@@ -69,6 +69,10 @@ html.dark .maplibregl-ctrl-attrib { background: rgba(16,20,33,0.85) !important; 
 html.dark .maplibregl-ctrl-attrib a { color: #e4e4e7 !important; }
 
 html.dark .bg-white { --tw-bg-opacity: 1; background-color: rgb(24 24 27 / var(--tw-bg-opacity)) !important; }
+html.dark .bg-white\/95 { background-color: rgba(24,24,27,0.94) !important; }
+html.dark .bg-white\/90 { background-color: rgba(24,24,27,0.90) !important; }
+html.dark .bg-white\/80 { background-color: rgba(24,24,27,0.82) !important; }
+html.dark .bg-white\/70 { background-color: rgba(24,24,27,0.72) !important; }
 html.dark .bg-stone-50 { --tw-bg-opacity: 1; background-color: rgb(39 39 42 / var(--tw-bg-opacity)) !important; }
 html.dark .bg-stone-100 { --tw-bg-opacity: 1; background-color: rgb(39 39 42 / var(--tw-bg-opacity)) !important; }
 html.dark .bg-gray-50, html.dark .bg-gray-100 { --tw-bg-opacity: 1; background-color: rgb(39 39 42 / var(--tw-bg-opacity)) !important; }

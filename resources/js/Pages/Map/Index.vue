@@ -24,26 +24,44 @@ const showCreate = ref(false)
 const creating = ref(false)
 const myStreet = ref('')
 const loadingStreet = ref(false)
+const showCoords = ref(false)
+const pinAddress = ref('')
+const loadingPinAddress = ref(false)
+
+function formatAddr(d: any): string {
+  const a = d.address || {}
+  const road = a.road || a.pedestrian || a.footway || a.street || a.path || a.cycleway || ''
+  const house = a.house_number ? `, ${a.house_number}` : ''
+  const city = a.city || a.town || a.village || a.municipality || a.county || ''
+  const suburb = a.suburb || a.neighbourhood || a.quarter || ''
+  if (road) return `${road}${house}${city ? ` · ${city}` : ''}`
+  if (suburb && city) return `${suburb} · ${city}`
+  return d.display_name?.split(',').slice(0, 3).join(', ') || 'Адрес не определён'
+}
 
 async function reverseGeocode(lat: number, lng: number) {
   loadingStreet.value = true
   try {
     const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&accept-language=ru`, { headers: { Accept: 'application/json' } })
     const d: any = await r.json()
-    const a = d.address || {}
-    const road = a.road || a.pedestrian || a.footway || a.street || a.path || a.cycleway || ''
-    const house = a.house_number ? `, ${a.house_number}` : ''
-    const city = a.city || a.town || a.village || a.municipality || a.county || ''
-    const suburb = a.suburb || a.neighbourhood || a.quarter || ''
-    if (road) myStreet.value = `${road}${house}${city ? ` · ${city}` : ''}`
-    else if (suburb && city) myStreet.value = `${suburb} · ${city}`
-    else myStreet.value = d.display_name?.split(',').slice(0, 3).join(', ') || ''
+    myStreet.value = formatAddr(d)
   } catch { myStreet.value = '' }
   finally { loadingStreet.value = false }
 }
 
+async function fetchPinAddress(lat: number, lng: number) {
+  loadingPinAddress.value = true
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&accept-language=ru`, { headers: { Accept: 'application/json' } })
+    const d: any = await r.json()
+    pinAddress.value = formatAddr(d)
+  } catch { pinAddress.value = '' }
+  finally { loadingPinAddress.value = false }
+}
+
 function openCreate(lngLat: any) {
   setCoords(lngLat.lat, lngLat.lng)
+  fetchPinAddress(lngLat.lat, lngLat.lng)
   mapApi.addTempMarker(lngLat)
   showCreate.value = true
 }
@@ -51,6 +69,7 @@ function closeCreate() {
   showCreate.value = false
   mapApi.removeTempMarker()
 }
+watch(showCreate, (v) => { if (v && !pinAddress.value) fetchPinAddress(newPin.value.latitude, newPin.value.longitude) })
 async function submit() {
   if (creating.value) return
   creating.value = true
@@ -151,16 +170,33 @@ onMounted(async () => {
             </div>
 
             <form @submit.prevent="submit" class="p-5 sm:p-6 space-y-4 overflow-y-auto overscroll-contain scrollbar-thin">
-              <div class="bg-stone-50 border border-stone-200 rounded-2xl px-3.5 py-3 flex items-center gap-2.5 text-xs">
+              <div class="bg-stone-50 border border-stone-200 rounded-2xl px-3.5 py-3 flex items-center gap-2.5">
                 <span class="w-8 h-8 rounded-full bg-ink-900 text-white grid place-items-center shrink-0">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
                 </span>
-                <div class="min-w-0">
-                  <div class="font-mono font-semibold text-ink-900">{{ newPin.latitude.toFixed(5) }}, {{ newPin.longitude.toFixed(5) }}</div>
-                  <div class="text-stone-400 leading-none mt-0.5">кликни по карте → переместить</div>
+                <div class="min-w-0 flex-1">
+                  <div class="text-[13px] font-semibold text-ink-900 leading-tight truncate">
+                    <span v-if="loadingPinAddress" class="text-stone-400">Определяем адрес…</span>
+                    <span v-else-if="showCoords" class="font-mono">{{ newPin.latitude.toFixed(5) }}, {{ newPin.longitude.toFixed(5) }}</span>
+                    <span v-else>{{ pinAddress || 'Адрес не определён' }}</span>
+                  </div>
+                  <div class="text-[11px] text-stone-400 leading-none mt-1 truncate">
+                    <span v-if="showCoords">{{ pinAddress || 'кликни по карте → переместить' }}</span>
+                    <span v-else>кликни по карте → переместить</span>
+                  </div>
                 </div>
-                <span class="ml-auto hidden sm:inline text-[11px] font-medium bg-white border border-stone-200 rounded-full px-2.5 py-1">точка выбрана</span>
+                <span v-if="loadingPinAddress" class="w-4 h-4 border-2 border-stone-200 border-t-ink-900 rounded-full animate-spin shrink-0"></span>
+                <span v-else-if="!showCoords" class="hidden sm:inline text-[11px] font-medium bg-white border border-stone-200 rounded-full px-2.5 py-1 shrink-0">точка выбрана</span>
               </div>
+              <label class="flex items-center justify-between bg-white border border-stone-200 rounded-full px-4 py-2.5 cursor-pointer hover:bg-stone-50 transition">
+                <span class="text-xs font-semibold flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-stone-100 border border-stone-200 grid place-items-center text-[11px]">◈</span> Показать координаты</span>
+                <span class="relative inline-flex items-center">
+                  <input type="checkbox" v-model="showCoords" class="sr-only" />
+                  <span :class="['w-9 h-5 rounded-full p-0.5 flex items-center transition', showCoords ? 'bg-ink-900' : 'bg-stone-300']">
+                    <span :class="['w-4 h-4 bg-white rounded-full shadow transition', showCoords ? 'translate-x-4' : 'translate-x-0']"></span>
+                  </span>
+                </span>
+              </label>
 
               <div>
                 <label class="text-[11px] font-bold tracking-wide uppercase text-stone-500">Заголовок *</label>

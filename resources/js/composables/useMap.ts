@@ -36,8 +36,7 @@ export function useMap(onPinClick: (pin: any) => void) {
     'https://demotiles.maplibre.org/style.json',
   ]
   function getStyles() {
-    const isDark = typeof document !== 'undefined' && document.documentElement.classList.contains('dark')
-    return isDark ? [DARK_STYLE, OSM_RASTER_STYLE] : LIGHT_STYLES
+    return LIGHT_STYLES
   }
 
   async function initMap(center: [number, number] = [27.5615, 53.9022], onMapClick?: (e: any) => void) {
@@ -149,10 +148,7 @@ export function useMap(onPinClick: (pin: any) => void) {
     window.Echo?.channel('map').listen('PinCreated', (e: any) => { store.addRealtime(e.pin); renderPins() }).listen('PinDeleted', (e: any) => { store.removeRealtime(e.pinId); renderPins() })
   }
   function setThemeStyle(isDark: boolean) {
-    if (!map) return
-    const style = isDark ? DARK_STYLE : OSM_RASTER_STYLE
-    try { map.setStyle(style as any) } catch {}
-    map.once('styledata', () => setTimeout(renderPins, 300))
+    return
   }
   return { mapContainer, initMap, renderPins, addTempMarker, removeTempMarker, startPolling, stopPolling, getCenter, flyToMyLocation, bindRealtime, setThemeStyle, loaded, errorMsg, get map() { return map } }
 }
