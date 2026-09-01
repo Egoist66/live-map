@@ -22,6 +22,25 @@ watch(isDark, (v) => mapApi.setThemeStyle(v))
 
 const showCreate = ref(false)
 const creating = ref(false)
+const myStreet = ref('')
+const loadingStreet = ref(false)
+
+async function reverseGeocode(lat: number, lng: number) {
+  loadingStreet.value = true
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&accept-language=ru`, { headers: { Accept: 'application/json' } })
+    const d: any = await r.json()
+    const a = d.address || {}
+    const road = a.road || a.pedestrian || a.footway || a.street || a.path || a.cycleway || ''
+    const house = a.house_number ? `, ${a.house_number}` : ''
+    const city = a.city || a.town || a.village || a.municipality || a.county || ''
+    const suburb = a.suburb || a.neighbourhood || a.quarter || ''
+    if (road) myStreet.value = `${road}${house}${city ? ` · ${city}` : ''}`
+    else if (suburb && city) myStreet.value = `${suburb} · ${city}`
+    else myStreet.value = d.display_name?.split(',').slice(0, 3).join(', ') || ''
+  } catch { myStreet.value = '' }
+  finally { loadingStreet.value = false }
+}
 
 function openCreate(lngLat: any) {
   setCoords(lngLat.lat, lngLat.lng)
@@ -31,14 +50,6 @@ function openCreate(lngLat: any) {
 function closeCreate() {
   showCreate.value = false
   mapApi.removeTempMarker()
-}
-async function flyToMe() {
-  try {
-    const g = await requestGeolocation()
-    mapApi.flyToMyLocation(g.lat, g.lng)
-    await fetchNearby(g.lat, g.lng)
-    mapApi.renderPins()
-  } catch {}
 }
 async function submit() {
   if (creating.value) return
@@ -54,7 +65,9 @@ async function submit() {
 
 onMounted(async () => {
   let geo = { lat: 53.9022, lng: 27.5615 }
-  try { geo = await requestGeolocation() } catch {}
+  let gotGeo = false
+  try { geo = await requestGeolocation(); gotGeo = true } catch {}
+  if (gotGeo) reverseGeocode(geo.lat, geo.lng)
   try { await fetchNearby(geo.lat, geo.lng) } catch {}
   await nextTick()
   await mapApi.initMap([geo.lng, geo.lat] as any, (e: any) => {
@@ -65,6 +78,7 @@ onMounted(async () => {
   mapApi.renderPins()
   mapApi.startPolling(30000)
   mapApi.bindRealtime()
+  try { (mapApi.map as any)?.on('geolocate', (e: any) => { const c = e.coords; if (c) { reverseGeocode(c.latitude, c.longitude) } }) } catch {}
 })
 </script>
 
@@ -93,17 +107,27 @@ onMounted(async () => {
             <button v-for="c in categories.slice(0,4)" :key="'m'+c.v" @click="selectedCategory=c.v" :class="['shrink-0 w-9 h-9 rounded-full text-sm grid place-items-center border sm:hidden', selectedCategory===c.v?'bg-ink-900 text-white border-ink-900':'bg-white border-stone-200']" :title="c.l">{{ c.i }}</button>
           </div>
         </div>
+        <Transition name="fade">
+          <div v-if="myStreet || loadingStreet" class="pointer-events-auto bg-white/95 backdrop-blur border border-stone-200 rounded-full pl-1 pr-3 py-1 shadow-soft flex items-center gap-2 w-fit max-w-[min(92vw,380px)]">
+            <span class="w-7 h-7 rounded-full bg-ink-900 text-white grid place-items-center shrink-0">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+            </span>
+            <div class="min-w-0 leading-none">
+              <div class="text-[10px] font-bold tracking-widest uppercase text-stone-400">вы здесь</div>
+              <div class="text-xs font-semibold text-ink-900 truncate">{{ loadingStreet ? 'Определяем улицу…' : myStreet }}</div>
+            </div>
+            <span v-if="loadingStreet" class="w-3.5 h-3.5 border-2 border-stone-200 border-t-ink-900 rounded-full animate-spin shrink-0"></span>
+            <span v-else class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shrink-0"></span>
+          </div>
+        </Transition>
         <div class="hidden sm:flex pointer-events-auto bg-white/95 backdrop-blur border border-stone-200 rounded-full px-3.5 py-2 text-xs font-medium shadow-soft items-center gap-2 w-fit">
           <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> кликнуть по карте — создашь пин
           <span class="bg-ink-900 text-white rounded-full px-2 py-0.5 text-[11px] font-bold">2 мин</span>
         </div>
       </div>
 
-      <div class="absolute bottom-4 right-4 sm:bottom-6 sm:right-4 flex flex-col items-center gap-2.5 z-10">
-        <button @click="flyToMe" class="w-[44px] h-[44px] rounded-full bg-white border border-stone-200 shadow-card grid place-items-center hover:bg-stone-50 hover:shadow-soft active:scale-95 transition" title="Моя локация">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.93 4.93l2.12 2.12M17.66 17.66l2.12 2.12M4.93 19.07l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>
-        </button>
-        <button @click="showCreate = true" class="sm:hidden w-14 h-14 rounded-full bg-ink-900 text-white shadow-float grid place-items-center text-xl hover:bg-ink-800 active:scale-95 transition">＋</button>
+      <div class="absolute bottom-4 right-4 sm:bottom-6 sm:right-4 flex flex-col items-center gap-2.5 z-10 pointer-events-none">
+        <button @click="showCreate = true" class="pointer-events-auto sm:hidden w-14 h-14 rounded-full bg-ink-900 text-white shadow-float grid place-items-center text-xl hover:bg-ink-800 active:scale-95 transition">＋</button>
       </div>
 
       <div class="absolute bottom-4 left-4 hidden xl:flex z-10 pointer-events-none">

@@ -7,6 +7,7 @@ import { Head, usePage } from '@inertiajs/vue3'
 import { Link } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
 import { useTheme } from '@/composables/useTheme'
+import AvatarPreview from '@/Components/AvatarPreview.vue'
 
 defineProps<{ mustVerifyEmail: boolean; status: string; user: any }>()
 const page = usePage()
@@ -20,6 +21,8 @@ const tabs = [
   { id:'appearance', label:'Внешний вид', icon:'◐', desc:'Тема, карта' },
   { id:'security', label:'Безопасность', icon:'🛡', desc:'Пароль, удаление' },
 ] as const
+const showAvatar = ref(false)
+const avatarSrc = computed(() => u.value.avatar_path ? `/storage/${u.value.avatar_path}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(u.value.name)}&background=0F172A&color=fff&bold=true`)
 </script>
 
 <template>
@@ -30,7 +33,10 @@ const tabs = [
         <div class="bg-ink-900 dark:bg-zinc-900 dark:border dark:border-zinc-800 text-white rounded-[24px] p-6 sm:p-7 flex flex-col sm:flex-row justify-between gap-4 relative overflow-hidden">
           <div class="absolute -right-16 -top-16 w-72 h-72 bg-gradient-to-br from-brand-500 to-accent-teal rounded-full blur-[60px] opacity-20"></div>
           <div class="relative flex items-center gap-4 min-w-0">
-            <img :src="u.avatar_path ? `/storage/${u.avatar_path}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=0F172A&color=fff&bold=true`" class="w-14 h-14 rounded-2xl border-2 border-white/20 object-cover shrink-0"/>
+            <button @click="showAvatar=true" class="group relative w-14 h-14 rounded-2xl overflow-hidden border-2 border-white/20 shrink-0 focus:outline-none focus:ring-2 focus:ring-white/40">
+              <img :src="avatarSrc" class="w-full h-full object-cover group-hover:scale-105 transition duration-300"/>
+              <span class="absolute inset-0 bg-black/0 group-hover:bg-black/20 grid place-items-center opacity-0 group-hover:opacity-100 transition text-white text-xs">🔍</span>
+            </button>
             <div class="min-w-0">
               <h1 class="text-xl font-black tracking-tight truncate">{{ u.name }} <span class="font-medium text-white/60 text-sm ml-2">{{ u.level || 'novice' }} · {{ u.reputation_score||0 }} ★</span></h1>
               <p class="text-white/60 text-sm mt-0.5 truncate">{{ u.email }} · <span class="capitalize">{{ u.plan||'free' }}</span> · {{ u.home_lat ? `дом ${Number(u.home_lat).toFixed(3)}, ${Number(u.home_lng).toFixed(3)}` : 'дом не задан' }}</p>
@@ -121,6 +127,7 @@ const tabs = [
           </div>
         </div>
       </div>
+      <AvatarPreview :src="avatarSrc" :name="u.name" :open="showAvatar" @close="showAvatar=false" />
     </div>
   </AuthenticatedLayout>
 </template>

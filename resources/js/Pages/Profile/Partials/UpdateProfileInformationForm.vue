@@ -3,6 +3,7 @@ import InputError from '@/Components/InputError.vue'
 import PrimaryButton from '@/Components/PrimaryButton.vue'
 import { Link, useForm, usePage, router } from '@inertiajs/vue3'
 import { ref, computed, watch } from 'vue'
+import AvatarPreview from '@/Components/AvatarPreview.vue'
 
 defineProps<{ mustVerifyEmail: boolean; status: string }>()
 
@@ -59,6 +60,7 @@ function useMyLocation() {
   })
 }
 
+const showPreview = ref(false)
 const avatarSrc = computed(() => {
   if (previewUrl.value) return previewUrl.value
   if (user.value.avatar_path) return `/storage/${user.value.avatar_path}`
@@ -75,7 +77,10 @@ const avatarSrc = computed(() => {
 
     <div class="flex flex-col sm:flex-row items-start gap-5 mt-6 p-4 bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-2xl">
       <div class="relative shrink-0">
-        <img :src="avatarSrc" :key="avatarSrc" class="w-20 h-20 rounded-2xl object-cover border border-stone-200 dark:border-zinc-700 bg-stone-100" />
+        <button @click="showPreview=true" class="group relative w-20 h-20 rounded-2xl overflow-hidden border border-stone-200 dark:border-zinc-700 bg-stone-100 focus:outline-none focus:ring-2 focus:ring-brand-500/30">
+          <img :src="avatarSrc" :key="avatarSrc" class="w-full h-full object-cover group-hover:scale-105 transition duration-300" />
+          <span class="absolute inset-0 bg-black/0 group-hover:bg-black/25 grid place-items-center opacity-0 group-hover:opacity-100 transition text-white text-[10px] font-bold">🔍 превью</span>
+        </button>
         <span v-if="avatarOk" class="absolute -bottom-1 -right-1 bg-emerald-500 text-white text-[11px] px-1.5 py-0.5 rounded-full">✓</span>
       </div>
       <div class="flex-1 min-w-0 w-full">
@@ -123,5 +128,6 @@ const avatarSrc = computed(() => {
         <span v-if="form.recentlySuccessful" class="text-sm text-green-600">Сохранено</span>
       </div>
     </form>
+    <AvatarPreview :src="avatarSrc" :name="user.name" :open="showPreview" @close="showPreview=false" />
   </section>
 </template>
