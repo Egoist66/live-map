@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg: #F8F7F3;
+    --ink: #0F172A;
+    --brand: #5B5BFF;
+    --teal: #06B6D4;
+  }
+  html.dark {
+    --bg: #0B0F1A;
+    --ink: #F8FAFC;
+  }
+  html { scrollbar-gutter: stable; color-scheme: light; }
+  html.dark { color-scheme: dark; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  html.dark body { background: #090E1A; color: #E2E8F0; }
+  ::selection { background: #0F172A; color: white; }
+  html.dark ::selection { background: #5B5BFF; }
+}
+
+@layer components {
+  .glass {
+    background: rgba(255,255,255,0.82);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+  }
+  html.dark .glass {
+    background: rgba(16, 20, 33, 0.72) !important;
+    border-color: rgba(255,255,255,0.08) !important;
+  }
+  .card {
+    @apply bg-white border border-stone-200/60 rounded-3xl shadow-card dark:bg-zinc-900 dark:border-zinc-800;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 bg-ink-900 text-white rounded-full font-semibold px-6 py-3 text-sm tracking-tight hover:bg-ink-800 transition-all duration-200 shadow-soft hover:shadow-card hover:-translate-y-px active:translate-y-0 dark:bg-white dark:text-ink-900 dark:hover:bg-zinc-100;
+  }
+  .btn-brand {
+    @apply inline-flex items-center justify-center gap-2 bg-brand-500 text-white rounded-full font-semibold px-6 py-3 text-sm hover:bg-brand-600 transition-all duration-200 shadow-glow hover:shadow-card hover:-translate-y-px;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center bg-white border border-stone-200 rounded-full font-semibold px-6 py-3 text-sm hover:bg-stone-50 hover:border-stone-300 transition-colors dark:bg-zinc-800 dark:border-zinc-700 dark:hover:bg-zinc-700 dark:text-zinc-100;
+  }
+  .input-premium {
+    @apply w-full bg-white border border-stone-200 rounded-2xl px-4 py-3 text-sm placeholder:text-stone-400 focus:outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/10 transition-all dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-100 dark:placeholder:text-zinc-500;
+  }
+  .badge-live {
+    @apply inline-flex items-center gap-1.5 bg-white border border-stone-200 rounded-full px-3 py-1.5 text-xs font-medium shadow-soft dark:bg-zinc-900 dark:border-zinc-700;
+  }
+}
+
+.scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background: #E7E5E4; border-radius: 999px; }
+html.dark .scrollbar-thin::-webkit-scrollbar-thumb { background: #3f3f46; }
+.scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #D6D3D1; }
+html.dark .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #52525b; }
+
+.maplibregl-popup-content { @apply !rounded-2xl !shadow-float !border !border-stone-200 !p-0 overflow-hidden dark:!bg-zinc-900 dark:!border-zinc-700; }
+html.dark .maplibregl-ctrl-group { background: #1a1d26 !important; border-color: #2a2f3f !important; box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important; }
+html.dark .maplibregl-ctrl button { filter: invert(0.85) hue-rotate(180deg); }
+html.dark .maplibregl-ctrl-attrib { background: rgba(16,20,33,0.85) !important; color: #a1a1aa !important; }
+html.dark .maplibregl-ctrl-attrib a { color: #e4e4e7 !important; }
+
+html.dark .bg-white { --tw-bg-opacity: 1; background-color: rgb(24 24 27 / var(--tw-bg-opacity)) !important; }
+html.dark .bg-stone-50 { --tw-bg-opacity: 1; background-color: rgb(39 39 42 / var(--tw-bg-opacity)) !important; }
+html.dark .bg-stone-100 { --tw-bg-opacity: 1; background-color: rgb(39 39 42 / var(--tw-bg-opacity)) !important; }
+html.dark .bg-surface { --tw-bg-opacity: 1; background-color: #090E1A !important; }
+html.dark .bg-\[\#eaf0f6\], html.dark .bg-\[\#eef2f7\], html.dark .bg-\[\#eef3f8\] { background-color: #0f172a !important; }
+html.dark .border-stone-200 { border-color: rgb(39 39 42) !important; }
+html.dark .border-stone-100 { border-color: rgb(39 39 42) !important; }
+html.dark .border-stone-300 { border-color: rgb(63 63 70) !important; }
+html.dark .text-ink-900 { color: #fafafa !important; }
+html.dark .text-stone-600 { color: #a1a1aa !important; }
+html.dark .text-stone-500 { color: #a1a1aa !important; }
+html.dark .text-stone-400 { color: #71717a !important; }
+html.dark .text-zinc-500 { color: #a1a1aa !important; }
+html.dark input, html.dark textarea, html.dark select { background-color: #18181b; border-color: #3f3f46; color: #e4e4e7; }
+html.dark input::placeholder, html.dark textarea::placeholder { color: #71717a; }
+
+.card-hover {
+  @apply transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-float hover:border-stone-300 dark:hover:border-zinc-700;
+}
+.card-hover:hover { box-shadow: 0 12px 40px -12px rgba(0,0,0,0.15), 0 4px 16px -8px rgba(0,0,0,0.08); }
+html.dark .card-hover:hover { box-shadow: 0 12px 40px -12px rgba(0,0,0,0.5), 0 4px 16px -8px rgba(0,0,0,0.3); }
+.card-hover .card-icon {
+  @apply transition-transform duration-300 ease-out;
+}
+.card-hover:hover .card-icon { transform: scale(1.05) rotate(-2deg); }
+.card-hover .card-arrow {
+  @apply transition-all duration-300;
+}
+.card-hover:hover .card-arrow { transform: translateX(4px); }

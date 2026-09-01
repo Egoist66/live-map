@@ -1,0 +1,25 @@
+services:
+  app:
+    image: php:8.4-fpm
+    volumes: [.:/var/www/html]
+    ports: ["8000:8000"]
+    command: php artisan serve --host=0.0.0.0
+    depends_on: [mysql, redis, meilisearch]
+  mysql:
+    image: mysql:8
+    environment: { MYSQL_DATABASE: live_map, MYSQL_ROOT_PASSWORD: secret, MYSQL_PASSWORD: secret, MYSQL_USER: laravel }
+    ports: ["3306:3306"]
+    volumes: [mysql:/var/lib/mysql]
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+  meilisearch:
+    image: getmeili/meilisearch:latest
+    ports: ["7700:7700"]
+    environment: { MEILI_MASTER_KEY: masterKey }
+  reverb:
+    image: php:8.4-fpm
+    command: php artisan reverb:start --host=0.0.0.0 --port=8080
+    ports: ["8080:8080"]
+    volumes: [.:/var/www/html]
+volumes: { mysql: {} }

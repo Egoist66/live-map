@@ -1,0 +1,17 @@
+<?php
+
+namespace App\Events;
+
+use App\Models\Pin;
+use Illuminate\Broadcasting\Channel;
+use Illuminate\Broadcasting\InteractsWithSockets;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Foundation\Events\Dispatchable;
+
+class PinCreated implements ShouldBroadcast
+{
+    use Dispatchable, InteractsWithSockets;
+    public function __construct(public Pin $pin) {}
+    public function broadcastOn(): array { return [new Channel('map')]; }
+    public function broadcastWith(): array { return ['pin' => $this->pin]; }
+}
