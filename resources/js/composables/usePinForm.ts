@@ -11,6 +11,7 @@ export function usePinForm(onCreated?: () => void) {
     longitude: 27.5615,
     location_precision: 'blur_200' as 'blur_200' | 'exact' | 'district',
     is_anonymous: false,
+    radius_meters: 1000,
   })
 
   function setCoords(lat: number, lng: number) {
@@ -19,7 +20,7 @@ export function usePinForm(onCreated?: () => void) {
   }
 
   async function submit(isAuth: boolean) {
-    if (!isAuth) { window.location.href = '/login'; return }
+    if (!isAuth) { const { router } = await import('@inertiajs/vue3'); router.visit(route('login')); return }
     await createPin(newPin.value)
     newPin.value.title = ''
     newPin.value.body = ''

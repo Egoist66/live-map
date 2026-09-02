@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { Head, Link, usePage } from '@inertiajs/vue3'
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import axios from 'axios'
 import { useGeolocation } from '@/composables/useGeolocation'
 
@@ -12,12 +12,35 @@ const zoneCount = ref(0)
 const { coords, requestGeolocation } = useGeolocation([user.longitude ? Number(user.longitude) : 37.6173, user.latitude ? Number(user.latitude) : 55.7558] as any)
 const zoneForm = ref({ radius_km: user.home_radius_km || 2, notify_via: 'in_app' })
 const showZoneForm = ref(false)
+const myPins = computed(() => pins.value.filter((p:any) => p.is_owner || p.user?.id === user.id))
+const otherPins = computed(() => pins.value.filter((p:any) => !(p.is_owner || p.user?.id === user.id)))
+
+async function deletePin(id: number) {
+  if (!confirm('Удалить пин?')) return
+  try { await axios.delete(`/api/pins/${id}`); pins.value = pins.value.filter(p => p.id !== id) } catch(e:any){ alert(e?.response?.data?.message||'Ошибка удаления') }
+}
+async function boostFromDashboard(type: 'top'|'glow'|'extend') {
+  const target = myPins.value[0] || otherPins.value[0] || pins.value[0]
+  if (!target) { alert('Создай пин на карте чтобы попробовать буст'); return }
+  if (type==='top' && !confirm(`Поднять пин "${target.title}" в ТОП на 1ч за $0.99?`)) return
+  if (type==='glow' && !confirm(`Подсветить пин "${target.title}" анимацией за $1.99?`)) return
+  if (type==='extend' && !confirm(`Продлить пин "${target.title}" на 24ч за $2.99?`)) return
+  try { await axios.post(`/api/pins/${target.id}/boost`, { type }); alert('Буст активирован: '+type+' — пин "'+target.title+'"') } catch(e:any){ alert(e?.response?.data?.message||'Ошибка буста') }
+}
 
 onMounted(async () => {
-  const loc = user.home_lat && user.home_lng ? { lat: Number(user.home_lat), lng: Number(user.home_lng) } : await requestGeolocation()
+  const loc = user.home_lat && user.home_lng ? { lat: Number(user.home_lat), lng: Number(user.home_lng) } : await requestGeolocation().catch(() => ({ lat: 53.9022, lng: 27.5615 }))
   try {
-    const { data } = await axios.get('/api/pins', { params: { lat: loc.lat, lng: loc.lng } })
-    pins.value = (Array.isArray(data) ? data : data.data || []).slice(0,3)
+    const [nearRes, mineRes] = await Promise.allSettled([
+      axios.get('/api/pins', { params: { lat: loc.lat, lng: loc.lng, radius: 5000 } }),
+      axios.get('/api/pins/mine'),
+    ])
+    const near = nearRes.status==='fulfilled' ? (Array.isArray(nearRes.value.data) ? nearRes.value.data : nearRes.value.data.data || []) : []
+    const mine = mineRes.status==='fulfilled' ? (Array.isArray(mineRes.value.data) ? mineRes.value.data : mineRes.value.data.data || []) : []
+    const map = new Map()
+    ;[...mine, ...near].forEach((p:any)=> { if(!map.has(p.id)) map.set(p.id,p) })
+    pins.value = Array.from(map.values()).slice(0,12)
+    if (!pins.value.length && mine.length) pins.value = mine.slice(0,12)
   } catch {}
   try {
     const { data } = await axios.get('/api/zone-subscriptions')
@@ -38,7 +61,7 @@ const levelColor: Record<string,string> = { novice:'bg-stone-100 text-stone-700 
 </script>
 
 <template>
-  <Head title="Кабинет — Live Map" />
+  <Head title="Дашборд" />
   <AuthenticatedLayout>
     <div class="bg-surface min-h-[calc(100vh-64px)]">
       <div class="max-w-[1280px] mx-auto px-4 sm:px-6 py-6 space-y-5">
@@ -91,21 +114,45 @@ const levelColor: Record<string,string> = { novice:'bg-stone-100 text-stone-700 
               <div class="text-[11px] text-stone-500 bg-white border rounded-full px-3 py-2">{{ coords.lat.toFixed(4) }}, {{ coords.lng.toFixed(4) }}</div>
               <button @click="createZone" class="bg-ink-900 text-white px-5 py-2.5 rounded-full text-sm font-semibold ml-auto hover:bg-ink-800">Подписаться</button>
             </div>
-            <div class="mt-5 grid grid-cols-3 gap-2 text-xs">
-              <div class="bg-stone-50 border border-stone-200 rounded-xl p-3"><div class="font-bold">Топ $0.99</div><div class="text-stone-500">поднять 1ч</div></div>
-              <div class="bg-stone-50 border border-stone-200 rounded-xl p-3"><div class="font-bold">Подсветка $1.99</div><div class="text-stone-500">анимация</div></div>
-              <div class="bg-stone-50 border border-stone-200 rounded-xl p-3"><div class="font-bold">+24ч $2.99</div><div class="text-stone-500">продлить</div></div>
+            <div class="mt-5 grid grid-cols-3 gap-2">
+              <button @click="boostFromDashboard('top')" class="group relative overflow-hidden bg-gradient-to-br from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-stone-900 rounded-2xl p-4 flex flex-col items-center justify-center gap-1 shadow-[0_4px_14px_rgba(245,158,11,0.3)] hover:shadow-[0_6px_20px_rgba(245,158,11,0.45)] hover:-translate-y-0.5 active:scale-95 transition-all text-center">
+                <span class="absolute inset-0 bg-gradient-to-r from-white/0 via-white/25 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></span>
+                <span class="text-lg">👑</span><span class="text-[15px] font-black">Топ $0.99</span><span class="text-sm font-semibold opacity-80">поднять 1ч</span>
+              </button>
+              <button @click="boostFromDashboard('glow')" class="group relative overflow-hidden bg-gradient-to-br from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white rounded-2xl p-4 flex flex-col items-center justify-center gap-1 shadow-[0_4px_14px_rgba(124,58,237,0.35)] hover:shadow-[0_6px_20px_rgba(124,58,237,0.5)] hover:-translate-y-0.5 active:scale-95 transition-all text-center">
+                <span class="absolute inset-0 bg-gradient-to-r from-white/0 via-white/15 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></span>
+                <span class="text-lg">✨</span><span class="text-[15px] font-black">Подсветка $1.99</span><span class="text-sm font-semibold opacity-80">анимация</span>
+              </button>
+              <button @click="boostFromDashboard('extend')" class="group relative overflow-hidden bg-gradient-to-br from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white rounded-2xl p-4 flex flex-col items-center justify-center gap-1 shadow-[0_4px_14px_rgba(16,185,129,0.3)] hover:shadow-[0_6px_20px_rgba(16,185,129,0.45)] hover:-translate-y-0.5 active:scale-95 transition-all text-center">
+                <span class="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></span>
+                <span class="text-lg">⏳</span><span class="text-[15px] font-black">+24ч $2.99</span><span class="text-sm font-semibold opacity-80">продлить</span>
+              </button>
             </div>
           </div>
-          <div class="bg-white border border-stone-200 rounded-[20px] p-6 shadow-soft">
+          <div class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-[20px] p-6 shadow-soft">
             <h3 class="font-black tracking-tight">Свежие пины рядом</h3>
-            <div v-if="pins.length" class="mt-4 space-y-2.5">
-              <div v-for="p in pins" :key="p.id" class="border border-stone-200 rounded-2xl p-3.5 hover:bg-stone-50 hover:border-stone-300 transition">
-                <div class="text-sm font-semibold truncate">{{ p.title }}</div><div class="text-xs text-stone-500 line-clamp-1 mt-0.5">{{ p.body }}</div><div class="flex items-center gap-1.5 text-[11px] text-stone-500 mt-2"><span class="bg-white border rounded-full px-2 py-0.5">{{ p.category }}</span><span>{{ p.reactions_count||0 }} ❤️</span><span class="ml-auto bg-stone-100 rounded-full px-2 py-0.5">до {{ new Date(p.expires_at).toLocaleTimeString().slice(0,5) }}</span></div>
+            <div v-if="pins.length" class="mt-4 space-y-5">
+              <div v-if="myPins.length">
+                <div class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500">Мои · {{ myPins.length }}</div>
+                <div class="mt-2 space-y-2.5">
+                  <div v-for="p in myPins.slice(0,4)" :key="'m'+p.id" class="border border-amber-200 dark:border-amber-800 bg-amber-50/40 dark:bg-amber-950/25 rounded-2xl p-3.5 hover:bg-amber-50 dark:hover:bg-amber-900/20 transition relative">
+                    <button @click="deletePin(p.id)" class="absolute top-2 right-2 w-7 h-7 rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 hover:bg-red-50 dark:hover:bg-red-950 hover:text-red-600 hover:border-red-200 dark:hover:border-red-800 grid place-items-center text-xs" title="Удалить пин">✕</button>
+                    <div class="text-sm font-semibold truncate pr-8 dark:text-zinc-100">{{ p.title }}</div><div class="text-xs text-stone-600 dark:text-zinc-400 line-clamp-1 mt-0.5">{{ p.body }}</div><div class="flex items-center gap-1.5 text-[11px] text-stone-500 dark:text-zinc-400 mt-2"><span class="bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-full px-2 py-0.5">{{ p.category }}</span><span>{{ p.reactions_count||0 }} ❤️</span><span class="ml-auto bg-white dark:bg-zinc-800 rounded-full px-2 py-0.5 border border-stone-200 dark:border-zinc-700">до {{ new Date(p.expires_at).toLocaleTimeString().slice(0,5) }}</span></div>
+                  </div>
+                </div>
               </div>
+              <div v-if="otherPins.length">
+                <div class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500">Пользователей · {{ otherPins.length }}</div>
+                <div class="mt-2 space-y-2.5">
+                  <div v-for="p in otherPins.slice(0,6)" :key="p.id" class="border border-stone-200 dark:border-zinc-700 rounded-2xl p-3.5 hover:bg-stone-50 dark:hover:bg-zinc-800 hover:border-stone-300 dark:hover:border-zinc-600 transition bg-white dark:bg-zinc-800/50">
+                    <div class="text-sm font-semibold truncate dark:text-zinc-100">{{ p.title }}</div><div class="text-xs text-stone-500 dark:text-zinc-400 line-clamp-1 mt-0.5">{{ p.body }}</div><div class="flex items-center gap-1.5 text-[11px] text-stone-500 dark:text-zinc-400 mt-2"><span class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-700 rounded-full px-2 py-0.5">{{ p.category }}</span><span>{{ p.reactions_count||0 }} ❤️</span><span class="ml-auto bg-stone-100 dark:bg-zinc-900 border border-stone-200 dark:border-zinc-700 rounded-full px-2 py-0.5">до {{ new Date(p.expires_at).toLocaleTimeString().slice(0,5) }}</span></div>
+                  </div>
+                </div>
+              </div>
+              <div v-if="!myPins.length && !otherPins.length" class="text-center py-4 text-xs text-stone-400">Нет пинов</div>
             </div>
-            <div v-else class="text-center py-8"><div class="w-10 h-10 rounded-xl bg-stone-100 border mx-auto grid place-items-center text-stone-400">◎</div><div class="text-sm font-medium text-stone-600 mt-3">Пинов пока нет</div><div class="text-xs text-stone-400">Стань первым в районе</div></div>
-            <Link href="/map" class="mt-4 inline-flex bg-ink-900 text-white px-5 py-2.5 rounded-full text-sm font-semibold hover:bg-ink-800">Открыть карту</Link>
+            <div v-else class="text-center py-8"><div class="w-10 h-10 rounded-xl bg-stone-100 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 mx-auto grid place-items-center text-stone-400">◎</div><div class="text-sm font-medium text-stone-600 dark:text-zinc-400 mt-3">Пинов пока нет</div><div class="text-xs text-stone-400">Стань первым в районе</div></div>
+            <Link href="/map" class="mt-4 inline-flex bg-ink-900 dark:bg-white dark:text-ink-900 text-white px-5 py-2.5 rounded-full text-sm font-semibold hover:bg-ink-800 dark:hover:bg-zinc-100">Открыть карту</Link>
           </div>
         </div>
 

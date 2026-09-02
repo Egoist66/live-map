@@ -15,10 +15,26 @@ class PinController extends Controller
         $lat = (float) $request->input('lat', 55.7558);
         $lng = (float) $request->input('lng', 37.6173);
         $radius = (int) $request->input('radius', Auth::user()?->pinRadius() ?? 1000) / 1000;
-
-        $pins = Pin::active()->where('status', 'active')->nearby($lat, $lng, $radius)->boostedFirst()->with('user:id,name,avatar_path,level')->limit(100)->get();
         $viewerId = Auth::id();
-        return response()->json($pins->map(fn($p) => $p->toPublicArray($viewerId)));
+
+        $q = Pin::active()->where('status', 'active')->nearby($lat, $lng, $radius);
+        if ($viewerId) {
+            $blocked = \App\Models\UserBlock::where('blocker_id', $viewerId)->pluck('blocked_id');
+            $blockedBy = \App\Models\UserBlock::where('blocked_id', $viewerId)->pluck('blocker_id');
+            $hide = $blocked->merge($blockedBy)->unique()->filter();
+            if ($hide->isNotEmpty()) $q->whereNotIn('user_id', $hide);
+        }
+        $pins = $q->boostedFirst()->with('user:id,name,avatar_path,level')->limit(100)->get();
+        $myReactions = $viewerId ? \App\Models\Reaction::where('user_id', $viewerId)->where('reactable_type', 'pin')->whereIn('reactable_id', $pins->pluck('id'))->pluck('type', 'reactable_id') : collect();
+        return response()->json($pins->map(fn($p) => array_merge($p->toPublicArray($viewerId), ['my_reaction' => $myReactions[$p->id] ?? null])));
+    }
+
+    public function mine(Request $request)
+    {
+        $user = $request->user();
+        $pins = Pin::where('user_id', $user->id)->where('status', 'active')->latest()->limit(50)->with('user:id,name,avatar_path,level')->get();
+        $myReactions = \App\Models\Reaction::where('user_id', $user->id)->where('reactable_type', 'pin')->whereIn('reactable_id', $pins->pluck('id'))->pluck('type', 'reactable_id');
+        return response()->json($pins->map(fn($p) => array_merge($p->toPublicArray($user->id), ['my_reaction' => $myReactions[$p->id] ?? null])));
     }
 
     public function store(Request $request)
@@ -35,6 +51,7 @@ class PinController extends Controller
             'location_precision' => 'sometimes|in:blur_200,exact,district',
             'is_anonymous' => 'sometimes|boolean',
             'photo_path' => 'sometimes|nullable|string|max:255',
+            'radius_meters' => 'sometimes|integer|min:500|max:50000',
         ]);
 
         $precision = $data['location_precision'] ?? 'blur_200';
@@ -49,11 +66,20 @@ class PinController extends Controller
         } elseif ($precision === 'exact') {
             $data['real_lat'] = $origLat;
             $data['real_lng'] = $origLng;
+        } elseif ($precision === 'district') {
+            [$blurLat, $blurLng] = Pin::blurCoords($origLat, $origLng, 1200);
+            $data['real_lat'] = $origLat;
+            $data['real_lng'] = $origLng;
+            $data['latitude'] = $blurLat;
+            $data['longitude'] = $blurLng;
         }
 
+        $requestedRadius = (int) ($data['radius_meters'] ?? 1000);
+        $maxRadius = $user->pinRadius();
+        $finalRadius = max(500, min($requestedRadius, $maxRadius));
         $data['user_id'] = $user->id;
-        $data['radius_meters'] = $user->pinRadius();
-        $data['visibility_radius_km'] = (int) ($user->pinRadius() / 1000);
+        $data['radius_meters'] = $finalRadius;
+        $data['visibility_radius_km'] = (int) max(1, round($finalRadius / 1000));
         $data['expires_at'] = now()->addHours($user->pinTtlHours());
         $data['is_anonymous'] = $data['is_anonymous'] ?? $user->is_anonymous_default;
         $data['status'] = 'active';
@@ -66,9 +92,24 @@ class PinController extends Controller
             $user->increment('pins_today_count');
         }
 
-        broadcast(new PinCreated($pin->load('user')))->toOthers();
+        $pin->load('user:id,name,avatar_path,level');
+        broadcast(new PinCreated($pin))->toOthers();
 
-        return response()->json($pin, 201);
+        return response()->json(array_merge($pin->toPublicArray($user->id), ['my_reaction' => null]), 201);
+    }
+
+    public function update(Request $request, Pin $pin)
+    {
+        $this->authorize('update', $pin);
+        $data = $request->validate([
+            'title' => 'sometimes|required|string|max:100',
+            'body' => 'nullable|string|max:1000',
+            'category' => 'sometimes|required|in:question,announcement,warning,event,offer,help',
+        ]);
+        $pin->update($data);
+        $pin->load('user:id,name,avatar_path,level');
+        $my = \App\Models\Reaction::where('user_id', $request->user()->id)->where('reactable_type','pin')->where('reactable_id',$pin->id)->value('type');
+        return response()->json(array_merge($pin->toPublicArray($request->user()->id), ['my_reaction' => $my]));
     }
 
     public function destroy(Pin $pin)

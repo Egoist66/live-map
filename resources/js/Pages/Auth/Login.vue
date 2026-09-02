@@ -2,20 +2,22 @@
 import GuestLayout from '@/Layouts/GuestLayout.vue'
 import InputError from '@/Components/InputError.vue'
 import { Head, Link, useForm } from '@inertiajs/vue3'
+import { ref } from 'vue'
 defineProps<{ canResetPassword: boolean; status: string }>()
 const form = useForm({ email:'', password:'', remember:false })
+const showPass = ref(false)
 const submit = () => form.post(route('login'), { onFinish: () => form.reset('password') })
 </script>
 
 <template>
   <GuestLayout>
-    <Head title="Вход — Live Map" />
+    <Head title="Вход" />
     <div v-if="status" class="mb-4 text-sm bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-2xl px-4 py-3">{{ status }}</div>
     <h1 class="text-[22px] font-black tracking-tight">С возвращением</h1>
     <p class="text-sm text-stone-500 mt-1">Войди и проверь, что происходит во дворе</p>
     <form @submit.prevent="submit" class="mt-6 space-y-4">
       <div><label class="text-[13px] font-semibold">Email</label><input v-model="form.email" type="email" required autofocus autocomplete="username" placeholder="you@mail.ru" class="mt-1.5 input-premium"/><InputError :message="form.errors.email" class="mt-1.5"/></div>
-      <div><label class="text-[13px] font-semibold">Пароль</label><input v-model="form.password" type="password" required autocomplete="current-password" placeholder="••••••••" class="mt-1.5 input-premium"/><InputError :message="form.errors.password" class="mt-1.5"/></div>
+      <div><label class="text-[13px] font-semibold">Пароль</label><div class="relative mt-1.5"><input v-model="form.password" :type="showPass?'text':'password'" required autocomplete="current-password" placeholder="••••••••" class="input-premium !mt-0 pr-11"/><button type="button" @click="showPass=!showPass" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-stone-100 grid place-items-center text-stone-500" :title="showPass?'Скрыть':'Показать'"><span class="text-[13px]">{{ showPass ? '🙈' : '👁' }}</span></button></div><InputError :message="form.errors.password" class="mt-1.5"/></div>
       <label class="flex items-center gap-2 text-sm font-medium"><input type="checkbox" v-model="form.remember" class="rounded border-stone-300 text-ink-900 focus:ring-ink-900"/> Запомнить меня</label>
       <button :disabled="form.processing" class="w-full bg-ink-900 text-white rounded-full py-3.5 font-semibold hover:bg-ink-800 shadow-soft transition disabled:opacity-50 inline-flex items-center justify-center gap-2">Войти <span>→</span></button>
       <div class="flex justify-between items-center text-sm pt-2">

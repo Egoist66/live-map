@@ -17,8 +17,9 @@ const form = useForm({
   home_lng: user.value.home_lng || '',
   home_radius_km: user.value.home_radius_km || 2,
   is_anonymous_default: !!user.value.is_anonymous_default,
+  plan: user.value.plan || 'free',
 })
-watch(user, (u) => { form.name = u.name; form.email = u.email; form.home_lat = u.home_lat || ''; form.home_lng = u.home_lng || ''; form.home_radius_km = u.home_radius_km || 2; form.is_anonymous_default = !!u.is_anonymous_default })
+watch(user, (u) => { form.name = u.name; form.email = u.email; form.home_lat = u.home_lat || ''; form.home_lng = u.home_lng || ''; form.home_radius_km = u.home_radius_km || 2; form.is_anonymous_default = !!u.is_anonymous_default; form.plan = u.plan || 'free' })
 
 const avatarFile = ref<File | null>(null)
 const previewUrl = ref<string | null>(null)
@@ -117,6 +118,24 @@ const avatarSrc = computed(() => {
       </div>
 
       <label class="flex items-center gap-2 text-sm"><input type="checkbox" v-model="form.is_anonymous_default" class="rounded"/> Создавать пины анонимно по умолчанию (без репутации)</label>
+
+      <div class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-700 rounded-2xl p-4">
+        <h4 class="text-sm font-black">Тариф — {{ ({free:'Бесплатный',pro:'Pro',business:'Бизнес'} as any)[form.plan] }}</h4>
+        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Переключи тариф — вступают сразу. Оплата пока в демо-режиме.</p>
+        <div class="mt-3 grid sm:grid-cols-3 gap-2">
+          <button type="button" @click="form.plan='free'" :class="['rounded-2xl border p-3 text-left transition', form.plan==='free'?'bg-ink-900 dark:bg-white dark:text-ink-900 text-white border-ink-900 dark:border-white shadow-soft':'bg-stone-50 dark:bg-zinc-800 hover:bg-white dark:hover:bg-zinc-700 border-stone-200 dark:border-zinc-700 text-stone-900 dark:text-zinc-100']">
+            <div class="text-sm font-bold">Free</div><div class="text-xs opacity-70">3/день · 1км · 2ч</div><div class="text-xs font-bold mt-1">Бесплатно</div>
+          </button>
+          <button type="button" @click="form.plan='pro'" :class="['rounded-2xl border p-3 text-left transition relative overflow-hidden', form.plan==='pro'?'bg-gradient-to-br from-violet-600 to-indigo-600 text-white border-violet-600 shadow-lg dark:from-violet-500 dark:to-indigo-500':'bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-900/30 border-amber-200 dark:border-amber-800 text-stone-900 dark:text-amber-100']">
+            <span v-if="form.plan==='pro'" class="absolute top-2 right-2 text-[10px] bg-white/20 rounded-full px-2 py-0.5">выбран</span>
+            <div class="text-sm font-black">Pro</div><div class="text-xs opacity-80">Безлимит · 5км · 24ч</div><div class="text-xs font-bold mt-1">$4.99 / мес</div>
+          </button>
+          <button type="button" @click="form.plan='business'" :class="['rounded-2xl border p-3 text-left transition', form.plan==='business'?'bg-ink-900 dark:bg-white dark:text-ink-900 text-white border-ink-900 dark:border-white shadow-soft':'bg-stone-50 dark:bg-zinc-800 hover:bg-white dark:hover:bg-zinc-700 border-stone-200 dark:border-zinc-700 text-stone-900 dark:text-zinc-100']">
+            <div class="text-sm font-bold">Business</div><div class="text-xs opacity-70">Безлимит · 50км · 168ч</div><div class="text-xs font-bold mt-1">$19.99 / мес</div>
+          </button>
+        </div>
+        <InputError :message="form.errors.plan" class="mt-2"/>
+      </div>
 
       <div v-if="mustVerifyEmail && user.email_verified_at === null" class="text-sm bg-amber-50 border border-amber-200 rounded-xl p-3">
         Почта не подтверждена. <Link :href="route('verification.send')" method="post" as="button" class="underline font-medium">Отправить письмо</Link>

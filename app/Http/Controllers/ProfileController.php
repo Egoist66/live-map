@@ -16,12 +16,26 @@ class ProfileController extends Controller
     /**
      * Display the user's profile form.
      */
-    public function edit(Request $request): Response
+    public function edit(Request $request, ?string $identifier = null): Response|RedirectResponse
     {
+        $auth = $request->user();
+        if ($identifier === null) {
+            $id = $auth->isAdmin() ? 'admin' : (string) $auth->id;
+            return redirect()->route('profile.edit', ['identifier' => $id]);
+        }
+        if ($identifier === 'admin') {
+            abort_unless($auth->isAdmin(), 403, 'Только админ');
+            $profileUser = $auth;
+        } elseif (is_numeric($identifier)) {
+            $profileUser = \App\Models\User::findOrFail((int) $identifier);
+            if ($profileUser->id !== $auth->id && !$auth->isAdmin()) abort(403, 'Чужой профиль');
+        } else {
+            abort(404);
+        }
         return Inertia::render('Profile/Edit', [
-            'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
+            'mustVerifyEmail' => $auth instanceof MustVerifyEmail,
             'status' => session('status'),
-            'user' => $request->user(),
+            'user' => $profileUser,
         ]);
     }
 
@@ -38,7 +52,8 @@ class ProfileController extends Controller
 
         $request->user()->save();
 
-        return Redirect::route('profile.edit');
+        $id = $request->user()->isAdmin() ? 'admin' : (string) $request->user()->id;
+        return Redirect::route('profile.edit', ['identifier' => $id]);
     }
 
     /**

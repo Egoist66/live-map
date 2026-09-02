@@ -17,20 +17,35 @@ class ReactionController extends Controller
             'type' => 'required|in:like,fire,laugh,sad,angry,useful',
         ]);
         $model = $data['reactable_type'] === 'pin' ? Pin::findOrFail($data['reactable_id']) : PinComment::findOrFail($data['reactable_id']);
-        $existing = Reaction::where('user_id', $request->user()->id)->where('reactable_type', $data['reactable_type'])->where('reactable_id', $data['reactable_id'])->where('type', $data['type'])->first();
-        if ($existing) {
-            $existing->delete();
-            if ($data['reactable_type'] === 'pin') $model->decrement('reactions_count');
-            return response()->json(['reacted' => false]);
+        $existingAny = Reaction::where('user_id', $request->user()->id)->where('reactable_type', $data['reactable_type'])->where('reactable_id', $data['reactable_id'])->first();
+        if ($existingAny) {
+            if ($existingAny->type === $data['type']) {
+                $existingAny->delete();
+                if ($data['reactable_type'] === 'pin') {
+                    $model->decrement('reactions_count');
+                    if ($data['type'] === 'like') $model->decrement('likes_count');
+                    $model->refresh();
+                }
+                return response()->json(['reacted' => false, 'type' => null, 'reactions_count' => $model->reactions_count ?? 0, 'likes_count' => $model->likes_count ?? 0]);
+            }
+            $prev = $existingAny->type;
+            $existingAny->update(['type' => $data['type']]);
+            if ($data['reactable_type'] === 'pin') {
+                if ($prev === 'like' && $data['type'] !== 'like') $model->decrement('likes_count');
+                if ($prev !== 'like' && $data['type'] === 'like') $model->increment('likes_count');
+                $model->refresh();
+            }
+            return response()->json(['reacted' => true, 'type' => $data['type'], 'switched' => true, 'reactions_count' => $model->reactions_count ?? 0, 'likes_count' => $model->likes_count ?? 0]);
         }
         Reaction::create(['user_id' => $request->user()->id, 'reactable_type' => $data['reactable_type'], 'reactable_id' => $data['reactable_id'], 'type' => $data['type']]);
         if ($data['reactable_type'] === 'pin') {
             $model->increment('reactions_count');
-            $model->increment('likes_count');
+            if ($data['type'] === 'like') $model->increment('likes_count');
+            $model->refresh();
             if ($model->reactions_count % 5 === 0 && $model->expires_at->diffInHours(now()) < 23) {
                 $model->update(['expires_at' => $model->expires_at->addHour()]);
             }
         }
-        return response()->json(['reacted' => true]);
+        return response()->json(['reacted' => true, 'type' => $data['type'], 'reactions_count' => $model->reactions_count ?? 0, 'likes_count' => $model->likes_count ?? 0]);
     }
 }

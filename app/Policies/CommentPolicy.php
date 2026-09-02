@@ -11,4 +11,8 @@ class CommentPolicy
     {
         return $user->isAdmin() || $user->id === $comment->user_id;
     }
+    public function update(User $user, PinComment $comment): bool
+    {
+        return $user->isAdmin() || $user->id === $comment->user_id;
+    }
 }

@@ -33,7 +33,7 @@ const submit = () => {
 
 <template>
     <GuestLayout>
-        <Head title="Новый пароль — Live Map" />
+        <Head title="Новый пароль" />
 
         <form @submit.prevent="submit">
             <div>

@@ -5,28 +5,47 @@ import UpdatePasswordForm from './Partials/UpdatePasswordForm.vue'
 import UpdateProfileInformationForm from './Partials/UpdateProfileInformationForm.vue'
 import { Head, usePage } from '@inertiajs/vue3'
 import { Link } from '@inertiajs/vue3'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
+import axios from 'axios'
 import { useTheme } from '@/composables/useTheme'
 import AvatarPreview from '@/Components/AvatarPreview.vue'
 
-defineProps<{ mustVerifyEmail: boolean; status: string; user: any }>()
+const props = defineProps<{ mustVerifyEmail: boolean; status: string; user: any }>()
 const page = usePage()
-const u = computed(() => (page.props.auth as any).user)
+const u = computed(() => props.user || (page.props.auth as any).user)
 const { theme, setTheme } = useTheme()
-const active = ref<'profile'|'privacy'|'appearance'|'security'>('profile')
+const active = ref<'profile'|'privacy'|'appearance'|'security'|'pins'|'support'>('profile')
 
 const tabs = [
   { id:'profile', label:'Профиль', icon:'◉', desc:'Фото, имя, дом' },
+  { id:'pins', label:'Мои пины', icon:'📍', desc:'Созданные, удалить' },
   { id:'privacy', label:'Приватность', icon:'🔒', desc:'Анонимность, зона' },
   { id:'appearance', label:'Внешний вид', icon:'◐', desc:'Тема, карта' },
   { id:'security', label:'Безопасность', icon:'🛡', desc:'Пароль, удаление' },
+  { id:'support', label:'Поддержка', icon:'💬', desc:'Письмо, донат' },
 ] as const
+const myPins = ref<any[]>([])
+const loadingPins = ref(false)
+async function loadMyPins(){ loadingPins.value=true; try{ const {data}=await axios.get('/api/pins/mine'); myPins.value=Array.isArray(data)?data:[] }catch{} finally{loadingPins.value=false} }
+async function deleteMyPin(id:number){ if(!confirm('Удалить пин?')) return; try{ await axios.delete(`/api/pins/${id}`); myPins.value=myPins.value.filter(p=>p.id!==id)}catch(e:any){ alert(e?.response?.data?.message||'Ошибка') } }
+watch(active, v=>{ if(v==='pins') loadMyPins(); if(v==='support') loadRate() })
 const showAvatar = ref(false)
+const supportSubject = ref('')
+const supportBody = ref('')
+const supportBodyRef = ref<HTMLTextAreaElement|null>(null)
+const donateSel = ref(5)
+const usdRate = ref<number|null>(null)
+const rateLoading = ref(false)
+async function loadRate(){ if(usdRate.value) return; rateLoading.value=true; try{ const r=await fetch('https://api.nbrb.by/exrates/rates/431?parammode=2'); const d:any=await r.json(); usdRate.value = d.Cur_OfficialRate / d.Cur_Scale } catch{ try{ const r2=await fetch('https://api.exchangerate-api.com/v4/latest/USD'); const d2:any=await r2.json(); usdRate.value = d2.rates?.BYN || null } catch{} } finally{ rateLoading.value=false } }
+function fmtByn(usd:number){ if(!usdRate.value) return '—'; return (usd*usdRate.value).toFixed(2)+' BYN' }
+function wrapSelection(before:string, after:string){ const el=supportBodyRef.value; if(!el) return; const s=el.selectionStart||0, e=el.selectionEnd||0; const v=supportBody.value; supportBody.value = v.slice(0,s)+before+v.slice(s,e)+after+v.slice(e); setTimeout(()=>{ el.focus(); el.setSelectionRange(s+before.length, e+before.length) },0) }
+function mailToSupport(){ const subj=encodeURIComponent(supportSubject.value||'Обращение в поддержку Live Map'); const body=encodeURIComponent(supportBody.value+(supportBody.value?'\n\n---\n':''+`Пользователь: ${u.value.name} <${u.value.email}>`)); window.location.href=`mailto:razormad666@gmail.com?subject=${subj}&body=${body}` }
+function mailToDonate(usd:number){ const byn = usdRate.value? (usd*usdRate.value).toFixed(2)+' BYN' : `${usd}$`; const subj=encodeURIComponent(`Донат Live Map — $${usd} (~${byn})`); const body=encodeURIComponent(`Привет! Хочу задонатить $${usd} (~${byn}) разработчику Live Map.\n\nПользователь: ${u.value.name} <${u.value.email}>\nТариф: ${u.value.plan||'free'}\n\nСообщение:\n`); window.location.href=`mailto:razormad666@gmail.com?subject=${subj}&body=${body}` }
 const avatarSrc = computed(() => u.value.avatar_path ? `/storage/${u.value.avatar_path}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(u.value.name)}&background=0F172A&color=fff&bold=true`)
 </script>
 
 <template>
-  <Head title="Настройки — Live Map" />
+  <Head title="Настройки" />
   <AuthenticatedLayout>
     <div class="bg-surface dark:bg-[#090E1A] min-h-[calc(100vh-64px)]">
       <div class="max-w-[1280px] mx-auto px-4 sm:px-6 py-6">
@@ -47,12 +66,13 @@ const avatarSrc = computed(() => u.value.avatar_path ? `/storage/${u.value.avata
 
         <div class="mt-6 grid lg:grid-cols-[280px_1fr] gap-6 items-start">
           <div class="lg:sticky lg:top-[80px] bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-[20px] p-2 shadow-soft">
-            <div class="px-2 py-2 text-[11px] font-bold tracking-widest text-stone-400 uppercase">Настройки</div>
-            <nav class="space-y-1">
-              <button v-for="t in tabs" :key="t.id" @click="active=t.id" :class="['w-full text-left flex items-center gap-3 px-3 py-3 rounded-xl transition', active===t.id ? 'bg-ink-900 dark:bg-white text-white dark:text-ink-900 shadow-soft' : 'hover:bg-stone-50 dark:hover:bg-zinc-800 text-stone-700 dark:text-zinc-300']">
-                <span class="w-9 h-9 rounded-xl grid place-items-center text-sm" :class="active===t.id ? 'bg-white/15 dark:bg-ink-900/10' : 'bg-stone-100 dark:bg-zinc-800'">{{ t.icon }}</span>
-                <div class="min-w-0"><div class="text-sm font-semibold leading-none">{{ t.label }}</div><div class="text-xs opacity-60 leading-none mt-1">{{ t.desc }}</div></div>
-                <span v-if="active===t.id" class="ml-auto text-xs">→</span>
+            <div class="hidden lg:block px-2 py-2 text-[11px] font-bold tracking-widest text-stone-400 uppercase">Настройки</div>
+            <nav class="flex lg:block gap-1.5 lg:space-y-1 overflow-x-auto scrollbar-none pb-1 lg:pb-0 -mx-1 px-1 lg:mx-0 lg:px-0 snap-x">
+              <button v-for="t in tabs" :key="t.id" @click="active=t.id" :class="['shrink-0 lg:w-full text-left flex items-center gap-3 px-3 py-2.5 lg:py-3 rounded-xl transition snap-start', active===t.id ? 'bg-ink-900 dark:bg-white text-white dark:text-ink-900 shadow-soft' : 'hover:bg-stone-50 dark:hover:bg-zinc-800 text-stone-700 dark:text-zinc-300 bg-stone-50 lg:bg-transparent dark:bg-zinc-800/50 lg:dark:bg-transparent border lg:border-0 border-stone-200 dark:border-zinc-700']">
+                <span class="w-8 h-8 lg:w-9 lg:h-9 rounded-xl grid place-items-center text-sm shrink-0" :class="active===t.id ? 'bg-white/15 dark:bg-ink-900/10' : 'bg-white lg:bg-stone-100 dark:bg-zinc-700'">{{ t.icon }}</span>
+                <div class="min-w-0 hidden sm:block lg:block"><div class="text-sm font-semibold leading-none whitespace-nowrap">{{ t.label }}</div><div class="text-xs opacity-60 leading-none mt-1 hidden lg:block">{{ t.desc }}</div></div>
+                <span class="text-xs font-semibold sm:hidden lg:hidden">{{ t.label }}</span>
+                <span v-if="active===t.id" class="ml-auto text-xs hidden lg:inline">→</span>
               </button>
             </nav>
             <div class="mt-4 mx-2 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border border-amber-200 dark:border-amber-900 rounded-xl p-3">
@@ -110,13 +130,52 @@ const avatarSrc = computed(() => u.value.avatar_path ? `/storage/${u.value.avata
                       <span class="text-xs font-semibold">Система</span>
                     </button>
                   </div>
-                  <div class="text-[11px] text-stone-400 mt-2">Система = следует настройкам OS (prefers-color-scheme)</div>
+                  <div class="text-[11px] text-stone-400 mt-2">Система = следует настройкам OS</div>
                 </div>
 
-                <div class="bg-stone-50 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl p-4">
-                  <div class="text-sm font-semibold">Карта в тёмной теме</div>
-                  <p class="text-xs text-stone-500 dark:text-zinc-400 mt-1">При тёмной теме карта переключается на <b>dark-matter</b>, при светлой — OSM/positron. Переключение мгновенное.</p>
+              
+              </div>
+            </div>
+
+            <div v-show="active==='pins'" class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-[20px] p-6 shadow-soft">
+              <h3 class="font-black tracking-tight text-lg">Мои пины</h3>
+              <p class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Правый клик по пину на карте тоже удаляет. Здесь — полный список.</p>
+              <div v-if="loadingPins" class="mt-5 flex items-center gap-2 text-sm text-stone-500"><span class="w-4 h-4 border-2 border-stone-200 border-t-ink-900 rounded-full animate-spin"></span> Загружаем…</div>
+              <div v-else-if="myPins.length" class="mt-5 grid sm:grid-cols-2 gap-3">
+                <div v-for="p in myPins" :key="p.id" class="border border-stone-200 rounded-2xl p-4 hover:bg-stone-50 transition relative">
+                  <button @click="deleteMyPin(p.id)" class="absolute top-3 right-3 w-7 h-7 rounded-full bg-white border border-stone-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200 grid place-items-center text-xs" title="Удалить">✕</button>
+                  <div class="text-sm font-bold pr-8 truncate">{{ p.title }}</div>
+                  <div class="text-xs text-stone-500 mt-1 line-clamp-2">{{ p.body }}</div>
+                  <div class="flex items-center gap-1.5 mt-3 text-[11px]"><span class="bg-ink-900 text-white rounded-full px-2 py-0.5">{{ p.category }}</span><span class="bg-stone-100 rounded-full px-2 py-0.5">{{ new Date(p.expires_at).toLocaleDateString() }} {{ new Date(p.expires_at).toLocaleTimeString().slice(0,5) }}</span></div>
                 </div>
+              </div>
+              <div v-else class="mt-6 text-center py-8 border border-dashed border-stone-200 rounded-2xl"><div class="w-10 h-10 rounded-xl bg-stone-100 border mx-auto grid place-items-center">📍</div><div class="text-sm font-medium mt-2">Пока нет пинов</div><div class="text-xs text-stone-400">Создай первый на карте</div><Link href="/map" class="mt-3 inline-flex bg-ink-900 text-white px-5 py-2 rounded-full text-sm font-semibold">На карту →</Link></div>
+            </div>
+
+            <div v-show="active==='support'" class="space-y-4">
+              <div class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-[20px] p-6 shadow-soft">
+                <h3 class="font-black tracking-tight text-lg">Обратиться в поддержку</h3>
+                <p class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Опиши проблему — ответим в течение часа.</p>
+                <div class="mt-5 max-w-xl space-y-3">
+                  <div><label class="text-sm font-medium">Тема</label><input v-model="supportSubject" placeholder="Напр. Не грузится карта в Минске" class="mt-1 w-full border rounded-xl px-3 py-2.5 text-sm dark:bg-zinc-900 dark:border-zinc-700"/></div>
+                  <div>
+                    <label class="text-sm font-medium">Сообщение</label>
+                    <textarea ref="supportBodyRef" v-model="supportBody" rows="6" placeholder="Опиши проблему подробно..." class="mt-1 w-full border rounded-xl px-3 py-2.5 text-sm dark:bg-zinc-900 dark:border-zinc-700 resize-y"></textarea>
+                  </div>
+                  <button @click="mailToSupport" class="w-full bg-ink-900 dark:bg-white dark:text-ink-900 text-white rounded-full py-3 font-semibold hover:bg-ink-800 dark:hover:bg-zinc-100">✉️ Отправить обращение</button>
+                </div>
+              </div>
+              <div class="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border border-amber-200 dark:border-amber-900 rounded-[20px] p-6">
+                <h3 class="font-black tracking-tight">Задонатить разработчику ❤️</h3>
+                <p class="text-sm text-stone-600 dark:text-zinc-400 mt-1">Поддержи Live Map — выбери сумму в долларах, покажем по курсу НБРБ (BYN).</p>
+                <div class="mt-4 flex items-center gap-2 text-xs"><span class="bg-white dark:bg-zinc-900 border dark:border-zinc-700 rounded-full px-3 py-1.5">Курс: <b v-if="usdRate">{{ usdRate.toFixed(4) }} BYN / $</b><span v-else-if="rateLoading" class="inline-flex items-center gap-1"><span class="w-3 h-3 border-2 border-stone-200 border-t-ink-900 rounded-full animate-spin"></span> загрузка…</span><span v-else>—</span></span><button @click="loadRate" class="text-xs underline">обновить</button></div>
+                <div class="mt-4 grid grid-cols-3 gap-2">
+                  <button v-for="usd in [2,5,10]" :key="usd" @click="donateSel=usd" :class="['rounded-2xl border p-4 text-center transition', donateSel===usd?'bg-ink-900 dark:bg-white text-white dark:text-ink-900 border-ink-900 dark:border-white shadow-lg':'bg-white dark:bg-zinc-900 border-stone-200 dark:border-zinc-700 hover:bg-stone-50']">
+                    <div class="text-lg font-black">${{ usd }}</div><div class="text-xs opacity-70">{{ fmtByn(usd) }}</div>
+                  </button>
+                </div>
+                <button @click="mailToDonate(donateSel)" class="mt-4 w-full bg-gradient-to-br from-amber-400 to-orange-500 hover:from-amber-300 hover:to-orange-400 text-stone-900 rounded-full py-3.5 font-black shadow-[0_4px_14px_rgba(245,158,11,0.35)] hover:shadow-[0_6px_20px_rgba(245,158,11,0.45)] transition">💛 Задонатить ${{ donateSel }} → {{ fmtByn(donateSel) }}</button>
+                <p class="text-[11px] text-stone-500 dark:text-zinc-400 mt-2 text-center">Откроется почтовый клиент с письмом — укажи удобный способ перевода, банк пересчитает по курсу</p>
               </div>
             </div>
 

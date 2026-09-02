@@ -24,6 +24,7 @@ class ProfileUpdateRequest extends FormRequest
             'home_radius_km' => ['nullable','integer','min:1','max:20'],
             'is_anonymous_default' => ['nullable','boolean'],
             'avatar_path' => ['nullable','string','max:255'],
+            'plan' => ['nullable','in:free,pro,business'],
         ];
     }
 }

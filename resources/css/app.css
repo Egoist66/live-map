@@ -100,6 +100,12 @@ html.dark input::placeholder, html.dark textarea::placeholder { color: #71717a; 
 html.dark h1, html.dark h2, html.dark h3, html.dark h4 { color: #fafafa; }
 html.dark label { color: #e4e4e7; }
 
+@media (max-width: 640px) {
+  input.input-premium, textarea.input-premium, input[type="text"], input[type="email"], input[type="password"], textarea, select {
+    font-size: 16px !important;
+  }
+}
+
 .card-hover {
   @apply transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-float hover:border-stone-300 dark:hover:border-zinc-700;
 }

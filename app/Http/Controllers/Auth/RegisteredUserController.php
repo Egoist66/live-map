@@ -35,12 +35,19 @@ class RegisteredUserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'home_lat' => 'nullable|numeric|between:-90,90',
+            'home_lng' => 'nullable|numeric|between:-180,180',
+            'home_radius_km' => 'nullable|integer|min:1|max:20',
+            'home_address' => 'nullable|string|max:255',
         ]);
 
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'home_lat' => $request->home_lat,
+            'home_lng' => $request->home_lng,
+            'home_radius_km' => $request->home_radius_km ?? 2,
         ]);
 
         event(new Registered($user));

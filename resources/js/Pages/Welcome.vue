@@ -4,7 +4,7 @@ defineProps<{ canLogin: boolean; canRegister: boolean }>()
 </script>
 
 <template>
-  <Head title="Live Map — твое окно во двор" />
+  <Head title="Твое окно во двор" />
   <div class="min-h-screen bg-surface dark:bg-[#0B0F1A] text-ink-900 dark:text-zinc-100 antialiased selection:bg-ink-900 dark:selection:bg-brand-500 selection:text-white">
     <header class="sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/70 backdrop-blur border-b border-stone-200/60 dark:border-zinc-800">
       <div class="max-w-[1280px] mx-auto px-6 h-[64px] flex items-center justify-between">
@@ -14,6 +14,7 @@ defineProps<{ canLogin: boolean; canRegister: boolean }>()
           <span class="hidden sm:inline ml-2 text-xs font-medium tracking-wide text-stone-500 dark:text-zinc-500 border-l border-stone-200 dark:border-zinc-700 pl-3">ТВОЕ ОКНО ВО ДВОР</span>
         </Link>
         <nav class="flex items-center gap-2">
+          <Link href="/faq" class="hidden sm:inline-flex text-[13px] font-medium text-stone-600 dark:text-zinc-400 hover:text-ink-900 dark:hover:text-white px-3 py-2 rounded-full hover:bg-white dark:hover:bg-zinc-800 transition">FAQ</Link>
           <Link href="/map" class="hidden sm:inline-flex text-[13px] font-medium text-stone-600 dark:text-zinc-400 hover:text-ink-900 dark:hover:text-white px-3 py-2 rounded-full hover:bg-white dark:hover:bg-zinc-800 transition">Карта</Link>
           <template v-if="$page.props.auth.user">
             <Link :href="route('dashboard')" class="inline-flex items-center gap-2 bg-ink-900 dark:bg-white dark:text-ink-900 text-white px-6 py-2.5 rounded-full text-sm font-semibold hover:bg-ink-800 dark:hover:bg-zinc-100 shadow-soft transition">Кабинет</Link>
@@ -129,7 +130,7 @@ defineProps<{ canLogin: boolean; canRegister: boolean }>()
         <div><div class="text-[20px] font-black tracking-tight">Готов почувствовать пульс района?</div><div class="text-sm text-stone-600 dark:text-zinc-400 mt-1">Создай первый пин за 2 минуты. Живут 2 часа — не пропусти.</div></div>
         <Link href="/map" class="bg-ink-900 dark:bg-white dark:text-ink-900 text-white px-8 py-3.5 rounded-full font-semibold whitespace-nowrap hover:bg-ink-800 dark:hover:bg-zinc-100 shadow-soft transition">Открыть карту — бесплатно</Link>
       </div>
-      <div class="text-center text-xs text-stone-400 mt-6 tracking-wide">© Live Map · Пилотный район · PWA скоро · API для города</div>
+      <div class="text-center text-xs text-stone-400 mt-6 tracking-wide">© Live Map · <Link href="/faq" class="underline hover:text-ink-900 dark:hover:text-white">FAQ</Link> · Пилотный район · PWA скоро · API для города</div>
     </section>
   </div>
 </template>

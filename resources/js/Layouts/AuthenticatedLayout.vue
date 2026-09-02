@@ -26,6 +26,7 @@ const avatarSrc = computed(() => {
             <div class="hidden lg:flex items-center gap-1 bg-stone-100/80 dark:bg-zinc-800 p-1 rounded-full border border-stone-200/60 dark:border-zinc-700">
               <NavLink :href="route('dashboard')" :active="route().current('dashboard')" class="!border-0 !pt-0 !px-4 !py-1.5 !rounded-full text-[13px] font-semibold" :class="route().current('dashboard') ? '!bg-white dark:!bg-zinc-700 !shadow-soft !text-ink-900 dark:!text-white border border-stone-200' : '!text-stone-500 dark:!text-zinc-400 hover:!text-ink-900'">Кабинет</NavLink>
               <NavLink :href="route('map')" :active="route().current('map')" class="!border-0 !pt-0 !px-4 !py-1.5 !rounded-full text-[13px] font-semibold" :class="route().current('map') ? '!bg-white dark:!bg-zinc-700 !shadow-soft !text-ink-900 dark:!text-white border border-stone-200' : '!text-stone-500 dark:!text-zinc-400 hover:!text-ink-900'">Карта</NavLink>
+              <NavLink :href="route('faq')" :active="route().current('faq')" class="!border-0 !pt-0 !px-4 !py-1.5 !rounded-full text-[13px] font-semibold" :class="route().current('faq') ? '!bg-white dark:!bg-zinc-700 !shadow-soft !text-ink-900 dark:!text-white border border-stone-200' : '!text-stone-500 dark:!text-zinc-400 hover:!text-ink-900'">FAQ</NavLink>
             </div>
           </div>
 
@@ -70,6 +71,7 @@ const avatarSrc = computed(() => {
         <div class="px-4 py-3 space-y-1">
           <ResponsiveNavLink :href="route('dashboard')" :active="route().current('dashboard')">Кабинет</ResponsiveNavLink>
           <ResponsiveNavLink :href="route('map')" :active="route().current('map')">Карта</ResponsiveNavLink>
+          <ResponsiveNavLink :href="route('faq')" :active="route().current('faq')">FAQ</ResponsiveNavLink>
           <Link href="/map" class="mt-2 flex bg-ink-900 dark:bg-white dark:text-ink-900 text-white rounded-full px-4 py-2.5 text-sm font-semibold justify-center">+ Создать пин</Link>
         </div>
         <div class="border-t border-stone-200 dark:border-zinc-800 px-4 py-4">

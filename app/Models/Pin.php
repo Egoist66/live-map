@@ -81,6 +81,7 @@ class Pin extends Model
             'reactions_count' => $this->reactions_count,
             'comments_count' => $this->comments_count,
             'is_anonymous' => (bool) $this->is_anonymous,
+            'is_owner' => $isOwner,
             'user' => $this->is_anonymous && !$isOwner ? null : $this->user?->only(['id', 'name', 'avatar_path', 'level']),
             'created_at' => $this->created_at,
         ];

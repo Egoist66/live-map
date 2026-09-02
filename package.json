@@ -4,7 +4,9 @@
     "type": "module",
     "scripts": {
         "build": "vue-tsc && vite build",
-        "dev": "vite"
+        "build:ssr": "vue-tsc && vite build && vite build --ssr",
+        "dev": "vite",
+        "dev:ssr": "concurrently \"php artisan serve\" \"php artisan inertia:start-ssr\" \"vite\""
     },
     "devDependencies": {
         "@inertiajs/vue3": "^2.0.0",
