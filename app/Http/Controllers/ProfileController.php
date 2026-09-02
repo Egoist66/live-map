@@ -22,6 +22,8 @@ class ProfileController extends Controller
         $friendship = null;
         $isFriend = false;
         $isPending = false;
+        $isBlocked = false;
+        $isBlockedBy = false;
         if ($auth && !$isOwn) {
             $friendship = \App\Models\Friendship::where(function($q) use ($auth,$user){
                 $q->where('requester_id',$auth->id)->where('addressee_id',$user->id)
@@ -29,6 +31,8 @@ class ProfileController extends Controller
             })->first();
             $isFriend = $friendship?->status==='accepted';
             $isPending = $friendship?->status==='pending';
+            $isBlocked = \App\Models\UserBlock::where('blocker_id',$auth->id)->where('blocked_id',$user->id)->exists();
+            $isBlockedBy = \App\Models\UserBlock::where('blocker_id',$user->id)->where('blocked_id',$auth->id)->exists();
         }
         return Inertia::render('Profile/Show', [
             'profileUser' => $user->only(['id','name','avatar_path','level','reputation_score','created_at','home_lat','home_lng','home_radius_km']),
@@ -36,6 +40,8 @@ class ProfileController extends Controller
             'friendship' => $friendship,
             'isFriend' => $isFriend,
             'isPending' => $isPending,
+            'isBlocked' => $isBlocked,
+            'isBlockedBy' => $isBlockedBy,
             'canMessage' => $canMessage,
             'canMessageReason' => $reason,
         ]);

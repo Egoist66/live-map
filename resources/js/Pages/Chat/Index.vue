@@ -11,6 +11,7 @@ const {
   chat, friendsApi, blocksApi, emoji,
   input, inputRef, editInputRef, tab, showChatMenu, sheet, showPrivacy, privacy, creatingChat, confirm, confirmVisible, isOwnMessage, bindSheet,
   handleSend, formatTime, onPickEmoji, onPickEmojiForEdit, handleStartEdit, startChatWith, savePrivacy, doConfirm, closeSheet, backToList, init,
+  askBlock, askDeleteChat, askRemoveFriend, askUnblock,
 } = useChatPage(props.conversationId)
 
 const { conversations, activeConv, messages, loading, sending, refreshing, typingUsers, searchQuery, searchResults, searching, selectedId, unreadTotal, editingId, editingBody, refresh, openConversation, saveEdit, cancelEdit, notifyTyping, stopTyping } = chat
@@ -55,8 +56,17 @@ onMounted(init)
               <img :src="u.avatar_path?`/storage/${u.avatar_path}`:`https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=0F172A&color=fff`" class="w-9 h-9 lg:w-8 lg:h-8 rounded-full object-cover shrink-0" />
               <div class="min-w-0"><div class="text-sm font-medium dark:text-white truncate hover:underline">{{ u.name }}</div><div class="text-xs truncate" :class="u.can_message?'text-emerald-600':'text-red-500'">{{ u.can_message?'можно написать':'не принимает' }}</div></div>
             </Link>
-            <div class="flex gap-1.5 shrink-0 ml-2">
-              <button @click="startChatWith(u)" :disabled="u.can_message===false || creatingChat" class="text-xs px-4 lg:px-3 py-2 lg:py-1 rounded-full bg-stone-900 dark:bg-white dark:text-zinc-900 text-white font-semibold disabled:opacity-40">{{ creatingChat?'...' : 'Написать' }}</button>
+            <div class="flex gap-1 shrink-0 ml-2 items-center">
+              <button @click="startChatWith(u)" :disabled="u.can_message===false || creatingChat" class="text-xs px-3 py-1.5 rounded-full bg-stone-900 dark:bg-white dark:text-zinc-900 text-white font-semibold disabled:opacity-40 flex items-center gap-1">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                {{ creatingChat?'...' : 'Написать' }}
+              </button>
+              <button @click.stop="friendsApi.add(u.id)" title="В друзья" class="w-7 h-7 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-violet-50 text-stone-500 hover:text-violet-600 transition">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+              </button>
+              <button @click.stop="askBlock(u.id, u.name)" title="Заблокировать" class="w-7 h-7 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-red-50 text-stone-500 hover:text-red-600 transition">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M4.93 4.93l14.14 14.14"/></svg>
+              </button>
             </div>
           </div>
         </div>
@@ -69,7 +79,7 @@ onMounted(init)
             <div class="text-sm font-semibold dark:text-white">Нет чатов</div>
             <div class="text-xs text-stone-500 mt-1">Найдите человека через поиск выше</div>
           </div>
-          <div v-for="c in conversations" :key="c.id" class="w-full flex items-center gap-0 hover:bg-stone-50 dark:hover:bg-zinc-800 text-left select-none active:bg-stone-100 dark:active:bg-zinc-800" v-bind="bindSheet({type:'chat', data:c})">
+          <div v-for="c in conversations" :key="c.id" class="group w-full flex items-center gap-0 hover:bg-stone-50 dark:hover:bg-zinc-800 text-left select-none active:bg-stone-100 dark:active:bg-zinc-800" v-bind="bindSheet({type:'chat', data:c})">
             <button @click="openConversation(c.id)" :class="selectedId===c.id?'lg:bg-violet-50 dark:lg:bg-zinc-800':''" class="flex-1 flex items-center gap-3 p-3.5 lg:p-3 text-left min-w-0">
               <img :src="c.other?.avatar_path?`/storage/${c.other.avatar_path}`:`https://ui-avatars.com/api/?name=${encodeURIComponent(c.other?.name||'?')}&background=0F172A&color=fff`" class="w-11 h-11 lg:w-10 lg:h-10 rounded-full object-cover shrink-0" />
               <div class="flex-1 min-w-0">
@@ -78,18 +88,35 @@ onMounted(init)
               </div>
               <span v-if="c.unread_count" class="bg-violet-600 text-white text-xs font-bold min-w-[22px] h-[22px] grid place-items-center px-1.5 rounded-full shrink-0">{{ c.unread_count>99?'99+':c.unread_count }}</span>
             </button>
+            <div class="flex items-center gap-1 pr-2 shrink-0">
+              <button @click.stop="askDeleteChat(c.id)" title="Удалить чат" class="w-7 h-7 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-red-50 dark:hover:bg-red-950/30 text-stone-500 hover:text-red-600 transition">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              </button>
+              <button v-if="c.other?.id" @click.stop="askBlock(c.other.id, c.other.name)" title="Заблокировать" class="w-7 h-7 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-red-50 dark:hover:bg-red-950/30 text-stone-500 hover:text-red-600 transition">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M4.93 4.93l14.14 14.14"/></svg>
+              </button>
+            </div>
           </div>
         </div>
 
         <div v-if="tab==='friends'" class="divide-y dark:divide-zinc-800">
           <div v-if="!friends.length" class="p-10 text-center text-sm text-stone-500">Нет друзей</div>
-          <div v-for="f in friends" :key="f.id" class="flex items-center justify-between p-3.5 lg:p-3 select-none active:bg-stone-50" v-bind="bindSheet({type:'friend', data:f})">
+          <div v-for="f in friends" :key="f.id" class="flex items-center justify-between p-3.5 lg:p-3 select-none active:bg-stone-50 group" v-bind="bindSheet({type:'friend', data:f})">
             <Link :href="`/users/${f.other.id}`" class="flex items-center gap-3 hover:opacity-80 min-w-0">
               <img :src="f.other.avatar_path?`/storage/${f.other.avatar_path}`:`https://ui-avatars.com/api/?name=${encodeURIComponent(f.other.name)}&background=0F172A&color=fff`" class="w-10 h-10 lg:w-9 lg:h-9 rounded-full shrink-0" />
               <span class="text-[15px] lg:text-sm font-medium dark:text-white truncate hover:underline">{{ f.other.name }}</span>
             </Link>
-            <div class="flex gap-1.5 shrink-0">
-              <button @click="startChatWith(f.other)" class="text-xs px-4 py-2 rounded-full bg-stone-900 dark:bg-white dark:text-zinc-900 text-white font-semibold border">Чат</button>
+            <div class="flex gap-1 shrink-0 items-center">
+              <button @click="startChatWith(f.other)" class="text-xs px-3 py-1.5 rounded-full bg-stone-900 dark:bg-white dark:text-zinc-900 text-white font-semibold flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                Чат
+              </button>
+              <button @click.stop="askRemoveFriend(f)" title="Удалить из друзей" class="w-7 h-7 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-red-50 text-stone-500 hover:text-red-600 transition">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM6 14a6 6 0 00-6 6h12a6 6 0 00-6-6z"/><path stroke-linecap="round" d="M16 11h5M21 11h-5"/></svg>
+              </button>
+              <button @click.stop="askBlock(f.other.id, f.other.name)" title="Заблокировать" class="w-7 h-7 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-red-50 text-stone-500 hover:text-red-600 transition">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M4.93 4.93l14.14 14.14"/></svg>
+              </button>
             </div>
           </div>
         </div>
@@ -161,10 +188,23 @@ onMounted(init)
             <button @click="refresh" :disabled="refreshing" title="Обновить" class="w-9 h-9 lg:w-8 lg:h-8 grid place-items-center rounded-full hover:bg-stone-100 dark:hover:bg-zinc-800 active:scale-95 disabled:opacity-50">
               <svg :class="['w-5 h-5 lg:w-4 lg:h-4', refreshing ? 'animate-spin' : '']" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
             </button>
+            <button @click="askDeleteChat()" title="Удалить чат" class="hidden lg:grid w-8 h-8 place-items-center rounded-full hover:bg-red-50 dark:hover:bg-red-950/30 text-stone-400 hover:text-red-600 transition">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+            <button v-if="activeConv?.other" @click="askBlock(activeConv.other.id, activeConv.other.name)" title="Заблокировать" class="hidden lg:grid w-8 h-8 place-items-center rounded-full hover:bg-red-50 dark:hover:bg-red-950/30 text-stone-400 hover:text-red-600 transition">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M4.93 4.93l14.14 14.14"/></svg>
+            </button>
             <div class="relative">
               <button @click="showChatMenu=!showChatMenu" class="w-9 h-9 lg:w-8 lg:h-8 grid place-items-center rounded-full hover:bg-stone-100 dark:hover:bg-zinc-800 active:scale-95 text-lg leading-none">⋯</button>
-              <div v-if="showChatMenu" class="absolute right-0 top-10 w-48 bg-white dark:bg-zinc-800 border dark:border-zinc-700 rounded-2xl shadow-xl py-1.5 z-20">
-                <button @click="showChatMenu=false; confirm = { type:'deleteChat', payload:selectedId, title:'Удалить чат?', msg:'Чат будет удален.', icon:'🗑️', confirmLabel:'Удалить', severity:'danger' }" class="w-full text-left px-4 py-3 lg:py-2.5 text-sm hover:bg-red-50 dark:hover:bg-red-950/30 text-red-600 flex items-center gap-2">🗑 Удалить чат</button>
+              <div v-if="showChatMenu" class="absolute right-0 top-10 w-52 bg-white dark:bg-zinc-800 border dark:border-zinc-700 rounded-2xl shadow-xl py-1.5 z-20">
+                <button @click="showChatMenu=false; askDeleteChat()" class="w-full text-left px-4 py-3 lg:py-2.5 text-sm hover:bg-red-50 dark:hover:bg-red-950/30 text-red-600 flex items-center gap-2">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                  Удалить чат
+                </button>
+                <button v-if="activeConv?.other" @click="showChatMenu=false; askBlock(activeConv.other.id, activeConv.other.name)" class="w-full text-left px-4 py-3 lg:py-2.5 text-sm hover:bg-red-50 dark:hover:bg-red-950/30 text-red-600 flex items-center gap-2">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M4.93 4.93l14.14 14.14"/></svg>
+                  Заблокировать
+                </button>
               </div>
             </div>
           </div>
@@ -244,18 +284,46 @@ onMounted(init)
     <div class="w-10 h-1 rounded-full bg-stone-200 dark:bg-zinc-700 mx-auto my-2.5 shrink-0"></div>
     <div class="px-2 pb-2 space-y-1">
       <template v-if="sheet.type==='message'">
-        <button v-if="isOwnMessage(sheet.data)" @click="closeSheet(); handleStartEdit(sheet.data)" class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-stone-50 dark:hover:bg-zinc-800 active:bg-stone-100 text-[15px] font-medium text-left">✎ Редактировать</button>
-        <button v-if="isOwnMessage(sheet.data)" @click="closeSheet(); confirm = { type:'deleteMessage', payload:sheet.data.id, title:'Удалить сообщение?', msg:'Удалить?', icon:'🗑️', confirmLabel:'Удалить', severity:'danger' }" class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-red-50 dark:hover:bg-red-950/20 active:bg-red-100 text-[15px] font-medium text-left text-red-600">🗑 Удалить сообщение</button>
+        <button v-if="isOwnMessage(sheet.data)" @click="closeSheet(); handleStartEdit(sheet.data)" class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-stone-50 dark:hover:bg-zinc-800 active:bg-stone-100 text-[15px] font-medium text-left">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+          Редактировать
+        </button>
+        <button v-if="isOwnMessage(sheet.data)" @click="closeSheet(); confirm = { type:'deleteMessage', payload:sheet.data.id, title:'Удалить сообщение?', msg:'Удалить?', icon:'🗑️', confirmLabel:'Удалить', severity:'danger' }" class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-red-50 dark:hover:bg-red-950/20 active:bg-red-100 text-[15px] font-medium text-left text-red-600">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          Удалить сообщение
+        </button>
         <button class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-stone-100 dark:bg-zinc-800 active:bg-stone-200 text-[15px] font-medium text-left justify-center mt-1" @click="closeSheet">Отмена</button>
       </template>
       <template v-else-if="sheet.type==='chat'">
         <div class="px-4 py-3 border-b dark:border-zinc-800 mb-1"><div class="text-[15px] font-bold dark:text-white truncate">{{ sheet.data.other?.name }}</div></div>
-        <button @click="closeSheet(); openConversation(sheet.data.id)" class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-violet-50 dark:hover:bg-zinc-800 active:bg-violet-100 text-[15px] font-medium text-left text-violet-700">💬 Открыть чат</button>
+        <button @click="closeSheet(); openConversation(sheet.data.id)" class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-violet-50 dark:hover:bg-zinc-800 active:bg-violet-100 text-[15px] font-medium text-left text-violet-700">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+          Открыть чат
+        </button>
+        <button @click="askDeleteChat(sheet.data.id)" class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-red-50 dark:hover:bg-red-950/20 text-[15px] font-medium text-left text-red-600">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          Удалить чат
+        </button>
+        <button v-if="sheet.data.other?.id" @click="askBlock(sheet.data.other.id, sheet.data.other.name)" class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-red-50 dark:hover:bg-red-950/20 text-[15px] font-medium text-left text-red-600">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M4.93 4.93l14.14 14.14"/></svg>
+          Заблокировать
+        </button>
         <button @click="closeSheet" class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-stone-100 dark:bg-zinc-800 text-[15px] font-medium text-left justify-center mt-1">Отмена</button>
       </template>
       <template v-else-if="sheet.type==='friend'">
         <div class="px-4 py-2 border-b dark:border-zinc-800 mb-1"><div class="text-[15px] font-bold dark:text-white">{{ sheet.data.other.name }}</div></div>
-        <button @click="closeSheet(); startChatWith(sheet.data.other)" class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-violet-50 dark:hover:bg-zinc-800 text-[15px] font-medium text-left text-violet-700">💬 Написать</button>
+        <button @click="closeSheet(); startChatWith(sheet.data.other)" class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-violet-50 dark:hover:bg-zinc-800 text-[15px] font-medium text-left text-violet-700">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+          Написать
+        </button>
+        <button @click="askRemoveFriend(sheet.data)" class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-red-50 dark:hover:bg-red-950/20 text-[15px] font-medium text-left text-red-600">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM6 14a6 6 0 00-6 6h12a6 6 0 00-6-6z"/><path stroke-linecap="round" d="M16 11h5"/></svg>
+          Удалить из друзей
+        </button>
+        <button @click="askBlock(sheet.data.other.id, sheet.data.other.name)" class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-red-50 dark:hover:bg-red-950/20 text-[15px] font-medium text-left text-red-600">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M4.93 4.93l14.14 14.14"/></svg>
+          Заблокировать
+        </button>
         <button @click="closeSheet" class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-stone-100 dark:bg-zinc-800 text-[15px] font-medium text-left justify-center mt-1">Отмена</button>
       </template>
       <template v-else-if="sheet.type==='request'">
@@ -266,7 +334,18 @@ onMounted(init)
       </template>
       <template v-else-if="sheet.type==='search'">
         <div class="px-4 py-2 border-b dark:border-zinc-800 mb-1"><div class="text-[15px] font-bold dark:text-white">{{ sheet.data.name }}</div></div>
-        <button @click="closeSheet(); startChatWith(sheet.data)" class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-violet-50 dark:hover:bg-zinc-800 text-[15px] font-medium text-left text-violet-700">💬 Написать</button>
+        <button @click="closeSheet(); startChatWith(sheet.data)" class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-violet-50 dark:hover:bg-zinc-800 text-[15px] font-medium text-left text-violet-700">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+          Написать
+        </button>
+        <button @click="closeSheet(); friendsApi.add(sheet.data.id)" class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-stone-50 dark:hover:bg-zinc-800 text-[15px] font-medium text-left">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+          В друзья
+        </button>
+        <button @click="askBlock(sheet.data.id, sheet.data.name)" class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-red-50 dark:hover:bg-red-950/20 text-[15px] font-medium text-left text-red-600">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M4.93 4.93l14.14 14.14"/></svg>
+          Заблокировать
+        </button>
         <button @click="closeSheet" class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl bg-stone-100 dark:bg-zinc-800 text-[15px] font-medium text-left justify-center mt-1">Отмена</button>
       </template>
     </div>

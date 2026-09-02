@@ -7,6 +7,8 @@ export function useUserProfile(userId: number) {
   const friendship = ref<any>(null)
   const isFriend = ref(false)
   const isPending = ref(false)
+  const isBlocked = ref(false)
+  const isBlockedBy = ref(false)
   const canMessage = ref(true)
   const reason = ref<string | null>(null)
 
@@ -16,6 +18,8 @@ export function useUserProfile(userId: number) {
       friendship.value = data.friendship
       isFriend.value = data.is_friend
       isPending.value = data.is_pending
+      isBlocked.value = !!data.is_blocked
+      isBlockedBy.value = !!data.is_blocked_by
       canMessage.value = data.can_message
       reason.value = data.can_message_reason
     } catch {}
@@ -26,6 +30,28 @@ export function useUserProfile(userId: number) {
     try { await chatApi.addFriend(userId); await load() } finally { loading.value = false }
   }
 
+  async function removeFriend() {
+    loading.value = true
+    try {
+      if (friendship.value?.id) await chatApi.removeFriend(friendship.value.id)
+      else {
+        const d = await chatApi.status(userId)
+        if (d.friendship?.id) await chatApi.removeFriend(d.friendship.id)
+      }
+      await load()
+    } finally { loading.value = false }
+  }
+
+  async function block() {
+    loading.value = true
+    try { await chatApi.block(userId); await load() } finally { loading.value = false }
+  }
+
+  async function unblock() {
+    loading.value = true
+    try { await chatApi.unblock(userId); await load() } finally { loading.value = false }
+  }
+
   async function startChat() {
     loading.value = true
     try {
@@ -34,5 +60,5 @@ export function useUserProfile(userId: number) {
     } finally { loading.value = false }
   }
 
-  return { loading, friendship, isFriend, isPending, canMessage, reason, load, addFriend, startChat }
+  return { loading, friendship, isFriend, isPending, isBlocked, isBlockedBy, canMessage, reason, load, addFriend, removeFriend, block, unblock, startChat }
 }

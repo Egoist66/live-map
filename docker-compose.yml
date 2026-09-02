@@ -1,25 +1,107 @@
 services:
   app:
-    image: php:8.4-fpm
-    volumes: [.:/var/www/html]
-    ports: ["8000:8000"]
-    command: php artisan serve --host=0.0.0.0
-    depends_on: [mysql, redis, meilisearch]
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:80"
+    env_file: .env
+    environment:
+      DB_HOST: mysql
+      REDIS_HOST: redis
+      REVERB_HOST: "0.0.0.0"
+      APP_URL: http://localhost:8000
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - app-storage:/var/www/html/storage
+      - app-database:/var/www/html/database
+
+  app-dev:
+    image: php:8.4-cli
+    working_dir: /var/www/html
+    profiles: ["dev"]
+    volumes:
+      - .:/var/www/html
+      - /var/www/html/vendor
+      - /var/www/html/node_modules
+    ports:
+      - "8001:8000"
+    env_file: .env
+    environment:
+      DB_HOST: mysql
+      REDIS_HOST: redis
+      REVERB_HOST: "0.0.0.0"
+      APP_URL: http://localhost:8001
+    command: bash -c "composer install && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  vite:
+    image: node:20
+    profiles: ["dev"]
+    working_dir: /var/www/html
+    volumes:
+      - .:/var/www/html
+      - /var/www/html/node_modules
+    ports:
+      - "5173:5173"
+    command: sh -c "if [ -f pnpm-lock.yaml ]; then pnpm install && pnpm run dev -- --host 0.0.0.0 --port 5173; else npm install && npm run dev -- --host 0.0.0.0 --port 5173; fi"
+    depends_on:
+      - app-dev
+
   mysql:
     image: mysql:8
-    environment: { MYSQL_DATABASE: live_map, MYSQL_ROOT_PASSWORD: secret, MYSQL_PASSWORD: secret, MYSQL_USER: laravel }
-    ports: ["3306:3306"]
-    volumes: [mysql:/var/lib/mysql]
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: live_map
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_PASSWORD: secret
+      MYSQL_USER: laravel
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "laravel", "-psecret"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
   redis:
     image: redis:7-alpine
-    ports: ["6379:6379"]
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   meilisearch:
     image: getmeili/meilisearch:latest
-    ports: ["7700:7700"]
-    environment: { MEILI_MASTER_KEY: masterKey }
-  reverb:
-    image: php:8.4-fpm
-    command: php artisan reverb:start --host=0.0.0.0 --port=8080
-    ports: ["8080:8080"]
-    volumes: [.:/var/www/html]
-volumes: { mysql: {} }
+    restart: unless-stopped
+    ports:
+      - "7700:7700"
+    environment:
+      MEILI_MASTER_KEY: masterKey
+      MEILI_NO_ANALYTICS: "true"
+    volumes:
+      - meilisearch:/meili_data
+
+volumes:
+  mysql:
+  redis:
+  meilisearch:
+  app-storage:
+  app-database:

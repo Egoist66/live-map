@@ -86,6 +86,8 @@ class FriendshipController extends Controller
             'friendship'=>$f,
             'is_friend'=> $f?->status==='accepted',
             'is_pending'=> $f?->status==='pending',
+            'is_blocked'=> UserBlock::where('blocker_id',$me->id)->where('blocked_id',$user->id)->exists(),
+            'is_blocked_by'=> UserBlock::where('blocker_id',$user->id)->where('blocked_id',$me->id)->exists(),
             'can_message'=> $me->canMessageUser($user),
             'can_message_reason'=> $me->messageBlockReason($user),
         ]);

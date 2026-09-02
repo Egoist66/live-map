@@ -23,6 +23,23 @@
 
 ## 2. Быстрый старт
 
+### 2.1 Через Docker (рекомендуется — 1 команда)
+
+```bash
+npm run docker:up      # прод-сборка как на Render: app http://localhost:8000 + mysql/redis/meilisearch
+# или для разработки с HMR:
+npm run docker:dev     # app-dev http://localhost:8001 + vite http://localhost:5173 + HMR
+npm run docker:logs    # логи
+npm run docker:down    # остановить
+npm run docker:clean   # удалить volumes (сброс БД)
+```
+
+`docker-compose.yml` — 1 универсальный файл: `app` (Dockerfile + supervisor: nginx+laravel+reverb+queue) + `mysql:8` + `redis:7` + `meilisearch`. Профиль `dev` добавляет `vite` и `app-dev` с hot reload.
+
+Переменные БД уже прокинуты (`DB_HOST=mysql`, `REDIS_HOST=redis`). Первый запуск делает `migrate --force` автоматически.
+
+### 2.2 Локально без Docker
+
 ```bash
 composer install
 cp .env.example .env && php artisan key:generate
@@ -30,7 +47,7 @@ php artisan migrate --force
 php artisan db:seed --class=AdminSeeder   # admin@live-map.test / Admin123!
 npm install && npm run build
 php artisan storage:link
-php artisan serve  # http://localhost:8000
+npm run dev  # php serve + reverb + vite concurrently → http://localhost:8000
 ```
 
 `.env`: `APP_NAME="Live Map"`, `APP_LOCALE=ru`, `FILESYSTEM_DISK=public`
@@ -297,11 +314,38 @@ POST /reactions/toggle, zone-subscriptions, POST /reports
 ## 17. Команды
 
 ```bash
+# Docker (1 команда)
+npm run docker:up      # прод: docker compose up --build → http://localhost:8000
+npm run docker:dev     # дев:  docker compose --profile dev up --build → http://localhost:8001 + vite 5173
+npm run docker:down    # остановить
+npm run docker:logs    # логи -f
+npm run docker:clean   # down -v (сброс БД)
+npm run docker:build   # только build
+
+# Локально
+npm run dev            # php serve + reverb + vite
+npm run dev:ssr        # + inertia SSR
+npm run build          # vue-tsc && vite build (~260kB gzip)
+npm run build:ssr
+
+# Laravel
 php artisan make:admin admin@live-map.test --password=Secret
 php artisan pins:prune
 php artisan migrate --force
-npm run build  # vue-tsc && vite build (815-821 modules, ~260kB gzip)
 ```
+
+## 18. Деплой на Render (автодеплой)
+
+`render.yaml` (Blueprint) уже настроен: `web` (Docker) + `postgres free`.
+
+```bash
+git add . && git commit -m "deploy" && git push origin main
+# Render → New → Blueprint → выбери репозиторий → Apply
+```
+
+После первого деплоя поправь в Render Dashboard → Environment: `APP_URL=https://xxx.onrender.com`, `VITE_REVERB_HOST=xxx.onrender.com`, `VITE_REVERB_PORT=443`, `VITE_REVERB_SCHEME=https`. Любой `git push` в `main` — автодеплой. `Dockerfile` уже поддерживает `$PORT` через `nginx.conf.template` + `envsubst`.
+
+Локальный прод-образ: `docker build -t live-map . && docker run -p 8000:80 --env-file .env live-map`
 
 ---
 
