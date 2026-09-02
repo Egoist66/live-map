@@ -3,7 +3,10 @@ import { onMounted } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
+import Toast from 'primevue/toast'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
+import OnlineDot from '@/Components/OnlineDot.vue'
+import { usePresenceState } from '@/composables/usePresence'
 import { useChatPage } from '@/composables/useChatPage'
 
 const props = defineProps<{ conversationId?: number }>()
@@ -18,12 +21,14 @@ const { conversations, activeConv, messages, loading, sending, refreshing, typin
 const { friends, pendingIn } = friendsApi
 const { blocked } = blocksApi
 const { open: emojiOpen, toggle: toggleEmoji, EMOJI_GROUPS } = emoji
+const { isOnline } = usePresenceState()
 
 onMounted(init)
 </script>
 
 <template>
 <AuthenticatedLayout>
+<Toast />
 <div class="mx-auto max-w-[1280px] lg:px-6 lg:py-6">
   <div class="flex flex-col lg:flex-row lg:gap-4 h-[calc(100dvh-64px)] lg:h-[calc(100dvh-88px)] bg-stone-100 dark:bg-zinc-950 lg:bg-transparent overflow-hidden lg:overflow-visible">
     <div :class="selectedId ? 'hidden lg:flex' : 'flex'" class="w-full lg:w-[360px] shrink-0 bg-white dark:bg-zinc-900 lg:rounded-2xl border-b lg:border border-stone-200 dark:border-zinc-800 flex-col overflow-hidden">
@@ -53,18 +58,20 @@ onMounted(init)
         <div v-if="searchResults.length" class="mt-2 max-h-[42dvh] lg:max-h-48 overflow-auto divide-y dark:divide-zinc-800 border rounded-2xl bg-white dark:bg-zinc-900 shadow-sm">
           <div v-for="u in searchResults" :key="u.id" class="flex items-center justify-between p-3 lg:p-2 hover:bg-stone-50 dark:hover:bg-zinc-800 select-none" v-bind="bindSheet({type:'search', data:u})">
             <Link :href="`/users/${u.id}`" class="flex items-center gap-2.5 hover:opacity-80 min-w-0">
-              <img :src="u.avatar_path?`/storage/${u.avatar_path}`:`https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=0F172A&color=fff`" class="w-9 h-9 lg:w-8 lg:h-8 rounded-full object-cover shrink-0" />
-              <div class="min-w-0"><div class="text-sm font-medium dark:text-white truncate hover:underline">{{ u.name }}</div><div class="text-xs truncate" :class="u.can_message?'text-emerald-600':'text-red-500'">{{ u.can_message?'можно написать':'не принимает' }}</div></div>
+              <span class="relative shrink-0">
+                <img :src="u.avatar_path?`/storage/${u.avatar_path}`:`https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=0F172A&color=fff`" class="w-9 h-9 lg:w-8 lg:h-8 rounded-full object-cover" />
+                <OnlineDot :online="isOnline(u.id)" size="w-3 h-3" />
+              </span>
+              <div class="min-w-0"><div class="text-sm font-medium dark:text-white truncate hover:underline flex items-center gap-1">{{ u.name }}<span v-if="isOnline(u.id)" class="w-1.5 h-1.5 bg-emerald-500 rounded-full shrink-0"></span></div><div class="text-xs truncate flex items-center gap-1"><span :class="isOnline(u.id)?'text-emerald-600':'text-stone-400'">{{ isOnline(u.id) ? '● в сети' : '○ офлайн' }}</span><span class="text-stone-300">·</span><span :class="u.can_message?'text-emerald-600':'text-red-500'">{{ u.can_message?'можно написать':'не принимает' }}</span></div></div>
             </Link>
             <div class="flex gap-1 shrink-0 ml-2 items-center">
-              <button @click="startChatWith(u)" :disabled="u.can_message===false || creatingChat" class="text-xs px-3 py-1.5 rounded-full bg-stone-900 dark:bg-white dark:text-zinc-900 text-white font-semibold disabled:opacity-40 flex items-center gap-1">
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-                {{ creatingChat?'...' : 'Написать' }}
+              <button v-if="u.can_message!==false" @click="startChatWith(u)" :disabled="creatingChat" title="Написать" class="w-8 h-8 grid place-items-center rounded-full bg-stone-900 dark:bg-white dark:text-zinc-900 text-white active:scale-95 disabled:opacity-40 transition">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
               </button>
-              <button @click.stop="friendsApi.add(u.id)" title="В друзья" class="w-7 h-7 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-violet-50 text-stone-500 hover:text-violet-600 transition">
+              <button @click.stop="friendsApi.add(u.id)" title="В друзья" class="w-8 h-8 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-violet-50 text-stone-500 hover:text-violet-600 active:scale-95 transition">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
               </button>
-              <button @click.stop="askBlock(u.id, u.name)" title="Заблокировать" class="w-7 h-7 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-red-50 text-stone-500 hover:text-red-600 transition">
+              <button @click.stop="askBlock(u.id, u.name)" title="Заблокировать" class="w-8 h-8 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-red-50 text-stone-500 hover:text-red-600 active:scale-95 transition">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M4.93 4.93l14.14 14.14"/></svg>
               </button>
             </div>
@@ -81,10 +88,13 @@ onMounted(init)
           </div>
           <div v-for="c in conversations" :key="c.id" class="group w-full flex items-center gap-0 hover:bg-stone-50 dark:hover:bg-zinc-800 text-left select-none active:bg-stone-100 dark:active:bg-zinc-800" v-bind="bindSheet({type:'chat', data:c})">
             <button @click="openConversation(c.id)" :class="selectedId===c.id?'lg:bg-violet-50 dark:lg:bg-zinc-800':''" class="flex-1 flex items-center gap-3 p-3.5 lg:p-3 text-left min-w-0">
-              <img :src="c.other?.avatar_path?`/storage/${c.other.avatar_path}`:`https://ui-avatars.com/api/?name=${encodeURIComponent(c.other?.name||'?')}&background=0F172A&color=fff`" class="w-11 h-11 lg:w-10 lg:h-10 rounded-full object-cover shrink-0" />
+              <span class="relative shrink-0">
+                <img :src="c.other?.avatar_path?`/storage/${c.other.avatar_path}`:`https://ui-avatars.com/api/?name=${encodeURIComponent(c.other?.name||'?')}&background=0F172A&color=fff`" class="w-11 h-11 lg:w-10 lg:h-10 rounded-full object-cover" />
+                <OnlineDot :online="isOnline(c.other?.id)" />
+              </span>
               <div class="flex-1 min-w-0">
-                <div class="flex justify-between items-baseline gap-2"><span class="text-[15px] lg:text-sm font-semibold dark:text-white truncate">{{ c.other?.name||'Чат' }}</span><span v-if="c.last_message_at" class="text-[11px] text-stone-400 shrink-0">{{ formatTime(c.last_message_at) }}</span></div>
-                <div class="text-[13px] lg:text-xs text-stone-500 truncate flex items-center gap-1 mt-0.5">{{ c.last_message?.body||'Нет сообщений' }}<span v-if="(c.last_message as any)?.is_edited" class="text-[10px] text-stone-400">(изм.)</span></div>
+                <div class="flex justify-between items-baseline gap-2"><span class="text-[15px] lg:text-sm font-semibold dark:text-white truncate flex items-center gap-1">{{ c.other?.name||'Чат' }}<span v-if="isOnline(c.other?.id)" class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shrink-0"></span></span><span v-if="c.last_message_at" class="text-[11px] text-stone-400 shrink-0">{{ formatTime(c.last_message_at) }}</span></div>
+                <div class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5" :class="isOnline(c.other?.id) ? 'text-emerald-600' : 'text-stone-500'">{{ isOnline(c.other?.id) ? '● в сети' : '○ офлайн' }}<span class="text-stone-300">·</span><span class="truncate text-stone-500">{{ c.last_message?.body||'Нет сообщений' }}</span><span v-if="(c.last_message as any)?.is_edited" class="text-[10px] text-stone-400">(изм.)</span></div>
               </div>
               <span v-if="c.unread_count" class="bg-violet-600 text-white text-xs font-bold min-w-[22px] h-[22px] grid place-items-center px-1.5 rounded-full shrink-0">{{ c.unread_count>99?'99+':c.unread_count }}</span>
             </button>
@@ -103,8 +113,11 @@ onMounted(init)
           <div v-if="!friends.length" class="p-10 text-center text-sm text-stone-500">Нет друзей</div>
           <div v-for="f in friends" :key="f.id" class="flex items-center justify-between p-3.5 lg:p-3 select-none active:bg-stone-50 group" v-bind="bindSheet({type:'friend', data:f})">
             <Link :href="`/users/${f.other.id}`" class="flex items-center gap-3 hover:opacity-80 min-w-0">
-              <img :src="f.other.avatar_path?`/storage/${f.other.avatar_path}`:`https://ui-avatars.com/api/?name=${encodeURIComponent(f.other.name)}&background=0F172A&color=fff`" class="w-10 h-10 lg:w-9 lg:h-9 rounded-full shrink-0" />
-              <span class="text-[15px] lg:text-sm font-medium dark:text-white truncate hover:underline">{{ f.other.name }}</span>
+              <span class="relative shrink-0">
+                <img :src="f.other.avatar_path?`/storage/${f.other.avatar_path}`:`https://ui-avatars.com/api/?name=${encodeURIComponent(f.other.name)}&background=0F172A&color=fff`" class="w-10 h-10 lg:w-9 lg:h-9 rounded-full" />
+                <OnlineDot :online="isOnline(f.other.id)" />
+              </span>
+              <span class="text-[15px] lg:text-sm font-medium dark:text-white truncate hover:underline flex items-center gap-1">{{ f.other.name }}<span v-if="isOnline(f.other.id)" class="w-1.5 h-1.5 bg-emerald-500 rounded-full shrink-0"></span></span>
             </Link>
             <div class="flex gap-1 shrink-0 items-center">
               <button @click="startChatWith(f.other)" class="text-xs px-3 py-1.5 rounded-full bg-stone-900 dark:bg-white dark:text-zinc-900 text-white font-semibold flex items-center gap-1">
@@ -125,8 +138,11 @@ onMounted(init)
           <div v-if="!pendingIn.length" class="p-10 text-center text-sm text-stone-500">Нет заявок</div>
           <div v-for="r in pendingIn" :key="r.id" class="flex items-center justify-between p-3.5 lg:p-3 gap-2 select-none" v-bind="bindSheet({type:'request', data:r})">
             <Link :href="`/users/${r.requester.id}`" class="flex items-center gap-3 hover:opacity-80 min-w-0">
-              <img :src="r.requester.avatar_path?`/storage/${r.requester.avatar_path}`:`https://ui-avatars.com/api/?name=${encodeURIComponent(r.requester.name)}&background=0F172A&color=fff`" class="w-10 h-10 lg:w-9 lg:h-9 rounded-full shrink-0" />
-              <span class="text-[15px] lg:text-sm dark:text-white truncate hover:underline">{{ r.requester.name }}</span>
+              <span class="relative shrink-0">
+                <img :src="r.requester.avatar_path?`/storage/${r.requester.avatar_path}`:`https://ui-avatars.com/api/?name=${encodeURIComponent(r.requester.name)}&background=0F172A&color=fff`" class="w-10 h-10 lg:w-9 lg:h-9 rounded-full" />
+                <OnlineDot :online="isOnline(r.requester.id)" />
+              </span>
+              <span class="text-[15px] lg:text-sm dark:text-white truncate hover:underline flex items-center gap-1">{{ r.requester.name }}<span v-if="isOnline(r.requester.id)" class="w-1.5 h-1.5 bg-emerald-500 rounded-full shrink-0"></span></span>
             </Link>
             <div class="flex gap-1.5 shrink-0">
               <button @click="friendsApi.accept(r.id)" class="text-xs px-3.5 py-2 rounded-full bg-green-600 text-white font-semibold active:scale-95">Принять</button>
@@ -142,7 +158,7 @@ onMounted(init)
               <img :src="b.blocked.avatar_path?`/storage/${b.blocked.avatar_path}`:`https://ui-avatars.com/api/?name=${encodeURIComponent(b.blocked.name)}&background=0F172A&color=fff`" class="w-10 h-10 lg:w-9 lg:h-9 rounded-full shrink-0" />
               <span class="text-[15px] lg:text-sm dark:text-white truncate">{{ b.blocked.name }}</span>
             </div>
-            <button @click="blocksApi.unblock(b.blocked.id).then(()=>blocksApi.load())" class="text-xs px-3.5 py-2 rounded-full border bg-white dark:bg-zinc-800 shrink-0">Разблокировать</button>
+            <button @click="askUnblock(b.blocked.id)" class="text-xs px-3.5 py-2 rounded-full border bg-white dark:bg-zinc-800 shrink-0">Разблокировать</button>
           </div>
         </div>
       </div>
@@ -181,8 +197,11 @@ onMounted(init)
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
           </button>
           <Link :href="activeConv?.other ? `/users/${activeConv.other.id}` : '#'" class="flex items-center gap-2.5 lg:gap-3 hover:opacity-80 min-w-0 flex-1">
-            <img :src="activeConv?.other?.avatar_path?`/storage/${activeConv!.other!.avatar_path}`:`https://ui-avatars.com/api/?name=${encodeURIComponent(activeConv?.other?.name||'?')}&background=0F172A&color=fff`" class="w-9 h-9 lg:w-9 lg:h-9 rounded-full shrink-0" />
-            <div class="min-w-0"><div class="text-[15px] lg:text-sm font-semibold dark:text-white truncate hover:underline">{{ activeConv?.other?.name }}</div><div v-if="[...typingUsers].some(id=>id===activeConv?.other?.id)" class="text-xs text-violet-600 leading-none">печатает...</div><div v-else class="hidden lg:block text-xs text-stone-400 leading-none">профиль →</div></div>
+            <span class="relative shrink-0">
+              <img :src="activeConv?.other?.avatar_path?`/storage/${activeConv!.other!.avatar_path}`:`https://ui-avatars.com/api/?name=${encodeURIComponent(activeConv?.other?.name||'?')}&background=0F172A&color=fff`" class="w-9 h-9 lg:w-9 lg:h-9 rounded-full" />
+              <OnlineDot :online="isOnline(activeConv?.other?.id)" />
+            </span>
+            <div class="min-w-0"><div class="text-[15px] lg:text-sm font-semibold dark:text-white truncate hover:underline flex items-center gap-1">{{ activeConv?.other?.name }}<span v-if="isOnline(activeConv?.other?.id)" class="w-1.5 h-1.5 bg-emerald-500 rounded-full shrink-0"></span></div><div v-if="[...typingUsers].some(id=>id===activeConv?.other?.id)" class="text-xs text-violet-600 leading-none">печатает...</div><div v-else class="text-xs leading-none" :class="isOnline(activeConv?.other?.id) ? 'text-emerald-600' : 'text-stone-400'">{{ isOnline(activeConv?.other?.id) ? '● в сети' : '○ офлайн' }}</div></div>
           </Link>
           <div class="flex items-center gap-0.5 lg:gap-1 shrink-0">
             <button @click="refresh" :disabled="refreshing" title="Обновить" class="w-9 h-9 lg:w-8 lg:h-8 grid place-items-center rounded-full hover:bg-stone-100 dark:hover:bg-zinc-800 active:scale-95 disabled:opacity-50">
@@ -334,7 +353,7 @@ onMounted(init)
       </template>
       <template v-else-if="sheet.type==='search'">
         <div class="px-4 py-2 border-b dark:border-zinc-800 mb-1"><div class="text-[15px] font-bold dark:text-white">{{ sheet.data.name }}</div></div>
-        <button @click="closeSheet(); startChatWith(sheet.data)" class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-violet-50 dark:hover:bg-zinc-800 text-[15px] font-medium text-left text-violet-700">
+        <button v-if="sheet.data.can_message!==false" @click="closeSheet(); startChatWith(sheet.data)" class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-violet-50 dark:hover:bg-zinc-800 text-[15px] font-medium text-left text-violet-700">
           <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
           Написать
         </button>

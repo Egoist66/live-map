@@ -1,7 +1,13 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { usePage } from '@inertiajs/vue3'
+import { useToast } from 'primevue/usetoast'
 import { chatApi } from '@/services/chat.api'
 import type { Conversation, ConversationDetail, Message } from '@/types/entities/Chat'
+
+let searchAbort: AbortController | null = null
+let searchTimer: ReturnType<typeof setTimeout> | null = null
+let loadConversationsInflight: Promise<Conversation[]> | null = null
+let scrollRaf: number | null = null
 
 export function useChat() {
   const conversations = ref<Conversation[]>([])
@@ -18,6 +24,18 @@ export function useChat() {
   const error = ref<string | null>(null)
   const editingId = ref<number | null>(null)
   const editingBody = ref('')
+  const toast = (() => { try { return useToast() } catch { return null as any } })()
+
+  function notifyBlocked(detail?: string) {
+    const msg = detail || 'Пользователь заблокировал вас'
+    const isBlockedBy = msg.includes('заблокировал вас')
+    toast?.add({
+      severity: 'error',
+      summary: isBlockedBy ? '⛔ Пользователь заблокировал вас' : '⛔ Нельзя отправить',
+      detail: isBlockedBy ? 'Вы не можете писать этому пользователю — он ограничил сообщения для вас.' : msg,
+      life: 4200,
+    })
+  }
   let echoChannels: any[] = []
   let activeChatChannel: any = null
   let activeChatId: number | null = null
@@ -44,7 +62,15 @@ export function useChat() {
     try { return echo.private(`chat.${selectedId.value}`) } catch { return null }
   }
 
-  async function loadConversations() { conversations.value = await chatApi.conversations() }
+  async function loadConversations() {
+    if (loadConversationsInflight) return loadConversationsInflight.then(d => { conversations.value = d; return d })
+    loadConversationsInflight = chatApi.conversations() as Promise<Conversation[]>
+    try {
+      const data = await loadConversationsInflight
+      conversations.value = data
+      return data
+    } finally { loadConversationsInflight = null }
+  }
 
   async function refresh() {
     if (refreshing.value) return
@@ -89,7 +115,8 @@ export function useChat() {
       await openConversation(res.id)
       return res
     } catch (e: any) {
-      error.value = e?.response?.data?.message || e?.message || 'Не удалось создать чат'
+      const msg = e?.response?.data?.message || e?.message || 'Не удалось создать чат'
+      error.value = msg
       throw e
     }
   }
@@ -128,6 +155,10 @@ export function useChat() {
     } catch (e: any) {
       const idx = messages.value.findIndex((m) => m.id === tempId)
       if (idx !== -1) (messages.value[idx] as any).failed = true
+      const msg = e?.response?.data?.message || ''
+      if (e?.response?.status === 403 && msg.includes('заблокировал')) {
+        if (idx !== -1) messages.value.splice(idx, 1)
+      }
       throw e
     } finally { sending.value = false }
   }
@@ -161,22 +192,33 @@ export function useChat() {
   }
 
   async function deleteMessage(id: number) {
-    await chatApi.deleteMessage(id)
+    const backup = [...messages.value]
     messages.value = messages.value.filter((m) => m.id !== id)
-    const conv = conversations.value.find((c) => (c as any).last_message?.id === id)
-    if (conv) await loadConversations()
+    try {
+      await chatApi.deleteMessage(id)
+      const conv = conversations.value.find((c) => (c as any).last_message?.id === id)
+      if (conv) loadConversations()
+    } catch (e) { messages.value = backup; throw e }
   }
 
   async function deleteConversation(id: number) {
-    await chatApi.deleteConversation(id)
+    const backup = [...conversations.value]
+    const wasSelected = selectedId.value === id
+    const backupActive = activeConv.value
+    const backupMsgs = [...messages.value]
     conversations.value = conversations.value.filter((c) => c.id !== id)
-    if (selectedId.value === id) { selectedId.value = null; activeConv.value = null; messages.value = [] }
+    if (wasSelected) { selectedId.value = null; activeConv.value = null; messages.value = [] }
+    try { await chatApi.deleteConversation(id) } catch (e) { conversations.value = backup; if (wasSelected) { activeConv.value = backupActive; messages.value = backupMsgs; selectedId.value = id }; throw e }
   }
 
   function scrollToBottom() {
-    nextTick(() => {
-      const el = document.getElementById('chat-messages')
-      if (el) el.scrollTop = el.scrollHeight
+    if (scrollRaf !== null) cancelAnimationFrame(scrollRaf)
+    scrollRaf = requestAnimationFrame(() => {
+      scrollRaf = null
+      nextTick(() => {
+        const el = document.getElementById('chat-messages')
+        if (el) el.scrollTop = el.scrollHeight
+      })
     })
   }
 
@@ -207,18 +249,24 @@ export function useChat() {
     }
   }
 
+  let globalSubscribed = false
   function subscribeGlobal() {
+    if (globalSubscribed) return
     try {
       const echo = getEcho()
       if (!echo) return
       const uid = getUid() || document.querySelector('meta[name="user-id"]')?.getAttribute('content')
       if (uid) {
+        globalSubscribed = true
         const ch = echo.private(`user.${uid}`)
         ch.listen('.message.sent', (e: any) => handleIncoming(e.message))
-        ch.listen('.friendship.updated', () => {})
+        ch.listen('.message.updated', (e: any) => handleUpdated(e.message))
+        ch.listen('.message.deleted', (e: any) => handleDeleted(e))
+        ch.listen('.friendship.updated', () => loadConversations())
+        ch.listen('.message.read', () => {})
         echoChannels.push(ch)
       }
-    } catch {}
+    } catch { globalSubscribed = false }
   }
 
   function handleUpdated(msg: Message) {
@@ -228,6 +276,13 @@ export function useChat() {
     if (conv && conv.last_message?.id === msg.id) conv.last_message = msg
   }
 
+  function handleDeleted(payload: any) {
+    const mid = Number(payload.message_id ?? payload.id)
+    if (!mid) return
+    messages.value = messages.value.filter((m) => m.id !== mid)
+    const conv = conversations.value.find((c) => (c as any).last_message?.id === mid)
+    if (conv) loadConversations()
+  }
   function subscribeChat(convId: number) {
     try {
       const echo = getEcho()
@@ -244,6 +299,10 @@ export function useChat() {
       activeChatId = convId
       ch.listen('.message.sent', (e: any) => handleIncoming(e.message))
       ch.listen('.message.updated', (e: any) => handleUpdated(e.message))
+      ch.listen('.message.deleted', (e: any) => handleDeleted(e))
+      ch.listen('.message.read', (e: any) => {
+        const n = new Set(typingUsers.value); n.delete(Number(e.user_id)); typingUsers.value = n
+      })
       const handleTyping = (e: any) => {
         if (Number(e.user_id) === currentUserId) return
         if (e.is_typing) {
@@ -260,20 +319,33 @@ export function useChat() {
         }
       }
       ch.listenForWhisper('typing', handleTyping)
-      ch.listen('.message.read', (e: any) => {
-        const n = new Set(typingUsers.value); n.delete(Number(e.user_id)); typingUsers.value = n
-      })
+      ch.listen('.typing', handleTyping)
       echoChannels.push(ch)
     } catch {}
   }
 
-  async function searchUsers() {
-    if (searchQuery.value.length < 2) { searchResults.value = []; return }
+  async function searchUsers(q: string) {
+    if (searchAbort) { searchAbort.abort(); searchAbort = null }
+    if (q.length < 2) { searchResults.value = []; searching.value = false; return }
     searching.value = true
-    try { searchResults.value = await chatApi.search(searchQuery.value) } finally { searching.value = false }
+    const ctrl = new AbortController()
+    searchAbort = ctrl
+    try {
+      const res = await chatApi.search(q)
+      if (ctrl.signal.aborted) return
+      searchResults.value = res
+    } catch (e: any) {
+      if (e?.name === 'CanceledError' || e?.code === 'ERR_CANCELED' || ctrl.signal.aborted) return
+      throw e
+    } finally {
+      if (searchAbort === ctrl) { searching.value = false; searchAbort = null }
+    }
   }
 
-  watch(searchQuery, () => searchUsers())
+  watch(searchQuery, (q) => {
+    if (searchTimer) clearTimeout(searchTimer)
+    searchTimer = setTimeout(() => searchUsers(q.trim()), 320)
+  })
 
   function sendTypingWs(isTyping: boolean) {
     if (!selectedId.value) return

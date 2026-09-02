@@ -4,12 +4,17 @@ import { Head, Link } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
+import Message from 'primevue/message'
+import OnlineDot from '@/Components/OnlineDot.vue'
+import { usePresenceState } from '@/composables/usePresence'
 import { useUserProfile } from '@/composables/useUserProfile'
+import { useSanitizedBio } from '@/composables/useSanitizedBio'
 
 const props = defineProps<{ profileUser: any; isOwn: boolean; friendship: any; isFriend: boolean; isPending: boolean; isBlocked?: boolean; isBlockedBy?: boolean; canMessage: boolean; canMessageReason: string | null }>()
 const avatarSrc = computed(() => props.profileUser.avatar_path ? `/storage/${props.profileUser.avatar_path}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(props.profileUser.name)}&background=0F172A&color=fff&bold=true`)
 const profile = useUserProfile(props.profileUser.id)
 const showAvatar = ref(false)
+const bio = useSanitizedBio(() => props.profileUser.bio)
 const levelLabel: Record<string,string> = { novice:'Новичок', local:'Местный', guide:'Гид района', explorer:'Исследователь', veteran:'Ветеран' }
 
 const isFriend = ref(props.isFriend)
@@ -19,6 +24,9 @@ const isBlockedBy = ref(!!props.isBlockedBy)
 const canMessage = ref(props.canMessage)
 const reason = ref(props.canMessageReason)
 const confirm = ref<{ title:string; msg:string; action:()=>Promise<void>} | null>(null)
+const isLocked = computed(() => isBlockedBy.value)
+const { isOnline } = usePresenceState()
+const online = computed(() => isOnline(props.profileUser.id))
 
 async function sync() {
   isFriend.value = profile.isFriend.value
@@ -40,64 +48,66 @@ async function onChat() { await profile.startChat() }
 <AuthenticatedLayout>
 <div class="bg-surface dark:bg-[#090E1A] min-h-[calc(100vh-64px)]">
 <div class="max-w-[860px] mx-auto px-4 sm:px-6 py-6 space-y-5">
-  <div class="bg-ink-900 dark:bg-zinc-900 dark:border dark:border-zinc-800 text-white rounded-[24px] p-6 sm:p-8 relative overflow-hidden">
-    <div class="absolute -right-16 -top-16 w-72 h-72 bg-gradient-to-br from-brand-500 to-accent-teal rounded-full blur-[60px] opacity-20"></div>
-    <div class="relative flex flex-col sm:flex-row gap-6">
-      <button @click="showAvatar=true" class="group relative w-28 h-28 rounded-[20px] overflow-hidden border-2 border-white/20 shrink-0 bg-white/10">
+  <div class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-[20px] p-4 sm:p-5 shadow-soft">
+    <div v-if="isLocked" class="flex flex-col items-center text-center gap-3 py-3">
+      <button @click="showAvatar=true" class="group relative w-16 h-16 rounded-2xl overflow-hidden border border-stone-200 dark:border-zinc-700 shrink-0 bg-stone-50">
         <img :src="avatarSrc" class="w-full h-full object-cover group-hover:scale-105 transition" />
       </button>
-      <div class="min-w-0 flex-1">
-        <h1 class="text-2xl font-black tracking-tight">{{ profileUser.name }}</h1>
-        <p class="text-white/60 text-sm mt-1">{{ levelLabel[profileUser.level] || profileUser.level || 'Новичок' }} · {{ profileUser.reputation_score||0 }} ★ · на сайте с {{ new Date(profileUser.created_at).toLocaleDateString('ru-RU') }}</p>
-        <p v-if="profileUser.home_lat" class="text-white/40 text-xs mt-1">Дом: {{ Number(profileUser.home_lat).toFixed(4) }}, {{ Number(profileUser.home_lng).toFixed(4) }} · {{ profileUser.home_radius_km||2 }} км</p>
-        <p v-if="!isOwn && isBlockedBy" class="mt-2 text-xs text-red-300 bg-red-900/30 border border-red-800 rounded-xl px-3 py-2">Пользователь заблокировал вас</p>
-        <p v-if="!isOwn && isBlocked" class="mt-2 text-xs text-amber-300 bg-amber-900/30 border border-amber-800 rounded-xl px-3 py-2">Вы заблокировали этого пользователя</p>
-        <div v-if="!isOwn" class="mt-4 flex flex-wrap gap-2">
-          <button @click="onChat" :disabled="(!canMessage && !isBlocked) || profile.loading.value" :title="canMessage ? 'Открыть чат' : (reason||'Закрыто')" class="px-6 py-2.5 rounded-full bg-white text-ink-900 text-sm font-bold hover:bg-stone-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-            {{ canMessage ? 'Написать' : 'Закрыто' }}
-          </button>
-          <button v-if="!isFriend && !isPending && !isBlocked" @click="onAdd" :disabled="profile.loading.value" title="Отправить заявку в друзья" class="px-6 py-2.5 rounded-full bg-white/10 border border-white/20 text-white text-sm font-bold hover:bg-white/15 flex items-center gap-1.5">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-            В друзья
-          </button>
-          <span v-else-if="isPending" class="px-6 py-2.5 rounded-full bg-white/10 border border-white/20 text-white text-sm font-bold flex items-center gap-1.5">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            Заявка отправлена
-          </span>
-          <span v-else-if="isFriend" class="px-6 py-2.5 rounded-full bg-emerald-500 text-white text-sm font-bold flex items-center gap-1.5">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-            Друзья
-          </span>
-          <button v-if="isFriend" @click="confirm={title:'Удалить из друзей?', msg:`Удалить ${profileUser.name} из друзей?`, action: onRemove}" :disabled="profile.loading.value" class="px-6 py-2.5 rounded-full bg-white/10 border border-white/20 text-white text-sm font-bold hover:bg-white/15 flex items-center gap-1.5">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM6 14a6 6 0 00-6 6h12a6 6 0 00-6-6z"/><path stroke-linecap="round" d="M16 11h5"/></svg>
-            Удалить из друзей
-          </button>
-          <button v-if="!isBlocked" @click="confirm={title:'Заблокировать?', msg:`Заблокировать ${profileUser.name}? Чат и дружба будут удалены.`, action: onBlock}" :disabled="profile.loading.value" class="px-6 py-2.5 rounded-full bg-red-600 text-white text-sm font-bold hover:bg-red-700 flex items-center gap-1.5">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M4.93 4.93l14.14 14.14"/></svg>
-            Заблокировать
-          </button>
-          <button v-else @click="onUnblock" :disabled="profile.loading.value" class="px-6 py-2.5 rounded-full bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 flex items-center gap-1.5">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-            Разблокировать
-          </button>
+      <Message severity="error" :closable="false" class="justify-center max-w-[420px] !bg-red-50 !border-red-200 !text-red-700 dark:!bg-red-950/30 dark:!border-red-900 dark:!text-red-300">
+        <span class="font-bold">⛔ Пользователь заблокировал вас</span>
+      </Message>
+      <p class="text-stone-500 dark:text-zinc-400 text-sm max-w-[420px]">Профиль скрыт.</p>
+      <Link href="/map" class="mt-1 bg-ink-900 dark:bg-white dark:text-ink-900 text-white rounded-full px-5 py-2 text-sm font-bold">На карту →</Link>
+    </div>
+    <div v-else>
+      <div class="flex items-center gap-4">
+        <button @click="showAvatar=true" class="group relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border border-stone-200 dark:border-zinc-700 shrink-0 bg-stone-50 dark:bg-zinc-800">
+          <img :src="avatarSrc" class="w-full h-full object-cover group-hover:scale-105 transition" />
+          <OnlineDot :online="online" size="w-4 h-4" />
+        </button>
+        <div class="min-w-0 flex-1">
+          <h1 class="text-lg sm:text-xl font-black tracking-tight truncate text-ink-900 dark:text-white flex items-center gap-2">{{ profileUser.name }}<span v-if="online" class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shrink-0"></span></h1>
+          <p class="text-sm truncate flex items-center gap-1.5" :class="online ? 'text-emerald-600' : 'text-stone-500 dark:text-zinc-400'">{{ online ? '● в сети' : '○ офлайн' }}<span class="text-stone-300">·</span>{{ levelLabel[profileUser.level] || profileUser.level || 'Новичок' }} · {{ profileUser.reputation_score||0 }} ★</p>
         </div>
-        <p v-if="!isOwn && !canMessage && !isBlocked && !isBlockedBy" class="mt-3 text-xs text-red-300 bg-red-900/30 border border-red-800 rounded-xl px-3 py-2">{{ reason }} — добавьте в друзья</p>
+        <Link href="/map" class="hidden sm:inline-flex bg-ink-900 dark:bg-white dark:text-ink-900 text-white rounded-full px-5 py-2.5 text-sm font-bold hover:opacity-90 transition shrink-0">На карту →</Link>
       </div>
+      <div v-if="!isOwn && !isLocked" class="mt-4 flex items-center gap-2">
+        <button v-if="canMessage && !isBlocked && !isBlockedBy" @click="onChat" :disabled="profile.loading.value" title="Написать" class="w-10 h-10 grid place-items-center rounded-full bg-stone-900 dark:bg-white text-white dark:text-zinc-900 active:scale-95 disabled:opacity-40 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+        </button>
+        <button v-if="!isFriend && !isPending && !isBlocked" @click="onAdd" :disabled="profile.loading.value" title="Добавить в друзья" class="w-10 h-10 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-violet-50 text-stone-500 hover:text-violet-600 active:scale-95 transition disabled:opacity-40">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+        </button>
+        <span v-if="isPending" title="Заявка отправлена" class="w-10 h-10 grid place-items-center rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 text-xs font-bold">⋯</span>
+        <button v-if="isFriend" @click="confirm={title:'Удалить из друзей?', msg:`Удалить ${profileUser.name} из друзей?`, action:onRemove}" title="Удалить из друзей" class="w-10 h-10 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-red-50 text-stone-500 hover:text-red-600 active:scale-95 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM6 14a6 6 0 00-6 6h12a6 6 0 00-6-6z"/><path stroke-linecap="round" d="M16 11h5M21 11h-5"/></svg>
+        </button>
+        <button v-if="!isBlocked" @click="confirm={title:'Заблокировать?', msg:`Заблокировать ${profileUser.name}?`, action:onBlock}" title="Заблокировать" class="w-10 h-10 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-red-50 text-stone-500 hover:text-red-600 active:scale-95 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M4.93 4.93l14.14 14.14"/></svg>
+        </button>
+        <button v-else @click="onUnblock" :disabled="profile.loading.value" title="Разблокировать" class="w-10 h-10 grid place-items-center rounded-full bg-red-50 dark:bg-red-950/30 text-red-600 active:scale-95 transition disabled:opacity-40">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M4.93 4.93l14.14 14.14" opacity="0.3"/></svg>
+        </button>
+      </div>
+      <Link href="/map" class="sm:hidden mt-4 flex w-full bg-ink-900 dark:bg-white dark:text-ink-900 text-white rounded-full py-2.5 text-sm font-bold justify-center hover:opacity-90 transition">На карту →</Link>
     </div>
   </div>
 
-  <div class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-[20px] p-6 shadow-soft">
-    <h3 class="font-black">Информация</h3>
+  <div v-if="!isLocked" class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-[20px] p-6 shadow-soft">
+    <h3 class="font-black">Основная информация</h3>
+    <div class="mt-4 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-stone-50/70 dark:bg-zinc-800/50 p-4">
+      <div class="flex items-center gap-2 text-xs font-bold tracking-widest uppercase text-stone-400">О себе</div>
+      <div v-if="!bio.isEmpty.value" class="mt-2 prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-h2:text-lg prose-h2:font-black prose-h2:mt-3 prose-h2:mb-1 prose-h3:text-base prose-h3:font-bold prose-a:text-brand-600 prose-a:underline prose-ul:list-disc prose-ul:pl-5 prose-ol:list-decimal prose-ol:pl-5 prose-blockquote:border-l-[3px] prose-blockquote:border-stone-300 dark:prose-blockquote:border-zinc-600 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-stone-600 dark:prose-blockquote:text-zinc-400 prose-code:bg-white dark:prose-code:bg-zinc-900 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-stone-900 prose-pre:text-stone-100 leading-relaxed" v-html="bio.html.value"></div>
+      <div v-else class="mt-2 text-sm text-stone-500 dark:text-zinc-400">Пользователь пока ничего не рассказал о себе.</div>
+    </div>
     <div class="mt-4 space-y-3 text-sm">
       <div class="flex justify-between py-2.5 border-b border-stone-100 dark:border-zinc-800"><span class="text-stone-500">Имя</span><span class="font-semibold dark:text-white">{{ profileUser.name }}</span></div>
       <div class="flex justify-between py-2.5 border-b border-stone-100 dark:border-zinc-800"><span class="text-stone-500">Уровень</span><span class="font-semibold dark:text-white">{{ levelLabel[profileUser.level] || profileUser.level }}</span></div>
       <div class="flex justify-between py-2.5 border-b border-stone-100 dark:border-zinc-800"><span class="text-stone-500">Репутация</span><span class="font-semibold dark:text-white">{{ profileUser.reputation_score||0 }}</span></div>
       <div class="flex justify-between py-2.5"><span class="text-stone-500">Дата регистрации</span><span class="font-semibold dark:text-white">{{ new Date(profileUser.created_at).toLocaleDateString('ru-RU') }}</span></div>
     </div>
-    <div class="mt-6 flex gap-2">
-      <Link href="/map" class="flex-1 bg-ink-900 dark:bg-white dark:text-ink-900 text-white rounded-full py-2.5 text-sm font-bold text-center">На карту →</Link>
-      <Link href="/chat" class="flex-1 bg-white border border-stone-200 rounded-full py-2.5 text-sm font-bold text-center">Чаты</Link>
+    <div class="mt-6">
+      <Link href="/map" class="flex w-full bg-ink-900 dark:bg-white dark:text-ink-900 text-white rounded-full py-2.5 text-sm font-bold text-center justify-center">На карту →</Link>
     </div>
   </div>
 

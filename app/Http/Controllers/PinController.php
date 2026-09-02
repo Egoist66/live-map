@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Events\PinCreated;
 use App\Events\PinDeleted;
+use App\Events\PinUpdated;
 use App\Models\Pin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -108,6 +109,7 @@ class PinController extends Controller
         ]);
         $pin->update($data);
         $pin->load('user:id,name,avatar_path,level');
+        try { broadcast(new PinUpdated($pin))->toOthers(); } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
         $my = \App\Models\Reaction::where('user_id', $request->user()->id)->where('reactable_type','pin')->where('reactable_id',$pin->id)->value('type');
         return response()->json(array_merge($pin->toPublicArray($request->user()->id), ['my_reaction' => $my]));
     }
@@ -137,6 +139,8 @@ class PinController extends Controller
             'boosted_until' => $boost->ends_at,
             'expires_at' => $data['type']==='extend' ? $pin->expires_at->addDay() : $pin->expires_at,
         ]);
+        $pin->load('user:id,name,avatar_path,level');
+        try { broadcast(new PinUpdated($pin))->toOthers(); } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
         return response()->json($boost, 201);
     }
 }

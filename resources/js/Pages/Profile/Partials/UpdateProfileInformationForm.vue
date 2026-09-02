@@ -3,11 +3,12 @@ import { Link } from '@inertiajs/vue3'
 import AvatarPreview from '@/Components/AvatarPreview.vue'
 import { useProfileForm } from '@/composables/useProfileForm'
 import { useAvatarUpload } from '@/composables/useAvatarUpload'
+import BioRichEditor from '@/Components/BioRichEditor.vue'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import Checkbox from 'primevue/checkbox'
 
-defineProps<{ mustVerifyEmail: boolean; status: string }>()
+defineProps<{ mustVerifyEmail: boolean; status?: string | null }>()
 const f = useProfileForm()
 const a = useAvatarUpload()
 </script>
@@ -15,8 +16,8 @@ const a = useAvatarUpload()
 <template>
   <section>
     <header>
-      <h2 class="font-bold">Профиль и приватность</h2>
-      <p class="text-sm text-zinc-500 mt-1">Имя, почта, домашняя зона и режим анонимности по умолчанию.</p>
+      <h2 class="font-bold">Данные аккаунта</h2>
+      <p class="text-sm text-zinc-500 mt-1">Контакты, домашняя зона и видимость пинов по умолчанию.</p>
     </header>
 
     <div class="flex flex-col sm:flex-row items-start gap-5 mt-6 p-4 bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-2xl">
@@ -54,6 +55,13 @@ const a = useAvatarUpload()
           <div><label class="text-xs font-medium">Долгота</label><InputText v-model="f.home_lng.value" v-bind="f.homeLngAttrs" placeholder="37.61" class="w-full mt-1" :invalid="!!f.errors.value.home_lng" /><small class="text-red-500">{{ f.errors.value.home_lng }}</small></div>
           <div><label class="text-xs font-medium">Радиус км</label><InputText v-model.number="f.values.home_radius_km" type="number" class="w-full mt-1" /><small class="text-red-500">{{ f.errors.value.home_radius_km }}</small></div>
         </div>
+      </div>
+
+      <div>
+        <label class="text-sm font-semibold">О себе</label>
+        <p class="text-xs text-zinc-500 mb-2">Красиво оформи — заголовки, списки, ссылки. Видно всем в профиле.</p>
+        <BioRichEditor v-model="f.bio.value" />
+        <small class="text-red-500">{{ f.errors.value.bio }}</small>
       </div>
 
       <label class="flex items-center gap-2 text-sm"><Checkbox v-model="f.is_anonymous_default.value" :binary="true" /> Создавать пины анонимно по умолчанию</label>

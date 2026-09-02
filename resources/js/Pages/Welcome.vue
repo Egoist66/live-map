@@ -3,6 +3,7 @@ import { Head, Link, usePage } from '@inertiajs/vue3'
 import { computed } from 'vue'
 defineProps<{ canLogin: boolean; canRegister: boolean }>()
 const page = usePage()
+const isAuthenticated = computed(() => !!(page.props.auth as any)?.user)
 const dashboardHref = computed(() => {
   const u = (page.props.auth as any)?.user
   if (!u) return route('dashboard')
@@ -24,7 +25,7 @@ const dashboardHref = computed(() => {
         <nav class="flex items-center gap-2">
           <Link href="/faq" class="hidden sm:inline-flex text-[13px] font-medium text-stone-600 dark:text-zinc-400 hover:text-ink-900 dark:hover:text-white px-3 py-2 rounded-full hover:bg-white dark:hover:bg-zinc-800 transition">FAQ</Link>
           <Link href="/map" class="hidden sm:inline-flex text-[13px] font-medium text-stone-600 dark:text-zinc-400 hover:text-ink-900 dark:hover:text-white px-3 py-2 rounded-full hover:bg-white dark:hover:bg-zinc-800 transition">Карта</Link>
-          <template v-if="$page.props.auth.user">
+          <template v-if="isAuthenticated">
             <Link :href="dashboardHref" class="inline-flex items-center gap-2 bg-ink-900 dark:bg-white dark:text-ink-900 text-white px-6 py-2.5 rounded-full text-sm font-semibold hover:bg-ink-800 dark:hover:bg-zinc-100 shadow-soft transition">Профиль</Link>
           </template>
           <template v-else>

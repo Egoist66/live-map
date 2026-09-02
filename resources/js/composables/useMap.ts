@@ -26,7 +26,6 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
   const mapContainer = ref<HTMLElement | null>(null)
   let map: maplibregl.Map
   let markers: maplibregl.Marker[] = []
-  let polling: ReturnType<typeof setInterval> | null = null
   const { store, selectedCategory } = usePins()
   const loaded = ref(false)
   const errorMsg = ref('')
@@ -283,45 +282,43 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
     } catch {}
   }
 
-  function startPolling(intervalMs = 30000) {
-    if(polling) clearInterval(polling)
-    polling = setInterval(async () => {
-      if (!map || (window as any).Echo?.connector?.pusher?.connection?.state === 'connected') return
-      const c = map.getCenter()
-      const z = (map as any).getZoom?.() || 13
-      const radius = z < 10 ? 30000 : z < 12 ? 15000 : 5000
-      await store.fetchNearby(c.lat, c.lng, radius)
-      renderPins()
-    }, intervalMs)
-  }
-  function stopPolling() { if (polling) clearInterval(polling) }
   function getCenter() { return map?.getCenter() }
   function flyToMyLocation(lat: number, lng: number) { if (!map) return; map.flyTo({ center: [lng, lat] as any, zoom: 14.5, essential: true, duration: 1200 }) }
-  let wsConnected = ref(true)
+  let wsConnected = ref(false)
   let reconnectTimer: any = null
+  let mapChannel: any = null
   function bindRealtime() {
     const doBind = () => {
-      // @ts-ignore
-      const ch = window.Echo?.channel('map')
-      if(!ch) return
-      ch.listen('PinCreated', (e: any) => { store.addRealtime(e.pin); renderPins() })
-        .listen('PinDeleted', (e: any) => { store.removeRealtime(e.pinId); renderPins() })
-        .listen('PinUpdated', (e: any) => { store.addRealtime(e.pin); renderPins() })
+      try { if (mapChannel) (window as any).Echo?.leave('map') } catch {}
+      const ch = (window as any).Echo?.channel('map')
+      if (!ch) return
+      mapChannel = ch
+      const onCreated = (e: any) => { if (e?.pin) { store.addRealtime(e.pin); renderPins() } }
+      const onDeleted = (e: any) => { if (e?.pinId) { store.removeRealtime(e.pinId); renderPins() } }
+      const onUpdated = (e: any) => { if (e?.pin) { store.addRealtime(e.pin); renderPins() } }
+      ch.listen('PinCreated', onCreated).listen('.pin.created', onCreated)
+        .listen('PinDeleted', onDeleted).listen('.pin.deleted', onDeleted)
+        .listen('PinUpdated', onUpdated).listen('.pin.updated', onUpdated)
     }
     doBind()
-    try{
-      // @ts-ignore
-      const pusher = window.Echo?.connector?.pusher
-      if(pusher){
-        pusher.connection.bind('connected', ()=>{ wsConnected.value=true; if(reconnectTimer) clearTimeout(reconnectTimer); doBind() })
-        pusher.connection.bind('disconnected', ()=> wsConnected.value=false)
-        pusher.connection.bind('failed', ()=> wsConnected.value=false)
-        pusher.connection.bind('unavailable', ()=>{ wsConnected.value=false; reconnectTimer=setTimeout(()=>pusher.connect(), 2000)})
+    try {
+      const pusher = (window as any).Echo?.connector?.pusher
+      if (pusher) {
+        pusher.connection.bind('connected', () => { wsConnected.value = true; if (reconnectTimer) clearTimeout(reconnectTimer); doBind() })
+        pusher.connection.bind('disconnected', () => wsConnected.value = false)
+        pusher.connection.bind('failed', () => wsConnected.value = false)
+        pusher.connection.bind('error', () => wsConnected.value = false)
+        pusher.connection.bind('unavailable', () => { wsConnected.value = false; reconnectTimer = setTimeout(() => pusher.connect(), 2000) })
+        if (pusher.connection.state === 'connected') wsConnected.value = true
       }
-    }catch{}
+    } catch {}
+  }
+  function unbindRealtime() {
+    try { if (mapChannel) (window as any).Echo?.leave('map'); mapChannel = null } catch {}
+    if (reconnectTimer) clearTimeout(reconnectTimer)
   }
   function setThemeStyle(isDark: boolean) {
     return
   }
-  return { mapContainer, initMap, renderPins, addTempMarker, removeTempMarker, showUserLocation, triggerGeolocate, startPolling, stopPolling, getCenter, flyToMyLocation, bindRealtime, setThemeStyle, loaded, errorMsg, wsConnected, get map() { return map } }
+  return { mapContainer, initMap, renderPins, addTempMarker, removeTempMarker, showUserLocation, triggerGeolocate, getCenter, flyToMyLocation, bindRealtime, unbindRealtime, setThemeStyle, loaded, errorMsg, wsConnected, get map() { return map } }
 }

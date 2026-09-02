@@ -52,6 +52,9 @@ class ConversationController extends Controller
         $request->validate(['user_id'=>'required|exists:users,id','message'=>'nullable|string|max:2000']);
         $me=$request->user();
         $other=User::findOrFail($request->input('user_id'));
+        if ($reason = $me->messageBlockReason($other)) {
+            abort(403, $reason);
+        }
         abort_unless($me->canMessageUser($other),403,'Нельзя написать этому пользователю. Проверьте настройки приватности или дружбу.');
         $existing = Conversation::findDirect($me->id,$other->id);
         if ($existing) {

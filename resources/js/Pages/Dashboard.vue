@@ -4,6 +4,7 @@ import { Head, Link, usePage } from '@inertiajs/vue3'
 import { computed, ref, onMounted } from 'vue'
 import AvatarPreview from '@/Components/AvatarPreview.vue'
 import { useBadgeStore } from '@/stores/badges'
+import { useSanitizedBio } from '@/composables/useSanitizedBio'
 
 const props = defineProps<{ user: any; isOwn?: boolean }>()
 const page = usePage()
@@ -18,6 +19,7 @@ const planLabel: Record<string,string> = { free:'Free', pro:'Pro', business:'Bus
 const planColor: Record<string,string> = { free:'bg-stone-100 text-stone-700 border-stone-200', pro:'bg-gradient-to-br from-violet-600 to-indigo-600 text-white border-transparent', business:'bg-ink-900 text-white border-ink-900' }
 const settingsHref = computed(() => isOwn.value ? route('profile.edit', { identifier: auth.is_admin || auth.role==='admin' ? 'admin' : String(auth.id) }) : route('profile.edit', { identifier: String(u.value.id) }))
 const badges = useBadgeStore()
+const bio = useSanitizedBio(() => u.value.bio)
 onMounted(()=> { if(isOwn.value) badges.init() })
 </script>
 
@@ -47,7 +49,6 @@ onMounted(()=> { if(isOwn.value) badges.init() })
               </p>
               <div class="mt-4 flex flex-wrap gap-2">
                 <Link href="/map" class="bg-white text-ink-900 px-6 py-2.5 rounded-full text-sm font-bold hover:bg-stone-50 transition inline-flex items-center gap-2">Открыть карту →</Link>
-                <Link v-if="isOwn" :href="settingsHref" class="bg-white/10 border border-white/15 text-white px-6 py-2.5 rounded-full text-sm font-bold hover:bg-white/15 transition">Настройки</Link>
                 <Link v-if="isOwn" href="/chat" class="relative bg-gradient-to-r from-violet-600 to-indigo-600 text-white px-6 py-2.5 rounded-full text-sm font-bold hover:opacity-90 transition inline-flex items-center gap-2">Чат
                   <span v-if="badges.unread" class="bg-white text-violet-700 text-xs font-black px-1.5 py-0.5 rounded-full min-w-[20px] text-center">{{ badges.unread }}</span>
                   <span v-if="badges.pending" class="bg-amber-400 text-ink-900 text-xs font-black px-1.5 py-0.5 rounded-full min-w-[20px] text-center">{{ badges.pending }}</span>
@@ -62,16 +63,67 @@ onMounted(()=> { if(isOwn.value) badges.init() })
         </div>
 
         <div class="grid lg:grid-cols-[1.15fr_0.85fr] gap-4">
-          <div class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-[20px] p-6 shadow-soft">
-            <h3 class="font-black tracking-tight">Общая информация</h3>
-            <div class="mt-4 space-y-3 text-sm">
-              <div class="flex justify-between gap-4 py-2.5 border-b border-stone-100 dark:border-zinc-800"><span class="text-stone-500 dark:text-zinc-400">Имя</span><span class="font-semibold dark:text-white">{{ u.name }}</span></div>
-              <div class="flex justify-between gap-4 py-2.5 border-b border-stone-100 dark:border-zinc-800"><span class="text-stone-500 dark:text-zinc-400">Email</span><span class="font-semibold dark:text-white truncate max-w-[60%]">{{ u.email }}</span></div>
-              <div class="flex justify-between gap-4 py-2.5 border-b border-stone-100 dark:border-zinc-800"><span class="text-stone-500 dark:text-zinc-400">Уровень</span><span class="font-semibold dark:text-white">{{ levelLabel[u.level] || u.level || 'novice' }}</span></div>
-              <div class="flex justify-between gap-4 py-2.5 border-b border-stone-100 dark:border-zinc-800"><span class="text-stone-500 dark:text-zinc-400">Репутация</span><span class="font-semibold dark:text-white">{{ u.reputation_score||0 }}</span></div>
-              <div class="flex justify-between gap-4 py-2.5 border-b border-stone-100 dark:border-zinc-800"><span class="text-stone-500 dark:text-zinc-400">Тариф</span><span class="font-semibold capitalize dark:text-white">{{ u.plan || 'free' }}</span></div>
-              <div class="flex justify-between gap-4 py-2.5 border-b border-stone-100 dark:border-zinc-800"><span class="text-stone-500 dark:text-zinc-400">Дом</span><span class="font-semibold dark:text-white text-right">{{ u.home_lat && u.home_lng ? `${Number(u.home_lat).toFixed(4)}, ${Number(u.home_lng).toFixed(4)} · ${u.home_radius_km||2} км` : 'не задан' }}</span></div>
-              <div class="flex justify-between gap-4 py-2.5"><span class="text-stone-500 dark:text-zinc-400">Анонимность</span><span class="font-semibold dark:text-white">{{ u.is_anonymous_default ? 'включена по умолчанию' : 'выключена' }}</span></div>
+          <div class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-[24px] p-6 shadow-soft overflow-hidden relative">
+            <div class="absolute -right-10 -top-10 w-32 h-32 bg-gradient-to-br from-violet-500/10 to-indigo-500/10 rounded-full blur-2xl"></div>
+            <div class="relative flex items-start justify-between gap-4">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-ink-900 dark:bg-white text-white dark:text-ink-900 grid place-items-center text-sm shadow-soft">◎</div>
+                <div>
+                  <h3 class="font-black tracking-tight leading-none">Общая информация</h3>
+                  <p class="text-xs text-stone-500 dark:text-zinc-400 mt-1">Профиль · видимость · приватность</p>
+                </div>
+              </div>
+
+            </div>
+
+            <div class="mt-5 grid gap-2.5">
+              <div class="group flex items-center gap-3 p-3 rounded-2xl bg-stone-50/80 dark:bg-zinc-800/60 border border-stone-100 dark:border-zinc-700/60 hover:bg-white dark:hover:bg-zinc-800 hover:shadow-soft transition">
+                <div class="w-9 h-9 rounded-xl bg-white dark:bg-zinc-700 border border-stone-200 dark:border-zinc-600 grid place-items-center text-sm shrink-0">👤</div>
+                <div class="min-w-0 flex-1">
+                  <div class="text-[10px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500">Имя</div>
+                  <div class="text-sm font-bold dark:text-white truncate">{{ u.name }}</div>
+                </div>
+                <span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.15)] shrink-0"></span>
+              </div>
+
+              <div class="group flex items-center gap-3 p-3 rounded-2xl bg-stone-50/80 dark:bg-zinc-800/60 border border-stone-100 dark:border-zinc-700/60 hover:bg-white dark:hover:bg-zinc-800 hover:shadow-soft transition">
+                <div class="w-9 h-9 rounded-xl bg-white dark:bg-zinc-700 border border-stone-200 dark:border-zinc-600 grid place-items-center text-sm shrink-0">✉️</div>
+                <div class="min-w-0 flex-1">
+                  <div class="text-[10px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500">Email</div>
+                  <div class="text-sm font-semibold dark:text-white truncate">{{ u.email }}</div>
+                </div>
+                <span v-if="u.email_verified_at" class="text-[10px] font-black bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 px-2 py-1 rounded-full shrink-0">✓ Подтверждена</span>
+                <span v-else class="text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 border border-amber-200 dark:border-amber-800 px-2 py-1 rounded-full shrink-0">не подтверждён</span>
+              </div>
+
+              <div class="p-3.5 rounded-2xl bg-stone-50/80 dark:bg-zinc-800/60 border border-stone-100 dark:border-zinc-700/60">
+                <div class="flex items-center gap-2">
+                  <div class="w-7 h-7 rounded-lg bg-white dark:bg-zinc-700 border border-stone-200 dark:border-zinc-600 grid place-items-center text-xs shrink-0">✨</div>
+                  <div class="text-[10px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500">О себе</div>
+                  <Link v-if="isOwn" :href="settingsHref" class="ml-auto text-[11px] font-bold text-violet-600 dark:text-violet-400 hover:underline">изменить</Link>
+                </div>
+                <div v-if="!bio.isEmpty.value" class="mt-2.5 prose prose-sm dark:prose-invert max-w-none prose-p:my-1.5 prose-p:leading-relaxed prose-h2:text-[15px] prose-h2:font-black prose-h2:mt-3 prose-h2:mb-1 prose-h3:text-[13px] prose-h3:font-bold prose-a:text-violet-600 dark:prose-a:text-violet-400 prose-a:underline prose-ul:list-disc prose-ul:pl-5 prose-ul:my-1.5 prose-ol:list-decimal prose-ol:pl-5 prose-blockquote:border-l-2 prose-blockquote:border-violet-300 dark:prose-blockquote:border-violet-700 prose-blockquote:pl-3 prose-blockquote:italic prose-blockquote:text-stone-600 dark:prose-blockquote:text-zinc-400 prose-code:bg-white dark:prose-code:bg-zinc-900 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-pre:bg-ink-900 prose-pre:text-white dark:prose-pre:bg-zinc-900 leading-relaxed text-stone-700 dark:text-zinc-300" v-html="bio.html.value"></div>
+                <div v-else class="mt-2 text-sm leading-relaxed" :class="isOwn ? 'text-stone-500 dark:text-zinc-400' : 'text-stone-500 dark:text-zinc-400'">{{ isOwn ? 'Расскажи о себе — это видят другие на твоём профиле. Добавь в настройках.' : 'Пользователь пока ничего не рассказал о себе.' }}</div>
+              </div>
+
+              <div class="flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-br from-emerald-50/70 to-teal-50/70 dark:from-emerald-950/20 dark:to-teal-950/20 border border-emerald-100 dark:border-emerald-900/40 hover:shadow-soft transition">
+                <div class="w-9 h-9 rounded-xl bg-white dark:bg-zinc-800 border border-emerald-200 dark:border-emerald-800 grid place-items-center text-sm shrink-0">📍</div>
+                <div class="min-w-0 flex-1">
+                  <div class="text-[10px] font-bold tracking-widest uppercase text-emerald-700/60 dark:text-emerald-300/60">Домашняя зона</div>
+                  <div class="text-sm font-bold dark:text-white truncate">{{ u.home_lat && u.home_lng ? `${Number(u.home_lat).toFixed(4)}, ${Number(u.home_lng).toFixed(4)}` : 'не задана' }}</div>
+                </div>
+                <span class="shrink-0 text-xs font-black px-3 py-1.5 rounded-full bg-ink-900 text-white dark:bg-white dark:text-ink-900">{{ u.home_radius_km||2 }} км</span>
+              </div>
+
+              <div class="flex items-center gap-3 p-3 rounded-2xl border transition" :class="u.is_anonymous_default ? 'bg-violet-50/70 dark:bg-violet-950/20 border-violet-200 dark:border-violet-900/50' : 'bg-stone-50/80 dark:bg-zinc-800/60 border-stone-100 dark:border-zinc-700/60'">
+                <div class="w-9 h-9 rounded-xl grid place-items-center text-sm shrink-0 border" :class="u.is_anonymous_default ? 'bg-violet-600 text-white border-violet-600' : 'bg-white dark:bg-zinc-700 border-stone-200 dark:border-zinc-600'">{{ u.is_anonymous_default ? '🕶️' : '👁️' }}</div>
+                <div class="min-w-0 flex-1">
+                  <div class="text-[10px] font-bold tracking-widest uppercase" :class="u.is_anonymous_default ? 'text-violet-600 dark:text-violet-300' : 'text-stone-400 dark:text-zinc-500'">Анонимность</div>
+                  <div class="text-sm font-bold dark:text-white leading-none">{{ u.is_anonymous_default ? 'Включена по умолчанию' : 'Выключена' }}</div>
+                  <div class="text-[11px] mt-0.5" :class="u.is_anonymous_default ? 'text-violet-600/70 dark:text-violet-300/70' : 'text-stone-500 dark:text-zinc-400'">пины скрывают автора</div>
+                </div>
+                <span class="w-2.5 h-2.5 rounded-full shrink-0" :class="u.is_anonymous_default ? 'bg-violet-600 shadow-[0_0_0_4px_rgba(124,58,237,0.15)]' : 'bg-stone-300 dark:bg-zinc-600'"></span>
+              </div>
             </div>
           </div>
 

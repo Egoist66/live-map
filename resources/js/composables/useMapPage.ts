@@ -141,7 +141,6 @@ export function useMapPage() {
     setTimeout(() => mapApi.triggerGeolocate(), 800)
     mapApi.renderPins()
     mapApi.bindRealtime()
-    mapApi.startPolling(30000)
     try {
       ;(mapApi.map as any)?.on('geolocate', (e: any) => {
         const c = e.coords
@@ -150,7 +149,7 @@ export function useMapPage() {
     } catch {}
   }
 
-  function destroy() { window.removeEventListener('keydown', onEsc) }
+  function destroy() { window.removeEventListener('keydown', onEsc); try { (mapApi as any).unbindRealtime?.() } catch {} }
 
   return {
     store, categories, selectedCategory, pinDetails, pinCreate, pinEdit, mapApi,

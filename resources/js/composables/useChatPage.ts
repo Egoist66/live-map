@@ -1,5 +1,6 @@
 import { ref, computed, nextTick } from 'vue'
 import { usePage } from '@inertiajs/vue3'
+import { useToast } from 'primevue/usetoast'
 import { useChat } from '@/composables/useChat'
 import { useFriendships } from '@/composables/useFriendships'
 import { useBlocks } from '@/composables/useBlocks'
@@ -28,20 +29,42 @@ export function useChatPage(initialConversationId?: number) {
   const creatingChat = ref(false)
   const confirm = ref<{ type: 'block' | 'deleteChat' | 'deleteMessage' | 'removeFriend' | 'unblock', payload: any, title: string, msg: string, icon: string, confirmLabel: string, severity: 'danger' | 'primary' } | null>(null)
   const confirmVisible = computed({ get: () => !!confirm.value, set: (v) => { if (!v) confirm.value = null } })
+  const toast = (() => { try { return useToast() } catch { return null as any } })()
   const pageProps = usePage().props as any
   const isOwnMessage = (m: any) => Number(m.sender_id) === Number(pageProps.auth?.user?.id)
   const { bind: bindSheet } = useLongPress((p: any) => { sheet.value = p }, 520)
+
+  function notifyBlockedBy(detail?: string) {
+    const msg = detail || 'Пользователь заблокировал вас'
+    toast?.add({
+      severity: 'error',
+      summary: '⛔ Доступ ограничен',
+      detail: msg.includes('заблокировал вас') ? 'Этот пользователь заблокировал вас — сообщения не доставляются.' : msg,
+      life: 4500,
+    })
+  }
 
   async function handleSend() {
     if (!input.value.trim()) return
     const txt = input.value
     input.value = ''
     emoji.close()
-    await chat.sendMessage(txt)
+    try {
+      await chat.sendMessage(txt)
+    } catch (e: any) {
+      const status = e?.response?.status
+      const msg = e?.response?.data?.message || e?.message || ''
+      input.value = txt
+      if (status === 403 && msg.includes('заблокировал')) notifyBlockedBy(msg)
+      else if (status === 403) toast?.add({ severity: 'warn', summary: 'Нельзя отправить', detail: msg || 'Сообщение не доставлено', life: 3500 })
+      else if (msg) toast?.add({ severity: 'error', summary: 'Ошибка', detail: msg, life: 3500 })
+    }
   }
 
+  const timeCache = new Map<string,string>()
   function formatTime(s: string) {
-    try { return new Date(s).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) } catch { return s }
+    if (timeCache.has(s)) return timeCache.get(s)!
+    try { const v = new Date(s).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }); timeCache.set(s, v); if (timeCache.size>400) timeCache.delete(timeCache.keys().next().value!); return v } catch { return s }
   }
 
   function onPickEmoji(emojiChar: string) {
@@ -67,7 +90,12 @@ export function useChatPage(initialConversationId?: number) {
   }
 
   async function startChatWith(u: any) {
-    if (u.can_message === false) return alert(u.can_message_reason || 'Пользователь не принимает сообщения')
+    if (u.can_message === false) {
+      const reason = u.can_message_reason || 'Пользователь не принимает сообщения'
+      if (reason.includes('заблокировал')) notifyBlockedBy(reason)
+      else toast?.add({ severity: 'warn', summary: 'Нельзя написать', detail: reason, life: 3500 })
+      return
+    }
     creatingChat.value = true
     try {
       await chat.createConversation(u.id)
@@ -75,7 +103,10 @@ export function useChatPage(initialConversationId?: number) {
       chat.searchQuery.value = ''
       chat.searchResults.value = []
     } catch (e: any) {
-      alert(e?.response?.data?.message || e?.message || 'Ошибка создания чата')
+      const msg = e?.response?.data?.message || e?.message || 'Ошибка создания чата'
+      if (e?.response?.status === 403 && msg.includes('заблокировал')) notifyBlockedBy(msg)
+      else if (e?.response?.status === 403) toast?.add({ severity: 'warn', summary: 'Нельзя создать чат', detail: msg, life: 3500 })
+      else toast?.add({ severity: 'error', summary: 'Ошибка', detail: msg, life: 3500 })
     } finally { creatingChat.value = false }
   }
 
@@ -106,10 +137,16 @@ export function useChatPage(initialConversationId?: number) {
     confirm.value = null
     sheet.value = null
     if (type === 'block') {
-      await blocksApi.block(payload)
       const conv = chat.conversations.value.find(c => c.other?.id === payload)
-      if (conv) await chat.deleteConversation(conv.id)
-      await friendsApi.load(); await blocksApi.load()
+      const friendEntry = friendsApi.friends.value.find(f => Number(f.other?.id) === Number(payload))
+      if (friendEntry) friendsApi.friends.value = friendsApi.friends.value.filter(f => f.id !== friendEntry.id)
+      if (conv) chat.conversations.value = chat.conversations.value.filter(c => c.id !== conv.id)
+      if (conv && chat.selectedId.value === conv.id) { chat.selectedId.value = null; chat.activeConv.value = null; chat.messages.value = [] }
+      try {
+        await blocksApi.block(payload)
+        if (conv) { try { await chatApi.deleteConversation(conv.id) } catch {} }
+      } catch (e) { await Promise.all([friendsApi.load(), blocksApi.load(), chat.loadConversations()]); throw e }
+      friendsApi.load(); chat.loadConversations()
     } else if (type === 'deleteChat') {
       await chat.deleteConversation(payload)
     } else if (type === 'deleteMessage') {
@@ -117,7 +154,7 @@ export function useChatPage(initialConversationId?: number) {
     } else if (type === 'removeFriend') {
       await friendsApi.remove(payload.id)
     } else if (type === 'unblock') {
-      await blocksApi.unblock(payload); await blocksApi.load()
+      await blocksApi.unblock(payload)
     }
   }
 

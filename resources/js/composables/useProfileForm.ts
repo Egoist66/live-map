@@ -17,18 +17,20 @@ export function useProfileForm() {
       home_lat: user.value.home_lat || null,
       home_lng: user.value.home_lng || null,
       home_radius_km: user.value.home_radius_km || 2,
+      bio: user.value.bio || null,
       is_anonymous_default: !!user.value.is_anonymous_default,
       plan: user.value.plan || 'free',
     } as any,
   })
 
-  watch(user, (u) => setValues({ name: u.name, email: u.email, home_lat: u.home_lat || null, home_lng: u.home_lng || null, home_radius_km: u.home_radius_km || 2, is_anonymous_default: !!u.is_anonymous_default, plan: u.plan || 'free' } as any))
+  watch(user, (u) => setValues({ name: u.name, email: u.email, home_lat: u.home_lat || null, home_lng: u.home_lng || null, home_radius_km: u.home_radius_km || 2, bio: u.bio || null, is_anonymous_default: !!u.is_anonymous_default, plan: u.plan || 'free' } as any))
 
   const [name, nameAttrs] = defineField('name')
   const [email, emailAttrs] = defineField('email')
   const [home_lat, homeLatAttrs] = defineField('home_lat')
   const [home_lng, homeLngAttrs] = defineField('home_lng')
   const [home_radius_km] = defineField('home_radius_km')
+  const [bio] = defineField('bio')
   const [is_anonymous_default] = defineField('is_anonymous_default')
   const [plan] = defineField('plan')
 
@@ -38,11 +40,17 @@ export function useProfileForm() {
   }
 
   const submit = handleSubmit((vals: any) => {
-    router.patch(route('profile.update'), vals, {
+    const payload: any = { ...vals }
+    if (typeof payload.bio === 'string') {
+      const stripped = payload.bio.replace(/<[^>]*>/g, '').trim()
+      if (!stripped) payload.bio = null
+    }
+    router.patch(route('profile.update'), payload, {
       preserveScroll: true,
       onSuccess: () => toast?.add({ severity: 'success', summary: 'Профиль сохранён', life: 2000 }),
+      onError: (e: any) => toast?.add({ severity: 'error', summary: 'Ошибка', detail: Object.values(e || {}).flat().join(', ') || 'Не удалось сохранить', life: 3000 }),
     })
   })
 
-  return { user, name, nameAttrs, email, emailAttrs, home_lat, homeLatAttrs, home_lng, homeLngAttrs, home_radius_km, is_anonymous_default, plan, errors, values, setValues, submit, isSubmitting, useMyLocation }
+  return { user, name, nameAttrs, email, emailAttrs, home_lat, homeLatAttrs, home_lng, homeLngAttrs, home_radius_km, bio, is_anonymous_default, plan, errors, values, setValues, submit, isSubmitting, useMyLocation }
 }

@@ -6,7 +6,6 @@ export const useBadgeStore = defineStore('badges', () => {
   const unread = ref(0)
   const pending = ref(0)
   const loading = ref(false)
-  let poll: ReturnType<typeof setInterval> | null = null
   let echoCh: any = null
   let inited = false
 
@@ -32,13 +31,19 @@ export const useBadgeStore = defineStore('badges', () => {
       if (echoCh) try { echo.leave(`user.${uid}`) } catch {}
       echoCh = echo.private(`user.${uid}`)
       echoCh.listen('.message.sent', () => { unread.value += 1 })
+      echoCh.listen('.message.updated', () => fetch())
+      echoCh.listen('.message.deleted', () => fetch())
       echoCh.listen('.friendship.updated', (e: any) => {
         const f = e.friendship
         const myId = Number(uid)
         if (f?.status === 'pending' && Number(f.addressee_id) === myId) pending.value += 1
-        else if (f?.status !== 'pending') fetch()
+        else fetch()
       })
       echoCh.listen('.message.read', () => fetch())
+      const pusher = (echo as any).connector?.pusher
+      if (pusher) {
+        pusher.connection.bind('connected', () => fetch())
+      }
     } catch {}
   }
 
@@ -56,8 +61,6 @@ export const useBadgeStore = defineStore('badges', () => {
     await fetch()
     subscribe()
     loading.value = false
-    if (poll) clearInterval(poll)
-    poll = setInterval(fetch, 30000)
     window.addEventListener('focus', fetch)
   }
 

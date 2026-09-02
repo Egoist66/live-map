@@ -14,3 +14,7 @@ Broadcast::channel('user.{userId}', function ($user, $userId) {
 });
 
 Broadcast::channel('map', function () { return true; });
+
+Broadcast::channel('online', function ($user) {
+    return ['id' => $user->id, 'name' => $user->name, 'avatar_path' => $user->avatar_path];
+});

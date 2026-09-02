@@ -24,12 +24,22 @@ class MessageController extends Controller
     public function store(Request $request, Conversation $conversation)
     {
         abort_unless($conversation->hasParticipant($request->user()->id),403);
+        $conversation->loadMissing('participants:id,name,message_privacy,allow_random_messages');
+        $other = $conversation->participants->firstWhere('id','!=',$request->user()->id);
+        if ($other && $reason = $request->user()->messageBlockReason($other)) {
+            abort(403, $reason);
+        }
         $data=$request->validate(['body'=>'required|string|max:2000']);
         return $this->storeInline($request,$conversation,$request->user(),$data['body']);
     }
 
     public function storeInline(Request $request, Conversation $conversation, $sender, string $body)
     {
+        $conversation->loadMissing('participants:id,name,message_privacy,allow_random_messages');
+        $other = $conversation->participants->firstWhere('id','!=',$sender->id);
+        if ($other && $reason = $sender->messageBlockReason($other)) {
+            abort(403, $reason);
+        }
         $msg=Message::create(['conversation_id'=>$conversation->id,'sender_id'=>$sender->id,'body'=>$body]);
         $msg->load(['sender:id,name,avatar_path','conversation.participantRows']);
         $conversation->update(['last_message_at'=>$msg->created_at]);
@@ -60,7 +70,10 @@ class MessageController extends Controller
     public function destroy(Request $request, Message $message)
     {
         abort_unless($message->sender_id===$request->user()->id || $request->user()->isAdmin(),403);
+        $cid = $message->conversation_id;
+        $mid = $message->id;
         $message->delete();
+        try { broadcast(new \App\Events\MessageDeleted($mid, $cid))->toOthers(); } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
         return response()->json(['ok'=>true]);
     }
 }

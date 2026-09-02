@@ -7,7 +7,7 @@ import Password from 'primevue/password'
 import Checkbox from 'primevue/checkbox'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
-defineProps<{ canResetPassword: boolean; status: string }>()
+defineProps<{ canResetPassword: boolean; status?: string | null }>()
 const { email, emailAttrs, password, passwordAttrs, remember, errors, showPass, submit, isSubmitting } = useLoginForm()
 </script>
 

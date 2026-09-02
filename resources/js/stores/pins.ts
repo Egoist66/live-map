@@ -84,7 +84,9 @@ export const usePinsStore = defineStore('pins', () => {
   }
 
   function addRealtime(pin: Pin): void {
-    if (!pins.value.some((p) => p.id === pin.id)) pins.value.unshift(pin)
+    const idx = pins.value.findIndex((p) => p.id === pin.id)
+    if (idx !== -1) pins.value[idx] = { ...pins.value[idx], ...pin } as Pin
+    else pins.value.unshift(pin)
   }
 
   function removeRealtime(id: number): void {

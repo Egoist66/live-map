@@ -1,14 +1,18 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import NavLink from '@/Components/NavLink.vue';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
-import { Link, usePage } from '@inertiajs/vue3';
+import { Link, usePage, router } from '@inertiajs/vue3';
 import { useBadgeStore } from '@/stores/badges';
+import { usePresence } from '@/composables/usePresence';
 const badge = useBadgeStore()
-onMounted(()=> badge.init())
+const presence = usePresence()
+onMounted(()=> { badge.init(); presence.connect() })
+onBeforeUnmount(()=> presence.disconnect())
+router.on('navigate', () => presence.connect())
 const showingNavigationDropdown = ref(false);
 const page = usePage()
 const avatarSrc = computed(() => {

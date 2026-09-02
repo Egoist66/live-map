@@ -7,7 +7,7 @@ import { router } from '@inertiajs/vue3'
 
 export function useLoginForm() {
   const showPass = ref(false)
-  const { defineField, handleSubmit, errors, values, isSubmitting } = useForm({
+  const { defineField, handleSubmit, errors, values, isSubmitting, setErrors } = useForm({
     validationSchema: loginSchema,
     initialValues: { email: '', password: '', remember: false } as any,
   })
@@ -16,7 +16,9 @@ export function useLoginForm() {
   const [remember] = defineField('remember')
 
   const submit = handleSubmit(async (vals: any) => {
-    router.post(route('login'), vals, { onFinish: () => {} })
+    router.post(route('login'), vals, {
+      onError: (errs: Record<string, string>) => setErrors(errs),
+    })
   })
 
   return { email, emailAttrs, password, passwordAttrs, remember, errors, values, showPass, submit, isSubmitting }
@@ -28,7 +30,7 @@ export function useRegisterForm() {
   const locating = ref(false)
   const addrLoading = ref(false)
 
-  const { defineField, handleSubmit, errors, values, isSubmitting, setValues } = useForm({
+  const { defineField, handleSubmit, errors, values, isSubmitting, setValues, setErrors } = useForm({
     validationSchema: registerSchema,
     initialValues: { name: '', email: '', password: '', password_confirmation: '', home_lat: null, home_lng: null, home_radius_km: 2, home_address: '' } as any,
   })
@@ -66,7 +68,9 @@ export function useRegisterForm() {
   }
 
   const submit = handleSubmit(async (vals: any) => {
-    router.post(route('register'), vals)
+    router.post(route('register'), vals, {
+      onError: (errs: Record<string, string>) => setErrors(errs),
+    })
   })
 
   return {

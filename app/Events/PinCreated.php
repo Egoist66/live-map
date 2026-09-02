@@ -13,5 +13,6 @@ class PinCreated implements ShouldBroadcastNow
     use Dispatchable, InteractsWithSockets;
     public function __construct(public Pin $pin) {}
     public function broadcastOn(): array { return [new Channel('map')]; }
+    public function broadcastAs(): string { return 'pin.created'; }
     public function broadcastWith(): array { return ['pin' => $this->pin->toPublicArray()]; }
 }

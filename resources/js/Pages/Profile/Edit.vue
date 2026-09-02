@@ -18,7 +18,7 @@ import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 
-const props = defineProps<{ mustVerifyEmail: boolean; status: string; user: any }>()
+const props = defineProps<{ mustVerifyEmail: boolean; status?: string | null; user: any }>()
 const page = usePage()
 const u = computed(() => props.user || (page.props.auth as any).user)
 const { theme, setTheme } = useTheme()
@@ -63,6 +63,8 @@ const ex = useSupportExchange()
 function mailToSupport(){ const subj=encodeURIComponent(supportSubject.value||'Обращение в поддержку UPin'); const body=encodeURIComponent(supportBody.value+(supportBody.value?'\n\n---\n':''+`Пользователь: ${u.value.name} <${u.value.email}>`)); window.location.href=`mailto:razormad666@gmail.com?subject=${subj}&body=${body}` }
 function mailToDonate(usd:number){ const byn = ex.usdRate.value? (usd*ex.usdRate.value).toFixed(2)+' BYN' : `${usd}$`; const subj=encodeURIComponent(`Донат UPin — $${usd} (~${byn})`); const body=encodeURIComponent(`Привет! Хочу задонатить $${usd} (~${byn}) разработчику UPin.\n\nПользователь: ${u.value.name} <${u.value.email}>\nТариф: ${u.value.plan||'free'}\n\nСообщение:\n`); window.location.href=`mailto:razormad666@gmail.com?subject=${subj}&body=${body}` }
 const avatarSrc = computed(() => u.value.avatar_path ? `/storage/${u.value.avatar_path}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(u.value.name)}&background=0F172A&color=fff&bold=true`)
+import { useSanitizedBio } from '@/composables/useSanitizedBio'
+const bioPreview = useSanitizedBio(() => (u.value as any).bio)
 </script>
 
 <template>
@@ -71,23 +73,8 @@ const avatarSrc = computed(() => u.value.avatar_path ? `/storage/${u.value.avata
     <Toast />
     <div class="bg-surface dark:bg-[#090E1A] min-h-[calc(100vh-64px)] overflow-x-hidden">
       <div class="max-w-[1280px] mx-auto px-4 sm:px-6 py-6 overflow-hidden">
-        <div class="bg-ink-900 dark:bg-zinc-900 dark:border dark:border-zinc-800 text-white rounded-[24px] p-6 sm:p-7 flex flex-col sm:flex-row justify-between gap-4 relative overflow-hidden">
-          <div class="absolute -right-16 -top-16 w-72 h-72 bg-gradient-to-br from-brand-500 to-accent-teal rounded-full blur-[60px] opacity-20"></div>
-          <div class="relative flex items-center gap-4 min-w-0">
-            <button @click="showAvatar=true" class="group relative w-14 h-14 rounded-2xl overflow-hidden border-2 border-white/20 shrink-0 focus:outline-none focus:ring-2 focus:ring-white/40">
-              <img :src="avatarSrc" class="w-full h-full object-cover group-hover:scale-105 transition duration-300"/>
-              <span class="absolute inset-0 bg-black/0 group-hover:bg-black/20 grid place-items-center opacity-0 group-hover:opacity-100 transition text-white text-xs">🔍</span>
-            </button>
-            <div class="min-w-0">
-              <h1 class="text-xl font-black tracking-tight truncate">{{ u.name }} <span class="font-medium text-white/60 text-sm ml-2">{{ u.level || 'novice' }} · {{ u.reputation_score||0 }} ★</span></h1>
-              <p class="text-white/60 text-sm mt-0.5 truncate">{{ u.email }} · <span class="capitalize">{{ u.plan||'free' }}</span> · {{ u.home_lat ? `дом ${Number(u.home_lat).toFixed(3)}, ${Number(u.home_lng).toFixed(3)}` : 'дом не задан' }}</p>
-            </div>
-          </div>
-          <Link href="/map" class="relative bg-white text-ink-900 px-6 py-3 rounded-full font-bold h-fit hover:bg-stone-50 transition shrink-0 self-start sm:self-center">На карту →</Link>
-        </div>
-
-        <div class="mt-6 grid lg:grid-cols-[280px_1fr] gap-4 sm:gap-6 items-start w-full overflow-hidden">
-          <div class="lg:sticky lg:top-[80px] bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-[20px] p-2 shadow-soft w-full max-w-full overflow-hidden">
+        <div class="grid lg:grid-cols-[280px_1fr] gap-4 sm:gap-6 items-start w-full overflow-hidden">
+          <div class="self-start bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-[20px] p-2 shadow-soft w-full max-w-full overflow-hidden">
             <div class="hidden lg:block px-2 py-2 text-[11px] font-bold tracking-widest text-stone-400 uppercase">Настройки</div>
             <nav class="flex lg:block gap-1.5 lg:space-y-1 overflow-x-auto scrollbar-none pb-1 lg:pb-0 px-1 lg:px-0 snap-x max-w-full">
               <button v-for="t in tabs" :key="t.id" @click="active=t.id" :class="['shrink-0 lg:w-full text-left flex items-center gap-3 px-3 py-2.5 lg:py-3 rounded-xl transition snap-start', active===t.id ? 'bg-ink-900 dark:bg-white text-white dark:text-ink-900 shadow-soft' : 'hover:bg-stone-50 dark:hover:bg-zinc-800 text-stone-700 dark:text-zinc-300 bg-stone-50 lg:bg-transparent dark:bg-zinc-800/50 lg:dark:bg-transparent border lg:border-0 border-stone-200 dark:border-zinc-700']">
@@ -105,10 +92,16 @@ const avatarSrc = computed(() => u.value.avatar_path ? `/storage/${u.value.avata
           </div>
 
           <div class="space-y-4 min-w-0 w-full max-w-full overflow-hidden">
-            <div v-show="active==='profile'" class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-[20px] p-6 shadow-soft">
-              <h3 class="font-black tracking-tight text-lg">Профиль</h3>
-              <p class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Фото, имя и домашняя зона — на них строится весь UPin.</p>
-              <UpdateProfileInformationForm :must-verify-email="mustVerifyEmail" :status="status" class="mt-5 max-w-xl" />
+            <div v-show="active==='profile'" class="space-y-4">
+              <div class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-[20px] p-6 shadow-soft">
+                <h3 class="font-black tracking-tight text-lg">Основное</h3>
+                <p class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Аватар, контакты и домашняя зона — что видят другие.</p>
+                <UpdateProfileInformationForm :must-verify-email="mustVerifyEmail" :status="status" class="mt-5 max-w-xl" />
+              </div>
+              <div v-if="!bioPreview.isEmpty.value" class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-[20px] p-6 shadow-soft">
+                <h4 class="text-sm font-black flex items-center gap-2">Превью «О себе» <span class="text-xs font-normal text-stone-400">как видят другие</span></h4>
+                <div class="mt-3 prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-h2:text-base prose-h2:font-black prose-h3:text-sm prose-h3:font-bold prose-a:text-brand-600 prose-a:underline prose-ul:list-disc prose-ul:pl-5 prose-ol:list-decimal prose-ol:pl-5 prose-blockquote:border-l-[3px] prose-blockquote:border-stone-200 prose-blockquote:pl-4 prose-blockquote:italic bg-stone-50 dark:bg-zinc-800 border border-stone-100 dark:border-zinc-700 rounded-2xl p-4 leading-relaxed" v-html="bioPreview.html.value"></div>
+              </div>
             </div>
 
             <div v-show="active==='billing'" class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-[20px] p-6 shadow-soft">
