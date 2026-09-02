@@ -8,6 +8,7 @@ import { useTheme } from '@/composables/useTheme'
 import { useReverseGeocode } from '@/composables/useReverseGeocode'
 import { usePinCreate } from '@/composables/usePinCreate'
 import { usePinEdit } from '@/composables/usePinEdit'
+import { useMapOverlays } from '@/composables/useMapOverlays'
 
 export function useMapPage() {
   const { store, categories, selectedCategory, fetchNearby } = usePins()
@@ -32,6 +33,11 @@ export function useMapPage() {
     pinDetails.openPin(p)
     nextTick(() => pinEdit.start(p))
   })
+
+  const overlays = useMapOverlays(
+    (lat, lng) => mapApi.map?.flyTo({ center: [lng, lat] as any, zoom: 15, duration: 900 }),
+    (p) => pinDetails.openPin(p),
+  )
 
   watch(isDark, (v) => mapApi.setThemeStyle(v))
 
@@ -151,5 +157,6 @@ export function useMapPage() {
     showCreate, pinAddress, loadingPinAddress, myStreet, loadingStreet,
     radiusOptions, radiusLabel, openCreate, closeCreate, deleteSelectedPin, saveEdit, init, destroy,
     deleteMutation,
+    ...overlays,
   }
 }

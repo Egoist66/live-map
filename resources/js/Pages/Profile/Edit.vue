@@ -69,8 +69,8 @@ const avatarSrc = computed(() => u.value.avatar_path ? `/storage/${u.value.avata
   <Head title="Настройки" />
   <AuthenticatedLayout>
     <Toast />
-    <div class="bg-surface dark:bg-[#090E1A] min-h-[calc(100vh-64px)]">
-      <div class="max-w-[1280px] mx-auto px-4 sm:px-6 py-6">
+    <div class="bg-surface dark:bg-[#090E1A] min-h-[calc(100vh-64px)] overflow-x-hidden">
+      <div class="max-w-[1280px] mx-auto px-4 sm:px-6 py-6 overflow-hidden">
         <div class="bg-ink-900 dark:bg-zinc-900 dark:border dark:border-zinc-800 text-white rounded-[24px] p-6 sm:p-7 flex flex-col sm:flex-row justify-between gap-4 relative overflow-hidden">
           <div class="absolute -right-16 -top-16 w-72 h-72 bg-gradient-to-br from-brand-500 to-accent-teal rounded-full blur-[60px] opacity-20"></div>
           <div class="relative flex items-center gap-4 min-w-0">
@@ -86,10 +86,10 @@ const avatarSrc = computed(() => u.value.avatar_path ? `/storage/${u.value.avata
           <Link href="/map" class="relative bg-white text-ink-900 px-6 py-3 rounded-full font-bold h-fit hover:bg-stone-50 transition shrink-0 self-start sm:self-center">На карту →</Link>
         </div>
 
-        <div class="mt-6 grid lg:grid-cols-[280px_1fr] gap-6 items-start">
-          <div class="lg:sticky lg:top-[80px] bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-[20px] p-2 shadow-soft">
+        <div class="mt-6 grid lg:grid-cols-[280px_1fr] gap-4 sm:gap-6 items-start w-full overflow-hidden">
+          <div class="lg:sticky lg:top-[80px] bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-[20px] p-2 shadow-soft w-full max-w-full overflow-hidden">
             <div class="hidden lg:block px-2 py-2 text-[11px] font-bold tracking-widest text-stone-400 uppercase">Настройки</div>
-            <nav class="flex lg:block gap-1.5 lg:space-y-1 overflow-x-auto scrollbar-none pb-1 lg:pb-0 -mx-1 px-1 lg:mx-0 lg:px-0 snap-x">
+            <nav class="flex lg:block gap-1.5 lg:space-y-1 overflow-x-auto scrollbar-none pb-1 lg:pb-0 px-1 lg:px-0 snap-x max-w-full">
               <button v-for="t in tabs" :key="t.id" @click="active=t.id" :class="['shrink-0 lg:w-full text-left flex items-center gap-3 px-3 py-2.5 lg:py-3 rounded-xl transition snap-start', active===t.id ? 'bg-ink-900 dark:bg-white text-white dark:text-ink-900 shadow-soft' : 'hover:bg-stone-50 dark:hover:bg-zinc-800 text-stone-700 dark:text-zinc-300 bg-stone-50 lg:bg-transparent dark:bg-zinc-800/50 lg:dark:bg-transparent border lg:border-0 border-stone-200 dark:border-zinc-700']">
                 <span class="w-8 h-8 lg:w-9 lg:h-9 rounded-xl grid place-items-center text-sm shrink-0" :class="active===t.id ? 'bg-white/15 dark:bg-ink-900/10' : 'bg-white lg:bg-stone-100 dark:bg-zinc-700'">{{ t.icon }}</span>
                 <div class="min-w-0 hidden sm:block lg:block"><div class="text-sm font-semibold leading-none whitespace-nowrap">{{ t.label }}</div><div class="text-xs opacity-60 leading-none mt-1 hidden lg:block">{{ t.desc }}</div></div>
@@ -104,7 +104,7 @@ const avatarSrc = computed(() => u.value.avatar_path ? `/storage/${u.value.avata
             </div>
           </div>
 
-          <div class="space-y-4 min-w-0">
+          <div class="space-y-4 min-w-0 w-full max-w-full overflow-hidden">
             <div v-show="active==='profile'" class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-[20px] p-6 shadow-soft">
               <h3 class="font-black tracking-tight text-lg">Профиль</h3>
               <p class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Фото, имя и домашняя зона — на них строится весь UPin.</p>

@@ -1,5 +1,9 @@
 <?php
 
+use App\Http\Controllers\ChatUserController;
+use App\Http\Controllers\ConversationController;
+use App\Http\Controllers\FriendshipController;
+use App\Http\Controllers\MessageController;
 use App\Http\Controllers\PinCommentController;
 use App\Http\Controllers\PinController;
 use App\Http\Controllers\ReactionController;
@@ -23,4 +27,26 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::post('/reactions/toggle', [ReactionController::class, 'toggle']);
     Route::apiResource('zone-subscriptions', ZoneSubscriptionController::class)->only(['index','store','destroy']);
     Route::post('/reports', [ReportController::class, 'store']);
+
+    Route::get('/chat/me', [ChatUserController::class, 'me']);
+    Route::get('/chat/users/search', [ChatUserController::class, 'search']);
+    Route::patch('/chat/privacy', [ChatUserController::class, 'privacy']);
+
+    Route::get('/friendships', [FriendshipController::class, 'index']);
+    Route::post('/friendships', [FriendshipController::class, 'store']);
+    Route::post('/friendships/{friendship}/accept', [FriendshipController::class, 'accept']);
+    Route::post('/friendships/{friendship}/decline', [FriendshipController::class, 'decline']);
+    Route::delete('/friendships/{friendship}', [FriendshipController::class, 'destroy']);
+    Route::get('/friendships/status/{user}', [FriendshipController::class, 'status']);
+
+    Route::get('/conversations', [ConversationController::class, 'index']);
+    Route::post('/conversations', [ConversationController::class, 'store']);
+    Route::get('/conversations/{conversation}', [ConversationController::class, 'show']);
+    Route::post('/conversations/{conversation}/read', [ConversationController::class, 'markRead']);
+    Route::delete('/conversations/{conversation}', [ConversationController::class, 'destroy']);
+
+    Route::get('/conversations/{conversation}/messages', [MessageController::class, 'index']);
+    Route::post('/conversations/{conversation}/messages', [MessageController::class, 'store']);
+    Route::post('/conversations/{conversation}/typing', [MessageController::class, 'typing']);
+    Route::delete('/messages/{message}', [MessageController::class, 'destroy']);
 });

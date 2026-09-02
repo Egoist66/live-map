@@ -13,9 +13,9 @@ const dashboardHref = computed(() => {
 
 <template>
   <Head title="Твое окно во двор" />
-  <div class="min-h-screen bg-surface dark:bg-[#0B0F1A] text-ink-900 dark:text-zinc-100 antialiased selection:bg-ink-900 dark:selection:bg-brand-500 selection:text-white">
+  <div class="min-h-screen bg-surface dark:bg-[#0B0F1A] text-ink-900 dark:text-zinc-100 antialiased selection:bg-ink-900 dark:selection:bg-brand-500 selection:text-white overflow-x-hidden">
     <header class="sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/70 backdrop-blur border-b border-stone-200/60 dark:border-zinc-800">
-      <div class="max-w-[1280px] mx-auto px-6 h-[64px] flex items-center justify-between">
+      <div class="max-w-[1280px] mx-auto px-4 sm:px-6 h-[64px] flex items-center justify-between">
         <Link href="/" class="flex items-center gap-2.5">
           <span class="w-9 h-9 rounded-xl bg-ink-900 dark:bg-white text-white dark:text-ink-900 grid place-items-center shadow-soft relative overflow-hidden"><span class="absolute inset-0 bg-gradient-to-br from-brand-500 to-accent-teal opacity-90"></span><span class="relative text-sm font-black">◉</span></span>
           <span class="font-black tracking-[-0.03em] text-[19px]">U<span class="font-light text-ink-600 dark:text-zinc-400">Pin</span></span>
@@ -35,14 +35,14 @@ const dashboardHref = computed(() => {
       </div>
     </header>
 
-    <section class="max-w-[1280px] mx-auto px-6 pt-8 sm:pt-14 pb-10 grid lg:grid-cols-[1.05fr_0.95fr] gap-10 items-center">
+    <section class="max-w-[1280px] mx-auto px-4 sm:px-6 pt-8 sm:pt-14 pb-10 grid lg:grid-cols-[1.05fr_0.95fr] gap-8 sm:gap-10 items-center overflow-hidden">
       <div>
         <div class="inline-flex items-center gap-2 bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-full pl-1.5 pr-3 py-1 shadow-soft">
           <span class="bg-emerald-500 text-white rounded-full px-2.5 py-1 text-[11px] font-bold tracking-wide flex items-center gap-1.5"><span class="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span> LIVE</span>
           <span class="text-xs font-medium text-stone-600 dark:text-zinc-400">847 пинов рядом · обновление 30 сек</span>
         </div>
-        <h1 class="mt-6 text-[42px] sm:text-[64px] font-black tracking-[-0.05em] leading-[0.85] dark:text-white">Район <span class="bg-gradient-to-r from-brand-500 via-violet-500 to-accent-teal bg-clip-text text-transparent">живой</span>,<br/>пока ты рядом.</h1>
-        <p class="mt-5 text-[17px] leading-relaxed text-stone-600 dark:text-zinc-400 max-w-[560px]">Строгая гиперлокальная сеть вокруг карты. Вопросы, события, помощь и объявления — всё в радиусе 1 км. Без ленты, без шума. Пины живут 2–24 часа.</p>
+        <h1 class="mt-6 text-[32px] sm:text-[48px] lg:text-[64px] font-black tracking-[-0.05em] leading-[0.85] dark:text-white break-words">Район <span class="bg-gradient-to-r from-brand-500 via-violet-500 to-accent-teal bg-clip-text text-transparent">живой</span>,<br/>пока ты рядом.</h1>
+        <p class="mt-5 text-[15px] sm:text-[17px] leading-relaxed text-stone-600 dark:text-zinc-400 max-w-[560px]">Строгая гиперлокальная сеть вокруг карты. Вопросы, события, помощь и объявления — всё в радиусе 1 км. Без ленты, без шума. Пины живут 2–24 часа.</p>
         <div class="mt-7 flex flex-wrap gap-3">
           <Link href="/map" class="bg-ink-900 dark:bg-white dark:text-ink-900 text-white px-7 py-3.5 rounded-full font-semibold hover:bg-ink-800 dark:hover:bg-zinc-100 shadow-soft hover:shadow-card transition inline-flex items-center gap-2">Открыть карту <span class="w-6 h-6 rounded-full bg-white/15 dark:bg-ink-900/10 grid place-items-center text-xs">→</span></Link>
           <a href="#how" class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-700 px-7 py-3.5 rounded-full font-semibold hover:bg-stone-50 dark:hover:bg-zinc-800 transition">Как это работает</a>

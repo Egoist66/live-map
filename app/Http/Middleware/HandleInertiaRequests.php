@@ -34,6 +34,7 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            'unreadCount' => $request->user() ? $request->user()->unreadMessagesCount() : 0,
         ];
     }
 }

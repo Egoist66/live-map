@@ -1,7 +1,7 @@
 import { ref, watch, nextTick } from 'vue'
 import * as maplibregl from 'maplibre-gl'
 import { usePins } from './usePins'
-import axios from 'axios'
+import { useThrottledMapFetch } from './useThrottledMapFetch'
 import { usePage as useInertiaPage } from '@inertiajs/vue3'
 
 const OSM_RASTER_STYLE: any = {
@@ -91,18 +91,11 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
       if (onMapClick) map.on('click', onMapClick)
       map.on('click', hideCtxMenu)
       map.on('dragstart', hideCtxMenu)
-      let moveTimer: any = null
-      let lastCenter = { lat: center[1], lng: center[0] }
+      const throttled = useThrottledMapFetch(renderPins)
       map.on('moveend', () => {
         if (!map) return
         const c = map.getCenter()
-        const dist = Math.hypot(c.lat - lastCenter.lat, c.lng - lastCenter.lng)
-        if (dist < 0.0005) return
-        clearTimeout(moveTimer)
-        moveTimer = setTimeout(() => {
-          lastCenter = { lat: c.lat, lng: c.lng }
-          store.fetchNearby(c.lat, c.lng).then(renderPins).catch(() => {})
-        }, 550)
+        throttled.request(c.lat, c.lng)
       })
     }
     create(tryStyles[0])

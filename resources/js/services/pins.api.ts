@@ -3,8 +3,8 @@ import type { Pin, CreatePinPayload, UpdatePinPayload, BoostType } from '@/types
 import type { PinBoost } from '@/types/entities/Boost'
 
 export const pinsApi = {
-  async list(lat: number, lng: number, radius?: number): Promise<Pin[]> {
-    const { data } = await api.get<Pin[]>('/api/pins', { params: { lat, lng, radius } })
+  async list(lat: number, lng: number, radius?: number, signal?: AbortSignal): Promise<Pin[]> {
+    const { data } = await api.get<Pin[]>('/api/pins', { params: { lat, lng, radius }, signal } as any)
     return data
   },
 

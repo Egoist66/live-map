@@ -13,6 +13,34 @@ use Inertia\Response;
 
 class ProfileController extends Controller
 {
+    public function publicShow(Request $request, \App\Models\User $user): Response
+    {
+        $auth = $request->user();
+        $isOwn = $auth && $auth->id === $user->id;
+        $canMessage = $auth ? $auth->canMessageUser($user) : false;
+        $reason = $auth ? $auth->messageBlockReason($user) : null;
+        $friendship = null;
+        $isFriend = false;
+        $isPending = false;
+        if ($auth && !$isOwn) {
+            $friendship = \App\Models\Friendship::where(function($q) use ($auth,$user){
+                $q->where('requester_id',$auth->id)->where('addressee_id',$user->id)
+                  ->orWhere(fn($x)=>$x->where('requester_id',$user->id)->where('addressee_id',$auth->id));
+            })->first();
+            $isFriend = $friendship?->status==='accepted';
+            $isPending = $friendship?->status==='pending';
+        }
+        return Inertia::render('Profile/Show', [
+            'profileUser' => $user->only(['id','name','avatar_path','level','reputation_score','created_at','home_lat','home_lng','home_radius_km']),
+            'isOwn' => $isOwn,
+            'friendship' => $friendship,
+            'isFriend' => $isFriend,
+            'isPending' => $isPending,
+            'canMessage' => $canMessage,
+            'canMessageReason' => $reason,
+        ]);
+    }
+
     public function dashboard(Request $request, ?string $identifier = null): Response|RedirectResponse
     {
         $auth = $request->user();
@@ -28,7 +56,9 @@ class ProfileController extends Controller
             $profileUser = $auth;
         } elseif (is_numeric($identifier)) {
             $profileUser = \App\Models\User::findOrFail((int) $identifier);
-            if ($profileUser->id !== $auth->id && !$auth->isAdmin()) abort(403, 'Чужой профиль');
+            if ($profileUser->id !== $auth->id && !$auth->isAdmin()) {
+                return redirect()->route('users.show', $profileUser->id);
+            }
         } else {
             abort(404);
         }

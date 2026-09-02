@@ -4,6 +4,7 @@ import { onMounted, onUnmounted } from 'vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useMapPage } from '@/composables/useMapPage'
+import { usePinChat } from '@/composables/usePinChat'
 import { formatTime } from '@/utils/date'
 import Toast from 'primevue/toast'
 import Button from 'primevue/button'
@@ -11,15 +12,20 @@ import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import Dialog from 'primevue/dialog'
 import Select from 'primevue/select'
+import { watch } from 'vue'
 
 const {
   store, categories, selectedCategory, pinDetails, pinCreate, pinEdit, mapApi,
   showCreate, pinAddress, loadingPinAddress, myStreet, loadingStreet,
   radiusOptions, radiusLabel, closeCreate, deleteSelectedPin, saveEdit, init, destroy,
+  showLiveInfo, showMyPins, myPins, handleMineClick, flyToPin,
 } = useMapPage()
 
 const { selectedPin, comments, commentText, react, sendComment, reportPin, boost, editingCommentId, editingContent, startEditComment, cancelEditComment, saveEditComment, reactAsyncStatus, createCommentAsyncStatus, boostMutation, reportMutation, updateCommentMutation } = pinDetails as any
 const { mapContainer, loaded } = mapApi
+const pinChat = usePinChat()
+
+watch(() => (selectedPin as any)?.value?.user?.id, (id) => { if (id && !(selectedPin as any).value.is_owner) pinChat.loadStatus(id) })
 
 function openCreateFromUI() { showCreate.value = true }
 
@@ -43,14 +49,14 @@ onUnmounted(destroy)
 
       <div class="absolute top-3 left-3 right-3 sm:top-4 sm:left-4 sm:right-auto flex flex-col gap-2.5 z-10 pointer-events-none">
         <div class="pointer-events-auto bg-white/95 dark:bg-zinc-900/95 backdrop-blur border border-stone-200 dark:border-zinc-700 rounded-2xl sm:rounded-full p-1.5 sm:pl-2 sm:pr-2 shadow-soft flex items-center gap-1.5 overflow-x-auto scrollbar-none max-w-full">
-          <span class="shrink-0 bg-ink-900 dark:bg-white dark:text-ink-900 text-white rounded-full px-3 py-1.5 text-xs font-bold flex items-center gap-1.5">
+          <button @click="showLiveInfo=true" class="shrink-0 bg-ink-900 dark:bg-white dark:text-ink-900 text-white rounded-full px-3 py-1.5 text-xs font-bold flex items-center gap-1.5 hover:opacity-90 transition">
             <span v-if="store.loading" class="w-3 h-3 border-2 border-white/30 dark:border-zinc-300 border-t-white dark:border-t-ink-900 rounded-full animate-spin"></span>
             <span v-else class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span>{{ store.pins.length }}
-          </span>
+          </button>
           <div class="h-5 w-px bg-stone-200 dark:bg-zinc-700 shrink-0 hidden sm:block"></div>
           <div class="flex items-center gap-1 overflow-x-auto scrollbar-none">
             <button @click="selectedCategory='all'" :class="['shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition', selectedCategory==='all'?'bg-ink-900 dark:bg-white dark:text-ink-900 text-white border-ink-900 dark:border-white shadow-soft':'bg-white dark:bg-zinc-800 border-stone-200 dark:border-zinc-700 dark:text-zinc-300 hover:border-stone-300 dark:hover:border-zinc-600 hover:bg-stone-50 dark:hover:bg-zinc-700']">Все</button>
-            <button @click="selectedCategory='mine'" :class="['shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition inline-flex items-center gap-1', selectedCategory==='mine'?'bg-amber-400 text-stone-900 border-amber-400 shadow-soft':'bg-white dark:bg-zinc-800 border-amber-200 dark:border-amber-800 dark:text-zinc-300 hover:bg-amber-50 dark:hover:bg-zinc-800']">📍 Мои</button>
+            <button @click="handleMineClick" :class="['shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition inline-flex items-center gap-1', selectedCategory==='mine'?'bg-amber-400 text-stone-900 border-amber-400 shadow-soft':'bg-white dark:bg-zinc-800 border-amber-200 dark:border-amber-800 dark:text-zinc-300 hover:bg-amber-50 dark:hover:bg-zinc-800']">📍 Мои</button>
             <button v-for="c in categories" :key="c.v" @click="selectedCategory=c.v" :class="['shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition hidden sm:inline-flex items-center gap-1', selectedCategory===c.v?'bg-ink-900 dark:bg-white dark:text-ink-900 text-white border-ink-900 dark:border-white shadow-soft':'bg-white dark:bg-zinc-800 border-stone-200 dark:border-zinc-700 dark:text-zinc-300 hover:border-stone-300 dark:hover:border-zinc-600 hover:bg-stone-50 dark:hover:bg-zinc-700']">{{ c.i }} <span>{{ c.l }}</span></button>
             <button v-for="c in categories.slice(0,4)" :key="'m'+c.v" @click="selectedCategory=c.v" :class="['shrink-0 w-9 h-9 rounded-full text-sm grid place-items-center border sm:hidden', selectedCategory===c.v?'bg-ink-900 dark:bg-white dark:text-ink-900 text-white border-ink-900 dark:border-white':'bg-white dark:bg-zinc-800 border-stone-200 dark:border-zinc-700 dark:text-zinc-300']" :title="c.l">{{ c.i }}</button>
           </div>
@@ -174,13 +180,34 @@ onUnmounted(destroy)
             <p v-if="!pinEdit.editing.value" class="text-sm text-stone-600 mt-2 leading-relaxed">{{ selectedPin.body }}</p>
             <div v-if="!pinEdit.editing.value" class="flex flex-wrap gap-1.5 mt-3 items-center">
               <span class="text-xs bg-stone-100 border border-stone-200 rounded-full px-2.5 py-1 font-medium">{{ selectedPin.category }}</span>
-              <span class="text-xs bg-white border border-stone-200 rounded-full pl-1 pr-2.5 py-1 flex items-center gap-1.5">
+              <a v-if="selectedPin.user && !selectedPin.is_anonymous" :href="`/users/${selectedPin.user.id}`" class="text-xs bg-white border border-stone-200 rounded-full pl-1 pr-2.5 py-1 flex items-center gap-1.5 hover:border-ink-900">
                 <img v-if="selectedPin.user?.avatar_path" :src="`/storage/${selectedPin.user.avatar_path}`" class="w-5 h-5 rounded-full object-cover border border-stone-200" />
-                <span v-else-if="selectedPin.user?.name" class="w-5 h-5 rounded-full bg-ink-900 text-white grid place-items-center text-[10px] font-bold">{{ selectedPin.user.name[0].toUpperCase() }}</span>
-                <span v-else class="w-5 h-5 rounded-full bg-stone-200 border border-stone-300 grid place-items-center text-[10px]">?</span>
-                {{ selectedPin.user?.name || 'аноним' }} · {{ selectedPin.user?.level||'novice' }}
-              </span>
+                <span v-else class="w-5 h-5 rounded-full bg-ink-900 text-white grid place-items-center text-[10px] font-bold">{{ selectedPin.user.name[0].toUpperCase() }}</span>
+                {{ selectedPin.user?.name }} · {{ selectedPin.user?.level||'novice' }}
+              </a>
+              <span v-else class="text-xs bg-stone-100 border border-stone-200 rounded-full px-2.5 py-1">{{ selectedPin.is_anonymous ? 'аноним' : 'аноним' }} · {{ selectedPin.user?.level||'novice' }}</span>
               <span class="text-xs bg-amber-50 border border-amber-200 rounded-full px-2.5 py-1">до {{ formatTime(selectedPin.expires_at) }}</span>
+            </div>
+            <div v-if="!pinEdit.editing.value && selectedPin.user && !selectedPin.is_owner && !selectedPin.is_anonymous" class="flex gap-2 mt-3">
+              <button
+                @click="pinChat.startChat(selectedPin.user.id)"
+                :disabled="pinChat.loadingId.value===selectedPin.user.id || (pinChat.getStatus(selectedPin.user.id) && !pinChat.getStatus(selectedPin.user.id).can_message)"
+                :title="pinChat.getStatus(selectedPin.user.id)?.can_message_reason || 'Начать чат — откроется окно диалога. Если закрыто — добавьте в друзья'"
+                class="flex-1 py-2 rounded-full text-xs font-bold border bg-ink-900 text-white border-ink-900 hover:bg-ink-800 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1">
+                <span>💬</span> {{ pinChat.getStatus(selectedPin.user.id)?.can_message===false ? 'Закрыто' : 'Написать' }}
+              </button>
+              <button
+                v-if="!pinChat.getStatus(selectedPin.user.id)?.is_friend"
+                @click="pinChat.addFriend(selectedPin.user.id)"
+                :disabled="pinChat.loadingId.value===selectedPin.user.id || pinChat.getStatus(selectedPin.user.id)?.is_pending"
+                :title="pinChat.getStatus(selectedPin.user.id)?.is_pending ? 'Заявка уже отправлена, ждите принятия' : 'Отправить заявку в друзья — после принятия сможете писать, если у пользователя «только друзья»'"
+                class="flex-1 py-2 rounded-full text-xs font-bold border bg-white border-stone-200 hover:bg-stone-50 disabled:opacity-40 flex items-center justify-center gap-1">
+                {{ pinChat.getStatus(selectedPin.user.id)?.is_pending ? '⏳ Заявка' : '＋ В друзья' }}
+              </button>
+              <span v-else class="flex-1 py-2 rounded-full text-xs font-bold border bg-emerald-50 border-emerald-200 text-emerald-700 grid place-items-center">✓ Друзья</span>
+            </div>
+            <div v-if="!pinEdit.editing.value && selectedPin.user && pinChat.getStatus(selectedPin.user.id)?.can_message===false" class="mt-2 text-[11px] text-red-500 bg-red-50 border border-red-200 rounded-xl px-3 py-2" :title="pinChat.getStatus(selectedPin.user.id).can_message_reason">
+              ⚠ {{ pinChat.getStatus(selectedPin.user.id).can_message_reason }} — добавьте в друзья
             </div>
             <div class="flex gap-1.5 mt-4">
               <button @click="react(selectedPin,'like')" :disabled="reactAsyncStatus?.value==='loading'" :class="['flex-1 rounded-full py-2.5 text-xs font-semibold border active:scale-95 transition flex items-center justify-center gap-1 disabled:opacity-50', selectedPin.my_reaction==='like'?'bg-rose-500 text-white border-rose-500 shadow-[0_2px_10px_rgba(244,63,94,0.35)]':'bg-white border-stone-200 hover:bg-stone-50']">❤️ {{ selectedPin.reactions_count||0 }}</button>
@@ -212,6 +239,36 @@ onUnmounted(destroy)
           </form>
         </div>
       </Transition>
+
+      <Dialog v-model:visible="showLiveInfo" modal header="Что это?" :style="{ width: '420px', maxWidth: '92vw' }">
+        <div class="space-y-3 text-sm leading-relaxed">
+          <div class="flex items-center gap-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900 rounded-2xl p-4">
+            <span class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.6)]"></span>
+            <span class="font-semibold">Зелёный датчик — живой статус карты</span>
+          </div>
+          <p class="text-stone-600 dark:text-zinc-400">Мигает, когда карта на связи. Каждые 30 секунд подтягивает новые пины рядом. Цифра рядом — сколько пинов сейчас вокруг тебя.</p>
+          <ul class="list-disc pl-5 text-stone-600 dark:text-zinc-400 space-y-1">
+            <li>Зелёный пульс = онлайн, данные свежие</li>
+            <li>Серый спиннер = идёт загрузка</li>
+            <li>Нажми на цифру ещё раз — подсказка закроется</li>
+          </ul>
+        </div>
+      </Dialog>
+
+      <Dialog v-model:visible="showMyPins" modal header="Мои пины" :style="{ width: '520px', maxWidth: '96vw' }">
+        <div v-if="myPins.length" class="grid gap-2 max-h-[60vh] overflow-auto pr-1">
+          <button v-for="p in myPins" :key="p.id" @click="flyToPin(p)" class="text-left bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl p-4 hover:border-ink-900 dark:hover:border-white hover:shadow-soft transition">
+            <div class="text-sm font-bold truncate">{{ p.title }}</div>
+            <div class="text-xs text-stone-500 dark:text-zinc-400 line-clamp-2 mt-1">{{ p.body }}</div>
+            <div class="flex items-center gap-1.5 mt-2 text-[11px]"><span class="bg-ink-900 dark:bg-white dark:text-ink-900 text-white rounded-full px-2 py-0.5">{{ p.category }}</span><span class="bg-stone-100 dark:bg-zinc-700 rounded-full px-2 py-0.5">до {{ formatTime(p.expires_at) }}</span><span class="ml-auto text-ink-900 dark:text-white font-semibold">На карте →</span></div>
+          </button>
+        </div>
+        <div v-else class="text-center py-10">
+          <div class="w-12 h-12 rounded-2xl bg-stone-100 dark:bg-zinc-800 border mx-auto grid place-items-center">📍</div>
+          <div class="text-sm font-semibold mt-3">Пока нет пинов</div>
+          <div class="text-xs text-stone-500">Создай первый — он появится здесь</div>
+        </div>
+      </Dialog>
     </div>
   </AuthenticatedLayout>
 </template>

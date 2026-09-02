@@ -1,0 +1,16 @@
+<?php
+
+use App\Models\Conversation;
+use Illuminate\Support\Facades\Broadcast;
+
+Broadcast::channel('chat.{conversationId}', function ($user, $conversationId) {
+    $conv = Conversation::find($conversationId);
+    if (!$conv) return false;
+    return $conv->hasParticipant($user->id);
+});
+
+Broadcast::channel('user.{userId}', function ($user, $userId) {
+    return (int) $user->id === (int) $userId;
+});
+
+Broadcast::channel('map', function () { return true; });

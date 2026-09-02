@@ -12,14 +12,18 @@ export const usePinsStore = defineStore('pins', () => {
   const updating = ref(false)
   const deleting = ref(false)
 
+  let abortCtrl: AbortController | null = null
   async function fetchNearby(lat: number, lng: number): Promise<Pin[]> {
+    if (abortCtrl) abortCtrl.abort()
+    abortCtrl = new AbortController()
     loading.value = true
     error.value = null
     try {
-      const data = await pinsApi.list(lat, lng)
+      const data = await pinsApi.list(lat, lng, undefined, abortCtrl.signal)
       pins.value = data
       return data
     } catch (e: any) {
+      if (e?.code === 'ERR_CANCELED' || e?.name === 'CanceledError' || e?.name === 'AbortError') return pins.value
       error.value = e?.response?.data?.message ?? 'Не удалось загрузить пины'
       return pins.value
     } finally {

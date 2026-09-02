@@ -1,6 +1,7 @@
 import '../css/app.css'
 import 'primeicons/primeicons.css'
 import './bootstrap'
+import './echo'
 import { createPinia } from 'pinia'
 import { PiniaColada } from '@pinia/colada'
 import { createInertiaApp } from '@inertiajs/vue3'
