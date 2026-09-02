@@ -5,8 +5,10 @@ import createServer from '@inertiajs/vue3/server'
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers'
 import { ZiggyVue } from '../../vendor/tightenco/ziggy'
 import { createPinia } from 'pinia'
+import { PiniaColada } from '@pinia/colada'
+import { setupPrimeVue } from './plugins/primevue'
 
-const appName = import.meta.env.VITE_APP_NAME || 'Live Map'
+const appName = import.meta.env.VITE_APP_NAME || 'UPin'
 
 createServer((page) =>
   createInertiaApp({
@@ -17,21 +19,17 @@ createServer((page) =>
       if (title.includes(appName)) return title
       return `${title} — ${appName}`
     },
-    resolve: (name) =>
-      resolvePageComponent(
-        `./Pages/${name}.vue`,
-        import.meta.glob<DefineComponent>('./Pages/**/*.vue'),
-      ),
+    resolve: (name) => resolvePageComponent(`./Pages/${name}.vue`, import.meta.glob<DefineComponent>('./Pages/**/*.vue')),
     setup({ App, props, plugin }) {
       const pinia = createPinia()
       const ziggy: any = (page.props as any).ziggy
-      return createSSRApp({ render: () => h(App, props) })
+      const app = createSSRApp({ render: () => h(App, props) })
         .use(plugin)
-        .use(ZiggyVue, {
-          ...ziggy,
-          location: new URL(ziggy?.location ?? 'http://localhost'),
-        } as any)
+        .use(ZiggyVue, { ...ziggy, location: new URL(ziggy?.location ?? 'http://localhost') } as any)
         .use(pinia)
+        .use(PiniaColada)
+      setupPrimeVue(app)
+      return app
     },
   }),
 )

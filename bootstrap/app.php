@@ -24,7 +24,12 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->redirectGuestsTo(fn (\Illuminate\Http\Request $request) => route('login'));
-        $middleware->redirectUsersTo(fn (\Illuminate\Http\Request $request) => route('dashboard'));
+        $middleware->redirectUsersTo(function (\Illuminate\Http\Request $request) {
+            $u = $request->user();
+            if (!$u) return route('dashboard');
+            $id = $u->isAdmin() ? 'admin' : (string) $u->id;
+            return route('dashboard', ['identifier' => $id]);
+        });
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

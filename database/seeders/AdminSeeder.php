@@ -10,13 +10,13 @@ class AdminSeeder extends Seeder
 {
     public function run(): void
     {
-        $email = env('ADMIN_EMAIL', 'admin@live-map.test');
+        $email = env('ADMIN_EMAIL', 'admin@upin.test');
         $password = env('ADMIN_PASSWORD', 'Admin123!');
 
         $admin = User::updateOrCreate(
             ['email' => $email],
             [
-                'name' => 'Администратор Live Map',
+                'name' => 'Администратор UPin',
                 'password' => Hash::make($password),
                 'email_verified_at' => now(),
                 'plan' => 'business',

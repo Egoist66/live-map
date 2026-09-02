@@ -1,25 +1,40 @@
 <script setup lang="ts">
 import GuestLayout from '@/Layouts/GuestLayout.vue'
-import InputError from '@/Components/InputError.vue'
-import { Head, Link, useForm } from '@inertiajs/vue3'
-import { ref } from 'vue'
+import { Head, Link } from '@inertiajs/vue3'
+import { useLoginForm } from '@/composables/useAuthForm'
+import InputText from 'primevue/inputtext'
+import Password from 'primevue/password'
+import Checkbox from 'primevue/checkbox'
+import Button from 'primevue/button'
+import Message from 'primevue/message'
 defineProps<{ canResetPassword: boolean; status: string }>()
-const form = useForm({ email:'', password:'', remember:false })
-const showPass = ref(false)
-const submit = () => form.post(route('login'), { onFinish: () => form.reset('password') })
+const { email, emailAttrs, password, passwordAttrs, remember, errors, showPass, submit, isSubmitting } = useLoginForm()
 </script>
 
 <template>
   <GuestLayout>
     <Head title="Вход" />
-    <div v-if="status" class="mb-4 text-sm bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-2xl px-4 py-3">{{ status }}</div>
+    <Message v-if="status" severity="success" class="mb-4 w-full">{{ status }}</Message>
     <h1 class="text-[22px] font-black tracking-tight">С возвращением</h1>
     <p class="text-sm text-stone-500 mt-1">Войди и проверь, что происходит во дворе</p>
     <form @submit.prevent="submit" class="mt-6 space-y-4">
-      <div><label class="text-[13px] font-semibold">Email</label><input v-model="form.email" type="email" required autofocus autocomplete="username" placeholder="you@mail.ru" class="mt-1.5 input-premium"/><InputError :message="form.errors.email" class="mt-1.5"/></div>
-      <div><label class="text-[13px] font-semibold">Пароль</label><div class="relative mt-1.5"><input v-model="form.password" :type="showPass?'text':'password'" required autocomplete="current-password" placeholder="••••••••" class="input-premium !mt-0 pr-11"/><button type="button" @click="showPass=!showPass" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-stone-100 grid place-items-center text-stone-500" :title="showPass?'Скрыть':'Показать'"><span class="text-[13px]">{{ showPass ? '🙈' : '👁' }}</span></button></div><InputError :message="form.errors.password" class="mt-1.5"/></div>
-      <label class="flex items-center gap-2 text-sm font-medium"><input type="checkbox" v-model="form.remember" class="rounded border-stone-300 text-ink-900 focus:ring-ink-900"/> Запомнить меня</label>
-      <button :disabled="form.processing" class="w-full bg-ink-900 text-white rounded-full py-3.5 font-semibold hover:bg-ink-800 shadow-soft transition disabled:opacity-50 inline-flex items-center justify-center gap-2">Войти <span>→</span></button>
+      <div>
+        <label class="text-[13px] font-semibold">Email</label>
+        <InputText v-model="email" v-bind="emailAttrs" type="email" placeholder="you@mail.ru" class="w-full mt-1.5" :invalid="!!errors.email" />
+        <small class="text-red-500">{{ errors.email }}</small>
+      </div>
+      <div>
+        <label class="text-[13px] font-semibold">Пароль</label>
+        <div class="mt-1.5">
+          <InputText v-model="password" v-bind="passwordAttrs" :type="showPass ? 'text' : 'password'" placeholder="••••••••" class="w-full" :invalid="!!errors.password" />
+        </div>
+        <small class="text-red-500">{{ errors.password }}</small>
+        <button type="button" @click="showPass=!showPass" class="text-xs text-stone-500 mt-1">{{ showPass ? 'Скрыть' : 'Показать' }} пароль</button>
+      </div>
+      <label class="flex items-center gap-2 text-sm font-medium">
+        <Checkbox v-model="remember" :binary="true" /> Запомнить меня
+      </label>
+      <Button :loading="isSubmitting" type="submit" label="Войти →" class="w-full !bg-ink-900 !border-ink-900 !rounded-full !py-3.5" />
       <div class="flex justify-between items-center text-sm pt-2">
         <Link v-if="canResetPassword" :href="route('password.request')" class="text-stone-500 hover:text-ink-900 font-medium">Забыли пароль?</Link>
         <Link :href="route('register')" class="font-semibold bg-stone-100 hover:bg-stone-200 rounded-full px-4 py-2 transition">Регистрация →</Link>

@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue'
 import { usePinsStore } from '@/stores/pins'
+import type { Pin, CreatePinPayload } from '@/types/entities/Pin'
 
 const selectedCategory = ref('all')
 
@@ -15,20 +16,28 @@ export function usePins() {
     { v: 'help', l: 'Помощь', i: '🤝' },
   ] as const
 
-  const filteredPins = computed(() =>
-    selectedCategory.value === 'all' ? store.pins : store.pins.filter((p: any) => p.category === selectedCategory.value)
-  )
+  const filteredPins = computed(() => {
+    if (selectedCategory.value === 'all') return store.pins
+    if (selectedCategory.value === 'mine') return store.pins.filter((p) => p.is_owner)
+    return store.pins.filter((p) => p.category === selectedCategory.value)
+  })
 
-  async function fetchNearby(lat: number, lng: number) {
-    await store.fetchNearby(lat, lng)
+  function fetchNearby(lat: number, lng: number) {
+    return store.fetchNearby(lat, lng)
   }
 
-  async function createPin(payload: any) {
-    return await store.createPin(payload)
+  function createPin(payload: CreatePinPayload): Promise<Pin> {
+    return store.createPin(payload)
   }
 
-  function addRealtime(pin: any) { store.addRealtime(pin) }
-  function removeRealtime(id: number) { store.removeRealtime(id) }
-
-  return { store, categories, selectedCategory, filteredPins, fetchNearby, createPin, addRealtime, removeRealtime }
+  return {
+    store,
+    categories,
+    selectedCategory,
+    filteredPins,
+    fetchNearby,
+    createPin,
+    addRealtime: (pin: Pin) => store.addRealtime(pin),
+    removeRealtime: (id: number) => store.removeRealtime(id),
+  }
 }

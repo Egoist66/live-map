@@ -1,44 +1,100 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import axios from 'axios'
+import { pinsApi } from '@/services/pins.api'
+import type { Pin, CreatePinPayload, UpdatePinPayload, BoostType } from '@/types/entities/Pin'
 
 export const usePinsStore = defineStore('pins', () => {
-  const pins = ref<any[]>([])
+  const pins = ref<Pin[]>([])
   const loading = ref(false)
+  const error = ref<string | null>(null)
 
-  let inflight: any = null
-  let lastFetch = 0
-  async function fetchNearby(lat: number, lng: number) {
-    const now = Date.now()
-    if (inflight) return inflight
-    if (now - lastFetch < 900) return Promise.resolve(pins.value)
+  const creating = ref(false)
+  const updating = ref(false)
+  const deleting = ref(false)
+
+  async function fetchNearby(lat: number, lng: number): Promise<Pin[]> {
     loading.value = true
-    lastFetch = now
-    inflight = axios.get('/api/pins', { params: { lat, lng } }).then(({ data }: any) => { pins.value = data; return data }).catch(() => pins.value).finally(() => { loading.value = false; inflight = null })
-    return inflight
+    error.value = null
+    try {
+      const data = await pinsApi.list(lat, lng)
+      pins.value = data
+      return data
+    } catch (e: any) {
+      error.value = e?.response?.data?.message ?? 'Не удалось загрузить пины'
+      return pins.value
+    } finally {
+      loading.value = false
+    }
   }
-  async function createPin(payload: any) {
-    const { data } = await axios.post('/api/pins', payload)
-    pins.value.unshift(data)
-    return data
-  }
-  async function deletePin(id: number) {
-    await axios.delete(`/api/pins/${id}`)
-    pins.value = pins.value.filter(p => p.id !== id)
-    return true
-  }
-  async function updatePin(id: number, payload: any) {
-    const { data } = await axios.patch(`/api/pins/${id}`, payload)
-    const idx = pins.value.findIndex(p => p.id === id)
-    if (idx !== -1) pins.value[idx] = { ...pins.value[idx], ...data }
-    return data
-  }
-  async function fetchMine() {
-    const { data } = await axios.get('/api/pins/mine')
-    return Array.isArray(data) ? data : data.data || []
-  }
-  function addRealtime(pin: any) { if (!pins.value.find(p => p.id === pin.id)) pins.value.unshift(pin) }
-  function removeRealtime(id: number) { pins.value = pins.value.filter(p => p.id !== id) }
 
-  return { pins, loading, fetchNearby, createPin, deletePin, updatePin, fetchMine, addRealtime, removeRealtime }
+  async function fetchMine(): Promise<Pin[]> {
+    const data = await pinsApi.mine()
+    return data
+  }
+
+  async function createPin(payload: CreatePinPayload): Promise<Pin> {
+    creating.value = true
+    error.value = null
+    try {
+      const pin = await pinsApi.create(payload)
+      if (!pins.value.some((p) => p.id === pin.id)) pins.value.unshift(pin)
+      return pin
+    } catch (e: any) {
+      error.value = e?.response?.data?.message ?? 'Ошибка создания'
+      throw e
+    } finally {
+      creating.value = false
+    }
+  }
+
+  async function updatePin(id: number, payload: UpdatePinPayload): Promise<Pin> {
+    updating.value = true
+    try {
+      const updated = await pinsApi.update(id, payload)
+      const idx = pins.value.findIndex((p) => p.id === id)
+      if (idx !== -1) pins.value[idx] = { ...pins.value[idx], ...updated }
+      return updated
+    } finally {
+      updating.value = false
+    }
+  }
+
+  async function deletePin(id: number): Promise<void> {
+    deleting.value = true
+    try {
+      await pinsApi.remove(id)
+      pins.value = pins.value.filter((p) => p.id !== id)
+    } finally {
+      deleting.value = false
+    }
+  }
+
+  async function boostPin(id: number, type: BoostType): Promise<void> {
+    await pinsApi.boost(id, type)
+  }
+
+  function addRealtime(pin: Pin): void {
+    if (!pins.value.some((p) => p.id === pin.id)) pins.value.unshift(pin)
+  }
+
+  function removeRealtime(id: number): void {
+    pins.value = pins.value.filter((p) => p.id !== id)
+  }
+
+  return {
+    pins,
+    loading,
+    error,
+    creating,
+    updating,
+    deleting,
+    fetchNearby,
+    fetchMine,
+    createPin,
+    updatePin: (vars: { id: number; payload: UpdatePinPayload }) => updatePin(vars.id, vars.payload),
+    deletePin,
+    boostPin: (vars: { id: number; type: BoostType }) => boostPin(vars.id, vars.type),
+    addRealtime,
+    removeRealtime,
+  }
 })

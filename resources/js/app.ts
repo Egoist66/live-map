@@ -1,34 +1,32 @@
-import '../css/app.css';
-import './bootstrap';
-// import './echo';
-import { createPinia } from 'pinia';
+import '../css/app.css'
+import 'primeicons/primeicons.css'
+import './bootstrap'
+import { createPinia } from 'pinia'
+import { PiniaColada } from '@pinia/colada'
+import { createInertiaApp } from '@inertiajs/vue3'
+import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers'
+import { createApp, DefineComponent, h } from 'vue'
+import { ZiggyVue } from '../../vendor/tightenco/ziggy'
+import { setupPrimeVue } from './plugins/primevue'
 
-import { createInertiaApp } from '@inertiajs/vue3';
-import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
-import { createApp, DefineComponent, h } from 'vue';
-import { ZiggyVue } from '../../vendor/tightenco/ziggy';
-
-const appName = import.meta.env.VITE_APP_NAME || 'Live Map';
+const appName = import.meta.env.VITE_APP_NAME || 'UPin'
 
 createInertiaApp({
-    title: (title) => {
-        if (!title) return appName
-        if (title.includes(appName)) return title
-        return `${title} — ${appName}`
-    },
-    resolve: (name) =>
-        resolvePageComponent(
-            `./Pages/${name}.vue`,
-            import.meta.glob<DefineComponent>('./Pages/**/*.vue'),
-        ),
-    setup({ el, App, props, plugin }) {
-        createApp({ render: () => h(App, props) })
-            .use(plugin)
-            .use(ZiggyVue)
-            .use(createPinia())
-            .mount(el);
-    },
-    progress: {
-        color: '#5B5BFF',
-    },
-});
+  title: (title) => {
+    if (!title) return appName
+    if (title.includes(appName)) return title
+    return `${title} — ${appName}`
+  },
+  resolve: (name) => resolvePageComponent(`./Pages/${name}.vue`, import.meta.glob<DefineComponent>('./Pages/**/*.vue')),
+  setup({ el, App, props, plugin }) {
+    const pinia = createPinia()
+    const app = createApp({ render: () => h(App, props) })
+    app.use(plugin)
+    app.use(ZiggyVue)
+    app.use(pinia)
+    app.use(PiniaColada)
+    setupPrimeVue(app)
+    app.mount(el)
+  },
+  progress: { color: '#5B5BFF' },
+})

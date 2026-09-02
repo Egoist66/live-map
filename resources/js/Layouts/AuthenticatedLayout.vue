@@ -12,6 +12,18 @@ const avatarSrc = computed(() => {
   const u = page.props.auth.user
   return u?.avatar_path ? `/storage/${u.avatar_path}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(u?.name||'U')}&background=0F172A&color=fff&bold=true`
 })
+const dashboardHref = computed(() => {
+  const u = page.props.auth.user
+  if (!u) return route('dashboard')
+  const id = u.is_admin || u.role === 'admin' ? 'admin' : String(u.id)
+  return route('dashboard', { identifier: id })
+})
+const settingsHref = computed(() => {
+  const u = page.props.auth.user
+  if (!u) return route('profile.edit')
+  const id = u.is_admin || u.role === 'admin' ? 'admin' : String(u.id)
+  return route('profile.edit', { identifier: id })
+})
 </script>
 
 <template>
@@ -20,11 +32,11 @@ const avatarSrc = computed(() => {
       <div class="mx-auto max-w-[1280px] px-4 sm:px-6">
         <div class="flex h-[64px] justify-between items-center">
           <div class="flex items-center gap-8">
-            <Link :href="route('dashboard')" class="shrink-0">
+            <Link :href="dashboardHref" class="shrink-0">
               <ApplicationLogo />
             </Link>
             <div class="hidden lg:flex items-center gap-1 bg-stone-100/80 dark:bg-zinc-800 p-1 rounded-full border border-stone-200/60 dark:border-zinc-700">
-              <NavLink :href="route('dashboard')" :active="route().current('dashboard')" class="!border-0 !pt-0 !px-4 !py-1.5 !rounded-full text-[13px] font-semibold" :class="route().current('dashboard') ? '!bg-white dark:!bg-zinc-700 !shadow-soft !text-ink-900 dark:!text-white border border-stone-200' : '!text-stone-500 dark:!text-zinc-400 hover:!text-ink-900'">Кабинет</NavLink>
+              <NavLink :href="dashboardHref" :active="route().current('dashboard')" class="!border-0 !pt-0 !px-4 !py-1.5 !rounded-full text-[13px] font-semibold" :class="route().current('dashboard') ? '!bg-white dark:!bg-zinc-700 !shadow-soft !text-ink-900 dark:!text-white border border-stone-200' : '!text-stone-500 dark:!text-zinc-400 hover:!text-ink-900'">Профиль</NavLink>
               <NavLink :href="route('map')" :active="route().current('map')" class="!border-0 !pt-0 !px-4 !py-1.5 !rounded-full text-[13px] font-semibold" :class="route().current('map') ? '!bg-white dark:!bg-zinc-700 !shadow-soft !text-ink-900 dark:!text-white border border-stone-200' : '!text-stone-500 dark:!text-zinc-400 hover:!text-ink-900'">Карта</NavLink>
               <NavLink :href="route('faq')" :active="route().current('faq')" class="!border-0 !pt-0 !px-4 !py-1.5 !rounded-full text-[13px] font-semibold" :class="route().current('faq') ? '!bg-white dark:!bg-zinc-700 !shadow-soft !text-ink-900 dark:!text-white border border-stone-200' : '!text-stone-500 dark:!text-zinc-400 hover:!text-ink-900'">FAQ</NavLink>
             </div>
@@ -49,8 +61,9 @@ const avatarSrc = computed(() => {
                       <img :src="avatarSrc" class="w-9 h-9 rounded-full object-cover" />
                       <div class="min-w-0"><div class="text-sm font-semibold truncate dark:text-white">{{ $page.props.auth.user.name }}</div><div class="text-xs text-stone-500 truncate">{{ $page.props.auth.user.email }}</div></div>
                     </div>
+                    <DropdownLink :href="dashboardHref" class="!text-sm">Профиль</DropdownLink>
+                    <DropdownLink :href="settingsHref" class="!text-sm">Настройки</DropdownLink>
                     <DropdownLink :href="route('map')" class="!text-sm">Карта</DropdownLink>
-                    <DropdownLink :href="route('profile.edit')" class="!text-sm">Настройки профиля</DropdownLink>
                     <DropdownLink :href="route('logout')" method="post" as="button" class="!text-sm">Выйти</DropdownLink>
                   </div>
                 </template>
@@ -69,7 +82,7 @@ const avatarSrc = computed(() => {
 
       <div :class="{ block: showingNavigationDropdown, hidden: !showingNavigationDropdown }" class="lg:hidden border-t border-stone-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 backdrop-blur">
         <div class="px-4 py-3 space-y-1">
-          <ResponsiveNavLink :href="route('dashboard')" :active="route().current('dashboard')">Кабинет</ResponsiveNavLink>
+          <ResponsiveNavLink :href="dashboardHref" :active="route().current('dashboard')">Профиль</ResponsiveNavLink>
           <ResponsiveNavLink :href="route('map')" :active="route().current('map')">Карта</ResponsiveNavLink>
           <ResponsiveNavLink :href="route('faq')" :active="route().current('faq')">FAQ</ResponsiveNavLink>
           <Link href="/map" class="mt-2 flex bg-ink-900 dark:bg-white dark:text-ink-900 text-white rounded-full px-4 py-2.5 text-sm font-semibold justify-center">+ Создать пин</Link>
@@ -80,7 +93,8 @@ const avatarSrc = computed(() => {
             <div><div class="text-sm font-semibold dark:text-white">{{ $page.props.auth.user.name }}</div><div class="text-xs text-stone-500">{{ $page.props.auth.user.email }}</div></div>
           </div>
           <div class="mt-3 grid grid-cols-2 gap-2">
-            <ResponsiveNavLink :href="route('profile.edit')" class="!border !rounded-xl !px-3">Профиль</ResponsiveNavLink>
+            <ResponsiveNavLink :href="settingsHref" class="!border !rounded-xl !px-3">Настройки</ResponsiveNavLink>
+            <ResponsiveNavLink :href="dashboardHref" class="!border !rounded-xl !px-3">Профиль</ResponsiveNavLink>
             <ResponsiveNavLink :href="route('logout')" method="post" as="button" class="!border !rounded-xl !px-3">Выйти</ResponsiveNavLink>
           </div>
         </div>

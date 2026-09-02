@@ -13,6 +13,31 @@ use Inertia\Response;
 
 class ProfileController extends Controller
 {
+    public function dashboard(Request $request, ?string $identifier = null): Response|RedirectResponse
+    {
+        $auth = $request->user();
+        if ($identifier === null) {
+            $profileUser = $auth;
+            return Inertia::render('Dashboard', [
+                'user' => $profileUser,
+                'isOwn' => true,
+            ]);
+        }
+        if ($identifier === 'admin') {
+            abort_unless($auth->isAdmin(), 403, 'Только админ');
+            $profileUser = $auth;
+        } elseif (is_numeric($identifier)) {
+            $profileUser = \App\Models\User::findOrFail((int) $identifier);
+            if ($profileUser->id !== $auth->id && !$auth->isAdmin()) abort(403, 'Чужой профиль');
+        } else {
+            abort(404);
+        }
+        return Inertia::render('Dashboard', [
+            'user' => $profileUser,
+            'isOwn' => $profileUser->id === $auth->id,
+        ]);
+    }
+
     /**
      * Display the user's profile form.
      */
@@ -20,8 +45,12 @@ class ProfileController extends Controller
     {
         $auth = $request->user();
         if ($identifier === null) {
-            $id = $auth->isAdmin() ? 'admin' : (string) $auth->id;
-            return redirect()->route('profile.edit', ['identifier' => $id]);
+            $profileUser = $auth;
+            return Inertia::render('Profile/Edit', [
+                'mustVerifyEmail' => $auth instanceof MustVerifyEmail,
+                'status' => session('status'),
+                'user' => $profileUser,
+            ]);
         }
         if ($identifier === 'admin') {
             abort_unless($auth->isAdmin(), 403, 'Только админ');

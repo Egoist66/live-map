@@ -22,8 +22,20 @@ const closeOnEscape = (e) => {
     }
 };
 
-onMounted(() => document.addEventListener('keydown', closeOnEscape));
-onUnmounted(() => document.removeEventListener('keydown', closeOnEscape));
+const dropdownRef = ref(null)
+const onDocClick = (e) => {
+    if (!open.value) return
+    if (dropdownRef.value && !dropdownRef.value.contains(e.target)) open.value = false
+}
+
+onMounted(() => {
+    document.addEventListener('keydown', closeOnEscape)
+    document.addEventListener('click', onDocClick)
+});
+onUnmounted(() => {
+    document.removeEventListener('keydown', closeOnEscape)
+    document.removeEventListener('click', onDocClick)
+});
 
 const widthClass = computed(() => {
     return {
@@ -45,17 +57,10 @@ const open = ref(false);
 </script>
 
 <template>
-    <div class="relative">
-        <div @click="open = !open">
+    <div class="relative" ref="dropdownRef">
+        <div @click.stop="open = !open">
             <slot name="trigger" />
         </div>
-
-        <!-- Full Screen Dropdown Overlay -->
-        <div
-            v-show="open"
-            class="fixed inset-0 z-40"
-            @click="open = false"
-        ></div>
 
         <Transition
             enter-active-class="transition ease-out duration-200"
@@ -69,7 +74,6 @@ const open = ref(false);
                 v-show="open"
                 class="absolute z-50 mt-2 rounded-md shadow-lg"
                 :class="[widthClass, alignmentClasses]"
-                style="display: none"
                 @click="open = false"
             >
                 <div

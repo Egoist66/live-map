@@ -1,6 +1,14 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3'
+import { Head, Link, usePage } from '@inertiajs/vue3'
+import { computed } from 'vue'
 defineProps<{ canLogin: boolean; canRegister: boolean }>()
+const page = usePage()
+const dashboardHref = computed(() => {
+  const u = (page.props.auth as any)?.user
+  if (!u) return route('dashboard')
+  const id = u.is_admin || u.role === 'admin' ? 'admin' : String(u.id)
+  return route('dashboard', { identifier: id })
+})
 </script>
 
 <template>
@@ -10,14 +18,14 @@ defineProps<{ canLogin: boolean; canRegister: boolean }>()
       <div class="max-w-[1280px] mx-auto px-6 h-[64px] flex items-center justify-between">
         <Link href="/" class="flex items-center gap-2.5">
           <span class="w-9 h-9 rounded-xl bg-ink-900 dark:bg-white text-white dark:text-ink-900 grid place-items-center shadow-soft relative overflow-hidden"><span class="absolute inset-0 bg-gradient-to-br from-brand-500 to-accent-teal opacity-90"></span><span class="relative text-sm font-black">◉</span></span>
-          <span class="font-black tracking-[-0.03em] text-[19px]">LIVE<span class="font-light text-ink-600 dark:text-zinc-400">MAP</span></span>
+          <span class="font-black tracking-[-0.03em] text-[19px]">U<span class="font-light text-ink-600 dark:text-zinc-400">Pin</span></span>
           <span class="hidden sm:inline ml-2 text-xs font-medium tracking-wide text-stone-500 dark:text-zinc-500 border-l border-stone-200 dark:border-zinc-700 pl-3">ТВОЕ ОКНО ВО ДВОР</span>
         </Link>
         <nav class="flex items-center gap-2">
           <Link href="/faq" class="hidden sm:inline-flex text-[13px] font-medium text-stone-600 dark:text-zinc-400 hover:text-ink-900 dark:hover:text-white px-3 py-2 rounded-full hover:bg-white dark:hover:bg-zinc-800 transition">FAQ</Link>
           <Link href="/map" class="hidden sm:inline-flex text-[13px] font-medium text-stone-600 dark:text-zinc-400 hover:text-ink-900 dark:hover:text-white px-3 py-2 rounded-full hover:bg-white dark:hover:bg-zinc-800 transition">Карта</Link>
           <template v-if="$page.props.auth.user">
-            <Link :href="route('dashboard')" class="inline-flex items-center gap-2 bg-ink-900 dark:bg-white dark:text-ink-900 text-white px-6 py-2.5 rounded-full text-sm font-semibold hover:bg-ink-800 dark:hover:bg-zinc-100 shadow-soft transition">Кабинет</Link>
+            <Link :href="dashboardHref" class="inline-flex items-center gap-2 bg-ink-900 dark:bg-white dark:text-ink-900 text-white px-6 py-2.5 rounded-full text-sm font-semibold hover:bg-ink-800 dark:hover:bg-zinc-100 shadow-soft transition">Профиль</Link>
           </template>
           <template v-else>
             <Link v-if="canLogin" :href="route('login')" class="text-sm font-semibold px-4 py-2 rounded-full hover:bg-white dark:hover:bg-zinc-800 transition">Войти</Link>
@@ -130,7 +138,7 @@ defineProps<{ canLogin: boolean; canRegister: boolean }>()
         <div><div class="text-[20px] font-black tracking-tight">Готов почувствовать пульс района?</div><div class="text-sm text-stone-600 dark:text-zinc-400 mt-1">Создай первый пин за 2 минуты. Живут 2 часа — не пропусти.</div></div>
         <Link href="/map" class="bg-ink-900 dark:bg-white dark:text-ink-900 text-white px-8 py-3.5 rounded-full font-semibold whitespace-nowrap hover:bg-ink-800 dark:hover:bg-zinc-100 shadow-soft transition">Открыть карту — бесплатно</Link>
       </div>
-      <div class="text-center text-xs text-stone-400 mt-6 tracking-wide">© Live Map · <Link href="/faq" class="underline hover:text-ink-900 dark:hover:text-white">FAQ</Link> · Пилотный район · PWA скоро · API для города</div>
+      <div class="text-center text-xs text-stone-400 mt-6 tracking-wide">© UPin · <Link href="/faq" class="underline hover:text-ink-900 dark:hover:text-white">FAQ</Link> · Пилотный район · PWA скоро</div>
     </section>
   </div>
 </template>

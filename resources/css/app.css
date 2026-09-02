@@ -119,3 +119,12 @@ html.dark .card-hover:hover { box-shadow: 0 12px 40px -12px rgba(0,0,0,0.5), 0 4
   @apply transition-all duration-300;
 }
 .card-hover:hover .card-arrow { transform: translateX(4px); }
+
+.p-license-host,
+.p-license-message,
+[data-p-license] { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; height: 0 !important; overflow: hidden !important; }
+
+
+div#p-license-host {
+  display: none !important;
+}
