@@ -27,7 +27,7 @@ class Conversation extends Model
 
     public function hasParticipant(int $userId): bool
     {
-        return $this->participantRows()->where('user_id',$userId)->exists();
+        return $this->participantRows()->where('user_id',$userId)->whereNull('hidden_at')->exists();
     }
 
     public static function findDirect(int $a, int $b): ?self

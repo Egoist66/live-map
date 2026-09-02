@@ -5,8 +5,8 @@
     "scripts": {
         "build": "vue-tsc && vite build",
         "build:ssr": "vue-tsc && vite build && vite build --ssr",
-        "dev": "vite",
-        "dev:ssr": "concurrently \"php artisan serve\" \"php artisan inertia:start-ssr\" \"vite\""
+        "dev": "concurrently \"php artisan serve\" \"php artisan reverb:start --debug\" \"vite\"",
+        "dev:ssr": "concurrently \"php artisan serve\" \"php artisan reverb:start --debug\" \"php artisan inertia:start-ssr\" \"vite\""
     },
     "devDependencies": {
         "@inertiajs/vue3": "^2.0.0",

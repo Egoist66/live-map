@@ -42,10 +42,10 @@ class FriendshipController extends Controller
         if ($exists) {
             if ($exists->status==='accepted') return response()->json(['message'=>'Уже друзья'],422);
             if ($exists->status==='pending') return response()->json(['message'=>'Заявка уже отправлена'],422);
-            if ($exists->status==='declined') { $exists->update(['requester_id'=>$me->id,'addressee_id'=>$otherId,'status'=>'pending']); broadcast(new FriendshipUpdated($exists))->toOthers(); return response()->json($exists,201); }
+            if ($exists->status==='declined') { $exists->update(['requester_id'=>$me->id,'addressee_id'=>$otherId,'status'=>'pending']); try{ broadcast(new FriendshipUpdated($exists))->toOthers(); }catch(\Throwable $e){ \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); } return response()->json($exists,201); }
         }
         $f = Friendship::create(['requester_id'=>$me->id,'addressee_id'=>$otherId,'status'=>'pending']);
-        broadcast(new FriendshipUpdated($f->load(['requester','addressee'])))->toOthers();
+        try{ broadcast(new FriendshipUpdated($f->load(['requester','addressee'])))->toOthers(); }catch(\Throwable $e){ \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
         return response()->json($f,201);
     }
 
@@ -54,7 +54,7 @@ class FriendshipController extends Controller
         abort_unless($friendship->addressee_id===$request->user()->id,403);
         abort_unless($friendship->status==='pending',422);
         $friendship->update(['status'=>'accepted']);
-        broadcast(new FriendshipUpdated($friendship->load(['requester','addressee'])))->toOthers();
+        try{ broadcast(new FriendshipUpdated($friendship->load(['requester','addressee'])))->toOthers(); }catch(\Throwable $e){ \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
         return response()->json($friendship);
     }
 
@@ -63,7 +63,7 @@ class FriendshipController extends Controller
         abort_unless($friendship->addressee_id===$request->user()->id,403);
         abort_unless($friendship->status==='pending',422);
         $friendship->update(['status'=>'declined']);
-        broadcast(new FriendshipUpdated($friendship))->toOthers();
+        try{ broadcast(new FriendshipUpdated($friendship))->toOthers(); }catch(\Throwable $e){ \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
         return response()->json($friendship);
     }
 

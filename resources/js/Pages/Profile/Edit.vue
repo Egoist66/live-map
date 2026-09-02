@@ -135,7 +135,7 @@ const avatarSrc = computed(() => u.value.avatar_path ? `/storage/${u.value.avata
               <div class="mt-5 border border-stone-200 dark:border-zinc-700 rounded-2xl p-4 bg-stone-50 dark:bg-zinc-800">
                 <div class="text-sm font-bold">Сменить тариф — в разделе Профиль</div>
                 <p class="text-xs text-stone-500 dark:text-zinc-400 mt-1">Free / Pro $4.99 / Business $19.99 — переключай внизу формы профиля.</p>
-                <Button @click="active='profile'" label="К выбору тарифа →" rounded size="small" class="!bg-ink-900 !border-ink-900 mt-3" />
+                <Button @click="active='profile'" label="К выбору тарифа →" rounded size="small" class="!bg-ink-900 dark:!bg-white !border-ink-900 dark:!border-white dark:!text-ink-900 !text-white mt-3" />
               </div>
             </div>
 
@@ -154,7 +154,7 @@ const avatarSrc = computed(() => u.value.avatar_path ? `/storage/${u.value.avata
                 <div class="border border-stone-200 dark:border-zinc-700 rounded-2xl p-4">
                   <div class="text-sm font-semibold">Режим анонимности по умолчанию</div>
                   <p class="text-xs text-stone-500 dark:text-zinc-400 mt-1">Настраивается в разделе «Профиль» — переключатель «Анонимно по умолчанию». При создании пина можно переопределить.</p>
-                  <Button @click="active='profile'" label="Перейти в Профиль →" rounded size="small" class="!bg-ink-900 !border-ink-900 mt-3" />
+                  <Button @click="active='profile'" label="Перейти в Профиль →" rounded size="small" class="!bg-ink-900 dark:!bg-white !border-ink-900 dark:!border-white dark:!text-ink-900 !text-white mt-3" />
                 </div>
               </div>
             </div>
@@ -167,15 +167,15 @@ const avatarSrc = computed(() => u.value.avatar_path ? `/storage/${u.value.avata
                   <div class="text-sm font-semibold">Тема</div>
                   <div class="text-xs text-stone-500 dark:text-zinc-400">Выбери как выглядит UPin на этом устройстве</div>
                   <div class="mt-3 grid grid-cols-3 gap-2">
-                    <button @click="setTheme('light')" :class="['rounded-2xl border p-3 flex flex-col items-center gap-2 transition', theme==='light' ? 'bg-ink-900 dark:bg-white text-white dark:text-ink-900 border-ink-900 shadow-soft' : 'bg-white dark:bg-zinc-800 border-stone-200 dark:border-zinc-700 hover:bg-stone-50']">
+                    <button @click="setTheme('light')" :class="['rounded-2xl border p-3 flex flex-col items-center gap-2 transition', theme==='light' ? 'bg-ink-900 dark:bg-white text-white dark:text-ink-900 border-ink-900 dark:border-white shadow-soft' : 'bg-white dark:bg-zinc-800 border-stone-200 dark:border-zinc-700 hover:bg-stone-50 dark:hover:bg-zinc-700 text-ink-900 dark:text-white']">
                       <span class="w-10 h-10 rounded-xl bg-gradient-to-br from-stone-100 to-stone-200 grid place-items-center text-sm">☀️</span>
                       <span class="text-xs font-semibold">Светлая</span>
                     </button>
-                    <button @click="setTheme('dark')" :class="['rounded-2xl border p-3 flex flex-col items-center gap-2 transition', theme==='dark' ? 'bg-ink-900 dark:bg-white text-white dark:text-ink-900 border-ink-900 shadow-soft' : 'bg-white dark:bg-zinc-800 border-stone-200 dark:border-zinc-700 hover:bg-stone-50']">
+                    <button @click="setTheme('dark')" :class="['rounded-2xl border p-3 flex flex-col items-center gap-2 transition', theme==='dark' ? 'bg-ink-900 dark:bg-white text-white dark:text-ink-900 border-ink-900 dark:border-white shadow-soft' : 'bg-white dark:bg-zinc-800 border-stone-200 dark:border-zinc-700 hover:bg-stone-50 dark:hover:bg-zinc-700 text-ink-900 dark:text-white']">
                       <span class="w-10 h-10 rounded-xl bg-gradient-to-br from-zinc-800 to-zinc-900 grid place-items-center text-sm text-white">🌙</span>
                       <span class="text-xs font-semibold">Тёмная</span>
                     </button>
-                    <button @click="setTheme('system')" :class="['rounded-2xl border p-3 flex flex-col items-center gap-2 transition', theme==='system' ? 'bg-ink-900 dark:bg-white text-white dark:text-ink-900 border-ink-900 shadow-soft' : 'bg-white dark:bg-zinc-800 border-stone-200 dark:border-zinc-700 hover:bg-stone-50']">
+                    <button @click="setTheme('system')" :class="['rounded-2xl border p-3 flex flex-col items-center gap-2 transition', theme==='system' ? 'bg-ink-900 dark:bg-white text-white dark:text-ink-900 border-ink-900 dark:border-white shadow-soft' : 'bg-white dark:bg-zinc-800 border-stone-200 dark:border-zinc-700 hover:bg-stone-50 dark:hover:bg-zinc-700 text-ink-900 dark:text-white']">
                       <span class="w-10 h-10 rounded-xl bg-gradient-to-br from-stone-100 to-zinc-800 grid place-items-center text-sm">◐</span>
                       <span class="text-xs font-semibold">Система</span>
                     </button>
@@ -212,7 +212,7 @@ const avatarSrc = computed(() => u.value.avatar_path ? `/storage/${u.value.avata
                     <label class="text-sm font-medium">Сообщение</label>
                     <Textarea ref="supportBodyRef" v-model="supportBody" rows="6" placeholder="Опиши проблему подробно..." class="w-full mt-1" autoResize />
                   </div>
-                  <Button @click="mailToSupport" label="✉️ Отправить обращение" rounded class="w-full !bg-ink-900 !border-ink-900" />
+                  <Button @click="mailToSupport" label="✉️ Отправить обращение" rounded class="w-full !bg-ink-900 dark:!bg-white !border-ink-900 dark:!border-white dark:!text-ink-900 !text-white" />
                 </div>
               </div>
               <div class="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border border-amber-200 dark:border-amber-900 rounded-[20px] p-6">

@@ -92,11 +92,16 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
       map.on('click', hideCtxMenu)
       map.on('dragstart', hideCtxMenu)
       const throttled = useThrottledMapFetch(renderPins)
-      map.on('moveend', () => {
+      const fetchForView = () => {
         if (!map) return
         const c = map.getCenter()
-        throttled.request(c.lat, c.lng)
-      })
+        const z = map.getZoom()
+        const radius = z < 8 ? 50000 : z < 10 ? 30000 : z < 12 ? 15000 : z < 14 ? 8000 : 5000
+        const { store: s } = usePins() as any
+        s.fetchNearby(c.lat, c.lng, radius).then(()=>renderPins())
+      }
+      map.on('moveend', fetchForView)
+      map.on('zoomend', fetchForView)
     }
     create(tryStyles[0])
     watch(selectedCategory, renderPins)
@@ -173,6 +178,8 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
 
   function renderPins() {
     if (!map || !(map as any).loaded?.() && !loaded.value) return
+    const zoom = (map as any).getZoom?.() || 13
+    const scale = zoom < 10 ? 1.35 : zoom < 12 ? 1.2 : zoom < 14 ? 1 : 0.9
     markers.forEach((m) => m.remove())
     markers = []
     let pins = store.pins as any[]
@@ -189,33 +196,41 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
     if (!document.getElementById('pin-soft-pulse-style')) {
       const s = document.createElement('style')
       s.id = 'pin-soft-pulse-style'
-      s.textContent = `@keyframes softPulse{0%,100%{transform:scale(1);opacity:0.55}50%{transform:scale(1.75);opacity:0}} @keyframes gentleBreath{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}`
+      s.textContent = `@keyframes softPulse{0%,100%{transform:scale(1);opacity:0.55}50%{transform:scale(1.85);opacity:0}} @keyframes gentleBreath{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}} @keyframes pinGlow{0%,100%{box-shadow:0 0 0 0 rgba(250,204,21,0.5)}50%{box-shadow:0 0 0 10px rgba(250,204,21,0)}}`
       document.head.appendChild(s)
     }
     pins.forEach((p: any, idx: number) => {
       const wrap = document.createElement('div')
-      wrap.className = 'relative grid place-items-center cursor-pointer'
-      wrap.style.width = '26px'
-      wrap.style.height = '26px'
+      wrap.className = 'relative grid place-items-center cursor-pointer will-change-transform'
+      const sz = Math.round(34 * scale)
+      wrap.style.width = sz+'px'
+      wrap.style.height = sz+'px'
       const baseColor = p.is_boosted ? '#F59E0B' : p.is_sponsored || p.priority==='sponsored' ? '#7C3AED' : (colorMap[p.category] || '#DC2626')
+      const isBoosted = !!p.is_boosted
       const halo = document.createElement('div')
       halo.className = 'absolute rounded-full'
-      halo.style.width = '22px'
-      halo.style.height = '22px'
+      halo.style.width = (isBoosted? 38*scale : 30*scale)+'px'
+      halo.style.height = (isBoosted? 38*scale : 30*scale)+'px'
       halo.style.background = baseColor
-      halo.style.opacity = '0.28'
-      halo.style.animation = `softPulse 2.4s ease-in-out infinite`
-      halo.style.animationDelay = `${(idx % 5) * 0.35}s`
+      halo.style.opacity = isBoosted ? '0.38' : '0.32'
+      halo.style.animation = `softPulse 2.2s ease-in-out infinite`
+      halo.style.animationDelay = `${(idx % 5) * 0.28}s`
+      if(isBoosted) halo.style.animation = `pinGlow 1.8s ease-in-out infinite, softPulse 2.2s ease-in-out infinite`
       const core = document.createElement('div')
-      core.className = 'relative rounded-full border-2 border-white shadow-[0_2px_10px_rgba(15,23,42,0.32),0_0_0_1px_rgba(15,23,42,0.08)] grid place-items-center'
-      core.style.width = '18px'
-      core.style.height = '18px'
+      core.className = 'relative rounded-full border-[3px] border-white shadow-[0_4px_16px_rgba(15,23,42,0.35),0_0_0_1px_rgba(15,23,42,0.1)] grid place-items-center'
+      core.style.width = (isBoosted? 28*scale : 22*scale)+'px'
+      core.style.height = (isBoosted? 28*scale : 22*scale)+'px'
       core.style.background = baseColor
-      core.style.animation = `gentleBreath 2.8s ease-in-out infinite`
-      core.style.animationDelay = `${(idx % 7) * 0.2}s`
-      if (p.is_boosted) { core.style.boxShadow = '0 0 0 3px rgba(251,191,36,0.45), 0 2px 10px rgba(15,23,42,0.32)'; core.style.borderColor = 'white' }
+      core.style.animation = `gentleBreath 2.6s ease-in-out infinite`
+      core.style.animationDelay = `${(idx % 7) * 0.18}s`
+      if (isBoosted) { core.style.boxShadow = '0 0 0 4px rgba(251,191,36,0.55), 0 0 18px rgba(251,191,36,0.9), 0 4px 16px rgba(15,23,42,0.35)'; core.style.borderColor = 'white' }
+      else core.style.boxShadow = '0 2px 12px rgba(15,23,42,0.32), 0 0 0 2px rgba(255,255,255,0.9)'
       const inner = document.createElement('div')
-      inner.className = 'w-1.5 h-1.5 rounded-full bg-white/95 shadow-sm'
+      inner.className = 'rounded-full bg-white shadow-sm'
+      inner.style.width = (isBoosted? 9*scale: 7*scale)+'px'
+      inner.style.height = (isBoosted? 9*scale: 7*scale)+'px'
+      if(isBoosted) inner.textContent='★'
+      if(isBoosted) { inner.className='rounded-full bg-white text-amber-600 grid place-items-center font-black'; inner.style.fontSize='9px'; inner.style.width=(12*scale)+'px'; inner.style.height=(12*scale)+'px' }
       core.appendChild(inner)
       wrap.appendChild(halo)
       wrap.appendChild(core)
@@ -269,22 +284,44 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
   }
 
   function startPolling(intervalMs = 30000) {
+    if(polling) clearInterval(polling)
     polling = setInterval(async () => {
-      if (!map) return
+      if (!map || (window as any).Echo?.connector?.pusher?.connection?.state === 'connected') return
       const c = map.getCenter()
-      await store.fetchNearby(c.lat, c.lng)
+      const z = (map as any).getZoom?.() || 13
+      const radius = z < 10 ? 30000 : z < 12 ? 15000 : 5000
+      await store.fetchNearby(c.lat, c.lng, radius)
       renderPins()
     }, intervalMs)
   }
   function stopPolling() { if (polling) clearInterval(polling) }
   function getCenter() { return map?.getCenter() }
   function flyToMyLocation(lat: number, lng: number) { if (!map) return; map.flyTo({ center: [lng, lat] as any, zoom: 14.5, essential: true, duration: 1200 }) }
+  let wsConnected = ref(true)
+  let reconnectTimer: any = null
   function bindRealtime() {
-    // @ts-ignore
-    window.Echo?.channel('map').listen('PinCreated', (e: any) => { store.addRealtime(e.pin); renderPins() }).listen('PinDeleted', (e: any) => { store.removeRealtime(e.pinId); renderPins() })
+    const doBind = () => {
+      // @ts-ignore
+      const ch = window.Echo?.channel('map')
+      if(!ch) return
+      ch.listen('PinCreated', (e: any) => { store.addRealtime(e.pin); renderPins() })
+        .listen('PinDeleted', (e: any) => { store.removeRealtime(e.pinId); renderPins() })
+        .listen('PinUpdated', (e: any) => { store.addRealtime(e.pin); renderPins() })
+    }
+    doBind()
+    try{
+      // @ts-ignore
+      const pusher = window.Echo?.connector?.pusher
+      if(pusher){
+        pusher.connection.bind('connected', ()=>{ wsConnected.value=true; if(reconnectTimer) clearTimeout(reconnectTimer); doBind() })
+        pusher.connection.bind('disconnected', ()=> wsConnected.value=false)
+        pusher.connection.bind('failed', ()=> wsConnected.value=false)
+        pusher.connection.bind('unavailable', ()=>{ wsConnected.value=false; reconnectTimer=setTimeout(()=>pusher.connect(), 2000)})
+      }
+    }catch{}
   }
   function setThemeStyle(isDark: boolean) {
     return
   }
-  return { mapContainer, initMap, renderPins, addTempMarker, removeTempMarker, showUserLocation, triggerGeolocate, startPolling, stopPolling, getCenter, flyToMyLocation, bindRealtime, setThemeStyle, loaded, errorMsg, get map() { return map } }
+  return { mapContainer, initMap, renderPins, addTempMarker, removeTempMarker, showUserLocation, triggerGeolocate, startPolling, stopPolling, getCenter, flyToMyLocation, bindRealtime, setThemeStyle, loaded, errorMsg, wsConnected, get map() { return map } }
 }

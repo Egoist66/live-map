@@ -140,8 +140,8 @@ export function useMapPage() {
     else try { mapApi.map?.setZoom(7) } catch {}
     setTimeout(() => mapApi.triggerGeolocate(), 800)
     mapApi.renderPins()
-    mapApi.startPolling(30000)
     mapApi.bindRealtime()
+    mapApi.startPolling(30000)
     try {
       ;(mapApi.map as any)?.on('geolocate', (e: any) => {
         const c = e.coords

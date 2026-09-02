@@ -27,7 +27,7 @@ const close = () => { confirming.value = false; form.clearErrors(); form.reset()
         <h2 class="font-bold">Точно удалить?</h2>
         <p class="text-sm text-zinc-600 mt-1">Введи пароль для подтверждения.</p>
         <div class="mt-4">
-          <input id="password" ref="passwordInput" v-model="form.password" type="password" placeholder="Пароль" @keyup.enter="del" class="w-3/4 border rounded-xl px-3 py-2.5 text-sm"/>
+          <input id="password" ref="passwordInput" v-model="form.password" type="password" placeholder="Пароль" @keyup.enter="del" class="w-3/4 border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-ink-900 dark:text-white rounded-xl px-3 py-2.5 text-sm placeholder:text-stone-400 focus:outline-none focus:border-stone-300 dark:focus:border-zinc-600"/>
           <InputError :message="form.errors.password" class="mt-1"/>
         </div>
         <div class="mt-6 flex justify-end gap-2">

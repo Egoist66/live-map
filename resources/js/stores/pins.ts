@@ -13,14 +13,20 @@ export const usePinsStore = defineStore('pins', () => {
   const deleting = ref(false)
 
   let abortCtrl: AbortController | null = null
-  async function fetchNearby(lat: number, lng: number): Promise<Pin[]> {
+  async function fetchNearby(lat: number, lng: number, radius?: number): Promise<Pin[]> {
     if (abortCtrl) abortCtrl.abort()
     abortCtrl = new AbortController()
     loading.value = true
     error.value = null
     try {
-      const data = await pinsApi.list(lat, lng, undefined, abortCtrl.signal)
-      pins.value = data
+      const r = radius ?? 50000
+      const data = await pinsApi.list(lat, lng, r, abortCtrl.signal)
+      const seen = new Map(pins.value.map(p=>[p.id,p]))
+      data.forEach(p=>seen.set(p.id,p))
+      const now = Date.now()
+      const merged = Array.from(seen.values()).filter(p=> new Date((p as any).expires_at).getTime() > now)
+      pins.value = data.length ? merged.slice(0,150) : pins.value
+      if(data.length) pins.value = data
       return data
     } catch (e: any) {
       if (e?.code === 'ERR_CANCELED' || e?.name === 'CanceledError' || e?.name === 'AbortError') return pins.value

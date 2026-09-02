@@ -5,11 +5,11 @@ namespace App\Events;
 use App\Models\Message;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class MessageSent implements ShouldBroadcast
+class MessageSent implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
@@ -17,10 +17,10 @@ class MessageSent implements ShouldBroadcast
 
     public function broadcastOn(): array
     {
-        return [
-            new PrivateChannel('chat.' . $this->message->conversation_id),
-            new PrivateChannel('user.' . $this->message->conversation->participantRows->pluck('user_id')->filter(fn($id)=>$id!==$this->message->sender_id)->first()),
-        ];
+        $otherId = $this->message->conversation->participantRows->pluck('user_id')->firstWhere(fn($id)=>$id!==$this->message->sender_id);
+        $channels = [new PrivateChannel('chat.' . $this->message->conversation_id)];
+        if($otherId) $channels[] = new PrivateChannel('user.'.$otherId);
+        return $channels;
     }
 
     public function broadcastWith(): array

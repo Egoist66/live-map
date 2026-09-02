@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import { router } from '@inertiajs/vue3'
 import { chatApi } from '@/services/chat.api'
 
 export function useUserProfile(userId: number) {
@@ -29,7 +30,7 @@ export function useUserProfile(userId: number) {
     loading.value = true
     try {
       const res = await chatApi.createConversation(userId)
-      window.location.href = `/chat/${res.id}`
+      router.visit(`/chat/${res.id}`)
     } finally { loading.value = false }
   }
 

@@ -38,7 +38,7 @@ const f = usePasswordForm()
         <small class="text-red-500">{{ f.errors.value.password_confirmation }}</small>
       </div>
       <div class="flex items-center gap-3 pt-1">
-        <Button :loading="f.isSubmitting.value" type="submit" label="Сохранить пароль" rounded class="!bg-black dark:!bg-white dark:!text-ink-900" />
+        <Button :loading="f.isSubmitting.value" type="submit" label="Сохранить пароль" rounded class="!bg-black dark:!bg-white dark:!text-ink-900 !border-black dark:!border-white" />
       </div>
     </form>
   </section>

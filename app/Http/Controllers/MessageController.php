@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Events\MessageSent;
+use App\Events\MessageUpdated;
 use App\Events\TypingIndicator;
 use App\Models\Conversation;
 use App\Models\Message;
@@ -32,7 +33,8 @@ class MessageController extends Controller
         $msg=Message::create(['conversation_id'=>$conversation->id,'sender_id'=>$sender->id,'body'=>$body]);
         $msg->load(['sender:id,name,avatar_path','conversation.participantRows']);
         $conversation->update(['last_message_at'=>$msg->created_at]);
-        broadcast(new MessageSent($msg))->toOthers();
+        $conversation->participantRows()->whereNotNull('hidden_at')->update(['hidden_at'=>null]);
+        try{ broadcast(new MessageSent($msg))->toOthers(); }catch(\Throwable $e){ \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
         return response()->json($msg->toArrayPayload(),201);
     }
 
@@ -40,8 +42,19 @@ class MessageController extends Controller
     {
         abort_unless($conversation->hasParticipant($request->user()->id),403);
         $request->validate(['is_typing'=>'required|boolean']);
-        broadcast(new TypingIndicator($conversation->id,$request->user()->id,(bool)$request->input('is_typing')))->toOthers();
+        try{ broadcast(new TypingIndicator($conversation->id,$request->user()->id,(bool)$request->input('is_typing')))->toOthers(); }catch(\Throwable $e){ \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
         return response()->json(['ok'=>true]);
+    }
+
+    public function update(Request $request, Message $message)
+    {
+        abort_unless($message->sender_id === $request->user()->id, 403);
+        abort_unless($message->conversation->hasParticipant($request->user()->id), 403);
+        $data = $request->validate(['body' => 'required|string|max:2000']);
+        $message->update(['body' => $data['body'], 'edited_at' => now()]);
+        $message->load(['sender:id,name,avatar_path', 'conversation.participantRows']);
+        try { broadcast(new MessageUpdated($message))->toOthers(); } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
+        return response()->json($message->toArrayPayload());
     }
 
     public function destroy(Request $request, Message $message)

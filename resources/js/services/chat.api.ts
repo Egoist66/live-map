@@ -13,6 +13,10 @@ export const chatApi = {
   removeFriend(id:number){ return api.delete(`/api/friendships/${id}`).then(r=>r.data) },
   status(userId:number){ return api.get(`/api/friendships/status/${userId}`).then(r=>r.data) },
 
+  blocks(){ return api.get('/api/blocks').then(r=>r.data) },
+  block(user_id:number){ return api.post('/api/blocks',{user_id}).then(r=>r.data) },
+  unblock(userId:number){ return api.delete(`/api/blocks/${userId}`).then(r=>r.data) },
+
   conversations(){ return api.get<Conversation[]>('/api/conversations').then(r=>r.data) },
   createConversation(user_id:number, message?:string){ return api.post('/api/conversations',{user_id,message}).then(r=>r.data) },
   getConversation(id:number){ return api.get<ConversationDetail>(`/api/conversations/${id}`).then(r=>r.data) },
@@ -21,5 +25,6 @@ export const chatApi = {
 
   messages(convId:number, before?:number){ return api.get<Message[]>(`/api/conversations/${convId}/messages`,{params:{before}}).then(r=>r.data) },
   sendMessage(convId:number, body:string){ return api.post<Message>(`/api/conversations/${convId}/messages`,{body}).then(r=>r.data) },
-  typing(convId:number, is_typing:boolean){ return api.post(`/api/conversations/${convId}/typing`,{is_typing}).then(r=>r.data) },
+  editMessage(messageId:number, body:string){ return api.patch<Message>(`/api/messages/${messageId}`,{body}).then(r=>r.data) },
+  deleteMessage(messageId:number){ return api.delete(`/api/messages/${messageId}`).then(r=>r.data) },
 }

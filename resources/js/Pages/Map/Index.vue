@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3'
+import { Head, Link } from '@inertiajs/vue3'
 import { onMounted, onUnmounted } from 'vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import 'maplibre-gl/dist/maplibre-gl.css'
@@ -180,11 +180,11 @@ onUnmounted(destroy)
             <p v-if="!pinEdit.editing.value" class="text-sm text-stone-600 mt-2 leading-relaxed">{{ selectedPin.body }}</p>
             <div v-if="!pinEdit.editing.value" class="flex flex-wrap gap-1.5 mt-3 items-center">
               <span class="text-xs bg-stone-100 border border-stone-200 rounded-full px-2.5 py-1 font-medium">{{ selectedPin.category }}</span>
-              <a v-if="selectedPin.user && !selectedPin.is_anonymous" :href="`/users/${selectedPin.user.id}`" class="text-xs bg-white border border-stone-200 rounded-full pl-1 pr-2.5 py-1 flex items-center gap-1.5 hover:border-ink-900">
+              <Link v-if="selectedPin.user && !selectedPin.is_anonymous" :href="`/users/${selectedPin.user.id}`" class="text-xs bg-white border border-stone-200 rounded-full pl-1 pr-2.5 py-1 flex items-center gap-1.5 hover:border-ink-900">
                 <img v-if="selectedPin.user?.avatar_path" :src="`/storage/${selectedPin.user.avatar_path}`" class="w-5 h-5 rounded-full object-cover border border-stone-200" />
                 <span v-else class="w-5 h-5 rounded-full bg-ink-900 text-white grid place-items-center text-[10px] font-bold">{{ selectedPin.user.name[0].toUpperCase() }}</span>
                 {{ selectedPin.user?.name }} · {{ selectedPin.user?.level||'novice' }}
-              </a>
+              </Link>
               <span v-else class="text-xs bg-stone-100 border border-stone-200 rounded-full px-2.5 py-1">{{ selectedPin.is_anonymous ? 'аноним' : 'аноним' }} · {{ selectedPin.user?.level||'novice' }}</span>
               <span class="text-xs bg-amber-50 border border-amber-200 rounded-full px-2.5 py-1">до {{ formatTime(selectedPin.expires_at) }}</span>
             </div>

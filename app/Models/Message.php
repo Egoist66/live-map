@@ -7,8 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Message extends Model
 {
-    protected $fillable = ['conversation_id','sender_id','body','type','read_at'];
-    protected $casts = ['read_at' => 'datetime'];
+    protected $fillable = ['conversation_id','sender_id','body','type','read_at','edited_at'];
+    protected $casts = ['read_at' => 'datetime', 'edited_at' => 'datetime'];
 
     public function conversation(): BelongsTo { return $this->belongsTo(Conversation::class); }
     public function sender(): BelongsTo { return $this->belongsTo(User::class,'sender_id'); }
@@ -22,6 +22,8 @@ class Message extends Model
             'body' => $this->body,
             'type' => $this->type,
             'created_at' => $this->created_at?->toISOString(),
+            'edited_at' => $this->edited_at?->toISOString(),
+            'is_edited' => $this->edited_at !== null,
             'sender' => $this->relationLoaded('sender') ? [
                 'id' => $this->sender->id,
                 'name' => $this->sender->name,

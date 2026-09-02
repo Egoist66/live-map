@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { Head, Link, usePage } from '@inertiajs/vue3'
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import AvatarPreview from '@/Components/AvatarPreview.vue'
+import { useBadgeStore } from '@/stores/badges'
 
 const props = defineProps<{ user: any; isOwn?: boolean }>()
 const page = usePage()
@@ -16,6 +17,8 @@ const levelColor: Record<string,string> = { novice:'bg-stone-100 text-stone-700 
 const planLabel: Record<string,string> = { free:'Free', pro:'Pro', business:'Business' }
 const planColor: Record<string,string> = { free:'bg-stone-100 text-stone-700 border-stone-200', pro:'bg-gradient-to-br from-violet-600 to-indigo-600 text-white border-transparent', business:'bg-ink-900 text-white border-ink-900' }
 const settingsHref = computed(() => isOwn.value ? route('profile.edit', { identifier: auth.is_admin || auth.role==='admin' ? 'admin' : String(auth.id) }) : route('profile.edit', { identifier: String(u.value.id) }))
+const badges = useBadgeStore()
+onMounted(()=> { if(isOwn.value) badges.init() })
 </script>
 
 <template>
@@ -45,6 +48,14 @@ const settingsHref = computed(() => isOwn.value ? route('profile.edit', { identi
               <div class="mt-4 flex flex-wrap gap-2">
                 <Link href="/map" class="bg-white text-ink-900 px-6 py-2.5 rounded-full text-sm font-bold hover:bg-stone-50 transition inline-flex items-center gap-2">Открыть карту →</Link>
                 <Link v-if="isOwn" :href="settingsHref" class="bg-white/10 border border-white/15 text-white px-6 py-2.5 rounded-full text-sm font-bold hover:bg-white/15 transition">Настройки</Link>
+                <Link v-if="isOwn" href="/chat" class="relative bg-gradient-to-r from-violet-600 to-indigo-600 text-white px-6 py-2.5 rounded-full text-sm font-bold hover:opacity-90 transition inline-flex items-center gap-2">Чат
+                  <span v-if="badges.unread" class="bg-white text-violet-700 text-xs font-black px-1.5 py-0.5 rounded-full min-w-[20px] text-center">{{ badges.unread }}</span>
+                  <span v-if="badges.pending" class="bg-amber-400 text-ink-900 text-xs font-black px-1.5 py-0.5 rounded-full min-w-[20px] text-center">{{ badges.pending }}</span>
+                </Link>
+              </div>
+              <div v-if="isOwn && badges.total" class="mt-3 flex gap-2 text-xs font-semibold">
+                <span v-if="badges.unread" class="inline-flex items-center gap-1 bg-red-500 text-white px-2.5 py-1 rounded-full">✉ {{ badges.unread }} непроч.</span>
+                <span v-if="badges.pending" class="inline-flex items-center gap-1 bg-amber-500 text-white px-2.5 py-1 rounded-full">👥 {{ badges.pending }} заявок</span>
               </div>
             </div>
           </div>
@@ -67,6 +78,10 @@ const settingsHref = computed(() => isOwn.value ? route('profile.edit', { identi
           <div class="space-y-4">
             <div class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-[20px] p-6 shadow-soft">
               <h3 class="font-black tracking-tight">Действия</h3>
+              <Link v-if="isOwn && badges.total" href="/chat" class="mt-3 flex items-center justify-between p-3 rounded-xl bg-violet-50 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-800 hover:bg-violet-100 transition">
+                <span class="text-sm font-bold dark:text-white">Новые уведомления</span>
+                <span class="flex gap-1"><span v-if="badges.unread" class="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">{{ badges.unread }} ✉</span><span v-if="badges.pending" class="bg-amber-500 text-white text-xs font-bold px-2 py-1 rounded-full">{{ badges.pending }} 👥</span></span>
+              </Link>
               <div class="mt-4 grid grid-cols-2 gap-3">
                 <Link href="/map" class="bg-ink-900 dark:bg-white dark:text-ink-900 text-white rounded-[16px] p-4 flex flex-col gap-1 hover:opacity-90 transition"><span class="w-8 h-8 rounded-xl bg-white/15 dark:bg-ink-900/10 grid place-items-center text-sm">🗺️</span><span class="text-sm font-bold leading-tight">Карта</span><span class="text-[11px] opacity-60">пины рядом</span></Link>
                 <Link v-if="isOwn" :href="settingsHref" class="bg-stone-50 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-[16px] p-4 flex flex-col gap-1 hover:bg-white dark:hover:bg-zinc-700 transition"><span class="w-8 h-8 rounded-xl bg-white dark:bg-zinc-700 border dark:border-zinc-600 grid place-items-center text-sm">⚙️</span><span class="text-sm font-bold leading-tight dark:text-white">Настройки</span><span class="text-[11px] text-stone-500 dark:text-zinc-400">тариф и прочее</span></Link>

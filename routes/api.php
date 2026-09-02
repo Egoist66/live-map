@@ -8,6 +8,7 @@ use App\Http\Controllers\PinCommentController;
 use App\Http\Controllers\PinController;
 use App\Http\Controllers\ReactionController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\UserBlockController;
 use App\Http\Controllers\ZoneSubscriptionController;
 use Illuminate\Support\Facades\Route;
 
@@ -39,6 +40,10 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::delete('/friendships/{friendship}', [FriendshipController::class, 'destroy']);
     Route::get('/friendships/status/{user}', [FriendshipController::class, 'status']);
 
+    Route::get('/blocks', [UserBlockController::class, 'index']);
+    Route::post('/blocks', [UserBlockController::class, 'store']);
+    Route::delete('/blocks/{user}', [UserBlockController::class, 'destroy']);
+
     Route::get('/conversations', [ConversationController::class, 'index']);
     Route::post('/conversations', [ConversationController::class, 'store']);
     Route::get('/conversations/{conversation}', [ConversationController::class, 'show']);
@@ -48,5 +53,6 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/conversations/{conversation}/messages', [MessageController::class, 'index']);
     Route::post('/conversations/{conversation}/messages', [MessageController::class, 'store']);
     Route::post('/conversations/{conversation}/typing', [MessageController::class, 'typing']);
+    Route::patch('/messages/{message}', [MessageController::class, 'update']);
     Route::delete('/messages/{message}', [MessageController::class, 'destroy']);
 });

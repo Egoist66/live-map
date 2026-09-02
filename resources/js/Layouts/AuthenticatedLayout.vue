@@ -1,11 +1,14 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import Dropdown from '@/Components/Dropdown.vue';
 import DropdownLink from '@/Components/DropdownLink.vue';
 import NavLink from '@/Components/NavLink.vue';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import { Link, usePage } from '@inertiajs/vue3';
+import { useBadgeStore } from '@/stores/badges';
+const badge = useBadgeStore()
+onMounted(()=> badge.init())
 const showingNavigationDropdown = ref(false);
 const page = usePage()
 const avatarSrc = computed(() => {
@@ -38,7 +41,11 @@ const settingsHref = computed(() => {
             <div class="hidden lg:flex items-center gap-1 bg-stone-100/80 dark:bg-zinc-800 p-1 rounded-full border border-stone-200/60 dark:border-zinc-700">
               <NavLink :href="dashboardHref" :active="route().current('dashboard')" class="!border-0 !pt-0 !px-4 !py-1.5 !rounded-full text-[13px] font-semibold" :class="route().current('dashboard') ? '!bg-white dark:!bg-zinc-700 !shadow-soft !text-ink-900 dark:!text-white border border-stone-200' : '!text-stone-500 dark:!text-zinc-400 hover:!text-ink-900'">Профиль</NavLink>
               <NavLink :href="route('map')" :active="route().current('map')" class="!border-0 !pt-0 !px-4 !py-1.5 !rounded-full text-[13px] font-semibold" :class="route().current('map') ? '!bg-white dark:!bg-zinc-700 !shadow-soft !text-ink-900 dark:!text-white border border-stone-200' : '!text-stone-500 dark:!text-zinc-400 hover:!text-ink-900'">Карта</NavLink>
-              <NavLink :href="route('chat')" :active="route().current('chat')" class="!border-0 !pt-0 !px-4 !py-1.5 !rounded-full text-[13px] font-semibold" :class="route().current('chat') ? '!bg-white dark:!bg-zinc-700 !shadow-soft !text-ink-900 dark:!text-white border border-stone-200' : '!text-stone-500 dark:!text-zinc-400 hover:!text-ink-900'">Чат</NavLink>
+              <NavLink :href="route('chat')" :active="route().current('chat')" class="!border-0 !pt-0 !px-4 !py-1.5 !rounded-full text-[13px] font-semibold relative" :class="route().current('chat') ? '!bg-white dark:!bg-zinc-700 !shadow-soft !text-ink-900 dark:!text-white border border-stone-200' : '!text-stone-500 dark:!text-zinc-400 hover:!text-ink-900'">Чат
+                <span v-if="badge.unread" class="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[11px] font-bold leading-none">{{ badge.unread>99?'99+':badge.unread }}</span>
+                <span v-if="badge.pending" class="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-white text-[11px] font-bold leading-none">{{ badge.pending>99?'99+':badge.pending }}</span>
+                <span v-if="badge.total" class="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+              </NavLink>
               <NavLink :href="route('faq')" :active="route().current('faq')" class="!border-0 !pt-0 !px-4 !py-1.5 !rounded-full text-[13px] font-semibold" :class="route().current('faq') ? '!bg-white dark:!bg-zinc-700 !shadow-soft !text-ink-900 dark:!text-white border border-stone-200' : '!text-stone-500 dark:!text-zinc-400 hover:!text-ink-900'">FAQ</NavLink>
             </div>
           </div>
@@ -48,7 +55,8 @@ const settingsHref = computed(() => {
             <div class="hidden sm:flex items-center">
               <Dropdown align="right" width="48">
                 <template #trigger>
-                  <button class="flex items-center gap-3 pl-2 pr-3 py-1.5 rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow-soft hover:shadow-card transition">
+                    <button class="relative flex items-center gap-3 pl-2 pr-3 py-1.5 rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow-soft hover:shadow-card transition">
+                    <span v-if="badge.total" class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-zinc-800 animate-pulse"></span>
                     <img :src="avatarSrc" class="w-7 h-7 rounded-full object-cover border dark:border-zinc-600" />
                     <span class="text-sm font-semibold text-ink-900 dark:text-white max-w-[120px] truncate">{{ $page.props.auth.user.name }}</span>
                     <span class="w-6 h-6 rounded-full bg-stone-100 dark:bg-zinc-700 grid place-items-center text-stone-500">
@@ -62,7 +70,7 @@ const settingsHref = computed(() => {
                       <img :src="avatarSrc" class="w-9 h-9 rounded-full object-cover" />
                       <div class="min-w-0"><div class="text-sm font-semibold truncate dark:text-white">{{ $page.props.auth.user.name }}</div><div class="text-xs text-stone-500 truncate">{{ $page.props.auth.user.email }}</div></div>
                     </div>
-                    <DropdownLink :href="dashboardHref" class="!text-sm">Профиль</DropdownLink>
+                    <DropdownLink :href="dashboardHref" class="!text-sm flex items-center justify-between">Профиль <span v-if="badge.total" class="ml-2 inline-flex gap-1"><span v-if="badge.unread" class="bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{{ badge.unread }}</span><span v-if="badge.pending" class="bg-amber-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">{{ badge.pending }}</span></span></DropdownLink>
                     <DropdownLink :href="settingsHref" class="!text-sm">Настройки</DropdownLink>
                     <DropdownLink :href="route('map')" class="!text-sm">Карта</DropdownLink>
                     <DropdownLink :href="route('logout')" method="post" as="button" class="!text-sm">Выйти</DropdownLink>
@@ -85,7 +93,7 @@ const settingsHref = computed(() => {
         <div class="px-4 py-3 space-y-1">
           <ResponsiveNavLink :href="dashboardHref" :active="route().current('dashboard')">Профиль</ResponsiveNavLink>
           <ResponsiveNavLink :href="route('map')" :active="route().current('map')">Карта</ResponsiveNavLink>
-          <ResponsiveNavLink :href="route('chat')" :active="route().current('chat')">Чат</ResponsiveNavLink>
+          <ResponsiveNavLink :href="route('chat')" :active="route().current('chat')" class="flex items-center justify-between">Чат <span class="flex gap-1"><span v-if="badge.unread" class="inline-flex min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[11px] font-bold items-center justify-center">{{ badge.unread }}</span><span v-if="badge.pending" class="inline-flex min-w-[18px] h-[18px] px-1 rounded-full bg-amber-500 text-white text-[11px] font-bold items-center justify-center">{{ badge.pending }}</span></span></ResponsiveNavLink>
           <ResponsiveNavLink :href="route('faq')" :active="route().current('faq')">FAQ</ResponsiveNavLink>
           <Link href="/map" class="mt-2 flex bg-ink-900 dark:bg-white dark:text-ink-900 text-white rounded-full px-4 py-2.5 text-sm font-semibold justify-center">+ Создать пин</Link>
         </div>
