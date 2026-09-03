@@ -26,7 +26,9 @@
         <meta name="twitter:title" content="{{ config('seo.default_title') }}">
         <meta name="twitter:description" content="{{ config('seo.default_description') }}">
         <meta name="twitter:image" content="{{ url(config('seo.image', '/og-cover.jpg')) }}">
-        @if(config('seo.twitter_site'))<meta name="twitter:site" content="{{ config('seo.twitter_site') }}">@endif
+        @if(config('seo.twitter_site'))
+            <meta name="twitter:site" content="{{ config('seo.twitter_site') }}">
+        @endif
 
         <title inertia>{{ config('seo.default_title') }}</title>
         <link rel="icon" href="/favicon.ico" sizes="any">
