@@ -173,78 +173,54 @@ onUnmounted(destroy)
       </Dialog>
 
       <Transition enter-active-class="transition duration-200 ease-out" enter-from-class="opacity-0 translate-y-4 sm:translate-x-4 sm:translate-y-0" enter-to-class="opacity-100 translate-y-0 sm:translate-x-0" leave-active-class="transition duration-150 ease-in" leave-from-class="opacity-100" leave-to-class="opacity-0 translate-y-4 sm:translate-x-4">
-        <div v-if="selectedPin" class="absolute inset-x-3 bottom-3 top-auto max-h-[78vh] sm:inset-x-auto sm:right-4 sm:top-4 sm:bottom-4 sm:w-[380px] sm:max-h-none bg-white rounded-[20px] shadow-float border border-stone-200 flex flex-col overflow-hidden z-20">
-          <div class="p-5 border-b border-stone-200">
-            <div v-if="!pinEdit.editing.value" class="flex justify-between items-start gap-3"><h3 class="font-bold leading-tight pr-2 text-[15px]">{{ selectedPin.title }}</h3><div class="flex items-center gap-1 shrink-0"><Button v-if="selectedPin.is_owner" icon="pi pi-pencil" rounded text size="small" @click="pinEdit.start(selectedPin)" /><Button v-if="selectedPin.is_owner" icon="pi pi-trash" severity="danger" rounded text size="small" :loading="store.deleting" @click="deleteSelectedPin" /><Button icon="pi pi-times" rounded text size="small" @click="pinDetails.closePin()" /></div></div>
+        <div v-if="selectedPin" class="absolute inset-x-3 bottom-3 top-auto max-h-[78vh] sm:inset-x-auto sm:right-4 sm:top-4 sm:bottom-4 sm:w-[380px] sm:max-h-none bg-white dark:bg-zinc-900 rounded-[20px] shadow-float border border-stone-200 dark:border-zinc-700 flex flex-col overflow-hidden z-20">
+          <div class="p-5 border-b border-stone-200 dark:border-zinc-700 dark:bg-zinc-900">
+            <div v-if="!pinEdit.editing.value" class="flex justify-between items-start gap-3"><h3 class="font-bold leading-tight pr-2 text-[15px] dark:text-white">{{ selectedPin.title }}</h3><div class="flex items-center gap-1 shrink-0"><Button v-if="selectedPin.is_owner" icon="pi pi-pencil" rounded text size="small" @click="pinEdit.start(selectedPin)" /><Button v-if="selectedPin.is_owner" icon="pi pi-trash" severity="danger" rounded text size="small" :loading="store.deleting" @click="deleteSelectedPin" /><Button icon="pi pi-times" rounded text size="small" @click="pinDetails.closePin()" /></div></div>
             <div v-else class="space-y-3">
-              <InputText v-model="pinEdit.title.value" v-bind="pinEdit.titleAttrs" maxlength="100" placeholder="Заголовок" class="w-full !rounded-xl" />
+              <InputText v-model="pinEdit.title.value" v-bind="pinEdit.titleAttrs" maxlength="100" placeholder="Заголовок" class="w-full !rounded-xl dark:!bg-zinc-800 dark:!border-zinc-700 dark:!text-white" />
               <small class="text-red-500 text-xs">{{ pinEdit.errors.value.title }}</small>
-              <Textarea v-model="pinEdit.body.value" rows="3" maxlength="1000" placeholder="Подробности" autoResize class="w-full !rounded-xl" />
+              <Textarea v-model="pinEdit.body.value" rows="3" maxlength="1000" placeholder="Подробности" autoResize class="w-full !rounded-xl dark:!bg-zinc-800 dark:!border-zinc-700 dark:!text-white" />
               <div class="flex gap-1.5 flex-wrap">
-                <button v-for="c in categories" :key="c.v" @click="(pinEdit.category.value as any)=c.v" :class="['px-3 py-1.5 rounded-full text-xs font-semibold border', (pinEdit.category.value as any)===c.v?'bg-ink-900 text-white border-ink-900':'bg-white border-stone-200']">{{ c.i }} {{ c.l }}</button>
+                <button v-for="c in categories" :key="c.v" @click="(pinEdit.category.value as any)=c.v" :class="['px-3 py-1.5 rounded-full text-xs font-semibold border', (pinEdit.category.value as any)===c.v?'bg-ink-900 dark:bg-white dark:text-ink-900 text-white border-ink-900 dark:border-white':'bg-white dark:bg-zinc-800 dark:text-zinc-200 border-stone-200 dark:border-zinc-700']">{{ c.i }} {{ c.l }}</button>
               </div>
               <div class="flex gap-2">
                 <Button label="Сохранить" rounded class="flex-1 !bg-ink-900 !border-ink-900" :loading="pinEdit.updating" @click="saveEdit" />
                 <Button label="Отмена" severity="secondary" outlined rounded class="flex-1" @click="pinEdit.cancel()" />
               </div>
             </div>
-            <p v-if="!pinEdit.editing.value" class="text-sm text-stone-600 mt-2 leading-relaxed">{{ selectedPin.body }}</p>
+            <p v-if="!pinEdit.editing.value" class="text-sm text-stone-600 dark:text-zinc-300 mt-2 leading-relaxed">{{ selectedPin.body }}</p>
             <div v-if="!pinEdit.editing.value" class="flex flex-wrap gap-1.5 mt-3 items-center">
-              <span class="text-xs bg-stone-100 border border-stone-200 rounded-full px-2.5 py-1 font-medium">{{ selectedPin.category }}</span>
+              <span class="text-xs bg-stone-100 dark:bg-zinc-800 dark:text-zinc-200 border border-stone-200 dark:border-zinc-700 rounded-full px-2.5 py-1 font-medium">{{ selectedPin.category }}</span>
               <Link v-if="selectedPin.user && !selectedPin.is_anonymous" :href="`/users/${selectedPin.user.id}`" class="hover:opacity-80">
-                <Chip :label="`${selectedPin.user?.name} · ${selectedPin.user?.level||'novice'}`" :image="avatarSrcFor(selectedPin.user) || undefined" class="!bg-white !border !border-stone-200 !rounded-full !pl-1 !pr-2.5 !py-1 !text-xs" />
+                <Chip :label="`${selectedPin.user?.name} · ${selectedPin.user?.level||'novice'}`" :image="avatarSrcFor(selectedPin.user) || undefined" class="!bg-white dark:!bg-zinc-800 !border !border-stone-200 dark:!border-zinc-700 dark:!text-zinc-200 !rounded-full !pl-1 !pr-2.5 !py-1 !text-xs" />
               </Link>
-              <span v-else class="text-xs bg-stone-100 border border-stone-200 rounded-full px-2.5 py-1">{{ selectedPin.is_anonymous ? 'аноним' : 'аноним' }} · {{ selectedPin.user?.level||'novice' }}</span>
-              <span class="text-xs bg-amber-50 border border-amber-200 rounded-full px-2.5 py-1">до {{ formatTime(selectedPin.expires_at) }}</span>
+              <span v-else class="text-xs bg-stone-100 dark:bg-zinc-800 dark:text-zinc-200 border border-stone-200 dark:border-zinc-700 rounded-full px-2.5 py-1">{{ selectedPin.is_anonymous ? 'аноним' : 'аноним' }} · {{ selectedPin.user?.level||'novice' }}</span>
+              <span class="text-xs bg-amber-50 dark:bg-amber-950/30 dark:text-amber-300 border border-amber-200 dark:border-amber-900 rounded-full px-2.5 py-1">до {{ formatTime(selectedPin.expires_at) }}</span>
             </div>
-            <div v-if="!pinEdit.editing.value && selectedPin.user && !selectedPin.is_owner && !selectedPin.is_anonymous" class="flex gap-2 mt-3">
-              <button
-                @click="pinChat.startChat(selectedPin.user.id)"
-                :disabled="pinChat.loadingId.value===selectedPin.user.id || (pinChat.getStatus(selectedPin.user.id) && !pinChat.getStatus(selectedPin.user.id).can_message)"
-                :title="pinChat.getStatus(selectedPin.user.id)?.can_message_reason || 'Начать чат — откроется окно диалога. Если закрыто — добавьте в друзья'"
-                class="flex-1 py-2 rounded-full text-xs font-bold border bg-ink-900 text-white border-ink-900 hover:bg-ink-800 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1">
-                <span>💬</span> {{ pinChat.getStatus(selectedPin.user.id)?.can_message===false ? 'Закрыто' : 'Написать' }}
-              </button>
-              <button
-                v-if="!pinChat.getStatus(selectedPin.user.id)?.is_friend"
-                @click="pinChat.addFriend(selectedPin.user.id)"
-                :disabled="pinChat.loadingId.value===selectedPin.user.id || pinChat.getStatus(selectedPin.user.id)?.is_pending"
-                :title="pinChat.getStatus(selectedPin.user.id)?.is_pending ? 'Заявка уже отправлена, ждите принятия' : 'Отправить заявку в друзья — после принятия сможете писать, если у пользователя «только друзья»'"
-                class="flex-1 py-2 rounded-full text-xs font-bold border bg-white border-stone-200 hover:bg-stone-50 disabled:opacity-40 flex items-center justify-center gap-1">
-                {{ pinChat.getStatus(selectedPin.user.id)?.is_pending ? '⏳ Заявка' : '＋ В друзья' }}
-              </button>
-              <span v-else class="flex-1 py-2 rounded-full text-xs font-bold border bg-emerald-50 border-emerald-200 text-emerald-700 grid place-items-center">✓ Друзья</span>
-            </div>
-            <div v-if="!pinEdit.editing.value && selectedPin.user && pinChat.getStatus(selectedPin.user.id)?.can_message===false" class="mt-2 text-[11px] text-red-500 bg-red-50 border border-red-200 rounded-xl px-3 py-2" :title="pinChat.getStatus(selectedPin.user.id).can_message_reason">
-              ⚠ {{ pinChat.getStatus(selectedPin.user.id).can_message_reason }} — добавьте в друзья
-            </div>
+
             <div class="flex gap-1.5 mt-4">
-              <button @click="react(selectedPin,'like')" :disabled="reactAsyncStatus?.value==='loading'" :class="['flex-1 rounded-full py-2.5 text-xs font-semibold border active:scale-95 transition flex items-center justify-center gap-1 disabled:opacity-50', selectedPin.my_reaction==='like'?'bg-rose-500 text-white border-rose-500 shadow-[0_2px_10px_rgba(244,63,94,0.35)]':'bg-white border-stone-200 hover:bg-stone-50']">❤️ {{ selectedPin.reactions_count||0 }}</button>
-              <button @click="react(selectedPin,'fire')" :disabled="reactAsyncStatus?.value==='loading'" class="px-4 rounded-full text-xs font-semibold border active:scale-95 transition disabled:opacity-50" :class="selectedPin.my_reaction==='fire'?'bg-orange-500 text-white border-orange-500':'bg-white border-stone-200 hover:bg-stone-50'">🔥</button>
-              <button @click="react(selectedPin,'useful')" :disabled="reactAsyncStatus?.value==='loading'" class="px-4 rounded-full text-xs font-semibold border active:scale-95 transition disabled:opacity-50" :class="selectedPin.my_reaction==='useful'?'bg-emerald-500 text-white border-emerald-500':'bg-white border-stone-200 hover:bg-stone-50'">👍</button>
-              <button @click="reportPin(selectedPin)" :disabled="reportMutation?.asyncStatus?.value==='loading'" class="w-10 h-10 bg-white border border-stone-200 rounded-full grid place-items-center hover:bg-red-50 hover:text-red-600 disabled:opacity-50">⚠</button>
+              <button @click="react(selectedPin,'like')" :disabled="reactAsyncStatus?.value==='loading'" :class="['flex-1 rounded-full py-2.5 text-xs font-semibold border active:scale-95 transition flex items-center justify-center gap-1 disabled:opacity-50', selectedPin.my_reaction==='like'?'bg-rose-500 text-white border-rose-500 shadow-[0_2px_10px_rgba(244,63,94,0.35)]':'bg-white dark:bg-zinc-800 dark:text-zinc-200 border-stone-200 dark:border-zinc-700 hover:bg-stone-50 dark:hover:bg-zinc-700']">❤️ {{ selectedPin.reactions_count||0 }}</button>
+              <button @click="react(selectedPin,'fire')" :disabled="reactAsyncStatus?.value==='loading'" class="px-4 rounded-full text-xs font-semibold border active:scale-95 transition disabled:opacity-50" :class="selectedPin.my_reaction==='fire'?'bg-orange-500 text-white border-orange-500':'bg-white dark:bg-zinc-800 dark:text-zinc-200 border-stone-200 dark:border-zinc-700 hover:bg-stone-50 dark:hover:bg-zinc-700'">🔥</button>
+              <button @click="react(selectedPin,'useful')" :disabled="reactAsyncStatus?.value==='loading'" class="px-4 rounded-full text-xs font-semibold border active:scale-95 transition disabled:opacity-50" :class="selectedPin.my_reaction==='useful'?'bg-emerald-500 text-white border-emerald-500':'bg-white dark:bg-zinc-800 dark:text-zinc-200 border-stone-200 dark:border-zinc-700 hover:bg-stone-50 dark:hover:bg-zinc-700'">👍</button>
+              <button @click="reportPin(selectedPin)" :disabled="reportMutation?.asyncStatus?.value==='loading'" class="w-10 h-10 bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-full grid place-items-center hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600 dark:text-zinc-300 disabled:opacity-50">⚠</button>
             </div>
-            <div class="grid grid-cols-3 gap-2 mt-4">
-              <Button @click="boost(selectedPin,'top')" :loading="boostMutation?.asyncStatus?.value==='loading'" class="!rounded-2xl !bg-gradient-to-br !from-amber-400 !to-orange-500 !border-0 !text-stone-900 !py-3" label="👑 Топ $0.99" size="small" />
-              <Button @click="boost(selectedPin,'glow')" :loading="boostMutation?.asyncStatus?.value==='loading'" class="!rounded-2xl !bg-gradient-to-br !from-violet-600 !to-indigo-600 !border-0 !py-3" label="✨ Подсветка $1.99" size="small" />
-              <Button @click="boost(selectedPin,'extend')" :loading="boostMutation?.asyncStatus?.value==='loading'" class="!rounded-2xl !bg-gradient-to-br !from-emerald-500 !to-teal-600 !border-0 !py-3" label="⏳ +24ч $2.99" size="small" />
-            </div>
+
           </div>
-          <div class="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin bg-stone-50/40">
-            <div v-for="c in comments" :key="c.id" class="bg-white border border-stone-200 rounded-2xl p-3.5">
-              <div class="font-semibold text-xs flex items-center gap-2">
+          <div class="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin bg-stone-50/40 dark:bg-zinc-800/50">
+            <div v-for="c in comments" :key="c.id" class="bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl p-3.5">
+              <div class="font-semibold text-xs flex items-center gap-2 dark:text-white">
                 {{ c.is_anonymous ? 'аноним' : c.user?.name }}
-                <span class="text-stone-400 font-normal">{{ formatTime(c.created_at) }}</span>
+                <span class="text-stone-400 dark:text-zinc-400 font-normal">{{ formatTime(c.created_at) }}</span>
               </div>
-              <div v-if="editingCommentId!==c.id" class="text-sm text-stone-700 mt-1.5 leading-relaxed break-words">{{ c.content }}</div>
-              <div v-else class="mt-2"><Textarea v-model="editingContent" rows="2" maxlength="1000" class="w-full !rounded-xl" /><div class="flex gap-2 mt-2"><Button label="Сохранить" size="small" rounded :loading="updateCommentMutation?.asyncStatus?.value==='loading'" @click="saveEditComment" /><Button label="Отмена" size="small" severity="secondary" outlined rounded @click="cancelEditComment" /></div></div>
+              <div v-if="editingCommentId!==c.id" class="text-sm text-stone-700 dark:text-zinc-200 mt-1.5 leading-relaxed break-words">{{ c.content }}</div>
+              <div v-else class="mt-2"><Textarea v-model="editingContent" rows="2" maxlength="1000" class="w-full !rounded-xl dark:!bg-zinc-900 dark:!border-zinc-600" /><div class="flex gap-2 mt-2"><Button label="Сохранить" size="small" rounded :loading="updateCommentMutation?.asyncStatus?.value==='loading'" @click="saveEditComment" /><Button label="Отмена" size="small" severity="secondary" outlined rounded @click="cancelEditComment" /></div></div>
               <div v-if="editingCommentId!==c.id" class="mt-2 flex gap-1"><Button v-if="c.user_id===(($page as any).props.auth.user.id)" label="ред." size="small" text @click="startEditComment(c)" /></div>
             </div>
-            <div v-if="!comments.length" class="text-center py-10"><div class="w-10 h-10 rounded-full bg-white border grid place-items-center mx-auto text-stone-400">💬</div><div class="text-xs text-stone-400 mt-2">Комментариев пока нет<br/>Будь первым</div></div>
+            <div v-if="!comments.length" class="text-center py-10"><div class="w-10 h-10 rounded-full bg-white dark:bg-zinc-800 border dark:border-zinc-700 grid place-items-center mx-auto text-stone-400 dark:text-zinc-500">💬</div><div class="text-xs text-stone-400 dark:text-zinc-500 mt-2">Комментариев пока нет<br/>Будь первым</div></div>
           </div>
-          <form @submit.prevent="sendComment" class="p-3 border-t border-stone-200 bg-white flex gap-2">
-            <InputText v-model="commentText" placeholder="Написать комментарий..." class="flex-1 !rounded-full" :disabled="createCommentAsyncStatus?.value==='loading'" />
-            <Button type="submit" icon="pi pi-send" rounded class="!bg-ink-900 !border-ink-900" :loading="createCommentAsyncStatus?.value==='loading'" />
+          <form @submit.prevent="sendComment" class="p-3 border-t border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 flex gap-2">
+            <InputText v-model="commentText" placeholder="Написать комментарий..." class="flex-1 !rounded-full dark:!bg-zinc-800 dark:!border-zinc-700 dark:!text-white" :disabled="createCommentAsyncStatus?.value==='loading'" />
+            <Button type="submit" icon="pi pi-send" rounded class="!bg-ink-900 dark:!bg-white dark:!text-ink-900 !border-ink-900 dark:!border-white" :loading="createCommentAsyncStatus?.value==='loading'" />
           </form>
         </div>
       </Transition>

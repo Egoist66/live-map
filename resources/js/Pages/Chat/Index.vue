@@ -100,7 +100,7 @@ onMounted(init)
           <div class="text-xs text-stone-500 dark:text-zinc-400 mb-3">Найди человека по имени чтобы начать чат — отдельный глобальный поиск</div>
           <IconField class="w-full">
             <InputIcon class="pi pi-search" />
-            <InputText v-model="searchQuery" placeholder="Имя, например Анна..." fluid class="!rounded-full" autofocus />
+            <InputText v-model="searchQuery" placeholder="Имя, например Петр..." fluid class="!rounded-full" autofocus />
             <InputIcon v-if="searching" class="pi pi-spin pi-spinner right-3 left-auto" />
           </IconField>
           <div v-if="searchResults.length" class="mt-3 max-h-[52vh] overflow-auto divide-y dark:divide-zinc-800 border rounded-2xl bg-white dark:bg-zinc-900 shadow-sm">
@@ -110,7 +110,7 @@ onMounted(init)
                   <Avatar :image="avatarSrcFor(u)" shape="circle" size="normal" class="!w-9 !h-9" />
                   <OnlineDot :online="isOnline(u.id)" size="w-3 h-3" />
                 </span>
-                <div class="min-w-0"><div class="text-sm font-medium dark:text-white truncate hover:underline flex items-center gap-1">{{ u.name }}<span v-if="isOnline(u.id)" class="w-1.5 h-1.5 bg-emerald-500 rounded-full shrink-0"></span><span v-else class="w-1.5 h-1.5 bg-red-500 rounded-full shrink-0"></span></div><div class="text-xs truncate flex items-center gap-1"><span :class="isOnline(u.id)?'text-emerald-600':'text-red-500'">{{ isOnline(u.id) ? '● в сети' : '○ офлайн' }}</span><span class="text-stone-300">·</span><span :class="u.can_message?'text-emerald-600':'text-red-500'">{{ u.can_message?'можно написать':'не принимает' }}</span></div></div>
+                <div class="min-w-0"><div class="text-sm font-medium dark:text-white truncate hover:underline">{{ u.name }}</div><div class="text-xs truncate flex items-center gap-1"><span :class="isOnline(u.id)?'text-emerald-600':'text-red-500'"><span :class="isOnline(u.id) ? 'animate-pulse inline-block' : 'animate-[pulse_3s_ease-in-out_infinite] inline-block'">{{ isOnline(u.id) ? '●' : '○' }}</span> {{ isOnline(u.id) ? 'в сети' : 'офлайн' }}</span><span class="text-stone-300">·</span><span :class="u.can_message?'text-emerald-600':'text-red-500'">{{ u.can_message?'можно написать':'не принимает' }}</span></div></div>
               </Link>
               <div class="flex gap-1 shrink-0 ml-2 items-center">
                 <button v-if="u.can_message!==false" @click="startChatWith(u); showPeopleSearch=false" :disabled="creatingChat" title="Написать" class="w-8 h-8 grid place-items-center rounded-full bg-stone-900 dark:bg-white dark:text-zinc-900 text-white active:scale-95 disabled:opacity-40 transition">
@@ -150,8 +150,8 @@ onMounted(init)
                 <OnlineDot :online="isOnline(c.other?.id)" />
               </span>
               <div class="flex-1 min-w-0">
-                <div class="flex justify-between items-baseline gap-2"><span class="text-[15px] lg:text-sm font-semibold dark:text-white truncate flex items-center gap-1">{{ c.other?.name||'Чат' }}<span v-if="isOnline(c.other?.id)" class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shrink-0"></span></span><span v-if="c.last_message_at" class="text-[11px] text-stone-400 shrink-0">{{ formatTime(c.last_message_at) }}</span></div>
-                <div class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5" :class="isOnline(c.other?.id) ? 'text-emerald-600' : 'text-red-500'">{{ isOnline(c.other?.id) ? '● в сети' : '○ офлайн' }}<span class="text-stone-300">·</span><span class="truncate text-stone-500">{{ c.last_message?.body||'Нет сообщений' }}</span><span v-if="(c.last_message as any)?.is_edited" class="text-[10px] text-stone-400">(изм.)</span></div>
+                <div class="flex justify-between items-baseline gap-2"><span class="text-[15px] lg:text-sm font-semibold dark:text-white truncate">{{ c.other?.name||'Чат' }}</span><span v-if="c.last_message_at" class="text-[11px] text-stone-400 shrink-0">{{ formatTime(c.last_message_at) }}</span></div>
+                <div class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5" :class="isOnline(c.other?.id) ? 'text-emerald-600' : 'text-red-500'"><span :class="isOnline(c.other?.id) ? 'animate-pulse inline-block' : 'animate-[pulse_3s_ease-in-out_infinite] inline-block'">{{ isOnline(c.other?.id) ? '●' : '○' }}</span> {{ isOnline(c.other?.id) ? 'в сети' : 'офлайн' }}<span class="text-stone-300">·</span><span class="truncate text-stone-500">{{ c.last_message?.body||'Нет сообщений' }}</span><span v-if="(c.last_message as any)?.is_edited" class="text-[10px] text-stone-400">(изм.)</span></div>
               </div>
               <span v-if="c.unread_count" class="bg-violet-600 text-white text-xs font-bold min-w-[22px] h-[22px] grid place-items-center px-1.5 rounded-full shrink-0">{{ c.unread_count>99?'99+':c.unread_count }}</span>
             </button>
@@ -174,7 +174,7 @@ onMounted(init)
                 <Avatar :image="avatarSrcFor(f.other)" shape="circle" />
                 <OnlineDot :online="isOnline(f.other.id)" />
               </span>
-              <span class="text-[15px] lg:text-sm font-medium dark:text-white truncate hover:underline flex items-center gap-1">{{ f.other.name }}<span v-if="isOnline(f.other.id)" class="w-1.5 h-1.5 bg-emerald-500 rounded-full shrink-0"></span></span>
+              <span class="text-[15px] lg:text-sm font-medium dark:text-white truncate hover:underline">{{ f.other.name }}</span>
             </Link>
             <div class="flex gap-1 shrink-0 items-center">
               <button @click="startChatWith(f.other)" class="text-xs px-3 py-1.5 rounded-full bg-stone-900 dark:bg-white dark:text-zinc-900 text-white font-semibold flex items-center gap-1">
@@ -199,7 +199,7 @@ onMounted(init)
                 <Avatar :image="avatarSrcFor(r.requester)" shape="circle" />
                 <OnlineDot :online="isOnline(r.requester.id)" />
               </span>
-              <span class="text-[15px] lg:text-sm dark:text-white truncate hover:underline flex items-center gap-1">{{ r.requester.name }}<span v-if="isOnline(r.requester.id)" class="w-1.5 h-1.5 bg-emerald-500 rounded-full shrink-0"></span></span>
+              <span class="text-[15px] lg:text-sm dark:text-white truncate hover:underline">{{ r.requester.name }}</span>
             </Link>
             <div class="flex gap-1.5 shrink-0">
               <button @click="friendsApi.accept(r.id)" class="text-xs px-3.5 py-2 rounded-full bg-green-600 text-white font-semibold active:scale-95">Принять</button>
@@ -254,7 +254,7 @@ onMounted(init)
               <Avatar :image="avatarSrcFor(activeConv?.other)" shape="circle" />
               <OnlineDot :online="isOnline(activeConv?.other?.id)" />
             </span>
-            <div class="min-w-0"><div class="text-[15px] lg:text-sm font-semibold dark:text-white truncate hover:underline">{{ activeConv?.other?.name }}</div><div v-if="[...typingUsers].some(id=>id===activeConv?.other?.id)" class="text-xs text-violet-600 leading-none">печатает...</div><div v-else class="text-xs leading-none" :class="isOnline(activeConv?.other?.id) ? 'text-emerald-600' : 'text-red-500'">{{ isOnline(activeConv?.other?.id) ? '● в сети' : '○ офлайн' }}</div></div>
+            <div class="min-w-0"><div class="text-[15px] lg:text-sm font-semibold dark:text-white truncate hover:underline">{{ activeConv?.other?.name }}</div><div v-if="[...typingUsers].some(id=>id===activeConv?.other?.id)" class="text-xs text-violet-600 leading-none animate-pulse">печатает...</div><div v-else class="text-xs leading-none flex items-center gap-1" :class="isOnline(activeConv?.other?.id) ? 'text-emerald-600' : 'text-red-500'"><span :class="isOnline(activeConv?.other?.id) ? 'animate-pulse inline-block' : 'animate-[pulse_3s_ease-in-out_infinite] inline-block'">{{ isOnline(activeConv?.other?.id) ? '●' : '○' }}</span> {{ isOnline(activeConv?.other?.id) ? 'в сети' : 'офлайн' }}</div></div>
           </Link>
           <div class="flex items-center gap-0.5 lg:gap-1 shrink-0">
             <Button @click="refresh" :loading="refreshing" icon="pi pi-refresh" rounded text severity="secondary" class="!w-9 !h-9 !min-w-9 !max-w-9 !min-h-9 !max-h-9 lg:!w-8 lg:!min-w-8 lg:!max-w-8 lg:!min-h-8 lg:!max-h-8 !p-0 !rounded-full aspect-square shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" aria-label="Обновить" />
