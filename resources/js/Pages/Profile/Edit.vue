@@ -7,6 +7,7 @@ import { Head, usePage, Link } from '@inertiajs/vue3'
 import { ref, computed, watch, onMounted } from 'vue'
 import { useTheme } from '@/composables/useTheme'
 import { useSupportExchange } from '@/composables/useSupportExchange'
+import { useSettingsTabs } from '@/composables/useSettingsTabs'
 import axios from 'axios'
 import { useQuery, useMutation, useQueryCache } from '@pinia/colada'
 import { myPinsQuery, PIN_KEYS } from '@/queries/pins'
@@ -25,22 +26,12 @@ import Tab from 'primevue/tab'
 import TabPanels from 'primevue/tabpanels'
 import TabPanel from 'primevue/tabpanel'
 import Tag from 'primevue/tag'
-import Badge from 'primevue/badge'
+import Menu from 'primevue/menu'
 const props = defineProps<{ mustVerifyEmail: boolean; status?: string | null; user: any }>()
 const page = usePage()
 const u = computed(() => props.user || (page.props.auth as any).user)
 const { theme, setTheme } = useTheme()
-const active = ref<'profile'|'billing'|'privacy'|'appearance'|'security'|'pins'|'support'>('profile')
-const tabs = [
-  { id:'profile', label:'Профиль', icon:'◉', desc:'Фото, имя, дом' },
-  { id:'billing', label:'Тариф', icon:'★', desc:'План, лимиты' },
-  { id:'pins', label:'Мои пины', icon:'📍', desc:'Созданные, удалить' },
-  { id:'privacy', label:'Приватность', icon:'🔒', desc:'Анонимность, зона' },
-  { id:'appearance', label:'Внешний вид', icon:'◐', desc:'Тема, карта' },
-  { id:'security', label:'Безопасность', icon:'🛡', desc:'Пароль, удаление' },
-  { id:'support', label:'Поддержка', icon:'💬', desc:'Письмо, донат' },
-] as const
-const tabIndex: Record<string,string> = { profile:'0', billing:'1', pins:'2', privacy:'3', appearance:'4', security:'5', support:'6' }
+const { active, tabs, activeIndex, menuModel } = useSettingsTabs()
 const cache = useQueryCache()
 const { state: pinsState, refetch, asyncStatus: pinsAsyncStatus } = useQuery(() => ({ ...myPinsQuery, enabled: active.value === 'pins' }))
 const myPins = computed(() => (pinsState.value.data as any[]) || [])
@@ -74,33 +65,42 @@ const bioPreviewEmpty = computed(() => bioPreviewText.value.length === 0)
     <Toast />
     <div class="bg-surface dark:bg-[#090E1A] min-h-[calc(100vh-64px)] overflow-x-hidden">
       <div class="max-w-[1280px] mx-auto px-4 sm:px-6 py-6 overflow-hidden">
-        <div class="grid lg:grid-cols-[280px_1fr] gap-4 sm:gap-6 items-start w-full overflow-hidden">
-          <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft self-start w-full max-w-full overflow-hidden" :pt="{ body:{ class:'!p-2' }, content:{ class:'!p-0' } }">
-            <template #content>
-              <div class="hidden lg:block px-2 py-2 text-[11px] font-bold tracking-widest text-stone-400 uppercase">Настройки</div>
-              <Tabs :value="tabIndex[active]" @update:value="(v:any)=>{ const e=tabs[Number(v)]; if(e) active=e.id as any }" class="!w-full">
-                <TabList class="!bg-transparent !border-stone-200 dark:!border-zinc-800 !flex lg:!flex-col !overflow-x-auto !gap-1.5 lg:!gap-1 !pb-1 lg:!pb-0 !px-1 lg:!px-0 !scrollbar-none !snap-x max-w-full">
-                  <Tab v-for="(t, idx) in tabs" :key="t.id" :value="String(idx)" class="!border-0 !bg-transparent !p-0 !shrink-0 lg:!w-full !snap-start">
-                    <div :class="['flex items-center gap-3 px-3 py-2.5 lg:py-3 rounded-3xl transition w-full text-left', active===t.id ? 'bg-ink-900 dark:bg-white text-white dark:text-ink-900 shadow-soft' : 'hover:bg-stone-50 dark:hover:bg-zinc-800 text-stone-700 dark:text-zinc-300 bg-stone-50 lg:bg-transparent dark:bg-zinc-800/50 lg:dark:bg-transparent border lg:border-0 border-stone-200 dark:border-zinc-700']">
-                      <span class="w-8 h-8 lg:w-9 lg:h-9 rounded-2xl grid place-items-center text-sm shrink-0" :class="active===t.id ? 'bg-white/15 dark:bg-ink-900/10' : 'bg-white lg:bg-stone-100 dark:bg-zinc-700'">{{ t.icon }}</span>
-                      <div class="min-w-0 hidden sm:block lg:block text-left"><div class="text-sm font-semibold leading-none whitespace-nowrap">{{ t.label }}</div><div class="text-xs opacity-60 leading-none mt-1 hidden lg:block">{{ t.desc }}</div></div>
-                      <span class="text-xs font-semibold sm:hidden lg:hidden">{{ t.label }}</span>
-                      <span v-if="active===t.id" class="ml-auto text-xs hidden lg:inline">→</span>
-                    </div>
-                  </Tab>
-                </TabList>
-              </Tabs>
-              <Card class="!bg-gradient-to-br !from-amber-50 !to-orange-50 dark:!from-amber-950/20 dark:!to-orange-950/20 !border-amber-200 dark:!border-amber-900 !rounded-3xl !shadow-none mt-4 mx-2" :pt="{ body:{ class:'!p-3' }, content:{ class:'!p-0' } }">
-                <template #content>
-                  <div class="text-xs font-bold dark:text-white">Тариф {{ u.plan||'free' }}</div>
-                  <div class="text-xs text-stone-600 dark:text-zinc-400 mt-1">{{ u.pins_today_count||0 }}/{{ u.plan==='free'?3:'∞' }} пинов сегодня · {{ zoneCount }} подписок</div>
-                  <Button @click="active='billing'" label="Управление →" link size="small" class="!px-0 !text-xs !font-semibold !mt-2" />
-                </template>
-              </Card>
-            </template>
-          </Card>
+        <div class="grid lg:grid-cols-[300px_1fr] gap-6 items-start w-full overflow-hidden">
+          <aside class="hidden lg:block sticky top-[80px] self-start space-y-4">
+            <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body:{ class:'!p-3' }, content:{ class:'!p-0' } }">
+              <template #content>
+                <div class="px-2 py-2 text-[11px] font-bold tracking-widest text-stone-400 uppercase">Настройки</div>
+                <Menu :model="(menuModel as any)" class="!bg-transparent !border-0 !w-full !p-0" :pt="{ root:{ class:'!bg-transparent !border-0 !p-0 !w-full' }, list:{ class:'!p-0 !flex !flex-col !gap-1 !bg-transparent' }, item:{ class:'!p-0' }, itemContent:{ class:'!p-0 !bg-transparent hover:!bg-transparent' }, submenuLabel:{ class:'!hidden' } }">
+                  <template #item="{ item, props: p }">
+                    <button v-bind="p.action" :class="['w-full flex items-center gap-3 px-3 py-3 rounded-2xl text-left transition', (item as any).active ? 'bg-ink-900 dark:bg-white text-white dark:text-ink-900 shadow-soft' : 'hover:bg-stone-50 dark:hover:bg-zinc-800 text-stone-700 dark:text-zinc-300']">
+                      <span :class="['w-9 h-9 rounded-2xl grid place-items-center text-sm shrink-0', (item as any).active ? 'bg-white/15 dark:bg-ink-900/10' : 'bg-stone-100 dark:bg-zinc-700']"><i :class="(item as any).icon" /></span>
+                      <span class="min-w-0 text-left">
+                        <span class="block text-sm font-semibold leading-none">{{ (item as any).label }}</span>
+                        <span class="block text-xs opacity-60 leading-none mt-1">{{ (item as any).desc }}</span>
+                      </span>
+                      <span v-if="(item as any).active" class="ml-auto text-xs">→</span>
+                    </button>
+                  </template>
+                </Menu>
+                <Card class="!bg-gradient-to-br !from-amber-50 !to-orange-50 dark:!from-amber-950/20 dark:!to-orange-950/20 !border-amber-200 dark:!border-amber-900 !rounded-3xl !shadow-none mt-4" :pt="{ body:{ class:'!p-3' }, content:{ class:'!p-0' } }">
+                  <template #content>
+                    <div class="text-xs font-bold dark:text-white">Тариф {{ u.plan||'free' }}</div>
+                    <div class="text-xs text-stone-600 dark:text-zinc-400 mt-1">{{ u.pins_today_count||0 }}/{{ u.plan==='free'?3:'∞' }} пинов сегодня · {{ zoneCount }} подписок</div>
+                    <Button @click="active='billing'" label="Управление →" link size="small" class="!px-0 !text-xs !font-semibold !mt-2" />
+                  </template>
+                </Card>
+              </template>
+            </Card>
+          </aside>
           <div class="space-y-4 min-w-0 w-full max-w-full overflow-hidden">
-            <Tabs :value="tabIndex[active]" class="w-full">
+            <Tabs :value="activeIndex" @update:value="(v:any)=>{ const e=tabs[Number(v)]; if(e) active=e.id as any }" class="w-full">
+              <TabList class="!flex lg:!hidden !bg-transparent !border-0 !gap-2 !overflow-x-auto !flex-nowrap !pb-2 !px-1 !scrollbar-none !snap-x" :pt="{ activeBar:{ class:'!hidden' } }">
+                <Tab v-for="(t, idx) in tabs" :key="t.id" :value="String(idx)" class="!bg-transparent !border-0 !p-0 !shrink-0 !snap-start">
+                  <div :class="['flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold border transition whitespace-nowrap', active===t.id ? 'bg-ink-900 dark:bg-white text-white dark:text-ink-900 border-ink-900 dark:border-white shadow-soft' : 'bg-white dark:bg-zinc-900 text-stone-700 dark:text-zinc-300 border-stone-200 dark:border-zinc-700']">
+                    <i :class="[t.icon, 'text-xs']" /><span>{{ t.label }}</span>
+                  </div>
+                </Tab>
+              </TabList>
               <TabPanels class="!bg-transparent !p-0">
                 <TabPanel value="0">
                   <div class="space-y-4">
