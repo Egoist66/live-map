@@ -3,8 +3,10 @@ import Pusher from 'pusher-js'
 // @ts-ignore
 window.Pusher = Pusher
 Pusher.logToConsole = false
+console.log('[reverb] env', import.meta.env)
 const scheme = import.meta.env.VITE_REVERB_SCHEME || 'https'
 const rawKey = import.meta.env.VITE_REVERB_APP_KEY
+console.log('[reverb] key', rawKey ? rawKey.slice(0,4)+'***' : 'MISSING', 'host', import.meta.env.VITE_REVERB_HOST, 'port', import.meta.env.VITE_REVERB_PORT, 'scheme', scheme)
 if (!rawKey) {
   console.warn('[reverb] VITE_REVERB_APP_KEY missing — Echo disabled, realtime off')
   // @ts-ignore

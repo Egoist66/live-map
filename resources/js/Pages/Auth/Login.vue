@@ -34,10 +34,10 @@ const { email, emailAttrs, password, passwordAttrs, remember, errors, showPass, 
       <label class="flex items-center gap-2 text-sm font-medium">
         <Checkbox v-model="remember" :binary="true" /> Запомнить меня
       </label>
-      <Button :loading="isSubmitting" type="submit" label="Войти →" class="w-full !bg-ink-900 !border-ink-900 !rounded-full !py-3.5" />
-      <div class="flex justify-between items-center text-sm pt-2">
-        <Link v-if="canResetPassword" :href="route('password.request')" class="text-stone-500 hover:text-ink-900 font-medium">Забыли пароль?</Link>
-        <Link :href="route('register')" class="font-semibold bg-stone-100 hover:bg-stone-200 rounded-full px-4 py-2 transition">Регистрация →</Link>
+      <Button :loading="isSubmitting" type="submit" label="Войти →" class="w-full !bg-ink-900 dark:!bg-white !border-ink-900 dark:!border-white !text-white dark:!text-ink-900 !rounded-full !py-3.5 [&_.p-button-label]:!text-white dark:[&_.p-button-label]:!text-ink-900" />
+      <div class="flex justify-between items-center gap-2 text-sm pt-2">
+        <Link v-if="canResetPassword" :href="route('password.request')" class="text-stone-500 dark:text-zinc-400 hover:text-ink-900 dark:hover:text-white font-medium shrink-0">Забыли пароль?</Link>
+        <Link :href="route('register')" class="font-semibold bg-stone-100 dark:bg-zinc-800 hover:bg-stone-200 dark:hover:bg-zinc-700 text-ink-900 dark:text-white border border-stone-200 dark:border-zinc-700 rounded-full px-4 py-2 transition shrink-0">Регистрация →</Link>
       </div>
     </form>
   </GuestLayout>

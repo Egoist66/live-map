@@ -170,3 +170,5 @@ $RECYCLE.BIN/
 *.k8s.yml
 helm-values-*.yaml
 helm-values-*.yml
+rr
+.rr.yaml

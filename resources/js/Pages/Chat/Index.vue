@@ -29,10 +29,10 @@ onMounted(init)
 <template>
 <AuthenticatedLayout>
 <Toast />
-<div class="mx-auto max-w-[1280px] lg:px-6 lg:py-6">
-  <div class="flex flex-col lg:flex-row lg:gap-4 h-[calc(100dvh-64px)] lg:h-[calc(100dvh-88px)] bg-stone-100 dark:bg-zinc-950 lg:bg-transparent overflow-hidden lg:overflow-visible">
-    <div :class="selectedId ? 'hidden lg:flex' : 'flex'" class="w-full lg:w-[360px] shrink-0 bg-white dark:bg-zinc-900 lg:rounded-2xl border-b lg:border border-stone-200 dark:border-zinc-800 flex-col overflow-hidden">
-      <div class="p-3 sm:p-3 border-b dark:border-zinc-800 shrink-0">
+<div class="mx-auto max-w-[1280px] lg:px-6 lg:py-6 w-full max-w-full min-w-0 overflow-hidden">
+  <div class="flex flex-col lg:flex-row lg:gap-4 h-[calc(100dvh-64px)] lg:h-[calc(100dvh-88px)] h-[100dvh] max-h-[100dvh] bg-stone-100 dark:bg-zinc-950 lg:bg-transparent overflow-hidden lg:overflow-visible w-full max-w-full min-w-0">
+    <div :class="selectedId ? 'hidden lg:flex' : 'flex'" class="w-full lg:w-[360px] lg:min-w-[360px] shrink-0 bg-white dark:bg-zinc-900 lg:rounded-2xl border-b lg:border border-stone-200 dark:border-zinc-800 flex-col overflow-hidden min-w-0 max-w-full">
+      <div class="p-3 border-b dark:border-zinc-800 shrink-0 w-full max-w-full min-w-0">
         <div class="flex items-center gap-2 mb-3">
           <h2 class="text-[15px] font-bold dark:text-white tracking-tight">Мессенджер</h2>
           <span v-if="unreadTotal" class="bg-red-500 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">{{ unreadTotal }}</span>
@@ -44,11 +44,11 @@ onMounted(init)
             {{ refreshing ? '...' : 'Обновить' }}
           </button>
         </div>
-        <div class="flex gap-1 bg-stone-100 dark:bg-zinc-800 p-1 rounded-full overflow-x-auto scrollbar-none snap-x">
-          <button @click="tab='chats'" :class="tab==='chats'?'bg-white dark:bg-zinc-700 shadow text-ink-900 dark:text-white':'text-stone-500 dark:text-zinc-400'" class="flex-1 min-w-[66px] snap-start py-2 lg:py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition">Чаты <span v-if="unreadTotal" class="ml-1 bg-red-500 text-white px-1.5 py-0.5 rounded-full text-[10px] align-middle">{{ unreadTotal }}</span></button>
-          <button @click="tab='friends'" :class="tab==='friends'?'bg-white dark:bg-zinc-700 shadow text-ink-900 dark:text-white':'text-stone-500 dark:text-zinc-400'" class="flex-1 min-w-[66px] snap-start py-2 lg:py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition">Друзья</button>
-          <button @click="tab='requests'" :class="tab==='requests'?'bg-white dark:bg-zinc-700 shadow text-ink-900 dark:text-white':'text-stone-500 dark:text-zinc-400'" class="flex-1 min-w-[66px] snap-start py-2 lg:py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition">Заявки <span v-if="pendingIn.length" class="ml-1 bg-amber-500 text-white px-1.5 py-0.5 rounded-full text-[10px] align-middle">{{ pendingIn.length }}</span></button>
-          <button @click="tab='blocked'" :class="tab==='blocked'?'bg-white dark:bg-zinc-700 shadow text-ink-900 dark:text-white':'text-stone-500 dark:text-zinc-400'" class="flex-1 min-w-[58px] snap-start py-2 lg:py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition">Блок<span v-if="blocked.length" class="ml-1 bg-stone-500 text-white px-1.5 py-0.5 rounded-full text-[10px] align-middle">{{ blocked.length }}</span></button>
+        <div class="flex gap-1 bg-stone-100 dark:bg-zinc-800 p-1 rounded-full overflow-x-auto scrollbar-none snap-x w-full max-w-full">
+          <button @click="tab='chats'" :class="tab==='chats'?'bg-white dark:bg-zinc-700 shadow text-ink-900 dark:text-white':'text-stone-500 dark:text-zinc-400'" class="flex-1 min-w-0 sm:min-w-[66px] snap-start py-2 lg:py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition px-2">Чаты <span v-if="unreadTotal" class="ml-1 bg-red-500 text-white px-1.5 py-0.5 rounded-full text-[10px] align-middle">{{ unreadTotal }}</span></button>
+          <button @click="tab='friends'" :class="tab==='friends'?'bg-white dark:bg-zinc-700 shadow text-ink-900 dark:text-white':'text-stone-500 dark:text-zinc-400'" class="flex-1 min-w-0 sm:min-w-[66px] snap-start py-2 lg:py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition px-2">Друзья</button>
+          <button @click="tab='requests'" :class="tab==='requests'?'bg-white dark:bg-zinc-700 shadow text-ink-900 dark:text-white':'text-stone-500 dark:text-zinc-400'" class="flex-1 min-w-0 sm:min-w-[66px] snap-start py-2 lg:py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition px-2">Заявки <span v-if="pendingIn.length" class="ml-1 bg-amber-500 text-white px-1.5 py-0.5 rounded-full text-[10px] align-middle">{{ pendingIn.length }}</span></button>
+          <button @click="tab='blocked'" :class="tab==='blocked'?'bg-white dark:bg-zinc-700 shadow text-ink-900 dark:text-white':'text-stone-500 dark:text-zinc-400'" class="flex-1 min-w-0 sm:min-w-[58px] snap-start py-2 lg:py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition px-2">Блок<span v-if="blocked.length" class="ml-1 bg-stone-500 text-white px-1.5 py-0.5 rounded-full text-[10px] align-middle">{{ blocked.length }}</span></button>
         </div>
         <div class="mt-3 relative">
           <input v-model="searchQuery" placeholder="Поиск людей..." class="w-full pl-9 pr-3 py-3 lg:py-2 bg-stone-50 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl lg:rounded-full text-[15px] lg:text-sm focus:outline-none focus:ring-2 focus:ring-violet-500" />
@@ -79,7 +79,7 @@ onMounted(init)
         </div>
       </div>
 
-      <div class="flex-1 overflow-auto overscroll-contain">
+      <div class="flex-1 overflow-auto overscroll-contain min-h-0 w-full max-w-full">
         <div v-if="tab==='chats'" class="divide-y dark:divide-zinc-800">
           <div v-if="!conversations.length" class="p-10 lg:p-8 text-center">
             <div class="w-14 h-14 rounded-2xl bg-violet-50 dark:bg-zinc-800 grid place-items-center mx-auto mb-3 text-xl">💬</div>
@@ -183,8 +183,8 @@ onMounted(init)
       </div>
     </div>
 
-    <div :class="selectedId ? 'flex' : 'hidden lg:flex'" class="flex-1 bg-white dark:bg-zinc-900 lg:rounded-2xl lg:border border-stone-200 dark:border-zinc-800 flex-col overflow-hidden min-h-0">
-      <div v-if="!selectedId" class="hidden lg:grid flex-1 place-items-center text-stone-400 text-sm p-8 text-center">
+    <div :class="selectedId ? 'flex' : 'hidden lg:flex'" class="flex-1 bg-white dark:bg-zinc-900 lg:rounded-2xl lg:border border-stone-200 dark:border-zinc-800 flex-col overflow-hidden min-h-0 min-w-0 w-full max-w-full">
+      <div v-if="!selectedId" class="hidden lg:grid flex-1 place-items-center text-stone-400 text-sm p-8 text-center min-w-0">
         <div>
           <div class="w-16 h-16 rounded-2xl bg-violet-50 dark:bg-zinc-800 grid place-items-center mx-auto text-2xl mb-3">💬</div>
           <div class="font-semibold dark:text-white">Выберите чат</div>
@@ -229,10 +229,10 @@ onMounted(init)
           </div>
         </div>
         <div v-if="showChatMenu" @click="showChatMenu=false" class="fixed inset-0 z-5 lg:hidden"></div>
-        <div id="chat-messages" class="flex-1 overflow-auto overscroll-contain p-3 lg:p-4 space-y-2.5 lg:space-y-2 bg-stone-50/50 dark:bg-zinc-950/30">
+        <div id="chat-messages" class="flex-1 overflow-auto overscroll-contain p-3 lg:p-4 space-y-2.5 lg:space-y-2 bg-stone-50/50 dark:bg-zinc-950/30 min-w-0 w-full max-w-full">
           <div v-if="loading" class="flex justify-center py-6"><span class="w-6 h-6 border-2 border-violet-200 border-t-violet-600 rounded-full animate-spin"></span></div>
-          <div v-for="m in messages" :key="m.id" :class="isOwnMessage(m) ? 'flex justify-end' : 'flex justify-start'">
-            <div class="group relative max-w-[82%] sm:max-w-[72%] lg:max-w-[68%] select-none" v-bind="bindSheet({type:'message', data:m})">
+          <div v-for="m in messages" :key="m.id" :class="isOwnMessage(m) ? 'flex justify-end' : 'flex justify-start'" class="min-w-0 w-full max-w-full">
+            <div class="group relative max-w-[82%] sm:max-w-[72%] lg:max-w-[68%] min-w-0 select-none" v-bind="bindSheet({type:'message', data:m})">
               <div v-if="editingId===m.id" class="bg-white dark:bg-zinc-800 border rounded-2xl p-2.5 shadow-lg min-w-[260px] max-w-[86vw]">
                 <input ref="editInputRef" v-model="editingBody" @keydown.enter.prevent="saveEdit" @keydown.escape="cancelEdit" class="w-full px-3.5 py-3 lg:py-2 rounded-xl border dark:border-zinc-700 dark:bg-zinc-900 text-[15px] lg:text-sm focus:outline-none focus:ring-2 focus:ring-violet-500" placeholder="Сообщение..." />
                 <div class="flex gap-1.5 mt-2.5 justify-between items-center flex-wrap">
@@ -261,7 +261,7 @@ onMounted(init)
             </div>
           </div>
         </div>
-        <div class="p-2 lg:p-3 border-t dark:border-zinc-800 relative bg-white dark:bg-zinc-900 shrink-0 pb-[calc(0.5rem+env(safe-area-inset-bottom))] lg:pb-3">
+        <div class="p-2 lg:p-3 border-t dark:border-zinc-800 relative bg-white dark:bg-zinc-900 shrink-0 pb-[calc(0.5rem+env(safe-area-inset-bottom))] lg:pb-3 w-full max-w-full min-w-0">
           <div v-if="emojiOpen" class="absolute bottom-full left-2 right-2 lg:left-3 lg:right-3 mb-2 bg-white dark:bg-zinc-800 border dark:border-zinc-700 rounded-[20px] lg:rounded-2xl shadow-xl p-3 z-10 max-h-[46dvh] lg:max-h-[220px] overflow-auto overscroll-contain">
             <div v-for="g in EMOJI_GROUPS" :key="g.label" class="mb-2 last:mb-0">
               <div class="text-[10px] font-bold tracking-widest uppercase text-stone-400 mb-1.5">{{ g.label }}</div>
@@ -270,9 +270,9 @@ onMounted(init)
               </div>
             </div>
           </div>
-          <div class="flex gap-2 items-end">
-            <button @click="toggleEmoji" :class="emojiOpen ? 'bg-violet-600 text-white border-violet-600' : 'bg-stone-100 dark:bg-zinc-800 text-stone-500 dark:text-zinc-400 border-stone-200 dark:border-zinc-700'" class="w-11 h-11 lg:w-10 lg:h-10 shrink-0 grid place-items-center rounded-full border active:scale-95 transition text-[20px] lg:text-lg shrink-0">😊</button>
-            <input ref="inputRef" v-model="input" @input="notifyTyping" @blur="stopTyping" @keydown.enter.prevent="handleSend" @keydown.escape="emoji.close()" placeholder="Сообщение..." class="flex-1 px-4 py-3 lg:py-2.5 rounded-full border dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800 text-[16px] lg:text-sm focus:outline-none focus:border-stone-300 dark:focus:border-zinc-600 placeholder:text-stone-400" enterkeyhint="send" />
+          <div class="flex gap-2 items-end min-w-0 w-full max-w-full">
+            <button @click="toggleEmoji" :class="emojiOpen ? 'bg-violet-600 text-white border-violet-600' : 'bg-stone-100 dark:bg-zinc-800 text-stone-500 dark:text-zinc-400 border-stone-200 dark:border-zinc-700'" class="w-11 h-11 lg:w-10 lg:h-10 shrink-0 grid place-items-center rounded-full border active:scale-95 transition text-[20px] lg:text-lg">😊</button>
+            <input ref="inputRef" v-model="input" @input="notifyTyping" @blur="stopTyping" @keydown.enter.prevent="handleSend" @keydown.escape="emoji.close()" placeholder="Сообщение..." class="flex-1 min-w-0 px-4 py-3 lg:py-2.5 rounded-full border dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800 text-[16px] lg:text-sm focus:outline-none focus:border-stone-300 dark:focus:border-zinc-600 placeholder:text-stone-400 w-full max-w-full" enterkeyhint="send" />
             <button @click="handleSend" :disabled="sending || !input.trim()" class="w-11 h-11 lg:w-auto lg:px-6 lg:py-2.5 shrink-0 grid place-items-center lg:inline-flex rounded-full bg-stone-900 dark:bg-white dark:text-zinc-900 text-white font-semibold disabled:opacity-40 active:scale-95 transition shadow-sm"> <span class="hidden lg:inline">➤</span><span class="lg:hidden text-[18px]">↑</span></button>
           </div>
         </div>

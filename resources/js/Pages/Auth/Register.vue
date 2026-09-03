@@ -53,8 +53,8 @@ const f = useRegisterForm()
           <button v-for="r in [1,2,5,10]" :key="r" type="button" @click="f.setValues({ home_radius_km: r } as any)" :class="['rounded-full py-2 text-xs font-semibold border', f.values.home_radius_km===r?'bg-ink-900 text-white border-ink-900':'bg-white border-stone-200']">{{ r }} км</button>
         </div>
       </div>
-      <Button :loading="f.isSubmitting.value" type="submit" label="Создать аккаунт →" class="w-full !bg-ink-900 !border-ink-900 !rounded-full !py-3.5" />
-      <div class="text-sm text-center text-stone-500">Уже есть? <Link :href="route('login')" class="font-semibold text-ink-900 hover:underline">Войти</Link></div>
+      <Button :loading="f.isSubmitting.value" type="submit" label="Создать аккаунт →" class="w-full !bg-ink-900 dark:!bg-white !border-ink-900 dark:!border-white !text-white dark:!text-ink-900 !rounded-full !py-3.5 [&_.p-button-label]:!text-white dark:[&_.p-button-label]:!text-ink-900" />
+      <div class="text-sm text-center text-stone-500 dark:text-zinc-400">Уже есть? <Link :href="route('login')" class="font-semibold text-ink-900 dark:text-white hover:underline">Войти</Link></div>
     </form>
   </GuestLayout>
 </template>
