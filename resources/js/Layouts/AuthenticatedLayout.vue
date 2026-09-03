@@ -13,7 +13,7 @@ const badge = useBadgeStore()
 const presence = usePresence()
 onMounted(()=> { badge.init(); presence.connect() })
 onBeforeUnmount(()=> presence.disconnect())
-router.on('navigate', () => presence.connect())
+router.on('navigate', () => { presence.connect(); showingNavigationDropdown.value = false })
 const showingNavigationDropdown = ref(false);
 const page = usePage()
 const avatarSrc = computed(() => {
@@ -36,7 +36,7 @@ const settingsHref = computed(() => {
 
 <template>
   <div class="min-h-screen bg-surface dark:bg-[#0B0F1A] overflow-x-hidden">
-    <nav class="sticky top-0 z-40 glass border-b border-stone-200/70 dark:border-zinc-800">
+    <nav class="sticky top-0 z-50 glass border-b border-stone-200/70 dark:border-zinc-800">
       <div class="mx-auto max-w-[1280px] px-4 sm:px-6">
         <div class="flex h-[64px] justify-between items-center">
           <div class="flex items-center gap-8">
@@ -84,17 +84,17 @@ const settingsHref = computed(() => {
               </Dropdown>
             </div>
 
-            <button @click="showingNavigationDropdown = !showingNavigationDropdown" class="lg:hidden w-10 h-10 grid place-items-center rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow-soft">
+            <button @click="showingNavigationDropdown = !showingNavigationDropdown" class="lg:hidden w-10 h-10 shrink-0 grid place-items-center rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow-soft relative z-10">
               <svg class="h-5 w-5 text-ink-900 dark:text-white" stroke="currentColor" fill="none" viewBox="0 0 24 24">
-                <path :class="{ hidden: showingNavigationDropdown, 'inline-flex': !showingNavigationDropdown }" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                <path :class="{ hidden: !showingNavigationDropdown, 'inline-flex': showingNavigationDropdown }" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                <path v-if="!showingNavigationDropdown" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
         </div>
       </div>
 
-      <div :class="{ block: showingNavigationDropdown, hidden: !showingNavigationDropdown }" class="lg:hidden border-t border-stone-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 backdrop-blur">
+      <div v-show="showingNavigationDropdown" class="lg:hidden border-t border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xl">
         <div class="px-4 py-3 space-y-1">
           <ResponsiveNavLink :href="dashboardHref" :active="route().current('dashboard')">Профиль</ResponsiveNavLink>
           <ResponsiveNavLink :href="route('map')" :active="route().current('map')">Карта</ResponsiveNavLink>
@@ -122,7 +122,7 @@ const settingsHref = computed(() => {
       </div>
     </header>
 
-    <main class="pb-[76px] lg:pb-0"><slot /></main>
+    <main :class="route().current('chat') || route().current('map') ? 'pb-0 lg:pb-0' : 'pb-[76px] lg:pb-0'"><slot /></main>
     <MobileBottomNav />
   </div>
 </template>

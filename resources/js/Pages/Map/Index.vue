@@ -39,7 +39,7 @@ onUnmounted(destroy)
   <Head :title="seo.title.value"><meta head-key="robots" name="robots" content="noindex, nofollow" /></Head>
   <AuthenticatedLayout>
     <Toast />
-    <div class="relative w-full h-[calc(100dvh-64px)] min-h-[400px] bg-[#eaf0f6] overflow-hidden">
+    <div class="relative w-full h-[calc(100dvh-64px-56px-env(safe-area-inset-bottom))] lg:h-[calc(100dvh-64px)] min-h-[400px] bg-[#eaf0f6] overflow-hidden">
       <div ref="mapContainer" class="absolute inset-0 w-full h-full bg-[#eaf0f6]"></div>
 
       <div v-if="!loaded" class="absolute inset-0 grid place-items-center bg-[#eef3f8] dark:bg-zinc-900 z-[5]">

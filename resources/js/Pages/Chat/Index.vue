@@ -32,8 +32,8 @@ onMounted(init)
 <AuthenticatedLayout>
 <Toast />
 <div class="mx-auto max-w-[1280px] lg:px-6 lg:py-6 w-full max-w-full min-w-0 overflow-hidden">
-  <div class="flex flex-col lg:flex-row lg:gap-4 h-[calc(100dvh-64px-76px)] lg:h-[calc(100dvh-88px)] max-h-[calc(100dvh-64px-76px)] lg:max-h-[calc(100dvh-88px)] bg-stone-100 dark:bg-zinc-950 lg:bg-transparent overflow-hidden lg:overflow-visible w-full max-w-full min-w-0" :style="isKeyboardOpen ? { height: `calc(100dvh - 64px - ${keyboardHeight}px)`, maxHeight: `calc(100dvh - 64px - ${keyboardHeight}px)` } : {}">
-    <div :class="selectedId ? 'hidden lg:flex' : 'flex'" class="w-full lg:w-[360px] lg:min-w-[360px] shrink-0 bg-white dark:bg-zinc-900 lg:rounded-2xl border-b lg:border border-stone-200 dark:border-zinc-800 flex-col overflow-hidden min-w-0 max-w-full">
+  <div class="flex flex-col lg:flex-row lg:gap-4 h-[calc(100dvh-64px-56px-env(safe-area-inset-bottom))] lg:h-[calc(100dvh-88px)] max-h-[calc(100dvh-64px-56px-env(safe-area-inset-bottom))] lg:max-h-[calc(100dvh-88px)] bg-stone-100 dark:bg-zinc-950 lg:bg-transparent overflow-hidden lg:overflow-visible w-full max-w-full min-w-0" :style="isKeyboardOpen ? { height: `calc(100dvh - 64px - ${keyboardHeight}px)`, maxHeight: `calc(100dvh - 64px - ${keyboardHeight}px)` } : {}">
+    <div :class="selectedId ? 'hidden lg:flex' : 'flex'" class="w-full lg:w-[360px] lg:min-w-[360px] flex-1 lg:flex-none min-h-0 lg:h-full lg:max-h-full bg-white dark:bg-zinc-900 lg:rounded-2xl border lg:border border-stone-200 dark:border-zinc-800 flex-col overflow-hidden max-w-full">
       <div class="p-3 border-b dark:border-zinc-800 shrink-0 w-full max-w-full min-w-0">
         <div class="flex items-center gap-2 mb-3">
           <h2 class="text-[15px] font-bold dark:text-white tracking-tight">Мессенджер</h2>
@@ -165,13 +165,13 @@ onMounted(init)
         </div>
       </div>
 
-      <div class="shrink-0 border-t dark:border-zinc-800 bg-stone-50 dark:bg-zinc-800/50">
+      <div class="shrink-0 flex-none border-t dark:border-zinc-800 bg-stone-50 dark:bg-zinc-800/50">
         <button @click="showPrivacy=!showPrivacy" class="w-full flex items-center justify-between px-3 py-3 lg:py-2.5 text-left active:bg-stone-100 dark:active:bg-zinc-800 lg:cursor-default">
           <span class="text-xs font-bold flex items-center gap-1.5">Приватность</span>
           <span class="lg:hidden text-stone-400 text-xs">{{ showPrivacy ? '▲' : '▼' }}</span>
           <span class="hidden lg:block text-[11px] text-stone-500">{{ privacy.message_privacy==='everyone' ? 'Все' : privacy.message_privacy==='friends' ? 'Друзья' : 'Никто' }}</span>
         </button>
-        <div :class="showPrivacy ? 'block' : 'hidden lg:block'" class="px-3 pb-3 space-y-2">
+        <div :class="showPrivacy ? 'block' : 'hidden lg:block'" class="px-3 pb-3 space-y-2 max-h-[32dvh] lg:max-h-none overflow-auto overscroll-contain">
           <select v-model="privacy.message_privacy" @change="savePrivacy" class="w-full text-sm lg:text-xs rounded-xl lg:rounded-lg border px-3 py-3 lg:px-2 lg:py-1.5 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-violet-500 focus:outline-none">
             <option value="everyone">Все могут писать</option>
             <option value="friends">Только друзья</option>
@@ -185,7 +185,7 @@ onMounted(init)
       </div>
     </div>
 
-    <div :class="selectedId ? 'flex' : 'hidden lg:flex'" class="flex-1 bg-white dark:bg-zinc-900 lg:rounded-2xl lg:border border-stone-200 dark:border-zinc-800 flex-col overflow-hidden min-h-0 min-w-0 w-full max-w-full">
+    <div :class="selectedId ? 'flex' : 'hidden lg:flex'" class="flex-1 min-h-0 bg-white dark:bg-zinc-900 lg:rounded-2xl lg:border border-stone-200 dark:border-zinc-800 flex-col overflow-hidden min-w-0 w-full max-w-full">
       <div v-if="!selectedId" class="hidden lg:grid flex-1 place-items-center text-stone-400 text-sm p-8 text-center min-w-0">
         <div>
           <div class="w-16 h-16 rounded-2xl bg-violet-50 dark:bg-zinc-800 grid place-items-center mx-auto text-2xl mb-3">💬</div>
@@ -263,7 +263,7 @@ onMounted(init)
             </div>
           </div>
         </div>
-        <div class="p-2 lg:p-3 border-t dark:border-zinc-800 relative bg-white dark:bg-zinc-900 shrink-0 pb-[calc(0.5rem+env(safe-area-inset-bottom))] lg:pb-3 w-full max-w-full min-w-0" style="position:sticky; bottom:0">
+        <div class="p-2 lg:p-3 border-t dark:border-zinc-800 bg-white dark:bg-zinc-900 shrink-0 flex-none pb-[calc(0.5rem+env(safe-area-inset-bottom))] lg:pb-3 w-full max-w-full min-w-0">
           <div v-if="emojiOpen" class="absolute bottom-full left-2 right-2 lg:left-3 lg:right-3 mb-2 bg-white dark:bg-zinc-800 border dark:border-zinc-700 rounded-[20px] lg:rounded-2xl shadow-xl p-3 z-10 max-h-[46dvh] lg:max-h-[220px] overflow-auto overscroll-contain">
             <div v-for="g in EMOJI_GROUPS" :key="g.label" class="mb-2 last:mb-0">
               <div class="text-[10px] font-bold tracking-widest uppercase text-stone-400 mb-1.5">{{ g.label }}</div>
