@@ -12,4 +12,4 @@ Disallow: /register
 Crawl-delay: 1
 
 Sitemap: /sitemap.xml
-Host: https://upin.app
+Host: https://upin.laravel.cloud
