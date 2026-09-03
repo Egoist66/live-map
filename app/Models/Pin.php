@@ -82,7 +82,7 @@ class Pin extends Model
             'comments_count' => $this->comments_count,
             'is_anonymous' => (bool) $this->is_anonymous,
             'is_owner' => $isOwner,
-            'user' => $this->is_anonymous && !$isOwner ? null : $this->user?->only(['id', 'name', 'avatar_path', 'level']),
+            'user' => $this->is_anonymous && !$isOwner ? null : ($this->user ? array_merge($this->user->only(['id', 'name', 'avatar_path', 'level']), ['avatar_url' => $this->user->avatar_url]) : null),
             'created_at' => $this->created_at,
         ];
     }

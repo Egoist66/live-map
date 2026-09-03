@@ -8,6 +8,7 @@ export interface User {
   email: string
   email_verified_at: string | null
   avatar_path: string | null
+  avatar_url: string | null
   home_lat: number | null
   home_lng: number | null
   home_radius_km: number | null
@@ -29,6 +30,7 @@ export interface UserBrief {
   id: number
   name: string
   avatar_path: string | null
+  avatar_url: string | null
   level: UserLevel
 }
 

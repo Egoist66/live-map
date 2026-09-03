@@ -23,7 +23,7 @@ class ConversationController extends Controller
                 $other = $c->participants->firstWhere('id','!=',$user->id);
                 return [
                     'id'=>$c->id,
-                    'other'=>$other ? ['id'=>$other->id,'name'=>$other->name,'avatar_path'=>$other->avatar_path] : null,
+                    'other'=>$other ? ['id'=>$other->id,'name'=>$other->name,'avatar_path'=>$other->avatar_path,'avatar_url'=>$other->avatar_url] : null,
                     'last_message'=>$c->messages->first()?->toArrayPayload(),
                     'unread_count'=>$c->unread_count,
                     'last_message_at'=>$c->last_message_at,
@@ -41,8 +41,8 @@ class ConversationController extends Controller
         $other = $conversation->participants->firstWhere('id','!=',$request->user()->id);
         return response()->json([
             'id'=>$conversation->id,
-            'other'=>$other ? ['id'=>$other->id,'name'=>$other->name,'avatar_path'=>$other->avatar_path] : null,
-            'participants'=>$conversation->participants,
+            'other'=>$other ? ['id'=>$other->id,'name'=>$other->name,'avatar_path'=>$other->avatar_path,'avatar_url'=>$other->avatar_url] : null,
+            'participants'=>$conversation->participants->map(fn($p)=> array_merge($p->toArray(), ['avatar_url'=>$p->avatar_url])),
             'messages'=>$messages,
         ]);
     }

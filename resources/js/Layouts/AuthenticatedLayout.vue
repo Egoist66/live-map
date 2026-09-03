@@ -28,9 +28,9 @@ const menu = ref()
 const menuItems = computed(() => [
   { label: user.value?.name || '', sublabel: user.value?.email || '', isHeader: true },
   { separator: true },
-  { label: 'Профиль', icon: 'pi pi-user', url: dashboardHref.value, badge: badge.total ? String(badge.total) : undefined },
-  { label: 'Настройки', icon: 'pi pi-cog', url: settingsHref.value },
-  { label: 'Карта', icon: 'pi pi-map', url: route('map') },
+  { label: 'Профиль', icon: 'pi pi-user', command: () => router.visit(dashboardHref.value), badge: badge.total ? String(badge.total) : undefined },
+  { label: 'Настройки', icon: 'pi pi-cog', command: () => router.visit(settingsHref.value) },
+  { label: 'Карта', icon: 'pi pi-map', command: () => router.visit(route('map')) },
   { separator: true },
   { label: 'Выйти', icon: 'pi pi-sign-out', command: () => router.post(route('logout')) },
 ])
@@ -88,6 +88,7 @@ function toggleMenu(e: Event) { menu.value.toggle(e) }
       <template #header><ApplicationLogo /></template>
       <div class="space-y-1">
         <Link :href="dashboardHref" class="flex items-center justify-between p-3 rounded-xl hover:bg-stone-50 dark:hover:bg-zinc-800 font-medium" @click="showDrawer=false">Профиль <Badge v-if="badge.total" :value="String(badge.total)" severity="danger" /></Link>
+        <Link :href="settingsHref" class="flex p-3 rounded-xl hover:bg-stone-50 dark:hover:bg-zinc-800 font-medium" @click="showDrawer=false">Настройки</Link>
         <Link :href="route('map')" class="flex p-3 rounded-xl hover:bg-stone-50 dark:hover:bg-zinc-800 font-medium" @click="showDrawer=false">Карта</Link>
         <Link :href="route('chat')" class="flex items-center justify-between p-3 rounded-xl hover:bg-stone-50 dark:hover:bg-zinc-800 font-medium" @click="showDrawer=false">Чат <span class="flex gap-1"><Badge v-if="badge.unread" :value="String(badge.unread)" severity="danger" /><Badge v-if="badge.pending" :value="String(badge.pending)" severity="warn" /></span></Link>
         <Link :href="route('faq')" class="flex p-3 rounded-xl hover:bg-stone-50 dark:hover:bg-zinc-800 font-medium" @click="showDrawer=false">FAQ</Link>

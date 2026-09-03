@@ -35,7 +35,7 @@ class ProfileController extends Controller
             $isBlockedBy = \App\Models\UserBlock::where('blocker_id',$user->id)->where('blocked_id',$auth->id)->exists();
         }
         return Inertia::render('Profile/Show', [
-            'profileUser' => $user->only(['id','name','avatar_path','level','reputation_score','created_at','home_lat','home_lng','home_radius_km','bio']),
+            'profileUser' => array_merge($user->only(['id','name','avatar_path','level','reputation_score','created_at','home_lat','home_lng','home_radius_km','bio']), ['avatar_url' => $user->avatar_url]),
             'isOwn' => $isOwn,
             'friendship' => $friendship,
             'isFriend' => $isFriend,

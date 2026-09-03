@@ -28,6 +28,7 @@ class Message extends Model
                 'id' => $this->sender->id,
                 'name' => $this->sender->name,
                 'avatar_path' => $this->sender->avatar_path,
+                'avatar_url' => $this->sender->avatar_url,
             ] : null,
         ];
     }
