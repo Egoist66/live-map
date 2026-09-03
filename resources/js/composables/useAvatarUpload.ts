@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
 import { usePage, router } from '@inertiajs/vue3'
 import { useToast } from 'primevue/usetoast'
+import { avatarSrcFor } from '@/composables/useAvatar'
 
 export function useAvatarUpload() {
   const page = usePage()
@@ -14,8 +15,7 @@ export function useAvatarUpload() {
 
   const avatarSrc = computed(() => {
     if (previewUrl.value) return previewUrl.value
-    if (user.value.avatar_path) return `/storage/${user.value.avatar_path}`
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(user.value.name)}&background=0F172A&color=fff&bold=true`
+    return avatarSrcFor(user.value)
   })
 
   function onAvatar(e: Event) {

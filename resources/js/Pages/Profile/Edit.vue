@@ -13,6 +13,7 @@ import { myPinsQuery, PIN_KEYS } from '@/queries/pins'
 import { pinsApi } from '@/services/pins.api'
 import { formatDate, formatTime } from '@/utils/date'
 import AvatarPreview from '@/Components/AvatarPreview.vue'
+import { avatarSrcFor } from '@/composables/useAvatar'
 import Toast from 'primevue/toast'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
@@ -62,7 +63,7 @@ const ex = useSupportExchange()
 
 function mailToSupport(){ const subj=encodeURIComponent(supportSubject.value||'Обращение в поддержку UPin'); const body=encodeURIComponent(supportBody.value+(supportBody.value?'\n\n---\n':''+`Пользователь: ${u.value.name} <${u.value.email}>`)); window.location.href=`mailto:razormad666@gmail.com?subject=${subj}&body=${body}` }
 function mailToDonate(usd:number){ const byn = ex.usdRate.value? (usd*ex.usdRate.value).toFixed(2)+' BYN' : `${usd}$`; const subj=encodeURIComponent(`Донат UPin — $${usd} (~${byn})`); const body=encodeURIComponent(`Привет! Хочу задонатить $${usd} (~${byn}) разработчику UPin.\n\nПользователь: ${u.value.name} <${u.value.email}>\nТариф: ${u.value.plan||'free'}\n\nСообщение:\n`); window.location.href=`mailto:razormad666@gmail.com?subject=${subj}&body=${body}` }
-const avatarSrc = computed(() => u.value.avatar_path ? `/storage/${u.value.avatar_path}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(u.value.name)}&background=0F172A&color=fff&bold=true`)
+const avatarSrc = computed(() => avatarSrcFor(u.value))
 const bioPreviewText = computed(() => ((u.value as any).bio || '').trim())
 const bioPreviewEmpty = computed(() => bioPreviewText.value.length === 0)
 </script>

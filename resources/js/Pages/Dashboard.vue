@@ -5,6 +5,7 @@ import { computed, ref, onMounted } from 'vue'
 import AvatarPreview from '@/Components/AvatarPreview.vue'
 import { useBadgeStore } from '@/stores/badges'
 import { useSeo } from '@/composables/useSeo'
+import { avatarSrcFor } from '@/composables/useAvatar'
 const seo = useSeo({ title: 'Профиль', description: 'Профиль UPin', noindex: true })
 const props = defineProps<{ user: any; isOwn?: boolean }>()
 const page = usePage()
@@ -12,7 +13,7 @@ const auth = (page.props.auth as any).user
 const u = computed(() => props.user || auth)
 const isOwn = computed(() => props.isOwn ?? u.value.id === auth.id)
 const showAvatar = ref(false)
-const avatarSrc = computed(() => u.value.avatar_path ? `/storage/${u.value.avatar_path}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(u.value.name)}&background=0F172A&color=fff&bold=true`)
+const avatarSrc = computed(() => avatarSrcFor(u.value))
 const levelLabel: Record<string,string> = { novice:'Новичок', explorer:'Исследователь', local:'Местный', veteran:'Ветеран', guide:'Гид района' }
 const levelColor: Record<string,string> = { novice:'bg-stone-100 text-stone-700 border-stone-200', explorer:'bg-sky-50 text-sky-700 border-sky-200', local:'bg-emerald-50 text-emerald-700 border-emerald-200', veteran:'bg-violet-50 text-violet-700 border-violet-200', guide:'bg-amber-50 text-amber-700 border-amber-200' }
 const planLabel: Record<string,string> = { free:'Free', pro:'Pro', business:'Business' }

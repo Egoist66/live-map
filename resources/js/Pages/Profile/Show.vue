@@ -8,8 +8,9 @@ import Message from 'primevue/message'
 import OnlineDot from '@/Components/OnlineDot.vue'
 import { usePresenceState } from '@/composables/usePresence'
 import { useUserProfile } from '@/composables/useUserProfile'
+import { avatarSrcFor } from '@/composables/useAvatar'
 const props = defineProps<{ profileUser: any; isOwn: boolean; friendship: any; isFriend: boolean; isPending: boolean; isBlocked?: boolean; isBlockedBy?: boolean; canMessage: boolean; canMessageReason: string | null }>()
-const avatarSrc = computed(() => props.profileUser.avatar_path ? `/storage/${props.profileUser.avatar_path}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(props.profileUser.name)}&background=0F172A&color=fff&bold=true`)
+const avatarSrc = computed(() => avatarSrcFor(props.profileUser))
 const profile = useUserProfile(props.profileUser.id)
 const showAvatar = ref(false)
 const bioText = computed(() => (props.profileUser.bio || '').trim())

@@ -5,15 +5,28 @@ namespace App\Models;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 
 #[Fillable(['name', 'email', 'password', 'plan', 'latitude', 'longitude', 'role', 'is_admin', 'avatar_path', 'home_lat', 'home_lng', 'home_radius_km', 'bio', 'reputation_score', 'level', 'is_anonymous_default', 'message_privacy', 'allow_random_messages', 'settings', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
     use HasFactory, Notifiable;
+
+    protected $appends = ['avatar_url'];
+
+    protected function avatarUrl(): Attribute
+    {
+        return Attribute::get(function (): ?string {
+            if (!$this->avatar_path) return null;
+            $disk = config('filesystems.default') === 's3' && config('filesystems.disks.s3.bucket') ? 's3' : 'public';
+            return Storage::disk($disk)->url($this->avatar_path);
+        });
+    }
 
     public function pins() { return $this->hasMany(Pin::class); }
     public function comments() { return $this->hasMany(PinComment::class); }

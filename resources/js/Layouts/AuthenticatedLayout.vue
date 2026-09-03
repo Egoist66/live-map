@@ -9,6 +9,7 @@ import { Link, usePage, router } from '@inertiajs/vue3';
 import { useBadgeStore } from '@/stores/badges';
 import { usePresence } from '@/composables/usePresence';
 import MobileBottomNav from '@/Components/MobileBottomNav.vue';
+import { avatarSrcFor } from '@/composables/useAvatar';
 const badge = useBadgeStore()
 const presence = usePresence()
 onMounted(()=> { badge.init(); presence.connect() })
@@ -16,10 +17,7 @@ onBeforeUnmount(()=> presence.disconnect())
 router.on('navigate', () => { presence.connect(); showingNavigationDropdown.value = false })
 const showingNavigationDropdown = ref(false);
 const page = usePage()
-const avatarSrc = computed(() => {
-  const u = page.props.auth.user
-  return u?.avatar_path ? `/storage/${u.avatar_path}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(u?.name||'U')}&background=0F172A&color=fff&bold=true`
-})
+const avatarSrc = computed(() => avatarSrcFor(page.props.auth.user))
 const dashboardHref = computed(() => {
   const u = page.props.auth.user
   if (!u) return route('dashboard')
