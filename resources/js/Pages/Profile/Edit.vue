@@ -72,8 +72,8 @@ const bioPreviewEmpty = computed(() => bioPreviewText.value.length === 0)
                 <div class="px-2 py-2 text-[11px] font-bold tracking-widest text-stone-400 uppercase">Настройки</div>
                 <Menu :model="(menuModel as any)" class="!bg-transparent !border-0 !w-full !p-0" :pt="{ root:{ class:'!bg-transparent !border-0 !p-0 !w-full' }, list:{ class:'!p-0 !flex !flex-col !gap-1 !bg-transparent' }, item:{ class:'!p-0' }, itemContent:{ class:'!p-0 !bg-transparent hover:!bg-transparent' }, submenuLabel:{ class:'!hidden' } }">
                   <template #item="{ item, props: p }">
-                    <button v-bind="p.action" :class="['w-full flex items-center gap-3 px-3 py-3 rounded-2xl text-left transition', (item as any).active ? 'bg-ink-900 dark:bg-white text-white dark:text-ink-900 shadow-soft' : 'hover:bg-stone-50 dark:hover:bg-zinc-800 text-stone-700 dark:text-zinc-300']">
-                      <span :class="['w-9 h-9 rounded-2xl grid place-items-center text-sm shrink-0', (item as any).active ? 'bg-white/15 dark:bg-ink-900/10' : 'bg-stone-100 dark:bg-zinc-700']"><i :class="(item as any).icon" /></span>
+                    <button v-bind="p.action" :class="['w-full flex items-center gap-3 px-3 py-3 rounded-2xl text-left transition border', (item as any).active ? '!bg-violet-600 !border-violet-600 !text-white shadow-soft dark:!bg-violet-600 dark:!border-violet-600 dark:!text-white' : 'border-transparent hover:bg-stone-50 dark:hover:bg-zinc-800 text-stone-700 dark:text-zinc-300']">
+                      <span :class="['w-9 h-9 rounded-2xl grid place-items-center text-sm shrink-0', (item as any).active ? 'bg-white/20 !text-white' : 'bg-stone-100 dark:bg-zinc-700']"><i :class="(item as any).icon" /></span>
                       <span class="min-w-0 text-left">
                         <span class="block text-sm font-semibold leading-none">{{ (item as any).label }}</span>
                         <span class="block text-xs opacity-60 leading-none mt-1">{{ (item as any).desc }}</span>
@@ -96,7 +96,7 @@ const bioPreviewEmpty = computed(() => bioPreviewText.value.length === 0)
             <Tabs :value="activeIndex" @update:value="(v:any)=>{ const e=tabs[Number(v)]; if(e) active=e.id as any }" class="w-full">
               <TabList class="!flex lg:!hidden !bg-transparent !border-0 !gap-2 !overflow-x-auto !flex-nowrap !pb-2 !px-1 !scrollbar-none !snap-x" :pt="{ activeBar:{ class:'!hidden' } }">
                 <Tab v-for="(t, idx) in tabs" :key="t.id" :value="String(idx)" class="!bg-transparent !border-0 !p-0 !shrink-0 !snap-start">
-                  <div :class="['flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold border transition whitespace-nowrap', active===t.id ? 'bg-ink-900 dark:bg-white text-white dark:text-ink-900 border-ink-900 dark:border-white shadow-soft' : 'bg-white dark:bg-zinc-900 text-stone-700 dark:text-zinc-300 border-stone-200 dark:border-zinc-700']">
+                  <div :class="['flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold border transition whitespace-nowrap', active===t.id ? '!bg-violet-600 !text-white !border-violet-600 shadow-soft dark:!bg-violet-600 dark:!border-violet-600 dark:!text-white' : 'bg-white dark:bg-zinc-900 text-stone-700 dark:text-zinc-300 border-stone-200 dark:border-zinc-700']">
                     <i :class="[t.icon, 'text-xs']" /><span>{{ t.label }}</span>
                   </div>
                 </Tab>
