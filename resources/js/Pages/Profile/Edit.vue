@@ -69,14 +69,14 @@ const invisible = useInvisible()
     <Toast />
     <div class="bg-surface dark:bg-[#090E1A] min-h-[calc(100vh-64px)] overflow-x-hidden">
       <div class="max-w-[1280px] mx-auto px-4 sm:px-6 py-6 overflow-hidden">
-        <div class="grid lg:grid-cols-[300px_1fr] gap-6 items-start w-full overflow-hidden">
-          <aside class="hidden lg:block sticky top-[88px] self-start space-y-4 h-fit">
+        <div class="grid lg:grid-cols-[300px_1fr] gap-6 items-start content-start w-full">
+          <aside class="hidden lg:block lg:sticky lg:top-[88px] lg:self-start self-start space-y-4 h-fit shrink-0 will-change-transform">
             <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body:{ class:'!p-3' }, content:{ class:'!p-0' } }">
               <template #content>
                 <div class="px-2 py-2 text-[11px] font-bold tracking-widest text-stone-400 uppercase">Настройки</div>
                 <Menu :model="(menuModel as any)" class="!bg-transparent !border-0 !w-full !p-0" :pt="{ root:{ class:'!bg-transparent !border-0 !p-0 !w-full' }, list:{ class:'!p-0 !flex !flex-col !gap-1 !bg-transparent' }, item:{ class:'!p-0' }, itemContent:{ class:'!p-0 !bg-transparent hover:!bg-transparent' }, submenuLabel:{ class:'!hidden' } }">
                   <template #item="{ item, props: p }">
-                    <button v-bind="p.action" :class="['w-full flex items-center gap-3 px-3 py-3 rounded-2xl text-left transition border', (item as any).active ? '!bg-violet-600 !border-violet-600 !text-white shadow-soft dark:!bg-violet-600 dark:!border-violet-600 dark:!text-white' : 'border-transparent hover:bg-stone-50 dark:hover:bg-zinc-800 text-stone-700 dark:text-zinc-300']">
+                    <button v-bind="p.action" :class="['w-full flex items-center gap-3 px-3 py-3 rounded-2xl text-left transition-colors border box-border', (item as any).active ? '!bg-violet-600 !border-violet-600 !text-white shadow-soft dark:!bg-violet-600 dark:!border-violet-600 dark:!text-white' : 'border-transparent hover:bg-stone-50 dark:hover:bg-zinc-800 text-stone-700 dark:text-zinc-300']">
                       <span :class="['w-9 h-9 rounded-2xl grid place-items-center text-sm shrink-0', (item as any).active ? 'bg-white/20 !text-white' : 'bg-stone-100 dark:bg-zinc-700']"><i :class="(item as any).icon" /></span>
                       <span class="min-w-0 text-left">
                         <span class="block text-sm font-semibold leading-none">{{ (item as any).label }}</span>
@@ -96,7 +96,7 @@ const invisible = useInvisible()
               </template>
             </Card>
           </aside>
-          <div class="space-y-4 min-w-0 w-full max-w-full overflow-hidden self-start">
+          <div class="space-y-4 min-w-0 w-full max-w-full lg:min-h-[600px] self-start">
             <Tabs :value="activeIndex" @update:value="(v:any)=>{ const e=tabs[Number(v)]; if(e) active=e.id as any }" class="w-full !mt-0">
               <TabList class="!flex lg:!hidden !bg-transparent !border-0 !gap-2 !overflow-x-auto !flex-nowrap !pb-2 !px-1 !scrollbar-none !snap-x" :pt="{ activeBar:{ class:'!hidden' } }">
                 <Tab v-for="(t, idx) in tabs" :key="t.id" :value="String(idx)" class="!bg-transparent !border-0 !p-0 !shrink-0 !snap-start">
