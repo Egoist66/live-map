@@ -69,8 +69,8 @@ const invisible = useInvisible()
     <Toast />
     <div class="bg-surface dark:bg-[#090E1A] min-h-[calc(100vh-64px)] overflow-x-hidden">
       <div class="max-w-[1280px] mx-auto px-4 sm:px-6 py-6 overflow-hidden">
-        <div class="grid lg:grid-cols-[300px_1fr] gap-6 items-start content-start w-full">
-          <aside class="hidden lg:block lg:sticky lg:top-[88px] lg:self-start self-start space-y-4 h-fit shrink-0 will-change-transform">
+        <div class="grid lg:grid-cols-[300px_1fr] gap-6 items-start content-start w-full lg:items-start">
+          <aside class="hidden lg:block self-start space-y-4 h-fit shrink-0">
             <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body:{ class:'!p-3' }, content:{ class:'!p-0' } }">
               <template #content>
                 <div class="px-2 py-2 text-[11px] font-bold tracking-widest text-stone-400 uppercase">Настройки</div>

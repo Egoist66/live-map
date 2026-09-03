@@ -111,8 +111,14 @@ export function useChat() {
       messages.value = d.messages
       d.messages.forEach((m:any)=> seenIds.add(m.id))
       chatApi.markRead(id).catch(()=>{})
+      const last = d.messages[d.messages.length - 1] as any
       const conv = conversations.value.find((c) => c.id === id)
-      if (conv) conv.unread_count = 0
+      if (conv) {
+        conv.unread_count = 0
+        if (last) { (conv as any).last_message = last; (conv as any).last_message_at = last.created_at; sortConversations() }
+      } else if (last) {
+        loadConversations()
+      }
       subscribeChat(id)
       await nextTick()
       scrollToBottom()
@@ -424,10 +430,11 @@ export function useChat() {
     sendTypingWs(false)
   }
 
-  onMounted(() => { loadConversations(); subscribeGlobal() })
+  onMounted(() => { loadConversations(); subscribeGlobal(); window.addEventListener('focus', loadConversations) })
   onBeforeUnmount(() => {
     if (typingTimeout) clearTimeout(typingTimeout)
     typingExpire.forEach((t) => clearTimeout(t))
+    window.removeEventListener('focus', loadConversations)
     try {
       const echo = getEcho()
       echoChannels.forEach((c: any) => { try { echo.leave(c.name ?? `chat.${selectedId.value}`) } catch {} })
