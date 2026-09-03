@@ -62,6 +62,14 @@ export function useChat() {
     try { return echo.private(`chat.${selectedId.value}`) } catch { return null }
   }
 
+  function sortConversations() {
+    conversations.value = [...conversations.value].sort((a:any,b:any)=> new Date(b.last_message_at||b.updated_at||0).getTime() - new Date(a.last_message_at||a.updated_at||0).getTime())
+  }
+  function syncConversationPreview(msg: any) {
+    const conv = conversations.value.find((c) => c.id === msg.conversation_id)
+    if (conv) { (conv as any).last_message = msg; (conv as any).last_message_at = msg.created_at; sortConversations() }
+    else loadConversations()
+  }
   async function loadConversations() {
     if (loadConversationsInflight) return loadConversationsInflight.then(d => { conversations.value = d; return d })
     loadConversationsInflight = chatApi.conversations() as Promise<Conversation[]>
@@ -152,8 +160,7 @@ export function useChat() {
       } else if (existsIdx === -1) {
         if (!seenIds.has(msg.id) || !messages.value.some(m=>m.id===msg.id)) messages.value.push({ ...(msg as any), justSent: true } as any)
       }
-      const conv = conversations.value.find((c) => c.id === selectedId.value)
-      if (conv) { conv.last_message = msg; conv.last_message_at = msg.created_at }
+      syncConversationPreview(msg)
       scrollToBottom()
       setTimeout(() => { const m = messages.value.find((x) => x.id === msg.id) as any; if (m) m.justSent = false }, 600)
     } catch (e: any) {
@@ -187,7 +194,7 @@ export function useChat() {
       const i = messages.value.findIndex((m) => m.id === id)
       if (i !== -1) messages.value[i] = updated
       const conv = conversations.value.find((c) => c.id === updated.conversation_id)
-      if (conv && conv.last_message?.id === id) conv.last_message = updated
+      if (conv && (conv as any).last_message?.id === id) { (conv as any).last_message = updated; sortConversations() }
       cancelEdit()
     } catch (e) {
       if (idx !== -1) (messages.value[idx] as any).pending = false
@@ -244,14 +251,18 @@ export function useChat() {
       }
       const n = new Set(typingUsers.value); n.delete(msg.sender_id); typingUsers.value = n
       const t = typingExpire.get(msg.sender_id); if (t) { clearTimeout(t); typingExpire.delete(msg.sender_id) }
+      syncConversationPreview(msg)
       if (msg.sender_id !== getUid()) {
         chatApi.markDelivered(msg.conversation_id).catch(()=>{})
         chatApi.markRead(msg.conversation_id).catch(()=>{})
+      } else {
+        const conv0 = conversations.value.find(c=>c.id===msg.conversation_id)
+        if (conv0) (conv0 as any).unread_count = 0
       }
       scrollToBottom()
     } else {
       const conv = conversations.value.find((c) => c.id === msg.conversation_id)
-      if (conv) { conv.unread_count = (conv.unread_count || 0) + 1; conv.last_message = msg; conv.last_message_at = msg.created_at }
+      if (conv) { conv.unread_count = (conv.unread_count || 0) + 1; (conv as any).last_message = msg; (conv as any).last_message_at = msg.created_at; sortConversations() }
       else loadConversations()
       if (msg.sender_id !== getUid()) {
         chatApi.markDelivered(msg.conversation_id).catch(()=>{})
@@ -312,7 +323,7 @@ export function useChat() {
     const idx = messages.value.findIndex((m) => m.id === msg.id)
     if (idx !== -1) messages.value[idx] = msg
     const conv = conversations.value.find((c) => c.id === msg.conversation_id)
-    if (conv && conv.last_message?.id === msg.id) conv.last_message = msg
+    if (conv && (conv as any).last_message?.id === msg.id) { (conv as any).last_message = msg; sortConversations() }
   }
 
   function handleDeleted(payload: any) {

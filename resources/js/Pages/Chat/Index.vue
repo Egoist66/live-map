@@ -107,7 +107,7 @@ onMounted(init)
             <div v-for="u in searchResults" :key="u.id" class="flex items-center justify-between p-3 lg:p-2 hover:bg-stone-50 dark:hover:bg-zinc-800 select-none" v-bind="bindSheet({type:'search', data:u})">
               <Link :href="`/users/${u.id}`" class="flex items-center gap-2.5 hover:opacity-80 min-w-0">
                 <span class="relative shrink-0">
-                  <Avatar :image="avatarSrcFor(u)" shape="circle" size="normal" class="!w-9 !h-9" />
+                  <Avatar :image="avatarSrcFor(u)" shape="circle" size="normal" class="!w-9 !h-9 [&_img]:object-cover" :pt="{ image: { class: 'object-cover' } }" />
                   <OnlineDot :online="isOnline(u.id)" size="w-3 h-3" />
                 </span>
                 <div class="min-w-0"><div class="text-sm font-medium dark:text-white truncate hover:underline">{{ u.name }}</div><div class="text-xs truncate flex items-center gap-1"><span :class="isOnline(u.id)?'text-emerald-600':'text-red-500'"><span :class="isOnline(u.id) ? 'animate-pulse inline-block' : 'animate-[pulse_3s_ease-in-out_infinite] inline-block'">{{ isOnline(u.id) ? '●' : '○' }}</span> {{ isOnline(u.id) ? 'в сети' : 'офлайн' }}</span><span class="text-stone-300">·</span><span :class="u.can_message?'text-emerald-600':'text-red-500'">{{ u.can_message?'можно написать':'не принимает' }}</span></div></div>
@@ -146,7 +146,7 @@ onMounted(init)
           <div v-for="c in filteredConversations" :key="c.id" class="group w-full flex items-center gap-0 text-left select-none" v-bind="bindSheet({type:'chat', data:c})">
             <button @click="openConversation(c.id)" :class="selectedId===c.id?'bg-stone-50 dark:bg-zinc-800':''" class="flex-1 flex items-center gap-3 p-3.5 lg:p-3 text-left min-w-0 hover:bg-stone-50/70 dark:hover:bg-zinc-800/70 transition-colors">
               <span class="relative shrink-0">
-                <Avatar :image="avatarSrcFor(c.other)" shape="circle" size="large" class="!w-11 !h-11" />
+                <Avatar :image="avatarSrcFor(c.other)" shape="circle" size="large" class="!w-11 !h-11 [&_img]:object-cover" :pt="{ image: { class: 'object-cover' } }" />
                 <OnlineDot :online="isOnline(c.other?.id)" />
               </span>
               <div class="flex-1 min-w-0">
@@ -171,7 +171,7 @@ onMounted(init)
           <div v-for="f in filteredFriends" :key="f.id" class="flex items-center justify-between p-3.5 lg:p-3 select-none active:bg-stone-50 group" v-bind="bindSheet({type:'friend', data:f})">
             <Link :href="`/users/${f.other.id}`" class="flex items-center gap-3 hover:opacity-80 min-w-0">
               <span class="relative shrink-0">
-                <Avatar :image="avatarSrcFor(f.other)" shape="circle" />
+                <Avatar :image="avatarSrcFor(f.other)" shape="circle" class="[&_img]:object-cover" :pt="{ image: { class: 'object-cover' } }" />
                 <OnlineDot :online="isOnline(f.other.id)" />
               </span>
               <span class="text-[15px] lg:text-sm font-medium dark:text-white truncate hover:underline">{{ f.other.name }}</span>
@@ -196,7 +196,7 @@ onMounted(init)
           <div v-for="r in filteredPendingIn" :key="r.id" class="flex items-center justify-between p-3.5 lg:p-3 gap-2 select-none" v-bind="bindSheet({type:'request', data:r})">
             <Link :href="`/users/${r.requester.id}`" class="flex items-center gap-3 hover:opacity-80 min-w-0">
               <span class="relative shrink-0">
-                <Avatar :image="avatarSrcFor(r.requester)" shape="circle" />
+                <Avatar :image="avatarSrcFor(r.requester)" shape="circle" class="[&_img]:object-cover" :pt="{ image: { class: 'object-cover' } }" />
                 <OnlineDot :online="isOnline(r.requester.id)" />
               </span>
               <span class="text-[15px] lg:text-sm dark:text-white truncate hover:underline">{{ r.requester.name }}</span>
@@ -212,7 +212,7 @@ onMounted(init)
           <div v-if="!blocked.length" class="p-10 text-center text-sm text-stone-500">Нет заблокированных</div>
           <div v-for="b in filteredBlocked" :key="b.id" class="flex items-center justify-between p-3.5 lg:p-3">
             <div class="flex items-center gap-3 min-w-0">
-              <Avatar :image="avatarSrcFor(b.blocked)" shape="circle" />
+              <Avatar :image="avatarSrcFor(b.blocked)" shape="circle" class="[&_img]:object-cover" :pt="{ image: { class: 'object-cover' } }" />
               <span class="text-[15px] lg:text-sm dark:text-white truncate">{{ b.blocked.name }}</span>
             </div>
             <button @click="askUnblock(b.blocked.id)" class="text-xs px-3.5 py-2 rounded-full border bg-white dark:bg-zinc-800 shrink-0">Разблокировать</button>
@@ -251,7 +251,7 @@ onMounted(init)
           </button>
           <Link :href="activeConv?.other ? `/users/${activeConv.other.id}` : '#'" class="flex items-center gap-2.5 lg:gap-3 hover:opacity-80 min-w-0 flex-1">
             <span class="relative shrink-0">
-              <Avatar :image="avatarSrcFor(activeConv?.other)" shape="circle" />
+              <Avatar :image="avatarSrcFor(activeConv?.other)" shape="circle" class="[&_img]:object-cover" :pt="{ image: { class: 'object-cover' } }" />
               <OnlineDot :online="isOnline(activeConv?.other?.id)" />
             </span>
             <div class="min-w-0"><div class="text-[15px] lg:text-sm font-semibold dark:text-white truncate hover:underline">{{ activeConv?.other?.name }}</div><div v-if="[...typingUsers].some(id=>id===activeConv?.other?.id)" class="text-xs text-violet-600 leading-none animate-pulse">печатает...</div><div v-else class="text-xs leading-none flex items-center gap-1" :class="isOnline(activeConv?.other?.id) ? 'text-emerald-600' : 'text-red-500'"><span :class="isOnline(activeConv?.other?.id) ? 'animate-pulse inline-block' : 'animate-[pulse_3s_ease-in-out_infinite] inline-block'">{{ isOnline(activeConv?.other?.id) ? '●' : '○' }}</span> {{ isOnline(activeConv?.other?.id) ? 'в сети' : 'офлайн' }}</div></div>

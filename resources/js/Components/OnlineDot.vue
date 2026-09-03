@@ -9,7 +9,6 @@ defineProps<{ online: boolean; size?: string }>()
       size || 'w-3.5 h-3.5',
     ]"
   >
-    <span v-if="online" class="w-full h-full rounded-full bg-emerald-500 animate-ping absolute opacity-30"></span>
     <span class="w-1.5 h-1.5 bg-white rounded-full relative animate-pulse"></span>
   </span>
 </template>

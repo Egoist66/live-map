@@ -5,8 +5,10 @@ import { Link, router } from '@inertiajs/vue3'
 import { useBadgeStore } from '@/stores/badges'
 import { usePresence } from '@/composables/usePresence'
 import { useNavigation } from '@/composables/useNavigation'
+import { useAppNotifications } from '@/composables/useAppNotifications'
 import MobileBottomNav from '@/Components/MobileBottomNav.vue'
 import PageTransition from '@/Components/PageTransition.vue'
+import GlobalNotificationToasts from '@/Components/GlobalNotificationToasts.vue'
 import Avatar from 'primevue/avatar'
 import Badge from 'primevue/badge'
 import Button from 'primevue/button'
@@ -17,8 +19,9 @@ import Toolbar from 'primevue/toolbar'
 const badge = useBadgeStore()
 const presence = usePresence()
 const { user, avatarSrc, dashboardHref, settingsHref } = useNavigation()
+const appNotes = useAppNotifications()
 import { onMounted, onBeforeUnmount } from 'vue'
-onMounted(() => { badge.init(); presence.connect() })
+onMounted(() => { badge.init(); presence.connect(); appNotes.init() })
 onBeforeUnmount(() => presence.disconnect())
 router.on('navigate', () => { presence.connect(); showDrawer.value = false })
 
@@ -56,6 +59,11 @@ function toggleMenu(e: Event) { menu.value.toggle(e) }
         </template>
         <template #end>
           <div class="flex items-center gap-2 h-[64px] pr-4 sm:pr-6">
+            <Link :href="route('chat')" class="relative w-10 h-10 grid place-items-center rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow-soft hover:bg-stone-50 dark:hover:bg-zinc-700 transition">
+              <i class="pi pi-bell text-stone-600 dark:text-zinc-300"></i>
+              <span v-if="badge.total" class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 grid place-items-center bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white dark:border-zinc-900">{{ badge.total>99?'99+':badge.total }}</span>
+              <span v-if="badge.total" class="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full bg-red-500 animate-ping opacity-30"></span>
+            </Link>
             <Link href="/map" class="hidden sm:inline-flex items-center gap-2 bg-ink-900 dark:bg-white dark:text-ink-900 text-white rounded-full px-5 py-2 text-sm font-semibold hover:bg-ink-800 transition">+ Создать пин</Link>
             <Button @click="toggleMenu" severity="secondary" outlined rounded class="hidden sm:inline-flex !p-1 !pl-2 !pr-3 !bg-white dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 shadow-soft">
               <Avatar :image="avatarSrc" shape="circle" size="normal" class="!w-7 !h-7" />
@@ -108,5 +116,6 @@ function toggleMenu(e: Event) { menu.value.toggle(e) }
       </PageTransition>
     </main>
     <MobileBottomNav />
+    <GlobalNotificationToasts />
   </div>
 </template>

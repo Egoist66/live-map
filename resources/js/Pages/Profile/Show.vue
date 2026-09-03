@@ -76,8 +76,8 @@ async function onChat() { await profile.startChat() }
             <OnlineDot :online="online" size="w-4 h-4" />
           </button>
           <div class="min-w-0 flex-1">
-            <h1 class="text-lg sm:text-xl font-black tracking-tight truncate text-ink-900 dark:text-white flex items-center gap-2">{{ profileUser.name }}<span v-if="online" class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shrink-0"></span><span v-else class="w-2 h-2 bg-red-500 rounded-full animate-[pulse_2.8s_ease-in-out_infinite] shrink-0"></span></h1>
-            <p class="text-sm truncate flex items-center gap-1.5" :class="online ? 'text-emerald-600' : 'text-red-500'"><span :class="online ? 'animate-pulse inline-block' : 'animate-[pulse_3s_ease-in-out_infinite] inline-block'">{{ online ? '●' : '○' }}</span> {{ online ? 'в сети' : lastSeenText }}<span class="text-stone-300">·</span>{{ levelLabel[profileUser.level] || profileUser.level || 'Новичок' }} · {{ profileUser.reputation_score||0 }} ★</p>
+            <h1 class="text-lg sm:text-xl font-black tracking-tight truncate text-ink-900 dark:text-white flex items-center gap-2">{{ profileUser.name }}</h1>
+            <p class="text-sm truncate flex items-center gap-1.5" :class="online ? 'text-emerald-600' : 'text-red-500'">{{ online ? 'в сети' : lastSeenText }}<span class="text-stone-300">·</span>{{ levelLabel[profileUser.level] || profileUser.level || 'Новичок' }} · {{ profileUser.reputation_score||0 }} ★</p>
           </div>
           <Link href="/map" class="hidden sm:inline-flex"><Button label="На карту →" rounded class="!bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white !border-ink-900 dark:!border-white !text-sm !font-bold !px-5 !py-2.5" /></Link>
         </div>
