@@ -1,2 +1,15 @@
 User-agent: *
-Disallow:
+Allow: /
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /chat
+Disallow: /settings
+Disallow: /profile
+Disallow: /api/
+Disallow: /*?*
+Disallow: /login
+Disallow: /register
+Crawl-delay: 1
+
+Sitemap: /sitemap.xml
+Host: https://upin.app

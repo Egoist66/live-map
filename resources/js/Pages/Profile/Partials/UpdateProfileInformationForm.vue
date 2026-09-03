@@ -3,8 +3,8 @@ import { Link } from '@inertiajs/vue3'
 import AvatarPreview from '@/Components/AvatarPreview.vue'
 import { useProfileForm } from '@/composables/useProfileForm'
 import { useAvatarUpload } from '@/composables/useAvatarUpload'
-import BioRichEditor from '@/Components/BioRichEditor.vue'
 import InputText from 'primevue/inputtext'
+import Textarea from 'primevue/textarea'
 import Button from 'primevue/button'
 import Checkbox from 'primevue/checkbox'
 
@@ -59,9 +59,12 @@ const a = useAvatarUpload()
 
       <div>
         <label class="text-sm font-semibold">О себе</label>
-        <p class="text-xs text-zinc-500 mb-2">Красиво оформи — заголовки, списки, ссылки. Видно всем в профиле.</p>
-        <BioRichEditor v-model="f.bio.value" />
-        <small class="text-red-500">{{ f.errors.value.bio }}</small>
+        <p class="text-xs text-zinc-500 mb-2">Расскажи о себе — видно всем в профиле в разделе «Общая информация».</p>
+        <Textarea v-model="f.bio.value" rows="5" autoResize maxlength="10000" placeholder="Напиши пару строк о себе — интересы, чем занимаешься..." class="w-full mt-1 !rounded-2xl !bg-white dark:!bg-zinc-900" />
+        <div class="flex justify-between mt-1">
+          <small class="text-red-500">{{ f.errors.value.bio }}</small>
+          <small class="text-stone-400">{{ (f.bio.value || '').length }} / 10000</small>
+        </div>
       </div>
 
       <label class="flex items-center gap-2 text-sm"><Checkbox v-model="f.is_anonymous_default.value" :binary="true" /> Создавать пины анонимно по умолчанию</label>

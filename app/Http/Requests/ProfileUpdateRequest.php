@@ -11,22 +11,24 @@ class ProfileUpdateRequest extends FormRequest
 {
     protected function prepareForValidation(): void
     {
-        if ($this->has('bio') && is_string($this->input('bio'))) {
-            $this->merge(['bio' => $this->sanitizeBio($this->input('bio'))]);
+        if ($this->has('bio')) {
+            $raw = $this->input('bio');
+            if (is_string($raw)) {
+                $sanitized = $this->sanitizeBio($raw);
+                $this->merge(['bio' => $sanitized]);
+            } elseif ($raw === null || $raw === '') {
+                $this->merge(['bio' => null]);
+            }
         }
     }
 
-    private function sanitizeBio(string $html): string
+    private function sanitizeBio(string $text): ?string
     {
-        $allowed = '<p><br><b><strong><i><em><u><s><a><ul><ol><li><h2><h3><blockquote><code><pre><span><div>';
-        $html = strip_tags($html, $allowed);
-        $html = preg_replace('/\s*on\w+\s*=\s*"[^"]*"/i', '', $html);
-        $html = preg_replace("/\s*on\w+\s*=\s*'[^']*'/i", '', $html);
-        $html = preg_replace('/javascript:/i', '', $html);
-        $html = preg_replace('/<a([^>]*?)href\s*=\s*["\'](?!https?:\/\/|\/|#|mailto:)[^"\']*["\']/i', '<a$1', $html);
-        $html = trim($html);
-        if (trim(strip_tags($html)) === '') return '';
-        return $html;
+        $text = strip_tags($text);
+        $text = trim($text);
+        $text = preg_replace("/\r\n?/", "\n", $text);
+        if ($text === '' || $text === null) return null;
+        return mb_substr($text, 0, 10000);
     }
 
     /**

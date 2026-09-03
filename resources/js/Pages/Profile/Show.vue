@@ -8,13 +8,12 @@ import Message from 'primevue/message'
 import OnlineDot from '@/Components/OnlineDot.vue'
 import { usePresenceState } from '@/composables/usePresence'
 import { useUserProfile } from '@/composables/useUserProfile'
-import { useSanitizedBio } from '@/composables/useSanitizedBio'
-
 const props = defineProps<{ profileUser: any; isOwn: boolean; friendship: any; isFriend: boolean; isPending: boolean; isBlocked?: boolean; isBlockedBy?: boolean; canMessage: boolean; canMessageReason: string | null }>()
 const avatarSrc = computed(() => props.profileUser.avatar_path ? `/storage/${props.profileUser.avatar_path}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(props.profileUser.name)}&background=0F172A&color=fff&bold=true`)
 const profile = useUserProfile(props.profileUser.id)
 const showAvatar = ref(false)
-const bio = useSanitizedBio(() => props.profileUser.bio)
+const bioText = computed(() => (props.profileUser.bio || '').trim())
+const bioEmpty = computed(() => bioText.value.length === 0)
 const levelLabel: Record<string,string> = { novice:'Новичок', local:'Местный', guide:'Гид района', explorer:'Исследователь', veteran:'Ветеран' }
 
 const isFriend = ref(props.isFriend)
@@ -97,7 +96,7 @@ async function onChat() { await profile.startChat() }
     <h3 class="font-black">Основная информация</h3>
     <div class="mt-4 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-stone-50/70 dark:bg-zinc-800/50 p-4">
       <div class="flex items-center gap-2 text-xs font-bold tracking-widest uppercase text-stone-400">О себе</div>
-      <div v-if="!bio.isEmpty.value" class="mt-2 prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-h2:text-lg prose-h2:font-black prose-h2:mt-3 prose-h2:mb-1 prose-h3:text-base prose-h3:font-bold prose-a:text-brand-600 prose-a:underline prose-ul:list-disc prose-ul:pl-5 prose-ol:list-decimal prose-ol:pl-5 prose-blockquote:border-l-[3px] prose-blockquote:border-stone-300 dark:prose-blockquote:border-zinc-600 prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:text-stone-600 dark:prose-blockquote:text-zinc-400 prose-code:bg-white dark:prose-code:bg-zinc-900 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-pre:bg-stone-900 prose-pre:text-stone-100 leading-relaxed" v-html="bio.html.value"></div>
+      <div v-if="!bioEmpty" class="mt-2 text-sm leading-relaxed text-stone-800 dark:text-zinc-200 whitespace-pre-wrap break-words">{{ bioText }}</div>
       <div v-else class="mt-2 text-sm text-stone-500 dark:text-zinc-400">Пользователь пока ничего не рассказал о себе.</div>
     </div>
     <div class="mt-4 space-y-3 text-sm">

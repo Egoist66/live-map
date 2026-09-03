@@ -5,6 +5,7 @@ import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
 import { Head, useForm } from '@inertiajs/vue3';
+import { ref } from 'vue'
 
 const props = defineProps({
     email: {
@@ -23,6 +24,9 @@ const form = useForm({
     password: '',
     password_confirmation: '',
 });
+
+const show1 = ref(false)
+const show2 = ref(false)
 
 const submit = () => {
     form.post(route('password.store'), {
@@ -53,39 +57,35 @@ const submit = () => {
             </div>
 
             <div class="mt-4">
-                <InputLabel for="password" value="Password" />
-
-                <TextInput
-                    id="password"
-                    type="password"
-                    class="mt-1 block w-full"
-                    v-model="form.password"
-                    required
-                    autocomplete="new-password"
-                />
-
+                <InputLabel for="password" value="Новый пароль" />
+                <div class="relative mt-1">
+                    <TextInput
+                        id="password"
+                        :type="show1 ? 'text' : 'password'"
+                        class="block w-full pr-11"
+                        v-model="form.password"
+                        required
+                        autocomplete="new-password"
+                    />
+                    <button type="button" @click="show1=!show1" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-stone-100 grid place-items-center text-stone-500 text-sm">{{ show1?'🙈':'👁' }}</button>
+                </div>
                 <InputError class="mt-2" :message="form.errors.password" />
             </div>
 
             <div class="mt-4">
-                <InputLabel
-                    for="password_confirmation"
-                    value="Confirm Password"
-                />
-
-                <TextInput
-                    id="password_confirmation"
-                    type="password"
-                    class="mt-1 block w-full"
-                    v-model="form.password_confirmation"
-                    required
-                    autocomplete="new-password"
-                />
-
-                <InputError
-                    class="mt-2"
-                    :message="form.errors.password_confirmation"
-                />
+                <InputLabel for="password_confirmation" value="Подтвердите пароль" />
+                <div class="relative mt-1">
+                    <TextInput
+                        id="password_confirmation"
+                        :type="show2 ? 'text' : 'password'"
+                        class="block w-full pr-11"
+                        v-model="form.password_confirmation"
+                        required
+                        autocomplete="new-password"
+                    />
+                    <button type="button" @click="show2=!show2" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-stone-100 grid place-items-center text-stone-500 text-sm">{{ show2?'🙈':'👁' }}</button>
+                </div>
+                <InputError class="mt-2" :message="form.errors.password_confirmation" />
             </div>
 
             <div class="mt-4 flex items-center justify-end">
@@ -93,7 +93,7 @@ const submit = () => {
                     :class="{ 'opacity-25': form.processing }"
                     :disabled="form.processing"
                 >
-                    Reset Password
+                    Сохранить пароль
                 </PrimaryButton>
             </div>
         </form>

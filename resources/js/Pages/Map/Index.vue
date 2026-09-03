@@ -2,6 +2,8 @@
 import { Head, Link } from '@inertiajs/vue3'
 import { onMounted, onUnmounted } from 'vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
+import { useSeo } from '@/composables/useSeo'
+const seo = useSeo({ title: 'Карта — UPin', description: 'Живая карта UPin: пины соседей рядом, фильтры по категориям, создание пина в 2 клика. Требуется вход.', noindex: true })
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useMapPage } from '@/composables/useMapPage'
 import { usePinChat } from '@/composables/usePinChat'
@@ -34,7 +36,7 @@ onUnmounted(destroy)
 </script>
 
 <template>
-  <Head title="Карта" />
+  <Head :title="seo.title.value"><meta head-key="robots" name="robots" content="noindex, nofollow" /></Head>
   <AuthenticatedLayout>
     <Toast />
     <div class="relative w-full h-[calc(100dvh-64px)] min-h-[400px] bg-[#eaf0f6] overflow-hidden">

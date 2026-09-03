@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { Head, Link, usePage } from '@inertiajs/vue3'
 import { computed } from 'vue'
+import { useSeo } from '@/composables/useSeo'
 defineProps<{ canLogin: boolean; canRegister: boolean }>()
+const seo = useSeo({
+  title: 'UPin — Твоё окно во двор | Живая карта района',
+  description: 'UPin — гиперлокальная карта района. Пины соседей в радиусе 1 км: вопросы, события, помощь, объявления. Приватность 200 м, анонимно, без спама. Пины живут 2–24 часа.',
+  keywords: ['UPin','живая карта','карта района','соседи','пины','объявления рядом','помощь соседей'],
+})
 const page = usePage()
 const isAuthenticated = computed(() => !!(page.props.auth as any)?.user)
 const dashboardHref = computed(() => {
@@ -13,7 +19,11 @@ const dashboardHref = computed(() => {
 </script>
 
 <template>
-  <Head title="Твое окно во двор" />
+  <Head :title="seo.title.value">
+    <meta head-key="description" name="description" :content="seo.description.value" />
+    <meta head-key="og:title" property="og:title" :content="seo.title.value" />
+    <meta head-key="og:description" property="og:description" :content="seo.description.value" />
+  </Head>
   <div class="min-h-screen bg-surface dark:bg-[#0B0F1A] text-ink-900 dark:text-zinc-100 antialiased selection:bg-ink-900 dark:selection:bg-brand-500 selection:text-white overflow-x-hidden">
     <header class="sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/70 backdrop-blur border-b border-stone-200/60 dark:border-zinc-800">
       <div class="max-w-[1280px] mx-auto px-4 sm:px-6 h-[64px] flex items-center justify-between">
@@ -123,14 +133,21 @@ const dashboardHref = computed(() => {
           <div class="mt-5 flex flex-wrap gap-2 text-xs font-medium"><span class="bg-white text-ink-900 px-3.5 py-2 rounded-full">Размытие 200 м</span><span class="bg-white/10 border border-white/15 px-3.5 py-2 rounded-full">Анонимность</span><span class="bg-white/10 border border-white/15 px-3.5 py-2 rounded-full">Без истории перемещений</span></div>
         </div>
       </div>
-      <div class="lg:col-span-2 bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-[24px] p-7 shadow-soft card-hover">
-        <h3 class="font-black tracking-tight">Монетизация для активных</h3><p class="text-xs text-stone-500 dark:text-zinc-500 mt-1">Честные бусты, без навязчивости</p>
-        <div class="mt-5 space-y-2.5 text-sm">
-          <div class="flex justify-between items-center bg-stone-50 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-xl px-4 py-3 hover:bg-white dark:hover:bg-zinc-700 transition"><span class="font-medium">Поднять в топ 1 ч</span><b class="bg-white dark:bg-zinc-700 border dark:border-zinc-600 px-2.5 py-1 rounded-full text-xs">$0.99</b></div>
-          <div class="flex justify-between items-center bg-stone-50 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-xl px-4 py-3 hover:bg-white dark:hover:bg-zinc-700 transition"><span class="font-medium">Подсветка на карте</span><b class="bg-white dark:bg-zinc-700 border dark:border-zinc-600 px-2.5 py-1 rounded-full text-xs">$1.99</b></div>
-          <div class="flex justify-between items-center bg-stone-50 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-xl px-4 py-3 hover:bg-white dark:hover:bg-zinc-700 transition"><span class="font-medium">Уведомить 1 км • 1 ч</span><b class="bg-white dark:bg-zinc-700 border dark:border-zinc-600 px-2.5 py-1 rounded-full text-xs">$4.99</b></div>
+      <div class="lg:col-span-2 relative group/monet bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-[24px] p-7 shadow-soft card-hover overflow-hidden select-none">
+        <div class="blur-[7px] group-hover/monet:blur-none group-active/monet:blur-none transition-all duration-300">
+          <h3 class="font-black tracking-tight">Монетизация для активных</h3><p class="text-xs text-stone-500 dark:text-zinc-500 mt-1">Честные бусты, без навязчивости</p>
+          <div class="mt-5 space-y-2.5 text-sm">
+            <div class="flex justify-between items-center bg-stone-50 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-xl px-4 py-3"><span class="font-medium">Поднять в топ 1 ч</span><b class="bg-white dark:bg-zinc-700 border dark:border-zinc-600 px-2.5 py-1 rounded-full text-xs">$0.99</b></div>
+            <div class="flex justify-between items-center bg-stone-50 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-xl px-4 py-3"><span class="font-medium">Подсветка на карте</span><b class="bg-white dark:bg-zinc-700 border dark:border-zinc-600 px-2.5 py-1 rounded-full text-xs">$1.99</b></div>
+            <div class="flex justify-between items-center bg-stone-50 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-xl px-4 py-3"><span class="font-medium">Уведомить 1 км • 1 ч</span><b class="bg-white dark:bg-zinc-700 border dark:border-zinc-600 px-2.5 py-1 rounded-full text-xs">$4.99</b></div>
+          </div>
+          <div class="mt-4 text-xs text-stone-500 dark:text-zinc-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-xl px-3 py-2.5">Pro $4.99/мес — безлимит, 5 км, 24 ч. Business $19.99 — витрина.</div>
         </div>
-        <div class="mt-4 text-xs text-stone-500 dark:text-zinc-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-xl px-3 py-2.5">Pro $4.99/мес — безлимит, 5 км, 24 ч. Business $19.99 — витрина.</div>
+        <div class="absolute inset-0 grid place-items-center bg-white/55 dark:bg-zinc-900/55 backdrop-blur-[1px] group-hover/monet:opacity-0 group-hover/monet:pointer-events-none group-active/monet:opacity-0 group-active/monet:pointer-events-none transition duration-300">
+          <span class="inline-flex items-center gap-2 bg-ink-900 dark:bg-white dark:text-ink-900 text-white px-4 py-2 rounded-full text-xs font-bold shadow-lg tracking-wide">
+            <span class="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></span> В разработке — наведите чтобы посмотреть
+          </span>
+        </div>
       </div>
     </section>
 

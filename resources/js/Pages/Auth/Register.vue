@@ -26,13 +26,18 @@ const f = useRegisterForm()
       </div>
       <div>
         <label class="text-[13px] font-semibold">Пароль</label>
-        <InputText v-model="f.password.value" v-bind="f.passwordAttrs" :type="f.showPass.value ? 'text' : 'password'" placeholder="••••••••" class="w-full mt-1.5" :invalid="!!f.errors.value.password" />
+        <div class="relative mt-1.5">
+          <InputText v-model="f.password.value" v-bind="f.passwordAttrs" :type="f.showPass.value ? 'text' : 'password'" placeholder="••••••••" class="w-full pr-11" :invalid="!!f.errors.value.password" />
+          <button type="button" @click="f.showPass.value=!f.showPass.value" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-zinc-700 grid place-items-center text-stone-500 text-sm" tabindex="-1">{{ f.showPass.value?'🙈':'👁' }}</button>
+        </div>
         <small class="text-red-500">{{ f.errors.value.password }}</small>
-        <button type="button" @click="f.showPass.value=!f.showPass.value" class="text-xs text-stone-500 mt-1">{{ f.showPass.value ? 'Скрыть' : 'Показать' }}</button>
       </div>
       <div>
         <label class="text-[13px] font-semibold">Подтверди пароль</label>
-        <InputText v-model="f.password_confirmation.value" v-bind="f.passwordConfirmationAttrs" :type="f.showPass2.value ? 'text' : 'password'" placeholder="••••••••" class="w-full mt-1.5" :invalid="!!f.errors.value.password_confirmation" />
+        <div class="relative mt-1.5">
+          <InputText v-model="f.password_confirmation.value" v-bind="f.passwordConfirmationAttrs" :type="f.showPass2.value ? 'text' : 'password'" placeholder="••••••••" class="w-full pr-11" :invalid="!!f.errors.value.password_confirmation" />
+          <button type="button" @click="f.showPass2.value=!f.showPass2.value" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-zinc-700 grid place-items-center text-stone-500 text-sm" tabindex="-1">{{ f.showPass2.value?'🙈':'👁' }}</button>
+        </div>
         <small class="text-red-500">{{ f.errors.value.password_confirmation }}</small>
       </div>
       <div class="bg-stone-50 border border-stone-200 rounded-2xl p-3.5 space-y-2.5">

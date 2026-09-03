@@ -3,7 +3,6 @@ import GuestLayout from '@/Layouts/GuestLayout.vue'
 import { Head, Link } from '@inertiajs/vue3'
 import { useLoginForm } from '@/composables/useAuthForm'
 import InputText from 'primevue/inputtext'
-import Password from 'primevue/password'
 import Checkbox from 'primevue/checkbox'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
@@ -25,11 +24,11 @@ const { email, emailAttrs, password, passwordAttrs, remember, errors, showPass, 
       </div>
       <div>
         <label class="text-[13px] font-semibold">Пароль</label>
-        <div class="mt-1.5">
-          <InputText v-model="password" v-bind="passwordAttrs" :type="showPass ? 'text' : 'password'" placeholder="••••••••" class="w-full" :invalid="!!errors.password" />
+        <div class="relative mt-1.5">
+          <InputText v-model="password" v-bind="passwordAttrs" :type="showPass ? 'text' : 'password'" placeholder="••••••••" class="w-full pr-11" :invalid="!!errors.password" />
+          <button type="button" @click="showPass=!showPass" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-zinc-700 grid place-items-center text-stone-500 text-sm" tabindex="-1" aria-label="Показать пароль">{{ showPass?'🙈':'👁' }}</button>
         </div>
         <small class="text-red-500">{{ errors.password }}</small>
-        <button type="button" @click="showPass=!showPass" class="text-xs text-stone-500 mt-1">{{ showPass ? 'Скрыть' : 'Показать' }} пароль</button>
       </div>
       <label class="flex items-center gap-2 text-sm font-medium">
         <Checkbox v-model="remember" :binary="true" /> Запомнить меня

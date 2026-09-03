@@ -63,8 +63,8 @@ const ex = useSupportExchange()
 function mailToSupport(){ const subj=encodeURIComponent(supportSubject.value||'Обращение в поддержку UPin'); const body=encodeURIComponent(supportBody.value+(supportBody.value?'\n\n---\n':''+`Пользователь: ${u.value.name} <${u.value.email}>`)); window.location.href=`mailto:razormad666@gmail.com?subject=${subj}&body=${body}` }
 function mailToDonate(usd:number){ const byn = ex.usdRate.value? (usd*ex.usdRate.value).toFixed(2)+' BYN' : `${usd}$`; const subj=encodeURIComponent(`Донат UPin — $${usd} (~${byn})`); const body=encodeURIComponent(`Привет! Хочу задонатить $${usd} (~${byn}) разработчику UPin.\n\nПользователь: ${u.value.name} <${u.value.email}>\nТариф: ${u.value.plan||'free'}\n\nСообщение:\n`); window.location.href=`mailto:razormad666@gmail.com?subject=${subj}&body=${body}` }
 const avatarSrc = computed(() => u.value.avatar_path ? `/storage/${u.value.avatar_path}` : `https://ui-avatars.com/api/?name=${encodeURIComponent(u.value.name)}&background=0F172A&color=fff&bold=true`)
-import { useSanitizedBio } from '@/composables/useSanitizedBio'
-const bioPreview = useSanitizedBio(() => (u.value as any).bio)
+const bioPreviewText = computed(() => ((u.value as any).bio || '').trim())
+const bioPreviewEmpty = computed(() => bioPreviewText.value.length === 0)
 </script>
 
 <template>
@@ -98,9 +98,9 @@ const bioPreview = useSanitizedBio(() => (u.value as any).bio)
                 <p class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Аватар, контакты и домашняя зона — что видят другие.</p>
                 <UpdateProfileInformationForm :must-verify-email="mustVerifyEmail" :status="status" class="mt-5 max-w-xl" />
               </div>
-              <div v-if="!bioPreview.isEmpty.value" class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-[20px] p-6 shadow-soft">
-                <h4 class="text-sm font-black flex items-center gap-2">Превью «О себе» <span class="text-xs font-normal text-stone-400">как видят другие</span></h4>
-                <div class="mt-3 prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-h2:text-base prose-h2:font-black prose-h3:text-sm prose-h3:font-bold prose-a:text-brand-600 prose-a:underline prose-ul:list-disc prose-ul:pl-5 prose-ol:list-decimal prose-ol:pl-5 prose-blockquote:border-l-[3px] prose-blockquote:border-stone-200 prose-blockquote:pl-4 prose-blockquote:italic bg-stone-50 dark:bg-zinc-800 border border-stone-100 dark:border-zinc-700 rounded-2xl p-4 leading-relaxed" v-html="bioPreview.html.value"></div>
+              <div v-if="!bioPreviewEmpty" class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-[20px] p-6 shadow-soft">
+                <h4 class="text-sm font-black flex items-center gap-2">Превью «О себе» <span class="text-xs font-normal text-stone-400">как видят другие в «Общая информация»</span></h4>
+                <div class="mt-3 bg-stone-50 dark:bg-zinc-800 border border-stone-100 dark:border-zinc-700 rounded-2xl p-4 text-sm leading-relaxed whitespace-pre-wrap break-words text-stone-700 dark:text-zinc-300">{{ bioPreviewText }}</div>
               </div>
             </div>
 

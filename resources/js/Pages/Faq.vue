@@ -4,6 +4,12 @@ import { ref, computed } from 'vue'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { usePage } from '@inertiajs/vue3'
+import { useSeo } from '@/composables/useSeo'
+const seo = useSeo({
+  title: 'FAQ — Как устроен UPin | Вопросы и ответы',
+  description: 'Ответы про UPin: что такое пины, приватность 200 м, анонимность, тарифы Free/Pro/Business, радиус 1–5 км и как пользоваться живой картой района.',
+  keywords: ['UPin FAQ','что такое UPin','пины','приватность','тарифы'],
+})
 
 const page = usePage()
 const isAuth = computed(() => !!(page.props.auth as any)?.user)
@@ -31,7 +37,10 @@ const sections = [
 </script>
 
 <template>
-  <Head title="FAQ" />
+  <Head :title="seo.title.value">
+    <meta head-key="description" name="description" :content="seo.description.value" />
+    <component :is="'script'" type="application/ld+json" v-html="JSON.stringify({ '@context':'https://schema.org','@type':'FAQPage', mainEntity: sections.map(s=>({ '@type':'Question', name:s.q, acceptedAnswer:{ '@type':'Answer', text:s.a }})) })"></component>
+  </Head>
   <component :is="Layout">
     <div class="min-h-[calc(100vh-64px)] bg-surface dark:bg-[#090E1A]">
       <div class="max-w-[900px] mx-auto px-4 sm:px-6 py-8">

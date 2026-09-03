@@ -8,6 +8,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import OnlineDot from '@/Components/OnlineDot.vue'
 import { usePresenceState } from '@/composables/usePresence'
 import { useChatPage } from '@/composables/useChatPage'
+import { useChatViewport } from '@/composables/useChatViewport'
 
 const props = defineProps<{ conversationId?: number }>()
 const {
@@ -22,6 +23,7 @@ const { friends, pendingIn } = friendsApi
 const { blocked } = blocksApi
 const { open: emojiOpen, toggle: toggleEmoji, EMOJI_GROUPS } = emoji
 const { isOnline } = usePresenceState()
+const { keyboardHeight, isKeyboardOpen } = useChatViewport()
 
 onMounted(init)
 </script>
@@ -30,7 +32,7 @@ onMounted(init)
 <AuthenticatedLayout>
 <Toast />
 <div class="mx-auto max-w-[1280px] lg:px-6 lg:py-6 w-full max-w-full min-w-0 overflow-hidden">
-  <div class="flex flex-col lg:flex-row lg:gap-4 h-[calc(100dvh-64px)] lg:h-[calc(100dvh-88px)] h-[100dvh] max-h-[100dvh] bg-stone-100 dark:bg-zinc-950 lg:bg-transparent overflow-hidden lg:overflow-visible w-full max-w-full min-w-0">
+  <div class="flex flex-col lg:flex-row lg:gap-4 h-[calc(100dvh-64px-76px)] lg:h-[calc(100dvh-88px)] max-h-[calc(100dvh-64px-76px)] lg:max-h-[calc(100dvh-88px)] bg-stone-100 dark:bg-zinc-950 lg:bg-transparent overflow-hidden lg:overflow-visible w-full max-w-full min-w-0" :style="isKeyboardOpen ? { height: `calc(100dvh - 64px - ${keyboardHeight}px)`, maxHeight: `calc(100dvh - 64px - ${keyboardHeight}px)` } : {}">
     <div :class="selectedId ? 'hidden lg:flex' : 'flex'" class="w-full lg:w-[360px] lg:min-w-[360px] shrink-0 bg-white dark:bg-zinc-900 lg:rounded-2xl border-b lg:border border-stone-200 dark:border-zinc-800 flex-col overflow-hidden min-w-0 max-w-full">
       <div class="p-3 border-b dark:border-zinc-800 shrink-0 w-full max-w-full min-w-0">
         <div class="flex items-center gap-2 mb-3">
@@ -261,7 +263,7 @@ onMounted(init)
             </div>
           </div>
         </div>
-        <div class="p-2 lg:p-3 border-t dark:border-zinc-800 relative bg-white dark:bg-zinc-900 shrink-0 pb-[calc(0.5rem+env(safe-area-inset-bottom))] lg:pb-3 w-full max-w-full min-w-0">
+        <div class="p-2 lg:p-3 border-t dark:border-zinc-800 relative bg-white dark:bg-zinc-900 shrink-0 pb-[calc(0.5rem+env(safe-area-inset-bottom))] lg:pb-3 w-full max-w-full min-w-0" style="position:sticky; bottom:0">
           <div v-if="emojiOpen" class="absolute bottom-full left-2 right-2 lg:left-3 lg:right-3 mb-2 bg-white dark:bg-zinc-800 border dark:border-zinc-700 rounded-[20px] lg:rounded-2xl shadow-xl p-3 z-10 max-h-[46dvh] lg:max-h-[220px] overflow-auto overscroll-contain">
             <div v-for="g in EMOJI_GROUPS" :key="g.label" class="mb-2 last:mb-0">
               <div class="text-[10px] font-bold tracking-widest uppercase text-stone-400 mb-1.5">{{ g.label }}</div>

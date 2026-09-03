@@ -8,6 +8,7 @@ import ResponsiveNavLink from '@/Components/ResponsiveNavLink.vue';
 import { Link, usePage, router } from '@inertiajs/vue3';
 import { useBadgeStore } from '@/stores/badges';
 import { usePresence } from '@/composables/usePresence';
+import MobileBottomNav from '@/Components/MobileBottomNav.vue';
 const badge = useBadgeStore()
 const presence = usePresence()
 onMounted(()=> { badge.init(); presence.connect() })
@@ -121,6 +122,7 @@ const settingsHref = computed(() => {
       </div>
     </header>
 
-    <main><slot /></main>
+    <main class="pb-[76px] lg:pb-0"><slot /></main>
+    <MobileBottomNav />
   </div>
 </template>

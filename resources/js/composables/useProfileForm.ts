@@ -42,9 +42,10 @@ export function useProfileForm() {
   const submit = handleSubmit((vals: any) => {
     const payload: any = { ...vals }
     if (typeof payload.bio === 'string') {
-      const stripped = payload.bio.replace(/<[^>]*>/g, '').trim()
-      if (!stripped) payload.bio = null
+      const t = payload.bio.trim()
+      payload.bio = t === '' ? null : t
     }
+    if (payload.bio === '') payload.bio = null
     router.patch(route('profile.update'), payload, {
       preserveScroll: true,
       onSuccess: () => toast?.add({ severity: 'success', summary: 'Профиль сохранён', life: 2000 }),

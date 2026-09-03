@@ -4,8 +4,8 @@ import { Head, Link, usePage } from '@inertiajs/vue3'
 import { computed, ref, onMounted } from 'vue'
 import AvatarPreview from '@/Components/AvatarPreview.vue'
 import { useBadgeStore } from '@/stores/badges'
-import { useSanitizedBio } from '@/composables/useSanitizedBio'
-
+import { useSeo } from '@/composables/useSeo'
+const seo = useSeo({ title: 'Профиль', description: 'Профиль UPin', noindex: true })
 const props = defineProps<{ user: any; isOwn?: boolean }>()
 const page = usePage()
 const auth = (page.props.auth as any).user
@@ -19,12 +19,13 @@ const planLabel: Record<string,string> = { free:'Free', pro:'Pro', business:'Bus
 const planColor: Record<string,string> = { free:'bg-stone-100 text-stone-700 border-stone-200', pro:'bg-gradient-to-br from-violet-600 to-indigo-600 text-white border-transparent', business:'bg-ink-900 text-white border-ink-900' }
 const settingsHref = computed(() => isOwn.value ? route('profile.edit', { identifier: auth.is_admin || auth.role==='admin' ? 'admin' : String(auth.id) }) : route('profile.edit', { identifier: String(u.value.id) }))
 const badges = useBadgeStore()
-const bio = useSanitizedBio(() => u.value.bio)
+const bioText = computed(() => (u.value.bio || '').trim())
+const bioEmpty = computed(() => bioText.value.length === 0)
 onMounted(()=> { if(isOwn.value) badges.init() })
 </script>
 
 <template>
-  <Head title="Профиль" />
+  <Head :title="seo.title.value"><meta head-key="robots" name="robots" content="noindex, nofollow" /></Head>
   <AuthenticatedLayout>
     <div class="bg-surface dark:bg-[#090E1A] min-h-[calc(100vh-64px)] overflow-x-hidden">
       <div class="max-w-[980px] mx-auto w-full max-w-full min-w-0 px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-5 overflow-hidden">
@@ -102,8 +103,8 @@ onMounted(()=> { if(isOwn.value) badges.init() })
                   <div class="text-[10px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500 truncate">О себе</div>
                   <Link v-if="isOwn" :href="settingsHref" class="ml-auto text-[11px] font-bold text-violet-600 dark:text-violet-400 hover:underline shrink-0">изменить</Link>
                 </div>
-                <div v-if="!bio.isEmpty.value" class="mt-2.5 prose prose-sm dark:prose-invert max-w-full break-words prose-p:my-1.5 prose-p:leading-relaxed prose-h2:text-[15px] prose-h2:font-black prose-h2:mt-3 prose-h2:mb-1 prose-h3:text-[13px] prose-h3:font-bold prose-a:text-violet-600 dark:prose-a:text-violet-400 prose-a:underline prose-ul:list-disc prose-ul:pl-5 prose-ul:my-1.5 prose-ol:list-decimal prose-ol:pl-5 prose-blockquote:border-l-2 prose-blockquote:border-violet-300 dark:prose-blockquote:border-violet-700 prose-blockquote:pl-3 prose-blockquote:italic prose-blockquote:text-stone-600 dark:prose-blockquote:text-zinc-400 prose-code:bg-white dark:prose-code:bg-zinc-900 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-pre:bg-ink-900 prose-pre:text-white dark:prose-pre:bg-zinc-900 prose-pre:overflow-x-auto prose-pre:max-w-full leading-relaxed text-stone-700 dark:text-zinc-300 overflow-hidden" v-html="bio.html.value"></div>
-                <div v-else class="mt-2 text-sm leading-relaxed break-words" :class="isOwn ? 'text-stone-500 dark:text-zinc-400' : 'text-stone-500 dark:text-zinc-400'">{{ isOwn ? 'Расскажи о себе — это видят другие на твоём профиле. Добавь в настройках.' : 'Пользователь пока ничего не рассказал о себе.' }}</div>
+                <div v-if="!bioEmpty" class="mt-2.5 text-sm leading-relaxed text-stone-700 dark:text-zinc-300 whitespace-pre-wrap break-words overflow-hidden">{{ bioText }}</div>
+                <div v-else class="mt-2 text-sm leading-relaxed break-words text-stone-500 dark:text-zinc-400">{{ isOwn ? 'Расскажи о себе — это видят другие на твоём профиле. Добавь в настройках.' : 'Пользователь пока ничего не рассказал о себе.' }}</div>
               </div>
 
               <div class="flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-br from-emerald-50/70 to-teal-50/70 dark:from-emerald-950/20 dark:to-teal-950/20 border border-emerald-100 dark:border-emerald-900/40 hover:shadow-soft transition">
