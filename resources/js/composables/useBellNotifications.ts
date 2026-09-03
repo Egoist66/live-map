@@ -10,8 +10,10 @@ const loading = ref(false)
 async function fetchAll() {
   loading.value = true
   try {
+    const w = window as any
+    const convsPromise = w.__conversationsInflight ? w.__conversationsInflight : chatApi.conversations().catch(() => [] as any[])
     const [convs, fr] = await Promise.all([
-      chatApi.conversations().catch(() => [] as any[]),
+      convsPromise,
       chatApi.friendships().catch(() => ({ pending_in: [] } as any)),
     ])
     conversations.value = (convs as any[]).slice(0, 8)
@@ -20,7 +22,7 @@ async function fetchAll() {
 }
 function open() { isOpen.value = true; fetchAll() }
 function close() { isOpen.value = false }
-function goChat(id: number) { close(); if (!id) router.visit('/chat'); else router.visit(`/chat?c=${id}`) }
+function goChat(id: number) { close(); router.visit(id ? `/chat/${id}` : '/chat') }
 function goRequests() { close(); router.visit('/chat?tab=requests') }
 function goFriends() { close(); router.visit('/chat?tab=friends') }
 

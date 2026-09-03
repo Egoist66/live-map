@@ -13,8 +13,10 @@ export const useBadgeStore = defineStore('badges', () => {
 
   async function fetch() {
     try {
+      const w = window as any
+      const convsPromise = w.__conversationsInflight ? w.__conversationsInflight : chatApi.conversations().catch(() => [] as any[])
       const [convs, fr] = await Promise.all([
-        chatApi.conversations().catch(() => [] as any[]),
+        convsPromise,
         chatApi.friendships().catch(() => ({ pending_in: [] } as any)),
       ])
       unread.value = (convs as any[]).reduce((s: number, c: any) => s + (c.unread_count || 0), 0)
@@ -28,7 +30,7 @@ export const useBadgeStore = defineStore('badges', () => {
       if (!echo) return
       const uid = (window as any).userId || document.querySelector('meta[name="user-id"]')?.getAttribute('content')
       if (!uid) return
-      if (echoCh) try { echo.leave(`user.${uid}`) } catch {}
+      if (echoCh) return
       echoCh = echo.private(`user.${uid}`)
       echoCh.listen('.message.sent', () => { unread.value += 1 })
       echoCh.listen('.message.updated', () => fetch())

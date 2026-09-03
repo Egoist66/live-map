@@ -14,7 +14,7 @@ class ConversationController extends Controller
     {
         $user = $request->user();
         $convs = Conversation::whereHas('participantRows', fn($q)=>$q->where('user_id',$user->id)->whereNull('hidden_at'))
-            ->with(['participants' => fn($q)=>$q->select('users.id','users.name','users.avatar_path','users.last_seen_at','users.is_invisible','users.plan','users.role','users.is_admin'), 'messages'=>fn($q)=>$q->latest()->limit(1)])
+            ->with(['participants' => fn($q)=>$q->select('users.id','users.name','users.avatar_path','users.last_seen_at','users.is_invisible','users.plan','users.role','users.is_admin'), 'messages'=>fn($q)=>$q->reorder()->latest('id')->limit(1)])
             ->withCount(['messages as unread_count'=>fn($q)=>$q->where('sender_id','!=',$user->id)->whereNull('read_at')])
             ->orderByDesc('last_message_at')
             ->orderByDesc('updated_at')

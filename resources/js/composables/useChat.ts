@@ -65,19 +65,28 @@ export function useChat() {
   function sortConversations() {
     conversations.value = [...conversations.value].sort((a:any,b:any)=> new Date(b.last_message_at||b.updated_at||0).getTime() - new Date(a.last_message_at||a.updated_at||0).getTime())
   }
+  function bumpConversation(msg: any) {
+    const idx = conversations.value.findIndex((c) => c.id === msg.conversation_id)
+    if (idx === -1) { loadConversations(); return }
+    const conv: any = conversations.value[idx]
+    conv.last_message = msg
+    conv.last_message_at = msg.created_at
+    conversations.value = [conv, ...conversations.value.filter((c) => c.id !== msg.conversation_id)]
+  }
   function syncConversationPreview(msg: any) {
-    const conv = conversations.value.find((c) => c.id === msg.conversation_id)
-    if (conv) { (conv as any).last_message = msg; (conv as any).last_message_at = msg.created_at; sortConversations() }
-    else loadConversations()
+    bumpConversation(msg)
   }
   async function loadConversations() {
+    const w = window as any
     if (loadConversationsInflight) return loadConversationsInflight.then(d => { conversations.value = d; return d })
+    if (w.__conversationsInflight) return w.__conversationsInflight.then((d: Conversation[]) => { conversations.value = d; return d })
     loadConversationsInflight = chatApi.conversations() as Promise<Conversation[]>
+    w.__conversationsInflight = loadConversationsInflight
     try {
       const data = await loadConversationsInflight
       conversations.value = data
       return data
-    } finally { loadConversationsInflight = null }
+    } finally { loadConversationsInflight = null; w.__conversationsInflight = null }
   }
 
   async function refresh() {
@@ -98,8 +107,15 @@ export function useChat() {
   async function openConversation(id: number) {
     if (selectedId.value === id && activeConv.value?.id === id && !loading.value) return
     selectedId.value = id
-    activeConv.value = null
-    messages.value = []
+    const cached = conversations.value.find((c) => c.id === id) as any
+    if (cached?.other) {
+      activeConv.value = { id, other: cached.other, participants: [] } as any
+      if (cached.last_message) messages.value = [cached.last_message as any]
+      else messages.value = []
+    } else {
+      activeConv.value = null
+      messages.value = []
+    }
     typingUsers.value = new Set()
     typingExpire.forEach((t) => clearTimeout(t))
     typingExpire.clear()
@@ -115,7 +131,7 @@ export function useChat() {
       const conv = conversations.value.find((c) => c.id === id)
       if (conv) {
         conv.unread_count = 0
-        if (last) { (conv as any).last_message = last; (conv as any).last_message_at = last.created_at; sortConversations() }
+        if (last) bumpConversation(last)
       } else if (last) {
         loadConversations()
       }
@@ -268,7 +284,7 @@ export function useChat() {
       scrollToBottom()
     } else {
       const conv = conversations.value.find((c) => c.id === msg.conversation_id)
-      if (conv) { conv.unread_count = (conv.unread_count || 0) + 1; (conv as any).last_message = msg; (conv as any).last_message_at = msg.created_at; sortConversations() }
+      if (conv) { conv.unread_count = (conv.unread_count || 0) + 1; bumpConversation(msg) }
       else loadConversations()
       if (msg.sender_id !== getUid()) {
         chatApi.markDelivered(msg.conversation_id).catch(()=>{})
@@ -304,23 +320,23 @@ export function useChat() {
     }
   }
 
+  let globalCh: any = null
   let globalSubscribed = false
   function subscribeGlobal() {
-    if (globalSubscribed) return
+    if (globalSubscribed && globalCh) return
     try {
       const echo = getEcho()
       if (!echo) return
       const uid = getUid() || document.querySelector('meta[name="user-id"]')?.getAttribute('content')
       if (uid) {
         globalSubscribed = true
-        const ch = echo.private(`user.${uid}`)
-        ch.listen('.message.sent', (e: any) => handleIncoming(e.message))
-        ch.listen('.message.updated', (e: any) => handleUpdated(e.message))
-        ch.listen('.message.deleted', (e: any) => handleDeleted(e))
-        ch.listen('.friendship.updated', () => loadConversations())
-        ch.listen('.message.delivered', (e: any) => handleDelivered(e))
-        ch.listen('.message.read', (e: any) => handleRead(e))
-        echoChannels.push(ch)
+        globalCh = echo.private(`user.${uid}`)
+        globalCh.listen('.message.sent', (e: any) => handleIncoming(e.message))
+        globalCh.listen('.message.updated', (e: any) => handleUpdated(e.message))
+        globalCh.listen('.message.deleted', (e: any) => handleDeleted(e))
+        globalCh.listen('.friendship.updated', () => loadConversations())
+        globalCh.listen('.message.delivered', (e: any) => handleDelivered(e))
+        globalCh.listen('.message.read', (e: any) => handleRead(e))
       }
     } catch { globalSubscribed = false }
   }
@@ -437,7 +453,10 @@ export function useChat() {
     window.removeEventListener('focus', loadConversations)
     try {
       const echo = getEcho()
-      echoChannels.forEach((c: any) => { try { echo.leave(c.name ?? `chat.${selectedId.value}`) } catch {} })
+      if (activeChatChannel && activeChatId !== null) try { echo.leave(`chat.${activeChatId}`) } catch {}
+      echoChannels = echoChannels.filter((c:any)=> c!==activeChatChannel)
+      activeChatChannel = null
+      activeChatId = null
     } catch {}
   })
 

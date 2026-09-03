@@ -1,4 +1,4 @@
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, nextTick, watch, onMounted, onBeforeUnmount } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import { useToast } from 'primevue/usetoast'
 import { useChat } from '@/composables/useChat'
@@ -102,6 +102,7 @@ export function useChatPage(initialConversationId?: number) {
       tab.value = 'chats'
       chat.searchQuery.value = ''
       chat.searchResults.value = []
+      focusChatInput()
     } catch (e: any) {
       const msg = e?.response?.data?.message || e?.message || 'Ошибка создания чата'
       if (e?.response?.status === 403 && msg.includes('заблокировал')) notifyBlockedBy(msg)
@@ -160,16 +161,66 @@ export function useChatPage(initialConversationId?: number) {
 
   function closeSheet() { sheet.value = null }
 
+  watch(() => chat.selectedId.value, (id) => { if (id) focusChatInput() })
+
   function backToList() { nav.backToList(emoji.close, chat.cancelEdit, showChatMenu) }
 
+  function onKeydown(e: KeyboardEvent) {
+    if (e.key === 'Escape' && chat.selectedId.value) {
+      if (emoji.open.value) { emoji.close(); return }
+      if (chat.editingId.value !== null) { chat.cancelEdit(); return }
+      if (showChatMenu.value) { showChatMenu.value = false; return }
+      backToList()
+    }
+  }
+  onMounted(() => window.addEventListener('keydown', onKeydown))
+  onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
+
+  function focusChatInput() {
+    nextTick(() => {
+      const el: any = inputRef.value
+      if (!el) return
+      try {
+        if (el.$el) {
+          const inner = el.$el.querySelector?.('input')
+          if (inner) { inner.focus(); return }
+        }
+        if (typeof el.focus === 'function') el.focus()
+      } catch {}
+    })
+  }
+
+  function resolveInitialId(): number | null {
+    if (initialConversationId) return Number(initialConversationId)
+    try {
+      const q = new URLSearchParams(window.location.search).get('c')
+      if (q && Number(q)) return Number(q)
+    } catch {}
+    return null
+  }
+
+  function resolveInitialTab() {
+    try {
+      const t = new URLSearchParams(window.location.search).get('tab')
+      if (t && ['chats', 'friends', 'requests', 'blocked'].includes(t)) tab.value = t as any
+    } catch {}
+  }
+
   async function init() {
+    resolveInitialTab()
     badgeSync.init()
     await Promise.all([friendsApi.load(), blocksApi.load()])
     badgeSync.setPending(friendsApi.pendingIn.value.length)
     await chat.loadConversations()
     badgeSync.setUnread(chat.unreadTotal.value)
     try { const me = await chatApi.me(); privacy.value.message_privacy = me.message_privacy; privacy.value.allow_random_messages = me.allow_random_messages } catch {}
-    if (initialConversationId) chat.openConversation(initialConversationId)
+    const targetId = resolveInitialId()
+    if (targetId) {
+      await chat.openConversation(targetId)
+      tab.value = 'chats'
+      focusChatInput()
+      chat.loadConversations()
+    }
   }
 
   return {

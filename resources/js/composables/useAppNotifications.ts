@@ -74,7 +74,7 @@ function handleMessage(e: any) {
     title: name,
     body: body || 'Новое сообщение',
     avatar: avatarSrcFor(sender),
-    link: `/chat?c=${msg.conversation_id}`,
+    link: `/chat/${msg.conversation_id}`,
     createdAt: Date.now(),
   })
 }

@@ -83,13 +83,12 @@ onMounted(init)
         <div class="p-3 border-b dark:border-zinc-800 shrink-0 w-full max-w-full min-w-0">
         <div class="flex items-center gap-2 mb-3">
           <h2 class="text-[15px] font-bold dark:text-white tracking-tight">Connect</h2>
-          <Badge v-if="unreadTotal" :value="String(unreadTotal)" severity="danger" />
           <Button @click="showPeopleSearch = true" icon="pi pi-users" rounded severity="secondary" outlined class="!w-8 !h-8 !min-w-8 !max-w-8 !min-h-8 !max-h-8 !p-0 !rounded-full aspect-square shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" aria-label="Поиск людей" v-tooltip.top="'Поиск людей'" />
           <Button @click="refresh" :loading="refreshing" icon="pi pi-refresh" rounded severity="secondary" text class="!w-8 !h-8 !min-w-8 !max-w-8 !min-h-8 !max-h-8 !p-0 !rounded-full aspect-square shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" aria-label="Обновить" />
         </div>
         <Tabs :value="tab" @update:value="(v:any)=>tab=v" class="w-full block">
           <TabList class="!bg-stone-100 dark:!bg-zinc-800 !rounded-full !p-1 !border-0 !flex-nowrap !overflow-x-auto scrollbar-none snap-x">
-            <Tab value="chats" class="!rounded-full !text-xs !py-2 !px-3 !whitespace-nowrap snap-start shrink-0">Чаты <Badge v-if="unreadTotal" :value="String(unreadTotal)" severity="danger" class="ml-1 !text-[10px]" /></Tab>
+            <Tab value="chats" class="!rounded-full !text-xs !py-2 !px-3 !whitespace-nowrap snap-start shrink-0">Чаты <Badge v-if="unreadTotal" :value="unreadTotal>9?'9+':String(unreadTotal)" severity="danger" class="ml-1 !text-[10px]" /></Tab>
             <Tab value="friends" class="!rounded-full !text-xs !py-2 !px-3 !whitespace-nowrap snap-start shrink-0">Друзья</Tab>
             <Tab value="requests" class="!rounded-full !text-xs !py-2 !px-3 !whitespace-nowrap snap-start shrink-0">Заявки <Badge v-if="pendingIn.length" :value="String(pendingIn.length)" severity="warn" class="ml-1 !text-[10px]" /></Tab>
             <Tab value="blocked" class="!rounded-full !text-xs !py-2 !px-3 !whitespace-nowrap snap-start shrink-0">Блок <Badge v-if="blocked.length" :value="String(blocked.length)" severity="secondary" class="ml-1 !text-[10px]" /></Tab>
@@ -153,7 +152,7 @@ onMounted(init)
                 <div class="flex justify-between items-baseline gap-2"><span class="text-[15px] lg:text-sm font-semibold dark:text-white truncate">{{ c.other?.name||'Чат' }}</span><span v-if="c.last_message_at" class="text-[11px] text-stone-400 shrink-0">{{ formatTime(c.last_message_at) }}</span></div>
                 <div class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5" :class="isOnline(c.other?.id) ? 'text-emerald-600' : 'text-red-500'">{{ isOnline(c.other?.id) ? 'в сети' : 'офлайн' }}<span class="text-stone-300">·</span><span class="truncate text-stone-500">{{ c.last_message?.body||'Нет сообщений' }}</span><span v-if="(c.last_message as any)?.is_edited" class="text-[10px] text-stone-400">(изм.)</span></div>
               </div>
-              <span v-if="c.unread_count" class="bg-violet-600 text-white text-xs font-bold min-w-[22px] h-[22px] grid place-items-center px-1.5 rounded-full shrink-0">{{ c.unread_count>99?'99+':c.unread_count }}</span>
+              <span v-if="c.unread_count" class="bg-violet-600 text-white text-xs font-bold min-w-[22px] h-[22px] grid place-items-center px-1.5 rounded-full shrink-0">{{ c.unread_count>9?'9+':c.unread_count }}</span>
             </button>
             <div class="flex items-center gap-1 pr-2 shrink-0">
               <button @click.stop="askDeleteChat(c.id)" title="Удалить чат" class="w-7 h-7 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-red-50 dark:hover:bg-red-950/30 text-stone-500 hover:text-red-600 transition">
@@ -277,6 +276,9 @@ onMounted(init)
                 </button>
               </div>
             </div>
+            <button @click="backToList" title="Закрыть чат" aria-label="Закрыть чат" class="w-9 h-9 lg:w-8 lg:h-8 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-stone-200 dark:hover:bg-zinc-700 active:scale-95 transition shrink-0">
+              <i class="pi pi-times text-sm text-stone-600 dark:text-zinc-300"></i>
+            </button>
           </div>
         </div>
         <div v-if="showChatMenu" @click="showChatMenu=false" class="fixed inset-0 z-5 lg:hidden"></div>
@@ -308,7 +310,7 @@ onMounted(init)
                   (m as any).failed ? '!bg-red-500' : '',
                   (m as any).justSent ? 'ring-2 ring-violet-300' : ''
                 ]">
-                  <div class="whitespace-pre-wrap break-words flex items-end gap-1.5">{{ m.body }}<span v-if="(m as any).pending" class="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin shrink-0 mb-0.5"></span><span v-if="(m as any).failed" class="text-[11px]">✕</span></div>
+                  <div class="whitespace-pre-wrap break-words">{{ m.body }}</div>
                   <div :class="isOwnMessage(m) ? 'text-violet-100' : 'text-stone-400'" class="text-[11px] lg:text-[10px] mt-1 text-right flex items-center justify-end gap-1.5">
                     <span>{{ formatTime(m.created_at) }}</span>
                     <span v-if="(m as any).is_edited" class="opacity-70">· изм.</span>

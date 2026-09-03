@@ -54,7 +54,6 @@ function toggleMenu(e: Event) { menu.value.toggle(e) }
               <Link :href="route('map')" :class="['px-4 py-1.5 rounded-full text-[13px] font-semibold transition', route().current('map') ? 'bg-white dark:bg-zinc-700 shadow-soft text-ink-900 dark:text-white border border-stone-200' : 'text-stone-500 dark:text-zinc-400 hover:text-ink-900']">Карта</Link>
               <Link :href="route('chat')" :class="['px-4 py-1.5 rounded-full text-[13px] font-semibold transition relative', route().current('chat') ? 'bg-white dark:bg-zinc-700 shadow-soft text-ink-900 dark:text-white border border-stone-200' : 'text-stone-500 dark:text-zinc-400 hover:text-ink-900']">
                 Чат
-                <Badge v-if="badge.total" :value="badge.total > 99 ? '99+' : String(badge.total)" severity="danger" class="!text-[10px] ml-1" />
               </Link>
               <Link :href="route('faq')" :class="['px-4 py-1.5 rounded-full text-[13px] font-semibold transition', route().current('faq') ? 'bg-white dark:bg-zinc-700 shadow-soft text-ink-900 dark:text-white border border-stone-200' : 'text-stone-500 dark:text-zinc-400 hover:text-ink-900']">FAQ</Link>
             </div>
@@ -64,7 +63,7 @@ function toggleMenu(e: Event) { menu.value.toggle(e) }
           <div class="flex items-center gap-2 h-[64px] pr-4 sm:pr-6">
             <button @click="bell.open()" class="relative w-10 h-10 grid place-items-center rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow-soft hover:bg-stone-50 dark:hover:bg-zinc-700 transition">
               <i class="pi pi-bell text-stone-600 dark:text-zinc-300"></i>
-              <span v-if="badge.total" class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 grid place-items-center bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white dark:border-zinc-900">{{ badge.total>99?'99+':badge.total }}</span>
+              <span v-if="badge.total" class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 grid place-items-center bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white dark:border-zinc-900">{{ badge.total>9?'9+':badge.total }}</span>
               <span v-if="badge.total" class="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full bg-red-500 animate-ping opacity-30"></span>
             </button>
             <Link href="/map" class="hidden sm:inline-flex items-center gap-2 bg-ink-900 dark:bg-white dark:text-ink-900 text-white rounded-full px-5 py-2 text-sm font-semibold hover:bg-ink-800 transition">+ Создать пин</Link>
@@ -97,7 +96,7 @@ function toggleMenu(e: Event) { menu.value.toggle(e) }
         <Link :href="dashboardHref" class="flex items-center justify-between p-3 rounded-xl hover:bg-stone-50 dark:hover:bg-zinc-800 font-medium text-ink-900 dark:text-white" @click="showDrawer=false">Профиль</Link>
         <Link :href="settingsHref" class="flex p-3 rounded-xl hover:bg-stone-50 dark:hover:bg-zinc-800 font-medium text-ink-900 dark:text-white" @click="showDrawer=false">Настройки</Link>
         <Link :href="route('map')" class="flex p-3 rounded-xl hover:bg-stone-50 dark:hover:bg-zinc-800 font-medium text-ink-900 dark:text-white" @click="showDrawer=false">Карта</Link>
-        <Link :href="route('chat')" class="flex items-center justify-between p-3 rounded-xl hover:bg-stone-50 dark:hover:bg-zinc-800 font-medium text-ink-900 dark:text-white" @click="showDrawer=false">Чат <Badge v-if="badge.total" :value="badge.total>99?'99+':String(badge.total)" severity="danger" /></Link>
+        <Link :href="route('chat')" class="flex items-center justify-between p-3 rounded-xl hover:bg-stone-50 dark:hover:bg-zinc-800 font-medium text-ink-900 dark:text-white" @click="showDrawer=false">Чат</Link>
         <Link :href="route('faq')" class="flex p-3 rounded-xl hover:bg-stone-50 dark:hover:bg-zinc-800 font-medium text-ink-900 dark:text-white" @click="showDrawer=false">FAQ</Link>
         <Link href="/map" class="flex bg-ink-900 dark:bg-white dark:text-ink-900 text-white rounded-full px-4 py-2.5 text-sm font-semibold justify-center mt-2" @click="showDrawer=false">+ Создать пин</Link>
       </div>
