@@ -13,8 +13,14 @@ import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import Dialog from 'primevue/dialog'
-import Select from 'primevue/select'
+import Tag from 'primevue/tag'
+import Card from 'primevue/card'
+import Badge from 'primevue/badge'
+import Chip from 'primevue/chip'
+import SelectButton from 'primevue/selectbutton'
+import Skeleton from 'primevue/skeleton'
 import { watch } from 'vue'
+import { avatarSrcFor } from '@/composables/useAvatar'
 
 const {
   store, categories, selectedCategory, pinDetails, pinCreate, pinEdit, mapApi,
@@ -50,19 +56,22 @@ onUnmounted(destroy)
       </div>
 
       <div class="absolute top-3 left-3 right-3 sm:top-4 sm:left-4 sm:right-auto flex flex-col gap-2.5 z-10 pointer-events-none">
-        <div class="pointer-events-auto bg-white/95 dark:bg-zinc-900/95 backdrop-blur border border-stone-200 dark:border-zinc-700 rounded-2xl sm:rounded-full p-1.5 sm:pl-2 sm:pr-2 shadow-soft flex items-center gap-1.5 overflow-x-auto scrollbar-none max-w-full">
-          <button @click="showLiveInfo=true" class="shrink-0 bg-ink-900 dark:bg-white dark:text-ink-900 text-white rounded-full px-3 py-1.5 text-xs font-bold flex items-center gap-1.5 hover:opacity-90 transition">
-            <span v-if="store.loading" class="w-3 h-3 border-2 border-white/30 dark:border-zinc-300 border-t-white dark:border-t-ink-900 rounded-full animate-spin"></span>
-            <span v-else class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse"></span>{{ store.pins.length }}
-          </button>
-          <div class="h-5 w-px bg-stone-200 dark:bg-zinc-700 shrink-0 hidden sm:block"></div>
-          <div class="flex items-center gap-1 overflow-x-auto scrollbar-none">
-            <button @click="selectedCategory='all'" :class="['shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition', selectedCategory==='all'?'bg-ink-900 dark:bg-white dark:text-ink-900 text-white border-ink-900 dark:border-white shadow-soft':'bg-white dark:bg-zinc-800 border-stone-200 dark:border-zinc-700 dark:text-zinc-300 hover:border-stone-300 dark:hover:border-zinc-600 hover:bg-stone-50 dark:hover:bg-zinc-700']">Все</button>
-            <button @click="handleMineClick" :class="['shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition inline-flex items-center gap-1', selectedCategory==='mine'?'bg-amber-400 text-stone-900 border-amber-400 shadow-soft':'bg-white dark:bg-zinc-800 border-amber-200 dark:border-amber-800 dark:text-zinc-300 hover:bg-amber-50 dark:hover:bg-zinc-800']">📍 Мои</button>
-            <button v-for="c in categories" :key="c.v" @click="selectedCategory=c.v" :class="['shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition hidden sm:inline-flex items-center gap-1', selectedCategory===c.v?'bg-ink-900 dark:bg-white dark:text-ink-900 text-white border-ink-900 dark:border-white shadow-soft':'bg-white dark:bg-zinc-800 border-stone-200 dark:border-zinc-700 dark:text-zinc-300 hover:border-stone-300 dark:hover:border-zinc-600 hover:bg-stone-50 dark:hover:bg-zinc-700']">{{ c.i }} <span>{{ c.l }}</span></button>
-            <button v-for="c in categories.slice(0,4)" :key="'m'+c.v" @click="selectedCategory=c.v" :class="['shrink-0 w-9 h-9 rounded-full text-sm grid place-items-center border sm:hidden', selectedCategory===c.v?'bg-ink-900 dark:bg-white dark:text-ink-900 text-white border-ink-900 dark:border-white':'bg-white dark:bg-zinc-800 border-stone-200 dark:border-zinc-700 dark:text-zinc-300']" :title="c.l">{{ c.i }}</button>
-          </div>
-        </div>
+        <Card class="pointer-events-auto !rounded-2xl sm:!rounded-full !shadow-soft !border-stone-200 dark:!border-zinc-700 !bg-white/95 dark:!bg-zinc-900/95 backdrop-blur !p-1.5 sm:!pl-2 sm:!pr-2 w-full max-w-full overflow-hidden" :pt="{ body: { class: '!p-0 w-full' }, content: { class: '!p-0 w-full' } }">
+          <template #content>
+            <div class="flex items-center gap-1.5 overflow-x-auto scrollbar-none max-w-full snap-x">
+              <Tag @click="showLiveInfo=true" :value="String(store.pins.length)" severity="contrast" rounded class="shrink-0 !bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white cursor-pointer hover:opacity-90 snap-start">
+                <template #icon><span v-if="store.loading" class="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></span><span v-else class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse inline-block"></span></template>
+              </Tag>
+              <div class="h-5 w-px bg-stone-200 dark:bg-zinc-700 shrink-0 hidden sm:block"></div>
+              <SelectButton v-model="selectedCategory" :options="[{label:'Все',value:'all'}, {label:'📍 Мои',value:'mine'}, ...categories.map(c=>({label:`${c.i} ${c.l}`, value:c.v}))]" optionLabel="label" optionValue="value" class="hidden sm:flex shrink-0" :allowEmpty="false" :pt="{ button: { class: '!rounded-full !text-xs !py-1.5 !px-3.5 !whitespace-nowrap' } }" />
+              <div class="flex sm:hidden items-center gap-1.5 overflow-x-auto scrollbar-none snap-x flex-1 min-w-0">
+                <Button label="Все" size="small" rounded :severity="selectedCategory==='all' ? 'contrast' : 'secondary'" :outlined="selectedCategory!=='all'" @click="selectedCategory='all'" class="shrink-0 !text-xs snap-start" />
+                <Button label="📍 Мои" size="small" rounded :severity="selectedCategory==='mine' ? 'warn' : 'secondary'" :outlined="selectedCategory!=='mine'" @click="handleMineClick" class="shrink-0 !text-xs snap-start" />
+                <Chip v-for="c in categories.slice(0,4)" :key="c.v" :label="c.i" @click="selectedCategory=c.v" :class="selectedCategory===c.v ? '!bg-ink-900 !text-white !border-ink-900' : '!bg-white dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 border'" class="shrink-0 cursor-pointer !rounded-full snap-start !text-xs !py-1" />
+              </div>
+            </div>
+          </template>
+        </Card>
         <Transition name="fade">
           <div v-if="myStreet || loadingStreet" class="pointer-events-auto bg-white/95 dark:bg-zinc-900/95 backdrop-blur border border-stone-200 dark:border-zinc-700 rounded-full pl-1 pr-3 py-1 shadow-soft flex items-center gap-2 w-fit max-w-[min(92vw,380px)]">
             <span class="w-7 h-7 rounded-full bg-ink-900 dark:bg-white dark:text-ink-900 text-white dark:text-ink-900 grid place-items-center shrink-0">
@@ -182,10 +191,8 @@ onUnmounted(destroy)
             <p v-if="!pinEdit.editing.value" class="text-sm text-stone-600 mt-2 leading-relaxed">{{ selectedPin.body }}</p>
             <div v-if="!pinEdit.editing.value" class="flex flex-wrap gap-1.5 mt-3 items-center">
               <span class="text-xs bg-stone-100 border border-stone-200 rounded-full px-2.5 py-1 font-medium">{{ selectedPin.category }}</span>
-              <Link v-if="selectedPin.user && !selectedPin.is_anonymous" :href="`/users/${selectedPin.user.id}`" class="text-xs bg-white border border-stone-200 rounded-full pl-1 pr-2.5 py-1 flex items-center gap-1.5 hover:border-ink-900">
-                <img v-if="selectedPin.user?.avatar_path" :src="`/storage/${selectedPin.user.avatar_path}`" class="w-5 h-5 rounded-full object-cover border border-stone-200" />
-                <span v-else class="w-5 h-5 rounded-full bg-ink-900 text-white grid place-items-center text-[10px] font-bold">{{ selectedPin.user.name[0].toUpperCase() }}</span>
-                {{ selectedPin.user?.name }} · {{ selectedPin.user?.level||'novice' }}
+              <Link v-if="selectedPin.user && !selectedPin.is_anonymous" :href="`/users/${selectedPin.user.id}`" class="hover:opacity-80">
+                <Chip :label="`${selectedPin.user?.name} · ${selectedPin.user?.level||'novice'}`" :image="avatarSrcFor(selectedPin.user) || undefined" class="!bg-white !border !border-stone-200 !rounded-full !pl-1 !pr-2.5 !py-1 !text-xs" />
               </Link>
               <span v-else class="text-xs bg-stone-100 border border-stone-200 rounded-full px-2.5 py-1">{{ selectedPin.is_anonymous ? 'аноним' : 'аноним' }} · {{ selectedPin.user?.level||'novice' }}</span>
               <span class="text-xs bg-amber-50 border border-amber-200 rounded-full px-2.5 py-1">до {{ formatTime(selectedPin.expires_at) }}</span>
@@ -218,9 +225,9 @@ onUnmounted(destroy)
               <button @click="reportPin(selectedPin)" :disabled="reportMutation?.asyncStatus?.value==='loading'" class="w-10 h-10 bg-white border border-stone-200 rounded-full grid place-items-center hover:bg-red-50 hover:text-red-600 disabled:opacity-50">⚠</button>
             </div>
             <div class="grid grid-cols-3 gap-2 mt-4">
-              <button @click="boost(selectedPin,'top')" :disabled="boostMutation?.asyncStatus?.value==='loading'" class="disabled:opacity-50 group relative overflow-hidden bg-gradient-to-br from-amber-400 to-orange-500 text-stone-900 rounded-2xl py-3 px-1 flex flex-col items-center justify-center gap-0.5 shadow-[0_4px_14px_rgba(245,158,11,0.35)]">👑 <span class="text-xs font-black">Топ $0.99</span></button>
-              <button @click="boost(selectedPin,'glow')" :disabled="boostMutation?.asyncStatus?.value==='loading'" class="disabled:opacity-50 group relative overflow-hidden bg-gradient-to-br from-violet-600 to-indigo-600 text-white rounded-2xl py-3 px-1 flex flex-col items-center justify-center gap-0.5 shadow-[0_4px_14px_rgba(124,58,237,0.35)]">✨ <span class="text-xs font-black">Подсветка $1.99</span></button>
-              <button @click="boost(selectedPin,'extend')" :disabled="boostMutation?.asyncStatus?.value==='loading'" class="disabled:opacity-50 group relative overflow-hidden bg-gradient-to-br from-emerald-500 to-teal-600 text-white rounded-2xl py-3 px-1 flex flex-col items-center justify-center gap-0.5">⏳ <span class="text-xs font-black">+24ч $2.99</span></button>
+              <Button @click="boost(selectedPin,'top')" :loading="boostMutation?.asyncStatus?.value==='loading'" class="!rounded-2xl !bg-gradient-to-br !from-amber-400 !to-orange-500 !border-0 !text-stone-900 !py-3" label="👑 Топ $0.99" size="small" />
+              <Button @click="boost(selectedPin,'glow')" :loading="boostMutation?.asyncStatus?.value==='loading'" class="!rounded-2xl !bg-gradient-to-br !from-violet-600 !to-indigo-600 !border-0 !py-3" label="✨ Подсветка $1.99" size="small" />
+              <Button @click="boost(selectedPin,'extend')" :loading="boostMutation?.asyncStatus?.value==='loading'" class="!rounded-2xl !bg-gradient-to-br !from-emerald-500 !to-teal-600 !border-0 !py-3" label="⏳ +24ч $2.99" size="small" />
             </div>
           </div>
           <div class="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-thin bg-stone-50/40">

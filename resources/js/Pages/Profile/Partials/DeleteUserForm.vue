@@ -1,44 +1,40 @@
 <script setup lang="ts">
-import DangerButton from '@/Components/DangerButton.vue'
-import InputError from '@/Components/InputError.vue'
-import Modal from '@/Components/Modal.vue'
-import SecondaryButton from '@/Components/SecondaryButton.vue'
-import { useForm } from '@inertiajs/vue3'
 import { nextTick, ref } from 'vue'
-
+import { useForm } from '@inertiajs/vue3'
+import Button from 'primevue/button'
+import Dialog from 'primevue/dialog'
+import InputText from 'primevue/inputtext'
+import Message from 'primevue/message'
 const confirming = ref(false)
-const passwordInput = ref<HTMLInputElement | null>(null)
+const passwordInput = ref<any>(null)
 const show = ref(false)
 const form = useForm({ password: '' })
-
-const confirm = () => { confirming.value = true; nextTick(() => passwordInput.value?.focus()) }
-const del = () => form.delete(route('profile.destroy'), { preserveScroll: true, onSuccess: () => close(), onError: () => passwordInput.value?.focus(), onFinish: () => form.reset() })
+const confirm = () => { confirming.value = true; nextTick(() => passwordInput.value?.$el?.focus?.()) }
+const del = () => form.delete(route('profile.destroy'), { preserveScroll: true, onSuccess: () => close(), onError: () => passwordInput.value?.$el?.focus?.(), onFinish: () => form.reset() })
 const close = () => { confirming.value = false; form.clearErrors(); form.reset() }
 </script>
-
 <template>
   <section>
     <header>
       <h2 class="font-bold text-red-600">Удаление аккаунта</h2>
       <p class="text-sm text-zinc-500 mt-1">Аккаунт и все пины/комменты будут удалены безвозвратно. Сохрани нужное заранее.</p>
     </header>
-    <DangerButton @click="confirm" class="!rounded-full mt-4">Удалить аккаунт</DangerButton>
-    <Modal :show="confirming" @close="close">
-      <div class="p-6">
-        <h2 class="font-bold">Точно удалить?</h2>
-        <p class="text-sm text-zinc-600 mt-1">Введи пароль для подтверждения.</p>
-        <div class="mt-4">
-          <div class="relative w-3/4">
-            <input id="password" ref="passwordInput" v-model="form.password" :type="show ? 'text' : 'password'" placeholder="Пароль" @keyup.enter="del" class="w-full border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-ink-900 dark:text-white rounded-xl px-3 py-2.5 pr-11 text-sm placeholder:text-stone-400 focus:outline-none focus:border-stone-300 dark:focus:border-zinc-600"/>
-            <button type="button" @click="show=!show" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-stone-100 grid place-items-center text-stone-500 text-sm" tabindex="-1">{{ show?'🙈':'👁' }}</button>
-          </div>
-          <InputError :message="form.errors.password" class="mt-1"/>
+    <Button @click="confirm" label="Удалить аккаунт" severity="danger" rounded class="mt-4 !rounded-full" />
+    <Dialog :visible="confirming" @update:visible="(v:boolean)=>{ if(!v) close() }" modal :closable="true" :draggable="false" header="Точно удалить?" :style="{ width:'420px', maxWidth:'calc(100vw - 2rem)' }" :pt="{ root:{ class:'!rounded-3xl' } }">
+      <p class="text-sm text-zinc-600 dark:text-zinc-300">Введи пароль для подтверждения.</p>
+      <div class="mt-4">
+        <div class="relative w-full">
+          <InputText ref="passwordInput" v-model="form.password" :type="show ? 'text' : 'password'" placeholder="Пароль" @keyup.enter="del" class="w-full !rounded-2xl !border-stone-200 pr-11" :invalid="!!form.errors.password" />
+          <Button type="button" @click="show=!show" text rounded class="!absolute !right-1.5 !top-1/2 !-translate-y-1/2 !w-8 !h-8 !p-0" :icon="show ? 'pi pi-eye-slash' : 'pi pi-eye'" tabindex="-1" />
         </div>
-        <div class="mt-6 flex justify-end gap-2">
-          <SecondaryButton @click="close" class="!rounded-full">Отмена</SecondaryButton>
-          <DangerButton @click="del" :disabled="form.processing" class="!rounded-full">Удалить</DangerButton>
-        </div>
+        <Message v-if="form.errors.password" severity="error" :closable="false" class="mt-1 !rounded-xl !py-1 !text-xs">{{ form.errors.password }}</Message>
       </div>
-    </Modal>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <Button @click="close" label="Отмена" severity="secondary" outlined rounded />
+          <Button @click="del" :loading="form.processing" label="Удалить" severity="danger" rounded />
+        </div>
+      </template>
+    </Dialog>
   </section>
 </template>

@@ -5,19 +5,21 @@ import GuestLayout from '@/Layouts/GuestLayout.vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { usePage } from '@inertiajs/vue3'
 import { useSeo } from '@/composables/useSeo'
+import Card from 'primevue/card'
+import Button from 'primevue/button'
+import Accordion from 'primevue/accordion'
+import AccordionPanel from 'primevue/accordionpanel'
+import AccordionHeader from 'primevue/accordionheader'
+import AccordionContent from 'primevue/accordioncontent'
 const seo = useSeo({
   title: 'FAQ — Как устроен UPin | Вопросы и ответы',
   description: 'Ответы про UPin: что такое пины, приватность 200 м, анонимность, тарифы Free/Pro/Business, радиус 1–5 км и как пользоваться живой картой района.',
   keywords: ['UPin FAQ','что такое UPin','пины','приватность','тарифы'],
 })
-
 const page = usePage()
 const isAuth = computed(() => !!(page.props.auth as any)?.user)
 const Layout = computed(() => isAuth.value ? AuthenticatedLayout : GuestLayout)
-
 const open = ref<string | null>('what')
-function toggle(id: string){ open.value = open.value===id ? null : id }
-
 const sections = [
   { id:'what', title:'Что такое UPin?', icon:'◉', q:'Зачем нужен UPin?', a:`UPin — это живая карта твоего района. Здесь соседи делятся тем, что происходит прямо сейчас рядом: просят о помощи, отдают вещи, предупреждают, зовут на встречу. Никакой общей ленты на весь город — только то, что в паре минут от тебя.` },
   { id:'pins', title:'Пины', icon:'📍', q:'Что такое пин?', a:`Пин — короткая заметка на карте. Заголовок, пара строк описания и точка. Категории простые: Вопрос, Объявление, Предупреждение, Событие, Отдам, Помощь. Выбрал категорию, поставил точку — и тебя уже видят рядом.` },
@@ -45,36 +47,43 @@ const sections = [
     <div class="min-h-[calc(100vh-64px)] bg-surface dark:bg-[#090E1A]">
       <div class="max-w-[900px] mx-auto px-4 sm:px-6 py-8">
         <div class="text-center">
-          <div class="inline-flex items-center gap-2 bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-700 rounded-full px-3 py-1 text-xs font-semibold shadow-soft"><span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> FAQ · просто о сложном</div>
+          <Card class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-700 !rounded-full !shadow-soft !inline-flex">
+            <template #content>
+              <div class="flex items-center gap-2 px-1 py-0 text-xs font-semibold"><span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> FAQ · просто о сложном</div>
+            </template>
+          </Card>
           <h1 class="mt-4 text-[32px] sm:text-[42px] font-black tracking-[-0.04em] leading-none dark:text-white">Как устроен <span class="bg-gradient-to-r from-brand-500 to-accent-teal bg-clip-text text-transparent">UPin</span></h1>
           <p class="mt-3 text-stone-600 dark:text-zinc-400 max-w-[640px] mx-auto">Коротко и по-человечески: что такое пины, как работает приватность, зачем тарифы и как не пропустить важное рядом. Не нашёл ответа — напиши нам пин «Вопрос» на карте.</p>
           <div class="mt-5 flex flex-wrap justify-center gap-2">
-            <Link href="/map" class="bg-ink-900 dark:bg-white dark:text-ink-900 text-white px-6 py-2.5 rounded-full text-sm font-semibold">Открыть карту</Link>
-            <a href="#faq" class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-700 px-6 py-2.5 rounded-full text-sm font-semibold">Читать ниже</a>
+            <Link href="/map"><Button label="Открыть карту" class="!bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white !px-6 !py-2.5 !rounded-full !text-sm !font-semibold !border-0" /></Link>
+            <a href="#faq"><Button label="Читать ниже" severity="secondary" outlined class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-700 !px-6 !py-2.5 !rounded-full !text-sm !font-semibold !text-ink-900 dark:!text-white" /></a>
           </div>
         </div>
 
-        <div id="faq" class="mt-8 grid gap-3">
-          <div v-for="s in sections" :key="s.id" class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-[20px] shadow-soft overflow-hidden card-hover">
-            <button @click="toggle(s.id)" class="w-full flex items-center gap-4 p-5 text-left">
-              <span class="w-10 h-10 rounded-xl bg-ink-900 dark:bg-zinc-800 text-white dark:text-white grid place-items-center text-sm card-icon shrink-0">{{ s.icon }}</span>
-              <div class="min-w-0 flex-1">
-                <div class="text-xs font-bold tracking-widest uppercase text-stone-400">{{ s.title }}</div>
-                <div class="text-[15px] font-bold leading-tight dark:text-white">{{ s.q }}</div>
-              </div>
-              <span :class="['w-8 h-8 rounded-full border grid place-items-center shrink-0 transition', open===s.id ? 'bg-ink-900 text-white border-ink-900 rotate-180' : 'bg-stone-50 dark:bg-zinc-800 border-stone-200 dark:border-zinc-700']">⌄</span>
-            </button>
-            <Transition name="faq">
-              <div v-if="open===s.id" class="px-5 pb-5">
-                <div class="bg-stone-50 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl p-4 text-sm leading-relaxed text-stone-700 dark:text-zinc-300 whitespace-pre-wrap">{{ s.a }}</div>
-              </div>
-            </Transition>
-          </div>
+        <div id="faq" class="mt-8">
+          <Accordion v-model:value="open" class="!flex !flex-col !gap-3">
+            <AccordionPanel v-for="s in sections" :key="s.id" :value="s.id" class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[20px] !shadow-soft overflow-hidden card-hover !mb-0">
+              <AccordionHeader class="!p-0 !bg-transparent !border-0">
+                <div class="w-full flex items-center gap-4 p-5 text-left">
+                  <span class="w-10 h-10 rounded-xl bg-ink-900 dark:bg-zinc-800 text-white grid place-items-center text-sm card-icon shrink-0">{{ s.icon }}</span>
+                  <div class="min-w-0 flex-1">
+                    <div class="text-xs font-bold tracking-widest uppercase text-stone-400">{{ s.title }}</div>
+                    <div class="text-[15px] font-bold leading-tight dark:text-white">{{ s.q }}</div>
+                  </div>
+                </div>
+              </AccordionHeader>
+              <AccordionContent class="!p-0 !bg-transparent !border-0">
+                <div class="px-5 pb-5">
+                  <div class="bg-stone-50 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl p-4 text-sm leading-relaxed text-stone-700 dark:text-zinc-300 whitespace-pre-wrap">{{ s.a }}</div>
+                </div>
+              </AccordionContent>
+            </AccordionPanel>
+          </Accordion>
         </div>
 
         <div class="mt-6 bg-ink-900 dark:bg-zinc-900 dark:border dark:border-zinc-800 text-white rounded-[24px] p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div><div class="font-black">Остались вопросы?</div><div class="text-sm text-white/60">Создай пин «Вопрос» — соседи ответят за минуты.</div></div>
-          <Link href="/map" class="bg-white text-ink-900 px-6 py-2.5 rounded-full font-bold">Создать вопрос</Link>
+          <Link href="/map"><Button label="Создать вопрос" class="!bg-white !text-ink-900 !px-6 !py-2.5 !rounded-full !font-bold !border-0" /></Link>
         </div>
 
         <div class="text-center text-xs text-stone-400 mt-6">UPin · Просто. Рядом. Сейчас · <Link href="/" class="underline">На главную</Link></div>
@@ -82,8 +91,3 @@ const sections = [
     </div>
   </component>
 </template>
-
-<style scoped>
-.faq-enter-active,.faq-leave-active{transition:all .22s ease}
-.faq-enter-from,.faq-leave-to{opacity:0; transform:translateY(-6px)}
-</style>

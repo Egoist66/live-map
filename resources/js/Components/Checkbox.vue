@@ -1,34 +1,14 @@
-<script setup>
-import { computed } from 'vue';
-
-const emit = defineEmits(['update:checked']);
-
-const props = defineProps({
-    checked: {
-        type: [Array, Boolean],
-        required: true,
-    },
-    value: {
-        default: null,
-    },
-});
-
-const proxyChecked = computed({
-    get() {
-        return props.checked;
-    },
-
-    set(val) {
-        emit('update:checked', val);
-    },
-});
+<script setup lang="ts">
+import PrimeCheckbox from 'primevue/checkbox'
+import { computed } from 'vue'
+const props = defineProps<{ checked: any; value?: any }>()
+const emit = defineEmits(['update:checked'])
+const model = computed({
+  get: () => props.checked,
+  set: (v: any) => emit('update:checked', v)
+})
+const binary = computed(() => !Array.isArray(props.checked))
 </script>
-
 <template>
-    <input
-        type="checkbox"
-        :value="value"
-        v-model="proxyChecked"
-        class="rounded border-gray-300 text-indigo-600 shadow-sm focus:ring-indigo-500"
-    />
+  <PrimeCheckbox v-model="model" :binary="binary" :value="value" v-bind="$attrs" class="!rounded !border-stone-300" />
 </template>

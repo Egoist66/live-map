@@ -1,14 +1,27 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
+import InputText from 'primevue/inputtext'
+import Select from 'primevue/select'
+import Tabs from 'primevue/tabs'
+import TabList from 'primevue/tablist'
+import Tab from 'primevue/tab'
+import TabPanels from 'primevue/tabpanels'
+import TabPanel from 'primevue/tabpanel'
+import Badge from 'primevue/badge'
+import Avatar from 'primevue/avatar'
+import Card from 'primevue/card'
+import IconField from 'primevue/iconfield'
+import InputIcon from 'primevue/inputicon'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import OnlineDot from '@/Components/OnlineDot.vue'
 import { usePresenceState } from '@/composables/usePresence'
 import { useChatPage } from '@/composables/useChatPage'
 import { useChatViewport } from '@/composables/useChatViewport'
+import { avatarSrcFor } from '@/composables/useAvatar'
 
 const props = defineProps<{ conversationId?: number }>()
 const {
@@ -24,6 +37,28 @@ const { blocked } = blocksApi
 const { open: emojiOpen, toggle: toggleEmoji, EMOJI_GROUPS } = emoji
 const { isOnline } = usePresenceState()
 const { keyboardHeight, isKeyboardOpen } = useChatViewport()
+const showPeopleSearch = ref(false)
+const chatFilter = ref('')
+const filteredConversations = computed(() => {
+  const q = chatFilter.value.trim().toLowerCase()
+  if (!q) return conversations.value
+  return conversations.value.filter((c:any) => (c.other?.name || '').toLowerCase().includes(q))
+})
+const filteredFriends = computed(() => {
+  const q = chatFilter.value.trim().toLowerCase()
+  if (!q) return friends.value
+  return friends.value.filter((f:any) => (f.other?.name || '').toLowerCase().includes(q))
+})
+const filteredPendingIn = computed(() => {
+  const q = chatFilter.value.trim().toLowerCase()
+  if (!q) return pendingIn.value
+  return pendingIn.value.filter((r:any) => (r.requester?.name || '').toLowerCase().includes(q))
+})
+const filteredBlocked = computed(() => {
+  const q = chatFilter.value.trim().toLowerCase()
+  if (!q) return blocked.value
+  return blocked.value.filter((b:any) => (b.blocked?.name || '').toLowerCase().includes(q))
+})
 
 onMounted(init)
 </script>
@@ -31,67 +66,76 @@ onMounted(init)
 <template>
 <AuthenticatedLayout>
 <Toast />
-<div class="mx-auto max-w-[1280px] lg:px-6 lg:py-6 w-full max-w-full min-w-0 overflow-hidden">
-  <div class="flex flex-col lg:flex-row lg:gap-4 h-[calc(100dvh-64px-56px-env(safe-area-inset-bottom))] lg:h-[calc(100dvh-88px)] max-h-[calc(100dvh-64px-56px-env(safe-area-inset-bottom))] lg:max-h-[calc(100dvh-88px)] bg-stone-100 dark:bg-zinc-950 lg:bg-transparent overflow-hidden lg:overflow-visible w-full max-w-full min-w-0" :style="isKeyboardOpen ? { height: `calc(100dvh - 64px - ${keyboardHeight}px)`, maxHeight: `calc(100dvh - 64px - ${keyboardHeight}px)` } : {}">
+  <div class="mx-auto max-w-[1280px] lg:px-6 lg:py-4 w-full max-w-full min-w-0 overflow-hidden">
+  <div class="flex flex-col lg:flex-row lg:gap-4 h-[calc(100dvh-64px-56px-env(safe-area-inset-bottom))] lg:h-[calc(100dvh-64px-24px)] max-h-[calc(100dvh-64px-56px-env(safe-area-inset-bottom))] lg:max-h-[calc(100dvh-64px-24px)] bg-stone-100 dark:bg-zinc-950 lg:bg-transparent overflow-hidden lg:overflow-visible w-full max-w-full min-w-0" :style="isKeyboardOpen ? { height: `calc(100dvh - 64px - ${keyboardHeight}px)`, maxHeight: `calc(100dvh - 64px - ${keyboardHeight}px)` } : {}">
     <div :class="selectedId ? 'hidden lg:flex' : 'flex'" class="w-full lg:w-[360px] lg:min-w-[360px] flex-1 lg:flex-none min-h-0 lg:h-full lg:max-h-full bg-white dark:bg-zinc-900 lg:rounded-2xl border lg:border border-stone-200 dark:border-zinc-800 flex-col overflow-hidden max-w-full">
-      <div class="p-3 border-b dark:border-zinc-800 shrink-0 w-full max-w-full min-w-0">
+        <div class="p-3 border-b dark:border-zinc-800 shrink-0 w-full max-w-full min-w-0">
         <div class="flex items-center gap-2 mb-3">
-          <h2 class="text-[15px] font-bold dark:text-white tracking-tight">Мессенджер</h2>
-          <span v-if="unreadTotal" class="bg-red-500 text-white text-[11px] font-bold px-2 py-0.5 rounded-full">{{ unreadTotal }}</span>
-          <button @click="refresh" :disabled="refreshing" title="Обновить" class="ml-auto w-8 h-8 grid place-items-center rounded-full bg-stone-900 dark:bg-white text-white dark:text-zinc-900 active:scale-95 disabled:opacity-50 transition lg:hidden">
-            <svg :class="['w-4 h-4', refreshing ? 'animate-spin' : '']" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-          </button>
-          <button @click="refresh" :disabled="refreshing" title="Обновить чаты и сообщения" class="hidden lg:flex ml-auto group items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-xs font-semibold shadow-md hover:shadow-lg active:scale-95 disabled:opacity-50 transition-all">
-            <svg :class="['w-3.5 h-3.5 transition-transform duration-500', refreshing ? 'animate-spin' : 'group-hover:rotate-180']" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-            {{ refreshing ? '...' : 'Обновить' }}
-          </button>
+          <h2 class="text-[15px] font-bold dark:text-white tracking-tight">Connect</h2>
+          <Badge v-if="unreadTotal" :value="String(unreadTotal)" severity="danger" />
+          <Button @click="showPeopleSearch = true" icon="pi pi-users" rounded severity="secondary" outlined class="!w-8 !h-8 !min-w-8 !max-w-8 !min-h-8 !max-h-8 !p-0 !rounded-full aspect-square shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" aria-label="Поиск людей" v-tooltip.top="'Поиск людей'" />
+          <Button @click="refresh" :loading="refreshing" icon="pi pi-refresh" rounded severity="secondary" text class="!w-8 !h-8 !min-w-8 !max-w-8 !min-h-8 !max-h-8 !p-0 !rounded-full aspect-square shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" aria-label="Обновить" />
         </div>
-        <div class="flex gap-1 bg-stone-100 dark:bg-zinc-800 p-1 rounded-full overflow-x-auto scrollbar-none snap-x w-full max-w-full">
-          <button @click="tab='chats'" :class="tab==='chats'?'bg-white dark:bg-zinc-700 shadow text-ink-900 dark:text-white':'text-stone-500 dark:text-zinc-400'" class="flex-1 min-w-0 sm:min-w-[66px] snap-start py-2 lg:py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition px-2">Чаты <span v-if="unreadTotal" class="ml-1 bg-red-500 text-white px-1.5 py-0.5 rounded-full text-[10px] align-middle">{{ unreadTotal }}</span></button>
-          <button @click="tab='friends'" :class="tab==='friends'?'bg-white dark:bg-zinc-700 shadow text-ink-900 dark:text-white':'text-stone-500 dark:text-zinc-400'" class="flex-1 min-w-0 sm:min-w-[66px] snap-start py-2 lg:py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition px-2">Друзья</button>
-          <button @click="tab='requests'" :class="tab==='requests'?'bg-white dark:bg-zinc-700 shadow text-ink-900 dark:text-white':'text-stone-500 dark:text-zinc-400'" class="flex-1 min-w-0 sm:min-w-[66px] snap-start py-2 lg:py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition px-2">Заявки <span v-if="pendingIn.length" class="ml-1 bg-amber-500 text-white px-1.5 py-0.5 rounded-full text-[10px] align-middle">{{ pendingIn.length }}</span></button>
-          <button @click="tab='blocked'" :class="tab==='blocked'?'bg-white dark:bg-zinc-700 shadow text-ink-900 dark:text-white':'text-stone-500 dark:text-zinc-400'" class="flex-1 min-w-0 sm:min-w-[58px] snap-start py-2 lg:py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition px-2">Блок<span v-if="blocked.length" class="ml-1 bg-stone-500 text-white px-1.5 py-0.5 rounded-full text-[10px] align-middle">{{ blocked.length }}</span></button>
+        <Tabs :value="tab" @update:value="(v:any)=>tab=v" class="w-full block">
+          <TabList class="!bg-stone-100 dark:!bg-zinc-800 !rounded-full !p-1 !border-0 !flex-nowrap !overflow-x-auto scrollbar-none snap-x">
+            <Tab value="chats" class="!rounded-full !text-xs !py-2 !px-3 !whitespace-nowrap snap-start shrink-0">Чаты <Badge v-if="unreadTotal" :value="String(unreadTotal)" severity="danger" class="ml-1 !text-[10px]" /></Tab>
+            <Tab value="friends" class="!rounded-full !text-xs !py-2 !px-3 !whitespace-nowrap snap-start shrink-0">Друзья</Tab>
+            <Tab value="requests" class="!rounded-full !text-xs !py-2 !px-3 !whitespace-nowrap snap-start shrink-0">Заявки <Badge v-if="pendingIn.length" :value="String(pendingIn.length)" severity="warn" class="ml-1 !text-[10px]" /></Tab>
+            <Tab value="blocked" class="!rounded-full !text-xs !py-2 !px-3 !whitespace-nowrap snap-start shrink-0">Блок <Badge v-if="blocked.length" :value="String(blocked.length)" severity="secondary" class="ml-1 !text-[10px]" /></Tab>
+          </TabList>
+        </Tabs>
         </div>
-        <div class="mt-3 relative">
-          <input v-model="searchQuery" placeholder="Поиск людей..." class="w-full pl-9 pr-3 py-3 lg:py-2 bg-stone-50 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl lg:rounded-full text-[15px] lg:text-sm focus:outline-none focus:ring-2 focus:ring-violet-500" />
-          <span class="absolute left-3 top-3.5 lg:top-2.5 text-stone-400">⌕</span>
-          <span v-if="searching" class="absolute right-3 top-3 lg:top-2.5 w-4 h-4 border-2 border-violet-200 border-t-violet-600 rounded-full animate-spin"></span>
-        </div>
-        <div v-if="searchResults.length" class="mt-2 max-h-[42dvh] lg:max-h-48 overflow-auto divide-y dark:divide-zinc-800 border rounded-2xl bg-white dark:bg-zinc-900 shadow-sm">
-          <div v-for="u in searchResults" :key="u.id" class="flex items-center justify-between p-3 lg:p-2 hover:bg-stone-50 dark:hover:bg-zinc-800 select-none" v-bind="bindSheet({type:'search', data:u})">
-            <Link :href="`/users/${u.id}`" class="flex items-center gap-2.5 hover:opacity-80 min-w-0">
-              <span class="relative shrink-0">
-                <img :src="u.avatar_path?`/storage/${u.avatar_path}`:`https://ui-avatars.com/api/?name=${encodeURIComponent(u.name)}&background=0F172A&color=fff`" class="w-9 h-9 lg:w-8 lg:h-8 rounded-full object-cover" />
-                <OnlineDot :online="isOnline(u.id)" size="w-3 h-3" />
-              </span>
-              <div class="min-w-0"><div class="text-sm font-medium dark:text-white truncate hover:underline flex items-center gap-1">{{ u.name }}<span v-if="isOnline(u.id)" class="w-1.5 h-1.5 bg-emerald-500 rounded-full shrink-0"></span></div><div class="text-xs truncate flex items-center gap-1"><span :class="isOnline(u.id)?'text-emerald-600':'text-stone-400'">{{ isOnline(u.id) ? '● в сети' : '○ офлайн' }}</span><span class="text-stone-300">·</span><span :class="u.can_message?'text-emerald-600':'text-red-500'">{{ u.can_message?'можно написать':'не принимает' }}</span></div></div>
-            </Link>
-            <div class="flex gap-1 shrink-0 ml-2 items-center">
-              <button v-if="u.can_message!==false" @click="startChatWith(u)" :disabled="creatingChat" title="Написать" class="w-8 h-8 grid place-items-center rounded-full bg-stone-900 dark:bg-white dark:text-zinc-900 text-white active:scale-95 disabled:opacity-40 transition">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-              </button>
-              <button @click.stop="friendsApi.add(u.id)" title="В друзья" class="w-8 h-8 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-violet-50 text-stone-500 hover:text-violet-600 active:scale-95 transition">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-              </button>
-              <button @click.stop="askBlock(u.id, u.name)" title="Заблокировать" class="w-8 h-8 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-red-50 text-stone-500 hover:text-red-600 active:scale-95 transition">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M4.93 4.93l14.14 14.14"/></svg>
-              </button>
+        <Dialog v-model:visible="showPeopleSearch" modal header="Поиск людей" :style="{ width: '480px', maxWidth: '96vw' }" :pt="{ content: { class: '!pt-2' } }">
+          <div class="text-xs text-stone-500 dark:text-zinc-400 mb-3">Найди человека по имени чтобы начать чат — отдельный глобальный поиск</div>
+          <IconField class="w-full">
+            <InputIcon class="pi pi-search" />
+            <InputText v-model="searchQuery" placeholder="Имя, например Анна..." fluid class="!rounded-full" autofocus />
+            <InputIcon v-if="searching" class="pi pi-spin pi-spinner right-3 left-auto" />
+          </IconField>
+          <div v-if="searchResults.length" class="mt-3 max-h-[52vh] overflow-auto divide-y dark:divide-zinc-800 border rounded-2xl bg-white dark:bg-zinc-900 shadow-sm">
+            <div v-for="u in searchResults" :key="u.id" class="flex items-center justify-between p-3 lg:p-2 hover:bg-stone-50 dark:hover:bg-zinc-800 select-none" v-bind="bindSheet({type:'search', data:u})">
+              <Link :href="`/users/${u.id}`" class="flex items-center gap-2.5 hover:opacity-80 min-w-0">
+                <span class="relative shrink-0">
+                  <Avatar :image="avatarSrcFor(u)" shape="circle" size="normal" class="!w-9 !h-9" />
+                  <OnlineDot :online="isOnline(u.id)" size="w-3 h-3" />
+                </span>
+                <div class="min-w-0"><div class="text-sm font-medium dark:text-white truncate hover:underline flex items-center gap-1">{{ u.name }}<span v-if="isOnline(u.id)" class="w-1.5 h-1.5 bg-emerald-500 rounded-full shrink-0"></span></div><div class="text-xs truncate flex items-center gap-1"><span :class="isOnline(u.id)?'text-emerald-600':'text-stone-400'">{{ isOnline(u.id) ? '● в сети' : '○ офлайн' }}</span><span class="text-stone-300">·</span><span :class="u.can_message?'text-emerald-600':'text-red-500'">{{ u.can_message?'можно написать':'не принимает' }}</span></div></div>
+              </Link>
+              <div class="flex gap-1 shrink-0 ml-2 items-center">
+                <button v-if="u.can_message!==false" @click="startChatWith(u); showPeopleSearch=false" :disabled="creatingChat" title="Написать" class="w-8 h-8 grid place-items-center rounded-full bg-stone-900 dark:bg-white dark:text-zinc-900 text-white active:scale-95 disabled:opacity-40 transition">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                </button>
+                <button @click.stop="friendsApi.add(u.id)" title="В друзья" class="w-8 h-8 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-violet-50 text-stone-500 hover:text-violet-600 active:scale-95 transition">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+                </button>
+                <button @click.stop="askBlock(u.id, u.name)" title="Заблокировать" class="w-8 h-8 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-red-50 text-stone-500 hover:text-red-600 active:scale-95 transition">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M4.93 4.93l14.14 14.14"/></svg>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+          <div v-else-if="searchQuery && !searching" class="mt-4 text-center py-6 text-sm text-stone-500">Ничего не найдено</div>
+          <div v-else class="mt-4 text-center py-6 text-xs text-stone-400">Введи имя для поиска</div>
+        </Dialog>
 
       <div class="flex-1 overflow-auto overscroll-contain min-h-0 w-full max-w-full">
+        <div class="p-2.5 border-b dark:border-zinc-800 bg-stone-50/50 dark:bg-zinc-900/50">
+          <IconField class="w-full">
+            <InputIcon class="pi pi-search" />
+            <InputText v-model="chatFilter" placeholder="Поиск по чатам — имя фамилия..." fluid class="!rounded-full !bg-white dark:!bg-zinc-800" />
+            <InputIcon v-if="chatFilter" class="pi pi-times right-3 left-auto cursor-pointer" @click="chatFilter=''" />
+          </IconField>
+        </div>
         <div v-if="tab==='chats'" class="divide-y dark:divide-zinc-800">
           <div v-if="!conversations.length" class="p-10 lg:p-8 text-center">
             <div class="w-14 h-14 rounded-2xl bg-violet-50 dark:bg-zinc-800 grid place-items-center mx-auto mb-3 text-xl">💬</div>
             <div class="text-sm font-semibold dark:text-white">Нет чатов</div>
             <div class="text-xs text-stone-500 mt-1">Найдите человека через поиск выше</div>
           </div>
-          <div v-for="c in conversations" :key="c.id" class="group w-full flex items-center gap-0 hover:bg-stone-50 dark:hover:bg-zinc-800 text-left select-none active:bg-stone-100 dark:active:bg-zinc-800" v-bind="bindSheet({type:'chat', data:c})">
-            <button @click="openConversation(c.id)" :class="selectedId===c.id?'lg:bg-violet-50 dark:lg:bg-zinc-800':''" class="flex-1 flex items-center gap-3 p-3.5 lg:p-3 text-left min-w-0">
+          <div v-for="c in filteredConversations" :key="c.id" class="group w-full flex items-center gap-0 text-left select-none" v-bind="bindSheet({type:'chat', data:c})">
+            <button @click="openConversation(c.id)" :class="selectedId===c.id?'bg-stone-50 dark:bg-zinc-800':''" class="flex-1 flex items-center gap-3 p-3.5 lg:p-3 text-left min-w-0 hover:bg-stone-50/70 dark:hover:bg-zinc-800/70 transition-colors">
               <span class="relative shrink-0">
-                <img :src="c.other?.avatar_path?`/storage/${c.other.avatar_path}`:`https://ui-avatars.com/api/?name=${encodeURIComponent(c.other?.name||'?')}&background=0F172A&color=fff`" class="w-11 h-11 lg:w-10 lg:h-10 rounded-full object-cover" />
+                <Avatar :image="avatarSrcFor(c.other)" shape="circle" size="large" class="!w-11 !h-11" />
                 <OnlineDot :online="isOnline(c.other?.id)" />
               </span>
               <div class="flex-1 min-w-0">
@@ -113,10 +157,10 @@ onMounted(init)
 
         <div v-if="tab==='friends'" class="divide-y dark:divide-zinc-800">
           <div v-if="!friends.length" class="p-10 text-center text-sm text-stone-500">Нет друзей</div>
-          <div v-for="f in friends" :key="f.id" class="flex items-center justify-between p-3.5 lg:p-3 select-none active:bg-stone-50 group" v-bind="bindSheet({type:'friend', data:f})">
+          <div v-for="f in filteredFriends" :key="f.id" class="flex items-center justify-between p-3.5 lg:p-3 select-none active:bg-stone-50 group" v-bind="bindSheet({type:'friend', data:f})">
             <Link :href="`/users/${f.other.id}`" class="flex items-center gap-3 hover:opacity-80 min-w-0">
               <span class="relative shrink-0">
-                <img :src="f.other.avatar_path?`/storage/${f.other.avatar_path}`:`https://ui-avatars.com/api/?name=${encodeURIComponent(f.other.name)}&background=0F172A&color=fff`" class="w-10 h-10 lg:w-9 lg:h-9 rounded-full" />
+                <Avatar :image="avatarSrcFor(f.other)" shape="circle" />
                 <OnlineDot :online="isOnline(f.other.id)" />
               </span>
               <span class="text-[15px] lg:text-sm font-medium dark:text-white truncate hover:underline flex items-center gap-1">{{ f.other.name }}<span v-if="isOnline(f.other.id)" class="w-1.5 h-1.5 bg-emerald-500 rounded-full shrink-0"></span></span>
@@ -138,10 +182,10 @@ onMounted(init)
 
         <div v-if="tab==='requests'" class="divide-y dark:divide-zinc-800">
           <div v-if="!pendingIn.length" class="p-10 text-center text-sm text-stone-500">Нет заявок</div>
-          <div v-for="r in pendingIn" :key="r.id" class="flex items-center justify-between p-3.5 lg:p-3 gap-2 select-none" v-bind="bindSheet({type:'request', data:r})">
+          <div v-for="r in filteredPendingIn" :key="r.id" class="flex items-center justify-between p-3.5 lg:p-3 gap-2 select-none" v-bind="bindSheet({type:'request', data:r})">
             <Link :href="`/users/${r.requester.id}`" class="flex items-center gap-3 hover:opacity-80 min-w-0">
               <span class="relative shrink-0">
-                <img :src="r.requester.avatar_path?`/storage/${r.requester.avatar_path}`:`https://ui-avatars.com/api/?name=${encodeURIComponent(r.requester.name)}&background=0F172A&color=fff`" class="w-10 h-10 lg:w-9 lg:h-9 rounded-full" />
+                <Avatar :image="avatarSrcFor(r.requester)" shape="circle" />
                 <OnlineDot :online="isOnline(r.requester.id)" />
               </span>
               <span class="text-[15px] lg:text-sm dark:text-white truncate hover:underline flex items-center gap-1">{{ r.requester.name }}<span v-if="isOnline(r.requester.id)" class="w-1.5 h-1.5 bg-emerald-500 rounded-full shrink-0"></span></span>
@@ -155,9 +199,9 @@ onMounted(init)
 
         <div v-if="tab==='blocked'" class="divide-y dark:divide-zinc-800">
           <div v-if="!blocked.length" class="p-10 text-center text-sm text-stone-500">Нет заблокированных</div>
-          <div v-for="b in blocked" :key="b.id" class="flex items-center justify-between p-3.5 lg:p-3">
+          <div v-for="b in filteredBlocked" :key="b.id" class="flex items-center justify-between p-3.5 lg:p-3">
             <div class="flex items-center gap-3 min-w-0">
-              <img :src="b.blocked.avatar_path?`/storage/${b.blocked.avatar_path}`:`https://ui-avatars.com/api/?name=${encodeURIComponent(b.blocked.name)}&background=0F172A&color=fff`" class="w-10 h-10 lg:w-9 lg:h-9 rounded-full shrink-0" />
+              <Avatar :image="avatarSrcFor(b.blocked)" shape="circle" />
               <span class="text-[15px] lg:text-sm dark:text-white truncate">{{ b.blocked.name }}</span>
             </div>
             <button @click="askUnblock(b.blocked.id)" class="text-xs px-3.5 py-2 rounded-full border bg-white dark:bg-zinc-800 shrink-0">Разблокировать</button>
@@ -172,11 +216,7 @@ onMounted(init)
           <span class="hidden lg:block text-[11px] text-stone-500">{{ privacy.message_privacy==='everyone' ? 'Все' : privacy.message_privacy==='friends' ? 'Друзья' : 'Никто' }}</span>
         </button>
         <div :class="showPrivacy ? 'block' : 'hidden lg:block'" class="px-3 pb-3 space-y-2 max-h-[32dvh] lg:max-h-none overflow-auto overscroll-contain">
-          <select v-model="privacy.message_privacy" @change="savePrivacy" class="w-full text-sm lg:text-xs rounded-xl lg:rounded-lg border px-3 py-3 lg:px-2 lg:py-1.5 bg-white dark:bg-zinc-900 focus:ring-2 focus:ring-violet-500 focus:outline-none">
-            <option value="everyone">Все могут писать</option>
-            <option value="friends">Только друзья</option>
-            <option value="none">Никто</option>
-          </select>
+          <Select v-model="privacy.message_privacy" @change="savePrivacy" :options="[{label:'Все могут писать',value:'everyone'},{label:'Только друзья',value:'friends'},{label:'Никто',value:'none'}]" optionLabel="label" optionValue="value" fluid class="!rounded-xl" />
           <label class="flex items-center gap-2.5 text-xs p-3 lg:p-2 rounded-xl lg:rounded-lg border bg-white dark:bg-zinc-900">
             <input type="checkbox" v-model="privacy.allow_random_messages" @change="savePrivacy" :disabled="privacy.message_privacy!=='everyone'" class="w-4 h-4 lg:w-3.5 lg:h-3.5 rounded" />
             <span :class="privacy.message_privacy!=='everyone'?'opacity-50':''" class="text-[13px] lg:text-xs">Разрешить рандомным писать</span>
@@ -200,15 +240,13 @@ onMounted(init)
           </button>
           <Link :href="activeConv?.other ? `/users/${activeConv.other.id}` : '#'" class="flex items-center gap-2.5 lg:gap-3 hover:opacity-80 min-w-0 flex-1">
             <span class="relative shrink-0">
-              <img :src="activeConv?.other?.avatar_path?`/storage/${activeConv!.other!.avatar_path}`:`https://ui-avatars.com/api/?name=${encodeURIComponent(activeConv?.other?.name||'?')}&background=0F172A&color=fff`" class="w-9 h-9 lg:w-9 lg:h-9 rounded-full" />
+              <Avatar :image="avatarSrcFor(activeConv?.other)" shape="circle" />
               <OnlineDot :online="isOnline(activeConv?.other?.id)" />
             </span>
             <div class="min-w-0"><div class="text-[15px] lg:text-sm font-semibold dark:text-white truncate hover:underline flex items-center gap-1">{{ activeConv?.other?.name }}<span v-if="isOnline(activeConv?.other?.id)" class="w-1.5 h-1.5 bg-emerald-500 rounded-full shrink-0"></span></div><div v-if="[...typingUsers].some(id=>id===activeConv?.other?.id)" class="text-xs text-violet-600 leading-none">печатает...</div><div v-else class="text-xs leading-none" :class="isOnline(activeConv?.other?.id) ? 'text-emerald-600' : 'text-stone-400'">{{ isOnline(activeConv?.other?.id) ? '● в сети' : '○ офлайн' }}</div></div>
           </Link>
           <div class="flex items-center gap-0.5 lg:gap-1 shrink-0">
-            <button @click="refresh" :disabled="refreshing" title="Обновить" class="w-9 h-9 lg:w-8 lg:h-8 grid place-items-center rounded-full hover:bg-stone-100 dark:hover:bg-zinc-800 active:scale-95 disabled:opacity-50">
-              <svg :class="['w-5 h-5 lg:w-4 lg:h-4', refreshing ? 'animate-spin' : '']" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-            </button>
+            <Button @click="refresh" :loading="refreshing" icon="pi pi-refresh" rounded text severity="secondary" class="!w-9 !h-9 !min-w-9 !max-w-9 !min-h-9 !max-h-9 lg:!w-8 lg:!min-w-8 lg:!max-w-8 lg:!min-h-8 lg:!max-h-8 !p-0 !rounded-full aspect-square shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" aria-label="Обновить" />
             <button @click="askDeleteChat()" title="Удалить чат" class="hidden lg:grid w-8 h-8 place-items-center rounded-full hover:bg-red-50 dark:hover:bg-red-950/30 text-stone-400 hover:text-red-600 transition">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
             </button>
@@ -273,9 +311,9 @@ onMounted(init)
             </div>
           </div>
           <div class="flex gap-2 items-end min-w-0 w-full max-w-full">
-            <button @click="toggleEmoji" :class="emojiOpen ? 'bg-violet-600 text-white border-violet-600' : 'bg-stone-100 dark:bg-zinc-800 text-stone-500 dark:text-zinc-400 border-stone-200 dark:border-zinc-700'" class="w-11 h-11 lg:w-10 lg:h-10 shrink-0 grid place-items-center rounded-full border active:scale-95 transition text-[20px] lg:text-lg">😊</button>
-            <input ref="inputRef" v-model="input" @input="notifyTyping" @blur="stopTyping" @keydown.enter.prevent="handleSend" @keydown.escape="emoji.close()" placeholder="Сообщение..." class="flex-1 min-w-0 px-4 py-3 lg:py-2.5 rounded-full border dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800 text-[16px] lg:text-sm focus:outline-none focus:border-stone-300 dark:focus:border-zinc-600 placeholder:text-stone-400 w-full max-w-full" enterkeyhint="send" />
-            <button @click="handleSend" :disabled="sending || !input.trim()" class="w-11 h-11 lg:w-auto lg:px-6 lg:py-2.5 shrink-0 grid place-items-center lg:inline-flex rounded-full bg-stone-900 dark:bg-white dark:text-zinc-900 text-white font-semibold disabled:opacity-40 active:scale-95 transition shadow-sm"> <span class="hidden lg:inline">➤</span><span class="lg:hidden text-[18px]">↑</span></button>
+            <Button @click="toggleEmoji" :severity="emojiOpen ? 'contrast' : 'secondary'" :outlined="!emojiOpen" rounded class="!w-11 !h-11 !min-w-11 !max-w-11 !min-h-11 !max-h-11 !p-0 !rounded-full aspect-square shrink-0 grid place-items-center text-[20px] lg:!w-10 lg:!h-10 lg:!min-w-10 lg:!max-w-10 lg:!min-h-10 lg:!max-h-10 [&_.p-button-label]:!m-0" label="😊" />
+            <InputText ref="inputRef" v-model="input" @input="notifyTyping" @blur="stopTyping" @keydown.enter.prevent="handleSend" @keydown.escape="emoji.close()" placeholder="Сообщение..." fluid class="!rounded-full flex-1 min-w-0" enterkeyhint="send" />
+            <Button @click="handleSend" :loading="sending" :disabled="!input.trim()" icon="pi pi-send" rounded class="!w-11 !h-11 !min-w-11 !max-w-11 !min-h-11 !max-h-11 !p-0 !rounded-full aspect-square shrink-0 grid place-items-center [&_.p-button-label]:hidden [&_.p-button-icon]:!m-0" aria-label="Отправить" />
           </div>
         </div>
       </template>
