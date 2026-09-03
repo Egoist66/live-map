@@ -70,7 +70,7 @@ const invisible = useInvisible()
     <div class="bg-surface dark:bg-[#090E1A] min-h-[calc(100vh-64px)] overflow-x-hidden">
       <div class="max-w-[1280px] mx-auto px-4 sm:px-6 py-6 overflow-hidden">
         <div class="grid lg:grid-cols-[300px_1fr] gap-6 items-start w-full overflow-hidden">
-          <aside class="hidden lg:block sticky top-[80px] self-start space-y-4">
+          <aside class="hidden lg:block sticky top-[88px] self-start space-y-4 h-fit">
             <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body:{ class:'!p-3' }, content:{ class:'!p-0' } }">
               <template #content>
                 <div class="px-2 py-2 text-[11px] font-bold tracking-widest text-stone-400 uppercase">Настройки</div>
@@ -96,8 +96,8 @@ const invisible = useInvisible()
               </template>
             </Card>
           </aside>
-          <div class="space-y-4 min-w-0 w-full max-w-full overflow-hidden">
-            <Tabs :value="activeIndex" @update:value="(v:any)=>{ const e=tabs[Number(v)]; if(e) active=e.id as any }" class="w-full">
+          <div class="space-y-4 min-w-0 w-full max-w-full overflow-hidden self-start">
+            <Tabs :value="activeIndex" @update:value="(v:any)=>{ const e=tabs[Number(v)]; if(e) active=e.id as any }" class="w-full !mt-0">
               <TabList class="!flex lg:!hidden !bg-transparent !border-0 !gap-2 !overflow-x-auto !flex-nowrap !pb-2 !px-1 !scrollbar-none !snap-x" :pt="{ activeBar:{ class:'!hidden' } }">
                 <Tab v-for="(t, idx) in tabs" :key="t.id" :value="String(idx)" class="!bg-transparent !border-0 !p-0 !shrink-0 !snap-start">
                   <div :class="['flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold border transition whitespace-nowrap', active===t.id ? '!bg-violet-600 !text-white !border-violet-600 shadow-soft dark:!bg-violet-600 dark:!border-violet-600 dark:!text-white' : 'bg-white dark:bg-zinc-900 text-stone-700 dark:text-zinc-300 border-stone-200 dark:border-zinc-700']">

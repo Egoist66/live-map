@@ -88,13 +88,17 @@ export function useChat() {
   }
 
   async function openConversation(id: number) {
+    if (selectedId.value === id && activeConv.value?.id === id && !loading.value) return
     selectedId.value = id
+    activeConv.value = null
+    messages.value = []
     typingUsers.value = new Set()
     typingExpire.forEach((t) => clearTimeout(t))
     typingExpire.clear()
     loading.value = true
     try {
       const d = await chatApi.getConversation(id)
+      if (selectedId.value !== id) return
       activeConv.value = d
       messages.value = d.messages
       d.messages.forEach((m:any)=> seenIds.add(m.id))
@@ -104,7 +108,7 @@ export function useChat() {
       subscribeChat(id)
       await nextTick()
       scrollToBottom()
-    } finally { loading.value = false }
+    } finally { if (selectedId.value === id) loading.value = false }
   }
 
   async function createConversation(userId: number, initialMessage?: string) {
