@@ -40,14 +40,14 @@
         </script>
         <script type="application/ld+json">
         {
-            "@context": "https://schema.org",
-            "@type": "WebSite",
+            "@@context": "https://schema.org",
+            "@@type": "WebSite",
             "name": "{{ config('seo.site_name') }}",
             "url": "{{ config('app.url') }}",
             "description": "{{ config('seo.default_description') }}",
             "inLanguage": "ru-RU",
             "potentialAction": {
-                "@type": "SearchAction",
+                "@@type": "SearchAction",
                 "target": "{{ config('app.url') }}/map?q={search_term_string}",
                 "query-input": "required name=search_term_string"
             }
@@ -55,8 +55,8 @@
         </script>
         <script type="application/ld+json">
         {
-            "@context": "https://schema.org",
-            "@type": "Organization",
+            "@@context": "https://schema.org",
+            "@@type": "Organization",
             "name": "{{ config('seo.site_name') }}",
             "url": "{{ config('app.url') }}",
             "logo": "{{ url('/favicon.ico') }}"
