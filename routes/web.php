@@ -20,9 +20,9 @@ Route::get('/', function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/profile/{identifier?}', [ProfileController::class, 'dashboard'])->name('dashboard');
-    Route::get('/profile/{identifier?}', [ProfileController::class, 'dashboard'])->name('profile.show');
     Route::get('/dashboard/{identifier?}', function (?string $identifier = null) {
-        return redirect()->route('dashboard', ['identifier' => $identifier]);
+        $target = '/profile' . ($identifier ? '/' . $identifier : '');
+        return redirect($target, 301);
     })->where('identifier', '.*');
     Route::get('/admin', fn () => redirect()->route('dashboard', ['identifier' => 'admin']))->name('admin');
 });

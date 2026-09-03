@@ -45,6 +45,7 @@ auth.json
 /storage/debugbar/
 /storage/clockwork/
 bootstrap/cache/
+bootstrap/ssr/
 public/storage
 public/hot
 public/build/
