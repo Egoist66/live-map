@@ -13,7 +13,6 @@ import Button from 'primevue/button'
 import Drawer from 'primevue/drawer'
 import Menu from 'primevue/menu'
 import Toolbar from 'primevue/toolbar'
-import OverlayBadge from 'primevue/overlaybadge'
 
 const badge = useBadgeStore()
 const presence = usePresence()
@@ -28,7 +27,7 @@ const menu = ref()
 const menuItems = computed(() => [
   { label: user.value?.name || '', sublabel: user.value?.email || '', isHeader: true },
   { separator: true },
-  { label: 'Профиль', icon: 'pi pi-user', command: () => router.visit(dashboardHref.value), badge: badge.total ? String(badge.total) : undefined },
+  { label: 'Профиль', icon: 'pi pi-user', command: () => router.visit(dashboardHref.value) },
   { label: 'Настройки', icon: 'pi pi-cog', command: () => router.visit(settingsHref.value) },
   { label: 'Карта', icon: 'pi pi-map', command: () => router.visit(route('map')) },
   { separator: true },
@@ -49,8 +48,7 @@ function toggleMenu(e: Event) { menu.value.toggle(e) }
               <Link :href="route('map')" :class="['px-4 py-1.5 rounded-full text-[13px] font-semibold transition', route().current('map') ? 'bg-white dark:bg-zinc-700 shadow-soft text-ink-900 dark:text-white border border-stone-200' : 'text-stone-500 dark:text-zinc-400 hover:text-ink-900']">Карта</Link>
               <Link :href="route('chat')" :class="['px-4 py-1.5 rounded-full text-[13px] font-semibold transition relative', route().current('chat') ? 'bg-white dark:bg-zinc-700 shadow-soft text-ink-900 dark:text-white border border-stone-200' : 'text-stone-500 dark:text-zinc-400 hover:text-ink-900']">
                 Чат
-                <Badge v-if="badge.unread" :value="badge.unread > 99 ? '99+' : String(badge.unread)" severity="danger" class="!text-[10px] ml-1" />
-                <Badge v-if="badge.pending" :value="String(badge.pending)" severity="warn" class="!text-[10px] ml-1" />
+                <Badge v-if="badge.total" :value="badge.total > 99 ? '99+' : String(badge.total)" severity="danger" class="!text-[10px] ml-1" />
               </Link>
               <Link :href="route('faq')" :class="['px-4 py-1.5 rounded-full text-[13px] font-semibold transition', route().current('faq') ? 'bg-white dark:bg-zinc-700 shadow-soft text-ink-900 dark:text-white border border-stone-200' : 'text-stone-500 dark:text-zinc-400 hover:text-ink-900']">FAQ</Link>
             </div>
@@ -59,22 +57,20 @@ function toggleMenu(e: Event) { menu.value.toggle(e) }
         <template #end>
           <div class="flex items-center gap-2 h-[64px] pr-4 sm:pr-6">
             <Link href="/map" class="hidden sm:inline-flex items-center gap-2 bg-ink-900 dark:bg-white dark:text-ink-900 text-white rounded-full px-5 py-2 text-sm font-semibold hover:bg-ink-800 transition">+ Создать пин</Link>
-            <OverlayBadge :value="badge.total ? '' : undefined" severity="danger" class="hidden sm:inline-flex">
-              <Button @click="toggleMenu" severity="secondary" outlined rounded class="!p-1 !pl-2 !pr-3 !bg-white dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 shadow-soft">
-                <Avatar :image="avatarSrc" shape="circle" size="normal" class="!w-7 !h-7" />
-                <span class="text-sm font-semibold text-ink-900 dark:text-white max-w-[120px] truncate hidden sm:inline">{{ user?.name }}</span>
-                <i class="pi pi-chevron-down text-xs text-stone-500" />
-              </Button>
-            </OverlayBadge>
-            <Menu ref="menu" :model="menuItems" popup class="!min-w-[260px]">
+            <Button @click="toggleMenu" severity="secondary" outlined rounded class="hidden sm:inline-flex !p-1 !pl-2 !pr-3 !bg-white dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 shadow-soft">
+              <Avatar :image="avatarSrc" shape="circle" size="normal" class="!w-7 !h-7" />
+              <span class="text-sm font-semibold text-ink-900 dark:text-white max-w-[120px] truncate hidden sm:inline">{{ user?.name }}</span>
+              <i class="pi pi-chevron-down text-xs text-stone-500" />
+            </Button>
+            <Menu ref="menu" :model="menuItems" popup class="!min-w-[260px] !bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-2xl !shadow-xl overflow-hidden" :pt="{ root: { class: '!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-2xl shadow-xl' }, list: { class: '!bg-white dark:!bg-zinc-900 !p-1' }, item: { class: '!bg-transparent' } }">
               <template #item="{ item, props }">
-                <div v-if="item.isHeader" class="px-4 py-3 flex gap-3 border-b border-stone-100 dark:border-zinc-800">
+                <div v-if="item.isHeader" class="px-4 py-3 flex gap-3 border-b border-stone-200 dark:border-zinc-700 bg-stone-50/50 dark:bg-zinc-800/50">
                   <Avatar :image="avatarSrc" shape="circle" size="large" class="!w-9 !h-9" />
-                  <div class="min-w-0"><div class="text-sm font-semibold truncate dark:text-white">{{ user?.name }}</div><div class="text-xs text-stone-500 truncate">{{ user?.email }}</div></div>
+                  <div class="min-w-0"><div class="text-sm font-semibold truncate text-ink-900 dark:text-white">{{ user?.name }}</div><div class="text-xs text-stone-500 dark:text-zinc-400 truncate">{{ user?.email }}</div></div>
                 </div>
-                <a v-else-if="item.separator" class="my-1 border-t border-stone-100 dark:border-zinc-800 block" />
-                <a v-else v-bind="props.action" class="flex items-center gap-2">
-                  <i :class="item.icon" /><span class="text-sm flex-1">{{ item.label }}</span><Badge v-if="item.badge" :value="item.badge" severity="danger" />
+                <a v-else-if="item.separator" class="my-1 border-t border-stone-200 dark:border-zinc-700 block" />
+                <a v-else v-bind="props.action" class="flex items-center gap-2 px-3 py-2.5 rounded-xl mx-1 my-0.5 hover:bg-stone-100 dark:hover:bg-zinc-800 text-stone-700 dark:text-zinc-200 transition">
+                  <i :class="item.icon + ' text-stone-500 dark:text-zinc-400'" /><span class="text-sm flex-1 font-medium">{{ item.label }}</span>
                 </a>
               </template>
             </Menu>
@@ -84,20 +80,20 @@ function toggleMenu(e: Event) { menu.value.toggle(e) }
       </Toolbar>
     </div>
 
-    <Drawer v-model:visible="showDrawer" position="right" class="!w-[320px]" header="Меню">
+    <Drawer v-model:visible="showDrawer" position="right" class="!w-[320px] !bg-white dark:!bg-zinc-900" :pt="{ root: { class: '!bg-white dark:!bg-zinc-900 !border-l !border-stone-200 dark:!border-zinc-800' }, header: { class: '!bg-white dark:!bg-zinc-900 !text-ink-900 dark:!text-white !border-b !border-stone-200 dark:!border-zinc-800' }, content: { class: '!bg-white dark:!bg-zinc-900 !text-stone-700 dark:!text-zinc-200' }, footer: { class: '!bg-white dark:!bg-zinc-900 !border-t !border-stone-200 dark:!border-zinc-800' } }" header="Меню">
       <template #header><ApplicationLogo /></template>
       <div class="space-y-1">
-        <Link :href="dashboardHref" class="flex items-center justify-between p-3 rounded-xl hover:bg-stone-50 dark:hover:bg-zinc-800 font-medium" @click="showDrawer=false">Профиль <Badge v-if="badge.total" :value="String(badge.total)" severity="danger" /></Link>
-        <Link :href="settingsHref" class="flex p-3 rounded-xl hover:bg-stone-50 dark:hover:bg-zinc-800 font-medium" @click="showDrawer=false">Настройки</Link>
-        <Link :href="route('map')" class="flex p-3 rounded-xl hover:bg-stone-50 dark:hover:bg-zinc-800 font-medium" @click="showDrawer=false">Карта</Link>
-        <Link :href="route('chat')" class="flex items-center justify-between p-3 rounded-xl hover:bg-stone-50 dark:hover:bg-zinc-800 font-medium" @click="showDrawer=false">Чат <span class="flex gap-1"><Badge v-if="badge.unread" :value="String(badge.unread)" severity="danger" /><Badge v-if="badge.pending" :value="String(badge.pending)" severity="warn" /></span></Link>
-        <Link :href="route('faq')" class="flex p-3 rounded-xl hover:bg-stone-50 dark:hover:bg-zinc-800 font-medium" @click="showDrawer=false">FAQ</Link>
+        <Link :href="dashboardHref" class="flex items-center justify-between p-3 rounded-xl hover:bg-stone-50 dark:hover:bg-zinc-800 font-medium text-ink-900 dark:text-white" @click="showDrawer=false">Профиль</Link>
+        <Link :href="settingsHref" class="flex p-3 rounded-xl hover:bg-stone-50 dark:hover:bg-zinc-800 font-medium text-ink-900 dark:text-white" @click="showDrawer=false">Настройки</Link>
+        <Link :href="route('map')" class="flex p-3 rounded-xl hover:bg-stone-50 dark:hover:bg-zinc-800 font-medium text-ink-900 dark:text-white" @click="showDrawer=false">Карта</Link>
+        <Link :href="route('chat')" class="flex items-center justify-between p-3 rounded-xl hover:bg-stone-50 dark:hover:bg-zinc-800 font-medium text-ink-900 dark:text-white" @click="showDrawer=false">Чат <Badge v-if="badge.total" :value="badge.total>99?'99+':String(badge.total)" severity="danger" /></Link>
+        <Link :href="route('faq')" class="flex p-3 rounded-xl hover:bg-stone-50 dark:hover:bg-zinc-800 font-medium text-ink-900 dark:text-white" @click="showDrawer=false">FAQ</Link>
         <Link href="/map" class="flex bg-ink-900 dark:bg-white dark:text-ink-900 text-white rounded-full px-4 py-2.5 text-sm font-semibold justify-center mt-2" @click="showDrawer=false">+ Создать пин</Link>
       </div>
       <template #footer>
-        <div class="flex items-center gap-3 p-3 border-t border-stone-200 dark:border-zinc-800">
+        <div class="flex items-center gap-3 p-3 border-t border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900">
           <Avatar :image="avatarSrc" shape="circle" />
-          <div class="min-w-0 flex-1"><div class="text-sm font-semibold truncate dark:text-white">{{ user?.name }}</div><div class="text-xs text-stone-500 truncate">{{ user?.email }}</div></div>
+          <div class="min-w-0 flex-1"><div class="text-sm font-semibold truncate text-ink-900 dark:text-white">{{ user?.name }}</div><div class="text-xs text-stone-500 dark:text-zinc-400 truncate">{{ user?.email }}</div></div>
           <Button icon="pi pi-sign-out" severity="secondary" text rounded @click="router.post(route('logout'))" />
         </div>
       </template>

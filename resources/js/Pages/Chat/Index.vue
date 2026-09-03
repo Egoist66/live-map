@@ -18,6 +18,7 @@ import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import OnlineDot from '@/Components/OnlineDot.vue'
+import MessageTicks from '@/Components/MessageTicks.vue'
 import { usePresenceState } from '@/composables/usePresence'
 import { useChatPage } from '@/composables/useChatPage'
 import { useChatViewport } from '@/composables/useChatViewport'
@@ -28,7 +29,7 @@ const {
   chat, friendsApi, blocksApi, emoji,
   input, inputRef, editInputRef, tab, showChatMenu, sheet, showPrivacy, privacy, creatingChat, confirm, confirmVisible, isOwnMessage, bindSheet,
   handleSend, formatTime, onPickEmoji, onPickEmojiForEdit, handleStartEdit, startChatWith, savePrivacy, doConfirm, closeSheet, backToList, init,
-  askBlock, askDeleteChat, askRemoveFriend, askUnblock,
+  askBlock, askDeleteChat, askDeleteMessage, askRemoveFriend, askUnblock,
 } = useChatPage(props.conversationId)
 
 const { conversations, activeConv, messages, loading, sending, refreshing, typingUsers, searchQuery, searchResults, searching, selectedId, unreadTotal, editingId, editingBody, refresh, openConversation, saveEdit, cancelEdit, notifyTyping, stopTyping } = chat
@@ -59,6 +60,16 @@ const filteredBlocked = computed(() => {
   if (!q) return blocked.value
   return blocked.value.filter((b:any) => (b.blocked?.name || '').toLowerCase().includes(q))
 })
+function messageStatus(m:any){
+  if((m as any).pending) return 'sending'
+  if((m as any).failed) return 'failed'
+  if(!isOwnMessage(m)) return 'sent'
+  if(m.read_at) return 'read'
+  if(m.delivered_at) return 'delivered'
+  if(m.status==='read') return 'read'
+  if(m.status==='delivered') return 'delivered'
+  return 'sent'
+}
 
 onMounted(init)
 </script>
@@ -99,7 +110,7 @@ onMounted(init)
                   <Avatar :image="avatarSrcFor(u)" shape="circle" size="normal" class="!w-9 !h-9" />
                   <OnlineDot :online="isOnline(u.id)" size="w-3 h-3" />
                 </span>
-                <div class="min-w-0"><div class="text-sm font-medium dark:text-white truncate hover:underline flex items-center gap-1">{{ u.name }}<span v-if="isOnline(u.id)" class="w-1.5 h-1.5 bg-emerald-500 rounded-full shrink-0"></span></div><div class="text-xs truncate flex items-center gap-1"><span :class="isOnline(u.id)?'text-emerald-600':'text-stone-400'">{{ isOnline(u.id) ? '● в сети' : '○ офлайн' }}</span><span class="text-stone-300">·</span><span :class="u.can_message?'text-emerald-600':'text-red-500'">{{ u.can_message?'можно написать':'не принимает' }}</span></div></div>
+                <div class="min-w-0"><div class="text-sm font-medium dark:text-white truncate hover:underline flex items-center gap-1">{{ u.name }}<span v-if="isOnline(u.id)" class="w-1.5 h-1.5 bg-emerald-500 rounded-full shrink-0"></span><span v-else class="w-1.5 h-1.5 bg-red-500 rounded-full shrink-0"></span></div><div class="text-xs truncate flex items-center gap-1"><span :class="isOnline(u.id)?'text-emerald-600':'text-red-500'">{{ isOnline(u.id) ? '● в сети' : '○ офлайн' }}</span><span class="text-stone-300">·</span><span :class="u.can_message?'text-emerald-600':'text-red-500'">{{ u.can_message?'можно написать':'не принимает' }}</span></div></div>
               </Link>
               <div class="flex gap-1 shrink-0 ml-2 items-center">
                 <button v-if="u.can_message!==false" @click="startChatWith(u); showPeopleSearch=false" :disabled="creatingChat" title="Написать" class="w-8 h-8 grid place-items-center rounded-full bg-stone-900 dark:bg-white dark:text-zinc-900 text-white active:scale-95 disabled:opacity-40 transition">
@@ -140,7 +151,7 @@ onMounted(init)
               </span>
               <div class="flex-1 min-w-0">
                 <div class="flex justify-between items-baseline gap-2"><span class="text-[15px] lg:text-sm font-semibold dark:text-white truncate flex items-center gap-1">{{ c.other?.name||'Чат' }}<span v-if="isOnline(c.other?.id)" class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shrink-0"></span></span><span v-if="c.last_message_at" class="text-[11px] text-stone-400 shrink-0">{{ formatTime(c.last_message_at) }}</span></div>
-                <div class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5" :class="isOnline(c.other?.id) ? 'text-emerald-600' : 'text-stone-500'">{{ isOnline(c.other?.id) ? '● в сети' : '○ офлайн' }}<span class="text-stone-300">·</span><span class="truncate text-stone-500">{{ c.last_message?.body||'Нет сообщений' }}</span><span v-if="(c.last_message as any)?.is_edited" class="text-[10px] text-stone-400">(изм.)</span></div>
+                <div class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5" :class="isOnline(c.other?.id) ? 'text-emerald-600' : 'text-red-500'">{{ isOnline(c.other?.id) ? '● в сети' : '○ офлайн' }}<span class="text-stone-300">·</span><span class="truncate text-stone-500">{{ c.last_message?.body||'Нет сообщений' }}</span><span v-if="(c.last_message as any)?.is_edited" class="text-[10px] text-stone-400">(изм.)</span></div>
               </div>
               <span v-if="c.unread_count" class="bg-violet-600 text-white text-xs font-bold min-w-[22px] h-[22px] grid place-items-center px-1.5 rounded-full shrink-0">{{ c.unread_count>99?'99+':c.unread_count }}</span>
             </button>
@@ -211,13 +222,13 @@ onMounted(init)
 
       <div class="shrink-0 flex-none border-t dark:border-zinc-800 bg-stone-50 dark:bg-zinc-800/50">
         <button @click="showPrivacy=!showPrivacy" class="w-full flex items-center justify-between px-3 py-3 lg:py-2.5 text-left active:bg-stone-100 dark:active:bg-zinc-800 lg:cursor-default">
-          <span class="text-xs font-bold flex items-center gap-1.5">Приватность</span>
-          <span class="lg:hidden text-stone-400 text-xs">{{ showPrivacy ? '▲' : '▼' }}</span>
-          <span class="hidden lg:block text-[11px] text-stone-500">{{ privacy.message_privacy==='everyone' ? 'Все' : privacy.message_privacy==='friends' ? 'Друзья' : 'Никто' }}</span>
+          <span class="text-xs font-bold flex items-center gap-1.5 dark:text-white">Приватность</span>
+          <span class="lg:hidden text-stone-400 dark:text-zinc-500 text-xs">{{ showPrivacy ? '▲' : '▼' }}</span>
+          <span class="hidden lg:block text-[11px] text-stone-500 dark:text-zinc-400">{{ privacy.message_privacy==='everyone' ? 'Все' : privacy.message_privacy==='friends' ? 'Друзья' : 'Никто' }}</span>
         </button>
         <div :class="showPrivacy ? 'block' : 'hidden lg:block'" class="px-3 pb-3 space-y-2 max-h-[32dvh] lg:max-h-none overflow-auto overscroll-contain">
-          <Select v-model="privacy.message_privacy" @change="savePrivacy" :options="[{label:'Все могут писать',value:'everyone'},{label:'Только друзья',value:'friends'},{label:'Никто',value:'none'}]" optionLabel="label" optionValue="value" fluid class="!rounded-xl" />
-          <label class="flex items-center gap-2.5 text-xs p-3 lg:p-2 rounded-xl lg:rounded-lg border bg-white dark:bg-zinc-900">
+          <Select v-model="privacy.message_privacy" @change="savePrivacy" :options="[{label:'Все могут писать',value:'everyone'},{label:'Только друзья',value:'friends'},{label:'Никто',value:'none'}]" optionLabel="label" optionValue="value" fluid class="!rounded-xl dark:!bg-zinc-800" :pt="{ root: { class: 'dark:!bg-zinc-800 dark:!border-zinc-700' }, label: { class: 'dark:!text-white' }, overlay: { class: 'dark:!bg-zinc-800 dark:!border-zinc-700' }, option: { class: 'dark:!text-zinc-200 dark:hover:!bg-zinc-700' } }" />
+          <label class="flex items-center gap-2.5 text-xs p-3 lg:p-2 rounded-xl lg:rounded-lg border dark:border-zinc-700 bg-white dark:bg-zinc-900 dark:text-zinc-200">
             <input type="checkbox" v-model="privacy.allow_random_messages" @change="savePrivacy" :disabled="privacy.message_privacy!=='everyone'" class="w-4 h-4 lg:w-3.5 lg:h-3.5 rounded" />
             <span :class="privacy.message_privacy!=='everyone'?'opacity-50':''" class="text-[13px] lg:text-xs">Разрешить рандомным писать</span>
           </label>
@@ -243,7 +254,7 @@ onMounted(init)
               <Avatar :image="avatarSrcFor(activeConv?.other)" shape="circle" />
               <OnlineDot :online="isOnline(activeConv?.other?.id)" />
             </span>
-            <div class="min-w-0"><div class="text-[15px] lg:text-sm font-semibold dark:text-white truncate hover:underline flex items-center gap-1">{{ activeConv?.other?.name }}<span v-if="isOnline(activeConv?.other?.id)" class="w-1.5 h-1.5 bg-emerald-500 rounded-full shrink-0"></span></div><div v-if="[...typingUsers].some(id=>id===activeConv?.other?.id)" class="text-xs text-violet-600 leading-none">печатает...</div><div v-else class="text-xs leading-none" :class="isOnline(activeConv?.other?.id) ? 'text-emerald-600' : 'text-stone-400'">{{ isOnline(activeConv?.other?.id) ? '● в сети' : '○ офлайн' }}</div></div>
+            <div class="min-w-0"><div class="text-[15px] lg:text-sm font-semibold dark:text-white truncate hover:underline">{{ activeConv?.other?.name }}</div><div v-if="[...typingUsers].some(id=>id===activeConv?.other?.id)" class="text-xs text-violet-600 leading-none">печатает...</div><div v-else class="text-xs leading-none" :class="isOnline(activeConv?.other?.id) ? 'text-emerald-600' : 'text-red-500'">{{ isOnline(activeConv?.other?.id) ? '● в сети' : '○ офлайн' }}</div></div>
           </Link>
           <div class="flex items-center gap-0.5 lg:gap-1 shrink-0">
             <Button @click="refresh" :loading="refreshing" icon="pi pi-refresh" rounded text severity="secondary" class="!w-9 !h-9 !min-w-9 !max-w-9 !min-h-9 !max-h-9 lg:!w-8 lg:!min-w-8 lg:!max-w-8 lg:!min-h-8 lg:!max-h-8 !p-0 !rounded-full aspect-square shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" aria-label="Обновить" />
@@ -272,45 +283,57 @@ onMounted(init)
         <div id="chat-messages" class="flex-1 overflow-auto overscroll-contain p-3 lg:p-4 space-y-2.5 lg:space-y-2 bg-stone-50/50 dark:bg-zinc-950/30 min-w-0 w-full max-w-full">
           <div v-if="loading" class="flex justify-center py-6"><span class="w-6 h-6 border-2 border-violet-200 border-t-violet-600 rounded-full animate-spin"></span></div>
           <div v-for="m in messages" :key="m.id" :class="isOwnMessage(m) ? 'flex justify-end' : 'flex justify-start'" class="min-w-0 w-full max-w-full">
-            <div class="group relative max-w-[82%] sm:max-w-[72%] lg:max-w-[68%] min-w-0 select-none" v-bind="bindSheet({type:'message', data:m})">
-              <div v-if="editingId===m.id" class="bg-white dark:bg-zinc-800 border rounded-2xl p-2.5 shadow-lg min-w-[260px] max-w-[86vw]">
-                <input ref="editInputRef" v-model="editingBody" @keydown.enter.prevent="saveEdit" @keydown.escape="cancelEdit" class="w-full px-3.5 py-3 lg:py-2 rounded-xl border dark:border-zinc-700 dark:bg-zinc-900 text-[15px] lg:text-sm focus:outline-none focus:ring-2 focus:ring-violet-500" placeholder="Сообщение..." />
-                <div class="flex gap-1.5 mt-2.5 justify-between items-center flex-wrap">
-                  <div class="flex gap-1">
-                    <button v-for="e in EMOJI_GROUPS[0].emojis.slice(0,6)" :key="e" @click="onPickEmojiForEdit(e)" class="w-8 h-8 lg:w-7 lg:h-7 grid place-items-center hover:bg-stone-100 dark:hover:bg-zinc-700 rounded-xl lg:rounded-lg text-[16px] lg:text-sm active:scale-95">{{ e }}</button>
-                  </div>
-                  <div class="flex gap-2 ml-auto">
-                    <button @click="cancelEdit" class="px-4 py-2 rounded-full border bg-white dark:bg-zinc-900 text-sm lg:text-xs font-medium active:scale-95">Отмена</button>
-                    <button @click="saveEdit" :disabled="!editingBody.trim()" class="px-4 py-2 rounded-full bg-violet-600 text-white text-sm lg:text-xs font-semibold disabled:opacity-40 active:scale-95">Сохранить</button>
+            <div class="flex items-end gap-2 max-w-[82%] sm:max-w-[72%] lg:max-w-[68%] group" :class="isOwnMessage(m) ? 'flex-row-reverse' : 'flex-row'">
+              <div v-if="isOwnMessage(m) && editingId!==m.id && !(m as any).pending" class="hidden lg:flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 shrink-0 pb-1">
+                <button @click="handleStartEdit(m)" class="w-8 h-8 grid place-items-center rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow hover:bg-violet-50 hover:text-violet-600 hover:border-violet-200 transition" title="Редактировать">✎</button>
+                <button @click="askDeleteMessage(m.id)" class="w-8 h-8 grid place-items-center rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition" title="Удалить">🗑</button>
+              </div>
+              <div class="relative min-w-0 flex-1 select-none" v-bind="bindSheet({type:'message', data:m})">
+                <div v-if="editingId===m.id" class="bg-white dark:bg-zinc-800 border rounded-2xl p-2.5 shadow-lg min-w-[260px] max-w-[86vw]">
+                  <input ref="editInputRef" v-model="editingBody" @keydown.enter.prevent="saveEdit" @keydown.escape="cancelEdit" class="w-full px-3.5 py-3 lg:py-2 rounded-xl border dark:border-zinc-700 dark:bg-zinc-900 text-[15px] lg:text-sm focus:outline-none focus:ring-2 focus:ring-violet-500" placeholder="Сообщение..." />
+                  <div class="flex gap-1.5 mt-2.5 justify-between items-center flex-wrap">
+                    <div class="flex gap-1">
+                      <button v-for="e in EMOJI_GROUPS[0].emojis.slice(0,6)" :key="e" @click="onPickEmojiForEdit(e)" class="w-8 h-8 lg:w-7 lg:h-7 grid place-items-center hover:bg-stone-100 dark:hover:bg-zinc-700 rounded-xl lg:rounded-lg text-[16px] lg:text-sm active:scale-95">{{ e }}</button>
+                    </div>
+                    <div class="flex gap-2 ml-auto">
+                      <button @click="cancelEdit" class="px-4 py-2 rounded-full border bg-white dark:bg-zinc-900 text-sm lg:text-xs font-medium active:scale-95">Отмена</button>
+                      <button @click="saveEdit" :disabled="!editingBody.trim()" class="px-4 py-2 rounded-full bg-violet-600 text-white text-sm lg:text-xs font-semibold disabled:opacity-40 active:scale-95">Сохранить</button>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div v-else :class="[
-                'rounded-[18px] lg:rounded-2xl px-3.5 py-2.5 lg:px-3 lg:py-2 text-[15px] lg:text-sm leading-[1.4] shadow-sm transition-all duration-300',
-                isOwnMessage(m) ? 'bg-violet-600 text-white rounded-br-[6px]' : 'bg-white dark:bg-zinc-800 dark:text-white border border-stone-200 dark:border-zinc-700 rounded-bl-[6px]',
-                (m as any).pending ? 'opacity-60 scale-[0.98]' : 'opacity-100 scale-100',
-                (m as any).failed ? '!bg-red-500' : '',
-                (m as any).justSent ? 'ring-2 ring-violet-300' : ''
-              ]">
-                <div class="whitespace-pre-wrap break-words flex items-end gap-1.5">{{ m.body }}<span v-if="(m as any).pending" class="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin shrink-0 mb-0.5"></span><span v-if="(m as any).failed" class="text-[11px]">✕</span></div>
-                <div :class="isOwnMessage(m) ? 'text-violet-100' : 'text-stone-400'" class="text-[11px] lg:text-[10px] mt-1 text-right flex items-center justify-end gap-1">{{ formatTime(m.created_at) }}<span v-if="(m as any).is_edited" class="opacity-70">· изм.</span><span v-if="(m as any).pending" class="opacity-70">· отправка</span><span v-if="(m as any).failed" class="text-red-100">· ошибка</span></div>
-              </div>
-              <div v-if="editingId!==m.id && isOwnMessage(m) && !(m as any).pending" class="absolute -left-16 top-1/2 -translate-y-1/2 hidden lg:group-hover:flex gap-1">
-                <button @click="handleStartEdit(m)" class="w-7 h-7 grid place-items-center rounded-full bg-white dark:bg-zinc-800 border shadow text-xs hover:scale-105 transition" title="Редактировать">✎</button>
+                <div v-else :class="[
+                  'rounded-[18px] lg:rounded-2xl px-3.5 py-2.5 lg:px-3 lg:py-2 text-[15px] lg:text-sm leading-[1.4] shadow-sm transition-all duration-300',
+                  isOwnMessage(m) ? 'bg-violet-600 text-white rounded-br-[6px]' : 'bg-white dark:bg-zinc-800 dark:text-white border border-stone-200 dark:border-zinc-700 rounded-bl-[6px]',
+                  (m as any).pending ? 'opacity-60 scale-[0.98]' : 'opacity-100 scale-100',
+                  (m as any).failed ? '!bg-red-500' : '',
+                  (m as any).justSent ? 'ring-2 ring-violet-300' : ''
+                ]">
+                  <div class="whitespace-pre-wrap break-words flex items-end gap-1.5">{{ m.body }}<span v-if="(m as any).pending" class="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin shrink-0 mb-0.5"></span><span v-if="(m as any).failed" class="text-[11px]">✕</span></div>
+                  <div :class="isOwnMessage(m) ? 'text-violet-100' : 'text-stone-400'" class="text-[11px] lg:text-[10px] mt-1 text-right flex items-center justify-end gap-1.5">
+                    <span>{{ formatTime(m.created_at) }}</span>
+                    <span v-if="(m as any).is_edited" class="opacity-70">· изм.</span>
+                    <MessageTicks v-if="isOwnMessage(m)" :status="messageStatus(m)" />
+                  </div>
+                </div>
+                <div v-if="isOwnMessage(m) && editingId!==m.id && !(m as any).pending" class="lg:hidden flex justify-end gap-1.5 mt-1.5 opacity-60">
+                  <button @click="handleStartEdit(m)" class="text-[11px] px-2.5 py-1 rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow-sm flex items-center gap-1">✎ Редакт.</button>
+                  <button @click="askDeleteMessage(m.id)" class="text-[11px] px-2.5 py-1 rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow-sm flex items-center gap-1 text-red-600">🗑 Удалить</button>
+                </div>
               </div>
             </div>
           </div>
         </div>
-        <div class="p-2 lg:p-3 border-t dark:border-zinc-800 bg-white dark:bg-zinc-900 shrink-0 flex-none pb-[calc(0.5rem+env(safe-area-inset-bottom))] lg:pb-3 w-full max-w-full min-w-0">
-          <div v-if="emojiOpen" class="absolute bottom-full left-2 right-2 lg:left-3 lg:right-3 mb-2 bg-white dark:bg-zinc-800 border dark:border-zinc-700 rounded-[20px] lg:rounded-2xl shadow-xl p-3 z-10 max-h-[46dvh] lg:max-h-[220px] overflow-auto overscroll-contain">
+        <div class="relative p-2 lg:p-3 border-t dark:border-zinc-800 bg-white dark:bg-zinc-900 shrink-0 flex-none pb-[calc(0.5rem+env(safe-area-inset-bottom))] lg:pb-3 w-full max-w-full min-w-0">
+          <div v-if="emojiOpen" class="absolute bottom-full left-2 right-2 lg:left-3 lg:right-3 mb-2 bg-white dark:bg-zinc-800 border dark:border-zinc-700 rounded-[20px] lg:rounded-2xl shadow-xl p-3 z-20 max-h-[42dvh] lg:max-h-[240px] overflow-auto overscroll-contain">
             <div v-for="g in EMOJI_GROUPS" :key="g.label" class="mb-2 last:mb-0">
-              <div class="text-[10px] font-bold tracking-widest uppercase text-stone-400 mb-1.5">{{ g.label }}</div>
+              <div class="text-[10px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500 mb-1.5">{{ g.label }}</div>
               <div class="flex flex-wrap gap-1">
-                <button v-for="e in g.emojis" :key="e" @click="onPickEmoji(e)" class="w-10 h-10 lg:w-8 lg:h-8 grid place-items-center hover:bg-stone-100 dark:hover:bg-zinc-700 active:bg-violet-100 rounded-xl lg:rounded-lg text-[20px] lg:text-lg leading-none transition active:scale-90">{{ e }}</button>
+                <button v-for="e in g.emojis" :key="e" @click="onPickEmoji(e)" class="w-10 h-10 lg:w-8 lg:h-8 grid place-items-center hover:bg-stone-100 dark:hover:bg-zinc-700 active:bg-violet-100 dark:active:bg-violet-900/30 rounded-xl lg:rounded-lg text-[20px] lg:text-lg leading-none transition active:scale-90">{{ e }}</button>
               </div>
             </div>
           </div>
-          <div class="flex gap-2 items-end min-w-0 w-full max-w-full">
+          <div v-if="emojiOpen" @click="emoji.close()" class="fixed inset-0 z-10"></div>
+          <div class="relative flex gap-2 items-end min-w-0 w-full max-w-full z-10">
             <Button @click="toggleEmoji" :severity="emojiOpen ? 'contrast' : 'secondary'" :outlined="!emojiOpen" rounded class="!w-11 !h-11 !min-w-11 !max-w-11 !min-h-11 !max-h-11 !p-0 !rounded-full aspect-square shrink-0 grid place-items-center text-[20px] lg:!w-10 lg:!h-10 lg:!min-w-10 lg:!max-w-10 lg:!min-h-10 lg:!max-h-10 [&_.p-button-label]:!m-0" label="😊" />
             <InputText ref="inputRef" v-model="input" @input="notifyTyping" @blur="stopTyping" @keydown.enter.prevent="handleSend" @keydown.escape="emoji.close()" placeholder="Сообщение..." fluid class="!rounded-full flex-1 min-w-0" enterkeyhint="send" />
             <Button @click="handleSend" :loading="sending" :disabled="!input.trim()" icon="pi pi-send" rounded class="!w-11 !h-11 !min-w-11 !max-w-11 !min-h-11 !max-h-11 !p-0 !rounded-full aspect-square shrink-0 grid place-items-center [&_.p-button-label]:hidden [&_.p-button-icon]:!m-0" aria-label="Отправить" />

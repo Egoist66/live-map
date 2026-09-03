@@ -96,8 +96,7 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
         const c = map.getCenter()
         const z = map.getZoom()
         const radius = z < 8 ? 50000 : z < 10 ? 30000 : z < 12 ? 15000 : z < 14 ? 8000 : 5000
-        const { store: s } = usePins() as any
-        s.fetchNearby(c.lat, c.lng, radius).then(()=>renderPins())
+        throttled.request(c.lat, c.lng, radius)
       }
       map.on('moveend', fetchForView)
       map.on('zoomend', fetchForView)

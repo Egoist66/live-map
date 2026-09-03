@@ -11,7 +11,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['name', 'email', 'password', 'plan', 'latitude', 'longitude', 'role', 'is_admin', 'avatar_path', 'home_lat', 'home_lng', 'home_radius_km', 'bio', 'reputation_score', 'level', 'is_anonymous_default', 'message_privacy', 'allow_random_messages', 'settings', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at'])]
+#[Fillable(['name', 'email', 'password', 'plan', 'latitude', 'longitude', 'role', 'is_admin', 'avatar_path', 'home_lat', 'home_lng', 'home_radius_km', 'bio', 'reputation_score', 'level', 'is_anonymous_default', 'message_privacy', 'allow_random_messages', 'settings', 'last_seen_at', 'is_invisible', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -66,6 +66,10 @@ class User extends Authenticatable
 
     public function isPro(): bool { return $this->isAdmin() || in_array($this->plan, ['pro','business']); }
 
+    public function canUseInvisible(): bool { return $this->isAdmin() || in_array($this->plan, ['pro','business']); }
+
+    public function isInvisibleActive(): bool { return (bool) $this->is_invisible && $this->canUseInvisible(); }
+
     public function canModerate(): bool { return $this->isModerator(); }
 
     public function canDeletePin(Pin $pin): bool { return $this->isAdmin() || $pin->user_id === $this->id; }
@@ -109,6 +113,8 @@ class User extends Authenticatable
             'is_anonymous_default' => 'boolean',
             'allow_random_messages' => 'boolean',
             'is_admin' => 'boolean',
+            'is_invisible' => 'boolean',
+            'last_seen_at' => 'datetime',
             'plan_expires_at' => 'datetime',
             'pins_today_date' => 'date',
             'trial_ends_at' => 'datetime',

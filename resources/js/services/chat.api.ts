@@ -27,4 +27,5 @@ export const chatApi = {
   sendMessage(convId:number, body:string){ return api.post<Message>(`/api/conversations/${convId}/messages`,{body}).then(r=>r.data) },
   editMessage(messageId:number, body:string){ return api.patch<Message>(`/api/messages/${messageId}`,{body}).then(r=>r.data) },
   deleteMessage(messageId:number){ return api.delete(`/api/messages/${messageId}`).then(r=>r.data) },
+  markDelivered(convId:number){ return api.post(`/api/conversations/${convId}/delivered`).then(r=>r.data) },
 }

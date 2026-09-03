@@ -17,7 +17,7 @@ class ChatUserController extends Controller
         $users = User::where('id','!=',$me->id)
             ->whereNotIn('id',$blocked)
             ->where(fn($qq)=>$qq->where('name','like',"%$q%")->orWhere('email','like',"%$q%"))
-            ->select('id','name','avatar_path','message_privacy','allow_random_messages')
+            ->select('id','name','avatar_path','message_privacy','allow_random_messages','last_seen_at','is_invisible','plan','role','is_admin')
             ->limit(20)->get()
             ->map(fn($u)=>[
                 'id'=>$u->id,
@@ -28,6 +28,8 @@ class ChatUserController extends Controller
                 'can_message_reason'=>$me->messageBlockReason($u),
                 'message_privacy'=>$u->message_privacy,
                 'allow_random_messages'=>$u->allow_random_messages,
+                'last_seen_at'=>$u->isInvisibleActive() && !$me->isAdmin() ? null : $u->last_seen_at?->toISOString(),
+                'is_invisible'=>$u->isInvisibleActive(),
             ]);
         return response()->json($users);
     }
@@ -50,6 +52,9 @@ class ChatUserController extends Controller
             'message_privacy'=>$u->message_privacy,
             'allow_random_messages'=>$u->allow_random_messages,
             'unread_count'=>$u->unreadMessagesCount(),
+            'last_seen_at'=>$u->last_seen_at?->toISOString(),
+            'is_invisible'=>$u->isInvisibleActive(),
+            'can_use_invisible'=>$u->canUseInvisible(),
         ]);
     }
 }

@@ -19,7 +19,11 @@ Route::get('/', function () {
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/dashboard/{identifier?}', [ProfileController::class, 'dashboard'])->name('dashboard');
+    Route::get('/profile/{identifier?}', [ProfileController::class, 'dashboard'])->name('dashboard');
+    Route::get('/profile/{identifier?}', [ProfileController::class, 'dashboard'])->name('profile.show');
+    Route::get('/dashboard/{identifier?}', function (?string $identifier = null) {
+        return redirect()->route('dashboard', ['identifier' => $identifier]);
+    })->where('identifier', '.*');
     Route::get('/admin', fn () => redirect()->route('dashboard', ['identifier' => 'admin']))->name('admin');
 });
 
@@ -29,7 +33,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/users/{user}', [ProfileController::class, 'publicShow'])->name('users.show');
     Route::get('/map', fn () => Inertia::render('Map/Index'))->name('map');
     Route::get('/settings/{identifier?}', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::get('/profile/{identifier?}', fn (?string $identifier = null) => redirect()->route('profile.edit', ['identifier' => $identifier]))->where('identifier', '.*');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::post('/profile/avatar', [\App\Http\Controllers\AvatarController::class, 'store'])->name('profile.avatar');

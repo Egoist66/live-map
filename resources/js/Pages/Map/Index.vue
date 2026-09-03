@@ -23,11 +23,11 @@ import { watch } from 'vue'
 import { avatarSrcFor } from '@/composables/useAvatar'
 
 const {
-  store, categories, selectedCategory, pinDetails, pinCreate, pinEdit, mapApi,
+  store, categories, selectedCategory, filteredPins, pinDetails, pinCreate, pinEdit, mapApi,
   showCreate, pinAddress, loadingPinAddress, myStreet, loadingStreet,
   radiusOptions, radiusLabel, closeCreate, deleteSelectedPin, saveEdit, init, destroy,
   showLiveInfo, showMyPins, myPins, handleMineClick, flyToPin,
-} = useMapPage()
+} = useMapPage() as any
 
 const { selectedPin, comments, commentText, react, sendComment, reportPin, boost, editingCommentId, editingContent, startEditComment, cancelEditComment, saveEditComment, reactAsyncStatus, createCommentAsyncStatus, boostMutation, reportMutation, updateCommentMutation } = pinDetails as any
 const { mapContainer, loaded } = mapApi
@@ -59,11 +59,11 @@ onUnmounted(destroy)
         <Card class="pointer-events-auto !rounded-2xl sm:!rounded-full !shadow-soft !border-stone-200 dark:!border-zinc-700 !bg-white/95 dark:!bg-zinc-900/95 backdrop-blur !p-1.5 sm:!pl-2 sm:!pr-2 w-full max-w-full overflow-hidden" :pt="{ body: { class: '!p-0 w-full' }, content: { class: '!p-0 w-full' } }">
           <template #content>
             <div class="flex items-center gap-1.5 overflow-x-auto scrollbar-none max-w-full snap-x">
-              <Tag @click="showLiveInfo=true" :value="String(store.pins.length)" severity="contrast" rounded class="shrink-0 !bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white cursor-pointer hover:opacity-90 snap-start">
+              <Tag @click="showLiveInfo=true" :value="String((filteredPins as any)?.value?.length ?? store.pins.length)" severity="contrast" rounded class="shrink-0 !bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white cursor-pointer hover:opacity-90 snap-start">
                 <template #icon><span v-if="store.loading" class="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></span><span v-else class="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse inline-block"></span></template>
               </Tag>
               <div class="h-5 w-px bg-stone-200 dark:bg-zinc-700 shrink-0 hidden sm:block"></div>
-              <SelectButton v-model="selectedCategory" :options="[{label:'Все',value:'all'}, {label:'📍 Мои',value:'mine'}, ...categories.map(c=>({label:`${c.i} ${c.l}`, value:c.v}))]" optionLabel="label" optionValue="value" class="hidden sm:flex shrink-0" :allowEmpty="false" :pt="{ button: { class: '!rounded-full !text-xs !py-1.5 !px-3.5 !whitespace-nowrap' } }" />
+              <SelectButton v-model="selectedCategory" :options="[{label:'Все',value:'all'}, {label:'📍 Мои',value:'mine'}, ...categories.map((c:any)=>({label:`${c.i} ${c.l}`, value:c.v}))]" optionLabel="label" optionValue="value" class="hidden sm:flex shrink-0" :allowEmpty="false" :pt="{ button: { class: '!rounded-full !text-xs !py-1.5 !px-3.5 !whitespace-nowrap' } }" />
               <div class="flex sm:hidden items-center gap-1.5 overflow-x-auto scrollbar-none snap-x flex-1 min-w-0">
                 <Button label="Все" size="small" rounded :severity="selectedCategory==='all' ? 'contrast' : 'secondary'" :outlined="selectedCategory!=='all'" @click="selectedCategory='all'" class="shrink-0 !text-xs snap-start" />
                 <Button label="📍 Мои" size="small" rounded :severity="selectedCategory==='mine' ? 'warn' : 'secondary'" :outlined="selectedCategory!=='mine'" @click="handleMineClick" class="shrink-0 !text-xs snap-start" />
@@ -94,28 +94,28 @@ onUnmounted(destroy)
       <div class="absolute bottom-4 left-4 hidden xl:flex z-10 pointer-events-none">
         <div class="bg-white/95 dark:bg-zinc-900/95 backdrop-blur border border-stone-200 dark:border-zinc-700 rounded-full px-3.5 py-2 shadow-soft flex items-center gap-2 text-xs font-medium dark:text-zinc-200">
           <span class="w-7 h-7 rounded-full bg-stone-100 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 grid place-items-center text-[11px] dark:text-zinc-300">◐</span>
-          {{ store.pins.length }} пинов · живёт 2–24ч · размытие 200м
+          {{ (filteredPins as any)?.value?.length ?? store.pins.length }} пинов · живёт 2–24ч · размытие 200м
         </div>
       </div>
 
-      <Dialog v-model:visible="showCreate" modal :dismissableMask="true" :closable="true" header="Новый пин" :style="{ width: '520px', maxWidth: '96vw' }" contentClass="!p-0" @hide="closeCreate">
-        <template #header><div><div class="text-[16px] font-black">Новый пин</div><div class="text-[11px] text-stone-500">Клик по карте — переместить точку</div></div></template>
-        <form @submit.prevent="pinCreate.submit" class="p-4 sm:p-5 space-y-3">
-          <div class="bg-stone-50 border border-stone-200 rounded-xl px-3 py-2.5 flex items-center gap-2.5">
+      <Dialog v-model:visible="showCreate" modal :dismissableMask="true" :closable="true" header="Новый пин" :style="{ width: '520px', maxWidth: '96vw' }" contentClass="!p-0 dark:!bg-zinc-900" :pt="{ root:{ class:'dark:!bg-zinc-900 dark:!border-zinc-700' }, header:{ class:'dark:!bg-zinc-900 dark:!text-white dark:!border-zinc-800' }, content:{ class:'dark:!bg-zinc-900' } }" @hide="closeCreate">
+        <template #header><div><div class="text-[16px] font-black dark:text-white">Новый пин</div><div class="text-[11px] text-stone-500 dark:text-zinc-400">Клик по карте — переместить точку</div></div></template>
+        <form @submit.prevent="pinCreate.submit" class="p-4 sm:p-5 space-y-3 dark:bg-zinc-900">
+          <div class="bg-stone-50 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-xl px-3 py-2.5 flex items-center gap-2.5">
             <span class="w-7 h-7 rounded-full bg-ink-900 text-white grid place-items-center shrink-0">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
             </span>
             <div class="min-w-0 flex-1">
-              <div class="text-[12px] font-semibold leading-tight truncate">
-                <span v-if="loadingPinAddress" class="text-stone-400">Определяем адрес…</span>
-                <span v-else-if="pinCreate.showCoords.value" class="font-mono">{{ (pinCreate.values as any).latitude?.toFixed(5) }}, {{ (pinCreate.values as any).longitude?.toFixed(5) }}</span>
-                <span v-else>{{ pinAddress || 'Адрес не определён' }}</span>
+              <div class="text-[12px] font-semibold leading-tight truncate dark:text-white">
+                <span v-if="loadingPinAddress" class="text-stone-400 dark:text-zinc-500">Определяем адрес…</span>
+                <span v-else-if="pinCreate.showCoords.value" class="font-mono dark:text-zinc-200">{{ (pinCreate.values as any).latitude?.toFixed(5) }}, {{ (pinCreate.values as any).longitude?.toFixed(5) }}</span>
+                <span v-else class="dark:text-zinc-200">{{ pinAddress || 'Адрес не определён' }}</span>
               </div>
-              <div class="text-[10px] text-stone-400 leading-none mt-0.5 truncate">кликни → переместить</div>
+              <div class="text-[10px] text-stone-400 dark:text-zinc-500 leading-none mt-0.5 truncate">кликни → переместить</div>
             </div>
           </div>
-          <label class="flex items-center justify-between bg-white border border-stone-200 rounded-full px-3 py-2 cursor-pointer hover:bg-stone-50 transition">
-            <span class="text-[11px] font-semibold flex items-center gap-1.5"><span class="w-5 h-5 rounded-full bg-stone-100 border border-stone-200 grid place-items-center text-[10px]">◈</span> Показать координаты</span>
+          <label class="flex items-center justify-between bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-full px-3 py-2 cursor-pointer hover:bg-stone-50 dark:hover:bg-zinc-700 transition dark:text-white">
+            <span class="text-[11px] font-semibold flex items-center gap-1.5"><span class="w-5 h-5 rounded-full bg-stone-100 dark:bg-zinc-700 border border-stone-200 dark:border-zinc-600 grid place-items-center text-[10px]">◈</span> Показать координаты</span>
             <input type="checkbox" v-model="pinCreate.showCoords.value" class="sr-only" />
             <span :class="['w-8 h-5 rounded-full p-0.5 flex items-center transition', pinCreate.showCoords.value ? 'bg-ink-900' : 'bg-stone-300']">
               <span :class="['w-4 h-4 bg-white rounded-full shadow transition', pinCreate.showCoords.value ? 'translate-x-3' : 'translate-x-0']"></span>
@@ -123,52 +123,52 @@ onUnmounted(destroy)
           </label>
 
           <div>
-            <label class="text-[10px] font-bold tracking-wide uppercase text-stone-500">Заголовок *</label>
-            <InputText v-model="pinCreate.title.value" v-bind="pinCreate.titleAttrs" placeholder="Напр. Отдам стул, где кофе?" maxlength="100" class="w-full mt-1 !rounded-2xl" />
+            <label class="text-[10px] font-bold tracking-wide uppercase text-stone-500 dark:text-zinc-400">Заголовок *</label>
+            <InputText v-model="pinCreate.title.value" v-bind="pinCreate.titleAttrs" placeholder="Напр. Отдам стул, где кофе?" maxlength="100" class="w-full mt-1 !rounded-2xl dark:!bg-zinc-800 dark:!border-zinc-700 dark:!text-white" />
             <small class="text-red-500 text-xs">{{ pinCreate.errors.value.title }}</small>
-            <div class="flex justify-between text-[10px] mt-1"><span class="text-stone-400">Коротко</span><span :class="(pinCreate.title.value?.length||0)>80?'text-amber-600':'text-stone-400'">{{ pinCreate.title.value?.length||0 }}/100</span></div>
+            <div class="flex justify-between text-[10px] mt-1"><span class="text-stone-400 dark:text-zinc-500">Коротко</span><span :class="(pinCreate.title.value?.length||0)>80?'text-amber-600':'text-stone-400 dark:text-zinc-500'">{{ pinCreate.title.value?.length||0 }}/100</span></div>
           </div>
           <div>
-            <label class="text-[10px] font-bold tracking-wide uppercase text-stone-500">Подробности</label>
-            <Textarea v-model="pinCreate.body.value" placeholder="Адрес, время, контакты…" rows="2" autoResize maxlength="1000" class="w-full mt-1 !rounded-2xl" />
+            <label class="text-[10px] font-bold tracking-wide uppercase text-stone-500 dark:text-zinc-400">Подробности</label>
+            <Textarea v-model="pinCreate.body.value" placeholder="Адрес, время, контакты…" rows="2" autoResize maxlength="1000" class="w-full mt-1 !rounded-2xl dark:!bg-zinc-800 dark:!border-zinc-700 dark:!text-white" />
             <small class="text-red-500 text-xs">{{ pinCreate.errors.value.body }}</small>
           </div>
           <div>
-            <label class="text-[10px] font-bold tracking-wide uppercase text-stone-500">Категория</label>
+            <label class="text-[10px] font-bold tracking-wide uppercase text-stone-500 dark:text-zinc-400">Категория</label>
             <div class="mt-1.5 grid grid-cols-3 gap-1.5">
-              <button v-for="c in categories" :key="c.v" type="button" @click="(pinCreate.category.value as any)=c.v" :class="['group relative px-2 py-2 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1 transition', (pinCreate.category.value as any)===c.v?'bg-ink-900 text-white border-ink-900 shadow-soft':'bg-white border-stone-200 hover:bg-stone-50']">
+              <button v-for="c in categories" :key="c.v" type="button" @click="(pinCreate.category.value as any)=c.v" :class="['group relative px-2 py-2 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1 transition', (pinCreate.category.value as any)===c.v?'bg-ink-900 dark:bg-white dark:text-ink-900 text-white border-ink-900 dark:border-white shadow-soft':'bg-white dark:bg-zinc-800 dark:text-zinc-200 border-stone-200 dark:border-zinc-700 hover:bg-stone-50 dark:hover:bg-zinc-700']">
                 <span class="text-sm leading-none">{{ c.i }}</span><span class="leading-none text-[11px]">{{ c.l }}</span>
               </button>
             </div>
           </div>
           <div>
-            <label class="text-[10px] font-bold tracking-wide uppercase text-stone-500">Приватность</label>
+            <label class="text-[10px] font-bold tracking-wide uppercase text-stone-500 dark:text-zinc-400">Приватность</label>
             <div class="mt-1.5 grid grid-cols-3 gap-1.5">
-              <button type="button" @click="(pinCreate.location_precision.value as any)='blur_200'" :class="['rounded-full py-2 text-xs font-semibold border transition flex items-center justify-center gap-1', (pinCreate.location_precision.value as any)==='blur_200'?'bg-ink-900 text-white border-ink-900 shadow-soft':'bg-white border-stone-200 hover:bg-stone-50']">Размыто <span class="text-[11px] opacity-60">200м</span></button>
-              <button type="button" @click="(pinCreate.location_precision.value as any)='exact'" :class="['rounded-full py-2 text-xs font-semibold border transition', (pinCreate.location_precision.value as any)==='exact'?'bg-ink-900 text-white border-ink-900 shadow-soft':'bg-white border-stone-200 hover:bg-stone-50']">Точно</button>
-              <button type="button" @click="(pinCreate.location_precision.value as any)='district'" :class="['rounded-full py-2 text-xs font-semibold border transition', (pinCreate.location_precision.value as any)==='district'?'bg-ink-900 text-white border-ink-900 shadow-soft':'bg-white border-stone-200 hover:bg-stone-50']">Район</button>
+              <button type="button" @click="(pinCreate.location_precision.value as any)='blur_200'" :class="['rounded-full py-2 text-xs font-semibold border transition flex items-center justify-center gap-1', (pinCreate.location_precision.value as any)==='blur_200'?'bg-ink-900 dark:bg-white dark:text-ink-900 text-white border-ink-900 dark:border-white shadow-soft':'bg-white dark:bg-zinc-800 dark:text-zinc-200 border-stone-200 dark:border-zinc-700 hover:bg-stone-50 dark:hover:bg-zinc-700']">Размыто <span class="text-[11px] opacity-60">200м</span></button>
+              <button type="button" @click="(pinCreate.location_precision.value as any)='exact'" :class="['rounded-full py-2 text-xs font-semibold border transition', (pinCreate.location_precision.value as any)==='exact'?'bg-ink-900 dark:bg-white dark:text-ink-900 text-white border-ink-900 dark:border-white shadow-soft':'bg-white dark:bg-zinc-800 dark:text-zinc-200 border-stone-200 dark:border-zinc-700 hover:bg-stone-50 dark:hover:bg-zinc-700']">Точно</button>
+              <button type="button" @click="(pinCreate.location_precision.value as any)='district'" :class="['rounded-full py-2 text-xs font-semibold border transition', (pinCreate.location_precision.value as any)==='district'?'bg-ink-900 dark:bg-white dark:text-ink-900 text-white border-ink-900 dark:border-white shadow-soft':'bg-white dark:bg-zinc-800 dark:text-zinc-200 border-stone-200 dark:border-zinc-700 hover:bg-stone-50 dark:hover:bg-zinc-700']">Район</button>
             </div>
           </div>
-          <div class="bg-white border border-stone-200 rounded-xl p-2.5">
+          <div class="bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-xl p-2.5">
             <div class="flex items-center justify-between">
-              <label class="text-[10px] font-bold tracking-wide uppercase text-stone-500">Радиус</label>
-              <span class="text-[11px] font-bold bg-ink-900 text-white rounded-full px-2 py-0.5">{{ radiusLabel }}</span>
+              <label class="text-[10px] font-bold tracking-wide uppercase text-stone-500 dark:text-zinc-400">Радиус</label>
+              <span class="text-[11px] font-bold bg-ink-900 dark:bg-white dark:text-ink-900 text-white rounded-full px-2 py-0.5">{{ radiusLabel }}</span>
             </div>
             <div class="mt-1.5 grid grid-cols-4 gap-1">
-              <button v-for="o in radiusOptions" :key="o.v" type="button" :disabled="o.disabled" @click="(pinCreate.radius_meters.value as any)=o.v" :class="['rounded-full py-2 text-xs font-semibold border transition', o.disabled ? 'bg-stone-100 border-stone-200 text-stone-400 cursor-not-allowed' : (pinCreate.radius_meters.value as any)===o.v ? 'bg-ink-900 text-white border-ink-900 shadow-soft' : 'bg-white border-stone-200 hover:bg-stone-50']">
+              <button v-for="o in radiusOptions" :key="o.v" type="button" :disabled="o.disabled" @click="(pinCreate.radius_meters.value as any)=o.v" :class="['rounded-full py-2 text-xs font-semibold border transition', o.disabled ? 'bg-stone-100 dark:bg-zinc-700 border-stone-200 dark:border-zinc-600 text-stone-400 dark:text-zinc-500 cursor-not-allowed' : (pinCreate.radius_meters.value as any)===o.v ? 'bg-ink-900 dark:bg-white dark:text-ink-900 text-white border-ink-900 dark:border-white shadow-soft' : 'bg-white dark:bg-zinc-800 dark:text-zinc-200 border-stone-200 dark:border-zinc-700 hover:bg-stone-50 dark:hover:bg-zinc-700']">
                 {{ o.l }}
               </button>
             </div>
           </div>
-          <label class="flex items-center gap-2.5 bg-stone-50 border border-stone-200 rounded-xl px-3 py-2.5 cursor-pointer hover:bg-stone-100 transition">
-            <input type="checkbox" v-model="(pinCreate.is_anonymous.value as any)" class="rounded text-ink-900 w-[16px] h-[16px] border-stone-300" />
-            <div class="flex-1 min-w-0"><div class="text-xs font-semibold leading-none">Анонимно</div><div class="text-[11px] text-stone-500 mt-0.5">без репутации</div></div>
+          <label class="flex items-center gap-2.5 bg-stone-50 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-xl px-3 py-2.5 cursor-pointer hover:bg-stone-100 dark:hover:bg-zinc-700 transition">
+            <input type="checkbox" v-model="(pinCreate.is_anonymous.value as any)" class="rounded text-ink-900 w-[16px] h-[16px] border-stone-300 dark:border-zinc-600" />
+            <div class="flex-1 min-w-0"><div class="text-xs font-semibold leading-none dark:text-white">Анонимно</div><div class="text-[11px] text-stone-500 dark:text-zinc-400 mt-0.5">без репутации</div></div>
           </label>
           <div class="flex gap-2 pt-2">
             <Button type="button" severity="secondary" outlined rounded class="flex-1" label="Отмена" @click="closeCreate" />
             <Button :loading="pinCreate.creating" :disabled="!pinCreate.title.value?.trim()" type="submit" rounded class="flex-[1.4] !bg-ink-900 !border-ink-900" :label="pinCreate.creating ? 'Создаём…' : 'Создать пин →'" />
           </div>
-          <p class="text-[10px] text-stone-400 text-center leading-relaxed">Free: 3/день · Pro $4.99 · 2–24ч · правила района</p>
+          <p class="text-[10px] text-stone-400 dark:text-zinc-500 text-center leading-relaxed">Free: 3/день · Pro $4.99 · 2–24ч · правила района</p>
         </form>
       </Dialog>
 

@@ -19,15 +19,19 @@ export const usePinsStore = defineStore('pins', () => {
     loading.value = true
     error.value = null
     try {
-      const r = radius ?? 50000
-      const data = await pinsApi.list(lat, lng, r, abortCtrl.signal)
-      const seen = new Map(pins.value.map(p=>[p.id,p]))
-      data.forEach(p=>seen.set(p.id,p))
+      const data = await pinsApi.list(lat, lng, radius as any, abortCtrl.signal)
       const now = Date.now()
-      const merged = Array.from(seen.values()).filter(p=> new Date((p as any).expires_at).getTime() > now)
-      pins.value = data.length ? merged.slice(0,150) : pins.value
-      if(data.length) pins.value = data
-      return data
+      const alive = (p: any) => new Date(p.expires_at).getTime() > now
+      if (!data.length) {
+        pins.value = pins.value.filter(alive)
+        return pins.value
+      }
+      const seen = new Map<number, Pin>()
+      ;[...pins.value, ...data].forEach((p: any) => seen.set(p.id, p))
+      const merged = Array.from(seen.values()).filter(alive)
+      merged.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      pins.value = merged.slice(0, 150)
+      return pins.value
     } catch (e: any) {
       if (e?.code === 'ERR_CANCELED' || e?.name === 'CanceledError' || e?.name === 'AbortError') return pins.value
       error.value = e?.response?.data?.message ?? 'Не удалось загрузить пины'

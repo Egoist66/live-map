@@ -11,7 +11,7 @@ import { usePinEdit } from '@/composables/usePinEdit'
 import { useMapOverlays } from '@/composables/useMapOverlays'
 
 export function useMapPage() {
-  const { store, categories, selectedCategory, fetchNearby } = usePins()
+  const { store, categories, selectedCategory, filteredPins, fetchNearby } = usePins()
   const pinDetails = usePinDetails()
   const { requestGeolocation } = useGeolocation()
   const { isDark } = useTheme()
@@ -152,7 +152,7 @@ export function useMapPage() {
   function destroy() { window.removeEventListener('keydown', onEsc); try { (mapApi as any).unbindRealtime?.() } catch {} }
 
   return {
-    store, categories, selectedCategory, pinDetails, pinCreate, pinEdit, mapApi,
+    store, categories, selectedCategory, filteredPins, pinDetails, pinCreate, pinEdit, mapApi,
     showCreate, pinAddress, loadingPinAddress, myStreet, loadingStreet,
     radiusOptions, radiusLabel, openCreate, closeCreate, deleteSelectedPin, saveEdit, init, destroy,
     deleteMutation,

@@ -7,11 +7,18 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Message extends Model
 {
-    protected $fillable = ['conversation_id','sender_id','body','type','read_at','edited_at'];
-    protected $casts = ['read_at' => 'datetime', 'edited_at' => 'datetime'];
+    protected $fillable = ['conversation_id','sender_id','body','type','read_at','delivered_at','edited_at'];
+    protected $casts = ['read_at' => 'datetime', 'delivered_at' => 'datetime', 'edited_at' => 'datetime'];
 
     public function conversation(): BelongsTo { return $this->belongsTo(Conversation::class); }
     public function sender(): BelongsTo { return $this->belongsTo(User::class,'sender_id'); }
+
+    public function statusFor(?int $viewerId = null): string
+    {
+        if ($this->read_at) return 'read';
+        if ($this->delivered_at) return 'delivered';
+        return 'sent';
+    }
 
     public function toArrayPayload(): array
     {
@@ -23,6 +30,9 @@ class Message extends Model
             'type' => $this->type,
             'created_at' => $this->created_at?->toISOString(),
             'edited_at' => $this->edited_at?->toISOString(),
+            'delivered_at' => $this->delivered_at?->toISOString(),
+            'read_at' => $this->read_at?->toISOString(),
+            'status' => $this->statusFor(),
             'is_edited' => $this->edited_at !== null,
             'sender' => $this->relationLoaded('sender') ? [
                 'id' => $this->sender->id,

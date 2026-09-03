@@ -27,6 +27,9 @@ import TabPanels from 'primevue/tabpanels'
 import TabPanel from 'primevue/tabpanel'
 import Tag from 'primevue/tag'
 import Menu from 'primevue/menu'
+import ToggleSwitch from 'primevue/toggleswitch'
+import Message from 'primevue/message'
+import { useInvisible } from '@/composables/useInvisible'
 const props = defineProps<{ mustVerifyEmail: boolean; status?: string | null; user: any }>()
 const page = usePage()
 const u = computed(() => props.user || (page.props.auth as any).user)
@@ -58,6 +61,7 @@ function mailToDonate(usd:number){ const byn = ex.usdRate.value? (usd*ex.usdRate
 const avatarSrc = computed(() => avatarSrcFor(u.value))
 const bioPreviewText = computed(() => ((u.value as any).bio || '').trim())
 const bioPreviewEmpty = computed(() => bioPreviewText.value.length === 0)
+const invisible = useInvisible()
 </script>
 <template>
   <Head title="Настройки" />
@@ -147,18 +151,18 @@ const bioPreviewEmpty = computed(() => bioPreviewText.value.length === 0)
                       <p class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Правый клик по пину на карте тоже удаляет. Здесь — полный список.</p>
                       <div v-if="loadingPins" class="mt-5 flex items-center gap-2 text-sm text-stone-500"><span class="w-4 h-4 border-2 border-stone-200 border-t-ink-900 rounded-full animate-spin"></span> Загружаем…</div>
                       <div v-else-if="myPins.length" class="mt-5 grid sm:grid-cols-2 gap-3">
-                        <Card v-for="p in myPins" :key="p.id" class="!border-stone-200 !rounded-3xl !shadow-none hover:!bg-stone-50 !transition relative" :pt="{ body:{ class:'!p-4' }, content:{ class:'!p-0' } }">
+                        <Card v-for="p in myPins" :key="p.id" class="!border-stone-200 dark:!border-zinc-700 !rounded-3xl !shadow-none !bg-white dark:!bg-zinc-800 hover:!bg-stone-50 dark:hover:!bg-zinc-700 !transition relative" :pt="{ body:{ class:'!p-4' }, content:{ class:'!p-0' } }">
                           <template #content>
-                            <Button @click="deleteMyPin(p.id)" :loading="(deleteAsyncStatus as any)?.value==='loading' || (deleteAsyncStatus as any)==='loading'" rounded text severity="secondary" class="!absolute !top-3 !right-3 !w-7 !h-7 !p-0 !bg-white !border !border-stone-200 hover:!bg-red-50 hover:!text-red-600 hover:!border-red-200" icon="pi pi-times" aria-label="Удалить" />
+                            <Button @click="deleteMyPin(p.id)" :loading="(deleteAsyncStatus as any)?.value==='loading' || (deleteAsyncStatus as any)==='loading'" rounded text severity="secondary" class="!absolute !top-3 !right-3 !w-7 !h-7 !p-0 !bg-white dark:!bg-zinc-700 !border !border-stone-200 dark:!border-zinc-600 hover:!bg-red-50 dark:hover:!bg-red-950/30 hover:!text-red-600 dark:hover:!text-red-400 hover:!border-red-200 dark:hover:!border-red-800" icon="pi pi-times" aria-label="Удалить" />
                             <div class="text-sm font-bold pr-8 truncate dark:text-white">{{ p.title }}</div>
-                            <div class="text-xs text-stone-500 mt-1 line-clamp-2">{{ p.body }}</div>
-                            <div class="flex items-center gap-1.5 mt-3 text-[11px]"><Tag :value="p.category" class="!bg-ink-900 !text-white !rounded-full !text-[11px] !px-2 !py-0.5 !border-0" /><Tag :value="`${formatDate(p.expires_at)} ${formatTime(p.expires_at)}`" class="!bg-stone-100 !text-stone-600 !rounded-full !text-[11px] !px-2 !py-0.5 !border-0" /></div>
+                            <div class="text-xs text-stone-500 dark:text-zinc-400 mt-1 line-clamp-2">{{ p.body }}</div>
+                            <div class="flex items-center gap-1.5 mt-3 text-[11px]"><Tag :value="p.category" class="!bg-ink-900 dark:!bg-zinc-700 !text-white !rounded-full !text-[11px] !px-2 !py-0.5 !border-0" /><Tag :value="`${formatDate(p.expires_at)} ${formatTime(p.expires_at)}`" class="!bg-stone-100 dark:!bg-zinc-700 !text-stone-600 dark:!text-zinc-300 !rounded-full !text-[11px] !px-2 !py-0.5 !border-0" /></div>
                           </template>
                         </Card>
                       </div>
-                      <Card v-else class="!border-dashed !border-stone-200 !rounded-3xl !shadow-none mt-6 text-center" :pt="{ body:{ class:'!py-8' }, content:{ class:'!p-0' } }">
+                      <Card v-else class="!border-dashed !border-stone-200 dark:!border-zinc-700 !rounded-3xl !shadow-none mt-6 text-center !bg-white dark:!bg-zinc-900" :pt="{ body:{ class:'!py-8' }, content:{ class:'!p-0' } }">
                         <template #content>
-                          <div class="w-10 h-10 rounded-xl bg-stone-100 border mx-auto grid place-items-center">📍</div><div class="text-sm font-medium mt-2 dark:text-white">Пока нет пинов</div><div class="text-xs text-stone-400">Создай первый на карте</div><Link href="/map" class="mt-3 inline-flex"><Button label="На карту →" rounded size="small" class="!bg-ink-900 !border-ink-900 !text-white" /></Link>
+                          <div class="w-10 h-10 rounded-xl bg-stone-100 dark:bg-zinc-800 border dark:border-zinc-700 mx-auto grid place-items-center">📍</div><div class="text-sm font-medium mt-2 dark:text-white">Пока нет пинов</div><div class="text-xs text-stone-400 dark:text-zinc-500">Создай первый на карте</div><Link href="/map" class="mt-3 inline-flex"><Button label="На карту →" rounded size="small" class="!bg-ink-900 dark:!bg-white dark:!text-ink-900 !border-ink-900 dark:!border-white !text-white" /></Link>
                         </template>
                       </Card>
                     </template>
@@ -185,6 +189,20 @@ const bioPreviewEmpty = computed(() => bioPreviewText.value.length === 0)
                             <div class="text-sm font-semibold dark:text-white">Режим анонимности по умолчанию</div>
                             <p class="text-xs text-stone-500 dark:text-zinc-400 mt-1">Настраивается в разделе «Профиль» — переключатель «Анонимно по умолчанию». При создании пина можно переопределить.</p>
                             <Button @click="active='profile'" label="Перейти в Профиль →" rounded size="small" class="!bg-ink-900 dark:!bg-white !border-ink-900 dark:!border-white dark:!text-ink-900 !text-white mt-3" />
+                          </template>
+                        </Card>
+                        <Card class="!border-stone-200 dark:!border-zinc-700 !rounded-3xl !shadow-none" :class="invisible.isInvisible.value ? '!bg-violet-50 dark:!bg-violet-950/20 !border-violet-200 dark:!border-violet-900' : ''" :pt="{ body:{ class:'!p-4' }, content:{ class:'!p-0' } }">
+                          <template #content>
+                            <div class="flex items-start justify-between gap-3">
+                              <div class="min-w-0">
+                                <div class="text-sm font-semibold dark:text-white flex items-center gap-2">Режим «Невидимка» <Tag v-if="invisible.canUse.value" value="PRO" class="!bg-violet-600 !text-white !border-0 !text-[10px] !px-1.5 !py-0.5 !rounded-full" /><Tag v-else value="PRO only" class="!bg-stone-200 !text-stone-600 !border-0 !text-[10px] !px-1.5 !py-0.5 !rounded-full" /></div>
+                                <p class="text-xs text-stone-500 dark:text-zinc-400 mt-1 leading-relaxed">Скрывает твой онлайн-статус — для других ты офлайн, не попадаешь в «в сети» и не обновляется «был в сети». Доступен только админам и тарифу Pro и выше.</p>
+                              </div>
+                              <ToggleSwitch :modelValue="invisible.isInvisible.value" @update:modelValue="(v:boolean)=>invisible.toggle(v)" :disabled="!invisible.canUse.value || invisible.loading.value" />
+                            </div>
+                            <Message v-if="!invisible.canUse.value" severity="warn" :closable="false" class="!mt-3 !rounded-2xl !text-xs">Нужен тариф Pro/Business или права админа. Сейчас у тебя {{ u.plan||'free' }}.</Message>
+                            <Message v-if="invisible.error.value" severity="error" :closable="false" class="!mt-3 !rounded-2xl !text-xs">{{ invisible.error.value }}</Message>
+                            <p v-if="invisible.isInvisible.value" class="text-xs font-semibold text-violet-700 dark:text-violet-300 mt-2">Включена — ты скрыт в онлайне</p>
                           </template>
                         </Card>
                       </div>
@@ -223,8 +241,8 @@ const bioPreviewEmpty = computed(() => bioPreviewText.value.length === 0)
                         <h3 class="font-black tracking-tight text-lg dark:text-white">Обратиться в поддержку</h3>
                         <p class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Опиши проблему — ответим в течение часа.</p>
                         <div class="mt-5 max-w-xl space-y-3">
-                          <div><label class="text-sm font-medium dark:text-white">Тема</label><InputText v-model="supportSubject" placeholder="Напр. Не грузится карта в Минске" class="w-full mt-1 !rounded-2xl" /></div>
-                          <div><label class="text-sm font-medium dark:text-white">Сообщение</label><Textarea v-model="supportBody" rows="6" placeholder="Опиши проблему подробно..." class="w-full mt-1 !rounded-3xl" autoResize /></div>
+                          <div><label class="text-sm font-medium dark:text-white">Тема</label><InputText v-model="supportSubject" placeholder="Напр. Не грузится карта в Минске" class="w-full mt-1 !rounded-2xl !bg-white dark:!bg-zinc-800 dark:!border-zinc-700 dark:!text-white dark:placeholder:text-zinc-500" /></div>
+                          <div><label class="text-sm font-medium dark:text-white">Сообщение</label><Textarea v-model="supportBody" rows="6" placeholder="Опиши проблему подробно..." class="w-full mt-1 !rounded-3xl !bg-white dark:!bg-zinc-800 dark:!border-zinc-700 dark:!text-white dark:placeholder:text-zinc-500" autoResize /></div>
                           <Button @click="mailToSupport" label="✉️ Отправить обращение" rounded class="w-full !bg-ink-900 dark:!bg-white !border-ink-900 dark:!border-white dark:!text-ink-900 !text-white" />
                         </div>
                       </template>

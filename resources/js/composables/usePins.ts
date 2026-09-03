@@ -22,8 +22,8 @@ export function usePins() {
     return store.pins.filter((p) => p.category === selectedCategory.value)
   })
 
-  function fetchNearby(lat: number, lng: number) {
-    return store.fetchNearby(lat, lng)
+  function fetchNearby(lat: number, lng: number, radius?: number) {
+    return store.fetchNearby(lat, lng, radius)
   }
 
   function createPin(payload: CreatePinPayload): Promise<Pin> {

@@ -11,6 +11,8 @@ import Avatar from 'primevue/avatar'
 import Tag from 'primevue/tag'
 import Badge from 'primevue/badge'
 import Button from 'primevue/button'
+import Toast from 'primevue/toast'
+import { useProfileShare } from '@/composables/useProfileShare'
 const seo = useSeo({ title: 'Профиль', description: 'Профиль UPin', noindex: true })
 const props = defineProps<{ user: any; isOwn?: boolean }>()
 const page = usePage()
@@ -27,11 +29,13 @@ const settingsHref = computed(() => isOwn.value ? route('profile.edit', { identi
 const badges = useBadgeStore()
 const bioText = computed(() => (u.value.bio || '').trim())
 const bioEmpty = computed(() => bioText.value.length === 0)
+const { shareProfile, sharing } = useProfileShare()
 onMounted(()=> { if(isOwn.value) badges.init() })
 </script>
 <template>
   <Head :title="seo.title.value"><meta head-key="robots" name="robots" content="noindex, nofollow" /></Head>
   <AuthenticatedLayout>
+    <Toast />
     <div class="bg-surface dark:bg-[#090E1A] min-h-[calc(100vh-64px)] overflow-x-hidden">
       <div class="max-w-[980px] mx-auto w-full max-w-full min-w-0 px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-5 overflow-hidden">
         <Card class="!bg-ink-900 dark:!bg-zinc-900 dark:!border dark:!border-zinc-800 !text-white !rounded-3xl !shadow-soft !border-0 !overflow-hidden" :pt="{ body:{ class:'!p-0' }, content:{ class:'!p-0' } }">
@@ -58,12 +62,9 @@ onMounted(()=> { if(isOwn.value) badges.init() })
                   <div class="mt-4 flex flex-wrap gap-2">
                     <Button label="Открыть карту →" rounded class="!bg-white !text-ink-900 !border-white !text-sm !font-bold hover:!bg-stone-50 !px-6 !py-2.5" @click="router.visit('/map')" />
                     <Button v-if="isOwn" rounded class="!bg-gradient-to-r !from-violet-600 !to-indigo-600 !text-white !border-0 !text-sm !font-bold !px-6 !py-2.5" @click="router.visit('/chat')">
-                      <span class="inline-flex items-center gap-2">Чат<Badge v-if="badges.unread" :value="String(badges.unread)" class="!bg-white !text-violet-700 !text-xs !font-black" /><Badge v-if="badges.pending" :value="String(badges.pending)" severity="warn" class="!text-xs !font-black" /></span>
+                      <span class="inline-flex items-center gap-2">Чат</span>
                     </Button>
-                  </div>
-                  <div v-if="isOwn && badges.total" class="mt-3 flex gap-2 text-xs font-semibold">
-                    <Badge v-if="badges.unread" :value="`✉ ${badges.unread} непроч.`" severity="danger" class="!rounded-full !px-2.5 !py-1" />
-                    <Badge v-if="badges.pending" :value="`👥 ${badges.pending} заявок`" severity="warn" class="!rounded-full !px-2.5 !py-1" />
+                    <Button icon="pi pi-share-alt" label="Поделиться" rounded severity="secondary" outlined class="!bg-white/10 !border-white/30 !text-white hover:!bg-white hover:!text-ink-900 !text-sm !font-bold !px-5 !py-2.5" :loading="sharing" @click="shareProfile({ id: u.id, name: u.name })" />
                   </div>
                 </div>
               </div>
@@ -138,10 +139,7 @@ onMounted(()=> { if(isOwn.value) badges.init() })
             <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body:{ class:'!p-4 sm:!p-6' }, content:{ class:'!p-0' } }">
               <template #content>
                 <h3 class="font-black tracking-tight dark:text-white">Действия</h3>
-                <Link v-if="isOwn && badges.total" href="/chat" class="mt-3 flex items-center justify-between p-3 rounded-2xl bg-violet-50 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-800 hover:bg-violet-100 transition">
-                  <span class="text-sm font-bold dark:text-white">Новые уведомления</span>
-                  <span class="flex gap-1"><Badge v-if="badges.unread" :value="`${badges.unread} ✉`" severity="danger" class="!text-xs !font-bold" /><Badge v-if="badges.pending" :value="`${badges.pending} 👥`" severity="warn" class="!text-xs !font-bold" /></span>
-                </Link>
+
                 <div class="mt-4 grid grid-cols-2 gap-3">
                   <Card class="!bg-ink-900 dark:!bg-white !text-white dark:!text-ink-900 !rounded-3xl !border-0 !shadow-soft hover:!opacity-90 !cursor-pointer" :pt="{ body:{ class:'!p-4' }, content:{ class:'!p-0' } }" @click="router.visit('/map')">
                     <template #content>

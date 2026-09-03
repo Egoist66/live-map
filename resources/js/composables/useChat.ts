@@ -240,12 +240,46 @@ export function useChat() {
       }
       const n = new Set(typingUsers.value); n.delete(msg.sender_id); typingUsers.value = n
       const t = typingExpire.get(msg.sender_id); if (t) { clearTimeout(t); typingExpire.delete(msg.sender_id) }
-      chatApi.markRead(msg.conversation_id).catch(()=>{})
+      if (msg.sender_id !== getUid()) {
+        chatApi.markDelivered(msg.conversation_id).catch(()=>{})
+        chatApi.markRead(msg.conversation_id).catch(()=>{})
+      }
       scrollToBottom()
     } else {
       const conv = conversations.value.find((c) => c.id === msg.conversation_id)
       if (conv) { conv.unread_count = (conv.unread_count || 0) + 1; conv.last_message = msg; conv.last_message_at = msg.created_at }
       else loadConversations()
+      if (msg.sender_id !== getUid()) {
+        chatApi.markDelivered(msg.conversation_id).catch(()=>{})
+      }
+    }
+  }
+
+  function handleDelivered(e: any) {
+    const ids: number[] = e.message_ids || []
+    const at = e.delivered_at
+    ids.forEach(id => {
+      const idx = messages.value.findIndex((m:any)=> m.id===id)
+      if(idx!==-1){ (messages.value[idx] as any).delivered_at = at; (messages.value[idx] as any).status = 'delivered' }
+      conversations.value.forEach(c=>{ if((c.last_message as any)?.id===id){ (c.last_message as any).delivered_at = at; (c.last_message as any).status='delivered' } })
+    })
+    if(ids.length===0 && e.conversation_id){
+      messages.value.forEach((m:any)=>{ if(m.conversation_id===e.conversation_id && m.sender_id===getUid() && !m.delivered_at && !m.read_at){ m.delivered_at = at; m.status='delivered' }})
+    }
+  }
+
+  function handleRead(e: any) {
+    const ids: number[] = e.message_ids || []
+    const at = e.read_at
+    if(ids.length){
+      ids.forEach(id=>{
+        const idx = messages.value.findIndex((m:any)=> m.id===id)
+        if(idx!==-1){ (messages.value[idx] as any).read_at = at; (messages.value[idx] as any).delivered_at = (messages.value[idx] as any).delivered_at || at; (messages.value[idx] as any).status='read' }
+        conversations.value.forEach(c=>{ if((c.last_message as any)?.id===id){ (c.last_message as any).read_at = at; (c.last_message as any).delivered_at = (c.last_message as any).delivered_at || at; (c.last_message as any).status='read' } })
+      })
+    } else {
+      messages.value.forEach((m:any)=>{ if(m.conversation_id===e.conversation_id && m.sender_id===getUid() && !m.read_at){ m.read_at = at; m.delivered_at = m.delivered_at || at; m.status='read' }})
+      conversations.value.forEach(c=>{ if(c.id===e.conversation_id && c.last_message && (c.last_message as any).sender_id===getUid() && !(c.last_message as any).read_at){ (c.last_message as any).read_at = at; (c.last_message as any).delivered_at = (c.last_message as any).delivered_at || at; (c.last_message as any).status='read' } })
     }
   }
 
@@ -263,7 +297,8 @@ export function useChat() {
         ch.listen('.message.updated', (e: any) => handleUpdated(e.message))
         ch.listen('.message.deleted', (e: any) => handleDeleted(e))
         ch.listen('.friendship.updated', () => loadConversations())
-        ch.listen('.message.read', () => {})
+        ch.listen('.message.delivered', (e: any) => handleDelivered(e))
+        ch.listen('.message.read', (e: any) => handleRead(e))
         echoChannels.push(ch)
       }
     } catch { globalSubscribed = false }
@@ -300,9 +335,8 @@ export function useChat() {
       ch.listen('.message.sent', (e: any) => handleIncoming(e.message))
       ch.listen('.message.updated', (e: any) => handleUpdated(e.message))
       ch.listen('.message.deleted', (e: any) => handleDeleted(e))
-      ch.listen('.message.read', (e: any) => {
-        const n = new Set(typingUsers.value); n.delete(Number(e.user_id)); typingUsers.value = n
-      })
+      ch.listen('.message.delivered', (e: any) => handleDelivered(e))
+      ch.listen('.message.read', (e: any) => handleRead(e))
       const handleTyping = (e: any) => {
         if (Number(e.user_id) === currentUserId) return
         if (e.is_typing) {

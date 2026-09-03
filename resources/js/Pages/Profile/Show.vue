@@ -8,9 +8,12 @@ import Message from 'primevue/message'
 import Card from 'primevue/card'
 import Avatar from 'primevue/avatar'
 import Tag from 'primevue/tag'
+import Toast from 'primevue/toast'
 import OnlineDot from '@/Components/OnlineDot.vue'
 import { usePresenceState } from '@/composables/usePresence'
 import { useUserProfile } from '@/composables/useUserProfile'
+import { useProfileShare } from '@/composables/useProfileShare'
+import { formatRelative } from '@/utils/date'
 import { avatarSrcFor } from '@/composables/useAvatar'
 const props = defineProps<{ profileUser: any; isOwn: boolean; friendship: any; isFriend: boolean; isPending: boolean; isBlocked?: boolean; isBlockedBy?: boolean; canMessage: boolean; canMessageReason: string | null }>()
 const avatarSrc = computed(() => avatarSrcFor(props.profileUser))
@@ -29,6 +32,13 @@ const confirm = ref<{ title:string; msg:string; action:()=>Promise<void>} | null
 const isLocked = computed(() => isBlockedBy.value)
 const { isOnline } = usePresenceState()
 const online = computed(() => isOnline(props.profileUser.id))
+const { shareProfile, sharing } = useProfileShare()
+const lastSeenText = computed(() => {
+  if (online.value) return 'в сети'
+  const v = props.profileUser.last_seen_at
+  if (!v) return 'офлайн'
+  try { return formatRelative(v) } catch { return 'офлайн' }
+})
 async function sync() {
   isFriend.value = profile.isFriend.value
   isPending.value = profile.isPending.value
@@ -46,6 +56,7 @@ async function onChat() { await profile.startChat() }
 <template>
 <Head :title="profileUser.name" />
 <AuthenticatedLayout>
+<Toast />
 <div class="bg-surface dark:bg-[#090E1A] min-h-[calc(100vh-64px)]">
 <div class="max-w-[860px] mx-auto px-4 sm:px-6 py-6 space-y-5">
   <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body:{ class:'!p-4 sm:!p-5' }, content:{ class:'!p-0' } }">
@@ -65,8 +76,8 @@ async function onChat() { await profile.startChat() }
             <OnlineDot :online="online" size="w-4 h-4" />
           </button>
           <div class="min-w-0 flex-1">
-            <h1 class="text-lg sm:text-xl font-black tracking-tight truncate text-ink-900 dark:text-white flex items-center gap-2">{{ profileUser.name }}<span v-if="online" class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shrink-0"></span></h1>
-            <p class="text-sm truncate flex items-center gap-1.5" :class="online ? 'text-emerald-600' : 'text-stone-500 dark:text-zinc-400'">{{ online ? '● в сети' : '○ офлайн' }}<span class="text-stone-300">·</span>{{ levelLabel[profileUser.level] || profileUser.level || 'Новичок' }} · {{ profileUser.reputation_score||0 }} ★</p>
+            <h1 class="text-lg sm:text-xl font-black tracking-tight truncate text-ink-900 dark:text-white flex items-center gap-2">{{ profileUser.name }}<span v-if="online" class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shrink-0"></span><span v-else class="w-2 h-2 bg-red-500 rounded-full shrink-0"></span></h1>
+            <p class="text-sm truncate flex items-center gap-1.5" :class="online ? 'text-emerald-600' : 'text-red-500'">{{ online ? '● в сети' : `○ ${lastSeenText}` }}<span class="text-stone-300">·</span>{{ levelLabel[profileUser.level] || profileUser.level || 'Новичок' }} · {{ profileUser.reputation_score||0 }} ★</p>
           </div>
           <Link href="/map" class="hidden sm:inline-flex"><Button label="На карту →" rounded class="!bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white !border-ink-900 dark:!border-white !text-sm !font-bold !px-5 !py-2.5" /></Link>
         </div>
@@ -78,7 +89,11 @@ async function onChat() { await profile.startChat() }
           <Button v-if="!isBlocked" @click="confirm={title:'Заблокировать?', msg:`Заблокировать ${profileUser.name}?`, action:onBlock}" rounded severity="secondary" outlined class="!w-10 !h-10 !p-0 !rounded-full hover:!text-red-600 hover:!border-red-200 hover:!bg-red-50" icon="pi pi-ban" aria-label="Заблокировать" />
           <Button v-else @click="onUnblock" :loading="profile.loading.value" rounded severity="danger" outlined class="!w-10 !h-10 !p-0 !rounded-full" icon="pi pi-ban" aria-label="Разблокировать" />
         </div>
-        <Link href="/map" class="sm:hidden mt-4 flex w-full"><Button label="На карту →" rounded class="w-full !bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white !border-ink-900 dark:!border-white !justify-center !text-sm !font-bold" /></Link>
+        <div class="mt-3 flex flex-wrap gap-2">
+          <Button icon="pi pi-share-alt" label="Поделиться профилем" severity="secondary" outlined rounded class="!rounded-full !text-sm !font-semibold !px-4 !py-2" :loading="sharing" @click="shareProfile({ id: profileUser.id, name: profileUser.name })" />
+          <Link href="/map" class="sm:hidden flex-1"><Button label="На карту →" rounded class="w-full !bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white !border-ink-900 dark:!border-white !justify-center !text-sm !font-bold" /></Link>
+        </div>
+        <Link href="/map" class="hidden sm:flex mt-3 w-auto"><Button v-if="isOwn || isLocked" label="На карту →" rounded class="!bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white !border-ink-900 dark:!border-white !justify-center !text-sm !font-bold !px-5 !py-2.5" /></Link>
       </div>
     </template>
   </Card>
@@ -96,6 +111,7 @@ async function onChat() { await profile.startChat() }
         <div class="flex justify-between py-2.5 border-b border-stone-100 dark:border-zinc-800"><span class="text-stone-500">Имя</span><Tag :value="profileUser.name" class="!bg-stone-100 dark:!bg-zinc-800 !text-ink-900 dark:!text-white !border-0 !font-semibold" /></div>
         <div class="flex justify-between py-2.5 border-b border-stone-100 dark:border-zinc-800"><span class="text-stone-500">Уровень</span><Tag :value="levelLabel[profileUser.level] || profileUser.level" class="!bg-ink-900 !text-white !border-0 !font-semibold !rounded-full" /></div>
         <div class="flex justify-between py-2.5 border-b border-stone-100 dark:border-zinc-800"><span class="text-stone-500">Репутация</span><span class="font-semibold dark:text-white">{{ profileUser.reputation_score||0 }}</span></div>
+        <div class="flex justify-between py-2.5 border-b border-stone-100 dark:border-zinc-800"><span class="text-stone-500">Статус</span><span class="font-semibold flex items-center gap-1.5" :class="online ? 'text-emerald-600' : 'text-red-500'"><span class="w-2 h-2 rounded-full" :class="online ? 'bg-emerald-500' : 'bg-red-500'"></span>{{ online ? 'в сети' : lastSeenText }}</span></div>
         <div class="flex justify-between py-2.5"><span class="text-stone-500">Дата регистрации</span><span class="font-semibold dark:text-white">{{ new Date(profileUser.created_at).toLocaleDateString('ru-RU') }}</span></div>
       </div>
       <div class="mt-6">

@@ -34,8 +34,12 @@ class ProfileController extends Controller
             $isBlocked = \App\Models\UserBlock::where('blocker_id',$auth->id)->where('blocked_id',$user->id)->exists();
             $isBlockedBy = \App\Models\UserBlock::where('blocker_id',$user->id)->where('blocked_id',$auth->id)->exists();
         }
+        $showLastSeen = $user->last_seen_at;
+        if ($user->isInvisibleActive() && !$isOwn && !($auth && $auth->isAdmin())) {
+            $showLastSeen = null;
+        }
         return Inertia::render('Profile/Show', [
-            'profileUser' => array_merge($user->only(['id','name','avatar_path','level','reputation_score','created_at','home_lat','home_lng','home_radius_km','bio']), ['avatar_url' => $user->avatar_url]),
+            'profileUser' => array_merge($user->only(['id','name','avatar_path','level','reputation_score','created_at','home_lat','home_lng','home_radius_km','bio','last_seen_at','is_invisible']), ['avatar_url' => $user->avatar_url, 'last_seen_at' => $showLastSeen?->toISOString(), 'is_invisible' => $user->isInvisibleActive()]),
             'isOwn' => $isOwn,
             'friendship' => $friendship,
             'isFriend' => $isFriend,
@@ -45,6 +49,15 @@ class ProfileController extends Controller
             'canMessage' => $canMessage,
             'canMessageReason' => $reason,
         ]);
+    }
+
+    public function toggleInvisible(Request $request)
+    {
+        $user = $request->user();
+        abort_unless($user->canUseInvisible(), 403, 'Недоступно для вашего тарифа');
+        $request->validate(['is_invisible' => 'required|boolean']);
+        $user->forceFill(['is_invisible' => $request->boolean('is_invisible')])->save();
+        return response()->json(['is_invisible' => $user->isInvisibleActive(), 'can_use_invisible' => $user->canUseInvisible()]);
     }
 
     public function dashboard(Request $request, ?string $identifier = null): Response|RedirectResponse

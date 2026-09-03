@@ -17,7 +17,14 @@ class MessageController extends Controller
         $before = $request->input('before');
         $q = $conversation->messages()->with('sender:id,name,avatar_path')->orderByDesc('created_at');
         if ($before) $q->where('id','<',$before);
-        $messages = $q->limit(30)->get()->reverse()->values()->map->toArrayPayload();
+        $collection = $q->limit(30)->get();
+        $undelivered = $collection->where('sender_id','!=',$request->user()->id)->whereNull('delivered_at')->pluck('id');
+        if($undelivered->isNotEmpty()){
+            Message::whereIn('id',$undelivered)->update(['delivered_at'=>now()]);
+            $collection->each(function($m) use ($undelivered){ if($undelivered->contains($m->id)) $m->delivered_at = now(); });
+            try{ broadcast(new \App\Events\MessageDelivered($conversation->id,$undelivered->toArray(),$request->user()->id))->toOthers(); }catch(\Throwable $e){ \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
+        }
+        $messages = $collection->reverse()->values()->map->toArrayPayload();
         return response()->json($messages);
     }
 

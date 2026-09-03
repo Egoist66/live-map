@@ -32,6 +32,7 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/chat/me', [ChatUserController::class, 'me']);
     Route::get('/chat/users/search', [ChatUserController::class, 'search']);
     Route::patch('/chat/privacy', [ChatUserController::class, 'privacy']);
+    Route::patch('/user/invisible', [\App\Http\Controllers\ProfileController::class, 'toggleInvisible']);
 
     Route::get('/friendships', [FriendshipController::class, 'index']);
     Route::post('/friendships', [FriendshipController::class, 'store']);
@@ -48,6 +49,7 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::post('/conversations', [ConversationController::class, 'store']);
     Route::get('/conversations/{conversation}', [ConversationController::class, 'show']);
     Route::post('/conversations/{conversation}/read', [ConversationController::class, 'markRead']);
+    Route::post('/conversations/{conversation}/delivered', [ConversationController::class, 'markDelivered']);
     Route::delete('/conversations/{conversation}', [ConversationController::class, 'destroy']);
 
     Route::get('/conversations/{conversation}/messages', [MessageController::class, 'index']);

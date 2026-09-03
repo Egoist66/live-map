@@ -16,5 +16,6 @@ Broadcast::channel('user.{userId}', function ($user, $userId) {
 Broadcast::channel('map', function () { return true; });
 
 Broadcast::channel('online', function ($user) {
+    if ($user->isInvisibleActive()) return false;
     return ['id' => $user->id, 'name' => $user->name, 'avatar_path' => $user->avatar_path];
 });

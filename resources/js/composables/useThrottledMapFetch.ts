@@ -11,7 +11,7 @@ export function useThrottledMapFetch(onDone?: () => void) {
   const DEBOUNCE = 900
   const THROTTLE = 3000
 
-  function request(lat: number, lng: number) {
+  function request(lat: number, lng: number, radius?: number) {
     const dist = Math.hypot(lat - lastPos.lat, lng - lastPos.lng)
     const now = Date.now()
     if (dist < MIN_DIST && now - lastFetch < THROTTLE) return
@@ -20,7 +20,7 @@ export function useThrottledMapFetch(onDone?: () => void) {
       if (pending) return
       pending = true
       try {
-        await fetchNearby(lat, lng)
+        await fetchNearby(lat, lng, radius)
         lastFetch = Date.now()
         lastPos = { lat, lng }
         onDone?.()
@@ -30,10 +30,10 @@ export function useThrottledMapFetch(onDone?: () => void) {
     }, DEBOUNCE)
   }
 
-  function flush(lat: number, lng: number) {
+  function flush(lat: number, lng: number, radius?: number) {
     if (timer) clearTimeout(timer)
     pending = false
-    return fetchNearby(lat, lng).then(() => {
+    return fetchNearby(lat, lng, radius).then(() => {
       lastFetch = Date.now()
       lastPos = { lat, lng }
       onDone?.()

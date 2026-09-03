@@ -8,8 +8,24 @@ function getEcho(): any {
   return (window as any).Echo
 }
 
+function isInvisible(): boolean {
+  try {
+    const u = (window as any)?.__inertia_page?.props?.auth?.user ?? (document as any)?.__page_auth_user
+    if (u?.is_invisible) return true
+  } catch {}
+  try {
+    const el = document.querySelector('[data-page]')?.getAttribute('data-page')
+    if (el) {
+      const page = JSON.parse(el)
+      if (page?.props?.auth?.user?.is_invisible) return true
+    }
+  } catch {}
+  return false
+}
+
 function connect() {
   if (started) return
+  if (isInvisible()) return
   const echo = getEcho()
   if (!echo || typeof echo.join !== 'function') return
   try {
