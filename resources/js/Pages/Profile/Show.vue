@@ -111,7 +111,6 @@ async function onChat() { await profile.startChat() }
         <div class="flex justify-between py-2.5 border-b border-stone-100 dark:border-zinc-800"><span class="text-stone-500">Имя</span><Tag :value="profileUser.name" class="!bg-stone-100 dark:!bg-zinc-800 !text-ink-900 dark:!text-white !border-0 !font-semibold" /></div>
         <div class="flex justify-between py-2.5 border-b border-stone-100 dark:border-zinc-800"><span class="text-stone-500">Уровень</span><Tag :value="levelLabel[profileUser.level] || profileUser.level" class="!bg-ink-900 !text-white !border-0 !font-semibold !rounded-full" /></div>
         <div class="flex justify-between py-2.5 border-b border-stone-100 dark:border-zinc-800"><span class="text-stone-500">Репутация</span><span class="font-semibold dark:text-white">{{ profileUser.reputation_score||0 }}</span></div>
-        <div class="flex justify-between py-2.5 border-b border-stone-100 dark:border-zinc-800"><span class="text-stone-500">Статус</span><span class="font-semibold flex items-center gap-1.5" :class="online ? 'text-emerald-600' : 'text-red-500'"><span class="w-2 h-2 rounded-full animate-pulse" :class="online ? 'bg-emerald-500 animate-pulse' : 'bg-red-500 animate-[pulse_2.8s_ease-in-out_infinite]'"></span>{{ online ? 'в сети' : lastSeenText }}</span></div>
         <div class="flex justify-between py-2.5"><span class="text-stone-500">Дата регистрации</span><span class="font-semibold dark:text-white">{{ new Date(profileUser.created_at).toLocaleDateString('ru-RU') }}</span></div>
       </div>
       <div class="mt-6">
