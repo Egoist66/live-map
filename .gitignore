@@ -23,9 +23,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
 
 # Laravel specific
 /vendor/
@@ -39,8 +36,6 @@ Homestead.json
 Homestead.yaml
 auth.json
 .storage
-*.sqlite
-*.sqlite-journal
 /storage/*.key
 /storage/framework/cache/
 /storage/framework/sessions/
@@ -55,15 +50,16 @@ public/hot
 public/build/
 /storage/app/*.zip
 /storage/app/*.tar.gz
+database/*.sqlite
+database/*.sqlite-journal
+*.sqlite-journal
 
 # PHP and Composer
 composer.phar
-composer.lock
 .php_cs.cache
 .php-cs-fixer.cache
 .phpunit.result.cache
 *.cache
-*.log
 *.pid
 *.seed
 *.pid.lock
@@ -110,10 +106,6 @@ public/js/vendor.js.map
 docker-compose.override.yml
 .docker/
 docker/.env
-*.dockerfile
-.Dockerfile
-Dockerfile
-.dockerignore
 
 # MacOS
 .DS_Store
@@ -133,7 +125,6 @@ $RECYCLE.BIN/
 *.swn
 
 # Windows
-*.exe
 *.dll
 *.so
 *.sl
@@ -142,34 +133,15 @@ $RECYCLE.BIN/
 # Vite
 /vite.config.js.timestamp-*
 /vite.config.ts.timestamp-*
-/vite.config.js
-/vite.config.ts
-/vite.config.cjs
-/vite.config.mjs
 /.vite/
 
 # Vue specific
-*.vue.ts
-*.vue.js
-*.vue.css
-*.vue.scss
-*.vue.sass
-*.vue.less
-*.vue.styl
-/src/**/*.vue?.*
 /dist-ssr/
 /*.tsbuildinfo
 
 # Environment files
 .env.*
 !.env.example
-.env.dev
-.env.test
-.env.staging
-.env.production
-.env.backup
-.env.old
-.env.temp
 
 # Backup files
 *.backup
@@ -178,9 +150,6 @@ $RECYCLE.BIN/
 *.orig
 *.tmp
 *.temp
-*.swp
-*.swo
-*.swn
 
 # Archive files
 *.zip
@@ -189,14 +158,6 @@ $RECYCLE.BIN/
 *.gz
 *.7z
 *.bz2
-
-# Database dumps
-*.sql
-*.sql.gz
-*.dump
-*.db
-*.sqlite
-*.sqlite3
 
 # Terraform
 *.tfstate
