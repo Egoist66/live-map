@@ -23,7 +23,7 @@ const { badge, user, avatarSrc, dashboardHref, settingsHref, bell, showDrawer, m
     <header v-if="$slots.header" class="bg-white dark:bg-zinc-900 border-b border-stone-200/60 dark:border-zinc-800">
       <div class="mx-auto max-w-[1280px] px-4 sm:px-6 py-4 sm:py-6"><slot name="header" /></div>
     </header>
-    <main :class="route().current('chat') || route().current('map') ? 'pb-[calc(60px+env(safe-area-inset-bottom,0px))] lg:pb-0' : 'pb-[calc(76px+env(safe-area-inset-bottom,0px))] lg:pb-0'">
+    <main :class="route().current('chat') || route().current('map') ? 'pb-0 lg:pb-0 overflow-hidden overscroll-none' : 'pb-[calc(76px+env(safe-area-inset-bottom,0px))] lg:pb-0'">
       <PageTransition><slot /></PageTransition>
     </main>
     <MobileBottomNav />

@@ -15,7 +15,7 @@ const emit = defineEmits<{ (e: 'close'): void; (e: 'ok'): void }>()
     </template>
     <p class="text-sm text-stone-600 leading-relaxed">{{ confirm?.msg }}</p>
     <template #footer>
-      <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+      <div class="flex flex-row justify-end gap-2">
         <Button label="Отмена" severity="secondary" text @click="emit('close')" />
         <Button :label="confirm?.confirmLabel" :severity="confirm?.severity" @click="emit('ok')" />
       </div>

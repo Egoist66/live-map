@@ -1,30 +1,23 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
+import { useAvatarPreview } from '@/composables/useAvatarPreview'
 const props = defineProps<{ src: string; name?: string; open: boolean }>()
 const emit = defineEmits<{ (e:'close'):void }>()
-function onKey(e: KeyboardEvent){ if(e.key==='Escape') emit('close') }
-watch(()=>props.open, (v)=> {
-  if(v) { document.body.style.overflow='hidden'; window.addEventListener('keydown', onKey) }
-  else { document.body.style.overflow=''; window.removeEventListener('keydown', onKey) }
-})
-onBeforeUnmount(()=> { document.body.style.overflow=''; window.removeEventListener('keydown', onKey) })
+useAvatarPreview(() => props.open, () => emit('close'))
 </script>
 <template>
   <Transition name="fade">
-    <div v-if="open" class="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-8">
+    <div v-if="open" class="fixed inset-0 z-[100] overflow-hidden overscroll-contain flex items-center justify-center p-4 sm:p-8 pt-[6dvh] pb-[12dvh]">
       <div class="absolute inset-0 bg-ink-900/70 dark:bg-black/80 backdrop-blur-sm" @click="emit('close')"></div>
       <Transition name="zoom" appear>
-        <div class="relative">
-          <div class="relative bg-white dark:bg-zinc-900 rounded-[24px] p-2 shadow-float border border-white/20 dark:border-zinc-700 max-w-[92vw] max-h-[88vh] flex flex-col">
-            <img :src="src" :alt="name||'avatar'" class="max-w-[80vw] sm:max-w-[420px] max-h-[70vh] w-auto h-auto rounded-[16px] object-cover bg-stone-100 dark:bg-zinc-800" />
-            <div class="flex items-center justify-between gap-4 px-2 py-3">
+        <div class="relative m-auto max-h-full flex items-center justify-center pointer-events-none">
+          <div class="pointer-events-auto relative bg-white dark:bg-zinc-900 rounded-[24px] p-2 shadow-float border border-white/20 dark:border-zinc-700 w-[90vw] sm:w-[520px] max-w-[90vw] max-h-[88vh] max-h-[88dvh] overflow-hidden flex flex-col">
+            <img :src="src" :alt="name||'avatar'" class="w-full h-[min(70vw,400px,56dvh)] object-cover object-center rounded-[16px] bg-stone-100 dark:bg-zinc-800" />
+            <div class="flex items-center justify-between gap-4 px-2 py-3 shrink-0">
               <div class="min-w-0">
                 <div class="text-sm font-bold dark:text-white truncate">{{ name || 'Фото профиля' }}</div>
-                <div class="text-xs text-stone-500 dark:text-zinc-400">Нажми вне фото чтобы закрыть · Esc</div>
               </div>
-              <a :href="src" target="_blank" class="shrink-0 text-xs font-semibold bg-ink-900 dark:bg-white dark:text-ink-900 text-white px-4 py-2 rounded-full hover:opacity-90 transition">Открыть</a>
             </div>
-            <button @click="emit('close')" class="absolute -top-3 -right-3 w-9 h-9 rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow-soft grid place-items-center hover:bg-stone-50 dark:hover:bg-zinc-700 transition text-stone-600 dark:text-zinc-300">✕</button>
+            <button @click="emit('close')" class="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-white/95 dark:bg-zinc-800/95 border border-stone-200 dark:border-zinc-700 shadow-soft grid place-items-center hover:bg-stone-50 dark:hover:bg-zinc-700 transition text-stone-600 dark:text-zinc-300">✕</button>
           </div>
         </div>
       </Transition>

@@ -13,6 +13,7 @@ export function useProfileForm() {
     validationSchema: updateProfileSchema,
     initialValues: {
       name: user.value.name,
+      gender: user.value.gender || null,
       email: user.value.email,
       home_lat: user.value.home_lat || null,
       home_lng: user.value.home_lng || null,
@@ -23,9 +24,10 @@ export function useProfileForm() {
     } as any,
   })
 
-  watch(user, (u) => setValues({ name: u.name, email: u.email, home_lat: u.home_lat || null, home_lng: u.home_lng || null, home_radius_km: u.home_radius_km || 2, bio: u.bio || null, is_anonymous_default: !!u.is_anonymous_default, plan: u.plan || 'free' } as any))
+  watch(user, (u) => setValues({ name: u.name, gender: u.gender || null, email: u.email, home_lat: u.home_lat || null, home_lng: u.home_lng || null, home_radius_km: u.home_radius_km || 2, bio: u.bio || null, is_anonymous_default: !!u.is_anonymous_default, plan: u.plan || 'free' } as any))
 
   const [name, nameAttrs] = defineField('name')
+  const [gender] = defineField('gender')
   const [email, emailAttrs] = defineField('email')
   const [home_lat, homeLatAttrs] = defineField('home_lat')
   const [home_lng, homeLngAttrs] = defineField('home_lng')
@@ -53,5 +55,5 @@ export function useProfileForm() {
     })
   })
 
-  return { user, name, nameAttrs, email, emailAttrs, home_lat, homeLatAttrs, home_lng, homeLngAttrs, home_radius_km, bio, is_anonymous_default, plan, errors, values, setValues, submit, isSubmitting, useMyLocation }
+  return { user, name, nameAttrs, gender, email, emailAttrs, home_lat, homeLatAttrs, home_lng, homeLngAttrs, home_radius_km, bio, is_anonymous_default, plan, errors, values, setValues, submit, isSubmitting, useMyLocation }
 }

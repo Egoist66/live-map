@@ -40,6 +40,7 @@ class ProfileUpdateRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
+            'gender' => ['nullable','in:male,female,other'],
             'email' => ['required','string','lowercase','email','max:255', Rule::unique(User::class)->ignore($this->user()->id)],
             'home_lat' => ['nullable','numeric','between:-90,90'],
             'home_lng' => ['nullable','numeric','between:-180,180'],

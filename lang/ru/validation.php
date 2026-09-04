@@ -132,6 +132,7 @@ return [
         'home_lng' => 'Долгота дома',
         'home_radius_km' => 'Радиус дома',
         'is_anonymous_default' => 'Анонимность',
+        'gender' => 'Пол',
         'phone' => 'Телефон',
         'address' => 'Адрес',
     ],

@@ -39,7 +39,7 @@ class ProfileController extends Controller
             $showLastSeen = null;
         }
         return Inertia::render('Profile/Show', [
-            'profileUser' => array_merge($user->only(['id','name','avatar_path','level','reputation_score','created_at','home_lat','home_lng','home_radius_km','bio','last_seen_at','is_invisible']), ['avatar_url' => $user->avatar_url, 'last_seen_at' => $showLastSeen?->toISOString(), 'is_invisible' => $user->isInvisibleActive()]),
+            'profileUser' => array_merge($user->only(['id','name','gender','avatar_path','level','reputation_score','created_at','home_lat','home_lng','home_radius_km','bio','last_seen_at','is_invisible']), ['avatar_url' => $user->avatar_url, 'last_seen_at' => $showLastSeen?->toISOString(), 'is_invisible' => $user->isInvisibleActive()]),
             'isOwn' => $isOwn,
             'friendship' => $friendship,
             'isFriend' => $isFriend,

@@ -3,8 +3,10 @@ import { Link } from '@inertiajs/vue3'
 import Card from 'primevue/card'
 import Avatar from 'primevue/avatar'
 import Tag from 'primevue/tag'
+import { useGender } from '@/composables/useGender'
 
 defineProps<{ user: any; bioEmpty: boolean; bioText: string; isOwn: boolean; settingsHref: string; presence: { active: boolean; label: string } }>()
+const g = useGender()
 </script>
 <template>
   <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 !rounded-3xl !shadow-soft !overflow-hidden" :pt="{ body: { class: '!p-0' }, content: { class: '!p-0' } }">
@@ -20,6 +22,10 @@ defineProps<{ user: any; bioEmpty: boolean; bioText: string; isOwn: boolean; set
           </div>          <div class="flex items-center gap-3 p-3 rounded-3xl bg-stone-50 border min-w-0">
             <Avatar label="👤" shape="square" class="!w-9 !h-9 !rounded-xl !bg-white !border !text-sm shrink-0" />
             <div class="min-w-0 flex-1"><div class="text-[10px] font-bold tracking-widest uppercase text-stone-400">Имя</div><div class="text-sm font-bold truncate">{{ user.name }}</div></div>
+          </div>
+          <div class="flex items-center gap-3 p-3 rounded-3xl bg-stone-50 border min-w-0">
+            <Avatar label="⚧" shape="square" class="!w-9 !h-9 !rounded-xl !bg-white !border !text-sm shrink-0" />
+            <div class="min-w-0 flex-1"><div class="text-[10px] font-bold tracking-widest uppercase text-stone-400">Пол</div><div class="text-sm font-bold truncate">{{ g.getLabel(user.gender) }}</div></div>
           </div>
           <div class="flex items-center gap-3 p-3 rounded-3xl bg-stone-50 border min-w-0">
             <Avatar label="✉️" shape="square" class="!w-9 !h-9 !rounded-xl !bg-white !border !text-sm shrink-0" />

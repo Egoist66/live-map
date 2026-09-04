@@ -14,6 +14,7 @@ const toNumberOrNull = (v: unknown) => {
 export const updateProfileSchema = toTypedSchema(
   z.object({
     name: z.string().min(1, 'Имя обязательно').max(255),
+    gender: z.enum(['male','female','other']).nullable().optional(),
     email: z.string().email('Некорректный email'),
     home_lat: z.preprocess(toNumberOrNull, z.number({ invalid_type_error: 'Широта должна быть числом' }).min(-90, 'Минимум -90').max(90, 'Максимум 90').nullable().optional()),
     home_lng: z.preprocess(toNumberOrNull, z.number({ invalid_type_error: 'Долгота должна быть числом' }).min(-180, 'Минимум -180').max(180, 'Максимум 180').nullable().optional()),

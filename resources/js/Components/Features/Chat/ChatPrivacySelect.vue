@@ -2,9 +2,11 @@
 import Select from 'primevue/select'
 import Checkbox from 'primevue/checkbox'
 import { PRIVACY_OPTIONS, isRandomDisabledFor } from '@/composables/usePrivacySettings'
+import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
 
 const props = defineProps<{ privacy: { message_privacy: string; allow_random_messages: boolean } }>()
 const emit = defineEmits<{ (e: 'savePrivacy'): void }>()
+const { selectPt } = useDropdownMenuStyle()
 
 function onPrivacyChange(v: any) {
   props.privacy.message_privacy = v
@@ -29,16 +31,7 @@ function onRandomChange(v: any) {
       scrollHeight="12rem"
       fluid
       class="w-full min-w-0 !rounded-xl"
-      :pt="{
-        root: { class: '!rounded-xl !border-stone-200 dark:!border-zinc-700 !bg-white dark:!bg-zinc-900' },
-        label: { class: '!text-sm !py-2.5 !text-stone-900 dark:!text-zinc-100 placeholder:!text-stone-400 dark:placeholder:!text-zinc-500' },
-        dropdown: { class: '!w-9' },
-        dropdownIcon: { class: '!text-xs !text-stone-400 dark:!text-zinc-500' },
-        overlay: { class: '!rounded-xl !border !border-stone-200 dark:!border-zinc-700 !bg-white dark:!bg-zinc-900 !shadow-xl !max-w-[calc(100vw-2rem)] !overflow-hidden' },
-        listContainer: { class: '!bg-white dark:!bg-zinc-900 !p-1.5' },
-        list: { class: '!bg-white dark:!bg-zinc-900 !flex !flex-col !gap-0.5' },
-        option: { class: '!rounded-lg !px-3 !py-2.5 !text-sm !text-stone-800 dark:!text-zinc-100 hover:!bg-stone-100 dark:hover:!bg-zinc-800' },
-      }"
+      :pt="selectPt"
     >
       <template #value="p">
         <span v-if="p.value" class="flex items-center gap-2 text-sm text-stone-900 dark:text-zinc-100 truncate">

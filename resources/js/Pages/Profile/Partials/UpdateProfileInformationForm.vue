@@ -3,6 +3,8 @@ import { Link } from '@inertiajs/vue3'
 import AvatarPreview from '@/Components/Features/Media/AvatarPreview.vue'
 import { useProfileForm } from '@/composables/useProfileForm'
 import { useAvatarUpload } from '@/composables/useAvatarUpload'
+import { useGender } from '@/composables/useGender'
+import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import Button from 'primevue/button'
@@ -14,6 +16,8 @@ import Avatar from 'primevue/avatar'
 defineProps<{ mustVerifyEmail: boolean; status?: string | null }>()
 const f = useProfileForm()
 const a = useAvatarUpload()
+const g = useGender()
+const { selectPt } = useDropdownMenuStyle()
 const planOptions = [{ label:'Free — 3/день · 1км', value:'free', icon:'pi pi-ticket' },{ label:'Pro — Безлимит · 5км', value:'pro', icon:'pi pi-bolt' },{ label:'Business — Безлимит · 50км', value:'business', icon:'pi pi-briefcase' }]
 </script>
 <template>
@@ -51,6 +55,37 @@ const planOptions = [{ label:'Free — 3/день · 1км', value:'free', icon:
       <div class="grid sm:grid-cols-2 gap-4">
         <div><label class="text-sm font-medium dark:text-white">Имя</label><InputText v-model="f.name.value" v-bind="f.nameAttrs" class="w-full mt-1 !rounded-2xl" :invalid="!!f.errors.value.name" /><Message v-if="f.errors.value.name" severity="error" :closable="false" class="mt-1 !rounded-xl !py-1 !text-xs">{{ f.errors.value.name }}</Message></div>
         <div><label class="text-sm font-medium dark:text-white">Email</label><InputText v-model="f.email.value" v-bind="f.emailAttrs" type="email" class="w-full mt-1 !rounded-2xl" :invalid="!!f.errors.value.email" /><Message v-if="f.errors.value.email" severity="error" :closable="false" class="mt-1 !rounded-xl !py-1 !text-xs">{{ f.errors.value.email }}</Message></div>
+      </div>
+      <div>
+        <label class="text-sm font-medium dark:text-white">Пол</label>
+        <Select
+          v-model="f.gender.value"
+          :options="g.options"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Не указан"
+          checkmark
+          showClear
+          scrollHeight="12rem"
+          fluid
+          class="w-full min-w-0 mt-1 !rounded-xl"
+          :pt="selectPt"
+        >
+          <template #value="p">
+            <span v-if="p.value" class="flex items-center gap-2 text-sm text-stone-900 dark:text-zinc-100 truncate">
+              <i :class="(g.options.find((o) => o.value === p.value)?.icon ?? 'pi pi-user') + ' text-xs text-violet-600 dark:text-violet-400 shrink-0'"></i>
+              <span class="truncate">{{ g.options.find((o) => o.value === p.value)?.label }}</span>
+            </span>
+            <span v-else class="text-sm text-stone-400 dark:text-zinc-500">Не указан</span>
+          </template>
+          <template #option="p">
+            <span class="flex items-center gap-2 text-sm truncate">
+              <i :class="p.option.icon + ' text-xs opacity-60 shrink-0'"></i>
+              <span class="truncate">{{ p.option.label }}</span>
+            </span>
+          </template>
+        </Select>
+        <Message v-if="f.errors.value.gender" severity="error" :closable="false" class="mt-1 !rounded-xl !py-1 !text-xs">{{ f.errors.value.gender }}</Message>
       </div>
       <Card class="!bg-zinc-50 dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 !rounded-3xl !shadow-none" :pt="{ body:{ class:'!p-4' }, content:{ class:'!p-0' } }">
         <template #content>

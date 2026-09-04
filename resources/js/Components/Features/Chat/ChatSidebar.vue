@@ -6,12 +6,15 @@ import Badge from 'primevue/badge'
 import Button from 'primevue/button'
 import ChatList from '@/Components/Features/Chat/ChatList.vue'
 import ChatPrivacySelect from '@/Components/Features/Chat/ChatPrivacySelect.vue'
+import { useChatLayout } from '@/composables/useChatLayout'
+
+const { sidebarCardClass } = useChatLayout()
 
 defineProps<{ tab: string; unreadTotal: number; pendingCount: number; blockedCount: number; refreshing: boolean; conversations: any[]; friends: any[]; pendingIn: any[]; blocked: any[]; filter: string; selectedId: number | null; privacy: any; showPrivacy: boolean; isOnline: (id?: number) => boolean; formatTime: (s: string) => string }>()
 const emit = defineEmits<{ (e: 'update:tab', v: any): void; (e: 'update:filter', v: string): void; (e: 'update:showPrivacy', v: boolean): void; (e: 'refresh'): void; (e: 'people'): void; (e: 'open', id: number): void; (e: 'startChat', u: any): void; (e: 'deleteChat', id: number): void; (e: 'block', id: number, name?: string): void; (e: 'unblock', id: number): void; (e: 'removeFriend', f: any): void; (e: 'accept', id: number): void; (e: 'decline', id: number): void; (e: 'savePrivacy'): void }>()
 </script>
 <template>
-  <div :class="selectedId ? 'hidden lg:flex' : 'flex'" class="w-full lg:w-[360px] lg:min-w-[360px] flex-1 lg:flex-none min-h-0 lg:h-full lg:max-h-full bg-white dark:bg-zinc-900 lg:rounded-2xl border lg:border border-stone-200 dark:border-zinc-800 flex-col overflow-hidden max-w-full">
+  <div :class="[selectedId ? 'hidden lg:flex' : 'flex', sidebarCardClass]">
     <div class="p-3 border-b dark:border-zinc-800 shrink-0 w-full max-w-full min-w-0">
       <div class="flex items-center gap-2 mb-3">
         <h2 class="text-[15px] font-bold dark:text-white tracking-tight">Connect</h2>
@@ -28,7 +31,7 @@ const emit = defineEmits<{ (e: 'update:tab', v: any): void; (e: 'update:filter',
       </Tabs>
     </div>
     <ChatList :conversations="conversations" :friends="friends" :pending-in="pendingIn" :blocked="blocked" :tab="tab" :selected-id="selectedId" :filter="filter" :is-online="isOnline" :format-time="formatTime" @update:filter="(v:string)=>emit('update:filter', v)" @open="(id:number)=>emit('open', id)" @start-chat="(u:any)=>emit('startChat', u)" @delete-chat="(id:number)=>emit('deleteChat', id)" @block="(id:number,n?:string)=>emit('block', id, n)" @unblock="(id:number)=>emit('unblock', id)" @remove-friend="(f:any)=>emit('removeFriend', f)" @accept="(id:number)=>emit('accept', id)" @decline="(id:number)=>emit('decline', id)" />
-    <div class="shrink-0 flex-none border-t dark:border-zinc-800 bg-stone-50 dark:bg-zinc-800/50">
+    <div class="shrink-0 flex-none border-t dark:border-zinc-800 bg-stone-50 dark:bg-zinc-800/50 rounded-b-none lg:rounded-b-2xl overflow-hidden">
       <button @click="emit('update:showPrivacy', !showPrivacy)" class="w-full flex items-center justify-between px-3 py-3 lg:py-2.5 text-left active:bg-stone-100 dark:active:bg-zinc-800 lg:cursor-default">
         <span class="text-xs font-bold flex items-center gap-1.5 dark:text-white">Приватность</span>
         <span class="lg:hidden text-stone-400 text-xs">{{ showPrivacy ? '▲' : '▼' }}</span>

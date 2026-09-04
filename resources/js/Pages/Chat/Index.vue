@@ -12,6 +12,10 @@ import { useChatPage } from '@/composables/useChatPage'
 import { useChatFilters } from '@/composables/useChatFilters'
 import { useChatMessageStatus } from '@/composables/useChatMessageStatus'
 import { useChatViewport } from '@/composables/useChatViewport'
+import { useChatLayout } from '@/composables/useChatLayout'
+import { usePageScrollLock } from '@/composables/usePageScrollLock'
+
+usePageScrollLock()
 
 const props = defineProps<{ conversationId?: number }>()
 const {
@@ -28,6 +32,7 @@ const { isOnline } = usePresenceState()
 const { keyboardHeight, isKeyboardOpen } = useChatViewport()
 const filters = useChatFilters(chat, friendsApi, blocksApi)
 const { messageStatus } = useChatMessageStatus(isOwnMessage)
+const { pageClass, frameClass } = useChatLayout()
 function closeConfirm() { confirm.value = null }
 
 onMounted(init)
@@ -35,8 +40,8 @@ onMounted(init)
 <template>
   <AuthenticatedLayout>
     <Toast />
-    <div class="mx-auto max-w-[1280px] lg:px-6 lg:py-4 w-full max-w-full min-w-0 overflow-hidden">
-      <div class="flex flex-col lg:flex-row lg:gap-4 h-[calc(100dvh-64px-56px-env(safe-area-inset-bottom))] lg:h-[calc(100dvh-64px-24px)] max-h-[calc(100dvh-64px-56px-env(safe-area-inset-bottom))] lg:max-h-[calc(100dvh-64px-24px)] bg-stone-100 dark:bg-zinc-950 lg:bg-transparent overflow-hidden lg:overflow-visible w-full max-w-full min-w-0" :style="isKeyboardOpen ? { height: `calc(100dvh - 64px - ${keyboardHeight}px)`, maxHeight: `calc(100dvh - 64px - ${keyboardHeight}px)` } : {}">
+    <div :class="pageClass">
+      <div :class="frameClass" class="h-[calc(100dvh-64px-56px-env(safe-area-inset-bottom,0px))] max-h-[calc(100dvh-64px-56px-env(safe-area-inset-bottom,0px))] lg:h-[calc(100dvh-64px-32px)] lg:max-h-[calc(100dvh-64px-32px)]" :style="isKeyboardOpen ? { height: `calc(100dvh - 64px - ${keyboardHeight}px)`, maxHeight: `calc(100dvh - 64px - ${keyboardHeight}px)` } : {}">
         <ChatSidebar :tab="tab" @update:tab="(v:any)=>tab=v" :unread-total="unreadTotal" :pending-count="pendingIn.length" :blocked-count="blocked.length" :refreshing="refreshing" :conversations="(filters.filteredConversations.value as any)" :friends="(filters.filteredFriends.value as any)" :pending-in="(filters.filteredPendingIn.value as any)" :blocked="(filters.filteredBlocked.value as any)" :filter="filters.chatFilter.value" @update:filter="(v:string)=>filters.chatFilter.value=v" :selected-id="selectedId" :privacy="privacy" :show-privacy="showPrivacy" @update:show-privacy="(v:boolean)=>showPrivacy=v" :is-online="isOnline" :format-time="formatTime" @refresh="refresh" @people="filters.showPeopleSearch.value = true" @open="openConversation" @start-chat="startChatWith" @delete-chat="askDeleteChat" @block="askBlock" @unblock="askUnblock" @remove-friend="askRemoveFriend" @accept="(id:number)=>friendsApi.accept(id)" @decline="(id:number)=>friendsApi.decline(id)" @save-privacy="savePrivacy" />
         <ChatWindow :selected-id="selectedId" :active-conv="activeConv" :messages="messages" :loading="loading" :sending="sending" :refreshing="refreshing" :typing="[...typingUsers].some((id:any)=>id===activeConv?.other?.id)" :online="isOnline(activeConv?.other?.id)" :input="input" @update:input="(v:string)=>input=v" :emoji-open="emojiOpen" :emoji-groups="EMOJI_GROUPS" :editing-id="editingId" :editing-body="editingBody" @update:editing-body="(v:string)=>editingBody=v" :show-menu="showChatMenu" :keyboard-style="{}" :is-own-message="isOwnMessage" :message-status="messageStatus" :format-time="formatTime" @send="handleSend" @typing="notifyTyping" @stop-typing="stopTyping" @refresh="refresh" @back="backToList" @close="backToList" @toggle-menu="showChatMenu = !showChatMenu" @menu-close="showChatMenu = false" @delete-chat="() => askDeleteChat()" @block="activeConv?.other && askBlock(activeConv.other.id, activeConv.other.name)" @toggle-emoji="toggleEmoji" @emoji-close="emoji.close()" @pick-emoji="onPickEmoji" @pick-emoji-edit="onPickEmojiForEdit" @start-edit="handleStartEdit" @save-edit="saveEdit" @cancel-edit="cancelEdit" @delete-message="askDeleteMessage" />
       </div>

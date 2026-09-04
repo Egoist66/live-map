@@ -13,7 +13,7 @@
     --bg: #0B0F1A;
     --ink: #F8FAFC;
   }
-   html { scrollbar-gutter: stable; color-scheme: light; overflow-x: clip; max-width: 100vw; }
+   html { scrollbar-gutter: auto; color-scheme: light; overflow-x: clip; max-width: 100vw; }
    html.dark { color-scheme: dark; }
    body {
     background: var(--bg);

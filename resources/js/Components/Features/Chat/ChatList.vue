@@ -8,7 +8,7 @@ defineProps<{ conversations: any[]; friends: any[]; pendingIn: any[]; blocked: a
 const emit = defineEmits<{ (e: 'update:filter', v: string): void; (e: 'open', id: number): void; (e: 'startChat', u: any): void; (e: 'deleteChat', id: number): void; (e: 'block', id: number, name?: string): void; (e: 'unblock', id: number): void; (e: 'removeFriend', f: any): void; (e: 'accept', id: number): void; (e: 'decline', id: number): void; (e: 'sheet', p: any): void }>()
 </script>
 <template>
-  <div class="flex-1 overflow-auto overscroll-contain min-h-0 w-full max-w-full">
+  <div class="flex-1 overflow-auto overscroll-contain [scrollbar-width:thin] max-lg:[-ms-overflow-style:none] max-lg:[scrollbar-width:none] max-lg:[&::-webkit-scrollbar]:hidden min-h-0 w-full max-w-full">
     <div class="p-2.5 border-b dark:border-zinc-800 bg-stone-50/50 dark:bg-zinc-900/50">
       <div class="relative w-full">
         <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-sm pointer-events-none" />
@@ -34,9 +34,9 @@ const emit = defineEmits<{ (e: 'update:filter', v: string): void; (e: 'open', id
           </div>
           <span v-if="c.unread_count" class="bg-violet-600 text-white text-xs font-bold min-w-[22px] h-[22px] grid place-items-center px-1.5 rounded-full shrink-0">{{ c.unread_count > 9 ? '9+' : c.unread_count }}</span>
         </button>
-        <div class="flex items-center gap-1 pr-2 shrink-0">
-          <button @click.stop="emit('deleteChat', c.id)" title="Удалить чат" class="w-7 h-7 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-red-50 text-stone-500 hover:text-red-600 transition">✕</button>
-          <button v-if="c.other?.id" @click.stop="emit('block', c.other.id, c.other.name)" title="Заблокировать" class="w-7 h-7 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-red-50 text-stone-500 hover:text-red-600 transition">⊘</button>
+        <div class="flex items-center gap-1 ml-2 pr-2 shrink-0">
+          <button @click.stop="emit('deleteChat', c.id)" title="Удалить чат" class="w-7 h-7 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-red-50 text-stone-500 hover:text-red-600 transition"><i class="pi pi-times text-xs"></i></button>
+          <button v-if="c.other?.id" @click.stop="emit('block', c.other.id, c.other.name)" title="Заблокировать" class="w-7 h-7 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-red-50 text-stone-500 hover:text-red-600 transition"><i class="pi pi-ban text-xs"></i></button>
         </div>
       </div>
     </div>
@@ -49,8 +49,8 @@ const emit = defineEmits<{ (e: 'update:filter', v: string): void; (e: 'open', id
         </Link>
         <div class="flex gap-1 shrink-0 items-center">
           <button @click="emit('startChat', f.other)" class="text-xs px-3 py-1.5 rounded-full bg-stone-900 dark:bg-white dark:text-zinc-900 text-white font-semibold">Чат</button>
-          <button @click.stop="emit('removeFriend', f)" title="Удалить из друзей" class="w-7 h-7 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-red-50 text-stone-500 hover:text-red-600 transition">✕</button>
-          <button v-if="f.other?.id" @click.stop="emit('block', f.other.id, f.other.name)" title="Заблокировать" class="w-7 h-7 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-red-50 text-stone-500 hover:text-red-600 transition">⊘</button>
+          <button @click.stop="emit('removeFriend', f)" title="Удалить из друзей" class="w-7 h-7 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-red-50 text-stone-500 hover:text-red-600 transition"><i class="pi pi-times text-xs"></i></button>
+          <button v-if="f.other?.id" @click.stop="emit('block', f.other.id, f.other.name)" title="Заблокировать" class="w-7 h-7 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-red-50 text-stone-500 hover:text-red-600 transition"><i class="pi pi-ban text-xs"></i></button>
         </div>
       </div>
     </div>
