@@ -110,13 +110,28 @@ export default defineConfig({
                         return { manifest, warnings: [] };
                     },
                 ],
-                navigateFallback: '/offline.html',
-                navigateFallbackDenylist: [/^\/api\//, /^\/broadcasting\//, /^\/reverb\//, /\/admin/],
+                navigateFallback: null,
                 cleanupOutdatedCaches: true,
                 clientsClaim: true,
                 skipWaiting: false,
                 importScripts: ['/push-sw.js'],
                 runtimeCaching: [
+                    {
+                        urlPattern: ({ request, url }) =>
+                            request.mode === 'navigate' &&
+                            !url.pathname.startsWith('/api/') &&
+                            !url.pathname.startsWith('/broadcasting/') &&
+                            !url.pathname.startsWith('/reverb/') &&
+                            !url.pathname.startsWith('/admin'),
+                        handler: 'NetworkFirst',
+                        method: 'GET',
+                        options: {
+                            cacheName: 'pwa-pages',
+                            networkTimeoutSeconds: 3,
+                            expiration: { maxEntries: 20, maxAgeSeconds: 86400 },
+                            cacheableResponse: { statuses: [0, 200] },
+                        },
+                    },
                     {
                         urlPattern: /^https:\/\/fonts\.(bunny|googleapis|gstatic)\.net\/.*/i,
                         handler: 'CacheFirst',
