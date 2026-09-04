@@ -17,7 +17,11 @@ function describeError(e: any): string {
   if (code === 'permission-denied') return 'Уведомления заблокированы в настройках браузера/телефона'
   if (code === 'permission-default') return 'Разрешение на уведомления не дано'
   if (code === 'sw-register-failed') return 'Service Worker не запустился: открой собранную версию по HTTPS (не dev-режим)'
-  if (code.startsWith('subscribe-failed:')) return `Не удалось подписаться: ${code.slice(17)}`
+  if (code.startsWith('subscribe-failed:')) {
+    const raw = code.slice(17)
+    if (/push service/i.test(raw)) return 'Push-сервис Chrome отклонил регистрацию (битое состояние браузера). Попробуй: Настройки Chrome → Конфиденциальность → Данные сайтов → удали данные этого сайта → обнови страницу → Вкл'
+    return `Не удалось подписаться: ${raw}`
+  }
   if (e?.response?.status === 419 || e?.response?.status === 401) return 'Не сохранилось на сервере: обнови страницу и войди заново'
   return 'Не удалось включить уведомления, попробуй ещё раз'
 }

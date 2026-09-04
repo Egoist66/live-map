@@ -28,13 +28,28 @@ export async function getEstimate(): Promise<StorageEstimate | null> {
   }
 }
 
+async function runtimeKeys(): Promise<string[]> {
+  if (!('caches' in window)) return []
+  try {
+    const keys = await caches.keys()
+    return keys.filter((k) => k.startsWith('pwa-'))
+  } catch {
+    return []
+  }
+}
+
 export async function cachedKeys(): Promise<string[]> {
   return matchPrefixes()
 }
 
-export async function clearRuntimeCaches(): Promise<void> {
-  const keys = await matchPrefixes()
+export async function runtimeCachedKeys(): Promise<string[]> {
+  return runtimeKeys()
+}
+
+export async function clearRuntimeCaches(): Promise<string[]> {
+  const keys = await runtimeKeys()
   await Promise.all(keys.map((k) => caches.delete(k).catch(() => false)))
+  return keys
 }
 
 export async function isOfflineReady(): Promise<boolean> {

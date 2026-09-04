@@ -60,14 +60,13 @@ export async function getSubscription(): Promise<PushSubscription | null> {
   return await reg.pushManager.getSubscription().catch(() => null)
 }
 
-export async function subscribe(): Promise<PushSubscription> {
-  if (!isSupported()) throw new Error('push-unsupported')
-  const key = vapidPublicKey()
-  if (!key) throw new Error('no-vapid-key')
-  const permission = await requestPermission()
-  if (permission !== 'granted') throw new Error(`permission-${permission}`)
-  const reg = await readyRegistration()
-  if (!reg.pushManager) throw new Error('push-unsupported')
+async function freshReregister(): Promise<ServiceWorkerRegistration> {
+  return await navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' }).catch(() => {
+    throw new Error('sw-register-failed')
+  })
+}
+
+async function doSubscribe(reg: ServiceWorkerRegistration, key: string): Promise<PushSubscription> {
   const normalized = bytesToBase64Url(base64ToBytes(key))
   const existing = await reg.pushManager.getSubscription().catch(() => null)
   if (existing && serverKeyOf(existing) === normalized) return existing
@@ -76,10 +75,27 @@ export async function subscribe(): Promise<PushSubscription> {
       await existing.unsubscribe()
     } catch {}
   }
+  return await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: base64ToBytes(key) as unknown as BufferSource })
+}
+
+export async function subscribe(): Promise<PushSubscription> {
+  if (!isSupported()) throw new Error('push-unsupported')
+  const key = vapidPublicKey()
+  if (!key) throw new Error('no-vapid-key')
+  const permission = await requestPermission()
+  if (permission !== 'granted') throw new Error(`permission-${permission}`)
+  const reg = await readyRegistration()
+  if (!reg.pushManager) throw new Error('push-unsupported')
   try {
-    return await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: base64ToBytes(key) as unknown as BufferSource })
+    return await doSubscribe(reg, key)
   } catch (e: any) {
-    throw new Error(`subscribe-failed:${e?.message || e}`)
+    try {
+      const fresh = await freshReregister()
+      if (!fresh.pushManager) throw e
+      return await doSubscribe(fresh, key)
+    } catch (e2: any) {
+      throw new Error(`subscribe-failed:${e2?.message || e?.message || e2}`)
+    }
   }
 }
 

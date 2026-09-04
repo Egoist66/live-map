@@ -1,9 +1,16 @@
 <script setup lang="ts">
 import Card from 'primevue/card'
+import { useToast } from 'primevue/usetoast'
 import { usePwaSettings } from '@/composables/usePwaSettings'
 import PwaPushToggle from '@/Components/Features/Pwa/PwaPushToggle.vue'
 
 const s = usePwaSettings()
+const toast = (() => { try { return useToast() } catch { return null as any } })()
+
+async function onClearCache() {
+  await s.clearCache()
+  if (s.lastCleared.value) toast?.add({ severity: 'success', summary: 'Офлайн-кэш', detail: s.lastCleared.value, life: 3500 })
+}
 </script>
 
 <template>
@@ -45,11 +52,12 @@ const s = usePwaSettings()
                 <span v-if="s.usage.value">занято {{ s.usage.value.usageMB.toFixed(1) }} МБ · карта и фото открываются без сети</span>
                 <span v-else>карта и фото открываются без сети</span>
               </p>
+              <p v-if="s.lastCleared.value" class="text-xs text-emerald-600 dark:text-emerald-400 mt-1">{{ s.lastCleared.value }}</p>
             </div>
             <button
               class="text-xs font-semibold px-3 py-2 rounded-xl bg-stone-200 dark:bg-zinc-800 dark:text-white active:scale-95"
               :disabled="s.clearing.value"
-              @click="s.clearCache()"
+              @click="onClearCache"
             >
               {{ s.clearing.value ? '…' : 'Очистить' }}
             </button>
