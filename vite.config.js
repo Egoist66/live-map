@@ -3,8 +3,20 @@ import laravel from 'laravel-vite-plugin';
 import vue from '@vitejs/plugin-vue';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
+import { createHash } from 'crypto';
+import { existsSync, readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+function fileRevision(rel) {
+    try {
+        const full = path.resolve(__dirname, 'public', rel);
+        if (!existsSync(full)) return null;
+        return createHash('md5').update(readFileSync(full)).digest('hex').slice(0, 16);
+    } catch {
+        return null;
+    }
+}
 
 export default defineConfig({
     resolve: { alias: { '@': path.resolve(__dirname, 'resources/js') } },
@@ -83,6 +95,21 @@ export default defineConfig({
             },
             workbox: {
                 globPatterns: ['**/*.{js,css,html,woff2}'],
+                manifestTransforms: [
+                    (entries) => {
+                        const manifest = entries.map((e) => ({
+                            ...e,
+                            url: e.url.startsWith('/') ? e.url : `/build/${e.url}`,
+                        }));
+                        for (const f of ['offline.html', 'manifest.webmanifest', 'pwa-192x192.png', 'pwa-512x512.png', 'pwa-icon.svg', 'favicon.ico']) {
+                            if (!manifest.some((m) => m.url === `/${f}`)) {
+                                const revision = fileRevision(f);
+                                if (revision) manifest.push({ url: `/${f}`, revision });
+                            }
+                        }
+                        return { manifest, warnings: [] };
+                    },
+                ],
                 navigateFallback: '/offline.html',
                 navigateFallbackDenylist: [/^\/api\//, /^\/broadcasting\//, /^\/reverb\//, /\/admin/],
                 cleanupOutdatedCaches: true,
