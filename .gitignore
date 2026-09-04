@@ -173,3 +173,8 @@ helm-values-*.yaml
 helm-values-*.yml
 rr
 .rr.yaml
+
+# PWA generated (rebuild via pnpm build)
+/public/sw.js
+/public/workbox-*.js
+/public/manifest.webmanifest

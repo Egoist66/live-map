@@ -39,6 +39,7 @@ class User extends Authenticatable
     public function friendships() { return $this->hasMany(Friendship::class, 'requester_id'); }
     public function friendshipsReceived() { return $this->hasMany(Friendship::class, 'addressee_id'); }
     public function conversations() { return $this->belongsToMany(Conversation::class, 'conversation_participants')->withPivot('last_read_at','joined_at'); }
+    public function pushSubscriptions() { return $this->hasMany(PushSubscription::class); }
 
     public function isAdmin(): bool { return $this->is_admin || $this->role === 'admin'; }
     public function isModerator(): bool { return $this->isAdmin() || $this->role === 'moderator'; }

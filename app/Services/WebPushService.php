@@ -1,0 +1,69 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\PushSubscription;
+use App\Models\User;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
+
+class WebPushService
+{
+    public function isConfigured(): bool
+    {
+        return (bool) config('services.webpush.vapid.public_key')
+            && (bool) config('services.webpush.vapid.private_key')
+            && class_exists(\Minishlink\WebPush\WebPush::class);
+    }
+
+    public function sendToUser(User $user, array $payload): int
+    {
+        return $this->sendToSubscriptions($user->pushSubscriptions()->get(), $payload);
+    }
+
+    public function sendToSubscriptions(Collection $subscriptions, array $payload): int
+    {
+        if ($subscriptions->isEmpty() || ! $this->isConfigured()) {
+            return 0;
+        }
+
+        $webPush = new \Minishlink\WebPush\WebPush([
+            'VAPID' => [
+                'subject' => config('app.url'),
+                'publicKey' => config('services.webpush.vapid.public_key'),
+                'privateKey' => config('services.webpush.vapid.private_key'),
+            ],
+        ]);
+
+        foreach ($subscriptions as $subscription) {
+            /** @var PushSubscription $subscription */
+            try {
+                $webPush->sendOneNotification(
+                    new \Minishlink\WebPush\Subscription(
+                        $subscription->endpoint,
+                        $subscription->p256dh_key,
+                        $subscription->auth_token,
+                        'aesgcm'
+                    ),
+                    json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+                );
+            } catch (\Throwable $e) {
+                Log::warning('webpush queue failed', ['id' => $subscription->id, 'error' => $e->getMessage()]);
+            }
+        }
+
+        $sent = 0;
+        foreach ($webPush->flush() as $report) {
+            $endpoint = $report->getRequest()->getUri()->__toString();
+            if ($report->isSuccess()) {
+                $sent++;
+            } elseif ($report->isSubscriptionExpired()) {
+                PushSubscription::where('endpoint', $endpoint)->delete();
+            } else {
+                Log::warning('webpush failed', ['endpoint' => $endpoint, 'reason' => $report->getReason()]);
+            }
+        }
+
+        return $sent;
+    }
+}

@@ -6,6 +6,7 @@ use App\Http\Controllers\FriendshipController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\PinCommentController;
 use App\Http\Controllers\PinController;
+use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\ReactionController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\UserBlockController;
@@ -58,4 +59,8 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::post('/conversations/{conversation}/typing', [MessageController::class, 'typing']);
     Route::patch('/messages/{message}', [MessageController::class, 'update']);
     Route::delete('/messages/{message}', [MessageController::class, 'destroy']);
+
+    Route::post('/push-subscriptions', [PushSubscriptionController::class, 'store']);
+    Route::delete('/push-subscriptions', [PushSubscriptionController::class, 'destroy']);
+    Route::post('/push-subscriptions/test', [PushSubscriptionController::class, 'test']);
 });

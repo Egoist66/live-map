@@ -126,7 +126,7 @@ export function useChat() {
       activeConv.value = d
       messages.value = d.messages
       d.messages.forEach((m:any)=> seenIds.add(m.id))
-      chatApi.markRead(id).catch(()=>{})
+      if (selectedId.value === id) chatApi.markRead(id).catch(()=>{})
       const last = d.messages[d.messages.length - 1] as any
       const conv = conversations.value.find((c) => c.id === id)
       if (conv) {
@@ -284,6 +284,7 @@ export function useChat() {
       }
       scrollToBottom()
     } else {
+      if (msg.sender_id === getUid()) { syncConversationPreview(msg); return }
       const conv = conversations.value.find((c) => c.id === msg.conversation_id)
       if (isOwn) {
         if (conv) syncConversationPreview(msg)

@@ -10,7 +10,18 @@
         <meta name="description" content="{{ config('seo.default_description') }}">
         <meta name="keywords" content="{{ implode(', ', config('seo.keywords', [])) }}">
         <meta name="format-detection" content="telephone=no">
+        <meta name="vapid-public-key" content="{{ config('services.webpush.vapid.public_key') }}">
         <link rel="canonical" href="{{ url()->current() }}">
+
+        <link rel="manifest" href="/manifest.webmanifest">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="application-name" content="{{ config('seo.site_name') }}">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-title" content="{{ config('seo.site_name') }}">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <meta name="msapplication-TileColor" content="#0F172A">
+        <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0F172A">
 
         <meta property="og:site_name" content="{{ config('seo.site_name') }}">
         <meta property="og:type" content="{{ config('seo.og_type', 'website') }}">
@@ -32,7 +43,8 @@
 
         <title inertia>{{ config('seo.default_title') }}</title>
         <link rel="icon" href="/favicon.ico" sizes="any">
-        <link rel="apple-touch-icon" href="/favicon.ico">
+        <link rel="icon" href="/pwa-icon.svg" type="image/svg+xml">
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png">
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700,800,900&family=inter:400,500,600&display=swap" rel="stylesheet" />
         <script>

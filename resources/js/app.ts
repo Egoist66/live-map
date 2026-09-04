@@ -9,6 +9,7 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers'
 import { createApp, DefineComponent, h } from 'vue'
 import { ZiggyVue } from '../../vendor/tightenco/ziggy'
 import { setupPrimeVue } from './plugins/primevue'
+import { register as registerSw } from './pwa/pwa.service'
 
 const appName = import.meta.env.VITE_APP_NAME || 'UPin'
 
@@ -28,6 +29,11 @@ createInertiaApp({
     app.use(PiniaColada)
     setupPrimeVue(app)
     app.mount(el)
+    if (!import.meta.env.SSR) {
+      try {
+        registerSw()
+      } catch {}
+    }
   },
   progress: { color: '#5B5BFF' },
 })

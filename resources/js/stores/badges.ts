@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { usePage } from '@inertiajs/vue3'
 import { chatApi } from '@/services/chat.api'
 
 export const useBadgeStore = defineStore('badges', () => {
@@ -49,11 +50,21 @@ export const useBadgeStore = defineStore('badges', () => {
     } catch {}
   }
 
+  function resolveUid(): string | number | null {
+    try {
+      const w = window as any
+      if (w.userId) return w.userId
+      const meta = document.querySelector('meta[name="user-id"]')?.getAttribute('content')
+      if (meta) return meta
+      return (usePage().props.auth as any)?.user?.id ?? null
+    } catch { return null }
+  }
+
   function subscribe() {
     try {
       const echo = (window as any).Echo
       if (!echo) return
-      const uid = (window as any).userId || document.querySelector('meta[name="user-id"]')?.getAttribute('content')
+      const uid = resolveUid()
       if (!uid) return
       if (echoCh) return
       echoCh = echo.private(`user.${uid}`)

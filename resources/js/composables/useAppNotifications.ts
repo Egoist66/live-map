@@ -1,6 +1,7 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
 import { avatarSrcFor } from '@/composables/useAvatar'
+import { showLocal } from '@/pwa/push.service'
 
 export type AppToast = {
   id: string
@@ -51,6 +52,9 @@ function push(t: AppToast) {
   const timer = setTimeout(() => remove(t.id), 5500)
   timers.set(t.id, timer)
   if ('vibrate' in navigator) try { (navigator as any).vibrate(120) } catch {}
+  try {
+    if (typeof document !== 'undefined' && document.hidden) showLocal(t.title, { body: t.body, url: t.link, avatar: t.avatar })
+  } catch {}
 }
 function remove(id: string) {
   toasts.value = toasts.value.filter(x => x.id !== id)

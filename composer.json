@@ -16,6 +16,7 @@
         "laravel/scout": "^11.6",
         "laravel/tinker": "^3.0",
         "league/flysystem-aws-s3-v3": "^3.35",
+        "minishlink/web-push": "^11.0",
         "spiral/roadrunner-cli": "2.6",
         "spiral/roadrunner-http": "3.3",
         "tightenco/ziggy": "^2.0"

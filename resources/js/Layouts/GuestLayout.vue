@@ -2,6 +2,8 @@
 import { Link } from '@inertiajs/vue3'
 import Card from 'primevue/card'
 import PageTransition from '@/Components/Features/Feedback/PageTransition.vue'
+import PwaInstallBanner from '@/Components/Features/Pwa/PwaInstallBanner.vue'
+import PwaUpdateBanner from '@/Components/Features/Pwa/PwaUpdateBanner.vue'
 const isFaq = route().current('faq')
 </script>
 
@@ -36,7 +38,7 @@ const isFaq = route().current('faq')
           </div>
         </div>
         <div class="mt-auto pt-8 flex items-center justify-between text-xs text-white/40">
-          <span>© UPin · Пилотный район</span><span>PWA скоро</span>
+          <span>© UPin · Пилотный район</span><span>PWA · ставится как приложение</span>
         </div>
       </div>
     </div>
@@ -62,7 +64,9 @@ const isFaq = route().current('faq')
             <div class="text-xs text-stone-400 mt-4 text-center max-w-[360px]">Защищено приватностью по умолчанию · Размытие 200м · Блок в 1 клик</div>
           </div>
         </template>
-      </PageTransition>
+        </PageTransition>
+      </div>
+      <PwaInstallBanner />
+      <PwaUpdateBanner />
     </div>
-  </div>
 </template>

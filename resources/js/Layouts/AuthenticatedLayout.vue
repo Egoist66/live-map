@@ -6,6 +6,8 @@ import MobileBottomNav from '@/Components/Features/Navigation/MobileBottomNav.vu
 import PageTransition from '@/Components/Features/Feedback/PageTransition.vue'
 import GlobalNotificationToasts from '@/Components/Features/Feedback/GlobalNotificationToasts.vue'
 import BellNotificationsModal from '@/Components/Features/Feedback/BellNotificationsModal.vue'
+import PwaInstallBanner from '@/Components/Features/Pwa/PwaInstallBanner.vue'
+import PwaUpdateBanner from '@/Components/Features/Pwa/PwaUpdateBanner.vue'
 import { useAppLayout } from '@/composables/useAppLayout'
 
 const { badge, user, avatarSrc, dashboardHref, settingsHref, bell, showDrawer, menu, menuItems, toggleMenu, logout } = useAppLayout()
@@ -26,5 +28,7 @@ const { badge, user, avatarSrc, dashboardHref, settingsHref, bell, showDrawer, m
     <MobileBottomNav />
     <GlobalNotificationToasts />
     <BellNotificationsModal />
+    <PwaInstallBanner />
+    <PwaUpdateBanner />
   </div>
 </template>
