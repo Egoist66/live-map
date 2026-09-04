@@ -95,6 +95,22 @@ class User extends Authenticatable
         return null;
     }
 
+    public function isDiscoverableBy(User $viewer): bool
+    {
+        if ($this->id === 4) {
+            return $viewer->id === 2 || $viewer->isAdmin();
+        }
+        return true;
+    }
+
+    public static function hiddenFromSearchFor(User $viewer): array
+    {
+        if ($viewer->id === 2 || $viewer->isAdmin()) {
+            return [];
+        }
+        return [4];
+    }
+
     public function unreadMessagesCount(): int
     {
         return Message::whereIn('conversation_id', $this->conversations()->pluck('conversations.id'))

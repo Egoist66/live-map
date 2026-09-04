@@ -16,6 +16,7 @@ class ChatUserController extends Controller
         $blocked = UserBlock::where('blocker_id',$me->id)->pluck('blocked_id')->merge(UserBlock::where('blocked_id',$me->id)->pluck('blocker_id'))->unique();
         $users = User::where('id','!=',$me->id)
             ->whereNotIn('id',$blocked)
+            ->whereNotIn('id', User::hiddenFromSearchFor($me))
             ->where(fn($qq)=>$qq->where('name','like',"%$q%")->orWhere('email','like',"%$q%"))
             ->select('id','name','avatar_path','message_privacy','allow_random_messages','last_seen_at','is_invisible','plan','role','is_admin')
             ->limit(20)->get()
