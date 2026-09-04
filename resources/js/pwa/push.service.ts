@@ -24,10 +24,33 @@ export async function requestPermission(): Promise<PushPermission> {
   return await Notification.requestPermission()
 }
 
+function bytesToBase64Url(bytes: Uint8Array): string {
+  let s = ''
+  for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i])
+  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
+function serverKeyOf(sub: PushSubscription): string | null {
+  try {
+    const raw = (sub.options as any)?.applicationServerKey as ArrayBuffer | null
+    if (!raw) return null
+    return bytesToBase64Url(new Uint8Array(raw))
+  } catch {
+    return null
+  }
+}
+
 async function readyRegistration(): Promise<ServiceWorkerRegistration> {
-  const existing = await navigator.serviceWorker.getRegistration('/')
-  if (existing) return existing
-  return await navigator.serviceWorker.register('/sw.js', { scope: '/' })
+  try {
+    const existing = await navigator.serviceWorker.getRegistration('/')
+    if (existing?.pushManager) return existing
+    if (existing) return existing
+  } catch {}
+  try {
+    return await navigator.serviceWorker.register('/sw.js', { scope: '/' })
+  } catch {
+    throw new Error('sw-register-failed')
+  }
 }
 
 export async function getSubscription(): Promise<PushSubscription | null> {
@@ -37,16 +60,27 @@ export async function getSubscription(): Promise<PushSubscription | null> {
   return await reg.pushManager.getSubscription().catch(() => null)
 }
 
-export async function subscribe(): Promise<PushSubscription | null> {
-  if (!isSupported()) return null
+export async function subscribe(): Promise<PushSubscription> {
+  if (!isSupported()) throw new Error('push-unsupported')
   const key = vapidPublicKey()
-  if (!key) return null
+  if (!key) throw new Error('no-vapid-key')
   const permission = await requestPermission()
-  if (permission !== 'granted') return null
+  if (permission !== 'granted') throw new Error(`permission-${permission}`)
   const reg = await readyRegistration()
+  if (!reg.pushManager) throw new Error('push-unsupported')
+  const normalized = bytesToBase64Url(base64ToBytes(key))
   const existing = await reg.pushManager.getSubscription().catch(() => null)
-  if (existing) return existing
-  return await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: base64ToBytes(key) as unknown as BufferSource })
+  if (existing && serverKeyOf(existing) === normalized) return existing
+  if (existing) {
+    try {
+      await existing.unsubscribe()
+    } catch {}
+  }
+  try {
+    return await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: base64ToBytes(key) as unknown as BufferSource })
+  } catch (e: any) {
+    throw new Error(`subscribe-failed:${e?.message || e}`)
+  }
 }
 
 export async function unsubscribe(): Promise<boolean> {

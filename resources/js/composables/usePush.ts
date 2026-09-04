@@ -7,7 +7,20 @@ const permission = ref<PushPermission>('default')
 const subscribed = ref(false)
 const loading = ref(false)
 const supported = ref(false)
+const pushError = ref<string | null>(null)
 let inited = false
+
+function describeError(e: any): string {
+  const code = typeof e?.message === 'string' ? e.message : String(e || '')
+  if (code === 'push-unsupported') return 'Браузер не поддерживает пуши: нужен Chrome/Edge на Android по HTTPS или установленная PWA'
+  if (code === 'no-vapid-key') return 'Нет VAPID-ключа: проверь настройки сервера'
+  if (code === 'permission-denied') return 'Уведомления заблокированы в настройках браузера/телефона'
+  if (code === 'permission-default') return 'Разрешение на уведомления не дано'
+  if (code === 'sw-register-failed') return 'Service Worker не запустился: открой собранную версию по HTTPS (не dev-режим)'
+  if (code.startsWith('subscribe-failed:')) return `Не удалось подписаться: ${code.slice(17)}`
+  if (e?.response?.status === 419 || e?.response?.status === 401) return 'Не сохранилось на сервере: обнови страницу и войди заново'
+  return 'Не удалось включить уведомления, попробуй ещё раз'
+}
 
 async function refresh(): Promise<void> {
   supported.value = isSupported()
@@ -53,41 +66,52 @@ export function usePush() {
   async function enable(): Promise<boolean> {
     if (loading.value) return subscribed.value
     loading.value = true
+    pushError.value = null
     try {
-      const sub = await subscribe()
-      if (!sub) {
+      let sub
+      try {
+        sub = await subscribe()
+      } catch (e) {
+        pushError.value = describeError(e)
         await refresh()
         return false
       }
       try {
         await savePushSubscription(subscriptionPayload(sub))
-      } catch {}
+      } catch (e) {
+        pushError.value = describeError(e)
+      }
       await refresh()
-      return true
+      return pushError.value === null
     } finally {
       loading.value = false
     }
   }
 
-  async function disable(): Promise<void> {
+  async function disable(): Promise<boolean> {
     loading.value = true
+    pushError.value = null
     try {
       const sub = await getSubscription()
       if (sub) {
         try {
           await removePushSubscription(sub.endpoint)
-        } catch {}
+        } catch (e) {
+          pushError.value = describeError(e)
+        }
       }
-      await unsubscribe()
+      const ok = await unsubscribe().catch(() => false)
+      if (!ok) pushError.value = pushError.value || 'Не удалось отписаться, попробуй ещё раз'
       await refresh()
+      return pushError.value === null
     } finally {
       loading.value = false
     }
   }
 
-  async function toggle(): Promise<void> {
-    if (subscribed.value) await disable()
-    else await enable()
+  async function toggle(): Promise<boolean> {
+    if (subscribed.value) return await disable()
+    return await enable()
   }
 
   async function test(): Promise<void> {
@@ -100,5 +124,5 @@ export function usePush() {
 
   onMounted(() => init())
 
-  return { supported, permission, subscribed, loading, init, refresh, enable, disable, toggle, test, notifyLocal: showLocal }
+  return { supported, permission, subscribed, loading, pushError, init, refresh, enable, disable, toggle, test, notifyLocal: showLocal }
 }

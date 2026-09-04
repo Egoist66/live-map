@@ -1,7 +1,15 @@
 <script setup lang="ts">
+import { useToast } from 'primevue/usetoast'
 import { usePush } from '@/composables/usePush'
 
-const { supported, permission, subscribed, loading, toggle, test } = usePush()
+const { supported, permission, subscribed, loading, pushError, toggle, test } = usePush()
+const toast = (() => { try { return useToast() } catch { return null as any } })()
+
+async function onToggle() {
+  const ok = await toggle()
+  if (!ok && pushError.value) toast?.add({ severity: 'error', summary: 'Уведомления не включились', detail: pushError.value, life: 5000 })
+  else if (ok && subscribed.value) toast?.add({ severity: 'success', summary: 'Включено', detail: 'Системные уведомления будут приходить даже на заблокированный экран', life: 3500 })
+}
 </script>
 
 <template>
@@ -14,6 +22,7 @@ const { supported, permission, subscribed, loading, toggle, test } = usePush()
         <span v-else-if="subscribed">включены, даже когда вкладка закрыта</span>
         <span v-else>о сообщениях и друзьях</span>
       </p>
+      <p v-if="pushError" class="text-xs text-red-500 mt-1">{{ pushError }}</p>
     </div>
     <button
       v-if="subscribed"
@@ -26,7 +35,7 @@ const { supported, permission, subscribed, loading, toggle, test } = usePush()
       class="text-xs font-semibold px-3 py-2 rounded-xl active:scale-95"
       :class="subscribed ? 'bg-stone-200 dark:bg-zinc-800' : 'bg-indigo-500 text-white'"
       :disabled="loading || permission === 'denied'"
-      @click="toggle"
+      @click="onToggle"
     >
       {{ loading ? '…' : subscribed ? 'Выкл' : 'Вкл' }}
     </button>
