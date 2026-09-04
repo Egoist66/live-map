@@ -3,6 +3,7 @@ import type { Conversation, ConversationDetail, Message, FriendshipsState } from
 
 export const chatApi = {
   me() { return api.get('/api/chat/me').then(r=>r.data) },
+  heartbeat() { return api.post('/api/chat/heartbeat').then(r=>r.data) },
   search(q:string){ return api.get('/api/chat/users/search',{params:{q}}).then(r=>r.data) },
   updatePrivacy(data:{message_privacy:string,allow_random_messages:boolean}){ return api.patch('/api/chat/privacy',data).then(r=>r.data) },
 

@@ -1,8 +1,12 @@
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { chatApi } from '@/services/chat.api'
 
 const onlineIds = ref<Set<number>>(new Set())
 let channel: any = null
 let started = false
+let retryTimer: ReturnType<typeof setTimeout> | null = null
+let beatTimer: ReturnType<typeof setInterval> | null = null
+let listenersBound = false
 
 function getEcho(): any {
   return (window as any).Echo
@@ -23,11 +27,47 @@ function isInvisible(): boolean {
   return false
 }
 
+function heartbeat() {
+  if (isInvisible()) return
+  chatApi.heartbeat().catch(() => {})
+}
+
+function startHeartbeat() {
+  if (beatTimer) return
+  heartbeat()
+  beatTimer = setInterval(heartbeat, 60000)
+  if (!listenersBound) {
+    listenersBound = true
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') { connect(); heartbeat() }
+    })
+    window.addEventListener('beforeunload', () => disconnect())
+    window.addEventListener('pagehide', () => disconnect())
+  }
+}
+
+function bindReconnect() {
+  try {
+    const echo = getEcho()
+    const pusher = (echo as any)?.connector?.pusher
+    if (pusher && !(pusher as any).__presenceBound) {
+      (pusher as any).__presenceBound = true
+      pusher.connection.bind('connected', () => {
+        if (started && !channel) connect()
+        else if (!started) connect()
+      })
+    }
+  } catch {}
+}
+
 function connect() {
   if (started) return
   if (isInvisible()) return
   const echo = getEcho()
-  if (!echo || typeof echo.join !== 'function') return
+  if (!echo || typeof echo.join !== 'function') {
+    if (!retryTimer) retryTimer = setTimeout(() => { retryTimer = null; connect() }, 2500)
+    return
+  }
   try {
     started = true
     channel = echo.join('online')
@@ -47,14 +87,23 @@ function connect() {
         s.delete(id)
         onlineIds.value = s
       })
-      .error((e: any) => console.warn('[presence] error', e))
-  } catch (e) {
-    console.warn('[presence] join failed', e)
+      .error(() => {
+        channel = null
+        started = false
+        if (!retryTimer) retryTimer = setTimeout(() => { retryTimer = null; connect() }, 5000)
+      })
+    bindReconnect()
+    startHeartbeat()
+  } catch {
+    channel = null
     started = false
+    if (!retryTimer) retryTimer = setTimeout(() => { retryTimer = null; connect() }, 5000)
   }
 }
 
 function disconnect() {
+  if (retryTimer) { clearTimeout(retryTimer); retryTimer = null }
+  if (beatTimer) { clearInterval(beatTimer); beatTimer = null }
   try {
     const echo = getEcho()
     if (echo && channel) echo.leave('online')
@@ -65,7 +114,6 @@ function disconnect() {
 
 export function usePresence() {
   onMounted(() => connect())
-  onBeforeUnmount(() => {})
 
   const isOnline = (id: number | string | null | undefined) => {
     if (id == null) return false
@@ -83,7 +131,7 @@ export function usePresence() {
 export function usePresenceState() {
   return {
     onlineIds: computed(() => onlineIds.value),
-    isOnline: (id: number | string | null | undefined) => onlineIds.value.has(Number(id)),
+    isOnline: (id: number | string | null | undefined) => id != null && onlineIds.value.has(Number(id)),
     connect,
     disconnect,
   }

@@ -4,7 +4,7 @@ import Card from 'primevue/card'
 import Avatar from 'primevue/avatar'
 import Tag from 'primevue/tag'
 
-defineProps<{ user: any; bioEmpty: boolean; bioText: string; isOwn: boolean; settingsHref: string }>()
+defineProps<{ user: any; bioEmpty: boolean; bioText: string; isOwn: boolean; settingsHref: string; presence: { active: boolean; label: string } }>()
 </script>
 <template>
   <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 !rounded-3xl !shadow-soft !overflow-hidden" :pt="{ body: { class: '!p-0' }, content: { class: '!p-0' } }">
@@ -14,6 +14,10 @@ defineProps<{ user: any; bioEmpty: boolean; bioText: string; isOwn: boolean; set
         <p class="text-xs text-stone-500 mt-1">Профиль · видимость · приватность</p>
         <div class="mt-5 grid gap-2.5 min-w-0">
           <div class="flex items-center gap-3 p-3 rounded-3xl bg-stone-50 border min-w-0">
+            <Avatar label="●" shape="square" class="!w-9 !h-9 !rounded-xl !bg-white !border !text-sm shrink-0" :class="presence.active ? '!text-emerald-500' : '!text-stone-300'" />
+            <div class="min-w-0 flex-1"><div class="text-[10px] font-bold tracking-widest uppercase text-stone-400">Статус</div><div class="text-sm font-bold truncate" :class="presence.active ? 'text-emerald-600' : 'text-stone-500'">{{ presence.label }}</div></div>
+            <span class="w-2 h-2 rounded-full shrink-0" :class="presence.active ? 'bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.15)]' : 'bg-stone-300'"></span>
+          </div>          <div class="flex items-center gap-3 p-3 rounded-3xl bg-stone-50 border min-w-0">
             <Avatar label="👤" shape="square" class="!w-9 !h-9 !rounded-xl !bg-white !border !text-sm shrink-0" />
             <div class="min-w-0 flex-1"><div class="text-[10px] font-bold tracking-widest uppercase text-stone-400">Имя</div><div class="text-sm font-bold truncate">{{ user.name }}</div></div>
           </div>

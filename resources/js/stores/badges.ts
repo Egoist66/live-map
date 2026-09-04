@@ -10,6 +10,31 @@ export const useBadgeStore = defineStore('badges', () => {
   let inited = false
 
   const total = computed(() => unread.value + pending.value)
+  const seenMsgIds = new Set<number>()
+  let fetchTimer: ReturnType<typeof setTimeout> | null = null
+
+  function getUid(): number {
+    try {
+      const meta = document.querySelector('meta[name="user-id"]')?.getAttribute('content')
+      if (meta) return Number(meta)
+    } catch {}
+    return Number((window as any).userId || 0)
+  }
+
+  function scheduleFetch() {
+    if (fetchTimer) return
+    fetchTimer = setTimeout(() => { fetchTimer = null; fetch() }, 400)
+  }
+
+  function handleIncomingMessage(e: any) {
+    const msg = e?.message
+    if (!msg?.id) { scheduleFetch(); return }
+    if (seenMsgIds.has(Number(msg.id))) return
+    seenMsgIds.add(Number(msg.id))
+    if (seenMsgIds.size > 300) seenMsgIds.delete(seenMsgIds.values().next().value!)
+    if (Number(msg.sender_id) === getUid()) return
+    scheduleFetch()
+  }
 
   async function fetch() {
     try {
@@ -32,16 +57,16 @@ export const useBadgeStore = defineStore('badges', () => {
       if (!uid) return
       if (echoCh) return
       echoCh = echo.private(`user.${uid}`)
-      echoCh.listen('.message.sent', () => { unread.value += 1 })
-      echoCh.listen('.message.updated', () => fetch())
-      echoCh.listen('.message.deleted', () => fetch())
+      echoCh.listen('.message.sent', handleIncomingMessage)
+      echoCh.listen('.message.updated', () => scheduleFetch())
+      echoCh.listen('.message.deleted', () => scheduleFetch())
       echoCh.listen('.friendship.updated', (e: any) => {
         const f = e.friendship
         const myId = Number(uid)
         if (f?.status === 'pending' && Number(f.addressee_id) === myId) pending.value += 1
-        else fetch()
+        else scheduleFetch()
       })
-      echoCh.listen('.message.read', () => fetch())
+      echoCh.listen('.message.read', () => scheduleFetch())
       const pusher = (echo as any).connector?.pusher
       if (pusher) {
         pusher.connection.bind('connected', () => fetch())

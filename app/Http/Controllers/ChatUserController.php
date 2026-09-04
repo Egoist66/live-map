@@ -34,6 +34,12 @@ class ChatUserController extends Controller
         return response()->json($users);
     }
 
+    public function heartbeat(Request $request)
+    {
+        $request->user()->forceFill(['last_seen_at' => now()])->saveQuietly();
+        return response()->json(['ok' => true]);
+    }
+
     public function privacy(Request $request)
     {
         $request->validate(['message_privacy'=>'required|in:everyone,friends,none','allow_random_messages'=>'required|boolean']);

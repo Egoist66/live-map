@@ -3,6 +3,7 @@ import { router, usePage } from '@inertiajs/vue3'
 import { useBadgeStore } from '@/stores/badges'
 import { useSeo } from '@/composables/useSeo'
 import { useProfileShare } from '@/composables/useProfileShare'
+import { useInvisible } from '@/composables/useInvisible'
 import { avatarSrcFor } from '@/composables/useAvatar'
 
 const LEVEL_LABEL: Record<string, string> = { novice: 'Новичок', explorer: 'Исследователь', local: 'Местный', veteran: 'Ветеран', guide: 'Гид района' }
@@ -26,6 +27,10 @@ export function useDashboardPage(propsUser?: any, propsIsOwn?: boolean) {
   })
   const badges = useBadgeStore()
   const { shareProfile, sharing } = useProfileShare()
+  const invisible = useInvisible()
+  const presence = computed(() => (invisible.isInvisible.value
+    ? { active: false, label: 'скрыт · невидимка' }
+    : { active: true, label: 'в сети' }))
   function openAvatar() { showAvatar.value = true }
   function closeAvatar() { showAvatar.value = false }
   function goMap() { router.visit('/map') }
@@ -34,5 +39,5 @@ export function useDashboardPage(propsUser?: any, propsIsOwn?: boolean) {
   function goFaq() { router.visit('/faq') }
   function share() { shareProfile({ id: u.value.id, name: u.value.name }) }
   onMounted(() => { if (isOwn.value) badges.init() })
-  return { seo, auth, u, isOwn, showAvatar, avatarSrc, bioText, bioEmpty, settingsHref, sharing, levelLabel: LEVEL_LABEL, levelColor: LEVEL_COLOR, planLabel: PLAN_LABEL, planColor: PLAN_COLOR, openAvatar, closeAvatar, goMap, goChat, goSettings, goFaq, share }
+  return { seo, auth, u, isOwn, showAvatar, avatarSrc, bioText, bioEmpty, settingsHref, sharing, presence, levelLabel: LEVEL_LABEL, levelColor: LEVEL_COLOR, planLabel: PLAN_LABEL, planColor: PLAN_COLOR, openAvatar, closeAvatar, goMap, goChat, goSettings, goFaq, share }
 }

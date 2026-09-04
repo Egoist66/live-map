@@ -30,6 +30,7 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::post('/reports', [ReportController::class, 'store']);
 
     Route::get('/chat/me', [ChatUserController::class, 'me']);
+    Route::post('/chat/heartbeat', [ChatUserController::class, 'heartbeat']);
     Route::get('/chat/users/search', [ChatUserController::class, 'search']);
     Route::patch('/chat/privacy', [ChatUserController::class, 'privacy']);
     Route::patch('/user/invisible', [\App\Http\Controllers\ProfileController::class, 'toggleInvisible']);

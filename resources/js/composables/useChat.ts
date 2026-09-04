@@ -256,8 +256,9 @@ export function useChat() {
   }
 
   function handleIncoming(msg: Message) {
-    if (seenIds.has(msg.id) && messages.value.some(m=>m.id===msg.id)) return
+    if (seenIds.has(msg.id)) return
     seenIds.add(msg.id)
+    const isOwn = msg.sender_id === getUid()
     if (msg.conversation_id === selectedId.value) {
       const pendingIdx = messages.value.findIndex((m:any)=> m.pending && m.conversation_id===msg.conversation_id && m.sender_id===msg.sender_id)
       if (pendingIdx !== -1) {
@@ -284,6 +285,11 @@ export function useChat() {
       scrollToBottom()
     } else {
       const conv = conversations.value.find((c) => c.id === msg.conversation_id)
+      if (isOwn) {
+        if (conv) syncConversationPreview(msg)
+        else loadConversations()
+        return
+      }
       if (conv) { conv.unread_count = (conv.unread_count || 0) + 1; bumpConversation(msg) }
       else loadConversations()
       if (msg.sender_id !== getUid()) {

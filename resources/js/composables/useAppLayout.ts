@@ -21,11 +21,12 @@ export function useAppLayout() {
     { label: 'Настройки', icon: 'pi pi-cog', command: () => router.visit(settingsHref.value) },
     { label: 'Карта', icon: 'pi pi-map', command: () => router.visit(route('map')) },
     { separator: true },
-    { label: 'Выйти', icon: 'pi pi-sign-out', command: () => router.post(route('logout')) },
+    { label: 'Выйти', icon: 'pi pi-sign-out', command: () => doLogout() },
   ])
   function toggleMenu(e: Event) { menu.value.toggle(e) }
   function closeDrawer() { showDrawer.value = false }
-  function logout() { router.post(route('logout')) }
+  function doLogout() { try { presence.disconnect() } catch {} router.post(route('logout')) }
+  function logout() { doLogout() }
   onMounted(() => { badge.init(); presence.connect(); appNotes.init() })
   onBeforeUnmount(() => presence.disconnect())
   router.on('navigate', () => { presence.connect(); showDrawer.value = false })

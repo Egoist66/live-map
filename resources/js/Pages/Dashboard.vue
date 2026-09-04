@@ -9,7 +9,7 @@ import Toast from 'primevue/toast'
 import { useDashboardPage } from '@/composables/useDashboardPage'
 
 const props = defineProps<{ user: any; isOwn?: boolean }>()
-const { seo, u, isOwn, showAvatar, avatarSrc, bioText, bioEmpty, settingsHref, sharing, levelLabel, levelColor, planLabel, planColor, openAvatar, closeAvatar, goMap, goChat, goSettings, goFaq, share } = useDashboardPage(props.user, props.isOwn)
+const { seo, u, isOwn, showAvatar, avatarSrc, bioText, bioEmpty, settingsHref, sharing, presence, levelLabel, levelColor, planLabel, planColor, openAvatar, closeAvatar, goMap, goChat, goSettings, goFaq, share } = useDashboardPage(props.user, props.isOwn)
 </script>
 <template>
   <Head :title="seo.title.value"><meta head-key="robots" name="robots" content="noindex, nofollow" /></Head>
@@ -19,7 +19,7 @@ const { seo, u, isOwn, showAvatar, avatarSrc, bioText, bioEmpty, settingsHref, s
       <div class="max-w-[980px] mx-auto w-full max-w-full min-w-0 px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-5 overflow-hidden">
         <DashboardHero :user="u" :avatar-src="avatarSrc" :level-label="levelLabel" :level-color="levelColor" :plan-label="planLabel" :plan-color="planColor" :sharing="sharing" @avatar="openAvatar" @map="goMap" @chat="goChat" @share="share" />
         <div class="grid grid-cols-1 lg:grid-cols-[1.15fr_0.85fr] gap-4 min-w-0">
-          <DashboardInfo :user="u" :bio-empty="bioEmpty" :bio-text="bioText" :is-own="isOwn" :settings-href="settingsHref" />
+          <DashboardInfo :user="u" :bio-empty="bioEmpty" :bio-text="bioText" :is-own="isOwn" :settings-href="settingsHref" :presence="presence" />
           <DashboardActions :is-own="isOwn" @map="goMap" @settings="goSettings" @faq="goFaq" />
         </div>
       </div>
