@@ -8,10 +8,11 @@ return new class extends Migration
 {
     public function up(): void
     {
+        Schema::dropIfExists('push_subscriptions');
         Schema::create('push_subscriptions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->string('endpoint', 1024)->unique();
+            $table->string('endpoint', 500)->unique();
             $table->string('p256dh_key');
             $table->string('auth_token');
             $table->string('encoding')->default('aesgcm');
