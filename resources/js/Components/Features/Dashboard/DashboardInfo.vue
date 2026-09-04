@@ -24,8 +24,8 @@ defineProps<{ user: any; bioEmpty: boolean; bioText: string; isOwn: boolean; set
           <div class="flex items-center gap-3 p-3 rounded-3xl bg-stone-50 border min-w-0">
             <Avatar label="✉️" shape="square" class="!w-9 !h-9 !rounded-xl !bg-white !border !text-sm shrink-0" />
             <div class="min-w-0 flex-1"><div class="text-[10px] font-bold tracking-widest uppercase text-stone-400">Email</div><div class="text-sm font-semibold truncate">{{ user.email }}</div></div>
-            <Tag v-if="user.email_verified_at" value="✓ Подтверждена" class="!text-[10px] !bg-emerald-50 !text-emerald-700 !rounded-full hidden sm:inline-flex" />
-            <Tag v-else value="не подтверждён" class="!text-[10px] !bg-amber-50 !text-amber-700 !rounded-full hidden sm:inline-flex" />
+            <Tag v-if="user.email_verified_at" value="✓" class="!text-[10px] !bg-emerald-50 !text-emerald-700 !rounded-full !inline-flex shrink-0" />
+            <Tag v-else value="!" class="!text-[10px] !bg-amber-50 !text-amber-700 !rounded-full !inline-flex shrink-0" />
           </div>
           <Card class="!bg-stone-50 !border-stone-100 !rounded-3xl !shadow-none" :pt="{ body: { class: '!p-3' }, content: { class: '!p-0' } }">
             <template #content>

@@ -14,7 +14,7 @@ import Avatar from 'primevue/avatar'
 defineProps<{ mustVerifyEmail: boolean; status?: string | null }>()
 const f = useProfileForm()
 const a = useAvatarUpload()
-const planOptions = [{ label:'Free — 3/день · 1км', value:'free' },{ label:'Pro — Безлимит · 5км', value:'pro' },{ label:'Business — Безлимит · 50км', value:'business' }]
+const planOptions = [{ label:'Free — 3/день · 1км', value:'free', icon:'pi pi-ticket' },{ label:'Pro — Безлимит · 5км', value:'pro', icon:'pi pi-bolt' },{ label:'Business — Безлимит · 50км', value:'business', icon:'pi pi-briefcase' }]
 </script>
 <template>
   <section>
@@ -76,7 +76,41 @@ const planOptions = [{ label:'Free — 3/день · 1км', value:'free' },{ la
         <template #content>
           <h4 class="text-sm font-black dark:text-white">Тариф — {{ ({free:'Бесплатный',pro:'Pro',business:'Бизнес'} as any)[f.values.plan] }}</h4>
           <p class="text-xs text-zinc-500 mt-1">Переключи тариф — вступают сразу.</p>
-          <Select v-model="f.plan.value" :options="planOptions" optionLabel="label" optionValue="value" placeholder="Выбери тариф" class="w-full mt-3 !rounded-2xl" />
+          <Select
+            v-model="f.plan.value"
+            :options="planOptions"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Выбери тариф"
+            checkmark
+            scrollHeight="12rem"
+            fluid
+            class="w-full min-w-0 mt-3 !rounded-xl"
+            :pt="{
+              root: { class: '!rounded-xl !border-stone-200 dark:!border-zinc-700 !bg-white dark:!bg-zinc-900' },
+              label: { class: '!text-sm !py-2.5 !text-stone-900 dark:!text-zinc-100 placeholder:!text-stone-400 dark:placeholder:!text-zinc-500' },
+              dropdown: { class: '!w-9' },
+              dropdownIcon: { class: '!text-xs !text-stone-400 dark:!text-zinc-500' },
+              overlay: { class: '!rounded-xl !border !border-stone-200 dark:!border-zinc-700 !bg-white dark:!bg-zinc-900 !shadow-xl !max-w-[calc(100vw-2rem)] !overflow-hidden' },
+              listContainer: { class: '!bg-white dark:!bg-zinc-900 !p-1.5' },
+              list: { class: '!bg-white dark:!bg-zinc-900 !flex !flex-col !gap-0.5' },
+              option: { class: '!rounded-lg !px-3 !py-2.5 !text-sm !text-stone-800 dark:!text-zinc-100 hover:!bg-stone-100 dark:hover:!bg-zinc-800' },
+            }"
+          >
+            <template #value="p">
+              <span v-if="p.value" class="flex items-center gap-2 text-sm text-stone-900 dark:text-zinc-100 truncate">
+                <i :class="(planOptions.find((o) => o.value === p.value)?.icon ?? 'pi pi-ticket') + ' text-xs text-violet-600 dark:text-violet-400 shrink-0'"></i>
+                <span class="truncate">{{ planOptions.find((o) => o.value === p.value)?.label }}</span>
+              </span>
+              <span v-else class="text-sm text-stone-400 dark:text-zinc-500">Выбери тариф</span>
+            </template>
+            <template #option="p">
+              <span class="flex items-center gap-2 text-sm truncate">
+                <i :class="p.option.icon + ' text-xs opacity-60 shrink-0'"></i>
+                <span class="truncate">{{ p.option.label }}</span>
+              </span>
+            </template>
+          </Select>
           <div class="mt-3 grid sm:grid-cols-3 gap-2">
             <Card @click="(f.plan.value as any)='free'" :class="['!rounded-3xl !cursor-pointer !transition', f.values.plan==='free'?'!bg-ink-900 dark:!bg-white !text-white dark:!text-ink-900 !border-ink-900 dark:!border-white':'!bg-stone-50 dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 !text-stone-800 dark:!text-zinc-200']" :pt="{ body:{ class:'!p-3' }, content:{ class:'!p-0' } }"><template #content><div class="text-sm font-bold">Free</div><div class="text-xs opacity-70">3/день · 1км · 2ч</div><div class="text-xs font-bold mt-1">Бесплатно</div></template></Card>
             <Card @click="(f.plan.value as any)='pro'" :class="['!rounded-3xl !cursor-pointer !transition', f.values.plan==='pro'?'!bg-gradient-to-br !from-violet-600 !to-indigo-600 !text-white !border-violet-600':'!bg-amber-50 dark:!bg-amber-950/30 !border-amber-200 dark:!border-amber-800 !text-stone-800 dark:!text-zinc-200']" :pt="{ body:{ class:'!p-3' }, content:{ class:'!p-0' } }"><template #content><div class="text-sm font-black">Pro</div><div class="text-xs opacity-80">Безлимит · 5км · 24ч</div><div class="text-xs font-bold mt-1">$4.99 / мес</div></template></Card>

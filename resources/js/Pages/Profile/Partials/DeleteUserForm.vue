@@ -30,7 +30,7 @@ const close = () => { confirming.value = false; form.clearErrors(); form.reset()
         <Message v-if="form.errors.password" severity="error" :closable="false" class="mt-1 !rounded-xl !py-1 !text-xs">{{ form.errors.password }}</Message>
       </div>
       <template #footer>
-        <div class="flex justify-end gap-2">
+        <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
           <Button @click="close" label="Отмена" severity="secondary" outlined rounded />
           <Button @click="del" :loading="form.processing" label="Удалить" severity="danger" rounded />
         </div>

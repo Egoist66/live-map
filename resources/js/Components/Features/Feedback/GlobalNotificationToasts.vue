@@ -3,7 +3,7 @@ import { useAppNotifications } from '@/composables/useAppNotifications'
 const { toasts, remove, openToast } = useAppNotifications()
 </script>
 <template>
-  <div class="fixed top-4 right-4 z-[9999] w-[calc(100vw-1.5rem)] sm:w-[380px] flex flex-col gap-3 pointer-events-none">
+  <div class="fixed top-[calc(64px+env(safe-area-inset-top,0px)+0.5rem)] sm:top-4 right-3 sm:right-4 left-3 sm:left-auto z-[9999] sm:w-[380px] flex flex-col gap-3 pointer-events-none">
     <TransitionGroup name="toast">
       <div
         v-for="t in toasts"

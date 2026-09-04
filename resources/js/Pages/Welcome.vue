@@ -50,19 +50,19 @@ const dashboardHref = computed(() => {
       </div>
     </header>
 
-    <section class="max-w-[1280px] mx-auto px-4 sm:px-6 pt-8 sm:pt-14 pb-10 grid lg:grid-cols-[1.05fr_0.95fr] gap-8 sm:gap-10 items-center overflow-hidden">
+    <section class="max-w-[1280px] mx-auto px-4 sm:px-6 pt-6 sm:pt-14 pb-8 sm:pb-10 grid lg:grid-cols-[1.05fr_0.95fr] gap-6 sm:gap-10 items-center overflow-hidden">
       <div>
         <div class="inline-flex items-center gap-2 bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-full pl-1.5 pr-3 py-1 shadow-soft">
           <Tag class="!bg-emerald-500 !text-white !rounded-full !px-2.5 !py-1 !text-[11px] !font-bold tracking-wide !border-0"><span class="w-1.5 h-1.5 bg-white rounded-full animate-pulse inline-block mr-1.5 align-middle"></span>LIVE</Tag>
           <span class="text-xs font-medium text-stone-600 dark:text-zinc-400">847 пинов рядом · обновление 30 сек</span>
         </div>
-        <h1 class="mt-6 text-[32px] sm:text-[48px] lg:text-[64px] font-black tracking-[-0.05em] leading-[0.85] dark:text-white break-words">Район <span class="bg-gradient-to-r from-brand-500 via-violet-500 to-accent-teal bg-clip-text text-transparent">живой</span>,<br />пока ты рядом.</h1>
+        <h1 class="mt-5 sm:mt-6 text-[30px] sm:text-[48px] lg:text-[64px] font-black tracking-[-0.04em] sm:tracking-[-0.05em] leading-[0.95] sm:leading-[0.85] dark:text-white break-words text-balance">Район <span class="bg-gradient-to-r from-brand-500 via-violet-500 to-accent-teal bg-clip-text text-transparent">живой</span>,<br />пока ты рядом.</h1>
         <p class="mt-5 text-[15px] sm:text-[17px] leading-relaxed text-stone-600 dark:text-zinc-400 max-w-[560px]">Строгая гиперлокальная сеть вокруг карты. Вопросы, события, помощь и объявления — всё в радиусе 1 км. Без ленты, без шума. Пины живут 2–24 часа.</p>
-        <div class="mt-7 flex flex-wrap gap-3">
-          <Link href="/map"><Button label="Открыть карту →" class="!bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white !px-7 !py-3.5 !rounded-full !font-semibold hover:!bg-ink-800 dark:hover:!bg-zinc-100 !border-0 shadow-soft" /></Link>
-          <a href="#how"><Button label="Как это работает" severity="secondary" outlined class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-700 !px-7 !py-3.5 !rounded-full !font-semibold hover:!bg-stone-50 dark:hover:!bg-zinc-800 !text-ink-900 dark:!text-white" /></a>
+        <div class="mt-6 sm:mt-7 flex flex-col sm:flex-row sm:flex-wrap gap-2.5 sm:gap-3">
+          <Link href="/map" class="w-full sm:w-auto"><Button label="Открыть карту →" class="w-full sm:w-auto !bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white !px-7 !py-3.5 !rounded-full !font-semibold hover:!bg-ink-800 dark:hover:!bg-zinc-100 !border-0 shadow-soft" /></Link>
+          <a href="#how" class="w-full sm:w-auto"><Button label="Как это работает" severity="secondary" outlined class="w-full sm:w-auto !bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-700 !px-7 !py-3.5 !rounded-full !font-semibold hover:!bg-stone-50 dark:hover:!bg-zinc-800 !text-ink-900 dark:!text-white" /></a>
         </div>
-        <div class="mt-8 flex items-center gap-6 py-5 border-y border-stone-200/60 dark:border-zinc-800 max-w-[520px]">
+        <div class="mt-6 sm:mt-8 flex items-center gap-4 sm:gap-6 flex-wrap py-4 sm:py-5 border-y border-stone-200/60 dark:border-zinc-800 max-w-[520px]">
           <div><div class="font-black text-[22px] tracking-tight">500+</div><div class="text-xs font-medium text-stone-500 dark:text-zinc-500 uppercase tracking-wide">активных рядом</div></div>
           <div class="w-px h-10 bg-stone-200 dark:bg-zinc-800"></div>
           <div><div class="font-black text-[22px] tracking-tight">~2 мин</div><div class="text-xs font-medium text-stone-500 dark:text-zinc-500 uppercase tracking-wide">создать пин</div></div>
@@ -106,14 +106,18 @@ const dashboardHref = computed(() => {
             </div>
           </template>
         </Card>
+        <div class="mt-3 bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-2xl p-4 shadow-float flex sm:hidden gap-3 items-center">
+          <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-brand-500 to-accent-teal grid place-items-center text-white shrink-0">◉</div>
+          <div class="min-w-0"><div class="text-xs font-bold">Твоя приватность</div><div class="text-xs text-stone-500 dark:text-zinc-400 leading-snug">Ты — не точка на карте, ты — пин с размытием 200 м.</div></div>
+        </div>
         <div class="absolute -bottom-5 -left-4 bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-2xl p-4 shadow-float hidden sm:flex gap-3 items-center max-w-[320px]">
-          <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-brand-500 to-accent-teal grid place-items-center text-white">◉</div>
+          <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-brand-500 to-accent-teal grid place-items-center text-white shrink-0">◉</div>
           <div><div class="text-xs font-bold">Твоя приватность</div><div class="text-xs text-stone-500 dark:text-zinc-400 leading-snug">Ты — не точка на карте, ты — пин с размытием 200 м.</div></div>
         </div>
       </div>
     </section>
 
-    <section id="how" class="max-w-[1280px] mx-auto px-6 py-6 grid md:grid-cols-3 gap-4">
+    <section id="how" class="max-w-[1280px] mx-auto px-4 sm:px-6 py-4 sm:py-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 scroll-mt-20">
       <Card class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[20px] !shadow-soft card-hover group cursor-default">
         <template #content>
           <div class="w-11 h-11 rounded-xl bg-ink-900 dark:bg-white dark:text-ink-900 text-white grid place-items-center font-bold text-sm card-icon">01</div>
@@ -134,8 +138,8 @@ const dashboardHref = computed(() => {
       </Card>
     </section>
 
-    <section class="max-w-[1280px] mx-auto px-6 py-6 grid lg:grid-cols-5 gap-4">
-      <div class="lg:col-span-3 bg-ink-900 dark:bg-zinc-900 dark:border dark:border-zinc-800 text-white rounded-[24px] p-8 relative overflow-hidden">
+    <section class="max-w-[1280px] mx-auto px-4 sm:px-6 py-4 sm:py-6 grid lg:grid-cols-5 gap-3 sm:gap-4">
+      <div class="lg:col-span-3 bg-ink-900 dark:bg-zinc-900 dark:border dark:border-zinc-800 text-white rounded-[20px] sm:rounded-[24px] p-5 sm:p-8 relative overflow-hidden">
         <div class="absolute -right-20 -top-20 w-80 h-80 bg-gradient-to-br from-brand-500 to-accent-teal rounded-full blur-[60px] opacity-20"></div>
         <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-white rounded-full blur-[80px] opacity-[0.06]"></div>
         <div class="relative">
@@ -165,12 +169,12 @@ const dashboardHref = computed(() => {
       </Card>
     </section>
 
-    <section class="max-w-[1280px] mx-auto px-6 py-8">
+    <section class="max-w-[1280px] mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
       <Card class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[24px] !shadow-soft card-hover">
         <template #content>
-          <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div><div class="text-[20px] font-black tracking-tight">Готов почувствовать пульс района?</div><div class="text-sm text-stone-600 dark:text-zinc-400 mt-1">Создай первый пин за 2 минуты. Живут 2 часа — не пропусти.</div></div>
-            <Link href="/map"><Button label="Открыть карту — бесплатно" class="!bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white !px-8 !py-3.5 !rounded-full !font-semibold whitespace-nowrap hover:!bg-ink-800 dark:hover:!bg-zinc-100 !border-0 shadow-soft" /></Link>
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div class="min-w-0"><div class="text-[18px] sm:text-[20px] font-black tracking-tight text-balance">Готов почувствовать пульс района?</div><div class="text-sm text-stone-600 dark:text-zinc-400 mt-1">Создай первый пин за 2 минуты. Живут 2 часа — не пропусти.</div></div>
+            <Link href="/map" class="w-full sm:w-auto shrink-0"><Button label="Открыть карту — бесплатно" class="w-full sm:w-auto !bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white !px-8 !py-3.5 !rounded-full !font-semibold whitespace-nowrap hover:!bg-ink-800 dark:hover:!bg-zinc-100 !border-0 shadow-soft" /></Link>
           </div>
         </template>
       </Card>

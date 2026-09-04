@@ -45,14 +45,14 @@ const sections = [
   </Head>
   <component :is="Layout">
     <div class="min-h-[calc(100vh-64px)] bg-surface dark:bg-[#090E1A]">
-      <div class="max-w-[900px] mx-auto px-4 sm:px-6 py-8">
+      <div class="max-w-[900px] mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-[calc(2rem+env(safe-area-inset-bottom,0px))]">
         <div class="text-center">
           <Card class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-700 !rounded-full !shadow-soft !inline-flex">
             <template #content>
               <div class="flex items-center gap-2 px-1 py-0 text-xs font-semibold"><span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> FAQ · просто о сложном</div>
             </template>
           </Card>
-          <h1 class="mt-4 text-[32px] sm:text-[42px] font-black tracking-[-0.04em] leading-none dark:text-white">Как устроен <span class="bg-gradient-to-r from-brand-500 to-accent-teal bg-clip-text text-transparent">UPin</span></h1>
+          <h1 class="mt-4 text-[28px] sm:text-[42px] font-black tracking-[-0.04em] leading-[1.05] sm:leading-none dark:text-white text-balance">Как устроен <span class="bg-gradient-to-r from-brand-500 to-accent-teal bg-clip-text text-transparent">UPin</span></h1>
           <p class="mt-3 text-stone-600 dark:text-zinc-400 max-w-[640px] mx-auto">Коротко и по-человечески: что такое пины, как работает приватность, зачем тарифы и как не пропустить важное рядом. Не нашёл ответа — напиши нам пин «Вопрос» на карте.</p>
           <div class="mt-5 flex flex-wrap justify-center gap-2">
             <Link href="/map"><Button label="Открыть карту" class="!bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white !px-6 !py-2.5 !rounded-full !text-sm !font-semibold !border-0" /></Link>
@@ -81,9 +81,9 @@ const sections = [
           </Accordion>
         </div>
 
-        <div class="mt-6 bg-ink-900 dark:bg-zinc-900 dark:border dark:border-zinc-800 text-white rounded-[24px] p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div><div class="font-black">Остались вопросы?</div><div class="text-sm text-white/60">Создай пин «Вопрос» — соседи ответят за минуты.</div></div>
-          <Link href="/map"><Button label="Создать вопрос" class="!bg-white !text-ink-900 !px-6 !py-2.5 !rounded-full !font-bold !border-0" /></Link>
+        <div class="mt-6 bg-ink-900 dark:bg-zinc-900 dark:border dark:border-zinc-800 text-white rounded-[20px] sm:rounded-[24px] p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="min-w-0"><div class="font-black">Остались вопросы?</div><div class="text-sm text-white/60">Создай пин «Вопрос» — соседи ответят за минуты.</div></div>
+          <Link href="/map" class="w-full sm:w-auto shrink-0"><Button label="Создать вопрос" class="w-full sm:w-auto !bg-white !text-ink-900 !px-6 !py-2.5 !rounded-full !font-bold !border-0" /></Link>
         </div>
 
         <div class="text-center text-xs text-stone-400 mt-6">UPin · Просто. Рядом. Сейчас · <Link href="/" class="underline">На главную</Link></div>

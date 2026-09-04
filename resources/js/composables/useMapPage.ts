@@ -9,10 +9,12 @@ import { useReverseGeocode } from '@/composables/useReverseGeocode'
 import { usePinCreate } from '@/composables/usePinCreate'
 import { usePinEdit } from '@/composables/usePinEdit'
 import { useMapOverlays } from '@/composables/useMapOverlays'
+import { useAppConfirm } from '@/composables/useAppConfirm'
 
 export function useMapPage() {
   const { store, categories, selectedCategory, filteredPins, fetchNearby } = usePins()
   const pinDetails = usePinDetails()
+  const { confirmDelete } = useAppConfirm()
   const { requestGeolocation } = useGeolocation()
   const { isDark } = useTheme()
 
@@ -91,7 +93,8 @@ export function useMapPage() {
 
   async function deleteSelectedPin() {
     if (!pinDetails.selectedPin.value) return
-    if (!confirm(`Удалить пин "${pinDetails.selectedPin.value.title}"?`)) return
+    const ok = await confirmDelete(`Пин «${pinDetails.selectedPin.value.title}» будет удалён навсегда вместе с комментариями.`)
+    if (!ok) return
     try {
       await (deleteMutation as any).mutateAsync(pinDetails.selectedPin.value.id)
       pinDetails.closePin()

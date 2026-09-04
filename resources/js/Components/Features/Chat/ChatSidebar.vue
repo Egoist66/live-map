@@ -4,8 +4,8 @@ import TabList from 'primevue/tablist'
 import Tab from 'primevue/tab'
 import Badge from 'primevue/badge'
 import Button from 'primevue/button'
-import Select from 'primevue/select'
 import ChatList from '@/Components/Features/Chat/ChatList.vue'
+import ChatPrivacySelect from '@/Components/Features/Chat/ChatPrivacySelect.vue'
 
 defineProps<{ tab: string; unreadTotal: number; pendingCount: number; blockedCount: number; refreshing: boolean; conversations: any[]; friends: any[]; pendingIn: any[]; blocked: any[]; filter: string; selectedId: number | null; privacy: any; showPrivacy: boolean; isOnline: (id?: number) => boolean; formatTime: (s: string) => string }>()
 const emit = defineEmits<{ (e: 'update:tab', v: any): void; (e: 'update:filter', v: string): void; (e: 'update:showPrivacy', v: boolean): void; (e: 'refresh'): void; (e: 'people'): void; (e: 'open', id: number): void; (e: 'startChat', u: any): void; (e: 'deleteChat', id: number): void; (e: 'block', id: number, name?: string): void; (e: 'unblock', id: number): void; (e: 'removeFriend', f: any): void; (e: 'accept', id: number): void; (e: 'decline', id: number): void; (e: 'savePrivacy'): void }>()
@@ -34,12 +34,8 @@ const emit = defineEmits<{ (e: 'update:tab', v: any): void; (e: 'update:filter',
         <span class="lg:hidden text-stone-400 text-xs">{{ showPrivacy ? '▲' : '▼' }}</span>
         <span class="hidden lg:block text-[11px] text-stone-500">{{ privacy.message_privacy === 'everyone' ? 'Все' : privacy.message_privacy === 'friends' ? 'Друзья' : 'Никто' }}</span>
       </button>
-      <div :class="showPrivacy ? 'block' : 'hidden lg:block'" class="px-3 pb-3 space-y-2 max-h-[32dvh] lg:max-h-none overflow-auto overscroll-contain">
-        <Select :model-value="privacy.message_privacy" @update:model-value="(v:any)=>{ privacy.message_privacy = v; emit('savePrivacy') }" :options="[{ label: 'Все могут писать', value: 'everyone' }, { label: 'Только друзья', value: 'friends' }, { label: 'Никто', value: 'none' }]" optionLabel="label" optionValue="value" fluid class="!rounded-xl" />
-        <label class="flex items-center gap-2.5 text-xs p-3 lg:p-2 rounded-xl border bg-white dark:bg-zinc-900 dark:text-zinc-200">
-          <input type="checkbox" :checked="privacy.allow_random_messages" @change="privacy.allow_random_messages = ($event.target as HTMLInputElement).checked; emit('savePrivacy')" :disabled="privacy.message_privacy !== 'everyone'" class="w-4 h-4 rounded" />
-          <span :class="privacy.message_privacy !== 'everyone' ? 'opacity-50' : ''" class="text-[13px] lg:text-xs">Разрешить рандомным писать</span>
-        </label>
+      <div :class="showPrivacy ? 'block' : 'hidden lg:block'" class="px-3 pb-3 max-h-[32dvh] lg:max-h-none overflow-auto overscroll-contain">
+        <ChatPrivacySelect :privacy="privacy" @save-privacy="emit('savePrivacy')" />
       </div>
     </div>
   </div>

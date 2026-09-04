@@ -26,7 +26,7 @@ function fmtTime(s: string | null) {
     :draggable="false"
     :closable="true"
     position="top"
-    :style="{ width: '380px', maxWidth: 'calc(100vw - 1.5rem)', marginTop: '4.5rem' }"
+    :style="{ width: '380px', maxWidth: 'calc(100vw - 1.5rem)', marginTop: '4.5rem', maxHeight: '80dvh' }"
     :pt="{
       root: {
         class: '!rounded-[24px] p-2 !border-stone-200 dark:!border-zinc-800 overflow-hidden',

@@ -3,9 +3,11 @@ import axios from 'axios'
 import { useQuery, useMutation, useQueryCache } from '@pinia/colada'
 import { myPinsQuery, PIN_KEYS } from '@/queries/pins'
 import { pinsApi } from '@/services/pins.api'
+import { useAppConfirm } from '@/composables/useAppConfirm'
 
 export function useMyPinsSettings(active: any) {
   const cache = useQueryCache()
+  const { confirmDelete } = useAppConfirm()
   const { state: pinsState, refetch, asyncStatus: pinsAsyncStatus } = useQuery(() => ({ ...myPinsQuery, enabled: active.value === 'pins' }))
   const myPins = computed(() => (pinsState.value.data as any[]) || [])
   const loadingPins = computed(() => pinsState.value.status === 'pending' || (pinsAsyncStatus.value as any) === 'loading')
@@ -14,7 +16,8 @@ export function useMyPinsSettings(active: any) {
     onSuccess: () => cache.invalidateQueries({ key: PIN_KEYS.mine() as any }),
   })
   async function deleteMyPin(id: number) {
-    if (!confirm('Удалить пин?')) return
+    const ok = await confirmDelete('Пин будет удалён навсегда вместе с комментариями.')
+    if (!ok) return
     try { await deleteMutate(id); await refetch() } catch (e: any) { alert(e?.response?.data?.message || 'Ошибка') }
   }
   return { myPins, loadingPins, deleteAsyncStatus, deleteMyPin, refetch }

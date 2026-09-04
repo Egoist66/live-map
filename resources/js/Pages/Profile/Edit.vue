@@ -30,8 +30,8 @@ const { setTheme } = useTheme()
   <AuthenticatedLayout>
     <Toast />
     <div class="bg-surface dark:bg-[#090E1A] min-h-[calc(100vh-64px)] overflow-x-hidden">
-      <div class="max-w-[1280px] mx-auto px-4 sm:px-6 py-6 overflow-hidden">
-        <div class="grid lg:grid-cols-[300px_1fr] gap-6 items-start content-start w-full lg:items-start">
+      <div class="max-w-[1280px] mx-auto px-3 sm:px-6 py-4 sm:py-6 overflow-hidden">
+        <div class="grid lg:grid-cols-[300px_1fr] gap-4 sm:gap-6 items-start content-start w-full lg:items-start">
           <SettingsSidebar :menu-model="s.menuModel.value" :plan="s.u.value.plan || 'free'" :pins-today="s.u.value.pins_today_count || 0" :pins-limit="s.u.value.plan === 'free' ? '3' : '∞'" :zone-count="s.zoneCount.value" @billing="s.active.value = 'billing'" />
           <div class="space-y-4 min-w-0 w-full max-w-full lg:min-h-[600px] self-start">
             <Tabs :value="s.activeIndex.value" @update:value="(v:any)=>{ const e=s.tabs[Number(v)]; if(e) s.active.value=e.id as any }" class="w-full !mt-0">

@@ -22,7 +22,7 @@ function dismiss(): void {
   <Transition name="pwa-slide">
     <div
       v-if="canInstall && !standalone && !dismissed"
-      class="fixed bottom-[84px] lg:bottom-6 left-1/2 -translate-x-1/2 z-[89] w-[calc(100%-2rem)] max-w-md"
+      class="fixed bottom-[calc(76px+env(safe-area-inset-bottom,0px)+0.5rem)] lg:bottom-6 left-1/2 -translate-x-1/2 z-[39] w-[calc(100%-1.5rem)] max-w-md"
       role="dialog"
       aria-label="Установить приложение"
     >

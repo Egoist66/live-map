@@ -2,6 +2,7 @@ import PrimeVue from 'primevue/config'
 import Aura from '@primeuix/themes/aura'
 import { definePreset } from '@primeuix/themes'
 import ToastService from 'primevue/toastservice'
+import ConfirmationService from 'primevue/confirmationservice'
 import Tooltip from 'primevue/tooltip'
 import type { App } from 'vue'
 
@@ -16,7 +17,12 @@ const UPin = definePreset(Aura as any, {
     },
   },
   components: {
-    button: { colorScheme: { light: { root: { primary: { background: '#0F172A', hoverBackground: '#1E293B', activeBackground: '#020617', borderColor: '#0F172A', hoverBorderColor: '#1E293B', color: '#FFFFFF', hoverColor: '#FFFFFF' } } } } },
+    button: {
+      colorScheme: {
+        light: { root: { primary: { background: '#0F172A', hoverBackground: '#1E293B', activeBackground: '#020617', borderColor: '#0F172A', hoverBorderColor: '#1E293B', color: '#FFFFFF', hoverColor: '#FFFFFF' } } },
+        dark: { root: { primary: { background: '#FAFAFA', hoverBackground: '#E4E4E7', activeBackground: '#D4D4D8', borderColor: '#FAFAFA', hoverBorderColor: '#E4E4E7', color: '#090E1A', hoverColor: '#090E1A' } } },
+      },
+    },
   },
 })
 
@@ -27,6 +33,7 @@ export function setupPrimeVue(app: App) {
     zIndex: { modal: 1100, overlay: 1000, menu: 1000, tooltip: 1100 },
   } as any)
   app.use(ToastService)
+  app.use(ConfirmationService)
   app.directive('tooltip', Tooltip)
   if (typeof document !== 'undefined') {
     const hide = () => {

@@ -16,8 +16,8 @@ const isActive = (name: string) => route().current(name)
 </script>
 
 <template>
-  <nav class="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border-t border-stone-200 dark:border-zinc-800 pb-[env(safe-area-inset-bottom)]">
-    <div class="flex items-center justify-around px-1 pt-1.5 pb-1">
+  <nav class="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border-t border-stone-200 dark:border-zinc-800" style="padding-bottom: env(safe-area-inset-bottom, 0px)">
+    <div class="flex items-center justify-around px-1 pt-1.5 pb-2 min-h-[60px]">
       <Link :href="dashboardHref" class="flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-2xl active:scale-95 transition" :class="isActive('dashboard') ? 'text-ink-900 dark:text-white' : 'text-stone-400'">
         <span class="relative">
           <svg class="w-6 h-6" :fill="isActive('dashboard') ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>

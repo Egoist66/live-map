@@ -23,7 +23,7 @@ defineProps<{ user: any; bioEmpty: boolean; bioText: string; levelName: string; 
         <div class="flex justify-between py-2.5 border-b border-stone-100"><span class="text-stone-500">Репутация</span><span class="font-semibold">{{ user.reputation_score || 0 }}</span></div>
         <div class="flex justify-between py-2.5"><span class="text-stone-500">Дата регистрации</span><span class="font-semibold">{{ registeredAt }}</span></div>
       </div>
-      <div class="mt-6"><Link href="/map" class="flex w-full"><Button label="На карту →" rounded class="w-full !bg-stone-900 !text-white" /></Link></div>
+      <div class="mt-6"><Link href="/map" class="flex w-full min-w-0"><Button label="На карту →" rounded class="w-full !bg-stone-900 dark:!bg-white dark:!text-ink-900 !text-white [&_.p-button-label]:whitespace-nowrap" /></Link></div>
     </template>
   </Card>
 </template>

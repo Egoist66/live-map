@@ -2,6 +2,7 @@ import { ref, watch, nextTick } from 'vue'
 import * as maplibregl from 'maplibre-gl'
 import { usePins } from './usePins'
 import { useThrottledMapFetch } from './useThrottledMapFetch'
+import { useAppConfirm } from './useAppConfirm'
 import { usePage as useInertiaPage } from '@inertiajs/vue3'
 
 const OSM_RASTER_STYLE: any = {
@@ -27,6 +28,7 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
   let map: maplibregl.Map
   let markers: maplibregl.Marker[] = []
   const { store, selectedCategory } = usePins()
+  const { confirmDelete } = useAppConfirm()
   const loaded = ref(false)
   const errorMsg = ref('')
 
@@ -153,7 +155,8 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
       if (act === 'del' && ctxPin) {
         const pin = ctxPin
         hideCtxMenu()
-        if (!confirm(`Удалить пин "${pin.title}"?`)) return
+        const ok = await confirmDelete(`Пин «${pin.title}» будет удалён навсегда вместе с комментариями.`)
+        if (!ok) return
         try { await (store as any).deletePin(pin.id); hidePinTip(); renderPins() } catch (err: any) { alert(err?.response?.data?.message || 'Не удалось удалить') }
       }
     })

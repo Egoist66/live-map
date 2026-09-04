@@ -11,8 +11,8 @@ const f = useRegisterForm()
 <template>
   <GuestLayout>
     <Head title="Регистрация" />
-    <h1 class="text-[22px] font-black tracking-tight">Создай аккаунт</h1>
-    <p class="text-sm text-stone-500 mt-1">Выбери район, радиус и стань частью живой карты</p>
+    <h1 class="text-[22px] font-black tracking-tight dark:text-white">Создай аккаунт</h1>
+    <p class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Выбери район, радиус и стань частью живой карты</p>
     <form @submit.prevent="f.submit" class="mt-6 space-y-4">
       <div>
         <label class="text-[13px] font-semibold">Имя / ник</label>
@@ -40,22 +40,22 @@ const f = useRegisterForm()
         </div>
         <small class="text-red-500">{{ f.errors.value.password_confirmation }}</small>
       </div>
-      <div class="bg-stone-50 border border-stone-200 rounded-2xl p-3.5 space-y-2.5">
+      <div class="bg-stone-50 dark:bg-zinc-800/60 border border-stone-200 dark:border-zinc-700 rounded-2xl p-3.5 space-y-2.5">
         <div class="flex items-center justify-between">
           <label class="text-[13px] font-semibold">Домашняя зона</label>
-          <span class="text-[11px] font-bold bg-white border border-stone-200 rounded-full px-2.5 py-1">{{ f.values.home_radius_km }} км</span>
+          <span class="text-[11px] font-bold bg-white dark:bg-zinc-700 dark:text-white border border-stone-200 dark:border-zinc-600 rounded-full px-2.5 py-1">{{ f.values.home_radius_km }} км</span>
         </div>
-        <p class="text-[11px] text-stone-500 leading-relaxed">Выбери район где живёшь/бываешь — пин видят только рядом.</p>
+        <p class="text-[11px] text-stone-500 dark:text-zinc-400 leading-relaxed">Выбери район где живёшь/бываешь — пин видят только рядом.</p>
         <Button type="button" @click="f.detectLocation" :loading="f.locating.value" severity="secondary" outlined rounded class="w-full" :label="f.values.home_lat ? 'Обновить моё место' : 'Определить моё место'" icon="pi pi-map-marker" />
-        <div v-if="f.values.home_address || f.addrLoading.value" class="bg-white border border-stone-200 rounded-xl px-3 py-2.5 flex items-center gap-2">
-          <span class="w-7 h-7 rounded-full bg-ink-900 text-white grid place-items-center shrink-0 text-[11px]">◉</span>
+        <div v-if="f.values.home_address || f.addrLoading.value" class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-700 rounded-xl px-3 py-2.5 flex items-center gap-2">
+          <span class="w-7 h-7 rounded-full bg-ink-900 dark:bg-white dark:text-ink-900 text-white grid place-items-center shrink-0 text-[11px]">◉</span>
           <div class="min-w-0 flex-1">
-            <div class="text-xs font-semibold truncate">{{ f.addrLoading.value ? 'Определяем район…' : f.values.home_address }}</div>
-            <div v-if="f.values.home_lat" class="text-[11px] text-stone-400 font-mono">{{ f.values.home_lat }}, {{ f.values.home_lng }}</div>
+            <div class="text-xs font-semibold truncate dark:text-zinc-100">{{ f.addrLoading.value ? 'Определяем район…' : f.values.home_address }}</div>
+            <div v-if="f.values.home_lat" class="text-[11px] text-stone-400 dark:text-zinc-400 font-mono">{{ f.values.home_lat }}, {{ f.values.home_lng }}</div>
           </div>
         </div>
-        <div class="grid grid-cols-4 gap-1.5">
-          <button v-for="r in [1,2,5,10]" :key="r" type="button" @click="f.setValues({ home_radius_km: r } as any)" :class="['rounded-full py-2 text-xs font-semibold border', f.values.home_radius_km===r?'bg-ink-900 text-white border-ink-900':'bg-white border-stone-200']">{{ r }} км</button>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+          <button v-for="r in [1,2,5,10]" :key="r" type="button" @click="f.setValues({ home_radius_km: r } as any)" :class="['rounded-full py-2 text-xs font-semibold border transition', f.values.home_radius_km===r?'bg-ink-900 dark:bg-white dark:text-ink-900 text-white border-ink-900 dark:border-white':'bg-white dark:bg-zinc-800 dark:text-zinc-200 border-stone-200 dark:border-zinc-700']">{{ r }} км</button>
         </div>
       </div>
       <Button :loading="f.isSubmitting.value" type="submit" label="Создать аккаунт →" class="w-full !bg-ink-900 dark:!bg-white !border-ink-900 dark:!border-white !text-white dark:!text-ink-900 !rounded-full !py-3.5 [&_.p-button-label]:!text-white dark:[&_.p-button-label]:!text-ink-900" />

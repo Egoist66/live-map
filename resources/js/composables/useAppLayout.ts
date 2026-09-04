@@ -17,11 +17,11 @@ export function useAppLayout() {
   const menuItems = computed(() => [
     { label: user.value?.name || '', sublabel: user.value?.email || '', isHeader: true },
     { separator: true },
-    { label: 'Профиль', icon: 'pi pi-user', command: () => router.visit(dashboardHref.value) },
-    { label: 'Настройки', icon: 'pi pi-cog', command: () => router.visit(settingsHref.value) },
-    { label: 'Карта', icon: 'pi pi-map', command: () => router.visit(route('map')) },
+    { label: 'Профиль', icon: 'pi pi-user', accent: 'violet', active: route().current('dashboard'), command: () => router.visit(dashboardHref.value) },
+    { label: 'Настройки', icon: 'pi pi-cog', accent: 'slate', active: route().current('profile.edit'), command: () => router.visit(settingsHref.value) },
+    { label: 'Карта', icon: 'pi pi-map', accent: 'teal', active: route().current('map'), command: () => router.visit(route('map')) },
     { separator: true },
-    { label: 'Выйти', icon: 'pi pi-sign-out', command: () => doLogout() },
+    { label: 'Выйти', icon: 'pi pi-sign-out', accent: 'red', danger: true, command: () => doLogout() },
   ])
   function toggleMenu(e: Event) { menu.value.toggle(e) }
   function closeDrawer() { showDrawer.value = false }

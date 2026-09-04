@@ -17,7 +17,7 @@ const emit = defineEmits<{ (e: 'update:filter', v: string): void; (e: 'open', id
       </div>
     </div>
     <div v-if="tab === 'chats'" class="divide-y dark:divide-zinc-800">
-      <div v-if="!conversations.length" class="p-10 lg:p-8 text-center">
+      <div v-if="!conversations.length" class="p-6 sm:p-8 text-center">
         <div class="w-14 h-14 rounded-2xl bg-violet-50 dark:bg-zinc-800 grid place-items-center mx-auto mb-3 text-xl">💬</div>
         <div class="text-sm font-semibold dark:text-white">Нет чатов</div>
         <div class="text-xs text-stone-500 mt-1">Найдите человека через поиск выше</div>
@@ -41,7 +41,7 @@ const emit = defineEmits<{ (e: 'update:filter', v: string): void; (e: 'open', id
       </div>
     </div>
     <div v-if="tab === 'friends'" class="divide-y dark:divide-zinc-800">
-      <div v-if="!friends.length" class="p-10 text-center text-sm text-stone-500">Нет друзей</div>
+      <div v-if="!friends.length" class="p-6 text-center text-sm text-stone-500">Нет друзей</div>
       <div v-for="f in friends" :key="f.id" class="flex items-center justify-between p-3.5 lg:p-3 select-none active:bg-stone-50 group">
         <Link :href="`/users/${f.other?.id}`" class="flex items-center gap-3 hover:opacity-80 min-w-0">
           <span class="relative shrink-0"><Avatar :image="avatarSrcFor(f.other)" shape="circle" class="[&_img]:object-cover" :pt="{ image: { class: 'object-cover' } }" /><OnlineDot :online="isOnline(f.other?.id)" /></span>
@@ -55,7 +55,7 @@ const emit = defineEmits<{ (e: 'update:filter', v: string): void; (e: 'open', id
       </div>
     </div>
     <div v-if="tab === 'requests'" class="divide-y dark:divide-zinc-800">
-      <div v-if="!pendingIn.length" class="p-10 text-center text-sm text-stone-500">Нет заявок</div>
+      <div v-if="!pendingIn.length" class="p-6 text-center text-sm text-stone-500">Нет заявок</div>
       <div v-for="r in pendingIn" :key="r.id" class="flex items-center justify-between p-3.5 lg:p-3 gap-2 select-none">
         <Link :href="`/users/${r.requester?.id}`" class="flex items-center gap-3 hover:opacity-80 min-w-0">
           <span class="relative shrink-0"><Avatar :image="avatarSrcFor(r.requester)" shape="circle" class="[&_img]:object-cover" :pt="{ image: { class: 'object-cover' } }" /><OnlineDot :online="isOnline(r.requester?.id)" /></span>
@@ -68,7 +68,7 @@ const emit = defineEmits<{ (e: 'update:filter', v: string): void; (e: 'open', id
       </div>
     </div>
     <div v-if="tab === 'blocked'" class="divide-y dark:divide-zinc-800">
-      <div v-if="!blocked.length" class="p-10 text-center text-sm text-stone-500">Нет заблокированных</div>
+      <div v-if="!blocked.length" class="p-6 text-center text-sm text-stone-500">Нет заблокированных</div>
       <div v-for="b in blocked" :key="b.id" class="flex items-center justify-between p-3.5 lg:p-3">
         <div class="flex items-center gap-3 min-w-0"><Avatar :image="avatarSrcFor(b.blocked)" shape="circle" class="[&_img]:object-cover" :pt="{ image: { class: 'object-cover' } }" /><span class="text-[15px] lg:text-sm dark:text-white truncate">{{ b.blocked?.name }}</span></div>
         <button v-if="b.blocked?.id" @click="emit('unblock', b.blocked.id)" class="text-xs px-3.5 py-2 rounded-full border bg-white dark:bg-zinc-800 shrink-0">Разблокировать</button>

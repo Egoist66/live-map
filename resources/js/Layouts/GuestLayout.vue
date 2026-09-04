@@ -42,26 +42,26 @@ const isFaq = route().current('faq')
         </div>
       </div>
     </div>
-    <div :class="isFaq ? 'flex-1 flex flex-col px-0 py-0 relative dark:bg-[#0B0F1A] overflow-auto' : 'flex-1 flex flex-col items-center justify-center px-6 py-10 relative dark:bg-[#0B0F1A]'">
+    <div :class="isFaq ? 'flex-1 flex flex-col px-0 py-0 relative dark:bg-[#0B0F1A] overflow-auto min-w-0 w-full' : 'flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6 sm:py-10 relative dark:bg-[#0B0F1A] min-w-0 w-full'">
       <div class="absolute inset-0 -z-10 bg-gradient-to-b from-white to-surface dark:from-zinc-900 dark:to-[#0B0F1A]"></div>
       <PageTransition>
         <template v-if="isFaq">
           <slot />
         </template>
         <template v-else>
-          <div>
-            <Link href="/" class="lg:hidden flex items-center gap-2.5 mb-6">
-              <span class="w-9 h-9 rounded-xl bg-ink-900 dark:bg-white text-white dark:text-ink-900 grid place-items-center text-sm">◉</span>
+          <div class="w-full max-w-[440px] min-w-0">
+            <Link href="/" class="lg:hidden flex items-center gap-2.5 mb-5 sm:mb-6">
+              <span class="w-9 h-9 rounded-xl bg-ink-900 dark:bg-white text-white dark:text-ink-900 grid place-items-center text-sm shrink-0">◉</span>
               <span class="font-black tracking-[-0.03em] text-xl text-ink-900 dark:text-white">U<span class="font-light text-ink-600 dark:text-zinc-400">Pin</span></span>
             </Link>
-            <Card class="w-full max-w-[440px] !bg-white dark:!bg-zinc-900 !border !border-stone-200/70 dark:!border-zinc-800 !rounded-[24px] !shadow-float !p-0">
+            <Card class="w-full max-w-full !bg-white dark:!bg-zinc-900 !border !border-stone-200/70 dark:!border-zinc-800 !rounded-[20px] sm:!rounded-[24px] !shadow-float !p-0">
               <template #content>
-                <div class="p-6 sm:p-8">
+                <div class="p-5 sm:p-8">
                   <slot />
                 </div>
               </template>
             </Card>
-            <div class="text-xs text-stone-400 mt-4 text-center max-w-[360px]">Защищено приватностью по умолчанию · Размытие 200м · Блок в 1 клик</div>
+            <div class="text-xs text-stone-400 mt-4 text-center max-w-full px-2 text-balance">Защищено приватностью по умолчанию · Размытие 200м · Блок в 1 клик</div>
           </div>
         </template>
         </PageTransition>
