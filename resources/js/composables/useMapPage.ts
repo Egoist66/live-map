@@ -111,6 +111,8 @@ export function useMapPage() {
     mapApi.renderPins()
   }
 
+  function openCreateFromUI() { showCreate.value = true }
+
   function onEsc(e: KeyboardEvent) {
     if (e.key !== 'Escape') return
     if (showCreate.value) { closeCreate(); return }
@@ -154,7 +156,7 @@ export function useMapPage() {
   return {
     store, categories, selectedCategory, filteredPins, pinDetails, pinCreate, pinEdit, mapApi,
     showCreate, pinAddress, loadingPinAddress, myStreet, loadingStreet,
-    radiusOptions, radiusLabel, openCreate, closeCreate, deleteSelectedPin, saveEdit, init, destroy,
+    radiusOptions, radiusLabel, openCreate, openCreateFromUI, closeCreate, deleteSelectedPin, saveEdit, init, destroy,
     deleteMutation,
     ...overlays,
   }
