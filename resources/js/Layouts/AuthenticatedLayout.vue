@@ -15,14 +15,14 @@ const { badge, user, avatarSrc, dashboardHref, settingsHref, bell, showDrawer, m
 </script>
 <template>
   <div class="min-h-screen bg-surface dark:bg-[#0B0F1A] overflow-x-clip">
-    <div class="sticky top-0 lg:top-1 z-50 glass border-b border-stone-200/70 dark:border-zinc-800 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-zinc-900/70">
+    <header class="sticky top-0 z-50 glass border-b border-stone-200/70 dark:border-zinc-800 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-zinc-900/70">
       <AppTopBar :user="user" :avatar-src="avatarSrc" :dashboard-href="dashboardHref" :badge-total="badge.total" @bell="bell.open()" @menu="toggleMenu" @drawer="showDrawer = true" />
-    </div>
+    </header>
     <AppUserMenu v-model:menu-ref="menu" :user="user" :avatar-src="avatarSrc" :items="(menuItems as any)" />
     <AppDrawerMenu :open="showDrawer" @update:open="(v:boolean)=>showDrawer=v" :user="user" :avatar-src="avatarSrc" :dashboard-href="dashboardHref" :settings-href="settingsHref" @logout="logout" />
-    <header v-if="$slots.header" class="bg-white dark:bg-zinc-900 border-b border-stone-200/60 dark:border-zinc-800">
+    <div v-if="$slots.header" class="bg-white dark:bg-zinc-900 border-b border-stone-200/60 dark:border-zinc-800">
       <div class="mx-auto max-w-[1280px] px-4 sm:px-6 py-4 sm:py-6"><slot name="header" /></div>
-    </header>
+    </div>
     <main :class="route().current('chat') || route().current('map') ? 'pb-0 lg:pb-0 overflow-hidden overscroll-none' : 'pb-[calc(76px+env(safe-area-inset-bottom,0px))] lg:pb-0'">
       <PageTransition><slot /></PageTransition>
     </main>

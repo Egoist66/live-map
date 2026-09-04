@@ -13,12 +13,12 @@ const emit = defineEmits<{ (e: 'bell'): void; (e: 'menu', ev: Event): void; (e: 
     <template #start>
       <div class="flex items-center gap-3 sm:gap-8 h-[64px] min-h-[64px] px-3 sm:px-6 max-w-[1280px] mx-auto w-full min-w-0">
         <Link :href="dashboardHref" class="shrink-0"><ApplicationLogo /></Link>
-        <div class="hidden lg:flex items-center gap-1 bg-stone-100/80 dark:bg-zinc-800 p-1 rounded-full border border-stone-200/60 dark:border-zinc-700">
+        <nav aria-label="Основная навигация" class="hidden lg:flex items-center gap-1 bg-stone-100/80 dark:bg-zinc-800 p-1 rounded-full border border-stone-200/60 dark:border-zinc-700">
           <Link :href="dashboardHref" :class="['px-4 py-1.5 rounded-full text-[13px] font-semibold transition', route().current('dashboard') ? 'bg-white dark:bg-zinc-700 shadow-soft text-ink-900 dark:text-white border border-stone-200' : 'text-stone-500 dark:text-zinc-400 hover:text-ink-900']">Профиль</Link>
           <Link :href="route('map')" :class="['px-4 py-1.5 rounded-full text-[13px] font-semibold transition', route().current('map') ? 'bg-white dark:bg-zinc-700 shadow-soft text-ink-900 dark:text-white border border-stone-200' : 'text-stone-500 dark:text-zinc-400 hover:text-ink-900']">Карта</Link>
           <Link :href="route('chat')" :class="['px-4 py-1.5 rounded-full text-[13px] font-semibold transition relative', route().current('chat') ? 'bg-white dark:bg-zinc-700 shadow-soft text-ink-900 dark:text-white border border-stone-200' : 'text-stone-500 dark:text-zinc-400 hover:text-ink-900']">Чат</Link>
           <Link :href="route('faq')" :class="['px-4 py-1.5 rounded-full text-[13px] font-semibold transition', route().current('faq') ? 'bg-white dark:bg-zinc-700 shadow-soft text-ink-900 dark:text-white border border-stone-200' : 'text-stone-500 dark:text-zinc-400 hover:text-ink-900']">FAQ</Link>
-        </div>
+        </nav>
       </div>
     </template>
     <template #end>
