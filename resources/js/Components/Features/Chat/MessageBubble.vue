@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import MessageTicks from '@/Components/MessageTicks.vue'
+import MessageTicks from '@/Components/Features/Feedback/MessageTicks.vue'
 
 defineProps<{ message: any; own: boolean; status: string; time: string }>()
 const emit = defineEmits<{ (e: 'edit', m: any): void; (e: 'delete', id: number): void }>()

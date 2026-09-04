@@ -4,7 +4,7 @@ import Card from 'primevue/card'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
-import OnlineDot from '@/Components/OnlineDot.vue'
+import OnlineDot from '@/Components/Features/Feedback/OnlineDot.vue'
 
 defineProps<{ user: any; avatarSrc: string; online: boolean; lastSeen: string; levelName: string; isOwn: boolean; isLocked: boolean; canMessage: boolean; isBlocked: boolean; isFriend: boolean; isPending: boolean; loading: boolean; sharing: boolean }>()
 const emit = defineEmits<{ (e: 'avatar'): void; (e: 'chat'): void; (e: 'add'): void; (e: 'remove'): void; (e: 'block'): void; (e: 'unblock'): void; (e: 'share'): void }>()

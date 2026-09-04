@@ -2,10 +2,10 @@
 import AppTopBar from '@/Layouts/AppTopBar.vue'
 import AppDrawerMenu from '@/Layouts/AppDrawerMenu.vue'
 import AppUserMenu from '@/Layouts/AppUserMenu.vue'
-import MobileBottomNav from '@/Components/MobileBottomNav.vue'
-import PageTransition from '@/Components/PageTransition.vue'
-import GlobalNotificationToasts from '@/Components/GlobalNotificationToasts.vue'
-import BellNotificationsModal from '@/Components/BellNotificationsModal.vue'
+import MobileBottomNav from '@/Components/Features/Navigation/MobileBottomNav.vue'
+import PageTransition from '@/Components/Features/Feedback/PageTransition.vue'
+import GlobalNotificationToasts from '@/Components/Features/Feedback/GlobalNotificationToasts.vue'
+import BellNotificationsModal from '@/Components/Features/Feedback/BellNotificationsModal.vue'
 import { useAppLayout } from '@/composables/useAppLayout'
 
 const { badge, user, avatarSrc, dashboardHref, settingsHref, bell, showDrawer, menu, menuItems, toggleMenu, logout } = useAppLayout()

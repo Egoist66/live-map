@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
 import Avatar from 'primevue/avatar'
-import OnlineDot from '@/Components/OnlineDot.vue'
+import OnlineDot from '@/Components/Features/Feedback/OnlineDot.vue'
 import { avatarSrcFor } from '@/composables/useAvatar'
 
 defineProps<{ conversations: any[]; friends: any[]; pendingIn: any[]; blocked: any[]; tab: string; selectedId: number | null; filter: string; isOnline: (id?: number) => boolean; formatTime: (s: string) => string }>()
@@ -43,23 +43,23 @@ const emit = defineEmits<{ (e: 'update:filter', v: string): void; (e: 'open', id
     <div v-if="tab === 'friends'" class="divide-y dark:divide-zinc-800">
       <div v-if="!friends.length" class="p-10 text-center text-sm text-stone-500">Нет друзей</div>
       <div v-for="f in friends" :key="f.id" class="flex items-center justify-between p-3.5 lg:p-3 select-none active:bg-stone-50 group">
-        <Link :href="`/users/${f.other.id}`" class="flex items-center gap-3 hover:opacity-80 min-w-0">
-          <span class="relative shrink-0"><Avatar :image="avatarSrcFor(f.other)" shape="circle" class="[&_img]:object-cover" :pt="{ image: { class: 'object-cover' } }" /><OnlineDot :online="isOnline(f.other.id)" /></span>
-          <span class="text-[15px] lg:text-sm font-medium dark:text-white truncate hover:underline">{{ f.other.name }}</span>
+        <Link :href="`/users/${f.other?.id}`" class="flex items-center gap-3 hover:opacity-80 min-w-0">
+          <span class="relative shrink-0"><Avatar :image="avatarSrcFor(f.other)" shape="circle" class="[&_img]:object-cover" :pt="{ image: { class: 'object-cover' } }" /><OnlineDot :online="isOnline(f.other?.id)" /></span>
+          <span class="text-[15px] lg:text-sm font-medium dark:text-white truncate hover:underline">{{ f.other?.name }}</span>
         </Link>
         <div class="flex gap-1 shrink-0 items-center">
           <button @click="emit('startChat', f.other)" class="text-xs px-3 py-1.5 rounded-full bg-stone-900 dark:bg-white dark:text-zinc-900 text-white font-semibold">Чат</button>
           <button @click.stop="emit('removeFriend', f)" title="Удалить из друзей" class="w-7 h-7 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-red-50 text-stone-500 hover:text-red-600 transition">✕</button>
-          <button @click.stop="emit('block', f.other.id, f.other.name)" title="Заблокировать" class="w-7 h-7 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-red-50 text-stone-500 hover:text-red-600 transition">⊘</button>
+          <button v-if="f.other?.id" @click.stop="emit('block', f.other.id, f.other.name)" title="Заблокировать" class="w-7 h-7 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-red-50 text-stone-500 hover:text-red-600 transition">⊘</button>
         </div>
       </div>
     </div>
     <div v-if="tab === 'requests'" class="divide-y dark:divide-zinc-800">
       <div v-if="!pendingIn.length" class="p-10 text-center text-sm text-stone-500">Нет заявок</div>
       <div v-for="r in pendingIn" :key="r.id" class="flex items-center justify-between p-3.5 lg:p-3 gap-2 select-none">
-        <Link :href="`/users/${r.requester.id}`" class="flex items-center gap-3 hover:opacity-80 min-w-0">
-          <span class="relative shrink-0"><Avatar :image="avatarSrcFor(r.requester)" shape="circle" class="[&_img]:object-cover" :pt="{ image: { class: 'object-cover' } }" /><OnlineDot :online="isOnline(r.requester.id)" /></span>
-          <span class="text-[15px] lg:text-sm dark:text-white truncate hover:underline">{{ r.requester.name }}</span>
+        <Link :href="`/users/${r.requester?.id}`" class="flex items-center gap-3 hover:opacity-80 min-w-0">
+          <span class="relative shrink-0"><Avatar :image="avatarSrcFor(r.requester)" shape="circle" class="[&_img]:object-cover" :pt="{ image: { class: 'object-cover' } }" /><OnlineDot :online="isOnline(r.requester?.id)" /></span>
+          <span class="text-[15px] lg:text-sm dark:text-white truncate hover:underline">{{ r.requester?.name }}</span>
         </Link>
         <div class="flex gap-1.5 shrink-0">
           <button @click="emit('accept', r.id)" class="text-xs px-3.5 py-2 rounded-full bg-green-600 text-white font-semibold active:scale-95">Принять</button>
@@ -70,8 +70,8 @@ const emit = defineEmits<{ (e: 'update:filter', v: string): void; (e: 'open', id
     <div v-if="tab === 'blocked'" class="divide-y dark:divide-zinc-800">
       <div v-if="!blocked.length" class="p-10 text-center text-sm text-stone-500">Нет заблокированных</div>
       <div v-for="b in blocked" :key="b.id" class="flex items-center justify-between p-3.5 lg:p-3">
-        <div class="flex items-center gap-3 min-w-0"><Avatar :image="avatarSrcFor(b.blocked)" shape="circle" class="[&_img]:object-cover" :pt="{ image: { class: 'object-cover' } }" /><span class="text-[15px] lg:text-sm dark:text-white truncate">{{ b.blocked.name }}</span></div>
-        <button @click="emit('unblock', b.blocked.id)" class="text-xs px-3.5 py-2 rounded-full border bg-white dark:bg-zinc-800 shrink-0">Разблокировать</button>
+        <div class="flex items-center gap-3 min-w-0"><Avatar :image="avatarSrcFor(b.blocked)" shape="circle" class="[&_img]:object-cover" :pt="{ image: { class: 'object-cover' } }" /><span class="text-[15px] lg:text-sm dark:text-white truncate">{{ b.blocked?.name }}</span></div>
+        <button v-if="b.blocked?.id" @click="emit('unblock', b.blocked.id)" class="text-xs px-3.5 py-2 rounded-full border bg-white dark:bg-zinc-800 shrink-0">Разблокировать</button>
       </div>
     </div>
   </div>

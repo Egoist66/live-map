@@ -5,7 +5,7 @@ import Tab from 'primevue/tab'
 import Badge from 'primevue/badge'
 import Button from 'primevue/button'
 import Select from 'primevue/select'
-import ChatList from '@/Components/Chat/ChatList.vue'
+import ChatList from '@/Components/Features/Chat/ChatList.vue'
 
 defineProps<{ tab: string; unreadTotal: number; pendingCount: number; blockedCount: number; refreshing: boolean; conversations: any[]; friends: any[]; pendingIn: any[]; blocked: any[]; filter: string; selectedId: number | null; privacy: any; showPrivacy: boolean; isOnline: (id?: number) => boolean; formatTime: (s: string) => string }>()
 const emit = defineEmits<{ (e: 'update:tab', v: any): void; (e: 'update:filter', v: string): void; (e: 'update:showPrivacy', v: boolean): void; (e: 'refresh'): void; (e: 'people'): void; (e: 'open', id: number): void; (e: 'startChat', u: any): void; (e: 'deleteChat', id: number): void; (e: 'block', id: number, name?: string): void; (e: 'unblock', id: number): void; (e: 'removeFriend', f: any): void; (e: 'accept', id: number): void; (e: 'decline', id: number): void; (e: 'savePrivacy'): void }>()

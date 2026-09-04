@@ -5,8 +5,8 @@ import Avatar from 'primevue/avatar'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
-import ProfileHeaderCard from '@/Components/Profile/ProfileHeaderCard.vue'
-import ProfileInfoCard from '@/Components/Profile/ProfileInfoCard.vue'
+import ProfileHeaderCard from '@/Components/Features/Profile/ProfileHeaderCard.vue'
+import ProfileInfoCard from '@/Components/Features/Profile/ProfileInfoCard.vue'
 import { useProfileShowPage } from '@/composables/useProfileShowPage'
 
 const props = defineProps<{ profileUser: any; isOwn: boolean; friendship: any; isFriend: boolean; isPending: boolean; isBlocked?: boolean; isBlockedBy?: boolean; canMessage: boolean; canMessageReason: string | null }>()

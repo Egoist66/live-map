@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
 import Card from 'primevue/card'
-import PageTransition from '@/Components/PageTransition.vue'
+import PageTransition from '@/Components/Features/Feedback/PageTransition.vue'
 const isFaq = route().current('faq')
 </script>
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
-import ApplicationLogo from '@/Components/ApplicationLogo.vue'
+import ApplicationLogo from '@/Components/Brand/ApplicationLogo.vue'
 import Toolbar from 'primevue/toolbar'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'

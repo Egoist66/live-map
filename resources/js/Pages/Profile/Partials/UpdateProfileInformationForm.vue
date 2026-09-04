@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
-import AvatarPreview from '@/Components/AvatarPreview.vue'
+import AvatarPreview from '@/Components/Features/Media/AvatarPreview.vue'
 import { useProfileForm } from '@/composables/useProfileForm'
 import { useAvatarUpload } from '@/composables/useAvatarUpload'
 import InputText from 'primevue/inputtext'

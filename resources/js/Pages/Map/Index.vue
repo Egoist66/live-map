@@ -2,10 +2,10 @@
 import { Head } from '@inertiajs/vue3'
 import { onMounted, onUnmounted } from 'vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
-import MapTopBar from '@/Components/Map/MapTopBar.vue'
-import MapCreateDialog from '@/Components/Map/MapCreateDialog.vue'
-import PinDetailsCard from '@/Components/Map/PinDetailsCard.vue'
-import MapInfoDialogs from '@/Components/Map/MapInfoDialogs.vue'
+import MapTopBar from '@/Components/Features/Map/MapTopBar.vue'
+import MapCreateDialog from '@/Components/Features/Map/MapCreateDialog.vue'
+import PinDetailsCard from '@/Components/Features/Map/PinDetailsCard.vue'
+import MapInfoDialogs from '@/Components/Features/Map/MapInfoDialogs.vue'
 import { useSeo } from '@/composables/useSeo'
 import { useMapPage } from '@/composables/useMapPage'
 import { useMapPinChat } from '@/composables/useMapPinChat'
@@ -41,7 +41,7 @@ onUnmounted(destroy)
       </div>
       <MapCreateDialog :open="showCreate" @update:open="(v:boolean)=>showCreate=v" :pin-create="pinCreate" :categories="categories" :pin-address="pinAddress" :loading-address="loadingPinAddress" :radius-options="radiusOptions" :radius-label="radiusLabel" @close="closeCreate" />
       <Transition enter-active-class="transition duration-200 ease-out" enter-from-class="opacity-0 translate-y-4" enter-to-class="opacity-100 translate-y-0" leave-active-class="transition duration-150 ease-in" leave-from-class="opacity-100" leave-to-class="opacity-0 translate-y-4">
-        <PinDetailsCard :pin="selectedPin" :comments="comments" :comment-text="commentText" @update:comment="(v:string)=>commentText=v" :creating-comment="createCommentAsyncStatus?.value==='loading'" :editing-comment-id="editingCommentId" :editing-content="editingContent" @update:edit-content="(v:string)=>editingContent=v" :saving-comment="updateCommentMutation?.asyncStatus?.value==='loading'" :reacting="reactAsyncStatus?.value==='loading'" :reporting="reportMutation?.asyncStatus?.value==='loading'" :pin-edit="pinEdit" :categories="categories" :deleting="store.deleting" :auth-id="($page as any).props.auth.user.id" @close="pinDetails.closePin()" @delete="deleteSelectedPin" @react="(k:string)=>react(selectedPin, k)" @report="reportPin(selectedPin)" @send-comment="sendComment" @start-edit-comment="startEditComment" @cancel-edit-comment="cancelEditComment" @save-edit-comment="saveEditComment" @save-edit="saveEdit" />
+        <PinDetailsCard :pin="selectedPin" :comments="comments" :comment-text="commentText" @update:comment="(v:string)=>commentText=v" :creating-comment="createCommentAsyncStatus?.value==='loading'" :editing-comment-id="editingCommentId" :editing-content="editingContent" @update:edit-content="(v:string)=>editingContent=v" :saving-comment="updateCommentMutation?.asyncStatus?.value==='loading'" :reacting="reactAsyncStatus?.value==='loading'" :reporting="reportMutation?.asyncStatus?.value==='loading'" :pin-edit="pinEdit" :categories="categories" :deleting="store.deleting" :auth-id="($page as any).props.auth?.user?.id ?? 0" @close="pinDetails.closePin()" @delete="deleteSelectedPin" @react="(k:string)=>react(selectedPin, k)" @report="reportPin(selectedPin)" @send-comment="sendComment" @start-edit-comment="startEditComment" @cancel-edit-comment="cancelEditComment" @save-edit-comment="saveEditComment" @save-edit="saveEdit" />
       </Transition>
       <MapInfoDialogs :live-open="showLiveInfo" @update:live="(v:boolean)=>showLiveInfo=v" :my-open="showMyPins" @update:my="(v:boolean)=>showMyPins=v" :my-pins="myPins" :format-time="formatTime" @fly="flyToPin" />
     </div>

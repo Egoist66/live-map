@@ -2,7 +2,7 @@
 import { Link } from '@inertiajs/vue3'
 import Dialog from 'primevue/dialog'
 import Avatar from 'primevue/avatar'
-import OnlineDot from '@/Components/OnlineDot.vue'
+import OnlineDot from '@/Components/Features/Feedback/OnlineDot.vue'
 import { avatarSrcFor } from '@/composables/useAvatar'
 
 defineProps<{ open: boolean; query: string; results: any[]; searching: boolean; creating: boolean; isOnline: (id?: number) => boolean }>()

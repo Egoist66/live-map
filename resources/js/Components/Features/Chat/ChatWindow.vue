@@ -3,8 +3,8 @@ import { Link } from '@inertiajs/vue3'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
-import OnlineDot from '@/Components/OnlineDot.vue'
-import MessageBubble from '@/Components/Chat/MessageBubble.vue'
+import OnlineDot from '@/Components/Features/Feedback/OnlineDot.vue'
+import MessageBubble from '@/Components/Features/Chat/MessageBubble.vue'
 import { avatarSrcFor } from '@/composables/useAvatar'
 
 defineProps<{ selectedId: number | null; activeConv: any; messages: any[]; loading: boolean; sending: boolean; refreshing: boolean; typing: boolean; online: boolean; input: string; emojiOpen: boolean; emojiGroups: any[]; editingId: number | null; editingBody: string; showMenu: boolean; keyboardStyle: any; isOwnMessage: (m: any) => boolean; messageStatus: (m: any) => string; formatTime: (s: string) => string }>()

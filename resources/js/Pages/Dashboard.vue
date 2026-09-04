@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { Head } from '@inertiajs/vue3'
-import AvatarPreview from '@/Components/AvatarPreview.vue'
-import DashboardHero from '@/Components/Dashboard/DashboardHero.vue'
-import DashboardInfo from '@/Components/Dashboard/DashboardInfo.vue'
-import DashboardActions from '@/Components/Dashboard/DashboardActions.vue'
+import AvatarPreview from '@/Components/Features/Media/AvatarPreview.vue'
+import DashboardHero from '@/Components/Features/Dashboard/DashboardHero.vue'
+import DashboardInfo from '@/Components/Features/Dashboard/DashboardInfo.vue'
+import DashboardActions from '@/Components/Features/Dashboard/DashboardActions.vue'
 import Toast from 'primevue/toast'
 import { useDashboardPage } from '@/composables/useDashboardPage'
 
