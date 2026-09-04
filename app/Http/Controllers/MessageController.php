@@ -7,6 +7,8 @@ use App\Events\MessageUpdated;
 use App\Events\TypingIndicator;
 use App\Models\Conversation;
 use App\Models\Message;
+use App\Models\User;
+use App\Services\WebPushService;
 use Illuminate\Http\Request;
 
 class MessageController extends Controller
@@ -14,9 +16,11 @@ class MessageController extends Controller
     public function index(Request $request, Conversation $conversation)
     {
         abort_unless($conversation->hasParticipant($request->user()->id),403);
+        $clearedAt = $conversation->participantRows()->where('user_id', $request->user()->id)->value('cleared_at');
         $before = $request->input('before');
         $q = $conversation->messages()->with('sender:id,name,avatar_path')->orderByDesc('created_at');
         if ($before) $q->where('id','<',$before);
+        if ($clearedAt) $q->where('created_at', '>', $clearedAt);
         $collection = $q->limit(30)->get();
         $undelivered = $collection->where('sender_id','!=',$request->user()->id)->whereNull('delivered_at')->pluck('id');
         if($undelivered->isNotEmpty()){
@@ -52,7 +56,24 @@ class MessageController extends Controller
         $conversation->update(['last_message_at'=>$msg->created_at]);
         $conversation->participantRows()->whereNotNull('hidden_at')->update(['hidden_at'=>null]);
         try{ broadcast(new MessageSent($msg))->toOthers(); }catch(\Throwable $e){ \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
+        $this->pushToRecipients($conversation, $sender, $msg);
         return response()->json($msg->toArrayPayload(),201);
+    }
+
+    private function pushToRecipients(Conversation $conversation, $sender, Message $msg): void
+    {
+        try {
+            $ids = $conversation->participantRows()->where('user_id', '!=', $sender->id)->pluck('user_id');
+            if ($ids->isEmpty()) return;
+            $push = app(WebPushService::class);
+            if (! $push->isConfigured()) return;
+            $senderModel = $sender instanceof User ? $sender : User::select('id', 'name', 'avatar_path')->find($sender->id);
+            foreach (User::whereIn('id', $ids)->select('id', 'name', 'avatar_path')->get() as $recipient) {
+                $push->sendChatMessage($recipient, $senderModel ?? $recipient, $conversation->id, (string) $msg->body);
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('chat webpush failed: '.$e->getMessage());
+        }
     }
 
     public function typing(Request $request, Conversation $conversation)

@@ -13,6 +13,11 @@ self.addEventListener('push', (event) => {
     badge: '/pwa-icon.svg',
     vibrate: [120, 60, 120],
     timestamp: Date.now(),
+    renotify: true,
+    requireInteraction: false,
+    silent: false,
+    lang: 'ru',
+    dir: 'auto',
     data: { url: data.url || '/chat' },
   }
   if (data.actions) options.actions = data.actions

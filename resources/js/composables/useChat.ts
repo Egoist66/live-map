@@ -138,6 +138,9 @@ export function useChat() {
       subscribeChat(id)
       await nextTick()
       scrollToBottom()
+    } catch (e) {
+      if (selectedId.value === id) { selectedId.value = null; activeConv.value = null; messages.value = []; loading.value = false }
+      throw e
     } finally { if (selectedId.value === id) loading.value = false }
   }
 

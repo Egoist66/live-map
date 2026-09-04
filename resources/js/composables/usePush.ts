@@ -19,14 +19,35 @@ async function refresh(): Promise<void> {
   }
 }
 
+function currentUid(): number {
+  try {
+    const meta = document.querySelector('meta[name="user-id"]')?.getAttribute('content')
+    if (meta) return Number(meta)
+    return Number((window as any).userId || 0)
+  } catch { return 0 }
+}
+
+async function syncBinding(): Promise<void> {
+  try {
+    if (!currentUid()) return
+    if (permission.value !== 'granted') return
+    const sub = await getSubscription()
+    if (!sub) return
+    await savePushSubscription(subscriptionPayload(sub))
+    subscribed.value = true
+  } catch {}
+}
+
 export function usePush() {
   async function init(): Promise<void> {
     if (inited) {
       await refresh()
+      await syncBinding()
       return
     }
     inited = true
     await refresh()
+    await syncBinding()
   }
 
   async function enable(): Promise<boolean> {

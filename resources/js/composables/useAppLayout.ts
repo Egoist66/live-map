@@ -25,7 +25,16 @@ export function useAppLayout() {
   ])
   function toggleMenu(e: Event) { menu.value.toggle(e) }
   function closeDrawer() { showDrawer.value = false }
-  function doLogout() { try { presence.disconnect() } catch {} router.post(route('logout')) }
+  async function doLogout() {
+    try { presence.disconnect() } catch {}
+    try {
+      const { getSubscription } = await import('@/pwa/push.service')
+      const { removePushSubscription } = await import('@/pwa/pwa.api')
+      const sub = await getSubscription().catch(() => null)
+      if (sub?.endpoint) await removePushSubscription(sub.endpoint).catch(() => {})
+    } catch {}
+    router.post(route('logout'))
+  }
   function logout() { doLogout() }
   onMounted(() => { badge.init(); presence.connect(); appNotes.init() })
   onBeforeUnmount(() => presence.disconnect())

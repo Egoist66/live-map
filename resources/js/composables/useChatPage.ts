@@ -216,9 +216,11 @@ export function useChatPage(initialConversationId?: number) {
     try { const me = await chatApi.me(); privacy.value.message_privacy = me.message_privacy; privacy.value.allow_random_messages = me.allow_random_messages } catch {}
     const targetId = resolveInitialId()
     if (targetId) {
-      await chat.openConversation(targetId)
-      tab.value = 'chats'
-      focusChatInput()
+      try {
+        await chat.openConversation(targetId)
+        tab.value = 'chats'
+        focusChatInput()
+      } catch {}
       chat.loadConversations()
     }
   }

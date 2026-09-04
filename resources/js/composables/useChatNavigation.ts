@@ -13,7 +13,7 @@ export function useChatNavigation(selectedId: Ref<number | null>, openConversati
     const m = window.location.pathname.match(/\/chat\/(\d+)/)
     if (m) {
       const id = Number(m[1])
-      if (id !== selectedId.value) openConversation(id)
+      if (id !== selectedId.value) openConversation(id).catch(() => { if (selectedId.value === id) selectedId.value = null })
     } else {
       selectedId.value = null
     }

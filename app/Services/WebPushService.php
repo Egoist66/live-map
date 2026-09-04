@@ -21,6 +21,43 @@ class WebPushService
         return $this->sendToSubscriptions($user->pushSubscriptions()->get(), $payload);
     }
 
+    public function sendChatMessage(User $recipient, User $sender, int $conversationId, string $body): int
+    {
+        $preview = trim(preg_replace('/\s+/', ' ', $body) ?? '');
+        if (mb_strlen($preview) > 120) {
+            $preview = mb_substr($preview, 0, 117).'...';
+        }
+        return $this->sendToUser($recipient, [
+            'title' => $sender->name ?: 'Новое сообщение',
+            'body' => $preview !== '' ? $preview : 'Новое сообщение',
+            'url' => '/chat/'.$conversationId,
+            'tag' => 'chat-'.$conversationId,
+            'avatar' => $sender->avatar_url,
+        ]);
+    }
+
+    public function sendFriendRequest(User $recipient, User $requester): int
+    {
+        return $this->sendToUser($recipient, [
+            'title' => 'Заявка в друзья',
+            'body' => ($requester->name ?: 'Кто-то').' хочет дружить',
+            'url' => '/chat?tab=requests',
+            'tag' => 'friend-request-'.$requester->id,
+            'avatar' => $requester->avatar_url,
+        ]);
+    }
+
+    public function sendFriendAccepted(User $recipient, User $addressee): int
+    {
+        return $this->sendToUser($recipient, [
+            'title' => 'Заявка принята',
+            'body' => ($addressee->name ?: 'Пользователь').' принял заявку',
+            'url' => '/chat?tab=friends',
+            'tag' => 'friend-accepted-'.$addressee->id,
+            'avatar' => $addressee->avatar_url,
+        ]);
+    }
+
     public function sendToSubscriptions(Collection $subscriptions, array $payload): int
     {
         if ($subscriptions->isEmpty() || ! $this->isConfigured()) {
