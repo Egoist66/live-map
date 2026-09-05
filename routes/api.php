@@ -4,6 +4,7 @@ use App\Http\Controllers\ChatUserController;
 use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\FriendshipController;
 use App\Http\Controllers\MessageController;
+use App\Http\Controllers\NbrbController;
 use App\Http\Controllers\PinCommentController;
 use App\Http\Controllers\PinController;
 use App\Http\Controllers\PushSubscriptionController;
@@ -12,6 +13,13 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\UserBlockController;
 use App\Http\Controllers\ZoneSubscriptionController;
 use Illuminate\Support\Facades\Route;
+
+Route::middleware('throttle:60,1')->group(function () {
+    Route::get('/nbrb/currencies/{curId?}', [NbrbController::class, 'currencies'])->whereNumber('curId');
+    Route::get('/nbrb/rates/{code?}', [NbrbController::class, 'rates'])->where('code', '[A-Za-z0-9]+');
+    Route::get('/nbrb/dynamics/{curId}', [NbrbController::class, 'dynamics'])->whereNumber('curId');
+    Route::get('/nbrb/convert', [NbrbController::class, 'convert']);
+});
 
 Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/pins/mine', [PinController::class, 'mine']);

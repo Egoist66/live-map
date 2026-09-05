@@ -4,6 +4,9 @@ export function useSupportForm(user: any) {
   const supportSubject = ref('')
   const supportBody = ref('')
   const donateSel = ref(5)
+  function setDonate(usd: number) {
+    donateSel.value = usd
+  }
   function mailToSupport() {
     const subj = encodeURIComponent(supportSubject.value || 'Обращение в поддержку UPin')
     const who = `Пользователь: ${user.value.name} <${user.value.email}>`
@@ -17,7 +20,7 @@ export function useSupportForm(user: any) {
     const body = encodeURIComponent(`Привет! Хочу задонатить $${usd} (~${byn}) разработчику UPin.\n\nПользователь: ${user.value.name} <${user.value.email}>\nТариф: ${user.value.plan || 'free'}\n\nСообщение:\n`)
     window.location.href = `mailto:razormad666@gmail.com?subject=${subj}&body=${body}`
   }
-  return { supportSubject, supportBody, donateSel, mailToSupport, mailToDonate }
+  return { supportSubject, supportBody, donateSel, setDonate, mailToSupport, mailToDonate }
 }
 
 export function useSettingsBioPreview(user: any) {

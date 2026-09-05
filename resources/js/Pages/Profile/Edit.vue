@@ -34,9 +34,9 @@ const { setTheme } = useTheme()
         <div class="grid lg:grid-cols-[300px_1fr] gap-4 sm:gap-6 items-start content-start w-full lg:items-start">
           <SettingsSidebar :menu-model="s.menuModel.value" :plan="s.u.value.plan || 'free'" :pins-today="s.u.value.pins_today_count || 0" :pins-limit="s.u.value.plan === 'free' ? '3' : '∞'" :zone-count="s.zoneCount.value" @billing="s.active.value = 'billing'" />
           <div class="space-y-4 min-w-0 w-full max-w-full lg:min-h-[600px] self-start">
-            <Tabs :value="s.activeIndex.value" @update:value="(v:any)=>{ const e=s.tabs[Number(v)]; if(e) s.active.value=e.id as any }" class="w-full !mt-0">
-              <TabList class="!flex lg:!hidden !bg-transparent !border-0 !gap-2 !overflow-x-auto !flex-nowrap !pb-2 !px-1 !scrollbar-none !snap-x" :pt="{ activeBar: { class: '!hidden' } }">
-                <Tab v-for="(t, idx) in s.tabs" :key="t.id" :value="String(idx)" class="!bg-transparent !border-0 !p-0 !shrink-0 !snap-start">
+            <Tabs :value="s.activeIndex.value" @update:value="(v:any)=>{ const e=s.tabs[Number(v)]; if(e) s.active.value=e.id as any }" class="settings-root w-full !mt-0">
+              <TabList class="!flex lg:!hidden !bg-transparent !border-0 !gap-2 !px-1 settings-tabs" :pt="{ activeBar: { class: '!hidden' }, content: { class: '!flex !flex-wrap !gap-2 !overflow-visible' } }">
+                <Tab v-for="(t, idx) in s.tabs" :key="t.id" :value="String(idx)" class="!bg-transparent !border-0 !p-0 !shrink-0">
                   <div :class="['flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold border transition whitespace-nowrap', s.active.value === t.id ? '!bg-violet-600 !text-white !border-violet-600 shadow-soft' : 'bg-white text-stone-700 border-stone-200']">
                     <i :class="[t.icon, 'text-xs']" /><span>{{ t.label }}</span>
                   </div>
@@ -49,7 +49,7 @@ const { setTheme } = useTheme()
                 <TabPanel value="3"><SettingsPrivacyTab :user="s.u.value" :invisible="s.invisible" @profile="s.active.value = 'profile'" /></TabPanel>
                 <TabPanel value="4"><SettingsAppearanceTab :theme="s.theme.value" @theme="setTheme" /></TabPanel>
                 <TabPanel value="5"><SettingsSecurityTab /></TabPanel>
-                <TabPanel value="6"><SettingsSupportTab :subject="s.support.supportSubject.value" @update:subject="(v:string)=>s.support.supportSubject.value=v" :body="s.support.supportBody.value" @update:body="(v:string)=>s.support.supportBody.value=v" :donate-sel="s.support.donateSel.value" @update:donate="(v:number)=>s.support.donateSel.value=v" :rate="s.ex.usdRate.value" :rate-loading="s.ex.loading.value" @send="s.support.mailToSupport()" @donate="s.support.mailToDonate(s.ex)" @reload="s.ex.load" /></TabPanel>
+                <TabPanel value="6"><SettingsSupportTab :subject="s.support.supportSubject.value" @update:subject="(v:string)=>s.support.supportSubject.value=v" :body="s.support.supportBody.value" @update:body="(v:string)=>s.support.supportBody.value=v" :donate-sel="s.support.donateSel.value" @update:donate="s.support.setDonate" :rate="s.ex.usdRate.value" :rate-loading="s.ex.loading.value" @send="s.support.mailToSupport()" @donate="s.support.mailToDonate(s.ex)" @reload="s.ex.load" /></TabPanel>
                 <TabPanel value="7"><SettingsAppTab /></TabPanel>
               </TabPanels>
             </Tabs>
@@ -60,3 +60,22 @@ const { setTheme } = useTheme()
     </div>
   </AuthenticatedLayout>
 </template>
+<style scoped>
+.settings-root {
+  gap: 20px !important;
+}
+.settings-tabs :deep(.p-tablist-content),
+.settings-tabs :deep(.p-tablist-tab-list) {
+  overflow: visible !important;
+  flex-wrap: wrap !important;
+  scrollbar-width: none !important;
+}
+.settings-tabs :deep(.p-tablist-content::-webkit-scrollbar),
+.settings-tabs :deep(.p-tablist-tab-list::-webkit-scrollbar) {
+  display: none !important;
+}
+.settings-tabs :deep(.p-tablist-prev-button),
+.settings-tabs :deep(.p-tablist-next-button) {
+  display: none !important;
+}
+</style>

@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import { api } from '@/services/api'
 
 export function useSupportExchange() {
   const usdRate = ref<number | null>(null)
@@ -8,14 +9,13 @@ export function useSupportExchange() {
     if (usdRate.value) return
     loading.value = true
     try {
-      const r = await fetch('https://api.nbrb.by/exrates/rates/431?parammode=2')
-      const d: any = await r.json()
-      usdRate.value = d.Cur_OfficialRate / d.Cur_Scale
+      const { data } = await api.get('/api/nbrb/rates/USD', { params: { parammode: 2 } })
+      if (data?.Cur_OfficialRate) usdRate.value = data.Cur_OfficialRate / data.Cur_Scale
     } catch {
       try {
-        const r2 = await fetch('https://api.exchangerate-api.com/v4/latest/USD')
-        const d2: any = await r2.json()
-        usdRate.value = d2.rates?.BYN || null
+        const r = await fetch('https://api.nbrb.by/exrates/rates/USD?parammode=2')
+        const d: any = await r.json()
+        if (d?.Cur_OfficialRate) usdRate.value = d.Cur_OfficialRate / d.Cur_Scale
       } catch {}
     } finally {
       loading.value = false
