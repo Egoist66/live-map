@@ -12,34 +12,35 @@ onMounted(() => notice.maybeShow())
     v-model:visible="notice.visible.value"
     modal
     :draggable="false"
-    :closable="true"
+    :closable="false"
+    :show-header="false"
     position="center"
     :style="{ width: '440px', maxWidth: 'calc(100vw - 2rem)' }"
     @hide="notice.dismiss()"
     :pt="{
       root: { class: '!rounded-[28px] !border-0 overflow-hidden !bg-white dark:!bg-zinc-900 shadow-2xl' },
-      header: { class: '!p-0 !border-0 !bg-transparent' },
-      content: { class: '!p-0 !bg-transparent' },
+      content: { class: '!p-0 !bg-white dark:!bg-zinc-900' },
     }"
   >
-    <template #header>
-      <div class="relative w-full overflow-hidden bg-gradient-to-br from-violet-600 via-indigo-600 to-fuchsia-600 px-6 pt-6 pb-14 text-white">
-        <div class="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/10 blur-none"></div>
-        <div class="absolute top-6 right-14 w-16 h-16 rounded-full bg-white/10"></div>
-        <div class="absolute bottom-2 left-10 w-8 h-8 rounded-full bg-white/10"></div>
-        <div class="relative flex items-center gap-3">
-          <span class="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur grid place-items-center text-2xl shrink-0">🚀</span>
-          <div class="min-w-0">
-            <div class="inline-flex items-center gap-1.5 text-[10px] font-black tracking-[0.14em] uppercase bg-white/20 backdrop-blur rounded-full px-2.5 py-1">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse"></span>
-              Beta · закрытый тест
-            </div>
-            <div class="text-xl font-black tracking-tight leading-tight mt-1.5">Добро пожаловать в UPin!</div>
+    <div class="relative w-full overflow-hidden bg-gradient-to-br from-violet-600 via-indigo-600 to-fuchsia-600 px-6 pt-6 pb-16 text-white">
+      <div class="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-white/10 pointer-events-none"></div>
+      <div class="absolute top-6 right-14 w-16 h-16 rounded-full bg-white/10 pointer-events-none"></div>
+      <div class="absolute bottom-2 left-10 w-8 h-8 rounded-full bg-white/10 pointer-events-none"></div>
+      <button type="button" @click="notice.dismiss()" aria-label="Закрыть" class="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur grid place-items-center text-white transition">
+        <i class="pi pi-times text-sm"></i>
+      </button>
+      <div class="relative flex items-center gap-3 pr-10">
+        <span class="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur grid place-items-center text-2xl shrink-0">🚀</span>
+        <div class="min-w-0">
+          <div class="inline-flex items-center gap-1.5 text-[10px] font-black tracking-[0.14em] uppercase bg-white/20 backdrop-blur rounded-full px-2.5 py-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse"></span>
+            Beta · закрытый тест
           </div>
+          <div class="text-xl font-black tracking-tight leading-tight mt-1.5">Добро пожаловать в UPin!</div>
         </div>
       </div>
-    </template>
-    <div class="px-6 pb-6 -mt-8 relative">
+    </div>
+    <div class="px-6 pb-6 -mt-10 relative">
       <div class="bg-white dark:bg-zinc-900 border border-stone-100 dark:border-zinc-800 rounded-2xl shadow-lg p-4 space-y-3">
         <p class="text-sm leading-relaxed text-stone-600 dark:text-zinc-300">
           Приложение в активной разработке. Что-то может меняться, глючить или пропадать — это нормально для этого этапа.
