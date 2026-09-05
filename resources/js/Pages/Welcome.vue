@@ -178,7 +178,7 @@ const dashboardHref = computed(() => {
           </div>
         </template>
       </Card>
-      <div class="text-center text-xs text-stone-400 mt-6 tracking-wide">© UPin · <Link href="/faq" class="underline hover:text-ink-900 dark:hover:text-white">FAQ</Link> · Пилотный район · PWA скоро</div>
+      <div class="text-center text-xs text-stone-400 mt-6 tracking-wide">© UPin · <Link href="/faq" class="underline hover:text-ink-900 dark:hover:text-white">FAQ</Link> · Пилотный район · PWA в доступе</div>
     </section>
   </div>
 </template>

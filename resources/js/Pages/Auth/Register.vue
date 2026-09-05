@@ -11,39 +11,39 @@ const f = useRegisterForm()
 <template>
   <GuestLayout>
     <Head title="Регистрация" />
-    <h1 class="text-[22px] font-black tracking-tight dark:text-white">Создай аккаунт</h1>
+    <h1 class="text-[22px] font-black tracking-tight text-ink-900 dark:text-white">Создай аккаунт</h1>
     <p class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Выбери район, радиус и стань частью живой карты</p>
     <form @submit.prevent="f.submit" class="mt-6 space-y-4">
       <div>
-        <label class="text-[13px] font-semibold">Имя / ник</label>
+        <label class="text-[13px] font-semibold text-ink-900 dark:text-zinc-100">Имя / ник</label>
         <InputText v-model="f.name.value" v-bind="f.nameAttrs" placeholder="Роберт Дауни" class="w-full mt-1.5" :invalid="!!f.errors.value.name" />
-        <small class="text-red-500">{{ f.errors.value.name }}</small>
+        <small class="text-red-500 dark:text-red-400">{{ f.errors.value.name }}</small>
       </div>
       <div>
-        <label class="text-[13px] font-semibold">Email</label>
+        <label class="text-[13px] font-semibold text-ink-900 dark:text-zinc-100">Email</label>
         <InputText v-model="f.email.value" v-bind="f.emailAttrs" type="email" placeholder="you@mail.ru" class="w-full mt-1.5" :invalid="!!f.errors.value.email" />
-        <small class="text-red-500">{{ f.errors.value.email }}</small>
+        <small class="text-red-500 dark:text-red-400">{{ f.errors.value.email }}</small>
       </div>
       <div>
-        <label class="text-[13px] font-semibold">Пароль</label>
+        <label class="text-[13px] font-semibold text-ink-900 dark:text-zinc-100">Пароль</label>
         <div class="relative mt-1.5">
           <InputText v-model="f.password.value" v-bind="f.passwordAttrs" :type="f.showPass.value ? 'text' : 'password'" placeholder="••••••••" class="w-full pr-11" :invalid="!!f.errors.value.password" />
-          <button type="button" @click="f.showPass.value=!f.showPass.value" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-zinc-700 grid place-items-center text-stone-500 text-sm" tabindex="-1">{{ f.showPass.value?'🙈':'👁' }}</button>
+          <button type="button" @click="f.showPass.value=!f.showPass.value" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-white/10 grid place-items-center text-stone-500 dark:text-zinc-400 text-sm" tabindex="-1">{{ f.showPass.value?'🙈':'👁' }}</button>
         </div>
-        <small class="text-red-500">{{ f.errors.value.password }}</small>
+        <small class="text-red-500 dark:text-red-400">{{ f.errors.value.password }}</small>
       </div>
       <div>
-        <label class="text-[13px] font-semibold">Подтверди пароль</label>
+        <label class="text-[13px] font-semibold text-ink-900 dark:text-zinc-100">Подтверди пароль</label>
         <div class="relative mt-1.5">
           <InputText v-model="f.password_confirmation.value" v-bind="f.passwordConfirmationAttrs" :type="f.showPass2.value ? 'text' : 'password'" placeholder="••••••••" class="w-full pr-11" :invalid="!!f.errors.value.password_confirmation" />
-          <button type="button" @click="f.showPass2.value=!f.showPass2.value" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-zinc-700 grid place-items-center text-stone-500 text-sm" tabindex="-1">{{ f.showPass2.value?'🙈':'👁' }}</button>
+          <button type="button" @click="f.showPass2.value=!f.showPass2.value" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-white/10 grid place-items-center text-stone-500 dark:text-zinc-400 text-sm" tabindex="-1">{{ f.showPass2.value?'🙈':'👁' }}</button>
         </div>
-        <small class="text-red-500">{{ f.errors.value.password_confirmation }}</small>
+        <small class="text-red-500 dark:text-red-400">{{ f.errors.value.password_confirmation }}</small>
       </div>
       <div class="bg-stone-50 dark:bg-zinc-800/60 border border-stone-200 dark:border-zinc-700 rounded-2xl p-3.5 space-y-2.5">
         <div class="flex items-center justify-between">
-          <label class="text-[13px] font-semibold">Домашняя зона</label>
-          <span class="text-[11px] font-bold bg-white dark:bg-zinc-700 dark:text-white border border-stone-200 dark:border-zinc-600 rounded-full px-2.5 py-1">{{ f.values.home_radius_km }} км</span>
+          <label class="text-[13px] font-semibold text-ink-900 dark:text-zinc-100">Домашняя зона</label>
+          <span class="text-[11px] font-bold bg-white dark:bg-zinc-700 text-ink-900 dark:text-white border border-stone-200 dark:border-zinc-600 rounded-full px-2.5 py-1">{{ f.values.home_radius_km }} км</span>
         </div>
         <p class="text-[11px] text-stone-500 dark:text-zinc-400 leading-relaxed">Выбери район где живёшь/бываешь — пин видят только рядом.</p>
         <Button type="button" @click="f.detectLocation" :loading="f.locating.value" severity="secondary" outlined rounded class="w-full" :label="f.values.home_lat ? 'Обновить моё место' : 'Определить моё место'" icon="pi pi-map-marker" />
@@ -58,7 +58,7 @@ const f = useRegisterForm()
           <button v-for="r in [1,2,5,10]" :key="r" type="button" @click="f.setValues({ home_radius_km: r } as any)" :class="['rounded-full py-2 text-xs font-semibold border transition', f.values.home_radius_km===r?'bg-ink-900 dark:bg-white dark:text-ink-900 text-white border-ink-900 dark:border-white':'bg-white dark:bg-zinc-800 dark:text-zinc-200 border-stone-200 dark:border-zinc-700']">{{ r }} км</button>
         </div>
       </div>
-      <Button :loading="f.isSubmitting.value" type="submit" label="Создать аккаунт →" class="w-full !bg-ink-900 dark:!bg-white !border-ink-900 dark:!border-white !text-white dark:!text-ink-900 !rounded-full !py-3.5 [&_.p-button-label]:!text-white dark:[&_.p-button-label]:!text-ink-900" />
+      <Button :loading="f.isSubmitting.value" type="submit" label="Создать аккаунт →" class="w-full !bg-ink-900 dark:!bg-[#FAFAFA] !border-ink-900 dark:!border-[#FAFAFA] !text-white dark:!text-[#0F172A] !rounded-full !py-3.5 [&_.p-button-label]:!text-white dark:[&_.p-button-label]:!text-[#0F172A]" />
       <div class="text-sm text-center text-stone-500 dark:text-zinc-400">Уже есть? <Link :href="route('login')" class="font-semibold text-ink-900 dark:text-white hover:underline">Войти</Link></div>
     </form>
   </GuestLayout>

@@ -17,7 +17,7 @@ const verificationLinkSent = computed(() => props.status === 'verification-link-
     <Message v-if="verificationLinkSent" severity="success" :closable="false" class="mt-3 !rounded-2xl">Новая ссылка отправлена на указанный при регистрации email.</Message>
     <form @submit.prevent="submit" class="mt-6">
       <div class="flex items-center justify-between gap-3">
-        <Button type="submit" :loading="form.processing" label="Отправить заново" class="!bg-ink-900 dark:!bg-white !border-ink-900 dark:!border-white !text-white dark:!text-ink-900 !rounded-full !px-6 !font-bold" />
+        <Button type="submit" :loading="form.processing" label="Отправить заново" class="!bg-ink-900 dark:!bg-[#FAFAFA] !border-ink-900 dark:!border-[#FAFAFA] !text-white dark:!text-[#0F172A] !rounded-full !px-6 !font-bold [&_.p-button-label]:!text-white dark:[&_.p-button-label]:!text-[#0F172A]" />
         <Link :href="route('logout')" method="post" as="button" class="rounded-full text-sm text-stone-600 dark:text-zinc-400 underline hover:text-ink-900 dark:hover:text-white">Выйти</Link>
       </div>
     </form>

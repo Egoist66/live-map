@@ -61,7 +61,7 @@ const isFaq = route().current('faq')
                 </div>
               </template>
             </Card>
-            <div class="text-xs text-stone-400 mt-4 text-center max-w-full px-2 text-balance">Защищено приватностью по умолчанию · Размытие 200м · Блок в 1 клик</div>
+            <div class="text-xs text-stone-500 dark:text-zinc-400 mt-4 text-center max-w-full px-2 text-balance">Защищено приватностью по умолчанию · Размытие 200м · Блок в 1 клик</div>
           </div>
         </template>
         </PageTransition>
