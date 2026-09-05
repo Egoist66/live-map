@@ -21,6 +21,8 @@ export const updateProfileSchema = toTypedSchema(
     home_radius_km: z.preprocess(toNull, z.preprocess((v: unknown) => (v === null ? v : Number(String(v).replace(',', '.'))), z.number({ invalid_type_error: 'Радиус должен быть числом' }).int('Целое число').min(1, 'Минимум 1 км').max(50, 'Максимум 50 км').nullable().optional())),
     bio: z.preprocess((v)=> v===''||v===undefined ? null : v, z.string().max(10000, 'Слишком длинно').nullable().optional()),
     is_anonymous_default: z.boolean().optional(),
+    default_location_precision: z.enum(['blur_200', 'exact', 'district', 'custom']).optional(),
+    default_blur_meters: z.number().min(0).max(5000).optional(),
     plan: z.enum(['free','pro','business']).optional(),
   }),
 )

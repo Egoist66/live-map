@@ -52,24 +52,36 @@ class PinController extends Controller
             'category' => 'required|in:question,announcement,warning,event,offer,help',
             'latitude' => 'required|numeric|between:-90,90',
             'longitude' => 'required|numeric|between:-180,180',
-            'location_precision' => 'sometimes|in:blur_200,exact,district',
+            'location_precision' => 'sometimes|in:blur_200,exact,district,custom',
+            'blur_meters' => 'sometimes|integer|min:0|max:5000',
             'is_anonymous' => 'sometimes|boolean',
             'photo_path' => 'sometimes|nullable|string|max:255',
             'radius_meters' => 'sometimes|integer|min:500|max:50000',
         ]);
 
-        $precision = $data['location_precision'] ?? 'blur_200';
+        $precision = $data['location_precision'] ?? $user->default_location_precision ?? 'blur_200';
+        if (!in_array($precision, ['blur_200', 'exact', 'district', 'custom'], true)) $precision = 'blur_200';
+        $meters = isset($data['blur_meters']) ? (int) $data['blur_meters'] : (int) ($user->default_blur_meters ?? 200);
+        $meters = max(0, min(5000, $meters));
         $origLat = (float) $data['latitude'];
         $origLng = (float) $data['longitude'];
-        if ($precision === 'blur_200') {
+        if ($precision === 'exact' || ($precision === 'custom' && $meters <= 0)) {
+            $precision = 'exact';
+            $data['real_lat'] = $origLat;
+            $data['real_lng'] = $origLng;
+        } elseif ($precision === 'custom') {
+            [$blurLat, $blurLng] = Pin::blurCoords($origLat, $origLng, $meters);
+            $data['real_lat'] = $origLat;
+            $data['real_lng'] = $origLng;
+            $data['latitude'] = $blurLat;
+            $data['longitude'] = $blurLng;
+            $data['meta'] = ['blur_meters' => $meters];
+        } elseif ($precision === 'blur_200') {
             [$blurLat, $blurLng] = Pin::blurCoords($origLat, $origLng, 200);
             $data['real_lat'] = $origLat;
             $data['real_lng'] = $origLng;
             $data['latitude'] = $blurLat;
             $data['longitude'] = $blurLng;
-        } elseif ($precision === 'exact') {
-            $data['real_lat'] = $origLat;
-            $data['real_lng'] = $origLng;
         } elseif ($precision === 'district') {
             [$blurLat, $blurLng] = Pin::blurCoords($origLat, $origLng, 1200);
             $data['real_lat'] = $origLat;
@@ -77,6 +89,8 @@ class PinController extends Controller
             $data['latitude'] = $blurLat;
             $data['longitude'] = $blurLng;
         }
+        $data['location_precision'] = $precision;
+        unset($data['blur_meters']);
 
         $requestedRadius = (int) ($data['radius_meters'] ?? 1000);
         $maxRadius = $user->pinRadius();

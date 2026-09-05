@@ -47,6 +47,8 @@ class ProfileUpdateRequest extends FormRequest
             'home_radius_km' => ['nullable','integer','min:1','max:50'],
             'bio' => ['nullable','string','max:10000'],
             'is_anonymous_default' => ['nullable','boolean'],
+            'default_location_precision' => ['nullable','in:blur_200,exact,district,custom'],
+            'default_blur_meters' => ['nullable','integer','min:0','max:5000'],
             'avatar_path' => ['nullable','string','max:255'],
             'plan' => ['nullable','in:free,pro,business'],
         ];

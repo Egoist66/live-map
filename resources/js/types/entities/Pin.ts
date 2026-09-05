@@ -3,7 +3,7 @@ import type { UserBrief } from './User'
 export type PinCategory = 'question' | 'announcement' | 'warning' | 'event' | 'offer' | 'help'
 export type PinPriority = 'normal' | 'sponsored' | 'pinned' | string
 export type PinStatus = 'active' | 'expired' | 'blocked' | string
-export type LocationPrecision = 'blur_200' | 'exact' | 'district'
+export type LocationPrecision = 'blur_200' | 'exact' | 'district' | 'custom'
 export type BoostType = 'top' | 'glow' | 'notify' | 'extend'
 
 export interface Pin {
@@ -47,6 +47,7 @@ export interface CreatePinPayload {
   latitude: number
   longitude: number
   location_precision?: LocationPrecision
+  blur_meters?: number
   is_anonymous?: boolean
   radius_meters?: number
   photo_path?: string | null

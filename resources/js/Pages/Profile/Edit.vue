@@ -47,7 +47,7 @@ const { setTheme } = useTheme()
                 <TabPanel value="0"><SettingsProfileTab :must-verify-email="mustVerifyEmail" :status="status" :bio-empty="s.bioPreviewEmpty.value" :bio-text="s.bioPreviewText.value" /></TabPanel>
                 <TabPanel value="1"><SettingsBillingTab :user="s.u.value" :zone-count="s.zoneCount.value" @profile="s.active.value = 'profile'" /></TabPanel>
                 <TabPanel value="2"><SettingsMyPinsTab :pins="(s.myPins.value as any)" :loading="(s.loadingPins.value as any)" :deleting="false" :format-date="formatDate" :format-time="formatTime" @delete="s.deleteMyPin" /></TabPanel>
-                <TabPanel value="3"><SettingsPrivacyTab :user="s.u.value" :invisible="s.invisible" :hidden="s.hidden" @profile="s.active.value = 'profile'" /></TabPanel>
+                <TabPanel value="3"><SettingsPrivacyTab :user="s.u.value" :invisible="s.invisible" :hidden="s.hidden" :blur="s.blur" @profile="s.active.value = 'profile'" /></TabPanel>
                 <TabPanel value="4"><SettingsAppearanceTab :theme="s.theme.value" @theme="setTheme" /></TabPanel>
                 <TabPanel value="5"><SettingsSecurityTab /></TabPanel>
                 <TabPanel value="6"><SettingsSupportTab :subject="s.support.supportSubject.value" @update:subject="(v:string)=>s.support.supportSubject.value=v" :body="s.support.supportBody.value" @update:body="(v:string)=>s.support.supportBody.value=v" :donate-sel="s.support.donateSel.value" @update:donate="s.support.setDonate" :rate="s.ex.usdRate.value" :rate-loading="s.ex.loading.value" @send="s.support.mailToSupport()" @donate="s.support.mailToDonate(s.ex)" @reload="s.ex.load" /></TabPanel>

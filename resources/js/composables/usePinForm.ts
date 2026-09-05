@@ -10,7 +10,8 @@ export function usePinForm(onCreated?: () => void) {
     category: 'announcement' as PinCategory,
     latitude: 53.9022,
     longitude: 27.5615,
-    location_precision: 'blur_200' as 'blur_200' | 'exact' | 'district',
+    location_precision: 'blur_200' as 'blur_200' | 'exact' | 'district' | 'custom',
+    blur_meters: 200,
     is_anonymous: false,
     radius_meters: 1000,
   })

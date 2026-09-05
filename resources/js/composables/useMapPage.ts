@@ -77,6 +77,10 @@ export function useMapPage() {
 
   function openCreate(lngLat: any) {
     pinCreate.setCoords(lngLat.lat, lngLat.lng)
+    try {
+      const au: any = (page.props as any).auth?.user
+      if (au) pinCreate.setValues({ location_precision: au.default_location_precision || 'blur_200', blur_meters: Number(au.default_blur_meters ?? 200) } as any)
+    } catch {}
     fetchPinAddress(lngLat.lat, lngLat.lng)
     mapApi.addTempMarker(lngLat)
     showCreate.value = true

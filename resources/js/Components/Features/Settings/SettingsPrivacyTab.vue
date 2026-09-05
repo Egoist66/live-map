@@ -6,7 +6,7 @@ import Message from 'primevue/message'
 import Tag from 'primevue/tag'
 
 import SettingsHiddenFriends from './SettingsHiddenFriends.vue'
-defineProps<{ user: any; invisible: any; hidden?: any }>()
+defineProps<{ user: any; invisible: any; hidden?: any; blur: any }>()
 const emit = defineEmits<{ (e: 'profile'): void }>()
 </script>
 <template>
@@ -23,6 +23,28 @@ const emit = defineEmits<{ (e: 'profile'): void }>()
               <li>Анонимный пин скрывает имя и репутацию</li>
               <li>Блокировка в 1 клик скрывает контент пользователя</li>
             </ul>
+          </template>
+        </Card>
+        <Card class="!border-stone-200 !rounded-3xl !shadow-none" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
+          <template #content>
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="text-sm font-semibold dark:text-white">Размытие локации · {{ blur.blurLabel.value }}</div>
+                <p class="text-xs text-stone-500 mt-1 leading-relaxed">Насколько сдвигать точку пина от реального места. Применяется ко всем новым пинам, но каждый пин можно настроить отдельно.</p>
+              </div>
+            </div>
+            <div class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+              <button v-for="o in blur.options" :key="o.v" type="button" @click="blur.setPrecision(o.v)" :class="['px-2 py-2 rounded-xl border text-center transition active:scale-95', blur.precision.value === o.v ? 'bg-stone-900 text-white border-stone-900 dark:bg-white dark:text-stone-900 dark:border-white' : 'bg-white dark:bg-white/[0.06] border-stone-200 dark:border-white/10 text-stone-700 dark:text-zinc-100']">
+                <span class="block text-xs font-bold leading-none">{{ o.l }}</span><span class="block text-[10px] opacity-60 leading-none mt-1">{{ o.d }}</span>
+              </button>
+            </div>
+            <div v-if="blur.precision.value === 'custom'" class="mt-3">
+              <div class="flex items-center justify-between text-xs text-stone-500"><span>Сдвиг точки</span><span class="font-bold text-stone-800 dark:text-zinc-100">{{ blur.blurMeters.value }} м</span></div>
+              <input type="range" min="0" max="5000" step="50" :value="blur.blurMeters.value" @input="blur.setMeters(Number(($event.target as HTMLInputElement).value))" @change="blur.commitMeters()" class="w-full mt-2 accent-stone-900" />
+              <div class="flex justify-between text-[10px] text-stone-400 mt-0.5"><span>0 · точно</span><span>5 км · максимум</span></div>
+            </div>
+            <div v-if="blur.saving.value" class="text-xs text-stone-400 mt-2">Сохраняем…</div>
+            <div v-else-if="blur.saved.value && !blur.dirty.value" class="text-xs text-emerald-600 mt-2">✓ Запомнили — новые пины будут с «{{ blur.blurLabel.value }}»</div>
           </template>
         </Card>
         <Card class="!border-stone-200 !rounded-3xl !shadow-none" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
