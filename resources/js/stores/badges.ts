@@ -2,15 +2,19 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import { chatApi } from '@/services/chat.api'
+import { pinActivityApi } from '@/services/pinActivity.api'
+import { api } from '@/services/api'
 
 export const useBadgeStore = defineStore('badges', () => {
   const unread = ref(0)
   const pending = ref(0)
+  const activity = ref(0)
+  const reports = ref(0)
   const loading = ref(false)
   let echoCh: any = null
   let inited = false
 
-  const total = computed(() => unread.value + pending.value)
+  const total = computed(() => unread.value + pending.value + activity.value + reports.value)
   const seenMsgIds = new Set<number>()
   let fetchTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -41,12 +45,16 @@ export const useBadgeStore = defineStore('badges', () => {
     try {
       const w = window as any
       const convsPromise = w.__conversationsInflight ? w.__conversationsInflight : chatApi.conversations().catch(() => [] as any[])
-      const [convs, fr] = await Promise.all([
+      const [convs, fr, ac, rep] = await Promise.all([
         convsPromise,
         chatApi.friendships().catch(() => ({ pending_in: [] } as any)),
+        pinActivityApi.unreadCount().catch(() => 0),
+        api.get('/api/admin/reports', { params: { status: 'pending', per_page: 1 } }).then((r) => Number(r.data?.pending_count ?? 0)).catch(() => 0),
       ])
       unread.value = (convs as any[]).reduce((s: number, c: any) => s + (c.unread_count || 0), 0)
       pending.value = (fr.pending_in?.length || 0)
+      activity.value = Number(ac) || 0
+      reports.value = Number(rep) || 0
     } catch {}
   }
 
@@ -87,10 +95,16 @@ export const useBadgeStore = defineStore('badges', () => {
 
   function setUnread(v: number) { unread.value = v }
   function setPending(v: number) { pending.value = v }
+  function setActivity(v: number) { activity.value = Math.max(0, v) }
   function decUnread() { unread.value = Math.max(0, unread.value - 1) }
   function incUnread() { unread.value += 1 }
   function incPending() { pending.value += 1 }
   function decPending() { pending.value = Math.max(0, pending.value - 1) }
+  function incActivity() { activity.value += 1 }
+  function decActivity() { activity.value = Math.max(0, activity.value - 1) }
+  function setReports(v: number) { reports.value = Math.max(0, v) }
+  function incReports() { reports.value += 1 }
+  function decReports() { reports.value = Math.max(0, reports.value - 1) }
 
   async function init() {
     if (inited) return
@@ -104,5 +118,5 @@ export const useBadgeStore = defineStore('badges', () => {
 
   function refresh() { return fetch() }
 
-  return { unread, pending, total, loading, init, fetch, refresh, subscribe, setUnread, setPending, decUnread, incUnread, incPending, decPending }
+  return { unread, pending, activity, reports, total, loading, init, fetch, refresh, subscribe, setUnread, setPending, setActivity, setReports, decUnread, incUnread, incPending, decPending, incActivity, decActivity, incReports, decReports }
 })

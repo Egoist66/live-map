@@ -34,7 +34,8 @@ class Pin extends Model
     public function comments(): HasMany { return $this->hasMany(PinComment::class); }
     public function reactions() { return $this->morphMany(Reaction::class, 'reactable'); }
 
-    public function scopeActive(Builder $q): Builder { return $q->where('expires_at', '>', now()); }
+    public function scopeActive(Builder $q): Builder { return $q->where('status', 'active')->where('expires_at', '>', now()); }
+    public function scopeArchivedOnly(Builder $q): Builder { return $q->whereIn('status', ['expired', 'archived'])->orWhere('expires_at', '<=', now()); }
     public function scopeNearby(Builder $q, float $lat, float $lng, int $radiusKm = 5): Builder
     {
         $haversine = "(6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude))))";
@@ -44,7 +45,7 @@ class Pin extends Model
 
     public function isExpired(): bool { return $this->expires_at->isPast(); }
     public function isVisibleForTier(string $plan): bool {
-        $radius = $plan === 'business' ? 5000 : ($plan === 'pro' ? 5000 : 1000);
+        $radius = $plan === 'business' ? 50000 : ($plan === 'pro' ? 5000 : 1000);
         return $this->radius_meters <= $radius;
     }
 
@@ -62,9 +63,36 @@ class Pin extends Model
         return [round($newLat, 7), round($newLng, 7)];
     }
 
+    public static function blurMetersFor(?string $precision, $meta = null): int
+    {
+        if ($precision === 'exact') return 0;
+        if ($precision === 'district') return 1200;
+        if ($precision === 'custom') return max(0, (int) (is_array($meta) ? ($meta['blur_meters'] ?? 200) : 200));
+        return 200;
+    }
+
+    public static function blurHintFor(?string $precision, $meta = null): ?string
+    {
+        $meters = static::blurMetersFor($precision, $meta);
+        if ($meters <= 0 || $precision === 'exact') return null;
+        return 'Виртуальная точка · сдвинута примерно на ' . static::formatMeters($meters) . ' — это не точное местоположение';
+    }
+
+    public static function formatMeters(int $meters): string
+    {
+        if ($meters >= 1000) {
+            $km = $meters / 1000;
+            $str = rtrim(rtrim(number_format($km, 1, ',', ' '), '0'), ',');
+            return $str . ' км';
+        }
+        return $meters . ' м';
+    }
+
     public function toPublicArray(?int $viewerId = null): array
     {
         $isOwner = $viewerId && $this->user_id === $viewerId;
+        $meta = is_array($this->meta) ? $this->meta : (is_string($this->meta) ? json_decode($this->meta, true) : []);
+        $blurMeters = static::blurMetersFor($this->location_precision, $meta);
         return [
             'id' => $this->id,
             'title' => $this->title,
@@ -82,6 +110,11 @@ class Pin extends Model
             'comments_count' => $this->comments_count,
             'is_anonymous' => (bool) $this->is_anonymous,
             'is_owner' => $isOwner,
+            'location_precision' => $this->location_precision,
+            'is_blurred' => $this->location_precision !== 'exact' && $blurMeters > 0,
+            'blur_meters' => $blurMeters,
+            'blur_label' => $blurMeters > 0 ? static::formatMeters($blurMeters) : null,
+            'blur_hint' => static::blurHintFor($this->location_precision, $meta),
             'user' => $this->is_anonymous && !$isOwner ? null : ($this->user ? array_merge($this->user->only(['id', 'name', 'avatar_path', 'level']), ['avatar_url' => $this->user->avatar_url]) : null),
             'created_at' => $this->created_at,
         ];

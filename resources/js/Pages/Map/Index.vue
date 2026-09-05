@@ -5,17 +5,20 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import MapTopBar from '@/Components/Features/Map/MapTopBar.vue'
 import MapCreateDialog from '@/Components/Features/Map/MapCreateDialog.vue'
 import PinDetailsCard from '@/Components/Features/Map/PinDetailsCard.vue'
+import ReportDialog from '@/Components/Features/Map/ReportDialog.vue'
 import MapInfoDialogs from '@/Components/Features/Map/MapInfoDialogs.vue'
 import { useSeo } from '@/composables/useSeo'
 import { useMapPage } from '@/composables/useMapPage'
 import { useMapPinChat } from '@/composables/useMapPinChat'
+import { useReportDialog } from '@/composables/useReportDialog'
 import { formatTime } from '@/utils/date'
 import Toast from 'primevue/toast'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 const seo = useSeo({ title: 'Карта — UPin', description: 'Живая карта UPin.', noindex: true })
-const { store, categories, selectedCategory, filteredPins, pinDetails, pinCreate, pinEdit, mapApi, showCreate, pinAddress, loadingPinAddress, myStreet, loadingStreet, radiusOptions, radiusLabel, closeCreate, deleteSelectedPin, saveEdit, init, destroy, showLiveInfo, showMyPins, myPins, handleMineClick, flyToPin } = useMapPage() as any
-const { selectedPin, comments, commentText, react, sendComment, reportPin, editingCommentId, editingContent, startEditComment, cancelEditComment, saveEditComment, reactAsyncStatus, createCommentAsyncStatus, boostMutation, reportMutation, updateCommentMutation } = pinDetails as any
+const { store, categories, selectedCategory, filteredPins, pinDetails, pinCreate, pinEdit, mapApi, showCreate, pinAddress, loadingPinAddress, myStreet, loadingStreet, radiusOptions, radiusLabel, homeZone, closeCreate, deleteSelectedPin, saveEdit, init, destroy, showLiveInfo, showMyPins, myPins, handleMineClick, flyToPin } = useMapPage() as any
+const { selectedPin, comments, commentText, react, sendComment, editingCommentId, editingContent, startEditComment, cancelEditComment, saveEditComment, reactAsyncStatus, createCommentAsyncStatus, boostMutation, updateCommentMutation } = pinDetails as any
+const reportDialog = useReportDialog()
 const { mapContainer, loaded } = mapApi
 useMapPinChat(selectedPin)
 
@@ -41,8 +44,13 @@ onUnmounted(destroy)
         </Transition>
       </div>
       <MapCreateDialog :open="showCreate" @update:open="(v:boolean)=>showCreate=v" :pin-create="pinCreate" :categories="categories" :pin-address="pinAddress" :loading-address="loadingPinAddress" :radius-options="radiusOptions" :radius-label="radiusLabel" @close="closeCreate" />
+      <div v-if="homeZone" class="absolute bottom-3 left-3 z-10 pointer-events-none bg-white/95 dark:bg-zinc-900/95 backdrop-blur border border-violet-200 dark:border-violet-900/60 rounded-2xl px-3 py-2 shadow flex items-center gap-2">
+        <span class="w-4 h-4 rounded-full bg-violet-500/15 border border-dashed border-violet-500 grid place-items-center shrink-0"><span class="w-1.5 h-1.5 rounded-full bg-violet-600 block"></span></span>
+        <span class="text-[11px] font-semibold text-violet-900 dark:text-violet-200">Домашняя зона {{ homeZone.radiusKm }} км — вижу чужие и мои</span>
+      </div>
       <Transition enter-active-class="transition duration-200 ease-out" enter-from-class="opacity-0 translate-y-4" enter-to-class="opacity-100 translate-y-0" leave-active-class="transition duration-150 ease-in" leave-from-class="opacity-100" leave-to-class="opacity-0 translate-y-4">
-        <PinDetailsCard :pin="selectedPin" :comments="comments" :comment-text="commentText" @update:comment="(v:string)=>commentText=v" :creating-comment="createCommentAsyncStatus?.value==='loading'" :editing-comment-id="editingCommentId" :editing-content="editingContent" @update:edit-content="(v:string)=>editingContent=v" :saving-comment="updateCommentMutation?.asyncStatus?.value==='loading'" :reacting="reactAsyncStatus?.value==='loading'" :reporting="reportMutation?.asyncStatus?.value==='loading'" :pin-edit="pinEdit" :categories="categories" :deleting="store.deleting" :auth-id="($page as any).props.auth?.user?.id ?? 0" @close="pinDetails.closePin()" @delete="deleteSelectedPin" @react="(k:string)=>react(selectedPin, k)" @report="reportPin(selectedPin)" @send-comment="sendComment" @start-edit-comment="startEditComment" @cancel-edit-comment="cancelEditComment" @save-edit-comment="saveEditComment" @save-edit="saveEdit" />
+        <PinDetailsCard :pin="selectedPin" :comments="comments" :comment-text="commentText" @update:comment="(v:string)=>commentText=v" :creating-comment="createCommentAsyncStatus?.value==='loading'" :editing-comment-id="editingCommentId" :editing-content="editingContent" @update:edit-content="(v:string)=>editingContent=v" :saving-comment="updateCommentMutation?.asyncStatus?.value==='loading'" :reacting="reactAsyncStatus?.value==='loading'" :reporting="reportDialog.sending.value" :pin-edit="pinEdit" :categories="categories" :deleting="store.deleting" :auth-id="($page as any).props.auth?.user?.id ?? 0" @close="pinDetails.closePin()" @delete="deleteSelectedPin" @react="(k:string)=>react(selectedPin, k)" @report="reportDialog.openReport('pin', selectedPin.id, selectedPin.title)" @send-comment="sendComment" @start-edit-comment="startEditComment" @cancel-edit-comment="cancelEditComment" @save-edit-comment="saveEditComment" @save-edit="saveEdit" />
+        <ReportDialog :dialog="reportDialog" />
       </Transition>
       <MapInfoDialogs :live-open="showLiveInfo" @update:live="(v:boolean)=>showLiveInfo=v" :my-open="showMyPins" @update:my="(v:boolean)=>showMyPins=v" :my-pins="myPins" :format-time="formatTime" @fly="flyToPin" />
     </div>

@@ -5,6 +5,8 @@ import { usePresence } from '@/composables/usePresence'
 import { useNavigation } from '@/composables/useNavigation'
 import { useAppNotifications } from '@/composables/useAppNotifications'
 import { useBellNotifications } from '@/composables/useBellNotifications'
+import { usePinActivity } from '@/composables/usePinActivity'
+import { useAdminReports } from '@/composables/useAdminReports'
 
 export function useAppLayout() {
   const badge = useBadgeStore()
@@ -12,6 +14,8 @@ export function useAppLayout() {
   const { user, avatarSrc, dashboardHref, settingsHref } = useNavigation()
   const appNotes = useAppNotifications()
   const bell = useBellNotifications()
+  const pinActivity = usePinActivity()
+  const adminReports = useAdminReports()
   const showDrawer = ref(false)
   const menu = ref()
   const menuItems = computed(() => [
@@ -36,8 +40,8 @@ export function useAppLayout() {
     router.post(route('logout'))
   }
   function logout() { doLogout() }
-  onMounted(() => { badge.init(); presence.connect(); appNotes.init() })
+  onMounted(() => { badge.init(); presence.connect(); appNotes.init(); pinActivity.init(); adminReports.init() })
   onBeforeUnmount(() => presence.disconnect())
   router.on('navigate', () => { presence.connect(); showDrawer.value = false })
-  return { badge, presence, user, avatarSrc, dashboardHref, settingsHref, bell, showDrawer, menu, menuItems, toggleMenu, closeDrawer, logout }
+  return { badge, presence, user, avatarSrc, dashboardHref, settingsHref, bell, pinActivity, adminReports, showDrawer, menu, menuItems, toggleMenu, closeDrawer, logout }
 }

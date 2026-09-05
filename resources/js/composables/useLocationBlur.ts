@@ -2,22 +2,50 @@ import { ref, computed, watch } from 'vue'
 import { usePage, router } from '@inertiajs/vue3'
 import { useToast } from 'primevue/usetoast'
 
-export type BlurPrecision = 'blur_200' | 'exact' | 'district' | 'custom'
+export const GEO_BLUR_DEFAULT = 300
+export const GEO_BLUR_MAX = 5000
 
-export const BLUR_OPTIONS: { v: BlurPrecision; l: string; d: string }[] = [
-  { v: 'exact', l: 'Точное', d: 'без сдвига' },
-  { v: 'blur_200', l: '200 м', d: 'по умолчанию' },
-  { v: 'custom', l: 'Своё', d: 'ползунок' },
-  { v: 'district', l: 'Район', d: '~1,2 км' },
+export const GEO_BLUR_OPTIONS: { v: number; l: string; d: string; pro?: boolean }[] = [
+  { v: 0, l: 'Точное', d: 'без сдвига' },
+  { v: 300, l: '300 м', d: 'по умолчанию' },
+  { v: 1000, l: '1 км', d: '' },
+  { v: 5000, l: '5 км', d: 'PRO', pro: true },
 ]
 
-export const BLUR_MAX_METERS = 5000
+export function formatBlurMeters(meters: number): string {
+  if (meters >= 1000) {
+    const s = (meters / 1000).toFixed(1).replace('.', ',').replace(',0', '')
+    return `${s} км`
+  }
+  return `${meters} м`
+}
 
-export function blurLabelFor(precision?: string | null, meters?: number | null): string {
-  if (precision === 'exact') return 'Точное место'
-  if (precision === 'district') return 'Район ~1,2 км'
-  if (precision === 'custom') return `Своё · ${Number(meters ?? 200)} м`
-  return '200 м'
+export function geoBlurLabel(meters?: number | null): string {
+  const m = Number(meters ?? GEO_BLUR_DEFAULT)
+  if (m <= 0) return 'Точное место'
+  return `~${formatBlurMeters(m)}`
+}
+
+export function blurCoords(lat: number, lng: number, meters: number): [number, number] {
+  if (!meters || meters <= 0) return [lat, lng]
+  const r = meters / 111300
+  const u = Math.random()
+  const v = Math.random()
+  const w = r * Math.sqrt(u)
+  const t = 2 * Math.PI * v
+  const cosLat = Math.cos((lat * Math.PI) / 180) || 1
+  return [Number((lat + w * Math.sin(t)).toFixed(7)), Number((lng + (w * Math.cos(t)) / cosLat).toFixed(7))]
+}
+
+export function pinBlurInfo(p: any): { blurred: boolean; label: string; hint: string } | null {
+  if (!p) return null
+  if (p.blur_hint) return { blurred: !!p.is_blurred, label: p.blur_label || '', hint: p.blur_hint }
+  const precision = p.location_precision
+  if (!precision || precision === 'exact') return null
+  const meters = precision === 'district' ? 1200 : Number(p?.meta?.blur_meters ?? 200)
+  if (meters <= 0) return null
+  const label = `~${formatBlurMeters(meters)}`
+  return { blurred: true, label, hint: `Виртуальная точка · сдвинута примерно на ${formatBlurMeters(meters)} — это не точное местоположение` }
 }
 
 export function useLocationBlur() {
@@ -25,37 +53,33 @@ export function useLocationBlur() {
   const authUser = computed(() => (page.props.auth as any)?.user)
   const toast = (() => { try { return useToast() } catch { return null as any } })()
 
-  const precision = ref<BlurPrecision>((authUser.value?.default_location_precision as BlurPrecision) || 'blur_200')
-  const blurMeters = ref<number>(Number(authUser.value?.default_blur_meters ?? 200))
+  const blurMeters = ref<number>(Number(authUser.value?.default_blur_meters ?? GEO_BLUR_DEFAULT))
   const saving = ref(false)
   const saved = ref(false)
 
+  const isPro = computed(() => {
+    const u = authUser.value
+    return !!u?.is_admin || u?.role === 'admin' || ['pro', 'business'].includes(u?.plan)
+  })
+  const canUse5km = computed(() => isPro.value)
+
   watch(authUser, (u) => {
-    if (!u) return
-    if (!saving.value) {
-      precision.value = (u.default_location_precision as BlurPrecision) || 'blur_200'
-      blurMeters.value = Number(u.default_blur_meters ?? 200)
-    }
+    if (!u || saving.value) return
+    blurMeters.value = Number(u.default_blur_meters ?? GEO_BLUR_DEFAULT)
   })
 
-  const blurLabel = computed(() => blurLabelFor(precision.value, blurMeters.value))
-  const dirty = computed(
-    () => precision.value !== ((authUser.value?.default_location_precision as string) || 'blur_200') || blurMeters.value !== Number(authUser.value?.default_blur_meters ?? 200),
-  )
-
-  function setPrecision(v: BlurPrecision) {
-    precision.value = v
-    saved.value = false
-    save()
-  }
+  const blurLabel = computed(() => geoBlurLabel(blurMeters.value))
+  const dirty = computed(() => blurMeters.value !== Number(authUser.value?.default_blur_meters ?? GEO_BLUR_DEFAULT))
 
   function setMeters(v: number) {
-    blurMeters.value = Math.max(0, Math.min(BLUR_MAX_METERS, Math.round(v)))
+    const next = Math.max(0, Math.min(GEO_BLUR_MAX, Math.round(v)))
+    if (next > 1000 && !canUse5km.value) {
+      toast?.add({ severity: 'warn', summary: 'Только Pro', detail: 'Размытие 5 км доступно на тарифе Pro/Business', life: 3000 })
+      return
+    }
+    blurMeters.value = next
     saved.value = false
-  }
-
-  function commitMeters() {
-    if (dirty.value) save()
+    save()
   }
 
   function save() {
@@ -64,7 +88,7 @@ export function useLocationBlur() {
     saving.value = true
     router.patch(
       route('profile.update'),
-      { name: u.name, email: u.email, default_location_precision: precision.value, default_blur_meters: blurMeters.value } as any,
+      { name: u.name, email: u.email, default_blur_meters: blurMeters.value, default_location_precision: blurMeters.value <= 0 ? 'exact' : 'custom' } as any,
       {
         preserveScroll: true,
         onSuccess: () => { saved.value = true; toast?.add({ severity: 'success', summary: 'Размытие сохранено', life: 2000 }) },
@@ -74,11 +98,5 @@ export function useLocationBlur() {
     )
   }
 
-  function applyToPinCreate(pinCreate: any) {
-    try {
-      pinCreate.setValues?.({ location_precision: precision.value, blur_meters: blurMeters.value } as any)
-    } catch {}
-  }
-
-  return { precision, blurMeters, blurLabel, dirty, saving, saved, setPrecision, setMeters, commitMeters, save, applyToPinCreate, options: BLUR_OPTIONS }
+  return { blurMeters, blurLabel, dirty, saving, saved, isPro, canUse5km, setMeters, save, options: GEO_BLUR_OPTIONS }
 }

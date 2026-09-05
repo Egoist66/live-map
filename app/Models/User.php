@@ -62,7 +62,16 @@ class User extends Authenticatable
     public function pinRadius(): int
     {
         if ($this->isAdmin()) return 50000;
+        if ($this->plan === 'business') return 50000;
         return $this->plan === 'free' ? 1000 : 5000;
+    }
+
+    public function homeRadiusLimit(): int
+    {
+        if ($this->isAdmin()) return 50;
+        if ($this->plan === 'business') return 50;
+        if ($this->plan === 'pro') return 5;
+        return 1;
     }
 
     public function isPro(): bool { return $this->isAdmin() || in_array($this->plan, ['pro','business']); }

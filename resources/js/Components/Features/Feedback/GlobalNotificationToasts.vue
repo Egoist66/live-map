@@ -15,9 +15,9 @@ const { toasts, remove, openToast } = useAppNotifications()
           <img :src="t.avatar || ''" class="w-11 h-11 rounded-full object-cover border border-stone-200 dark:border-zinc-700 bg-stone-100" :alt="t.title" />
           <span
             class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full grid place-items-center border-2 border-white dark:border-zinc-900 shadow text-white text-xs"
-            :class="t.type==='message' ? 'bg-violet-600' : 'bg-amber-500'"
+            :class="t.type==='message' ? 'bg-violet-600' : t.type==='pin' ? 'bg-rose-500' : t.type==='report' ? 'bg-red-600' : 'bg-amber-500'"
           >
-            <i :class="t.type==='message' ? 'pi pi-comments text-[10px]' : 'pi pi-user-plus text-[10px]'" />
+            <i :class="t.type==='message' ? 'pi pi-comments text-[10px]' : t.type==='pin' ? 'pi pi-heart text-[10px]' : t.type==='report' ? 'pi pi-flag text-[10px]' : 'pi pi-user-plus text-[10px]'" />
           </span>
           <span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-zinc-900 animate-[ping_1.6s_ease-out_infinite] opacity-60"></span>
         </div>

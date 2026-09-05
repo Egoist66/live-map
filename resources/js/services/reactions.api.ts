@@ -7,8 +7,8 @@ export const reactionsApi = {
     return data
   },
 
-  async report(target_type: string, target_id: number, reason = 'spam'): Promise<unknown> {
-    const { data } = await api.post('/api/reports', { target_type, target_id, reason } as ReportPayload)
+  async report(target_type: string, target_id: number, reason = 'spam', description?: string): Promise<unknown> {
+    const { data } = await api.post('/api/reports', { target_type, target_id, reason, description } as ReportPayload)
     return data
   },
 }

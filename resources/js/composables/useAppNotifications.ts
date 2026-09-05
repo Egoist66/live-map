@@ -5,7 +5,7 @@ import { showLocal } from '@/pwa/push.service'
 
 export type AppToast = {
   id: string
-  type: 'message' | 'friend'
+  type: 'message' | 'friend' | 'pin' | 'report'
   title: string
   body: string
   avatar: string | null
@@ -16,6 +16,7 @@ export type AppToast = {
 const toasts = ref<AppToast[]>([])
 let inited = false
 let echoCh: any = null
+let adminMode = false
 let seenMsgIds = new Set<number>()
 let timers = new Map<string, ReturnType<typeof setTimeout>>()
 
@@ -110,6 +111,47 @@ function handleFriendship(e: any) {
     })
   }
 }
+function handlePinActivity(e: any) {
+  const a = e?.activity
+  if (!a?.id) return
+  const actor = a.actor || {}
+  const name = actor.name || 'Кто-то'
+  const pinTitle = a.pin?.title || 'ваш пин'
+  const emoji: Record<string, string> = { like: '❤️', fire: '🔥', laugh: '😂', sad: '😢', angry: '😡', useful: '👍' }
+  const body = a.kind === 'comment'
+    ? (a.excerpt ? `${name}: ${a.excerpt}` : `${name} прокомментировал «${pinTitle}»`).slice(0, 90)
+    : `${name} ${emoji[a.reaction_type] || '⭐'} «${pinTitle}»`.slice(0, 90)
+  push({
+    id: `pin-${a.id}-${Date.now()}`,
+    type: 'pin',
+    title: a.kind === 'comment' ? 'Новый комментарий' : 'Новая реакция',
+    body,
+    avatar: avatarSrcFor(actor),
+    link: '/map',
+    createdAt: Date.now(),
+  })
+}
+function isAdminNow(): boolean {
+  try {
+    const u = (usePage().props.auth as any)?.user
+    return !!u?.is_admin || u?.role === 'admin'
+  } catch { return false }
+}
+function handleReport(e: any) {
+  if (!adminMode || !e?.report?.id) return
+  const r = e.report
+  const title = r.target_title || `${r.target_type} #${r.target_id}`
+  const body = (r.description ? `${r.description} — ` : '') + `от ${r.reporter?.name || 'пользователя'}`
+  push({
+    id: `rep-${r.id}-${Date.now()}`,
+    type: 'report',
+    title: `Жалоба: ${r.reason_label || r.reason}`,
+    body: `${title} · ${body}`.slice(0, 90),
+    avatar: avatarSrcFor(r.reporter || {}),
+    link: '/settings?tab=admin',
+    createdAt: Date.now(),
+  })
+}
 function subscribe() {
   try {
     const echo = getEcho()
@@ -118,8 +160,13 @@ function subscribe() {
     if (!uid) return
     if (echoCh) return
     echoCh = echo.private(`user.${uid}`)
+    adminMode = isAdminNow()
     echoCh.listen('.message.sent', handleMessage)
     echoCh.listen('.friendship.updated', handleFriendship)
+    echoCh.listen('.pin.activity', handlePinActivity)
+    echoCh.listen('PinActivityCreated', handlePinActivity)
+    echoCh.listen('.report.created', handleReport)
+    echoCh.listen('ReportCreated', handleReport)
     const pusher = (echo as any).connector?.pusher
     if (pusher) pusher.connection.bind('connected', () => { if (!echoCh) subscribe() })
   } catch {}

@@ -58,6 +58,41 @@ class WebPushService
         ]);
     }
 
+    public function sendPinActivity(User $recipient, User $actor, \App\Models\Pin $pin, \App\Models\PinActivity $activity): int
+    {
+        $name = $actor->name ?: 'Кто-то';
+        $title = mb_strimwidth($pin->title ?: 'Пин', 0, 40, '…');
+        if ($activity->kind === 'comment') {
+            $body = $activity->excerpt ? "{$name}: {$activity->excerpt}" : "{$name} комментирует «{$title}»";
+            $tag = "pin-{$pin->id}-comment-{$activity->id}";
+        } else {
+            $emoji = ['like' => '❤️', 'fire' => '🔥', 'laugh' => '😂', 'sad' => '😢', 'angry' => '😡', 'useful' => '👍'][$activity->reaction_type ?? ''] ?? '⭐';
+            $body = "{$name} {$emoji} «{$title}»";
+            $tag = "pin-{$pin->id}-reaction-{$activity->id}";
+        }
+        return $this->sendToUser($recipient, [
+            'title' => 'Активность пина',
+            'body' => $body,
+            'url' => '/map',
+            'tag' => $tag,
+            'avatar' => $actor->avatar_url,
+        ]);
+    }
+
+    public function sendReport(User $recipient, \App\Models\Report $report): int
+    {
+        $reasons = \App\Models\Report::reasons();
+        $reason = $reasons[$report->reason] ?? $report->reason;
+        $title = $report->targetTitle();
+        return $this->sendToUser($recipient, [
+            'title' => "Жалоба #{$report->id}: {$reason}",
+            'body' => ($title ? "«{$title}»" : "{$report->target_type} #{$report->target_id}").($report->description ? " — {$report->description}" : ''),
+            'url' => '/settings?tab=admin',
+            'tag' => 'report-'.$report->id,
+            'avatar' => null,
+        ]);
+    }
+
     public function sendToSubscriptions(Collection $subscriptions, array $payload): int
     {
         if ($subscriptions->isEmpty() || ! $this->isConfigured()) {

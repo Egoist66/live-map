@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Pin;
 use App\Models\PinComment;
 use App\Models\Reaction;
+use App\Services\PinActivityNotifier;
 use Illuminate\Http\Request;
 
 class ReactionController extends Controller
@@ -25,6 +26,8 @@ class ReactionController extends Controller
                     $model->decrement('reactions_count');
                     if ($data['type'] === 'like') $model->decrement('likes_count');
                     $model->refresh();
+                    PinActivityNotifier::counters($model);
+                    $model->refresh();
                 }
                 return response()->json(['reacted' => false, 'type' => null, 'reactions_count' => $model->reactions_count ?? 0, 'likes_count' => $model->likes_count ?? 0]);
             }
@@ -33,6 +36,8 @@ class ReactionController extends Controller
             if ($data['reactable_type'] === 'pin') {
                 if ($prev === 'like' && $data['type'] !== 'like') $model->decrement('likes_count');
                 if ($prev !== 'like' && $data['type'] === 'like') $model->increment('likes_count');
+                $model->refresh();
+                PinActivityNotifier::reaction($model, $request->user(), $data['type']);
                 $model->refresh();
             }
             return response()->json(['reacted' => true, 'type' => $data['type'], 'switched' => true, 'reactions_count' => $model->reactions_count ?? 0, 'likes_count' => $model->likes_count ?? 0]);
@@ -45,6 +50,8 @@ class ReactionController extends Controller
             if ($model->reactions_count % 5 === 0 && $model->expires_at->diffInHours(now()) < 23) {
                 $model->update(['expires_at' => $model->expires_at->addHour()]);
             }
+            PinActivityNotifier::reaction($model, $request->user(), $data['type']);
+            $model->refresh();
         }
         return response()->json(['reacted' => true, 'type' => $data['type'], 'reactions_count' => $model->reactions_count ?? 0, 'likes_count' => $model->likes_count ?? 0]);
     }

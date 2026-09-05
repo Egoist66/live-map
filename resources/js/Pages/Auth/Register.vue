@@ -5,6 +5,7 @@ import { useRegisterForm } from '@/composables/useAuthForm'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
+import HomeZoneField from '@/Components/Features/HomeZone/HomeZoneField.vue'
 const f = useRegisterForm()
 </script>
 
@@ -43,9 +44,9 @@ const f = useRegisterForm()
       <div class="bg-stone-50 dark:bg-zinc-800/60 border border-stone-200 dark:border-zinc-700 rounded-2xl p-3.5 space-y-2.5">
         <div class="flex items-center justify-between">
           <label class="text-[13px] font-semibold text-ink-900 dark:text-zinc-100">Домашняя зона</label>
-          <span class="text-[11px] font-bold bg-white dark:bg-zinc-700 text-ink-900 dark:text-white border border-stone-200 dark:border-zinc-600 rounded-full px-2.5 py-1">{{ f.values.home_radius_km }} км</span>
+          <span class="text-[11px] font-bold bg-violet-100 dark:bg-violet-500/20 text-violet-800 dark:text-violet-200 border border-violet-200 dark:border-violet-700 rounded-full px-2.5 py-1">{{ f.values.home_radius_km }} км · FREE</span>
         </div>
-        <p class="text-[11px] text-stone-500 dark:text-zinc-400 leading-relaxed">Выбери район где живёшь/бываешь — пин видят только рядом.</p>
+        <p class="text-[11px] text-stone-500 dark:text-zinc-400 leading-relaxed">Выбери район где живёшь/бываешь — видишь чужие и свои пины в этом радиусе. Тот же радиус, что у пина.</p>
         <Button type="button" @click="f.detectLocation" :loading="f.locating.value" severity="secondary" outlined rounded class="w-full" :label="f.values.home_lat ? 'Обновить моё место' : 'Определить моё место'" icon="pi pi-map-marker" />
         <div v-if="f.values.home_address || f.addrLoading.value" class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-700 rounded-xl px-3 py-2.5 flex items-center gap-2">
           <span class="w-7 h-7 rounded-full bg-ink-900 dark:bg-white dark:text-ink-900 text-white grid place-items-center shrink-0 text-[11px]">◉</span>
@@ -54,9 +55,8 @@ const f = useRegisterForm()
             <div v-if="f.values.home_lat" class="text-[11px] text-stone-400 dark:text-zinc-400 font-mono">{{ f.values.home_lat }}, {{ f.values.home_lng }}</div>
           </div>
         </div>
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-          <button v-for="r in [1,2,5,10]" :key="r" type="button" @click="f.setValues({ home_radius_km: r } as any)" :class="['rounded-full py-2 text-xs font-semibold border transition', f.values.home_radius_km===r?'bg-ink-900 dark:bg-white dark:text-ink-900 text-white border-ink-900 dark:border-white':'bg-white dark:bg-zinc-800 dark:text-zinc-200 border-stone-200 dark:border-zinc-700']">{{ r }} км</button>
-        </div>
+        <HomeZoneField :model-value="Number(f.values.home_radius_km ?? 1)" plan="free" :error="f.errors.value.home_radius_km" @update:model-value="(v:number)=>f.setValues({ home_radius_km: v } as any)" />
+        <p class="text-[11px] text-stone-500 dark:text-zinc-400">Больше радиус? Pro — до 5 км, Business — до 50 км. Сменишь после регистрации в тарифе.</p>
       </div>
       <Button :loading="f.isSubmitting.value" type="submit" label="Создать аккаунт →" class="w-full !bg-ink-900 dark:!bg-[#FAFAFA] !border-ink-900 dark:!border-[#FAFAFA] !text-white dark:!text-[#0F172A] !rounded-full !py-3.5 [&_.p-button-label]:!text-white dark:[&_.p-button-label]:!text-[#0F172A]" />
       <div class="text-sm text-center text-stone-500 dark:text-zinc-400">Уже есть? <Link :href="route('login')" class="font-semibold text-ink-900 dark:text-white hover:underline">Войти</Link></div>

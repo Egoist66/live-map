@@ -45,6 +45,11 @@ export function useMapPage() {
 
   const page: any = usePage()
   const userPlan = computed(() => page.props.auth?.user?.plan || 'free')
+  const homeZone = computed(() => {
+    const u = page.props.auth?.user
+    if (!u?.home_lat || !u?.home_lng) return null
+    return { lat: Number(u.home_lat), lng: Number(u.home_lng), radiusKm: Number(u.home_radius_km ?? 1) }
+  })
   const radiusOptions = computed(() => {
     const isPro = userPlan.value === 'pro' || userPlan.value === 'business'
     return [
@@ -77,10 +82,6 @@ export function useMapPage() {
 
   function openCreate(lngLat: any) {
     pinCreate.setCoords(lngLat.lat, lngLat.lng)
-    try {
-      const au: any = (page.props as any).auth?.user
-      if (au) pinCreate.setValues({ location_precision: au.default_location_precision || 'blur_200', blur_meters: Number(au.default_blur_meters ?? 200) } as any)
-    } catch {}
     fetchPinAddress(lngLat.lat, lngLat.lng)
     mapApi.addTempMarker(lngLat)
     showCreate.value = true
@@ -93,6 +94,11 @@ export function useMapPage() {
 
   watch(showCreate, (v) => {
     if (v && !pinAddress.value) fetchPinAddress((pinCreate.values as any).latitude, (pinCreate.values as any).longitude)
+  })
+
+  watch(homeZone, (z) => {
+    if (!z) return
+    try { (mapApi as any).showHomeZone?.(z.lat, z.lng, z.radiusKm) } catch {}
   })
 
   async function deleteSelectedPin() {
@@ -138,6 +144,7 @@ export function useMapPage() {
     try {
       const mine = await store.fetchMine()
       mine.forEach((p: any) => { if (!store.pins.find((x: any) => x.id === p.id)) store.pins.unshift(p) })
+      store.pruneExpired()
     } catch {}
     await nextTick()
     await mapApi.initMap([geo.lng, geo.lat] as any, (e: any) => {
@@ -145,6 +152,10 @@ export function useMapPage() {
       if (target?.closest?.('.maplibregl-marker')) return
       openCreate(e.lngLat)
     })
+    try {
+      const hz = homeZone.value
+      if (hz) (mapApi as any).showHomeZone?.(hz.lat, hz.lng, hz.radiusKm)
+    } catch {}
     if (gotGeo) mapApi.showUserLocation(geo.lat, geo.lng)
     else try { mapApi.map?.setZoom(7) } catch {}
     setTimeout(() => mapApi.triggerGeolocate(), 800)
@@ -163,7 +174,7 @@ export function useMapPage() {
   return {
     store, categories, selectedCategory, filteredPins, pinDetails, pinCreate, pinEdit, mapApi,
     showCreate, pinAddress, loadingPinAddress, myStreet, loadingStreet,
-    radiusOptions, radiusLabel, openCreate, openCreateFromUI, closeCreate, deleteSelectedPin, saveEdit, init, destroy,
+    radiusOptions, radiusLabel, homeZone, openCreate, openCreateFromUI, closeCreate, deleteSelectedPin, saveEdit, init, destroy,
     deleteMutation,
     ...overlays,
   }

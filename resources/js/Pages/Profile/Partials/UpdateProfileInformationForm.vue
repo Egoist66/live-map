@@ -13,6 +13,7 @@ import Card from 'primevue/card'
 import Select from 'primevue/select'
 import Message from 'primevue/message'
 import Avatar from 'primevue/avatar'
+import HomeZoneField from '@/Components/Features/HomeZone/HomeZoneField.vue'
 defineProps<{ mustVerifyEmail: boolean; status?: string | null }>()
 const f = useProfileForm()
 const a = useAvatarUpload()
@@ -90,10 +91,12 @@ const planOptions = [{ label:'Free — 3/день · 1км', value:'free', icon:
       <Card class="!bg-zinc-50 dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 !rounded-3xl !shadow-none" :pt="{ body:{ class:'!p-4' }, content:{ class:'!p-0' } }">
         <template #content>
           <div class="flex items-center justify-between"><h4 class="text-sm font-bold dark:text-white">Домашняя зона</h4><Button @click="f.useMyLocation" label="Моя геопозиция" size="small" rounded class="!bg-black dark:!bg-white !border-black dark:!border-white !text-white dark:!text-black" /></div>
-          <div class="grid sm:grid-cols-3 gap-3 mt-3">
+          <div class="grid sm:grid-cols-2 gap-3 mt-3">
             <div><label class="text-xs font-medium dark:text-white">Широта</label><InputText v-model="f.home_lat.value" v-bind="f.homeLatAttrs" placeholder="55.75" class="w-full mt-1 !rounded-2xl" :invalid="!!f.errors.value.home_lat" /><Message v-if="f.errors.value.home_lat" severity="error" :closable="false" class="mt-1 !text-xs">{{ f.errors.value.home_lat }}</Message></div>
             <div><label class="text-xs font-medium dark:text-white">Долгота</label><InputText v-model="f.home_lng.value" v-bind="f.homeLngAttrs" placeholder="37.61" class="w-full mt-1 !rounded-2xl" :invalid="!!f.errors.value.home_lng" /><Message v-if="f.errors.value.home_lng" severity="error" :closable="false" class="mt-1 !text-xs">{{ f.errors.value.home_lng }}</Message></div>
-            <div><label class="text-xs font-medium dark:text-white">Радиус км</label><InputText v-model.number="f.values.home_radius_km" type="number" class="w-full mt-1 !rounded-2xl" /><Message v-if="f.errors.value.home_radius_km" severity="error" :closable="false" class="mt-1 !text-xs">{{ f.errors.value.home_radius_km }}</Message></div>
+          </div>
+          <div class="mt-3">
+            <HomeZoneField :model-value="Number(f.values.home_radius_km ?? 1)" :plan="String(f.values.plan || 'free')" :error="f.errors.value.home_radius_km" @update:model-value="(v:number)=>f.setValues({ home_radius_km: v } as any)" />
           </div>
         </template>
       </Card>

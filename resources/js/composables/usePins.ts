@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue'
 import { usePinsStore } from '@/stores/pins'
+import { isPinAlive } from '@/composables/usePinExpiry'
 import type { Pin, CreatePinPayload } from '@/types/entities/Pin'
 
 const selectedCategory = ref('all')
@@ -17,9 +18,10 @@ export function usePins() {
   ] as const
 
   const filteredPins = computed(() => {
-    if (selectedCategory.value === 'all') return store.pins
-    if (selectedCategory.value === 'mine') return store.pins.filter((p) => p.is_owner)
-    return store.pins.filter((p) => p.category === selectedCategory.value)
+    const alive = (store.pins as any[]).filter((p) => isPinAlive(p))
+    if (selectedCategory.value === 'all') return alive
+    if (selectedCategory.value === 'mine') return alive.filter((p) => p.is_owner)
+    return alive.filter((p) => p.category === selectedCategory.value)
   })
 
   function fetchNearby(lat: number, lng: number, radius?: number) {

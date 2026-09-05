@@ -24,6 +24,11 @@ export function useSettingsTabs() {
   const page = usePage()
   const isAdmin = computed(() => !!((page.props.auth as any)?.user?.is_admin) || (page.props.auth as any)?.user?.role === 'admin')
   const active = ref<SettingsTabId>('profile')
+  try {
+    const t = new URLSearchParams(window.location.search).get('tab') as SettingsTabId | null
+    const all = [...SETTINGS_TABS, ADMIN_TAB]
+    if (t && all.some((x) => x.id === t) && (t !== 'admin' || isAdmin.value)) active.value = t
+  } catch {}
   const tabs = computed(() => (isAdmin.value ? [...SETTINGS_TABS, ADMIN_TAB] : [...SETTINGS_TABS]))
   const tabIndex = SETTINGS_TAB_INDEX
   const activeIndex = computed(() => tabIndex[active.value])

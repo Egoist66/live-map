@@ -1,6 +1,5 @@
 import { ref } from 'vue'
 import { useForm } from 'vee-validate'
-import { usePage } from '@inertiajs/vue3'
 import { createPinSchema } from '@/validation/schemas/createPin.schema'
 import { usePinsStore } from '@/stores/pins'
 import { useToast } from 'primevue/usetoast'
@@ -10,8 +9,6 @@ export function usePinCreate(onSuccess?: () => void) {
   const toast = useToast()
   const showCoords = ref(false)
 
-  const authUser = (() => { try { return (usePage().props.auth as any)?.user } catch { return null } })()
-
   const { defineField, handleSubmit, setValues, values, errors, resetForm } = useForm({
     validationSchema: createPinSchema,
     initialValues: {
@@ -20,8 +17,7 @@ export function usePinCreate(onSuccess?: () => void) {
       category: 'announcement',
       latitude: 53.9022,
       longitude: 27.5615,
-      location_precision: authUser?.default_location_precision || 'blur_200',
-      blur_meters: Number(authUser?.default_blur_meters ?? 200),
+      location_precision: 'exact',
       is_anonymous: false,
       radius_meters: 1000,
     } as any,
@@ -33,7 +29,6 @@ export function usePinCreate(onSuccess?: () => void) {
   const [latitude] = defineField('latitude')
   const [longitude] = defineField('longitude')
   const [location_precision] = defineField('location_precision')
-  const [blur_meters] = defineField('blur_meters')
   const [is_anonymous] = defineField('is_anonymous')
   const [radius_meters] = defineField('radius_meters')
 
@@ -66,7 +61,6 @@ export function usePinCreate(onSuccess?: () => void) {
     latitude,
     longitude,
     location_precision,
-    blur_meters,
     is_anonymous,
     radius_meters,
     values,

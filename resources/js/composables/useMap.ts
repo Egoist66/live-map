@@ -1,9 +1,11 @@
 import { ref, watch, nextTick } from 'vue'
 import * as maplibregl from 'maplibre-gl'
 import { usePins } from './usePins'
+import { isPinAlive } from './usePinExpiry'
 import { useThrottledMapFetch } from './useThrottledMapFetch'
 import { useAppConfirm } from './useAppConfirm'
 import { usePage as useInertiaPage } from '@inertiajs/vue3'
+import { GEO_BLUR_DEFAULT, formatBlurMeters, pinBlurInfo } from './useLocationBlur'
 
 const OSM_RASTER_STYLE: any = {
   version: 8,
@@ -27,6 +29,7 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
   const mapContainer = ref<HTMLElement | null>(null)
   let map: maplibregl.Map
   let markers: maplibregl.Marker[] = []
+  let lastActivePinId: number | null = null
   const { store, selectedCategory } = usePins()
   const { confirmDelete } = useAppConfirm()
   const loaded = ref(false)
@@ -61,7 +64,7 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
         attributionControl: false,
       } as any)
       map.addControl(new maplibregl.NavigationControl({ showCompass: true, showZoom: true, visualizePitch: true }), 'bottom-right')
-      map.addControl(new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true, timeout: 8000 }, trackUserLocation: true, showAccuracyCircle: true, showUserLocation: true, fitBoundsOptions: { maxZoom: 15 } } as any), 'bottom-right')
+      map.addControl(new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true, timeout: 8000 }, trackUserLocation: true, showAccuracyCircle: false, showUserLocation: false, fitBoundsOptions: { maxZoom: 15 } } as any), 'bottom-right')
       map.addControl(new maplibregl.ScaleControl({ maxWidth: 120, unit: 'metric' }), 'bottom-left')
       map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right')
       const onReady = () => {
@@ -69,6 +72,7 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
         loaded.value = true
         clearTimeout(loadTimer)
         map.resize()
+        if (pendingHomeZone) drawHomeZone(pendingHomeZone.lat, pendingHomeZone.lng, pendingHomeZone.radiusKm)
         renderPins()
       }
       map.once('load', onReady)
@@ -130,7 +134,9 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
     const author = p.is_anonymous ? 'аноним' : (p.user?.name || 'пользователь')
     const level = p.user?.level ? ` · ${p.user.level}` : ''
     const exp = p.expires_at ? new Date(p.expires_at).toLocaleTimeString().slice(0,5) : ''
-    tip.innerHTML = `<div class="p-3.5 bg-white dark:bg-zinc-800"><div class="flex items-center gap-1.5 flex-wrap"><span class="text-xs bg-stone-900 dark:bg-white dark:text-zinc-900 text-white rounded-full px-2 py-0.5 font-semibold">${catIcon[p.category]||'📍'} ${catLabel[p.category]||p.category}</span>${p.is_boosted?'<span class="text-[11px] bg-amber-400 text-stone-900 rounded-full px-2 py-0.5 font-bold">★ ТОП</span>':''}${p.priority==='sponsored'?'<span class="text-[11px] bg-violet-600 text-white rounded-full px-2 py-0.5 font-bold">AD</span>':''}</div><div class="font-bold text-[13px] leading-tight mt-2 text-stone-900 dark:text-white">${p.title}</div>${body?`<div class="text-xs text-stone-600 dark:text-zinc-300 mt-1.5 leading-relaxed">${body}</div>`:''}<div class="flex items-center gap-2 mt-2.5 text-[11px] text-stone-500 dark:text-zinc-400 flex-wrap"><span class="bg-stone-100 dark:bg-zinc-700 dark:text-zinc-200 border border-stone-200 dark:border-zinc-600 rounded-full px-2 py-0.5">${author}${level}</span>${exp?`<span class="bg-amber-50 dark:bg-amber-950/30 dark:text-amber-300 border border-amber-200 dark:border-amber-900 rounded-full px-2 py-0.5">до ${exp}</span>`:''}<span class="bg-white dark:bg-zinc-700 dark:text-zinc-200 border border-stone-200 dark:border-zinc-600 rounded-full px-2 py-0.5">❤️ ${p.reactions_count||0} · 💬 ${p.comments_count||0}</span></div></div><div class="h-1 w-full ${p.is_boosted?'bg-amber-400':p.category==='warning'?'bg-[#EA580C]':p.category==='event'?'bg-[#7C3AED]':p.category==='help'?'bg-[#DB2777]':p.category==='question'?'bg-[#2563EB]':p.category==='offer'?'bg-[#0891B2]':'bg-[#DC2626]'}"></div>`
+    const bi = pinBlurInfo(p)
+    const blurHint = bi ? `<div class="mt-2 text-[11px] leading-snug bg-violet-50 dark:bg-violet-950/40 border border-violet-200 dark:border-violet-800 text-violet-800 dark:text-violet-200 rounded-xl px-2.5 py-1.5">📍 Виртуальная точка · сдвиг ${bi.label} — не точное местоположение</div>` : ''
+    tip.innerHTML = `<div class="p-3.5 bg-white dark:bg-zinc-800"><div class="flex items-center gap-1.5 flex-wrap"><span class="text-xs bg-stone-900 dark:bg-white dark:text-zinc-900 text-white rounded-full px-2 py-0.5 font-semibold">${catIcon[p.category]||'📍'} ${catLabel[p.category]||p.category}</span>${p.is_boosted?'<span class="text-[11px] bg-amber-400 text-stone-900 rounded-full px-2 py-0.5 font-bold">★ ТОП</span>':''}${p.priority==='sponsored'?'<span class="text-[11px] bg-violet-600 text-white rounded-full px-2 py-0.5 font-bold">AD</span>':''}</div><div class="font-bold text-[13px] leading-tight mt-2 text-stone-900 dark:text-white">${p.title}</div>${body?`<div class="text-xs text-stone-600 dark:text-zinc-300 mt-1.5 leading-relaxed">${body}</div>`:''}${blurHint}<div class="flex items-center gap-2 mt-2.5 text-[11px] text-stone-500 dark:text-zinc-400 flex-wrap"><span class="bg-stone-100 dark:bg-zinc-700 dark:text-zinc-200 border border-stone-200 dark:border-zinc-600 rounded-full px-2 py-0.5">${author}${level}</span>${exp?`<span class="bg-amber-50 dark:bg-amber-950/30 dark:text-amber-300 border border-amber-200 dark:border-amber-900 rounded-full px-2 py-0.5">до ${exp}</span>`:''}<span class="bg-white dark:bg-zinc-700 dark:text-zinc-200 border border-stone-200 dark:border-zinc-600 rounded-full px-2 py-0.5">❤️ ${p.reactions_count||0} · 💬 ${p.comments_count||0}</span></div></div><div class="h-1 w-full ${p.is_boosted?'bg-amber-400':p.category==='warning'?'bg-[#EA580C]':p.category==='event'?'bg-[#7C3AED]':p.category==='help'?'bg-[#DB2777]':p.category==='question'?'bg-[#2563EB]':p.category==='offer'?'bg-[#0891B2]':'bg-[#DC2626]'}"></div>`
     tip.style.left = x + 'px'
     tip.style.top = y + 'px'
     tip.classList.remove('hidden')
@@ -179,11 +185,14 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
 
   function renderPins() {
     if (!map || !(map as any).loaded?.() && !loaded.value) return
+    const animateId = lastActivePinId
+    lastActivePinId = null
     const zoom = (map as any).getZoom?.() || 13
     const scale = zoom < 10 ? 1.35 : zoom < 12 ? 1.2 : zoom < 14 ? 1 : 0.9
     markers.forEach((m) => m.remove())
     markers = []
-    let pins = store.pins as any[]
+    try { (store as any).pruneExpired?.() } catch {}
+    let pins = (store.pins as any[]).filter((p: any) => isPinAlive(p))
     if (selectedCategory.value === 'mine') pins = pins.filter((p: any) => p.is_owner)
     else if (selectedCategory.value !== 'all') pins = pins.filter((p: any) => p.category === selectedCategory.value)
     const colorMap: any = {
@@ -197,7 +206,7 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
     if (!document.getElementById('pin-soft-pulse-style')) {
       const s = document.createElement('style')
       s.id = 'pin-soft-pulse-style'
-      s.textContent = `@keyframes softPulse{0%,100%{transform:scale(1);opacity:0.55}50%{transform:scale(1.85);opacity:0}} @keyframes gentleBreath{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}} @keyframes pinGlow{0%,100%{box-shadow:0 0 0 0 rgba(250,204,21,0.5)}50%{box-shadow:0 0 0 10px rgba(250,204,21,0)}}`
+      s.textContent = `@keyframes softPulse{0%,100%{transform:scale(1);opacity:0.55}50%{transform:scale(1.85);opacity:0}} @keyframes gentleBreath{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}} @keyframes pinGlow{0%,100%{box-shadow:0 0 0 0 rgba(250,204,21,0.5)}50%{box-shadow:0 0 0 10px rgba(250,204,21,0)}} @keyframes badgePop{0%{transform:translateX(-50%) scale(0.5)}60%{transform:translateX(-50%) scale(1.15)}100%{transform:translateX(-50%) scale(1)}}`
       document.head.appendChild(s)
     }
     pins.forEach((p: any, idx: number) => {
@@ -235,6 +244,32 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
       core.appendChild(inner)
       wrap.appendChild(halo)
       wrap.appendChild(core)
+      const rc = Number(p.reactions_count) || 0
+      const cc = Number(p.comments_count) || 0
+      if (rc + cc > 0) {
+        const badge = document.createElement('div')
+        const parts: string[] = []
+        if (rc > 0) parts.push(`❤️${rc > 99 ? '99+' : rc}`)
+        if (cc > 0) parts.push(`💬${cc > 99 ? '99+' : cc}`)
+        badge.textContent = parts.join(' · ')
+        badge.style.position = 'absolute'
+        badge.style.top = '-13px'
+        badge.style.left = '50%'
+        badge.style.transform = 'translateX(-50%)'
+        badge.style.background = 'rgba(24,24,27,0.92)'
+        badge.style.color = '#fff'
+        badge.style.fontSize = '10px'
+        badge.style.fontWeight = '800'
+        badge.style.lineHeight = '1'
+        badge.style.padding = '4px 7px'
+        badge.style.borderRadius = '999px'
+        badge.style.whiteSpace = 'nowrap'
+        badge.style.pointerEvents = 'none'
+        badge.style.boxShadow = '0 2px 10px rgba(15,23,42,0.4), 0 0 0 1px rgba(255,255,255,0.85)'
+        badge.style.zIndex = '5'
+        if (animateId === p.id) badge.style.animation = 'badgePop 0.35s ease-out'
+        wrap.appendChild(badge)
+      }
       wrap.addEventListener('mouseenter', (e: any) => showPinTip(p, e.clientX, e.clientY))
       wrap.addEventListener('mousemove', (e: any) => { if (pinTooltip && !pinTooltip.classList.contains('hidden')) { pinTooltip.style.left = e.clientX + 'px'; pinTooltip.style.top = e.clientY + 'px' } })
       wrap.addEventListener('mouseleave', hidePinTip)
@@ -262,25 +297,127 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
   }
   function removeTempMarker() { if (tempMarker) { tempMarker.remove(); tempMarker = null } }
   let userDot: maplibregl.Marker | null = null
-  function showUserLocation(lat: number, lng: number) {
-    if (!map) return
+  let lastGeo: { lat: number; lng: number; meters: number } | null = null
+  let geoOffset: { dx: number; dy: number; meters: number } | null = null
+  function getMyBlurMeters(): number {
+    try { const pg: any = (useInertiaPage as any)(); const m = Number(pg?.props?.auth?.user?.default_blur_meters); if (!Number.isNaN(m)) return m } catch {}
+    try { const p: any = (window as any).__inertia?.page?.props || (document as any).__inertiaPage || null; const m = Number(p?.auth?.user?.default_blur_meters); if (!Number.isNaN(m)) return m } catch {}
+    try { const el: any = document.getElementById('app') as any; if (el?.dataset?.page) { const m = Number(JSON.parse(el.dataset.page).props?.auth?.user?.default_blur_meters); if (!Number.isNaN(m)) return m } } catch {}
+    return GEO_BLUR_DEFAULT
+  }
+  function blurredGeo(lat: number, lng: number, meters: number): [number, number] {
+    if (!meters || meters <= 0) return [lat, lng]
+    if (!geoOffset || geoOffset.meters !== meters) {
+      const w = Math.sqrt(Math.random())
+      const t = 2 * Math.PI * Math.random()
+      geoOffset = { dx: w * Math.cos(t), dy: w * Math.sin(t), meters }
+    }
+    const r = meters / 111300
+    const cosLat = Math.cos((lat * Math.PI) / 180) || 1
+    return [Number((lat + geoOffset.dy * r).toFixed(7)), Number((lng + (geoOffset.dx * r) / cosLat).toFixed(7))]
+  }
+  function drawUserDot() {
+    if (!map || !lastGeo) return
+    const [blat, blng] = blurredGeo(lastGeo.lat, lastGeo.lng, lastGeo.meters)
     if (userDot) userDot.remove()
     const wrap = document.createElement('div')
     wrap.className = 'relative grid place-items-center'
     wrap.style.width = '20px'
     wrap.style.height = '20px'
+    const meters = lastGeo.meters
+    if (meters > 0) {
+      try {
+        const zoom = (map as any).getZoom?.() || 13
+        const mpp = (156543.03392 * Math.cos((blat * Math.PI) / 180)) / Math.pow(2, zoom)
+        const radiusPx = Math.min(800, meters / mpp)
+        if (radiusPx > 14) {
+          const area = document.createElement('div')
+          area.className = 'absolute rounded-full'
+          area.style.width = radiusPx * 2 + 'px'
+          area.style.height = radiusPx * 2 + 'px'
+          area.style.background = 'rgba(59,130,246,0.07)'
+          area.style.border = '1px dashed rgba(59,130,246,0.55)'
+          wrap.appendChild(area)
+        }
+      } catch {}
+    }
     const pulse = document.createElement('div')
     pulse.className = 'absolute w-10 h-10 rounded-full bg-blue-500/20 animate-ping'
     const dot = document.createElement('div')
     dot.className = 'relative w-4 h-4 rounded-full bg-[#3b82f6] border-2 border-white shadow-[0_0_0_6px_rgba(59,130,246,0.25)]'
     wrap.appendChild(pulse)
     wrap.appendChild(dot)
-    userDot = new maplibregl.Marker({ element: wrap, anchor: 'center' }).setLngLat([lng, lat]).addTo(map)
+    const hint = meters > 0 ? `Ваша видимая позиция сдвинута на ~${formatBlurMeters(meters)} — это не точное местоположение` : 'Ваша точная позиция'
+    wrap.addEventListener('mouseenter', (e: any) => {
+      const tip = ensureTooltip()
+      tip.innerHTML = `<div class="px-3.5 py-2.5 text-[11px] leading-snug bg-white dark:bg-zinc-800 text-stone-700 dark:text-zinc-200">📍 <b>Вы</b> · ${hint}</div>`
+      tip.style.left = e.clientX + 'px'
+      tip.style.top = e.clientY + 'px'
+      tip.classList.remove('hidden')
+    })
+    wrap.addEventListener('mousemove', (e: any) => { if (pinTooltip && !pinTooltip.classList.contains('hidden')) { pinTooltip.style.left = e.clientX + 'px'; pinTooltip.style.top = e.clientY + 'px' } })
+    wrap.addEventListener('mouseleave', hidePinTip)
+    userDot = new maplibregl.Marker({ element: wrap, anchor: 'center' }).setLngLat([blng, blat]).addTo(map)
+  }
+  function showUserLocation(lat: number, lng: number) {
+    if (!map) return
+    lastGeo = { lat, lng, meters: Math.max(0, getMyBlurMeters()) }
+    drawUserDot()
+    try { (map as any).off?.('zoomend', drawUserDot); (map as any).on?.('zoomend', drawUserDot) } catch {}
   }
   function triggerGeolocate() {
     try {
       const ctrl: any = map?._controls?.find((c: any) => c.trigger && c._geolocateButton) || null
       if (ctrl?.trigger) ctrl.trigger()
+    } catch {}
+  }
+
+  function homeCircleCoords(lat: number, lng: number, radiusKm: number, points = 64): number[][] {
+    const coords: number[][] = []
+    const latR = radiusKm / 111.32
+    const lngR = radiusKm / (111.32 * Math.cos((lat * Math.PI) / 180) || 1)
+    for (let i = 0; i <= points; i++) {
+      const a = (i / points) * 2 * Math.PI
+      coords.push([lng + lngR * Math.cos(a), lat + latR * Math.sin(a)])
+    }
+    return coords
+  }
+
+  let pendingHomeZone: { lat: number; lng: number; radiusKm: number } | null = null
+
+  function drawHomeZone(lat: number, lng: number, radiusKm: number) {
+    if (!map || !(map as any).loaded?.()) {
+      pendingHomeZone = { lat, lng, radiusKm }
+      return
+    }
+    try {
+      const srcId = 'home-zone-src'
+      const fillId = 'home-zone-fill'
+      const lineId = 'home-zone-line'
+      const geojson: any = { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [homeCircleCoords(lat, lng, radiusKm)] } }
+      if ((map as any).getSource?.(srcId)) {
+        ;(map.getSource(srcId) as any).setData(geojson)
+      } else {
+        ;(map as any).addSource?.(srcId, { type: 'geojson', data: geojson })
+        ;(map as any).addLayer?.({ id: fillId, type: 'fill', source: srcId, paint: { 'fill-color': '#7c3aed', 'fill-opacity': 0.1 } })
+        ;(map as any).addLayer?.({ id: lineId, type: 'line', source: srcId, paint: { 'line-color': '#7c3aed', 'line-width': 1.5, 'line-dasharray': [4, 4], 'line-opacity': 0.55 } })
+      }
+    } catch {}
+  }
+
+  function showHomeZone(lat: number | null | undefined, lng: number | null | undefined, radiusKm: number | null | undefined) {
+    if (!lat || !lng) return
+    const r = Math.min(Math.max(Number(radiusKm) || 1, 1), 50)
+    pendingHomeZone = { lat: Number(lat), lng: Number(lng), radiusKm: r }
+    drawHomeZone(Number(lat), Number(lng), r)
+  }
+
+  function hideHomeZone() {
+    pendingHomeZone = null
+    try {
+      if ((map as any)?.getLayer?.('home-zone-fill')) (map as any).removeLayer('home-zone-fill')
+      if ((map as any)?.getLayer?.('home-zone-line')) (map as any).removeLayer('home-zone-line')
+      if ((map as any)?.getSource?.('home-zone-src')) (map as any).removeSource('home-zone-src')
     } catch {}
   }
 
@@ -298,9 +435,16 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
       const onCreated = (e: any) => { if (e?.pin) { store.addRealtime(e.pin); renderPins() } }
       const onDeleted = (e: any) => { if (e?.pinId) { store.removeRealtime(e.pinId); renderPins() } }
       const onUpdated = (e: any) => { if (e?.pin) { store.addRealtime(e.pin); renderPins() } }
+      const onActivity = (e: any) => {
+        if (!e?.pin_id) return
+        lastActivePinId = Number(e.pin_id)
+        try { (store as any).patchCounts?.(Number(e.pin_id), e.reactions_count, e.comments_count) } catch {}
+        renderPins()
+      }
       ch.listen('PinCreated', onCreated).listen('.pin.created', onCreated)
         .listen('PinDeleted', onDeleted).listen('.pin.deleted', onDeleted)
         .listen('PinUpdated', onUpdated).listen('.pin.updated', onUpdated)
+        .listen('PinActivityCreated', onActivity).listen('.pin.activity', onActivity)
     }
     doBind()
     try {
@@ -322,5 +466,5 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
   function setThemeStyle(isDark: boolean) {
     return
   }
-  return { mapContainer, initMap, renderPins, addTempMarker, removeTempMarker, showUserLocation, triggerGeolocate, getCenter, flyToMyLocation, bindRealtime, unbindRealtime, setThemeStyle, loaded, errorMsg, wsConnected, get map() { return map } }
+  return { mapContainer, initMap, renderPins, addTempMarker, removeTempMarker, showUserLocation, triggerGeolocate, getCenter, flyToMyLocation, bindRealtime, unbindRealtime, setThemeStyle, showHomeZone, hideHomeZone, loaded, errorMsg, wsConnected, get map() { return map } }
 }

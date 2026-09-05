@@ -29,4 +29,5 @@ export interface ReportPayload {
   target_type: 'pin' | 'comment' | string
   target_id: number
   reason: string
+  description?: string
 }

@@ -16,6 +16,10 @@ export interface Pin {
   real_lat?: number | null
   real_lng?: number | null
   location_precision?: LocationPrecision
+  is_blurred?: boolean
+  blur_meters?: number
+  blur_label?: string | null
+  blur_hint?: string | null
   radius_meters: number
   visibility_radius_km: number
   expires_at: string

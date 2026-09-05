@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { pinsApi } from '@/services/pins.api'
+import { isPinAlive } from '@/composables/usePinExpiry'
 import type { Pin, CreatePinPayload, UpdatePinPayload, BoostType } from '@/types/entities/Pin'
 
 export const usePinsStore = defineStore('pins', () => {
@@ -20,14 +21,14 @@ export const usePinsStore = defineStore('pins', () => {
     error.value = null
     try {
       const data = await pinsApi.list(lat, lng, radius as any, abortCtrl.signal)
-      const now = Date.now()
-      const alive = (p: any) => new Date(p.expires_at).getTime() > now
-      if (!data.length) {
+      const alive = (p: any) => isPinAlive(p)
+      const fresh = (data || []).filter(alive)
+      if (!fresh.length) {
         pins.value = pins.value.filter(alive)
         return pins.value
       }
       const seen = new Map<number, Pin>()
-      ;[...pins.value, ...data].forEach((p: any) => seen.set(p.id, p))
+      ;[...pins.value, ...fresh].forEach((p: any) => seen.set(p.id, p))
       const merged = Array.from(seen.values()).filter(alive)
       merged.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
       pins.value = merged.slice(0, 150)
@@ -43,7 +44,11 @@ export const usePinsStore = defineStore('pins', () => {
 
   async function fetchMine(): Promise<Pin[]> {
     const data = await pinsApi.mine()
-    return data
+    return (data || []).filter((p: any) => isPinAlive(p))
+  }
+
+  function pruneExpired(): void {
+    pins.value = pins.value.filter((p: any) => isPinAlive(p))
   }
 
   async function createPin(payload: CreatePinPayload): Promise<Pin> {
@@ -88,6 +93,10 @@ export const usePinsStore = defineStore('pins', () => {
   }
 
   function addRealtime(pin: Pin): void {
+    if (!isPinAlive(pin as any)) {
+      pins.value = pins.value.filter((p) => p.id !== pin.id)
+      return
+    }
     const idx = pins.value.findIndex((p) => p.id === pin.id)
     if (idx !== -1) pins.value[idx] = { ...pins.value[idx], ...pin } as Pin
     else pins.value.unshift(pin)
@@ -95,6 +104,17 @@ export const usePinsStore = defineStore('pins', () => {
 
   function removeRealtime(id: number): void {
     pins.value = pins.value.filter((p) => p.id !== id)
+  }
+
+  function patchCounts(id: number, reactions_count?: number, comments_count?: number): void {
+    const idx = pins.value.findIndex((p) => p.id === id)
+    if (idx === -1) return
+    const p: any = pins.value[idx]
+    pins.value[idx] = {
+      ...p,
+      ...(reactions_count !== undefined ? { reactions_count } : {}),
+      ...(comments_count !== undefined ? { comments_count } : {}),
+    } as Pin
   }
 
   return {
@@ -106,11 +126,13 @@ export const usePinsStore = defineStore('pins', () => {
     deleting,
     fetchNearby,
     fetchMine,
+    pruneExpired,
     createPin,
     updatePin: (vars: { id: number; payload: UpdatePinPayload }) => updatePin(vars.id, vars.payload),
     deletePin,
     boostPin: (vars: { id: number; type: BoostType }) => boostPin(vars.id, vars.type),
     addRealtime,
     removeRealtime,
+    patchCounts,
   }
 })

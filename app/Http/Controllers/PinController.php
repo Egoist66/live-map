@@ -18,7 +18,7 @@ class PinController extends Controller
         $radius = (int) $request->input('radius', Auth::user()?->pinRadius() ?? 1000) / 1000;
         $viewerId = Auth::id();
 
-        $q = Pin::active()->where('status', 'active')->nearby($lat, $lng, $radius);
+        $q = Pin::active()->nearby($lat, $lng, $radius);
         $viewer = Auth::user();
         $hiddenUsers = $viewer ? \App\Models\User::hiddenFromSearchFor($viewer) : \App\Models\User::where('is_hidden_from_search', true)->pluck('id')->all();
         if (!empty($hiddenUsers)) $q->whereNotIn('user_id', is_array($hiddenUsers) ? $hiddenUsers : $hiddenUsers->all());
@@ -36,9 +36,18 @@ class PinController extends Controller
     public function mine(Request $request)
     {
         $user = $request->user();
-        $pins = Pin::where('user_id', $user->id)->where('status', 'active')->latest()->limit(50)->with('user:id,name,avatar_path,level')->get();
+        $pins = Pin::where('user_id', $user->id)->active()->latest()->limit(50)->with('user:id,name,avatar_path,level')->get();
         $myReactions = \App\Models\Reaction::where('user_id', $user->id)->where('reactable_type', 'pin')->whereIn('reactable_id', $pins->pluck('id'))->pluck('type', 'reactable_id');
         return response()->json($pins->map(fn($p) => array_merge($p->toPublicArray($user->id), ['my_reaction' => $myReactions[$p->id] ?? null])));
+    }
+
+    public function archived(Request $request)
+    {
+        $user = $request->user();
+        $pins = Pin::where('user_id', $user->id)
+            ->where(fn($q) => $q->whereIn('status', ['expired', 'archived'])->orWhere('expires_at', '<=', now()))
+            ->latest()->limit(50)->with('user:id,name,avatar_path,level')->get();
+        return response()->json($pins->map(fn($p) => $p->toPublicArray($user->id)));
     }
 
     public function store(Request $request)
@@ -59,36 +68,11 @@ class PinController extends Controller
             'radius_meters' => 'sometimes|integer|min:500|max:50000',
         ]);
 
-        $precision = $data['location_precision'] ?? $user->default_location_precision ?? 'blur_200';
-        if (!in_array($precision, ['blur_200', 'exact', 'district', 'custom'], true)) $precision = 'blur_200';
-        $meters = isset($data['blur_meters']) ? (int) $data['blur_meters'] : (int) ($user->default_blur_meters ?? 200);
-        $meters = max(0, min(5000, $meters));
+        $precision = 'exact';
         $origLat = (float) $data['latitude'];
         $origLng = (float) $data['longitude'];
-        if ($precision === 'exact' || ($precision === 'custom' && $meters <= 0)) {
-            $precision = 'exact';
-            $data['real_lat'] = $origLat;
-            $data['real_lng'] = $origLng;
-        } elseif ($precision === 'custom') {
-            [$blurLat, $blurLng] = Pin::blurCoords($origLat, $origLng, $meters);
-            $data['real_lat'] = $origLat;
-            $data['real_lng'] = $origLng;
-            $data['latitude'] = $blurLat;
-            $data['longitude'] = $blurLng;
-            $data['meta'] = ['blur_meters' => $meters];
-        } elseif ($precision === 'blur_200') {
-            [$blurLat, $blurLng] = Pin::blurCoords($origLat, $origLng, 200);
-            $data['real_lat'] = $origLat;
-            $data['real_lng'] = $origLng;
-            $data['latitude'] = $blurLat;
-            $data['longitude'] = $blurLng;
-        } elseif ($precision === 'district') {
-            [$blurLat, $blurLng] = Pin::blurCoords($origLat, $origLng, 1200);
-            $data['real_lat'] = $origLat;
-            $data['real_lng'] = $origLng;
-            $data['latitude'] = $blurLat;
-            $data['longitude'] = $blurLng;
-        }
+        $data['real_lat'] = $origLat;
+        $data['real_lng'] = $origLng;
         $data['location_precision'] = $precision;
         unset($data['blur_meters']);
 
@@ -134,7 +118,9 @@ class PinController extends Controller
     public function destroy(Pin $pin)
     {
         $this->authorize('delete', $pin);
-        $pin->delete();
+        $pin->comments()->delete();
+        $pin->reactions()->delete();
+        $pin->forceDelete();
         broadcast(new PinDeleted($pin->id))->toOthers();
         return response()->json(['ok' => true]);
     }

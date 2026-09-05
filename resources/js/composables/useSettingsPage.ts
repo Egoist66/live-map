@@ -9,6 +9,7 @@ import { useMyPinsSettings, useBillingInfo } from '@/composables/useSettingsPins
 import { useSupportForm, useSettingsBioPreview } from '@/composables/useSettingsSupport'
 import { useHiddenFriends } from '@/composables/useHiddenFriends'
 import { useAdminUsers } from '@/composables/useAdminUsers'
+import { useAdminReports } from '@/composables/useAdminReports'
 import { useLocationBlur } from '@/composables/useLocationBlur'
 
 export function useSettingsPage(props: { user: any }) {
@@ -26,8 +27,9 @@ export function useSettingsPage(props: { user: any }) {
   const invisible = useInvisible()
   const hidden = useHiddenFriends()
   const admin = useAdminUsers()
+  const reports = useAdminReports()
   const blur = useLocationBlur()
-  watch(active, (v) => { if (v === 'pins') pins.refetch(); if (v === 'support') ex.load(); if (v === 'billing') loadZoneCount(); if (v === 'privacy') hidden.load() })
+  watch(active, (v) => { if (v === 'pins') pins.refetch(); if (v === 'support') ex.load(); if (v === 'billing') loadZoneCount(); if (v === 'privacy') hidden.load(); if (v === 'admin') reports.refresh() })
   onMounted(() => { loadZoneCount(); hidden.load() })
-  return { u, theme, active, tabs, activeIndex, menuModel, setActive, isAdmin, zoneCount, showAvatar, ex, support, bioPreviewText, bioPreviewEmpty, avatarSrc, invisible, hidden, admin, blur, ...pins }
+  return { u, theme, active, tabs, activeIndex, menuModel, setActive, isAdmin, zoneCount, showAvatar, ex, support, bioPreviewText, bioPreviewEmpty, avatarSrc, invisible, hidden, admin, reports, blur, ...pins }
 }

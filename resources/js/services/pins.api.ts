@@ -14,6 +14,12 @@ export const pinsApi = {
     return (data as { data: Pin[] }).data ?? []
   },
 
+  async archived(): Promise<Pin[]> {
+    const { data } = await api.get<Pin[] | { data: Pin[] }>('/api/pins/mine/archived')
+    if (Array.isArray(data)) return data
+    return (data as { data: Pin[] }).data ?? []
+  },
+
   async create(payload: CreatePinPayload): Promise<Pin> {
     const { data } = await api.post<Pin>('/api/pins', payload)
     return data

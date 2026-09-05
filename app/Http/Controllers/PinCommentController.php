@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Pin;
 use App\Models\PinComment;
+use App\Services\PinActivityNotifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 
@@ -36,6 +37,7 @@ class PinCommentController extends Controller
             'is_anonymous' => $data['is_anonymous'] ?? $request->user()->is_anonymous_default ?? false,
         ]);
         $pin->increment('comments_count');
+        PinActivityNotifier::comment($pin, $request->user(), $comment);
         if ($comment->is_anonymous) $comment->setRelation('user', null);
         else $comment->load('user:id,name,avatar_path');
         return response()->json($comment, 201);
@@ -64,8 +66,10 @@ class PinCommentController extends Controller
     public function destroy(PinComment $comment)
     {
         $this->authorize('delete', $comment);
+        $pin = $comment->pin;
         $comment->delete();
-        $comment->pin()->decrement('comments_count');
+        $pin->decrement('comments_count');
+        PinActivityNotifier::counters($pin);
         return response()->json(['ok' => true]);
     }
 }

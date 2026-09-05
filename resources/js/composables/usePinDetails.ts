@@ -93,15 +93,6 @@ export function usePinDetails() {
     if (selectedPin.value) selectedPin.value.comments_count = (selectedPin.value.comments_count || 0) + 1
   })
 
-  const reportMutation = useMutation({
-    mutation: (pin: any) => reactionsApi.report('pin', pin.id, 'spam'),
-  })
-
-  async function reportPin(pin: Pin): Promise<void> {
-    await (reportMutation as any).mutateAsync(pin)
-    toast?.add({ severity: 'success', summary: 'Жалоба отправлена', life: 2000 })
-  }
-
   const boostMutation = useMutation({
     mutation: ({ pin, type }: { pin: Pin; type: BoostType }) => pinsApi.boost(pin.id, type),
   })
@@ -135,11 +126,11 @@ export function usePinDetails() {
 
   return {
     selectedPin, comments, commentText, commentTextAttrs, commentFormErrors, editingCommentId, editingContent,
-    openPin, closePin, loadComments, react, sendComment, reportPin, boost, startEditComment, cancelEditComment, saveEditComment, useCommentsQuery, formatTime,
+    openPin, closePin, loadComments, react, sendComment, boost, startEditComment, cancelEditComment, saveEditComment, useCommentsQuery, formatTime,
     commentsQuery,
     reactMutation, reactStatus: (reactMutation as any).state, reactAsyncStatus: (reactMutation as any).asyncStatus,
     createCommentMutation, createCommentStatus: (createCommentMutation as any).state, createCommentAsyncStatus: (createCommentMutation as any).asyncStatus,
-    reportMutation, boostMutation, updateCommentMutation,
+    boostMutation, updateCommentMutation,
     reactionLoading: computed(() => (reactMutation as any).asyncStatus?.value === 'loading'),
   }
 }

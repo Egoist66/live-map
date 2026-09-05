@@ -6,6 +6,7 @@ use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\FriendshipController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\NbrbController;
+use App\Http\Controllers\PinActivityController;
 use App\Http\Controllers\PinCommentController;
 use App\Http\Controllers\PinController;
 use App\Http\Controllers\PushSubscriptionController;
@@ -24,6 +25,7 @@ Route::middleware('throttle:60,1')->group(function () {
 
 Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/pins/mine', [PinController::class, 'mine']);
+    Route::get('/pins/mine/archived', [PinController::class, 'archived']);
     Route::get('/pins', [PinController::class, 'index']);
     Route::post('/pins', [PinController::class, 'store']);
     Route::patch('/pins/{pin}', [PinController::class, 'update']);
@@ -36,6 +38,11 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::put('/comments/{comment}', [PinCommentController::class, 'update']);
     Route::delete('/comments/{comment}', [PinCommentController::class, 'destroy']);
     Route::post('/reactions/toggle', [ReactionController::class, 'toggle']);
+    Route::get('/pin-activities', [PinActivityController::class, 'index']);
+    Route::get('/pin-activities/unread-count', [PinActivityController::class, 'unreadCount']);
+    Route::post('/pin-activities/read', [PinActivityController::class, 'read']);
+    Route::get('/admin/reports', [ReportController::class, 'index']);
+    Route::post('/admin/reports/{report}/resolve', [ReportController::class, 'resolve']);
     Route::apiResource('zone-subscriptions', ZoneSubscriptionController::class)->only(['index','store','destroy']);
     Route::post('/reports', [ReportController::class, 'store']);
 

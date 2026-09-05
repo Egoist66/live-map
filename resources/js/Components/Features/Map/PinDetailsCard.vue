@@ -1,14 +1,17 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import Chip from 'primevue/chip'
 import { avatarSrcFor } from '@/composables/useAvatar'
+import { pinBlurInfo } from '@/composables/useLocationBlur'
 import { formatTime } from '@/utils/date'
 
-defineProps<{ pin: any; comments: any[]; commentText: string; creatingComment: boolean; editingCommentId: number | null; editingContent: string; savingComment: boolean; reacting: boolean; reporting: boolean; pinEdit: any; categories: any[]; deleting: boolean; authId: number }>()
+const props = defineProps<{ pin: any; comments: any[]; commentText: string; creatingComment: boolean; editingCommentId: number | null; editingContent: string; savingComment: boolean; reacting: boolean; reporting: boolean; pinEdit: any; categories: any[]; deleting: boolean; authId: number }>()
 const emit = defineEmits<{ (e: 'close'): void; (e: 'delete'): void; (e: 'react', k: string): void; (e: 'report'): void; (e: 'sendComment'): void; (e: 'update:comment', v: string): void; (e: 'update:editContent', v: string): void; (e: 'startEditComment', c: any): void; (e: 'cancelEditComment'): void; (e: 'saveEditComment'): void; (e: 'saveEdit'): void }>()
+const blur = computed(() => pinBlurInfo(props.pin))
 </script>
 <template>
   <div v-if="pin" class="absolute inset-x-2 sm:inset-x-auto bottom-2 sm:bottom-4 top-auto max-h-[72dvh] sm:right-4 sm:top-4 sm:w-[380px] sm:max-h-none bg-white dark:bg-zinc-900 rounded-[20px] shadow-float border border-stone-200 dark:border-zinc-700 flex flex-col overflow-hidden z-20">
@@ -31,6 +34,7 @@ const emit = defineEmits<{ (e: 'close'): void; (e: 'delete'): void; (e: 'react',
         </div>
       </div>
       <p v-if="!pinEdit.editing.value" class="text-sm text-stone-600 dark:text-zinc-300 mt-2 leading-relaxed break-words overflow-wrap-anywhere">{{ pin.body }}</p>
+      <div v-if="!pinEdit.editing.value && blur" title="Точка на карте сдвинута от реального места" class="mt-2 text-[11px] leading-snug bg-violet-50 dark:bg-violet-950/40 border border-violet-200 dark:border-violet-800 text-violet-800 dark:text-violet-200 rounded-xl px-2.5 py-1.5">📍 {{ blur.hint }}</div>
       <div v-if="!pinEdit.editing.value" class="flex flex-wrap gap-1.5 mt-3 items-center">
         <span class="text-xs bg-stone-100 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 text-stone-700 dark:text-zinc-200 rounded-full px-2.5 py-1 font-medium">{{ pin.category }}</span>
         <Link v-if="pin.user && !pin.is_anonymous" :href="`/users/${pin.user.id}`" class="hover:opacity-80"><Chip :label="`${pin.user?.name} · ${pin.user?.level || 'novice'}`" :image="avatarSrcFor(pin.user) || undefined" class="!bg-white dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 !rounded-full !text-xs !text-ink-900 dark:!text-zinc-100" /></Link>

@@ -3,6 +3,7 @@ import { useForm } from 'vee-validate'
 import { updateProfileSchema } from '@/validation/schemas/profile.schema'
 import { usePage, router } from '@inertiajs/vue3'
 import { useToast } from 'primevue/usetoast'
+import { maxHomeRadiusKm } from './usePlanLimits'
 
 export function useProfileForm() {
   const page = usePage()
@@ -41,6 +42,14 @@ export function useProfileForm() {
     navigator.geolocation.getCurrentPosition((pos) => setValues({ home_lat: Number(pos.coords.latitude.toFixed(7)), home_lng: Number(pos.coords.longitude.toFixed(7)) } as any))
   }
 
+  const maxRadius = computed(() => maxHomeRadiusKm((values as any).plan || user.value?.plan || 'free'))
+
+  watch(() => (values as any).plan, (pl) => {
+    const m = maxHomeRadiusKm(pl || 'free')
+    const cur = Number((values as any).home_radius_km ?? 1)
+    if (cur > m) setValues({ home_radius_km: m } as any)
+  })
+
   const submit = handleSubmit((vals: any) => {
     const payload: any = { ...vals }
     if (typeof payload.bio === 'string') {
@@ -55,5 +64,5 @@ export function useProfileForm() {
     })
   })
 
-  return { user, name, nameAttrs, gender, email, emailAttrs, home_lat, homeLatAttrs, home_lng, homeLngAttrs, home_radius_km, bio, is_anonymous_default, plan, errors, values, setValues, submit, isSubmitting, useMyLocation }
+  return { user, name, nameAttrs, gender, email, emailAttrs, home_lat, homeLatAttrs, home_lng, homeLngAttrs, home_radius_km, bio, is_anonymous_default, plan, errors, values, setValues, submit, isSubmitting, useMyLocation, maxRadius }
 }

@@ -8,14 +8,54 @@ import Tag from 'primevue/tag'
 import Dialog from 'primevue/dialog'
 import { avatarSrcFor } from '@/composables/useAvatar'
 
-defineProps<{ admin: any }>()
+defineProps<{ admin: any; reports: any }>()
 </script>
 <template>
   <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }">
     <template #content>
       <h3 class="font-black tracking-tight text-lg dark:text-white">Админ</h3>
-      <p class="text-sm text-stone-500 mt-1">Скрытие профилей из поиска и удаление аккаунтов.</p>
+      <p class="text-sm text-stone-500 mt-1">Жалобы, скрытие профилей и удаление аккаунтов.</p>
       <div class="mt-5 space-y-4 max-w-xl">
+        <Card class="!border-red-200 dark:!border-red-900 !rounded-3xl !shadow-none" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
+          <template #content>
+            <div class="flex items-center gap-2">
+              <span class="w-8 h-8 rounded-2xl bg-red-600 text-white grid place-items-center shrink-0"><i class="pi pi-flag text-xs"></i></span>
+              <div class="text-sm font-semibold dark:text-white">Жалобы</div>
+              <span v-if="reports.pendingCount.value" class="bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{{ reports.pendingCount.value }}</span>
+              <button @click="reports.refresh()" class="ml-auto text-xs text-stone-400 hover:text-stone-600 underline underline-offset-2">обновить</button>
+            </div>
+            <div class="mt-3 flex gap-1.5 flex-wrap">
+              <button
+                v-for="f in [['pending','Новые'],['resolved','Принятые'],['dismissed','Отклонённые'],['all','Все']]"
+                :key="f[0]"
+                @click="reports.setFilter(f[0])"
+                :class="['px-3 py-1.5 rounded-full text-xs font-semibold transition', reports.filter.value === f[0] ? 'bg-stone-900 text-white dark:bg-white dark:text-stone-900' : 'bg-stone-100 dark:bg-zinc-800 text-stone-500 hover:text-stone-800']"
+              >{{ f[1] }}</button>
+            </div>
+            <div v-if="reports.loading.value" class="py-6 grid place-items-center">
+              <span class="w-5 h-5 border-2 border-stone-200 border-t-stone-900 rounded-full animate-spin"></span>
+            </div>
+            <div v-else-if="reports.reports.value.length" class="mt-3 space-y-2">
+              <div v-for="r in reports.reports.value" :key="r.id" class="rounded-2xl border border-stone-200 dark:border-zinc-700 p-3">
+                <div class="flex items-center gap-2 min-w-0">
+                  <Avatar :image="avatarSrcFor(r.reporter)" shape="circle" class="!w-8 !h-8 shrink-0 [&_img]:object-cover" />
+                  <div class="min-w-0 flex-1">
+                    <div class="text-[13px] font-semibold truncate dark:text-white">{{ r.reason_label || r.reason }} · {{ r.target_type }} #{{ r.target_id }}</div>
+                    <div class="text-[11px] text-stone-500 truncate">от {{ r.reporter?.name || '?' }} · {{ r.target_title || '' }}</div>
+                  </div>
+                  <Tag v-if="r.status !== 'pending'" :value="r.status === 'resolved' ? 'принята' : 'отклонена'" :severity="r.status === 'resolved' ? 'success' : 'secondary'" class="!text-[9px]" />
+                </div>
+                <p v-if="r.description" class="mt-2 text-[13px] text-stone-600 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap">{{ r.description }}</p>
+                <div v-if="r.status === 'pending'" class="mt-2 flex gap-1.5">
+                  <Button @click="reports.resolve(r.id, 'resolved')" :loading="reports.actingId.value === r.id" label="Принято" size="small" rounded severity="success" class="!text-xs" />
+                  <Button @click="reports.resolve(r.id, 'dismissed')" :loading="reports.actingId.value === r.id" label="Отклонить" size="small" rounded outlined severity="secondary" class="!text-xs" />
+                </div>
+              </div>
+            </div>
+            <div v-else class="mt-3 text-center py-4 text-sm text-stone-500">Жалоб нет 🎉</div>
+            <Message v-if="reports.error.value" severity="error" :closable="false" class="!mt-3 !rounded-2xl !text-xs">{{ reports.error.value }}</Message>
+          </template>
+        </Card>
         <Card class="!border-stone-200 !rounded-3xl !shadow-none" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
           <template #content>
             <div class="flex items-start justify-between gap-3">

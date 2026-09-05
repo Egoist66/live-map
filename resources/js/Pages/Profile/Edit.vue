@@ -52,7 +52,7 @@ const { setTheme } = useTheme()
                 <TabPanel value="5"><SettingsSecurityTab /></TabPanel>
                 <TabPanel value="6"><SettingsSupportTab :subject="s.support.supportSubject.value" @update:subject="(v:string)=>s.support.supportSubject.value=v" :body="s.support.supportBody.value" @update:body="(v:string)=>s.support.supportBody.value=v" :donate-sel="s.support.donateSel.value" @update:donate="s.support.setDonate" :rate="s.ex.usdRate.value" :rate-loading="s.ex.loading.value" @send="s.support.mailToSupport()" @donate="s.support.mailToDonate(s.ex)" @reload="s.ex.load" /></TabPanel>
                 <TabPanel value="7"><SettingsAppTab /></TabPanel>
-                <TabPanel v-if="s.isAdmin.value" value="8"><SettingsAdminTab :admin="s.admin" /></TabPanel>
+                <TabPanel v-if="s.isAdmin.value" value="8"><SettingsAdminTab :admin="s.admin" :reports="s.reports" /></TabPanel>
               </TabPanels>
             </Tabs>
           </div>

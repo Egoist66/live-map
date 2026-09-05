@@ -3,10 +3,24 @@ import Dialog from "primevue/dialog";
 import Avatar from "primevue/avatar";
 import Button from "primevue/button";
 import Badge from "primevue/badge";
+import { watch } from "vue";
 import { useBellNotifications } from "@/composables/useBellNotifications";
+import { usePinActivity } from "@/composables/usePinActivity";
+import { useAdminReports } from "@/composables/useAdminReports";
 import { avatarSrcFor } from "@/composables/useAvatar";
 
 const bell = useBellNotifications();
+const pinAct = usePinActivity();
+const admRep = useAdminReports();
+watch(
+  () => bell.isOpen.value,
+  (open) => {
+    if (open) {
+      pinAct.refresh();
+      admRep.refresh();
+    }
+  }
+);
 function fmtTime(s: string | null) {
   if (!s) return "";
   try {
@@ -50,8 +64,8 @@ function fmtTime(s: string | null) {
           </div>
         </div>
         <Badge
-          v-if="bell.unreadCount.value + bell.pending.value.length"
-          :value="(bell.unreadCount.value + bell.pending.value.length)>9?'9+':String(bell.unreadCount.value + bell.pending.value.length)"
+          v-if="bell.unreadCount.value + bell.pending.value.length + pinAct.unread.value + admRep.pendingCount.value"
+          :value="(bell.unreadCount.value + bell.pending.value.length + pinAct.unread.value + admRep.pendingCount.value)>9?'9+':String(bell.unreadCount.value + bell.pending.value.length + pinAct.unread.value + admRep.pendingCount.value)"
           severity="danger"
         />
       </div>
@@ -63,16 +77,120 @@ function fmtTime(s: string | null) {
         ></span>
       </div>
       <template v-else>
-        <div v-if="!bell.hasData.value" class="py-10 text-center">
+        <div v-if="!bell.hasData.value && !pinAct.activities.value.length && !admRep.reports.value.length" class="py-10 text-center">
           <div
             class="w-12 h-12 rounded-2xl bg-stone-100 dark:bg-zinc-800 grid place-items-center mx-auto text-xl"
           >
             🔔
           </div>
           <div class="text-sm font-semibold dark:text-white mt-3">Пока тихо</div>
-          <div class="text-xs text-stone-500 mt-1">Новых сообщений и заявок нет</div>
+          <div class="text-xs text-stone-500 mt-1">Новых сообщений, заявок и реакций нет</div>
         </div>
         <template v-else>
+          <div v-if="admRep.reports.value.length" class="mb-3">
+            <div
+              class="text-[11px] font-bold tracking-widest uppercase text-stone-400 px-2 py-1.5 flex items-center gap-1.5"
+            >
+              Жалобы
+              <span
+                v-if="admRep.pendingCount.value"
+                class="bg-red-600 text-white text-[10px] px-1.5 py-0.5 rounded-full"
+                >{{ admRep.pendingCount.value }}</span
+              >
+            </div>
+            <div class="space-y-1">
+              <button
+                v-for="r in admRep.reports.value.slice(0, 5)"
+                :key="r.id"
+                @click="bell.close(); admRep.goReports()"
+                class="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-800"
+              >
+                <span
+                  class="w-10 h-10 rounded-full bg-red-600 text-white grid place-items-center shrink-0"
+                  ><i class="pi pi-flag text-sm"></i
+                ></span>
+                <div class="min-w-0 flex-1">
+                  <div class="text-sm font-semibold dark:text-white truncate">
+                    {{ r.reason_label || r.reason }} · {{ r.target_type }} #{{ r.target_id }}
+                  </div>
+                  <div class="text-xs text-stone-500 dark:text-zinc-400 truncate">
+                    {{ r.target_title || r.description || `от ${r.reporter?.name || 'пользователя'}` }}
+                  </div>
+                </div>
+                <i class="pi pi-chevron-right text-stone-300 text-xs shrink-0"></i>
+              </button>
+            </div>
+            <button
+              @click="bell.close(); admRep.goReports()"
+              class="w-full mt-1 text-xs font-semibold text-violet-600 hover:text-violet-700 py-1.5"
+            >
+              Открыть жалобы →
+            </button>
+          </div>
+          <div v-if="pinAct.activities.value.length" class="mb-3">
+            <div
+              class="text-[11px] font-bold tracking-widest uppercase text-stone-400 px-2 py-1.5 flex items-center gap-1.5"
+            >
+              Активность пинов
+              <span
+                v-if="pinAct.unread.value"
+                class="bg-rose-500 text-white text-[10px] px-1.5 py-0.5 rounded-full"
+                >{{ pinAct.unread.value }}</span
+              >
+              <button
+                v-if="pinAct.unread.value"
+                @click="pinAct.markAllRead()"
+                class="ml-auto text-[11px] font-semibold text-violet-600 hover:text-violet-700 normal-case tracking-normal"
+              >
+                Прочитать все
+              </button>
+            </div>
+            <div class="space-y-1">
+              <button
+                v-for="a in pinAct.activities.value"
+                :key="a.id"
+                @click="pinAct.goPin(a)"
+                :class="
+                  !a.read_at
+                    ? 'bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-800'
+                    : 'hover:bg-stone-50 dark:hover:bg-zinc-800 border border-transparent'
+                "
+                class="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition"
+              >
+                <span class="relative shrink-0"
+                  ><Avatar
+                    :image="avatarSrcFor(a.actor)"
+                    shape="circle"
+                    class="!w-10 !h-10 [&_img]:object-cover"
+                    :pt="{ image: { class: 'object-cover' } }" /><span
+                    class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center border-2 border-white dark:border-zinc-900 text-[10px]"
+                    :class="a.kind === 'comment' ? 'bg-violet-600' : 'bg-rose-500'"
+                    >{{ pinAct.describe(a).emoji }}</span
+                  ></span
+                >
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center gap-1.5">
+                    <span class="text-sm font-semibold dark:text-white truncate">{{
+                      a.pin?.title || "Ваш пин"
+                    }}</span
+                    ><span
+                      v-if="a.created_at"
+                      class="text-[11px] text-stone-400 shrink-0"
+                      >{{ fmtTime(a.created_at) }}</span
+                    >
+                  </div>
+                  <div class="text-xs text-stone-500 dark:text-zinc-400 truncate">
+                    {{ pinAct.describe(a).text }}
+                  </div>
+                </div>
+                <span
+                  v-if="!a.read_at"
+                  class="w-2.5 h-2.5 bg-rose-500 rounded-full shrink-0"
+                ></span>
+                <i v-else class="pi pi-chevron-right text-stone-300 text-xs shrink-0"></i>
+              </button>
+            </div>
+          </div>
           <div v-if="bell.pending.value.length" class="mb-3">
             <div
               class="text-[11px] font-bold tracking-widest uppercase text-stone-400 px-2 py-1.5 flex items-center gap-1.5"

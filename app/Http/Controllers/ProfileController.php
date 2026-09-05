@@ -124,15 +124,21 @@ class ProfileController extends Controller
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $user = $request->user();
+        $user->fill($request->validated());
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
+        $meters = (int) ($user->default_blur_meters ?? 300);
+        if ($meters > 1000 && !$user->canUseInvisible()) $meters = 1000;
+        $user->default_blur_meters = max(0, min(5000, $meters));
+        $user->default_location_precision = $user->default_blur_meters <= 0 ? 'exact' : 'custom';
+
+        if ($user->isDirty('email')) {
+            $user->email_verified_at = null;
         }
 
-        $request->user()->save();
+        $user->save();
 
-        $id = $request->user()->isAdmin() ? 'admin' : (string) $request->user()->id;
+        $id = $user->isAdmin() ? 'admin' : (string) $user->id;
         return Redirect::route('profile.edit', ['identifier' => $id]);
     }
 

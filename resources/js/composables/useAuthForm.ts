@@ -32,7 +32,7 @@ export function useRegisterForm() {
 
   const { defineField, handleSubmit, errors, values, isSubmitting, setValues, setErrors } = useForm({
     validationSchema: registerSchema,
-    initialValues: { name: '', email: '', password: '', password_confirmation: '', home_lat: null, home_lng: null, home_radius_km: 2, home_address: '' } as any,
+    initialValues: { name: '', email: '', password: '', password_confirmation: '', home_lat: null, home_lng: null, home_radius_km: 1, home_address: '' } as any,
   })
 
   const [name, nameAttrs] = defineField('name')

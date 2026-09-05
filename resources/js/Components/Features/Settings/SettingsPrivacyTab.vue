@@ -13,13 +13,14 @@ const emit = defineEmits<{ (e: 'profile'): void }>()
   <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }">
     <template #content>
       <h3 class="font-black tracking-tight text-lg dark:text-white">Приватность</h3>
-      <p class="text-sm text-stone-500 mt-1">Ты — не точка, ты — пин. Управляй размытием и анонимностью.</p>
+      <p class="text-sm text-stone-500 mt-1">Ты — не точка, ты — пин. Управляй видимостью своей геопозиции и анонимностью.</p>
       <div class="mt-5 space-y-4 max-w-xl">
         <Card class="!bg-stone-50 dark:!bg-zinc-800 !border-stone-200 !rounded-3xl !shadow-none" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
           <template #content>
             <div class="text-sm font-semibold dark:text-white">Базовые принципы</div>
             <ul class="text-sm text-stone-600 mt-2 space-y-1 list-disc pl-5">
-              <li>Размытие 200м по умолчанию — координаты смещаются случайно</li>
+              <li>Твоя точка на карте всегда одна и пульсирует — видна только сдвинутая позиция</li>
+              <li>Пины всегда точные — чтобы люди знали, где событие</li>
               <li>Анонимный пин скрывает имя и репутацию</li>
               <li>Блокировка в 1 клик скрывает контент пользователя</li>
             </ul>
@@ -29,22 +30,17 @@ const emit = defineEmits<{ (e: 'profile'): void }>()
           <template #content>
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
-                <div class="text-sm font-semibold dark:text-white">Размытие локации · {{ blur.blurLabel.value }}</div>
-                <p class="text-xs text-stone-500 mt-1 leading-relaxed">Насколько сдвигать точку пина от реального места. Применяется ко всем новым пинам, но каждый пин можно настроить отдельно.</p>
+                <div class="text-sm font-semibold dark:text-white">Моя геопозиция · {{ blur.blurLabel.value }}</div>
+                <p class="text-xs text-stone-500 mt-1 leading-relaxed">Насколько сдвигать твою пульсирующую точку от реального места. Координаты точки меняются соответственно.</p>
               </div>
             </div>
             <div class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-              <button v-for="o in blur.options" :key="o.v" type="button" @click="blur.setPrecision(o.v)" :class="['px-2 py-2 rounded-xl border text-center transition active:scale-95', blur.precision.value === o.v ? 'bg-stone-900 text-white border-stone-900 dark:bg-white dark:text-stone-900 dark:border-white' : 'bg-white dark:bg-white/[0.06] border-stone-200 dark:border-white/10 text-stone-700 dark:text-zinc-100']">
-                <span class="block text-xs font-bold leading-none">{{ o.l }}</span><span class="block text-[10px] opacity-60 leading-none mt-1">{{ o.d }}</span>
+              <button v-for="o in blur.options" :key="o.v" type="button" @click="blur.setMeters(o.v)" :disabled="!!o.pro && !blur.canUse5km.value" :title="!!o.pro && !blur.canUse5km.value ? 'Только Pro' : o.d" :class="['px-2 py-2 rounded-xl border text-center transition active:scale-95 disabled:opacity-50', blur.blurMeters.value === o.v ? 'bg-stone-900 text-white border-stone-900 dark:bg-white dark:text-stone-900 dark:border-white' : 'bg-white dark:bg-white/[0.06] border-stone-200 dark:border-white/10 text-stone-700 dark:text-zinc-100']">
+                <span class="block text-xs font-bold leading-none">{{ o.l }}</span><span class="block text-[10px] opacity-60 leading-none mt-1">{{ o.pro && !blur.canUse5km.value ? 'PRO' : o.d }}</span>
               </button>
             </div>
-            <div v-if="blur.precision.value === 'custom'" class="mt-3">
-              <div class="flex items-center justify-between text-xs text-stone-500"><span>Сдвиг точки</span><span class="font-bold text-stone-800 dark:text-zinc-100">{{ blur.blurMeters.value }} м</span></div>
-              <input type="range" min="0" max="5000" step="50" :value="blur.blurMeters.value" @input="blur.setMeters(Number(($event.target as HTMLInputElement).value))" @change="blur.commitMeters()" class="w-full mt-2 accent-stone-900" />
-              <div class="flex justify-between text-[10px] text-stone-400 mt-0.5"><span>0 · точно</span><span>5 км · максимум</span></div>
-            </div>
             <div v-if="blur.saving.value" class="text-xs text-stone-400 mt-2">Сохраняем…</div>
-            <div v-else-if="blur.saved.value && !blur.dirty.value" class="text-xs text-emerald-600 mt-2">✓ Запомнили — новые пины будут с «{{ blur.blurLabel.value }}»</div>
+            <div v-else-if="blur.saved.value && !blur.dirty.value" class="text-xs text-emerald-600 mt-2">✓ Запомнили — твоя точка сдвинута на «{{ blur.blurLabel.value }}»</div>
           </template>
         </Card>
         <Card class="!border-stone-200 !rounded-3xl !shadow-none" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">

@@ -17,7 +17,7 @@ export const registerSchema = toTypedSchema(
       password_confirmation: z.string().min(1, 'Подтвердите пароль'),
       home_lat: z.preprocess(toNumberOrNull, z.number({ invalid_type_error: 'Широта должна быть числом' }).min(-90).max(90).nullable().optional()),
       home_lng: z.preprocess(toNumberOrNull, z.number({ invalid_type_error: 'Долгота должна быть числом' }).min(-180).max(180).nullable().optional()),
-      home_radius_km: z.preprocess(toNumberOrNull, z.number({ invalid_type_error: 'Радиус должен быть числом' }).int().min(1, 'Минимум 1 км').max(50, 'Максимум 50 км').nullable().optional()),
+      home_radius_km: z.preprocess(toNumberOrNull, z.number({ invalid_type_error: 'Радиус должен быть числом' }).int().min(1, 'Минимум 1 км').max(1, 'На старте Free — максимум 1 км (как радиус пина)').nullable().optional()),
       home_address: z.string().optional(),
     })
     .refine((d) => d.password === d.password_confirmation, { message: 'Пароли не совпадают', path: ['password_confirmation'] }),
