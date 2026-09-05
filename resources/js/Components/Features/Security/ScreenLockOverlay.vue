@@ -75,7 +75,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
 <template>
   <Teleport to="body">
     <Transition name="lock-fade">
-      <div v-if="lock.locked.value" class="fixed inset-0 z-[200] overflow-y-auto bg-[#0f1420]/70 backdrop-blur-2xl">
+      <div v-if="lock.locked.value" data-lock-overlay data-lock-scroll class="fixed inset-0 z-[200] overflow-y-auto overscroll-contain bg-[#0f1420]/70 backdrop-blur-2xl">
         <div class="min-h-full grid place-items-center p-4">
           <div :key="shakeKey" :class="['w-full max-w-[340px] rounded-[28px] bg-white dark:bg-zinc-900 border border-white/10 shadow-2xl px-6 py-8 text-center', shakeKey && 'lock-shake']">
             <Avatar :image="avatarSrc" shape="circle" size="xlarge" class="!w-20 !h-20 mx-auto shadow-soft" />

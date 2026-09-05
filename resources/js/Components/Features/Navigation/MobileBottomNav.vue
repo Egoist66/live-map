@@ -1,20 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { Link, usePage } from '@inertiajs/vue3'
-import { useBadgeStore } from '@/stores/badges'
-import { useScreenLock } from '@/composables/useScreenLock'
+import { Link } from '@inertiajs/vue3'
+import { useMobileBottomNav } from '@/composables/useMobileBottomNav'
 
-const badge = useBadgeStore()
-const lock = useScreenLock()
-const page = usePage()
-const user = computed(() => (page.props.auth as any)?.user)
-const isAdmin = computed(() => user.value?.is_admin || user.value?.role === 'admin')
-const dashboardHref = computed(() => {
-  if (!user.value) return route('dashboard')
-  const id = isAdmin.value ? 'admin' : String(user.value.id)
-  return route('dashboard', { identifier: id })
-})
-const isActive = (name: string) => route().current(name)
+const { dashboardHref, isActive, total } = useMobileBottomNav()
 </script>
 
 <template>
@@ -39,7 +27,7 @@ const isActive = (name: string) => route().current(name)
       <Link :href="route('chat')" class="flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-2xl active:scale-95 transition relative" :class="isActive('chat') ? 'text-ink-900 dark:text-white' : 'text-stone-400'">
         <span class="relative">
           <svg class="w-6 h-6" :fill="isActive('chat') ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-          <span v-if="badge.total" class="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold grid place-items-center leading-none border-2 border-white dark:border-zinc-900">{{ badge.total>9?'9+':badge.total }}</span>
+          <span v-if="total" class="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold grid place-items-center leading-none border-2 border-white dark:border-zinc-900">{{ total>9?'9+':total }}</span>
         </span>
         <span class="text-[10px] font-semibold leading-none" :class="isActive('chat') ? 'opacity-100' : 'opacity-70'">Чат</span>
       </Link>
@@ -48,11 +36,6 @@ const isActive = (name: string) => route().current(name)
         <svg class="w-6 h-6" :fill="isActive('faq') ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" stroke-linejoin="round" d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"/></svg>
         <span class="text-[10px] font-semibold leading-none" :class="isActive('faq') ? 'opacity-100' : 'opacity-70'">FAQ</span>
       </Link>
-
-      <button v-if="lock.enabled.value" type="button" @click="lock.lockNow()" aria-label="Заблокировать" class="flex flex-col items-center gap-0.5 py-1.5 px-2.5 rounded-2xl active:scale-95 transition text-stone-400">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path stroke-linecap="round" stroke-linejoin="round" d="M7 11V7a5 5 0 0110 0v4"/></svg>
-        <span class="text-[10px] font-semibold leading-none opacity-70">Замок</span>
-      </button>
     </div>
   </nav>
 </template>

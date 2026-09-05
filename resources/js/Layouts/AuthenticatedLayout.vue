@@ -12,10 +12,12 @@ import ConfirmDialog from 'primevue/confirmdialog'
 import ScreenLockOverlay from '@/Components/Features/Security/ScreenLockOverlay.vue'
 import { useAppLayout } from '@/composables/useAppLayout'
 import { useScreenLock } from '@/composables/useScreenLock'
+import { useScreenLockScroll } from '@/composables/useScreenLockScroll'
 import { onMounted } from 'vue'
 
 const { badge, user, avatarSrc, dashboardHref, settingsHref, bell, showDrawer, menu, menuItems, toggleMenu, logout } = useAppLayout()
 const screenLock = useScreenLock()
+useScreenLockScroll()
 onMounted(() => screenLock.init())
 </script>
 <template>

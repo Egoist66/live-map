@@ -14,7 +14,7 @@ class ChatUserController extends Controller
         $q = trim($request->input('q',''));
         abort_if(strlen($q)<2,422,'Минимум 2 символа');
         $me=$request->user();
-        $blocked = UserBlock::where('blocker_id',$me->id)->pluck('blocked_id')->merge(UserBlock::where('blocked_id',$me->id)->pluck('blocker_id'))->unique();
+        $blocked = $me->isAdmin() ? collect() : UserBlock::where('blocker_id',$me->id)->pluck('blocked_id')->merge(UserBlock::where('blocked_id',$me->id)->pluck('blocker_id'))->unique();
         $users = User::where('id','!=',$me->id)
             ->whereNotIn('id',$blocked)
             ->whereNotIn('id', User::hiddenFromSearchFor($me))
