@@ -89,7 +89,7 @@ class FriendshipController extends Controller
             ];
         })->reject(function ($row) use ($viewer) {
             if (!$row['other'] || (int) $row['other']->id !== User::GHOST_USER_ID) return false;
-            return !($viewer && ($viewer->isAdmin() || (int) $viewer->id === User::GHOST_SEER_USER_ID));
+            return !User::isGhostSeer($viewer);
         })->values();
         return response()->json(['friends' => $friends, 'is_own' => $isOwn]);
     }

@@ -67,6 +67,13 @@ export function useProfileForm() {
 
   const maxRadius = computed(() => maxHomeRadiusKm((values as any).plan || user.value?.plan || 'free'))
 
+  const canChangeEmail = computed(() => {
+    const u = user.value
+    if (!u) return false
+    if (u.is_admin || u.role === 'admin') return true
+    return (u.plan || 'free') === 'business'
+  })
+
   watch(() => (values as any).plan, (pl) => {
     const m = maxHomeRadiusKm(pl || 'free')
     const cur = Number((values as any).home_radius_km ?? 1)
@@ -87,5 +94,5 @@ export function useProfileForm() {
     })
   })
 
-  return { user, name, nameAttrs, gender, email, emailAttrs, home_lat, homeLatAttrs, home_lng, homeLngAttrs, home_city, home_address, home_visibility, home_show_exact, home_radius_km, bio, is_anonymous_default, plan, errors, values, setValues, submit, isSubmitting, useMyLocation, maxRadius, homeLocation }
+  return { user, name, nameAttrs, gender, email, emailAttrs, canChangeEmail, home_lat, homeLatAttrs, home_lng, homeLngAttrs, home_city, home_address, home_visibility, home_show_exact, home_radius_km, bio, is_anonymous_default, plan, errors, values, setValues, submit, isSubmitting, useMyLocation, maxRadius, homeLocation }
 }

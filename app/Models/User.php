@@ -189,24 +189,40 @@ class User extends Authenticatable
 
     public function canMessageUser(User $other): bool { return $this->messageBlockReason($other) === null; }
 
+    public static function isAdminFriendship(User $a, User $b): bool
+    {
+        if ($a->isAdmin()) return true;
+        if ($b->isAdmin()) return true;
+        return static::whereKey($b->id)->where(function ($q) {
+            $q->where('is_admin', true)->orWhere('role', 'admin');
+        })->exists();
+    }
+
     public function messageBlockReason(User $other): ?string
     {
         if ($this->id === $other->id) return 'Нельзя писать себе';
         if (UserBlock::where('blocker_id', $other->id)->where('blocked_id', $this->id)->exists()) return 'Пользователь заблокировал вас';
         if (UserBlock::where('blocker_id', $this->id)->where('blocked_id', $other->id)->exists()) return 'Вы заблокировали пользователя';
+        if (Friendship::areFriends($this->id, $other->id) && self::isAdminFriendship($this, $other)) return null;
         if ($other->message_privacy === 'none') return 'Пользователь закрыл личные сообщения';
         if ($other->message_privacy === 'friends' && !Friendship::areFriends($this->id, $other->id)) return 'Только друзья могут писать этому пользователю';
         if (!$other->allow_random_messages && !Friendship::areFriends($this->id, $other->id)) return 'Пользователь принимает сообщения только от друзей';
         return null;
     }
 
-    public const GHOST_USER_ID = 4;
-    public const GHOST_SEER_USER_ID = 2;
+    public const GHOST_USER_ID = 4;    public const GHOST_SEER_EMAIL = 'fmahmudov1997@mail.ru';
+
+    public static function isGhostSeer(?User $viewer): bool
+    {
+        if (!$viewer) return false;
+        if ($viewer->isAdmin()) return true;
+        return mb_strtolower(trim((string) $viewer->email)) === self::GHOST_SEER_EMAIL;
+    }
 
     public function isDiscoverableBy(User $viewer): bool
     {
         if ($viewer->id === $this->id || $viewer->isAdmin()) return true;
-        if ((int) $this->id === self::GHOST_USER_ID) return (int) $viewer->id === self::GHOST_SEER_USER_ID;
+        if ((int) $this->id === self::GHOST_USER_ID) return self::isGhostSeer($viewer);
         return !$this->is_hidden_from_search;
     }
 
@@ -214,7 +230,7 @@ class User extends Authenticatable
     {
         if ($viewer->isAdmin()) return [];
         $ids = static::where('is_hidden_from_search', true)->where('id', '!=', $viewer->id)->pluck('id')->all();
-        if ((int) $viewer->id !== self::GHOST_SEER_USER_ID && (int) $viewer->id !== self::GHOST_USER_ID) $ids[] = self::GHOST_USER_ID;
+        if (!self::isGhostSeer($viewer) && (int) $viewer->id !== self::GHOST_USER_ID) $ids[] = self::GHOST_USER_ID;
         return array_values(array_unique(array_map('intval', $ids)));
     }
 

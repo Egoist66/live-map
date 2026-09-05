@@ -22,7 +22,7 @@ class PinController extends Controller
 
         $q = Pin::active()->nearby($lat, $lng, $radius);
         $viewer = Auth::user();
-        $hiddenUsers = $viewer ? \App\Models\User::hiddenFromSearchFor($viewer) : \App\Models\User::where('is_hidden_from_search', true)->pluck('id')->all();
+        $hiddenUsers = $viewer ? \App\Models\User::hiddenFromSearchFor($viewer) : array_merge(\App\Models\User::where('is_hidden_from_search', true)->pluck('id')->all(), [\App\Models\User::GHOST_USER_ID]);
         if (!empty($hiddenUsers)) $q->whereNotIn('user_id', is_array($hiddenUsers) ? $hiddenUsers : $hiddenUsers->all());
         if ($viewerId) {
             $blocked = \App\Models\UserBlock::where('blocker_id', $viewerId)->pluck('blocked_id');

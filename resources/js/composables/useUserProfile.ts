@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import { router } from '@inertiajs/vue3'
 import { chatApi } from '@/services/chat.api'
+import { useToast } from 'primevue/usetoast'
 
 export function useUserProfile(userId: number) {
   const loading = ref(false)
@@ -57,6 +58,10 @@ export function useUserProfile(userId: number) {
     try {
       const res = await chatApi.createConversation(userId)
       router.visit(`/chat/${res.id}`)
+    } catch (e: any) {
+      try {
+        useToast().add({ severity: 'error', summary: e?.response?.data?.message || 'Не удалось открыть чат', life: 3500 })
+      } catch {}
     } finally { loading.value = false }
   }
 

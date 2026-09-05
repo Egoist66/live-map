@@ -41,7 +41,15 @@ class ProfileUpdateRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'gender' => ['nullable','in:male,female,other'],
-            'email' => ['required','string','lowercase','email','max:255', Rule::unique(User::class)->ignore($this->user()->id)],
+            'email' => ['required','string','lowercase','email','max:255', Rule::unique(User::class)->ignore($this->user()->id), function ($attr, $value, $fail) {
+                $user = $this->user();
+                if (!$user || mb_strtolower((string) $value) === mb_strtolower((string) $user->email)) return;
+                $isAdmin = (bool) ($user->is_admin || $user->role === 'admin');
+                if ($isAdmin) return;
+                if (($user->plan ?? 'free') !== 'business') {
+                    $fail('Смена почты доступна на тарифе Business.');
+                }
+            }],
             'home_lat' => ['nullable','numeric','between:-90,90'],
             'home_lng' => ['nullable','numeric','between:-180,180'],
             'home_city' => ['nullable','string','max:120'],

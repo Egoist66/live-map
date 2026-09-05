@@ -41,15 +41,25 @@ export const useBadgeStore = defineStore('badges', () => {
     scheduleFetch()
   }
 
+  function readIsAdmin(): boolean {
+    try {
+      const u = (usePage().props.auth as any)?.user
+      return !!u?.is_admin || u?.role === 'admin'
+    } catch { return false }
+  }
+
   async function fetch() {
     try {
       const w = window as any
       const convsPromise = w.__conversationsInflight ? w.__conversationsInflight : chatApi.conversations().catch(() => [] as any[])
+      const repPromise = readIsAdmin()
+        ? api.get('/api/admin/reports', { params: { status: 'pending', per_page: 1 } }).then((r) => Number(r.data?.pending_count ?? 0)).catch(() => 0)
+        : Promise.resolve(0)
       const [convs, fr, ac, rep] = await Promise.all([
         convsPromise,
         chatApi.friendships().catch(() => ({ pending_in: [] } as any)),
         pinActivityApi.unreadCount().catch(() => 0),
-        api.get('/api/admin/reports', { params: { status: 'pending', per_page: 1 } }).then((r) => Number(r.data?.pending_count ?? 0)).catch(() => 0),
+        repPromise,
       ])
       unread.value = (convs as any[]).reduce((s: number, c: any) => s + (c.unread_count || 0), 0)
       pending.value = (fr.pending_in?.length || 0)
