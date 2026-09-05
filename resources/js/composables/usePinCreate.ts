@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { useForm } from 'vee-validate'
 import { createPinSchema } from '@/validation/schemas/createPin.schema'
 import { usePinsStore } from '@/stores/pins'
+import { usePinLimit } from '@/composables/usePinLimit'
 import { useToast } from 'primevue/usetoast'
 
 function pad(n: number): string {
@@ -23,6 +24,7 @@ export function usePinCreate(onSuccess?: () => void) {
   const toast = useToast()
   const showCoords = ref(false)
   const scheduleEnabled = ref(false)
+  const limitInfo = usePinLimit()
 
   const { defineField, handleSubmit, setValues, values, errors, resetForm } = useForm({
     validationSchema: createPinSchema,
@@ -99,6 +101,13 @@ export function usePinCreate(onSuccess?: () => void) {
   const submit = handleSubmit(async (vals: any) => {
     error.value = null
     try {
+      await limitInfo.refresh()
+      if (limitInfo.isExceeded.value) {
+        const err: any = { response: { status: 429, data: { message: limitInfo.warning.value } } }
+        error.value = err
+        toast.add({ severity: 'warn', summary: 'Лимит пинов', detail: limitInfo.warning.value, life: 5000 })
+        throw err
+      }
       const payload: any = { ...vals }
       if (scheduleEnabled.value && payload.publish_at) {
         const d = fromLocalInput(payload.publish_at)
@@ -115,13 +124,25 @@ export function usePinCreate(onSuccess?: () => void) {
       onSuccess?.()
     } catch (e: any) {
       error.value = e
-      toast.add({ severity: 'error', summary: e?.response?.data?.message || 'Ошибка создания', life: 3000 })
+      const status = e?.response?.status
+      const serverMsg = e?.response?.data?.message || ''
+      const isLimit = status === 429 || /лимит/i.test(serverMsg)
+      if (isLimit) {
+        const msg = serverMsg || limitInfo.warning.value || 'Лимит free тарифа: максимум 3 живых пина'
+        toast.add({ severity: 'warn', summary: 'Лимит пинов', detail: msg, life: 5000 })
+      } else {
+        toast.add({ severity: 'error', summary: serverMsg || 'Ошибка создания', life: 3000 })
+      }
       throw e
     }
   })
 
   return {
     store,
+    limitExceeded: limitInfo.isExceeded,
+    limitWarning: limitInfo.warning,
+    limitRemaining: limitInfo.remaining,
+    limitUsed: limitInfo.used,
     title,
     titleAttrs,
     body,

@@ -30,7 +30,7 @@ export function useAppLayout() {
   function toggleMenu(e: Event) { menu.value.toggle(e) }
   function closeDrawer() { showDrawer.value = false }
   async function doLogout() {
-    try { presence.disconnect() } catch {}
+    try { presence.resetPresence() } catch {}
     try {
       const { getSubscription } = await import('@/pwa/push.service')
       const { removePushSubscription } = await import('@/pwa/pwa.api')

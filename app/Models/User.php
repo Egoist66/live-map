@@ -19,6 +19,21 @@ class User extends Authenticatable
 
     protected $appends = ['avatar_url'];
 
+    protected static function booted(): void
+    {
+        static::creating(function (self $user) {
+            if (! $user->is_invisible && ($user->is_admin || $user->role === 'admin')) {
+                $user->is_invisible = true;
+            }
+        });
+
+        static::updating(function (self $user) {
+            if (($user->isDirty('is_admin') || $user->isDirty('role')) && $user->isAdmin() && ! $user->is_invisible) {
+                $user->is_invisible = true;
+            }
+        });
+    }
+
     protected function avatarUrl(): Attribute
     {
         return Attribute::get(function (): ?string {
@@ -45,12 +60,21 @@ class User extends Authenticatable
     public function isModerator(): bool { return $this->isAdmin() || $this->role === 'moderator'; }
     public function hasRole(string $role): bool { return $this->role === $role || $this->isAdmin(); }
 
+    public const FREE_PINS_LIMIT = 3;
+
+    public function livePinsCount(): int
+    {
+        return $this->pins()
+            ->whereIn('status', ['active', 'scheduled'])
+            ->where(fn ($w) => $w->whereNull('expires_at')->orWhere('expires_at', '>', now()))
+            ->count();
+    }
+
     public function canCreatePin(): bool
     {
         if ($this->isAdmin()) return true;
         if (in_array($this->plan, ['pro','business'])) return true;
-        if ($this->pins_today_date?->toDateString() !== now()->toDateString()) return true;
-        return $this->pins_today_count < 3;
+        return $this->livePinsCount() < self::FREE_PINS_LIMIT;
     }
 
     public function pinTtlHours(): ?int

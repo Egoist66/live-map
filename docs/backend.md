@@ -24,8 +24,8 @@
 
 **Как работает:**
 1. Регистрация `RegisteredUserController`, логин `AuthenticatedSessionController` (Breeze). Сессия в `sessions`.
-2. Каждый запрос через `UpdateLastSeen`: если авторизован и не `isInvisibleActive()`, раз в 120 сек (кеш `last_seen:{id}`) пишет `last_seen_at`. Невидимка (`is_invisible`, тариф pro/business/admin) не светится. Явный пинг — `POST /chat/heartbeat`.
-3. Лимиты пинов `canCreatePin()`: `admin/pro/business = безлимит`, `free = 3 в сутки` (сброс по `pins_today_date`). Радиус `pinRadius()`: `free=1км, pro/business=5км, admin=50км`. TTL `pinTtlHours()`: `free=2ч, pro/business=24ч, admin=168ч`.
+2. Каждый запрос через `UpdateLastSeen`: если авторизован и не `isInvisibleActive()`, раз в 120 сек (кеш `last_seen:{id}`) пишет `last_seen_at`. Невидимка (`is_invisible`, тариф pro/business/admin) не светится; у админов `is_invisible=true` выставляется по умолчанию (хуки модели, `make:admin`, сидер + миграция-бэкфилл). Явный пинг — `POST /chat/heartbeat`.
+3. Лимиты пинов `canCreatePin()` / `livePinsCount()`: `admin/pro/business = безлимит`, `free = максимум 3 живых пина` (`status active|scheduled` + `expires_at>now`; истёкшие, удалённые и архивные место не занимают). Проверка под `lockForUpdate` + повторная проверка внутри транзакции — параллельные запросы 4-й пин не протолкнут. Радиус `pinRadius()`: `free=5км, pro=15км, business=50км, admin=500км`. TTL `pinTtlHours()`: `free=4ч, pro=12ч, business/admin=null (без срока)`.
 4. Анти-спам сообщений `messageBlockReason(other)` (вызывается при создании диалога/сообщения, в `friendship-status`, в поиске):
    - себе нельзя; я заблокировал / меня заблокировали → запрет;
    - `other.message_privacy=none` → запрет;

@@ -1,34 +1,36 @@
-import { usePresenceState } from '@/composables/usePresence'
+import { usePresenceState, isRecentlySeen } from '@/composables/usePresence'
 
 export function useChatOnline(chat: any, friendsApi: any) {
   const { onlineIds, isOnline: presenceOnline, connect, disconnect } = usePresenceState()
 
-  function isInvisibleUser(id: number | string | null | undefined): boolean {
-    if (id == null) return false
+  function lookupUser(id: number | string): any | null {
     const nid = Number(id)
     try {
-      const convs = chat?.conversations?.value || []
-      for (const c of convs) {
-        if (Number(c?.other?.id) === nid && c?.other?.is_invisible) return true
-      }
       const active = chat?.activeConv?.value?.other
-      if (active && Number(active.id) === nid && active.is_invisible) return true
-      const friends = friendsApi?.friends?.value || []
-      for (const f of friends) {
-        if (Number(f?.other?.id) === nid && (f?.other as any)?.is_invisible) return true
+      if (active && Number(active.id) === nid) return active
+      for (const c of chat?.conversations?.value || []) {
+        if (Number(c?.other?.id) === nid) return c.other
       }
-      const results = chat?.searchResults?.value || []
-      for (const u of results) {
-        if (Number(u?.id) === nid && (u as any)?.is_invisible) return true
+      for (const f of friendsApi?.friends?.value || []) {
+        if (Number(f?.other?.id) === nid) return f.other
+      }
+      for (const r of friendsApi?.pendingIn?.value || []) {
+        if (Number(r?.requester?.id) === nid) return r.requester
+      }
+      for (const u of chat?.searchResults?.value || []) {
+        if (Number(u?.id) === nid) return u
       }
     } catch {}
-    return false
+    return null
   }
 
-  const isOnline = (id: number | string | null | undefined) => {
+  const isOnline = (id: number | string | null | undefined, lastSeenAt?: string | null) => {
     if (id == null) return false
-    if (isInvisibleUser(id)) return false
-    return presenceOnline(id)
+    const u = lookupUser(id)
+    if (u?.is_invisible) return false
+    if (presenceOnline(id)) return true
+    const seen = lastSeenAt ?? u?.last_seen_at ?? null
+    return isRecentlySeen(seen)
   }
 
   return { onlineIds, isOnline, connect, disconnect }

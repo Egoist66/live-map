@@ -31,6 +31,7 @@ class AdminSeeder extends Seeder
                 'latitude' => 55.7558,
                 'longitude' => 37.6173,
                 'is_anonymous_default' => false,
+                'is_invisible' => true,
                 'settings' => [
                     'is_super_admin' => true,
                     'bypass_limits' => true,

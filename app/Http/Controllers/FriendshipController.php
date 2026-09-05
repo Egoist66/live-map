@@ -15,9 +15,10 @@ class FriendshipController extends Controller
         $u = $request->user();
         $friends = Friendship::where('status','accepted')
             ->where(fn($q)=>$q->where('requester_id',$u->id)->orWhere('addressee_id',$u->id))
-            ->with(['requester:id,name,avatar_path,is_invisible,plan,role,is_admin','addressee:id,name,avatar_path,is_invisible,plan,role,is_admin'])
+            ->with(['requester:id,name,avatar_path,last_seen_at,is_invisible,plan,role,is_admin','addressee:id,name,avatar_path,last_seen_at,is_invisible,plan,role,is_admin'])
             ->get()->map(function($f) use ($u){
                 $other = $f->requester_id===$u->id ? $f->addressee : $f->requester;
+                if ($other && $other->isInvisibleActive() && !$u->isAdmin()) $other->setAttribute('last_seen_at', null);
                 if ($other) $other->setAttribute('is_invisible', $other->isInvisibleActive());
                 return [
                     'id'=>$f->id,
@@ -27,7 +28,10 @@ class FriendshipController extends Controller
                     'created_at'=>$f->created_at,
                 ];
             });
-        $pendingIn = Friendship::where('status','pending')->where('addressee_id',$u->id)->with('requester:id,name,avatar_path,is_invisible,plan,role,is_admin')->get()->each(fn($f)=>$f->requester?->setAttribute('is_invisible', $f->requester->isInvisibleActive()));
+        $pendingIn = Friendship::where('status','pending')->where('addressee_id',$u->id)->with('requester:id,name,avatar_path,last_seen_at,is_invisible,plan,role,is_admin')->get()->each(function($f) use ($u) {
+            if ($f->requester && $f->requester->isInvisibleActive() && !$u->isAdmin()) $f->requester->setAttribute('last_seen_at', null);
+            $f->requester?->setAttribute('is_invisible', $f->requester->isInvisibleActive());
+        });
         $pendingOut = Friendship::where('status','pending')->where('requester_id',$u->id)->with('addressee:id,name,avatar_path')->get();
         $limit = $u->hiddenFriendsLimit();
         return response()->json([

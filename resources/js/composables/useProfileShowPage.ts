@@ -1,5 +1,5 @@
 import { computed, ref } from 'vue'
-import { usePresenceState } from '@/composables/usePresence'
+import { usePresenceState, isRecentlySeen } from '@/composables/usePresence'
 import { useUserProfile } from '@/composables/useUserProfile'
 import { useProfileShare } from '@/composables/useProfileShare'
 import { formatRelative } from '@/utils/date'
@@ -21,10 +21,11 @@ export function useProfileShowPage(props: { profileUser: any; isOwn: boolean; is
   const reason = ref(props.canMessageReason)
   const confirm = ref<{ title: string; msg: string; action: () => Promise<void> } | null>(null)
   const isLocked = computed(() => isBlockedBy.value)
-  const { isOnline } = usePresenceState()
+  const { isOnline: presenceOnline } = usePresenceState()
   const online = computed(() => {
     if (!props.isOwn && props.profileUser?.is_invisible) return false
-    return isOnline(props.profileUser.id)
+    if (presenceOnline(props.profileUser.id)) return true
+    return isRecentlySeen(props.profileUser?.last_seen_at)
   })
   const { shareProfile, sharing } = useProfileShare()
   const lastSeenText = computed(() => {

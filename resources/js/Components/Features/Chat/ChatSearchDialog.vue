@@ -6,7 +6,7 @@ import OnlineDot from '@/Components/Features/Feedback/OnlineDot.vue'
 import { avatarSrcFor } from '@/composables/useAvatar'
 import { useChatSearchList } from '@/composables/useChatSearchUser'
 
-defineProps<{ open: boolean; query: string; results: any[]; searching: boolean; creating: boolean; isOnline: (id?: number) => boolean }>()
+defineProps<{ open: boolean; query: string; results: any[]; searching: boolean; creating: boolean; isOnline: (id?: number, lastSeenAt?: string | null) => boolean }>()
 const emit = defineEmits<{ (e: 'update:open', v: boolean): void; (e: 'update:query', v: string): void; (e: 'chat', u: any): void; (e: 'add', id: number): void; (e: 'block', id: number, name?: string): void }>()
 const { isFriend, isPending, showAdd, addTitle } = useChatSearchList()
 </script>
@@ -21,7 +21,7 @@ const { isFriend, isPending, showAdd, addTitle } = useChatSearchList()
     <div v-if="results.length" class="mt-3 max-h-[60dvh] sm:max-h-[52vh] overflow-auto divide-y border rounded-2xl bg-white dark:bg-zinc-900 dark:border-zinc-700 shadow-sm">
       <div v-for="u in results" :key="u.id" class="flex items-center justify-between p-3 select-none">
         <Link :href="`/users/${u.id}`" class="flex items-center gap-2.5 min-w-0">
-          <span class="relative shrink-0"><Avatar :image="avatarSrcFor(u)" shape="circle" size="normal" class="!w-9 !h-9 [&_img]:object-cover" /><OnlineDot :online="isOnline(u.id)" size="w-3 h-3" /></span>
+          <span class="relative shrink-0"><Avatar :image="avatarSrcFor(u)" shape="circle" size="normal" class="!w-9 !h-9 [&_img]:object-cover" /><OnlineDot :online="isOnline(u.id, u.last_seen_at)" size="w-3 h-3" /></span>
           <div class="min-w-0"><div class="text-sm font-medium truncate">{{ u.name }}</div></div>
         </Link>
         <div class="flex gap-1 shrink-0 ml-2 items-center">

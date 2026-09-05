@@ -8,6 +8,7 @@ use App\Events\PinUpdated;
 use App\Models\Pin;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class PinController extends Controller
 {
@@ -60,7 +61,7 @@ class PinController extends Controller
     public function store(Request $request)
     {
         $user = $request->user();
-        abort_unless($user->canCreatePin(), 429, 'Лимит 3 пина в день для free тарифа');
+        abort_unless($user->canCreatePin(), 429, 'Лимит free тарифа: максимум 3 живых пина. Истёкшие и удалённые освобождают место — дождись или удали лишний.');
 
         $data = $request->validate([
             'title' => 'required|string|max:100',
@@ -98,13 +99,20 @@ class PinController extends Controller
         $data['is_anonymous'] = $data['is_anonymous'] ?? $user->is_anonymous_default;
         $data['status'] = $isScheduled ? 'scheduled' : 'active';
 
-        $pin = Pin::create($data);
+        $pin = DB::transaction(function () use ($user, $data) {
+            $locked = \App\Models\User::whereKey($user->id)->lockForUpdate()->first();
+            abort_unless($locked->canCreatePin(), 429, 'Лимит free тарифа: максимум 3 живых пина. Истёкшие и удалённые освобождают место — дождись или удали лишний.');
 
-        if ($user->pins_today_date?->toDateString() !== now()->toDateString()) {
-            $user->update(['pins_today_date' => now()->toDateString(), 'pins_today_count' => 1]);
-        } else {
-            $user->increment('pins_today_count');
-        }
+            $created = Pin::create($data);
+
+            if ($locked->pins_today_date?->toDateString() !== now()->toDateString()) {
+                $locked->update(['pins_today_date' => now()->toDateString(), 'pins_today_count' => 1]);
+            } else {
+                $locked->increment('pins_today_count');
+            }
+
+            return $created;
+        });
 
         $pin->load('user:id,name,avatar_path,level');
         if (! $isScheduled) {

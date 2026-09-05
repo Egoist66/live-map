@@ -33,6 +33,7 @@ class MakeAdmin extends Command
                 'level' => 'guide',
                 'reputation_score' => max($user->reputation_score, 99999),
                 'email_verified_at' => $user->email_verified_at ?? now(),
+                'is_invisible' => true,
             ]);
             if ($this->confirm('Сменить пароль для существующего пользователя?', true)) {
                 $user->update(['password' => Hash::make($password)]);
@@ -55,6 +56,7 @@ class MakeAdmin extends Command
                 'home_radius_km' => 50,
                 'latitude' => 55.7558,
                 'longitude' => 37.6173,
+                'is_invisible' => true,
             ]);
             $this->info("✓ Админ создан: {$email} (ID: {$user->id})");
         }
