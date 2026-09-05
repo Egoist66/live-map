@@ -9,15 +9,24 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->string('screen_lock_code', 8)->nullable()->after('is_invisible');
-            $table->unsignedSmallInteger('screen_lock_timeout')->default(5)->after('screen_lock_code');
+            if (!Schema::hasColumn('users', 'screen_lock_code')) {
+                $table->string('screen_lock_code', 32)->nullable()->after('is_invisible');
+            }
+            if (!Schema::hasColumn('users', 'screen_lock_timeout')) {
+                $table->unsignedSmallInteger('screen_lock_timeout')->default(5)->after('screen_lock_code');
+            }
         });
     }
 
     public function down(): void
     {
-        Schema::table('users', function (Blueprint $table) {
-            $table->dropColumn(['screen_lock_code', 'screen_lock_timeout']);
-        });
+        $drop = [];
+        if (Schema::hasColumn('users', 'screen_lock_code')) $drop[] = 'screen_lock_code';
+        if (Schema::hasColumn('users', 'screen_lock_timeout')) $drop[] = 'screen_lock_timeout';
+        if ($drop) {
+            Schema::table('users', function (Blueprint $table) use ($drop) {
+                $table->dropColumn($drop);
+            });
+        }
     }
 };
