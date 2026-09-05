@@ -195,6 +195,7 @@ class User extends Authenticatable
         if ($this->isAdmin()) return null;
         if (UserBlock::where('blocker_id', $other->id)->where('blocked_id', $this->id)->exists()) return 'Пользователь заблокировал вас';
         if (UserBlock::where('blocker_id', $this->id)->where('blocked_id', $other->id)->exists()) return 'Вы заблокировали пользователя';
+        if ($other->isAdmin() && !Friendship::areFriends($this->id, $other->id)) return 'Сначала добавьте администратора в друзья';
         if ($other->message_privacy === 'none') return 'Пользователь закрыл личные сообщения';
         if ($other->message_privacy === 'friends' && !Friendship::areFriends($this->id, $other->id)) return 'Только друзья могут писать этому пользователю';
         if (!$other->allow_random_messages && !Friendship::areFriends($this->id, $other->id)) return 'Пользователь принимает сообщения только от друзей';
@@ -213,7 +214,10 @@ class User extends Authenticatable
     public function isDiscoverableBy(User $viewer): bool
     {
         if ($viewer->id === $this->id || $viewer->isAdmin()) return true;
-        if ($this->isAdmin()) return true;
+        if ($this->isAdmin()) {
+            if (! $this->is_hidden_from_search) return true;
+            return Friendship::areFriends($viewer->id, $this->id);
+        }
         if ((int) $this->id === self::GHOST_USER_ID) return self::isGhostSeer($viewer);
         return !$this->is_hidden_from_search;
     }
@@ -221,10 +225,7 @@ class User extends Authenticatable
     public static function hiddenFromSearchFor(User $viewer): array
     {
         if ($viewer->isAdmin()) return [];
-        $ids = static::where('is_hidden_from_search', true)
-            ->where('is_admin', false)
-            ->where('role', '!=', 'admin')
-            ->where('id', '!=', $viewer->id)->pluck('id')->all();
+        $ids = static::where('is_hidden_from_search', true)->where('id', '!=', $viewer->id)->pluck('id')->all();
         if (!self::isGhostSeer($viewer) && (int) $viewer->id !== self::GHOST_USER_ID) $ids[] = self::GHOST_USER_ID;
         return array_values(array_unique(array_map('intval', $ids)));
     }
