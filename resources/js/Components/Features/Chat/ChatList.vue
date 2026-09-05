@@ -30,7 +30,7 @@ const emit = defineEmits<{ (e: 'update:filter', v: string): void; (e: 'open', id
           </span>
           <div class="flex-1 min-w-0">
             <div class="flex justify-between items-baseline gap-2"><span class="text-[15px] lg:text-sm font-semibold dark:text-white truncate">{{ c.other?.name || 'Чат' }}</span><span v-if="c.last_message_at" class="text-[11px] text-stone-400 shrink-0">{{ formatTime(c.last_message_at) }}</span></div>
-            <div class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5" :class="isOnline(c.other?.id) ? 'text-emerald-600' : 'text-red-500'">{{ isOnline(c.other?.id) ? 'в сети' : 'офлайн' }}<span class="text-stone-300">·</span><span class="truncate text-stone-500">{{ c.last_message?.body || 'Нет сообщений' }}</span><span v-if="(c.last_message as any)?.is_edited" class="text-[10px] text-stone-400">(изм.)</span></div>
+            <div class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5" :class="isOnline(c.other?.id) ? 'text-emerald-600' : 'text-red-500'">{{ isOnline(c.other?.id) ? 'в сети' : 'оффлайн' }}<span class="text-stone-300">·</span><span class="truncate text-stone-500">{{ c.last_message?.body || 'Нет сообщений' }}</span><span v-if="(c.last_message as any)?.is_edited" class="text-[10px] text-stone-400">(изм.)</span></div>
           </div>
           <span v-if="c.unread_count" class="bg-violet-600 text-white text-xs font-bold min-w-[22px] h-[22px] grid place-items-center px-1.5 rounded-full shrink-0">{{ c.unread_count > 9 ? '9+' : c.unread_count }}</span>
         </button>

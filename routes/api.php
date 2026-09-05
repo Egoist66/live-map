@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\ChatUserController;
 use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\FriendshipController;
@@ -15,10 +16,10 @@ use App\Http\Controllers\ZoneSubscriptionController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('throttle:60,1')->group(function () {
+    Route::get('/nbrb/convert', [NbrbController::class, 'convert']);
+    Route::get('/nbrb/dynamics/{curId}', [NbrbController::class, 'dynamics'])->whereNumber('curId');
     Route::get('/nbrb/currencies/{curId?}', [NbrbController::class, 'currencies'])->whereNumber('curId');
     Route::get('/nbrb/rates/{code?}', [NbrbController::class, 'rates'])->where('code', '[A-Za-z0-9]+');
-    Route::get('/nbrb/dynamics/{curId}', [NbrbController::class, 'dynamics'])->whereNumber('curId');
-    Route::get('/nbrb/convert', [NbrbController::class, 'convert']);
 });
 
 Route::middleware(['web', 'auth'])->group(function () {
@@ -50,6 +51,8 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::post('/friendships/{friendship}/decline', [FriendshipController::class, 'decline']);
     Route::delete('/friendships/{friendship}', [FriendshipController::class, 'destroy']);
     Route::get('/friendships/status/{user}', [FriendshipController::class, 'status']);
+    Route::patch('/friendships/{friendship}/hidden', [FriendshipController::class, 'toggleHidden']);
+    Route::get('/users/{user}/friends', [FriendshipController::class, 'publicList']);
 
     Route::get('/blocks', [UserBlockController::class, 'index']);
     Route::post('/blocks', [UserBlockController::class, 'store']);
@@ -71,4 +74,10 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::post('/push-subscriptions', [PushSubscriptionController::class, 'store']);
     Route::delete('/push-subscriptions', [PushSubscriptionController::class, 'destroy']);
     Route::post('/push-subscriptions/test', [PushSubscriptionController::class, 'test']);
+});
+
+Route::middleware(['web', 'auth', 'admin'])->group(function () {
+    Route::get('/admin/users/search', [AdminUserController::class, 'search']);
+    Route::patch('/admin/users/{user}/visibility', [AdminUserController::class, 'updateVisibility']);
+    Route::delete('/admin/users/{user}', [AdminUserController::class, 'destroy']);
 });

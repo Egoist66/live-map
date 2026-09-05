@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
+import { usePage } from '@inertiajs/vue3'
 
-export type SettingsTabId = 'profile'|'billing'|'privacy'|'appearance'|'security'|'pins'|'support'|'app'
+export type SettingsTabId = 'profile'|'billing'|'privacy'|'appearance'|'security'|'pins'|'support'|'app'|'admin'
 
 export const SETTINGS_TABS = [
   { id: 'profile' as const, label: 'Профиль', icon: 'pi pi-user', desc: 'Фото, имя, дом' },
@@ -14,18 +15,22 @@ export const SETTINGS_TABS = [
 ] as const
 
 export const SETTINGS_TAB_INDEX: Record<SettingsTabId, string> = {
-  profile: '0', billing: '1', pins: '2', privacy: '3', appearance: '4', security: '5', support: '6', app: '7',
+  profile: '0', billing: '1', pins: '2', privacy: '3', appearance: '4', security: '5', support: '6', app: '7', admin: '8',
 }
 
+export const ADMIN_TAB = { id: 'admin' as const, label: 'Админ', icon: 'pi pi-shield', desc: 'Скрытие, удаление' } as const
+
 export function useSettingsTabs() {
+  const page = usePage()
+  const isAdmin = computed(() => !!((page.props.auth as any)?.user?.is_admin) || (page.props.auth as any)?.user?.role === 'admin')
   const active = ref<SettingsTabId>('profile')
-  const tabs = SETTINGS_TABS
+  const tabs = computed(() => (isAdmin.value ? [...SETTINGS_TABS, ADMIN_TAB] : [...SETTINGS_TABS]))
   const tabIndex = SETTINGS_TAB_INDEX
   const activeIndex = computed(() => tabIndex[active.value])
   const setActive = (id: SettingsTabId) => { active.value = id }
 
   const menuModel = computed(() =>
-    tabs.map((t) => ({
+    tabs.value.map((t) => ({
       label: t.label,
       icon: t.icon,
       desc: t.desc,
@@ -35,5 +40,5 @@ export function useSettingsTabs() {
     }))
   )
 
-  return { active, tabs, tabIndex, activeIndex, menuModel, setActive }
+  return { active, tabs, tabIndex, activeIndex, menuModel, setActive, isAdmin }
 }

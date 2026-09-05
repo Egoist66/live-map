@@ -4,9 +4,11 @@ import Dialog from 'primevue/dialog'
 import Avatar from 'primevue/avatar'
 import OnlineDot from '@/Components/Features/Feedback/OnlineDot.vue'
 import { avatarSrcFor } from '@/composables/useAvatar'
+import { useChatSearchList } from '@/composables/useChatSearchUser'
 
 defineProps<{ open: boolean; query: string; results: any[]; searching: boolean; creating: boolean; isOnline: (id?: number) => boolean }>()
 const emit = defineEmits<{ (e: 'update:open', v: boolean): void; (e: 'update:query', v: string): void; (e: 'chat', u: any): void; (e: 'add', id: number): void; (e: 'block', id: number, name?: string): void }>()
+const { isFriend, isPending, showAdd, addTitle } = useChatSearchList()
 </script>
 <template>
   <Dialog :visible="open" @update:visible="(v:boolean)=>emit('update:open', v)" modal header="Поиск людей" :style="{ width: '480px', maxWidth: '96vw', maxHeight: '92dvh' }" :pt="{ content: { class: '!pt-2 !max-h-[80dvh] !overflow-y-auto' } }">
@@ -24,7 +26,9 @@ const emit = defineEmits<{ (e: 'update:open', v: boolean): void; (e: 'update:que
         </Link>
         <div class="flex gap-1 shrink-0 ml-2 items-center">
           <button v-if="u.can_message !== false" @click="emit('chat', u)" :disabled="creating" title="Написать" class="w-8 h-8 grid place-items-center rounded-full bg-stone-900 text-white disabled:opacity-40">✉</button>
-          <button @click.stop="emit('add', u.id)" title="В друзья" class="w-8 h-8 grid place-items-center rounded-full bg-stone-100 text-stone-500">+</button>
+          <button v-if="showAdd(u)" @click.stop="emit('add', u.id)" :title="addTitle(u)" class="w-8 h-8 grid place-items-center rounded-full bg-stone-100 text-stone-500"><i class="pi pi-user-plus text-xs" /></button>
+          <button v-else-if="isPending(u)" :title="addTitle(u)" disabled class="w-8 h-8 grid place-items-center rounded-full bg-stone-100 text-stone-400 cursor-default"><i class="pi pi-clock text-xs" /></button>
+          <span v-else :title="addTitle(u)" class="w-8 h-8 grid place-items-center rounded-full bg-green-100 text-green-600"><i class="pi pi-check text-xs" /></span>
           <button @click.stop="emit('block', u.id, u.name)" title="Заблокировать" class="w-8 h-8 grid place-items-center rounded-full bg-stone-100 text-stone-500">⊘</button>
         </div>
       </div>

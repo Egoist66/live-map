@@ -5,7 +5,8 @@ import ToggleSwitch from 'primevue/toggleswitch'
 import Message from 'primevue/message'
 import Tag from 'primevue/tag'
 
-defineProps<{ user: any; invisible: any }>()
+import SettingsHiddenFriends from './SettingsHiddenFriends.vue'
+defineProps<{ user: any; invisible: any; hidden?: any }>()
 const emit = defineEmits<{ (e: 'profile'): void }>()
 </script>
 <template>
@@ -36,7 +37,7 @@ const emit = defineEmits<{ (e: 'profile'): void }>()
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
                 <div class="text-sm font-semibold dark:text-white flex items-center gap-2">Режим «Невидимка» <Tag v-if="invisible.canUse.value" value="PRO" class="!bg-violet-600 !text-white !border-0 !text-[10px]" /><Tag v-else value="PRO only" class="!bg-stone-200 !text-stone-600 !border-0 !text-[10px]" /></div>
-                <p class="text-xs text-stone-500 mt-1 leading-relaxed">Скрывает твой онлайн-статус — для других ты офлайн.</p>
+                <p class="text-xs text-stone-500 mt-1 leading-relaxed">Скрывает твой онлайн-статус — для других ты оффлайн.</p>
               </div>
               <ToggleSwitch :modelValue="invisible.isInvisible.value" @update:modelValue="(v:boolean)=>invisible.toggle(v)" :disabled="!invisible.canUse.value || invisible.loading.value" />
             </div>
@@ -44,6 +45,7 @@ const emit = defineEmits<{ (e: 'profile'): void }>()
             <Message v-if="invisible.error.value" severity="error" :closable="false" class="!mt-3 !rounded-2xl !text-xs">{{ invisible.error.value }}</Message>
           </template>
         </Card>
+        <SettingsHiddenFriends v-if="hidden" :hidden="hidden" />
       </div>
     </template>
   </Card>

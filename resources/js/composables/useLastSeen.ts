@@ -8,7 +8,7 @@ export function useLastSeen(lastSeenAt: string | null | undefined, isOnline: boo
     try {
       return `был(а) ${formatRelative(lastSeenAt)}`
     } catch {
-      return 'офлайн'
+      return 'оффлайн'
     }
   })
   return { text }

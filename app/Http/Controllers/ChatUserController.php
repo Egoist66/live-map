@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\UserBlock;
+use App\Models\Friendship;
 use Illuminate\Http\Request;
 
 class ChatUserController extends Controller
@@ -19,8 +20,14 @@ class ChatUserController extends Controller
             ->whereNotIn('id', User::hiddenFromSearchFor($me))
             ->where(fn($qq)=>$qq->where('name','like',"%$q%")->orWhere('email','like',"%$q%"))
             ->select('id','name','avatar_path','message_privacy','allow_random_messages','last_seen_at','is_invisible','plan','role','is_admin')
-            ->limit(20)->get()
-            ->map(fn($u)=>[
+            ->limit(20)->get();
+        $ids = $users->pluck('id')->all();
+        $friendships = Friendship::where(function($q) use ($me,$ids){
+                $q->where('requester_id',$me->id)->whereIn('addressee_id',$ids);
+            })->orWhere(function($q) use ($me,$ids){
+                $q->where('addressee_id',$me->id)->whereIn('requester_id',$ids);
+            })->get()->keyBy(fn($f)=> $f->requester_id===$me->id ? $f->addressee_id : $f->requester_id);
+        return $users->map(fn($u)=>[
                 'id'=>$u->id,
                 'name'=>$u->name,
                 'avatar_path'=>$u->avatar_path,
@@ -31,12 +38,18 @@ class ChatUserController extends Controller
                 'allow_random_messages'=>$u->allow_random_messages,
                 'last_seen_at'=>$u->isInvisibleActive() && !$me->isAdmin() ? null : $u->last_seen_at?->toISOString(),
                 'is_invisible'=>$u->isInvisibleActive(),
+                'is_friend'=>($friendships[$u->id]?->status ?? null)==='accepted',
+                'is_pending'=>($friendships[$u->id]?->status ?? null)==='pending',
+                'friendship_outgoing'=>($friendships[$u->id]?->status ?? null)==='pending' ? ($friendships[$u->id]->requester_id===$me->id) : null,
             ]);
         return response()->json($users);
     }
 
     public function heartbeat(Request $request)
     {
+        if ($request->user()->isInvisibleActive()) {
+            return response()->json(['ok' => true, 'invisible' => true]);
+        }
         $request->user()->forceFill(['last_seen_at' => now()])->saveQuietly();
         return response()->json(['ok' => true]);
     }

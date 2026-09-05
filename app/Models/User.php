@@ -11,7 +11,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['name', 'email', 'password', 'gender', 'plan', 'latitude', 'longitude', 'role', 'is_admin', 'avatar_path', 'home_lat', 'home_lng', 'home_radius_km', 'bio', 'reputation_score', 'level', 'is_anonymous_default', 'message_privacy', 'allow_random_messages', 'settings', 'last_seen_at', 'is_invisible', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at'])]
+#[Fillable(['name', 'email', 'password', 'gender', 'plan', 'latitude', 'longitude', 'role', 'is_admin', 'is_hidden_from_search', 'avatar_path', 'home_lat', 'home_lng', 'home_radius_km', 'bio', 'reputation_score', 'level', 'is_anonymous_default', 'message_privacy', 'allow_random_messages', 'settings', 'last_seen_at', 'is_invisible', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -69,6 +69,38 @@ class User extends Authenticatable
 
     public function canUseInvisible(): bool { return $this->isAdmin() || in_array($this->plan, ['pro','business']); }
 
+    public function hiddenFriendsLimit(): ?int
+    {
+        if ($this->isAdmin()) return null;
+        return match ($this->plan) {
+            'business' => null,
+            'pro' => 3,
+            default => 1,
+        };
+    }
+
+    public function hiddenFriendsCount(): int
+    {
+        return \App\Models\Friendship::where('status', 'accepted')
+            ->where(function ($q) {
+                $q->where(function ($x) { $x->where('requester_id', $this->id)->where('hidden_by_requester', true); })
+                  ->orWhere(function ($x) { $x->where('addressee_id', $this->id)->where('hidden_by_addressee', true); });
+            })->count();
+    }
+
+    public function canHideFriend(?int $exceptFriendshipId = null): bool
+    {
+        $limit = $this->hiddenFriendsLimit();
+        if ($limit === null) return true;
+        $count = \App\Models\Friendship::where('status', 'accepted')
+            ->where('id', '!=', $exceptFriendshipId ?? 0)
+            ->where(function ($q) {
+                $q->where(function ($x) { $x->where('requester_id', $this->id)->where('hidden_by_requester', true); })
+                  ->orWhere(function ($x) { $x->where('addressee_id', $this->id)->where('hidden_by_addressee', true); });
+            })->count();
+        return $count < $limit;
+    }
+
     public function isInvisibleActive(): bool { return (bool) $this->is_invisible && $this->canUseInvisible(); }
 
     public function canModerate(): bool { return $this->isModerator(); }
@@ -97,18 +129,14 @@ class User extends Authenticatable
 
     public function isDiscoverableBy(User $viewer): bool
     {
-        if ($this->id === 4) {
-            return $viewer->id === 2 || $viewer->isAdmin();
-        }
-        return true;
+        if ($viewer->id === $this->id || $viewer->isAdmin()) return true;
+        return !$this->is_hidden_from_search;
     }
 
     public static function hiddenFromSearchFor(User $viewer): array
     {
-        if ($viewer->id === 2 || $viewer->isAdmin()) {
-            return [];
-        }
-        return [4];
+        if ($viewer->isAdmin()) return [];
+        return static::where('is_hidden_from_search', true)->where('id', '!=', $viewer->id)->pluck('id')->all();
     }
 
     public function unreadMessagesCount(): int
@@ -130,6 +158,7 @@ class User extends Authenticatable
             'is_anonymous_default' => 'boolean',
             'allow_random_messages' => 'boolean',
             'is_admin' => 'boolean',
+            'is_hidden_from_search' => 'boolean',
             'is_invisible' => 'boolean',
             'last_seen_at' => 'datetime',
             'plan_expires_at' => 'datetime',

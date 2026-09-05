@@ -111,6 +111,16 @@ export function useChatPage(initialConversationId?: number) {
     } finally { creatingChat.value = false }
   }
 
+  async function addFriendFromSearch(userId: number) {
+    try {
+      await friendsApi.add(userId)
+      const item = chat.searchResults.value.find((u: any) => Number(u.id) === Number(userId))
+      if (item) { item.is_pending = true }
+    } catch (e: any) {
+      toast?.add({ severity: 'error', summary: 'Ошибка', detail: e?.response?.data?.message || 'Не удалось отправить заявку', life: 3500 })
+    }
+  }
+
   async function savePrivacy() {
     await chatApi.updatePrivacy(privacy.value as any)
   }
@@ -228,7 +238,7 @@ export function useChatPage(initialConversationId?: number) {
   return {
     chat, friendsApi, blocksApi, emoji, badgeSync,
     input, inputRef, editInputRef, tab, showChatMenu, sheet, showPrivacy, privacy, creatingChat, confirm, confirmVisible, isOwnMessage, bindSheet,
-    handleSend, formatTime, onPickEmoji, onPickEmojiForEdit, handleStartEdit, startChatWith, savePrivacy, doConfirm, closeSheet, backToList,
+    handleSend, formatTime, onPickEmoji, onPickEmojiForEdit, handleStartEdit, startChatWith, addFriendFromSearch, savePrivacy, doConfirm, closeSheet, backToList,
     askBlock, askDeleteChat, askDeleteMessage, askRemoveFriend, askUnblock,
     init,
   }

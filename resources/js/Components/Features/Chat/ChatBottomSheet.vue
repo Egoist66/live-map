@@ -34,9 +34,9 @@ const emit = defineEmits<{ (e: 'close'): void; (e: 'openChat', id: number): void
           <button @click="emit('close')" class="w-full px-4 py-3.5 rounded-2xl bg-stone-100 text-[15px] font-medium justify-center mt-1">Отмена</button>
         </template>
         <template v-else-if="sheet.type === 'search'">
-          <div class="px-4 py-2 border-b mb-1"><div class="text-[15px] font-bold">{{ sheet.data.name }}</div></div>
+          <div class="px-4 py-2 border-b mb-1"><div class="text-[15px] font-bold">{{ sheet.data.name }}</div><div v-if="sheet.data.is_friend" class="text-xs text-green-600">Уже в друзьях</div><div v-else-if="sheet.data.is_pending" class="text-xs text-stone-500">Заявка отправлена</div></div>
           <button v-if="sheet.data.can_message !== false" @click="emit('startChat', sheet.data)" class="w-full px-4 py-3.5 rounded-2xl text-[15px] font-medium text-left text-violet-700">Написать</button>
-          <button @click="emit('add', sheet.data.id)" class="w-full px-4 py-3.5 rounded-2xl text-[15px] font-medium text-left">В друзья</button>
+          <button v-if="!sheet.data.is_friend && !sheet.data.is_pending" @click="emit('add', sheet.data.id)" class="w-full px-4 py-3.5 rounded-2xl text-[15px] font-medium text-left">В друзья</button>
           <button @click="emit('block', sheet.data.id, sheet.data.name)" class="w-full px-4 py-3.5 rounded-2xl text-[15px] font-medium text-left text-red-600">Заблокировать</button>
           <button @click="emit('close')" class="w-full px-4 py-3.5 rounded-2xl bg-stone-100 text-[15px] font-medium justify-center mt-1">Отмена</button>
         </template>

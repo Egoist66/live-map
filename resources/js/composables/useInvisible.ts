@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import axios from 'axios'
+import { setPresenceInvisible } from '@/composables/usePresence'
 
 export function useInvisible() {
   const page = usePage()
@@ -25,6 +26,12 @@ export function useInvisible() {
       const { data } = await axios.patch('/api/user/invisible', { is_invisible: value })
       isInvisible.value = !!data.is_invisible
       if (user.value) user.value.is_invisible = isInvisible.value
+      try {
+        const w = window as any
+        if (w.__inertia_page?.props?.auth?.user) w.__inertia_page.props.auth.user.is_invisible = isInvisible.value
+        if ((document as any).__page_auth_user) (document as any).__page_auth_user.is_invisible = isInvisible.value
+      } catch {}
+      setPresenceInvisible(isInvisible.value)
     } catch (e: any) {
       error.value = e?.response?.data?.message || 'Ошибка переключения невидимки'
       throw e

@@ -12,7 +12,16 @@ function getEcho(): any {
   return (window as any).Echo
 }
 
+let invisibleOverride: boolean | null = null
+
+export function setPresenceInvisible(v: boolean) {
+  invisibleOverride = v
+  if (v) disconnect()
+  else connect()
+}
+
 function isInvisible(): boolean {
+  if (invisibleOverride !== null) return invisibleOverride
   try {
     const u = (window as any)?.__inertia_page?.props?.auth?.user ?? (document as any)?.__page_auth_user
     if (u?.is_invisible) return true
@@ -61,8 +70,8 @@ function bindReconnect() {
 }
 
 function connect() {
+  if (isInvisible()) { disconnect(); return }
   if (started) return
-  if (isInvisible()) return
   const echo = getEcho()
   if (!echo || typeof echo.join !== 'function') {
     if (!retryTimer) retryTimer = setTimeout(() => { retryTimer = null; connect() }, 2500)

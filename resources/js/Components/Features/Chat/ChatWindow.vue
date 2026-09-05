@@ -26,7 +26,7 @@ const { cm, menuModel, bindMessage } = useMessageContextMenu({ isOwn: (m: any) =
         <button @click="emit('back')" class="lg:hidden w-9 h-9 grid place-items-center rounded-full hover:bg-stone-100 dark:hover:bg-zinc-800 active:scale-95 shrink-0">‹</button>
         <Link :href="activeConv?.other ? `/users/${activeConv.other.id}` : '#'" class="flex items-center gap-2.5 hover:opacity-80 min-w-0 flex-1 overflow-hidden">
           <span class="relative shrink-0"><Avatar :image="avatarSrcFor(activeConv?.other)" shape="circle" class="[&_img]:object-cover" :pt="{ image: { class: 'object-cover' } }" /><OnlineDot :online="online" /></span>
-          <div class="min-w-0"><div class="text-[15px] lg:text-sm font-semibold dark:text-white truncate hover:underline">{{ activeConv?.other?.name }}</div><div v-if="typing" class="text-xs text-violet-600 leading-none animate-pulse">печатает...</div><div v-else class="text-xs leading-none" :class="online ? 'text-emerald-600' : 'text-red-500'">{{ online ? 'в сети' : 'офлайн' }}</div></div>
+          <div class="min-w-0"><div class="text-[15px] lg:text-sm font-semibold dark:text-white truncate hover:underline">{{ activeConv?.other?.name }}</div><div v-if="typing" class="text-xs text-violet-600 leading-none animate-pulse">печатает...</div><div v-else class="text-xs leading-none" :class="online ? 'text-emerald-600' : 'text-red-500'">{{ online ? 'в сети' : 'оффлайн' }}</div></div>
         </Link>
         <div class="flex items-center gap-0.5 shrink-0">
           <Button @click="emit('refresh')" :loading="refreshing" icon="pi pi-refresh" rounded text severity="secondary" class="!w-9 !h-9 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" aria-label="Обновить" />

@@ -36,6 +36,8 @@ export interface NbrbConvertResult {
 
 const POPULAR = ['USD', 'EUR', 'RUB', 'PLN', 'UAH', 'CNY']
 
+let convertTimer: ReturnType<typeof setTimeout> | null = null
+
 export function useNbrb() {
   const currencies = ref<NbrbCurrency[]>([])
   const rates = ref<NbrbRate[]>([])
@@ -47,19 +49,28 @@ export function useNbrb() {
   const convertResult = ref<NbrbConvertResult | null>(null)
   const converting = ref(false)
 
+  function dedupe(list: NbrbCurrency[]): NbrbCurrency[] {
+    const byCode = new Map<string, NbrbCurrency>()
+    for (const c of list) {
+      if (!c?.Cur_Abbreviation) continue
+      const code = c.Cur_Abbreviation.toUpperCase()
+      const prev = byCode.get(code)
+      if (!prev || c.Cur_ID > prev.Cur_ID) byCode.set(code, c)
+    }
+    const rank = (c: string) => {
+      const i = POPULAR.indexOf(c)
+      return i === -1 ? 99 : i
+    }
+    return [...byCode.values()].sort((a, b) => rank(a.Cur_Abbreviation) - rank(b.Cur_Abbreviation) || a.Cur_Abbreviation.localeCompare(b.Cur_Abbreviation))
+  }
+
   async function loadCurrencies() {
     loading.value = true
     error.value = null
     try {
       const { data } = await api.get('/api/nbrb/currencies')
       const list: NbrbCurrency[] = Array.isArray(data) ? data : []
-      const rank = (c: string) => {
-        const i = POPULAR.indexOf(c)
-        return i === -1 ? 99 : i
-      }
-      currencies.value = list
-        .filter((c) => new Date(c.Cur_DateEnd) > new Date('2000-01-01') || !c.Cur_DateEnd)
-        .sort((a, b) => rank(a.Cur_Abbreviation) - rank(b.Cur_Abbreviation) || a.Cur_Abbreviation.localeCompare(b.Cur_Abbreviation))
+      currencies.value = dedupe(list)
     } catch {
       error.value = 'Не удалось загрузить валюты НБРБ'
     } finally {
@@ -74,6 +85,7 @@ export function useNbrb() {
       const { data } = await api.get('/api/nbrb/rates', { params: { periodicity: 0, ondate: date || ondate.value || undefined } })
       rates.value = Array.isArray(data) ? data : []
     } catch {
+      rates.value = []
       error.value = 'Не удалось загрузить курсы НБРБ'
     } finally {
       loading.value = false
@@ -88,9 +100,17 @@ export function useNbrb() {
       })
       convertResult.value = data
       return data as NbrbConvertResult
+    } catch {
+      convertResult.value = null
+      return null
     } finally {
       converting.value = false
     }
+  }
+
+  function convertDebounced(ms = 400) {
+    if (convertTimer) clearTimeout(convertTimer)
+    convertTimer = setTimeout(() => { void convert() }, ms)
   }
 
   async function dynamics(curId: number, start: string, end: string) {
@@ -114,5 +134,10 @@ export function useNbrb() {
     return r ? (a * r).toFixed(2) + ' BYN' : '—'
   }
 
-  return { currencies, rates, loading, error, ondate, amount, curCode, convertResult, converting, loadCurrencies, loadRates, convert, dynamics, perUnit, toByn }
+  const currencyOptions = computed(() => {
+    const opts = currencies.value.map((c) => c.Cur_Abbreviation)
+    return opts.length ? [...new Set(opts)] : ['USD', 'EUR', 'RUB', 'PLN']
+  })
+
+  return { currencies, currencyOptions, rates, loading, error, ondate, amount, curCode, convertResult, converting, loadCurrencies, loadRates, convert, convertDebounced, dynamics, perUnit, toByn }
 }

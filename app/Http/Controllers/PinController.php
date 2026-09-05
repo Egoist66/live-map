@@ -19,6 +19,9 @@ class PinController extends Controller
         $viewerId = Auth::id();
 
         $q = Pin::active()->where('status', 'active')->nearby($lat, $lng, $radius);
+        $viewer = Auth::user();
+        $hiddenUsers = $viewer ? \App\Models\User::hiddenFromSearchFor($viewer) : \App\Models\User::where('is_hidden_from_search', true)->pluck('id')->all();
+        if (!empty($hiddenUsers)) $q->whereNotIn('user_id', is_array($hiddenUsers) ? $hiddenUsers : $hiddenUsers->all());
         if ($viewerId) {
             $blocked = \App\Models\UserBlock::where('blocker_id', $viewerId)->pluck('blocked_id');
             $blockedBy = \App\Models\UserBlock::where('blocked_id', $viewerId)->pluck('blocker_id');

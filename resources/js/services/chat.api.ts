@@ -7,7 +7,9 @@ export const chatApi = {
   search(q:string){ return api.get('/api/chat/users/search',{params:{q}}).then(r=>r.data) },
   updatePrivacy(data:{message_privacy:string,allow_random_messages:boolean}){ return api.patch('/api/chat/privacy',data).then(r=>r.data) },
 
-  friendships(){ return api.get<FriendshipsState>('/api/friendships').then(r=>r.data) },
+  friendships(){ return api.get<FriendshipsState & { hidden_limit?: number|null; hidden_count?: number; hidden_unlimited?: boolean }>('/api/friendships').then(r=>r.data) },
+  toggleHidden(id:number, is_hidden?:boolean){ return api.patch(`/api/friendships/${id}/hidden`, is_hidden===undefined?{}:{is_hidden}).then(r=>r.data) },
+  publicFriends(userId:number){ return api.get(`/api/users/${userId}/friends`).then(r=>r.data) },
   addFriend(user_id:number){ return api.post('/api/friendships',{user_id}).then(r=>r.data) },
   accept(id:number){ return api.post(`/api/friendships/${id}/accept`).then(r=>r.data) },
   decline(id:number){ return api.post(`/api/friendships/${id}/decline`).then(r=>r.data) },

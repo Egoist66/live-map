@@ -15,16 +15,76 @@ class FriendshipController extends Controller
         $u = $request->user();
         $friends = Friendship::where('status','accepted')
             ->where(fn($q)=>$q->where('requester_id',$u->id)->orWhere('addressee_id',$u->id))
-            ->with(['requester:id,name,avatar_path','addressee:id,name,avatar_path'])
-            ->get()->map(fn($f)=>[
-                'id'=>$f->id,
-                'status'=>$f->status,
-                'other'=> $f->requester_id===$u->id ? $f->addressee : $f->requester,
-                'created_at'=>$f->created_at,
-            ]);
-        $pendingIn = Friendship::where('status','pending')->where('addressee_id',$u->id)->with('requester:id,name,avatar_path')->get();
+            ->with(['requester:id,name,avatar_path,is_invisible,plan,role,is_admin','addressee:id,name,avatar_path,is_invisible,plan,role,is_admin'])
+            ->get()->map(function($f) use ($u){
+                $other = $f->requester_id===$u->id ? $f->addressee : $f->requester;
+                if ($other) $other->setAttribute('is_invisible', $other->isInvisibleActive());
+                return [
+                    'id'=>$f->id,
+                    'status'=>$f->status,
+                    'is_hidden'=>$f->isHiddenFor($u->id),
+                    'other'=>$other,
+                    'created_at'=>$f->created_at,
+                ];
+            });
+        $pendingIn = Friendship::where('status','pending')->where('addressee_id',$u->id)->with('requester:id,name,avatar_path,is_invisible,plan,role,is_admin')->get()->each(fn($f)=>$f->requester?->setAttribute('is_invisible', $f->requester->isInvisibleActive()));
         $pendingOut = Friendship::where('status','pending')->where('requester_id',$u->id)->with('addressee:id,name,avatar_path')->get();
-        return response()->json(['friends'=>$friends,'pending_in'=>$pendingIn,'pending_out'=>$pendingOut]);
+        $limit = $u->hiddenFriendsLimit();
+        return response()->json([
+            'friends'=>$friends,
+            'pending_in'=>$pendingIn,
+            'pending_out'=>$pendingOut,
+            'hidden_limit'=>$limit,
+            'hidden_count'=>$u->hiddenFriendsCount(),
+            'hidden_unlimited'=>$limit===null,
+        ]);
+    }
+
+    public function toggleHidden(Request $request, Friendship $friendship)
+    {
+        $u = $request->user();
+        abort_unless(in_array($u->id, [$friendship->requester_id, $friendship->addressee_id]), 403);
+        abort_unless($friendship->status === 'accepted', 422, 'Только принятых друзей можно скрывать');
+        $request->validate(['is_hidden' => 'sometimes|boolean']);
+        $hidden = $request->has('is_hidden') ? $request->boolean('is_hidden') : !$friendship->isHiddenFor($u->id);
+        if ($hidden && !$friendship->isHiddenFor($u->id) && !$u->canHideFriend($friendship->id)) {
+            $limit = $u->hiddenFriendsLimit();
+            return response()->json(['message' => "Лимит скрытых друзей исчерпан ({$limit}). Обновите тариф."], 422);
+        }
+        $friendship->setHiddenFor($u->id, $hidden);
+        $friendship->save();
+        return response()->json([
+            'id' => $friendship->id,
+            'is_hidden' => $friendship->isHiddenFor($u->id),
+            'hidden_count' => $u->hiddenFriendsCount(),
+            'hidden_limit' => $u->hiddenFriendsLimit(),
+            'hidden_unlimited' => $u->hiddenFriendsLimit() === null,
+        ]);
+    }
+
+    public function publicList(Request $request, User $user)
+    {
+        $viewer = $request->user();
+        $isOwn = $viewer && $viewer->id === $user->id;
+        $canSeeHidden = $isOwn || ($viewer && $viewer->isAdmin());
+        $query = Friendship::where('status', 'accepted')
+            ->where(fn($q) => $q->where('requester_id', $user->id)->orWhere('addressee_id', $user->id))
+            ->with(['requester:id,name,avatar_path', 'addressee:id,name,avatar_path']);
+        if (!$canSeeHidden) {
+            $query->where(function ($q) use ($user) {
+                $q->where(function ($x) use ($user) { $x->where('requester_id', $user->id)->where('hidden_by_requester', false); })
+                  ->orWhere(function ($x) use ($user) { $x->where('addressee_id', $user->id)->where('hidden_by_addressee', false); });
+            });
+        }
+        $friends = $query->get()->map(function ($f) use ($user, $isOwn, $canSeeHidden) {
+            $other = $f->requester_id === $user->id ? $f->addressee : $f->requester;
+            return [
+                'id' => $f->id,
+                'other' => $other,
+                'is_hidden' => $canSeeHidden ? $f->isHiddenFor($user->id) : false,
+            ];
+        });
+        return response()->json(['friends' => $friends, 'is_own' => $isOwn]);
     }
 
     public function store(Request $request)

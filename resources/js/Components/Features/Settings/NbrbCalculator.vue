@@ -17,13 +17,17 @@ const dateObj = computed({
 })
 
 async function init() {
-  await Promise.all([n.loadCurrencies(), n.loadRates()])
+  await n.loadCurrencies()
   await n.convert()
 }
 init()
 
 async function onCalc() {
   await n.convert()
+}
+
+function onInput() {
+  n.convertDebounced()
 }
 </script>
 <template>
@@ -33,10 +37,10 @@ async function onCalc() {
       <span v-if="n.convertResult.value" class="text-[11px] text-stone-400">на {{ new Date(n.convertResult.value.date).toLocaleDateString('ru-BY') }}</span>
     </div>
     <div class="mt-2 grid grid-cols-[1fr_130px] sm:grid-cols-[1fr_150px_150px_auto] gap-2">
-      <InputNumber v-model="n.amount.value" :min="0" :max-fraction-digits="2" placeholder="Сумма" class="w-full" input-class="!rounded-xl w-full" @update:model-value="onCalc" />
+      <InputNumber v-model="n.amount.value" :min="0" :max-fraction-digits="2" placeholder="Сумма" class="w-full" input-class="!rounded-xl w-full" @update:model-value="onInput" />
       <Select
         v-model="n.curCode.value"
-        :options="n.currencies.value.length ? n.currencies.value.map((c) => c.Cur_Abbreviation) : ['USD', 'EUR', 'RUB', 'PLN']"
+        :options="n.currencyOptions.value"
         placeholder="USD"
         class="w-full !rounded-xl"
         @update:model-value="onCalc"

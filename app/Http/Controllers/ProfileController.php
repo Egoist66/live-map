@@ -17,6 +17,8 @@ class ProfileController extends Controller
     {
         $auth = $request->user();
         $isOwn = $auth && $auth->id === $user->id;
+        if (!$isOwn && $auth && !$user->isDiscoverableBy($auth)) abort(404);
+        if (!$isOwn && !$auth && $user->is_hidden_from_search) abort(404);
         $canMessage = $auth ? $auth->canMessageUser($user) : false;
         $reason = $auth ? $auth->messageBlockReason($user) : null;
         $friendship = null;

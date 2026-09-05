@@ -7,8 +7,21 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Friendship extends Model
 {
-    protected $fillable = ['requester_id','addressee_id','status'];
-    protected $casts = ['status' => 'string'];
+    protected $fillable = ['requester_id','addressee_id','status','hidden_by_requester','hidden_by_addressee'];
+    protected $casts = ['status' => 'string', 'hidden_by_requester' => 'boolean', 'hidden_by_addressee' => 'boolean'];
+
+    public function isHiddenFor(int $userId): bool
+    {
+        if ($this->requester_id === $userId) return (bool) $this->hidden_by_requester;
+        if ($this->addressee_id === $userId) return (bool) $this->hidden_by_addressee;
+        return false;
+    }
+
+    public function setHiddenFor(int $userId, bool $hidden): void
+    {
+        if ($this->requester_id === $userId) $this->hidden_by_requester = $hidden;
+        if ($this->addressee_id === $userId) $this->hidden_by_addressee = $hidden;
+    }
 
     public function requester(): BelongsTo { return $this->belongsTo(User::class,'requester_id'); }
     public function addressee(): BelongsTo { return $this->belongsTo(User::class,'addressee_id'); }

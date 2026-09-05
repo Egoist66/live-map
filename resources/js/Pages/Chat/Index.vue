@@ -7,7 +7,7 @@ import ChatWindow from '@/Components/Features/Chat/ChatWindow.vue'
 import ChatSearchDialog from '@/Components/Features/Chat/ChatSearchDialog.vue'
 import ChatConfirmDialog from '@/Components/Features/Chat/ChatConfirmDialog.vue'
 import ChatBottomSheet from '@/Components/Features/Chat/ChatBottomSheet.vue'
-import { usePresenceState } from '@/composables/usePresence'
+import { useChatOnline } from '@/composables/useChatOnline'
 import { useChatPage } from '@/composables/useChatPage'
 import { useChatFilters } from '@/composables/useChatFilters'
 import { useChatMessageStatus } from '@/composables/useChatMessageStatus'
@@ -21,14 +21,14 @@ const props = defineProps<{ conversationId?: number }>()
 const {
   chat, friendsApi, blocksApi, emoji,
   input, tab, showChatMenu, sheet, showPrivacy, privacy, creatingChat, confirm, confirmVisible, isOwnMessage,
-  handleSend, formatTime, onPickEmoji, onPickEmojiForEdit, handleStartEdit, startChatWith, savePrivacy, doConfirm, closeSheet, backToList, init,
+  handleSend, formatTime, onPickEmoji, onPickEmojiForEdit, handleStartEdit, startChatWith, addFriendFromSearch, savePrivacy, doConfirm, closeSheet, backToList, init,
   askBlock, askDeleteChat, askDeleteMessage, askRemoveFriend, askUnblock,
 } = useChatPage(props.conversationId)
 const { conversations, activeConv, messages, loading, sending, refreshing, typingUsers, searchQuery, searchResults, searching, selectedId, unreadTotal, editingId, editingBody, refresh, openConversation, saveEdit, cancelEdit, notifyTyping, stopTyping } = chat
 const { friends, pendingIn } = friendsApi
 const { blocked } = blocksApi
 const { open: emojiOpen, toggle: toggleEmoji, EMOJI_GROUPS } = emoji
-const { isOnline } = usePresenceState()
+const { isOnline } = useChatOnline(chat, friendsApi)
 const { keyboardHeight, isKeyboardOpen } = useChatViewport()
 const filters = useChatFilters(chat, friendsApi, blocksApi)
 const { messageStatus } = useChatMessageStatus(isOwnMessage)
@@ -46,7 +46,7 @@ onMounted(init)
         <ChatWindow :selected-id="selectedId" :active-conv="activeConv" :messages="messages" :loading="loading" :sending="sending" :refreshing="refreshing" :typing="[...typingUsers].some((id:any)=>id===activeConv?.other?.id)" :online="isOnline(activeConv?.other?.id)" :input="input" @update:input="(v:string)=>input=v" :emoji-open="emojiOpen" :emoji-groups="EMOJI_GROUPS" :editing-id="editingId" :editing-body="editingBody" @update:editing-body="(v:string)=>editingBody=v" :show-menu="showChatMenu" :keyboard-style="{}" :is-own-message="isOwnMessage" :message-status="messageStatus" :format-time="formatTime" @send="handleSend" @typing="notifyTyping" @stop-typing="stopTyping" @refresh="refresh" @back="backToList" @close="backToList" @toggle-menu="showChatMenu = !showChatMenu" @menu-close="showChatMenu = false" @delete-chat="() => askDeleteChat()" @block="activeConv?.other && askBlock(activeConv.other.id, activeConv.other.name)" @toggle-emoji="toggleEmoji" @emoji-close="emoji.close()" @pick-emoji="onPickEmoji" @pick-emoji-edit="onPickEmojiForEdit" @start-edit="handleStartEdit" @save-edit="saveEdit" @cancel-edit="cancelEdit" @delete-message="askDeleteMessage" />
       </div>
     </div>
-    <ChatSearchDialog :open="filters.showPeopleSearch.value" @update:open="(v:boolean)=>filters.showPeopleSearch.value=v" :query="searchQuery" @update:query="(v:string)=>searchQuery=v" :results="searchResults" :searching="searching" :creating="creatingChat" :is-online="isOnline" @chat="(u:any)=>{ startChatWith(u); filters.showPeopleSearch.value = false }" @add="(id:number)=>friendsApi.add(id)" @block="askBlock" />
+    <ChatSearchDialog :open="filters.showPeopleSearch.value" @update:open="(v:boolean)=>filters.showPeopleSearch.value=v" :query="searchQuery" @update:query="(v:string)=>searchQuery=v" :results="searchResults" :searching="searching" :creating="creatingChat" :is-online="isOnline" @chat="(u:any)=>{ startChatWith(u); filters.showPeopleSearch.value = false }" @add="addFriendFromSearch" @block="askBlock" />
     <ChatConfirmDialog :confirm="confirm" @close="closeConfirm" @ok="doConfirm" />
     <ChatBottomSheet :sheet="sheet" :is-own-message="isOwnMessage" @close="closeSheet" @open-chat="openConversation" @start-chat="startChatWith" @edit="(m:any)=>{ closeSheet(); handleStartEdit(m) }" @delete-message="(id:number)=>{ closeSheet(); askDeleteMessage(id) }" @delete-chat="(id?:number)=>askDeleteChat(id)" @block="askBlock" @unblock="askUnblock" @remove-friend="askRemoveFriend" @accept="(id:number)=>{ closeSheet(); friendsApi.accept(id) }" @decline="(id:number)=>{ friendsApi.decline(id); closeSheet() }" @add="(id:number)=>{ closeSheet(); friendsApi.add(id) }" />
   </AuthenticatedLayout>

@@ -22,13 +22,16 @@ export function useProfileShowPage(props: { profileUser: any; isOwn: boolean; is
   const confirm = ref<{ title: string; msg: string; action: () => Promise<void> } | null>(null)
   const isLocked = computed(() => isBlockedBy.value)
   const { isOnline } = usePresenceState()
-  const online = computed(() => isOnline(props.profileUser.id))
+  const online = computed(() => {
+    if (!props.isOwn && props.profileUser?.is_invisible) return false
+    return isOnline(props.profileUser.id)
+  })
   const { shareProfile, sharing } = useProfileShare()
   const lastSeenText = computed(() => {
     if (online.value) return 'в сети'
     const v = props.profileUser.last_seen_at
-    if (!v) return 'офлайн'
-    try { return formatRelative(v) } catch { return 'офлайн' }
+    if (!v) return 'оффлайн'
+    try { return formatRelative(v) } catch { return 'оффлайн' }
   })
   const registeredAt = computed(() => {
     try { return new Date(props.profileUser.created_at).toLocaleDateString('ru-RU') } catch { return '' }
