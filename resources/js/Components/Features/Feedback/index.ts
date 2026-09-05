@@ -1,3 +1,4 @@
+export { default as BetaNoticeModal } from './BetaNoticeModal.vue'
 export { default as PageTransition } from './PageTransition.vue'
 export { default as GlobalNotificationToasts } from './GlobalNotificationToasts.vue'
 export { default as BellNotificationsModal } from './BellNotificationsModal.vue'

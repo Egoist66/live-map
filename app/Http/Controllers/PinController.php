@@ -22,6 +22,7 @@ class PinController extends Controller
 
         $q = Pin::active()->nearby($lat, $lng, $radius);
         $viewer = Auth::user();
+        $q->visibleForGender($viewer);
         $hiddenUsers = $viewer ? \App\Models\User::hiddenFromSearchFor($viewer) : array_merge(\App\Models\User::where('is_hidden_from_search', true)->pluck('id')->all(), [\App\Models\User::GHOST_USER_ID]);
         if (!empty($hiddenUsers)) $q->whereNotIn('user_id', is_array($hiddenUsers) ? $hiddenUsers : $hiddenUsers->all());
         if ($viewerId) {
@@ -73,6 +74,7 @@ class PinController extends Controller
                     $fail('Свои категории доступны на тарифе Pro и выше.');
                 }
             }],
+            'gender_audience' => 'sometimes|in:all,male,female',
             'latitude' => 'required|numeric|between:-90,90',
             'longitude' => 'required|numeric|between:-180,180',
             'location_precision' => 'sometimes|in:blur_200,exact,district,custom',
@@ -85,6 +87,7 @@ class PinController extends Controller
 
         ContentModeration::assertClean($data['title'] ?? null, $data['body'] ?? null);
         $data['category'] = Pin::normalizeCategory($data['category']);
+        $data['gender_audience'] = Pin::normalizeGenderAudience($data['gender_audience'] ?? 'all');
 
         $precision = 'exact';
         $origLat = (float) $data['latitude'];
@@ -144,8 +147,10 @@ class PinController extends Controller
                 }
             }],
             'publish_at' => 'sometimes|nullable|date|after:now|before:+31 days',
+            'gender_audience' => 'sometimes|in:all,male,female',
         ]);
         if (array_key_exists('category', $data)) $data['category'] = Pin::normalizeCategory($data['category']);
+        if (array_key_exists('gender_audience', $data)) $data['gender_audience'] = Pin::normalizeGenderAudience($data['gender_audience']);
         ContentModeration::assertClean($data['title'] ?? $pin->title, array_key_exists('body', $data) ? $data['body'] : $pin->body);
         if ($pin->status === 'scheduled' && array_key_exists('publish_at', $data)) {
             $pin->publish_at = $data['publish_at'] ? \Carbon\Carbon::parse($data['publish_at']) : null;

@@ -13,6 +13,7 @@ export const registerSchema = toTypedSchema(
     .object({
       name: z.string().min(1, 'Имя обязательно').min(2, 'Минимум 2 символа').max(255),
       email: z.string().min(1, 'Email обязателен').email('Некорректный email'),
+      gender: z.enum(['male', 'female', 'other'], { errorMap: () => ({ message: 'Выбери пол' }) }),
       password: z.string().min(8, 'Минимум 8 символов'),
       password_confirmation: z.string().min(1, 'Подтвердите пароль'),
       home_lat: z.preprocess(toNumberOrNull, z.number({ invalid_type_error: 'Широта должна быть числом' }).min(-90).max(90).nullable().optional()),

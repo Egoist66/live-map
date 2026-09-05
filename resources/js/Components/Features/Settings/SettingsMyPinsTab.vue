@@ -3,10 +3,13 @@ import { Link } from '@inertiajs/vue3'
 import Card from 'primevue/card'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
+import Select from 'primevue/select'
+import { usePinAudience } from '@/composables/usePinAudience'
 
-defineProps<{ pins: any[]; loading: boolean; deleting: boolean; formatDate: (s: string) => string; formatTime: (s: string) => string }>()
+defineProps<{ pins: any[]; loading: boolean; deleting: boolean; updatingId?: number | null; formatDate: (s: string) => string; formatTime: (s: string) => string }>()
 
-const emit = defineEmits<{ (e: 'delete', id: number): void }>()
+const emit = defineEmits<{ (e: 'delete', id: number): void; (e: 'audience', id: number, v: string): void }>()
+const audience = usePinAudience()
 
 function isScheduled(p: any): boolean {
   return p?.status === 'scheduled' || !!p?.is_scheduled
@@ -32,8 +35,15 @@ function scheduleLabel(p: any): string {
             <div class="text-xs text-stone-500 mt-1 line-clamp-2">{{ p.body }}</div>
             <div class="flex items-center gap-1.5 mt-3 text-[11px] flex-wrap">
               <Tag :value="p.category" class="!bg-stone-900 !text-white !rounded-full !text-[11px]" />
+              <Tag v-if="(p.gender_audience ?? 'all') === 'female'" value="👩 Только женщины" class="!bg-pink-600 !text-white !rounded-full !text-[11px] !border-0" />
+              <Tag v-else-if="(p.gender_audience ?? 'all') === 'male'" value="👨 Только мужчины" class="!bg-sky-600 !text-white !rounded-full !text-[11px] !border-0" />
+              <Tag v-else value="🌍 Все" class="!bg-emerald-600 !text-white !rounded-full !text-[11px] !border-0" />
               <Tag v-if="isScheduled(p)" :value="`🕓 ${scheduleLabel(p)}`" class="!bg-violet-600 !text-white !rounded-full !text-[11px] !border-0" />
               <Tag v-else :value="p.expires_at ? `${formatDate(p.expires_at)} ${formatTime(p.expires_at)}` : '∞ бессрочно'" class="!bg-stone-100 !text-stone-600 !rounded-full !text-[11px]" />
+            </div>
+            <div class="mt-3">
+              <label class="text-[11px] font-bold uppercase tracking-wide text-stone-500">Кто видит</label>
+              <Select :model-value="p.gender_audience ?? 'all'" :options="audience.options" optionLabel="label" optionValue="value" checkmark fluid size="small" class="w-full mt-1 !rounded-xl" :loading="updatingId === p.id" :disabled="updatingId === p.id" @update:model-value="(v: string) => emit('audience', p.id, v)" />
             </div>
           </template>
         </Card>

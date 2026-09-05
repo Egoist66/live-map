@@ -32,11 +32,12 @@ export function useRegisterForm() {
 
   const { defineField, handleSubmit, errors, values, isSubmitting, setValues, setErrors } = useForm({
     validationSchema: registerSchema,
-    initialValues: { name: '', email: '', password: '', password_confirmation: '', home_lat: null, home_lng: null, home_radius_km: 5, home_address: '' } as any,
+    initialValues: { name: '', email: '', gender: null, password: '', password_confirmation: '', home_lat: null, home_lng: null, home_radius_km: 5, home_address: '' } as any,
   })
 
   const [name, nameAttrs] = defineField('name')
   const [email, emailAttrs] = defineField('email')
+  const [gender] = defineField('gender')
   const [password, passwordAttrs] = defineField('password')
   const [password_confirmation, passwordConfirmationAttrs] = defineField('password_confirmation')
   const [home_lat] = defineField('home_lat')
@@ -74,7 +75,7 @@ export function useRegisterForm() {
   })
 
   return {
-    name, nameAttrs, email, emailAttrs, password, passwordAttrs, password_confirmation, passwordConfirmationAttrs,
+    name, nameAttrs, email, emailAttrs, gender, password, passwordAttrs, password_confirmation, passwordConfirmationAttrs,
     home_lat, home_lng, home_radius_km, home_address, values, errors, showPass, showPass2, locating, addrLoading, detectLocation, submit, isSubmitting, setValues,
   }
 }

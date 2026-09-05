@@ -3,9 +3,12 @@ import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
+import Select from 'primevue/select'
+import { usePinAudience } from '@/composables/usePinAudience'
 
 const props = withDefaults(defineProps<{ open: boolean; pinCreate: any; customCats: any; categories: any[]; pinAddress: string; loadingAddress: boolean; radiusOptions: any[]; radiusLabel?: string }>(), { radiusLabel: '1 км' })
 const emit = defineEmits<{ (e: 'update:open', v: boolean): void; (e: 'close'): void; (e: 'delete-custom-category', slug: string): void }>()
+const audience = usePinAudience()
 async function createCustomAndSelect() {
   const d = await props.customCats.createFromDraft()
   if (d) props.pinCreate.setValues({ category: d.slug } as any)
@@ -64,6 +67,11 @@ async function createCustomAndSelect() {
           </div>
         </div>
         <div v-else class="mt-1.5 text-[11px] leading-snug text-stone-400 dark:text-zinc-500 bg-stone-50 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-xl px-3 py-2">⭐ Свои категории — на тарифе Pro и выше</div>
+      </div>
+      <div>
+        <label class="text-[10px] font-bold tracking-wide uppercase text-stone-500">Кто видит</label>
+        <Select v-model="pinCreate.gender_audience.value" :options="audience.options" optionLabel="label" optionValue="value" checkmark fluid class="w-full mt-1 !rounded-2xl" />
+        <p class="text-[11px] text-stone-500 dark:text-zinc-400 mt-1">По умолчанию — все. Можно ограничить: только женщины / только мужчины.</p>
       </div>
       <div class="rounded-2xl border border-stone-200 dark:border-zinc-700 overflow-hidden">
         <button type="button" @click="pinCreate.toggleSchedule()" class="w-full flex items-center gap-3 px-3.5 py-3 text-left active:scale-[0.99] transition">

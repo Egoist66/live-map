@@ -11,6 +11,7 @@ export const createPinSchema = toTypedSchema(
     location_precision: z.enum(['blur_200', 'exact', 'district', 'custom']).optional(),
     blur_meters: z.number().min(0).max(5000).optional(),
     is_anonymous: z.boolean().optional(),
+    gender_audience: z.enum(['all', 'male', 'female']).optional(),
     radius_meters: z.number().min(500).max(50000).optional(),
     publish_at: z.string().nullable().optional(),
   }),

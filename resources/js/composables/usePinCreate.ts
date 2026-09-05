@@ -36,6 +36,7 @@ export function usePinCreate(onSuccess?: () => void) {
       title: '',
       body: '',
       category: 'announcement',
+      gender_audience: 'all',
       latitude: 0,
       longitude: 0,
       location_precision: 'exact',
@@ -48,6 +49,7 @@ export function usePinCreate(onSuccess?: () => void) {
   const [title, titleAttrs] = defineField('title')
   const [body] = defineField('body')
   const [category] = defineField('category')
+  const [gender_audience] = defineField('gender_audience')
   const [latitude] = defineField('latitude')
   const [longitude] = defineField('longitude')
   const [location_precision] = defineField('location_precision')
@@ -131,7 +133,7 @@ export function usePinCreate(onSuccess?: () => void) {
       const scheduled = (pin as any)?.is_scheduled || (pin as any)?.status === 'scheduled'
       toast.add({ severity: 'success', summary: scheduled ? `Запланирован на ${scheduleLabel.value}` : 'Пин создан', life: 2500 })
       scheduleEnabled.value = false
-      resetForm({ values: { ...vals, title: '', body: '', publish_at: null } as any })
+      resetForm({ values: { ...vals, title: '', body: '', publish_at: null, gender_audience: (vals as any).gender_audience ?? 'all' } as any })
       try { await limitInfo.refresh() } catch {}
       onSuccess?.()
     } catch (e: any) {
@@ -163,6 +165,7 @@ export function usePinCreate(onSuccess?: () => void) {
     titleAttrs,
     body,
     category,
+    gender_audience,
     latitude,
     longitude,
     location_precision,

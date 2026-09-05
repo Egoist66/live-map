@@ -18,6 +18,11 @@ class ReactionController extends Controller
             'type' => 'required|in:like,fire,laugh,sad,angry,useful',
         ]);
         $model = $data['reactable_type'] === 'pin' ? Pin::findOrFail($data['reactable_id']) : PinComment::findOrFail($data['reactable_id']);
+        if ($data['reactable_type'] === 'pin') {
+            abort_unless($model->isVisibleForGender($request->user()), 403, 'Пин доступен только для другого пола');
+        } else {
+            abort_unless($model->pin->isVisibleForGender($request->user()), 403, 'Пин доступен только для другого пола');
+        }
         $existingAny = Reaction::where('user_id', $request->user()->id)->where('reactable_type', $data['reactable_type'])->where('reactable_id', $data['reactable_id'])->first();
         if ($existingAny) {
             if ($existingAny->type === $data['type']) {

@@ -12,18 +12,19 @@ export function usePinEdit() {
 
   const { defineField, handleSubmit, setValues, values, errors, resetForm } = useForm({
     validationSchema: updatePinSchema,
-    initialValues: { title: '', body: '', category: 'announcement' } as any,
+    initialValues: { title: '', body: '', category: 'announcement', gender_audience: 'all' } as any,
   })
 
   const [title, titleAttrs] = defineField('title')
   const [body] = defineField('body')
   const [category] = defineField('category')
+  const [gender_audience] = defineField('gender_audience')
 
   const error = ref<unknown>(null)
 
   function start(pin: any) {
     targetId.value = pin.id
-    setValues({ title: pin.title, body: pin.body || '', category: pin.category } as any)
+    setValues({ title: pin.title, body: pin.body || '', category: pin.category, gender_audience: pin.gender_audience ?? 'all' } as any)
     editing.value = true
   }
 
@@ -45,5 +46,5 @@ export function usePinEdit() {
     }
   })
 
-  return { editing, targetId, title, titleAttrs, body, category, values, errors, start, cancel, save, setValues, resetForm, error, updating: store.updating }
+  return { editing, targetId, title, titleAttrs, body, category, gender_audience, values, errors, start, cancel, save, setValues, resetForm, error, updating: store.updating }
 }

@@ -73,6 +73,8 @@ function authorName(c: any): string { return c?.is_anonymous ? 'аноним' : 
       <div v-if="!pinEdit.editing.value && blur" title="Точка на карте сдвинута от реального места" class="mt-2 text-[11px] leading-snug bg-violet-50 dark:bg-violet-950/40 border border-violet-200 dark:border-violet-800 text-violet-800 dark:text-violet-200 rounded-xl px-2.5 py-1.5">📍 {{ blur.hint }}</div>
       <div v-if="!pinEdit.editing.value" class="flex flex-wrap gap-1.5 mt-3 items-center">
         <span class="text-xs bg-stone-100 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 text-stone-700 dark:text-zinc-200 rounded-full px-2.5 py-1 font-medium">{{ catMeta ? `${catMeta.i} ${catMeta.l}` : pin.category }}</span>
+        <span v-if="(pin.gender_audience ?? 'all') === 'female'" class="text-xs bg-pink-600 text-white rounded-full px-2.5 py-1 font-medium">👩 Только женщины</span>
+        <span v-else-if="(pin.gender_audience ?? 'all') === 'male'" class="text-xs bg-sky-600 text-white rounded-full px-2.5 py-1 font-medium">👨 Только мужчины</span>
         <Link v-if="pin.user && !pin.is_anonymous" :href="`/users/${pin.user.id}`" class="hover:opacity-80"><Chip :label="`${pin.user?.name} · ${pin.user?.level || 'novice'}`" :image="avatarSrcFor(pin.user) || undefined" class="!bg-white dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 !rounded-full !text-xs !text-ink-900 dark:!text-zinc-100" /></Link>
         <span class="text-xs bg-amber-50 dark:bg-amber-500/15 border border-amber-200 dark:border-amber-400/30 text-amber-800 dark:text-amber-300 rounded-full px-2.5 py-1">{{ pin.expires_at ? `до ${formatTime(pin.expires_at)}` : '∞ бессрочно' }}</span>
       </div>

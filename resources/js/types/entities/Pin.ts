@@ -7,12 +7,14 @@ export type PinPriority = 'normal' | 'sponsored' | 'pinned' | string
 export type PinStatus = 'active' | 'expired' | 'blocked' | 'scheduled' | 'archived' | string
 export type LocationPrecision = 'blur_200' | 'exact' | 'district' | 'custom'
 export type BoostType = 'top' | 'glow' | 'notify' | 'extend'
+export type PinGenderAudience = 'all' | 'male' | 'female'
 
 export interface Pin {
   id: number
   title: string
   body: string | null
   category: PinCategory
+  gender_audience: PinGenderAudience
   latitude: number
   longitude: number
   real_lat?: number | null
@@ -52,6 +54,7 @@ export interface CreatePinPayload {
   title: string
   body?: string | null
   category: PinCategory
+  gender_audience?: PinGenderAudience
   latitude: number
   longitude: number
   location_precision?: LocationPrecision
@@ -62,7 +65,7 @@ export interface CreatePinPayload {
   publish_at?: string | null
 }
 
-export type UpdatePinPayload = Partial<Pick<CreatePinPayload, 'title' | 'body' | 'category' | 'publish_at'>>
+export type UpdatePinPayload = Partial<Pick<CreatePinPayload, 'title' | 'body' | 'category' | 'publish_at' | 'gender_audience'>>
 
 export interface NearbyParams {
   lat: number

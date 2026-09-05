@@ -46,7 +46,7 @@ const { setTheme } = useTheme()
               <TabPanels class="!bg-transparent !p-0">
                 <TabPanel value="0"><SettingsProfileTab :must-verify-email="mustVerifyEmail" :status="status" :bio-empty="s.bioPreviewEmpty.value" :bio-text="s.bioPreviewText.value" /></TabPanel>
                 <TabPanel value="1"><SettingsBillingTab :user="s.u.value" :zone-count="s.zoneCount.value" @profile="s.active.value = 'profile'" /></TabPanel>
-                <TabPanel value="2"><SettingsMyPinsTab :pins="(s.myPins.value as any)" :loading="(s.loadingPins.value as any)" :deleting="false" :format-date="formatDate" :format-time="formatTime" @delete="s.deleteMyPin" /></TabPanel>
+                <TabPanel value="2"><SettingsMyPinsTab :pins="(s.myPins.value as any)" :loading="(s.loadingPins.value as any)" :deleting="false" :updating-id="(s.updatingId as any)?.value ?? null" :format-date="formatDate" :format-time="formatTime" @delete="s.deleteMyPin" @audience="(id: number, v: string) => (s.updateAudience as any)(id, v)" /></TabPanel>
                 <TabPanel value="3"><SettingsPrivacyTab :user="s.u.value" :invisible="s.invisible" :hidden="s.hidden" :blur="s.blur" @profile="s.active.value = 'profile'" /></TabPanel>
                 <TabPanel value="4"><SettingsAppearanceTab :theme="s.theme.value" @theme="setTheme" /></TabPanel>
                 <TabPanel value="5"><SettingsSecurityTab /></TabPanel>

@@ -6,6 +6,7 @@ import MobileBottomNav from '@/Components/Features/Navigation/MobileBottomNav.vu
 import PageTransition from '@/Components/Features/Feedback/PageTransition.vue'
 import GlobalNotificationToasts from '@/Components/Features/Feedback/GlobalNotificationToasts.vue'
 import BellNotificationsModal from '@/Components/Features/Feedback/BellNotificationsModal.vue'
+import BetaNoticeModal from '@/Components/Features/Feedback/BetaNoticeModal.vue'
 import PwaInstallBanner from '@/Components/Features/Pwa/PwaInstallBanner.vue'
 import PwaUpdateBanner from '@/Components/Features/Pwa/PwaUpdateBanner.vue'
 import ConfirmDialog from 'primevue/confirmdialog'
@@ -36,6 +37,7 @@ onMounted(() => screenLock.init())
     <MobileBottomNav />
     <GlobalNotificationToasts />
     <BellNotificationsModal />
+    <BetaNoticeModal />
     <PwaInstallBanner />
     <PwaUpdateBanner />
     <ScreenLockOverlay />

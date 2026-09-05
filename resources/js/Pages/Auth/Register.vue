@@ -2,11 +2,14 @@
 import GuestLayout from '@/Layouts/GuestLayout.vue'
 import { Head, Link } from '@inertiajs/vue3'
 import { useRegisterForm } from '@/composables/useAuthForm'
+import { useGender } from '@/composables/useGender'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
+import Select from 'primevue/select'
 import HomeZoneField from '@/Components/Features/HomeZone/HomeZoneField.vue'
 const f = useRegisterForm()
+const g = useGender()
 </script>
 
 <template>
@@ -24,6 +27,11 @@ const f = useRegisterForm()
         <label class="text-[13px] font-semibold text-ink-900 dark:text-zinc-100">Email</label>
         <InputText v-model="f.email.value" v-bind="f.emailAttrs" type="email" placeholder="you@mail.ru" class="w-full mt-1.5" :invalid="!!f.errors.value.email" />
         <small class="text-red-500 dark:text-red-400">{{ f.errors.value.email }}</small>
+      </div>
+      <div>
+        <label class="text-[13px] font-semibold text-ink-900 dark:text-zinc-100">Пол *</label>
+        <Select v-model="f.gender.value" :options="g.options" optionLabel="label" optionValue="value" placeholder="Выбери пол" checkmark fluid class="w-full mt-1.5 !rounded-2xl" :invalid="!!f.errors.value.gender" />
+        <small class="text-red-500 dark:text-red-400">{{ f.errors.value.gender }}</small>
       </div>
       <div>
         <label class="text-[13px] font-semibold text-ink-900 dark:text-zinc-100">Пароль</label>

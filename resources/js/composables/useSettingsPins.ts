@@ -20,7 +20,15 @@ export function useMyPinsSettings(active: any) {
     if (!ok) return
     try { await deleteMutate(id); await refetch() } catch (e: any) { alert(e?.response?.data?.message || 'Ошибка') }
   }
-  return { myPins, loadingPins, deleteAsyncStatus, deleteMyPin, refetch }
+  const updatingId = ref<number | null>(null)
+  async function updateAudience(id: number, gender_audience: 'all' | 'male' | 'female') {
+    updatingId.value = id
+    try {
+      await pinsApi.update(id, { gender_audience } as any)
+      await refetch()
+    } catch (e: any) { alert(e?.response?.data?.message || 'Не удалось обновить') } finally { updatingId.value = null }
+  }
+  return { myPins, loadingPins, deleteAsyncStatus, deleteMyPin, refetch, updatingId, updateAudience }
 }
 
 export function useBillingInfo() {

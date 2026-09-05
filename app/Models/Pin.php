@@ -27,7 +27,7 @@ class Pin extends Model
     }
 
     protected $fillable = [
-        'user_id','title','body','category','latitude','longitude','real_lat','real_lng','location_precision',
+        'user_id','title','body','category','gender_audience','latitude','longitude','real_lat','real_lng','location_precision',
         'radius_meters','visibility_radius_km','expires_at','publish_at','status','priority','is_pinned','is_sponsored','is_boosted','boosted_until','views_count','likes_count','reactions_count','comments_count','is_anonymous','district_name','photo_path','meta'
     ];
 
@@ -61,6 +61,39 @@ class Pin extends Model
         return $q->selectRaw("pins.*, $haversine as distance", [$lat, $lng, $lat])->having('distance', '<=', $radiusKm)->orderBy('distance');
     }
     public function scopeBoostedFirst(Builder $q): Builder { return $q->orderByDesc('is_boosted')->orderByDesc('is_pinned')->orderByDesc('created_at'); }
+
+    public const GENDER_AUDIENCES = ['all', 'male', 'female'];
+
+    public static function normalizeGenderAudience(?string $v): string
+    {
+        $v = mb_strtolower(trim((string) $v));
+        return in_array($v, ['male', 'female'], true) ? $v : 'all';
+    }
+
+    public function scopeVisibleForGender(Builder $q, ?User $viewer): Builder
+    {
+        if ($viewer && $viewer->isAdmin()) return $q;
+        $viewerId = $viewer?->id;
+        $gender = $viewer?->gender;
+        return $q->where(function (Builder $w) use ($viewerId, $gender) {
+            $w->where('gender_audience', 'all')->orWhereNull('gender_audience');
+            if (in_array($gender, ['male', 'female'], true)) {
+                $w->orWhere('gender_audience', $gender);
+            }
+            if ($viewerId) {
+                $w->orWhere('user_id', $viewerId);
+            }
+        });
+    }
+
+    public function isVisibleForGender(?User $viewer): bool
+    {
+        if ($viewer && ($viewer->isAdmin() || $viewer->id === $this->user_id)) return true;
+        $audience = static::normalizeGenderAudience($this->gender_audience ?? 'all');
+        if ($audience === 'all') return true;
+        if (!$viewer) return false;
+        return $viewer->gender === $audience;
+    }
 
     public function isExpired(): bool { return $this->expires_at ? $this->expires_at->isPast() : false; }
     public function isVisibleForTier(string $plan): bool {
@@ -117,6 +150,7 @@ class Pin extends Model
             'title' => $this->title,
             'body' => $this->body,
             'category' => $this->category,
+            'gender_audience' => static::normalizeGenderAudience($this->gender_audience ?? 'all'),
             'latitude' => (float) $this->latitude,
             'longitude' => (float) $this->longitude,
             'expires_at' => $this->expires_at,
