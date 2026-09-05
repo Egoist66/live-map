@@ -16,7 +16,7 @@ const emit = defineEmits<{ (e: 'update:live', v: boolean): void; (e: 'update:my'
       <button v-for="p in myPins" :key="p.id" @click="emit('fly', p)" class="text-left bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl p-4 hover:border-stone-900 dark:hover:border-white/30 transition">
         <div class="text-sm font-bold truncate dark:text-zinc-100">{{ p.title }}</div>
         <div class="text-xs text-stone-500 dark:text-zinc-400 line-clamp-2 mt-1">{{ p.body }}</div>
-        <div class="flex items-center gap-1.5 mt-2 text-[11px]"><span class="bg-stone-900 dark:bg-white text-white dark:text-ink-900 rounded-full px-2 py-0.5">{{ p.category }}</span><span class="bg-stone-100 dark:bg-zinc-700 dark:text-zinc-200 rounded-full px-2 py-0.5">до {{ formatTime(p.expires_at) }}</span><span class="ml-auto font-semibold dark:text-zinc-200">На карте →</span></div>
+        <div class="flex items-center gap-1.5 mt-2 text-[11px]"><span class="bg-stone-900 dark:bg-white text-white dark:text-ink-900 rounded-full px-2 py-0.5">{{ p.category }}</span><span class="bg-stone-100 dark:bg-zinc-700 dark:text-zinc-200 rounded-full px-2 py-0.5">{{ p.expires_at ? `до ${formatTime(p.expires_at)}` : '∞' }}</span><span class="ml-auto font-semibold dark:text-zinc-200">На карте →</span></div>
       </button>
     </div>
     <div v-else class="text-center py-10"><div class="text-sm font-semibold mt-3 dark:text-zinc-100">Пока нет пинов</div><div class="text-xs text-stone-500 dark:text-zinc-400">Создай первый — он появится здесь</div></div>

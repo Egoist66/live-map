@@ -18,14 +18,14 @@ export function useProfileForm() {
       email: user.value.email,
       home_lat: user.value.home_lat || null,
       home_lng: user.value.home_lng || null,
-      home_radius_km: user.value.home_radius_km || 2,
+      home_radius_km: user.value.home_radius_km || 5,
       bio: user.value.bio || null,
       is_anonymous_default: !!user.value.is_anonymous_default,
       plan: user.value.plan || 'free',
     } as any,
   })
 
-  watch(user, (u) => setValues({ name: u.name, gender: u.gender || null, email: u.email, home_lat: u.home_lat || null, home_lng: u.home_lng || null, home_radius_km: u.home_radius_km || 2, bio: u.bio || null, is_anonymous_default: !!u.is_anonymous_default, plan: u.plan || 'free' } as any))
+  watch(user, (u) => setValues({ name: u.name, gender: u.gender || null, email: u.email, home_lat: u.home_lat || null, home_lng: u.home_lng || null, home_radius_km: u.home_radius_km || 5, bio: u.bio || null, is_anonymous_default: !!u.is_anonymous_default, plan: u.plan || 'free' } as any))
 
   const [name, nameAttrs] = defineField('name')
   const [gender] = defineField('gender')

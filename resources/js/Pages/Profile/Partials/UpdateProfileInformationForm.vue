@@ -19,7 +19,7 @@ const f = useProfileForm()
 const a = useAvatarUpload()
 const g = useGender()
 const { selectPt } = useDropdownMenuStyle()
-const planOptions = [{ label:'Free — 3/день · 1км', value:'free', icon:'pi pi-ticket' },{ label:'Pro — Безлимит · 5км', value:'pro', icon:'pi pi-bolt' },{ label:'Business — Безлимит · 50км', value:'business', icon:'pi pi-briefcase' }]
+const planOptions = [{ label:'Free — 3/день · 5км', value:'free', icon:'pi pi-ticket' },{ label:'Pro — Безлимит · 15км', value:'pro', icon:'pi pi-bolt' },{ label:'Business — Безлимит · 50км', value:'business', icon:'pi pi-briefcase' }]
 </script>
 <template>
   <section>
@@ -92,11 +92,11 @@ const planOptions = [{ label:'Free — 3/день · 1км', value:'free', icon:
         <template #content>
           <div class="flex items-center justify-between"><h4 class="text-sm font-bold dark:text-white">Домашняя зона</h4><Button @click="f.useMyLocation" label="Моя геопозиция" size="small" rounded class="!bg-black dark:!bg-white !border-black dark:!border-white !text-white dark:!text-black" /></div>
           <div class="grid sm:grid-cols-2 gap-3 mt-3">
-            <div><label class="text-xs font-medium dark:text-white">Широта</label><InputText v-model="f.home_lat.value" v-bind="f.homeLatAttrs" placeholder="55.75" class="w-full mt-1 !rounded-2xl" :invalid="!!f.errors.value.home_lat" /><Message v-if="f.errors.value.home_lat" severity="error" :closable="false" class="mt-1 !text-xs">{{ f.errors.value.home_lat }}</Message></div>
-            <div><label class="text-xs font-medium dark:text-white">Долгота</label><InputText v-model="f.home_lng.value" v-bind="f.homeLngAttrs" placeholder="37.61" class="w-full mt-1 !rounded-2xl" :invalid="!!f.errors.value.home_lng" /><Message v-if="f.errors.value.home_lng" severity="error" :closable="false" class="mt-1 !text-xs">{{ f.errors.value.home_lng }}</Message></div>
+            <div><label class="text-xs font-medium dark:text-white">Широта</label><InputText readonly v-model="f.home_lat.value" v-bind="f.homeLatAttrs" placeholder="55.75" class="w-full mt-1 !rounded-2xl" :invalid="!!f.errors.value.home_lat" /><Message v-if="f.errors.value.home_lat" severity="error" :closable="false" class="mt-1 !text-xs">{{ f.errors.value.home_lat }}</Message></div>
+            <div><label class="text-xs font-medium dark:text-white">Долгота</label><InputText readonly v-model="f.home_lng.value" v-bind="f.homeLngAttrs" placeholder="37.61" class="w-full mt-1 !rounded-2xl" :invalid="!!f.errors.value.home_lng" /><Message v-if="f.errors.value.home_lng" severity="error" :closable="false" class="mt-1 !text-xs">{{ f.errors.value.home_lng }}</Message></div>
           </div>
           <div class="mt-3">
-            <HomeZoneField :model-value="Number(f.values.home_radius_km ?? 1)" :plan="String(f.values.plan || 'free')" :error="f.errors.value.home_radius_km" @update:model-value="(v:number)=>f.setValues({ home_radius_km: v } as any)" />
+            <HomeZoneField :model-value="Number(f.values.home_radius_km ?? 5)" :plan="String(f.values.plan || 'free')" :error="f.errors.value.home_radius_km" @update:model-value="(v:number)=>f.setValues({ home_radius_km: v } as any)" />
           </div>
         </template>
       </Card>
@@ -150,9 +150,9 @@ const planOptions = [{ label:'Free — 3/день · 1км', value:'free', icon:
             </template>
           </Select>
           <div class="mt-3 grid sm:grid-cols-3 gap-2">
-            <Card @click="(f.plan.value as any)='free'" :class="['!rounded-3xl !cursor-pointer !transition', f.values.plan==='free'?'!bg-ink-900 dark:!bg-white !text-white dark:!text-ink-900 !border-ink-900 dark:!border-white':'!bg-stone-50 dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 !text-stone-800 dark:!text-zinc-200']" :pt="{ body:{ class:'!p-3' }, content:{ class:'!p-0' } }"><template #content><div class="text-sm font-bold">Free</div><div class="text-xs opacity-70">3/день · 1км · 2ч</div><div class="text-xs font-bold mt-1">Бесплатно</div></template></Card>
-            <Card @click="(f.plan.value as any)='pro'" :class="['!rounded-3xl !cursor-pointer !transition', f.values.plan==='pro'?'!bg-gradient-to-br !from-violet-600 !to-indigo-600 !text-white !border-violet-600':'!bg-amber-50 dark:!bg-amber-950/30 !border-amber-200 dark:!border-amber-800 !text-stone-800 dark:!text-zinc-200']" :pt="{ body:{ class:'!p-3' }, content:{ class:'!p-0' } }"><template #content><div class="text-sm font-black">Pro</div><div class="text-xs opacity-80">Безлимит · 5км · 24ч</div><div class="text-xs font-bold mt-1">$4.99 / мес</div></template></Card>
-            <Card @click="(f.plan.value as any)='business'" :class="['!rounded-3xl !cursor-pointer !transition', f.values.plan==='business'?'!bg-ink-900 dark:!bg-white !text-white dark:!text-ink-900 !border-ink-900 dark:!border-white':'!bg-stone-50 dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 !text-stone-800 dark:!text-zinc-200']" :pt="{ body:{ class:'!p-3' }, content:{ class:'!p-0' } }"><template #content><div class="text-sm font-bold">Business</div><div class="text-xs opacity-70">Безлимит · 50км · 168ч</div><div class="text-xs font-bold mt-1">$19.99 / мес</div></template></Card>
+            <Card @click="(f.plan.value as any)='free'" :class="['!rounded-3xl !cursor-pointer !transition', f.values.plan==='free'?'!bg-ink-900 dark:!bg-white !text-white dark:!text-ink-900 !border-ink-900 dark:!border-white':'!bg-stone-50 dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 !text-stone-800 dark:!text-zinc-200']" :pt="{ body:{ class:'!p-3' }, content:{ class:'!p-0' } }"><template #content><div class="text-sm font-bold">Free</div><div class="text-xs opacity-70">3/день · 5км · 4ч</div><div class="text-xs font-bold mt-1">Бесплатно</div></template></Card>
+            <Card @click="(f.plan.value as any)='pro'" :class="['!rounded-3xl !cursor-pointer !transition', f.values.plan==='pro'?'!bg-gradient-to-br !from-violet-600 !to-indigo-600 !text-white !border-violet-600':'!bg-amber-50 dark:!bg-amber-950/30 !border-amber-200 dark:!border-amber-800 !text-stone-800 dark:!text-zinc-200']" :pt="{ body:{ class:'!p-3' }, content:{ class:'!p-0' } }"><template #content><div class="text-sm font-black">Pro</div><div class="text-xs opacity-80">Безлимит · 15км · 12ч</div><div class="text-xs font-bold mt-1">$4.99 / мес</div></template></Card>
+            <Card @click="(f.plan.value as any)='business'" :class="['!rounded-3xl !cursor-pointer !transition', f.values.plan==='business'?'!bg-ink-900 dark:!bg-white !text-white dark:!text-ink-900 !border-ink-900 dark:!border-white':'!bg-stone-50 dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 !text-stone-800 dark:!text-zinc-200']" :pt="{ body:{ class:'!p-3' }, content:{ class:'!p-0' } }"><template #content><div class="text-sm font-bold">Business</div><div class="text-xs opacity-70">Безлимит · 50км · ∞</div><div class="text-xs font-bold mt-1">$19.99 / мес</div></template></Card>
           </div>
         </template>
       </Card>

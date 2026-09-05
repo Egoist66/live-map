@@ -25,6 +25,7 @@ Route::middleware('throttle:60,1')->group(function () {
 
 Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/pins/mine', [PinController::class, 'mine']);
+    Route::get('/pins/mine/scheduled', [PinController::class, 'scheduled']);
     Route::get('/pins/mine/archived', [PinController::class, 'archived']);
     Route::get('/pins', [PinController::class, 'index']);
     Route::post('/pins', [PinController::class, 'store']);

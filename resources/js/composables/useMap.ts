@@ -72,7 +72,7 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
         loaded.value = true
         clearTimeout(loadTimer)
         map.resize()
-        if (pendingHomeZone) drawHomeZone(pendingHomeZone.lat, pendingHomeZone.lng, pendingHomeZone.radiusKm)
+        if (homeZoneState) drawHomeZone(homeZoneState.lat, homeZoneState.lng, homeZoneState.radiusKm)
         renderPins()
       }
       map.once('load', onReady)
@@ -383,44 +383,100 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
     return coords
   }
 
-  let pendingHomeZone: { lat: number; lng: number; radiusKm: number } | null = null
+  let homeZoneState: { lat: number; lng: number; radiusKm: number } | null = null
+  let homeZoneMarker: maplibregl.Marker | null = null
+  let homeZoneEl: HTMLElement | null = null
+  let homeZoneCircle: HTMLElement | null = null
+  let homeZoneBound = false
+
+  function ensureHomeZoneEvents() {
+    if (homeZoneBound || !map) return
+    homeZoneBound = true
+    try {
+      ;(map as any).on?.('zoom', updateHomeZonePixels)
+      ;(map as any).on?.('zoomend', updateHomeZonePixels)
+      ;(map as any).on?.('move', updateHomeZonePixels)
+    } catch {}
+  }
+
+  function metersPerPixel(lat: number): number {
+    try {
+      const z = (map as any)?.getZoom?.() ?? 13
+      return (156543.03392 * Math.cos((lat * Math.PI) / 180)) / Math.pow(2, z)
+    } catch { return 20 }
+  }
+
+  function updateHomeZonePixels() {
+    if (!homeZoneState || !homeZoneEl || !homeZoneCircle) return
+    try {
+      const mpp = metersPerPixel(homeZoneState.lat)
+      const radiusPx = (homeZoneState.radiusKm * 1000) / Math.max(mpp, 0.1)
+      const d = Math.min(Math.max(radiusPx * 2, 20), 4000)
+      homeZoneCircle.style.width = d + 'px'
+      homeZoneCircle.style.height = d + 'px'
+    } catch {}
+  }
 
   function drawHomeZone(lat: number, lng: number, radiusKm: number) {
-    if (!map || !(map as any).loaded?.()) {
-      pendingHomeZone = { lat, lng, radiusKm }
+    if (!map) {
+      homeZoneState = { lat, lng, radiusKm }
       return
     }
+    homeZoneState = { lat, lng, radiusKm }
+    ensureHomeZoneEvents()
     try {
-      const srcId = 'home-zone-src'
-      const fillId = 'home-zone-fill'
-      const lineId = 'home-zone-line'
-      const geojson: any = { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [homeCircleCoords(lat, lng, radiusKm)] } }
-      if ((map as any).getSource?.(srcId)) {
-        ;(map.getSource(srcId) as any).setData(geojson)
+      if (!homeZoneMarker) {
+        homeZoneEl = document.createElement('div')
+        homeZoneEl.style.position = 'relative'
+        homeZoneEl.style.display = 'grid'
+        homeZoneEl.style.placeItems = 'center'
+        homeZoneEl.style.pointerEvents = 'none'
+        homeZoneCircle = document.createElement('div')
+        homeZoneCircle.style.position = 'absolute'
+        homeZoneCircle.style.borderRadius = '9999px'
+        homeZoneCircle.style.background = 'rgba(124,58,237,0.14)'
+        homeZoneCircle.style.border = '2px dashed rgba(124,58,237,0.7)'
+        homeZoneCircle.style.boxShadow = 'inset 0 0 40px rgba(124,58,237,0.12)'
+        homeZoneEl.appendChild(homeZoneCircle)
+        homeZoneMarker = new maplibregl.Marker({ element: homeZoneEl, anchor: 'center' }).setLngLat([lng, lat]).addTo(map)
       } else {
-        ;(map as any).addSource?.(srcId, { type: 'geojson', data: geojson })
-        ;(map as any).addLayer?.({ id: fillId, type: 'fill', source: srcId, paint: { 'fill-color': '#7c3aed', 'fill-opacity': 0.1 } })
-        ;(map as any).addLayer?.({ id: lineId, type: 'line', source: srcId, paint: { 'line-color': '#7c3aed', 'line-width': 1.5, 'line-dasharray': [4, 4], 'line-opacity': 0.55 } })
+        homeZoneMarker.setLngLat([lng, lat] as any)
       }
+      updateHomeZonePixels()
     } catch {}
   }
 
   function showHomeZone(lat: number | null | undefined, lng: number | null | undefined, radiusKm: number | null | undefined) {
-    if (!lat || !lng) return
+    if (lat == null || lng == null) return
+    const la = Number(lat)
+    const ln = Number(lng)
+    if (!Number.isFinite(la) || !Number.isFinite(ln)) return
+    if (la === 0 && ln === 0) return
     const r = Math.min(Math.max(Number(radiusKm) || 1, 1), 50)
-    pendingHomeZone = { lat: Number(lat), lng: Number(lng), radiusKm: r }
-    drawHomeZone(Number(lat), Number(lng), r)
+    drawHomeZone(la, ln, r)
   }
 
   function hideHomeZone() {
-    pendingHomeZone = null
+    homeZoneState = null
+    try { if (homeZoneMarker) { homeZoneMarker.remove(); homeZoneMarker = null; homeZoneEl = null; homeZoneCircle = null } } catch {}
     try {
       if ((map as any)?.getLayer?.('home-zone-fill')) (map as any).removeLayer('home-zone-fill')
       if ((map as any)?.getLayer?.('home-zone-line')) (map as any).removeLayer('home-zone-line')
       if ((map as any)?.getSource?.('home-zone-src')) (map as any).removeSource('home-zone-src')
     } catch {}
+    try { if (homeMarker) { homeMarker.remove(); homeMarker = null } } catch {}
   }
 
+  function flyToHomeZone(lat: number, lng: number, radiusKm: number) {
+    if (!map) return
+    const z = radiusKm >= 50 ? 9 : radiusKm >= 10 ? 10 : radiusKm >= 5 ? 11 : radiusKm >= 2 ? 12 : 13
+    try { map.flyTo({ center: [lng, lat] as any, zoom: z, duration: 900 }) } catch {}
+    setTimeout(() => updateHomeZonePixels(), 950)
+  }
+
+  let homeMarker: maplibregl.Marker | null = null
+
+  function drawHomeMarker(_lat: number, _lng: number, _radiusKm: number) {}
   function getCenter() { return map?.getCenter() }
   function flyToMyLocation(lat: number, lng: number) { if (!map) return; map.flyTo({ center: [lng, lat] as any, zoom: 14.5, essential: true, duration: 1200 }) }
   let wsConnected = ref(false)
@@ -466,5 +522,5 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
   function setThemeStyle(isDark: boolean) {
     return
   }
-  return { mapContainer, initMap, renderPins, addTempMarker, removeTempMarker, showUserLocation, triggerGeolocate, getCenter, flyToMyLocation, bindRealtime, unbindRealtime, setThemeStyle, showHomeZone, hideHomeZone, loaded, errorMsg, wsConnected, get map() { return map } }
+  return { mapContainer, initMap, renderPins, addTempMarker, removeTempMarker, showUserLocation, triggerGeolocate, getCenter, flyToMyLocation, flyToHomeZone, bindRealtime, unbindRealtime, setThemeStyle, showHomeZone, hideHomeZone, loaded, errorMsg, wsConnected, get map() { return map } }
 }

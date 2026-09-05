@@ -1,7 +1,7 @@
 export function isPinAlive(p: any, now = Date.now()): boolean {
   if (!p) return false
   if (p.status && p.status !== 'active') return false
-  if (!p.expires_at) return false
+  if (!p.expires_at) return true
   return new Date(p.expires_at).getTime() > now
 }
 

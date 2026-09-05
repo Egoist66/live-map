@@ -37,7 +37,7 @@ class RegisteredUserController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'home_lat' => 'nullable|numeric|between:-90,90',
             'home_lng' => 'nullable|numeric|between:-180,180',
-            'home_radius_km' => 'nullable|integer|min:1|max:1',
+            'home_radius_km' => 'nullable|integer|min:1|max:5',
             'home_address' => 'nullable|string|max:255',
         ]);
 
@@ -47,7 +47,7 @@ class RegisteredUserController extends Controller
             'password' => Hash::make($request->password),
             'home_lat' => $request->home_lat,
             'home_lng' => $request->home_lng,
-            'home_radius_km' => min(1, max(1, (int) ($request->home_radius_km ?? 1))),
+            'home_radius_km' => min(5, max(1, (int) ($request->home_radius_km ?? 5))),
         ]);
 
         event(new Registered($user));

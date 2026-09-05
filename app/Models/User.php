@@ -53,25 +53,28 @@ class User extends Authenticatable
         return $this->pins_today_count < 3;
     }
 
-    public function pinTtlHours(): int
+    public function pinTtlHours(): ?int
     {
-        if ($this->isAdmin()) return 168;
-        return $this->plan === 'free' ? 2 : 24;
+        if ($this->isAdmin()) return null;
+        if ($this->plan === 'business') return null;
+        if ($this->plan === 'pro') return 12;
+        return 4;
     }
 
     public function pinRadius(): int
     {
-        if ($this->isAdmin()) return 50000;
+        if ($this->isAdmin()) return 500000;
         if ($this->plan === 'business') return 50000;
-        return $this->plan === 'free' ? 1000 : 5000;
+        if ($this->plan === 'pro') return 15000;
+        return 5000;
     }
 
     public function homeRadiusLimit(): int
     {
-        if ($this->isAdmin()) return 50;
+        if ($this->isAdmin()) return 500;
         if ($this->plan === 'business') return 50;
-        if ($this->plan === 'pro') return 5;
-        return 1;
+        if ($this->plan === 'pro') return 15;
+        return 5;
     }
 
     public function isPro(): bool { return $this->isAdmin() || in_array($this->plan, ['pro','business']); }

@@ -10,7 +10,7 @@ export function useHomeZone(planRef: Ref<string | null | undefined> | string, ra
   const needPlan = computed(() => requiredPlanForRadius(radius.value || 1))
   const hint = computed(() => {
     const r = radius.value || 1
-    return `Вижу чужие и мои пины в радиусе ${r} км от дома — тот же радиус, что у пина (${plan.value === 'free' ? 'Free 1 км' : plan.value === 'pro' ? 'Pro 5 км' : 'Business 50 км'}). Настройка по умолчанию, чтобы не задавать каждый пин.`
+    return `Вижу чужие и мои пины в радиусе ${r} км от дома — тот же радиус, что у пина (${plan.value === 'free' ? 'Free 5 км' : plan.value === 'pro' ? 'Pro 15 км' : 'Business 50+ км'}). Настройка по умолчанию, чтобы не задавать каждый пин.`
   })
   const presets = computed(() =>
     HOME_RADIUS_PRESETS.map((p) => ({

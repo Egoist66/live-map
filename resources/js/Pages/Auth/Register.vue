@@ -44,7 +44,7 @@ const f = useRegisterForm()
       <div class="bg-stone-50 dark:bg-zinc-800/60 border border-stone-200 dark:border-zinc-700 rounded-2xl p-3.5 space-y-2.5">
         <div class="flex items-center justify-between">
           <label class="text-[13px] font-semibold text-ink-900 dark:text-zinc-100">Домашняя зона</label>
-          <span class="text-[11px] font-bold bg-violet-100 dark:bg-violet-500/20 text-violet-800 dark:text-violet-200 border border-violet-200 dark:border-violet-700 rounded-full px-2.5 py-1">{{ f.values.home_radius_km }} км · FREE</span>
+          <span class="text-[11px] font-bold bg-violet-100 dark:bg-violet-500/20 text-violet-800 dark:text-violet-200 border border-violet-200 dark:border-violet-700 rounded-full px-2.5 py-1">{{ f.values.home_radius_km }} км · FREE до 5</span>
         </div>
         <p class="text-[11px] text-stone-500 dark:text-zinc-400 leading-relaxed">Выбери район где живёшь/бываешь — видишь чужие и свои пины в этом радиусе. Тот же радиус, что у пина.</p>
         <Button type="button" @click="f.detectLocation" :loading="f.locating.value" severity="secondary" outlined rounded class="w-full" :label="f.values.home_lat ? 'Обновить моё место' : 'Определить моё место'" icon="pi pi-map-marker" />
@@ -55,8 +55,8 @@ const f = useRegisterForm()
             <div v-if="f.values.home_lat" class="text-[11px] text-stone-400 dark:text-zinc-400 font-mono">{{ f.values.home_lat }}, {{ f.values.home_lng }}</div>
           </div>
         </div>
-        <HomeZoneField :model-value="Number(f.values.home_radius_km ?? 1)" plan="free" :error="f.errors.value.home_radius_km" @update:model-value="(v:number)=>f.setValues({ home_radius_km: v } as any)" />
-        <p class="text-[11px] text-stone-500 dark:text-zinc-400">Больше радиус? Pro — до 5 км, Business — до 50 км. Сменишь после регистрации в тарифе.</p>
+        <HomeZoneField :model-value="Number(f.values.home_radius_km ?? 5)" plan="free" :error="f.errors.value.home_radius_km" @update:model-value="(v:number)=>f.setValues({ home_radius_km: v } as any)" />
+        <p class="text-[11px] text-stone-500 dark:text-zinc-400">Больше радиус? Pro — до 15 км, Business — 20+ км. Сменишь после регистрации в тарифе.</p>
       </div>
       <Button :loading="f.isSubmitting.value" type="submit" label="Создать аккаунт →" class="w-full !bg-ink-900 dark:!bg-[#FAFAFA] !border-ink-900 dark:!border-[#FAFAFA] !text-white dark:!text-[#0F172A] !rounded-full !py-3.5 [&_.p-button-label]:!text-white dark:[&_.p-button-label]:!text-[#0F172A]" />
       <div class="text-sm text-center text-stone-500 dark:text-zinc-400">Уже есть? <Link :href="route('login')" class="font-semibold text-ink-900 dark:text-white hover:underline">Войти</Link></div>

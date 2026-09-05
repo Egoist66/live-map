@@ -47,7 +47,7 @@ class ReactionController extends Controller
             $model->increment('reactions_count');
             if ($data['type'] === 'like') $model->increment('likes_count');
             $model->refresh();
-            if ($model->reactions_count % 5 === 0 && $model->expires_at->diffInHours(now()) < 23) {
+            if ($model->reactions_count % 5 === 0 && $model->expires_at && $model->expires_at->diffInHours(now()) < 23) {
                 $model->update(['expires_at' => $model->expires_at->addHour()]);
             }
             PinActivityNotifier::reaction($model, $request->user(), $data['type']);

@@ -44,11 +44,15 @@ export const usePinsStore = defineStore('pins', () => {
 
   async function fetchMine(): Promise<Pin[]> {
     const data = await pinsApi.mine()
-    return (data || []).filter((p: any) => isPinAlive(p))
+    return (data || []).filter((p: any) => isPinAlive(p) || (p as any).status === 'scheduled')
+  }
+
+  async function fetchScheduled(): Promise<Pin[]> {
+    return pinsApi.scheduled()
   }
 
   function pruneExpired(): void {
-    pins.value = pins.value.filter((p: any) => isPinAlive(p))
+    pins.value = pins.value.filter((p: any) => isPinAlive(p) || (p as any).status === 'scheduled')
   }
 
   async function createPin(payload: CreatePinPayload): Promise<Pin> {
@@ -126,6 +130,7 @@ export const usePinsStore = defineStore('pins', () => {
     deleting,
     fetchNearby,
     fetchMine,
+    fetchScheduled,
     pruneExpired,
     createPin,
     updatePin: (vars: { id: number; payload: UpdatePinPayload }) => updatePin(vars.id, vars.payload),

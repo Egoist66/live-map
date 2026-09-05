@@ -5,6 +5,7 @@ export const PIN_KEYS = {
   all: () => ['pins'] as const,
   nearby: (lat: number, lng: number) => [...PIN_KEYS.all(), 'nearby', lat, lng] as const,
   mine: () => [...PIN_KEYS.all(), 'mine'] as const,
+  scheduled: () => [...PIN_KEYS.all(), 'scheduled'] as const,
 }
 
 export const nearbyPinsQuery = (lat: number, lng: number) =>

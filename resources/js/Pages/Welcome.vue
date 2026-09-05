@@ -9,7 +9,7 @@ import Badge from 'primevue/badge'
 defineProps<{ canLogin: boolean; canRegister: boolean }>()
 const seo = useSeo({
   title: 'UPin — Твоё окно во двор | Живая карта района',
-  description: 'UPin — гиперлокальная карта района. Пины соседей в радиусе 1 км: вопросы, события, помощь, объявления. Приватность 200 м, анонимно, без спама. Пины живут 2–24 часа.',
+  description: 'UPin — гиперлокальная карта района. Пины соседей в радиусе 5 км: вопросы, события, помощь, объявления. Приватность 200 м, анонимно, без спама. Free 4ч · Pro 12ч · Business ∞.',
   keywords: ['UPin','живая карта','карта района','соседи','пины','объявления рядом','помощь соседей'],
 })
 const page = usePage()
@@ -57,7 +57,7 @@ const dashboardHref = computed(() => {
           <span class="text-xs font-medium text-stone-600 dark:text-zinc-400">847 пинов рядом · обновление 30 сек</span>
         </div>
         <h1 class="mt-5 sm:mt-6 text-[30px] sm:text-[48px] lg:text-[64px] font-black tracking-[-0.04em] sm:tracking-[-0.05em] leading-[0.95] sm:leading-[0.85] dark:text-white break-words text-balance">Район <span class="bg-gradient-to-r from-brand-500 via-violet-500 to-accent-teal bg-clip-text text-transparent">живой</span>,<br />пока ты рядом.</h1>
-        <p class="mt-5 text-[15px] sm:text-[17px] leading-relaxed text-stone-600 dark:text-zinc-400 max-w-[560px]">Строгая гиперлокальная сеть вокруг карты. Вопросы, события, помощь и объявления — всё в радиусе 1 км. Без ленты, без шума. Пины живут 2–24 часа.</p>
+        <p class="mt-5 text-[15px] sm:text-[17px] leading-relaxed text-stone-600 dark:text-zinc-400 max-w-[560px]">Строгая гиперлокальная сеть вокруг карты. Вопросы, события, помощь и объявления — всё в радиусе 5 км. Без ленты, без шума. Free 4ч · Pro 12ч · Business ∞.</p>
         <div class="mt-6 sm:mt-7 flex flex-col sm:flex-row sm:flex-wrap gap-2.5 sm:gap-3">
           <Link href="/map" class="w-full sm:w-auto"><Button label="Открыть карту →" class="w-full sm:w-auto !bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white !px-7 !py-3.5 !rounded-full !font-semibold hover:!bg-ink-800 dark:hover:!bg-zinc-100 !border-0 shadow-soft" /></Link>
           <a href="#how" class="w-full sm:w-auto"><Button label="Как это работает" severity="secondary" outlined class="w-full sm:w-auto !bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-700 !px-7 !py-3.5 !rounded-full !font-semibold hover:!bg-stone-50 dark:hover:!bg-zinc-800 !text-ink-900 dark:!text-white" /></a>

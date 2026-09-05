@@ -1,13 +1,28 @@
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useForm } from 'vee-validate'
 import { createPinSchema } from '@/validation/schemas/createPin.schema'
 import { usePinsStore } from '@/stores/pins'
 import { useToast } from 'primevue/usetoast'
 
+function pad(n: number): string {
+  return String(n).padStart(2, '0')
+}
+
+function toLocalInput(d: Date): string {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+function fromLocalInput(v: string): Date | null {
+  if (!v) return null
+  const d = new Date(v)
+  return Number.isNaN(d.getTime()) ? null : d
+}
+
 export function usePinCreate(onSuccess?: () => void) {
   const store = usePinsStore()
   const toast = useToast()
   const showCoords = ref(false)
+  const scheduleEnabled = ref(false)
 
   const { defineField, handleSubmit, setValues, values, errors, resetForm } = useForm({
     validationSchema: createPinSchema,
@@ -20,6 +35,7 @@ export function usePinCreate(onSuccess?: () => void) {
       location_precision: 'exact',
       is_anonymous: false,
       radius_meters: 1000,
+      publish_at: null,
     } as any,
   })
 
@@ -31,9 +47,51 @@ export function usePinCreate(onSuccess?: () => void) {
   const [location_precision] = defineField('location_precision')
   const [is_anonymous] = defineField('is_anonymous')
   const [radius_meters] = defineField('radius_meters')
+  const [publish_at] = defineField('publish_at')
+
+  const minScheduleLocal = computed(() => toLocalInput(new Date(Date.now() + 5 * 60_000)))
+  const maxScheduleLocal = computed(() => {
+    const d = new Date()
+    d.setDate(d.getDate() + 30)
+    return toLocalInput(d)
+  })
+
+  const isScheduled = computed(() => scheduleEnabled.value && !!publish_at.value && !!fromLocalInput(publish_at.value as any))
+
+  const scheduleLabel = computed(() => {
+    if (!isScheduled.value) return ''
+    const d = fromLocalInput(publish_at.value as any)
+    if (!d) return ''
+    return d.toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+  })
 
   function setCoords(lat: number, lng: number) {
     setValues({ latitude: Number(lat.toFixed(7)), longitude: Number(lng.toFixed(7)) } as any)
+  }
+
+  function toggleSchedule(on?: boolean) {
+    scheduleEnabled.value = on ?? !scheduleEnabled.value
+    if (!scheduleEnabled.value) setValues({ publish_at: null } as any)
+    else if (!publish_at.value) {
+      const d = new Date(Date.now() + 60 * 60_000)
+      setValues({ publish_at: toLocalInput(d) } as any)
+    }
+  }
+
+  function applyPreset(kind: 'hour' | 'evening' | 'morning') {
+    const now = new Date()
+    let d = new Date(now)
+    if (kind === 'hour') d = new Date(now.getTime() + 60 * 60_000)
+    if (kind === 'evening') {
+      d.setHours(18, 0, 0, 0)
+      if (d.getTime() <= now.getTime()) d.setDate(d.getDate() + 1)
+    }
+    if (kind === 'morning') {
+      d.setDate(d.getDate() + 1)
+      d.setHours(9, 0, 0, 0)
+    }
+    scheduleEnabled.value = true
+    setValues({ publish_at: toLocalInput(d) } as any)
   }
 
   const error = ref<unknown>(null)
@@ -41,9 +99,19 @@ export function usePinCreate(onSuccess?: () => void) {
   const submit = handleSubmit(async (vals: any) => {
     error.value = null
     try {
-      await store.createPin(vals)
-      toast.add({ severity: 'success', summary: 'Пин создан', life: 2000 })
-      resetForm({ values: { ...vals, title: '', body: '' } as any })
+      const payload: any = { ...vals }
+      if (scheduleEnabled.value && payload.publish_at) {
+        const d = fromLocalInput(payload.publish_at)
+        if (!d || d.getTime() <= Date.now()) throw { response: { data: { message: 'Выбери будущие дату и время' } } }
+        payload.publish_at = d.toISOString()
+      } else {
+        payload.publish_at = null
+      }
+      const pin = await store.createPin(payload)
+      const scheduled = (pin as any)?.is_scheduled || (pin as any)?.status === 'scheduled'
+      toast.add({ severity: 'success', summary: scheduled ? `Запланирован на ${scheduleLabel.value}` : 'Пин создан', life: 2500 })
+      scheduleEnabled.value = false
+      resetForm({ values: { ...vals, title: '', body: '', publish_at: null } as any })
       onSuccess?.()
     } catch (e: any) {
       error.value = e
@@ -63,6 +131,7 @@ export function usePinCreate(onSuccess?: () => void) {
     location_precision,
     is_anonymous,
     radius_meters,
+    publish_at,
     values,
     errors,
     showCoords,
@@ -72,5 +141,12 @@ export function usePinCreate(onSuccess?: () => void) {
     submit,
     setValues,
     resetForm,
+    scheduleEnabled,
+    isScheduled,
+    scheduleLabel,
+    minScheduleLocal,
+    maxScheduleLocal,
+    toggleSchedule,
+    applyPreset,
   }
 }

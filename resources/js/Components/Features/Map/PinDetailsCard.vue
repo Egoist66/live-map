@@ -38,7 +38,7 @@ const blur = computed(() => pinBlurInfo(props.pin))
       <div v-if="!pinEdit.editing.value" class="flex flex-wrap gap-1.5 mt-3 items-center">
         <span class="text-xs bg-stone-100 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 text-stone-700 dark:text-zinc-200 rounded-full px-2.5 py-1 font-medium">{{ pin.category }}</span>
         <Link v-if="pin.user && !pin.is_anonymous" :href="`/users/${pin.user.id}`" class="hover:opacity-80"><Chip :label="`${pin.user?.name} · ${pin.user?.level || 'novice'}`" :image="avatarSrcFor(pin.user) || undefined" class="!bg-white dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 !rounded-full !text-xs !text-ink-900 dark:!text-zinc-100" /></Link>
-        <span class="text-xs bg-amber-50 dark:bg-amber-500/15 border border-amber-200 dark:border-amber-400/30 text-amber-800 dark:text-amber-300 rounded-full px-2.5 py-1">до {{ formatTime(pin.expires_at) }}</span>
+        <span class="text-xs bg-amber-50 dark:bg-amber-500/15 border border-amber-200 dark:border-amber-400/30 text-amber-800 dark:text-amber-300 rounded-full px-2.5 py-1">{{ pin.expires_at ? `до ${formatTime(pin.expires_at)}` : '∞ бессрочно' }}</span>
       </div>
       <div class="flex gap-1.5 mt-4">
         <button @click="emit('react', 'like')" :disabled="reacting" :class="['flex-1 rounded-full py-2.5 text-xs font-semibold border active:scale-95 transition disabled:opacity-50', pin.my_reaction === 'like' ? 'bg-rose-500 text-white border-rose-500 shadow-[0_4px_16px_-4px_rgba(244,63,94,0.5)]' : 'bg-rose-500/10 dark:bg-rose-500/15 border-rose-500/30 dark:border-rose-400/30 text-rose-600 dark:text-rose-300 hover:bg-rose-500/20']">❤️ {{ pin.reactions_count || 0 }}</button>

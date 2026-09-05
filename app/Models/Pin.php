@@ -11,11 +11,12 @@ class Pin extends Model
 {
     protected $fillable = [
         'user_id','title','body','category','latitude','longitude','real_lat','real_lng','location_precision',
-        'radius_meters','visibility_radius_km','expires_at','status','priority','is_pinned','is_sponsored','is_boosted','boosted_until','views_count','likes_count','reactions_count','comments_count','is_anonymous','district_name','photo_path','meta'
+        'radius_meters','visibility_radius_km','expires_at','publish_at','status','priority','is_pinned','is_sponsored','is_boosted','boosted_until','views_count','likes_count','reactions_count','comments_count','is_anonymous','district_name','photo_path','meta'
     ];
 
     protected $casts = [
         'expires_at' => 'datetime',
+        'publish_at' => 'datetime',
         'boosted_until' => 'datetime',
         'meta' => 'array',
         'latitude' => 'decimal:7',
@@ -34,8 +35,9 @@ class Pin extends Model
     public function comments(): HasMany { return $this->hasMany(PinComment::class); }
     public function reactions() { return $this->morphMany(Reaction::class, 'reactable'); }
 
-    public function scopeActive(Builder $q): Builder { return $q->where('status', 'active')->where('expires_at', '>', now()); }
-    public function scopeArchivedOnly(Builder $q): Builder { return $q->whereIn('status', ['expired', 'archived'])->orWhere('expires_at', '<=', now()); }
+    public function scopeActive(Builder $q): Builder { return $q->where('status', 'active')->where(fn($w) => $w->whereNull('expires_at')->orWhere('expires_at', '>', now()))->where(fn($w) => $w->whereNull('publish_at')->orWhere('publish_at', '<=', now())); }
+    public function scopeScheduled(Builder $q): Builder { return $q->where('status', 'scheduled')->where('publish_at', '>', now()); }
+    public function scopeArchivedOnly(Builder $q): Builder { return $q->whereIn('status', ['expired', 'archived'])->orWhere(fn($w) => $w->whereNotNull('expires_at')->where('expires_at', '<=', now())); }
     public function scopeNearby(Builder $q, float $lat, float $lng, int $radiusKm = 5): Builder
     {
         $haversine = "(6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude))))";
@@ -43,9 +45,9 @@ class Pin extends Model
     }
     public function scopeBoostedFirst(Builder $q): Builder { return $q->orderByDesc('is_boosted')->orderByDesc('is_pinned')->orderByDesc('created_at'); }
 
-    public function isExpired(): bool { return $this->expires_at->isPast(); }
+    public function isExpired(): bool { return $this->expires_at ? $this->expires_at->isPast() : false; }
     public function isVisibleForTier(string $plan): bool {
-        $radius = $plan === 'business' ? 50000 : ($plan === 'pro' ? 5000 : 1000);
+        $radius = $plan === 'business' ? 50000 : ($plan === 'pro' ? 15000 : 5000);
         return $this->radius_meters <= $radius;
     }
 
@@ -101,6 +103,9 @@ class Pin extends Model
             'latitude' => (float) $this->latitude,
             'longitude' => (float) $this->longitude,
             'expires_at' => $this->expires_at,
+            'publish_at' => $this->publish_at,
+            'status' => $this->status,
+            'is_scheduled' => $this->status === 'scheduled',
             'is_boosted' => (bool) $this->is_boosted,
             'is_sponsored' => (bool) $this->is_sponsored,
             'priority' => $this->priority,

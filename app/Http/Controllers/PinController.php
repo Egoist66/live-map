@@ -36,7 +36,7 @@ class PinController extends Controller
     public function mine(Request $request)
     {
         $user = $request->user();
-        $pins = Pin::where('user_id', $user->id)->active()->latest()->limit(50)->with('user:id,name,avatar_path,level')->get();
+        $pins = Pin::where('user_id', $user->id)->whereIn('status', ['active', 'scheduled'])->latest()->limit(50)->with('user:id,name,avatar_path,level')->get();
         $myReactions = \App\Models\Reaction::where('user_id', $user->id)->where('reactable_type', 'pin')->whereIn('reactable_id', $pins->pluck('id'))->pluck('type', 'reactable_id');
         return response()->json($pins->map(fn($p) => array_merge($p->toPublicArray($user->id), ['my_reaction' => $myReactions[$p->id] ?? null])));
     }
@@ -47,6 +47,13 @@ class PinController extends Controller
         $pins = Pin::where('user_id', $user->id)
             ->where(fn($q) => $q->whereIn('status', ['expired', 'archived'])->orWhere('expires_at', '<=', now()))
             ->latest()->limit(50)->with('user:id,name,avatar_path,level')->get();
+        return response()->json($pins->map(fn($p) => $p->toPublicArray($user->id)));
+    }
+
+    public function scheduled(Request $request)
+    {
+        $user = $request->user();
+        $pins = Pin::where('user_id', $user->id)->scheduled()->latest('publish_at')->limit(50)->with('user:id,name,avatar_path,level')->get();
         return response()->json($pins->map(fn($p) => $p->toPublicArray($user->id)));
     }
 
@@ -65,7 +72,8 @@ class PinController extends Controller
             'blur_meters' => 'sometimes|integer|min:0|max:5000',
             'is_anonymous' => 'sometimes|boolean',
             'photo_path' => 'sometimes|nullable|string|max:255',
-            'radius_meters' => 'sometimes|integer|min:500|max:50000',
+            'radius_meters' => 'sometimes|integer|min:500|max:500000',
+            'publish_at' => 'sometimes|nullable|date|after:now|before:+31 days',
         ]);
 
         $precision = 'exact';
@@ -82,9 +90,13 @@ class PinController extends Controller
         $data['user_id'] = $user->id;
         $data['radius_meters'] = $finalRadius;
         $data['visibility_radius_km'] = (int) max(1, round($finalRadius / 1000));
-        $data['expires_at'] = now()->addHours($user->pinTtlHours());
+        $publishAt = !empty($data['publish_at']) ? \Carbon\Carbon::parse($data['publish_at']) : null;
+        $isScheduled = $publishAt && $publishAt->isFuture();
+        $data['publish_at'] = $publishAt;
+        $ttl = $user->pinTtlHours();
+        $data['expires_at'] = $ttl === null ? null : ($isScheduled ? $publishAt->copy() : now())->addHours($ttl);
         $data['is_anonymous'] = $data['is_anonymous'] ?? $user->is_anonymous_default;
-        $data['status'] = 'active';
+        $data['status'] = $isScheduled ? 'scheduled' : 'active';
 
         $pin = Pin::create($data);
 
@@ -95,7 +107,9 @@ class PinController extends Controller
         }
 
         $pin->load('user:id,name,avatar_path,level');
-        broadcast(new PinCreated($pin))->toOthers();
+        if (! $isScheduled) {
+            broadcast(new PinCreated($pin))->toOthers();
+        }
 
         return response()->json(array_merge($pin->toPublicArray($user->id), ['my_reaction' => null]), 201);
     }
@@ -107,7 +121,21 @@ class PinController extends Controller
             'title' => 'sometimes|required|string|max:100',
             'body' => 'nullable|string|max:1000',
             'category' => 'sometimes|required|in:question,announcement,warning,event,offer,help',
+            'publish_at' => 'sometimes|nullable|date|after:now|before:+31 days',
         ]);
+        if ($pin->status === 'scheduled' && array_key_exists('publish_at', $data)) {
+            $pin->publish_at = $data['publish_at'] ? \Carbon\Carbon::parse($data['publish_at']) : null;
+            unset($data['publish_at']);
+            if (! $pin->publish_at || $pin->publish_at->isPast()) {
+                $pin->status = 'active';
+                $pin->publish_at = null;
+                $data['status'] = 'active';
+            } else {
+                $ttl = $request->user()->pinTtlHours();
+                $pin->expires_at = $ttl === null ? null : $pin->publish_at->copy()->addHours($ttl);
+            }
+            $pin->save();
+        }
         $pin->update($data);
         $pin->load('user:id,name,avatar_path,level');
         try { broadcast(new PinUpdated($pin))->toOthers(); } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
@@ -140,7 +168,7 @@ class PinController extends Controller
         $pin->update([
             'is_boosted' => true,
             'boosted_until' => $boost->ends_at,
-            'expires_at' => $data['type']==='extend' ? $pin->expires_at->addDay() : $pin->expires_at,
+            'expires_at' => $data['type']==='extend' && $pin->expires_at ? $pin->expires_at->addDay() : $pin->expires_at,
         ]);
         $pin->load('user:id,name,avatar_path,level');
         try { broadcast(new PinUpdated($pin))->toOthers(); } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }

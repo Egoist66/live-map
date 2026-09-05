@@ -44,13 +44,14 @@ class ProfileUpdateRequest extends FormRequest
             'email' => ['required','string','lowercase','email','max:255', Rule::unique(User::class)->ignore($this->user()->id)],
             'home_lat' => ['nullable','numeric','between:-90,90'],
             'home_lng' => ['nullable','numeric','between:-180,180'],
-            'home_radius_km' => ['nullable','integer','min:1','max:50', function ($attr, $value, $fail) {
+            'home_radius_km' => ['nullable','integer','min:1','max:500', function ($attr, $value, $fail) {
                 if ($value === null || $value === '') return;
-                $plan = $this->input('plan', $this->user()?->plan ?? 'free');
                 $isAdmin = (bool) ($this->user()?->is_admin || $this->user()?->role === 'admin');
-                $max = $isAdmin ? 50 : ($plan === 'business' ? 50 : ($plan === 'pro' ? 5 : 1));
+                if ($isAdmin) return;
+                $plan = $this->input('plan', $this->user()?->plan ?? 'free');
+                $max = $plan === 'business' ? 50 : ($plan === 'pro' ? 15 : 5);
                 if ((int) $value > $max) {
-                    $need = $max >= 50 ? 'Business' : ($max >= 5 ? 'Pro' : 'Free (1 км)');
+                    $need = $max >= 50 ? 'Business' : ($max >= 15 ? 'Pro' : 'Free (5 км)');
                     $fail("Максимум {$max} км на твоём тарифе. Нужно: {$need} — радиус = зона видимости пина.");
                 }
             }],

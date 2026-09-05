@@ -12,5 +12,6 @@ export const createPinSchema = toTypedSchema(
     blur_meters: z.number().min(0).max(5000).optional(),
     is_anonymous: z.boolean().optional(),
     radius_meters: z.number().min(500).max(50000).optional(),
+    publish_at: z.string().nullable().optional(),
   }),
 )

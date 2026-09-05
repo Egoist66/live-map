@@ -66,7 +66,7 @@ class MakeAdmin extends Command
             ['Plan', $user->plan . ' (до ' . $user->plan_expires_at . ')'],
             ['Level', $user->level],
             ['Reputation', $user->reputation_score],
-            ['TTL пина', $user->pinTtlHours().'ч'],
+            ['TTL пина', $user->pinTtlHours() === null ? '∞' : $user->pinTtlHours().'ч'],
             ['Радиус', ($user->pinRadius()/1000).'км'],
             ['Лимит пинов', '∞ (bypass)'],
             ['Модерация', 'да'],

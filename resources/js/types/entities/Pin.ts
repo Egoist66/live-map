@@ -2,7 +2,7 @@ import type { UserBrief } from './User'
 
 export type PinCategory = 'question' | 'announcement' | 'warning' | 'event' | 'offer' | 'help'
 export type PinPriority = 'normal' | 'sponsored' | 'pinned' | string
-export type PinStatus = 'active' | 'expired' | 'blocked' | string
+export type PinStatus = 'active' | 'expired' | 'blocked' | 'scheduled' | 'archived' | string
 export type LocationPrecision = 'blur_200' | 'exact' | 'district' | 'custom'
 export type BoostType = 'top' | 'glow' | 'notify' | 'extend'
 
@@ -22,7 +22,9 @@ export interface Pin {
   blur_hint?: string | null
   radius_meters: number
   visibility_radius_km: number
-  expires_at: string
+  expires_at: string | null
+  publish_at?: string | null
+  is_scheduled?: boolean
   boosted_until?: string | null
   status: PinStatus
   priority: PinPriority
@@ -55,9 +57,10 @@ export interface CreatePinPayload {
   is_anonymous?: boolean
   radius_meters?: number
   photo_path?: string | null
+  publish_at?: string | null
 }
 
-export type UpdatePinPayload = Partial<Pick<CreatePinPayload, 'title' | 'body' | 'category'>>
+export type UpdatePinPayload = Partial<Pick<CreatePinPayload, 'title' | 'body' | 'category' | 'publish_at'>>
 
 export interface NearbyParams {
   lat: number

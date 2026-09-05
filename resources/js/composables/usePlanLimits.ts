@@ -3,37 +3,39 @@ import { computed, type Ref } from 'vue'
 export type Plan = 'free' | 'pro' | 'business'
 
 export const HOME_RADIUS_LIMITS: Record<Plan, number> = {
-  free: 1,
-  pro: 5,
+  free: 5,
+  pro: 15,
   business: 50,
 }
 
 export const PIN_RADIUS_M_LIMITS: Record<Plan, number> = {
-  free: 1000,
-  pro: 5000,
+  free: 5000,
+  pro: 15000,
   business: 50000,
 }
 
 export const HOME_RADIUS_PRESETS: Array<{ v: number; minPlan: Plan }> = [
   { v: 1, minPlan: 'free' },
-  { v: 2, minPlan: 'pro' },
-  { v: 5, minPlan: 'pro' },
-  { v: 10, minPlan: 'business' },
+  { v: 2, minPlan: 'free' },
+  { v: 5, minPlan: 'free' },
+  { v: 10, minPlan: 'pro' },
+  { v: 15, minPlan: 'pro' },
+  { v: 20, minPlan: 'business' },
   { v: 50, minPlan: 'business' },
 ]
 
 export function maxHomeRadiusKm(plan?: string | null, isAdmin?: boolean): number {
-  if (isAdmin) return 50
+  if (isAdmin) return 500
   if (plan === 'business') return 50
-  if (plan === 'pro') return 5
-  return 1
+  if (plan === 'pro') return 15
+  return 5
 }
 
 export function maxPinRadiusM(plan?: string | null, isAdmin?: boolean): number {
-  if (isAdmin) return 50000
+  if (isAdmin) return 500000
   if (plan === 'business') return 50000
-  if (plan === 'pro') return 5000
-  return 1000
+  if (plan === 'pro') return 15000
+  return 5000
 }
 
 export function planRank(plan?: string | null): number {
@@ -48,8 +50,8 @@ export function canUseHomeRadius(radiusKm: number, plan?: string | null, isAdmin
 }
 
 export function requiredPlanForRadius(radiusKm: number): Plan {
-  if (radiusKm > 5) return 'business'
-  if (radiusKm > 1) return 'pro'
+  if (radiusKm > 15) return 'business'
+  if (radiusKm > 5) return 'pro'
   return 'free'
 }
 
