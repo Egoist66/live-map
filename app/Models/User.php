@@ -11,8 +11,8 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['name', 'email', 'password', 'gender', 'plan', 'latitude', 'longitude', 'role', 'is_admin', 'is_hidden_from_search', 'avatar_path', 'home_lat', 'home_lng', 'home_radius_km', 'bio', 'reputation_score', 'level', 'is_anonymous_default', 'default_location_precision', 'default_blur_meters', 'message_privacy', 'allow_random_messages', 'settings', 'last_seen_at', 'is_invisible', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at'])]
-#[Hidden(['password', 'remember_token'])]
+#[Fillable(['name', 'email', 'password', 'gender', 'plan', 'latitude', 'longitude', 'role', 'is_admin', 'is_hidden_from_search', 'avatar_path', 'home_lat', 'home_lng', 'home_city', 'home_address', 'home_visibility', 'home_show_exact', 'home_radius_km', 'bio', 'reputation_score', 'level', 'is_anonymous_default', 'default_location_precision', 'default_blur_meters', 'message_privacy', 'allow_random_messages', 'settings', 'last_seen_at', 'is_invisible', 'screen_lock_code', 'screen_lock_timeout', 'screen_lock_kind', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at'])]
+#[Hidden(['password', 'remember_token', 'screen_lock_code'])]
 class User extends Authenticatable
 {
     use HasFactory, Notifiable;
@@ -139,6 +139,43 @@ class User extends Authenticatable
 
     public function isInvisibleActive(): bool { return (bool) $this->is_invisible && $this->canUseInvisible(); }
 
+    public function canShowExactHome(): bool { return $this->isAdmin() || in_array($this->plan, ['pro', 'business']); }
+
+    public function effectiveHomeBlurMeters(): int
+    {
+        if ($this->canShowExactHome() && (bool) $this->home_show_exact) return 0;
+        return max(300, (int) ($this->default_blur_meters ?? 300));
+    }
+
+    public function canSeeHome(?User $viewer): bool
+    {
+        if ($viewer && ($viewer->id === $this->id || $viewer->isAdmin())) return true;
+        if ($this->home_lat === null || $this->home_lng === null) return false;
+        return match ($this->home_visibility ?? 'everyone') {
+            'everyone' => true,
+            'friends' => $viewer ? Friendship::areFriends($viewer->id, $this->id) : false,
+            'none' => false,
+        };
+    }
+
+    public function publicHomeFor(?User $viewer): ?array
+    {
+        if (! $this->canSeeHome($viewer)) return null;
+        $blur = $this->effectiveHomeBlurMeters();
+        $lat = (float) $this->home_lat;
+        $lng = (float) $this->home_lng;
+        if ($blur > 0) [$lat, $lng] = Pin::blurCoords($lat, $lng, $blur);
+        return [
+            'city' => $this->home_city,
+            'address' => $blur > 0 ? null : $this->home_address,
+            'lat' => round($lat, 7),
+            'lng' => round($lng, 7),
+            'is_blurred' => $blur > 0,
+            'blur_meters' => $blur,
+            'blur_label' => $blur > 0 ? Pin::formatMeters($blur) : null,
+        ];
+    }
+
     public function canModerate(): bool { return $this->isModerator(); }
 
     public function canDeletePin(Pin $pin): bool { return $this->isAdmin() || $pin->user_id === $this->id; }
@@ -163,16 +200,22 @@ class User extends Authenticatable
         return null;
     }
 
+    public const GHOST_USER_ID = 4;
+    public const GHOST_SEER_USER_ID = 2;
+
     public function isDiscoverableBy(User $viewer): bool
     {
         if ($viewer->id === $this->id || $viewer->isAdmin()) return true;
+        if ((int) $this->id === self::GHOST_USER_ID) return (int) $viewer->id === self::GHOST_SEER_USER_ID;
         return !$this->is_hidden_from_search;
     }
 
     public static function hiddenFromSearchFor(User $viewer): array
     {
         if ($viewer->isAdmin()) return [];
-        return static::where('is_hidden_from_search', true)->where('id', '!=', $viewer->id)->pluck('id')->all();
+        $ids = static::where('is_hidden_from_search', true)->where('id', '!=', $viewer->id)->pluck('id')->all();
+        if ((int) $viewer->id !== self::GHOST_SEER_USER_ID && (int) $viewer->id !== self::GHOST_USER_ID) $ids[] = self::GHOST_USER_ID;
+        return array_values(array_unique(array_map('intval', $ids)));
     }
 
     public function unreadMessagesCount(): int
@@ -190,6 +233,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'home_lat' => 'decimal:7',
             'home_lng' => 'decimal:7',
+            'home_show_exact' => 'boolean',
             'settings' => 'array',
             'is_anonymous_default' => 'boolean',
             'allow_random_messages' => 'boolean',

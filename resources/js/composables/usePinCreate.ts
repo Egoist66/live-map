@@ -3,6 +3,8 @@ import { useForm } from 'vee-validate'
 import { createPinSchema } from '@/validation/schemas/createPin.schema'
 import { usePinsStore } from '@/stores/pins'
 import { usePinLimit } from '@/composables/usePinLimit'
+import { useCustomCategories } from '@/composables/useCustomCategories'
+import { PIN_CATEGORIES } from '@/composables/usePins'
 import { useToast } from 'primevue/usetoast'
 
 function pad(n: number): string {
@@ -25,6 +27,8 @@ export function usePinCreate(onSuccess?: () => void) {
   const showCoords = ref(false)
   const scheduleEnabled = ref(false)
   const limitInfo = usePinLimit()
+  const customCats = useCustomCategories()
+  const builtInValues = (PIN_CATEGORIES as unknown as any[]).map((c) => c.v)
 
   const { defineField, handleSubmit, setValues, values, errors, resetForm } = useForm({
     validationSchema: createPinSchema,
@@ -32,8 +36,8 @@ export function usePinCreate(onSuccess?: () => void) {
       title: '',
       body: '',
       category: 'announcement',
-      latitude: 53.9022,
-      longitude: 27.5615,
+      latitude: 0,
+      longitude: 0,
       location_precision: 'exact',
       is_anonymous: false,
       radius_meters: 1000,
@@ -101,6 +105,13 @@ export function usePinCreate(onSuccess?: () => void) {
   const submit = handleSubmit(async (vals: any) => {
     error.value = null
     try {
+      const cat = String(vals.category ?? '').toLowerCase()
+      if (cat && !builtInValues.includes(cat) && !customCats.canCreate.value) {
+        const err: any = { response: { status: 403, data: { message: 'Свои категории доступны на тарифе Pro и выше.' } } }
+        error.value = err
+        toast.add({ severity: 'warn', summary: 'Только Pro', detail: 'Свои категории доступны на тарифе Pro и выше.', life: 4000 })
+        throw err
+      }
       await limitInfo.refresh()
       if (limitInfo.isExceeded.value) {
         const err: any = { response: { status: 429, data: { message: limitInfo.warning.value } } }
@@ -121,6 +132,7 @@ export function usePinCreate(onSuccess?: () => void) {
       toast.add({ severity: 'success', summary: scheduled ? `Запланирован на ${scheduleLabel.value}` : 'Пин создан', life: 2500 })
       scheduleEnabled.value = false
       resetForm({ values: { ...vals, title: '', body: '', publish_at: null } as any })
+      try { await limitInfo.refresh() } catch {}
       onSuccess?.()
     } catch (e: any) {
       error.value = e
@@ -143,6 +155,10 @@ export function usePinCreate(onSuccess?: () => void) {
     limitWarning: limitInfo.warning,
     limitRemaining: limitInfo.remaining,
     limitUsed: limitInfo.used,
+    limitStatus: limitInfo.statusText,
+    isUnlimited: limitInfo.isUnlimited,
+    ttlLabel: limitInfo.ttlLabel,
+    refreshLimit: limitInfo.refresh,
     title,
     titleAttrs,
     body,

@@ -2,8 +2,10 @@
 import { computed } from 'vue'
 import { Link, usePage } from '@inertiajs/vue3'
 import { useBadgeStore } from '@/stores/badges'
+import { useScreenLock } from '@/composables/useScreenLock'
 
 const badge = useBadgeStore()
+const lock = useScreenLock()
 const page = usePage()
 const user = computed(() => (page.props.auth as any)?.user)
 const isAdmin = computed(() => user.value?.is_admin || user.value?.role === 'admin')
@@ -42,10 +44,15 @@ const isActive = (name: string) => route().current(name)
         <span class="text-[10px] font-semibold leading-none" :class="isActive('chat') ? 'opacity-100' : 'opacity-70'">Чат</span>
       </Link>
 
-      <Link :href="route('faq')" class="flex flex-col items-center gap-0.5 py-1.5 px-3 rounded-2xl active:scale-95 transition" :class="isActive('faq') ? 'text-ink-900 dark:text-white' : 'text-stone-400'">
+      <Link :href="route('faq')" class="flex flex-col items-center gap-0.5 py-1.5 px-2.5 rounded-2xl active:scale-95 transition" :class="isActive('faq') ? 'text-ink-900 dark:text-white' : 'text-stone-400'">
         <svg class="w-6 h-6" :fill="isActive('faq') ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" stroke-linejoin="round" d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01"/></svg>
         <span class="text-[10px] font-semibold leading-none" :class="isActive('faq') ? 'opacity-100' : 'opacity-70'">FAQ</span>
       </Link>
+
+      <button v-if="lock.enabled.value" type="button" @click="lock.lockNow()" aria-label="Заблокировать" class="flex flex-col items-center gap-0.5 py-1.5 px-2.5 rounded-2xl active:scale-95 transition text-stone-400">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path stroke-linecap="round" stroke-linejoin="round" d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        <span class="text-[10px] font-semibold leading-none opacity-70">Замок</span>
+      </button>
     </div>
   </nav>
 </template>

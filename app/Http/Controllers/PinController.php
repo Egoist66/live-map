@@ -6,6 +6,7 @@ use App\Events\PinCreated;
 use App\Events\PinDeleted;
 use App\Events\PinUpdated;
 use App\Models\Pin;
+use App\Services\ContentModeration;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -66,7 +67,12 @@ class PinController extends Controller
         $data = $request->validate([
             'title' => 'required|string|max:100',
             'body' => 'nullable|string|max:1000',
-            'category' => 'required|in:question,announcement,warning,event,offer,help',
+            'category' => ['required', 'string', 'max:32', 'regex:/^[a-z0-9_]+$/i', function ($attr, $val, $fail) use ($user) {
+                $v = Pin::normalizeCategory($val);
+                if (!Pin::canUseCategory($user, $v)) {
+                    $fail('Свои категории доступны на тарифе Pro и выше.');
+                }
+            }],
             'latitude' => 'required|numeric|between:-90,90',
             'longitude' => 'required|numeric|between:-180,180',
             'location_precision' => 'sometimes|in:blur_200,exact,district,custom',
@@ -76,6 +82,9 @@ class PinController extends Controller
             'radius_meters' => 'sometimes|integer|min:500|max:500000',
             'publish_at' => 'sometimes|nullable|date|after:now|before:+31 days',
         ]);
+
+        ContentModeration::assertClean($data['title'] ?? null, $data['body'] ?? null);
+        $data['category'] = Pin::normalizeCategory($data['category']);
 
         $precision = 'exact';
         $origLat = (float) $data['latitude'];
@@ -128,9 +137,16 @@ class PinController extends Controller
         $data = $request->validate([
             'title' => 'sometimes|required|string|max:100',
             'body' => 'nullable|string|max:1000',
-            'category' => 'sometimes|required|in:question,announcement,warning,event,offer,help',
+            'category' => ['sometimes', 'required', 'string', 'max:32', 'regex:/^[a-z0-9_]+$/i', function ($attr, $val, $fail) use ($request) {
+                $v = Pin::normalizeCategory($val);
+                if (!Pin::canUseCategory($request->user(), $v)) {
+                    $fail('Свои категории доступны на тарифе Pro и выше.');
+                }
+            }],
             'publish_at' => 'sometimes|nullable|date|after:now|before:+31 days',
         ]);
+        if (array_key_exists('category', $data)) $data['category'] = Pin::normalizeCategory($data['category']);
+        ContentModeration::assertClean($data['title'] ?? $pin->title, array_key_exists('body', $data) ? $data['body'] : $pin->body);
         if ($pin->status === 'scheduled' && array_key_exists('publish_at', $data)) {
             $pin->publish_at = $data['publish_at'] ? \Carbon\Carbon::parse($data['publish_at']) : null;
             unset($data['publish_at']);

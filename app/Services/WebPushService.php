@@ -65,6 +65,9 @@ class WebPushService
         if ($activity->kind === 'comment') {
             $body = $activity->excerpt ? "{$name}: {$activity->excerpt}" : "{$name} комментирует «{$title}»";
             $tag = "pin-{$pin->id}-comment-{$activity->id}";
+        } elseif ($activity->kind === 'mention') {
+            $body = $activity->excerpt ? "{$name} упомянул вас: {$activity->excerpt}" : "{$name} упомянул вас в «{$title}»";
+            $tag = "pin-{$pin->id}-mention-{$activity->id}";
         } else {
             $emoji = ['like' => '❤️', 'fire' => '🔥', 'laugh' => '😂', 'sad' => '😢', 'angry' => '😡', 'useful' => '👍'][$activity->reaction_type ?? ''] ?? '⭐';
             $body = "{$name} {$emoji} «{$title}»";

@@ -10,6 +10,7 @@ import MapInfoDialogs from '@/Components/Features/Map/MapInfoDialogs.vue'
 import { useSeo } from '@/composables/useSeo'
 import { useMapPage } from '@/composables/useMapPage'
 import { useMapPinChat } from '@/composables/useMapPinChat'
+import { useMentions } from '@/composables/useMentions'
 import { useReportDialog } from '@/composables/useReportDialog'
 import { formatTime } from '@/utils/date'
 import Toast from 'primevue/toast'
@@ -17,8 +18,9 @@ import Checkbox from 'primevue/checkbox'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 const seo = useSeo({ title: 'Карта — UPin', description: 'Живая карта UPin.', noindex: true })
-const { store, categories, selectedCategory, filteredPins, pinDetails, pinCreate, pinEdit, mapApi, showCreate, pinAddress, loadingPinAddress, myStreet, loadingStreet, radiusOptions, radiusLabel, homeZone, homeZoneVisible, toggleHomeZone, closeCreate, deleteSelectedPin, saveEdit, init, destroy, showLiveInfo, showMyPins, myPins, handleMineClick, flyToPin } = useMapPage() as any
-const { selectedPin, comments, commentText, react, sendComment, editingCommentId, editingContent, startEditComment, cancelEditComment, saveEditComment, reactAsyncStatus, createCommentAsyncStatus, boostMutation, updateCommentMutation } = pinDetails as any
+const { store, categories, customCats, selectedCategory, filteredPins, pinDetails, pinCreate, pinEdit, mapApi, showCreate, pinAddress, loadingPinAddress, myStreet, loadingStreet, radiusOptions, radiusLabel, homeZone, homeZoneVisible, toggleHomeZone, closeCreate, deleteSelectedPin, saveEdit, deleteCustomCategory, init, destroy, showLiveInfo, showMyPins, myPins, handleMineClick, flyToPin } = useMapPage() as any
+const { selectedPin, comments, threadedComments, replyTo, replyTarget, cancelReply, commentText, react, sendComment, editingCommentId, editingContent, startEditComment, cancelEditComment, saveEditComment, reactAsyncStatus, createCommentAsyncStatus, boostMutation, updateCommentMutation } = pinDetails as any
+const mentions = useMentions()
 const reportDialog = useReportDialog()
 const { mapContainer, loaded } = mapApi
 useMapPinChat(selectedPin)
@@ -44,7 +46,7 @@ onUnmounted(destroy)
           </div>
         </Transition>
       </div>
-      <MapCreateDialog :open="showCreate" @update:open="(v:boolean)=>showCreate=v" :pin-create="pinCreate" :categories="categories" :pin-address="pinAddress" :loading-address="loadingPinAddress" :radius-options="radiusOptions" :radius-label="radiusLabel" @close="closeCreate" />
+      <MapCreateDialog :open="showCreate" @update:open="(v:boolean)=>showCreate=v" :pin-create="pinCreate" :custom-cats="customCats" :categories="categories" :pin-address="pinAddress" :loading-address="loadingPinAddress" :radius-options="radiusOptions" :radius-label="radiusLabel" @close="closeCreate" @delete-custom-category="deleteCustomCategory" />
       <div v-if="homeZone" class="absolute bottom-3 left-3 z-10 bg-white/95 dark:bg-zinc-900/95 backdrop-blur border border-violet-200 dark:border-violet-900/60 rounded-2xl px-3 py-2 shadow flex items-center gap-2">
         <button type="button" @click="mapApi.flyToHomeZone?.(homeZone.lat, homeZone.lng, homeZone.radiusKm)" title="Показать мою зону" class="w-5 h-5 rounded-full bg-violet-500/15 border border-dashed border-violet-500 grid place-items-center shrink-0 hover:bg-violet-500/30 transition">
           <span class="w-1.5 h-1.5 rounded-full bg-violet-600 block pointer-events-none"></span>
@@ -56,7 +58,7 @@ onUnmounted(destroy)
         </label>
       </div>
       <Transition enter-active-class="transition duration-200 ease-out" enter-from-class="opacity-0 translate-y-4" enter-to-class="opacity-100 translate-y-0" leave-active-class="transition duration-150 ease-in" leave-from-class="opacity-100" leave-to-class="opacity-0 translate-y-4">
-        <PinDetailsCard v-if="selectedPin" :pin="selectedPin" :comments="comments" :comment-text="commentText" @update:comment="(v:string)=>commentText=v" :creating-comment="createCommentAsyncStatus?.value==='loading'" :editing-comment-id="editingCommentId" :editing-content="editingContent" @update:edit-content="(v:string)=>editingContent=v" :saving-comment="updateCommentMutation?.asyncStatus?.value==='loading'" :reacting="reactAsyncStatus?.value==='loading'" :reporting="reportDialog.sending.value" :pin-edit="pinEdit" :categories="categories" :deleting="store.deleting" :auth-id="($page as any).props.auth?.user?.id ?? 0" @close="pinDetails.closePin()" @delete="deleteSelectedPin" @react="(k:string)=>react(selectedPin, k)" @report="reportDialog.openReport('pin', selectedPin.id, selectedPin.title)" @send-comment="sendComment" @start-edit-comment="startEditComment" @cancel-edit-comment="cancelEditComment" @save-edit-comment="saveEditComment" @save-edit="saveEdit" />
+        <PinDetailsCard v-if="selectedPin" :pin="selectedPin" :comments="threadedComments" :comment-text="commentText" @update:comment="(v:string)=>commentText=v" :creating-comment="createCommentAsyncStatus?.value==='loading'" :editing-comment-id="editingCommentId" :editing-content="editingContent" @update:edit-content="(v:string)=>editingContent=v" :saving-comment="updateCommentMutation?.asyncStatus?.value==='loading'" :reacting="reactAsyncStatus?.value==='loading'" :reporting="reportDialog.sending.value" :pin-edit="pinEdit" :categories="categories" :deleting="store.deleting" :auth-id="($page as any).props.auth?.user?.id ?? 0" :reply-to="replyTo" :mentions="mentions" @close="pinDetails.closePin()" @delete="deleteSelectedPin" @react="(k:string)=>react(selectedPin, k)" @report="reportDialog.openReport('pin', selectedPin.id, selectedPin.title)" @send-comment="sendComment" @reply="(r:any,t:any)=>replyTarget(r,t)" @cancel-reply="cancelReply" @start-edit-comment="startEditComment" @cancel-edit-comment="cancelEditComment" @save-edit-comment="saveEditComment" @save-edit="saveEdit" />
       </Transition>
       <ReportDialog :dialog="reportDialog" />
       <MapInfoDialogs :live-open="showLiveInfo" @update:live="(v:boolean)=>showLiveInfo=v" :my-open="showMyPins" @update:my="(v:boolean)=>showMyPins=v" :my-pins="myPins" :format-time="formatTime" @fly="flyToPin" />

@@ -7,7 +7,7 @@ import Message from 'primevue/message'
 import OnlineDot from '@/Components/Features/Feedback/OnlineDot.vue'
 
 defineProps<{ user: any; avatarSrc: string; online: boolean; lastSeen: string; levelName: string; isOwn: boolean; isLocked: boolean; canMessage: boolean; isBlocked: boolean; isFriend: boolean; isPending: boolean; loading: boolean; sharing: boolean }>()
-const emit = defineEmits<{ (e: 'avatar'): void; (e: 'chat'): void; (e: 'add'): void; (e: 'remove'): void; (e: 'block'): void; (e: 'unblock'): void; (e: 'share'): void }>()
+const emit = defineEmits<{ (e: 'avatar'): void; (e: 'chat'): void; (e: 'add'): void; (e: 'remove'): void; (e: 'block'): void; (e: 'unblock'): void; (e: 'share'): void; (e: 'friends'): void; (e: 'search'): void }>()
 </script>
 <template>
   <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0' } }">
@@ -28,7 +28,11 @@ const emit = defineEmits<{ (e: 'avatar'): void; (e: 'chat'): void; (e: 'add'): v
             <h1 class="text-lg sm:text-xl font-black tracking-tight truncate flex items-center gap-2">{{ user.name }}</h1>
             <p class="text-[13px] sm:text-sm flex flex-wrap items-center gap-x-1.5 gap-y-0.5 min-w-0" :class="online ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'"><span class="whitespace-nowrap">{{ online ? 'в сети' : lastSeen }}</span><span aria-hidden="true" class="text-stone-300 dark:text-zinc-600 shrink-0">·</span><span class="whitespace-nowrap">{{ levelName }} · {{ user.reputation_score || 0 }} ★</span></p>
           </div>
-          <Link href="/map" class="hidden sm:inline-flex"><Button label="На карту →" rounded class="!bg-gradient-to-r !from-violet-600 !to-indigo-600 !border-0 !text-white !text-sm !font-bold !shadow-glow hover:!opacity-90" /></Link>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <Button @click="emit('friends')" rounded text class="!w-10 !h-10 !p-0 !rounded-full" icon="pi pi-users" aria-label="Друзья" title="Друзья" />
+            <Button v-if="isOwn" @click="emit('search')" rounded text class="!w-10 !h-10 !p-0 !rounded-full" icon="pi pi-search" aria-label="Поиск людей" title="Поиск людей" />
+            <Link href="/map" class="hidden sm:inline-flex"><Button label="На карту →" rounded class="!bg-gradient-to-r !from-violet-600 !to-indigo-600 !border-0 !text-white !text-sm !font-bold !shadow-glow hover:!opacity-90" /></Link>
+          </div>
         </div>
         <div v-if="!isOwn && !isLocked" class="mt-4 flex items-center gap-2 rounded-2xl p-2.5 bg-gradient-to-br from-stone-100/90 to-stone-50/50 dark:from-white/[0.07] dark:to-white/[0.02] border border-stone-200/60 dark:border-white/10">
           <Button v-if="canMessage && !isBlocked" @click="emit('chat')" :loading="loading" rounded class="!w-10 !h-10 !p-0 !rounded-full !bg-gradient-to-br !from-brand-500 !to-violet-600 !border-0 !text-white !shadow-glow" icon="pi pi-comments" aria-label="Написать" />

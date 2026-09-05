@@ -22,7 +22,7 @@ import Tab from 'primevue/tab'
 import TabPanels from 'primevue/tabpanels'
 import TabPanel from 'primevue/tabpanel'
 
-const props = defineProps<{ mustVerifyEmail: boolean; status?: string | null; user: any }>()
+const props = defineProps<{ mustVerifyEmail: boolean; status?: string | null; user: any; initialTab?: string | null }>()
 const s = useSettingsPage(props)
 const { setTheme } = useTheme()
 </script>

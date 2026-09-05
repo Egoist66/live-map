@@ -4,16 +4,19 @@ import { usePinsStore } from '@/stores/pins'
 import { isPinAlive } from '@/composables/usePinExpiry'
 
 export const FREE_PINS_LIMIT = 3
+const TTL_BY_PLAN: Record<string, number | null> = { pro: 12, business: null }
 
 export function usePinLimit() {
   const page = usePage() as any
   const store = usePinsStore()
   const user = computed(() => page.props.auth?.user)
   const plan = computed(() => user.value?.plan || 'free')
-  const isUnlimited = computed(() => {
-    const u = user.value
-    return !!u?.is_admin || u?.role === 'admin' || plan.value === 'pro' || plan.value === 'business'
-  })
+  const isAdmin = computed(() => !!user.value?.is_admin || user.value?.role === 'admin')
+  const isUnlimited = computed(() => isAdmin.value || plan.value === 'pro' || plan.value === 'business')
+  const isFree = computed(() => !isUnlimited.value)
+
+  const ttlHours = computed(() => (isAdmin.value || plan.value === 'business' ? null : (TTL_BY_PLAN[plan.value] ?? 4)))
+  const ttlLabel = computed(() => (ttlHours.value === null ? '∞' : `${ttlHours.value} ч`))
 
   const myLiveCount = ref<number | null>(null)
   const checking = ref(false)
@@ -31,12 +34,20 @@ export function usePinLimit() {
   const isExceeded = computed(() => !isUnlimited.value && used.value >= FREE_PINS_LIMIT)
   const warning = computed(() =>
     isExceeded.value
-      ? `Лимит free тарифа: у тебя уже ${used.value} живых пина из ${FREE_PINS_LIMIT}. Истёкшие (живут 4 часа) и удалённые освобождают место — дождись или удали лишний.`
+      ? `Лимит free тарифа: у тебя уже ${used.value} живых пина из ${FREE_PINS_LIMIT}. Истёкшие (живут 4 часа) и удалённые освобождают место — удали лишний и создавай заново.`
       : '',
+  )
+  const statusText = computed(() =>
+    isUnlimited.value
+      ? `Безлимит · пины живут ${ttlLabel.value}`
+      : `${used.value} из ${FREE_PINS_LIMIT} живых · свободно ${remaining.value} · живут ${ttlLabel.value} · удаление или истечение освобождает место`,
   )
 
   async function refresh(): Promise<number> {
-    if (isUnlimited.value) return 0
+    if (isUnlimited.value) {
+      myLiveCount.value = 0
+      return 0
+    }
     checking.value = true
     try {
       const mine = await store.fetchMine()
@@ -50,5 +61,5 @@ export function usePinLimit() {
     }
   }
 
-  return { limit, used, remaining, isExceeded, warning, checking, refresh, isUnlimited }
+  return { limit, used, remaining, isExceeded, warning, statusText, checking, refresh, isUnlimited, isFree, ttlHours, ttlLabel }
 }

@@ -32,7 +32,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/chat/{conversation?}', fn (?int $conversation = null) => Inertia::render('Chat/Index', ['conversationId' => $conversation]))->name('chat');
     Route::get('/users/{user}', [ProfileController::class, 'publicShow'])->name('users.show');
     Route::get('/map', fn () => Inertia::render('Map/Index'))->name('map');
-    Route::get('/settings/{identifier?}', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::get('/settings/{identifier?}/{tab?}', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::post('/profile/avatar', [\App\Http\Controllers\AvatarController::class, 'store'])->name('profile.avatar');

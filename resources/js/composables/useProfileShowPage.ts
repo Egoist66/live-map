@@ -37,6 +37,16 @@ export function useProfileShowPage(props: { profileUser: any; isOwn: boolean; is
   const registeredAt = computed(() => {
     try { return new Date(props.profileUser.created_at).toLocaleDateString('ru-RU') } catch { return '' }
   })
+  const homeLabel = computed(() => {
+    const u = props.profileUser
+    if (!u) return ''
+    if (u.home_lat == null || u.home_lng == null) return ''
+    const parts = [u.home_address, u.home_city].filter(Boolean)
+    if (parts.length) return parts.join(' · ') + (u.home_is_blurred ? ` (~${u.home_blur_label || 'скрыто'})` : '')
+    if (u.home_city) return u.home_city
+    return `${Number(u.home_lat).toFixed(4)}, ${Number(u.home_lng).toFixed(4)}`
+  })
+  const hasHome = computed(() => !!homeLabel.value)
   async function sync() {
     isFriend.value = profile.isFriend.value
     isPending.value = profile.isPending.value
@@ -55,5 +65,5 @@ export function useProfileShowPage(props: { profileUser: any; isOwn: boolean; is
   function closeConfirm() { confirm.value = null }
   async function runConfirm() { const a = confirm.value?.action; confirm.value = null; if (a) await a() }
   function share() { shareProfile({ id: props.profileUser.id, name: props.profileUser.name }) }
-  return { avatarSrc, profile, showAvatar, bioText, bioEmpty, isFriend, isPending, isBlocked, isBlockedBy, canMessage, reason, confirm, isLocked, online, sharing, lastSeenText, registeredAt, levelLabel: LEVEL_LABEL, sync, onAdd, onRemove, onBlock, onUnblock, onChat, askRemove, askBlock, closeConfirm, runConfirm, share }
+  return { avatarSrc, profile, showAvatar, bioText, bioEmpty, isFriend, isPending, isBlocked, isBlockedBy, canMessage, reason, confirm, isLocked, online, sharing, lastSeenText, registeredAt, homeLabel, hasHome, levelLabel: LEVEL_LABEL, sync, onAdd, onRemove, onBlock, onUnblock, onChat, askRemove, askBlock, closeConfirm, runConfirm, share }
 }

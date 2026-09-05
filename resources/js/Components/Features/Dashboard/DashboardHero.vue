@@ -5,7 +5,7 @@ import Tag from 'primevue/tag'
 import Button from 'primevue/button'
 
 defineProps<{ user: any; avatarSrc: string; levelLabel: any; levelColor: any; planLabel: any; planColor: any; sharing: boolean }>()
-const emit = defineEmits<{ (e: 'avatar'): void; (e: 'map'): void; (e: 'chat'): void; (e: 'share'): void }>()
+const emit = defineEmits<{ (e: 'avatar'): void; (e: 'map'): void; (e: 'chat'): void; (e: 'share'): void; (e: 'friends'): void; (e: 'search'): void }>()
 </script>
 <template>
   <Card class="!bg-stone-900 !text-white !rounded-3xl !shadow-soft !border-0 !overflow-hidden" :pt="{ body: { class: '!p-0' }, content: { class: '!p-0' } }">
@@ -30,6 +30,8 @@ const emit = defineEmits<{ (e: 'avatar'): void; (e: 'map'): void; (e: 'chat'): v
             <div class="mt-4 flex flex-wrap gap-2">
               <Button label="Открыть карту →" rounded class="!bg-white !text-stone-900 !border-white !text-sm !font-bold" @click="emit('map')" />
               <Button rounded class="!bg-gradient-to-r !from-violet-600 !to-indigo-600 !text-white !border-0 !text-sm !font-bold" @click="emit('chat')">Чат</Button>
+              <Button icon="pi pi-users" aria-label="Друзья" title="Друзья" rounded outlined class="!bg-white/10 !border-white/30 !text-white hover:!bg-white hover:!text-stone-900 !text-sm !font-bold !w-10 !p-0" @click="emit('friends')" />
+              <Button icon="pi pi-search" aria-label="Поиск людей" title="Поиск людей" rounded outlined class="!bg-white/10 !border-white/30 !text-white hover:!bg-white hover:!text-stone-900 !text-sm !font-bold !w-10 !p-0" @click="emit('search')" />
               <Button icon="pi pi-share-alt" label="Поделиться" rounded severity="secondary" outlined class="!bg-white/10 !border-white/30 !text-white hover:!bg-white hover:!text-stone-900 !text-sm !font-bold" :loading="sharing" @click="emit('share')" />
             </div>
           </div>

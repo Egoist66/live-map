@@ -9,14 +9,19 @@ import BellNotificationsModal from '@/Components/Features/Feedback/BellNotificat
 import PwaInstallBanner from '@/Components/Features/Pwa/PwaInstallBanner.vue'
 import PwaUpdateBanner from '@/Components/Features/Pwa/PwaUpdateBanner.vue'
 import ConfirmDialog from 'primevue/confirmdialog'
+import ScreenLockOverlay from '@/Components/Features/Security/ScreenLockOverlay.vue'
 import { useAppLayout } from '@/composables/useAppLayout'
+import { useScreenLock } from '@/composables/useScreenLock'
+import { onMounted } from 'vue'
 
 const { badge, user, avatarSrc, dashboardHref, settingsHref, bell, showDrawer, menu, menuItems, toggleMenu, logout } = useAppLayout()
+const screenLock = useScreenLock()
+onMounted(() => screenLock.init())
 </script>
 <template>
   <div class="min-h-screen bg-surface dark:bg-[#0B0F1A] overflow-x-clip">
     <header class="sticky top-0 z-50 glass border-b border-stone-200/70 dark:border-zinc-800 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-zinc-900/70">
-      <AppTopBar :user="user" :avatar-src="avatarSrc" :dashboard-href="dashboardHref" :badge-total="badge.total" @bell="bell.open()" @menu="toggleMenu" @drawer="showDrawer = true" />
+      <AppTopBar :user="user" :avatar-src="avatarSrc" :dashboard-href="dashboardHref" :badge-total="badge.total" :lock-enabled="screenLock.enabled.value" @bell="bell.open()" @menu="toggleMenu" @drawer="showDrawer = true" @lock="screenLock.lockNow()" />
     </header>
     <AppUserMenu v-model:menu-ref="menu" :user="user" :avatar-src="avatarSrc" :items="(menuItems as any)" />
     <AppDrawerMenu :open="showDrawer" @update:open="(v:boolean)=>showDrawer=v" :user="user" :avatar-src="avatarSrc" :dashboard-href="dashboardHref" :settings-href="settingsHref" @logout="logout" />
@@ -31,6 +36,7 @@ const { badge, user, avatarSrc, dashboardHref, settingsHref, bell, showDrawer, m
     <BellNotificationsModal />
     <PwaInstallBanner />
     <PwaUpdateBanner />
+    <ScreenLockOverlay />
     <ConfirmDialog :style="{ width: '400px', maxWidth: '92vw' }" :pt="{ root: { class: '!rounded-[24px] !border-stone-200 dark:!border-white/10 overflow-hidden !bg-white dark:!bg-zinc-900' }, header: { class: '!p-5 !pb-0 !border-0' }, title: { class: '!font-black !text-[17px] !tracking-tight' }, content: { class: '!px-5 !py-4 !text-sm !text-stone-600 dark:!text-zinc-300 !leading-relaxed' }, footer: { class: '!px-5 !pb-5 !pt-0 !border-0 !flex !gap-2' }, acceptButton: { class: '!rounded-full !bg-gradient-to-r !from-rose-500 !to-red-600 !border-0 !px-5 !shadow-glow' }, rejectButton: { class: '!rounded-full !px-5' }, headerIcon: { class: '!w-10 !h-10 !rounded-2xl !bg-gradient-to-br !from-rose-500 !to-red-600 !text-white !grid !place-items-center !mr-3' } }">
       <template #icon><i class="pi pi-trash text-base"></i></template>
     </ConfirmDialog>

@@ -8,10 +8,16 @@ import Toast from 'primevue/toast'
 import ProfileHeaderCard from '@/Components/Features/Profile/ProfileHeaderCard.vue'
 import ProfileInfoCard from '@/Components/Features/Profile/ProfileInfoCard.vue'
 import { useProfileShowPage } from '@/composables/useProfileShowPage'
+import { useProfilePeople } from '@/composables/useProfilePeople'
+import { usePeopleSearch } from '@/composables/usePeopleSearch'
 import { useAvatarPreview } from '@/composables/useAvatarPreview'
+import ProfileFriendsDialog from '@/Components/Features/Profile/ProfileFriendsDialog.vue'
+import ChatSearchDialog from '@/Components/Features/Chat/ChatSearchDialog.vue'
 
 const props = defineProps<{ profileUser: any; isOwn: boolean; friendship: any; isFriend: boolean; isPending: boolean; isBlocked?: boolean; isBlockedBy?: boolean; canMessage: boolean; canMessageReason: string | null }>()
 const page = useProfileShowPage(props)
+const people = useProfilePeople()
+const search = usePeopleSearch()
 useAvatarPreview(() => page.showAvatar.value, () => (page.showAvatar.value = false))
 </script>
 <template>
@@ -20,7 +26,9 @@ useAvatarPreview(() => page.showAvatar.value, () => (page.showAvatar.value = fal
     <Toast />
     <div class="bg-surface dark:bg-[#090E1A] min-h-[calc(100vh-64px)]">
       <div class="max-w-[860px] mx-auto px-4 sm:px-6 py-6 space-y-5">
-        <ProfileHeaderCard :user="profileUser" :avatar-src="page.avatarSrc.value" :online="page.online.value" :last-seen="page.lastSeenText.value" :level-name="(page.levelLabel as any)[profileUser.level] || profileUser.level || 'Новичок'" :is-own="isOwn" :is-locked="page.isLocked.value" :can-message="page.canMessage.value" :is-blocked="page.isBlocked.value" :is-friend="page.isFriend.value" :is-pending="page.isPending.value" :loading="page.profile.loading.value" :sharing="page.sharing.value" @avatar="page.showAvatar.value = true" @chat="page.onChat()" @add="page.onAdd()" @remove="page.askRemove()" @block="page.askBlock()" @unblock="page.onUnblock()" @share="page.share()" />
+        <ProfileHeaderCard :user="profileUser" :avatar-src="page.avatarSrc.value" :online="page.online.value" :last-seen="page.lastSeenText.value" :level-name="(page.levelLabel as any)[profileUser.level] || profileUser.level || 'Новичок'" :is-own="isOwn" :is-locked="page.isLocked.value" :can-message="page.canMessage.value" :is-blocked="page.isBlocked.value" :is-friend="page.isFriend.value" :is-pending="page.isPending.value" :loading="page.profile.loading.value" :sharing="page.sharing.value" @avatar="page.showAvatar.value = true" @chat="page.onChat()" @add="page.onAdd()" @remove="page.askRemove()" @block="page.askBlock()" @unblock="page.onUnblock()" @share="page.share()" @friends="people.openFriends(profileUser.id, profileUser.name)" @search="search.openDialog()" />
+        <ProfileFriendsDialog :people="people" />
+        <ChatSearchDialog :open="search.open.value" @update:open="(v:boolean)=>{ if(!v) search.closeDialog() }" :query="search.query.value" @update:query="(v:string)=>search.setQuery(v)" :results="search.results.value" :searching="search.searching.value" :creating="search.creating.value" :is-online="(id?:number,lastSeen?:string|null)=>search.isOnline(id,lastSeen)" @chat="search.startChat" @add="search.addFriend" @block="search.askBlock" />
         <ProfileInfoCard v-if="!page.isLocked.value" :user="profileUser" :bio-empty="page.bioEmpty.value" :bio-text="page.bioText.value" :level-name="(page.levelLabel as any)[profileUser.level] || profileUser.level" :registered-at="page.registeredAt.value" />
         <Teleport to="body">
           <div v-if="page.showAvatar.value" @click="page.showAvatar.value = false" class="fixed inset-0 z-[100] bg-black/80 grid place-items-center p-4 cursor-zoom-out overflow-auto">

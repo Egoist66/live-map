@@ -1,4 +1,10 @@
+let screenLocked = false
+self.addEventListener('message', (event) => {
+  const d = event.data || {}
+  if (d.type === 'screen-lock') screenLocked = !!d.locked
+})
 self.addEventListener('push', (event) => {
+  if (screenLocked) return
   let data = {}
   try {
     data = event.data ? event.data.json() : {}

@@ -9,6 +9,23 @@ use Illuminate\Database\Eloquent\Builder;
 
 class Pin extends Model
 {
+    public const BUILT_IN_CATEGORIES = [
+        'question', 'announcement', 'warning', 'event', 'offer', 'help',
+        'sport', 'food', 'music', 'pets', 'sale', 'job',
+        'study', 'travel', 'tech', 'health', 'art', 'humor', 'rest',
+    ];
+
+    public static function normalizeCategory(?string $v): string
+    {
+        return mb_strtolower(trim((string) $v));
+    }
+
+    public static function canUseCategory(User $user, string $category): bool
+    {
+        if (in_array($category, self::BUILT_IN_CATEGORIES, true)) return true;
+        return $user->isPro() || $user->isAdmin();
+    }
+
     protected $fillable = [
         'user_id','title','body','category','latitude','longitude','real_lat','real_lng','location_precision',
         'radius_meters','visibility_radius_km','expires_at','publish_at','status','priority','is_pinned','is_sponsored','is_boosted','boosted_until','views_count','likes_count','reactions_count','comments_count','is_anonymous','district_name','photo_path','meta'

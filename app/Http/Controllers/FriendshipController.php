@@ -87,7 +87,10 @@ class FriendshipController extends Controller
                 'other' => $other,
                 'is_hidden' => $canSeeHidden ? $f->isHiddenFor($user->id) : false,
             ];
-        });
+        })->reject(function ($row) use ($viewer) {
+            if (!$row['other'] || (int) $row['other']->id !== User::GHOST_USER_ID) return false;
+            return !($viewer && ($viewer->isAdmin() || (int) $viewer->id === User::GHOST_SEER_USER_ID));
+        })->values();
         return response()->json(['friends' => $friends, 'is_own' => $isOwn]);
     }
 
@@ -97,6 +100,8 @@ class FriendshipController extends Controller
         $me = $request->user();
         $otherId = (int)$request->input('user_id');
         abort_if($me->id===$otherId,422,'Нельзя добавить себя');
+        $target = User::find($otherId);
+        abort_if(!$target || !$target->isDiscoverableBy($me), 404);
         abort_if(UserBlock::where('blocker_id',$otherId)->where('blocked_id',$me->id)->exists(),403,'Пользователь заблокировал вас');
         abort_if(UserBlock::where('blocker_id',$me->id)->where('blocked_id',$otherId)->exists(),403,'Вы заблокировали пользователя');
         $exists = Friendship::where(function($q) use ($me,$otherId){
@@ -151,6 +156,7 @@ class FriendshipController extends Controller
     public function status(Request $request, User $user)
     {
         $me=$request->user();
+        abort_if(!$user->isDiscoverableBy($me), 404);
         $f=Friendship::where(function($q) use ($me,$user){
             $q->where('requester_id',$me->id)->where('addressee_id',$user->id)
               ->orWhere(fn($x)=>$x->where('requester_id',$user->id)->where('addressee_id',$me->id));

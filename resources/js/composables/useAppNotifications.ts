@@ -2,6 +2,11 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
 import { avatarSrcFor } from '@/composables/useAvatar'
 import { showLocal } from '@/pwa/push.service'
+import { useScreenLock } from '@/composables/useScreenLock'
+
+function isLockedNow(): boolean {
+  try { return useScreenLock().locked.value } catch { return false }
+}
 
 export type AppToast = {
   id: string
@@ -48,6 +53,7 @@ function playTick() {
   } catch {}
 }
 function push(t: AppToast) {
+  if (isLockedNow()) return
   toasts.value = [t, ...toasts.value].slice(0, 3)
   playTick()
   const timer = setTimeout(() => remove(t.id), 5500)
@@ -120,11 +126,13 @@ function handlePinActivity(e: any) {
   const emoji: Record<string, string> = { like: '❤️', fire: '🔥', laugh: '😂', sad: '😢', angry: '😡', useful: '👍' }
   const body = a.kind === 'comment'
     ? (a.excerpt ? `${name}: ${a.excerpt}` : `${name} прокомментировал «${pinTitle}»`).slice(0, 90)
-    : `${name} ${emoji[a.reaction_type] || '⭐'} «${pinTitle}»`.slice(0, 90)
+    : a.kind === 'mention'
+      ? (a.excerpt ? `${name} упомянул вас: ${a.excerpt}` : `${name} упомянул вас в «${pinTitle}»`).slice(0, 90)
+      : `${name} ${emoji[a.reaction_type] || '⭐'} «${pinTitle}»`.slice(0, 90)
   push({
     id: `pin-${a.id}-${Date.now()}`,
     type: 'pin',
-    title: a.kind === 'comment' ? 'Новый комментарий' : 'Новая реакция',
+    title: a.kind === 'comment' ? 'Новый комментарий' : a.kind === 'mention' ? 'Вас упомянули' : 'Новая реакция',
     body,
     avatar: avatarSrcFor(actor),
     link: '/map',

@@ -44,6 +44,19 @@ class ProfileUpdateRequest extends FormRequest
             'email' => ['required','string','lowercase','email','max:255', Rule::unique(User::class)->ignore($this->user()->id)],
             'home_lat' => ['nullable','numeric','between:-90,90'],
             'home_lng' => ['nullable','numeric','between:-180,180'],
+            'home_city' => ['nullable','string','max:120'],
+            'home_address' => ['nullable','string','max:255'],
+            'home_visibility' => ['nullable','in:everyone,friends,none'],
+            'home_show_exact' => ['nullable','boolean', function ($attr, $value, $fail) {
+                if (! $value) return;
+                $user = $this->user();
+                $isAdmin = (bool) ($user?->is_admin || $user?->role === 'admin');
+                if ($isAdmin) return;
+                $plan = $this->input('plan', $user?->plan ?? 'free');
+                if (! in_array($plan, ['pro', 'business'])) {
+                    $fail('Точное местоположение дома доступно на тарифе Pro/Business.');
+                }
+            }],
             'home_radius_km' => ['nullable','integer','min:1','max:500', function ($attr, $value, $fail) {
                 if ($value === null || $value === '') return;
                 $isAdmin = (bool) ($this->user()?->is_admin || $this->user()?->role === 'admin');

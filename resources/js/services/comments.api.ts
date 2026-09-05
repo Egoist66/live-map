@@ -9,8 +9,8 @@ export const commentsApi = {
     return (data as PaginatedResponse<PinComment>).data ?? []
   },
 
-  async create(pinId: number, content: string, is_anonymous?: boolean): Promise<PinComment> {
-    const { data } = await api.post<PinComment>(`/api/pins/${pinId}/comments`, { content, is_anonymous })
+  async create(pinId: number, content: string, is_anonymous?: boolean, parent_id?: number | null): Promise<PinComment> {
+    const { data } = await api.post<PinComment>(`/api/pins/${pinId}/comments`, { content, is_anonymous, parent_id: parent_id ?? null })
     return data
   },
 

@@ -18,6 +18,7 @@ export function usePinDetails() {
   const comments = ref<PinComment[]>([])
   const editingCommentId = ref<number | null>(null)
   const editingContent = ref<string>('')
+  const replyTo = ref<PinComment | null>(null)
   const toast = (() => { try { return useToast() } catch { return null as any } })()
   const cache = (() => { try { return useQueryCache() } catch { return null as any } })()
 
@@ -47,10 +48,46 @@ export function usePinDetails() {
 
   function openPin(pin: Pin): void {
     selectedPin.value = pin
+    replyTo.value = null
     void loadComments(pin.id)
   }
 
-  function closePin(): void { selectedPin.value = null }
+  function closePin(): void { selectedPin.value = null; replyTo.value = null }
+
+  const threadedComments = computed(() => {
+    const list = (comments.value || []) as any[]
+    const roots = list.filter((c) => !c.parent_id)
+    if (!roots.length) return list
+    const byId = new Map(list.map((c) => [c.id, c]))
+    const findRoot = (c: any): any => {
+      let cur = c
+      const seen = new Set<number>()
+      while (cur?.parent_id && byId.has(cur.parent_id) && !seen.has(cur.id)) {
+        seen.add(cur.id)
+        cur = byId.get(cur.parent_id)
+      }
+      return cur
+    }
+    roots.forEach((r: any) => {
+      const nested = (r.replies || []) as any[]
+      const have = new Set(nested.map((x: any) => x.id))
+      const extra = list.filter((c: any) => c.parent_id && !have.has(c.id) && findRoot(c)?.id === r.id)
+      if (extra.length) r.replies = [...nested, ...extra]
+    })
+    return roots
+  })
+
+  function replyTarget(root: PinComment, target?: PinComment | null): void {
+    replyTo.value = root
+    const t = (target ?? root) as any
+    const name = t.is_anonymous ? null : t.user?.name
+    const cur = commentText.value || ''
+    if (name && !cur.startsWith(`@${name}`)) commentText.value = `@${name} ${cur}`
+  }
+
+  function cancelReply(): void {
+    replyTo.value = null
+  }
 
   function useCommentsQuery(pinId: () => number | null) {
     return useQuery(() => {
@@ -79,7 +116,7 @@ export function usePinDetails() {
   }
 
   const createCommentMutation = useMutation({
-    mutation: ({ pinId, content }: { pinId: number; content: string }) => commentsApi.create(pinId, content),
+    mutation: ({ pinId, content, parent_id }: { pinId: number; content: string; parent_id?: number | null }) => commentsApi.create(pinId, content, undefined, parent_id ?? null),
     onSuccess: (_data: any, vars: any) => {
       try { cache?.invalidateQueries({ key: COMMENT_KEYS.byPin((vars as any).pinId) as any }) } catch {}
     },
@@ -87,8 +124,10 @@ export function usePinDetails() {
 
   const sendComment = handleCommentSubmit(async (vals: any) => {
     if (!selectedPin.value) return
-    await (createCommentMutation as any).mutateAsync({ pinId: selectedPin.value.id, content: vals.content })
+    const parentId = replyTo.value?.id ?? null
+    await (createCommentMutation as any).mutateAsync({ pinId: selectedPin.value.id, content: vals.content, parent_id: parentId })
     resetCommentForm()
+    replyTo.value = null
     await loadComments(selectedPin.value.id)
     if (selectedPin.value) selectedPin.value.comments_count = (selectedPin.value.comments_count || 0) + 1
   })
@@ -125,7 +164,7 @@ export function usePinDetails() {
   }
 
   return {
-    selectedPin, comments, commentText, commentTextAttrs, commentFormErrors, editingCommentId, editingContent,
+    selectedPin, comments, threadedComments, replyTo, replyTarget, cancelReply, commentText, commentTextAttrs, commentFormErrors, editingCommentId, editingContent,
     openPin, closePin, loadComments, react, sendComment, boost, startEditComment, cancelEditComment, saveEditComment, useCommentsQuery, formatTime,
     commentsQuery,
     reactMutation, reactStatus: (reactMutation as any).state, reactAsyncStatus: (reactMutation as any).asyncStatus,

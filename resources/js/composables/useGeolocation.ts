@@ -1,30 +1,46 @@
 import { ref } from 'vue'
 
-export function useGeolocation(defaultCenter: [number, number] = [27.5615, 53.9022]) {
-  const coords = ref<{ lat: number; lng: number }>({ lat: defaultCenter[1], lng: defaultCenter[0] })
+const LAST_POS_KEY = 'live-map:last-pos'
+
+function readLastPos(): { lat: number; lng: number } | null {
+  try {
+    const raw = localStorage.getItem(LAST_POS_KEY)
+    if (!raw) return null
+    const p = JSON.parse(raw)
+    if (Number.isFinite(p?.lat) && Number.isFinite(p?.lng) && (p.lat !== 0 || p.lng !== 0)) return p
+  } catch {}
+  return null
+}
+
+export function useGeolocation() {
+  const coords = ref<{ lat: number; lng: number } | null>(readLastPos())
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  function requestGeolocation(): Promise<{ lat: number; lng: number }> {
+  function requestGeolocation(): Promise<{ lat: number; lng: number } | null> {
     loading.value = true
+    error.value = null
     return new Promise((resolve) => {
       if (!navigator.geolocation) {
         loading.value = false
-        resolve(coords.value)
+        error.value = 'Геолокация недоступна'
+        resolve(null)
         return
       }
       navigator.geolocation.getCurrentPosition(
         (pos) => {
-          coords.value = { lat: pos.coords.latitude, lng: pos.coords.longitude }
+          const next = { lat: pos.coords.latitude, lng: pos.coords.longitude }
+          coords.value = next
+          try { localStorage.setItem(LAST_POS_KEY, JSON.stringify(next)) } catch {}
           loading.value = false
-          resolve(coords.value)
+          resolve(next)
         },
-        () => {
-          error.value = 'Геолокация отклонена, используем центр'
+        (err) => {
+          error.value = err?.code === 1 ? 'Геолокация отклонена' : 'Не удалось определить позицию'
           loading.value = false
-          resolve(coords.value)
+          resolve(null)
         },
-        { enableHighAccuracy: false, timeout: 5000 }
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
       )
     })
   }

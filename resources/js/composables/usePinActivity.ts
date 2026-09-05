@@ -81,6 +81,9 @@ async function markOne(a: PinActivityItem) {
 
 function describe(a: PinActivityItem): { emoji: string; text: string } {
   const name = a.actor?.name || 'Кто-то'
+  if (a.kind === 'mention') {
+    return { emoji: '📣', text: a.excerpt ? `${name} упомянул вас: ${a.excerpt}` : `${name} упомянул вас` }
+  }
   if (a.kind === 'comment') {
     return { emoji: '💬', text: a.excerpt ? `${name}: ${a.excerpt}` : `${name} прокомментировал пин` }
   }

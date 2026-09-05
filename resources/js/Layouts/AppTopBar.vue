@@ -5,8 +5,8 @@ import Toolbar from 'primevue/toolbar'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
 
-defineProps<{ user: any; avatarSrc: string; dashboardHref: string; badgeTotal: number }>()
-const emit = defineEmits<{ (e: 'bell'): void; (e: 'menu', ev: Event): void; (e: 'drawer'): void }>()
+defineProps<{ user: any; avatarSrc: string; dashboardHref: string; badgeTotal: number; lockEnabled?: boolean }>()
+const emit = defineEmits<{ (e: 'bell'): void; (e: 'menu', ev: Event): void; (e: 'drawer'): void; (e: 'lock'): void }>()
 </script>
 <template>
   <Toolbar class="!p-0 !border-0 !rounded-none !bg-transparent !min-h-[64px] !h-[64px]" :pt="{ root: { class: '!min-h-[64px] !h-[64px] !bg-transparent !border-0 !p-0' }, start: { class: 'flex items-center gap-8 h-[64px]' }, end: { class: 'flex items-center gap-2 h-[64px]' } }">
@@ -23,6 +23,9 @@ const emit = defineEmits<{ (e: 'bell'): void; (e: 'menu', ev: Event): void; (e: 
     </template>
     <template #end>
       <div class="flex items-center gap-1.5 sm:gap-2 h-[64px] min-h-[64px] pr-3 sm:pr-6 shrink-0">
+        <button v-if="lockEnabled" @click="emit('lock')" title="Заблокировать" class="w-10 h-10 grid place-items-center rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow-soft hover:bg-stone-50 dark:hover:bg-zinc-700 transition">
+          <i class="pi pi-lock text-stone-600 dark:text-zinc-300"></i>
+        </button>
         <button @click="emit('bell')" class="relative w-10 h-10 grid place-items-center rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow-soft hover:bg-stone-50 dark:hover:bg-zinc-700 transition">
           <i class="pi pi-bell text-stone-600 dark:text-zinc-300"></i>
           <span v-if="badgeTotal" class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 grid place-items-center bg-red-500 text-white text-[10px] font-bold rounded-full border-2 border-white dark:border-zinc-900">{{ badgeTotal > 9 ? '9+' : badgeTotal }}</span>

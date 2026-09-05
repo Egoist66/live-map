@@ -8,12 +8,16 @@ import { useTheme } from '@/composables/useTheme'
 import { useReverseGeocode } from '@/composables/useReverseGeocode'
 import { usePinCreate } from '@/composables/usePinCreate'
 import { usePinEdit } from '@/composables/usePinEdit'
+import { useToast } from 'primevue/usetoast'
 import { useMapOverlays } from '@/composables/useMapOverlays'
 import { useAppConfirm } from '@/composables/useAppConfirm'
+import { useCustomCategories } from '@/composables/useCustomCategories'
 import { useHomeZoneVisibility } from '@/composables/useHomeZoneVisibility'
 
 export function useMapPage() {
-  const { store, categories, selectedCategory, filteredPins, fetchNearby } = usePins()
+  const { store, selectedCategory, filteredPins, fetchNearby } = usePins()
+  const customCats = useCustomCategories()
+  const categories = customCats.allCategories
   const pinDetails = usePinDetails()
   const { confirmDelete } = useAppConfirm()
   const { requestGeolocation } = useGeolocation()
@@ -25,6 +29,7 @@ export function useMapPage() {
   const { address: myStreet, loading: loadingStreet, fetch: fetchStreet } = useReverseGeocode() as any
 
   const pinEdit = usePinEdit()
+  const toast = (() => { try { return useToast() } catch { return null as any } })()
 
   const pinCreate = usePinCreate(() => {
     mapApi.removeTempMarker()
@@ -77,7 +82,7 @@ export function useMapPage() {
     ].map((o) => ({ ...o, disabled: ((o as any).pro && !isPro) || ((o as any).biz && !isBiz) }))
   })
   const radiusLabel = computed(() => {
-    const v = (pinCreate.values as any).radius_meters ?? 1000
+    const v = Number((pinCreate.values as any)?.value?.radius_meters ?? 1000)
     return v >= 1000 ? `${v / 1000} км` : `${v} м`
   })
 
@@ -101,6 +106,7 @@ export function useMapPage() {
     pinCreate.setCoords(lngLat.lat, lngLat.lng)
     fetchPinAddress(lngLat.lat, lngLat.lng)
     mapApi.addTempMarker(lngLat)
+    try { void pinCreate.refreshLimit() } catch {}
     showCreate.value = true
   }
 
@@ -110,7 +116,10 @@ export function useMapPage() {
   }
 
   watch(showCreate, (v) => {
-    if (v && !pinAddress.value) fetchPinAddress((pinCreate.values as any).latitude, (pinCreate.values as any).longitude)
+    if (!v || pinAddress.value) return
+    const lat = (pinCreate.values as any)?.value?.latitude
+    const lng = (pinCreate.values as any)?.value?.longitude
+    if (Number.isFinite(lat) && Number.isFinite(lng)) fetchPinAddress(lat, lng)
   })
 
   watch(homeZone, () => applyHomeZone())
@@ -125,8 +134,9 @@ export function useMapPage() {
       await (deleteMutation as any).mutateAsync(pinDetails.selectedPin.value.id)
       pinDetails.closePin()
       mapApi.renderPins()
+      try { await pinCreate.refreshLimit() } catch {}
     } catch (e: any) {
-      alert(e?.response?.data?.message || 'Ошибка удаления')
+      toast?.add({ severity: 'error', summary: 'Ошибка удаления', detail: e?.response?.data?.message, life: 3000 })
     }
   }
 
@@ -140,7 +150,28 @@ export function useMapPage() {
     mapApi.renderPins()
   }
 
-  function openCreateFromUI() { showCreate.value = true }
+  async function deleteCustomCategory(slug: string) {
+    const ok = await confirmDelete(`Своя категория будет удалена. Пины с ней останутся, но без оформления.`, 'Удалить категорию?')
+    if (!ok) return
+    try {
+      await customCats.remove(slug)
+      if ((pinCreate.values.value as any)?.category === slug) pinCreate.setValues({ category: 'announcement' } as any)
+      mapApi.renderPins()
+      toast?.add({ severity: 'success', summary: 'Категория удалена', life: 2000 })
+    } catch (e: any) {
+      toast?.add({ severity: 'error', summary: 'Не удалось удалить категорию', detail: e?.response?.data?.message, life: 3000 })
+    }
+  }
+
+  function openCreateFromUI() {
+    if (myPos.value) pinCreate.setCoords(myPos.value.lat, myPos.value.lng)
+    else {
+      const c: any = mapApi.getCenter?.()
+      if (c) pinCreate.setCoords(c.lat, c.lng)
+    }
+    try { void pinCreate.refreshLimit() } catch {}
+    showCreate.value = true
+  }
 
   function onEsc(e: KeyboardEvent) {
     if (e.key !== 'Escape') return
@@ -152,35 +183,70 @@ export function useMapPage() {
 
   async function init() {
     window.addEventListener('keydown', onEsc)
-    let geo = { lat: 53.9022, lng: 27.5615 }
-    try { geo = await requestGeolocation() } catch {}
-    myPos.value = { ...geo }
-    fetchStreet(geo.lat, geo.lng)
-    try { await fetchNearby(geo.lat, geo.lng) } catch {}
-    try {
-      const mine = await store.fetchMine()
-      mine.forEach((p: any) => { if (!store.pins.find((x: any) => x.id === p.id)) store.pins.unshift(p) })
-      store.pruneExpired()
-    } catch {}
-    await nextTick()
-    await mapApi.initMap([geo.lng, geo.lat] as any, (e: any) => {
+    try { void customCats.fetchAll() } catch {}
+    const cached = (() => {
+      try {
+        const raw = localStorage.getItem('live-map:last-pos')
+        if (!raw) return null
+        const p = JSON.parse(raw)
+        if (Number.isFinite(p?.lat) && Number.isFinite(p?.lng)) return p as { lat: number; lng: number }
+      } catch {}
+      return null
+    })()
+    const onMapClick = (e: any) => {
       const target = e.originalEvent?.target as HTMLElement
       if (target?.closest?.('.maplibregl-marker')) return
       openCreate(e.lngLat)
-    })
-    mapApi.showUserLocation(geo.lat, geo.lng)
-    applyHomeZone()
-    try { mapApi.flyToMyLocation?.(geo.lat, geo.lng) } catch {}
-    mapApi.renderPins()
-    setTimeout(() => applyHomeZone(), 1200)
-    mapApi.bindRealtime()
+    }
+    if (cached) {
+      myPos.value = { ...cached }
+      try { await fetchNearby(cached.lat, cached.lng) } catch {}
+      try {
+        const mine = await store.fetchMine()
+        mine.forEach((p: any) => { if (!store.pins.find((x: any) => x.id === p.id)) store.pins.unshift(p) })
+        store.pruneExpired()
+      } catch {}
+      await nextTick()
+      await mapApi.initMap([cached.lng, cached.lat] as any, onMapClick)
+      mapApi.renderPins()
+      applyHomeZone()
+      mapApi.bindRealtime()
+    } else {
+      await nextTick()
+      await mapApi.initMap(null, onMapClick)
+      mapApi.bindRealtime()
+    }
+    let geo: { lat: number; lng: number } | null = null
+    try { geo = await requestGeolocation() } catch { geo = null }
+    if (geo) {
+      myPos.value = { ...geo }
+      try { localStorage.setItem('live-map:last-pos', JSON.stringify(geo)) } catch {}
+      fetchStreet(geo.lat, geo.lng)
+      try { await fetchNearby(geo.lat, geo.lng) } catch {}
+      if (cached) {
+        mapApi.showUserLocation(geo.lat, geo.lng)
+        applyHomeZone()
+        try { mapApi.flyToMyLocation?.(geo.lat, geo.lng) } catch {}
+      } else {
+        await mapApi.initMap([geo.lng, geo.lat] as any, onMapClick)
+        mapApi.showUserLocation(geo.lat, geo.lng)
+        applyHomeZone()
+        try { mapApi.flyToMyLocation?.(geo.lat, geo.lng) } catch {}
+      }
+      mapApi.renderPins()
+      setTimeout(() => applyHomeZone(), 1200)
+    } else if (!cached) {
+      try { await fetchNearby(0, 20) } catch {}
+    }
     try {
       ;(mapApi.map as any)?.on('geolocate', (e: any) => {
         const c = e.coords
         if (!c) return
-        myPos.value = { lat: c.latitude, lng: c.longitude }
-        fetchStreet(c.latitude, c.longitude)
-        mapApi.showUserLocation(c.latitude, c.longitude)
+        const next = { lat: c.latitude, lng: c.longitude }
+        myPos.value = next
+        try { localStorage.setItem('live-map:last-pos', JSON.stringify(next)) } catch {}
+        fetchStreet(next.lat, next.lng)
+        mapApi.showUserLocation(next.lat, next.lng)
         applyHomeZone()
       })
     } catch {}
@@ -189,9 +255,9 @@ export function useMapPage() {
   function destroy() { window.removeEventListener('keydown', onEsc); try { (mapApi as any).unbindRealtime?.() } catch {} }
 
   return {
-    store, categories, selectedCategory, filteredPins, pinDetails, pinCreate, pinEdit, mapApi,
+    store, categories, customCats, selectedCategory, filteredPins, pinDetails, pinCreate, pinEdit, mapApi,
     showCreate, pinAddress, loadingPinAddress, myStreet, loadingStreet,
-    radiusOptions, radiusLabel, homeZone, homeZoneVisible, toggleHomeZone, setHomeZoneVisible, openCreate, openCreateFromUI, closeCreate, deleteSelectedPin, saveEdit, init, destroy,
+    radiusOptions, radiusLabel, homeZone, homeZoneVisible, toggleHomeZone, setHomeZoneVisible, openCreate, openCreateFromUI, closeCreate, deleteSelectedPin, saveEdit, deleteCustomCategory, init, destroy,
     deleteMutation,
     ...overlays,
   }

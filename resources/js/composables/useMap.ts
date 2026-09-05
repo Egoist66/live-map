@@ -1,6 +1,7 @@
 import { ref, watch, nextTick } from 'vue'
 import * as maplibregl from 'maplibre-gl'
 import { usePins } from './usePins'
+import { useCustomCategories } from './useCustomCategories'
 import { isPinAlive } from './usePinExpiry'
 import { useThrottledMapFetch } from './useThrottledMapFetch'
 import { useAppConfirm } from './useAppConfirm'
@@ -31,6 +32,7 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
   let markers: maplibregl.Marker[] = []
   let lastActivePinId: number | null = null
   const { store, selectedCategory } = usePins()
+  const { metaOf } = useCustomCategories()
   const { confirmDelete } = useAppConfirm()
   const loaded = ref(false)
   const errorMsg = ref('')
@@ -45,9 +47,11 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
     return LIGHT_STYLES
   }
 
-  async function initMap(center: [number, number] = [27.5615, 53.9022], onMapClick?: (e: any) => void) {
+  async function initMap(center: [number, number] | null = null, onMapClick?: (e: any) => void, zoom = 13) {
     await nextTick()
     if (!mapContainer.value) return
+    const initialCenter: [number, number] = center ?? [0, 20]
+    const initialZoom = center ? zoom : 2
     const tryStyles: any[] = getStyles()
     let styleIndex = 0
     let loadTimer: any = null
@@ -59,8 +63,8 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
       map = new maplibregl.Map({
         container: mapContainer.value!,
         style,
-        center: center as any,
-        zoom: 13,
+        center: initialCenter as any,
+        zoom: initialZoom,
         attributionControl: false,
       } as any)
       map.addControl(new maplibregl.NavigationControl({ showCompass: true, showZoom: true, visualizePitch: true }), 'bottom-right')
@@ -128,8 +132,9 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
   }
   function showPinTip(p: any, x: number, y: number) {
     const tip = ensureTooltip()
-    const catIcon: any = { question: '💬', announcement: '📍', warning: '⚠️', event: '🎉', offer: '📦', help: '🤝' }
-    const catLabel: any = { question: 'Вопрос', announcement: 'Объявление', warning: 'Предупреждение', event: 'Событие', offer: 'Отдам', help: 'Помощь' }
+    const meta = metaOf(p.category)
+    const catIcon: any = { [p.category]: meta?.i ?? '📍' }
+    const catLabel: any = { [p.category]: meta?.l ?? p.category }
     const body = p.body ? (p.body.length > 110 ? p.body.slice(0, 110) + '…' : p.body) : ''
     const author = p.is_anonymous ? 'аноним' : (p.user?.name || 'пользователь')
     const level = p.user?.level ? ` · ${p.user.level}` : ''
@@ -195,14 +200,7 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
     let pins = (store.pins as any[]).filter((p: any) => isPinAlive(p))
     if (selectedCategory.value === 'mine') pins = pins.filter((p: any) => p.is_owner)
     else if (selectedCategory.value !== 'all') pins = pins.filter((p: any) => p.category === selectedCategory.value)
-    const colorMap: any = {
-      question: '#2563EB',
-      announcement: '#DC2626',
-      warning: '#EA580C',
-      event: '#7C3AED',
-      offer: '#0891B2',
-      help: '#DB2777',
-    }
+    const colorFor = (cat: string): string => metaOf(cat)?.c ?? '#DC2626'
     if (!document.getElementById('pin-soft-pulse-style')) {
       const s = document.createElement('style')
       s.id = 'pin-soft-pulse-style'
@@ -215,7 +213,7 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
       const sz = Math.round(34 * scale)
       wrap.style.width = sz+'px'
       wrap.style.height = sz+'px'
-      const baseColor = p.is_boosted ? '#F59E0B' : p.is_sponsored || p.priority==='sponsored' ? '#7C3AED' : (colorMap[p.category] || '#DC2626')
+      const baseColor = p.is_boosted ? '#F59E0B' : p.is_sponsored || p.priority==='sponsored' ? '#7C3AED' : colorFor(p.category)
       const isBoosted = !!p.is_boosted
       const halo = document.createElement('div')
       halo.className = 'absolute rounded-full'

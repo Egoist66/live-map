@@ -164,7 +164,7 @@ function fmtTime(s: string | null) {
                     class="!w-10 !h-10 [&_img]:object-cover"
                     :pt="{ image: { class: 'object-cover' } }" /><span
                     class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center border-2 border-white dark:border-zinc-900 text-[10px]"
-                    :class="a.kind === 'comment' ? 'bg-violet-600' : 'bg-rose-500'"
+                    :class="a.kind === 'comment' ? 'bg-violet-600' : a.kind === 'mention' ? 'bg-amber-500' : 'bg-rose-500'"
                     >{{ pinAct.describe(a).emoji }}</span
                   ></span
                 >

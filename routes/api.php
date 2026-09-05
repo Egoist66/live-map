@@ -3,6 +3,7 @@
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\ChatUserController;
 use App\Http\Controllers\ConversationController;
+use App\Http\Controllers\CustomCategoryController;
 use App\Http\Controllers\FriendshipController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\NbrbController;
@@ -45,6 +46,9 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/admin/reports', [ReportController::class, 'index']);
     Route::post('/admin/reports/{report}/resolve', [ReportController::class, 'resolve']);
     Route::apiResource('zone-subscriptions', ZoneSubscriptionController::class)->only(['index','store','destroy']);
+    Route::get('/custom-categories', [CustomCategoryController::class, 'index']);
+    Route::post('/custom-categories', [CustomCategoryController::class, 'store']);
+    Route::delete('/custom-categories/{customCategory}', [CustomCategoryController::class, 'destroy']);
     Route::post('/reports', [ReportController::class, 'store']);
 
     Route::get('/chat/me', [ChatUserController::class, 'me']);
@@ -52,6 +56,11 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/chat/users/search', [ChatUserController::class, 'search']);
     Route::patch('/chat/privacy', [ChatUserController::class, 'privacy']);
     Route::patch('/user/invisible', [\App\Http\Controllers\ProfileController::class, 'toggleInvisible']);
+
+    Route::get('/user/screen-lock', [\App\Http\Controllers\ScreenLockController::class, 'show']);
+    Route::put('/user/screen-lock', [\App\Http\Controllers\ScreenLockController::class, 'update']);
+    Route::delete('/user/screen-lock', [\App\Http\Controllers\ScreenLockController::class, 'destroy']);
+    Route::post('/user/screen-lock/verify', [\App\Http\Controllers\ScreenLockController::class, 'verify'])->middleware('throttle:30,1');
 
     Route::get('/friendships', [FriendshipController::class, 'index']);
     Route::post('/friendships', [FriendshipController::class, 'store']);

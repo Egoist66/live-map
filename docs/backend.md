@@ -40,7 +40,7 @@
 
 ## 2. Pin — `pins` (`App\Models\Pin`) — ядро карты
 
-**Зачем:** гео-объявление `question|announcement|warning|event|offer|help` с временем жизни. Все остальное (комменты, реакции, жалобы, бусты, подписки на зоны) крутится вокруг пина.
+**Зачем:** гео-объявление (19 встроенных: `question|announcement|warning|event|offer|help|sport|food|music|pets|sale|job|study|travel|tech|health|art|humor|rest` + свои слаги для Pro/Business/admin через `custom_categories`) с временем жизни. Политика, 18+, наркотики, оружие, ненависть и криминал блокируются фильтром `ContentModeration` на создании/редактировании пинов, комментариев и названий своих категорий (422). Свои категории: `GET/POST /api/custom-categories`, `DELETE /api/custom-categories/{slug}` (Pro+, удаление — владелец или admin). Колонка `pins.category` — `VARCHAR(32)`. Все остальное (комменты, реакции, жалобы, бусты, подписки на зоны) крутится вокруг пина.
 
 **Поля:** `user_id cascade, title(120), body, photo_path, category+INDEX, latitude/longitude (публичные)+INDEX, real_lat/real_lng (точные), location_precision(blur_200|exact|district), district_name, radius_meters, visibility_radius_km, status(active|expired|archived|deleted), expires_at INDEX, priority(normal|boosted|sponsored), is_pinned/is_sponsored/is_boosted, boosted_until, views_count/likes_count/reactions_count/comments_count, is_anonymous, meta json`.
 

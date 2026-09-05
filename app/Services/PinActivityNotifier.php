@@ -56,6 +56,28 @@ class PinActivityNotifier
         static::dispatch($pin, $activity);
     }
 
+    public static function mentions(Pin $pin, User $actor, PinComment $comment, array $userIds): void
+    {
+        $pin->refresh();
+        $excerpt = trim(preg_replace('/\s+/', ' ', $comment->content) ?? '');
+        if (mb_strlen($excerpt) > 120) {
+            $excerpt = mb_substr($excerpt, 0, 117).'...';
+        }
+        foreach (array_unique(array_map('intval', $userIds)) as $ownerId) {
+            if ($ownerId === $actor->id) continue;
+            $activity = PinActivity::create([
+                'pin_id' => $pin->id,
+                'actor_id' => $actor->id,
+                'owner_id' => $ownerId,
+                'kind' => 'mention',
+                'comment_id' => $comment->id,
+                'excerpt' => $excerpt !== '' ? $excerpt : null,
+            ]);
+            $activity->load(['actor:id,name,avatar_path', 'pin:id,title,category']);
+            static::dispatch($pin, $activity);
+        }
+    }
+
     private static function dispatch(Pin $pin, ?PinActivity $activity): void
     {
         try {
@@ -71,7 +93,7 @@ class PinActivityNotifier
         }
         if ($activity) {
             try {
-                $owner = $pin->user ?? User::find($pin->user_id);
+                $owner = User::find($activity->owner_id);
                 $actor = $activity->actor ?? User::find($activity->actor_id);
                 if ($owner && $actor) {
                     app(WebPushService::class)->sendPinActivity($owner, $actor, $pin, $activity);

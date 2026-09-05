@@ -40,8 +40,32 @@ class ProfileController extends Controller
         if ($user->isInvisibleActive() && !$isOwn && !($auth && $auth->isAdmin())) {
             $showLastSeen = null;
         }
+        $home = $user->publicHomeFor($auth);
+        $base = $user->only(['id','name','gender','avatar_path','level','reputation_score','created_at','home_city','home_visibility','home_radius_km','bio','last_seen_at','is_invisible']);
+        if ($isOwn) {
+            $base['home_lat'] = $user->home_lat;
+            $base['home_lng'] = $user->home_lng;
+            $base['home_address'] = $user->home_address;
+            $base['home_show_exact'] = (bool) $user->home_show_exact;
+            $base['can_show_exact_home'] = $user->canShowExactHome();
+        } elseif ($home) {
+            $base['home_lat'] = $home['lat'];
+            $base['home_lng'] = $home['lng'];
+            $base['home_city'] = $home['city'];
+            $base['home_address'] = $home['address'];
+        } else {
+            $base['home_lat'] = null;
+            $base['home_lng'] = null;
+            $base['home_city'] = $user->home_visibility === 'none' ? null : $user->home_city;
+            $base['home_address'] = null;
+        }
+        if ($home) {
+            $base['home_is_blurred'] = $home['is_blurred'];
+            $base['home_blur_meters'] = $home['blur_meters'];
+            $base['home_blur_label'] = $home['blur_label'];
+        }
         return Inertia::render('Profile/Show', [
-            'profileUser' => array_merge($user->only(['id','name','gender','avatar_path','level','reputation_score','created_at','home_lat','home_lng','home_radius_km','bio','last_seen_at','is_invisible']), ['avatar_url' => $user->avatar_url, 'last_seen_at' => $showLastSeen?->toISOString(), 'is_invisible' => $user->isInvisibleActive()]),
+            'profileUser' => array_merge($base, ['avatar_url' => $user->avatar_url, 'last_seen_at' => $showLastSeen?->toISOString(), 'is_invisible' => $user->isInvisibleActive()]),
             'isOwn' => $isOwn,
             'friendship' => $friendship,
             'isFriend' => $isFriend,
@@ -92,15 +116,22 @@ class ProfileController extends Controller
     /**
      * Display the user's profile form.
      */
-    public function edit(Request $request, ?string $identifier = null): Response|RedirectResponse
+    public function edit(Request $request, ?string $identifier = null, ?string $tab = null): Response|RedirectResponse
     {
         $auth = $request->user();
+        $tabIds = ['profile', 'billing', 'pins', 'privacy', 'appearance', 'security', 'support', 'app', 'admin'];
+        if ($tab === null && $identifier !== null && in_array($identifier, $tabIds, true) && $identifier !== 'admin') {
+            $tab = $identifier;
+            $identifier = null;
+        }
+        $initialTab = in_array($tab, $tabIds, true) && ($tab !== 'admin' || $auth->isAdmin()) ? $tab : null;
         if ($identifier === null) {
             $profileUser = $auth;
             return Inertia::render('Profile/Edit', [
                 'mustVerifyEmail' => $auth instanceof MustVerifyEmail,
                 'status' => session('status'),
                 'user' => $profileUser,
+                'initialTab' => $initialTab,
             ]);
         }
         if ($identifier === 'admin') {
@@ -116,6 +147,7 @@ class ProfileController extends Controller
             'mustVerifyEmail' => $auth instanceof MustVerifyEmail,
             'status' => session('status'),
             'user' => $profileUser,
+            'initialTab' => $initialTab,
         ]);
     }
 
@@ -126,6 +158,10 @@ class ProfileController extends Controller
     {
         $user = $request->user();
         $user->fill($request->validated());
+
+        if ((bool) $user->home_show_exact && ! $user->canShowExactHome()) {
+            $user->home_show_exact = false;
+        }
 
         $meters = (int) ($user->default_blur_meters ?? 300);
         if ($meters > 1000 && !$user->canUseInvisible()) $meters = 1000;

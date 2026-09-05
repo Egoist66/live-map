@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 
 export type SettingsTabId = 'profile'|'billing'|'privacy'|'appearance'|'security'|'pins'|'support'|'app'|'admin'
@@ -25,14 +25,33 @@ export function useSettingsTabs() {
   const isAdmin = computed(() => !!((page.props.auth as any)?.user?.is_admin) || (page.props.auth as any)?.user?.role === 'admin')
   const active = ref<SettingsTabId>('profile')
   try {
-    const t = new URLSearchParams(window.location.search).get('tab') as SettingsTabId | null
     const all = [...SETTINGS_TABS, ADMIN_TAB]
-    if (t && all.some((x) => x.id === t) && (t !== 'admin' || isAdmin.value)) active.value = t
+    const valid = (t: unknown): t is SettingsTabId =>
+      typeof t === 'string' && (all as any[]).some((x) => x.id === t) && (t !== 'admin' || isAdmin.value)
+    const fromRoute = (page.props as any)?.initialTab
+    const fromQuery = new URLSearchParams(window.location.search).get('tab')
+    if (valid(fromRoute)) active.value = fromRoute
+    else if (valid(fromQuery)) active.value = fromQuery
   } catch {}
   const tabs = computed(() => (isAdmin.value ? [...SETTINGS_TABS, ADMIN_TAB] : [...SETTINGS_TABS]))
   const tabIndex = SETTINGS_TAB_INDEX
   const activeIndex = computed(() => tabIndex[active.value])
   const setActive = (id: SettingsTabId) => { active.value = id }
+
+  watch(active, (id) => {
+    try {
+      const url = new URL(window.location.href)
+      if (!url.pathname.startsWith('/settings')) return
+      const ids = new Set([...SETTINGS_TABS, ADMIN_TAB].map((t) => t.id))
+      const rest = url.pathname.split('/').filter(Boolean).slice(1)
+      if (rest.length === 1 && rest[0] === 'admin' && id === 'admin') return
+      if (rest.length && ids.has(rest[rest.length - 1] as any) && !(rest.length === 1 && rest[0] === 'admin')) rest.pop()
+      rest.push(id)
+      url.pathname = '/settings' + (rest.length ? `/${rest.join('/')}` : '')
+      url.searchParams.delete('tab')
+      window.history.replaceState({}, '', url.toString())
+    } catch {}
+  })
 
   const menuModel = computed(() =>
     tabs.value.map((t) => ({
