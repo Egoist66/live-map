@@ -24,7 +24,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         $target = '/profile' . ($identifier ? '/' . $identifier : '');
         return redirect($target, 301);
     })->where('identifier', '.*');
-    Route::get('/admin', fn () => redirect()->route('dashboard', ['identifier' => 'admin']))->name('admin');
+    Route::get('/admin', fn () => Inertia::render('Admin/Index'))->middleware('admin')->name('admin');
 });
 
 Route::get('/faq', fn () => Inertia::render('Faq'))->name('faq');
@@ -42,9 +42,7 @@ Route::fallback(function () {
     if (!auth()->check()) {
         return redirect()->route('login');
     }
-    $u = auth()->user();
-    $id = $u->isAdmin() ? 'admin' : (string) $u->id;
-    return redirect()->route('dashboard', ['identifier' => $id]);
+    return redirect()->route('dashboard');
 });
 
 require __DIR__.'/auth.php';

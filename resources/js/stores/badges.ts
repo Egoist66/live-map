@@ -10,11 +10,12 @@ export const useBadgeStore = defineStore('badges', () => {
   const pending = ref(0)
   const activity = ref(0)
   const reports = ref(0)
+  const updates = ref(0)
   const loading = ref(false)
   let echoCh: any = null
   let inited = false
 
-  const total = computed(() => unread.value + pending.value + activity.value + reports.value)
+  const total = computed(() => unread.value + pending.value + activity.value + reports.value + updates.value)
   const seenMsgIds = new Set<number>()
   let fetchTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -55,16 +56,21 @@ export const useBadgeStore = defineStore('badges', () => {
       const repPromise = readIsAdmin()
         ? api.get('/api/admin/reports', { params: { status: 'pending', per_page: 1 } }).then((r) => Number(r.data?.pending_count ?? 0)).catch(() => 0)
         : Promise.resolve(0)
-      const [convs, fr, ac, rep] = await Promise.all([
+      const updPromise = readIsAdmin()
+        ? Promise.resolve(0)
+        : api.get('/api/updates/unread').then((r) => Number(r.data?.count ?? 0)).catch(() => 0)
+      const [convs, fr, ac, rep, upd] = await Promise.all([
         convsPromise,
         chatApi.friendships().catch(() => ({ pending_in: [] } as any)),
         pinActivityApi.unreadCount().catch(() => 0),
         repPromise,
+        updPromise,
       ])
       unread.value = (convs as any[]).reduce((s: number, c: any) => s + (c.unread_count || 0), 0)
       pending.value = (fr.pending_in?.length || 0)
       activity.value = Number(ac) || 0
       reports.value = Number(rep) || 0
+      updates.value = Number(upd) || 0
     } catch {}
   }
 
@@ -113,6 +119,7 @@ export const useBadgeStore = defineStore('badges', () => {
   function incActivity() { activity.value += 1 }
   function decActivity() { activity.value = Math.max(0, activity.value - 1) }
   function setReports(v: number) { reports.value = Math.max(0, v) }
+  function setUpdates(v: number) { updates.value = Math.max(0, v) }
   function incReports() { reports.value += 1 }
   function decReports() { reports.value = Math.max(0, reports.value - 1) }
 
@@ -128,5 +135,5 @@ export const useBadgeStore = defineStore('badges', () => {
 
   function refresh() { return fetch() }
 
-  return { unread, pending, activity, reports, total, loading, init, fetch, refresh, subscribe, setUnread, setPending, setActivity, setReports, decUnread, incUnread, incPending, decPending, incActivity, decActivity, incReports, decReports }
+  return { unread, pending, activity, reports, updates, total, loading, init, fetch, refresh, subscribe, setUnread, setPending, setActivity, setReports, setUpdates, decUnread, incUnread, incPending, decPending, incActivity, decActivity, incReports, decReports }
 })

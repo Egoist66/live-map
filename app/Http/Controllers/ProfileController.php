@@ -41,7 +41,9 @@ class ProfileController extends Controller
             $showLastSeen = null;
         }
         $home = $user->publicHomeFor($auth);
-        $base = $user->only(['id','name','gender','avatar_path','level','reputation_score','created_at','home_city','home_visibility','home_radius_km','bio','last_seen_at','is_invisible']);
+        $base = $user->only(['id','name','gender','birth_date','country','country_code','avatar_path','level','reputation_score','created_at','home_city','home_visibility','home_radius_km','bio','last_seen_at','is_invisible']);
+        $base['age'] = $user->age;
+        if (!$isOwn) unset($base['birth_date']);
         if ($isOwn) {
             $base['home_lat'] = $user->home_lat;
             $base['home_lng'] = $user->home_lng;
@@ -98,7 +100,7 @@ class ProfileController extends Controller
         }
         if ($identifier === 'admin') {
             abort_unless($auth->isAdmin(), 403, 'Только админ');
-            $profileUser = $auth;
+            return Inertia::render('Admin/Index');
         } elseif (is_numeric($identifier)) {
             $profileUser = \App\Models\User::findOrFail((int) $identifier);
             if ($profileUser->id !== $auth->id && !$auth->isAdmin()) {
@@ -158,6 +160,8 @@ class ProfileController extends Controller
     {
         $user = $request->user();
         $user->fill($request->validated());
+        if ($user->country_code) $user->country_code = mb_strtolower(trim((string) $user->country_code));
+        if ($user->country) $user->country = trim(preg_replace('/\s+/', ' ', (string) $user->country));
 
         if ((bool) $user->home_show_exact && ! $user->canShowExactHome()) {
             $user->home_show_exact = false;
@@ -174,8 +178,7 @@ class ProfileController extends Controller
 
         $user->save();
 
-        $id = $user->isAdmin() ? 'admin' : (string) $user->id;
-        return Redirect::route('profile.edit', ['identifier' => $id]);
+        return Redirect::route('profile.edit');
     }
 
     /**

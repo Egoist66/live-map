@@ -10,7 +10,7 @@ function isLockedNow(): boolean {
 
 export type AppToast = {
   id: string
-  type: 'message' | 'friend' | 'pin' | 'report'
+  type: 'message' | 'friend' | 'pin' | 'report' | 'security'
   title: string
   body: string
   avatar: string | null
@@ -139,6 +139,19 @@ function handlePinActivity(e: any) {
     createdAt: Date.now(),
   })
 }
+function handleImpersonation(e: any) {
+  const log = e?.log
+  if (!log?.id) return
+  push({
+    id: `imp-${log.id}-${Date.now()}`,
+    type: 'security',
+    title: 'Вход администрации в ваш аккаунт',
+    body: `${log.reason || 'Основание указано в журнале'}`.slice(0, 90),
+    avatar: null,
+    link: '/settings/procedures',
+    createdAt: Date.now(),
+  })
+}
 function isAdminNow(): boolean {
   try {
     const u = (usePage().props.auth as any)?.user
@@ -175,6 +188,8 @@ function subscribe() {
     echoCh.listen('PinActivityCreated', handlePinActivity)
     echoCh.listen('.report.created', handleReport)
     echoCh.listen('ReportCreated', handleReport)
+    echoCh.listen('.impersonation.started', handleImpersonation)
+    echoCh.listen('ImpersonationStarted', handleImpersonation)
     const pusher = (echo as any).connector?.pusher
     if (pusher) pusher.connection.bind('connected', () => { if (!echoCh) subscribe() })
   } catch {}

@@ -22,12 +22,12 @@ export function useDashboardPage(propsUser?: any, propsIsOwn?: boolean) {
   const bioText = computed(() => (u.value.bio || '').trim())
   const bioEmpty = computed(() => bioText.value.length === 0)
   const settingsHref = computed(() => {
-    const id = auth.is_admin || auth.role === 'admin' ? 'admin' : String(auth.id)
-    return route('profile.edit', { identifier: id })
+    return route('profile.edit')
   })
   const badges = useBadgeStore()
   const { shareProfile, sharing } = useProfileShare()
   const invisible = useInvisible()
+  const isAdmin = computed(() => !!auth?.is_admin || auth?.role === 'admin')
   const presence = computed(() => (invisible.isInvisible.value
     ? { active: false, label: 'скрыт · невидимка' }
     : { active: true, label: 'в сети' }))
@@ -36,8 +36,9 @@ export function useDashboardPage(propsUser?: any, propsIsOwn?: boolean) {
   function goMap() { router.visit('/map') }
   function goChat() { router.visit('/chat') }
   function goSettings() { router.visit(settingsHref.value) }
+  function goAdmin() { router.visit(route('admin')) }
   function goFaq() { router.visit('/faq') }
   function share() { shareProfile({ id: u.value.id, name: u.value.name }) }
   onMounted(() => { if (isOwn.value) badges.init() })
-  return { seo, auth, u, isOwn, showAvatar, avatarSrc, bioText, bioEmpty, settingsHref, sharing, presence, levelLabel: LEVEL_LABEL, levelColor: LEVEL_COLOR, planLabel: PLAN_LABEL, planColor: PLAN_COLOR, openAvatar, closeAvatar, goMap, goChat, goSettings, goFaq, share }
+  return { seo, auth, u, isOwn, isAdmin, showAvatar, avatarSrc, bioText, bioEmpty, settingsHref, sharing, presence, levelLabel: LEVEL_LABEL, levelColor: LEVEL_COLOR, planLabel: PLAN_LABEL, planColor: PLAN_COLOR, openAvatar, closeAvatar, goMap, goChat, goSettings, goAdmin, goFaq, share }
 }

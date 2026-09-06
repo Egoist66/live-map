@@ -41,6 +41,9 @@ class ProfileUpdateRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'gender' => ['nullable','in:male,female,other'],
+            'birth_date' => ['nullable','date','before:today','after:1900-01-01'],
+            'country' => ['nullable','string','max:120'],
+            'country_code' => ['nullable','string','max:8'],
             'email' => ['required','string','lowercase','email','max:255', Rule::unique(User::class)->ignore($this->user()->id), function ($attr, $value, $fail) {
                 $user = $this->user();
                 if (!$user || mb_strtolower((string) $value) === mb_strtolower((string) $user->email)) return;

@@ -4,6 +4,8 @@ import { createPinSchema } from '@/validation/schemas/createPin.schema'
 import { usePinsStore } from '@/stores/pins'
 import { usePinLimit } from '@/composables/usePinLimit'
 import { useCustomCategories } from '@/composables/useCustomCategories'
+import { useResidence } from '@/composables/useResidence'
+import { usePage } from '@inertiajs/vue3'
 import { PIN_CATEGORIES } from '@/composables/usePins'
 import { useToast } from 'primevue/usetoast'
 
@@ -28,6 +30,8 @@ export function usePinCreate(onSuccess?: () => void) {
   const scheduleEnabled = ref(false)
   const limitInfo = usePinLimit()
   const customCats = useCustomCategories()
+  const page = usePage()
+  const residence = useResidence(() => (page.props.auth as any)?.user)
   const builtInValues = (PIN_CATEGORIES as unknown as any[]).map((c) => c.v)
 
   const { defineField, handleSubmit, setValues, values, errors, resetForm } = useForm({
@@ -122,6 +126,13 @@ export function usePinCreate(onSuccess?: () => void) {
         throw err
       }
       const payload: any = { ...vals }
+      const guard = await residence.assertPinInHomeCountry(Number(payload.latitude), Number(payload.longitude))
+      if (!guard.ok) {
+        const err: any = { response: { status: 422, data: { message: guard.message } } }
+        error.value = err
+        toast.add({ severity: 'error', summary: 'Операция запрещена', detail: guard.message, life: 5000 })
+        throw err
+      }
       if (scheduleEnabled.value && payload.publish_at) {
         const d = fromLocalInput(payload.publish_at)
         if (!d || d.getTime() <= Date.now()) throw { response: { data: { message: 'Выбери будущие дату и время' } } }
@@ -144,6 +155,8 @@ export function usePinCreate(onSuccess?: () => void) {
       if (isLimit) {
         const msg = serverMsg || limitInfo.warning.value || 'Лимит free тарифа: максимум 3 живых пина'
         toast.add({ severity: 'warn', summary: 'Лимит пинов', detail: msg, life: 5000 })
+      } else if (status === 422 && /стран/i.test(serverMsg)) {
+        toast.add({ severity: 'error', summary: 'Операция запрещена', detail: serverMsg, life: 5000 })
       } else {
         toast.add({ severity: 'error', summary: serverMsg || 'Ошибка создания', life: 3000 })
       }

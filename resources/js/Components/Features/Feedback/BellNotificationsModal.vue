@@ -3,21 +3,33 @@ import Dialog from "primevue/dialog";
 import Avatar from "primevue/avatar";
 import Button from "primevue/button";
 import Badge from "primevue/badge";
+import Tag from "primevue/tag";
+import Tabs from "primevue/tabs";
+import TabList from "primevue/tablist";
+import Tab from "primevue/tab";
+import TabPanels from "primevue/tabpanels";
+import TabPanel from "primevue/tabpanel";
+import ProgressSpinner from "primevue/progressspinner";
 import { watch } from "vue";
 import { useBellNotifications } from "@/composables/useBellNotifications";
 import { usePinActivity } from "@/composables/usePinActivity";
 import { useAdminReports } from "@/composables/useAdminReports";
+import { useAppUpdates } from "@/composables/useAppUpdates";
 import { avatarSrcFor } from "@/composables/useAvatar";
 
 const bell = useBellNotifications();
 const pinAct = usePinActivity();
 const admRep = useAdminReports();
+const updates = useAppUpdates();
 watch(
   () => bell.isOpen.value,
   (open) => {
     if (open) {
+      bell.tab.value = "events";
       pinAct.refresh();
       admRep.refresh();
+      updates.loadUnread();
+      updates.loadHistory();
     }
   }
 );
@@ -32,6 +44,21 @@ function fmtTime(s: string | null) {
     return "";
   }
 }
+function fmtDay(s: string | null) {
+  if (!s) return "";
+  try {
+    return new Date(s).toLocaleDateString("ru-RU", {
+      day: "numeric",
+      month: "short",
+    });
+  } catch {
+    return "";
+  }
+}
+function openNews(item: any) {
+  bell.close();
+  updates.preview(item);
+}
 </script>
 <template>
   <Dialog
@@ -40,7 +67,7 @@ function fmtTime(s: string | null) {
     :draggable="false"
     :closable="true"
     position="top"
-    :style="{ width: '380px', maxWidth: 'calc(100vw - 1.5rem)', marginTop: '4.5rem', maxHeight: '80dvh' }"
+    :style="{ width: '400px', maxWidth: 'calc(100vw - 1.5rem)', marginTop: '4.5rem', maxHeight: '80dvh' }"
     :pt="{
       root: {
         class: '!rounded-[24px] p-2 !border-stone-200 dark:!border-zinc-800 overflow-hidden',
@@ -64,17 +91,24 @@ function fmtTime(s: string | null) {
           </div>
         </div>
         <Badge
-          v-if="bell.unreadCount.value + bell.pending.value.length + pinAct.unread.value + admRep.pendingCount.value"
-          :value="(bell.unreadCount.value + bell.pending.value.length + pinAct.unread.value + admRep.pendingCount.value)>9?'9+':String(bell.unreadCount.value + bell.pending.value.length + pinAct.unread.value + admRep.pendingCount.value)"
+          v-if="bell.unreadCount.value + bell.pending.value.length + pinAct.unread.value + admRep.pendingCount.value + updates.unreadCount.value"
+          :value="(bell.unreadCount.value + bell.pending.value.length + pinAct.unread.value + admRep.pendingCount.value + updates.unreadCount.value)>9?'9+':String(bell.unreadCount.value + bell.pending.value.length + pinAct.unread.value + admRep.pendingCount.value + updates.unreadCount.value)"
           severity="danger"
         />
       </div>
     </template>
     <div class="px-3 pb-3">
+      <Tabs v-model:value="bell.tab.value">
+        <TabList class="!bg-transparent" :pt="{ activeBar: { class: '!bg-violet-600' } }">
+          <Tab value="events" class="!text-[13px] !font-bold">События</Tab>
+          <Tab v-if="!bell.isAdmin.value" value="news" class="!text-[13px] !font-bold">
+            <span class="flex items-center gap-1.5">Новости<Badge v-if="updates.unreadCount.value" :value="updates.unreadCount.value > 9 ? '9+' : String(updates.unreadCount.value)" severity="info" /></span>
+          </Tab>
+        </TabList>
+        <TabPanels class="!p-0 !bg-transparent">
+          <TabPanel value="events">
       <div v-if="bell.loading.value" class="py-10 grid place-items-center">
-        <span
-          class="w-6 h-6 border-2 border-violet-200 border-t-violet-600 rounded-full animate-spin"
-        ></span>
+        <ProgressSpinner style="width:26px;height:26px" :strokeWidth="6" />
       </div>
       <template v-else>
         <div v-if="!bell.hasData.value && !pinAct.activities.value.length && !admRep.reports.value.length" class="py-10 text-center">
@@ -120,12 +154,13 @@ function fmtTime(s: string | null) {
                 <i class="pi pi-chevron-right text-stone-300 text-xs shrink-0"></i>
               </button>
             </div>
-            <button
+            <Button
               @click="bell.close(); admRep.goReports()"
-              class="w-full mt-1 text-xs font-semibold text-violet-600 hover:text-violet-700 py-1.5"
-            >
-              Открыть жалобы →
-            </button>
+              label="Открыть жалобы →"
+              link
+              size="small"
+              class="w-full !text-xs"
+            />
           </div>
           <div v-if="pinAct.activities.value.length" class="mb-3">
             <div
@@ -137,13 +172,14 @@ function fmtTime(s: string | null) {
                 class="bg-rose-500 text-white text-[10px] px-1.5 py-0.5 rounded-full"
                 >{{ pinAct.unread.value }}</span
               >
-              <button
+              <Button
                 v-if="pinAct.unread.value"
                 @click="pinAct.markAllRead()"
-                class="ml-auto text-[11px] font-semibold text-violet-600 hover:text-violet-700 normal-case tracking-normal"
-              >
-                Прочитать все
-              </button>
+                label="Прочитать все"
+                link
+                size="small"
+                class="ml-auto !text-[11px]"
+              />
             </div>
             <div class="space-y-1">
               <button
@@ -228,12 +264,13 @@ function fmtTime(s: string | null) {
                 ></span>
               </button>
             </div>
-            <button
+            <Button
               @click="bell.goRequests()"
-              class="w-full mt-1 text-xs font-semibold text-violet-600 hover:text-violet-700 py-1.5"
-            >
-              Открыть заявки →
-            </button>
+              label="Открыть заявки →"
+              link
+              size="small"
+              class="w-full !text-xs"
+            />
           </div>
           <div v-if="bell.conversations.value.length" class="mb-1">
             <div
@@ -289,6 +326,46 @@ function fmtTime(s: string | null) {
           </div>
         </template>
       </template>
+          </TabPanel>
+          <TabPanel v-if="!bell.isAdmin.value" value="news">
+            <div v-if="updates.loading.value" class="py-10 grid place-items-center">
+              <ProgressSpinner style="width:26px;height:26px" :strokeWidth="6" />
+            </div>
+            <div v-else-if="!updates.history.value.length" class="py-10 text-center">
+              <div class="w-12 h-12 rounded-2xl bg-stone-100 dark:bg-zinc-800 grid place-items-center mx-auto text-xl">✨</div>
+              <div class="text-sm font-semibold dark:text-white mt-3">Новостей пока нет</div>
+              <div class="text-xs text-stone-500 mt-1">Здесь появятся заметки о новых функциях</div>
+            </div>
+            <div v-else>
+              <div class="px-2 py-1.5 flex items-center gap-1.5">
+                <span class="text-[11px] font-bold tracking-widest uppercase text-stone-400">Что нового</span>
+                <Tag v-if="updates.unreadCount.value" :value="`новых: ${updates.unreadCount.value}`" severity="info" class="!text-[10px]" />
+                <Button v-if="updates.unreadCount.value" @click="updates.dismissAll()" label="Прочитать все" link size="small" class="ml-auto !text-[11px]" />
+              </div>
+              <div class="space-y-1">
+                <button
+                  v-for="n in updates.sortedHistory.value"
+                  :key="n.id"
+                  @click="openNews(n)"
+                  :class="!n.is_read ? 'bg-sky-50 dark:bg-sky-500/10 border border-sky-200 dark:border-sky-800' : 'hover:bg-stone-50 dark:hover:bg-zinc-800 border border-transparent'"
+                  class="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition"
+                >
+                  <span class="w-10 h-10 rounded-full bg-gradient-to-br from-violet-600 to-indigo-600 text-white grid place-items-center shrink-0"><i class="pi pi-sparkles text-sm"></i></span>
+                  <div class="min-w-0 flex-1">
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-sm font-semibold dark:text-white truncate">{{ n.title }}</span>
+                      <span v-if="n.published_at" class="text-[11px] text-stone-400 shrink-0">{{ fmtDay(n.published_at) }}</span>
+                    </div>
+                    <div class="text-xs text-stone-500 dark:text-zinc-400 truncate">{{ (n.body || '').slice(0, 80) }}</div>
+                  </div>
+                  <span v-if="!n.is_read" class="w-2.5 h-2.5 bg-sky-500 rounded-full shrink-0"></span>
+                  <i v-else class="pi pi-chevron-right text-stone-300 text-xs shrink-0"></i>
+                </button>
+              </div>
+            </div>
+          </TabPanel>
+        </TabPanels>
+      </Tabs>
     </div>
   </Dialog>
 </template>

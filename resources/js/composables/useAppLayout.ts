@@ -7,6 +7,7 @@ import { useAppNotifications } from '@/composables/useAppNotifications'
 import { useBellNotifications } from '@/composables/useBellNotifications'
 import { usePinActivity } from '@/composables/usePinActivity'
 import { useAdminReports } from '@/composables/useAdminReports'
+import { useAppUpdates } from '@/composables/useAppUpdates'
 
 export function useAppLayout() {
   const badge = useBadgeStore()
@@ -16,12 +17,15 @@ export function useAppLayout() {
   const bell = useBellNotifications()
   const pinActivity = usePinActivity()
   const adminReports = useAdminReports()
+  const updates = useAppUpdates()
   const showDrawer = ref(false)
   const menu = ref()
+  const isAdmin = computed(() => !!user.value?.is_admin || user.value?.role === 'admin')
   const menuItems = computed(() => [
     { label: user.value?.name || '', sublabel: user.value?.email || '', isHeader: true },
     { separator: true },
     { label: 'Профиль', icon: 'pi pi-user', accent: 'violet', active: route().current('dashboard'), command: () => router.visit(dashboardHref.value) },
+    ...(isAdmin.value ? [{ label: 'Админ-панель', icon: 'pi pi-shield', accent: 'amber', active: route().current('admin'), command: () => router.visit(route('admin')) }] : []),
     { label: 'Настройки', icon: 'pi pi-cog', accent: 'slate', active: route().current('profile.edit'), command: () => router.visit(settingsHref.value) },
     { label: 'Карта', icon: 'pi pi-map', accent: 'teal', active: route().current('map'), command: () => router.visit(route('map')) },
     { separator: true },
@@ -40,8 +44,8 @@ export function useAppLayout() {
     router.post(route('logout'))
   }
   function logout() { doLogout() }
-  onMounted(() => { badge.init(); presence.connect(); appNotes.init(); pinActivity.init(); adminReports.init() })
+  onMounted(() => { badge.init(); presence.connect(); appNotes.init(); pinActivity.init(); adminReports.init(); updates.init() })
   onBeforeUnmount(() => presence.disconnect())
   router.on('navigate', () => { presence.connect(); showDrawer.value = false })
-  return { badge, presence, user, avatarSrc, dashboardHref, settingsHref, bell, pinActivity, adminReports, showDrawer, menu, menuItems, toggleMenu, closeDrawer, logout }
+  return { badge, presence, user, avatarSrc, dashboardHref, settingsHref, bell, pinActivity, adminReports, updates, showDrawer, menu, menuItems, isAdmin, toggleMenu, closeDrawer, logout }
 }

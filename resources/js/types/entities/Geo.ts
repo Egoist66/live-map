@@ -17,6 +17,7 @@ export interface NominatimAddress {
   state?: string
   postcode?: string
   country?: string
+  country_code?: string
 }
 
 export interface NominatimReverseResponse {

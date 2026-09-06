@@ -17,6 +17,7 @@ const emit = defineEmits<{ (e: 'update:open', v: boolean): void; (e: 'logout'): 
       <Link :href="route('map')" class="flex p-3 rounded-xl hover:bg-stone-50 dark:hover:bg-zinc-800 font-medium text-ink-900 dark:text-white" @click="emit('update:open', false)">Карта</Link>
       <Link :href="route('chat')" class="flex items-center justify-between p-3 rounded-xl hover:bg-stone-50 dark:hover:bg-zinc-800 font-medium text-ink-900 dark:text-white" @click="emit('update:open', false)">Чат</Link>
       <Link :href="route('faq')" class="flex p-3 rounded-xl hover:bg-stone-50 dark:hover:bg-zinc-800 font-medium text-ink-900 dark:text-white" @click="emit('update:open', false)">FAQ</Link>
+      <Link v-if="user?.is_admin || user?.role === 'admin'" :href="route('admin')" class="flex items-center gap-2 p-3 rounded-xl bg-stone-100 dark:bg-zinc-800 hover:bg-stone-200 dark:hover:bg-zinc-700 font-semibold text-ink-900 dark:text-white" @click="emit('update:open', false)"><i class="pi pi-shield text-sm" />Админ-панель</Link>
       <Link href="/map" class="flex bg-ink-900 dark:bg-white dark:text-ink-900 text-white rounded-full px-4 py-2.5 text-sm font-semibold justify-center mt-2" @click="emit('update:open', false)">+ Создать пин</Link>
     </div>
     <template #footer>

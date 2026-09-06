@@ -11,13 +11,13 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['name', 'email', 'password', 'gender', 'plan', 'latitude', 'longitude', 'role', 'is_admin', 'is_hidden_from_search', 'avatar_path', 'home_lat', 'home_lng', 'home_city', 'home_address', 'home_visibility', 'home_show_exact', 'home_radius_km', 'bio', 'reputation_score', 'level', 'is_anonymous_default', 'default_location_precision', 'default_blur_meters', 'message_privacy', 'allow_random_messages', 'settings', 'last_seen_at', 'is_invisible', 'screen_lock_code', 'screen_lock_timeout', 'screen_lock_kind', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at'])]
+#[Fillable(['name', 'email', 'password', 'gender', 'birth_date', 'country', 'country_code', 'plan', 'latitude', 'longitude', 'role', 'is_admin', 'is_hidden_from_search', 'avatar_path', 'home_lat', 'home_lng', 'home_city', 'home_address', 'home_visibility', 'home_show_exact', 'home_radius_km', 'bio', 'reputation_score', 'level', 'is_anonymous_default', 'default_location_precision', 'default_blur_meters', 'message_privacy', 'allow_random_messages', 'settings', 'last_seen_at', 'is_invisible', 'screen_lock_code', 'screen_lock_timeout', 'screen_lock_kind', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at'])]
 #[Hidden(['password', 'remember_token', 'screen_lock_code'])]
 class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
-    protected $appends = ['avatar_url'];
+    protected $appends = ['avatar_url', 'age'];
 
     protected static function booted(): void
     {
@@ -40,6 +40,19 @@ class User extends Authenticatable
             if (!$this->avatar_path) return null;
             $disk = config('filesystems.default') === 's3' && config('filesystems.disks.s3.bucket') ? 's3' : 'public';
             return Storage::disk($disk)->url($this->avatar_path);
+        });
+    }
+
+    protected function age(): Attribute
+    {
+        return Attribute::get(function (): ?int {
+            if (!$this->birth_date) return null;
+            try {
+                $d = $this->birth_date instanceof \DateTimeInterface ? \Carbon\Carbon::parse($this->birth_date) : \Carbon\Carbon::parse((string) $this->birth_date);
+                return $d->age;
+            } catch (\Throwable) {
+                return null;
+            }
         });
     }
 
@@ -243,6 +256,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'birth_date' => 'date',
             'home_lat' => 'decimal:7',
             'home_lng' => 'decimal:7',
             'home_show_exact' => 'boolean',

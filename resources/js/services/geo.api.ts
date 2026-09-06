@@ -30,3 +30,13 @@ export async function reverseGeocodeRaw(lat: number, lng: number, zoom = 14): Pr
   const display = [road, city].filter(Boolean).join(' · ') || d.display_name?.split(',').slice(0, 2).join(', ') || `${lat}, ${lng}`
   return { address: display, raw: d }
 }
+
+export async function reverseGeocodeCountry(lat: number, lng: number): Promise<{ country: string | null; country_code: string | null }> {
+  const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=3&accept-language=ru`)
+  if (!r.ok) throw new Error('Geocode failed')
+  const d = (await r.json()) as NominatimReverseResponse
+  const a: any = d.address || {}
+  const country = a.country ? String(a.country) : null
+  const country_code = a.country_code ? String(a.country_code).toLowerCase() : null
+  return { country, country_code }
+}

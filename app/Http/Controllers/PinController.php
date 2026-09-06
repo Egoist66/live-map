@@ -7,6 +7,7 @@ use App\Events\PinDeleted;
 use App\Events\PinUpdated;
 use App\Models\Pin;
 use App\Services\ContentModeration;
+use App\Services\CountryResolver;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -83,7 +84,12 @@ class PinController extends Controller
             'photo_path' => 'sometimes|nullable|string|max:255',
             'radius_meters' => 'sometimes|integer|min:500|max:500000',
             'publish_at' => 'sometimes|nullable|date|after:now|before:+31 days',
+            'user_lat' => 'sometimes|nullable|numeric|between:-90,90',
+            'user_lng' => 'sometimes|nullable|numeric|between:-180,180',
         ]);
+
+        CountryResolver::assertPinAllowed($user, (float) $data['latitude'], (float) $data['longitude'], isset($data['user_lat']) ? (float) $data['user_lat'] : null, isset($data['user_lng']) ? (float) $data['user_lng'] : null);
+        unset($data['user_lat'], $data['user_lng']);
 
         ContentModeration::assertClean($data['title'] ?? null, $data['body'] ?? null);
         $data['category'] = Pin::normalizeCategory($data['category']);

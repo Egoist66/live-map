@@ -11,9 +11,11 @@ import SettingsMyPinsTab from '@/Components/Features/Settings/SettingsMyPinsTab.
 import SettingsPrivacyTab from '@/Components/Features/Settings/SettingsPrivacyTab.vue'
 import SettingsAppearanceTab from '@/Components/Features/Settings/SettingsAppearanceTab.vue'
 import SettingsSecurityTab from '@/Components/Features/Settings/SettingsSecurityTab.vue'
+import SettingsProceduresTab from '@/Components/Features/Settings/SettingsProceduresTab.vue'
 import SettingsSupportTab from '@/Components/Features/Settings/SettingsSupportTab.vue'
 import SettingsAppTab from '@/Components/Features/Settings/SettingsAppTab.vue'
 import SettingsAdminTab from '@/Components/Features/Settings/SettingsAdminTab.vue'
+import AdminImpersonateDialog from '@/Components/Features/Admin/AdminImpersonateDialog.vue'
 import AvatarPreview from '@/Components/Features/Media/AvatarPreview.vue'
 import Toast from 'primevue/toast'
 import Tabs from 'primevue/tabs'
@@ -50,15 +52,17 @@ const { setTheme } = useTheme()
                 <TabPanel value="3"><SettingsPrivacyTab :user="s.u.value" :invisible="s.invisible" :hidden="s.hidden" :blur="s.blur" @profile="s.active.value = 'profile'" /></TabPanel>
                 <TabPanel value="4"><SettingsAppearanceTab :theme="s.theme.value" @theme="setTheme" /></TabPanel>
                 <TabPanel value="5"><SettingsSecurityTab /></TabPanel>
-                <TabPanel value="6"><SettingsSupportTab :subject="s.support.supportSubject.value" @update:subject="(v:string)=>s.support.supportSubject.value=v" :body="s.support.supportBody.value" @update:body="(v:string)=>s.support.supportBody.value=v" :donate-sel="s.support.donateSel.value" @update:donate="s.support.setDonate" :rate="s.ex.usdRate.value" :rate-loading="s.ex.loading.value" @send="s.support.mailToSupport()" @donate="s.support.mailToDonate(s.ex)" @reload="s.ex.load" /></TabPanel>
-                <TabPanel value="7"><SettingsAppTab /></TabPanel>
-                <TabPanel v-if="s.isAdmin.value" value="8"><SettingsAdminTab :admin="s.admin" :reports="s.reports" /></TabPanel>
+                <TabPanel value="6"><SettingsProceduresTab :proc="s.proc" /></TabPanel>
+                <TabPanel value="7"><SettingsSupportTab :subject="s.support.supportSubject.value" @update:subject="(v:string)=>s.support.supportSubject.value=v" :body="s.support.supportBody.value" @update:body="(v:string)=>s.support.supportBody.value=v" :donate-sel="s.support.donateSel.value" @update:donate="s.support.setDonate" :rate="s.ex.usdRate.value" :rate-loading="s.ex.loading.value" @send="s.support.mailToSupport()" @donate="s.support.mailToDonate(s.ex)" @reload="s.ex.load" /></TabPanel>
+                <TabPanel value="8"><SettingsAppTab /></TabPanel>
+                <TabPanel v-if="s.isAdmin.value" value="9"><SettingsAdminTab :admin="s.admin" :reports="s.reports" :imp="s.imp" /></TabPanel>
               </TabPanels>
             </Tabs>
           </div>
         </div>
       </div>
       <AvatarPreview :src="s.avatarSrc.value" :name="s.u.value.name" :open="s.showAvatar.value" @close="s.showAvatar.value = false" />
+      <AdminImpersonateDialog :imp="s.imp" />
     </div>
   </AuthenticatedLayout>
 </template>

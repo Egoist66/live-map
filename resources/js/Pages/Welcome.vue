@@ -2,6 +2,7 @@
 import { Head, Link, usePage } from '@inertiajs/vue3'
 import { computed } from 'vue'
 import { useSeo } from '@/composables/useSeo'
+import { useNavigation } from '@/composables/useNavigation'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import Tag from 'primevue/tag'
@@ -14,12 +15,7 @@ const seo = useSeo({
 })
 const page = usePage()
 const isAuthenticated = computed(() => !!(page.props.auth as any)?.user)
-const dashboardHref = computed(() => {
-  const u = (page.props.auth as any)?.user
-  if (!u) return route('dashboard')
-  const id = u.is_admin || u.role === 'admin' ? 'admin' : String(u.id)
-  return route('dashboard', { identifier: id })
-})
+const { dashboardHref } = useNavigation()
 </script>
 
 <template>

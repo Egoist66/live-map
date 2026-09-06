@@ -91,10 +91,31 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::post('/push-subscriptions', [PushSubscriptionController::class, 'store']);
     Route::delete('/push-subscriptions', [PushSubscriptionController::class, 'destroy']);
     Route::post('/push-subscriptions/test', [PushSubscriptionController::class, 'test']);
+
+    Route::post('/admin/impersonation/stop', [\App\Http\Controllers\AdminImpersonationController::class, 'stop']);
+    Route::get('/security/impersonations', [\App\Http\Controllers\AdminImpersonationController::class, 'myHistory']);
+    Route::post('/security/impersonations/read', [\App\Http\Controllers\AdminImpersonationController::class, 'markSeen']);
+
+    Route::get('/updates', [\App\Http\Controllers\AppUpdateController::class, 'index']);
+    Route::get('/updates/unread', [\App\Http\Controllers\AppUpdateController::class, 'unread']);
+    Route::post('/updates/{appUpdate}/read', [\App\Http\Controllers\AppUpdateController::class, 'markRead']);
+    Route::post('/updates/read-all', [\App\Http\Controllers\AppUpdateController::class, 'markAllRead']);
 });
 
 Route::middleware(['web', 'auth', 'admin'])->group(function () {
+    Route::get('/admin/updates', [\App\Http\Controllers\AdminAppUpdateController::class, 'index']);
+    Route::post('/admin/updates', [\App\Http\Controllers\AdminAppUpdateController::class, 'store']);
+    Route::patch('/admin/updates/{appUpdate}', [\App\Http\Controllers\AdminAppUpdateController::class, 'update']);
+    Route::delete('/admin/updates/{appUpdate}', [\App\Http\Controllers\AdminAppUpdateController::class, 'destroy']);
+    Route::get('/admin/monitoring/overview', [\App\Http\Controllers\AdminMonitoringController::class, 'overview']);
+    Route::get('/admin/monitoring/chart', [\App\Http\Controllers\AdminMonitoringController::class, 'chart']);
+    Route::get('/admin/monitoring/export', [\App\Http\Controllers\AdminMonitoringController::class, 'export']);
+    Route::get('/admin/monitoring/online', [\App\Http\Controllers\AdminMonitoringController::class, 'online']);
+    Route::get('/admin/monitoring/users', [\App\Http\Controllers\AdminMonitoringController::class, 'users']);
+    Route::get('/admin/users', [AdminUserController::class, 'index']);
     Route::get('/admin/users/search', [AdminUserController::class, 'search']);
+    Route::patch('/admin/users/{user}', [AdminUserController::class, 'update']);
     Route::patch('/admin/users/{user}/visibility', [AdminUserController::class, 'updateVisibility']);
     Route::delete('/admin/users/{user}', [AdminUserController::class, 'destroy']);
+    Route::post('/admin/users/{user}/impersonate', [\App\Http\Controllers\AdminImpersonationController::class, 'impersonate']);
 });

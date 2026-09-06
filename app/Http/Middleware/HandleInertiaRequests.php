@@ -33,6 +33,8 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'auth' => [
                 'user' => $request->user(),
+                'impersonating' => session()->has('impersonator_id'),
+                'impersonator_id' => session('impersonator_id'),
             ],
             'unreadCount' => $request->user() ? $request->user()->unreadMessagesCount() : 0,
         ];

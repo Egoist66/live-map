@@ -4,6 +4,7 @@ import AvatarPreview from '@/Components/Features/Media/AvatarPreview.vue'
 import { useProfileForm } from '@/composables/useProfileForm'
 import { useAvatarUpload } from '@/composables/useAvatarUpload'
 import { useGender } from '@/composables/useGender'
+import { RESIDENCE_COUNTRIES } from '@/composables/useResidence'
 import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
@@ -11,6 +12,7 @@ import Button from 'primevue/button'
 import Checkbox from 'primevue/checkbox'
 import Card from 'primevue/card'
 import Select from 'primevue/select'
+import DatePicker from 'primevue/datepicker'
 import Message from 'primevue/message'
 import Avatar from 'primevue/avatar'
 import HomeZoneField from '@/Components/Features/HomeZone/HomeZoneField.vue'
@@ -87,6 +89,25 @@ const planOptions = [{ label:'Free — 3/день · 5км', value:'free', icon:
           </template>
         </Select>
         <Message v-if="f.errors.value.gender" severity="error" :closable="false" class="mt-1 !rounded-xl !py-1 !text-xs">{{ f.errors.value.gender }}</Message>
+      </div>
+      <div class="grid sm:grid-cols-3 gap-4">
+        <div>
+          <label class="text-sm font-medium dark:text-white">Дата рождения</label>
+          <DatePicker v-model="f.birth_date.value" dateFormat="yy-mm-dd" :maxDate="new Date()" showIcon fluid placeholder="1997-05-20" class="w-full mt-1" :invalid="!!f.errors.value.birth_date" />
+          <small v-if="f.ageLabel.value" class="text-stone-500 dark:text-zinc-400">{{ f.ageLabel.value }}</small>
+          <Message v-if="f.errors.value.birth_date" severity="error" :closable="false" class="mt-1 !rounded-xl !py-1 !text-xs">{{ f.errors.value.birth_date }}</Message>
+        </div>
+        <div>
+          <label class="text-sm font-medium dark:text-white">Страна проживания</label>
+          <Select v-model="f.country.value" :options="[...RESIDENCE_COUNTRIES]" optionLabel="name" optionValue="name" placeholder="Беларусь" checkmark editable fluid class="w-full mt-1 !rounded-xl" :pt="selectPt" @update:model-value="(v:string)=>{ const c=[...RESIDENCE_COUNTRIES].find(x=>x.name===v); f.setValues({ country: v, country_code: c ? c.code : (f.values as any).country_code } as any) }" />
+          <p class="text-[11px] text-stone-400 mt-1">Пины — только в своей стране</p>
+          <Message v-if="f.errors.value.country" severity="error" :closable="false" class="mt-1 !rounded-xl !py-1 !text-xs">{{ f.errors.value.country }}</Message>
+        </div>
+        <div>
+          <label class="text-sm font-medium dark:text-white">Город проживания</label>
+          <InputText v-model="f.home_city.value" placeholder="Минск" class="w-full mt-1 !rounded-2xl" :invalid="!!f.errors.value.home_city" />
+          <Message v-if="f.errors.value.home_city" severity="error" :closable="false" class="mt-1 !rounded-xl !py-1 !text-xs">{{ f.errors.value.home_city }}</Message>
+        </div>
       </div>
       <Card class="!bg-zinc-50 dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 !rounded-3xl !shadow-none" :pt="{ body:{ class:'!p-4' }, content:{ class:'!p-0' } }">
         <template #content>

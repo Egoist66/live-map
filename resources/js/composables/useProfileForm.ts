@@ -5,6 +5,8 @@ import { usePage, router } from '@inertiajs/vue3'
 import { useToast } from 'primevue/usetoast'
 import { maxHomeRadiusKm } from './usePlanLimits'
 import { useHomeLocation } from './useHomeLocation'
+import { useUserAge } from './useUserAge'
+import { normalizeCountryCode } from './useResidence'
 import { reverseGeocode } from '@/services/geo.api'
 
 export function useProfileForm() {
@@ -17,6 +19,9 @@ export function useProfileForm() {
     initialValues: {
       name: user.value.name,
       gender: user.value.gender || null,
+      birth_date: user.value.birth_date ? String(user.value.birth_date).slice(0, 10) : null,
+      country: user.value.country || null,
+      country_code: user.value.country_code || null,
       email: user.value.email,
       home_lat: user.value.home_lat || null,
       home_lng: user.value.home_lng || null,
@@ -31,10 +36,13 @@ export function useProfileForm() {
     } as any,
   })
 
-  watch(user, (u) => setValues({ name: u.name, gender: u.gender || null, email: u.email, home_lat: u.home_lat || null, home_lng: u.home_lng || null, home_city: u.home_city || null, home_address: u.home_address || null, home_visibility: u.home_visibility || 'everyone', home_show_exact: !!u.home_show_exact, home_radius_km: u.home_radius_km || 5, bio: u.bio || null, is_anonymous_default: !!u.is_anonymous_default, plan: u.plan || 'free' } as any))
+  watch(user, (u) => setValues({ name: u.name, gender: u.gender || null, birth_date: u.birth_date ? String(u.birth_date).slice(0, 10) : null, country: u.country || null, country_code: u.country_code || null, email: u.email, home_lat: u.home_lat || null, home_lng: u.home_lng || null, home_city: u.home_city || null, home_address: u.home_address || null, home_visibility: u.home_visibility || 'everyone', home_show_exact: !!u.home_show_exact, home_radius_km: u.home_radius_km || 5, bio: u.bio || null, is_anonymous_default: !!u.is_anonymous_default, plan: u.plan || 'free' } as any))
 
   const [name, nameAttrs] = defineField('name')
   const [gender] = defineField('gender')
+  const [birth_date] = defineField('birth_date')
+  const [country] = defineField('country')
+  const [country_code] = defineField('country_code')
   const [email, emailAttrs] = defineField('email')
   const [home_lat, homeLatAttrs] = defineField('home_lat')
   const [home_lng, homeLngAttrs] = defineField('home_lng')
@@ -87,6 +95,8 @@ export function useProfileForm() {
       payload.bio = t === '' ? null : t
     }
     if (payload.bio === '') payload.bio = null
+    if (payload.country_code) payload.country_code = normalizeCountryCode(payload.country_code)
+    if (payload.birth_date === '') payload.birth_date = null
     router.patch(route('profile.update'), payload, {
       preserveScroll: true,
       onSuccess: () => toast?.add({ severity: 'success', summary: 'Профиль сохранён', life: 2000 }),
@@ -94,5 +104,7 @@ export function useProfileForm() {
     })
   })
 
-  return { user, name, nameAttrs, gender, email, emailAttrs, canChangeEmail, home_lat, homeLatAttrs, home_lng, homeLngAttrs, home_city, home_address, home_visibility, home_show_exact, home_radius_km, bio, is_anonymous_default, plan, errors, values, setValues, submit, isSubmitting, useMyLocation, maxRadius, homeLocation }
+  const age = useUserAge(() => (values as any).birth_date)
+
+  return { user, name, nameAttrs, gender, birth_date, age: age.age, ageLabel: age.label, country, country_code, email, emailAttrs, canChangeEmail, home_lat, homeLatAttrs, home_lng, homeLngAttrs, home_city, home_address, home_visibility, home_show_exact, home_radius_km, bio, is_anonymous_default, plan, errors, values, setValues, submit, isSubmitting, useMyLocation, maxRadius, homeLocation }
 }

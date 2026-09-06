@@ -11,6 +11,12 @@ const toNumberOrNull = (v: unknown) => {
   return Number.isNaN(n) ? v : n
 }
 
+const toBirthDate = (v: unknown) => {
+  if (v === '' || v === undefined || v === null) return null
+  if (v instanceof Date) return Number.isNaN(v.getTime()) ? v : v.toISOString().slice(0, 10)
+  return v
+}
+
 const MAX_BY_PLAN: Record<string, number> = { free: 5, pro: 15, business: 50 }
 
 export const updateProfileSchema = toTypedSchema(
@@ -18,6 +24,9 @@ export const updateProfileSchema = toTypedSchema(
     .object({
       name: z.string().min(1, 'Имя обязательно').max(255),
       gender: z.enum(['male', 'female', 'other']).nullable().optional(),
+      birth_date: z.preprocess(toBirthDate, z.string().max(10).nullable().optional()).refine((v) => v == null || (!Number.isNaN(new Date(v as string).getTime()) && new Date(v as string) < new Date()), { message: 'Некорректная дата рождения' }),
+      country: z.preprocess((v) => (v === '' || v === undefined ? null : v), z.string().max(120).nullable().optional()),
+      country_code: z.preprocess((v) => (v === '' || v === undefined ? null : v), z.string().max(8).nullable().optional()),
       email: z.string().email('Некорректный email'),
       home_lat: z.preprocess(toNumberOrNull, z.number({ invalid_type_error: 'Широта должна быть числом' }).min(-90, 'Минимум -90').max(90, 'Максимум 90').nullable().optional()),
       home_lng: z.preprocess(toNumberOrNull, z.number({ invalid_type_error: 'Долгота должна быть числом' }).min(-180, 'Минимум -180').max(180, 'Максимум 180').nullable().optional()),

@@ -7,16 +7,10 @@ export function useNavigation() {
   const user = computed(() => (page.props.auth as any).user)
   const avatarSrc = computed(() => avatarSrcFor(user.value))
   const dashboardHref = computed(() => {
-    const u = user.value
-    if (!u) return route('dashboard')
-    const id = u.is_admin || u.role === 'admin' ? 'admin' : String(u.id)
-    return route('dashboard', { identifier: id })
+    return route('dashboard')
   })
   const settingsHref = computed(() => {
-    const u = user.value
-    if (!u) return route('profile.edit')
-    const id = u.is_admin || u.role === 'admin' ? 'admin' : String(u.id)
-    return route('profile.edit', { identifier: id })
+    return route('profile.edit')
   })
   return { user, avatarSrc, dashboardHref, settingsHref }
 }

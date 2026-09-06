@@ -13,13 +13,16 @@ export interface PinActivityItem {
 }
 
 export const pinActivityApi = {
-  list() {
-    return api.get('/api/pin-activities').then((r) => r.data?.data ?? r.data ?? [])
+  async list() {
+    const { data } = await api.get('/api/pin-activities')
+    return data?.data ?? data ?? []
   },
-  unreadCount() {
-    return api.get('/api/pin-activities/unread-count').then((r) => Number(r.data?.count ?? 0))
+  async unreadCount() {
+    const { data } = await api.get('/api/pin-activities/unread-count')
+    return Number(data?.count ?? 0)
   },
-  markRead(ids?: number[]) {
-    return api.post('/api/pin-activities/read', ids?.length ? { ids } : { all: true }).then((r) => r.data)
+  async markRead(ids?: number[]) {
+    const { data } = await api.post('/api/pin-activities/read', ids?.length ? { ids } : { all: true })
+    return data
   },
 }
