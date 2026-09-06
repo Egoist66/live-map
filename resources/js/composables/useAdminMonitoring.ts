@@ -133,6 +133,8 @@ export function useAdminMonitoring() {
     try {
       const d: any = await adminApi.updateUser(user.id, { plan })
       user.plan = d.plan
+      user.effective_plan = d.effective_plan ?? d.plan
+      user.plan_expires_at = d.plan_expires_at ?? null
     } finally { actingId.value = null }
   }
 

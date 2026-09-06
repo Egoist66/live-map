@@ -9,6 +9,7 @@ export interface MentionUser {
 }
 
 const MENTION_RE = /@([\p{L}\p{N}_]+(?: [\p{L}\p{N}_]+)?)/gu
+const URL_RE = /\bhttps?:\/\/[^\s<>"')\]]+/gi
 
 export function escapeHtml(s: string): string {
   return (s ?? '')
@@ -18,8 +19,50 @@ export function escapeHtml(s: string): string {
     .replace(/"/g, '&quot;')
 }
 
+function trimUrlEnd(url: string): string {
+  let end = url.length
+  while (end > 0 && '.,;:!?'.includes(url[end - 1])) end--
+  let balance = 0
+  for (let i = 0; i < end; i++) {
+    if (url[i] === '(') balance++
+    else if (url[i] === ')') balance--
+  }
+  while (end > 0 && url[end - 1] === ')' && balance < 0) {
+    end--
+    balance++
+  }
+  return url.slice(0, end)
+}
+
+function shortUrl(url: string): string {
+  return url.length > 64 ? `${url.slice(0, 61)}…` : url
+}
+
+function linkTag(url: string): string {
+  const safe = escapeHtml(url)
+  return `<a href="${safe}" title="${safe}" target="_blank" rel="noopener noreferrer nofollow" class="rich-link">${escapeHtml(shortUrl(url))}</a>`
+}
+
 export function renderWithMentions(text: string): string {
-  return escapeHtml(text).replace(MENTION_RE, '<span class="mention">@$1</span>')
+  const src = text ?? ''
+  const out: string[] = []
+  let last = 0
+  URL_RE.lastIndex = 0
+  let m: RegExpExecArray | null
+  while ((m = URL_RE.exec(src)) !== null) {
+    out.push(escapeHtml(src.slice(last, m.index)).replace(MENTION_RE, '<span class="mention">@$1</span>'))
+    const clean = trimUrlEnd(m[0])
+    const trail = m[0].slice(clean.length)
+    if (/^https?:\/\/.+\..+/.test(clean)) {
+      out.push(linkTag(clean))
+      out.push(escapeHtml(trail).replace(MENTION_RE, '<span class="mention">@$1</span>'))
+    } else {
+      out.push(escapeHtml(m[0]).replace(MENTION_RE, '<span class="mention">@$1</span>'))
+    }
+    last = m.index + m[0].length
+  }
+  out.push(escapeHtml(src.slice(last)).replace(MENTION_RE, '<span class="mention">@$1</span>'))
+  return out.join('')
 }
 
 export function useMentions() {

@@ -18,6 +18,7 @@ import SettingsAdminTab from '@/Components/Features/Settings/SettingsAdminTab.vu
 import AdminImpersonateDialog from '@/Components/Features/Admin/AdminImpersonateDialog.vue'
 import AvatarPreview from '@/Components/Features/Media/AvatarPreview.vue'
 import Toast from 'primevue/toast'
+import { planOf } from '@/composables/usePlanLimits'
 import Tabs from 'primevue/tabs'
 import TabList from 'primevue/tablist'
 import Tab from 'primevue/tab'
@@ -35,13 +36,13 @@ const { setTheme } = useTheme()
     <div class="bg-surface dark:bg-[#090E1A] min-h-[calc(100vh-64px)] overflow-x-hidden">
       <div class="max-w-[1280px] mx-auto px-3 sm:px-6 py-4 sm:py-6 overflow-hidden">
         <div class="grid lg:grid-cols-[300px_1fr] gap-4 sm:gap-6 items-start content-start w-full lg:items-start">
-          <SettingsSidebar :menu-model="s.menuModel.value" :plan="s.u.value.plan || 'free'" :pins-today="s.u.value.pins_today_count || 0" :pins-limit="s.u.value.plan === 'free' ? '3' : '∞'" :zone-count="s.zoneCount.value" @billing="s.active.value = 'billing'" />
+          <SettingsSidebar :menu-model="s.menuModel.value" :plan="planOf(s.u.value)" :pins-today="s.u.value.pins_today_count || 0" :pins-limit="planOf(s.u.value) === 'free' ? '3' : '∞'" :zone-count="s.zoneCount.value" :proc-unread="s.proc.unread.value" @billing="s.active.value = 'billing'" />
           <div class="space-y-4 min-w-0 w-full max-w-full lg:min-h-[600px] self-start">
             <Tabs :value="s.activeIndex.value" @update:value="(v:any)=>{ const e=s.tabs.value[Number(v)]; if(e) s.active.value=e.id as any }" class="settings-root w-full !mt-0">
               <TabList class="!flex lg:!hidden !bg-transparent !border-0 !gap-2 !px-1 settings-tabs" :pt="{ activeBar: { class: '!hidden' }, content: { class: '!flex !flex-wrap !gap-2 !overflow-visible' } }">
                 <Tab v-for="(t, idx) in s.tabs.value" :key="t.id" :value="String(idx)" class="!bg-transparent !border-0 !p-0 !shrink-0">
                   <div :class="['flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold border transition whitespace-nowrap', s.active.value === t.id ? '!bg-violet-600 !text-white !border-violet-600 shadow-soft' : 'bg-white text-stone-700 border-stone-200']">
-                    <i :class="[t.icon, 'text-xs']" /><span>{{ t.label }}</span>
+                    <i :class="[t.icon, 'text-xs']" /><span>{{ t.label }}</span><span v-if="t.id === 'procedures' && s.proc.unread.value" class="text-red-500 leading-none">❗</span>
                   </div>
                 </Tab>
               </TabList>

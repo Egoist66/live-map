@@ -53,7 +53,7 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
           <template v-if="isOwn">
             <Button icon="pi pi-pencil" rounded text class="!w-10 !h-10" @click="viewer.editing.value ? viewer.cancelEdit() : viewer.startEdit()" aria-label="Редактировать подпись" />
             <Button icon="pi pi-refresh" rounded text class="!w-10 !h-10" @click="viewer.onPickReplace" aria-label="Заменить фото" />
-            <input ref="viewer.replaceInput" type="file" accept="image/*" class="hidden" @change="viewer.onReplaceFile" />
+            <input :ref="viewer.setReplaceInput" type="file" accept="image/*" class="hidden" @change="viewer.onReplaceFile" />
           </template>
         </div>
         <div class="px-4 text-sm font-black">{{ gallery.active.value.likes_count }} отметок «Нравится»</div>

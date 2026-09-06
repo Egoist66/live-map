@@ -24,22 +24,22 @@ Route::middleware('throttle:60,1')->group(function () {
     Route::get('/nbrb/rates/{code?}', [NbrbController::class, 'rates'])->where('code', '[A-Za-z0-9]+');
 });
 
-Route::middleware(['web', 'auth'])->group(function () {
+Route::middleware(['web', 'auth', 'throttle:120,1'])->group(function () {
     Route::get('/pins/mine', [PinController::class, 'mine']);
     Route::get('/pins/mine/scheduled', [PinController::class, 'scheduled']);
     Route::get('/pins/mine/archived', [PinController::class, 'archived']);
-    Route::get('/pins', [PinController::class, 'index']);
-    Route::post('/pins', [PinController::class, 'store']);
+    Route::get('/pins', [PinController::class, 'index'])->middleware('throttle:pins-index');
+    Route::post('/pins', [PinController::class, 'store'])->middleware('throttle:pins-write');
     Route::patch('/pins/{pin}', [PinController::class, 'update']);
     Route::put('/pins/{pin}', [PinController::class, 'update']);
     Route::delete('/pins/{pin}', [PinController::class, 'destroy']);
-    Route::post('/pins/{pin}/boost', [PinController::class, 'boost']);
+    Route::post('/pins/{pin}/boost', [PinController::class, 'boost'])->middleware('throttle:pins-write');
     Route::get('/pins/{pin}/comments', [PinCommentController::class, 'index']);
-    Route::post('/pins/{pin}/comments', [PinCommentController::class, 'store']);
+    Route::post('/pins/{pin}/comments', [PinCommentController::class, 'store'])->middleware('throttle:comments-write');
     Route::patch('/comments/{comment}', [PinCommentController::class, 'update']);
     Route::put('/comments/{comment}', [PinCommentController::class, 'update']);
     Route::delete('/comments/{comment}', [PinCommentController::class, 'destroy']);
-    Route::post('/reactions/toggle', [ReactionController::class, 'toggle']);
+    Route::post('/reactions/toggle', [ReactionController::class, 'toggle'])->middleware('throttle:reactions');
     Route::get('/pin-activities', [PinActivityController::class, 'index']);
     Route::get('/pin-activities/unread-count', [PinActivityController::class, 'unreadCount']);
     Route::post('/pin-activities/read', [PinActivityController::class, 'read']);
@@ -47,61 +47,64 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::post('/admin/reports/{report}/resolve', [ReportController::class, 'resolve']);
     Route::apiResource('zone-subscriptions', ZoneSubscriptionController::class)->only(['index','store','destroy']);
     Route::get('/custom-categories', [CustomCategoryController::class, 'index']);
-    Route::post('/custom-categories', [CustomCategoryController::class, 'store']);
-    Route::delete('/custom-categories/{customCategory}', [CustomCategoryController::class, 'destroy']);
-    Route::post('/reports', [ReportController::class, 'store']);
+    Route::post('/custom-categories', [CustomCategoryController::class, 'store'])->middleware('throttle:social-write');
+    Route::delete('/custom-categories/{customCategory}', [CustomCategoryController::class, 'destroy'])->middleware('throttle:social-write');
+    Route::post('/reports', [ReportController::class, 'store'])->middleware('throttle:reports');
 
     Route::get('/chat/me', [ChatUserController::class, 'me']);
-    Route::post('/chat/heartbeat', [ChatUserController::class, 'heartbeat']);
-    Route::get('/chat/users/search', [ChatUserController::class, 'search']);
+    Route::post('/chat/heartbeat', [ChatUserController::class, 'heartbeat'])->middleware('throttle:chat-signal');
+    Route::get('/chat/users/search', [ChatUserController::class, 'search'])->middleware('throttle:chat-search');
     Route::patch('/chat/privacy', [ChatUserController::class, 'privacy']);
     Route::patch('/user/invisible', [\App\Http\Controllers\ProfileController::class, 'toggleInvisible']);
     Route::patch('/user/photo-comments-privacy', [\App\Http\Controllers\ProfilePhotoController::class, 'updatePrivacy']);
 
     Route::get('/users/{user}/photos', [\App\Http\Controllers\ProfilePhotoController::class, 'index']);
-    Route::post('/photos', [\App\Http\Controllers\ProfilePhotoController::class, 'store']);
-    Route::post('/photos/{photo}', [\App\Http\Controllers\ProfilePhotoController::class, 'update']);
-    Route::patch('/photos/{photo}', [\App\Http\Controllers\ProfilePhotoController::class, 'update']);
-    Route::delete('/photos/{photo}', [\App\Http\Controllers\ProfilePhotoController::class, 'destroy']);
-    Route::post('/photos/{photo}/like', [\App\Http\Controllers\ProfilePhotoController::class, 'toggleLike']);
+    Route::post('/photos', [\App\Http\Controllers\ProfilePhotoController::class, 'store'])->middleware('throttle:social-write');
+    Route::post('/photos/{photo}', [\App\Http\Controllers\ProfilePhotoController::class, 'update'])->middleware('throttle:social-write');
+    Route::patch('/photos/{photo}', [\App\Http\Controllers\ProfilePhotoController::class, 'update'])->middleware('throttle:social-write');
+    Route::delete('/photos/{photo}', [\App\Http\Controllers\ProfilePhotoController::class, 'destroy'])->middleware('throttle:social-write');
+    Route::post('/photos/{photo}/like', [\App\Http\Controllers\ProfilePhotoController::class, 'toggleLike'])->middleware('throttle:reactions');
     Route::get('/photos/{photo}/comments', [\App\Http\Controllers\ProfilePhotoController::class, 'comments']);
-    Route::post('/photos/{photo}/comments', [\App\Http\Controllers\ProfilePhotoController::class, 'storeComment']);
+    Route::post('/photos/{photo}/comments', [\App\Http\Controllers\ProfilePhotoController::class, 'storeComment'])->middleware('throttle:comments-write');
     Route::delete('/photo-comments/{comment}', [\App\Http\Controllers\ProfilePhotoController::class, 'destroyComment']);
 
     Route::get('/user/screen-lock', [\App\Http\Controllers\ScreenLockController::class, 'show']);
     Route::put('/user/screen-lock', [\App\Http\Controllers\ScreenLockController::class, 'update']);
     Route::delete('/user/screen-lock', [\App\Http\Controllers\ScreenLockController::class, 'destroy']);
-    Route::post('/user/screen-lock/verify', [\App\Http\Controllers\ScreenLockController::class, 'verify'])->middleware('throttle:30,1');
+    Route::post('/user/screen-lock/verify', [\App\Http\Controllers\ScreenLockController::class, 'verify'])->middleware('throttle:screen-lock');
 
     Route::get('/friendships', [FriendshipController::class, 'index']);
-    Route::post('/friendships', [FriendshipController::class, 'store']);
-    Route::post('/friendships/{friendship}/accept', [FriendshipController::class, 'accept']);
-    Route::post('/friendships/{friendship}/decline', [FriendshipController::class, 'decline']);
-    Route::delete('/friendships/{friendship}', [FriendshipController::class, 'destroy']);
+    Route::post('/friendships', [FriendshipController::class, 'store'])->middleware('throttle:social-write');
+    Route::post('/friendships/{friendship}/accept', [FriendshipController::class, 'accept'])->middleware('throttle:social-write');
+    Route::post('/friendships/{friendship}/decline', [FriendshipController::class, 'decline'])->middleware('throttle:social-write');
+    Route::delete('/friendships/{friendship}', [FriendshipController::class, 'destroy'])->middleware('throttle:social-write');
     Route::get('/friendships/status/{user}', [FriendshipController::class, 'status']);
     Route::patch('/friendships/{friendship}/hidden', [FriendshipController::class, 'toggleHidden']);
     Route::get('/users/{user}/friends', [FriendshipController::class, 'publicList']);
 
     Route::get('/blocks', [UserBlockController::class, 'index']);
-    Route::post('/blocks', [UserBlockController::class, 'store']);
-    Route::delete('/blocks/{user}', [UserBlockController::class, 'destroy']);
+    Route::post('/blocks', [UserBlockController::class, 'store'])->middleware('throttle:social-write');
+    Route::delete('/blocks/{user}', [UserBlockController::class, 'destroy'])->middleware('throttle:social-write');
 
     Route::get('/conversations', [ConversationController::class, 'index']);
-    Route::post('/conversations', [ConversationController::class, 'store']);
+    Route::post('/conversations', [ConversationController::class, 'store'])->middleware('throttle:social-write');
     Route::get('/conversations/{conversation}', [ConversationController::class, 'show']);
-    Route::post('/conversations/{conversation}/read', [ConversationController::class, 'markRead']);
-    Route::post('/conversations/{conversation}/delivered', [ConversationController::class, 'markDelivered']);
-    Route::delete('/conversations/{conversation}', [ConversationController::class, 'destroy']);
+    Route::post('/conversations/{conversation}/read', [ConversationController::class, 'markRead'])->middleware('throttle:chat-signal');
+    Route::post('/conversations/{conversation}/delivered', [ConversationController::class, 'markDelivered'])->middleware('throttle:chat-signal');
+    Route::delete('/conversations/{conversation}', [ConversationController::class, 'destroy'])->middleware('throttle:social-write');
 
     Route::get('/conversations/{conversation}/messages', [MessageController::class, 'index']);
-    Route::post('/conversations/{conversation}/messages', [MessageController::class, 'store']);
-    Route::post('/conversations/{conversation}/typing', [MessageController::class, 'typing']);
+    Route::post('/conversations/{conversation}/messages', [MessageController::class, 'store'])->middleware('throttle:messages-write');
+    Route::post('/conversations/{conversation}/typing', [MessageController::class, 'typing'])->middleware('throttle:chat-signal');
     Route::patch('/messages/{message}', [MessageController::class, 'update']);
     Route::delete('/messages/{message}', [MessageController::class, 'destroy']);
+    Route::get('/conversations/{conversation}/pinned', [MessageController::class, 'pinned']);
+    Route::post('/messages/{message}/pin', [MessageController::class, 'pin'])->middleware('throttle:pin-toggle');
+    Route::delete('/messages/{message}/pin', [MessageController::class, 'unpin'])->middleware('throttle:pin-toggle');
 
-    Route::post('/push-subscriptions', [PushSubscriptionController::class, 'store']);
-    Route::delete('/push-subscriptions', [PushSubscriptionController::class, 'destroy']);
-    Route::post('/push-subscriptions/test', [PushSubscriptionController::class, 'test']);
+    Route::post('/push-subscriptions', [PushSubscriptionController::class, 'store'])->middleware('throttle:social-write');
+    Route::delete('/push-subscriptions', [PushSubscriptionController::class, 'destroy'])->middleware('throttle:social-write');
+    Route::post('/push-subscriptions/test', [PushSubscriptionController::class, 'test'])->middleware('throttle:push-test');
 
     Route::post('/admin/impersonation/stop', [\App\Http\Controllers\AdminImpersonationController::class, 'stop']);
     Route::get('/security/impersonations', [\App\Http\Controllers\AdminImpersonationController::class, 'myHistory']);
@@ -113,7 +116,7 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::post('/updates/read-all', [\App\Http\Controllers\AppUpdateController::class, 'markAllRead']);
 });
 
-Route::middleware(['web', 'auth', 'admin'])->group(function () {
+Route::middleware(['web', 'auth', 'admin', 'throttle:120,1'])->group(function () {
     Route::get('/admin/updates', [\App\Http\Controllers\AdminAppUpdateController::class, 'index']);
     Route::post('/admin/updates', [\App\Http\Controllers\AdminAppUpdateController::class, 'store']);
     Route::patch('/admin/updates/{appUpdate}', [\App\Http\Controllers\AdminAppUpdateController::class, 'update']);
@@ -125,6 +128,11 @@ Route::middleware(['web', 'auth', 'admin'])->group(function () {
     Route::get('/admin/monitoring/users', [\App\Http\Controllers\AdminMonitoringController::class, 'users']);
     Route::get('/admin/users', [AdminUserController::class, 'index']);
     Route::get('/admin/users/search', [AdminUserController::class, 'search']);
+    Route::post('/admin/users/{user}/ban', [AdminUserController::class, 'ban']);
+    Route::delete('/admin/users/{user}/ban', [AdminUserController::class, 'unban']);
+    Route::get('/admin/login-attempts', [\App\Http\Controllers\AdminLoginAttemptController::class, 'index']);
+    Route::get('/admin/maintenance', [\App\Http\Controllers\AdminMaintenanceController::class, 'show']);
+    Route::put('/admin/maintenance', [\App\Http\Controllers\AdminMaintenanceController::class, 'update']);
     Route::patch('/admin/users/{user}', [AdminUserController::class, 'update']);
     Route::patch('/admin/users/{user}/visibility', [AdminUserController::class, 'updateVisibility']);
     Route::delete('/admin/users/{user}', [AdminUserController::class, 'destroy']);

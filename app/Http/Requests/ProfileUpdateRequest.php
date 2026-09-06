@@ -49,7 +49,7 @@ class ProfileUpdateRequest extends FormRequest
                 if (!$user || mb_strtolower((string) $value) === mb_strtolower((string) $user->email)) return;
                 $isAdmin = (bool) ($user->is_admin || $user->role === 'admin');
                 if ($isAdmin) return;
-                if (($user->plan ?? 'free') !== 'business') {
+                if (($user->effectivePlan() ?? 'free') !== 'business') {
                     $fail('Смена почты доступна на тарифе Business.');
                 }
             }],
@@ -63,7 +63,7 @@ class ProfileUpdateRequest extends FormRequest
                 $user = $this->user();
                 $isAdmin = (bool) ($user?->is_admin || $user?->role === 'admin');
                 if ($isAdmin) return;
-                $plan = $this->input('plan', $user?->plan ?? 'free');
+                $plan = $user?->effectivePlan() ?? 'free';
                 if (! in_array($plan, ['pro', 'business'])) {
                     $fail('Точное местоположение дома доступно на тарифе Pro/Business.');
                 }
@@ -72,7 +72,7 @@ class ProfileUpdateRequest extends FormRequest
                 if ($value === null || $value === '') return;
                 $isAdmin = (bool) ($this->user()?->is_admin || $this->user()?->role === 'admin');
                 if ($isAdmin) return;
-                $plan = $this->input('plan', $this->user()?->plan ?? 'free');
+                $plan = $this->user()?->effectivePlan() ?? 'free';
                 $max = $plan === 'business' ? 50 : ($plan === 'pro' ? 15 : 5);
                 if ((int) $value > $max) {
                     $need = $max >= 50 ? 'Business' : ($max >= 15 ? 'Pro' : 'Free (5 км)');
@@ -85,7 +85,6 @@ class ProfileUpdateRequest extends FormRequest
             'default_blur_meters' => ['nullable','integer','min:0','max:5000'],
             'avatar_path' => ['nullable','string','max:255'],
             'photo_comments_privacy' => ['nullable','in:everyone,friends,none'],
-            'plan' => ['nullable','in:free,pro,business'],
         ];
     }
 }

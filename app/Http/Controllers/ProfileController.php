@@ -168,7 +168,7 @@ class ProfileController extends Controller
                 $request->input('home_lng', $user->home_lng),
             );
         }
-        $user->fill($request->validated());
+        $user->fill($request->safe()->except(['plan', 'plan_expires_at']));
         if ($user->country_code) $user->country_code = mb_strtolower(trim((string) $user->country_code));
         if ($user->country) $user->country = trim(preg_replace('/\s+/', ' ', (string) $user->country));
 

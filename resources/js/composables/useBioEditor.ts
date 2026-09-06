@@ -64,5 +64,9 @@ export function useBioEditor(initial: string | null = null) {
 
   const sanitized = computed(() => sanitize(html.value))
 
-  return { editorRef, html, sanitized, empty, charCount, charOk, linkUrl, showLink, onInput, sync, toggle, heading, bullet, ordered, quote, clear, insertLink, sanitize }
+  function setEditorRef(el: unknown) {
+    editorRef.value = (el instanceof HTMLElement) ? el : null
+  }
+
+  return { editorRef, setEditorRef, html, sanitized, empty, charCount, charOk, linkUrl, showLink, onInput, sync, toggle, heading, bullet, ordered, quote, clear, insertLink, sanitize }
 }

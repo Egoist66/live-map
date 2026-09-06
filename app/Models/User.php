@@ -17,7 +17,29 @@ class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
-    protected $appends = ['avatar_url', 'age'];
+    protected $appends = ['avatar_url', 'age', 'effective_plan'];
+
+    public function getEffectivePlanAttribute(): string
+    {
+        return $this->effectivePlan();
+    }
+
+    public function isPlanExpired(): bool
+    {
+        if (empty($this->plan) || $this->plan === 'free') return false;
+        if ($this->plan_expires_at === null) return false;
+        try {
+            return \Carbon\Carbon::parse($this->plan_expires_at)->isPast();
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    public function effectivePlan(): string
+    {
+        if ($this->isPlanExpired()) return 'free';
+        return $this->plan ?? 'free';
+    }
 
     protected static function booted(): void
     {
@@ -71,6 +93,7 @@ class User extends Authenticatable
     public function profilePhotos() { return $this->hasMany(ProfilePhoto::class); }
 
     public function isAdmin(): bool { return $this->is_admin || $this->role === 'admin'; }
+    public function isBanned(): bool { return $this->banned_at !== null; }
     public function isModerator(): bool { return $this->isAdmin() || $this->role === 'moderator'; }
     public function hasRole(string $role): bool { return $this->role === $role || $this->isAdmin(); }
 
@@ -87,42 +110,42 @@ class User extends Authenticatable
     public function canCreatePin(): bool
     {
         if ($this->isAdmin()) return true;
-        if (in_array($this->plan, ['pro','business'])) return true;
+        if (in_array($this->effectivePlan(), ['pro','business'])) return true;
         return $this->livePinsCount() < self::FREE_PINS_LIMIT;
     }
 
     public function pinTtlHours(): ?int
     {
         if ($this->isAdmin()) return null;
-        if ($this->plan === 'business') return null;
-        if ($this->plan === 'pro') return 12;
+        if ($this->effectivePlan() === 'business') return null;
+        if ($this->effectivePlan() === 'pro') return 12;
         return 4;
     }
 
     public function pinRadius(): int
     {
         if ($this->isAdmin()) return 500000;
-        if ($this->plan === 'business') return 50000;
-        if ($this->plan === 'pro') return 15000;
+        if ($this->effectivePlan() === 'business') return 50000;
+        if ($this->effectivePlan() === 'pro') return 15000;
         return 5000;
     }
 
     public function homeRadiusLimit(): int
     {
         if ($this->isAdmin()) return 500;
-        if ($this->plan === 'business') return 50;
-        if ($this->plan === 'pro') return 15;
+        if ($this->effectivePlan() === 'business') return 50;
+        if ($this->effectivePlan() === 'pro') return 15;
         return 5;
     }
 
-    public function isPro(): bool { return $this->isAdmin() || in_array($this->plan, ['pro','business']); }
+    public function isPro(): bool { return $this->isAdmin() || in_array($this->effectivePlan(), ['pro','business']); }
 
-    public function canUseInvisible(): bool { return $this->isAdmin() || in_array($this->plan, ['pro','business']); }
+    public function canUseInvisible(): bool { return $this->isAdmin() || in_array($this->effectivePlan(), ['pro','business']); }
 
     public function hiddenFriendsLimit(): ?int
     {
         if ($this->isAdmin()) return null;
-        return match ($this->plan) {
+        return match ($this->effectivePlan()) {
             'business' => null,
             'pro' => 3,
             default => 1,
@@ -153,7 +176,7 @@ class User extends Authenticatable
 
     public function isInvisibleActive(): bool { return (bool) $this->is_invisible && $this->canUseInvisible(); }
 
-    public function canShowExactHome(): bool { return $this->isAdmin() || in_array($this->plan, ['pro', 'business']); }
+    public function canShowExactHome(): bool { return $this->isAdmin() || in_array($this->effectivePlan(), ['pro', 'business']); }
 
     public function effectiveHomeBlurMeters(): int
     {
@@ -195,7 +218,7 @@ class User extends Authenticatable
     public function photoLimit(): int
     {
         if ($this->isAdmin()) return 15;
-        return match ($this->plan) {
+        return match ($this->effectivePlan()) {
             'business' => 15,
             'pro' => 6,
             default => 3,
@@ -223,12 +246,22 @@ class User extends Authenticatable
         };
     }
 
+    public function pinnedMessagesLimit(): ?int
+    {
+        if ($this->isAdmin()) return null;
+        return match ($this->effectivePlan()) {
+            'business' => 20,
+            'pro' => 6,
+            default => 3,
+        };
+    }
+
     public function canDeletePin(Pin $pin): bool { return $this->isAdmin() || $pin->user_id === $this->id; }
 
     public function canManageBusiness(?Business $business = null): bool
     {
         if ($this->isAdmin()) return true;
-        if (!$business) return $this->plan === 'business' || $this->isPro();
+        if (!$business) return $this->effectivePlan() === 'business' || $this->isPro();
         return $this->id === $business->user_id || $this->isAdmin();
     }
 
@@ -300,6 +333,7 @@ class User extends Authenticatable
             'is_invisible' => 'boolean',
             'last_seen_at' => 'datetime',
             'plan_expires_at' => 'datetime',
+            'banned_at' => 'datetime',
             'pins_today_date' => 'date',
             'trial_ends_at' => 'datetime',
         ];

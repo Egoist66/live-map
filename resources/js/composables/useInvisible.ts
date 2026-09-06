@@ -2,6 +2,7 @@ import { ref, computed } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import axios from 'axios'
 import { setPresenceInvisible } from '@/composables/usePresence'
+import { planOf } from '@/composables/usePlanLimits'
 
 export function useInvisible() {
   const page = usePage()
@@ -10,7 +11,7 @@ export function useInvisible() {
   const canUse = computed(() => {
     const u = user.value
     if (!u) return false
-    return u.is_admin || u.role === 'admin' || ['pro', 'business'].includes(u.plan)
+    return u.is_admin || u.role === 'admin' || ['pro', 'business'].includes(planOf(u))
   })
   const loading = ref(false)
   const error = ref<string | null>(null)

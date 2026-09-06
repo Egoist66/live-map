@@ -10,8 +10,14 @@ class UpdateLastSeen
 {
     public function handle(Request $request, Closure $next)
     {
-        $response = $next($request);
         $user = $request->user();
+        if ($user && $user->banned_at) {
+            \Illuminate\Support\Facades\Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+            abort(403, 'Аккаунт заблокирован. Обратитесь к администратору.');
+        }
+        $response = $next($request);
         if ($user && !$user->isInvisibleActive()) {
             $key = 'last_seen:'.$user->id;
             if (!Cache::has($key)) {

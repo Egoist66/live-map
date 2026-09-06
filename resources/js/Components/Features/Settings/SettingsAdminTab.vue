@@ -23,7 +23,7 @@ const reportFilters = [
 ]
 </script>
 <template>
-  <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }">
+  <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-6' }, content: { class: '!p-0' } }">
     <template #content>
       <h3 class="font-black tracking-tight text-lg dark:text-white">Админ</h3>
       <p class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Жалобы, скрытие профилей и удаление аккаунтов.</p>
@@ -36,7 +36,7 @@ const reportFilters = [
               <Tag v-if="reports.pendingCount.value" :value="String(reports.pendingCount.value)" severity="danger" class="!text-[10px]" />
               <Button label="обновить" link size="small" class="ml-auto !text-xs !px-1" @click="reports.refresh()" />
             </div>
-            <SelectButton :modelValue="reports.filter.value" @update:modelValue="(v:string)=>reports.setFilter(v)" :options="reportFilters" optionLabel="label" optionValue="value" :allowEmpty="false" size="small" class="mt-3" />
+            <SelectButton :modelValue="reports.filter.value" @update:modelValue="(v:string)=>reports.setFilter(v)" :options="reportFilters" optionLabel="label" optionValue="value" :allowEmpty="false" size="small" class="mt-3 flex-wrap max-w-full" />
             <div v-if="reports.loading.value" class="py-6 grid place-items-center">
               <ProgressSpinner style="width:22px;height:22px" :strokeWidth="6" />
             </div>

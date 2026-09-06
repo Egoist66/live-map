@@ -11,16 +11,19 @@ import TabPanels from "primevue/tabpanels";
 import TabPanel from "primevue/tabpanel";
 import ProgressSpinner from "primevue/progressspinner";
 import { watch } from "vue";
+import { router } from "@inertiajs/vue3";
 import { useBellNotifications } from "@/composables/useBellNotifications";
 import { usePinActivity } from "@/composables/usePinActivity";
 import { useAdminReports } from "@/composables/useAdminReports";
 import { useAppUpdates } from "@/composables/useAppUpdates";
+import { useSecurityImpersonations } from "@/composables/useSecurityImpersonations";
 import { avatarSrcFor } from "@/composables/useAvatar";
 
 const bell = useBellNotifications();
 const pinAct = usePinActivity();
 const admRep = useAdminReports();
 const updates = useAppUpdates();
+const proc = useSecurityImpersonations();
 watch(
   () => bell.isOpen.value,
   (open) => {
@@ -30,9 +33,14 @@ watch(
       admRep.refresh();
       updates.loadUnread();
       updates.loadHistory();
+      proc.load();
     }
   }
 );
+function goProcedures() {
+  bell.close();
+  router.visit("/settings/procedures");
+}
 function fmtTime(s: string | null) {
   if (!s) return "";
   try {
@@ -91,8 +99,8 @@ function openNews(item: any) {
           </div>
         </div>
         <Badge
-          v-if="bell.unreadCount.value + bell.pending.value.length + pinAct.unread.value + admRep.pendingCount.value + updates.unreadCount.value"
-          :value="(bell.unreadCount.value + bell.pending.value.length + pinAct.unread.value + admRep.pendingCount.value + updates.unreadCount.value)>9?'9+':String(bell.unreadCount.value + bell.pending.value.length + pinAct.unread.value + admRep.pendingCount.value + updates.unreadCount.value)"
+          v-if="bell.unreadCount.value + bell.pending.value.length + pinAct.unread.value + admRep.pendingCount.value + updates.unreadCount.value + proc.unread.value"
+          :value="(bell.unreadCount.value + bell.pending.value.length + pinAct.unread.value + admRep.pendingCount.value + updates.unreadCount.value + proc.unread.value)>9?'9+':String(bell.unreadCount.value + bell.pending.value.length + pinAct.unread.value + admRep.pendingCount.value + updates.unreadCount.value + proc.unread.value)"
           severity="danger"
         />
       </div>
@@ -111,7 +119,7 @@ function openNews(item: any) {
         <ProgressSpinner style="width:26px;height:26px" :strokeWidth="6" />
       </div>
       <template v-else>
-        <div v-if="!bell.hasData.value && !pinAct.activities.value.length && !admRep.reports.value.length" class="py-10 text-center">
+        <div v-if="!bell.hasData.value && !pinAct.activities.value.length && !admRep.reports.value.length && !proc.items.value.length" class="py-10 text-center">
           <div
             class="w-12 h-12 rounded-2xl bg-stone-100 dark:bg-zinc-800 grid place-items-center mx-auto text-xl"
           >
@@ -226,6 +234,65 @@ function openNews(item: any) {
                 <i v-else class="pi pi-chevron-right text-stone-300 text-xs shrink-0"></i>
               </button>
             </div>
+          </div>
+          <div v-if="proc.items.value.length" class="mb-3">
+            <div
+              class="text-[11px] font-bold tracking-widest uppercase text-stone-400 px-2 py-1.5 flex items-center gap-1.5"
+            >
+              <span class="text-red-500">❗</span> Безопасность
+              <span
+                v-if="proc.unread.value"
+                class="bg-red-600 text-white text-[10px] px-1.5 py-0.5 rounded-full"
+                >{{ proc.unread.value }}</span
+              >
+              <Button
+                v-if="proc.unread.value"
+                @click="proc.markRead()"
+                label="Прочитано"
+                link
+                size="small"
+                class="ml-auto !text-[11px]"
+              />
+            </div>
+            <div class="space-y-1">
+              <button
+                v-for="l in proc.items.value.slice(0, 5)"
+                :key="l.id"
+                @click="goProcedures()"
+                :class="
+                  !l.seen_at
+                    ? 'bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-800'
+                    : 'hover:bg-stone-50 dark:hover:bg-zinc-800 border border-transparent'
+                "
+                class="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition"
+              >
+                <span
+                  class="w-10 h-10 rounded-full bg-red-600 text-white grid place-items-center shrink-0"
+                  ><i class="pi pi-eye text-sm"></i
+                ></span>
+                <div class="min-w-0 flex-1">
+                  <div class="text-sm font-semibold dark:text-white truncate">
+                    Вход администрации
+                  </div>
+                  <div class="text-xs text-stone-500 dark:text-zinc-400 truncate">
+                    {{ (l.reason || '').slice(0, 80) }}{{ l.started_at ? ` · ${fmtTime(l.started_at)}` : '' }}
+                  </div>
+                </div>
+                <span
+                  v-if="!l.seen_at"
+                  class="text-red-500 text-base shrink-0"
+                  >❗</span
+                >
+                <i v-else class="pi pi-chevron-right text-stone-300 text-xs shrink-0"></i>
+              </button>
+            </div>
+            <Button
+              @click="goProcedures()"
+              label="Открыть процедуры →"
+              link
+              size="small"
+              class="w-full !text-xs"
+            />
           </div>
           <div v-if="bell.pending.value.length" class="mb-3">
             <div

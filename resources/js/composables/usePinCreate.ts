@@ -115,14 +115,12 @@ export function usePinCreate(onSuccess?: () => void) {
       if (cat && !builtInValues.includes(cat) && !customCats.canCreate.value) {
         const err: any = { response: { status: 403, data: { message: 'Свои категории доступны на тарифе Pro и выше.' } } }
         error.value = err
-        toast.add({ severity: 'warn', summary: 'Только Pro', detail: 'Свои категории доступны на тарифе Pro и выше.', life: 4000 })
         throw err
       }
       await limitInfo.refresh()
       if (limitInfo.isExceeded.value) {
         const err: any = { response: { status: 429, data: { message: limitInfo.warning.value } } }
         error.value = err
-        toast.add({ severity: 'warn', summary: 'Лимит пинов', detail: limitInfo.warning.value, life: 5000 })
         throw err
       }
       const payload: any = { ...vals }
@@ -130,7 +128,6 @@ export function usePinCreate(onSuccess?: () => void) {
       if (!guard.ok) {
         const err: any = { response: { status: 422, data: { message: guard.message } } }
         error.value = err
-        toast.add({ severity: 'error', summary: 'Операция запрещена', detail: guard.message, life: 5000 })
         throw err
       }
       if (scheduleEnabled.value && payload.publish_at) {

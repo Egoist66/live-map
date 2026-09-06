@@ -7,6 +7,7 @@ import { maxHomeRadiusKm } from './usePlanLimits'
 import { useHomeLocation } from './useHomeLocation'
 import { useUserAge } from './useUserAge'
 import { normalizeCountryCode } from './useResidence'
+import { planOf } from './usePlanLimits'
 import { useCountryMismatch } from './useCountryMismatch'
 import { reverseGeocode } from '@/services/geo.api'
 
@@ -33,11 +34,11 @@ export function useProfileForm() {
       home_radius_km: user.value.home_radius_km || 5,
       bio: user.value.bio || null,
       is_anonymous_default: !!user.value.is_anonymous_default,
-      plan: user.value.plan || 'free',
+      plan: planOf(user.value),
     } as any,
   })
 
-  watch(user, (u) => setValues({ name: u.name, gender: u.gender || null, birth_date: u.birth_date ? String(u.birth_date).slice(0, 10) : null, country: u.country || null, country_code: u.country_code || null, email: u.email, home_lat: u.home_lat || null, home_lng: u.home_lng || null, home_city: u.home_city || null, home_address: u.home_address || null, home_visibility: u.home_visibility || 'everyone', home_show_exact: !!u.home_show_exact, home_radius_km: u.home_radius_km || 5, bio: u.bio || null, is_anonymous_default: !!u.is_anonymous_default, plan: u.plan || 'free' } as any))
+  watch(user, (u) => setValues({ name: u.name, gender: u.gender || null, birth_date: u.birth_date ? String(u.birth_date).slice(0, 10) : null, country: u.country || null, country_code: u.country_code || null, email: u.email, home_lat: u.home_lat || null, home_lng: u.home_lng || null, home_city: u.home_city || null, home_address: u.home_address || null, home_visibility: u.home_visibility || 'everyone', home_show_exact: !!u.home_show_exact, home_radius_km: u.home_radius_km || 5, bio: u.bio || null, is_anonymous_default: !!u.is_anonymous_default, plan: planOf(u) } as any))
 
   const [name, nameAttrs] = defineField('name')
   const [gender] = defineField('gender')
@@ -57,7 +58,7 @@ export function useProfileForm() {
   const [plan] = defineField('plan')
 
   const homeLocation = useHomeLocation({
-    getPlan: () => String((values as any).plan || user.value?.plan || 'free'),
+    getPlan: () => String((values as any).plan || planOf(user.value)),
     isAdmin: () => !!user.value?.is_admin || user.value?.role === 'admin',
     getBlur: () => Number(user.value?.default_blur_meters ?? 300),
     setCoords: (lat, lng, address) => setValues({ home_lat: lat, home_lng: lng, home_address: address || (values as any).home_address } as any),
@@ -74,13 +75,13 @@ export function useProfileForm() {
     })
   }
 
-  const maxRadius = computed(() => maxHomeRadiusKm((values as any).plan || user.value?.plan || 'free'))
+  const maxRadius = computed(() => maxHomeRadiusKm((values as any).plan || planOf(user.value)))
 
   const canChangeEmail = computed(() => {
     const u = user.value
     if (!u) return false
     if (u.is_admin || u.role === 'admin') return true
-    return (u.plan || 'free') === 'business'
+    return planOf(u) === 'business'
   })
 
   watch(() => (values as any).plan, (pl) => {
@@ -97,12 +98,14 @@ export function useProfileForm() {
   }))
 
   const submit = handleSubmit(async (vals: any) => {
-    const residenceOk = await residenceCheck.recheckCountry()
-    if (!residenceOk) {
-      const msg = residenceCheck.countryWarning.value || 'Страна не совпадает с геолокацией'
-      setErrors({ country: msg })
-      toast?.add({ severity: 'error', summary: 'Сохранение запрещено', detail: msg, life: 4000 })
-      return
+    if (!isAdmin.value) {
+      const residenceOk = await residenceCheck.recheckCountry()
+      if (!residenceOk) {
+        const msg = residenceCheck.countryWarning.value || 'Страна не совпадает с геолокацией'
+        setErrors({ country: msg })
+        toast?.add({ severity: 'error', summary: 'Сохранение запрещено', detail: msg, life: 4000 })
+        return
+      }
     }
     const payload: any = { ...vals }
     if (typeof payload.bio === 'string') {
@@ -123,6 +126,9 @@ export function useProfileForm() {
   })
 
   const age = useUserAge(() => (values as any).birth_date)
+  const isAdmin = computed(() => !!user.value?.is_admin || user.value?.role === 'admin')
+  const countryWarning = computed(() => (isAdmin.value ? null : residenceCheck.countryWarning.value))
+  const checkingCountry = computed(() => (isAdmin.value ? false : residenceCheck.checkingCountry.value))
 
-  return { user, name, nameAttrs, gender, birth_date, age: age.age, ageLabel: age.label, country, country_code, email, emailAttrs, canChangeEmail, home_lat, homeLatAttrs, home_lng, homeLngAttrs, home_city, home_address, home_visibility, home_show_exact, home_radius_km, bio, is_anonymous_default, plan, errors, values, setValues, setErrors, submit, isSubmitting, useMyLocation, maxRadius, homeLocation, countryWarning: residenceCheck.countryWarning, checkingCountry: residenceCheck.checkingCountry }
+  return { user, name, nameAttrs, gender, birth_date, age: age.age, ageLabel: age.label, country, country_code, email, emailAttrs, canChangeEmail, home_lat, homeLatAttrs, home_lng, homeLngAttrs, home_city, home_address, home_visibility, home_show_exact, home_radius_km, bio, is_anonymous_default, plan, errors, values, setValues, setErrors, submit, isSubmitting, useMyLocation, maxRadius, homeLocation, countryWarning, checkingCountry }
 }

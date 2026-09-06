@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import { usePinsStore } from '@/stores/pins'
 import { isPinAlive } from '@/composables/usePinExpiry'
+import { planOf } from '@/composables/usePlanLimits'
 
 export const FREE_PINS_LIMIT = 3
 const TTL_BY_PLAN: Record<string, number | null> = { pro: 12, business: null }
@@ -10,7 +11,7 @@ export function usePinLimit() {
   const page = usePage() as any
   const store = usePinsStore()
   const user = computed(() => page.props.auth?.user)
-  const plan = computed(() => user.value?.plan || 'free')
+  const plan = computed(() => planOf(user.value))
   const isAdmin = computed(() => !!user.value?.is_admin || user.value?.role === 'admin')
   const isUnlimited = computed(() => isAdmin.value || plan.value === 'pro' || plan.value === 'business')
   const isFree = computed(() => !isUnlimited.value)

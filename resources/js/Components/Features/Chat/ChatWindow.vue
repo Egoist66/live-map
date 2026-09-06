@@ -12,9 +12,14 @@ import { useChatLayout } from '@/composables/useChatLayout'
 
 const { windowCardClass } = useChatLayout()
 
-const props = defineProps<{ selectedId: number | null; activeConv: any; messages: any[]; loading: boolean; sending: boolean; refreshing: boolean; typing: boolean; online: boolean; input: string; emojiOpen: boolean; emojiGroups: any[]; editingId: number | null; editingBody: string; showMenu: boolean; keyboardStyle: any; isOwnMessage: (m: any) => boolean; messageStatus: (m: any) => string; formatTime: (s: string) => string }>()
-const emit = defineEmits<{ (e: 'update:input', v: string): void; (e: 'update:editingBody', v: string): void; (e: 'send'): void; (e: 'typing'): void; (e: 'stopTyping'): void; (e: 'refresh'): void; (e: 'back'): void; (e: 'close'): void; (e: 'toggleMenu'): void; (e: 'menuClose'): void; (e: 'deleteChat'): void; (e: 'block'): void; (e: 'toggleEmoji'): void; (e: 'emojiClose'): void; (e: 'pickEmoji', v: string): void; (e: 'pickEmojiEdit', v: string): void; (e: 'startEdit', m: any): void; (e: 'saveEdit'): void; (e: 'cancelEdit'): void; (e: 'deleteMessage', id: number): void }>()
-const { cm, menuModel, bindMessage } = useMessageContextMenu({ isOwn: (m: any) => props.isOwnMessage(m), onEdit: (m: any) => emit('startEdit', m), onDelete: (id: number) => emit('deleteMessage', id) })
+const props = defineProps<{ selectedId: number | null; activeConv: any; messages: any[]; loading: boolean; sending: boolean; refreshing: boolean; typing: boolean; online: boolean; input: string; emojiOpen: boolean; emojiGroups: any[]; editingId: number | null; editingBody: string; showMenu: boolean; keyboardStyle: any; isOwnMessage: (m: any) => boolean; messageStatus: (m: any) => string; formatTime: (s: string) => string; pinned?: any[]; pinLimitLabel?: string; flashId?: number | null }>()
+const emit = defineEmits<{ (e: 'update:input', v: string): void; (e: 'update:editingBody', v: string): void; (e: 'send'): void; (e: 'typing'): void; (e: 'stopTyping'): void; (e: 'refresh'): void; (e: 'back'): void; (e: 'close'): void; (e: 'toggleMenu'): void; (e: 'menuClose'): void; (e: 'deleteChat'): void; (e: 'block'): void; (e: 'toggleEmoji'): void; (e: 'emojiClose'): void; (e: 'pickEmoji', v: string): void; (e: 'pickEmojiEdit', v: string): void; (e: 'startEdit', m: any): void; (e: 'saveEdit'): void; (e: 'cancelEdit'): void; (e: 'deleteMessage', id: number): void; (e: 'togglePin', m: any): void; (e: 'unpin', id: number): void; (e: 'jumpToMessage', id: number): void }>()
+const { cm, menuModel, bindMessage } = useMessageContextMenu({ isOwn: (m: any) => props.isOwnMessage(m), onEdit: (m: any) => emit('startEdit', m), onDelete: (id: number) => emit('deleteMessage', id), onPin: (m: any) => emit('togglePin', m) })
+
+function pinPreview(body: string): string {
+  const t = (body || '').replace(/\s+/g, ' ').trim()
+  return t.length > 60 ? `${t.slice(0, 60)}…` : t
+}
 </script>
 <template>
   <div :class="[selectedId ? 'flex' : 'hidden lg:flex', windowCardClass]">
@@ -41,6 +46,15 @@ const { cm, menuModel, bindMessage } = useMessageContextMenu({ isOwn: (m: any) =
         </div>
       </div>
       <div v-if="showMenu" @click="emit('menuClose')" class="fixed inset-0 z-5 lg:hidden"></div>
+      <div v-if="(pinned || []).length" class="shrink-0 border-b dark:border-zinc-800 bg-violet-50/80 dark:bg-violet-950/30 px-2 lg:px-4 py-1.5 min-w-0">
+        <div class="flex items-center gap-1.5 text-[11px] font-bold text-violet-700 dark:text-violet-300 px-1 mb-1"><span>📌 Закрепы</span><span class="opacity-70">{{ (pinned || []).length }}/{{ pinLimitLabel || '∞' }}</span></div>
+        <div class="flex gap-1.5 overflow-x-auto pb-0.5">
+          <div v-for="p in (pinned || [])" :key="p.id" class="shrink-0 max-w-[240px] flex items-center gap-1 bg-white dark:bg-zinc-800 border dark:border-zinc-700 rounded-full pl-3 pr-1 py-1 text-xs shadow-sm">
+            <button @click="emit('jumpToMessage', p.id)" class="truncate text-left hover:underline min-w-0 flex-1 dark:text-zinc-100">{{ pinPreview(p.body) }}</button>
+            <button @click="emit('unpin', p.id)" class="w-6 h-6 shrink-0 grid place-items-center rounded-full hover:bg-stone-100 dark:hover:bg-zinc-700 text-stone-400" aria-label="Открепить"><i class="pi pi-times text-[10px]"></i></button>
+          </div>
+        </div>
+      </div>
       <div id="chat-messages" class="flex-1 overflow-auto overscroll-contain [scrollbar-width:thin] max-lg:[-ms-overflow-style:none] max-lg:[scrollbar-width:none] max-lg:[&::-webkit-scrollbar]:hidden p-3 lg:p-4 space-y-2.5 bg-stone-50/50 dark:bg-zinc-950/30 min-w-0 w-full max-w-full">
         <div v-if="loading" class="flex justify-center py-6"><span class="w-6 h-6 border-2 border-violet-200 border-t-violet-600 rounded-full animate-spin"></span></div>
         <template v-for="m in messages" :key="m.id">
@@ -56,8 +70,8 @@ const { cm, menuModel, bindMessage } = useMessageContextMenu({ isOwn: (m: any) =
               </div>
             </div>
           </div>
-          <div v-else v-on="bindMessage(m)">
-            <MessageBubble :message="m" :own="isOwnMessage(m)" :status="messageStatus(m)" :time="formatTime(m.created_at)" @edit="(mm:any)=>emit('startEdit', mm)" @delete="(id:number)=>emit('deleteMessage', id)" />
+          <div v-else v-on="bindMessage(m)" :id="`msg-${m.id}`" :class="['rounded-2xl transition-shadow duration-500 scroll-mt-2', flashId === m.id ? 'ring-2 ring-violet-500 shadow-lg' : '']">
+            <MessageBubble :message="m" :own="isOwnMessage(m)" :status="messageStatus(m)" :time="formatTime(m.created_at)" @edit="(mm:any)=>emit('startEdit', mm)" @delete="(id:number)=>emit('deleteMessage', id)" @pin="(mm:any)=>emit('togglePin', mm)" />
           </div>
         </template>
       </div>

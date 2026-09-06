@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import { chatApi } from '@/services/chat.api'
+import { planOf } from './usePlanLimits'
 
 export function hiddenLimitFor(plan?: string, isAdmin?: boolean): number | null {
   if (isAdmin) return null
@@ -26,7 +27,7 @@ export function useHiddenFriends() {
   const showHidden = ref(true)
   const query = ref('')
 
-  const plan = computed(() => authUser.value?.plan || 'free')
+  const plan = computed(() => planOf(authUser.value))
   const isAdmin = computed(() => !!authUser.value?.is_admin || authUser.value?.role === 'admin')
   const effectiveLimit = computed(() => {
     if (hiddenUnlimited.value || isAdmin.value) return null

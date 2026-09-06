@@ -143,6 +143,8 @@ class MonitoringService
             'is_hidden_from_search' => (bool) $u->is_hidden_from_search,
             'is_invisible' => (bool) $u->is_invisible,
             'is_online' => $isOnline,
+            'banned_at' => $u->banned_at?->toISOString(),
+            'banned_reason' => $u->banned_reason,
             'last_seen_at' => $u->last_seen_at?->toISOString(),
             'created_at' => $u->created_at?->toISOString(),
             'pins_count' => $u->pins_count ?? 0,

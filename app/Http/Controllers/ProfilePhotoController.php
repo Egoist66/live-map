@@ -70,10 +70,18 @@ class ProfilePhotoController extends Controller
             'caption' => 'nullable|string|max:500',
         ]);
         $user = $request->user();
-        abort_unless($user->canAddProfilePhoto(), 422, 'Лимит фото для тарифа ' . ($user->plan ?? 'free') . ': ' . $user->photoLimit());
         if ($request->filled('caption')) ContentModeration::assertClean($request->input('caption'));
         $path = $request->file('photo')->store('profile-photos', $this->disk());
-        $photo = $user->profilePhotos()->create(['path' => $path, 'caption' => $request->input('caption')]);
+        try {
+            $photo = \Illuminate\Support\Facades\DB::transaction(function () use ($user, $path, $request) {
+                $locked = \App\Models\User::whereKey($user->id)->lockForUpdate()->first();
+                abort_unless($locked->canAddProfilePhoto(), 422, 'Лимит фото для тарифа ' . $locked->effectivePlan() . ': ' . $locked->photoLimit());
+                return $locked->profilePhotos()->create(['path' => $path, 'caption' => $request->input('caption')]);
+            });
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Storage::disk($this->disk())->delete($path);
+            throw $e;
+        }
         return response()->json($this->serialize($photo->refresh(), $user), 201);
     }
 

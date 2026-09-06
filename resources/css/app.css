@@ -333,3 +333,23 @@ div#p-license-host {
 .dark .p-toast-message-error .p-toast-message-icon { color: #f87171 !important; }
 .dark .p-toast-message .p-toast-icon-close { color: inherit !important; opacity: 0.7; }
 .dark .p-toast-message .p-toast-icon-close:hover { opacity: 1; background: rgba(255, 255, 255, 0.12) !important; }
+
+/* Rich text links (chat messages, comments) */
+.msg-body a.rich-link, .comment-body a.rich-link { color: #7c3aed; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; overflow-wrap: anywhere; }
+.msg-body a.rich-link:hover, .comment-body a.rich-link:hover { color: #6d28d9; }
+.dark .msg-body a.rich-link, .dark .comment-body a.rich-link { color: #a78bfa; }
+.dark .msg-body a.rich-link:hover, .dark .comment-body a.rich-link:hover { color: #c4b5fd; }
+.bg-violet-600 a.rich-link { color: #fff; }
+.bg-violet-600 a.rich-link:hover { color: #ede9fe; }
+
+/* Admin tabs: horizontal scroll on mobile, icons only on small screens */
+.admin-tabs .p-tablist-tab-list { display: flex; flex-wrap: nowrap; overflow-x: auto; max-width: 100%; scrollbar-width: none; }
+.admin-tabs .p-tablist-tab-list::-webkit-scrollbar { display: none; }
+.admin-tabs .p-tab { flex-shrink: 0; }
+@media (max-width: 520px) {
+  .admin-tabs .p-tab .tab-label { display: none; }
+  .admin-tabs .p-tab { padding-left: 0.85rem; padding-right: 0.85rem; }
+}
+
+/* Paginators wrap on narrow screens */
+.p-paginator { flex-wrap: wrap; row-gap: 0.25rem; }

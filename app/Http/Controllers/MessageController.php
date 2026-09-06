@@ -104,4 +104,45 @@ class MessageController extends Controller
         try { broadcast(new \App\Events\MessageDeleted($mid, $cid))->toOthers(); } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
         return response()->json(['ok'=>true]);
     }
+
+    public function pinned(Request $request, Conversation $conversation)
+    {
+        abort_unless($conversation->hasParticipant($request->user()->id),403);
+        $list = $conversation->messages()
+            ->with('sender:id,name,avatar_path')
+            ->whereNotNull('pinned_at')
+            ->orderBy('pinned_at')
+            ->get()
+            ->map->toArrayPayload();
+        return response()->json([
+            'pinned' => $list,
+            'pin_limit' => $request->user()->pinnedMessagesLimit(),
+        ]);
+    }
+
+    public function pin(Request $request, Message $message)
+    {
+        $me = $request->user();
+        abort_unless($message->conversation->hasParticipant($me->id),403);
+        if ($message->pinned_at) return response()->json($message->refresh()->toArrayPayload());
+        $limit = $me->pinnedMessagesLimit();
+        if ($limit !== null) {
+            $count = Message::where('conversation_id', $message->conversation_id)->whereNotNull('pinned_at')->count();
+            abort_if($count >= $limit, 422, 'Лимит закреплённых сообщений: ' . $limit);
+        }
+        $message->update(['pinned_at' => now(), 'pinned_by' => $me->id]);
+        $message->refresh();
+        try { broadcast(new \App\Events\MessagePinned($message))->toOthers(); } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
+        return response()->json($message->toArrayPayload());
+    }
+
+    public function unpin(Request $request, Message $message)
+    {
+        abort_unless($message->conversation->hasParticipant($request->user()->id),403);
+        if (!$message->pinned_at) return response()->json($message->toArrayPayload());
+        $message->update(['pinned_at' => null, 'pinned_by' => null]);
+        $message->refresh();
+        try { broadcast(new \App\Events\MessagePinned($message))->toOthers(); } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
+        return response()->json($message->toArrayPayload());
+    }
 }

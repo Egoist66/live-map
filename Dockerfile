@@ -46,6 +46,7 @@ RUN composer dump-autoload --optimize \
 
 COPY docker/nginx.conf /etc/nginx/sites-enabled/default
 COPY docker/nginx.conf.template /etc/nginx/sites-enabled/default.template
+COPY docker/nginx-limits.conf /etc/nginx/conf.d/limits.conf
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

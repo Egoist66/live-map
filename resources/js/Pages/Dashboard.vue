@@ -18,6 +18,7 @@ import { useDashboardPage } from '@/composables/useDashboardPage'
 import { onMounted } from 'vue'
 import { useProfilePeople } from '@/composables/useProfilePeople'
 import { usePeopleSearch } from '@/composables/usePeopleSearch'
+import { planOf } from '@/composables/usePlanLimits'
 
 const props = defineProps<{ user: any; isOwn?: boolean }>()
 const { seo, u, isOwn, isAdmin, showAvatar, avatarSrc, bioText, bioEmpty, settingsHref, sharing, presence, levelLabel, levelColor, planLabel, planColor, openAvatar, closeAvatar, goMap, goChat, goSettings, goAdmin, goFaq, share } = useDashboardPage(props.user, props.isOwn)
@@ -52,7 +53,7 @@ onMounted(() => gallery.load())
           <DashboardInfo :user="u" :bio-empty="bioEmpty" :bio-text="bioText" :is-own="isOwn" :settings-href="settingsHref" :presence="presence" />
           <DashboardActions :is-own="isOwn" @map="goMap" @settings="goSettings" @faq="goFaq" />
         </div>
-        <ProfileGalleryDialog :gallery="gallery" :is-own="true" :plan="u.plan || 'free'" />
+        <ProfileGalleryDialog :gallery="gallery" :is-own="true" :plan="planOf(u)" />
         <ProfilePhotoViewer :gallery="gallery" :comments="photoComments" :is-own="true" :user-name="u.name" :avatar-src="avatarSrc" />
       </div>
       <AvatarPreview :src="avatarSrc" :name="u.name" :open="showAvatar" @close="closeAvatar" />

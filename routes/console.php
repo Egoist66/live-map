@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 
 Schedule::command('pins:publish')->everyMinute();
 Schedule::command('pins:prune')->everyFiveMinutes();
+Schedule::command('plans:downgrade-expired')->daily();

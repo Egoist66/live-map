@@ -3,7 +3,7 @@ import Card from 'primevue/card'
 import Menu from 'primevue/menu'
 import Button from 'primevue/button'
 
-defineProps<{ menuModel: any; plan: string; pinsToday: number; pinsLimit: string; zoneCount: number }>()
+defineProps<{ menuModel: any; plan: string; pinsToday: number; pinsLimit: string; zoneCount: number; procUnread?: number }>()
 const emit = defineEmits<{ (e: 'billing'): void }>()
 </script>
 <template>
@@ -16,7 +16,8 @@ const emit = defineEmits<{ (e: 'billing'): void }>()
             <button v-bind="p.action" :class="['w-full flex items-center gap-3 px-3 py-3 rounded-2xl text-left transition-colors border box-border', (item as any).active ? '!bg-violet-600 !border-violet-600 !text-white shadow-soft' : 'border-transparent hover:bg-stone-50 dark:hover:bg-zinc-800 text-stone-700 dark:text-zinc-300']">
               <span :class="['w-9 h-9 rounded-2xl grid place-items-center text-sm shrink-0', (item as any).active ? 'bg-white/20 !text-white' : 'bg-stone-100 dark:bg-zinc-700']"><i :class="(item as any).icon" /></span>
               <span class="min-w-0 text-left"><span class="block text-sm font-semibold leading-none">{{ (item as any).label }}</span><span class="block text-xs opacity-60 leading-none mt-1">{{ (item as any).desc }}</span></span>
-              <span v-if="(item as any).active" class="ml-auto text-xs">→</span>
+              <span v-if="(item as any).id === 'procedures' && procUnread" class="ml-auto text-red-500 leading-none">❗</span>
+              <span v-else-if="(item as any).active" class="ml-auto text-xs">→</span>
             </button>
           </template>
         </Menu>

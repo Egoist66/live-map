@@ -16,6 +16,7 @@ import ProfileGalleryDialog from '@/Components/Features/Profile/ProfileGalleryDi
 import ProfilePhotoViewer from '@/Components/Features/Profile/ProfilePhotoViewer.vue'
 import { useProfileGallery } from '@/composables/useProfileGallery'
 import { useProfilePhotoComments } from '@/composables/useProfilePhotoComments'
+import { planOf } from '@/composables/usePlanLimits'
 import { onMounted } from 'vue'
 import ChatSearchDialog from '@/Components/Features/Chat/ChatSearchDialog.vue'
 
@@ -41,7 +42,7 @@ onMounted(() => gallery.load())
         <ProfileFriendsDialog :people="people" />
         <ChatSearchDialog :open="search.open.value" @update:open="(v:boolean)=>{ if(!v) search.closeDialog() }" :query="search.query.value" @update:query="(v:string)=>search.setQuery(v)" :results="search.results.value" :searching="search.searching.value" :creating="search.creating.value" :is-online="(id?:number,lastSeen?:string|null)=>search.isOnline(id,lastSeen)" @chat="search.startChat" @add="search.addFriend" @block="search.askBlock" />
         <ProfileInfoCard v-if="!page.isLocked.value" :user="profileUser" :bio-empty="page.bioEmpty.value" :bio-text="page.bioText.value" :level-name="(page.levelLabel as any)[profileUser.level] || profileUser.level" :registered-at="page.registeredAt.value" />
-        <ProfileGalleryDialog :gallery="gallery" :is-own="isOwn" :plan="profileUser.plan || 'free'" />
+        <ProfileGalleryDialog :gallery="gallery" :is-own="isOwn" :plan="planOf(profileUser)" />
         <ProfilePhotoViewer :gallery="gallery" :comments="photoComments" :is-own="isOwn" :user-name="profileUser.name" :avatar-src="page.avatarSrc.value" />
         <Teleport to="body">
           <div v-if="page.showAvatar.value" @click="page.showAvatar.value = false" class="fixed inset-0 z-[100] bg-black/80 grid place-items-center p-4 cursor-zoom-out overflow-auto">

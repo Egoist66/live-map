@@ -2,6 +2,10 @@ import { computed, type Ref } from 'vue'
 
 export type Plan = 'free' | 'pro' | 'business'
 
+export function planOf(u: any): string {
+  return u?.effective_plan ?? u?.plan ?? 'free'
+}
+
 export const HOME_RADIUS_LIMITS: Record<Plan, number> = {
   free: 5,
   pro: 15,

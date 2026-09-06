@@ -42,8 +42,24 @@ class LoginRequest extends FormRequest
     {
         $this->ensureIsNotRateLimited();
 
+        $email = \App\Services\LoginShield::normalizeEmail($this->input('email'));
+        $user = \App\Models\User::where('email', $email)->first();
+        \App\Services\LoginShield::check($email, $user);
+
         if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
+
+            $res = \App\Services\LoginShield::recordFail($email, $this->ip(), (string) $this->userAgent(), $user);
+            if ($res['banned']) {
+                throw ValidationException::withMessages([
+                    'email' => 'Неверный логин или пароль. Аккаунт заблокирован навсегда за 4 неверные попытки — обратитесь к администратору.',
+                ]);
+            }
+            if ($res['fails'] >= \App\Services\LoginShield::COOLDOWN_FAILS) {
+                throw ValidationException::withMessages([
+                    'email' => 'Неверный логин или пароль. Это 3-я неудачная попытка — вход заморожен на час.',
+                ]);
+            }
 
             throw ValidationException::withMessages([
                 'email' => trans('auth.failed'),
@@ -51,6 +67,7 @@ class LoginRequest extends FormRequest
         }
 
         RateLimiter::clear($this->throttleKey());
+        \App\Services\LoginShield::recordSuccess($email, $this->ip(), (string) $this->userAgent(), Auth::id());
     }
 
     /**

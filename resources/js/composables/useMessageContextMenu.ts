@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 type MsgCallback = (m: any) => void
 type DeleteCallback = (id: number) => void
 
-export function useMessageContextMenu(opts: { isOwn: (m: any) => boolean; onEdit: MsgCallback; onDelete: DeleteCallback }) {
+export function useMessageContextMenu(opts: { isOwn: (m: any) => boolean; onEdit: MsgCallback; onDelete: DeleteCallback; onPin?: MsgCallback; isPinned?: (m: any) => boolean }) {
   const cm = ref<any>(null)
   const current = ref<any>(null)
 
@@ -12,19 +12,27 @@ export function useMessageContextMenu(opts: { isOwn: (m: any) => boolean; onEdit
   let startY = 0
 
   const menuModel = computed(() => {
-    if (!current.value || !opts.isOwn(current.value)) return []
+    if (!current.value) return []
     const m = current.value
-    return [
+    const items: any[] = []
+    if (opts.onPin) {
+      const pinned = opts.isPinned?.(m) ?? !!(m as any).is_pinned
+      items.push({ label: pinned ? 'Открепить' : 'Закрепить', icon: 'pi pi-thumbtack', command: () => opts.onPin!(m) })
+      items.push({ separator: true })
+    }
+    if (!opts.isOwn(m)) return items
+    items.push(
       { label: 'Редактировать', icon: 'pi pi-pencil', command: () => opts.onEdit(m) },
       { separator: true },
       { label: 'Удалить', icon: 'pi pi-trash', command: () => opts.onDelete(m.id) },
-    ]
+    )
+    return items
   })
 
   function openAt(e: any, m: any) {
-    if (!opts.isOwn(m)) return
     if ((m as any).pending) return
     current.value = m
+    if (!opts.isOwn(m) && !opts.onPin) return
     try { cm.value?.show(e) } catch {}
   }
 
@@ -34,7 +42,7 @@ export function useMessageContextMenu(opts: { isOwn: (m: any) => boolean; onEdit
   }
 
   function onTouchStart(e: TouchEvent, m: any) {
-    if (!opts.isOwn(m)) return
+    if (!opts.isOwn(m) && !opts.onPin) return
     const t = e.touches[0]
     if (!t) return
     startX = t.clientX

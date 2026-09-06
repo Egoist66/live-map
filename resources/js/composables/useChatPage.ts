@@ -6,6 +6,7 @@ import { useFriendships } from '@/composables/useFriendships'
 import { useBlocks } from '@/composables/useBlocks'
 import { useEmojiPicker } from '@/composables/useEmojiPicker'
 import { useLongPress } from '@/composables/useLongPress'
+import { usePinnedMessages } from '@/composables/usePinnedMessages'
 import { useChatBadges } from '@/composables/useChatBadges'
 import { useChatNavigation } from '@/composables/useChatNavigation'
 import { chatApi } from '@/services/chat.api'
@@ -33,6 +34,19 @@ export function useChatPage(initialConversationId?: number) {
   const pageProps = usePage().props as any
   const isOwnMessage = (m: any) => Number(m.sender_id) === Number(pageProps.auth?.user?.id)
   const { bind: bindSheet } = useLongPress((p: any) => { sheet.value = p }, 520)
+  const pins = usePinnedMessages(chat.messages as any)
+
+  watch(() => chat.activeConv.value, (conv: any) => {
+    if (conv?.id) void pins.load(conv.id, { pinned: conv.pinned, pin_limit: conv.pin_limit })
+    else pins.reset()
+  })
+
+  async function togglePin(m: any) {
+    const ok = await pins.toggle(m)
+    if (!ok && pins.error.value) {
+      toast?.add({ severity: 'warn', summary: 'Не удалось закрепить', detail: pins.error.value, life: 4000 })
+    }
+  }
 
   function notifyBlockedBy(detail?: string) {
     const msg = detail || 'Пользователь заблокировал вас'
@@ -236,7 +250,7 @@ export function useChatPage(initialConversationId?: number) {
   }
 
   return {
-    chat, friendsApi, blocksApi, emoji, badgeSync,
+    chat, friendsApi, blocksApi, emoji, badgeSync, pins, togglePin,
     input, inputRef, editInputRef, tab, showChatMenu, sheet, showPrivacy, privacy, creatingChat, confirm, confirmVisible, isOwnMessage, bindSheet,
     handleSend, formatTime, onPickEmoji, onPickEmojiForEdit, handleStartEdit, startChatWith, addFriendFromSearch, savePrivacy, doConfirm, closeSheet, backToList,
     askBlock, askDeleteChat, askDeleteMessage, askRemoveFriend, askUnblock,

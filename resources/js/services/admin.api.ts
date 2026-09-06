@@ -55,4 +55,24 @@ export const adminApi = {
     const { data } = await api.get('/api/admin/monitoring/users', { params })
     return data
   },
+  async loginAttempts(params: { q?: string; successful?: 'all' | 'failed' | 'success'; per_page?: number; page?: number } = {}) {
+    const { data } = await api.get('/api/admin/login-attempts', { params })
+    return data
+  },
+  async banUser(userId: number, reason?: string) {
+    const { data } = await api.post(`/api/admin/users/${userId}/ban`, reason ? { reason } : {})
+    return data
+  },
+  async unbanUser(userId: number) {
+    const { data } = await api.delete(`/api/admin/users/${userId}/ban`)
+    return data
+  },
+  async maintenance() {
+    const { data } = await api.get('/api/admin/maintenance')
+    return data
+  },
+  async updateMaintenance(payload: { enabled: boolean; title: string; message: string }) {
+    const { data } = await api.put('/api/admin/maintenance', payload)
+    return data
+  },
 }

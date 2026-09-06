@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import { PIN_CATEGORIES } from './usePins'
 import { customCategoriesApi } from '@/services/custom-categories.api'
+import { planOf } from './usePlanLimits'
 
 export interface CustomCategoryDef {
   id: number
@@ -24,7 +25,7 @@ export function useCustomCategories() {
   const user = computed(() => page.props.auth?.user)
   const canCreate = computed(() => {
     const u = user.value
-    return !!u?.is_admin || u?.role === 'admin' || u?.plan === 'pro' || u?.plan === 'business'
+    return !!u?.is_admin || u?.role === 'admin' || planOf(u) === 'pro' || planOf(u) === 'business'
   })
 
   const allCategories = computed(() => [

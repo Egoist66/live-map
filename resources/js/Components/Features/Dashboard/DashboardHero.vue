@@ -3,6 +3,7 @@ import Card from 'primevue/card'
 import Avatar from 'primevue/avatar'
 import Tag from 'primevue/tag'
 import Button from 'primevue/button'
+import { planOf } from '@/composables/usePlanLimits'
 
 defineProps<{ user: any; avatarSrc: string; levelLabel: any; levelColor: any; planLabel: any; planColor: any; sharing: boolean }>()
 const emit = defineEmits<{ (e: 'avatar'): void; (e: 'map'): void; (e: 'chat'): void; (e: 'share'): void; (e: 'friends'): void; (e: 'search'): void; (e: 'gallery'): void }>()
@@ -25,7 +26,7 @@ const emit = defineEmits<{ (e: 'avatar'): void; (e: 'map'): void; (e: 'chat'): v
             <p class="text-white/40 text-xs mt-1.5 flex flex-wrap items-center gap-2">
               <Tag :value="levelLabel[user.level] || user.level || 'Новичок'" class="!rounded-full !text-xs !font-bold !border" :class="levelColor[user.level || 'novice']" />
               <span class="opacity-80 shrink-0">· {{ user.reputation_score || 0 }} ★</span>
-              <Tag :value="planLabel[user.plan || 'free'] || user.plan" class="!rounded-full !text-xs !font-bold !border" :class="planColor[user.plan || 'free']" />
+              <Tag :value="planLabel[planOf(user)] || planOf(user)" class="!rounded-full !text-xs !font-bold !border" :class="planColor[planOf(user) || 'free']" />
             </p>
             <div class="mt-4 flex flex-wrap gap-2">
               <Button label="Открыть карту →" rounded class="!bg-white !text-stone-900 !border-white !text-sm !font-bold" @click="emit('map')" />

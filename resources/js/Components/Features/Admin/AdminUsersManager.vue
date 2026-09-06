@@ -21,6 +21,8 @@ const emit = defineEmits<{
   (e: 'plan', u: any, v: string): void
   (e: 'role', u: any, v: string): void
   (e: 'impersonate', u: any): void
+  (e: 'ban', u: any): void
+  (e: 'unban', u: any): void
 }>()
 
 const filterOptions = [
@@ -56,7 +58,7 @@ const roleOptions = [
         <InputText :modelValue="query" @update:modelValue="(v:string|undefined)=>emit('update:query', v ?? '')" placeholder="Имя или email..." fluid size="small" rounded />
       </IconField>
       <div class="mt-2.5 flex gap-1.5 flex-wrap items-center">
-        <SelectButton :modelValue="filter" @update:modelValue="(v:string)=>emit('filter', v)" :options="filterOptions" optionLabel="label" optionValue="value" :allowEmpty="false" size="small" />
+        <SelectButton :modelValue="filter" @update:modelValue="(v:string)=>emit('filter', v)" :options="filterOptions" optionLabel="label" optionValue="value" :allowEmpty="false" size="small" class="flex-wrap max-w-full" />
         <Select :modelValue="sort" @update:modelValue="(v:string)=>emit('sort', v)" :options="sortOptions" optionLabel="label" optionValue="value" size="small" rounded class="ml-auto" />
       </div>
       <div v-if="loading" class="py-8 grid place-items-center"><ProgressSpinner style="width:24px;height:24px" :strokeWidth="6" /></div>
@@ -75,12 +77,15 @@ const roleOptions = [
             <Tag v-if="u.is_online" value="онлайн" severity="success" class="!text-[9px]" />
             <Tag v-else value="офлайн" severity="secondary" class="!text-[9px]" />
             <Tag v-if="u.is_hidden_from_search" value="скрыт" severity="contrast" class="!text-[9px]" />
+            <Tag v-if="u.banned_at" value="забанен" severity="danger" class="!text-[9px]" />
           </div>
           <div class="mt-2.5 flex gap-1.5 flex-wrap items-center">
             <Select :modelValue="u.plan" @change="(e:any)=>emit('plan', u, e.value)" :options="planOptions" optionLabel="label" optionValue="value" size="small" :disabled="actingId === u.id" checkmark />
             <Select :modelValue="u.role || 'user'" @change="(e:any)=>emit('role', u, e.value)" :options="roleOptions" optionLabel="label" optionValue="value" size="small" :disabled="actingId === u.id || u.is_admin" checkmark />
             <span class="flex-1" />
             <Button @click="admin.toggleUser(u)" :loading="admin.togglingId.value === u.id" :label="u.is_hidden_from_search ? 'Показать' : 'Скрыть'" size="small" rounded :outlined="!u.is_hidden_from_search" class="!text-xs !py-1" :severity="u.is_hidden_from_search ? 'success' : 'secondary'" />
+            <Button v-if="!u.banned_at" @click="emit('ban', u)" :disabled="!!u.is_admin" icon="pi pi-ban" size="small" rounded outlined severity="danger" title="Забанить" />
+            <Button v-else @click="emit('unban', u)" icon="pi pi-check" size="small" rounded outlined severity="success" title="Разбанить" />
             <Button @click="emit('impersonate', u)" :disabled="!!u.is_admin" icon="pi pi-sign-in" size="small" rounded outlined severity="warn" title="Войти в аккаунт" />
             <Button @click="admin.askDelete(u)" :disabled="u.is_admin" icon="pi pi-trash" size="small" rounded outlined severity="danger" />
           </div>

@@ -27,6 +27,10 @@ export function usePhotoViewer(gallery: GalleryLike, comments: CommentsLike) {
   const likeLoading = ref(false)
   const saveLoading = ref(false)
 
+  function setReplaceInput(el: unknown) {
+    replaceInput.value = (el instanceof HTMLInputElement) ? el : null
+  }
+
   watch(
     () => gallery.active.value,
     (p) => {
@@ -98,6 +102,7 @@ export function usePhotoViewer(gallery: GalleryLike, comments: CommentsLike) {
     editing,
     captionDraft,
     replaceInput,
+    setReplaceInput,
     confirmDelete,
     likeLoading,
     saveLoading,

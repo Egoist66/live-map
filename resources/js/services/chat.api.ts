@@ -106,4 +106,16 @@ export const chatApi = {
     const { data } = await api.post(`/api/conversations/${convId}/delivered`)
     return data
   },
+  async pinnedMessages(convId: number) {
+    const { data } = await api.get<{ pinned: Message[]; pin_limit: number | null }>(`/api/conversations/${convId}/pinned`)
+    return data
+  },
+  async pinMessage(messageId: number) {
+    const { data } = await api.post<Message>(`/api/messages/${messageId}/pin`)
+    return data
+  },
+  async unpinMessage(messageId: number) {
+    const { data } = await api.delete<Message>(`/api/messages/${messageId}/pin`)
+    return data
+  },
 }

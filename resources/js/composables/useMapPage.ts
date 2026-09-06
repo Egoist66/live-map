@@ -13,6 +13,7 @@ import { useMapOverlays } from '@/composables/useMapOverlays'
 import { useAppConfirm } from '@/composables/useAppConfirm'
 import { useCustomCategories } from '@/composables/useCustomCategories'
 import { useHomeZoneVisibility } from '@/composables/useHomeZoneVisibility'
+import { planOf } from '@/composables/usePlanLimits'
 
 export function useMapPage() {
   const { store, selectedCategory, filteredPins, fetchNearby } = usePins()
@@ -50,7 +51,7 @@ export function useMapPage() {
   watch(isDark, (v) => mapApi.setThemeStyle(v))
 
   const page: any = usePage()
-  const userPlan = computed(() => page.props.auth?.user?.plan || 'free')
+  const userPlan = computed(() => planOf(page.props.auth?.user))
   const { visible: homeZoneVisible, toggle: toggleHomeZone, set: setHomeZoneVisible } = useHomeZoneVisibility()
   const myPos = ref<{ lat: number; lng: number } | null>(null)
   const homeRadiusKm = computed(() => Number(page.props.auth?.user?.home_radius_km ?? 5))

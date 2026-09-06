@@ -7,6 +7,10 @@ interface GalleryLike {
 export function useGalleryDialogUpload(gallery: GalleryLike) {
   const fileInput = ref<HTMLInputElement | null>(null)
 
+  function setFileInput(el: unknown) {
+    fileInput.value = (el instanceof HTMLInputElement) ? el : null
+  }
+
   function pickFile() {
     fileInput.value?.click()
   }
@@ -18,5 +22,5 @@ export function useGalleryDialogUpload(gallery: GalleryLike) {
     ;(e.target as HTMLInputElement).value = ''
   }
 
-  return { fileInput, pickFile, onFile }
+  return { fileInput, setFileInput, pickFile, onFile }
 }

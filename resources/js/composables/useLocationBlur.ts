@@ -1,6 +1,7 @@
 import { ref, computed, watch } from 'vue'
 import { usePage, router } from '@inertiajs/vue3'
 import { useToast } from 'primevue/usetoast'
+import { planOf } from '@/composables/usePlanLimits'
 
 export const GEO_BLUR_DEFAULT = 300
 export const GEO_BLUR_MAX = 5000
@@ -59,7 +60,7 @@ export function useLocationBlur() {
 
   const isPro = computed(() => {
     const u = authUser.value
-    return !!u?.is_admin || u?.role === 'admin' || ['pro', 'business'].includes(u?.plan)
+    return !!u?.is_admin || u?.role === 'admin' || ['pro', 'business'].includes(planOf(u))
   })
   const canUse5km = computed(() => isPro.value)
 

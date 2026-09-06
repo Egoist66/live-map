@@ -40,7 +40,7 @@ function ago(iso?: string | null) {
         <div class="font-black dark:text-white flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block" />Онлайн <span class="text-xs font-bold text-stone-400 dark:text-zinc-500">· {{ meta.total }}</span></div>
         <div class="ml-auto flex items-center gap-1.5">
           <span class="text-[11px] text-stone-400 dark:text-zinc-500 font-semibold">выборка:</span>
-          <SelectButton :modelValue="limit" @update:modelValue="(v:number)=>emit('limit', v)" :options="limitOptions" optionLabel="label" optionValue="value" :allowEmpty="false" size="small" />
+          <SelectButton :modelValue="limit" @update:modelValue="(v:number)=>emit('limit', v)" :options="limitOptions" optionLabel="label" optionValue="value" :allowEmpty="false" size="small" class="flex-wrap max-w-full" />
         </div>
       </div>
       <IconField class="mt-3">

@@ -84,17 +84,21 @@ function fmtDate(iso?: string | null) {
         </div>
       </div>
 
-      <div v-if="points.length" class="mt-4">
+      <div v-if="points.length" class="mt-4 min-w-0">
         <div class="text-xs font-bold text-stone-500 dark:text-zinc-400 mb-2">Детализация по дням</div>
-        <DataTable :value="points" size="small" stripedRows paginator :rows="7" :rowsPerPageOptions="[7, 14, 30]" sortField="date" :sortOrder="-1" class="!text-[13px]">
-          <Column field="date" header="Дата" sortable>
-            <template #body="{ data }">{{ fmtDate(data.date) }}<span class="text-stone-400 dark:text-zinc-500"> · {{ data.date }}</span></template>
-          </Column>
-          <Column field="registrations" header="Регистрации" sortable />
-          <Column field="active" header="Активные" sortable />
-          <Column field="pins" header="Пины" sortable />
-          <Column field="total" header="Всего" sortable />
-        </DataTable>
+        <div class="overflow-x-auto -mx-1 px-1">
+          <div class="min-w-[560px]">
+            <DataTable :value="points" size="small" stripedRows paginator :rows="7" :rowsPerPageOptions="[7, 14, 30]" sortField="date" :sortOrder="-1" class="!text-[13px]">
+              <Column field="date" header="Дата" sortable>
+                <template #body="{ data }">{{ fmtDate(data.date) }}<span class="text-stone-400 dark:text-zinc-500"> · {{ data.date }}</span></template>
+              </Column>
+              <Column field="registrations" header="Регистрации" sortable />
+              <Column field="active" header="Активные" sortable />
+              <Column field="pins" header="Пины" sortable />
+              <Column field="total" header="Всего" sortable />
+            </DataTable>
+          </div>
+        </div>
       </div>
     </template>
   </Card>
