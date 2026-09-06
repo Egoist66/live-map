@@ -1,5 +1,6 @@
 import { ref, computed, watch } from 'vue'
 import { usePage } from '@inertiajs/vue3'
+import { useSecurityImpersonations } from '@/composables/useSecurityImpersonations'
 
 export type SettingsTabId = 'profile'|'billing'|'privacy'|'appearance'|'security'|'pins'|'support'|'app'|'procedures'|'admin'
 
@@ -34,7 +35,12 @@ export function useSettingsTabs() {
     if (valid(fromRoute)) active.value = fromRoute
     else if (valid(fromQuery)) active.value = fromQuery
   } catch {}
-  const tabs = computed(() => (isAdmin.value ? [...SETTINGS_TABS, ADMIN_TAB] : [...SETTINGS_TABS]))
+  const proc = useSecurityImpersonations()
+  const showProcedures = computed(() => proc.items.value.length > 0 || proc.unread.value > 0 || active.value === 'procedures')
+  const tabs = computed(() => {
+    const base = SETTINGS_TABS.filter((t) => t.id !== 'procedures' || showProcedures.value)
+    return isAdmin.value ? [...base, ADMIN_TAB] : [...base]
+  })
   const tabIndex = SETTINGS_TAB_INDEX
   const activeIndex = computed(() => tabIndex[active.value])
   const setActive = (id: SettingsTabId) => { active.value = id }
@@ -65,5 +71,5 @@ export function useSettingsTabs() {
     }))
   )
 
-  return { active, tabs, tabIndex, activeIndex, menuModel, setActive, isAdmin }
+  return { active, tabs, tabIndex, activeIndex, menuModel, setActive, isAdmin, showProcedures }
 }

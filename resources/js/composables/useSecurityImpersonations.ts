@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { api } from '@/services/api'
 import { useBadgeStore } from '@/stores/badges'
 
@@ -80,5 +80,6 @@ function init() {
 }
 
 export function useSecurityImpersonations(_active?: any) {
-  return { items, unread, loading, error, load, markRead, init, subscribe }
+  const hasEvents = computed(() => items.value.length > 0 || unread.value > 0)
+  return { items, unread, loading, error, hasEvents, load, markRead, init, subscribe }
 }

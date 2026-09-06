@@ -20,7 +20,7 @@ export function useSettingsPage(props: { user: any }) {
   const page = usePage()
   const u = computed(() => props.user || (page.props.auth as any).user)
   const { theme } = useTheme()
-  const { active, tabs, activeIndex, menuModel, setActive, isAdmin } = useSettingsTabs()
+  const { active, tabs, activeIndex, menuModel, setActive, isAdmin, showProcedures } = useSettingsTabs()
   const pins = useMyPinsSettings(active)
   const { zoneCount, loadZoneCount } = useBillingInfo()
   const showAvatar = ref(false)
@@ -39,6 +39,6 @@ export function useSettingsPage(props: { user: any }) {
   watch(u, (v) => photoPrivacy.sync(String((v as any)?.photo_comments_privacy || 'everyone')))
   const screenLock = useScreenLock()
   watch(active, (v) => { if (v === 'pins') pins.refetch(); if (v === 'support') ex.load(); if (v === 'billing') loadZoneCount(); if (v === 'privacy') hidden.load(); if (v === 'admin') reports.refresh(); if (v === 'procedures') { proc.load() } })
-  onMounted(() => { loadZoneCount(); hidden.load() })
-  return { u, theme, active, tabs, activeIndex, menuModel, setActive, isAdmin, zoneCount, showAvatar, ex, support, bioPreviewText, bioPreviewEmpty, avatarSrc, invisible, hidden, admin, reports, imp, proc, blur, photoPrivacy, screenLock, ...pins }
+  onMounted(() => { loadZoneCount(); hidden.load(); proc.init() })
+  return { u, theme, active, tabs, activeIndex, menuModel, setActive, isAdmin, showProcedures, zoneCount, showAvatar, ex, support, bioPreviewText, bioPreviewEmpty, avatarSrc, invisible, hidden, admin, reports, imp, proc, blur, photoPrivacy, screenLock, ...pins }
 }

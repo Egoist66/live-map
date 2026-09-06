@@ -122,7 +122,7 @@ class ProfileController extends Controller
     public function edit(Request $request, ?string $identifier = null, ?string $tab = null): Response|RedirectResponse
     {
         $auth = $request->user();
-        $tabIds = ['profile', 'billing', 'pins', 'privacy', 'appearance', 'security', 'support', 'app', 'admin'];
+        $tabIds = ['profile', 'billing', 'pins', 'privacy', 'appearance', 'security', 'procedures', 'support', 'app', 'admin'];
         if ($tab === null && $identifier !== null && in_array($identifier, $tabIds, true) && $identifier !== 'admin') {
             $tab = $identifier;
             $identifier = null;
