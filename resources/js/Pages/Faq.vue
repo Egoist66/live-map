@@ -14,7 +14,7 @@ import AccordionHeader from 'primevue/accordionheader'
 import AccordionContent from 'primevue/accordioncontent'
 const seo = useSeo({
   title: 'FAQ — Как устроен UPin | Вопросы и ответы',
-  description: 'Ответы про UPin простым языком: что такое пины, сколько живут (Free 4 ч, Pro 12 ч, Business без срока), лимиты, радиус 5-50 км, приватность, тарифы, бусты, чат и карта района.',
+  description: 'Ответы про UPin простым языком: регистрация, пины и аудитория по полу, страна проживания, жизнь пина (Free 4 ч, Pro 12 ч, Business без срока), радиус 5-50 км, приватность, тарифы, новости приложения и карта района.',
   keywords: ['UPin FAQ','что такое UPin','пины','приватность','тарифы'],
 })
 const page = usePage()

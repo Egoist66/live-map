@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\CountryResolver;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -45,6 +46,8 @@ class RegisteredUserController extends Controller
             'home_radius_km' => 'nullable|integer|min:1|max:5',
             'home_address' => 'nullable|string|max:255',
         ]);
+
+        CountryResolver::assertResidenceAllowed($request->input('country'), $request->input('country_code'), $request->input('home_lat'), $request->input('home_lng'));
 
         $user = User::create([
             'name' => $request->name,

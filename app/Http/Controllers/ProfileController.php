@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Services\CountryResolver;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -41,7 +42,7 @@ class ProfileController extends Controller
             $showLastSeen = null;
         }
         $home = $user->publicHomeFor($auth);
-        $base = $user->only(['id','name','gender','birth_date','country','country_code','avatar_path','level','reputation_score','created_at','home_city','home_visibility','home_radius_km','bio','last_seen_at','is_invisible']);
+        $base = $user->only(['id','name','gender','birth_date','country','country_code','avatar_path','level','reputation_score','created_at','home_city','home_visibility','home_radius_km','bio','last_seen_at','is_invisible','photo_comments_privacy']);
         $base['age'] = $user->age;
         if (!$isOwn) unset($base['birth_date']);
         if ($isOwn) {
@@ -159,6 +160,14 @@ class ProfileController extends Controller
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
         $user = $request->user();
+        if (! $user->isAdmin()) {
+            CountryResolver::assertResidenceAllowed(
+                $request->input('country', $user->country),
+                $request->input('country_code', $user->country_code),
+                $request->input('home_lat', $user->home_lat),
+                $request->input('home_lng', $user->home_lng),
+            );
+        }
         $user->fill($request->validated());
         if ($user->country_code) $user->country_code = mb_strtolower(trim((string) $user->country_code));
         if ($user->country) $user->country = trim(preg_replace('/\s+/', ' ', (string) $user->country));

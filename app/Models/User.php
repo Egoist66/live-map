@@ -11,7 +11,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['name', 'email', 'password', 'gender', 'birth_date', 'country', 'country_code', 'plan', 'latitude', 'longitude', 'role', 'is_admin', 'is_hidden_from_search', 'avatar_path', 'home_lat', 'home_lng', 'home_city', 'home_address', 'home_visibility', 'home_show_exact', 'home_radius_km', 'bio', 'reputation_score', 'level', 'is_anonymous_default', 'default_location_precision', 'default_blur_meters', 'message_privacy', 'allow_random_messages', 'settings', 'last_seen_at', 'is_invisible', 'screen_lock_code', 'screen_lock_timeout', 'screen_lock_kind', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at'])]
+#[Fillable(['name', 'email', 'password', 'gender', 'birth_date', 'country', 'country_code', 'plan', 'latitude', 'longitude', 'role', 'is_admin', 'is_hidden_from_search', 'avatar_path', 'home_lat', 'home_lng', 'home_city', 'home_address', 'home_visibility', 'home_show_exact', 'home_radius_km', 'bio', 'reputation_score', 'level', 'is_anonymous_default', 'default_location_precision', 'default_blur_meters', 'message_privacy', 'allow_random_messages', 'photo_comments_privacy', 'settings', 'last_seen_at', 'is_invisible', 'screen_lock_code', 'screen_lock_timeout', 'screen_lock_kind', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at'])]
 #[Hidden(['password', 'remember_token', 'screen_lock_code'])]
 class User extends Authenticatable
 {
@@ -68,6 +68,7 @@ class User extends Authenticatable
     public function friendshipsReceived() { return $this->hasMany(Friendship::class, 'addressee_id'); }
     public function conversations() { return $this->belongsToMany(Conversation::class, 'conversation_participants')->withPivot('last_read_at','joined_at'); }
     public function pushSubscriptions() { return $this->hasMany(PushSubscription::class); }
+    public function profilePhotos() { return $this->hasMany(ProfilePhoto::class); }
 
     public function isAdmin(): bool { return $this->is_admin || $this->role === 'admin'; }
     public function isModerator(): bool { return $this->isAdmin() || $this->role === 'moderator'; }
@@ -190,6 +191,37 @@ class User extends Authenticatable
     }
 
     public function canModerate(): bool { return $this->isModerator(); }
+
+    public function photoLimit(): int
+    {
+        if ($this->isAdmin()) return 15;
+        return match ($this->plan) {
+            'business' => 15,
+            'pro' => 6,
+            default => 3,
+        };
+    }
+
+    public function profilePhotosCount(): int
+    {
+        return $this->profilePhotos()->count();
+    }
+
+    public function canAddProfilePhoto(): bool
+    {
+        return $this->profilePhotosCount() < $this->photoLimit();
+    }
+
+    public function canCommentProfilePhoto(User $owner): bool
+    {
+        if ($this->id === $owner->id || $this->isAdmin()) return true;
+        return match ($owner->photo_comments_privacy ?? 'everyone') {
+            'everyone' => true,
+            'friends' => Friendship::areFriends($this->id, $owner->id),
+            'none' => false,
+            default => true,
+        };
+    }
 
     public function canDeletePin(Pin $pin): bool { return $this->isAdmin() || $pin->user_id === $this->id; }
 

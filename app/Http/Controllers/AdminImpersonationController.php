@@ -75,6 +75,53 @@ class AdminImpersonationController extends Controller
         return response()->json(['ok' => true]);
     }
 
+    public function index(Request $request)
+    {
+        $data = $request->validate([
+            'q' => 'nullable|string|max:100',
+            'filter' => 'nullable|in:all,unread,read',
+            'per_page' => 'nullable|integer|min:5|max:100',
+        ]);
+        $query = AdminImpersonationLog::with([
+            'admin:id,name,email',
+            'target:id,name,email',
+        ])->latest('started_at');
+
+        $filter = $data['filter'] ?? 'all';
+        if ($filter === 'unread') $query->whereNull('seen_at');
+        if ($filter === 'read') $query->whereNotNull('seen_at');
+
+        if (! empty($data['q'])) {
+            $term = trim($data['q']);
+            $query->where(function ($w) use ($term) {
+                $w->where('reason', 'like', "%$term%")
+                    ->orWhereHas('target', fn ($t) => $t->where('name', 'like', "%$term%")->orWhere('email', 'like', "%$term%"))
+                    ->orWhereHas('admin', fn ($a) => $a->where('name', 'like', "%$term%")->orWhere('email', 'like', "%$term%"));
+            });
+        }
+
+        $paginator = $query->paginate((int) ($data['per_page'] ?? 20));
+
+        return response()->json([
+            'data' => collect($paginator->items())->map(fn ($l) => [
+                'id' => $l->id,
+                'reason' => $l->reason,
+                'started_at' => $l->started_at?->toISOString(),
+                'ended_at' => $l->ended_at?->toISOString(),
+                'seen_at' => $l->seen_at?->toISOString(),
+                'admin' => $l->admin ? $l->admin->only(['id', 'name', 'email']) : ['id' => $l->admin_id],
+                'target' => $l->target ? $l->target->only(['id', 'name', 'email']) : ['id' => $l->target_user_id],
+            ]),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ],
+            'unread_count' => AdminImpersonationLog::whereNull('seen_at')->count(),
+        ]);
+    }
+
     public function myHistory(Request $request)
     {
         $logs = AdminImpersonationLog::where('target_user_id', $request->user()->id)

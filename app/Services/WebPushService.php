@@ -82,6 +82,27 @@ class WebPushService
         ]);
     }
 
+    public function sendPhotoActivity(User $recipient, User $actor, \App\Models\ProfilePhoto $photo, \App\Models\PinActivity $activity): int
+    {
+        $name = $actor->name ?: 'Кто-то';
+        if ($activity->kind === 'mention') {
+            $title = 'Вас упомянули';
+            $body = $activity->excerpt ? "{$name} упомянул вас: {$activity->excerpt}" : "{$name} упомянул вас в комментарии к фото";
+            $tag = "photo-{$photo->id}-mention-{$activity->id}";
+        } else {
+            $title = 'Комментарий к фото';
+            $body = $activity->excerpt ? "{$name}: {$activity->excerpt}" : "{$name} прокомментировал ваше фото";
+            $tag = "photo-{$photo->id}-comment-{$activity->id}";
+        }
+        return $this->sendToUser($recipient, [
+            'title' => $title,
+            'body' => $body,
+            'url' => '/users/'.$photo->user_id,
+            'tag' => $tag,
+            'avatar' => $actor->avatar_url,
+        ]);
+    }
+
     public function sendReport(User $recipient, \App\Models\Report $report): int
     {
         $reasons = \App\Models\Report::reasons();

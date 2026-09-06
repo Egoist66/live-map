@@ -2,6 +2,7 @@
 import GuestLayout from '@/Layouts/GuestLayout.vue'
 import { Head, Link } from '@inertiajs/vue3'
 import { useRegisterForm } from '@/composables/useAuthForm'
+import { useBirthDateField } from '@/composables/useBirthDate'
 import { useGender } from '@/composables/useGender'
 import { useUserAge } from '@/composables/useUserAge'
 import { RESIDENCE_COUNTRIES } from '@/composables/useResidence'
@@ -12,6 +13,7 @@ import Select from 'primevue/select'
 import DatePicker from 'primevue/datepicker'
 import HomeZoneField from '@/Components/Features/HomeZone/HomeZoneField.vue'
 const f = useRegisterForm()
+const bd = useBirthDateField(f.birth_date as any)
 const g = useGender()
 const { label: ageLabel } = useUserAge(() => (f.values as any).birth_date)
 </script>
@@ -40,7 +42,7 @@ const { label: ageLabel } = useUserAge(() => (f.values as any).birth_date)
       <div class="grid grid-cols-2 gap-3">
         <div>
           <label class="text-[13px] font-semibold text-ink-900 dark:text-zinc-100">Дата рождения</label>
-          <DatePicker v-model="f.birth_date.value" dateFormat="yy-mm-dd" :maxDate="new Date()" showIcon fluid placeholder="1997-05-20" class="w-full mt-1.5" :invalid="!!f.errors.value.birth_date" />
+          <DatePicker v-model="bd.birthDateInput.value" v-bind="bd.birthDatePickerProps.value" placeholder="12.07.1997" class="w-full mt-1.5" :invalid="!!f.errors.value.birth_date" />
           <small class="text-red-500 dark:text-red-400">{{ f.errors.value.birth_date }}</small>
           <small v-if="ageLabel" class="text-stone-500 dark:text-zinc-400">{{ ageLabel }}</small>
         </div>
@@ -54,6 +56,7 @@ const { label: ageLabel } = useUserAge(() => (f.values as any).birth_date)
         <label class="text-[13px] font-semibold text-ink-900 dark:text-zinc-100">Страна проживания</label>
         <Select v-model="f.country.value" :options="[...RESIDENCE_COUNTRIES]" optionLabel="name" optionValue="name" placeholder="Беларусь" checkmark editable fluid class="w-full mt-1.5 !rounded-2xl" :invalid="!!f.errors.value.country" @update:model-value="(v:string)=>{ const c=[...RESIDENCE_COUNTRIES].find(x=>x.name===v); f.setValues({ country: v, country_code: c ? c.code : (f.values as any).country_code } as any) }" />
         <small class="text-stone-500 dark:text-zinc-400">Пины можно создавать только в своей стране</small>
+        <small v-if="f.countryWarning.value" class="text-amber-600 dark:text-amber-400">⚠️ {{ f.countryWarning.value }}</small>
         <small class="text-red-500 dark:text-red-400">{{ f.errors.value.country }}</small>
       </div>
       <div>

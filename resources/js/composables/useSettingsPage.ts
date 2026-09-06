@@ -14,6 +14,7 @@ import { useAdminReports } from '@/composables/useAdminReports'
 import { useAdminImpersonate } from '@/composables/useAdminImpersonate'
 import { useSecurityImpersonations } from '@/composables/useSecurityImpersonations'
 import { useLocationBlur } from '@/composables/useLocationBlur'
+import { usePhotoCommentsPrivacy } from '@/composables/usePhotoCommentsPrivacy'
 
 export function useSettingsPage(props: { user: any }) {
   const page = usePage()
@@ -34,8 +35,10 @@ export function useSettingsPage(props: { user: any }) {
   const imp = useAdminImpersonate()
   const proc = useSecurityImpersonations(active)
   const blur = useLocationBlur()
+  const photoPrivacy = usePhotoCommentsPrivacy(() => String((u.value as any)?.photo_comments_privacy || 'everyone'))
+  watch(u, (v) => photoPrivacy.sync(String((v as any)?.photo_comments_privacy || 'everyone')))
   const screenLock = useScreenLock()
   watch(active, (v) => { if (v === 'pins') pins.refetch(); if (v === 'support') ex.load(); if (v === 'billing') loadZoneCount(); if (v === 'privacy') hidden.load(); if (v === 'admin') reports.refresh(); if (v === 'procedures') { proc.load() } })
   onMounted(() => { loadZoneCount(); hidden.load() })
-  return { u, theme, active, tabs, activeIndex, menuModel, setActive, isAdmin, zoneCount, showAvatar, ex, support, bioPreviewText, bioPreviewEmpty, avatarSrc, invisible, hidden, admin, reports, imp, proc, blur, screenLock, ...pins }
+  return { u, theme, active, tabs, activeIndex, menuModel, setActive, isAdmin, zoneCount, showAvatar, ex, support, bioPreviewText, bioPreviewEmpty, avatarSrc, invisible, hidden, admin, reports, imp, proc, blur, photoPrivacy, screenLock, ...pins }
 }

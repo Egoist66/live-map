@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import MessageTicks from '@/Components/Features/Feedback/MessageTicks.vue'
+import { renderWithMentions } from '@/composables/useMentions'
 
 defineProps<{ message: any; own: boolean; status: string; time: string }>()
 const emit = defineEmits<{ (e: 'edit', m: any): void; (e: 'delete', id: number): void }>()
@@ -13,7 +14,7 @@ const emit = defineEmits<{ (e: 'edit', m: any): void; (e: 'delete', id: number):
       </div>
       <div class="relative min-w-0 flex-1 select-none">
         <div :class="['rounded-[18px] lg:rounded-2xl px-3.5 py-2.5 lg:px-3 lg:py-2 text-[15px] lg:text-sm leading-[1.4] shadow-sm transition-all duration-300', own ? 'bg-violet-600 text-white rounded-br-[6px]' : 'bg-white dark:bg-zinc-800 dark:text-white border border-stone-200 dark:border-zinc-700 rounded-bl-[6px]', (message as any).pending ? 'opacity-60 scale-[0.98]' : 'opacity-100 scale-100', (message as any).failed ? '!bg-red-500' : '', (message as any).justSent ? 'ring-2 ring-violet-300' : '']">
-          <div class="whitespace-pre-wrap break-words overflow-wrap-anywhere [overflow-wrap:anywhere] min-w-0">{{ message.body }}</div>
+          <div class="whitespace-pre-wrap break-words overflow-wrap-anywhere [overflow-wrap:anywhere] min-w-0 msg-body" v-html="renderWithMentions(message.body || '')"></div>
           <div :class="own ? 'text-violet-100' : 'text-stone-400'" class="text-[11px] lg:text-[10px] mt-1 text-right flex items-center justify-end gap-1.5">
             <span>{{ time }}</span>
             <span v-if="(message as any).is_edited" class="opacity-70">· изм.</span>
@@ -28,3 +29,6 @@ const emit = defineEmits<{ (e: 'edit', m: any): void; (e: 'delete', id: number):
     </div>
   </div>
 </template>
+<style scoped>
+.msg-body :deep(.mention){font-weight:700;text-decoration:underline;text-underline-offset:2px}
+</style>

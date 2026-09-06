@@ -200,14 +200,14 @@ function openNews(item: any) {
                     class="!w-10 !h-10 [&_img]:object-cover"
                     :pt="{ image: { class: 'object-cover' } }" /><span
                     class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center border-2 border-white dark:border-zinc-900 text-[10px]"
-                    :class="a.kind === 'comment' ? 'bg-violet-600' : a.kind === 'mention' ? 'bg-amber-500' : 'bg-rose-500'"
+                    :class="a.kind === 'comment' ? 'bg-violet-600' : a.kind === 'mention' ? 'bg-amber-500' : a.kind === 'photo_comment' ? 'bg-sky-500' : 'bg-rose-500'"
                     >{{ pinAct.describe(a).emoji }}</span
                   ></span
                 >
                 <div class="min-w-0 flex-1">
                   <div class="flex items-center gap-1.5">
                     <span class="text-sm font-semibold dark:text-white truncate">{{
-                      a.pin?.title || "Ваш пин"
+                      a.pin?.title || (a.photo ? "Ваше фото" : "Ваш пин")
                     }}</span
                     ><span
                       v-if="a.created_at"

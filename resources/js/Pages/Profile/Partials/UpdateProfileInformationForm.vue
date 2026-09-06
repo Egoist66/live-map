@@ -2,6 +2,7 @@
 import { Link } from '@inertiajs/vue3'
 import AvatarPreview from '@/Components/Features/Media/AvatarPreview.vue'
 import { useProfileForm } from '@/composables/useProfileForm'
+import { useBirthDateField } from '@/composables/useBirthDate'
 import { useAvatarUpload } from '@/composables/useAvatarUpload'
 import { useGender } from '@/composables/useGender'
 import { RESIDENCE_COUNTRIES } from '@/composables/useResidence'
@@ -18,6 +19,7 @@ import Avatar from 'primevue/avatar'
 import HomeZoneField from '@/Components/Features/HomeZone/HomeZoneField.vue'
 defineProps<{ mustVerifyEmail: boolean; status?: string | null }>()
 const f = useProfileForm()
+const bd = useBirthDateField(f.birth_date as any)
 const a = useAvatarUpload()
 const g = useGender()
 const { selectPt } = useDropdownMenuStyle()
@@ -93,7 +95,7 @@ const planOptions = [{ label:'Free — 3/день · 5км', value:'free', icon:
       <div class="grid sm:grid-cols-3 gap-4">
         <div>
           <label class="text-sm font-medium dark:text-white">Дата рождения</label>
-          <DatePicker v-model="f.birth_date.value" dateFormat="yy-mm-dd" :maxDate="new Date()" showIcon fluid placeholder="1997-05-20" class="w-full mt-1" :invalid="!!f.errors.value.birth_date" />
+          <DatePicker v-model="bd.birthDateInput.value" v-bind="bd.birthDatePickerProps.value" placeholder="12.07.1997" class="w-full mt-1" :invalid="!!f.errors.value.birth_date" />
           <small v-if="f.ageLabel.value" class="text-stone-500 dark:text-zinc-400">{{ f.ageLabel.value }}</small>
           <Message v-if="f.errors.value.birth_date" severity="error" :closable="false" class="mt-1 !rounded-xl !py-1 !text-xs">{{ f.errors.value.birth_date }}</Message>
         </div>
@@ -101,6 +103,7 @@ const planOptions = [{ label:'Free — 3/день · 5км', value:'free', icon:
           <label class="text-sm font-medium dark:text-white">Страна проживания</label>
           <Select v-model="f.country.value" :options="[...RESIDENCE_COUNTRIES]" optionLabel="name" optionValue="name" placeholder="Беларусь" checkmark editable fluid class="w-full mt-1 !rounded-xl" :pt="selectPt" @update:model-value="(v:string)=>{ const c=[...RESIDENCE_COUNTRIES].find(x=>x.name===v); f.setValues({ country: v, country_code: c ? c.code : (f.values as any).country_code } as any) }" />
           <p class="text-[11px] text-stone-400 mt-1">Пины — только в своей стране</p>
+          <small v-if="f.countryWarning.value" class="text-amber-600 dark:text-amber-400">⚠️ {{ f.countryWarning.value }}</small>
           <Message v-if="f.errors.value.country" severity="error" :closable="false" class="mt-1 !rounded-xl !py-1 !text-xs">{{ f.errors.value.country }}</Message>
         </div>
         <div>

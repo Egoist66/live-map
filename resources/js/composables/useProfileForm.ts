@@ -7,6 +7,7 @@ import { maxHomeRadiusKm } from './usePlanLimits'
 import { useHomeLocation } from './useHomeLocation'
 import { useUserAge } from './useUserAge'
 import { normalizeCountryCode } from './useResidence'
+import { useCountryMismatch } from './useCountryMismatch'
 import { reverseGeocode } from '@/services/geo.api'
 
 export function useProfileForm() {
@@ -14,7 +15,7 @@ export function useProfileForm() {
   const user = computed(() => (page.props.auth as any).user)
   const toast = (() => { try { return useToast() } catch { return null as any } })()
 
-  const { defineField, handleSubmit, errors, values, setValues, isSubmitting } = useForm({
+  const { defineField, handleSubmit, errors, values, setValues, setErrors, isSubmitting } = useForm({
     validationSchema: updateProfileSchema,
     initialValues: {
       name: user.value.name,
@@ -88,7 +89,21 @@ export function useProfileForm() {
     if (cur > m) setValues({ home_radius_km: m } as any)
   })
 
-  const submit = handleSubmit((vals: any) => {
+  const residenceCheck = useCountryMismatch(() => ({
+    country: (values as any).country,
+    country_code: (values as any).country_code,
+    lat: (values as any).home_lat,
+    lng: (values as any).home_lng,
+  }))
+
+  const submit = handleSubmit(async (vals: any) => {
+    const residenceOk = await residenceCheck.recheckCountry()
+    if (!residenceOk) {
+      const msg = residenceCheck.countryWarning.value || 'Страна не совпадает с геолокацией'
+      setErrors({ country: msg })
+      toast?.add({ severity: 'error', summary: 'Сохранение запрещено', detail: msg, life: 4000 })
+      return
+    }
     const payload: any = { ...vals }
     if (typeof payload.bio === 'string') {
       const t = payload.bio.trim()
@@ -100,11 +115,14 @@ export function useProfileForm() {
     router.patch(route('profile.update'), payload, {
       preserveScroll: true,
       onSuccess: () => toast?.add({ severity: 'success', summary: 'Профиль сохранён', life: 2000 }),
-      onError: (e: any) => toast?.add({ severity: 'error', summary: 'Ошибка', detail: Object.values(e || {}).flat().join(', ') || 'Не удалось сохранить', life: 3000 }),
+      onError: (e: any) => {
+        try { setErrors(e) } catch {}
+        toast?.add({ severity: 'error', summary: 'Ошибка', detail: Object.values(e || {}).flat().join(', ') || 'Не удалось сохранить', life: 3000 })
+      },
     })
   })
 
   const age = useUserAge(() => (values as any).birth_date)
 
-  return { user, name, nameAttrs, gender, birth_date, age: age.age, ageLabel: age.label, country, country_code, email, emailAttrs, canChangeEmail, home_lat, homeLatAttrs, home_lng, homeLngAttrs, home_city, home_address, home_visibility, home_show_exact, home_radius_km, bio, is_anonymous_default, plan, errors, values, setValues, submit, isSubmitting, useMyLocation, maxRadius, homeLocation }
+  return { user, name, nameAttrs, gender, birth_date, age: age.age, ageLabel: age.label, country, country_code, email, emailAttrs, canChangeEmail, home_lat, homeLatAttrs, home_lng, homeLngAttrs, home_city, home_address, home_visibility, home_show_exact, home_radius_km, bio, is_anonymous_default, plan, errors, values, setValues, setErrors, submit, isSubmitting, useMyLocation, maxRadius, homeLocation, countryWarning: residenceCheck.countryWarning, checkingCountry: residenceCheck.checkingCountry }
 }

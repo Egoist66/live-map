@@ -3,6 +3,8 @@ import { useForm } from 'vee-validate'
 import { loginSchema } from '@/validation/schemas/login.schema'
 import { registerSchema } from '@/validation/schemas/register.schema'
 import { reverseGeocodeRaw } from '@/services/geo.api'
+import { useCountryMismatch } from '@/composables/useCountryMismatch'
+import { useToast } from 'primevue/usetoast'
 import { router } from '@inertiajs/vue3'
 
 export function useLoginForm() {
@@ -48,6 +50,13 @@ export function useRegisterForm() {
   const [home_lng] = defineField('home_lng')
   const [home_radius_km] = defineField('home_radius_km')
   const [home_address] = defineField('home_address')
+  const toast = (() => { try { return useToast() } catch { return null as any } })()
+  const residenceCheck = useCountryMismatch(() => ({
+    country: (values as any).country,
+    country_code: (values as any).country_code,
+    lat: (values as any).home_lat,
+    lng: (values as any).home_lng,
+  }))
 
   async function detectLocation() {
     locating.value = true
@@ -79,6 +88,13 @@ export function useRegisterForm() {
   }
 
   const submit = handleSubmit(async (vals: any) => {
+    const residenceOk = await residenceCheck.recheckCountry()
+    if (!residenceOk) {
+      const msg = residenceCheck.countryWarning.value || 'Страна не совпадает с геолокацией'
+      setErrors({ country: msg })
+      toast?.add({ severity: 'error', summary: 'Сохранение запрещено', detail: msg, life: 4000 })
+      return
+    }
     router.post(route('register'), vals, {
       onError: (errs: Record<string, string>) => setErrors(errs),
     })
@@ -87,5 +103,6 @@ export function useRegisterForm() {
   return {
     name, nameAttrs, email, emailAttrs, gender, password, passwordAttrs, password_confirmation, passwordConfirmationAttrs,
     birth_date, country, country_code, home_city, home_lat, home_lng, home_radius_km, home_address, values, errors, showPass, showPass2, locating, addrLoading, detectLocation, submit, isSubmitting, setValues,
+    countryWarning: residenceCheck.countryWarning, checkingCountry: residenceCheck.checkingCountry,
   }
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
+import { computed } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
@@ -9,6 +9,7 @@ import { avatarSrcFor } from '@/composables/useAvatar'
 import { pinBlurInfo } from '@/composables/useLocationBlur'
 import { usePinLifetime } from '@/composables/usePinLifetime'
 import { renderWithMentions } from '@/composables/useMentions'
+import { usePinCommentInput } from '@/composables/usePinCommentInput'
 import { formatTime } from '@/utils/date'
 
 const props = defineProps<{ pin: any; comments: any[]; commentText: string; creatingComment: boolean; editingCommentId: number | null; editingContent: string; savingComment: boolean; reacting: boolean; reporting: boolean; pinEdit: any; categories: any[]; deleting: boolean; authId: number; replyTo: any; mentions: any }>()
@@ -16,41 +17,20 @@ const emit = defineEmits<{ (e: 'close'): void; (e: 'delete'): void; (e: 'react',
 const blur = computed(() => pinBlurInfo(props.pin))
 const catMeta = computed(() => (props.categories as any[]).find((c: any) => c.v === props.pin?.category) ?? null)
 const lifetime = usePinLifetime(() => props.pin)
-const commentInput = ref<any>(null)
-function inputEl(): any {
-  try { return (commentInput.value as any)?.$el ?? commentInput.value ?? null } catch { return null }
-}
-function inputCursor(): number {
-  const el = inputEl()
-  if (el && typeof el.selectionStart === 'number') return el.selectionStart
-  return (props.commentText || '').length
-}
-function focusInput(cursor?: number) {
-  const el = inputEl()
-  if (!el) return
-  try {
-    el.focus()
-    if (typeof cursor === 'number' && el.setSelectionRange) el.setSelectionRange(cursor, cursor)
-  } catch {}
-}
-function onCommentInput() {
-  try { props.mentions?.detect(props.commentText, inputCursor()) } catch {}
-}
-function pickMention(u: any) {
-  try {
-    const { text, cursor } = props.mentions.applyMention(props.commentText, u)
-    emit('update:comment', text)
-    nextTick(() => focusInput(cursor))
-  } catch {}
-}
+const commentBox = usePinCommentInput({ getText: () => props.commentText, emit: (e, v) => emit(e as any, v as any), mentions: props.mentions })
+const { cardRef, listRef, commentInput, cardStyle, onCommentInput, onInputFocus, pickMention, focusForReply, blurInput } = commentBox
 function onReply(root: any, target?: any) {
   emit('reply', root, target ?? root)
-  nextTick(() => focusInput())
+  focusForReply()
+}
+function onSend() {
+  blurInput()
+  emit('sendComment')
 }
 function authorName(c: any): string { return c?.is_anonymous ? 'аноним' : (c?.user?.name || 'пользователь') }
 </script>
 <template>
-  <div v-if="pin" class="absolute inset-x-2 sm:inset-x-auto bottom-2 sm:bottom-4 top-auto max-h-[72dvh] sm:right-4 sm:top-4 sm:w-[380px] sm:max-h-none bg-white dark:bg-zinc-900 rounded-[20px] shadow-float border border-stone-200 dark:border-zinc-700 flex flex-col overflow-hidden z-20">
+  <div v-if="pin" ref="cardRef" :style="cardStyle" class="absolute inset-x-2 sm:inset-x-auto bottom-2 sm:bottom-4 top-auto max-h-[72dvh] sm:right-4 sm:top-4 sm:w-[380px] sm:max-h-none bg-white dark:bg-zinc-900 rounded-[20px] shadow-float border border-stone-200 dark:border-zinc-700 flex flex-col overflow-hidden z-20">
     <div class="p-4 sm:p-5 border-b border-stone-200 dark:border-zinc-700 shrink-0">
       <div v-if="!pinEdit.editing.value" class="flex justify-between items-start gap-3">
         <h3 class="font-bold leading-tight pr-2 text-[15px] break-words min-w-0 flex-1">{{ pin.title }}</h3>
@@ -69,7 +49,7 @@ function authorName(c: any): string { return c?.is_anonymous ? 'аноним' : 
           <Button label="Отмена" severity="secondary" outlined rounded class="flex-1" @click="pinEdit.cancel()" />
         </div>
       </div>
-      <p v-if="!pinEdit.editing.value" class="text-sm text-stone-600 dark:text-zinc-300 mt-2 leading-relaxed break-words overflow-wrap-anywhere">{{ pin.body }}</p>
+      <p v-if="!pinEdit.editing.value && pin.body" class="text-sm text-stone-600 dark:text-zinc-300 mt-2 leading-relaxed break-words overflow-wrap-anywhere comment-body" v-html="renderWithMentions(pin.body || '')"></p>
       <div v-if="!pinEdit.editing.value && blur" title="Точка на карте сдвинута от реального места" class="mt-2 text-[11px] leading-snug bg-violet-50 dark:bg-violet-950/40 border border-violet-200 dark:border-violet-800 text-violet-800 dark:text-violet-200 rounded-xl px-2.5 py-1.5">📍 {{ blur.hint }}</div>
       <div v-if="!pinEdit.editing.value" class="flex flex-wrap gap-1.5 mt-3 items-center">
         <span class="text-xs bg-stone-100 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 text-stone-700 dark:text-zinc-200 rounded-full px-2.5 py-1 font-medium">{{ catMeta ? `${catMeta.i} ${catMeta.l}` : pin.category }}</span>
@@ -89,7 +69,7 @@ function authorName(c: any): string { return c?.is_anonymous ? 'аноним' : 
         <button @click="emit('report')" :disabled="reporting" class="w-10 h-10 rounded-full grid place-items-center border active:scale-95 transition disabled:opacity-50 bg-zinc-500/10 dark:bg-zinc-500/15 border-zinc-500/25 dark:border-zinc-500/30 text-zinc-500 dark:text-zinc-300 hover:bg-red-500/15 hover:border-red-500/40 hover:text-red-500 dark:hover:text-red-400">⚠</button>
       </div>
     </div>
-    <div class="flex-1 overflow-y-auto p-4 space-y-3 bg-stone-50/40 dark:bg-black/30">
+    <div ref="listRef" class="flex-1 overflow-y-auto overscroll-contain p-4 space-y-3 bg-stone-50/40 dark:bg-black/30" style="webkit-overflow-scrolling: touch;">
       <div v-for="root in comments" :key="root.id" class="bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl p-3.5">
         <div class="font-semibold text-xs flex items-center gap-2 dark:text-zinc-100">
           <img v-if="!root.is_anonymous" :src="avatarSrcFor(root.user)" class="w-6 h-6 rounded-full object-cover shrink-0" alt="" />
@@ -126,8 +106,8 @@ function authorName(c: any): string { return c?.is_anonymous ? 'аноним' : 
         <span class="truncate">Ответ для {{ replyTo.is_anonymous ? 'анонима' : '@' + (replyTo.user?.name || 'пользователя') }}</span>
         <button type="button" @click="emit('cancelReply')" class="w-5 h-5 rounded-full grid place-items-center hover:bg-violet-200 dark:hover:bg-violet-800 shrink-0"><i class="pi pi-times text-[9px]"></i></button>
       </div>
-      <form @submit.prevent="emit('sendComment')" class="relative flex gap-2">
-        <InputText ref="commentInput" :model-value="commentText" @update:model-value="(v:any)=>{ emit('update:comment', v); nextTick(onCommentInput) }" @input="onCommentInput" @keyup="onCommentInput" @click="onCommentInput" placeholder="Написать комментарий... @ — упомянуть" class="flex-1 !rounded-full" :disabled="creatingComment" />
+      <form @submit.prevent="onSend" class="relative flex gap-2">
+        <InputText ref="commentInput" :model-value="commentText" @update:model-value="(v:any)=>{ emit('update:comment', v); onCommentInput() }" @input="onCommentInput" @keyup="onCommentInput" @click="onCommentInput" @focus="onInputFocus" inputmode="text" enterkeyhint="send" autocomplete="off" autocapitalize="sentences" placeholder="Написать комментарий... @ — упомянуть" class="flex-1 !rounded-full" :disabled="creatingComment" />
         <Button type="submit" icon="pi pi-send" rounded class="!bg-stone-900 dark:!bg-white dark:!text-ink-900 !border-stone-900 dark:!border-white" :loading="creatingComment" />
         <div v-if="mentions?.mentionOpen.value" class="absolute left-0 right-12 bottom-[calc(100%+8px)] bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl shadow-float overflow-hidden z-30 max-h-56 overflow-y-auto">
           <div v-if="mentions.mentionLoading.value" class="px-4 py-3 text-xs text-stone-400">Ищем людей…</div>

@@ -3,7 +3,6 @@
 namespace App\Events;
 
 use App\Models\PinActivity;
-use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
@@ -16,16 +15,15 @@ class PinActivityCreated implements ShouldBroadcastNow
 
     public function __construct(
         public ?PinActivity $activity,
-        public int $pinId,
+        public ?int $pinId,
         public int $ownerId,
-        public int $reactionsCount,
-        public int $commentsCount,
+        public ?int $reactionsCount,
+        public ?int $commentsCount,
     ) {}
 
     public function broadcastOn(): array
     {
         return [
-            new Channel('map'),
             new PrivateChannel('user.'.$this->ownerId),
         ];
     }
@@ -36,6 +34,7 @@ class PinActivityCreated implements ShouldBroadcastNow
     {
         return [
             'pin_id' => $this->pinId,
+            'owner_id' => $this->ownerId,
             'reactions_count' => $this->reactionsCount,
             'comments_count' => $this->commentsCount,
             'activity' => $this->activity?->toNotifyArray(),

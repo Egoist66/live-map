@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\User;
+use App\Models\UserBlock;
 use Illuminate\Support\Facades\DB;
 
 class Mentions
@@ -32,6 +33,18 @@ class Mentions
             ->map(fn ($id) => (int) $id)
             ->all();
         return array_values(array_unique(array_filter($rows, fn ($id) => $id !== $excludeId)));
+    }
+
+    public static function notifyableIds(array $ids, int $actorId): array
+    {
+        $ids = array_values(array_unique(array_map('intval', $ids)));
+        $ids = array_values(array_filter($ids, fn ($id) => $id > 0 && $id !== $actorId));
+        if (!$ids) return [];
+        $blocked = UserBlock::where(function ($q) use ($ids, $actorId) {
+            $q->where(fn ($x) => $x->where('blocker_id', $actorId)->whereIn('blocked_id', $ids))
+              ->orWhere(fn ($x) => $x->where('blocked_id', $actorId)->whereIn('blocker_id', $ids));
+        })->get()->flatMap(fn ($b) => [(int) $b->blocker_id, (int) $b->blocked_id])->unique()->all();
+        return array_values(array_filter($ids, fn ($id) => !in_array($id, $blocked, true)));
     }
 
     private static function clean(string $raw): string

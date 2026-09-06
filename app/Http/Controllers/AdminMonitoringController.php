@@ -79,7 +79,7 @@ class AdminMonitoringController extends Controller
             ['Лучший день по активности', ($summary['best_active_day']['date'] ?? '—').' ('.($summary['best_active_day']['value'] ?? 0).')'],
             ['Пинов за период (всего / активных)', $summary['total_pins'].' / '.$overview['total_pins'].' / '.$overview['active_pins']],
             ['Жалоб в ожидании', $overview['reports_pending']],
-            ['Тарифы', collect($overview['plans'])->map(fn ($c, $p) => "$p: $c")->implode(', ')],
+            ['Тарифы', self::formatPlans($overview['plans'] ?? [])],
             ['Сформировано', now()->format('Y-m-d H:i')],
         ];
         $summarySheet->setCellValue('A1', 'Метрика');
@@ -117,6 +117,24 @@ class AdminMonitoringController extends Controller
         return response()->streamDownload(function () use ($spreadsheet) {
             (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet))->save('php://output');
         }, $fileName, ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']);
+    }
+
+    private static function formatPlans(mixed $plans): string
+    {
+        $items = $plans instanceof \Traversable ? iterator_to_array($plans) : (is_array($plans) ? $plans : []);
+        if ($items instanceof \Illuminate\Support\Collection) $items = $items->all();
+        if (! is_array($items)) return '';
+        $parts = [];
+        foreach ($items as $key => $value) {
+            if (is_array($value)) {
+                $name = $value['plan'] ?? $value['name'] ?? $key;
+                $count = $value['c'] ?? $value['count'] ?? $value['total'] ?? reset($value);
+                $parts[] = (is_array($name) || is_array($count)) ? json_encode($value, JSON_UNESCAPED_UNICODE) : "$name: $count";
+            } else {
+                $parts[] = "$key: $value";
+            }
+        }
+        return implode(', ', $parts);
     }
 
     public function online(Request $request, MonitoringService $monitoring)

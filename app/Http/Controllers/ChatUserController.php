@@ -58,7 +58,7 @@ class ChatUserController extends Controller
     {
         $request->validate(['message_privacy'=>'required|in:everyone,friends,none','allow_random_messages'=>'required|boolean']);
         $request->user()->update($request->only(['message_privacy','allow_random_messages']));
-        return response()->json($request->user()->only(['message_privacy','allow_random_messages']));
+        return response()->json($request->user()->only(['message_privacy','allow_random_messages','photo_comments_privacy']));
     }
 
     public function me(Request $request)

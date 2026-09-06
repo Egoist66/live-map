@@ -29,6 +29,8 @@ function getUid(): number {
 function onActivity(e: any) {
   const act = e?.activity
   if (!act?.id) return
+  const uid = getUid()
+  if (act.owner_id && uid && Number(act.owner_id) !== uid) return
   if (activities.value.some((x) => x.id === act.id)) return
   activities.value = [act, ...activities.value].slice(0, 30)
   unread.value += 1
@@ -82,7 +84,12 @@ async function markOne(a: PinActivityItem) {
 function describe(a: PinActivityItem): { emoji: string; text: string } {
   const name = a.actor?.name || 'Кто-то'
   if (a.kind === 'mention') {
-    return { emoji: '📣', text: a.excerpt ? `${name} упомянул вас: ${a.excerpt}` : `${name} упомянул вас` }
+    return a.photo
+      ? { emoji: '📣', text: a.excerpt ? `${name} упомянул вас: ${a.excerpt}` : `${name} упомянул вас в фото` }
+      : { emoji: '📣', text: a.excerpt ? `${name} упомянул вас: ${a.excerpt}` : `${name} упомянул вас` }
+  }
+  if (a.kind === 'photo_comment') {
+    return { emoji: '📷', text: a.excerpt ? `${name}: ${a.excerpt}` : `${name} прокомментировал фото` }
   }
   if (a.kind === 'comment') {
     return { emoji: '💬', text: a.excerpt ? `${name}: ${a.excerpt}` : `${name} прокомментировал пин` }
@@ -93,6 +100,10 @@ function describe(a: PinActivityItem): { emoji: string; text: string } {
 
 function goPin(a: PinActivityItem) {
   void markOne(a)
+  if (a.photo?.user_id) {
+    router.visit(`/users/${a.photo.user_id}`)
+    return
+  }
   router.visit('/map')
 }
 

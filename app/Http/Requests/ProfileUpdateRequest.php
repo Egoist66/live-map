@@ -84,6 +84,7 @@ class ProfileUpdateRequest extends FormRequest
             'default_location_precision' => ['nullable','in:blur_200,exact,district,custom'],
             'default_blur_meters' => ['nullable','integer','min:0','max:5000'],
             'avatar_path' => ['nullable','string','max:255'],
+            'photo_comments_privacy' => ['nullable','in:everyone,friends,none'],
             'plan' => ['nullable','in:free,pro,business'],
         ];
     }

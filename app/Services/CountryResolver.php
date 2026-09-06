@@ -5,6 +5,7 @@ namespace App\Services;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 class CountryResolver
 {
@@ -89,5 +90,20 @@ class CountryResolver
             $there = $pin['country'] ?? $pin['country_code'] ?? 'другой стране';
             abort(422, "Операция запрещена — карта ограничена страной проживания ({$home}). Пин находится в: {$there}.");
         }
+    }
+
+    public static function assertResidenceAllowed(?string $country, ?string $code, mixed $lat, mixed $lng): void
+    {
+        $country = self::normalizeName($country);
+        $code = self::normalizeCode($code);
+        if (!$country && !$code) return;
+        if ($lat === null || $lng === null || $lat === '' || $lng === '') return;
+        if (!is_numeric($lat) || !is_numeric($lng)) return;
+        $detected = self::fromCoords((float) $lat, (float) $lng);
+        if (!$detected) return;
+        if (self::sameCountry($code, $country, $detected['country_code'] ?? null, $detected['country'] ?? null)) return;
+        $declared = $country ?? $code;
+        $there = $detected['country'] ?? $detected['country_code'] ?? 'другая страна';
+        throw ValidationException::withMessages(['country' => ["Страна «{$declared}» не совпадает с геолокацией ({$there}). Сохранение запрещено — укажите страну, где вы находитесь."]]);
     }
 }

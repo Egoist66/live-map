@@ -120,22 +120,26 @@ function handleFriendship(e: any) {
 function handlePinActivity(e: any) {
   const a = e?.activity
   if (!a?.id) return
+  const uid = getUid()
+  if (a.owner_id && uid && Number(a.owner_id) !== uid) return
   const actor = a.actor || {}
   const name = actor.name || 'Кто-то'
-  const pinTitle = a.pin?.title || 'ваш пин'
+  const pinTitle = a.pin?.title || a.photo?.caption || 'ваш пин'
   const emoji: Record<string, string> = { like: '❤️', fire: '🔥', laugh: '😂', sad: '😢', angry: '😡', useful: '👍' }
   const body = a.kind === 'comment'
     ? (a.excerpt ? `${name}: ${a.excerpt}` : `${name} прокомментировал «${pinTitle}»`).slice(0, 90)
-    : a.kind === 'mention'
-      ? (a.excerpt ? `${name} упомянул вас: ${a.excerpt}` : `${name} упомянул вас в «${pinTitle}»`).slice(0, 90)
-      : `${name} ${emoji[a.reaction_type] || '⭐'} «${pinTitle}»`.slice(0, 90)
+    : a.kind === 'photo_comment'
+      ? (a.excerpt ? `${name}: ${a.excerpt}` : `${name} прокомментировал фото`).slice(0, 90)
+      : a.kind === 'mention'
+        ? (a.excerpt ? `${name} упомянул вас: ${a.excerpt}` : `${name} упомянул вас в «${pinTitle}»`).slice(0, 90)
+        : `${name} ${emoji[a.reaction_type] || '⭐'} «${pinTitle}»`.slice(0, 90)
   push({
     id: `pin-${a.id}-${Date.now()}`,
     type: 'pin',
-    title: a.kind === 'comment' ? 'Новый комментарий' : a.kind === 'mention' ? 'Вас упомянули' : 'Новая реакция',
+    title: a.kind === 'comment' || a.kind === 'photo_comment' ? 'Новый комментарий' : a.kind === 'mention' ? 'Вас упомянули' : 'Новая реакция',
     body,
     avatar: avatarSrcFor(actor),
-    link: '/map',
+    link: a.photo?.user_id ? `/users/${a.photo.user_id}` : '/map',
     createdAt: Date.now(),
   })
 }

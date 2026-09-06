@@ -56,6 +56,17 @@ Route::middleware(['web', 'auth'])->group(function () {
     Route::get('/chat/users/search', [ChatUserController::class, 'search']);
     Route::patch('/chat/privacy', [ChatUserController::class, 'privacy']);
     Route::patch('/user/invisible', [\App\Http\Controllers\ProfileController::class, 'toggleInvisible']);
+    Route::patch('/user/photo-comments-privacy', [\App\Http\Controllers\ProfilePhotoController::class, 'updatePrivacy']);
+
+    Route::get('/users/{user}/photos', [\App\Http\Controllers\ProfilePhotoController::class, 'index']);
+    Route::post('/photos', [\App\Http\Controllers\ProfilePhotoController::class, 'store']);
+    Route::post('/photos/{photo}', [\App\Http\Controllers\ProfilePhotoController::class, 'update']);
+    Route::patch('/photos/{photo}', [\App\Http\Controllers\ProfilePhotoController::class, 'update']);
+    Route::delete('/photos/{photo}', [\App\Http\Controllers\ProfilePhotoController::class, 'destroy']);
+    Route::post('/photos/{photo}/like', [\App\Http\Controllers\ProfilePhotoController::class, 'toggleLike']);
+    Route::get('/photos/{photo}/comments', [\App\Http\Controllers\ProfilePhotoController::class, 'comments']);
+    Route::post('/photos/{photo}/comments', [\App\Http\Controllers\ProfilePhotoController::class, 'storeComment']);
+    Route::delete('/photo-comments/{comment}', [\App\Http\Controllers\ProfilePhotoController::class, 'destroyComment']);
 
     Route::get('/user/screen-lock', [\App\Http\Controllers\ScreenLockController::class, 'show']);
     Route::put('/user/screen-lock', [\App\Http\Controllers\ScreenLockController::class, 'update']);
@@ -118,4 +129,5 @@ Route::middleware(['web', 'auth', 'admin'])->group(function () {
     Route::patch('/admin/users/{user}/visibility', [AdminUserController::class, 'updateVisibility']);
     Route::delete('/admin/users/{user}', [AdminUserController::class, 'destroy']);
     Route::post('/admin/users/{user}/impersonate', [\App\Http\Controllers\AdminImpersonationController::class, 'impersonate']);
+    Route::get('/admin/impersonations', [\App\Http\Controllers\AdminImpersonationController::class, 'index']);
 });

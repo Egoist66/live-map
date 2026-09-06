@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { toTypedSchema } from '@vee-validate/zod'
+import { isValidBirthDate, toIsoBirthDate } from '@/utils/birthDate'
 
 const toNull = (v: unknown) => (v === '' || v === undefined ? null : v)
 const toNumberOrNull = (v: unknown) => {
@@ -11,11 +12,7 @@ const toNumberOrNull = (v: unknown) => {
   return Number.isNaN(n) ? v : n
 }
 
-const toBirthDate = (v: unknown) => {
-  if (v === '' || v === undefined || v === null) return null
-  if (v instanceof Date) return Number.isNaN(v.getTime()) ? v : v.toISOString().slice(0, 10)
-  return v
-}
+const toBirthDate = (v: unknown) => toIsoBirthDate(v)
 
 const MAX_BY_PLAN: Record<string, number> = { free: 5, pro: 15, business: 50 }
 
@@ -24,7 +21,7 @@ export const updateProfileSchema = toTypedSchema(
     .object({
       name: z.string().min(1, 'Имя обязательно').max(255),
       gender: z.enum(['male', 'female', 'other']).nullable().optional(),
-      birth_date: z.preprocess(toBirthDate, z.string().max(10).nullable().optional()).refine((v) => v == null || (!Number.isNaN(new Date(v as string).getTime()) && new Date(v as string) < new Date()), { message: 'Некорректная дата рождения' }),
+      birth_date: z.preprocess(toBirthDate, z.string().max(10).nullable().optional()).refine((v) => v == null || isValidBirthDate(v), { message: 'Некорректная дата рождения' }),
       country: z.preprocess((v) => (v === '' || v === undefined ? null : v), z.string().max(120).nullable().optional()),
       country_code: z.preprocess((v) => (v === '' || v === undefined ? null : v), z.string().max(8).nullable().optional()),
       email: z.string().email('Некорректный email'),

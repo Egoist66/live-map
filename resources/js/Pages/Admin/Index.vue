@@ -14,9 +14,11 @@ import AdminOnlineList from '@/Components/Features/Admin/AdminOnlineList.vue'
 import AdminUsersManager from '@/Components/Features/Admin/AdminUsersManager.vue'
 import AdminUpdatesManager from '@/Components/Features/Admin/AdminUpdatesManager.vue'
 import AdminImpersonateDialog from '@/Components/Features/Admin/AdminImpersonateDialog.vue'
+import AdminImpersonationLogs from '@/Components/Features/Admin/AdminImpersonationLogs.vue'
 import SettingsAdminTab from '@/Components/Features/Settings/SettingsAdminTab.vue'
 import { useAdminAppUpdates } from '@/composables/useAdminAppUpdates'
 import { useAdminImpersonate } from '@/composables/useAdminImpersonate'
+import { useAdminImpersonationLogs } from '@/composables/useAdminImpersonationLogs'
 import { onMounted } from 'vue'
 
 const mon = useAdminMonitoring()
@@ -24,8 +26,10 @@ const admin = useAdminUsers()
 const reports = useAdminReports()
 const appUpdates = useAdminAppUpdates()
 const imp = useAdminImpersonate()
+const impLogs = useAdminImpersonationLogs()
 reports.init()
 onMounted(() => appUpdates.load())
+onMounted(() => impLogs.load())
 </script>
 <template>
   <Head title="Админ-панель" />
@@ -68,6 +72,7 @@ onMounted(() => appUpdates.load())
 
         <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
           <SettingsAdminTab :admin="admin" :reports="reports" :imp="imp" />
+          <AdminImpersonationLogs :logs="impLogs" />
         </div>
       </div>
       <AdminImpersonateDialog :imp="imp" />

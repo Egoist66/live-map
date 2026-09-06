@@ -6,11 +6,16 @@ import DashboardHero from '@/Components/Features/Dashboard/DashboardHero.vue'
 import DashboardInfo from '@/Components/Features/Dashboard/DashboardInfo.vue'
 import DashboardActions from '@/Components/Features/Dashboard/DashboardActions.vue'
 import ProfileFriendsDialog from '@/Components/Features/Profile/ProfileFriendsDialog.vue'
+import ProfileGalleryDialog from '@/Components/Features/Profile/ProfileGalleryDialog.vue'
+import ProfilePhotoViewer from '@/Components/Features/Profile/ProfilePhotoViewer.vue'
+import { useProfileGallery } from '@/composables/useProfileGallery'
+import { useProfilePhotoComments } from '@/composables/useProfilePhotoComments'
 import ChatSearchDialog from '@/Components/Features/Chat/ChatSearchDialog.vue'
 import Toast from 'primevue/toast'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import { useDashboardPage } from '@/composables/useDashboardPage'
+import { onMounted } from 'vue'
 import { useProfilePeople } from '@/composables/useProfilePeople'
 import { usePeopleSearch } from '@/composables/usePeopleSearch'
 
@@ -18,6 +23,12 @@ const props = defineProps<{ user: any; isOwn?: boolean }>()
 const { seo, u, isOwn, isAdmin, showAvatar, avatarSrc, bioText, bioEmpty, settingsHref, sharing, presence, levelLabel, levelColor, planLabel, planColor, openAvatar, closeAvatar, goMap, goChat, goSettings, goAdmin, goFaq, share } = useDashboardPage(props.user, props.isOwn)
 const people = useProfilePeople()
 const search = usePeopleSearch()
+const gallery = useProfileGallery(() => u.value.id, { isOwn: true })
+const photoComments = useProfilePhotoComments(() => gallery.active.value?.id ?? null, (n) => {
+  const p = gallery.active.value
+  if (p) gallery.syncCounts(p.id, { comments_count: n })
+})
+onMounted(() => gallery.load())
 </script>
 <template>
   <Head :title="seo.title.value"><meta head-key="robots" name="robots" content="noindex, nofollow" /></Head>
@@ -25,7 +36,7 @@ const search = usePeopleSearch()
     <Toast />
     <div class="bg-surface dark:bg-[#090E1A] min-h-[calc(100vh-64px)] overflow-x-hidden">
       <div class="max-w-[980px] mx-auto w-full max-w-full min-w-0 px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-5 overflow-hidden">
-        <DashboardHero :user="u" :avatar-src="avatarSrc" :level-label="levelLabel" :level-color="levelColor" :plan-label="planLabel" :plan-color="planColor" :sharing="sharing" @avatar="openAvatar" @map="goMap" @chat="goChat" @share="share" @friends="people.openFriends(u.id, u.name)" @search="search.openDialog()" />
+        <DashboardHero :user="u" :avatar-src="avatarSrc" :level-label="levelLabel" :level-color="levelColor" :plan-label="planLabel" :plan-color="planColor" :sharing="sharing" @avatar="openAvatar" @map="goMap" @chat="goChat" @share="share" @friends="people.openFriends(u.id, u.name)" @search="search.openDialog()" @gallery="gallery.openDialog()" />
         <Card v-if="isAdmin && isOwn" class="!bg-stone-900 dark:!bg-zinc-900 !text-white !border-0 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
           <template #content>
             <div class="flex flex-wrap items-center gap-3">
@@ -41,6 +52,8 @@ const search = usePeopleSearch()
           <DashboardInfo :user="u" :bio-empty="bioEmpty" :bio-text="bioText" :is-own="isOwn" :settings-href="settingsHref" :presence="presence" />
           <DashboardActions :is-own="isOwn" @map="goMap" @settings="goSettings" @faq="goFaq" />
         </div>
+        <ProfileGalleryDialog :gallery="gallery" :is-own="true" :plan="u.plan || 'free'" />
+        <ProfilePhotoViewer :gallery="gallery" :comments="photoComments" :is-own="true" :user-name="u.name" :avatar-src="avatarSrc" />
       </div>
       <AvatarPreview :src="avatarSrc" :name="u.name" :open="showAvatar" @close="closeAvatar" />
     </div>

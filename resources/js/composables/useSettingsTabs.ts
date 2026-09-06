@@ -10,7 +10,7 @@ export const SETTINGS_TABS = [
   { id: 'privacy' as const, label: 'Приватность', icon: 'pi pi-lock', desc: 'Анонимность, зона' },
   { id: 'appearance' as const, label: 'Внешний вид', icon: 'pi pi-palette', desc: 'Тема, карта' },
   { id: 'security' as const, label: 'Безопасность', icon: 'pi pi-shield', desc: 'Пароль, удаление' },
-  { id: 'procedures' as const, label: 'Процедуры', icon: 'pi pi-file-shield', desc: 'Доступы, закон' },
+  { id: 'procedures' as const, label: 'Процедуры', icon: 'pi pi-building-columns', desc: 'Доступы, закон' },
   { id: 'support' as const, label: 'Поддержка', icon: 'pi pi-heart', desc: 'Письмо, донат' },
   { id: 'app' as const, label: 'Приложение', icon: 'pi pi-mobile', desc: 'Установка, кэш' },
 ] as const
