@@ -52,14 +52,27 @@ export function useAppUpdates() {
   async function dismissCurrent() {
     const item = current.value
     if (!item) return
+    const id = Number(item.id)
     try {
-      await appUpdatesApi.markRead(item.id)
+      await appUpdatesApi.markRead(id)
     } catch {}
-    queue.value = queue.value.slice(1)
+    queue.value = queue.value.filter((x) => Number(x.id) !== id)
     unreadCount.value = Math.max(0, unreadCount.value - 1)
-    const h = history.value.find((x) => x.id === item.id)
+    const h = history.value.find((x) => Number(x.id) === id)
     if (h) h.is_read = true
+    else history.value = [{ ...item, is_read: true }, ...history.value]
     syncBadge()
+    try {
+      const d: any = await appUpdatesApi.unread()
+      const serverCount = Number(d?.count ?? unreadCount.value)
+      if (serverCount !== unreadCount.value) unreadCount.value = serverCount
+      const fresh = d?.updates ?? []
+      const knownIds = new Set(queue.value.map((x) => Number(x.id)))
+      for (const u of fresh) {
+        if (!knownIds.has(Number(u.id))) queue.value.push(u)
+      }
+      syncBadge()
+    } catch {}
   }
 
   async function dismissAll() {
@@ -73,7 +86,9 @@ export function useAppUpdates() {
   }
 
   function snooze() {
-    queue.value = queue.value.slice(1)
+    if (!queue.value.length) return
+    const [first, ...rest] = queue.value
+    queue.value = [...rest, first]
   }
 
   function preview(item: any) {

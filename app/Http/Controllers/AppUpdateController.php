@@ -30,6 +30,10 @@ class AppUpdateController extends Controller
     {
         $readIds = AppUpdateRead::where('user_id', $request->user()->id)->pluck('app_update_id');
 
+        $total = AppUpdate::published()
+            ->whereNotIn('id', $readIds)
+            ->count();
+
         $updates = AppUpdate::published()
             ->whereNotIn('id', $readIds)
             ->orderBy('published_at')
@@ -39,7 +43,7 @@ class AppUpdateController extends Controller
             ->map(fn ($u) => $u->only(['id', 'title', 'body', 'version', 'published_at']));
 
         return response()->json([
-            'count' => $updates->count(),
+            'count' => $total,
             'updates' => $updates->values(),
             'latest' => $updates->last(),
         ]);

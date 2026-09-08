@@ -30,7 +30,7 @@ const photoComments = useProfilePhotoComments(() => gallery.active.value?.id ?? 
 const people = useProfilePeople()
 const search = usePeopleSearch()
 useAvatarPreview(() => page.showAvatar.value, () => (page.showAvatar.value = false))
-onMounted(() => gallery.load())
+onMounted(async () => { await gallery.load(); try { await gallery.consumePendingPhoto() } catch {} })
 </script>
 <template>
   <Head :title="profileUser.name" />

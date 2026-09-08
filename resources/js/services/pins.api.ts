@@ -14,6 +14,11 @@ export const pinsApi = {
     return (data as { data: Pin[] }).data ?? []
   },
 
+  async show(id: number): Promise<Pin> {
+    const { data } = await api.get<Pin>(`/api/pins/${id}`)
+    return data
+  },
+
   async scheduled(): Promise<Pin[]> {
     const { data } = await api.get<Pin[] | { data: Pin[] }>('/api/pins/mine/scheduled')
     if (Array.isArray(data)) return data

@@ -76,7 +76,7 @@ class WebPushService
         return $this->sendToUser($recipient, [
             'title' => 'Активность пина',
             'body' => $body,
-            'url' => '/map',
+            'url' => '/map?pin='.$pin->id.($activity->comment_id ? '&comment='.$activity->comment_id : ''),
             'tag' => $tag,
             'avatar' => $actor->avatar_url,
         ]);
@@ -97,7 +97,7 @@ class WebPushService
         return $this->sendToUser($recipient, [
             'title' => $title,
             'body' => $body,
-            'url' => '/users/'.$photo->user_id,
+            'url' => '/users/'.$photo->user_id.'?photo='.$photo->id.($activity->photo_comment_id ? '&comment='.$activity->photo_comment_id : ''),
             'tag' => $tag,
             'avatar' => $actor->avatar_url,
         ]);

@@ -37,6 +37,23 @@ class PinController extends Controller
         return response()->json($pins->map(fn($p) => array_merge($p->toPublicArray($viewerId), ['my_reaction' => $myReactions[$p->id] ?? null])));
     }
 
+    public function show(Request $request, Pin $pin)
+    {
+        $viewer = $request->user();
+        $viewerId = $viewer?->id;
+        if ($pin->user_id !== $viewerId && !$viewer?->isAdmin()) {
+            if ($pin->status !== 'active' || ($pin->expires_at && $pin->expires_at->isPast())) {
+                abort(404);
+            }
+            if (!$pin->isVisibleForGender($viewer)) {
+                abort(403);
+            }
+        }
+        $pin->load('user:id,name,avatar_path,level');
+        $my = $viewerId ? \App\Models\Reaction::where('user_id', $viewerId)->where('reactable_type', 'pin')->where('reactable_id', $pin->id)->value('type') : null;
+        return response()->json(array_merge($pin->toPublicArray($viewerId), ['my_reaction' => $my]));
+    }
+
     public function mine(Request $request)
     {
         $user = $request->user();

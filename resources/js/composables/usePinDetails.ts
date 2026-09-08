@@ -16,6 +16,7 @@ import type { ReactionType } from '@/types/entities/Reaction'
 export function usePinDetails() {
   const selectedPin = ref<Pin | null>(null)
   const comments = ref<PinComment[]>([])
+  const highlightCommentId = ref<number | null>(null)
   const editingCommentId = ref<number | null>(null)
   const editingContent = ref<string>('')
   const replyTo = ref<PinComment | null>(null)
@@ -46,13 +47,27 @@ export function usePinDetails() {
     }
   }
 
-  function openPin(pin: Pin): void {
+  function openPin(pin: Pin, commentId?: number | null): void {
     selectedPin.value = pin
     replyTo.value = null
+    highlightCommentId.value = commentId ? Number(commentId) : null
     void loadComments(pin.id)
   }
 
-  function closePin(): void { selectedPin.value = null; replyTo.value = null }
+  async function openPinById(pinId: number, commentId?: number | null): Promise<Pin | null> {
+    const id = Number(pinId)
+    if (!id) return null
+    try {
+      const { pinsApi } = await import('@/services/pins.api')
+      const pin = await pinsApi.show(id)
+      openPin(pin, commentId ?? null)
+      return pin
+    } catch {
+      return null
+    }
+  }
+
+  function closePin(): void { selectedPin.value = null; replyTo.value = null; highlightCommentId.value = null }
 
   const threadedComments = computed(() => {
     const list = (comments.value || []) as any[]
@@ -164,8 +179,8 @@ export function usePinDetails() {
   }
 
   return {
-    selectedPin, comments, threadedComments, replyTo, replyTarget, cancelReply, commentText, commentTextAttrs, commentFormErrors, editingCommentId, editingContent,
-    openPin, closePin, loadComments, react, sendComment, boost, startEditComment, cancelEditComment, saveEditComment, useCommentsQuery, formatTime,
+    selectedPin, comments, threadedComments, replyTo, replyTarget, cancelReply, commentText, commentTextAttrs, commentFormErrors, editingCommentId, editingContent, highlightCommentId,
+    openPin, openPinById, closePin, loadComments, react, sendComment, boost, startEditComment, cancelEditComment, saveEditComment, useCommentsQuery, formatTime,
     commentsQuery,
     reactMutation, reactStatus: (reactMutation as any).state, reactAsyncStatus: (reactMutation as any).asyncStatus,
     createCommentMutation, createCommentStatus: (createCommentMutation as any).state, createCommentAsyncStatus: (createCommentMutation as any).asyncStatus,

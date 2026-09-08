@@ -44,7 +44,8 @@ export function useChat() {
   let typingThrottleUntil = 0
   const typingExpire = new Map<number, ReturnType<typeof setTimeout>>()
 
-  const unreadTotal = computed(() => conversations.value.reduce((s, c) => s + c.unread_count, 0))
+  const unreadTotal = computed(() => conversations.value.filter((c) => Number(c.unread_count || 0) > 0).length)
+  const unreadMessagesTotal = computed(() => conversations.value.reduce((s, c) => s + (Number(c.unread_count) || 0), 0))
 
   function getEcho(): any {
     return (window as any).Echo
@@ -126,7 +127,6 @@ export function useChat() {
       activeConv.value = d
       messages.value = d.messages
       d.messages.forEach((m:any)=> seenIds.add(m.id))
-      if (selectedId.value === id) chatApi.markRead(id).catch(()=>{})
       const last = d.messages[d.messages.length - 1] as any
       const conv = conversations.value.find((c) => c.id === id)
       if (conv) {
@@ -135,6 +135,7 @@ export function useChat() {
       } else if (last) {
         loadConversations()
       }
+      try { await chatApi.markRead(id) } catch {}
       subscribeChat(id)
       await nextTick()
       scrollToBottom()
@@ -279,6 +280,8 @@ export function useChat() {
       const t = typingExpire.get(msg.sender_id); if (t) { clearTimeout(t); typingExpire.delete(msg.sender_id) }
       syncConversationPreview(msg)
       if (msg.sender_id !== getUid()) {
+        const conv0 = conversations.value.find(c=>c.id===msg.conversation_id)
+        if (conv0) (conv0 as any).unread_count = 0
         chatApi.markDelivered(msg.conversation_id).catch(()=>{})
         chatApi.markRead(msg.conversation_id).catch(()=>{})
       } else {
@@ -472,7 +475,7 @@ export function useChat() {
 
   return {
     conversations, activeConv, messages, loading, sending, refreshing, typingUsers,
-    searchQuery, searchResults, searching, selectedId, error, unreadTotal,
+    searchQuery, searchResults, searching, selectedId, error, unreadTotal, unreadMessagesTotal,
     editingId, editingBody,
     loadConversations, refresh, openConversation, createConversation, sendMessage, startEdit, cancelEdit, saveEdit, deleteMessage, deleteConversation, searchUsers, notifyTyping, stopTyping, handleIncoming, handleUpdated,
   }

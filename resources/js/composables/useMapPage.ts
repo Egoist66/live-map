@@ -251,9 +251,65 @@ export function useMapPage() {
         applyHomeZone()
       })
     } catch {}
+    try { void consumePendingPin() } catch {}
   }
 
-  function destroy() { window.removeEventListener('keydown', onEsc); try { (mapApi as any).unbindRealtime?.() } catch {} }
+  function readPendingPin(): { pinId: number; commentId: number | null } | null {
+    try {
+      const q = new URLSearchParams(window.location.search)
+      const qp = Number(q.get('pin') || 0)
+      if (qp) return { pinId: qp, commentId: Number(q.get('comment') || 0) || null }
+    } catch {}
+    try {
+      const raw = sessionStorage.getItem('live-map:pending-activity')
+      if (!raw) return null
+      const p = JSON.parse(raw)
+      if (p?.type === 'pin' && Number(p.pinId)) return { pinId: Number(p.pinId), commentId: Number(p.commentId) || null }
+    } catch {}
+    return null
+  }
+
+  function clearPendingPin() {
+    try { sessionStorage.removeItem('live-map:pending-activity') } catch {}
+    try {
+      const url = new URL(window.location.href)
+      if (url.searchParams.has('pin') || url.searchParams.has('comment')) {
+        url.searchParams.delete('pin')
+        url.searchParams.delete('comment')
+        window.history.replaceState({}, '', url.toString())
+      }
+    } catch {}
+  }
+
+  async function consumePendingPin() {
+    const target = readPendingPin()
+    if (!target) return
+    let pin: any = store.pins.find((x: any) => Number(x.id) === Number(target.pinId)) ?? null
+    if (!pin) {
+      try { pin = await pinDetails.openPinById(target.pinId, target.commentId) } catch { pin = null }
+    } else {
+      pinDetails.openPin(pin, target.commentId)
+    }
+    if (!pin && !pinDetails.selectedPin.value) return
+    const opened: any = pinDetails.selectedPin.value ?? pin
+    try {
+      const lat = Number(opened?.latitude)
+      const lng = Number(opened?.longitude)
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        try { mapApi.map?.flyTo?.({ center: [lng, lat] as any, zoom: 15, duration: 900 }) } catch {}
+      }
+    } catch {}
+    clearPendingPin()
+    if (target.commentId) {
+      setTimeout(() => {
+        try { document.getElementById(`pin-comment-${target.commentId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }) } catch {}
+      }, 600)
+    }
+  }
+
+  function destroy() { window.removeEventListener('keydown', onEsc); try { (mapApi as any).unbindRealtime?.()     } catch {}
+    try { void consumePendingPin() } catch {}
+  }
 
   return {
     store, categories, customCats, selectedCategory, filteredPins, pinDetails, pinCreate, pinEdit, mapApi,

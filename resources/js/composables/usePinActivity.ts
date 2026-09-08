@@ -98,13 +98,30 @@ function describe(a: PinActivityItem): { emoji: string; text: string } {
   return { emoji, text: `${name} отреагировал ${emoji}` }
 }
 
+function resolveTarget(a: PinActivityItem): { url: string; pending: any } {
+  const pinId = Number((a as any).pin?.id || (a as any).pin_id || 0) || null
+  const commentId = Number((a as any).comment_id || 0) || null
+  const photoId = Number((a as any).photo?.id || (a as any).photo_id || 0) || null
+  const photoCommentId = Number((a as any).photo_comment_id || 0) || null
+  const photoUserId = Number((a as any).photo?.user_id || 0) || null
+  if (pinId) {
+    const url = `/map?pin=${pinId}${commentId ? `&comment=${commentId}` : ''}`
+    return { url, pending: { type: 'pin', pinId, commentId } }
+  }
+  if (photoId && photoUserId) {
+    const url = `/users/${photoUserId}?photo=${photoId}${photoCommentId ? `&comment=${photoCommentId}` : ''}`
+    return { url, pending: { type: 'photo', photoId, commentId: photoCommentId, userId: photoUserId } }
+  }
+  return { url: '/map', pending: null }
+}
+
 function goPin(a: PinActivityItem) {
   void markOne(a)
-  if (a.photo?.user_id) {
-    router.visit(`/users/${a.photo.user_id}`)
-    return
-  }
-  router.visit('/map')
+  const { url, pending } = resolveTarget(a)
+  try {
+    if (pending) sessionStorage.setItem('live-map:pending-activity', JSON.stringify(pending))
+  } catch {}
+  router.visit(url)
 }
 
 function init() {
@@ -117,5 +134,5 @@ function init() {
 
 export function usePinActivity() {
   const hasData = computed(() => activities.value.length > 0)
-  return { activities, unread, loading, hasData, describe, refresh, markAllRead, markOne, goPin, init, subscribe }
+  return { activities, unread, loading, hasData, describe, refresh, markAllRead, markOne, goPin, resolveTarget, init, subscribe }
 }

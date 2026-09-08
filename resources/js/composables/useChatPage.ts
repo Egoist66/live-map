@@ -16,7 +16,7 @@ export function useChatPage(initialConversationId?: number) {
   const friendsApi = useFriendships()
   const blocksApi = useBlocks()
   const emoji = useEmojiPicker()
-  const badgeSync = useChatBadges(chat.unreadTotal, friendsApi.pendingIn)
+  const badgeSync = useChatBadges(chat.unreadTotal, friendsApi.pendingIn, chat.unreadMessagesTotal)
   const nav = useChatNavigation(chat.selectedId, chat.openConversation)
 
   const input = ref('')
@@ -237,6 +237,7 @@ export function useChatPage(initialConversationId?: number) {
     badgeSync.setPending(friendsApi.pendingIn.value.length)
     await chat.loadConversations()
     badgeSync.setUnread(chat.unreadTotal.value)
+    badgeSync.setUnreadMessages(chat.unreadMessagesTotal.value)
     try { const me = await chatApi.me(); privacy.value.message_privacy = me.message_privacy; privacy.value.allow_random_messages = me.allow_random_messages } catch {}
     const targetId = resolveInitialId()
     if (targetId) {

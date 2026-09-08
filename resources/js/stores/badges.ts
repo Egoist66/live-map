@@ -7,6 +7,7 @@ import { api } from '@/services/api'
 
 export const useBadgeStore = defineStore('badges', () => {
   const unread = ref(0)
+  const unreadMessages = ref(0)
   const pending = ref(0)
   const activity = ref(0)
   const reports = ref(0)
@@ -68,7 +69,8 @@ export const useBadgeStore = defineStore('badges', () => {
         updPromise,
         api.get('/api/security/impersonations').then((r) => Number(r.data?.unread ?? 0)).catch(() => 0),
       ])
-      unread.value = (convs as any[]).reduce((s: number, c: any) => s + (c.unread_count || 0), 0)
+      unread.value = (convs as any[]).filter((c: any) => Number(c.unread_count || 0) > 0).length
+      unreadMessages.value = (convs as any[]).reduce((s: number, c: any) => s + (Number(c.unread_count) || 0), 0)
       pending.value = (fr.pending_in?.length || 0)
       activity.value = Number(ac) || 0
       reports.value = Number(rep) || 0
@@ -113,6 +115,7 @@ export const useBadgeStore = defineStore('badges', () => {
   }
 
   function setUnread(v: number) { unread.value = v }
+  function setUnreadMessages(v: number) { unreadMessages.value = Math.max(0, v) }
   function setPending(v: number) { pending.value = v }
   function setActivity(v: number) { activity.value = Math.max(0, v) }
   function decUnread() { unread.value = Math.max(0, unread.value - 1) }
@@ -140,5 +143,5 @@ export const useBadgeStore = defineStore('badges', () => {
 
   function refresh() { return fetch() }
 
-  return { unread, pending, activity, reports, updates, security, total, loading, init, fetch, refresh, subscribe, setUnread, setPending, setActivity, setReports, setUpdates, setSecurity, incSecurity, decUnread, incUnread, incPending, decPending, incActivity, decActivity, incReports, decReports }
+  return { unread, unreadMessages, pending, activity, reports, updates, security, total, loading, init, fetch, refresh, subscribe, setUnread, setUnreadMessages, setPending, setActivity, setReports, setUpdates, setSecurity, incSecurity, decUnread, incUnread, incPending, decPending, incActivity, decActivity, incReports, decReports }
 })

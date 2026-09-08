@@ -12,7 +12,7 @@ import { renderWithMentions } from '@/composables/useMentions'
 import { usePinCommentInput } from '@/composables/usePinCommentInput'
 import { formatTime } from '@/utils/date'
 
-const props = defineProps<{ pin: any; comments: any[]; commentText: string; creatingComment: boolean; editingCommentId: number | null; editingContent: string; savingComment: boolean; reacting: boolean; reporting: boolean; pinEdit: any; categories: any[]; deleting: boolean; authId: number; replyTo: any; mentions: any }>()
+const props = defineProps<{ pin: any; comments: any[]; highlightCommentId?: number | null; commentText: string; creatingComment: boolean; editingCommentId: number | null; editingContent: string; savingComment: boolean; reacting: boolean; reporting: boolean; pinEdit: any; categories: any[]; deleting: boolean; authId: number; replyTo: any; mentions: any }>()
 const emit = defineEmits<{ (e: 'close'): void; (e: 'delete'): void; (e: 'react', k: string): void; (e: 'report'): void; (e: 'sendComment'): void; (e: 'update:comment', v: string): void; (e: 'update:editContent', v: string): void; (e: 'startEditComment', c: any): void; (e: 'cancelEditComment'): void; (e: 'saveEditComment'): void; (e: 'saveEdit'): void; (e: 'reply', root: any, target: any): void; (e: 'cancelReply'): void }>()
 const blur = computed(() => pinBlurInfo(props.pin))
 const catMeta = computed(() => (props.categories as any[]).find((c: any) => c.v === props.pin?.category) ?? null)
@@ -70,7 +70,7 @@ function authorName(c: any): string { return c?.is_anonymous ? 'аноним' : 
       </div>
     </div>
     <div ref="listRef" class="flex-1 overflow-y-auto overscroll-contain p-4 space-y-3 bg-stone-50/40 dark:bg-black/30" style="webkit-overflow-scrolling: touch;">
-      <div v-for="root in comments" :key="root.id" class="bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl p-3.5">
+      <div v-for="root in comments" :key="root.id" :id="`pin-comment-${root.id}`" :class="['bg-white dark:bg-zinc-800 border rounded-2xl p-3.5', Number(highlightCommentId) === Number(root.id) ? 'border-violet-500 ring-2 ring-violet-500/40' : 'border-stone-200 dark:border-zinc-700']">
         <div class="font-semibold text-xs flex items-center gap-2 dark:text-zinc-100">
           <img v-if="!root.is_anonymous" :src="avatarSrcFor(root.user)" class="w-6 h-6 rounded-full object-cover shrink-0" alt="" />
           <span class="truncate">{{ authorName(root) }}</span>
@@ -84,7 +84,7 @@ function authorName(c: any): string { return c?.is_anonymous ? 'аноним' : 
           <Button v-if="root.user_id === authId" label="ред." size="small" text @click="emit('startEditComment', root)" />
         </div>
         <div v-if="(root.replies || []).length" class="mt-2.5 ml-4 sm:ml-6 pl-3 border-l-2 border-violet-200 dark:border-violet-800 space-y-2.5">
-          <div v-for="r in root.replies" :key="r.id">
+          <div v-for="r in root.replies" :key="r.id" :id="`pin-comment-${r.id}`" :class="['rounded-xl px-2 py-1 -mx-2', Number(highlightCommentId) === Number(r.id) ? 'bg-violet-50 dark:bg-violet-950/40 ring-1 ring-violet-500/40' : '']">
             <div class="font-semibold text-xs flex items-center gap-2 dark:text-zinc-100">
               <img v-if="!r.is_anonymous" :src="avatarSrcFor(r.user)" class="w-5 h-5 rounded-full object-cover shrink-0" alt="" />
               <span class="truncate">{{ authorName(r) }}</span>

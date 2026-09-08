@@ -22,6 +22,7 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
   const active = ref<GalleryPhoto | null>(null)
   const viewerOpen = ref(false)
   const dialogOpen = ref(false)
+  const highlightCommentId = ref<number | null>(null)
 
   const count = computed(() => photos.value.length)
   const remaining = computed(() => Math.max(0, limit.value - count.value))
@@ -94,9 +95,15 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
     return res
   }
 
-  function open(photo: GalleryPhoto) {
+  function open(photo: GalleryPhoto, commentId?: number | null) {
     active.value = photo
     viewerOpen.value = true
+    highlightCommentId.value = commentId ? Number(commentId) : null
+    if (commentId) {
+      setTimeout(() => {
+        try { document.getElementById(`photo-comment-${commentId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }) } catch {}
+      }, 500)
+    }
   }
 
   function stepPhoto(dir: 1 | -1) {
@@ -107,6 +114,7 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
 
   function close() {
     viewerOpen.value = false
+    highlightCommentId.value = null
   }
 
   function openDialog() {
@@ -124,11 +132,48 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
     if (active.value?.id === photoId) Object.assign(active.value, patch)
   }
 
+  async function consumePendingPhoto() {
+    let photoId = 0
+    let commentId: number | null = null
+    try {
+      const q = new URLSearchParams(window.location.search)
+      photoId = Number(q.get('photo') || 0)
+      commentId = Number(q.get('comment') || 0) || null
+    } catch {}
+    if (!photoId) {
+      try {
+        const raw = sessionStorage.getItem('live-map:pending-activity')
+        if (raw) {
+          const p = JSON.parse(raw)
+          if (p?.type === 'photo' && Number(p.photoId)) {
+            photoId = Number(p.photoId)
+            commentId = Number(p.commentId) || null
+          }
+        }
+      } catch {}
+    }
+    if (!photoId) return
+    if (!photos.value.length) {
+      try { await load() } catch {}
+    }
+    const target = photos.value.find((p) => Number(p.id) === Number(photoId))
+    if (target) open(target, commentId)
+    try { sessionStorage.removeItem('live-map:pending-activity') } catch {}
+    try {
+      const url = new URL(window.location.href)
+      if (url.searchParams.has('photo') || url.searchParams.has('comment')) {
+        url.searchParams.delete('photo')
+        url.searchParams.delete('comment')
+        window.history.replaceState({}, '', url.toString())
+      }
+    } catch {}
+  }
+
   const MOSAIC_PATTERN = ['sm:col-span-2 sm:row-span-2', '', '', '', '', 'sm:col-span-2', '', '']
 
   function mosaicClass(i: number): string {
     return MOSAIC_PATTERN[i % MOSAIC_PATTERN.length]
   }
 
-  return { photos, limit, count, remaining, isFull, canAdd, canComment, privacy, loading, uploading, error, active, viewerOpen, dialogOpen, isOwn: !!opts?.isOwn, load, upload, saveCaption, replace, remove, toggleLike, open, stepPhoto, close, openDialog, closeDialog, syncCounts, mosaicClass }
+  return { photos, limit, count, remaining, isFull, canAdd, canComment, privacy, loading, uploading, error, active, viewerOpen, dialogOpen, highlightCommentId, isOwn: !!opts?.isOwn, load, upload, saveCaption, replace, remove, toggleLike, open, stepPhoto, close, openDialog, closeDialog, syncCounts, consumePendingPhoto, mosaicClass }
 }

@@ -29,6 +29,7 @@ Route::middleware(['web', 'auth', 'throttle:120,1'])->group(function () {
     Route::get('/pins/mine/scheduled', [PinController::class, 'scheduled']);
     Route::get('/pins/mine/archived', [PinController::class, 'archived']);
     Route::get('/pins', [PinController::class, 'index'])->middleware('throttle:pins-index');
+    Route::get('/pins/{pin}', [PinController::class, 'show']);
     Route::post('/pins', [PinController::class, 'store'])->middleware('throttle:pins-write');
     Route::patch('/pins/{pin}', [PinController::class, 'update']);
     Route::put('/pins/{pin}', [PinController::class, 'update']);

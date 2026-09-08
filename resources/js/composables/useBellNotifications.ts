@@ -5,6 +5,7 @@ import { chatApi } from '@/services/chat.api'
 const isOpen = ref(false)
 const conversations = ref<any[]>([])
 const pending = ref<any[]>([])
+const unreadChats = ref(0)
 const loading = ref(false)
 const tab = ref('events')
 
@@ -24,6 +25,7 @@ async function fetchAll() {
       convsPromise,
       chatApi.friendships().catch(() => ({ pending_in: [] } as any)),
     ])
+    unreadChats.value = (convs as any[]).filter((c: any) => Number(c.unread_count || 0) > 0).length
     conversations.value = (convs as any[]).slice(0, 8)
     pending.value = (fr.pending_in || []).slice(0, 8)
   } finally { loading.value = false }
@@ -36,7 +38,7 @@ function goFriends() { close(); router.visit('/chat?tab=friends') }
 
 export function useBellNotifications() {
   const hasData = computed(() => conversations.value.length > 0 || pending.value.length > 0)
-  const unreadCount = computed(() => conversations.value.reduce((s: number, c: any) => s + (c.unread_count || 0), 0))
+  const unreadCount = computed(() => unreadChats.value)
   const isAdmin = computed(() => readIsAdmin())
-  return { isOpen, conversations, pending, loading, tab, isAdmin, hasData, unreadCount, fetchAll, open, close, goChat, goRequests, goFriends }
+  return { isOpen, conversations, pending, loading, tab, isAdmin, hasData, unreadCount, unreadChats, fetchAll, open, close, goChat, goRequests, goFriends }
 }

@@ -6,7 +6,7 @@ export function useMobileBottomNav() {
   const dashboardHref = computed(() => {
     return route('dashboard')
   })
-  const total = computed(() => badge.total)
+  const total = computed(() => badge.unread)
   function isActive(name: string) {
     return route().current(name)
   }
