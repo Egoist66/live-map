@@ -60,6 +60,14 @@ export const datingApi = {
     const { data } = await api.get('/api/swipes/matches')
     return data as { matches: Array<{ match_id: number; created_at: string; conversation_id: number | null; user: { id: number; name: string; avatar_url: string | null; last_seen_at: string | null } }>; quota: SwipeQuota }
   },
+  async favorites() {
+    const { data } = await api.get('/api/swipes/favorites')
+    return data as { favorites: SwipeCard[]; limit: number }
+  },
+  async removeFavorite(userId: number) {
+    const { data } = await api.delete(`/api/swipes/favorites/${userId}`)
+    return data as { ok: boolean }
+  },
   async quota() {
     const { data } = await api.get('/api/swipes/quota')
     return data as SwipeQuota

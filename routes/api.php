@@ -86,6 +86,8 @@ Route::middleware(['web', 'auth', 'throttle:120,1'])->group(function () {
     Route::get('/swipes/feed', [SwipeController::class, 'feed']);
     Route::post('/swipes/action', [SwipeController::class, 'act'])->middleware('throttle:social-write');
     Route::get('/swipes/matches', [SwipeController::class, 'matches']);
+    Route::get('/swipes/favorites', [SwipeController::class, 'favorites']);
+    Route::delete('/swipes/favorites/{user}', [SwipeController::class, 'removeFavorite'])->middleware('throttle:social-write');
     Route::get('/swipes/quota', [SwipeController::class, 'quota']);
     Route::patch('/swipes/settings', [SwipeController::class, 'settings'])->middleware('throttle:profile-write');
     Route::post('/swipes/verify-age', [SwipeController::class, 'verifyAge'])->middleware('throttle:profile-write');

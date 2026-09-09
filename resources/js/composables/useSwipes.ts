@@ -15,6 +15,10 @@ export function useSwipes() {
   const cards = ref<SwipeCard[]>([])
   const index = ref(0)
   const matches = ref<Array<{ match_id: number; conversation_id: number | null; user: { id: number; name: string; avatar_url: string | null } }>>([])
+  const favorites = ref<SwipeCard[]>([])
+  const favoritesLimit = ref(2)
+  const favoritesLoading = ref(false)
+  const activeTab = ref<'feed' | 'favorites'>('feed')
   const quota = ref<SwipeQuota | null>(null)
   const loading = ref(false)
   const acting = ref(false)
@@ -50,6 +54,24 @@ export function useSwipes() {
   const current = computed(() => cards.value[index.value] ?? null)
   const hasMore = computed(() => index.value < cards.value.length)
   const seenCount = computed(() => Math.min(index.value, cards.value.length))
+  const favoritesCount = computed(() => favorites.value.length)
+
+  /**
+   * Есть ли активные фильтры ленты.
+   *
+   * @returns true если хоть один фильтр задан
+   */
+  const hasActiveFilters = computed(() => {
+    const f = filters.value
+    return !!(f.goal || (f.gender && f.gender !== 'all') || f.age_min || f.age_max || f.radius_km || (f.interests && f.interests.length))
+  })
+
+  /**
+   * Лента исчерпана: загрузка кончилась, а карточек нет.
+   *
+   * @returns true когда всех просвайпали
+   */
+  const feedExhausted = computed(() => !loading.value && !error.value && !current.value && cards.value.length === 0)
 
   const quotaLabel = computed(() => {    if (!quota.value) return ''
     if (quota.value.limit < 0) return 'Безлимит'
@@ -185,6 +207,42 @@ export function useSwipes() {
   }
 
   /**
+   * Загрузить избранное (лайкнутые без мэтча).
+   *
+   * @returns void
+   */
+  async function loadFavorites(): Promise<void> {
+    favoritesLoading.value = true
+    try {
+      const res = await datingApi.favorites()
+      favorites.value = res.favorites
+      favoritesLimit.value = res.limit
+    } catch (e: unknown) {
+      if (handleGate(e)) return
+      favorites.value = []
+    } finally {
+      favoritesLoading.value = false
+    }
+  }
+
+  /**
+   * Убрать человека из избранного.
+   *
+   * @param userId id пользователя
+   * @returns void
+   */
+  async function removeFavorite(userId: number): Promise<void> {
+    try {
+      await datingApi.removeFavorite(userId)
+      favorites.value = favorites.value.filter((f) => f.id !== userId)
+    } catch (e: unknown) {
+      if (handleGate(e)) return
+      const err = e as { response?: { data?: { message?: string } } }
+      error.value = err.response?.data?.message ?? 'Не удалось убрать из избранного'
+    }
+  }
+
+  /**
    * Применить фильтры и перезагрузить ленту.
    *
    * @returns void
@@ -232,6 +290,7 @@ export function useSwipes() {
         await loadMatches()
       }
       index.value += 1
+      if (action === 'like') void loadFavorites()
       if (index.value >= cards.value.length - 3) {
         void loadMore()
       }
@@ -391,6 +450,15 @@ export function useSwipes() {
     hasMore,
     seenCount,
     matches,
+    favorites,
+    favoritesLimit,
+    favoritesCount,
+    favoritesLoading,
+    activeTab,
+    hasActiveFilters,
+    feedExhausted,
+    loadFavorites,
+    removeFavorite,
     quota,
     quotaLabel,
     isQuotaEmpty,

@@ -22,6 +22,12 @@ class DatingService
 
     public const PRO_RANDOM_LIMIT = 10;
 
+    public const FREE_FAVORITES_LIMIT = 2;
+
+    public const PRO_FAVORITES_LIMIT = 5;
+
+    public const BUSINESS_FAVORITES_LIMIT = 15;
+
     public const GOALS = ['love', 'flirt', 'friendship', 'chat', 'interests'];
 
     public const GENDER_PREFS = ['male', 'female', 'all'];
@@ -202,10 +208,114 @@ class DatingService
     }
 
     /**
+     * Лимит избранного (лайкнутые без мэтча) по тарифу.
+     *
+     * @param User $user
+     * @return int
+     */
+    public function favoritesLimitFor(User $user): int
+    {
+        if ($user->isAdmin()) {
+            return self::BUSINESS_FAVORITES_LIMIT;
+        }
+
+        $plan = $user->effectivePlan() ?? 'free';
+
+        if ($plan === 'business') {
+            return self::BUSINESS_FAVORITES_LIMIT;
+        }
+
+        if ($plan === 'pro') {
+            return self::PRO_FAVORITES_LIMIT;
+        }
+
+        return self::FREE_FAVORITES_LIMIT;
+    }
+
+    /**
+     * Id пользователей, с которыми уже есть мэтч.
+     *
+     * @param User $me
+     * @return array<int>
+     */
+    private function matchedIds(User $me): array
+    {
+        $a = DatingMatch::where('user_a_id', $me->id)->pluck('user_b_id');
+        $b = DatingMatch::where('user_b_id', $me->id)->pluck('user_a_id');
+
+        return $a->merge($b)->map(fn ($id) => (int) $id)->unique()->values()->all();
+    }
+
+    /**
+     * Число занятых мест в избранном (лайки без мэтча).
+     *
+     * @param User $me
+     * @return int
+     */
+    public function favoritesCount(User $me): int
+    {
+        $query = SwipeAction::where('liker_id', $me->id)->where('action', 'like');
+        $matched = $this->matchedIds($me);
+
+        if ($matched) {
+            $query->whereNotIn('liked_id', $matched);
+        }
+
+        return (int) $query->count();
+    }
+
+    /**
+     * Избранное: лайкнутые без мэтча, свежие сверху.
+     *
+     * @param User $me
+     * @return array{favorites:array<int,array<string,mixed>>,limit:int}
+     */
+    public function favorites(User $me): array
+    {
+        $matched = $this->matchedIds($me);
+        $query = SwipeAction::where('liker_id', $me->id)->where('action', 'like')->orderByDesc('id')->limit(50);
+
+        if ($matched) {
+            $query->whereNotIn('liked_id', $matched);
+        }
+
+        $ids = $query->pluck('liked_id')->map(fn ($id) => (int) $id)->all();
+        $users = User::whereIn('id', $ids)->get()->keyBy('id');
+        $likedMe = SwipeAction::where('liked_id', $me->id)->where('action', 'like')->pluck('liker_id')->map(fn ($id) => (int) $id)->flip();
+
+        $cards = [];
+
+        foreach ($ids as $id) {
+            $candidate = $users->get($id);
+
+            if (! $candidate) {
+                continue;
+            }
+
+            $cards[] = $this->cardFor($candidate, $me, $this->distanceKm($me, $candidate), false, isset($likedMe[$id]));
+        }
+
+        return ['favorites' => $cards, 'limit' => $this->favoritesLimitFor($me)];
+    }
+
+    /**
+     * Убрать человека из избранного (свой лайк снимается, анкета может вернуться в ленту).
+     *
+     * @param User $me
+     * @param int $otherId
+     * @return void
+     */
+    public function removeFavorite(User $me, int $otherId): void
+    {
+        SwipeAction::where('liker_id', $me->id)->where('liked_id', $otherId)->delete();
+    }
+
+    /**
      * Записать свайп и при взаимности создать мэтч.
      *
      * При мэтче сразу создаётся общая комната-чат
      * в готовой системе чатов с системным сообщением.
+     * Новый лайк сверх лимита избранного отклоняется (422).
      *
      * @param User $me
      * @param int $otherId
@@ -220,6 +330,15 @@ class DatingService
 
         abort_if(! $other->isDiscoverableBy($me), 404);
         abort_if(UserBlock::where('blocker_id', $otherId)->where('blocked_id', $me->id)->exists(), 403);
+
+        if ($action === 'like') {
+            $alreadyLiked = SwipeAction::where('liker_id', $me->id)->where('liked_id', $otherId)->where('action', 'like')->exists();
+
+            if (! $alreadyLiked && $this->favoritesCount($me) >= $this->favoritesLimitFor($me)) {
+                $limit = $this->favoritesLimitFor($me);
+                abort(422, "Избранное переполнено ({$limit}). Убери кого-то из избранного или возьми Pro.");
+            }
+        }
 
         DB::transaction(function () use ($me, $otherId, $action) {
             SwipeAction::updateOrCreate(

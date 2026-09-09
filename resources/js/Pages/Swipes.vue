@@ -60,6 +60,7 @@ onMounted(async () => {
   if (isAuth.value) {
     await s.loadFeed()
     await s.loadMatches()
+    await s.loadFavorites()
   }
 })
 </script>
@@ -122,14 +123,48 @@ onMounted(async () => {
             {{ s.error.value }}
           </div>
 
+          <div class="mt-3 grid grid-cols-2 gap-1 p-1 rounded-2xl bg-stone-100 dark:bg-zinc-800">
+            <button type="button" @click="s.activeTab.value = 'feed'" :class="['py-2 rounded-xl text-[13px] font-bold transition', s.activeTab.value === 'feed' ? 'bg-white dark:bg-zinc-900 text-ink-900 dark:text-white shadow-soft' : 'text-stone-500 dark:text-zinc-400']">Лента</button>
+            <button type="button" @click="s.activeTab.value = 'favorites'" :class="['py-2 rounded-xl text-[13px] font-bold transition', s.activeTab.value === 'favorites' ? 'bg-white dark:bg-zinc-900 text-ink-900 dark:text-white shadow-soft' : 'text-stone-500 dark:text-zinc-400']">Избранное · {{ s.favoritesCount.value }}/{{ s.favoritesLimit.value }}</button>
+          </div>
+
+          <template v-if="s.activeTab.value === 'favorites'">
+            <div v-if="s.favoritesLoading.value" class="mt-4 rounded-[24px] border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 h-[40dvh] min-h-[240px] grid place-items-center">
+              <i class="pi pi-spin pi-spinner text-2xl text-stone-400 dark:text-zinc-500" />
+            </div>
+            <div v-else-if="s.favorites.value.length" class="mt-4 space-y-2">
+              <div
+                v-for="f in s.favorites.value"
+                :key="f.id"
+                class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3"
+              >
+                <Link :href="`/users/${f.id}`" class="shrink-0"><Avatar :image="f.avatar_url ?? undefined" :label="!f.avatar_url ? (f.name ?? '?').slice(0, 1) : undefined" shape="circle" class="!w-12 !h-12" /></Link>
+                <Link :href="`/users/${f.id}`" class="min-w-0 flex-1">
+                  <div class="text-sm font-bold truncate text-stone-900 dark:text-white">{{ f.name }}<span v-if="f.age" class="font-semibold text-stone-500 dark:text-zinc-400"> · {{ f.age }}</span></div>
+                  <div v-if="f.city" class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">{{ f.city }}</div>
+                </Link>
+                <Button icon="pi pi-send" rounded size="small" aria-label="Написать" title="Написать" :loading="s.creatingChat.value" class="!w-10 !h-10 !p-0 shrink-0" @click="s.writeWithoutMatch(f.id)" />
+                <Button icon="pi pi-times" rounded size="small" severity="secondary" outlined aria-label="Убрать" title="Убрать из избранного" class="!w-10 !h-10 !p-0 shrink-0" @click="s.removeFavorite(f.id)" />
+              </div>
+              <div class="text-center text-[11px] text-stone-400 dark:text-zinc-500">Занято {{ s.favoritesCount.value }} из {{ s.favoritesLimit.value }} · Free: до 2 · Pro: до 5</div>
+            </div>
+            <div v-else class="mt-4 rounded-[24px] border border-dashed border-stone-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-6 sm:p-8 text-center">
+              <div class="w-14 h-14 mx-auto rounded-2xl bg-rose-500/10 text-rose-500 grid place-items-center"><i class="pi pi-star text-xl" /></div>
+              <div class="mt-4 text-lg font-black text-stone-900 dark:text-white">Пока пусто</div>
+              <div class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Лайкни кого-то в ленте — не потеряешь. Free: до {{ s.favoritesLimit.value }}.</div>
+              <div class="mt-4"><Button label="К ленте" rounded size="small" @click="s.activeTab.value = 'feed'" /></div>
+            </div>
+          </template>
+
+          <template v-else>
           <div class="mt-4 relative select-none">
-            <div v-if="s.loading.value" class="rounded-[24px] border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 h-[68dvh] min-h-[440px] max-h-[560px] grid place-items-center">
+            <div v-if="s.loading.value" class="rounded-[24px] border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 h-[62dvh] min-h-[400px] max-h-[540px] grid place-items-center">
               <i class="pi pi-spin pi-spinner text-2xl text-stone-400 dark:text-zinc-500" />
             </div>
 
             <div
               v-else-if="s.current.value"
-              class="relative rounded-[24px] overflow-hidden bg-zinc-900 dark:bg-zinc-950 h-[68dvh] min-h-[440px] max-h-[560px] shadow-soft touch-pan-y ring-1 ring-black/10 dark:ring-white/10"
+              class="relative rounded-[24px] overflow-hidden bg-zinc-900 dark:bg-zinc-950 h-[62dvh] min-h-[400px] max-h-[540px] shadow-soft touch-pan-y ring-1 ring-black/10 dark:ring-white/10"
               :style="{ transform: `translateX(${s.dragX.value}px) rotate(${s.dragX.value / 28}deg)`, transition: s.dragging.value ? 'none' : 'transform .25s ease' }"
               @pointerdown="s.dragStart($event.clientX)"
               @pointermove="s.dragMove($event.clientX)"
@@ -173,20 +208,30 @@ onMounted(async () => {
             </div>
 
             <div v-else class="rounded-[24px] border border-dashed border-stone-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-6 sm:p-8 text-center">
-              <div class="w-14 h-14 mx-auto rounded-2xl bg-ink-900 dark:bg-white text-white dark:text-ink-900 grid place-items-center"><i class="pi pi-heart text-xl" /></div>
-              <div class="mt-4 text-lg font-black text-stone-900 dark:text-white">Лента пуста</div>
-              <div class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Попробуй смягчить фильтры или загляни позже.</div>
-              <div class="mt-4 flex gap-2 justify-center flex-wrap">
-                <Button label="Сбросить фильтры" severity="secondary" rounded outlined size="small" @click="s.resetFilters()" />
-                <Button label="Обновить" rounded size="small" @click="s.loadFeed()" />
-              </div>
+              <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-rose-500 to-orange-400 text-white grid place-items-center"><i class="pi pi-heart-fill text-xl" /></div>
+              <template v-if="s.feedExhausted.value && !s.hasActiveFilters.value">
+                <div class="mt-4 text-lg font-black text-stone-900 dark:text-white">Ты просвайпал(а) всех рядом 🎉</div>
+                <div class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Лайкнутые сохранены в «Избранном». Новые люди появляются каждый день — загляни позже.</div>
+                <div class="mt-4 flex gap-2 justify-center flex-wrap">
+                  <Button label="Моё избранное" rounded size="small" class="!bg-gradient-to-br !from-rose-500 !to-orange-400 !border-0 !text-white" @click="s.activeTab.value = 'favorites'" />
+                  <Button label="Обновить" severity="secondary" rounded outlined size="small" @click="s.loadFeed()" />
+                </div>
+              </template>
+              <template v-else>
+                <div class="mt-4 text-lg font-black text-stone-900 dark:text-white">Лента пуста</div>
+                <div class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Попробуй смягчить фильтры или загляни позже.</div>
+                <div class="mt-4 flex gap-2 justify-center flex-wrap">
+                  <Button label="Сбросить фильтры" severity="secondary" rounded outlined size="small" @click="s.resetFilters()" />
+                  <Button label="Обновить" rounded size="small" @click="s.loadFeed()" />
+                </div>
+              </template>
             </div>
           </div>
 
-          <div v-if="s.current.value" class="mt-4 flex items-center justify-center gap-3 sm:gap-4">
-            <Button icon="pi pi-times" severity="danger" rounded raised aria-label="Пропустить" class="!w-16 !h-16 !text-2xl" :loading="s.acting.value" @click="s.swipe('pass')" />
-            <Button icon="pi pi-heart-fill" rounded raised aria-label="Лайк" class="!w-20 !h-20 !text-3xl !text-white !bg-gradient-to-br !from-rose-500 !to-orange-400 !border-0" :loading="s.acting.value" @click="s.swipe('like')" />
-            <Button icon="pi pi-send" severity="info" rounded raised aria-label="Написать" class="!w-16 !h-16 !text-2xl" :loading="s.creatingChat.value" @click="s.writeWithoutMatch(s.current.value.id)" />
+          <div v-if="s.current.value" class="mt-4 flex items-center justify-center gap-2.5 sm:gap-4 pb-[env(safe-area-inset-bottom,0px)]">
+            <Button icon="pi pi-times" severity="danger" rounded raised aria-label="Пропустить" class="!w-14 !h-14 sm:!w-16 sm:!h-16 !text-xl sm:!text-2xl" :loading="s.acting.value" @click="s.swipe('pass')" />
+            <Button icon="pi pi-heart-fill" rounded raised aria-label="Лайк" class="!w-[72px] !h-[72px] sm:!w-20 sm:!h-20 !text-2xl sm:!text-3xl !text-white !bg-gradient-to-br !from-rose-500 !to-orange-400 !border-0" :loading="s.acting.value" @click="s.swipe('like')" />
+            <Button icon="pi pi-send" severity="info" rounded raised aria-label="Написать" class="!w-14 !h-14 sm:!w-16 sm:!h-16 !text-xl sm:!text-2xl" :loading="s.creatingChat.value" @click="s.writeWithoutMatch(s.current.value.id)" />
           </div>
           <div class="mt-2 text-center text-xs text-stone-400 dark:text-zinc-500">Свайпы безлимитные · сообщения: free {{ s.quota.value ? `${s.quota.value.left}/${s.quota.value.limit}` : '3/3' }} · мэтч открывает чат всегда · 18+</div>
 
@@ -198,6 +243,7 @@ onMounted(async () => {
             </span>
             <i class="pi pi-chevron-right ml-auto text-stone-300 dark:text-zinc-600 shrink-0" />
           </Link>
+          </template>
         </template>
       </div>
 

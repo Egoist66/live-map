@@ -82,6 +82,34 @@ class SwipeController extends Controller
     }
 
     /**
+     * Избранное: лайкнутые без мэтча + лимит по тарифу.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function favorites(Request $request)
+    {
+        $this->dating->assertAdult($request->user());
+
+        return response()->json($this->dating->favorites($request->user()));
+    }
+
+    /**
+     * Убрать человека из избранного.
+     *
+     * @param Request $request
+     * @param int $user
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function removeFavorite(Request $request, int $user)
+    {
+        $this->dating->assertAdult($request->user());
+        $this->dating->removeFavorite($request->user(), $user);
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
      * Квота рандомных чатов.
      *
      * @param Request $request

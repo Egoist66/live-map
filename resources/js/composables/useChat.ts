@@ -39,6 +39,7 @@ export function useChat() {
   let echoChannels: any[] = []
   let activeChatChannel: any = null
   let activeChatId: number | null = null
+  let alive = true
   const seenIds = new Set<number>()
   let typingTimeout: ReturnType<typeof setTimeout> | null = null
   let typingThrottleUntil = 0
@@ -56,6 +57,14 @@ export function useChat() {
       if (meta) return Number(meta)
       return Number((window as any).userId || (usePage().props.auth as any)?.user?.id || 0)
     } catch { return Number((window as any).userId || 0) }
+  }
+  function isChatPageOpen(): boolean {
+    try {
+      if (document.hidden) return false
+      const ziggyRoute = (window as any).route ?? (globalThis as any).route
+      if (typeof ziggyRoute !== 'function') return true
+      return !!ziggyRoute().current('chat')
+    } catch { return true }
   }
   function currentChannel(): any {
     const echo = getEcho()
@@ -260,10 +269,12 @@ export function useChat() {
   }
 
   function handleIncoming(msg: Message) {
+    if (!alive) return
     if (seenIds.has(msg.id)) return
     seenIds.add(msg.id)
     const isOwn = msg.sender_id === getUid()
-    if (msg.conversation_id === selectedId.value) {
+    const isViewing = msg.conversation_id === selectedId.value && isChatPageOpen()
+    if (isViewing) {
       const pendingIdx = messages.value.findIndex((m:any)=> m.pending && m.conversation_id===msg.conversation_id && m.sender_id===msg.sender_id)
       if (pendingIdx !== -1) {
         const bodyMatch = messages.value.findIndex((m:any)=> m.pending && (m as any).body===msg.body && m.sender_id===msg.sender_id)
@@ -461,6 +472,8 @@ export function useChat() {
 
   onMounted(() => { loadConversations(); subscribeGlobal(); window.addEventListener('focus', loadConversations) })
   onBeforeUnmount(() => {
+    alive = false
+    selectedId.value = null
     if (typingTimeout) clearTimeout(typingTimeout)
     typingExpire.forEach((t) => clearTimeout(t))
     window.removeEventListener('focus', loadConversations)
