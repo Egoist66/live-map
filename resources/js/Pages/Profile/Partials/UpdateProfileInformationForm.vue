@@ -27,9 +27,12 @@ const planOptions = [{ label:'Free — 3/день · 5км', value:'free', icon:
 </script>
 <template>
   <section>
-    <header>
-      <h2 class="font-bold dark:text-white">Данные аккаунта</h2>
-      <p class="text-sm text-zinc-500 mt-1">Контакты, домашняя зона и видимость пинов по умолчанию.</p>
+    <header class="flex items-start justify-between gap-3">
+      <div class="min-w-0">
+        <h2 class="font-bold dark:text-white">Данные аккаунта</h2>
+        <p class="text-sm text-zinc-500 mt-1">Контакты, домашняя зона и видимость пинов по умолчанию.</p>
+      </div>
+      <Button :loading="f.isSubmitting.value" label="Сохранить" icon="pi pi-check" size="small" rounded class="!bg-black dark:!bg-white dark:!text-ink-900 !border-black dark:!border-white shrink-0" @click="f.submit" />
     </header>
     <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft mt-6" :pt="{ body:{ class:'!p-4' }, content:{ class:'!p-0' } }">
       <template #content>

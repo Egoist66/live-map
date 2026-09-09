@@ -99,7 +99,7 @@ html.dark .bg-orange-50, html.dark .\!bg-orange-50 { --tw-bg-opacity: 1; backgro
 html.dark .bg-violet-50, html.dark .\!bg-violet-50, html.dark .bg-indigo-50, html.dark .\!bg-indigo-50 { --tw-bg-opacity: 1; background-color: rgb(39 39 42 / var(--tw-bg-opacity)) !important; }
 html.dark .bg-red-50, html.dark .\!bg-red-50 { --tw-bg-opacity: 1; background-color: rgba(127,29,29,0.25) !important; }
 html.dark .bg-\[\#eaf0f6\], html.dark .bg-\[\#eef2f7\], html.dark .bg-\[\#eef3f8\], html.dark .bg-\[\#F8F7F3\] { background-color: #0f172a !important; }
-html.dark .from-white { --tw-gradient-from: #18181b var(--tw-gradient-from-position); --tw-gradient-to: rgb(24 24 27 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+html.dark .from-white:not(.bg-clip-text) { --tw-gradient-from: #18181b var(--tw-gradient-from-position); --tw-gradient-to: rgb(24 24 27 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
 html.dark .to-surface { --tw-gradient-to: #090E1A var(--tw-gradient-to-position); }
 html.dark .border-stone-200, html.dark .\!border-stone-200, html.dark .\!border { border-color: rgb(39 39 42) !important; }
 html.dark .border-stone-100, html.dark .\!border-stone-100 { border-color: rgb(39 39 42) !important; }
@@ -155,6 +155,24 @@ html.dark .p-select-option { color: #e4e4e7 !important; }
 html.dark .p-select-option[aria-selected="true"] { background: rgba(91,91,255,0.18) !important; color: #C7CAFF !important; }
 html.dark .p-select-option[aria-selected="true"] .p-select-option-check-icon { color: #A5AAFF !important; }
 html.dark .p-select-option[data-p-focused="true"]:not([aria-selected="true"]) { background: #27272a !important; }
+html.dark .p-datepicker-header { background: transparent !important; border-color: #27272a !important; }
+html.dark .p-datepicker-title { color: #e4e4e7 !important; }
+html.dark .p-datepicker-decade { background: transparent !important; border-color: transparent !important; color: #fafafa !important; }
+html.dark .p-datepicker-decade:hover { background: #27272a !important; color: #fafafa !important; }
+html.dark .p-datepicker-year-view, html.dark .p-datepicker-month-view, html.dark .p-datepicker-day-view { background: transparent !important; }
+html.dark .p-datepicker-day:not(.p-datepicker-day-selected):hover { background: #27272a !important; color: #fafafa !important; }
+html.dark .p-datepicker-month:not(.p-datepicker-month-selected):hover, html.dark .p-datepicker-year:not(.p-datepicker-year-selected):hover { background: #27272a !important; color: #fafafa !important; }
+html.dark .p-datepicker-select-month:hover, html.dark .p-datepicker-select-year:hover { background: #27272a !important; }
+html.dark .p-datepicker-prev-button, html.dark .p-datepicker-next-button { color: #a1a1aa !important; }
+html.dark .p-datepicker-select-month, html.dark .p-datepicker-select-year { color: #fafafa !important; }
+html.dark .p-datepicker-weekday { color: #71717a !important; }
+html.dark .p-datepicker-day { color: #e4e4e7 !important; }
+html.dark .p-datepicker-day:disabled { color: #52525b !important; }
+html.dark .p-datepicker-other-month .p-datepicker-day { color: #52525b !important; }
+html.dark .p-datepicker-month, html.dark .p-datepicker-year, html.dark .p-datepicker-decade { background: transparent !important; color: #e4e4e7 !important; }
+html.dark .p-datepicker-today > .p-datepicker-day, html.dark .p-datepicker-day.p-datepicker-today { border-color: #5B5BFF !important; color: #C7CAFF !important; }
+html.dark .p-datepicker-day-selected, html.dark .p-datepicker-day.p-datepicker-day-selected { background: #5B5BFF !important; color: #ffffff !important; }
+html.dark .p-datepicker-month-selected, html.dark .p-datepicker-year-selected { background: rgba(91,91,255,0.25) !important; color: #C7CAFF !important; }
 html.dark .shadow, html.dark .shadow-sm, html.dark .shadow-lg, html.dark .shadow-xl { --tw-shadow-color: rgba(0,0,0,0.5); }
 html.dark .divide-stone-200 > :not([hidden]) ~ :not([hidden]), html.dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) { border-color: rgb(39 39 42) !important; }
 html.dark .ring-stone-200, html.dark .ring-gray-200 { --tw-ring-color: rgb(63 63 70) !important; }
@@ -346,6 +364,15 @@ div#p-license-host {
 .admin-tabs .p-tablist-tab-list { display: flex; flex-wrap: nowrap; overflow-x: auto; max-width: 100%; scrollbar-width: none; }
 .admin-tabs .p-tablist-tab-list::-webkit-scrollbar { display: none; }
 .admin-tabs .p-tab { flex-shrink: 0; }
+
+/* Admin tabs: readable text + hover in light/dark (override PrimeVue defaults) */
+.admin-tabs .p-tab { color: #57534e; }
+.admin-tabs .p-tab:hover { background: rgba(0, 0, 0, 0.04); color: #1c1917; }
+.admin-tabs .p-tab.p-tab-active { color: #1c1917; }
+.dark .admin-tabs .p-tab { color: #ffffff; }
+.dark .admin-tabs .p-tab:hover { background: rgba(255, 255, 255, 0.06) !important; color: #ffffff !important; }
+.dark .admin-tabs .p-tab.p-tab-active { color: #ffffff; }
+.dark .admin-tabs .p-tab.p-tab-active:hover { background: rgba(255, 255, 255, 0.08) !important; color: #ffffff !important; }
 @media (max-width: 520px) {
   .admin-tabs .p-tab .tab-label { display: none; }
   .admin-tabs .p-tab { padding-left: 0.85rem; padding-right: 0.85rem; }

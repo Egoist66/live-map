@@ -5,17 +5,17 @@ import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
 import Drawer from 'primevue/drawer'
 
-defineProps<{ open: boolean; user: any; avatarSrc: string; dashboardHref: string; settingsHref: string }>()
+defineProps<{ open: boolean; user: any; avatarSrc: string; settingsHref: string }>()
 const emit = defineEmits<{ (e: 'update:open', v: boolean): void; (e: 'logout'): void }>()
 </script>
 <template>
   <Drawer :visible="open" @update:visible="(v:boolean)=>emit('update:open', v)" position="right" class="!w-[86vw] !max-w-[320px] !bg-white dark:!bg-zinc-900" :pt="{ root: { class: '!bg-white dark:!bg-zinc-900 !border-l !border-stone-200 dark:!border-zinc-800' }, header: { class: '!bg-white dark:!bg-zinc-900 !text-ink-900 dark:!text-white !border-b !border-stone-200 dark:!border-zinc-800' }, content: { class: '!bg-white dark:!bg-zinc-900 !text-stone-700 dark:!text-zinc-200' }, footer: { class: '!bg-white dark:!bg-zinc-900 !border-t !border-stone-200 dark:!border-zinc-800' } }" header="Меню">
     <template #header><ApplicationLogo /></template>
     <div class="space-y-1">
-      <Link :href="dashboardHref" class="flex items-center justify-between p-3 rounded-xl hover:bg-stone-50 dark:hover:bg-zinc-800 font-medium text-ink-900 dark:text-white" @click="emit('update:open', false)">Профиль</Link>
       <Link :href="settingsHref" class="flex p-3 rounded-xl hover:bg-stone-50 dark:hover:bg-zinc-800 font-medium text-ink-900 dark:text-white" @click="emit('update:open', false)">Настройки</Link>
       <Link :href="route('map')" class="flex p-3 rounded-xl hover:bg-stone-50 dark:hover:bg-zinc-800 font-medium text-ink-900 dark:text-white" @click="emit('update:open', false)">Карта</Link>
       <Link :href="route('chat')" class="flex items-center justify-between p-3 rounded-xl hover:bg-stone-50 dark:hover:bg-zinc-800 font-medium text-ink-900 dark:text-white" @click="emit('update:open', false)">Чат</Link>
+      <Link :href="route('swipes')" class="flex items-center gap-2 p-3 rounded-xl hover:bg-stone-50 dark:hover:bg-zinc-800 font-medium text-ink-900 dark:text-white" @click="emit('update:open', false)"><i class="pi pi-images text-sm" />Свайпы</Link>
       <Link :href="route('faq')" class="flex p-3 rounded-xl hover:bg-stone-50 dark:hover:bg-zinc-800 font-medium text-ink-900 dark:text-white" @click="emit('update:open', false)">FAQ</Link>
       <Link v-if="user?.is_admin || user?.role === 'admin'" :href="route('admin')" class="flex items-center gap-2 p-3 rounded-xl bg-stone-100 dark:bg-zinc-800 hover:bg-stone-200 dark:hover:bg-zinc-700 font-semibold text-ink-900 dark:text-white" @click="emit('update:open', false)"><i class="pi pi-shield text-sm" />Админ-панель</Link>
       <Link href="/map" class="flex bg-ink-900 dark:bg-white dark:text-ink-900 text-white rounded-full px-4 py-2.5 text-sm font-semibold justify-center mt-2" @click="emit('update:open', false)">+ Создать пин</Link>

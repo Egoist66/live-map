@@ -11,7 +11,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['name', 'email', 'password', 'gender', 'birth_date', 'country', 'country_code', 'plan', 'latitude', 'longitude', 'role', 'is_admin', 'is_hidden_from_search', 'avatar_path', 'home_lat', 'home_lng', 'home_city', 'home_address', 'home_visibility', 'home_show_exact', 'home_radius_km', 'bio', 'reputation_score', 'level', 'is_anonymous_default', 'default_location_precision', 'default_blur_meters', 'message_privacy', 'allow_random_messages', 'photo_comments_privacy', 'settings', 'last_seen_at', 'is_invisible', 'screen_lock_code', 'screen_lock_timeout', 'screen_lock_kind', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at'])]
+#[Fillable(['name', 'email', 'password', 'gender', 'birth_date', 'country', 'country_code', 'plan', 'latitude', 'longitude', 'role', 'is_admin', 'is_hidden_from_search', 'dating_enabled', 'dating_goal', 'dating_interests', 'dating_gender_pref', 'dating_hide_name', 'dating_hide_age', 'dating_match_only', 'random_chats_used', 'random_chats_month', 'avatar_path', 'home_lat', 'home_lng', 'home_city', 'home_address', 'home_visibility', 'home_show_exact', 'home_radius_km', 'bio', 'reputation_score', 'level', 'is_anonymous_default', 'default_location_precision', 'default_blur_meters', 'message_privacy', 'allow_random_messages', 'photo_comments_privacy', 'settings', 'last_seen_at', 'is_invisible', 'screen_lock_code', 'screen_lock_timeout', 'screen_lock_kind', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at', 'terms_accepted_at', 'terms_version'])]
 #[Hidden(['password', 'remember_token', 'screen_lock_code'])]
 class User extends Authenticatable
 {
@@ -56,12 +56,23 @@ class User extends Authenticatable
         });
     }
 
+    /**
+     * Диск для аватаров: S3 когда он настроен, иначе локальный public.
+     *
+     * Единая точка выбора диска для записи и чтения, чтобы URL
+     * никогда не указывал на другой диск, чем загруженный файл.
+     */
+    public static function avatarDisk(): string
+    {
+        $isS3 = config('filesystems.default') === 's3' && config('filesystems.disks.s3.bucket');
+        return $isS3 ? 's3' : 'public';
+    }
+
     protected function avatarUrl(): Attribute
     {
         return Attribute::get(function (): ?string {
             if (!$this->avatar_path) return null;
-            $disk = config('filesystems.default') === 's3' && config('filesystems.disks.s3.bucket') ? 's3' : 'public';
-            return Storage::disk($disk)->url($this->avatar_path);
+            return Storage::disk(self::avatarDisk())->url($this->avatar_path);
         });
     }
 
@@ -275,8 +286,12 @@ class User extends Authenticatable
         if (UserBlock::where('blocker_id', $this->id)->where('blocked_id', $other->id)->exists()) return 'Вы заблокировали пользователя';
         if ($other->isAdmin() && !Friendship::areFriends($this->id, $other->id)) return 'Сначала добавьте администратора в друзья';
         if ($other->message_privacy === 'none') return 'Пользователь закрыл личные сообщения';
-        if ($other->message_privacy === 'friends' && !Friendship::areFriends($this->id, $other->id)) return 'Только друзья могут писать этому пользователю';
-        if (!$other->allow_random_messages && !Friendship::areFriends($this->id, $other->id)) return 'Пользователь принимает сообщения только от друзей';
+        $isMatch = DatingMatch::between($this->id, $other->id) !== null;
+        $isFriend = Friendship::areFriends($this->id, $other->id);
+        if ($isMatch) return null;
+        if ($other->message_privacy === 'friends' && !$isFriend) return 'Только друзья могут писать этому пользователю';
+        if ($other->dating_match_only && !$isFriend) return 'Пользователь принимает сообщения только при взаимном мэтче';
+        if (!$other->allow_random_messages && !$isFriend) return 'Пользователь принимает сообщения только от друзей';
         return null;
     }
 
@@ -326,6 +341,11 @@ class User extends Authenticatable
             'home_lng' => 'decimal:7',
             'home_show_exact' => 'boolean',
             'settings' => 'array',
+            'dating_enabled' => 'boolean',
+            'dating_interests' => 'array',
+            'dating_hide_name' => 'boolean',
+            'dating_hide_age' => 'boolean',
+            'dating_match_only' => 'boolean',
             'is_anonymous_default' => 'boolean',
             'allow_random_messages' => 'boolean',
             'is_admin' => 'boolean',

@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
 import { galleryApi, type GalleryPhoto } from '@/services/gallery.api'
+import { compressImageFile } from '@/utils/image'
 
 export const GALLERY_LIMITS: Record<string, number> = { free: 3, pro: 6, business: 15 }
 
@@ -49,7 +50,8 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
   async function upload(file: File, caption?: string | null) {
     uploading.value = true
     try {
-      const created = await galleryApi.upload(file, caption)
+      const small = await compressImageFile(file)
+      const created = await galleryApi.upload(small, caption)
       photos.value.unshift(created)
       await load()
       return created
@@ -67,7 +69,8 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
   }
 
   async function replace(photo: GalleryPhoto, file: File) {
-    const updated = await galleryApi.replace(photo.id, file)
+    const small = await compressImageFile(file)
+    const updated = await galleryApi.replace(photo.id, small)
     const i = photos.value.findIndex((p) => p.id === photo.id)
     if (i >= 0) photos.value[i] = updated
     if (active.value?.id === photo.id) active.value = updated

@@ -97,17 +97,28 @@ export default defineConfig({
                 globPatterns: ['**/*.{js,css,html,woff2}'],
                 manifestTransforms: [
                     (entries) => {
-                        const manifest = entries.map((e) => ({
-                            ...e,
-                            url: e.url.startsWith('/') ? e.url : `/build/${e.url}`,
-                        }));
-                        for (const f of ['offline.html', 'manifest.webmanifest', 'pwa-192x192.png', 'pwa-512x512.png', 'pwa-icon.svg', 'favicon.ico']) {
-                            if (!manifest.some((m) => m.url === `/${f}`)) {
-                                const revision = fileRevision(f);
-                                if (revision) manifest.push({ url: `/${f}`, revision });
-                            }
+                        const normalized = entries.map((entry) => {
+                            const isRootManifest = entry.url === 'manifest.webmanifest';
+                            const normalizedUrl = isRootManifest
+                                ? '/manifest.webmanifest'
+                                : entry.url.startsWith('/')
+                                    ? entry.url
+                                    : `/build/${entry.url}`;
+                            return { ...entry, url: normalizedUrl };
+                        });
+                        const seenUrls = new Set();
+                        const deduped = normalized.filter((entry) => {
+                            const alreadySeen = seenUrls.has(entry.url);
+                            seenUrls.add(entry.url);
+                            return !alreadySeen;
+                        });
+                        for (const f of ['offline.html', 'pwa-192x192.png', 'pwa-512x512.png', 'pwa-icon.svg', 'favicon.ico']) {
+                            const alreadyListed = deduped.some((m) => m.url === `/${f}`);
+                            if (alreadyListed) continue;
+                            const revision = fileRevision(f);
+                            if (revision) deduped.push({ url: `/${f}`, revision });
                         }
-                        return { manifest, warnings: [] };
+                        return { manifest: deduped, warnings: [] };
                     },
                 ],
                 navigateFallback: null,

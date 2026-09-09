@@ -2,6 +2,7 @@
 import { Link } from '@inertiajs/vue3'
 import Card from 'primevue/card'
 import PageTransition from '@/Components/Features/Feedback/PageTransition.vue'
+import AppFooter from '@/Layouts/AppFooter.vue'
 import PwaInstallBanner from '@/Components/Features/Pwa/PwaInstallBanner.vue'
 import PwaUpdateBanner from '@/Components/Features/Pwa/PwaUpdateBanner.vue'
 const isFaq = route().current('faq')
@@ -24,7 +25,7 @@ const isFaq = route().current('faq')
           <div class="inline-flex items-center gap-2 bg-white/10 backdrop-blur border border-white/15 rounded-full px-3 py-1.5 text-xs font-medium">
             <span class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]"></span> live • обновление 30 сек
           </div>
-          <h2 class="mt-5 text-[36px] xl:text-[40px] font-black leading-[0.9] tracking-[-0.04em]">Твое окно<br /><span class="bg-gradient-to-r from-white via-violet-200 to-teal-200 bg-clip-text text-transparent">во двор</span></h2>
+          <h2 class="mt-5 text-[36px] xl:text-[40px] font-black leading-[0.9] tracking-[-0.04em]">Твое окно<br /><span class="bg-gradient-to-r from-[#FFFFFF] via-violet-200 to-teal-200 bg-clip-text text-transparent">во двор</span></h2>
           <p class="text-white/60 mt-3 leading-relaxed text-[14px]">Спокойная карта без шума. Только то, что рядом — прямо сейчас.</p>
           <div class="mt-6 grid grid-cols-1 gap-3">
             <div class="bg-white/[0.07] backdrop-blur border border-white/10 rounded-2xl p-3.5 flex items-center gap-3">
@@ -63,8 +64,11 @@ const isFaq = route().current('faq')
             </Card>
             <div class="text-xs text-stone-500 dark:text-zinc-400 mt-4 text-center max-w-full px-2 text-balance">Защищено приватностью по умолчанию · Размытие 200м · Блок в 1 клик</div>
           </div>
-        </template>
+          </template>
         </PageTransition>
+        <div v-if="isFaq" class="mt-auto">
+          <AppFooter />
+        </div>
       </div>
       <PwaInstallBanner />
       <PwaUpdateBanner />

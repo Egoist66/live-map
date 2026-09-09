@@ -2,6 +2,7 @@
 import { Link } from '@inertiajs/vue3'
 import Dialog from 'primevue/dialog'
 import Avatar from 'primevue/avatar'
+import InputText from 'primevue/inputtext'
 import OnlineDot from '@/Components/Features/Feedback/OnlineDot.vue'
 import { avatarSrcFor } from '@/composables/useAvatar'
 import { useChatSearchList } from '@/composables/useChatSearchUser'
@@ -14,9 +15,9 @@ const { isFriend, isPending, showAdd, addTitle } = useChatSearchList()
   <Dialog :visible="open" @update:visible="(v:boolean)=>emit('update:open', v)" modal header="Поиск людей" :style="{ width: '480px', maxWidth: '96vw', maxHeight: '92dvh' }" :pt="{ content: { class: '!pt-2 !max-h-[80dvh] !overflow-y-auto' } }">
     <div class="text-xs text-stone-500 mb-3">Найди человека по имени чтобы начать чат — отдельный глобальный поиск</div>
     <div class="relative w-full">
-      <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-sm" />
-      <input :value="query" @input="emit('update:query', ($event.target as HTMLInputElement).value)" placeholder="Имя, например Петр..." autofocus class="w-full rounded-full border border-stone-200 pl-9 pr-9 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500" />
-      <i v-if="searching" class="pi pi-spin pi-spinner absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 text-sm" />
+      <i class="pi pi-search absolute left-3.5 top-1/2 -translate-y-1/2 text-violet-500 text-sm pointer-events-none z-[1]" />
+      <InputText :model-value="query" @update:model-value="emit('update:query', String($event ?? ''))" placeholder="Имя, например Петр..." autofocus fluid class="!rounded-full !pl-10 !pr-10 !py-2.5 !text-sm !border-stone-200 dark:!border-zinc-700 focus:!border-violet-500 focus:!ring-2 focus:!ring-violet-500/30" />
+      <i v-if="searching" class="pi pi-spin pi-spinner absolute right-3.5 top-1/2 -translate-y-1/2 text-violet-400 text-sm pointer-events-none" />
     </div>
     <div v-if="results.length" class="mt-3 max-h-[60dvh] sm:max-h-[52vh] overflow-auto divide-y border rounded-2xl bg-white dark:bg-zinc-900 dark:border-zinc-700 shadow-sm">
       <div v-for="u in results" :key="u.id" class="flex items-center justify-between p-3 select-none">

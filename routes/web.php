@@ -28,6 +28,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 Route::get('/faq', fn () => Inertia::render('Faq'))->name('faq');
+Route::get('/swipes', fn () => Inertia::render('Swipes'))->name('swipes');
+Route::get('/contacts', fn () => Inertia::render('Reference', ['slug' => 'contacts']))->name('contacts');
+Route::get('/privacy', fn () => Inertia::render('Reference', ['slug' => 'privacy']))->name('privacy');
+Route::get('/offer', fn () => Inertia::render('Reference', ['slug' => 'offer']))->name('offer');
 Route::middleware('auth')->group(function () {
     Route::get('/chat/{conversation?}', fn (?int $conversation = null) => Inertia::render('Chat/Index', ['conversationId' => $conversation]))->name('chat');
     Route::get('/users/{user}', [ProfileController::class, 'publicShow'])->name('users.show');
@@ -36,6 +40,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->middleware('throttle:profile-write')->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->middleware('throttle:profile-write')->name('profile.destroy');
     Route::post('/profile/avatar', [\App\Http\Controllers\AvatarController::class, 'store'])->middleware('throttle:profile-write')->name('profile.avatar');
+    Route::post('/terms/accept', [\App\Http\Controllers\TermsController::class, 'accept'])->name('terms.accept');
 });
 
 Route::fallback(function () {

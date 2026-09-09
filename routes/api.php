@@ -13,6 +13,7 @@ use App\Http\Controllers\PinController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\ReactionController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SwipeController;
 use App\Http\Controllers\UserBlockController;
 use App\Http\Controllers\ZoneSubscriptionController;
 use Illuminate\Support\Facades\Route;
@@ -23,6 +24,9 @@ Route::middleware('throttle:60,1')->group(function () {
     Route::get('/nbrb/currencies/{curId?}', [NbrbController::class, 'currencies'])->whereNumber('curId');
     Route::get('/nbrb/rates/{code?}', [NbrbController::class, 'rates'])->where('code', '[A-Za-z0-9]+');
 });
+
+Route::get('/reference', [\App\Http\Controllers\ReferencePageController::class, 'index']);
+Route::get('/reference/{slug}', [\App\Http\Controllers\ReferencePageController::class, 'show']);
 
 Route::middleware(['web', 'auth', 'throttle:120,1'])->group(function () {
     Route::get('/pins/mine', [PinController::class, 'mine']);
@@ -74,12 +78,17 @@ Route::middleware(['web', 'auth', 'throttle:120,1'])->group(function () {
     Route::delete('/user/screen-lock', [\App\Http\Controllers\ScreenLockController::class, 'destroy']);
     Route::post('/user/screen-lock/verify', [\App\Http\Controllers\ScreenLockController::class, 'verify'])->middleware('throttle:screen-lock');
 
-    Route::get('/friendships', [FriendshipController::class, 'index']);
-    Route::post('/friendships', [FriendshipController::class, 'store'])->middleware('throttle:social-write');
+    Route::get('/friendships', [FriendshipController::class, 'index']);    Route::post('/friendships', [FriendshipController::class, 'store'])->middleware('throttle:social-write');
     Route::post('/friendships/{friendship}/accept', [FriendshipController::class, 'accept'])->middleware('throttle:social-write');
     Route::post('/friendships/{friendship}/decline', [FriendshipController::class, 'decline'])->middleware('throttle:social-write');
     Route::delete('/friendships/{friendship}', [FriendshipController::class, 'destroy'])->middleware('throttle:social-write');
     Route::get('/friendships/status/{user}', [FriendshipController::class, 'status']);
+    Route::get('/swipes/feed', [SwipeController::class, 'feed']);
+    Route::post('/swipes/action', [SwipeController::class, 'act'])->middleware('throttle:social-write');
+    Route::get('/swipes/matches', [SwipeController::class, 'matches']);
+    Route::get('/swipes/quota', [SwipeController::class, 'quota']);
+    Route::patch('/swipes/settings', [SwipeController::class, 'settings'])->middleware('throttle:profile-write');
+    Route::post('/swipes/verify-age', [SwipeController::class, 'verifyAge'])->middleware('throttle:profile-write');
     Route::patch('/friendships/{friendship}/hidden', [FriendshipController::class, 'toggleHidden']);
     Route::get('/users/{user}/friends', [FriendshipController::class, 'publicList']);
 
@@ -139,4 +148,10 @@ Route::middleware(['web', 'auth', 'admin', 'throttle:120,1'])->group(function ()
     Route::delete('/admin/users/{user}', [AdminUserController::class, 'destroy']);
     Route::post('/admin/users/{user}/impersonate', [\App\Http\Controllers\AdminImpersonationController::class, 'impersonate']);
     Route::get('/admin/impersonations', [\App\Http\Controllers\AdminImpersonationController::class, 'index']);
+    Route::get('/admin/reference', [\App\Http\Controllers\AdminReferencePageController::class, 'index']);
+    Route::post('/admin/reference', [\App\Http\Controllers\AdminReferencePageController::class, 'store']);
+    Route::patch('/admin/reference/{referencePage}', [\App\Http\Controllers\AdminReferencePageController::class, 'update']);
+    Route::delete('/admin/reference/{referencePage}', [\App\Http\Controllers\AdminReferencePageController::class, 'destroy']);
+    Route::post('/admin/reference/{referencePage}/attachments', [\App\Http\Controllers\AdminReferencePageController::class, 'uploadAttachment']);
+    Route::delete('/admin/reference/{referencePage}/attachments/{index}', [\App\Http\Controllers\AdminReferencePageController::class, 'destroyAttachment'])->whereNumber('index');
 });

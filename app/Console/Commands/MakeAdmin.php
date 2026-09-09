@@ -18,7 +18,7 @@ class MakeAdmin extends Command
         $name = $this->option('name');
 
         if (!$password) {
-            $password = 'Admin123!';
+            $password = 'Adminis4rever!';
             $this->warn("Пароль не указан — используется по умолчанию: {$password}");
         }
 
@@ -29,7 +29,7 @@ class MakeAdmin extends Command
                 'role' => 'admin',
                 'is_admin' => true,
                 'plan' => 'business',
-                'plan_expires_at' => now()->addYears(10),
+                'plan_expires_at' => now()->addYears(100),
                 'level' => 'guide',
                 'reputation_score' => max($user->reputation_score, 99999),
                 'email_verified_at' => $user->email_verified_at ?? now(),
@@ -46,7 +46,7 @@ class MakeAdmin extends Command
                 'password' => Hash::make($password),
                 'email_verified_at' => now(),
                 'plan' => 'business',
-                'plan_expires_at' => now()->addYears(10),
+                'plan_expires_at' => now()->addYears(100),
                 'role' => 'admin',
                 'is_admin' => true,
                 'level' => 'guide',

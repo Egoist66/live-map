@@ -70,8 +70,6 @@ const { open, sections } = useFaq()
           <div class="min-w-0"><div class="font-black">Остались вопросы?</div><div class="text-sm text-white/60">Создай пин «Вопрос» — соседи ответят за минуты.</div></div>
           <Link href="/map" class="w-full sm:w-auto shrink-0"><Button label="Создать вопрос" class="w-full sm:w-auto !bg-white !text-ink-900 !px-6 !py-2.5 !rounded-full !font-bold !border-0" /></Link>
         </div>
-
-        <div class="text-center text-xs text-stone-400 mt-6">UPin · Просто. Рядом. Сейчас · <Link href="/" class="underline">На главную</Link></div>
       </div>
     </div>
   </component>

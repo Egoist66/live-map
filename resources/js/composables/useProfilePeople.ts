@@ -7,6 +7,7 @@ export function useProfilePeople() {
   const friendsTitle = ref('')
   const friends = ref<any[]>([])
   const friendsLoading = ref(false)
+  const friendsCount = ref<number | null>(null)
 
   async function openFriends(userId: number, name?: string) {
     friendsTitle.value = name || ''
@@ -27,6 +28,20 @@ export function useProfilePeople() {
     friendsOpen.value = false
   }
 
+  /**
+   * Тихо подгружает число друзей для счётчика в шапке профиля.
+   * @param userId id пользователя
+   */
+  async function loadFriendsCount(userId: number): Promise<void> {
+    try {
+      const data = await chatApi.publicFriends(userId)
+      const list = Array.isArray(data?.friends) ? data.friends : []
+      friendsCount.value = list.length
+    } catch {
+      friendsCount.value = null
+    }
+  }
+
   function goProfile(id: number) {
     closeFriends()
     router.visit(`/users/${id}`)
@@ -37,8 +52,10 @@ export function useProfilePeople() {
     friendsTitle,
     friends,
     friendsLoading,
+    friendsCount,
     openFriends,
     closeFriends,
+    loadFriendsCount,
     goProfile,
   }
 }

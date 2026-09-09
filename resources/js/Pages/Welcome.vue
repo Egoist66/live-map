@@ -2,7 +2,7 @@
 import { Head, Link, usePage } from '@inertiajs/vue3'
 import { computed } from 'vue'
 import { useSeo } from '@/composables/useSeo'
-import { useNavigation } from '@/composables/useNavigation'
+import AppFooter from '@/Layouts/AppFooter.vue'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import Tag from 'primevue/tag'
@@ -15,7 +15,6 @@ const seo = useSeo({
 })
 const page = usePage()
 const isAuthenticated = computed(() => !!(page.props.auth as any)?.user)
-const { dashboardHref } = useNavigation()
 </script>
 
 <template>
@@ -24,7 +23,7 @@ const { dashboardHref } = useNavigation()
     <meta head-key="og:title" property="og:title" :content="seo.title.value" />
     <meta head-key="og:description" property="og:description" :content="seo.description.value" />
   </Head>
-  <div class="min-h-screen bg-surface dark:bg-[#0B0F1A] text-ink-900 dark:text-zinc-100 antialiased selection:bg-ink-900 dark:selection:bg-brand-500 selection:text-white overflow-x-hidden">
+  <div class="min-h-screen flex flex-col bg-surface dark:bg-[#0B0F1A] text-ink-900 dark:text-zinc-100 antialiased selection:bg-ink-900 dark:selection:bg-brand-500 selection:text-white overflow-x-hidden">
     <header class="sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/70 backdrop-blur border-b border-stone-200/60 dark:border-zinc-800">
       <div class="max-w-[1280px] mx-auto px-4 sm:px-6 h-[64px] flex items-center justify-between">
         <Link href="/" class="flex items-center gap-2.5">
@@ -33,14 +32,11 @@ const { dashboardHref } = useNavigation()
           <span class="hidden sm:inline ml-2 text-xs font-medium tracking-wide text-stone-500 dark:text-zinc-500 border-l border-stone-200 dark:border-zinc-700 pl-3">ТВОЕ ОКНО ВО ДВОР</span>
         </Link>
         <nav class="flex items-center gap-2">
-          <Link href="/faq" class="hidden sm:inline-flex text-[13px] font-medium text-stone-600 dark:text-zinc-400 hover:text-ink-900 dark:hover:text-white px-3 py-2 rounded-full hover:bg-white dark:hover:bg-zinc-800 transition">FAQ</Link>
-          <Link href="/map" class="hidden sm:inline-flex text-[13px] font-medium text-stone-600 dark:text-zinc-400 hover:text-ink-900 dark:hover:text-white px-3 py-2 rounded-full hover:bg-white dark:hover:bg-zinc-800 transition">Карта</Link>
           <template v-if="isAuthenticated">
-            <Link :href="dashboardHref"><Button label="Профиль" class="!bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white !px-6 !py-2.5 !rounded-full !text-sm !font-semibold hover:!bg-ink-800 dark:hover:!bg-zinc-100 !border-0 shadow-soft" /></Link>
+            <Link :href="route('dashboard')"><Button label="Открыть профиль" class="!bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white !px-6 !py-2.5 !rounded-full !text-sm !font-semibold hover:!bg-ink-800 dark:hover:!bg-zinc-100 !border-0 shadow-soft" /></Link>
           </template>
           <template v-else>
-            <Link v-if="canLogin" :href="route('login')"><Button label="Войти" severity="secondary" text class="!text-sm !font-semibold !px-4 !py-2 !rounded-full" /></Link>
-            <Link v-if="canRegister" :href="route('register')"><Button label="Начать бесплатно" class="!bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white !px-6 !py-2.5 !rounded-full !text-sm !font-semibold hover:!bg-ink-800 dark:hover:!bg-zinc-100 !border-0 shadow-soft" /></Link>
+            <Link v-if="canLogin" :href="route('login')"><Button label="Войти" class="!bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white !px-6 !py-2.5 !rounded-full !text-sm !font-semibold hover:!bg-ink-800 dark:hover:!bg-zinc-100 !border-0 shadow-soft" /></Link>
           </template>
         </nav>
       </div>
@@ -174,7 +170,8 @@ const { dashboardHref } = useNavigation()
           </div>
         </template>
       </Card>
-      <div class="text-center text-xs text-stone-400 mt-6 tracking-wide">© UPin · <Link href="/faq" class="underline hover:text-ink-900 dark:hover:text-white">FAQ</Link> · Пилотный район · PWA в доступе</div>
     </section>
+
+    <AppFooter class="mt-auto w-full" />
   </div>
 </template>

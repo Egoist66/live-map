@@ -40,3 +40,34 @@ export async function reverseGeocodeCountry(lat: number, lng: number): Promise<{
   const country_code = a.country_code ? String(a.country_code).toLowerCase() : null
   return { country, country_code }
 }
+
+/**
+ * Прямое геокодирование места (город/страна) в координаты.
+ * Используется как стартовый центр карты, когда нет геопозиции.
+ * @param query строка вида "Минск, Беларусь" или "Беларусь"
+ * @returns координаты центра или null
+ * @example
+ * const c = await forwardGeocodePlace('Минск, Беларусь')
+ */
+export async function forwardGeocodePlace(query: string, timeoutMs = 6000): Promise<{ lat: number; lng: number } | null> {
+  const q = query.trim()
+  if (!q) return null
+  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&accept-language=ru&q=${encodeURIComponent(q)}`
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs)
+  try {
+    const r = await fetch(url, { headers: { Accept: 'application/json' }, signal: ctrl.signal })
+    if (!r.ok) return null
+    const list = (await r.json()) as Array<{ lat: string; lon: string }>
+    const first = list?.[0]
+    if (!first) return null
+    const lat = Number(first.lat)
+    const lng = Number(first.lon)
+    const valid = Number.isFinite(lat) && Number.isFinite(lng)
+    return valid ? { lat, lng } : null
+  } catch {
+    return null
+  } finally {
+    clearTimeout(timer)
+  }
+}

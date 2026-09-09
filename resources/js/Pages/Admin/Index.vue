@@ -23,7 +23,9 @@ import AdminImpersonateDialog from '@/Components/Features/Admin/AdminImpersonate
 import AdminImpersonationLogs from '@/Components/Features/Admin/AdminImpersonationLogs.vue'
 import AdminLoginAttempts from '@/Components/Features/Admin/AdminLoginAttempts.vue'
 import AdminMaintenanceManager from '@/Components/Features/Admin/AdminMaintenanceManager.vue'
+import AdminReferencesManager from '@/Components/Features/Admin/AdminReferencesManager.vue'
 import SettingsAdminTab from '@/Components/Features/Settings/SettingsAdminTab.vue'
+import { useAdminReference } from '@/composables/useAdminReference'
 import { useAdminAppUpdates } from '@/composables/useAdminAppUpdates'
 import { useAdminImpersonate } from '@/composables/useAdminImpersonate'
 import { useAdminImpersonationLogs } from '@/composables/useAdminImpersonationLogs'
@@ -41,11 +43,13 @@ const imp = useAdminImpersonate()
 const impLogs = useAdminImpersonationLogs()
 const logins = useAdminLoginAttempts()
 const maintenance = useAppMaintenance()
+const refs = useAdminReference()
 reports.init()
 onMounted(() => appUpdates.load())
 onMounted(() => impLogs.load())
 onMounted(() => logins.load())
 onMounted(() => maintenance.load())
+onMounted(() => refs.load())
 </script>
 <template>
   <Head title="Админ-панель" />
@@ -75,6 +79,7 @@ onMounted(() => maintenance.load())
             <Tab value="manage" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-users text-xs" /><span class="tab-label">Управление</span></span></Tab>
             <Tab value="security" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-shield text-xs" /><span class="tab-label">Безопасность</span><Badge v-if="logins.stats.value.failed_today" :value="logins.stats.value.failed_today > 99 ? '99+' : String(logins.stats.value.failed_today)" severity="danger" /></span></Tab>
             <Tab value="admin" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-cog text-xs" /><span class="tab-label">Администрирование</span><Badge v-if="reports.pendingCount.value" :value="reports.pendingCount.value > 99 ? '99+' : String(reports.pendingCount.value)" severity="danger" /></span></Tab>
+            <Tab value="refs" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-book text-xs" /><span class="tab-label">Справочники</span></span></Tab>
           </TabList>
           <TabPanels class="!p-0 !pt-4 !bg-transparent">
             <TabPanel value="stats">
@@ -107,6 +112,11 @@ onMounted(() => maintenance.load())
             </TabPanel>
             <TabPanel value="admin">
               <SettingsAdminTab :admin="admin" :reports="reports" :imp="imp" />
+            </TabPanel>
+            <TabPanel value="refs">
+              <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
+                <AdminReferencesManager :mgr="refs" />
+              </div>
             </TabPanel>
           </TabPanels>
         </Tabs>

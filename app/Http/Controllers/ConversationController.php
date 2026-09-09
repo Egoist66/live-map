@@ -18,12 +18,18 @@ class ConversationController extends Controller
             ->get(['conversation_id', 'cleared_at'])
             ->keyBy('conversation_id');
         $convs = Conversation::whereHas('participantRows', fn($q)=>$q->where('user_id',$user->id)->whereNull('hidden_at'))
-            ->with(['participants' => fn($q)=>$q->select('users.id','users.name','users.avatar_path','users.last_seen_at','users.is_invisible','users.plan','users.role','users.is_admin'), 'messages'=>fn($q)=>$q->reorder()->latest('id')->limit(1)])
+            ->with(['participants' => fn($q)=>$q->select('users.id','users.name','users.avatar_path','users.last_seen_at','users.is_invisible','users.plan','users.role','users.is_admin','users.dating_goal','users.dating_interests'), 'messages'=>fn($q)=>$q->reorder()->latest('id')->limit(1)])
             ->withCount(['messages as unread_count'=>fn($q)=>$q->where('sender_id','!=',$user->id)->whereNull('read_at')])
             ->orderByDesc('last_message_at')
             ->orderByDesc('updated_at')
+            ->get();
+        $matchedIds = \App\Models\DatingMatch::where('user_a_id', $user->id)
+            ->orWhere('user_b_id', $user->id)
             ->get()
-            ->map(function($c) use ($user, $myRows){
+            ->map(fn($m) => $m->user_a_id === $user->id ? $m->user_b_id : $m->user_a_id)
+            ->flip();
+        $convs = $convs
+            ->map(function($c) use ($user, $myRows, $matchedIds){
                 $other = $c->participants->firstWhere('id','!=',$user->id);
                 $lastSeen = $other && $other->isInvisibleActive() && !$user->isAdmin() ? null : $other?->last_seen_at?->toISOString();
                 $clearedAt = $myRows->get($c->id)?->cleared_at;
@@ -41,7 +47,7 @@ class ConversationController extends Controller
                 }
                 return [
                     'id'=>$c->id,
-                    'other'=>$other ? ['id'=>$other->id,'name'=>$other->name,'avatar_path'=>$other->avatar_path,'avatar_url'=>$other->avatar_url,'last_seen_at'=>$lastSeen,'is_invisible'=>$other->isInvisibleActive()] : null,
+                    'other'=>$other ? ['id'=>$other->id,'name'=>$other->name,'avatar_path'=>$other->avatar_path,'avatar_url'=>$other->avatar_url,'last_seen_at'=>$lastSeen,'is_invisible'=>$other->isInvisibleActive(),'is_match'=>isset($matchedIds[$other->id]),'dating_goal'=>$other->dating_goal,'dating_interests'=>$other->dating_interests ?? []] : null,
                     'last_message'=>$last,
                     'unread_count'=>$unread,
                     'last_message_at'=>$c->last_message_at,
@@ -55,7 +61,7 @@ class ConversationController extends Controller
     {
         abort_unless($conversation->hasParticipant($request->user()->id),403);
         $clearedAt = $conversation->participantRows()->where('user_id', $request->user()->id)->value('cleared_at');
-        $conversation->load(['participants:id,name,avatar_path,last_seen_at,is_invisible,plan,role,is_admin']);
+        $conversation->load(['participants:id,name,avatar_path,last_seen_at,is_invisible,plan,role,is_admin,dating_goal,dating_interests']);
         $rawMessages = $conversation->messages()->with('sender:id,name,avatar_path')->orderBy('created_at')->limit(100)->get();
         if ($clearedAt) {
             $rawMessages = $rawMessages->filter(fn($m) => $m->created_at > $clearedAt)->values();
@@ -70,9 +76,10 @@ class ConversationController extends Controller
         $pinned = $conversation->messages()->with('sender:id,name,avatar_path')->whereNotNull('pinned_at')->orderBy('pinned_at')->get()->map->toArrayPayload();
         $other = $conversation->participants->firstWhere('id','!=',$request->user()->id);
         $lastSeen = $other && $other->isInvisibleActive() && !$request->user()->isAdmin() ? null : $other?->last_seen_at?->toISOString();
+        $isMatch = $other ? \App\Models\DatingMatch::between($request->user()->id, $other->id) !== null : false;
         return response()->json([
             'id'=>$conversation->id,
-            'other'=>$other ? ['id'=>$other->id,'name'=>$other->name,'avatar_path'=>$other->avatar_path,'avatar_url'=>$other->avatar_url,'last_seen_at'=>$lastSeen,'is_invisible'=>$other->isInvisibleActive()] : null,
+            'other'=>$other ? ['id'=>$other->id,'name'=>$other->name,'avatar_path'=>$other->avatar_path,'avatar_url'=>$other->avatar_url,'last_seen_at'=>$lastSeen,'is_invisible'=>$other->isInvisibleActive(),'is_match'=>$isMatch,'dating_goal'=>$other->dating_goal,'dating_interests'=>$other->dating_interests ?? []] : null,
             'participants'=>$conversation->participants->map(fn($p)=> array_merge($p->toArray(), ['avatar_url'=>$p->avatar_url])),
             'messages'=>$messages,
             'pinned'=>$pinned,
@@ -113,6 +120,7 @@ class ConversationController extends Controller
             return response()->json(['id'=>$hiddenExisting->id,'existing'=>true,'restored'=>true],201);
         }
         return DB::transaction(function() use ($me,$other,$request){
+            app(\App\Services\DatingService::class)->tryConsumeRandomQuota($me->refresh(), $other);
             $conv=Conversation::create(['type'=>'direct','created_by'=>$me->id,'last_message_at'=>now()]);
             $conv->participantRows()->createMany([
                 ['user_id'=>$me->id,'joined_at'=>now()],

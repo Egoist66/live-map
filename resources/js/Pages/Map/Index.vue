@@ -14,11 +14,12 @@ import { useMentions } from '@/composables/useMentions'
 import { useReportDialog } from '@/composables/useReportDialog'
 import { formatTime } from '@/utils/date'
 import Toast from 'primevue/toast'
+import Button from 'primevue/button'
 import Checkbox from 'primevue/checkbox'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 const seo = useSeo({ title: 'Карта — UPin', description: 'Живая карта UPin.', noindex: true })
-const { store, categories, customCats, selectedCategory, filteredPins, pinDetails, pinCreate, pinEdit, mapApi, showCreate, pinAddress, loadingPinAddress, myStreet, loadingStreet, radiusOptions, radiusLabel, homeZone, homeZoneVisible, toggleHomeZone, closeCreate, deleteSelectedPin, saveEdit, deleteCustomCategory, init, destroy, showLiveInfo, showMyPins, myPins, handleMineClick, flyToPin } = useMapPage() as any
+const { store, categories, customCats, selectedCategory, filteredPins, pinDetails, pinCreate, pinEdit, mapApi, showCreate, pinAddress, loadingPinAddress, myStreet, loadingStreet, radiusOptions, radiusLabel, homeZone, homeZoneVisible, toggleHomeZone, closeCreate, deleteSelectedPin, saveEdit, deleteCustomCategory, init, destroy, showLiveInfo, showMyPins, myPins, handleMineClick, flyToPin, geoNotice, dismissGeoNotice, locateMe } = useMapPage() as any
 const { selectedPin, comments, threadedComments, replyTo, replyTarget, cancelReply, commentText, react, sendComment, editingCommentId, editingContent, highlightCommentId, startEditComment, cancelEditComment, saveEditComment, reactAsyncStatus, createCommentAsyncStatus, boostMutation, updateCommentMutation } = pinDetails as any
 const mentions = useMentions()
 const reportDialog = useReportDialog()
@@ -39,6 +40,17 @@ onUnmounted(destroy)
       </div>
       <div class="absolute top-2 sm:top-4 left-2 right-2 sm:left-4 sm:right-auto sm:max-w-[420px] flex flex-col gap-2 sm:gap-2.5 z-10 pointer-events-none">
         <MapTopBar :count="(filteredPins as any)?.value?.length ?? store.pins.length" :loading="store.loading" :categories="categories" :selected-category="selectedCategory" @update:category="(v:any)=>selectedCategory=v" @info="showLiveInfo = true" @mine="handleMineClick" />
+        <Transition name="fade">
+          <div v-if="geoNotice" class="pointer-events-auto bg-white/95 dark:bg-zinc-900/95 backdrop-blur border border-amber-200 dark:border-amber-900/60 rounded-2xl px-3.5 py-3 shadow flex items-start gap-2.5 w-fit max-w-[min(92vw,380px)]">
+            <span class="w-8 h-8 rounded-full bg-amber-500/15 dark:bg-amber-400/15 grid place-items-center text-sm shrink-0"><i class="pi pi-map-marker text-amber-600 dark:text-amber-400"></i></span>
+            <div class="min-w-0 flex-1">
+              <div class="text-xs font-bold dark:text-zinc-100">Карта открыта по профилю · {{ geoNotice.place }}</div>
+              <div class="text-[11px] text-stone-500 dark:text-zinc-400 leading-snug mt-0.5">Твоей точки пока нет. Разреши геолокацию в браузере или нажми кнопку — покажем, где ты.</div>
+              <Button label="Показать моё место" icon="pi pi-crosshairs" size="small" rounded class="mt-2 !text-xs" @click="locateMe" />
+            </div>
+            <button type="button" class="shrink-0 w-6 h-6 rounded-full hover:bg-stone-100 dark:hover:bg-white/10 grid place-items-center text-stone-400 dark:text-zinc-400" title="Скрыть" @click="dismissGeoNotice"><i class="pi pi-times text-[10px]"></i></button>
+          </div>
+        </Transition>
         <Transition name="fade">
           <div v-if="myStreet || loadingStreet" class="pointer-events-auto bg-white/95 dark:bg-zinc-900/95 backdrop-blur border border-stone-200 dark:border-zinc-700 rounded-2xl px-4 py-3 shadow flex items-center gap-3 w-fit max-w-[min(92vw,380px)]">
             <span class="w-8 h-8 rounded-full bg-emerald-500/15 dark:bg-emerald-400/15 grid place-items-center text-sm shrink-0">📍</span>

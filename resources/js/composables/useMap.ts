@@ -29,6 +29,8 @@ const OSM_RASTER_STYLE: any = {
 export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) => void) {
   const mapContainer = ref<HTMLElement | null>(null)
   let map: maplibregl.Map
+  let geoControl: any = null
+  const geoListeners = new Set<(e: any) => void>()
   let markers: maplibregl.Marker[] = []
   let lastActivePinId: number | null = null
   const { store, selectedCategory } = usePins()
@@ -68,7 +70,11 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
         attributionControl: false,
       } as any)
       map.addControl(new maplibregl.NavigationControl({ showCompass: true, showZoom: true, visualizePitch: true }), 'bottom-right')
-      map.addControl(new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true, timeout: 8000 }, trackUserLocation: true, showAccuracyCircle: false, showUserLocation: false, fitBoundsOptions: { maxZoom: 15 } } as any), 'bottom-right')
+      geoControl = new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true, timeout: 8000 }, trackUserLocation: true, showAccuracyCircle: false, showUserLocation: false, fitBoundsOptions: { maxZoom: 15 } } as any)
+      map.addControl(geoControl, 'bottom-right')
+      geoListeners.forEach((cb) => {
+        try { geoControl.on('geolocate', cb) } catch {}
+      })
       map.addControl(new maplibregl.ScaleControl({ maxWidth: 120, unit: 'metric' }), 'bottom-left')
       map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right')
       const onReady = () => {
@@ -365,9 +371,31 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
   }
   function triggerGeolocate() {
     try {
+      if (geoControl?.trigger) {
+        geoControl.trigger()
+        return
+      }
       const ctrl: any = map?._controls?.find((c: any) => c.trigger && c._geolocateButton) || null
       if (ctrl?.trigger) ctrl.trigger()
     } catch {}
+  }
+
+  /**
+   * Подписка на живые фиксы кнопки геолокации.
+   *
+   * Событие `geolocate` фаерится на самом GeolocateControl, а не на карте,
+   * поэтому слушать `map.on('geolocate')` бесполезно — подписка идёт на контрол
+   * и переживает пересоздание карты. Пейлоад — GeolocationPosition.
+   * @param cb обработчик фикса
+   * @returns функция отписки
+   */
+  function onGeolocate(cb: (e: any) => void): () => void {
+    geoListeners.add(cb)
+    try { geoControl?.on('geolocate', cb) } catch {}
+    return () => {
+      geoListeners.delete(cb)
+      try { geoControl?.off('geolocate', cb) } catch {}
+    }
   }
 
   function homeCircleCoords(lat: number, lng: number, radiusKm: number, points = 64): number[][] {
@@ -520,5 +548,5 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
   function setThemeStyle(isDark: boolean) {
     return
   }
-  return { mapContainer, initMap, renderPins, addTempMarker, removeTempMarker, showUserLocation, triggerGeolocate, getCenter, flyToMyLocation, flyToHomeZone, bindRealtime, unbindRealtime, setThemeStyle, showHomeZone, hideHomeZone, loaded, errorMsg, wsConnected, get map() { return map } }
+  return { mapContainer, initMap, renderPins, addTempMarker, removeTempMarker, showUserLocation, triggerGeolocate, onGeolocate, getCenter, flyToMyLocation, flyToHomeZone, bindRealtime, unbindRealtime, setThemeStyle, showHomeZone, hideHomeZone, loaded, errorMsg, wsConnected, get map() { return map } }
 }

@@ -39,6 +39,10 @@ export function useDashboardPage(propsUser?: any, propsIsOwn?: boolean) {
   function goAdmin() { router.visit(route('admin')) }
   function goFaq() { router.visit('/faq') }
   function share() { shareProfile({ id: u.value.id, name: u.value.name }) }
+  const levelName = computed(() => LEVEL_LABEL[u.value?.level] || u.value?.level || 'Новичок')
+  const registeredAt = computed(() => {
+    try { return new Date(u.value.created_at).toLocaleDateString('ru-RU') } catch { return '' }
+  })
   onMounted(() => { if (isOwn.value) badges.init() })
-  return { seo, auth, u, isOwn, isAdmin, showAvatar, avatarSrc, bioText, bioEmpty, settingsHref, sharing, presence, levelLabel: LEVEL_LABEL, levelColor: LEVEL_COLOR, planLabel: PLAN_LABEL, planColor: PLAN_COLOR, openAvatar, closeAvatar, goMap, goChat, goSettings, goAdmin, goFaq, share }
+  return { seo, auth, u, isOwn, isAdmin, showAvatar, avatarSrc, bioText, bioEmpty, settingsHref, sharing, presence, levelLabel: LEVEL_LABEL, levelColor: LEVEL_COLOR, planLabel: PLAN_LABEL, planColor: PLAN_COLOR, levelName, registeredAt, openAvatar, closeAvatar, goMap, goChat, goSettings, goAdmin, goFaq, share }
 }

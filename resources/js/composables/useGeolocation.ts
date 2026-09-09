@@ -12,12 +12,16 @@ function readLastPos(): { lat: number; lng: number } | null {
   return null
 }
 
+/**
+ * Одноразовый запрос геопозиции браузера.
+ * @returns координаты с точностью или null при отказе/ошибке
+ */
 export function useGeolocation() {
   const coords = ref<{ lat: number; lng: number } | null>(readLastPos())
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  function requestGeolocation(): Promise<{ lat: number; lng: number } | null> {
+  function requestGeolocation(): Promise<{ lat: number; lng: number; accuracy: number | null } | null> {
     loading.value = true
     error.value = null
     return new Promise((resolve) => {
@@ -31,9 +35,9 @@ export function useGeolocation() {
         (pos) => {
           const next = { lat: pos.coords.latitude, lng: pos.coords.longitude }
           coords.value = next
-          try { localStorage.setItem(LAST_POS_KEY, JSON.stringify(next)) } catch {}
           loading.value = false
-          resolve(next)
+          const accuracy = Number(pos.coords.accuracy)
+          resolve({ ...next, accuracy: Number.isFinite(accuracy) ? accuracy : null })
         },
         (err) => {
           error.value = err?.code === 1 ? 'Геолокация отклонена' : 'Не удалось определить позицию'

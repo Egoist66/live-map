@@ -46,6 +46,9 @@ class SeoController extends Controller
         $urls = [
             ['loc' => $base.'/', 'priority' => '1.0', 'changefreq' => 'daily'],
             ['loc' => $base.'/faq', 'priority' => '0.8', 'changefreq' => 'weekly'],
+            ['loc' => $base.'/contacts', 'priority' => '0.5', 'changefreq' => 'monthly'],
+            ['loc' => $base.'/privacy', 'priority' => '0.4', 'changefreq' => 'monthly'],
+            ['loc' => $base.'/offer', 'priority' => '0.4', 'changefreq' => 'monthly'],
             ['loc' => $base.'/map', 'priority' => '0.9', 'changefreq' => 'hourly'],
             ['loc' => $base.'/login', 'priority' => '0.3', 'changefreq' => 'monthly'],
             ['loc' => $base.'/register', 'priority' => '0.5', 'changefreq' => 'monthly'],

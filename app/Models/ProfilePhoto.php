@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Storage;
 
 class ProfilePhoto extends Model
 {
-    protected $fillable = ['user_id', 'path', 'caption'];
+    protected $fillable = ['user_id', 'path', 'caption', 'sort_order'];
 
     protected $appends = ['url'];
 

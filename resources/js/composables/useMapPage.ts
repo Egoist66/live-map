@@ -14,6 +14,7 @@ import { useAppConfirm } from '@/composables/useAppConfirm'
 import { useCustomCategories } from '@/composables/useCustomCategories'
 import { useHomeZoneVisibility } from '@/composables/useHomeZoneVisibility'
 import { planOf } from '@/composables/usePlanLimits'
+import { resolveInitialCenter, homeAnchorOf, isSaneFix } from '@/composables/useMapInitialCenter'
 
 export function useMapPage() {
   const { store, selectedCategory, filteredPins, fetchNearby } = usePins()
@@ -54,6 +55,44 @@ export function useMapPage() {
   const userPlan = computed(() => planOf(page.props.auth?.user))
   const { visible: homeZoneVisible, toggle: toggleHomeZone, set: setHomeZoneVisible } = useHomeZoneVisibility()
   const myPos = ref<{ lat: number; lng: number } | null>(null)
+  const geoNotice = ref<{ place: string } | null>(null)
+  let flewToLive = false
+  let unsubGeolocate: (() => void) | null = null
+
+  /**
+   * Сохраняет последнюю хорошую позицию для следующего открытия карты.
+   * @param lat широта
+   * @param lng долгота
+   */
+  function saveLastPos(lat: number, lng: number): void {
+    try { localStorage.setItem('live-map:last-pos', JSON.stringify({ lat, lng })) } catch {}
+  }
+
+  /**
+   * Подпись места из профиля для баннера фолбэка.
+   * @param user текущий пользователь из Inertia-props
+   * @returns строка вида "Минск, Беларусь" или запасной текст
+   */
+  function residenceLabelOf(user: any): string {
+    const city = String(user?.home_city || '').trim()
+    const country = String(user?.country || '').trim()
+    const parts = [city, country].filter(Boolean)
+    return parts.length ? parts.join(', ') : 'вашего профиля'
+  }
+
+  /**
+   * Скрывает баннер фолбэка на текущую сессию.
+   */
+  function dismissGeoNotice(): void {
+    geoNotice.value = null
+  }
+
+  /**
+   * Вручную запрашивает геопозицию через кнопку контрола карты.
+   */
+  function locateMe(): void {
+    try { mapApi.triggerGeolocate?.() } catch {}
+  }
   const homeRadiusKm = computed(() => Number(page.props.auth?.user?.home_radius_km ?? 5))
   const homeZone = computed(() => {
     if (!myPos.value) return null
@@ -185,72 +224,77 @@ export function useMapPage() {
   async function init() {
     window.addEventListener('keydown', onEsc)
     try { void customCats.fetchAll() } catch {}
-    const cached = (() => {
-      try {
-        const raw = localStorage.getItem('live-map:last-pos')
-        if (!raw) return null
-        const p = JSON.parse(raw)
-        if (Number.isFinite(p?.lat) && Number.isFinite(p?.lng)) return p as { lat: number; lng: number }
-      } catch {}
-      return null
-    })()
+    const user = page.props.auth?.user as any
+    const anchor = homeAnchorOf(user)
+    if (anchor) myPos.value = { ...anchor }
+    const start = await resolveInitialCenter(user)
     const onMapClick = (e: any) => {
       const target = e.originalEvent?.target as HTMLElement
       if (target?.closest?.('.maplibregl-marker')) return
       openCreate(e.lngLat)
     }
-    if (cached) {
-      myPos.value = { ...cached }
-      try { await fetchNearby(cached.lat, cached.lng) } catch {}
+    await nextTick()
+    const isFallback = start.source === 'residence' || start.source === 'none'
+    if (isFallback && !start.hasPrecise) geoNotice.value = { place: residenceLabelOf(user) }
+    if (start.center) {
+      if (!myPos.value && !isFallback) myPos.value = { ...start.center }
+      try { await fetchNearby(start.center.lat, start.center.lng) } catch {}
       try {
         const mine = await store.fetchMine()
         mine.forEach((p: any) => { if (!store.pins.find((x: any) => x.id === p.id)) store.pins.unshift(p) })
         store.pruneExpired()
       } catch {}
-      await nextTick()
-      await mapApi.initMap([cached.lng, cached.lat] as any, onMapClick)
+      const lngLat = [start.center.lng, start.center.lat] as any
+      await mapApi.initMap(lngLat, onMapClick, start.zoom)
+      if (start.hasPrecise) mapApi.showUserLocation(start.center.lat, start.center.lng)
       mapApi.renderPins()
       applyHomeZone()
       mapApi.bindRealtime()
     } else {
-      await nextTick()
       await mapApi.initMap(null, onMapClick)
       mapApi.bindRealtime()
+      try { await fetchNearby(0, 20) } catch {}
     }
-    let geo: { lat: number; lng: number } | null = null
+    let geo: { lat: number; lng: number; accuracy: number | null } | null = null
     try { geo = await requestGeolocation() } catch { geo = null }
     if (geo) {
-      myPos.value = { ...geo }
-      try { localStorage.setItem('live-map:last-pos', JSON.stringify(geo)) } catch {}
+      const sane = isSaneFix(geo.accuracy)
+      myPos.value = { lat: geo.lat, lng: geo.lng }
+      if (sane) {
+        saveLastPos(geo.lat, geo.lng)
+        geoNotice.value = null
+      }
       fetchStreet(geo.lat, geo.lng)
       try { await fetchNearby(geo.lat, geo.lng) } catch {}
-      if (cached) {
-        mapApi.showUserLocation(geo.lat, geo.lng)
-        applyHomeZone()
-        try { mapApi.flyToMyLocation?.(geo.lat, geo.lng) } catch {}
-      } else {
-        await mapApi.initMap([geo.lng, geo.lat] as any, onMapClick)
-        mapApi.showUserLocation(geo.lat, geo.lng)
-        applyHomeZone()
+      mapApi.showUserLocation(geo.lat, geo.lng)
+      applyHomeZone()
+      if (sane && !flewToLive) {
+        flewToLive = true
         try { mapApi.flyToMyLocation?.(geo.lat, geo.lng) } catch {}
       }
       mapApi.renderPins()
       setTimeout(() => applyHomeZone(), 1200)
-    } else if (!cached) {
-      try { await fetchNearby(0, 20) } catch {}
     }
-    try {
-      ;(mapApi.map as any)?.on('geolocate', (e: any) => {
-        const c = e.coords
-        if (!c) return
-        const next = { lat: c.latitude, lng: c.longitude }
-        myPos.value = next
-        try { localStorage.setItem('live-map:last-pos', JSON.stringify(next)) } catch {}
-        fetchStreet(next.lat, next.lng)
-        mapApi.showUserLocation(next.lat, next.lng)
-        applyHomeZone()
-      })
-    } catch {}
+    unsubGeolocate = mapApi.onGeolocate?.((e: any) => {
+      const raw = e?.coords ?? e
+      const lat = Number(raw?.latitude)
+      const lng = Number(raw?.longitude)
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return
+      const rawAcc = Number(raw?.accuracy)
+      const sane = isSaneFix(Number.isFinite(rawAcc) ? rawAcc : null)
+      myPos.value = { lat, lng }
+      if (sane) {
+        saveLastPos(lat, lng)
+        geoNotice.value = null
+      }
+      fetchStreet(lat, lng)
+      mapApi.showUserLocation(lat, lng)
+      applyHomeZone()
+      if (sane && !flewToLive) {
+        flewToLive = true
+        try { mapApi.flyToMyLocation?.(lat, lng) } catch {}
+      }
+    }) ?? null
     try { void consumePendingPin() } catch {}
   }
 
@@ -307,7 +351,11 @@ export function useMapPage() {
     }
   }
 
-  function destroy() { window.removeEventListener('keydown', onEsc); try { (mapApi as any).unbindRealtime?.()     } catch {}
+  function destroy() {
+    window.removeEventListener('keydown', onEsc)
+    try { unsubGeolocate?.() } catch {}
+    unsubGeolocate = null
+    try { (mapApi as any).unbindRealtime?.() } catch {}
     try { void consumePendingPin() } catch {}
   }
 
@@ -315,7 +363,7 @@ export function useMapPage() {
     store, categories, customCats, selectedCategory, filteredPins, pinDetails, pinCreate, pinEdit, mapApi,
     showCreate, pinAddress, loadingPinAddress, myStreet, loadingStreet,
     radiusOptions, radiusLabel, homeZone, homeZoneVisible, toggleHomeZone, setHomeZoneVisible, openCreate, openCreateFromUI, closeCreate, deleteSelectedPin, saveEdit, deleteCustomCategory, init, destroy,
-    deleteMutation,
+    deleteMutation, geoNotice, dismissGeoNotice, locateMe,
     ...overlays,
   }
 }

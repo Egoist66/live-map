@@ -28,6 +28,10 @@ class RegisteredUserController extends Controller
     /**
      * Handle an incoming registration request.
      *
+     * Домашняя зона на регистрации не настраивается: всем выдаётся
+     * Free-радиус 5 км по умолчанию, меняется позже в тарифе/настройках.
+     * Геопозиция опциональна: без неё карта откроется по стране/городу.
+     *
      * @throws ValidationException
      */
     public function store(Request $request): RedirectResponse
@@ -60,7 +64,7 @@ class RegisteredUserController extends Controller
             'home_city' => $request->home_city,
             'home_lat' => $request->home_lat,
             'home_lng' => $request->home_lng,
-            'home_radius_km' => min(5, max(1, (int) ($request->home_radius_km ?? 5))),
+            'home_radius_km' => 5,
         ]);
 
         event(new Registered($user));
