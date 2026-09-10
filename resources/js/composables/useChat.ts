@@ -5,8 +5,6 @@ import { chatApi } from '@/services/chat.api'
 import { useChatHistory } from '@/composables/useChatHistory'
 import type { Conversation, ConversationDetail, Message } from '@/types/entities/Chat'
 
-const INITIAL_PAGE = 100
-
 let searchAbort: AbortController | null = null
 let searchTimer: ReturnType<typeof setTimeout> | null = null
 let loadConversationsInflight: Promise<Conversation[]> | null = null
@@ -167,7 +165,7 @@ export function useChat() {
         activeConv.value = d
         messages.value = mergeFetched(currentId, Array.isArray(d.messages) ? d.messages : [])
         await nextTick()
-        if (history.stickToBottom.value) history.scrollToBottom()
+        history.scrollToBottom()
       }
     } finally { refreshing.value = false }
   }
@@ -238,8 +236,7 @@ export function useChat() {
       try { await chatApi.markRead(id) } catch {}
       subscribeChat(id)
       await nextTick()
-      history.reset(detailMessages.length >= INITIAL_PAGE)
-      history.attach()
+      history.reset()
     } catch (e) {
       if (selectedId.value === id) { selectedId.value = null; activeConv.value = null; messages.value = []; loading.value = false }
       throw e
@@ -283,7 +280,7 @@ export function useChat() {
     } : null
     const optimistic: any = { id: tempId, conversation_id: selectedId.value, reply_to_id: replyTo?.id ?? null, reply_to: replySnapshot, sender_id: uid, body: text, type: optimisticAttachment ? optimisticAttachment.kind : 'text', attachment: optimisticAttachment, created_at: new Date().toISOString(), pending: true }
     messages.value.push(optimistic)
-    history.notifyAppended(true)
+    history.notifyAppended()
     sending.value = true
     try {
       const msg = await chatApi.sendMessage(selectedId.value!, text, replyTo?.id ?? null, attachmentFile ?? null)
@@ -302,7 +299,7 @@ export function useChat() {
         messages.value.push({ ...(msg as any), justSent: true } as any)
       }
       syncConversationPreview(msg)
-      history.notifyAppended(true)
+      history.notifyAppended()
       setTimeout(() => { const m = messages.value.find((x) => x?.id === msg.id) as any; if (m) m.justSent = false }, 600)
     } catch (e: any) {
       const idx = messages.value.findIndex((m) => m?.id === tempId)
@@ -363,10 +360,6 @@ export function useChat() {
     try { await chatApi.deleteConversation(id) } catch (e) { conversations.value = backup; if (wasSelected) { activeConv.value = backupActive; messages.value = backupMsgs; selectedId.value = id }; throw e }
   }
 
-  function scrollToBottom() {
-    history.scrollToBottom()
-  }
-
   function handleIncoming(msg: Message) {
     if (!alive) return
     if (!msg || (msg as any)?.id == null) return
@@ -394,13 +387,13 @@ export function useChat() {
         const conv0 = conversations.value.find(c=>c?.id===msg.conversation_id)
         if (conv0) (conv0 as any).unread_count = 0
       }
-      history.notifyAppended(false)
+      history.notifyAppended()
       return
     }
     if (msg.sender_id === getUid()) { syncConversationPreview(msg); return }
     if (Number(msg.conversation_id) === Number(selectedId.value)) {
       appendLiveMessage(msg)
-      history.notifyAppended(false)
+      history.notifyAppended()
     }
     const conv = conversations.value.find((c) => c?.id === msg.conversation_id)
     if (conv) { conv.unread_count = (conv.unread_count || 0) + 1; bumpConversation(msg) }
@@ -631,7 +624,7 @@ export function useChat() {
         chatApi.markRead(id).catch(() => {})
       }
       await nextTick()
-      if (history.stickToBottom.value) history.scrollToBottom()
+      history.scrollToBottom()
     } catch {}
   }
 
@@ -648,11 +641,10 @@ export function useChat() {
     } catch {}
   }
 
-  onMounted(() => { loadConversations(); subscribeGlobal(); history.attach(); window.addEventListener('focus', handleFocusResync); document.addEventListener('visibilitychange', handleFocusResync) })
+  onMounted(() => { loadConversations(); subscribeGlobal(); window.addEventListener('focus', handleFocusResync); document.addEventListener('visibilitychange', handleFocusResync) })
   onBeforeUnmount(() => {
     alive = false
     selectedId.value = null
-    history.detach()
     if (typingTimeout) clearTimeout(typingTimeout)
     typingExpire.forEach((t) => clearTimeout(t))
     window.removeEventListener('focus', handleFocusResync)
