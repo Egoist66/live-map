@@ -90,16 +90,52 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
     }
   }
 
-  async function toggleLike(photo: GalleryPhoto) {
-    const res = await galleryApi.toggleLike(photo.id)
+  async function toggleLike(photo: GalleryPhoto, incognito = false) {
+    const res = await galleryApi.toggleLike(photo.id, incognito)
     const apply = (p: GalleryPhoto) => {
       p.liked = res.liked
       p.likes_count = res.likes_count
+      p.liked_incognito = res.liked ? (res.is_incognito ?? incognito) : false
     }
     const i = photos.value.findIndex((p) => p.id === photo.id)
     if (i >= 0) apply(photos.value[i])
     if (active.value?.id === photo.id) apply(active.value)
+    if (activeLikersPhotoId.value === photo.id && res.liked) void loadLikers(photo.id)
+    if (activeLikersPhotoId.value === photo.id && !res.liked) likers.value = likers.value.filter((l) => l.user_id !== null || !l.is_incognito)
     return res
+  }
+
+  const likers = ref<Array<{ user_id: number | null; name: string; avatar_url: string | null; is_incognito: boolean; created_at?: string }>>([])
+  const likersLoading = ref(false)
+  const likersTotal = ref(0)
+  const likersIncognito = ref(0)
+  const activeLikersPhotoId = ref<number | null>(null)
+  const likersOpen = ref(false)
+
+  /**
+   * Загрузить кто лайкнул фото (открытый список как в инсте).
+   * @param photoId id фото
+   */
+  async function loadLikers(photoId: number) {
+    likersLoading.value = true
+    activeLikersPhotoId.value = photoId
+    try {
+      const res = await galleryApi.likers(photoId)
+      likers.value = res.likers
+      likersTotal.value = res.total
+      likersIncognito.value = res.incognito_count
+    } finally {
+      likersLoading.value = false
+    }
+  }
+
+  function openLikers(photo: GalleryPhoto) {
+    likersOpen.value = true
+    void loadLikers(photo.id)
+  }
+
+  function closeLikers() {
+    likersOpen.value = false
   }
 
   function open(photo: GalleryPhoto, commentId?: number | null) {
@@ -182,5 +218,5 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
     return MOSAIC_PATTERN[i % MOSAIC_PATTERN.length]
   }
 
-  return { photos, limit, count, remaining, isFull, canAdd, canComment, privacy, loading, uploading, error, active, viewerOpen, dialogOpen, highlightCommentId, isOwn: !!opts?.isOwn, load, upload, saveCaption, replace, remove, toggleLike, open, stepPhoto, close, openDialog, closeDialog, syncCounts, consumePendingPhoto, mosaicClass }
+  return { photos, limit, count, remaining, isFull, canAdd, canComment, privacy, loading, uploading, error, active, viewerOpen, dialogOpen, highlightCommentId, isOwn: !!opts?.isOwn, load, upload, saveCaption, replace, remove, toggleLike, likers, likersLoading, likersTotal, likersIncognito, likersOpen, loadLikers, openLikers, closeLikers, open, stepPhoto, close, openDialog, closeDialog, syncCounts, consumePendingPhoto, mosaicClass }
 }

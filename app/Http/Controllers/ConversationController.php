@@ -62,10 +62,14 @@ class ConversationController extends Controller
         abort_unless($conversation->hasParticipant($request->user()->id), 403, 'Этот чат принадлежит другому аккаунту. Войдите под нужным пользователем.');
         $clearedAt = $conversation->participantRows()->where('user_id', $request->user()->id)->value('cleared_at');
         $conversation->load(['participants:id,name,avatar_path,last_seen_at,is_invisible,plan,role,is_admin,dating_goal,dating_interests']);
-        $rawMessages = $conversation->messages()->with(['sender:id,name,avatar_path', 'replyTo.sender:id,name'])->orderBy('created_at')->limit(100)->get();
-        if ($clearedAt) {
-            $rawMessages = $rawMessages->filter(fn($m) => $m->created_at > $clearedAt)->values();
-        }
+        $rawMessages = $conversation->messages()
+            ->with(['sender:id,name,avatar_path', 'replyTo.sender:id,name'])
+            ->when($clearedAt, fn ($q) => $q->where('created_at', '>', $clearedAt))
+            ->orderByDesc('id')
+            ->limit(100)
+            ->get()
+            ->reverse()
+            ->values();
         $undelivered = $rawMessages->where('sender_id','!=',$request->user()->id)->whereNull('delivered_at')->pluck('id');
         if($undelivered->isNotEmpty()){
             Message::whereIn('id',$undelivered)->update(['delivered_at'=>now()]);

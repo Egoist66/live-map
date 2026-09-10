@@ -181,6 +181,8 @@ class User extends Authenticatable
 
     public function isPro(): bool { return $this->isAdmin() || in_array($this->effectivePlan(), ['pro','business']); }
 
+    public function canUseIncognitoLike(): bool { return $this->isPro(); }
+
     public function canUseInvisible(): bool { return $this->isAdmin() || in_array($this->effectivePlan(), ['pro','business']); }
 
     public function hiddenFriendsLimit(): ?int

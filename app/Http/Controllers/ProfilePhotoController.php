@@ -36,6 +36,7 @@ class ProfilePhotoController extends Controller
     private function serialize(ProfilePhoto $photo, ?User $viewer): array
     {
         $photo->loadMissing('user:id,name,avatar_path');
+        $myLike = $viewer ? ProfilePhotoLike::where('photo_id', $photo->id)->where('user_id', $viewer->id)->first() : null;
         return [
             'id' => $photo->id,
             'user_id' => $photo->user_id,
@@ -43,7 +44,8 @@ class ProfilePhotoController extends Controller
             'caption' => $photo->caption,
             'likes_count' => (int) $photo->likes_count,
             'comments_count' => (int) $photo->comments_count,
-            'liked' => $viewer ? ProfilePhotoLike::where('photo_id', $photo->id)->where('user_id', $viewer->id)->exists() : false,
+            'liked' => (bool) $myLike,
+            'liked_incognito' => (bool) ($myLike?->is_incognito ?? false),
             'can_comment' => $viewer ? $viewer->canCommentProfilePhoto($photo->user ?? $photo->user()->first()) : false,
             'created_at' => $photo->created_at?->toISOString(),
         ];
@@ -123,15 +125,49 @@ class ProfilePhotoController extends Controller
         $viewer = $request->user();
         $owner = $photo->user;
         if ($viewer->id !== $owner->id) $this->abortIfBlocked($viewer, $owner);
+        $data = $request->validate(['incognito' => 'sometimes|boolean']);
+        $incognito = (bool) ($data['incognito'] ?? false);
+        if ($incognito && ! $viewer->canUseIncognitoLike()) {
+            return response()->json(['message' => 'Анонимный лайк — PRO-функция. Оформите PRO, чтобы скрывать себя.'], 402);
+        }
         $existing = ProfilePhotoLike::where('photo_id', $photo->id)->where('user_id', $viewer->id)->first();
         if ($existing) {
             $existing->delete();
             $photo->decrement('likes_count');
+            PinActivityNotifier::photoUnliked($photo, $viewer);
             return response()->json(['liked' => false, 'likes_count' => (int) $photo->refresh()->likes_count]);
         }
-        ProfilePhotoLike::create(['photo_id' => $photo->id, 'user_id' => $viewer->id]);
+        ProfilePhotoLike::create(['photo_id' => $photo->id, 'user_id' => $viewer->id, 'is_incognito' => $incognito]);
         $photo->increment('likes_count');
-        return response()->json(['liked' => true, 'likes_count' => (int) $photo->refresh()->likes_count]);
+        PinActivityNotifier::photoLiked($photo->refresh(), $viewer);
+        return response()->json(['liked' => true, 'likes_count' => (int) $photo->refresh()->likes_count, 'is_incognito' => $incognito]);
+    }
+
+    /**
+     * Кто лайкнул фото (как в инсте): открытый список.
+     * Инкогнито (PRO) видно как «Тайный поклонник», id скрыт от чужих.
+     */
+    public function likers(Request $request, ProfilePhoto $photo)
+    {
+        $viewer = $request->user();
+        if ($viewer->id !== $photo->user_id) $this->abortIfBlocked($viewer, $photo->user);
+        $likes = ProfilePhotoLike::where('photo_id', $photo->id)->with('user:id,name,avatar_path,last_seen_at')->latest()->limit(50)->get();
+        $isOwner = $viewer->id === $photo->user_id || $viewer->isAdmin();
+        $list = $likes->map(function ($like) use ($isOwner) {
+            $isIncognito = (bool) $like->is_incognito;
+            if ($isIncognito && ! $isOwner) {
+                return ['user_id' => null, 'name' => 'Тайный поклонник', 'avatar_url' => null, 'is_incognito' => true, 'created_at' => $like->created_at?->toISOString()];
+            }
+            $u = $like->user;
+            return [
+                'user_id' => $u?->id ?? $like->user_id,
+                'name' => $isIncognito ? 'Тайный поклонник' : ($u?->name ?? 'Пользователь'),
+                'avatar_url' => $isIncognito ? null : $u?->avatar_url,
+                'is_incognito' => $isIncognito,
+                'created_at' => $like->created_at?->toISOString(),
+            ];
+        })->values();
+        return response()->json(['likers' => $list, 'total' => $photo->likes_count, 'incognito_count' => $likes->where('is_incognito', true)->count()]);
     }
 
     public function comments(Request $request, ProfilePhoto $photo)

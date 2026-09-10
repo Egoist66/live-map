@@ -77,9 +77,12 @@ onMounted(async () => {
     const stopRealtime = s.subscribeRealtime()
     ;(window as any).__swipesRealtimeStop?.()
     ;(window as any).__swipesRealtimeStop = stopRealtime
+    const tab = new URLSearchParams(window.location.search).get('tab')
+    if (tab === 'admirers') s.activeTab.value = 'admirers'
     await s.loadFeed()
     await s.loadMatches()
     await s.loadFavorites()
+    await s.loadAdmirers()
     await s.loadActive()
   }
 })
@@ -146,10 +149,11 @@ onMounted(async () => {
             {{ s.error.value }}
           </div>
 
-          <div class="mt-3 grid grid-cols-3 gap-1 p-1 rounded-2xl bg-stone-100 dark:bg-zinc-800">
+          <div class="mt-3 grid grid-cols-4 gap-1 p-1 rounded-2xl bg-stone-100 dark:bg-zinc-800">
             <button type="button" @click="s.activeTab.value = 'feed'" :class="['py-2 rounded-xl text-[13px] font-bold transition', s.activeTab.value === 'feed' ? 'bg-white dark:bg-zinc-900 text-ink-900 dark:text-white shadow-soft' : 'text-stone-500 dark:text-zinc-400']">Лента</button>
             <button type="button" @click="s.activeTab.value = 'active'; s.loadActive()" :class="['py-2 rounded-xl text-[13px] font-bold transition', s.activeTab.value === 'active' ? 'bg-white dark:bg-zinc-900 text-ink-900 dark:text-white shadow-soft' : 'text-stone-500 dark:text-zinc-400']">Активные</button>
             <button type="button" @click="s.activeTab.value = 'favorites'" :class="['py-2 rounded-xl text-[13px] font-bold transition', s.activeTab.value === 'favorites' ? 'bg-white dark:bg-zinc-900 text-ink-900 dark:text-white shadow-soft' : 'text-stone-500 dark:text-zinc-400']">Избранное · {{ s.favoritesCount.value }}/{{ s.favoritesLimit.value }}</button>
+            <button type="button" @click="s.activeTab.value = 'admirers'; s.loadAdmirers()" :class="['py-2 rounded-xl text-[13px] font-bold transition', s.activeTab.value === 'admirers' ? 'bg-white dark:bg-zinc-900 text-ink-900 dark:text-white shadow-soft' : 'text-stone-500 dark:text-zinc-400']">Меня лайкнули · {{ s.admirersTotal.value }}</button>
           </div>
 
           <template v-if="s.activeTab.value === 'active'">
@@ -226,6 +230,38 @@ onMounted(async () => {
               <div class="w-14 h-14 mx-auto rounded-2xl bg-rose-500/10 text-rose-500 grid place-items-center"><i class="pi pi-star text-xl" /></div>
               <div class="mt-4 text-lg font-black text-stone-900 dark:text-white">Пока пусто</div>
               <div class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Лайкни кого-то в ленте — не потеряешь. Free: до {{ s.favoritesLimit.value }}.</div>
+              <div class="mt-4"><Button label="К ленте" rounded size="small" @click="s.activeTab.value = 'feed'" /></div>
+            </div>
+          </template>
+
+          <template v-else-if="s.activeTab.value === 'admirers'">
+            <div v-if="s.admirersLoading.value" class="mt-4 rounded-[24px] border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 h-[40dvh] min-h-[240px] grid place-items-center">
+              <i class="pi pi-spin pi-spinner text-2xl text-stone-400 dark:text-zinc-500" />
+            </div>
+            <div v-else-if="s.admirers.value.length" class="mt-4 space-y-2">
+              <div v-if="s.admirersIncognito.value" class="text-center text-[11px] font-bold text-violet-600 dark:text-violet-300">🕵️ {{ s.admirersIncognito.value }} — тайные поклонники (PRO)</div>
+              <div
+                v-for="f in s.admirers.value"
+                :key="`${f.id}-${f.is_incognito ? 'inc' : 'open'}`"
+                class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3"
+              >
+                <component :is="f.is_incognito ? 'span' : Link" :href="f.is_incognito ? undefined : `/users/${f.id}`" class="shrink-0">
+                  <Avatar :image="(!f.is_incognito && f.avatar_url) ? f.avatar_url : undefined" :label="f.is_incognito ? '🕵️' : (!f.avatar_url ? (f.name ?? '?').slice(0, 1) : undefined)" shape="circle" class="!w-12 !h-12" />
+                </component>
+                <component :is="f.is_incognito ? 'span' : Link" :href="f.is_incognito ? undefined : `/users/${f.id}`" class="min-w-0 flex-1">
+                  <div class="text-sm font-bold truncate text-stone-900 dark:text-white">{{ f.is_incognito ? 'Тайный поклонник' : f.name }}<span v-if="!f.is_incognito" class="font-semibold text-stone-500 dark:text-zinc-400"> · {{ s.ageLabel(f) }}</span></div>
+                  <div v-if="f.is_incognito" class="text-[11px] text-violet-500 font-bold">Скрыл себя · PRO · лайкни в ответ — откроется при мэтче</div>
+                  <div v-else-if="f.city" class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">{{ f.city }}</div>
+                </component>
+                <Chip v-if="f.liked_me || f.is_match" label="Взаимно" icon="pi pi-heart-fill" class="!rounded-full !text-[10px]" />
+                <Button v-if="!f.is_incognito" icon="pi pi-heart-fill" rounded size="small" aria-label="Лайк в ответ" title="Лайк в ответ" :loading="s.acting.value" class="!w-10 !h-10 !p-0 shrink-0" @click="s.swipeAdmirer(f.id)" />
+                <Button v-if="!f.is_incognito" icon="pi pi-send" rounded size="small" severity="secondary" outlined aria-label="Написать" title="Написать" :loading="s.creatingChat.value" class="!w-10 !h-10 !p-0 shrink-0" @click="s.writeWithoutMatch(f.id)" />
+              </div>
+            </div>
+            <div v-else class="mt-4 rounded-[24px] border border-dashed border-stone-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-6 sm:p-8 text-center">
+              <div class="w-14 h-14 mx-auto rounded-2xl bg-rose-500/10 text-rose-500 grid place-items-center"><i class="pi pi-heart text-xl" /></div>
+              <div class="mt-4 text-lg font-black text-stone-900 dark:text-white">Тебя пока не лайкнули</div>
+              <div class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Заполни анкету и добавь фото — так заметнее. Каждый лайк прилетит в колокольчик.</div>
               <div class="mt-4"><Button label="К ленте" rounded size="small" @click="s.activeTab.value = 'feed'" /></div>
             </div>
           </template>
@@ -410,7 +446,11 @@ onMounted(async () => {
             </div>
           </div>
 
-          <div v-if="s.current.value" class="mt-4 flex items-center justify-center gap-2.5 sm:gap-4 pb-[env(safe-area-inset-bottom,0px)]">
+          <div v-if="s.current.value" class="mt-3 flex items-center justify-center gap-2">
+            <ToggleSwitch v-model="s.incognitoLike.value" :disabled="!s.canIncognito.value" input-id="incognito-like" />
+            <label for="incognito-like" class="text-xs text-stone-500 dark:text-zinc-400">🕵️ Скрыть себя <span class="font-black text-violet-500">PRO</span><span v-if="!s.canIncognito.value"> · оформи PRO</span><span v-else-if="s.incognitoLike.value"> · тебя увидят как «Тайный поклонник»</span></label>
+          </div>
+          <div v-if="s.current.value" class="mt-2 flex items-center justify-center gap-2.5 sm:gap-4 pb-[env(safe-area-inset-bottom,0px)]">
             <Button icon="pi pi-times" severity="danger" rounded raised aria-label="Пропустить" class="!w-14 !h-14 sm:!w-16 sm:!h-16 !text-xl sm:!text-2xl" :loading="s.acting.value" @click="s.swipe('pass')" />
             <Button icon="pi pi-heart-fill" rounded raised aria-label="Лайк" class="!w-[72px] !h-[72px] sm:!w-20 sm:!h-20 !text-2xl sm:!text-3xl !text-white !bg-gradient-to-br !from-rose-500 !to-orange-400 !border-0" :loading="s.acting.value" @click="s.swipe('like')" />
             <Button icon="pi pi-send" severity="info" rounded raised aria-label="Написать" class="!w-14 !h-14 sm:!w-16 sm:!h-16 !text-xl sm:!text-2xl" :loading="s.creatingChat.value" @click="s.writeWithoutMatch(s.current.value.id)" />

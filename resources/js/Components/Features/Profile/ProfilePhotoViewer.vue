@@ -61,8 +61,13 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
           <Button icon="pi pi-chevron-right" rounded text size="small" class="!absolute right-1.5 top-1/2 -translate-y-1/2 z-10 !bg-black/40 !text-white !border-0 !w-9 !h-9" @click="gallery.stepPhoto(1)" aria-label="Вперёд" />
         </div>
         <div class="px-4 pt-2.5 flex items-center gap-1">
-          <Button :icon="gallery.active.value.liked ? 'pi pi-heart-fill' : 'pi pi-heart'" rounded text :loading="viewer.likeLoading.value" :class="['!w-10 !h-10', gallery.active.value.liked ? '!text-red-500' : '']" @click="viewer.onLike" :aria-label="gallery.active.value.liked ? 'Убрать лайк' : 'Лайк'" />
+          <Button :icon="gallery.active.value.liked ? 'pi pi-heart-fill' : 'pi pi-heart'" rounded text :loading="viewer.likeLoading.value" :class="['!w-10 !h-10', gallery.active.value.liked ? '!text-red-500' : '']" @click="viewer.onLike(viewer.incognito.value)" :aria-label="gallery.active.value.liked ? 'Убрать лайк' : 'Лайк'" />
           <Button icon="pi pi-comment" rounded text class="!w-10 !h-10" aria-label="Комментарии" />
+          <span class="flex-1" />
+          <label class="flex items-center gap-1.5 text-[11px] text-stone-500 dark:text-zinc-400 cursor-pointer" title="Анонимный лайк — PRO">
+            <input type="checkbox" v-model="viewer.incognito.value" :disabled="!viewer.canIncognito.value" class="accent-violet-600 w-3.5 h-3.5" />
+            🕵️<span class="font-bold text-violet-500">PRO</span>
+          </label>
           <span class="flex-1" />
           <template v-if="isOwn">
             <Button icon="pi pi-pencil" rounded text class="!w-10 !h-10" @click="viewer.editing.value ? viewer.cancelEdit() : viewer.startEdit()" aria-label="Редактировать подпись" />
@@ -71,6 +76,22 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
           </template>
         </div>
         <div class="px-4 text-sm font-black">{{ gallery.active.value.likes_count }} отметок «Нравится»</div>
+        <button type="button" class="px-4 mt-1 text-xs font-bold text-stone-500 dark:text-zinc-400 hover:text-violet-600" @click="gallery.openLikers(gallery.active.value)">Показать кто лайкнул · как в инсте</button>
+        <div v-if="gallery.likersOpen.value" class="px-4 mt-2 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-900 p-2">
+          <div class="flex items-center gap-2 px-1 py-1">
+            <span class="text-xs font-black flex-1">Лайки · {{ gallery.likersTotal.value }}<span v-if="gallery.likersIncognito.value" class="text-violet-500"> · 🕵️{{ gallery.likersIncognito.value }}</span></span>
+            <Button icon="pi pi-times" rounded text size="small" class="!w-7 !h-7" @click="gallery.closeLikers()" aria-label="Закрыть" />
+          </div>
+          <div v-if="gallery.likersLoading.value" class="py-3 text-center text-xs text-stone-400">Загружаем…</div>
+          <div v-else-if="!gallery.likers.value.length" class="py-3 text-center text-xs text-stone-400">Пока никто не лайкнул</div>
+          <div v-else class="max-h-44 overflow-y-auto space-y-1">
+            <div v-for="l in gallery.likers.value" :key="`${l.user_id ?? 'inc'}-${l.created_at}`" class="flex items-center gap-2 px-1 py-1">
+              <span class="w-7 h-7 rounded-full bg-stone-200 dark:bg-white/10 grid place-items-center text-[11px] font-black overflow-hidden">{{ l.is_incognito ? '🕵️' : (l.name || '?').slice(0, 1).toUpperCase() }}</span>
+              <span class="text-xs font-bold truncate flex-1">{{ l.is_incognito ? 'Тайный поклонник' : l.name }}</span>
+              <span v-if="l.is_incognito" class="text-[10px] font-bold text-violet-500">PRO</span>
+            </div>
+          </div>
+        </div>
         <div class="px-4 mt-1.5">
           <div v-if="!viewer.editing.value && gallery.active.value.caption" class="text-sm break-words dark:text-zinc-100"><span class="font-bold">{{ userName }} </span>{{ gallery.active.value.caption }}</div>
           <div v-if="viewer.editing.value" class="flex gap-2">

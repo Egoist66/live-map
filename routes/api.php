@@ -75,6 +75,7 @@ Route::middleware(['web', 'auth', 'throttle:120,1'])->group(function () {
     Route::patch('/photos/{photo}', [\App\Http\Controllers\ProfilePhotoController::class, 'update'])->middleware('throttle:social-write');
     Route::delete('/photos/{photo}', [\App\Http\Controllers\ProfilePhotoController::class, 'destroy'])->middleware('throttle:social-write');
     Route::post('/photos/{photo}/like', [\App\Http\Controllers\ProfilePhotoController::class, 'toggleLike'])->middleware('throttle:reactions');
+    Route::get('/photos/{photo}/likers', [\App\Http\Controllers\ProfilePhotoController::class, 'likers']);
     Route::get('/photos/{photo}/comments', [\App\Http\Controllers\ProfilePhotoController::class, 'comments']);
     Route::post('/photos/{photo}/comments', [\App\Http\Controllers\ProfilePhotoController::class, 'storeComment'])->middleware('throttle:comments-write');
     Route::delete('/photo-comments/{comment}', [\App\Http\Controllers\ProfilePhotoController::class, 'destroyComment']);
@@ -94,6 +95,7 @@ Route::middleware(['web', 'auth', 'throttle:120,1'])->group(function () {
     Route::get('/swipes/matches', [SwipeController::class, 'matches']);
     Route::get('/swipes/active', [SwipeController::class, 'active']);
     Route::get('/swipes/favorites', [SwipeController::class, 'favorites']);
+    Route::get('/swipes/admirers', [SwipeController::class, 'admirers']);
     Route::delete('/swipes/favorites/{user}', [SwipeController::class, 'removeFavorite'])->middleware('throttle:social-write');
     Route::post('/swipes/reset-history', [SwipeController::class, 'resetHistory']);
     Route::get('/swipes/quota', [SwipeController::class, 'quota']);

@@ -198,6 +198,119 @@ class PinActivityNotifier
         }
     }
 
+    /**
+     * Лайк анкеты в ULove: попадает в колокольчик получателя.
+     * Инкогнито (PRO) скрывает имя/аватар, но счётчик и сам факт остаются.
+     */
+    public static function swipeLiked(User $liker, User $liked, bool $isIncognito = false): ?PinActivity
+    {
+        if ((int) $liker->id === (int) $liked->id) {
+            return null;
+        }
+        $exists = PinActivity::where('owner_id', $liked->id)
+            ->where('actor_id', $liker->id)
+            ->where('kind', 'swipe_like')
+            ->whereNull('read_at')
+            ->latest('id')
+            ->first();
+        if ($exists) {
+            $exists->forceFill(['is_incognito' => $isIncognito])->saveQuietly();
+            $exists->load(['actor:id,name,avatar_path']);
+            static::dispatchActivity($exists, null, null);
+            return $exists;
+        }
+        $activity = PinActivity::create([
+            'pin_id' => null,
+            'actor_id' => $liker->id,
+            'owner_id' => $liked->id,
+            'kind' => 'swipe_like',
+            'related_user_id' => $liker->id,
+            'is_incognito' => $isIncognito,
+        ]);
+        $activity->load(['actor:id,name,avatar_path']);
+        static::dispatchActivity($activity, null, null);
+        return $activity;
+    }
+
+    /**
+     * Взаимный мэтч: уведомление обоим, инкогнито раскрывается.
+     */
+    public static function matched(User $me, User $other, int $matchId): void
+    {
+        foreach ([[$other, $me], [$me, $other]] as [$recipient, $actor]) {
+            $activity = PinActivity::create([
+                'pin_id' => null,
+                'actor_id' => $actor->id,
+                'owner_id' => $recipient->id,
+                'kind' => 'match',
+                'related_user_id' => $actor->id,
+                'is_incognito' => false,
+                'excerpt' => "match:{$matchId}",
+            ]);
+            $activity->load(['actor:id,name,avatar_path']);
+            static::dispatchActivity($activity, null, null);
+        }
+        try {
+            PinActivity::where('kind', 'swipe_like')
+                ->where(function ($q) use ($me, $other) {
+                    $q->where(fn ($x) => $x->where('owner_id', $me->id)->where('actor_id', $other->id))
+                        ->orWhere(fn ($x) => $x->where('owner_id', $other->id)->where('actor_id', $me->id));
+                })
+                ->whereNull('read_at')
+                ->update(['read_at' => now()]);
+        } catch (\Throwable $e) {
+            Log::warning('match swipe_like cleanup failed', ['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Лайк фото профиля: попадает в колокольчик владельца фото.
+     */
+    public static function photoLiked(ProfilePhoto $photo, User $actor): ?PinActivity
+    {
+        $ownerId = (int) $photo->user_id;
+        if ((int) $actor->id === $ownerId) {
+            return null;
+        }
+        $exists = PinActivity::where('owner_id', $ownerId)
+            ->where('actor_id', $actor->id)
+            ->where('kind', 'photo_like')
+            ->where('photo_id', $photo->id)
+            ->whereNull('read_at')
+            ->first();
+        if ($exists) {
+            return $exists;
+        }
+        $activity = PinActivity::create([
+            'pin_id' => null,
+            'actor_id' => $actor->id,
+            'owner_id' => $ownerId,
+            'kind' => 'photo_like',
+            'photo_id' => $photo->id,
+            'related_user_id' => $actor->id,
+        ]);
+        $activity->load(['actor:id,name,avatar_path', 'photo:id,user_id,caption']);
+        static::dispatchActivity($activity, null, $photo);
+        return $activity;
+    }
+
+    /**
+     * Снять уведомление о лайке фото при анлайке.
+     */
+    public static function photoUnliked(ProfilePhoto $photo, User $actor): void
+    {
+        try {
+            PinActivity::where('owner_id', $photo->user_id)
+                ->where('actor_id', $actor->id)
+                ->where('kind', 'photo_like')
+                ->where('photo_id', $photo->id)
+                ->whereNull('read_at')
+                ->delete();
+        } catch (\Throwable $e) {
+            Log::warning('photo_like cleanup failed', ['error' => $e->getMessage()]);
+        }
+    }
+
     private static function excerpt(?string $content): ?string
     {
         $excerpt = trim(preg_replace('/\s+/', ' ', (string) $content) ?? '');
@@ -239,6 +352,7 @@ class PinActivityNotifier
             if ($owner && $actor) {
                 if ($pin) app(WebPushService::class)->sendPinActivity($owner, $actor, $pin, $activity);
                 elseif ($photo) app(WebPushService::class)->sendPhotoActivity($owner, $actor, $photo, $activity);
+                elseif (in_array($activity->kind, ['swipe_like', 'match'], true)) app(WebPushService::class)->sendSwipeActivity($owner, $actor, $activity);
             }
         } catch (\Throwable $e) {
             Log::warning('pin activity webpush failed', ['activity' => $activity->id, 'error' => $e->getMessage()]);

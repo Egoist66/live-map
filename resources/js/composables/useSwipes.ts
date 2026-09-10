@@ -22,7 +22,12 @@ export function useSwipes() {
   const favorites = ref<SwipeCard[]>([])
   const favoritesLimit = ref(2)
   const favoritesLoading = ref(false)
-  const activeTab = ref<'feed' | 'active' | 'favorites'>('feed')
+  const admirers = ref<Array<SwipeCard & { is_incognito?: boolean }>>([])
+  const admirersTotal = ref(0)
+  const admirersIncognito = ref(0)
+  const admirersLoading = ref(false)
+  const incognitoLike = ref(false)
+  const activeTab = ref<'feed' | 'active' | 'favorites' | 'admirers'>('feed')
   const activeUsers = ref<ActiveCard[]>([])
   const activeLoading = ref(false)
   const quota = ref<SwipeQuota | null>(null)
@@ -49,6 +54,16 @@ export function useSwipes() {
    * @returns true если админ
    */
   const isAdmin = computed(() => !!authUser.value?.is_admin || authUser.value?.role === 'admin')
+
+  /**
+   * Может ли скрывать лайк: PRO / Business / админ.
+   * @returns true если доступен анонимный лайк
+   */
+  const canIncognito = computed(() => {
+    if (isAdmin.value) return true
+    const plan = (authUser.value?.effective_plan || authUser.value?.plan || 'free') as string
+    return plan === 'pro' || plan === 'business'
+  })
 
   const filters = ref<SwipeFilters>({
     goal: null,
@@ -368,6 +383,7 @@ export function useSwipes() {
       }
       const onLiked = () => {
         void loadFeed()
+        void loadAdmirers()
       }
       ch.listen('.match.created', onMatch)
       ch.listen('MatchCreated', onMatch)
@@ -420,6 +436,25 @@ export function useSwipes() {
   }
 
   /**
+   * Загрузить «Кто меня лайкнул»: открытые + тайные поклонники.
+   * @returns void
+   */
+  async function loadAdmirers(): Promise<void> {
+    admirersLoading.value = true
+    try {
+      const res = await datingApi.admirers()
+      admirers.value = res.admirers
+      admirersTotal.value = res.total
+      admirersIncognito.value = res.incognito_count
+    } catch (e: unknown) {
+      if (handleGate(e)) return
+      admirers.value = []
+    } finally {
+      admirersLoading.value = false
+    }
+  }
+
+  /**
    * Убрать человека из избранного.
    *
    * @param userId id пользователя
@@ -465,6 +500,7 @@ export function useSwipes() {
 
   /**
    * Отправить свайп за текущую карточку с улётом за экран.
+   * PRO может лайкнуть инкогнито: себя скрыть, но в уведомления попасть.
    *
    * @param action like|pass
    * @returns void
@@ -481,7 +517,8 @@ export function useSwipes() {
     dragY.value = 0
     error.value = null
     try {
-      const pending = datingApi.act(card.id, action)
+      const useIncognito = action === 'like' && incognitoLike.value && canIncognito.value
+      const pending = datingApi.act(card.id, action, useIncognito)
       await waitFrame(360)
       const res = await pending
       quota.value = res.quota
@@ -678,6 +715,32 @@ export function useSwipes() {
   }
 
   /**
+   * Лайк в ответ из «Меня лайкнули».
+   * @param userId id пользователя
+   */
+  async function swipeAdmirer(userId: number): Promise<void> {
+    if (acting.value) return
+    acting.value = true
+    error.value = null
+    try {
+      const res = await datingApi.act(userId, 'like', false)
+      quota.value = res.quota
+      if (res.matched) {
+        await loadMatches()
+        await loadAdmirers()
+      }
+      cards.value = cards.value.filter((c) => c.id !== userId)
+      admirers.value = admirers.value.map((a) => (a.id === userId ? { ...a, is_match: true } : a))
+    } catch (e: unknown) {
+      if (handleGate(e)) return
+      const err = e as { response?: { data?: { message?: string } } }
+      error.value = err.response?.data?.message ?? 'Не удалось отправить лайк'
+    } finally {
+      acting.value = false
+    }
+  }
+
+  /**
    * Закрыть окно мэтча.
    *
    * @returns void
@@ -702,6 +765,13 @@ export function useSwipes() {
     favoritesLimit,
     favoritesCount,
     favoritesLoading,
+    admirers,
+    admirersTotal,
+    admirersIncognito,
+    admirersLoading,
+    loadAdmirers,
+    incognitoLike,
+    canIncognito,
     activeTab,
     activeUsers,
     activeLoading,
@@ -755,6 +825,7 @@ export function useSwipes() {
     toggleInterest,
     openChat,
     writeWithoutMatch,
+    swipeAdmirer,
     savePrivacy,
     dragStart,
     dragMove,

@@ -18,8 +18,10 @@ class FriendshipController extends Controller
             ->with(['requester:id,name,avatar_path,last_seen_at,is_invisible,plan,role,is_admin','addressee:id,name,avatar_path,last_seen_at,is_invisible,plan,role,is_admin'])
             ->get()->map(function($f) use ($u){
                 $other = $f->requester_id===$u->id ? $f->addressee : $f->requester;
-                if ($other && $other->isInvisibleActive() && !$u->isAdmin()) $other->setAttribute('last_seen_at', null);
+                $hiddenOnline = $other && $other->isInvisibleActive() && !$u->isAdmin();
+                if ($other && $hiddenOnline) $other->setAttribute('last_seen_at', null);
                 if ($other) $other->setAttribute('is_invisible', $other->isInvisibleActive());
+                if ($other) $other->setAttribute('is_online', $hiddenOnline ? false : \App\Services\MonitoringService::isOnline($other->last_seen_at));
                 return [
                     'id'=>$f->id,
                     'status'=>$f->status,
@@ -73,15 +75,21 @@ class FriendshipController extends Controller
         $canSeeHidden = $isOwn || ($viewer && $viewer->isAdmin());
         $query = Friendship::where('status', 'accepted')
             ->where(fn($q) => $q->where('requester_id', $user->id)->orWhere('addressee_id', $user->id))
-            ->with(['requester:id,name,avatar_path', 'addressee:id,name,avatar_path']);
+            ->with(['requester:id,name,avatar_path,last_seen_at,is_invisible', 'addressee:id,name,avatar_path,last_seen_at,is_invisible']);
         if (!$canSeeHidden) {
             $query->where(function ($q) use ($user) {
                 $q->where(function ($x) use ($user) { $x->where('requester_id', $user->id)->where('hidden_by_requester', false); })
                   ->orWhere(function ($x) use ($user) { $x->where('addressee_id', $user->id)->where('hidden_by_addressee', false); });
             });
         }
-        $friends = $query->get()->map(function ($f) use ($user, $isOwn, $canSeeHidden) {
+        $friends = $query->get()->map(function ($f) use ($user, $isOwn, $canSeeHidden, $viewer) {
             $other = $f->requester_id === $user->id ? $f->addressee : $f->requester;
+            if ($other) {
+                $hiddenOnline = $other->isInvisibleActive() && (! $viewer || ! $viewer->isAdmin());
+                $other->setAttribute('is_online', $hiddenOnline ? false : \App\Services\MonitoringService::isOnline($other->last_seen_at));
+                $other->setAttribute('is_invisible', $other->isInvisibleActive());
+                if ($hiddenOnline) $other->setAttribute('last_seen_at', null);
+            }
             return [
                 'id' => $f->id,
                 'other' => $other,

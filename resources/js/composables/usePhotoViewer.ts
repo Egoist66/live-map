@@ -1,4 +1,5 @@
-import { ref, watch, type Ref } from 'vue'
+import { computed, ref, watch, type Ref } from 'vue'
+import { usePage } from '@inertiajs/vue3'
 
 interface PhotoLike {
   id: number
@@ -7,7 +8,7 @@ interface PhotoLike {
 
 interface GalleryLike {
   active: Ref<PhotoLike | null>
-  toggleLike: (p: any) => Promise<unknown>
+  toggleLike: (p: any, incognito?: boolean) => Promise<unknown>
   saveCaption: (p: any, caption: string | null) => Promise<unknown>
   replace: (p: any, file: File) => Promise<unknown>
   remove: (p: any) => Promise<unknown>
@@ -26,6 +27,21 @@ export function usePhotoViewer(gallery: GalleryLike, comments: CommentsLike) {
   const confirmDelete = ref(false)
   const likeLoading = ref(false)
   const saveLoading = ref(false)
+  const incognito = ref(false)
+
+  /**
+   * Может ли ставить анонимный лайк: только PRO.
+   * @returns true если PRO/Business/админ
+   */
+  const canIncognito = computed(() => {
+    try {
+      const u = (usePage().props.auth as any)?.user
+      if (!u) return false
+      if (u.is_admin || u.role === 'admin') return true
+      const plan = u.effective_plan || u.plan || 'free'
+      return plan === 'pro' || plan === 'business'
+    } catch { return false }
+  })
 
   function setReplaceInput(el: unknown) {
     replaceInput.value = (el instanceof HTMLInputElement) ? el : null
@@ -42,12 +58,12 @@ export function usePhotoViewer(gallery: GalleryLike, comments: CommentsLike) {
     { immediate: true },
   )
 
-  async function onLike() {
+  async function onLike(useIncognito = false) {
     const p = gallery.active.value
     if (!p || likeLoading.value) return
     likeLoading.value = true
     try {
-      await gallery.toggleLike(p)
+      await gallery.toggleLike(p, useIncognito && canIncognito.value)
     } finally {
       likeLoading.value = false
     }
@@ -106,6 +122,8 @@ export function usePhotoViewer(gallery: GalleryLike, comments: CommentsLike) {
     confirmDelete,
     likeLoading,
     saveLoading,
+    incognito,
+    canIncognito,
     onLike,
     onSaveCaption,
     startEdit,

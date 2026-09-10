@@ -66,10 +66,27 @@ export function useChat() {
   let activeChatChannel: any = null
   let activeChatId: number | null = null
   let alive = true
-  const seenIds = new Set<number>()
+  const recentIds = new Map<number, number>()
   let typingTimeout: ReturnType<typeof setTimeout> | null = null
   let typingThrottleUntil = 0
   const typingExpire = new Map<number, ReturnType<typeof setTimeout>>()
+
+  /**
+   * Короткий дедуп двойной доставки (user.* + chat.* шлют одно событие).
+   * @param id id сообщения
+   * @returns true если это дубль в окне 5с
+   */
+  function isDuplicate(id: number): boolean {
+    const now = Date.now()
+    const prev = recentIds.get(id)
+    if (prev !== undefined && now - prev < 5000) return true
+    recentIds.set(id, now)
+    if (recentIds.size > 500) {
+      const first = recentIds.keys().next().value as number | undefined
+      if (first !== undefined) recentIds.delete(first)
+    }
+    return false
+  }
 
   const unreadTotal = computed(() => conversations.value.filter((c) => Number(c.unread_count || 0) > 0).length)
   const unreadMessagesTotal = computed(() => conversations.value.reduce((s, c) => s + (Number(c.unread_count) || 0), 0))
@@ -133,17 +150,50 @@ export function useChat() {
     try {
       await loadConversations()
       if (selectedId.value) {
-        const d = await chatApi.getConversation(selectedId.value)
+        const currentId = selectedId.value
+        const d = await chatApi.getConversation(currentId)
+        if (selectedId.value !== currentId) return
         activeConv.value = d
-        messages.value = d.messages
+        messages.value = mergeFetched(currentId, d.messages)
         await nextTick()
         scrollToBottom()
       }
     } finally { refreshing.value = false }
   }
 
-  async function openConversation(id: number) {
-    if (selectedId.value === id && activeConv.value?.id === id && !loading.value) return
+  /**
+   * Объединяет сообщения с сервера с локальными (optimistic + realtime),
+   * чтобы refresh/открытие не затирало свежие сообщения из сокета.
+   * @param convId id диалога
+   * @param fetched сообщения с сервера
+   * @returns объединённый отсортированный список
+   */
+  function mergeFetched(convId: number, fetched: Message[]): Message[] {
+    const byId = new Map<number, any>()
+    for (const m of fetched as any[]) {
+      byId.set(m.id, m)
+    }
+    for (const m of messages.value as any[]) {
+      const belongs = Number(m.conversation_id) === Number(convId)
+      const isPending = m.id < 0 || (m as any).pending || (m as any).failed
+      if (!belongs && !isPending) continue
+      if (isPending || !byId.has(m.id)) {
+        byId.set(m.id, m)
+      }
+    }
+    const list = [...byId.values()]
+    list.sort((a: any, b: any) => Number(a.id) - Number(b.id))
+    return list as Message[]
+  }
+
+  async function openConversation(id: number, force = false) {
+    if (!force && selectedId.value === id && activeConv.value?.id === id && !loading.value) {
+      const conv = conversations.value.find((c) => c.id === id) as any
+      const hasUnread = Number(conv?.unread_count || 0) > 0
+      const lastId = Number(conv?.last_message?.id || 0)
+      const hasLast = lastId > 0 && messages.value.some((m) => Number(m.id) === lastId)
+      if (!hasUnread && (lastId === 0 || hasLast)) return
+    }
     selectedId.value = id
     const cached = conversations.value.find((c) => c.id === id) as any
     if (cached?.other) {
@@ -162,8 +212,7 @@ export function useChat() {
       const d = await chatApi.getConversation(id)
       if (selectedId.value !== id) return
       activeConv.value = d
-      messages.value = d.messages
-      d.messages.forEach((m:any)=> seenIds.add(m.id))
+      messages.value = mergeFetched(id, d.messages)
       const last = d.messages[d.messages.length - 1] as any
       const conv = conversations.value.find((c) => c.id === id)
       if (conv) {
@@ -219,7 +268,6 @@ export function useChat() {
     } : null
     const optimistic: any = { id: tempId, conversation_id: selectedId.value, reply_to_id: replyTo?.id ?? null, reply_to: replySnapshot, sender_id: uid, body: text, type: optimisticAttachment ? optimisticAttachment.kind : 'text', attachment: optimisticAttachment, created_at: new Date().toISOString(), pending: true }
     messages.value.push(optimistic)
-    seenIds.add(tempId)
     scrollToBottom()
     sending.value = true
     try {
@@ -227,7 +275,6 @@ export function useChat() {
       if (optimisticAttachment?.url) {
         try { URL.revokeObjectURL(optimisticAttachment.url) } catch {}
       }
-      seenIds.add(msg.id)
       const tempIdx = messages.value.findIndex((m) => m.id === tempId)
       const existsIdx = messages.value.findIndex((m) => m.id === msg.id)
       if (tempIdx !== -1 && existsIdx !== -1) {
@@ -237,7 +284,7 @@ export function useChat() {
       } else if (tempIdx !== -1) {
         (messages.value[tempIdx] as any) = { ...(msg as any), justSent: true }
       } else if (existsIdx === -1) {
-        if (!seenIds.has(msg.id) || !messages.value.some(m=>m.id===msg.id)) messages.value.push({ ...(msg as any), justSent: true } as any)
+        messages.value.push({ ...(msg as any), justSent: true } as any)
       }
       syncConversationPreview(msg)
       scrollToBottom()
@@ -314,23 +361,19 @@ export function useChat() {
 
   function handleIncoming(msg: Message) {
     if (!alive) return
-    if (seenIds.has(msg.id)) return
-    seenIds.add(msg.id)
-    const isOwn = msg.sender_id === getUid()
-    const isViewing = msg.conversation_id === selectedId.value && isChatPageOpen()
+    if (!msg || !(msg as any).id) return
+    const id = Number((msg as any).id)
+    const alreadyShown = messages.value.some((m) => Number(m.id) === id)
+    if (alreadyShown) {
+      const pendingIdx = messages.value.findIndex((m: any) => m.pending && Number(m.conversation_id) === Number(msg.conversation_id))
+      if (pendingIdx !== -1) messages.value.splice(pendingIdx, 1)
+      syncConversationPreview(msg)
+      return
+    }
+    if (isDuplicate(id)) return
+    const isViewing = Number(msg.conversation_id) === Number(selectedId.value) && isChatPageOpen()
     if (isViewing) {
-      const pendingIdx = messages.value.findIndex((m:any)=> m.pending && m.conversation_id===msg.conversation_id && m.sender_id===msg.sender_id)
-      if (pendingIdx !== -1) {
-        const bodyMatch = messages.value.findIndex((m:any)=> m.pending && (m as any).body===msg.body && m.sender_id===msg.sender_id)
-        const target = bodyMatch !== -1 ? bodyMatch : pendingIdx
-        if (messages.value.some(m=>m.id===msg.id)) {
-          messages.value.splice(target,1)
-        } else {
-          (messages.value as any)[target] = msg
-        }
-      } else {
-        if (!messages.value.some((m) => m.id === msg.id)) messages.value.push(msg)
-      }
+      appendLiveMessage(msg)
       const n = new Set(typingUsers.value); n.delete(msg.sender_id); typingUsers.value = n
       const t = typingExpire.get(msg.sender_id); if (t) { clearTimeout(t); typingExpire.delete(msg.sender_id) }
       syncConversationPreview(msg)
@@ -344,20 +387,38 @@ export function useChat() {
         if (conv0) (conv0 as any).unread_count = 0
       }
       scrollToBottom()
-    } else {
-      if (msg.sender_id === getUid()) { syncConversationPreview(msg); return }
-      const conv = conversations.value.find((c) => c.id === msg.conversation_id)
-      if (isOwn) {
-        if (conv) syncConversationPreview(msg)
-        else loadConversations()
+      return
+    }
+    if (msg.sender_id === getUid()) { syncConversationPreview(msg); return }
+    if (Number(msg.conversation_id) === Number(selectedId.value)) {
+      appendLiveMessage(msg)
+      scrollToBottom()
+    }
+    const conv = conversations.value.find((c) => c.id === msg.conversation_id)
+    if (conv) { conv.unread_count = (conv.unread_count || 0) + 1; bumpConversation(msg) }
+    else loadConversations()
+    if (msg.sender_id !== getUid()) {
+      chatApi.markDelivered(msg.conversation_id).catch(()=>{})
+    }
+  }
+
+  /**
+   * Добавляет live-сообщение в открытый диалог с заменой optimistic.
+   * @param msg сообщение из сокета
+   */
+  function appendLiveMessage(msg: Message): void {
+    const pendingIdx = messages.value.findIndex((m: any) => m.pending && Number(m.conversation_id) === Number(msg.conversation_id) && Number(m.sender_id) === Number(msg.sender_id))
+    if (pendingIdx !== -1) {
+      const bodyIdx = messages.value.findIndex((m: any) => m.pending && (m as any).body === (msg as any).body && Number(m.sender_id) === Number(msg.sender_id))
+      const target = bodyIdx !== -1 ? bodyIdx : pendingIdx
+      if (messages.value.some((m) => Number(m.id) === Number(msg.id))) {
+        messages.value.splice(target, 1)
         return
       }
-      if (conv) { conv.unread_count = (conv.unread_count || 0) + 1; bumpConversation(msg) }
-      else loadConversations()
-      if (msg.sender_id !== getUid()) {
-        chatApi.markDelivered(msg.conversation_id).catch(()=>{})
-      }
+      ;(messages.value as any)[target] = msg
+      return
     }
+    if (!messages.value.some((m) => Number(m.id) === Number(msg.id))) messages.value.push(msg)
   }
 
   function handleDelivered(e: any) {
@@ -428,7 +489,7 @@ export function useChat() {
     activeChatChannel = null
     activeChatId = null
     echoChannels = []
-    seenIds.clear()
+    recentIds.clear()
     selectedId.value = null
     activeConv.value = null
     messages.value = []
@@ -541,13 +602,49 @@ export function useChat() {
     sendTypingWs(false)
   }
 
-  onMounted(() => { loadConversations(); subscribeGlobal(); window.addEventListener('focus', loadConversations) })
+  /**
+   * Догружает открытый диалог после возврата из фона: сайдбар уже свежий,
+   * а messages могли отстать (сокет молчал или вкладка была скрыта).
+   */
+  async function resyncOpenConversation(): Promise<void> {
+    if (!alive || !selectedId.value || document.hidden) return
+    const id = selectedId.value
+    try {
+      const d = await chatApi.getConversation(id)
+      if (!alive || selectedId.value !== id) return
+      activeConv.value = d
+      messages.value = mergeFetched(id, d.messages)
+      const conv = conversations.value.find((c) => c.id === id)
+      if (conv && Number((conv as any).unread_count || 0) > 0) {
+        ;(conv as any).unread_count = 0
+        chatApi.markRead(id).catch(() => {})
+      }
+      await nextTick()
+      scrollToBottom()
+    } catch {}
+  }
+
+  async function handleFocusResync(): Promise<void> {
+    try {
+      await loadConversations()
+    } catch {}
+    await resyncOpenConversation()
+    try {
+      const echo = getEcho() as any
+      const pusher = echo?.connector?.pusher
+      if (echo && !pusher) subscribeGlobal()
+      if (selectedId.value) subscribeChat(selectedId.value)
+    } catch {}
+  }
+
+  onMounted(() => { loadConversations(); subscribeGlobal(); window.addEventListener('focus', handleFocusResync); document.addEventListener('visibilitychange', handleFocusResync) })
   onBeforeUnmount(() => {
     alive = false
     selectedId.value = null
     if (typingTimeout) clearTimeout(typingTimeout)
     typingExpire.forEach((t) => clearTimeout(t))
-    window.removeEventListener('focus', loadConversations)
+    window.removeEventListener('focus', handleFocusResync)
+    document.removeEventListener('visibilitychange', handleFocusResync)
     try {
       const echo = getEcho()
       if (activeChatChannel && activeChatId !== null) try { echo.leave(`chat.${activeChatId}`) } catch {}

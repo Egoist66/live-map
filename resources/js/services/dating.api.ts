@@ -66,9 +66,9 @@ export const datingApi = {
     const { data } = await api.get('/api/swipes/feed', { params })
     return data as { cards: SwipeCard[]; quota: SwipeQuota }
   },
-  async act(user_id: number, action: 'like' | 'pass') {
-    const { data } = await api.post('/api/swipes/action', { user_id, action })
-    return data as { matched: boolean; match_id: number | null; conversation_id: number | null; quota: SwipeQuota }
+  async act(user_id: number, action: 'like' | 'pass', incognito = false) {
+    const { data } = await api.post('/api/swipes/action', { user_id, action, incognito })
+    return data as { matched: boolean; match_id: number | null; conversation_id: number | null; is_incognito?: boolean; quota: SwipeQuota }
   },
   async matches() {
     const { data } = await api.get('/api/swipes/matches')
@@ -81,6 +81,10 @@ export const datingApi = {
   async favorites() {
     const { data } = await api.get('/api/swipes/favorites')
     return data as { favorites: SwipeCard[]; limit: number }
+  },
+  async admirers() {
+    const { data } = await api.get('/api/swipes/admirers')
+    return data as { admirers: Array<SwipeCard & { is_incognito?: boolean; created_at?: string }>; total: number; incognito_count: number }
   },
   async removeFavorite(userId: number) {
     const { data } = await api.delete(`/api/swipes/favorites/${userId}`)

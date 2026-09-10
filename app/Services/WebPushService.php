@@ -84,7 +84,17 @@ class WebPushService
 
     public function sendPhotoActivity(User $recipient, User $actor, \App\Models\ProfilePhoto $photo, \App\Models\PinActivity $activity): int
     {
-        $name = $actor->name ?: 'Кто-то';
+        $name = $activity->is_incognito ? 'Тайный поклонник' : ($actor->name ?: 'Кто-то');
+        $avatar = $activity->is_incognito ? null : $actor->avatar_url;
+        if ($activity->kind === 'photo_like') {
+            return $this->sendToUser($recipient, [
+                'title' => 'Лайк фото',
+                'body' => "{$name} лайкнул ваше фото",
+                'url' => '/users/'.$photo->user_id.'?photo='.$photo->id,
+                'tag' => "photo-{$photo->id}-like-{$activity->id}",
+                'avatar' => $avatar,
+            ]);
+        }
         if ($activity->kind === 'mention') {
             $title = 'Вас упомянули';
             $body = $activity->excerpt ? "{$name} упомянул вас: {$activity->excerpt}" : "{$name} упомянул вас в комментарии к фото";
@@ -99,7 +109,29 @@ class WebPushService
             'body' => $body,
             'url' => '/users/'.$photo->user_id.'?photo='.$photo->id.($activity->photo_comment_id ? '&comment='.$activity->photo_comment_id : ''),
             'tag' => $tag,
-            'avatar' => $actor->avatar_url,
+            'avatar' => $avatar,
+        ]);
+    }
+
+    public function sendSwipeActivity(User $recipient, User $actor, \App\Models\PinActivity $activity): int
+    {
+        $name = $activity->is_incognito ? 'Тайный поклонник' : ($actor->name ?: 'Кто-то');
+        $avatar = $activity->is_incognito ? null : $actor->avatar_url;
+        if ($activity->kind === 'match') {
+            return $this->sendToUser($recipient, [
+                'title' => '💞 Новый мэтч!',
+                'body' => "{$actor->name} тоже лайкнул тебя — чат открыт",
+                'url' => '/swipes',
+                'tag' => 'match-'.$activity->id,
+                'avatar' => $actor->avatar_url,
+            ]);
+        }
+        return $this->sendToUser($recipient, [
+            'title' => '💘 Тебя лайкнули в ULove',
+            'body' => $activity->is_incognito ? 'Тайный поклонник отреагировал на твою анкету' : "{$name} отреагировал на твою анкету",
+            'url' => '/swipes?tab=admirers',
+            'tag' => 'swipe-like-'.$activity->id,
+            'avatar' => $avatar,
         ]);
     }
 

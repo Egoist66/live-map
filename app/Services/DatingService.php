@@ -393,6 +393,62 @@ class DatingService
     }
 
     /**
+     * Кто лайкнул меня: открытые + инкогнито (PRO скрывает себя).
+     * Инкогнито без мэтча отдаём анонимно, после мэтча раскрываем.
+     *
+     * @param User $me
+     * @return array{admirers:array<int,array<string,mixed>>,total:int,incognito_count:int}
+     */
+    public function admirers(User $me): array
+    {
+        $rows = SwipeAction::where('liked_id', $me->id)
+            ->where('action', 'like')
+            ->orderByDesc('id')
+            ->limit(50)
+            ->get();
+
+        $matchedFlip = array_flip($this->matchedIds($me));
+        $likerIds = $rows->pluck('liker_id')->map(fn ($id) => (int) $id)->all();
+        $users = User::whereIn('id', $likerIds)->get()->keyBy('id');
+
+        $cards = [];
+        $incognitoCount = 0;
+
+        foreach ($rows as $row) {
+            $candidate = $users->get((int) $row->liker_id);
+            if (! $candidate) {
+                continue;
+            }
+            $isMatch = isset($matchedFlip[$candidate->id]);
+            $isIncognito = (bool) $row->is_incognito && ! $isMatch && ! $me->isAdmin();
+            if ($isIncognito) {
+                $incognitoCount++;
+            }
+            $distance = $this->distanceKm($me, $candidate);
+            $card = $this->cardFor($candidate, $me, $distance, $isMatch, true);
+            $card['is_incognito'] = $isIncognito;
+            $card['created_at'] = $row->created_at?->toISOString();
+            if ($isIncognito) {
+                $card['id'] = $candidate->id;
+                $card['name'] = 'Тайный поклонник';
+                $card['is_anonymous'] = true;
+                $card['avatar_url'] = null;
+                $card['photos'] = [];
+                $card['age'] = null;
+                $card['age_hidden'] = true;
+                $card['city'] = null;
+                $card['distance_km'] = null;
+                $card['bio'] = null;
+                $card['about'] = null;
+                $card['interests'] = [];
+            }
+            $cards[] = $card;
+        }
+
+        return ['admirers' => $cards, 'total' => count($cards), 'incognito_count' => $incognitoCount];
+    }
+
+    /**
      * Убрать человека из избранного (свой лайк снимается, анкета может вернуться в ленту).
      *
      * @param User $me
@@ -441,16 +497,17 @@ class DatingService
     /**
      * Записать свайп и при взаимности создать мэтч.
      *
-     * При мэтче сразу создаётся общая комната-чат
-     * в готовой системе чатов с системным сообщением.
-     * Новый лайк сверх лимита избранного отклоняется (422).
+     * Инкогнито-лайк (PRO) скрывает автора в «Кто меня лайкнул» и в колокольчике,
+     * но после взаимного мэтча обе анкеты раскрываются.
+     * Каждый лайк попадает в уведомления получателя.
      *
      * @param User $me
      * @param int $otherId
      * @param string $action like|pass
-     * @return array{matched:bool,match_id:int|null,conversation_id:int|null}
+     * @param bool $incognito скрыть себя (только PRO)
+     * @return array{matched:bool,match_id:int|null,conversation_id:int|null,is_incognito:bool}
      */
-    public function recordAction(User $me, int $otherId, string $action): array
+    public function recordAction(User $me, int $otherId, string $action, bool $incognito = false): array
     {
         abort_if($me->id === $otherId, 422, 'Нельзя лайкать себя');
 
@@ -458,6 +515,12 @@ class DatingService
 
         abort_if(! $other->isDiscoverableBy($me), 404);
         abort_if(UserBlock::where('blocker_id', $otherId)->where('blocked_id', $me->id)->exists(), 403);
+
+        if ($action === 'like' && $incognito && ! $me->canUseIncognitoLike()) {
+            throw new HttpResponseException(response()->json([
+                'message' => 'Анонимный лайк — PRO-функция. Оформите PRO, чтобы скрывать себя.',
+            ], 402));
+        }
 
         if ($action === 'like') {
             $alreadyLiked = SwipeAction::where('liker_id', $me->id)->where('liked_id', $otherId)->where('action', 'like')->exists();
@@ -468,15 +531,15 @@ class DatingService
             }
         }
 
-        DB::transaction(function () use ($me, $otherId, $action) {
+        DB::transaction(function () use ($me, $otherId, $action, $incognito) {
             SwipeAction::updateOrCreate(
                 ['liker_id' => $me->id, 'liked_id' => $otherId],
-                ['action' => $action]
+                ['action' => $action, 'is_incognito' => $action === 'like' ? $incognito : false]
             );
         });
 
         if ($action !== 'like') {
-            return ['matched' => false, 'match_id' => null, 'conversation_id' => null];
+            return ['matched' => false, 'match_id' => null, 'conversation_id' => null, 'is_incognito' => false];
         }
 
         $reciprocal = SwipeAction::where('liker_id', $otherId)
@@ -485,9 +548,9 @@ class DatingService
             ->exists();
 
         if (! $reciprocal) {
-            $this->notifyLiked($me, $other);
+            $this->notifyLiked($me, $other, $incognito);
 
-            return ['matched' => false, 'match_id' => null, 'conversation_id' => null];
+            return ['matched' => false, 'match_id' => null, 'conversation_id' => null, 'is_incognito' => $incognito];
         }
 
         [$low, $high] = DatingMatch::orderedPair($me->id, $otherId);
@@ -501,35 +564,53 @@ class DatingService
 
         $this->notifyMatched($me->refresh(), $other->refresh(), $match->id, $conversation->id);
 
-        return ['matched' => true, 'match_id' => $match->id, 'conversation_id' => $conversation->id];
+        return ['matched' => true, 'match_id' => $match->id, 'conversation_id' => $conversation->id, 'is_incognito' => $incognito];
     }
 
     /**
      * Краткий профиль для realtime-уведомлений.
+     * Инкогнито скрывает имя/аватар, но факт лайка остаётся.
      *
      * @param User $user
-     * @return array{id:int,name:string,avatar_url:string|null}
+     * @param bool $incognito
+     * @return array{id:int,name:string,avatar_url:string|null,is_incognito:bool}
      */
-    private function briefFor(User $user): array
+    private function briefFor(User $user, bool $incognito = false): array
     {
+        if ($incognito) {
+            return [
+                'id' => (int) $user->id,
+                'name' => 'Тайный поклонник',
+                'avatar_url' => null,
+                'is_incognito' => true,
+            ];
+        }
         return [
             'id' => (int) $user->id,
             'name' => (string) $user->name,
             'avatar_url' => $user->avatar_url,
+            'is_incognito' => false,
         ];
     }
 
     /**
      * Уведомить получателя об одиночном лайке.
+     * Всегда пишет в колокольчик (PinActivity) + realtime + push.
      *
      * @param User $liker
      * @param User $liked
+     * @param bool $incognito
      * @return void
      */
-    private function notifyLiked(User $liker, User $liked): void
+    private function notifyLiked(User $liker, User $liked, bool $incognito = false): void
     {
         try {
-            broadcast(new \App\Events\SwipeLiked($this->briefFor($liker), (int) $liked->id))->toOthers();
+            PinActivityNotifier::swipeLiked($liker, $liked, $incognito);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('swipe_like activity failed: '.$e->getMessage());
+        }
+        try {
+            broadcast(new \App\Events\SwipeLiked($this->briefFor($liker, $incognito), (int) $liked->id))->toOthers();
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('swipe liked broadcast failed: '.$e->getMessage());
         }
@@ -550,6 +631,11 @@ class DatingService
      */
     private function notifyMatched(User $me, User $other, int $matchId, int $conversationId): void
     {
+        try {
+            PinActivityNotifier::matched($me, $other, $matchId);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('match activity failed: '.$e->getMessage());
+        }
         try {
             broadcast(new \App\Events\MatchCreated(
                 $matchId,

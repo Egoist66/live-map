@@ -8,7 +8,16 @@ export interface GalleryPhoto {
   likes_count: number
   comments_count: number
   liked: boolean
+  liked_incognito?: boolean
   can_comment: boolean
+  created_at?: string
+}
+
+export interface PhotoLiker {
+  user_id: number | null
+  name: string
+  avatar_url: string | null
+  is_incognito: boolean
   created_at?: string
 }
 
@@ -48,9 +57,13 @@ export const galleryApi = {
     const { data } = await api.delete<{ ok: boolean }>(`/api/photos/${id}`)
     return data
   },
-  async toggleLike(id: number): Promise<{ liked: boolean; likes_count: number }> {
-    const { data } = await api.post<{ liked: boolean; likes_count: number }>(`/api/photos/${id}/like`)
+  async toggleLike(id: number, incognito = false): Promise<{ liked: boolean; likes_count: number; is_incognito?: boolean }> {
+    const { data } = await api.post<{ liked: boolean; likes_count: number; is_incognito?: boolean }>(`/api/photos/${id}/like`, { incognito })
     return data
+  },
+  async likers(id: number): Promise<{ likers: PhotoLiker[]; total: number; incognito_count: number }> {
+    const { data } = await api.get(`/api/photos/${id}/likers`)
+    return data as { likers: PhotoLiker[]; total: number; incognito_count: number }
   },
   async updatePrivacy(photo_comments_privacy: string): Promise<{ photo_comments_privacy: string }> {
     const { data } = await api.patch<{ photo_comments_privacy: string }>('/api/user/photo-comments-privacy', { photo_comments_privacy })

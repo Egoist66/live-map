@@ -206,6 +206,43 @@ function handlePinActivity(e: any) {
   }
   const pinTitle = a.pin?.title || a.photo?.caption || 'ваш пин'
   const emoji: Record<string, string> = { like: '❤️', fire: '🔥', laugh: '😂', sad: '😢', angry: '😡', useful: '👍' }
+  if (a.kind === 'swipe_like') {
+    const anon = a.is_incognito
+    push({
+      id: `pin-${a.id}-${Date.now()}`,
+      type: 'match',
+      title: anon ? '💘 Тайный поклонник' : '💘 Тебя лайкнули в ULove',
+      body: anon ? 'Тайный поклонник отреагировал на твою анкету' : `${name} отреагировал на твою анкету`.slice(0, 90),
+      avatar: anon ? null : avatarSrcFor(actor),
+      link: '/swipes?tab=admirers',
+      createdAt: Date.now(),
+    })
+    return
+  }
+  if (a.kind === 'match') {
+    push({
+      id: `pin-${a.id}-${Date.now()}`,
+      type: 'match',
+      title: '💞 Новый мэтч!',
+      body: `${name} тоже лайкнул тебя — чат открыт`.slice(0, 90),
+      avatar: avatarSrcFor(actor),
+      link: '/swipes',
+      createdAt: Date.now(),
+    })
+    return
+  }
+  if (a.kind === 'photo_like') {
+    push({
+      id: `pin-${a.id}-${Date.now()}`,
+      type: 'pin',
+      title: 'Лайк фото',
+      body: `${name} лайкнул ваше фото`.slice(0, 90),
+      avatar: avatarSrcFor(actor),
+      link: activityLink(a),
+      createdAt: Date.now(),
+    })
+    return
+  }
   const body = a.kind === 'comment'
     ? (a.excerpt ? `${name}: ${a.excerpt}` : `${name} прокомментировал «${pinTitle}»`).slice(0, 90)
     : a.kind === 'photo_comment'
@@ -286,13 +323,14 @@ function handleMatch(e: any) {
 function handleSwipeLiked(e: any) {
   const liker = e?.liker
   if (!liker?.id) return
+  const anon = !!(liker.is_incognito || e?.is_incognito)
   push({
     id: `liked-${liker.id}-${Date.now()}`,
     type: 'match',
-    title: '💘 Тебя лайкнули в ULove',
-    body: `${liker.name || 'Кто-то'} отреагировал на твою анкету`,
-    avatar: avatarSrcFor(liker),
-    link: '/swipes',
+    title: anon ? '💘 Тайный поклонник' : '💘 Тебя лайкнули в ULove',
+    body: anon ? 'Тайный поклонник отреагировал на твою анкету' : `${liker.name || 'Кто-то'} отреагировал на твою анкету`,
+    avatar: anon ? null : avatarSrcFor(liker),
+    link: '/swipes?tab=admirers',
     createdAt: Date.now(),
   })
 }

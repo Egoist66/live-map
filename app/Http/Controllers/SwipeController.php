@@ -53,12 +53,14 @@ class SwipeController extends Controller
         $data = $request->validate([
             'user_id' => 'required|exists:users,id',
             'action' => 'required|in:like,pass',
+            'incognito' => 'sometimes|boolean',
         ]);
 
         $result = $this->dating->recordAction(
             $request->user(),
             (int) $data['user_id'],
-            $data['action']
+            $data['action'],
+            (bool) ($data['incognito'] ?? false)
         );
 
         return response()->json(array_merge($result, [
@@ -92,6 +94,20 @@ class SwipeController extends Controller
         $this->dating->assertAdult($request->user());
 
         return response()->json($this->dating->favorites($request->user()));
+    }
+
+    /**
+     * Кто лайкнул меня: открытые + инкогнито.
+     * Инкогнито (PRO) видно как «Тайный поклонник» до мэтча.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function admirers(Request $request)
+    {
+        $this->dating->assertAdult($request->user());
+
+        return response()->json($this->dating->admirers($request->user()));
     }
 
     /**

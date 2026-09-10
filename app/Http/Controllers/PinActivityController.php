@@ -10,7 +10,7 @@ class PinActivityController extends Controller
     public function index(Request $request)
     {
         return PinActivity::where('owner_id', $request->user()->id)
-            ->with(['actor:id,name,avatar_path', 'pin:id,title,category', 'photo:id,user_id,caption'])
+            ->with(['actor:id,name,avatar_path', 'pin:id,title,category', 'photo:id,user_id,caption', 'relatedUser:id,name,avatar_path'])
             ->latest()
             ->paginate(15);
     }
