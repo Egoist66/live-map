@@ -25,9 +25,15 @@ class Conversation extends Model
         return $this->participants->firstWhere('id','!=',$userId);
     }
 
+    /**
+     * Чистое членство в диалоге без учёта hidden_at.
+     * Видимость в списке (hidden_at) проверяется отдельно в index,
+     * иначе после "Удалить чат" show/index сокет-авторизация дают 403
+     * и диалог выглядит пустым, а realtime отваливается.
+     */
     public function hasParticipant(int $userId): bool
     {
-        return $this->participantRows()->where('user_id',$userId)->whereNull('hidden_at')->exists();
+        return $this->participantRows()->where('user_id',$userId)->exists();
     }
 
     public static function findDirect(int $a, int $b): ?self

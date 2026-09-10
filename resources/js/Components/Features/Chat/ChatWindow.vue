@@ -15,8 +15,8 @@ import { useEnterToSend } from '@/composables/useEnterToSend'
 const { windowCardClass } = useChatLayout()
 const { handleEnterToSend } = useEnterToSend()
 
-const props = defineProps<{ selectedId: number | null; activeConv: any; messages: any[]; loading: boolean; sending: boolean; refreshing: boolean; typing: boolean; online: boolean; input: string; emojiOpen: boolean; emojiGroups: any[]; editingId: number | null; editingBody: string; showMenu: boolean; keyboardStyle: any; locating?: boolean; isOwnMessage: (m: any) => boolean; messageStatus: (m: any) => string; formatTime: (s: string) => string; pinned?: any[]; pinLimitLabel?: string; flashId?: number | null; datingEntry?: boolean; datingBadge?: string | null; replyTo?: any | null; attachmentName?: string | null; attachmentSize?: number | null; previewUrl?: string | null; attachError?: string | null; attaching?: boolean }>()
-const emit = defineEmits<{ (e: 'update:input', v: string): void; (e: 'update:editingBody', v: string): void; (e: 'send'): void; (e: 'share-location'): void; (e: 'typing'): void; (e: 'stopTyping'): void; (e: 'refresh'): void; (e: 'back'): void; (e: 'close'): void; (e: 'toggleMenu'): void; (e: 'menuClose'): void; (e: 'deleteChat'): void; (e: 'block'): void; (e: 'toggleEmoji'): void; (e: 'emojiClose'): void; (e: 'pickEmoji', v: string): void; (e: 'pickEmojiEdit', v: string): void; (e: 'startEdit', m: any): void; (e: 'saveEdit'): void; (e: 'cancelEdit'): void; (e: 'deleteMessage', id: number): void; (e: 'togglePin', m: any): void; (e: 'unpin', id: number): void; (e: 'jumpToMessage', id: number): void; (e: 'swipesBack'): void; (e: 'reply', m: any): void; (e: 'cancelReply'): void; (e: 'pickFile', f: File | null): void; (e: 'removeFile'): void; (e: 'pasteImage', ev: ClipboardEvent): void }>()
+const props = defineProps<{ selectedId: number | null; activeConv: any; messages: any[]; history: any; loading: boolean; sending: boolean; refreshing: boolean; typing: boolean; online: boolean; input: string; emojiOpen: boolean; emojiGroups: any[]; editingId: number | null; editingBody: string; showMenu: boolean; keyboardStyle: any; locating?: boolean; isOwnMessage: (m: any) => boolean; messageStatus: (m: any) => string; formatTime: (s: string) => string; pinned?: any[]; pinLimitLabel?: string; flashId?: number | null; datingEntry?: boolean; datingBadge?: string | null; replyTo?: any | null; attachmentName?: string | null; attachmentSize?: number | null; previewUrl?: string | null; attachError?: string | null; attaching?: boolean }>()
+const emit = defineEmits<{ (e: 'update:input', v: string): void; (e: 'update:editingBody', v: string): void; (e: 'send'): void; (e: 'share-location'): void; (e: 'typing'): void; (e: 'stopTyping'): void; (e: 'refresh'): void; (e: 'back'): void; (e: 'close'): void; (e: 'scroll-bottom'): void; (e: 'toggleMenu'): void; (e: 'menuClose'): void; (e: 'deleteChat'): void; (e: 'block'): void; (e: 'toggleEmoji'): void; (e: 'emojiClose'): void; (e: 'pickEmoji', v: string): void; (e: 'pickEmojiEdit', v: string): void; (e: 'startEdit', m: any): void; (e: 'saveEdit'): void; (e: 'cancelEdit'): void; (e: 'deleteMessage', id: number): void; (e: 'togglePin', m: any): void; (e: 'unpin', id: number): void; (e: 'jumpToMessage', id: number): void; (e: 'swipesBack'): void; (e: 'reply', m: any): void; (e: 'cancelReply'): void; (e: 'pickFile', f: File | null): void; (e: 'removeFile'): void; (e: 'pasteImage', ev: ClipboardEvent): void }>()
 const { cm, menuModel, bindMessage } = useMessageContextMenu({ isOwn: (m: any) => props.isOwnMessage(m), onEdit: (m: any) => emit('startEdit', m), onDelete: (id: number) => emit('deleteMessage', id), onPin: (m: any) => emit('togglePin', m), onReply: (m: any) => emit('reply', m) })
 const { menuPt } = useDropdownMenuStyle()
 
@@ -65,25 +65,35 @@ function replyPreview(body: string): string {
           </div>
         </div>
       </div>
-      <div id="chat-messages" class="flex-1 overflow-auto overscroll-contain [scrollbar-width:thin] max-lg:[-ms-overflow-style:none] max-lg:[scrollbar-width:none] max-lg:[&::-webkit-scrollbar]:hidden p-3 lg:p-4 space-y-2.5 bg-stone-50/50 dark:bg-zinc-950/30 min-w-0 w-full max-w-full">
+      <div id="chat-messages" v-bind="history.containerProps" class="relative flex-1 overflow-auto overscroll-contain [scrollbar-width:thin] max-lg:[-ms-overflow-style:none] max-lg:[scrollbar-width:none] max-lg:[&::-webkit-scrollbar]:hidden p-3 lg:p-4 bg-stone-50/50 dark:bg-zinc-950/30 min-w-0 w-full max-w-full">
         <div v-if="loading" class="flex justify-center py-6"><span class="w-6 h-6 border-2 border-violet-200 border-t-violet-600 rounded-full animate-spin"></span></div>
-        <template v-for="m in messages" :key="m.id">
-          <div v-if="editingId === m.id" class="flex justify-end min-w-0">
-            <div class="bg-white dark:bg-zinc-800 border dark:border-zinc-700 rounded-xl shadow-lg w-full max-w-[92vw] sm:max-w-[86vw] min-w-0 p-2">
-              <Textarea :model-value="editingBody" @update:model-value="(v:any)=>emit('update:editingBody', v)" @keydown="(e:any)=>handleEnterToSend(e, () => emit('saveEdit'))" @keydown.escape="emit('cancelEdit')" rows="2" autoResize maxlength="2000" class="w-full !rounded-xl text-sm" placeholder="Сообщение..." />
-              <div class="flex gap-1 mt-2 justify-between items-center">
-                <div class="flex gap-0.5"><button v-for="e in emojiGroups[0].emojis.slice(0, 6)" :key="e" @click="emit('pickEmojiEdit', e)" class="w-7 h-7 grid place-items-center hover:bg-stone-100 rounded-lg text-sm">{{ e }}</button></div>
-                <div class="flex gap-1.5 ml-auto shrink-0">
-                  <button @click="emit('cancelEdit')" class="px-3 py-1.5 rounded-full border bg-white dark:bg-zinc-900 text-xs font-medium">Отмена</button>
-                  <button @click="emit('saveEdit')" :disabled="!editingBody.trim()" class="px-3 py-1.5 rounded-full bg-violet-600 text-white text-xs font-semibold disabled:opacity-40">Сохранить</button>
+        <div v-else-if="history.loadingOlder" class="absolute top-2 left-1/2 -translate-x-1/2 z-10 bg-white dark:bg-zinc-800 rounded-full shadow px-3 py-1.5"><span class="block w-4 h-4 border-2 border-violet-200 border-t-violet-600 rounded-full animate-spin"></span></div>
+        <div v-else-if="!history.hasMore && history.list.length" class="absolute top-2 left-1/2 -translate-x-1/2 z-10 text-[11px] text-stone-400 bg-white/80 dark:bg-zinc-800/80 rounded-full px-3 py-1">Начало переписки</div>
+        <div v-if="!loading && !history.list.length" class="h-full grid place-items-center text-stone-400 text-sm text-center"><div><div class="text-3xl mb-2">✉️</div><div>Пока пусто — напишите первым</div></div></div>
+        <div v-bind="history.wrapperProps">
+          <template v-for="item in history.list" :key="item.data.id">
+            <div :id="`msg-${item.data.id}`" :style="{ height: history.rowHeight(item.data.id) + 'px', overflow: 'hidden' }">
+              <div :data-vm="item.data.id" class="pb-2.5">
+                <div v-if="editingId === item.data.id" class="flex justify-end min-w-0">
+                  <div class="bg-white dark:bg-zinc-800 border dark:border-zinc-700 rounded-xl shadow-lg w-full max-w-[92vw] sm:max-w-[86vw] min-w-0 p-2">
+                    <Textarea :model-value="editingBody" @update:model-value="(v:any)=>emit('update:editingBody', v)" @keydown="(e:any)=>handleEnterToSend(e, () => emit('saveEdit'))" @keydown.escape="emit('cancelEdit')" rows="2" autoResize maxlength="2000" class="w-full !rounded-xl text-sm" placeholder="Сообщение..." />
+                    <div class="flex gap-1 mt-2 justify-between items-center">
+                      <div class="flex gap-0.5"><button v-for="e in emojiGroups[0].emojis.slice(0, 6)" :key="e" @click="emit('pickEmojiEdit', e)" class="w-7 h-7 grid place-items-center hover:bg-stone-100 rounded-lg text-sm">{{ e }}</button></div>
+                      <div class="flex gap-1.5 ml-auto shrink-0">
+                        <button @click="emit('cancelEdit')" class="px-3 py-1.5 rounded-full border bg-white dark:bg-zinc-900 text-xs font-medium">Отмена</button>
+                        <button @click="emit('saveEdit')" :disabled="!editingBody.trim()" class="px-3 py-1.5 rounded-full bg-violet-600 text-white text-xs font-semibold disabled:opacity-40">Сохранить</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div v-else v-on="bindMessage(item.data)" :class="['rounded-2xl transition-shadow duration-500 scroll-mt-2', flashId === item.data.id ? 'ring-2 ring-violet-500 shadow-lg' : '']">
+                  <MessageBubble :message="item.data" :own="isOwnMessage(item.data)" :status="messageStatus(item.data)" :time="formatTime(item.data.created_at)" @edit="(mm:any)=>emit('startEdit', mm)" @delete="(id:number)=>emit('deleteMessage', id)" @pin="(mm:any)=>emit('togglePin', mm)" @reply="(mm:any)=>emit('reply', mm)" @jump="(id:number)=>emit('jumpToMessage', id)" />
                 </div>
               </div>
             </div>
-          </div>
-          <div v-else v-on="bindMessage(m)" :id="`msg-${m.id}`" :class="['rounded-2xl transition-shadow duration-500 scroll-mt-2', flashId === m.id ? 'ring-2 ring-violet-500 shadow-lg' : '']">
-            <MessageBubble :message="m" :own="isOwnMessage(m)" :status="messageStatus(m)" :time="formatTime(m.created_at)" @edit="(mm:any)=>emit('startEdit', mm)" @delete="(id:number)=>emit('deleteMessage', id)" @pin="(mm:any)=>emit('togglePin', mm)" @reply="(mm:any)=>emit('reply', mm)" @jump="(id:number)=>emit('jumpToMessage', id)" />
-          </div>
-        </template>
+          </template>
+        </div>
+        <button v-if="!history.stickToBottom && history.unseenCount > 0" @click="emit('scroll-bottom')" class="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 bg-violet-600 text-white text-xs font-semibold rounded-full shadow-lg px-4 py-2 active:scale-95 transition">↓ {{ history.unseenCount }} нов.</button>
       </div>
       <ContextMenu ref="cm" :model="menuModel" :pt="menuPt" />
       <div class="relative p-2 lg:p-3 border-t dark:border-zinc-800 bg-white dark:bg-zinc-900 shrink-0 flex-none pb-[calc(0.5rem+env(safe-area-inset-bottom))] lg:pb-3 w-full max-w-full min-w-0 rounded-b-none lg:rounded-b-2xl">

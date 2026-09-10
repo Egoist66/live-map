@@ -94,7 +94,7 @@ onMounted(async () => {
   </Head>
   <component :is="Layout">
     <div class="min-h-[calc(100vh-64px)] bg-surface dark:bg-[#090E1A]">
-      <div class="max-w-[520px] mx-auto px-4 sm:px-6 py-5 sm:py-6 pb-[calc(2rem+env(safe-area-inset-bottom,0px))]">
+      <div class="max-w-[640px] mx-auto px-4 sm:px-6 py-5 sm:py-6 pb-[calc(2rem+env(safe-area-inset-bottom,0px))]">
 
         <div class="text-center">
           <div class="flex items-center justify-center gap-2.5">
@@ -150,10 +150,10 @@ onMounted(async () => {
           </div>
 
           <div class="mt-3 grid grid-cols-4 gap-1 p-1 rounded-2xl bg-stone-100 dark:bg-zinc-800">
-            <button type="button" @click="s.activeTab.value = 'feed'" :class="['py-2 rounded-xl text-[13px] font-bold transition', s.activeTab.value === 'feed' ? 'bg-white dark:bg-zinc-900 text-ink-900 dark:text-white shadow-soft' : 'text-stone-500 dark:text-zinc-400']">Лента</button>
-            <button type="button" @click="s.activeTab.value = 'active'; s.loadActive()" :class="['py-2 rounded-xl text-[13px] font-bold transition', s.activeTab.value === 'active' ? 'bg-white dark:bg-zinc-900 text-ink-900 dark:text-white shadow-soft' : 'text-stone-500 dark:text-zinc-400']">Активные</button>
-            <button type="button" @click="s.activeTab.value = 'favorites'" :class="['py-2 rounded-xl text-[13px] font-bold transition', s.activeTab.value === 'favorites' ? 'bg-white dark:bg-zinc-900 text-ink-900 dark:text-white shadow-soft' : 'text-stone-500 dark:text-zinc-400']">Избранное · {{ s.favoritesCount.value }}/{{ s.favoritesLimit.value }}</button>
-            <button type="button" @click="s.activeTab.value = 'admirers'; s.loadAdmirers()" :class="['py-2 rounded-xl text-[13px] font-bold transition', s.activeTab.value === 'admirers' ? 'bg-white dark:bg-zinc-900 text-ink-900 dark:text-white shadow-soft' : 'text-stone-500 dark:text-zinc-400']">Меня лайкнули · {{ s.admirersTotal.value }}</button>
+            <button type="button" @click="s.activeTab.value = 'feed'" :class="['min-w-0 px-1 py-2 rounded-xl transition flex flex-col items-center justify-center leading-tight', s.activeTab.value === 'feed' ? 'bg-white dark:bg-zinc-900 text-ink-900 dark:text-white shadow-soft' : 'text-stone-500 dark:text-zinc-400']"><span class="text-[13px] font-bold truncate w-full text-center">Лента</span><span class="text-[10px] font-semibold opacity-70">листай</span></button>
+            <button type="button" @click="s.activeTab.value = 'active'; s.loadActive()" :class="['min-w-0 px-1 py-2 rounded-xl transition flex flex-col items-center justify-center leading-tight', s.activeTab.value === 'active' ? 'bg-white dark:bg-zinc-900 text-ink-900 dark:text-white shadow-soft' : 'text-stone-500 dark:text-zinc-400']"><span class="text-[13px] font-bold truncate w-full text-center">Активные</span><span class="text-[10px] font-semibold opacity-70">онлайн</span></button>
+            <button type="button" @click="s.activeTab.value = 'favorites'" :class="['min-w-0 px-1 py-2 rounded-xl transition flex flex-col items-center justify-center leading-tight', s.activeTab.value === 'favorites' ? 'bg-white dark:bg-zinc-900 text-ink-900 dark:text-white shadow-soft' : 'text-stone-500 dark:text-zinc-400']"><span class="text-[13px] font-bold truncate w-full text-center">Избранное</span><span class="text-[10px] font-semibold opacity-70">{{ s.favoritesCount.value }}/{{ s.favoritesLimit.value }}</span></button>
+            <button type="button" @click="s.activeTab.value = 'admirers'; s.loadAdmirers()" :class="['min-w-0 px-1 py-2 rounded-xl transition flex flex-col items-center justify-center leading-tight', s.activeTab.value === 'admirers' ? 'bg-white dark:bg-zinc-900 text-ink-900 dark:text-white shadow-soft' : 'text-stone-500 dark:text-zinc-400']"><span class="text-[13px] font-bold truncate w-full text-center">Лайки</span><span class="text-[10px] font-semibold opacity-70">мне · {{ s.admirersTotal.value }}</span></button>
           </div>
 
           <template v-if="s.activeTab.value === 'active'">

@@ -2,12 +2,14 @@ import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import { useToast } from 'primevue/usetoast'
 import { chatApi } from '@/services/chat.api'
+import { useChatHistory } from '@/composables/useChatHistory'
 import type { Conversation, ConversationDetail, Message } from '@/types/entities/Chat'
+
+const INITIAL_PAGE = 100
 
 let searchAbort: AbortController | null = null
 let searchTimer: ReturnType<typeof setTimeout> | null = null
 let loadConversationsInflight: Promise<Conversation[]> | null = null
-let scrollRaf: number | null = null
 const trackedUserChannels = new Set<number>()
 const trackedChatChannels = new Set<number>()
 
@@ -90,6 +92,10 @@ export function useChat() {
 
   const unreadTotal = computed(() => conversations.value.filter((c) => Number(c.unread_count || 0) > 0).length)
   const unreadMessagesTotal = computed(() => conversations.value.reduce((s, c) => s + (Number(c.unread_count) || 0), 0))
+  const history = useChatHistory(messages, {
+    loadPage: (beforeId: number) => chatApi.messages(selectedId.value!, beforeId),
+    getKey: () => selectedId.value,
+  })
 
   function getEcho(): any {
     return (window as any).Echo
@@ -156,7 +162,8 @@ export function useChat() {
         activeConv.value = d
         messages.value = mergeFetched(currentId, d.messages)
         await nextTick()
-        scrollToBottom()
+        if (history.stickToBottom.value) history.scrollToBottom()
+        else history.measureRows()
       }
     } finally { refreshing.value = false }
   }
@@ -224,7 +231,8 @@ export function useChat() {
       try { await chatApi.markRead(id) } catch {}
       subscribeChat(id)
       await nextTick()
-      scrollToBottom()
+      history.reset(d.messages.length >= INITIAL_PAGE)
+      history.attach()
     } catch (e) {
       if (selectedId.value === id) { selectedId.value = null; activeConv.value = null; messages.value = []; loading.value = false }
       throw e
@@ -268,7 +276,7 @@ export function useChat() {
     } : null
     const optimistic: any = { id: tempId, conversation_id: selectedId.value, reply_to_id: replyTo?.id ?? null, reply_to: replySnapshot, sender_id: uid, body: text, type: optimisticAttachment ? optimisticAttachment.kind : 'text', attachment: optimisticAttachment, created_at: new Date().toISOString(), pending: true }
     messages.value.push(optimistic)
-    scrollToBottom()
+    history.notifyAppended(true)
     sending.value = true
     try {
       const msg = await chatApi.sendMessage(selectedId.value!, text, replyTo?.id ?? null, attachmentFile ?? null)
@@ -287,7 +295,7 @@ export function useChat() {
         messages.value.push({ ...(msg as any), justSent: true } as any)
       }
       syncConversationPreview(msg)
-      scrollToBottom()
+      history.notifyAppended(true)
       setTimeout(() => { const m = messages.value.find((x) => x.id === msg.id) as any; if (m) m.justSent = false }, 600)
     } catch (e: any) {
       const idx = messages.value.findIndex((m) => m.id === tempId)
@@ -349,14 +357,7 @@ export function useChat() {
   }
 
   function scrollToBottom() {
-    if (scrollRaf !== null) cancelAnimationFrame(scrollRaf)
-    scrollRaf = requestAnimationFrame(() => {
-      scrollRaf = null
-      nextTick(() => {
-        const el = document.getElementById('chat-messages')
-        if (el) el.scrollTop = el.scrollHeight
-      })
-    })
+    history.scrollToBottom()
   }
 
   function handleIncoming(msg: Message) {
@@ -386,13 +387,13 @@ export function useChat() {
         const conv0 = conversations.value.find(c=>c.id===msg.conversation_id)
         if (conv0) (conv0 as any).unread_count = 0
       }
-      scrollToBottom()
+      history.notifyAppended(false)
       return
     }
     if (msg.sender_id === getUid()) { syncConversationPreview(msg); return }
     if (Number(msg.conversation_id) === Number(selectedId.value)) {
       appendLiveMessage(msg)
-      scrollToBottom()
+      history.notifyAppended(false)
     }
     const conv = conversations.value.find((c) => c.id === msg.conversation_id)
     if (conv) { conv.unread_count = (conv.unread_count || 0) + 1; bumpConversation(msg) }
@@ -620,7 +621,8 @@ export function useChat() {
         chatApi.markRead(id).catch(() => {})
       }
       await nextTick()
-      scrollToBottom()
+      if (history.stickToBottom.value) history.scrollToBottom()
+      else history.measureRows()
     } catch {}
   }
 
@@ -637,10 +639,11 @@ export function useChat() {
     } catch {}
   }
 
-  onMounted(() => { loadConversations(); subscribeGlobal(); window.addEventListener('focus', handleFocusResync); document.addEventListener('visibilitychange', handleFocusResync) })
+  onMounted(() => { loadConversations(); subscribeGlobal(); history.attach(); window.addEventListener('focus', handleFocusResync); document.addEventListener('visibilitychange', handleFocusResync) })
   onBeforeUnmount(() => {
     alive = false
     selectedId.value = null
+    history.detach()
     if (typingTimeout) clearTimeout(typingTimeout)
     typingExpire.forEach((t) => clearTimeout(t))
     window.removeEventListener('focus', handleFocusResync)
@@ -657,7 +660,7 @@ export function useChat() {
   return {
     conversations, activeConv, messages, loading, sending, refreshing, typingUsers,
     searchQuery, searchResults, searching, selectedId, error, unreadTotal, unreadMessagesTotal,
-    editingId, editingBody,
+    editingId, editingBody, history,
     loadConversations, refresh, openConversation, createConversation, sendMessage, startEdit, cancelEdit, saveEdit, deleteMessage, deleteConversation, searchUsers, notifyTyping, stopTyping, handleIncoming, handleUpdated, subscribeGlobal, resetChatRealtime,
   }
 }

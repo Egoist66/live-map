@@ -63,6 +63,19 @@ export function useChatPage(initialConversationId?: number) {
     }
   }
 
+  /**
+   * Переход к сообщению: догружает историю вверх при нужде и подсвечивает.
+   * @param id id сообщения
+   */
+  async function jumpToMessage(id: number): Promise<void> {
+    const found = await chat.history.scrollToMessage(id)
+    if (found) {
+      pins.flash(id)
+      return
+    }
+    toast?.add({ severity: 'warn', summary: 'Не найдено', detail: 'Сообщение не найдено в истории', life: 3000 })
+  }
+
   function notifyBlockedBy(detail?: string) {
     const msg = detail || 'Пользователь заблокировал вас'
     toast?.add({
@@ -364,6 +377,6 @@ export function useChatPage(initialConversationId?: number) {
     input, inputRef, editInputRef, tab, showChatMenu, sheet, showPrivacy, privacy, creatingChat, confirm, confirmVisible, isOwnMessage, bindSheet,
     handleSend, handlePickFile, handlePasteImage, handleShareLocation, locating: chatLocation.locating, attachment, formatTime, onPickEmoji, onPickEmojiForEdit, handleStartEdit, startChatWith, addFriendFromSearch, savePrivacy, doConfirm, closeSheet, backToList,
     askBlock, askDeleteChat, askDeleteMessage, askRemoveFriend, askUnblock,
-    init, openTarget, reply, handleStartReply,
+    init, openTarget, reply, handleStartReply, jumpToMessage,
   }
 }

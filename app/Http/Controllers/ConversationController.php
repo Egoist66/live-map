@@ -177,9 +177,6 @@ class ConversationController extends Controller
     {
         abort_unless($conversation->hasParticipant($request->user()->id),403);
         $conversation->participantRows()->where('user_id',$request->user()->id)->update(['hidden_at'=>now(),'cleared_at'=>now()]);
-        if ($conversation->participantRows()->whereNull('hidden_at')->count()===0) {
-            $conversation->delete();
-        }
         return response()->json(['ok'=>true]);
     }
 }

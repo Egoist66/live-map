@@ -147,5 +147,15 @@ export function usePinnedMessages(messages: Ref<Message[]>) {
     return pinLimit.value === null || pinLimit.value === undefined ? '∞' : String(pinLimit.value)
   }
 
-  return { pinned, pinLimit, loading, error, flashId, load, reset, toggle, unpin, jumpTo, limitLabel, applyRemote }
+  /**
+   * Подсвечивает сообщение (используется после программного скролла).
+   * @param id id сообщения
+   */
+  function flash(id: number): void {
+    flashId.value = id
+    if (flashTimer) clearTimeout(flashTimer)
+    flashTimer = setTimeout(() => { flashId.value = null }, 1600)
+  }
+
+  return { pinned, pinLimit, loading, error, flashId, load, reset, toggle, unpin, jumpTo, flash, limitLabel, applyRemote }
 }
