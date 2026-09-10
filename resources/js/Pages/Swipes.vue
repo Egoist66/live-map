@@ -54,10 +54,11 @@ const genderOptions = [
 ]
 
 const radiusOptions = [
-  { label: 'Рядом: любой', value: null },
-  { label: '5 км', value: 5 },
-  { label: '15 км', value: 15 },
-  { label: '50 км', value: 50 },
+  { label: 'Все люди (без ограничений)', value: null },
+  { label: 'Рядом: до 10 км', value: 10 },
+  { label: 'Рядом: до 25 км · PRO', value: 25 },
+  { label: 'Рядом: до 50 км · PRO', value: 50 },
+  { label: 'Рядом: до 100 км · PRO', value: 100 },
 ]
 
 onMounted(async () => {
@@ -65,6 +66,7 @@ onMounted(async () => {
     await s.loadFeed()
     await s.loadMatches()
     await s.loadFavorites()
+    await s.loadActive()
   }
 })
 </script>
@@ -101,9 +103,10 @@ onMounted(async () => {
             <Chip :label="s.quotaLabel.value" icon="pi pi-send" class="!rounded-full" />
             <Chip v-if="s.isQuotaEmpty.value" label="Лимит исчерпан — мэтчи пишут бесплатно" icon="pi pi-heart-fill" class="!rounded-full !bg-rose-100 !text-rose-700 dark:!bg-rose-950 dark:!text-rose-300 dark:!border dark:!border-rose-900" />
             <span class="flex-1" />
+            <Button icon="pi pi-question-circle" severity="secondary" rounded outlined size="small" aria-label="Как работают свайпы" title="Как работают свайпы" @click="s.showHelp.value = true" />
             <Button icon="pi pi-sliders-h" severity="secondary" rounded outlined size="small" aria-label="Фильтры" @click="s.showFilters.value = true" />
             <Button icon="pi pi-refresh" severity="secondary" rounded outlined size="small" aria-label="Обновить ленту" :loading="s.loading.value" @click="s.loadFeed()" />
-            <Button v-if="s.isAdmin.value" icon="pi pi-trash" severity="warn" rounded outlined size="small" aria-label="Сбросить просмотренные" title="Сбросить просмотренные (админ)" :loading="s.resetting.value" @click="s.resetHistory()" />
+            <Button v-if="s.canResetHistory.value" icon="pi pi-trash" severity="warn" rounded outlined size="small" aria-label="Сбросить просмотренные" :title="s.isAdmin.value ? 'Сбросить просмотренные (админ, безлимит)' : 'Сбросить просмотренные (1 раз)'" :loading="s.resetting.value" @click="s.resetHistory()" />
           </div>
 
           <div v-if="s.matches.value.length" class="mt-4">
@@ -128,12 +131,63 @@ onMounted(async () => {
             {{ s.error.value }}
           </div>
 
-          <div class="mt-3 grid grid-cols-2 gap-1 p-1 rounded-2xl bg-stone-100 dark:bg-zinc-800">
+          <div class="mt-3 grid grid-cols-3 gap-1 p-1 rounded-2xl bg-stone-100 dark:bg-zinc-800">
             <button type="button" @click="s.activeTab.value = 'feed'" :class="['py-2 rounded-xl text-[13px] font-bold transition', s.activeTab.value === 'feed' ? 'bg-white dark:bg-zinc-900 text-ink-900 dark:text-white shadow-soft' : 'text-stone-500 dark:text-zinc-400']">Лента</button>
+            <button type="button" @click="s.activeTab.value = 'active'; s.loadActive()" :class="['py-2 rounded-xl text-[13px] font-bold transition', s.activeTab.value === 'active' ? 'bg-white dark:bg-zinc-900 text-ink-900 dark:text-white shadow-soft' : 'text-stone-500 dark:text-zinc-400']">Активные</button>
             <button type="button" @click="s.activeTab.value = 'favorites'" :class="['py-2 rounded-xl text-[13px] font-bold transition', s.activeTab.value === 'favorites' ? 'bg-white dark:bg-zinc-900 text-ink-900 dark:text-white shadow-soft' : 'text-stone-500 dark:text-zinc-400']">Избранное · {{ s.favoritesCount.value }}/{{ s.favoritesLimit.value }}</button>
           </div>
 
-          <template v-if="s.activeTab.value === 'favorites'">
+          <template v-if="s.activeTab.value === 'active'">
+            <div v-if="s.activeLoading.value" class="mt-4 rounded-[24px] border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 h-[40dvh] min-h-[240px] grid place-items-center">
+              <i class="pi pi-spin pi-spinner text-2xl text-stone-400 dark:text-zinc-500" />
+            </div>
+            <div v-else-if="s.activeUsers.value.length" class="mt-4">
+              <div class="text-xs text-stone-500 dark:text-zinc-400 mb-2">Сейчас в ULove · {{ s.activeUsers.value.length }} онлайн</div>
+              <div class="grid grid-cols-2 gap-2">
+                <div
+                  v-for="u in s.activeUsers.value"
+                  :key="u.id"
+                  class="rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3 flex flex-col items-center text-center"
+                >
+                  <Link :href="`/users/${u.id}`" class="relative shrink-0">
+                    <Avatar :image="u.avatar_url ?? undefined" :label="!u.avatar_url ? (u.name ?? '?').slice(0, 1) : undefined" shape="circle" class="!w-16 !h-16" />
+                    <span class="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white dark:border-zinc-900" title="В сети" />
+                  </Link>
+                  <Link :href="`/users/${u.id}`" class="mt-2 min-w-0 w-full">
+                    <div class="text-sm font-bold truncate text-stone-900 dark:text-white">{{ u.name }} · {{ s.ageLabel(u) }}</div>
+                    <div v-if="u.city" class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">{{ u.city }}</div>
+                    <div v-if="u.distance_km != null" class="text-[11px] text-stone-500 dark:text-zinc-400">{{ u.distance_km }} км</div>
+                  </Link>
+                  <Button
+                    icon="pi pi-send"
+                    :label="u.can_message ? 'Написать' : 'Закрыто'"
+                    rounded
+                    size="small"
+                    class="mt-2 w-full"
+                    :disabled="!u.can_message"
+                    :title="u.can_message ? 'Написать' : (u.can_message_reason ?? 'Написать нельзя')"
+                    :loading="s.creatingChat.value"
+                    @click="s.writeWithoutMatch(u.id)"
+                  />
+                  <div v-if="!u.can_message && u.can_message_reason" class="mt-1 text-[10px] leading-tight text-stone-400 dark:text-zinc-500">{{ u.can_message_reason }}</div>
+                </div>
+              </div>
+              <div class="mt-2 text-center">
+                <Button label="Обновить" icon="pi pi-refresh" severity="secondary" rounded outlined size="small" :loading="s.activeLoading.value" @click="s.loadActive()" />
+              </div>
+            </div>
+            <div v-else class="mt-4 rounded-[24px] border border-dashed border-stone-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-6 sm:p-8 text-center">
+              <div class="w-14 h-14 mx-auto rounded-2xl bg-emerald-500/10 text-emerald-500 grid place-items-center"><i class="pi pi-users text-xl" /></div>
+              <div class="mt-4 text-lg font-black text-stone-900 dark:text-white">Пока никого онлайн</div>
+              <div class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Загляни в ленту — там все люди, а сюда возвращайся за живым общением.</div>
+              <div class="mt-4 flex gap-2 justify-center">
+                <Button label="К ленте" rounded size="small" @click="s.activeTab.value = 'feed'" />
+                <Button label="Обновить" severity="secondary" rounded outlined size="small" @click="s.loadActive()" />
+              </div>
+            </div>
+          </template>
+
+          <template v-else-if="s.activeTab.value === 'favorites'">
             <div v-if="s.favoritesLoading.value" class="mt-4 rounded-[24px] border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 h-[40dvh] min-h-[240px] grid place-items-center">
               <i class="pi pi-spin pi-spinner text-2xl text-stone-400 dark:text-zinc-500" />
             </div>
@@ -313,13 +367,14 @@ onMounted(async () => {
             <div v-else class="rounded-[24px] border border-dashed border-stone-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-6 sm:p-8 text-center">
               <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-rose-500 to-orange-400 text-white grid place-items-center"><i class="pi pi-heart-fill text-xl" /></div>
               <template v-if="s.feedExhausted.value && !s.hasActiveFilters.value">
-                <div class="mt-4 text-lg font-black text-stone-900 dark:text-white">Ты просвайпал(а) всех рядом 🎉</div>
+                <div class="mt-4 text-lg font-black text-stone-900 dark:text-white">Ты просвайпал(а) всех в ULove 🎉</div>
                 <div class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Лайкнутые сохранены в «Избранном». Новые люди появляются каждый день — загляни позже.</div>
                 <div class="mt-4 flex gap-2 justify-center flex-wrap">
                   <Button label="Моё избранное" rounded size="small" class="!bg-gradient-to-br !from-rose-500 !to-orange-400 !border-0 !text-white" @click="s.activeTab.value = 'favorites'" />
                   <Button label="Обновить" severity="secondary" rounded outlined size="small" @click="s.loadFeed()" />
-                  <Button v-if="s.isAdmin.value" label="Сбросить просмотренные" icon="pi pi-trash" severity="warn" rounded outlined size="small" :loading="s.resetting.value" @click="s.resetHistory()" />
+                  <Button v-if="s.canResetHistory.value" :label="s.isAdmin.value ? 'Сбросить просмотренные' : 'Начать заново (1 раз)'" icon="pi pi-trash" severity="warn" rounded outlined size="small" :loading="s.resetting.value" @click="s.resetHistory()" />
                 </div>
+                <div v-if="!s.canResetHistory.value" class="mt-2 text-[11px] text-stone-400 dark:text-zinc-500">Одноразовый сброс уже использован</div>
               </template>
               <template v-else>
                 <div class="mt-4 text-lg font-black text-stone-900 dark:text-white">Лента пуста</div>
@@ -337,7 +392,6 @@ onMounted(async () => {
             <Button icon="pi pi-heart-fill" rounded raised aria-label="Лайк" class="!w-[72px] !h-[72px] sm:!w-20 sm:!h-20 !text-2xl sm:!text-3xl !text-white !bg-gradient-to-br !from-rose-500 !to-orange-400 !border-0" :loading="s.acting.value" @click="s.swipe('like')" />
             <Button icon="pi pi-send" severity="info" rounded raised aria-label="Написать" class="!w-14 !h-14 sm:!w-16 sm:!h-16 !text-xl sm:!text-2xl" :loading="s.creatingChat.value" @click="s.writeWithoutMatch(s.current.value.id)" />
           </div>
-          <div class="mt-2 text-center text-xs text-stone-400 dark:text-zinc-500">Свайпы безлимитные · сообщения: free {{ s.quota.value ? `${s.quota.value.left}/${s.quota.value.limit}` : '3/3' }} · мэтч открывает чат всегда · 18+</div>
 
           <Link href="/map" class="mt-5 flex items-center gap-3 rounded-[20px] border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 shadow-soft">
             <span class="w-11 h-11 rounded-2xl bg-teal-500/15 text-teal-600 dark:text-teal-300 grid place-items-center shrink-0"><i class="pi pi-map text-lg" /></span>
@@ -363,8 +417,10 @@ onMounted(async () => {
               <Select v-model="s.filters.value.gender" :options="genderOptions" option-label="label" option-value="value" class="w-full mt-1 dark:!border-zinc-700" :pt="selectPt" />
             </div>
             <div class="min-w-0">
-              <label class="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500">Радиус</label>
-              <Select v-model="s.filters.value.radius_km" :options="radiusOptions" option-label="label" option-value="value" placeholder="Любой" class="w-full mt-1 dark:!border-zinc-700" :pt="selectPt" />
+              <label class="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500">Люди рядом</label>
+              <Select v-model="s.filters.value.radius_km" :options="radiusOptions" option-label="label" option-value="value" placeholder="Все люди" class="w-full mt-1 dark:!border-zinc-700" :pt="selectPt" />
+              <div class="mt-1 text-[11px] text-stone-500 dark:text-zinc-400">Без фильтра — все люди в системе. Free: рядом до 10 км, дальше — PRO.</div>
+              <div v-if="s.isRadiusPro(s.filters.value.radius_km)" class="mt-1 text-[11px] font-bold text-amber-600 dark:text-amber-400">Выбранный радиус — PRO. Оформи PRO, чтобы листать дальше.</div>
             </div>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -422,6 +478,18 @@ onMounted(async () => {
             <Button label="Продолжить листать" severity="secondary" rounded outlined @click="s.closeMatch()" />
             <Button label="Перейти в чат" icon="pi pi-send" rounded :loading="s.creatingChat.value" @click="s.matchedCard.value && s.openChat(s.matchedCard.value.id, s.matchedConversationId.value)" />
           </div>
+        </div>
+      </Dialog>
+
+      <Dialog :visible="s.showHelp.value" @update:visible="(v:boolean)=>{ s.showHelp.value = v }" modal header="Как работают свайпы" :style="{ width: '420px', maxWidth: '94vw', maxHeight: '92dvh' }" :pt="dialogPt">
+        <div class="flex flex-col gap-3 text-sm text-stone-600 dark:text-zinc-300 pt-1">
+          <div>Лента — без geo-ограничений: листай всех людей в системе, не важно где они находятся.</div>
+          <div>Фильтр «Люди рядом» — опционален. Free: рядом до 10 км, всё дальше — PRO безлимит.</div>
+          <div>Свайпы безлимитные. Сообщения без мэтча: Free {{ s.quota.value ? `${s.quota.value.left}/${s.quota.value.limit}` : '3/3' }}, PRO — 10/мес. Взаимный лайк (мэтч) открывает чат всегда, даже при исчерпанном лимите.</div>
+          <div>Избранное — лайкнутые без мэтча. Лимиты: Free до 2, Pro до 5, Business до 15.</div>
+          <div>Просвайпанных можно вернуть один раз кнопкой «Начать заново» — лента снова покажет всех. Админу сброс доступен безлимитно.</div>
+          <div>Таб «Активные» — кто сейчас в ULove. Открывай анкету, пиши, если человек не закрыл сообщения.</div>
+          <div class="rounded-2xl bg-stone-100 dark:bg-zinc-800 px-3 py-2 text-center font-bold">Строго 18+</div>
         </div>
       </Dialog>
 

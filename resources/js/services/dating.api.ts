@@ -40,6 +40,16 @@ export interface SwipeQuota {
   used: number
   left: number
   plan: string
+  radius_limit: number | null
+  can_reset: boolean
+  reset_used: boolean
+}
+
+/** Анкета из таба «Активные» (онлайн). */
+export interface ActiveCard extends SwipeCard {
+  is_online: boolean
+  can_message: boolean
+  can_message_reason: string | null
 }
 
 export const datingApi = {
@@ -61,6 +71,10 @@ export const datingApi = {
   async matches() {
     const { data } = await api.get('/api/swipes/matches')
     return data as { matches: Array<{ match_id: number; created_at: string; conversation_id: number | null; user: { id: number; name: string; avatar_url: string | null; last_seen_at: string | null } }>; quota: SwipeQuota }
+  },
+  async active() {
+    const { data } = await api.get('/api/swipes/active')
+    return data as { active: ActiveCard[]; quota: SwipeQuota }
   },
   async favorites() {
     const { data } = await api.get('/api/swipes/favorites')
@@ -88,6 +102,6 @@ export const datingApi = {
    */
   async resetHistory() {
     const { data } = await api.post('/api/swipes/reset-history')
-    return data as { ok: boolean; deleted: number }
+    return data as { ok: boolean; deleted: number; quota?: SwipeQuota }
   },
 }

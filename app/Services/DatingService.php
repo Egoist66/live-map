@@ -32,6 +32,11 @@ class DatingService
 
     public const SWIPE_PHOTOS_LIMIT_PRO = 5;
 
+    /**
+     * Лимит радиуса ленты для Free. PRO/Business/Admin — безлимит.
+     */
+    public const FREE_SWIPE_RADIUS_KM = 10;
+
     public const GOALS = ['love', 'flirt', 'friendship', 'chat', 'interests'];
 
     public const GENDER_PREFS = ['male', 'female', 'all'];
@@ -126,20 +131,105 @@ class DatingService
     }
 
     /**
+     * Лимит радиуса ленты по тарифу. Null — безлимит.
+     *
+     * Free видит фильтр «рядом» только до 10 км,
+     * PRO/Business/Admin — любой радиус и всю страну.
+     *
+     * @param User $user
+     * @return int|null
+     */
+    public function radiusLimitFor(User $user): ?int
+    {
+        if ($user->isAdmin() || $user->isPro()) {
+            return null;
+        }
+
+        return self::FREE_SWIPE_RADIUS_KM;
+    }
+
+    /**
+     * Проверить, что выбранный радиус доступен тарифу.
+     *
+     * @param User $user
+     * @param int|null $radiusKm
+     * @return void
+     *
+     * @throws HttpResponseException 402 когда радиус только для PRO
+     */
+    public function assertRadiusAllowed(User $user, ?int $radiusKm): void
+    {
+        if ($radiusKm === null || $radiusKm <= 0) {
+            return;
+        }
+
+        $limit = $this->radiusLimitFor($user);
+
+        if ($limit === null || $radiusKm <= $limit) {
+            return;
+        }
+
+        throw new HttpResponseException(response()->json([
+            'message' => "Радиус свыше {$limit} км — PRO-функция. Оформите PRO, чтобы листать дальше.",
+            'quota' => $this->quotaState($user),
+            'radius_limit' => $limit,
+        ], 402));
+    }
+
+    /**
+     * Использован ли одноразовый сброс истории свайпов.
+     *
+     * @param User $user
+     * @return bool
+     */
+    public function hasUsedSwipeReset(User $user): bool
+    {
+        $settings = $user->settings ?? [];
+
+        return (bool) ($settings['swipe_reset_used'] ?? false);
+    }
+
+    /**
+     * Может ли пользователь сбросить историю сейчас.
+     *
+     * Админ — всегда, остальные — один раз.
+     *
+     * @param User $user
+     * @return bool
+     */
+    public function canResetHistory(User $user): bool
+    {
+        if ($user->isAdmin()) {
+            return true;
+        }
+
+        return ! $this->hasUsedSwipeReset($user);
+    }
+
+    /**
      * Состояние квоты для бейджа в UI.
      *
      * @param User $user
-     * @return array{limit:int,used:int,left:int,plan:string}
+     * @return array{limit:int,used:int,left:int,plan:string,radius_limit:int|null,can_reset:bool,reset_used:bool}
      */
     public function quotaState(User $user): array
     {
+        $radiusLimit = $this->radiusLimitFor($user);
+        $resetUsed = $user->isAdmin() ? false : $this->hasUsedSwipeReset($user);
+
+        $base = [
+            'radius_limit' => $radiusLimit,
+            'can_reset' => $this->canResetHistory($user),
+            'reset_used' => $resetUsed,
+        ];
+
         if ($user->isAdmin()) {
-            return [
+            return array_merge([
                 'limit' => -1,
                 'used' => 0,
                 'left' => -1,
                 'plan' => $user->effectivePlan(),
-            ];
+            ], $base);
         }
 
         $this->resetQuotaIfNeeded($user->refresh());
@@ -147,12 +237,12 @@ class DatingService
         $limit = $this->limitFor($user);
         $used = (int) $user->random_chats_used;
 
-        return [
+        return array_merge([
             'limit' => $limit,
             'used' => $used,
             'left' => max(0, $limit - $used),
             'plan' => $user->effectivePlan(),
-        ];
+        ], $base);
     }
 
     /**
@@ -318,14 +408,34 @@ class DatingService
      * Сбросить просмотренные свайпы пользователя.
      *
      * Удаляет все SwipeAction автора — лента снова покажет всех кандидатов.
-     * Мэтчи и чаты не трогает, только история like/pass. Для тестов админа.
+     * Мэтчи и чаты не трогает, только история like/pass.
+     * Админ — безлимитно, остальные — один раз.
      *
      * @param User $me
      * @return int число удалённых записей
+     *
+     * @throws HttpResponseException 403 когда одноразовый сброс уже использован
      */
     public function resetHistory(User $me): int
     {
-        return SwipeAction::where('liker_id', $me->id)->delete();
+        $fresh = $me->refresh();
+
+        if (! $fresh->isAdmin() && $this->hasUsedSwipeReset($fresh)) {
+            throw new HttpResponseException(response()->json([
+                'message' => 'Ты уже использовал(а) одноразовый сброс. Дальше — PRO без ограничений.',
+                'quota' => $this->quotaState($fresh),
+            ], 403));
+        }
+
+        $deleted = SwipeAction::where('liker_id', $me->id)->delete();
+
+        if (! $fresh->isAdmin()) {
+            $settings = $fresh->settings ?? [];
+            $settings['swipe_reset_used'] = true;
+            $fresh->forceFill(['settings' => $settings])->saveQuietly();
+        }
+
+        return $deleted;
     }
 
     /**
@@ -455,6 +565,10 @@ class DatingService
     /**
      * Лента кандидатов для свайпов.
      *
+     * По умолчанию — без geo-ограничений: видны все люди в системе,
+     * независимо от расстояния. Фильтр «рядом» (radius_km) опционален
+     * и упирается в тариф: Free — до 10 км, PRO — безлимит.
+     *
      * @param User $me
      * @param array{goal?:string,gender?:string,age_min?:int,age_max?:int,radius_km?:int,interests?:string[]} $filters
      * @param int $limit
@@ -462,6 +576,9 @@ class DatingService
      */
     public function feed(User $me, array $filters = [], int $limit = 20): array
     {
+        $radiusKm = isset($filters['radius_km']) ? (int) $filters['radius_km'] : null;
+        $this->assertRadiusAllowed($me, $radiusKm);
+
         $actedIds = SwipeAction::where('liker_id', $me->id)->pluck('liked_id')->all();
 
         $hiddenIds = User::hiddenFromSearchFor($me);
@@ -482,7 +599,6 @@ class DatingService
         $goal = $filters['goal'] ?? null;
         $ageMin = isset($filters['age_min']) ? (int) $filters['age_min'] : null;
         $ageMax = isset($filters['age_max']) ? (int) $filters['age_max'] : null;
-        $radiusKm = isset($filters['radius_km']) ? (int) $filters['radius_km'] : null;
         $wantedInterests = $filters['interests'] ?? [];
 
         $query = User::whereNotIn('id', $exclude)
@@ -570,6 +686,83 @@ class DatingService
         }
 
         return $cards;
+    }
+
+    /**
+     * Активные сейчас в ULove: онлайн-пользователи для таба «Активные».
+     *
+     * Показывает тех, кто в сети (last_seen_at в пределах онлайн-порога),
+     * без geo-ограничений. Каждому прикладывается can_message_reason:
+     * написать можно, если человек не запретил (приватность/блоки).
+     *
+     * @param User $me
+     * @param int $limit
+     * @return array<int, array<string,mixed>>
+     */
+    public function active(User $me, int $limit = 50): array
+    {
+        $threshold = MonitoringService::onlineThreshold();
+
+        $hiddenIds = User::hiddenFromSearchFor($me);
+
+        $blockedIds = UserBlock::where('blocker_id', $me->id)
+            ->pluck('blocked_id')
+            ->merge(UserBlock::where('blocked_id', $me->id)->pluck('blocker_id'))
+            ->unique()
+            ->values()
+            ->all();
+
+        $exclude = array_values(array_unique(array_map(
+            'intval',
+            array_merge([$me->id], $hiddenIds, $blockedIds, [User::GHOST_USER_ID])
+        )));
+
+        $adultThreshold = Carbon::now()->subYears(self::ADULT_AGE)->toDateString();
+
+        $candidates = User::whereNotIn('id', $exclude)
+            ->where('dating_enabled', true)
+            ->where('last_seen_at', '>=', $threshold)
+            ->where(function ($ageQuery) use ($adultThreshold) {
+                $ageQuery->whereNull('birth_date')->orWhere('birth_date', '<=', $adultThreshold);
+            })
+            ->when(! $me->isAdmin() && ! User::isGhostSeer($me), function ($query) {
+                $query->where('is_admin', false);
+            })
+            ->select([
+                'id', 'name', 'gender', 'birth_date', 'bio', 'avatar_path',
+                'home_city', 'home_lat', 'home_lng', 'last_seen_at',
+                'dating_goal', 'dating_interests', 'dating_hide_name', 'dating_hide_age',
+                'dating_match_only', 'message_privacy', 'allow_random_messages',
+                'plan', 'plan_expires_at', 'is_admin', 'role',
+            ])
+            ->with(['profilePhotos' => fn ($q) => $q->orderBy('sort_order')->limit(self::SWIPE_PHOTOS_LIMIT_PRO)])
+            ->orderByDesc('last_seen_at')
+            ->limit($limit)
+            ->get();
+
+        $likedMeIds = SwipeAction::where('liked_id', $me->id)
+            ->where('action', 'like')
+            ->pluck('liker_id')
+            ->flip();
+
+        $matchedIds = $this->matchedIds($me);
+        $matchedFlip = array_flip($matchedIds);
+
+        $result = [];
+
+        foreach ($candidates as $candidate) {
+            $distance = $this->distanceKm($me, $candidate);
+            $isMatch = isset($matchedFlip[$candidate->id]);
+            $card = $this->cardFor($candidate, $me, $distance, $isMatch, isset($likedMeIds[$candidate->id]));
+
+            $card['is_online'] = true;
+            $card['can_message'] = $me->canMessageUser($candidate);
+            $card['can_message_reason'] = $me->messageBlockReason($candidate);
+
+            $result[] = $card;
+        }
+
+        return $result;
     }
 
     /**

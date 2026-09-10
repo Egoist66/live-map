@@ -110,18 +110,38 @@ class SwipeController extends Controller
     }
 
     /**
-     * Сбросить просмотренные свайпы (только админ, для тестов ленты).
+     * Активные сейчас в ULove (онлайн).
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function active(Request $request)
+    {
+        $this->dating->assertAdult($request->user());
+
+        return response()->json([
+            'active' => $this->dating->active($request->user()),
+            'quota' => $this->dating->quotaState($request->user()),
+        ]);
+    }
+
+    /**
+     * Сбросить просмотренные свайпы.
+     *
+     * Админ — безлимитно, остальные — один раз (Free).
      *
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function resetHistory(Request $request)
     {
-        abort_unless($request->user()->isAdmin(), 403);
-
         $deleted = $this->dating->resetHistory($request->user());
 
-        return response()->json(['ok' => true, 'deleted' => $deleted]);
+        return response()->json([
+            'ok' => true,
+            'deleted' => $deleted,
+            'quota' => $this->dating->quotaState($request->user()),
+        ]);
     }
 
     /**

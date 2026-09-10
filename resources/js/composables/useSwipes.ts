@@ -2,11 +2,15 @@ import { computed, ref } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
 import { chatApi } from '@/services/chat.api'
 import { datingApi } from '@/services/dating.api'
-import type { SwipeCard, SwipeFilters, SwipeQuota } from '@/services/dating.api'
+import type { ActiveCard, SwipeCard, SwipeFilters, SwipeQuota } from '@/services/dating.api'
+
+/** Лимит радиуса «рядом» для Free, км. PRO — безлимит. */
+export const FREE_SWIPES_RADIUS_KM = 10
 
 /**
- * Дейтинг-лента: свайпы, мэтчи, фильтры, квоты, приватность.
+ * Дейтинг-лента: свайпы, мэтчи, активные, фильтры, квоты, приватность.
  *
+ * Лента по умолчанию без geo-ограничений: видны все люди в системе.
  * Компонент только отображает состояние хука.
  *
  * @returns состояние ленты и действия свайпов
@@ -18,12 +22,15 @@ export function useSwipes() {
   const favorites = ref<SwipeCard[]>([])
   const favoritesLimit = ref(2)
   const favoritesLoading = ref(false)
-  const activeTab = ref<'feed' | 'favorites'>('feed')
+  const activeTab = ref<'feed' | 'active' | 'favorites'>('feed')
+  const activeUsers = ref<ActiveCard[]>([])
+  const activeLoading = ref(false)
   const quota = ref<SwipeQuota | null>(null)
   const loading = ref(false)
   const acting = ref(false)
   const error = ref<string | null>(null)
   const showFilters = ref(false)
+  const showHelp = ref(false)
   const matchedCard = ref<SwipeCard | null>(null)
   const matchedConversationId = ref<number | null>(null)
   const creatingChat = ref(false)
@@ -90,10 +97,29 @@ export function useSwipes() {
    */
   const feedExhausted = computed(() => !loading.value && !error.value && !current.value && cards.value.length === 0)
 
-  const quotaLabel = computed(() => {    if (!quota.value) return ''
+  const quotaLabel = computed(() => {
+    if (!quota.value) return ''
     if (quota.value.limit < 0) return 'Безлимит'
     return `Сообщения: ${quota.value.left}/${quota.value.limit}`
   })
+
+  /** Лимит радиуса по тарифу. Null — безлимит (PRO). */
+  const radiusLimit = computed(() => quota.value?.radius_limit ?? FREE_SWIPES_RADIUS_KM)
+
+  /** Доступен ли сброс истории (админ — всегда, остальные — один раз). */
+  const canResetHistory = computed(() => quota.value?.can_reset ?? false)
+
+  /**
+   * Подпись радиуса с пометкой PRO.
+   * @param km радиус в км
+   * @returns true если радиус требует PRO
+   */
+  function isRadiusPro(km: number | null): boolean {
+    if (km == null) return false
+    const limit = radiusLimit.value
+    if (limit == null) return false
+    return km > limit
+  }
 
   const isQuotaEmpty = computed(() => {
     if (!quota.value) return false
@@ -271,6 +297,18 @@ export function useSwipes() {
     await new Promise((resolve) => setTimeout(resolve, ms))
   }
 
+  /**
+   * Записать ошибку ленты и подтянуть квоту из ответа.
+   * @param e ошибка запроса
+   * @param fallback запасной текст
+   * @returns void
+   */
+  function applyFeedError(e: unknown, fallback: string): void {
+    const err = e as { response?: { data?: { message?: string; quota?: SwipeQuota } } }
+    if (err.response?.data?.quota) quota.value = err.response.data.quota
+    error.value = err.response?.data?.message ?? fallback
+  }
+
   async function loadFeed(): Promise<void> {
     loading.value = true
     error.value = null
@@ -286,10 +324,28 @@ export function useSwipes() {
       exiting.value = null
     } catch (e: unknown) {
       if (handleGate(e)) return
-      const err = e as { response?: { data?: { message?: string } } }
-      error.value = err.response?.data?.message ?? 'Не удалось загрузить ленту'
+      applyFeedError(e, 'Не удалось загрузить ленту')
     } finally {
       loading.value = false
+    }
+  }
+
+  /**
+   * Загрузить активных сейчас в ULove (онлайн).
+   * @returns void
+   */
+  async function loadActive(): Promise<void> {
+    activeLoading.value = true
+    error.value = null
+    try {
+      const res = await datingApi.active()
+      activeUsers.value = res.active
+      quota.value = res.quota
+    } catch (e: unknown) {
+      if (handleGate(e)) return
+      applyFeedError(e, 'Не удалось загрузить активных')
+    } finally {
+      activeLoading.value = false
     }
   }
 
@@ -561,22 +617,25 @@ export function useSwipes() {
   }
 
   /**
-   * Сбросить просмотренные свайпы (только админ, для бесконечных тестов).
+   * Сбросить просмотренные свайпы и снова листать всех.
    *
-   * Чистит историю like/pass и перезагружает ленту с избранным.
+   * Админ — безлимитно, обычный пользователь — один раз (Free).
+   * Чистит историю like/pass, перезагружает ленту с избранным.
    *
    * @returns void
    */
   async function resetHistory(): Promise<void> {
-    if (!isAdmin.value || resetting.value) return
+    if (resetting.value || !canResetHistory.value) return
     resetting.value = true
     error.value = null
     try {
-      await datingApi.resetHistory()
+      const res = await datingApi.resetHistory()
+      if (res.quota) quota.value = res.quota
       await loadFeed()
       await loadFavorites()
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { message?: string } } }
+      const err = e as { response?: { data?: { message?: string; quota?: SwipeQuota } } }
+      if (err.response?.data?.quota) quota.value = err.response.data.quota
       error.value = err.response?.data?.message ?? 'Не удалось сбросить свайпы'
     } finally {
       resetting.value = false
@@ -609,6 +668,9 @@ export function useSwipes() {
     favoritesCount,
     favoritesLoading,
     activeTab,
+    activeUsers,
+    activeLoading,
+    loadActive,
     hasActiveFilters,
     feedExhausted,
     loadFavorites,
@@ -616,6 +678,9 @@ export function useSwipes() {
     quota,
     quotaLabel,
     isQuotaEmpty,
+    radiusLimit,
+    canResetHistory,
+    isRadiusPro,
     filters,
     privacy,
     ageMinText,
@@ -634,6 +699,7 @@ export function useSwipes() {
     verifyAge,
     error,
     showFilters,
+    showHelp,
     matchedCard,
     matchedConversationId,
     dragX,
