@@ -65,16 +65,14 @@ function replyPreview(body: string): string {
           </div>
         </div>
       </div>
-      <div id="chat-messages" v-bind="history.containerProps" class="relative flex-1 overflow-auto overscroll-contain [scrollbar-width:thin] max-lg:[-ms-overflow-style:none] max-lg:[scrollbar-width:none] max-lg:[&::-webkit-scrollbar]:hidden p-3 lg:p-4 bg-stone-50/50 dark:bg-zinc-950/30 min-w-0 w-full max-w-full">
+      <div id="chat-messages" class="relative flex-1 overflow-auto overscroll-contain [scrollbar-width:thin] max-lg:[-ms-overflow-style:none] max-lg:[scrollbar-width:none] max-lg:[&::-webkit-scrollbar]:hidden p-3 lg:p-4 bg-stone-50/50 dark:bg-zinc-950/30 min-w-0 w-full max-w-full">
         <div v-if="loading" class="flex justify-center py-6"><span class="w-6 h-6 border-2 border-violet-200 border-t-violet-600 rounded-full animate-spin"></span></div>
         <div v-else-if="history.loadingOlder" class="absolute top-2 left-1/2 -translate-x-1/2 z-10 bg-white dark:bg-zinc-800 rounded-full shadow px-3 py-1.5"><span class="block w-4 h-4 border-2 border-violet-200 border-t-violet-600 rounded-full animate-spin"></span></div>
         <div v-else-if="!history.hasMore && history.list.length" class="absolute top-2 left-1/2 -translate-x-1/2 z-10 text-[11px] text-stone-400 bg-white/80 dark:bg-zinc-800/80 rounded-full px-3 py-1">Начало переписки</div>
         <div v-if="!loading && !history.list.length" class="h-full grid place-items-center text-stone-400 text-sm text-center"><div><div class="text-3xl mb-2">✉️</div><div>Пока пусто — напишите первым</div></div></div>
-        <div v-bind="history.wrapperProps">
-          <template v-for="item in history.list" :key="item.data?.id ?? item.index">
-            <div v-if="item.data" :id="`msg-${item.data.id}`" :style="{ height: history.rowHeight(item.data.id) + 'px', overflow: 'hidden' }">
-              <div :data-vm="item.data.id" class="pb-2.5">
-                <div v-if="editingId === item.data.id" class="flex justify-end min-w-0">
+        <template v-for="item in history.list" :key="item.data?.id ?? item.index">
+          <div v-if="item.data" :id="`msg-${item.data.id}`" class="pb-2.5">
+            <div v-if="editingId === item.data.id" class="flex justify-end min-w-0">
                   <div class="bg-white dark:bg-zinc-800 border dark:border-zinc-700 rounded-xl shadow-lg w-full max-w-[92vw] sm:max-w-[86vw] min-w-0 p-2">
                     <Textarea :model-value="editingBody" @update:model-value="(v:any)=>emit('update:editingBody', v)" @keydown="(e:any)=>handleEnterToSend(e, () => emit('saveEdit'))" @keydown.escape="emit('cancelEdit')" rows="2" autoResize maxlength="2000" class="w-full !rounded-xl text-sm" placeholder="Сообщение..." />
                     <div class="flex gap-1 mt-2 justify-between items-center">
@@ -89,10 +87,8 @@ function replyPreview(body: string): string {
                 <div v-else v-on="bindMessage(item.data)" :class="['rounded-2xl transition-shadow duration-500 scroll-mt-2', flashId === item.data.id ? 'ring-2 ring-violet-500 shadow-lg' : '']">
                   <MessageBubble :message="item.data" :own="isOwnMessage(item.data)" :status="messageStatus(item.data)" :time="formatTime(item.data.created_at)" @edit="(mm:any)=>emit('startEdit', mm)" @delete="(id:number)=>emit('deleteMessage', id)" @pin="(mm:any)=>emit('togglePin', mm)" @reply="(mm:any)=>emit('reply', mm)" @jump="(id:number)=>emit('jumpToMessage', id)" />
                 </div>
-              </div>
-            </div>
+          </div>
           </template>
-        </div>
         <button v-if="!history.stickToBottom && history.unseenCount > 0" @click="emit('scroll-bottom')" class="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 bg-violet-600 text-white text-xs font-semibold rounded-full shadow-lg px-4 py-2 active:scale-95 transition">↓ {{ history.unseenCount }} нов.</button>
       </div>
       <ContextMenu ref="cm" :model="menuModel" :pt="menuPt" />

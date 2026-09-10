@@ -164,7 +164,6 @@ export function useChat() {
         messages.value = mergeFetched(currentId, Array.isArray(d.messages) ? d.messages : [])
         await nextTick()
         if (history.stickToBottom.value) history.scrollToBottom()
-        else history.measureRows()
       }
     } finally { refreshing.value = false }
   }
@@ -629,7 +628,6 @@ export function useChat() {
       }
       await nextTick()
       if (history.stickToBottom.value) history.scrollToBottom()
-      else history.measureRows()
     } catch {}
   }
 
