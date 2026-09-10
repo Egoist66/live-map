@@ -435,15 +435,37 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
     const lat = homeZoneState.lat
     const lng = homeZoneState.lng
     const radiusKm = homeZoneState.radiusKm
+    const data = homeZoneGeoJson(lat, lng, radiusKm)
+    let hasSource = false
     try {
       const source = (map as any)?.getSource?.('home-zone-src') as any
-      if (source?.setData) {
-        source.setData(homeZoneGeoJson(lat, lng, radiusKm))
-        return
-      }
+      hasSource = !!source?.setData
+    } catch {
+      hasSource = false
+    }
+    let hasFill = false
+    let hasLine = false
+    try {
+      hasFill = !!(map as any)?.getLayer?.('home-zone-fill')
+      hasLine = !!(map as any)?.getLayer?.('home-zone-line')
+    } catch {
+      hasFill = false
+      hasLine = false
+    }
+    if (hasSource && hasFill && hasLine) {
+      try {
+        const source = (map as any)?.getSource?.('home-zone-src') as any
+        source?.setData?.(data)
+      } catch {}
+      return
+    }
+    try {
+      if (hasFill) (map as any)?.removeLayer?.('home-zone-fill')
+      if (hasLine) (map as any)?.removeLayer?.('home-zone-line')
+      if (hasSource) (map as any)?.removeSource?.('home-zone-src')
     } catch {}
     try {
-      ;(map as any)?.addSource?.('home-zone-src', { type: 'geojson', data: homeZoneGeoJson(lat, lng, radiusKm) })
+      ;(map as any)?.addSource?.('home-zone-src', { type: 'geojson', data })
     } catch {
       return
     }
@@ -474,14 +496,14 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
   function drawHomeZone(lat: number, lng: number, radiusKm: number) {
     homeZoneState = { lat, lng, radiusKm }
     if (!map) return
+    renderHomeZoneLayer()
     try {
       const loaded = (map as any)?.isStyleLoaded?.() ?? true
       if (!loaded) {
         try { (map as any)?.once?.('load', () => renderHomeZoneLayer()) } catch {}
-        return
+        try { (map as any)?.once?.('idle', () => renderHomeZoneLayer()) } catch {}
       }
     } catch {}
-    renderHomeZoneLayer()
   }
 
   function showHomeZone(lat: number | null | undefined, lng: number | null | undefined, radiusKm: number | null | undefined) {
