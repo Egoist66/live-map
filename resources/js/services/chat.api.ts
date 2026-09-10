@@ -97,7 +97,7 @@ export const chatApi = {
     }
     const form = new FormData()
     form.append('body', body || '')
-    form.append('reply_to_id', String(replyToId ?? ''))
+    if (replyToId != null) form.append('reply_to_id', String(replyToId))
     form.append('attachment', attachment, attachment.name)
     const { data } = await api.post<Message>(`/api/conversations/${convId}/messages`, form)
     return data

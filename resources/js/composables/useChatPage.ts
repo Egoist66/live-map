@@ -109,7 +109,11 @@ export function useChatPage(initialConversationId?: number) {
       }
       if (status === 403 && msg.includes('заблокировал')) notifyBlockedBy(msg)
       else if (status === 403) toast?.add({ severity: 'warn', summary: 'Нельзя отправить', detail: msg || 'Сообщение не доставлено', life: 3500 })
-      else if (msg) toast?.add({ severity: 'error', summary: 'Ошибка', detail: msg, life: 3500 })
+      else {
+        const isTimeout = (e as any)?.code === 'ECONNABORTED'
+        const fallback = isTimeout ? 'Нет соединения — сообщение не отправлено, попробуйте снова' : 'Не удалось отправить сообщение'
+        toast?.add({ severity: 'error', summary: 'Не отправлено', detail: msg || fallback, life: 3500 })
+      }
     }
   }
 

@@ -65,6 +65,7 @@ class ConversationController extends Controller
         $rawMessages = $conversation->messages()
             ->with(['sender:id,name,avatar_path', 'replyTo.sender:id,name'])
             ->when($clearedAt, fn ($q) => $q->where('created_at', '>', $clearedAt))
+            ->reorder()
             ->orderByDesc('id')
             ->limit(100)
             ->get()

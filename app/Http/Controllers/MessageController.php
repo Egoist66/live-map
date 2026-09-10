@@ -19,7 +19,7 @@ class MessageController extends Controller
         abort_unless($conversation->hasParticipant($request->user()->id),403);
         $clearedAt = $conversation->participantRows()->where('user_id', $request->user()->id)->value('cleared_at');
         $before = $request->input('before');
-        $q = $conversation->messages()->with(['sender:id,name,avatar_path', 'replyTo.sender:id,name'])->orderByDesc('created_at');
+        $q = $conversation->messages()->with(['sender:id,name,avatar_path', 'replyTo.sender:id,name'])->reorder()->orderByDesc('id');
         if ($before) $q->where('id','<',$before);
         if ($clearedAt) $q->where('created_at', '>', $clearedAt);
         $collection = $q->limit(30)->get();

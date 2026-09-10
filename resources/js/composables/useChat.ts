@@ -67,6 +67,7 @@ export function useChat() {
   let activeChatId: number | null = null
   let alive = true
   const recentIds = new Map<number, number>()
+  const deletedIds = new Set<number>()
   let typingTimeout: ReturnType<typeof setTimeout> | null = null
   let typingThrottleUntil = 0
   const typingExpire = new Map<number, ReturnType<typeof setTimeout>>()
@@ -128,27 +129,79 @@ export function useChat() {
   function sortConversations() {
     conversations.value = [...conversations.value].sort((a:any,b:any)=> new Date(b.last_message_at||b.updated_at||0).getTime() - new Date(a.last_message_at||a.updated_at||0).getTime())
   }
+  /**
+   * Новейшее сообщение списка по id (страховка от порядка с сервера).
+   * @param list сообщения диалога
+   * @returns сообщение с максимальным id или null
+   */
+  function newestMessage(list: any[]): any | null {
+    let best: any | null = null
+    for (const m of (Array.isArray(list) ? list : [])) {
+      if (m?.id == null) continue
+      if (best == null || Number(m.id) > Number(best.id)) best = m
+    }
+    return best
+  }
   function bumpConversation(msg: any) {
     if (!msg || msg.conversation_id == null) return
     const idx = conversations.value.findIndex((c) => c?.id === msg.conversation_id)
-    if (idx === -1) { loadConversations(); return }
-    const conv: any = conversations.value[idx]
+    if (idx === -1) {
+      void loadConversations()
+        .then(() => {
+          const retry = conversations.value.findIndex((c) => c?.id === msg.conversation_id)
+          if (retry !== -1) applyPreview(conversations.value[retry] as any, msg)
+        })
+        .catch(() => {})
+      return
+    }
+    applyPreview(conversations.value[idx] as any, msg)
+    conversations.value = [conversations.value[idx], ...conversations.value.filter((c) => c?.id !== msg.conversation_id)]
+  }
+  /**
+   * Кладет свежее сообщение в превью диалога.
+   * @param conv строка диалога из сайдбара
+   * @param msg сообщение (отправка или сокет)
+   */
+  function applyPreview(conv: any, msg: any): void {
+    if (!conv || !msg) return
     conv.last_message = msg
     conv.last_message_at = msg.created_at
-    conversations.value = [conv, ...conversations.value.filter((c) => c?.id !== msg.conversation_id)]
   }
   function syncConversationPreview(msg: any) {
     bumpConversation(msg)
   }
+  /**
+   * Сливает свежий список диалогов с локальным, не откатывая превью.
+   * Ответ сервера мог стартовать до нашей отправки — более новое
+   * локальное last_message (по id) сохраняется.
+   * @param fresh диалоги с сервера
+   * @returns merged список для сайдбара
+   */
+  function mergeConversationPreviews(fresh: Conversation[]): Conversation[] {
+    const prev = new Map<number, any>()
+    for (const c of conversations.value) {
+      if (c?.id != null) prev.set(Number(c.id), c)
+    }
+    for (const n of fresh as any[]) {
+      const old = prev.get(Number(n?.id))
+      const oldLast = old?.last_message
+      const newLast = (n as any)?.last_message
+      if (oldLast?.id != null && Number(oldLast.id) > Number(newLast?.id ?? 0) && !deletedIds.has(Number(oldLast.id))) {
+        ;(n as any).last_message = oldLast
+        ;(n as any).last_message_at = old.last_message_at
+      }
+    }
+    return fresh
+  }
   async function loadConversations() {
     const w = window as any
-    if (loadConversationsInflight) return loadConversationsInflight.then(d => { conversations.value = normalizeConversations(d); return conversations.value })
-    if (w.__conversationsInflight) return w.__conversationsInflight.then((d: Conversation[]) => { conversations.value = normalizeConversations(d); return conversations.value })
+    if (loadConversationsInflight) return loadConversationsInflight.then(d => { conversations.value = mergeConversationPreviews(normalizeConversations(d)); return conversations.value })
+    if (w.__conversationsInflight) return w.__conversationsInflight.then((d: Conversation[]) => { conversations.value = mergeConversationPreviews(normalizeConversations(d)); return conversations.value })
     loadConversationsInflight = chatApi.conversations() as Promise<Conversation[]>
     w.__conversationsInflight = loadConversationsInflight
     try {
       const data = await loadConversationsInflight
-      conversations.value = normalizeConversations(data)
+      conversations.value = mergeConversationPreviews(normalizeConversations(data))
       return conversations.value
     } finally { loadConversationsInflight = null; w.__conversationsInflight = null }
   }
@@ -225,12 +278,12 @@ export function useChat() {
       activeConv.value = d
       const detailMessages = Array.isArray(d.messages) ? d.messages : []
       messages.value = mergeFetched(id, detailMessages)
-      const last = detailMessages[detailMessages.length - 1] as any
+      const newest = newestMessage(detailMessages)
       const conv = conversations.value.find((c) => c?.id === id)
       if (conv) {
         conv.unread_count = 0
-        if (last) bumpConversation(last)
-      } else if (last) {
+        if (newest) bumpConversation(newest)
+      } else if (newest) {
         loadConversations()
       }
       try { await chatApi.markRead(id) } catch {}
@@ -257,9 +310,33 @@ export function useChat() {
     }
   }
 
+  /**
+   * Заменяет optimistic-сообщение ответом сервера в открытом диалоге.
+   * @param tempId временный id optimistic-сообщения
+   * @param msg сообщение с сервера
+   */
+  function applySentResult(tempId: number, msg: any): void {
+    const tempIdx = messages.value.findIndex((m) => m?.id === tempId)
+    const existsIdx = messages.value.findIndex((m) => m?.id === msg.id)
+    if (tempIdx !== -1 && existsIdx !== -1) {
+      messages.value.splice(tempIdx, 1)
+      const real = messages.value.find((x) => x?.id === msg.id) as any
+      if (real) real.justSent = true
+      return
+    }
+    if (tempIdx !== -1) {
+      ;(messages.value[tempIdx] as any) = { ...(msg as any), justSent: true }
+      return
+    }
+    if (existsIdx === -1) {
+      messages.value.push({ ...(msg as any), justSent: true } as any)
+    }
+  }
+
   async function sendMessage(body: string, replyTo?: any | null, attachmentFile?: File | null) {
+    const targetId = selectedId.value
     const text = body.trim()
-    if (!selectedId.value || (!text && !attachmentFile)) return
+    if (!targetId || (!text && !attachmentFile)) return
     if (sending.value) return
     const tempId = -Math.floor(Math.random()*1e9) - Date.now()%1e6
     const uid = getUid()
@@ -278,28 +355,20 @@ export function useChat() {
       kind: /^image\//i.test(attachmentFile.type) ? 'image' : 'file',
       local: true,
     } : null
-    const optimistic: any = { id: tempId, conversation_id: selectedId.value, reply_to_id: replyTo?.id ?? null, reply_to: replySnapshot, sender_id: uid, body: text, type: optimisticAttachment ? optimisticAttachment.kind : 'text', attachment: optimisticAttachment, created_at: new Date().toISOString(), pending: true }
+    const optimistic: any = { id: tempId, conversation_id: targetId, reply_to_id: replyTo?.id ?? null, reply_to: replySnapshot, sender_id: uid, body: text, type: optimisticAttachment ? optimisticAttachment.kind : 'text', attachment: optimisticAttachment, created_at: new Date().toISOString(), pending: true }
     messages.value.push(optimistic)
     history.notifyAppended()
     sending.value = true
     try {
-      const msg = await chatApi.sendMessage(selectedId.value!, text, replyTo?.id ?? null, attachmentFile ?? null)
+      const msg = await chatApi.sendMessage(targetId, text, replyTo?.id ?? null, attachmentFile ?? null)
       if (optimisticAttachment?.url) {
         try { URL.revokeObjectURL(optimisticAttachment.url) } catch {}
       }
-      const tempIdx = messages.value.findIndex((m) => m?.id === tempId)
-      const existsIdx = messages.value.findIndex((m) => m?.id === msg.id)
-      if (tempIdx !== -1 && existsIdx !== -1) {
-        messages.value.splice(tempIdx, 1)
-        const real = messages.value.find((x)=> x?.id===msg.id) as any
-        if (real) real.justSent = true
-      } else if (tempIdx !== -1) {
-        (messages.value[tempIdx] as any) = { ...(msg as any), justSent: true }
-      } else if (existsIdx === -1) {
-        messages.value.push({ ...(msg as any), justSent: true } as any)
+      if (selectedId.value === targetId) {
+        applySentResult(tempId, msg)
+        history.notifyAppended()
       }
       syncConversationPreview(msg)
-      history.notifyAppended()
       setTimeout(() => { const m = messages.value.find((x) => x?.id === msg.id) as any; if (m) m.justSent = false }, 600)
     } catch (e: any) {
       const idx = messages.value.findIndex((m) => m?.id === tempId)
@@ -510,6 +579,11 @@ export function useChat() {
     if (!payload) return
     const mid = Number(payload.message_id ?? payload.id)
     if (!mid) return
+    deletedIds.add(mid)
+    if (deletedIds.size > 500) {
+      const first = deletedIds.values().next().value as number | undefined
+      if (first !== undefined) deletedIds.delete(first)
+    }
     messages.value = messages.value.filter((m) => m?.id !== mid)
     const conv = conversations.value.find((c) => (c as any)?.last_message?.id === mid)
     if (conv) loadConversations()
