@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { Head, Link, usePage } from '@inertiajs/vue3'
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
+import DatingQuestionnaireDialog from '@/Components/Features/Dating/DatingQuestionnaireDialog.vue'
+import SwipeDetailsDialog from '@/Components/Features/Dating/SwipeDetailsDialog.vue'
 import { useSwipes } from '@/composables/useSwipes'
 import { useSwipeCardPhotos } from '@/composables/useSwipeCardPhotos'
 import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
@@ -29,6 +31,15 @@ const Layout = computed(() => (isAuth.value ? AuthenticatedLayout : GuestLayout)
 const s = useSwipes()
 const cardPhotos = useSwipeCardPhotos(() => s.current.value)
 const { selectPt } = useDropdownMenuStyle()
+
+const showQuestionnaire = ref(false)
+const detailsCard = ref<any | null>(null)
+
+function goalShort(card: any): string {
+  const custom = String(card?.custom_goal ?? '').trim()
+  if (custom) return custom.length > 42 ? `${custom.slice(0, 42)}…` : custom
+  return s.goalLabel(card?.goal ?? null)
+}
 
 const dialogPt = {
   root: { class: '!rounded-3xl dark:!bg-zinc-900 dark:!border-zinc-700' },
@@ -106,6 +117,7 @@ onMounted(async () => {
             <Chip :label="s.quotaLabel.value" icon="pi pi-send" class="!rounded-full" />
             <Chip v-if="s.isQuotaEmpty.value" label="Лимит исчерпан — мэтчи пишут бесплатно" icon="pi pi-heart-fill" class="!rounded-full !bg-rose-100 !text-rose-700 dark:!bg-rose-950 dark:!text-rose-300 dark:!border dark:!border-rose-900" />
             <span class="flex-1" />
+            <Button icon="pi pi-user-edit" severity="secondary" rounded outlined size="small" aria-label="Моя анкета" title="Моя анкета — что ищешь, о себе, интересы" @click="showQuestionnaire = true" />
             <Button icon="pi pi-question-circle" severity="secondary" rounded outlined size="small" aria-label="Как работают свайпы" title="Как работают свайпы" @click="s.showHelp.value = true" />
             <Button icon="pi pi-sliders-h" severity="secondary" rounded outlined size="small" aria-label="Фильтры" @click="s.showFilters.value = true" />
             <Button icon="pi pi-refresh" severity="secondary" rounded outlined size="small" aria-label="Обновить ленту" :loading="s.loading.value" @click="s.loadFeed()" />
@@ -314,6 +326,14 @@ onMounted(async () => {
                 <div v-if="s.current.value.liked_me" class="absolute top-4 right-4 pointer-events-none">
                   <Chip label="Лайкнул тебя" icon="pi pi-heart-fill" class="!rounded-full !bg-rose-500 !text-white !border-0" />
                 </div>
+                <button
+                  type="button"
+                  aria-label="Подробнее об анкете"
+                  title="Подробнее — интересы, о себе"
+                  class="absolute top-4 left-4 w-10 h-10 rounded-full bg-black/45 backdrop-blur grid place-items-center text-white text-lg active:scale-95 transition pointer-events-auto"
+                  @pointerdown.stop
+                  @click="detailsCard = s.current.value"
+                >ⓘ</button>
 
                 <div class="absolute bottom-0 inset-x-0 p-4 sm:p-5 text-white pointer-events-none">
                   <div class="flex items-baseline gap-2">
@@ -321,7 +341,7 @@ onMounted(async () => {
                     <span class="text-lg sm:text-xl font-bold opacity-90">{{ s.ageLabel(s.current.value) }}</span>
                   </div>
                   <div class="mt-2 flex flex-wrap gap-1.5">
-                    <Chip :label="s.goalLabel(s.current.value.goal)" class="!rounded-full !bg-white/15 !text-white !border-0 text-xs" />
+                    <Chip :label="goalShort(s.current.value)" class="!rounded-full !bg-white/15 !text-white !border-0 text-xs" />
                     <Chip v-if="s.current.value.city" :label="s.current.value.city" icon="pi pi-map-marker" class="!rounded-full !bg-white/15 !text-white !border-0 text-xs" />
                     <Chip v-if="s.current.value.distance_km != null" :label="`${s.current.value.distance_km} км`" icon="pi pi-send" class="!rounded-full !bg-white/15 !text-white !border-0 text-xs" />
                   </div>
@@ -484,6 +504,9 @@ onMounted(async () => {
         </div>
       </Dialog>
 
+      <DatingQuestionnaireDialog :open="showQuestionnaire" @update:open="(v:boolean)=>{ showQuestionnaire = v }" />
+      <SwipeDetailsDialog :card="detailsCard" @close="detailsCard = null" />
+
       <Dialog :visible="s.showHelp.value" @update:visible="(v:boolean)=>{ s.showHelp.value = v }" modal header="Как работают свайпы" :style="{ width: '420px', maxWidth: '94vw', maxHeight: '92dvh' }" :pt="dialogPt">
         <div class="flex flex-col gap-3 text-sm text-stone-600 dark:text-zinc-300 pt-1">
           <div>Лента — без geo-ограничений: листай всех людей в системе, не важно где они находятся.</div>
@@ -492,6 +515,7 @@ onMounted(async () => {
           <div>Избранное — лайкнутые без мэтча. Лимиты: Free до 2, Pro до 5, Business до 15.</div>
           <div>Просвайпанных можно вернуть один раз кнопкой «Начать заново» — лента снова покажет всех. Админу сброс доступен безлимитно.</div>
           <div>Таб «Активные» — кто сейчас в ULove. Открывай анкету, пиши, если человек не закрыл сообщения.</div>
+          <div>Кнопка ⓘ на карточке — подробная анкета: что ищет, интересы, о себе. Своя анкета — иконка-карандаш сверху.</div>
           <div class="rounded-2xl bg-stone-100 dark:bg-zinc-800 px-3 py-2 text-center font-bold">Строго 18+</div>
         </div>
       </Dialog>

@@ -18,6 +18,8 @@ export interface SwipeCard {
   city: string | null
   distance_km: number | null
   goal: string | null
+  custom_goal: string | null
+  about: string | null
   interests: string[]
   last_seen_at: string | null
   is_match: boolean

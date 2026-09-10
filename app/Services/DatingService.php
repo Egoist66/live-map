@@ -697,7 +697,7 @@ class DatingService
             ->select([
                 'id', 'name', 'gender', 'birth_date', 'bio', 'avatar_path',
                 'home_city', 'home_lat', 'home_lng', 'last_seen_at',
-                'dating_goal', 'dating_interests', 'dating_hide_name', 'dating_hide_age',
+                'dating_goal', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_hide_name', 'dating_hide_age',
                 'plan', 'plan_expires_at', 'is_admin', 'role',
             ])
             ->with(['profilePhotos' => fn ($q) => $q->orderBy('sort_order')->limit(self::SWIPE_PHOTOS_LIMIT_PRO)])
@@ -793,7 +793,7 @@ class DatingService
             ->select([
                 'id', 'name', 'gender', 'birth_date', 'bio', 'avatar_path',
                 'home_city', 'home_lat', 'home_lng', 'last_seen_at',
-                'dating_goal', 'dating_interests', 'dating_hide_name', 'dating_hide_age',
+                'dating_goal', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_hide_name', 'dating_hide_age',
                 'dating_match_only', 'message_privacy', 'allow_random_messages',
                 'plan', 'plan_expires_at', 'is_admin', 'role',
             ])
@@ -945,6 +945,8 @@ class DatingService
             'city' => $candidate->home_city,
             'distance_km' => $distanceKm !== null ? round($distanceKm, 1) : null,
             'goal' => $candidate->dating_goal,
+            'custom_goal' => $candidate->dating_custom_goal,
+            'about' => $candidate->dating_about,
             'interests' => $candidate->dating_interests ?? [],
             'last_seen_at' => $candidate->last_seen_at?->toISOString(),
             'is_match' => $isMatch,

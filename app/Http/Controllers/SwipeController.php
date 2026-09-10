@@ -172,6 +172,8 @@ class SwipeController extends Controller
         $data = $request->validate([
             'dating_enabled' => 'sometimes|boolean',
             'dating_goal' => 'nullable|in:love,flirt,friendship,chat,interests',
+            'dating_custom_goal' => 'nullable|string|max:60',
+            'dating_about' => 'nullable|string|max:1000',
             'dating_interests' => 'nullable|array|max:10',
             'dating_interests.*' => 'string|max:40',
             'dating_gender_pref' => 'sometimes|in:male,female,all',
@@ -179,6 +181,29 @@ class SwipeController extends Controller
             'dating_hide_age' => 'sometimes|boolean',
             'dating_match_only' => 'sometimes|boolean',
         ]);
+
+        $customGoal = isset($data['dating_custom_goal']) ? trim((string) $data['dating_custom_goal']) : null;
+        $data['dating_custom_goal'] = $customGoal !== '' ? $customGoal : null;
+        $about = isset($data['dating_about']) ? trim((string) $data['dating_about']) : null;
+        $data['dating_about'] = $about !== '' ? $about : null;
+        $interests = $data['dating_interests'] ?? null;
+        if (is_array($interests)) {
+            $cleaned = [];
+            foreach ($interests as $interest) {
+                $tag = mb_strtolower(trim((string) $interest));
+                if ($tag === '' || in_array($tag, $cleaned, true)) {
+                    continue;
+                }
+                $cleaned[] = mb_substr($tag, 0, 40);
+            }
+            $data['dating_interests'] = array_values(array_slice($cleaned, 0, 10));
+        }
+
+        \App\Services\ContentModeration::assertClean(
+            $data['dating_about'] ?? null,
+            $data['dating_custom_goal'] ?? null,
+            ...($data['dating_interests'] ?? [])
+        );
 
         $wantsHide = ($data['dating_hide_name'] ?? false) || ($data['dating_hide_age'] ?? false);
 
@@ -193,6 +218,8 @@ class SwipeController extends Controller
         return response()->json($me->only([
             'dating_enabled',
             'dating_goal',
+            'dating_custom_goal',
+            'dating_about',
             'dating_interests',
             'dating_gender_pref',
             'dating_hide_name',
