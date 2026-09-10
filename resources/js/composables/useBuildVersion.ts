@@ -14,7 +14,8 @@ import { hardRefreshToLatest } from '@/pwa/cache.service'
  * const { buildUpdateAvailable, refreshApp, init } = useBuildVersion()
  */
 
-const POLL_INTERVAL_MS = 5 * 60 * 1000
+const POLL_INTERVAL_MS = 60 * 1000
+const DISMISSED_KEY = 'uconnect-dismissed-build'
 
 const initialVersion = ref<string | null>(null)
 const latestVersion = ref<string | null>(null)
@@ -66,6 +67,10 @@ export async function checkForBuildUpdate(): Promise<boolean> {
     }
 
     const mismatch = latest !== initialVersion.value
+    if (mismatch && latest === readDismissedVersion()) {
+      buildUpdateAvailable.value = false
+      return false
+    }
     buildUpdateAvailable.value = mismatch
 
     return mismatch
@@ -74,6 +79,31 @@ export async function checkForBuildUpdate(): Promise<boolean> {
   } finally {
     checking.value = false
   }
+}
+
+/**
+ * Версия, для которой пользователь нажал «Позже».
+ * @returns хэш отклонённого билда или null
+ */
+function readDismissedVersion(): string | null {
+  try {
+    return window.localStorage.getItem(DISMISSED_KEY)
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Скрыть баннер до следующего билда.
+ * Запоминает текущую серверную версию, чтобы опросы не поднимали баннер снова.
+ */
+export function dismissBuildUpdate(): void {
+  buildUpdateAvailable.value = false
+  try {
+    if (latestVersion.value) {
+      window.localStorage.setItem(DISMISSED_KEY, latestVersion.value)
+    }
+  } catch {}
 }
 
 /**
@@ -86,6 +116,9 @@ export async function refreshApp(): Promise<void> {
 
   refreshing.value = true
   buildUpdateAvailable.value = false
+  try {
+    window.localStorage.removeItem(DISMISSED_KEY)
+  } catch {}
 
   try {
     await hardRefreshToLatest()
@@ -100,6 +133,23 @@ function handleVisibility(): void {
   }
 }
 
+function handleFocus(): void {
+  void checkForBuildUpdate()
+}
+
+/**
+ * Убрать служебный ?v= после жёсткого обновления.
+ */
+function stripRefreshParam(): void {
+  try {
+    const url = new URL(window.location.href)
+    if (url.searchParams.has('v')) {
+      url.searchParams.delete('v')
+      window.history.replaceState({}, '', url.toString())
+    }
+  } catch {}
+}
+
 /**
  * Хук версии билда: опрос, флаги, жесткое обновление.
  */
@@ -112,6 +162,7 @@ export function useBuildVersion() {
     }
 
     inited = true
+    stripRefreshParam()
     initialVersion.value = readInitialVersion()
 
     void checkForBuildUpdate()
@@ -121,14 +172,11 @@ export function useBuildVersion() {
     }, POLL_INTERVAL_MS)
 
     document.addEventListener('visibilitychange', handleVisibility)
+    window.addEventListener('focus', handleFocus)
     window.addEventListener('online', handleOnline)
 
     try {
       offNavigate = router.on('navigate', () => {
-        const fresh = readInitialVersion()
-        if (fresh !== null) {
-          initialVersion.value = fresh
-        }
         void checkForBuildUpdate()
       })
     } catch {}
@@ -145,6 +193,7 @@ export function useBuildVersion() {
     }
 
     document.removeEventListener('visibilitychange', handleVisibility)
+    window.removeEventListener('focus', handleFocus)
     window.removeEventListener('online', handleOnline)
     offNavigate?.()
     offNavigate = null
@@ -163,5 +212,6 @@ export function useBuildVersion() {
     destroy,
     checkForBuildUpdate,
     refreshApp,
+    dismissBuildUpdate,
   }
 }

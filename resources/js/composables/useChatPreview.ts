@@ -6,25 +6,29 @@ const PREVIEW_LIMIT = 120
  * Текст превью последнего сообщения для сайдбара чатов.
  *
  * Показывает тело сообщения, а для сообщений без текста (только вложение)
- * — подпись вида «📷 Фото · name.jpg». Пустой диалог даёт «Нет сообщений».
+ * — подпись вида «📷 Фото · name.jpg». Свои сообщения помечаются
+ * префиксом «Вы: ». Пустой диалог даёт emptyLabel.
  *
  * @param lastMessage последнее сообщение диалога или null
  * @param emptyLabel текст для пустого диалога
+ * @param isOwn true если последнее сообщение отправлено мной
  * @returns однострочный текст превью
  */
-export function chatPreviewText(lastMessage: Message | null | undefined, emptyLabel = 'Нет сообщений'): string {
+export function chatPreviewText(lastMessage: Message | null | undefined, emptyLabel = 'Нет сообщений', isOwn = false): string {
   const body = String(lastMessage?.body ?? '')
     .replace(/\s+/g, ' ')
     .trim()
+  const prefix = isOwn ? 'Вы: ' : ''
   if (body) {
-    return body.length > PREVIEW_LIMIT ? `${body.slice(0, PREVIEW_LIMIT)}…` : body
+    const text = body.length > PREVIEW_LIMIT ? `${body.slice(0, PREVIEW_LIMIT)}…` : body
+    return `${prefix}${text}`
   }
   const attachment = (lastMessage as any)?.attachment ?? null
   const kind = String(attachment?.kind ?? (lastMessage as any)?.type ?? '')
   if (attachment?.url || kind === 'image' || kind === 'file') {
     const name = String(attachment?.name ?? '').trim()
     const label = kind === 'image' ? '📷 Фото' : '📎 Файл'
-    return name ? `${label} · ${name}` : label
+    return name ? `${prefix}${label} · ${name}` : `${prefix}${label}`
   }
   return emptyLabel
 }
@@ -32,8 +36,20 @@ export function chatPreviewText(lastMessage: Message | null | undefined, emptyLa
 /**
  * Хук превью диалогов для сайдбара: последний текст свой/чужой + вложения.
  *
+ * @param currentUserId id текущего пользователя для префикса «Вы: »
  * @returns метод previewText для строк списка чатов
  */
-export function useChatPreview() {
-  return { previewText: chatPreviewText }
+export function useChatPreview(currentUserId?: number) {
+  const uid = Number(currentUserId ?? 0) || 0
+  /**
+   * Превью диалога с автопрефиксом своих сообщений.
+   * @param lastMessage последнее сообщение диалога
+   * @param emptyLabel текст для пустого диалога
+   * @returns однострочный текст превью
+   */
+  function previewText(lastMessage: Message | null | undefined, emptyLabel = 'Нет сообщений'): string {
+    const isOwn = uid > 0 && Number((lastMessage as any)?.sender_id ?? 0) === uid
+    return chatPreviewText(lastMessage, emptyLabel, isOwn)
+  }
+  return { previewText }
 }

@@ -28,7 +28,7 @@ export function useAppRefreshBanner() {
 
   function dismiss(): void {
     pwa.dismissUpdate()
-    build.buildUpdateAvailable.value = false
+    build.dismissBuildUpdate()
   }
 
   return { visible, isBuildUpdate, busy, online: pwa.online, apply, dismiss }

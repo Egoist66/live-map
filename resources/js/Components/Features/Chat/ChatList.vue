@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Link } from '@inertiajs/vue3'
+import { Link, usePage } from '@inertiajs/vue3'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
 import Menu from 'primevue/menu'
@@ -22,7 +22,7 @@ const filteredUlove = computed(() => {
 })
 const emit = defineEmits<{ (e: 'update:filter', v: string): void; (e: 'open', id: number): void; (e: 'startChat', u: any): void; (e: 'deleteChat', id: number): void; (e: 'block', id: number, name?: string): void; (e: 'unblock', id: number): void; (e: 'removeFriend', f: any): void; (e: 'accept', id: number): void; (e: 'decline', id: number): void; (e: 'sheet', p: any): void }>()
 
-const { previewText } = useChatPreview()
+const { previewText } = useChatPreview(Number((usePage().props.auth as any)?.user?.id ?? 0))
 const rowMenu = useChatRowMenu({
   onDeleteChat: (id: number) => emit('deleteChat', id),
   onBlock: (id: number, name?: string) => emit('block', id, name),
@@ -48,7 +48,7 @@ const { menuPt } = useDropdownMenuStyle()
         <div class="text-xs text-stone-500 mt-1">Найдите человека через поиск выше</div>
       </div>
       <div v-for="c in conversations" :key="c.id" class="group w-full flex items-center gap-0 text-left select-none">
-        <button @click="emit('open', c.id)" :class="selectedId === c.id ? 'bg-stone-50 dark:bg-zinc-800' : ''" class="flex-1 flex items-center gap-3 p-3.5 lg:p-3 text-left min-w-0 hover:bg-stone-50/70 dark:hover:bg-zinc-800/70 transition-colors">
+        <button @click="emit('open', c.id)" :class="selectedId === c.id ? 'bg-violet-50 dark:bg-violet-500/10 shadow-[inset_3px_0_0_0_#8b5cf6]' : 'hover:bg-stone-50/70 dark:hover:bg-zinc-800/70'" class="flex-1 flex items-center gap-3 p-3.5 lg:p-3 text-left min-w-0 transition-colors">
           <span class="relative shrink-0">
             <Avatar :image="avatarSrcFor(c.other)" shape="circle" size="large" class="!w-11 !h-11 [&_img]:object-cover" :pt="{ image: { class: 'object-cover' } }" />
             <OnlineDot :online="isOnline(c.other?.id, c.other?.last_seen_at)" />
@@ -71,7 +71,7 @@ const { menuPt } = useDropdownMenuStyle()
         <div class="text-xs text-stone-500 mt-1">Лайкай в ULove — взаимность появится здесь</div>
       </div>
       <div v-for="c in filteredUlove" :key="c.id" class="group w-full flex items-center gap-0 text-left select-none">
-        <button @click="emit('open', c.id)" :class="selectedId === c.id ? 'bg-rose-50 dark:bg-rose-950/30' : ''" class="flex-1 flex items-center gap-3 p-3.5 lg:p-3 text-left min-w-0 hover:bg-rose-50/70 dark:hover:bg-rose-950/20 transition-colors">
+        <button @click="emit('open', c.id)" :class="selectedId === c.id ? 'bg-rose-50 dark:bg-rose-500/10 shadow-[inset_3px_0_0_0_#f43f5e]' : 'hover:bg-rose-50/70 dark:hover:bg-rose-950/20'" class="flex-1 flex items-center gap-3 p-3.5 lg:p-3 text-left min-w-0 transition-colors">
           <span class="relative shrink-0">
             <Avatar :image="avatarSrcFor(c.other)" shape="circle" size="large" class="!w-11 !h-11 [&_img]:object-cover ring-2 ring-rose-300 dark:ring-rose-700" :pt="{ image: { class: 'object-cover' } }" />
             <OnlineDot :online="isOnline(c.other?.id, c.other?.last_seen_at)" />
