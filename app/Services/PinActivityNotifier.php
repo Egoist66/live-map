@@ -38,15 +38,17 @@ class PinActivityNotifier
         if ($activity) static::dispatchActivity($activity, $pin, null);
     }
 
-    public static function comment(Pin $pin, User $actor, PinComment $comment): void
+    public static function comment(Pin $pin, User $actor, PinComment $comment, array $exceptOwnerIds = []): void
     {
         $pin->refresh();
         $activity = null;
-        if ((int) $actor->id !== (int) $pin->user_id) {
+        $ownerId = (int) $pin->user_id;
+        $mentioned = array_map('intval', $exceptOwnerIds);
+        if ((int) $actor->id !== $ownerId && ! in_array($ownerId, $mentioned, true)) {
             $activity = PinActivity::create([
                 'pin_id' => $pin->id,
                 'actor_id' => $actor->id,
-                'owner_id' => $pin->user_id,
+                'owner_id' => $ownerId,
                 'kind' => 'comment',
                 'comment_id' => $comment->id,
                 'excerpt' => static::excerpt($comment->content),
@@ -84,16 +86,37 @@ class PinActivityNotifier
             ]);
             $activity->load(['actor:id,name,avatar_path', 'pin:id,title,category']);
             static::dispatchActivity($activity, $pin, null);
+            static::dropDuplicateComment($pin->id, $comment->id, (int) $ownerId);
         }
     }
 
-    public static function photoComment(ProfilePhoto $photo, User $actor, ProfilePhotoComment $comment): void
+    /**
+     * Убирает generic-строку «комментарий», если тот же коммент уже
+     * покрыт «упоминанием»: две иконки на один коммент не показываем.
+     */
+    private static function dropDuplicateComment(int $pinId, int $commentId, int $ownerId): void
     {
-        if ((int) $actor->id === (int) $photo->user_id) return;
+        try {
+            PinActivity::where('owner_id', $ownerId)
+                ->where('pin_id', $pinId)
+                ->where('comment_id', $commentId)
+                ->where('kind', 'comment')
+                ->whereNull('read_at')
+                ->delete();
+        } catch (\Throwable $e) {
+            Log::warning('duplicate comment cleanup failed', ['error' => $e->getMessage()]);
+        }
+    }
+
+    public static function photoComment(ProfilePhoto $photo, User $actor, ProfilePhotoComment $comment, array $exceptOwnerIds = []): void
+    {
+        $ownerId = (int) $photo->user_id;
+        if ((int) $actor->id === $ownerId) return;
+        if (in_array($ownerId, array_map('intval', $exceptOwnerIds), true)) return;
         $activity = PinActivity::create([
             'pin_id' => null,
             'actor_id' => $actor->id,
-            'owner_id' => $photo->user_id,
+            'owner_id' => $ownerId,
             'kind' => 'photo_comment',
             'photo_id' => $photo->id,
             'photo_comment_id' => $comment->id,
@@ -129,6 +152,15 @@ class PinActivityNotifier
             ]);
             $activity->load(['actor:id,name,avatar_path', 'photo:id,user_id,caption']);
             static::dispatchActivity($activity, null, $photo);
+            try {
+                PinActivity::where('owner_id', $ownerId)
+                    ->where('photo_comment_id', $comment->id)
+                    ->where('kind', 'photo_comment')
+                    ->whereNull('read_at')
+                    ->delete();
+            } catch (\Throwable $e) {
+                Log::warning('duplicate photo comment cleanup failed', ['error' => $e->getMessage()]);
+            }
         }
     }
 

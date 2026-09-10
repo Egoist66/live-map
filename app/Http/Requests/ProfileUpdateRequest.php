@@ -73,9 +73,9 @@ class ProfileUpdateRequest extends FormRequest
                 $isAdmin = (bool) ($this->user()?->is_admin || $this->user()?->role === 'admin');
                 if ($isAdmin) return;
                 $plan = $this->user()?->effectivePlan() ?? 'free';
-                $max = $plan === 'business' ? 50 : ($plan === 'pro' ? 15 : 5);
+                $max = $plan === 'business' ? 50 : ($plan === 'pro' ? 15 : 10);
                 if ((int) $value > $max) {
-                    $need = $max >= 50 ? 'Business' : ($max >= 15 ? 'Pro' : 'Free (5 км)');
+                    $need = $max >= 50 ? 'Business' : ($max >= 15 ? 'Pro' : 'Pro (Free — до 10 км)');
                     $fail("Максимум {$max} км на твоём тарифе. Нужно: {$need} — радиус = зона видимости пина.");
                 }
             }],

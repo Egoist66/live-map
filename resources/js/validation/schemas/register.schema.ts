@@ -21,7 +21,7 @@ export const registerSchema = toTypedSchema(
       password_confirmation: z.string().min(1, 'Подтвердите пароль'),
       home_lat: z.preprocess(toNumberOrNull, z.number({ invalid_type_error: 'Широта должна быть числом' }).min(-90).max(90).nullable().optional()),
       home_lng: z.preprocess(toNumberOrNull, z.number({ invalid_type_error: 'Долгота должна быть числом' }).min(-180).max(180).nullable().optional()),
-      home_radius_km: z.preprocess(toNumberOrNull, z.number({ invalid_type_error: 'Радиус должен быть числом' }).int().min(1, 'Минимум 1 км').max(5, 'На старте Free — максимум 5 км (как радиус пина)').nullable().optional()),
+      home_radius_km: z.preprocess(toNumberOrNull, z.number({ invalid_type_error: 'Радиус должен быть числом' }).int().min(1, 'Минимум 1 км').max(10, 'На старте Free — максимум 10 км (как радиус пина)').nullable().optional()),
       home_address: z.string().optional(),
       home_city: z.preprocess((v) => (v === '' || v === undefined ? null : v), z.string().max(120).nullable().optional()),
       country: z.preprocess((v) => (v === '' || v === undefined ? null : v), z.string().max(120).nullable().optional()),

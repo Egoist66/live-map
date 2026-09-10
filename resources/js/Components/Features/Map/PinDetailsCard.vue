@@ -1,15 +1,17 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import Chip from 'primevue/chip'
+import CommentComposerModal from '@/Components/Features/Map/CommentComposerModal.vue'
 import { avatarSrcFor } from '@/composables/useAvatar'
 import { pinBlurInfo } from '@/composables/useLocationBlur'
 import { usePinLifetime } from '@/composables/usePinLifetime'
 import { renderWithMentions } from '@/composables/useMentions'
 import { useMentionNavigate } from '@/composables/useMentionNavigate'
+import { useCommentComposer } from '@/composables/useCommentComposer'
 import { usePinCommentInput } from '@/composables/usePinCommentInput'
 import { useEnterToSend } from '@/composables/useEnterToSend'
 import { formatTime } from '@/utils/date'
@@ -24,10 +26,74 @@ const { handleEnterToSend, enterPlaceholder } = useEnterToSend()
 const editCommentPlaceholder = enterPlaceholder('Shift+Enter — новая строка', 'Новая строка')
 const newCommentPlaceholder = enterPlaceholder('Написать комментарий... Shift+Enter — новая строка', 'Написать комментарий...')
 const mentionNav = useMentionNavigate()
+const composer = useCommentComposer()
+const composerRef = ref<any>(null)
 const { cardRef, listRef, commentInput, cardStyle, onCommentInput, onInputFocus, pickMention, focusForReply, blurInput } = commentBox
 function onReply(root: any, target?: any) {
   emit('reply', root, target ?? root)
+  if (composer.useModalComposer.value) {
+    composer.openComposer('create')
+    return
+  }
   focusForReply()
+}
+function onStartEdit(c: any) {
+  emit('startEditComment', c)
+  if (composer.useModalComposer.value) {
+    nextTick(() => composer.openComposer('edit'))
+  }
+}
+const composerDraft = computed({
+  get: () => (composer.composerMode.value === 'edit' ? props.editingContent : props.commentText) ?? '',
+  set: (v: string) => {
+    if (composer.composerMode.value === 'edit') {
+      emit('update:editContent', v)
+    } else {
+      emit('update:comment', v)
+    }
+  },
+})
+const composerTitle = computed(() => {
+  if (composer.composerMode.value === 'edit') {
+    return 'Редактировать комментарий'
+  }
+  if (props.replyTo) {
+    const who = props.replyTo.is_anonymous ? 'анонима' : `@${props.replyTo.user?.name || 'пользователя'}`
+    return `Ответ для ${who}`
+  }
+  return 'Комментарий'
+})
+const composerSending = computed(() => (composer.composerMode.value === 'edit' ? props.savingComment : props.creatingComment))
+function onComposerDraftInput(cursor: number) {
+  onCommentInput(cursor, composerDraft.value)
+}
+function onComposerPick(u: any) {
+  try {
+    const applied = props.mentions?.applyMention?.(composerDraft.value, u)
+    if (!applied) {
+      return
+    }
+    composerDraft.value = applied.text
+    composerRef.value?.focusInput?.(applied.cursor)
+  } catch {}
+}
+function onComposerSubmit() {
+  if (!composerDraft.value.trim()) {
+    return
+  }
+  if (composer.composerMode.value === 'edit') {
+    emit('saveEditComment')
+  } else {
+    blurInput()
+    emit('sendComment')
+  }
+  composer.closeComposer()
+}
+function onComposerCancel() {
+  if (composer.composerMode.value === 'edit') {
+    emit('cancelEditComment')
+  }
+  composer.closeComposer()
 }
 function onSend() {
   blurInput()
@@ -83,11 +149,11 @@ function authorName(c: any): string { return c?.is_anonymous ? 'аноним' : 
           <span class="text-stone-400 dark:text-zinc-400 font-normal shrink-0">{{ formatTime(root.created_at) }}</span>
           <span v-if="(root.replies_count ?? (root.replies || []).length) > 0" class="ml-auto text-[10px] text-stone-400 dark:text-zinc-500 shrink-0">💬 {{ root.replies_count ?? (root.replies || []).length }}</span>
         </div>
-        <div v-if="editingCommentId !== root.id" class="text-sm text-stone-700 dark:text-zinc-200 mt-1.5 break-words comment-body" v-html="renderWithMentions(root.content)" @click="mentionNav.onRichClick"></div>
-        <div v-else class="mt-2"><Textarea :model-value="editingContent" @update:model-value="(v:any)=>emit('update:editContent', v)" @keydown="(e:any)=>handleEnterToSend(e, () => emit('saveEditComment'))" rows="2" autoResize maxlength="1000" class="w-full !rounded-xl" :placeholder="editCommentPlaceholder" /><div class="flex gap-2 mt-2"><Button label="Сохранить" size="small" rounded :loading="savingComment" @click="emit('saveEditComment')" /><Button label="Отмена" size="small" severity="secondary" outlined rounded @click="emit('cancelEditComment')" /></div></div>
-        <div v-if="editingCommentId !== root.id" class="mt-2 flex gap-1 items-center">
+        <div v-if="editingCommentId !== root.id || composer.useModalComposer.value" class="text-sm text-stone-700 dark:text-zinc-200 mt-1.5 break-words comment-body" v-html="renderWithMentions(root.content)" @click="mentionNav.onRichClick"></div>
+        <div v-else-if="!composer.useModalComposer.value" class="mt-2"><Textarea :model-value="editingContent" @update:model-value="(v:any)=>emit('update:editContent', v)" @keydown="(e:any)=>handleEnterToSend(e, () => emit('saveEditComment'))" rows="2" autoResize maxlength="1000" class="w-full !rounded-xl" placeholder="Shift+Enter — новая строка" /><div class="flex gap-2 mt-2"><Button label="Сохранить" size="small" rounded :loading="savingComment" @click="emit('saveEditComment')" /><Button label="Отмена" size="small" severity="secondary" outlined rounded @click="emit('cancelEditComment')" /></div></div>
+        <div v-if="editingCommentId !== root.id || composer.useModalComposer.value" class="mt-2 flex gap-1 items-center">
           <Button label="Ответить" size="small" text @click="onReply(root)" />
-          <Button v-if="root.user_id === authId" label="ред." size="small" text @click="emit('startEditComment', root)" />
+          <Button v-if="root.user_id === authId" label="ред." size="small" text @click="onStartEdit(root)" />
         </div>
         <div v-if="(root.replies || []).length" class="mt-2.5 ml-4 sm:ml-6 pl-3 border-l-2 border-violet-200 dark:border-violet-800 space-y-2.5">
           <div v-for="r in root.replies" :key="r.id" :id="`pin-comment-${r.id}`" :class="['rounded-xl px-2 py-1 -mx-2', Number(highlightCommentId) === Number(r.id) ? 'bg-violet-50 dark:bg-violet-950/40 ring-1 ring-violet-500/40' : '']">
@@ -96,11 +162,11 @@ function authorName(c: any): string { return c?.is_anonymous ? 'аноним' : 
               <span class="truncate">{{ authorName(r) }}</span>
               <span class="text-stone-400 dark:text-zinc-400 font-normal shrink-0">{{ formatTime(r.created_at) }}</span>
             </div>
-            <div v-if="editingCommentId !== r.id" class="text-[13px] text-stone-700 dark:text-zinc-200 mt-1 break-words comment-body" v-html="renderWithMentions(r.content)" @click="mentionNav.onRichClick"></div>
-            <div v-else class="mt-2"><Textarea :model-value="editingContent" @update:model-value="(v:any)=>emit('update:editContent', v)" @keydown="(e:any)=>handleEnterToSend(e, () => emit('saveEditComment'))" rows="2" autoResize maxlength="1000" class="w-full !rounded-xl" :placeholder="editCommentPlaceholder" /><div class="flex gap-2 mt-2"><Button label="Сохранить" size="small" rounded :loading="savingComment" @click="emit('saveEditComment')" /><Button label="Отмена" size="small" severity="secondary" outlined rounded @click="emit('cancelEditComment')" /></div></div>
-            <div v-if="editingCommentId !== r.id" class="mt-1.5 flex gap-1 items-center">
+            <div v-if="editingCommentId !== r.id || composer.useModalComposer.value" class="text-[13px] text-stone-700 dark:text-zinc-200 mt-1 break-words comment-body" v-html="renderWithMentions(r.content)" @click="mentionNav.onRichClick"></div>
+            <div v-else-if="!composer.useModalComposer.value" class="mt-2"><Textarea :model-value="editingContent" @update:model-value="(v:any)=>emit('update:editContent', v)" @keydown="(e:any)=>handleEnterToSend(e, () => emit('saveEditComment'))" rows="2" autoResize maxlength="1000" class="w-full !rounded-xl" placeholder="Shift+Enter — новая строка" /><div class="flex gap-2 mt-2"><Button label="Сохранить" size="small" rounded :loading="savingComment" @click="emit('saveEditComment')" /><Button label="Отмена" size="small" severity="secondary" outlined rounded @click="emit('cancelEditComment')" /></div></div>
+            <div v-if="editingCommentId !== r.id || composer.useModalComposer.value" class="mt-1.5 flex gap-1 items-center">
               <Button label="Ответить" size="small" text @click="onReply(root, r)" />
-              <Button v-if="r.user_id === authId" label="ред." size="small" text @click="emit('startEditComment', r)" />
+              <Button v-if="r.user_id === authId" label="ред." size="small" text @click="onStartEdit(r)" />
             </div>
           </div>
         </div>
@@ -112,7 +178,7 @@ function authorName(c: any): string { return c?.is_anonymous ? 'аноним' : 
         <span class="truncate">Ответ для {{ replyTo.is_anonymous ? 'анонима' : '@' + (replyTo.user?.name || 'пользователя') }}</span>
         <button type="button" @click="emit('cancelReply')" class="w-5 h-5 rounded-full grid place-items-center hover:bg-violet-200 dark:hover:bg-violet-800 shrink-0"><i class="pi pi-times text-[9px]"></i></button>
       </div>
-      <form @submit.prevent="onSend" class="relative flex gap-2 items-end">
+      <form v-if="!composer.useModalComposer.value" @submit.prevent="onSend" class="relative flex gap-2 items-end">
         <Textarea ref="commentInput" :model-value="commentText" @update:model-value="(v:any)=>{ emit('update:comment', v); onCommentInput() }" @input="onCommentInput" @keyup="onCommentInput" @click="onCommentInput" @focus="onInputFocus" @keydown="(e:any)=>handleEnterToSend(e, onSend)" rows="1" autoResize maxlength="1000" enterkeyhint="enter" autocomplete="off" autocapitalize="sentences" :placeholder="newCommentPlaceholder" class="flex-1 !rounded-2xl max-h-32" :disabled="creatingComment" />
         <Button type="submit" icon="pi pi-send" rounded class="!bg-stone-900 dark:!bg-white dark:!text-ink-900 !border-stone-900 dark:!border-white shrink-0" :loading="creatingComment" />
         <div v-if="mentions?.mentionOpen.value" class="absolute left-0 right-12 bottom-[calc(100%+8px)] bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl shadow-float overflow-hidden z-30 max-h-56 overflow-y-auto">
@@ -126,7 +192,33 @@ function authorName(c: any): string { return c?.is_anonymous ? 'аноним' : 
           </template>
         </div>
       </form>
+      <button
+        v-else
+        type="button"
+        class="w-full flex gap-2 items-center rounded-2xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800 px-3.5 py-2.5 text-left text-[15px] text-stone-400 dark:text-zinc-500 active:scale-[0.99] transition"
+        @click="composer.openComposer('create')"
+      >
+        <span class="flex-1 truncate">{{ replyTo ? `Ответ для @${replyTo.is_anonymous ? 'анонима' : (replyTo.user?.name || 'пользователя')}` : commentText || 'Написать комментарий…' }}</span>
+        <i class="pi pi-send text-sm shrink-0" />
+      </button>
     </div>
+    <CommentComposerModal
+      ref="composerRef"
+      :visible="composer.composerOpen.value"
+      @update:visible="(v:boolean)=>{ if(!v) onComposerCancel() }"
+      :mode="composer.composerMode.value"
+      :title="composerTitle"
+      :draft="composerDraft"
+      @update:draft="(v:string)=>{ composerDraft = v }"
+      :placeholder="composer.composerMode.value === 'edit' ? 'Новая строка' : 'Написать комментарий…'"
+      :sending="!!composerSending"
+      :mentions="mentions"
+      :lift-style="composer.liftStyle.value"
+      @draft-input="onComposerDraftInput"
+      @pick-mention="onComposerPick"
+      @submit="onComposerSubmit"
+      @cancel="onComposerCancel"
+    />
   </div>
 </template>
 <style scoped>

@@ -3,10 +3,14 @@ export function useDropdownMenuStyle() {
   const menuItemClass = 'group flex items-center gap-3 px-3 py-2.5 rounded-lg my-px !bg-transparent hover:!bg-stone-100 dark:hover:!bg-zinc-800 focus-within:!bg-stone-100 dark:focus-within:!bg-zinc-800'
   const menuPt = {
     root: { class: '!bg-white dark:!bg-zinc-900/95 dark:!backdrop-blur-xl !border !border-stone-200 dark:!border-white/10 !rounded-[20px] !shadow-float dark:!shadow-[0_24px_70px_-16px_rgba(0,0,0,0.8)] !overflow-hidden !p-0' },
-    list: { class: '!bg-transparent !p-1.5 !flex !flex-col !gap-0.5' },
+    list: { class: '!bg-transparent !p-1.5 !m-0 !list-none !flex !flex-col !gap-0.5' },
+    rootList: { class: '!bg-transparent !p-1.5 !m-0 !list-none !flex !flex-col !gap-0.5' },
     item: { class: '!bg-transparent' },
     itemContent: { class: '!bg-transparent hover:!bg-transparent focus:!bg-transparent focus-visible:!bg-transparent' },
-    action: { class: '!bg-transparent hover:!bg-transparent focus:!bg-transparent focus-visible:!outline-none !p-0 !rounded-lg' },
+    itemLink: { class: 'group flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer !text-sm !font-medium !text-stone-800 dark:!text-zinc-100 hover:!bg-stone-100 dark:hover:!bg-white/10 focus-visible:!bg-stone-100 dark:focus-visible:!bg-white/10 focus-visible:!outline-none transition' },
+    itemIcon: { class: '!text-base !text-stone-500 dark:!text-zinc-400 shrink-0' },
+    itemLabel: { class: 'flex-1 truncate' },
+    separator: { class: '!border-stone-200 dark:!border-white/10 !mx-3 !my-1' },
   }
   const selectPt = {
     root: { class: '!rounded-xl !border-stone-200 dark:!border-zinc-700 !bg-white dark:!bg-zinc-900' },

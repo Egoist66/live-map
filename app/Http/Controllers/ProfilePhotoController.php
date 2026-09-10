@@ -150,8 +150,9 @@ class ProfilePhotoController extends Controller
         ContentModeration::assertClean($data['content']);
         $comment = $photo->comments()->create(['user_id' => $viewer->id, 'content' => $data['content']]);
         $photo->increment('comments_count');
-        PinActivityNotifier::photoComment($photo, $viewer, $comment);
-        PinActivityNotifier::photoMentions($photo, $viewer, $comment, Mentions::extractIds($data['content'], $viewer->id));
+        $mentionedIds = Mentions::extractIds($data['content'], $viewer->id);
+        PinActivityNotifier::photoComment($photo, $viewer, $comment, $mentionedIds);
+        PinActivityNotifier::photoMentions($photo, $viewer, $comment, $mentionedIds);
         $comment->load('user:id,name,avatar_path');
         return response()->json($comment, 201);
     }

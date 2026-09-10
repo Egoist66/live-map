@@ -6,8 +6,9 @@ import Message from 'primevue/message'
 import Tag from 'primevue/tag'
 
 import SettingsHiddenFriends from './SettingsHiddenFriends.vue'
+import HomeZoneField from '@/Components/Features/HomeZone/HomeZoneField.vue'
 import { planOf } from '@/composables/usePlanLimits'
-defineProps<{ user: any; invisible: any; hidden?: any; blur: any; photoPrivacy?: any }>()
+defineProps<{ user: any; invisible: any; hidden?: any; blur: any; photoPrivacy?: any; homeRadius?: any }>()
 const emit = defineEmits<{ (e: 'profile'): void }>()
 </script>
 <template>
@@ -42,6 +43,16 @@ const emit = defineEmits<{ (e: 'profile'): void }>()
             </div>
             <div v-if="blur.saving.value" class="text-xs text-stone-400 mt-2">Сохраняем…</div>
             <div v-else-if="blur.saved.value && !blur.dirty.value" class="text-xs text-emerald-600 mt-2">✓ Запомнили — твоя точка сдвинута на «{{ blur.blurLabel.value }}»</div>
+          </template>
+        </Card>
+        <Card class="!border-stone-200 !rounded-3xl !shadow-none" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
+          <template #content>
+            <div class="text-sm font-semibold dark:text-white">Радиус зоны — где вижу и ставлю пины</div>
+            <p class="text-xs text-stone-500 mt-1 leading-relaxed">Создавать и видеть чужие пины можно только внутри зоны. Вне зоны операция запрещена. Free — до 10 км, больше — Pro/Business. Админ — без ограничений.</p>
+            <div v-if="homeRadius" class="mt-3">
+              <HomeZoneField :model-value="homeRadius.radius.value" :plan="String(homeRadius.plan.value)" :error="homeRadius.error.value" @update:model-value="(v:number)=>homeRadius.save(v)" />
+              <div v-if="homeRadius.saving.value" class="text-xs text-stone-400 mt-2">Сохраняем…</div>
+            </div>
           </template>
         </Card>
         <Card class="!border-stone-200 !rounded-3xl !shadow-none" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">

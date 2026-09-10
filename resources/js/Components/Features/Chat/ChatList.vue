@@ -97,10 +97,3 @@ const { menuPt } = useDropdownMenuStyle()
     </Dialog>
   </div>
 </template>
-
-<style scoped>
-:global(.danger-item .p-menu-item-label),
-:global(.danger-item .p-menu-item-icon) {
-  color: #dc2626;
-}
-</style>

@@ -5,8 +5,10 @@ import Select from 'primevue/select'
 import Textarea from 'primevue/textarea'
 import Message from 'primevue/message'
 import { REPORT_REASONS } from '@/composables/useReportDialog'
+import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
 
 defineProps<{ dialog: any }>()
+const { selectPt } = useDropdownMenuStyle()
 </script>
 <template>
   <Dialog
@@ -28,7 +30,8 @@ defineProps<{ dialog: any }>()
           :options="[...REPORT_REASONS]"
           option-label="l"
           option-value="v"
-          class="w-full mt-1 !rounded-2xl"
+          class="w-full mt-1"
+          :pt="selectPt"
         />
       </div>
       <div>

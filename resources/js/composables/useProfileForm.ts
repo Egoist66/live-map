@@ -31,14 +31,14 @@ export function useProfileForm() {
       home_address: user.value.home_address || null,
       home_visibility: user.value.home_visibility || 'everyone',
       home_show_exact: !!user.value.home_show_exact,
-      home_radius_km: user.value.home_radius_km || 5,
+      home_radius_km: user.value.home_radius_km || 10,
       bio: user.value.bio || null,
       is_anonymous_default: !!user.value.is_anonymous_default,
       plan: planOf(user.value),
     } as any,
   })
 
-  watch(user, (u) => setValues({ name: u.name, gender: u.gender || null, birth_date: u.birth_date ? String(u.birth_date).slice(0, 10) : null, country: u.country || null, country_code: u.country_code || null, email: u.email, home_lat: u.home_lat || null, home_lng: u.home_lng || null, home_city: u.home_city || null, home_address: u.home_address || null, home_visibility: u.home_visibility || 'everyone', home_show_exact: !!u.home_show_exact, home_radius_km: u.home_radius_km || 5, bio: u.bio || null, is_anonymous_default: !!u.is_anonymous_default, plan: planOf(u) } as any))
+  watch(user, (u) => setValues({ name: u.name, gender: u.gender || null, birth_date: u.birth_date ? String(u.birth_date).slice(0, 10) : null, country: u.country || null, country_code: u.country_code || null, email: u.email, home_lat: u.home_lat || null, home_lng: u.home_lng || null, home_city: u.home_city || null, home_address: u.home_address || null, home_visibility: u.home_visibility || 'everyone', home_show_exact: !!u.home_show_exact, home_radius_km: u.home_radius_km || 10, bio: u.bio || null, is_anonymous_default: !!u.is_anonymous_default, plan: planOf(u) } as any))
 
   const [name, nameAttrs] = defineField('name')
   const [gender] = defineField('gender')

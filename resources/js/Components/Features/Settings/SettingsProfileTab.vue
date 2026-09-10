@@ -10,7 +10,6 @@ defineProps<{ mustVerifyEmail: boolean; status?: string | null; bioEmpty: boolea
     <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }">
       <template #content>
         <h3 class="font-black tracking-tight text-lg dark:text-white">Основное</h3>
-        <p class="text-sm text-stone-500 mt-1">Аватар, контакты и домашняя зона — что видят другие.</p>
         <UpdateProfileInformationForm :must-verify-email="mustVerifyEmail" :status="status" class="mt-5 max-w-xl" />
       </template>
     </Card>

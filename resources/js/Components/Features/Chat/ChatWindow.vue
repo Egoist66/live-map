@@ -8,6 +8,7 @@ import OnlineDot from '@/Components/Features/Feedback/OnlineDot.vue'
 import MessageBubble from '@/Components/Features/Chat/MessageBubble.vue'
 import { avatarSrcFor } from '@/composables/useAvatar'
 import { useMessageContextMenu } from '@/composables/useMessageContextMenu'
+import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
 import { useChatLayout } from '@/composables/useChatLayout'
 import { useEnterToSend } from '@/composables/useEnterToSend'
 
@@ -17,6 +18,7 @@ const { handleEnterToSend } = useEnterToSend()
 const props = defineProps<{ selectedId: number | null; activeConv: any; messages: any[]; loading: boolean; sending: boolean; refreshing: boolean; typing: boolean; online: boolean; input: string; emojiOpen: boolean; emojiGroups: any[]; editingId: number | null; editingBody: string; showMenu: boolean; keyboardStyle: any; isOwnMessage: (m: any) => boolean; messageStatus: (m: any) => string; formatTime: (s: string) => string; pinned?: any[]; pinLimitLabel?: string; flashId?: number | null; datingEntry?: boolean; datingBadge?: string | null; replyTo?: any | null; attachmentName?: string | null; attachmentSize?: number | null; previewUrl?: string | null; attachError?: string | null; attaching?: boolean }>()
 const emit = defineEmits<{ (e: 'update:input', v: string): void; (e: 'update:editingBody', v: string): void; (e: 'send'): void; (e: 'typing'): void; (e: 'stopTyping'): void; (e: 'refresh'): void; (e: 'back'): void; (e: 'close'): void; (e: 'toggleMenu'): void; (e: 'menuClose'): void; (e: 'deleteChat'): void; (e: 'block'): void; (e: 'toggleEmoji'): void; (e: 'emojiClose'): void; (e: 'pickEmoji', v: string): void; (e: 'pickEmojiEdit', v: string): void; (e: 'startEdit', m: any): void; (e: 'saveEdit'): void; (e: 'cancelEdit'): void; (e: 'deleteMessage', id: number): void; (e: 'togglePin', m: any): void; (e: 'unpin', id: number): void; (e: 'jumpToMessage', id: number): void; (e: 'swipesBack'): void; (e: 'reply', m: any): void; (e: 'cancelReply'): void; (e: 'pickFile', f: File | null): void; (e: 'removeFile'): void }>()
 const { cm, menuModel, bindMessage } = useMessageContextMenu({ isOwn: (m: any) => props.isOwnMessage(m), onEdit: (m: any) => emit('startEdit', m), onDelete: (id: number) => emit('deleteMessage', id), onPin: (m: any) => emit('togglePin', m), onReply: (m: any) => emit('reply', m) })
+const { menuPt } = useDropdownMenuStyle()
 
 function pinPreview(body: string): string {
   const t = (body || '').replace(/\s+/g, ' ').trim()
@@ -46,8 +48,8 @@ function replyPreview(body: string): string {
           <div class="relative">
             <button @click="emit('toggleMenu')" class="w-9 h-9 grid place-items-center rounded-full hover:bg-stone-100 dark:hover:bg-zinc-800 active:scale-95 text-lg leading-none">⋯</button>
             <div v-if="showMenu" class="absolute right-0 top-10 w-52 bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl shadow-xl py-1.5 z-30 overflow-hidden">
-              <button @click="emit('menuClose'); emit('deleteChat')" class="w-full flex items-center gap-2.5 text-left px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 active:bg-red-100 transition"><i class="pi pi-trash text-xs"></i>Удалить чат</button>
-              <button v-if="activeConv?.other" @click="emit('menuClose'); emit('block')" class="w-full flex items-center gap-2.5 text-left px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 active:bg-red-100 transition"><i class="pi pi-ban text-xs"></i>Заблокировать</button>
+              <button @click="emit('menuClose'); emit('deleteChat')" class="w-full flex items-center gap-2.5 text-left px-4 py-3 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 active:bg-red-100 transition"><i class="pi pi-trash text-xs"></i>Удалить чат</button>
+              <button v-if="activeConv?.other" @click="emit('menuClose'); emit('block')" class="w-full flex items-center gap-2.5 text-left px-4 py-3 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 active:bg-red-100 transition"><i class="pi pi-ban text-xs"></i>Заблокировать</button>
             </div>
           </div>
           <button @click="emit('close')" title="Закрыть чат" class="w-9 h-9 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-stone-200 active:scale-95 transition shrink-0"><i class="pi pi-times text-sm text-stone-600 dark:text-zinc-300"></i></button>
@@ -83,7 +85,7 @@ function replyPreview(body: string): string {
           </div>
         </template>
       </div>
-      <ContextMenu ref="cm" :model="menuModel" />
+      <ContextMenu ref="cm" :model="menuModel" :pt="menuPt" />
       <div class="relative p-2 lg:p-3 border-t dark:border-zinc-800 bg-white dark:bg-zinc-900 shrink-0 flex-none pb-[calc(0.5rem+env(safe-area-inset-bottom))] lg:pb-3 w-full max-w-full min-w-0 rounded-b-none lg:rounded-b-2xl">
         <div v-if="replyTo" class="flex items-center gap-2.5 bg-violet-50 dark:bg-violet-500/10 border-l-[3px] border-violet-500 rounded-r-xl rounded-l-sm px-3 py-2 mb-2 min-w-0">
           <div class="flex-1 min-w-0">

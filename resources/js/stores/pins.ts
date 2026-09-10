@@ -14,13 +14,13 @@ export const usePinsStore = defineStore('pins', () => {
   const deleting = ref(false)
 
   let abortCtrl: AbortController | null = null
-  async function fetchNearby(lat: number, lng: number, radius?: number): Promise<Pin[]> {
+  async function fetchNearby(lat: number, lng: number, radius?: number, userPos?: { lat: number; lng: number } | null): Promise<Pin[]> {
     if (abortCtrl) abortCtrl.abort()
     abortCtrl = new AbortController()
     loading.value = true
     error.value = null
     try {
-      const data = await pinsApi.list(lat, lng, radius as any, abortCtrl.signal)
+      const data = await pinsApi.list(lat, lng, radius as any, abortCtrl.signal, userPos ?? null)
       const alive = (p: any) => isPinAlive(p)
       const fresh = (data || []).filter(alive)
       if (!fresh.length) {

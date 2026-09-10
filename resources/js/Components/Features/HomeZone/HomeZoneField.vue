@@ -9,7 +9,7 @@ const emit = defineEmits<{ (e: 'update:modelValue', v: number): void }>()
 const planRef = computed(() => props.plan || 'free')
 const { maxHomeRadius, presets } = usePlanLimits(planRef)
 
-const radius = computed(() => Number(props.modelValue ?? 5))
+const radius = computed(() => Number(props.modelValue ?? 10))
 const needPlan = computed(() => requiredPlanForRadius(radius.value))
 const overLimit = computed(() => radius.value > maxHomeRadius.value)
 
@@ -36,7 +36,7 @@ function onInput(e: Event) {
     </div>
     <p class="text-[11px] text-stone-500 dark:text-zinc-400 leading-relaxed mt-1.5">
       Вижу чужие и мои пины в радиусе {{ radius }} км от дома — тот же радиус, что у пина.
-      Общая настройка, чтобы не задавать каждый пин. Free — 5 км · Pro — 10–15 км · Business — 20+ км.
+      Общая настройка, чтобы не задавать каждый пин. Free — 10 км · Pro — 15 км · Business — 20+ км.
     </p>
     <div class="grid grid-cols-4 gap-1.5 mt-2.5">
       <button

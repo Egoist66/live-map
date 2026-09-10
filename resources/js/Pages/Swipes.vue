@@ -5,7 +5,7 @@ import GuestLayout from '@/Layouts/GuestLayout.vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { useSwipes } from '@/composables/useSwipes'
 import { useSwipeCardPhotos } from '@/composables/useSwipeCardPhotos'
-import { useSwipePhotoViewer } from '@/composables/useSwipePhotoViewer'
+import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
 import { useSeo } from '@/composables/useSeo'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
@@ -27,8 +27,8 @@ const isAuth = computed(() => !!(page.props.auth as any)?.user)
 const Layout = computed(() => (isAuth.value ? AuthenticatedLayout : GuestLayout))
 
 const s = useSwipes()
-const viewer = useSwipePhotoViewer()
 const cardPhotos = useSwipeCardPhotos(() => s.current.value)
+const { selectPt } = useDropdownMenuStyle()
 
 const dialogPt = {
   root: { class: '!rounded-3xl dark:!bg-zinc-900 dark:!border-zinc-700' },
@@ -167,7 +167,32 @@ onMounted(async () => {
               <i class="pi pi-spin pi-spinner text-2xl text-stone-400 dark:text-zinc-500" />
             </div>
 
-            <div v-else-if="s.current.value" class="swipe-deck relative h-[62dvh] min-h-[400px] max-h-[540px]">
+            <div v-else-if="s.current.value">
+              <div v-if="cardPhotos.hasMultiple.value" class="mb-2 flex gap-1.5 px-1" role="tablist" aria-label="Фото профиля">
+                <button
+                  v-for="(p, i) in cardPhotos.photos.value"
+                  :key="`${s.current.value.id}-${i}`"
+                  type="button"
+                  role="tab"
+                  :aria-selected="i === cardPhotos.photoIndex.value"
+                  class="flex-1 py-2 cursor-pointer"
+                  :aria-label="`Фото ${i + 1} из ${cardPhotos.total.value}`"
+                  @click="cardPhotos.goTo(i)"
+                >
+                  <span class="block h-[5px] rounded-full overflow-hidden bg-stone-300/80 dark:bg-white/30">
+                    <span
+                      :key="`${s.current.value.id}-${cardPhotos.photoIndex.value}-${i}`"
+                      class="block h-full rounded-full bg-stone-900 dark:bg-white"
+                      :class="i === cardPhotos.photoIndex.value ? 'story-fill' : ''"
+                      :style="{
+                        width: i < cardPhotos.photoIndex.value ? '100%' : i === cardPhotos.photoIndex.value ? undefined : '0%',
+                        animationDuration: i === cardPhotos.photoIndex.value ? `${cardPhotos.intervalMs}ms` : undefined,
+                      }"
+                    />
+                  </span>
+                </button>
+              </div>
+              <div class="swipe-deck relative h-[62dvh] min-h-[400px] max-h-[540px]">
               <div
                 v-if="s.next.value"
                 class="absolute inset-0 z-0 rounded-[24px] overflow-hidden bg-zinc-900 dark:bg-zinc-950 shadow-soft ring-1 ring-black/10 dark:ring-white/10 pointer-events-none"
@@ -212,19 +237,13 @@ onMounted(async () => {
                 <div v-else class="absolute inset-0 grid place-items-center bg-gradient-to-br from-violet-600 via-fuchsia-500 to-orange-400 dark:from-violet-900 dark:via-fuchsia-900 dark:to-orange-900">
                   <span class="text-white text-7xl font-black">{{ (s.current.value.name ?? '?').slice(0, 1) }}</span>
                 </div>
+                <div
+                  v-if="cardPhotos.hasMultiple.value"
+                  class="absolute inset-0"
+                  @pointerdown="cardPhotos.tapDown($event)"
+                  @pointerup="cardPhotos.tapUp($event)"
+                />
                 <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent pointer-events-none" />
-
-                <div v-if="cardPhotos.hasMultiple.value" class="absolute top-2.5 inset-x-3 flex gap-1">
-                  <button
-                    v-for="(p, i) in cardPhotos.photos.value"
-                    :key="`${s.current.value.id}-${i}`"
-                    type="button"
-                    :class="['h-[5px] flex-1 rounded-full transition cursor-pointer', i === cardPhotos.photoIndex.value ? 'bg-white' : 'bg-white/40 hover:bg-white/70']"
-                    :aria-label="`Фото ${i + 1} из ${cardPhotos.total.value}`"
-                    @pointerdown.stop
-                    @click.stop="cardPhotos.goTo(i)"
-                  />
-                </div>
 
                 <div
                   class="absolute top-5 left-5 rotate-[-12deg] border-4 border-emerald-400 text-emerald-300 font-black text-2xl px-3 py-1 rounded-xl bg-black/20"
@@ -237,19 +256,6 @@ onMounted(async () => {
 
                 <div v-if="s.current.value.liked_me" class="absolute top-4 right-4 pointer-events-none">
                   <Chip label="Лайкнул тебя" icon="pi pi-heart-fill" class="!rounded-full !bg-rose-500 !text-white !border-0" />
-                </div>
-
-                <div v-if="s.current.value.photos.length" class="absolute top-11 left-3" @pointerdown.stop @pointermove.stop @pointerup.stop>
-                  <Button
-                    :label="`${s.current.value.photos.slice(0, s.current.value.is_pro ? 5 : 3).length}`"
-                    icon="pi pi-images"
-                    rounded
-                    size="small"
-                    aria-label="Смотреть фото"
-                    title="Смотреть фото"
-                    class="!bg-black/55 !border-white/20 !text-white backdrop-blur"
-                    @click.stop="s.current.value && viewer.open(s.current.value)"
-                  />
                 </div>
 
                 <div class="absolute bottom-0 inset-x-0 p-4 sm:p-5 text-white pointer-events-none">
@@ -302,6 +308,7 @@ onMounted(async () => {
                 </div>
               </div>
             </div>
+            </div>
 
             <div v-else class="rounded-[24px] border border-dashed border-stone-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-6 sm:p-8 text-center">
               <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-rose-500 to-orange-400 text-white grid place-items-center"><i class="pi pi-heart-fill text-xl" /></div>
@@ -348,16 +355,16 @@ onMounted(async () => {
         <div class="flex flex-col gap-4 pt-1 min-w-0">
           <div class="min-w-0">
             <label class="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500">Что ищешь</label>
-            <Select v-model="s.filters.value.goal" :options="goalOptions" option-label="label" option-value="value" placeholder="Любая цель" class="w-full mt-1 dark:!border-zinc-700" />
+            <Select v-model="s.filters.value.goal" :options="goalOptions" option-label="label" option-value="value" placeholder="Любая цель" class="w-full mt-1 dark:!border-zinc-700" :pt="selectPt" />
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div class="min-w-0">
               <label class="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500">Кого показать</label>
-              <Select v-model="s.filters.value.gender" :options="genderOptions" option-label="label" option-value="value" class="w-full mt-1 dark:!border-zinc-700" />
+              <Select v-model="s.filters.value.gender" :options="genderOptions" option-label="label" option-value="value" class="w-full mt-1 dark:!border-zinc-700" :pt="selectPt" />
             </div>
             <div class="min-w-0">
               <label class="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500">Радиус</label>
-              <Select v-model="s.filters.value.radius_km" :options="radiusOptions" option-label="label" option-value="value" placeholder="Любой" class="w-full mt-1 dark:!border-zinc-700" />
+              <Select v-model="s.filters.value.radius_km" :options="radiusOptions" option-label="label" option-value="value" placeholder="Любой" class="w-full mt-1 dark:!border-zinc-700" :pt="selectPt" />
             </div>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -418,37 +425,6 @@ onMounted(async () => {
         </div>
       </Dialog>
 
-      <Dialog :visible="viewer.viewerOpen.value" @update:visible="(v:boolean)=>{ if(!v) viewer.close() }" modal :draggable="false" :style="{ width: '420px', maxWidth: '94vw', maxHeight: '92dvh' }" :pt="dialogPt">
-        <template #header>
-          <span class="font-bold">{{ viewer.card.value?.name }} · {{ viewer.counterLabel.value }}</span>
-        </template>
-        <div v-if="viewer.hasPhotos.value" class="select-none">
-          <div class="flex gap-1">
-            <button
-              v-for="(p, i) in viewer.photos.value"
-              :key="i"
-              type="button"
-              :class="['h-1 flex-1 rounded-full transition', i === viewer.photoIndex.value ? 'bg-rose-500' : i < viewer.photoIndex.value ? 'bg-rose-300' : 'bg-stone-200 dark:bg-zinc-700']"
-              :aria-label="`Фото ${i + 1}`"
-              @click="viewer.goTo(i)"
-            />
-          </div>
-          <div class="relative mt-2 rounded-2xl overflow-hidden bg-black">
-            <img :src="viewer.currentPhoto.value ?? ''" alt="" class="w-full h-[52dvh] min-h-[320px] object-contain bg-black" draggable="false" />
-            <button type="button" aria-label="Назад" class="absolute left-0 top-0 h-full w-[28%] cursor-w-pointer" @click="viewer.prev()" />
-            <button type="button" aria-label="Вперёд" class="absolute right-0 top-0 h-full w-[28%] cursor-e-pointer" @click="viewer.next()" />
-            <Button icon="pi pi-times" rounded text size="small" aria-label="Закрыть" class="!absolute top-2 right-2 !bg-black/50 !text-white !border-0 !w-9 !h-9" @click="viewer.close()" />
-            <span class="absolute bottom-2 right-2 text-[11px] font-bold text-white bg-black/55 rounded-full px-2 py-0.5">{{ viewer.counterLabel.value }}</span>
-          </div>
-          <div class="mt-2 flex items-center justify-between gap-2">
-            <Button icon="pi pi-chevron-left" rounded outlined size="small" aria-label="Предыдущее фото" :disabled="viewer.photoIndex.value === 0" @click="viewer.prev()" />
-            <span class="text-[11px] text-stone-400 dark:text-zinc-500">Тап по краям фото листает · max {{ viewer.card.value?.is_pro ? 5 : 3 }}</span>
-            <Button icon="pi pi-chevron-right" rounded outlined size="small" aria-label="Следующее фото" :disabled="viewer.photoIndex.value >= viewer.total.value - 1" @click="viewer.next()" />
-          </div>
-        </div>
-        <div v-else class="py-6 text-center text-sm text-stone-500 dark:text-zinc-400">Фото пока нет</div>
-      </Dialog>
-
       <Dialog :visible="s.ageGate.value" modal :closable="false" :draggable="false" header="Только 18+" :style="{ width: '400px', maxWidth: '94vw', maxHeight: '92dvh' }" :pt="dialogPt">
         <div class="pt-1">
           <div class="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-500 to-orange-400 text-white grid place-items-center text-lg font-black">18+</div>
@@ -484,6 +460,20 @@ onMounted(async () => {
 }
 .swipe-top img {
   pointer-events: none;
+}
+.story-fill {
+  width: 0%;
+  animation-name: story-fill;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+@keyframes story-fill {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
 }
 .fly-card {
   will-change: transform, opacity;

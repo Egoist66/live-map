@@ -7,13 +7,13 @@ export function planOf(u: any): string {
 }
 
 export const HOME_RADIUS_LIMITS: Record<Plan, number> = {
-  free: 5,
+  free: 10,
   pro: 15,
   business: 50,
 }
 
 export const PIN_RADIUS_M_LIMITS: Record<Plan, number> = {
-  free: 5000,
+  free: 10000,
   pro: 15000,
   business: 50000,
 }
@@ -22,7 +22,7 @@ export const HOME_RADIUS_PRESETS: Array<{ v: number; minPlan: Plan }> = [
   { v: 1, minPlan: 'free' },
   { v: 2, minPlan: 'free' },
   { v: 5, minPlan: 'free' },
-  { v: 10, minPlan: 'pro' },
+  { v: 10, minPlan: 'free' },
   { v: 15, minPlan: 'pro' },
   { v: 20, minPlan: 'business' },
   { v: 50, minPlan: 'business' },
@@ -32,14 +32,14 @@ export function maxHomeRadiusKm(plan?: string | null, isAdmin?: boolean): number
   if (isAdmin) return 500
   if (plan === 'business') return 50
   if (plan === 'pro') return 15
-  return 5
+  return 10
 }
 
 export function maxPinRadiusM(plan?: string | null, isAdmin?: boolean): number {
   if (isAdmin) return 500000
   if (plan === 'business') return 50000
   if (plan === 'pro') return 15000
-  return 5000
+  return 10000
 }
 
 export function planRank(plan?: string | null): number {
@@ -55,7 +55,7 @@ export function canUseHomeRadius(radiusKm: number, plan?: string | null, isAdmin
 
 export function requiredPlanForRadius(radiusKm: number): Plan {
   if (radiusKm > 15) return 'business'
-  if (radiusKm > 5) return 'pro'
+  if (radiusKm > 10) return 'pro'
   return 'free'
 }
 

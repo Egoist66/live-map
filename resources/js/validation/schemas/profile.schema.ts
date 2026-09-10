@@ -14,7 +14,7 @@ const toNumberOrNull = (v: unknown) => {
 
 const toBirthDate = (v: unknown) => toIsoBirthDate(v)
 
-const MAX_BY_PLAN: Record<string, number> = { free: 5, pro: 15, business: 50 }
+const MAX_BY_PLAN: Record<string, number> = { free: 10, pro: 15, business: 50 }
 
 export const updateProfileSchema = toTypedSchema(
   z

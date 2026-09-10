@@ -71,8 +71,12 @@ export function usePinCommentInput(opts: {
     })
   }
 
-  function onCommentInput() {
-    try { opts.mentions?.detect?.(opts.getText(), inputCursor()) } catch {}
+  function onCommentInput(cursor?: unknown, text?: unknown) {
+    try {
+      const body = typeof text === 'string' ? text : opts.getText()
+      const pos = typeof cursor === 'number' ? cursor : inputCursor()
+      opts.mentions?.detect?.(body, pos)
+    } catch {}
   }
 
   function onInputFocus() {

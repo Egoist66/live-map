@@ -5,6 +5,7 @@ import { usePinsStore } from '@/stores/pins'
 import { usePinLimit } from '@/composables/usePinLimit'
 import { useCustomCategories } from '@/composables/useCustomCategories'
 import { useResidence } from '@/composables/useResidence'
+import { useHomeZoneGuard } from '@/composables/useHomeZoneGuard'
 import { usePage } from '@inertiajs/vue3'
 import { PIN_CATEGORIES } from '@/composables/usePins'
 import { useToast } from 'primevue/usetoast'
@@ -32,6 +33,7 @@ export function usePinCreate(onSuccess?: () => void) {
   const customCats = useCustomCategories()
   const page = usePage()
   const residence = useResidence(() => (page.props.auth as any)?.user)
+  const zoneGuard = useHomeZoneGuard()
   const builtInValues = (PIN_CATEGORIES as unknown as any[]).map((c) => c.v)
 
   const { defineField, handleSubmit, setValues, values, errors, resetForm } = useForm({
@@ -124,6 +126,22 @@ export function usePinCreate(onSuccess?: () => void) {
         throw err
       }
       const payload: any = { ...vals }
+      let livePos: { lat: number; lng: number } | null = null
+      try {
+        const liveRaw = localStorage.getItem('live-map:last-pos')
+        const live = liveRaw ? JSON.parse(liveRaw) : null
+        if (live && Number.isFinite(Number(live.lat)) && Number.isFinite(Number(live.lng))) livePos = { lat: Number(live.lat), lng: Number(live.lng) }
+      } catch {}
+      if (livePos) {
+        payload.user_lat = livePos.lat
+        payload.user_lng = livePos.lng
+      }
+      const zone = zoneGuard.check(Number(payload.latitude), Number(payload.longitude), livePos)
+      if (!zone.ok) {
+        const err: any = { response: { status: 422, data: { message: zone.message } } }
+        error.value = err
+        throw err
+      }
       const guard = await residence.assertPinInHomeCountry(Number(payload.latitude), Number(payload.longitude))
       if (!guard.ok) {
         const err: any = { response: { status: 422, data: { message: guard.message } } }
@@ -152,8 +170,8 @@ export function usePinCreate(onSuccess?: () => void) {
       if (isLimit) {
         const msg = serverMsg || limitInfo.warning.value || 'Лимит free тарифа: максимум 3 живых пина'
         toast.add({ severity: 'warn', summary: 'Лимит пинов', detail: msg, life: 5000 })
-      } else if (status === 422 && /стран/i.test(serverMsg)) {
-        toast.add({ severity: 'error', summary: 'Операция запрещена', detail: serverMsg, life: 5000 })
+      } else if (status === 422 && (/стран/i.test(serverMsg) || /зон/i.test(serverMsg))) {
+        toast.add({ severity: 'warn', summary: 'Вне вашей зоны', detail: serverMsg, life: 5000 })
       } else {
         toast.add({ severity: 'error', summary: serverMsg || 'Ошибка создания', life: 3000 })
       }

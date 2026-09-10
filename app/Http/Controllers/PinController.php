@@ -8,6 +8,7 @@ use App\Events\PinUpdated;
 use App\Models\Pin;
 use App\Services\ContentModeration;
 use App\Services\CountryResolver;
+use App\Services\HomeZoneService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -16,13 +17,29 @@ class PinController extends Controller
 {
     public function index(Request $request)
     {
-        $lat = (float) $request->input('lat', 55.7558);
-        $lng = (float) $request->input('lng', 37.6173);
-        $radius = (int) $request->input('radius', Auth::user()?->pinRadius() ?? 1000) / 1000;
+        $viewer = Auth::user();
         $viewerId = Auth::id();
 
+        $reqLat = (float) $request->input('lat', 55.7558);
+        $reqLng = (float) $request->input('lng', 37.6173);
+        $reqRadiusKm = (int) $request->input('radius', $viewer?->pinRadius() ?? 1000) / 1000;
+
+        $lat = $reqLat;
+        $lng = $reqLng;
+        $radius = $reqRadiusKm;
+
+        if ($viewer && ! $viewer->isAdmin()) {
+            $liveLat = $request->filled('user_lat') ? (float) $request->input('user_lat') : null;
+            $liveLng = $request->filled('user_lng') ? (float) $request->input('user_lng') : null;
+            $zone = HomeZoneService::zoneFor($viewer, $liveLat, $liveLng);
+            if ($zone !== null) {
+                $lat = $zone['lat'];
+                $lng = $zone['lng'];
+                $radius = min($reqRadiusKm, $zone['radiusKm']);
+            }
+        }
+
         $q = Pin::active()->nearby($lat, $lng, $radius);
-        $viewer = Auth::user();
         $q->visibleForGender($viewer);
         $hiddenUsers = $viewer ? \App\Models\User::hiddenFromSearchFor($viewer) : array_merge(\App\Models\User::where('is_hidden_from_search', true)->pluck('id')->all(), [\App\Models\User::GHOST_USER_ID]);
         if (!empty($hiddenUsers)) $q->whereNotIn('user_id', is_array($hiddenUsers) ? $hiddenUsers : $hiddenUsers->all());
@@ -47,6 +64,11 @@ class PinController extends Controller
             }
             if (!$pin->isVisibleForGender($viewer)) {
                 abort(403);
+            }
+            $liveLat = $request->filled('user_lat') ? (float) $request->input('user_lat') : null;
+            $liveLng = $request->filled('user_lng') ? (float) $request->input('user_lng') : null;
+            if ($viewer && HomeZoneService::isOutsideZone($viewer, (float) $pin->latitude, (float) $pin->longitude, $liveLat, $liveLng)) {
+                abort(403, 'Пин вне вашей зоны видимости.');
             }
         }
         $pin->load('user:id,name,avatar_path,level');
@@ -106,6 +128,7 @@ class PinController extends Controller
         ]);
 
         CountryResolver::assertPinAllowed($user, (float) $data['latitude'], (float) $data['longitude'], isset($data['user_lat']) ? (float) $data['user_lat'] : null, isset($data['user_lng']) ? (float) $data['user_lng'] : null);
+        HomeZoneService::assertInsideZone($user, (float) $data['latitude'], (float) $data['longitude'], isset($data['user_lat']) ? (float) $data['user_lat'] : null, isset($data['user_lng']) ? (float) $data['user_lng'] : null);
         unset($data['user_lat'], $data['user_lng']);
 
         ContentModeration::assertClean($data['title'] ?? null, $data['body'] ?? null);

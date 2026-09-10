@@ -5,10 +5,12 @@ import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import Select from 'primevue/select'
 import { usePinAudience } from '@/composables/usePinAudience'
+import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
 
 const props = withDefaults(defineProps<{ open: boolean; pinCreate: any; customCats: any; categories: any[]; pinAddress: string; loadingAddress: boolean; radiusOptions: any[]; radiusLabel?: string }>(), { radiusLabel: '1 км' })
 const emit = defineEmits<{ (e: 'update:open', v: boolean): void; (e: 'close'): void; (e: 'delete-custom-category', slug: string): void }>()
 const audience = usePinAudience()
+const { selectPt } = useDropdownMenuStyle()
 async function createCustomAndSelect() {
   const d = await props.customCats.createFromDraft()
   if (d) props.pinCreate.setValues({ category: d.slug } as any)
@@ -70,7 +72,7 @@ async function createCustomAndSelect() {
       </div>
       <div>
         <label class="text-[10px] font-bold tracking-wide uppercase text-stone-500">Кто видит</label>
-        <Select v-model="pinCreate.gender_audience.value" :options="audience.options" optionLabel="label" optionValue="value" checkmark fluid class="w-full mt-1 !rounded-2xl" />
+        <Select v-model="pinCreate.gender_audience.value" :options="audience.options" optionLabel="label" optionValue="value" checkmark fluid class="w-full mt-1" :pt="selectPt" />
         <p class="text-[11px] text-stone-500 dark:text-zinc-400 mt-1">По умолчанию — все. Можно ограничить: только женщины / только мужчины.</p>
       </div>
       <div class="rounded-2xl border border-stone-200 dark:border-zinc-700 overflow-hidden">

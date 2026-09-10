@@ -47,10 +47,3 @@ async function onCopy(): Promise<void> {
     </Dialog>
   </span>
 </template>
-
-<style scoped>
-:global(.danger-item .p-menu-item-label),
-:global(.danger-item .p-menu-item-icon) {
-  color: #dc2626;
-}
-</style>

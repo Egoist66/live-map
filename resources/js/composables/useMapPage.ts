@@ -16,6 +16,7 @@ import { useHomeZoneVisibility } from '@/composables/useHomeZoneVisibility'
 import { planOf } from '@/composables/usePlanLimits'
 import { resolveInitialCenter, homeAnchorOf, isSaneFix } from '@/composables/useMapInitialCenter'
 import { haversineKm } from '@/utils/geo'
+import { useHomeZoneGuard } from '@/composables/useHomeZoneGuard'
 
 export function useMapPage() {
   const { store, selectedCategory, filteredPins, fetchNearby } = usePins()
@@ -126,7 +127,7 @@ export function useMapPage() {
   function locateMe(): void {
     try { mapApi.triggerGeolocate?.() } catch {}
   }
-  const homeRadiusKm = computed(() => Number(page.props.auth?.user?.home_radius_km ?? 5))
+  const homeRadiusKm = computed(() => Number(page.props.auth?.user?.home_radius_km ?? 10))
   const homeZone = computed(() => {
     if (!myPos.value) return null
     return { lat: myPos.value.lat, lng: myPos.value.lng, radiusKm: homeRadiusKm.value }
@@ -141,14 +142,15 @@ export function useMapPage() {
   }
   const radiusOptions = computed(() => {
     const plan = userPlan.value
-    const isPro = plan === 'pro' || plan === 'business'
-    const isBiz = plan === 'business'
+    const isAdmin = !!(page.props.auth?.user?.is_admin || page.props.auth?.user?.role === 'admin')
+    const isPro = isAdmin || plan === 'pro' || plan === 'business'
+    const isBiz = isAdmin || plan === 'business'
     return [
       { v: 500, l: '500 м' },
       { v: 1000, l: '1 км' },
       { v: 2000, l: '2 км' },
       { v: 5000, l: '5 км' },
-      { v: 10000, l: '10 км', pro: true },
+      { v: 10000, l: '10 км' },
       { v: 15000, l: '15 км', pro: true },
       { v: 20000, l: '20 км', biz: true },
       { v: 50000, l: '50 км', biz: true },
@@ -176,6 +178,12 @@ export function useMapPage() {
   }
 
   function openCreate(lngLat: any) {
+    const guard = useHomeZoneGuard()
+    const zone = guard.check(Number(lngLat.lat), Number(lngLat.lng), myPos.value)
+    if (!zone.ok) {
+      toast?.add({ severity: 'warn', summary: 'Вне вашей зоны', detail: zone.message, life: 5000 })
+      return
+    }
     pinCreate.setCoords(lngLat.lat, lngLat.lng)
     fetchPinAddress(lngLat.lat, lngLat.lng)
     mapApi.addTempMarker(lngLat)
@@ -271,7 +279,7 @@ export function useMapPage() {
     if (isFallback && !start.hasPrecise) geoNotice.value = { place: residenceLabelOf(user) }
     if (start.center) {
       if (!myPos.value && !isFallback) myPos.value = { ...start.center }
-      try { await fetchNearby(start.center.lat, start.center.lng) } catch {}
+      try { await fetchNearby(start.center.lat, start.center.lng, undefined, myPos.value) } catch {}
       try {
         const mine = await store.fetchMine()
         mine.forEach((p: any) => { if (!store.pins.find((x: any) => x.id === p.id)) store.pins.unshift(p) })
@@ -298,7 +306,7 @@ export function useMapPage() {
         geoNotice.value = null
       }
       maybeFetchStreet(geo.lat, geo.lng)
-      try { await fetchNearby(geo.lat, geo.lng) } catch {}
+      try { await fetchNearby(geo.lat, geo.lng, undefined, { lat: geo.lat, lng: geo.lng }) } catch {}
       mapApi.showUserLocation(geo.lat, geo.lng)
       applyHomeZone()
       if (sane && !flewToLive) {

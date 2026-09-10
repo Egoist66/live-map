@@ -19,7 +19,7 @@ const upload = useGalleryDialogUpload(props.gallery)
         <Tag :value="`${gallery.count.value}/${gallery.limit.value}`" class="!text-[11px] !bg-stone-100 !text-stone-600 !border-0 dark:!bg-white/10 dark:!text-zinc-200" />
         <span class="flex-1" />
         <div v-if="isOwn && !gallery.isFull.value" class="shrink-0">
-          <input :ref="upload.setFileInput" type="file" accept="image/*" class="hidden" @change="upload.onFile" />
+          <input :ref="upload.setFileInput" type="file" accept="image/*" class="absolute w-px h-px opacity-0 overflow-hidden pointer-events-none" tabindex="-1" aria-hidden="true" @change="upload.onFile" />
           <Button icon="pi pi-plus" label="Добавить" rounded size="small" :loading="gallery.uploading.value" class="!bg-violet-600 !border-violet-600 !text-white !font-bold [&_.p-button-label]:hidden min-[420px]:[&_.p-button-label]:inline" aria-label="Добавить фото" @click="upload.pickFile" />
         </div>
       </div>

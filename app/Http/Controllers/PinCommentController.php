@@ -49,8 +49,9 @@ class PinCommentController extends Controller
             'is_anonymous' => $data['is_anonymous'] ?? $request->user()->is_anonymous_default ?? false,
         ]);
         $pin->increment('comments_count');
-        PinActivityNotifier::comment($pin, $request->user(), $comment);
-        PinActivityNotifier::mentions($pin, $request->user(), $comment, Mentions::extractIds($data['content'], $request->user()->id));
+        $mentionedIds = Mentions::extractIds($data['content'], $request->user()->id);
+        PinActivityNotifier::comment($pin, $request->user(), $comment, $mentionedIds);
+        PinActivityNotifier::mentions($pin, $request->user(), $comment, $mentionedIds);
         if ($comment->is_anonymous) $comment->setRelation('user', null);
         else $comment->load('user:id,name,avatar_path');
         return response()->json($comment, 201);

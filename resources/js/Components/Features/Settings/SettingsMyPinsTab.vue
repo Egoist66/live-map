@@ -5,11 +5,13 @@ import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 import Select from 'primevue/select'
 import { usePinAudience } from '@/composables/usePinAudience'
+import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
 
 defineProps<{ pins: any[]; loading: boolean; deleting: boolean; updatingId?: number | null; formatDate: (s: string) => string; formatTime: (s: string) => string }>()
 
 const emit = defineEmits<{ (e: 'delete', id: number): void; (e: 'audience', id: number, v: string): void }>()
 const audience = usePinAudience()
+const { selectPt } = useDropdownMenuStyle()
 
 function isScheduled(p: any): boolean {
   return p?.status === 'scheduled' || !!p?.is_scheduled
@@ -43,7 +45,7 @@ function scheduleLabel(p: any): string {
             </div>
             <div class="mt-3">
               <label class="text-[11px] font-bold uppercase tracking-wide text-stone-500">Кто видит</label>
-              <Select :model-value="p.gender_audience ?? 'all'" :options="audience.options" optionLabel="label" optionValue="value" checkmark fluid size="small" class="w-full mt-1 !rounded-xl" :loading="updatingId === p.id" :disabled="updatingId === p.id" @update:model-value="(v: string) => emit('audience', p.id, v)" />
+              <Select :model-value="p.gender_audience ?? 'all'" :options="audience.options" optionLabel="label" optionValue="value" checkmark fluid size="small" class="w-full mt-1 !rounded-xl" :pt="selectPt" :loading="updatingId === p.id" :disabled="updatingId === p.id" @update:model-value="(v: string) => emit('audience', p.id, v)" />
             </div>
           </template>
         </Card>

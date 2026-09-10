@@ -158,7 +158,7 @@ class User extends Authenticatable
         if ($this->isAdmin()) return 500000;
         if ($this->effectivePlan() === 'business') return 50000;
         if ($this->effectivePlan() === 'pro') return 15000;
-        return 5000;
+        return 10000;
     }
 
     public function homeRadiusLimit(): int
@@ -166,7 +166,17 @@ class User extends Authenticatable
         if ($this->isAdmin()) return 500;
         if ($this->effectivePlan() === 'business') return 50;
         if ($this->effectivePlan() === 'pro') return 15;
-        return 5;
+        return 10;
+    }
+
+    /**
+     * Фактический радиус домашней зоны с учётом тарифа.
+     */
+    public function homeZoneRadiusKm(): int
+    {
+        $wanted = (int) ($this->home_radius_km ?? $this->homeRadiusLimit());
+        $wanted = max(1, $wanted);
+        return min($wanted, $this->homeRadiusLimit());
     }
 
     public function isPro(): bool { return $this->isAdmin() || in_array($this->effectivePlan(), ['pro','business']); }

@@ -143,6 +143,21 @@ html.dark label { color: #e4e4e7; }
 html.dark .p-inputtext, html.dark .p-textarea, html.dark .p-select-label, html.dark .p-multiselect-label, html.dark .p-datepicker-input { background: #18181b !important; border-color: #3f3f46 !important; color: #e4e4e7 !important; }
 html.dark .p-inputtext::placeholder, html.dark .p-textarea::placeholder { color: #71717a !important; }
 html.dark .p-card, html.dark .p-dialog, html.dark .p-drawer, html.dark .p-popover-content, html.dark .p-menu, html.dark .p-tieredmenu { background: #18181b !important; border-color: #27272a !important; color: #e4e4e7 !important; }
+html.dark .p-contextmenu { background: #18181b !important; border-color: #27272a !important; color: #e4e4e7 !important; }
+html.dark .p-menu li:not(.danger-item) [class*='-label'],
+html.dark .p-menu li:not(.danger-item) [class*='-icon'],
+html.dark .p-contextmenu li:not(.danger-item) [class*='-label'],
+html.dark .p-contextmenu li:not(.danger-item) [class*='-icon'] { color: #e4e4e7 !important; }
+.danger-item .p-menu-item-label,
+.danger-item .p-menu-item-icon,
+.danger-item .p-contextmenu-item-label,
+.danger-item .p-contextmenu-item-icon { color: #dc2626 !important; }
+html.dark .danger-item .p-menu-item-label,
+html.dark .danger-item .p-menu-item-icon,
+html.dark .danger-item .p-contextmenu-item-label,
+html.dark .danger-item .p-contextmenu-item-icon { color: #f87171 !important; }
+.danger-item a:hover { background-color: rgb(254 242 242) !important; }
+html.dark .danger-item a:hover { background-color: rgba(248, 113, 113, 0.12) !important; }
 html.dark .p-accordionpanel, html.dark .p-accordioncontent-content { background: #18181b !important; border-color: #27272a !important; color: #e4e4e7 !important; }
 html.dark .p-select-overlay, html.dark .p-datepicker-panel, html.dark .p-popover { background: #18181b !important; border-color: #3f3f46 !important; color: #e4e4e7 !important; }
 html.dark .p-confirmdialog, html.dark .p-confirmdialog .p-dialog { background: #18181b !important; border-color: #3f3f46 !important; color: #e4e4e7 !important; }

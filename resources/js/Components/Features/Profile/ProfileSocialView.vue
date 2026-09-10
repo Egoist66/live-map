@@ -12,6 +12,7 @@ import { useGender } from '@/composables/useGender'
 import { useSwipesCta } from '@/composables/useSwipesCta'
 import { ageLabel, calcAge } from '@/composables/useUserAge'
 import { useSwipeTabs } from '@/composables/useSwipeTabs'
+import { usePhotoPicker } from '@/composables/usePhotoPicker'
 
 const props = defineProps<{
   user: any
@@ -56,24 +57,9 @@ const emit = defineEmits<{
 
 const tab = ref<'short' | 'gallery' | 'info'>('short')
 const swipe = useSwipeTabs(['short', 'gallery', 'info'] as const, tab)
-const photoInput = ref<HTMLInputElement | null>(null)
-
-/**
- * Открывает системный выбор фото с устройства.
- */
-function pickPhoto(): void {
-  photoInput.value?.click()
-}
-
-/**
- * Передаёт выбранный файл наверх для загрузки.
- */
-function onPhotoPicked(e: Event): void {
-  const input = e.target as HTMLInputElement
-  const f = input.files?.[0]
-  input.value = ''
-  if (f) emit('addPhoto', f)
-}
+const { pickerInput, openPicker, handlePickerChange } = usePhotoPicker({
+  onPick: (file: File) => emit('addPhoto', file),
+})
 const g = useGender()
 const { goSwipes } = useSwipesCta()
 
@@ -121,8 +107,9 @@ const statCls = 'flex-1 min-w-0 flex flex-col items-center sm:block sm:text-left
             <Tag :value="levelName" rounded class="!text-[10px] sm:!text-[11px] !font-bold !bg-blue-600 !text-white !border-0 shrink-0" />
           </div>
           <p class="text-[13px] sm:text-sm mt-1 truncate" :class="online ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-stone-500 dark:text-zinc-400'">
-            {{ online ? 'в сети' : lastSeen }}<span v-if="residenceText"> · {{ residenceText }}</span>
+            {{ online ? 'в сети' : lastSeen }}
           </p>
+          <p v-if="residenceText" class="text-xs sm:text-[13px] mt-0.5 truncate text-stone-500 dark:text-zinc-400">{{ residenceText }}</p>
         </div>
         <div class="flex gap-2 shrink-0 sm:pb-2 w-full sm:w-auto">
           <template v-if="isOwn">
@@ -204,10 +191,9 @@ const statCls = 'flex-1 min-w-0 flex flex-col items-center sm:block sm:text-left
               </span>
               <span v-if="(p.likes_count || 0) + (p.comments_count || 0) > 0" class="sm:hidden absolute bottom-1 left-1 text-[10px] font-bold text-white bg-black/55 rounded-full px-1.5 py-0.5">❤️{{ p.likes_count || 0 }} · 💬{{ p.comments_count || 0 }}</span>
             </button>
-            <button v-for="n in emptyTiles" :key="`slot-${n}`" type="button" @click="pickPhoto" title="Добавить фото" aria-label="Добавить фото" class="aspect-square grid place-items-center border-2 border-dashed border-stone-300 dark:border-zinc-700 text-stone-400 dark:text-zinc-500 hover:border-blue-500 hover:text-blue-500 dark:hover:border-blue-400 dark:hover:text-blue-400 hover:bg-blue-500/5 transition active:scale-[0.97]">
+            <button v-for="n in emptyTiles" :key="`slot-${n}`" type="button" @click="openPicker" title="Добавить фото" aria-label="Добавить фото" class="aspect-square grid place-items-center border-2 border-dashed border-stone-300 dark:border-zinc-700 text-stone-400 dark:text-zinc-500 hover:border-blue-500 hover:text-blue-500 dark:hover:border-blue-400 dark:hover:text-blue-400 hover:bg-blue-500/5 transition active:scale-[0.97]">
               <span class="flex flex-col items-center gap-1"><i class="pi pi-plus text-xl"></i><span class="text-[10px] font-bold">Добавить</span></span>
             </button>
-            <input ref="photoInput" type="file" accept="image/*" class="hidden" tabindex="-1" @change="onPhotoPicked" />
           </div>
           <div v-if="isOwn" class="mt-2 text-[11px] text-stone-500 dark:text-zinc-400">Занято {{ photosCount }} из {{ galleryLimit }} · {{ extraSlots > 0 ? `ещё ${extraSlots} свободно` : galleryCanAdd ? 'можно добавить' : 'лимит тарифа — Pro даёт больше' }}</div>
         </div>
@@ -215,9 +201,10 @@ const statCls = 'flex-1 min-w-0 flex flex-col items-center sm:block sm:text-left
           <div class="w-14 h-14 mx-auto rounded-full bg-blue-600/10 grid place-items-center"><i class="pi pi-camera text-xl text-blue-600 dark:text-blue-400"></i></div>
           <div class="mt-3 font-black text-ink-900 dark:text-white">Пока нет фотографий</div>
           <p class="text-xs text-stone-500 dark:text-zinc-400 mt-1">{{ isOwn ? 'Поделись первым моментом района' : 'Пользователь ещё ничего не опубликовал' }}</p>
-          <Button v-if="isOwn" label="Добавить фото" icon="pi pi-plus" rounded class="mt-4 !bg-blue-600 hover:!bg-blue-500 !border-0 !text-white !text-sm !font-bold" @click="pickPhoto" />
+          <Button v-if="isOwn" label="Добавить фото" icon="pi pi-plus" rounded class="mt-4 !bg-blue-600 hover:!bg-blue-500 !border-0 !text-white !text-sm !font-bold" @click="openPicker" />
         </div>
       </div>
+      <input ref="pickerInput" type="file" accept="image/*" class="absolute w-px h-px opacity-0 overflow-hidden pointer-events-none" tabindex="-1" aria-hidden="true" @change="handlePickerChange" />
     </div>
 
     <div v-else class="p-4 sm:p-6 text-sm" @touchstart.passive="swipe.onTouchStart" @touchend.passive="swipe.onTouchEnd">

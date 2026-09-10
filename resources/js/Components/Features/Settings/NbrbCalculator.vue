@@ -5,11 +5,13 @@ import Select from 'primevue/select'
 import DatePicker from 'primevue/datepicker'
 import { computed } from 'vue'
 import { useNbrb } from '@/composables/useNbrb'
+import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
 
 const props = defineProps<{ modelAmount?: number }>()
 const emit = defineEmits<{ (e: 'use-amount', v: number): void }>()
 
 const n = useNbrb()
+const { selectPt } = useDropdownMenuStyle()
 if (props.modelAmount) n.amount.value = props.modelAmount
 const dateObj = computed({
   get: () => (n.ondate.value ? new Date(n.ondate.value + 'T12:00:00') : null),
@@ -43,6 +45,7 @@ function onInput() {
         :options="n.currencyOptions.value"
         placeholder="USD"
         class="w-full !rounded-xl"
+        :pt="selectPt"
         @update:model-value="onCalc"
       />
       <DatePicker v-model="dateObj" date-format="yy-mm-dd" placeholder="Дата" class="w-full max-sm:col-span-2" input-class="!rounded-xl w-full" />

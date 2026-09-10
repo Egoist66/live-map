@@ -45,8 +45,8 @@ export function usePins() {
     return alive.filter((p) => p.category === selectedCategory.value)
   })
 
-  function fetchNearby(lat: number, lng: number, radius?: number) {
-    return store.fetchNearby(lat, lng, radius)
+  function fetchNearby(lat: number, lng: number, radius?: number, userPos?: { lat: number; lng: number } | null) {
+    return store.fetchNearby(lat, lng, radius, userPos ?? null)
   }
 
   function createPin(payload: CreatePinPayload): Promise<Pin> {

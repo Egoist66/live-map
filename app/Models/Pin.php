@@ -97,7 +97,7 @@ class Pin extends Model
 
     public function isExpired(): bool { return $this->expires_at ? $this->expires_at->isPast() : false; }
     public function isVisibleForTier(string $plan): bool {
-        $radius = $plan === 'business' ? 50000 : ($plan === 'pro' ? 15000 : 5000);
+        $radius = $plan === 'business' ? 50000 : ($plan === 'pro' ? 15000 : 10000);
         return $this->radius_meters <= $radius;
     }
 

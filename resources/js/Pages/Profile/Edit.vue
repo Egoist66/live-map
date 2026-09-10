@@ -52,7 +52,7 @@ const { setTheme } = useTheme()
                 <TabPanel value="billing"><SettingsBillingTab :user="s.u.value" :zone-count="s.zoneCount.value" @profile="s.active.value = 'profile'" /></TabPanel>
                 <TabPanel value="pins"><SettingsMyPinsTab :pins="(s.myPins.value as any)" :loading="(s.loadingPins.value as any)" :deleting="false" :updating-id="(s.updatingId as any)?.value ?? null" :format-date="formatDate" :format-time="formatTime" @delete="s.deleteMyPin" @audience="(id: number, v: string) => (s.updateAudience as any)(id, v)" /></TabPanel>
                 <TabPanel value="archive"><SettingsArchiveTab /></TabPanel>
-                <TabPanel value="privacy"><SettingsPrivacyTab :user="s.u.value" :invisible="s.invisible" :hidden="s.hidden" :blur="s.blur" :photo-privacy="s.photoPrivacy" @profile="s.active.value = 'profile'" /></TabPanel>
+                <TabPanel value="privacy"><SettingsPrivacyTab :user="s.u.value" :invisible="s.invisible" :hidden="s.hidden" :blur="s.blur" :photo-privacy="s.photoPrivacy" :home-radius="s.homeRadius" @profile="s.active.value = 'profile'" /></TabPanel>
                 <TabPanel value="appearance"><SettingsAppearanceTab :theme="s.theme.value" @theme="setTheme" /></TabPanel>
                 <TabPanel value="security"><SettingsSecurityTab /></TabPanel>
                 <TabPanel v-if="(s.showProcedures as any).value" value="procedures"><SettingsProceduresTab :proc="s.proc" /></TabPanel>
