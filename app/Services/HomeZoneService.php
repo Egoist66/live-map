@@ -59,6 +59,9 @@ class HomeZoneService
     /**
      * Запрещает операцию вне зоны (создание/просмотр чужих пинов).
      *
+     * Без зоны (не задан дом и нет живой геопозиции) — тоже запрет:
+     * иначе пины можно создавать где угодно. Админ — без ограничений.
+     *
      * @throws \Symfony\Component\HttpKernel\Exception\HttpException 422
      */
     public static function assertInsideZone(User $user, float $pinLat, float $pinLng, ?float $liveLat = null, ?float $liveLng = null): void
@@ -70,7 +73,7 @@ class HomeZoneService
         $zone = self::zoneFor($user, $liveLat, $liveLng);
 
         if ($zone === null) {
-            return;
+            abort(422, 'Операция запрещена — у вас не задан дом: создание пинов доступно только внутри вашей зоны. Укажите дом в профиле.');
         }
 
         $distance = self::distanceKm($zone['lat'], $zone['lng'], $pinLat, $pinLng);

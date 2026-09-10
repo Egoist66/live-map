@@ -13,7 +13,7 @@ import { useMapOverlays } from '@/composables/useMapOverlays'
 import { useAppConfirm } from '@/composables/useAppConfirm'
 import { useCustomCategories } from '@/composables/useCustomCategories'
 import { useHomeZoneVisibility } from '@/composables/useHomeZoneVisibility'
-import { planOf } from '@/composables/usePlanLimits'
+import { planOf, maxHomeRadiusKm } from '@/composables/usePlanLimits'
 import { resolveInitialCenter, homeAnchorOf, isSaneFix } from '@/composables/useMapInitialCenter'
 import { haversineKm } from '@/utils/geo'
 import { useHomeZoneGuard } from '@/composables/useHomeZoneGuard'
@@ -127,7 +127,12 @@ export function useMapPage() {
   function locateMe(): void {
     try { mapApi.triggerGeolocate?.() } catch {}
   }
-  const homeRadiusKm = computed(() => Number(page.props.auth?.user?.home_radius_km ?? 10))
+  const homeRadiusKm = computed(() => {
+    const user = page.props.auth?.user as any
+    const isAdmin = !!(user?.is_admin || user?.role === 'admin')
+    const wanted = Number(user?.home_radius_km ?? 10) || 10
+    return Math.min(Math.max(1, wanted), maxHomeRadiusKm(userPlan.value, isAdmin))
+  })
   const homeZone = computed(() => {
     if (!myPos.value) return null
     return { lat: myPos.value.lat, lng: myPos.value.lng, radiusKm: homeRadiusKm.value }
@@ -245,10 +250,23 @@ export function useMapPage() {
   }
 
   function openCreateFromUI() {
-    if (myPos.value) pinCreate.setCoords(myPos.value.lat, myPos.value.lng)
-    else {
+    const guard = useHomeZoneGuard()
+    if (myPos.value) {
+      const zone = guard.check(myPos.value.lat, myPos.value.lng, myPos.value)
+      if (!zone.ok) {
+        toast?.add({ severity: 'warn', summary: 'Вне вашей зоны', detail: zone.message, life: 5000 })
+        return
+      }
+      pinCreate.setCoords(myPos.value.lat, myPos.value.lng)
+    } else {
       const c: any = mapApi.getCenter?.()
-      if (c) pinCreate.setCoords(c.lat, c.lng)
+      if (!c) return
+      const zone = guard.check(Number(c.lat), Number(c.lng), null)
+      if (!zone.ok) {
+        toast?.add({ severity: 'warn', summary: 'Вне вашей зоны', detail: zone.message, life: 5000 })
+        return
+      }
+      pinCreate.setCoords(c.lat, c.lng)
     }
     try { void pinCreate.refreshLimit() } catch {}
     showCreate.value = true

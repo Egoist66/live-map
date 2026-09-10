@@ -48,7 +48,7 @@ const emit = defineEmits<{ (e: 'profile'): void }>()
         <Card class="!border-stone-200 !rounded-3xl !shadow-none" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
           <template #content>
             <div class="text-sm font-semibold dark:text-white">Радиус зоны — где вижу и ставлю пины</div>
-            <p class="text-xs text-stone-500 mt-1 leading-relaxed">Создавать и видеть чужие пины можно только внутри зоны. Вне зоны операция запрещена. Free — до 10 км, больше — Pro/Business. Админ — без ограничений.</p>
+            <p class="text-xs text-stone-500 mt-1 leading-relaxed">Создавать и видеть чужие пины можно только внутри зоны. Вне зоны операция запрещена. Free — до 10 км, больше — Pro/Business.</p>
             <div v-if="homeRadius" class="mt-3">
               <HomeZoneField :model-value="homeRadius.radius.value" :plan="String(homeRadius.plan.value)" :error="homeRadius.error.value" @update:model-value="(v:number)=>homeRadius.save(v)" />
               <div v-if="homeRadius.saving.value" class="text-xs text-stone-400 mt-2">Сохраняем…</div>

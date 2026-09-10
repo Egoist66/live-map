@@ -6,7 +6,7 @@ import { maxHomeRadiusKm, planOf } from './usePlanLimits'
 /**
  * Guard домашней зоны: создание и просмотр чужих пинов только внутри радиуса.
  * Центр — живая геопозиция, если гео включено, иначе статичный дом из профиля.
- * Админ — без ограничений.
+ * Админ — без ограничений. Без центра зоны (нет дома и гео) — запрет.
  * @example const guard = useHomeZoneGuard(); guard.assertCanCreate(lat, lng, livePos)
  */
 export function useHomeZoneGuard() {
@@ -44,7 +44,12 @@ export function useHomeZoneGuard() {
   function check(pinLat: number, pinLng: number, livePos?: { lat: number; lng: number } | null): { ok: boolean; message?: string; distanceKm?: number } {
     if (isAdmin.value) return { ok: true }
     const center = zoneCenter(livePos ?? null)
-    if (!center) return { ok: true }
+    if (!center) {
+      return {
+        ok: false,
+        message: 'Операция запрещена — у вас не задан дом: создание пинов доступно только внутри вашей зоны. Укажите дом в профиле.',
+      }
+    }
     const distance = haversineKm(center.lat, center.lng, pinLat, pinLng)
     if (distance <= zoneRadiusKm.value) return { ok: true, distanceKm: distance }
     const where = center.live ? 'вашей текущей геопозиции' : 'вашего дома'
