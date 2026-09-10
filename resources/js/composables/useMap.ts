@@ -410,99 +410,91 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
   }
 
   let homeZoneState: { lat: number; lng: number; radiusKm: number } | null = null
+  let homeZoneMarker: maplibregl.Marker | null = null
+  let homeZoneSvg: SVGSVGElement | null = null
+  let homeZoneCircle: SVGCircleElement | null = null
+  let homeZoneBound = false
 
-  function homeZoneGeoJson(lat: number, lng: number, radiusKm: number): any {
-    const ring = homeCircleCoords(lat, lng, radiusKm)
-    return {
-      type: 'Feature',
-      properties: {},
-      geometry: { type: 'Polygon', coordinates: [ring] },
-    }
+  function ensureHomeZoneEvents() {
+    if (homeZoneBound || !map) return
+    homeZoneBound = true
+    const update = () => updateHomeZonePixels()
+    try {
+      ;(map as any).on?.('zoom', update)
+      ;(map as any).on?.('zoomend', update)
+      ;(map as any).on?.('move', update)
+      ;(map as any).on?.('rotate', update)
+      ;(map as any).on?.('pitch', update)
+      ;(map as any).on?.('resize', update)
+      ;(map as any).on?.('idle', update)
+    } catch {}
   }
 
-  function firstSymbolLayerId(): string | undefined {
-    try {
-      const layers = (map as any)?.getStyle?.()?.layers ?? []
-      for (const layer of layers) {
-        if (layer?.type === 'symbol') return layer.id
-      }
-    } catch {}
-    return undefined
+  /**
+   * Точка строго на восток от центра на radiusKm км (точная сферическая формула).
+   */
+  function eastPoint(lat: number, lng: number, radiusKm: number): [number, number] {
+    const rad = Math.PI / 180
+    const dist = radiusKm / 6371.0
+    const lat1 = lat * rad
+    const lng1 = lng * rad
+    const sinLat1 = Math.sin(lat1)
+    const cosLat1 = Math.cos(lat1)
+    const sinDist = Math.sin(dist)
+    const cosDist = Math.cos(dist)
+    const lat2 = Math.asin(sinLat1 * cosDist)
+    const lng2 = lng1 + Math.atan2(sinDist * cosLat1, cosDist - sinLat1 * Math.sin(lat2))
+    return [lng2 / rad, lat2 / rad]
   }
 
-  function renderHomeZoneLayer(): void {
-    if (!map || !homeZoneState) return
-    const lat = homeZoneState.lat
-    const lng = homeZoneState.lng
-    const radiusKm = homeZoneState.radiusKm
-    const data = homeZoneGeoJson(lat, lng, radiusKm)
-    let hasSource = false
+  function updateHomeZonePixels() {
+    if (!map || !homeZoneState || !homeZoneSvg || !homeZoneCircle) return
     try {
-      const source = (map as any)?.getSource?.('home-zone-src') as any
-      hasSource = !!source?.setData
-    } catch {
-      hasSource = false
-    }
-    let hasFill = false
-    let hasLine = false
-    try {
-      hasFill = !!(map as any)?.getLayer?.('home-zone-fill')
-      hasLine = !!(map as any)?.getLayer?.('home-zone-line')
-    } catch {
-      hasFill = false
-      hasLine = false
-    }
-    if (hasSource && hasFill && hasLine) {
-      try {
-        const source = (map as any)?.getSource?.('home-zone-src') as any
-        source?.setData?.(data)
-      } catch {}
-      return
-    }
-    try {
-      if (hasFill) (map as any)?.removeLayer?.('home-zone-fill')
-      if (hasLine) (map as any)?.removeLayer?.('home-zone-line')
-      if (hasSource) (map as any)?.removeSource?.('home-zone-src')
-    } catch {}
-    try {
-      ;(map as any)?.addSource?.('home-zone-src', { type: 'geojson', data })
-    } catch {
-      return
-    }
-    const beforeId = firstSymbolLayerId()
-    try {
-      ;(map as any)?.addLayer?.({
-        id: 'home-zone-fill',
-        type: 'fill',
-        source: 'home-zone-src',
-        paint: { 'fill-color': '#7c3aed', 'fill-opacity': 0.14 },
-      }, beforeId)
-    } catch {}
-    try {
-      ;(map as any)?.addLayer?.({
-        id: 'home-zone-line',
-        type: 'line',
-        source: 'home-zone-src',
-        paint: {
-          'line-color': '#7c3aed',
-          'line-opacity': 0.7,
-          'line-width': 2,
-          'line-dasharray': [2, 2],
-        },
-      }, beforeId)
+      const lat = homeZoneState.lat
+      const lng = homeZoneState.lng
+      const center = (map as any)?.project?.([lng, lat])
+      const edge = (map as any)?.project?.(eastPoint(lat, lng, homeZoneState.radiusKm))
+      if (!center || !edge) return
+      const dx = Number(edge.x) - Number(center.x)
+      const dy = Number(edge.y) - Number(center.y)
+      const radiusPx = Math.sqrt(dx * dx + dy * dy)
+      if (!Number.isFinite(radiusPx) || radiusPx <= 0) return
+      const size = Math.min(Math.max(radiusPx * 2, 20), 6000)
+      const radius = size / 2
+      homeZoneSvg.setAttribute('width', String(Math.round(size)))
+      homeZoneSvg.setAttribute('height', String(Math.round(size)))
+      homeZoneSvg.style.width = `${Math.round(size)}px`
+      homeZoneSvg.style.height = `${Math.round(size)}px`
+      homeZoneCircle.setAttribute('cx', String(radius))
+      homeZoneCircle.setAttribute('cy', String(radius))
+      homeZoneCircle.setAttribute('r', String(Math.max(radius - 1, 1)))
     } catch {}
   }
 
   function drawHomeZone(lat: number, lng: number, radiusKm: number) {
     homeZoneState = { lat, lng, radiusKm }
     if (!map) return
-    renderHomeZoneLayer()
+    ensureHomeZoneEvents()
     try {
-      const loaded = (map as any)?.isStyleLoaded?.() ?? true
-      if (!loaded) {
-        try { (map as any)?.once?.('load', () => renderHomeZoneLayer()) } catch {}
-        try { (map as any)?.once?.('idle', () => renderHomeZoneLayer()) } catch {}
+      if (!homeZoneMarker) {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+        svg.style.display = 'block'
+        svg.style.overflow = 'visible'
+        svg.style.pointerEvents = 'none'
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+        circle.setAttribute('fill', 'rgba(124,58,237,0.14)')
+        circle.setAttribute('stroke', 'rgba(124,58,237,0.7)')
+        circle.setAttribute('stroke-width', '2')
+        circle.setAttribute('stroke-dasharray', '8 6')
+        circle.style.pointerEvents = 'none'
+        svg.appendChild(circle)
+        homeZoneSvg = svg
+        homeZoneCircle = circle
+        homeZoneMarker = new maplibregl.Marker({ element: svg as unknown as HTMLElement, anchor: 'center' }).setLngLat([lng, lat]).addTo(map)
+      } else {
+        homeZoneMarker.setLngLat([lng, lat] as any)
       }
+      updateHomeZonePixels()
     } catch {}
   }
 
@@ -518,6 +510,14 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
 
   function hideHomeZone() {
     homeZoneState = null
+    try {
+      if (homeZoneMarker) {
+        homeZoneMarker.remove()
+        homeZoneMarker = null
+        homeZoneSvg = null
+        homeZoneCircle = null
+      }
+    } catch {}
     try {
       if ((map as any)?.getLayer?.('home-zone-fill')) (map as any).removeLayer('home-zone-fill')
       if ((map as any)?.getLayer?.('home-zone-line')) (map as any).removeLayer('home-zone-line')
