@@ -4,6 +4,7 @@ import { computed, onMounted } from 'vue'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { useSwipes } from '@/composables/useSwipes'
+import { useSwipePhotoViewer } from '@/composables/useSwipePhotoViewer'
 import { useSeo } from '@/composables/useSeo'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
@@ -25,6 +26,7 @@ const isAuth = computed(() => !!(page.props.auth as any)?.user)
 const Layout = computed(() => (isAuth.value ? AuthenticatedLayout : GuestLayout))
 
 const s = useSwipes()
+const viewer = useSwipePhotoViewer()
 
 const dialogPt = {
   root: { class: '!rounded-3xl dark:!bg-zinc-900 dark:!border-zinc-700' },
@@ -209,6 +211,14 @@ onMounted(async () => {
                 </div>
                 <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent pointer-events-none" />
 
+                <div v-if="s.current.value.photos.length > 1" class="absolute top-2.5 inset-x-3 flex gap-1 pointer-events-none">
+                  <span
+                    v-for="(p, i) in s.current.value.photos.slice(0, s.current.value.is_pro ? 5 : 3)"
+                    :key="i"
+                    :class="['h-[3px] flex-1 rounded-full', i === 0 ? 'bg-white' : 'bg-white/40']"
+                  />
+                </div>
+
                 <div
                   class="absolute top-5 left-5 rotate-[-12deg] border-4 border-emerald-400 text-emerald-300 font-black text-2xl px-3 py-1 rounded-xl bg-black/20"
                   :style="{ opacity: s.likeStrength.value, transform: `scale(${0.8 + s.likeStrength.value * 0.3})` }"
@@ -220,6 +230,19 @@ onMounted(async () => {
 
                 <div v-if="s.current.value.liked_me" class="absolute top-4 right-4">
                   <Chip label="Лайкнул тебя" icon="pi pi-heart-fill" class="!rounded-full !bg-rose-500 !text-white !border-0" />
+                </div>
+
+                <div v-if="s.current.value.photos.length" class="absolute top-11 left-3" @pointerdown.stop @pointermove.stop @pointerup.stop>
+                  <Button
+                    :label="`${s.current.value.photos.slice(0, s.current.value.is_pro ? 5 : 3).length}`"
+                    icon="pi pi-images"
+                    rounded
+                    size="small"
+                    aria-label="Смотреть фото"
+                    title="Смотреть фото"
+                    class="!bg-black/55 !border-white/20 !text-white backdrop-blur"
+                    @click.stop="s.current.value && viewer.open(s.current.value)"
+                  />
                 </div>
 
                 <div class="absolute bottom-0 inset-x-0 p-4 sm:p-5 text-white pointer-events-none">
@@ -386,6 +409,37 @@ onMounted(async () => {
             <Button label="Перейти в чат" icon="pi pi-send" rounded :loading="s.creatingChat.value" @click="s.matchedCard.value && s.openChat(s.matchedCard.value.id, s.matchedConversationId.value)" />
           </div>
         </div>
+      </Dialog>
+
+      <Dialog :visible="viewer.viewerOpen.value" @update:visible="(v:boolean)=>{ if(!v) viewer.close() }" modal :draggable="false" :style="{ width: '420px', maxWidth: '94vw', maxHeight: '92dvh' }" :pt="dialogPt">
+        <template #header>
+          <span class="font-bold">{{ viewer.card.value?.name }} · {{ viewer.counterLabel.value }}</span>
+        </template>
+        <div v-if="viewer.hasPhotos.value" class="select-none">
+          <div class="flex gap-1">
+            <button
+              v-for="(p, i) in viewer.photos.value"
+              :key="i"
+              type="button"
+              :class="['h-1 flex-1 rounded-full transition', i === viewer.photoIndex.value ? 'bg-rose-500' : i < viewer.photoIndex.value ? 'bg-rose-300' : 'bg-stone-200 dark:bg-zinc-700']"
+              :aria-label="`Фото ${i + 1}`"
+              @click="viewer.goTo(i)"
+            />
+          </div>
+          <div class="relative mt-2 rounded-2xl overflow-hidden bg-black">
+            <img :src="viewer.currentPhoto.value ?? ''" alt="" class="w-full h-[52dvh] min-h-[320px] object-contain bg-black" draggable="false" />
+            <button type="button" aria-label="Назад" class="absolute left-0 top-0 h-full w-[28%] cursor-w-pointer" @click="viewer.prev()" />
+            <button type="button" aria-label="Вперёд" class="absolute right-0 top-0 h-full w-[28%] cursor-e-pointer" @click="viewer.next()" />
+            <Button icon="pi pi-times" rounded text size="small" aria-label="Закрыть" class="!absolute top-2 right-2 !bg-black/50 !text-white !border-0 !w-9 !h-9" @click="viewer.close()" />
+            <span class="absolute bottom-2 right-2 text-[11px] font-bold text-white bg-black/55 rounded-full px-2 py-0.5">{{ viewer.counterLabel.value }}</span>
+          </div>
+          <div class="mt-2 flex items-center justify-between gap-2">
+            <Button icon="pi pi-chevron-left" rounded outlined size="small" aria-label="Предыдущее фото" :disabled="viewer.photoIndex.value === 0" @click="viewer.prev()" />
+            <span class="text-[11px] text-stone-400 dark:text-zinc-500">Тап по краям фото листает · max {{ viewer.card.value?.is_pro ? 5 : 3 }}</span>
+            <Button icon="pi pi-chevron-right" rounded outlined size="small" aria-label="Следующее фото" :disabled="viewer.photoIndex.value >= viewer.total.value - 1" @click="viewer.next()" />
+          </div>
+        </div>
+        <div v-else class="py-6 text-center text-sm text-stone-500 dark:text-zinc-400">Фото пока нет</div>
       </Dialog>
 
       <Dialog :visible="s.ageGate.value" modal :closable="false" :draggable="false" header="Только 18+" :style="{ width: '400px', maxWidth: '94vw', maxHeight: '92dvh' }" :pt="dialogPt">

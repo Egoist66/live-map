@@ -44,7 +44,7 @@ const emit = defineEmits<{ (e: 'avatar'): void; (e: 'chat'): void; (e: 'add'): v
           <Button v-if="isFriend" @click="emit('remove')" rounded severity="danger" outlined class="!w-10 !h-10 !p-0 !rounded-full" icon="pi pi-user-minus" aria-label="Удалить из друзей" />
           <Button v-if="!isBlocked" @click="emit('block')" rounded severity="danger" outlined class="!w-10 !h-10 !p-0 !rounded-full" icon="pi pi-ban" aria-label="Заблокировать" />
           <Button v-else @click="emit('unblock')" :loading="loading" rounded severity="danger" outlined class="!w-10 !h-10 !p-0 !rounded-full" icon="pi pi-ban" aria-label="Разблокировать" />
-          <UserSubscribeButton v-if="!isBlocked" :user-id="(user as any).id" :initial="subscription" :compact="true" />
+          <UserSubscribeButton v-if="!isBlocked && isFriend" :user-id="(user as any).id" :initial="subscription" :compact="true" :is-friend="isFriend" />
           <span class="ml-1 text-xs font-medium text-stone-500 dark:text-zinc-400 hidden sm:inline">Действия</span>
         </div>
         <div class="mt-3 flex gap-2 rounded-2xl p-2.5 bg-gradient-to-br from-stone-100/90 to-stone-50/50 dark:from-white/[0.07] dark:to-white/[0.02] border border-stone-200/60 dark:border-white/10">

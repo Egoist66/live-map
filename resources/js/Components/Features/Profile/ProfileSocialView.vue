@@ -134,7 +134,7 @@ const statCls = 'flex-1 min-w-0 flex flex-col items-center sm:block sm:text-left
           <template v-else>
             <Button v-if="canMessage && !isBlocked" icon="pi pi-comments" :loading="loading" aria-label="Написать сообщение" title="Написать сообщение" class="!rounded-xl !w-11 shrink-0 !bg-blue-600 hover:!bg-blue-500 !border-0 !text-white" @click="emit('chat')" />
             <Button v-if="!isBlocked" :label="friendLabel" :icon="isFriend ? 'pi pi-check' : 'pi pi-user-plus'" :loading="loading" class="flex-1 min-w-0 !rounded-xl !text-[13px] !font-bold !border-0 [&_.p-button-label]:truncate" :class="isFriend ? '!bg-emerald-50 dark:!bg-emerald-500/10 !text-emerald-600 dark:!text-emerald-400' : '!bg-stone-100 dark:!bg-white/10 !text-ink-900 dark:!text-white'" @click="isFriend ? emit('remove') : emit('add')" />
-            <UserSubscribeButton v-if="!isBlocked" :user-id="(user as any).id" :initial="subscription" :compact="true" />
+            <UserSubscribeButton v-if="!isBlocked && isFriend" :user-id="(user as any).id" :initial="subscription" :compact="true" :is-friend="isFriend" />
             <ProfileMoreMenu v-if="!isBlocked" :user-id="(user as any).id" :user-name="(user as any).name" @share="emit('share')" @block="emit('block')" @remove="emit('remove')" />
             <Button v-else label="Разблокировать" icon="pi pi-ban" :loading="loading" severity="danger" outlined class="flex-1 min-w-0 !rounded-xl !text-[13px] !font-bold [&_.p-button-label]:truncate" @click="emit('unblock')" />
           </template>

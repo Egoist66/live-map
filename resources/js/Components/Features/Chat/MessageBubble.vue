@@ -3,9 +3,11 @@ import { computed } from 'vue'
 import Image from 'primevue/image'
 import MessageTicks from '@/Components/Features/Feedback/MessageTicks.vue'
 import { renderWithMentions } from '@/composables/useMentions'
+import { useMentionNavigate } from '@/composables/useMentionNavigate'
 
 const props = defineProps<{ message: any; own: boolean; status: string; time: string; pinned?: boolean }>()
 const emit = defineEmits<{ (e: 'edit', m: any): void; (e: 'delete', id: number): void; (e: 'pin', m: any): void; (e: 'reply', m: any): void; (e: 'jump', id: number): void }>()
+const mentionNav = useMentionNavigate()
 
 const quote = computed(() => (props.message as any)?.reply_to ?? null)
 const quoteSnippet = computed(() => {
@@ -54,7 +56,7 @@ const attachmentSize = computed(() => {
               <i class="pi pi-download text-sm shrink-0"></i>
             </a>
           </div>
-          <div v-if="message.body" class="whitespace-pre-wrap break-words overflow-wrap-anywhere [overflow-wrap:anywhere] min-w-0 msg-body" v-html="renderWithMentions(message.body || '')"></div>
+          <div v-if="message.body" class="whitespace-pre-wrap break-words overflow-wrap-anywhere [overflow-wrap:anywhere] min-w-0 msg-body" v-html="renderWithMentions(message.body || '')" @click="mentionNav.onRichClick"></div>
           <div v-else-if="attachment?.url" class="text-xs opacity-70 truncate">{{ attachment.name || 'Файл' }}</div>
           <div :class="own ? 'text-violet-100' : 'text-stone-400'" class="text-[11px] lg:text-[10px] mt-1 text-right flex items-center justify-end gap-1.5">
             <span>{{ time }}</span>
@@ -74,4 +76,5 @@ const attachmentSize = computed(() => {
 </template>
 <style scoped>
 .msg-body :deep(.mention){font-weight:700;text-decoration:underline;text-underline-offset:2px}
+.msg-body :deep(.mention-link){cursor:pointer}
 </style>

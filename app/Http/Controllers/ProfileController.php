@@ -72,6 +72,9 @@ class ProfileController extends Controller
             $subscription = \App\Models\UserSubscription::where('subscriber_id', $auth->id)
                 ->where('target_id', $user->id)
                 ->first();
+            if (! $isFriend) {
+                $subscription = null;
+            }
         }
         return Inertia::render('Profile/Show', [
             'profileUser' => array_merge($base, ['avatar_url' => $user->avatar_url, 'last_seen_at' => $showLastSeen?->toISOString(), 'is_invisible' => $user->isInvisibleActive()]),

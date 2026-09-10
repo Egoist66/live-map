@@ -23,6 +23,11 @@ class PublishScheduledPins extends Command
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage());
             }
+            try {
+                \App\Services\UserSubscriptionNotifier::pinCreated($pin);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('subscription notify failed: '.$e->getMessage());
+            }
             $count++;
         }
         $this->info("Published $count scheduled pins");

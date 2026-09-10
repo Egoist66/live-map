@@ -28,6 +28,10 @@ class DatingService
 
     public const BUSINESS_FAVORITES_LIMIT = 15;
 
+    public const SWIPE_PHOTOS_LIMIT = 3;
+
+    public const SWIPE_PHOTOS_LIMIT_PRO = 5;
+
     public const GOALS = ['love', 'flirt', 'friendship', 'chat', 'interests'];
 
     public const GENDER_PREFS = ['male', 'female', 'all'];
@@ -516,8 +520,9 @@ class DatingService
                 'id', 'name', 'gender', 'birth_date', 'bio', 'avatar_path',
                 'home_city', 'home_lat', 'home_lng', 'last_seen_at',
                 'dating_goal', 'dating_interests', 'dating_hide_name', 'dating_hide_age',
+                'plan', 'plan_expires_at', 'is_admin', 'role',
             ])
-            ->with(['profilePhotos' => fn ($q) => $q->orderBy('sort_order')->limit(4)])
+            ->with(['profilePhotos' => fn ($q) => $q->orderBy('sort_order')->limit(self::SWIPE_PHOTOS_LIMIT_PRO)])
             ->orderByDesc('last_seen_at')
             ->limit(60)
             ->get();
@@ -650,7 +655,7 @@ class DatingService
 
         $photos = $candidate->relationLoaded('profilePhotos')
             ? $candidate->profilePhotos
-            : $candidate->profilePhotos()->orderBy('sort_order')->limit(4)->get();
+            : $candidate->profilePhotos()->orderBy('sort_order')->limit(self::SWIPE_PHOTOS_LIMIT_PRO)->get();
 
         $photoUrls = $photos
             ->map(fn ($p) => $p->url ?? null)
@@ -662,6 +667,14 @@ class DatingService
             $photoUrls[] = $candidate->avatar_url;
         }
 
+        $isProCandidate = $candidate->isPro();
+
+        $photosLimit = $isProCandidate
+            ? self::SWIPE_PHOTOS_LIMIT_PRO
+            : self::SWIPE_PHOTOS_LIMIT;
+
+        $photoUrls = array_values(array_slice($photoUrls, 0, $photosLimit));
+
         return [
             'id' => $candidate->id,
             'name' => $hideName ? 'Аноним' : $candidate->name,
@@ -672,6 +685,8 @@ class DatingService
             'bio' => $candidate->bio,
             'avatar_url' => $candidate->avatar_url,
             'photos' => $photoUrls,
+            'photos_limit' => $photosLimit,
+            'is_pro' => $isProCandidate,
             'city' => $candidate->home_city,
             'distance_km' => $distanceKm !== null ? round($distanceKm, 1) : null,
             'goal' => $candidate->dating_goal,

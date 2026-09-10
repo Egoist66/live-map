@@ -30,7 +30,7 @@ export function useUserSubscriptions(userId: number | string, initial?: { subscr
   }
 
   /**
-   * Переключает подписку.
+   * Переключает подписку. Доступно только для друзей.
    */
   async function toggle(): Promise<void> {
     if (loading.value) return
@@ -49,8 +49,9 @@ export function useUserSubscriptions(userId: number | string, initial?: { subscr
         subscribed.value = s.subscribed
         toast?.add({ severity: 'success', summary: 'Подписались', detail: 'Новый пин, фото и уровень — в уведомлениях', life: 3000 })
       }
-    } catch {
-      toast?.add({ severity: 'error', summary: 'Не вышло', detail: 'Попробуйте позже', life: 2500 })
+    } catch (e: any) {
+      const detail = e?.response?.data?.message || 'Попробуйте позже'
+      toast?.add({ severity: 'error', summary: 'Не вышло', detail, life: 3000 })
     } finally {
       loading.value = false
     }

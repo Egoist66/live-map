@@ -2,7 +2,7 @@ import { api } from './api'
 
 export interface PinActivityItem {
   id: number
-  kind: 'reaction' | 'comment' | 'mention' | 'photo_comment'
+  kind: 'reaction' | 'comment' | 'mention' | 'photo_comment' | 'sub_pin' | 'sub_photo' | 'sub_level'
   owner_id?: number | null
   reaction_type?: string | null
   excerpt?: string | null

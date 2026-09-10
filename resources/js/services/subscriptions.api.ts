@@ -5,6 +5,8 @@ export type SubscriptionStatus = {
   notify_pin: boolean
   notify_photo: boolean
   notify_level: boolean
+  is_friend?: boolean
+  can_subscribe?: boolean
 }
 
 export type SubscriptionFlags = {

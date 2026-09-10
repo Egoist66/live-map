@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Friendship;
 use App\Models\User;
 use App\Models\UserBlock;
 use App\Models\UserSubscription;
@@ -41,15 +42,19 @@ class UserSubscriptionController extends Controller
      */
     public function status(Request $request, User $user)
     {
-        $sub = UserSubscription::where('subscriber_id', $request->user()->id)
+        $meId = (int) $request->user()->id;
+        $isFriend = Friendship::areFriends($meId, (int) $user->id);
+        $sub = UserSubscription::where('subscriber_id', $meId)
             ->where('target_id', $user->id)
             ->first();
 
         return response()->json([
-            'subscribed' => (bool) $sub,
+            'subscribed' => $isFriend && (bool) $sub,
             'notify_pin' => (bool) ($sub->notify_pin ?? true),
             'notify_photo' => (bool) ($sub->notify_photo ?? true),
             'notify_level' => (bool) ($sub->notify_level ?? true),
+            'is_friend' => $isFriend,
+            'can_subscribe' => $isFriend,
         ]);
     }
 
@@ -66,6 +71,7 @@ class UserSubscriptionController extends Controller
                 ->orWhere(fn ($x) => $x->where('blocker_id', $user->id)->where('blocked_id', $me->id));
         })->exists();
         abort_if($blocked, 403, 'Недоступно');
+        abort_unless(Friendship::areFriends((int) $me->id, (int) $user->id), 403, 'Подписка на обновления доступна только для друзей');
 
         $data = $request->validate([
             'notify_pin' => 'sometimes|boolean',

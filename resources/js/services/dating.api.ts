@@ -13,6 +13,8 @@ export interface SwipeCard {
   bio: string | null
   avatar_url: string | null
   photos: string[]
+  photos_limit?: number
+  is_pro?: boolean
   city: string | null
   distance_km: number | null
   goal: string | null

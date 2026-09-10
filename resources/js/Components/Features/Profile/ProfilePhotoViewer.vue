@@ -13,6 +13,7 @@ import { usePhotoViewerSwiper } from '@/composables/usePhotoViewerSwiper'
 import { useMentionInput } from '@/composables/useMentionInput'
 import { useEnterToSend } from '@/composables/useEnterToSend'
 import { renderWithMentions } from '@/composables/useMentions'
+import { useMentionNavigate } from '@/composables/useMentionNavigate'
 import { avatarSrcFor } from '@/composables/useAvatar'
 
 const props = defineProps<{ gallery: any; comments: any; isOwn: boolean; userName?: string; avatarSrc?: string }>()
@@ -26,6 +27,7 @@ const mentionInput = useMentionInput({
   setText: (v: string) => { props.comments.draft.value = v },
 })
 const { handleEnterToSend } = useEnterToSend()
+const mentionNav = useMentionNavigate()
 
 /**
  * Отправляет комментарий к фото и закрывает подсказки.
@@ -81,7 +83,7 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
           <div v-else-if="!comments.comments.value.length" class="text-xs text-stone-400 py-2">Комментариев пока нет — стань первым</div>
           <div v-for="c in comments.comments.value" :key="c.id" :id="`photo-comment-${c.id}`" :class="['flex gap-2.5 items-start rounded-xl px-2 py-1 -mx-2', Number(gallery.highlightCommentId?.value) === Number(c.id) ? 'bg-violet-50 dark:bg-violet-950/40 ring-1 ring-violet-500/40' : '']">
             <span class="w-7 h-7 shrink-0 rounded-full bg-stone-200 dark:bg-white/10 grid place-items-center text-[11px] font-black text-stone-600 dark:text-zinc-200">{{ (c.user?.name || '?').slice(0, 1).toUpperCase() }}</span>
-            <div class="min-w-0 flex-1 text-sm break-words dark:text-zinc-100"><span class="font-bold">{{ c.user?.name || 'Пользователь' }} </span><span class="comment-body" v-html="renderWithMentions(c.content || '')"></span></div>
+            <div class="min-w-0 flex-1 text-sm break-words dark:text-zinc-100"><span class="font-bold">{{ c.user?.name || 'Пользователь' }} </span><span class="comment-body" v-html="renderWithMentions(c.content || '')" @click="mentionNav.onRichClick"></span></div>
             <Button v-if="isOwn" icon="pi pi-times" text rounded size="small" class="!w-8 !h-8 shrink-0" @click="comments.remove(c.id)" aria-label="Удалить комментарий" />
           </div>
           <Message v-if="comments.error.value" severity="error" :closable="false" class="!rounded-2xl !text-xs">{{ comments.error.value }}</Message>
@@ -122,5 +124,6 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
 </template>
 <style scoped>
 .comment-body :deep(.mention){color:#7c3aed;font-weight:700}
+.comment-body :deep(.mention-link){cursor:pointer}
 :global(.dark) .comment-body :deep(.mention){color:#a78bfa}
 </style>

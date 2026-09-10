@@ -107,6 +107,10 @@ export const useBadgeStore = defineStore('badges', () => {
         else scheduleFetch()
       })
       echoCh.listen('.message.read', () => scheduleFetch())
+      echoCh.listen('.pin.activity', () => scheduleFetch())
+      echoCh.listen('PinActivityCreated', () => scheduleFetch())
+      echoCh.listen('.user.feed.updated', () => scheduleFetch())
+      echoCh.listen('UserFeedUpdated', () => scheduleFetch())
       const pusher = (echo as any).connector?.pusher
       if (pusher) {
         pusher.connection.bind('connected', () => fetch())

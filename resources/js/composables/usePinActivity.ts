@@ -83,6 +83,16 @@ async function markOne(a: PinActivityItem) {
 
 function describe(a: PinActivityItem): { emoji: string; text: string } {
   const name = a.actor?.name || 'Кто-то'
+  if (a.kind === 'sub_pin') {
+    const title = (a as any).excerpt || a.pin?.title || 'новый пин'
+    return { emoji: '📍', text: `${name} создал пин «${title}»` }
+  }
+  if (a.kind === 'sub_photo') {
+    return { emoji: '📷', text: `${name} добавил новое фото` }
+  }
+  if (a.kind === 'sub_level') {
+    return { emoji: '⭐', text: (a as any).excerpt ? `${name}: ${(a as any).excerpt}` : `${name} обновил репутацию` }
+  }
   if (a.kind === 'mention') {
     return a.photo
       ? { emoji: '📣', text: a.excerpt ? `${name} упомянул вас: ${a.excerpt}` : `${name} упомянул вас в фото` }
@@ -99,11 +109,12 @@ function describe(a: PinActivityItem): { emoji: string; text: string } {
 }
 
 function resolveTarget(a: PinActivityItem): { url: string; pending: any } {
+  const actorId = Number((a as any).actor?.id || 0) || null
   const pinId = Number((a as any).pin?.id || (a as any).pin_id || 0) || null
   const commentId = Number((a as any).comment_id || 0) || null
   const photoId = Number((a as any).photo?.id || (a as any).photo_id || 0) || null
   const photoCommentId = Number((a as any).photo_comment_id || 0) || null
-  const photoUserId = Number((a as any).photo?.user_id || 0) || null
+  const photoUserId = Number((a as any).photo?.user_id || actorId || 0) || null
   if (pinId) {
     const url = `/map?pin=${pinId}${commentId ? `&comment=${commentId}` : ''}`
     return { url, pending: { type: 'pin', pinId, commentId } }
@@ -111,6 +122,9 @@ function resolveTarget(a: PinActivityItem): { url: string; pending: any } {
   if (photoId && photoUserId) {
     const url = `/users/${photoUserId}?photo=${photoId}${photoCommentId ? `&comment=${photoCommentId}` : ''}`
     return { url, pending: { type: 'photo', photoId, commentId: photoCommentId, userId: photoUserId } }
+  }
+  if (actorId) {
+    return { url: `/users/${actorId}`, pending: null }
   }
   return { url: '/map', pending: null }
 }

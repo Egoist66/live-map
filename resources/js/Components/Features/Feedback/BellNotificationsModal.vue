@@ -193,7 +193,7 @@ function openNews(item: any) {
               <button
                 v-for="a in pinAct.activities.value"
                 :key="a.id"
-                @click="pinAct.goPin(a)"
+                @click="bell.close(); pinAct.goPin(a)"
                 :class="
                   !a.read_at
                     ? 'bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-800'
@@ -215,7 +215,7 @@ function openNews(item: any) {
                 <div class="min-w-0 flex-1">
                   <div class="flex items-center gap-1.5">
                     <span class="text-sm font-semibold dark:text-white truncate">{{
-                      a.pin?.title || (a.photo ? "Ваше фото" : "Ваш пин")
+                      a.pin?.title || (a.kind === 'sub_photo' ? "Новое фото" : a.kind === 'sub_level' ? "Обновление профиля" : a.photo ? "Ваше фото" : a.kind === 'mention' ? "Вас упомянули" : "Ваш пин")
                     }}</span
                     ><span
                       v-if="a.created_at"

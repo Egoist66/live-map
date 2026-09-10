@@ -149,7 +149,16 @@ class FriendshipController extends Controller
     {
         $u=$request->user();
         abort_unless(in_array($u->id,[$friendship->requester_id,$friendship->addressee_id]),403);
+        $a = (int) $friendship->requester_id;
+        $b = (int) $friendship->addressee_id;
         $friendship->delete();
+        \App\Models\UserSubscription::where(function ($q) use ($a, $b) {
+            $q->where(function ($x) use ($a, $b) {
+                $x->where('subscriber_id', $a)->where('target_id', $b);
+            })->orWhere(function ($x) use ($a, $b) {
+                $x->where('subscriber_id', $b)->where('target_id', $a);
+            });
+        })->delete();
         return response()->json(['ok'=>true]);
     }
 

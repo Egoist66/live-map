@@ -50,18 +50,18 @@ export function renderWithMentions(text: string): string {
   URL_RE.lastIndex = 0
   let m: RegExpExecArray | null
   while ((m = URL_RE.exec(src)) !== null) {
-    out.push(escapeHtml(src.slice(last, m.index)).replace(MENTION_RE, '<span class="mention">@$1</span>'))
+    out.push(escapeHtml(src.slice(last, m.index)).replace(MENTION_RE, '<span class="mention mention-link" data-mention="$1">@$1</span>'))
     const clean = trimUrlEnd(m[0])
     const trail = m[0].slice(clean.length)
     if (/^https?:\/\/.+\..+/.test(clean)) {
       out.push(linkTag(clean))
-      out.push(escapeHtml(trail).replace(MENTION_RE, '<span class="mention">@$1</span>'))
+      out.push(escapeHtml(trail).replace(MENTION_RE, '<span class="mention mention-link" data-mention="$1">@$1</span>'))
     } else {
-      out.push(escapeHtml(m[0]).replace(MENTION_RE, '<span class="mention">@$1</span>'))
+      out.push(escapeHtml(m[0]).replace(MENTION_RE, '<span class="mention mention-link" data-mention="$1">@$1</span>'))
     }
     last = m.index + m[0].length
   }
-  out.push(escapeHtml(src.slice(last)).replace(MENTION_RE, '<span class="mention">@$1</span>'))
+  out.push(escapeHtml(src.slice(last)).replace(MENTION_RE, '<span class="mention mention-link" data-mention="$1">@$1</span>'))
   return out.join('')
 }
 

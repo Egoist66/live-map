@@ -6,12 +6,14 @@ const props = defineProps<{
   userId: number | string
   initial?: { subscribed: boolean; notify_pin: boolean; notify_photo: boolean; notify_level: boolean }
   compact?: boolean
+  isFriend?: boolean
 }>()
 
 const sub = useUserSubscriptions(props.userId, props.initial)
 </script>
 <template>
   <Button
+    v-if="isFriend !== false"
     :icon="sub.subscribed.value ? 'pi pi-bell-slash' : 'pi pi-bell'"
     :label="compact ? undefined : (sub.subscribed.value ? 'Вы подписаны' : 'Подписаться')"
     :loading="sub.loading.value"

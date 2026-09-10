@@ -9,6 +9,7 @@ import { avatarSrcFor } from '@/composables/useAvatar'
 import { pinBlurInfo } from '@/composables/useLocationBlur'
 import { usePinLifetime } from '@/composables/usePinLifetime'
 import { renderWithMentions } from '@/composables/useMentions'
+import { useMentionNavigate } from '@/composables/useMentionNavigate'
 import { usePinCommentInput } from '@/composables/usePinCommentInput'
 import { useEnterToSend } from '@/composables/useEnterToSend'
 import { formatTime } from '@/utils/date'
@@ -20,6 +21,7 @@ const catMeta = computed(() => (props.categories as any[]).find((c: any) => c.v 
 const lifetime = usePinLifetime(() => props.pin)
 const commentBox = usePinCommentInput({ getText: () => props.commentText, emit: (e, v) => emit(e as any, v as any), mentions: props.mentions })
 const { handleEnterToSend } = useEnterToSend()
+const mentionNav = useMentionNavigate()
 const { cardRef, listRef, commentInput, cardStyle, onCommentInput, onInputFocus, pickMention, focusForReply, blurInput } = commentBox
 function onReply(root: any, target?: any) {
   emit('reply', root, target ?? root)
@@ -51,7 +53,7 @@ function authorName(c: any): string { return c?.is_anonymous ? 'аноним' : 
           <Button label="Отмена" severity="secondary" outlined rounded class="flex-1" @click="pinEdit.cancel()" />
         </div>
       </div>
-      <p v-if="!pinEdit.editing.value && pin.body" class="text-sm text-stone-600 dark:text-zinc-300 mt-2 leading-relaxed break-words overflow-wrap-anywhere comment-body" v-html="renderWithMentions(pin.body || '')"></p>
+      <p v-if="!pinEdit.editing.value && pin.body" class="text-sm text-stone-600 dark:text-zinc-300 mt-2 leading-relaxed break-words overflow-wrap-anywhere comment-body" v-html="renderWithMentions(pin.body || '')" @click="mentionNav.onRichClick"></p>
       <div v-if="!pinEdit.editing.value && blur" title="Точка на карте сдвинута от реального места" class="mt-2 text-[11px] leading-snug bg-violet-50 dark:bg-violet-950/40 border border-violet-200 dark:border-violet-800 text-violet-800 dark:text-violet-200 rounded-xl px-2.5 py-1.5">📍 {{ blur.hint }}</div>
       <div v-if="!pinEdit.editing.value" class="flex flex-wrap gap-1.5 mt-3 items-center">
         <span class="text-xs bg-stone-100 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 text-stone-700 dark:text-zinc-200 rounded-full px-2.5 py-1 font-medium">{{ catMeta ? `${catMeta.i} ${catMeta.l}` : pin.category }}</span>
@@ -79,7 +81,7 @@ function authorName(c: any): string { return c?.is_anonymous ? 'аноним' : 
           <span class="text-stone-400 dark:text-zinc-400 font-normal shrink-0">{{ formatTime(root.created_at) }}</span>
           <span v-if="(root.replies_count ?? (root.replies || []).length) > 0" class="ml-auto text-[10px] text-stone-400 dark:text-zinc-500 shrink-0">💬 {{ root.replies_count ?? (root.replies || []).length }}</span>
         </div>
-        <div v-if="editingCommentId !== root.id" class="text-sm text-stone-700 dark:text-zinc-200 mt-1.5 break-words comment-body" v-html="renderWithMentions(root.content)"></div>
+        <div v-if="editingCommentId !== root.id" class="text-sm text-stone-700 dark:text-zinc-200 mt-1.5 break-words comment-body" v-html="renderWithMentions(root.content)" @click="mentionNav.onRichClick"></div>
         <div v-else class="mt-2"><Textarea :model-value="editingContent" @update:model-value="(v:any)=>emit('update:editContent', v)" @keydown="(e:any)=>handleEnterToSend(e, () => emit('saveEditComment'))" rows="2" autoResize maxlength="1000" class="w-full !rounded-xl" placeholder="Shift+Enter — новая строка" /><div class="flex gap-2 mt-2"><Button label="Сохранить" size="small" rounded :loading="savingComment" @click="emit('saveEditComment')" /><Button label="Отмена" size="small" severity="secondary" outlined rounded @click="emit('cancelEditComment')" /></div></div>
         <div v-if="editingCommentId !== root.id" class="mt-2 flex gap-1 items-center">
           <Button label="Ответить" size="small" text @click="onReply(root)" />
@@ -92,7 +94,7 @@ function authorName(c: any): string { return c?.is_anonymous ? 'аноним' : 
               <span class="truncate">{{ authorName(r) }}</span>
               <span class="text-stone-400 dark:text-zinc-400 font-normal shrink-0">{{ formatTime(r.created_at) }}</span>
             </div>
-            <div v-if="editingCommentId !== r.id" class="text-[13px] text-stone-700 dark:text-zinc-200 mt-1 break-words comment-body" v-html="renderWithMentions(r.content)"></div>
+            <div v-if="editingCommentId !== r.id" class="text-[13px] text-stone-700 dark:text-zinc-200 mt-1 break-words comment-body" v-html="renderWithMentions(r.content)" @click="mentionNav.onRichClick"></div>
             <div v-else class="mt-2"><Textarea :model-value="editingContent" @update:model-value="(v:any)=>emit('update:editContent', v)" @keydown="(e:any)=>handleEnterToSend(e, () => emit('saveEditComment'))" rows="2" autoResize maxlength="1000" class="w-full !rounded-xl" placeholder="Shift+Enter — новая строка" /><div class="flex gap-2 mt-2"><Button label="Сохранить" size="small" rounded :loading="savingComment" @click="emit('saveEditComment')" /><Button label="Отмена" size="small" severity="secondary" outlined rounded @click="emit('cancelEditComment')" /></div></div>
             <div v-if="editingCommentId !== r.id" class="mt-1.5 flex gap-1 items-center">
               <Button label="Ответить" size="small" text @click="onReply(root, r)" />
@@ -127,5 +129,6 @@ function authorName(c: any): string { return c?.is_anonymous ? 'аноним' : 
 </template>
 <style scoped>
 .comment-body :deep(.mention){color:#7c3aed;font-weight:700}
+.comment-body :deep(.mention-link){cursor:pointer}
 :global(.dark) .comment-body :deep(.mention){color:#a78bfa}
 </style>

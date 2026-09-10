@@ -117,6 +117,28 @@ function handleFriendship(e: any) {
     })
   }
 }
+/**
+ * Глубокая ссылка на место активности: комментарий пина, комментарий фото или профиль автора.
+ * Повторяет логику resolveTarget/usePinActivity и WebPushService на бэке.
+ */
+function activityLink(a: any): string {
+  const pinId = Number(a?.pin?.id || a?.pin_id || 0) || null
+  const commentId = Number(a?.comment_id || 0) || null
+  const photoId = Number(a?.photo?.id || a?.photo_id || 0) || null
+  const photoCommentId = Number(a?.photo_comment_id || 0) || null
+  const actorId = Number(a?.actor?.id || a?.actor_id || 0) || null
+  const photoUserId = Number(a?.photo?.user_id || actorId || 0) || null
+  if (pinId) {
+    return `/map?pin=${pinId}${commentId ? `&comment=${commentId}` : ''}`
+  }
+  if (photoId && photoUserId) {
+    return `/users/${photoUserId}?photo=${photoId}${photoCommentId ? `&comment=${photoCommentId}` : ''}`
+  }
+  if (actorId) {
+    return `/users/${actorId}`
+  }
+  return '/map'
+}
 function handlePinActivity(e: any) {
   const a = e?.activity
   if (!a?.id) return
@@ -124,6 +146,44 @@ function handlePinActivity(e: any) {
   if (a.owner_id && uid && Number(a.owner_id) !== uid) return
   const actor = a.actor || {}
   const name = actor.name || 'Кто-то'
+  const actorLink = `/users/${actor.id || a.actor_id || ''}`
+  if (a.kind === 'sub_pin') {
+    const title = (a.excerpt || a.pin?.title || 'новый пин').toString().slice(0, 60)
+    push({
+      id: `pin-sub-${a.id}-${Date.now()}`,
+      type: 'pin',
+      title: `${name} создал пин`,
+      body: `«${title}»`.slice(0, 90),
+      avatar: avatarSrcFor(actor),
+      link: activityLink(a),
+      createdAt: Date.now(),
+    })
+    return
+  }
+  if (a.kind === 'sub_photo') {
+    push({
+      id: `pin-sub-photo-${a.id}-${Date.now()}`,
+      type: 'pin',
+      title: `${name} — новое фото`,
+      body: 'Загружено новое фото. Откройте галерею'.slice(0, 90),
+      avatar: avatarSrcFor(actor),
+      link: activityLink(a),
+      createdAt: Date.now(),
+    })
+    return
+  }
+  if (a.kind === 'sub_level') {
+    push({
+      id: `pin-sub-level-${a.id}-${Date.now()}`,
+      type: 'friend',
+      title: `${name} — репутация изменилась`,
+      body: (a.excerpt || 'Обновление профиля').toString().slice(0, 90),
+      avatar: avatarSrcFor(actor),
+      link: actorLink,
+      createdAt: Date.now(),
+    })
+    return
+  }
   const pinTitle = a.pin?.title || a.photo?.caption || 'ваш пин'
   const emoji: Record<string, string> = { like: '❤️', fire: '🔥', laugh: '😂', sad: '😢', angry: '😡', useful: '👍' }
   const body = a.kind === 'comment'
@@ -139,7 +199,7 @@ function handlePinActivity(e: any) {
     title: a.kind === 'comment' || a.kind === 'photo_comment' ? 'Новый комментарий' : a.kind === 'mention' ? 'Вас упомянули' : 'Новая реакция',
     body,
     avatar: avatarSrcFor(actor),
-    link: a.photo?.user_id ? `/users/${a.photo.user_id}` : '/map',
+    link: activityLink(a),
     createdAt: Date.now(),
   })
 }
