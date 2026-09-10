@@ -200,6 +200,12 @@ class UserSubscriptionNotifier
                 }
             } catch (\Throwable) {
             }
+            try {
+                if (! PinVisibility::canView($subscriber, $pin)) {
+                    continue;
+                }
+            } catch (\Throwable) {
+            }
             $visible[] = $sid;
         }
         return $visible;

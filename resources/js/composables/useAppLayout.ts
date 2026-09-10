@@ -10,6 +10,7 @@ import { useAdminReports } from '@/composables/useAdminReports'
 import { useAppUpdates } from '@/composables/useAppUpdates'
 import { useBuildVersion } from '@/composables/useBuildVersion'
 import { useSecurityImpersonations } from '@/composables/useSecurityImpersonations'
+import { useAuthSession } from '@/composables/useAuthSession'
 
 export function useAppLayout() {
   const badge = useBadgeStore()
@@ -22,6 +23,7 @@ export function useAppLayout() {
   const updates = useAppUpdates()
   const buildVersion = useBuildVersion()
   const proc = useSecurityImpersonations()
+  const authSession = useAuthSession()
   const showDrawer = ref(false)
   const menu = ref()
   const isAdmin = computed(() => !!user.value?.is_admin || user.value?.role === 'admin')
@@ -37,14 +39,18 @@ export function useAppLayout() {
   function toggleMenu(e: Event) { menu.value.toggle(e) }
   function closeDrawer() { showDrawer.value = false }
   async function doLogout() {
-    try { presence.resetPresence() } catch {}
+    try { authSession.resetAll() } catch {}
     try {
       const { getSubscription } = await import('@/pwa/push.service')
       const { removePushSubscription } = await import('@/pwa/pwa.api')
       const sub = await getSubscription().catch(() => null)
       if (sub?.endpoint) await removePushSubscription(sub.endpoint).catch(() => {})
     } catch {}
-    router.post(route('logout'))
+    try {
+      const { resetEchoSession } = await import('@/echo')
+      resetEchoSession([])
+    } catch {}
+    router.post(route('logout'), {}, { onSuccess: () => { try { authSession.resetAll() } catch {} } })
   }
   function logout() { doLogout() }
   onMounted(() => { badge.init(); presence.connect(); appNotes.init(); pinActivity.init(); adminReports.init(); updates.init(); proc.init(); buildVersion.init() })

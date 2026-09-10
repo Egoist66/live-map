@@ -38,6 +38,8 @@ async function refresh(): Promise<void> {
 
 function currentUid(): number {
   try {
+    const inertiaUid = Number((window as any)?.__inertia_page?.props?.auth?.user?.id || 0)
+    if (inertiaUid) return inertiaUid
     const meta = document.querySelector('meta[name="user-id"]')?.getAttribute('content')
     if (meta) return Number(meta)
     return Number((window as any).userId || 0)

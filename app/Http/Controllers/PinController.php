@@ -20,23 +20,22 @@ class PinController extends Controller
         $viewer = Auth::user();
         $viewerId = Auth::id();
 
-        $reqLat = (float) $request->input('lat', 55.7558);
-        $reqLng = (float) $request->input('lng', 37.6173);
-        $reqRadiusKm = (int) $request->input('radius', $viewer?->pinRadius() ?? 1000) / 1000;
+        $liveLat = $request->filled('user_lat') ? (float) $request->input('user_lat') : null;
+        $liveLng = $request->filled('user_lng') ? (float) $request->input('user_lng') : null;
 
-        $lat = $reqLat;
-        $lng = $reqLng;
-        $radius = $reqRadiusKm;
-
-        if ($viewer && ! $viewer->isAdmin()) {
-            $liveLat = $request->filled('user_lat') ? (float) $request->input('user_lat') : null;
-            $liveLng = $request->filled('user_lng') ? (float) $request->input('user_lng') : null;
-            $zone = HomeZoneService::zoneFor($viewer, $liveLat, $liveLng);
-            if ($zone !== null) {
-                $lat = $zone['lat'];
-                $lng = $zone['lng'];
-                $radius = min($reqRadiusKm, $zone['radiusKm']);
+        if ($viewer && !$viewer->isAdmin()) {
+            $zone = \App\Services\HomeZoneService::zoneFor($viewer, $liveLat, $liveLng);
+            if ($zone === null) {
+                return response()->json([]);
             }
+            $lat = $zone['lat'];
+            $lng = $zone['lng'];
+            $reqRadiusKm = (int) $request->input('radius', $viewer->pinRadius()) / 1000;
+            $radius = (int) max(1, min($reqRadiusKm, $zone['radiusKm'], $viewer->pinRadius() / 1000));
+        } else {
+            $lat = (float) $request->input('lat', 55.7558);
+            $lng = (float) $request->input('lng', 37.6173);
+            $radius = (int) $request->input('radius', $viewer?->pinRadius() ?? 1000) / 1000;
         }
 
         $q = Pin::active()->nearby($lat, $lng, $radius);
@@ -50,8 +49,15 @@ class PinController extends Controller
             if ($hide->isNotEmpty()) $q->whereNotIn('user_id', $hide);
         }
         $pins = $q->boostedFirst()->with('user:id,name,avatar_path,level')->limit(100)->get();
-        $myReactions = $viewerId ? \App\Models\Reaction::where('user_id', $viewerId)->where('reactable_type', 'pin')->whereIn('reactable_id', $pins->pluck('id'))->pluck('type', 'reactable_id') : collect();
-        return response()->json($pins->map(fn($p) => array_merge($p->toPublicArray($viewerId), ['my_reaction' => $myReactions[$p->id] ?? null])));
+        $invitedIds = $viewerId ? \App\Models\PinInvite::where('invitee_id', $viewerId)->whereIn('pin_id', $pins->pluck('id'))->pluck('pin_id')->map(fn($v) => (int) $v)->flip() : collect();
+        $visible = $pins->filter(function ($p) use ($viewer, $viewerId, $liveLat, $liveLng, $invitedIds) {
+            if ($viewerId && ((int) $p->user_id === (int) $viewerId || isset($invitedIds[(int) $p->id]))) {
+                return true;
+            }
+            return \App\Services\PinVisibility::canView($viewer, $p, $liveLat, $liveLng);
+        })->values();
+        $myReactions = $viewerId ? \App\Models\Reaction::where('user_id', $viewerId)->where('reactable_type', 'pin')->whereIn('reactable_id', $visible->pluck('id'))->pluck('type', 'reactable_id') : collect();
+        return response()->json($visible->map(fn($p) => array_merge($p->toPublicArray($viewerId), ['my_reaction' => $myReactions[$p->id] ?? null])));
     }
 
     public function show(Request $request, Pin $pin)
@@ -67,8 +73,8 @@ class PinController extends Controller
             }
             $liveLat = $request->filled('user_lat') ? (float) $request->input('user_lat') : null;
             $liveLng = $request->filled('user_lng') ? (float) $request->input('user_lng') : null;
-            if ($viewer && HomeZoneService::isOutsideZone($viewer, (float) $pin->latitude, (float) $pin->longitude, $liveLat, $liveLng)) {
-                abort(403, 'Пин вне вашей зоны видимости.');
+            if (!\App\Services\PinVisibility::canView($viewer, $pin, $liveLat, $liveLng)) {
+                abort(403, 'Пин вне вашей зоны или страны. Автор может прислать вам приглашение.');
             }
         }
         $pin->load('user:id,name,avatar_path,level');
@@ -130,6 +136,15 @@ class PinController extends Controller
         CountryResolver::assertPinAllowed($user, (float) $data['latitude'], (float) $data['longitude'], isset($data['user_lat']) ? (float) $data['user_lat'] : null, isset($data['user_lng']) ? (float) $data['user_lng'] : null);
         HomeZoneService::assertInsideZone($user, (float) $data['latitude'], (float) $data['longitude'], isset($data['user_lat']) ? (float) $data['user_lat'] : null, isset($data['user_lng']) ? (float) $data['user_lng'] : null);
         unset($data['user_lat'], $data['user_lng']);
+
+        try {
+            $resolved = CountryResolver::fromCoords((float) $data['latitude'], (float) $data['longitude']);
+            if ($resolved) {
+                $data['country'] = $resolved['country'];
+                $data['country_code'] = $resolved['country_code'];
+            }
+        } catch (\Throwable) {
+        }
 
         ContentModeration::assertClean($data['title'] ?? null, $data['body'] ?? null);
         $data['category'] = Pin::normalizeCategory($data['category']);

@@ -15,6 +15,7 @@ import { useCommentComposer } from '@/composables/useCommentComposer'
 import { usePinCommentInput } from '@/composables/usePinCommentInput'
 import { useEnterToSend } from '@/composables/useEnterToSend'
 import { formatTime } from '@/utils/date'
+import PinInviteButton from '@/Components/Features/Map/PinInviteButton.vue'
 
 const props = defineProps<{ pin: any; comments: any[]; highlightCommentId?: number | null; commentText: string; creatingComment: boolean; editingCommentId: number | null; editingContent: string; savingComment: boolean; reacting: boolean; reporting: boolean; pinEdit: any; categories: any[]; deleting: boolean; authId: number; replyTo: any; mentions: any }>()
 const emit = defineEmits<{ (e: 'close'): void; (e: 'delete'): void; (e: 'react', k: string): void; (e: 'report'): void; (e: 'sendComment'): void; (e: 'update:comment', v: string): void; (e: 'update:editContent', v: string): void; (e: 'startEditComment', c: any): void; (e: 'cancelEditComment'): void; (e: 'saveEditComment'): void; (e: 'saveEdit'): void; (e: 'reply', root: any, target: any): void; (e: 'cancelReply'): void }>()
@@ -133,6 +134,9 @@ function authorName(c: any): string { return c?.is_anonymous ? 'аноним' : 
       <div v-if="!pinEdit.editing.value" class="mt-3">
         <div class="flex items-center justify-between text-[11px] font-semibold text-stone-500 dark:text-zinc-400"><span>❤️ {{ lifetime.label.value }}</span><span v-if="!lifetime.isEternal.value && !lifetime.isScheduled.value">{{ Math.round(lifetime.percent.value * 100) }}%</span></div>
         <div v-if="!lifetime.isEternal.value" class="mt-1 h-1.5 rounded-full bg-stone-200 dark:bg-zinc-700 overflow-hidden"><div class="h-full rounded-full transition-all" :style="{ width: `${Math.round(lifetime.percent.value * 100)}%` }" :class="lifetime.tone.value === 'good' ? 'bg-emerald-500' : lifetime.tone.value === 'warn' ? 'bg-amber-500' : 'bg-red-500'" /></div>
+      </div>
+      <div v-if="!pinEdit.editing.value && pin.is_owner" class="mt-3">
+        <PinInviteButton :pin-id="pin.id" :is-owner="pin.is_owner" />
       </div>
       <div class="flex gap-1.5 mt-4">
         <button @click="emit('react', 'like')" :disabled="reacting" :class="['flex-1 rounded-full py-2.5 text-xs font-semibold border active:scale-95 transition disabled:opacity-50', pin.my_reaction === 'like' ? 'bg-rose-500 text-white border-rose-500 shadow-[0_4px_16px_-4px_rgba(244,63,94,0.5)]' : 'bg-rose-500/10 dark:bg-rose-500/15 border-rose-500/30 dark:border-rose-400/30 text-rose-600 dark:text-rose-300 hover:bg-rose-500/20']">❤️ {{ pin.reactions_count || 0 }}</button>

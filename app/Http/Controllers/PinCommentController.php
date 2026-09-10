@@ -15,6 +15,7 @@ class PinCommentController extends Controller
     public function index(Pin $pin)
     {
         abort_unless($pin->isVisibleForGender(request()->user()), 403, 'Пин доступен только для другого пола');
+        abort_unless(\App\Services\PinVisibility::canView(request()->user(), $pin), 403, 'Пин вне вашей зоны или страны.');
         $comments = $pin->comments()
             ->whereNull('parent_id')
             ->with(['user:id,name,avatar_path', 'replies' => fn ($q) => $q->oldest()->with('user:id,name,avatar_path')])
@@ -31,6 +32,7 @@ class PinCommentController extends Controller
     public function store(Request $request, Pin $pin)
     {
         abort_unless($pin->isVisibleForGender($request->user()), 403, 'Пин доступен только для другого пола');
+        abort_unless(\App\Services\PinVisibility::canView($request->user(), $pin), 403, 'Пин вне вашей зоны или страны.');
         $data = $request->validate([
             'content' => 'required|string|max:1000',
             'parent_id' => 'nullable|exists:pin_comments,id',

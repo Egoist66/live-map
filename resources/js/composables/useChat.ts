@@ -8,6 +8,32 @@ let searchAbort: AbortController | null = null
 let searchTimer: ReturnType<typeof setTimeout> | null = null
 let loadConversationsInflight: Promise<Conversation[]> | null = null
 let scrollRaf: number | null = null
+const trackedUserChannels = new Set<number>()
+const trackedChatChannels = new Set<number>()
+
+/**
+ * Глобальный сброс чат-подписок при смене аккаунта.
+ */
+export function resetChatSession(): void {
+  try {
+    const echo = (window as any).Echo
+    if (echo) {
+      trackedUserChannels.forEach((uid) => {
+        try { echo.leave(`user.${uid}`) } catch {}
+      })
+      trackedChatChannels.forEach((id) => {
+        try { echo.leave(`chat.${id}`) } catch {}
+      })
+    }
+  } catch {}
+  trackedUserChannels.clear()
+  trackedChatChannels.clear()
+  loadConversationsInflight = null
+  try {
+    const w = window as any
+    w.__conversationsInflight = null
+  } catch {}
+}
 
 export function useChat() {
   const conversations = ref<Conversation[]>([])
@@ -53,9 +79,11 @@ export function useChat() {
   }
   function getUid(): number {
     try {
+      const inertiaUid = Number((usePage().props.auth as any)?.user?.id || 0)
+      if (inertiaUid) return inertiaUid
       const meta = document.querySelector('meta[name="user-id"]')?.getAttribute('content')
       if (meta) return Number(meta)
-      return Number((window as any).userId || (usePage().props.auth as any)?.user?.id || 0)
+      return Number((window as any).userId || 0)
     } catch { return Number((window as any).userId || 0) }
   }
   function isChatPageOpen(): boolean {
@@ -362,23 +390,49 @@ export function useChat() {
 
   let globalCh: any = null
   let globalSubscribed = false
+  let globalUid: number | null = null
   function subscribeGlobal() {
     if (globalSubscribed && globalCh) return
     try {
       const echo = getEcho()
       if (!echo) return
-      const uid = getUid() || document.querySelector('meta[name="user-id"]')?.getAttribute('content')
-      if (uid) {
-        globalSubscribed = true
-        globalCh = echo.private(`user.${uid}`)
-        globalCh.listen('.message.sent', (e: any) => handleIncoming(e.message))
-        globalCh.listen('.message.updated', (e: any) => handleUpdated(e.message))
-        globalCh.listen('.message.deleted', (e: any) => handleDeleted(e))
-        globalCh.listen('.friendship.updated', () => loadConversations())
-        globalCh.listen('.message.delivered', (e: any) => handleDelivered(e))
-        globalCh.listen('.message.read', (e: any) => handleRead(e))
-      }
+      const uid = getUid()
+      if (!uid) return
+      if (globalSubscribed && globalUid !== null && globalUid !== uid) resetChatRealtime()
+      if (globalSubscribed && globalCh) return
+      globalSubscribed = true
+      globalUid = uid
+      trackedUserChannels.add(Number(uid))
+      globalCh = echo.private(`user.${uid}`)
+      globalCh.listen('.message.sent', (e: any) => handleIncoming(e.message))
+      globalCh.listen('.message.updated', (e: any) => handleUpdated(e.message))
+      globalCh.listen('.message.deleted', (e: any) => handleDeleted(e))
+      globalCh.listen('.friendship.updated', () => loadConversations())
+      globalCh.listen('.message.delivered', (e: any) => handleDelivered(e))
+      globalCh.listen('.message.read', (e: any) => handleRead(e))
     } catch { globalSubscribed = false }
+  }
+
+  /**
+   * Сбросить realtime чата при смене аккаунта.
+   */
+  function resetChatRealtime(): void {
+    try {
+      const echo = getEcho()
+      if (echo && globalUid) try { echo.leave(`user.${globalUid}`) } catch {}
+      if (echo && activeChatId !== null) try { echo.leave(`chat.${activeChatId}`) } catch {}
+    } catch {}
+    globalCh = null
+    globalSubscribed = false
+    globalUid = null
+    activeChatChannel = null
+    activeChatId = null
+    echoChannels = []
+    seenIds.clear()
+    selectedId.value = null
+    activeConv.value = null
+    messages.value = []
+    conversations.value = []
   }
 
   function handleUpdated(msg: Message) {
@@ -409,6 +463,7 @@ export function useChat() {
       const ch = echo.private(`chat.${convId}`)
       activeChatChannel = ch
       activeChatId = convId
+      trackedChatChannels.add(Number(convId))
       ch.listen('.message.sent', (e: any) => handleIncoming(e.message))
       ch.listen('.message.updated', (e: any) => handleUpdated(e.message))
       ch.listen('.message.deleted', (e: any) => handleDeleted(e))
@@ -506,6 +561,6 @@ export function useChat() {
     conversations, activeConv, messages, loading, sending, refreshing, typingUsers,
     searchQuery, searchResults, searching, selectedId, error, unreadTotal, unreadMessagesTotal,
     editingId, editingBody,
-    loadConversations, refresh, openConversation, createConversation, sendMessage, startEdit, cancelEdit, saveEdit, deleteMessage, deleteConversation, searchUsers, notifyTyping, stopTyping, handleIncoming, handleUpdated,
+    loadConversations, refresh, openConversation, createConversation, sendMessage, startEdit, cancelEdit, saveEdit, deleteMessage, deleteConversation, searchUsers, notifyTyping, stopTyping, handleIncoming, handleUpdated, subscribeGlobal, resetChatRealtime,
   }
 }

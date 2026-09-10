@@ -28,7 +28,7 @@ class Pin extends Model
 
     protected $fillable = [
         'user_id','title','body','category','gender_audience','latitude','longitude','real_lat','real_lng','location_precision',
-        'radius_meters','visibility_radius_km','expires_at','publish_at','status','priority','is_pinned','is_sponsored','is_boosted','boosted_until','views_count','likes_count','reactions_count','comments_count','is_anonymous','district_name','photo_path','meta'
+        'radius_meters','visibility_radius_km','expires_at','publish_at','status','priority','is_pinned','is_sponsored','is_boosted','boosted_until','views_count','likes_count','reactions_count','comments_count','is_anonymous','district_name','country','country_code','photo_path','meta'
     ];
 
     protected $casts = [
@@ -51,6 +51,17 @@ class Pin extends Model
     public function views(): HasMany { return $this->hasMany(PinView::class); }
     public function comments(): HasMany { return $this->hasMany(PinComment::class); }
     public function reactions() { return $this->morphMany(Reaction::class, 'reactable'); }
+    public function invites(): HasMany { return $this->hasMany(PinInvite::class); }
+
+    /**
+     * Приглашён ли пользователь смотреть пин вне зоны/страны.
+     */
+    public function isInvited(?int $userId): bool
+    {
+        if (!$userId) return false;
+        return $this->invites()->where('invitee_id', $userId)->exists()
+            || PinInvite::where('pin_id', $this->id)->where('invitee_id', $userId)->exists();
+    }
 
     public function scopeActive(Builder $q): Builder { return $q->where('status', 'active')->where(fn($w) => $w->whereNull('expires_at')->orWhere('expires_at', '>', now()))->where(fn($w) => $w->whereNull('publish_at')->orWhere('publish_at', '<=', now())); }
     public function scopeScheduled(Builder $q): Builder { return $q->where('status', 'scheduled')->where('publish_at', '>', now()); }
@@ -166,6 +177,8 @@ class Pin extends Model
             'comments_count' => $this->comments_count,
             'is_anonymous' => (bool) $this->is_anonymous,
             'is_owner' => $isOwner,
+            'country' => $this->country ?? null,
+            'country_code' => $this->country_code ?? null,
             'location_precision' => $this->location_precision,
             'is_blurred' => $this->location_precision !== 'exact' && $blurMeters > 0,
             'blur_meters' => $blurMeters,

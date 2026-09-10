@@ -7,6 +7,7 @@ import { useThrottledMapFetch } from './useThrottledMapFetch'
 import { useAppConfirm } from './useAppConfirm'
 import { usePage as useInertiaPage } from '@inertiajs/vue3'
 import { GEO_BLUR_DEFAULT, formatBlurMeters, pinBlurInfo } from './useLocationBlur'
+import { isPinVisibleLocally } from './usePinVisibility'
 
 const OSM_RASTER_STYLE: any = {
   version: 8,
@@ -105,7 +106,14 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
       })
       if (onMapClick) map.on('click', onMapClick)
       map.on('click', hideCtxMenu)
+      map.on('click', hidePinTip)
       map.on('dragstart', hideCtxMenu)
+      map.on('dragstart', hidePinTip)
+      try {
+        ;(map as any).on?.('movestart', hidePinTip)
+        ;(map as any).on?.('zoomstart', hidePinTip)
+      } catch {}
+      try { mapContainer.value?.addEventListener?.('mouseleave', hidePinTip) } catch {}
       const throttled = useThrottledMapFetch(renderPins)
       const fetchForView = () => {
         if (!map) return
@@ -128,12 +136,22 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
     return null
   }
   let pinTooltip: HTMLElement | null = null
+  let tipTimer: ReturnType<typeof setTimeout> | null = null
+  let tipGlobalBound = false
   function ensureTooltip() {
     if (pinTooltip) return pinTooltip
     pinTooltip = document.createElement('div')
     pinTooltip.className = 'hidden fixed z-[40] pointer-events-none max-w-[300px] bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl shadow-[0_12px_32px_rgba(15,23,42,0.18)] overflow-hidden'
     pinTooltip.style.transform = 'translate(-50%, calc(-100% - 14px))'
     document.body.appendChild(pinTooltip)
+    if (!tipGlobalBound) {
+      tipGlobalBound = true
+      window.addEventListener('scroll', hidePinTip, true)
+      window.addEventListener('blur', hidePinTip)
+      document.addEventListener('pointerdown', hidePinTip, true)
+      document.addEventListener('keydown', (e: any) => { if (e?.key === 'Escape') hidePinTip() })
+      document.addEventListener('visibilitychange', () => { if (document.hidden) hidePinTip() })
+    }
     return pinTooltip
   }
   function showPinTip(p: any, x: number, y: number) {
@@ -151,8 +169,13 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
     tip.style.left = x + 'px'
     tip.style.top = y + 'px'
     tip.classList.remove('hidden')
+    if (tipTimer) clearTimeout(tipTimer)
+    tipTimer = setTimeout(hidePinTip, 4000)
   }
-  function hidePinTip() { if (pinTooltip) pinTooltip.classList.add('hidden') }
+  function hidePinTip() {
+    if (tipTimer) { clearTimeout(tipTimer); tipTimer = null }
+    if (pinTooltip) pinTooltip.classList.add('hidden')
+  }
   let ctxMenu: HTMLElement | null = null
   let ctxPin: any = null
   function ensureCtxMenu() {
@@ -195,6 +218,7 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
   function hideCtxMenu() { if (ctxMenu) { ctxMenu.classList.add('hidden'); ctxPin=null } }
 
   function renderPins() {
+    hidePinTip()
     if (!map || !(map as any).loaded?.() && !loaded.value) return
     const animateId = lastActivePinId
     lastActivePinId = null
@@ -277,6 +301,7 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
       wrap.addEventListener('mouseenter', (e: any) => showPinTip(p, e.clientX, e.clientY))
       wrap.addEventListener('mousemove', (e: any) => { if (pinTooltip && !pinTooltip.classList.contains('hidden')) { pinTooltip.style.left = e.clientX + 'px'; pinTooltip.style.top = e.clientY + 'px' } })
       wrap.addEventListener('mouseleave', hidePinTip)
+      wrap.addEventListener('pointerleave', hidePinTip)
       wrap.addEventListener('click', (ev: any) => { hidePinTip(); hideCtxMenu(); ev.stopPropagation(); onPinClick(p) })
       wrap.addEventListener('contextmenu', (e: any) => {
         e.preventDefault(); e.stopPropagation(); hidePinTip()
@@ -358,9 +383,13 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
       tip.style.left = e.clientX + 'px'
       tip.style.top = e.clientY + 'px'
       tip.classList.remove('hidden')
+      if (tipTimer) clearTimeout(tipTimer)
+      tipTimer = setTimeout(hidePinTip, 4000)
     })
     wrap.addEventListener('mousemove', (e: any) => { if (pinTooltip && !pinTooltip.classList.contains('hidden')) { pinTooltip.style.left = e.clientX + 'px'; pinTooltip.style.top = e.clientY + 'px' } })
     wrap.addEventListener('mouseleave', hidePinTip)
+    wrap.addEventListener('pointerleave', hidePinTip)
+    wrap.addEventListener('click', hidePinTip)
     userDot = new maplibregl.Marker({ element: wrap, anchor: 'center' }).setLngLat([blng, blat]).addTo(map)
   }
   function showUserLocation(lat: number, lng: number) {
@@ -546,9 +575,23 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
       const ch = (window as any).Echo?.channel('map')
       if (!ch) return
       mapChannel = ch
-      const onCreated = (e: any) => { if (e?.pin) { store.addRealtime(e.pin); renderPins() } }
+      const onCreated = (e: any) => {
+        if (!e?.pin) return
+        if (!isPinVisibleLocally(e.pin)) return
+        store.addRealtime(e.pin)
+        renderPins()
+      }
       const onDeleted = (e: any) => { if (e?.pinId) { store.removeRealtime(e.pinId); renderPins() } }
-      const onUpdated = (e: any) => { if (e?.pin) { store.addRealtime(e.pin); renderPins() } }
+      const onUpdated = (e: any) => {
+        if (!e?.pin) return
+        if (!isPinVisibleLocally(e.pin)) {
+          store.removeRealtime(e.pin.id)
+          renderPins()
+          return
+        }
+        store.addRealtime(e.pin)
+        renderPins()
+      }
       const onActivity = (e: any) => {
         if (!e?.pin_id) return
         lastActivePinId = Number(e.pin_id)
@@ -577,8 +620,30 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
     try { if (mapChannel) (window as any).Echo?.leave('map'); mapChannel = null } catch {}
     if (reconnectTimer) clearTimeout(reconnectTimer)
   }
+  /**
+   * Полная очистка карты при уходе со страницы: тултип/меню не должны
+   * оставаться висеть поверх чата и других экранов.
+   */
+  function destroyMap(): void {
+    hidePinTip()
+    hideCtxMenu()
+    if (tipTimer) { clearTimeout(tipTimer); tipTimer = null }
+    try { unbindRealtime() } catch {}
+    try { markers.forEach((m) => m.remove()); markers = [] } catch {}
+    try { if (userDot) { userDot.remove(); userDot = null } } catch {}
+    try { removeTempMarker() } catch {}
+    try { if (homeZoneMarker) { homeZoneMarker.remove(); homeZoneMarker = null } } catch {}
+    try { if (homeMarker) { homeMarker.remove(); homeMarker = null } } catch {}
+    try { (map as any)?.off?.('movestart', hidePinTip) } catch {}
+    try { (map as any)?.off?.('zoomstart', hidePinTip) } catch {}
+    try { (map as any)?.off?.('click', hidePinTip) } catch {}
+    try { (map as any)?.off?.('dragstart', hidePinTip) } catch {}
+    try { (map as any)?.remove?.() } catch {}
+    try { pinTooltip?.remove?.(); pinTooltip = null } catch {}
+    try { ctxMenu?.remove?.(); ctxMenu = null } catch {}
+  }
   function setThemeStyle(isDark: boolean) {
     return
   }
-  return { mapContainer, initMap, renderPins, addTempMarker, removeTempMarker, showUserLocation, triggerGeolocate, onGeolocate, getCenter, flyToMyLocation, flyToHomeZone, bindRealtime, unbindRealtime, setThemeStyle, showHomeZone, hideHomeZone, loaded, errorMsg, wsConnected, get map() { return map } }
+  return { mapContainer, initMap, renderPins, addTempMarker, removeTempMarker, showUserLocation, triggerGeolocate, onGeolocate, getCenter, flyToMyLocation, flyToHomeZone, bindRealtime, unbindRealtime, destroyMap, setThemeStyle, showHomeZone, hideHomeZone, loaded, errorMsg, wsConnected, get map() { return map } }
 }

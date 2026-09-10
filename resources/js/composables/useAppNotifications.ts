@@ -21,15 +21,35 @@ export type AppToast = {
 const toasts = ref<AppToast[]>([])
 let inited = false
 let echoCh: any = null
+let subscribedUid: number | null = null
 let adminMode = false
 let seenMsgIds = new Set<number>()
 let timers = new Map<string, ReturnType<typeof setTimeout>>()
 
+/**
+ * Сбросить уведомления при смене аккаунта: покинуть user.* и очистить тосты.
+ */
+export function resetAppNotifications(): void {
+  try {
+    const echo = getEcho()
+    if (echo && subscribedUid) try { echo.leave(`user.${subscribedUid}`) } catch {}
+  } catch {}
+  echoCh = null
+  subscribedUid = null
+  inited = false
+  seenMsgIds = new Set<number>()
+  timers.forEach((t) => clearTimeout(t))
+  timers = new Map()
+  toasts.value = []
+}
+
 function getUid(): number {
   try {
+    const inertiaUid = Number((usePage().props.auth as any)?.user?.id || 0)
+    if (inertiaUid) return inertiaUid
     const meta = document.querySelector('meta[name="user-id"]')?.getAttribute('content')
     if (meta) return Number(meta)
-    return Number((window as any).userId || (usePage().props.auth as any)?.user?.id || 0)
+    return Number((window as any).userId || 0)
   } catch { return Number((window as any).userId || 0) }
 }
 function getEcho(): any { return (window as any).Echo }
@@ -316,8 +336,11 @@ function subscribe() {
     if (!echo) return
     const uid = getUid()
     if (!uid) return
+    if (echoCh && subscribedUid === uid) return
+    if (echoCh && subscribedUid !== null && subscribedUid !== uid) resetAppNotifications()
     if (echoCh) return
     echoCh = echo.private(`user.${uid}`)
+    subscribedUid = uid
     adminMode = isAdminNow()
     echoCh.listen('.message.sent', handleMessage)
     echoCh.listen('.friendship.updated', handleFriendship)

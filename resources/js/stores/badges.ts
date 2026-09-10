@@ -16,6 +16,7 @@ export const useBadgeStore = defineStore('badges', () => {
   const loading = ref(false)
   let echoCh: any = null
   let inited = false
+  let subscribedUid: string | number | null = null
 
   const total = computed(() => unread.value + pending.value + activity.value + reports.value + updates.value + security.value)
   const seenMsgIds = new Set<number>()
@@ -23,6 +24,8 @@ export const useBadgeStore = defineStore('badges', () => {
 
   function getUid(): number {
     try {
+      const inertiaUid = Number((usePage().props.auth as any)?.user?.id || 0)
+      if (inertiaUid) return inertiaUid
       const meta = document.querySelector('meta[name="user-id"]')?.getAttribute('content')
       if (meta) return Number(meta)
     } catch {}
@@ -81,11 +84,13 @@ export const useBadgeStore = defineStore('badges', () => {
 
   function resolveUid(): string | number | null {
     try {
+      const inertiaUid = (usePage().props.auth as any)?.user?.id ?? null
+      if (inertiaUid) return inertiaUid
       const w = window as any
       if (w.userId) return w.userId
       const meta = document.querySelector('meta[name="user-id"]')?.getAttribute('content')
       if (meta) return meta
-      return (usePage().props.auth as any)?.user?.id ?? null
+      return null
     } catch { return null }
   }
 
@@ -95,8 +100,10 @@ export const useBadgeStore = defineStore('badges', () => {
       if (!echo) return
       const uid = resolveUid()
       if (!uid) return
-      if (echoCh) return
+      if (echoCh && String(subscribedUid) === String(uid)) return
+      if (echoCh) reset()
       echoCh = echo.private(`user.${uid}`)
+      subscribedUid = uid
       echoCh.listen('.message.sent', handleIncomingMessage)
       echoCh.listen('.message.updated', () => scheduleFetch())
       echoCh.listen('.message.deleted', () => scheduleFetch())
@@ -151,5 +158,26 @@ export const useBadgeStore = defineStore('badges', () => {
 
   function refresh() { return fetch() }
 
-  return { unread, unreadMessages, pending, activity, reports, updates, security, total, loading, init, fetch, refresh, subscribe, setUnread, setUnreadMessages, setPending, setActivity, setReports, setUpdates, setSecurity, incSecurity, decUnread, incUnread, incPending, decPending, incActivity, decActivity, incReports, decReports }
+  /**
+   * Сбросить бейджи при смене аккаунта.
+   */
+  function reset() {
+    try {
+      const echo = (window as any).Echo
+      if (echo && subscribedUid) try { echo.leave(`user.${subscribedUid}`) } catch {}
+    } catch {}
+    echoCh = null
+    subscribedUid = null
+    inited = false
+    unread.value = 0
+    unreadMessages.value = 0
+    pending.value = 0
+    activity.value = 0
+    reports.value = 0
+    updates.value = 0
+    security.value = 0
+    seenMsgIds.clear()
+  }
+
+  return { unread, unreadMessages, pending, activity, reports, updates, security, total, loading, init, fetch, refresh, reset, subscribe, setUnread, setUnreadMessages, setPending, setActivity, setReports, setUpdates, setSecurity, incSecurity, decUnread, incUnread, incPending, decPending, incActivity, decActivity, incReports, decReports }
 })

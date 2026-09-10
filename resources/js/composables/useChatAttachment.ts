@@ -17,6 +17,13 @@ const FORBIDDEN_EXTS = [
 
 const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'webp', 'gif']
 
+const MIME_TO_EXT: Record<string, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+}
+
 /**
  * Проверяет расширение файла по имени.
  * @param name имя файла
@@ -132,6 +139,44 @@ export function useChatAttachment() {
   }
 
   /**
+   * Достаёт картинку из буфера обмена и кладёт во вложение.
+   *
+   * Скриншоты из буфера часто без имени/расширения — имя строится
+   * из mime-типа, иначе валидация по расширению их отбракует.
+   * Текст в буфере игнорируется (возвращает false).
+   *
+   * @param e событие paste из инпута чата
+   * @returns true если картинка принята как вложение
+   */
+  async function pickClipboard(e: ClipboardEvent): Promise<boolean> {
+    const items = e?.clipboardData?.items ?? null
+    if (!items || items.length === 0) {
+      return false
+    }
+    let raw: File | null = null
+    for (const item of Array.from(items)) {
+      if (item.kind === 'file' && item.type.startsWith('image/')) {
+        raw = item.getAsFile()
+        if (raw) break
+      }
+    }
+    if (!raw) {
+      return false
+    }
+    const ext = MIME_TO_EXT[raw.type] ?? chatFileExt(raw.name) ?? 'png'
+    const stamp = new Date()
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const name = `pasted-${stamp.getFullYear()}${pad(stamp.getMonth() + 1)}${pad(stamp.getDate())}-${pad(stamp.getHours())}${pad(stamp.getMinutes())}${pad(stamp.getSeconds())}.${ext}`
+    const named = new File([raw], raw.name && chatFileExt(raw.name) ? raw.name : name, { type: raw.type || `image/${ext}` })
+    const ok = await pick(named)
+    if (ok) {
+      e.preventDefault()
+      return true
+    }
+    return false
+  }
+
+  /**
    * Чистит превью-URL без сброса ошибки.
    */
   function clearPreview(): void {
@@ -144,5 +189,5 @@ export function useChatAttachment() {
     }
   }
 
-  return { file, previewUrl, error, processing, pick, clear, validateChatFile }
+  return { file, previewUrl, error, processing, pick, pickClipboard, clear, validateChatFile }
 }

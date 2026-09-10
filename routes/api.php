@@ -41,6 +41,10 @@ Route::middleware(['web', 'auth', 'throttle:120,1'])->group(function () {
     Route::put('/pins/{pin}', [PinController::class, 'update']);
     Route::delete('/pins/{pin}', [PinController::class, 'destroy']);
     Route::post('/pins/{pin}/boost', [PinController::class, 'boost'])->middleware('throttle:pins-write');
+    Route::get('/pins/invited/mine', [\App\Http\Controllers\PinInviteController::class, 'mine']);
+    Route::get('/pins/{pin}/invites', [\App\Http\Controllers\PinInviteController::class, 'index']);
+    Route::post('/pins/{pin}/invites', [\App\Http\Controllers\PinInviteController::class, 'store'])->middleware('throttle:social-write');
+    Route::delete('/pins/{pin}/invites/{invite}', [\App\Http\Controllers\PinInviteController::class, 'destroy'])->middleware('throttle:social-write');
     Route::get('/pins/{pin}/comments', [PinCommentController::class, 'index']);
     Route::post('/pins/{pin}/comments', [PinCommentController::class, 'store'])->middleware('throttle:comments-write');
     Route::patch('/comments/{comment}', [PinCommentController::class, 'update']);

@@ -33,3 +33,21 @@ if ((window as any).Echo?.connector?.pusher) {
   c.bind('disconnected', () => console.warn('[reverb] disconnected'))
   c.bind('connected', () => console.info('[reverb] connected'))
 }
+
+/**
+ * Полный сброс realtime при смене аккаунта: покинуть приватные каналы
+ * и разорвать сокет, чтобы чужой user.* не долетал в новый аккаунт.
+ */
+export function resetEchoSession(channels: string[] = []): void {
+  try {
+    const echo = (window as any).Echo
+    if (!echo) return
+    channels.forEach((ch) => {
+      try { echo.leave(ch) } catch {}
+    })
+    try {
+      const pusher = echo.connector?.pusher
+      if (pusher?.disconnect) pusher.disconnect()
+    } catch {}
+  } catch {}
+}

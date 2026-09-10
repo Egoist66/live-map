@@ -116,6 +116,24 @@ export function useChatPage(initialConversationId?: number) {
   }
 
   /**
+   * Вставка картинки из буфера (Ctrl+V скриншота) в инпут чата.
+   * Картинка кладётся во вложение как файл и отправляется кнопкой.
+   *
+   * @param e событие paste из инпута
+   */
+  async function handlePasteImage(e: ClipboardEvent): Promise<void> {
+    const handled = await attachment.pickClipboard(e)
+    if (handled) {
+      focusChatInput()
+      return
+    }
+    if (attachment.error.value) {
+      toast?.add({ severity: 'warn', summary: 'Файл не принят', detail: attachment.error.value, life: 3500 })
+      attachment.error.value = null
+    }
+  }
+
+  /**
    * Поделиться геопозицией: координаты + ссылки на Яндекс и Google карты.
    * @returns void
    */
@@ -344,7 +362,7 @@ export function useChatPage(initialConversationId?: number) {
   return {
     chat, friendsApi, blocksApi, emoji, badgeSync, pins, togglePin, uloveConversations, uloveUnread,
     input, inputRef, editInputRef, tab, showChatMenu, sheet, showPrivacy, privacy, creatingChat, confirm, confirmVisible, isOwnMessage, bindSheet,
-    handleSend, handlePickFile, handleShareLocation, locating: chatLocation.locating, attachment, formatTime, onPickEmoji, onPickEmojiForEdit, handleStartEdit, startChatWith, addFriendFromSearch, savePrivacy, doConfirm, closeSheet, backToList,
+    handleSend, handlePickFile, handlePasteImage, handleShareLocation, locating: chatLocation.locating, attachment, formatTime, onPickEmoji, onPickEmojiForEdit, handleStartEdit, startChatWith, addFriendFromSearch, savePrivacy, doConfirm, closeSheet, backToList,
     askBlock, askDeleteChat, askDeleteMessage, askRemoveFriend, askUnblock,
     init, openTarget, reply, handleStartReply,
   }

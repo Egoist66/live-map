@@ -45,6 +45,8 @@ export interface Pin {
   user: UserBrief | null
   photo_path?: string | null
   district_name?: string | null
+  country?: string | null
+  country_code?: string | null
   created_at: string
   updated_at?: string
   distance?: number

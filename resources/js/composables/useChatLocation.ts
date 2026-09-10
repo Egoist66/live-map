@@ -28,12 +28,16 @@ export function formatCoords(lat: number, lng: number): string {
 /**
  * Ссылка на точку в Яндекс Картах.
  *
+ * Важно передавать ll (центр карты), а не только pt (маркер):
+ * без ll Яндекс открывает регион по умолчанию вместо точки.
+ *
  * @param lat широта
  * @param lng долгота
  * @returns url
  */
 export function yandexMapsUrl(lat: number, lng: number): string {
-  return `https://yandex.ru/maps/?pt=${lng.toFixed(6)},${lat.toFixed(6)},pm2rdm&z=16`
+  const point = `${lng.toFixed(6)},${lat.toFixed(6)}`
+  return `https://yandex.ru/maps/?ll=${point}&pt=${point},pm2rdm&z=16`
 }
 
 /**

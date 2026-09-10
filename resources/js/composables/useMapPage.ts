@@ -415,6 +415,7 @@ export function useMapPage() {
     try { unsubGeolocate?.() } catch {}
     unsubGeolocate = null
     try { (mapApi as any).unbindRealtime?.() } catch {}
+    try { (mapApi as any).destroyMap?.() } catch {}
     try { void consumePendingPin() } catch {}
   }
 

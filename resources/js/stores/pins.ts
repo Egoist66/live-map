@@ -14,6 +14,7 @@ export const usePinsStore = defineStore('pins', () => {
   const deleting = ref(false)
 
   let abortCtrl: AbortController | null = null
+  let lastCenter: { lat: number; lng: number } | null = null
   async function fetchNearby(lat: number, lng: number, radius?: number, userPos?: { lat: number; lng: number } | null): Promise<Pin[]> {
     if (abortCtrl) abortCtrl.abort()
     abortCtrl = new AbortController()
@@ -23,8 +24,15 @@ export const usePinsStore = defineStore('pins', () => {
       const data = await pinsApi.list(lat, lng, radius as any, abortCtrl.signal, userPos ?? null)
       const alive = (p: any) => isPinAlive(p)
       const fresh = (data || []).filter(alive)
-      if (!fresh.length) {
+      const movedFar = lastCenter ? Math.hypot(lastCenter.lat - lat, lastCenter.lng - lng) > 0.2 : true
+      lastCenter = { lat, lng }
+      if (!fresh.length && !movedFar) {
         pins.value = pins.value.filter(alive)
+        return pins.value
+      }
+      if (movedFar) {
+        const sorted = [...fresh].sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        pins.value = sorted.slice(0, 150)
         return pins.value
       }
       const seen = new Map<number, Pin>()
@@ -100,8 +108,7 @@ export const usePinsStore = defineStore('pins', () => {
     if (!isPinAlive(pin as any)) {
       pins.value = pins.value.filter((p) => p.id !== pin.id)
       return
-    }
-    const idx = pins.value.findIndex((p) => p.id === pin.id)
+    }    const idx = pins.value.findIndex((p) => p.id === pin.id)
     if (idx !== -1) pins.value[idx] = { ...pins.value[idx], ...pin } as Pin
     else pins.value.unshift(pin)
   }
