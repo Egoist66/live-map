@@ -63,6 +63,17 @@ class PinActivityNotifier
         static::broadcastCounters($pin);
         $excerpt = static::excerpt($comment->content);
         foreach (Mentions::notifyableIds($userIds, (int) $actor->id) as $ownerId) {
+            $reused = static::reuseUnreadMention(
+                ['pin_id' => $pin->id],
+                ['comment_id' => $comment->id, 'excerpt' => $excerpt],
+                (int) $actor->id,
+                (int) $ownerId
+            );
+            if ($reused) {
+                $reused->load(['actor:id,name,avatar_path', 'pin:id,title,category']);
+                static::dispatchActivity($reused, $pin, null);
+                continue;
+            }
             $activity = PinActivity::create([
                 'pin_id' => $pin->id,
                 'actor_id' => $actor->id,
@@ -96,6 +107,17 @@ class PinActivityNotifier
     {
         $excerpt = static::excerpt($comment->content);
         foreach (Mentions::notifyableIds($userIds, (int) $actor->id) as $ownerId) {
+            $reused = static::reuseUnreadMention(
+                ['photo_id' => $photo->id],
+                ['photo_comment_id' => $comment->id, 'excerpt' => $excerpt],
+                (int) $actor->id,
+                (int) $ownerId
+            );
+            if ($reused) {
+                $reused->load(['actor:id,name,avatar_path', 'photo:id,user_id,caption']);
+                static::dispatchActivity($reused, null, $photo);
+                continue;
+            }
             $activity = PinActivity::create([
                 'pin_id' => null,
                 'actor_id' => $actor->id,
@@ -107,6 +129,40 @@ class PinActivityNotifier
             ]);
             $activity->load(['actor:id,name,avatar_path', 'photo:id,user_id,caption']);
             static::dispatchActivity($activity, null, $photo);
+        }
+    }
+
+    /**
+     * Повторный пинг не плодит строки: одно непрочитанное упоминание
+     * на пару автор → получатель в пределах пина/фото.
+     * Обновляет ссылку на свежий комментарий и поднимает запись наверх.
+     * Прочитанное упоминание не трогаем — дальше накапливается заново.
+     *
+     * @param array $scope ['pin_id' => ?int] или ['photo_id' => ?int]
+     * @param array $fresh ['comment_id'|'photo_comment_id', 'excerpt']
+     */
+    private static function reuseUnreadMention(array $scope, array $fresh, int $actorId, int $ownerId): ?PinActivity
+    {
+        try {
+            $query = PinActivity::where('owner_id', $ownerId)
+                ->where('actor_id', $actorId)
+                ->where('kind', 'mention')
+                ->whereNull('read_at');
+            foreach ($scope as $column => $value) {
+                $query->where($column, $value);
+            }
+            $existing = $query->latest('id')->first();
+            if (! $existing) {
+                return null;
+            }
+            PinActivity::whereKey($existing->id)->update(array_merge($fresh, [
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]));
+            return $existing->fresh();
+        } catch (\Throwable $e) {
+            Log::warning('mention reuse failed', ['error' => $e->getMessage()]);
+            return null;
         }
     }
 

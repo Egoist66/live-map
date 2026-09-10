@@ -22,9 +22,8 @@ export function usePinCommentInput(opts: {
     if (!isKeyboardOpen.value || !h) return {}
     return {
       transform: `translateY(${-h}px)`,
-      transition: 'transform 0.22s ease-out, max-height 0.22s ease-out',
+      transition: 'transform 0.22s ease-out',
       willChange: 'transform',
-      maxHeight: `calc(72dvh - ${h}px)`,
     } as any
   })
 
@@ -67,15 +66,9 @@ export function usePinCommentInput(opts: {
     nextTick(() => {
       try {
         const el = resolveInputTag(inputEl())
-        el?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' })
-      } catch {}
-    })
-    setTimeout(() => {
-      try {
-        const el = resolveInputTag(inputEl())
         el?.scrollIntoView?.({ block: 'nearest' })
       } catch {}
-    }, 320)
+    })
   }
 
   function onCommentInput() {

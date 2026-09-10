@@ -110,7 +110,7 @@ function replyPreview(body: string): string {
           <button @click="emit('removeFile')" aria-label="Убрать файл" class="w-7 h-7 shrink-0 grid place-items-center rounded-full hover:bg-violet-100 dark:hover:bg-white/10 text-stone-500 active:scale-95 transition"><i class="pi pi-times text-xs"></i></button>
         </div>
         <div v-if="attachError" class="text-[11px] text-red-600 dark:text-red-400 px-1 mb-1.5">{{ attachError }}</div>
-        <div class="relative flex gap-2 items-end min-w-0 w-full max-w-full z-10">
+        <div data-chat-input class="relative flex gap-2 items-end min-w-0 w-full max-w-full z-10">
           <input type="file" data-chat-file class="hidden" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip" @change="(e:any)=>{ const f = e.target.files?.[0] ?? null; emit('pickFile', f); e.target.value = '' }" />
           <Button @click="(e:any)=>{ const btn = e?.currentTarget as HTMLElement | null; const root = btn?.closest?.('.relative'); const inp = root?.querySelector?.('[data-chat-file]') as HTMLInputElement | null; inp?.click() }" icon="pi pi-paperclip" severity="secondary" outlined rounded class="!w-11 !h-11 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-label]:hidden [&_.p-button-icon]:!m-0" aria-label="Прикрепить файл" />
           <Button @click="emit('toggleEmoji')" :severity="emojiOpen ? 'contrast' : 'secondary'" :outlined="!emojiOpen" rounded class="!w-11 !h-11 !p-0 !rounded-full shrink-0 grid place-items-center text-[20px]" label="😊" />

@@ -4,6 +4,7 @@ import { computed, onMounted } from 'vue'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { useSwipes } from '@/composables/useSwipes'
+import { useSwipeCardPhotos } from '@/composables/useSwipeCardPhotos'
 import { useSwipePhotoViewer } from '@/composables/useSwipePhotoViewer'
 import { useSeo } from '@/composables/useSeo'
 import Button from 'primevue/button'
@@ -27,6 +28,7 @@ const Layout = computed(() => (isAuth.value ? AuthenticatedLayout : GuestLayout)
 
 const s = useSwipes()
 const viewer = useSwipePhotoViewer()
+const cardPhotos = useSwipeCardPhotos(() => s.current.value)
 
 const dialogPt = {
   root: { class: '!rounded-3xl dark:!bg-zinc-900 dark:!border-zinc-700' },
@@ -200,8 +202,9 @@ onMounted(async () => {
                 @pointerleave="s.dragEnd()"
               >
                 <img
-                  v-if="s.current.value.photos[0]"
-                  :src="s.current.value.photos[0]"
+                  v-if="cardPhotos.currentPhoto.value"
+                  :src="cardPhotos.currentPhoto.value"
+                  :key="`${s.current.value.id}-${cardPhotos.photoIndex.value}`"
                   alt=""
                   class="absolute inset-0 w-full h-full object-cover"
                   draggable="false"
@@ -211,11 +214,15 @@ onMounted(async () => {
                 </div>
                 <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent pointer-events-none" />
 
-                <div v-if="s.current.value.photos.length > 1" class="absolute top-2.5 inset-x-3 flex gap-1 pointer-events-none">
-                  <span
-                    v-for="(p, i) in s.current.value.photos.slice(0, s.current.value.is_pro ? 5 : 3)"
-                    :key="i"
-                    :class="['h-[3px] flex-1 rounded-full', i === 0 ? 'bg-white' : 'bg-white/40']"
+                <div v-if="cardPhotos.hasMultiple.value" class="absolute top-2.5 inset-x-3 flex gap-1">
+                  <button
+                    v-for="(p, i) in cardPhotos.photos.value"
+                    :key="`${s.current.value.id}-${i}`"
+                    type="button"
+                    :class="['h-[5px] flex-1 rounded-full transition cursor-pointer', i === cardPhotos.photoIndex.value ? 'bg-white' : 'bg-white/40 hover:bg-white/70']"
+                    :aria-label="`Фото ${i + 1} из ${cardPhotos.total.value}`"
+                    @pointerdown.stop
+                    @click.stop="cardPhotos.goTo(i)"
                   />
                 </div>
 
@@ -228,7 +235,7 @@ onMounted(async () => {
                   :style="{ opacity: s.passStrength.value, transform: `scale(${0.8 + s.passStrength.value * 0.3})` }"
                 >ПАС</div>
 
-                <div v-if="s.current.value.liked_me" class="absolute top-4 right-4">
+                <div v-if="s.current.value.liked_me" class="absolute top-4 right-4 pointer-events-none">
                   <Chip label="Лайкнул тебя" icon="pi pi-heart-fill" class="!rounded-full !bg-rose-500 !text-white !border-0" />
                 </div>
 

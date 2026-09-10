@@ -66,9 +66,6 @@ const attachmentSize = computed(() => {
         </div>
         <div v-if="!(message as any).pending" class="lg:hidden flex justify-end gap-1.5 mt-1.5 opacity-60">
           <button @click="emit('reply', message)" class="text-[11px] px-2.5 py-1 rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow-sm flex items-center gap-1">↩ Ответить</button>
-          <button @click="emit('pin', message)" class="text-[11px] px-2.5 py-1 rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow-sm flex items-center gap-1">{{ (message as any).is_pinned || pinned ? '📌 Открепить' : '📍 Закрепить' }}</button>
-          <button v-if="own" @click="emit('edit', message)" class="text-[11px] px-2.5 py-1 rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow-sm flex items-center gap-1">✎ Редакт.</button>
-          <button v-if="own" @click="emit('delete', message.id)" class="text-[11px] px-2.5 py-1 rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow-sm flex items-center gap-1 text-red-600">🗑 Удалить</button>
         </div>
       </div>
     </div>

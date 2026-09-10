@@ -31,7 +31,12 @@ function onActivity(e: any) {
   if (!act?.id) return
   const uid = getUid()
   if (act.owner_id && uid && Number(act.owner_id) !== uid) return
-  if (activities.value.some((x) => x.id === act.id)) return
+  const idx = activities.value.findIndex((x) => x.id === act.id)
+  if (idx >= 0) {
+    const rest = activities.value.filter((x) => x.id !== act.id)
+    activities.value = [act, ...rest].slice(0, 30)
+    return
+  }
   activities.value = [act, ...activities.value].slice(0, 30)
   unread.value += 1
   try { useBadgeStore().incActivity() } catch {}

@@ -54,7 +54,7 @@ const emit = defineEmits<{
   (e: 'openPhoto', photo: any): void
 }>()
 
-const tab = ref<'short' | 'gallery' | 'info'>('gallery')
+const tab = ref<'short' | 'gallery' | 'info'>('short')
 const swipe = useSwipeTabs(['short', 'gallery', 'info'] as const, tab)
 const photoInput = ref<HTMLInputElement | null>(null)
 

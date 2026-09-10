@@ -1,10 +1,13 @@
+import { computed, onMounted, ref } from 'vue'
+
 /**
  * Enter-to-send для чатов и комментариев.
  * Десктоп: Enter отправляет, Shift+Enter переносит строку.
  * Мобилка (touch): Enter всегда переносит строку, отправка только кнопкой.
  * @example
- * const { handleEnterToSend } = useEnterToSend()
+ * const { handleEnterToSend, enterPlaceholder } = useEnterToSend()
  * // @keydown="handleEnterToSend($event, send)"
+ * // :placeholder="enterPlaceholder('Написать... Shift+Enter — новая строка', 'Написать...')"
  */
 
 /**
@@ -25,9 +28,25 @@ export function isDesktopEnter(): boolean {
 
 /**
  * Хук обработки Enter в многострочных полях.
- * @returns обработчик keydown для Textarea
+ * @returns обработчик keydown для Textarea и адаптивный плейсхолдер
  */
 export function useEnterToSend() {
+  const isDesktop = ref(false)
+
+  onMounted(() => {
+    isDesktop.value = isDesktopEnter()
+  })
+
+  /**
+   * Адаптивный плейсхолдер: на мобилке без упоминания Shift+Enter.
+   * @param desktopText текст для десктопа
+   * @param mobileText текст для мобилки
+   * @returns плейсхолдер под текущее устройство
+   */
+  function enterPlaceholder(desktopText: string, mobileText: string) {
+    return computed(() => (isDesktop.value ? desktopText : mobileText))
+  }
+
   /**
    * Обрабатывает нажатие Enter в поле ввода.
    * @param e клавиатурное событие
@@ -59,5 +78,5 @@ export function useEnterToSend() {
     return true
   }
 
-  return { handleEnterToSend, isDesktopEnter }
+  return { handleEnterToSend, isDesktopEnter, isDesktop, enterPlaceholder }
 }

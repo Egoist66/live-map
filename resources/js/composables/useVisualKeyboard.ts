@@ -5,7 +5,10 @@ export function useVisualKeyboard(threshold = 80) {
   const viewportHeight = ref(0)
   const isKeyboardOpen = ref(false)
 
-  function recalc() {
+  let rafId = 0
+
+  function applyRecalc() {
+    rafId = 0
     try {
       const vv = window.visualViewport
       if (vv) {
@@ -22,6 +25,19 @@ export function useVisualKeyboard(threshold = 80) {
       keyboardHeight.value = 0
       isKeyboardOpen.value = false
     }
+  }
+
+  /**
+   * Пересчёт высоты клавиатуры через rAF.
+   *
+   * События visualViewport сыплются пачками с промежуточными высотами —
+   * без дебаунса карточка прыгает вверх-вниз и инпут «улетает».
+   */
+  function recalc() {
+    if (rafId) {
+      return
+    }
+    rafId = requestAnimationFrame(applyRecalc)
   }
 
   function onFocusIn(e: FocusEvent) {
