@@ -43,7 +43,7 @@ class MessageController extends Controller
         }
         $data = $request->validate([
             'body' => 'nullable|string|max:2000',
-            'attachment' => 'nullable|file|max:2048',
+            'attachment' => 'nullable|file|max:10240',
             'reply_to_id' => 'nullable|integer|exists:messages,id',
         ]);
         $body = trim((string) ($data['body'] ?? ''));

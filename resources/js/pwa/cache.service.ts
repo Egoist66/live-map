@@ -52,6 +52,41 @@ export async function clearRuntimeCaches(): Promise<string[]> {
   return keys
 }
 
+/**
+ * Стереть ВЕСЬ кэш приложения (Cache Storage целиком).
+ *
+ * @returns список удаленных ключей
+ */
+export async function clearAllCaches(): Promise<string[]> {
+  if (!('caches' in window)) {
+    return []
+  }
+
+  const keys = await caches.keys().catch(() => [] as string[])
+  await Promise.all(keys.map((key) => caches.delete(key).catch(() => false)))
+
+  return keys
+}
+
+/**
+ * Полное обновление приложения: стирает весь кэш, будит новый SW и перезагружает страницу.
+ */
+export async function hardRefreshToLatest(): Promise<void> {
+  try {
+    await clearAllCaches()
+  } catch {}
+
+  try {
+    const reg = await navigator.serviceWorker?.getRegistration('/').catch(() => null)
+    await reg?.update().catch(() => {})
+    reg?.waiting?.postMessage({ type: 'SKIP_WAITING' })
+  } catch {}
+
+  const url = new URL(window.location.href)
+  url.searchParams.set('v', String(Date.now()))
+  window.location.replace(url.toString())
+}
+
 export async function isOfflineReady(): Promise<boolean> {
   try {
     const cache = await caches.open('pwa-probe')

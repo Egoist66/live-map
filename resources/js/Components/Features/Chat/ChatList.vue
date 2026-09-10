@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
@@ -9,7 +10,15 @@ import { avatarSrcFor } from '@/composables/useAvatar'
 import { useChatRowMenu } from '@/composables/useChatRowMenu'
 import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
 
-defineProps<{ conversations: any[]; friends: any[]; pendingIn: any[]; blocked: any[]; tab: string; selectedId: number | null; filter: string; isOnline: (id?: number, lastSeenAt?: string | null) => boolean; formatTime: (s: string) => string }>()
+const props = defineProps<{ conversations: any[]; uloveConversations?: any[]; friends: any[]; pendingIn: any[]; blocked: any[]; tab: string; selectedId: number | null; filter: string; isOnline: (id?: number, lastSeenAt?: string | null) => boolean; formatTime: (s: string) => string }>()
+
+/** Мэтчи ULove с учётом строки поиска. */
+const filteredUlove = computed(() => {
+  const q = (props.filter || '').trim().toLowerCase()
+  const list = props.uloveConversations || []
+  if (!q) return list
+  return list.filter((c: any) => (c.other?.name || '').toLowerCase().includes(q))
+})
 const emit = defineEmits<{ (e: 'update:filter', v: string): void; (e: 'open', id: number): void; (e: 'startChat', u: any): void; (e: 'deleteChat', id: number): void; (e: 'block', id: number, name?: string): void; (e: 'unblock', id: number): void; (e: 'removeFriend', f: any): void; (e: 'accept', id: number): void; (e: 'decline', id: number): void; (e: 'sheet', p: any): void }>()
 
 const rowMenu = useChatRowMenu({
@@ -47,6 +56,30 @@ const { menuPt } = useDropdownMenuStyle()
             <div class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5" :class="isOnline(c.other?.id, c.other?.last_seen_at) ? 'text-emerald-600' : 'text-red-500'">{{ isOnline(c.other?.id, c.other?.last_seen_at) ? 'в сети' : 'оффлайн' }}<span class="text-stone-300">·</span><span class="truncate text-stone-500">{{ c.last_message?.body || 'Нет сообщений' }}</span><span v-if="(c.last_message as any)?.is_edited" class="text-[10px] text-stone-400">(изм.)</span></div>
           </div>
           <span v-if="c.unread_count" class="bg-violet-600 text-white text-xs font-bold min-w-[22px] h-[22px] grid place-items-center px-1.5 rounded-full shrink-0">{{ c.unread_count > 9 ? '9+' : c.unread_count }}</span>
+        </button>
+        <div class="flex items-center ml-1 pr-2 shrink-0">
+          <Button @click.stop="(e: Event) => rowMenu.open(e, { kind: 'chat', id: c.id, userId: c.other?.id, userName: c.other?.name })" icon="pi pi-ellipsis-h" text rounded severity="secondary" class="!w-7 !h-7 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" aria-label="Меню чата" title="Меню чата" />
+        </div>
+      </div>
+    </div>
+    <div v-if="tab === 'ulove'" class="divide-y dark:divide-zinc-800">
+      <div v-if="!filteredUlove.length" class="p-6 sm:p-8 text-center">
+        <div class="w-14 h-14 rounded-2xl bg-rose-500/10 text-rose-500 grid place-items-center mx-auto mb-3 text-xl">💞</div>
+        <div class="text-sm font-semibold dark:text-white">Пока нет мэтчей</div>
+        <div class="text-xs text-stone-500 mt-1">Лайкай в ULove — взаимность появится здесь</div>
+      </div>
+      <div v-for="c in filteredUlove" :key="c.id" class="group w-full flex items-center gap-0 text-left select-none">
+        <button @click="emit('open', c.id)" :class="selectedId === c.id ? 'bg-rose-50 dark:bg-rose-950/30' : ''" class="flex-1 flex items-center gap-3 p-3.5 lg:p-3 text-left min-w-0 hover:bg-rose-50/70 dark:hover:bg-rose-950/20 transition-colors">
+          <span class="relative shrink-0">
+            <Avatar :image="avatarSrcFor(c.other)" shape="circle" size="large" class="!w-11 !h-11 [&_img]:object-cover ring-2 ring-rose-300 dark:ring-rose-700" :pt="{ image: { class: 'object-cover' } }" />
+            <OnlineDot :online="isOnline(c.other?.id, c.other?.last_seen_at)" />
+            <span class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-rose-500 grid place-items-center ring-2 ring-white dark:ring-zinc-900"><i class="pi pi-heart-fill text-white text-[10px]" /></span>
+          </span>
+          <div class="flex-1 min-w-0">
+            <div class="flex justify-between items-baseline gap-2"><span class="text-[15px] lg:text-sm font-semibold dark:text-white truncate">{{ c.other?.name || 'Мэтч' }}</span><span v-if="c.last_message_at" class="text-[11px] text-stone-400 shrink-0">{{ formatTime(c.last_message_at) }}</span></div>
+            <div class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5"><span class="text-rose-500 font-bold">Мэтч</span><span class="text-stone-300">·</span><span class="truncate text-stone-500">{{ c.last_message?.body || 'Чат открыт — напиши первым' }}</span><span v-if="(c.last_message as any)?.is_edited" class="text-[10px] text-stone-400">(изм.)</span></div>
+          </div>
+          <span v-if="c.unread_count" class="bg-rose-500 text-white text-xs font-bold min-w-[22px] h-[22px] grid place-items-center px-1.5 rounded-full shrink-0">{{ c.unread_count > 9 ? '9+' : c.unread_count }}</span>
         </button>
         <div class="flex items-center ml-1 pr-2 shrink-0">
           <Button @click.stop="(e: Event) => rowMenu.open(e, { kind: 'chat', id: c.id, userId: c.other?.id, userName: c.other?.name })" icon="pi pi-ellipsis-h" text rounded severity="secondary" class="!w-7 !h-7 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" aria-label="Меню чата" title="Меню чата" />

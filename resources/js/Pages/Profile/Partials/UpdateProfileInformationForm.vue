@@ -45,7 +45,7 @@ const planOptions = [{ label:'Free — 3/день · 10км', value:'free', icon
           </div>
           <div class="flex-1 min-w-0 w-full">
             <label class="text-sm font-semibold dark:text-white">Фото профиля</label>
-            <p class="text-xs text-zinc-500">JPG/PNG/WebP до 2МБ · сразу видно везде</p>
+            <p class="text-xs text-zinc-500">JPG/PNG/WebP до 10МБ · сразу видно везде</p>
             <div class="flex gap-2 mt-3">
               <label class="flex-1 cursor-pointer">
                 <input type="file" accept="image/*" @change="a.onAvatar" class="hidden" />

@@ -10,7 +10,7 @@ function isLockedNow(): boolean {
 
 export type AppToast = {
   id: string
-  type: 'message' | 'friend' | 'pin' | 'report' | 'security'
+  type: 'message' | 'friend' | 'pin' | 'report' | 'security' | 'match'
   title: string
   body: string
   avatar: string | null
@@ -243,6 +243,39 @@ function handleUserFeed(e: any) {
     })
   }
 }
+function otherParty(e: any): any {
+  const uid = getUid()
+  const a = e?.user_a
+  const b = e?.user_b
+  if (a && b) return Number(a.id) === uid ? b : a
+  return b || a || {}
+}
+function handleMatch(e: any) {
+  if (!e?.conversation_id) return
+  const other = otherParty(e)
+  push({
+    id: `match-${e.match_id || e.conversation_id}-${Date.now()}`,
+    type: 'match',
+    title: '💞 Новый мэтч!',
+    body: `${other?.name || 'Кто-то'} тоже лайкнул тебя — чат открыт`,
+    avatar: avatarSrcFor(other || {}),
+    link: `/chat/${e.conversation_id}?from=swipes`,
+    createdAt: Date.now(),
+  })
+}
+function handleSwipeLiked(e: any) {
+  const liker = e?.liker
+  if (!liker?.id) return
+  push({
+    id: `liked-${liker.id}-${Date.now()}`,
+    type: 'match',
+    title: '💘 Тебя лайкнули в ULove',
+    body: `${liker.name || 'Кто-то'} отреагировал на твою анкету`,
+    avatar: avatarSrcFor(liker),
+    link: '/swipes',
+    createdAt: Date.now(),
+  })
+}
 function handleImpersonation(e: any) {
   const log = e?.log
   if (!log?.id) return
@@ -292,6 +325,10 @@ function subscribe() {
     echoCh.listen('UserFeedUpdated', handleUserFeed)
     echoCh.listen('.pin.activity', handlePinActivity)
     echoCh.listen('PinActivityCreated', handlePinActivity)
+    echoCh.listen('.match.created', handleMatch)
+    echoCh.listen('MatchCreated', handleMatch)
+    echoCh.listen('.swipe.liked', handleSwipeLiked)
+    echoCh.listen('SwipeLiked', handleSwipeLiked)
     echoCh.listen('.report.created', handleReport)
     echoCh.listen('ReportCreated', handleReport)
     echoCh.listen('.impersonation.started', handleImpersonation)

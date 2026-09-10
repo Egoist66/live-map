@@ -4,8 +4,11 @@
  * не тянула многомегабайтные оригиналы.
  */
 
-/** Лимит веса фото после оптимизации: 2.5 МБ. */
-export const MAX_PHOTO_BYTES = Math.round(2.5 * 1024 * 1024)
+/** Лимит входящего фото: 10 МБ. */
+export const MAX_PHOTO_INPUT_BYTES = 10 * 1024 * 1024
+
+/** Лимит веса фото после оптимизации: 4 МБ — экономия диска без видимой потери. */
+export const MAX_PHOTO_BYTES = 4 * 1024 * 1024
 
 /**
  * Сжимает изображение: ресайз по длинной стороне + webp/jpeg.
@@ -21,11 +24,12 @@ export const MAX_PHOTO_BYTES = Math.round(2.5 * 1024 * 1024)
  */
 export async function compressImageFile(
   file: File,
-  maxSide = 1600,
-  quality = 0.82,
+  maxSide = 1920,
+  quality = 0.84,
   maxBytes = MAX_PHOTO_BYTES,
 ): Promise<File> {
   if (!file.type.startsWith('image/')) return file
+  if (file.size > MAX_PHOTO_INPUT_BYTES) throw new Error('Фото больше 10 МБ')
   if (file.size <= 400 * 1024) return file
   try {
     const bitmap = await createImageBitmap(file)
@@ -35,8 +39,9 @@ export async function compressImageFile(
       const base = file.name.replace(/\.[a-z0-9]+$/i, '')
       const steps: Array<{ side: number; q: number }> = [
         { side: maxSide, q: quality },
-        { side: maxSide, q: 0.7 },
-        { side: 1280, q: 0.72 },
+        { side: maxSide, q: 0.78 },
+        { side: 1600, q: 0.8 },
+        { side: 1280, q: 0.76 },
         { side: 1024, q: 0.7 },
         { side: 800, q: 0.65 },
       ]

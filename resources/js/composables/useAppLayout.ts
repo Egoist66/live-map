@@ -8,6 +8,7 @@ import { useBellNotifications } from '@/composables/useBellNotifications'
 import { usePinActivity } from '@/composables/usePinActivity'
 import { useAdminReports } from '@/composables/useAdminReports'
 import { useAppUpdates } from '@/composables/useAppUpdates'
+import { useBuildVersion } from '@/composables/useBuildVersion'
 import { useSecurityImpersonations } from '@/composables/useSecurityImpersonations'
 
 export function useAppLayout() {
@@ -19,6 +20,7 @@ export function useAppLayout() {
   const pinActivity = usePinActivity()
   const adminReports = useAdminReports()
   const updates = useAppUpdates()
+  const buildVersion = useBuildVersion()
   const proc = useSecurityImpersonations()
   const showDrawer = ref(false)
   const menu = ref()
@@ -45,7 +47,7 @@ export function useAppLayout() {
     router.post(route('logout'))
   }
   function logout() { doLogout() }
-  onMounted(() => { badge.init(); presence.connect(); appNotes.init(); pinActivity.init(); adminReports.init(); updates.init(); proc.init() })
+  onMounted(() => { badge.init(); presence.connect(); appNotes.init(); pinActivity.init(); adminReports.init(); updates.init(); proc.init(); buildVersion.init() })
   onBeforeUnmount(() => presence.disconnect())
   router.on('navigate', () => { presence.connect(); showDrawer.value = false })
   return { badge, presence, user, avatarSrc, dashboardHref, settingsHref, bell, pinActivity, adminReports, updates, showDrawer, menu, menuItems, isAdmin, toggleMenu, closeDrawer, logout }

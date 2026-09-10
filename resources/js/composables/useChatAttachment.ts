@@ -1,8 +1,11 @@
 import { ref } from 'vue'
 import { compressImageFile } from '@/utils/image'
 
-/** Макс вес вложения в чате: 2 МБ. */
-export const CHAT_MAX_BYTES = 2 * 1024 * 1024
+/** Макс вес вложения в чате: 10 МБ. */
+export const CHAT_MAX_BYTES = 10 * 1024 * 1024
+
+/** Цель сжатия фото в чате: 4 МБ — диск экономим, качество держим. */
+export const CHAT_COMPRESSED_TARGET = 4 * 1024 * 1024
 
 const ALLOWED_EXTS = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'txt', 'zip']
 
@@ -79,14 +82,14 @@ export function useChatAttachment() {
     if (!ALLOWED_EXTS.includes(ext)) {
       return 'Можно фото (jpg, png, webp, gif) и документы (pdf, doc, docx, xls, xlsx, txt, zip)'
     }
-    if (target.size > 12 * 1024 * 1024) {
-      return 'Файл слишком большой (макс 2 МБ после сжатия)'
+    if (target.size > CHAT_MAX_BYTES) {
+      return 'Файл слишком большой (макс 10 МБ)'
     }
     return null
   }
 
   /**
-   * Принимает файл из input: валидирует, жмёт картинки до 2 МБ.
+   * Принимает файл из input: валидирует, жмёт картинки.
    * @param target исходный файл
    * @returns true если файл принят
    */
@@ -102,9 +105,9 @@ export function useChatAttachment() {
     }
     processing.value = true
     try {
-      const next = isChatImage(target.name) ? await compressImageFile(target, 1600, 0.82, CHAT_MAX_BYTES) : target
+      const next = isChatImage(target.name) ? await compressImageFile(target, 1920, 0.84, CHAT_COMPRESSED_TARGET) : target
       if (next.size > CHAT_MAX_BYTES) {
-        error.value = 'Файл больше 2 МБ'
+        error.value = 'Файл больше 10 МБ'
         return false
       }
       clearPreview()

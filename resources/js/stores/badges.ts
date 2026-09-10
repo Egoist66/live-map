@@ -106,6 +106,10 @@ export const useBadgeStore = defineStore('badges', () => {
         if (f?.status === 'pending' && Number(f.addressee_id) === myId) pending.value += 1
         else scheduleFetch()
       })
+      echoCh.listen('.match.created', () => scheduleFetch())
+      echoCh.listen('MatchCreated', () => scheduleFetch())
+      echoCh.listen('.swipe.liked', () => scheduleFetch())
+      echoCh.listen('SwipeLiked', () => scheduleFetch())
       echoCh.listen('.message.read', () => scheduleFetch())
       echoCh.listen('.pin.activity', () => scheduleFetch())
       echoCh.listen('PinActivityCreated', () => scheduleFetch())

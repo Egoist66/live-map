@@ -49,12 +49,16 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
 
   async function upload(file: File, caption?: string | null) {
     uploading.value = true
+    error.value = null
     try {
       const small = await compressImageFile(file)
       const created = await galleryApi.upload(small, caption)
       photos.value.unshift(created)
       await load()
       return created
+    } catch (e: any) {
+      error.value = e?.message || e?.response?.data?.message || 'Не удалось загрузить фото (макс 10 МБ)'
+      throw e
     } finally {
       uploading.value = false
     }

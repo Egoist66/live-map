@@ -350,6 +350,41 @@ export function useSwipes() {
   }
 
   /**
+   * Подписаться на realtime мэтчей/лайков: обновляет шапку мэтчей,
+   * даже если уведомление прилетело вне страницы ULove.
+   * @returns функция отписки
+   */
+  function subscribeRealtime(): () => void {
+    try {
+      const echo = (window as any).Echo
+      if (!echo) return () => {}
+      const meta = document.querySelector('meta[name="user-id"]')?.getAttribute('content')
+      const uid = meta || (window as any).userId || authUser.value?.id
+      if (!uid) return () => {}
+      const ch = echo.private(`user.${uid}`)
+      const onMatch = () => {
+        void loadMatches()
+        void loadFavorites()
+      }
+      const onLiked = () => {
+        void loadFeed()
+      }
+      ch.listen('.match.created', onMatch)
+      ch.listen('MatchCreated', onMatch)
+      ch.listen('.swipe.liked', onLiked)
+      ch.listen('SwipeLiked', onLiked)
+      return () => {
+        try {
+          ch.stopListening('.match.created')
+          ch.stopListening('MatchCreated')
+          ch.stopListening('.swipe.liked')
+          ch.stopListening('SwipeLiked')
+        } catch { return }
+      }
+    } catch { return () => {} }
+  }
+
+  /**
    * Загрузить мэтчи.
    *
    * @returns void
@@ -713,6 +748,7 @@ export function useSwipes() {
     ageLabel,
     loadFeed,
     loadMatches,
+    subscribeRealtime,
     applyFilters,
     resetFilters,
     swipe,

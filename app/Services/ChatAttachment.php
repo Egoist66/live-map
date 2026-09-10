@@ -14,8 +14,8 @@ use Illuminate\Validation\ValidationException;
  */
 class ChatAttachment
 {
-    /** Макс вес вложения: 2 МБ. */
-    public const MAX_BYTES = 2 * 1024 * 1024;
+    /** Макс вес вложения: 10 МБ. */
+    public const MAX_BYTES = 10 * 1024 * 1024;
 
     /** Срок хранения вложений в днях: дальше удаляются автоматически. */
     public const RETENTION_DAYS = 15;
@@ -68,7 +68,7 @@ class ChatAttachment
         $size = $file->getSize() ?: 0;
         if ($size > self::MAX_BYTES) {
             throw ValidationException::withMessages([
-                'attachment' => 'Файл больше 2 МБ',
+                'attachment' => 'Файл больше 10 МБ',
             ]);
         }
 
@@ -104,19 +104,34 @@ class ChatAttachment
     /**
      * Сохраняет вложение в chat-attachments.
      *
+     * Фото жмёт через ImageOptimizer, документы кладёт как есть.
+     *
      * @param UploadedFile $file проверенный файл
      * @param string $kind image|file
      * @return array{path: string, name: string, mime: string, size: int, kind: string}
      */
     public static function store(UploadedFile $file, string $kind): array
     {
-        $path = $file->store('chat-attachments', self::disk());
+        $disk = self::disk();
+        if ($kind === 'image') {
+            $path = ImageOptimizer::storeOptimized($file, 'chat-attachments', $disk);
+        } else {
+            $path = $file->store('chat-attachments', $disk);
+        }
+        try {
+            $storedSize = (int) Storage::disk($disk)->size($path);
+        } catch (\Throwable) {
+            $storedSize = (int) ($file->getSize() ?: 0);
+        }
+        if ($storedSize <= 0) {
+            $storedSize = (int) ($file->getSize() ?: 0);
+        }
 
         return [
             'path' => $path,
             'name' => $file->getClientOriginalName(),
             'mime' => (string) $file->getMimeType(),
-            'size' => (int) ($file->getSize() ?: 0),
+            'size' => $storedSize,
             'kind' => $kind,
         ];
     }

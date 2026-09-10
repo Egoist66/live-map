@@ -9,6 +9,7 @@ use App\Models\ProfilePhotoLike;
 use App\Models\User;
 use App\Models\UserBlock;
 use App\Services\ContentModeration;
+use App\Services\ImageOptimizer;
 use App\Services\Mentions;
 use App\Services\PinActivityNotifier;
 use Illuminate\Http\Request;
@@ -66,12 +67,12 @@ class ProfilePhotoController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'photo' => 'required|image|max:5120',
+            'photo' => 'required|image|max:10240',
             'caption' => 'nullable|string|max:500',
         ]);
         $user = $request->user();
         if ($request->filled('caption')) ContentModeration::assertClean($request->input('caption'));
-        $path = $request->file('photo')->store('profile-photos', $this->disk());
+        $path = ImageOptimizer::storeOptimized($request->file('photo'), 'profile-photos', $this->disk());
         try {
             $photo = \Illuminate\Support\Facades\DB::transaction(function () use ($user, $path, $request) {
                 $locked = \App\Models\User::whereKey($user->id)->lockForUpdate()->first();
@@ -95,14 +96,14 @@ class ProfilePhotoController extends Controller
         abort_unless($request->user()->id === $photo->user_id || $request->user()->isAdmin(), 403);
         $request->validate([
             'caption' => 'nullable|string|max:500',
-            'photo' => 'nullable|image|max:5120',
+            'photo' => 'nullable|image|max:10240',
         ]);
         if ($request->filled('caption')) ContentModeration::assertClean($request->input('caption'));
         $data = [];
         if ($request->has('caption')) $data['caption'] = $request->input('caption') ?: null;
         if ($request->hasFile('photo')) {
             Storage::disk($this->disk())->delete($photo->path);
-            $data['path'] = $request->file('photo')->store('profile-photos', $this->disk());
+            $data['path'] = ImageOptimizer::storeOptimized($request->file('photo'), 'profile-photos', $this->disk());
         }
         if ($data) $photo->update($data);
         return response()->json($this->serialize($photo->refresh(), $request->user()));

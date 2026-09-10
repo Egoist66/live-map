@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\AppVersionService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -37,6 +38,7 @@ class HandleInertiaRequests extends Middleware
                 'impersonator_id' => session('impersonator_id'),
             ],
             'unreadCount' => $request->user() ? $request->user()->unreadMessagesCount() : 0,
+            'appVersion' => AppVersionService::version(),
         ];
     }
 }

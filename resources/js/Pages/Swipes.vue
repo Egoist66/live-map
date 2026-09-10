@@ -63,6 +63,9 @@ const radiusOptions = [
 
 onMounted(async () => {
   if (isAuth.value) {
+    const stopRealtime = s.subscribeRealtime()
+    ;(window as any).__swipesRealtimeStop?.()
+    ;(window as any).__swipesRealtimeStop = stopRealtime
     await s.loadFeed()
     await s.loadMatches()
     await s.loadFavorites()
@@ -111,18 +114,18 @@ onMounted(async () => {
 
           <div v-if="s.matches.value.length" class="mt-4">
             <div class="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500 mb-2">Мэтчи · чат открыт</div>
-            <div class="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
+            <div class="flex gap-3 overflow-x-auto pb-2 pt-1 -mx-1 px-1">
               <button
                 v-for="m in s.matches.value"
                 :key="m.match_id"
-                class="shrink-0 flex flex-col items-center gap-1 w-[64px] rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
+                class="shrink-0 flex flex-col items-center w-[64px] rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
                 @click="s.openChat(m.user.id, m.conversation_id)"
               >
-                <span class="relative">
+                <span class="relative block">
                   <Avatar :image="m.user.avatar_url ?? undefined" :label="!m.user.avatar_url ? (m.user.name ?? '?').slice(0, 1) : undefined" shape="circle" size="large" class="!w-14 !h-14 ring-2 ring-emerald-400 dark:ring-emerald-500" />
-                  <span class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 grid place-items-center"><i class="pi pi-heart-fill text-white text-[10px]" /></span>
+                  <span class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 grid place-items-center ring-2 ring-white dark:ring-zinc-900"><i class="pi pi-heart-fill text-white text-[10px]" /></span>
                 </span>
-                <span class="text-[11px] font-semibold text-stone-600 dark:text-zinc-200 truncate w-full text-center">{{ m.user.name }}</span>
+                <span class="mt-1.5 text-[11px] font-semibold leading-tight text-stone-600 dark:text-zinc-200 truncate w-full text-center">{{ m.user.name }}</span>
               </button>
             </div>
           </div>

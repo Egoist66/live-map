@@ -11,6 +11,7 @@ import { usePinnedMessages } from '@/composables/usePinnedMessages'
 import { useChatBadges } from '@/composables/useChatBadges'
 import { useChatNavigation } from '@/composables/useChatNavigation'
 import { useChatAttachment } from '@/composables/useChatAttachment'
+import { useChatLocation } from '@/composables/useChatLocation'
 import { chatApi } from '@/services/chat.api'
 
 export function useChatPage(initialConversationId?: number) {
@@ -24,7 +25,16 @@ export function useChatPage(initialConversationId?: number) {
   const input = ref('')
   const inputRef = ref<HTMLInputElement | null>(null)
   const editInputRef = ref<HTMLInputElement | null>(null)
-  const tab = ref<'chats' | 'friends' | 'requests' | 'blocked'>('chats')
+  const tab = ref<'chats' | 'ulove' | 'friends' | 'requests' | 'blocked'>('chats')
+
+  /**
+   * Чаты мэтчей ULove: собеседник с is_match.
+   * @returns диалоги ULove
+   */
+  const uloveConversations = computed(() => chat.conversations.value.filter((c: any) => !!(c.other as any)?.is_match))
+
+  /** Непрочитанные диалоги ULove (счётчик таба). */
+  const uloveUnread = computed(() => uloveConversations.value.filter((c: any) => Number(c.unread_count || 0) > 0).length)
   const showChatMenu = ref(false)
   const sheet = ref<{ type: 'message' | 'chat' | 'friend' | 'request' | 'search', data: any } | null>(null)
   const showPrivacy = ref(false)
@@ -39,6 +49,7 @@ export function useChatPage(initialConversationId?: number) {
   const reply = useMessageReply()
   const pins = usePinnedMessages(chat.messages as any)
   const attachment = useChatAttachment()
+  const chatLocation = useChatLocation()
 
   watch(() => chat.activeConv.value, (conv: any) => {
     if (conv?.id) void pins.load(conv.id, { pinned: conv.pinned, pin_limit: conv.pin_limit })
@@ -102,6 +113,24 @@ export function useChatPage(initialConversationId?: number) {
       toast?.add({ severity: 'warn', summary: 'Файл не принят', detail: attachment.error.value, life: 3500 })
     }
     focusChatInput()
+  }
+
+  /**
+   * Поделиться геопозицией: координаты + ссылки на Яндекс и Google карты.
+   * @returns void
+   */
+  async function handleShareLocation(): Promise<void> {
+    const quoted = reply.replyTo.value
+    const ok = await chatLocation.shareLocation((text) => chat.sendMessage(text, quoted))
+
+    if (ok) {
+      reply.cancelReply()
+      return
+    }
+
+    if (chatLocation.locationError.value) {
+      toast?.add({ severity: 'warn', summary: 'Геопозиция', detail: chatLocation.locationError.value, life: 3500 })
+    }
   }
 
   function handleStartReply(m: any) {
@@ -262,8 +291,10 @@ export function useChatPage(initialConversationId?: number) {
 
   function resolveInitialTab() {
     try {
-      const t = new URLSearchParams(window.location.search).get('tab')
-      if (t && ['chats', 'friends', 'requests', 'blocked'].includes(t)) tab.value = t as any
+      const q = new URLSearchParams(window.location.search)
+      const t = q.get('tab')
+      if (t && ['chats', 'ulove', 'friends', 'requests', 'blocked'].includes(t)) tab.value = t as any
+      else if (q.get('from') === 'swipes') tab.value = 'ulove'
     } catch {}
   }
 
@@ -278,7 +309,8 @@ export function useChatPage(initialConversationId?: number) {
     if (!targetId) return
     try {
       await chat.openConversation(targetId)
-      tab.value = 'chats'
+      const opened = chat.activeConv.value as any
+      tab.value = opened?.other?.is_match ? 'ulove' : 'chats'
       focusChatInput()
     } catch (e: any) {
       const msg = e?.response?.data?.message || 'Не удалось открыть чат'
@@ -310,9 +342,9 @@ export function useChatPage(initialConversationId?: number) {
   }
 
   return {
-    chat, friendsApi, blocksApi, emoji, badgeSync, pins, togglePin,
+    chat, friendsApi, blocksApi, emoji, badgeSync, pins, togglePin, uloveConversations, uloveUnread,
     input, inputRef, editInputRef, tab, showChatMenu, sheet, showPrivacy, privacy, creatingChat, confirm, confirmVisible, isOwnMessage, bindSheet,
-    handleSend, handlePickFile, attachment, formatTime, onPickEmoji, onPickEmojiForEdit, handleStartEdit, startChatWith, addFriendFromSearch, savePrivacy, doConfirm, closeSheet, backToList,
+    handleSend, handlePickFile, handleShareLocation, locating: chatLocation.locating, attachment, formatTime, onPickEmoji, onPickEmojiForEdit, handleStartEdit, startChatWith, addFriendFromSearch, savePrivacy, doConfirm, closeSheet, backToList,
     askBlock, askDeleteChat, askDeleteMessage, askRemoveFriend, askUnblock,
     init, openTarget, reply, handleStartReply,
   }

@@ -485,6 +485,8 @@ class DatingService
             ->exists();
 
         if (! $reciprocal) {
+            $this->notifyLiked($me, $other);
+
             return ['matched' => false, 'match_id' => null, 'conversation_id' => null];
         }
 
@@ -497,7 +499,67 @@ class DatingService
 
         $conversation = $this->ensureMatchConversation($me->refresh(), $other);
 
+        $this->notifyMatched($me->refresh(), $other->refresh(), $match->id, $conversation->id);
+
         return ['matched' => true, 'match_id' => $match->id, 'conversation_id' => $conversation->id];
+    }
+
+    /**
+     * Краткий профиль для realtime-уведомлений.
+     *
+     * @param User $user
+     * @return array{id:int,name:string,avatar_url:string|null}
+     */
+    private function briefFor(User $user): array
+    {
+        return [
+            'id' => (int) $user->id,
+            'name' => (string) $user->name,
+            'avatar_url' => $user->avatar_url,
+        ];
+    }
+
+    /**
+     * Уведомить получателя об одиночном лайке.
+     *
+     * @param User $liker
+     * @param User $liked
+     * @return void
+     */
+    private function notifyLiked(User $liker, User $liked): void
+    {
+        try {
+            broadcast(new \App\Events\SwipeLiked($this->briefFor($liker), (int) $liked->id))->toOthers();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('swipe liked broadcast failed: '.$e->getMessage());
+        }
+    }
+
+    /**
+     * Уведомить обоих участников о взаимном мэтче.
+     *
+     * toOthers: у автора свайпа уже открыта модалка мэтча,
+     * повторный тост ему не нужен, а второму устройству и
+     * второму человеку уведомление придёт по user-каналам.
+     *
+     * @param User $me
+     * @param User $other
+     * @param int $matchId
+     * @param int $conversationId
+     * @return void
+     */
+    private function notifyMatched(User $me, User $other, int $matchId, int $conversationId): void
+    {
+        try {
+            broadcast(new \App\Events\MatchCreated(
+                $matchId,
+                $conversationId,
+                $this->briefFor($me),
+                $this->briefFor($other),
+            ))->toOthers();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('match broadcast failed: '.$e->getMessage());
+        }
     }
 
     /**

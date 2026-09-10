@@ -15,10 +15,12 @@ use App\Http\Controllers\ReactionController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SwipeController;
 use App\Http\Controllers\UserBlockController;
+use App\Http\Controllers\VersionController;
 use App\Http\Controllers\ZoneSubscriptionController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('throttle:60,1')->group(function () {
+    Route::get('/version', [VersionController::class, 'show']);
     Route::get('/nbrb/convert', [NbrbController::class, 'convert']);
     Route::get('/nbrb/dynamics/{curId}', [NbrbController::class, 'dynamics'])->whereNumber('curId');
     Route::get('/nbrb/currencies/{curId?}', [NbrbController::class, 'currencies'])->whereNumber('curId');

@@ -78,14 +78,24 @@ class AdminReferencePageController extends Controller
         ]);
 
         $file = $data['file'];
-        $path = $file->store('reference', 'public');
+        $isImage = str_starts_with((string) $file->getMimeType(), 'image/');
+        if ($isImage) {
+            $path = \App\Services\ImageOptimizer::storeOptimized($file, 'reference', 'public');
+        } else {
+            $path = $file->store('reference', 'public');
+        }
+        try {
+            $storedSize = (int) \Storage::disk('public')->size($path);
+        } catch (\Throwable) {
+            $storedSize = (int) $file->getSize();
+        }
 
         $attachments = $referencePage->attachments ?? [];
         $attachments[] = [
             'name' => $file->getClientOriginalName(),
             'path' => $path,
             'url' => '/storage/' . $path,
-            'size' => $file->getSize(),
+            'size' => $storedSize > 0 ? $storedSize : (int) $file->getSize(),
             'uploaded_at' => now()->toISOString(),
         ];
 

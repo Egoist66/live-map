@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\ImageOptimizer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
@@ -18,13 +19,13 @@ class AvatarController extends Controller
 {
     public function store(Request $request)
     {
-        $request->validate(['avatar' => 'required|image|max:2048']);
+        $request->validate(['avatar' => 'required|image|max:10240']);
 
         $user = $request->user();
         $disk = User::avatarDisk();
         $oldPath = $user->avatar_path;
 
-        $path = $request->file('avatar')->store('avatars', $disk);
+        $path = ImageOptimizer::storeOptimized($request->file('avatar'), 'avatars', $disk, ['maxSide' => ImageOptimizer::AVATAR_MAX_SIDE]);
         if (!$path || !Storage::disk($disk)->exists($path)) {
             throw ValidationException::withMessages([
                 'avatar' => 'Не удалось сохранить файл. Попробуй ещё раз.',
