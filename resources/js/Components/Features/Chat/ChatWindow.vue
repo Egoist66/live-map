@@ -70,8 +70,8 @@ function replyPreview(body: string): string {
         <div v-else-if="history.loadingOlder" class="absolute top-2 left-1/2 -translate-x-1/2 z-10 bg-white dark:bg-zinc-800 rounded-full shadow px-3 py-1.5"><span class="block w-4 h-4 border-2 border-violet-200 border-t-violet-600 rounded-full animate-spin"></span></div>
         <div v-else-if="!history.hasMore && history.list.length" class="absolute top-2 left-1/2 -translate-x-1/2 z-10 text-[11px] text-stone-400 bg-white/80 dark:bg-zinc-800/80 rounded-full px-3 py-1">Начало переписки</div>
         <div v-if="!loading && !history.list.length" class="h-full grid place-items-center text-stone-400 text-sm text-center"><div><div class="text-3xl mb-2">✉️</div><div>Пока пусто — напишите первым</div></div></div>
-        <template v-for="item in history.list" :key="item.data?.id ?? item.index">
-          <div v-if="item.data" :id="`msg-${item.data.id}`" class="pb-2.5">
+        <template v-for="item in (history.list || [])" :key="item?.data?.id ?? item?.index">
+          <div v-if="item?.data" :id="`msg-${item.data.id}`" class="pb-2.5">
             <div v-if="editingId === item.data.id" class="flex justify-end min-w-0">
                   <div class="bg-white dark:bg-zinc-800 border dark:border-zinc-700 rounded-xl shadow-lg w-full max-w-[92vw] sm:max-w-[86vw] min-w-0 p-2">
                     <Textarea :model-value="editingBody" @update:model-value="(v:any)=>emit('update:editingBody', v)" @keydown="(e:any)=>handleEnterToSend(e, () => emit('saveEdit'))" @keydown.escape="emit('cancelEdit')" rows="2" autoResize maxlength="2000" class="w-full !rounded-xl text-sm" placeholder="Сообщение..." />

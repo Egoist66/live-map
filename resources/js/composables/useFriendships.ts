@@ -13,9 +13,9 @@ export function useFriendships() {
     error.value=null
     try{
       const d=await chatApi.friendships()
-      friends.value=d.friends
-      pendingIn.value=d.pending_in
-      pendingOut.value=d.pending_out
+      friends.value=Array.isArray(d.friends) ? d.friends.filter(Boolean) : []
+      pendingIn.value=Array.isArray(d.pending_in) ? d.pending_in.filter(Boolean) : []
+      pendingOut.value=Array.isArray(d.pending_out) ? d.pending_out.filter(Boolean) : []
     } catch(e:any){ error.value=e?.response?.data?.message||'Ошибка' } finally { loading.value=false }
   }
 

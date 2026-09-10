@@ -31,7 +31,7 @@ export function useChatHistory(source: Ref<Message[]>, loader: ChatHistoryLoader
   const unseenCount = ref(0)
   let scrollEl: HTMLElement | null = null
 
-  const list = computed(() => source.value.map((data, index) => ({ data, index })))
+  const list = computed(() => (Array.isArray(source.value) ? source.value : []).filter((m) => m != null).map((data, index) => ({ data, index })))
 
   function containerEl(): HTMLElement | null {
     return document.getElementById('chat-messages')

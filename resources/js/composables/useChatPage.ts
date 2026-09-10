@@ -172,9 +172,10 @@ export function useChatPage(initialConversationId?: number) {
   }
 
   const timeCache = new Map<string,string>()
-  function formatTime(s: string) {
+  function formatTime(s: string | null | undefined) {
+    if (!s) return ''
     if (timeCache.has(s)) return timeCache.get(s)!
-    try { const v = new Date(s).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }); timeCache.set(s, v); if (timeCache.size>400) timeCache.delete(timeCache.keys().next().value!); return v } catch { return s }
+    try { const v = new Date(s).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }); timeCache.set(s, v); if (timeCache.size>400) timeCache.delete(timeCache.keys().next().value!); return v } catch { return '' }
   }
 
   function onPickEmoji(emojiChar: string) {

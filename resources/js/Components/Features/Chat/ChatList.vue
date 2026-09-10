@@ -7,6 +7,7 @@ import Menu from 'primevue/menu'
 import Dialog from 'primevue/dialog'
 import OnlineDot from '@/Components/Features/Feedback/OnlineDot.vue'
 import { avatarSrcFor } from '@/composables/useAvatar'
+import { useChatPreview } from '@/composables/useChatPreview'
 import { useChatRowMenu } from '@/composables/useChatRowMenu'
 import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
 
@@ -21,6 +22,7 @@ const filteredUlove = computed(() => {
 })
 const emit = defineEmits<{ (e: 'update:filter', v: string): void; (e: 'open', id: number): void; (e: 'startChat', u: any): void; (e: 'deleteChat', id: number): void; (e: 'block', id: number, name?: string): void; (e: 'unblock', id: number): void; (e: 'removeFriend', f: any): void; (e: 'accept', id: number): void; (e: 'decline', id: number): void; (e: 'sheet', p: any): void }>()
 
+const { previewText } = useChatPreview()
 const rowMenu = useChatRowMenu({
   onDeleteChat: (id: number) => emit('deleteChat', id),
   onBlock: (id: number, name?: string) => emit('block', id, name),
@@ -53,7 +55,7 @@ const { menuPt } = useDropdownMenuStyle()
           </span>
           <div class="flex-1 min-w-0">
             <div class="flex justify-between items-baseline gap-2"><span class="text-[15px] lg:text-sm font-semibold dark:text-white truncate">{{ c.other?.name || 'Чат' }}</span><span v-if="c.last_message_at" class="text-[11px] text-stone-400 shrink-0">{{ formatTime(c.last_message_at) }}</span></div>
-            <div class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5" :class="isOnline(c.other?.id, c.other?.last_seen_at) ? 'text-emerald-600' : 'text-red-500'">{{ isOnline(c.other?.id, c.other?.last_seen_at) ? 'в сети' : 'оффлайн' }}<span class="text-stone-300">·</span><span class="truncate text-stone-500">{{ c.last_message?.body || 'Нет сообщений' }}</span><span v-if="(c.last_message as any)?.is_edited" class="text-[10px] text-stone-400">(изм.)</span></div>
+            <div class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5" :class="isOnline(c.other?.id, c.other?.last_seen_at) ? 'text-emerald-600' : 'text-red-500'">{{ isOnline(c.other?.id, c.other?.last_seen_at) ? 'в сети' : 'оффлайн' }}<span class="text-stone-300">·</span><span class="truncate text-stone-500">{{ previewText(c.last_message) }}</span><span v-if="(c.last_message as any)?.is_edited" class="text-[10px] text-stone-400">(изм.)</span></div>
           </div>
           <span v-if="c.unread_count" class="bg-violet-600 text-white text-xs font-bold min-w-[22px] h-[22px] grid place-items-center px-1.5 rounded-full shrink-0">{{ c.unread_count > 9 ? '9+' : c.unread_count }}</span>
         </button>
@@ -77,7 +79,7 @@ const { menuPt } = useDropdownMenuStyle()
           </span>
           <div class="flex-1 min-w-0">
             <div class="flex justify-between items-baseline gap-2"><span class="text-[15px] lg:text-sm font-semibold dark:text-white truncate">{{ c.other?.name || 'Мэтч' }}</span><span v-if="c.last_message_at" class="text-[11px] text-stone-400 shrink-0">{{ formatTime(c.last_message_at) }}</span></div>
-            <div class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5"><span class="text-rose-500 font-bold">Мэтч</span><span class="text-stone-300">·</span><span class="truncate text-stone-500">{{ c.last_message?.body || 'Чат открыт — напиши первым' }}</span><span v-if="(c.last_message as any)?.is_edited" class="text-[10px] text-stone-400">(изм.)</span></div>
+            <div class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5"><span class="text-rose-500 font-bold">Мэтч</span><span class="text-stone-300">·</span><span class="truncate text-stone-500">{{ previewText(c.last_message, 'Чат открыт — напиши первым') }}</span><span v-if="(c.last_message as any)?.is_edited" class="text-[10px] text-stone-400">(изм.)</span></div>
           </div>
           <span v-if="c.unread_count" class="bg-rose-500 text-white text-xs font-bold min-w-[22px] h-[22px] grid place-items-center px-1.5 rounded-full shrink-0">{{ c.unread_count > 9 ? '9+' : c.unread_count }}</span>
         </button>

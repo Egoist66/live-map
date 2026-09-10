@@ -216,7 +216,7 @@ export function useSwipes() {
   function handleGate(e: unknown): boolean {
     const err = e as { response?: { status?: number; data?: { age_gate?: boolean; age_gate_reason?: string } } }
     if (err.response?.status === 403 && err.response?.data?.age_gate === true) {
-      ageGateReason.value = err.response.data.age_gate_reason === 'underage' ? 'underage' : 'missing'
+      ageGateReason.value = err.response?.data?.age_gate_reason === 'underage' ? 'underage' : 'missing'
       ageGate.value = true
       return true
     }
@@ -320,7 +320,7 @@ export function useSwipes() {
    */
   function applyFeedError(e: unknown, fallback: string): void {
     const err = e as { response?: { data?: { message?: string; quota?: SwipeQuota } } }
-    if (err.response?.data?.quota) quota.value = err.response.data.quota
+    if (err.response?.data?.quota) quota.value = err.response?.data?.quota as SwipeQuota
     error.value = err.response?.data?.message ?? fallback
   }
 
@@ -588,7 +588,7 @@ export function useSwipes() {
     } catch (e: unknown) {
       if (handleGate(e)) return
       const err = e as { response?: { data?: { message?: string; quota?: SwipeQuota } } }
-      if (err.response?.data?.quota) quota.value = err.response.data.quota
+      if (err.response?.data?.quota) quota.value = err.response?.data?.quota as SwipeQuota
       error.value = err.response?.data?.message ?? 'Не удалось открыть чат'
     } finally {
       creatingChat.value = false
@@ -707,7 +707,7 @@ export function useSwipes() {
       await loadFavorites()
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string; quota?: SwipeQuota } } }
-      if (err.response?.data?.quota) quota.value = err.response.data.quota
+      if (err.response?.data?.quota) quota.value = err.response?.data?.quota as SwipeQuota
       error.value = err.response?.data?.message ?? 'Не удалось сбросить свайпы'
     } finally {
       resetting.value = false

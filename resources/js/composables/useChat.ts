@@ -123,6 +123,10 @@ export function useChat() {
     try { return echo.private(`chat.${selectedId.value}`) } catch { return null }
   }
 
+  function normalizeConversations(data: unknown): Conversation[] {
+    if (!Array.isArray(data)) return []
+    return (data as Conversation[]).filter((c) => c != null && Number((c as any)?.id) > 0)
+  }
   function sortConversations() {
     conversations.value = [...conversations.value].sort((a:any,b:any)=> new Date(b.last_message_at||b.updated_at||0).getTime() - new Date(a.last_message_at||a.updated_at||0).getTime())
   }
@@ -140,14 +144,14 @@ export function useChat() {
   }
   async function loadConversations() {
     const w = window as any
-    if (loadConversationsInflight) return loadConversationsInflight.then(d => { conversations.value = d; return d })
-    if (w.__conversationsInflight) return w.__conversationsInflight.then((d: Conversation[]) => { conversations.value = d; return d })
+    if (loadConversationsInflight) return loadConversationsInflight.then(d => { conversations.value = normalizeConversations(d); return conversations.value })
+    if (w.__conversationsInflight) return w.__conversationsInflight.then((d: Conversation[]) => { conversations.value = normalizeConversations(d); return conversations.value })
     loadConversationsInflight = chatApi.conversations() as Promise<Conversation[]>
     w.__conversationsInflight = loadConversationsInflight
     try {
       const data = await loadConversationsInflight
-      conversations.value = data
-      return data
+      conversations.value = normalizeConversations(data)
+      return conversations.value
     } finally { loadConversationsInflight = null; w.__conversationsInflight = null }
   }
 

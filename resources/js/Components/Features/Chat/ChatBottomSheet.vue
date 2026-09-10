@@ -14,29 +14,29 @@ const emit = defineEmits<{ (e: 'close'): void; (e: 'openChat', id: number): void
           <button class="w-full px-4 py-3.5 rounded-2xl bg-stone-100 text-[15px] font-medium justify-center mt-1" @click="emit('close')">Отмена</button>
         </template>
         <template v-else-if="sheet.type === 'chat'">
-          <div class="px-4 py-3 border-b mb-1"><div class="text-[15px] font-bold truncate">{{ sheet.data.other?.name }}</div></div>
+          <div class="px-4 py-3 border-b mb-1"><div class="text-[15px] font-bold truncate">{{ sheet.data?.other?.name }}</div></div>
           <button @click="emit('openChat', sheet.data?.id)" class="w-full px-4 py-3.5 rounded-2xl hover:bg-violet-50 text-[15px] font-medium text-left text-violet-700">Открыть чат</button>
           <button @click="emit('deleteChat', sheet.data?.id)" class="w-full px-4 py-3.5 rounded-2xl text-[15px] font-medium text-left text-red-600">Удалить чат</button>
-          <button v-if="sheet.data.other?.id" @click="emit('block', sheet.data.other.id, sheet.data.other.name)" class="w-full px-4 py-3.5 rounded-2xl text-[15px] font-medium text-left text-red-600">Заблокировать</button>
+          <button v-if="sheet.data?.other?.id" @click="emit('block', sheet.data.other.id, sheet.data.other.name)" class="w-full px-4 py-3.5 rounded-2xl text-[15px] font-medium text-left text-red-600">Заблокировать</button>
           <button @click="emit('close')" class="w-full px-4 py-3.5 rounded-2xl bg-stone-100 text-[15px] font-medium justify-center mt-1">Отмена</button>
         </template>
         <template v-else-if="sheet.type === 'friend'">
-          <div class="px-4 py-2 border-b mb-1"><div class="text-[15px] font-bold">{{ sheet.data.other?.name }}</div></div>
-          <button @click="emit('startChat', sheet.data.other)" class="w-full px-4 py-3.5 rounded-2xl text-[15px] font-medium text-left text-violet-700">Написать</button>
+          <div class="px-4 py-2 border-b mb-1"><div class="text-[15px] font-bold">{{ sheet.data?.other?.name }}</div></div>
+          <button @click="emit('startChat', sheet.data?.other)" class="w-full px-4 py-3.5 rounded-2xl text-[15px] font-medium text-left text-violet-700">Написать</button>
           <button @click="emit('removeFriend', sheet.data)" class="w-full px-4 py-3.5 rounded-2xl text-[15px] font-medium text-left text-red-600">Удалить из друзей</button>
-          <button v-if="sheet.data.other?.id" @click="emit('block', sheet.data.other.id, sheet.data.other.name)" class="w-full px-4 py-3.5 rounded-2xl text-[15px] font-medium text-left text-red-600">Заблокировать</button>
+          <button v-if="sheet.data?.other?.id" @click="emit('block', sheet.data.other.id, sheet.data.other.name)" class="w-full px-4 py-3.5 rounded-2xl text-[15px] font-medium text-left text-red-600">Заблокировать</button>
           <button @click="emit('close')" class="w-full px-4 py-3.5 rounded-2xl bg-stone-100 text-[15px] font-medium justify-center mt-1">Отмена</button>
         </template>
         <template v-else-if="sheet.type === 'request'">
-          <div class="px-4 py-2 border-b mb-1"><div class="text-[15px] font-bold">{{ sheet.data.requester?.name }}</div><div class="text-xs text-stone-500">хочет дружить</div></div>
+          <div class="px-4 py-2 border-b mb-1"><div class="text-[15px] font-bold">{{ sheet.data?.requester?.name }}</div><div class="text-xs text-stone-500">хочет дружить</div></div>
           <button @click="emit('accept', sheet.data?.id)" class="w-full px-4 py-3.5 rounded-2xl bg-green-600 text-white text-[15px] font-medium text-left">Принять</button>
           <button @click="emit('decline', sheet.data?.id)" class="w-full px-4 py-3.5 rounded-2xl text-[15px] font-medium text-left text-red-600">Отклонить</button>
           <button @click="emit('close')" class="w-full px-4 py-3.5 rounded-2xl bg-stone-100 text-[15px] font-medium justify-center mt-1">Отмена</button>
         </template>
         <template v-else-if="sheet.type === 'search'">
-          <div class="px-4 py-2 border-b mb-1"><div class="text-[15px] font-bold">{{ sheet.data?.name }}</div><div v-if="sheet.data.is_friend" class="text-xs text-green-600">Уже в друзьях</div><div v-else-if="sheet.data.is_pending" class="text-xs text-stone-500">Заявка отправлена</div></div>
-          <button v-if="sheet.data.can_message !== false" @click="emit('startChat', sheet.data)" class="w-full px-4 py-3.5 rounded-2xl text-[15px] font-medium text-left text-violet-700">Написать</button>
-          <button v-if="!sheet.data.is_friend && !sheet.data.is_pending" @click="emit('add', sheet.data?.id)" class="w-full px-4 py-3.5 rounded-2xl text-[15px] font-medium text-left">В друзья</button>
+          <div class="px-4 py-2 border-b mb-1"><div class="text-[15px] font-bold">{{ sheet.data?.name }}</div><div v-if="sheet.data?.is_friend" class="text-xs text-green-600">Уже в друзьях</div><div v-else-if="sheet.data?.is_pending" class="text-xs text-stone-500">Заявка отправлена</div></div>
+          <button v-if="sheet.data?.can_message !== false" @click="emit('startChat', sheet.data)" class="w-full px-4 py-3.5 rounded-2xl text-[15px] font-medium text-left text-violet-700">Написать</button>
+          <button v-if="!sheet.data?.is_friend && !sheet.data?.is_pending" @click="emit('add', sheet.data?.id)" class="w-full px-4 py-3.5 rounded-2xl text-[15px] font-medium text-left">В друзья</button>
           <button @click="emit('block', sheet.data?.id, sheet.data?.name)" class="w-full px-4 py-3.5 rounded-2xl text-[15px] font-medium text-left text-red-600">Заблокировать</button>
           <button @click="emit('close')" class="w-full px-4 py-3.5 rounded-2xl bg-stone-100 text-[15px] font-medium justify-center mt-1">Отмена</button>
         </template>

@@ -7,7 +7,7 @@ export function useBlocks() {
 
   async function load() {
     loading.value = true
-    try { blocked.value = await chatApi.blocks() } finally { loading.value = false }
+    try { const list = await chatApi.blocks(); blocked.value = Array.isArray(list) ? list.filter(Boolean) : [] } finally { loading.value = false }
   }
 
   async function block(userId: number) {
