@@ -2,12 +2,13 @@ import { ref, computed, watch } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import { useSecurityImpersonations } from '@/composables/useSecurityImpersonations'
 
-export type SettingsTabId = 'profile'|'billing'|'privacy'|'appearance'|'security'|'pins'|'support'|'app'|'procedures'|'admin'
+export type SettingsTabId = 'profile'|'billing'|'privacy'|'appearance'|'security'|'pins'|'support'|'app'|'procedures'|'admin'|'archive'
 
 export const SETTINGS_TABS = [
   { id: 'profile' as const, label: 'Профиль', icon: 'pi pi-user', desc: 'Фото, имя, дом' },
   { id: 'billing' as const, label: 'Тариф', icon: 'pi pi-star', desc: 'План, лимиты' },
   { id: 'pins' as const, label: 'Мои пины', icon: 'pi pi-map-marker', desc: 'Созданные, удалить' },
+  { id: 'archive' as const, label: 'Архив', icon: 'pi pi-folder', desc: 'Файлы, 15 дней' },
   { id: 'privacy' as const, label: 'Приватность', icon: 'pi pi-lock', desc: 'Анонимность, зона' },
   { id: 'appearance' as const, label: 'Внешний вид', icon: 'pi pi-palette', desc: 'Тема, карта' },
   { id: 'security' as const, label: 'Безопасность', icon: 'pi pi-shield', desc: 'Пароль, удаление' },
@@ -17,7 +18,7 @@ export const SETTINGS_TABS = [
 ] as const
 
 export const SETTINGS_TAB_INDEX: Record<SettingsTabId, string> = {
-  profile: '0', billing: '1', pins: '2', privacy: '3', appearance: '4', security: '5', procedures: '6', support: '7', app: '8', admin: '9',
+  profile: '0', billing: '1', pins: '2', archive: '3', privacy: '4', appearance: '5', security: '6', procedures: '7', support: '8', app: '9', admin: '10',
 }
 
 export const ADMIN_TAB = { id: 'admin' as const, label: 'Админ', icon: 'pi pi-shield', desc: 'Скрытие, удаление' } as const

@@ -82,7 +82,12 @@ class ProfilePhotoController extends Controller
             \Illuminate\Support\Facades\Storage::disk($this->disk())->delete($path);
             throw $e;
         }
-        return response()->json($this->serialize($photo->refresh(), $user), 201);
+        $fresh = $photo->refresh();
+        try {
+            \App\Services\UserSubscriptionNotifier::photoCreated($fresh);
+        } catch (\Throwable) {
+        }
+        return response()->json($this->serialize($fresh, $user), 201);
     }
 
     public function update(Request $request, ProfilePhoto $photo)

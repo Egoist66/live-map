@@ -15,6 +15,7 @@ import { useCustomCategories } from '@/composables/useCustomCategories'
 import { useHomeZoneVisibility } from '@/composables/useHomeZoneVisibility'
 import { planOf } from '@/composables/usePlanLimits'
 import { resolveInitialCenter, homeAnchorOf, isSaneFix } from '@/composables/useMapInitialCenter'
+import { haversineKm } from '@/utils/geo'
 
 export function useMapPage() {
   const { store, selectedCategory, filteredPins, fetchNearby } = usePins()
@@ -58,6 +59,38 @@ export function useMapPage() {
   const geoNotice = ref<{ place: string } | null>(null)
   let flewToLive = false
   let unsubGeolocate: (() => void) | null = null
+  let lastStreetPos: { lat: number; lng: number; at: number } | null = null
+
+  /**
+   * Троттлинг подписи "Вы здесь": GPS на мобилке дёргается каждую секунду.
+   * @param lat широта нового фикса
+   * @param lng долгота нового фикса
+   * @returns true если сдвиг/пауза достаточны для нового reverse-geocode
+   */
+  function isStreetStale(lat: number, lng: number): boolean {
+    if (!lastStreetPos) {
+      return true
+    }
+    const distKm = haversineKm(lastStreetPos.lat, lastStreetPos.lng, lat, lng)
+    const elapsedMs = Date.now() - lastStreetPos.at
+    const movedFar = distKm > 0.03
+    const movedBitAndIdle = distKm > 0.01 && elapsedMs > 60000
+    return movedFar || movedBitAndIdle
+  }
+
+  /**
+   * Запрашивает улицу только при значимом сдвиге, иначе оставляет кэш.
+   * @param lat широта
+   * @param lng долгота
+   */
+  function maybeFetchStreet(lat: number, lng: number): void {
+    const stale = isStreetStale(lat, lng)
+    if (!stale) {
+      return
+    }
+    lastStreetPos = { lat, lng, at: Date.now() }
+    void fetchStreet(lat, lng)
+  }
 
   /**
    * Сохраняет последнюю хорошую позицию для следующего открытия карты.
@@ -264,7 +297,7 @@ export function useMapPage() {
         saveLastPos(geo.lat, geo.lng)
         geoNotice.value = null
       }
-      fetchStreet(geo.lat, geo.lng)
+      maybeFetchStreet(geo.lat, geo.lng)
       try { await fetchNearby(geo.lat, geo.lng) } catch {}
       mapApi.showUserLocation(geo.lat, geo.lng)
       applyHomeZone()
@@ -287,7 +320,7 @@ export function useMapPage() {
         saveLastPos(lat, lng)
         geoNotice.value = null
       }
-      fetchStreet(lat, lng)
+      maybeFetchStreet(lat, lng)
       mapApi.showUserLocation(lat, lng)
       applyHomeZone()
       if (sane && !flewToLive) {

@@ -88,6 +88,7 @@ Route::middleware(['web', 'auth', 'throttle:120,1'])->group(function () {
     Route::get('/swipes/matches', [SwipeController::class, 'matches']);
     Route::get('/swipes/favorites', [SwipeController::class, 'favorites']);
     Route::delete('/swipes/favorites/{user}', [SwipeController::class, 'removeFavorite'])->middleware('throttle:social-write');
+    Route::post('/swipes/reset-history', [SwipeController::class, 'resetHistory']);
     Route::get('/swipes/quota', [SwipeController::class, 'quota']);
     Route::patch('/swipes/settings', [SwipeController::class, 'settings'])->middleware('throttle:profile-write');
     Route::post('/swipes/verify-age', [SwipeController::class, 'verifyAge'])->middleware('throttle:profile-write');
@@ -97,6 +98,11 @@ Route::middleware(['web', 'auth', 'throttle:120,1'])->group(function () {
     Route::get('/blocks', [UserBlockController::class, 'index']);
     Route::post('/blocks', [UserBlockController::class, 'store'])->middleware('throttle:social-write');
     Route::delete('/blocks/{user}', [UserBlockController::class, 'destroy'])->middleware('throttle:social-write');
+
+    Route::get('/subscriptions', [\App\Http\Controllers\UserSubscriptionController::class, 'index']);
+    Route::get('/users/{user}/subscription', [\App\Http\Controllers\UserSubscriptionController::class, 'status']);
+    Route::post('/users/{user}/subscription', [\App\Http\Controllers\UserSubscriptionController::class, 'store'])->middleware('throttle:social-write');
+    Route::delete('/users/{user}/subscription', [\App\Http\Controllers\UserSubscriptionController::class, 'destroy'])->middleware('throttle:social-write');
 
     Route::get('/conversations', [ConversationController::class, 'index']);
     Route::post('/conversations', [ConversationController::class, 'store'])->middleware('throttle:social-write');
@@ -113,6 +119,10 @@ Route::middleware(['web', 'auth', 'throttle:120,1'])->group(function () {
     Route::get('/conversations/{conversation}/pinned', [MessageController::class, 'pinned']);
     Route::post('/messages/{message}/pin', [MessageController::class, 'pin'])->middleware('throttle:pin-toggle');
     Route::delete('/messages/{message}/pin', [MessageController::class, 'unpin'])->middleware('throttle:pin-toggle');
+
+    Route::get('/chat/attachments', [\App\Http\Controllers\ChatAttachmentController::class, 'index']);
+    Route::delete('/chat/attachments', [\App\Http\Controllers\ChatAttachmentController::class, 'clear'])->middleware('throttle:social-write');
+    Route::delete('/chat/attachments/{message}', [\App\Http\Controllers\ChatAttachmentController::class, 'destroy'])->middleware('throttle:social-write');
 
     Route::post('/push-subscriptions', [PushSubscriptionController::class, 'store'])->middleware('throttle:social-write');
     Route::delete('/push-subscriptions', [PushSubscriptionController::class, 'destroy'])->middleware('throttle:social-write');

@@ -168,21 +168,37 @@ export function useChat() {
     }
   }
 
-  async function sendMessage(body: string) {
-    if (!selectedId.value || !body.trim()) return
-    if (sending.value) return
+  async function sendMessage(body: string, replyTo?: any | null, attachmentFile?: File | null) {
     const text = body.trim()
+    if (!selectedId.value || (!text && !attachmentFile)) return
+    if (sending.value) return
     const tempId = -Math.floor(Math.random()*1e9) - Date.now()%1e6
     const uid = getUid()
     sendTypingWs(false)
     if (typingTimeout) { clearTimeout(typingTimeout); typingTimeout = null }
-    const optimistic: any = { id: tempId, conversation_id: selectedId.value, sender_id: uid, body: text, type: 'text', created_at: new Date().toISOString(), pending: true }
+    const replySnapshot = replyTo ? {
+      id: replyTo.id,
+      body: replyTo.body,
+      sender_id: replyTo.sender_id,
+      sender_name: replyTo.sender?.name ?? null,
+    } : null
+    const optimisticAttachment = attachmentFile ? {
+      url: URL.createObjectURL(attachmentFile),
+      name: attachmentFile.name,
+      size: attachmentFile.size,
+      kind: /^image\//i.test(attachmentFile.type) ? 'image' : 'file',
+      local: true,
+    } : null
+    const optimistic: any = { id: tempId, conversation_id: selectedId.value, reply_to_id: replyTo?.id ?? null, reply_to: replySnapshot, sender_id: uid, body: text, type: optimisticAttachment ? optimisticAttachment.kind : 'text', attachment: optimisticAttachment, created_at: new Date().toISOString(), pending: true }
     messages.value.push(optimistic)
     seenIds.add(tempId)
     scrollToBottom()
     sending.value = true
     try {
-      const msg = await chatApi.sendMessage(selectedId.value!, text)
+      const msg = await chatApi.sendMessage(selectedId.value!, text, replyTo?.id ?? null, attachmentFile ?? null)
+      if (optimisticAttachment?.url) {
+        try { URL.revokeObjectURL(optimisticAttachment.url) } catch {}
+      }
       seenIds.add(msg.id)
       const tempIdx = messages.value.findIndex((m) => m.id === tempId)
       const existsIdx = messages.value.findIndex((m) => m.id === msg.id)

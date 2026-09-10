@@ -53,10 +53,18 @@ export function useUserProfile(userId: number) {
     try { await chatApi.unblock(userId); await load() } finally { loading.value = false }
   }
 
+  /**
+   * Создать диалог и сразу открыть окно чата chat/id.
+   *
+   * @returns void
+   */
   async function startChat() {
     loading.value = true
     try {
       const res = await chatApi.createConversation(userId)
+      if (!res?.id) {
+        throw new Error('Сервер не вернул чат')
+      }
       router.visit(`/chat/${res.id}`)
     } catch (e: any) {
       try {

@@ -62,7 +62,7 @@ class ConversationController extends Controller
         abort_unless($conversation->hasParticipant($request->user()->id),403);
         $clearedAt = $conversation->participantRows()->where('user_id', $request->user()->id)->value('cleared_at');
         $conversation->load(['participants:id,name,avatar_path,last_seen_at,is_invisible,plan,role,is_admin,dating_goal,dating_interests']);
-        $rawMessages = $conversation->messages()->with('sender:id,name,avatar_path')->orderBy('created_at')->limit(100)->get();
+        $rawMessages = $conversation->messages()->with(['sender:id,name,avatar_path', 'replyTo.sender:id,name'])->orderBy('created_at')->limit(100)->get();
         if ($clearedAt) {
             $rawMessages = $rawMessages->filter(fn($m) => $m->created_at > $clearedAt)->values();
         }
@@ -73,7 +73,7 @@ class ConversationController extends Controller
             try{ broadcast(new \App\Events\MessageDelivered($conversation->id,$undelivered->toArray(),$request->user()->id))->toOthers(); }catch(\Throwable $e){ \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
         }
         $messages = $rawMessages->map->toArrayPayload();
-        $pinned = $conversation->messages()->with('sender:id,name,avatar_path')->whereNotNull('pinned_at')->orderBy('pinned_at')->get()->map->toArrayPayload();
+        $pinned = $conversation->messages()->with(['sender:id,name,avatar_path', 'replyTo.sender:id,name'])->whereNotNull('pinned_at')->orderBy('pinned_at')->get()->map->toArrayPayload();
         $other = $conversation->participants->firstWhere('id','!=',$request->user()->id);
         $lastSeen = $other && $other->isInvisibleActive() && !$request->user()->isAdmin() ? null : $other?->last_seen_at?->toISOString();
         $isMatch = $other ? \App\Models\DatingMatch::between($request->user()->id, $other->id) !== null : false;

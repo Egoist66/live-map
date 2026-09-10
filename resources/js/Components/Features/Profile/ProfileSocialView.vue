@@ -6,7 +6,10 @@ import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 import Message from 'primevue/message'
 import OnlineDot from '@/Components/Features/Feedback/OnlineDot.vue'
+import ProfileMoreMenu from '@/Components/Features/Profile/ProfileMoreMenu.vue'
+import UserSubscribeButton from '@/Components/Features/Profile/UserSubscribeButton.vue'
 import { useGender } from '@/composables/useGender'
+import { useSwipesCta } from '@/composables/useSwipesCta'
 import { ageLabel, calcAge } from '@/composables/useUserAge'
 import { useSwipeTabs } from '@/composables/useSwipeTabs'
 
@@ -34,6 +37,7 @@ const props = defineProps<{
   galleryCanAdd: boolean
   galleryLoading: boolean
   galleryUploading: boolean
+  subscription?: { subscribed: boolean; notify_pin: boolean; notify_photo: boolean; notify_level: boolean }
 }>()
 
 const emit = defineEmits<{
@@ -71,6 +75,7 @@ function onPhotoPicked(e: Event): void {
   if (f) emit('addPhoto', f)
 }
 const g = useGender()
+const { goSwipes } = useSwipesCta()
 
 const ageText = computed(() => {
   const direct = props.user?.age != null ? ageLabel(Number(props.user.age)) : ''
@@ -89,7 +94,7 @@ const extraSlots = computed(() => {
   if (!props.isOwn || !props.galleryCanAdd || props.isLocked) return 0
   return Math.max(0, remainingSlots.value - emptyTiles.value)
 })
-const friendLabel = computed(() => (props.isFriend ? 'В друзьях ✓' : props.isPending ? 'Ожидает' : 'В друзья'))
+const friendLabel = computed(() => (props.isFriend ? 'В друзьях' : props.isPending ? 'Ожидает' : 'В друзья'))
 const statCls = 'flex-1 min-w-0 flex flex-col items-center sm:block sm:text-left px-2 py-2 sm:py-1 rounded-xl transition active:scale-[0.98] hover:bg-stone-100 dark:hover:bg-white/5'
 </script>
 
@@ -127,9 +132,10 @@ const statCls = 'flex-1 min-w-0 flex flex-col items-center sm:block sm:text-left
             <Button icon="pi pi-search" aria-label="Поиск людей" title="Поиск людей" class="!rounded-xl !w-11 shrink-0 !bg-emerald-600/10 dark:!bg-emerald-500/15 !border-0 !text-emerald-600 dark:!text-emerald-400" @click="emit('search')" />
           </template>
           <template v-else>
-            <Button v-if="canMessage && !isBlocked" label="Сообщение" icon="pi pi-comments" :loading="loading" class="flex-[1.3] min-w-0 !rounded-xl !text-[13px] !font-bold !bg-blue-600 hover:!bg-blue-500 !border-0 !text-white [&_.p-button-label]:truncate" @click="emit('chat')" />
-            <Button v-if="!isBlocked" :label="friendLabel" :icon="isFriend ? 'pi pi-check' : 'pi pi-user-plus'" :loading="loading" class="flex-1 min-w-0 !rounded-xl !text-[13px] !font-bold !bg-stone-100 dark:!bg-white/10 !border-0 !text-ink-900 dark:!text-white [&_.p-button-label]:truncate" @click="isFriend ? emit('remove') : emit('add')" />
-            <Button v-if="!isBlocked" icon="pi pi-ellipsis-h" aria-label="Ещё" title="Ещё" class="!rounded-xl !w-11 shrink-0 !bg-violet-600/10 dark:!bg-violet-500/15 !border-0 !text-violet-600 dark:!text-violet-300" @click="emit('share')" />
+            <Button v-if="canMessage && !isBlocked" icon="pi pi-comments" :loading="loading" aria-label="Написать сообщение" title="Написать сообщение" class="!rounded-xl !w-11 shrink-0 !bg-blue-600 hover:!bg-blue-500 !border-0 !text-white" @click="emit('chat')" />
+            <Button v-if="!isBlocked" :label="friendLabel" :icon="isFriend ? 'pi pi-check' : 'pi pi-user-plus'" :loading="loading" class="flex-1 min-w-0 !rounded-xl !text-[13px] !font-bold !border-0 [&_.p-button-label]:truncate" :class="isFriend ? '!bg-emerald-50 dark:!bg-emerald-500/10 !text-emerald-600 dark:!text-emerald-400' : '!bg-stone-100 dark:!bg-white/10 !text-ink-900 dark:!text-white'" @click="isFriend ? emit('remove') : emit('add')" />
+            <UserSubscribeButton v-if="!isBlocked" :user-id="(user as any).id" :initial="subscription" :compact="true" />
+            <ProfileMoreMenu v-if="!isBlocked" :user-id="(user as any).id" :user-name="(user as any).name" @share="emit('share')" @block="emit('block')" @remove="emit('remove')" />
             <Button v-else label="Разблокировать" icon="pi pi-ban" :loading="loading" severity="danger" outlined class="flex-1 min-w-0 !rounded-xl !text-[13px] !font-bold [&_.p-button-label]:truncate" @click="emit('unblock')" />
           </template>
         </div>
@@ -167,7 +173,7 @@ const statCls = 'flex-1 min-w-0 flex flex-col items-center sm:block sm:text-left
         <div v-if="ageText" class="flex justify-between gap-3 px-4 py-3"><span class="text-stone-500 dark:text-zinc-400 flex items-center gap-2"><i class="pi pi-cake"></i>Возраст</span><span class="font-semibold text-ink-900 dark:text-white">{{ ageText }}</span></div>
         <div v-if="user.gender" class="flex justify-between gap-3 px-4 py-3"><span class="text-stone-500 dark:text-zinc-400 flex items-center gap-2"><i class="pi pi-users"></i>Пол</span><span class="font-semibold text-ink-900 dark:text-white">{{ g.getLabel(user.gender) }}</span></div>
       </div>
-      <button type="button" @click="emit('search')" class="relative mt-3 lg:mt-0 w-full overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-700 text-white text-left p-5 transition hover:opacity-95 active:scale-[0.99]">
+      <button type="button" @click="goSwipes()" class="relative mt-3 lg:mt-0 w-full overflow-hidden rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-700 text-white text-left p-5 transition hover:opacity-95 active:scale-[0.99]">
         <div class="absolute inset-0 opacity-[0.12]" style="background-image: radial-gradient(circle at 1px 1px, white 1px, transparent 0); background-size: 18px 18px"></div>
         <div class="absolute -top-10 -right-10 w-40 h-40 bg-white/20 rounded-full blur-2xl"></div>
         <span class="relative block w-16 h-16 rounded-2xl bg-white/15 border border-white/25 grid place-items-center"><i class="pi pi-heart text-3xl"></i></span>
@@ -229,9 +235,8 @@ const statCls = 'flex-1 min-w-0 flex flex-col items-center sm:block sm:text-left
         <div class="flex justify-between gap-3 py-3 border-b border-stone-100 dark:border-zinc-800"><span class="text-stone-500 dark:text-zinc-400">Репутация</span><span class="font-semibold text-ink-900 dark:text-white">{{ user.reputation_score || 0 }} ★</span></div>
         <div class="flex justify-between gap-3 py-3"><span class="text-stone-500 dark:text-zinc-400">На карте с</span><span class="font-semibold text-ink-900 dark:text-white">{{ registeredAt }}</span></div>
       </div>
-      <div class="pt-2 pb-1 flex gap-2">
+      <div class="pt-2 pb-1">
         <Link href="/map" class="flex flex-1"><Button label="На карту →" rounded class="w-full !bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white" /></Link>
-        <Button v-if="!isOwn && !isBlocked" icon="pi pi-ban" severity="secondary" outlined rounded aria-label="Заблокировать" title="Заблокировать" class="!w-12 shrink-0" @click="emit('block')" />
       </div>
     </div>
   </div>

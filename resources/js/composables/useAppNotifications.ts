@@ -143,6 +143,46 @@ function handlePinActivity(e: any) {
     createdAt: Date.now(),
   })
 }
+function handleUserFeed(e: any) {
+  const kind = e?.kind as string | undefined
+  if (!kind) return
+  const actor = e?.actor || {}
+  const name = actor.name || 'Кто-то'
+  const p = e?.payload || {}
+  if (kind === 'pin') {
+    const title = (p.title || 'новый пин').toString().slice(0, 60)
+    push({
+      id: `feed-pin-${p.pin_id || Date.now()}-${Date.now()}`,
+      type: 'pin',
+      title: `${name} — новый пин`,
+      body: `«${title}»`.slice(0, 90),
+      avatar: avatarSrcFor(actor),
+      link: `/users/${actor.id || p.target_id || ''}`,
+      createdAt: Date.now(),
+    })
+  } else if (kind === 'photo') {
+    push({
+      id: `feed-photo-${p.photo_id || Date.now()}-${Date.now()}`,
+      type: 'pin',
+      title: `${name} — новое фото`,
+      body: 'Загружено новое фото. Откройте галерею'.slice(0, 90),
+      avatar: avatarSrcFor(actor),
+      link: `/users/${actor.id || p.target_id || ''}`,
+      createdAt: Date.now(),
+    })
+  } else if (kind === 'level') {
+    const leveledUp = p.old_level && p.old_level !== p.level
+    push({
+      id: `feed-level-${actor.id || Date.now()}-${Date.now()}`,
+      type: 'friend',
+      title: leveledUp ? `${name} — новый уровень` : `${name} — репутация изменилась`,
+      body: leveledUp ? `Уровень: ${p.level} · ${p.reputation_score ?? 0} ★` : `Репутация: ${p.reputation_score ?? 0} ★`.slice(0, 90),
+      avatar: avatarSrcFor(actor),
+      link: `/users/${actor.id || p.target_id || ''}`,
+      createdAt: Date.now(),
+    })
+  }
+}
 function handleImpersonation(e: any) {
   const log = e?.log
   if (!log?.id) return
@@ -188,6 +228,8 @@ function subscribe() {
     adminMode = isAdminNow()
     echoCh.listen('.message.sent', handleMessage)
     echoCh.listen('.friendship.updated', handleFriendship)
+    echoCh.listen('.user.feed.updated', handleUserFeed)
+    echoCh.listen('UserFeedUpdated', handleUserFeed)
     echoCh.listen('.pin.activity', handlePinActivity)
     echoCh.listen('PinActivityCreated', handlePinActivity)
     echoCh.listen('.report.created', handleReport)

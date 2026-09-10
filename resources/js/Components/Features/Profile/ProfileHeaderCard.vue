@@ -5,8 +5,10 @@ import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
 import OnlineDot from '@/Components/Features/Feedback/OnlineDot.vue'
+import ProfileMoreMenu from '@/Components/Features/Profile/ProfileMoreMenu.vue'
+import UserSubscribeButton from '@/Components/Features/Profile/UserSubscribeButton.vue'
 
-defineProps<{ user: any; avatarSrc: string; online: boolean; lastSeen: string; levelName: string; isOwn: boolean; isLocked: boolean; canMessage: boolean; isBlocked: boolean; isFriend: boolean; isPending: boolean; loading: boolean; sharing: boolean }>()
+defineProps<{ user: any; avatarSrc: string; online: boolean; lastSeen: string; levelName: string; isOwn: boolean; isLocked: boolean; canMessage: boolean; isBlocked: boolean; isFriend: boolean; isPending: boolean; loading: boolean; sharing: boolean; subscription?: { subscribed: boolean; notify_pin: boolean; notify_photo: boolean; notify_level: boolean } }>()
 const emit = defineEmits<{ (e: 'avatar'): void; (e: 'chat'): void; (e: 'add'): void; (e: 'remove'): void; (e: 'block'): void; (e: 'unblock'): void; (e: 'share'): void; (e: 'friends'): void; (e: 'search'): void; (e: 'gallery'): void }>()
 </script>
 <template>
@@ -32,15 +34,17 @@ const emit = defineEmits<{ (e: 'avatar'): void; (e: 'chat'): void; (e: 'add'): v
             <Button @click="emit('gallery')" rounded text class="!w-10 !h-10 !p-0 !rounded-full" icon="pi pi-images" aria-label="Галерея" title="Галерея" />
             <Button @click="emit('friends')" rounded text class="!w-10 !h-10 !p-0 !rounded-full" icon="pi pi-users" aria-label="Друзья" title="Друзья" />
             <Button v-if="isOwn" @click="emit('search')" rounded text class="!w-10 !h-10 !p-0 !rounded-full" icon="pi pi-search" aria-label="Поиск людей" title="Поиск людей" />
+            <ProfileMoreMenu v-else-if="!isLocked && !isBlocked" :user-id="(user as any).id" :user-name="(user as any).name" button-class="!w-10 !h-10 !p-0 !rounded-full" @share="emit('share')" @block="emit('block')" @remove="emit('remove')" />
             <Link href="/map" class="hidden sm:inline-flex"><Button label="На карту →" rounded class="!bg-gradient-to-r !from-violet-600 !to-indigo-600 !border-0 !text-white !text-sm !font-bold !shadow-glow hover:!opacity-90" /></Link>
           </div>
         </div>
         <div v-if="!isOwn && !isLocked" class="mt-4 flex items-center gap-2 rounded-2xl p-2.5 bg-gradient-to-br from-stone-100/90 to-stone-50/50 dark:from-white/[0.07] dark:to-white/[0.02] border border-stone-200/60 dark:border-white/10">
           <Button v-if="canMessage && !isBlocked" @click="emit('chat')" :loading="loading" rounded class="!w-10 !h-10 !p-0 !rounded-full !bg-gradient-to-br !from-brand-500 !to-violet-600 !border-0 !text-white !shadow-glow" icon="pi pi-comments" aria-label="Написать" />
           <Button v-if="!isFriend && !isPending && !isBlocked" @click="emit('add')" :loading="loading" rounded severity="secondary" outlined class="!w-10 !h-10 !p-0 !rounded-full dark:!bg-white/5 dark:!border-white/15 dark:!text-zinc-100 dark:hover:!bg-white/10" icon="pi pi-user-plus" aria-label="Добавить в друзья" />
-          <Button v-if="isFriend" @click="emit('remove')" rounded severity="secondary" outlined class="!w-10 !h-10 !p-0 !rounded-full dark:!bg-white/5 dark:!border-white/15 dark:!text-zinc-100 dark:hover:!bg-white/10" icon="pi pi-user-minus" aria-label="Удалить из друзей" />
-          <Button v-if="!isBlocked" @click="emit('block')" rounded severity="secondary" outlined class="!w-10 !h-10 !p-0 !rounded-full dark:!bg-white/5 dark:!border-white/15 dark:!text-zinc-100 dark:hover:!bg-white/10" icon="pi pi-ban" aria-label="Заблокировать" />
+          <Button v-if="isFriend" @click="emit('remove')" rounded severity="danger" outlined class="!w-10 !h-10 !p-0 !rounded-full" icon="pi pi-user-minus" aria-label="Удалить из друзей" />
+          <Button v-if="!isBlocked" @click="emit('block')" rounded severity="danger" outlined class="!w-10 !h-10 !p-0 !rounded-full" icon="pi pi-ban" aria-label="Заблокировать" />
           <Button v-else @click="emit('unblock')" :loading="loading" rounded severity="danger" outlined class="!w-10 !h-10 !p-0 !rounded-full" icon="pi pi-ban" aria-label="Разблокировать" />
+          <UserSubscribeButton v-if="!isBlocked" :user-id="(user as any).id" :initial="subscription" :compact="true" />
           <span class="ml-1 text-xs font-medium text-stone-500 dark:text-zinc-400 hidden sm:inline">Действия</span>
         </div>
         <div class="mt-3 flex gap-2 rounded-2xl p-2.5 bg-gradient-to-br from-stone-100/90 to-stone-50/50 dark:from-white/[0.07] dark:to-white/[0.02] border border-stone-200/60 dark:border-white/10">

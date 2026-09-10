@@ -1,22 +1,61 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import Image from 'primevue/image'
 import MessageTicks from '@/Components/Features/Feedback/MessageTicks.vue'
 import { renderWithMentions } from '@/composables/useMentions'
 
-defineProps<{ message: any; own: boolean; status: string; time: string; pinned?: boolean }>()
-const emit = defineEmits<{ (e: 'edit', m: any): void; (e: 'delete', id: number): void; (e: 'pin', m: any): void }>()
+const props = defineProps<{ message: any; own: boolean; status: string; time: string; pinned?: boolean }>()
+const emit = defineEmits<{ (e: 'edit', m: any): void; (e: 'delete', id: number): void; (e: 'pin', m: any): void; (e: 'reply', m: any): void; (e: 'jump', id: number): void }>()
+
+const quote = computed(() => (props.message as any)?.reply_to ?? null)
+const quoteSnippet = computed(() => {
+  const t = String(quote.value?.body ?? '').replace(/\s+/g, ' ').trim()
+  if (t) {
+    return t.length > 90 ? `${t.slice(0, 90)}…` : t
+  }
+  return 'Файл'
+})
+const attachment = computed(() => (props.message as any)?.attachment ?? null)
+const attachmentSize = computed(() => {
+  const s = Number(attachment.value?.size) || 0
+  if (!s) {
+    return ''
+  }
+  if (s < 1024) {
+    return `${s} Б`
+  }
+  const kb = s / 1024
+  if (kb < 1024) {
+    return `${kb.toFixed(0)} КБ`
+  }
+  return `${(kb / 1024).toFixed(1)} МБ`
+})
 </script>
 <template>
   <div :class="own ? 'flex justify-end' : 'flex justify-start'" class="min-w-0 w-full max-w-full">
-    <div class="flex items-end gap-1.5 sm:gap-2 max-w-[88%] sm:max-w-[72%] lg:max-w-[68%] group min-w-0" :class="own ? 'flex-row-reverse' : 'flex-row'">
-      <div v-if="!(message as any).pending" class="hidden lg:flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 shrink-0 pb-1">
-        <button @click="emit('pin', message)" class="w-8 h-8 grid place-items-center rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow hover:bg-violet-50 hover:text-violet-600 hover:border-violet-200 transition" :title="(message as any).is_pinned || pinned ? 'Открепить' : 'Закрепить'">{{ (message as any).is_pinned || pinned ? '📌' : '📍' }}</button>
-        <button v-if="own" @click="emit('edit', message)" class="w-8 h-8 grid place-items-center rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow hover:bg-violet-50 hover:text-violet-600 hover:border-violet-200 transition" title="Редактировать">✎</button>
-        <button v-if="own" @click="emit('delete', message.id)" class="w-8 h-8 grid place-items-center rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition" title="Удалить">🗑</button>
-      </div>
+    <div class="flex items-end gap-1.5 sm:gap-2 max-w-[88%] sm:max-w-[72%] lg:max-w-[68%] min-w-0" :class="own ? 'flex-row-reverse' : 'flex-row'">
       <div class="relative min-w-0 flex-1 select-none">
         <div :class="['rounded-[18px] lg:rounded-2xl px-3.5 py-2.5 lg:px-3 lg:py-2 text-[15px] lg:text-sm leading-[1.4] shadow-sm transition-all duration-300', own ? 'bg-violet-600 text-white rounded-br-[6px]' : 'bg-white dark:bg-zinc-800 dark:text-white border border-stone-200 dark:border-zinc-700 rounded-bl-[6px]', (message as any).pending ? 'opacity-60 scale-[0.98]' : 'opacity-100 scale-100', (message as any).failed ? '!bg-red-500' : '', (message as any).justSent ? 'ring-2 ring-violet-300' : '']">
           <div v-if="(message as any).is_pinned || pinned" class="text-[11px] lg:text-[10px] font-bold mb-1 opacity-80">📌 Закреплено</div>
-          <div class="whitespace-pre-wrap break-words overflow-wrap-anywhere [overflow-wrap:anywhere] min-w-0 msg-body" v-html="renderWithMentions(message.body || '')"></div>
+          <button v-if="quote" type="button" @click="emit('jump', quote.id)" :class="own ? 'border-white/50 bg-black/10 hover:bg-black/15' : 'border-violet-500 bg-violet-50 dark:bg-violet-500/10 hover:bg-violet-100 dark:hover:bg-violet-500/20'" class="w-full text-left border-l-[3px] rounded-r-lg rounded-l-sm px-2.5 py-1.5 mb-1.5 transition active:scale-[0.98] min-w-0">
+            <span :class="own ? 'text-violet-100' : 'text-violet-600 dark:text-violet-300'" class="block text-[11px] lg:text-[10px] font-bold truncate">{{ quote.sender_name || 'Сообщение' }}</span>
+            <span :class="own ? 'text-violet-50/90' : 'text-stone-500 dark:text-zinc-400'" class="block text-xs lg:text-[11px] truncate">{{ quoteSnippet || '…' }}</span>
+          </button>
+          <div v-if="attachment?.url && attachment?.kind === 'image'" class="mb-1.5 min-w-0">
+            <Image :src="attachment.url" :alt="attachment.name || 'Фото'" preview class="block rounded-xl overflow-hidden chat-image-preview" image-class="block w-full max-h-64 object-cover cursor-zoom-in" />
+          </div>
+          <div v-else-if="attachment?.url" class="mb-1.5 min-w-0">
+            <a :href="attachment.url" target="_blank" rel="noopener" download class="flex items-center gap-2.5 rounded-xl px-3 py-2 min-w-0" :class="own ? 'bg-black/15 hover:bg-black/20' : 'bg-violet-50 dark:bg-violet-500/10 hover:bg-violet-100 dark:hover:bg-violet-500/20'">
+              <i class="pi pi-file text-xl shrink-0"></i>
+              <span class="min-w-0 flex-1">
+                <span class="block text-xs font-bold truncate">{{ attachment.name || 'Файл' }}</span>
+                <span v-if="attachmentSize" class="block text-[11px] opacity-70">{{ attachmentSize }}</span>
+              </span>
+              <i class="pi pi-download text-sm shrink-0"></i>
+            </a>
+          </div>
+          <div v-if="message.body" class="whitespace-pre-wrap break-words overflow-wrap-anywhere [overflow-wrap:anywhere] min-w-0 msg-body" v-html="renderWithMentions(message.body || '')"></div>
+          <div v-else-if="attachment?.url" class="text-xs opacity-70 truncate">{{ attachment.name || 'Файл' }}</div>
           <div :class="own ? 'text-violet-100' : 'text-stone-400'" class="text-[11px] lg:text-[10px] mt-1 text-right flex items-center justify-end gap-1.5">
             <span>{{ time }}</span>
             <span v-if="(message as any).is_edited" class="opacity-70">· изм.</span>
@@ -24,6 +63,7 @@ const emit = defineEmits<{ (e: 'edit', m: any): void; (e: 'delete', id: number):
           </div>
         </div>
         <div v-if="!(message as any).pending" class="lg:hidden flex justify-end gap-1.5 mt-1.5 opacity-60">
+          <button @click="emit('reply', message)" class="text-[11px] px-2.5 py-1 rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow-sm flex items-center gap-1">↩ Ответить</button>
           <button @click="emit('pin', message)" class="text-[11px] px-2.5 py-1 rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow-sm flex items-center gap-1">{{ (message as any).is_pinned || pinned ? '📌 Открепить' : '📍 Закрепить' }}</button>
           <button v-if="own" @click="emit('edit', message)" class="text-[11px] px-2.5 py-1 rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow-sm flex items-center gap-1">✎ Редакт.</button>
           <button v-if="own" @click="emit('delete', message.id)" class="text-[11px] px-2.5 py-1 rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow-sm flex items-center gap-1 text-red-600">🗑 Удалить</button>

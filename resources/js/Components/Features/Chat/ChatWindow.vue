@@ -2,23 +2,30 @@
 import { Link } from '@inertiajs/vue3'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
-import InputText from 'primevue/inputtext'
+import Textarea from 'primevue/textarea'
 import ContextMenu from 'primevue/contextmenu'
 import OnlineDot from '@/Components/Features/Feedback/OnlineDot.vue'
 import MessageBubble from '@/Components/Features/Chat/MessageBubble.vue'
 import { avatarSrcFor } from '@/composables/useAvatar'
 import { useMessageContextMenu } from '@/composables/useMessageContextMenu'
 import { useChatLayout } from '@/composables/useChatLayout'
+import { useEnterToSend } from '@/composables/useEnterToSend'
 
 const { windowCardClass } = useChatLayout()
+const { handleEnterToSend } = useEnterToSend()
 
-const props = defineProps<{ selectedId: number | null; activeConv: any; messages: any[]; loading: boolean; sending: boolean; refreshing: boolean; typing: boolean; online: boolean; input: string; emojiOpen: boolean; emojiGroups: any[]; editingId: number | null; editingBody: string; showMenu: boolean; keyboardStyle: any; isOwnMessage: (m: any) => boolean; messageStatus: (m: any) => string; formatTime: (s: string) => string; pinned?: any[]; pinLimitLabel?: string; flashId?: number | null; datingEntry?: boolean; datingBadge?: string | null }>()
-const emit = defineEmits<{ (e: 'update:input', v: string): void; (e: 'update:editingBody', v: string): void; (e: 'send'): void; (e: 'typing'): void; (e: 'stopTyping'): void; (e: 'refresh'): void; (e: 'back'): void; (e: 'close'): void; (e: 'toggleMenu'): void; (e: 'menuClose'): void; (e: 'deleteChat'): void; (e: 'block'): void; (e: 'toggleEmoji'): void; (e: 'emojiClose'): void; (e: 'pickEmoji', v: string): void; (e: 'pickEmojiEdit', v: string): void; (e: 'startEdit', m: any): void; (e: 'saveEdit'): void; (e: 'cancelEdit'): void; (e: 'deleteMessage', id: number): void; (e: 'togglePin', m: any): void; (e: 'unpin', id: number): void; (e: 'jumpToMessage', id: number): void; (e: 'swipesBack'): void }>()
-const { cm, menuModel, bindMessage } = useMessageContextMenu({ isOwn: (m: any) => props.isOwnMessage(m), onEdit: (m: any) => emit('startEdit', m), onDelete: (id: number) => emit('deleteMessage', id), onPin: (m: any) => emit('togglePin', m) })
+const props = defineProps<{ selectedId: number | null; activeConv: any; messages: any[]; loading: boolean; sending: boolean; refreshing: boolean; typing: boolean; online: boolean; input: string; emojiOpen: boolean; emojiGroups: any[]; editingId: number | null; editingBody: string; showMenu: boolean; keyboardStyle: any; isOwnMessage: (m: any) => boolean; messageStatus: (m: any) => string; formatTime: (s: string) => string; pinned?: any[]; pinLimitLabel?: string; flashId?: number | null; datingEntry?: boolean; datingBadge?: string | null; replyTo?: any | null; attachmentName?: string | null; attachmentSize?: number | null; previewUrl?: string | null; attachError?: string | null; attaching?: boolean }>()
+const emit = defineEmits<{ (e: 'update:input', v: string): void; (e: 'update:editingBody', v: string): void; (e: 'send'): void; (e: 'typing'): void; (e: 'stopTyping'): void; (e: 'refresh'): void; (e: 'back'): void; (e: 'close'): void; (e: 'toggleMenu'): void; (e: 'menuClose'): void; (e: 'deleteChat'): void; (e: 'block'): void; (e: 'toggleEmoji'): void; (e: 'emojiClose'): void; (e: 'pickEmoji', v: string): void; (e: 'pickEmojiEdit', v: string): void; (e: 'startEdit', m: any): void; (e: 'saveEdit'): void; (e: 'cancelEdit'): void; (e: 'deleteMessage', id: number): void; (e: 'togglePin', m: any): void; (e: 'unpin', id: number): void; (e: 'jumpToMessage', id: number): void; (e: 'swipesBack'): void; (e: 'reply', m: any): void; (e: 'cancelReply'): void; (e: 'pickFile', f: File | null): void; (e: 'removeFile'): void }>()
+const { cm, menuModel, bindMessage } = useMessageContextMenu({ isOwn: (m: any) => props.isOwnMessage(m), onEdit: (m: any) => emit('startEdit', m), onDelete: (id: number) => emit('deleteMessage', id), onPin: (m: any) => emit('togglePin', m), onReply: (m: any) => emit('reply', m) })
 
 function pinPreview(body: string): string {
   const t = (body || '').replace(/\s+/g, ' ').trim()
   return t.length > 60 ? `${t.slice(0, 60)}…` : t
+}
+
+function replyPreview(body: string): string {
+  const t = (body || '').replace(/\s+/g, ' ').trim()
+  return t.length > 80 ? `${t.slice(0, 80)}…` : t
 }
 </script>
 <template>
@@ -38,9 +45,9 @@ function pinPreview(body: string): string {
           <Button @click="emit('refresh')" :loading="refreshing" icon="pi pi-refresh" rounded text severity="secondary" class="!w-9 !h-9 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" aria-label="Обновить" />
           <div class="relative">
             <button @click="emit('toggleMenu')" class="w-9 h-9 grid place-items-center rounded-full hover:bg-stone-100 dark:hover:bg-zinc-800 active:scale-95 text-lg leading-none">⋯</button>
-            <div v-if="showMenu" class="absolute right-0 top-10 w-52 bg-white dark:bg-zinc-800 border dark:border-zinc-700 rounded-2xl shadow-xl py-1.5 z-30">
-              <button @click="emit('menuClose'); emit('deleteChat')" class="w-full text-left px-4 py-3 text-sm hover:bg-red-50 text-red-600">Удалить чат</button>
-              <button v-if="activeConv?.other" @click="emit('menuClose'); emit('block')" class="w-full text-left px-4 py-3 text-sm hover:bg-red-50 text-red-600">Заблокировать</button>
+            <div v-if="showMenu" class="absolute right-0 top-10 w-52 bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl shadow-xl py-1.5 z-30 overflow-hidden">
+              <button @click="emit('menuClose'); emit('deleteChat')" class="w-full flex items-center gap-2.5 text-left px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 active:bg-red-100 transition"><i class="pi pi-trash text-xs"></i>Удалить чат</button>
+              <button v-if="activeConv?.other" @click="emit('menuClose'); emit('block')" class="w-full flex items-center gap-2.5 text-left px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 active:bg-red-100 transition"><i class="pi pi-ban text-xs"></i>Заблокировать</button>
             </div>
           </div>
           <button @click="emit('close')" title="Закрыть чат" class="w-9 h-9 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-stone-200 active:scale-95 transition shrink-0"><i class="pi pi-times text-sm text-stone-600 dark:text-zinc-300"></i></button>
@@ -61,7 +68,7 @@ function pinPreview(body: string): string {
         <template v-for="m in messages" :key="m.id">
           <div v-if="editingId === m.id" class="flex justify-end min-w-0">
             <div class="bg-white dark:bg-zinc-800 border dark:border-zinc-700 rounded-xl shadow-lg w-full max-w-[92vw] sm:max-w-[86vw] min-w-0 p-2">
-              <input :value="editingBody" @input="emit('update:editingBody', ($event.target as HTMLInputElement).value)" @keydown.enter.prevent="emit('saveEdit')" @keydown.escape="emit('cancelEdit')" class="w-full px-3 py-2 rounded-lg border dark:bg-zinc-900 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500" placeholder="Сообщение..." />
+              <Textarea :model-value="editingBody" @update:model-value="(v:any)=>emit('update:editingBody', v)" @keydown="(e:any)=>handleEnterToSend(e, () => emit('saveEdit'))" @keydown.escape="emit('cancelEdit')" rows="2" autoResize maxlength="2000" class="w-full !rounded-xl text-sm" placeholder="Сообщение..." />
               <div class="flex gap-1 mt-2 justify-between items-center">
                 <div class="flex gap-0.5"><button v-for="e in emojiGroups[0].emojis.slice(0, 6)" :key="e" @click="emit('pickEmojiEdit', e)" class="w-7 h-7 grid place-items-center hover:bg-stone-100 rounded-lg text-sm">{{ e }}</button></div>
                 <div class="flex gap-1.5 ml-auto shrink-0">
@@ -72,12 +79,19 @@ function pinPreview(body: string): string {
             </div>
           </div>
           <div v-else v-on="bindMessage(m)" :id="`msg-${m.id}`" :class="['rounded-2xl transition-shadow duration-500 scroll-mt-2', flashId === m.id ? 'ring-2 ring-violet-500 shadow-lg' : '']">
-            <MessageBubble :message="m" :own="isOwnMessage(m)" :status="messageStatus(m)" :time="formatTime(m.created_at)" @edit="(mm:any)=>emit('startEdit', mm)" @delete="(id:number)=>emit('deleteMessage', id)" @pin="(mm:any)=>emit('togglePin', mm)" />
+            <MessageBubble :message="m" :own="isOwnMessage(m)" :status="messageStatus(m)" :time="formatTime(m.created_at)" @edit="(mm:any)=>emit('startEdit', mm)" @delete="(id:number)=>emit('deleteMessage', id)" @pin="(mm:any)=>emit('togglePin', mm)" @reply="(mm:any)=>emit('reply', mm)" @jump="(id:number)=>emit('jumpToMessage', id)" />
           </div>
         </template>
       </div>
       <ContextMenu ref="cm" :model="menuModel" />
       <div class="relative p-2 lg:p-3 border-t dark:border-zinc-800 bg-white dark:bg-zinc-900 shrink-0 flex-none pb-[calc(0.5rem+env(safe-area-inset-bottom))] lg:pb-3 w-full max-w-full min-w-0 rounded-b-none lg:rounded-b-2xl">
+        <div v-if="replyTo" class="flex items-center gap-2.5 bg-violet-50 dark:bg-violet-500/10 border-l-[3px] border-violet-500 rounded-r-xl rounded-l-sm px-3 py-2 mb-2 min-w-0">
+          <div class="flex-1 min-w-0">
+            <div class="text-[11px] font-bold text-violet-600 dark:text-violet-300 truncate">↩ {{ isOwnMessage(replyTo) ? 'Вы' : (replyTo.sender?.name || 'Сообщение') }}</div>
+            <div class="text-xs text-stone-500 dark:text-zinc-400 truncate">{{ replyPreview(replyTo.body) }}</div>
+          </div>
+          <button @click="emit('cancelReply')" aria-label="Отменить ответ" class="w-7 h-7 shrink-0 grid place-items-center rounded-full hover:bg-violet-100 dark:hover:bg-white/10 text-stone-500 active:scale-95 transition"><i class="pi pi-times text-xs"></i></button>
+        </div>
         <div v-if="emojiOpen" class="absolute bottom-full left-2 right-2 mb-2 bg-white dark:bg-zinc-800 border rounded-[20px] shadow-xl p-3 z-20 max-h-[42dvh] overflow-auto">
           <div v-for="g in emojiGroups" :key="g.label" class="mb-2 last:mb-0">
             <div class="text-[10px] font-bold tracking-widest uppercase text-stone-400 mb-1.5">{{ g.label }}</div>
@@ -85,12 +99,32 @@ function pinPreview(body: string): string {
           </div>
         </div>
         <div v-if="emojiOpen" @click="emit('emojiClose')" class="fixed inset-0 z-10"></div>
+        <div v-if="attachmentName || previewUrl" class="flex items-center gap-2 bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-800 rounded-2xl px-2.5 py-2 mb-2 min-w-0">
+          <img v-if="previewUrl" :src="previewUrl" alt="" class="w-10 h-10 rounded-xl object-cover shrink-0" />
+          <span v-else class="w-10 h-10 rounded-xl bg-violet-600/10 grid place-items-center shrink-0"><i class="pi pi-file text-lg text-violet-600 dark:text-violet-300"></i></span>
+          <div class="flex-1 min-w-0">
+            <div class="text-xs font-bold truncate dark:text-zinc-100">{{ attachmentName }}</div>
+            <div v-if="attachmentSize" class="text-[11px] text-stone-500 dark:text-zinc-400">{{ (attachmentSize / 1024).toFixed(0) }} КБ · макс 2 МБ</div>
+          </div>
+          <span v-if="attaching" class="w-5 h-5 border-2 border-violet-200 border-t-violet-600 rounded-full animate-spin shrink-0"></span>
+          <button @click="emit('removeFile')" aria-label="Убрать файл" class="w-7 h-7 shrink-0 grid place-items-center rounded-full hover:bg-violet-100 dark:hover:bg-white/10 text-stone-500 active:scale-95 transition"><i class="pi pi-times text-xs"></i></button>
+        </div>
+        <div v-if="attachError" class="text-[11px] text-red-600 dark:text-red-400 px-1 mb-1.5">{{ attachError }}</div>
         <div class="relative flex gap-2 items-end min-w-0 w-full max-w-full z-10">
+          <input type="file" data-chat-file class="hidden" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip" @change="(e:any)=>{ const f = e.target.files?.[0] ?? null; emit('pickFile', f); e.target.value = '' }" />
+          <Button @click="(e:any)=>{ const btn = e?.currentTarget as HTMLElement | null; const root = btn?.closest?.('.relative'); const inp = root?.querySelector?.('[data-chat-file]') as HTMLInputElement | null; inp?.click() }" icon="pi pi-paperclip" severity="secondary" outlined rounded class="!w-11 !h-11 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-label]:hidden [&_.p-button-icon]:!m-0" aria-label="Прикрепить файл" />
           <Button @click="emit('toggleEmoji')" :severity="emojiOpen ? 'contrast' : 'secondary'" :outlined="!emojiOpen" rounded class="!w-11 !h-11 !p-0 !rounded-full shrink-0 grid place-items-center text-[20px]" label="😊" />
-          <InputText :model-value="input" @update:model-value="(v:any)=>emit('update:input', v)" @input="emit('typing')" @blur="emit('stopTyping')" @keydown.enter.prevent="emit('send')" @keydown.escape="emit('emojiClose')" placeholder="Сообщение..." fluid class="!rounded-full flex-1 min-w-0" enterkeyhint="send" />
-          <Button @click="emit('send')" :loading="sending" :disabled="!input.trim()" icon="pi pi-send" rounded class="!w-11 !h-11 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-label]:hidden [&_.p-button-icon]:!m-0" aria-label="Отправить" />
+          <Textarea :model-value="input" @update:model-value="(v:any)=>emit('update:input', v)" @input="emit('typing')" @blur="emit('stopTyping')" @keydown="(e:any)=>handleEnterToSend(e, () => emit('send'))" @keydown.escape="emit('emojiClose')" placeholder="Сообщение..." rows="1" autoResize maxlength="2000" fluid class="!rounded-2xl flex-1 min-w-0 max-h-32" enterkeyhint="enter" />
+          <Button @click="emit('send')" :loading="sending" :disabled="!input.trim() && !attachmentName" icon="pi pi-send" rounded class="!w-11 !h-11 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-label]:hidden [&_.p-button-icon]:!m-0" aria-label="Отправить" />
         </div>
       </div>
     </template>
   </div>
 </template>
+
+<style scoped>
+:global(.danger-item .p-menu-item-label),
+:global(.danger-item .p-menu-item-icon) {
+  color: #dc2626;
+}
+</style>

@@ -1,38 +1,81 @@
 import { ref, computed } from 'vue'
+import { useToast } from 'primevue/usetoast'
 
 type MsgCallback = (m: any) => void
 type DeleteCallback = (id: number) => void
 
-export function useMessageContextMenu(opts: { isOwn: (m: any) => boolean; onEdit: MsgCallback; onDelete: DeleteCallback; onPin?: MsgCallback; isPinned?: (m: any) => boolean }) {
+/**
+ * Контекстное меню сообщения: копирование (long-press / правый клик), пин, edit/delete.
+ * @param opts колбэки владельца и действий
+ * @returns привязки для пузырька и модель меню PrimeVue
+ */
+export function useMessageContextMenu(opts: { isOwn: (m: any) => boolean; onEdit: MsgCallback; onDelete: DeleteCallback; onPin?: MsgCallback; onCopy?: MsgCallback; onReply?: MsgCallback; isPinned?: (m: any) => boolean }) {
   const cm = ref<any>(null)
   const current = ref<any>(null)
+  const toast = (() => { try { return useToast() } catch { return null as any } })()
+
+  /**
+   * Копирует текст сообщения в буфер обмена с fallback.
+   * @param m сообщение с полем body
+   */
+  async function copyMessage(m: any): Promise<void> {
+    const text = String(m?.body ?? '')
+    if (!text) return
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text)
+      } else {
+        const ta = document.createElement('textarea')
+        ta.value = text
+        document.body.appendChild(ta)
+        ta.select()
+        document.execCommand('copy')
+        document.body.removeChild(ta)
+      }
+      toast?.add({ severity: 'success', summary: 'Скопировано', detail: 'Текст сообщения скопирован', life: 2000 })
+    } catch {
+      toast?.add({ severity: 'info', summary: 'Копирование', detail: text.slice(0, 120), life: 3000 })
+    }
+    opts.onCopy?.(m)
+  }
 
   let pressTimer: ReturnType<typeof setTimeout> | null = null
   let startX = 0
   let startY = 0
+  let startPageX = 0
+  let startPageY = 0
 
   const menuModel = computed(() => {
     if (!current.value) return []
     const m = current.value
+    const text = String(m?.body ?? '').trim()
     const items: any[] = []
+    if (opts.onReply) {
+      items.push({ label: 'Ответить', icon: 'pi pi-reply', command: () => opts.onReply!(m) })
+    }
+    if (text) {
+      if (items.length) items.push({ separator: true })
+      items.push({ label: 'Скопировать', icon: 'pi pi-copy', command: () => copyMessage(m) })
+    }
     if (opts.onPin) {
       const pinned = opts.isPinned?.(m) ?? !!(m as any).is_pinned
+      if (items.length) items.push({ separator: true })
       items.push({ label: pinned ? 'Открепить' : 'Закрепить', icon: 'pi pi-thumbtack', command: () => opts.onPin!(m) })
-      items.push({ separator: true })
     }
     if (!opts.isOwn(m)) return items
+    if (items.length) items.push({ separator: true })
     items.push(
       { label: 'Редактировать', icon: 'pi pi-pencil', command: () => opts.onEdit(m) },
       { separator: true },
-      { label: 'Удалить', icon: 'pi pi-trash', command: () => opts.onDelete(m.id) },
+      { label: 'Удалить', icon: 'pi pi-trash', class: 'danger-item !text-red-600', command: () => opts.onDelete(m.id) },
     )
     return items
   })
 
   function openAt(e: any, m: any) {
     if ((m as any).pending) return
+    if (!String(m?.body ?? '').trim() && !opts.isOwn(m) && !opts.onPin) return
     current.value = m
-    if (!opts.isOwn(m) && !opts.onPin) return
     try { cm.value?.show(e) } catch {}
   }
 
@@ -42,16 +85,25 @@ export function useMessageContextMenu(opts: { isOwn: (m: any) => boolean; onEdit
   }
 
   function onTouchStart(e: TouchEvent, m: any) {
-    if (!opts.isOwn(m) && !opts.onPin) return
+    if (!String(m?.body ?? '').trim() && !opts.isOwn(m) && !opts.onPin) return
     const t = e.touches[0]
     if (!t) return
     startX = t.clientX
     startY = t.clientY
+    startPageX = t.pageX
+    startPageY = t.pageY
     if (pressTimer) clearTimeout(pressTimer)
     const target = m
     pressTimer = setTimeout(() => {
       try { if (navigator.vibrate) navigator.vibrate(40) } catch {}
-      openAt({ clientX: startX, clientY: startY, preventDefault: () => {} } as any, target)
+      openAt({
+        pageX: startPageX,
+        pageY: startPageY,
+        clientX: startX,
+        clientY: startY,
+        preventDefault: () => {},
+        stopPropagation: () => {},
+      } as any, target)
     }, 550)
   }
 
@@ -72,12 +124,13 @@ export function useMessageContextMenu(opts: { isOwn: (m: any) => boolean; onEdit
 
   function bindMessage(m: any) {
     return {
-      onContextmenu: (e: MouseEvent) => onContextMenu(e, m),
-      onTouchstart: (e: TouchEvent) => onTouchStart(e, m),
-      onTouchmove: onTouchMove,
-      onTouchend: onTouchEnd,
+      contextmenu: (e: MouseEvent) => onContextMenu(e, m),
+      touchstart: (e: TouchEvent) => onTouchStart(e, m),
+      touchmove: onTouchMove,
+      touchend: onTouchEnd,
+      touchcancel: onTouchEnd,
     }
   }
 
-  return { cm, current, menuModel, show: openAt, onContextMenu, bindMessage }
+  return { cm, current, menuModel, show: openAt, onContextMenu, bindMessage, copyMessage }
 }

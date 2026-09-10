@@ -90,8 +90,16 @@ export const chatApi = {
     const { data } = await api.get<Message[]>(`/api/conversations/${convId}/messages`, { params: { before } })
     return data
   },
-  async sendMessage(convId: number, body: string) {
-    const { data } = await api.post<Message>(`/api/conversations/${convId}/messages`, { body })
+  async sendMessage(convId: number, body: string, replyToId?: number | null, attachment?: File | null) {
+    if (!attachment) {
+      const { data } = await api.post<Message>(`/api/conversations/${convId}/messages`, { body, reply_to_id: replyToId ?? null })
+      return data
+    }
+    const form = new FormData()
+    form.append('body', body || '')
+    form.append('reply_to_id', String(replyToId ?? ''))
+    form.append('attachment', attachment, attachment.name)
+    const { data } = await api.post<Message>(`/api/conversations/${convId}/messages`, form)
     return data
   },
   async editMessage(messageId: number, body: string) {
@@ -116,6 +124,18 @@ export const chatApi = {
   },
   async unpinMessage(messageId: number) {
     const { data } = await api.delete<Message>(`/api/messages/${messageId}/pin`)
+    return data
+  },
+  async attachments(page = 1) {
+    const { data } = await api.get('/api/chat/attachments', { params: { page } })
+    return data
+  },
+  async deleteAttachment(messageId: number) {
+    const { data } = await api.delete(`/api/chat/attachments/${messageId}`)
+    return data
+  },
+  async clearAttachments() {
+    const { data } = await api.delete('/api/chat/attachments')
     return data
   },
 }

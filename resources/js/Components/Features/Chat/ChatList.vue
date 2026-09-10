@@ -1,11 +1,25 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
 import Avatar from 'primevue/avatar'
+import Button from 'primevue/button'
+import Menu from 'primevue/menu'
+import Dialog from 'primevue/dialog'
 import OnlineDot from '@/Components/Features/Feedback/OnlineDot.vue'
 import { avatarSrcFor } from '@/composables/useAvatar'
+import { useChatRowMenu } from '@/composables/useChatRowMenu'
+import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
 
 defineProps<{ conversations: any[]; friends: any[]; pendingIn: any[]; blocked: any[]; tab: string; selectedId: number | null; filter: string; isOnline: (id?: number, lastSeenAt?: string | null) => boolean; formatTime: (s: string) => string }>()
 const emit = defineEmits<{ (e: 'update:filter', v: string): void; (e: 'open', id: number): void; (e: 'startChat', u: any): void; (e: 'deleteChat', id: number): void; (e: 'block', id: number, name?: string): void; (e: 'unblock', id: number): void; (e: 'removeFriend', f: any): void; (e: 'accept', id: number): void; (e: 'decline', id: number): void; (e: 'sheet', p: any): void }>()
+
+const rowMenu = useChatRowMenu({
+  onDeleteChat: (id: number) => emit('deleteChat', id),
+  onBlock: (id: number, name?: string) => emit('block', id, name),
+  onRemoveFriend: (f: any) => emit('removeFriend', f),
+  onStartChat: (u: any) => emit('startChat', u),
+})
+const menuAnchor = rowMenu.menu
+const { menuPt } = useDropdownMenuStyle()
 </script>
 <template>
   <div class="flex-1 overflow-auto overscroll-contain [scrollbar-width:thin] max-lg:[-ms-overflow-style:none] max-lg:[scrollbar-width:none] max-lg:[&::-webkit-scrollbar]:hidden min-h-0 w-full max-w-full">
@@ -34,9 +48,8 @@ const emit = defineEmits<{ (e: 'update:filter', v: string): void; (e: 'open', id
           </div>
           <span v-if="c.unread_count" class="bg-violet-600 text-white text-xs font-bold min-w-[22px] h-[22px] grid place-items-center px-1.5 rounded-full shrink-0">{{ c.unread_count > 9 ? '9+' : c.unread_count }}</span>
         </button>
-        <div class="flex items-center gap-1 ml-2 pr-2 shrink-0">
-          <button @click.stop="emit('deleteChat', c.id)" title="Удалить чат" class="w-7 h-7 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-red-50 text-stone-500 hover:text-red-600 transition"><i class="pi pi-times text-xs"></i></button>
-          <button v-if="c.other?.id" @click.stop="emit('block', c.other.id, c.other.name)" title="Заблокировать" class="w-7 h-7 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-red-50 text-stone-500 hover:text-red-600 transition"><i class="pi pi-ban text-xs"></i></button>
+        <div class="flex items-center ml-1 pr-2 shrink-0">
+          <Button @click.stop="(e: Event) => rowMenu.open(e, { kind: 'chat', id: c.id, userId: c.other?.id, userName: c.other?.name })" icon="pi pi-ellipsis-h" text rounded severity="secondary" class="!w-7 !h-7 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" aria-label="Меню чата" title="Меню чата" />
         </div>
       </div>
     </div>
@@ -49,8 +62,7 @@ const emit = defineEmits<{ (e: 'update:filter', v: string): void; (e: 'open', id
         </Link>
         <div class="flex gap-1 shrink-0 items-center">
           <button @click="emit('startChat', f.other)" class="text-xs px-3 py-1.5 rounded-full bg-stone-900 dark:bg-white dark:text-zinc-900 text-white font-semibold">Чат</button>
-          <button @click.stop="emit('removeFriend', f)" title="Удалить из друзей" class="w-7 h-7 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-red-50 text-stone-500 hover:text-red-600 transition"><i class="pi pi-times text-xs"></i></button>
-          <button v-if="f.other?.id" @click.stop="emit('block', f.other.id, f.other.name)" title="Заблокировать" class="w-7 h-7 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 hover:bg-red-50 text-stone-500 hover:text-red-600 transition"><i class="pi pi-ban text-xs"></i></button>
+          <Button @click.stop="(e: Event) => rowMenu.open(e, { kind: 'friend', friendship: f, other: f.other, userId: f.other?.id, userName: f.other?.name })" icon="pi pi-ellipsis-h" text rounded severity="secondary" class="!w-7 !h-7 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" aria-label="Меню" title="Меню" />
         </div>
       </div>
     </div>
@@ -63,7 +75,7 @@ const emit = defineEmits<{ (e: 'update:filter', v: string): void; (e: 'open', id
         </Link>
         <div class="flex gap-1.5 shrink-0">
           <button @click="emit('accept', r.id)" class="text-xs px-3.5 py-2 rounded-full bg-green-600 text-white font-semibold active:scale-95">Принять</button>
-          <button @click="emit('decline', r.id)" class="text-xs px-3 py-2 rounded-full border bg-white dark:bg-zinc-800">Отклонить</button>
+          <button @click="emit('decline', r.id)" class="text-xs px-3 py-2 rounded-full border border-red-200 bg-white text-red-600 dark:bg-zinc-800 dark:border-red-900 dark:text-red-400">Отклонить</button>
         </div>
       </div>
     </div>
@@ -74,5 +86,21 @@ const emit = defineEmits<{ (e: 'update:filter', v: string): void; (e: 'open', id
         <button v-if="b.blocked?.id" @click="emit('unblock', b.blocked.id)" class="text-xs px-3.5 py-2 rounded-full border bg-white dark:bg-zinc-800 shrink-0">Разблокировать</button>
       </div>
     </div>
+    <Menu ref="menuAnchor" :model="(rowMenu.menuModel.value as any)" :popup="true" :pt="menuPt" />
+    <Dialog v-model:visible="rowMenu.sheetOpen.value" position="bottom" :draggable="false" :modal="true" :dismissable-mask="true" :show-header="false" :pt="{ root: { class: '!rounded-t-[24px] !rounded-b-none !border-0 !m-0 !max-h-[80dvh] w-full sm:!max-w-[360px]' }, content: { class: '!p-2 !pb-[calc(0.5rem+env(safe-area-inset-bottom))]' } }">
+      <div class="w-10 h-1 rounded-full bg-stone-200 dark:bg-zinc-700 mx-auto my-2.5"></div>
+      <div class="px-2 pb-2 space-y-1">
+        <div v-if="rowMenu.target.value?.userName" class="px-4 py-2 text-[15px] font-bold truncate dark:text-white">{{ rowMenu.target.value.userName }}</div>
+        <button v-for="(it, i) in rowMenu.menuModel.value" :key="i" type="button" class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-stone-50 dark:hover:bg-white/5 text-[15px] font-medium text-left dark:text-zinc-100" :class="(it as any).danger ? '!text-red-600' : ''" @click="(it as any).command?.()"><i :class="(it as any).icon"></i>{{ (it as any).label }}</button>
+        <button type="button" class="w-full px-4 py-3.5 rounded-2xl bg-stone-100 dark:bg-white/10 dark:text-zinc-100 text-[15px] font-medium mt-1" @click="rowMenu.close()">Отмена</button>
+      </div>
+    </Dialog>
   </div>
 </template>
+
+<style scoped>
+:global(.danger-item .p-menu-item-label),
+:global(.danger-item .p-menu-item-icon) {
+  color: #dc2626;
+}
+</style>

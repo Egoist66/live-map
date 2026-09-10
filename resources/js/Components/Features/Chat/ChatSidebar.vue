@@ -17,7 +17,7 @@ const emit = defineEmits<{ (e: 'update:tab', v: any): void; (e: 'update:filter',
   <div :class="[selectedId ? 'hidden lg:flex' : 'flex', sidebarCardClass]">
     <div class="p-3 border-b dark:border-zinc-800 shrink-0 w-full max-w-full min-w-0">
       <div class="flex items-center gap-2 mb-3">
-        <h2 class="text-[15px] font-bold dark:text-white tracking-tight">Connect</h2>
+        <h2 class="text-[15px] font-bold dark:text-white tracking-tight">UConnect</h2>
         <Button @click="emit('people')" icon="pi pi-users" rounded severity="secondary" outlined class="!w-8 !h-8 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" aria-label="Поиск людей" />
         <Button @click="emit('refresh')" :loading="refreshing" icon="pi pi-refresh" rounded severity="secondary" text class="!w-8 !h-8 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" aria-label="Обновить" />
       </div>

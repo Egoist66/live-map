@@ -152,6 +152,10 @@ class PinController extends Controller
         $pin->load('user:id,name,avatar_path,level');
         if (! $isScheduled) {
             broadcast(new PinCreated($pin))->toOthers();
+            try {
+                \App\Services\UserSubscriptionNotifier::pinCreated($pin);
+            } catch (\Throwable) {
+            }
         }
 
         return response()->json(array_merge($pin->toPublicArray($user->id), ['my_reaction' => null]), 201);

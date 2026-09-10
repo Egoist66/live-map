@@ -80,4 +80,12 @@ export const datingApi = {
     const { data } = await api.post('/api/swipes/verify-age', { birth_date })
     return data as { ok: boolean; age: number }
   },
+  /**
+   * Сбросить просмотренные свайпы (только админ, для тестов).
+   * @returns число удалённых записей
+   */
+  async resetHistory() {
+    const { data } = await api.post('/api/swipes/reset-history')
+    return data as { ok: boolean; deleted: number }
+  },
 }

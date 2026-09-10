@@ -53,6 +53,24 @@ class User extends Authenticatable
             if (($user->isDirty('is_admin') || $user->isDirty('role')) && $user->isAdmin() && ! $user->is_invisible) {
                 $user->is_invisible = true;
             }
+            if ($user->isDirty('reputation_score') || $user->isDirty('level')) {
+                $user->_subOldScore = (int) ($user->getOriginal('reputation_score') ?? 0);
+                $user->_subOldLevel = (string) ($user->getOriginal('level') ?? '');
+            }
+        });
+
+        static::updated(function (self $user) {
+            if (isset($user->_subOldScore) || isset($user->_subOldLevel)) {
+                try {
+                    \App\Services\UserSubscriptionNotifier::levelChanged(
+                        $user,
+                        $user->_subOldScore ?? null,
+                        $user->_subOldLevel ?? null
+                    );
+                } catch (\Throwable) {
+                }
+                unset($user->_subOldScore, $user->_subOldLevel);
+            }
         });
     }
 
@@ -102,6 +120,8 @@ class User extends Authenticatable
     public function conversations() { return $this->belongsToMany(Conversation::class, 'conversation_participants')->withPivot('last_read_at','joined_at'); }
     public function pushSubscriptions() { return $this->hasMany(PushSubscription::class); }
     public function profilePhotos() { return $this->hasMany(ProfilePhoto::class); }
+    public function subscriptions() { return $this->hasMany(UserSubscription::class, 'subscriber_id'); }
+    public function subscribers() { return $this->hasMany(UserSubscription::class, 'target_id'); }
 
     public function isAdmin(): bool { return $this->is_admin || $this->role === 'admin'; }
     public function isBanned(): bool { return $this->banned_at !== null; }

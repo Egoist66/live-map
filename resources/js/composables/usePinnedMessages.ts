@@ -110,14 +110,37 @@ export function usePinnedMessages(messages: Ref<Message[]>) {
     return toggle(msg)
   }
 
-  function jumpTo(id: number) {
-    nextTick(() => {
-      const el = document.getElementById(`msg-${id}`)
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      flashId.value = id
-      if (flashTimer) clearTimeout(flashTimer)
-      flashTimer = setTimeout(() => { flashId.value = null }, 1600)
-    })
+  /**
+   * Плавно скроллит к сообщению и подсвечивает его.
+   * Если сообщения нет на экране — догружает историю выше.
+   * @param id id сообщения
+   */
+  async function jumpTo(id: number) {
+    let el = document.getElementById(`msg-${id}`)
+    let guard = 0
+    while (!el && guard < 5 && convId.value) {
+      const first = messages.value[0] as any
+      if (!first) break
+      let older: Message[] = []
+      try {
+        older = await chatApi.messages(convId.value, first.id)
+      } catch {
+        break
+      }
+      if (!older.length) break
+      const box = document.getElementById('chat-messages')
+      const prevH = box?.scrollHeight ?? 0
+      const prevTop = box?.scrollTop ?? 0
+      messages.value = [...older, ...messages.value] as Message[]
+      await nextTick()
+      if (box) box.scrollTop = prevTop + (box.scrollHeight - prevH)
+      el = document.getElementById(`msg-${id}`)
+      guard++
+    }
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    flashId.value = id
+    if (flashTimer) clearTimeout(flashTimer)
+    flashTimer = setTimeout(() => { flashId.value = null }, 1600)
   }
 
   function limitLabel(): string {

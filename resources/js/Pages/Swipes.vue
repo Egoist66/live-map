@@ -99,6 +99,7 @@ onMounted(async () => {
             <span class="flex-1" />
             <Button icon="pi pi-sliders-h" severity="secondary" rounded outlined size="small" aria-label="Фильтры" @click="s.showFilters.value = true" />
             <Button icon="pi pi-refresh" severity="secondary" rounded outlined size="small" aria-label="Обновить ленту" :loading="s.loading.value" @click="s.loadFeed()" />
+            <Button v-if="s.isAdmin.value" icon="pi pi-trash" severity="warn" rounded outlined size="small" aria-label="Сбросить просмотренные" title="Сбросить просмотренные (админ)" :loading="s.resetting.value" @click="s.resetHistory()" />
           </div>
 
           <div v-if="s.matches.value.length" class="mt-4">
@@ -140,7 +141,7 @@ onMounted(async () => {
               >
                 <Link :href="`/users/${f.id}`" class="shrink-0"><Avatar :image="f.avatar_url ?? undefined" :label="!f.avatar_url ? (f.name ?? '?').slice(0, 1) : undefined" shape="circle" class="!w-12 !h-12" /></Link>
                 <Link :href="`/users/${f.id}`" class="min-w-0 flex-1">
-                  <div class="text-sm font-bold truncate text-stone-900 dark:text-white">{{ f.name }}<span v-if="f.age" class="font-semibold text-stone-500 dark:text-zinc-400"> · {{ f.age }}</span></div>
+                  <div class="text-sm font-bold truncate text-stone-900 dark:text-white">{{ f.name }}<span class="font-semibold text-stone-500 dark:text-zinc-400"> · {{ s.ageLabel(f) }}</span></div>
                   <div v-if="f.city" class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">{{ f.city }}</div>
                 </Link>
                 <Button icon="pi pi-send" rounded size="small" aria-label="Написать" title="Написать" :loading="s.creatingChat.value" class="!w-10 !h-10 !p-0 shrink-0" @click="s.writeWithoutMatch(f.id)" />
@@ -162,48 +163,113 @@ onMounted(async () => {
               <i class="pi pi-spin pi-spinner text-2xl text-stone-400 dark:text-zinc-500" />
             </div>
 
-            <div
-              v-else-if="s.current.value"
-              class="relative rounded-[24px] overflow-hidden bg-zinc-900 dark:bg-zinc-950 h-[62dvh] min-h-[400px] max-h-[540px] shadow-soft touch-pan-y ring-1 ring-black/10 dark:ring-white/10"
-              :style="{ transform: `translateX(${s.dragX.value}px) rotate(${s.dragX.value / 28}deg)`, transition: s.dragging.value ? 'none' : 'transform .25s ease' }"
-              @pointerdown="s.dragStart($event.clientX)"
-              @pointermove="s.dragMove($event.clientX)"
-              @pointerup="s.dragEnd()"
-              @pointerleave="s.dragEnd()"
-            >
-              <img
-                v-if="s.current.value.photos[0]"
-                :src="s.current.value.photos[0]"
-                alt=""
-                class="absolute inset-0 w-full h-full object-cover"
-                draggable="false"
-              />
-              <div v-else class="absolute inset-0 grid place-items-center bg-gradient-to-br from-violet-600 via-fuchsia-500 to-orange-400 dark:from-violet-900 dark:via-fuchsia-900 dark:to-orange-900">
-                <span class="text-white text-7xl font-black">{{ (s.current.value.name ?? '?').slice(0, 1) }}</span>
-              </div>
-              <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
-
-              <div v-if="s.dragX.value > 40" class="absolute top-5 left-5 rotate-[-12deg] border-4 border-emerald-400 text-emerald-300 font-black text-2xl px-3 py-1 rounded-xl">ЛАЙК</div>
-              <div v-if="s.dragX.value < -40" class="absolute top-5 right-5 rotate-[12deg] border-4 border-rose-500 text-rose-400 font-black text-2xl px-3 py-1 rounded-xl">ПАС</div>
-
-              <div v-if="s.current.value.liked_me" class="absolute top-4 right-4">
-                <Chip label="Лайкнул тебя" icon="pi pi-heart-fill" class="!rounded-full !bg-rose-500 !text-white !border-0" />
+            <div v-else-if="s.current.value" class="swipe-deck relative h-[62dvh] min-h-[400px] max-h-[540px]">
+              <div
+                v-if="s.next.value"
+                class="absolute inset-0 z-0 rounded-[24px] overflow-hidden bg-zinc-900 dark:bg-zinc-950 shadow-soft ring-1 ring-black/10 dark:ring-white/10 pointer-events-none"
+                :style="s.stackCardStyle.value"
+              >
+                <img
+                  v-if="s.next.value.photos[0]"
+                  :src="s.next.value.photos[0]"
+                  alt=""
+                  class="absolute inset-0 w-full h-full object-cover"
+                  draggable="false"
+                />
+                <div v-else class="absolute inset-0 grid place-items-center bg-gradient-to-br from-violet-600 via-fuchsia-500 to-orange-400">
+                  <span class="text-white text-7xl font-black">{{ (s.next.value.name ?? '?').slice(0, 1) }}</span>
+                </div>
+                <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
+                <div class="absolute bottom-0 inset-x-0 p-4 sm:p-5 text-white">
+                  <div class="flex items-baseline gap-2">
+                    <span class="text-[24px] font-black leading-none">{{ s.next.value.name }}</span>
+                    <span class="text-lg font-bold opacity-90">{{ s.ageLabel(s.next.value) }}</span>
+                  </div>
+                </div>
               </div>
 
-              <div class="absolute bottom-0 inset-x-0 p-4 sm:p-5 text-white">
-                <div class="flex items-baseline gap-2">
-                  <span class="text-[24px] sm:text-[26px] font-black leading-none">{{ s.current.value.name }}</span>
-                  <span v-if="s.current.value.age" class="text-lg sm:text-xl font-bold opacity-90">{{ s.current.value.age }}</span>
+              <div
+                class="swipe-top absolute inset-0 z-10 rounded-[24px] overflow-hidden bg-zinc-900 dark:bg-zinc-950 shadow-soft touch-pan-y ring-1 ring-black/10 dark:ring-white/10 cursor-grab active:cursor-grabbing"
+                :style="s.topCardStyle.value"
+                @pointerdown="s.dragStart($event.clientX, $event.clientY)"
+                @pointermove="s.dragMove($event.clientX, $event.clientY)"
+                @pointerup="s.dragEnd()"
+                @pointercancel="s.dragEnd()"
+                @pointerleave="s.dragEnd()"
+              >
+                <img
+                  v-if="s.current.value.photos[0]"
+                  :src="s.current.value.photos[0]"
+                  alt=""
+                  class="absolute inset-0 w-full h-full object-cover"
+                  draggable="false"
+                />
+                <div v-else class="absolute inset-0 grid place-items-center bg-gradient-to-br from-violet-600 via-fuchsia-500 to-orange-400 dark:from-violet-900 dark:via-fuchsia-900 dark:to-orange-900">
+                  <span class="text-white text-7xl font-black">{{ (s.current.value.name ?? '?').slice(0, 1) }}</span>
                 </div>
-                <div class="mt-2 flex flex-wrap gap-1.5">
-                  <Chip :label="s.goalLabel(s.current.value.goal)" class="!rounded-full !bg-white/15 !text-white !border-0 text-xs" />
-                  <Chip v-if="s.current.value.city" :label="s.current.value.city" icon="pi pi-map-marker" class="!rounded-full !bg-white/15 !text-white !border-0 text-xs" />
-                  <Chip v-if="s.current.value.distance_km != null" :label="`${s.current.value.distance_km} км`" icon="pi pi-send" class="!rounded-full !bg-white/15 !text-white !border-0 text-xs" />
+                <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent pointer-events-none" />
+
+                <div
+                  class="absolute top-5 left-5 rotate-[-12deg] border-4 border-emerald-400 text-emerald-300 font-black text-2xl px-3 py-1 rounded-xl bg-black/20"
+                  :style="{ opacity: s.likeStrength.value, transform: `scale(${0.8 + s.likeStrength.value * 0.3})` }"
+                >ЛАЙК</div>
+                <div
+                  class="absolute top-5 right-5 rotate-[12deg] border-4 border-rose-500 text-rose-400 font-black text-2xl px-3 py-1 rounded-xl bg-black/20"
+                  :style="{ opacity: s.passStrength.value, transform: `scale(${0.8 + s.passStrength.value * 0.3})` }"
+                >ПАС</div>
+
+                <div v-if="s.current.value.liked_me" class="absolute top-4 right-4">
+                  <Chip label="Лайкнул тебя" icon="pi pi-heart-fill" class="!rounded-full !bg-rose-500 !text-white !border-0" />
                 </div>
-                <div v-if="s.current.value.interests.length" class="mt-2 flex flex-wrap gap-1.5">
-                  <Chip v-for="t in s.current.value.interests" :key="t" :label="`#${t}`" class="!rounded-full !bg-white/10 !text-white/90 !border !border-white/20 text-xs" />
+
+                <div class="absolute bottom-0 inset-x-0 p-4 sm:p-5 text-white pointer-events-none">
+                  <div class="flex items-baseline gap-2">
+                    <span class="text-[24px] sm:text-[26px] font-black leading-none">{{ s.current.value.name }}</span>
+                    <span class="text-lg sm:text-xl font-bold opacity-90">{{ s.ageLabel(s.current.value) }}</span>
+                  </div>
+                  <div class="mt-2 flex flex-wrap gap-1.5">
+                    <Chip :label="s.goalLabel(s.current.value.goal)" class="!rounded-full !bg-white/15 !text-white !border-0 text-xs" />
+                    <Chip v-if="s.current.value.city" :label="s.current.value.city" icon="pi pi-map-marker" class="!rounded-full !bg-white/15 !text-white !border-0 text-xs" />
+                    <Chip v-if="s.current.value.distance_km != null" :label="`${s.current.value.distance_km} км`" icon="pi pi-send" class="!rounded-full !bg-white/15 !text-white !border-0 text-xs" />
+                  </div>
+                  <div v-if="s.current.value.interests.length" class="mt-2 flex flex-wrap gap-1.5">
+                    <Chip v-for="t in s.current.value.interests" :key="t" :label="`#${t}`" class="!rounded-full !bg-white/10 !text-white/90 !border !border-white/20 text-xs" />
+                  </div>
+                  <p v-if="s.current.value.bio" class="mt-2 text-sm text-white/85 line-clamp-2">{{ s.current.value.bio }}</p>
                 </div>
-                <p v-if="s.current.value.bio" class="mt-2 text-sm text-white/85 line-clamp-2">{{ s.current.value.bio }}</p>
+              </div>
+
+              <div
+                v-if="s.exiting.value"
+                class="fly-card absolute inset-0 z-20 rounded-[24px] overflow-hidden bg-zinc-900 dark:bg-zinc-950 shadow-soft ring-1 ring-black/10 dark:ring-white/10 pointer-events-none"
+                :class="s.exiting.value.dir === 'like' ? 'fly-like' : 'fly-pass'"
+                :style="{ '--from-x': `${s.exiting.value.fromX}px`, '--from-y': `${s.exiting.value.fromY}px` }"
+              >
+                <img
+                  v-if="s.exiting.value.card.photos[0]"
+                  :src="s.exiting.value.card.photos[0]"
+                  alt=""
+                  class="absolute inset-0 w-full h-full object-cover"
+                  draggable="false"
+                />
+                <div v-else class="absolute inset-0 grid place-items-center bg-gradient-to-br from-violet-600 via-fuchsia-500 to-orange-400">
+                  <span class="text-white text-7xl font-black">{{ (s.exiting.value.card.name ?? '?').slice(0, 1) }}</span>
+                </div>
+                <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
+                <div
+                  v-if="s.exiting.value.dir === 'like'"
+                  class="absolute top-5 left-5 rotate-[-12deg] border-4 border-emerald-400 text-emerald-300 font-black text-2xl px-3 py-1 rounded-xl bg-black/20"
+                >ЛАЙК</div>
+                <div
+                  v-else
+                  class="absolute top-5 right-5 rotate-[12deg] border-4 border-rose-500 text-rose-400 font-black text-2xl px-3 py-1 rounded-xl bg-black/20"
+                >ПАС</div>
+                <div class="absolute bottom-0 inset-x-0 p-4 sm:p-5 text-white">
+                  <div class="flex items-baseline gap-2">
+                    <span class="text-[24px] sm:text-[26px] font-black leading-none">{{ s.exiting.value.card.name }}</span>
+                    <span class="text-lg sm:text-xl font-bold opacity-90">{{ s.ageLabel(s.exiting.value.card) }}</span>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -215,6 +281,7 @@ onMounted(async () => {
                 <div class="mt-4 flex gap-2 justify-center flex-wrap">
                   <Button label="Моё избранное" rounded size="small" class="!bg-gradient-to-br !from-rose-500 !to-orange-400 !border-0 !text-white" @click="s.activeTab.value = 'favorites'" />
                   <Button label="Обновить" severity="secondary" rounded outlined size="small" @click="s.loadFeed()" />
+                  <Button v-if="s.isAdmin.value" label="Сбросить просмотренные" icon="pi pi-trash" severity="warn" rounded outlined size="small" :loading="s.resetting.value" @click="s.resetHistory()" />
                 </div>
               </template>
               <template v-else>
@@ -346,4 +413,46 @@ onMounted(async () => {
 .touch-pan-y {
   touch-action: pan-y;
 }
-</style>
+.swipe-deck {
+  perspective: 1200px;
+}
+.swipe-top {
+  will-change: transform, opacity;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.swipe-top img {
+  pointer-events: none;
+}
+.fly-card {
+  will-change: transform, opacity;
+  animation-duration: 0.38s;
+  animation-timing-function: cubic-bezier(0.2, 0.7, 0.25, 1);
+  animation-fill-mode: forwards;
+}
+.fly-like {
+  animation-name: fly-like;
+}
+.fly-pass {
+  animation-name: fly-pass;
+}
+@keyframes fly-like {
+  from {
+    transform: translate(var(--from-x, 0px), var(--from-y, 0px)) rotate(8deg);
+    opacity: 1;
+  }
+  to {
+    transform: translate(110vw, 140px) rotate(30deg);
+    opacity: 0;
+  }
+}
+@keyframes fly-pass {
+  from {
+    transform: translate(var(--from-x, 0px), var(--from-y, 0px)) rotate(-8deg);
+    opacity: 1;
+  }
+  to {
+    transform: translate(-110vw, 140px) rotate(-30deg);
+    opacity: 0;
+  }
+}</style>

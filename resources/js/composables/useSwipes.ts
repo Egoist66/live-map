@@ -1,5 +1,5 @@
 import { computed, ref } from 'vue'
-import { router } from '@inertiajs/vue3'
+import { router, usePage } from '@inertiajs/vue3'
 import { chatApi } from '@/services/chat.api'
 import { datingApi } from '@/services/dating.api'
 import type { SwipeCard, SwipeFilters, SwipeQuota } from '@/services/dating.api'
@@ -31,6 +31,17 @@ export function useSwipes() {
   const ageGateReason = ref<'missing' | 'underage'>('missing')
   const birthDate = ref<Date | null>(null)
   const verifying = ref(false)
+  const resetting = ref(false)
+
+  const page = usePage()
+  const authUser = computed(() => (page.props.auth as any)?.user)
+
+  /**
+   * Админ ли текущий пользователь (для сброса истории свайпов).
+   *
+   * @returns true если админ
+   */
+  const isAdmin = computed(() => !!authUser.value?.is_admin || authUser.value?.role === 'admin')
 
   const filters = ref<SwipeFilters>({
     goal: null,
@@ -48,10 +59,16 @@ export function useSwipes() {
   })
 
   const dragX = ref(0)
+  const dragY = ref(0)
   const dragging = ref(false)
   const dragStartX = ref(0)
+  const dragStartY = ref(0)
+  const leaving = ref(false)
+  const flyDir = ref<'like' | 'pass' | null>(null)
+  const exiting = ref<{ card: SwipeCard; dir: 'like' | 'pass'; fromX: number; fromY: number } | null>(null)
 
   const current = computed(() => cards.value[index.value] ?? null)
+  const next = computed(() => cards.value[index.value + 1] ?? null)
   const hasMore = computed(() => index.value < cards.value.length)
   const seenCount = computed(() => Math.min(index.value, cards.value.length))
   const favoritesCount = computed(() => favorites.value.length)
@@ -82,6 +99,64 @@ export function useSwipes() {
     if (!quota.value) return false
     if (quota.value.limit < 0) return false
     return quota.value.left <= 0
+  })
+
+  /**
+   * Стиль верхней карты колоды: только драг.
+   *
+   * Улёт играет отдельный оверлей exiting, чтобы следующая карта стояла спокойно.
+   *
+   * @returns css-стиль transform/transition/opacity
+   */
+  const topCardStyle = computed(() => {
+    if (leaving.value) {
+      return {
+        transform: 'scale(.96)',
+        transition: 'none',
+        opacity: '0',
+      }
+    }
+    const rotate = dragX.value / 16
+    return {
+      transform: `translate(${dragX.value}px, ${dragY.value}px) rotate(${rotate}deg)`,
+      transition: dragging.value ? 'none' : 'transform .28s cubic-bezier(.2,.7,.25,1.2)',
+      opacity: '1',
+    }
+  })
+
+  /**
+   * Стиль следующей карты: подъезжает только пока тянут.
+   *
+   * @returns css-стиль для подложки
+   */
+  const stackCardStyle = computed(() => {
+    const pull = Math.min(Math.abs(dragX.value) / 120, 1)
+    const scale = dragging.value ? 0.94 + pull * 0.06 : 0.94
+    const y = dragging.value ? 12 - pull * 12 : 12
+    return {
+      transform: `scale(${scale}) translateY(${y}px)`,
+      transition: dragging.value ? 'none' : 'transform .28s ease',
+    }
+  })
+
+  /**
+   * Сила штампа лайка 0..1.
+   *
+   * @returns доля проявления
+   */
+  const likeStrength = computed(() => {
+    if (leaving.value && flyDir.value === 'like') return 1
+    return Math.max(0, Math.min(dragX.value / 110, 1))
+  })
+
+  /**
+   * Сила штампа паса 0..1.
+   *
+   * @returns доля проявления
+   */
+  const passStrength = computed(() => {
+    if (leaving.value && flyDir.value === 'pass') return 1
+    return Math.max(0, Math.min(-dragX.value / 110, 1))
   })
 
   /** Максимальная дата рождения для гейта 18+ (сегодня минус 18 лет). */
@@ -169,10 +244,33 @@ export function useSwipes() {
   }
 
   /**
+   * Подпись возраста: всегда видна, с фолбэком.
+   *
+   * @param card карточка кандидата
+   * @returns возраст или пояснение
+   */
+  function ageLabel(card: SwipeCard | null): string {
+    if (!card) return ''
+    if (card.age != null) return String(card.age)
+    if (card.age_hidden) return 'возраст скрыт'
+    return 'возраст не указан'
+  }
+
+  /**
    * Загрузить ленту кандидатов.
    *
    * @returns void
    */
+  /**
+   * Пауза для проигрывания улёта карты.
+   *
+   * @param ms миллисекунды
+   * @returns void
+   */
+  async function waitFrame(ms: number): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, ms))
+  }
+
   async function loadFeed(): Promise<void> {
     loading.value = true
     error.value = null
@@ -181,6 +279,11 @@ export function useSwipes() {
       cards.value = res.cards
       quota.value = res.quota
       index.value = 0
+      dragX.value = 0
+      dragY.value = 0
+      leaving.value = false
+      flyDir.value = null
+      exiting.value = null
     } catch (e: unknown) {
       if (handleGate(e)) return
       const err = e as { response?: { data?: { message?: string } } }
@@ -270,19 +373,26 @@ export function useSwipes() {
   }
 
   /**
-   * Отправить свайп за текущую карточку.
+   * Отправить свайп за текущую карточку с улётом за экран.
    *
    * @param action like|pass
    * @returns void
    */
   async function swipe(action: 'like' | 'pass'): Promise<void> {
     const card = current.value
-    if (!card || acting.value) return
+    if (!card || acting.value || leaving.value) return
     acting.value = true
-    error.value = null
+    leaving.value = true
+    flyDir.value = action
+    exiting.value = { card, dir: action, fromX: dragX.value, fromY: dragY.value }
+    dragging.value = false
     dragX.value = 0
+    dragY.value = 0
+    error.value = null
     try {
-      const res = await datingApi.act(card.id, action)
+      const pending = datingApi.act(card.id, action)
+      await waitFrame(360)
+      const res = await pending
       quota.value = res.quota
       if (res.matched) {
         matchedCard.value = card
@@ -299,6 +409,9 @@ export function useSwipes() {
       const err = e as { response?: { data?: { message?: string } } }
       error.value = err.response?.data?.message ?? 'Не удалось отправить свайп'
     } finally {
+      exiting.value = null
+      leaving.value = false
+      flyDir.value = null
       acting.value = false
     }
   }
@@ -384,37 +497,51 @@ export function useSwipes() {
    * Начало перетаскивания карточки.
    *
    * @param clientX координата X
+   * @param clientY координата Y
    * @returns void
    */
-  function dragStart(clientX: number): void {
+  function dragStart(clientX: number, clientY = 0): void {
+    if (acting.value || leaving.value) return
     dragging.value = true
     dragStartX.value = clientX
+    dragStartY.value = clientY
   }
 
   /**
    * Движение перетаскивания.
    *
    * @param clientX координата X
+   * @param clientY координата Y
    * @returns void
    */
-  function dragMove(clientX: number): void {
-    if (!dragging.value) return
-    dragX.value = clientX - dragStartX.value
+  function dragMove(clientX: number, clientY = 0): void {
+    if (!dragging.value || leaving.value) return
+    const nextX = clientX - dragStartX.value
+    const nextY = clientY - dragStartY.value
+    dragX.value = Math.max(-260, Math.min(260, nextX))
+    dragY.value = Math.max(-120, Math.min(120, nextY))
   }
 
   /**
-   * Конец перетаскивания: резкий сдвиг = свайп.
+   * Конец перетаскивания: резкий сдвиг = улёт.
    *
    * @returns void
    */
   async function dragEnd(): Promise<void> {
-    if (!dragging.value) return
+    if (!dragging.value || leaving.value) return
     dragging.value = false
     const threshold = 110
-    const x = dragX.value
+    const shiftX = dragX.value
+    if (shiftX > threshold) {
+      await swipe('like')
+      return
+    }
+    if (shiftX < -threshold) {
+      await swipe('pass')
+      return
+    }
     dragX.value = 0
-    if (x > threshold) await swipe('like')
-    if (x < -threshold) await swipe('pass')
+    dragY.value = 0
   }
 
   /**
@@ -434,6 +561,29 @@ export function useSwipes() {
   }
 
   /**
+   * Сбросить просмотренные свайпы (только админ, для бесконечных тестов).
+   *
+   * Чистит историю like/pass и перезагружает ленту с избранным.
+   *
+   * @returns void
+   */
+  async function resetHistory(): Promise<void> {
+    if (!isAdmin.value || resetting.value) return
+    resetting.value = true
+    error.value = null
+    try {
+      await datingApi.resetHistory()
+      await loadFeed()
+      await loadFavorites()
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } } }
+      error.value = err.response?.data?.message ?? 'Не удалось сбросить свайпы'
+    } finally {
+      resetting.value = false
+    }
+  }
+
+  /**
    * Закрыть окно мэтча.
    *
    * @returns void
@@ -447,6 +597,10 @@ export function useSwipes() {
     cards,
     index,
     current,
+    next,
+    leaving,
+    flyDir,
+    exiting,
     hasMore,
     seenCount,
     matches,
@@ -473,6 +627,9 @@ export function useSwipes() {
     ageGateReason,
     birthDate,
     verifying,
+    resetting,
+    isAdmin,
+    resetHistory,
     adultMaxDate,
     verifyAge,
     error,
@@ -480,8 +637,14 @@ export function useSwipes() {
     matchedCard,
     matchedConversationId,
     dragX,
+    dragY,
     dragging,
+    topCardStyle,
+    stackCardStyle,
+    likeStrength,
+    passStrength,
     goalLabel,
+    ageLabel,
     loadFeed,
     loadMatches,
     applyFilters,

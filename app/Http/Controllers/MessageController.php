@@ -8,6 +8,7 @@ use App\Events\TypingIndicator;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
+use App\Services\ChatAttachment;
 use App\Services\WebPushService;
 use Illuminate\Http\Request;
 
@@ -18,7 +19,7 @@ class MessageController extends Controller
         abort_unless($conversation->hasParticipant($request->user()->id),403);
         $clearedAt = $conversation->participantRows()->where('user_id', $request->user()->id)->value('cleared_at');
         $before = $request->input('before');
-        $q = $conversation->messages()->with('sender:id,name,avatar_path')->orderByDesc('created_at');
+        $q = $conversation->messages()->with(['sender:id,name,avatar_path', 'replyTo.sender:id,name'])->orderByDesc('created_at');
         if ($before) $q->where('id','<',$before);
         if ($clearedAt) $q->where('created_at', '>', $clearedAt);
         $collection = $q->limit(30)->get();
@@ -40,19 +41,69 @@ class MessageController extends Controller
         if ($other && $reason = $request->user()->messageBlockReason($other)) {
             abort(403, $reason);
         }
-        $data=$request->validate(['body'=>'required|string|max:2000']);
-        return $this->storeInline($request,$conversation,$request->user(),$data['body']);
+        $data = $request->validate([
+            'body' => 'nullable|string|max:2000',
+            'attachment' => 'nullable|file|max:2048',
+            'reply_to_id' => 'nullable|integer|exists:messages,id',
+        ]);
+        $body = trim((string) ($data['body'] ?? ''));
+        $hasFile = $request->hasFile('attachment');
+        abort_if($body === '' && ! $hasFile, 422, 'Нужно сообщение или файл');
+        $attachment = $this->resolveAttachment($request);
+        $replyToId = $this->resolveReplyTo($conversation, $data['reply_to_id'] ?? null);
+        return $this->storeInline($request, $conversation, $request->user(), $body, $replyToId, $attachment);
     }
 
-    public function storeInline(Request $request, Conversation $conversation, $sender, string $body)
+    /**
+     * Проверяет, что цитируемое сообщение из того же чата.
+     */
+    private function resolveReplyTo(Conversation $conversation, ?int $replyToId): ?int
+    {
+        if (! $replyToId) return null;
+        $orig = Message::whereKey($replyToId)->first(['id', 'conversation_id']);
+        abort_if(! $orig || (int) $orig->conversation_id !== (int) $conversation->id, 422, 'Сообщение для ответа не найдено в этом чате');
+        return $orig->id;
+    }
+
+    /**
+     * Проверяет и сохраняет вложение из multipart-запроса.
+     */
+    private function resolveAttachment(Request $request): ?array
+    {
+        if (! $request->hasFile('attachment')) {
+            return null;
+        }
+        $file = $request->file('attachment');
+        $kind = ChatAttachment::validate($file);
+
+        return ChatAttachment::store($file, $kind);
+    }
+
+    public function storeInline(Request $request, Conversation $conversation, $sender, string $body, ?int $replyToId = null, ?array $attachment = null)
     {
         $conversation->loadMissing('participants:id,name,message_privacy,allow_random_messages');
         $other = $conversation->participants->firstWhere('id','!=',$sender->id);
         if ($other && $reason = $sender->messageBlockReason($other)) {
+            if ($attachment) {
+                ChatAttachment::delete($attachment['path']);
+            }
             abort(403, $reason);
         }
-        $msg=Message::create(['conversation_id'=>$conversation->id,'sender_id'=>$sender->id,'body'=>$body]);
-        $msg->load(['sender:id,name,avatar_path','conversation.participantRows']);
+        $kind = $attachment['kind'] ?? null;
+        $type = $kind === 'image' ? 'image' : ($kind === 'file' ? 'file' : 'text');
+        $msg = Message::create([
+            'conversation_id' => $conversation->id,
+            'reply_to_id' => $replyToId,
+            'sender_id' => $sender->id,
+            'body' => $body,
+            'type' => $type,
+            'attachment_path' => $attachment['path'] ?? null,
+            'attachment_name' => $attachment['name'] ?? null,
+            'attachment_mime' => $attachment['mime'] ?? null,
+            'attachment_size' => $attachment['size'] ?? null,
+            'attachment_kind' => $kind,
+        ]);
+        $msg->load(['sender:id,name,avatar_path','replyTo.sender:id,name','conversation.participantRows']);
         $conversation->update(['last_message_at'=>$msg->created_at]);
         $conversation->participantRows()->whereNotNull('hidden_at')->update(['hidden_at'=>null]);
         try{ broadcast(new MessageSent($msg))->toOthers(); }catch(\Throwable $e){ \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
@@ -68,8 +119,13 @@ class MessageController extends Controller
             $push = app(WebPushService::class);
             if (! $push->isConfigured()) return;
             $senderModel = $sender instanceof User ? $sender : User::select('id', 'name', 'avatar_path')->find($sender->id);
+            $text = trim((string) $msg->body);
+            if ($text === '' && $msg->attachment_path) {
+                $label = $msg->attachment_name ? ' ' . $msg->attachment_name : '';
+                $text = ($msg->attachment_kind === 'image' ? '📷 Фото' : '📎 Файл') . $label;
+            }
             foreach (User::whereIn('id', $ids)->select('id', 'name', 'avatar_path')->get() as $recipient) {
-                $push->sendChatMessage($recipient, $senderModel ?? $recipient, $conversation->id, (string) $msg->body);
+                $push->sendChatMessage($recipient, $senderModel ?? $recipient, $conversation->id, $text);
             }
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('chat webpush failed: '.$e->getMessage());
@@ -100,7 +156,9 @@ class MessageController extends Controller
         abort_unless($message->sender_id===$request->user()->id || $request->user()->isAdmin(),403);
         $cid = $message->conversation_id;
         $mid = $message->id;
+        $path = $message->attachment_path;
         $message->delete();
+        ChatAttachment::delete($path);
         try { broadcast(new \App\Events\MessageDeleted($mid, $cid))->toOthers(); } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
         return response()->json(['ok'=>true]);
     }
@@ -109,7 +167,7 @@ class MessageController extends Controller
     {
         abort_unless($conversation->hasParticipant($request->user()->id),403);
         $list = $conversation->messages()
-            ->with('sender:id,name,avatar_path')
+            ->with(['sender:id,name,avatar_path', 'replyTo.sender:id,name'])
             ->whereNotNull('pinned_at')
             ->orderBy('pinned_at')
             ->get()

@@ -2,6 +2,7 @@
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
+import Textarea from 'primevue/textarea'
 import Message from 'primevue/message'
 import ProgressSpinner from 'primevue/progressspinner'
 import { Swiper, SwiperSlide } from 'swiper/vue'
@@ -10,6 +11,7 @@ import { useBodyLock } from '@/composables/useBodyLock'
 import { usePhotoViewer } from '@/composables/usePhotoViewer'
 import { usePhotoViewerSwiper } from '@/composables/usePhotoViewerSwiper'
 import { useMentionInput } from '@/composables/useMentionInput'
+import { useEnterToSend } from '@/composables/useEnterToSend'
 import { renderWithMentions } from '@/composables/useMentions'
 import { avatarSrcFor } from '@/composables/useAvatar'
 
@@ -23,6 +25,15 @@ const mentionInput = useMentionInput({
   getText: () => props.comments.draft.value ?? '',
   setText: (v: string) => { props.comments.draft.value = v },
 })
+const { handleEnterToSend } = useEnterToSend()
+
+/**
+ * Отправляет комментарий к фото и закрывает подсказки.
+ */
+function sendPhotoComment(): void {
+  viewer.onSend()
+  mentionInput.close()
+}
 
 const canComment = () => !!(props.gallery.active.value?.can_comment || props.gallery.canComment?.value)
 </script>
@@ -77,10 +88,10 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
         </div>
       </div>
       <div class="shrink-0 px-3 pt-2.5 border-t border-stone-200/70 dark:border-white/10 pb-[max(0.625rem,env(safe-area-inset-bottom))]">
-        <div v-if="canComment()" class="relative flex items-center gap-2">
+        <div v-if="canComment()" class="relative flex items-end gap-2">
           <span class="w-8 h-8 shrink-0 rounded-full bg-stone-200 dark:bg-white/10 grid place-items-center text-[11px] font-black text-stone-500">Вы</span>
-          <InputText v-model="comments.draft.value" placeholder="Добавить комментарий… @ — упомянуть" maxlength="1000" class="flex-1 min-w-0 !rounded-full !text-sm" @input="mentionInput.onInput()" @click="mentionInput.onInput()" @focus="mentionInput.onFocus()" @keyup.enter="viewer.onSend(); mentionInput.close()" />
-          <Button icon="pi pi-send" rounded :loading="comments.sending.value" :disabled="!comments.draft.value.trim()" class="!bg-violet-600 !border-violet-600 shrink-0" @click="viewer.onSend(); mentionInput.close()" aria-label="Отправить" />
+          <Textarea v-model="comments.draft.value" placeholder="Добавить комментарий… Shift+Enter — новая строка" rows="1" autoResize maxlength="1000" enterkeyhint="enter" class="flex-1 min-w-0 !rounded-2xl !text-sm max-h-32" @input="mentionInput.onInput()" @click="mentionInput.onInput()" @focus="mentionInput.onFocus()" @keydown="(e:any)=>handleEnterToSend(e, sendPhotoComment)" />
+          <Button icon="pi pi-send" rounded :loading="comments.sending.value" :disabled="!comments.draft.value.trim()" class="!bg-violet-600 !border-violet-600 shrink-0" @click="sendPhotoComment" aria-label="Отправить" />
           <div v-if="mentionInput.mentions.mentionOpen.value" class="absolute left-0 right-0 bottom-[calc(100%+8px)] bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl shadow-float overflow-hidden z-30 max-h-56 overflow-y-auto">
             <div v-if="mentionInput.mentions.mentionLoading.value" class="px-4 py-3 text-xs text-stone-400">Ищем людей…</div>
             <template v-else>

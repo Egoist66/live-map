@@ -10,6 +10,7 @@ import { pinBlurInfo } from '@/composables/useLocationBlur'
 import { usePinLifetime } from '@/composables/usePinLifetime'
 import { renderWithMentions } from '@/composables/useMentions'
 import { usePinCommentInput } from '@/composables/usePinCommentInput'
+import { useEnterToSend } from '@/composables/useEnterToSend'
 import { formatTime } from '@/utils/date'
 
 const props = defineProps<{ pin: any; comments: any[]; highlightCommentId?: number | null; commentText: string; creatingComment: boolean; editingCommentId: number | null; editingContent: string; savingComment: boolean; reacting: boolean; reporting: boolean; pinEdit: any; categories: any[]; deleting: boolean; authId: number; replyTo: any; mentions: any }>()
@@ -18,6 +19,7 @@ const blur = computed(() => pinBlurInfo(props.pin))
 const catMeta = computed(() => (props.categories as any[]).find((c: any) => c.v === props.pin?.category) ?? null)
 const lifetime = usePinLifetime(() => props.pin)
 const commentBox = usePinCommentInput({ getText: () => props.commentText, emit: (e, v) => emit(e as any, v as any), mentions: props.mentions })
+const { handleEnterToSend } = useEnterToSend()
 const { cardRef, listRef, commentInput, cardStyle, onCommentInput, onInputFocus, pickMention, focusForReply, blurInput } = commentBox
 function onReply(root: any, target?: any) {
   emit('reply', root, target ?? root)
@@ -78,7 +80,7 @@ function authorName(c: any): string { return c?.is_anonymous ? 'аноним' : 
           <span v-if="(root.replies_count ?? (root.replies || []).length) > 0" class="ml-auto text-[10px] text-stone-400 dark:text-zinc-500 shrink-0">💬 {{ root.replies_count ?? (root.replies || []).length }}</span>
         </div>
         <div v-if="editingCommentId !== root.id" class="text-sm text-stone-700 dark:text-zinc-200 mt-1.5 break-words comment-body" v-html="renderWithMentions(root.content)"></div>
-        <div v-else class="mt-2"><Textarea :model-value="editingContent" @update:model-value="(v:any)=>emit('update:editContent', v)" rows="2" maxlength="1000" class="w-full !rounded-xl" /><div class="flex gap-2 mt-2"><Button label="Сохранить" size="small" rounded :loading="savingComment" @click="emit('saveEditComment')" /><Button label="Отмена" size="small" severity="secondary" outlined rounded @click="emit('cancelEditComment')" /></div></div>
+        <div v-else class="mt-2"><Textarea :model-value="editingContent" @update:model-value="(v:any)=>emit('update:editContent', v)" @keydown="(e:any)=>handleEnterToSend(e, () => emit('saveEditComment'))" rows="2" autoResize maxlength="1000" class="w-full !rounded-xl" placeholder="Shift+Enter — новая строка" /><div class="flex gap-2 mt-2"><Button label="Сохранить" size="small" rounded :loading="savingComment" @click="emit('saveEditComment')" /><Button label="Отмена" size="small" severity="secondary" outlined rounded @click="emit('cancelEditComment')" /></div></div>
         <div v-if="editingCommentId !== root.id" class="mt-2 flex gap-1 items-center">
           <Button label="Ответить" size="small" text @click="onReply(root)" />
           <Button v-if="root.user_id === authId" label="ред." size="small" text @click="emit('startEditComment', root)" />
@@ -91,7 +93,7 @@ function authorName(c: any): string { return c?.is_anonymous ? 'аноним' : 
               <span class="text-stone-400 dark:text-zinc-400 font-normal shrink-0">{{ formatTime(r.created_at) }}</span>
             </div>
             <div v-if="editingCommentId !== r.id" class="text-[13px] text-stone-700 dark:text-zinc-200 mt-1 break-words comment-body" v-html="renderWithMentions(r.content)"></div>
-            <div v-else class="mt-2"><Textarea :model-value="editingContent" @update:model-value="(v:any)=>emit('update:editContent', v)" rows="2" maxlength="1000" class="w-full !rounded-xl" /><div class="flex gap-2 mt-2"><Button label="Сохранить" size="small" rounded :loading="savingComment" @click="emit('saveEditComment')" /><Button label="Отмена" size="small" severity="secondary" outlined rounded @click="emit('cancelEditComment')" /></div></div>
+            <div v-else class="mt-2"><Textarea :model-value="editingContent" @update:model-value="(v:any)=>emit('update:editContent', v)" @keydown="(e:any)=>handleEnterToSend(e, () => emit('saveEditComment'))" rows="2" autoResize maxlength="1000" class="w-full !rounded-xl" placeholder="Shift+Enter — новая строка" /><div class="flex gap-2 mt-2"><Button label="Сохранить" size="small" rounded :loading="savingComment" @click="emit('saveEditComment')" /><Button label="Отмена" size="small" severity="secondary" outlined rounded @click="emit('cancelEditComment')" /></div></div>
             <div v-if="editingCommentId !== r.id" class="mt-1.5 flex gap-1 items-center">
               <Button label="Ответить" size="small" text @click="onReply(root, r)" />
               <Button v-if="r.user_id === authId" label="ред." size="small" text @click="emit('startEditComment', r)" />
@@ -106,9 +108,9 @@ function authorName(c: any): string { return c?.is_anonymous ? 'аноним' : 
         <span class="truncate">Ответ для {{ replyTo.is_anonymous ? 'анонима' : '@' + (replyTo.user?.name || 'пользователя') }}</span>
         <button type="button" @click="emit('cancelReply')" class="w-5 h-5 rounded-full grid place-items-center hover:bg-violet-200 dark:hover:bg-violet-800 shrink-0"><i class="pi pi-times text-[9px]"></i></button>
       </div>
-      <form @submit.prevent="onSend" class="relative flex gap-2">
-        <InputText ref="commentInput" :model-value="commentText" @update:model-value="(v:any)=>{ emit('update:comment', v); onCommentInput() }" @input="onCommentInput" @keyup="onCommentInput" @click="onCommentInput" @focus="onInputFocus" inputmode="text" enterkeyhint="send" autocomplete="off" autocapitalize="sentences" placeholder="Написать комментарий... @ — упомянуть" class="flex-1 !rounded-full" :disabled="creatingComment" />
-        <Button type="submit" icon="pi pi-send" rounded class="!bg-stone-900 dark:!bg-white dark:!text-ink-900 !border-stone-900 dark:!border-white" :loading="creatingComment" />
+      <form @submit.prevent="onSend" class="relative flex gap-2 items-end">
+        <Textarea ref="commentInput" :model-value="commentText" @update:model-value="(v:any)=>{ emit('update:comment', v); onCommentInput() }" @input="onCommentInput" @keyup="onCommentInput" @click="onCommentInput" @focus="onInputFocus" @keydown="(e:any)=>handleEnterToSend(e, onSend)" rows="1" autoResize maxlength="1000" enterkeyhint="enter" autocomplete="off" autocapitalize="sentences" placeholder="Написать комментарий... Shift+Enter — новая строка" class="flex-1 !rounded-2xl max-h-32" :disabled="creatingComment" />
+        <Button type="submit" icon="pi pi-send" rounded class="!bg-stone-900 dark:!bg-white dark:!text-ink-900 !border-stone-900 dark:!border-white shrink-0" :loading="creatingComment" />
         <div v-if="mentions?.mentionOpen.value" class="absolute left-0 right-12 bottom-[calc(100%+8px)] bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl shadow-float overflow-hidden z-30 max-h-56 overflow-y-auto">
           <div v-if="mentions.mentionLoading.value" class="px-4 py-3 text-xs text-stone-400">Ищем людей…</div>
           <template v-else>

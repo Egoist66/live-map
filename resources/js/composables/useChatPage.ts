@@ -6,9 +6,11 @@ import { useFriendships } from '@/composables/useFriendships'
 import { useBlocks } from '@/composables/useBlocks'
 import { useEmojiPicker } from '@/composables/useEmojiPicker'
 import { useLongPress } from '@/composables/useLongPress'
+import { useMessageReply } from '@/composables/useMessageReply'
 import { usePinnedMessages } from '@/composables/usePinnedMessages'
 import { useChatBadges } from '@/composables/useChatBadges'
 import { useChatNavigation } from '@/composables/useChatNavigation'
+import { useChatAttachment } from '@/composables/useChatAttachment'
 import { chatApi } from '@/services/chat.api'
 
 export function useChatPage(initialConversationId?: number) {
@@ -34,7 +36,9 @@ export function useChatPage(initialConversationId?: number) {
   const pageProps = usePage().props as any
   const isOwnMessage = (m: any) => Number(m.sender_id) === Number(pageProps.auth?.user?.id)
   const { bind: bindSheet } = useLongPress((p: any) => { sheet.value = p }, 520)
+  const reply = useMessageReply()
   const pins = usePinnedMessages(chat.messages as any)
+  const attachment = useChatAttachment()
 
   watch(() => chat.activeConv.value, (conv: any) => {
     if (conv?.id) void pins.load(conv.id, { pinned: conv.pinned, pin_limit: conv.pin_limit })
@@ -59,20 +63,52 @@ export function useChatPage(initialConversationId?: number) {
   }
 
   async function handleSend() {
-    if (!input.value.trim()) return
-    const txt = input.value
+    const text = input.value.trim()
+    const picked = attachment.file.value
+    if (!text && !picked) {
+      return
+    }
     input.value = ''
     emoji.close()
+    const quoted = reply.replyTo.value
+    const sendingFile = picked
+    attachment.clear()
     try {
-      await chat.sendMessage(txt)
+      await chat.sendMessage(text, quoted, sendingFile)
+      reply.cancelReply()
     } catch (e: any) {
       const status = e?.response?.status
-      const msg = e?.response?.data?.message || e?.message || ''
-      input.value = txt
+      const msg = e?.response?.data?.message || e?.response?.data?.errors?.attachment?.[0] || e?.message || ''
+      input.value = text
+      if (sendingFile && !attachment.file.value) {
+        attachment.file.value = sendingFile
+      }
       if (status === 403 && msg.includes('заблокировал')) notifyBlockedBy(msg)
       else if (status === 403) toast?.add({ severity: 'warn', summary: 'Нельзя отправить', detail: msg || 'Сообщение не доставлено', life: 3500 })
       else if (msg) toast?.add({ severity: 'error', summary: 'Ошибка', detail: msg, life: 3500 })
     }
+  }
+
+  /**
+   * Принимает файл из input чата: валидация и сжатие картинок.
+   * @param target выбранный файл или null
+   */
+  async function handlePickFile(target: File | null): Promise<void> {
+    if (!target) {
+      return
+    }
+    const ok = await attachment.pick(target)
+    if (!ok && attachment.error.value) {
+      toast?.add({ severity: 'warn', summary: 'Файл не принят', detail: attachment.error.value, life: 3500 })
+    }
+    focusChatInput()
+  }
+
+  function handleStartReply(m: any) {
+    chat.cancelEdit()
+    emoji.close()
+    reply.startReply(m)
+    focusChatInput()
   }
 
   const timeCache = new Map<string,string>()
@@ -185,7 +221,7 @@ export function useChatPage(initialConversationId?: number) {
 
   function closeSheet() { sheet.value = null }
 
-  watch(() => chat.selectedId.value, (id) => { if (id) focusChatInput() })
+  watch(() => chat.selectedId.value, (id) => { reply.cancelReply(); if (id) focusChatInput() })
 
   function backToList() { nav.backToList(emoji.close, chat.cancelEdit, showChatMenu) }
 
@@ -193,6 +229,7 @@ export function useChatPage(initialConversationId?: number) {
     if (e.key === 'Escape' && chat.selectedId.value) {
       if (emoji.open.value) { emoji.close(); return }
       if (chat.editingId.value !== null) { chat.cancelEdit(); return }
+      if (reply.replyTo.value) { reply.cancelReply(); return }
       if (showChatMenu.value) { showChatMenu.value = false; return }
       backToList()
     }
@@ -230,31 +267,53 @@ export function useChatPage(initialConversationId?: number) {
     } catch {}
   }
 
+  /**
+   * Открыть диалог по id с понятной ошибкой.
+   *
+   * @param rawId id диалога из пропса или URL
+   * @returns void
+   */
+  async function openTarget(rawId: number | string | null | undefined): Promise<void> {
+    const targetId = Number(rawId)
+    if (!targetId) return
+    try {
+      await chat.openConversation(targetId)
+      tab.value = 'chats'
+      focusChatInput()
+    } catch (e: any) {
+      const msg = e?.response?.data?.message || 'Не удалось открыть чат'
+      toast?.add({ severity: 'error', summary: 'Чат не открылся', detail: msg, life: 4000 })
+    }
+  }
+
   async function init() {
     resolveInitialTab()
     badgeSync.init()
-    await Promise.all([friendsApi.load(), blocksApi.load()])
+    const targetId = resolveInitialId()
+    if (targetId) {
+      await chat.loadConversations().catch(() => {})
+      await openTarget(targetId)
+    }
+    try {
+      await Promise.all([friendsApi.load(), blocksApi.load()])
+    } catch {}
     badgeSync.setPending(friendsApi.pendingIn.value.length)
-    await chat.loadConversations()
+    try {
+      await chat.loadConversations()
+    } catch {}
     badgeSync.setUnread(chat.unreadTotal.value)
     badgeSync.setUnreadMessages(chat.unreadMessagesTotal.value)
     try { const me = await chatApi.me(); privacy.value.message_privacy = me.message_privacy; privacy.value.allow_random_messages = me.allow_random_messages } catch {}
-    const targetId = resolveInitialId()
-    if (targetId) {
-      try {
-        await chat.openConversation(targetId)
-        tab.value = 'chats'
-        focusChatInput()
-      } catch {}
-      chat.loadConversations()
+    if (targetId && !chat.selectedId.value) {
+      await openTarget(targetId)
     }
   }
 
   return {
     chat, friendsApi, blocksApi, emoji, badgeSync, pins, togglePin,
     input, inputRef, editInputRef, tab, showChatMenu, sheet, showPrivacy, privacy, creatingChat, confirm, confirmVisible, isOwnMessage, bindSheet,
-    handleSend, formatTime, onPickEmoji, onPickEmojiForEdit, handleStartEdit, startChatWith, addFriendFromSearch, savePrivacy, doConfirm, closeSheet, backToList,
+    handleSend, handlePickFile, attachment, formatTime, onPickEmoji, onPickEmojiForEdit, handleStartEdit, startChatWith, addFriendFromSearch, savePrivacy, doConfirm, closeSheet, backToList,
     askBlock, askDeleteChat, askDeleteMessage, askRemoveFriend, askUnblock,
-    init,
+    init, openTarget, reply, handleStartReply,
   }
 }

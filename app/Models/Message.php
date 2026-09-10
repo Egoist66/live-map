@@ -7,11 +7,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Message extends Model
 {
-    protected $fillable = ['conversation_id','sender_id','body','type','read_at','delivered_at','edited_at','pinned_at','pinned_by'];
+    protected $fillable = ['conversation_id','reply_to_id','sender_id','body','type','read_at','delivered_at','edited_at','pinned_at','pinned_by','attachment_path','attachment_name','attachment_mime','attachment_size','attachment_kind'];
     protected $casts = ['read_at' => 'datetime', 'delivered_at' => 'datetime', 'edited_at' => 'datetime', 'pinned_at' => 'datetime'];
 
     public function conversation(): BelongsTo { return $this->belongsTo(Conversation::class); }
     public function sender(): BelongsTo { return $this->belongsTo(User::class,'sender_id'); }
+
+    /**
+     * Сообщение, на которое дан ответ.
+     */
+    public function replyTo(): BelongsTo { return $this->belongsTo(Message::class,'reply_to_id'); }
 
     public function statusFor(?int $viewerId = null): string
     {
@@ -20,14 +25,53 @@ class Message extends Model
         return 'sent';
     }
 
+    /**
+     * Короткое представление цитируемого сообщения для ответа.
+     */
+    public function replyToPayload(): ?array
+    {
+        $orig = $this->relationLoaded('replyTo') ? $this->replyTo : $this->replyTo()->first();
+        if (! $orig) return null;
+        $sender = $orig->relationLoaded('sender') ? $orig->sender : $orig->sender()->first(['id', 'name']);
+        return [
+            'id' => $orig->id,
+            'body' => $orig->body,
+            'sender_id' => $orig->sender_id,
+            'sender_name' => $sender?->name,
+        ];
+    }
+
+    /**
+     * Пейлоад вложения для фронта: url, имя, mime, размер, вид.
+     *
+     * @return array|null
+     */
+    public function attachmentPayload(): ?array
+    {
+        if (! $this->attachment_path) {
+            return null;
+        }
+
+        return [
+            'url' => \App\Services\ChatAttachment::url($this->attachment_path),
+            'name' => $this->attachment_name,
+            'mime' => $this->attachment_mime,
+            'size' => $this->attachment_size !== null ? (int) $this->attachment_size : null,
+            'kind' => $this->attachment_kind,
+        ];
+    }
+
     public function toArrayPayload(): array
     {
         return [
             'id' => $this->id,
             'conversation_id' => $this->conversation_id,
+            'reply_to_id' => $this->reply_to_id,
+            'reply_to' => $this->reply_to_id ? $this->replyToPayload() : null,
             'sender_id' => $this->sender_id,
             'body' => $this->body,
             'type' => $this->type,
+            'attachment' => $this->attachmentPayload(),
             'created_at' => $this->created_at?->toISOString(),
             'edited_at' => $this->edited_at?->toISOString(),
             'delivered_at' => $this->delivered_at?->toISOString(),

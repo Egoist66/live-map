@@ -57,11 +57,11 @@ export function useLongPress(onLong: (payload?: any) => void, delay = 520) {
 
   function bind(p?: any) {
     return {
-      onTouchstart: (e: TouchEvent) => start(e, p),
-      onTouchmove: move,
-      onTouchend: end,
-      onTouchcancel: cancel,
-      onContextmenu: (e: MouseEvent) => context(e, p),
+      touchstart: (e: TouchEvent) => start(e, p),
+      touchmove: move,
+      touchend: end,
+      touchcancel: cancel,
+      contextmenu: (e: MouseEvent) => context(e, p),
     }
   }
 

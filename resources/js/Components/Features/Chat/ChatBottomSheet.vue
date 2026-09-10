@@ -30,7 +30,7 @@ const emit = defineEmits<{ (e: 'close'): void; (e: 'openChat', id: number): void
         <template v-else-if="sheet.type === 'request'">
           <div class="px-4 py-2 border-b mb-1"><div class="text-[15px] font-bold">{{ sheet.data.requester?.name }}</div><div class="text-xs text-stone-500">хочет дружить</div></div>
           <button @click="emit('accept', sheet.data.id)" class="w-full px-4 py-3.5 rounded-2xl bg-green-600 text-white text-[15px] font-medium text-left">Принять</button>
-          <button @click="emit('decline', sheet.data.id)" class="w-full px-4 py-3.5 rounded-2xl text-[15px] font-medium text-left">Отклонить</button>
+          <button @click="emit('decline', sheet.data.id)" class="w-full px-4 py-3.5 rounded-2xl text-[15px] font-medium text-left text-red-600">Отклонить</button>
           <button @click="emit('close')" class="w-full px-4 py-3.5 rounded-2xl bg-stone-100 text-[15px] font-medium justify-center mt-1">Отмена</button>
         </template>
         <template v-else-if="sheet.type === 'search'">

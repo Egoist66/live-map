@@ -22,7 +22,7 @@ class MessageUpdated implements ShouldBroadcastNow
 
     public function broadcastWith(): array
     {
-        $this->message->load('sender:id,name,avatar_path');
+        $this->message->loadMissing(['sender:id,name,avatar_path', 'replyTo.sender:id,name']);
         return ['message' => $this->message->toArrayPayload()];
     }
 

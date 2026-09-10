@@ -30,7 +30,7 @@ const { isFriend, isPending, showAdd, addTitle } = useChatSearchList()
           <button v-if="showAdd(u)" @click.stop="emit('add', u.id)" :title="addTitle(u)" class="w-8 h-8 grid place-items-center rounded-full bg-stone-100 text-stone-500"><i class="pi pi-user-plus text-xs" /></button>
           <button v-else-if="isPending(u)" :title="addTitle(u)" disabled class="w-8 h-8 grid place-items-center rounded-full bg-stone-100 text-stone-400 cursor-default"><i class="pi pi-clock text-xs" /></button>
           <span v-else :title="addTitle(u)" class="w-8 h-8 grid place-items-center rounded-full bg-green-100 text-green-600"><i class="pi pi-check text-xs" /></span>
-          <button @click.stop="emit('block', u.id, u.name)" title="Заблокировать" class="w-8 h-8 grid place-items-center rounded-full bg-stone-100 text-stone-500">⊘</button>
+          <button @click.stop="emit('block', u.id, u.name)" title="Заблокировать" class="w-8 h-8 grid place-items-center rounded-full bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400">⊘</button>
         </div>
       </div>
     </div>

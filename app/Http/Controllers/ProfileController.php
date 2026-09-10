@@ -67,6 +67,12 @@ class ProfileController extends Controller
             $base['home_blur_meters'] = $home['blur_meters'];
             $base['home_blur_label'] = $home['blur_label'];
         }
+        $subscription = null;
+        if ($auth && ! $isOwn) {
+            $subscription = \App\Models\UserSubscription::where('subscriber_id', $auth->id)
+                ->where('target_id', $user->id)
+                ->first();
+        }
         return Inertia::render('Profile/Show', [
             'profileUser' => array_merge($base, ['avatar_url' => $user->avatar_url, 'last_seen_at' => $showLastSeen?->toISOString(), 'is_invisible' => $user->isInvisibleActive()]),
             'isOwn' => $isOwn,
@@ -77,6 +83,12 @@ class ProfileController extends Controller
             'isBlockedBy' => $isBlockedBy,
             'canMessage' => $canMessage,
             'canMessageReason' => $reason,
+            'subscription' => $subscription ? [
+                'subscribed' => true,
+                'notify_pin' => (bool) $subscription->notify_pin,
+                'notify_photo' => (bool) $subscription->notify_photo,
+                'notify_level' => (bool) $subscription->notify_level,
+            ] : ['subscribed' => false, 'notify_pin' => true, 'notify_photo' => true, 'notify_level' => true],
         ]);
     }
 
@@ -122,7 +134,7 @@ class ProfileController extends Controller
     public function edit(Request $request, ?string $identifier = null, ?string $tab = null): Response|RedirectResponse
     {
         $auth = $request->user();
-        $tabIds = ['profile', 'billing', 'pins', 'privacy', 'appearance', 'security', 'procedures', 'support', 'app', 'admin'];
+        $tabIds = ['profile', 'billing', 'pins', 'privacy', 'appearance', 'security', 'procedures', 'support', 'app', 'admin', 'archive'];
         if ($tab === null && $identifier !== null && in_array($identifier, $tabIds, true) && $identifier !== 'admin') {
             $tab = $identifier;
             $identifier = null;

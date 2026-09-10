@@ -110,6 +110,21 @@ class SwipeController extends Controller
     }
 
     /**
+     * Сбросить просмотренные свайпы (только админ, для тестов ленты).
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function resetHistory(Request $request)
+    {
+        abort_unless($request->user()->isAdmin(), 403);
+
+        $deleted = $this->dating->resetHistory($request->user());
+
+        return response()->json(['ok' => true, 'deleted' => $deleted]);
+    }
+
+    /**
      * Квота рандомных чатов.
      *
      * @param Request $request

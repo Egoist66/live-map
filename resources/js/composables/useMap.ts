@@ -70,7 +70,7 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
         attributionControl: false,
       } as any)
       map.addControl(new maplibregl.NavigationControl({ showCompass: true, showZoom: true, visualizePitch: true }), 'bottom-right')
-      geoControl = new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true, timeout: 8000 }, trackUserLocation: true, showAccuracyCircle: false, showUserLocation: false, fitBoundsOptions: { maxZoom: 15 } } as any)
+      geoControl = new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true, timeout: 8000 }, trackUserLocation: false, showAccuracyCircle: false, showUserLocation: false, fitBoundsOptions: { maxZoom: 15 } } as any)
       map.addControl(geoControl, 'bottom-right')
       geoListeners.forEach((cb) => {
         try { geoControl.on('geolocate', cb) } catch {}
