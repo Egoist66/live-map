@@ -20,6 +20,7 @@ export function useAvatarCropper() {
   const posX = ref(50)
   const posY = ref(50)
   const zoom = ref(1)
+  const shape = ref<'square' | 'circle'>('square')
   const showCropper = ref(false)
   const frameEl = ref<HTMLElement | null>(null)
   const dragging = ref(false)
@@ -55,6 +56,7 @@ export function useAvatarCropper() {
     posX.value = 50
     posY.value = 50
     zoom.value = 1
+    shape.value = 'square'
     const url = URL.createObjectURL(file)
     sourceUrl.value = url
     showCropper.value = true
@@ -112,6 +114,14 @@ export function useAvatarCropper() {
       top: `${top}%`,
     }
   })
+
+  /**
+   * Переключает форму рамки превью: квадрат или круг.
+   * @param v новая форма
+   */
+  function setShape(v: 'square' | 'circle') {
+    shape.value = v
+  }
 
   function onPointerDown(e: PointerEvent) {
     if (!sourceUrl.value) return
@@ -177,6 +187,7 @@ export function useAvatarCropper() {
     posX.value = 50
     posY.value = 50
     zoom.value = 1
+    shape.value = 'square'
   }
 
   /**
@@ -253,6 +264,7 @@ export function useAvatarCropper() {
     posX,
     posY,
     zoom,
+    shape,
     ZOOM_MIN,
     ZOOM_MAX,
     showCropper,
@@ -265,6 +277,7 @@ export function useAvatarCropper() {
     onPointerUp,
     zoomIn,
     zoomOut,
+    setShape,
     close,
     setFrameEl,
     reset,

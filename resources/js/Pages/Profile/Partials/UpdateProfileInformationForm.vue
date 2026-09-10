@@ -194,37 +194,37 @@ const planOptions = [{ label:'Free — 3/день · 10км', value:'free', icon
     <Dialog :visible="a.crop.showCropper.value" @update:visible="(v:boolean)=>{ if(!v) a.cancelCrop() }" modal dismissableMask :draggable="false" header="Позиционируй фото" :style="{ width: '440px', maxWidth: 'calc(100vw - 1.5rem)' }" :pt="{ root: { class: '!rounded-3xl avatar-crop' }, header: { class: '!py-3 !px-4 !rounded-t-3xl' }, content: { class: '!px-4 !pb-2 !overflow-y-auto !overscroll-contain' }, footer: { class: '!px-4 !py-3 !rounded-b-3xl' } }">
       <div
         :ref="(el:any)=>a.crop.setFrameEl(el)"
-        class="relative w-[min(100%,44dvh)] mx-auto aspect-square rounded-3xl overflow-hidden bg-stone-100 dark:bg-zinc-800 select-none touch-none"
-        :class="a.crop.dragging.value ? 'cursor-grabbing' : 'cursor-grab'"
+        class="relative w-[min(100%,44dvh)] mx-auto aspect-square overflow-hidden bg-stone-100 dark:bg-zinc-800 select-none touch-none"
+        :class="[a.crop.dragging.value ? 'cursor-grabbing' : 'cursor-grab', a.crop.shape.value === 'circle' ? 'rounded-full' : 'rounded-3xl']"
         @pointerdown="a.crop.onPointerDown"
         @pointermove="a.crop.onPointerMove"
         @pointerup="a.crop.onPointerUp"
         @pointercancel="a.crop.onPointerUp"
       >
         <img v-if="a.crop.sourceUrl.value" :src="a.crop.sourceUrl.value" alt="" draggable="false" class="absolute max-w-none" :style="a.crop.frameStyle.value" />
-        <div class="absolute inset-0 pointer-events-none grid grid-cols-3 grid-rows-3">
+        <div v-if="a.crop.shape.value === 'square'" class="absolute inset-0 pointer-events-none grid grid-cols-3 grid-rows-3">
           <div v-for="i in 9" :key="i" class="border border-white/30"></div>
         </div>
       </div>
-      <p class="text-xs text-zinc-500 mt-2">Тяни фото чтобы подвинуть · ползунок — приблизить</p>
+      <p class="text-xs text-zinc-500 mt-2">Тяни фото чтобы подвинуть · ползунок — приблизить · нажми на кружок или квадрат чтобы примерить форму</p>
       <div class="flex items-center gap-1 mt-2">
         <Button icon="pi pi-minus" rounded text aria-label="Отдалить" @click="a.crop.zoomOut()" :disabled="a.crop.zoom.value <= a.crop.ZOOM_MIN" class="!w-10 !h-10 shrink-0" />
         <Slider v-model="a.crop.zoom.value" :min="a.crop.ZOOM_MIN" :max="a.crop.ZOOM_MAX" :step="0.01" class="flex-1" aria-label="Масштаб фото" />
         <Button icon="pi pi-plus" rounded text aria-label="Приблизить" @click="a.crop.zoomIn()" :disabled="a.crop.zoom.value >= a.crop.ZOOM_MAX" class="!w-10 !h-10 shrink-0" />
       </div>
       <div class="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3">
-        <div class="flex items-center gap-2">
-          <div class="relative w-14 h-14 rounded-full overflow-hidden bg-stone-100 dark:bg-zinc-800 shrink-0">
+        <button type="button" @click="a.crop.setShape('circle')" :aria-pressed="a.crop.shape.value === 'circle'" :class="['flex items-center gap-2 rounded-2xl p-1 transition', a.crop.shape.value === 'circle' ? 'ring-2 ring-violet-500 bg-violet-500/5' : 'ring-1 ring-stone-200 dark:ring-zinc-700']">
+          <span class="relative block w-14 h-14 rounded-full overflow-hidden bg-stone-100 dark:bg-zinc-800 shrink-0">
             <img v-if="a.crop.sourceUrl.value" :src="a.crop.sourceUrl.value" alt="" draggable="false" class="absolute max-w-none pointer-events-none" :style="a.crop.frameStyle.value" />
-          </div>
-          <span class="text-xs text-zinc-500">кружок<br />в шапке</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <div class="relative w-14 h-14 rounded-2xl overflow-hidden bg-stone-100 dark:bg-zinc-800 shrink-0">
+          </span>
+          <span class="text-xs text-zinc-500 text-left">кружок<br />в шапке</span>
+        </button>
+        <button type="button" @click="a.crop.setShape('square')" :aria-pressed="a.crop.shape.value === 'square'" :class="['flex items-center gap-2 rounded-2xl p-1 transition', a.crop.shape.value === 'square' ? 'ring-2 ring-violet-500 bg-violet-500/5' : 'ring-1 ring-stone-200 dark:ring-zinc-700']">
+          <span class="relative block w-14 h-14 rounded-2xl overflow-hidden bg-stone-100 dark:bg-zinc-800 shrink-0">
             <img v-if="a.crop.sourceUrl.value" :src="a.crop.sourceUrl.value" alt="" draggable="false" class="absolute max-w-none pointer-events-none" :style="a.crop.frameStyle.value" />
-          </div>
-          <span class="text-xs text-zinc-500">квадрат<br />в превью</span>
-        </div>
+          </span>
+          <span class="text-xs text-zinc-500 text-left">квадрат<br />в превью</span>
+        </button>
       </div>
       <template #footer>
         <div class="flex justify-end gap-2">
