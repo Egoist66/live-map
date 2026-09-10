@@ -111,7 +111,7 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
     </div>
   </Teleport>
   <Teleport to="body">
-    <Dialog :visible="viewer.confirmDelete.value" @update:visible="(v:boolean)=>viewer.confirmDelete.value=v" modal :closable="true" :draggable="false" :style="{ width: '360px', maxWidth: 'calc(100vw - 2rem)' }">
+    <Dialog :visible="viewer.confirmDelete.value" @update:visible="(v:boolean)=>viewer.confirmDelete.value=v" modal :closable="true" :draggable="false" :base-z-index="3000" :style="{ width: '360px', maxWidth: 'calc(100vw - 2rem)' }">
       <template #header><span class="font-bold">Удалить фото?</span></template>
       <p class="text-sm text-stone-600 dark:text-zinc-300">Удалить это фото без возможности восстановления?</p>
       <template #footer>
