@@ -59,9 +59,9 @@ function replyPreview(body: string): string {
       <div v-if="(pinned || []).length" class="shrink-0 border-b dark:border-zinc-800 bg-violet-50/80 dark:bg-violet-950/30 px-2 lg:px-4 py-1.5 min-w-0">
         <div class="flex items-center gap-1.5 text-[11px] font-bold text-violet-700 dark:text-violet-300 px-1 mb-1"><span>📌 Закрепы</span><span class="opacity-70">{{ (pinned || []).length }}/{{ pinLimitLabel || '∞' }}</span></div>
         <div class="flex gap-1.5 overflow-x-auto pb-0.5">
-          <div v-for="p in (pinned || [])" :key="p.id" class="shrink-0 max-w-[240px] flex items-center gap-1 bg-white dark:bg-zinc-800 border dark:border-zinc-700 rounded-full pl-3 pr-1 py-1 text-xs shadow-sm">
-            <button @click="emit('jumpToMessage', p.id)" class="truncate text-left hover:underline min-w-0 flex-1 dark:text-zinc-100">{{ pinPreview(p.body) }}</button>
-            <button @click="emit('unpin', p.id)" class="w-6 h-6 shrink-0 grid place-items-center rounded-full hover:bg-stone-100 dark:hover:bg-zinc-700 text-stone-400" aria-label="Открепить"><i class="pi pi-times text-[10px]"></i></button>
+          <div v-for="p in (pinned || [])" :key="p?.id" class="shrink-0 max-w-[240px] flex items-center gap-1 bg-white dark:bg-zinc-800 border dark:border-zinc-700 rounded-full pl-3 pr-1 py-1 text-xs shadow-sm">
+            <button @click="emit('jumpToMessage', p?.id)" class="truncate text-left hover:underline min-w-0 flex-1 dark:text-zinc-100">{{ pinPreview(p?.body ?? '') }}</button>
+            <button @click="emit('unpin', p?.id)" class="w-6 h-6 shrink-0 grid place-items-center rounded-full hover:bg-stone-100 dark:hover:bg-zinc-700 text-stone-400" aria-label="Открепить"><i class="pi pi-times text-[10px]"></i></button>
           </div>
         </div>
       </div>
@@ -71,8 +71,8 @@ function replyPreview(body: string): string {
         <div v-else-if="!history.hasMore && history.list.length" class="absolute top-2 left-1/2 -translate-x-1/2 z-10 text-[11px] text-stone-400 bg-white/80 dark:bg-zinc-800/80 rounded-full px-3 py-1">Начало переписки</div>
         <div v-if="!loading && !history.list.length" class="h-full grid place-items-center text-stone-400 text-sm text-center"><div><div class="text-3xl mb-2">✉️</div><div>Пока пусто — напишите первым</div></div></div>
         <div v-bind="history.wrapperProps">
-          <template v-for="item in history.list" :key="item.data.id">
-            <div :id="`msg-${item.data.id}`" :style="{ height: history.rowHeight(item.data.id) + 'px', overflow: 'hidden' }">
+          <template v-for="item in history.list" :key="item.data?.id ?? item.index">
+            <div v-if="item.data" :id="`msg-${item.data.id}`" :style="{ height: history.rowHeight(item.data.id) + 'px', overflow: 'hidden' }">
               <div :data-vm="item.data.id" class="pb-2.5">
                 <div v-if="editingId === item.data.id" class="flex justify-end min-w-0">
                   <div class="bg-white dark:bg-zinc-800 border dark:border-zinc-700 rounded-xl shadow-lg w-full max-w-[92vw] sm:max-w-[86vw] min-w-0 p-2">

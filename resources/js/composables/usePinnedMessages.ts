@@ -13,9 +13,9 @@ export function usePinnedMessages(messages: Ref<Message[]>) {
   let channel: any = null
 
   function syncFlags() {
-    const ids = new Set(pinned.value.map((m) => m.id))
+    const ids = new Set(pinned.value.map((m) => m?.id))
     messages.value.forEach((m: any) => {
-      m.is_pinned = ids.has(m.id)
+      if (m) m.is_pinned = ids.has(m.id)
     })
   }
 
@@ -39,14 +39,15 @@ export function usePinnedMessages(messages: Ref<Message[]>) {
   }
 
   function applyRemote(msg: Message) {
-    const i = messages.value.findIndex((m) => m.id === msg.id)
+    if (!msg?.id) return
+    const i = messages.value.findIndex((m) => m?.id === msg.id)
     if (i !== -1) messages.value[i] = { ...messages.value[i], ...msg }
-    const p = pinned.value.findIndex((m) => m.id === msg.id)
+    const p = pinned.value.findIndex((m) => m?.id === msg.id)
     if (msg.is_pinned) {
       if (p === -1) pinned.value = [...pinned.value, msg]
       else pinned.value[p] = msg
     } else if (p !== -1) {
-      pinned.value = pinned.value.filter((m) => m.id !== msg.id)
+      pinned.value = pinned.value.filter((m) => m?.id !== msg.id)
     }
     syncFlags()
   }
@@ -90,6 +91,7 @@ export function usePinnedMessages(messages: Ref<Message[]>) {
 
   async function toggle(msg: Message): Promise<boolean> {
     error.value = null
+    if (!msg?.id) return false
     try {
       const updated = msg.is_pinned
         ? await chatApi.unpinMessage(msg.id)
@@ -105,7 +107,7 @@ export function usePinnedMessages(messages: Ref<Message[]>) {
   }
 
   async function unpin(id: number): Promise<boolean> {
-    const msg = pinned.value.find((m) => m.id === id) ?? messages.value.find((m) => m.id === id)
+    const msg = pinned.value.find((m) => m?.id === id) ?? messages.value.find((m) => m?.id === id)
     if (!msg) return false
     return toggle(msg)
   }
@@ -120,7 +122,7 @@ export function usePinnedMessages(messages: Ref<Message[]>) {
     let guard = 0
     while (!el && guard < 5 && convId.value) {
       const first = messages.value[0] as any
-      if (!first) break
+      if (!first?.id) break
       let older: Message[] = []
       try {
         older = await chatApi.messages(convId.value, first.id)

@@ -16,8 +16,8 @@ const props = defineProps<{ conversations: any[]; uloveConversations?: any[]; fr
 const filteredUlove = computed(() => {
   const q = (props.filter || '').trim().toLowerCase()
   const list = props.uloveConversations || []
-  if (!q) return list
-  return list.filter((c: any) => (c.other?.name || '').toLowerCase().includes(q))
+  if (!q) return list.filter((c: any) => !!c)
+  return list.filter((c: any) => c && (c.other?.name || '').toLowerCase().includes(q))
 })
 const emit = defineEmits<{ (e: 'update:filter', v: string): void; (e: 'open', id: number): void; (e: 'startChat', u: any): void; (e: 'deleteChat', id: number): void; (e: 'block', id: number, name?: string): void; (e: 'unblock', id: number): void; (e: 'removeFriend', f: any): void; (e: 'accept', id: number): void; (e: 'decline', id: number): void; (e: 'sheet', p: any): void }>()
 

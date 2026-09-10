@@ -101,7 +101,7 @@ export function useChatHistory(source: Ref<Message[]>, loader: ChatHistoryLoader
       } catch { /* noop */ }
     })
     if (observed.size > 800) {
-      const alive = new Set(source.value.map((m) => Number(m.id)))
+      const alive = new Set(source.value.map((m) => Number(m?.id)))
       observed.forEach((id) => { if (!alive.has(id)) observed.delete(id) })
       heightById.forEach((_, id) => { if (!alive.has(id)) heightById.delete(id) })
     }
@@ -139,22 +139,22 @@ export function useChatHistory(source: Ref<Message[]>, loader: ChatHistoryLoader
     if (loadingOlder.value || !hasMore.value) return false
     const key = loader.getKey()
     if (!key) return false
-    const first = source.value.find((m) => Number(m.id) > 0)
+    const first = source.value.find((m) => Number(m?.id) > 0)
     if (!first) return false
     loadingOlder.value = true
     const el = containerEl()
     const prevH = el?.scrollHeight ?? 0
     const prevTop = el?.scrollTop ?? 0
     try {
-      const older = await loader.loadPage(Number(first.id))
+      const older = await loader.loadPage(Number(first?.id))
       if (loader.getKey() !== key) return false
       if (!older.length) {
         hasMore.value = false
         return false
       }
       if (older.length < pageSize) hasMore.value = false
-      const known = new Set(source.value.map((m) => Number(m.id)))
-      const fresh = older.filter((m) => !known.has(Number(m.id)))
+      const known = new Set(source.value.map((m) => Number(m?.id)))
+      const fresh = older.filter((m) => m?.id != null && !known.has(Number(m.id)))
       fresh.sort((a: any, b: any) => Number(a.id) - Number(b.id))
       if (fresh.length) {
         source.value = [...fresh, ...source.value] as Message[]
@@ -179,11 +179,11 @@ export function useChatHistory(source: Ref<Message[]>, loader: ChatHistoryLoader
     const target = Number(id)
     if (!target) return false
     let guard = 0
-    let idx = source.value.findIndex((m) => Number(m.id) === target)
+    let idx = source.value.findIndex((m) => Number(m?.id) === target)
     while (idx === -1 && hasMore.value && guard < 8) {
       const ok = await loadOlder()
       if (!ok) break
-      idx = source.value.findIndex((m) => Number(m.id) === target)
+      idx = source.value.findIndex((m) => Number(m?.id) === target)
       guard += 1
     }
     if (idx === -1) return false

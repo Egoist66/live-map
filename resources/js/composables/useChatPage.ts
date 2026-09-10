@@ -31,10 +31,10 @@ export function useChatPage(initialConversationId?: number) {
    * Чаты мэтчей ULove: собеседник с is_match.
    * @returns диалоги ULove
    */
-  const uloveConversations = computed(() => chat.conversations.value.filter((c: any) => !!(c.other as any)?.is_match))
+  const uloveConversations = computed(() => chat.conversations.value.filter((c: any) => !!(c?.other as any)?.is_match))
 
   /** Непрочитанные диалоги ULove (счётчик таба). */
-  const uloveUnread = computed(() => uloveConversations.value.filter((c: any) => Number(c.unread_count || 0) > 0).length)
+  const uloveUnread = computed(() => uloveConversations.value.filter((c: any) => Number(c?.unread_count || 0) > 0).length)
   const showChatMenu = ref(false)
   const sheet = ref<{ type: 'message' | 'chat' | 'friend' | 'request' | 'search', data: any } | null>(null)
   const showPrivacy = ref(false)
@@ -44,7 +44,7 @@ export function useChatPage(initialConversationId?: number) {
   const confirmVisible = computed({ get: () => !!confirm.value, set: (v) => { if (!v) confirm.value = null } })
   const toast = (() => { try { return useToast() } catch { return null as any } })()
   const pageProps = usePage().props as any
-  const isOwnMessage = (m: any) => Number(m.sender_id) === Number(pageProps.auth?.user?.id)
+  const isOwnMessage = (m: any) => Number(m?.sender_id) === Number(pageProps.auth?.user?.id)
   const { bind: bindSheet } = useLongPress((p: any) => { sheet.value = p }, 520)
   const reply = useMessageReply()
   const pins = usePinnedMessages(chat.messages as any)
@@ -247,7 +247,7 @@ export function useChatPage(initialConversationId?: number) {
     confirm.value = { type: 'deleteMessage', payload: id, title: 'Удалить сообщение?', msg: 'Сообщение будет удалено у всех участников.', icon: '🗑️', confirmLabel: 'Удалить', severity: 'danger' }
   }
   function askRemoveFriend(f: any) {
-    confirm.value = { type: 'removeFriend', payload: f, title: 'Удалить из друзей?', msg: `Удалить ${f.other.name} из друзей?`, icon: '👋', confirmLabel: 'Удалить', severity: 'danger' }
+    confirm.value = { type: 'removeFriend', payload: f, title: 'Удалить из друзей?', msg: `Удалить ${f?.other?.name ?? 'пользователя'} из друзей?`, icon: '👋', confirmLabel: 'Удалить', severity: 'danger' }
   }
   function askUnblock(userId: number) {
     confirm.value = { type: 'unblock', payload: userId, title: 'Разблокировать?', msg: 'Пользователь снова сможет писать вам.', icon: '🔓', confirmLabel: 'Разблокировать', severity: 'primary' }
@@ -258,10 +258,10 @@ export function useChatPage(initialConversationId?: number) {
     confirm.value = null
     sheet.value = null
     if (type === 'block') {
-      const conv = chat.conversations.value.find(c => c.other?.id === payload)
-      const friendEntry = friendsApi.friends.value.find(f => Number(f.other?.id) === Number(payload))
-      if (friendEntry) friendsApi.friends.value = friendsApi.friends.value.filter(f => f.id !== friendEntry.id)
-      if (conv) chat.conversations.value = chat.conversations.value.filter(c => c.id !== conv.id)
+      const conv = chat.conversations.value.find(c => c?.other?.id === payload)
+      const friendEntry = friendsApi.friends.value.find(f => Number(f?.other?.id) === Number(payload))
+      if (friendEntry) friendsApi.friends.value = friendsApi.friends.value.filter(f => f?.id !== friendEntry.id)
+      if (conv) chat.conversations.value = chat.conversations.value.filter(c => c?.id !== conv.id)
       if (conv && chat.selectedId.value === conv.id) { chat.selectedId.value = null; chat.activeConv.value = null; chat.messages.value = [] }
       try {
         await blocksApi.block(payload)

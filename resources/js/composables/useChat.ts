@@ -90,8 +90,8 @@ export function useChat() {
     return false
   }
 
-  const unreadTotal = computed(() => conversations.value.filter((c) => Number(c.unread_count || 0) > 0).length)
-  const unreadMessagesTotal = computed(() => conversations.value.reduce((s, c) => s + (Number(c.unread_count) || 0), 0))
+  const unreadTotal = computed(() => conversations.value.filter((c) => Number(c?.unread_count || 0) > 0).length)
+  const unreadMessagesTotal = computed(() => conversations.value.reduce((s, c) => s + (Number(c?.unread_count) || 0), 0))
   const history = useChatHistory(messages, {
     loadPage: (beforeId: number) => chatApi.messages(selectedId.value!, beforeId),
     getKey: () => selectedId.value,
@@ -127,12 +127,13 @@ export function useChat() {
     conversations.value = [...conversations.value].sort((a:any,b:any)=> new Date(b.last_message_at||b.updated_at||0).getTime() - new Date(a.last_message_at||a.updated_at||0).getTime())
   }
   function bumpConversation(msg: any) {
-    const idx = conversations.value.findIndex((c) => c.id === msg.conversation_id)
+    if (!msg || msg.conversation_id == null) return
+    const idx = conversations.value.findIndex((c) => c?.id === msg.conversation_id)
     if (idx === -1) { loadConversations(); return }
     const conv: any = conversations.value[idx]
     conv.last_message = msg
     conv.last_message_at = msg.created_at
-    conversations.value = [conv, ...conversations.value.filter((c) => c.id !== msg.conversation_id)]
+    conversations.value = [conv, ...conversations.value.filter((c) => c?.id !== msg.conversation_id)]
   }
   function syncConversationPreview(msg: any) {
     bumpConversation(msg)
@@ -160,7 +161,7 @@ export function useChat() {
         const d = await chatApi.getConversation(currentId)
         if (selectedId.value !== currentId) return
         activeConv.value = d
-        messages.value = mergeFetched(currentId, d.messages)
+        messages.value = mergeFetched(currentId, Array.isArray(d.messages) ? d.messages : [])
         await nextTick()
         if (history.stickToBottom.value) history.scrollToBottom()
         else history.measureRows()
@@ -177,10 +178,12 @@ export function useChat() {
    */
   function mergeFetched(convId: number, fetched: Message[]): Message[] {
     const byId = new Map<number, any>()
-    for (const m of fetched as any[]) {
+    for (const m of (Array.isArray(fetched) ? fetched : []) as any[]) {
+      if (m?.id == null) continue
       byId.set(m.id, m)
     }
     for (const m of messages.value as any[]) {
+      if (!m) continue
       const belongs = Number(m.conversation_id) === Number(convId)
       const isPending = m.id < 0 || (m as any).pending || (m as any).failed
       if (!belongs && !isPending) continue
@@ -195,14 +198,14 @@ export function useChat() {
 
   async function openConversation(id: number, force = false) {
     if (!force && selectedId.value === id && activeConv.value?.id === id && !loading.value) {
-      const conv = conversations.value.find((c) => c.id === id) as any
+      const conv = conversations.value.find((c) => c?.id === id) as any
       const hasUnread = Number(conv?.unread_count || 0) > 0
       const lastId = Number(conv?.last_message?.id || 0)
-      const hasLast = lastId > 0 && messages.value.some((m) => Number(m.id) === lastId)
+      const hasLast = lastId > 0 && messages.value.some((m) => Number(m?.id) === lastId)
       if (!hasUnread && (lastId === 0 || hasLast)) return
     }
     selectedId.value = id
-    const cached = conversations.value.find((c) => c.id === id) as any
+    const cached = conversations.value.find((c) => c?.id === id) as any
     if (cached?.other) {
       activeConv.value = { id, other: cached.other, participants: [] } as any
       if (cached.last_message) messages.value = [cached.last_message as any]
@@ -219,9 +222,10 @@ export function useChat() {
       const d = await chatApi.getConversation(id)
       if (selectedId.value !== id) return
       activeConv.value = d
-      messages.value = mergeFetched(id, d.messages)
-      const last = d.messages[d.messages.length - 1] as any
-      const conv = conversations.value.find((c) => c.id === id)
+      const detailMessages = Array.isArray(d.messages) ? d.messages : []
+      messages.value = mergeFetched(id, detailMessages)
+      const last = detailMessages[detailMessages.length - 1] as any
+      const conv = conversations.value.find((c) => c?.id === id)
       if (conv) {
         conv.unread_count = 0
         if (last) bumpConversation(last)
@@ -231,7 +235,7 @@ export function useChat() {
       try { await chatApi.markRead(id) } catch {}
       subscribeChat(id)
       await nextTick()
-      history.reset(d.messages.length >= INITIAL_PAGE)
+      history.reset(detailMessages.length >= INITIAL_PAGE)
       history.attach()
     } catch (e) {
       if (selectedId.value === id) { selectedId.value = null; activeConv.value = null; messages.value = []; loading.value = false }
@@ -283,11 +287,11 @@ export function useChat() {
       if (optimisticAttachment?.url) {
         try { URL.revokeObjectURL(optimisticAttachment.url) } catch {}
       }
-      const tempIdx = messages.value.findIndex((m) => m.id === tempId)
-      const existsIdx = messages.value.findIndex((m) => m.id === msg.id)
+      const tempIdx = messages.value.findIndex((m) => m?.id === tempId)
+      const existsIdx = messages.value.findIndex((m) => m?.id === msg.id)
       if (tempIdx !== -1 && existsIdx !== -1) {
         messages.value.splice(tempIdx, 1)
-        const real = messages.value.find((x)=> x.id===msg.id) as any
+        const real = messages.value.find((x)=> x?.id===msg.id) as any
         if (real) real.justSent = true
       } else if (tempIdx !== -1) {
         (messages.value[tempIdx] as any) = { ...(msg as any), justSent: true }
@@ -296,9 +300,9 @@ export function useChat() {
       }
       syncConversationPreview(msg)
       history.notifyAppended(true)
-      setTimeout(() => { const m = messages.value.find((x) => x.id === msg.id) as any; if (m) m.justSent = false }, 600)
+      setTimeout(() => { const m = messages.value.find((x) => x?.id === msg.id) as any; if (m) m.justSent = false }, 600)
     } catch (e: any) {
-      const idx = messages.value.findIndex((m) => m.id === tempId)
+      const idx = messages.value.findIndex((m) => m?.id === tempId)
       if (idx !== -1) (messages.value[idx] as any).failed = true
       const msg = e?.response?.data?.message || ''
       if (e?.response?.status === 403 && msg.includes('заблокировал')) {
@@ -309,7 +313,7 @@ export function useChat() {
   }
 
   function startEdit(msg: Message) {
-    if (msg.sender_id !== getUid()) return
+    if (msg?.sender_id !== getUid()) return
     editingId.value = msg.id
     editingBody.value = msg.body
   }
@@ -321,13 +325,13 @@ export function useChat() {
     if (editingId.value === null || !editingBody.value.trim()) return
     const id = editingId.value
     const body = editingBody.value.trim()
-    const idx = messages.value.findIndex((m) => m.id === id)
+    const idx = messages.value.findIndex((m) => m?.id === id)
     if (idx !== -1) (messages.value[idx] as any).pending = true
     try {
       const updated = await chatApi.editMessage(id, body)
-      const i = messages.value.findIndex((m) => m.id === id)
+      const i = messages.value.findIndex((m) => m?.id === id)
       if (i !== -1) messages.value[i] = updated
-      const conv = conversations.value.find((c) => c.id === updated.conversation_id)
+      const conv = conversations.value.find((c) => c?.id === updated.conversation_id)
       if (conv && (conv as any).last_message?.id === id) { (conv as any).last_message = updated; sortConversations() }
       cancelEdit()
     } catch (e) {
@@ -338,7 +342,7 @@ export function useChat() {
 
   async function deleteMessage(id: number) {
     const backup = [...messages.value]
-    messages.value = messages.value.filter((m) => m.id !== id)
+    messages.value = messages.value.filter((m) => m?.id !== id)
     try {
       await chatApi.deleteMessage(id)
       const conv = conversations.value.find((c) => (c as any).last_message?.id === id)
@@ -351,7 +355,7 @@ export function useChat() {
     const wasSelected = selectedId.value === id
     const backupActive = activeConv.value
     const backupMsgs = [...messages.value]
-    conversations.value = conversations.value.filter((c) => c.id !== id)
+    conversations.value = conversations.value.filter((c) => c?.id !== id)
     if (wasSelected) { selectedId.value = null; activeConv.value = null; messages.value = [] }
     try { await chatApi.deleteConversation(id) } catch (e) { conversations.value = backup; if (wasSelected) { activeConv.value = backupActive; messages.value = backupMsgs; selectedId.value = id }; throw e }
   }
@@ -362,11 +366,11 @@ export function useChat() {
 
   function handleIncoming(msg: Message) {
     if (!alive) return
-    if (!msg || !(msg as any).id) return
+    if (!msg || (msg as any)?.id == null) return
     const id = Number((msg as any).id)
-    const alreadyShown = messages.value.some((m) => Number(m.id) === id)
+    const alreadyShown = messages.value.some((m) => Number(m?.id) === id)
     if (alreadyShown) {
-      const pendingIdx = messages.value.findIndex((m: any) => m.pending && Number(m.conversation_id) === Number(msg.conversation_id))
+      const pendingIdx = messages.value.findIndex((m: any) => m?.pending && Number(m?.conversation_id) === Number(msg.conversation_id))
       if (pendingIdx !== -1) messages.value.splice(pendingIdx, 1)
       syncConversationPreview(msg)
       return
@@ -379,12 +383,12 @@ export function useChat() {
       const t = typingExpire.get(msg.sender_id); if (t) { clearTimeout(t); typingExpire.delete(msg.sender_id) }
       syncConversationPreview(msg)
       if (msg.sender_id !== getUid()) {
-        const conv0 = conversations.value.find(c=>c.id===msg.conversation_id)
+        const conv0 = conversations.value.find(c=>c?.id===msg.conversation_id)
         if (conv0) (conv0 as any).unread_count = 0
         chatApi.markDelivered(msg.conversation_id).catch(()=>{})
         chatApi.markRead(msg.conversation_id).catch(()=>{})
       } else {
-        const conv0 = conversations.value.find(c=>c.id===msg.conversation_id)
+        const conv0 = conversations.value.find(c=>c?.id===msg.conversation_id)
         if (conv0) (conv0 as any).unread_count = 0
       }
       history.notifyAppended(false)
@@ -395,7 +399,7 @@ export function useChat() {
       appendLiveMessage(msg)
       history.notifyAppended(false)
     }
-    const conv = conversations.value.find((c) => c.id === msg.conversation_id)
+    const conv = conversations.value.find((c) => c?.id === msg.conversation_id)
     if (conv) { conv.unread_count = (conv.unread_count || 0) + 1; bumpConversation(msg) }
     else loadConversations()
     if (msg.sender_id !== getUid()) {
@@ -408,45 +412,46 @@ export function useChat() {
    * @param msg сообщение из сокета
    */
   function appendLiveMessage(msg: Message): void {
-    const pendingIdx = messages.value.findIndex((m: any) => m.pending && Number(m.conversation_id) === Number(msg.conversation_id) && Number(m.sender_id) === Number(msg.sender_id))
+    if (!msg?.id) return
+    const pendingIdx = messages.value.findIndex((m: any) => m?.pending && Number(m?.conversation_id) === Number(msg.conversation_id) && Number(m?.sender_id) === Number(msg.sender_id))
     if (pendingIdx !== -1) {
-      const bodyIdx = messages.value.findIndex((m: any) => m.pending && (m as any).body === (msg as any).body && Number(m.sender_id) === Number(msg.sender_id))
+      const bodyIdx = messages.value.findIndex((m: any) => m?.pending && (m as any)?.body === (msg as any)?.body && Number(m?.sender_id) === Number(msg.sender_id))
       const target = bodyIdx !== -1 ? bodyIdx : pendingIdx
-      if (messages.value.some((m) => Number(m.id) === Number(msg.id))) {
+      if (messages.value.some((m) => Number(m?.id) === Number(msg.id))) {
         messages.value.splice(target, 1)
         return
       }
       ;(messages.value as any)[target] = msg
       return
     }
-    if (!messages.value.some((m) => Number(m.id) === Number(msg.id))) messages.value.push(msg)
+    if (!messages.value.some((m) => Number(m?.id) === Number(msg.id))) messages.value.push(msg)
   }
 
   function handleDelivered(e: any) {
-    const ids: number[] = e.message_ids || []
-    const at = e.delivered_at
+    const ids: number[] = e?.message_ids || []
+    const at = e?.delivered_at
     ids.forEach(id => {
-      const idx = messages.value.findIndex((m:any)=> m.id===id)
+      const idx = messages.value.findIndex((m:any)=> m?.id===id)
       if(idx!==-1){ (messages.value[idx] as any).delivered_at = at; (messages.value[idx] as any).status = 'delivered' }
-      conversations.value.forEach(c=>{ if((c.last_message as any)?.id===id){ (c.last_message as any).delivered_at = at; (c.last_message as any).status='delivered' } })
+      conversations.value.forEach(c=>{ if((c?.last_message as any)?.id===id){ (c.last_message as any).delivered_at = at; (c.last_message as any).status='delivered' } })
     })
-    if(ids.length===0 && e.conversation_id){
-      messages.value.forEach((m:any)=>{ if(m.conversation_id===e.conversation_id && m.sender_id===getUid() && !m.delivered_at && !m.read_at){ m.delivered_at = at; m.status='delivered' }})
+    if(ids.length===0 && e?.conversation_id){
+      messages.value.forEach((m:any)=>{ if(m?.conversation_id===e.conversation_id && m?.sender_id===getUid() && !m?.delivered_at && !m?.read_at){ m.delivered_at = at; m.status='delivered' }})
     }
   }
 
   function handleRead(e: any) {
-    const ids: number[] = e.message_ids || []
-    const at = e.read_at
+    const ids: number[] = e?.message_ids || []
+    const at = e?.read_at
     if(ids.length){
       ids.forEach(id=>{
-        const idx = messages.value.findIndex((m:any)=> m.id===id)
+        const idx = messages.value.findIndex((m:any)=> m?.id===id)
         if(idx!==-1){ (messages.value[idx] as any).read_at = at; (messages.value[idx] as any).delivered_at = (messages.value[idx] as any).delivered_at || at; (messages.value[idx] as any).status='read' }
-        conversations.value.forEach(c=>{ if((c.last_message as any)?.id===id){ (c.last_message as any).read_at = at; (c.last_message as any).delivered_at = (c.last_message as any).delivered_at || at; (c.last_message as any).status='read' } })
+        conversations.value.forEach(c=>{ if((c?.last_message as any)?.id===id){ (c.last_message as any).read_at = at; (c.last_message as any).delivered_at = (c.last_message as any).delivered_at || at; (c.last_message as any).status='read' } })
       })
     } else {
-      messages.value.forEach((m:any)=>{ if(m.conversation_id===e.conversation_id && m.sender_id===getUid() && !m.read_at){ m.read_at = at; m.delivered_at = m.delivered_at || at; m.status='read' }})
-      conversations.value.forEach(c=>{ if(c.id===e.conversation_id && c.last_message && (c.last_message as any).sender_id===getUid() && !(c.last_message as any).read_at){ (c.last_message as any).read_at = at; (c.last_message as any).delivered_at = (c.last_message as any).delivered_at || at; (c.last_message as any).status='read' } })
+      messages.value.forEach((m:any)=>{ if(m?.conversation_id===e?.conversation_id && m?.sender_id===getUid() && !m?.read_at){ m.read_at = at; m.delivered_at = m.delivered_at || at; m.status='read' }})
+      conversations.value.forEach(c=>{ if(c?.id===e?.conversation_id && c?.last_message && (c.last_message as any)?.sender_id===getUid() && !(c.last_message as any)?.read_at){ (c.last_message as any).read_at = at; (c.last_message as any).delivered_at = (c.last_message as any).delivered_at || at; (c.last_message as any).status='read' } })
     }
   }
 
@@ -498,17 +503,19 @@ export function useChat() {
   }
 
   function handleUpdated(msg: Message) {
-    const idx = messages.value.findIndex((m) => m.id === msg.id)
+    if (!msg?.id) return
+    const idx = messages.value.findIndex((m) => m?.id === msg.id)
     if (idx !== -1) messages.value[idx] = msg
-    const conv = conversations.value.find((c) => c.id === msg.conversation_id)
-    if (conv && (conv as any).last_message?.id === msg.id) { (conv as any).last_message = msg; sortConversations() }
+    const conv = conversations.value.find((c) => c?.id === msg.conversation_id)
+    if (conv && (conv as any)?.last_message?.id === msg.id) { (conv as any).last_message = msg; sortConversations() }
   }
 
   function handleDeleted(payload: any) {
+    if (!payload) return
     const mid = Number(payload.message_id ?? payload.id)
     if (!mid) return
-    messages.value = messages.value.filter((m) => m.id !== mid)
-    const conv = conversations.value.find((c) => (c as any).last_message?.id === mid)
+    messages.value = messages.value.filter((m) => m?.id !== mid)
+    const conv = conversations.value.find((c) => (c as any)?.last_message?.id === mid)
     if (conv) loadConversations()
   }
   function subscribeChat(convId: number) {
@@ -614,8 +621,8 @@ export function useChat() {
       const d = await chatApi.getConversation(id)
       if (!alive || selectedId.value !== id) return
       activeConv.value = d
-      messages.value = mergeFetched(id, d.messages)
-      const conv = conversations.value.find((c) => c.id === id)
+      messages.value = mergeFetched(id, Array.isArray(d.messages) ? d.messages : [])
+      const conv = conversations.value.find((c) => c?.id === id)
       if (conv && Number((conv as any).unread_count || 0) > 0) {
         ;(conv as any).unread_count = 0
         chatApi.markRead(id).catch(() => {})

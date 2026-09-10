@@ -24,22 +24,22 @@ export function useFriendships() {
     await load()
   }
   async function accept(id:number){
-    const idx = pendingIn.value.findIndex(r=> r.id===id)
+    const idx = pendingIn.value.findIndex(r=> r?.id===id)
     const backup = idx!==-1 ? pendingIn.value[idx] : null
     if (backup) {
-      pendingIn.value = pendingIn.value.filter(r=> r.id!==id)
+      pendingIn.value = pendingIn.value.filter(r=> r?.id!==id)
       friends.value = [...friends.value, { id: Date.now(), other: backup.requester }]
     }
     try { await chatApi.accept(id); await load() } catch(e){ if(backup) await load(); throw e }
   }
   async function decline(id:number){
     const backup = [...pendingIn.value]
-    pendingIn.value = pendingIn.value.filter(r=> r.id!==id)
+    pendingIn.value = pendingIn.value.filter(r=> r?.id!==id)
     try { await chatApi.decline(id); await load() } catch(e){ pendingIn.value = backup; throw e }
   }
   async function remove(id:number){
     const backup = [...friends.value]
-    friends.value = friends.value.filter(f=> f.id!==id)
+    friends.value = friends.value.filter(f=> f?.id!==id)
     try { await chatApi.removeFriend(id); await load() } catch(e){ friends.value = backup; throw e }
   }
   async function status(userId:number){ return chatApi.status(userId) }

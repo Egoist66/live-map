@@ -72,8 +72,8 @@ export const useBadgeStore = defineStore('badges', () => {
         updPromise,
         api.get('/api/security/impersonations').then((r) => Number(r.data?.unread ?? 0)).catch(() => 0),
       ])
-      unread.value = (convs as any[]).filter((c: any) => Number(c.unread_count || 0) > 0).length
-      unreadMessages.value = (convs as any[]).reduce((s: number, c: any) => s + (Number(c.unread_count) || 0), 0)
+      unread.value = (convs as any[]).filter((c: any) => Number(c?.unread_count || 0) > 0).length
+      unreadMessages.value = (convs as any[]).reduce((s: number, c: any) => s + (Number(c?.unread_count) || 0), 0)
       pending.value = (fr.pending_in?.length || 0)
       activity.value = Number(ac) || 0
       reports.value = Number(rep) || 0

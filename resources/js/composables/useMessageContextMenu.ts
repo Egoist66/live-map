@@ -67,7 +67,7 @@ export function useMessageContextMenu(opts: { isOwn: (m: any) => boolean; onEdit
     items.push(
       { label: 'Редактировать', icon: 'pi pi-pencil', command: () => opts.onEdit(m) },
       { separator: true },
-      { label: 'Удалить', icon: 'pi pi-trash', class: 'danger-item !text-red-600', command: () => opts.onDelete(m.id) },
+      { label: 'Удалить', icon: 'pi pi-trash', class: 'danger-item !text-red-600', command: () => opts.onDelete(m?.id) },
     )
     return items
   })

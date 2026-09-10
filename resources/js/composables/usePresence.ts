@@ -105,17 +105,19 @@ function connect() {
     started = true
     channel = echo.join('online')
       .here((users: any[]) => {
-        const ids = users.map((u: any) => Number(u.id ?? u))
+        const ids = (users || []).map((u: any) => Number(u?.id ?? u)).filter((n) => Number.isFinite(n))
         onlineIds.value = new Set(ids)
       })
       .joining((user: any) => {
-        const id = Number(user.id ?? user)
+        const id = Number(user?.id ?? user)
+        if (!Number.isFinite(id)) return
         const s = new Set(onlineIds.value)
         s.add(id)
         onlineIds.value = s
       })
       .leaving((user: any) => {
-        const id = Number(user.id ?? user)
+        const id = Number(user?.id ?? user)
+        if (!Number.isFinite(id)) return
         const s = new Set(onlineIds.value)
         s.delete(id)
         onlineIds.value = s
