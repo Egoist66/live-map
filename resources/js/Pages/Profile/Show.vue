@@ -56,8 +56,8 @@ onMounted(async () => { await gallery.load(); try { await gallery.consumePending
         <ProfileGalleryDialog :gallery="gallery" :is-own="isOwn" :plan="planOf(profileUser)" />
         <ProfilePhotoViewer :gallery="gallery" :comments="photoComments" :is-own="isOwn" :user-name="profileUser.name" :avatar-src="page.avatarSrc.value" />
         <Teleport to="body">
-          <div v-if="page.showAvatar.value" @click="page.showAvatar.value = false" class="fixed inset-0 z-[100] bg-black/80 grid place-items-center p-4 cursor-zoom-out overflow-auto">
-            <Avatar :image="page.avatarSrc.value" shape="square" class="!w-auto !h-auto max-w-full max-h-[85dvh] !rounded-3xl [&_img]:!rounded-3xl [&_img]:max-h-[85dvh] [&_img]:object-contain" />
+          <div v-if="page.showAvatar.value" @click="page.showAvatar.value = false" class="fixed inset-0 z-[100] bg-black/80 grid place-items-center p-3 sm:p-4 cursor-zoom-out overflow-auto">
+            <Avatar :image="page.avatarSrc.value" shape="square" class="m-auto !w-auto !h-auto max-w-full max-h-[90dvh] !rounded-3xl [&_img]:!rounded-3xl [&_img]:max-h-[90dvh] [&_img]:object-contain" />
           </div>
         </Teleport>
       </div>

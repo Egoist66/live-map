@@ -2,11 +2,12 @@ import { ref, computed } from 'vue'
 import { usePage, router } from '@inertiajs/vue3'
 import { useToast } from 'primevue/usetoast'
 import { avatarSrcFor } from '@/composables/useAvatar'
+import { useAvatarCropper } from '@/composables/useAvatarCropper'
 import { compressImageFile, MAX_PHOTO_INPUT_BYTES } from '@/utils/image'
 
 /**
- * Загрузка аватара: валидация до 10 МБ, сжатие до 800px, отправка.
- * @returns состояние файла и helpers
+ * Загрузка аватара: выбор → позиционирование в кропере → сжатие → отправка.
+ * @returns состояние файла, кропер и helpers
  */
 export function useAvatarUpload() {
   const page = usePage()
@@ -14,8 +15,10 @@ export function useAvatarUpload() {
   const avatarFile = ref<File | null>(null)
   const previewUrl = ref<string | null>(null)
   const uploading = ref(false)
+  const confirming = ref(false)
   const avatarOk = ref(false)
   const showPreview = ref(false)
+  const crop = useAvatarCropper()
   const toast = (() => { try { return useToast() } catch { return null as any } })()
 
   const avatarSrc = computed(() => {
@@ -24,16 +27,50 @@ export function useAvatarUpload() {
   })
 
   function onAvatar(e: Event) {
-    const f = (e.target as HTMLInputElement).files?.[0]
+    const input = e.target as HTMLInputElement
+    const f = input.files?.[0]
+    input.value = ''
     if (!f) return
     if (f.size > MAX_PHOTO_INPUT_BYTES) {
       toast?.add({ severity: 'error', summary: 'Фото больше 10 МБ', life: 2500 })
       return
     }
-    avatarFile.value = f
-    const r = new FileReader()
-    r.onload = () => (previewUrl.value = r.result as string)
-    r.readAsDataURL(f)
+    if (!f.type.startsWith('image/')) return
+    avatarFile.value = null
+    revokePreview()
+    crop.openWithFile(f)
+  }
+
+  /**
+   * Подтверждает кроп: режет квадрат и кладёт в превью.
+   */
+  async function confirmCrop() {
+    if (!crop.sourceUrl.value || confirming.value) return
+    confirming.value = true
+    try {
+      const cropped = await crop.exportCropped(640)
+      if (!cropped) {
+        toast?.add({ severity: 'error', summary: 'Не вышло обрезать фото', life: 2500 })
+        return
+      }
+      avatarFile.value = cropped
+      revokePreview()
+      previewUrl.value = URL.createObjectURL(cropped)
+      crop.close()
+    } finally {
+      confirming.value = false
+    }
+  }
+
+  function cancelCrop() {
+    crop.reset()
+  }
+
+  function revokePreview() {
+    if (previewUrl.value && previewUrl.value.startsWith('blob:')) {
+      URL.revokeObjectURL(previewUrl.value)
+    }
+    previewUrl.value = null
   }
 
   async function uploadAvatar() {
@@ -48,7 +85,8 @@ export function useAvatarUpload() {
         preserveScroll: true,
         onSuccess: () => {
           avatarFile.value = null
-          previewUrl.value = null
+          revokePreview()
+          crop.reset()
           avatarOk.value = true
           router.reload({ only: ['auth'] })
           toast?.add({ severity: 'success', summary: 'Аватар обновлён', life: 2000 })
@@ -65,5 +103,5 @@ export function useAvatarUpload() {
     }
   }
 
-  return { user, avatarFile, previewUrl, uploading, avatarOk, showPreview, avatarSrc, onAvatar, uploadAvatar }
+  return { user, avatarFile, previewUrl, uploading, confirming, avatarOk, showPreview, avatarSrc, crop, onAvatar, confirmCrop, cancelCrop, uploadAvatar }
 }
