@@ -66,6 +66,9 @@ class RealtimeController extends Controller
         ]);
 
         $since = empty($data['since']) ? null : Carbon::createFromTimestampMs($data['since']);
+        // БД хранит время посекундно, а тики идут каждые 3с: без нахлёста события,
+        // попавшие в ту же секунду, терялись бы навсегда. Клиент отсекает дубли.
+        $window = $since ? $since->copy()->subSeconds(10) : null;
         $openId = empty($data['conversation_id']) ? null : (int) $data['conversation_id'];
         $afterId = (int) ($data['after_id'] ?? 0);
 
@@ -75,8 +78,8 @@ class RealtimeController extends Controller
             $openId = null;
         }
 
-        $messages = $this->freshMessages($convIds, $since, $afterId);
-        $previews = $this->changedPreviews($user->id, $convIds, $since);
+        $messages = $this->freshMessages($convIds, $window, $afterId);
+        $previews = $this->changedPreviews($user->id, $convIds, $window);
 
         return response()->json([
             'mode' => RealtimeMode::get(),
@@ -84,15 +87,15 @@ class RealtimeController extends Controller
             'messages' => $messages,
             'typing' => $openId ? $this->typingUsers($openId, $user->id) : [],
             'previews' => $previews,
-            'friendships' => $this->freshFriendships($user->id, $since),
-            'matches' => $this->freshMatches($user->id, $since),
-            'swipe_likes' => $this->freshSwipeLikes($user->id, $since),
-            'activities' => $this->freshActivities($user->id, $since),
+            'friendships' => $this->freshFriendships($user->id, $window),
+            'matches' => $this->freshMatches($user->id, $window),
+            'swipe_likes' => $this->freshSwipeLikes($user->id, $window),
+            'activities' => $this->freshActivities($user->id, $window),
             'peer' => $openId ? $this->peerState($user, $openId) : null,
-            'map' => $this->mapChanges($user->id, $data, $since),
-            'receipts' => $this->freshReceipts($user->id, $since),
-            'reports' => $this->freshReports($user, $since),
-            'app_updates' => $this->freshAppUpdates($user->id, $since),
+            'map' => $this->mapChanges($user->id, $data, $window),
+            'receipts' => $this->freshReceipts($user->id, $window),
+            'reports' => $this->freshReports($user, $window),
+            'app_updates' => $this->freshAppUpdates($user->id, $window),
             'badges' => $this->badges($user),
         ]);
     }
@@ -286,6 +289,7 @@ class RealtimeController extends Controller
             $incognito = (bool) $s->is_incognito;
 
             return [
+                'id' => $s->id,
                 'liker' => $liker ? $this->brief($liker, $incognito) : null,
                 'conversation_id' => null,
             ];

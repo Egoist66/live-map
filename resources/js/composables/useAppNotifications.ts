@@ -203,7 +203,70 @@ function handlePinActivity(e: any) {
     })
     return
   }
-  const pinTitle = a.pin?.title || a.photo?.caption || 'ваш пин'
+  const pinTitle = a.pin?.title || a.photo?.caption || 'ваша запись'
+  const flowPostId = Number(a?.flow_post?.id || a?.flow_post_id || 0) || null
+  const flowLink = flowPostId ? `/flow/post/${flowPostId}` : '/flow'
+  const flowExcerpt = (a.excerpt || '').toString().slice(0, 90)
+  if (a.kind === 'sub_flow_post') {
+    push({
+      id: `pin-${a.id}-${Date.now()}`,
+      type: 'pin',
+      title: `${name} — пост в UFlow`,
+      body: flowExcerpt || 'Опубликован новый пост',
+      avatar: avatarSrcFor(actor),
+      link: flowLink,
+      createdAt: Date.now(),
+    })
+    return
+  }
+  if (a.kind === 'flow_like') {
+    push({
+      id: `pin-${a.id}-${Date.now()}`,
+      type: 'pin',
+      title: 'Лайк поста',
+      body: `${name} оценил ваш пост в UFlow`.slice(0, 90),
+      avatar: avatarSrcFor(actor),
+      link: flowLink,
+      createdAt: Date.now(),
+    })
+    return
+  }
+  if (a.kind === 'flow_comment') {
+    push({
+      id: `pin-${a.id}-${Date.now()}`,
+      type: 'pin',
+      title: 'Комментарий к посту',
+      body: flowExcerpt ? `${name}: ${flowExcerpt}` : `${name} прокомментировал ваш пост`.slice(0, 90),
+      avatar: avatarSrcFor(actor),
+      link: flowLink,
+      createdAt: Date.now(),
+    })
+    return
+  }
+  if (a.kind === 'flow_reply') {
+    push({
+      id: `pin-${a.id}-${Date.now()}`,
+      type: 'pin',
+      title: 'Ответ на комментарий',
+      body: flowExcerpt ? `${name} ответил вам: ${flowExcerpt}` : `${name} ответил на ваш комментарий`.slice(0, 90),
+      avatar: avatarSrcFor(actor),
+      link: flowLink,
+      createdAt: Date.now(),
+    })
+    return
+  }
+  if (a.kind === 'flow_mention') {
+    push({
+      id: `pin-${a.id}-${Date.now()}`,
+      type: 'pin',
+      title: 'Вас упомянули в UFlow',
+      body: flowExcerpt ? `${name} упомянул вас: ${flowExcerpt}` : `${name} упомянул вас в UFlow`.slice(0, 90),
+      avatar: avatarSrcFor(actor),
+      link: flowLink,
+      createdAt: Date.now(),
+    })
+    return
+  }
   const emoji: Record<string, string> = { like: '❤️', fire: '🔥', laugh: '😂', sad: '😢', angry: '😡', useful: '👍' }
   if (a.kind === 'swipe_like') {
     const anon = a.is_incognito

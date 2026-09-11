@@ -4,7 +4,6 @@ import { pinActivityApi, type PinActivityItem } from '@/services/pinActivity.api
 import { useBadgeStore } from '@/stores/badges'
 import { busOn } from '@/services/realtime-bus'
 import { ensureUserChannel, leaveUserChannel } from '@/composables/useUserChannel'
-import { useAppConfirm } from '@/composables/useAppConfirm'
 
 const activities = ref<PinActivityItem[]>([])
 const unread = ref(0)
@@ -94,20 +93,11 @@ async function markOne(a: PinActivityItem) {
 }
 
 /**
- * Удалить всю ленту активности навсегда (с подтверждением).
+ * Удалить всю ленту активности навсегда.
+ * Подтверждение — на вызывающей стороне (useAppConfirm в setup-скоупе).
  */
 async function clearAll(): Promise<void> {
   if (clearing.value) return
-  let ok = false
-  try {
-    ok = await useAppConfirm().confirmDelete(
-      'Все уведомления будут удалены из базы навсегда. Это нельзя отменить.',
-      'Очистить уведомления?',
-    )
-  } catch {
-    ok = false
-  }
-  if (!ok) return
   clearing.value = true
   const backup = activities.value
   const prevUnread = unread.value

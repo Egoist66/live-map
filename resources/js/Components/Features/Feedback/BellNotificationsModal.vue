@@ -18,12 +18,22 @@ import { useAdminReports } from "@/composables/useAdminReports";
 import { useAppUpdates } from "@/composables/useAppUpdates";
 import { useSecurityImpersonations } from "@/composables/useSecurityImpersonations";
 import { avatarSrcFor } from "@/composables/useAvatar";
+import { useAppConfirm } from "@/composables/useAppConfirm";
 
 const bell = useBellNotifications();
 const pinAct = usePinActivity();
 const admRep = useAdminReports();
 const updates = useAppUpdates();
 const proc = useSecurityImpersonations();
+const { confirmDelete } = useAppConfirm();
+async function askClearActivities() {
+  const ok = await confirmDelete(
+    "Все уведомления будут удалены из базы навсегда. Это нельзя отменить.",
+    "Очистить уведомления?"
+  ).catch(() => false);
+  if (!ok) return;
+  await pinAct.clearAll();
+}
 watch(
   () => bell.isOpen.value,
   (open) => {
@@ -75,7 +85,7 @@ function openNews(item: any) {
     :draggable="false"
     :closable="true"
     position="top"
-    :style="{ width: '400px', maxWidth: 'calc(100vw - 1.5rem)', marginTop: '4.5rem', maxHeight: '80dvh' }"
+    :style="{ width: '480px', maxWidth: 'calc(100vw - 1.5rem)', marginTop: '4.5rem', maxHeight: '80dvh' }"
     :pt="{
       root: {
         class: '!rounded-[24px] p-2 !border-stone-200 dark:!border-zinc-800 overflow-hidden',
@@ -190,7 +200,7 @@ function openNews(item: any) {
               />
               <Button
                 v-if="pinAct.activities.value.length"
-                @click="pinAct.clearAll()"
+                @click="askClearActivities()"
                 :loading="pinAct.clearing.value"
                 label="Очистить"
                 link

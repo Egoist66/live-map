@@ -20,6 +20,22 @@ let burstUntil = 0
 let lastMsgId = 0
 let lastTime = 0
 let modeListenerAttached = false
+const emittedKeys = new Set<string>()
+
+/**
+ * Дедуп тостов при нахлёсте окон тиков (событие может прийти дважды).
+ * @param key kind:id[:status]
+ * @returns true если уже показывали
+ */
+function alreadyEmitted(key: string): boolean {
+  if (emittedKeys.has(key)) return true
+  emittedKeys.add(key)
+  if (emittedKeys.size > 500) {
+    const first = emittedKeys.values().next().value as string | undefined
+    if (first !== undefined) emittedKeys.delete(first)
+  }
+  return false
+}
 /** Проверка смены режима, пока едем на сокетах */
 const SLOW_INTERVAL = 60000
 
@@ -142,15 +158,31 @@ export function useRealtimePoller() {
     const previews = Array.isArray(data?.previews) ? data.previews : []
     if (previews.length) busEmit('chat:previews', previews)
     const friendships = Array.isArray(data?.friendships) ? data.friendships : []
-    friendships.forEach((e: any) => busEmit('notify:friendship', e))
+    friendships.forEach((e: any) => {
+      const f = e?.friendship
+      if (f?.id == null || alreadyEmitted(`fr:${f.id}:${f.status}`)) return
+      busEmit('notify:friendship', e)
+    })
     const matches = Array.isArray(data?.matches) ? data.matches : []
-    matches.forEach((e: any) => busEmit('notify:match', e))
+    matches.forEach((e: any) => {
+      if (e?.match_id == null || alreadyEmitted(`match:${e.match_id}`)) return
+      busEmit('notify:match', e)
+    })
     const likes = Array.isArray(data?.swipe_likes) ? data.swipe_likes : []
-    likes.forEach((e: any) => busEmit('notify:swipe', e))
+    likes.forEach((e: any) => {
+      if (e?.id == null || alreadyEmitted(`sw:${e.id}`)) return
+      busEmit('notify:swipe', e)
+    })
     const activities = Array.isArray(data?.activities) ? data.activities : []
-    activities.forEach((e: any) => busEmit('notify:activity', e))
+    activities.forEach((e: any) => {
+      if (e?.activity?.id == null || alreadyEmitted(`act:${e.activity.id}`)) return
+      busEmit('notify:activity', e)
+    })
     const reports = Array.isArray(data?.reports) ? data.reports : []
-    reports.forEach((e: any) => busEmit('notify:report', e))
+    reports.forEach((e: any) => {
+      if (e?.report?.id == null || alreadyEmitted(`rep:${e.report.id}`)) return
+      busEmit('notify:report', e)
+    })
     const appUpdates = Array.isArray(data?.app_updates) ? data.app_updates : []
     if (appUpdates.length) busEmit('notify:update', { updates: appUpdates })
     const receipts = Array.isArray(data?.receipts) ? data.receipts : []
@@ -211,6 +243,7 @@ export function useRealtimePoller() {
     burstUntil = 0
     lastMsgId = 0
     lastTime = 0
+    emittedKeys.clear()
   }
 
   /**
