@@ -115,8 +115,53 @@ async function clearAll(): Promise<void> {
   }
 }
 
+/**
+ * Виды, которые относятся строго к пинам/фото (вкладка «Пины»).
+ * Остальное (ULove, UFlow, подписки на фото/уровень) — вкладка «События».
+ */
+export const PIN_ACTIVITY_KINDS = ['reaction', 'comment', 'mention', 'photo_comment', 'photo_like', 'sub_pin'] as const
+
+/**
+ * Проверка: активность относится к пинам, а не к общим событиям.
+ * Mention с фото считаем пином, обычный mention без пина — событием.
+ * @param a элемент ленты
+ * @returns true если показать во вкладке «Пины»
+ */
+export function isPinActivity(a: PinActivityItem): boolean {
+  if (a.kind === 'mention') {
+    const hasPhoto = Number((a as any).photo?.id || (a as any).photo_id || 0) > 0
+    const hasPin = Number((a as any).pin?.id || (a as any).pin_id || 0) > 0
+    return hasPhoto || hasPin
+  }
+  return (PIN_ACTIVITY_KINDS as readonly string[]).includes(a.kind)
+}
+
+/**
+ * Короткая группировка ленты для вкладок «Пины» / «События».
+ */
+export function splitActivities(list: PinActivityItem[]): { pins: PinActivityItem[]; events: PinActivityItem[] } {
+  const pins: PinActivityItem[] = []
+  const events: PinActivityItem[] = []
+  for (const a of list) {
+    if (isPinActivity(a)) pins.push(a)
+    else events.push(a)
+  }
+  return { pins, events }
+}
+
 function describe(a: PinActivityItem): { emoji: string; text: string } {
   const name = a.actor?.name || 'Кто-то'
+  if (a.kind === 'swipe_like') {
+    return (a as any).is_incognito
+      ? { emoji: '💘', text: 'Тайный поклонник лайкнул вас в ULove' }
+      : { emoji: '💘', text: `${name} лайкнул вас в ULove` }
+  }
+  if (a.kind === 'match') {
+    return { emoji: '💞', text: `${name} — у вас мэтч в ULove!` }
+  }
+  if (a.kind === 'photo_like') {
+    return { emoji: '❤️', text: `${name} лайкнул ваше фото` }
+  }
   if (a.kind === 'sub_flow_post') {
     const excerpt = (a as unknown as { excerpt?: string }).excerpt
     return { emoji: '📰', text: excerpt ? `${name} опубликовал в UFlow: ${excerpt}` : `${name} опубликовал пост в UFlow` }
@@ -163,6 +208,12 @@ function describe(a: PinActivityItem): { emoji: string; text: string } {
 
 function resolveTarget(a: PinActivityItem): { url: string; pending: any } {
   const actorId = Number((a as unknown as { actor?: { id?: number } }).actor?.id || 0) || null
+  if (a.kind === 'swipe_like') {
+    return { url: '/swipes?tab=admirers', pending: null }
+  }
+  if (a.kind === 'match') {
+    return { url: '/swipes', pending: null }
+  }
   const flowPostId = Number((a as unknown as { flow_post?: { id?: number }; flow_post_id?: number }).flow_post?.id || (a as unknown as { flow_post_id?: number }).flow_post_id || 0) || null
   if (flowPostId) {
     return { url: `/flow/post/${flowPostId}`, pending: { type: 'flow', postId: flowPostId } }
@@ -215,7 +266,21 @@ export function resetPinActivity(): void {
   unread.value = 0
 }
 
+/**
+ * Хук ленты уведомлений: пины + общие события (ULove, UFlow, подписки).
+ * Разделяет ленту на вкладки «Пины» / «События», считает непрочитанные отдельно.
+ * @returns состояние ленты и действия
+ */
 export function usePinActivity() {
   const hasData = computed(() => activities.value.length > 0)
-  return { activities, unread, loading, clearing, hasData, describe, refresh, markAllRead, markOne, clearAll, goPin, resolveTarget, init, subscribe }
+  const pinActivities = computed(() => splitActivities(activities.value).pins)
+  const eventActivities = computed(() => splitActivities(activities.value).events)
+  const pinUnread = computed(() => pinActivities.value.filter((a) => !a.read_at).length)
+  const eventUnread = computed(() => eventActivities.value.filter((a) => !a.read_at).length)
+  const loveActivities = computed(() => eventActivities.value.filter((a) => a.kind === 'swipe_like' || a.kind === 'match'))
+  const flowActivities = computed(() => eventActivities.value.filter((a) => a.kind === 'flow_like' || a.kind === 'flow_comment' || a.kind === 'flow_reply' || a.kind === 'flow_mention' || a.kind === 'sub_flow_post'))
+  const subActivities = computed(() => eventActivities.value.filter((a) => a.kind === 'sub_photo' || a.kind === 'sub_level'))
+  const loveUnread = computed(() => loveActivities.value.filter((a) => !a.read_at).length)
+  const flowUnread = computed(() => flowActivities.value.filter((a) => !a.read_at).length)
+  return { activities, unread, loading, clearing, hasData, pinActivities, eventActivities, pinUnread, eventUnread, loveActivities, flowActivities, subActivities, loveUnread, flowUnread, describe, refresh, markAllRead, markOne, clearAll, goPin, resolveTarget, init, subscribe }
 }
