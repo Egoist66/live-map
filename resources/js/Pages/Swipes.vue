@@ -3,14 +3,16 @@ import { Head, Link, usePage } from '@inertiajs/vue3'
 import { computed, onMounted, ref } from 'vue'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
-import DatingQuestionnaireDialog from '@/Components/Features/Dating/DatingQuestionnaireDialog.vue'
+import DatingQuestionnaireForm from '@/Components/Features/Dating/DatingQuestionnaireForm.vue'
 import SwipeDetailsDialog from '@/Components/Features/Dating/SwipeDetailsDialog.vue'
 import { useSwipes } from '@/composables/useSwipes'
 import { useSwipeCardPhotos } from '@/composables/useSwipeCardPhotos'
+import { useSwipesMobileMenu } from '@/composables/useSwipesMobileMenu'
 import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
 import { useSeo } from '@/composables/useSeo'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
+import Drawer from 'primevue/drawer'
 import Select from 'primevue/select'
 import Avatar from 'primevue/avatar'
 import Chip from 'primevue/chip'
@@ -30,9 +32,9 @@ const Layout = computed(() => (isAuth.value ? AuthenticatedLayout : GuestLayout)
 
 const s = useSwipes()
 const cardPhotos = useSwipeCardPhotos(() => s.current.value)
+const mobileMenu = useSwipesMobileMenu()
 const { selectPt } = useDropdownMenuStyle()
 
-const showQuestionnaire = ref(false)
 const detailsCard = ref<any | null>(null)
 
 function goalShort(card: any): string {
@@ -77,8 +79,6 @@ onMounted(async () => {
     const stopRealtime = s.subscribeRealtime()
     ;(window as any).__swipesRealtimeStop?.()
     ;(window as any).__swipesRealtimeStop = stopRealtime
-    const tab = new URLSearchParams(window.location.search).get('tab')
-    if (tab === 'admirers') s.activeTab.value = 'admirers'
     await s.loadFeed()
     await s.loadMatches()
     await s.loadFavorites()
@@ -94,9 +94,9 @@ onMounted(async () => {
   </Head>
   <component :is="Layout">
     <div class="min-h-[calc(100vh-64px)] bg-surface dark:bg-[#090E1A]">
-      <div class="max-w-[640px] mx-auto px-4 sm:px-6 py-5 sm:py-6 pb-[calc(2rem+env(safe-area-inset-bottom,0px))]">
+      <div class="max-w-[640px] mx-auto px-3 sm:px-6 py-3 sm:py-6 pb-2 sm:pb-[calc(2rem+env(safe-area-inset-bottom,0px))]">
 
-        <div class="text-center">
+        <div class="text-center hidden sm:block">
           <div class="flex items-center justify-center gap-2.5">
             <span class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br from-rose-500 via-fuchsia-500 to-orange-400 grid place-items-center text-white shadow-lg shadow-rose-500/30 dark:shadow-rose-500/20"><i class="pi pi-heart-fill text-lg sm:text-xl" /></span>
             <h1 class="text-[32px] sm:text-[42px] font-black tracking-[-0.04em] leading-none bg-gradient-to-r from-rose-500 via-fuchsia-500 to-orange-400 dark:from-rose-400 dark:via-fuchsia-400 dark:to-orange-300 bg-clip-text text-transparent">ULove</h1>
@@ -116,18 +116,26 @@ onMounted(async () => {
         </template>
 
         <template v-else>
-          <div class="mt-4 flex items-center gap-2">
+          <div class="flex items-center gap-2 py-1">
+            <Button icon="pi pi-arrow-left" rounded text aria-label="Выйти из свайпов" title="Выйти из свайпов" class="!w-10 !h-10 !p-0 shrink-0" @click="mobileMenu.goBack()" />
+            <div class="flex-1 flex items-center justify-center gap-1.5">
+              <span class="w-7 h-7 rounded-xl bg-gradient-to-br from-rose-500 via-fuchsia-500 to-orange-400 grid place-items-center text-white"><i class="pi pi-heart-fill text-sm" /></span>
+              <span class="text-[22px] font-black tracking-[-0.04em] leading-none bg-gradient-to-r from-rose-500 via-fuchsia-500 to-orange-400 bg-clip-text text-transparent">ULove</span>
+            </div>
+            <Button v-if="s.activeTab.value !== 'feed'" icon="pi pi-bars" rounded text aria-label="Меню свайпов" title="Лента · Активные · Избранное · Лайки" class="!w-10 !h-10 !p-0 shrink-0" @click="mobileMenu.open()" />
+            <span v-else class="w-10 shrink-0" />
+          </div>
+          <div class="mt-2 sm:mt-4 hidden sm:flex items-center gap-2">
             <Chip :label="s.quotaLabel.value" icon="pi pi-send" class="!rounded-full" />
             <Chip v-if="s.isQuotaEmpty.value" label="Лимит исчерпан — мэтчи пишут бесплатно" icon="pi pi-heart-fill" class="!rounded-full !bg-rose-100 !text-rose-700 dark:!bg-rose-950 dark:!text-rose-300 dark:!border dark:!border-rose-900" />
             <span class="flex-1" />
-            <Button icon="pi pi-user-edit" severity="secondary" rounded outlined size="small" aria-label="Моя анкета" title="Моя анкета — что ищешь, о себе, интересы" @click="showQuestionnaire = true" />
+            <Button icon="pi pi-user-edit" severity="secondary" rounded outlined size="small" aria-label="Моя анкета" title="Моя анкета — что ищешь, о себе, интересы" @click="s.goTab('questionnaire')" />
             <Button icon="pi pi-question-circle" severity="secondary" rounded outlined size="small" aria-label="Как работают свайпы" title="Как работают свайпы" @click="s.showHelp.value = true" />
             <Button icon="pi pi-sliders-h" severity="secondary" rounded outlined size="small" aria-label="Фильтры" @click="s.showFilters.value = true" />
-            <Button icon="pi pi-refresh" severity="secondary" rounded outlined size="small" aria-label="Обновить ленту" :loading="s.loading.value" @click="s.loadFeed()" />
             <Button v-if="s.canResetHistory.value" icon="pi pi-trash" severity="warn" rounded outlined size="small" aria-label="Сбросить просмотренные" :title="s.isAdmin.value ? 'Сбросить просмотренные (админ, безлимит)' : 'Сбросить просмотренные (1 раз)'" :loading="s.resetting.value" @click="s.resetHistory()" />
           </div>
 
-          <div v-if="s.matches.value.length" class="mt-4">
+          <div v-if="s.matches.value.length" class="mt-4 hidden sm:block">
             <div class="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500 mb-2">Мэтчи · чат открыт</div>
             <div class="flex gap-3 overflow-x-auto pb-2 pt-1 -mx-1 px-1">
               <button
@@ -149,11 +157,13 @@ onMounted(async () => {
             {{ s.error.value }}
           </div>
 
-          <div class="mt-3 grid grid-cols-4 gap-1 p-1 rounded-2xl bg-stone-100 dark:bg-zinc-800">
-            <button type="button" @click="s.activeTab.value = 'feed'" :class="['min-w-0 px-1 py-2 rounded-xl transition flex flex-col items-center justify-center leading-tight', s.activeTab.value === 'feed' ? 'bg-white dark:bg-zinc-900 text-ink-900 dark:text-white shadow-soft' : 'text-stone-500 dark:text-zinc-400']"><span class="text-[13px] font-bold truncate w-full text-center">Лента</span><span class="text-[10px] font-semibold opacity-70">листай</span></button>
-            <button type="button" @click="s.activeTab.value = 'active'; s.loadActive()" :class="['min-w-0 px-1 py-2 rounded-xl transition flex flex-col items-center justify-center leading-tight', s.activeTab.value === 'active' ? 'bg-white dark:bg-zinc-900 text-ink-900 dark:text-white shadow-soft' : 'text-stone-500 dark:text-zinc-400']"><span class="text-[13px] font-bold truncate w-full text-center">Активные</span><span class="text-[10px] font-semibold opacity-70">онлайн</span></button>
-            <button type="button" @click="s.activeTab.value = 'favorites'" :class="['min-w-0 px-1 py-2 rounded-xl transition flex flex-col items-center justify-center leading-tight', s.activeTab.value === 'favorites' ? 'bg-white dark:bg-zinc-900 text-ink-900 dark:text-white shadow-soft' : 'text-stone-500 dark:text-zinc-400']"><span class="text-[13px] font-bold truncate w-full text-center">Избранное</span><span class="text-[10px] font-semibold opacity-70">{{ s.favoritesCount.value }}/{{ s.favoritesLimit.value }}</span></button>
-            <button type="button" @click="s.activeTab.value = 'admirers'; s.loadAdmirers()" :class="['min-w-0 px-1 py-2 rounded-xl transition flex flex-col items-center justify-center leading-tight', s.activeTab.value === 'admirers' ? 'bg-white dark:bg-zinc-900 text-ink-900 dark:text-white shadow-soft' : 'text-stone-500 dark:text-zinc-400']"><span class="text-[13px] font-bold truncate w-full text-center">Лайки</span><span class="text-[10px] font-semibold opacity-70">мне · {{ s.admirersTotal.value }}</span></button>
+          <div class="mt-3 hidden sm:grid grid-cols-6 gap-1 p-1 rounded-2xl bg-stone-100 dark:bg-zinc-800">
+            <button type="button" @click="s.goTab('feed')" :class="['min-w-0 px-1 py-2 rounded-xl transition flex flex-col items-center justify-center leading-tight', s.activeTab.value === 'feed' ? 'bg-white dark:bg-zinc-900 text-ink-900 dark:text-white shadow-soft' : 'text-stone-500 dark:text-zinc-400']"><span class="text-[13px] font-bold truncate w-full text-center">Лента</span><span class="text-[10px] font-semibold opacity-70">листай</span></button>
+            <button type="button" @click="s.goTab('active')" :class="['min-w-0 px-1 py-2 rounded-xl transition flex flex-col items-center justify-center leading-tight', s.activeTab.value === 'active' ? 'bg-white dark:bg-zinc-900 text-ink-900 dark:text-white shadow-soft' : 'text-stone-500 dark:text-zinc-400']"><span class="text-[13px] font-bold truncate w-full text-center">Активные</span><span class="text-[10px] font-semibold opacity-70">онлайн</span></button>
+            <button type="button" @click="s.goTab('favorites')" :class="['min-w-0 px-1 py-2 rounded-xl transition flex flex-col items-center justify-center leading-tight', s.activeTab.value === 'favorites' ? 'bg-white dark:bg-zinc-900 text-ink-900 dark:text-white shadow-soft' : 'text-stone-500 dark:text-zinc-400']"><span class="text-[13px] font-bold truncate w-full text-center">Избранное</span><span class="text-[10px] font-semibold opacity-70">{{ s.favoritesCount.value }}/{{ s.favoritesLimit.value }}</span></button>
+            <button type="button" @click="s.goTab('admirers')" :class="['min-w-0 px-1 py-2 rounded-xl transition flex flex-col items-center justify-center leading-tight', s.activeTab.value === 'admirers' ? 'bg-white dark:bg-zinc-900 text-ink-900 dark:text-white shadow-soft' : 'text-stone-500 dark:text-zinc-400']"><span class="text-[13px] font-bold truncate w-full text-center">Лайки</span><span class="text-[10px] font-semibold opacity-70">мне · {{ s.admirersTotal.value }}</span></button>
+            <button type="button" @click="s.goTab('questionnaire')" :class="['min-w-0 px-1 py-2 rounded-xl transition flex flex-col items-center justify-center leading-tight', s.activeTab.value === 'questionnaire' ? 'bg-white dark:bg-zinc-900 text-ink-900 dark:text-white shadow-soft' : 'text-stone-500 dark:text-zinc-400']"><span class="text-[13px] font-bold truncate w-full text-center">Анкета</span><span class="text-[10px] font-semibold opacity-70">моя</span></button>
+            <button type="button" @click="s.goTab('premium')" :class="['min-w-0 px-1 py-2 rounded-xl transition flex flex-col items-center justify-center leading-tight', s.activeTab.value === 'premium' ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-soft' : 'text-amber-600 dark:text-amber-400']"><span class="text-[13px] font-bold truncate w-full text-center">PRO</span><span class="text-[10px] font-semibold opacity-70">плюшки</span></button>
           </div>
 
           <template v-if="s.activeTab.value === 'active'">
@@ -200,7 +210,7 @@ onMounted(async () => {
               <div class="mt-4 text-lg font-black text-stone-900 dark:text-white">Пока никого онлайн</div>
               <div class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Загляни в ленту — там все люди, а сюда возвращайся за живым общением.</div>
               <div class="mt-4 flex gap-2 justify-center">
-                <Button label="К ленте" rounded size="small" @click="s.activeTab.value = 'feed'" />
+                <Button label="К ленте" rounded size="small" @click="s.goTab('feed')" />
                 <Button label="Обновить" severity="secondary" rounded outlined size="small" @click="s.loadActive()" />
               </div>
             </div>
@@ -230,7 +240,7 @@ onMounted(async () => {
               <div class="w-14 h-14 mx-auto rounded-2xl bg-rose-500/10 text-rose-500 grid place-items-center"><i class="pi pi-star text-xl" /></div>
               <div class="mt-4 text-lg font-black text-stone-900 dark:text-white">Пока пусто</div>
               <div class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Лайкни кого-то в ленте — не потеряешь. Free: до {{ s.favoritesLimit.value }}.</div>
-              <div class="mt-4"><Button label="К ленте" rounded size="small" @click="s.activeTab.value = 'feed'" /></div>
+              <div class="mt-4"><Button label="К ленте" rounded size="small" @click="s.goTab('feed')" /></div>
             </div>
           </template>
 
@@ -262,42 +272,130 @@ onMounted(async () => {
               <div class="w-14 h-14 mx-auto rounded-2xl bg-rose-500/10 text-rose-500 grid place-items-center"><i class="pi pi-heart text-xl" /></div>
               <div class="mt-4 text-lg font-black text-stone-900 dark:text-white">Тебя пока не лайкнули</div>
               <div class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Заполни анкету и добавь фото — так заметнее. Каждый лайк прилетит в колокольчик.</div>
-              <div class="mt-4"><Button label="К ленте" rounded size="small" @click="s.activeTab.value = 'feed'" /></div>
+              <div class="mt-4"><Button label="К ленте" rounded size="small" @click="s.goTab('feed')" /></div>
+            </div>
+          </template>
+
+          <template v-else-if="s.activeTab.value === 'questionnaire'">
+            <div class="mt-4 rounded-[24px] border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 sm:p-6 shadow-soft">
+              <div class="mb-4 flex items-center gap-2.5">
+                <span class="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-orange-400 grid place-items-center text-white"><i class="pi pi-user-edit" /></span>
+                <div>
+                  <div class="text-base font-black text-stone-900 dark:text-white">Моя анкета</div>
+                  <div class="text-xs text-stone-500 dark:text-zinc-400">Так тебя видят в ленте ULove</div>
+                </div>
+              </div>
+              <DatingQuestionnaireForm />
+            </div>
+          </template>
+
+          <template v-else-if="s.activeTab.value === 'premium'">
+            <div class="mt-4 rounded-[24px] bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500 p-4 sm:p-6 text-white shadow-soft">
+              <div class="flex items-center gap-2.5">
+                <span class="w-10 h-10 rounded-2xl bg-white/20 grid place-items-center"><i class="pi pi-crown" /></span>
+                <div class="min-w-0 flex-1">
+                  <div class="text-base font-black">ULove PRO</div>
+                  <div class="text-xs text-white/80">Твой тариф: {{ s.planLabel.value }}</div>
+                </div>
+                <Chip :label="s.quotaLabel.value" icon="pi pi-send" class="!rounded-full !bg-white/20 !text-white !border-0 text-xs" />
+              </div>
+              <div class="mt-3 text-[13px] text-white/90">Все платные плюшки свайпов — в одном месте: включай, проверяй статус, оформляй тариф.</div>
+              <div class="mt-3">
+                <Link href="/settings"><Button label="Выбрать тариф" icon="pi pi-crown" rounded size="small" class="!bg-white !text-orange-600 !border-0" /></Link>
+              </div>
+            </div>
+
+            <div class="mt-2 space-y-2">
+              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
+                <span class="w-10 h-10 rounded-2xl bg-violet-500/15 text-violet-500 grid place-items-center shrink-0"><i class="pi pi-eye-slash" /></span>
+                <div class="min-w-0 flex-1">
+                  <div class="text-sm font-black text-stone-900 dark:text-white">Инкогнито-лайк <span class="text-violet-500">PRO</span></div>
+                  <div class="text-[11px] text-stone-500 dark:text-zinc-400">{{ s.canIncognito.value ? 'Тебя увидят как «Тайный поклонник»' : 'Включи — подскажем, как оформить PRO' }}</div>
+                </div>
+                <ToggleSwitch :model-value="s.incognitoLike.value" input-id="premium-incognito" @update:model-value="(v:boolean)=>s.setIncognito(v)" />
+              </div>
+
+              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
+                <span class="w-10 h-10 rounded-2xl bg-teal-500/15 text-teal-600 dark:text-teal-300 grid place-items-center shrink-0"><i class="pi pi-map-marker" /></span>
+                <div class="min-w-0 flex-1">
+                  <div class="text-sm font-black text-stone-900 dark:text-white">Люди рядом <span class="text-amber-500">PRO</span></div>
+                  <div class="text-[11px] text-stone-500 dark:text-zinc-400">Сейчас: {{ s.filters.value.radius_km ? `до ${s.filters.value.radius_km} км` : 'все люди' }} · Free — до 10 км</div>
+                </div>
+                <Button label="Фильтры" icon="pi pi-sliders-h" rounded outlined size="small" @click="s.showFilters.value = true" />
+              </div>
+
+              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
+                <span class="w-10 h-10 rounded-2xl bg-sky-500/15 text-sky-600 dark:text-sky-300 grid place-items-center shrink-0"><i class="pi pi-user" /></span>
+                <div class="min-w-0 flex-1">
+                  <div class="text-sm font-black text-stone-900 dark:text-white">Скрыть имя <span class="text-amber-500">PRO</span></div>
+                  <div class="text-[11px] text-stone-500 dark:text-zinc-400">{{ s.privacy.value.dating_hide_name ? 'Имя скрыто' : 'Все видят твоё имя' }}</div>
+                </div>
+                <ToggleSwitch :model-value="s.privacy.value.dating_hide_name" input-id="premium-hide-name" @update:model-value="(v:boolean)=>s.setPrivacyFlag('dating_hide_name', v)" />
+              </div>
+
+              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
+                <span class="w-10 h-10 rounded-2xl bg-sky-500/15 text-sky-600 dark:text-sky-300 grid place-items-center shrink-0"><i class="pi pi-calendar" /></span>
+                <div class="min-w-0 flex-1">
+                  <div class="text-sm font-black text-stone-900 dark:text-white">Скрыть возраст <span class="text-amber-500">PRO</span></div>
+                  <div class="text-[11px] text-stone-500 dark:text-zinc-400">{{ s.privacy.value.dating_hide_age ? 'Возраст скрыт' : 'Все видят твой возраст' }}</div>
+                </div>
+                <ToggleSwitch :model-value="s.privacy.value.dating_hide_age" input-id="premium-hide-age" @update:model-value="(v:boolean)=>s.setPrivacyFlag('dating_hide_age', v)" />
+              </div>
+
+              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
+                <span class="w-10 h-10 rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 grid place-items-center shrink-0"><i class="pi pi-lock" /></span>
+                <div class="min-w-0 flex-1">
+                  <div class="text-sm font-black text-stone-900 dark:text-white">Пишут только мэтчи <span class="text-emerald-500">Free</span></div>
+                  <div class="text-[11px] text-stone-500 dark:text-zinc-400">Закрыть личку от незнакомцев</div>
+                </div>
+                <ToggleSwitch :model-value="s.privacy.value.dating_match_only" input-id="premium-match-only" @update:model-value="(v:boolean)=>s.setPrivacyFlag('dating_match_only', v)" />
+              </div>
+
+              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
+                <span class="w-10 h-10 rounded-2xl bg-amber-500/15 text-amber-500 grid place-items-center shrink-0"><i class="pi pi-star" /></span>
+                <div class="min-w-0 flex-1">
+                  <div class="text-sm font-black text-stone-900 dark:text-white">Избранное {{ s.favoritesCount.value }}/{{ s.favoritesLimit.value }}</div>
+                  <div class="text-[11px] text-stone-500 dark:text-zinc-400">Free — до 2 · Pro — до 5 · Business — до 15</div>
+                </div>
+                <Button label="Открыть" icon="pi pi-star" rounded outlined size="small" @click="s.goTab('favorites')" />
+              </div>
+
+              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
+                <span class="w-10 h-10 rounded-2xl bg-rose-500/15 text-rose-500 grid place-items-center shrink-0"><i class="pi pi-send" /></span>
+                <div class="min-w-0 flex-1">
+                  <div class="text-sm font-black text-stone-900 dark:text-white">{{ s.quotaLabel.value || 'Сообщения' }}</div>
+                  <div class="text-[11px] text-stone-500 dark:text-zinc-400">Free — 3/мес · PRO — 10/мес · мэтчи пишут бесплатно</div>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
+                <span class="w-10 h-10 rounded-2xl bg-zinc-500/15 text-stone-500 dark:text-zinc-300 grid place-items-center shrink-0"><i class="pi pi-images" /></span>
+                <div class="min-w-0 flex-1">
+                  <div class="text-sm font-black text-stone-900 dark:text-white">До 5 фото в анкете <span class="text-amber-500">PRO</span></div>
+                  <div class="text-[11px] text-stone-500 dark:text-zinc-400">Free — до 3 фото · фото добавляют в профиле</div>
+                </div>
+                <Link href="/profile"><Button label="Фото" icon="pi pi-camera" rounded outlined size="small" /></Link>
+              </div>
+
+              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
+                <span class="w-10 h-10 rounded-2xl bg-orange-500/15 text-orange-500 grid place-items-center shrink-0"><i class="pi pi-refresh" /></span>
+                <div class="min-w-0 flex-1">
+                  <div class="text-sm font-black text-stone-900 dark:text-white">Начать заново</div>
+                  <div class="text-[11px] text-stone-500 dark:text-zinc-400">{{ s.canResetHistory.value ? 'Вернёт всех просвайпанных в ленту' : 'Одноразовый сброс уже использован' }}</div>
+                </div>
+                <Button v-if="s.canResetHistory.value" :label="s.isAdmin.value ? 'Сбросить' : 'Сбросить (1 раз)'" icon="pi pi-trash" severity="warn" rounded outlined size="small" :loading="s.resetting.value" @click="s.resetHistory()" />
+              </div>
             </div>
           </template>
 
           <template v-else>
-          <div class="mt-4 relative select-none">
-            <div v-if="s.loading.value" class="rounded-[24px] border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 h-[62dvh] min-h-[400px] max-h-[540px] grid place-items-center">
+          <div class="mt-3 sm:mt-4 relative select-none">
+            <div v-if="s.loading.value" class="rounded-[24px] border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 h-[calc(100dvh-160px)] min-h-[460px] sm:h-[62dvh] sm:min-h-[400px] sm:max-h-[540px] grid place-items-center">
               <i class="pi pi-spin pi-spinner text-2xl text-stone-400 dark:text-zinc-500" />
             </div>
 
             <div v-else-if="s.current.value">
-              <div v-if="cardPhotos.hasMultiple.value" class="mb-2 flex gap-1.5 px-1" role="tablist" aria-label="Фото профиля">
-                <button
-                  v-for="(p, i) in cardPhotos.photos.value"
-                  :key="`${s.current.value.id}-${i}`"
-                  type="button"
-                  role="tab"
-                  :aria-selected="i === cardPhotos.photoIndex.value"
-                  class="flex-1 py-2 cursor-pointer"
-                  :aria-label="`Фото ${i + 1} из ${cardPhotos.total.value}`"
-                  @click="cardPhotos.goTo(i)"
-                >
-                  <span class="block h-[5px] rounded-full overflow-hidden bg-stone-300/80 dark:bg-white/30">
-                    <span
-                      :key="`${s.current.value.id}-${cardPhotos.photoIndex.value}-${i}`"
-                      class="block h-full rounded-full bg-stone-900 dark:bg-white"
-                      :class="i === cardPhotos.photoIndex.value ? 'story-fill' : ''"
-                      :style="{
-                        width: i < cardPhotos.photoIndex.value ? '100%' : i === cardPhotos.photoIndex.value ? undefined : '0%',
-                        animationDuration: i === cardPhotos.photoIndex.value ? `${cardPhotos.intervalMs}ms` : undefined,
-                      }"
-                    />
-                  </span>
-                </button>
-              </div>
-              <div class="swipe-deck relative h-[62dvh] min-h-[400px] max-h-[540px]">
+              <div class="swipe-deck relative h-[calc(100dvh-160px)] min-h-[460px] sm:h-[62dvh] sm:min-h-[400px] sm:max-h-[540px]">
               <div
                 v-if="s.next.value"
                 class="absolute inset-0 z-0 rounded-[24px] overflow-hidden bg-zinc-900 dark:bg-zinc-950 shadow-soft ring-1 ring-black/10 dark:ring-white/10 pointer-events-none"
@@ -331,6 +429,36 @@ onMounted(async () => {
                 @pointercancel="s.dragEnd()"
                 @pointerleave="s.dragEnd()"
               >
+                <div
+                  v-if="cardPhotos.hasMultiple.value"
+                  class="absolute top-0 inset-x-0 z-20 px-2.5 pt-2.5 pb-6 bg-gradient-to-b from-black/55 to-transparent pointer-events-none"
+                >
+                  <div class="flex gap-1.5" role="tablist" aria-label="Фото профиля">
+                    <button
+                      v-for="(p, i) in cardPhotos.photos.value"
+                      :key="`${s.current.value.id}-${i}`"
+                      type="button"
+                      role="tab"
+                      :aria-selected="i === cardPhotos.photoIndex.value"
+                      class="flex-1 py-1 cursor-pointer pointer-events-auto"
+                      :aria-label="`Фото ${i + 1} из ${cardPhotos.total.value}`"
+                      @pointerdown.stop
+                      @click="cardPhotos.goTo(i)"
+                    >
+                      <span class="block h-[4px] rounded-full overflow-hidden bg-white/35">
+                        <span
+                          :key="`${s.current.value.id}-${cardPhotos.photoIndex.value}-${i}`"
+                          class="block h-full rounded-full bg-white"
+                          :class="i === cardPhotos.photoIndex.value ? 'story-fill' : ''"
+                          :style="{
+                            width: i < cardPhotos.photoIndex.value ? '100%' : i === cardPhotos.photoIndex.value ? undefined : '0%',
+                            animationDuration: i === cardPhotos.photoIndex.value ? `${cardPhotos.intervalMs}ms` : undefined,
+                          }"
+                        />
+                      </span>
+                    </button>
+                  </div>
+                </div>
                 <img
                   v-if="cardPhotos.currentPhoto.value"
                   :src="cardPhotos.currentPhoto.value"
@@ -351,27 +479,27 @@ onMounted(async () => {
                 <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent pointer-events-none" />
 
                 <div
-                  class="absolute top-5 left-5 rotate-[-12deg] border-4 border-emerald-400 text-emerald-300 font-black text-2xl px-3 py-1 rounded-xl bg-black/20"
+                  class="absolute top-12 left-5 rotate-[-12deg] border-4 border-emerald-400 text-emerald-300 font-black text-2xl px-3 py-1 rounded-xl bg-black/20"
                   :style="{ opacity: s.likeStrength.value, transform: `scale(${0.8 + s.likeStrength.value * 0.3})` }"
                 >ЛАЙК</div>
                 <div
-                  class="absolute top-5 right-5 rotate-[12deg] border-4 border-rose-500 text-rose-400 font-black text-2xl px-3 py-1 rounded-xl bg-black/20"
+                  class="absolute top-12 right-5 rotate-[12deg] border-4 border-rose-500 text-rose-400 font-black text-2xl px-3 py-1 rounded-xl bg-black/20"
                   :style="{ opacity: s.passStrength.value, transform: `scale(${0.8 + s.passStrength.value * 0.3})` }"
                 >ПАС</div>
 
-                <div v-if="s.current.value.liked_me" class="absolute top-4 right-4 pointer-events-none">
+                <div v-if="s.current.value.liked_me" class="absolute top-24 right-4 pointer-events-none">
                   <Chip label="Лайкнул тебя" icon="pi pi-heart-fill" class="!rounded-full !bg-rose-500 !text-white !border-0" />
                 </div>
                 <button
                   type="button"
                   aria-label="Подробнее об анкете"
                   title="Подробнее — интересы, о себе"
-                  class="absolute top-4 left-4 w-10 h-10 rounded-full bg-black/45 backdrop-blur grid place-items-center text-white text-lg active:scale-95 transition pointer-events-auto"
+                  class="absolute top-11 left-4 w-10 h-10 rounded-full bg-black/45 backdrop-blur grid place-items-center text-white text-lg active:scale-95 transition pointer-events-auto"
                   @pointerdown.stop
                   @click="detailsCard = s.current.value"
                 >ⓘ</button>
 
-                <div class="absolute bottom-0 inset-x-0 p-4 sm:p-5 text-white pointer-events-none">
+                <div class="absolute bottom-0 inset-x-0 p-4 pr-[124px] sm:p-5 text-white pointer-events-none">
                   <div class="flex items-baseline gap-2">
                     <span class="text-[24px] sm:text-[26px] font-black leading-none">{{ s.current.value.name }}</span>
                     <span class="text-lg sm:text-xl font-bold opacity-90">{{ s.ageLabel(s.current.value) }}</span>
@@ -385,6 +513,10 @@ onMounted(async () => {
                     <Chip v-for="t in s.current.value.interests" :key="t" :label="`#${t}`" class="!rounded-full !bg-white/10 !text-white/90 !border !border-white/20 text-xs" />
                   </div>
                   <p v-if="s.current.value.bio" class="mt-2 text-sm text-white/85 line-clamp-2">{{ s.current.value.bio }}</p>
+                </div>
+                <div class="absolute bottom-4 right-4 z-30 flex items-center gap-2 sm:hidden">
+                  <Button icon="pi pi-send" severity="info" rounded raised aria-label="Написать" title="Написать" class="!w-12 !h-12 !p-0 !text-lg" :loading="s.creatingChat.value" @pointerdown.stop @click="s.writeWithoutMatch(s.current.value.id)" />
+                  <Button icon="pi pi-heart-fill" rounded raised aria-label="Лайк" title="Лайк" class="!w-14 !h-14 !p-0 !text-2xl !text-white !bg-gradient-to-br !from-rose-500 !to-orange-400 !border-0" :loading="s.acting.value" @pointerdown.stop @click="s.swipe('like')" />
                 </div>
               </div>
 
@@ -420,6 +552,15 @@ onMounted(async () => {
                   </div>
                 </div>
               </div>
+              <Button
+                icon="pi pi-bars"
+                rounded
+                aria-label="Меню свайпов"
+                title="Лента · Активные · Избранное · Лайки"
+                class="sm:hidden !absolute !top-11 !right-4 !z-30 !w-10 !h-10 !p-0 !rounded-full !bg-black/45 !border-0 !text-white backdrop-blur active:!scale-95"
+                @pointerdown.stop
+                @click="mobileMenu.open()"
+              />
             </div>
             </div>
 
@@ -429,7 +570,7 @@ onMounted(async () => {
                 <div class="mt-4 text-lg font-black text-stone-900 dark:text-white">Ты просвайпал(а) всех в ULove 🎉</div>
                 <div class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Лайкнутые сохранены в «Избранном». Новые люди появляются каждый день — загляни позже.</div>
                 <div class="mt-4 flex gap-2 justify-center flex-wrap">
-                  <Button label="Моё избранное" rounded size="small" class="!bg-gradient-to-br !from-rose-500 !to-orange-400 !border-0 !text-white" @click="s.activeTab.value = 'favorites'" />
+                  <Button label="Моё избранное" rounded size="small" class="!bg-gradient-to-br !from-rose-500 !to-orange-400 !border-0 !text-white" @click="s.goTab('favorites')" />
                   <Button label="Обновить" severity="secondary" rounded outlined size="small" @click="s.loadFeed()" />
                   <Button v-if="s.canResetHistory.value" :label="s.isAdmin.value ? 'Сбросить просмотренные' : 'Начать заново (1 раз)'" icon="pi pi-trash" severity="warn" rounded outlined size="small" :loading="s.resetting.value" @click="s.resetHistory()" />
                 </div>
@@ -446,17 +587,12 @@ onMounted(async () => {
             </div>
           </div>
 
-          <div v-if="s.current.value" class="mt-3 flex items-center justify-center gap-2">
-            <ToggleSwitch v-model="s.incognitoLike.value" :disabled="!s.canIncognito.value" input-id="incognito-like" />
-            <label for="incognito-like" class="text-xs text-stone-500 dark:text-zinc-400">🕵️ Скрыть себя <span class="font-black text-violet-500">PRO</span><span v-if="!s.canIncognito.value"> · оформи PRO</span><span v-else-if="s.incognitoLike.value"> · тебя увидят как «Тайный поклонник»</span></label>
-          </div>
-          <div v-if="s.current.value" class="mt-2 flex items-center justify-center gap-2.5 sm:gap-4 pb-[env(safe-area-inset-bottom,0px)]">
-            <Button icon="pi pi-times" severity="danger" rounded raised aria-label="Пропустить" class="!w-14 !h-14 sm:!w-16 sm:!h-16 !text-xl sm:!text-2xl" :loading="s.acting.value" @click="s.swipe('pass')" />
+          <div v-if="s.current.value" class="mt-2 hidden sm:flex items-center justify-center gap-2.5 sm:gap-4 pb-[env(safe-area-inset-bottom,0px)]">
             <Button icon="pi pi-heart-fill" rounded raised aria-label="Лайк" class="!w-[72px] !h-[72px] sm:!w-20 sm:!h-20 !text-2xl sm:!text-3xl !text-white !bg-gradient-to-br !from-rose-500 !to-orange-400 !border-0" :loading="s.acting.value" @click="s.swipe('like')" />
             <Button icon="pi pi-send" severity="info" rounded raised aria-label="Написать" class="!w-14 !h-14 sm:!w-16 sm:!h-16 !text-xl sm:!text-2xl" :loading="s.creatingChat.value" @click="s.writeWithoutMatch(s.current.value.id)" />
           </div>
 
-          <Link href="/map" class="mt-5 flex items-center gap-3 rounded-[20px] border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 shadow-soft">
+          <Link href="/map" class="mt-5 hidden sm:flex items-center gap-3 rounded-[20px] border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 shadow-soft">
             <span class="w-11 h-11 rounded-2xl bg-teal-500/15 text-teal-600 dark:text-teal-300 grid place-items-center shrink-0"><i class="pi pi-map text-lg" /></span>
             <span class="min-w-0">
               <span class="block text-sm font-black text-stone-900 dark:text-white">Карта рядом усиливает знакомства</span>
@@ -465,6 +601,61 @@ onMounted(async () => {
             <i class="pi pi-chevron-right ml-auto text-stone-300 dark:text-zinc-600 shrink-0" />
           </Link>
           </template>
+
+          <Drawer
+            :visible="mobileMenu.isOpen.value"
+            position="right"
+            class="!w-[78vw] !max-w-[300px]"
+            :pt="{ header: { class: '!pb-2' }, content: { class: '!pt-1' } }"
+            @update:visible="(v:boolean) => { v ? mobileMenu.open() : mobileMenu.close() }"
+          >
+            <template #header>
+              <div class="flex items-center gap-2">
+                <span class="w-9 h-9 rounded-2xl bg-gradient-to-br from-rose-500 via-fuchsia-500 to-orange-400 grid place-items-center text-white shadow-lg shadow-rose-500/30"><i class="pi pi-heart-fill" /></span>
+                <span>
+                  <span class="block text-[20px] font-black leading-none tracking-[-0.03em] bg-gradient-to-r from-rose-500 via-fuchsia-500 to-orange-400 bg-clip-text text-transparent">ULove</span>
+                  <span class="mt-0.5 block text-[11px] leading-none text-stone-400 dark:text-zinc-500">дейтинг внутри UPin</span>
+                </span>
+              </div>
+            </template>
+            <div class="flex flex-col gap-1.5 pt-1">
+              <Button label="Лента" rounded :outlined="s.activeTab.value !== 'feed'" class="w-full !justify-start" :class="s.activeTab.value === 'feed' ? '!bg-gradient-to-br !from-rose-500 !to-orange-400 !border-0 !text-white !shadow-lg !shadow-rose-500/25' : ''" @click="mobileMenu.selectTab(s, 'feed')">
+                <template #icon>
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><rect x="7" y="4" width="10" height="16" rx="2.5" /><path stroke-linecap="round" stroke-linejoin="round" d="M2.5 12H5m-2.5 0L4 10.5M2.5 12L4 13.5M21.5 12H19m2.5 0L20 10.5m1.5 1.5L20 13.5" /></svg>
+                </template>
+              </Button>
+              <Button label="Активные · онлайн" icon="pi pi-users" rounded :outlined="s.activeTab.value !== 'active'" class="w-full !justify-start" :class="s.activeTab.value === 'active' ? '!bg-gradient-to-br !from-emerald-500 !to-teal-500 !border-0 !text-white !shadow-lg !shadow-emerald-500/25' : ''" @click="mobileMenu.selectTab(s, 'active')" />
+              <Button :label="`Избранное · ${s.favoritesCount.value}/${s.favoritesLimit.value}`" icon="pi pi-star" rounded :outlined="s.activeTab.value !== 'favorites'" class="w-full !justify-start" :class="s.activeTab.value === 'favorites' ? '!bg-gradient-to-br !from-amber-400 !to-orange-500 !border-0 !text-white !shadow-lg !shadow-amber-500/25' : ''" @click="mobileMenu.selectTab(s, 'favorites')" />
+              <Button :label="`Лайки мне · ${s.admirersTotal.value}`" icon="pi pi-heart" rounded :outlined="s.activeTab.value !== 'admirers'" class="w-full !justify-start" :class="s.activeTab.value === 'admirers' ? '!bg-gradient-to-br !from-fuchsia-500 !to-rose-500 !border-0 !text-white !shadow-lg !shadow-fuchsia-500/25' : ''" @click="mobileMenu.selectTab(s, 'admirers')" />
+              <Button label="Анкета · моя" icon="pi pi-user-edit" rounded :outlined="s.activeTab.value !== 'questionnaire'" class="w-full !justify-start" :class="s.activeTab.value === 'questionnaire' ? '!bg-gradient-to-br !from-violet-500 !to-fuchsia-500 !border-0 !text-white !shadow-lg !shadow-violet-500/25' : ''" @click="mobileMenu.selectTab(s, 'questionnaire')" />
+              <Button label="PRO · плюшки" icon="pi pi-crown" rounded :outlined="s.activeTab.value !== 'premium'" class="w-full !justify-start" :class="s.activeTab.value === 'premium' ? '!bg-gradient-to-br !from-amber-400 !to-orange-500 !border-0 !text-white !shadow-lg !shadow-amber-500/25' : ''" @click="mobileMenu.selectTab(s, 'premium')" />
+            </div>
+            <div v-if="s.matches.value.length" class="mt-4">
+              <div class="px-1 mb-1.5 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500"><i class="pi pi-heart-fill text-[10px] text-emerald-500" />Мэтчи · чат открыт</div>
+              <button
+                v-for="m in s.matches.value"
+                :key="m.match_id"
+                type="button"
+                class="w-full flex items-center gap-2.5 p-1.5 rounded-2xl hover:bg-stone-100 dark:hover:bg-zinc-800 active:scale-[0.99] transition text-left"
+                @click="mobileMenu.openMatch(s, m)"
+              >
+                <span class="relative shrink-0">
+                  <Avatar :image="m.user.avatar_url ?? undefined" :label="!m.user.avatar_url ? (m.user.name ?? '?').slice(0, 1) : undefined" shape="circle" class="!w-11 !h-11 ring-2 ring-emerald-400 dark:ring-emerald-500" />
+                  <span class="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-emerald-500 grid place-items-center ring-2 ring-white dark:ring-zinc-900"><i class="pi pi-heart-fill text-white text-[8px]" /></span>
+                </span>
+                <span class="min-w-0 flex-1 text-sm font-bold truncate text-stone-800 dark:text-zinc-100">{{ m.user.name }}</span>
+                <i class="pi pi-chevron-right text-stone-300 dark:text-zinc-600 text-xs shrink-0" />
+              </button>
+            </div>
+            <div class="mt-4">
+              <div class="px-1 mb-1.5 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500"><i class="pi pi-sliders-h text-[10px] text-fuchsia-500" />Панель</div>
+              <div class="mb-2 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-rose-500/10 to-orange-400/10 border border-rose-200/70 dark:border-rose-900/60 px-3 py-1 text-[11px] font-bold text-rose-600 dark:text-rose-300"><i class="pi pi-send text-[10px]" />{{ s.quotaLabel.value }}</div>
+              <div class="flex flex-col gap-1.5">
+                <Button label="Фильтры" icon="pi pi-sliders-h" rounded outlined size="small" class="w-full !justify-start" @click="mobileMenu.openFilters(s)" />
+                <Button label="Как работают свайпы" icon="pi pi-question-circle" rounded outlined size="small" class="w-full !justify-start" @click="mobileMenu.openHelp(s)" />
+              </div>
+            </div>
+          </Drawer>
         </template>
       </div>
 
@@ -544,7 +735,6 @@ onMounted(async () => {
         </div>
       </Dialog>
 
-      <DatingQuestionnaireDialog :open="showQuestionnaire" @update:open="(v:boolean)=>{ showQuestionnaire = v }" />
       <SwipeDetailsDialog :card="detailsCard" @close="detailsCard = null" />
 
       <Dialog :visible="s.showHelp.value" @update:visible="(v:boolean)=>{ s.showHelp.value = v }" modal header="Как работают свайпы" :style="{ width: '420px', maxWidth: '94vw', maxHeight: '92dvh' }" :pt="dialogPt">
@@ -557,6 +747,18 @@ onMounted(async () => {
           <div>Таб «Активные» — кто сейчас в ULove. Открывай анкету, пиши, если человек не закрыл сообщения.</div>
           <div>Кнопка ⓘ на карточке — подробная анкета: что ищет, интересы, о себе. Своя анкета — иконка-карандаш сверху.</div>
           <div class="rounded-2xl bg-stone-100 dark:bg-zinc-800 px-3 py-2 text-center font-bold">Строго 18+</div>
+        </div>
+      </Dialog>
+
+      <Dialog :visible="s.showPaywall.value" @update:visible="(v:boolean)=>{ if(!v) s.closePaywall() }" modal header="Нужен PRO" :style="{ width: '380px', maxWidth: '94vw', maxHeight: '92dvh' }" :pt="dialogPt">
+        <div class="text-center py-2">
+          <div class="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-white grid place-items-center"><i class="pi pi-crown text-xl" /></div>
+          <div class="mt-3 text-lg font-black text-stone-900 dark:text-white">«{{ s.paywallFeature.value }}» — PRO-плюшка</div>
+          <p class="mt-1 text-sm text-stone-500 dark:text-zinc-400">Твой тариф: {{ s.planLabel.value }}. Оформи подписку PRO, чтобы включить.</p>
+          <div class="mt-4 flex gap-2 justify-center flex-wrap">
+            <Button label="Понятно" severity="secondary" rounded outlined @click="s.closePaywall()" />
+            <Link href="/settings"><Button label="Выбрать тариф" icon="pi pi-crown" rounded class="!bg-gradient-to-br !from-amber-400 !to-orange-500 !border-0 !text-white" /></Link>
+          </div>
         </div>
       </Dialog>
 

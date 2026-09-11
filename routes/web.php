@@ -29,6 +29,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 Route::get('/faq', fn () => Inertia::render('Faq'))->name('faq');
 Route::get('/swipes', fn () => Inertia::render('Swipes'))->name('swipes');
+Route::get('/swipes/{tab}', fn (string $tab) => Inertia::render('Swipes', ['tab' => $tab]))
+    ->where('tab', 'tape|active|favorites|admirers|questionnaire|premium')
+    ->name('swipes.tab');
 Route::get('/contacts', fn () => Inertia::render('Reference', ['slug' => 'contacts']))->name('contacts');
 Route::get('/privacy', fn () => Inertia::render('Reference', ['slug' => 'privacy']))->name('privacy');
 Route::get('/offer', fn () => Inertia::render('Reference', ['slug' => 'offer']))->name('offer');

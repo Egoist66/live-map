@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
 import { chatApi } from '@/services/chat.api'
 import { datingApi } from '@/services/dating.api'
@@ -6,6 +6,36 @@ import type { ActiveCard, SwipeCard, SwipeFilters, SwipeQuota } from '@/services
 
 /** Лимит радиуса «рядом» для Free, км. PRO — безлимит. */
 export const FREE_SWIPES_RADIUS_KM = 10
+
+/** Табы свайпов с отдельными роутами. */
+const SWIPE_TABS = ['feed', 'active', 'favorites', 'admirers', 'questionnaire', 'premium'] as const
+
+/** Таб свайпов. */
+export type SwipeTab = (typeof SWIPE_TABS)[number]
+
+/**
+ * Привести сырое значение к табу свайпов.
+ *
+ * Алиас tape ведёт на ленту.
+ *
+ * @param raw значение из роута или query
+ * @returns таб свайпов, по умолчанию лента
+ */
+export function normalizeSwipeTab(raw: unknown): SwipeTab {
+  const tab = String(raw ?? '')
+  if (tab === 'tape') return 'feed'
+  return (SWIPE_TABS as readonly string[]).includes(tab) ? (tab as SwipeTab) : 'feed'
+}
+
+/**
+ * Путь таба свайпов для навигации с историей назад.
+ *
+ * @param tab таб свайпов
+ * @returns путь вида /swipes/active
+ */
+export function swipeTabPath(tab: SwipeTab): string {
+  return tab === 'feed' ? '/swipes/tape' : `/swipes/${tab}`
+}
 
 /**
  * Дейтинг-лента: свайпы, мэтчи, активные, фильтры, квоты, приватность.
@@ -27,7 +57,7 @@ export function useSwipes() {
   const admirersIncognito = ref(0)
   const admirersLoading = ref(false)
   const incognitoLike = ref(false)
-  const activeTab = ref<'feed' | 'active' | 'favorites' | 'admirers'>('feed')
+  const activeTab = ref<SwipeTab>('feed')
   const activeUsers = ref<ActiveCard[]>([])
   const activeLoading = ref(false)
   const quota = ref<SwipeQuota | null>(null)
@@ -44,6 +74,8 @@ export function useSwipes() {
   const birthDate = ref<Date | null>(null)
   const verifying = ref(false)
   const resetting = ref(false)
+  const showPaywall = ref(false)
+  const paywallFeature = ref('')
 
   const page = usePage()
   const authUser = computed(() => (page.props.auth as any)?.user)
@@ -64,6 +96,56 @@ export function useSwipes() {
     const plan = (authUser.value?.effective_plan || authUser.value?.plan || 'free') as string
     return plan === 'pro' || plan === 'business'
   })
+
+  /**
+   * Название тарифа для PRO-таба.
+   *
+   * @returns Free, PRO или Business
+   */
+  const planLabel = computed(() => {
+    const plan = String(authUser.value?.effective_plan || authUser.value?.plan || 'free')
+    if (plan === 'business') return 'Business'
+    if (plan === 'pro') return 'PRO'
+    return 'Free'
+  })
+
+  onMounted(() => {
+    const propsTab = (page.props as unknown as { tab?: unknown }).tab
+    const queryTab = new URLSearchParams(window.location.search).get('tab')
+    activeTab.value = normalizeSwipeTab(propsTab ?? (queryTab === 'admirers' ? queryTab : null))
+  })
+
+  watch(
+    () => (page.props as unknown as { tab?: unknown }).tab,
+    async (raw) => {
+      const tab = normalizeSwipeTab(raw)
+      if (tab === activeTab.value) return
+      activeTab.value = tab
+      await loadTabData(tab)
+    },
+  )
+
+  /**
+   * Догрузить данные таба после перехода по роуту.
+   *
+   * @param tab таб свайпов
+   */
+  async function loadTabData(tab: SwipeTab): Promise<void> {
+    if (tab === 'active') await loadActive()
+    else if (tab === 'favorites') await loadFavorites()
+    else if (tab === 'admirers') await loadAdmirers()
+    else if (tab === 'feed') await loadFeed()
+  }
+
+  /**
+   * Перейти на таб отдельным роутом, чтобы работала стрелка назад.
+   *
+   * @param tab таб свайпов
+   */
+  function goTab(tab: SwipeTab): void {
+    if (activeTab.value === tab) return
+    router.visit(swipeTabPath(tab))
+  }
 
   const filters = ref<SwipeFilters>({
     goal: null,
@@ -622,6 +704,57 @@ export function useSwipes() {
   }
 
   /**
+   * Попросить PRO для платной плюшки.
+   *
+   * @param feature название плюшки для окна
+   */
+  function askPremium(feature: string): void {
+    paywallFeature.value = feature
+    showPaywall.value = true
+  }
+
+  /**
+   * Закрыть окно PRO.
+   */
+  function closePaywall(): void {
+    showPaywall.value = false
+  }
+
+  /**
+   * Включить/выключить инкогнито-лайк с проверкой тарифа.
+   *
+   * Без PRO показывает окно с просьбой оформить подписку.
+   *
+   * @param next новое значение
+   */
+  function setIncognito(next: boolean): void {
+    if (next && !canIncognito.value) {
+      askPremium('Инкогнито-лайк')
+      return
+    }
+    incognitoLike.value = next
+  }
+
+  /**
+   * Переключить флаг приватности с проверкой тарифа.
+   *
+   * Скрытие имени/возраста — PRO, «только мэтчи» — бесплатно.
+   *
+   * @param key флаг приватности
+   * @param next новое значение
+   */
+  async function setPrivacyFlag(key: 'dating_hide_name' | 'dating_hide_age' | 'dating_match_only', next: boolean): Promise<void> {
+    const needsPro = key !== 'dating_match_only'
+    if (next && needsPro && !canIncognito.value) {
+      const featureName = key === 'dating_hide_name' ? 'Скрытие имени' : 'Скрытие возраста'
+      askPremium(featureName)
+      return
+    }
+    privacy.value[key] = next
+    await savePrivacy()
+  }
+
+  /**
    * Начало перетаскивания карточки.
    *
    * @param clientX координата X
@@ -772,7 +905,9 @@ export function useSwipes() {
     loadAdmirers,
     incognitoLike,
     canIncognito,
+    planLabel,
     activeTab,
+    goTab,
     activeUsers,
     activeLoading,
     loadActive,
@@ -827,6 +962,11 @@ export function useSwipes() {
     writeWithoutMatch,
     swipeAdmirer,
     savePrivacy,
+    showPaywall,
+    paywallFeature,
+    closePaywall,
+    setIncognito,
+    setPrivacyFlag,
     dragStart,
     dragMove,
     dragEnd,
