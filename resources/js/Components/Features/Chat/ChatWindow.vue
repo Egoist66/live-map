@@ -99,7 +99,7 @@ function replyPreview(body: string): string {
           </div>
           <button @click="emit('cancelReply')" aria-label="Отменить ответ" class="w-7 h-7 shrink-0 grid place-items-center rounded-full hover:bg-violet-100 dark:hover:bg-white/10 text-stone-500 active:scale-95 transition"><i class="pi pi-times text-xs"></i></button>
         </div>
-        <div v-if="emojiOpen" class="absolute bottom-full left-2 right-2 mb-2 bg-white dark:bg-zinc-800 border rounded-[20px] shadow-xl p-3 z-20 max-h-[42dvh] overflow-auto">
+        <div v-if="emojiOpen" class="absolute bottom-full left-2 right-2 mb-2 bg-white dark:bg-zinc-800 border rounded-[20px] shadow-xl p-3 z-30 max-h-[42dvh] overflow-auto">
           <div v-for="g in emojiGroups" :key="g.label" class="mb-2 last:mb-0">
             <div class="text-[10px] font-bold tracking-widest uppercase text-stone-400 mb-1.5">{{ g.label }}</div>
             <div class="flex flex-wrap gap-1"><button v-for="e in g.emojis" :key="e" @click="emit('pickEmoji', e)" class="w-10 h-10 grid place-items-center hover:bg-stone-100 rounded-xl text-[20px]">{{ e }}</button></div>
@@ -117,7 +117,7 @@ function replyPreview(body: string): string {
           <button @click="emit('removeFile')" aria-label="Убрать файл" class="w-7 h-7 shrink-0 grid place-items-center rounded-full hover:bg-violet-100 dark:hover:bg-white/10 text-stone-500 active:scale-95 transition"><i class="pi pi-times text-xs"></i></button>
         </div>
         <div v-if="attachError" class="text-[11px] text-red-600 dark:text-red-400 px-1 mb-1.5">{{ attachError }}</div>
-        <div data-chat-input class="relative flex gap-2 items-end min-w-0 w-full max-w-full z-10">
+        <div data-chat-input class="relative flex gap-2 items-end min-w-0 w-full max-w-full">
           <input type="file" data-chat-file class="hidden" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip" @change="(e:any)=>{ const f = e.target.files?.[0] ?? null; emit('pickFile', f); e.target.value = '' }" />
           <div class="relative shrink-0">
             <Button @click="composerMenu.toggle()" icon="pi pi-ellipsis-h" severity="secondary" outlined rounded class="!w-11 !h-11 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-label]:hidden [&_.p-button-icon]:!m-0" aria-label="Ещё" />
@@ -130,7 +130,7 @@ function replyPreview(body: string): string {
           <Textarea :model-value="input" @update:model-value="(v:any)=>emit('update:input', v)" @input="emit('typing')" @blur="emit('stopTyping')" @keydown="(e:any)=>handleEnterToSend(e, () => emit('send'))" @keydown.escape="emit('emojiClose')" @paste="(e:any)=>emit('pasteImage', e as ClipboardEvent)" placeholder="Сообщение..." rows="1" autoResize maxlength="2000" fluid class="!rounded-2xl flex-1 min-w-0 max-h-32" enterkeyhint="enter" />
           <Button @click="emit('send')" :loading="sending" :disabled="!input.trim() && !attachmentName" icon="pi pi-send" rounded class="!w-11 !h-11 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-label]:hidden [&_.p-button-icon]:!m-0" aria-label="Отправить" />
         </div>
-        <div v-if="composerMenu.open.value" @click="composerMenu.close()" class="fixed inset-0 z-10"></div>
+        <div v-if="composerMenu.open.value" @click="composerMenu.close()" class="fixed inset-0 z-20"></div>
       </div>
     </template>
   </div>
