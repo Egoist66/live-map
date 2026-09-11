@@ -114,6 +114,17 @@ export const chatApi = {
     const { data } = await api.post(`/api/conversations/${convId}/delivered`)
     return data
   },
+  /**
+   * Шлёт серверный typing-сигнал: бэкенд транслирует его через Reverb
+   * событием `.typing`. Дублирует whisper, который Reverb режет
+   * на приватных каналах.
+   * @param convId id диалога
+   * @param isTyping печатает или перестал
+   */
+  async typing(convId: number, isTyping: boolean) {
+    const { data } = await api.post(`/api/conversations/${convId}/typing`, { is_typing: isTyping })
+    return data
+  },
   async pinnedMessages(convId: number) {
     const { data } = await api.get<{ pinned: Message[]; pin_limit: number | null }>(`/api/conversations/${convId}/pinned`)
     return data

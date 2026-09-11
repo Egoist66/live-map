@@ -654,10 +654,23 @@ export function useChat() {
 
   function sendTypingWs(isTyping: boolean) {
     if (!selectedId.value) return
+    const convId = selectedId.value
     try {
       const ch = currentChannel()
-      if (!ch) return
-      ch.whisper('typing', { user_id: getUid(), is_typing: isTyping })
+      if (ch) ch.whisper('typing', { user_id: getUid(), is_typing: isTyping })
+    } catch {}
+    void postTypingHttp(convId, isTyping)
+  }
+
+  /**
+   * Дублирует typing через HTTP: сервер разошлёт `.typing` всем
+   * участникам, даже если Reverb отбросил whisper на приватном канале.
+   * @param convId id диалога
+   * @param isTyping печатает или перестал
+   */
+  async function postTypingHttp(convId: number, isTyping: boolean): Promise<void> {
+    try {
+      await chatApi.typing(convId, isTyping)
     } catch {}
   }
 

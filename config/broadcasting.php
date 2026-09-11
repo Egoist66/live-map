@@ -1,5 +1,12 @@
 <?php
 
+// Хост самого Reverb-сервера для server-side публикации событий.
+// 0.0.0.0 — это bind-адрес, POST на него падает: мапим на loopback.
+$reverbPublishHost = (string) env('REVERB_HOST', '127.0.0.1');
+if ($reverbPublishHost === '0.0.0.0') {
+    $reverbPublishHost = '127.0.0.1';
+}
+
 return [
 
     /*
@@ -36,7 +43,7 @@ return [
             'secret' => env('REVERB_APP_SECRET'),
             'app_id' => env('REVERB_APP_ID'),
             'options' => [
-                'host' => env('REVERB_HOST'),
+                'host' => $reverbPublishHost,
                 'port' => env('REVERB_PORT', 443),
                 'scheme' => env('REVERB_SCHEME', 'https'),
                 'useTLS' => env('REVERB_SCHEME', 'https') === 'https',

@@ -9,7 +9,8 @@ services:
     environment:
       DB_HOST: mysql
       REDIS_HOST: redis
-      REVERB_HOST: "0.0.0.0"
+      REVERB_HOST: "127.0.0.1"
+      REVERB_SERVER_HOST: "0.0.0.0"
       APP_URL: http://localhost:8000
     depends_on:
       mysql:
@@ -34,7 +35,8 @@ services:
     environment:
       DB_HOST: mysql
       REDIS_HOST: redis
-      REVERB_HOST: "0.0.0.0"
+      REVERB_HOST: "127.0.0.1"
+      REVERB_SERVER_HOST: "0.0.0.0"
       APP_URL: http://localhost:8001
     command: bash -c "composer install && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8000"
     depends_on:

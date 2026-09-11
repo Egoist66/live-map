@@ -3,24 +3,49 @@ import Pusher from 'pusher-js'
 // @ts-ignore
 window.Pusher = Pusher
 Pusher.logToConsole = false
-console.log('[reverb] env', import.meta.env)
-const scheme = import.meta.env.VITE_REVERB_SCHEME || 'https'
+
+/**
+ * Резолвит параметры подключения к Reverb с фолбэком на same-origin.
+ *
+ * VITE_* запекаются в билд, поэтому на проде (Laravel Cloud, один порт 443
+ * за прокси, nginx `location /app` -> Reverb) билд со значениями localhost
+ * уводил бы сокет в никуда. Если запечённый хост loopback, а страница открыта
+ * на реальном домене — подключаемся к хосту страницы.
+ *
+ * @returns параметры wsHost/wsPort/wssPort/forceTLS/transports
+ */
+function resolveReverbParams(): { host: string; port: number; tls: boolean } {
+  const bakedHost = (import.meta.env.VITE_REVERB_HOST as string | undefined) || ''
+  const bakedPort = Number(import.meta.env.VITE_REVERB_PORT || 0)
+  const bakedScheme = (import.meta.env.VITE_REVERB_SCHEME as string | undefined) || ''
+  const pageHost = window.location.hostname
+  const pageTls = window.location.protocol === 'https:'
+  const bakedIsLoopback = bakedHost === '' || bakedHost === 'localhost' || bakedHost === '127.0.0.1' || bakedHost === '0.0.0.0'
+  const pageIsLoopback = pageHost === 'localhost' || pageHost === '127.0.0.1' || pageHost === '[::1]'
+  const host = bakedIsLoopback && !pageIsLoopback ? pageHost : bakedHost || pageHost
+  const tls = bakedScheme !== '' ? bakedScheme === 'https' : pageTls
+  const fallbackPort = tls ? 443 : 80
+  const port = bakedIsLoopback && !pageIsLoopback ? fallbackPort : bakedPort || fallbackPort
+  return { host, port, tls }
+}
+
 const rawKey = import.meta.env.VITE_REVERB_APP_KEY
-console.log('[reverb] key', rawKey ? rawKey.slice(0,4)+'***' : 'MISSING', 'host', import.meta.env.VITE_REVERB_HOST, 'port', import.meta.env.VITE_REVERB_PORT, 'scheme', scheme)
 if (!rawKey) {
   console.warn('[reverb] VITE_REVERB_APP_KEY missing — Echo disabled, realtime off')
   // @ts-ignore
   window.Echo = null
 } else {
+  const params = resolveReverbParams()
+  console.info('[reverb] connect', params.host, params.port, params.tls ? 'wss' : 'ws')
   // @ts-ignore
   window.Echo = new Echo({
     broadcaster: 'reverb',
     key: rawKey,
-    wsHost: import.meta.env.VITE_REVERB_HOST || window.location.hostname,
-    wsPort: Number(import.meta.env.VITE_REVERB_PORT || 443),
-    wssPort: Number(import.meta.env.VITE_REVERB_PORT || 443),
-    forceTLS: scheme === 'https',
-    enabledTransports: scheme === 'https' ? ['ws', 'wss'] : ['ws', 'wss'],
+    wsHost: params.host,
+    wsPort: params.port,
+    wssPort: params.port,
+    forceTLS: params.tls,
+    enabledTransports: params.tls ? ['wss'] : ['ws'],
     disableStats: true,
     authEndpoint: '/broadcasting/auth',
     auth: { headers: { 'X-Requested-With': 'XMLHttpRequest' } },
@@ -51,3 +76,57 @@ export function resetEchoSession(channels: string[] = []): void {
     } catch {}
   } catch {}
 }
+
+/**
+ * Освобождает WS-слот, пока вкладка не используется.
+ *
+ * Каждый открытый таб держит одно Reverb-соединение, и при упоре в
+ * max_connections новые клиенты отбрасываются. Поэтому фоновая вкладка
+ * (>60с hidden) и выгрузка страницы (pagehide) рвут сокет досрочно —
+ * сервер иначе держал бы призрака до ping/activity таймаутов.
+ * Возврат во вкладку переподключает сокет, pusher-js сам
+ * переподписывает каналы, свежие данные дотягивает focus-resync в чате.
+ */
+function setupIdleDisconnect(): void {
+  const idleDelay = 60_000
+  let idleTimer: ReturnType<typeof setTimeout> | null = null
+
+  function echo(): any {
+    return (window as any).Echo
+  }
+  function connect(): void {
+    try {
+      if (echo()?.connect) echo().connect()
+    } catch {}
+  }
+  function disconnect(): void {
+    try {
+      if (echo()?.disconnect) echo().disconnect()
+    } catch {}
+  }
+  function clearIdleTimer(): void {
+    if (idleTimer) clearTimeout(idleTimer)
+    idleTimer = null
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      clearIdleTimer()
+      idleTimer = setTimeout(disconnect, idleDelay)
+    } else {
+      clearIdleTimer()
+      connect()
+    }
+  })
+  window.addEventListener('pagehide', () => {
+    clearIdleTimer()
+    disconnect()
+  })
+  window.addEventListener('pageshow', (event) => {
+    if ((event as PageTransitionEvent).persisted) connect()
+  })
+}
+
+try {
+  if (typeof document !== 'undefined' && (window as any).Echo) setupIdleDisconnect()
+} catch {}
