@@ -85,6 +85,13 @@ export const chatApi = {
     const { data } = await api.delete(`/api/conversations/${id}`)
     return data
   },
+  /**
+   * Убрать все диалоги из своего списка навсегда.
+   */
+  async clearConversations() {
+    const { data } = await api.delete('/api/conversations')
+    return data
+  },
 
   async messages(convId: number, before?: number) {
     const { data } = await api.get<Message[]>(`/api/conversations/${convId}/messages`, { params: { before } })

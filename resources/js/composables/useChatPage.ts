@@ -40,7 +40,7 @@ export function useChatPage(initialConversationId?: number) {
   const showPrivacy = ref(false)
   const privacy = ref({ message_privacy: 'everyone', allow_random_messages: true })
   const creatingChat = ref(false)
-  const confirm = ref<{ type: 'block' | 'deleteChat' | 'deleteMessage' | 'removeFriend' | 'unblock', payload: any, title: string, msg: string, icon: string, confirmLabel: string, severity: 'danger' | 'primary' } | null>(null)
+  const confirm = ref<{ type: 'block' | 'deleteChat' | 'clearAllChats' | 'deleteMessage' | 'removeFriend' | 'unblock', payload: any, title: string, msg: string, icon: string, confirmLabel: string, severity: 'danger' | 'primary' } | null>(null)
   const confirmVisible = computed({ get: () => !!confirm.value, set: (v) => { if (!v) confirm.value = null } })
   const toast = (() => { try { return useToast() } catch { return null as any } })()
   const pageProps = usePage().props as any
@@ -248,6 +248,10 @@ export function useChatPage(initialConversationId?: number) {
     if (!cid) return
     confirm.value = { type: 'deleteChat', payload: cid, title: 'Удалить чат?', msg: 'Чат и все сообщения будут удалены навсегда. Это нельзя отменить.', icon: '🗑️', confirmLabel: 'Удалить', severity: 'danger' }
   }
+  function askClearAllChats() {
+    if (!chat.conversations.value.length) return
+    confirm.value = { type: 'clearAllChats', payload: null, title: 'Удалить все чаты?', msg: 'Все диалоги пропадут из вашего списка навсегда, история будет очищена. У собеседников чаты останутся. Это нельзя отменить.', icon: '🗑️', confirmLabel: 'Удалить все', severity: 'danger' }
+  }
   function askDeleteMessage(id: number) {
     confirm.value = { type: 'deleteMessage', payload: id, title: 'Удалить сообщение?', msg: 'Сообщение будет удалено у всех участников.', icon: '🗑️', confirmLabel: 'Удалить', severity: 'danger' }
   }
@@ -275,6 +279,8 @@ export function useChatPage(initialConversationId?: number) {
       friendsApi.load(); chat.loadConversations()
     } else if (type === 'deleteChat') {
       await chat.deleteConversation(payload)
+    } else if (type === 'clearAllChats') {
+      await chat.clearAllConversations()
     } else if (type === 'deleteMessage') {
       await chat.deleteMessage(payload)
     } else if (type === 'removeFriend') {
@@ -381,7 +387,7 @@ export function useChatPage(initialConversationId?: number) {
     chat, friendsApi, blocksApi, emoji, badgeSync, pins, togglePin, uloveConversations, uloveUnread,
     input, inputRef, editInputRef, tab, showChatMenu, sheet, showPrivacy, privacy, creatingChat, confirm, confirmVisible, isOwnMessage, bindSheet,
     handleSend, handlePickFile, handlePasteImage, handleShareLocation, locating: chatLocation.locating, attachment, formatTime, onPickEmoji, onPickEmojiForEdit, handleStartEdit, startChatWith, addFriendFromSearch, savePrivacy, doConfirm, closeSheet, backToList,
-    askBlock, askDeleteChat, askDeleteMessage, askRemoveFriend, askUnblock,
+    askBlock, askDeleteChat, askClearAllChats, askDeleteMessage, askRemoveFriend, askUnblock,
     init, openTarget, reply, handleStartReply, jumpToMessage,
   }
 }

@@ -92,6 +92,7 @@ class RealtimeController extends Controller
             'map' => $this->mapChanges($user->id, $data, $since),
             'receipts' => $this->freshReceipts($user->id, $since),
             'reports' => $this->freshReports($user, $since),
+            'app_updates' => $this->freshAppUpdates($user->id, $since),
             'badges' => $this->badges($user),
         ]);
     }
@@ -484,6 +485,30 @@ class RealtimeController extends Controller
             ->get();
 
         return $rows->map(fn ($r) => ['report' => $r->toNotifyArray()])->all();
+    }
+
+    /**
+     * Новые опубликованные новости, ещё не прочитанные пользователем.
+     *
+     * @param int $userId пользователь
+     * @param Carbon|null $since момент прошлого тика
+     */
+    private function freshAppUpdates(int $userId, ?Carbon $since): array
+    {
+        if (! $since) {
+            return [];
+        }
+
+        $readIds = AppUpdateRead::where('user_id', $userId)->pluck('app_update_id');
+
+        return AppUpdate::published()
+            ->whereNotIn('id', $readIds)
+            ->where('created_at', '>', $since)
+            ->orderBy('id')
+            ->limit(5)
+            ->get()
+            ->map(fn ($u) => $u->only(['id', 'title', 'body', 'version', 'published_at']))
+            ->all();
     }
 
     /**

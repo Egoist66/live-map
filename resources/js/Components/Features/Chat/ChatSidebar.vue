@@ -11,7 +11,7 @@ import { useChatLayout } from '@/composables/useChatLayout'
 const { sidebarCardClass } = useChatLayout()
 
 defineProps<{ tab: string; unreadTotal: number; uloveUnread?: number; pendingCount: number; blockedCount: number; refreshing: boolean; conversations: any[]; uloveConversations?: any[]; friends: any[]; pendingIn: any[]; blocked: any[]; filter: string; selectedId: number | null; privacy: any; showPrivacy: boolean; isOnline: (id?: number, lastSeenAt?: string | null) => boolean; formatTime: (s: string) => string }>()
-const emit = defineEmits<{ (e: 'update:tab', v: any): void; (e: 'update:filter', v: string): void; (e: 'update:showPrivacy', v: boolean): void; (e: 'refresh'): void; (e: 'people'): void; (e: 'open', id: number): void; (e: 'startChat', u: any): void; (e: 'deleteChat', id: number): void; (e: 'block', id: number, name?: string): void; (e: 'unblock', id: number): void; (e: 'removeFriend', f: any): void; (e: 'accept', id: number): void; (e: 'decline', id: number): void; (e: 'savePrivacy'): void }>()
+const emit = defineEmits<{ (e: 'update:tab', v: any): void; (e: 'update:filter', v: string): void; (e: 'update:showPrivacy', v: boolean): void; (e: 'refresh'): void; (e: 'people'): void; (e: 'open', id: number): void; (e: 'startChat', u: any): void; (e: 'deleteChat', id: number): void; (e: 'clearAllChats'): void; (e: 'block', id: number, name?: string): void; (e: 'unblock', id: number): void; (e: 'removeFriend', f: any): void; (e: 'accept', id: number): void; (e: 'decline', id: number): void; (e: 'savePrivacy'): void }>()
 </script>
 <template>
   <div :class="[selectedId ? 'hidden lg:flex' : 'flex', sidebarCardClass]">
@@ -20,6 +20,7 @@ const emit = defineEmits<{ (e: 'update:tab', v: any): void; (e: 'update:filter',
         <h2 class="text-[15px] font-bold dark:text-white tracking-tight">UConnect</h2>
         <Button @click="emit('people')" icon="pi pi-users" rounded severity="secondary" outlined class="!w-8 !h-8 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" aria-label="Поиск людей" />
         <Button @click="emit('refresh')" :loading="refreshing" icon="pi pi-refresh" rounded severity="secondary" text class="!w-8 !h-8 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" aria-label="Обновить" />
+        <Button v-if="conversations.length" @click="emit('clearAllChats')" icon="pi pi-trash" rounded severity="danger" text class="!w-8 !h-8 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" aria-label="Удалить все чаты" title="Удалить все чаты" />
       </div>
       <Tabs :value="tab" @update:value="(v:any)=>emit('update:tab', v)" class="w-full block">
         <TabList class="!bg-stone-100 dark:!bg-zinc-800 !rounded-full !p-1 !border-0 !flex-nowrap !overflow-x-auto scrollbar-none snap-x">

@@ -180,4 +180,16 @@ class ConversationController extends Controller
         $conversation->participantRows()->where('user_id',$request->user()->id)->update(['hidden_at'=>now(),'cleared_at'=>now()]);
         return response()->json(['ok'=>true]);
     }
+
+    /**
+     * Убрать все диалоги из своего списка навсегда (у собеседников остаются).
+     */
+    public function clearAll(Request $request)
+    {
+        $now = now();
+        $cleared = \App\Models\ConversationParticipant::where('user_id',$request->user()->id)
+            ->whereNull('hidden_at')
+            ->update(['hidden_at'=>$now,'cleared_at'=>$now]);
+        return response()->json(['ok'=>true,'cleared'=>$cleared]);
+    }
 }

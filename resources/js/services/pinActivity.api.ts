@@ -31,4 +31,11 @@ export const pinActivityApi = {
     const { data } = await api.post('/api/pin-activities/read', ids?.length ? { ids } : { all: true })
     return data
   },
+  /**
+   * Удалить всю ленту активности навсегда.
+   */
+  async clear() {
+    const { data } = await api.delete('/api/pin-activities')
+    return data
+  },
 }

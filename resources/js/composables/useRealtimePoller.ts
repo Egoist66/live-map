@@ -3,16 +3,25 @@ import { busEmit, busOn, getPollContext } from '@/services/realtime-bus'
 
 /** Тик живого поллинга: компромисс задержки и нагрузки */
 const FAST_INTERVAL = 3000
-/** Проверка смены режима, пока едем на сокетах */
-const SLOW_INTERVAL = 60000
+/** Тик в burst-режиме после исходящего действия */
+const BURST_INTERVAL = 1200
+/** Сколько держать ускоренный режим после poke */
+const BURST_WINDOW = 12000
+/** Дебаунс ручного syncNow */
+const POKE_DEBOUNCE = 800
 
 let fastTimer: ReturnType<typeof setTimeout> | null = null
 let slowTimer: ReturnType<typeof setTimeout> | null = null
+let pokeTimer: ReturnType<typeof setTimeout> | null = null
 let fastRunning = false
 let slowRunning = false
+let ticking = false
+let burstUntil = 0
 let lastMsgId = 0
 let lastTime = 0
 let modeListenerAttached = false
+/** Проверка смены режима, пока едем на сокетах */
+const SLOW_INTERVAL = 60000
 
 function echo(): any {
   return (window as any).Echo
@@ -54,17 +63,22 @@ function clearSlow(): void {
  */
 export function useRealtimePoller() {
   /**
-   * Один тик быстрого цикла.
+   * Один тик быстрого цикла. В burst-окне после исходящего
+   * действия тикает чаще, тики не накладываются друг на друга.
    */
   async function tickFast(): Promise<void> {
     clearFast()
     if (!fastRunning) return
-    if (!document.hidden) {
+    if (!document.hidden && !ticking) {
+      ticking = true
       try {
         await syncOnce()
       } catch {}
+      ticking = false
     }
-    if (fastRunning) fastTimer = setTimeout(() => void tickFast(), FAST_INTERVAL)
+    if (!fastRunning) return
+    const interval = Date.now() < burstUntil ? BURST_INTERVAL : FAST_INTERVAL
+    fastTimer = setTimeout(() => void tickFast(), interval)
   }
 
   /**
@@ -90,6 +104,9 @@ export function useRealtimePoller() {
     const ctx = getPollContext()
     const bbox = ctx.mapBbox ?? null
     const knownIds = Array.isArray(ctx.knownPinIds) ? ctx.knownPinIds.filter((id) => Number(id) > 0).slice(0, 500) : []
+    try {
+      busEmit('badges:request', Date.now())
+    } catch {}
     const { data } = await api.get('/api/realtime/sync', {
       params: {
         since: lastTime || undefined,
@@ -134,6 +151,8 @@ export function useRealtimePoller() {
     activities.forEach((e: any) => busEmit('notify:activity', e))
     const reports = Array.isArray(data?.reports) ? data.reports : []
     reports.forEach((e: any) => busEmit('notify:report', e))
+    const appUpdates = Array.isArray(data?.app_updates) ? data.app_updates : []
+    if (appUpdates.length) busEmit('notify:update', { updates: appUpdates })
     const receipts = Array.isArray(data?.receipts) ? data.receipts : []
     if (receipts.length) busEmit('chat:receipts', receipts)
     if (data?.map) busEmit('map:pins', data.map)
@@ -186,11 +205,64 @@ export function useRealtimePoller() {
   function stop(): void {
     stopFast()
     stopSlow()
+    if (pokeTimer) clearTimeout(pokeTimer)
+    pokeTimer = null
+    ticking = false
+    burstUntil = 0
     lastMsgId = 0
     lastTime = 0
   }
 
-  return { ensure, stop, syncOnce }
+  /**
+   * Мгновенный тик вне расписания (не чаще дебаунса снаружи).
+   */
+  async function syncNow(): Promise<void> {
+    if (!fastRunning || ticking || document.hidden) return
+    clearFast()
+    ticking = true
+    try {
+      await syncOnce()
+    } catch {}
+    ticking = false
+    if (fastRunning) {
+      const interval = Date.now() < burstUntil ? BURST_INTERVAL : FAST_INTERVAL
+      fastTimer = setTimeout(() => void tickFast(), interval)
+    }
+  }
+
+  /**
+   * Всплеск отзывчивости после исходящего действия.
+   */
+  function poke(): void {
+    if (!fastRunning) return
+    burstUntil = Date.now() + BURST_WINDOW
+    void syncNow()
+  }
+
+  return { ensure, stop, syncOnce, poke, syncNow }
+}
+
+/**
+ * Ускорение после исходящего действия: мгновенный тик (дебаунс)
+ * и частые тики BURST_WINDOW — ответ прилетает почти как по сокету.
+ */
+export function pokeRealtime(): void {
+  if (pokeTimer) clearTimeout(pokeTimer)
+  pokeTimer = setTimeout(() => {
+    pokeTimer = null
+    try {
+      useRealtimePoller().poke()
+    } catch {}
+  }, POKE_DEBOUNCE)
+}
+
+/**
+ * Мгновенная синхронизация (открыл диалог/страницу — не ждём тик).
+ */
+export function syncRealtimeNow(): void {
+  try {
+    useRealtimePoller().syncNow()
+  } catch {}
 }
 
 /**

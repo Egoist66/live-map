@@ -52,6 +52,10 @@ export type RealtimeEventMap = {
   'user:reconnected': any
   /** Счётчики бейджей одним пакетом */
   'badges:update': Record<string, number>
+  /** Поллер ушёл в сеть: метка времени запроса для отсева протухших ответов */
+  'badges:request': number
+  /** Новые новости для очереди апдейтов */
+  'notify:update': { updates: any[] }
   /** Смена режима realtime: socket|polling */
   'realtime:mode': string
 }

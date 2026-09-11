@@ -2,12 +2,14 @@ import { ref, computed } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import { appUpdatesApi } from '@/services/app-updates.api'
 import { useBadgeStore } from '@/stores/badges'
+import { busOn } from '@/services/realtime-bus'
 
 const queue = ref<any[]>([])
 const history = ref<any[]>([])
 const unreadCount = ref(0)
 const loading = ref(false)
 const inited = ref(false)
+let busBound = false
 
 function readIsAdmin(): boolean {
   try {
@@ -102,6 +104,30 @@ export function useAppUpdates() {
     if (readIsAdmin()) return
     void loadUnread()
     void loadHistory()
+    if (!busBound) {
+      busBound = true
+      try {
+        busOn('notify:update', (e: any) => mergeIncoming(e?.updates))
+      } catch {}
+    }
+  }
+
+  /**
+   * Вливает новости из поллинга в очередь (модалка покажет сама).
+   * @param updates новости из /api/realtime/sync
+   */
+  function mergeIncoming(updates: any[]): void {
+    if (!Array.isArray(updates) || !updates.length) return
+    if (readIsAdmin()) return
+    const known = new Set(queue.value.map((x) => Number(x.id)))
+    let added = false
+    for (const u of updates) {
+      if (u?.id == null || known.has(Number(u.id))) continue
+      known.add(Number(u.id))
+      queue.value.push(u)
+      added = true
+    }
+    if (added) syncBadge()
   }
 
   return { queue, history, sortedHistory, unreadCount, loading, current, hasUnread, loadUnread, loadHistory, dismissCurrent, dismissAll, snooze, preview, init }

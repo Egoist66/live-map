@@ -23,6 +23,9 @@ export const useBadgeStore = defineStore('badges', () => {
   const total = computed(() => unread.value + pending.value + activity.value + reports.value + updates.value + security.value)
   const seenMsgIds = new Set<number>()
   let fetchTimer: ReturnType<typeof setTimeout> | null = null
+  let lastMutationAt = 0
+  let lastRequestAt = 0
+  let suppressUntil = 0
 
   function getUid(): number {
     try {
@@ -32,6 +35,10 @@ export const useBadgeStore = defineStore('badges', () => {
       if (meta) return Number(meta)
     } catch {}
     return Number((window as any).userId || 0)
+  }
+
+  function noteMutation(): void {
+    lastMutationAt = Date.now()
   }
 
   function scheduleFetch() {
@@ -81,6 +88,9 @@ export const useBadgeStore = defineStore('badges', () => {
       reports.value = Number(rep) || 0
       updates.value = Number(upd) || 0
       security.value = Number(sec) || 0
+      lastMutationAt = 0
+      lastRequestAt = Date.now()
+      suppressUntil = Date.now() + 4000
     } catch {}
   }
 
@@ -124,22 +134,22 @@ export const useBadgeStore = defineStore('badges', () => {
     } catch {}
   }
 
-  function setUnread(v: number) { unread.value = v }
-  function setUnreadMessages(v: number) { unreadMessages.value = Math.max(0, v) }
-  function setPending(v: number) { pending.value = v }
-  function setActivity(v: number) { activity.value = Math.max(0, v) }
-  function decUnread() { unread.value = Math.max(0, unread.value - 1) }
-  function incUnread() { unread.value += 1 }
-  function incPending() { pending.value += 1 }
-  function decPending() { pending.value = Math.max(0, pending.value - 1) }
-  function incActivity() { activity.value += 1 }
-  function decActivity() { activity.value = Math.max(0, activity.value - 1) }
-  function setReports(v: number) { reports.value = Math.max(0, v) }
-  function setUpdates(v: number) { updates.value = Math.max(0, v) }
-  function setSecurity(v: number) { security.value = Math.max(0, v) }
-  function incSecurity() { security.value += 1 }
-  function incReports() { reports.value += 1 }
-  function decReports() { reports.value = Math.max(0, reports.value - 1) }
+  function setUnread(v: number) { noteMutation(); unread.value = v }
+  function setUnreadMessages(v: number) { noteMutation(); unreadMessages.value = Math.max(0, v) }
+  function setPending(v: number) { noteMutation(); pending.value = v }
+  function setActivity(v: number) { noteMutation(); activity.value = Math.max(0, v) }
+  function decUnread() { noteMutation(); unread.value = Math.max(0, unread.value - 1) }
+  function incUnread() { noteMutation(); unread.value += 1 }
+  function incPending() { noteMutation(); pending.value += 1 }
+  function decPending() { noteMutation(); pending.value = Math.max(0, pending.value - 1) }
+  function incActivity() { noteMutation(); activity.value += 1 }
+  function decActivity() { noteMutation(); activity.value = Math.max(0, activity.value - 1) }
+  function setReports(v: number) { noteMutation(); reports.value = Math.max(0, v) }
+  function setUpdates(v: number) { noteMutation(); updates.value = Math.max(0, v) }
+  function setSecurity(v: number) { noteMutation(); security.value = Math.max(0, v) }
+  function incSecurity() { noteMutation(); security.value += 1 }
+  function incReports() { noteMutation(); reports.value += 1 }
+  function decReports() { noteMutation(); reports.value = Math.max(0, reports.value - 1) }
 
   async function init() {
     if (inited) return
@@ -149,6 +159,9 @@ export const useBadgeStore = defineStore('badges', () => {
     subscribe()
     try {
       busOn('badges:update', (b: any) => applyPollBadges(b))
+      busOn('badges:request', (sentAt: number) => {
+        lastRequestAt = Number(sentAt) || Date.now()
+      })
     } catch {}
     loading.value = false
     window.addEventListener('focus', fetch)
@@ -156,10 +169,14 @@ export const useBadgeStore = defineStore('badges', () => {
 
   /**
    * Применяет счётчики из polling-тика одним пакетом.
+   * Отбрасывает протухшие ответы: локальная правда (прочитал/сбросил)
+   * всегда новее тика, запрошенного до неё — иначе счётчик "зависает".
    * @param b badges из /api/realtime/sync
    */
   function applyPollBadges(b: any): void {
     if (!b) return
+    if (Date.now() < suppressUntil) return
+    if (lastMutationAt > lastRequestAt) return
     if (b.unread_messages != null) setUnreadMessages(Number(b.unread_messages))
     if (b.conversations_unread != null) setUnread(Number(b.conversations_unread))
     if (b.pending_friends != null) setPending(Number(b.pending_friends))

@@ -4,10 +4,12 @@ import { pinActivityApi, type PinActivityItem } from '@/services/pinActivity.api
 import { useBadgeStore } from '@/stores/badges'
 import { busOn } from '@/services/realtime-bus'
 import { ensureUserChannel, leaveUserChannel } from '@/composables/useUserChannel'
+import { useAppConfirm } from '@/composables/useAppConfirm'
 
 const activities = ref<PinActivityItem[]>([])
 const unread = ref(0)
 const loading = ref(false)
+const clearing = ref(false)
 let busBound = false
 let inited = false
 
@@ -77,7 +79,10 @@ async function markAllRead() {
   unread.value = 0
   activities.value = activities.value.map((a) => (a.read_at ? a : { ...a, read_at: new Date().toISOString() }))
   try { useBadgeStore().setActivity(0) } catch {}
-  try { await pinActivityApi.markRead() } catch { unread.value = prev }
+  try { await pinActivityApi.markRead() } catch {
+    unread.value = prev
+    try { useBadgeStore().setActivity(prev) } catch {}
+  }
 }
 
 async function markOne(a: PinActivityItem) {
@@ -86,6 +91,38 @@ async function markOne(a: PinActivityItem) {
   unread.value = Math.max(0, unread.value - 1)
   try { useBadgeStore().decActivity() } catch {}
   try { await pinActivityApi.markRead([a.id]) } catch {}
+}
+
+/**
+ * Удалить всю ленту активности навсегда (с подтверждением).
+ */
+async function clearAll(): Promise<void> {
+  if (clearing.value) return
+  let ok = false
+  try {
+    ok = await useAppConfirm().confirmDelete(
+      'Все уведомления будут удалены из базы навсегда. Это нельзя отменить.',
+      'Очистить уведомления?',
+    )
+  } catch {
+    ok = false
+  }
+  if (!ok) return
+  clearing.value = true
+  const backup = activities.value
+  const prevUnread = unread.value
+  activities.value = []
+  unread.value = 0
+  try { useBadgeStore().setActivity(0) } catch {}
+  try {
+    await pinActivityApi.clear()
+  } catch {
+    activities.value = backup
+    unread.value = prevUnread
+    try { useBadgeStore().setActivity(prevUnread) } catch {}
+  } finally {
+    clearing.value = false
+  }
 }
 
 function describe(a: PinActivityItem): { emoji: string; text: string } {
@@ -190,5 +227,5 @@ export function resetPinActivity(): void {
 
 export function usePinActivity() {
   const hasData = computed(() => activities.value.length > 0)
-  return { activities, unread, loading, hasData, describe, refresh, markAllRead, markOne, goPin, resolveTarget, init, subscribe }
+  return { activities, unread, loading, clearing, hasData, describe, refresh, markAllRead, markOne, clearAll, goPin, resolveTarget, init, subscribe }
 }

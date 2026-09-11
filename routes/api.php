@@ -66,6 +66,7 @@ Route::middleware(['web', 'auth', 'throttle:120,1'])->group(function () {
     Route::get('/pin-activities', [PinActivityController::class, 'index']);
     Route::get('/pin-activities/unread-count', [PinActivityController::class, 'unreadCount']);
     Route::post('/pin-activities/read', [PinActivityController::class, 'read']);
+    Route::delete('/pin-activities', [PinActivityController::class, 'clear'])->middleware('throttle:social-write');
     Route::get('/admin/reports', [ReportController::class, 'index']);
     Route::post('/admin/reports/{report}/resolve', [ReportController::class, 'resolve']);
     Route::apiResource('zone-subscriptions', ZoneSubscriptionController::class)->only(['index','store','destroy']);
@@ -130,6 +131,7 @@ Route::middleware(['web', 'auth', 'throttle:120,1'])->group(function () {
     Route::get('/conversations/{conversation}', [ConversationController::class, 'show']);
     Route::post('/conversations/{conversation}/read', [ConversationController::class, 'markRead'])->middleware('throttle:chat-signal');
     Route::post('/conversations/{conversation}/delivered', [ConversationController::class, 'markDelivered'])->middleware('throttle:chat-signal');
+    Route::delete('/conversations', [ConversationController::class, 'clearAll'])->middleware('throttle:social-write');
     Route::delete('/conversations/{conversation}', [ConversationController::class, 'destroy'])->middleware('throttle:social-write');
 
     Route::get('/conversations/{conversation}/messages', [MessageController::class, 'index']);

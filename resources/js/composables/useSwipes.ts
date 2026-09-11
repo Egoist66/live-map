@@ -4,6 +4,7 @@ import { chatApi } from '@/services/chat.api'
 import { datingApi } from '@/services/dating.api'
 import { busOn } from '@/services/realtime-bus'
 import { ensureUserChannel } from '@/composables/useUserChannel'
+import { pokeRealtime } from '@/composables/useRealtimePoller'
 import type { ActiveCard, SwipeCard, SwipeFilters, SwipeQuota } from '@/services/dating.api'
 
 /** Лимит радиуса «рядом» для Free, км. PRO — безлимит. */
@@ -606,6 +607,9 @@ export function useSwipes() {
       }
       index.value += 1
       if (action === 'like') void loadFavorites()
+      if (action === 'like') {
+        try { pokeRealtime() } catch {}
+      }
       if (index.value >= cards.value.length - 3) {
         void loadMore()
       }

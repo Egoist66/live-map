@@ -188,6 +188,15 @@ function openNews(item: any) {
                 size="small"
                 class="ml-auto !text-[11px]"
               />
+              <Button
+                v-if="pinAct.activities.value.length"
+                @click="pinAct.clearAll()"
+                :loading="pinAct.clearing.value"
+                label="Очистить"
+                link
+                size="small"
+                class="!text-[11px] !text-red-500"
+              />
             </div>
             <div class="space-y-1">
               <button

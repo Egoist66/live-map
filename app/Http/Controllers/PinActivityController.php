@@ -39,4 +39,14 @@ class PinActivityController extends Controller
         $marked = $q->update(['read_at' => now()]);
         return response()->json(['ok' => true, 'marked' => $marked]);
     }
+
+    /**
+     * Удалить всю ленту активности навсегда (без восстановления).
+     */
+    public function clear(Request $request)
+    {
+        $deleted = PinActivity::where('owner_id', $request->user()->id)->delete();
+
+        return response()->json(['ok' => true, 'deleted' => $deleted]);
+    }
 }

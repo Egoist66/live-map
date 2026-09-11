@@ -5,6 +5,7 @@ import { chatApi } from '@/services/chat.api'
 import { useChatHistory } from '@/composables/useChatHistory'
 import { busOn, registerPollContextProvider } from '@/services/realtime-bus'
 import { ensureUserChannel, leaveUserChannel } from '@/composables/useUserChannel'
+import { pokeRealtime, syncRealtimeNow } from '@/composables/useRealtimePoller'
 import type { Conversation, ConversationDetail, Message } from '@/types/entities/Chat'
 
 let searchAbort: AbortController | null = null
@@ -290,6 +291,7 @@ export function useChat() {
       }
       try { await chatApi.markRead(id) } catch {}
       subscribeChat(id)
+      try { syncRealtimeNow() } catch {}
       await nextTick()
       history.reset()
     } catch (e) {
@@ -371,6 +373,7 @@ export function useChat() {
         history.notifyAppended()
       }
       syncConversationPreview(msg)
+      try { pokeRealtime() } catch {}
       setTimeout(() => { const m = messages.value.find((x) => x?.id === msg.id) as any; if (m) m.justSent = false }, 600)
     } catch (e: any) {
       const idx = messages.value.findIndex((m) => m?.id === tempId)
@@ -429,6 +432,29 @@ export function useChat() {
     conversations.value = conversations.value.filter((c) => c?.id !== id)
     if (wasSelected) { selectedId.value = null; activeConv.value = null; messages.value = [] }
     try { await chatApi.deleteConversation(id) } catch (e) { conversations.value = backup; if (wasSelected) { activeConv.value = backupActive; messages.value = backupMsgs; selectedId.value = id }; throw e }
+  }
+
+  /**
+   * Убрать все диалоги из своего списка навсегда.
+   */
+  async function clearAllConversations(): Promise<void> {
+    const backupConvs = [...conversations.value]
+    const backupActive = activeConv.value
+    const backupMsgs = [...messages.value]
+    const backupSelected = selectedId.value
+    conversations.value = []
+    selectedId.value = null
+    activeConv.value = null
+    messages.value = []
+    try {
+      await chatApi.clearConversations()
+    } catch (e) {
+      conversations.value = backupConvs
+      selectedId.value = backupSelected
+      activeConv.value = backupActive
+      messages.value = backupMsgs
+      throw e
+    }
   }
 
   function handleIncoming(msg: Message) {
@@ -870,6 +896,6 @@ export function useChat() {
     conversations, activeConv, messages, loading, sending, refreshing, typingUsers,
     searchQuery, searchResults, searching, selectedId, error, unreadTotal, unreadMessagesTotal,
     editingId, editingBody, history,
-    loadConversations, refresh, openConversation, createConversation, sendMessage, startEdit, cancelEdit, saveEdit, deleteMessage, deleteConversation, searchUsers, notifyTyping, stopTyping, handleIncoming, handleUpdated, subscribeGlobal, resetChatRealtime,
+    loadConversations, refresh, openConversation, createConversation, sendMessage, startEdit, cancelEdit, saveEdit, deleteMessage, deleteConversation, clearAllConversations, searchUsers, notifyTyping, stopTyping, handleIncoming, handleUpdated, subscribeGlobal, resetChatRealtime,
   }
 }
