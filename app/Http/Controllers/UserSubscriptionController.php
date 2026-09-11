@@ -29,6 +29,7 @@ class UserSubscriptionController extends Controller
             'notify_pin' => (bool) $s->notify_pin,
             'notify_photo' => (bool) $s->notify_photo,
             'notify_level' => (bool) $s->notify_level,
+            'notify_post' => (bool) ($s->notify_post ?? true),
             'target' => $s->target ? array_merge(
                 $s->target->only(['id', 'name', 'level', 'reputation_score']),
                 ['avatar_url' => $s->target->avatar_url]
@@ -53,6 +54,7 @@ class UserSubscriptionController extends Controller
             'notify_pin' => (bool) ($sub->notify_pin ?? true),
             'notify_photo' => (bool) ($sub->notify_photo ?? true),
             'notify_level' => (bool) ($sub->notify_level ?? true),
+            'notify_post' => (bool) ($sub->notify_post ?? true),
             'is_friend' => $isFriend,
             'can_subscribe' => $isFriend,
         ]);
@@ -77,6 +79,7 @@ class UserSubscriptionController extends Controller
             'notify_pin' => 'sometimes|boolean',
             'notify_photo' => 'sometimes|boolean',
             'notify_level' => 'sometimes|boolean',
+            'notify_post' => 'sometimes|boolean',
         ]);
 
         $sub = UserSubscription::updateOrCreate(
@@ -85,6 +88,7 @@ class UserSubscriptionController extends Controller
                 'notify_pin' => array_key_exists('notify_pin', $data) ? (bool) $data['notify_pin'] : true,
                 'notify_photo' => array_key_exists('notify_photo', $data) ? (bool) $data['notify_photo'] : true,
                 'notify_level' => array_key_exists('notify_level', $data) ? (bool) $data['notify_level'] : true,
+                'notify_post' => array_key_exists('notify_post', $data) ? (bool) $data['notify_post'] : true,
             ]
         );
 
@@ -93,6 +97,7 @@ class UserSubscriptionController extends Controller
             'notify_pin' => (bool) $sub->notify_pin,
             'notify_photo' => (bool) $sub->notify_photo,
             'notify_level' => (bool) $sub->notify_level,
+            'notify_post' => (bool) ($sub->notify_post ?? true),
         ], 201);
     }
 

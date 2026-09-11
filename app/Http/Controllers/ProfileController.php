@@ -91,7 +91,8 @@ class ProfileController extends Controller
                 'notify_pin' => (bool) $subscription->notify_pin,
                 'notify_photo' => (bool) $subscription->notify_photo,
                 'notify_level' => (bool) $subscription->notify_level,
-            ] : ['subscribed' => false, 'notify_pin' => true, 'notify_photo' => true, 'notify_level' => true],
+                'notify_post' => (bool) ($subscription->notify_post ?? true),
+            ] : ['subscribed' => false, 'notify_pin' => true, 'notify_photo' => true, 'notify_level' => true, 'notify_post' => true],
         ]);
     }
 

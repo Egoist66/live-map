@@ -10,9 +10,11 @@ import { avatarSrcFor } from '@/composables/useAvatar'
 import { useMessageContextMenu } from '@/composables/useMessageContextMenu'
 import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
 import { useChatLayout } from '@/composables/useChatLayout'
+import { useChatComposerMenu } from '@/composables/useChatComposerMenu'
 import { useEnterToSend } from '@/composables/useEnterToSend'
 
 const { windowCardClass } = useChatLayout()
+const composerMenu = useChatComposerMenu()
 const { handleEnterToSend } = useEnterToSend()
 
 const props = defineProps<{ selectedId: number | null; activeConv: any; messages: any[]; loading: boolean; sending: boolean; refreshing: boolean; typing: boolean; online: boolean; input: string; emojiOpen: boolean; emojiGroups: any[]; editingId: number | null; editingBody: string; showMenu: boolean; keyboardStyle: any; locating?: boolean; isOwnMessage: (m: any) => boolean; messageStatus: (m: any) => string; formatTime: (s: string) => string; pinned?: any[]; pinLimitLabel?: string; flashId?: number | null; datingEntry?: boolean; datingBadge?: string | null; replyTo?: any | null; attachmentName?: string | null; attachmentSize?: number | null; previewUrl?: string | null; attachError?: string | null; attaching?: boolean }>()
@@ -38,7 +40,7 @@ function replyPreview(body: string): string {
     <template v-else>
       <div :class="datingEntry ? 'pl-1 pr-2 lg:px-4 py-2 border-b border-rose-200 flex items-center gap-2 shrink-0 bg-gradient-to-r from-rose-500 to-orange-400 text-white sticky top-0 z-10 min-w-0 rounded-t-none lg:rounded-t-2xl min-h-[60px]' : 'pl-1 pr-2 lg:px-4 py-2 border-b dark:border-zinc-800 flex items-center gap-2 shrink-0 bg-white/95 dark:bg-zinc-900/95 backdrop-blur sticky top-0 z-10 min-w-0 rounded-t-none lg:rounded-t-2xl min-h-[60px]'">
         <button @click="emit('back')" :class="datingEntry ? 'text-white hover:bg-white/20' : 'hover:bg-black/10'" class="lg:hidden w-9 h-9 grid place-items-center rounded-full active:scale-95 shrink-0 text-xl leading-none">‹</button>
-        <button v-if="datingEntry" @click="emit('swipesBack')" title="Назад в свайпы" class="hidden sm:grid w-9 h-9 place-items-center rounded-full bg-white/20 hover:bg-white/30 active:scale-95 shrink-0"><i class="pi pi-heart-fill text-sm"></i></button>
+        <button v-if="datingEntry" @click="emit('swipesBack')" title="Назад в свайпы" class="!hidden sm:!grid w-9 h-9 place-items-center rounded-full bg-white/20 hover:bg-white/30 active:scale-95 shrink-0"><i class="pi pi-heart-fill text-sm"></i></button>
         <Link :href="activeConv?.other ? `/users/${activeConv.other.id}` : '#'" class="flex items-center gap-2.5 hover:opacity-80 min-w-0 flex-1 overflow-hidden py-0.5">
           <span class="relative block shrink-0 w-10 h-10"><Avatar :image="avatarSrcFor(activeConv?.other)" shape="circle" class="!w-10 !h-10 [&_img]:object-cover" :class="datingEntry ? 'ring-2 ring-white/70' : ''" :pt="{ image: { class: 'object-cover' } }" /><OnlineDot :online="online" /></span>
           <span class="min-w-0 flex-1 block"><span class="block text-[15px] lg:text-sm font-semibold truncate hover:underline leading-snug" :class="datingEntry ? 'text-white' : 'dark:text-white'">{{ activeConv?.other?.name }}</span><span v-if="datingBadge" class="mt-0.5 text-[11px] font-bold leading-none flex items-center gap-1" :class="datingEntry ? 'text-white/90' : 'text-rose-500'"><i class="pi pi-heart-fill text-[10px]"></i>{{ datingBadge }}</span><span v-else-if="typing" class="mt-0.5 block text-xs leading-none animate-pulse" :class="datingEntry ? 'text-white/90' : 'text-violet-600'">печатает...</span><span v-else class="mt-0.5 block text-xs leading-none" :class="datingEntry ? 'text-white/80' : (online ? 'text-emerald-600' : 'text-red-500')">{{ online ? 'в сети' : 'оффлайн' }}</span></span>
@@ -117,12 +119,18 @@ function replyPreview(body: string): string {
         <div v-if="attachError" class="text-[11px] text-red-600 dark:text-red-400 px-1 mb-1.5">{{ attachError }}</div>
         <div data-chat-input class="relative flex gap-2 items-end min-w-0 w-full max-w-full z-10">
           <input type="file" data-chat-file class="hidden" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip" @change="(e:any)=>{ const f = e.target.files?.[0] ?? null; emit('pickFile', f); e.target.value = '' }" />
-          <Button @click="(e:any)=>{ const btn = e?.currentTarget as HTMLElement | null; const root = btn?.closest?.('.relative'); const inp = root?.querySelector?.('[data-chat-file]') as HTMLInputElement | null; inp?.click() }" icon="pi pi-paperclip" severity="secondary" outlined rounded class="!w-11 !h-11 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-label]:hidden [&_.p-button-icon]:!m-0" aria-label="Прикрепить файл" />
-          <Button @click="emit('toggleEmoji')" :severity="emojiOpen ? 'contrast' : 'secondary'" :outlined="!emojiOpen" rounded class="!w-11 !h-11 !p-0 !rounded-full shrink-0 grid place-items-center text-[20px]" label="😊" />
-          <Button @click="emit('share-location')" :loading="locating" icon="pi pi-map-marker" severity="secondary" outlined rounded class="!w-11 !h-11 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-label]:hidden [&_.p-button-icon]:!m-0" aria-label="Поделиться геопозицией" title="Поделиться геопозицией" />
+          <div class="relative shrink-0">
+            <Button @click="composerMenu.toggle()" icon="pi pi-ellipsis-h" severity="secondary" outlined rounded class="!w-11 !h-11 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-label]:hidden [&_.p-button-icon]:!m-0" aria-label="Ещё" />
+            <div v-if="composerMenu.open.value" class="absolute bottom-full left-0 mb-2 w-52 bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl shadow-xl py-1.5 z-30 overflow-hidden">
+              <button @click="(e:any)=>{ composerMenu.close(); const btn = e?.currentTarget as HTMLElement | null; const root = btn?.closest?.('[data-chat-input]') as HTMLElement | null; const inp = root?.querySelector?.('[data-chat-file]') as HTMLInputElement | null; inp?.click() }" class="w-full flex items-center gap-2.5 text-left px-4 py-3 text-sm font-medium dark:text-zinc-100 hover:bg-stone-50 dark:hover:bg-zinc-700/60 active:bg-stone-100 transition"><i class="pi pi-paperclip text-xs text-stone-400"></i>Документ</button>
+              <button @click="composerMenu.close(); emit('toggleEmoji')" class="w-full flex items-center gap-2.5 text-left px-4 py-3 text-sm font-medium dark:text-zinc-100 hover:bg-stone-50 dark:hover:bg-zinc-700/60 active:bg-stone-100 transition"><span class="text-base leading-none">😊</span>Смайлы</button>
+              <button @click="composerMenu.close(); emit('share-location')" class="w-full flex items-center gap-2.5 text-left px-4 py-3 text-sm font-medium dark:text-zinc-100 hover:bg-stone-50 dark:hover:bg-zinc-700/60 active:bg-stone-100 transition"><i class="pi pi-map-marker text-xs text-stone-400"></i>Геопозиция</button>
+            </div>
+          </div>
           <Textarea :model-value="input" @update:model-value="(v:any)=>emit('update:input', v)" @input="emit('typing')" @blur="emit('stopTyping')" @keydown="(e:any)=>handleEnterToSend(e, () => emit('send'))" @keydown.escape="emit('emojiClose')" @paste="(e:any)=>emit('pasteImage', e as ClipboardEvent)" placeholder="Сообщение..." rows="1" autoResize maxlength="2000" fluid class="!rounded-2xl flex-1 min-w-0 max-h-32" enterkeyhint="enter" />
           <Button @click="emit('send')" :loading="sending" :disabled="!input.trim() && !attachmentName" icon="pi pi-send" rounded class="!w-11 !h-11 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-label]:hidden [&_.p-button-icon]:!m-0" aria-label="Отправить" />
         </div>
+        <div v-if="composerMenu.open.value" @click="composerMenu.close()" class="fixed inset-0 z-10"></div>
       </div>
     </template>
   </div>

@@ -33,6 +33,8 @@ export function useAppLayout() {
     ...(isAdmin.value ? [{ label: 'Админ-панель', icon: 'pi pi-shield', accent: 'amber', active: route().current('admin'), command: () => router.visit(route('admin')) }] : []),
     { label: 'Настройки', icon: 'pi pi-cog', accent: 'slate', active: route().current('profile.edit'), command: () => router.visit(settingsHref.value) },
     { label: 'Карта', icon: 'pi pi-map', accent: 'teal', active: route().current('map'), command: () => router.visit(route('map')) },
+    { label: 'ULove', icon: 'pi pi-heart', accent: 'red', active: route().current('swipes'), command: () => router.visit(route('swipes')) },
+    { label: 'UFlow', icon: 'pi pi-align-justify', svg: 'flow', accent: 'sky', active: route().current('flow'), command: () => router.visit(route('flow')) },
     { separator: true },
     { label: 'Выйти', icon: 'pi pi-sign-out', accent: 'red', danger: true, command: () => doLogout() },
   ])

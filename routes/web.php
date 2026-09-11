@@ -36,6 +36,8 @@ Route::get('/contacts', fn () => Inertia::render('Reference', ['slug' => 'contac
 Route::get('/privacy', fn () => Inertia::render('Reference', ['slug' => 'privacy']))->name('privacy');
 Route::get('/offer', fn () => Inertia::render('Reference', ['slug' => 'offer']))->name('offer');
 Route::middleware('auth')->group(function () {
+    Route::get('/flow', fn () => Inertia::render('Flow/Index'))->name('flow');
+    Route::get('/flow/post/{post}', fn (int $post) => Inertia::render('Flow/Index', ['postId' => $post]))->whereNumber('post')->name('flow.post');
     Route::get('/chat/{conversation?}', fn (?int $conversation = null) => Inertia::render('Chat/Index', ['conversationId' => $conversation]))->name('chat');
     Route::get('/users/{user}', [ProfileController::class, 'publicShow'])->name('users.show');
     Route::get('/map', fn () => Inertia::render('Map/Index'))->name('map');

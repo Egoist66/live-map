@@ -27,6 +27,7 @@ export const registerSchema = toTypedSchema(
       country: z.preprocess((v) => (v === '' || v === undefined ? null : v), z.string().max(120).nullable().optional()),
       country_code: z.preprocess((v) => (v === '' || v === undefined ? null : v), z.string().max(8).nullable().optional()),
       birth_date: z.preprocess(toBirthDate, z.string().max(10).nullable().optional()).refine((v) => v == null || isValidBirthDate(v), { message: 'Некорректная дата рождения' }),
+      signup_goal: z.enum(['love', 'flirt', 'friendship', 'chat', 'interests', 'neighbors'], { errorMap: () => ({ message: 'Выбери цель' }) }),
     })
     .refine((d) => d.password === d.password_confirmation, { message: 'Пароли не совпадают', path: ['password_confirmation'] }),
 )

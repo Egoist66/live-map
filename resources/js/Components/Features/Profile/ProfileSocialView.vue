@@ -13,6 +13,7 @@ import { useSwipesCta } from '@/composables/useSwipesCta'
 import { ageLabel, calcAge } from '@/composables/useUserAge'
 import { useSwipeTabs } from '@/composables/useSwipeTabs'
 import { usePhotoPicker } from '@/composables/usePhotoPicker'
+import ProfileFlowPosts from '@/Components/Features/Flow/ProfileFlowPosts.vue'
 
 const props = defineProps<{
   user: any
@@ -38,7 +39,7 @@ const props = defineProps<{
   galleryCanAdd: boolean
   galleryLoading: boolean
   galleryUploading: boolean
-  subscription?: { subscribed: boolean; notify_pin: boolean; notify_photo: boolean; notify_level: boolean }
+  subscription?: { subscribed: boolean; notify_pin: boolean; notify_photo: boolean; notify_level: boolean; notify_post?: boolean }
 }>()
 
 const emit = defineEmits<{
@@ -55,8 +56,8 @@ const emit = defineEmits<{
   (e: 'openPhoto', photo: any): void
 }>()
 
-const tab = ref<'short' | 'gallery' | 'info'>('short')
-const swipe = useSwipeTabs(['short', 'gallery', 'info'] as const, tab)
+const tab = ref<'short' | 'gallery' | 'info' | 'flow'>('short')
+const swipe = useSwipeTabs(['short', 'gallery', 'info', 'flow'] as const, tab)
 const { pickerInput, openPicker, handlePickerChange } = usePhotoPicker({
   onPick: (file: File) => emit('addPhoto', file),
 })
@@ -145,10 +146,11 @@ const statCls = 'flex-1 min-w-0 flex flex-col items-center sm:block sm:text-left
         </div>
       </div>
 
-      <div class="flex gap-1 sm:gap-2 border-b border-stone-200/70 dark:border-zinc-800 sticky top-16 z-[5] bg-white/95 dark:bg-zinc-900/95 backdrop-blur">
-        <button type="button" @click="tab = 'short'" :class="['px-3 sm:px-4 py-3 text-[13px] sm:text-sm font-bold border-b-[3px] -mb-px transition', tab === 'short' ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'border-transparent text-stone-500 dark:text-zinc-400 hover:text-ink-900 dark:hover:text-zinc-200']">О себе</button>
-        <button type="button" @click="tab = 'gallery'" :class="['px-3 sm:px-4 py-3 text-[13px] sm:text-sm font-bold border-b-[3px] -mb-px transition', tab === 'gallery' ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'border-transparent text-stone-500 dark:text-zinc-400 hover:text-ink-900 dark:hover:text-zinc-200']">Галерея</button>
-        <button type="button" @click="tab = 'info'" :class="['px-3 sm:px-4 py-3 text-[13px] sm:text-sm font-bold border-b-[3px] -mb-px transition', tab === 'info' ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'border-transparent text-stone-500 dark:text-zinc-400 hover:text-ink-900 dark:hover:text-zinc-200']">Информация</button>
+      <div class="flex gap-1 sm:gap-2 border-b border-stone-200/70 dark:border-zinc-800 sticky top-16 z-[5] bg-white/95 dark:bg-zinc-900/95 backdrop-blur overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <button type="button" @click="tab = 'short'" :class="['shrink-0 whitespace-nowrap px-3 sm:px-4 py-3 text-[13px] sm:text-sm font-bold border-b-[3px] -mb-px transition', tab === 'short' ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'border-transparent text-stone-500 dark:text-zinc-400 hover:text-ink-900 dark:hover:text-zinc-200']">О себе</button>
+        <button type="button" @click="tab = 'gallery'" :class="['shrink-0 whitespace-nowrap px-3 sm:px-4 py-3 text-[13px] sm:text-sm font-bold border-b-[3px] -mb-px transition', tab === 'gallery' ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'border-transparent text-stone-500 dark:text-zinc-400 hover:text-ink-900 dark:hover:text-zinc-200']">Галерея</button>
+        <button type="button" @click="tab = 'info'" :class="['shrink-0 whitespace-nowrap px-3 sm:px-4 py-3 text-[13px] sm:text-sm font-bold border-b-[3px] -mb-px transition', tab === 'info' ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'border-transparent text-stone-500 dark:text-zinc-400 hover:text-ink-900 dark:hover:text-zinc-200']">Информация</button>
+        <button type="button" @click="tab = 'flow'" :class="['shrink-0 whitespace-nowrap px-3 sm:px-4 py-3 text-[13px] sm:text-sm font-bold border-b-[3px] -mb-px transition', tab === 'flow' ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'border-transparent text-stone-500 dark:text-zinc-400 hover:text-ink-900 dark:hover:text-zinc-200']">Flow</button>
       </div>
     </div>
 
@@ -207,7 +209,7 @@ const statCls = 'flex-1 min-w-0 flex flex-col items-center sm:block sm:text-left
       <input ref="pickerInput" type="file" accept="image/*" class="absolute w-px h-px opacity-0 overflow-hidden pointer-events-none" tabindex="-1" aria-hidden="true" @change="handlePickerChange" />
     </div>
 
-    <div v-else class="p-4 sm:p-6 text-sm" @touchstart.passive="swipe.onTouchStart" @touchend.passive="swipe.onTouchEnd">
+    <div v-else-if="tab === 'info'" class="p-4 sm:p-6 text-sm" @touchstart.passive="swipe.onTouchStart" @touchend.passive="swipe.onTouchEnd">
       <div v-if="!bioEmpty" class="rounded-2xl bg-stone-50 dark:bg-white/[0.03] border border-stone-200/70 dark:border-zinc-800 p-4">
         <div class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500">О себе</div>
         <p class="mt-2 leading-relaxed whitespace-pre-wrap break-words text-ink-900 dark:text-zinc-100">{{ bioText }}</p>
@@ -225,6 +227,10 @@ const statCls = 'flex-1 min-w-0 flex flex-col items-center sm:block sm:text-left
       <div class="pt-2 pb-1">
         <Link href="/map" class="flex flex-1"><Button label="На карту →" rounded class="w-full !bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white" /></Link>
       </div>
+    </div>
+
+    <div v-else class="p-4 sm:p-6" @touchstart.passive="swipe.onTouchStart" @touchend.passive="swipe.onTouchEnd">
+      <ProfileFlowPosts :user-id="(user as any).id" :is-own="isOwn" :show-header="false" />
     </div>
   </div>
 </template>

@@ -2,6 +2,7 @@
 import GuestLayout from '@/Layouts/GuestLayout.vue'
 import { Head, Link } from '@inertiajs/vue3'
 import { useRegisterForm } from '@/composables/useAuthForm'
+import { useSignupGoals } from '@/composables/useSignupGoals'
 import { useBirthDateField } from '@/composables/useBirthDate'
 import { useGender } from '@/composables/useGender'
 import { useUserAge } from '@/composables/useUserAge'
@@ -12,6 +13,7 @@ import Select from 'primevue/select'
 import DatePicker from 'primevue/datepicker'
 
 const f = useRegisterForm()
+const goals = useSignupGoals()
 const bd = useBirthDateField(f.birth_date as any)
 const g = useGender()
 const { label: ageLabel } = useUserAge(() => (f.values as any).birth_date)
@@ -27,8 +29,15 @@ function onCountryChange(v: string): void {
   <GuestLayout>
     <Head title="Регистрация" />
     <h1 class="text-[22px] font-black tracking-tight text-ink-900 dark:text-white">Создай аккаунт</h1>
-    <p class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Укажи страну и город — карта откроется там</p>
+    <p class="text-sm text-stone-500 dark:text-zinc-400 mt-1">💘 ULove знакомит рядом · 📍 пины показывают жизнь района</p>
     <form @submit.prevent="f.submit" class="mt-6 space-y-4">
+      <div class="rounded-2xl border-2 border-rose-200 dark:border-rose-900 bg-gradient-to-br from-rose-50 to-orange-50 dark:from-rose-950/40 dark:to-orange-950/20 p-3.5">
+        <label class="auth-label">💘 Зачем ты здесь? *</label>
+        <Select v-model="f.signup_goal.value" :options="goals.options" optionLabel="label" optionValue="value" placeholder="Выбери цель" checkmark fluid class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.signup_goal" />
+        <small class="auth-err">{{ f.errors.value.signup_goal }}</small>
+        <small v-if="goals.isLoveGoal(f.signup_goal.value)" class="text-stone-500 dark:text-zinc-400">После регистрации откроем ULove — листай людей рядом 💘</small>
+        <small v-else class="text-stone-500 dark:text-zinc-400">После регистрации откроем карту — кидай пины, зови рядом 📍</small>
+      </div>
       <div>
         <label class="auth-label">Имя / ник</label>
         <InputText v-model="f.name.value" v-bind="f.nameAttrs" placeholder="Роберт Дауни" class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.name" />

@@ -6,6 +6,7 @@ import DashboardHero from '@/Components/Features/Dashboard/DashboardHero.vue'
 import DashboardInfo from '@/Components/Features/Dashboard/DashboardInfo.vue'
 import DashboardActions from '@/Components/Features/Dashboard/DashboardActions.vue'
 import ProfileSocialView from '@/Components/Features/Profile/ProfileSocialView.vue'
+import ProfileFlowPosts from '@/Components/Features/Flow/ProfileFlowPosts.vue'
 import { useProfileViewMode } from '@/composables/useProfileViewMode'
 import ProfileFriendsDialog from '@/Components/Features/Profile/ProfileFriendsDialog.vue'
 import ProfileGalleryDialog from '@/Components/Features/Profile/ProfileGalleryDialog.vue'
@@ -56,6 +57,9 @@ onMounted(async () => { await gallery.load(); try { await people.loadFriendsCoun
         <div v-if="view.mode.value === 'classic'" class="grid grid-cols-1 lg:grid-cols-[1.15fr_0.85fr] gap-4 min-w-0 px-3 sm:px-0 pt-3 sm:pt-0 pb-4 sm:pb-0">
           <DashboardInfo :user="u" :bio-empty="bioEmpty" :bio-text="bioText" :is-own="isOwn" :settings-href="settingsHref" :presence="presence" />
           <DashboardActions :is-own="isOwn" @map="goMap" @settings="goSettings" @faq="goFaq" />
+        </div>
+        <div v-if="view.mode.value === 'classic'" class="min-w-0 px-3 sm:px-0 pb-4 sm:pb-0">
+          <ProfileFlowPosts :user-id="u.id" :is-own="true" />
         </div>
         <ProfileGalleryDialog :gallery="gallery" :is-own="true" :plan="planOf(u)" />
         <ProfilePhotoViewer :gallery="gallery" :comments="photoComments" :is-own="true" :user-name="u.name" :avatar-src="avatarSrc" />

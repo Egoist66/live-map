@@ -13,6 +13,7 @@ const chip: Record<string, string> = {
   slate: 'bg-stone-200/70 text-stone-600 dark:!bg-zinc-500/15 dark:!text-zinc-300',
   teal: 'bg-teal-500/15 text-teal-600 dark:!bg-teal-500/15 dark:!text-teal-300',
   red: 'bg-red-500/10 text-red-600 dark:!bg-red-500/15 dark:!text-red-400',
+  sky: 'bg-sky-500/15 text-sky-600 dark:!bg-sky-500/15 dark:!text-sky-300',
 }
 </script>
 <template>
@@ -25,7 +26,10 @@ const chip: Record<string, string> = {
       </div>
       <a v-else-if="(item as any).separator" class="my-1.5 mx-3 border-t border-stone-200 dark:!border-white/5 block" />
       <a v-else v-bind="props.action" :class="[menuItemClass, (item as any).active ? '!bg-[#EEF0FF] dark:!bg-violet-400/15' : '']">
-        <span :class="['w-9 h-9 rounded-xl grid place-items-center text-sm shrink-0', chip[(item as any).accent] || chip.slate]"><i :class="(item as any).icon" /></span>
+        <span :class="['w-9 h-9 rounded-xl grid place-items-center text-sm shrink-0', chip[(item as any).accent] || chip.slate]">
+          <svg v-if="(item as any).svg === 'flow'" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 12h6" /></svg>
+          <i v-else :class="(item as any).icon" />
+        </span>
         <span :class="['text-sm flex-1 font-semibold', (item as any).danger ? 'text-red-600 dark:!text-red-400' : (item as any).active ? '!text-[#4338CA] dark:!text-white' : 'text-stone-700 dark:!text-zinc-100']">{{ (item as any).label }}</span>
         <i v-if="!(item as any).danger" class="pi pi-angle-right text-[10px] text-stone-300 dark:!text-zinc-600" />
       </a>

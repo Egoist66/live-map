@@ -15,7 +15,7 @@ const { email, emailAttrs, password, passwordAttrs, remember, errors, showPass, 
     <Head title="Вход" />
     <Message v-if="status" severity="success" class="mb-4 w-full">{{ status }}</Message>
     <h1 class="text-[22px] font-black tracking-tight text-ink-900 dark:text-white">С возвращением</h1>
-    <p class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Войди и проверь, что происходит во дворе</p>
+    <p class="text-sm text-stone-500 dark:text-zinc-400 mt-1">💘 ULove с мэтчами и 📍 пины района уже ждут</p>
     <form @submit.prevent="submit" class="mt-6 space-y-4">
       <div>
         <label class="text-[13px] font-semibold text-ink-900 dark:text-zinc-100">Email</label>

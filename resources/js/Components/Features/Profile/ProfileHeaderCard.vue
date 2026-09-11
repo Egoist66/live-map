@@ -8,7 +8,7 @@ import OnlineDot from '@/Components/Features/Feedback/OnlineDot.vue'
 import ProfileMoreMenu from '@/Components/Features/Profile/ProfileMoreMenu.vue'
 import UserSubscribeButton from '@/Components/Features/Profile/UserSubscribeButton.vue'
 
-defineProps<{ user: any; avatarSrc: string; online: boolean; lastSeen: string; levelName: string; isOwn: boolean; isLocked: boolean; canMessage: boolean; isBlocked: boolean; isFriend: boolean; isPending: boolean; loading: boolean; sharing: boolean; subscription?: { subscribed: boolean; notify_pin: boolean; notify_photo: boolean; notify_level: boolean } }>()
+defineProps<{ user: any; avatarSrc: string; online: boolean; lastSeen: string; levelName: string; isOwn: boolean; isLocked: boolean; canMessage: boolean; isBlocked: boolean; isFriend: boolean; isPending: boolean; loading: boolean; sharing: boolean; subscription?: { subscribed: boolean; notify_pin: boolean; notify_photo: boolean; notify_level: boolean; notify_post?: boolean } }>()
 const emit = defineEmits<{ (e: 'avatar'): void; (e: 'chat'): void; (e: 'add'): void; (e: 'remove'): void; (e: 'block'): void; (e: 'unblock'): void; (e: 'share'): void; (e: 'friends'): void; (e: 'search'): void; (e: 'gallery'): void }>()
 </script>
 <template>

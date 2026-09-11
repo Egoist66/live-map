@@ -11,7 +11,7 @@ const { dashboardHref, isActive, total } = useMobileBottomNav()
     class="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border-t border-stone-200 dark:border-zinc-800"
     style="padding-bottom: env(safe-area-inset-bottom, 0px)"
   >
-    <div class="grid grid-cols-4 items-end px-2 pt-1.5 pb-2 min-h-[60px]">
+    <div class="grid grid-cols-5 items-end px-2 pt-1.5 pb-2 min-h-[60px]">
       <Link
         :href="dashboardHref"
         class="flex flex-col items-center justify-center gap-1 py-1.5 rounded-2xl active:scale-95 transition min-h-[52px]"
@@ -37,6 +37,15 @@ const { dashboardHref, isActive, total } = useMobileBottomNav()
       >
         <svg class="w-6 h-6" :fill="isActive('swipes') ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><rect x="7" y="4" width="10" height="16" rx="2.5"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.5 12H5m-2.5 0L4 10.5M2.5 12L4 13.5M21.5 12H19m2.5 0L20 10.5m1.5 1.5L20 13.5"/></svg>
         <span class="text-[10px] font-semibold leading-none" :class="isActive('swipes') ? 'opacity-100' : 'opacity-70'">Свайпы</span>
+      </Link>
+
+      <Link
+        :href="route('flow')"
+        class="flex flex-col items-center justify-center gap-1 py-1.5 rounded-2xl active:scale-95 transition min-h-[52px]"
+        :class="isActive('flow') ? 'text-ink-900 dark:text-white' : 'text-stone-400'"
+      >
+        <svg class="w-6 h-6" :fill="isActive('flow') ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 12h6"/></svg>
+        <span class="text-[10px] font-black leading-none bg-gradient-to-r from-sky-500 via-blue-600 to-fuchsia-500 dark:from-sky-400 dark:via-blue-400 dark:to-fuchsia-400 bg-clip-text text-transparent" :class="isActive('flow') ? 'opacity-100' : 'opacity-70'">UFlow</span>
       </Link>
 
       <Link

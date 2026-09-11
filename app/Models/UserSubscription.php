@@ -28,6 +28,7 @@ class UserSubscription extends Model
         'notify_pin',
         'notify_photo',
         'notify_level',
+        'notify_post',
     ];
 
     protected function casts(): array
@@ -36,6 +37,7 @@ class UserSubscription extends Model
             'notify_pin' => 'boolean',
             'notify_photo' => 'boolean',
             'notify_level' => 'boolean',
+            'notify_post' => 'boolean',
         ];
     }
 

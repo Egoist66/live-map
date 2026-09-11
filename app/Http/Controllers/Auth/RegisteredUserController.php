@@ -31,6 +31,7 @@ class RegisteredUserController extends Controller
      * Домашняя зона на регистрации не настраивается: всем выдаётся
      * Free-радиус 10 км по умолчанию, меняется позже в тарифе/настройках.
      * Геопозиция опциональна: без неё карта откроется по стране/городу.
+     * ULove включён всем по умолчанию; любовные цели уводят в свайпы.
      *
      * @throws ValidationException
      */
@@ -49,9 +50,14 @@ class RegisteredUserController extends Controller
             'home_lng' => 'nullable|numeric|between:-180,180',
             'home_radius_km' => 'nullable|integer|min:1|max:10',
             'home_address' => 'nullable|string|max:255',
+            'signup_goal' => 'required|in:love,flirt,friendship,chat,interests,neighbors',
         ]);
 
         CountryResolver::assertResidenceAllowed($request->input('country'), $request->input('country_code'), $request->input('home_lat'), $request->input('home_lng'));
+
+        $signupGoal = $request->string('signup_goal')->toString();
+
+        $datingGoal = $this->datingGoalFor($signupGoal);
 
         $user = User::create([
             'name' => $request->name,
@@ -65,12 +71,45 @@ class RegisteredUserController extends Controller
             'home_lat' => $request->home_lat,
             'home_lng' => $request->home_lng,
             'home_radius_km' => 10,
+            'signup_goal' => $signupGoal,
+            'dating_enabled' => true,
+            'dating_goal' => $datingGoal,
         ]);
 
         event(new Registered($user));
 
         Auth::login($user);
 
-        return redirect(route('dashboard', absolute: false));
+        return redirect($this->landingFor($signupGoal));
+    }
+
+    /**
+     * Пресет анкеты ULove из цели захода.
+     *
+     * @param string $signupGoal цель с формы регистрации
+     * @return string|null dating_goal или null для карты
+     */
+    private function datingGoalFor(string $signupGoal): ?string
+    {
+        if ($signupGoal === 'neighbors') {
+            return null;
+        }
+
+        return $signupGoal;
+    }
+
+    /**
+     * Стартовый экран после регистрации по цели захода.
+     *
+     * @param string $signupGoal цель с формы регистрации
+     * @return string URL свайпов для любовных целей, иначе карта
+     */
+    private function landingFor(string $signupGoal): string
+    {
+        if ($signupGoal === 'neighbors') {
+            return route('map', absolute: false);
+        }
+
+        return route('swipes', absolute: false);
     }
 }

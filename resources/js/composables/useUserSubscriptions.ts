@@ -8,11 +8,12 @@ import { subscriptionsApi, type SubscriptionFlags } from '@/services/subscriptio
  * @param initial начальный статус с сервера (Inertia)
  * @returns состояние подписки и действия
  */
-export function useUserSubscriptions(userId: number | string, initial?: { subscribed: boolean; notify_pin: boolean; notify_photo: boolean; notify_level: boolean }) {
+export function useUserSubscriptions(userId: number | string, initial?: { subscribed: boolean; notify_pin: boolean; notify_photo: boolean; notify_level: boolean; notify_post?: boolean }) {
   const subscribed = ref(!!initial?.subscribed)
   const notifyPin = ref(initial?.notify_pin ?? true)
   const notifyPhoto = ref(initial?.notify_photo ?? true)
   const notifyLevel = ref(initial?.notify_level ?? true)
+  const notifyPost = ref(initial?.notify_post ?? true)
   const loading = ref(false)
   const toast = (() => { try { return useToast() } catch { return null as any } })()
 
@@ -26,6 +27,7 @@ export function useUserSubscriptions(userId: number | string, initial?: { subscr
       notifyPin.value = s.notify_pin
       notifyPhoto.value = s.notify_photo
       notifyLevel.value = s.notify_level
+      notifyPost.value = s.notify_post ?? true
     } catch {}
   }
 
@@ -45,9 +47,10 @@ export function useUserSubscriptions(userId: number | string, initial?: { subscr
           notify_pin: notifyPin.value,
           notify_photo: notifyPhoto.value,
           notify_level: notifyLevel.value,
+          notify_post: notifyPost.value,
         })
         subscribed.value = s.subscribed
-        toast?.add({ severity: 'success', summary: 'Подписались', detail: 'Новый пин, фото и уровень — в уведомлениях', life: 3000 })
+        toast?.add({ severity: 'success', summary: 'Подписались', detail: 'Посты, пины, фото и уровень — в уведомлениях', life: 3000 })
       }
     } catch (e: any) {
       const detail = e?.response?.data?.message || 'Попробуйте позже'
@@ -69,10 +72,11 @@ export function useUserSubscriptions(userId: number | string, initial?: { subscr
       notifyPin.value = s.notify_pin
       notifyPhoto.value = s.notify_photo
       notifyLevel.value = s.notify_level
+      notifyPost.value = s.notify_post ?? notifyPost.value
     } catch {} finally {
       loading.value = false
     }
   }
 
-  return { subscribed, notifyPin, notifyPhoto, notifyLevel, loading, refresh, toggle, saveFlags }
+  return { subscribed, notifyPin, notifyPhoto, notifyLevel, notifyPost, loading, refresh, toggle, saveFlags }
 }

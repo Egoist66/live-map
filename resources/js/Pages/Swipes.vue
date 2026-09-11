@@ -96,12 +96,12 @@ onMounted(async () => {
     <div class="min-h-[calc(100vh-64px)] bg-surface dark:bg-[#090E1A]">
       <div class="max-w-[640px] mx-auto px-3 sm:px-6 py-3 sm:py-6 pb-2 sm:pb-[calc(2rem+env(safe-area-inset-bottom,0px))]">
 
-        <div class="text-center hidden sm:block">
+        <div class="text-center">
           <div class="flex items-center justify-center gap-2.5">
             <span class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br from-rose-500 via-fuchsia-500 to-orange-400 grid place-items-center text-white shadow-lg shadow-rose-500/30 dark:shadow-rose-500/20"><i class="pi pi-heart-fill text-lg sm:text-xl" /></span>
             <h1 class="text-[32px] sm:text-[42px] font-black tracking-[-0.04em] leading-none bg-gradient-to-r from-rose-500 via-fuchsia-500 to-orange-400 dark:from-rose-400 dark:via-fuchsia-400 dark:to-orange-300 bg-clip-text text-transparent">ULove</h1>
           </div>
-          <p class="mt-2 text-[13px] sm:text-sm text-stone-500 dark:text-zinc-400">Дейтинг внутри UPin🔥</p>
+          <p class="mt-2 hidden sm:block text-[13px] sm:text-sm text-stone-500 dark:text-zinc-400">Дейтинг внутри UPin🔥</p>
         </div>
 
         <template v-if="!isAuth">
@@ -116,16 +116,12 @@ onMounted(async () => {
         </template>
 
         <template v-else>
-          <div class="flex items-center gap-2 py-1">
-            <Button icon="pi pi-arrow-left" rounded text aria-label="Выйти из свайпов" title="Выйти из свайпов" class="!w-10 !h-10 !p-0 shrink-0" @click="mobileMenu.goBack()" />
-            <div class="flex-1 flex items-center justify-center gap-1.5">
-              <span class="w-7 h-7 rounded-xl bg-gradient-to-br from-rose-500 via-fuchsia-500 to-orange-400 grid place-items-center text-white"><i class="pi pi-heart-fill text-sm" /></span>
-              <span class="text-[22px] font-black tracking-[-0.04em] leading-none bg-gradient-to-r from-rose-500 via-fuchsia-500 to-orange-400 bg-clip-text text-transparent">ULove</span>
-            </div>
-            <Button v-if="s.activeTab.value !== 'feed'" icon="pi pi-bars" rounded text aria-label="Меню свайпов" title="Лента · Активные · Избранное · Лайки" class="!w-10 !h-10 !p-0 shrink-0" @click="mobileMenu.open()" />
-            <span v-else class="w-10 shrink-0" />
+          <div class="flex items-center gap-2 h-[1.2rem] sm:h-auto py-0 sm:py-1 overflow-hidden">
+            <Button icon="pi pi-arrow-left" rounded text aria-label="Выйти из свайпов" title="Выйти из свайпов" class="!w-7 !h-7 sm:!w-10 sm:!h-10 !p-0 shrink-0" @click="mobileMenu.goBack()" />
+            <span class="flex-1" />
           </div>
           <div class="mt-2 sm:mt-4 hidden sm:flex items-center gap-2">
+            <Button icon="pi pi-bars" severity="secondary" rounded outlined size="small" aria-label="Меню свайпов" title="Лента · Активные · Избранное · Лайки · Анкета · PRO" @click="mobileMenu.open()" />
             <Chip :label="s.quotaLabel.value" icon="pi pi-send" class="!rounded-full" />
             <Chip v-if="s.isQuotaEmpty.value" label="Лимит исчерпан — мэтчи пишут бесплатно" icon="pi pi-heart-fill" class="!rounded-full !bg-rose-100 !text-rose-700 dark:!bg-rose-950 dark:!text-rose-300 dark:!border dark:!border-rose-900" />
             <span class="flex-1" />
@@ -155,15 +151,6 @@ onMounted(async () => {
 
           <div v-if="s.error.value" class="mt-3 text-sm text-rose-600 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-2xl px-4 py-3">
             {{ s.error.value }}
-          </div>
-
-          <div class="mt-3 hidden sm:grid grid-cols-6 gap-1 p-1 rounded-2xl bg-stone-100 dark:bg-zinc-800">
-            <button type="button" @click="s.goTab('feed')" :class="['min-w-0 px-1 py-2 rounded-xl transition flex flex-col items-center justify-center leading-tight', s.activeTab.value === 'feed' ? 'bg-white dark:bg-zinc-900 text-ink-900 dark:text-white shadow-soft' : 'text-stone-500 dark:text-zinc-400']"><span class="text-[13px] font-bold truncate w-full text-center">Лента</span><span class="text-[10px] font-semibold opacity-70">листай</span></button>
-            <button type="button" @click="s.goTab('active')" :class="['min-w-0 px-1 py-2 rounded-xl transition flex flex-col items-center justify-center leading-tight', s.activeTab.value === 'active' ? 'bg-white dark:bg-zinc-900 text-ink-900 dark:text-white shadow-soft' : 'text-stone-500 dark:text-zinc-400']"><span class="text-[13px] font-bold truncate w-full text-center">Активные</span><span class="text-[10px] font-semibold opacity-70">онлайн</span></button>
-            <button type="button" @click="s.goTab('favorites')" :class="['min-w-0 px-1 py-2 rounded-xl transition flex flex-col items-center justify-center leading-tight', s.activeTab.value === 'favorites' ? 'bg-white dark:bg-zinc-900 text-ink-900 dark:text-white shadow-soft' : 'text-stone-500 dark:text-zinc-400']"><span class="text-[13px] font-bold truncate w-full text-center">Избранное</span><span class="text-[10px] font-semibold opacity-70">{{ s.favoritesCount.value }}/{{ s.favoritesLimit.value }}</span></button>
-            <button type="button" @click="s.goTab('admirers')" :class="['min-w-0 px-1 py-2 rounded-xl transition flex flex-col items-center justify-center leading-tight', s.activeTab.value === 'admirers' ? 'bg-white dark:bg-zinc-900 text-ink-900 dark:text-white shadow-soft' : 'text-stone-500 dark:text-zinc-400']"><span class="text-[13px] font-bold truncate w-full text-center">Лайки</span><span class="text-[10px] font-semibold opacity-70">мне · {{ s.admirersTotal.value }}</span></button>
-            <button type="button" @click="s.goTab('questionnaire')" :class="['min-w-0 px-1 py-2 rounded-xl transition flex flex-col items-center justify-center leading-tight', s.activeTab.value === 'questionnaire' ? 'bg-white dark:bg-zinc-900 text-ink-900 dark:text-white shadow-soft' : 'text-stone-500 dark:text-zinc-400']"><span class="text-[13px] font-bold truncate w-full text-center">Анкета</span><span class="text-[10px] font-semibold opacity-70">моя</span></button>
-            <button type="button" @click="s.goTab('premium')" :class="['min-w-0 px-1 py-2 rounded-xl transition flex flex-col items-center justify-center leading-tight', s.activeTab.value === 'premium' ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-soft' : 'text-amber-600 dark:text-amber-400']"><span class="text-[13px] font-bold truncate w-full text-center">PRO</span><span class="text-[10px] font-semibold opacity-70">плюшки</span></button>
           </div>
 
           <template v-if="s.activeTab.value === 'active'">
@@ -556,7 +543,7 @@ onMounted(async () => {
                 icon="pi pi-bars"
                 rounded
                 aria-label="Меню свайпов"
-                title="Лента · Активные · Избранное · Лайки"
+                title="Лента · Активные · Избранное · Лайки · Анкета · PRO"
                 class="sm:hidden !absolute !top-11 !right-4 !z-30 !w-10 !h-10 !p-0 !rounded-full !bg-black/45 !border-0 !text-white backdrop-blur active:!scale-95"
                 @pointerdown.stop
                 @click="mobileMenu.open()"
@@ -594,7 +581,7 @@ onMounted(async () => {
 
           <Link href="/map" class="mt-5 hidden sm:flex items-center gap-3 rounded-[20px] border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 shadow-soft">
             <span class="w-11 h-11 rounded-2xl bg-teal-500/15 text-teal-600 dark:text-teal-300 grid place-items-center shrink-0"><i class="pi pi-map text-lg" /></span>
-            <span class="min-w-0">
+            <span class="min-w-0 flex-1 text-center">
               <span class="block text-sm font-black text-stone-900 dark:text-white">Карта рядом усиливает знакомства</span>
               <span class="block text-xs text-stone-500 dark:text-zinc-400">Смотри, кто гуляет поблизости, и ставь пины-встречи.</span>
             </span>

@@ -51,6 +51,18 @@ Route::middleware(['web', 'auth', 'throttle:120,1'])->group(function () {
     Route::put('/comments/{comment}', [PinCommentController::class, 'update']);
     Route::delete('/comments/{comment}', [PinCommentController::class, 'destroy']);
     Route::post('/reactions/toggle', [ReactionController::class, 'toggle'])->middleware('throttle:reactions');
+    Route::get('/flow-posts', [\App\Http\Controllers\FlowPostController::class, 'index']);
+    Route::post('/flow-posts', [\App\Http\Controllers\FlowPostController::class, 'store'])->middleware('throttle:social-write');
+    Route::get('/flow-posts/{post}', [\App\Http\Controllers\FlowPostController::class, 'show']);
+    Route::post('/flow-posts/{post}', [\App\Http\Controllers\FlowPostController::class, 'update'])->middleware('throttle:social-write');
+    Route::patch('/flow-posts/{post}', [\App\Http\Controllers\FlowPostController::class, 'update'])->middleware('throttle:social-write');
+    Route::delete('/flow-posts/{post}', [\App\Http\Controllers\FlowPostController::class, 'destroy'])->middleware('throttle:social-write');
+    Route::post('/flow-posts/{post}/like', [\App\Http\Controllers\FlowPostController::class, 'toggleLike'])->middleware('throttle:reactions');
+    Route::get('/flow-posts/{post}/comments', [\App\Http\Controllers\FlowPostCommentController::class, 'index']);
+    Route::post('/flow-posts/{post}/comments', [\App\Http\Controllers\FlowPostCommentController::class, 'store'])->middleware('throttle:comments-write');
+    Route::patch('/flow-comments/{comment}', [\App\Http\Controllers\FlowPostCommentController::class, 'update']);
+    Route::put('/flow-comments/{comment}', [\App\Http\Controllers\FlowPostCommentController::class, 'update']);
+    Route::delete('/flow-comments/{comment}', [\App\Http\Controllers\FlowPostCommentController::class, 'destroy'])->middleware('throttle:social-write');
     Route::get('/pin-activities', [PinActivityController::class, 'index']);
     Route::get('/pin-activities/unread-count', [PinActivityController::class, 'unreadCount']);
     Route::post('/pin-activities/read', [PinActivityController::class, 'read']);

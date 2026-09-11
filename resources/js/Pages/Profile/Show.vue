@@ -7,6 +7,7 @@ import Button from 'primevue/button'
 import Toast from 'primevue/toast'
 import ProfileHeaderCard from '@/Components/Features/Profile/ProfileHeaderCard.vue'
 import ProfileInfoCard from '@/Components/Features/Profile/ProfileInfoCard.vue'
+import ProfileFlowPosts from '@/Components/Features/Flow/ProfileFlowPosts.vue'
 import ProfileSocialView from '@/Components/Features/Profile/ProfileSocialView.vue'
 import { useProfileShowPage } from '@/composables/useProfileShowPage'
 import { useProfileViewMode } from '@/composables/useProfileViewMode'
@@ -22,7 +23,7 @@ import { planOf } from '@/composables/usePlanLimits'
 import { onMounted } from 'vue'
 import ChatSearchDialog from '@/Components/Features/Chat/ChatSearchDialog.vue'
 
-const props = defineProps<{ profileUser: any; isOwn: boolean; friendship: any; isFriend: boolean; isPending: boolean; isBlocked?: boolean; isBlockedBy?: boolean; canMessage: boolean; canMessageReason: string | null; subscription?: { subscribed: boolean; notify_pin: boolean; notify_photo: boolean; notify_level: boolean } }>()
+const props = defineProps<{ profileUser: any; isOwn: boolean; friendship: any; isFriend: boolean; isPending: boolean; isBlocked?: boolean; isBlockedBy?: boolean; canMessage: boolean; canMessageReason: string | null; subscription?: { subscribed: boolean; notify_pin: boolean; notify_photo: boolean; notify_level: boolean; notify_post?: boolean } }>()
 const page = useProfileShowPage(props)
 const gallery = useProfileGallery(() => props.profileUser.id, { isOwn: props.isOwn })
 const photoComments = useProfilePhotoComments(() => gallery.active.value?.id ?? null, (n) => {
@@ -49,6 +50,7 @@ onMounted(async () => { await gallery.load(); try { await gallery.consumePending
           <div class="px-4 sm:px-0 pt-3 sm:pt-0 pb-4 sm:pb-0 space-y-5">
             <ProfileHeaderCard :user="profileUser" :avatar-src="page.avatarSrc.value" :online="page.online.value" :last-seen="page.lastSeenText.value" :level-name="(page.levelLabel as any)[profileUser.level] || profileUser.level || 'Новичок'" :is-own="isOwn" :is-locked="page.isLocked.value" :can-message="page.canMessage.value" :is-blocked="page.isBlocked.value" :is-friend="page.isFriend.value" :is-pending="page.isPending.value" :loading="page.profile.loading.value" :sharing="page.sharing.value" :subscription="subscription" @avatar="page.showAvatar.value = true" @chat="page.onChat()" @add="page.onAdd()" @remove="page.askRemove()" @block="page.askBlock()" @unblock="page.onUnblock()" @share="page.share()" @friends="people.openFriends(profileUser.id, profileUser.name)" @search="search.openDialog()" @gallery="gallery.openDialog()" />
             <ProfileInfoCard v-if="!page.isLocked.value" :user="profileUser" :bio-empty="page.bioEmpty.value" :bio-text="page.bioText.value" :level-name="(page.levelLabel as any)[profileUser.level] || profileUser.level" :registered-at="page.registeredAt.value" />
+            <ProfileFlowPosts v-if="!page.isLocked.value" :user-id="profileUser.id" :is-own="isOwn" />
           </div>
         </template>
         <ProfileFriendsDialog :people="people" />

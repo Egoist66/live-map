@@ -1,43 +1,33 @@
 <script setup lang="ts">
-import { Head, Link, usePage } from '@inertiajs/vue3'
-import { computed } from 'vue'
-import { useSeo } from '@/composables/useSeo'
+import { Head, Link } from '@inertiajs/vue3'
+import { useWelcome } from '@/composables/useWelcome'
 import AppFooter from '@/Layouts/AppFooter.vue'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import Tag from 'primevue/tag'
 import Badge from 'primevue/badge'
-defineProps<{ canLogin: boolean; canRegister: boolean }>()
-const seo = useSeo({
-  title: 'UPin — Твоё окно во двор | Живая карта района',
-  description: 'UPin — гиперлокальная карта района. Пины соседей в радиусе 5 км: вопросы, события, помощь, объявления. Приватность 200 м, анонимно, без спама. Free 4ч · Pro 12ч · Business ∞.',
-  keywords: ['UPin','живая карта','карта района','соседи','пины','объявления рядом','помощь соседей'],
-})
-const page = usePage()
-const isAuthenticated = computed(() => !!(page.props.auth as any)?.user)
+import Avatar from 'primevue/avatar'
+
+const w = useWelcome()
 </script>
 
 <template>
-  <Head :title="seo.title.value">
-    <meta head-key="description" name="description" :content="seo.description.value" />
-    <meta head-key="og:title" property="og:title" :content="seo.title.value" />
-    <meta head-key="og:description" property="og:description" :content="seo.description.value" />
+  <Head :title="w.seo.title.value">
+    <meta head-key="description" name="description" :content="w.seo.description.value" />
+    <meta head-key="og:title" property="og:title" :content="w.seo.title.value" />
+    <meta head-key="og:description" property="og:description" :content="w.seo.description.value" />
   </Head>
-  <div class="min-h-screen flex flex-col bg-surface dark:bg-[#0B0F1A] text-ink-900 dark:text-zinc-100 antialiased selection:bg-ink-900 dark:selection:bg-brand-500 selection:text-white overflow-x-hidden">
+  <div class="min-h-screen flex flex-col bg-surface dark:bg-[#0B0F1A] text-ink-900 dark:text-zinc-100 antialiased selection:bg-rose-500 selection:text-white overflow-x-hidden">
     <header class="sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/70 backdrop-blur border-b border-stone-200/60 dark:border-zinc-800">
       <div class="max-w-[1280px] mx-auto px-4 sm:px-6 h-[64px] flex items-center justify-between">
         <Link href="/" class="flex items-center gap-2.5">
-          <span class="w-9 h-9 rounded-xl bg-ink-900 dark:bg-white text-white dark:text-ink-900 grid place-items-center shadow-soft relative overflow-hidden"><span class="absolute inset-0 bg-gradient-to-br from-brand-500 to-accent-teal opacity-90"></span><span class="relative text-sm font-black">◉</span></span>
+          <span class="w-9 h-9 rounded-xl bg-gradient-to-br from-rose-500 via-fuchsia-500 to-orange-400 grid place-items-center text-white shadow-soft"><i class="pi pi-heart-fill text-sm" /></span>
           <span class="font-black tracking-[-0.03em] text-[19px]">U<span class="font-light text-ink-600 dark:text-zinc-400">Pin</span></span>
-          <span class="hidden sm:inline ml-2 text-xs font-medium tracking-wide text-stone-500 dark:text-zinc-500 border-l border-stone-200 dark:border-zinc-700 pl-3">ТВОЕ ОКНО ВО ДВОР</span>
+          <span class="hidden sm:inline ml-2 text-xs font-black tracking-wide bg-gradient-to-r from-rose-500 via-fuchsia-500 to-orange-400 bg-clip-text text-transparent border-l border-stone-200 dark:border-zinc-700 pl-3">ULOVE · ЗНАКОМСТВА РЯДОМ</span>
         </Link>
         <nav class="flex items-center gap-2">
-          <template v-if="isAuthenticated">
-            <Link :href="route('dashboard')"><Button label="Открыть профиль" class="!bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white !px-6 !py-2.5 !rounded-full !text-sm !font-semibold hover:!bg-ink-800 dark:hover:!bg-zinc-100 !border-0 shadow-soft" /></Link>
-          </template>
-          <template v-else>
-            <Link v-if="canLogin" :href="route('login')"><Button label="Войти" class="!bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white !px-6 !py-2.5 !rounded-full !text-sm !font-semibold hover:!bg-ink-800 dark:hover:!bg-zinc-100 !border-0 shadow-soft" /></Link>
-          </template>
+          <Link href="/map" class="hidden sm:inline-flex text-sm font-semibold text-stone-500 dark:text-zinc-400 hover:text-ink-900 dark:hover:text-white px-3 py-2">Карта</Link>
+          <Link :href="w.profileCtaHref.value"><Button :label="w.profileCtaLabel.value" class="!bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white !px-6 !py-2.5 !rounded-full !text-sm !font-semibold hover:!bg-ink-800 dark:hover:!bg-zinc-100 !border-0 shadow-soft" /></Link>
         </nav>
       </div>
     </header>
@@ -45,66 +35,64 @@ const isAuthenticated = computed(() => !!(page.props.auth as any)?.user)
     <section class="max-w-[1280px] mx-auto px-4 sm:px-6 pt-6 sm:pt-14 pb-8 sm:pb-10 grid lg:grid-cols-[1.05fr_0.95fr] gap-6 sm:gap-10 items-center overflow-hidden">
       <div>
         <div class="inline-flex items-center gap-2 bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-full pl-1.5 pr-3 py-1 shadow-soft">
-          <Tag class="!bg-emerald-500 !text-white !rounded-full !px-2.5 !py-1 !text-[11px] !font-bold tracking-wide !border-0"><span class="w-1.5 h-1.5 bg-white rounded-full animate-pulse inline-block mr-1.5 align-middle"></span>LIVE</Tag>
-          <span class="text-xs font-medium text-stone-600 dark:text-zinc-400">847 пинов рядом · обновление 30 сек</span>
+          <Tag class="!bg-gradient-to-r !from-rose-500 !via-fuchsia-500 !to-orange-400 !text-white !rounded-full !px-2.5 !py-1 !text-[11px] !font-bold tracking-wide !border-0"><span class="w-1.5 h-1.5 bg-white rounded-full animate-pulse inline-block mr-1.5 align-middle"></span>ULOVE · LIVE</Tag>
+          <span class="text-xs font-medium text-stone-600 dark:text-zinc-400">люди рядом · мэтч открывает чат · пины на карте</span>
         </div>
-        <h1 class="mt-5 sm:mt-6 text-[30px] sm:text-[48px] lg:text-[64px] font-black tracking-[-0.04em] sm:tracking-[-0.05em] leading-[0.95] sm:leading-[0.85] dark:text-white break-words text-balance">Район <span class="bg-gradient-to-r from-brand-500 via-violet-500 to-accent-teal bg-clip-text text-transparent">живой</span>,<br />пока ты рядом.</h1>
-        <p class="mt-5 text-[15px] sm:text-[17px] leading-relaxed text-stone-600 dark:text-zinc-400 max-w-[560px]">Строгая гиперлокальная сеть вокруг карты. Вопросы, события, помощь и объявления — всё в радиусе 5 км. Без ленты, без шума. Free 4ч · Pro 12ч · Business ∞.</p>
+        <h1 class="mt-5 sm:mt-6 text-[30px] sm:text-[48px] lg:text-[64px] font-black tracking-[-0.04em] sm:tracking-[-0.05em] leading-[0.95] sm:leading-[0.85] dark:text-white break-words text-balance">Встречай рядом.<br /><span class="bg-gradient-to-r from-rose-500 via-fuchsia-500 to-orange-400 bg-clip-text text-transparent">ULove</span> — главное.</h1>
+        <p class="mt-5 text-[15px] sm:text-[17px] leading-relaxed text-stone-600 dark:text-zinc-400 max-w-[560px]">Свайпы людей рядом, мэтч открывает чат. Без ленты и шума. А карта с пинами — удобная фишка в помощь: позови на кофе в 2 клика, без точного адреса.</p>
         <div class="mt-6 sm:mt-7 flex flex-col sm:flex-row sm:flex-wrap gap-2.5 sm:gap-3">
-          <Link href="/map" class="w-full sm:w-auto"><Button label="Открыть карту →" class="w-full sm:w-auto !bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white !px-7 !py-3.5 !rounded-full !font-semibold hover:!bg-ink-800 dark:hover:!bg-zinc-100 !border-0 shadow-soft" /></Link>
-          <a href="#how" class="w-full sm:w-auto"><Button label="Как это работает" severity="secondary" outlined class="w-full sm:w-auto !bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-700 !px-7 !py-3.5 !rounded-full !font-semibold hover:!bg-stone-50 dark:hover:!bg-zinc-800 !text-ink-900 dark:!text-white" /></a>
+          <Link :href="w.primaryCtaHref.value" class="w-full sm:w-auto"><Button :label="w.primaryCtaLabel.value" class="w-full sm:w-auto !bg-gradient-to-r !from-rose-500 !via-fuchsia-500 !to-orange-400 !text-white !px-7 !py-3.5 !rounded-full !font-bold hover:opacity-90 !border-0 shadow-soft" /></Link>
+          <a href="#how" class="w-full sm:w-auto"><Button label="Как работает ULove" severity="secondary" outlined class="w-full sm:w-auto !bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-700 !px-7 !py-3.5 !rounded-full !font-semibold hover:!bg-stone-50 dark:hover:!bg-zinc-800 !text-ink-900 dark:!text-white" /></a>
         </div>
         <div class="mt-6 sm:mt-8 flex items-center gap-4 sm:gap-6 flex-wrap py-4 sm:py-5 border-y border-stone-200/60 dark:border-zinc-800 max-w-[520px]">
-          <div><div class="font-black text-[22px] tracking-tight">500+</div><div class="text-xs font-medium text-stone-500 dark:text-zinc-500 uppercase tracking-wide">активных рядом</div></div>
+          <div><div class="font-black text-[22px] tracking-tight">Мэтч → чат</div><div class="text-xs font-medium text-stone-500 dark:text-zinc-500 uppercase tracking-wide">пишут только взаимно</div></div>
           <div class="w-px h-10 bg-stone-200 dark:bg-zinc-800"></div>
-          <div><div class="font-black text-[22px] tracking-tight">~2 мин</div><div class="text-xs font-medium text-stone-500 dark:text-zinc-500 uppercase tracking-wide">создать пин</div></div>
+          <div><div class="font-black text-[22px] tracking-tight">Рядом</div><div class="text-xs font-medium text-stone-500 dark:text-zinc-500 uppercase tracking-wide">фильтр по расстоянию</div></div>
           <div class="w-px h-10 bg-stone-200 dark:bg-zinc-800"></div>
-          <div><div class="font-black text-[22px] tracking-tight">200 м</div><div class="text-xs font-medium text-stone-500 dark:text-zinc-500 uppercase tracking-wide">размытие по умолч.</div></div>
+          <div><div class="font-black text-[22px] tracking-tight">Пины · 200 м</div><div class="text-xs font-medium text-stone-500 dark:text-zinc-500 uppercase tracking-wide">карта без точного адреса</div></div>
         </div>
         <div class="mt-4 flex items-center gap-2 text-xs text-stone-500 dark:text-zinc-500">
-          <span class="w-7 h-7 rounded-full bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-700 grid place-items-center">✓</span> Приватность сначала · Анонимно по желанию · Блок в 1 клик
+          <span class="w-7 h-7 rounded-full bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-700 grid place-items-center">✓</span> Анонимно по желанию · Блок в 1 клик · Пины живут часы
         </div>
       </div>
 
       <div class="relative">
         <Card class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[28px] !shadow-float !p-3">
           <template #content>
-            <div class="aspect-[4/3.1] rounded-[18px] overflow-hidden relative bg-stone-100 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700">
-              <div class="absolute inset-0 bg-gradient-to-br from-stone-50 to-stone-200 dark:from-zinc-800 dark:to-zinc-900"></div>
-              <div class="absolute inset-0 opacity-[0.07] dark:opacity-[0.15]" style="background-image: radial-gradient(circle at 1px 1px, #0F172A 1px, transparent 0); background-size: 20px 20px"></div>
-              <div class="absolute inset-0 bg-gradient-to-t from-white/60 dark:from-zinc-900/60 via-transparent to-transparent"></div>
-              <div class="absolute top-4 left-4 right-4 flex justify-between">
-                <span class="bg-white dark:bg-zinc-800 rounded-full px-3.5 py-2 text-xs font-semibold shadow-card border border-stone-200 dark:border-zinc-700 flex items-center gap-2"><span class="w-6 h-6 rounded-full bg-ink-900 text-white grid place-items-center text-[10px]">?</span> Где починить велик?</span>
-                <Badge value="★ ТОП" class="!bg-amber-400 !text-ink-900 !rounded-full !px-3 !py-1.5 !text-xs !font-black shadow" />
+            <div class="aspect-[4/3.4] rounded-[18px] overflow-hidden relative bg-stone-100 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700">
+              <img src="https://i.pravatar.cc/600?img=47" class="absolute inset-0 w-full h-full object-cover" alt="Анкета ULove" />
+              <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-black/20"></div>
+              <div class="absolute top-4 left-4 right-4 flex justify-between items-center">
+                <Badge value="● РЯДОМ · 1,2 км" class="!bg-white/90 !text-ink-900 !rounded-full !px-3 !py-1.5 !text-xs !font-bold !border-0" />
+                <Badge value="📍 пин рядом" class="!bg-black/50 !text-white !rounded-full !px-3 !py-1.5 !text-xs !font-bold !border !border-white/20" />
               </div>
-              <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                <div class="w-4 h-4 bg-brand-500 rounded-full border-[3px] border-white dark:border-zinc-900 shadow-lg"></div>
-                <div class="absolute inset-0 bg-brand-500 rounded-full animate-ping opacity-20"></div>
-              </div>
-              <div class="absolute bottom-4 left-4 right-4 flex gap-3">
-                <div class="flex-1 bg-white dark:bg-zinc-800 rounded-2xl p-3.5 shadow-card border border-stone-200 dark:border-zinc-700">
-                  <div class="text-xs font-bold flex items-center gap-1.5"><span class="w-6 h-6 rounded-lg bg-gradient-to-br from-violet-500 to-pink-500 grid place-items-center text-white text-[11px]">◐</span> Настолки в кофейне</div>
-                  <div class="text-xs text-stone-500 dark:text-zinc-400 mt-1 leading-snug">Нас трое, нужен четвёртый. Ленина 15, до 22:00</div>
-                  <div class="mt-2.5 flex gap-1.5 items-center"><Badge value="3 💬" class="!bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white !px-2.5 !py-1 !rounded-full !text-[11px] !font-medium !border-0" /><Badge value="5 ❤️" severity="secondary" class="!bg-white dark:!bg-zinc-700 !border !border-stone-200 dark:!border-zinc-600 !px-2.5 !py-1 !rounded-full !text-[11px]" /><span class="text-[11px] text-stone-400 ml-auto">до 21:00</span></div>
+              <div class="absolute bottom-4 left-4 right-4">
+                <div class="text-white font-black text-xl leading-tight">Аня, 24</div>
+                <div class="mt-2 flex gap-1.5 flex-wrap">
+                  <Tag class="!bg-white/15 !border !border-white/20 !text-white !rounded-full !px-2.5 !py-1 !text-[11px] !font-semibold">☕ кофе и прогулки</Tag>
+                  <Tag class="!bg-white/15 !border !border-white/20 !text-white !rounded-full !px-2.5 !py-1 !text-[11px] !font-semibold">🎬 кино</Tag>
                 </div>
-                <div class="hidden sm:flex w-[88px] bg-ink-900 dark:bg-white dark:text-ink-900 text-white rounded-2xl p-3 flex-col justify-between shadow-card">
-                  <div class="text-[11px] font-bold leading-tight">+ Создать пин</div><div class="w-7 h-7 rounded-full bg-white dark:bg-ink-900 dark:text-white text-ink-900 grid place-items-center text-sm ml-auto">＋</div>
+                <div class="mt-3 flex gap-2">
+                  <Button icon="pi pi-times" rounded class="!w-12 !h-12 !bg-white !text-ink-900 !border-0 shadow-lg" aria-label="Пропустить" />
+                  <Button icon="pi pi-heart-fill" rounded class="!w-12 !h-12 !bg-gradient-to-r !from-rose-500 !to-orange-400 !text-white !border-0 shadow-lg shadow-rose-500/30" aria-label="Лайк" />
+                  <div class="ml-auto self-center bg-white/90 rounded-full px-3 py-2 text-xs font-bold text-ink-900">💬 мэтч → чат</div>
                 </div>
               </div>
             </div>
             <div class="flex items-center justify-between px-1 pt-3">
-              <div class="flex -space-x-2"><img src="https://i.pravatar.cc/100?img=11" class="w-7 h-7 rounded-full border-2 border-white dark:border-zinc-900" /><img src="https://i.pravatar.cc/100?img=32" class="w-7 h-7 rounded-full border-2 border-white dark:border-zinc-900" /><img src="https://i.pravatar.cc/100?img=14" class="w-7 h-7 rounded-full border-2 border-white dark:border-zinc-900" /><Badge value="+42" class="!w-7 !h-7 !rounded-full !bg-stone-100 dark:!bg-zinc-800 !border-2 !border-white dark:!border-zinc-900 !grid !place-items-center !text-[10px] !font-bold !text-ink-900 dark:!text-white" /></div>
-              <span class="text-xs font-medium text-stone-500 dark:text-zinc-500">сейчас в районе</span>
+              <div class="flex items-center gap-2">
+                <Avatar image="https://i.pravatar.cc/100?img=12" shape="circle" size="normal" />
+                <Avatar image="https://i.pravatar.cc/100?img=32" shape="circle" size="normal" class="-ml-4" />
+                <Avatar image="https://i.pravatar.cc/100?img=5" shape="circle" size="normal" class="-ml-4" />
+                <span class="text-xs font-medium text-stone-500 dark:text-zinc-500 ml-1">уже листают рядом</span>
+              </div>
+              <span class="text-xs font-black bg-gradient-to-r from-rose-500 via-fuchsia-500 to-orange-400 bg-clip-text text-transparent">ULOVE</span>
             </div>
           </template>
         </Card>
-        <div class="mt-3 bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-2xl p-4 shadow-float flex sm:hidden gap-3 items-center">
-          <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-brand-500 to-accent-teal grid place-items-center text-white shrink-0">◉</div>
-          <div class="min-w-0"><div class="text-xs font-bold">Твоя приватность</div><div class="text-xs text-stone-500 dark:text-zinc-400 leading-snug">Ты — не точка на карте, ты — пин с размытием 200 м.</div></div>
-        </div>
         <div class="absolute -bottom-5 -left-4 bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-2xl p-4 shadow-float hidden sm:flex gap-3 items-center max-w-[320px]">
-          <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-brand-500 to-accent-teal grid place-items-center text-white shrink-0">◉</div>
-          <div><div class="text-xs font-bold">Твоя приватность</div><div class="text-xs text-stone-500 dark:text-zinc-400 leading-snug">Ты — не точка на карте, ты — пин с размытием 200 м.</div></div>
+          <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-brand-500 to-accent-teal grid place-items-center text-white shrink-0"><i class="pi pi-map-marker text-lg" /></div>
+          <div><div class="text-xs font-bold">Карта в помощь ULove</div><div class="text-xs text-stone-500 dark:text-zinc-400 leading-snug">Мэтч? Кинь пин «кофе тут» — встретитесь без адреса.</div></div>
         </div>
       </div>
     </section>
@@ -112,51 +100,46 @@ const isAuthenticated = computed(() => !!(page.props.auth as any)?.user)
     <section id="how" class="max-w-[1280px] mx-auto px-4 sm:px-6 py-4 sm:py-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 scroll-mt-20">
       <Card class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[20px] !shadow-soft card-hover group cursor-default">
         <template #content>
-          <div class="w-11 h-11 rounded-xl bg-ink-900 dark:bg-white dark:text-ink-900 text-white grid place-items-center font-bold text-sm card-icon">01</div>
-          <h3 class="mt-4 font-bold text-[15px]">Открой карту <span class="card-arrow inline-block opacity-0 group-hover:opacity-100">→</span></h3><p class="text-sm text-stone-600 dark:text-zinc-400 mt-1.5 leading-relaxed">Пины в радиусе: вопросы, события, предупреждения. Фильтр по типу в 1 клик.</p>
+          <div class="w-11 h-11 rounded-xl bg-gradient-to-r from-rose-500 to-orange-400 text-white grid place-items-center font-bold text-sm card-icon"><i class="pi pi-user-edit" /></div>
+          <h3 class="mt-4 font-bold text-[15px]">01 · Создай анкету <span class="card-arrow inline-block opacity-0 group-hover:opacity-100">→</span></h3><p class="text-sm text-stone-600 dark:text-zinc-400 mt-1.5 leading-relaxed">Фото, цель, интересы. Видно только в ULove.</p>
         </template>
       </Card>
       <Card class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[20px] !shadow-soft card-hover group cursor-default">
         <template #content>
-          <div class="w-11 h-11 rounded-xl bg-brand-500 text-white grid place-items-center font-bold text-sm card-icon">02</div>
-          <h3 class="mt-4 font-bold text-[15px]">Создай пин <span class="card-arrow inline-block opacity-0 group-hover:opacity-100">→</span></h3><p class="text-sm text-stone-600 dark:text-zinc-400 mt-1.5 leading-relaxed">Выбери точность: 200 м, точно или район. Анонимно или с репутацией.</p>
+          <div class="w-11 h-11 rounded-xl bg-gradient-to-r from-rose-500 to-orange-400 text-white grid place-items-center font-bold text-sm card-icon"><i class="pi pi-heart" /></div>
+          <h3 class="mt-4 font-bold text-[15px]">02 · Листай рядом <span class="card-arrow inline-block opacity-0 group-hover:opacity-100">→</span></h3><p class="text-sm text-stone-600 dark:text-zinc-400 mt-1.5 leading-relaxed">Свайпы с фильтром по расстоянию. Лайк — в один тап.</p>
         </template>
       </Card>
       <Card class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[20px] !shadow-soft card-hover group cursor-default">
         <template #content>
-          <div class="w-11 h-11 rounded-xl bg-emerald-600 text-white grid place-items-center font-bold text-sm card-icon">03</div>
-          <h3 class="mt-4 font-bold text-[15px]">Получай отклик <span class="card-arrow inline-block opacity-0 group-hover:opacity-100">→</span></h3><p class="text-sm text-stone-600 dark:text-zinc-400 mt-1.5 leading-relaxed">Комментарии, реакции, пуши подписчикам. Больше реакций — дольше жизнь.</p>
+          <div class="w-11 h-11 rounded-xl bg-gradient-to-r from-rose-500 to-orange-400 text-white grid place-items-center font-bold text-sm card-icon"><i class="pi pi-comments" /></div>
+          <h3 class="mt-4 font-bold text-[15px]">03 · Мэтч открывает чат <span class="card-arrow inline-block opacity-0 group-hover:opacity-100">→</span></h3><p class="text-sm text-stone-600 dark:text-zinc-400 mt-1.5 leading-relaxed">Взаимность — и вы уже переписываетесь. Без мэтча — тихо.</p>
         </template>
       </Card>
     </section>
 
     <section class="max-w-[1280px] mx-auto px-4 sm:px-6 py-4 sm:py-6 grid lg:grid-cols-5 gap-3 sm:gap-4">
       <div class="lg:col-span-3 bg-ink-900 dark:bg-zinc-900 dark:border dark:border-zinc-800 text-white rounded-[20px] sm:rounded-[24px] p-5 sm:p-8 relative overflow-hidden">
-        <div class="absolute -right-20 -top-20 w-80 h-80 bg-gradient-to-br from-brand-500 to-accent-teal rounded-full blur-[60px] opacity-20"></div>
-        <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-white rounded-full blur-[80px] opacity-[0.06]"></div>
+        <div class="absolute -right-20 -top-20 w-80 h-80 bg-gradient-to-br from-rose-500 to-orange-400 rounded-full blur-[60px] opacity-25"></div>
         <div class="relative">
-          <Tag class="!bg-white/10 !border !border-white/15 !rounded-full !px-3 !py-1 !text-xs !font-medium !text-white">🔒 Приватность по умолчанию</Tag>
-          <h3 class="mt-4 text-2xl font-black tracking-tight">Спокойная карта. Без слежки.</h3>
-          <p class="text-white/60 mt-2 max-w-xl leading-relaxed">Точное место никогда не показывается. По умолчанию смещение 200 м, сообщения — только взаимно, блок — в один клик.</p>
-          <div class="mt-5 flex flex-wrap gap-2 text-xs font-medium"><Tag class="!bg-white !text-ink-900 !px-3.5 !py-2 !rounded-full !border-0">Размытие 200 м</Tag><Tag class="!bg-white/10 !border !border-white/15 !px-3.5 !py-2 !rounded-full !text-white">Анонимность</Tag><Tag class="!bg-white/10 !border !border-white/15 !px-3.5 !py-2 !rounded-full !text-white">Без истории перемещений</Tag></div>
+          <Tag class="!bg-white/10 !border !border-white/15 !rounded-full !px-3 !py-1 !text-xs !font-medium !text-white">🗺️ КАРТА + ПИНЫ · КАЙФ РАЙОНА</Tag>
+          <h3 class="mt-4 text-2xl font-black tracking-tight">Пины — пульс района. Карта удобно дополняет ULove.</h3>
+          <p class="text-white/60 mt-2 max-w-xl leading-relaxed">Вопросы, события, помощь и объявления рядом — кинь пин в 2 клика и тебя увидят соседи. Есть мэтч и не знаете где встретиться? Кинь пин «кофе тут» — встретитесь без точного адреса. Пины живут часы, а не вечно.</p>
+          <div class="mt-5 grid sm:grid-cols-3 gap-2">
+            <div class="bg-white/10 border border-white/15 rounded-2xl px-3.5 py-3"><div class="text-sm font-bold">☕ Настолки в кофейне</div><div class="text-xs text-white/60 mt-1">Нас трое, нужен четвёртый · до 22:00</div></div>
+            <div class="bg-white/10 border border-white/15 rounded-2xl px-3.5 py-3"><div class="text-sm font-bold">🐕 Кто гуляет с собакой?</div><div class="text-xs text-white/60 mt-1">Парк за домом · выхожу в 19:00</div></div>
+            <div class="bg-white/10 border border-white/15 rounded-2xl px-3.5 py-3"><div class="text-sm font-bold">🔧 Одолжу дрель</div><div class="text-xs text-white/60 mt-1">Верну с шоколадкой · район рядом</div></div>
+          </div>
+          <div class="mt-5 flex flex-wrap gap-2 text-xs font-medium"><Tag class="!bg-white !text-ink-900 !px-3.5 !py-2 !rounded-full !border-0">Пин-свидание в 2 клика</Tag><Tag class="!bg-white/10 !border !border-white/15 !px-3.5 !py-2 !rounded-full !text-white">Без точного адреса</Tag><Tag class="!bg-white/10 !border !border-white/15 !px-3.5 !py-2 !rounded-full !text-white">Вопросы и помощь рядом</Tag></div>
+          <div class="mt-6"><Link href="/map"><Button label="Открыть карту →" outlined class="!border-white/25 !text-white !px-6 !py-3 !rounded-full !font-semibold hover:!bg-white/10" /></Link></div>
         </div>
       </div>
-      <Card class="lg:col-span-2 !bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[24px] !shadow-soft card-hover overflow-hidden select-none relative group/monet">
+      <Card class="lg:col-span-2 !bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[24px] !shadow-soft card-hover overflow-hidden">
         <template #content>
-          <div class="blur-[7px] group-hover/monet:blur-none group-active/monet:blur-none transition-all duration-300">
-            <h3 class="font-black tracking-tight">Монетизация для активных</h3><p class="text-xs text-stone-500 dark:text-zinc-500 mt-1">Честные бусты, без навязчивости</p>
-            <div class="mt-5 space-y-2.5 text-sm">
-              <div class="flex justify-between items-center bg-stone-50 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-xl px-4 py-3"><span class="font-medium">Поднять в топ 1 ч</span><Badge value="$0.99" class="!bg-white dark:!bg-zinc-700 !border dark:!border-zinc-600 !px-2.5 !py-1 !rounded-full !text-xs !text-ink-900 dark:!text-white" /></div>
-              <div class="flex justify-between items-center bg-stone-50 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-xl px-4 py-3"><span class="font-medium">Подсветка на карте</span><Badge value="$1.99" class="!bg-white dark:!bg-zinc-700 !border dark:!border-zinc-600 !px-2.5 !py-1 !rounded-full !text-xs !text-ink-900 dark:!text-white" /></div>
-              <div class="flex justify-between items-center bg-stone-50 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-xl px-4 py-3"><span class="font-medium">Уведомить 1 км • 1 ч</span><Badge value="$4.99" class="!bg-white dark:!bg-zinc-700 !border dark:!border-zinc-600 !px-2.5 !py-1 !rounded-full !text-xs !text-ink-900 dark:!text-white" /></div>
-            </div>
-            <div class="mt-4 text-xs text-stone-500 dark:text-zinc-400 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-xl px-3 py-2.5">Pro $4.99/мес — безлимит, 5 км, 24 ч. Business $19.99 — витрина.</div>
-          </div>
-          <div class="absolute inset-0 grid place-items-center bg-white/55 dark:bg-zinc-900/55 backdrop-blur-[1px] group-hover/monet:opacity-0 group-hover/monet:pointer-events-none group-active/monet:opacity-0 group-active/monet:pointer-events-none transition duration-300">
-            <span class="inline-flex items-center gap-2 bg-ink-900 dark:bg-white dark:text-ink-900 text-white px-4 py-2 rounded-full text-xs font-bold shadow-lg tracking-wide">
-              <span class="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></span> В разработке — наведите чтобы посмотреть
-            </span>
-          </div>
+          <Tag class="!bg-white/10 !rounded-full !px-3 !py-1 !text-xs !font-medium !text-white !bg-gradient-to-r !from-rose-500 !to-orange-400 !border-0">🔒 Приватность по умолчанию</Tag>
+          <h3 class="mt-4 text-xl font-black tracking-tight">Спокойно знакомиться. Без слежки.</h3>
+          <p class="text-sm text-stone-600 dark:text-zinc-400 mt-2 leading-relaxed">Точное место никогда не показывается. Размытие 200 м, сообщения только взаимно, блок в один клик.</p>
+          <div class="mt-4 flex flex-wrap gap-2 text-xs font-medium"><Tag class="!bg-stone-100 dark:!bg-zinc-800 !text-ink-900 dark:!text-white !px-3 !py-1.5 !rounded-full !border-0">Размытие 200 м</Tag><Tag class="!bg-stone-100 dark:!bg-zinc-800 !text-ink-900 dark:!text-white !px-3 !py-1.5 !rounded-full !border-0">Анонимно по желанию</Tag></div>
         </template>
       </Card>
     </section>
@@ -165,8 +148,8 @@ const isAuthenticated = computed(() => !!(page.props.auth as any)?.user)
       <Card class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[24px] !shadow-soft card-hover">
         <template #content>
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div class="min-w-0"><div class="text-[18px] sm:text-[20px] font-black tracking-tight text-balance">Готов почувствовать пульс района?</div><div class="text-sm text-stone-600 dark:text-zinc-400 mt-1">Создай первый пин за 2 минуты. Живут 2 часа — не пропусти.</div></div>
-            <Link href="/map" class="w-full sm:w-auto shrink-0"><Button label="Открыть карту — бесплатно" class="w-full sm:w-auto !bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white !px-8 !py-3.5 !rounded-full !font-semibold whitespace-nowrap hover:!bg-ink-800 dark:hover:!bg-zinc-100 !border-0 shadow-soft" /></Link>
+            <div class="min-w-0"><div class="text-[18px] sm:text-[20px] font-black tracking-tight text-balance">Готов к первому мэтчу?</div><div class="text-sm text-stone-600 dark:text-zinc-400 mt-1">Создай анкету ULove за 2 минуты. А карту откроешь, когда захочется встретиться рядом.</div></div>
+            <Link :href="w.primaryCtaHref.value" class="w-full sm:w-auto shrink-0"><Button :label="w.primaryCtaLabel.value" class="w-full sm:w-auto !bg-gradient-to-r !from-rose-500 !via-fuchsia-500 !to-orange-400 !text-white !px-8 !py-3.5 !rounded-full !font-bold whitespace-nowrap hover:opacity-90 !border-0 shadow-soft" /></Link>
           </div>
         </template>
       </Card>

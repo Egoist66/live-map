@@ -55,12 +55,14 @@ export function useRegisterForm() {
       home_lng: null,
       home_radius_km: 5,
       home_address: '',
+      signup_goal: 'love',
     } as any,
   })
 
   const [name, nameAttrs] = defineField('name')
   const [email, emailAttrs] = defineField('email')
   const [gender] = defineField('gender')
+  const [signup_goal] = defineField('signup_goal')
   const [password, passwordAttrs] = defineField('password')
   const [password_confirmation, passwordConfirmationAttrs] = defineField('password_confirmation')
   const [birth_date] = defineField('birth_date')
@@ -157,6 +159,7 @@ export function useRegisterForm() {
     email,
     emailAttrs,
     gender,
+    signup_goal,
     password,
     passwordAttrs,
     password_confirmation,

@@ -33,7 +33,17 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        $goal = $request->user()->signup_goal;
+
+        $fallback = route('dashboard', absolute: false);
+
+        if ($goal === 'neighbors') {
+            $fallback = route('map', absolute: false);
+        } elseif (is_string($goal) && $goal !== '') {
+            $fallback = route('swipes', absolute: false);
+        }
+
+        return redirect()->intended($fallback);
     }
 
     /**

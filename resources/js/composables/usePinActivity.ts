@@ -88,6 +88,25 @@ async function markOne(a: PinActivityItem) {
 
 function describe(a: PinActivityItem): { emoji: string; text: string } {
   const name = a.actor?.name || 'Кто-то'
+  if (a.kind === 'sub_flow_post') {
+    const excerpt = (a as unknown as { excerpt?: string }).excerpt
+    return { emoji: '📰', text: excerpt ? `${name} опубликовал в UFlow: ${excerpt}` : `${name} опубликовал пост в UFlow` }
+  }
+  if (a.kind === 'flow_like') {
+    return { emoji: '❤️', text: `${name} оценил ваш пост в UFlow` }
+  }
+  if (a.kind === 'flow_comment') {
+    const excerpt = (a as unknown as { excerpt?: string }).excerpt
+    return { emoji: '💬', text: excerpt ? `${name}: ${excerpt}` : `${name} прокомментировал ваш пост` }
+  }
+  if (a.kind === 'flow_reply') {
+    const excerpt = (a as unknown as { excerpt?: string }).excerpt
+    return { emoji: '↩️', text: excerpt ? `${name} ответил вам: ${excerpt}` : `${name} ответил на ваш комментарий` }
+  }
+  if (a.kind === 'flow_mention') {
+    const excerpt = (a as unknown as { excerpt?: string }).excerpt
+    return { emoji: '📣', text: excerpt ? `${name} упомянул вас в UFlow: ${excerpt}` : `${name} упомянул вас в UFlow` }
+  }
   if (a.kind === 'sub_pin') {
     const title = (a as any).excerpt || a.pin?.title || 'новый пин'
     return { emoji: '📍', text: `${name} создал пин «${title}»` }
@@ -114,7 +133,11 @@ function describe(a: PinActivityItem): { emoji: string; text: string } {
 }
 
 function resolveTarget(a: PinActivityItem): { url: string; pending: any } {
-  const actorId = Number((a as any).actor?.id || 0) || null
+  const actorId = Number((a as unknown as { actor?: { id?: number } }).actor?.id || 0) || null
+  const flowPostId = Number((a as unknown as { flow_post?: { id?: number }; flow_post_id?: number }).flow_post?.id || (a as unknown as { flow_post_id?: number }).flow_post_id || 0) || null
+  if (flowPostId) {
+    return { url: `/flow/post/${flowPostId}`, pending: { type: 'flow', postId: flowPostId } }
+  }
   const pinId = Number((a as any).pin?.id || (a as any).pin_id || 0) || null
   const commentId = Number((a as any).comment_id || 0) || null
   const photoId = Number((a as any).photo?.id || (a as any).photo_id || 0) || null

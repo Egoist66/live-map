@@ -4,7 +4,7 @@ import { useUserSubscriptions } from '@/composables/useUserSubscriptions'
 
 const props = defineProps<{
   userId: number | string
-  initial?: { subscribed: boolean; notify_pin: boolean; notify_photo: boolean; notify_level: boolean }
+  initial?: { subscribed: boolean; notify_pin: boolean; notify_photo: boolean; notify_level: boolean; notify_post?: boolean }
   compact?: boolean
   isFriend?: boolean
 }>()
@@ -22,7 +22,7 @@ const sub = useUserSubscriptions(props.userId, props.initial)
     rounded
     class="!rounded-xl !text-[13px] !font-bold shrink-0"
     :aria-label="sub.subscribed.value ? 'Отписаться от обновлений' : 'Подписаться на обновления'"
-    :title="sub.subscribed.value ? 'Новый пин, фото, репутация' : 'Новый пин, фото, репутация'"
+    :title="sub.subscribed.value ? 'Посты, пины, фото, репутация' : 'Посты, пины, фото, репутация'"
     @click="sub.toggle()"
   />
 </template>

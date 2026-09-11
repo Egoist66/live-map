@@ -64,19 +64,17 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
           <Button :icon="gallery.active.value.liked ? 'pi pi-heart-fill' : 'pi pi-heart'" rounded text :loading="viewer.likeLoading.value" :class="['!w-10 !h-10', gallery.active.value.liked ? '!text-red-500' : '']" @click="viewer.onLike(viewer.incognito.value)" :aria-label="gallery.active.value.liked ? 'Убрать лайк' : 'Лайк'" />
           <Button icon="pi pi-comment" rounded text class="!w-10 !h-10" aria-label="Комментарии" />
           <span class="flex-1" />
-          <label class="flex items-center gap-1.5 text-[11px] text-stone-500 dark:text-zinc-400 cursor-pointer" title="Анонимный лайк — PRO">
-            <input type="checkbox" v-model="viewer.incognito.value" :disabled="!viewer.canIncognito.value" class="accent-violet-600 w-3.5 h-3.5" />
-            🕵️<span class="font-bold text-violet-500">PRO</span>
-          </label>
-          <span class="flex-1" />
           <template v-if="isOwn">
             <Button icon="pi pi-pencil" rounded text class="!w-10 !h-10" @click="viewer.editing.value ? viewer.cancelEdit() : viewer.startEdit()" aria-label="Редактировать подпись" />
             <Button icon="pi pi-refresh" rounded text class="!w-10 !h-10" @click="viewer.onPickReplace" aria-label="Заменить фото" />
             <input :ref="viewer.setReplaceInput" type="file" accept="image/*" class="hidden" @change="viewer.onReplaceFile" />
           </template>
+          <label class="ml-1 flex items-center gap-1.5 border-l border-stone-200/70 dark:border-white/10 pl-2.5 text-[11px] text-stone-500 dark:text-zinc-400 cursor-pointer" title="Анонимный лайк — PRO">
+            <input type="checkbox" v-model="viewer.incognito.value" :disabled="!viewer.canIncognito.value" class="accent-violet-600 w-3.5 h-3.5" />
+            🕵️<span class="font-bold text-violet-500">PRO</span>
+          </label>
         </div>
-        <div class="px-4 text-sm font-black">{{ gallery.active.value.likes_count }} отметок «Нравится»</div>
-        <button type="button" class="px-4 mt-1 text-xs font-bold text-stone-500 dark:text-zinc-400 hover:text-violet-600" @click="gallery.openLikers(gallery.active.value)">Показать кто лайкнул · как в инсте</button>
+        <button type="button" class="px-4 text-sm font-black text-left hover:opacity-70" @click="gallery.likersOpen.value ? gallery.closeLikers() : gallery.openLikers(gallery.active.value)">{{ gallery.active.value.likes_count }} отметок «Нравится»</button>
         <div v-if="gallery.likersOpen.value" class="px-4 mt-2 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-900 p-2">
           <div class="flex items-center gap-2 px-1 py-1">
             <span class="text-xs font-black flex-1">Лайки · {{ gallery.likersTotal.value }}<span v-if="gallery.likersIncognito.value" class="text-violet-500"> · 🕵️{{ gallery.likersIncognito.value }}</span></span>
