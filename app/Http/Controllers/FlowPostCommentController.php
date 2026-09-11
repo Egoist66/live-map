@@ -60,7 +60,7 @@ class FlowPostCommentController extends Controller
             'parent_id' => $comment->parent_id,
             'content' => $comment->content,
             'is_anonymous' => (bool) $comment->is_anonymous,
-            'can_edit' => $isOwn || ($viewer && $viewer->isAdmin()),
+            'can_edit' => $isOwn,
             'can_delete' => $isOwn || ($viewer && $viewer->isAdmin()),
             'created_at' => $comment->created_at?->toISOString(),
             'updated_at' => $comment->updated_at?->toISOString(),
@@ -157,7 +157,7 @@ class FlowPostCommentController extends Controller
     }
 
     /**
-     * Обновить свой комментарий.
+     * Обновить свой комментарий. Чужой запрещено даже админу.
      *
      * @param Request $request запрос
      * @param FlowPostComment $comment комментарий
@@ -165,7 +165,7 @@ class FlowPostCommentController extends Controller
     public function update(Request $request, FlowPostComment $comment)
     {
         $user = $request->user();
-        abort_unless((int) $user->id === (int) $comment->user_id || $user->isAdmin(), 403);
+        abort_unless((int) $user->id === (int) $comment->user_id, 403);
 
         $data = $request->validate(['content' => 'required|string|max:1000']);
         ContentModeration::assertClean($data['content']);

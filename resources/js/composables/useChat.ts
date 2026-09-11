@@ -3,6 +3,8 @@ import { usePage } from '@inertiajs/vue3'
 import { useToast } from 'primevue/usetoast'
 import { chatApi } from '@/services/chat.api'
 import { useChatHistory } from '@/composables/useChatHistory'
+import { busOn, registerPollContextProvider } from '@/services/realtime-bus'
+import { ensureUserChannel, leaveUserChannel } from '@/composables/useUserChannel'
 import type { Conversation, ConversationDetail, Message } from '@/types/entities/Chat'
 
 let searchAbort: AbortController | null = null
@@ -520,29 +522,86 @@ export function useChat() {
     }
   }
 
-  let globalCh: any = null
   let globalSubscribed = false
   let globalUid: number | null = null
-  function subscribeGlobal() {
-    if (globalSubscribed && globalCh) return
+  let busUnsubs: Array<() => void> = []
+
+  /**
+   * Подписки на шину polling-режима: сообщения, typing, превью.
+   * В socket-режиме шина молчит, дубли исключены дедупом handleIncoming.
+   */
+  function subscribeRealtimeBus(): void {
     try {
-      const echo = getEcho()
-      if (!echo) return
+      registerPollContextProvider('chat', () => ({ conversationId: selectedId.value }))
+      busUnsubs.push(busOn('chat:message', (msg: any) => handleIncoming(msg as Message)))
+      busUnsubs.push(busOn('chat:typing', (e: any) => syncTypingFromPoll(Number(e?.conversationId), e?.userIds)))
+      busUnsubs.push(busOn('chat:previews', (previews: any[]) => applyPreviews(previews)))
+      busUnsubs.push(busOn('chat:peer', (e: any) => applyPeer(Number(e?.conversationId), e?.peer)))
+    } catch {}
+  }
+
+  /**
+   * Освежает «в сети» собеседника из поллинга.
+   * @param conversationId диалог
+   * @param peer состояние собеседника
+   */
+  function applyPeer(conversationId: number, peer: any): void {
+    if (!peer || Number(conversationId) !== Number(selectedId.value)) return
+    if (activeConv.value?.other && Number((activeConv.value.other as any)?.id) === Number(peer.id)) {
+      (activeConv.value.other as any).last_seen_at = peer.last_seen_at ?? null
+    }
+    const conv = conversations.value.find((c) => c?.id === Number(conversationId)) as any
+    if (conv?.other && Number(conv.other?.id) === Number(peer.id)) {
+      conv.other.last_seen_at = peer.last_seen_at ?? null
+    }
+  }
+  function subscribeGlobal() {
+    if (globalSubscribed) return
+    try {
       const uid = getUid()
       if (!uid) return
-      if (globalSubscribed && globalUid !== null && globalUid !== uid) resetChatRealtime()
-      if (globalSubscribed && globalCh) return
+      if (globalUid !== null && globalUid !== uid) resetChatRealtime()
       globalSubscribed = true
       globalUid = uid
       trackedUserChannels.add(Number(uid))
-      globalCh = echo.private(`user.${uid}`)
-      globalCh.listen('.message.sent', (e: any) => handleIncoming(e.message))
-      globalCh.listen('.message.updated', (e: any) => handleUpdated(e.message))
-      globalCh.listen('.message.deleted', (e: any) => handleDeleted(e))
-      globalCh.listen('.friendship.updated', () => loadConversations())
-      globalCh.listen('.message.delivered', (e: any) => handleDelivered(e))
-      globalCh.listen('.message.read', (e: any) => handleRead(e))
+      ensureUserChannel()
+      busUnsubs.push(busOn('user:message.sent', (e: any) => handleIncoming(e.message as Message)))
+      busUnsubs.push(busOn('user:message.updated', (e: any) => handleUpdated(e.message as Message)))
+      busUnsubs.push(busOn('user:message.deleted', (e: any) => handleDeleted(e)))
+      busUnsubs.push(busOn('user:friendship.updated', () => loadConversations()))
+      busUnsubs.push(busOn('user:message.delivered', (e: any) => handleDelivered(e)))
+      busUnsubs.push(busOn('user:message.read', (e: any) => handleRead(e)))
+      busUnsubs.push(busOn('chat:receipts', (list: any[]) => applyReceipts(list)))
     } catch { globalSubscribed = false }
+  }
+
+  /**
+   * Применяет статусы доставки/прочтения из поллинга.
+   * @param list квитанции {id, conversation_id, delivered_at, read_at}
+   */
+  function applyReceipts(list: any[]): void {
+    if (!Array.isArray(list) || !list.length) return
+    for (const r of list) {
+      if (r?.id == null) continue
+      const idx = messages.value.findIndex((m: any) => m?.id === Number(r.id))
+      if (idx !== -1) {
+        const current = messages.value[idx] as any
+        if (r.delivered_at) current.delivered_at = r.delivered_at
+        if (r.read_at) {
+          current.read_at = r.read_at
+          current.delivered_at = current.delivered_at || r.read_at
+        }
+      }
+      conversations.value.forEach((c: any) => {
+        if (c?.last_message && Number((c.last_message as any)?.id) === Number(r.id)) {
+          if (r.delivered_at) (c.last_message as any).delivered_at = r.delivered_at
+          if (r.read_at) {
+            (c.last_message as any).read_at = r.read_at
+            ;(c.last_message as any).delivered_at = (c.last_message as any).delivered_at || r.read_at
+          }
+        }
+      })
+    }
   }
 
   /**
@@ -550,11 +609,10 @@ export function useChat() {
    */
   function resetChatRealtime(): void {
     try {
+      leaveUserChannel()
       const echo = getEcho()
-      if (echo && globalUid) try { echo.leave(`user.${globalUid}`) } catch {}
       if (echo && activeChatId !== null) try { echo.leave(`chat.${activeChatId}`) } catch {}
     } catch {}
-    globalCh = null
     globalSubscribed = false
     globalUid = null
     activeChatChannel = null
@@ -592,7 +650,6 @@ export function useChat() {
     try {
       const echo = getEcho()
       if (!echo) return
-      const currentUserId = getUid()
       if (activeChatChannel && activeChatId !== null && activeChatId !== convId) {
         try { echo.leave(`chat.${activeChatId}`) } catch {}
         echoChannels = echoChannels.filter((c:any)=> c!==activeChatChannel)
@@ -609,24 +666,87 @@ export function useChat() {
       ch.listen('.message.delivered', (e: any) => handleDelivered(e))
       ch.listen('.message.read', (e: any) => handleRead(e))
       const handleTyping = (e: any) => {
-        if (Number(e.user_id) === currentUserId) return
-        if (e.is_typing) {
-          const n = new Set(typingUsers.value); n.add(Number(e.user_id)); typingUsers.value = n
-          const prev = typingExpire.get(Number(e.user_id)); if (prev) clearTimeout(prev)
-          const timer = setTimeout(() => {
-            const nn = new Set(typingUsers.value); nn.delete(Number(e.user_id)); typingUsers.value = nn
-            typingExpire.delete(Number(e.user_id))
-          }, 2500)
-          typingExpire.set(Number(e.user_id), timer)
-        } else {
-          const n = new Set(typingUsers.value); n.delete(Number(e.user_id)); typingUsers.value = n
-          const t = typingExpire.get(Number(e.user_id)); if (t) { clearTimeout(t); typingExpire.delete(Number(e.user_id)) }
-        }
+        applyTypingState(Number(e.user_id), !!e.is_typing)
       }
       ch.listenForWhisper('typing', handleTyping)
       ch.listen('.typing', handleTyping)
       echoChannels.push(ch)
     } catch {}
+  }
+
+  /**
+   * Применяет состояние "печатает" (сокет и поллинг идут сюда же).
+   * @param userId кто печатает
+   * @param isTyping печатает или перестал
+   */
+  function applyTypingState(userId: number, isTyping: boolean): void {
+    const id = Number(userId)
+    if (!id || id === getUid()) return
+    if (isTyping) {
+      const n = new Set(typingUsers.value)
+      n.add(id)
+      typingUsers.value = n
+      const prev = typingExpire.get(id)
+      if (prev) clearTimeout(prev)
+      const timer = setTimeout(() => {
+        const nn = new Set(typingUsers.value)
+        nn.delete(id)
+        typingUsers.value = nn
+        typingExpire.delete(id)
+      }, 2500)
+      typingExpire.set(id, timer)
+    } else {
+      const n = new Set(typingUsers.value)
+      n.delete(id)
+      typingUsers.value = n
+      const t = typingExpire.get(id)
+      if (t) {
+        clearTimeout(t)
+        typingExpire.delete(id)
+      }
+    }
+  }
+
+  /**
+   * Синхронизирует "печатают" из поллинга: сервер отдаёт полный срез.
+   * @param conversationId диалог среза
+   * @param userIds печатающие прямо сейчас
+   */
+  function syncTypingFromPoll(conversationId: number, userIds: number[]): void {
+    if (Number(conversationId) !== Number(selectedId.value)) return
+    const selfId = getUid()
+    const next = new Set(
+      (Array.isArray(userIds) ? userIds : [])
+        .map((id) => Number(id))
+        .filter((id) => id > 0 && id !== selfId),
+    )
+    typingExpire.forEach((timer, id) => {
+      if (!next.has(id)) {
+        clearTimeout(timer)
+        typingExpire.delete(id)
+      }
+    })
+    typingUsers.value = next
+  }
+
+  /**
+   * Вливает лёгкие превью из поллинга в сайдбар.
+   * @param previews превью изменившихся диалогов
+   */
+  function applyPreviews(previews: any[]): void {
+    if (!Array.isArray(previews) || !previews.length) return
+    let unknown = false
+    for (const preview of previews) {
+      const conv = conversations.value.find((c) => c?.id === Number(preview?.id))
+      if (!conv) {
+        unknown = true
+        continue
+      }
+      if (preview?.last_message) applyPreview(conv as any, preview.last_message)
+      if (preview?.unread_count != null) (conv as any).unread_count = Number(preview.unread_count)
+    }
+    sortConversations()
+    if (unknown) loadConversations().catch(() => {})
   }
 
   async function searchUsers(q: string) {
@@ -721,17 +841,18 @@ export function useChat() {
     } catch {}
     await resyncOpenConversation()
     try {
-      const echo = getEcho() as any
-      const pusher = echo?.connector?.pusher
-      if (echo && !pusher) subscribeGlobal()
+      subscribeGlobal()
       if (selectedId.value) subscribeChat(selectedId.value)
     } catch {}
   }
 
-  onMounted(() => { loadConversations(); subscribeGlobal(); window.addEventListener('focus', handleFocusResync); document.addEventListener('visibilitychange', handleFocusResync) })
+  onMounted(() => { loadConversations(); subscribeGlobal(); subscribeRealtimeBus(); window.addEventListener('focus', handleFocusResync); document.addEventListener('visibilitychange', handleFocusResync) })
   onBeforeUnmount(() => {
     alive = false
     selectedId.value = null
+    globalSubscribed = false
+    busUnsubs.forEach((off) => { try { off() } catch {} })
+    busUnsubs = []
     if (typingTimeout) clearTimeout(typingTimeout)
     typingExpire.forEach((t) => clearTimeout(t))
     window.removeEventListener('focus', handleFocusResync)

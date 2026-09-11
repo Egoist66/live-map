@@ -2,11 +2,13 @@ import { ref, computed } from 'vue'
 import { router } from '@inertiajs/vue3'
 import { pinActivityApi, type PinActivityItem } from '@/services/pinActivity.api'
 import { useBadgeStore } from '@/stores/badges'
+import { busOn } from '@/services/realtime-bus'
+import { ensureUserChannel, leaveUserChannel } from '@/composables/useUserChannel'
 
 const activities = ref<PinActivityItem[]>([])
 const unread = ref(0)
 const loading = ref(false)
-let echoCh: any = null
+let busBound = false
 let inited = false
 
 const REACTION_EMOJI: Record<string, string> = {
@@ -44,13 +46,13 @@ function onActivity(e: any) {
 
 function subscribe() {
   try {
-    const echo = (window as any).Echo
-    if (!echo || echoCh) return
     const uid = getUid()
     if (!uid) return
-    echoCh = echo.private(`user.${uid}`)
-    echoCh.listen('.pin.activity', onActivity)
-    echoCh.listen('PinActivityCreated', onActivity)
+    ensureUserChannel()
+    if (busBound) return
+    busBound = true
+    busOn('user:pin.activity', onActivity)
+    busOn('notify:activity', (e: any) => onActivity(e))
   } catch {}
 }
 
@@ -172,6 +174,18 @@ function init() {
   void refresh()
   subscribe()
   window.addEventListener('focus', subscribe)
+}
+
+/**
+ * Сбросить ленту активности при смене аккаунта.
+ */
+export function resetPinActivity(): void {
+  try {
+    leaveUserChannel()
+  } catch {}
+  inited = false
+  activities.value = []
+  unread.value = 0
 }
 
 export function usePinActivity() {

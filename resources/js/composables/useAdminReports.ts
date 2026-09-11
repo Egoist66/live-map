@@ -3,6 +3,8 @@ import { router, usePage } from '@inertiajs/vue3'
 import { useToast } from 'primevue/usetoast'
 import { adminApi } from '@/services/admin.api'
 import { useBadgeStore } from '@/stores/badges'
+import { busOn } from '@/services/realtime-bus'
+import { ensureUserChannel, leaveUserChannel } from '@/composables/useUserChannel'
 
 export type ReportFilter = 'pending' | 'resolved' | 'dismissed' | 'all'
 
@@ -12,7 +14,7 @@ const loading = ref(false)
 const filter = ref<ReportFilter>('pending')
 const actingId = ref<number | null>(null)
 const error = ref<string | null>(null)
-let echoCh: any = null
+let busBound = false
 let inited = false
 let toast: any = null
 
@@ -43,13 +45,13 @@ function onReport(e: any) {
 
 function subscribe() {
   try {
-    const echo = (window as any).Echo
-    if (!echo || echoCh) return
     const uid = getUid()
     if (!uid) return
-    echoCh = echo.private(`user.${uid}`)
-    echoCh.listen('.report.created', onReport)
-    echoCh.listen('ReportCreated', onReport)
+    ensureUserChannel()
+    if (busBound) return
+    busBound = true
+    busOn('user:report.created', onReport)
+    busOn('notify:report', onReport)
   } catch {}
 }
 
@@ -104,6 +106,19 @@ function init() {
   void refresh()
   subscribe()
   window.addEventListener('focus', subscribe)
+}
+
+/**
+ * Сбросить жалобы при смене аккаунта.
+ */
+export function resetAdminReports(): void {
+  try {
+    leaveUserChannel()
+  } catch {}
+  inited = false
+  reports.value = []
+  pendingCount.value = 0
+  error.value = null
 }
 
 export function useAdminReports() {

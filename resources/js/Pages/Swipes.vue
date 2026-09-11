@@ -118,6 +118,7 @@ onMounted(async () => {
         <template v-else>
           <div class="flex items-center gap-2 h-[1.2rem] sm:h-auto py-0 sm:py-1 overflow-hidden">
             <Button icon="pi pi-arrow-left" rounded text aria-label="Выйти из свайпов" title="Выйти из свайпов" class="!w-7 !h-7 sm:!w-10 sm:!h-10 !p-0 shrink-0" @click="mobileMenu.goBack()" />
+            <Button icon="pi pi-user" rounded text aria-label="Мой профиль" title="Мой профиль" class="!w-7 !h-7 sm:!w-10 sm:!h-10 !p-0 shrink-0" @click="mobileMenu.goProfile()" />
             <span class="flex-1" />
           </div>
           <div class="mt-2 sm:mt-4 hidden sm:flex items-center gap-2">

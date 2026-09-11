@@ -8,6 +8,7 @@ import { useAppConfirm } from './useAppConfirm'
 import { usePage as useInertiaPage } from '@inertiajs/vue3'
 import { GEO_BLUR_DEFAULT, formatBlurMeters, pinBlurInfo } from './useLocationBlur'
 import { isPinVisibleLocally } from './usePinVisibility'
+import { busOn, registerPollContextProvider } from '@/services/realtime-bus'
 
 const OSM_RASTER_STYLE: any = {
   version: 8,
@@ -569,11 +570,85 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
   let wsConnected = ref(false)
   let reconnectTimer: any = null
   let mapChannel: any = null
+  let mapBusUnsubs: Array<() => void> = []
+  let connBound = false
+  let renderTimer: ReturnType<typeof setTimeout> | null = null
+
+  /**
+   * Отложенная перерисовка маркеров: схлопывает пачки событий тика поллинга.
+   */
+  function scheduleRenderPins(): void {
+    if (renderTimer) return
+    renderTimer = setTimeout(() => {
+      renderTimer = null
+      try { renderPins() } catch {}
+    }, 300)
+  }
+
+  /**
+   * Применяет изменения карты из поллинга.
+   * @param payload upsert/deleted/counters из /api/realtime/sync
+   */
+  function applyMapSync(payload: any): void {
+    if (!payload) return
+    let touched = false
+    for (const pin of (Array.isArray(payload.upsert) ? payload.upsert : [])) {
+      if (!pin?.id || !isPinVisibleLocally(pin)) continue
+      try { store.addRealtime(pin) } catch {}
+      touched = true
+    }
+    for (const id of (Array.isArray(payload.deleted) ? payload.deleted : [])) {
+      if (Number(id) > 0) {
+        try { store.removeRealtime(Number(id)) } catch {}
+        touched = true
+      }
+    }
+    const counters = payload.counters && typeof payload.counters === 'object' ? payload.counters : {}
+    for (const [id, counts] of Object.entries(counters) as Array<[string, any]>) {
+      if (Number(id) > 0 && counts) {
+        try { (store as any).patchCounts?.(Number(id), counts.reactions_count, counts.comments_count) } catch {}
+        touched = true
+      }
+    }
+    if (touched) scheduleRenderPins()
+  }
+
+  /**
+   * Контекст карты для поллера: bbox вьюпорта и известные id.
+   */
+  function mapPollContext(): { mapBbox?: any; knownPinIds?: number[] } {
+    try {
+      if (!map) return {}
+      const bounds = (map as any).getBounds?.()
+      if (!bounds) return {}
+      const pins = ((store as any).pins?.value ?? (store as any).pins ?? []) as any[]
+      const knownPinIds = (Array.isArray(pins) ? pins : [])
+        .map((p: any) => Number(p?.id))
+        .filter((id: number) => id > 0)
+        .slice(0, 500)
+      return {
+        mapBbox: {
+          minLat: bounds.getSouth(),
+          maxLat: bounds.getNorth(),
+          minLng: bounds.getWest(),
+          maxLng: bounds.getEast(),
+        },
+        knownPinIds,
+      }
+    } catch { return {} }
+  }
+
   function bindRealtime() {
     const doBind = () => {
       try { if (mapChannel) (window as any).Echo?.leave('map') } catch {}
+      mapBusUnsubs.forEach((off) => { try { off() } catch {} })
+      mapBusUnsubs = []
+      try { registerPollContextProvider('map', () => mapPollContext()) } catch {}
       const ch = (window as any).Echo?.channel('map')
-      if (!ch) return
+      if (!ch) {
+        mapBusUnsubs.push(busOn('map:pins', (payload: any) => applyMapSync(payload)))
+        return
+      }
       mapChannel = ch
       const onCreated = (e: any) => {
         if (!e?.pin) return
@@ -598,15 +673,18 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
         try { (store as any).patchCounts?.(Number(e.pin_id), e.reactions_count, e.comments_count) } catch {}
         renderPins()
       }
-      ch.listen('PinCreated', onCreated).listen('.pin.created', onCreated)
-        .listen('PinDeleted', onDeleted).listen('.pin.deleted', onDeleted)
-        .listen('PinUpdated', onUpdated).listen('.pin.updated', onUpdated)
-        .listen('PinActivityCreated', onActivity).listen('.pin.activity', onActivity)
+      ch.listen('.pin.created', onCreated)
+        .listen('.pin.deleted', onDeleted)
+        .listen('.pin.updated', onUpdated)
+        .listen('.pin.activity', onActivity)
+        .listen('.pin.counters', onActivity)
+      mapBusUnsubs.push(busOn('map:pins', (payload: any) => applyMapSync(payload)))
     }
     doBind()
     try {
       const pusher = (window as any).Echo?.connector?.pusher
-      if (pusher) {
+      if (pusher && !connBound) {
+        connBound = true
         pusher.connection.bind('connected', () => { wsConnected.value = true; if (reconnectTimer) clearTimeout(reconnectTimer); doBind() })
         pusher.connection.bind('disconnected', () => wsConnected.value = false)
         pusher.connection.bind('failed', () => wsConnected.value = false)
@@ -618,7 +696,11 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
   }
   function unbindRealtime() {
     try { if (mapChannel) (window as any).Echo?.leave('map'); mapChannel = null } catch {}
+    mapBusUnsubs.forEach((off) => { try { off() } catch {} })
+    mapBusUnsubs = []
+    try { registerPollContextProvider('map', null) } catch {}
     if (reconnectTimer) clearTimeout(reconnectTimer)
+    if (renderTimer) { clearTimeout(renderTimer); renderTimer = null }
   }
   /**
    * Полная очистка карты при уходе со страницы: тултип/меню не должны

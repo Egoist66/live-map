@@ -87,6 +87,14 @@ export function useSwipesMobileMenu() {
   }
 
   /**
+   * Перейти в свой профиль.
+   */
+  function goProfile(): void {
+    close()
+    router.visit('/profile')
+  }
+
+  /**
    * Назад по истории, иначе в профиль.
    */
   function goBack(): void {
@@ -118,5 +126,5 @@ export function useSwipesMobileMenu() {
     store.showHelp.value = true
   }
 
-  return { isOpen, open, close, toggle, selectTab, openMatch, goBack, openFilters, openHelp }
+  return { isOpen, open, close, toggle, selectTab, openMatch, goBack, goProfile, openFilters, openHelp }
 }

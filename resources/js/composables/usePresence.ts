@@ -5,6 +5,8 @@ const onlineIds = ref<Set<number>>(new Set())
 let channel: any = null
 let started = false
 let retryTimer: ReturnType<typeof setTimeout> | null = null
+let retryAttempts = 0
+const MAX_RETRY_ATTEMPTS = 10
 let beatTimer: ReturnType<typeof setInterval> | null = null
 let listenersBound = false
 
@@ -97,9 +99,13 @@ function connect() {
   if (started && channel) return
   const echo = getEcho()
   if (!echo || typeof echo.join !== 'function') {
-    if (!retryTimer) retryTimer = setTimeout(() => { retryTimer = null; connect() }, 2500)
+    if (!retryTimer && retryAttempts < MAX_RETRY_ATTEMPTS) {
+      retryAttempts += 1
+      retryTimer = setTimeout(() => { retryTimer = null; connect() }, 2500)
+    }
     return
   }
+  retryAttempts = 0
   try {
     try { if (channel) echo.leave('online') } catch {}
     started = true

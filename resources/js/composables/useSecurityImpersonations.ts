@@ -1,6 +1,8 @@
 import { computed, ref } from 'vue'
 import { api } from '@/services/api'
 import { useBadgeStore } from '@/stores/badges'
+import { busOn } from '@/services/realtime-bus'
+import { ensureUserChannel, leaveUserChannel } from '@/composables/useUserChannel'
 
 export type ImpersonationEntry = {
   id: number
@@ -14,7 +16,7 @@ const items = ref<ImpersonationEntry[]>([])
 const unread = ref(0)
 const loading = ref(false)
 const error = ref<string | null>(null)
-let echoCh: any = null
+let busBound = false
 let inited = false
 
 function getUid(): number {
@@ -36,13 +38,12 @@ function onStarted(e: any) {
 
 function subscribe() {
   try {
-    const echo = (window as any).Echo
-    if (!echo || echoCh) return
     const uid = getUid()
     if (!uid) return
-    echoCh = echo.private(`user.${uid}`)
-    echoCh.listen('.impersonation.started', onStarted)
-    echoCh.listen('ImpersonationStarted', onStarted)
+    ensureUserChannel()
+    if (busBound) return
+    busBound = true
+    busOn('user:impersonation.started', onStarted)
   } catch {}
 }
 
@@ -77,6 +78,19 @@ function init() {
   void load()
   subscribe()
   window.addEventListener('focus', subscribe)
+}
+
+/**
+ * Сбросить журнал входов при смене аккаунта.
+ */
+export function resetSecurityImpersonations(): void {
+  try {
+    leaveUserChannel()
+  } catch {}
+  inited = false
+  items.value = []
+  unread.value = 0
+  error.value = null
 }
 
 export function useSecurityImpersonations(_active?: any) {

@@ -4,6 +4,8 @@ import { usePage } from '@inertiajs/vue3'
 import { chatApi } from '@/services/chat.api'
 import { pinActivityApi } from '@/services/pinActivity.api'
 import { api } from '@/services/api'
+import { busOn } from '@/services/realtime-bus'
+import { ensureUserChannel, leaveUserChannel } from '@/composables/useUserChannel'
 
 export const useBadgeStore = defineStore('badges', () => {
   const unread = ref(0)
@@ -14,7 +16,7 @@ export const useBadgeStore = defineStore('badges', () => {
   const updates = ref(0)
   const security = ref(0)
   const loading = ref(false)
-  let echoCh: any = null
+  let busBound = false
   let inited = false
   let subscribedUid: string | number | null = null
 
@@ -96,36 +98,29 @@ export const useBadgeStore = defineStore('badges', () => {
 
   function subscribe() {
     try {
-      const echo = (window as any).Echo
-      if (!echo) return
       const uid = resolveUid()
       if (!uid) return
-      if (echoCh && String(subscribedUid) === String(uid)) return
-      if (echoCh) reset()
-      echoCh = echo.private(`user.${uid}`)
+      if (subscribedUid !== null && String(subscribedUid) !== String(uid)) reset()
       subscribedUid = uid
-      echoCh.listen('.message.sent', handleIncomingMessage)
-      echoCh.listen('.message.updated', () => scheduleFetch())
-      echoCh.listen('.message.deleted', () => scheduleFetch())
-      echoCh.listen('.friendship.updated', (e: any) => {
+      ensureUserChannel()
+      if (busBound) return
+      busBound = true
+      busOn('user:message.sent', handleIncomingMessage)
+      busOn('user:message.updated', () => scheduleFetch())
+      busOn('user:message.deleted', () => scheduleFetch())
+      busOn('user:friendship.updated', (e: any) => {
         const f = e.friendship
-        const myId = Number(uid)
+        const myId = Number(subscribedUid)
         if (f?.status === 'pending' && Number(f.addressee_id) === myId) pending.value += 1
         else scheduleFetch()
       })
-      echoCh.listen('.match.created', () => scheduleFetch())
-      echoCh.listen('MatchCreated', () => scheduleFetch())
-      echoCh.listen('.swipe.liked', () => scheduleFetch())
-      echoCh.listen('SwipeLiked', () => scheduleFetch())
-      echoCh.listen('.message.read', () => scheduleFetch())
-      echoCh.listen('.pin.activity', () => scheduleFetch())
-      echoCh.listen('PinActivityCreated', () => scheduleFetch())
-      echoCh.listen('.user.feed.updated', () => scheduleFetch())
-      echoCh.listen('UserFeedUpdated', () => scheduleFetch())
-      const pusher = (echo as any).connector?.pusher
-      if (pusher) {
-        pusher.connection.bind('connected', () => fetch())
-      }
+      busOn('user:match.created', () => scheduleFetch())
+      busOn('user:swipe.liked', () => scheduleFetch())
+      busOn('user:message.read', () => scheduleFetch())
+      busOn('user:pin.activity', () => scheduleFetch())
+      busOn('user:pin.counters', () => scheduleFetch())
+      busOn('user:user.feed.updated', () => scheduleFetch())
+      busOn('user:reconnected', () => fetch())
     } catch {}
   }
 
@@ -152,8 +147,25 @@ export const useBadgeStore = defineStore('badges', () => {
     loading.value = true
     await fetch()
     subscribe()
+    try {
+      busOn('badges:update', (b: any) => applyPollBadges(b))
+    } catch {}
     loading.value = false
     window.addEventListener('focus', fetch)
+  }
+
+  /**
+   * Применяет счётчики из polling-тика одним пакетом.
+   * @param b badges из /api/realtime/sync
+   */
+  function applyPollBadges(b: any): void {
+    if (!b) return
+    if (b.unread_messages != null) setUnreadMessages(Number(b.unread_messages))
+    if (b.conversations_unread != null) setUnread(Number(b.conversations_unread))
+    if (b.pending_friends != null) setPending(Number(b.pending_friends))
+    if (b.pin_activity != null) setActivity(Number(b.pin_activity))
+    if (b.updates != null) setUpdates(Number(b.updates))
+    if (b.reports_pending != null) setReports(Number(b.reports_pending))
   }
 
   function refresh() { return fetch() }
@@ -163,10 +175,8 @@ export const useBadgeStore = defineStore('badges', () => {
    */
   function reset() {
     try {
-      const echo = (window as any).Echo
-      if (echo && subscribedUid) try { echo.leave(`user.${subscribedUid}`) } catch {}
+      leaveUserChannel()
     } catch {}
-    echoCh = null
     subscribedUid = null
     inited = false
     unread.value = 0

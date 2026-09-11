@@ -135,6 +135,9 @@ Route::middleware(['web', 'auth', 'throttle:120,1'])->group(function () {
     Route::get('/conversations/{conversation}/messages', [MessageController::class, 'index']);
     Route::post('/conversations/{conversation}/messages', [MessageController::class, 'store'])->middleware('throttle:messages-write');
     Route::post('/conversations/{conversation}/typing', [MessageController::class, 'typing'])->middleware('throttle:chat-signal');
+
+    Route::get('/realtime/mode', [\App\Http\Controllers\RealtimeController::class, 'mode']);
+    Route::get('/realtime/sync', [\App\Http\Controllers\RealtimeController::class, 'sync'])->middleware('throttle:realtime-sync');
     Route::patch('/messages/{message}', [MessageController::class, 'update']);
     Route::delete('/messages/{message}', [MessageController::class, 'destroy']);
     Route::get('/conversations/{conversation}/pinned', [MessageController::class, 'pinned']);
@@ -176,6 +179,7 @@ Route::middleware(['web', 'auth', 'admin', 'throttle:120,1'])->group(function ()
     Route::get('/admin/login-attempts', [\App\Http\Controllers\AdminLoginAttemptController::class, 'index']);
     Route::get('/admin/maintenance', [\App\Http\Controllers\AdminMaintenanceController::class, 'show']);
     Route::put('/admin/maintenance', [\App\Http\Controllers\AdminMaintenanceController::class, 'update']);
+    Route::post('/admin/realtime/mode', [\App\Http\Controllers\RealtimeController::class, 'setMode']);
     Route::patch('/admin/users/{user}', [AdminUserController::class, 'update']);
     Route::patch('/admin/users/{user}/visibility', [AdminUserController::class, 'updateVisibility']);
     Route::delete('/admin/users/{user}', [AdminUserController::class, 'destroy']);

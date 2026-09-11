@@ -3,6 +3,8 @@ import { router, usePage } from '@inertiajs/vue3'
 import { avatarSrcFor } from '@/composables/useAvatar'
 import { showLocal } from '@/pwa/push.service'
 import { useScreenLock } from '@/composables/useScreenLock'
+import { busOn } from '@/services/realtime-bus'
+import { ensureUserChannel, leaveUserChannel } from '@/composables/useUserChannel'
 
 function isLockedNow(): boolean {
   try { return useScreenLock().locked.value } catch { return false }
@@ -20,7 +22,7 @@ export type AppToast = {
 
 const toasts = ref<AppToast[]>([])
 let inited = false
-let echoCh: any = null
+let busBound = false
 let subscribedUid: number | null = null
 let adminMode = false
 let seenMsgIds = new Set<number>()
@@ -31,10 +33,8 @@ let timers = new Map<string, ReturnType<typeof setTimeout>>()
  */
 export function resetAppNotifications(): void {
   try {
-    const echo = getEcho()
-    if (echo && subscribedUid) try { echo.leave(`user.${subscribedUid}`) } catch {}
+    leaveUserChannel()
   } catch {}
-  echoCh = null
   subscribedUid = null
   inited = false
   seenMsgIds = new Set<number>()
@@ -52,7 +52,6 @@ function getUid(): number {
     return Number((window as any).userId || 0)
   } catch { return Number((window as any).userId || 0) }
 }
-function getEcho(): any { return (window as any).Echo }
 function isChatRoute() { try { return (route as any)().current('chat') } catch { return window.location.pathname.startsWith('/chat') } }
 function currentConversationId(): number | null {
   try {
@@ -370,32 +369,29 @@ function handleReport(e: any) {
 }
 function subscribe() {
   try {
-    const echo = getEcho()
-    if (!echo) return
     const uid = getUid()
     if (!uid) return
-    if (echoCh && subscribedUid === uid) return
-    if (echoCh && subscribedUid !== null && subscribedUid !== uid) resetAppNotifications()
-    if (echoCh) return
-    echoCh = echo.private(`user.${uid}`)
+    if (subscribedUid !== null && subscribedUid !== uid) resetAppNotifications()
     subscribedUid = uid
     adminMode = isAdminNow()
-    echoCh.listen('.message.sent', handleMessage)
-    echoCh.listen('.friendship.updated', handleFriendship)
-    echoCh.listen('.user.feed.updated', handleUserFeed)
-    echoCh.listen('UserFeedUpdated', handleUserFeed)
-    echoCh.listen('.pin.activity', handlePinActivity)
-    echoCh.listen('PinActivityCreated', handlePinActivity)
-    echoCh.listen('.match.created', handleMatch)
-    echoCh.listen('MatchCreated', handleMatch)
-    echoCh.listen('.swipe.liked', handleSwipeLiked)
-    echoCh.listen('SwipeLiked', handleSwipeLiked)
-    echoCh.listen('.report.created', handleReport)
-    echoCh.listen('ReportCreated', handleReport)
-    echoCh.listen('.impersonation.started', handleImpersonation)
-    echoCh.listen('ImpersonationStarted', handleImpersonation)
-    const pusher = (echo as any).connector?.pusher
-    if (pusher) pusher.connection.bind('connected', () => { if (!echoCh) subscribe() })
+    ensureUserChannel()
+    if (!busBound) {
+      busBound = true
+      busOn('user:message.sent', handleMessage)
+      busOn('user:friendship.updated', handleFriendship)
+      busOn('user:user.feed.updated', handleUserFeed)
+      busOn('user:pin.activity', handlePinActivity)
+      busOn('user:match.created', handleMatch)
+      busOn('user:swipe.liked', handleSwipeLiked)
+      busOn('user:report.created', handleReport)
+      busOn('user:impersonation.started', handleImpersonation)
+      busOn('notify:message', (msg: any) => handleMessage({ message: msg }))
+      busOn('notify:friendship', (e: any) => handleFriendship(e))
+      busOn('notify:match', (e: any) => handleMatch(e))
+      busOn('notify:swipe', (e: any) => handleSwipeLiked(e))
+      busOn('notify:activity', (e: any) => handlePinActivity(e))
+      busOn('notify:report', (e: any) => handleReport(e))
+    }
   } catch {}
 }
 function init() {

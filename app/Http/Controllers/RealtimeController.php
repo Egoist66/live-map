@@ -1,0 +1,534 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\AppUpdate;
+use App\Models\AppUpdateRead;
+use App\Models\Conversation;
+use App\Models\ConversationParticipant;
+use App\Models\DatingMatch;
+use App\Models\Friendship;
+use App\Models\Message;
+use App\Models\Pin;
+use App\Models\PinActivity;
+use App\Models\Report;
+use App\Models\SwipeAction;
+use App\Services\MonitoringService;
+use App\Services\RealtimeMode;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+
+/**
+ * Временный REST-транспорт realtime на период лимита WS-соединений.
+ *
+ * Клиент в режиме polling дёргает sync() раз в несколько секунд вместо
+ * сокетов: новые сообщения, typing-индикаторы, превью диалогов и счётчики.
+ */
+class RealtimeController extends Controller
+{
+    /**
+     * Текущий режим realtime.
+     */
+    public function mode()
+    {
+        return response()->json(['mode' => RealtimeMode::get()]);
+    }
+
+    /**
+     * Переключить режим realtime (только админ).
+     */
+    public function setMode(Request $request)
+    {
+        abort_unless($request->user()->isAdmin(), 403);
+
+        $data = $request->validate(['mode' => 'required|in:socket,polling']);
+
+        return response()->json(['mode' => RealtimeMode::set($data['mode'])]);
+    }
+
+    /**
+     * Один тик поллинга: всё изменившееся с момента since.
+     */
+    public function sync(Request $request)
+    {
+        $user = $request->user();
+
+        $data = $request->validate([
+            'since' => 'nullable|integer|min:0',
+            'conversation_id' => 'nullable|integer',
+            'after_id' => 'nullable|integer|min:0',
+            'min_lat' => 'nullable|numeric|between:-90,90',
+            'max_lat' => 'nullable|numeric|between:-90,90',
+            'min_lng' => 'nullable|numeric|between:-180,180',
+            'max_lng' => 'nullable|numeric|between:-180,180',
+            'known_ids' => 'nullable|string|max:4000',
+        ]);
+
+        $since = empty($data['since']) ? null : Carbon::createFromTimestampMs($data['since']);
+        $openId = empty($data['conversation_id']) ? null : (int) $data['conversation_id'];
+        $afterId = (int) ($data['after_id'] ?? 0);
+
+        $convIds = $this->myConversationIds($user->id);
+
+        if ($openId && ! in_array($openId, $convIds, true)) {
+            $openId = null;
+        }
+
+        $messages = $this->freshMessages($convIds, $since, $afterId);
+        $previews = $this->changedPreviews($user->id, $convIds, $since);
+
+        return response()->json([
+            'mode' => RealtimeMode::get(),
+            'time' => now()->valueOf(),
+            'messages' => $messages,
+            'typing' => $openId ? $this->typingUsers($openId, $user->id) : [],
+            'previews' => $previews,
+            'friendships' => $this->freshFriendships($user->id, $since),
+            'matches' => $this->freshMatches($user->id, $since),
+            'swipe_likes' => $this->freshSwipeLikes($user->id, $since),
+            'activities' => $this->freshActivities($user->id, $since),
+            'peer' => $openId ? $this->peerState($user, $openId) : null,
+            'map' => $this->mapChanges($user->id, $data, $since),
+            'receipts' => $this->freshReceipts($user->id, $since),
+            'reports' => $this->freshReports($user, $since),
+            'badges' => $this->badges($user),
+        ]);
+    }
+
+    /**
+     * Id диалогов пользователя.
+     *
+     * @param int $userId пользователь
+     * @return int[]
+     */
+    private function myConversationIds(int $userId): array
+    {
+        return ConversationParticipant::where('user_id', $userId)
+            ->whereNull('hidden_at')
+            ->pluck('conversation_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
+    /**
+     * Новые сообщения в диалогах пользователя.
+     *
+     * @param int[] $convIds диалоги
+     * @param Carbon|null $since момент прошлого тика
+     * @param int $afterId последний известный id в открытом диалоге
+     */
+    private function freshMessages(array $convIds, ?Carbon $since, int $afterId): array
+    {
+        if (empty($convIds)) {
+            return [];
+        }
+
+        $query = Message::whereIn('conversation_id', $convIds)
+            ->with(['sender:id,name,avatar_path', 'replyTo.sender:id,name'])
+            ->orderBy('id')
+            ->limit(50);
+
+        if ($afterId > 0) {
+            $query->where('id', '>', $afterId);
+        } elseif ($since) {
+            $query->where('created_at', '>', $since);
+        } else {
+            return [];
+        }
+
+        return $query->get()->map->toArrayPayload()->all();
+    }
+
+    /**
+     * Лёгкие превью изменившихся диалогов для сайдбара.
+     *
+     * @param int $userId пользователь
+     * @param int[] $convIds диалоги
+     * @param Carbon|null $since момент прошлого тика
+     */
+    private function changedPreviews(int $userId, array $convIds, ?Carbon $since): array
+    {
+        if (empty($convIds) || ! $since) {
+            return [];
+        }
+
+        $convs = Conversation::whereIn('id', $convIds)
+            ->with(['messages' => fn ($q) => $q->reorder()->latest('id')->limit(1)])
+            ->withCount(['messages as unread_count' => fn ($q) => $q->where('sender_id', '!=', $userId)->whereNull('read_at')])
+            ->where('last_message_at', '>', $since)
+            ->orderByDesc('last_message_at')
+            ->limit(20)
+            ->get();
+
+        return $convs->map(function ($conv) {
+            $last = $conv->messages->first();
+
+            return [
+                'id' => $conv->id,
+                'unread_count' => (int) $conv->unread_count,
+                'last_message' => $last ? $last->toArrayPayload() : null,
+                'last_message_at' => $conv->last_message_at,
+            ];
+        })->all();
+    }
+
+    /**
+     * Кто сейчас печатает в диалоге (состояние пишет typing-эндпоинт, TTL 5с).
+     *
+     * @param int $conversationId диалог
+     * @param int $selfId не возвращать себя
+     * @return int[]
+     */
+    private function typingUsers(int $conversationId, int $selfId): array
+    {
+        $ids = ConversationParticipant::where('conversation_id', $conversationId)
+            ->where('user_id', '!=', $selfId)
+            ->pluck('user_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        $typing = [];
+        foreach ($ids as $id) {
+            $fresh = Cache::get("typing:{$conversationId}:{$id}");
+            if ($fresh) {
+                $typing[] = $id;
+            }
+        }
+
+        return $typing;
+    }
+
+    /**
+     * Изменения дружбы с участием пользователя (заявки, принятия).
+     * Формат — как FriendshipUpdated, тосты строятся тем же хендлером.
+     *
+     * @param int $userId пользователь
+     * @param Carbon|null $since момент прошлого тика
+     */
+    private function freshFriendships(int $userId, ?Carbon $since): array
+    {
+        if (! $since) {
+            return [];
+        }
+
+        $rows = Friendship::where(fn ($q) => $q->where('requester_id', $userId)->orWhere('addressee_id', $userId))
+            ->where('updated_at', '>', $since)
+            ->with(['requester:id,name,avatar_path', 'addressee:id,name,avatar_path'])
+            ->orderBy('updated_at')
+            ->limit(20)
+            ->get();
+
+        return $rows->map(fn ($f) => ['friendship' => [
+            'id' => $f->id,
+            'requester_id' => $f->requester_id,
+            'addressee_id' => $f->addressee_id,
+            'status' => $f->status,
+            'requester' => $f->requester,
+            'addressee' => $f->addressee,
+        ]])->all();
+    }
+
+    /**
+     * Новые мэтчи пользователя. Формат — как MatchCreated.
+     *
+     * @param int $userId пользователь
+     * @param Carbon|null $since момент прошлого тика
+     */
+    private function freshMatches(int $userId, ?Carbon $since): array
+    {
+        if (! $since) {
+            return [];
+        }
+
+        $rows = DatingMatch::where(fn ($q) => $q->where('user_a_id', $userId)->orWhere('user_b_id', $userId))
+            ->where('created_at', '>', $since)
+            ->with(['userA:id,name,avatar_path', 'userB:id,name,avatar_path'])
+            ->orderBy('id')
+            ->limit(10)
+            ->get();
+
+        return $rows->map(function ($m) {
+            $conv = Conversation::findDirect($m->user_a_id, $m->user_b_id);
+
+            return [
+                'match_id' => $m->id,
+                'conversation_id' => $conv?->id,
+                'user_a' => $this->brief($m->userA),
+                'user_b' => $this->brief($m->userB),
+            ];
+        })->all();
+    }
+
+    /**
+     * Новые лайки анкеты. Формат — как SwipeLiked.
+     *
+     * @param int $userId пользователь
+     * @param Carbon|null $since момент прошлого тика
+     */
+    private function freshSwipeLikes(int $userId, ?Carbon $since): array
+    {
+        if (! $since) {
+            return [];
+        }
+
+        $rows = SwipeAction::where('liked_id', $userId)
+            ->where('action', 'like')
+            ->where('created_at', '>', $since)
+            ->with('liker:id,name,avatar_path')
+            ->orderBy('id')
+            ->limit(20)
+            ->get();
+
+        return $rows->map(function ($s) {
+            $liker = $s->liker;
+            $incognito = (bool) $s->is_incognito;
+
+            return [
+                'liker' => $liker ? $this->brief($liker, $incognito) : null,
+                'conversation_id' => null,
+            ];
+        })->all();
+    }
+
+    /**
+     * Краткий профиль для уведомлений (повторяет DatingService::briefFor).
+     */
+    private function brief($user, bool $incognito = false): array
+    {
+        if ($incognito) {
+            return [
+                'id' => (int) $user->id,
+                'name' => 'Тайный поклонник',
+                'avatar_url' => null,
+                'is_incognito' => true,
+            ];
+        }
+
+        return [
+            'id' => (int) $user->id,
+            'name' => (string) $user->name,
+            'avatar_url' => $user->avatar_url,
+            'is_incognito' => false,
+        ];
+    }
+
+    /**
+     * Свежая активность пинов (реакции, комменты, мэтчи, подписки).
+     * Формат — как PinActivityCreated: хендлер тостов тот же.
+     *
+     * @param int $userId пользователь
+     * @param Carbon|null $since момент прошлого тика
+     */
+    private function freshActivities(int $userId, ?Carbon $since): array
+    {
+        if (! $since) {
+            return [];
+        }
+
+        $rows = PinActivity::where('owner_id', $userId)
+            ->where('created_at', '>', $since)
+            ->orderBy('id')
+            ->limit(20)
+            ->get();
+
+        return $rows->map(fn ($a) => ['activity' => $a->toNotifyArray()])->all();
+    }
+
+    /**
+     * Свежее состояние собеседника открытого диалога («в сети»).
+     *
+     * @param \App\Models\User $user смотрящий
+     * @param int $conversationId диалог
+     */
+    private function peerState($user, int $conversationId): ?array
+    {
+        $conv = Conversation::whereKey($conversationId)
+            ->with('participants:id,name,avatar_path,last_seen_at,is_invisible')
+            ->first();
+
+        if (! $conv) {
+            return null;
+        }
+
+        $other = $conv->participants->firstWhere('id', '!=', $user->id);
+
+        if (! $other) {
+            return null;
+        }
+
+        $hidden = $other->isInvisibleActive() && ! $user->isAdmin();
+        $lastSeen = $hidden ? null : $other->last_seen_at;
+
+        return [
+            'conversation_id' => $conv->id,
+            'id' => $other->id,
+            'last_seen_at' => $lastSeen?->toISOString(),
+            'is_online' => $hidden ? false : MonitoringService::isOnline($other->last_seen_at),
+        ];
+    }
+    /**
+     * Изменения карты: upsert пинов в bbox, пропавшие known_ids, свежие счётчики.
+     * Тонкие фильтры видимости — на клиенте (isPinVisibleLocally), как в сокетах.
+     *
+     * @param int $userId смотрящий
+     * @param array $data параметры тика
+     * @param Carbon|null $since момент прошлого тика
+     */
+    private function mapChanges(int $userId, array $data, ?Carbon $since): array
+    {
+        $empty = ['upsert' => [], 'deleted' => [], 'counters' => []];
+
+        $known = $this->parseIds($data['known_ids'] ?? null);
+
+        if (! empty($known)) {
+            $existing = Pin::whereIn('id', $known)->pluck('id')->map(fn ($id) => (int) $id)->all();
+            $empty['deleted'] = array_values(array_diff($known, $existing));
+            $empty['counters'] = Pin::whereIn('id', $existing)
+                ->get(['id', 'reactions_count', 'comments_count'])
+                ->mapWithKeys(fn ($p) => [(int) $p->id => [
+                    'reactions_count' => (int) $p->reactions_count,
+                    'comments_count' => (int) $p->comments_count,
+                ]])
+                ->all();
+        }
+
+        $hasBbox = isset($data['min_lat'], $data['max_lat'], $data['min_lng'], $data['max_lng']);
+
+        if (! $hasBbox || ! $since) {
+            return $empty;
+        }
+
+        $upsert = Pin::active()
+            ->whereBetween('latitude', [(float) $data['min_lat'], (float) $data['max_lat']])
+            ->whereBetween('longitude', [(float) $data['min_lng'], (float) $data['max_lng']])
+            ->where('updated_at', '>', $since)
+            ->with('user:id,name,avatar_path,level')
+            ->orderBy('updated_at')
+            ->limit(50)
+            ->get();
+
+        $empty['upsert'] = $upsert->map(fn ($p) => $p->toPublicArray($userId))->all();
+
+        return $empty;
+    }
+
+    /**
+     * Разобрать csv id из тика.
+     *
+     * @param string|null $raw сырая строка
+     * @return int[]
+     */
+    private function parseIds(?string $raw): array
+    {
+        if (! $raw) {
+            return [];
+        }
+
+        $ids = [];
+        foreach (explode(',', $raw) as $part) {
+            $id = (int) trim($part);
+            if ($id > 0) {
+                $ids[] = $id;
+            }
+            if (count($ids) >= 500) {
+                break;
+            }
+        }
+
+        return array_values(array_unique($ids));
+    }
+
+    /**
+     * Статусы доставки/прочтения моих сообщений (для отправителя).
+     *
+     * @param int $userId пользователь
+     * @param Carbon|null $since момент прошлого тика
+     */
+    private function freshReceipts(int $userId, ?Carbon $since): array
+    {
+        if (! $since) {
+            return [];
+        }
+
+        $rows = Message::where('sender_id', $userId)
+            ->where('updated_at', '>', $since)
+            ->where(fn ($q) => $q->whereNotNull('delivered_at')->orWhereNotNull('read_at'))
+            ->orderBy('updated_at')
+            ->limit(50)
+            ->get(['id', 'conversation_id', 'delivered_at', 'read_at']);
+
+        return $rows->map(fn ($m) => [
+            'id' => $m->id,
+            'conversation_id' => $m->conversation_id,
+            'delivered_at' => $m->delivered_at,
+            'read_at' => $m->read_at,
+        ])->all();
+    }
+
+    /**
+     * Новые жалобы (только админам). Формат — как ReportCreated.
+     *
+     * @param \App\Models\User $user пользователь
+     * @param Carbon|null $since момент прошлого тика
+     */
+    private function freshReports($user, ?Carbon $since): array
+    {
+        if (! $since || ! $user->isAdmin()) {
+            return [];
+        }
+
+        $rows = Report::where('created_at', '>', $since)
+            ->orderBy('id')
+            ->limit(10)
+            ->get();
+
+        return $rows->map(fn ($r) => ['report' => $r->toNotifyArray()])->all();
+    }
+
+    /**
+     * Счётчики для бейджей одним запросом вместо шести.
+     *
+     * @param \App\Models\User $user пользователь
+     */
+    private function badges($user): array
+    {
+        $convIds = $this->myConversationIds($user->id);
+
+        $unreadMessages = empty($convIds) ? 0 : Message::whereIn('conversation_id', $convIds)
+            ->where('sender_id', '!=', $user->id)
+            ->whereNull('read_at')
+            ->count();
+
+        $conversationsUnread = empty($convIds) ? 0 : Message::whereIn('conversation_id', $convIds)
+            ->where('sender_id', '!=', $user->id)
+            ->whereNull('read_at')
+            ->distinct()
+            ->count('conversation_id');
+
+        $pendingFriends = Friendship::where('status', 'pending')
+            ->where('addressee_id', $user->id)
+            ->count();
+
+        $pinActivity = PinActivity::where('owner_id', $user->id)
+            ->whereNull('read_at')
+            ->count();
+
+        $readIds = AppUpdateRead::where('user_id', $user->id)->pluck('app_update_id');
+        $updates = AppUpdate::published()->whereNotIn('id', $readIds)->count();
+
+        $badges = [
+            'unread_messages' => $unreadMessages,
+            'conversations_unread' => $conversationsUnread,
+            'pending_friends' => $pendingFriends,
+            'pin_activity' => $pinActivity,
+            'updates' => $updates,
+        ];
+
+        if ($user->isAdmin()) {
+            $badges['reports_pending'] = Report::where('status', 'pending')->count();
+        }
+
+        return $badges;
+    }
+}

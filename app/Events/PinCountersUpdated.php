@@ -23,7 +23,7 @@ class PinCountersUpdated implements ShouldBroadcastNow
         return [new Channel('map')];
     }
 
-    public function broadcastAs(): string { return 'pin.activity'; }
+    public function broadcastAs(): string { return 'pin.counters'; }
 
     public function broadcastWith(): array
     {

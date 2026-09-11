@@ -11,9 +11,14 @@ import Avatar from 'primevue/avatar'
 import Tag from 'primevue/tag'
 import Dialog from 'primevue/dialog'
 import ProgressSpinner from 'primevue/progressspinner'
+import { onMounted } from 'vue'
 import { avatarSrcFor } from '@/composables/useAvatar'
+import { useRealtimeMode } from '@/composables/useRealtimeMode'
 
 defineProps<{ admin: any; reports: any; imp?: any }>()
+
+const realtime = useRealtimeMode()
+onMounted(() => { realtime.init().catch(() => {}) })
 
 const reportFilters = [
   { label: 'Новые', value: 'pending' },
@@ -28,6 +33,22 @@ const reportFilters = [
       <h3 class="font-black tracking-tight text-lg dark:text-white">Админ</h3>
       <p class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Жалобы, скрытие профилей и удаление аккаунтов.</p>
       <div class="mt-5 space-y-4 max-w-xl">
+        <Card class="!border-amber-200 dark:!border-amber-950 !rounded-3xl !shadow-none !bg-white dark:!bg-zinc-900" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
+          <template #content>
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="text-sm font-semibold dark:text-white">Запасной realtime (поллинг)</div>
+                <p class="text-xs text-stone-500 dark:text-zinc-400 mt-1 leading-relaxed">Временная мера, пока упираемся в лимит WS-соединений. Клиенты опрашивают сервер раз в 3 секунды: сообщения, «печатает...», заявки, мэтчи, лайки, активность пинов, «в сети» и бейджи. Выключи, когда поднимешь тариф — вернутся сокеты.</p>
+              </div>
+              <ToggleSwitch :modelValue="realtime.isPolling.value" @update:modelValue="(v:boolean)=>realtime.setMode(v ? 'polling' : 'socket').catch(()=>{})" :disabled="realtime.saving.value || realtime.loading.value" class="shrink-0" :pt="{ root: { class: '!shrink-0' } }" />
+            </div>
+            <div class="mt-2 flex items-center gap-2">
+              <Tag :value="realtime.isPolling.value ? 'поллинг' : 'сокеты'" :severity="realtime.isPolling.value ? 'warn' : 'success'" class="!text-[10px]" />
+              <span v-if="realtime.saving.value" class="text-xs text-stone-500 dark:text-zinc-400">переключаю…</span>
+            </div>
+            <Message v-if="realtime.error.value" severity="error" :closable="false" class="!mt-3 !rounded-2xl !text-xs">{{ realtime.error.value }}</Message>
+          </template>
+        </Card>
         <Card class="!border-red-200 dark:!border-red-950 !rounded-3xl !shadow-none !bg-white dark:!bg-zinc-900" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
           <template #content>
             <div class="flex items-center gap-2">

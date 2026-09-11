@@ -84,7 +84,7 @@ class FlowPostController extends Controller
             'likes_count' => (int) $post->likes_count,
             'comments_count' => (int) $post->comments_count,
             'liked' => $liked,
-            'can_edit' => $isOwn || ($viewer && $viewer->isAdmin()),
+            'can_edit' => $isOwn,
             'can_delete' => $isOwn || ($viewer && $viewer->isAdmin()),
             'created_at' => $post->created_at?->toISOString(),
             'updated_at' => $post->updated_at?->toISOString(),
@@ -208,7 +208,8 @@ class FlowPostController extends Controller
     }
 
     /**
-     * Обновить свой пост.
+     * Обновить свой пост. Редактировать чужой запрещено даже админу:
+     * максимум админа — удалить пост при нарушении правил.
      *
      * @param Request $request запрос
      * @param FlowPost $post пост
@@ -216,7 +217,7 @@ class FlowPostController extends Controller
     public function update(Request $request, FlowPost $post)
     {
         $user = $request->user();
-        abort_unless((int) $user->id === (int) $post->user_id || $user->isAdmin(), 403);
+        abort_unless((int) $user->id === (int) $post->user_id, 403);
 
         $data = $request->validate([
             'title' => 'sometimes|nullable|string|max:150',

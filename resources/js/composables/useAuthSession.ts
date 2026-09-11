@@ -3,8 +3,12 @@ import { usePage } from '@inertiajs/vue3'
 import { resetChatSession } from '@/composables/useChat'
 import { resetAppNotifications } from '@/composables/useAppNotifications'
 import { resetPresence } from '@/composables/usePresence'
+import { resetPinActivity } from '@/composables/usePinActivity'
+import { resetAdminReports } from '@/composables/useAdminReports'
+import { resetSecurityImpersonations } from '@/composables/useSecurityImpersonations'
 import { useBadgeStore } from '@/stores/badges'
 import { resetEchoSession } from '@/echo'
+import { stopRealtimePoller } from '@/composables/useRealtimePoller'
 
 const trackedUid = ref<number | null>(null)
 let watching = false
@@ -39,10 +43,22 @@ export function useAuthSession() {
       resetPresence()
     } catch {}
     try {
+      resetPinActivity()
+    } catch {}
+    try {
+      resetAdminReports()
+    } catch {}
+    try {
+      resetSecurityImpersonations()
+    } catch {}
+    try {
       useBadgeStore().reset()
     } catch {}
     try {
       resetEchoSession([])
+    } catch {}
+    try {
+      stopRealtimePoller()
     } catch {}
   }
 

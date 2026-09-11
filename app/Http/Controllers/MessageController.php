@@ -136,7 +136,14 @@ class MessageController extends Controller
     {
         abort_unless($conversation->hasParticipant($request->user()->id),403);
         $request->validate(['is_typing'=>'required|boolean']);
-        try{ broadcast(new TypingIndicator($conversation->id,$request->user()->id,(bool)$request->input('is_typing')))->toOthers(); }catch(\Throwable $e){ \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
+        $isTyping = (bool) $request->input('is_typing');
+        $key = "typing:{$conversation->id}:{$request->user()->id}";
+        if ($isTyping) {
+            \Illuminate\Support\Facades\Cache::put($key, true, 5);
+        } else {
+            \Illuminate\Support\Facades\Cache::forget($key);
+        }
+        try{ broadcast(new TypingIndicator($conversation->id,$request->user()->id,$isTyping))->toOthers(); }catch(\Throwable $e){ \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
         return response()->json(['ok'=>true]);
     }
 

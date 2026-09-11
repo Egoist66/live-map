@@ -11,6 +11,8 @@ import { useAppUpdates } from '@/composables/useAppUpdates'
 import { useBuildVersion } from '@/composables/useBuildVersion'
 import { useSecurityImpersonations } from '@/composables/useSecurityImpersonations'
 import { useAuthSession } from '@/composables/useAuthSession'
+import { useRealtimeMode } from '@/composables/useRealtimeMode'
+import { useRealtimePoller, watchRealtimeMode } from '@/composables/useRealtimePoller'
 
 export function useAppLayout() {
   const badge = useBadgeStore()
@@ -24,6 +26,8 @@ export function useAppLayout() {
   const buildVersion = useBuildVersion()
   const proc = useSecurityImpersonations()
   const authSession = useAuthSession()
+  const realtimeMode = useRealtimeMode()
+  const realtimePoller = useRealtimePoller()
   const showDrawer = ref(false)
   const menu = ref()
   const isAdmin = computed(() => !!user.value?.is_admin || user.value?.role === 'admin')
@@ -55,7 +59,18 @@ export function useAppLayout() {
     router.post(route('logout'), {}, { onSuccess: () => { try { authSession.resetAll() } catch {} } })
   }
   function logout() { doLogout() }
-  onMounted(() => { badge.init(); presence.connect(); appNotes.init(); pinActivity.init(); adminReports.init(); updates.init(); proc.init(); buildVersion.init() })
+  /**
+   * Выбор транспорта realtime: polling при включённом запасном режиме,
+   * иначе сокеты + редкий вотчер смены режима.
+   */
+  async function initRealtime(): Promise<void> {
+    try {
+      watchRealtimeMode((next) => realtimePoller.ensure(next))
+      const current = await realtimeMode.init()
+      realtimePoller.ensure(current)
+    } catch {}
+  }
+  onMounted(() => { badge.init(); presence.connect(); appNotes.init(); pinActivity.init(); adminReports.init(); updates.init(); proc.init(); buildVersion.init(); void initRealtime() })
   onBeforeUnmount(() => presence.disconnect())
   router.on('navigate', () => { presence.connect(); showDrawer.value = false })
   return { badge, presence, user, avatarSrc, dashboardHref, settingsHref, bell, pinActivity, adminReports, updates, showDrawer, menu, menuItems, isAdmin, toggleMenu, closeDrawer, logout }

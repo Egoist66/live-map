@@ -2,6 +2,8 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
 import { chatApi } from '@/services/chat.api'
 import { datingApi } from '@/services/dating.api'
+import { busOn } from '@/services/realtime-bus'
+import { ensureUserChannel } from '@/composables/useUserChannel'
 import type { ActiveCard, SwipeCard, SwipeFilters, SwipeQuota } from '@/services/dating.api'
 
 /** Лимит радиуса «рядом» для Free, км. PRO — безлимит. */
@@ -453,12 +455,7 @@ export function useSwipes() {
    */
   function subscribeRealtime(): () => void {
     try {
-      const echo = (window as any).Echo
-      if (!echo) return () => {}
-      const meta = document.querySelector('meta[name="user-id"]')?.getAttribute('content')
-      const uid = meta || (window as any).userId || authUser.value?.id
-      if (!uid) return () => {}
-      const ch = echo.private(`user.${uid}`)
+      const offs: Array<() => void> = []
       const onMatch = () => {
         void loadMatches()
         void loadFavorites()
@@ -467,17 +464,15 @@ export function useSwipes() {
         void loadFeed()
         void loadAdmirers()
       }
-      ch.listen('.match.created', onMatch)
-      ch.listen('MatchCreated', onMatch)
-      ch.listen('.swipe.liked', onLiked)
-      ch.listen('SwipeLiked', onLiked)
+      ensureUserChannel()
+      offs.push(busOn('user:match.created', () => onMatch()))
+      offs.push(busOn('user:swipe.liked', () => onLiked()))
+      offs.push(busOn('notify:match', () => onMatch()))
+      offs.push(busOn('notify:swipe', () => onLiked()))
       return () => {
-        try {
-          ch.stopListening('.match.created')
-          ch.stopListening('MatchCreated')
-          ch.stopListening('.swipe.liked')
-          ch.stopListening('SwipeLiked')
-        } catch { return }
+        offs.forEach((off) => {
+          try { off() } catch { return }
+        })
       }
     } catch { return () => {} }
   }

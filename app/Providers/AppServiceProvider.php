@@ -45,6 +45,7 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('messages-write', fn (Request $r) => Limit::perMinute(60)->by($byUser($r)));
         RateLimiter::for('pin-toggle', fn (Request $r) => Limit::perMinute(60)->by($byUser($r)));
         RateLimiter::for('chat-signal', fn (Request $r) => Limit::perMinute(120)->by($byUser($r)));
+        RateLimiter::for('realtime-sync', fn (Request $r) => Limit::perMinute(60)->by($byUser($r)));
         RateLimiter::for('reactions', fn (Request $r) => Limit::perMinute(120)->by($byUser($r)));
         RateLimiter::for('chat-search', fn (Request $r) => Limit::perMinute(30)->by($byUser($r)));
         RateLimiter::for('social-write', fn (Request $r) => Limit::perMinute(60)->by($byUser($r)));
