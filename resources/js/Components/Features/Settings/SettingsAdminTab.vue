@@ -38,7 +38,7 @@ const reportFilters = [
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
                 <div class="text-sm font-semibold dark:text-white">Запасной realtime (поллинг)</div>
-                <p class="text-xs text-stone-500 dark:text-zinc-400 mt-1 leading-relaxed">Временная мера, пока упираемся в лимит WS-соединений. Клиенты опрашивают сервер раз в 3 секунды: сообщения, «печатает...», заявки, мэтчи, лайки, активность пинов, «в сети» и бейджи. Выключи, когда поднимешь тариф — вернутся сокеты.</p>
+                <p class="text-xs text-stone-500 dark:text-zinc-400 mt-1 leading-relaxed">Временная мера, пока упираемся в лимит WS-соединений. Клиенты опрашивают сервер раз в 3 секунды: сообщения, «печатает...», заявки, мэтчи, лайки, активность пинов, «в сети» и бейджи.</p>
               </div>
               <ToggleSwitch :modelValue="realtime.isPolling.value" @update:modelValue="(v:boolean)=>realtime.setMode(v ? 'polling' : 'socket').catch(()=>{})" :disabled="realtime.saving.value || realtime.loading.value" class="shrink-0" :pt="{ root: { class: '!shrink-0' } }" />
             </div>

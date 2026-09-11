@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3'
 import { useWelcome } from '@/composables/useWelcome'
+import { useWelcomeHeroSwiper } from '@/composables/useWelcomeHeroSwiper'
 import AppFooter from '@/Layouts/AppFooter.vue'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
@@ -9,6 +10,7 @@ import Badge from 'primevue/badge'
 import Avatar from 'primevue/avatar'
 
 const w = useWelcome()
+const hero = useWelcomeHeroSwiper()
 </script>
 
 <template>
@@ -56,28 +58,55 @@ const w = useWelcome()
         </div>
       </div>
 
-      <div class="relative">
+      <div class="relative w-full max-w-[560px] justify-self-center lg:justify-self-end">
         <Card class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[28px] !shadow-float !p-3">
           <template #content>
-            <div class="aspect-[4/3.4] rounded-[18px] overflow-hidden relative bg-stone-100 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700">
-              <img src="https://i.pravatar.cc/600?img=47" class="absolute inset-0 w-full h-full object-cover" alt="Анкета ULove" />
-              <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-black/20"></div>
-              <div class="absolute top-4 left-4 right-4 flex justify-between items-center">
-                <Badge value="● РЯДОМ · 1,2 км" class="!bg-white/90 !text-ink-900 !rounded-full !px-3 !py-1.5 !text-xs !font-bold !border-0" />
-                <Badge value="📍 пин рядом" class="!bg-black/50 !text-white !rounded-full !px-3 !py-1.5 !text-xs !font-bold !border !border-white/20" />
-              </div>
-              <div class="absolute bottom-4 left-4 right-4">
-                <div class="text-white font-black text-xl leading-tight">Аня, 24</div>
-                <div class="mt-2 flex gap-1.5 flex-wrap">
-                  <Tag class="!bg-white/15 !border !border-white/20 !text-white !rounded-full !px-2.5 !py-1 !text-[11px] !font-semibold">☕ кофе и прогулки</Tag>
-                  <Tag class="!bg-white/15 !border !border-white/20 !text-white !rounded-full !px-2.5 !py-1 !text-[11px] !font-semibold">🎬 кино</Tag>
+            <div
+              class="aspect-[4/3.4] rounded-[18px] overflow-hidden relative bg-stone-100 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700"
+              @mouseenter="hero.pause()"
+              @mouseleave="hero.resume()"
+              @touchstart="hero.onTouchStart"
+              @touchend="hero.onTouchEnd"
+            >
+              <div
+                v-for="(profile, slideIndex) in hero.profiles.value"
+                :key="profile.name"
+                :class="['absolute inset-0 transition-all duration-700 ease-out', hero.slideClass(slideIndex)]"
+              >
+                <img :src="profile.photo" class="absolute inset-0 w-full h-full object-cover" :alt="`Анкета ULove — ${profile.name}`" @error="hero.onPhotoError(profile)" />
+                <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-black/20"></div>
+                <div class="absolute top-4 left-4 right-4 flex justify-between items-center">
+                  <Badge :value="profile.distance" class="!bg-white/90 !text-ink-900 !rounded-full !px-3 !py-1.5 !text-xs !font-bold !border-0" />
+                  <Badge :value="profile.pin" class="!bg-black/50 !text-white !rounded-full !px-3 !py-1.5 !text-xs !font-bold !border !border-white/20" />
                 </div>
-                <div class="mt-3 flex gap-2">
-                  <Button icon="pi pi-times" rounded class="!w-12 !h-12 !bg-white !text-ink-900 !border-0 shadow-lg" aria-label="Пропустить" />
-                  <Button icon="pi pi-heart-fill" rounded class="!w-12 !h-12 !bg-gradient-to-r !from-rose-500 !to-orange-400 !text-white !border-0 shadow-lg shadow-rose-500/30" aria-label="Лайк" />
-                  <div class="ml-auto self-center bg-white/90 rounded-full px-3 py-2 text-xs font-bold text-ink-900">💬 мэтч → чат</div>
+                <div class="absolute bottom-4 left-4 right-4">
+                  <div class="text-white font-black text-xl leading-tight">{{ profile.name }}, {{ profile.age }}</div>
+                  <div class="mt-2 flex gap-1.5 flex-wrap">
+                    <Tag
+                      v-for="tag in profile.tags"
+                      :key="tag"
+                      class="!bg-white/15 !border !border-white/20 !text-white !rounded-full !px-2.5 !py-1 !text-[11px] !font-semibold"
+                    >{{ tag }}</Tag>
+                  </div>
+                  <div class="mt-3 flex gap-2">
+                    <Button icon="pi pi-times" rounded class="!w-12 !h-12 !bg-white !text-ink-900 !border-0 shadow-lg" aria-label="Пропустить" />
+                    <Button icon="pi pi-heart-fill" rounded class="!w-12 !h-12 !bg-gradient-to-r !from-rose-500 !to-orange-400 !text-white !border-0 shadow-lg shadow-rose-500/30" aria-label="Лайк" />
+                    <div class="ml-auto self-center bg-white/90 rounded-full px-3 py-2 text-xs font-bold text-ink-900">💬 мэтч → чат</div>
+                  </div>
                 </div>
               </div>
+            </div>
+            <div class="flex justify-center items-center gap-1 pt-3">
+              <button
+                v-for="(profile, dotIndex) in hero.profiles.value"
+                :key="profile.name"
+                type="button"
+                :aria-label="`Показать ${profile.name}`"
+                class="h-8 px-1.5 grid place-items-center"
+                @click="hero.goTo(dotIndex)"
+              >
+                <span :class="['block h-2 rounded-full transition-all', dotIndex === hero.activeIndex.value ? 'w-6 bg-gradient-to-r from-rose-500 to-orange-400' : 'w-2 bg-stone-300 dark:bg-zinc-600']" />
+              </button>
             </div>
             <div class="flex items-center justify-between px-1 pt-3">
               <div class="flex items-center gap-2">
@@ -121,14 +150,14 @@ const w = useWelcome()
     <section class="max-w-[1280px] mx-auto px-4 sm:px-6 py-4 sm:py-6 grid lg:grid-cols-5 gap-3 sm:gap-4">
       <div class="lg:col-span-3 bg-ink-900 dark:bg-zinc-900 dark:border dark:border-zinc-800 text-white rounded-[20px] sm:rounded-[24px] p-5 sm:p-8 relative overflow-hidden">
         <div class="absolute -right-20 -top-20 w-80 h-80 bg-gradient-to-br from-rose-500 to-orange-400 rounded-full blur-[60px] opacity-25"></div>
-        <div class="relative">
+      <div class="relative w-full max-w-[680px] mx-auto">
           <Tag class="!bg-white/10 !border !border-white/15 !rounded-full !px-3 !py-1 !text-xs !font-medium !text-white">🗺️ КАРТА + ПИНЫ · КАЙФ РАЙОНА</Tag>
           <h3 class="mt-4 text-2xl font-black tracking-tight">Пины — пульс района. Карта удобно дополняет ULove.</h3>
           <p class="text-white/60 mt-2 max-w-xl leading-relaxed">Вопросы, события, помощь и объявления рядом — кинь пин в 2 клика и тебя увидят соседи. Есть мэтч и не знаете где встретиться? Кинь пин «кофе тут» — встретитесь без точного адреса. Пины живут часы, а не вечно.</p>
           <div class="mt-5 grid sm:grid-cols-3 gap-2">
             <div class="bg-white/10 border border-white/15 rounded-2xl px-3.5 py-3"><div class="text-sm font-bold">☕ Настолки в кофейне</div><div class="text-xs text-white/60 mt-1">Нас трое, нужен четвёртый · до 22:00</div></div>
             <div class="bg-white/10 border border-white/15 rounded-2xl px-3.5 py-3"><div class="text-sm font-bold">🐕 Кто гуляет с собакой?</div><div class="text-xs text-white/60 mt-1">Парк за домом · выхожу в 19:00</div></div>
-            <div class="bg-white/10 border border-white/15 rounded-2xl px-3.5 py-3"><div class="text-sm font-bold">🔧 Одолжу дрель</div><div class="text-xs text-white/60 mt-1">Верну с шоколадкой · район рядом</div></div>
+            <div class="bg-white/10 border border-white/15 rounded-2xl px-3.5 py-3"><div class="text-sm font-bold">🚴 Велозаезд в субботу</div><div class="text-xs text-white/60 mt-1">Собираю компанию · старт в 10:00</div></div>
           </div>
           <div class="mt-5 flex flex-wrap gap-2 text-xs font-medium"><Tag class="!bg-white !text-ink-900 !px-3.5 !py-2 !rounded-full !border-0">Пин-свидание в 2 клика</Tag><Tag class="!bg-white/10 !border !border-white/15 !px-3.5 !py-2 !rounded-full !text-white">Без точного адреса</Tag><Tag class="!bg-white/10 !border !border-white/15 !px-3.5 !py-2 !rounded-full !text-white">Вопросы и помощь рядом</Tag></div>
           <div class="mt-6"><Link href="/map"><Button label="Открыть карту →" outlined class="!border-white/25 !text-white !px-6 !py-3 !rounded-full !font-semibold hover:!bg-white/10" /></Link></div>

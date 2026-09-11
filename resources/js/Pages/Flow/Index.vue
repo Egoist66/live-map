@@ -6,7 +6,6 @@ import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import SelectButton from 'primevue/selectbutton'
 import Toast from 'primevue/toast'
-import FlowComposer from '@/Components/Features/Flow/FlowComposer.vue'
 import FlowDeleteDialog from '@/Components/Features/Flow/FlowDeleteDialog.vue'
 import FlowEditDialog from '@/Components/Features/Flow/FlowEditDialog.vue'
 import FlowPostCard from '@/Components/Features/Flow/FlowPostCard.vue'
@@ -46,8 +45,6 @@ onMounted(() => feed.init())
           <span class="text-xs text-stone-400">новости друзей и людей рядом</span>
         </div>
 
-        <FlowComposer />
-
         <div v-if="feed.store.authorId" class="flex items-center justify-between gap-2 rounded-2xl bg-blue-600/10 dark:bg-blue-500/10 border border-blue-600/20 px-4 py-2.5 text-sm font-semibold text-blue-700 dark:text-blue-300">
           <span>Посты пользователя</span>
           <button class="underline hover:no-underline" @click="feed.clearAuthor()">Вся лента</button>
@@ -72,7 +69,7 @@ onMounted(() => feed.init())
         <div v-else-if="!feed.store.posts.length" class="rounded-3xl border border-dashed border-stone-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-8 text-center">
           <div class="text-3xl">📰</div>
           <div class="mt-2 font-bold text-ink-900 dark:text-white">Пока пусто</div>
-          <div class="mt-1 text-sm text-stone-500">Опубликуйте первую новость или загляните во вкладку «Подписки».</div>
+          <div class="mt-1 text-sm text-stone-500">Новости публикуются из профиля — загляните во вкладку «Подписки».</div>
         </div>
 
         <div v-else class="space-y-4">

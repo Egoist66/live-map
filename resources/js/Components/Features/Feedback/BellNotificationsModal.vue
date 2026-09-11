@@ -85,368 +85,551 @@ function openNews(item: any) {
     :draggable="false"
     :closable="true"
     position="top"
-    :style="{ width: '480px', maxWidth: 'calc(100vw - 1.5rem)', marginTop: '4.5rem', maxHeight: '80dvh' }"
+    :breakpoints="{ '640px': '100vw' }"
+    :style="{ width: '560px', maxWidth: 'calc(100vw - 1.5rem)', marginTop: '4.5rem', maxHeight: '85dvh' }"
     :pt="{
       root: {
-        class: '!rounded-[24px] p-2 !border-stone-200 dark:!border-zinc-800 overflow-hidden',
+        class: '!rounded-[24px] sm:!rounded-[24px] !rounded-b-none sm:!rounded-b-[24px] p-2 !border-stone-200 dark:!border-zinc-800 overflow-hidden notif-modal',
       },
       header: { class: '!p-0 !border-0' },
       content: { class: '!p-0 !bg-white dark:!bg-zinc-900' },
     }"
   >
     <template #header>
-      <div class="w-full flex items-center justify-between px-5 pt-5 pb-3">
-        <div class="flex items-center gap-2.5">
+      <div class="w-full flex items-center justify-between gap-2 px-4 sm:px-5 pt-4 sm:pt-5 pb-3">
+        <div class="flex items-center gap-2.5 min-w-0">
           <span
-            class="w-9 h-9 rounded-full bg-violet-600 grid place-items-center text-white shadow"
+            class="w-9 h-9 rounded-full bg-violet-600 grid place-items-center text-white shadow shrink-0"
             ><i class="pi pi-bell text-sm"></i
           ></span>
-          <div>
+          <div class="min-w-0">
             <div class="text-[15px] font-black dark:text-white leading-none">
               Уведомления
             </div>
             <div class="text-xs text-stone-500 dark:text-zinc-400">последние события</div>
           </div>
         </div>
-        <Badge
-          v-if="bell.unreadCount.value + bell.pending.value.length + pinAct.unread.value + admRep.pendingCount.value + updates.unreadCount.value + proc.unread.value"
-          :value="(bell.unreadCount.value + bell.pending.value.length + pinAct.unread.value + admRep.pendingCount.value + updates.unreadCount.value + proc.unread.value)>9?'9+':String(bell.unreadCount.value + bell.pending.value.length + pinAct.unread.value + admRep.pendingCount.value + updates.unreadCount.value + proc.unread.value)"
-          severity="danger"
-        />
+        <div class="flex items-center gap-1.5 shrink-0">
+          <Button
+            v-if="pinAct.activities.value.length"
+            @click="askClearActivities()"
+            :loading="pinAct.clearing.value"
+            icon="pi pi-trash"
+            text
+            rounded
+            severity="danger"
+            aria-label="Очистить уведомления"
+            v-tooltip.bottom="'Очистить уведомления'"
+            class="!w-9 !h-9"
+          />
+          <Badge
+            v-if="bell.unreadCount.value + bell.pending.value.length + pinAct.unread.value + admRep.pendingCount.value + updates.unreadCount.value + proc.unread.value"
+            :value="(bell.unreadCount.value + bell.pending.value.length + pinAct.unread.value + admRep.pendingCount.value + updates.unreadCount.value + proc.unread.value)>9?'9+':String(bell.unreadCount.value + bell.pending.value.length + pinAct.unread.value + admRep.pendingCount.value + updates.unreadCount.value + proc.unread.value)"
+            severity="danger"
+          />
+        </div>
       </div>
     </template>
-    <div class="px-3 pb-3">
-      <Tabs v-model:value="bell.tab.value">
-        <TabList class="!bg-transparent" :pt="{ activeBar: { class: '!bg-violet-600' } }">
-          <Tab value="events" class="!text-[13px] !font-bold">События</Tab>
-          <Tab v-if="!bell.isAdmin.value" value="news" class="!text-[13px] !font-bold">
-            <span class="flex items-center gap-1.5">Новости<Badge v-if="updates.unreadCount.value" :value="updates.unreadCount.value > 9 ? '9+' : String(updates.unreadCount.value)" severity="info" /></span>
+    <div class="px-2 sm:px-3 pb-3 pb-safe">
+      <Tabs v-model:value="bell.tab.value" class="notif-tabs">
+        <TabList class="!bg-transparent overflow-x-auto" :pt="{ activeBar: { class: '!bg-violet-600' } }">
+          <Tab value="events" class="!text-[13px] !font-bold whitespace-nowrap">
+            <span class="flex items-center gap-1.5">События
+              <Badge v-if="pinAct.eventUnread.value + bell.pending.value.length + bell.unreadCount.value + proc.unread.value" :value="(pinAct.eventUnread.value + bell.pending.value.length + bell.unreadCount.value + proc.unread.value) > 9 ? '9+' : String(pinAct.eventUnread.value + bell.pending.value.length + bell.unreadCount.value + proc.unread.value)" severity="danger" class="!text-[10px] !min-w-[20px] !h-5" />
+            </span>
+          </Tab>
+          <Tab value="pins" class="!text-[13px] !font-bold whitespace-nowrap">
+            <span class="flex items-center gap-1.5">Пины
+              <Badge v-if="pinAct.pinUnread.value" :value="pinAct.pinUnread.value > 9 ? '9+' : String(pinAct.pinUnread.value)" severity="danger" class="!text-[10px] !min-w-[20px] !h-5" />
+            </span>
+          </Tab>
+          <Tab v-if="!bell.isAdmin.value" value="news" class="!text-[13px] !font-bold whitespace-nowrap">
+            <span class="flex items-center gap-1.5">Новости<Badge v-if="updates.unreadCount.value" :value="updates.unreadCount.value > 9 ? '9+' : String(updates.unreadCount.value)" severity="info" class="!text-[10px] !min-w-[20px] !h-5" /></span>
           </Tab>
         </TabList>
         <TabPanels class="!p-0 !bg-transparent">
           <TabPanel value="events">
-      <div v-if="bell.loading.value" class="py-10 grid place-items-center">
-        <ProgressSpinner style="width:26px;height:26px" :strokeWidth="6" />
-      </div>
-      <template v-else>
-        <div v-if="!bell.hasData.value && !pinAct.activities.value.length && !admRep.reports.value.length && !proc.items.value.length" class="py-10 text-center">
-          <div
-            class="w-12 h-12 rounded-2xl bg-stone-100 dark:bg-zinc-800 grid place-items-center mx-auto text-xl"
-          >
-            🔔
-          </div>
-          <div class="text-sm font-semibold dark:text-white mt-3">Пока тихо</div>
-          <div class="text-xs text-stone-500 mt-1">Новых сообщений, заявок и реакций нет</div>
-        </div>
-        <template v-else>
-          <div v-if="admRep.reports.value.length" class="mb-3">
-            <div
-              class="text-[11px] font-bold tracking-widest uppercase text-stone-400 px-2 py-1.5 flex items-center gap-1.5"
-            >
-              Жалобы
-              <span
-                v-if="admRep.pendingCount.value"
-                class="bg-red-600 text-white text-[10px] px-1.5 py-0.5 rounded-full"
-                >{{ admRep.pendingCount.value }}</span
-              >
-            </div>
-            <div class="space-y-1">
-              <button
-                v-for="r in admRep.reports.value.slice(0, 5)"
-                :key="r.id"
-                @click="bell.close(); admRep.goReports()"
-                class="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-800"
-              >
-                <span
-                  class="w-10 h-10 rounded-full bg-red-600 text-white grid place-items-center shrink-0"
-                  ><i class="pi pi-flag text-sm"></i
-                ></span>
-                <div class="min-w-0 flex-1">
-                  <div class="text-sm font-semibold dark:text-white truncate">
-                    {{ r.reason_label || r.reason }} · {{ r.target_type }} #{{ r.target_id }}
-                  </div>
-                  <div class="text-xs text-stone-500 dark:text-zinc-400 truncate">
-                    {{ r.target_title || r.description || `от ${r.reporter?.name || 'пользователя'}` }}
-                  </div>
-                </div>
-                <i class="pi pi-chevron-right text-stone-300 text-xs shrink-0"></i>
-              </button>
-            </div>
-            <Button
-              @click="bell.close(); admRep.goReports()"
-              label="Открыть жалобы →"
-              link
-              size="small"
-              class="w-full !text-xs"
-            />
-          </div>
-          <div v-if="pinAct.activities.value.length" class="mb-3">
-            <div
-              class="text-[11px] font-bold tracking-widest uppercase text-stone-400 px-2 py-1.5 flex items-center gap-1.5"
-            >
-              Активность пинов
-              <span
-                v-if="pinAct.unread.value"
-                class="bg-rose-500 text-white text-[10px] px-1.5 py-0.5 rounded-full"
-                >{{ pinAct.unread.value }}</span
-              >
-              <Button
-                v-if="pinAct.unread.value"
-                @click="pinAct.markAllRead()"
-                label="Прочитать все"
-                link
-                size="small"
-                class="ml-auto !text-[11px]"
-              />
-              <Button
-                v-if="pinAct.activities.value.length"
-                @click="askClearActivities()"
-                :loading="pinAct.clearing.value"
-                label="Очистить"
-                link
-                size="small"
-                class="!text-[11px] !text-red-500"
-              />
-            </div>
-            <div class="space-y-1">
-              <button
-                v-for="a in pinAct.activities.value"
-                :key="a.id"
-                @click="bell.close(); pinAct.goPin(a)"
-                :class="
-                  !a.read_at
-                    ? 'bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-800'
-                    : 'hover:bg-stone-50 dark:hover:bg-zinc-800 border border-transparent'
-                "
-                class="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition"
-              >
-                <span class="relative shrink-0"
-                  ><Avatar
-                    :image="avatarSrcFor(a.actor)"
-                    shape="circle"
-                    class="!w-10 !h-10 [&_img]:object-cover"
-                    :pt="{ image: { class: 'object-cover' } }" /><span
-                    class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center border-2 border-white dark:border-zinc-900 text-[10px]"
-                    :class="a.kind === 'comment' ? 'bg-violet-600' : a.kind === 'mention' ? 'bg-amber-500' : a.kind === 'photo_comment' ? 'bg-sky-500' : 'bg-rose-500'"
-                    >{{ pinAct.describe(a).emoji }}</span
-                  ></span
-                >
-                <div class="min-w-0 flex-1">
-                  <div class="flex items-center gap-1.5">
-                    <span class="text-sm font-semibold dark:text-white truncate">{{
-                      a.pin?.title || (a.kind === 'sub_photo' ? "Новое фото" : a.kind === 'sub_level' ? "Обновление профиля" : a.photo ? "Ваше фото" : a.kind === 'mention' ? "Вас упомянули" : "Ваш пин")
-                    }}</span
-                    ><span
-                      v-if="a.created_at"
-                      class="text-[11px] text-stone-400 shrink-0"
-                      >{{ fmtTime(a.created_at) }}</span
-                    >
-                  </div>
-                  <div class="text-xs text-stone-500 dark:text-zinc-400 truncate">
-                    {{ pinAct.describe(a).text }}
-                  </div>
-                </div>
-                <span
-                  v-if="!a.read_at"
-                  class="w-2.5 h-2.5 bg-rose-500 rounded-full shrink-0"
-                ></span>
-                <i v-else class="pi pi-chevron-right text-stone-300 text-xs shrink-0"></i>
-              </button>
-            </div>
-          </div>
-          <div v-if="proc.items.value.length" class="mb-3">
-            <div
-              class="text-[11px] font-bold tracking-widest uppercase text-stone-400 px-2 py-1.5 flex items-center gap-1.5"
-            >
-              <span class="text-red-500">❗</span> Безопасность
-              <span
-                v-if="proc.unread.value"
-                class="bg-red-600 text-white text-[10px] px-1.5 py-0.5 rounded-full"
-                >{{ proc.unread.value }}</span
-              >
-              <Button
-                v-if="proc.unread.value"
-                @click="proc.markRead()"
-                label="Прочитано"
-                link
-                size="small"
-                class="ml-auto !text-[11px]"
-              />
-            </div>
-            <div class="space-y-1">
-              <button
-                v-for="l in proc.items.value.slice(0, 5)"
-                :key="l.id"
-                @click="goProcedures()"
-                :class="
-                  !l.seen_at
-                    ? 'bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-800'
-                    : 'hover:bg-stone-50 dark:hover:bg-zinc-800 border border-transparent'
-                "
-                class="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition"
-              >
-                <span
-                  class="w-10 h-10 rounded-full bg-red-600 text-white grid place-items-center shrink-0"
-                  ><i class="pi pi-eye text-sm"></i
-                ></span>
-                <div class="min-w-0 flex-1">
-                  <div class="text-sm font-semibold dark:text-white truncate">
-                    Вход администрации
-                  </div>
-                  <div class="text-xs text-stone-500 dark:text-zinc-400 truncate">
-                    {{ (l.reason || '').slice(0, 80) }}{{ l.started_at ? ` · ${fmtTime(l.started_at)}` : '' }}
-                  </div>
-                </div>
-                <span
-                  v-if="!l.seen_at"
-                  class="text-red-500 text-base shrink-0"
-                  >❗</span
-                >
-                <i v-else class="pi pi-chevron-right text-stone-300 text-xs shrink-0"></i>
-              </button>
-            </div>
-            <Button
-              @click="goProcedures()"
-              label="Открыть процедуры →"
-              link
-              size="small"
-              class="w-full !text-xs"
-            />
-          </div>
-          <div v-if="bell.pending.value.length" class="mb-3">
-            <div
-              class="text-[11px] font-bold tracking-widest uppercase text-stone-400 px-2 py-1.5 flex items-center gap-1.5"
-            >
-              Заявки
-              <span
-                class="bg-amber-500 text-white text-[10px] px-1.5 py-0.5 rounded-full"
-                >{{ bell.pending.value.length }}</span
-              >
-            </div>
-            <div class="space-y-1">
-              <button
-                v-for="r in bell.pending.value"
-                :key="r.id"
-                @click="bell.goRequests()"
-                class="w-full flex items-center gap-3 p-2.5 rounded-2xl hover:bg-amber-50 dark:hover:bg-zinc-800 text-left transition"
-              >
-                <Avatar
-                  :image="avatarSrcFor(r.requester)"
-                  shape="circle"
-                  class="!w-10 !h-10 shrink-0 [&_img]:object-cover"
-                  :pt="{ image: { class: 'object-cover' } }"
-                />
-                <div class="min-w-0 flex-1">
-                  <div class="text-sm font-semibold dark:text-white truncate">
-                    {{ r.requester?.name }}
-                  </div>
-                  <div class="text-xs text-amber-600 dark:text-amber-400 truncate">
-                    хочет дружить
-                  </div>
-                </div>
-                <span
-                  class="w-7 h-7 rounded-full bg-amber-500 text-white grid place-items-center shrink-0"
-                  ><i class="pi pi-user-plus text-xs"></i
-                ></span>
-              </button>
-            </div>
-            <Button
-              @click="bell.goRequests()"
-              label="Открыть заявки →"
-              link
-              size="small"
-              class="w-full !text-xs"
-            />
-          </div>
-          <div v-if="bell.conversations.value.length" class="mb-1">
-            <div
-              class="text-[11px] font-bold tracking-widest uppercase text-stone-400 px-2 py-1.5"
-            >
-              Сообщения
-            </div>
-            <div class="space-y-1">
-              <button
-                v-for="c in bell.conversations.value"
-                :key="c.id"
-                @click="bell.goChat(c.id)"
-                :class="
-                  c.unread_count
-                    ? 'bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-800'
-                    : 'hover:bg-stone-50 dark:hover:bg-zinc-800 border border-transparent'
-                "
-                class="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition"
-              >
-                <span class="relative shrink-0"
-                  ><Avatar
-                    :image="avatarSrcFor(c.other)"
-                    shape="circle"
-                    class="!w-10 !h-10 [&_img]:object-cover"
-                    :pt="{ image: { class: 'object-cover' } }" /><span
-                    v-if="c.unread_count"
-                    class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-zinc-900"
-                  ></span
-                ></span>
-                <div class="min-w-0 flex-1">
-                  <div class="flex items-center gap-1.5">
-                    <span class="text-sm font-semibold dark:text-white truncate">{{
-                      c.other?.name || "Чат"
-                    }}</span
-                    ><span
-                      v-if="c.last_message_at"
-                      class="text-[11px] text-stone-400 shrink-0"
-                      >{{ fmtTime(c.last_message_at) }}</span
-                    >
-                  </div>
-                  <div class="text-xs text-stone-500 dark:text-zinc-400 truncate">
-                    {{ c.last_message?.body || "Нет сообщений" }}
-                  </div>
-                </div>
-                <span
-                  v-if="c.unread_count"
-                  class="bg-violet-600 text-white text-xs font-bold min-w-[22px] h-[22px] grid place-items-center px-1.5 rounded-full shrink-0"
-                  >{{ c.unread_count > 9 ? "9+" : c.unread_count }}</span
-                >
-                <i v-else class="pi pi-chevron-right text-stone-300 text-xs shrink-0"></i>
-              </button>
-            </div>
-          </div>
-        </template>
-      </template>
-          </TabPanel>
-          <TabPanel v-if="!bell.isAdmin.value" value="news">
-            <div v-if="updates.loading.value" class="py-10 grid place-items-center">
-              <ProgressSpinner style="width:26px;height:26px" :strokeWidth="6" />
-            </div>
-            <div v-else-if="!updates.history.value.length" class="py-10 text-center">
-              <div class="w-12 h-12 rounded-2xl bg-stone-100 dark:bg-zinc-800 grid place-items-center mx-auto text-xl">✨</div>
-              <div class="text-sm font-semibold dark:text-white mt-3">Новостей пока нет</div>
-              <div class="text-xs text-stone-500 mt-1">Здесь появятся заметки о новых функциях</div>
-            </div>
-            <div v-else>
-              <div class="px-2 py-1.5 flex items-center gap-1.5">
-                <span class="text-[11px] font-bold tracking-widest uppercase text-stone-400">Что нового</span>
-                <Tag v-if="updates.unreadCount.value" :value="`новых: ${updates.unreadCount.value}`" severity="info" class="!text-[10px]" />
-                <Button v-if="updates.unreadCount.value" @click="updates.dismissAll()" label="Прочитать все" link size="small" class="ml-auto !text-[11px]" />
+            <div class="notif-scroll">
+              <div v-if="bell.loading.value" class="py-10 grid place-items-center">
+                <ProgressSpinner style="width:26px;height:26px" :strokeWidth="6" />
               </div>
-              <div class="space-y-1">
-                <button
-                  v-for="n in updates.sortedHistory.value"
-                  :key="n.id"
-                  @click="openNews(n)"
-                  :class="!n.is_read ? 'bg-sky-50 dark:bg-sky-500/10 border border-sky-200 dark:border-sky-800' : 'hover:bg-stone-50 dark:hover:bg-zinc-800 border border-transparent'"
-                  class="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition"
+              <template v-else>
+                <div v-if="!bell.hasData.value && !pinAct.eventActivities.value.length && !admRep.reports.value.length && !proc.items.value.length" class="py-10 text-center px-4">
+                  <div
+                    class="w-12 h-12 rounded-2xl bg-stone-100 dark:bg-zinc-800 grid place-items-center mx-auto text-xl"
+                  >
+                    🔔
+                  </div>
+                  <div class="text-sm font-semibold dark:text-white mt-3">Пока тихо</div>
+                  <div class="text-xs text-stone-500 mt-1">Новых сообщений, заявок, лайков и постов нет</div>
+                </div>
+                <template v-else>
+                  <div v-if="admRep.reports.value.length" class="mb-3">
+                    <div
+                      class="text-[11px] font-bold tracking-widest uppercase text-stone-400 px-2 py-1.5 flex items-center gap-1.5"
+                    >
+                      Жалобы
+                      <span
+                        v-if="admRep.pendingCount.value"
+                        class="bg-red-600 text-white text-[10px] px-1.5 py-0.5 rounded-full"
+                        >{{ admRep.pendingCount.value }}</span
+                      >
+                    </div>
+                    <div class="space-y-1">
+                      <button
+                        v-for="r in admRep.reports.value.slice(0, 5)"
+                        :key="r.id"
+                        @click="bell.close(); admRep.goReports()"
+                        class="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-800 min-h-[56px]"
+                      >
+                        <span
+                          class="w-10 h-10 rounded-full bg-red-600 text-white grid place-items-center shrink-0"
+                          ><i class="pi pi-flag text-sm"></i
+                        ></span>
+                        <div class="min-w-0 flex-1">
+                          <div class="text-sm font-semibold dark:text-white truncate">
+                            {{ r.reason_label || r.reason }} · {{ r.target_type }} #{{ r.target_id }}
+                          </div>
+                          <div class="text-xs text-stone-500 dark:text-zinc-400 truncate">
+                            {{ r.target_title || r.description || `от ${r.reporter?.name || 'пользователя'}` }}
+                          </div>
+                        </div>
+                        <i class="pi pi-chevron-right text-stone-300 text-xs shrink-0"></i>
+                      </button>
+                    </div>
+                    <Button
+                      @click="bell.close(); admRep.goReports()"
+                      label="Открыть жалобы →"
+                      link
+                      size="small"
+                      class="w-full !text-xs"
+                    />
+                  </div>
+                  <div v-if="proc.items.value.length" class="mb-3">
+                    <div
+                      class="text-[11px] font-bold tracking-widest uppercase text-stone-400 px-2 py-1.5 flex items-center gap-1.5"
+                    >
+                      <span class="text-red-500">❗</span> Безопасность
+                      <span
+                        v-if="proc.unread.value"
+                        class="bg-red-600 text-white text-[10px] px-1.5 py-0.5 rounded-full"
+                        >{{ proc.unread.value }}</span
+                      >
+                      <Button
+                        v-if="proc.unread.value"
+                        @click="proc.markRead()"
+                        label="Прочитано"
+                        link
+                        size="small"
+                        class="ml-auto !text-[11px]"
+                      />
+                    </div>
+                    <div class="space-y-1">
+                      <button
+                        v-for="l in proc.items.value.slice(0, 5)"
+                        :key="l.id"
+                        @click="goProcedures()"
+                        :class="
+                          !l.seen_at
+                            ? 'bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-800'
+                            : 'hover:bg-stone-50 dark:hover:bg-zinc-800 border border-transparent'
+                        "
+                        class="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition min-h-[56px]"
+                      >
+                        <span
+                          class="w-10 h-10 rounded-full bg-red-600 text-white grid place-items-center shrink-0"
+                          ><i class="pi pi-eye text-sm"></i
+                        ></span>
+                        <div class="min-w-0 flex-1">
+                          <div class="text-sm font-semibold dark:text-white truncate">
+                            Вход администрации
+                          </div>
+                          <div class="text-xs text-stone-500 dark:text-zinc-400 truncate">
+                            {{ (l.reason || '').slice(0, 80) }}{{ l.started_at ? ` · ${fmtTime(l.started_at)}` : '' }}
+                          </div>
+                        </div>
+                        <span
+                          v-if="!l.seen_at"
+                          class="text-red-500 text-base shrink-0"
+                          >❗</span
+                        >
+                        <i v-else class="pi pi-chevron-right text-stone-300 text-xs shrink-0"></i>
+                      </button>
+                    </div>
+                    <Button
+                      @click="goProcedures()"
+                      label="Открыть процедуры →"
+                      link
+                      size="small"
+                      class="w-full !text-xs"
+                    />
+                  </div>
+                  <div v-if="pinAct.loveActivities.value.length" class="mb-3">
+                    <div
+                      class="text-[11px] font-bold tracking-widest uppercase text-stone-400 px-2 py-1.5 flex items-center gap-1.5"
+                    >
+                      Знакомства
+                      <span
+                        v-if="pinAct.loveUnread.value"
+                        class="bg-pink-500 text-white text-[10px] px-1.5 py-0.5 rounded-full"
+                        >{{ pinAct.loveUnread.value }}</span
+                      >
+                    </div>
+                    <div class="space-y-1">
+                      <button
+                        v-for="a in pinAct.loveActivities.value"
+                        :key="a.id"
+                        @click="bell.close(); pinAct.goPin(a)"
+                        :class="
+                          !a.read_at
+                            ? 'bg-pink-50 dark:bg-pink-500/10 border border-pink-200 dark:border-pink-800'
+                            : 'hover:bg-stone-50 dark:hover:bg-zinc-800 border border-transparent'
+                        "
+                        class="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition min-h-[56px]"
+                      >
+                        <span class="relative shrink-0"
+                          ><Avatar
+                            :image="avatarSrcFor(a.actor)"
+                            shape="circle"
+                            class="!w-10 !h-10 [&_img]:object-cover"
+                            :pt="{ image: { class: 'object-cover' } }" /><span
+                            class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center border-2 border-white dark:border-zinc-900 text-[10px] bg-pink-500"
+                            >{{ pinAct.describe(a).emoji }}</span
+                          ></span
+                        >
+                        <div class="min-w-0 flex-1">
+                          <div class="flex items-center gap-1.5">
+                            <span class="text-sm font-semibold dark:text-white truncate">{{
+                              a.kind === 'match' ? "Новый мэтч!" : "ULove"
+                            }}</span
+                            ><span
+                              v-if="a.created_at"
+                              class="text-[11px] text-stone-400 shrink-0"
+                              >{{ fmtTime(a.created_at) }}</span
+                            >
+                          </div>
+                          <div class="text-xs text-stone-500 dark:text-zinc-400 truncate">
+                            {{ pinAct.describe(a).text }}
+                          </div>
+                        </div>
+                        <span
+                          v-if="!a.read_at"
+                          class="w-2.5 h-2.5 bg-pink-500 rounded-full shrink-0"
+                        ></span>
+                        <i v-else class="pi pi-chevron-right text-stone-300 text-xs shrink-0"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div v-if="pinAct.flowActivities.value.length" class="mb-3">
+                    <div
+                      class="text-[11px] font-bold tracking-widest uppercase text-stone-400 px-2 py-1.5 flex items-center gap-1.5"
+                    >
+                      UFlow
+                      <span
+                        v-if="pinAct.flowUnread.value"
+                        class="bg-sky-500 text-white text-[10px] px-1.5 py-0.5 rounded-full"
+                        >{{ pinAct.flowUnread.value }}</span
+                      >
+                    </div>
+                    <div class="space-y-1">
+                      <button
+                        v-for="a in pinAct.flowActivities.value"
+                        :key="a.id"
+                        @click="bell.close(); pinAct.goPin(a)"
+                        :class="
+                          !a.read_at
+                            ? 'bg-sky-50 dark:bg-sky-500/10 border border-sky-200 dark:border-sky-800'
+                            : 'hover:bg-stone-50 dark:hover:bg-zinc-800 border border-transparent'
+                        "
+                        class="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition min-h-[56px]"
+                      >
+                        <span class="relative shrink-0"
+                          ><Avatar
+                            :image="avatarSrcFor(a.actor)"
+                            shape="circle"
+                            class="!w-10 !h-10 [&_img]:object-cover"
+                            :pt="{ image: { class: 'object-cover' } }" /><span
+                            class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center border-2 border-white dark:border-zinc-900 text-[10px] bg-sky-500"
+                            >{{ pinAct.describe(a).emoji }}</span
+                          ></span
+                        >
+                        <div class="min-w-0 flex-1">
+                          <div class="flex items-center gap-1.5">
+                            <span class="text-sm font-semibold dark:text-white truncate">UFlow</span
+                            ><span
+                              v-if="a.created_at"
+                              class="text-[11px] text-stone-400 shrink-0"
+                              >{{ fmtTime(a.created_at) }}</span
+                            >
+                          </div>
+                          <div class="text-xs text-stone-500 dark:text-zinc-400 truncate">
+                            {{ pinAct.describe(a).text }}
+                          </div>
+                        </div>
+                        <span
+                          v-if="!a.read_at"
+                          class="w-2.5 h-2.5 bg-sky-500 rounded-full shrink-0"
+                        ></span>
+                        <i v-else class="pi pi-chevron-right text-stone-300 text-xs shrink-0"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div v-if="pinAct.subActivities.value.length" class="mb-3">
+                    <div
+                      class="text-[11px] font-bold tracking-widest uppercase text-stone-400 px-2 py-1.5 flex items-center gap-1.5"
+                    >
+                      Подписки
+                    </div>
+                    <div class="space-y-1">
+                      <button
+                        v-for="a in pinAct.subActivities.value"
+                        :key="a.id"
+                        @click="bell.close(); pinAct.goPin(a)"
+                        :class="
+                          !a.read_at
+                            ? 'bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-800'
+                            : 'hover:bg-stone-50 dark:hover:bg-zinc-800 border border-transparent'
+                        "
+                        class="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition min-h-[56px]"
+                      >
+                        <span class="relative shrink-0"
+                          ><Avatar
+                            :image="avatarSrcFor(a.actor)"
+                            shape="circle"
+                            class="!w-10 !h-10 [&_img]:object-cover"
+                            :pt="{ image: { class: 'object-cover' } }" /><span
+                            class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center border-2 border-white dark:border-zinc-900 text-[10px] bg-violet-600"
+                            >{{ pinAct.describe(a).emoji }}</span
+                          ></span
+                        >
+                        <div class="min-w-0 flex-1">
+                          <div class="flex items-center gap-1.5">
+                            <span class="text-sm font-semibold dark:text-white truncate">Подписка</span
+                            ><span
+                              v-if="a.created_at"
+                              class="text-[11px] text-stone-400 shrink-0"
+                              >{{ fmtTime(a.created_at) }}</span
+                            >
+                          </div>
+                          <div class="text-xs text-stone-500 dark:text-zinc-400 truncate">
+                            {{ pinAct.describe(a).text }}
+                          </div>
+                        </div>
+                        <span
+                          v-if="!a.read_at"
+                          class="w-2.5 h-2.5 bg-violet-500 rounded-full shrink-0"
+                        ></span>
+                        <i v-else class="pi pi-chevron-right text-stone-300 text-xs shrink-0"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div v-if="bell.pending.value.length" class="mb-3">
+                    <div
+                      class="text-[11px] font-bold tracking-widest uppercase text-stone-400 px-2 py-1.5 flex items-center gap-1.5"
+                    >
+                      Заявки
+                      <span
+                        class="bg-amber-500 text-white text-[10px] px-1.5 py-0.5 rounded-full"
+                        >{{ bell.pending.value.length }}</span
+                      >
+                    </div>
+                    <div class="space-y-1">
+                      <button
+                        v-for="r in bell.pending.value"
+                        :key="r.id"
+                        @click="bell.goRequests()"
+                        class="w-full flex items-center gap-3 p-2.5 rounded-2xl hover:bg-amber-50 dark:hover:bg-zinc-800 text-left transition min-h-[56px]"
+                      >
+                        <Avatar
+                          :image="avatarSrcFor(r.requester)"
+                          shape="circle"
+                          class="!w-10 !h-10 shrink-0 [&_img]:object-cover"
+                          :pt="{ image: { class: 'object-cover' } }"
+                        />
+                        <div class="min-w-0 flex-1">
+                          <div class="text-sm font-semibold dark:text-white truncate">
+                            {{ r.requester?.name }}
+                          </div>
+                          <div class="text-xs text-amber-600 dark:text-amber-400 truncate">
+                            хочет дружить
+                          </div>
+                        </div>
+                        <span
+                          class="w-7 h-7 rounded-full bg-amber-500 text-white grid place-items-center shrink-0"
+                          ><i class="pi pi-user-plus text-xs"></i
+                        ></span>
+                      </button>
+                    </div>
+                    <Button
+                      @click="bell.goRequests()"
+                      label="Открыть заявки →"
+                      link
+                      size="small"
+                      class="w-full !text-xs"
+                    />
+                  </div>
+                  <div v-if="bell.conversations.value.length" class="mb-1">
+                    <div
+                      class="text-[11px] font-bold tracking-widest uppercase text-stone-400 px-2 py-1.5"
+                    >
+                      Сообщения
+                    </div>
+                    <div class="space-y-1">
+                      <button
+                        v-for="c in bell.conversations.value"
+                        :key="c.id"
+                        @click="bell.goChat(c.id)"
+                        :class="
+                          c.unread_count
+                            ? 'bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-800'
+                            : 'hover:bg-stone-50 dark:hover:bg-zinc-800 border border-transparent'
+                        "
+                        class="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition min-h-[56px]"
+                      >
+                        <span class="relative shrink-0"
+                          ><Avatar
+                            :image="avatarSrcFor(c.other)"
+                            shape="circle"
+                            class="!w-10 !h-10 [&_img]:object-cover"
+                            :pt="{ image: { class: 'object-cover' } }" /><span
+                            v-if="c.unread_count"
+                            class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-zinc-900"
+                          ></span
+                        ></span>
+                        <div class="min-w-0 flex-1">
+                          <div class="flex items-center gap-1.5">
+                            <span class="text-sm font-semibold dark:text-white truncate">{{
+                              c.other?.name || "Чат"
+                            }}</span
+                            ><span
+                              v-if="c.last_message_at"
+                              class="text-[11px] text-stone-400 shrink-0"
+                              >{{ fmtTime(c.last_message_at) }}</span
+                            >
+                          </div>
+                          <div class="text-xs text-stone-500 dark:text-zinc-400 truncate">
+                            {{ c.last_message?.body || "Нет сообщений" }}
+                          </div>
+                        </div>
+                        <span
+                          v-if="c.unread_count"
+                          class="bg-violet-600 text-white text-xs font-bold min-w-[22px] h-[22px] grid place-items-center px-1.5 rounded-full shrink-0"
+                          >{{ c.unread_count > 9 ? "9+" : c.unread_count }}</span
+                        >
+                        <i v-else class="pi pi-chevron-right text-stone-300 text-xs shrink-0"></i>
+                      </button>
+                    </div>
+                  </div>
+                </template>
+              </template>
+            </div>
+          </TabPanel>
+          <TabPanel value="pins">
+            <div class="notif-scroll">
+              <div class="px-2 py-1.5 flex items-center gap-1.5">
+                <span class="text-[11px] font-bold tracking-widest uppercase text-stone-400">Активность пинов</span>
+                <span
+                  v-if="pinAct.pinUnread.value"
+                  class="bg-rose-500 text-white text-[10px] px-1.5 py-0.5 rounded-full"
+                  >{{ pinAct.pinUnread.value }}</span
                 >
-                  <span class="w-10 h-10 rounded-full bg-gradient-to-br from-violet-600 to-indigo-600 text-white grid place-items-center shrink-0"><i class="pi pi-sparkles text-sm"></i></span>
+                <Button
+                  v-if="pinAct.pinUnread.value"
+                  @click="pinAct.markAllRead()"
+                  label="Прочитать все"
+                  link
+                  size="small"
+                  class="ml-auto !text-[11px]"
+                />
+              </div>
+              <div v-if="!pinAct.pinActivities.value.length" class="py-10 text-center px-4">
+                <div class="w-12 h-12 rounded-2xl bg-stone-100 dark:bg-zinc-800 grid place-items-center mx-auto text-xl">📍</div>
+                <div class="text-sm font-semibold dark:text-white mt-3">Реакций на пины нет</div>
+                <div class="text-xs text-stone-500 mt-1">Лайки ULove и UFlow — во вкладке «События»</div>
+              </div>
+              <div v-else class="space-y-1">
+                <button
+                  v-for="a in pinAct.pinActivities.value"
+                  :key="a.id"
+                  @click="bell.close(); pinAct.goPin(a)"
+                  :class="
+                    !a.read_at
+                      ? 'bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-800'
+                      : 'hover:bg-stone-50 dark:hover:bg-zinc-800 border border-transparent'
+                  "
+                  class="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition min-h-[56px]"
+                >
+                  <span class="relative shrink-0"
+                    ><Avatar
+                      :image="avatarSrcFor(a.actor)"
+                      shape="circle"
+                      class="!w-10 !h-10 [&_img]:object-cover"
+                      :pt="{ image: { class: 'object-cover' } }" /><span
+                      class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center border-2 border-white dark:border-zinc-900 text-[10px]"
+                      :class="a.kind === 'comment' ? 'bg-violet-600' : a.kind === 'mention' ? 'bg-amber-500' : a.kind === 'photo_comment' || a.kind === 'photo_like' ? 'bg-sky-500' : a.kind === 'sub_pin' ? 'bg-emerald-500' : 'bg-rose-500'"
+                      >{{ pinAct.describe(a).emoji }}</span
+                    ></span
+                  >
                   <div class="min-w-0 flex-1">
                     <div class="flex items-center gap-1.5">
-                      <span class="text-sm font-semibold dark:text-white truncate">{{ n.title }}</span>
-                      <span v-if="n.published_at" class="text-[11px] text-stone-400 shrink-0">{{ fmtDay(n.published_at) }}</span>
+                      <span class="text-sm font-semibold dark:text-white truncate">{{
+                        a.pin?.title || (a.kind === 'sub_pin' ? "Новый пин" : a.photo ? "Ваше фото" : a.kind === 'mention' ? "Вас упомянули" : "Ваш пин")
+                      }}</span
+                      ><span
+                        v-if="a.created_at"
+                        class="text-[11px] text-stone-400 shrink-0"
+                        >{{ fmtTime(a.created_at) }}</span
+                      >
                     </div>
-                    <div class="text-xs text-stone-500 dark:text-zinc-400 truncate">{{ (n.body || '').slice(0, 80) }}</div>
+                    <div class="text-xs text-stone-500 dark:text-zinc-400 truncate">
+                      {{ pinAct.describe(a).text }}
+                    </div>
                   </div>
-                  <span v-if="!n.is_read" class="w-2.5 h-2.5 bg-sky-500 rounded-full shrink-0"></span>
+                  <span
+                    v-if="!a.read_at"
+                    class="w-2.5 h-2.5 bg-rose-500 rounded-full shrink-0"
+                  ></span>
                   <i v-else class="pi pi-chevron-right text-stone-300 text-xs shrink-0"></i>
                 </button>
+              </div>
+            </div>
+          </TabPanel>
+          <TabPanel v-if="!bell.isAdmin.value" value="news">
+            <div class="notif-scroll">
+              <div v-if="updates.loading.value" class="py-10 grid place-items-center">
+                <ProgressSpinner style="width:26px;height:26px" :strokeWidth="6" />
+              </div>
+              <div v-else-if="!updates.history.value.length" class="py-10 text-center px-4">
+                <div class="w-12 h-12 rounded-2xl bg-stone-100 dark:bg-zinc-800 grid place-items-center mx-auto text-xl">✨</div>
+                <div class="text-sm font-semibold dark:text-white mt-3">Новостей пока нет</div>
+                <div class="text-xs text-stone-500 mt-1">Здесь появятся заметки о новых функциях</div>
+              </div>
+              <div v-else>
+                <div class="px-2 py-1.5 flex items-center gap-1.5">
+                  <span class="text-[11px] font-bold tracking-widest uppercase text-stone-400">Что нового</span>
+                  <Tag v-if="updates.unreadCount.value" :value="`новых: ${updates.unreadCount.value}`" severity="info" class="!text-[10px]" />
+                  <Button v-if="updates.unreadCount.value" @click="updates.dismissAll()" label="Прочитать все" link size="small" class="ml-auto !text-[11px]" />
+                </div>
+                <div class="space-y-1">
+                  <button
+                    v-for="n in updates.sortedHistory.value"
+                    :key="n.id"
+                    @click="openNews(n)"
+                    :class="!n.is_read ? 'bg-sky-50 dark:bg-sky-500/10 border border-sky-200 dark:border-sky-800' : 'hover:bg-stone-50 dark:hover:bg-zinc-800 border border-transparent'"
+                    class="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition min-h-[56px]"
+                  >
+                    <span class="w-10 h-10 rounded-full bg-gradient-to-br from-violet-600 to-indigo-600 text-white grid place-items-center shrink-0"><i class="pi pi-sparkles text-sm"></i></span>
+                    <div class="min-w-0 flex-1">
+                      <div class="flex items-center gap-1.5">
+                        <span class="text-sm font-semibold dark:text-white truncate">{{ n.title }}</span>
+                        <span v-if="n.published_at" class="text-[11px] text-stone-400 shrink-0">{{ fmtDay(n.published_at) }}</span>
+                      </div>
+                      <div class="text-xs text-stone-500 dark:text-zinc-400 truncate">{{ (n.body || '').slice(0, 80) }}</div>
+                    </div>
+                    <span v-if="!n.is_read" class="w-2.5 h-2.5 bg-sky-500 rounded-full shrink-0"></span>
+                    <i v-else class="pi pi-chevron-right text-stone-300 text-xs shrink-0"></i>
+                  </button>
+                </div>
               </div>
             </div>
           </TabPanel>
@@ -455,3 +638,32 @@ function openNews(item: any) {
     </div>
   </Dialog>
 </template>
+<style scoped>
+.notif-scroll {
+  max-height: min(62dvh, 520px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.notif-tabs :deep([data-pc-name="tablist"]) {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.notif-tabs :deep([data-pc-name="tablist"])::-webkit-scrollbar {
+  display: none;
+}
+@media (max-width: 640px) {
+  .notif-modal {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    max-height: 92dvh !important;
+  }
+  .notif-scroll {
+    max-height: 72dvh;
+  }
+}
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+</style>
