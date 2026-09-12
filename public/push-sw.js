@@ -11,6 +11,14 @@ self.addEventListener('push', (event) => {
   } catch {
     data = { body: event.data ? event.data.text() : '' }
   }
+  const visibleClient = (async () => {
+    try {
+      const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+      return clients.some((c) => c.visibilityState === 'visible')
+    } catch {
+      return false
+    }
+  })()
   const title = data.title || 'UPin'
   const options = {
     body: data.body || 'Новое уведомление',
@@ -27,7 +35,12 @@ self.addEventListener('push', (event) => {
     data: { url: data.url || '/chat' },
   }
   if (data.actions) options.actions = data.actions
-  event.waitUntil(self.registration.showNotification(title, options))
+  event.waitUntil(
+    (async () => {
+      if (await visibleClient) return
+      await self.registration.showNotification(title, options)
+    })(),
+  )
 })
 
 self.addEventListener('notificationclick', (event) => {

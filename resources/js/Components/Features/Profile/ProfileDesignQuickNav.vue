@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+
+const props = withDefaults(defineProps<{ isOwn?: boolean }>(), { isOwn: true })
+
 const emit = defineEmits<{
   (e: 'profile'): void
   (e: 'friends'): void
@@ -8,12 +12,19 @@ const emit = defineEmits<{
 
 type QuickNavKey = 'profile' | 'friends' | 'search' | 'share'
 
-const actions: Array<{ key: QuickNavKey; label: string; icon: string }> = [
+const allActions: Array<{ key: QuickNavKey; label: string; icon: string }> = [
   { key: 'profile', label: 'Профиль', icon: 'pi pi-user' },
   { key: 'friends', label: 'Друзья', icon: 'pi pi-users' },
   { key: 'search', label: 'Поиск', icon: 'pi pi-search' },
   { key: 'share', label: 'Поделиться', icon: 'pi pi-share-alt' },
 ]
+
+/** Поиск людей — только из своего профиля, в чужом его нет. */
+const actions = computed(() => {
+  const isOwnProfile = props.isOwn
+  if (isOwnProfile) return allActions
+  return allActions.filter((action) => action.key !== 'search')
+})
 
 /**
  * Прокидывает нажатие наружу отдельным событием под каждый ключ.
@@ -28,7 +39,7 @@ function onAction(key: QuickNavKey): void {
 </script>
 
 <template>
-  <nav aria-label="Быстрые действия профиля" class="grid grid-cols-4 gap-2 sm:gap-3">
+  <nav aria-label="Быстрые действия профиля" class="grid gap-2 sm:gap-3" :class="actions.length === 4 ? 'grid-cols-4' : 'grid-cols-3'">
     <div v-for="action in actions" :key="action.key" class="flex min-w-0 flex-col items-center gap-1.5">
       <button
         type="button"

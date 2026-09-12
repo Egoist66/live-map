@@ -244,13 +244,60 @@ class FlowPostNotifier
     }
 
     /**
+     * Найти непрочитанный дубль события UFlow.
+     *
+     * То же правило ленты: один комментарий/пост — одна непрочитанная строка.
+     *
+     * @param array $attributes атрибуты PinActivity
+     */
+    private static function findUnreadDuplicate(array $attributes): ?PinActivity
+    {
+        $kind = (string) ($attributes['kind'] ?? '');
+        $ownerId = (int) ($attributes['owner_id'] ?? 0);
+        if ($kind === '' || $ownerId <= 0) {
+            return null;
+        }
+        $query = PinActivity::query()->where('owner_id', $ownerId)->where('kind', $kind)->whereNull('read_at');
+        $commentId = (int) ($attributes['flow_comment_id'] ?? 0);
+        if ($commentId > 0) {
+            $query->where('flow_comment_id', $commentId);
+        } else {
+            $postId = (int) ($attributes['flow_post_id'] ?? 0);
+            $actorId = (int) ($attributes['actor_id'] ?? 0);
+            if ($postId <= 0 || $actorId <= 0) {
+                return null;
+            }
+            $query->where('flow_post_id', $postId)->where('actor_id', $actorId);
+        }
+
+        return $query->latest('id')->first();
+    }
+
+    /**
      * Сохранить событие и разослать realtime в личный канал.
+     *
+     * Идемпотентно: непрочитанный дубль поднимается наверх вместо нового ряда.
      *
      * @param array $attributes атрибуты PinActivity
      */
     private static function storeActivity(array $attributes): void
     {
         try {
+            $duplicate = self::findUnreadDuplicate($attributes);
+            if ($duplicate) {
+                $duplicate->forceFill(['created_at' => now(), 'updated_at' => now()])->saveQuietly();
+                $duplicate = $duplicate->fresh();
+                $duplicate->load(['actor:id,name,avatar_path', 'flowPost:id,user_id,body']);
+                broadcast(new PinActivityCreated(
+                    $duplicate,
+                    null,
+                    (int) $duplicate->owner_id,
+                    null,
+                    null,
+                ));
+
+                return;
+            }
             $activity = PinActivity::create($attributes);
             $activity->load(['actor:id,name,avatar_path', 'flowPost:id,user_id,body']);
 

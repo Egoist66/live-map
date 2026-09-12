@@ -133,6 +133,7 @@ onMounted(async () => { await design.init() })
           </div>
 
           <ProfileDesignQuickNav
+            :is-own="isOwn"
             @profile="isOwn ? design.onEdit() : design.scrollTop()"
             @friends="people.openFriends(profileUser.id, profileUser.name)"
             @search="search.openDialog()"

@@ -14,6 +14,36 @@ use Illuminate\Support\Facades\Log;
 
 class PinActivityNotifier
 {
+    /**
+     * Переиспользовать непрочитанную строку вместо дубля.
+     *
+     * Архитектурное правило ленты: одно событие — одна непрочитанная строка
+     * на получателя. Повторный вызов (даблклик, ретрай, сокет+поллер) поднимает
+     * существующую запись наверх, а не плодит дубли в БД и колокольчике.
+     *
+     * @param array<string, mixed> $match точное совпадение колонок
+     */
+    private static function reuseUnread(array $match): ?PinActivity
+    {
+        try {
+            $query = PinActivity::query()->whereNull('read_at');
+            foreach ($match as $column => $value) {
+                $query->where($column, $value);
+            }
+            $existing = $query->latest('id')->first();
+            if (! $existing) {
+                return null;
+            }
+            $existing->forceFill(['created_at' => now(), 'updated_at' => now()])->saveQuietly();
+
+            return $existing->fresh();
+        } catch (\Throwable $e) {
+            Log::warning('activity reuse failed', ['error' => $e->getMessage()]);
+
+            return null;
+        }
+    }
+
     public static function counters(Pin $pin): void
     {
         $pin->refresh();
@@ -25,14 +55,26 @@ class PinActivityNotifier
         $pin->refresh();
         $activity = null;
         if ((int) $actor->id !== (int) $pin->user_id) {
-            $activity = PinActivity::create([
-                'pin_id' => $pin->id,
-                'actor_id' => $actor->id,
+            $reused = static::reuseUnread([
                 'owner_id' => $pin->user_id,
+                'actor_id' => $actor->id,
+                'pin_id' => $pin->id,
                 'kind' => 'reaction',
                 'reaction_type' => $type,
             ]);
-            $activity->load(['actor:id,name,avatar_path', 'pin:id,title,category']);
+            if ($reused) {
+                $reused->load(['actor:id,name,avatar_path', 'pin:id,title,category']);
+                $activity = $reused;
+            } else {
+                $activity = PinActivity::create([
+                    'pin_id' => $pin->id,
+                    'actor_id' => $actor->id,
+                    'owner_id' => $pin->user_id,
+                    'kind' => 'reaction',
+                    'reaction_type' => $type,
+                ]);
+                $activity->load(['actor:id,name,avatar_path', 'pin:id,title,category']);
+            }
         }
         static::broadcastCounters($pin);
         if ($activity) static::dispatchActivity($activity, $pin, null);
@@ -45,15 +87,26 @@ class PinActivityNotifier
         $ownerId = (int) $pin->user_id;
         $mentioned = array_map('intval', $exceptOwnerIds);
         if ((int) $actor->id !== $ownerId && ! in_array($ownerId, $mentioned, true)) {
-            $activity = PinActivity::create([
-                'pin_id' => $pin->id,
-                'actor_id' => $actor->id,
+            $reused = static::reuseUnread([
                 'owner_id' => $ownerId,
+                'pin_id' => $pin->id,
                 'kind' => 'comment',
                 'comment_id' => $comment->id,
-                'excerpt' => static::excerpt($comment->content),
             ]);
-            $activity->load(['actor:id,name,avatar_path', 'pin:id,title,category']);
+            if ($reused) {
+                $reused->load(['actor:id,name,avatar_path', 'pin:id,title,category']);
+                $activity = $reused;
+            } else {
+                $activity = PinActivity::create([
+                    'pin_id' => $pin->id,
+                    'actor_id' => $actor->id,
+                    'owner_id' => $ownerId,
+                    'kind' => 'comment',
+                    'comment_id' => $comment->id,
+                    'excerpt' => static::excerpt($comment->content),
+                ]);
+                $activity->load(['actor:id,name,avatar_path', 'pin:id,title,category']);
+            }
         }
         static::broadcastCounters($pin);
         if ($activity) static::dispatchActivity($activity, $pin, null);
@@ -113,6 +166,17 @@ class PinActivityNotifier
         $ownerId = (int) $photo->user_id;
         if ((int) $actor->id === $ownerId) return;
         if (in_array($ownerId, array_map('intval', $exceptOwnerIds), true)) return;
+        $reused = static::reuseUnread([
+            'owner_id' => $ownerId,
+            'kind' => 'photo_comment',
+            'photo_comment_id' => $comment->id,
+        ]);
+        if ($reused) {
+            $reused->load(['actor:id,name,avatar_path', 'photo:id,user_id,caption']);
+            static::dispatchActivity($reused, null, $photo);
+
+            return;
+        }
         $activity = PinActivity::create([
             'pin_id' => null,
             'actor_id' => $actor->id,
@@ -238,6 +302,14 @@ class PinActivityNotifier
     public static function matched(User $me, User $other, int $matchId): void
     {
         foreach ([[$other, $me], [$me, $other]] as [$recipient, $actor]) {
+            $reused = static::reuseUnread([
+                'owner_id' => $recipient->id,
+                'kind' => 'match',
+                'excerpt' => "match:{$matchId}",
+            ]);
+            if ($reused) {
+                continue;
+            }
             $activity = PinActivity::create([
                 'pin_id' => null,
                 'actor_id' => $actor->id,

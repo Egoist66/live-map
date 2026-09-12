@@ -212,13 +212,56 @@ class UserSubscriptionNotifier
     }
 
     /**
+     * Найти непрочитанный дубль события (повторный вызов рассылки).
+     *
+     * Один пин/фото/уровень должен давать одну строку в ленте владельца,
+     * иначе друг видит два одинаковых уведомления и две строки в «Пинах».
+     *
+     * @param array $attributes
+     * @return \App\Models\PinActivity|null
+     */
+    private static function findUnreadDuplicate(array $attributes): ?PinActivity
+    {
+        $kind = (string) ($attributes['kind'] ?? '');
+        $ownerId = (int) ($attributes['owner_id'] ?? 0);
+        if ($kind === '' || $ownerId <= 0) {
+            return null;
+        }
+        $query = PinActivity::query()->where('owner_id', $ownerId)->where('kind', $kind)->whereNull('read_at');
+        $pinId = (int) ($attributes['pin_id'] ?? 0);
+        $photoId = (int) ($attributes['photo_id'] ?? 0);
+        $actorId = (int) ($attributes['actor_id'] ?? 0);
+        if ($pinId > 0) {
+            $query->where('pin_id', $pinId);
+        } elseif ($photoId > 0) {
+            $query->where('photo_id', $photoId);
+        } elseif ($actorId > 0) {
+            $query->where('actor_id', $actorId);
+        } else {
+            return null;
+        }
+        $excerpt = $attributes['excerpt'] ?? null;
+        if (is_string($excerpt) && $excerpt !== '') {
+            $query->where('excerpt', $excerpt);
+        }
+
+        return $query->latest('id')->first();
+    }
+
+    /**
      * Сохранить событие в ленту (счётчик + история) и разослать realtime.
+     *
+     * Идемпотентно: непрочитанный дубль не создаётся повторно.
      *
      * @param array $attributes
      */
     private static function storeActivity(array $attributes): void
     {
         try {
+            $duplicate = self::findUnreadDuplicate($attributes);
+            if ($duplicate) {
+                return;
+            }
             $activity = PinActivity::create($attributes);
             $activity->load(['actor:id,name,avatar_path', 'pin:id,title,category', 'photo:id,user_id,caption']);
             $pin = $activity->pin;

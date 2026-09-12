@@ -1,7 +1,7 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
 import { avatarSrcFor } from '@/composables/useAvatar'
-import { showLocal } from '@/pwa/push.service'
+import { getSubscription, showLocal } from '@/pwa/push.service'
 import { useScreenLock } from '@/composables/useScreenLock'
 import { busOn } from '@/services/realtime-bus'
 import { ensureUserChannel, leaveUserChannel } from '@/composables/useUserChannel'
@@ -81,7 +81,22 @@ function push(t: AppToast) {
   timers.set(t.id, timer)
   if ('vibrate' in navigator) try { (navigator as any).vibrate(120) } catch {}
   try {
-    if (typeof document !== 'undefined' && document.hidden) showLocal(t.title, { body: t.body, url: t.link, avatar: t.avatar })
+    if (typeof document !== 'undefined' && document.hidden) void notifyHidden(t)
+  } catch {}
+}
+/**
+ * Системный баннер для скрытой вкладки — без дубля с серверным web-push.
+ *
+ * Если у устройства есть push-подписка, серверный пуш уже покажет баннер
+ * через SW — локальный не нужен. Тег стабилен на событие, чтобы повтор
+ * заменил баннер, а не сложил второй.
+ */
+async function notifyHidden(t: AppToast): Promise<void> {
+  try {
+    const sub = await getSubscription().catch(() => null)
+    if (sub) return
+    const tag = t.id.replace(/-\d+$/, '')
+    await showLocal(t.title, { body: t.body, url: t.link, avatar: t.avatar, tag })
   } catch {}
 }
 function remove(id: string) {
@@ -179,9 +194,26 @@ function activityLink(a: any): string {
   }
   return '/map'
 }
+/**
+ * Общий ключ тоста для одного повода: `pin.activity` (sub_pin/...) и
+ * `user.feed.updated` (pin/...) приходят парой на одно событие —
+ * второй тост гасится независимо от порядка доставки.
+ */
+function sharedFeedKeyForActivity(a: any): string | null {
+  const pinId = Number(a?.pin?.id || a?.pin_id || 0) || null
+  if (a?.kind === 'sub_pin' && pinId) return `feedpin-${pinId}`
+  const photoId = Number(a?.photo?.id || a?.photo_id || 0) || null
+  if (a?.kind === 'sub_photo' && photoId) return `feedphoto-${photoId}`
+  const actorId = Number(a?.actor?.id || a?.actor_id || 0) || null
+  if (a?.kind === 'sub_level' && actorId) return `feedlevel-${actorId}`
+  return null
+}
 function handlePinActivity(e: any) {
   const a = e?.activity
   if (!a?.id) return
+  if (isDuplicateEvent(`act-${a.id}`)) return
+  const sharedKey = sharedFeedKeyForActivity(a)
+  if (sharedKey && isDuplicateEvent(sharedKey)) return
   const uid = getUid()
   if (a.owner_id && uid && Number(a.owner_id) !== uid) return
   const actor = a.actor || {}
@@ -350,6 +382,8 @@ function handleUserFeed(e: any) {
   const name = actor.name || 'Кто-то'
   const p = e?.payload || {}
   if (kind === 'pin') {
+    const feedPinId = Number(p.pin_id || 0) || null
+    if (feedPinId && isDuplicateEvent(`feedpin-${feedPinId}`)) return
     const title = (p.title || 'новый пин').toString().slice(0, 60)
     push({
       id: `feed-pin-${p.pin_id || Date.now()}-${Date.now()}`,
@@ -422,6 +456,7 @@ function handleSwipeLiked(e: any) {
 function handleImpersonation(e: any) {
   const log = e?.log
   if (!log?.id) return
+  if (isDuplicateEvent(`imp-${log.id}`)) return
   push({
     id: `imp-${log.id}-${Date.now()}`,
     type: 'security',
@@ -440,6 +475,7 @@ function isAdminNow(): boolean {
 }
 function handleReport(e: any) {
   if (!adminMode || !e?.report?.id) return
+  if (isDuplicateEvent(`rep-${e.report.id}`)) return
   const r = e.report
   const title = r.target_title || `${r.target_type} #${r.target_id}`
   const body = (r.description ? `${r.description} — ` : '') + `от ${r.reporter?.name || 'пользователя'}`
