@@ -97,11 +97,11 @@ const statCls = 'flex-1 min-w-0 flex flex-col items-center sm:block sm:text-left
     <div class="px-4 sm:px-6 pt-0.5 sm:pt-1">
       <div class="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-5">
         <button @click="emit('avatar')" class="relative shrink-0 self-start rounded-[26px] p-1 bg-white dark:bg-zinc-900 shadow-soft" aria-label="Открыть фото">
-          <span class="relative block w-24 h-24 sm:w-36 sm:h-36">
-            <span class="block w-full h-full rounded-[20px] overflow-hidden bg-stone-100 dark:bg-zinc-800">
+          <span class="block w-24 h-24 sm:w-36 sm:h-36">
+            <span class="relative block w-full h-full rounded-[20px] overflow-hidden bg-stone-100 dark:bg-zinc-800">
               <Avatar :image="avatarSrc" shape="square" class="!w-full !h-full !rounded-[20px] [&_img]:!rounded-[20px] [&_img]:object-cover" />
+              <OnlineDot :online="online" size="w-5 h-5 sm:w-6 sm:h-6" />
             </span>
-            <OnlineDot :online="online" size="w-5 h-5 sm:w-6 sm:h-6" />
           </span>
         </button>
         <div class="min-w-0 flex-1 sm:pb-1">

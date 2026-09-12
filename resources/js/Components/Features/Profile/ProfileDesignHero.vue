@@ -32,10 +32,10 @@ const emit = defineEmits<{
 <template>
   <section class="rounded-[24px] border border-stone-200 bg-white shadow-soft p-4 sm:p-5 dark:border-zinc-800 dark:bg-zinc-900">
     <div class="flex gap-3 sm:gap-5">
-      <div class="relative shrink-0">
+      <div class="shrink-0">
         <button
           type="button"
-          class="block h-[104px] w-[104px] sm:h-[128px] sm:w-[128px] overflow-hidden rounded-[22px] bg-stone-200/70 dark:bg-zinc-800"
+          class="relative block h-[104px] w-[104px] sm:h-[128px] sm:w-[128px] overflow-hidden rounded-[22px] bg-stone-200/70 dark:bg-zinc-800"
           aria-label="Открыть фото"
           @click="emit('avatar')"
         >
@@ -44,11 +44,11 @@ const emit = defineEmits<{
             shape="square"
             class="!h-full !w-full !rounded-[22px] [&_img]:!rounded-[22px] [&_img]:object-cover"
           />
+          <OnlineDot
+            :online="online"
+            size="w-4 h-4 sm:w-5 sm:h-5"
+          />
         </button>
-        <OnlineDot
-          :online="online"
-          size="w-4 h-4 sm:w-5 sm:h-5"
-        />
       </div>
 
       <div class="min-w-0 flex-1">

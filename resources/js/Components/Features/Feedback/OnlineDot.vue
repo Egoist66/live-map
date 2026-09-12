@@ -2,10 +2,9 @@
 /**
  * Индикатор онлайна поверх аватарки.
  *
- * Позиция зашита внутри: всегда справа снизу аватара
- * (`bottom-0 right-0` + вынос на четверть точки наружу).
- * Сдвиг в процентах от размера самой точки, поэтому одинаков
- * на любом разрешении и размере аватара.
+ * Позиция зашита внутри: всегда справа снизу НА САМОМ аватаре
+ * (`bottom-0 right-0`, целиком внутри угла — одинаково на мобилке и десктопе).
+ * Без выноса наружу: точку не режет `overflow-hidden` скруглённого аватара.
  * Родитель обязан быть `relative`. Позицию через `class` не передавать.
  *
  * @example
@@ -19,7 +18,7 @@ defineProps<{ online: boolean; size?: string }>()
 <template>
   <span
     :class="[
-      'absolute bottom-0 right-0 translate-x-1/4 translate-y-1/4 pointer-events-none grid shrink-0 place-items-center rounded-full border-2 border-white shadow-sm dark:border-zinc-900',
+      'absolute bottom-0 right-0 pointer-events-none grid shrink-0 place-items-center rounded-full border-2 border-white shadow-sm dark:border-zinc-900',
       online ? 'bg-emerald-500 animate-[pulse_2s_ease-in-out_infinite]' : 'bg-red-500 animate-[pulse_2.8s_ease-in-out_infinite]',
       size || 'w-3.5 h-3.5',
     ]"

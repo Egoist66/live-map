@@ -22,11 +22,11 @@ const emit = defineEmits<{ (e: 'avatar'): void; (e: 'chat'): void; (e: 'add'): v
       </div>
       <div v-else>
         <div class="flex items-center gap-4">
-          <span class="relative block h-16 w-16 shrink-0 sm:h-20 sm:w-20">
-            <button @click="emit('avatar')" class="block h-full w-full overflow-hidden rounded-3xl border bg-stone-50">
+          <span class="block h-16 w-16 shrink-0 sm:h-20 sm:w-20">
+            <button @click="emit('avatar')" class="relative block h-full w-full overflow-hidden rounded-3xl border bg-stone-50">
               <Avatar :image="avatarSrc" shape="square" class="!w-full !h-full [&_img]:object-cover" />
+              <OnlineDot :online="online" size="w-4 h-4" />
             </button>
-            <OnlineDot :online="online" size="w-4 h-4" />
           </span>
           <div class="min-w-0 flex-1">
             <h1 class="text-lg sm:text-xl font-black tracking-tight truncate flex items-center gap-2">{{ user.name }}</h1>
