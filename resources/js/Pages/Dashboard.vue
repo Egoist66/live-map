@@ -50,6 +50,7 @@ onMounted(async () => { await design.init() })
           :user="dash.u.value"
           :avatar-src="dash.avatarSrc.value"
           :online="dash.presence.value.active"
+          :presence-text="design.presenceText.value"
           :level-name="dash.levelName.value"
           :plan-name="design.planName.value"
           :reputation-text="design.reputationText.value"

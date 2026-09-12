@@ -56,6 +56,7 @@ onMounted(async () => { await design.init() })
             :user="profileUser"
             :avatar-src="page.avatarSrc.value"
             :online="page.online.value"
+            :presence-text="design.presenceText.value"
             :level-name="design.levelName.value"
             :plan-name="design.planName.value"
             :reputation-text="design.reputationText.value"

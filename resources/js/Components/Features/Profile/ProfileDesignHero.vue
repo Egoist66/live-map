@@ -8,6 +8,7 @@ defineProps<{
   user: any
   avatarSrc: string
   online: boolean
+  presenceText: string
   levelName: string
   planName: string
   reputationText: string
@@ -61,6 +62,7 @@ const emit = defineEmits<{
           <span class="rounded-full border border-stone-200 bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">{{ reputationText }} ★</span>
           <span class="rounded-full border border-stone-200 bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">{{ planName }}</span>
         </div>
+        <p class="mt-1.5 text-xs font-semibold" :class="online ? 'text-emerald-600 dark:text-emerald-400' : 'text-stone-500 dark:text-zinc-400'">{{ presenceText }}</p>
         <p v-if="headlineText" class="mt-2 flex min-w-0 items-center gap-1 text-[13px] italic text-stone-500 dark:text-zinc-400">
           <span class="truncate">{{ headlineText }} <span class="not-italic">✦</span></span>
           <button

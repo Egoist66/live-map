@@ -48,7 +48,8 @@ export function useDashboardDesign(propsUser?: any, propsIsOwn?: boolean) {
   const reputationText = computed(() => `${dash.u.value.reputation_score || 0}`)
   const emailText = computed(() => dash.u.value.email || '')
   const galleryPreview = computed(() => gallery.photos.value.slice(0, 8))
-  const statusText = computed(() => (dash.presence.value.active ? 'в сети' : dash.presence.value.label))
+  const statusText = computed(() => (dash.presence.value.active ? 'онлайн' : 'оффлайн'))
+  const presenceText = computed(() => (dash.presence.value.active ? 'в сети' : dash.presence.value.label))
 
   /** Короткое превью «О себе» для плитки общей информации. */
   const bioPreview = computed(() => {
@@ -100,6 +101,7 @@ export function useDashboardDesign(propsUser?: any, propsIsOwn?: boolean) {
     emailText,
     galleryPreview,
     statusText,
+    presenceText,
     headlineText,
     bioPreview,
     addSlots,

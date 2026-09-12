@@ -76,7 +76,8 @@ export function useProfileDesign(props: {
     return `${text.slice(0, 80).trimEnd()}…`
   })
   const galleryPreview = computed(() => gallery.photos.value.slice(0, 8))
-  const statusText = computed(() => (page.online.value ? 'в сети' : page.lastSeenText.value))
+  const statusText = computed(() => (page.online.value ? 'онлайн' : 'оффлайн'))
+  const presenceText = computed(() => (page.online.value ? 'в сети' : page.lastSeenText.value))
 
   /** Строка под именем: мысль пользователя или текст «О себе». */
   const headlineText = computed(() => {
@@ -146,6 +147,7 @@ export function useProfileDesign(props: {
     headlineText,
     galleryPreview,
     statusText,
+    presenceText,
     addSlots,
     infoTiles,
     subscription: props.subscription,

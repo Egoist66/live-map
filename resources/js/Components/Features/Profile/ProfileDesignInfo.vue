@@ -50,7 +50,7 @@ const chevronCls = 'pi pi-chevron-right shrink-0 text-xs text-stone-300 dark:tex
         </span>
         <span class="min-w-0 flex-1">
           <span :class="labelCls">Статус</span>
-          <span :class="[valueCls, online ? '!text-emerald-600 dark:!text-emerald-400' : '']">{{ statusText }}</span>
+          <span :class="[valueCls, online ? '!text-emerald-600 dark:!text-emerald-400' : '!text-red-500 dark:!text-red-400']">{{ statusText }}</span>
         </span>
         <i :class="chevronCls"></i>
       </button>
