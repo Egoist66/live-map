@@ -48,7 +48,6 @@ const emit = defineEmits<{
         <OnlineDot
           :online="online"
           size="w-4 h-4 sm:w-5 sm:h-5"
-          class="absolute bottom-2 right-2 sm:bottom-2.5 sm:right-2.5"
         />
       </div>
 

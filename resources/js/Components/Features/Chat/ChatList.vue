@@ -51,7 +51,7 @@ const { menuPt } = useDropdownMenuStyle()
         <button @click="emit('open', c.id)" :class="selectedId === c.id ? 'bg-violet-50 dark:bg-violet-500/10 shadow-[inset_3px_0_0_0_#8b5cf6]' : 'hover:bg-stone-50/70 dark:hover:bg-zinc-800/70'" class="flex-1 flex items-center gap-3 p-3.5 lg:p-3 text-left min-w-0 transition-colors">
           <span class="relative shrink-0">
             <Avatar :image="avatarSrcFor(c.other)" shape="circle" size="large" class="!w-11 !h-11 [&_img]:object-cover" :pt="{ image: { class: 'object-cover' } }" />
-            <OnlineDot :online="isOnline(c.other?.id, c.other?.last_seen_at)" class="absolute -bottom-0.5 -right-0.5" />
+            <OnlineDot :online="isOnline(c.other?.id, c.other?.last_seen_at)" />
           </span>
           <div class="flex-1 min-w-0">
             <div class="flex justify-between items-baseline gap-2"><span class="text-[15px] lg:text-sm font-semibold dark:text-white truncate">{{ c.other?.name || 'Чат' }}</span><span v-if="c.last_message_at" class="text-[11px] text-stone-400 shrink-0">{{ formatTime(c.last_message_at) }}</span></div>
@@ -74,7 +74,7 @@ const { menuPt } = useDropdownMenuStyle()
         <button @click="emit('open', c.id)" :class="selectedId === c.id ? 'bg-rose-50 dark:bg-rose-500/10 shadow-[inset_3px_0_0_0_#f43f5e]' : 'hover:bg-rose-50/70 dark:hover:bg-rose-950/20'" class="flex-1 flex items-center gap-3 p-3.5 lg:p-3 text-left min-w-0 transition-colors">
           <span class="relative shrink-0">
             <Avatar :image="avatarSrcFor(c.other)" shape="circle" size="large" class="!w-11 !h-11 [&_img]:object-cover ring-2 ring-rose-300 dark:ring-rose-700" :pt="{ image: { class: 'object-cover' } }" />
-            <OnlineDot :online="isOnline(c.other?.id, c.other?.last_seen_at)" class="absolute -bottom-0.5 -right-0.5" />
+            <OnlineDot :online="isOnline(c.other?.id, c.other?.last_seen_at)" />
             <span class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-rose-500 grid place-items-center ring-2 ring-white dark:ring-zinc-900"><i class="pi pi-heart-fill text-white text-[10px]" /></span>
           </span>
           <div class="flex-1 min-w-0">
@@ -92,7 +92,7 @@ const { menuPt } = useDropdownMenuStyle()
       <div v-if="!friends.length" class="p-6 text-center text-sm text-stone-500">Нет друзей</div>
       <div v-for="f in friends" :key="f.id" class="flex items-center justify-between p-3.5 lg:p-3 select-none active:bg-stone-50 group">
         <Link :href="`/users/${f.other?.id}`" class="flex items-center gap-3 hover:opacity-80 min-w-0">
-          <span class="relative shrink-0"><Avatar :image="avatarSrcFor(f.other)" shape="circle" class="[&_img]:object-cover" :pt="{ image: { class: 'object-cover' } }" /><OnlineDot :online="isOnline(f.other?.id, (f.other as any)?.last_seen_at)" class="absolute -bottom-0.5 -right-0.5" /></span>
+          <span class="relative shrink-0"><Avatar :image="avatarSrcFor(f.other)" shape="circle" class="[&_img]:object-cover" :pt="{ image: { class: 'object-cover' } }" /><OnlineDot :online="isOnline(f.other?.id, (f.other as any)?.last_seen_at)" /></span>
           <span class="text-[15px] lg:text-sm font-medium dark:text-white truncate hover:underline">{{ f.other?.name }}</span>
         </Link>
         <div class="flex gap-1 shrink-0 items-center">
@@ -105,7 +105,7 @@ const { menuPt } = useDropdownMenuStyle()
       <div v-if="!pendingIn.length" class="p-6 text-center text-sm text-stone-500">Нет заявок</div>
       <div v-for="r in pendingIn" :key="r.id" class="flex items-center justify-between p-3.5 lg:p-3 gap-2 select-none">
         <Link :href="`/users/${r.requester?.id}`" class="flex items-center gap-3 hover:opacity-80 min-w-0">
-          <span class="relative shrink-0"><Avatar :image="avatarSrcFor(r.requester)" shape="circle" class="[&_img]:object-cover" :pt="{ image: { class: 'object-cover' } }" /><OnlineDot :online="isOnline(r.requester?.id, (r.requester as any)?.last_seen_at)" class="absolute -bottom-0.5 -right-0.5" /></span>
+          <span class="relative shrink-0"><Avatar :image="avatarSrcFor(r.requester)" shape="circle" class="[&_img]:object-cover" :pt="{ image: { class: 'object-cover' } }" /><OnlineDot :online="isOnline(r.requester?.id, (r.requester as any)?.last_seen_at)" /></span>
           <span class="text-[15px] lg:text-sm dark:text-white truncate hover:underline">{{ r.requester?.name }}</span>
         </Link>
         <div class="flex gap-1.5 shrink-0">

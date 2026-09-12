@@ -26,6 +26,7 @@ let busBound = false
 let subscribedUid: number | null = null
 let adminMode = false
 let seenMsgIds = new Set<number>()
+let seenEventAt = new Map<string, number>()
 let timers = new Map<string, ReturnType<typeof setTimeout>>()
 
 /**
@@ -38,6 +39,7 @@ export function resetAppNotifications(): void {
   subscribedUid = null
   inited = false
   seenMsgIds = new Set<number>()
+  seenEventAt = new Map<string, number>()
   timers.forEach((t) => clearTimeout(t))
   timers = new Map()
   toasts.value = []
@@ -108,9 +110,28 @@ function handleMessage(e: any) {
     createdAt: Date.now(),
   })
 }
+/**
+ * Защита от дублей тостов: одно событие дружбы прилетает дважды —
+ * поллер шлёт пару `notify:friendship` + `user:friendship.updated`,
+ * на оба висит один хендлер, плюс сокет и поллер могут пересечься.
+ * Ключ включает статус: pending и accepted позже — разные тосты.
+ */
+function isDuplicateEvent(key: string, ttlMs = 20000): boolean {
+  const now = Date.now()
+  const prev = seenEventAt.get(key)
+  if (prev !== undefined && now - prev < ttlMs) return true
+  seenEventAt.set(key, now)
+  if (seenEventAt.size > 200) {
+    const first = seenEventAt.keys().next().value as string | undefined
+    if (first !== undefined) seenEventAt.delete(first)
+  }
+  return false
+}
 function handleFriendship(e: any) {
   const f = e?.friendship
   if (!f) return
+  const eventKey = `fr-${f.id}-${f.status}`
+  if (isDuplicateEvent(eventKey)) return
   const uid = getUid()
   if (f.status === 'pending' && Number(f.addressee_id) === uid) {
     const r = f.requester || {}
@@ -371,6 +392,7 @@ function otherParty(e: any): any {
 }
 function handleMatch(e: any) {
   if (!e?.conversation_id) return
+  if (isDuplicateEvent(`match-${e.match_id || e.conversation_id}`)) return
   const other = otherParty(e)
   push({
     id: `match-${e.match_id || e.conversation_id}-${Date.now()}`,
@@ -385,6 +407,7 @@ function handleMatch(e: any) {
 function handleSwipeLiked(e: any) {
   const liker = e?.liker
   if (!liker?.id) return
+  if (isDuplicateEvent(`liked-${liker.id}`)) return
   const anon = !!(liker.is_incognito || e?.is_incognito)
   push({
     id: `liked-${liker.id}-${Date.now()}`,

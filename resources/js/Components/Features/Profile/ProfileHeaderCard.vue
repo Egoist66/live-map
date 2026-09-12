@@ -26,7 +26,7 @@ const emit = defineEmits<{ (e: 'avatar'): void; (e: 'chat'): void; (e: 'add'): v
             <button @click="emit('avatar')" class="block h-full w-full overflow-hidden rounded-3xl border bg-stone-50">
               <Avatar :image="avatarSrc" shape="square" class="!w-full !h-full [&_img]:object-cover" />
             </button>
-            <OnlineDot :online="online" size="w-4 h-4" class="absolute bottom-1 right-1" />
+            <OnlineDot :online="online" size="w-4 h-4" />
           </span>
           <div class="min-w-0 flex-1">
             <h1 class="text-lg sm:text-xl font-black tracking-tight truncate flex items-center gap-2">{{ user.name }}</h1>
