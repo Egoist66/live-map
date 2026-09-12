@@ -34,6 +34,8 @@ export type RealtimeEventMap = {
   'map:pins': { upsert: any[]; deleted: number[]; counters: Record<number, { reactions_count: number; comments_count: number }> }
   /** Квитанции доставки/прочтения из поллинга */
   'chat:receipts': any[]
+  /** Хвост id открытого диалога: клиент вычищает локально удалённые */
+  'chat:open-ids': { conversationId: number; ids: number[] }
   /** Единый user-канал: сырые события (user:message.sent и т.д.) */
   'user:message.sent': any
   'user:message.updated': any

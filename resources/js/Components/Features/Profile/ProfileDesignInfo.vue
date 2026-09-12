@@ -10,7 +10,8 @@ defineProps<{
   ageText: string
   genderLabel: string
   residenceText: string
-  levelName: string
+  bioText: string
+  bioPreview: string
 }>()
 
 const emit = defineEmits<{
@@ -90,11 +91,11 @@ const chevronCls = 'pi pi-chevron-right shrink-0 text-xs text-stone-300 dark:tex
         <i :class="chevronCls"></i>
       </button>
 
-      <button type="button" :class="tileCls" @click="modal.show('Уровень', levelName)">
-        <span :class="iconCls"><i class="pi pi-star"></i></span>
+      <button type="button" :class="tileCls" @click="modal.show('О себе', bioText || 'Пока пусто — расскажи о себе в настройках профиля')">
+        <span :class="iconCls"><i class="pi pi-align-left"></i></span>
         <span class="min-w-0 flex-1">
-          <span :class="labelCls">Уровень</span>
-          <span :class="valueCls">{{ levelName }}</span>
+          <span :class="labelCls">О себе</span>
+          <span :class="valueCls">{{ bioPreview || '—' }}</span>
         </span>
         <i :class="chevronCls"></i>
       </button>

@@ -25,6 +25,7 @@ export const useBadgeStore = defineStore('badges', () => {
   let fetchTimer: ReturnType<typeof setTimeout> | null = null
   let lastMutationAt = 0
   let lastRequestAt = 0
+  let lastPollTickAt = 0
   let suppressUntil = 0
 
   function getUid(): number {
@@ -41,8 +42,16 @@ export const useBadgeStore = defineStore('badges', () => {
     lastMutationAt = Date.now()
   }
 
+  /**
+   * Отложенная перезагрузка счётчиков после события шины.
+   *
+   * В polling-режиме тик идёт каждые ~2.5с и привозит готовые
+   * badges:update — зеркальные user:*-события поллера не должны
+   * устраивать тяжёлый fetch() на каждый тик, пропускаем их.
+   */
   function scheduleFetch() {
     if (fetchTimer) return
+    if (Date.now() - lastPollTickAt < 8000) return
     fetchTimer = setTimeout(() => { fetchTimer = null; fetch() }, 400)
   }
 
@@ -160,7 +169,8 @@ export const useBadgeStore = defineStore('badges', () => {
     try {
       busOn('badges:update', (b: any) => applyPollBadges(b))
       busOn('badges:request', (sentAt: number) => {
-        lastRequestAt = Number(sentAt) || Date.now()
+        lastPollTickAt = Number(sentAt) || Date.now()
+        lastRequestAt = lastPollTickAt
       })
     } catch {}
     loading.value = false

@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
 import AvatarPreview from '@/Components/Features/Media/AvatarPreview.vue'
+import PlanDetailsDialog from '@/Components/Features/Profile/PlanDetailsDialog.vue'
 import { useProfileForm } from '@/composables/useProfileForm'
+import { usePlanDetails, type PlanId } from '@/composables/usePlanDetails'
 import { useBirthDateField } from '@/composables/useBirthDate'
 import { useAvatarUpload } from '@/composables/useAvatarUpload'
 import { useGender } from '@/composables/useGender'
@@ -24,7 +26,17 @@ const bd = useBirthDateField(f.birth_date as any)
 const a = useAvatarUpload()
 const g = useGender()
 const { selectPt } = useDropdownMenuStyle()
-const planOptions = [{ label:'Free — 3/день · 10км', value:'free', icon:'pi pi-ticket' },{ label:'Pro — Безлимит · 15км', value:'pro', icon:'pi pi-bolt' },{ label:'Business — Безлимит · 50км', value:'business', icon:'pi pi-briefcase' }]
+const planDialog = usePlanDetails()
+const planOptions = [{ label:'Free — 3 пина · 10 км', value:'free', icon:'pi pi-ticket' },{ label:'Pro — Безлимит · 15 км', value:'pro', icon:'pi pi-bolt' },{ label:'Business — Безлимит · 50 км', value:'business', icon:'pi pi-briefcase' }]
+
+/**
+ * Выбрать тариф из модалки: подставляет значение и закрывает.
+ * @param id идентификатор тарифа
+ */
+function choosePlan(id: PlanId): void {
+  ;(f.plan.value as any) = id
+  planDialog.hide()
+}
 </script>
 <template>
   <section>
@@ -176,10 +188,11 @@ const planOptions = [{ label:'Free — 3/день · 10км', value:'free', icon
             </template>
           </Select>
           <div class="mt-3 grid sm:grid-cols-3 gap-2">
-            <Card @click="(f.plan.value as any)='free'" :class="['!rounded-3xl !cursor-pointer !transition', f.values.plan==='free'?'!bg-ink-900 dark:!bg-white !text-white dark:!text-ink-900 !border-ink-900 dark:!border-white':'!bg-stone-50 dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 !text-stone-800 dark:!text-zinc-200']" :pt="{ body:{ class:'!p-3' }, content:{ class:'!p-0' } }"><template #content><div class="text-sm font-bold">Free</div><div class="text-xs opacity-70">3/день · 10км · 4ч</div><div class="text-xs font-bold mt-1">Бесплатно</div></template></Card>
-            <Card @click="(f.plan.value as any)='pro'" :class="['!rounded-3xl !cursor-pointer !transition', f.values.plan==='pro'?'!bg-gradient-to-br !from-violet-600 !to-indigo-600 !text-white !border-violet-600':'!bg-amber-50 dark:!bg-amber-950/30 !border-amber-200 dark:!border-amber-800 !text-stone-800 dark:!text-zinc-200']" :pt="{ body:{ class:'!p-3' }, content:{ class:'!p-0' } }"><template #content><div class="text-sm font-black">Pro</div><div class="text-xs opacity-80">Безлимит · 15км · 12ч</div><div class="text-xs font-bold mt-1">$4.99 / мес</div></template></Card>
-            <Card @click="(f.plan.value as any)='business'" :class="['!rounded-3xl !cursor-pointer !transition', f.values.plan==='business'?'!bg-ink-900 dark:!bg-white !text-white dark:!text-ink-900 !border-ink-900 dark:!border-white':'!bg-stone-50 dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 !text-stone-800 dark:!text-zinc-200']" :pt="{ body:{ class:'!p-3' }, content:{ class:'!p-0' } }"><template #content><div class="text-sm font-bold">Business</div><div class="text-xs opacity-70">Безлимит · 50км · ∞</div><div class="text-xs font-bold mt-1">$19.99 / мес</div></template></Card>
+            <Card @click="planDialog.showPlan('free')" :class="['!rounded-3xl !cursor-pointer !transition', f.values.plan==='free'?'!bg-ink-900 dark:!bg-white !text-white dark:!text-ink-900 !border-ink-900 dark:!border-white':'!bg-stone-50 dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 !text-stone-800 dark:!text-zinc-200']" :pt="{ body:{ class:'!p-3' }, content:{ class:'!p-0' } }"><template #content><div class="text-sm font-bold">Free</div><div class="text-xs opacity-70">3 пина · 10 км · 4 ч</div><div class="text-xs font-bold mt-1">Бесплатно</div><div class="text-[11px] font-semibold mt-1 underline underline-offset-2">Что входит?</div></template></Card>
+            <Card @click="planDialog.showPlan('pro')" :class="['!rounded-3xl !cursor-pointer !transition', f.values.plan==='pro'?'!bg-gradient-to-br !from-violet-600 !to-indigo-600 !text-white !border-violet-600':'!bg-amber-50 dark:!bg-amber-950/30 !border-amber-200 dark:!border-amber-800 !text-stone-800 dark:!text-zinc-200']" :pt="{ body:{ class:'!p-3' }, content:{ class:'!p-0' } }"><template #content><div class="text-sm font-black">Pro</div><div class="text-xs opacity-80">Безлимит · 15 км · 12 ч</div><div class="text-xs font-bold mt-1">$4.99 / мес</div><div class="text-[11px] font-semibold mt-1 underline underline-offset-2">Что входит?</div></template></Card>
+            <Card @click="planDialog.showPlan('business')" :class="['!rounded-3xl !cursor-pointer !transition', f.values.plan==='business'?'!bg-ink-900 dark:!bg-white !text-white dark:!text-ink-900 !border-ink-900 dark:!border-white':'!bg-stone-50 dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 !text-stone-800 dark:!text-zinc-200']" :pt="{ body:{ class:'!p-3' }, content:{ class:'!p-0' } }"><template #content><div class="text-sm font-bold">Business</div><div class="text-xs opacity-70">Безлимит · 50 км · ∞</div><div class="text-xs font-bold mt-1">$19.99 / мес</div><div class="text-[11px] font-semibold mt-1 underline underline-offset-2">Что входит?</div></template></Card>
           </div>
+          <PlanDetailsDialog :plan="planDialog.dialogPlan.value" :current-plan="String(f.values.plan ?? 'free')" @close="planDialog.hide()" @choose="choosePlan" />
         </template>
       </Card>
       <Message v-if="mustVerifyEmail && f.user.value.email_verified_at === null" severity="warn" :closable="false" class="!rounded-2xl">

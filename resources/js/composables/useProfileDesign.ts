@@ -68,6 +68,13 @@ export function useProfileDesign(props: {
   const reputationText = computed(() => `${props.profileUser.reputation_score || 0}`)
   const emailText = computed(() => props.profileUser.email || '')
   const bioQuote = computed(() => page.bioText.value)
+
+  /** Короткое превью «О себе» для плитки общей информации. */
+  const bioPreview = computed(() => {
+    const text = page.bioText.value
+    if (text.length <= 80) return text
+    return `${text.slice(0, 80).trimEnd()}…`
+  })
   const galleryPreview = computed(() => gallery.photos.value.slice(0, 8))
   const statusText = computed(() => (page.online.value ? 'в сети' : page.lastSeenText.value))
 
@@ -135,6 +142,7 @@ export function useProfileDesign(props: {
     reputationText,
     emailText,
     bioQuote,
+    bioPreview,
     headlineText,
     galleryPreview,
     statusText,

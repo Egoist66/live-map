@@ -50,6 +50,13 @@ export function useDashboardDesign(propsUser?: any, propsIsOwn?: boolean) {
   const galleryPreview = computed(() => gallery.photos.value.slice(0, 8))
   const statusText = computed(() => (dash.presence.value.active ? 'в сети' : dash.presence.value.label))
 
+  /** Короткое превью «О себе» для плитки общей информации. */
+  const bioPreview = computed(() => {
+    const text = dash.bioText.value
+    if (text.length <= 80) return text
+    return `${text.slice(0, 80).trimEnd()}…`
+  })
+
   /** Строка под именем: мысль пользователя или текст «О себе». */
   const headlineText = computed(() => {
     const thought = (dash.u.value.thought || '').trim()
@@ -94,6 +101,7 @@ export function useDashboardDesign(propsUser?: any, propsIsOwn?: boolean) {
     galleryPreview,
     statusText,
     headlineText,
+    bioPreview,
     addSlots,
     infoTiles,
     init,

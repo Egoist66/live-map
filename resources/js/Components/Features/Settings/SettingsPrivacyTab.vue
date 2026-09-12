@@ -1,22 +1,35 @@
 <script setup lang="ts">
+import { ref } from 'vue'
+import { Link } from '@inertiajs/vue3'
 import Card from 'primevue/card'
 import Button from 'primevue/button'
 import ToggleSwitch from 'primevue/toggleswitch'
 import Message from 'primevue/message'
 import Tag from 'primevue/tag'
+import SelectButton from 'primevue/selectbutton'
 
 import SettingsHiddenFriends from './SettingsHiddenFriends.vue'
 import HomeZoneField from '@/Components/Features/HomeZone/HomeZoneField.vue'
 import { planOf } from '@/composables/usePlanLimits'
+import { useUlovePrivacy } from '@/composables/useUlovePrivacy'
 defineProps<{ user: any; invisible: any; hidden?: any; blur: any; photoPrivacy?: any; homeRadius?: any }>()
 const emit = defineEmits<{ (e: 'profile'): void }>()
+
+const privacyTab = ref<'map' | 'ulove'>('map')
+const privacyTabOptions = [
+  { label: '⚙️ Общее', value: 'map' },
+  { label: '💘 ULove', value: 'ulove' },
+] as const
+const ulove = useUlovePrivacy()
 </script>
 <template>
   <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }">
     <template #content>
       <h3 class="font-black tracking-tight text-lg dark:text-white">Приватность</h3>
       <p class="text-sm text-stone-500 mt-1">Ты — не точка, ты — пин. Управляй видимостью своей геопозиции и анонимностью.</p>
-      <div class="mt-5 space-y-4 max-w-xl">
+      <div class="mt-5 max-w-xl">
+        <SelectButton v-model="privacyTab" :options="[...privacyTabOptions]" option-label="label" option-value="value" class="w-full" />
+        <div v-if="privacyTab === 'map'" class="mt-4 space-y-4">
         <Card class="!bg-stone-50 dark:!bg-zinc-800 !border-stone-200 !rounded-3xl !shadow-none" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
           <template #content>
             <div class="text-sm font-semibold dark:text-white">Базовые принципы</div>
@@ -92,6 +105,25 @@ const emit = defineEmits<{ (e: 'profile'): void }>()
             <Message v-if="photoPrivacy.error.value" severity="error" :closable="false" class="!mt-2 !rounded-2xl !text-xs">{{ photoPrivacy.error.value }}</Message>
           </template>
         </Card>
+        </div>
+        <div v-else class="mt-4 space-y-4">
+          <div class="rounded-3xl border-2 border-rose-200 dark:border-rose-900 bg-gradient-to-br from-rose-50 to-orange-50 dark:from-rose-950/40 dark:to-orange-950/20 p-4">
+            <div class="text-sm font-semibold dark:text-white">💘 ULove — платные фишки</div>
+            <p class="text-xs text-stone-500 mt-1 leading-relaxed">Включай приватность знакомств. Твой тариф: {{ ulove.planLabel.value }}.</p>
+            <Link href="/settings/billing"><Button label="Выбрать тариф" icon="pi pi-crown" rounded size="small" class="mt-3 !bg-white !text-orange-600 !border-0" /></Link>
+          </div>
+          <div v-for="feature in ulove.features" :key="feature.key" class="flex items-center gap-3 rounded-3xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4">
+            <span :class="['w-10 h-10 rounded-2xl grid place-items-center shrink-0', feature.iconClass]"><i :class="feature.icon" /></span>
+            <div class="min-w-0 flex-1">
+              <div class="text-sm font-black text-stone-900 dark:text-white">{{ feature.title }} <span :class="feature.plan === 'PRO' ? 'text-amber-500' : 'text-emerald-500'">{{ feature.plan }}</span></div>
+              <div class="text-[11px] text-stone-500 dark:text-zinc-400">{{ ulove.statusFor(feature.key) }}</div>
+            </div>
+            <ToggleSwitch :model-value="ulove.flags.value[feature.key]" :disabled="ulove.isLocked(feature.key) || ulove.saving.value" class="shrink-0" @update:model-value="(next:boolean)=>ulove.toggle(feature.key, next)" />
+          </div>
+          <div v-if="ulove.saving.value" class="text-xs text-stone-400">Сохраняем…</div>
+          <Message v-if="!ulove.canPro.value" severity="warn" :closable="false" class="!rounded-2xl !text-xs">Скрытие имени и возраста — только на PRO/Business. Сейчас у тебя {{ planOf(user) }}.</Message>
+          <Message v-if="ulove.error.value" severity="error" :closable="false" class="!rounded-2xl !text-xs">{{ ulove.error.value }}</Message>
+        </div>
       </div>
     </template>
   </Card>

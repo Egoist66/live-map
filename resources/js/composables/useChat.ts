@@ -563,6 +563,7 @@ export function useChat() {
       busUnsubs.push(busOn('chat:typing', (e: any) => syncTypingFromPoll(Number(e?.conversationId), e?.userIds)))
       busUnsubs.push(busOn('chat:previews', (previews: any[]) => applyPreviews(previews)))
       busUnsubs.push(busOn('chat:peer', (e: any) => applyPeer(Number(e?.conversationId), e?.peer)))
+      busUnsubs.push(busOn('chat:open-ids', (e: any) => applyOpenIds(Number(e?.conversationId), e?.ids)))
     } catch {}
   }
 
@@ -773,6 +774,38 @@ export function useChat() {
     }
     sortConversations()
     if (unknown) loadConversations().catch(() => {})
+  }
+
+  /**
+   * Вычищает жёстко удалённые сообщения из открытого диалога.
+   *
+   * Поллер отдаёт хвост id (последние 100): локальные моложе минимума
+   * среза, но отсутствующие в нём, — удалены. Старые (догружаемая
+   * история старше среза) не трогаем, optimistic (id<0) тоже.
+   *
+   * @param conversationId диалог среза
+   * @param ids хвост id с сервера
+   */
+  function applyOpenIds(conversationId: number, ids: unknown): void {
+    if (!alive || Number(conversationId) !== Number(selectedId.value)) return
+    if (!Array.isArray(ids) || !ids.length) return
+    const serverIds = new Set((ids as unknown[]).map((id) => Number(id)).filter((id) => id > 0))
+    let minServer = Number.POSITIVE_INFINITY
+    serverIds.forEach((id) => {
+      if (id < minServer) minServer = id
+    })
+    const missing: number[] = []
+    for (const local of messages.value as any[]) {
+      const id = Number(local?.id)
+      if (!(id > 0) || id < minServer || serverIds.has(id)) continue
+      missing.push(id)
+    }
+    if (!missing.length) return
+    const gone = new Set(missing)
+    missing.forEach((id) => deletedIds.add(id))
+    messages.value = messages.value.filter((m: any) => !gone.has(Number(m?.id)))
+    const conv = conversations.value.find((c) => c?.id === Number(conversationId)) as any
+    if (conv?.last_message && gone.has(Number((conv.last_message as any)?.id))) loadConversations().catch(() => {})
   }
 
   async function searchUsers(q: string) {

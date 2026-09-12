@@ -1,14 +1,21 @@
 import { api } from '@/services/api'
 import { busEmit, busOn, getPollContext } from '@/services/realtime-bus'
 
-/** Тик живого поллинга: компромисс задержки и нагрузки */
-const FAST_INTERVAL = 3000
+/** Тик живого поллинга: компромисс задержки и нагрузки (24 запроса/мин) */
+const FAST_INTERVAL = 2500
 /** Тик в burst-режиме после исходящего действия */
-const BURST_INTERVAL = 1200
+const BURST_INTERVAL = 1000
 /** Сколько держать ускоренный режим после poke */
-const BURST_WINDOW = 12000
+const BURST_WINDOW = 15000
 /** Дебаунс ручного syncNow */
 const POKE_DEBOUNCE = 800
+/** Пауза между попытками после ошибки: растёт экспоненциально до потолка */
+const BASE_BACKOFF = 3000
+const MAX_BACKOFF = 30000
+/** Не чаще раза в минуту дёргаем сеть по голой активности (клики/клавиши) */
+const ACTIVITY_THROTTLE = 60000
+/** Потолок кэша увиденных id сообщений */
+const SEEN_CAP = 1000
 
 let fastTimer: ReturnType<typeof setTimeout> | null = null
 let slowTimer: ReturnType<typeof setTimeout> | null = null
@@ -19,8 +26,13 @@ let ticking = false
 let burstUntil = 0
 let lastMsgId = 0
 let lastTime = 0
+let consecutiveErrors = 0
+let backoffUntil = 0
+let lastActivitySync = 0
 let modeListenerAttached = false
+let trackingAttached = false
 const emittedKeys = new Set<string>()
+const seenMessageIds = new Set<number>()
 
 /**
  * Дедуп тостов при нахлёсте окон тиков (событие может прийти дважды).
@@ -68,8 +80,10 @@ function clearSlow(): void {
 /**
  * Запасной транспорт realtime на период лимита WS-соединений.
  *
- * Быстрый цикл (4с, только видимая вкладка) тянет /api/realtime/sync
- * и разносит данные по шине: сообщения, typing, превью, бейджи.
+ * Быстрый цикл (2.5с, только видимая вкладка) тянет /api/realtime/sync
+ * и разносит данные по шине: сообщения, правки, удаления, typing,
+ * превью, бейджи. Зеркалит события в user:*-формате сокетов, чтобы
+ * существующие подписчики (чат, тосты, бейджи) работали без ветвлений.
  * В режиме socket работает редкий вотчер смены режима (60с).
  * Сокет в polling-режиме рвётся сразу — освобождаем слот Reverb.
  *
@@ -81,20 +95,82 @@ export function useRealtimePoller() {
   /**
    * Один тик быстрого цикла. В burst-окне после исходящего
    * действия тикает чаще, тики не накладываются друг на друга.
+   * После ошибок выдерживает экспоненциальный бэкофф, офлайн
+   * ждёт события online вместо холостых запросов.
    */
   async function tickFast(): Promise<void> {
     clearFast()
     if (!fastRunning) return
-    if (!document.hidden && !ticking) {
+    const now = Date.now()
+    const online = typeof navigator === 'undefined' || navigator.onLine !== false
+    if (!document.hidden && !ticking && online && now >= backoffUntil) {
       ticking = true
       try {
         await syncOnce()
-      } catch {}
+        noteSuccess()
+      } catch (error) {
+        noteFailure(error)
+      }
       ticking = false
     }
     if (!fastRunning) return
-    const interval = Date.now() < burstUntil ? BURST_INTERVAL : FAST_INTERVAL
-    fastTimer = setTimeout(() => void tickFast(), interval)
+    fastTimer = setTimeout(() => void tickFast(), nextInterval())
+  }
+
+  /**
+   * Пауза до следующего тика: burst после poke, бэкофф после ошибок.
+   *
+   * @returns миллисекунд до следующего тика
+   */
+  function nextInterval(): number {
+    const now = Date.now()
+    if (now < backoffUntil) return Math.max(backoffUntil - now, 1000)
+    if (consecutiveErrors > 0) {
+      const backoff = Math.min(BASE_BACKOFF * 2 ** (consecutiveErrors - 1), MAX_BACKOFF)
+      return backoff
+    }
+    return now < burstUntil ? BURST_INTERVAL : FAST_INTERVAL
+  }
+
+  /**
+   * Успешный тик: сбрасываем счётчик ошибок и бэкофф.
+   */
+  function noteSuccess(): void {
+    consecutiveErrors = 0
+    backoffUntil = 0
+  }
+
+  /**
+   * Неудачный тик: 429 (throttle) — длинная пауза, сеть — ждём online.
+   *
+   * @param error ошибка запроса
+   */
+  function noteFailure(error: unknown): void {
+    consecutiveErrors += 1
+    const status = (error as { response?: { status?: number } })?.response?.status
+    if (status === 429) {
+      backoffUntil = Date.now() + 10000
+    } else {
+      const backoff = Math.min(BASE_BACKOFF * 2 ** (consecutiveErrors - 1), MAX_BACKOFF)
+      backoffUntil = Date.now() + backoff
+    }
+  }
+
+  /**
+   * Дедуп сообщений нахлёста окон тиков: сервер отдаёт окно с запасом
+   * 10с, одно сообщение может вернуться в нескольких тиках подряд.
+   *
+   * @param id id сообщения
+   * @returns true если уже разносили
+   */
+  function alreadySeenMessage(id: number): boolean {
+    if (seenMessageIds.has(id)) return true
+    seenMessageIds.add(id)
+    if (seenMessageIds.size > SEEN_CAP) {
+      const first = seenMessageIds.values().next().value as number | undefined
+      if (first !== undefined) seenMessageIds.delete(first)
+    }
+    return false
   }
 
   /**
@@ -145,9 +221,22 @@ export function useRealtimePoller() {
     const messages = Array.isArray(data?.messages) ? data.messages : []
     for (const msg of messages) {
       if (msg?.id == null) continue
-      if (Number(msg.id) > lastMsgId) lastMsgId = Number(msg.id)
+      const id = Number(msg.id)
+      if (id > lastMsgId) lastMsgId = id
+      if (alreadySeenMessage(id)) continue
       busEmit('chat:message', msg)
       busEmit('notify:message', msg)
+      busEmit('user:message.sent', { message: msg })
+    }
+    const updated = Array.isArray(data?.messages_updated) ? data.messages_updated : []
+    for (const msg of updated) {
+      if (msg?.id == null) continue
+      busEmit('user:message.updated', { message: msg })
+    }
+    const openIds = Array.isArray(data?.open_ids) ? data.open_ids : []
+    if (ctx.conversationId && openIds.length) {
+      const ids = openIds.map((id: unknown) => Number(id)).filter((id: number) => id > 0)
+      busEmit('chat:open-ids', { conversationId: Number(ctx.conversationId), ids })
     }
     if (ctx.conversationId) {
       const userIds = (Array.isArray(data?.typing) ? data.typing : [])
@@ -162,31 +251,39 @@ export function useRealtimePoller() {
       const f = e?.friendship
       if (f?.id == null || alreadyEmitted(`fr:${f.id}:${f.status}`)) return
       busEmit('notify:friendship', e)
+      busEmit('user:friendship.updated', e)
     })
     const matches = Array.isArray(data?.matches) ? data.matches : []
     matches.forEach((e: any) => {
       if (e?.match_id == null || alreadyEmitted(`match:${e.match_id}`)) return
       busEmit('notify:match', e)
+      busEmit('user:match.created', e)
     })
     const likes = Array.isArray(data?.swipe_likes) ? data.swipe_likes : []
     likes.forEach((e: any) => {
       if (e?.id == null || alreadyEmitted(`sw:${e.id}`)) return
       busEmit('notify:swipe', e)
+      busEmit('user:swipe.liked', e)
     })
     const activities = Array.isArray(data?.activities) ? data.activities : []
     activities.forEach((e: any) => {
       if (e?.activity?.id == null || alreadyEmitted(`act:${e.activity.id}`)) return
       busEmit('notify:activity', e)
+      busEmit('user:pin.activity', e)
     })
     const reports = Array.isArray(data?.reports) ? data.reports : []
     reports.forEach((e: any) => {
       if (e?.report?.id == null || alreadyEmitted(`rep:${e.report.id}`)) return
       busEmit('notify:report', e)
+      busEmit('user:report.created', e)
     })
     const appUpdates = Array.isArray(data?.app_updates) ? data.app_updates : []
     if (appUpdates.length) busEmit('notify:update', { updates: appUpdates })
     const receipts = Array.isArray(data?.receipts) ? data.receipts : []
-    if (receipts.length) busEmit('chat:receipts', receipts)
+    if (receipts.length) {
+      busEmit('chat:receipts', receipts)
+      mirrorReceipts(receipts)
+    }
     if (data?.map) busEmit('map:pins', data.map)
     if (data?.peer && ctx.conversationId) {
       busEmit('chat:peer', { conversationId: Number(ctx.conversationId), peer: data.peer })
@@ -194,10 +291,48 @@ export function useRealtimePoller() {
     if (data?.badges) busEmit('badges:update', data.badges)
   }
 
+  /**
+   * Зеркалит квитанции поллинга в формат сокетов, чтобы слушатели
+   * user:message.delivered/read (чат, бейджи) работали без ветвлений.
+   *
+   * @param receipts квитанции {id, conversation_id, delivered_at, read_at}
+   */
+  function mirrorReceipts(receipts: any[]): void {
+    const deliveredIds: number[] = []
+    const readIds: number[] = []
+    let deliveredAt: string | null = null
+    let readAt: string | null = null
+    let conversationId: number | null = null
+    for (const receipt of receipts) {
+      if (receipt?.id == null) continue
+      const id = Number(receipt.id)
+      if (receipt.delivered_at) {
+        deliveredIds.push(id)
+        deliveredAt = receipt.delivered_at
+      }
+      if (receipt.read_at) {
+        readIds.push(id)
+        readAt = receipt.read_at
+      }
+      if (conversationId === null && receipt.conversation_id != null) {
+        conversationId = Number(receipt.conversation_id)
+      }
+    }
+    if (deliveredIds.length) {
+      busEmit('user:message.delivered', { message_ids: deliveredIds, delivered_at: deliveredAt, conversation_id: conversationId })
+    }
+    if (readIds.length) {
+      busEmit('user:message.read', { message_ids: readIds, read_at: readAt, conversation_id: conversationId })
+    }
+  }
+
   function startFast(): void {
     stopSlow()
+    ensureTracking()
     if (fastRunning) return
     fastRunning = true
+    consecutiveErrors = 0
+    backoffUntil = 0
     disconnectSocket()
     if (!lastTime) lastTime = Date.now()
     void tickFast()
@@ -241,13 +376,19 @@ export function useRealtimePoller() {
     pokeTimer = null
     ticking = false
     burstUntil = 0
+    backoffUntil = 0
+    consecutiveErrors = 0
+    lastActivitySync = 0
     lastMsgId = 0
     lastTime = 0
     emittedKeys.clear()
+    seenMessageIds.clear()
   }
 
   /**
    * Мгновенный тик вне расписания (не чаще дебаунса снаружи).
+   * Ручной вызов (возврат во вкладку, открытие диалога) пробивает
+   * бэкофф: пользователь активен — пробуем сразу, как переподключение сокета.
    */
   async function syncNow(): Promise<void> {
     if (!fastRunning || ticking || document.hidden) return
@@ -255,12 +396,12 @@ export function useRealtimePoller() {
     ticking = true
     try {
       await syncOnce()
-    } catch {}
-    ticking = false
-    if (fastRunning) {
-      const interval = Date.now() < burstUntil ? BURST_INTERVAL : FAST_INTERVAL
-      fastTimer = setTimeout(() => void tickFast(), interval)
+      noteSuccess()
+    } catch (error) {
+      noteFailure(error)
     }
+    ticking = false
+    if (fastRunning) fastTimer = setTimeout(() => void tickFast(), nextInterval())
   }
 
   /**
@@ -273,6 +414,50 @@ export function useRealtimePoller() {
   }
 
   return { ensure, stop, syncOnce, poke, syncNow }
+}
+
+/**
+ * Глобальный трекинг активности вкладки: возврат из фона, фокус,
+ * восстановление сети — мгновенный синк, как переподключение сокета.
+ * Голая активность (клики/клавиши) не дёргает сеть чаще минуты:
+ * живой тик и так идёт каждые 2.5с и обновляет last_seen на сервере.
+ */
+function ensureTracking(): void {
+  if (trackingAttached || typeof document === 'undefined') return
+  trackingAttached = true
+
+  const onVisible = (): void => {
+    if (!document.hidden) {
+      try {
+        useRealtimePoller().syncNow()
+      } catch {}
+    }
+  }
+  const onOnline = (): void => {
+    backoffUntil = 0
+    consecutiveErrors = 0
+    try {
+      useRealtimePoller().syncNow()
+    } catch {}
+  }
+  const onActivity = (): void => {
+    const now = Date.now()
+    if (now - lastActivitySync < ACTIVITY_THROTTLE) return
+    lastActivitySync = now
+    if (backoffUntil > now) {
+      backoffUntil = 0
+      consecutiveErrors = 0
+      try {
+        useRealtimePoller().syncNow()
+      } catch {}
+    }
+  }
+
+  document.addEventListener('visibilitychange', onVisible)
+  window.addEventListener('focus', onVisible)
+  window.addEventListener('online', onOnline)
+  window.addEventListener('pointerdown', onActivity, { passive: true })
+  window.addEventListener('keydown', onActivity)
 }
 
 /**

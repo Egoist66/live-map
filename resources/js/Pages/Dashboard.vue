@@ -92,7 +92,8 @@ onMounted(async () => { await design.init() })
           :age-text="design.infoTiles.ageText.value"
           :gender-label="design.infoTiles.genderLabel.value"
           :residence-text="design.infoTiles.residenceText.value"
-          :level-name="dash.levelName.value"
+          :bio-text="dash.bioText.value"
+          :bio-preview="design.bioPreview.value"
           @edit="dash.goSettings()"
         />
 

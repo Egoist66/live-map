@@ -156,7 +156,8 @@ onMounted(async () => { await design.init() })
             :age-text="design.infoTiles.ageText.value"
             :gender-label="design.infoTiles.genderLabel.value"
             :residence-text="design.infoTiles.residenceText.value"
-            :level-name="design.levelName.value"
+            :bio-text="design.page.bioText.value"
+            :bio-preview="design.bioPreview.value"
             @edit="design.onEdit()"
           />
 

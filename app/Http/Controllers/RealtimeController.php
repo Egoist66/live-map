@@ -81,10 +81,19 @@ class RealtimeController extends Controller
         $messages = $this->freshMessages($convIds, $window, $afterId);
         $previews = $this->changedPreviews($user->id, $convIds, $window);
 
+        $freshIds = [];
+        foreach ($messages as $message) {
+            if (isset($message['id'])) {
+                $freshIds[] = (int) $message['id'];
+            }
+        }
+
         return response()->json([
             'mode' => RealtimeMode::get(),
             'time' => now()->valueOf(),
             'messages' => $messages,
+            'messages_updated' => $this->updatedMessages($convIds, $window, $freshIds),
+            'open_ids' => $openId ? $this->openConversationIds($openId) : [],
             'typing' => $openId ? $this->typingUsers($openId, $user->id) : [],
             'previews' => $previews,
             'friendships' => $this->freshFriendships($user->id, $window),
@@ -142,6 +151,54 @@ class RealtimeController extends Controller
         }
 
         return $query->get()->map->toArrayPayload()->all();
+    }
+
+    /**
+     * Отредактированные/закреплённые сообщения в окне тика.
+     *
+     * Правки ставит MessageController::update (edited_at), закрепы —
+     * pin/unpin (pinned_at). Квитанции доставки/прочтения едут отдельно
+     * через freshReceipts, поэтому их здесь не касаемся.
+     *
+     * @param int[] $convIds диалоги
+     * @param Carbon|null $since момент прошлого тика
+     * @param int[] $excludeIds id уже отданных свежих сообщений
+     */
+    private function updatedMessages(array $convIds, ?Carbon $since, array $excludeIds): array
+    {
+        if (empty($convIds) || ! $since) {
+            return [];
+        }
+
+        $rows = Message::whereIn('conversation_id', $convIds)
+            ->where(fn ($query) => $query->where('edited_at', '>', $since)->orWhere('pinned_at', '>', $since))
+            ->whereNotIn('id', $excludeIds ?: [0])
+            ->with(['sender:id,name,avatar_path', 'replyTo.sender:id,name'])
+            ->orderBy('updated_at')
+            ->limit(20)
+            ->get();
+
+        return $rows->map->toArrayPayload()->all();
+    }
+
+    /**
+     * Хвост id открытого диалога для детекта удалений на клиенте.
+     *
+     * Удаления жёсткие (без soft deletes) — сервер не знает, что видел
+     * клиент, поэтому отдаём срез последних id, а поллер сравнивает
+     * с локальными и разносит user:message.deleted по недостающим.
+     *
+     * @param int $conversationId открытый диалог
+     * @return int[]
+     */
+    private function openConversationIds(int $conversationId): array
+    {
+        return Message::where('conversation_id', $conversationId)
+            ->orderByDesc('id')
+            ->limit(100)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
     }
 
     /**
@@ -516,48 +573,59 @@ class RealtimeController extends Controller
     }
 
     /**
-     * Счётчики для бейджей одним запросом вместо шести.
+     * Счётчики для бейджей одним тиком вместо шести запросов с фронта.
+     *
+     * Тик идёт каждые ~2.5с с каждого таба — без кэша это шесть
+     * тяжёлых count-запросов на пользователя. Кэш 5с: свежести хватает
+     * для бейджей, а точные события (сообщения, дружба) едут отдельно.
      *
      * @param \App\Models\User $user пользователь
      */
     private function badges($user): array
     {
-        $convIds = $this->myConversationIds($user->id);
+        $userId = (int) $user->id;
+        $isAdmin = $user->isAdmin();
 
-        $unreadMessages = empty($convIds) ? 0 : Message::whereIn('conversation_id', $convIds)
-            ->where('sender_id', '!=', $user->id)
-            ->whereNull('read_at')
-            ->count();
+        return Cache::remember("realtime:badges:{$userId}", 5, function () use ($userId, $isAdmin) {
+            $convIds = $this->myConversationIds($userId);
 
-        $conversationsUnread = empty($convIds) ? 0 : Message::whereIn('conversation_id', $convIds)
-            ->where('sender_id', '!=', $user->id)
-            ->whereNull('read_at')
-            ->distinct()
-            ->count('conversation_id');
+            $unreadMessages = 0;
+            $conversationsUnread = 0;
+            if (! empty($convIds)) {
+                $unreadQuery = Message::whereIn('conversation_id', $convIds)
+                    ->where('sender_id', '!=', $userId)
+                    ->whereNull('read_at');
 
-        $pendingFriends = Friendship::where('status', 'pending')
-            ->where('addressee_id', $user->id)
-            ->count();
+                $unreadMessages = (clone $unreadQuery)->count();
+                $conversationsUnread = (clone $unreadQuery)->distinct()->count('conversation_id');
+            }
 
-        $pinActivity = PinActivity::where('owner_id', $user->id)
-            ->whereNull('read_at')
-            ->count();
+            $pendingFriends = Friendship::where('status', 'pending')
+                ->where('addressee_id', $userId)
+                ->count();
 
-        $readIds = AppUpdateRead::where('user_id', $user->id)->pluck('app_update_id');
-        $updates = AppUpdate::published()->whereNotIn('id', $readIds)->count();
+            $pinActivity = PinActivity::where('owner_id', $userId)
+                ->whereNull('read_at')
+                ->count();
 
-        $badges = [
-            'unread_messages' => $unreadMessages,
-            'conversations_unread' => $conversationsUnread,
-            'pending_friends' => $pendingFriends,
-            'pin_activity' => $pinActivity,
-            'updates' => $updates,
-        ];
+            $readIds = AppUpdateRead::where('user_id', $userId)->pluck('app_update_id');
+            $updates = AppUpdate::published()
+                ->whereNotIn('id', $readIds)
+                ->count();
 
-        if ($user->isAdmin()) {
-            $badges['reports_pending'] = Report::where('status', 'pending')->count();
-        }
+            $badges = [
+                'unread_messages' => $unreadMessages,
+                'conversations_unread' => $conversationsUnread,
+                'pending_friends' => $pendingFriends,
+                'pin_activity' => $pinActivity,
+                'updates' => $updates,
+            ];
 
-        return $badges;
+            if ($isAdmin) {
+                $badges['reports_pending'] = Report::where('status', 'pending')->count();
+            }
+
+            return $badges;
+        });
     }
 }
