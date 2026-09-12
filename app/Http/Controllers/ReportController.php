@@ -2,11 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Events\ReportCreated;
 use App\Mail\ReportReceived;
 use App\Models\Report;
 use App\Models\User;
-use App\Services\WebPushService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -21,6 +19,10 @@ class ReportController extends Controller
             'reason' => 'required|in:spam,abuse,inappropriate,illegal,fake',
             'description' => 'nullable|string|max:1000',
         ]);
+        if ($data['target_type'] === 'user') {
+            abort_if((int) $data['target_id'] === (int) $request->user()->id, 422, 'Нельзя жаловаться на себя');
+            abort_unless(\App\Models\User::whereKey($data['target_id'])->exists(), 404);
+        }
         $exists = Report::where('reporter_id', $request->user()->id)
             ->where('target_type', $data['target_type'])
             ->where('target_id', $data['target_id'])
@@ -81,21 +83,9 @@ class ReportController extends Controller
 
     public static function notifyAdmins(Report $report): void
     {
-        $adminIds = User::where('is_admin', true)->orWhere('role', 'admin')->pluck('id')->map(fn ($v) => (int) $v)->values()->all();
-        if (! empty($adminIds)) {
-            try {
-                broadcast(new ReportCreated($report, $adminIds));
-            } catch (\Throwable $e) {
-                Log::warning('report broadcast failed', ['report' => $report->id, 'error' => $e->getMessage()]);
-            }
-            try {
-                $push = app(WebPushService::class);
-                foreach (User::whereIn('id', $adminIds)->get() as $admin) {
-                    $push->sendReport($admin, $report);
-                }
-            } catch (\Throwable $e) {
-                Log::warning('report webpush failed', ['report' => $report->id, 'error' => $e->getMessage()]);
-            }
+        $admins = User::where('is_admin', true)->orWhere('role', 'admin')->get();
+        foreach ($admins as $admin) {
+            \App\Services\UserNotifier::send($admin, new \App\Notifications\ReportCreatedNotification($report));
         }
         foreach (static::adminEmails() as $email) {
             try {

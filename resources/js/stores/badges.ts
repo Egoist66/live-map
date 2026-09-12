@@ -136,9 +136,8 @@ export const useBadgeStore = defineStore('badges', () => {
       busOn('user:match.created', () => scheduleFetch())
       busOn('user:swipe.liked', () => scheduleFetch())
       busOn('user:message.read', () => scheduleFetch())
-      busOn('user:pin.activity', () => scheduleFetch())
+      busOn('user:notification.created', () => scheduleFetch())
       busOn('user:pin.counters', () => scheduleFetch())
-      busOn('user:user.feed.updated', () => scheduleFetch())
       busOn('user:reconnected', () => fetch())
     } catch {}
   }

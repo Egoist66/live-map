@@ -2,15 +2,15 @@
 
 namespace App\Services;
 
-use App\Events\PinActivityCreated;
-use App\Events\UserFeedUpdated;
 use App\Models\Friendship;
 use App\Models\Pin;
-use App\Models\PinActivity;
 use App\Models\ProfilePhoto;
 use App\Models\User;
 use App\Models\UserBlock;
 use App\Models\UserSubscription;
+use App\Notifications\LevelChangedNotification;
+use App\Notifications\PhotoPublishedNotification;
+use App\Notifications\PinPublishedNotification;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -26,30 +26,12 @@ class UserSubscriptionNotifier
         try {
             $author = $pin->user ?? User::find($pin->user_id);
             if (! $author) return;
-            $actor = UserFeedUpdated::actorOf($author);
             $subscriberIds = self::eligibleSubscribers($pin->user_id, 'notify_pin');
             $subscriberIds = self::filterVisibleForPin($subscriberIds, $pin, $author);
-            $excerpt = mb_substr((string) $pin->title, 0, 120);
-            foreach ($subscriberIds as $sid) {
-                self::storeActivity([
-                    'pin_id' => $pin->id,
-                    'actor_id' => $author->id,
-                    'owner_id' => $sid,
-                    'kind' => 'sub_pin',
-                    'excerpt' => $excerpt !== '' ? $excerpt : null,
-                ]);
-                try {
-                    broadcast(new UserFeedUpdated(
-                        (int) $sid,
-                        'pin',
-                        $actor,
-                        ['pin_id' => $pin->id, 'title' => $pin->title, 'target_id' => $pin->user_id]
-                    ));
-                } catch (\Throwable $e) {
-                    Log::warning('user feed broadcast failed', ['kind' => 'pin', 'error' => $e->getMessage()]);
-                }
+            $subscribers = User::whereIn('id', $subscriberIds)->get();
+            foreach ($subscribers as $subscriber) {
+                UserNotifier::send($subscriber, new PinPublishedNotification($pin, $author, (int) $subscriber->id));
             }
-            self::pushToSubscribers($subscriberIds, $author, 'Новый пин', '«'.mb_substr((string) $pin->title, 0, 60).'»');
         } catch (\Throwable $e) {
             Log::warning('user subscription pin notify failed', ['error' => $e->getMessage()]);
         }
@@ -63,27 +45,11 @@ class UserSubscriptionNotifier
         try {
             $author = $photo->user ?? User::find($photo->user_id);
             if (! $author) return;
-            $actor = UserFeedUpdated::actorOf($author);
             $subscriberIds = self::eligibleSubscribers($photo->user_id, 'notify_photo');
-            foreach ($subscriberIds as $sid) {
-                self::storeActivity([
-                    'photo_id' => $photo->id,
-                    'actor_id' => $author->id,
-                    'owner_id' => $sid,
-                    'kind' => 'sub_photo',
-                ]);
-                try {
-                    broadcast(new UserFeedUpdated(
-                        (int) $sid,
-                        'photo',
-                        $actor,
-                        ['photo_id' => $photo->id, 'target_id' => $photo->user_id]
-                    ));
-                } catch (\Throwable $e) {
-                    Log::warning('user feed broadcast failed', ['kind' => 'photo', 'error' => $e->getMessage()]);
-                }
+            $subscribers = User::whereIn('id', $subscriberIds)->get();
+            foreach ($subscribers as $subscriber) {
+                UserNotifier::send($subscriber, new PhotoPublishedNotification($photo, $author, (int) $subscriber->id));
             }
-            self::pushToSubscribers($subscriberIds, $author, 'Новое фото', 'Загружено новое фото');
         } catch (\Throwable $e) {
             Log::warning('user subscription photo notify failed', ['error' => $e->getMessage()]);
         }
@@ -95,36 +61,15 @@ class UserSubscriptionNotifier
     public static function levelChanged(User $user, ?int $oldScore, ?string $oldLevel): void
     {
         try {
-            $actor = UserFeedUpdated::actorOf($user->fresh() ?? $user);
             $subscriberIds = self::eligibleSubscribers($user->id, 'notify_level');
-            $payload = [
-                'target_id' => $user->id,
-                'reputation_score' => (int) $user->reputation_score,
-                'level' => (string) $user->level,
-                'old_reputation_score' => $oldScore,
-                'old_level' => $oldLevel,
-            ];
             $isLevelUp = $oldLevel !== null && $oldLevel !== (string) $user->level;
             $excerpt = $isLevelUp
                 ? 'Новый уровень: '.$user->level
                 : 'Репутация: '.(int) $user->reputation_score.' ★';
-            foreach ($subscriberIds as $sid) {
-                self::storeActivity([
-                    'actor_id' => $user->id,
-                    'owner_id' => $sid,
-                    'kind' => 'sub_level',
-                    'excerpt' => $excerpt,
-                ]);
-                try {
-                    broadcast(new UserFeedUpdated((int) $sid, 'level', $actor, $payload));
-                } catch (\Throwable $e) {
-                    Log::warning('user feed broadcast failed', ['kind' => 'level', 'error' => $e->getMessage()]);
-                }
+            $subscribers = User::whereIn('id', $subscriberIds)->get();
+            foreach ($subscribers as $subscriber) {
+                UserNotifier::send($subscriber, new LevelChangedNotification($user, (int) $subscriber->id, $excerpt));
             }
-            $detail = $isLevelUp
-                ? 'Новый уровень: '.$user->level
-                : 'Репутация: '.(int) $user->reputation_score.' ★';
-            self::pushToSubscribers($subscriberIds, $user, 'Обновление профиля', $detail);
         } catch (\Throwable $e) {
             Log::warning('user subscription level notify failed', ['error' => $e->getMessage()]);
         }
@@ -211,98 +156,4 @@ class UserSubscriptionNotifier
         return $visible;
     }
 
-    /**
-     * Найти непрочитанный дубль события (повторный вызов рассылки).
-     *
-     * Один пин/фото/уровень должен давать одну строку в ленте владельца,
-     * иначе друг видит два одинаковых уведомления и две строки в «Пинах».
-     *
-     * @param array $attributes
-     * @return \App\Models\PinActivity|null
-     */
-    private static function findUnreadDuplicate(array $attributes): ?PinActivity
-    {
-        $kind = (string) ($attributes['kind'] ?? '');
-        $ownerId = (int) ($attributes['owner_id'] ?? 0);
-        if ($kind === '' || $ownerId <= 0) {
-            return null;
-        }
-        $query = PinActivity::query()->where('owner_id', $ownerId)->where('kind', $kind)->whereNull('read_at');
-        $pinId = (int) ($attributes['pin_id'] ?? 0);
-        $photoId = (int) ($attributes['photo_id'] ?? 0);
-        $actorId = (int) ($attributes['actor_id'] ?? 0);
-        if ($pinId > 0) {
-            $query->where('pin_id', $pinId);
-        } elseif ($photoId > 0) {
-            $query->where('photo_id', $photoId);
-        } elseif ($actorId > 0) {
-            $query->where('actor_id', $actorId);
-        } else {
-            return null;
-        }
-        $excerpt = $attributes['excerpt'] ?? null;
-        if (is_string($excerpt) && $excerpt !== '') {
-            $query->where('excerpt', $excerpt);
-        }
-
-        return $query->latest('id')->first();
-    }
-
-    /**
-     * Сохранить событие в ленту (счётчик + история) и разослать realtime.
-     *
-     * Идемпотентно: непрочитанный дубль не создаётся повторно.
-     *
-     * @param array $attributes
-     */
-    private static function storeActivity(array $attributes): void
-    {
-        try {
-            $duplicate = self::findUnreadDuplicate($attributes);
-            if ($duplicate) {
-                return;
-            }
-            $activity = PinActivity::create($attributes);
-            $activity->load(['actor:id,name,avatar_path', 'pin:id,title,category', 'photo:id,user_id,caption']);
-            $pin = $activity->pin;
-            try {
-                broadcast(new PinActivityCreated(
-                    $activity,
-                    $activity->pin_id ? (int) $activity->pin_id : ($pin ? (int) $pin->id : null),
-                    (int) $activity->owner_id,
-                    $pin ? (int) ($pin->reactions_count ?? 0) : null,
-                    $pin ? (int) ($pin->comments_count ?? 0) : null,
-                ));
-            } catch (\Throwable $e) {
-                Log::warning('subscription activity broadcast failed', ['error' => $e->getMessage()]);
-            }
-        } catch (\Throwable $e) {
-            Log::warning('subscription activity store failed', ['error' => $e->getMessage()]);
-        }
-    }
-
-    /**
-     * Web-push подписчикам (best-effort).
-     *
-     * @param \Illuminate\Support\Collection|array $ids
-     */
-    private static function pushToSubscribers($ids, User $author, string $title, string $body): void
-    {
-        try {
-            $users = User::whereIn('id', collect($ids)->map(fn ($v) => (int) $v)->all())->get();
-            foreach ($users as $u) {
-                try {
-                    app(WebPushService::class)->sendToUser($u, [
-                        'title' => $title,
-                        'body' => $author->name.' — '.$body,
-                        'url' => '/users/'.$author->id,
-                        'tag' => 'feed-'.$author->id.'-'.time(),
-                        'avatar' => $author->avatar_url,
-                    ]);
-                } catch (\Throwable) {
-                }
-            }
-        } catch (\Throwable) {
-        }
-    }
 }

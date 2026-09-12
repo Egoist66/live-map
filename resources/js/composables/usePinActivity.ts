@@ -1,12 +1,17 @@
 import { ref, computed } from 'vue'
 import { router } from '@inertiajs/vue3'
 import { pinActivityApi, type PinActivityItem } from '@/services/pinActivity.api'
+import { notificationsApi, toActivityItem, describeInboxRow, type InboxNotification } from '@/services/notifications.api'
 import { useBadgeStore } from '@/stores/badges'
+import { useAppUpdates } from '@/composables/useAppUpdates'
 import { busOn } from '@/services/realtime-bus'
 import { ensureUserChannel, leaveUserChannel } from '@/composables/useUserChannel'
 
 const activities = ref<PinActivityItem[]>([])
+const inboxRows = ref<InboxNotification[]>([])
 const unread = ref(0)
+const pinUnreadCount = ref(0)
+const eventUnreadCount = ref(0)
 const loading = ref(false)
 const clearing = ref(false)
 let busBound = false
@@ -45,6 +50,18 @@ function onActivity(e: any) {
   try { useBadgeStore().incActivity() } catch {}
 }
 
+/**
+ * Новая строка inbox (сокет или поллер) — в начало ленты без дублей.
+ */
+function onNotification(e: any) {
+  const row = e?.notification as InboxNotification | undefined
+  if (!row?.id) return
+  try {
+    if (!inboxRows.value.some((x) => x.id === row.id)) inboxRows.value = [row, ...inboxRows.value].slice(0, 30)
+    onActivity({ activity: toActivityItem(row) })
+  } catch {}
+}
+
 function subscribe() {
   try {
     const uid = getUid()
@@ -52,20 +69,22 @@ function subscribe() {
     ensureUserChannel()
     if (busBound) return
     busBound = true
-    busOn('user:pin.activity', onActivity)
-    busOn('notify:activity', (e: any) => onActivity(e))
+    busOn('user:notification.created', onNotification)
   } catch {}
 }
 
 async function refresh() {
   loading.value = true
   try {
-    const [list, count] = await Promise.all([
-      pinActivityApi.list().catch(() => []),
-      pinActivityApi.unreadCount().catch(() => 0),
+    const [rows, count] = await Promise.all([
+      notificationsApi.list().catch(() => []),
+      notificationsApi.unreadCount().catch(() => ({ total: 0, pins: 0, events: 0 })),
     ])
-    activities.value = (list as PinActivityItem[]).slice(0, 30)
-    unread.value = count as number
+    inboxRows.value = (rows as InboxNotification[]).slice(0, 30)
+    activities.value = inboxRows.value.map((row) => toActivityItem(row))
+    unread.value = count.total
+    pinUnreadCount.value = count.pins
+    eventUnreadCount.value = count.events
     try { useBadgeStore().setActivity(unread.value) } catch {}
   } finally {
     loading.value = false
@@ -76,9 +95,12 @@ async function markAllRead() {
   if (!unread.value) return
   const prev = unread.value
   unread.value = 0
+  pinUnreadCount.value = 0
+  eventUnreadCount.value = 0
   activities.value = activities.value.map((a) => (a.read_at ? a : { ...a, read_at: new Date().toISOString() }))
+  inboxRows.value = inboxRows.value.map((n) => (n.read_at ? n : { ...n, read_at: new Date().toISOString() }))
   try { useBadgeStore().setActivity(0) } catch {}
-  try { await pinActivityApi.markRead() } catch {
+  try { await notificationsApi.markRead() } catch {
     unread.value = prev
     try { useBadgeStore().setActivity(prev) } catch {}
   }
@@ -89,7 +111,10 @@ async function markOne(a: PinActivityItem) {
   a.read_at = new Date().toISOString()
   unread.value = Math.max(0, unread.value - 1)
   try { useBadgeStore().decActivity() } catch {}
-  try { await pinActivityApi.markRead([a.id]) } catch {}
+  try {
+    if (typeof a.id === 'number') await pinActivityApi.markRead([a.id])
+    else await notificationsApi.markRead([String(a.id)])
+  } catch {}
 }
 
 /**
@@ -105,7 +130,8 @@ async function clearAll(): Promise<void> {
   unread.value = 0
   try { useBadgeStore().setActivity(0) } catch {}
   try {
-    await pinActivityApi.clear()
+    await notificationsApi.clear()
+    inboxRows.value = []
   } catch {
     activities.value = backup
     unread.value = prevUnread
@@ -263,7 +289,10 @@ export function resetPinActivity(): void {
   } catch {}
   inited = false
   activities.value = []
+  inboxRows.value = []
   unread.value = 0
+  pinUnreadCount.value = 0
+  eventUnreadCount.value = 0
 }
 
 /**
@@ -271,16 +300,43 @@ export function resetPinActivity(): void {
  * Разделяет ленту на вкладки «Пины» / «События», считает непрочитанные отдельно.
  * @returns состояние ленты и действия
  */
+/**
+ * Строки inbox без activity-тела (дружба, жалобы, безопасность, новости) —
+ * отдельная секция «Уведомления» в табе «События».
+ */
 export function usePinActivity() {
   const hasData = computed(() => activities.value.length > 0)
+  const otherNotifications = computed(() => inboxRows.value.filter((n) => !n.data?.activity))
+  const otherUnread = computed(() => otherNotifications.value.filter((n) => !n.read_at).length)
+
+  /**
+   * Открыть строку inbox: пометить прочитанной и перейти по ссылке типа.
+   * Новости открываются превью в модалке обновлений.
+   */
+  async function goNotification(n: InboxNotification) {
+    if (!n.read_at) {
+      n.read_at = new Date().toISOString()
+      unread.value = Math.max(0, unread.value - 1)
+      try { useBadgeStore().decActivity() } catch {}
+      try { await notificationsApi.markRead([n.id]) } catch {}
+      const item = activities.value.find((a) => String(a.id) === n.id)
+      if (item) item.read_at = n.read_at
+    }
+    if (n.type === 'app.published' && n.data?.update) {
+      try { useAppUpdates().preview(n.data.update as any) } catch {}
+      return
+    }
+    const link = describeInboxRow(n).link
+    if (link) router.visit(link)
+  }
   const pinActivities = computed(() => splitActivities(activities.value).pins)
   const eventActivities = computed(() => splitActivities(activities.value).events)
-  const pinUnread = computed(() => pinActivities.value.filter((a) => !a.read_at).length)
-  const eventUnread = computed(() => eventActivities.value.filter((a) => !a.read_at).length)
+  const pinUnread = computed(() => pinUnreadCount.value)
+  const eventUnread = computed(() => eventUnreadCount.value)
   const loveActivities = computed(() => eventActivities.value.filter((a) => a.kind === 'swipe_like' || a.kind === 'match'))
   const flowActivities = computed(() => eventActivities.value.filter((a) => a.kind === 'flow_like' || a.kind === 'flow_comment' || a.kind === 'flow_reply' || a.kind === 'flow_mention' || a.kind === 'sub_flow_post'))
   const subActivities = computed(() => eventActivities.value.filter((a) => a.kind === 'sub_photo' || a.kind === 'sub_level'))
   const loveUnread = computed(() => loveActivities.value.filter((a) => !a.read_at).length)
   const flowUnread = computed(() => flowActivities.value.filter((a) => !a.read_at).length)
-  return { activities, unread, loading, clearing, hasData, pinActivities, eventActivities, pinUnread, eventUnread, loveActivities, flowActivities, subActivities, loveUnread, flowUnread, describe, refresh, markAllRead, markOne, clearAll, goPin, resolveTarget, init, subscribe }
+  return { activities, unread, loading, clearing, hasData, pinActivities, eventActivities, pinUnread, eventUnread, loveActivities, flowActivities, subActivities, loveUnread, flowUnread, otherNotifications, otherUnread, describe, refresh, markAllRead, markOne, clearAll, goPin, goNotification, resolveTarget, init, subscribe }
 }

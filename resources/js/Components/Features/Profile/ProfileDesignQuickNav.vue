@@ -12,11 +12,35 @@ const emit = defineEmits<{
 
 type QuickNavKey = 'profile' | 'friends' | 'search' | 'share'
 
-const allActions: Array<{ key: QuickNavKey; label: string; icon: string }> = [
-  { key: 'profile', label: 'Профиль', icon: 'pi pi-user' },
-  { key: 'friends', label: 'Друзья', icon: 'pi pi-users' },
-  { key: 'search', label: 'Поиск', icon: 'pi pi-search' },
-  { key: 'share', label: 'Поделиться', icon: 'pi pi-share-alt' },
+const allActions: Array<{ key: QuickNavKey; label: string; icon: string; tile: string; iconColor: string }> = [
+  {
+    key: 'profile',
+    label: 'Профиль',
+    icon: 'pi pi-user',
+    tile: '!border-blue-200 !bg-blue-600/10 hover:!bg-blue-600/20 dark:!border-blue-500/25 dark:!bg-blue-500/15 dark:hover:!bg-blue-500/25',
+    iconColor: '!text-blue-600 dark:!text-blue-400',
+  },
+  {
+    key: 'friends',
+    label: 'Друзья',
+    icon: 'pi pi-users',
+    tile: '!border-emerald-200 !bg-emerald-600/10 hover:!bg-emerald-600/20 dark:!border-emerald-500/25 dark:!bg-emerald-500/15 dark:hover:!bg-emerald-500/25',
+    iconColor: '!text-emerald-600 dark:!text-emerald-400',
+  },
+  {
+    key: 'search',
+    label: 'Поиск',
+    icon: 'pi pi-search',
+    tile: '!border-amber-200 !bg-amber-500/10 hover:!bg-amber-500/20 dark:!border-amber-500/25 dark:!bg-amber-500/15 dark:hover:!bg-amber-500/25',
+    iconColor: '!text-amber-600 dark:!text-amber-400',
+  },
+  {
+    key: 'share',
+    label: 'Поделиться',
+    icon: 'pi pi-share-alt',
+    tile: '!border-violet-200 !bg-violet-600/10 hover:!bg-violet-600/20 dark:!border-violet-500/25 dark:!bg-violet-500/15 dark:hover:!bg-violet-500/25',
+    iconColor: '!text-violet-600 dark:!text-violet-300',
+  },
 ]
 
 /** Поиск людей — только из своего профиля, в чужом его нет. */
@@ -44,10 +68,10 @@ function onAction(key: QuickNavKey): void {
       <button
         type="button"
         :aria-label="action.label"
-        class="grid h-16 w-full sm:h-[72px] place-items-center rounded-[18px] border border-stone-200 bg-white shadow-soft text-stone-500 transition hover:bg-stone-50 active:scale-95 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+        :class="['grid h-16 w-full sm:h-24 place-items-center rounded-[18px] border shadow-soft transition active:scale-95', action.tile]"
         @click="onAction(action.key)"
       >
-        <i :class="[action.icon, 'text-xl sm:text-2xl']"></i>
+        <i :class="[action.icon, action.iconColor, 'text-xl sm:text-4xl']"></i>
       </button>
       <span class="truncate text-[11px] sm:text-xs font-medium text-stone-500 dark:text-zinc-400">{{ action.label }}</span>
     </div>

@@ -19,6 +19,7 @@ const USER_EVENTS = [
   'swipe.liked',
   'report.created',
   'impersonation.started',
+  'notification.created',
 ] as const
 
 let channel: any = null

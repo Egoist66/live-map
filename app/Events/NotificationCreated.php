@@ -2,23 +2,26 @@
 
 namespace App\Events;
 
-use App\Models\PinActivity;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class PinActivityCreated implements ShouldBroadcastNow
+/**
+ * Новое уведомление в личном канале (единый realtime-источник тостов).
+ */
+class NotificationCreated implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
+    /**
+     * @param int $ownerId получатель
+     * @param array $notification строка UserNotifier::serialize()
+     */
     public function __construct(
-        public ?PinActivity $activity,
-        public ?int $pinId,
         public int $ownerId,
-        public ?int $reactionsCount,
-        public ?int $commentsCount,
+        public array $notification,
     ) {}
 
     public function broadcastOn(): array
@@ -28,16 +31,12 @@ class PinActivityCreated implements ShouldBroadcastNow
         ];
     }
 
-    public function broadcastAs(): string { return 'pin.activity'; }
+    public function broadcastAs(): string { return 'notification.created'; }
 
     public function broadcastWith(): array
     {
         return [
-            'pin_id' => $this->pinId,
-            'owner_id' => $this->ownerId,
-            'reactions_count' => $this->reactionsCount,
-            'comments_count' => $this->commentsCount,
-            'activity' => $this->activity?->toNotifyArray(),
+            'notification' => $this->notification,
         ];
     }
 }

@@ -50,7 +50,7 @@ export function useUserSubscriptions(userId: number | string, initial?: { subscr
           notify_post: notifyPost.value,
         })
         subscribed.value = s.subscribed
-        toast?.add({ severity: 'success', summary: 'Подписались', detail: 'Посты, пины, фото и уровень — в уведомлениях', life: 3000 })
+        toast?.add({ severity: 'success', summary: 'Вы подписались на обновления пользователя', life: 3000 })
       }
     } catch (e: any) {
       const detail = e?.response?.data?.message || 'Попробуйте позже'

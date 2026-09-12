@@ -11,7 +11,7 @@ class AdminAppUpdateController extends Controller
     {
         $updates = AppUpdate::with('author:id,name')->latest()->paginate(20);
         $updates->getCollection()->transform(fn ($u) => array_merge($u->toArray(), [
-            'reads_count' => $u->reads()->count(),
+            'reads_count' => $u->readsCount(),
         ]));
         return response()->json($updates);
     }
@@ -33,6 +33,9 @@ class AdminAppUpdateController extends Controller
             'published_at' => $published ? now() : null,
             'created_by' => $request->user()->id,
         ]);
+        if ($published) {
+            self::fanOut($update);
+        }
         return response()->json($update, 201);
     }
 
@@ -44,16 +47,42 @@ class AdminAppUpdateController extends Controller
             'version' => 'nullable|string|max:50',
             'is_published' => 'sometimes|boolean',
         ]);
+        $wasPublished = (bool) $appUpdate->is_published;
         if (array_key_exists('is_published', $data)) {
             $data['published_at'] = $data['is_published'] && ! $appUpdate->published_at ? now() : $appUpdate->published_at;
         }
         $appUpdate->update($data);
-        return response()->json($appUpdate->fresh());
+        $appUpdate = $appUpdate->fresh();
+        if ($appUpdate && (bool) $appUpdate->is_published && ! $wasPublished) {
+            self::fanOut($appUpdate);
+        }
+        return response()->json($appUpdate);
     }
 
     public function destroy(AppUpdate $appUpdate)
     {
         $appUpdate->delete();
         return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Разослать новость в inbox всех пользователей (кроме админов).
+     */
+    private static function fanOut(AppUpdate $update): void
+    {
+        try {
+            \App\Models\User::where('is_admin', false)
+                ->where(function ($query) {
+                    $query->whereNull('role')->orWhere('role', '!=', 'admin');
+                })
+                ->orderBy('id')
+                ->chunk(500, function ($users) use ($update) {
+                    foreach ($users as $user) {
+                        \App\Services\UserNotifier::send($user, new \App\Notifications\AppPublishedNotification($update));
+                    }
+                });
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('app update fanout failed', ['id' => $update->id, 'error' => $e->getMessage()]);
+        }
     }
 }

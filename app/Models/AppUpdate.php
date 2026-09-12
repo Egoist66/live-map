@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Notifications\DatabaseNotification;
 
 class AppUpdate extends Model
 {
@@ -20,27 +20,23 @@ class AppUpdate extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    public function reads(): HasMany
-    {
-        return $this->hasMany(AppUpdateRead::class);
-    }
-
     public function scopePublished($q)
     {
         return $q->where('is_published', true);
     }
 
-    public function isReadBy(?User $user): bool
+    /**
+     * Сколько пользователей прочитало новость (прочтения живут в inbox).
+     */
+    public function readsCount(): int
     {
-        if (! $user) return false;
-        return $this->reads()->where('user_id', $user->id)->exists();
-    }
-
-    public function toArrayWithRead(?User $user = null): array
-    {
-        return array_merge($this->toArray(), [
-            'is_read' => $user ? $this->isReadBy($user) : false,
-            'reads_count' => $this->reads()->count(),
-        ]);
+        try {
+            return DatabaseNotification::where('type', 'app.published')
+                ->where('data->update_id', $this->id)
+                ->whereNotNull('read_at')
+                ->count();
+        } catch (\Throwable) {
+            return 0;
+        }
     }
 }

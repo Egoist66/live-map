@@ -18,6 +18,8 @@ import ProfileGalleryDialog from '@/Components/Features/Profile/ProfileGalleryDi
 import ProfilePhotoViewer from '@/Components/Features/Profile/ProfilePhotoViewer.vue'
 import ChatSearchDialog from '@/Components/Features/Chat/ChatSearchDialog.vue'
 import ProfileThoughtDialog from '@/Components/Features/Profile/ProfileThoughtDialog.vue'
+import ReportDialog from '@/Components/Features/Map/ReportDialog.vue'
+import { useReportDialog } from '@/composables/useReportDialog'
 import { useProfileDesign } from '@/composables/useProfileDesign'
 import { useProfileThought } from '@/composables/useProfileThought'
 import { planOf } from '@/composables/usePlanLimits'
@@ -27,6 +29,7 @@ const props = defineProps<{ profileUser: any; isOwn: boolean; friendship: any; i
 
 const design = useProfileDesign(props)
 const { page, gallery, people, search, photoComments } = design
+const reportDialog = useReportDialog()
 const thought = useProfileThought(() => props.profileUser.thought)
 const pickerInput = design.pickerInput
 const handlePickerChange = design.handlePickerChange
@@ -118,6 +121,7 @@ onMounted(async () => { await design.init() })
               @share="page.share()"
               @block="page.askBlock()"
               @remove="page.askRemove()"
+              @report="reportDialog.openReport('user', profileUser.id, profileUser.name)"
             />
             <Button
               v-else
@@ -173,6 +177,7 @@ onMounted(async () => { await design.init() })
         <ChatSearchDialog :open="search.open.value" @update:open="(v:boolean)=>{ if(!v) search.closeDialog() }" :query="search.query.value" @update:query="(v:string)=>search.setQuery(v)" :results="search.results.value" :searching="search.searching.value" :creating="search.creating.value" :is-online="(id?:number,lastSeen?:string|null)=>search.isOnline(id,lastSeen)" @chat="search.startChat" @add="search.addFriend" @block="search.askBlock" />
         <ProfileGalleryDialog :gallery="gallery" :is-own="isOwn" :plan="planOf(profileUser)" />
         <ProfilePhotoViewer :gallery="gallery" :comments="photoComments" :is-own="isOwn" :user-name="profileUser.name" :avatar-src="page.avatarSrc.value" />
+        <ReportDialog :dialog="reportDialog" />
 
         <input ref="pickerInput" type="file" accept="image/*" class="absolute w-px h-px opacity-0 overflow-hidden pointer-events-none" tabindex="-1" aria-hidden="true" @change="handlePickerChange" />
 

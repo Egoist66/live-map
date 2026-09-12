@@ -1,10 +1,11 @@
 import { api } from './api'
 
 /**
- * Элемент ленты уведомлений (таблица pin_activities — общая для пинов, UFlow, ULove, подписок).
+ * Элемент ленты уведомлений (единая inbox-таблица notifications;
+ * id — uuid строки, старые строки pin_activities — number).
  */
 export interface PinActivityItem {
-  id: number
+  id: number | string
   kind: 'reaction' | 'comment' | 'mention' | 'photo_comment' | 'photo_like' | 'swipe_like' | 'match' | 'sub_pin' | 'sub_photo' | 'sub_level' | 'sub_flow_post' | 'flow_like' | 'flow_comment' | 'flow_reply' | 'flow_mention'
   owner_id?: number | null
   reaction_type?: string | null

@@ -265,20 +265,12 @@ export function useRealtimePoller() {
       busEmit('notify:swipe', e)
       busEmit('user:swipe.liked', e)
     })
-    const activities = Array.isArray(data?.activities) ? data.activities : []
-    activities.forEach((e: any) => {
-      if (e?.activity?.id == null || alreadyEmitted(`act:${e.activity.id}`)) return
-      busEmit('notify:activity', e)
-      busEmit('user:pin.activity', e)
+    const inbox = Array.isArray(data?.notifications) ? data.notifications : []
+    inbox.forEach((e: any) => {
+      const n = e?.notification
+      if (!n?.id || alreadyEmitted(`notif:${n.id}`)) return
+      busEmit('user:notification.created', { notification: n })
     })
-    const reports = Array.isArray(data?.reports) ? data.reports : []
-    reports.forEach((e: any) => {
-      if (e?.report?.id == null || alreadyEmitted(`rep:${e.report.id}`)) return
-      busEmit('notify:report', e)
-      busEmit('user:report.created', e)
-    })
-    const appUpdates = Array.isArray(data?.app_updates) ? data.app_updates : []
-    if (appUpdates.length) busEmit('notify:update', { updates: appUpdates })
     const receipts = Array.isArray(data?.receipts) ? data.receipts : []
     if (receipts.length) {
       busEmit('chat:receipts', receipts)

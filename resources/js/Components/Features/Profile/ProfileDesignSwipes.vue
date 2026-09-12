@@ -20,7 +20,7 @@ const emit = defineEmits<{
     </span>
     <span class="relative mt-4 block text-lg font-extrabold leading-tight">Начать<br />знакомиться</span>
     <span class="relative mt-1 block text-xs leading-snug text-white/70">Люди рядом на живой карте — напиши первым</span>
-    <span class="relative mt-4 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[13px] font-bold text-zinc-900">
+    <span class="relative mt-4 inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[13px] font-bold text-ink-900">
       Найти людей<i class="pi pi-arrow-right text-xs"></i>
     </span>
   </button>

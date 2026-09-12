@@ -595,7 +595,7 @@ class DatingService
 
     /**
      * Уведомить получателя об одиночном лайке.
-     * Всегда пишет в колокольчик (PinActivity) + realtime + push.
+     * Пишет в единую inbox-таблицу notifications + realtime + push.
      *
      * @param User $liker
      * @param User $liked

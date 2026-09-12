@@ -2,19 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\AppUpdate;
-use App\Models\AppUpdateRead;
 use App\Models\Conversation;
 use App\Models\ConversationParticipant;
 use App\Models\DatingMatch;
 use App\Models\Friendship;
 use App\Models\Message;
 use App\Models\Pin;
-use App\Models\PinActivity;
 use App\Models\Report;
 use App\Models\SwipeAction;
 use App\Services\MonitoringService;
 use App\Services\RealtimeMode;
+use App\Services\UserNotifier;
+use Illuminate\Notifications\DatabaseNotification;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -99,12 +98,10 @@ class RealtimeController extends Controller
             'friendships' => $this->freshFriendships($user->id, $window),
             'matches' => $this->freshMatches($user->id, $window),
             'swipe_likes' => $this->freshSwipeLikes($user->id, $window),
-            'activities' => $this->freshActivities($user->id, $window),
+            'notifications' => $this->freshNotifications($user->id, $window),
             'peer' => $openId ? $this->peerState($user, $openId) : null,
             'map' => $this->mapChanges($user->id, $data, $window),
             'receipts' => $this->freshReceipts($user->id, $window),
-            'reports' => $this->freshReports($user, $window),
-            'app_updates' => $this->freshAppUpdates($user->id, $window),
             'badges' => $this->badges($user),
         ]);
     }
@@ -376,25 +373,24 @@ class RealtimeController extends Controller
     }
 
     /**
-     * Свежая активность пинов (реакции, комменты, мэтчи, подписки).
-     * Формат — как PinActivityCreated: хендлер тостов тот же.
+     * Свежие inbox-уведомления (единый источник тостов и колокольчика).
      *
      * @param int $userId пользователь
      * @param Carbon|null $since момент прошлого тика
      */
-    private function freshActivities(int $userId, ?Carbon $since): array
+    private function freshNotifications(int $userId, ?Carbon $since): array
     {
         if (! $since) {
             return [];
         }
 
-        $rows = PinActivity::where('owner_id', $userId)
-            ->where('created_at', '>', $since)
-            ->orderBy('id')
+        $rows = DatabaseNotification::where('notifiable_id', $userId)
+            ->where('updated_at', '>', $since)
+            ->orderBy('updated_at')
             ->limit(20)
             ->get();
 
-        return $rows->map(fn ($a) => ['activity' => $a->toNotifyArray()])->all();
+        return $rows->map(fn ($row) => ['notification' => UserNotifier::serialize($row)])->all();
     }
 
     /**
@@ -529,50 +525,6 @@ class RealtimeController extends Controller
     }
 
     /**
-     * Новые жалобы (только админам). Формат — как ReportCreated.
-     *
-     * @param \App\Models\User $user пользователь
-     * @param Carbon|null $since момент прошлого тика
-     */
-    private function freshReports($user, ?Carbon $since): array
-    {
-        if (! $since || ! $user->isAdmin()) {
-            return [];
-        }
-
-        $rows = Report::where('created_at', '>', $since)
-            ->orderBy('id')
-            ->limit(10)
-            ->get();
-
-        return $rows->map(fn ($r) => ['report' => $r->toNotifyArray()])->all();
-    }
-
-    /**
-     * Новые опубликованные новости, ещё не прочитанные пользователем.
-     *
-     * @param int $userId пользователь
-     * @param Carbon|null $since момент прошлого тика
-     */
-    private function freshAppUpdates(int $userId, ?Carbon $since): array
-    {
-        if (! $since) {
-            return [];
-        }
-
-        $readIds = AppUpdateRead::where('user_id', $userId)->pluck('app_update_id');
-
-        return AppUpdate::published()
-            ->whereNotIn('id', $readIds)
-            ->where('created_at', '>', $since)
-            ->orderBy('id')
-            ->limit(5)
-            ->get()
-            ->map(fn ($u) => $u->only(['id', 'title', 'body', 'version', 'published_at']))
-            ->all();
-    }
-
-    /**
      * Счётчики для бейджей одним тиком вместо шести запросов с фронта.
      *
      * Тик идёт каждые ~2.5с с каждого таба — без кэша это шесть
@@ -604,20 +556,19 @@ class RealtimeController extends Controller
                 ->where('addressee_id', $userId)
                 ->count();
 
-            $pinActivity = PinActivity::where('owner_id', $userId)
+            $inboxUnread = DatabaseNotification::where('notifiable_id', $userId)
                 ->whereNull('read_at')
                 ->count();
-
-            $readIds = AppUpdateRead::where('user_id', $userId)->pluck('app_update_id');
-            $updates = AppUpdate::published()
-                ->whereNotIn('id', $readIds)
+            $updates = DatabaseNotification::where('notifiable_id', $userId)
+                ->where('type', 'app.published')
+                ->whereNull('read_at')
                 ->count();
 
             $badges = [
                 'unread_messages' => $unreadMessages,
                 'conversations_unread' => $conversationsUnread,
                 'pending_friends' => $pendingFriends,
-                'pin_activity' => $pinActivity,
+                'pin_activity' => $inboxUnread,
                 'updates' => $updates,
             ];
 

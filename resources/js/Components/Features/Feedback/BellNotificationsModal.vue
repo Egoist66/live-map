@@ -19,6 +19,7 @@ import { useAppUpdates } from "@/composables/useAppUpdates";
 import { useSecurityImpersonations } from "@/composables/useSecurityImpersonations";
 import { avatarSrcFor } from "@/composables/useAvatar";
 import { useAppConfirm } from "@/composables/useAppConfirm";
+import { describeInboxRow } from "@/services/notifications.api";
 
 const bell = useBellNotifications();
 const pinAct = usePinActivity();
@@ -154,19 +155,19 @@ function openNews(item: any) {
                 <ProgressSpinner style="width:26px;height:26px" :strokeWidth="6" />
               </div>
               <template v-else>
-                <div v-if="!bell.hasData.value && !pinAct.eventActivities.value.length && !admRep.reports.value.length && !proc.items.value.length" class="py-10 text-center px-4">
+                <div v-if="!bell.hasData.value && !pinAct.eventActivities.value.length && !pinAct.otherNotifications.value.length && !admRep.reports.value.length && !proc.items.value.length" class="py-10 text-center px-4">
                   <div
                     class="w-12 h-12 rounded-2xl bg-stone-100 dark:bg-zinc-800 grid place-items-center mx-auto text-xl"
                   >
                     🔔
                   </div>
                   <div class="text-sm font-semibold dark:text-white mt-3">Пока тихо</div>
-                  <div class="text-xs text-stone-500 mt-1">Новых сообщений, заявок, лайков и постов нет</div>
+                  <div class="text-xs text-stone-500 dark:text-zinc-400 mt-1">Новых сообщений, заявок, лайков и постов нет</div>
                 </div>
                 <template v-else>
                   <div v-if="admRep.reports.value.length" class="mb-3">
                     <div
-                      class="text-[11px] font-bold tracking-widest uppercase text-stone-400 px-2 py-1.5 flex items-center gap-1.5"
+                      class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500 px-2 py-1.5 flex items-center gap-1.5"
                     >
                       Жалобы
                       <span
@@ -194,7 +195,7 @@ function openNews(item: any) {
                             {{ r.target_title || r.description || `от ${r.reporter?.name || 'пользователя'}` }}
                           </div>
                         </div>
-                        <i class="pi pi-chevron-right text-stone-300 text-xs shrink-0"></i>
+                        <i class="pi pi-chevron-right text-stone-300 dark:text-zinc-600 text-xs shrink-0"></i>
                       </button>
                     </div>
                     <Button
@@ -207,7 +208,7 @@ function openNews(item: any) {
                   </div>
                   <div v-if="proc.items.value.length" class="mb-3">
                     <div
-                      class="text-[11px] font-bold tracking-widest uppercase text-stone-400 px-2 py-1.5 flex items-center gap-1.5"
+                      class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500 px-2 py-1.5 flex items-center gap-1.5"
                     >
                       <span class="text-red-500">❗</span> Безопасность
                       <span
@@ -253,7 +254,7 @@ function openNews(item: any) {
                           class="text-red-500 text-base shrink-0"
                           >❗</span
                         >
-                        <i v-else class="pi pi-chevron-right text-stone-300 text-xs shrink-0"></i>
+                        <i v-else class="pi pi-chevron-right text-stone-300 dark:text-zinc-600 text-xs shrink-0"></i>
                       </button>
                     </div>
                     <Button
@@ -266,7 +267,7 @@ function openNews(item: any) {
                   </div>
                   <div v-if="pinAct.loveActivities.value.length" class="mb-3">
                     <div
-                      class="text-[11px] font-bold tracking-widest uppercase text-stone-400 px-2 py-1.5 flex items-center gap-1.5"
+                      class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500 px-2 py-1.5 flex items-center gap-1.5"
                     >
                       Знакомства
                       <span
@@ -304,7 +305,7 @@ function openNews(item: any) {
                             }}</span
                             ><span
                               v-if="a.created_at"
-                              class="text-[11px] text-stone-400 shrink-0"
+                              class="text-[11px] text-stone-400 dark:text-zinc-500 shrink-0"
                               >{{ fmtTime(a.created_at) }}</span
                             >
                           </div>
@@ -316,13 +317,13 @@ function openNews(item: any) {
                           v-if="!a.read_at"
                           class="w-2.5 h-2.5 bg-pink-500 rounded-full shrink-0"
                         ></span>
-                        <i v-else class="pi pi-chevron-right text-stone-300 text-xs shrink-0"></i>
+                        <i v-else class="pi pi-chevron-right text-stone-300 dark:text-zinc-600 text-xs shrink-0"></i>
                       </button>
                     </div>
                   </div>
                   <div v-if="pinAct.flowActivities.value.length" class="mb-3">
                     <div
-                      class="text-[11px] font-bold tracking-widest uppercase text-stone-400 px-2 py-1.5 flex items-center gap-1.5"
+                      class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500 px-2 py-1.5 flex items-center gap-1.5"
                     >
                       UFlow
                       <span
@@ -358,7 +359,7 @@ function openNews(item: any) {
                             <span class="text-sm font-semibold dark:text-white truncate">UFlow</span
                             ><span
                               v-if="a.created_at"
-                              class="text-[11px] text-stone-400 shrink-0"
+                              class="text-[11px] text-stone-400 dark:text-zinc-500 shrink-0"
                               >{{ fmtTime(a.created_at) }}</span
                             >
                           </div>
@@ -370,13 +371,13 @@ function openNews(item: any) {
                           v-if="!a.read_at"
                           class="w-2.5 h-2.5 bg-sky-500 rounded-full shrink-0"
                         ></span>
-                        <i v-else class="pi pi-chevron-right text-stone-300 text-xs shrink-0"></i>
+                        <i v-else class="pi pi-chevron-right text-stone-300 dark:text-zinc-600 text-xs shrink-0"></i>
                       </button>
                     </div>
                   </div>
                   <div v-if="pinAct.subActivities.value.length" class="mb-3">
                     <div
-                      class="text-[11px] font-bold tracking-widest uppercase text-stone-400 px-2 py-1.5 flex items-center gap-1.5"
+                      class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500 px-2 py-1.5 flex items-center gap-1.5"
                     >
                       Подписки
                     </div>
@@ -407,7 +408,7 @@ function openNews(item: any) {
                             <span class="text-sm font-semibold dark:text-white truncate">Подписка</span
                             ><span
                               v-if="a.created_at"
-                              class="text-[11px] text-stone-400 shrink-0"
+                              class="text-[11px] text-stone-400 dark:text-zinc-500 shrink-0"
                               >{{ fmtTime(a.created_at) }}</span
                             >
                           </div>
@@ -419,13 +420,70 @@ function openNews(item: any) {
                           v-if="!a.read_at"
                           class="w-2.5 h-2.5 bg-violet-500 rounded-full shrink-0"
                         ></span>
-                        <i v-else class="pi pi-chevron-right text-stone-300 text-xs shrink-0"></i>
+                        <i v-else class="pi pi-chevron-right text-stone-300 dark:text-zinc-600 text-xs shrink-0"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div v-if="pinAct.otherNotifications.value.length" class="mb-3">
+                    <div
+                      class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500 px-2 py-1.5 flex items-center gap-1.5"
+                    >
+                      Уведомления
+                      <span
+                        v-if="pinAct.otherUnread.value"
+                        class="bg-violet-600 text-white text-[10px] px-1.5 py-0.5 rounded-full"
+                        >{{ pinAct.otherUnread.value }}</span
+                      >
+                    </div>
+                    <div class="space-y-1">
+                      <button
+                        v-for="n in pinAct.otherNotifications.value"
+                        :key="n.id"
+                        @click="bell.close(); pinAct.goNotification(n)"
+                        :class="
+                          !n.read_at
+                            ? 'bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-800'
+                            : 'hover:bg-stone-50 dark:hover:bg-zinc-800 border border-transparent'
+                        "
+                        class="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition min-h-[56px]"
+                      >
+                        <span class="relative shrink-0"
+                          ><Avatar
+                            :image="describeInboxRow(n).avatar || undefined"
+                            icon="pi pi-bell"
+                            shape="circle"
+                            class="!w-10 !h-10 [&_img]:object-cover !bg-violet-100 dark:!bg-violet-500/20 !text-violet-600 dark:!text-violet-300"
+                            :pt="{ image: { class: 'object-cover' } }" /><span
+                            class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center border-2 border-white dark:border-zinc-900 text-[10px] bg-violet-600"
+                            >{{ describeInboxRow(n).emoji }}</span
+                          ></span
+                        >
+                        <div class="min-w-0 flex-1">
+                          <div class="flex items-center gap-1.5">
+                            <span class="text-sm font-semibold dark:text-white truncate">{{
+                              describeInboxRow(n).title
+                            }}</span
+                            ><span
+                              v-if="n.created_at"
+                              class="text-[11px] text-stone-400 dark:text-zinc-500 shrink-0"
+                              >{{ fmtTime(n.created_at) }}</span
+                            >
+                          </div>
+                          <div class="text-xs text-stone-500 dark:text-zinc-400 truncate">
+                            {{ describeInboxRow(n).body }}
+                          </div>
+                        </div>
+                        <span
+                          v-if="!n.read_at"
+                          class="w-2.5 h-2.5 bg-violet-500 rounded-full shrink-0"
+                        ></span>
+                        <i v-else class="pi pi-chevron-right text-stone-300 dark:text-zinc-600 text-xs shrink-0"></i>
                       </button>
                     </div>
                   </div>
                   <div v-if="bell.pending.value.length" class="mb-3">
                     <div
-                      class="text-[11px] font-bold tracking-widest uppercase text-stone-400 px-2 py-1.5 flex items-center gap-1.5"
+                      class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500 px-2 py-1.5 flex items-center gap-1.5"
                     >
                       Заявки
                       <span
@@ -470,7 +528,7 @@ function openNews(item: any) {
                   </div>
                   <div v-if="bell.conversations.value.length" class="mb-1">
                     <div
-                      class="text-[11px] font-bold tracking-widest uppercase text-stone-400 px-2 py-1.5"
+                      class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500 px-2 py-1.5"
                     >
                       Сообщения
                     </div>
@@ -503,7 +561,7 @@ function openNews(item: any) {
                             }}</span
                             ><span
                               v-if="c.last_message_at"
-                              class="text-[11px] text-stone-400 shrink-0"
+                              class="text-[11px] text-stone-400 dark:text-zinc-500 shrink-0"
                               >{{ fmtTime(c.last_message_at) }}</span
                             >
                           </div>
@@ -516,7 +574,7 @@ function openNews(item: any) {
                           class="bg-violet-600 text-white text-xs font-bold min-w-[22px] h-[22px] grid place-items-center px-1.5 rounded-full shrink-0"
                           >{{ c.unread_count > 9 ? "9+" : c.unread_count }}</span
                         >
-                        <i v-else class="pi pi-chevron-right text-stone-300 text-xs shrink-0"></i>
+                        <i v-else class="pi pi-chevron-right text-stone-300 dark:text-zinc-600 text-xs shrink-0"></i>
                       </button>
                     </div>
                   </div>
@@ -527,7 +585,7 @@ function openNews(item: any) {
           <TabPanel value="pins">
             <div class="notif-scroll">
               <div class="px-2 py-1.5 flex items-center gap-1.5">
-                <span class="text-[11px] font-bold tracking-widest uppercase text-stone-400">Активность пинов</span>
+                <span class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500">Активность пинов</span>
                 <span
                   v-if="pinAct.pinUnread.value"
                   class="bg-rose-500 text-white text-[10px] px-1.5 py-0.5 rounded-full"
@@ -545,7 +603,7 @@ function openNews(item: any) {
               <div v-if="!pinAct.pinActivities.value.length" class="py-10 text-center px-4">
                 <div class="w-12 h-12 rounded-2xl bg-stone-100 dark:bg-zinc-800 grid place-items-center mx-auto text-xl">📍</div>
                 <div class="text-sm font-semibold dark:text-white mt-3">Реакций на пины нет</div>
-                <div class="text-xs text-stone-500 mt-1">Лайки ULove и UFlow — во вкладке «События»</div>
+                <div class="text-xs text-stone-500 dark:text-zinc-400 mt-1">Лайки ULove и UFlow — во вкладке «События»</div>
               </div>
               <div v-else class="space-y-1">
                 <button
@@ -577,7 +635,7 @@ function openNews(item: any) {
                       }}</span
                       ><span
                         v-if="a.created_at"
-                        class="text-[11px] text-stone-400 shrink-0"
+                        class="text-[11px] text-stone-400 dark:text-zinc-500 shrink-0"
                         >{{ fmtTime(a.created_at) }}</span
                       >
                     </div>
@@ -589,7 +647,7 @@ function openNews(item: any) {
                     v-if="!a.read_at"
                     class="w-2.5 h-2.5 bg-rose-500 rounded-full shrink-0"
                   ></span>
-                  <i v-else class="pi pi-chevron-right text-stone-300 text-xs shrink-0"></i>
+                  <i v-else class="pi pi-chevron-right text-stone-300 dark:text-zinc-600 text-xs shrink-0"></i>
                 </button>
               </div>
             </div>
@@ -602,11 +660,11 @@ function openNews(item: any) {
               <div v-else-if="!updates.history.value.length" class="py-10 text-center px-4">
                 <div class="w-12 h-12 rounded-2xl bg-stone-100 dark:bg-zinc-800 grid place-items-center mx-auto text-xl">✨</div>
                 <div class="text-sm font-semibold dark:text-white mt-3">Новостей пока нет</div>
-                <div class="text-xs text-stone-500 mt-1">Здесь появятся заметки о новых функциях</div>
+                <div class="text-xs text-stone-500 dark:text-zinc-400 mt-1">Здесь появятся заметки о новых функциях</div>
               </div>
               <div v-else>
                 <div class="px-2 py-1.5 flex items-center gap-1.5">
-                  <span class="text-[11px] font-bold tracking-widest uppercase text-stone-400">Что нового</span>
+                  <span class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500">Что нового</span>
                   <Tag v-if="updates.unreadCount.value" :value="`новых: ${updates.unreadCount.value}`" severity="info" class="!text-[10px]" />
                   <Button v-if="updates.unreadCount.value" @click="updates.dismissAll()" label="Прочитать все" link size="small" class="ml-auto !text-[11px]" />
                 </div>
@@ -622,12 +680,12 @@ function openNews(item: any) {
                     <div class="min-w-0 flex-1">
                       <div class="flex items-center gap-1.5">
                         <span class="text-sm font-semibold dark:text-white truncate">{{ n.title }}</span>
-                        <span v-if="n.published_at" class="text-[11px] text-stone-400 shrink-0">{{ fmtDay(n.published_at) }}</span>
+                        <span v-if="n.published_at" class="text-[11px] text-stone-400 dark:text-zinc-500 shrink-0">{{ fmtDay(n.published_at) }}</span>
                       </div>
                       <div class="text-xs text-stone-500 dark:text-zinc-400 truncate">{{ (n.body || '').slice(0, 80) }}</div>
                     </div>
                     <span v-if="!n.is_read" class="w-2.5 h-2.5 bg-sky-500 rounded-full shrink-0"></span>
-                    <i v-else class="pi pi-chevron-right text-stone-300 text-xs shrink-0"></i>
+                    <i v-else class="pi pi-chevron-right text-stone-300 dark:text-zinc-600 text-xs shrink-0"></i>
                   </button>
                 </div>
               </div>

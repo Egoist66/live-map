@@ -126,10 +126,9 @@ function handleMessage(e: any) {
   })
 }
 /**
- * Защита от дублей тостов: одно событие дружбы прилетает дважды —
- * поллер шлёт пару `notify:friendship` + `user:friendship.updated`,
- * на оба висит один хендлер, плюс сокет и поллер могут пересечься.
- * Ключ включает статус: pending и accepted позже — разные тосты.
+ * Защита от дублей тостов: сокет и поллер несут одну строку inbox,
+ * ключ стабилен на событие. Ключ дружбы включает статус: pending
+ * и accepted позже — разные тосты.
  */
 function isDuplicateEvent(key: string, ttlMs = 20000): boolean {
   const now = Date.now()
@@ -194,26 +193,10 @@ function activityLink(a: any): string {
   }
   return '/map'
 }
-/**
- * Общий ключ тоста для одного повода: `pin.activity` (sub_pin/...) и
- * `user.feed.updated` (pin/...) приходят парой на одно событие —
- * второй тост гасится независимо от порядка доставки.
- */
-function sharedFeedKeyForActivity(a: any): string | null {
-  const pinId = Number(a?.pin?.id || a?.pin_id || 0) || null
-  if (a?.kind === 'sub_pin' && pinId) return `feedpin-${pinId}`
-  const photoId = Number(a?.photo?.id || a?.photo_id || 0) || null
-  if (a?.kind === 'sub_photo' && photoId) return `feedphoto-${photoId}`
-  const actorId = Number(a?.actor?.id || a?.actor_id || 0) || null
-  if (a?.kind === 'sub_level' && actorId) return `feedlevel-${actorId}`
-  return null
-}
 function handlePinActivity(e: any) {
   const a = e?.activity
   if (!a?.id) return
   if (isDuplicateEvent(`act-${a.id}`)) return
-  const sharedKey = sharedFeedKeyForActivity(a)
-  if (sharedKey && isDuplicateEvent(sharedKey)) return
   const uid = getUid()
   if (a.owner_id && uid && Number(a.owner_id) !== uid) return
   const actor = a.actor || {}
@@ -375,83 +358,33 @@ function handlePinActivity(e: any) {
     createdAt: Date.now(),
   })
 }
-function handleUserFeed(e: any) {
-  const kind = e?.kind as string | undefined
-  if (!kind) return
-  const actor = e?.actor || {}
-  const name = actor.name || 'Кто-то'
-  const p = e?.payload || {}
-  if (kind === 'pin') {
-    const feedPinId = Number(p.pin_id || 0) || null
-    if (feedPinId && isDuplicateEvent(`feedpin-${feedPinId}`)) return
-    const title = (p.title || 'новый пин').toString().slice(0, 60)
-    push({
-      id: `feed-pin-${p.pin_id || Date.now()}-${Date.now()}`,
-      type: 'pin',
-      title: `${name} — новый пин`,
-      body: `«${title}»`.slice(0, 90),
-      avatar: avatarSrcFor(actor),
-      link: `/users/${actor.id || p.target_id || ''}`,
-      createdAt: Date.now(),
-    })
-  } else if (kind === 'photo') {
-    push({
-      id: `feed-photo-${p.photo_id || Date.now()}-${Date.now()}`,
-      type: 'pin',
-      title: `${name} — новое фото`,
-      body: 'Загружено новое фото. Откройте галерею'.slice(0, 90),
-      avatar: avatarSrcFor(actor),
-      link: `/users/${actor.id || p.target_id || ''}`,
-      createdAt: Date.now(),
-    })
-  } else if (kind === 'level') {
-    const leveledUp = p.old_level && p.old_level !== p.level
-    push({
-      id: `feed-level-${actor.id || Date.now()}-${Date.now()}`,
-      type: 'friend',
-      title: leveledUp ? `${name} — новый уровень` : `${name} — репутация изменилась`,
-      body: leveledUp ? `Уровень: ${p.level} · ${p.reputation_score ?? 0} ★` : `Репутация: ${p.reputation_score ?? 0} ★`.slice(0, 90),
-      avatar: avatarSrcFor(actor),
-      link: `/users/${actor.id || p.target_id || ''}`,
-      createdAt: Date.now(),
-    })
+/**
+ * Единый вход тостов: строка inbox-таблицы notifications.
+ *
+ * Один тип — один строитель тоста, сокет и поллер несут одну и ту же
+ * строку (ключ notif-{id}), поэтому дублей нет по построению.
+ */
+function handleNotification(e: any) {
+  const n = e?.notification
+  if (!n?.id) return
+  if (isDuplicateEvent(`notif-${n.id}`)) return
+  const data = n.data ?? {}
+  if (data.activity) {
+    handlePinActivity({ activity: data.activity })
+    return
   }
-}
-function otherParty(e: any): any {
-  const uid = getUid()
-  const a = e?.user_a
-  const b = e?.user_b
-  if (a && b) return Number(a.id) === uid ? b : a
-  return b || a || {}
-}
-function handleMatch(e: any) {
-  if (!e?.conversation_id) return
-  if (isDuplicateEvent(`match-${e.match_id || e.conversation_id}`)) return
-  const other = otherParty(e)
-  push({
-    id: `match-${e.match_id || e.conversation_id}-${Date.now()}`,
-    type: 'match',
-    title: '💞 Новый мэтч!',
-    body: `${other?.name || 'Кто-то'} тоже лайкнул тебя — чат открыт`,
-    avatar: avatarSrcFor(other || {}),
-    link: `/chat/${e.conversation_id}?from=swipes`,
-    createdAt: Date.now(),
-  })
-}
-function handleSwipeLiked(e: any) {
-  const liker = e?.liker
-  if (!liker?.id) return
-  if (isDuplicateEvent(`liked-${liker.id}`)) return
-  const anon = !!(liker.is_incognito || e?.is_incognito)
-  push({
-    id: `liked-${liker.id}-${Date.now()}`,
-    type: 'match',
-    title: anon ? '💘 Тайный поклонник' : '💘 Тебя лайкнули в ULove',
-    body: anon ? 'Тайный поклонник отреагировал на твою анкету' : `${liker.name || 'Кто-то'} отреагировал на твою анкету`,
-    avatar: anon ? null : avatarSrcFor(liker),
-    link: '/swipes?tab=admirers',
-    createdAt: Date.now(),
-  })
+  if (data.friendship) {
+    handleFriendship({ friendship: data.friendship })
+    return
+  }
+  if (data.report) {
+    handleReport({ report: data.report })
+    return
+  }
+  if (data.log) {
+    handleImpersonation({ log: data.log })
+    return
+  }
 }
 function handleImpersonation(e: any) {
   const log = e?.log
@@ -500,19 +433,7 @@ function subscribe() {
     if (!busBound) {
       busBound = true
       busOn('user:message.sent', handleMessage)
-      busOn('user:friendship.updated', handleFriendship)
-      busOn('user:user.feed.updated', handleUserFeed)
-      busOn('user:pin.activity', handlePinActivity)
-      busOn('user:match.created', handleMatch)
-      busOn('user:swipe.liked', handleSwipeLiked)
-      busOn('user:report.created', handleReport)
-      busOn('user:impersonation.started', handleImpersonation)
-      busOn('notify:message', (msg: any) => handleMessage({ message: msg }))
-      busOn('notify:friendship', (e: any) => handleFriendship(e))
-      busOn('notify:match', (e: any) => handleMatch(e))
-      busOn('notify:swipe', (e: any) => handleSwipeLiked(e))
-      busOn('notify:activity', (e: any) => handlePinActivity(e))
-      busOn('notify:report', (e: any) => handleReport(e))
+      busOn('user:notification.created', handleNotification)
     }
   } catch {}
 }

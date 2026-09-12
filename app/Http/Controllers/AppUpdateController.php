@@ -3,48 +3,65 @@
 namespace App\Http\Controllers;
 
 use App\Models\AppUpdate;
-use App\Models\AppUpdateRead;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\DatabaseNotification;
 
+/**
+ * Новости приложения для пользователя (читаются из inbox-таблицы notifications).
+ *
+ * Контент новостей ведёт админка (app_updates), доставка — строки
+ * type=app.published: прочтение и история живут только в inbox.
+ */
 class AppUpdateController extends Controller
 {
+    /**
+     * @return array{id:int,title:string|null,body:string|null,version:string|null,published_at:string|null,created_at:string|null,is_read:bool}
+     */
+    private static function mapRow(DatabaseNotification $row): array
+    {
+        $update = $row->data['update'] ?? [];
+
+        return [
+            'id' => (int) ($update['id'] ?? 0),
+            'title' => $update['title'] ?? null,
+            'body' => $update['body'] ?? null,
+            'version' => $update['version'] ?? null,
+            'published_at' => $update['published_at'] ?? null,
+            'created_at' => $row->created_at ? $row->created_at->toISOString() : null,
+            'is_read' => $row->read_at !== null,
+        ];
+    }
+
+    private function baseQuery(Request $request)
+    {
+        return DatabaseNotification::where('notifiable_type', $request->user()->getMorphClass())
+            ->where('notifiable_id', $request->user()->id)
+            ->where('type', 'app.published');
+    }
+
     public function index(Request $request)
     {
-        $updates = AppUpdate::published()
-            ->latest('published_at')
-            ->latest('id')
+        $rows = $this->baseQuery($request)
+            ->latest('updated_at')
             ->limit(20)
             ->get();
 
-        $readIds = AppUpdateRead::where('user_id', $request->user()->id)
-            ->whereIn('app_update_id', $updates->pluck('id'))
-            ->pluck('app_update_id')
-            ->flip();
-
-        return response()->json($updates->map(fn ($u) => array_merge($u->only(['id', 'title', 'body', 'version', 'published_at', 'created_at']), [
-            'is_read' => isset($readIds[$u->id]),
-        ])));
+        return response()->json($rows->map(fn ($row) => self::mapRow($row))->values());
     }
 
     public function unread(Request $request)
     {
-        $readIds = AppUpdateRead::where('user_id', $request->user()->id)->pluck('app_update_id');
-
-        $total = AppUpdate::published()
-            ->whereNotIn('id', $readIds)
-            ->count();
-
-        $updates = AppUpdate::published()
-            ->whereNotIn('id', $readIds)
-            ->orderBy('published_at')
-            ->orderBy('id')
+        $total = (clone $this->baseQuery($request))->whereNull('read_at')->count();
+        $rows = $this->baseQuery($request)
+            ->whereNull('read_at')
+            ->orderBy('updated_at')
             ->limit(5)
-            ->get()
-            ->map(fn ($u) => $u->only(['id', 'title', 'body', 'version', 'published_at']));
+            ->get();
+        $updates = $rows->map(fn ($row) => self::mapRow($row))->values();
 
         return response()->json([
             'count' => $total,
-            'updates' => $updates->values(),
+            'updates' => $updates,
             'latest' => $updates->last(),
         ]);
     }
@@ -52,23 +69,20 @@ class AppUpdateController extends Controller
     public function markRead(Request $request, AppUpdate $appUpdate)
     {
         abort_unless($appUpdate->is_published, 404);
-        AppUpdateRead::firstOrCreate(
-            ['app_update_id' => $appUpdate->id, 'user_id' => $request->user()->id],
-            ['read_at' => now()]
-        );
+        $this->baseQuery($request)
+            ->whereNull('read_at')
+            ->where('data->update_id', $appUpdate->id)
+            ->update(['read_at' => now()]);
+
         return response()->json(['ok' => true]);
     }
 
     public function markAllRead(Request $request)
     {
-        $readIds = AppUpdateRead::where('user_id', $request->user()->id)->pluck('app_update_id');
-        $unreadIds = AppUpdate::published()->whereNotIn('id', $readIds)->pluck('id');
-        foreach ($unreadIds as $id) {
-            AppUpdateRead::firstOrCreate(
-                ['app_update_id' => $id, 'user_id' => $request->user()->id],
-                ['read_at' => now()]
-            );
-        }
-        return response()->json(['ok' => true, 'count' => $unreadIds->count()]);
+        $marked = $this->baseQuery($request)
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
+
+        return response()->json(['ok' => true, 'count' => $marked]);
     }
 }

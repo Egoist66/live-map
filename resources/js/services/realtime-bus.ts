@@ -50,6 +50,8 @@ export type RealtimeEventMap = {
   'user:swipe.liked': any
   'user:report.created': any
   'user:impersonation.started': any
+  /** Единое inbox-уведомление (таблица notifications): тосты и колокольчик */
+  'user:notification.created': { notification: any }
   /** Переподключение сокета: подписчикам стоит освежить данные */
   'user:reconnected': any
   /** Счётчики бейджей одним пакетом */

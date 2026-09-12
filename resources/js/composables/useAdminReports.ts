@@ -43,6 +43,12 @@ function onReport(e: any) {
   try { useBadgeStore().incReports() } catch {}
 }
 
+function onNotification(e: any) {
+  const n = e?.notification
+  if (!n?.id || n.type !== 'report.created') return
+  if (n.data?.report) onReport({ report: n.data.report })
+}
+
 function subscribe() {
   try {
     const uid = getUid()
@@ -50,8 +56,7 @@ function subscribe() {
     ensureUserChannel()
     if (busBound) return
     busBound = true
-    busOn('user:report.created', onReport)
-    busOn('notify:report', onReport)
+    busOn('user:notification.created', onNotification)
   } catch {}
 }
 

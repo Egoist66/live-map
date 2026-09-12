@@ -119,11 +119,11 @@ class FriendshipController extends Controller
         if ($exists) {
             if ($exists->status==='accepted') return response()->json(['message'=>'Уже друзья'],422);
             if ($exists->status==='pending') return response()->json(['message'=>'Заявка уже отправлена'],422);
-            if ($exists->status==='declined') { $exists->update(['requester_id'=>$me->id,'addressee_id'=>$otherId,'status'=>'pending']); try{ broadcast(new FriendshipUpdated($exists))->toOthers(); }catch(\Throwable $e){ \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); } $this->pushFriendRequest($otherId, $me); return response()->json($exists,201); }
+            if ($exists->status==='declined') { $exists->update(['requester_id'=>$me->id,'addressee_id'=>$otherId,'status'=>'pending']); try{ broadcast(new FriendshipUpdated($exists))->toOthers(); }catch(\Throwable $e){ \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); } self::notifyRequested($exists->load(['requester','addressee'])); return response()->json($exists,201); }
         }
         $f = Friendship::create(['requester_id'=>$me->id,'addressee_id'=>$otherId,'status'=>'pending']);
         try{ broadcast(new FriendshipUpdated($f->load(['requester','addressee'])))->toOthers(); }catch(\Throwable $e){ \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
-        $this->pushFriendRequest($otherId, $me);
+        self::notifyRequested($f);
         return response()->json($f,201);
     }
 
@@ -133,14 +133,10 @@ class FriendshipController extends Controller
         abort_unless($friendship->status==='pending',422);
         $friendship->update(['status'=>'accepted']);
         try{ broadcast(new FriendshipUpdated($friendship->load(['requester','addressee'])))->toOthers(); }catch(\Throwable $e){ \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
-        try {
-            $push = app(\App\Services\WebPushService::class);
-            if ($push->isConfigured()) {
-                $requester = User::select('id', 'name', 'avatar_path')->find($friendship->requester_id);
-                $addresseeModel = User::select('id', 'name', 'avatar_path')->find($request->user()->id);
-                if ($requester) $push->sendFriendAccepted($requester, $addresseeModel ?? $request->user());
-            }
-        } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('friend webpush failed: '.$e->getMessage()); }
+        $requester = User::find($friendship->requester_id);
+        if ($requester) {
+            \App\Services\UserNotifier::send($requester, new \App\Notifications\FriendAcceptedNotification($friendship));
+        }
         return response()->json($friendship);
     }
 
@@ -189,13 +185,16 @@ class FriendshipController extends Controller
         ]);
     }
 
-    private function pushFriendRequest(int $addresseeId, User $requester): void
+    /**
+     * Уведомление о заявке в единую inbox-таблицу (тост + колокольчик + пуш).
+     */
+    private static function notifyRequested(Friendship $friendship): void
     {
         try {
-            $push = app(\App\Services\WebPushService::class);
-            if (! $push->isConfigured()) return;
-            $addressee = User::select('id', 'name', 'avatar_path')->find($addresseeId);
-            if ($addressee) $push->sendFriendRequest($addressee, $requester);
-        } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('friend webpush failed: '.$e->getMessage()); }
+            $addressee = User::find($friendship->addressee_id);
+            if ($addressee) {
+                \App\Services\UserNotifier::send($addressee, new \App\Notifications\FriendRequestedNotification($friendship));
+            }
+        } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('friend notify failed: '.$e->getMessage()); }
     }
 }

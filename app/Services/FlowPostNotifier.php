@@ -2,15 +2,17 @@
 
 namespace App\Services;
 
-use App\Events\PinActivityCreated;
-use App\Events\UserFeedUpdated;
 use App\Models\FlowPost;
 use App\Models\FlowPostComment;
 use App\Models\Friendship;
-use App\Models\PinActivity;
 use App\Models\User;
 use App\Models\UserBlock;
 use App\Models\UserSubscription;
+use App\Notifications\FlowCommentedNotification;
+use App\Notifications\FlowLikedNotification;
+use App\Notifications\FlowMentionNotification;
+use App\Notifications\FlowPostedNotification;
+use App\Notifications\FlowRepliedNotification;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -39,22 +41,11 @@ class FlowPostNotifier
                 return;
             }
 
-            $actor = UserFeedUpdated::actorOf($author);
             $excerpt = $post->title ? mb_substr(trim((string) $post->title), 0, 120) : self::excerpt($post->body);
-
-            foreach ($subscriberIds as $subscriberId) {
-                self::storeActivity([
-                    'actor_id' => $author->id,
-                    'owner_id' => $subscriberId,
-                    'kind' => 'sub_flow_post',
-                    'flow_post_id' => $post->id,
-                    'excerpt' => $excerpt,
-                ]);
-
-                self::broadcastFeed($subscriberId, $actor, $post);
+            $subscribers = User::whereIn('id', $subscriberIds)->get();
+            foreach ($subscribers as $subscriber) {
+                UserNotifier::send($subscriber, new FlowPostedNotification($post, $author, (int) $subscriber->id, $excerpt));
             }
-
-            self::pushToSubscribers($subscriberIds, $author, $post, $excerpt);
         } catch (\Throwable $e) {
             Log::warning('flow post notify failed', ['error' => $e->getMessage()]);
         }
@@ -74,23 +65,10 @@ class FlowPostNotifier
         }
 
         try {
-            $exists = PinActivity::where('owner_id', $ownerId)
-                ->where('actor_id', $actor->id)
-                ->where('kind', 'flow_like')
-                ->where('flow_post_id', $post->id)
-                ->whereNull('read_at')
-                ->first();
-
-            if ($exists) {
-                return;
+            $owner = User::find($ownerId);
+            if ($owner) {
+                UserNotifier::send($owner, new FlowLikedNotification($post, $actor, $ownerId));
             }
-
-            self::storeActivity([
-                'actor_id' => $actor->id,
-                'owner_id' => $ownerId,
-                'kind' => 'flow_like',
-                'flow_post_id' => $post->id,
-            ]);
         } catch (\Throwable $e) {
             Log::warning('flow like notify failed', ['error' => $e->getMessage()]);
         }
@@ -104,16 +82,7 @@ class FlowPostNotifier
      */
     public static function unliked(FlowPost $post, User $actor): void
     {
-        try {
-            PinActivity::where('owner_id', $post->user_id)
-                ->where('actor_id', $actor->id)
-                ->where('kind', 'flow_like')
-                ->where('flow_post_id', $post->id)
-                ->whereNull('read_at')
-                ->delete();
-        } catch (\Throwable $e) {
-            Log::warning('flow unlike cleanup failed', ['error' => $e->getMessage()]);
-        }
+        UserNotifier::deleteUnread((int) $post->user_id, 'flow.liked', "flow-like:{$post->id}:{$actor->id}");
     }
 
     /**
@@ -131,14 +100,10 @@ class FlowPostNotifier
             $excerpt = self::excerpt($comment->content);
 
             if ($actorId !== $ownerId) {
-                self::storeActivity([
-                    'actor_id' => $actorId,
-                    'owner_id' => $ownerId,
-                    'kind' => 'flow_comment',
-                    'flow_post_id' => $post->id,
-                    'flow_comment_id' => $comment->id,
-                    'excerpt' => $excerpt,
-                ]);
+                $owner = User::find($ownerId);
+                if ($owner) {
+                    UserNotifier::send($owner, new FlowCommentedNotification($post, $actor, $comment, $ownerId));
+                }
             }
 
             $parent = $comment->parent_id
@@ -152,14 +117,10 @@ class FlowPostNotifier
                 && $parentAuthorId !== $ownerId;
 
             if ($isReplyToOther) {
-                self::storeActivity([
-                    'actor_id' => $actorId,
-                    'owner_id' => $parentAuthorId,
-                    'kind' => 'flow_reply',
-                    'flow_post_id' => $post->id,
-                    'flow_comment_id' => $comment->id,
-                    'excerpt' => $excerpt,
-                ]);
+                $parentAuthor = User::find($parentAuthorId);
+                if ($parentAuthor) {
+                    UserNotifier::send($parentAuthor, new FlowRepliedNotification($post, $actor, $comment, $parentAuthorId));
+                }
             }
         } catch (\Throwable $e) {
             Log::warning('flow comment notify failed', ['error' => $e->getMessage()]);
@@ -183,15 +144,10 @@ class FlowPostNotifier
                 if ($ownerId === (int) $post->user_id) {
                     continue;
                 }
-
-                self::storeActivity([
-                    'actor_id' => $actor->id,
-                    'owner_id' => $ownerId,
-                    'kind' => 'flow_mention',
-                    'flow_post_id' => $post->id,
-                    'flow_comment_id' => $comment->id,
-                    'excerpt' => $excerpt,
-                ]);
+                $mentioned = User::find((int) $ownerId);
+                if ($mentioned) {
+                    UserNotifier::send($mentioned, new FlowMentionNotification($post, $actor, $comment, (int) $ownerId));
+                }
             }
         } catch (\Throwable $e) {
             Log::warning('flow mention notify failed', ['error' => $e->getMessage()]);
@@ -241,126 +197,6 @@ class FlowPostNotifier
         }
 
         return $eligible;
-    }
-
-    /**
-     * Найти непрочитанный дубль события UFlow.
-     *
-     * То же правило ленты: один комментарий/пост — одна непрочитанная строка.
-     *
-     * @param array $attributes атрибуты PinActivity
-     */
-    private static function findUnreadDuplicate(array $attributes): ?PinActivity
-    {
-        $kind = (string) ($attributes['kind'] ?? '');
-        $ownerId = (int) ($attributes['owner_id'] ?? 0);
-        if ($kind === '' || $ownerId <= 0) {
-            return null;
-        }
-        $query = PinActivity::query()->where('owner_id', $ownerId)->where('kind', $kind)->whereNull('read_at');
-        $commentId = (int) ($attributes['flow_comment_id'] ?? 0);
-        if ($commentId > 0) {
-            $query->where('flow_comment_id', $commentId);
-        } else {
-            $postId = (int) ($attributes['flow_post_id'] ?? 0);
-            $actorId = (int) ($attributes['actor_id'] ?? 0);
-            if ($postId <= 0 || $actorId <= 0) {
-                return null;
-            }
-            $query->where('flow_post_id', $postId)->where('actor_id', $actorId);
-        }
-
-        return $query->latest('id')->first();
-    }
-
-    /**
-     * Сохранить событие и разослать realtime в личный канал.
-     *
-     * Идемпотентно: непрочитанный дубль поднимается наверх вместо нового ряда.
-     *
-     * @param array $attributes атрибуты PinActivity
-     */
-    private static function storeActivity(array $attributes): void
-    {
-        try {
-            $duplicate = self::findUnreadDuplicate($attributes);
-            if ($duplicate) {
-                $duplicate->forceFill(['created_at' => now(), 'updated_at' => now()])->saveQuietly();
-                $duplicate = $duplicate->fresh();
-                $duplicate->load(['actor:id,name,avatar_path', 'flowPost:id,user_id,body']);
-                broadcast(new PinActivityCreated(
-                    $duplicate,
-                    null,
-                    (int) $duplicate->owner_id,
-                    null,
-                    null,
-                ));
-
-                return;
-            }
-            $activity = PinActivity::create($attributes);
-            $activity->load(['actor:id,name,avatar_path', 'flowPost:id,user_id,body']);
-
-            broadcast(new PinActivityCreated(
-                $activity,
-                null,
-                (int) $activity->owner_id,
-                null,
-                null,
-            ));
-        } catch (\Throwable $e) {
-            Log::warning('flow activity store failed', ['error' => $e->getMessage()]);
-        }
-    }
-
-    /**
-     * Realtime-пинг ленты подписчика.
-     *
-     * @param int $subscriberId получатель
-     * @param array $actor актор для UserFeedUpdated
-     * @param FlowPost $post пост
-     */
-    private static function broadcastFeed(int $subscriberId, array $actor, FlowPost $post): void
-    {
-        try {
-            broadcast(new UserFeedUpdated(
-                $subscriberId,
-                'flow_post',
-                $actor,
-                ['flow_post_id' => $post->id, 'target_id' => $post->user_id]
-            ));
-        } catch (\Throwable $e) {
-            Log::warning('flow feed broadcast failed', ['error' => $e->getMessage()]);
-        }
-    }
-
-    /**
-     * Web-push подписчикам (best-effort).
-     *
-     * @param array<int> $ids получатели
-     * @param User $author автор поста
-     * @param FlowPost $post пост
-     * @param string|null $excerpt анонс текста
-     */
-    private static function pushToSubscribers(array $ids, User $author, FlowPost $post, ?string $excerpt): void
-    {
-        try {
-            $users = User::whereIn('id', $ids)->get();
-
-            foreach ($users as $user) {
-                try {
-                    app(WebPushService::class)->sendToUser($user, [
-                        'title' => $author->name.' — новый пост в UFlow',
-                        'body' => $excerpt ?? 'Открыть ленту',
-                        'url' => '/flow/post/'.$post->id,
-                        'tag' => 'flow-'.$post->id.'-'.$user->id,
-                        'avatar' => $author->avatar_url,
-                    ]);
-                } catch (\Throwable) {
-                }
-            }
-        } catch (\Throwable) {
-        }
     }
 
     /**

@@ -41,11 +41,7 @@ class AdminImpersonationController extends Controller
 
         session()->put('impersonator_id', $admin->id);
         session()->put('impersonation_log_id', $log->id);
-        try {
-            broadcast(new \App\Events\ImpersonationStarted($log));
-        } catch (\Throwable $e) {
-            Log::warning('impersonation broadcast failed', ['log_id' => $log->id, 'error' => $e->getMessage()]);
-        }
+        \App\Services\UserNotifier::send($user, new \App\Notifications\ImpersonationStartedNotification($log));
         Auth::login($user);
         $request->session()->regenerate();
 

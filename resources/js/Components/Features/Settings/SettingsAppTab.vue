@@ -2,9 +2,12 @@
 import Card from 'primevue/card'
 import { useToast } from 'primevue/usetoast'
 import { usePwaSettings } from '@/composables/usePwaSettings'
+import { usePwaInstallGuide } from '@/composables/usePwaInstallGuide'
 import PwaPushToggle from '@/Components/Features/Pwa/PwaPushToggle.vue'
+import PwaInstallGuideDialog from '@/Components/Features/Pwa/PwaInstallGuideDialog.vue'
 
 const s = usePwaSettings()
+const guide = usePwaInstallGuide()
 const toast = (() => { try { return useToast() } catch { return null as any } })()
 
 async function onClearCache() {
@@ -31,16 +34,19 @@ async function onClearCache() {
               </p>
             </div>
             <button
-              v-if="s.canInstall.value && !s.standalone.value"
-              class="text-xs font-semibold px-3 py-2 rounded-xl bg-indigo-500 text-white active:scale-95"
-              @click="s.promptInstall()"
+              v-if="!s.standalone.value"
+              class="text-xs font-semibold px-3 py-2 rounded-xl bg-indigo-500 text-white hover:opacity-90 active:scale-95 shrink-0"
+              @click="guide.install()"
             >
               Установить
             </button>
-            <span v-else class="text-xs font-semibold px-3 py-2 rounded-xl bg-stone-100 dark:bg-zinc-800 dark:text-white">
-              {{ s.standalone.value ? 'Установлено' : s.supported.value ? 'Готово к установке' : 'Браузер' }}
+            <span v-else class="text-xs font-semibold px-3 py-2 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shrink-0">
+              Установлено
             </span>
           </div>
+          <p v-if="!s.standalone.value" class="text-xs text-stone-500 dark:text-zinc-400 -mt-2">
+            {{ s.canInstall.value ? 'Готово к установке в один клик.' : 'Покажем инструкцию под твое устройство.' }}
+          </p>
 
           <PwaPushToggle />
 
@@ -65,5 +71,6 @@ async function onClearCache() {
         </div>
       </template>
     </Card>
+    <PwaInstallGuideDialog />
   </div>
 </template>

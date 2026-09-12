@@ -107,7 +107,11 @@ export function useAppUpdates() {
     if (!busBound) {
       busBound = true
       try {
-        busOn('notify:update', (e: any) => mergeIncoming(e?.updates))
+        busOn('user:notification.created', (e: any) => {
+          const n = e?.notification
+          if (!n?.id || n.type !== 'app.published' || !n.data?.update) return
+          mergeIncoming([n.data.update])
+        })
       } catch {}
     }
   }
