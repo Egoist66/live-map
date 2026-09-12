@@ -77,6 +77,7 @@ export function useSwipes() {
   const birthDate = ref<Date | null>(null)
   const verifying = ref(false)
   const resetting = ref(false)
+  const savingPrivacy = ref(false)
   const showPaywall = ref(false)
   const paywallFeature = ref('')
 
@@ -689,16 +690,27 @@ export function useSwipes() {
   /**
    * Сохранить приватность дейтинга.
    *
-   * @returns void
+   * При успехе закрывает модалку фильтров.
+   *
+   * @returns true если сохранение прошло успешно
    */
-  async function savePrivacy(): Promise<void> {
+  async function savePrivacy(): Promise<boolean> {
+    if (savingPrivacy.value) {
+      return false
+    }
+    savingPrivacy.value = true
     error.value = null
     try {
       await datingApi.updateSettings({ ...privacy.value })
+      showFilters.value = false
+      return true
     } catch (e: unknown) {
-      if (handleGate(e)) return
+      if (handleGate(e)) return false
       const err = e as { response?: { data?: { message?: string } } }
       error.value = err.response?.data?.message ?? 'Не удалось сохранить приватность'
+      return false
+    } finally {
+      savingPrivacy.value = false
     }
   }
 
@@ -961,6 +973,7 @@ export function useSwipes() {
     writeWithoutMatch,
     swipeAdmirer,
     savePrivacy,
+    savingPrivacy,
     showPaywall,
     paywallFeature,
     closePaywall,

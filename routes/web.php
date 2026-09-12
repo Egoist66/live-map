@@ -43,6 +43,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/map', fn () => Inertia::render('Map/Index'))->name('map');
     Route::get('/settings/{identifier?}/{tab?}', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->middleware('throttle:profile-write')->name('profile.update');
+    Route::patch('/profile/thought', [ProfileController::class, 'updateThought'])->middleware('throttle:profile-write')->name('profile.thought');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->middleware('throttle:profile-write')->name('profile.destroy');
     Route::post('/profile/avatar', [\App\Http\Controllers\AvatarController::class, 'store'])->middleware('throttle:profile-write')->name('profile.avatar');
     Route::post('/terms/accept', [\App\Http\Controllers\TermsController::class, 'accept'])->name('terms.accept');

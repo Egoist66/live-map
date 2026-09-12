@@ -2,8 +2,19 @@
 import Dialog from 'primevue/dialog'
 import { avatarSrcFor } from '@/composables/useAvatar'
 import { isRecentlySeen } from '@/composables/usePresence'
+import { formatRelative } from '@/utils/date'
 
 defineProps<{ people: any }>()
+
+/**
+ * Подпись статуса: «в сети» или относительное время последнего визита.
+ * @param other профиль друга
+ */
+function statusText(other: any): string {
+  if (isOnline(other)) return 'в сети'
+  if (!other?.last_seen_at) return 'оффлайн'
+  try { return formatRelative(other.last_seen_at) } catch { return 'оффлайн' }
+}
 
 /**
  * Онлайн только по индикатору: presence/is_online или свежий last_seen.
@@ -26,7 +37,13 @@ function isOnline(other: any): boolean {
           <img :src="avatarSrcFor(f.other) || undefined" class="w-10 h-10 rounded-full object-cover shrink-0" alt="" />
           <span v-if="isOnline(f.other)" class="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white dark:border-zinc-900" title="В сети" />
         </span>
-        <span class="min-w-0 flex-1"><span class="block text-sm font-bold truncate dark:text-zinc-100">{{ f.other.name }}</span></span>
+        <span class="min-w-0 flex-1">
+          <span class="flex items-center gap-1.5">
+            <span class="block text-sm font-bold truncate dark:text-zinc-100">{{ f.other.name }}</span>
+            <span class="h-2 w-2 shrink-0 rounded-full" :class="isOnline(f.other) ? 'bg-emerald-500' : 'bg-stone-300 dark:bg-zinc-600'" :title="statusText(f.other)"></span>
+          </span>
+          <span class="block text-xs truncate" :class="isOnline(f.other) ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-stone-500 dark:text-zinc-400'">{{ statusText(f.other) }}</span>
+        </span>
         <i class="pi pi-chevron-right text-xs text-stone-300 dark:text-zinc-600 shrink-0"></i>
       </button>
     </div>

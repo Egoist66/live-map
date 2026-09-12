@@ -42,7 +42,7 @@ class ProfileController extends Controller
             $showLastSeen = null;
         }
         $home = $user->publicHomeFor($auth);
-        $base = $user->only(['id','name','gender','birth_date','country','country_code','avatar_path','level','reputation_score','created_at','home_city','home_visibility','home_radius_km','bio','last_seen_at','is_invisible','photo_comments_privacy']);
+        $base = $user->only(['id','name','gender','birth_date','country','country_code','avatar_path','level','reputation_score','created_at','home_city','home_visibility','home_radius_km','bio','thought','last_seen_at','is_invisible','photo_comments_privacy']);
         $base['age'] = $user->age;
         if (!$isOwn) unset($base['birth_date']);
         if ($isOwn) {
@@ -204,6 +204,28 @@ class ProfileController extends Controller
         $user->save();
 
         return Redirect::route('profile.edit');
+    }
+
+    /**
+     * Быстрое обновление короткой мысли профиля (строка под именем).
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function updateThought(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'thought' => ['nullable', 'string', 'max:140'],
+        ]);
+        $raw = $data['thought'] ?? null;
+        $thought = is_string($raw) ? trim((string) preg_replace('/\s+/u', ' ', strip_tags($raw))) : null;
+        if ($thought === '') $thought = null;
+        if ($thought !== null) $thought = mb_substr($thought, 0, 140);
+        $user = $request->user();
+        $user->thought = $thought;
+        $user->save();
+
+        return back();
     }
 
     /**

@@ -300,7 +300,7 @@ onMounted(async () => {
                   <div class="text-sm font-black text-stone-900 dark:text-white">Инкогнито-лайк <span class="text-violet-500">PRO</span></div>
                   <div class="text-[11px] text-stone-500 dark:text-zinc-400">{{ s.canIncognito.value ? 'Тебя увидят как «Тайный поклонник»' : 'Включи — подскажем, как оформить PRO' }}</div>
                 </div>
-                <ToggleSwitch :model-value="s.incognitoLike.value" input-id="premium-incognito" @update:model-value="(v:boolean)=>s.setIncognito(v)" />
+                <ToggleSwitch class="shrink-0" :model-value="s.incognitoLike.value" input-id="premium-incognito" @update:model-value="(v:boolean)=>s.setIncognito(v)" />
               </div>
 
               <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
@@ -318,7 +318,7 @@ onMounted(async () => {
                   <div class="text-sm font-black text-stone-900 dark:text-white">Скрыть имя <span class="text-amber-500">PRO</span></div>
                   <div class="text-[11px] text-stone-500 dark:text-zinc-400">{{ s.privacy.value.dating_hide_name ? 'Имя скрыто' : 'Все видят твоё имя' }}</div>
                 </div>
-                <ToggleSwitch :model-value="s.privacy.value.dating_hide_name" input-id="premium-hide-name" @update:model-value="(v:boolean)=>s.setPrivacyFlag('dating_hide_name', v)" />
+                <ToggleSwitch class="shrink-0" :model-value="s.privacy.value.dating_hide_name" input-id="premium-hide-name" @update:model-value="(v:boolean)=>s.setPrivacyFlag('dating_hide_name', v)" />
               </div>
 
               <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
@@ -327,7 +327,7 @@ onMounted(async () => {
                   <div class="text-sm font-black text-stone-900 dark:text-white">Скрыть возраст <span class="text-amber-500">PRO</span></div>
                   <div class="text-[11px] text-stone-500 dark:text-zinc-400">{{ s.privacy.value.dating_hide_age ? 'Возраст скрыт' : 'Все видят твой возраст' }}</div>
                 </div>
-                <ToggleSwitch :model-value="s.privacy.value.dating_hide_age" input-id="premium-hide-age" @update:model-value="(v:boolean)=>s.setPrivacyFlag('dating_hide_age', v)" />
+                <ToggleSwitch class="shrink-0" :model-value="s.privacy.value.dating_hide_age" input-id="premium-hide-age" @update:model-value="(v:boolean)=>s.setPrivacyFlag('dating_hide_age', v)" />
               </div>
 
               <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
@@ -336,7 +336,7 @@ onMounted(async () => {
                   <div class="text-sm font-black text-stone-900 dark:text-white">Пишут только мэтчи <span class="text-emerald-500">Free</span></div>
                   <div class="text-[11px] text-stone-500 dark:text-zinc-400">Закрыть личку от незнакомцев</div>
                 </div>
-                <ToggleSwitch :model-value="s.privacy.value.dating_match_only" input-id="premium-match-only" @update:model-value="(v:boolean)=>s.setPrivacyFlag('dating_match_only', v)" />
+                <ToggleSwitch class="shrink-0" :model-value="s.privacy.value.dating_match_only" input-id="premium-match-only" @update:model-value="(v:boolean)=>s.setPrivacyFlag('dating_match_only', v)" />
               </div>
 
               <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
@@ -690,22 +690,22 @@ onMounted(async () => {
           </div>
           <div class="rounded-2xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/60 p-3 flex flex-col gap-3">
             <div class="flex items-center gap-3">
-              <ToggleSwitch v-model="s.privacy.value.dating_match_only" input-id="match-only" />
+              <ToggleSwitch class="shrink-0" v-model="s.privacy.value.dating_match_only" input-id="match-only" />
               <label for="match-only" class="text-sm text-stone-700 dark:text-zinc-200">Писать могут только мэтчи <span class="text-stone-400 dark:text-zinc-500">(базовая приватность, бесплатно)</span></label>
             </div>
             <div class="flex items-center gap-3 opacity-80">
-              <ToggleSwitch v-model="s.privacy.value.dating_hide_name" input-id="hide-name" />
+              <ToggleSwitch class="shrink-0" v-model="s.privacy.value.dating_hide_name" input-id="hide-name" />
               <label for="hide-name" class="text-sm text-stone-700 dark:text-zinc-200">Скрыть имя <span class="text-amber-500 font-bold">PRO</span></label>
             </div>
             <div class="flex items-center gap-3 opacity-80">
-              <ToggleSwitch v-model="s.privacy.value.dating_hide_age" input-id="hide-age" />
+              <ToggleSwitch class="shrink-0" v-model="s.privacy.value.dating_hide_age" input-id="hide-age" />
               <label for="hide-age" class="text-sm text-stone-700 dark:text-zinc-200">Скрыть возраст <span class="text-amber-500 font-bold">PRO</span></label>
             </div>
-            <Button label="Сохранить приватность" severity="secondary" size="small" rounded outlined @click="s.savePrivacy()" />
+            <Button label="Сохранить приватность" severity="secondary" size="small" rounded outlined :loading="s.savingPrivacy.value" @click="s.savePrivacy()" />
           </div>
           <div class="flex gap-2 pb-[env(safe-area-inset-bottom,0px)]">
-            <Button label="Сбросить" severity="secondary" outlined rounded class="flex-1" @click="s.resetFilters()" />
-            <Button label="Показать" rounded class="flex-1" @click="s.applyFilters()" />
+            <Button label="Сбросить" severity="secondary" outlined rounded class="flex-1" :loading="s.loading.value" @click="s.resetFilters()" />
+            <Button label="Показать" rounded class="flex-1" :loading="s.loading.value" @click="s.applyFilters()" />
           </div>
         </div>
       </Dialog>

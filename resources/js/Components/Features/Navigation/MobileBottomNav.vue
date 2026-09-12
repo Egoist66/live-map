@@ -36,7 +36,7 @@ const { dashboardHref, isActive, total } = useMobileBottomNav()
         :class="isActive('swipes') ? 'text-ink-900 dark:text-white' : 'text-stone-400'"
       >
         <svg class="w-6 h-6" :fill="isActive('swipes') ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><rect x="7" y="4" width="10" height="16" rx="2.5"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.5 12H5m-2.5 0L4 10.5M2.5 12L4 13.5M21.5 12H19m2.5 0L20 10.5m1.5 1.5L20 13.5"/></svg>
-        <span class="text-[10px] font-semibold leading-none" :class="isActive('swipes') ? 'opacity-100' : 'opacity-70'">Свайпы</span>
+        <span class="text-[10px] font-black leading-none bg-gradient-to-r from-rose-500 via-fuchsia-500 to-orange-400 dark:from-rose-400 dark:via-fuchsia-400 dark:to-orange-300 bg-clip-text text-transparent" :class="isActive('swipes') ? 'opacity-100' : 'opacity-70'">ULove</span>
       </Link>
 
       <Link

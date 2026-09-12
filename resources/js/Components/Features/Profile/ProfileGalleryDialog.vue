@@ -1,28 +1,14 @@
 <script setup lang="ts">
 import Dialog from 'primevue/dialog'
-import Button from 'primevue/button'
-import Tag from 'primevue/tag'
 import Message from 'primevue/message'
 import ProgressSpinner from 'primevue/progressspinner'
-import { useGalleryDialogUpload } from '@/composables/useGalleryDialogUpload'
 
-const props = defineProps<{ gallery: any; isOwn: boolean; plan?: string }>()
-
-const upload = useGalleryDialogUpload(props.gallery)
+defineProps<{ gallery: any; isOwn: boolean; plan?: string }>()
 </script>
 <template>
   <Dialog :visible="gallery.dialogOpen.value" @update:visible="(v:boolean)=>{ if(!v) gallery.closeDialog() }" modal dismissableMask :closable="true" :draggable="false" :breakpoints="{ '960px': '94vw', '640px': '100vw' }" :style="{ width: '760px' }" class="!rounded-3xl max-sm:!rounded-b-none" :pt="{ root: { class: 'max-sm:!m-0' }, mask: { class: 'max-sm:!items-end' }, content: { class: '!p-0' }, header: { class: '!py-3 !px-3 sm:!px-5' } }">
     <template #header>
-      <div class="flex items-center gap-2 min-w-0 flex-1">
-        <i class="pi pi-images text-violet-600" />
-        <span class="font-black tracking-tight truncate">Галерея</span>
-        <Tag :value="`${gallery.count.value}/${gallery.limit.value}`" class="!text-[11px] !bg-stone-100 !text-stone-600 !border-0 dark:!bg-white/10 dark:!text-zinc-200" />
-        <span class="flex-1" />
-        <div v-if="isOwn && !gallery.isFull.value" class="shrink-0">
-          <input :ref="upload.setFileInput" type="file" accept="image/*" class="absolute w-px h-px opacity-0 overflow-hidden pointer-events-none" tabindex="-1" aria-hidden="true" @change="upload.onFile" />
-          <Button icon="pi pi-plus" label="Добавить" rounded size="small" :loading="gallery.uploading.value" class="!bg-violet-600 !border-violet-600 !text-white !font-bold [&_.p-button-label]:hidden min-[420px]:[&_.p-button-label]:inline" aria-label="Добавить фото" @click="upload.pickFile" />
-        </div>
-      </div>
+      <span class="flex-1" />
     </template>
     <div class="px-3 sm:px-5 pb-[max(1rem,env(safe-area-inset-bottom))] max-h-[78dvh] overflow-y-auto overscroll-contain">
       <p v-if="isOwn && gallery.isFull.value" class="text-xs text-stone-500 mt-1">Лимит {{ gallery.limit.value }} фото на тарифе{{ plan ? ` (${plan})` : '' }} — удали что-то, чтобы добавить новое.</p>

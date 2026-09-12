@@ -20,6 +20,14 @@ class ProfileUpdateRequest extends FormRequest
                 $this->merge(['bio' => null]);
             }
         }
+        if ($this->has('thought')) {
+            $raw = $this->input('thought');
+            if (is_string($raw)) {
+                $this->merge(['thought' => $this->sanitizeThought($raw)]);
+            } elseif ($raw === null || $raw === '') {
+                $this->merge(['thought' => null]);
+            }
+        }
     }
 
     private function sanitizeBio(string $text): ?string
@@ -29,6 +37,14 @@ class ProfileUpdateRequest extends FormRequest
         $text = preg_replace("/\r\n?/", "\n", $text);
         if ($text === '' || $text === null) return null;
         return mb_substr($text, 0, 10000);
+    }
+
+    private function sanitizeThought(string $text): ?string
+    {
+        $text = strip_tags($text);
+        $text = trim((string) preg_replace('/\s+/u', ' ', $text));
+        if ($text === '') return null;
+        return mb_substr($text, 0, 140);
     }
 
     /**
@@ -80,6 +96,7 @@ class ProfileUpdateRequest extends FormRequest
                 }
             }],
             'bio' => ['nullable','string','max:10000'],
+            'thought' => ['nullable','string','max:140'],
             'is_anonymous_default' => ['nullable','boolean'],
             'default_location_precision' => ['nullable','in:blur_200,exact,district,custom'],
             'default_blur_meters' => ['nullable','integer','min:0','max:5000'],

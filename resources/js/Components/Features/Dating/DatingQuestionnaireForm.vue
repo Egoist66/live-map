@@ -33,7 +33,7 @@ async function onSave(): Promise<void> {
 <template>
   <div class="flex flex-col gap-4 min-w-0">
     <div class="flex items-center gap-3">
-      <ToggleSwitch v-model="q.enabled.value" input-id="dating-enabled" />
+      <ToggleSwitch v-model="q.enabled.value" input-id="dating-enabled" class="shrink-0" />
       <label for="dating-enabled" class="text-sm font-semibold text-stone-700 dark:text-zinc-200">Показывать меня в ленте</label>
     </div>
 

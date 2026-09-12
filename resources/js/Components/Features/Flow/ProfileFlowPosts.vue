@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { router } from '@inertiajs/vue3'
 import Button from 'primevue/button'
+import Dialog from 'primevue/dialog'
 import Toast from 'primevue/toast'
 import FlowComposer from '@/Components/Features/Flow/FlowComposer.vue'
 import FlowDeleteDialog from '@/Components/Features/Flow/FlowDeleteDialog.vue'
@@ -11,13 +12,22 @@ import { useFlowComposer } from '@/composables/useFlowComposer'
 import { useFlowFeed } from '@/composables/useFlowFeed'
 import type { FlowPost } from '@/types/flow'
 
-const props = defineProps<{ userId: number; isOwn: boolean; showHeader?: boolean }>()
+const props = defineProps<{ userId: number; isOwn: boolean; showHeader?: boolean; limit?: number; previewModal?: boolean }>()
 
 const showHeader = props.showHeader ?? true
+const previewLimit = computed(() => props.limit ?? 5)
 
 const feed = useFlowFeed({ authorId: props.userId })
 const editor = useFlowComposer()
 const editOpen = ref(false)
+const allOpen = ref(false)
+const previewPosts = computed(() => feed.store.posts.slice(0, previewLimit.value))
+const hiddenCount = computed(() => Math.max(0, feed.store.posts.length - previewLimit.value))
+
+/** Открывает большую модалку со всеми постами. */
+function openAll(): void {
+  allOpen.value = true
+}
 
 function goFlow(): void {
   router.visit(route('flow'))
@@ -53,7 +63,7 @@ onMounted(() => feed.init())
     </div>
     <div v-else class="space-y-4">
       <FlowPostCard
-        v-for="post in feed.store.posts.slice(0, 5)"
+        v-for="post in previewPosts"
         :key="post.id"
         :post="post"
         :like-busy="!!feed.likeBusy.value[post.id]"
@@ -61,10 +71,26 @@ onMounted(() => feed.init())
         @edit="openEdit($event)"
         @delete="feed.askDelete($event)"
       />
-      <div v-if="feed.store.posts.length > 5" class="flex justify-center">
+      <div v-if="hiddenCount > 0 && previewModal" class="flex justify-center">
+        <Button :label="`Показать ещё · ${hiddenCount}`" icon="pi pi-chevron-down" rounded outlined size="small" @click="openAll()" />
+      </div>
+      <div v-else-if="hiddenCount > 0" class="flex justify-center">
         <Button label="Все посты пользователя" outlined rounded size="small" @click="goAuthorPosts()" />
       </div>
     </div>
+    <Dialog v-model:visible="allOpen" modal dismissableMask :closable="true" :draggable="false" header="Все посты" :breakpoints="{ '640px': '100vw' }" :style="{ width: '720px' }" :pt="{ content: { class: '!p-0' }, header: { class: '!py-3 !px-3 sm:!px-5' } }">
+      <div class="px-3 sm:px-5 pb-[max(1rem,env(safe-area-inset-bottom))] max-h-[78dvh] overflow-y-auto overscroll-contain space-y-4">
+        <FlowPostCard
+          v-for="post in feed.store.posts"
+          :key="post.id"
+          :post="post"
+          :like-busy="!!feed.likeBusy.value[post.id]"
+          @like="feed.toggleLike($event)"
+          @edit="openEdit($event)"
+          @delete="feed.askDelete($event)"
+        />
+      </div>
+    </Dialog>
     <FlowEditDialog v-model:visible="editOpen" :composer="editor" />
     <FlowDeleteDialog :visible="feed.pendingDeleteId.value !== null" @cancel="feed.pendingDeleteId.value = null" @confirm="feed.confirmDelete()" />
   </section>

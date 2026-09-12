@@ -1,62 +1,178 @@
 <script setup lang="ts">
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
-import { Head } from '@inertiajs/vue3'
+import { Head, Link } from '@inertiajs/vue3'
 import Avatar from 'primevue/avatar'
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import Toast from 'primevue/toast'
-import ProfileHeaderCard from '@/Components/Features/Profile/ProfileHeaderCard.vue'
-import ProfileInfoCard from '@/Components/Features/Profile/ProfileInfoCard.vue'
-import ProfileFlowPosts from '@/Components/Features/Flow/ProfileFlowPosts.vue'
-import ProfileSocialView from '@/Components/Features/Profile/ProfileSocialView.vue'
-import { useProfileShowPage } from '@/composables/useProfileShowPage'
-import { useProfileViewMode } from '@/composables/useProfileViewMode'
-import { useProfilePeople } from '@/composables/useProfilePeople'
-import { usePeopleSearch } from '@/composables/usePeopleSearch'
-import { useAvatarPreview } from '@/composables/useAvatarPreview'
+import ProfileDesignHero from '@/Components/Features/Profile/ProfileDesignHero.vue'
+import ProfileDesignQuickNav from '@/Components/Features/Profile/ProfileDesignQuickNav.vue'
+import ProfileDesignGallery from '@/Components/Features/Profile/ProfileDesignGallery.vue'
+import ProfileDesignInfo from '@/Components/Features/Profile/ProfileDesignInfo.vue'
+import ProfileDesignSwipes from '@/Components/Features/Profile/ProfileDesignSwipes.vue'
+import ProfileDesignFlow from '@/Components/Features/Profile/ProfileDesignFlow.vue'
+import ProfileMoreMenu from '@/Components/Features/Profile/ProfileMoreMenu.vue'
+import UserSubscribeButton from '@/Components/Features/Profile/UserSubscribeButton.vue'
 import ProfileFriendsDialog from '@/Components/Features/Profile/ProfileFriendsDialog.vue'
 import ProfileGalleryDialog from '@/Components/Features/Profile/ProfileGalleryDialog.vue'
 import ProfilePhotoViewer from '@/Components/Features/Profile/ProfilePhotoViewer.vue'
-import { useProfileGallery } from '@/composables/useProfileGallery'
-import { useProfilePhotoComments } from '@/composables/useProfilePhotoComments'
+import ChatSearchDialog from '@/Components/Features/Chat/ChatSearchDialog.vue'
+import ProfileThoughtDialog from '@/Components/Features/Profile/ProfileThoughtDialog.vue'
+import { useProfileDesign } from '@/composables/useProfileDesign'
+import { useProfileThought } from '@/composables/useProfileThought'
 import { planOf } from '@/composables/usePlanLimits'
 import { onMounted } from 'vue'
-import ChatSearchDialog from '@/Components/Features/Chat/ChatSearchDialog.vue'
 
 const props = defineProps<{ profileUser: any; isOwn: boolean; friendship: any; isFriend: boolean; isPending: boolean; isBlocked?: boolean; isBlockedBy?: boolean; canMessage: boolean; canMessageReason: string | null; subscription?: { subscribed: boolean; notify_pin: boolean; notify_photo: boolean; notify_level: boolean; notify_post?: boolean } }>()
-const page = useProfileShowPage(props)
-const gallery = useProfileGallery(() => props.profileUser.id, { isOwn: props.isOwn })
-const photoComments = useProfilePhotoComments(() => gallery.active.value?.id ?? null, (n) => {
-  const p = gallery.active.value
-  if (p) gallery.syncCounts(p.id, { comments_count: n })
-})
-const people = useProfilePeople()
-const search = usePeopleSearch()
-const view = useProfileViewMode()
-useAvatarPreview(() => page.showAvatar.value, () => (page.showAvatar.value = false))
-onMounted(async () => { await gallery.load(); try { await gallery.consumePendingPhoto() } catch {}; try { await people.loadFriendsCount(props.profileUser.id) } catch {} })
+
+const design = useProfileDesign(props)
+const { page, gallery, people, search, photoComments } = design
+const thought = useProfileThought(() => props.profileUser.thought)
+const pickerInput = design.pickerInput
+const handlePickerChange = design.handlePickerChange
+
+onMounted(async () => { await design.init() })
 </script>
+
 <template>
   <Head :title="profileUser.name" />
   <AuthenticatedLayout>
     <Toast />
     <div class="bg-surface dark:bg-[#090E1A] min-h-[calc(100vh-64px)]">
-      <div class="max-w-[860px] mx-auto px-0 sm:px-6 py-0 sm:py-6 space-y-0 sm:space-y-5">
-        <div class="flex justify-end px-4 sm:px-0 pt-3 sm:pt-0">
-          <Button :icon="view.mode.value === 'social' ? 'pi pi-id-card' : 'pi pi-th-large'" rounded text severity="secondary" class="!w-9 !h-9 !rounded-full" :title="view.mode.value === 'social' ? 'Классический вид' : 'Новый вид'" :aria-label="view.mode.value === 'social' ? 'Классический вид' : 'Новый вид'" @click="view.toggle()" />
+      <div class="max-w-[1040px] mx-auto px-3 sm:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4">
+        <div v-if="page.isLocked.value" class="rounded-[24px] border border-stone-200 bg-white shadow-soft p-6 flex flex-col items-center text-center gap-3 dark:border-zinc-800 dark:bg-zinc-900">
+          <button type="button" class="h-16 w-16 overflow-hidden rounded-[22px] bg-stone-100 dark:bg-zinc-800" @click="page.showAvatar.value = true">
+            <Avatar :image="page.avatarSrc.value" shape="square" class="!h-full !w-full [&_img]:object-cover" />
+          </button>
+          <p class="font-bold text-ink-900 dark:text-white">⛔ Пользователь заблокировал вас</p>
+          <p class="text-sm text-stone-500 dark:text-zinc-400">Профиль скрыт.</p>
+          <Link href="/map">
+            <Button label="На карту →" rounded class="!border-0 !bg-gradient-to-r !from-[#7c3aed] !to-[#3b82f6] !text-sm !font-bold !text-white" />
+          </Link>
         </div>
-        <ProfileSocialView v-if="view.mode.value === 'social'" :user="profileUser" :avatar-src="page.avatarSrc.value" :online="page.online.value" :last-seen="page.lastSeenText.value" :level-name="(page.levelLabel as any)[profileUser.level] || profileUser.level || 'Новичок'" :is-own="isOwn" :is-locked="page.isLocked.value" :can-message="page.canMessage.value" :is-blocked="page.isBlocked.value" :is-friend="page.isFriend.value" :is-pending="page.isPending.value" :loading="page.profile.loading.value" :sharing="page.sharing.value" :bio-empty="page.bioEmpty.value" :bio-text="page.bioText.value" :registered-at="page.registeredAt.value" :photos="gallery.photos.value" :photos-count="gallery.count.value" :friends-count="people.friendsCount.value" :gallery-limit="gallery.limit.value" :gallery-can-add="gallery.canAdd.value" :gallery-loading="gallery.loading.value" :gallery-uploading="gallery.uploading.value" :subscription="subscription" @avatar="page.showAvatar.value = true" @chat="page.onChat()" @add="page.onAdd()" @remove="page.askRemove()" @block="page.askBlock()" @unblock="page.onUnblock()" @share="page.share()" @friends="people.openFriends(profileUser.id, profileUser.name)" @search="search.openDialog()" @add-photo="(f:File)=>gallery.upload(f)" @open-photo="(p:any)=>gallery.open(p)" />
+
         <template v-else>
-          <div class="px-4 sm:px-0 pt-3 sm:pt-0 pb-4 sm:pb-0 space-y-5">
-            <ProfileHeaderCard :user="profileUser" :avatar-src="page.avatarSrc.value" :online="page.online.value" :last-seen="page.lastSeenText.value" :level-name="(page.levelLabel as any)[profileUser.level] || profileUser.level || 'Новичок'" :is-own="isOwn" :is-locked="page.isLocked.value" :can-message="page.canMessage.value" :is-blocked="page.isBlocked.value" :is-friend="page.isFriend.value" :is-pending="page.isPending.value" :loading="page.profile.loading.value" :sharing="page.sharing.value" :subscription="subscription" @avatar="page.showAvatar.value = true" @chat="page.onChat()" @add="page.onAdd()" @remove="page.askRemove()" @block="page.askBlock()" @unblock="page.onUnblock()" @share="page.share()" @friends="people.openFriends(profileUser.id, profileUser.name)" @search="search.openDialog()" @gallery="gallery.openDialog()" />
-            <ProfileInfoCard v-if="!page.isLocked.value" :user="profileUser" :bio-empty="page.bioEmpty.value" :bio-text="page.bioText.value" :level-name="(page.levelLabel as any)[profileUser.level] || profileUser.level" :registered-at="page.registeredAt.value" />
-            <ProfileFlowPosts v-if="!page.isLocked.value" :user-id="profileUser.id" :is-own="isOwn" />
+          <ProfileDesignHero
+            :user="profileUser"
+            :avatar-src="page.avatarSrc.value"
+            :online="page.online.value"
+            :level-name="design.levelName.value"
+            :plan-name="design.planName.value"
+            :reputation-text="design.reputationText.value"
+            :email-text="design.emailText.value"
+            :headline-text="thought.committed.value ?? design.headlineText.value"
+            :can-edit-thought="isOwn"
+            :is-own="isOwn"
+            :can-message="page.canMessage.value"
+            :is-blocked="page.isBlocked.value"
+            :loading="page.profile.loading.value"
+            @avatar="page.showAvatar.value = true"
+            @open-map="design.onOpenMap()"
+            @chat="page.onChat()"
+            @edit="design.onEdit()"
+            @edit-thought="thought.openDialog()"
+          />
+
+          <div
+            v-if="!isOwn && !page.isLocked.value"
+            class="flex items-center gap-2 rounded-[24px] border border-stone-200 bg-white shadow-soft p-2.5 dark:border-zinc-800 dark:bg-zinc-900"
+          >
+            <Button
+              v-if="!page.isFriend.value && !page.isPending.value && !page.isBlocked.value"
+              label="В друзья"
+              icon="pi pi-user-plus"
+              rounded
+              :loading="page.profile.loading.value"
+              class="!flex-1 !rounded-full !border-0 !bg-ink-900 !text-[13px] !font-bold !text-white dark:!bg-white/[0.08] dark:!text-white hover:!opacity-90"
+              @click="page.onAdd()"
+            />
+            <Button
+              v-else-if="page.isFriend.value"
+              label="В друзьях"
+              icon="pi pi-check"
+              rounded
+              class="!flex-1 !rounded-full !border-0 !bg-emerald-50 !text-[13px] !font-bold !text-emerald-700 dark:!bg-emerald-500/15 dark:!text-emerald-300"
+              @click="page.askRemove()"
+            />
+            <Button
+              v-else-if="page.isPending.value"
+              label="Ожидает"
+              icon="pi pi-clock"
+              rounded
+              disabled
+              class="!flex-1 !rounded-full !border-0 !bg-stone-100 !text-[13px] !font-bold !text-stone-500 dark:!bg-white/[0.06] dark:!text-zinc-400"
+            />
+            <UserSubscribeButton
+              v-if="!page.isBlocked.value && page.isFriend.value"
+              :user-id="profileUser.id"
+              :initial="design.subscription"
+              :compact="true"
+              :is-friend="page.isFriend.value"
+            />
+            <ProfileMoreMenu
+              v-if="!page.isBlocked.value"
+              :user-id="profileUser.id"
+              :user-name="profileUser.name"
+              button-class="!w-10 !h-10 !p-0 !rounded-full !border-0 !bg-stone-100 !text-stone-600 dark:!bg-white/[0.06] dark:!text-zinc-200"
+              @share="page.share()"
+              @block="page.askBlock()"
+              @remove="page.askRemove()"
+            />
+            <Button
+              v-else
+              label="Разблокировать"
+              icon="pi pi-ban"
+              :loading="page.profile.loading.value"
+              severity="danger"
+              outlined
+              rounded
+              class="!flex-1 !rounded-full !text-[13px] !font-bold"
+              @click="page.onUnblock()"
+            />
           </div>
+
+          <ProfileDesignQuickNav
+            @profile="isOwn ? design.onEdit() : design.scrollTop()"
+            @friends="people.openFriends(profileUser.id, profileUser.name)"
+            @search="search.openDialog()"
+            @share="page.share()"
+          />
+
+          <ProfileDesignGallery
+            :photos="design.galleryPreview.value"
+            :loading="gallery.loading.value"
+            :add-slots="design.addSlots.value"
+            :uploading="gallery.uploading.value"
+            @all="gallery.openDialog()"
+            @open="(photo) => gallery.open(photo)"
+            @add="design.openPicker()"
+          />
+
+          <ProfileDesignInfo
+            :status-text="design.statusText.value"
+            :online="page.online.value"
+            :user-name="profileUser.name"
+            :is-own="isOwn"
+            :age-text="design.infoTiles.ageText.value"
+            :gender-label="design.infoTiles.genderLabel.value"
+            :residence-text="design.infoTiles.residenceText.value"
+            :level-name="design.levelName.value"
+            @edit="design.onEdit()"
+          />
+
+          <ProfileDesignSwipes @go="design.goSwipes()" />
+
+          <ProfileDesignFlow :user-id="profileUser.id" :is-own="isOwn" />
         </template>
+
         <ProfileFriendsDialog :people="people" />
+        <ProfileThoughtDialog :open="thought.open.value" :draft="thought.draft.value" :saving="thought.saving.value" :error="thought.error.value" @update:draft="(v:string)=>thought.setDraft(v)" @close="thought.close()" @save="thought.save()" />
         <ChatSearchDialog :open="search.open.value" @update:open="(v:boolean)=>{ if(!v) search.closeDialog() }" :query="search.query.value" @update:query="(v:string)=>search.setQuery(v)" :results="search.results.value" :searching="search.searching.value" :creating="search.creating.value" :is-online="(id?:number,lastSeen?:string|null)=>search.isOnline(id,lastSeen)" @chat="search.startChat" @add="search.addFriend" @block="search.askBlock" />
         <ProfileGalleryDialog :gallery="gallery" :is-own="isOwn" :plan="planOf(profileUser)" />
         <ProfilePhotoViewer :gallery="gallery" :comments="photoComments" :is-own="isOwn" :user-name="profileUser.name" :avatar-src="page.avatarSrc.value" />
+
+        <input ref="pickerInput" type="file" accept="image/*" class="absolute w-px h-px opacity-0 overflow-hidden pointer-events-none" tabindex="-1" aria-hidden="true" @change="handlePickerChange" />
+
         <Teleport to="body">
           <div v-if="page.showAvatar.value" @click="page.showAvatar.value = false" class="fixed inset-0 z-[100] bg-black/80 grid place-items-center p-3 sm:p-4 cursor-zoom-out overflow-auto">
             <Avatar :image="page.avatarSrc.value" shape="square" class="m-auto !w-auto !h-auto max-w-full max-h-[90dvh] !rounded-3xl [&_img]:!rounded-3xl [&_img]:max-h-[90dvh] [&_img]:object-contain" />
@@ -64,6 +180,7 @@ onMounted(async () => { await gallery.load(); try { await gallery.consumePending
         </Teleport>
       </div>
     </div>
+
     <Dialog :visible="!!page.confirm.value" @update:visible="(v:boolean)=>{ if(!v) page.closeConfirm() }" modal :closable="true" :draggable="false" :style="{ width: '360px', maxWidth: 'calc(100vw - 2rem)' }">
       <template #header><span class="font-bold">{{ page.confirm.value?.title }}</span></template>
       <p class="text-sm text-stone-600 dark:text-zinc-300 break-words">{{ page.confirm.value?.msg }}</p>

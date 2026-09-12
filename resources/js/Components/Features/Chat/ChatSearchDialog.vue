@@ -28,12 +28,12 @@ const { isFriend, isPending, showAdd, addTitle } = useChatSearchList()
           <span class="relative shrink-0"><Avatar :image="avatarSrcFor(u)" shape="circle" size="normal" class="!w-9 !h-9 [&_img]:object-cover" /><OnlineDot :online="isOnline(u.id, u.last_seen_at)" size="w-3 h-3" /></span>
           <div class="min-w-0"><div class="text-sm font-medium truncate">{{ u.name }}</div></div>
         </Link>
-        <div class="flex gap-1 shrink-0 ml-2 items-center">
-          <button v-if="u.can_message !== false" @click="emit('chat', u)" :disabled="creating" title="Написать" class="w-8 h-8 grid place-items-center rounded-full bg-stone-900 text-white disabled:opacity-40">✉</button>
-          <button v-if="showAdd(u)" @click.stop="emit('add', u.id)" :title="addTitle(u)" class="w-8 h-8 grid place-items-center rounded-full bg-stone-100 text-stone-500"><i class="pi pi-user-plus text-xs" /></button>
-          <button v-else-if="isPending(u)" :title="addTitle(u)" disabled class="w-8 h-8 grid place-items-center rounded-full bg-stone-100 text-stone-400 cursor-default"><i class="pi pi-clock text-xs" /></button>
-          <span v-else :title="addTitle(u)" class="w-8 h-8 grid place-items-center rounded-full bg-green-100 text-green-600"><i class="pi pi-check text-xs" /></span>
-          <button @click.stop="emit('block', u.id, u.name)" title="Заблокировать" class="w-8 h-8 grid place-items-center rounded-full bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400">⊘</button>
+        <div class="flex gap-1.5 shrink-0 ml-2 items-center">
+          <button v-if="u.can_message !== false" @click="emit('chat', u)" :disabled="creating" title="Написать сообщение" aria-label="Написать сообщение" class="w-9 h-9 grid place-items-center rounded-full bg-ink-900 text-white transition hover:opacity-90 active:scale-95 disabled:opacity-40 dark:bg-white dark:text-zinc-900"><i class="pi pi-send text-sm" /></button>
+          <button v-if="showAdd(u)" @click.stop="emit('add', u.id)" :title="addTitle(u)" :aria-label="addTitle(u)" class="w-9 h-9 grid place-items-center rounded-full bg-blue-600/10 text-blue-600 transition hover:bg-blue-600/20 active:scale-95 dark:bg-blue-500/15 dark:text-blue-400 dark:hover:bg-blue-500/25"><i class="pi pi-user-plus text-sm" /></button>
+          <button v-else-if="isPending(u)" :title="addTitle(u)" :aria-label="addTitle(u)" disabled class="w-9 h-9 grid place-items-center rounded-full bg-stone-100 text-stone-400 cursor-default dark:bg-zinc-800 dark:text-zinc-500"><i class="pi pi-clock text-sm" /></button>
+          <span v-else :title="addTitle(u)" class="w-9 h-9 grid place-items-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"><i class="pi pi-check text-sm" /></span>
+          <button @click.stop="emit('block', u.id, u.name)" title="Заблокировать" aria-label="Заблокировать" class="w-9 h-9 grid place-items-center rounded-full bg-red-500/10 text-red-600 transition hover:bg-red-500/20 active:scale-95 dark:text-red-400 dark:hover:bg-red-500/20"><i class="pi pi-ban text-sm" /></button>
         </div>
       </div>
     </div>
