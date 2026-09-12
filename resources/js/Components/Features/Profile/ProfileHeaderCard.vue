@@ -22,10 +22,12 @@ const emit = defineEmits<{ (e: 'avatar'): void; (e: 'chat'): void; (e: 'add'): v
       </div>
       <div v-else>
         <div class="flex items-center gap-4">
-          <button @click="emit('avatar')" class="relative w-16 h-16 sm:w-20 sm:h-20 rounded-3xl overflow-hidden border shrink-0 bg-stone-50">
-            <Avatar :image="avatarSrc" shape="square" class="!w-full !h-full [&_img]:object-cover" />
-            <OnlineDot :online="online" size="w-4 h-4" />
-          </button>
+          <span class="relative block h-16 w-16 shrink-0 sm:h-20 sm:w-20">
+            <button @click="emit('avatar')" class="block h-full w-full overflow-hidden rounded-3xl border bg-stone-50">
+              <Avatar :image="avatarSrc" shape="square" class="!w-full !h-full [&_img]:object-cover" />
+            </button>
+            <OnlineDot :online="online" size="w-4 h-4" class="absolute bottom-1 right-1" />
+          </span>
           <div class="min-w-0 flex-1">
             <h1 class="text-lg sm:text-xl font-black tracking-tight truncate flex items-center gap-2">{{ user.name }}</h1>
             <p class="text-[13px] sm:text-sm flex flex-wrap items-center gap-x-1.5 gap-y-0.5 min-w-0" :class="online ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'"><span class="whitespace-nowrap">{{ online ? 'в сети' : lastSeen }}</span><span aria-hidden="true" class="text-stone-300 dark:text-zinc-600 shrink-0">·</span><span class="whitespace-nowrap">{{ levelName }} · {{ user.reputation_score || 0 }} ★</span></p>

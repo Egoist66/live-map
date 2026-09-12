@@ -23,7 +23,7 @@ const props = defineProps<{ user: any; isOwn?: boolean }>()
 
 const design = useDashboardDesign(props.user, props.isOwn)
 const { dash, gallery, people, search, photoComments } = design
-const thought = useProfileThought(() => dash.u.value.thought, ['user'])
+const thought = useProfileThought(() => dash.u.value.thought)
 const pickerInput = design.pickerInput
 const handlePickerChange = design.handlePickerChange
 
@@ -54,7 +54,7 @@ onMounted(async () => { await design.init() })
           :plan-name="design.planName.value"
           :reputation-text="design.reputationText.value"
           :email-text="design.emailText.value"
-          :headline-text="thought.committed.value ?? design.headlineText.value"
+          :headline-text="thought.display(design.headlineText.value, dash.bioText.value)"
           :can-edit-thought="true"
           :is-own="true"
           :can-message="false"

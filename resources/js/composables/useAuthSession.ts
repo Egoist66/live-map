@@ -6,6 +6,7 @@ import { resetPresence } from '@/composables/usePresence'
 import { resetPinActivity } from '@/composables/usePinActivity'
 import { resetAdminReports } from '@/composables/useAdminReports'
 import { resetSecurityImpersonations } from '@/composables/useSecurityImpersonations'
+import { resetScreenLockSession, useScreenLock } from '@/composables/useScreenLock'
 import { useBadgeStore } from '@/stores/badges'
 import { resetEchoSession } from '@/echo'
 import { stopRealtimePoller } from '@/composables/useRealtimePoller'
@@ -52,6 +53,9 @@ export function useAuthSession() {
       resetSecurityImpersonations()
     } catch {}
     try {
+      resetScreenLockSession()
+    } catch {}
+    try {
       useBadgeStore().reset()
     } catch {}
     try {
@@ -64,10 +68,28 @@ export function useAuthSession() {
 
   function syncUid(): void {
     const uid = currentAuthUid()
-    if (trackedUid.value !== null && uid !== trackedUid.value) {
+    const prevUid = trackedUid.value
+    const isAccountChanged = prevUid !== null && uid !== prevUid
+    if (isAccountChanged) {
       resetAll()
     }
     trackedUid.value = uid
+    const isLoggedInAsOther = isAccountChanged && uid !== null
+    if (isLoggedInAsOther) {
+      void reloadScreenLockForNewAccount()
+    }
+  }
+
+  /**
+   * Подтягивает скринлок нового аккаунта после смены юзера.
+   *
+   * Без этого layout остаётся смонтированным (Inertia без перезагрузки),
+   * init() повторно не вызывается и висит старый enabled=true от юзера A.
+   */
+  async function reloadScreenLockForNewAccount(): Promise<void> {
+    try {
+      await useScreenLock().load()
+    } catch {}
   }
 
   onMounted(() => {

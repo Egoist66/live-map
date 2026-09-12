@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { router, usePage } from '@inertiajs/vue3'
+import { api } from '@/services/api'
 
 /** Максимум символов короткой мысли. */
 export const THOUGHT_MAX_LENGTH = 140
@@ -8,25 +8,29 @@ export const THOUGHT_MAX_LENGTH = 140
  * Быстрое редактирование короткой мысли профиля (строка под именем).
  *
  * Открывает диалог, сохраняет через PATCH /profile/thought
- * и точечно перезагружает данные пользователя.
+ * и вставляет в UI запись, возвращённую бэком, без перезагрузки страницы.
  *
  * @param initial геттер текущего значения мысли
- * @param reloadKeys ключи пропсов для перезагрузки после сохранения
+ * @param options необязательный колбэк после сохранения
  * @returns состояние диалога и действия
  * @example
  * const thought = useProfileThought(() => props.profileUser.thought)
  * await thought.save()
  */
-export function useProfileThought(initial: () => string | null | undefined, reloadKeys: string[] = ['profileUser']) {
+export function useProfileThought(
+  initial: () => string | null | undefined,
+  options: { onSaved?: (thought: string | null) => void } = {},
+) {
   const open = ref(false)
   const draft = ref('')
   const saving = ref(false)
   const error = ref<string | null>(null)
-  const committed = ref<string | undefined>(undefined)
+  const committed = ref<string | null | undefined>(undefined)
 
   /** Открывает диалог с текущим текстом. */
   function openDialog(): void {
-    draft.value = (initial() ?? '').trim()
+    const current = committed.value === undefined ? initial() : committed.value
+    draft.value = (current ?? '').trim()
     error.value = null
     open.value = true
   }
@@ -45,33 +49,30 @@ export function useProfileThought(initial: () => string | null | undefined, relo
   }
 
   /**
-   * Отправляет мысль на сервер.
-   * @param value текст или null для очистки
+   * Строка для UI: сохранённое значение, иначе фолбэк.
+   *
+   * @param current актуальная строка (мысль или «О себе»)
+   * @param emptyFallback строка при очищенной мысли (текст «О себе»)
+   * @returns текст для отображения под именем
    */
-  function patchThought(value: string | null): Promise<void> {
-    return new Promise((resolve, reject) => {
-      router.patch(route('profile.thought'), { thought: value }, {
-        preserveScroll: true,
-        preserveState: true,
-        onSuccess: () => resolve(),
-        onError: () => reject(new Error('Не удалось сохранить мысль')),
-      })
-    })
+  function display(current: string, emptyFallback: string): string {
+    if (committed.value === undefined) return current
+    return committed.value ?? emptyFallback
   }
 
-  /** Сохраняет черновик, мгновенно показывает его и перезагружает пользователя. */
+  /** Сохраняет черновик и вставляет ответ бэка в UI. */
   async function save(): Promise<void> {
     const value = draft.value.trim().slice(0, THOUGHT_MAX_LENGTH)
     const next = value === '' ? null : value
     saving.value = true
     error.value = null
     try {
-      await patchThought(next)
+      const res = await api.patch('/profile/thought', { thought: next })
+      const returned = (res.data as any)?.thought
+      const saved = typeof returned === 'string' ? returned : next
+      committed.value = saved
       open.value = false
-      committed.value = next ?? ''
-      applyLocal(next)
-      await reloadUser()
-      committed.value = undefined
+      options.onSaved?.(saved)
     } catch {
       error.value = 'Не удалось сохранить мысль'
     } finally {
@@ -79,27 +80,5 @@ export function useProfileThought(initial: () => string | null | undefined, relo
     }
   }
 
-  /**
-   * Мгновенно пишет значение в пропсы страницы, не дожидаясь сети.
-   * @param value сохранённый текст или null
-   */
-  function applyLocal(value: string | null): void {
-    try {
-      const bag = (usePage().props as any)?.[reloadKeys[0]]
-      if (bag && typeof bag === 'object') bag.thought = value
-    } catch {}
-  }
-
-  /** Точечно перезагружает пользователя с сервера. */
-  function reloadUser(): Promise<void> {
-    return new Promise((resolve) => {
-      try {
-        router.reload({ only: reloadKeys, onFinish: () => resolve() })
-      } catch {
-        resolve()
-      }
-    })
-  }
-
-  return { open, draft, saving, error, committed, openDialog, close, setDraft, save }
+  return { open, draft, saving, error, committed, openDialog, close, setDraft, display, save }
 }

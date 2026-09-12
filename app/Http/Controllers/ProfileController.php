@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Services\CountryResolver;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -209,10 +210,12 @@ class ProfileController extends Controller
     /**
      * Быстрое обновление короткой мысли профиля (строка под именем).
      *
+     * Для AJAX возвращает обновлённую запись, для Inertia — redirect back.
+     *
      * @param \Illuminate\Http\Request $request
-     * @return \Illuminate\Http\RedirectResponse
+     * @return \Illuminate\Http\RedirectResponse|\Illuminate\Http\JsonResponse
      */
-    public function updateThought(Request $request): RedirectResponse
+    public function updateThought(Request $request): RedirectResponse|JsonResponse
     {
         $data = $request->validate([
             'thought' => ['nullable', 'string', 'max:140'],
@@ -224,6 +227,10 @@ class ProfileController extends Controller
         $user = $request->user();
         $user->thought = $thought;
         $user->save();
+
+        if ($request->wantsJson()) {
+            return response()->json(['thought' => $user->thought]);
+        }
 
         return back();
     }

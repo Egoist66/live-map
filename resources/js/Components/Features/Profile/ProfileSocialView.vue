@@ -100,7 +100,7 @@ const statCls = 'flex-1 min-w-0 flex flex-col items-center sm:block sm:text-left
           <span class="block w-24 h-24 sm:w-36 sm:h-36 rounded-[20px] overflow-hidden bg-stone-100 dark:bg-zinc-800">
             <Avatar :image="avatarSrc" shape="square" class="!w-full !h-full !rounded-[20px] [&_img]:!rounded-[20px] [&_img]:object-cover" />
           </span>
-          <OnlineDot :online="online" size="w-5 h-5 sm:w-6 sm:h-6" class="absolute bottom-1.5 right-1.5 ring-[3px] ring-white dark:ring-zinc-900" />
+          <OnlineDot :online="online" size="w-5 h-5 sm:w-6 sm:h-6" class="absolute bottom-2 right-2 sm:bottom-2.5 sm:right-2.5" />
         </button>
         <div class="min-w-0 flex-1 sm:pb-1">
           <div class="flex items-center gap-2 min-w-0 flex-wrap">

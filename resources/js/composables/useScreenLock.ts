@@ -55,6 +55,27 @@ let lastPoke = 0
 let timer: ReturnType<typeof setTimeout> | null = null
 let bound = false
 
+/**
+ * Глобальный сброс скринлока при смене аккаунта / выходе.
+ *
+ * Чинит баг: вышел из A (локер включён), зашёл в B (локер выключен) —
+ * через 5 минут прилетал чужой таймер и лочил экран B.
+ * Причина — модульный синглтон хранил enabled/timeout/cachedCode юзера A,
+ * а useAuthSession его не сбрасывал.
+ */
+export function resetScreenLockSession(): void {
+  disarm()
+  locked.value = false
+  enabled.value = false
+  cachedCode = null
+  initialized.value = false
+  lastPoke = 0
+  error.value = null
+  writeMirror(false, timeoutMin.value, kind.value)
+  broadcastLockState()
+  void kvDel(CODE_KEY).catch(() => {})
+}
+
 function disarm() {
   if (timer) clearTimeout(timer)
   timer = null
@@ -124,12 +145,11 @@ export function useScreenLock() {
   const isLocked = computed(() => enabled.value && locked.value)
 
   async function init() {
+    bind()
     if (initialized.value) {
-      bind()
       arm()
       return
     }
-    bind()
     await load()
   }
 
@@ -137,15 +157,22 @@ export function useScreenLock() {
     loading.value = true
     error.value = null
     try {
-      const s = await fetchScreenLock()
+      const fetchedState = await fetchScreenLock()
       offline.value = false
-      enabled.value = s.enabled
-      timeoutMin.value = s.timeout
-      kind.value = s.kind
-      const local = await readLocal()
-      cachedCode = local.code
-      await kvSet(TIMEOUT_KEY, String(s.timeout))
-      await kvSet(KIND_KEY, s.kind)
+      enabled.value = fetchedState.enabled
+      timeoutMin.value = fetchedState.timeout
+      kind.value = fetchedState.kind
+      const localState = await readLocal()
+      const hasServerCode = fetchedState.enabled
+      cachedCode = hasServerCode ? localState.code : null
+      if (hasServerCode) {
+        await kvSet(TIMEOUT_KEY, String(fetchedState.timeout))
+        await kvSet(KIND_KEY, fetchedState.kind)
+      } else {
+        await kvDel(CODE_KEY)
+        await kvSet(TIMEOUT_KEY, String(fetchedState.timeout))
+        await kvSet(KIND_KEY, fetchedState.kind)
+      }
     } catch {
       offline.value = true
       const local = await readLocal()
