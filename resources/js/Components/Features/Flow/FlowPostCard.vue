@@ -8,6 +8,8 @@ import Card from 'primevue/card'
 import InputText from 'primevue/inputtext'
 import Checkbox from 'primevue/checkbox'
 import { useFlowComments } from '@/composables/useFlowComments'
+import { useLikersPreview } from '@/composables/useLikersPreview'
+import LikersDialog from '@/Components/Features/Feedback/LikersDialog.vue'
 import { formatFlowDate } from '@/utils/flowDate'
 import type { FlowComment, FlowPost } from '@/types/flow'
 
@@ -21,6 +23,11 @@ const emit = defineEmits<{
 
 const expanded = ref(false)
 const thread = useFlowComments(props.post.id)
+const postLikers = useLikersPreview(
+  'flow',
+  () => props.post?.id ?? null,
+  () => props.post?.likes_count ?? 0,
+)
 const sharing = ref(false)
 const toast = (() => {
   try {
@@ -122,10 +129,13 @@ async function share(): Promise<void> {
             text
             rounded
             :loading="likeBusy"
-            :class="post.liked ? '!text-rose-500' : '!text-stone-500 dark:!text-zinc-400'"
-            :label="String(post.likes_count)"
+            :class="[post.liked ? '!text-rose-500' : '!text-stone-500 dark:!text-zinc-400', '!w-10 !h-10']"
             @click="emit('like', post.id)"
+            aria-label="Лайк"
+            v-tooltip.bottom="postLikers.tooltip.value"
+            @mouseenter="postLikers.ensure()"
           />
+          <button v-if="post.likes_count > 0" @click="postLikers.open()" class="px-1 text-[13px] font-bold text-stone-500 dark:text-zinc-400 hover:underline" title="Кто лайкнул">{{ post.likes_count }}</button>
           <Button icon="pi pi-comment" text rounded severity="secondary" :label="String(post.comments_count)" @click="toggleComments()" />
           <span class="flex-1" />
           <Button icon="pi pi-share-alt" text rounded severity="secondary" :loading="sharing" @click="share()" />
@@ -206,6 +216,7 @@ async function share(): Promise<void> {
         <button v-else-if="post.comments_count > 0" class="mt-2 text-[13px] font-semibold text-stone-500 hover:underline" @click="toggleComments()">
           Показать комментарии ({{ post.comments_count }})
         </button>
+        <LikersDialog :visible="postLikers.opened.value" @update:visible="(v:boolean)=>{ v ? postLikers.open() : postLikers.close() }" title="Лайки" :likers="postLikers.likers.value" :loading="postLikers.loading.value" :total="postLikers.total.value" />
       </article>
     </template>
   </Card>

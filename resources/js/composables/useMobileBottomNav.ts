@@ -31,11 +31,30 @@ export function useMobileBottomNav() {
   const navHidden = computed(() => keyboardOpen.value)
 
   /**
+   * Десктоп с физической клавиатурой: visualViewport не сжимается,
+   * фокус в инпуте не означает экранную клавиатуру. Иначе фокус
+   * в поле чата на десктопе добавлял бы `native-keyboard-open`
+   * и дёргал высоту `.h-app-full` вниз/вверх.
+   *
+   * @returns true на ширине десктопа (lg и шире)
+   */
+  function isDesktopViewport(): boolean {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return false
+    }
+    return window.matchMedia('(min-width: 1024px)').matches
+  }
+
+  /**
    * Пересчитывает признак открытой клавиатуры по visualViewport.
    *
    * @returns void
    */
   function recalcKeyboard(): void {
+    if (isDesktopViewport()) {
+      keyboardOpen.value = false
+      return
+    }
     const viewport = window.visualViewport
     if (!viewport) {
       keyboardOpen.value = false
@@ -66,6 +85,9 @@ export function useMobileBottomNav() {
    * @returns void
    */
   function onFocusIn(event: FocusEvent): void {
+    if (isDesktopViewport()) {
+      return
+    }
     const target = event.target as HTMLElement | null
     const tag = target?.tagName ?? ''
     const isField = tag === 'INPUT' || tag === 'TEXTAREA'

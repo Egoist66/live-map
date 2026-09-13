@@ -19,9 +19,11 @@ import { useAppUpdates } from "@/composables/useAppUpdates";
 import { useSecurityImpersonations } from "@/composables/useSecurityImpersonations";
 import { avatarSrcFor } from "@/composables/useAvatar";
 import { useAppConfirm } from "@/composables/useAppConfirm";
+import { useNotificationsReadAll } from "@/composables/useNotificationsReadAll";
 import { describeInboxRow } from "@/services/notifications.api";
 
 const bell = useBellNotifications();
+const readAllState = useNotificationsReadAll();
 const pinAct = usePinActivity();
 const admRep = useAdminReports();
 const updates = useAppUpdates();
@@ -111,6 +113,18 @@ function openNews(item: any) {
           </div>
         </div>
         <div class="flex items-center gap-1.5 shrink-0">
+          <Button
+            v-if="readAllState.hasUnread.value"
+            @click="readAllState.readAll()"
+            :loading="readAllState.reading.value"
+            icon="pi pi-check"
+            text
+            rounded
+            severity="success"
+            aria-label="Прочитать все уведомления"
+            v-tooltip.bottom="'Прочитать все'"
+            class="!w-9 !h-9"
+          />
           <Button
             v-if="pinAct.activities.value.length"
             @click="askClearActivities()"

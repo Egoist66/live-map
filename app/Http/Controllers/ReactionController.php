@@ -10,6 +10,42 @@ use Illuminate\Http\Request;
 
 class ReactionController extends Controller
 {
+    /**
+     * Кто отреагировал на пин: открытый список для тултипа и модалки.
+     *
+     * @param Request $request запрос
+     * @param Pin $pin пин
+     * @return \Illuminate\Http\JsonResponse список реакций и общее число
+     */
+    public function likers(Request $request, Pin $pin)
+    {
+        abort_unless($pin->isVisibleForGender($request->user()), 403);
+
+        $reactions = Reaction::where('reactable_type', 'pin')
+            ->where('reactable_id', $pin->id)
+            ->with('user:id,name,avatar_path')
+            ->latest()
+            ->limit(50)
+            ->get();
+
+        $list = $reactions->map(function ($reaction) {
+            $user = $reaction->user;
+
+            return [
+                'user_id' => $user?->id ?? $reaction->user_id,
+                'name' => $user?->name ?? 'Пользователь',
+                'avatar_url' => $user?->avatar_url,
+                'type' => $reaction->type,
+                'created_at' => $reaction->created_at?->toISOString(),
+            ];
+        })->values();
+
+        return response()->json([
+            'likers' => $list,
+            'total' => (int) $pin->reactions_count,
+        ]);
+    }
+
     public function toggle(Request $request)
     {
         $data = $request->validate([

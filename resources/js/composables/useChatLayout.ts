@@ -27,7 +27,23 @@ export function useChatLayout(
 
   const { isNative } = usePlatform()
 
+  /**
+   * Ручной оффсет клавиатуры запрещён на десктопе: высота фрейма
+   * там стабильна через `h-app-full`, иначе инпут дёргался бы.
+   *
+   * @returns true на ширине десктопа (lg и шире)
+   */
+  function isDesktopViewport(): boolean {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return false
+    }
+    return window.matchMedia('(min-width: 1024px)').matches
+  }
+
   const frameStyle = computed(() => {
+    if (isDesktopViewport()) {
+      return {}
+    }
     const open = isChatKeyboardOpen?.value ?? false
     const height = keyboardHeight?.value ?? 0
     if (!open || !height || isNative) {

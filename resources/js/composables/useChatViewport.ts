@@ -40,7 +40,26 @@ export function useChatViewport() {
     })
   }
 
+  /**
+   * Десктоп с физической клавиатурой: фокус в инпуте не открывает
+   * экранную клавиатуру, а автоскролл списка при фокусе дёргал бы
+   * чат вниз/вверх. Мобильное поведение не меняется.
+   *
+   * @returns true на ширине десктопа (lg и шире)
+   */
+  function isDesktopViewport(): boolean {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return false
+    }
+    return window.matchMedia('(min-width: 1024px)').matches
+  }
+
   function onResize() {
+    if (isDesktopViewport()) {
+      keyboardHeight.value = 0
+      isKeyboardOpen.value = false
+      return
+    }
     const vv = window.visualViewport
     if (!vv) return
     const diff = window.innerHeight - vv.height - vv.offsetTop
@@ -52,6 +71,10 @@ export function useChatViewport() {
   }
 
   function onFocusIn(e: FocusEvent) {
+    if (isDesktopViewport()) {
+      chatInputFocused.value = false
+      return
+    }
     const target = e.target as HTMLElement
     if (target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
       return

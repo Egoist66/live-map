@@ -104,4 +104,21 @@ export const flowApi = {
   async removeComment(commentId: number): Promise<void> {
     await api.delete(`/api/flow-comments/${commentId}`)
   },
+
+  /**
+   * Кто лайкнул пост (для тултипа и модалки лайков).
+   *
+   * @param postId id поста
+   * @returns свежие лайки с пользователями и общее число
+   */
+  async likers(postId: number): Promise<{ likers: FlowLiker[]; total: number }> {
+    const { data } = await api.get<{ likers: FlowLiker[]; total: number }>(`/api/flow-posts/${postId}/likers`)
+    return data
+  },
+}
+
+export interface FlowLiker {
+  user_id: number
+  name: string
+  avatar_url: string | null
 }

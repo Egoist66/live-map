@@ -257,6 +257,15 @@ html.native-keyboard-open .h-app-full {
 .h-app-map-desktop {
   height: calc(100dvh - var(--app-header-md));
 }
+/* Десктопная карта в центрированной оболочке (как хедер/футер):
+   сверху отступ 16px, снизу встык — белой полосы нет.
+   На мобилке класс пустой, работает обычный h-app-full. */
+@media (min-width: 1024px) {
+  .map-desktop-frame {
+    height: calc(100dvh - var(--app-header-md) - 16px);
+    max-height: calc(100dvh - var(--app-header-md) - 16px);
+  }
+}
 /* Обычные страницы: min-height учитывает шапку и вырез; зазор под нижнее
    меню уже даёт AuthenticatedLayout (main pb), тут только высота. */
 .page-scroll {

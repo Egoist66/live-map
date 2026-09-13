@@ -14,6 +14,8 @@ import { useMentionInput } from '@/composables/useMentionInput'
 import { useEnterToSend } from '@/composables/useEnterToSend'
 import { renderWithMentions } from '@/composables/useMentions'
 import { useMentionNavigate } from '@/composables/useMentionNavigate'
+import { useLikersPreview } from '@/composables/useLikersPreview'
+import LikersDialog from '@/Components/Features/Feedback/LikersDialog.vue'
 import { avatarSrcFor } from '@/composables/useAvatar'
 
 const props = defineProps<{ gallery: any; comments: any; isOwn: boolean; userName?: string; avatarSrc?: string }>()
@@ -27,6 +29,11 @@ const mentionInput = useMentionInput({
   setText: (v: string) => { props.comments.draft.value = v },
 })
 const { handleEnterToSend, enterPlaceholder } = useEnterToSend()
+const photoLikers = useLikersPreview(
+  'photo',
+  () => props.gallery.active.value?.id ?? null,
+  () => props.gallery.active.value?.likes_count ?? 0,
+)
 const commentPlaceholder = enterPlaceholder('Добавить комментарий… Shift+Enter — новая строка', 'Добавить комментарий…')
 const mentionNav = useMentionNavigate()
 
@@ -61,7 +68,7 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
           <Button icon="pi pi-chevron-right" rounded text size="small" class="!absolute right-1.5 top-1/2 -translate-y-1/2 z-10 !bg-black/40 !text-white !border-0 !w-9 !h-9" @click="gallery.stepPhoto(1)" aria-label="Вперёд" />
         </div>
         <div class="px-4 pt-2.5 flex items-center gap-1">
-          <Button :icon="gallery.active.value.liked ? 'pi pi-heart-fill' : 'pi pi-heart'" rounded text :loading="viewer.likeLoading.value" :class="['!w-10 !h-10', gallery.active.value.liked ? '!text-red-500' : '']" @click="viewer.onLike(viewer.incognito.value)" :aria-label="gallery.active.value.liked ? 'Убрать лайк' : 'Лайк'" />
+          <Button :icon="gallery.active.value.liked ? 'pi pi-heart-fill' : 'pi pi-heart'" rounded text :loading="viewer.likeLoading.value" :class="['!w-10 !h-10', gallery.active.value.liked ? '!text-red-500' : '']" @click="viewer.onLike(viewer.incognito.value)" :aria-label="gallery.active.value.liked ? 'Убрать лайк' : 'Лайк'" v-tooltip.bottom="photoLikers.tooltip.value" @mouseenter="photoLikers.ensure()" />
           <Button icon="pi pi-comment" rounded text class="!w-10 !h-10" aria-label="Комментарии" />
           <span class="flex-1" />
           <template v-if="isOwn">
@@ -74,24 +81,10 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
             🕵️<span class="font-bold text-violet-500">PRO</span>
           </label>
         </div>
-        <button type="button" class="px-4 text-sm font-black text-left hover:opacity-70" @click="gallery.likersOpen.value ? gallery.closeLikers() : gallery.openLikers(gallery.active.value)">{{ gallery.active.value.likes_count }} отметок «Нравится»</button>
-        <div v-if="gallery.likersOpen.value" class="px-4 mt-2 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-stone-50 dark:bg-zinc-900 p-2">
-          <div class="flex items-center gap-2 px-1 py-1">
-            <span class="text-xs font-black flex-1">Лайки · {{ gallery.likersTotal.value }}<span v-if="gallery.likersIncognito.value" class="text-violet-500"> · 🕵️{{ gallery.likersIncognito.value }}</span></span>
-            <Button icon="pi pi-times" rounded text size="small" class="!w-7 !h-7" @click="gallery.closeLikers()" aria-label="Закрыть" />
-          </div>
-          <div v-if="gallery.likersLoading.value" class="py-3 text-center text-xs text-stone-400">Загружаем…</div>
-          <div v-else-if="!gallery.likers.value.length" class="py-3 text-center text-xs text-stone-400">Пока никто не лайкнул</div>
-          <div v-else class="max-h-44 overflow-y-auto space-y-1">
-            <div v-for="l in gallery.likers.value" :key="`${l.user_id ?? 'inc'}-${l.created_at}`" class="flex items-center gap-2 px-1 py-1">
-              <span class="w-7 h-7 rounded-full bg-stone-200 dark:bg-white/10 grid place-items-center text-[11px] font-black overflow-hidden">{{ l.is_incognito ? '🕵️' : (l.name || '?').slice(0, 1).toUpperCase() }}</span>
-              <span class="text-xs font-bold truncate flex-1">{{ l.is_incognito ? 'Тайный поклонник' : l.name }}</span>
-              <span v-if="l.is_incognito" class="text-[10px] font-bold text-violet-500">PRO</span>
-            </div>
-          </div>
-        </div>
+        <button type="button" class="px-4 text-sm font-black text-left hover:opacity-70" @click="photoLikers.open()" v-tooltip.bottom="photoLikers.tooltip.value" @mouseenter="photoLikers.ensure()">{{ gallery.active.value.likes_count }} отметок «Нравится»</button>
+        <LikersDialog :visible="photoLikers.opened.value" @update:visible="(v:boolean)=>{ v ? photoLikers.open() : photoLikers.close() }" title="Лайки" :likers="photoLikers.likers.value" :loading="photoLikers.loading.value" :total="photoLikers.total.value" />
         <div class="px-4 mt-1.5">
-          <div v-if="!viewer.editing.value && gallery.active.value.caption" class="text-sm break-words dark:text-zinc-100"><span class="font-bold">{{ userName }} </span>{{ gallery.active.value.caption }}</div>
+          <div v-if="!viewer.editing.value && gallery.active.value.caption" class="text-sm break-words dark:text-zinc-100"><span class="font-bold mr-1">{{ userName }}</span>{{ gallery.active.value.caption }}</div>
           <div v-if="viewer.editing.value" class="flex gap-2">
             <InputText v-model="viewer.captionDraft.value" placeholder="Подпись…" maxlength="500" class="flex-1 min-w-0 !rounded-xl !text-sm" />
             <Button icon="pi pi-check" rounded size="small" :loading="viewer.saveLoading.value" class="!bg-violet-600 !border-violet-600 shrink-0" @click="viewer.onSaveCaption" aria-label="Сохранить" />
@@ -103,7 +96,7 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
           <div v-else-if="!comments.comments.value.length" class="text-xs text-stone-400 py-2">Комментариев пока нет — стань первым</div>
           <div v-for="c in comments.comments.value" :key="c.id" :id="`photo-comment-${c.id}`" :class="['flex gap-2.5 items-start rounded-xl px-2 py-1 -mx-2', Number(gallery.highlightCommentId?.value) === Number(c.id) ? 'bg-violet-50 dark:bg-violet-950/40 ring-1 ring-violet-500/40' : '']">
             <span class="w-7 h-7 shrink-0 rounded-full bg-stone-200 dark:bg-white/10 grid place-items-center text-[11px] font-black text-stone-600 dark:text-zinc-200">{{ (c.user?.name || '?').slice(0, 1).toUpperCase() }}</span>
-            <div class="min-w-0 flex-1 text-sm break-words dark:text-zinc-100"><span class="font-bold">{{ c.user?.name || 'Пользователь' }} </span><span class="comment-body" v-html="renderWithMentions(c.content || '')" @click="mentionNav.onRichClick"></span></div>
+            <div class="min-w-0 flex-1 text-sm break-words dark:text-zinc-100"><span class="font-bold mr-1">{{ c.user?.name || 'Пользователь' }}</span><span class="comment-body" v-html="renderWithMentions(c.content || '')" @click="mentionNav.onRichClick"></span></div>
             <Button v-if="isOwn" icon="pi pi-times" text rounded size="small" class="!w-8 !h-8 shrink-0" @click="comments.remove(c.id)" aria-label="Удалить комментарий" />
           </div>
           <Message v-if="comments.error.value" severity="error" :closable="false" class="!rounded-2xl !text-xs">{{ comments.error.value }}</Message>

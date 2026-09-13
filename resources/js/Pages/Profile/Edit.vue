@@ -78,28 +78,28 @@ const { setTheme } = useTheme()
   gap: 20px !important;
 }
 .settings-tabs :deep(.p-tablist-content) {
-  background: transparent !important;
-  border: 0 !important;
-}
-.settings-tabs :deep(.p-tablist-tab-list) {
   display: grid !important;
   grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
   gap: 0.5rem !important;
   overflow: visible !important;
   background: transparent !important;
   border: 0 !important;
+  padding: 0 !important;
   scrollbar-width: none !important;
+}
+@media (min-width: 640px) {
+  .settings-tabs :deep(.p-tablist-content) {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
 }
 .settings-tabs :deep(.p-tab) {
   padding: 0 !important;
   margin: 0 !important;
   min-width: 0 !important;
+  width: 100% !important;
+  white-space: normal !important;
   background: transparent !important;
   border: 0 !important;
-}
-.settings-tabs :deep(.p-tablist-content::-webkit-scrollbar),
-.settings-tabs :deep(.p-tablist-tab-list::-webkit-scrollbar) {
-  display: none !important;
 }
 .settings-tabs :deep(.p-tablist-prev-button),
 .settings-tabs :deep(.p-tablist-next-button) {

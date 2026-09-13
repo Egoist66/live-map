@@ -14,6 +14,8 @@ import { pinBlurInfo } from '@/composables/useLocationBlur'
 import { usePinLifetime } from '@/composables/usePinLifetime'
 import { renderWithMentions } from '@/composables/useMentions'
 import { useMentionNavigate } from '@/composables/useMentionNavigate'
+import { useLikersPreview } from '@/composables/useLikersPreview'
+import LikersDialog from '@/Components/Features/Feedback/LikersDialog.vue'
 import { useCommentComposer } from '@/composables/useCommentComposer'
 import { usePinCommentInput } from '@/composables/usePinCommentInput'
 import { useEnterToSend } from '@/composables/useEnterToSend'
@@ -32,6 +34,11 @@ const { handleEnterToSend, enterPlaceholder } = useEnterToSend()
 const editCommentPlaceholder = enterPlaceholder('Shift+Enter — новая строка', 'Новая строка')
 const newCommentPlaceholder = enterPlaceholder('Написать комментарий... Shift+Enter — новая строка', 'Написать комментарий...')
 const mentionNav = useMentionNavigate()
+const pinLikers = useLikersPreview(
+  'pin',
+  () => props.pin?.id ?? null,
+  () => props.pin?.reactions_count ?? 0,
+)
 const composer = useCommentComposer()
 const composerRef = ref<any>(null)
 const { cardRef, listRef, commentInput, cardStyle, onCommentInput, onInputFocus, pickMention, focusForReply, blurInput } = commentBox
@@ -169,7 +176,10 @@ function canDeleteComment(c: any): boolean {
         <PinInviteButton :pin-id="pin.id" :is-owner="pin.is_owner" />
       </div>
       <div class="flex gap-1.5 mt-4">
-        <button @click="emit('react', 'like')" :disabled="reacting" :class="['flex-1 rounded-full py-2.5 text-xs font-semibold border active:scale-95 transition disabled:opacity-50', pin.my_reaction === 'like' ? 'bg-rose-500 text-white border-rose-500 shadow-[0_4px_16px_-4px_rgba(244,63,94,0.5)]' : 'bg-rose-500/10 dark:bg-rose-500/15 border-rose-500/30 dark:border-rose-400/30 text-rose-600 dark:text-rose-300 hover:bg-rose-500/20']">❤️ {{ pin.reactions_count || 0 }}</button>
+        <div :class="['flex-1 rounded-full text-xs font-semibold border transition flex items-center justify-center overflow-hidden', pin.my_reaction === 'like' ? 'bg-rose-500 text-white border-rose-500 shadow-[0_4px_16px_-4px_rgba(244,63,94,0.5)]' : 'bg-rose-500/10 dark:bg-rose-500/15 border-rose-500/30 dark:border-rose-400/30 text-rose-600 dark:text-rose-300']" v-tooltip.bottom="pinLikers.tooltip.value" @mouseenter="pinLikers.ensure()">
+          <button @click="emit('react', 'like')" :disabled="reacting" class="py-2.5 pl-4 pr-0.5 active:scale-95 transition disabled:opacity-50" aria-label="Лайк">❤️</button>
+          <button @click="pinLikers.open()" class="py-2.5 pl-0.5 pr-4 font-bold hover:underline" title="Кто лайкнул">{{ pin.reactions_count || 0 }}</button>
+        </div>
         <button @click="emit('react', 'fire')" :disabled="reacting" :class="['px-4 rounded-full text-xs font-semibold border active:scale-95 transition disabled:opacity-50', pin.my_reaction === 'fire' ? 'bg-orange-500 text-white border-orange-500 shadow-[0_4px_16px_-4px_rgba(249,115,22,0.5)]' : 'bg-orange-500/10 dark:bg-orange-500/15 border-orange-500/30 dark:border-orange-400/30 hover:bg-orange-500/20']">🔥</button>
         <button @click="emit('react', 'useful')" :disabled="reacting" :class="['px-4 rounded-full text-xs font-semibold border active:scale-95 transition disabled:opacity-50', pin.my_reaction === 'useful' ? 'bg-emerald-500 text-white border-emerald-500 shadow-[0_4px_16px_-4px_rgba(16,185,129,0.5)]' : 'bg-emerald-500/10 dark:bg-emerald-500/15 border-emerald-500/30 dark:border-emerald-400/30 hover:bg-emerald-500/20']">👍</button>
         <button @click="emit('report')" :disabled="reporting" class="w-10 h-10 rounded-full grid place-items-center border active:scale-95 transition disabled:opacity-50 bg-zinc-500/10 dark:bg-zinc-500/15 border-zinc-500/25 dark:border-zinc-500/30 text-zinc-500 dark:text-zinc-300 hover:bg-red-500/15 hover:border-red-500/40 hover:text-red-500 dark:hover:text-red-400">⚠</button>
@@ -255,6 +265,7 @@ function canDeleteComment(c: any): boolean {
       @submit="onComposerSubmit"
       @cancel="onComposerCancel"
     />
+    <LikersDialog :visible="pinLikers.opened.value" @update:visible="(v:boolean)=>{ v ? pinLikers.open() : pinLikers.close() }" title="Реакции" :likers="pinLikers.likers.value" :loading="pinLikers.loading.value" :total="pinLikers.total.value" show-type />
   </div>
 </template>
 <style scoped>

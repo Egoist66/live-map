@@ -319,4 +319,41 @@ class FlowPostController extends Controller
             'likes_count' => (int) $post->refresh()->likes_count,
         ]);
     }
+
+    /**
+     * Кто лайкнул пост: открытый список для тултипа и модалки.
+     *
+     * @param Request $request запрос
+     * @param FlowPost $post пост
+     * @return \Illuminate\Http\JsonResponse список лайков и общее число
+     */
+    public function likers(Request $request, FlowPost $post)
+    {
+        $viewer = $request->user();
+
+        if ((int) $viewer->id !== (int) $post->user_id) {
+            $this->abortIfBlocked($viewer, $post->user);
+        }
+
+        $likes = FlowPostLike::where('post_id', $post->id)
+            ->with('user:id,name,avatar_path')
+            ->orderByDesc('id')
+            ->limit(50)
+            ->get();
+
+        $list = $likes->map(function ($like) {
+            $user = $like->user;
+
+            return [
+                'user_id' => $user?->id ?? $like->user_id,
+                'name' => $user?->name ?? 'Пользователь',
+                'avatar_url' => $user?->avatar_url,
+            ];
+        })->values();
+
+        return response()->json([
+            'likers' => $list,
+            'total' => (int) $post->likes_count,
+        ]);
+    }
 }
