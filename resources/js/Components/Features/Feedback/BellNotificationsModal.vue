@@ -624,7 +624,7 @@ function openNews(item: any) {
                 <div class="text-xs text-stone-500 dark:text-zinc-400 mt-1">Лайки ULove и UFlow — во вкладке «События»</div>
               </div>
               <div v-else class="space-y-1">
-                <button
+                <div
                   v-for="a in pinAct.pinActivities.value"
                   :key="a.id"
                   @click="bell.close(); pinAct.goPin(a)"
@@ -633,7 +633,7 @@ function openNews(item: any) {
                       ? 'bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-800'
                       : 'hover:bg-stone-50 dark:hover:bg-zinc-800 border border-transparent'
                   "
-                  class="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition min-h-[56px]"
+                  class="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition min-h-[56px] cursor-pointer"
                 >
                   <span class="relative shrink-0"
                     ><Avatar
@@ -642,14 +642,14 @@ function openNews(item: any) {
                       class="!w-10 !h-10 [&_img]:object-cover"
                       :pt="{ image: { class: 'object-cover' } }" /><span
                       class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center border-2 border-white dark:border-zinc-900 text-[10px]"
-                      :class="a.kind === 'comment' ? 'bg-violet-600' : a.kind === 'mention' ? 'bg-amber-500' : a.kind === 'photo_comment' || a.kind === 'photo_like' ? 'bg-sky-500' : a.kind === 'sub_pin' ? 'bg-emerald-500' : 'bg-rose-500'"
+                      :class="a.kind === 'comment' ? 'bg-violet-600' : a.kind === 'mention' ? 'bg-amber-500' : a.kind === 'photo_comment' || a.kind === 'photo_like' ? 'bg-sky-500' : a.kind === 'sub_pin' ? 'bg-emerald-500' : a.kind === 'invite' ? 'bg-amber-500' : a.kind === 'invite_accepted' ? 'bg-emerald-500' : 'bg-rose-500'"
                       >{{ pinAct.describe(a).emoji }}</span
                     ></span
                   >
                   <div class="min-w-0 flex-1">
                     <div class="flex items-center gap-1.5">
                       <span class="text-sm font-semibold dark:text-white truncate">{{
-                        a.pin?.title || (a.kind === 'sub_pin' ? "Новый пин" : a.photo ? "Ваше фото" : a.kind === 'mention' ? "Вас упомянули" : "Ваш пин")
+                        a.pin?.title || (a.kind === 'sub_pin' ? "Новый пин" : a.photo ? "Ваше фото" : a.kind === 'mention' ? "Вас упомянули" : a.kind === 'invite' ? "Приглашение в пин" : a.kind === 'invite_accepted' ? "Приглашение принято" : "Ваш пин")
                       }}</span
                       ><span
                         v-if="a.created_at"
@@ -660,13 +660,17 @@ function openNews(item: any) {
                     <div class="text-xs text-stone-500 dark:text-zinc-400 truncate">
                       {{ pinAct.describe(a).text }}
                     </div>
+                    <div v-if="a.kind === 'invite' && !a.read_at" class="flex items-center gap-2 mt-2">
+                      <Button label="Принять" icon="pi pi-check" size="small" severity="success" rounded @click.stop="pinAct.acceptInvite(a)" />
+                      <Button label="Отклонить" icon="pi pi-times" size="small" severity="secondary" outlined rounded @click.stop="pinAct.declineInvite(a)" />
+                    </div>
                   </div>
                   <span
-                    v-if="!a.read_at"
+                    v-if="!a.read_at && a.kind !== 'invite'"
                     class="w-2.5 h-2.5 bg-rose-500 rounded-full shrink-0"
                   ></span>
-                  <i v-else class="pi pi-chevron-right text-stone-300 dark:text-zinc-600 text-xs shrink-0"></i>
-                </button>
+                  <i v-else-if="a.kind !== 'invite'" class="pi pi-chevron-right text-stone-300 dark:text-zinc-600 text-xs shrink-0"></i>
+                </div>
               </div>
             </div>
           </TabPanel>

@@ -6,7 +6,7 @@ import { api } from './api'
  */
 export interface PinActivityItem {
   id: number | string
-  kind: 'reaction' | 'comment' | 'mention' | 'photo_comment' | 'photo_like' | 'swipe_like' | 'match' | 'sub_pin' | 'sub_photo' | 'sub_level' | 'sub_flow_post' | 'flow_like' | 'flow_comment' | 'flow_reply' | 'flow_mention' | 'invite'
+  kind: 'reaction' | 'comment' | 'mention' | 'photo_comment' | 'photo_like' | 'swipe_like' | 'match' | 'sub_pin' | 'sub_photo' | 'sub_level' | 'sub_flow_post' | 'flow_like' | 'flow_comment' | 'flow_reply' | 'flow_mention' | 'invite' | 'invite_accepted'
   owner_id?: number | null
   reaction_type?: string | null
   excerpt?: string | null
@@ -14,6 +14,8 @@ export interface PinActivityItem {
   photo_comment_id?: number | null
   flow_post_id?: number | null
   flow_comment_id?: number | null
+  invite_id?: number | null
+  pin_id?: number | null
   read_at?: string | null
   created_at?: string | null
   pin?: { id: number; title?: string; category?: string } | null

@@ -44,6 +44,8 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::get('/pins/invites/usage', [\App\Http\Controllers\PinInviteController::class, 'usage']);
     Route::get('/pins/{pin}/invites', [\App\Http\Controllers\PinInviteController::class, 'index']);
     Route::post('/pins/{pin}/invites', [\App\Http\Controllers\PinInviteController::class, 'store'])->middleware('throttle:social-write');
+    Route::post('/pins/{pin}/invites/accept', [\App\Http\Controllers\PinInviteController::class, 'accept'])->middleware('throttle:social-write');
+    Route::post('/pins/{pin}/invites/decline', [\App\Http\Controllers\PinInviteController::class, 'decline'])->middleware('throttle:social-write');
     Route::delete('/pins/{pin}/invites/{invite}', [\App\Http\Controllers\PinInviteController::class, 'destroy'])->middleware('throttle:social-write');
     Route::get('/pins/{pin}/comments', [PinCommentController::class, 'index']);
     Route::post('/pins/{pin}/comments', [PinCommentController::class, 'store'])->middleware('throttle:comments-write');

@@ -2,6 +2,7 @@ import { ref, computed } from 'vue'
 import { router } from '@inertiajs/vue3'
 import { pinActivityApi, type PinActivityItem } from '@/services/pinActivity.api'
 import { notificationsApi, toActivityItem, describeInboxRow, type InboxNotification } from '@/services/notifications.api'
+import { pinInvitesApi } from '@/services/pinInvites.api'
 import { useFileDownload } from '@/composables/useFileDownload'
 import { useBadgeStore } from '@/stores/badges'
 import { useAppUpdates } from '@/composables/useAppUpdates'
@@ -53,10 +54,12 @@ function onActivity(e: any) {
 
 /**
  * Новая строка inbox (сокет или поллер) — в начало ленты без дублей.
+ * Прочитанные строки счётчик не трогают: тост и +1 только для unread.
  */
 function onNotification(e: any) {
   const row = e?.notification as InboxNotification | undefined
   if (!row?.id) return
+  if (row.read_at) return
   try {
     if (!inboxRows.value.some((x) => x.id === row.id)) inboxRows.value = [row, ...inboxRows.value].slice(0, 30)
     onActivity({ activity: toActivityItem(row) })
@@ -119,6 +122,59 @@ async function markOne(a: PinActivityItem) {
 }
 
 /**
+ * Достать id пина из активности приглашения.
+ * @param a элемент ленты kind=invite
+ * @returns id пина или 0
+ */
+function invitePinId(a: PinActivityItem): number {
+  const pinId = Number((a as any).pin?.id || (a as any).pin_id || 0)
+  return Number.isFinite(pinId) ? pinId : 0
+}
+
+/**
+ * Принять приглашение в пин: сервер ставит accepted и шлёт автору уведомление.
+ * Локально помечаем строку прочитанной и гасим счётчики, бэк уже пометил read.
+ * @param a элемент ленты kind=invite
+ */
+async function acceptInvite(a: PinActivityItem): Promise<void> {
+  const pinId = invitePinId(a)
+  if (!pinId) return
+  try {
+    await pinInvitesApi.accept(pinId)
+  } catch {
+    return
+  }
+  if (!a.read_at) {
+    a.read_at = new Date().toISOString()
+    unread.value = Math.max(0, unread.value - 1)
+    try { useBadgeStore().decActivity() } catch {}
+  }
+  const row = inboxRows.value.find((n) => String(n.id) === String(a.id))
+  if (row && !row.read_at) row.read_at = a.read_at ?? new Date().toISOString()
+}
+
+/**
+ * Отклонить приглашение в пин: сервер удаляет invite, уведомление гаснет.
+ * @param a элемент ленты kind=invite
+ */
+async function declineInvite(a: PinActivityItem): Promise<void> {
+  const pinId = invitePinId(a)
+  if (!pinId) return
+  try {
+    await pinInvitesApi.decline(pinId)
+  } catch {
+    return
+  }
+  if (!a.read_at) {
+    a.read_at = new Date().toISOString()
+    unread.value = Math.max(0, unread.value - 1)
+    try { useBadgeStore().decActivity() } catch {}
+  }
+  const row = inboxRows.value.find((n) => String(n.id) === String(a.id))
+  if (row && !row.read_at) row.read_at = a.read_at ?? new Date().toISOString()
+}
+
+/**
  * Удалить всю ленту активности навсегда.
  * Подтверждение — на вызывающей стороне (useAppConfirm в setup-скоупе).
  */
@@ -146,7 +202,7 @@ async function clearAll(): Promise<void> {
  * Виды, которые относятся строго к пинам/фото (вкладка «Пины»).
  * Остальное (ULove, UFlow, подписки на фото/уровень) — вкладка «События».
  */
-export const PIN_ACTIVITY_KINDS = ['reaction', 'comment', 'mention', 'photo_comment', 'photo_like', 'sub_pin', 'invite'] as const
+export const PIN_ACTIVITY_KINDS = ['reaction', 'comment', 'mention', 'photo_comment', 'photo_like', 'sub_pin', 'invite', 'invite_accepted'] as const
 
 /**
  * Проверка: активность относится к пинам, а не к общим событиям.
@@ -215,6 +271,10 @@ function describe(a: PinActivityItem): { emoji: string; text: string } {
   if (a.kind === 'invite') {
     const title = a.pin?.title || 'пин'
     return { emoji: '🎫', text: `${name} приглашает в пин «${title}»` }
+  }
+  if (a.kind === 'invite_accepted') {
+    const title = a.pin?.title || 'пин'
+    return { emoji: '✅', text: `${name} принял приглашение в «${title}»` }
   }
   if (a.kind === 'sub_photo') {
     return { emoji: '📷', text: `${name} добавил новое фото` }
@@ -348,5 +408,5 @@ export function usePinActivity() {
   const subActivities = computed(() => eventActivities.value.filter((a) => a.kind === 'sub_photo' || a.kind === 'sub_level'))
   const loveUnread = computed(() => loveActivities.value.filter((a) => !a.read_at).length)
   const flowUnread = computed(() => flowActivities.value.filter((a) => !a.read_at).length)
-  return { activities, unread, loading, clearing, hasData, pinActivities, eventActivities, pinUnread, eventUnread, loveActivities, flowActivities, subActivities, loveUnread, flowUnread, otherNotifications, otherUnread, describe, refresh, markAllRead, markOne, clearAll, goPin, goNotification, resolveTarget, init, subscribe }
+  return { activities, unread, loading, clearing, hasData, pinActivities, eventActivities, pinUnread, eventUnread, loveActivities, flowActivities, subActivities, loveUnread, flowUnread, otherNotifications, otherUnread, describe, refresh, markAllRead, markOne, clearAll, goPin, goNotification, resolveTarget, acceptInvite, declineInvite, invitePinId, init, subscribe }
 }

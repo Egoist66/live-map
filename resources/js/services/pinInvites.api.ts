@@ -15,6 +15,21 @@ export const pinInvitesApi = {
   async revoke(pinId: number, inviteId: number): Promise<void> {
     await api.delete(`/api/pins/${pinId}/invites/${inviteId}`)
   },
+  /**
+   * Принять приглашение в пин (только приглашённый).
+   * @param pinId id пина
+   */
+  async accept(pinId: number): Promise<any> {
+    const { data } = await api.post(`/api/pins/${pinId}/invites/accept`)
+    return data
+  },
+  /**
+   * Отклонить приглашение в пин (только приглашённый).
+   * @param pinId id пина
+   */
+  async decline(pinId: number): Promise<void> {
+    await api.post(`/api/pins/${pinId}/invites/decline`)
+  },
   async mine(): Promise<any[]> {
     const { data } = await api.get('/api/pins/invited/mine')
     return Array.isArray(data) ? data : []

@@ -1,6 +1,43 @@
 <script setup lang="ts">
 import { useAppNotifications } from '@/composables/useAppNotifications'
+import { usePinActivity } from '@/composables/usePinActivity'
+import Button from 'primevue/button'
+
 const { toasts, remove, openToast } = useAppNotifications()
+const pinAct = usePinActivity()
+
+/**
+ * Принять приглашение прямо из тоста: гасим тост, счётчик гаснет
+ * через acceptInvite (бэк уже пометил уведомление прочитанным).
+ */
+async function acceptFromToast(t: any) {
+  const activity = {
+    id: t.activityId ?? t.id,
+    kind: 'invite',
+    pin: { id: Number(t.pinId || 0) },
+    pin_id: Number(t.pinId || 0),
+    read_at: null,
+    actor: { id: 0 },
+  } as any
+  await pinAct.acceptInvite(activity)
+  remove(t.id)
+}
+
+/**
+ * Отклонить приглашение прямо из тоста.
+ */
+async function declineFromToast(t: any) {
+  const activity = {
+    id: t.activityId ?? t.id,
+    kind: 'invite',
+    pin: { id: Number(t.pinId || 0) },
+    pin_id: Number(t.pinId || 0),
+    read_at: null,
+    actor: { id: 0 },
+  } as any
+  await pinAct.declineInvite(activity)
+  remove(t.id)
+}
 </script>
 <template>
   <div class="fixed top-[calc(var(--app-header-md)+var(--sat)+0.5rem)] sm:top-4 right-3 sm:right-4 left-3 sm:left-auto z-[9999] sm:w-[380px] flex flex-col gap-3 pointer-events-none">
@@ -30,6 +67,10 @@ const { toasts, remove, openToast } = useAppNotifications()
             <span class="text-[11px] text-stone-400 shrink-0">сейчас</span>
           </div>
           <div class="text-[13px] leading-4 text-stone-600 dark:text-zinc-300 truncate mt-0.5">{{ t.body }}</div>
+          <div v-if="t.kind === 'invite' && t.pinId" class="flex items-center gap-2 mt-2" @click.stop>
+            <Button label="Принять" icon="pi pi-check" size="small" severity="success" rounded @click.stop="acceptFromToast(t)" />
+            <Button label="Отклонить" icon="pi pi-times" size="small" severity="secondary" outlined rounded @click.stop="declineFromToast(t)" />
+          </div>
         </div>
         <button @click.stop="remove(t.id)" class="shrink-0 w-8 h-8 grid place-items-center rounded-full hover:bg-stone-100 dark:hover:bg-zinc-800 text-stone-400 hover:text-stone-600 transition">
           <i class="pi pi-times text-xs"></i>

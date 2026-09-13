@@ -17,6 +17,7 @@ class PinInvitedNotification extends UserNotification
         private Pin $pin,
         private User $inviter,
         private int $inviteeId,
+        private ?int $inviteId = null,
     ) {}
 
     public function type(): string { return 'pin.invited'; }
@@ -37,6 +38,7 @@ class PinInvitedNotification extends UserNotification
             'activity' => static::activityShape($id, 'invite', $this->inviteeId, [
                 'pin_id' => $this->pin->id,
                 'actor_id' => $this->inviter->id,
+                'invite_id' => $this->inviteId,
                 'pin' => ['id' => $this->pin->id, 'title' => $this->pin->title, 'category' => $this->pin->category],
                 'actor' => static::actorShape($this->inviter),
             ]),

@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Pin;
 use App\Models\PinInvite;
 use App\Models\User;
+use App\Notifications\PinInviteAcceptedNotification;
 use App\Notifications\PinInvitedNotification;
 use App\Services\UserNotifier;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\DatabaseNotification;
 
 /**
  * Приглашения посмотреть пин вне зоны/страны.
@@ -48,10 +50,73 @@ class PinInviteController extends Controller
             ['inviter_id' => $user->id, 'status' => 'pending']
         );
         try {
-            UserNotifier::send($invitee, new PinInvitedNotification($pin, $user, $inviteeId));
+            UserNotifier::send($invitee, new PinInvitedNotification($pin, $user, $inviteeId, (int) $invite->id));
         } catch (\Throwable) {
         }
         return response()->json($invite, 201);
+    }
+
+    /**
+     * Принять приглашение в пин (только приглашённый).
+     *
+     * Ставит status=accepted, гасит своё уведомление pin.invited
+     * и уведомляет автора пина что приглашение принято.
+     */
+    public function accept(Request $request, Pin $pin)
+    {
+        $user = $request->user();
+        $invite = PinInvite::where('pin_id', $pin->id)
+            ->where('invitee_id', $user->id)
+            ->firstOrFail();
+        $invite->status = 'accepted';
+        $invite->save();
+        $this->markInviteNotificationRead((int) $user->id, (int) $pin->id, (int) $user->id);
+        $owner = User::find($pin->user_id);
+        if ($owner && (int) $owner->id !== (int) $user->id) {
+            try {
+                UserNotifier::send($owner, new PinInviteAcceptedNotification($pin, $user, (int) $owner->id));
+            } catch (\Throwable) {
+            }
+        }
+
+        return response()->json($invite->fresh());
+    }
+
+    /**
+     * Отклонить приглашение в пин (только приглашённый).
+     *
+     * Удаляет приглашение (доступ закрывается) и гасит
+     * своё уведомление pin.invited. Автора не спамим.
+     */
+    public function decline(Request $request, Pin $pin)
+    {
+        $user = $request->user();
+        $invite = PinInvite::where('pin_id', $pin->id)
+            ->where('invitee_id', $user->id)
+            ->firstOrFail();
+        $invite->delete();
+        $this->markInviteNotificationRead((int) $user->id, (int) $pin->id, (int) $user->id);
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Пометить прочитанным уведомление о приглашении.
+     *
+     * @param int $userId приглашённый
+     * @param int $pinId пин
+     * @param int $inviteeId приглашённый (часть dedupe-ключа)
+     */
+    private function markInviteNotificationRead(int $userId, int $pinId, int $inviteeId): void
+    {
+        try {
+            DatabaseNotification::where('notifiable_id', $userId)
+                ->where('type', 'pin.invited')
+                ->where('key', 'pin-invite:'.$pinId.':'.$inviteeId)
+                ->whereNull('read_at')
+                ->update(['read_at' => now()]);
+        } catch (\Throwable) {
+        }
     }
 
     public function destroy(Request $request, Pin $pin, PinInvite $invite)

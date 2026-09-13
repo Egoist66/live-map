@@ -31,6 +31,12 @@ export type AppToast = {
   downloadUrl?: string | null
   /** Имя файла для скачивания по клику. */
   fileName?: string | null
+  /** Kind активности пина (invite — показать Принять/Отклонить). */
+  kind?: string | null
+  /** Id пина для accept/decline прямо из тоста. */
+  pinId?: number | null
+  /** Id строки inbox (uuid) для гашения счётчика после accept/decline. */
+  activityId?: string | number | null
 }
 
 const toasts = ref<AppToast[]>([])
@@ -38,6 +44,7 @@ let inited = false
 let busBound = false
 let subscribedUid: number | null = null
 let adminMode = false
+let initialShown = false
 let seenMsgIds = new Set<number>()
 let seenEventAt = new Map<string, number>()
 let timers = new Map<string, ReturnType<typeof setTimeout>>()
@@ -51,6 +58,7 @@ export function resetAppNotifications(): void {
   } catch {}
   subscribedUid = null
   inited = false
+  initialShown = false
   seenMsgIds = new Set<number>()
   seenEventAt = new Map<string, number>()
   timers.forEach((t) => clearTimeout(t))
@@ -329,6 +337,7 @@ function handlePinActivity(e: any) {
   }
   if (a.kind === 'invite') {
     const title = (a.pin?.title || 'пин').toString().slice(0, 60)
+    const pinId = Number((a as any).pin?.id || (a as any).pin_id || 0) || null
     push({
       id: `pin-invite-${a.id}-${Date.now()}`,
       type: 'pin',
@@ -338,6 +347,26 @@ function handlePinActivity(e: any) {
       avatar: avatarSrcFor(actor),
       link: activityLink(a),
       createdAt: Date.now(),
+      kind: 'invite',
+      pinId,
+      activityId: a.id,
+    })
+    return
+  }
+  if (a.kind === 'invite_accepted') {
+    const title = (a.pin?.title || 'пин').toString().slice(0, 60)
+    push({
+      id: `pin-invite-acc-${a.id}-${Date.now()}`,
+      type: 'pin',
+      icon: 'pi pi-check-circle',
+      title: `✅ ${name} принял приглашение`,
+      body: `«${title}» — можно смотреть вместе`.slice(0, 90),
+      avatar: avatarSrcFor(actor),
+      link: activityLink(a),
+      createdAt: Date.now(),
+      kind: 'invite_accepted',
+      pinId: Number((a as any).pin?.id || (a as any).pin_id || 0) || null,
+      activityId: a.id,
     })
     return
   }
@@ -411,6 +440,9 @@ function handlePinActivity(e: any) {
 function handleNotification(e: any) {
   const n = e?.notification
   if (!n?.id) return
+  // Прочитанные строки тост не дают: они уже в ленте колокольчика.
+  // Иначе тост всплывал бы по открытию колокольчика / после read-all.
+  if (n.read_at) return
   if (isDuplicateEvent(`notif-${n.id}`)) return
   const data = n.data ?? {}
   if (data.sos_chat_closed) {
@@ -506,10 +538,36 @@ function subscribe() {
     }
   } catch {}
 }
+/**
+ * Показать тосты для уже висящих непрочитанных при входе.
+ *
+ * Берём последние 3 непрочитанные строки inbox и прогоняем через
+ * тот же handleNotification — дедуп по notif-{id} не даст дублей
+ * с живым сокетом/поллером. Строки НЕ помечаем прочитанными:
+ * закрытие тоста (крестик/автохайд) счётчик колокольчика не трогает,
+ * гаснет он только явным «прочитать» в колокольчике.
+ */
+async function showInitialUnreads(): Promise<void> {
+  if (initialShown) return
+  initialShown = true
+  try {
+    const { notificationsApi } = await import('@/services/notifications.api')
+    const rows = await notificationsApi.list().catch(() => [] as any[])
+    const unread = (Array.isArray(rows) ? rows : [])
+      .filter((n: any) => !n?.read_at)
+      .slice(0, 3)
+    for (const n of unread) {
+      try {
+        handleNotification({ notification: n })
+      } catch {}
+    }
+  } catch {}
+}
 function init() {
   if (inited) return
   inited = true
   subscribe()
+  void showInitialUnreads()
   window.addEventListener('focus', subscribe)
 }
 export function useAppNotifications() {

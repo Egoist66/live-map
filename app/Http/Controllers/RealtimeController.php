@@ -375,6 +375,10 @@ class RealtimeController extends Controller
     /**
      * Свежие inbox-уведомления (единый источник тостов и колокольчика).
      *
+     * Отдаём только непрочитанные: прочитанные уже лежат в ленте
+     * колокольчика и тост по ним не нужен (иначе тост всплывал бы
+     * по клику на колокольчик / после «прочитать всё»).
+     *
      * @param int $userId пользователь
      * @param Carbon|null $since момент прошлого тика
      */
@@ -385,6 +389,7 @@ class RealtimeController extends Controller
         }
 
         $rows = DatabaseNotification::where('notifiable_id', $userId)
+            ->whereNull('read_at')
             ->where('updated_at', '>', $since)
             ->orderBy('updated_at')
             ->limit(20)
