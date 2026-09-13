@@ -94,9 +94,9 @@ onMounted(() => refs.load())
             <TabPanel value="manage">
               <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
                 <AdminUsersManager
-                  :list="mon.users.value" :meta="mon.usersMeta.value" :page="mon.usersPage.value" :query="mon.usersQuery.value" :filter="mon.usersFilter.value" :sort="mon.usersSort.value" :limit="mon.usersLimit.value" :loading="mon.loadingUsers.value" :acting-id="mon.actingId.value" :admin="admin"
+                  :list="mon.users.value" :meta="mon.usersMeta.value" :page="mon.usersPage.value" :query="mon.usersQuery.value" :filter="mon.usersFilter.value" :sort="mon.usersSort.value" :limit="mon.usersLimit.value" :loading="mon.loadingUsers.value" :acting-id="mon.actingId.value" :admin="admin" :auth-user-id="mon.authUserId.value"
                   @update:query="(v:string)=>mon.usersQuery.value=v" @filter="(v:string)=>mon.setUsersFilter(v as any)" @sort="(v:string)=>mon.usersSort.value=v as any" @page="mon.setUsersPage"
-                  @plan="mon.setPlan" @role="mon.setRole" @impersonate="imp.ask" @ban="(u:any)=>logins.ban(u)" @unban="(u:any)=>logins.unban(u)"
+                  @plan="mon.setPlan" @role="mon.requestRoleChange" @impersonate="imp.ask" @ban="(u:any)=>logins.ban(u)" @unban="(u:any)=>logins.unban(u)"
                 />
                 <div class="space-y-4 min-w-0">
                   <AdminUpdatesManager :mgr="appUpdates" />
@@ -122,6 +122,13 @@ onMounted(() => refs.load())
         </Tabs>
       </div>
       <AdminImpersonateDialog :imp="imp" />
+      <Dialog :visible="!!mon.pendingSelfRole.value" @update:visible="(v:boolean)=>{ if(!v) mon.cancelSelfRoleChange() }" modal header="Снять с себя права?" :style="{ width: '400px', maxWidth: '94vw' }">
+        <p class="text-sm text-stone-600 dark:text-zinc-300">Сменить свою роль с <b>admin</b> на <b>{{ mon.pendingSelfRole.value?.role }}</b>? Ты потеряешь доступ к админ-панели.</p>
+        <template #footer>
+          <Button label="Отмена" text @click="mon.cancelSelfRoleChange()" />
+          <Button label="Снять права" severity="danger" :loading="mon.actingId.value !== null" @click="mon.confirmSelfRoleChange()" />
+        </template>
+      </Dialog>
       <Dialog :visible="!!admin.confirmDelete.value" @update:visible="(v:boolean)=>{ if(!v) admin.closeConfirm() }" modal header="Удалить аккаунт?" :style="{ width: '400px', maxWidth: '94vw' }">
         <p class="text-sm text-stone-600 dark:text-zinc-300">Удалить <b>{{ admin.confirmDelete.value?.name }}</b> ({{ admin.confirmDelete.value?.email }})? Это нельзя отменить.</p>
         <template #footer>

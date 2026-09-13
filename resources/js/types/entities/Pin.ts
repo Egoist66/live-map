@@ -1,6 +1,6 @@
 import type { UserBrief } from './User'
 
-export type BuiltInPinCategory = 'question' | 'announcement' | 'warning' | 'event' | 'offer' | 'help' | 'sport' | 'food' | 'music' | 'pets' | 'sale' | 'job' | 'study' | 'travel' | 'tech' | 'health' | 'art' | 'humor' | 'rest'
+export type BuiltInPinCategory = 'sos' | 'question' | 'announcement' | 'warning' | 'event' | 'offer' | 'help' | 'sport' | 'food' | 'music' | 'pets' | 'sale' | 'job' | 'study' | 'travel' | 'tech' | 'health' | 'art' | 'humor' | 'rest'
 
 export type PinCategory = BuiltInPinCategory | (string & {})
 export type PinPriority = 'normal' | 'sponsored' | 'pinned' | string

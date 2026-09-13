@@ -6,8 +6,9 @@ import Textarea from 'primevue/textarea'
 import Select from 'primevue/select'
 import { usePinAudience } from '@/composables/usePinAudience'
 import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
+import { SOS_WARNING_TEXT, SOS_WARNING_TITLE } from '@/composables/useSosConfirm'
 
-const props = withDefaults(defineProps<{ open: boolean; pinCreate: any; customCats: any; categories: any[]; pinAddress: string; loadingAddress: boolean; radiusOptions: any[]; radiusLabel?: string }>(), { radiusLabel: '1 км' })
+const props = withDefaults(defineProps<{ open: boolean; pinCreate: any; customCats: any; categories: any[]; pinAddress: string; loadingAddress: boolean; radiusOptions: any[]; radiusLabel?: string; sosLimits?: { used: number; limit: number; left: number; is_pro: boolean } | null }>(), { radiusLabel: '1 км', sosLimits: null })
 const emit = defineEmits<{ (e: 'update:open', v: boolean): void; (e: 'close'): void; (e: 'delete-custom-category', slug: string): void }>()
 const audience = usePinAudience()
 const { selectPt } = useDropdownMenuStyle()
@@ -47,7 +48,7 @@ async function createCustomAndSelect() {
       <div>
         <label class="text-[10px] font-bold tracking-wide uppercase text-stone-500">Категория</label>
         <div class="mt-1.5 grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-          <button v-for="c in categories" :key="c.v" type="button" @click="(pinCreate.category.value as any) = c.v" :class="['px-2 py-2 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1 transition active:scale-95', (pinCreate.category.value as any) === c.v ? 'bg-gradient-to-br from-violet-600 to-indigo-600 text-white border-transparent shadow-glow' : 'bg-white dark:bg-white/[0.06] border-stone-200 dark:border-white/10 text-ink-900 dark:text-zinc-100 hover:bg-stone-50 dark:hover:bg-white/10']">
+          <button v-for="c in categories" :key="c.v" type="button" @click="pinCreate.selectCategory(c.v)" :class="['px-2 py-2 rounded-xl border text-xs font-semibold flex items-center justify-center gap-1 transition active:scale-95', (pinCreate.category.value as any) === c.v ? 'bg-gradient-to-br from-violet-600 to-indigo-600 text-white border-transparent shadow-glow' : 'bg-white dark:bg-white/[0.06] border-stone-200 dark:border-white/10 text-ink-900 dark:text-zinc-100 hover:bg-stone-50 dark:hover:bg-white/10']">
             <span class="text-sm leading-none">{{ c.i }}</span><span class="leading-none text-[11px]">{{ c.l }}</span>
           </button>
         </div>
@@ -69,6 +70,7 @@ async function createCustomAndSelect() {
           </div>
         </div>
         <div v-else class="mt-1.5 text-[11px] leading-snug text-stone-400 dark:text-zinc-500 bg-stone-50 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-xl px-3 py-2">⭐ Свои категории — на тарифе Pro и выше</div>
+        <div v-if="String((pinCreate.category as any)?.value ?? '') === 'sos'" class="mt-1.5 text-[11px] leading-snug rounded-xl px-3 py-2 border" :class="(sosLimits?.left ?? 1) > 0 ? 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200' : 'bg-stone-100 dark:bg-zinc-800 border-stone-300 dark:border-zinc-600 text-stone-500 dark:text-zinc-400'">🆘 SOS в этом месяце: {{ sosLimits?.used ?? 0 }}/{{ sosLimits?.limit ?? 1 }} · Free — 1, PRO — 3</div>
       </div>
       <div>
         <label class="text-[10px] font-bold tracking-wide uppercase text-stone-500">Кто видит</label>
@@ -103,6 +105,21 @@ async function createCustomAndSelect() {
         <Button :loading="pinCreate.creating.value" :disabled="!pinCreate.title.value?.trim() || pinCreate.limitExceeded.value" type="submit" rounded class="flex-[1.4] !bg-gradient-to-r !from-violet-600 !to-indigo-600 !border-0 !text-white !shadow-glow" :label="pinCreate.limitExceeded.value ? 'Лимит исчерпан' : (pinCreate.creating.value ? 'Сохраняем…' : (pinCreate.isScheduled.value ? `Запланировать → ${pinCreate.scheduleLabel.value}` : 'Создать пин →'))" />
       </div>
     </form>
+    <Dialog :visible="pinCreate.sos.showSosWarning.value" @update:visible="(v:boolean)=>{ if (!v) pinCreate.sos.cancelSos() }" modal :closable="false" :draggable="false" header="SOS" :style="{ width: '420px', maxWidth: 'calc(100vw - 2rem)' }" :pt="{ root: { class: '!rounded-3xl !border-red-200 dark:!border-red-900' } }">
+      <div class="flex items-start gap-3">
+        <span class="w-11 h-11 rounded-2xl bg-red-500/15 text-red-500 grid place-items-center text-xl shrink-0">🆘</span>
+        <div>
+          <div class="text-[15px] font-black text-stone-900 dark:text-white">{{ SOS_WARNING_TITLE }}</div>
+          <p class="mt-1.5 text-[13px] leading-relaxed text-stone-600 dark:text-zinc-300">{{ SOS_WARNING_TEXT }}</p>
+        </div>
+      </div>
+      <template #footer>
+        <div class="flex gap-2 justify-end">
+          <Button label="Отмена" severity="secondary" outlined rounded size="small" @click="pinCreate.sos.cancelSos()" />
+          <Button label="Осознаю ответственность" severity="danger" rounded size="small" @click="pinCreate.sos.confirmSos()" />
+        </div>
+      </template>
+    </Dialog>
   </Dialog>
 </template>
 <style scoped>

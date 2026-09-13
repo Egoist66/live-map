@@ -1,4 +1,6 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { router, usePage } from '@inertiajs/vue3'
+import { useToast } from 'primevue/usetoast'
 import { adminApi } from '@/services/admin.api'
 
 export type OnlineLimit = 10 | 20 | 50 | 100
@@ -32,8 +34,41 @@ export function useAdminMonitoring() {
   const loadingUsers = ref(false)
 
   const actingId = ref<number | null>(null)
+  const pendingSelfRole = ref<{ user: any; role: string; prevRole: string } | null>(null)
+  let toast: any = null
+  try { toast = useToast() } catch { toast = null }
   let timer: ReturnType<typeof setInterval> | null = null
   let searchT: ReturnType<typeof setTimeout> | null = null
+
+  const authUserId = computed(() => {
+    try {
+      const authUser = (usePage().props.auth as any)?.user
+      return Number(authUser?.id ?? 0) || null
+    } catch {
+      return null
+    }
+  })
+
+  /**
+   * Это текущий админ?
+   * @param user строка списка пользователей
+   * @returns true если user — это я
+   */
+  function isSelf(user: any): boolean {
+    if (!user || authUserId.value === null) return false
+    return Number(user.id) === Number(authUserId.value)
+  }
+
+  /**
+   * Это понижение с admin до не-admin?
+   * @param user строка списка пользователей
+   * @param role новая роль
+   * @returns true если снимаем admin-права
+   */
+  function isDemotion(user: any, role: string): boolean {
+    const wasAdmin = !!user?.is_admin || user?.role === 'admin'
+    return wasAdmin && role !== 'admin'
+  }
 
   const onlinePct = computed(() => {
     const o = overview.value
@@ -139,12 +174,81 @@ export function useAdminMonitoring() {
   }
 
   async function setRole(user: any, role: string) {
+    if (!user || user.role === role) return
     actingId.value = user.id
+    error.value = null
+    const prevRole = user.role
+    const prevIsAdmin = user.is_admin
     try {
-      const d: any = await adminApi.updateUser(user.id, { role })
-      user.role = d.role
-      user.is_admin = d.is_admin
-    } finally { actingId.value = null }
+      const updated: any = await adminApi.updateUser(user.id, { role })
+      user.role = updated.role
+      user.is_admin = updated.is_admin
+      if (isSelf(user)) {
+        syncAuthUser(updated)
+      }
+      if (isSelf(user) && isDemotion({ role: prevRole, is_admin: prevIsAdmin }, role)) {
+        toast?.add({ severity: 'warn', summary: 'Роль изменена. Админ-доступ потерян', life: 3500 })
+        router.visit('/')
+        return
+      }
+      toast?.add({ severity: 'success', summary: 'Роль обновлена', life: 2000 })
+    } catch (e: any) {
+      const message = e?.response?.data?.message || 'Не удалось сменить роль'
+      error.value = message
+      toast?.add({ severity: 'error', summary: message, life: 3500 })
+      throw e
+    } finally {
+      actingId.value = null
+    }
+  }
+
+  /**
+   * Запросить смену роли. Свою с понижением — только через подтверждение.
+   * @param user строка списка пользователей
+   * @param role новая роль user|moderator|admin
+   * @returns Promise<void>
+   */
+  async function requestRoleChange(user: any, role: string): Promise<void> {
+    if (!user || user.role === role) return
+    const self = isSelf(user)
+    const demotion = isDemotion(user, role)
+    if (self && demotion) {
+      pendingSelfRole.value = { user, role, prevRole: user.role }
+      return
+    }
+    await setRole(user, role)
+  }
+
+  /**
+   * Подтвердить снятие admin-роли с себя.
+   * @returns Promise<void>
+   */
+  async function confirmSelfRoleChange(): Promise<void> {
+    const pending = pendingSelfRole.value
+    if (!pending) return
+    pendingSelfRole.value = null
+    await setRole(pending.user, pending.role)
+  }
+
+  /**
+   * Отменить смену своей роли.
+   */
+  function cancelSelfRoleChange(): void {
+    pendingSelfRole.value = null
+  }
+
+  /**
+   * Синхронизировать auth-пользователя Inertia после смены своей роли.
+   * @param updated ответ PATCH /admin/users/{user}
+   */
+  function syncAuthUser(updated: any): void {
+    try {
+      const page = usePage()
+      const authUser = (page.props.auth as any)?.user
+      if (!authUser) return
+      authUser.role = updated.role
+      authUser.is_admin = updated.is_admin
+    } catch {}
   }
 
   watch([usersFilter, usersSort, usersLimit], () => { usersPage.value = 1; void loadUsers() })
@@ -164,8 +268,9 @@ export function useAdminMonitoring() {
     overview, loadingOverview, points, summary, chartDays, loadingChart, exporting, error,
     online, onlineMeta, onlinePage, onlineLimit, onlineQuery, loadingOnline,
     users, usersMeta, usersPage, usersLimit, usersQuery, usersFilter, usersSort, loadingUsers,
-    actingId, onlinePct, maxChart,
+    actingId, onlinePct, maxChart, authUserId, pendingSelfRole,
     loadOverview, loadChart, exportExcel, loadOnline, loadUsers, refreshAll,
     setOnlineLimit, setOnlinePage, setUsersPage, setUsersFilter, setPlan, setRole,
+    requestRoleChange, confirmSelfRoleChange, cancelSelfRoleChange, isSelf,
   }
 }

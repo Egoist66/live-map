@@ -88,7 +88,7 @@ async function share(): Promise<void> {
 <template>
   <Card class="!rounded-3xl !border-stone-200 dark:!border-zinc-800 !bg-white dark:!bg-zinc-900 !shadow-soft overflow-hidden">
     <template #content>
-      <article class="p-4 sm:p-5">
+      <article class="p-3 sm:p-5">
         <div class="flex items-start gap-3">
           <Avatar v-if="post.author.avatar_url" :image="post.author.avatar_url" shape="circle" class="!w-11 !h-11" />
           <Avatar v-else icon="pi pi-user-secret" shape="circle" class="!w-11 !h-11 !bg-stone-900 !text-white dark:!bg-zinc-700" />
@@ -134,13 +134,13 @@ async function share(): Promise<void> {
         <div v-if="expanded" class="mt-2 space-y-3 border-t border-stone-100 dark:border-zinc-800 pt-3">
           <div v-if="thread.loading.value" class="text-sm text-stone-400">Загружаем комментарии…</div>
           <div v-else-if="!thread.comments.value.length" class="text-sm text-stone-400">Пока тихо — станьте первым.</div>
-          <div v-for="c in thread.comments.value" :key="c.id" class="flex gap-2.5">
-            <Avatar v-if="c.author.avatar_url" :image="c.author.avatar_url" shape="circle" class="!w-8 !h-8 shrink-0" />
-            <Avatar v-else icon="pi pi-user-secret" shape="circle" class="!w-8 !h-8 shrink-0 !bg-stone-200 dark:!bg-zinc-700" />
-            <div class="min-w-0 flex-1 rounded-2xl bg-stone-100 dark:bg-zinc-800 px-3 py-2">
+          <div v-for="c in thread.comments.value" :key="c.id" class="flex gap-2 sm:gap-2.5">
+            <Avatar v-if="c.author.avatar_url" :image="c.author.avatar_url" shape="circle" class="!w-7 !h-7 sm:!w-8 sm:!h-8 shrink-0" />
+            <Avatar v-else icon="pi pi-user-secret" shape="circle" class="!w-7 !h-7 sm:!w-8 sm:!h-8 shrink-0 !bg-stone-200 dark:!bg-zinc-700" />
+            <div class="min-w-0 flex-1 rounded-2xl bg-stone-100 dark:bg-zinc-800 px-2.5 py-2 sm:px-3">
               <div class="text-[13px] font-bold text-ink-900 dark:text-white">{{ replyName(c) }}</div>
-              <div class="whitespace-pre-line break-words text-sm text-stone-700 dark:text-zinc-200">{{ c.content }}</div>
-              <div class="mt-1 flex items-center gap-3 text-xs text-stone-400">
+              <div class="whitespace-pre-line break-words text-[15px] sm:text-sm leading-relaxed text-stone-700 dark:text-zinc-200">{{ c.content }}</div>
+              <div class="mt-1 flex items-center gap-4 sm:gap-3 py-1 text-[13px] sm:text-xs text-stone-400">
                 <span>{{ formatFlowDate(c.created_at) }}</span>
                 <button class="font-semibold hover:underline" @click="thread.setReply(c)">Ответить</button>
                 <button v-if="c.can_delete" class="hover:underline" @click="thread.remove(c)">Удалить</button>
@@ -149,10 +149,10 @@ async function share(): Promise<void> {
                 <div v-for="r in c.replies" :key="r.id" class="flex gap-2">
                   <Avatar v-if="r.author.avatar_url" :image="r.author.avatar_url" shape="circle" class="!w-6 !h-6 shrink-0" />
                   <Avatar v-else icon="pi pi-user-secret" shape="circle" class="!w-6 !h-6 shrink-0 !bg-stone-200 dark:!bg-zinc-700" />
-                  <div class="min-w-0 flex-1 rounded-xl bg-white dark:bg-zinc-900 px-2.5 py-1.5">
+                  <div class="min-w-0 flex-1 rounded-xl bg-white dark:bg-zinc-900 px-2 py-1.5 sm:px-2.5">
                     <div class="text-xs font-bold text-ink-900 dark:text-white">{{ replyName(r) }}</div>
-                    <div class="whitespace-pre-line break-words text-[13px] text-stone-700 dark:text-zinc-200">{{ r.content }}</div>
-                    <div class="mt-0.5 flex gap-2 text-[11px] text-stone-400">
+                    <div class="whitespace-pre-line break-words text-sm sm:text-[13px] leading-relaxed text-stone-700 dark:text-zinc-200">{{ r.content }}</div>
+                    <div class="mt-0.5 flex gap-3 sm:gap-2 py-0.5 text-xs sm:text-[11px] text-stone-400">
                       <span>{{ formatFlowDate(r.created_at) }}</span>
                       <button v-if="r.can_delete" class="hover:underline" @click="thread.remove(r)">Удалить</button>
                     </div>
@@ -171,14 +171,14 @@ async function share(): Promise<void> {
               <InputText
                 v-model="thread.draft.value"
                 placeholder="Написать комментарий…"
-                class="w-full !rounded-full !bg-stone-100 dark:!bg-zinc-800 !border-0"
+                class="w-full !rounded-2xl sm:!rounded-full !bg-stone-100 dark:!bg-zinc-800 !border-0 !py-3 sm:!py-2 !text-[15px] sm:!text-sm"
                 @keyup.enter="thread.send()"
               />
             </div>
             <label class="hidden sm:inline-flex items-center gap-1 text-xs text-stone-400">
               <Checkbox v-model="thread.anonymousReply.value" binary /> аноним
             </label>
-            <Button icon="pi pi-send" rounded :loading="thread.sending.value" :disabled="!thread.draft.value.trim()" @click="thread.send()" />
+            <Button icon="pi pi-send" rounded :loading="thread.sending.value" :disabled="!thread.draft.value.trim()" class="!w-12 !h-12 sm:!w-10 sm:!h-10 shrink-0" @click="thread.send()" />
           </div>
         </div>
         <button v-else-if="post.comments_count > 0" class="mt-2 text-[13px] font-semibold text-stone-500 hover:underline" @click="toggleComments()">

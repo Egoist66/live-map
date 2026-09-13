@@ -56,14 +56,14 @@ export function usePwaInstallBanner() {
     } catch {}
   }
 
-  /** Установить: системный промпт или инструкция под платформу. */
+  /** Установить: сразу системный промпт, без подсказок; инструкция — только если промпта нет. */
   async function install(): Promise<void> {
-    if (canInstall.value) {
-      const outcome = await promptInstall()
-      if (outcome !== 'unavailable') dismiss()
+    if (!canInstall.value) {
+      guide.openGuide()
       return
     }
-    guide.openGuide()
+    const outcome = await promptInstall()
+    if (outcome !== 'unavailable') dismiss()
   }
 
   return { canInstall, standalone, dismissed, visible, isNewcomer, hint: guide.hint, install, dismiss }

@@ -13,6 +13,60 @@ export const usePinsStore = defineStore('pins', () => {
   const updating = ref(false)
   const deleting = ref(false)
 
+  /**
+   * Надгробия недавно удалённых пинов: id -> время удаления.
+   *
+   * Тик поллинга, ушедший до коммита удаления, может вернуть пин
+   * в `upsert` (окно сервера ~10с) — без надгробия пин воскресает
+   * на карте до следующей проверки. Id пинов не переиспользуются,
+   * поэтому игнорировать их безопасно.
+   */
+  const recentlyDeleted = ref(new Map<number, number>())
+  const TOMBSTONE_TTL = 60000
+
+  /**
+   * Вычистить протухшие надгробия.
+   */
+  function pruneTombstones(): void {
+    const now = Date.now()
+    for (const [id, at] of recentlyDeleted.value) {
+      if (now - at > TOMBSTONE_TTL) {
+        recentlyDeleted.value.delete(id)
+      }
+    }
+  }
+
+  /**
+   * Запомнить id как недавно удалённый.
+   * @param id id удалённого пина
+   */
+  function rememberDeleted(id: number): void {
+    const num = Number(id)
+    if (!(num > 0)) {
+      return
+    }
+    pruneTombstones()
+    recentlyDeleted.value.set(num, Date.now())
+  }
+
+  /**
+   * Проверить, удалён ли пин недавно (воскрешать нельзя).
+   * @param id id пина
+   * @returns true если id под надгробием
+   */
+  function isRecentlyDeleted(id: number): boolean {
+    const num = Number(id)
+    const at = recentlyDeleted.value.get(num)
+    if (at === undefined) {
+      return false
+    }
+    if (Date.now() - at > TOMBSTONE_TTL) {
+      recentlyDeleted.value.delete(num)
+      return false
+    }
+    return true
+  }
+
   let abortCtrl: AbortController | null = null
   let lastCenter: { lat: number; lng: number } | null = null
   async function fetchNearby(lat: number, lng: number, radius?: number, userPos?: { lat: number; lng: number } | null): Promise<Pin[]> {
@@ -22,7 +76,7 @@ export const usePinsStore = defineStore('pins', () => {
     error.value = null
     try {
       const data = await pinsApi.list(lat, lng, radius as any, abortCtrl.signal, userPos ?? null)
-      const alive = (p: any) => isPinAlive(p)
+      const alive = (p: any) => isPinAlive(p) && !isRecentlyDeleted(p?.id)
       const fresh = (data || []).filter(alive)
       const movedFar = lastCenter ? Math.hypot(lastCenter.lat - lat, lastCenter.lng - lng) > 0.2 : true
       lastCenter = { lat, lng }
@@ -94,6 +148,7 @@ export const usePinsStore = defineStore('pins', () => {
     deleting.value = true
     try {
       await pinsApi.remove(id)
+      rememberDeleted(id)
       pins.value = pins.value.filter((p) => p.id !== id)
     } finally {
       deleting.value = false
@@ -105,6 +160,9 @@ export const usePinsStore = defineStore('pins', () => {
   }
 
   function addRealtime(pin: Pin): void {
+    if (isRecentlyDeleted((pin as any)?.id)) {
+      return
+    }
     if (!isPinAlive(pin as any)) {
       pins.value = pins.value.filter((p) => p.id !== pin.id)
       return
@@ -114,6 +172,7 @@ export const usePinsStore = defineStore('pins', () => {
   }
 
   function removeRealtime(id: number): void {
+    rememberDeleted(id)
     pins.value = pins.value.filter((p) => p.id !== id)
   }
 

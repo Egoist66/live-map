@@ -5,6 +5,8 @@ import { usePwaSettings } from '@/composables/usePwaSettings'
 import { usePwaInstallGuide } from '@/composables/usePwaInstallGuide'
 import PwaPushToggle from '@/Components/Features/Pwa/PwaPushToggle.vue'
 import PwaInstallGuideDialog from '@/Components/Features/Pwa/PwaInstallGuideDialog.vue'
+import SettingsDefaultMode from '@/Components/Features/Settings/SettingsDefaultMode.vue'
+import SettingsHotkeysSection from '@/Components/Features/Settings/SettingsHotkeysSection.vue'
 
 const s = usePwaSettings()
 const guide = usePwaInstallGuide()
@@ -23,6 +25,7 @@ async function onClearCache() {
         <h3 class="font-black tracking-tight text-lg dark:text-white">Приложение</h3>
         <p class="text-sm text-stone-500 mt-1">Установка, оффлайн-режим и уведомления на этом устройстве.</p>
         <div class="mt-6 space-y-4 max-w-xl">
+          <SettingsDefaultMode />
           <div class="flex items-center gap-3 rounded-2xl border border-stone-200/70 dark:border-zinc-800 px-4 py-3">
             <i class="pi pi-mobile text-lg text-indigo-500 shrink-0" />
             <div class="flex-1 text-sm">
@@ -35,10 +38,11 @@ async function onClearCache() {
             </div>
             <button
               v-if="!s.standalone.value"
-              class="text-xs font-semibold px-3 py-2 rounded-xl bg-indigo-500 text-white hover:opacity-90 active:scale-95 shrink-0"
+              class="text-xs font-semibold px-3 py-2 rounded-xl bg-indigo-500 text-white hover:opacity-90 active:scale-95 shrink-0 disabled:opacity-60"
+              :disabled="guide.installing.value"
               @click="guide.install()"
             >
-              Установить
+              {{ guide.installing.value ? '…' : s.canInstall.value ? 'Установить' : 'Как установить' }}
             </button>
             <span v-else class="text-xs font-semibold px-3 py-2 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 shrink-0">
               Установлено
@@ -71,6 +75,7 @@ async function onClearCache() {
         </div>
       </template>
     </Card>
+    <SettingsHotkeysSection />
     <PwaInstallGuideDialog />
   </div>
 </template>

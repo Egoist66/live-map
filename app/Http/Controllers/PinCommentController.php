@@ -83,15 +83,34 @@ class PinCommentController extends Controller
         return response()->json($comment);
     }
 
+    /**
+     * Удалить комментарий вместе с ответами.
+     *
+     * Free-тариф: максимум 3 удаления своих комментариев в день,
+     * на PRO и у админа — безлимитно.
+     *
+     * @param PinComment $comment
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function destroy(PinComment $comment)
     {
         $this->authorize('delete', $comment);
+        $user = request()->user();
+        $limited = !$user->isPro();
+        $limitKey = "comment_delete:{$user->id}:" . now()->toDateString();
+        if ($limited && (int) Cache::get($limitKey, 0) >= 3) {
+            abort(429, 'Лимит удалений: 3 комментария в день на Free, на PRO — безлимитно.');
+        }
         $pin = $comment->pin;
         $removed = 1 + $comment->replies()->count();
         $comment->replies()->delete();
         $comment->delete();
         $pin->decrement('comments_count', $removed);
         PinActivityNotifier::counters($pin);
+        if ($limited) {
+            Cache::put($limitKey, ((int) Cache::get($limitKey, 0)) + 1, now()->endOfDay());
+        }
+
         return response()->json(['ok' => true]);
     }
 }

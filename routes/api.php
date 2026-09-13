@@ -79,6 +79,7 @@ Route::middleware(['web', 'auth', 'throttle:120,1'])->group(function () {
     Route::get('/chat/users/search', [ChatUserController::class, 'search'])->middleware('throttle:chat-search');
     Route::patch('/chat/privacy', [ChatUserController::class, 'privacy']);
     Route::patch('/user/invisible', [\App\Http\Controllers\ProfileController::class, 'toggleInvisible']);
+    Route::patch('/user/default-mode', [\App\Http\Controllers\ProfileController::class, 'updateDefaultMode'])->middleware('throttle:profile-write');
     Route::patch('/user/photo-comments-privacy', [\App\Http\Controllers\ProfilePhotoController::class, 'updatePrivacy']);
 
     Route::get('/users/{user}/photos', [\App\Http\Controllers\ProfilePhotoController::class, 'index']);
@@ -161,6 +162,16 @@ Route::middleware(['web', 'auth', 'throttle:120,1'])->group(function () {
     Route::get('/updates/unread', [\App\Http\Controllers\AppUpdateController::class, 'unread']);
     Route::post('/updates/{appUpdate}/read', [\App\Http\Controllers\AppUpdateController::class, 'markRead']);
     Route::post('/updates/read-all', [\App\Http\Controllers\AppUpdateController::class, 'markAllRead']);
+
+    Route::get('/quests', [\App\Http\Controllers\QuestController::class, 'index']);
+    Route::post('/quests/refresh', [\App\Http\Controllers\QuestController::class, 'refresh'])->middleware('throttle:social-write');
+    Route::post('/quests/claim', [\App\Http\Controllers\QuestController::class, 'claim'])->middleware('throttle:social-write');
+
+    Route::get('/sos/mine', [\App\Http\Controllers\SosController::class, 'mine']);
+    Route::get('/pins/{pin}/sos', [\App\Http\Controllers\SosController::class, 'show']);
+    Route::post('/pins/{pin}/sos/accept', [\App\Http\Controllers\SosController::class, 'accept'])->middleware('throttle:social-write');
+    Route::post('/pins/{pin}/sos/decline', [\App\Http\Controllers\SosController::class, 'decline'])->middleware('throttle:social-write');
+    Route::post('/pins/{pin}/sos/close', [\App\Http\Controllers\SosController::class, 'close'])->middleware('throttle:social-write');
 });
 
 Route::middleware(['web', 'auth', 'admin', 'throttle:120,1'])->group(function () {

@@ -8,6 +8,7 @@ import { useResidence } from '@/composables/useResidence'
 import { useHomeZoneGuard } from '@/composables/useHomeZoneGuard'
 import { usePage } from '@inertiajs/vue3'
 import { PIN_CATEGORIES } from '@/composables/usePins'
+import { useSosConfirm } from '@/composables/useSosConfirm'
 import { useToast } from 'primevue/usetoast'
 
 function pad(n: number): string {
@@ -34,7 +35,20 @@ export function usePinCreate(onSuccess?: () => void) {
   const page = usePage()
   const residence = useResidence(() => (page.props.auth as any)?.user)
   const zoneGuard = useHomeZoneGuard()
+  const sos = useSosConfirm()
   const builtInValues = (PIN_CATEGORIES as unknown as any[]).map((c) => c.v)
+
+  /**
+   * Выбрать категорию: SOS проходит через предупреждение об ответственности.
+   * @param value код категории
+   */
+  function selectCategory(value: string): void {
+    if (sos.isSos(value) && String((category as any)?.value ?? '') !== 'sos') {
+      sos.requestSos(() => setValues({ category: 'sos' } as any))
+      return
+    }
+    setValues({ category: value } as any)
+  }
 
   const { defineField, handleSubmit, setValues, values, errors, resetForm } = useForm({
     validationSchema: createPinSchema,
@@ -125,7 +139,7 @@ export function usePinCreate(onSuccess?: () => void) {
         error.value = err
         throw err
       }
-      const payload: any = { ...vals }
+      const payload: any = { ...vals, sos_confirmed: sos.sosConfirmed.value }
       let livePos: { lat: number; lng: number } | null = null
       try {
         const liveRaw = localStorage.getItem('live-map:last-pos')
@@ -159,6 +173,7 @@ export function usePinCreate(onSuccess?: () => void) {
       const scheduled = (pin as any)?.is_scheduled || (pin as any)?.status === 'scheduled'
       toast.add({ severity: 'success', summary: scheduled ? `Запланирован на ${scheduleLabel.value}` : 'Пин создан', life: 2500 })
       scheduleEnabled.value = false
+      sos.resetSos()
       resetForm({ values: { ...vals, title: '', body: '', publish_at: null, gender_audience: (vals as any).gender_audience ?? 'all' } as any })
       try { await limitInfo.refresh() } catch {}
       onSuccess?.()
@@ -169,7 +184,8 @@ export function usePinCreate(onSuccess?: () => void) {
       const isLimit = status === 429 || /лимит/i.test(serverMsg)
       if (isLimit) {
         const msg = serverMsg || limitInfo.warning.value || 'Лимит free тарифа: максимум 3 живых пина'
-        toast.add({ severity: 'warn', summary: 'Лимит пинов', detail: msg, life: 5000 })
+        const isSosLimit = /sos/i.test(serverMsg)
+        toast.add({ severity: 'warn', summary: isSosLimit ? 'Лимит SOS' : 'Лимит пинов', detail: msg, life: 5000 })
       } else if (status === 422 && (/стран/i.test(serverMsg) || /зон/i.test(serverMsg))) {
         toast.add({ severity: 'warn', summary: 'Вне вашей зоны', detail: serverMsg, life: 5000 })
       } else {
@@ -181,6 +197,8 @@ export function usePinCreate(onSuccess?: () => void) {
 
   return {
     store,
+    sos,
+    selectCategory,
     limitExceeded: limitInfo.isExceeded,
     limitWarning: limitInfo.warning,
     limitRemaining: limitInfo.remaining,

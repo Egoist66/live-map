@@ -70,14 +70,17 @@ export function useFlowComposer(existingId?: number | null) {
    * @param currentTitle заголовок
    * @param currentBody текст
    * @param anonymous анонимность
+   * @param currentImageUrl текущая картинка поста или null
    */
-  function startEdit(postId: number, currentTitle: string | null, currentBody: string, anonymous: boolean): void {
+  function startEdit(postId: number, currentTitle: string | null, currentBody: string, anonymous: boolean, currentImageUrl: string | null = null): void {
     editingId.value = postId
     title.value = currentTitle ?? ''
     body.value = currentBody
     isAnonymous.value = anonymous
-    pickImage(null)
+    image.value = null
     removeImage.value = false
+    if (imagePreview.value) URL.revokeObjectURL(imagePreview.value)
+    imagePreview.value = currentImageUrl
   }
 
   /**

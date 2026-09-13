@@ -112,3 +112,9 @@ export async function applyUpdate(): Promise<void> {
 export function getRegistration(): ServiceWorkerRegistration | null {
   return registration
 }
+
+// Слушаем beforeinstallprompt как можно раньше: браузер присылает
+// событие в начале загрузки страницы, до монтирования Vue.
+// Поздняя подписка (в onMounted) его пропускает — и кнопка
+// «Установить» вместо системного промпта показывает инструкцию.
+bindOnce()

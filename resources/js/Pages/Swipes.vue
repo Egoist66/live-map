@@ -5,6 +5,7 @@ import GuestLayout from '@/Layouts/GuestLayout.vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import DatingQuestionnaireForm from '@/Components/Features/Dating/DatingQuestionnaireForm.vue'
 import SwipeDetailsDialog from '@/Components/Features/Dating/SwipeDetailsDialog.vue'
+import DefaultModeHint from '@/Components/Features/Mode/DefaultModeHint.vue'
 import { useSwipes } from '@/composables/useSwipes'
 import { useSwipeCardPhotos } from '@/composables/useSwipeCardPhotos'
 import { useSwipesMobileMenu } from '@/composables/useSwipesMobileMenu'
@@ -103,6 +104,9 @@ onMounted(async () => {
           </div>
           <p class="mt-2 hidden sm:block text-[13px] sm:text-sm text-stone-500 dark:text-zinc-400">Дейтинг внутри UPin🔥</p>
         </div>
+        <div v-if="isAuth" class="mt-3 flex justify-center">
+          <DefaultModeHint place="swipes" />
+        </div>
 
         <template v-if="!isAuth">
           <div class="mt-6 rounded-[20px] border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 text-center shadow-soft">
@@ -160,7 +164,7 @@ onMounted(async () => {
             </div>
             <div v-else-if="s.activeUsers.value.length" class="mt-4">
               <div class="text-xs text-stone-500 dark:text-zinc-400 mb-2">Сейчас в ULove · {{ s.activeUsers.value.length }} онлайн</div>
-              <div class="grid grid-cols-2 gap-2">
+              <div class="grid grid-cols-2 gap-1.5 min-[411px]:gap-2">
                 <div
                   v-for="u in s.activeUsers.value"
                   :key="u.id"
@@ -378,12 +382,12 @@ onMounted(async () => {
 
           <template v-else>
           <div class="mt-3 sm:mt-4 relative select-none">
-            <div v-if="s.loading.value" class="rounded-[24px] border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 h-[calc(100dvh-160px)] min-h-[460px] sm:h-[62dvh] sm:min-h-[400px] sm:max-h-[540px] grid place-items-center">
+            <div v-if="s.loading.value" class="rounded-[20px] min-[411px]:rounded-[24px] border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 h-[calc(100dvh-220px)] min-h-[380px] min-[411px]:h-[calc(100dvh-160px)] min-[411px]:min-h-[460px] sm:h-[62dvh] sm:min-h-[400px] sm:max-h-[540px] grid place-items-center">
               <i class="pi pi-spin pi-spinner text-2xl text-stone-400 dark:text-zinc-500" />
             </div>
 
             <div v-else-if="s.current.value">
-              <div class="swipe-deck relative h-[calc(100dvh-160px)] min-h-[460px] sm:h-[62dvh] sm:min-h-[400px] sm:max-h-[540px]">
+              <div class="swipe-deck relative h-[calc(100dvh-220px)] min-h-[380px] min-[411px]:h-[calc(100dvh-160px)] min-[411px]:min-h-[460px] sm:h-[62dvh] sm:min-h-[400px] sm:max-h-[540px]">
               <div
                 v-if="s.next.value"
                 class="absolute inset-0 z-0 rounded-[24px] overflow-hidden bg-zinc-900 dark:bg-zinc-950 shadow-soft ring-1 ring-black/10 dark:ring-white/10 pointer-events-none"
@@ -487,7 +491,7 @@ onMounted(async () => {
                   @click="detailsCard = s.current.value"
                 >ⓘ</button>
 
-                <div class="absolute bottom-0 inset-x-0 p-4 pr-[124px] sm:p-5 text-white pointer-events-none">
+                <div class="absolute bottom-0 inset-x-0 p-3 pr-[108px] min-[411px]:p-4 min-[411px]:pr-[124px] sm:p-5 text-white pointer-events-none">
                   <div class="flex items-baseline gap-2">
                     <span class="text-[24px] sm:text-[26px] font-black leading-none">{{ s.current.value.name }}</span>
                     <span class="text-lg sm:text-xl font-bold opacity-90">{{ s.ageLabel(s.current.value) }}</span>

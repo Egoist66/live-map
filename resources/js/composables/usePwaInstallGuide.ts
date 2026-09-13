@@ -11,6 +11,7 @@ export interface InstallStep {
 }
 
 const guideOpen = ref(false)
+const installing = ref(false)
 
 /**
  * Определяет платформу по user agent.
@@ -85,16 +86,24 @@ export function usePwaInstallGuide() {
   }
 
   /**
-   * Устанавливает приложение: системный промпт, если доступен,
-   * иначе открывает инструкцию.
+   * Устанавливает приложение: сразу системный промпт, если доступен,
+   * иначе открывает инструкцию (iOS и случаи без промпта).
    *
    * @returns исход системного промпта или 'guide'
    */
   async function install(): Promise<'accepted' | 'dismissed' | 'unavailable' | 'guide'> {
-    if (canInstall.value) return promptInstall()
-    openGuide()
-    return 'guide'
+    if (!canInstall.value) {
+      openGuide()
+      return 'guide'
+    }
+    if (installing.value) return 'unavailable'
+    installing.value = true
+    try {
+      return await promptInstall()
+    } finally {
+      installing.value = false
+    }
   }
 
-  return { platform, steps, hint, guideOpen, openGuide, closeGuide, install }
+  return { platform, steps, hint, guideOpen, installing, openGuide, closeGuide, install }
 }

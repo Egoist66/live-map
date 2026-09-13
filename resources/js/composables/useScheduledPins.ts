@@ -1,6 +1,7 @@
-import { computed, ref } from 'vue'
+import { computed, onUnmounted, ref } from 'vue'
 import { useQuery, useMutation, useQueryCache } from '@pinia/colada'
 import { pinsApi } from '@/services/pins.api'
+import { busOn } from '@/services/realtime-bus'
 import { defineQueryOptions } from '@pinia/colada'
 
 export const scheduledPinsQuery = defineQueryOptions({
@@ -36,6 +37,53 @@ export function useScheduledPins() {
   const items = computed(() => ((state.value.data as any[]) || []).slice().sort((a, b) => +new Date(a.publish_at) - +new Date(b.publish_at)))
   const loading = computed(() => state.value.status === 'pending' || (asyncStatus.value as any) === 'loading')
   const deletingId = ref<number | null>(null)
+
+  let debounceTimer: ReturnType<typeof setTimeout> | null = null
+
+  /**
+   * Отложенное обновление списка после realtime-события.
+   * Схлопывает пачку тиков поллинга в один запрос.
+   */
+  async function scheduleRefresh(): Promise<void> {
+    if (debounceTimer) return
+    debounceTimer = setTimeout(() => {
+      debounceTimer = null
+    }, 2000)
+    try {
+      await refetch()
+      await cache.invalidateQueries({ key: ['pins'] as any })
+    } catch {}
+  }
+
+  /**
+   * Реакция на публикацию/истечение: свой пин в upsert или свой id в deleted.
+   * Один хендлер обслуживает оба транспорта — сокет зеркалится в шину
+   * через useMap, поллер шлёт map:pins напрямую.
+   * @param payload upsert/deleted/counters из шины
+   */
+  async function handleMapPins(payload: any): Promise<void> {
+    const upsert = Array.isArray(payload?.upsert) ? payload.upsert : []
+    const deleted = Array.isArray(payload?.deleted) ? payload.deleted : []
+    const hasOwnUpsert = upsert.some((p: any) => p?.is_owner)
+    if (hasOwnUpsert) {
+      await scheduleRefresh()
+      return
+    }
+    if (deleted.length === 0) return
+    const mine = new Set(items.value.map((p: any) => Number(p?.id)))
+    const touchesMine = deleted.some((id: unknown) => mine.has(Number(id)))
+    if (touchesMine) {
+      await scheduleRefresh()
+    }
+  }
+
+  const offMapPins = busOn('map:pins', (payload: any) => {
+    void handleMapPins(payload)
+  })
+  onUnmounted(() => {
+    try { offMapPins() } catch {}
+    if (debounceTimer) clearTimeout(debounceTimer)
+  })
 
   const { mutateAsync: removeAsync } = useMutation({
     mutation: (id: number) => pinsApi.remove(id),

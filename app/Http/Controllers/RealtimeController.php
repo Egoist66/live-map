@@ -440,9 +440,14 @@ class RealtimeController extends Controller
         $known = $this->parseIds($data['known_ids'] ?? null);
 
         if (! empty($known)) {
-            $existing = Pin::whereIn('id', $known)->pluck('id')->map(fn ($id) => (int) $id)->all();
-            $empty['deleted'] = array_values(array_diff($known, $existing));
-            $empty['counters'] = Pin::whereIn('id', $existing)
+            $activeIds = Pin::active()
+                ->whereIn('id', $known)
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+            $activeLookup = array_flip($activeIds);
+            $empty['deleted'] = array_values(array_filter($known, fn ($id) => ! isset($activeLookup[$id])));
+            $empty['counters'] = Pin::whereIn('id', $activeIds ?: [0])
                 ->get(['id', 'reactions_count', 'comments_count'])
                 ->mapWithKeys(fn ($p) => [(int) $p->id => [
                     'reactions_count' => (int) $p->reactions_count,
@@ -466,9 +471,51 @@ class RealtimeController extends Controller
             ->limit(50)
             ->get();
 
-        $empty['upsert'] = $upsert->map(fn ($p) => $p->toPublicArray($userId))->all();
+        $upsertPins = $upsert->map(fn ($p) => $p->toPublicArray($userId))->all();
+
+        $sosLive = $this->liveSosPins($userId, $since);
+        $seenIds = [];
+        foreach ($upsertPins as $row) {
+            $seenIds[(int) ($row['id'] ?? 0)] = true;
+        }
+        foreach ($sosLive as $row) {
+            if (! isset($seenIds[(int) ($row['id'] ?? 0)])) {
+                $upsertPins[] = $row;
+            }
+        }
+
+        $empty['upsert'] = $upsertPins;
 
         return $empty;
+    }
+
+    /**
+     * Живые SOS-пины вне зависимости от bbox: экстренный вызов
+     * должны увидеть все, а не только те, у кого он во вьюпорте.
+     *
+     * @param int $userId смотрящий
+     * @param Carbon|null $since момент прошлого тика
+     * @return array
+     */
+    private function liveSosPins(int $userId, ?Carbon $since): array
+    {
+        if (! $since) {
+            return [];
+        }
+
+        try {
+            $pins = Pin::active()
+                ->where('category', 'sos')
+                ->where('updated_at', '>', $since)
+                ->with('user:id,name,avatar_path,level')
+                ->orderBy('updated_at')
+                ->limit(10)
+                ->get();
+
+            return $pins->map(fn ($p) => $p->toPublicArray($userId))->all();
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     /**

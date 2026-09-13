@@ -31,12 +31,15 @@ function onCountryChange(v: string): void {
     <h1 class="text-[22px] font-black tracking-tight text-ink-900 dark:text-white">Создай аккаунт</h1>
     <p class="text-sm text-stone-500 dark:text-zinc-400 mt-1">💘 ULove знакомит рядом · 📍 пины показывают жизнь района</p>
     <form @submit.prevent="f.submit" class="mt-6 space-y-4">
-      <div class="rounded-2xl border-2 border-rose-200 dark:border-rose-900 bg-gradient-to-br from-rose-50 to-orange-50 dark:from-rose-950/40 dark:to-orange-950/20 p-3.5">
+      <div v-if="!f.goalPreset.locked" class="rounded-2xl border-2 border-rose-200 dark:border-rose-900 bg-gradient-to-br from-rose-50 to-orange-50 dark:from-rose-950/40 dark:to-orange-950/20 p-3.5">
         <label class="auth-label">💘 Зачем ты здесь? *</label>
-        <Select v-model="f.signup_goal.value" :options="goals.options" optionLabel="label" optionValue="value" placeholder="Выбери цель" checkmark fluid class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.signup_goal" />
+        <Select v-model="f.signup_goal.value" :options="goals.preset.options" optionLabel="label" optionValue="value" placeholder="Выбери цель" checkmark fluid class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.signup_goal" />
         <small class="auth-err">{{ f.errors.value.signup_goal }}</small>
-        <small v-if="goals.isLoveGoal(f.signup_goal.value)" class="text-stone-500 dark:text-zinc-400">После регистрации откроем ULove — листай людей рядом 💘</small>
-        <small v-else class="text-stone-500 dark:text-zinc-400">После регистрации откроем карту — кидай пины, зови рядом 📍</small>
+        <small class="text-stone-500 dark:text-zinc-400">После регистрации откроем ULove — листай людей рядом 💘</small>
+      </div>
+      <div v-else class="rounded-2xl border-2 border-sky-200 dark:border-sky-900 bg-gradient-to-br from-sky-50 to-indigo-50 dark:from-sky-950/40 dark:to-indigo-950/20 p-3.5 flex items-center gap-3">
+        <span class="w-10 h-10 rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-600 grid place-items-center text-lg shrink-0">📍</span>
+        <div class="text-[13px] leading-snug text-stone-600 dark:text-zinc-300"><span class="font-bold text-ink-900 dark:text-white">Ты с UPin</span> — после регистрации откроем карту: кидай пины, зови рядом 📍</div>
       </div>
       <div>
         <label class="auth-label">Имя / ник</label>

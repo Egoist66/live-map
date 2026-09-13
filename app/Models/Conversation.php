@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Conversation extends Model
 {
-    protected $fillable = ['type','created_by','last_message_at'];
+    protected $fillable = ['type','created_by','pin_id','last_message_at'];
     protected $casts = ['last_message_at' => 'datetime'];
 
     public function participants(): BelongsToMany

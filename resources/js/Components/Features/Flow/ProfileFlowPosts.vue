@@ -42,7 +42,7 @@ function goAuthorPosts(): void {
  * @param post пост
  */
 function openEdit(post: FlowPost): void {
-  editor.startEdit(post.id, post.title, post.body, post.is_anonymous)
+  editor.startEdit(post.id, post.title, post.body, post.is_anonymous, post.image_url ?? null)
   editOpen.value = true
 }
 

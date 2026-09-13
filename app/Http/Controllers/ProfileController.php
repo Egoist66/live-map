@@ -139,7 +139,7 @@ class ProfileController extends Controller
     public function edit(Request $request, ?string $identifier = null, ?string $tab = null): Response|RedirectResponse
     {
         $auth = $request->user();
-        $tabIds = ['profile', 'billing', 'pins', 'privacy', 'appearance', 'security', 'procedures', 'support', 'app', 'admin', 'archive'];
+        $tabIds = ['profile', 'billing', 'quests', 'pins', 'privacy', 'appearance', 'security', 'procedures', 'support', 'app', 'admin', 'archive'];
         if ($tab === null && $identifier !== null && in_array($identifier, $tabIds, true) && $identifier !== 'admin') {
             $tab = $identifier;
             $identifier = null;
@@ -205,6 +205,35 @@ class ProfileController extends Controller
         $user->save();
 
         return Redirect::route('profile.edit');
+    }
+
+    /**
+     * Смена стартового режима приложения (ULove-свайпы или UPin-карта).
+     *
+     * Без ограничений: пользователь всегда может пользоваться обеими
+     * сторонами, режим влияет лишь на стартовый экран и подсказки.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function updateDefaultMode(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'default_mode' => ['required', 'string', 'in:ulove,upin'],
+        ]);
+
+        $user = $request->user();
+        $mode = mb_strtolower(trim((string) $data['default_mode']));
+
+        $user->forceFill([
+            'default_mode' => $mode,
+            'default_mode_set_at' => now(),
+        ])->save();
+
+        return response()->json([
+            'default_mode' => $user->default_mode,
+            'landing' => $user->landingPath(),
+        ]);
     }
 
     /**

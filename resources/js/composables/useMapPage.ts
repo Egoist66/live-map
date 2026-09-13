@@ -280,8 +280,28 @@ export function useMapPage() {
     if (pinDetails.selectedPin.value) { pinDetails.closePin(); return }
   }
 
+  /**
+   * Открыть создание пина по ?create=1 (горячая клавиша N вне карты).
+   * Параметр чистится из URL, чтобы не мешать дальше.
+   */
+  function openCreateIfRequested(): void {
+    let requested = false
+    try {
+      const url = new URL(window.location.href)
+      requested = url.searchParams.get('create') === '1'
+      if (requested) {
+        url.searchParams.delete('create')
+        window.history.replaceState({}, '', url.toString())
+      }
+    } catch {
+      requested = false
+    }
+    if (requested) openCreateFromUI()
+  }
+
   async function init() {
     window.addEventListener('keydown', onEsc)
+    window.addEventListener('map:open-create', openCreateFromUI)
     try { void customCats.fetchAll() } catch {}
     const user = page.props.auth?.user as any
     const anchor = homeAnchorOf(user)
@@ -355,6 +375,7 @@ export function useMapPage() {
       }
     }) ?? null
     try { void consumePendingPin() } catch {}
+    try { openCreateIfRequested() } catch {}
   }
 
   function readPendingPin(): { pinId: number; commentId: number | null } | null {
@@ -412,6 +433,7 @@ export function useMapPage() {
 
   function destroy() {
     window.removeEventListener('keydown', onEsc)
+    window.removeEventListener('map:open-create', openCreateFromUI)
     try { unsubGeolocate?.() } catch {}
     unsubGeolocate = null
     try { (mapApi as any).unbindRealtime?.() } catch {}

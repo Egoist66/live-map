@@ -3,6 +3,7 @@ import { useQuery, useQueryCache, useMutation } from '@pinia/colada'
 import { commentsByPinQuery, COMMENT_KEYS } from '@/queries/comments'
 import { PIN_KEYS } from '@/queries/pins'
 import { commentsApi } from '@/services/comments.api'
+import { useAppConfirm } from '@/composables/useAppConfirm'
 import { reactionsApi } from '@/services/reactions.api'
 import { pinsApi } from '@/services/pins.api'
 import { formatTime } from '@/utils/date'
@@ -19,9 +20,11 @@ export function usePinDetails() {
   const highlightCommentId = ref<number | null>(null)
   const editingCommentId = ref<number | null>(null)
   const editingContent = ref<string>('')
+  const deletingCommentId = ref<number | null>(null)
   const replyTo = ref<PinComment | null>(null)
   const toast = (() => { try { return useToast() } catch { return null as any } })()
   const cache = (() => { try { return useQueryCache() } catch { return null as any } })()
+  const { confirmDelete } = useAppConfirm()
 
   const { defineField: defineCommentField, handleSubmit: handleCommentSubmit, errors: commentFormErrors, values: commentFormValues, resetForm: resetCommentForm } = useForm({
     validationSchema: createCommentSchema,
@@ -178,9 +181,68 @@ export function usePinDetails() {
     } catch (e: any) { toast?.add({ severity: 'error', summary: e?.response?.data?.message || 'Лимит 3/день', life: 3000 }) }
   }
 
+  /**
+   * Удалить комментарий с подтверждением.
+   *
+   * Убирает комментарий и его ответы из локального списка, уменьшает
+   * счётчик пина. Лимит на сервере: 3 удаления в день на Free,
+   * на PRO и у админа — безлимитно (ошибка 429 показывается тостом).
+   *
+   * @param comment комментарий или ответ для удаления
+   * @example
+   * await deleteComment(root)
+   */
+  async function deleteComment(comment: PinComment): Promise<void> {
+    const id = Number((comment as any)?.id ?? 0)
+    if (!id || deletingCommentId.value) {
+      return
+    }
+    const ok = await confirmDelete('Комментарий и ответы на него будут удалены навсегда.', 'Удалить комментарий?')
+    if (!ok) {
+      return
+    }
+    deletingCommentId.value = id
+    try {
+      await commentsApi.remove(id)
+      let removedCount = 0
+      const rest: PinComment[] = []
+      for (const item of comments.value as any[]) {
+        if (Number(item.id) === id) {
+          removedCount += 1 + (item.replies?.length ?? 0)
+          continue
+        }
+        const replies = Array.isArray(item.replies)
+          ? item.replies.filter((reply: any) => Number(reply.id) !== id)
+          : item.replies
+        removedCount += (item.replies?.length ?? 0) - (replies?.length ?? 0)
+        rest.push({ ...item, replies })
+      }
+      comments.value = rest
+      if (editingCommentId.value === id) {
+        cancelEditComment()
+      }
+      if (replyTo.value && Number(replyTo.value.id) === id) {
+        replyTo.value = null
+      }
+      if (selectedPin.value) {
+        const left = (selectedPin.value.comments_count || 0) - removedCount
+        selectedPin.value.comments_count = Math.max(0, left)
+      }
+      try {
+        if (selectedPin.value) cache?.invalidateQueries({ key: COMMENT_KEYS.byPin(selectedPin.value.id) as any })
+      } catch {}
+      toast?.add({ severity: 'success', summary: 'Комментарий удалён', life: 2000 })
+    } catch (e: any) {
+      const message = e?.response?.data?.message || 'Не удалось удалить комментарий'
+      toast?.add({ severity: 'error', summary: message, life: 4000 })
+    } finally {
+      deletingCommentId.value = null
+    }
+  }
+
   return {
-    selectedPin, comments, threadedComments, replyTo, replyTarget, cancelReply, commentText, commentTextAttrs, commentFormErrors, editingCommentId, editingContent, highlightCommentId,
-    openPin, openPinById, closePin, loadComments, react, sendComment, boost, startEditComment, cancelEditComment, saveEditComment, useCommentsQuery, formatTime,
+    selectedPin, comments, threadedComments, replyTo, replyTarget, cancelReply, commentText, commentTextAttrs, commentFormErrors, editingCommentId, editingContent, deletingCommentId, highlightCommentId,
+    openPin, openPinById, closePin, loadComments, react, sendComment, boost, startEditComment, cancelEditComment, saveEditComment, deleteComment, useCommentsQuery, formatTime,
     commentsQuery,
     reactMutation, reactStatus: (reactMutation as any).state, reactAsyncStatus: (reactMutation as any).asyncStatus,
     createCommentMutation, createCommentStatus: (createCommentMutation as any).state, createCommentAsyncStatus: (createCommentMutation as any).asyncStatus,

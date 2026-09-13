@@ -5,15 +5,42 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Builder;
 
 class Pin extends Model
 {
     public const BUILT_IN_CATEGORIES = [
-        'question', 'announcement', 'warning', 'event', 'offer', 'help',
+        'sos', 'question', 'announcement', 'warning', 'event', 'offer', 'help',
         'sport', 'food', 'music', 'pets', 'sale', 'job',
         'study', 'travel', 'tech', 'health', 'art', 'humor', 'rest',
     ];
+
+    /**
+     * Категория экстренных ситуаций: требует явного подтверждения ответственности.
+     */
+    public const SOS_CATEGORY = 'sos';
+
+    /**
+     * Лимит SOS-пинов в месяц для Free.
+     */
+    public const SOS_FREE_MONTH_LIMIT = 1;
+
+    /**
+     * Лимит SOS-пинов в месяц для Pro/Business.
+     */
+    public const SOS_PRO_MONTH_LIMIT = 3;
+
+    /**
+     * Проверить, относится ли значение к SOS-категории.
+     *
+     * @param string|null $v сырое значение категории
+     * @return bool true для SOS
+     */
+    public static function isSosCategory(?string $v): bool
+    {
+        return self::normalizeCategory($v) === self::SOS_CATEGORY;
+    }
 
     public static function normalizeCategory(?string $v): string
     {
@@ -47,6 +74,11 @@ class Pin extends Model
     ];
 
     public function user(): BelongsTo { return $this->belongsTo(User::class); }
+
+    /**
+     * SOS-вызов этого пина (только для категории SOS).
+     */
+    public function sosCall(): HasOne { return $this->hasOne(SosCall::class); }
     public function boosts(): HasMany { return $this->hasMany(PinBoost::class); }
     public function views(): HasMany { return $this->hasMany(PinView::class); }
     public function comments(): HasMany { return $this->hasMany(PinComment::class); }

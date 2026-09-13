@@ -17,11 +17,42 @@ export function useWelcome() {
 
   const page = usePage()
   const isAuthenticated = computed(() => !!((page.props as any).auth as any)?.user)
+  const authUser = computed(() => ((page.props as any).auth as any)?.user ?? null)
 
-  const primaryCtaHref = computed(() => (isAuthenticated.value ? '/swipes' : '/register'))
-  const primaryCtaLabel = computed(() => (isAuthenticated.value ? 'Открыть ULove →' : 'Создать анкету ULove →'))
-  const profileCtaHref = computed(() => (isAuthenticated.value ? '/swipes' : '/login'))
-  const profileCtaLabel = computed(() => (isAuthenticated.value ? 'Открыть ULove' : 'Войти'))
+  const homeLanding = computed(() => {
+    const raw = authUser.value?.default_mode
+    if (raw === 'upin' || raw === 'ulove') {
+      return raw === 'upin' ? '/map' : '/swipes'
+    }
+    return authUser.value?.signup_goal === 'neighbors' ? '/map' : '/swipes'
+  })
+
+  const isUpinHome = computed(() => homeLanding.value === '/map')
+
+  const primaryCtaHref = computed(() => {
+    if (!isAuthenticated.value) {
+      return '/register'
+    }
+    return homeLanding.value
+  })
+  const primaryCtaLabel = computed(() => {
+    if (!isAuthenticated.value) {
+      return 'Создать анкету ULove →'
+    }
+    return isUpinHome.value ? 'Открыть карту →' : 'Открыть ULove →'
+  })
+  const profileCtaHref = computed(() => {
+    if (!isAuthenticated.value) {
+      return '/login'
+    }
+    return homeLanding.value
+  })
+  const profileCtaLabel = computed(() => {
+    if (!isAuthenticated.value) {
+      return 'Войти'
+    }
+    return isUpinHome.value ? 'Открыть карту' : 'Открыть ULove'
+  })
 
   return { seo, isAuthenticated, primaryCtaHref, primaryCtaLabel, profileCtaHref, profileCtaLabel }
 }

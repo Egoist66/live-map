@@ -27,7 +27,7 @@ function onSearch() {
 }
 
 function openEdit(post: FlowPost) {
-  editor.startEdit(post.id, post.title, post.body, post.is_anonymous)
+  editor.startEdit(post.id, post.title, post.body, post.is_anonymous, post.image_url ?? null)
   editOpen.value = true
 }
 
@@ -39,7 +39,7 @@ onMounted(() => feed.init())
   <AuthenticatedLayout>
     <Toast />
     <div class="bg-surface dark:bg-[#090E1A] min-h-[calc(100vh-64px)]">
-      <div class="mx-auto max-w-[680px] px-3 sm:px-6 py-4 sm:py-6 space-y-4">
+      <div class="mx-auto max-w-[680px] px-2 sm:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4">
         <div class="flex items-center gap-3">
           <span class="text-xl font-black tracking-tight bg-gradient-to-r from-sky-500 via-blue-600 to-fuchsia-500 bg-clip-text text-transparent">UFlow</span>
           <span class="text-xs text-stone-400">новости друзей и людей рядом</span>
@@ -50,9 +50,9 @@ onMounted(() => feed.init())
           <button class="underline hover:no-underline" @click="feed.clearAuthor()">Вся лента</button>
         </div>
 
-        <div class="flex flex-col sm:flex-row sm:items-center gap-2">
-          <SelectButton :model-value="feed.store.filter" :options="feed.tabs.value" option-label="label" option-value="value" class="max-w-full overflow-x-auto self-start sm:self-auto" @update:model-value="feed.setFilter($event)" />
-          <span class="relative flex-1">
+        <div class="flex flex-col min-[411px]:flex-col sm:flex-row sm:items-center gap-2 min-w-0 max-w-full">
+          <SelectButton :model-value="feed.store.filter" :options="feed.tabs.value" option-label="label" option-value="value" class="max-w-[calc(100vw-1rem)] sm:max-w-full overflow-x-auto self-start sm:self-auto flex-nowrap" @update:model-value="feed.setFilter($event)" />
+          <span class="relative flex-1 min-w-0 w-full">
             <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-sm" />
             <InputText v-model="searchInput" placeholder="Поиск по новостям…" class="w-full !rounded-full !pl-9" @input="onSearch()" />
           </span>

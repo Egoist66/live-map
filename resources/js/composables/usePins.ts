@@ -6,6 +6,7 @@ import type { Pin, CreatePinPayload } from '@/types/entities/Pin'
 const selectedCategory = ref('all')
 
 export const PIN_CATEGORIES = [
+  { v: 'sos', l: 'SOS', i: '🆘', c: '#B91C1C' },
   { v: 'question', l: 'Вопрос', i: '💬', c: '#2563EB' },
   { v: 'announcement', l: 'Объявление', i: '📍', c: '#DC2626' },
   { v: 'warning', l: 'Предупреждение', i: '⚠️', c: '#EA580C' },

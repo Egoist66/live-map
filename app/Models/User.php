@@ -11,18 +11,29 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['name', 'email', 'password', 'gender', 'birth_date', 'country', 'country_code', 'plan', 'latitude', 'longitude', 'role', 'is_admin', 'is_hidden_from_search', 'dating_enabled', 'dating_goal', 'signup_goal', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_gender_pref', 'dating_hide_name', 'dating_hide_age', 'dating_match_only', 'random_chats_used', 'random_chats_month', 'avatar_path', 'home_lat', 'home_lng', 'home_city', 'home_address', 'home_visibility', 'home_show_exact', 'home_radius_km', 'bio', 'thought', 'reputation_score', 'level', 'is_anonymous_default', 'default_location_precision', 'default_blur_meters', 'message_privacy', 'allow_random_messages', 'photo_comments_privacy', 'settings', 'last_seen_at', 'is_invisible', 'screen_lock_code', 'screen_lock_timeout', 'screen_lock_kind', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at', 'terms_accepted_at', 'terms_version'])]
+#[Fillable(['name', 'email', 'password', 'gender', 'birth_date', 'country', 'country_code', 'plan', 'latitude', 'longitude', 'role', 'is_admin', 'is_hidden_from_search', 'dating_enabled', 'dating_goal', 'signup_goal', 'default_mode', 'default_mode_set_at', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_gender_pref', 'dating_hide_name', 'dating_hide_age', 'dating_match_only', 'random_chats_used', 'random_chats_month', 'avatar_path', 'home_lat', 'home_lng', 'home_city', 'home_address', 'home_visibility', 'home_show_exact', 'home_radius_km', 'bio', 'thought', 'reputation_score', 'level', 'quest_cooldown_until', 'quest_last_track', 'quest_granted_at', 'is_anonymous_default', 'default_location_precision', 'default_blur_meters', 'message_privacy', 'allow_random_messages', 'photo_comments_privacy', 'settings', 'last_seen_at', 'is_invisible', 'screen_lock_code', 'screen_lock_timeout', 'screen_lock_kind', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at', 'terms_accepted_at', 'terms_version'])]
 #[Hidden(['password', 'remember_token', 'screen_lock_code'])]
 /**
  * Пользователь приложения.
  *
  * @property string|null $signup_goal Цель захода: love|flirt|friendship|chat|interests везут в ULove-свайпы, neighbors — на карту.
+ * @property string|null $default_mode Стартовый режим: ulove|upin. NULL — режим не выбран, показать модалку.
+ * @property \Carbon\Carbon|null $default_mode_set_at Когда выбран стартовый режим.
  * @property string|null $dating_goal Цель анкеты ULove.
  * @property string|null $thought Короткая мысль под именем в профиле (до 140 символов).
  */
 class User extends Authenticatable
 {
     use HasFactory, Notifiable;
+
+    /**
+     * Временные значения для нотификаций о смене уровня.
+     *
+     * Объявлены как реальные свойства класса, чтобы Eloquent
+     * не складывал их в attributes и не пытался писать в БД.
+     */
+    public mixed $_subOldScore = null;
+    public mixed $_subOldLevel = null;
 
     protected $appends = ['avatar_url', 'age', 'effective_plan'];
 
@@ -67,16 +78,17 @@ class User extends Authenticatable
         });
 
         static::updated(function (self $user) {
-            if (isset($user->_subOldScore) || isset($user->_subOldLevel)) {
+            if ($user->_subOldScore !== null || $user->_subOldLevel !== null) {
                 try {
                     \App\Services\UserSubscriptionNotifier::levelChanged(
                         $user,
-                        $user->_subOldScore ?? null,
-                        $user->_subOldLevel ?? null
+                        $user->_subOldScore,
+                        $user->_subOldLevel
                     );
                 } catch (\Throwable) {
                 }
-                unset($user->_subOldScore, $user->_subOldLevel);
+                $user->_subOldScore = null;
+                $user->_subOldLevel = null;
             }
         });
     }
@@ -189,6 +201,71 @@ class User extends Authenticatable
     }
 
     public function isPro(): bool { return $this->isAdmin() || in_array($this->effectivePlan(), ['pro','business']); }
+
+    /**
+     * Стартовый режим приложения для пользователя.
+     *
+     * Явный default_mode приоритетнее, иначе фолбэк по signup_goal
+     * для совместимости со старыми записями.
+     *
+     * @return string ulove|upin
+     */
+    public function defaultMode(): string
+    {
+        $mode = mb_strtolower(trim((string) ($this->default_mode ?? '')));
+
+        if (in_array($mode, ['ulove', 'upin'], true)) {
+            return $mode;
+        }
+
+        if (($this->signup_goal ?? '') === 'neighbors') {
+            return 'upin';
+        }
+
+        return 'ulove';
+    }
+
+    /**
+     * Выбран ли стартовый режим явно (не фолбэк).
+     *
+     * @return bool true когда default_mode заполнен
+     */
+    public function hasChosenDefaultMode(): bool
+    {
+        return in_array($this->default_mode, ['ulove', 'upin'], true);
+    }
+
+    /**
+     * URL стартового экрана по режиму.
+     *
+     * @return string путь /map для UPin, иначе /swipes
+     */
+    public function landingPath(): string
+    {
+        if ($this->defaultMode() === 'upin') {
+            return route('map', absolute: false);
+        }
+
+        return route('swipes', absolute: false);
+    }
+
+    /**
+     * Сохраняет стартовый режим пользователя.
+     *
+     * @param string $mode ulove|upin
+     * @return void
+     */
+    public function setDefaultMode(string $mode): void
+    {
+        $normalized = mb_strtolower(trim($mode));
+
+        abort_unless(in_array($normalized, ['ulove', 'upin'], true), 422, 'Неизвестный режим');
+
+        $this->forceFill([
+            'default_mode' => $normalized,
+            'default_mode_set_at' => now(),
+        ])->save();
+    }
 
     public function canUseIncognitoLike(): bool { return $this->isPro(); }
 
@@ -394,6 +471,9 @@ class User extends Authenticatable
             'is_invisible' => 'boolean',
             'last_seen_at' => 'datetime',
             'plan_expires_at' => 'datetime',
+            'quest_cooldown_until' => 'datetime',
+            'quest_granted_at' => 'datetime',
+            'default_mode_set_at' => 'datetime',
             'banned_at' => 'datetime',
             'pins_today_date' => 'date',
             'trial_ends_at' => 'datetime',

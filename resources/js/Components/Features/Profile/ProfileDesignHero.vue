@@ -31,12 +31,12 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <section class="rounded-[24px] border border-stone-200 bg-white shadow-soft p-4 sm:p-5 dark:border-zinc-800 dark:bg-zinc-900">
-    <div class="flex gap-3 sm:gap-5">
+  <section class="rounded-[20px] min-[411px]:rounded-[24px] border border-stone-200 bg-white shadow-soft p-3 min-[411px]:p-4 sm:p-5 dark:border-zinc-800 dark:bg-zinc-900 min-w-0 max-w-full overflow-hidden">
+    <div class="flex gap-2.5 min-[411px]:gap-3 sm:gap-5 min-w-0">
       <div class="shrink-0">
         <button
           type="button"
-          class="relative block h-[104px] w-[104px] sm:h-[128px] sm:w-[128px] overflow-hidden rounded-[22px] bg-stone-200/70 dark:bg-zinc-800"
+          class="relative block h-[80px] w-[80px] min-[411px]:h-[104px] min-[411px]:w-[104px] sm:h-[128px] sm:w-[128px] overflow-hidden rounded-[18px] min-[411px]:rounded-[22px] bg-stone-200/70 dark:bg-zinc-800"
           aria-label="Открыть фото"
           @click="emit('avatar')"
         >
@@ -53,14 +53,14 @@ const emit = defineEmits<{
       </div>
 
       <div class="min-w-0 flex-1">
-        <h1 class="truncate text-[22px] sm:text-2xl font-extrabold tracking-tight text-ink-900 dark:text-white">
+        <h1 class="truncate text-[18px] min-[411px]:text-[22px] sm:text-2xl font-extrabold tracking-tight text-ink-900 dark:text-white">
           {{ user.name }}
         </h1>
-        <p v-if="emailText" class="mt-0.5 truncate text-[13px] text-stone-500 dark:text-zinc-400">{{ emailText }}</p>
-        <div class="mt-2 flex flex-wrap items-center gap-1.5">
-          <span class="rounded-full border border-stone-200 bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">{{ levelName }}</span>
-          <span class="rounded-full border border-stone-200 bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">{{ reputationText }} ★</span>
-          <span class="rounded-full border border-stone-200 bg-stone-100 px-3 py-1 text-xs font-semibold text-stone-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">{{ planName }}</span>
+        <p v-if="emailText" class="mt-0.5 truncate text-[12px] min-[411px]:text-[13px] text-stone-500 dark:text-zinc-400">{{ emailText }}</p>
+        <div class="mt-2 flex flex-wrap items-center gap-1 min-[411px]:gap-1.5">
+          <span class="rounded-full border border-stone-200 bg-stone-100 px-2.5 min-[411px]:px-3 py-1 text-[11px] min-[411px]:text-xs font-semibold text-stone-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 max-w-full truncate">{{ levelName }}</span>
+          <span class="rounded-full border border-stone-200 bg-stone-100 px-2.5 min-[411px]:px-3 py-1 text-[11px] min-[411px]:text-xs font-semibold text-stone-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 max-w-full truncate">{{ reputationText }} ★</span>
+          <span class="rounded-full border border-stone-200 bg-stone-100 px-2.5 min-[411px]:px-3 py-1 text-[11px] min-[411px]:text-xs font-semibold text-stone-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 max-w-full truncate">{{ planName }}</span>
         </div>
         <p class="mt-1.5 text-xs font-semibold" :class="online ? 'text-emerald-600 dark:text-emerald-400' : 'text-stone-500 dark:text-zinc-400'">{{ presenceText }}</p>
         <p v-if="headlineText" class="mt-2 flex min-w-0 items-center gap-1 text-[13px] italic text-stone-500 dark:text-zinc-400">
@@ -86,7 +86,7 @@ const emit = defineEmits<{
         </button>
       </div>
 
-      <div class="flex shrink-0 flex-col gap-2">
+      <div class="flex shrink-0 flex-col gap-1.5 min-[411px]:gap-2">
         <Link href="/map" class="block">
           <Button
             icon="pi pi-map"
@@ -94,7 +94,7 @@ const emit = defineEmits<{
             outlined
             title="Открыть карту"
             aria-label="Открыть карту"
-            class="!h-11 !w-11 !p-0 !rounded-full !border-stone-300 !text-stone-600 hover:!border-stone-400 dark:!border-zinc-700 dark:!text-zinc-200 dark:hover:!border-zinc-500"
+            class="!h-10 !w-10 min-[411px]:!h-11 min-[411px]:!w-11 !p-0 !rounded-full !border-stone-300 !text-stone-600 hover:!border-stone-400 dark:!border-zinc-700 dark:!text-zinc-200 dark:hover:!border-zinc-500"
             @click="emit('openMap')"
           />
         </Link>
@@ -104,7 +104,7 @@ const emit = defineEmits<{
           rounded
           title="Редактировать профиль"
           aria-label="Редактировать профиль"
-          class="!h-11 !w-11 !p-0 !rounded-full !border-0 !bg-gradient-to-r !from-[#7c3aed] !to-[#3b82f6] !text-white hover:opacity-95"
+          class="!h-10 !w-10 min-[411px]:!h-11 min-[411px]:!w-11 !p-0 !rounded-full !border-0 !bg-gradient-to-r !from-[#7c3aed] !to-[#3b82f6] !text-white hover:opacity-95"
           @click="emit('edit')"
         />
         <Button
@@ -114,7 +114,7 @@ const emit = defineEmits<{
           rounded
           title="Написать сообщение"
           aria-label="Написать сообщение"
-          class="!h-11 !w-11 !p-0 !rounded-full !border-0 !bg-gradient-to-r !from-[#7c3aed] !to-[#3b82f6] !text-white hover:opacity-95"
+          class="!h-10 !w-10 min-[411px]:!h-11 min-[411px]:!w-11 !p-0 !rounded-full !border-0 !bg-gradient-to-r !from-[#7c3aed] !to-[#3b82f6] !text-white hover:opacity-95"
           @click="emit('chat')"
         />
       </div>

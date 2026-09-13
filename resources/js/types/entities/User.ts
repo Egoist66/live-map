@@ -2,6 +2,7 @@ export type UserPlan = 'free' | 'pro' | 'business'
 export type UserRole = 'user' | 'moderator' | 'admin'
 export type UserLevel = 'novice' | 'explorer' | 'local' | 'veteran' | string
 export type UserGender = 'male' | 'female' | 'other'
+export type DefaultMode = 'ulove' | 'upin'
 
 export interface User {
   id: number
@@ -9,6 +10,9 @@ export interface User {
   gender: UserGender | null
   email: string
   email_verified_at: string | null
+  signup_goal?: string | null
+  default_mode?: DefaultMode | null
+  default_mode_set_at?: string | null
   avatar_path: string | null
   avatar_url: string | null
   home_lat: number | null

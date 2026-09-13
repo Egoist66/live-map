@@ -5,7 +5,7 @@ import { useProfileShare } from '@/composables/useProfileShare'
 import { formatRelative } from '@/utils/date'
 import { avatarSrcFor } from '@/composables/useAvatar'
 
-const LEVEL_LABEL: Record<string, string> = { novice: 'Новичок', local: 'Местный', guide: 'Гид района', explorer: 'Исследователь', veteran: 'Ветеран' }
+const LEVEL_LABEL: Record<string, string> = { novice: 'Новичок', explorer: 'Исследователь', active: 'Активист', local: 'Свой в городе', veteran: 'Ветеран', legend: 'Легенда', guide: 'Гид' }
 
 export function useProfileShowPage(props: { profileUser: any; isOwn: boolean; isFriend: boolean; isPending: boolean; isBlocked?: boolean; isBlockedBy?: boolean; canMessage: boolean; canMessageReason: string | null }) {
   const avatarSrc = computed(() => avatarSrcFor(props.profileUser))

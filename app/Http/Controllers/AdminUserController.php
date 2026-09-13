@@ -41,6 +41,16 @@ class AdminUserController extends Controller
         return response()->json($users);
     }
 
+    /**
+     * Обновить план/роль пользователя.
+     *
+     * Свою роль менять можно, но снятие admin с себя запрещено,
+     * если это последний администратор в системе.
+     *
+     * @param Request $request
+     * @param User $user
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function update(Request $request, User $user)
     {
         $data = $request->validate([
@@ -48,7 +58,18 @@ class AdminUserController extends Controller
             'plan_expires_at' => 'nullable|date|after:now',
             'role' => 'nullable|in:user,moderator,admin',
         ]);
-        abort_if($user->id === $request->user()->id && isset($data['role']), 422, 'Нельзя менять свою роль здесь');
+        $isSelf = $user->id === $request->user()->id;
+        $demotesSelfFromAdmin = $isSelf
+            && isset($data['role'])
+            && $request->user()->isAdmin()
+            && $data['role'] !== 'admin';
+        if ($demotesSelfFromAdmin) {
+            $otherAdmins = User::query()
+                ->where('id', '!=', $user->id)
+                ->where(fn ($w) => $w->where('is_admin', true)->orWhere('role', 'admin'))
+                ->count();
+            abort_if($otherAdmins === 0, 422, 'Нельзя снять роль последнего администратора');
+        }
         if (isset($data['plan'])) {
             $user->plan = $data['plan'];
             $user->plan_expires_at = $data['plan'] === 'free'

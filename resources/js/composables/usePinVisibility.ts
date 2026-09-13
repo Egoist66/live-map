@@ -24,6 +24,7 @@ function authUser(): any {
  * Клиентская проверка видимости пина: страна + зона.
  * Дублирует бэкенд PinVisibility, чтобы realtime из общей
  * Map-рассылки не показывал чужие страны (Польша → Минск).
+ * Активный SOS виден всем, как на бэкенде.
  *
  * @param pin пин из realtime или API
  * @param livePos живая геопозиция, если гео включено
@@ -36,6 +37,9 @@ export function isPinVisibleLocally(pin: any, livePos?: { lat: number; lng: numb
       return false
     }
     if (user.is_admin || user.role === 'admin') {
+      return true
+    }
+    if (String(pin?.category ?? '').toLowerCase() === 'sos' && String(pin?.status ?? 'active') === 'active') {
       return true
     }
     if (pin?.is_owner || Number(pin?.user_id) === Number(user.id)) {

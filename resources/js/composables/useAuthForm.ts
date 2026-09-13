@@ -4,6 +4,7 @@ import { loginSchema } from '@/validation/schemas/login.schema'
 import { registerSchema } from '@/validation/schemas/register.schema'
 import { reverseGeocodeRaw } from '@/services/geo.api'
 import { useCountryMismatch } from '@/composables/useCountryMismatch'
+import { useSignupGoals } from '@/composables/useSignupGoals'
 import { useToast } from 'primevue/usetoast'
 import { router } from '@inertiajs/vue3'
 
@@ -38,6 +39,8 @@ export function useRegisterForm() {
   const showPass2 = ref(false)
   const locating = ref(false)
   const addrLoading = ref(false)
+  const goals = useSignupGoals()
+  const goalPreset = goals.preset
 
   const { defineField, handleSubmit, errors, values, isSubmitting, setValues, setErrors } = useForm({
     validationSchema: registerSchema,
@@ -55,7 +58,7 @@ export function useRegisterForm() {
       home_lng: null,
       home_radius_km: 5,
       home_address: '',
-      signup_goal: 'love',
+      signup_goal: goalPreset.goal,
     } as any,
   })
 
@@ -141,6 +144,9 @@ export function useRegisterForm() {
 
   const submit = handleSubmit(async (vals: any) => {
     const payload = { ...vals, home_radius_km: 5 }
+    if (goalPreset.locked) {
+      payload.signup_goal = goalPreset.goal
+    }
     const residenceOk = await residenceCheck.recheckCountry()
     if (!residenceOk) {
       const msg = residenceCheck.countryWarning.value || 'Страна не совпадает с геолокацией'
@@ -183,6 +189,7 @@ export function useRegisterForm() {
     submit,
     isSubmitting,
     setValues,
+    goalPreset,
     countryWarning: residenceCheck.countryWarning,
     checkingCountry: residenceCheck.checkingCountry,
   }

@@ -2,9 +2,12 @@
 import { computed, nextTick, ref } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import Button from 'primevue/button'
+import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import Chip from 'primevue/chip'
+import { SOS_WARNING_TEXT, SOS_WARNING_TITLE } from '@/composables/useSosConfirm'
+import SosPinActions from '@/Components/Features/Map/SosPinActions.vue'
 import CommentComposerModal from '@/Components/Features/Map/CommentComposerModal.vue'
 import { avatarSrcFor } from '@/composables/useAvatar'
 import { pinBlurInfo } from '@/composables/useLocationBlur'
@@ -17,9 +20,11 @@ import { useEnterToSend } from '@/composables/useEnterToSend'
 import { formatTime } from '@/utils/date'
 import PinInviteButton from '@/Components/Features/Map/PinInviteButton.vue'
 
-const props = defineProps<{ pin: any; comments: any[]; highlightCommentId?: number | null; commentText: string; creatingComment: boolean; editingCommentId: number | null; editingContent: string; savingComment: boolean; reacting: boolean; reporting: boolean; pinEdit: any; categories: any[]; deleting: boolean; authId: number; replyTo: any; mentions: any }>()
-const emit = defineEmits<{ (e: 'close'): void; (e: 'delete'): void; (e: 'react', k: string): void; (e: 'report'): void; (e: 'sendComment'): void; (e: 'update:comment', v: string): void; (e: 'update:editContent', v: string): void; (e: 'startEditComment', c: any): void; (e: 'cancelEditComment'): void; (e: 'saveEditComment'): void; (e: 'saveEdit'): void; (e: 'reply', root: any, target: any): void; (e: 'cancelReply'): void }>()
+const props = defineProps<{ pin: any; comments: any[]; highlightCommentId?: number | null; commentText: string; creatingComment: boolean; editingCommentId: number | null; editingContent: string; savingComment: boolean; deletingCommentId?: number | null; reacting: boolean; reporting: boolean; pinEdit: any; categories: any[]; deleting: boolean; authId: number; isAdmin?: boolean; replyTo: any; mentions: any }>()
+const emit = defineEmits<{ (e: 'close'): void; (e: 'delete'): void; (e: 'react', k: string): void; (e: 'report'): void; (e: 'sendComment'): void; (e: 'update:comment', v: string): void; (e: 'update:editContent', v: string): void; (e: 'startEditComment', c: any): void; (e: 'cancelEditComment'): void; (e: 'saveEditComment'): void; (e: 'deleteComment', c: any): void; (e: 'saveEdit'): void; (e: 'reply', root: any, target: any): void; (e: 'cancelReply'): void; (e: 'sosChat', conversationId: number): void; (e: 'sosClosed'): void }>()
 const blur = computed(() => pinBlurInfo(props.pin))
+const isSosPin = computed(() => String(props.pin?.category ?? '').toLowerCase() === 'sos')
+const isEditingPin = computed(() => !!props.pinEdit?.editing?.value)
 const catMeta = computed(() => (props.categories as any[]).find((c: any) => c.v === props.pin?.category) ?? null)
 const lifetime = usePinLifetime(() => props.pin)
 const commentBox = usePinCommentInput({ getText: () => props.commentText, emit: (e, v) => emit(e as any, v as any), mentions: props.mentions })
@@ -101,10 +106,19 @@ function onSend() {
   emit('sendComment')
 }
 function authorName(c: any): string { return c?.is_anonymous ? 'аноним' : (c?.user?.name || 'пользователь') }
+function canDeleteComment(c: any): boolean {
+  if (!c) {
+    return false
+  }
+  if (Number(c.user_id) === Number(props.authId)) {
+    return true
+  }
+  return !!props.isAdmin
+}
 </script>
 <template>
-  <div v-if="pin" ref="cardRef" :style="cardStyle" class="absolute inset-x-2 sm:inset-x-auto bottom-2 sm:bottom-4 top-auto max-h-[72dvh] sm:right-4 sm:top-4 sm:w-[380px] sm:max-h-none bg-white dark:bg-zinc-900 rounded-[20px] shadow-float border border-stone-200 dark:border-zinc-700 flex flex-col overflow-hidden z-20">
-    <div class="p-4 sm:p-5 border-b border-stone-200 dark:border-zinc-700 shrink-0">
+  <div v-if="pin" ref="cardRef" :style="cardStyle" :class="isEditingPin ? 'sm:max-h-[calc(100dvh-2rem)]' : 'sm:max-h-none'" class="absolute inset-x-2 sm:inset-x-auto bottom-2 sm:bottom-4 top-auto max-h-[72dvh] sm:right-4 sm:top-4 sm:w-[380px] bg-white dark:bg-zinc-900 rounded-[20px] shadow-float border border-stone-200 dark:border-zinc-700 flex flex-col overflow-hidden z-20">
+    <div class="p-4 sm:p-5 border-b border-stone-200 dark:border-zinc-700 shrink-0" :class="isEditingPin ? 'max-h-[30dvh] sm:max-h-[280px] overflow-y-auto min-h-0' : ''">
       <div v-if="!pinEdit.editing.value" class="flex justify-between items-start gap-3">
         <h3 class="font-bold leading-tight pr-2 text-[15px] break-words min-w-0 flex-1">{{ pin.title }}</h3>
         <div class="flex items-center gap-1 shrink-0">
@@ -116,12 +130,28 @@ function authorName(c: any): string { return c?.is_anonymous ? 'аноним' : 
       <div v-else class="space-y-3">
         <InputText v-model="pinEdit.title.value" v-bind="pinEdit.titleAttrs" maxlength="100" placeholder="Заголовок" class="w-full !rounded-xl" />
         <Textarea v-model="pinEdit.body.value" rows="3" maxlength="1000" placeholder="Подробности" autoResize class="w-full !rounded-xl" />
-        <div class="flex gap-1.5 flex-wrap"><button v-for="c in categories" :key="c.v" @click="(pinEdit.category.value as any) = c.v" :class="['px-3 py-1.5 rounded-full text-xs font-semibold border transition active:scale-95', (pinEdit.category.value as any) === c.v ? 'bg-stone-900 dark:bg-white text-white dark:text-ink-900 border-stone-900 dark:border-white' : 'bg-zinc-500/10 dark:bg-zinc-500/15 border-zinc-500/25 dark:border-zinc-500/30 text-ink-900 dark:text-zinc-200 hover:bg-zinc-500/20']">{{ c.i }} {{ c.l }}</button></div>
+        <div class="flex gap-1.5 flex-wrap"><button v-for="c in categories" :key="c.v" @click="pinEdit.selectCategory(c.v)" :class="['px-3 py-1.5 rounded-full text-xs font-semibold border transition active:scale-95', (pinEdit.category.value as any) === c.v ? 'bg-stone-900 dark:bg-white text-white dark:text-ink-900 border-stone-900 dark:border-white' : 'bg-zinc-500/10 dark:bg-zinc-500/15 border-zinc-500/25 dark:border-zinc-500/30 text-ink-900 dark:text-zinc-200 hover:bg-zinc-500/20']">{{ c.i }} {{ c.l }}</button></div>
         <div class="flex gap-2">
           <Button label="Сохранить" rounded class="flex-1 !bg-stone-900 dark:!bg-white dark:!text-ink-900 !border-stone-900 dark:!border-white" :loading="pinEdit.updating.value" @click="emit('saveEdit')" />
           <Button label="Отмена" severity="secondary" outlined rounded class="flex-1" @click="pinEdit.cancel()" />
         </div>
+        <Dialog :visible="pinEdit.sos.showSosWarning.value" @update:visible="(v:boolean)=>{ if (!v) pinEdit.sos.cancelSos() }" modal :closable="false" :draggable="false" header="SOS" :style="{ width: '420px', maxWidth: 'calc(100vw - 2rem)' }" :pt="{ root: { class: '!rounded-3xl !border-red-200 dark:!border-red-900' } }">
+          <div class="flex items-start gap-3">
+            <span class="w-11 h-11 rounded-2xl bg-red-500/15 text-red-500 grid place-items-center text-xl shrink-0">🆘</span>
+            <div>
+              <div class="text-[15px] font-black text-stone-900 dark:text-white">{{ SOS_WARNING_TITLE }}</div>
+              <p class="mt-1.5 text-[13px] leading-relaxed text-stone-600 dark:text-zinc-300">{{ SOS_WARNING_TEXT }}</p>
+            </div>
+          </div>
+          <template #footer>
+            <div class="flex gap-2 justify-end">
+              <Button label="Отмена" severity="secondary" outlined rounded size="small" @click="pinEdit.sos.cancelSos()" />
+              <Button label="Осознаю ответственность" severity="danger" rounded size="small" @click="pinEdit.sos.confirmSos()" />
+            </div>
+          </template>
+        </Dialog>
       </div>
+      <SosPinActions v-if="!pinEdit.editing.value && isSosPin" :pin-id="Number(pin.id)" :is-owner="!!pin.is_owner" :auth-id="Number(authId)" class="mt-3" @chat="(id:number)=>emit('sosChat', id)" @closed="emit('sosClosed')" />
       <p v-if="!pinEdit.editing.value && pin.body" class="text-sm text-stone-600 dark:text-zinc-300 mt-2 leading-relaxed break-words overflow-wrap-anywhere comment-body" v-html="renderWithMentions(pin.body || '')" @click="mentionNav.onRichClick"></p>
       <div v-if="!pinEdit.editing.value && blur" title="Точка на карте сдвинута от реального места" class="mt-2 text-[11px] leading-snug bg-violet-50 dark:bg-violet-950/40 border border-violet-200 dark:border-violet-800 text-violet-800 dark:text-violet-200 rounded-xl px-2.5 py-1.5">📍 {{ blur.hint }}</div>
       <div v-if="!pinEdit.editing.value" class="flex flex-wrap gap-1.5 mt-3 items-center">
@@ -145,7 +175,7 @@ function authorName(c: any): string { return c?.is_anonymous ? 'аноним' : 
         <button @click="emit('report')" :disabled="reporting" class="w-10 h-10 rounded-full grid place-items-center border active:scale-95 transition disabled:opacity-50 bg-zinc-500/10 dark:bg-zinc-500/15 border-zinc-500/25 dark:border-zinc-500/30 text-zinc-500 dark:text-zinc-300 hover:bg-red-500/15 hover:border-red-500/40 hover:text-red-500 dark:hover:text-red-400">⚠</button>
       </div>
     </div>
-    <div ref="listRef" class="flex-1 overflow-y-auto overscroll-contain p-4 space-y-3 bg-stone-50/40 dark:bg-black/30" style="webkit-overflow-scrolling: touch;">
+    <div ref="listRef" class="flex-1 overflow-y-auto overscroll-contain p-4 space-y-3 bg-stone-50/40 dark:bg-black/30" :class="isEditingPin ? 'min-h-[160px] sm:min-h-[240px]' : ''" style="webkit-overflow-scrolling: touch;">
       <div v-for="root in comments" :key="root.id" :id="`pin-comment-${root.id}`" :class="['bg-white dark:bg-zinc-800 border rounded-2xl p-3.5', Number(highlightCommentId) === Number(root.id) ? 'border-violet-500 ring-2 ring-violet-500/40' : 'border-stone-200 dark:border-zinc-700']">
         <div class="font-semibold text-xs flex items-center gap-2 dark:text-zinc-100">
           <img v-if="!root.is_anonymous" :src="avatarSrcFor(root.user)" class="w-6 h-6 rounded-full object-cover shrink-0" alt="" />
@@ -158,6 +188,7 @@ function authorName(c: any): string { return c?.is_anonymous ? 'аноним' : 
         <div v-if="editingCommentId !== root.id || composer.useModalComposer.value" class="mt-2 flex gap-1 items-center">
           <Button label="Ответить" size="small" text @click="onReply(root)" />
           <Button v-if="root.user_id === authId" label="ред." size="small" text @click="onStartEdit(root)" />
+          <Button v-if="canDeleteComment(root)" icon="pi pi-trash" severity="danger" size="small" text title="Удалить комментарий" aria-label="Удалить комментарий" :loading="Number(deletingCommentId) === Number(root.id)" @click="emit('deleteComment', root)" />
         </div>
         <div v-if="(root.replies || []).length" class="mt-2.5 ml-4 sm:ml-6 pl-3 border-l-2 border-violet-200 dark:border-violet-800 space-y-2.5">
           <div v-for="r in root.replies" :key="r.id" :id="`pin-comment-${r.id}`" :class="['rounded-xl px-2 py-1 -mx-2', Number(highlightCommentId) === Number(r.id) ? 'bg-violet-50 dark:bg-violet-950/40 ring-1 ring-violet-500/40' : '']">
@@ -171,6 +202,7 @@ function authorName(c: any): string { return c?.is_anonymous ? 'аноним' : 
             <div v-if="editingCommentId !== r.id || composer.useModalComposer.value" class="mt-1.5 flex gap-1 items-center">
               <Button label="Ответить" size="small" text @click="onReply(root, r)" />
               <Button v-if="r.user_id === authId" label="ред." size="small" text @click="onStartEdit(r)" />
+              <Button v-if="canDeleteComment(r)" icon="pi pi-trash" severity="danger" size="small" text title="Удалить комментарий" aria-label="Удалить комментарий" :loading="Number(deletingCommentId) === Number(r.id)" @click="emit('deleteComment', r)" />
             </div>
           </div>
         </div>

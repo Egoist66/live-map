@@ -53,7 +53,7 @@ Route::fallback(function () {
     if (!auth()->check()) {
         return redirect()->route('login');
     }
-    return redirect()->route('dashboard');
+    return redirect(auth()->user()->landingPath());
 });
 
 require __DIR__.'/auth.php';

@@ -59,6 +59,8 @@ class RegisteredUserController extends Controller
 
         $datingGoal = $this->datingGoalFor($signupGoal);
 
+        $defaultMode = $this->defaultModeFor($signupGoal);
+
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
@@ -72,6 +74,8 @@ class RegisteredUserController extends Controller
             'home_lng' => $request->home_lng,
             'home_radius_km' => 10,
             'signup_goal' => $signupGoal,
+            'default_mode' => $defaultMode,
+            'default_mode_set_at' => now(),
             'dating_enabled' => true,
             'dating_goal' => $datingGoal,
         ]);
@@ -80,7 +84,7 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        return redirect($this->landingFor($signupGoal));
+        return redirect($this->landingFor($defaultMode));
     }
 
     /**
@@ -99,14 +103,29 @@ class RegisteredUserController extends Controller
     }
 
     /**
-     * Стартовый экран после регистрации по цели захода.
+     * Стартовый режим из цели захода.
      *
      * @param string $signupGoal цель с формы регистрации
-     * @return string URL свайпов для любовных целей, иначе карта
+     * @return string ulove для знакомств, upin для карты
      */
-    private function landingFor(string $signupGoal): string
+    private function defaultModeFor(string $signupGoal): string
     {
         if ($signupGoal === 'neighbors') {
+            return 'upin';
+        }
+
+        return 'ulove';
+    }
+
+    /**
+     * Стартовый экран после регистрации по режиму.
+     *
+     * @param string $defaultMode ulove|upin
+     * @return string URL свайпов для ULove, иначе карта
+     */
+    private function landingFor(string $defaultMode): string
+    {
+        if ($defaultMode === 'upin') {
             return route('map', absolute: false);
         }
 

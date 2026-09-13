@@ -12,7 +12,7 @@ import Paginator from 'primevue/paginator'
 import ProgressSpinner from 'primevue/progressspinner'
 import { avatarSrcFor } from '@/composables/useAvatar'
 
-defineProps<{ list: any[]; meta: any; page: number; query: string; filter: string; sort: string; limit: number; loading: boolean; actingId: number | null; admin: any }>()
+defineProps<{ list: any[]; meta: any; page: number; query: string; filter: string; sort: string; limit: number; loading: boolean; actingId: number | null; admin: any; authUserId?: number | null }>()
 const emit = defineEmits<{
   (e: 'update:query', v: string): void
   (e: 'filter', v: string): void
@@ -76,12 +76,13 @@ const roleOptions = [
             </div>
             <Tag v-if="u.is_online" value="онлайн" severity="success" class="!text-[9px]" />
             <Tag v-else value="офлайн" severity="secondary" class="!text-[9px]" />
+            <Tag v-if="authUserId && Number(u.id) === Number(authUserId)" value="это вы" severity="warn" class="!text-[9px]" />
             <Tag v-if="u.is_hidden_from_search" value="скрыт" severity="contrast" class="!text-[9px]" />
             <Tag v-if="u.banned_at" value="забанен" severity="danger" class="!text-[9px]" />
           </div>
           <div class="mt-2.5 flex gap-1.5 flex-wrap items-center">
             <Select :modelValue="u.plan" @change="(e:any)=>emit('plan', u, e.value)" :options="planOptions" optionLabel="label" optionValue="value" size="small" :disabled="actingId === u.id" checkmark />
-            <Select :modelValue="u.role || 'user'" @change="(e:any)=>emit('role', u, e.value)" :options="roleOptions" optionLabel="label" optionValue="value" size="small" :disabled="actingId === u.id || u.is_admin" checkmark />
+            <Select :modelValue="u.role || 'user'" @change="(e:any)=>emit('role', u, e.value)" :options="roleOptions" optionLabel="label" optionValue="value" size="small" :disabled="actingId === u.id || (!!u.is_admin && !(authUserId && Number(u.id) === Number(authUserId)))" :title="authUserId && Number(u.id) === Number(authUserId) ? 'Сменить свою роль' : undefined" checkmark />
             <span class="flex-1" />
             <Button @click="admin.toggleUser(u)" :loading="admin.togglingId.value === u.id" :label="u.is_hidden_from_search ? 'Показать' : 'Скрыть'" size="small" rounded :outlined="!u.is_hidden_from_search" class="!text-xs !py-1" :severity="u.is_hidden_from_search ? 'success' : 'secondary'" />
             <Button v-if="!u.banned_at" @click="emit('ban', u)" :disabled="!!u.is_admin" icon="pi pi-ban" size="small" rounded outlined severity="danger" title="Забанить" />

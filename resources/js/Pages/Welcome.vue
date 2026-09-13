@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3'
 import { useWelcome } from '@/composables/useWelcome'
+import { useWelcomeMode } from '@/composables/useWelcomeMode'
 import { useWelcomeHeroSwiper } from '@/composables/useWelcomeHeroSwiper'
 import AppFooter from '@/Layouts/AppFooter.vue'
 import Button from 'primevue/button'
@@ -10,56 +11,89 @@ import Badge from 'primevue/badge'
 import Avatar from 'primevue/avatar'
 
 const w = useWelcome()
+const landing = useWelcomeMode()
 const hero = useWelcomeHeroSwiper()
+
+const tabOptions = [
+  { label: 'ULove', icon: '💘', value: 'ulove' },
+  { label: 'UPin', icon: '📍', value: 'upin' },
+]
+
+const thumbGradient = {
+  ulove: 'bg-gradient-to-r from-rose-400 via-fuchsia-400 to-orange-300',
+  upin: 'bg-gradient-to-r from-sky-400 via-blue-400 to-indigo-400',
+} as const
+
+function switchTab(next: 'ulove' | 'upin'): void {
+  landing.setTab(next)
+}
 </script>
 
 <template>
-  <Head :title="w.seo.title.value">
-    <meta head-key="description" name="description" :content="w.seo.description.value" />
-    <meta head-key="og:title" property="og:title" :content="w.seo.title.value" />
-    <meta head-key="og:description" property="og:description" :content="w.seo.description.value" />
+  <Head :title="landing.seo.value.title">
+    <meta head-key="description" name="description" :content="landing.seo.value.description" />
+    <meta head-key="og:title" property="og:title" :content="landing.seo.value.title" />
+    <meta head-key="og:description" property="og:description" :content="landing.seo.value.description" />
   </Head>
   <div class="min-h-screen flex flex-col bg-surface dark:bg-[#0B0F1A] text-ink-900 dark:text-zinc-100 antialiased selection:bg-rose-500 selection:text-white overflow-x-hidden">
     <header class="sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/70 backdrop-blur border-b border-stone-200/60 dark:border-zinc-800">
-      <div class="max-w-[1280px] mx-auto px-4 sm:px-6 h-[64px] flex items-center justify-between">
-        <Link href="/" class="flex items-center gap-2.5">
-          <span class="w-9 h-9 rounded-xl bg-gradient-to-br from-rose-500 via-fuchsia-500 to-orange-400 grid place-items-center text-white shadow-soft"><i class="pi pi-heart-fill text-sm" /></span>
-          <span class="font-black tracking-[-0.03em] text-[19px]">U<span class="font-light text-ink-600 dark:text-zinc-400">Pin</span></span>
-          <span class="hidden sm:inline ml-2 text-xs font-black tracking-wide bg-gradient-to-r from-rose-500 via-fuchsia-500 to-orange-400 bg-clip-text text-transparent border-l border-stone-200 dark:border-zinc-700 pl-3">ULOVE · ЗНАКОМСТВА РЯДОМ</span>
+      <div class="max-w-[1280px] mx-auto px-2 min-[411px]:px-4 sm:px-6 h-14 min-[411px]:h-[64px] flex items-center justify-between gap-2 min-w-0">
+        <Link href="/" class="flex items-center gap-2 min-w-0 shrink-0">
+          <span :class="['w-8 h-8 min-[411px]:w-9 min-[411px]:h-9 rounded-[10px] min-[411px]:rounded-xl grid place-items-center text-white shadow-soft transition-colors duration-300 shrink-0', landing.theme.value.logo]"><i :class="[landing.theme.value.logoIcon, 'text-sm']" /></span>
+          <span class="font-black tracking-[-0.03em] text-[17px] min-[411px]:text-[19px] whitespace-nowrap">U<span class="font-light text-ink-600 dark:text-zinc-400">Pin</span></span>
+          <span class="hidden sm:inline ml-2 text-xs font-black tracking-wide bg-gradient-to-r from-rose-500 via-fuchsia-500 to-orange-400 bg-clip-text text-transparent border-l border-stone-200 dark:border-zinc-700 pl-3">{{ landing.isUlove.value ? 'ULOVE · ЗНАКОМСТВА РЯДОМ' : 'UPIN · КАРТА РЯДОМ' }}</span>
         </Link>
-        <nav class="flex items-center gap-2">
+        <nav class="flex items-center gap-1 min-[411px]:gap-2 shrink-0">
           <Link href="/map" class="hidden sm:inline-flex text-sm font-semibold text-stone-500 dark:text-zinc-400 hover:text-ink-900 dark:hover:text-white px-3 py-2">Карта</Link>
-          <Link :href="w.profileCtaHref.value"><Button :label="w.profileCtaLabel.value" class="!bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white !px-6 !py-2.5 !rounded-full !text-sm !font-semibold hover:!bg-ink-800 dark:hover:!bg-zinc-100 !border-0 shadow-soft" /></Link>
+          <Link :href="w.profileCtaHref.value"><Button :label="w.profileCtaLabel.value" class="!bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white !px-4 min-[411px]:!px-6 !py-2 min-[411px]:!py-2.5 !rounded-full !text-[13px] min-[411px]:!text-sm !font-semibold hover:!bg-ink-800 dark:hover:!bg-zinc-100 !border-0 shadow-soft whitespace-nowrap" /></Link>
         </nav>
       </div>
     </header>
 
-    <section class="max-w-[1280px] mx-auto px-4 sm:px-6 pt-6 sm:pt-14 pb-8 sm:pb-10 grid lg:grid-cols-[1.05fr_0.95fr] gap-6 sm:gap-10 items-center overflow-hidden">
+    <div class="max-w-[1280px] mx-auto px-4 sm:px-6 pt-4 sm:pt-6 flex flex-col items-center gap-2">
+      <div class="text-[10px] font-black tracking-[0.22em] uppercase text-stone-400 dark:text-zinc-500">Выбери сторону</div>
+      <div class="relative inline-flex rounded-full bg-white/70 dark:bg-zinc-900/70 backdrop-blur border border-stone-200/80 dark:border-zinc-700/60 p-1 shadow-soft">
+        <span
+          :class="['absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] rounded-full shadow-md transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]', thumbGradient[landing.tab.value], landing.tab.value === 'upin' ? 'translate-x-full' : 'translate-x-0']"
+        ></span>
+        <button
+          v-for="opt in tabOptions"
+          :key="opt.value"
+          type="button"
+          :class="['relative z-10 flex items-center gap-1.5 rounded-full px-5 sm:px-8 py-2 text-sm font-bold transition-colors duration-300', landing.tab.value === opt.value ? 'text-white' : 'text-stone-500 dark:text-zinc-400 hover:text-ink-900 dark:hover:text-white']"
+          @click="switchTab(opt.value as 'ulove' | 'upin')"
+        >
+          <span class="text-[15px] leading-none">{{ opt.icon }}</span>{{ opt.label }}
+        </button>
+      </div>
+    </div>
+
+    <section class="max-w-[1280px] mx-auto px-4 sm:px-6 pt-4 sm:pt-10 pb-8 sm:pb-10 grid lg:grid-cols-[1.05fr_0.95fr] gap-6 sm:gap-10 items-center overflow-hidden">
       <div>
         <div class="inline-flex items-center gap-2 bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-full pl-1.5 pr-3 py-1 shadow-soft">
-          <Tag class="!bg-gradient-to-r !from-rose-500 !via-fuchsia-500 !to-orange-400 !text-white !rounded-full !px-2.5 !py-1 !text-[11px] !font-bold tracking-wide !border-0"><span class="w-1.5 h-1.5 bg-white rounded-full animate-pulse inline-block mr-1.5 align-middle"></span>ULOVE · LIVE</Tag>
-          <span class="text-xs font-medium text-stone-600 dark:text-zinc-400">люди рядом · мэтч открывает чат · пины на карте</span>
+          <Tag :class="['!text-white !rounded-full !px-2.5 !py-1 !text-[11px] !font-bold tracking-wide !border-0', landing.theme.value.badge]"><span class="w-1.5 h-1.5 bg-white rounded-full animate-pulse inline-block mr-1.5 align-middle"></span>{{ landing.content.value.badge }}</Tag>
+          <span class="text-xs font-medium text-stone-600 dark:text-zinc-400">{{ landing.content.value.badgeNote }}</span>
         </div>
-        <h1 class="mt-5 sm:mt-6 text-[30px] sm:text-[48px] lg:text-[64px] font-black tracking-[-0.04em] sm:tracking-[-0.05em] leading-[0.95] sm:leading-[0.85] dark:text-white break-words text-balance">Встречай рядом.<br /><span class="bg-gradient-to-r from-rose-500 via-fuchsia-500 to-orange-400 bg-clip-text text-transparent">ULove</span> — главное.</h1>
-        <p class="mt-5 text-[15px] sm:text-[17px] leading-relaxed text-stone-600 dark:text-zinc-400 max-w-[560px]">Свайпы людей рядом, мэтч открывает чат. Без ленты и шума. А карта с пинами — удобная фишка в помощь: позови на кофе в 2 клика, без точного адреса.</p>
+        <h1 class="mt-5 sm:mt-6 text-[30px] sm:text-[48px] lg:text-[64px] font-black tracking-[-0.04em] sm:tracking-[-0.05em] leading-[0.95] sm:leading-[0.85] dark:text-white break-words text-balance">{{ landing.content.value.titleTop }}<br /><span :class="landing.theme.value.accentText">{{ landing.content.value.titleAccent }}</span> {{ landing.content.value.titleTail }}</h1>
+        <p class="mt-5 text-[15px] sm:text-[17px] leading-relaxed text-stone-600 dark:text-zinc-400 max-w-[560px]">{{ landing.content.value.description }}</p>
         <div class="mt-6 sm:mt-7 flex flex-col sm:flex-row sm:flex-wrap gap-2.5 sm:gap-3">
-          <Link :href="w.primaryCtaHref.value" class="w-full sm:w-auto"><Button :label="w.primaryCtaLabel.value" class="w-full sm:w-auto !bg-gradient-to-r !from-rose-500 !via-fuchsia-500 !to-orange-400 !text-white !px-7 !py-3.5 !rounded-full !font-bold hover:opacity-90 !border-0 shadow-soft" /></Link>
-          <a href="#how" class="w-full sm:w-auto"><Button label="Как работает ULove" severity="secondary" outlined class="w-full sm:w-auto !bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-700 !px-7 !py-3.5 !rounded-full !font-semibold hover:!bg-stone-50 dark:hover:!bg-zinc-800 !text-ink-900 dark:!text-white" /></a>
+          <Link :href="landing.primaryCta.value.href" class="w-full sm:w-auto"><Button :label="landing.primaryCta.value.label" :class="['w-full sm:w-auto !text-white !px-7 !py-3.5 !rounded-full !font-bold hover:opacity-90 !border-0 shadow-soft', landing.theme.value.ctaBtn]" /></Link>
+          <a href="#how" class="w-full sm:w-auto"><Button :label="landing.content.value.secondaryLabel" severity="secondary" outlined class="w-full sm:w-auto !bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-700 !px-7 !py-3.5 !rounded-full !font-semibold hover:!bg-stone-50 dark:hover:!bg-zinc-800 !text-ink-900 dark:!text-white" /></a>
         </div>
         <div class="mt-6 sm:mt-8 flex items-center gap-4 sm:gap-6 flex-wrap py-4 sm:py-5 border-y border-stone-200/60 dark:border-zinc-800 max-w-[520px]">
-          <div><div class="font-black text-[22px] tracking-tight">Мэтч → чат</div><div class="text-xs font-medium text-stone-500 dark:text-zinc-500 uppercase tracking-wide">пишут только взаимно</div></div>
-          <div class="w-px h-10 bg-stone-200 dark:bg-zinc-800"></div>
-          <div><div class="font-black text-[22px] tracking-tight">Рядом</div><div class="text-xs font-medium text-stone-500 dark:text-zinc-500 uppercase tracking-wide">фильтр по расстоянию</div></div>
-          <div class="w-px h-10 bg-stone-200 dark:bg-zinc-800"></div>
-          <div><div class="font-black text-[22px] tracking-tight">Пины · 200 м</div><div class="text-xs font-medium text-stone-500 dark:text-zinc-500 uppercase tracking-wide">карта без точного адреса</div></div>
+          <div v-for="(stat, statIndex) in landing.content.value.stats" :key="stat.value" class="flex items-center gap-4 sm:gap-6">
+            <div><div class="font-black text-xl sm:text-[22px] tracking-tight">{{ stat.value }}</div><div class="text-xs font-medium text-stone-500 dark:text-zinc-500 uppercase tracking-wide">{{ stat.note }}</div></div>
+            <div v-if="statIndex < landing.content.value.stats.length - 1" class="hidden sm:block w-px h-10 bg-stone-200 dark:bg-zinc-800"></div>
+          </div>
         </div>
         <div class="mt-4 flex items-center gap-2 text-xs text-stone-500 dark:text-zinc-500">
-          <span class="w-7 h-7 rounded-full bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-700 grid place-items-center">✓</span> Анонимно по желанию · Блок в 1 клик · Пины живут часы
+          <span class="w-7 h-7 rounded-full bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-700 grid place-items-center">✓</span> {{ landing.content.value.trust }}
         </div>
+        <button type="button" :class="['mt-4 text-[13px] font-bold hover:opacity-80', landing.theme.value.accentText]" @click="switchTab(landing.isUlove.value ? 'upin' : 'ulove')">{{ landing.content.value.crossHint }}</button>
       </div>
 
       <div class="relative w-full max-w-[560px] justify-self-center lg:justify-self-end">
-        <Card class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[28px] !shadow-float !p-3">
+        <Card v-if="landing.isUlove.value" class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[28px] !shadow-float !p-3">
           <template #content>
             <div
               class="aspect-[4/3.4] rounded-[18px] overflow-hidden relative bg-stone-100 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700"
@@ -119,30 +153,45 @@ const hero = useWelcomeHeroSwiper()
             </div>
           </template>
         </Card>
+
+        <Card v-else class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[28px] !shadow-float !p-3">
+          <template #content>
+            <div class="rounded-[18px] overflow-hidden relative bg-gradient-to-br from-teal-600 via-indigo-700 to-[#0B0F1A] border border-stone-200 dark:border-zinc-700 p-4 sm:p-5 min-h-[320px]">
+              <div class="absolute inset-0 opacity-20 pointer-events-none" style="background-image: radial-gradient(circle at 20% 30%, rgba(255,255,255,.5) 0 2px, transparent 2px), radial-gradient(circle at 70% 20%, rgba(255,255,255,.4) 0 2px, transparent 2px), radial-gradient(circle at 85% 65%, rgba(255,255,255,.4) 0 2px, transparent 2px), radial-gradient(circle at 40% 75%, rgba(255,255,255,.35) 0 2px, transparent 2px); background-size: 90px 90px;"></div>
+              <div class="absolute top-[22%] left-[16%] pointer-events-none"><span class="block w-9 h-9 rounded-full bg-white shadow-lg grid place-items-center text-base">☕</span></div>
+              <div class="absolute top-[55%] left-[68%] pointer-events-none"><span class="block w-9 h-9 rounded-full bg-white shadow-lg grid place-items-center text-base">🐕</span></div>
+              <div class="absolute top-[38%] left-[46%] pointer-events-none"><span class="block w-11 h-11 rounded-full bg-gradient-to-r from-sky-500 to-indigo-500 shadow-lg shadow-sky-500/40 grid place-items-center text-lg ring-4 ring-white/40">📍</span></div>
+              <div class="relative flex justify-between items-center">
+                <Badge value="📍 Рядом сейчас" class="!bg-white/90 !text-ink-900 !rounded-full !px-3 !py-1.5 !text-xs !font-bold !border-0" />
+                <Badge value="без точного адреса" class="!bg-black/50 !text-white !rounded-full !px-3 !py-1.5 !text-xs !font-bold !border !border-white/20" />
+              </div>
+              <div class="relative mt-[38%] sm:mt-[34%] space-y-2">
+                <div v-for="pin in landing.pinSamples" :key="pin.title" class="bg-white/95 dark:bg-zinc-900/95 backdrop-blur rounded-2xl px-3.5 py-2.5 flex items-center gap-3 shadow">
+                  <span class="w-9 h-9 rounded-xl bg-stone-100 dark:bg-zinc-800 grid place-items-center text-base shrink-0">{{ pin.emoji }}</span>
+                  <div class="min-w-0"><div class="text-[13px] font-bold truncate dark:text-white">{{ pin.title }}</div><div class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">{{ pin.meta }}</div></div>
+                </div>
+              </div>
+            </div>
+            <div class="flex items-center justify-between px-1 pt-3 flex-wrap gap-2">
+              <div class="flex gap-1.5 flex-wrap">
+                <Tag v-for="chip in landing.pinChips" :key="chip" class="!bg-stone-100 dark:!bg-zinc-800 !text-ink-900 dark:!text-white !rounded-full !px-2.5 !py-1 !text-[11px] !font-semibold !border-0">{{ chip }}</Tag>
+              </div>
+              <span class="text-xs font-black bg-gradient-to-r from-teal-500 to-indigo-500 bg-clip-text text-transparent">UPIN</span>
+            </div>
+          </template>
+        </Card>
         <div class="absolute -bottom-5 -left-4 bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-2xl p-4 shadow-float hidden sm:flex gap-3 items-center max-w-[320px]">
           <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-brand-500 to-accent-teal grid place-items-center text-white shrink-0"><i class="pi pi-map-marker text-lg" /></div>
-          <div><div class="text-xs font-bold">Карта в помощь ULove</div><div class="text-xs text-stone-500 dark:text-zinc-400 leading-snug">Мэтч? Кинь пин «кофе тут» — встретитесь без адреса.</div></div>
+          <div><div class="text-xs font-bold">{{ landing.isUlove.value ? 'Карта в помощь ULove' : 'ULove в помощь карте' }}</div><div class="text-xs text-stone-500 dark:text-zinc-400 leading-snug">{{ landing.isUlove.value ? 'Мэтч? Кинь пин «кофе тут» — встретитесь без адреса.' : 'Познакомились на районе? Мэтч откроет чат.' }}</div></div>
         </div>
       </div>
     </section>
 
     <section id="how" class="max-w-[1280px] mx-auto px-4 sm:px-6 py-4 sm:py-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 scroll-mt-20">
-      <Card class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[20px] !shadow-soft card-hover group cursor-default">
+      <Card v-for="step in landing.content.value.steps" :key="step.title" class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[20px] !shadow-soft card-hover group cursor-default">
         <template #content>
-          <div class="w-11 h-11 rounded-xl bg-gradient-to-r from-rose-500 to-orange-400 text-white grid place-items-center font-bold text-sm card-icon"><i class="pi pi-user-edit" /></div>
-          <h3 class="mt-4 font-bold text-[15px]">01 · Создай анкету <span class="card-arrow inline-block opacity-0 group-hover:opacity-100">→</span></h3><p class="text-sm text-stone-600 dark:text-zinc-400 mt-1.5 leading-relaxed">Фото, цель, интересы. Видно только в ULove.</p>
-        </template>
-      </Card>
-      <Card class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[20px] !shadow-soft card-hover group cursor-default">
-        <template #content>
-          <div class="w-11 h-11 rounded-xl bg-gradient-to-r from-rose-500 to-orange-400 text-white grid place-items-center font-bold text-sm card-icon"><i class="pi pi-heart" /></div>
-          <h3 class="mt-4 font-bold text-[15px]">02 · Листай рядом <span class="card-arrow inline-block opacity-0 group-hover:opacity-100">→</span></h3><p class="text-sm text-stone-600 dark:text-zinc-400 mt-1.5 leading-relaxed">Свайпы с фильтром по расстоянию. Лайк — в один тап.</p>
-        </template>
-      </Card>
-      <Card class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[20px] !shadow-soft card-hover group cursor-default">
-        <template #content>
-          <div class="w-11 h-11 rounded-xl bg-gradient-to-r from-rose-500 to-orange-400 text-white grid place-items-center font-bold text-sm card-icon"><i class="pi pi-comments" /></div>
-          <h3 class="mt-4 font-bold text-[15px]">03 · Мэтч открывает чат <span class="card-arrow inline-block opacity-0 group-hover:opacity-100">→</span></h3><p class="text-sm text-stone-600 dark:text-zinc-400 mt-1.5 leading-relaxed">Взаимность — и вы уже переписываетесь. Без мэтча — тихо.</p>
+          <div :class="['w-11 h-11 rounded-xl text-white grid place-items-center font-bold text-sm card-icon', landing.theme.value.stepIcon]"><i :class="`pi ${step.icon}`" /></div>
+          <h3 class="mt-4 font-bold text-[15px]">{{ step.title }} <span class="card-arrow inline-block opacity-0 group-hover:opacity-100">→</span></h3><p class="text-sm text-stone-600 dark:text-zinc-400 mt-1.5 leading-relaxed">{{ step.text }}</p>
         </template>
       </Card>
     </section>
@@ -151,24 +200,22 @@ const hero = useWelcomeHeroSwiper()
       <div class="lg:col-span-3 bg-ink-900 dark:bg-zinc-900 dark:border dark:border-zinc-800 text-white rounded-[20px] sm:rounded-[24px] p-5 sm:p-8 relative overflow-hidden">
         <div class="absolute -right-20 -top-20 w-80 h-80 bg-gradient-to-br from-rose-500 to-orange-400 rounded-full blur-[60px] opacity-25"></div>
       <div class="relative w-full max-w-[680px] mx-auto">
-          <Tag class="!bg-white/10 !border !border-white/15 !rounded-full !px-3 !py-1 !text-xs !font-medium !text-white">🗺️ КАРТА + ПИНЫ · КАЙФ РАЙОНА</Tag>
-          <h3 class="mt-4 text-2xl font-black tracking-tight">Пины — пульс района. Карта удобно дополняет ULove.</h3>
-          <p class="text-white/60 mt-2 max-w-xl leading-relaxed">Вопросы, события, помощь и объявления рядом — кинь пин в 2 клика и тебя увидят соседи. Есть мэтч и не знаете где встретиться? Кинь пин «кофе тут» — встретитесь без точного адреса. Пины живут часы, а не вечно.</p>
+          <Tag class="!bg-white/10 !border !border-white/15 !rounded-full !px-3 !py-1 !text-xs !font-medium !text-white">{{ landing.content.value.spotlight.tag }}</Tag>
+          <h3 class="mt-4 text-2xl font-black tracking-tight">{{ landing.content.value.spotlight.title }}</h3>
+          <p class="text-white/60 mt-2 max-w-xl leading-relaxed">{{ landing.content.value.spotlight.text }}</p>
           <div class="mt-5 grid sm:grid-cols-3 gap-2">
-            <div class="bg-white/10 border border-white/15 rounded-2xl px-3.5 py-3"><div class="text-sm font-bold">☕ Настолки в кофейне</div><div class="text-xs text-white/60 mt-1">Нас трое, нужен четвёртый · до 22:00</div></div>
-            <div class="bg-white/10 border border-white/15 rounded-2xl px-3.5 py-3"><div class="text-sm font-bold">🐕 Кто гуляет с собакой?</div><div class="text-xs text-white/60 mt-1">Парк за домом · выхожу в 19:00</div></div>
-            <div class="bg-white/10 border border-white/15 rounded-2xl px-3.5 py-3"><div class="text-sm font-bold">🚴 Велозаезд в субботу</div><div class="text-xs text-white/60 mt-1">Собираю компанию · старт в 10:00</div></div>
+            <div v-for="tile in landing.content.value.spotlight.tiles" :key="tile.top" class="bg-white/10 border border-white/15 rounded-2xl px-3.5 py-3"><div class="text-sm font-bold">{{ tile.top }}</div><div class="text-xs text-white/60 mt-1">{{ tile.sub }}</div></div>
           </div>
-          <div class="mt-5 flex flex-wrap gap-2 text-xs font-medium"><Tag class="!bg-white !text-ink-900 !px-3.5 !py-2 !rounded-full !border-0">Пин-свидание в 2 клика</Tag><Tag class="!bg-white/10 !border !border-white/15 !px-3.5 !py-2 !rounded-full !text-white">Без точного адреса</Tag><Tag class="!bg-white/10 !border !border-white/15 !px-3.5 !py-2 !rounded-full !text-white">Вопросы и помощь рядом</Tag></div>
-          <div class="mt-6"><Link href="/map"><Button label="Открыть карту →" outlined class="!border-white/25 !text-white !px-6 !py-3 !rounded-full !font-semibold hover:!bg-white/10" /></Link></div>
+          <div class="mt-5 flex flex-wrap gap-2 text-xs font-medium"><Tag class="!bg-white !text-ink-900 !px-3.5 !py-2 !rounded-full !border-0">{{ landing.content.value.spotlight.chips[0] }}</Tag><Tag v-for="chip in landing.content.value.spotlight.chips.slice(1)" :key="chip" class="!bg-white/10 !border !border-white/15 !px-3.5 !py-2 !rounded-full !text-white">{{ chip }}</Tag></div>
+          <div class="mt-6"><Link href="/map"><Button :label="landing.content.value.spotlight.ctaLabel" outlined class="!border-white/25 !text-white !px-6 !py-3 !rounded-full !font-semibold hover:!bg-white/10" /></Link></div>
         </div>
       </div>
       <Card class="lg:col-span-2 !bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[24px] !shadow-soft card-hover overflow-hidden">
         <template #content>
-          <Tag class="!bg-white/10 !rounded-full !px-3 !py-1 !text-xs !font-medium !text-white !bg-gradient-to-r !from-rose-500 !to-orange-400 !border-0">🔒 Приватность по умолчанию</Tag>
-          <h3 class="mt-4 text-xl font-black tracking-tight">Спокойно знакомиться. Без слежки.</h3>
-          <p class="text-sm text-stone-600 dark:text-zinc-400 mt-2 leading-relaxed">Точное место никогда не показывается. Размытие 200 м, сообщения только взаимно, блок в один клик.</p>
-          <div class="mt-4 flex flex-wrap gap-2 text-xs font-medium"><Tag class="!bg-stone-100 dark:!bg-zinc-800 !text-ink-900 dark:!text-white !px-3 !py-1.5 !rounded-full !border-0">Размытие 200 м</Tag><Tag class="!bg-stone-100 dark:!bg-zinc-800 !text-ink-900 dark:!text-white !px-3 !py-1.5 !rounded-full !border-0">Анонимно по желанию</Tag></div>
+          <Tag class="!bg-white/10 !rounded-full !px-3 !py-1 !text-xs !font-medium !text-white !bg-gradient-to-r !from-rose-500 !to-orange-400 !border-0">{{ landing.content.value.privacy.tag }}</Tag>
+          <h3 class="mt-4 text-xl font-black tracking-tight">{{ landing.content.value.privacy.title }}</h3>
+          <p class="text-sm text-stone-600 dark:text-zinc-400 mt-2 leading-relaxed">{{ landing.content.value.privacy.text }}</p>
+          <div class="mt-4 flex flex-wrap gap-2 text-xs font-medium"><Tag v-for="chip in landing.content.value.privacy.chips" :key="chip" class="!bg-stone-100 dark:!bg-zinc-800 !text-ink-900 dark:!text-white !px-3 !py-1.5 !rounded-full !border-0">{{ chip }}</Tag></div>
         </template>
       </Card>
     </section>
@@ -177,8 +224,8 @@ const hero = useWelcomeHeroSwiper()
       <Card class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[24px] !shadow-soft card-hover">
         <template #content>
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div class="min-w-0"><div class="text-[18px] sm:text-[20px] font-black tracking-tight text-balance">Готов к первому мэтчу?</div><div class="text-sm text-stone-600 dark:text-zinc-400 mt-1">Создай анкету ULove за 2 минуты. А карту откроешь, когда захочется встретиться рядом.</div></div>
-            <Link :href="w.primaryCtaHref.value" class="w-full sm:w-auto shrink-0"><Button :label="w.primaryCtaLabel.value" class="w-full sm:w-auto !bg-gradient-to-r !from-rose-500 !via-fuchsia-500 !to-orange-400 !text-white !px-8 !py-3.5 !rounded-full !font-bold whitespace-nowrap hover:opacity-90 !border-0 shadow-soft" /></Link>
+            <div class="min-w-0"><div class="text-[18px] sm:text-[20px] font-black tracking-tight text-balance">{{ landing.content.value.finalTitle }}</div><div class="text-sm text-stone-600 dark:text-zinc-400 mt-1">{{ landing.content.value.finalText }}</div></div>
+            <Link :href="landing.primaryCta.value.href" class="w-full sm:w-auto shrink-0"><Button :label="landing.primaryCta.value.label" :class="['w-full sm:w-auto !text-white !px-8 !py-3.5 !rounded-full !font-bold whitespace-nowrap hover:opacity-90 !border-0 shadow-soft', landing.theme.value.ctaBtn]" /></Link>
           </div>
         </template>
       </Card>

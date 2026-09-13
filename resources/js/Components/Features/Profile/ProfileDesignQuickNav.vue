@@ -68,12 +68,12 @@ function onAction(key: QuickNavKey): void {
       <button
         type="button"
         :aria-label="action.label"
-        :class="['grid h-16 w-full sm:h-24 place-items-center rounded-[18px] border shadow-soft transition active:scale-95', action.tile]"
+        :class="['grid h-16 w-full min-[411px]:h-20 sm:h-28 place-items-center rounded-[16px] min-[411px]:rounded-[20px] border shadow-soft transition active:scale-95', action.tile]"
         @click="onAction(action.key)"
       >
-        <i :class="[action.icon, action.iconColor, 'text-xl sm:text-4xl']"></i>
+        <i :class="[action.icon, action.iconColor, 'text-xl min-[411px]:text-2xl sm:text-5xl']"></i>
       </button>
-      <span class="truncate text-[11px] sm:text-xs font-medium text-stone-500 dark:text-zinc-400">{{ action.label }}</span>
+      <span class="truncate text-xs sm:text-[13px] font-medium text-stone-500 dark:text-zinc-400">{{ action.label }}</span>
     </div>
   </nav>
 </template>

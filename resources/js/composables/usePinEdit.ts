@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import { useForm } from 'vee-validate'
 import { updatePinSchema } from '@/validation/schemas/updatePin.schema'
 import { usePinsStore } from '@/stores/pins'
+import { useSosConfirm } from '@/composables/useSosConfirm'
 import { useToast } from 'primevue/usetoast'
 
 export function usePinEdit() {
@@ -9,6 +10,19 @@ export function usePinEdit() {
   const toast = useToast()
   const editing = ref(false)
   const targetId = ref<number | null>(null)
+  const sos = useSosConfirm()
+
+  /**
+   * Выбрать категорию: SOS проходит через предупреждение об ответственности.
+   * @param value код категории
+   */
+  function selectCategory(value: string): void {
+    if (sos.isSos(value) && String((category as any)?.value ?? '') !== 'sos') {
+      sos.requestSos(() => setValues({ category: 'sos' } as any))
+      return
+    }
+    setValues({ category: value } as any)
+  }
 
   const { defineField, handleSubmit, setValues, values, errors, resetForm } = useForm({
     validationSchema: updatePinSchema,
@@ -24,6 +38,7 @@ export function usePinEdit() {
 
   function start(pin: any) {
     targetId.value = pin.id
+    sos.resetSos()
     setValues({ title: pin.title, body: pin.body || '', category: pin.category, gender_audience: pin.gender_audience ?? 'all' } as any)
     editing.value = true
   }
@@ -31,13 +46,16 @@ export function usePinEdit() {
   function cancel() {
     editing.value = false
     targetId.value = null
+    sos.resetSos()
   }
 
   const save = handleSubmit(async (vals: any) => {
     if (!targetId.value) return null
     try {
-      const data = await (store.updatePin as any)({ id: targetId.value, payload: vals })
+      const payload = { ...vals, sos_confirmed: sos.sosConfirmed.value }
+      const data = await (store.updatePin as any)({ id: targetId.value, payload })
       editing.value = false
+      sos.resetSos()
       toast.add({ severity: 'success', summary: 'Сохранено', life: 2000 })
       return data
     } catch (e: any) {
@@ -46,5 +64,5 @@ export function usePinEdit() {
     }
   })
 
-  return { editing, targetId, title, titleAttrs, body, category, gender_audience, values, errors, start, cancel, save, setValues, resetForm, error, updating: store.updating }
+  return { editing, targetId, title, titleAttrs, body, category, gender_audience, values, errors, start, cancel, save, setValues, resetForm, error, updating: store.updating, sos, selectCategory }
 }

@@ -56,6 +56,27 @@ class PinController extends Controller
             }
             return \App\Services\PinVisibility::canView($viewer, $p, $liveLat, $liveLng);
         })->values();
+        try {
+            $sosExtra = Pin::active()
+                ->where('category', 'sos')
+                ->whereNotIn('id', $visible->pluck('id')->all() ?: [0])
+                ->with('user:id,name,avatar_path,level')
+                ->limit(20)
+                ->get()
+                ->filter(fn ($p) => \App\Services\PinVisibility::canView($viewer, $p, $liveLat, $liveLng));
+            $visible = $visible->concat($sosExtra)->values();
+        } catch (\Throwable) {
+        }
+        if ($viewerId) {
+            try {
+                $sosActive = \App\Services\SosService::activeFor($viewer);
+                if ($sosActive) {
+                    $sosPinId = (int) $sosActive->pin_id;
+                    $visible = $visible->filter(fn ($p) => (int) $p->id === $sosPinId)->values();
+                }
+            } catch (\Throwable) {
+            }
+        }
         $myReactions = $viewerId ? \App\Models\Reaction::where('user_id', $viewerId)->where('reactable_type', 'pin')->whereIn('reactable_id', $visible->pluck('id'))->pluck('type', 'reactable_id') : collect();
         return response()->json($visible->map(fn($p) => array_merge($p->toPublicArray($viewerId), ['my_reaction' => $myReactions[$p->id] ?? null])));
     }
@@ -131,7 +152,16 @@ class PinController extends Controller
             'publish_at' => 'sometimes|nullable|date|after:now|before:+31 days',
             'user_lat' => 'sometimes|nullable|numeric|between:-90,90',
             'user_lng' => 'sometimes|nullable|numeric|between:-180,180',
+            'sos_confirmed' => 'sometimes|boolean',
         ]);
+
+        $sosCategory = Pin::isSosCategory($data['category'] ?? null);
+        $sosConfirmed = (bool) ($data['sos_confirmed'] ?? false);
+        unset($data['sos_confirmed']);
+        abort_if($sosCategory && ! $sosConfirmed, 422, 'SOS-пин — только для реальной чрезвычайной ситуации. Вы несёте ответственность за ложное объявление: пользователи вправе пожаловаться администрации приложения и в соответствующие органы.');
+        if ($sosCategory) {
+            \App\Services\SosService::assertSosLimit($user);
+        }
 
         CountryResolver::assertPinAllowed($user, (float) $data['latitude'], (float) $data['longitude'], isset($data['user_lat']) ? (float) $data['user_lat'] : null, isset($data['user_lng']) ? (float) $data['user_lng'] : null);
         HomeZoneService::assertInsideZone($user, (float) $data['latitude'], (float) $data['longitude'], isset($data['user_lat']) ? (float) $data['user_lat'] : null, isset($data['user_lng']) ? (float) $data['user_lng'] : null);
@@ -188,6 +218,9 @@ class PinController extends Controller
         });
 
         $pin->load('user:id,name,avatar_path,level');
+        if (Pin::isSosCategory($pin->category ?? null)) {
+            \App\Services\SosService::callFor($pin);
+        }
         if (! $isScheduled) {
             broadcast(new PinCreated($pin))->toOthers();
             try {
@@ -213,8 +246,13 @@ class PinController extends Controller
             }],
             'publish_at' => 'sometimes|nullable|date|after:now|before:+31 days',
             'gender_audience' => 'sometimes|in:all,male,female',
+            'sos_confirmed' => 'sometimes|boolean',
         ]);
         if (array_key_exists('category', $data)) $data['category'] = Pin::normalizeCategory($data['category']);
+        $sosSwitch = array_key_exists('category', $data) && Pin::isSosCategory($data['category']);
+        $sosConfirmed = (bool) ($data['sos_confirmed'] ?? $request->boolean('sos_confirmed'));
+        unset($data['sos_confirmed']);
+        abort_if($sosSwitch && ! $sosConfirmed, 422, 'SOS-пин — только для реальной чрезвычайной ситуации. Вы несёте ответственность за ложное объявление: пользователи вправе пожаловаться администрации приложения и в соответствующие органы.');
         if (array_key_exists('gender_audience', $data)) $data['gender_audience'] = Pin::normalizeGenderAudience($data['gender_audience']);
         ContentModeration::assertClean($data['title'] ?? $pin->title, array_key_exists('body', $data) ? $data['body'] : $pin->body);
         if ($pin->status === 'scheduled' && array_key_exists('publish_at', $data)) {

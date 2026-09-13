@@ -47,6 +47,8 @@ class ConversationController extends Controller
                 }
                 return [
                     'id'=>$c->id,
+                    'type'=>$c->type,
+                    'pin_id'=>$c->pin_id,
                     'other'=>$other ? ['id'=>$other->id,'name'=>$other->name,'avatar_path'=>$other->avatar_path,'avatar_url'=>$other->avatar_url,'last_seen_at'=>$lastSeen,'is_invisible'=>$other->isInvisibleActive(),'is_match'=>isset($matchedIds[$other->id]),'dating_goal'=>$other->dating_goal,'dating_interests'=>$other->dating_interests ?? []] : null,
                     'last_message'=>$last,
                     'unread_count'=>$unread,
@@ -84,6 +86,8 @@ class ConversationController extends Controller
         $isMatch = $other ? \App\Models\DatingMatch::between($request->user()->id, $other->id) !== null : false;
         return response()->json([
             'id'=>$conversation->id,
+            'type'=>$conversation->type,
+            'pin_id'=>$conversation->pin_id,
             'other'=>$other ? ['id'=>$other->id,'name'=>$other->name,'avatar_path'=>$other->avatar_path,'avatar_url'=>$other->avatar_url,'last_seen_at'=>$lastSeen,'is_invisible'=>$other->isInvisibleActive(),'is_match'=>$isMatch,'dating_goal'=>$other->dating_goal,'dating_interests'=>$other->dating_interests ?? []] : null,
             'participants'=>$conversation->participants->map(fn($p)=> array_merge($p->toArray(), ['avatar_url'=>$p->avatar_url])),
             'messages'=>$messages,

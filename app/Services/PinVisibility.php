@@ -79,6 +79,9 @@ class PinVisibility
         if ($viewer && $viewer->isAdmin()) {
             return true;
         }
+        if ($viewer && Pin::isSosCategory($pin->category ?? null) && $pin->status === 'active' && ! $pin->isExpired()) {
+            return true;
+        }
         $viewerId = $viewer?->id;
         if ($viewerId && (int) $pin->user_id === (int) $viewerId) {
             return true;

@@ -7,6 +7,7 @@ import { formatDate, formatTime } from '@/utils/date'
 import SettingsSidebar from '@/Components/Features/Settings/SettingsSidebar.vue'
 import SettingsProfileTab from '@/Components/Features/Settings/SettingsProfileTab.vue'
 import SettingsBillingTab from '@/Components/Features/Settings/SettingsBillingTab.vue'
+import SettingsQuestsTab from '@/Components/Features/Settings/SettingsQuestsTab.vue'
 import SettingsMyPinsTab from '@/Components/Features/Settings/SettingsMyPinsTab.vue'
 import SettingsArchiveTab from '@/Components/Features/Settings/SettingsArchiveTab.vue'
 import SettingsPrivacyTab from '@/Components/Features/Settings/SettingsPrivacyTab.vue'
@@ -50,6 +51,7 @@ const { setTheme } = useTheme()
               <TabPanels class="!bg-transparent !p-0">
                 <TabPanel value="profile"><SettingsProfileTab :must-verify-email="mustVerifyEmail" :status="status" :bio-empty="s.bioPreviewEmpty.value" :bio-text="s.bioPreviewText.value" /></TabPanel>
                 <TabPanel value="billing"><SettingsBillingTab :user="s.u.value" :zone-count="s.zoneCount.value" @profile="s.active.value = 'profile'" /></TabPanel>
+                <TabPanel value="quests"><SettingsQuestsTab @billing="s.active.value = 'billing'" /></TabPanel>
                 <TabPanel value="pins"><SettingsMyPinsTab :pins="(s.myPins.value as any)" :loading="(s.loadingPins.value as any)" :deleting="false" :updating-id="(s.updatingId as any)?.value ?? null" :format-date="formatDate" :format-time="formatTime" @delete="s.deleteMyPin" @audience="(id: number, v: string) => (s.updateAudience as any)(id, v)" /></TabPanel>
                 <TabPanel value="archive"><SettingsArchiveTab /></TabPanel>
                 <TabPanel value="privacy"><SettingsPrivacyTab :user="s.u.value" :invisible="s.invisible" :hidden="s.hidden" :blur="s.blur" :photo-privacy="s.photoPrivacy" :home-radius="s.homeRadius" @profile="s.active.value = 'profile'" /></TabPanel>
