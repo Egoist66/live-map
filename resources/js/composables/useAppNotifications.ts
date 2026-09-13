@@ -369,6 +369,10 @@ function handleNotification(e: any) {
   if (!n?.id) return
   if (isDuplicateEvent(`notif-${n.id}`)) return
   const data = n.data ?? {}
+  if (data.sos_chat_closed) {
+    handleSosChatClosed(data.sos_chat_closed)
+    return
+  }
   if (data.activity) {
     handlePinActivity({ activity: data.activity })
     return
@@ -385,6 +389,21 @@ function handleNotification(e: any) {
     handleImpersonation({ log: data.log })
     return
   }
+}
+function handleSosChatClosed(s: any) {
+  const cid = Number(s?.conversation_id ?? 0) || 0
+  if (isDuplicateEvent(`sos-closed-${cid}-${s?.reason ?? 'closed'}`)) return
+  const reasonLabel = String(s?.reason_label ?? 'пин завершён')
+  const title = s?.pin_title ? `🆘 SOS-чат закрыт: ${s.pin_title}` : '🆘 SOS-чат закрыт'
+  push({
+    id: `sos-closed-${cid}-${Date.now()}`,
+    type: 'pin',
+    title,
+    body: `Чат удалён, так как ${reasonLabel}. История сохранена в архив.`.slice(0, 90),
+    avatar: null,
+    link: '/chat',
+    createdAt: Date.now(),
+  })
 }
 function handleImpersonation(e: any) {
   const log = e?.log

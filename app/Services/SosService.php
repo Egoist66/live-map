@@ -9,8 +9,10 @@ use App\Models\Pin;
 use App\Models\SosCall;
 use App\Models\SosCallDecline;
 use App\Models\User;
+use App\Notifications\SosChatClosedNotification;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * SOS-режим: лимиты, принятие вызова, отдельный чат.
@@ -223,5 +225,204 @@ class SosService
             'sos_call_id' => $call->id,
             'user_id' => $user->id,
         ]);
+    }
+
+    /**
+     * Завершить SOS-чат пина: архив истории каждому + скрытие у обоих + уведомления.
+     *
+     * Вызывается при закрытии создателем, удалении пина и истечении срока.
+     * Идемпотентно: повтор с тем же pin_id ничего не дублирует.
+     *
+     * Механика:
+     * - история сообщений собирается в .txt и кладётся в chat-archives;
+     * - каждому участнику создаётся своё Message с вложением (sender = он),
+     *   поэтому файл виден в «Архив» (вложения) каждого;
+     * - диалог скрывается у ОБОИХ (hidden_at + cleared_at), из списка пропадает;
+     * - обоим шлётся SosChatClosedNotification: websocket user.{id}
+     *   + realtime-bus polling + web-push (внутри UserNotifier::send).
+     *
+     * @param Pin $pin завершённый SOS-пин
+     * @param string $reason closed|deleted|expired
+     * @return int|null id зачищенного диалога
+     */
+    public static function cleanupConversationForPin(Pin $pin, string $reason = 'closed'): ?int
+    {
+        $reason = in_array($reason, ['closed', 'deleted', 'expired'], true) ? $reason : 'closed';
+
+        return DB::transaction(function () use ($pin, $reason) {
+            $call = SosCall::where('pin_id', $pin->id)->lockForUpdate()->first();
+
+            if (! $call || ! $call->conversation_id) {
+                if ($call && $call->status !== SosCall::STATUS_CLOSED) {
+                    $call->forceFill(['status' => SosCall::STATUS_CLOSED])->save();
+                }
+
+                return $call ? (int) $call->conversation_id : null;
+            }
+
+            $conversation = Conversation::find($call->conversation_id);
+
+            if (! $conversation) {
+                $call->forceFill(['status' => SosCall::STATUS_CLOSED])->save();
+
+                return null;
+            }
+
+            $participantIds = $conversation->participantRows()->pluck('user_id')->map(fn ($id) => (int) $id)->unique()->values()->all();
+
+            if (empty($participantIds)) {
+                $call->forceFill(['status' => SosCall::STATUS_CLOSED])->save();
+
+                return (int) $conversation->id;
+            }
+
+            $alreadyHidden = (int) $conversation->participantRows()->whereNotNull('hidden_at')->count();
+            $isAlreadyClosed = $call->status === SosCall::STATUS_CLOSED && $alreadyHidden >= count($participantIds);
+
+            if ($isAlreadyClosed) {
+                return (int) $conversation->id;
+            }
+
+            $messages = Message::where('conversation_id', $conversation->id)
+                ->with('sender:id,name')
+                ->orderBy('id')
+                ->limit(2000)
+                ->get();
+
+            $usersById = User::whereIn('id', $participantIds)->get(['id', 'name', 'avatar_path'])->keyBy('id');
+
+            $pinTitle = (string) ($pin->title ?? 'SOS');
+
+            $archivePaths = [];
+            $now = now();
+
+            foreach ($participantIds as $uid) {
+                $content = self::renderHistoryFile($pinTitle, $reason, $messages, $usersById, $now);
+                $base = 'sos-chat-'.$conversation->id.'-user-'.$uid.'-'.now()->format('Ymd-His').'.txt';
+                $path = 'chat-archives/'.$base;
+
+                try {
+                    Storage::disk(ChatAttachment::disk())->put($path, $content);
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('sos archive write failed: '.$e->getMessage());
+
+                    continue;
+                }
+
+                $size = 0;
+
+                try {
+                    $size = (int) Storage::disk(ChatAttachment::disk())->size($path);
+                } catch (\Throwable) {
+                    $size = strlen($content);
+                }
+
+                $fileName = 'SOS-чат · '.$pinTitle.'.txt';
+
+                try {
+                    Message::create([
+                        'conversation_id' => $conversation->id,
+                        'sender_id' => $uid,
+                        'body' => '📦 История SOS-чата сохранена в архив.',
+                        'type' => 'file',
+                        'attachment_path' => $path,
+                        'attachment_name' => $fileName,
+                        'attachment_mime' => 'text/plain',
+                        'attachment_size' => $size,
+                        'attachment_kind' => 'file',
+                    ]);
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('sos archive message failed: '.$e->getMessage());
+                }
+
+                $archivePaths[$uid] = $path;
+            }
+
+            $conversation->participantRows()->update(['hidden_at' => $now, 'cleared_at' => $now]);
+            $call->forceFill(['status' => SosCall::STATUS_CLOSED])->save();
+
+            foreach ($participantIds as $uid) {
+                $user = $usersById->get($uid) ?? User::find($uid);
+
+                if (! $user) {
+                    continue;
+                }
+
+                $path = $archivePaths[$uid] ?? null;
+
+                try {
+                    UserNotifier::send($user, new SosChatClosedNotification(
+                        (int) $conversation->id,
+                        $reason,
+                        $pinTitle,
+                        $path ? ChatAttachment::url($path) : null,
+                        $path ? 'SOS-чат · '.$pinTitle.'.txt' : null,
+                    ));
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('sos closed notify failed: '.$e->getMessage());
+                }
+            }
+
+            return (int) $conversation->id;
+        });
+    }
+
+    /**
+     * Текст истории SOS-чата для архивного файла.
+     *
+     * @param string $pinTitle заголовок пина
+     * @param string $reason причина закрытия
+     * @param \Illuminate\Support\Collection<int, Message> $messages сообщения
+     * @param \Illuminate\Support\Collection<int, User> $usersById участники
+     * @param \Carbon\Carbon $now момент выгрузки
+     * @return string содержимое .txt
+     */
+    private static function renderHistoryFile(string $pinTitle, string $reason, $messages, $usersById, $now): string
+    {
+        $reasonLabel = match ($reason) {
+            'deleted' => 'пин удалён',
+            'expired' => 'истёк срок пина',
+            default => 'пин завершён',
+        };
+
+        $names = $usersById->map(fn ($u) => (string) ($u->name ?? ('user '.$u->id)))->values()->all();
+
+        $lines = [];
+        $lines[] = 'SOS-чат · '.$pinTitle;
+        $lines[] = 'Завершён: '.$reasonLabel.' · '.$now->toDateTimeString();
+        $lines[] = 'Участники: '.implode(', ', $names);
+        $lines[] = str_repeat('—', 32);
+
+        foreach ($messages as $message) {
+            $senderName = $message->relationLoaded('sender') && $message->sender
+                ? (string) $message->sender->name
+                : (string) ($usersById->get($message->sender_id)?->name ?? ('user '.$message->sender_id));
+
+            $when = '';
+
+            try {
+                $when = $message->created_at ? Carbon::parse($message->created_at)->format('d.m.Y H:i') : '';
+            } catch (\Throwable) {
+                $when = '';
+            }
+
+            $body = trim((string) ($message->body ?? ''));
+
+            if ($body === '' && $message->attachment_name) {
+                $body = '[файл] '.$message->attachment_name;
+            }
+
+            $prefix = $when !== '' ? '['.$when.'] ' : '';
+            $lines[] = $prefix.$senderName.': '.$body;
+        }
+
+        if ($messages->isEmpty()) {
+            $lines[] = '(сообщений не было)';
+        }
+
+        $lines[] = str_repeat('—', 32);
+        $lines[] = 'История сохранена автоматически при завершении SOS.';
+
+        return implode("\n", $lines);
     }
 }

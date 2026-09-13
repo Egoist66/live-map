@@ -131,30 +131,36 @@ async function share(): Promise<void> {
           <Button icon="pi pi-share-alt" text rounded severity="secondary" :loading="sharing" @click="share()" />
         </div>
 
-        <div v-if="expanded" class="mt-2 space-y-3 border-t border-stone-100 dark:border-zinc-800 pt-3">
-          <div v-if="thread.loading.value" class="text-sm text-stone-400">Загружаем комментарии…</div>
-          <div v-else-if="!thread.comments.value.length" class="text-sm text-stone-400">Пока тихо — станьте первым.</div>
-          <div v-for="c in thread.comments.value" :key="c.id" class="flex gap-2 sm:gap-2.5">
-            <Avatar v-if="c.author.avatar_url" :image="c.author.avatar_url" shape="circle" class="!w-7 !h-7 sm:!w-8 sm:!h-8 shrink-0" />
-            <Avatar v-else icon="pi pi-user-secret" shape="circle" class="!w-7 !h-7 sm:!w-8 sm:!h-8 shrink-0 !bg-stone-200 dark:!bg-zinc-700" />
-            <div class="min-w-0 flex-1 rounded-2xl bg-stone-100 dark:bg-zinc-800 px-2.5 py-2 sm:px-3">
-              <div class="text-[13px] font-bold text-ink-900 dark:text-white">{{ replyName(c) }}</div>
-              <div class="whitespace-pre-line break-words text-[15px] sm:text-sm leading-relaxed text-stone-700 dark:text-zinc-200">{{ c.content }}</div>
-              <div class="mt-1 flex items-center gap-4 sm:gap-3 py-1 text-[13px] sm:text-xs text-stone-400">
-                <span>{{ formatFlowDate(c.created_at) }}</span>
-                <button class="font-semibold hover:underline" @click="thread.setReply(c)">Ответить</button>
-                <button v-if="c.can_delete" class="hover:underline" @click="thread.remove(c)">Удалить</button>
-              </div>
-              <div v-if="c.replies?.length" class="mt-2 space-y-2">
-                <div v-for="r in c.replies" :key="r.id" class="flex gap-2">
-                  <Avatar v-if="r.author.avatar_url" :image="r.author.avatar_url" shape="circle" class="!w-6 !h-6 shrink-0" />
-                  <Avatar v-else icon="pi pi-user-secret" shape="circle" class="!w-6 !h-6 shrink-0 !bg-stone-200 dark:!bg-zinc-700" />
-                  <div class="min-w-0 flex-1 rounded-xl bg-white dark:bg-zinc-900 px-2 py-1.5 sm:px-2.5">
-                    <div class="text-xs font-bold text-ink-900 dark:text-white">{{ replyName(r) }}</div>
-                    <div class="whitespace-pre-line break-words text-sm sm:text-[13px] leading-relaxed text-stone-700 dark:text-zinc-200">{{ r.content }}</div>
-                    <div class="mt-0.5 flex gap-3 sm:gap-2 py-0.5 text-xs sm:text-[11px] text-stone-400">
-                      <span>{{ formatFlowDate(r.created_at) }}</span>
-                      <button v-if="r.can_delete" class="hover:underline" @click="thread.remove(r)">Удалить</button>
+        <div v-if="expanded" class="mt-2 border-t border-stone-100 dark:border-zinc-800 pt-3">
+          <div v-if="thread.loading.value" class="py-4 text-center text-sm text-stone-400">Загружаем комментарии…</div>
+          <div v-else-if="!thread.comments.value.length" class="py-4 text-center text-sm text-stone-400">Пока тихо — станьте первым.</div>
+          <div v-else class="space-y-3">
+            <div v-for="c in thread.comments.value" :key="c.id" class="flex min-w-0 gap-2.5">
+              <Avatar v-if="c.author.avatar_url" :image="c.author.avatar_url" shape="circle" class="!w-8 !h-8 shrink-0" />
+              <Avatar v-else icon="pi pi-user-secret" shape="circle" class="!w-8 !h-8 shrink-0 !bg-stone-200 dark:!bg-zinc-700" />
+              <div class="min-w-0 flex-1">
+                <div class="min-w-0 rounded-2xl bg-stone-100 dark:bg-zinc-800 px-3 py-2">
+                  <div class="truncate text-[13px] font-bold leading-tight text-ink-900 dark:text-white">{{ replyName(c) }}</div>
+                  <div class="mt-0.5 whitespace-pre-line break-words text-[14px] leading-[1.5] text-stone-700 dark:text-zinc-200 [overflow-wrap:anywhere]">{{ c.content }}</div>
+                </div>
+                <div class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-0.5 px-1 pt-1 text-xs text-stone-400">
+                  <span class="shrink-0">{{ formatFlowDate(c.created_at) }}</span>
+                  <button class="shrink-0 px-1 py-1.5 font-semibold text-stone-500 dark:text-zinc-400 active:text-violet-600" @click="thread.setReply(c)">Ответить</button>
+                  <button v-if="c.can_delete" class="shrink-0 px-1 py-1.5 active:text-red-500" @click="thread.remove(c)">Удалить</button>
+                </div>
+                <div v-if="c.replies?.length" class="mt-1.5 space-y-2.5 border-l-2 border-stone-200 pl-2.5 dark:border-zinc-700">
+                  <div v-for="r in c.replies" :key="r.id" class="flex min-w-0 gap-2">
+                    <Avatar v-if="r.author.avatar_url" :image="r.author.avatar_url" shape="circle" class="!w-6 !h-6 shrink-0" />
+                    <Avatar v-else icon="pi pi-user-secret" shape="circle" class="!w-6 !h-6 shrink-0 !bg-stone-200 dark:!bg-zinc-700" />
+                    <div class="min-w-0 flex-1">
+                      <div class="min-w-0 rounded-xl bg-stone-100 px-2.5 py-1.5 dark:bg-zinc-800">
+                        <div class="truncate text-xs font-bold leading-tight text-ink-900 dark:text-white">{{ replyName(r) }}</div>
+                        <div class="mt-0.5 whitespace-pre-line break-words text-[13px] leading-[1.5] text-stone-700 dark:text-zinc-200 [overflow-wrap:anywhere]">{{ r.content }}</div>
+                      </div>
+                      <div class="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 px-1 pt-0.5 text-[11px] text-stone-400">
+                        <span class="shrink-0">{{ formatFlowDate(r.created_at) }}</span>
+                        <button v-if="r.can_delete" class="shrink-0 px-1 py-1 active:text-red-500" @click="thread.remove(r)">Удалить</button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -162,23 +168,39 @@ async function share(): Promise<void> {
             </div>
           </div>
 
-          <div class="flex items-center gap-2">
-            <div class="min-w-0 flex-1">
-              <div v-if="thread.replyTo.value" class="mb-1 flex items-center gap-2 text-xs text-stone-500">
-                <span>Ответ для <b>{{ replyName(thread.replyTo.value) }}</b></span>
-                <button class="text-stone-400 hover:text-red-500" @click="thread.setReply(null)"><i class="pi pi-times text-[11px]" /></button>
-              </div>
-              <InputText
-                v-model="thread.draft.value"
-                placeholder="Написать комментарий…"
-                class="w-full !rounded-2xl sm:!rounded-full !bg-stone-100 dark:!bg-zinc-800 !border-0 !py-3 sm:!py-2 !text-[15px] sm:!text-sm"
-                @keyup.enter="thread.send()"
-              />
+          <div class="sticky bottom-0 -mx-1 mt-3 bg-white/95 pb-1 pt-2 backdrop-blur dark:bg-zinc-900/95">
+            <div v-if="thread.replyTo.value" class="mb-2 flex min-w-0 items-center gap-2 rounded-full bg-violet-50 py-1.5 pl-3 pr-1.5 text-xs text-stone-600 dark:bg-violet-950/50 dark:text-zinc-300">
+              <i class="pi pi-reply shrink-0 text-[11px] text-violet-500" />
+              <span class="min-w-0 flex-1 truncate">Ответ для <b>{{ replyName(thread.replyTo.value) }}</b></span>
+              <Button icon="pi pi-times" text rounded severity="secondary" class="!h-7 !w-7 shrink-0" @click="thread.setReply(null)" aria-label="Отменить ответ" />
             </div>
-            <label class="hidden sm:inline-flex items-center gap-1 text-xs text-stone-400">
-              <Checkbox v-model="thread.anonymousReply.value" binary /> аноним
-            </label>
-            <Button icon="pi pi-send" rounded :loading="thread.sending.value" :disabled="!thread.draft.value.trim()" class="!w-12 !h-12 sm:!w-10 sm:!h-10 shrink-0" @click="thread.send()" />
+            <div class="flex min-w-0 items-end gap-1.5">
+              <Button
+                :icon="thread.anonymousReply.value ? 'pi pi-eye-slash' : 'pi pi-user-secret'"
+                text
+                rounded
+                :severity="thread.anonymousReply.value ? 'warn' : 'secondary'"
+                class="!h-11 !w-11 shrink-0"
+                :aria-pressed="thread.anonymousReply.value"
+                aria-label="Анонимный комментарий"
+                title="Анонимно"
+                @click="thread.anonymousReply.value = !thread.anonymousReply.value"
+              />
+              <div class="min-w-0 flex-1">
+                <InputText
+                  v-model="thread.draft.value"
+                  placeholder="Написать комментарий…"
+                  enterkeyhint="send"
+                  class="w-full !rounded-2xl !border-0 !bg-stone-100 !py-3 !text-[16px] !leading-snug dark:!bg-zinc-800"
+                  @keyup.enter="thread.send()"
+                />
+              </div>
+              <Button icon="pi pi-send" rounded :loading="thread.sending.value" :disabled="!thread.draft.value.trim()" class="!h-11 !w-11 shrink-0" aria-label="Отправить" @click="thread.send()" />
+            </div>
+            <div class="hidden items-center gap-1 px-1 pt-1 text-[11px] text-stone-400 sm:inline-flex">
+              <Checkbox v-model="thread.anonymousReply.value" binary inputId="anon-flow" />
+              <label for="anon-flow">анонимно</label>
+            </div>
           </div>
         </div>
         <button v-else-if="post.comments_count > 0" class="mt-2 text-[13px] font-semibold text-stone-500 hover:underline" @click="toggleComments()">

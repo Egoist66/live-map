@@ -278,6 +278,14 @@ class PinController extends Controller
     public function destroy(Pin $pin)
     {
         $this->authorize('delete', $pin);
+        $isSos = \App\Models\Pin::isSosCategory($pin->category ?? null);
+        if ($isSos) {
+            try {
+                \App\Services\SosService::cleanupConversationForPin($pin, 'deleted');
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('sos cleanup failed: '.$e->getMessage());
+            }
+        }
         $pin->comments()->delete();
         $pin->reactions()->delete();
         $pin->forceDelete();

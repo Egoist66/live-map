@@ -28,10 +28,11 @@ export function useChatPage(initialConversationId?: number) {
   const tab = ref<'chats' | 'ulove' | 'friends' | 'requests' | 'blocked'>('chats')
 
   /**
-   * Чаты мэтчей ULove: собеседник с is_match.
+   * Чаты мэтчей ULove: собеседник с is_match и только direct.
+   * SOS-диалоги (type=sos) сюда не попадают — у них обычный стиль.
    * @returns диалоги ULove
    */
-  const uloveConversations = computed(() => chat.conversations.value.filter((c: any) => !!(c?.other as any)?.is_match))
+  const uloveConversations = computed(() => chat.conversations.value.filter((c: any) => (c?.type ?? 'direct') === 'direct' && !!(c?.other as any)?.is_match))
 
   /** Непрочитанные диалоги ULove (счётчик таба). */
   const uloveUnread = computed(() => uloveConversations.value.filter((c: any) => Number(c?.unread_count || 0) > 0).length)
@@ -352,7 +353,8 @@ export function useChatPage(initialConversationId?: number) {
     try {
       await chat.openConversation(targetId)
       const opened = chat.activeConv.value as any
-      tab.value = opened?.other?.is_match ? 'ulove' : 'chats'
+      const isSos = String(opened?.type ?? 'direct') !== 'direct'
+      tab.value = !isSos && opened?.other?.is_match ? 'ulove' : 'chats'
       focusChatInput()
     } catch (e: any) {
       const msg = e?.response?.data?.message || 'Не удалось открыть чат'

@@ -6,7 +6,8 @@ import { router } from '@inertiajs/vue3'
  * ULove-тема шапки чата.
  *
  * Строго только для мэтчей: тема активна, когда у собеседника
- * открытого чата `other.is_match === true`. Переключение на обычный
+ * открытого чата `other.is_match === true` И тип диалога `direct`.
+ * SOS-чат (`type=sos`) всегда обычный, даже если люди в мэтче.
  * диалог сразу возвращает стандартную шапку, ничего не запоминается.
  *
  * @param activeConv активный чат (other несёт is_match, dating_goal)
@@ -16,7 +17,9 @@ import { router } from '@inertiajs/vue3'
 export function useChatDatingTheme(activeConv: Ref<any>, selectedId: Ref<number | null>) {
   const peer = computed(() => activeConv.value?.other ?? null)
 
-  const isMatch = computed(() => !!peer.value?.is_match)
+  const convType = computed(() => String(activeConv.value?.type ?? 'direct'))
+
+  const isMatch = computed(() => convType.value === 'direct' && !!peer.value?.is_match)
 
   /**
    * Тема активна только для открытого чата мэтча.

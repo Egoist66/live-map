@@ -598,6 +598,7 @@ export function useChat() {
       busUnsubs.push(busOn('user:friendship.updated', () => loadConversations()))
       busUnsubs.push(busOn('user:message.delivered', (e: any) => handleDelivered(e)))
       busUnsubs.push(busOn('user:message.read', (e: any) => handleRead(e)))
+      busUnsubs.push(busOn('user:notification.created', (e: any) => handleSosClosed(e)))
       busUnsubs.push(busOn('chat:receipts', (list: any[]) => applyReceipts(list)))
     } catch { globalSubscribed = false }
   }
@@ -672,6 +673,40 @@ export function useChat() {
     messages.value = messages.value.filter((m) => m?.id !== mid)
     const conv = conversations.value.find((c) => (c as any)?.last_message?.id === mid)
     if (conv) loadConversations()
+  }
+
+  /**
+   * SOS-чат завершён: убрать диалог из списка у обоих, закрыть открытый.
+   *
+   * Прилетает inbox-уведомлением sos.chat_closed по обоим транспортам
+   * (сокет user.* + polling user:notification.created), поэтому дублей нет:
+   * повторное удаление уже отсутствующего id — no-op.
+   * @param e событие user:notification.created
+   */
+  function handleSosClosed(e: any) {
+    const s = e?.notification?.data?.sos_chat_closed
+    if (!s?.conversation_id) return
+    const cid = Number(s.conversation_id)
+    if (!cid || !conversations.value.some((c) => Number(c?.id) === cid)) {
+      if (Number(selectedId.value) === cid) {
+        selectedId.value = null
+        activeConv.value = null
+        messages.value = []
+      }
+      return
+    }
+    conversations.value = conversations.value.filter((c) => Number(c?.id) !== cid)
+    if (Number(selectedId.value) === cid) {
+      selectedId.value = null
+      activeConv.value = null
+      messages.value = []
+    }
+    toast?.add({
+      severity: 'info',
+      summary: '🆘 SOS-чат удалён',
+      detail: 'История сохранена в архив (вложения).',
+      life: 5000,
+    })
   }
   function subscribeChat(convId: number) {
     try {

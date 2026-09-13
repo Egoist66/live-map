@@ -82,7 +82,7 @@ class SosController extends Controller
     }
 
     /**
-     * Завершить SOS: удаляет пин создателя (чат остаётся).
+     * Завершить SOS: архив чата обоим, удаление чата, удаление пина.
      *
      * @param Request $request
      * @param Pin $pin
@@ -92,6 +92,12 @@ class SosController extends Controller
     {
         $user = $request->user();
         abort_unless($user->isAdmin() || (int) $pin->user_id === (int) $user->id, 403, 'Завершить SOS может только создатель.');
+
+        try {
+            SosService::cleanupConversationForPin($pin, 'closed');
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('sos cleanup failed: '.$e->getMessage());
+        }
 
         return app(PinController::class)->destroy($pin);
     }

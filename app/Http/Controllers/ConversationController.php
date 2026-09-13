@@ -49,7 +49,7 @@ class ConversationController extends Controller
                     'id'=>$c->id,
                     'type'=>$c->type,
                     'pin_id'=>$c->pin_id,
-                    'other'=>$other ? ['id'=>$other->id,'name'=>$other->name,'avatar_path'=>$other->avatar_path,'avatar_url'=>$other->avatar_url,'last_seen_at'=>$lastSeen,'is_invisible'=>$other->isInvisibleActive(),'is_match'=>isset($matchedIds[$other->id]),'dating_goal'=>$other->dating_goal,'dating_interests'=>$other->dating_interests ?? []] : null,
+                    'other'=>$other ? ['id'=>$other->id,'name'=>$other->name,'avatar_path'=>$other->avatar_path,'avatar_url'=>$other->avatar_url,'last_seen_at'=>$lastSeen,'is_invisible'=>$other->isInvisibleActive(),'is_match'=>$c->type === 'direct' && isset($matchedIds[$other->id]),'dating_goal'=>$other->dating_goal,'dating_interests'=>$other->dating_interests ?? []] : null,
                     'last_message'=>$last,
                     'unread_count'=>$unread,
                     'last_message_at'=>$c->last_message_at,
@@ -83,7 +83,9 @@ class ConversationController extends Controller
         $pinned = $conversation->messages()->with(['sender:id,name,avatar_path', 'replyTo.sender:id,name'])->whereNotNull('pinned_at')->orderBy('pinned_at')->get()->map->toArrayPayload();
         $other = $conversation->participants->firstWhere('id','!=',$request->user()->id);
         $lastSeen = $other && $other->isInvisibleActive() && !$request->user()->isAdmin() ? null : $other?->last_seen_at?->toISOString();
-        $isMatch = $other ? \App\Models\DatingMatch::between($request->user()->id, $other->id) !== null : false;
+        $isMatch = $other && $conversation->type === 'direct'
+            ? \App\Models\DatingMatch::between($request->user()->id, $other->id) !== null
+            : false;
         return response()->json([
             'id'=>$conversation->id,
             'type'=>$conversation->type,

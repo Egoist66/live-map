@@ -39,6 +39,16 @@ class PruneExpiredPins extends Command
             return 0;
         }
 
+        $sosPins = Pin::whereIn('id', $ids)->where('category', 'sos')->get();
+
+        foreach ($sosPins as $pin) {
+            try {
+                \App\Services\SosService::cleanupConversationForPin($pin, 'expired');
+            } catch (\Throwable $e) {
+                Log::warning('sos expire cleanup failed: '.$e->getMessage());
+            }
+        }
+
         $count = Pin::whereIn('id', $ids)->update(['status' => 'expired']);
 
         foreach ($ids as $id) {

@@ -34,7 +34,17 @@ class ReportController extends Controller
         $data['reporter_id'] = $request->user()->id;
         $report = Report::create($data);
         if (Report::where('target_type', $data['target_type'])->where('target_id', $data['target_id'])->where('status', 'pending')->count() >= 3) {
-            if ($data['target_type'] === 'pin') \App\Models\Pin::where('id', $data['target_id'])->update(['status' => 'archived']);
+            if ($data['target_type'] === 'pin') {
+                $target = \App\Models\Pin::where('id', $data['target_id'])->first();
+                if ($target && \App\Models\Pin::isSosCategory($target->category ?? null)) {
+                    try {
+                        \App\Services\SosService::cleanupConversationForPin($target, 'deleted');
+                    } catch (\Throwable $e) {
+                        Log::warning('sos report cleanup failed: '.$e->getMessage());
+                    }
+                }
+                \App\Models\Pin::where('id', $data['target_id'])->update(['status' => 'archived']);
+            }
         }
         static::notifyAdmins($report);
         return response()->json($report, 201);
