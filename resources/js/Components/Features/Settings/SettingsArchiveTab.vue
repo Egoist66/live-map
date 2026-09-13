@@ -4,15 +4,38 @@ import Card from 'primevue/card'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
 import Message from 'primevue/message'
-import { useSettingsArchive } from '@/composables/useSettingsArchive'
+import { useSettingsArchive, type ArchiveItem } from '@/composables/useSettingsArchive'
+import { useFileDownload } from '@/composables/useFileDownload'
 import { useAppConfirm } from '@/composables/useAppConfirm'
 
 const archive = useSettingsArchive()
+const files = useFileDownload()
 const { confirmDelete } = useAppConfirm()
 
 onMounted(() => {
   void archive.fetchAll()
 })
+
+/**
+ * Скачивает файл сразу на диск, без открытия во вкладке.
+ * @param item строка архива
+ */
+async function onDownload(item: ArchiveItem): Promise<void> {
+  const url = item.download_url || item.attachment?.url
+  if (!url) {
+    return
+  }
+  await files.download(url, item.attachment?.name || 'файл')
+}
+
+/**
+ * Проверяет, качается ли файл прямо сейчас (спиннер на кнопке).
+ * @param item строка архива
+ */
+function isDownloading(item: ArchiveItem): boolean {
+  const url = item.download_url || item.attachment?.url
+  return !!url && files.downloadingUrl.value === url
+}
 
 /**
  * Удаляет один файл после подтверждения.
@@ -67,7 +90,7 @@ async function onClearAll(): Promise<void> {
               <Tag :value="archive.expiresIn(item.expires_at)" icon="pi pi-clock" class="!bg-amber-100 !text-amber-800 !rounded-full !text-[11px] !border-0" />
             </div>
             <div class="mt-3 flex gap-2">
-              <a v-if="item.attachment?.url" :href="item.attachment.url" target="_blank" rel="noopener" download class="flex-1"><Button label="Скачать" icon="pi pi-download" outlined rounded size="small" class="w-full" /></a>
+              <Button label="Скачать" icon="pi pi-download" outlined rounded size="small" class="w-full" :loading="isDownloading(item)" @click="onDownload(item)" />
             </div>
           </template>
         </Card>

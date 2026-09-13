@@ -1,5 +1,11 @@
 # Dev-лог
 
+## 2026-09-13 — Capacitor-каркас: Android + dual-auth API без ломки web
+- 📱 Установлены `@capacitor/core/cli/android + 9 плагинов` (geolocation/push/camera/preferences/haptics/status-bar/splash/keyboard/app), создан `capacitor.config.ts` (`com.upin.live`, `server.url`, `CAP_SERVER_URL`), добавлен `android/`, скрипты `mobile:build/cap:sync/open`.
+- 🔑 Dual-auth: `HasApiTokens` + guard `sanctum`, `POST/DELETE /api/auth/token`, `device_tokens` (миграция + `DeviceToken` + `DeviceTokenController`), старые группы `api.php` переведены на `auth:web,sanctum` — web-cookie работает как раньше, Bearer добавлен опцией.
+- 🧠 Фронт по Правилам №1-4: `usePlatform/useAuthStorage (Preferences+зеркало)/useNativeShell/useNativePush`, `mobile.api`, `services/api` (+Bearer, `VITE_API_URL` без `/api`), `echo.ts` (+Bearer + абсолютный `authEndpoint`), `useGeolocation` (натив first, fallback web).
+- Проверки: migrate ✅, `route:list api/auth|device` ✅, `vue-tsc --noEmit` ✅, `npx cap sync android` ✅ (9 плагинов).
+
 ## 2026-09-13 — Убрана иконка поиска из навигации
 - 🔍 Кнопка `pi-search` удалена из `AppTopBar`, событие `search` и привязка в `AuthenticatedLayout` вычищены.
 - ⌨️ Поиск людей остаётся доступен через Ctrl+K и диалог `GlobalPeopleSearchDialog`.

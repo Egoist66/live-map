@@ -30,6 +30,22 @@ function resolveReverbParams(): { host: string; port: number; tls: boolean } {
 }
 
 const rawKey = import.meta.env.VITE_REVERB_APP_KEY
+const apiOrigin = (import.meta.env.VITE_API_URL as string | undefined) || ''
+function resolveAuthEndpoint(): string {
+  if (apiOrigin) {
+    const normalized = apiOrigin.endsWith('/') ? apiOrigin.slice(0, -1) : apiOrigin
+    return `${normalized}/broadcasting/auth`
+  }
+  return '/broadcasting/auth'
+}
+function resolveAuthHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { 'X-Requested-With': 'XMLHttpRequest' }
+  try {
+    const mirrored = localStorage.getItem('upin_auth_token_mirror')
+    if (mirrored) headers['Authorization'] = `Bearer ${mirrored}`
+  } catch {}
+  return headers
+}
 if (!rawKey) {
   console.warn('[reverb] VITE_REVERB_APP_KEY missing — Echo disabled, realtime off')
   // @ts-ignore
@@ -47,8 +63,8 @@ if (!rawKey) {
     forceTLS: params.tls,
     enabledTransports: params.tls ? ['wss'] : ['ws'],
     disableStats: true,
-    authEndpoint: '/broadcasting/auth',
-    auth: { headers: { 'X-Requested-With': 'XMLHttpRequest' } },
+    authEndpoint: resolveAuthEndpoint(),
+    auth: { headers: resolveAuthHeaders() },
   })
 }
 if ((window as any).Echo?.connector?.pusher) {

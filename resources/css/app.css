@@ -210,6 +210,17 @@ html.dark .bg-stone-900\/90, html.dark .bg-black\/50, html.dark .bg-black\/60 { 
   .h-dvh-app { height: 100dvh; }
 }
 
+/* Нативный верх: шапка и оверлеи карты под статус-баром/вырезом.
+   useNativeShell добавляет .no-safe-area-top, если WebView отдал env() нулём. */
+.native-safe-top { padding-top: env(safe-area-inset-top, 0px); }
+.no-safe-area-top .native-safe-top { padding-top: 28px; }
+.native-safe-offset-top { top: calc(env(safe-area-inset-top, 0px) + 8px); }
+.no-safe-area-top .native-safe-offset-top { top: 36px; }
+@media (min-width: 640px) {
+  .native-safe-offset-top { top: calc(env(safe-area-inset-top, 0px) + 16px); }
+  .no-safe-area-top .native-safe-offset-top { top: 44px; }
+}
+
 @media (max-width: 640px) {
   button, a, [role="button"] { min-height: 0; }
   button:not(.p-link):not(.p-unselectable-text), .btn-primary, .btn-brand, .btn-ghost {

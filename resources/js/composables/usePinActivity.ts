@@ -2,6 +2,7 @@ import { ref, computed } from 'vue'
 import { router } from '@inertiajs/vue3'
 import { pinActivityApi, type PinActivityItem } from '@/services/pinActivity.api'
 import { notificationsApi, toActivityItem, describeInboxRow, type InboxNotification } from '@/services/notifications.api'
+import { useFileDownload } from '@/composables/useFileDownload'
 import { useBadgeStore } from '@/stores/badges'
 import { useAppUpdates } from '@/composables/useAppUpdates'
 import { busOn } from '@/services/realtime-bus'
@@ -326,7 +327,12 @@ export function usePinActivity() {
       try { useAppUpdates().preview(n.data.update as any) } catch {}
       return
     }
-    const link = describeInboxRow(n).link
+    const desc = describeInboxRow(n)
+    if (desc.downloadUrl) {
+      try { await useFileDownload().download(desc.downloadUrl, desc.fileName || 'SOS-чат.txt') } catch {}
+      return
+    }
+    const link = desc.link
     if (link) router.visit(link)
   }
   const pinActivities = computed(() => splitActivities(activities.value).pins)

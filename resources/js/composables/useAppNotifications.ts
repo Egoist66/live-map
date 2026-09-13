@@ -3,6 +3,7 @@ import { router, usePage } from '@inertiajs/vue3'
 import { avatarSrcFor } from '@/composables/useAvatar'
 import { getSubscription, showLocal } from '@/pwa/push.service'
 import { useScreenLock } from '@/composables/useScreenLock'
+import { useFileDownload } from '@/composables/useFileDownload'
 import { busOn } from '@/services/realtime-bus'
 import { ensureUserChannel, leaveUserChannel } from '@/composables/useUserChannel'
 
@@ -12,12 +13,24 @@ function isLockedNow(): boolean {
 
 export type AppToast = {
   id: string
-  type: 'message' | 'friend' | 'pin' | 'report' | 'security' | 'match'
+  type: 'message' | 'friend' | 'pin' | 'report' | 'security' | 'match' | 'sos'
   title: string
   body: string
   avatar: string | null
   link: string
   createdAt: number
+  /**
+   * PrimeIcon бейджа тоста (например 'pi pi-map-marker').
+   * Компонент только отображает, выбор иконки — здесь.
+   */
+  icon: string
+  /**
+   * Прямое скачивание по клику: если задано — клик качает файл,
+   * а не ведёт по link (история SOS-чата).
+   */
+  downloadUrl?: string | null
+  /** Имя файла для скачивания по клику. */
+  fileName?: string | null
 }
 
 const toasts = ref<AppToast[]>([])
@@ -118,6 +131,7 @@ function handleMessage(e: any) {
   push({
     id: `msg-${msg.id}-${Date.now()}`,
     type: 'message',
+    icon: 'pi pi-comments',
     title: name,
     body: body || 'Новое сообщение',
     avatar: avatarSrcFor(sender),
@@ -152,6 +166,7 @@ function handleFriendship(e: any) {
     push({
       id: `fr-${f.id}-${Date.now()}`,
       type: 'friend',
+      icon: 'pi pi-user-plus',
       title: 'Заявка в друзья',
       body: `${r.name || 'Кто-то'} хочет дружить`,
       avatar: avatarSrcFor(r),
@@ -163,6 +178,7 @@ function handleFriendship(e: any) {
     push({
       id: `fr-acc-${f.id}-${Date.now()}`,
       type: 'friend',
+      icon: 'pi pi-user-plus',
       title: 'Заявка принята',
       body: `${a.name || 'Пользователь'} принял заявку`,
       avatar: avatarSrcFor(a),
@@ -207,6 +223,7 @@ function handlePinActivity(e: any) {
     push({
       id: `pin-sub-${a.id}-${Date.now()}`,
       type: 'pin',
+      icon: 'pi pi-map-marker',
       title: `${name} создал пин`,
       body: `«${title}»`.slice(0, 90),
       avatar: avatarSrcFor(actor),
@@ -219,6 +236,7 @@ function handlePinActivity(e: any) {
     push({
       id: `pin-sub-photo-${a.id}-${Date.now()}`,
       type: 'pin',
+      icon: 'pi pi-image',
       title: `${name} — новое фото`,
       body: 'Загружено новое фото. Откройте галерею'.slice(0, 90),
       avatar: avatarSrcFor(actor),
@@ -231,6 +249,7 @@ function handlePinActivity(e: any) {
     push({
       id: `pin-sub-level-${a.id}-${Date.now()}`,
       type: 'friend',
+      icon: 'pi pi-star',
       title: `${name} — репутация изменилась`,
       body: (a.excerpt || 'Обновление профиля').toString().slice(0, 90),
       avatar: avatarSrcFor(actor),
@@ -247,6 +266,7 @@ function handlePinActivity(e: any) {
     push({
       id: `pin-${a.id}-${Date.now()}`,
       type: 'pin',
+      icon: 'pi pi-file',
       title: `${name} — пост в UFlow`,
       body: flowExcerpt || 'Опубликован новый пост',
       avatar: avatarSrcFor(actor),
@@ -259,6 +279,7 @@ function handlePinActivity(e: any) {
     push({
       id: `pin-${a.id}-${Date.now()}`,
       type: 'pin',
+      icon: 'pi pi-heart',
       title: 'Лайк поста',
       body: `${name} оценил ваш пост в UFlow`.slice(0, 90),
       avatar: avatarSrcFor(actor),
@@ -271,6 +292,7 @@ function handlePinActivity(e: any) {
     push({
       id: `pin-${a.id}-${Date.now()}`,
       type: 'pin',
+      icon: 'pi pi-comments',
       title: 'Комментарий к посту',
       body: flowExcerpt ? `${name}: ${flowExcerpt}` : `${name} прокомментировал ваш пост`.slice(0, 90),
       avatar: avatarSrcFor(actor),
@@ -283,6 +305,7 @@ function handlePinActivity(e: any) {
     push({
       id: `pin-${a.id}-${Date.now()}`,
       type: 'pin',
+      icon: 'pi pi-comments',
       title: 'Ответ на комментарий',
       body: flowExcerpt ? `${name} ответил вам: ${flowExcerpt}` : `${name} ответил на ваш комментарий`.slice(0, 90),
       avatar: avatarSrcFor(actor),
@@ -295,6 +318,7 @@ function handlePinActivity(e: any) {
     push({
       id: `pin-${a.id}-${Date.now()}`,
       type: 'pin',
+      icon: 'pi pi-at',
       title: 'Вас упомянули в UFlow',
       body: flowExcerpt ? `${name} упомянул вас: ${flowExcerpt}` : `${name} упомянул вас в UFlow`.slice(0, 90),
       avatar: avatarSrcFor(actor),
@@ -309,6 +333,7 @@ function handlePinActivity(e: any) {
     push({
       id: `pin-${a.id}-${Date.now()}`,
       type: 'match',
+      icon: 'pi pi-heart-fill',
       title: anon ? '💘 Тайный поклонник' : '💘 Тебя лайкнули в ULove',
       body: anon ? 'Тайный поклонник отреагировал на твою анкету' : `${name} отреагировал на твою анкету`.slice(0, 90),
       avatar: anon ? null : avatarSrcFor(actor),
@@ -321,6 +346,7 @@ function handlePinActivity(e: any) {
     push({
       id: `pin-${a.id}-${Date.now()}`,
       type: 'match',
+      icon: 'pi pi-heart-fill',
       title: '💞 Новый мэтч!',
       body: `${name} тоже лайкнул тебя — чат открыт`.slice(0, 90),
       avatar: avatarSrcFor(actor),
@@ -333,6 +359,7 @@ function handlePinActivity(e: any) {
     push({
       id: `pin-${a.id}-${Date.now()}`,
       type: 'pin',
+      icon: 'pi pi-heart',
       title: 'Лайк фото',
       body: `${name} лайкнул ваше фото`.slice(0, 90),
       avatar: avatarSrcFor(actor),
@@ -348,10 +375,13 @@ function handlePinActivity(e: any) {
       : a.kind === 'mention'
         ? (a.excerpt ? `${name} упомянул вас: ${a.excerpt}` : `${name} упомянул вас в «${pinTitle}»`).slice(0, 90)
         : `${name} ${emoji[a.reaction_type] || '⭐'} «${pinTitle}»`.slice(0, 90)
+  const isCommentKind = a.kind === 'comment' || a.kind === 'photo_comment'
+  const isMentionKind = a.kind === 'mention'
   push({
     id: `pin-${a.id}-${Date.now()}`,
     type: 'pin',
-    title: a.kind === 'comment' || a.kind === 'photo_comment' ? 'Новый комментарий' : a.kind === 'mention' ? 'Вас упомянули' : 'Новая реакция',
+    icon: isCommentKind ? 'pi pi-comments' : isMentionKind ? 'pi pi-at' : 'pi pi-heart',
+    title: isCommentKind ? 'Новый комментарий' : isMentionKind ? 'Вас упомянули' : 'Новая реакция',
     body,
     avatar: avatarSrcFor(actor),
     link: activityLink(a),
@@ -393,15 +423,19 @@ function handleNotification(e: any) {
 function handleSosChatClosed(s: any) {
   const cid = Number(s?.conversation_id ?? 0) || 0
   if (isDuplicateEvent(`sos-closed-${cid}-${s?.reason ?? 'closed'}`)) return
-  const reasonLabel = String(s?.reason_label ?? 'пин завершён')
   const title = s?.pin_title ? `🆘 SOS-чат закрыт: ${s.pin_title}` : '🆘 SOS-чат закрыт'
+  const downloadUrl = String(s?.archive_download_url || s?.archive_url || '') || null
+  const fileName = String(s?.archive_name || 'SOS-чат.txt')
   push({
     id: `sos-closed-${cid}-${Date.now()}`,
-    type: 'pin',
+    type: 'sos',
+    icon: 'pi pi-exclamation-triangle',
     title,
-    body: `Чат удалён, так как ${reasonLabel}. История сохранена в архив.`.slice(0, 90),
+    body: 'Нажмите, чтобы скачать историю чата.'.slice(0, 90),
     avatar: null,
-    link: '/chat',
+    link: downloadUrl || '/chat',
+    downloadUrl,
+    fileName,
     createdAt: Date.now(),
   })
 }
@@ -412,6 +446,7 @@ function handleImpersonation(e: any) {
   push({
     id: `imp-${log.id}-${Date.now()}`,
     type: 'security',
+    icon: 'pi pi-shield',
     title: 'Вход администрации в ваш аккаунт',
     body: `${log.reason || 'Основание указано в журнале'}`.slice(0, 90),
     avatar: null,
@@ -434,6 +469,7 @@ function handleReport(e: any) {
   push({
     id: `rep-${r.id}-${Date.now()}`,
     type: 'report',
+    icon: 'pi pi-flag',
     title: `Жалоба: ${r.reason_label || r.reason}`,
     body: `${title} · ${body}`.slice(0, 90),
     avatar: avatarSrcFor(r.reporter || {}),
@@ -465,6 +501,18 @@ function init() {
 export function useAppNotifications() {
   onMounted(() => init())
   onBeforeUnmount(() => {})
-  function openToast(t: AppToast) { router.visit(t.link); remove(t.id) }
+  /**
+   * Клик по тосту: файл (история SOS) — сразу скачать, иначе переход.
+   */
+  function openToast(t: AppToast) {
+    if (t.downloadUrl) {
+      const name = t.fileName || 'SOS-чат.txt'
+      void useFileDownload().download(t.downloadUrl, name)
+      remove(t.id)
+
+      return
+    }
+    router.visit(t.link); remove(t.id)
+  }
   return { toasts, init, push, remove, openToast, subscribe }
 }

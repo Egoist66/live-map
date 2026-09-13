@@ -34,6 +34,37 @@ class ChatAttachmentController extends Controller
     }
 
     /**
+     * Скачивает вложение как файл: Content-Disposition attachment + UTF-8 для текста.
+     *
+     * Прямая ссылка /storage открывается браузером во вкладке, где .txt
+     * с кириллицей может показаться абракадаброй из-за неверной кодировки.
+     * Здесь отдаём файл скачиванием сразу с корректным именем.
+     *
+     * @param Request $request
+     * @param Message $message сообщение с вложением
+     * @return \Symfony\Component\HttpFoundation\StreamedResponse|\Symfony\Component\HttpFoundation\BinaryFileResponse
+     */
+    public function download(Request $request, Message $message)
+    {
+        abort_unless($message->sender_id === $request->user()->id || $request->user()->isAdmin(), 403);
+        abort_if(! $message->attachment_path, 404, 'Вложение уже удалено');
+
+        $disk = ChatAttachment::disk();
+        $path = $message->attachment_path;
+
+        abort_unless(\Illuminate\Support\Facades\Storage::disk($disk)->exists($path), 404, 'Файл не найден');
+
+        $name = $message->attachment_name ?: basename($path);
+        $headers = [];
+
+        if (($message->attachment_mime ?: '') === 'text/plain') {
+            $headers['Content-Type'] = 'text/plain; charset=UTF-8';
+        }
+
+        return \Illuminate\Support\Facades\Storage::disk($disk)->download($path, $name, $headers);
+    }
+
+    /**
      * Удаляет одно вложение: файл с диска и поля в БД.
      *
      * @param Request $request
@@ -105,6 +136,7 @@ class ChatAttachmentController extends Controller
             'conversation_id' => $message->conversation_id,
             'chat_with' => $other ? ['id' => $other->id, 'name' => $other->name] : null,
             'attachment' => $message->attachmentPayload(),
+            'download_url' => $message->attachment_path ? url('/api/chat/attachments/'.$message->id.'/download') : null,
             'created_at' => $created?->toISOString(),
             'expires_at' => $created
                 ? $created->copy()->addDays(ChatAttachment::RETENTION_DAYS)->toISOString()

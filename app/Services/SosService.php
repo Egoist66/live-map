@@ -294,6 +294,7 @@ class SosService
             $pinTitle = (string) ($pin->title ?? 'SOS');
 
             $archivePaths = [];
+            $archiveMessageIds = [];
             $now = now();
 
             foreach ($participantIds as $uid) {
@@ -320,7 +321,7 @@ class SosService
                 $fileName = 'SOS-чат · '.$pinTitle.'.txt';
 
                 try {
-                    Message::create([
+                    $archiveMessage = Message::create([
                         'conversation_id' => $conversation->id,
                         'sender_id' => $uid,
                         'body' => '📦 История SOS-чата сохранена в архив.',
@@ -331,6 +332,7 @@ class SosService
                         'attachment_size' => $size,
                         'attachment_kind' => 'file',
                     ]);
+                    $archiveMessageIds[$uid] = (int) $archiveMessage->id;
                 } catch (\Throwable $e) {
                     \Illuminate\Support\Facades\Log::warning('sos archive message failed: '.$e->getMessage());
                 }
@@ -349,6 +351,7 @@ class SosService
                 }
 
                 $path = $archivePaths[$uid] ?? null;
+                $archiveMessageId = $archiveMessageIds[$uid] ?? null;
 
                 try {
                     UserNotifier::send($user, new SosChatClosedNotification(
@@ -357,6 +360,7 @@ class SosService
                         $pinTitle,
                         $path ? ChatAttachment::url($path) : null,
                         $path ? 'SOS-чат · '.$pinTitle.'.txt' : null,
+                        $archiveMessageId,
                     ));
                 } catch (\Throwable $e) {
                     \Illuminate\Support\Facades\Log::warning('sos closed notify failed: '.$e->getMessage());

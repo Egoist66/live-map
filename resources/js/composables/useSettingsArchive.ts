@@ -7,6 +7,8 @@ export type ArchiveItem = {
   conversation_id: number
   chat_with: { id: number; name: string } | null
   attachment: { url: string | null; name: string | null; mime: string | null; size: number | null; kind: 'image' | 'file' | null } | null
+  /** API-роут скачивания с корректным именем и кодировкой. */
+  download_url: string | null
   created_at: string | null
   expires_at: string | null
 }

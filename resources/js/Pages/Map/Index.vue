@@ -106,7 +106,7 @@ onUnmounted(() => {
       <div v-if="!loaded" class="absolute inset-0 grid place-items-center bg-[#eef3f8] dark:bg-[#0B0F1A] z-[5]">
         <div class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-700 rounded-2xl px-5 py-4 shadow flex items-center gap-3"><span class="w-5 h-5 border-2 border-stone-200 dark:border-zinc-700 border-t-stone-900 dark:border-t-white rounded-full animate-spin"></span><span class="text-sm font-medium dark:text-zinc-100">Загружаем карту…</span></div>
       </div>
-      <div class="absolute top-2 sm:top-4 left-2 right-2 sm:left-4 sm:right-auto sm:max-w-[420px] flex flex-col gap-2 sm:gap-2.5 z-10 pointer-events-none">
+      <div class="native-safe-offset-top absolute left-2 right-2 sm:left-4 sm:right-auto sm:max-w-[420px] flex flex-col gap-2 sm:gap-2.5 z-10 pointer-events-none">
         <MapTopBar :count="(filteredPins as any)?.value?.length ?? store.pins.length" :loading="store.loading" :refreshing="mapRefresh.refreshing.value" :categories="categories" :selected-category="selectedCategory" @update:category="(v:any)=>selectedCategory=v" @info="showLiveInfo = true" @mine="handleMineClick" @refresh="refreshMap" />
         <SosModeBanner v-if="sosMode.isSosMode.value" @chat="goSosChat" @close="onSosClosed" />
         <DefaultModeHint place="map" />

@@ -453,8 +453,11 @@ function openNews(item: any) {
                             icon="pi pi-bell"
                             shape="circle"
                             class="!w-10 !h-10 [&_img]:object-cover !bg-violet-100 dark:!bg-violet-500/20 !text-violet-600 dark:!text-violet-300"
-                            :pt="{ image: { class: 'object-cover' } }" /><span
-                            class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center border-2 border-white dark:border-zinc-900 text-[10px] bg-violet-600"
+                            :pt="{ image: { class: 'object-cover' } }"
+                          />
+                          <span
+                            class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center border-2 border-white dark:border-zinc-900 text-[10px]"
+                            :class="n.type === 'sos.chat_closed' ? 'bg-red-600' : 'bg-violet-600'"
                             >{{ describeInboxRow(n).emoji }}</span
                           ></span
                         >
@@ -475,7 +478,8 @@ function openNews(item: any) {
                         </div>
                         <span
                           v-if="!n.read_at"
-                          class="w-2.5 h-2.5 bg-violet-500 rounded-full shrink-0"
+                          class="w-2.5 h-2.5 rounded-full shrink-0"
+                          :class="n.type === 'sos.chat_closed' ? 'bg-red-600' : 'bg-violet-500'"
                         ></span>
                         <i v-else class="pi pi-chevron-right text-stone-300 dark:text-zinc-600 text-xs shrink-0"></i>
                       </button>

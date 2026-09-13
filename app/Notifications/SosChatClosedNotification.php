@@ -17,6 +17,7 @@ class SosChatClosedNotification extends UserNotification
         private ?string $pinTitle = null,
         private ?string $archiveUrl = null,
         private ?string $archiveName = null,
+        private ?int $archiveMessageId = null,
     ) {}
 
     public function type(): string { return 'sos.chat_closed'; }
@@ -42,6 +43,9 @@ class SosChatClosedNotification extends UserNotification
                 'pin_title' => $this->pinTitle,
                 'archive_url' => $this->archiveUrl,
                 'archive_name' => $this->archiveName,
+                'archive_download_url' => $this->archiveMessageId
+                    ? url('/api/chat/attachments/'.$this->archiveMessageId.'/download')
+                    : null,
             ],
         ];
     }

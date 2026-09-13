@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('throttle:60,1')->group(function () {
     Route::get('/version', [VersionController::class, 'show']);
+    Route::post('/auth/token', [\App\Http\Controllers\MobileAuthController::class, 'store'])->middleware('throttle:10,1');
     Route::get('/nbrb/convert', [NbrbController::class, 'convert']);
     Route::get('/nbrb/dynamics/{curId}', [NbrbController::class, 'dynamics'])->whereNumber('curId');
     Route::get('/nbrb/currencies/{curId?}', [NbrbController::class, 'currencies'])->whereNumber('curId');
@@ -29,7 +30,11 @@ Route::middleware('throttle:60,1')->group(function () {
 Route::get('/reference', [\App\Http\Controllers\ReferencePageController::class, 'index']);
 Route::get('/reference/{slug}', [\App\Http\Controllers\ReferencePageController::class, 'show']);
 
-Route::middleware(['web', 'auth', 'throttle:120,1'])->group(function () {
+Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function () {
+    Route::delete('/auth/token', [\App\Http\Controllers\MobileAuthController::class, 'destroy']);
+    Route::get('/device-tokens', [\App\Http\Controllers\DeviceTokenController::class, 'index']);
+    Route::post('/device-tokens', [\App\Http\Controllers\DeviceTokenController::class, 'store'])->middleware('throttle:social-write');
+    Route::delete('/device-tokens', [\App\Http\Controllers\DeviceTokenController::class, 'destroy'])->middleware('throttle:social-write');
     Route::get('/pins/mine', [PinController::class, 'mine']);
     Route::get('/pins/mine/scheduled', [PinController::class, 'scheduled']);
     Route::get('/pins/mine/archived', [PinController::class, 'archived']);
@@ -147,6 +152,7 @@ Route::middleware(['web', 'auth', 'throttle:120,1'])->group(function () {
     Route::delete('/messages/{message}/pin', [MessageController::class, 'unpin'])->middleware('throttle:pin-toggle');
 
     Route::get('/chat/attachments', [\App\Http\Controllers\ChatAttachmentController::class, 'index']);
+    Route::get('/chat/attachments/{message}/download', [\App\Http\Controllers\ChatAttachmentController::class, 'download']);
     Route::delete('/chat/attachments', [\App\Http\Controllers\ChatAttachmentController::class, 'clear'])->middleware('throttle:social-write');
     Route::delete('/chat/attachments/{message}', [\App\Http\Controllers\ChatAttachmentController::class, 'destroy'])->middleware('throttle:social-write');
 
@@ -174,7 +180,7 @@ Route::middleware(['web', 'auth', 'throttle:120,1'])->group(function () {
     Route::post('/pins/{pin}/sos/close', [\App\Http\Controllers\SosController::class, 'close'])->middleware('throttle:social-write');
 });
 
-Route::middleware(['web', 'auth', 'admin', 'throttle:120,1'])->group(function () {
+Route::middleware(['web', 'auth:web,sanctum', 'admin', 'throttle:120,1'])->group(function () {
     Route::get('/admin/updates', [\App\Http\Controllers\AdminAppUpdateController::class, 'index']);
     Route::post('/admin/updates', [\App\Http\Controllers\AdminAppUpdateController::class, 'store']);
     Route::patch('/admin/updates/{appUpdate}', [\App\Http\Controllers\AdminAppUpdateController::class, 'update']);

@@ -10,6 +10,8 @@ import { createApp, DefineComponent, h } from 'vue'
 import { ZiggyVue } from '../../vendor/tightenco/ziggy'
 import { setupPrimeVue } from './plugins/primevue'
 import { register as registerSw } from './pwa/pwa.service'
+import { useNativeShell } from './composables/useNativeShell'
+import { useNativePush } from './composables/useNativePush'
 
 const appName = import.meta.env.VITE_APP_NAME || 'UPin'
 
@@ -33,6 +35,14 @@ createInertiaApp({
       try {
         registerSw()
       } catch {}
+      void (async () => {
+        try {
+          await useNativeShell().initNativeShell()
+        } catch {}
+        try {
+          await useNativePush().initNativePush()
+        } catch {}
+      })()
     }
   },
   progress: { color: '#5B5BFF' },

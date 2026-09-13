@@ -20,6 +20,7 @@ export interface InboxNotification {
     friendship?: any
     report?: any
     log?: any
+    sos_chat_closed?: { conversation_id?: number; reason?: string; reason_label?: string; pin_title?: string | null } | null
     update?: { id: number; title?: string; body?: string; version?: string; published_at?: string | null } | null
   }
 }
@@ -40,6 +41,10 @@ export interface InboxText {
   body: string
   link: string
   avatar: string | null
+  /** Прямое скачивание по клику вместо перехода (история SOS-чата). */
+  downloadUrl?: string | null
+  /** Имя файла для скачивания по клику. */
+  fileName?: string | null
 }
 
 /**
@@ -68,6 +73,19 @@ export function describeInboxRow(row: InboxNotification): InboxText {
   if (row.type === 'security.impersonation') {
     const log = data.log ?? {}
     return { emoji: '🔒', title: 'Вход администрации', body: `${log.reason || 'Основание указано в журнале'}`.slice(0, 120), link: '/settings/procedures', avatar: null }
+  }
+  if (row.type === 'sos.chat_closed') {
+    const s = (data as any).sos_chat_closed ?? {}
+    const pinTitle = s.pin_title ? `: ${s.pin_title}` : ''
+    return {
+      emoji: '🆘',
+      title: `SOS-чат закрыт${pinTitle}`.slice(0, 120),
+      body: 'Нажмите, чтобы скачать историю чата.'.slice(0, 120),
+      link: String(s.archive_download_url || s.archive_url || '/chat'),
+      avatar: null,
+      downloadUrl: String(s.archive_download_url || s.archive_url || '') || null,
+      fileName: String(s.archive_name || 'SOS-чат.txt'),
+    }
   }
   if (row.type === 'app.published') {
     const u = data.update ?? ({} as NonNullable<NonNullable<InboxNotification['data']>['update']>)

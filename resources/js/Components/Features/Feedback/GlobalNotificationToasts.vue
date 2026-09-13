@@ -12,12 +12,14 @@ const { toasts, remove, openToast } = useAppNotifications()
         class="pointer-events-auto group cursor-pointer bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-[20px] shadow-[0_12px_40px_rgba(0,0,0,0.16)] p-3.5 flex gap-3 items-center hover:scale-[1.01] active:scale-[0.99] transition-all"
       >
         <div class="relative shrink-0">
-          <img :src="t.avatar || ''" class="w-11 h-11 rounded-full object-cover border border-stone-200 dark:border-zinc-700 bg-stone-100" :alt="t.title" />
+          <img v-if="t.avatar" :src="t.avatar" class="w-11 h-11 rounded-full object-cover border border-stone-200 dark:border-zinc-700 bg-stone-100" :alt="t.title" />
+          <span v-else class="w-11 h-11 rounded-full grid place-items-center border border-stone-200 dark:border-zinc-700 text-lg" :class="t.type==='sos' ? 'bg-red-600 text-white' : t.type==='match' ? 'bg-pink-500 text-white' : t.type==='message' ? 'bg-violet-600 text-white' : t.type==='pin' ? 'bg-rose-500 text-white' : t.type==='report' ? 'bg-red-600 text-white' : 'bg-amber-500 text-white'"><i :class="[t.icon || 'pi pi-bell', 'text-base']" /></span>
           <span
+            v-if="t.avatar"
             class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full grid place-items-center border-2 border-white dark:border-zinc-900 shadow text-white text-xs"
-            :class="t.type==='message' ? 'bg-violet-600' : t.type==='pin' ? 'bg-rose-500' : t.type==='report' ? 'bg-red-600' : 'bg-amber-500'"
+            :class="t.type==='message' ? 'bg-violet-600' : t.type==='pin' ? 'bg-rose-500' : t.type==='sos' ? 'bg-red-600' : t.type==='match' ? 'bg-pink-500' : t.type==='report' ? 'bg-red-600' : 'bg-amber-500'"
           >
-            <i :class="t.type==='message' ? 'pi pi-comments text-[10px]' : t.type==='pin' ? 'pi pi-heart text-[10px]' : t.type==='report' ? 'pi pi-flag text-[10px]' : 'pi pi-user-plus text-[10px]'" />
+            <i :class="[t.icon || 'pi pi-bell', 'text-[10px]']" />
           </span>
           <span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-zinc-900 animate-[ping_1.6s_ease-out_infinite] opacity-60"></span>
         </div>

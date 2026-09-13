@@ -31,7 +31,7 @@ onMounted(() => { screenLock.init(); hotkeys.init() })
 </script>
 <template>
   <div class="min-h-screen bg-surface dark:bg-[#0B0F1A] overflow-x-clip">
-    <header v-if="!route().current('swipes*')" class="sticky top-0 z-50 glass border-b border-stone-200/70 dark:border-zinc-800 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-zinc-900/70">
+    <header v-if="!route().current('swipes*')" class="native-safe-top sticky top-0 z-50 glass border-b border-stone-200/70 dark:border-zinc-800 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-zinc-900/70">
       <AppTopBar :user="user" :avatar-src="avatarSrc" :dashboard-href="dashboardHref" :badge-total="badge.total" :lock-enabled="screenLock.enabled.value" @bell="bell.open()" @menu="toggleMenu" @drawer="showDrawer = true" @lock="screenLock.lockNow()" />
     </header>
     <AppUserMenu v-model:menu-ref="menu" :user="user" :avatar-src="avatarSrc" :items="(menuItems as any)" />
