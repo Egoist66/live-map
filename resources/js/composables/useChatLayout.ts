@@ -1,8 +1,41 @@
-export function useChatLayout() {
+import { computed } from 'vue'
+import { usePlatform } from '@/composables/usePlatform'
+
+/**
+ * Классы и стили раскладки чата.
+ *
+ * Высота фрейма считается через CSS-класс `h-app-full` (шапка + нижнее меню
+ * + safe-area). Ручной оффсет клавиатуры применяется только на вебе:
+ * в нативном WebView ресайз клавиатуры делает Capacitor, двойной сдвиг
+ * уводил бы инпут вниз.
+ *
+ * @param keyboardHeight высота клавиатуры из useChatViewport
+ * @param isChatKeyboardOpen true когда клавиатура открыта в поле сообщения
+ * @returns классы карточек и стиль фрейма
+ * @example
+ * const { keyboardHeight, isChatKeyboardOpen } = useChatViewport()
+ * const { pageClass, frameClass, frameStyle } = useChatLayout(keyboardHeight, isChatKeyboardOpen)
+ */
+export function useChatLayout(
+  keyboardHeight?: { value: number },
+  isChatKeyboardOpen?: { value: boolean },
+) {
   const pageClass = 'mx-auto max-w-[1280px] w-full min-w-0 overflow-hidden overscroll-none p-0 lg:px-6 lg:py-4'
   const frameClass = 'flex flex-col lg:flex-row lg:gap-4 w-full min-w-0 overflow-hidden overscroll-contain bg-transparent'
   const sidebarCardClass = 'w-full lg:w-[360px] lg:min-w-[360px] flex-1 lg:flex-none min-h-0 lg:h-full lg:max-h-full bg-white dark:bg-zinc-900 rounded-none lg:rounded-2xl border-0 lg:border border-stone-200 dark:border-zinc-800 flex-col overflow-hidden max-w-full'
   const windowCardClass = 'flex-1 min-h-0 bg-white dark:bg-zinc-900 rounded-none lg:rounded-2xl border-0 lg:border border-stone-200 dark:border-zinc-800 flex-col overflow-hidden min-w-0 w-full max-w-full'
 
-  return { pageClass, frameClass, sidebarCardClass, windowCardClass }
+  const { isNative } = usePlatform()
+
+  const frameStyle = computed(() => {
+    const open = isChatKeyboardOpen?.value ?? false
+    const height = keyboardHeight?.value ?? 0
+    if (!open || !height || isNative) {
+      return {}
+    }
+    const offset = `calc(100dvh - var(--app-header-sm) - var(--sat) - ${height}px)`
+    return { height: offset, maxHeight: offset }
+  })
+
+  return { pageClass, frameClass, sidebarCardClass, windowCardClass, frameStyle }
 }

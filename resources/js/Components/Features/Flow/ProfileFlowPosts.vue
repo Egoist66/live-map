@@ -79,7 +79,7 @@ onMounted(() => feed.init())
       </div>
     </div>
     <Dialog v-model:visible="allOpen" modal dismissableMask :closable="true" :draggable="false" header="Все посты" :breakpoints="{ '640px': '100vw' }" :style="{ width: '720px' }" :pt="{ content: { class: '!p-0' }, header: { class: '!py-3 !px-3 sm:!px-5' } }">
-      <div class="px-3 sm:px-5 pb-[max(1rem,env(safe-area-inset-bottom))] max-h-[78dvh] overflow-y-auto overscroll-contain space-y-4">
+      <div class="px-3 sm:px-5 pb-[max(1rem,var(--sab))] max-h-[78dvh] overflow-y-auto overscroll-contain space-y-4">
         <FlowPostCard
           v-for="post in feed.store.posts"
           :key="post.id"

@@ -94,8 +94,8 @@ onMounted(async () => {
     <meta head-key="description" name="description" :content="seo.description.value" />
   </Head>
   <component :is="Layout">
-    <div class="min-h-[calc(100vh-64px)] bg-surface dark:bg-[#090E1A]">
-      <div class="max-w-[640px] mx-auto px-3 sm:px-6 py-3 sm:py-6 pb-2 sm:pb-[calc(2rem+env(safe-area-inset-bottom,0px))]">
+    <div class="page-scroll bg-surface dark:bg-[#090E1A]">
+      <div class="max-w-[640px] mx-auto px-3 sm:px-6 py-3 sm:py-6 pb-2 sm:pb-[calc(2rem+var(--sab))]">
 
         <div class="text-center">
           <div class="flex items-center justify-center gap-2.5">
@@ -579,7 +579,7 @@ onMounted(async () => {
             </div>
           </div>
 
-          <div v-if="s.current.value" class="mt-2 hidden sm:flex items-center justify-center gap-2.5 sm:gap-4 pb-[env(safe-area-inset-bottom,0px)]">
+          <div v-if="s.current.value" class="mt-2 hidden sm:flex items-center justify-center gap-2.5 sm:gap-4 pb-[var(--sab)]">
             <Button icon="pi pi-heart-fill" rounded raised aria-label="Лайк" class="!w-[72px] !h-[72px] sm:!w-20 sm:!h-20 !text-2xl sm:!text-3xl !text-white !bg-gradient-to-br !from-rose-500 !to-orange-400 !border-0" :loading="s.acting.value" @click="s.swipe('like')" />
             <Button icon="pi pi-send" severity="info" rounded raised aria-label="Написать" class="!w-14 !h-14 sm:!w-16 sm:!h-16 !text-xl sm:!text-2xl" :loading="s.creatingChat.value" @click="s.writeWithoutMatch(s.current.value.id)" />
           </div>
@@ -707,7 +707,7 @@ onMounted(async () => {
             </div>
             <Button label="Сохранить приватность" severity="secondary" size="small" rounded outlined :loading="s.savingPrivacy.value" @click="s.savePrivacy()" />
           </div>
-          <div class="flex gap-2 pb-[env(safe-area-inset-bottom,0px)]">
+          <div class="flex gap-2 pb-[var(--sab)]">
             <Button label="Сбросить" severity="secondary" outlined rounded class="flex-1" :loading="s.loading.value" @click="s.resetFilters()" />
             <Button label="Показать" rounded class="flex-1" :loading="s.loading.value" @click="s.applyFilters()" />
           </div>

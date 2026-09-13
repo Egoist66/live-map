@@ -122,7 +122,7 @@ const { menuPt } = useDropdownMenuStyle()
       </div>
     </div>
     <Menu ref="menuAnchor" :model="(rowMenu.menuModel.value as any)" :popup="true" :pt="menuPt" />
-    <Dialog v-model:visible="rowMenu.sheetOpen.value" position="bottom" :draggable="false" :modal="true" :dismissable-mask="true" :show-header="false" :pt="{ root: { class: '!rounded-t-[24px] !rounded-b-none !border-0 !m-0 !max-h-[80dvh] w-full sm:!max-w-[360px]' }, content: { class: '!p-2 !pb-[calc(0.5rem+env(safe-area-inset-bottom))]' } }">
+    <Dialog v-model:visible="rowMenu.sheetOpen.value" position="bottom" :draggable="false" :modal="true" :dismissable-mask="true" :show-header="false" :pt="{ root: { class: '!rounded-t-[24px] !rounded-b-none !border-0 !m-0 !max-h-[80dvh] w-full sm:!max-w-[360px]' }, content: { class: '!p-2 !pb-[calc(0.5rem+var(--sab))]' } }">
       <div class="w-10 h-1 rounded-full bg-stone-200 dark:bg-zinc-700 mx-auto my-2.5"></div>
       <div class="px-2 pb-2 space-y-1">
         <div v-if="rowMenu.target.value?.userName" class="px-4 py-2 text-[15px] font-bold truncate dark:text-white">{{ rowMenu.target.value.userName }}</div>

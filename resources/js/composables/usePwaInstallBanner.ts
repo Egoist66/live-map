@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import { usePwa } from '@/composables/usePwa'
 import { usePwaInstallGuide } from '@/composables/usePwaInstallGuide'
+import { usePlatform } from '@/composables/usePlatform'
 
 /** Сколько дней после регистрации считать пользователя новичком. */
 export const PWA_NEWCOMER_DAYS = 14
@@ -21,6 +22,7 @@ const DISMISS_KEY = 'pwa-install-dismissed'
  */
 export function usePwaInstallBanner() {
   const { canInstall, standalone, promptInstall } = usePwa()
+  const { isNative } = usePlatform()
   const guide = usePwaInstallGuide()
   const dismissed = ref(false)
 
@@ -43,8 +45,9 @@ export function usePwaInstallBanner() {
     return ageMs < PWA_NEWCOMER_DAYS * 24 * 60 * 60 * 1000
   })
 
-  /** Показывать баннер: не приложение, не закрыт, есть промпт или новичок. */
+  /** Показывать баннер: в нативном приложении уже APK — никогда. */
   const visible = computed(() => {
+    if (isNative) return false
     if (standalone.value || dismissed.value) return false
     return canInstall.value || isNewcomer.value
   })

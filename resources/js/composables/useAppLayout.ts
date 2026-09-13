@@ -11,6 +11,8 @@ import { useAppUpdates } from '@/composables/useAppUpdates'
 import { useBuildVersion } from '@/composables/useBuildVersion'
 import { useSecurityImpersonations } from '@/composables/useSecurityImpersonations'
 import { useAuthSession } from '@/composables/useAuthSession'
+import { useAppBadge } from '@/composables/useAppBadge'
+import { useLastRoute } from '@/composables/useLastRoute'
 import { useRealtimeMode } from '@/composables/useRealtimeMode'
 import { useRealtimePoller, watchRealtimeMode } from '@/composables/useRealtimePoller'
 
@@ -46,6 +48,8 @@ export function useAppLayout() {
   function closeDrawer() { showDrawer.value = false }
   async function doLogout() {
     try { authSession.resetAll() } catch {}
+    try { await useAppBadge().clearAppBadge() } catch {}
+    try { await useLastRoute().forgetLastRoute() } catch {}
     try {
       const { getSubscription } = await import('@/pwa/push.service')
       const { removePushSubscription } = await import('@/pwa/pwa.api')
@@ -70,7 +74,7 @@ export function useAppLayout() {
       realtimePoller.ensure(current)
     } catch {}
   }
-  onMounted(() => { badge.init(); presence.connect(); appNotes.init(); pinActivity.init(); adminReports.init(); updates.init(); proc.init(); buildVersion.init(); void initRealtime() })
+  onMounted(() => { badge.init(); presence.connect(); appNotes.init(); pinActivity.init(); adminReports.init(); updates.init(); proc.init(); buildVersion.init(); useAppBadge().initAppBadge(); void initRealtime() })
   onBeforeUnmount(() => presence.disconnect())
   router.on('navigate', () => { presence.connect(); showDrawer.value = false })
   return { badge, presence, user, avatarSrc, dashboardHref, settingsHref, bell, pinActivity, adminReports, updates, showDrawer, menu, menuItems, isAdmin, toggleMenu, closeDrawer, logout }

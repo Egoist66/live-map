@@ -40,12 +40,11 @@ function choosePlan(id: PlanId): void {
 </script>
 <template>
   <section>
-    <header class="flex items-start justify-between gap-3">
+    <header>
       <div class="min-w-0">
         <h2 class="font-bold dark:text-white">Данные аккаунта</h2>
         <p class="text-sm text-zinc-500 mt-1">Аватар, Контакты и домашняя точка. Радиус зоны — в разделе «Приватность».</p>
       </div>
-      <Button :loading="f.isSubmitting.value" label="Сохранить" icon="pi pi-check" size="small" rounded class="!bg-black dark:!bg-white dark:!text-ink-900 !border-black dark:!border-white shrink-0" @click="f.submit" />
     </header>
     <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft mt-6" :pt="{ body:{ class:'!p-4' }, content:{ class:'!p-0' } }">
       <template #content>
@@ -199,8 +198,8 @@ function choosePlan(id: PlanId): void {
         Почта не подтверждена. <Link :href="route('verification.send')" method="post" as="button" class="underline font-medium">Отправить письмо</Link>
         <div v-if="status==='verification-link-sent'" class="text-green-700 mt-1">Письмо отправлено</div>
       </Message>
-      <div class="flex items-center gap-3">
-        <Button :loading="f.isSubmitting.value" type="submit" label="Сохранить" rounded class="!bg-black dark:!bg-white dark:!text-ink-900 !border-black dark:!border-white" />
+      <div class="pt-1">
+        <Button :loading="f.isSubmitting.value" type="submit" label="Сохранить изменения" icon="pi pi-check" class="w-full !bg-gradient-to-r !from-violet-600 !to-indigo-600 !border-0 !text-white !font-bold !rounded-2xl !py-3.5 !text-[15px] shadow-lg shadow-violet-600/25 dark:shadow-violet-500/25 active:scale-[0.99]" />
       </div>
     </form>
     <AvatarPreview :src="a.avatarSrc.value" :name="f.user.value.name" :open="a.showPreview.value" @close="a.showPreview.value=false" />

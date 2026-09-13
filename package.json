@@ -57,6 +57,7 @@
         "@capacitor/push-notifications": "8.1.2",
         "@capacitor/splash-screen": "8.0.2",
         "@capacitor/status-bar": "8.0.3",
+        "@capawesome/capacitor-badge": "^8.0.3",
         "@pinia/colada": "^1.4.4",
         "@primeuix/themes": "^3.0.0",
         "@vee-validate/zod": "^4.15.1",

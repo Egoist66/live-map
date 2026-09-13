@@ -12,6 +12,8 @@ import { setupPrimeVue } from './plugins/primevue'
 import { register as registerSw } from './pwa/pwa.service'
 import { useNativeShell } from './composables/useNativeShell'
 import { useNativePush } from './composables/useNativePush'
+import { useOverlaySafeArea } from './composables/useOverlaySafeArea'
+import { useLastRoute } from './composables/useLastRoute'
 
 const appName = import.meta.env.VITE_APP_NAME || 'UPin'
 
@@ -37,10 +39,17 @@ createInertiaApp({
       } catch {}
       void (async () => {
         try {
+          useOverlaySafeArea().initOverlaySafeArea()
+        } catch {}
+        try {
           await useNativeShell().initNativeShell()
         } catch {}
         try {
           await useNativePush().initNativePush()
+        } catch {}
+        try {
+          const auth = (props.initialPage.props as unknown as { auth?: { user?: { id?: number } } }).auth
+          await useLastRoute().initLastRoute(Number(auth?.user?.id) || 0)
         } catch {}
       })()
     }

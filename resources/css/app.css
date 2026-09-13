@@ -203,21 +203,152 @@ html.dark .bg-stone-900\/90, html.dark .bg-black\/50, html.dark .bg-black\/60 { 
 }
 
 @layer utilities {
-  .pb-safe { padding-bottom: calc(env(safe-area-inset-bottom, 0px)) !important; }
-  .pt-safe { padding-top: calc(env(safe-area-inset-top, 0px)) !important; }
-  .pb-safe-or-2 { padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px)) !important; }
+  .pb-safe { padding-bottom: var(--sab) !important; }
+  .pt-safe { padding-top: var(--sat) !important; }
+  .pb-safe-or-2 { padding-bottom: calc(0.5rem + var(--sab)) !important; }
   .min-h-dvh { min-height: 100dvh; }
   .h-dvh-app { height: 100dvh; }
 }
 
-/* Нативный верх: шапка и оверлеи карты под статус-баром/вырезом.
+/* Единые отступы приложения под WebView/браузер.
+   --sat/--sab дублируют env(), чтобы все calc() считали одинаково.
    useNativeShell добавляет .no-safe-area-top, если WebView отдал env() нулём. */
-.native-safe-top { padding-top: env(safe-area-inset-top, 0px); }
+:root {
+  --sat-real: env(safe-area-inset-top, 0px);
+  --sab-real: env(safe-area-inset-bottom, 0px);
+  --sat: var(--sat-real);
+  --sab: var(--sab-real);
+  --app-header-sm: 56px;
+  --app-header-md: 64px;
+  --app-bottomnav: 68px;
+}
+.no-safe-area-top { --sat: 28px; }
+
+/* Полноэкранные поверхности (карта/чат): ровно место между шапкой и нижним меню. */
+.h-app-full {
+  height: calc(100dvh - var(--app-header-sm) - var(--sat) - var(--app-bottomnav) - var(--sab));
+  max-height: calc(100dvh - var(--app-header-sm) - var(--sat) - var(--app-bottomnav) - var(--sab));
+}
+@media (min-width: 411px) {
+  .h-app-full {
+    height: calc(100dvh - var(--app-header-md) - var(--sat) - var(--app-bottomnav) - var(--sab));
+    max-height: calc(100dvh - var(--app-header-md) - var(--sat) - var(--app-bottomnav) - var(--sab));
+  }
+}
+@media (min-width: 1024px) {
+  .h-app-full {
+    height: calc(100dvh - var(--app-header-md) - 32px);
+    max-height: calc(100dvh - var(--app-header-md) - 32px);
+  }
+}
+/* Клавиатура открыта: меню спрятано — возвращаем его высоту фрейму,
+   инпут встаёт ровно над клавиатурой, а не под меню. */
+html.native-keyboard-open .h-app-full {
+  height: calc(100dvh - var(--app-header-sm) - var(--sat) - var(--sab));
+  max-height: calc(100dvh - var(--app-header-sm) - var(--sat) - var(--sab));
+}
+@media (min-width: 411px) {
+  html.native-keyboard-open .h-app-full {
+    height: calc(100dvh - var(--app-header-md) - var(--sat) - var(--sab));
+    max-height: calc(100dvh - var(--app-header-md) - var(--sat) - var(--sab));
+  }
+}
+/* Десктопная карта без нижнего меню: вычитаем только шапку. */
+.h-app-map-desktop {
+  height: calc(100dvh - var(--app-header-md));
+}
+/* Обычные страницы: min-height учитывает шапку и вырез; зазор под нижнее
+   меню уже даёт AuthenticatedLayout (main pb), тут только высота. */
+.page-scroll {
+  min-height: calc(100dvh - var(--app-header-sm) - var(--sat));
+}
+@media (min-width: 411px) {
+  .page-scroll {
+    min-height: calc(100dvh - var(--app-header-md) - var(--sat));
+  }
+}
+@media (min-width: 1024px) {
+  .page-scroll {
+    min-height: calc(100dvh - var(--app-header-md));
+  }
+}
+/* Нижнее меню прячется при открытой клавиатуре (класс ставит useMobileBottomNav). */
+.mobile-bottom-nav {
+  transition: transform 0.22s ease, opacity 0.22s ease;
+}
+html.native-keyboard-open .mobile-bottom-nav {
+  transform: translateY(110%);
+  opacity: 0;
+  pointer-events: none;
+}
+/* Плавучие элементы поверх карты/чата всегда выше нижнего меню. */
+.above-bottomnav {
+  bottom: calc(12px + var(--app-bottomnav) + var(--sab)) !important;
+}
+@media (min-width: 1024px) {
+  .above-bottomnav {
+    bottom: 12px !important;
+  }
+}
+
+/* Единый контроллер безопасной области оверлеев.
+   Класс `overlay-safe` ставит useOverlaySafeArea (один раз из app.ts),
+   переменные --sat/--sab замеряет он же. Здесь — все ограничения,
+   чтобы ни одна модалка/панель/тост не налазила на вырез и края. */
+.overlay-safe .p-dialog-mask,
+.overlay-safe .p-drawer-mask {
+  padding-top: var(--sat) !important;
+  padding-bottom: var(--sab) !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+.overlay-safe .p-dialog {
+  max-height: calc(100dvh - var(--sat) - var(--sab) - 12px) !important;
+}
+.overlay-safe .p-confirmdialog {
+  max-height: calc(100dvh - var(--sat) - var(--sab) - 12px) !important;
+}
+.overlay-safe .p-drawer {
+  max-height: calc(100dvh - var(--sat) - var(--sab)) !important;
+}
+.overlay-safe .p-toast {
+  top: calc(var(--app-header-sm) + var(--sat) + 8px) !important;
+}
+.overlay-safe .p-drawer-bottom {
+  padding-bottom: var(--sab) !important;
+}
+.overlay-safe .p-select-overlay,
+.overlay-safe .p-datepicker-panel,
+.overlay-safe .p-popover,
+.overlay-safe .p-menu,
+.overlay-safe .p-contextmenu {
+  max-height: calc(100dvh - var(--sat) - var(--sab) - 24px) !important;
+}
+@media (min-width: 411px) {
+  .overlay-safe .p-toast {
+    top: calc(var(--app-header-md) + var(--sat) + 8px) !important;
+  }
+}
+@media (min-width: 1024px) {
+  .overlay-safe .p-dialog-mask,
+  .overlay-safe .p-drawer-mask {
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+  .overlay-safe .p-toast {
+    top: 1rem !important;
+  }
+}
+
+/* Нативный верх: шапка и оверлеи карты под статус-баром/вырезом.
+   Отступы берутся из --sat (единый контроллер useOverlaySafeArea),
+   useNativeShell добавляет .no-safe-area-top, если WebView отдал env() нулём. */
+.native-safe-top { padding-top: var(--sat); }
 .no-safe-area-top .native-safe-top { padding-top: 28px; }
-.native-safe-offset-top { top: calc(env(safe-area-inset-top, 0px) + 8px); }
+.native-safe-offset-top { top: calc(var(--sat) + 8px); }
 .no-safe-area-top .native-safe-offset-top { top: 36px; }
 @media (min-width: 640px) {
-  .native-safe-offset-top { top: calc(env(safe-area-inset-top, 0px) + 16px); }
+  .native-safe-offset-top { top: calc(var(--sat) + 16px); }
   .no-safe-area-top .native-safe-offset-top { top: 44px; }
 }
 
@@ -237,10 +368,10 @@ html.dark .bg-stone-900\/90, html.dark .bg-black\/50, html.dark .bg-black\/60 { 
     border-radius: 20px 20px 0 0 !important;
     max-height: 92dvh !important;
   }
-  .p-dialog .p-dialog-content { padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom, 0px)) !important; }
+  .p-dialog .p-dialog-content { padding: 1rem 1rem calc(1rem + var(--sab)) !important; }
   .p-drawer-bottom .p-drawer-content, .mobile-sheet .p-dialog-content { -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
-  .maplibregl-ctrl-top-right, .maplibregl-ctrl-top-left { top: calc(76px + env(safe-area-inset-top, 0px)) !important; }
-  .maplibregl-ctrl-bottom-right { bottom: calc(150px + env(safe-area-inset-bottom, 0px)) !important; }
+  .maplibregl-ctrl-top-right, .maplibregl-ctrl-top-left { top: calc(76px + var(--sat)) !important; }
+  .maplibregl-ctrl-bottom-right { bottom: calc(150px + var(--sab)) !important; }
   img, video, canvas, svg.maplibregl-canvas { max-width: 100%; }
   .break-anywhere { overflow-wrap: anywhere; word-break: break-word; }
 }
@@ -265,7 +396,7 @@ html.dark .bg-stone-900\/90, html.dark .bg-black\/50, html.dark .bg-black\/60 { 
   .p-toast { width: calc(100vw - 1rem) !important; max-width: calc(100vw - 1rem) !important; left: 0.5rem !important; right: 0.5rem !important; }
   .p-toast-message { margin: 0 0 0.5rem 0 !important; }
   /* Карта: контролы не налезают на пилюлю фильтров */
-  .maplibregl-ctrl-top-right, .maplibregl-ctrl-top-left { top: calc(68px + env(safe-area-inset-top, 0px)) !important; }
+  .maplibregl-ctrl-top-right, .maplibregl-ctrl-top-left { top: calc(68px + var(--sat)) !important; }
   .maplibregl-ctrl { margin: 0 8px 0 0 !important; }
   .maplibregl-ctrl-group { box-shadow: 0 4px 16px rgba(15,23,42,0.12) !important; }
   /* Длинные строки/ссылки нигде не дают горизонтальный скролл */

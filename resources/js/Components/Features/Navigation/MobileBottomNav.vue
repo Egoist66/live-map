@@ -2,14 +2,14 @@
 import { Link } from '@inertiajs/vue3'
 import { useMobileBottomNav } from '@/composables/useMobileBottomNav'
 
-const { dashboardHref, isActive, total } = useMobileBottomNav()
+const { dashboardHref, isActive, total, navHidden } = useMobileBottomNav()
 </script>
 
 <template>
   <nav
     aria-label="Мобильная навигация"
-    class="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border-t border-stone-200 dark:border-zinc-800"
-    style="padding-bottom: env(safe-area-inset-bottom, 0px)"
+    :aria-hidden="navHidden ? 'true' : undefined"
+    class="mobile-bottom-nav pb-[var(--sab)] lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl border-t border-stone-200 dark:border-zinc-800"
   >
     <div class="grid grid-cols-5 items-end px-2 pt-1.5 pb-2 min-h-[60px]">
       <Link

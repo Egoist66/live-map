@@ -101,7 +101,7 @@ onUnmounted(() => {
   <Head :title="seo.title.value"><meta head-key="robots" name="robots" content="noindex, nofollow" /></Head>
   <AuthenticatedLayout>
     <Toast />
-    <div class="relative w-full h-[calc(100dvh-56px-60px-env(safe-area-inset-bottom,0px))] min-[411px]:h-[calc(100dvh-64px-60px-env(safe-area-inset-bottom,0px))] lg:h-[calc(100dvh-64px)] min-h-[380px] bg-[#eaf0f6] dark:bg-[#0B0F1A] overflow-hidden">
+    <div class="h-app-full relative w-full min-h-[380px] bg-[#eaf0f6] dark:bg-[#0B0F1A] overflow-hidden">
       <div ref="mapContainer" class="absolute inset-0 w-full h-full bg-[#eaf0f6] dark:bg-[#0B0F1A]"></div>
       <div v-if="!loaded" class="absolute inset-0 grid place-items-center bg-[#eef3f8] dark:bg-[#0B0F1A] z-[5]">
         <div class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-700 rounded-2xl px-5 py-4 shadow flex items-center gap-3"><span class="w-5 h-5 border-2 border-stone-200 dark:border-zinc-700 border-t-stone-900 dark:border-t-white rounded-full animate-spin"></span><span class="text-sm font-medium dark:text-zinc-100">Загружаем карту…</span></div>
@@ -129,7 +129,7 @@ onUnmounted(() => {
         </Transition>
       </div>
       <MapCreateDialog :open="showCreate" @update:open="(v:boolean)=>showCreate=v" :pin-create="pinCreate" :custom-cats="customCats" :categories="categories" :pin-address="pinAddress" :loading-address="loadingPinAddress" :radius-options="radiusOptions" :radius-label="radiusLabel" :sos-limits="sosMode.sos.limits" @close="closeCreate" @delete-custom-category="deleteCustomCategory" />
-      <div v-if="homeZone" class="absolute bottom-3 left-3 z-10 bg-white/95 dark:bg-zinc-900/95 backdrop-blur border border-violet-200 dark:border-violet-900/60 rounded-2xl px-3 py-2 shadow flex items-center gap-2">
+      <div v-if="homeZone" class="above-bottomnav absolute left-3 z-10 bg-white/95 dark:bg-zinc-900/95 backdrop-blur border border-violet-200 dark:border-violet-900/60 rounded-2xl px-3 py-2 shadow flex items-center gap-2">
         <button type="button" @click="mapApi.flyToHomeZone?.(homeZone.lat, homeZone.lng, homeZone.radiusKm)" title="Показать мою зону" class="w-5 h-5 rounded-full bg-violet-500/15 border border-dashed border-violet-500 grid place-items-center shrink-0 hover:bg-violet-500/30 transition">
           <span class="w-1.5 h-1.5 rounded-full bg-violet-600 block pointer-events-none"></span>
         </button>

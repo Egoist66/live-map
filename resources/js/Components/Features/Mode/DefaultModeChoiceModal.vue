@@ -76,7 +76,7 @@ async function pick(next: 'ulove' | 'upin'): Promise<void> {
         </button>
       </div>
 
-      <div class="px-4 sm:px-6 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] sm:pb-5">
+      <div class="px-4 sm:px-6 pb-[calc(1.25rem+var(--sab))] sm:pb-5">
         <p v-if="mode.error.value" class="text-[13px] text-red-500 text-center mb-2">{{ mode.error.value }}</p>
         <p class="text-[11px] text-center text-stone-400 dark:text-zinc-500 leading-relaxed">
           {{ mode.saving.value ? 'Сохраняем выбор…' : 'Ничего не скрываем: свайпы, карта, чат и лента остаются доступны.' }}

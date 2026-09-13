@@ -35,16 +35,18 @@ const { setTheme } = useTheme()
   <Head title="Настройки" />
   <AuthenticatedLayout>
     <Toast />
-    <div class="bg-surface dark:bg-[#090E1A] min-h-[calc(100vh-64px)] overflow-x-hidden">
+    <div class="page-scroll bg-surface dark:bg-[#090E1A] overflow-x-hidden">
       <div class="max-w-[1280px] mx-auto px-3 sm:px-6 py-4 sm:py-6 overflow-hidden">
         <div class="grid lg:grid-cols-[300px_1fr] gap-4 sm:gap-6 items-start content-start w-full lg:items-start">
           <SettingsSidebar :menu-model="s.menuModel.value" :plan="planOf(s.u.value)" :pins-today="s.u.value.pins_today_count || 0" :pins-limit="planOf(s.u.value) === 'free' ? '3' : '∞'" :zone-count="s.zoneCount.value" :proc-unread="s.proc.unread.value" @billing="s.active.value = 'billing'" />
           <div class="space-y-4 min-w-0 w-full max-w-full lg:min-h-[600px] self-start">
             <Tabs :value="s.active.value" @update:value="(v:any)=>{ if (typeof v === 'string') (s.setActive as any)(v) }" class="settings-root w-full !mt-0">
-              <TabList class="!flex lg:!hidden !bg-transparent !border-0 !gap-2 !px-1 settings-tabs" :pt="{ activeBar: { class: '!hidden' }, content: { class: '!flex !flex-wrap !gap-2 !overflow-visible' } }">
-                <Tab v-for="t in s.tabs.value" :key="t.id" :value="t.id" class="!bg-transparent !border-0 !p-0 !shrink-0">
-                  <div :class="['flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold border transition whitespace-nowrap', s.active.value === t.id ? '!bg-violet-600 !text-white !border-violet-600 shadow-soft' : 'bg-white text-stone-700 border-stone-200']">
-                    <i :class="[t.icon, 'text-xs']" /><span>{{ t.label }}</span><span v-if="t.id === 'procedures' && s.proc.unread.value" class="text-red-500 leading-none">❗</span>
+              <TabList class="!block lg:!hidden !bg-transparent !border-0 !p-0 settings-tabs" :pt="{ activeBar: { class: '!hidden' } }">
+                <Tab v-for="t in s.tabs.value" :key="t.id" :value="t.id" class="!bg-transparent !border-0 !p-0 !m-0 !min-w-0">
+                  <div :class="['w-full min-h-[62px] flex flex-col items-center justify-center gap-1 rounded-2xl border px-1 py-2 text-center transition active:scale-[0.97]', s.active.value === t.id ? '!bg-violet-600 !border-violet-600 !text-white shadow-soft' : 'bg-white dark:bg-zinc-900 text-stone-600 dark:text-zinc-300 border-stone-200 dark:border-zinc-800']">
+                    <i :class="[t.icon, 'text-base leading-none']" />
+                    <span class="text-[11px] font-bold leading-tight">{{ t.label }}</span>
+                    <span v-if="t.id === 'procedures' && s.proc.unread.value" class="text-[10px] leading-none">❗</span>
                   </div>
                 </Tab>
               </TabList>
@@ -75,11 +77,25 @@ const { setTheme } = useTheme()
 .settings-root {
   gap: 20px !important;
 }
-.settings-tabs :deep(.p-tablist-content),
+.settings-tabs :deep(.p-tablist-content) {
+  background: transparent !important;
+  border: 0 !important;
+}
 .settings-tabs :deep(.p-tablist-tab-list) {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 0.5rem !important;
   overflow: visible !important;
-  flex-wrap: wrap !important;
+  background: transparent !important;
+  border: 0 !important;
   scrollbar-width: none !important;
+}
+.settings-tabs :deep(.p-tab) {
+  padding: 0 !important;
+  margin: 0 !important;
+  min-width: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
 }
 .settings-tabs :deep(.p-tablist-content::-webkit-scrollbar),
 .settings-tabs :deep(.p-tablist-tab-list::-webkit-scrollbar) {

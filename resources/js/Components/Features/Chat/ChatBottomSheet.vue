@@ -5,7 +5,7 @@ const emit = defineEmits<{ (e: 'close'): void; (e: 'openChat', id: number): void
 <template>
   <div v-if="sheet" class="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
     <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="emit('close')"></div>
-    <div class="relative w-full sm:max-w-[360px] bg-white dark:bg-zinc-900 rounded-t-[24px] sm:rounded-2xl shadow-2xl border p-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] max-h-[80dvh] overflow-auto">
+    <div class="relative w-full sm:max-w-[360px] bg-white dark:bg-zinc-900 rounded-t-[24px] sm:rounded-2xl shadow-2xl border p-2 pb-[calc(0.5rem+var(--sab))] max-h-[80dvh] overflow-auto">
       <div class="w-10 h-1 rounded-full bg-stone-200 mx-auto my-2.5 shrink-0"></div>
       <div class="px-2 pb-2 space-y-1">
         <template v-if="sheet.type === 'message'">

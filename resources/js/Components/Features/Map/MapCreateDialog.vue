@@ -21,7 +21,7 @@ async function createCustomAndSelect() {
 <template>
   <Dialog :visible="open" @update:visible="(v:boolean)=>emit('update:open', v)" modal :dismissableMask="true" :closable="true" header="Новый пин" :style="{ width: '540px', maxWidth: '96vw', maxHeight: '92dvh' }" :pt="{ content: { class: '!max-h-[80dvh] !overflow-y-auto' } }" @hide="emit('close')">
     <template #header><div><div class="text-[16px] font-black">Новый пин</div><div class="text-[11px] text-stone-500">Клик по карте — переместить точку</div></div></template>
-    <form @submit.prevent="pinCreate.submit" class="p-4 sm:p-5 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] space-y-3">
+    <form @submit.prevent="pinCreate.submit" class="p-4 sm:p-5 pb-[calc(1rem+var(--sab))] space-y-3">
       <div v-if="pinCreate.isUnlimited?.value" class="bg-violet-50 dark:bg-violet-950/40 border border-violet-200 dark:border-violet-800 rounded-xl px-3 py-2.5 text-xs leading-snug text-violet-800 dark:text-violet-200">∞ Безлимит · пин живёт {{ pinCreate.ttlLabel?.value ?? '∞' }}</div>
       <div v-else-if="pinCreate.limitExceeded.value" class="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-xl px-3 py-2.5 text-xs leading-snug text-stone-700 dark:text-amber-100">⚠️ {{ pinCreate.limitWarning.value }}</div>
       <div v-else class="bg-stone-50 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-xl px-3 py-2.5 text-xs leading-snug text-stone-600 dark:text-zinc-300">📌 {{ pinCreate.limitStatus.value }}</div>

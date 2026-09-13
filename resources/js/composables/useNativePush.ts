@@ -1,6 +1,7 @@
 import { PushNotifications } from '@capacitor/push-notifications';
 import { ref } from 'vue';
 import { usePlatform } from '@/composables/usePlatform';
+import { useAppBadge } from '@/composables/useAppBadge';
 import { mobileApi } from '@/services/mobile.api';
 
 const fcmToken = ref<string | null>(null);
@@ -70,6 +71,11 @@ export function useNativePush() {
         });
         PushNotifications.addListener('pushNotificationReceived', (notification) => {
             window.dispatchEvent(new CustomEvent('upin:native-push', { detail: notification }));
+            const raw = (notification.data as Record<string, unknown> | undefined)?.badge;
+            const count = Number(raw);
+            if (Number.isFinite(count)) {
+                void useAppBadge().syncAppBadge(count);
+            }
         });
         PushNotifications.addListener('pushNotificationActionPerformed', ({ notification }) => {
             const url = (notification.data as Record<string, string> | undefined)?.url;

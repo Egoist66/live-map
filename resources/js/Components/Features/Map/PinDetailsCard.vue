@@ -117,7 +117,7 @@ function canDeleteComment(c: any): boolean {
 }
 </script>
 <template>
-  <div v-if="pin" ref="cardRef" :style="cardStyle" :class="isEditingPin ? 'sm:max-h-[calc(100dvh-2rem)]' : 'sm:max-h-none'" class="absolute inset-x-2 sm:inset-x-auto bottom-2 sm:bottom-4 top-auto max-h-[72dvh] sm:right-4 sm:top-4 sm:w-[380px] bg-white dark:bg-zinc-900 rounded-[20px] shadow-float border border-stone-200 dark:border-zinc-700 flex flex-col overflow-hidden z-20">
+  <div v-if="pin" ref="cardRef" :style="cardStyle" :class="isEditingPin ? 'sm:max-h-[calc(100dvh-2rem)]' : 'sm:max-h-none'" class="above-bottomnav absolute inset-x-2 sm:inset-x-auto top-auto max-h-[72dvh] sm:right-4 sm:top-4 sm:w-[380px] bg-white dark:bg-zinc-900 rounded-[20px] shadow-float border border-stone-200 dark:border-zinc-700 flex flex-col overflow-hidden z-20">
     <div class="p-4 sm:p-5 border-b border-stone-200 dark:border-zinc-700 shrink-0" :class="isEditingPin ? 'max-h-[30dvh] sm:max-h-[280px] overflow-y-auto min-h-0' : ''">
       <div v-if="!pinEdit.editing.value" class="flex justify-between items-start gap-3">
         <h3 class="font-bold leading-tight pr-2 text-[15px] break-words min-w-0 flex-1">{{ pin.title }}</h3>
@@ -209,7 +209,7 @@ function canDeleteComment(c: any): boolean {
       </div>
       <div v-if="!comments.length" class="text-center py-10"><div class="text-xs text-stone-400 mt-2">Комментариев пока нет<br />Будь первым</div></div>
     </div>
-    <div class="p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] border-t bg-white dark:bg-zinc-900 dark:border-zinc-700 shrink-0">
+    <div class="p-3 pb-[calc(0.75rem+var(--sab))] border-t bg-white dark:bg-zinc-900 dark:border-zinc-700 shrink-0">
       <div v-if="replyTo" class="mb-2 flex items-center gap-2 text-[11px] bg-violet-50 dark:bg-violet-950/40 border border-violet-200 dark:border-violet-800 text-violet-800 dark:text-violet-200 rounded-full pl-3 pr-1.5 py-1 w-fit max-w-full">
         <span class="truncate">Ответ для {{ replyTo.is_anonymous ? 'анонима' : '@' + (replyTo.user?.name || 'пользователя') }}</span>
         <button type="button" @click="emit('cancelReply')" class="w-5 h-5 rounded-full grid place-items-center hover:bg-violet-200 dark:hover:bg-violet-800 shrink-0"><i class="pi pi-times text-[9px]"></i></button>

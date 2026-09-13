@@ -109,7 +109,7 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
           <Message v-if="comments.error.value" severity="error" :closable="false" class="!rounded-2xl !text-xs">{{ comments.error.value }}</Message>
         </div>
       </div>
-      <div class="shrink-0 px-3 pt-2.5 border-t border-stone-200/70 dark:border-white/10 pb-[max(0.625rem,env(safe-area-inset-bottom))]">
+      <div class="shrink-0 px-3 pt-2.5 border-t border-stone-200/70 dark:border-white/10 pb-[max(0.625rem,var(--sab))]">
         <div v-if="canComment()" class="relative flex items-end gap-2">
           <span class="w-8 h-8 shrink-0 rounded-full bg-stone-200 dark:bg-white/10 grid place-items-center text-[11px] font-black text-stone-500">Вы</span>
           <Textarea v-model="comments.draft.value" :placeholder="commentPlaceholder" rows="1" autoResize maxlength="1000" enterkeyhint="enter" class="flex-1 min-w-0 !rounded-2xl !text-sm max-h-32" @input="mentionInput.onInput()" @click="mentionInput.onInput()" @focus="mentionInput.onFocus()" @keydown="(e:any)=>handleEnterToSend(e, sendPhotoComment)" />

@@ -41,7 +41,7 @@ onMounted(async () => { await design.init() })
   <Head :title="profileUser.name" />
   <AuthenticatedLayout>
     <Toast />
-    <div class="bg-surface dark:bg-[#090E1A] min-h-[calc(100vh-64px)]">
+    <div class="page-scroll bg-surface dark:bg-[#090E1A]">
       <div class="max-w-[1040px] mx-auto px-3 sm:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4">
         <div v-if="page.isLocked.value" class="rounded-[24px] border border-stone-200 bg-white shadow-soft p-6 flex flex-col items-center text-center gap-3 dark:border-zinc-800 dark:bg-zinc-900">
           <button type="button" class="h-16 w-16 overflow-hidden rounded-[22px] bg-stone-100 dark:bg-zinc-800" @click="page.showAvatar.value = true">

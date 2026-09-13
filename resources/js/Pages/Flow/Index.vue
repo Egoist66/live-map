@@ -38,7 +38,7 @@ onMounted(() => feed.init())
   <Head title="UFlow — лента" />
   <AuthenticatedLayout>
     <Toast />
-    <div class="bg-surface dark:bg-[#090E1A] min-h-[calc(100vh-64px)]">
+    <div class="page-scroll bg-surface dark:bg-[#090E1A]">
       <div class="mx-auto max-w-[680px] px-2 sm:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4">
         <div class="flex items-center gap-3">
           <span class="text-xl font-black tracking-tight bg-gradient-to-r from-sky-500 via-blue-600 to-fuchsia-500 bg-clip-text text-transparent">UFlow</span>

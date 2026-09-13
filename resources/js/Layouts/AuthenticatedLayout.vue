@@ -39,10 +39,10 @@ onMounted(() => { screenLock.init(); hotkeys.init() })
     <div v-if="$slots.header" class="bg-white dark:bg-zinc-900 border-b border-stone-200/60 dark:border-zinc-800">
       <div class="mx-auto max-w-[1280px] px-4 sm:px-6 py-4 sm:py-6"><slot name="header" /></div>
     </div>
-    <main :class="route().current('chat') || route().current('map') ? 'pb-0 lg:pb-0 overflow-hidden overscroll-none' : 'pb-[calc(60px+env(safe-area-inset-bottom,0px))] lg:pb-0'">
+    <main :class="route().current('chat') || route().current('map') ? 'pb-0 lg:pb-0 overflow-hidden overscroll-none' : 'pb-[calc(var(--app-bottomnav)+var(--sab))] lg:pb-0'">
       <PageTransition><slot /></PageTransition>
     </main>
-    <div v-if="!route().current('chat') && !route().current('map')" :class="['pb-[calc(60px+env(safe-area-inset-bottom,0px))] lg:pb-0', route().current('swipes') ? 'hidden lg:block' : '']">
+    <div v-if="!route().current('chat') && !route().current('map')" :class="['pb-[calc(var(--app-bottomnav)+var(--sab))] lg:pb-0', route().current('swipes') ? 'hidden lg:block' : '']">
       <AppFooter />
     </div>
     <MobileBottomNav />

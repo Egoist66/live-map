@@ -35,7 +35,7 @@ async function onCopy(): Promise<void> {
       @click="onToggle"
     />
     <Menu ref="menuAnchor" :model="[{ label: 'Поделиться профилем', icon: 'pi pi-share-alt', command: onShare }, { label: 'Скопировать ссылку', icon: 'pi pi-link', command: onCopy }, { label: 'Пожаловаться', icon: 'pi pi-flag', class: 'danger-item !text-red-600', command: () => emit('report') }, { separator: true }, { label: 'Заблокировать', icon: 'pi pi-ban', class: 'danger-item !text-red-600', command: () => emit('block') }, { label: 'Удалить из друзей', icon: 'pi pi-user-minus', class: 'danger-item !text-red-600', command: () => emit('remove') }]" :popup="true" :pt="menuPt" />
-    <Dialog v-model:visible="pm.sheetOpen.value" position="bottom" :draggable="false" :modal="true" :dismissable-mask="true" :show-header="false" :pt="{ root: { class: '!rounded-t-[24px] !rounded-b-none !border-0 !m-0 !max-h-[80dvh] w-full sm:!max-w-[360px]' }, content: { class: '!p-2 !pb-[calc(0.5rem+env(safe-area-inset-bottom))]' } }">
+    <Dialog v-model:visible="pm.sheetOpen.value" position="bottom" :draggable="false" :modal="true" :dismissable-mask="true" :show-header="false" :pt="{ root: { class: '!rounded-t-[24px] !rounded-b-none !border-0 !m-0 !max-h-[80dvh] w-full sm:!max-w-[360px]' }, content: { class: '!p-2 !pb-[calc(0.5rem+var(--sab))]' } }">
       <div class="w-10 h-1 rounded-full bg-stone-200 dark:bg-zinc-700 mx-auto my-2.5"></div>
       <div class="px-2 pb-2 space-y-1">
         <button type="button" class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-stone-50 dark:hover:bg-white/5 text-[15px] font-medium text-left" @click="onShare"><i class="pi pi-share-alt text-violet-600"></i>Поделиться профилем</button>

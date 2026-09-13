@@ -65,6 +65,11 @@
 
 
 
+**Правило №12 — Установки** 
+
+все делать через pnpm
+
+
 
 <laravel-boost-guidelines>
 # Laravel Application

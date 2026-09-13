@@ -10,7 +10,7 @@ defineProps<{ gallery: any; isOwn: boolean; plan?: string }>()
     <template #header>
       <span class="flex-1" />
     </template>
-    <div class="px-3 sm:px-5 pb-[max(1rem,env(safe-area-inset-bottom))] max-h-[78dvh] overflow-y-auto overscroll-contain">
+    <div class="px-3 sm:px-5 pb-[max(1rem,var(--sab))] max-h-[78dvh] overflow-y-auto overscroll-contain">
       <p v-if="isOwn && gallery.isFull.value" class="text-xs text-stone-500 mt-1">Лимит {{ gallery.limit.value }} фото на тарифе{{ plan ? ` (${plan})` : '' }} — удали что-то, чтобы добавить новое.</p>
       <p v-else-if="isOwn" class="text-xs text-stone-500 mt-1">Осталось мест: {{ gallery.remaining.value }} из {{ gallery.limit.value }}.</p>
       <Message v-if="gallery.error.value" severity="error" :closable="false" class="!mt-3 !rounded-2xl !text-xs">{{ gallery.error.value }}</Message>

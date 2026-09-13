@@ -9,7 +9,7 @@ const { visible, isBuildUpdate, busy, online, apply, dismiss } = useAppRefreshBa
   <Transition name="pwa-slide">
     <div
       v-if="visible"
-      class="fixed bottom-[calc(76px+env(safe-area-inset-bottom,0px)+0.5rem)] lg:bottom-6 left-1/2 -translate-x-1/2 z-[39] w-[calc(100%-1.5rem)] max-w-md"
+      class="fixed bottom-[calc(var(--app-bottomnav)+var(--sab)+0.5rem)] lg:bottom-6 left-1/2 -translate-x-1/2 z-[39] w-[calc(100%-1.5rem)] max-w-md"
       role="status"
     >
       <div class="glass rounded-2xl border border-stone-200/70 dark:border-white/10 shadow-xl dark:shadow-black/50 px-4 py-3 flex items-center gap-3 text-ink-900 dark:text-zinc-100">

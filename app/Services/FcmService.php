@@ -2,12 +2,16 @@
 
 namespace App\Services;
 
+use App\Models\ConversationParticipant;
 use App\Models\DeviceToken;
+use App\Models\Friendship;
+use App\Models\Message;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Kreait\Firebase\Contract\Messaging;
 use Kreait\Firebase\Factory;
 use Kreait\Firebase\Messaging\AndroidConfig;
+use Kreait\Firebase\Messaging\ApnsConfig;
 use Kreait\Firebase\Messaging\CloudMessage;
 use Kreait\Firebase\Messaging\Notification;
 
@@ -47,7 +51,7 @@ class FcmService
             return 0;
         }
 
-        return $this->sendToTokens($tokens, $payload);
+        return $this->sendToTokens($tokens, $payload, $this->badgeFor($user));
     }
 
     /**
@@ -99,16 +103,17 @@ class FcmService
      *
      * @param string[] $tokens FCM-токены
      * @param array{title:string,body:string,url:string,tag:string,avatar:string|null} $payload содержимое
+     * @param int $badge счётчик непрочитанного для иконки
      * @return int число успешных доставок
      */
-    protected function sendToTokens(array $tokens, array $payload): int
+    protected function sendToTokens(array $tokens, array $payload, int $badge = 0): int
     {
         $messaging = $this->messaging();
         if ($messaging === null) {
             return 0;
         }
 
-        $message = $this->buildMessage($payload);
+        $message = $this->buildMessage($payload, $badge);
 
         try {
             $report = $messaging->sendMulticast($message, $tokens);
@@ -127,23 +132,69 @@ class FcmService
     /**
      * Собрать CloudMessage: баннер + data для диплинка + высокий приоритет на Android.
      *
+     * Счётчик едет двумя путями: `badge` в data (читает натив для иконки)
+     * и aps-бейдж для iOS (система ставит его даже при убитом приложении).
+     *
      * @param array{title:string,body:string,url:string,tag:string,avatar:string|null} $payload содержимое
+     * @param int $badge счётчик непрочитанного для иконки
      */
-    protected function buildMessage(array $payload): CloudMessage
+    protected function buildMessage(array $payload, int $badge = 0): CloudMessage
     {
         $notification = Notification::create($payload['title'], $payload['body']);
 
         $data = [
             'url' => (string) ($payload['url'] ?? '/'),
             'tag' => (string) ($payload['tag'] ?? 'upin'),
+            'badge' => (string) max(0, $badge),
         ];
 
         $android = AndroidConfig::fromArray(['priority' => 'high']);
+        $apns = ApnsConfig::new()->withBadge(max(0, $badge));
 
         return CloudMessage::new()
             ->withNotification($notification)
             ->withData($data)
-            ->withAndroidConfig($android);
+            ->withAndroidConfig($android)
+            ->withApnsConfig($apns);
+    }
+
+    /**
+     * Счётчик непрочитанного для бейджа иконки.
+     *
+     * Непрочитанные сообщения в диалогах пользователя плюс входящие
+     * заявки в друзья. Ошибка подсчёта — не повод ронять пуш.
+     *
+     * @param User $user получатель
+     * @return int суммарный счётчик
+     */
+    protected function badgeFor(User $user): int
+    {
+        try {
+            $userId = (int) $user->id;
+
+            $convIds = ConversationParticipant::where('user_id', $userId)
+                ->whereNull('hidden_at')
+                ->pluck('conversation_id')
+                ->all();
+
+            $unread = 0;
+            if ($convIds !== []) {
+                $unread = Message::whereIn('conversation_id', $convIds)
+                    ->where('sender_id', '!=', $userId)
+                    ->whereNull('read_at')
+                    ->count();
+            }
+
+            $pending = Friendship::where('status', 'pending')
+                ->where('addressee_id', $userId)
+                ->count();
+
+            return max(0, (int) $unread + (int) $pending);
+        } catch (\Throwable $e) {
+            Log::warning('fcm badge count failed', ['error' => $e->getMessage()]);
+
+            return 0;
+        }
     }
 
     /**
@@ -166,6 +217,12 @@ class FcmService
 
     /**
      * Ленивый FCM-клиент из service-account JSON.
+     *
+     * Источник ключа по приоритету: файл FIREBASE_CREDENTIALS (локально),
+     * иначе FIREBASE_CREDENTIALS_JSON из окружения (base64 или сырой JSON —
+     * для эфемерных хостингов вроде Laravel Cloud, где файлы storage
+     * не переживают деплой). JSON из окружения материализуется в тот же
+     * файл, чтобы дальше работал единый путь через withServiceAccount().
      */
     protected function messaging(): ?Messaging
     {
@@ -178,6 +235,9 @@ class FcmService
         try {
             $path = (string) config('services.firebase.credentials');
             if ($path === '' || ! is_file($path)) {
+                $path = $this->materializeCredentialsFromEnv($path);
+            }
+            if ($path === '' || ! is_file($path)) {
                 return null;
             }
             $this->messaging = (new Factory)->withServiceAccount($path)->createMessaging();
@@ -188,5 +248,47 @@ class FcmService
         }
 
         return $this->messaging;
+    }
+
+    /**
+     * Сохранить service-account ключ из FIREBASE_CREDENTIALS_JSON в файл.
+     *
+     * Принимает base64 или сырой JSON, проверяет наличие private_key,
+     * чтобы мусор из окружения не превращался в «валидный» путь.
+     *
+     * @param string $fallbackPath путь, куда положить ключ
+     * @return string путь к файлу или '' если ключа нет
+     */
+    protected function materializeCredentialsFromEnv(string $fallbackPath): string
+    {
+        try {
+            $raw = trim((string) config('services.firebase.credentials_json'));
+            if ($raw === '') {
+                return '';
+            }
+
+            $decoded = base64_decode($raw, true);
+            $json = $decoded !== false ? $decoded : $raw;
+
+            $data = json_decode($json, true);
+            if (! is_array($data) || empty($data['private_key']) || empty($data['client_email'])) {
+                Log::warning('fcm env credentials invalid');
+
+                return '';
+            }
+
+            $target = $fallbackPath !== '' ? $fallbackPath : storage_path('app/firebase/service-account.json');
+            $dir = dirname($target);
+            if (! is_dir($dir)) {
+                mkdir($dir, 0755, true);
+            }
+            file_put_contents($target, $json);
+
+            return $target;
+        } catch (\Throwable $e) {
+            Log::warning('fcm env credentials failed', ['error' => $e->getMessage()]);
+
+            return '';
+        }
     }
 }

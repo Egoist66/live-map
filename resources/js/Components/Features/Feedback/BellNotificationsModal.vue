@@ -706,7 +706,7 @@ function openNews(item: any) {
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
-  padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: var(--sab);
 }
 .notif-tabs :deep([data-pc-name="tablist"]) {
   overflow-x: auto;
@@ -726,6 +726,6 @@ function openNews(item: any) {
   }
 }
 .pb-safe {
-  padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: var(--sab);
 }
 </style>

@@ -91,7 +91,7 @@ function replyPreview(body: string): string {
           </template>
       </div>
       <ContextMenu ref="cm" :model="menuModel" :pt="menuPt" />
-      <div class="relative p-2 lg:p-3 border-t dark:border-zinc-800 bg-white dark:bg-zinc-900 shrink-0 flex-none pb-[calc(0.5rem+env(safe-area-inset-bottom))] lg:pb-3 w-full max-w-full min-w-0 rounded-b-none lg:rounded-b-2xl">
+      <div class="relative p-2 lg:p-3 border-t dark:border-zinc-800 bg-white dark:bg-zinc-900 shrink-0 flex-none pb-[calc(0.5rem+var(--sab))] lg:pb-3 w-full max-w-full min-w-0 rounded-b-none lg:rounded-b-2xl">
         <div v-if="replyTo" class="flex items-center gap-2.5 bg-violet-50 dark:bg-violet-500/10 border-l-[3px] border-violet-500 rounded-r-xl rounded-l-sm px-3 py-2 mb-2 min-w-0">
           <div class="flex-1 min-w-0">
             <div class="text-[11px] font-bold text-violet-600 dark:text-violet-300 truncate">↩ {{ isOwnMessage(replyTo) ? 'Вы' : (replyTo.sender?.name || 'Сообщение') }}</div>

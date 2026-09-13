@@ -34,7 +34,7 @@ onMounted(async () => { await design.init() })
   <Head :title="dash.seo.title.value"><meta head-key="robots" name="robots" content="noindex, nofollow" /></Head>
   <AuthenticatedLayout>
     <Toast />
-    <div class="bg-surface dark:bg-[#090E1A] min-h-[calc(100vh-64px)]">
+    <div class="page-scroll bg-surface dark:bg-[#090E1A]">
       <div class="max-w-[1040px] mx-auto px-3 sm:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4">
         <button
           v-if="dash.isAdmin.value && dash.isOwn.value"

@@ -36,7 +36,7 @@ function switchTab(next: 'ulove' | 'upin'): void {
     <meta head-key="og:description" property="og:description" :content="landing.seo.value.description" />
   </Head>
   <div class="min-h-screen flex flex-col bg-surface dark:bg-[#0B0F1A] text-ink-900 dark:text-zinc-100 antialiased selection:bg-rose-500 selection:text-white overflow-x-hidden">
-    <header class="sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/70 backdrop-blur border-b border-stone-200/60 dark:border-zinc-800">
+    <header class="native-safe-top sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/70 backdrop-blur border-b border-stone-200/60 dark:border-zinc-800">
       <div class="max-w-[1280px] mx-auto px-2 min-[411px]:px-4 sm:px-6 h-14 min-[411px]:h-[64px] flex items-center justify-between gap-2 min-w-0">
         <Link href="/" class="flex items-center gap-2 min-w-0 shrink-0">
           <span :class="['w-8 h-8 min-[411px]:w-9 min-[411px]:h-9 rounded-[10px] min-[411px]:rounded-xl grid place-items-center text-white shadow-soft transition-colors duration-300 shrink-0', landing.theme.value.logo]"><i :class="[landing.theme.value.logoIcon, 'text-sm']" /></span>
@@ -220,7 +220,7 @@ function switchTab(next: 'ulove' | 'upin'): void {
       </Card>
     </section>
 
-    <section class="max-w-[1280px] mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))]">
+    <section class="max-w-[1280px] mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-[calc(1.5rem+var(--sab))]">
       <Card class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[24px] !shadow-soft card-hover">
         <template #content>
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

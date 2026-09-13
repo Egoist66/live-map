@@ -10,7 +10,7 @@ const { canInstall, visible, hint, install, dismiss } = usePwaInstallBanner()
     <Transition name="pwa-slide">
       <div
         v-if="visible"
-        class="fixed bottom-[calc(76px+env(safe-area-inset-bottom,0px)+0.5rem)] lg:bottom-6 left-1/2 -translate-x-1/2 z-[39] w-[calc(100%-1.5rem)] max-w-md"
+        class="fixed bottom-[calc(var(--app-bottomnav)+var(--sab)+0.5rem)] lg:bottom-6 left-1/2 -translate-x-1/2 z-[39] w-[calc(100%-1.5rem)] max-w-md"
         role="dialog"
         aria-label="Установить приложение"
       >
