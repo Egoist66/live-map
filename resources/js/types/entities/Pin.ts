@@ -41,6 +41,7 @@ export interface Pin {
   comments_count: number
   is_anonymous: boolean
   is_owner: boolean
+  is_invited?: boolean
   my_reaction: string | null
   user: UserBrief | null
   photo_path?: string | null

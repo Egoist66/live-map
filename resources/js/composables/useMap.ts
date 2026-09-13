@@ -166,7 +166,8 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
     const exp = p.expires_at ? new Date(p.expires_at).toLocaleTimeString().slice(0,5) : ''
     const bi = pinBlurInfo(p)
     const blurHint = bi ? `<div class="mt-2 text-[11px] leading-snug bg-violet-50 dark:bg-violet-950/40 border border-violet-200 dark:border-violet-800 text-violet-800 dark:text-violet-200 rounded-xl px-2.5 py-1.5">📍 Виртуальная точка · сдвиг ${bi.label} — не точное местоположение</div>` : ''
-    tip.innerHTML = `<div class="p-3.5 bg-white dark:bg-zinc-800"><div class="flex items-center gap-1.5 flex-wrap"><span class="text-xs bg-stone-900 dark:bg-white dark:text-zinc-900 text-white rounded-full px-2 py-0.5 font-semibold">${catIcon[p.category]||'📍'} ${catLabel[p.category]||p.category}</span>${p.is_boosted?'<span class="text-[11px] bg-amber-400 text-stone-900 rounded-full px-2 py-0.5 font-bold">★ ТОП</span>':''}${p.priority==='sponsored'?'<span class="text-[11px] bg-violet-600 text-white rounded-full px-2 py-0.5 font-bold">AD</span>':''}</div><div class="font-bold text-[13px] leading-tight mt-2 text-stone-900 dark:text-white">${p.title}</div>${body?`<div class="text-xs text-stone-600 dark:text-zinc-300 mt-1.5 leading-relaxed">${body}</div>`:''}${blurHint}<div class="flex items-center gap-2 mt-2.5 text-[11px] text-stone-500 dark:text-zinc-400 flex-wrap"><span class="bg-stone-100 dark:bg-zinc-700 dark:text-zinc-200 border border-stone-200 dark:border-zinc-600 rounded-full px-2 py-0.5">${author}${level}</span>${exp?`<span class="bg-amber-50 dark:bg-amber-950/30 dark:text-amber-300 border border-amber-200 dark:border-amber-900 rounded-full px-2 py-0.5">до ${exp}</span>`:''}<span class="bg-white dark:bg-zinc-700 dark:text-zinc-200 border border-stone-200 dark:border-zinc-600 rounded-full px-2 py-0.5">❤️ ${p.reactions_count||0} · 💬 ${p.comments_count||0}</span></div></div><div class="h-1 w-full ${p.is_boosted?'bg-amber-400':p.category==='sos'?'bg-[#B91C1C]':p.category==='warning'?'bg-[#EA580C]':p.category==='event'?'bg-[#7C3AED]':p.category==='help'?'bg-[#DB2777]':p.category==='question'?'bg-[#2563EB]':p.category==='offer'?'bg-[#0891B2]':'bg-[#DC2626]'}"></div>`
+    const inviteHint = p.is_invited ? `<div class="mt-2 text-[11px] leading-snug bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 rounded-xl px-2.5 py-1.5">🎫 Вас пригласили — видно вне зоны и страны</div>` : ''
+    tip.innerHTML = `<div class="p-3.5 bg-white dark:bg-zinc-800"><div class="flex items-center gap-1.5 flex-wrap"><span class="text-xs bg-stone-900 dark:bg-white dark:text-zinc-900 text-white rounded-full px-2 py-0.5 font-semibold">${catIcon[p.category]||'📍'} ${catLabel[p.category]||p.category}</span>${p.is_boosted?'<span class="text-[11px] bg-amber-400 text-stone-900 rounded-full px-2 py-0.5 font-bold">★ ТОП</span>':''}${p.priority==='sponsored'?'<span class="text-[11px] bg-violet-600 text-white rounded-full px-2 py-0.5 font-bold">AD</span>':''}${p.is_invited?'<span class="text-[11px] bg-emerald-500 text-white rounded-full px-2 py-0.5 font-bold">🎫 Приглашение</span>':''}</div><div class="font-bold text-[13px] leading-tight mt-2 text-stone-900 dark:text-white">${p.title}</div>${body?`<div class="text-xs text-stone-600 dark:text-zinc-300 mt-1.5 leading-relaxed">${body}</div>`:''}${inviteHint}${blurHint}<div class="flex items-center gap-2 mt-2.5 text-[11px] text-stone-500 dark:text-zinc-400 flex-wrap"><span class="bg-stone-100 dark:bg-zinc-700 dark:text-zinc-200 border border-stone-200 dark:border-zinc-600 rounded-full px-2 py-0.5">${author}${level}</span>${exp?`<span class="bg-amber-50 dark:bg-amber-950/30 dark:text-amber-300 border border-amber-200 dark:border-amber-900 rounded-full px-2 py-0.5">до ${exp}</span>`:''}<span class="bg-white dark:bg-zinc-700 dark:text-zinc-200 border border-stone-200 dark:border-zinc-600 rounded-full px-2 py-0.5">❤️ ${p.reactions_count||0} · 💬 ${p.comments_count||0}</span></div></div><div class="h-1 w-full ${p.is_boosted?'bg-amber-400':p.category==='sos'?'bg-[#B91C1C]':p.category==='warning'?'bg-[#EA580C]':p.category==='event'?'bg-[#7C3AED]':p.category==='help'?'bg-[#DB2777]':p.category==='question'?'bg-[#2563EB]':p.category==='offer'?'bg-[#0891B2]':'bg-[#DC2626]'}"></div>`
     tip.style.left = x + 'px'
     tip.style.top = y + 'px'
     tip.classList.remove('hidden')
@@ -235,7 +236,7 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
     if (!document.getElementById('pin-soft-pulse-style')) {
       const s = document.createElement('style')
       s.id = 'pin-soft-pulse-style'
-      s.textContent = `@keyframes softPulse{0%,100%{transform:scale(1);opacity:0.55}50%{transform:scale(1.85);opacity:0}} @keyframes gentleBreath{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}} @keyframes pinGlow{0%,100%{box-shadow:0 0 0 0 rgba(250,204,21,0.5)}50%{box-shadow:0 0 0 10px rgba(250,204,21,0)}} @keyframes badgePop{0%{transform:translateX(-50%) scale(0.5)}60%{transform:translateX(-50%) scale(1.15)}100%{transform:translateX(-50%) scale(1)}} @keyframes sosBlink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.35;transform:scale(0.9)}}`
+      s.textContent = `@keyframes softPulse{0%,100%{transform:scale(1);opacity:0.55}50%{transform:scale(1.85);opacity:0}} @keyframes gentleBreath{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}} @keyframes pinGlow{0%,100%{box-shadow:0 0 0 0 rgba(250,204,21,0.5)}50%{box-shadow:0 0 0 10px rgba(250,204,21,0)}} @keyframes badgePop{0%{transform:translateX(-50%) scale(0.5)}60%{transform:translateX(-50%) scale(1.15)}100%{transform:translateX(-50%) scale(1)}} @keyframes sosBlink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.35;transform:scale(0.9)}} @keyframes inviteRing{0%,100%{transform:scale(1);opacity:0.7}50%{transform:scale(1.6);opacity:0}}`
       document.head.appendChild(s)
     }
     pins.forEach((p: any, idx: number) => {
@@ -244,7 +245,8 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
       const sz = Math.round(34 * scale)
       wrap.style.width = sz+'px'
       wrap.style.height = sz+'px'
-      const baseColor = p.is_boosted ? '#F59E0B' : p.is_sponsored || p.priority==='sponsored' ? '#7C3AED' : colorFor(p.category)
+      const isInvited = !!p.is_invited
+      const baseColor = isInvited ? '#10B981' : p.is_boosted ? '#F59E0B' : p.is_sponsored || p.priority==='sponsored' ? '#7C3AED' : colorFor(p.category)
       const isBoosted = !!p.is_boosted
       const isSosPin = String((p as any).category ?? '') === 'sos'
       const halo = document.createElement('div')
@@ -265,6 +267,12 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
       core.style.animationDelay = `${(idx % 7) * 0.18}s`
       if (isBoosted) { core.style.boxShadow = '0 0 0 4px rgba(251,191,36,0.55), 0 0 18px rgba(251,191,36,0.9), 0 4px 16px rgba(15,23,42,0.35)'; core.style.borderColor = 'white' }
       else core.style.boxShadow = '0 2px 12px rgba(15,23,42,0.32), 0 0 0 2px rgba(255,255,255,0.9)'
+      if (isInvited && !isSosPin) {
+        halo.style.background = '#10B981'
+        halo.style.opacity = '0.5'
+        halo.style.animation = 'inviteRing 1.6s ease-in-out infinite'
+        core.style.boxShadow = '0 0 0 3px rgba(16,185,129,0.45), 0 0 18px rgba(16,185,129,0.8), 0 4px 16px rgba(15,23,42,0.35)'
+      }
       if (isSosPin) {
         core.style.width = (30*scale)+'px'
         core.style.height = (30*scale)+'px'
@@ -282,9 +290,30 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
       inner.style.height = (isBoosted? 9*scale: 7*scale)+'px'
       if(isBoosted) inner.textContent='★'
       if(isBoosted) { inner.className='rounded-full bg-white text-amber-600 grid place-items-center font-black'; inner.style.fontSize='9px'; inner.style.width=(12*scale)+'px'; inner.style.height=(12*scale)+'px' }
+      if (isInvited && !isSosPin && !isBoosted) { inner.className='rounded-full bg-white grid place-items-center'; inner.style.fontSize='8px'; inner.style.width=(12*scale)+'px'; inner.style.height=(12*scale)+'px'; inner.textContent='✉️' }
       if (!isSosPin) core.appendChild(inner)
       wrap.appendChild(halo)
       wrap.appendChild(core)
+      if (isInvited) {
+        const inviteBadge = document.createElement('div')
+        inviteBadge.textContent = '🎫 Приглашение'
+        inviteBadge.style.position = 'absolute'
+        inviteBadge.style.top = '-13px'
+        inviteBadge.style.left = '50%'
+        inviteBadge.style.transform = 'translateX(-50%)'
+        inviteBadge.style.background = '#059669'
+        inviteBadge.style.color = '#fff'
+        inviteBadge.style.fontSize = '10px'
+        inviteBadge.style.fontWeight = '800'
+        inviteBadge.style.lineHeight = '1'
+        inviteBadge.style.padding = '4px 7px'
+        inviteBadge.style.borderRadius = '999px'
+        inviteBadge.style.whiteSpace = 'nowrap'
+        inviteBadge.style.pointerEvents = 'none'
+        inviteBadge.style.boxShadow = '0 2px 10px rgba(5,150,105,0.5), 0 0 0 1px rgba(255,255,255,0.85)'
+        inviteBadge.style.zIndex = '6'
+        wrap.appendChild(inviteBadge)
+      }
       const rc = Number(p.reactions_count) || 0
       const cc = Number(p.comments_count) || 0
       if (rc + cc > 0) {

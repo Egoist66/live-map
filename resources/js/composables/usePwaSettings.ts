@@ -36,13 +36,17 @@ export function usePwaSettings() {
     try {
       const before = await loadStorage()
       const deleted = await clearRuntimeCaches()
-      await new Promise((r) => setTimeout(r, 400))
+      await new Promise((r) => setTimeout(r, 800))
       const after = await loadStorage()
+      if (deleted.length === 0) {
+        lastCleared.value = 'Кеш уже пуст — очищать нечего'
+        return
+      }
       const freed = before && after ? Math.max(0, before.usageMB - after.usageMB) : null
-      lastCleared.value =
-        deleted.length === 0
-          ? 'Кеш уже пуст — очищать нечего'
-          : `Очищено разделов: ${deleted.length}` + (freed !== null ? ` · освобождено ~${freed.toFixed(1)} МБ` : '')
+      const freedText = freed !== null && freed >= 0.1 ? ` · освобождено ~${freed.toFixed(1)} МБ` : ''
+      const restMB = after ? after.usageMB : 0
+      const restText = restMB >= 1 ? ` · осталось ~${restMB.toFixed(1)} МБ (оболочка и данные)` : ''
+      lastCleared.value = `Очищено разделов: ${deleted.length}${freedText}${restText}`
     } finally {
       clearing.value = false
     }

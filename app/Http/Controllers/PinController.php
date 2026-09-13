@@ -67,6 +67,26 @@ class PinController extends Controller
             $visible = $visible->concat($sosExtra)->values();
         } catch (\Throwable) {
         }
+        $allInvitedIds = collect();
+        if ($viewerId) {
+            try {
+                $knownIds = $visible->pluck('id')->all() ?: [0];
+                $invitedExtra = Pin::active()
+                    ->whereIn('id', \App\Models\PinInvite::where('invitee_id', $viewerId)->select('pin_id'))
+                    ->whereNotIn('id', $knownIds)
+                    ->with('user:id,name,avatar_path,level')
+                    ->limit(50)
+                    ->get()
+                    ->filter(fn ($p) => $p->isVisibleForGender($viewer));
+                $visible = $visible->concat($invitedExtra)->values();
+                $allInvitedIds = \App\Models\PinInvite::where('invitee_id', $viewerId)
+                    ->whereIn('pin_id', $visible->pluck('id'))
+                    ->pluck('pin_id')
+                    ->map(fn ($v) => (int) $v)
+                    ->flip();
+            } catch (\Throwable) {
+            }
+        }
         if ($viewerId) {
             try {
                 $sosActive = \App\Services\SosService::activeFor($viewer);
@@ -78,7 +98,10 @@ class PinController extends Controller
             }
         }
         $myReactions = $viewerId ? \App\Models\Reaction::where('user_id', $viewerId)->where('reactable_type', 'pin')->whereIn('reactable_id', $visible->pluck('id'))->pluck('type', 'reactable_id') : collect();
-        return response()->json($visible->map(fn($p) => array_merge($p->toPublicArray($viewerId), ['my_reaction' => $myReactions[$p->id] ?? null])));
+        return response()->json($visible->map(function ($p) use ($viewerId, $myReactions, $allInvitedIds) {
+            $isInvited = $viewerId && isset($allInvitedIds[(int) $p->id]);
+            return array_merge($p->toPublicArray($viewerId, (bool) $isInvited), ['my_reaction' => $myReactions[$p->id] ?? null]);
+        }));
     }
 
     public function show(Request $request, Pin $pin)
@@ -100,7 +123,8 @@ class PinController extends Controller
         }
         $pin->load('user:id,name,avatar_path,level');
         $my = $viewerId ? \App\Models\Reaction::where('user_id', $viewerId)->where('reactable_type', 'pin')->where('reactable_id', $pin->id)->value('type') : null;
-        return response()->json(array_merge($pin->toPublicArray($viewerId), ['my_reaction' => $my]));
+        $isInvited = $viewerId ? \App\Services\PinVisibility::isInvited($pin, (int) $viewerId) : false;
+        return response()->json(array_merge($pin->toPublicArray($viewerId, (bool) $isInvited), ['my_reaction' => $my]));
     }
 
     public function mine(Request $request)

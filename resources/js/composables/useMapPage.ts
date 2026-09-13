@@ -323,6 +323,9 @@ export function useMapPage() {
         mine.forEach((p: any) => { if (!store.pins.find((x: any) => x.id === p.id)) store.pins.unshift(p) })
         store.pruneExpired()
       } catch {}
+      try {
+        await store.fetchInvited()
+      } catch {}
       const lngLat = [start.center.lng, start.center.lat] as any
       await mapApi.initMap(lngLat, onMapClick, start.zoom)
       if (start.hasPrecise) mapApi.showUserLocation(start.center.lat, start.center.lng)

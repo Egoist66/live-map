@@ -28,11 +28,17 @@ export async function getEstimate(): Promise<StorageEstimate | null> {
   }
 }
 
+/**
+ * Префикс прекэша оболочки: его не трогаем, иначе оффлайн-режим
+ * умрёт до следующей установки SW.
+ */
+const PRECACHE_PREFIX = 'workbox-precache'
+
 async function runtimeKeys(): Promise<string[]> {
   if (!('caches' in window)) return []
   try {
     const keys = await caches.keys()
-    return keys.filter((k) => k.startsWith('pwa-'))
+    return keys.filter((k) => !k.startsWith(PRECACHE_PREFIX))
   } catch {
     return []
   }
@@ -46,10 +52,30 @@ export async function runtimeCachedKeys(): Promise<string[]> {
   return runtimeKeys()
 }
 
+/**
+ * Стереть рантайм-кэш приложения (тайлы карты, фото, страницы, API).
+ *
+ * Удаляет ВСЕ разделы Cache Storage кроме активного прекэша оболочки:
+ * фильтр только по `pwa-*` пропускал кэши с устаревшими именами от старых
+ * версий SW — они висели мёртвым грузом, а очистка рапортовала
+ * «уже пуст» при десятках мегабайт занятого места.
+ *
+ * @returns ключи реально удалённых разделов
+ */
 export async function clearRuntimeCaches(): Promise<string[]> {
   const keys = await runtimeKeys()
-  await Promise.all(keys.map((k) => caches.delete(k).catch(() => false)))
-  return keys
+  const deleted: string[] = []
+  for (const key of keys) {
+    try {
+      const ok = await caches.delete(key)
+      if (ok) {
+        deleted.push(key)
+      }
+    } catch {
+      continue
+    }
+  }
+  return deleted
 }
 
 /**

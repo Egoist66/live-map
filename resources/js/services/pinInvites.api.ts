@@ -19,4 +19,12 @@ export const pinInvitesApi = {
     const { data } = await api.get('/api/pins/invited/mine')
     return Array.isArray(data) ? data : []
   },
+  /**
+   * Остаток месячного лимита приглашений.
+   * @returns used/limit/remaining/unlimited
+   */
+  async usage(): Promise<{ used: number; limit: number | null; remaining: number | null; unlimited: boolean }> {
+    const { data } = await api.get('/api/pins/invites/usage')
+    return data
+  },
 }

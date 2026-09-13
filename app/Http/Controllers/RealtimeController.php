@@ -474,11 +474,17 @@ class RealtimeController extends Controller
         $upsertPins = $upsert->map(fn ($p) => $p->toPublicArray($userId))->all();
 
         $sosLive = $this->liveSosPins($userId, $since);
+        $invitedLive = $this->liveInvitedPins($userId, $since);
         $seenIds = [];
         foreach ($upsertPins as $row) {
             $seenIds[(int) ($row['id'] ?? 0)] = true;
         }
         foreach ($sosLive as $row) {
+            if (! isset($seenIds[(int) ($row['id'] ?? 0)])) {
+                $upsertPins[] = $row;
+            }
+        }
+        foreach ($invitedLive as $row) {
             if (! isset($seenIds[(int) ($row['id'] ?? 0)])) {
                 $upsertPins[] = $row;
             }
@@ -513,6 +519,35 @@ class RealtimeController extends Controller
                 ->get();
 
             return $pins->map(fn ($p) => $p->toPublicArray($userId))->all();
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    /**
+     * Живые приглашённые пины вне зависимости от bbox: приглашение
+     * должно долететь даже когда пин далеко за радиусом и вьюпортом.
+     *
+     * @param int $userId смотрящий
+     * @param Carbon|null $since момент прошлого тика
+     * @return array
+     */
+    private function liveInvitedPins(int $userId, ?Carbon $since): array
+    {
+        if (! $since) {
+            return [];
+        }
+
+        try {
+            $pins = Pin::active()
+                ->whereIn('id', \App\Models\PinInvite::where('invitee_id', $userId)->select('pin_id'))
+                ->where('updated_at', '>', $since)
+                ->with('user:id,name,avatar_path,level')
+                ->orderBy('updated_at')
+                ->limit(10)
+                ->get();
+
+            return $pins->map(fn ($p) => $p->toPublicArray($userId, true))->all();
         } catch (\Throwable) {
             return [];
         }

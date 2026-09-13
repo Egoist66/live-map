@@ -84,7 +84,7 @@ const ulove = useUlovePrivacy()
               </div>
               <ToggleSwitch :modelValue="invisible.isInvisible.value" @update:modelValue="(v:boolean)=>invisible.toggle(v)" :disabled="!invisible.canUse.value || invisible.loading.value" class="shrink-0" />
             </div>
-            <Message v-if="!invisible.canUse.value" severity="warn" :closable="false" class="!mt-3 !rounded-2xl !text-xs">Нужен тариф Pro/Business или права админа. Сейчас у тебя {{ planOf(user) }}.</Message>
+            <Message v-if="!invisible.canUse.value" severity="warn" :closable="false" class="!mt-3 !rounded-2xl !text-xs">Нужен тариф Pro/Business -  сейчас у тебя {{ planOf(user) }}.</Message>
             <Message v-if="invisible.error.value" severity="error" :closable="false" class="!mt-3 !rounded-2xl !text-xs">{{ invisible.error.value }}</Message>
           </template>
         </Card>

@@ -151,6 +151,7 @@ class User extends Authenticatable
     public function hasRole(string $role): bool { return $this->role === $role || $this->isAdmin(); }
 
     public const FREE_PINS_LIMIT = 3;
+    public const FREE_PIN_INVITES_MONTH_LIMIT = 3;
 
     public function livePinsCount(): int
     {
@@ -165,6 +166,32 @@ class User extends Authenticatable
         if ($this->isAdmin()) return true;
         if (in_array($this->effectivePlan(), ['pro','business'])) return true;
         return $this->livePinsCount() < self::FREE_PINS_LIMIT;
+    }
+
+    /**
+     * Сколько приглашений в пины отправлено с начала месяца.
+     *
+     * @return int количество созданных pin_invites за текущий месяц
+     */
+    public function pinInvitesUsedThisMonth(): int
+    {
+        return PinInvite::where('inviter_id', $this->id)
+            ->where('created_at', '>=', now()->startOfMonth())
+            ->count();
+    }
+
+    /**
+     * Может ли пользователь отправить ещё одно приглашение в пин.
+     *
+     * Free — 3 в месяц, pro/business/admin — безлимит.
+     *
+     * @return bool true когда лимит не исчерпан
+     */
+    public function canInviteToPin(): bool
+    {
+        if ($this->isAdmin()) return true;
+        if (in_array($this->effectivePlan(), ['pro', 'business'])) return true;
+        return $this->pinInvitesUsedThisMonth() < self::FREE_PIN_INVITES_MONTH_LIMIT;
     }
 
     public function pinTtlHours(): ?int

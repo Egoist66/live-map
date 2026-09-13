@@ -82,7 +82,7 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
           </label>
         </div>
         <button type="button" class="px-4 text-sm font-black text-left hover:opacity-70" @click="photoLikers.open()" v-tooltip.bottom="photoLikers.tooltip.value" @mouseenter="photoLikers.ensure()">{{ gallery.active.value.likes_count }} отметок «Нравится»</button>
-        <LikersDialog :visible="photoLikers.opened.value" @update:visible="(v:boolean)=>{ v ? photoLikers.open() : photoLikers.close() }" title="Лайки" :likers="photoLikers.likers.value" :loading="photoLikers.loading.value" :total="photoLikers.total.value" />
+        <LikersDialog :visible="photoLikers.opened.value" @update:visible="(v:boolean)=>{ v ? photoLikers.open() : photoLikers.close() }" title="Лайки" :likers="photoLikers.likers.value" :loading="photoLikers.loading.value" :total="photoLikers.total.value" :base-z-index="3000" />
         <div class="px-4 mt-1.5">
           <div v-if="!viewer.editing.value && gallery.active.value.caption" class="text-sm break-words dark:text-zinc-100"><span class="font-bold mr-1">{{ userName }}</span>{{ gallery.active.value.caption }}</div>
           <div v-if="viewer.editing.value" class="flex gap-2">

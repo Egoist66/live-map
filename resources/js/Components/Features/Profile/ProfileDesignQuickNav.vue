@@ -17,29 +17,29 @@ const allActions: Array<{ key: QuickNavKey; label: string; icon: string; tile: s
     key: 'profile',
     label: 'Профиль',
     icon: 'pi pi-user',
-    tile: '!border-blue-200 !bg-blue-600/10 hover:!bg-blue-600/20 dark:!border-blue-500/25 dark:!bg-blue-500/15 dark:hover:!bg-blue-500/25',
-    iconColor: '!text-blue-600 dark:!text-blue-400',
+    tile: '!border-0 !bg-gradient-to-br !from-blue-500 !to-indigo-600 hover:!from-blue-400 hover:!to-indigo-500 shadow-[0_8px_20px_-8px_rgba(59,130,246,0.7)]',
+    iconColor: '!text-white',
   },
   {
     key: 'friends',
     label: 'Друзья',
     icon: 'pi pi-users',
-    tile: '!border-emerald-200 !bg-emerald-600/10 hover:!bg-emerald-600/20 dark:!border-emerald-500/25 dark:!bg-emerald-500/15 dark:hover:!bg-emerald-500/25',
-    iconColor: '!text-emerald-600 dark:!text-emerald-400',
+    tile: '!border-0 !bg-gradient-to-br !from-emerald-500 !to-teal-600 hover:!from-emerald-400 hover:!to-teal-500 shadow-[0_8px_20px_-8px_rgba(16,185,129,0.7)]',
+    iconColor: '!text-white',
   },
   {
     key: 'search',
     label: 'Поиск',
     icon: 'pi pi-search',
-    tile: '!border-amber-200 !bg-amber-500/10 hover:!bg-amber-500/20 dark:!border-amber-500/25 dark:!bg-amber-500/15 dark:hover:!bg-amber-500/25',
-    iconColor: '!text-amber-600 dark:!text-amber-400',
+    tile: '!border-0 !bg-gradient-to-br !from-amber-400 !to-orange-500 hover:!from-amber-300 hover:!to-orange-400 shadow-[0_8px_20px_-8px_rgba(245,158,11,0.7)]',
+    iconColor: '!text-white',
   },
   {
     key: 'share',
     label: 'Поделиться',
     icon: 'pi pi-share-alt',
-    tile: '!border-violet-200 !bg-violet-600/10 hover:!bg-violet-600/20 dark:!border-violet-500/25 dark:!bg-violet-500/15 dark:hover:!bg-violet-500/25',
-    iconColor: '!text-violet-600 dark:!text-violet-300',
+    tile: '!border-0 !bg-gradient-to-br !from-violet-500 !to-fuchsia-600 hover:!from-violet-400 hover:!to-fuchsia-500 shadow-[0_8px_20px_-8px_rgba(139,92,246,0.7)]',
+    iconColor: '!text-white',
   },
 ]
 
@@ -68,10 +68,10 @@ function onAction(key: QuickNavKey): void {
       <button
         type="button"
         :aria-label="action.label"
-        :class="['grid h-16 w-full min-[411px]:h-20 sm:h-28 place-items-center rounded-[16px] min-[411px]:rounded-[20px] border shadow-soft transition active:scale-95', action.tile]"
+        :class="['grid h-16 w-full min-[411px]:h-[72px] sm:h-20 place-items-center rounded-[16px] min-[411px]:rounded-[20px] border transition active:scale-95', action.tile]"
         @click="onAction(action.key)"
       >
-        <i :class="[action.icon, action.iconColor, 'text-xl min-[411px]:text-2xl sm:text-5xl']"></i>
+        <i :class="[action.icon, action.iconColor, 'text-xl min-[411px]:text-2xl sm:text-3xl drop-shadow']"></i>
       </button>
       <span class="truncate text-xs sm:text-[13px] font-medium text-stone-500 dark:text-zinc-400">{{ action.label }}</span>
     </div>

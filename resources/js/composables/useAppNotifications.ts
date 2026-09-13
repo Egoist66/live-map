@@ -327,6 +327,20 @@ function handlePinActivity(e: any) {
     })
     return
   }
+  if (a.kind === 'invite') {
+    const title = (a.pin?.title || 'пин').toString().slice(0, 60)
+    push({
+      id: `pin-invite-${a.id}-${Date.now()}`,
+      type: 'pin',
+      icon: 'pi pi-ticket',
+      title: `🎫 ${name} приглашает в пин`,
+      body: `«${title}» — видно вне зоны · открывай и комментируй`.slice(0, 90),
+      avatar: avatarSrcFor(actor),
+      link: activityLink(a),
+      createdAt: Date.now(),
+    })
+    return
+  }
   const emoji: Record<string, string> = { like: '❤️', fire: '🔥', laugh: '😂', sad: '😢', angry: '😡', useful: '👍' }
   if (a.kind === 'swipe_like') {
     const anon = a.is_incognito

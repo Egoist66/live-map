@@ -5,7 +5,7 @@ import Button from 'primevue/button'
 import ProgressSpinner from 'primevue/progressspinner'
 import { reactionEmoji, type LikerItem } from '@/composables/useLikersPreview'
 
-defineProps<{ visible: boolean; title: string; likers: LikerItem[]; loading: boolean; total: number; showType?: boolean }>()
+defineProps<{ visible: boolean; title: string; likers: LikerItem[]; loading: boolean; total: number; showType?: boolean; baseZIndex?: number }>()
 const emit = defineEmits<{ (e: 'update:visible', v: boolean): void }>()
 
 function initialOf(name: string): string {
@@ -19,6 +19,7 @@ function initialOf(name: string): string {
     modal
     :draggable="false"
     :closable="true"
+    :base-z-index="baseZIndex ?? 0"
     :style="{ width: '360px', maxWidth: 'calc(100vw - 2rem)' }"
     :pt="{ root: { class: '!rounded-[24px] !border-stone-200 dark:!border-zinc-800 overflow-hidden' }, header: { class: '!p-0 !border-0' }, content: { class: '!p-0 !bg-white dark:!bg-zinc-900' } }"
   >

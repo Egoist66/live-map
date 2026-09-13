@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { pinsApi } from '@/services/pins.api'
+import { pinInvitesApi } from '@/services/pinInvites.api'
 import { isPinAlive } from '@/composables/usePinExpiry'
 import type { Pin, CreatePinPayload, UpdatePinPayload, BoostType } from '@/types/entities/Pin'
 
@@ -109,6 +110,25 @@ export const usePinsStore = defineStore('pins', () => {
     return (data || []).filter((p: any) => isPinAlive(p) || (p as any).status === 'scheduled')
   }
 
+  /**
+   * Подтянуть пины, куда пользователя пригласили.
+   *
+   * Приглашённые живут вне радиуса/зоны/страны, поэтому мерджим
+   * их поверх обычных с флагом is_invited для особого маркера.
+   * @returns приглашённые живые пины
+   */
+  async function fetchInvited(): Promise<Pin[]> {
+    const data = await pinInvitesApi.mine()
+    const alive = (data || []).filter((p: any) => isPinAlive(p) && !isRecentlyDeleted(p?.id))
+    const marked = alive.map((p: any) => ({ ...p, is_invited: true }))
+    const seen = new Map<number, Pin>()
+    ;[...pins.value, ...marked].forEach((p: any) => seen.set(p.id, p))
+    const merged = Array.from(seen.values()).filter((p: any) => isPinAlive(p))
+    merged.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    pins.value = merged.slice(0, 150)
+    return marked
+  }
+
   async function fetchScheduled(): Promise<Pin[]> {
     return pinsApi.scheduled()
   }
@@ -167,8 +187,10 @@ export const usePinsStore = defineStore('pins', () => {
       pins.value = pins.value.filter((p) => p.id !== pin.id)
       return
     }    const idx = pins.value.findIndex((p) => p.id === pin.id)
-    if (idx !== -1) pins.value[idx] = { ...pins.value[idx], ...pin } as Pin
-    else pins.value.unshift(pin)
+    if (idx !== -1) {
+      const prev: any = pins.value[idx]
+      pins.value[idx] = { ...prev, ...pin, is_invited: (pin as any).is_invited ?? prev.is_invited } as Pin
+    } else pins.value.unshift(pin)
   }
 
   function removeRealtime(id: number): void {
@@ -196,6 +218,7 @@ export const usePinsStore = defineStore('pins', () => {
     deleting,
     fetchNearby,
     fetchMine,
+    fetchInvited,
     fetchScheduled,
     pruneExpired,
     createPin,

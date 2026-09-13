@@ -146,7 +146,7 @@ async function clearAll(): Promise<void> {
  * Виды, которые относятся строго к пинам/фото (вкладка «Пины»).
  * Остальное (ULove, UFlow, подписки на фото/уровень) — вкладка «События».
  */
-export const PIN_ACTIVITY_KINDS = ['reaction', 'comment', 'mention', 'photo_comment', 'photo_like', 'sub_pin'] as const
+export const PIN_ACTIVITY_KINDS = ['reaction', 'comment', 'mention', 'photo_comment', 'photo_like', 'sub_pin', 'invite'] as const
 
 /**
  * Проверка: активность относится к пинам, а не к общим событиям.
@@ -211,6 +211,10 @@ function describe(a: PinActivityItem): { emoji: string; text: string } {
   if (a.kind === 'sub_pin') {
     const title = (a as any).excerpt || a.pin?.title || 'новый пин'
     return { emoji: '📍', text: `${name} создал пин «${title}»` }
+  }
+  if (a.kind === 'invite') {
+    const title = a.pin?.title || 'пин'
+    return { emoji: '🎫', text: `${name} приглашает в пин «${title}»` }
   }
   if (a.kind === 'sub_photo') {
     return { emoji: '📷', text: `${name} добавил новое фото` }

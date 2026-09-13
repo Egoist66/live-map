@@ -6,17 +6,20 @@ import InputText from 'primevue/inputtext'
 import Avatar from 'primevue/avatar'
 import { usePinInvites } from '@/composables/usePinInvites'
 import { useInviteUserSearch } from '@/composables/useInviteUserSearch'
+import { usePinInviteLimit } from '@/composables/usePinInviteLimit'
 import { avatarSrcFor } from '@/composables/useAvatar'
 
 const props = defineProps<{ pinId: number; isOwner: boolean }>()
 const open = ref(false)
-const { invites, load, inviteUser, revokeInvite } = usePinInvites(props.pinId)
+const { invites, load, inviteUser, revokeInvite, error } = usePinInvites(props.pinId)
 const { results, searching, search } = useInviteUserSearch()
+const limit = usePinInviteLimit()
 const searchText = ref('')
 
 watch(open, (v) => {
   if (v) {
     load()
+    void limit.refresh()
   }
 })
 
@@ -26,7 +29,13 @@ async function onSearch(v: string | undefined) {
 }
 
 async function onInvite(userId: number) {
-  await inviteUser(userId)
+  try {
+    await inviteUser(userId)
+    await limit.refresh()
+  } catch {
+    await limit.refresh()
+    return
+  }
   searchText.value = ''
   await search('')
 }
@@ -40,7 +49,9 @@ function avatarOf(u: any) {
   <div v-if="isOwner">
     <Button label="Пригласить" icon="pi pi-user-plus" severity="secondary" outlined size="small" @click="open = true" />
     <Dialog v-model:visible="open" header="Пригласить в пин" modal :style="{ width: '26rem' }">
-      <p class="text-sm text-stone-500 mb-3">Приглашённый увидит пин даже из другой страны и зоны.</p>
+      <p class="text-sm text-stone-500 mb-1">Приглашённый увидит пин даже из другой страны и зоны.</p>
+      <p class="text-xs text-stone-400 mb-3">{{ limit.remainingText }}</p>
+      <div v-if="error" class="text-xs text-red-500 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-xl px-3 py-2 mb-2">{{ error }}</div>
       <InputText :model-value="searchText" placeholder="Имя пользователя..." class="w-full" @update:model-value="onSearch" />
       <div v-if="searching" class="text-xs text-stone-400 mt-2">Поиск...</div>
       <div v-else class="mt-2 space-y-1">

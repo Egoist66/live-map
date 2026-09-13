@@ -183,7 +183,7 @@ class Pin extends Model
         return $meters . ' м';
     }
 
-    public function toPublicArray(?int $viewerId = null): array
+    public function toPublicArray(?int $viewerId = null, bool $isInvited = false): array
     {
         $isOwner = $viewerId && $this->user_id === $viewerId;
         $meta = is_array($this->meta) ? $this->meta : (is_string($this->meta) ? json_decode($this->meta, true) : []);
@@ -209,6 +209,7 @@ class Pin extends Model
             'comments_count' => $this->comments_count,
             'is_anonymous' => (bool) $this->is_anonymous,
             'is_owner' => $isOwner,
+            'is_invited' => $isInvited,
             'country' => $this->country ?? null,
             'country_code' => $this->country_code ?? null,
             'location_precision' => $this->location_precision,

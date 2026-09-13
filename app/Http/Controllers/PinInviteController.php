@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Pin;
 use App\Models\PinInvite;
 use App\Models\User;
+use App\Notifications\PinInvitedNotification;
+use App\Services\UserNotifier;
 use Illuminate\Http\Request;
 
 /**
@@ -35,10 +37,20 @@ class PinInviteController extends Controller
         if ($reason && !$user->isAdmin()) {
             abort(403, $reason);
         }
+        $alreadyInvited = PinInvite::where('pin_id', $pin->id)
+            ->where('invitee_id', $inviteeId)
+            ->exists();
+        if (!$alreadyInvited && !$user->canInviteToPin()) {
+            abort(429, 'Лимит free тарифа: 3 приглашения в пин в месяц. Pro — безлимит.');
+        }
         $invite = PinInvite::updateOrCreate(
             ['pin_id' => $pin->id, 'invitee_id' => $inviteeId],
             ['inviter_id' => $user->id, 'status' => 'pending']
         );
+        try {
+            UserNotifier::send($invitee, new PinInvitedNotification($pin, $user, $inviteeId));
+        } catch (\Throwable) {
+        }
         return response()->json($invite, 201);
     }
 
@@ -56,8 +68,34 @@ class PinInviteController extends Controller
     public function mine(Request $request)
     {
         $user = $request->user();
-        $invites = PinInvite::where('invitee_id', $user->id)->with('pin')->latest()->limit(100)->get();
+        $invites = PinInvite::where('invitee_id', $user->id)->with('pin.user:id,name,avatar_path,level')->latest()->limit(100)->get();
         $pins = $invites->map(fn($i) => $i->pin)->filter()->values();
-        return response()->json($pins->map(fn($p) => $p->toPublicArray($user->id)));
+        $visible = $pins->filter(function ($p) use ($user) {
+            if ($p->status !== 'active') return false;
+            if ($p->expires_at && $p->expires_at->isPast()) return false;
+            return $p->isVisibleForGender($user);
+        })->values();
+        return response()->json($visible->map(fn($p) => $p->toPublicArray($user->id, true)));
+    }
+
+    /**
+     * Остаток месячного лимита приглашений.
+     *
+     * Free — 3 в месяц, pro/business/admin — безлимит.
+     */
+    public function usage(Request $request)
+    {
+        $user = $request->user();
+        $unlimited = $user->isAdmin() || in_array($user->effectivePlan(), ['pro', 'business']);
+        $limit = $unlimited ? null : User::FREE_PIN_INVITES_MONTH_LIMIT;
+        $used = $unlimited ? 0 : $user->pinInvitesUsedThisMonth();
+        $remaining = $unlimited ? null : max(0, $limit - $used);
+
+        return response()->json([
+            'used' => $used,
+            'limit' => $limit,
+            'remaining' => $remaining,
+            'unlimited' => $unlimited,
+        ]);
     }
 }
