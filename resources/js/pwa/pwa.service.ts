@@ -12,6 +12,23 @@ export function isSupported(): boolean {
   return typeof window !== 'undefined' && 'serviceWorker' in navigator
 }
 
+/**
+ * Проверка запуска внутри нативной оболочки Capacitor.
+ *
+ * Service Worker в нативном WebView с server.url не работает
+ * (чужой origin/скоп) — регистрация там вредна, скипаем её.
+ *
+ * @returns true если это Capacitor-натив (Android/iOS)
+ */
+async function isNativeShell(): Promise<boolean> {
+  try {
+    const { Capacitor } = await import('@capacitor/core')
+    return Capacitor.isNativePlatform()
+  } catch {
+    return false
+  }
+}
+
 function bindOnce(): void {
   if (bound || typeof window === 'undefined') return
   bound = true
@@ -79,6 +96,7 @@ export function isOnline(): boolean {
 
 export async function register(): Promise<ServiceWorkerRegistration | null> {
   bindOnce()
+  if (await isNativeShell()) return null
   if (!isSupported()) return null
   if (registration) return registration
   try {

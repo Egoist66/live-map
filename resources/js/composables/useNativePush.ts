@@ -5,6 +5,7 @@ import { mobileApi } from '@/services/mobile.api';
 
 const fcmToken = ref<string | null>(null);
 const permissionGranted = ref(false);
+const pushUnavailable = ref(false);
 let listenersBound = false;
 
 /**
@@ -14,7 +15,12 @@ let listenersBound = false;
  * Токен сохраняет в /api/device-tokens, входящие в foreground отдаем
  * штатному тосту через CustomEvent (слушает useAppNotifications).
  *
- * @returns init(), токен и флаг разрешения
+ * Безопасен для релизных сборок без Firebase (нет google-services.json):
+ * register() в таком случае кидает нативный эксепшн и роняет приложение,
+ * поэтому всё обёрнуто в try/catch, а отсутствие FCM фиксируется
+ * флагом pushUnavailable вместо краша.
+ *
+ * @returns init(), токен, флаг разрешения и флаг недоступности FCM
  * @example
  * const { initNativePush } = useNativePush()
  * await initNativePush()
@@ -26,23 +32,41 @@ export function useNativePush() {
         if (!isNative) {
             return;
         }
-        const permission = await PushNotifications.requestPermissions();
-        const granted = permission.receive === 'granted';
-        permissionGranted.value = granted;
-        if (!granted) {
-            return;
+        try {
+            bindListenersOnce(platform);
+            const current = await PushNotifications.checkPermissions();
+            const alreadyGranted = current.receive === 'granted';
+            const received = alreadyGranted ? current : await PushNotifications.requestPermissions();
+            const granted = received.receive === 'granted';
+            permissionGranted.value = granted;
+            if (!granted) {
+                return;
+            }
+            await PushNotifications.register();
+        } catch {
+            pushUnavailable.value = true;
         }
-        await PushNotifications.register();
+    }
+
+    /**
+     * Подписывает нативные слушатели пушей (один раз, до register()).
+     *
+     * @param nativePlatform платформа из usePlatform()
+     */
+    function bindListenersOnce(nativePlatform: string): void {
         if (listenersBound) {
             return;
         }
         listenersBound = true;
         PushNotifications.addListener('registration', async ({ value }) => {
             fcmToken.value = value;
-            const nativePlatform = platform === 'ios' ? 'ios' : 'android';
+            const target = nativePlatform === 'ios' ? 'ios' : 'android';
             try {
-                await mobileApi.saveDeviceToken(nativePlatform, value);
+                await mobileApi.saveDeviceToken(target, value);
             } catch {}
+        });
+        PushNotifications.addListener('registrationError', () => {
+            pushUnavailable.value = true;
         });
         PushNotifications.addListener('pushNotificationReceived', (notification) => {
             window.dispatchEvent(new CustomEvent('upin:native-push', { detail: notification }));
@@ -55,5 +79,5 @@ export function useNativePush() {
         });
     }
 
-    return { fcmToken, permissionGranted, initNativePush };
+    return { fcmToken, permissionGranted, pushUnavailable, initNativePush };
 }

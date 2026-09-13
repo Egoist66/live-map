@@ -178,3 +178,6 @@ rr
 /public/sw.js
 /public/workbox-*.js
 /public/manifest.webmanifest
+
+# Firebase service-account key (secret, one per environment)
+/storage/app/firebase/service-account.json

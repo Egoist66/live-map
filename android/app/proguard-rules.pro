@@ -19,3 +19,18 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Релиз собирается с minifyEnabled=true: без кипов R8 режет/обфусцирует
+# классы Capacitor и Firebase — приложение крашится только в release,
+# чаще всего сразу после PushNotifications.register().
+-keep class com.getcapacitor.** { *; }
+-keep class com.capacitorjs.** { *; }
+-keepattributes *Annotation*,Signature,InnerClasses,EnclosingMethod
+-keepattributes SourceFile,LineNumberTable
+-dontwarn com.getcapacitor.**
+# Firebase / Play Services нужны только когда лежит google-services.json,
+# но кипы безвредны и без него.
+-keep class com.google.firebase.** { *; }
+-keep class com.google.android.gms.** { *; }
+-dontwarn com.google.firebase.**
+-dontwarn com.google.android.gms.**

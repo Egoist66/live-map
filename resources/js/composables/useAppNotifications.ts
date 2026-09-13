@@ -477,6 +477,33 @@ function handleReport(e: any) {
     createdAt: Date.now(),
   })
 }
+/**
+ * Тост из нативного FCM-пуша (foreground).
+ *
+ * Срабатывает когда сокет недоступен, а приложение открыто:
+ * useNativePush кидает 'upin:native-push', realtime-шина его не видит.
+ * Дедуп по tag — сокетное событие с тем же текстом тост не удвоит.
+ *
+ * @param e CustomEvent с {title, body, data:{url, tag}}
+ */
+function handleNativePush(e: Event) {
+  const detail = (e as CustomEvent)?.detail
+  if (!detail?.title && !detail?.body) return
+  const tag = String(detail?.data?.tag || 'native')
+  const bodyKey = String(detail?.body || '').slice(0, 40)
+  if (isDuplicateEvent(`native-${tag}-${bodyKey}`)) return
+  const link = String(detail?.data?.url || '/')
+  push({
+    id: `native-${tag}-${Date.now()}`,
+    type: 'message',
+    icon: 'pi pi-bell',
+    title: String(detail.title || 'UPin'),
+    body: String(detail.body || '').slice(0, 90),
+    avatar: null,
+    link,
+    createdAt: Date.now(),
+  })
+}
 function subscribe() {
   try {
     const uid = getUid()
@@ -489,6 +516,7 @@ function subscribe() {
       busBound = true
       busOn('user:message.sent', handleMessage)
       busOn('user:notification.created', handleNotification)
+      window.addEventListener('upin:native-push', handleNativePush)
     }
   } catch {}
 }
