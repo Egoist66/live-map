@@ -1,16 +1,9 @@
-import { Preferences } from '@capacitor/preferences';
-import { usePlatform } from '@/composables/usePlatform';
-
-const TOKEN_KEY = 'upin_auth_token';
 const MIRROR_KEY = 'upin_auth_token_mirror';
 
 let memoryToken: string | null = null;
 
 /**
  * Читает токен синхронно (для axios/Echo интерсепторов).
- *
- * Натив пишет токен и в Preferences, и в localStorage-зеркало,
- * поэтому синхронное чтение не теряет токен после рестарта WebView.
  *
  * @returns токен или null
  */
@@ -31,11 +24,10 @@ export function getStoredTokenSync(): string | null {
 }
 
 /**
- * Хранилище auth-токена для натива.
+ * Хранилище auth-токена (localStorage-зеркало + память).
  *
- * Web продолжает работать на cookie (Sanctum stateful) как сейчас —
- * токен там не используется. Натив хранит Bearer-токен в Preferences
- * (+ зеркало в localStorage для синхронных интерсепторов).
+ * Web работает на cookie (Sanctum stateful), токен используется
+ * только синхронными интерсепторами axios/Echo, если задан.
  *
  * @returns методы работы с токеном
  * @example
@@ -43,33 +35,17 @@ export function getStoredTokenSync(): string | null {
  * await saveToken(tokenFromApi)
  */
 export function useAuthStorage() {
-    const { isNative } = usePlatform();
-
     async function saveToken(token: string): Promise<void> {
         memoryToken = token;
         try {
             localStorage.setItem(MIRROR_KEY, token);
         } catch {}
-        if (isNative) {
-            await Preferences.set({ key: TOKEN_KEY, value: token });
-        }
     }
 
     async function loadToken(): Promise<string | null> {
         const synced = getStoredTokenSync();
         if (synced) {
             return synced;
-        }
-        if (!isNative) {
-            return null;
-        }
-        const stored = await Preferences.get({ key: TOKEN_KEY });
-        if (stored.value) {
-            memoryToken = stored.value;
-            try {
-                localStorage.setItem(MIRROR_KEY, stored.value);
-            } catch {}
-            return stored.value;
         }
         return null;
     }
@@ -79,9 +55,6 @@ export function useAuthStorage() {
         try {
             localStorage.removeItem(MIRROR_KEY);
         } catch {}
-        if (isNative) {
-            await Preferences.remove({ key: TOKEN_KEY });
-        }
     }
 
     return { saveToken, loadToken, clearToken, getStoredTokenSync };

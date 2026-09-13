@@ -9,7 +9,6 @@ use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
 use App\Services\ChatAttachment;
-use App\Services\FcmService;
 use App\Services\WebPushService;
 use Illuminate\Http\Request;
 
@@ -128,38 +127,8 @@ class MessageController extends Controller
             foreach (User::whereIn('id', $ids)->select('id', 'name', 'avatar_path')->get() as $recipient) {
                 $push->sendChatMessage($recipient, $senderModel ?? $recipient, $conversation->id, $text);
             }
-            $this->pushFcmToRecipients($conversation, $sender, $senderModel ?? null, $text);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('chat webpush failed: '.$e->getMessage());
-        }
-    }
-
-    /**
-     * Дослать то же сообщение чата в FCM нативным приложениям.
-     *
-     * @param Conversation $conversation диалог
-     * @param mixed $sender отправитель
-     * @param User|null $senderModel загруженная модель отправителя
-     * @param string $text готовый текст-превью
-     */
-    private function pushFcmToRecipients(Conversation $conversation, $sender, ?User $senderModel, string $text): void
-    {
-        try {
-            $fcm = app(FcmService::class);
-            if (! $fcm->isConfigured()) {
-                return;
-            }
-            $ids = $conversation->participantRows()->where('user_id', '!=', $sender->id)->pluck('user_id');
-            if ($ids->isEmpty()) {
-                return;
-            }
-            $senderRow = $senderModel ?? User::select('id', 'name', 'avatar_path')->find($sender->id);
-            $recipients = User::whereIn('id', $ids)->select('id', 'name', 'avatar_path')->get();
-            foreach ($recipients as $recipient) {
-                $fcm->sendChatMessage($recipient, $senderRow ?? $recipient, $conversation->id, $text);
-            }
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning('chat fcm failed: '.$e->getMessage());
         }
     }
 

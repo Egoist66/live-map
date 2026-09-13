@@ -1,6 +1,5 @@
 import { computed, nextTick, ref } from 'vue'
 import { useVisualKeyboard } from '@/composables/useVisualKeyboard'
-import { usePlatform } from '@/composables/usePlatform'
 
 type MentionsLike = {
   detect?: (text: string, cursor: number) => void
@@ -14,15 +13,11 @@ export function usePinCommentInput(opts: {
   mentions?: MentionsLike
 }) {
   const { keyboardHeight, isKeyboardOpen } = useVisualKeyboard()
-  const { isNative } = usePlatform()
   const cardRef = ref<HTMLElement | null>(null)
   const listRef = ref<HTMLElement | null>(null)
   const commentInput = ref<any>(null)
 
   const cardStyle = computed(() => {
-    if (isNative) {
-      return {}
-    }
     const h = keyboardHeight.value
     if (!isKeyboardOpen.value || !h) return {}
     return {

@@ -42,11 +42,4 @@ return [
         ],
     ],
 
-    'firebase' => [
-        'credentials' => env('FIREBASE_CREDENTIALS', storage_path('app/firebase/service-account.json')),
-        // Запасной путь для эфемерных хостингов (Laravel Cloud): base64 или сырой JSON
-        // service-account ключа целиком в переменной окружения.
-        'credentials_json' => env('FIREBASE_CREDENTIALS_JSON'),
-    ],
-
 ];

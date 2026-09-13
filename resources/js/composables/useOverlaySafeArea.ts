@@ -58,7 +58,7 @@ export function useOverlaySafeArea() {
    * Применяет замеренные инсеты как CSS-переменные на <html>.
    *
    * Нулевой замер означает «env() пуст» — переменные не трогаем,
-   * остаются env()-значения и фолбэк `.no-safe-area-top` из useNativeShell.
+   * остаются env()-значения и фолбэк `.no-safe-area-top` из CSS.
    *
    * @returns void
    */

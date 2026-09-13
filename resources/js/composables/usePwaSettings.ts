@@ -1,6 +1,5 @@
 import { onMounted, ref } from 'vue'
 import { usePwa } from '@/composables/usePwa'
-import { usePlatform } from '@/composables/usePlatform'
 import { clearRuntimeCaches, getEstimate } from '@/pwa/cache.service'
 import type { StorageEstimate } from '@/pwa/cache.service'
 
@@ -10,11 +9,9 @@ const loaded = ref(false)
 const lastCleared = ref<string | null>(null)
 
 /**
- * Настройки вкладки «Приложение»: PWA-статус, кэш и платформа.
+ * Настройки вкладки «Приложение»: PWA-статус и кэш.
  *
- * В нативной сборке установка не предлагается — приложение уже APK.
- *
- * @returns состояние PWA, кэша и флаг нативной платформы
+ * @returns состояние PWA и кэша
  * @example
  * const s = usePwaSettings()
  * await s.clearCache()
@@ -22,7 +19,6 @@ const lastCleared = ref<string | null>(null)
 export function usePwaSettings() {
   const pwa = usePwa()
   const { init } = pwa
-  const { isNative } = usePlatform()
 
   async function loadStorage(): Promise<StorageEstimate | null> {
     try {
@@ -58,5 +54,5 @@ export function usePwaSettings() {
     loaded.value = true
   })
 
-  return { ...pwa, isNative, usage, clearing, loaded, lastCleared, loadStorage, clearCache }
+  return { ...pwa, usage, clearing, loaded, lastCleared, loadStorage, clearCache }
 }

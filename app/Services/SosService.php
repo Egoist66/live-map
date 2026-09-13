@@ -203,14 +203,6 @@ class SosService
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::warning('sos webpush failed: '.$e->getMessage());
             }
-            try {
-                $fcm = app(FcmService::class);
-                if ($fcm->isConfigured()) {
-                    $fcm->sendChatMessage($creator, $user, $conversation->id, (string) $message->body);
-                }
-            } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning('sos fcm failed: '.$e->getMessage());
-            }
 
             return $call->fresh(['pin', 'conversation', 'responder']);
         });

@@ -705,14 +705,6 @@ class DatingService
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::warning('match webpush failed: '.$e->getMessage());
             }
-            try {
-                $fcm = app(\App\Services\FcmService::class);
-                if ($fcm->isConfigured()) {
-                    $fcm->sendChatMessage($other, $me, $conv->id, '💞 У вас новый мэтч! Загляните в чат.');
-                }
-            } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning('match fcm failed: '.$e->getMessage());
-            }
 
             return $conv;
         });

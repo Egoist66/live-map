@@ -101,9 +101,8 @@ onUnmounted(() => {
   <Head :title="seo.title.value"><meta head-key="robots" name="robots" content="noindex, nofollow" /></Head>
   <AuthenticatedLayout>
     <Toast />
-    <div class="w-full bg-[#eaf0f6] dark:bg-[#0B0F1A] lg:bg-surface lg:dark:bg-[#090E1A] lg:px-6 lg:pt-4">
-      <div class="mx-auto w-full lg:max-w-[1280px]">
-        <div class="h-app-full map-desktop-frame relative w-full min-h-[380px] bg-[#eaf0f6] dark:bg-[#0B0F1A] overflow-hidden lg:rounded-t-2xl border-0 lg:border lg:border-b-0 border-stone-200 dark:border-zinc-800">
+    <div class="w-full bg-[#eaf0f6] dark:bg-[#0B0F1A]">
+      <div class="h-app-full map-desktop-frame relative w-full min-h-[380px] bg-[#eaf0f6] dark:bg-[#0B0F1A] overflow-hidden border-0">
       <div ref="mapContainer" class="absolute inset-0 w-full h-full bg-[#eaf0f6] dark:bg-[#0B0F1A]"></div>
       <div v-if="!loaded" class="absolute inset-0 grid place-items-center bg-[#eef3f8] dark:bg-[#0B0F1A] z-[5]">
         <div class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-700 rounded-2xl px-5 py-4 shadow flex items-center gap-3"><span class="w-5 h-5 border-2 border-stone-200 dark:border-zinc-700 border-t-stone-900 dark:border-t-white rounded-full animate-spin"></span><span class="text-sm font-medium dark:text-zinc-100">Загружаем карту…</span></div>
@@ -146,7 +145,6 @@ onUnmounted(() => {
       </Transition>
       <ReportDialog :dialog="reportDialog" />
       <MapInfoDialogs :live-open="showLiveInfo" @update:live="(v:boolean)=>showLiveInfo=v" :my-open="showMyPins" @update:my="(v:boolean)=>showMyPins=v" :my-pins="myPins" :format-time="formatTime" @fly="flyToPin" />
-        </div>
       </div>
     </div>
   </AuthenticatedLayout>

@@ -1,6 +1,4 @@
 import { router } from '@inertiajs/vue3'
-import { Preferences } from '@capacitor/preferences'
-import { usePlatform } from '@/composables/usePlatform'
 
 const STORAGE_KEY = 'upin:last-route'
 
@@ -30,8 +28,6 @@ let bound = false
  * await initLastRoute(currentUid)
  */
 export function useLastRoute() {
-  const { isNative } = usePlatform()
-
   /**
    * Проверяет, что путь внутренний и пригоден для возврата.
    *
@@ -56,9 +52,7 @@ export function useLastRoute() {
    */
   async function readStored(): Promise<{ uid: string; path: string } | null> {
     try {
-      const raw = isNative
-        ? (await Preferences.get({ key: STORAGE_KEY })).value
-        : localStorage.getItem(STORAGE_KEY)
+      const raw = localStorage.getItem(STORAGE_KEY)
       if (!raw) {
         return null
       }
@@ -90,10 +84,6 @@ export function useLastRoute() {
     }
     const value = `${uid}|${path}`
     try {
-      if (isNative) {
-        await Preferences.set({ key: STORAGE_KEY, value })
-        return
-      }
       localStorage.setItem(STORAGE_KEY, value)
     } catch {}
   }
@@ -105,10 +95,6 @@ export function useLastRoute() {
    */
   async function forget(): Promise<void> {
     try {
-      if (isNative) {
-        await Preferences.remove({ key: STORAGE_KEY })
-        return
-      }
       localStorage.removeItem(STORAGE_KEY)
     } catch {}
   }

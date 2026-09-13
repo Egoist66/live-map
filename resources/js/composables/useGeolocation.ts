@@ -13,9 +13,8 @@ function readLastPos(): { lat: number; lng: number } | null {
 }
 
 /**
- * Одноразовый запрос геопозиции (web + native).
+ * Одноразовый запрос геопозиции через браузерный API.
  *
- * Натив: @capacitor/geolocation, веб: navigator.geolocation.
  * @returns координаты с точностью или null при отказе/ошибке
  */
 export function useGeolocation() {
@@ -23,40 +22,9 @@ export function useGeolocation() {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  async function requestNativePosition(): Promise<{ lat: number; lng: number; accuracy: number | null } | null> {
-    try {
-      const { Geolocation } = await import('@capacitor/geolocation')
-      const permission = await Geolocation.requestPermissions()
-      const granted = (permission as { location?: string }).location === 'granted'
-        || (permission as unknown as string) === 'granted'
-      if (!granted) {
-        error.value = 'Геолокация отклонена'
-        return null
-      }
-      const pos = await Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 10000 })
-      const next = { lat: pos.coords.latitude, lng: pos.coords.longitude }
-      coords.value = next
-      try {
-        localStorage.setItem(LAST_POS_KEY, JSON.stringify(next))
-      } catch {}
-      const accuracy = Number(pos.coords.accuracy)
-      return { ...next, accuracy: Number.isFinite(accuracy) ? accuracy : null }
-    } catch {
-      return null
-    }
-  }
-
   async function requestGeolocation(): Promise<{ lat: number; lng: number; accuracy: number | null } | null> {
     loading.value = true
     error.value = null
-    try {
-      const { Capacitor } = await import('@capacitor/core')
-      if (Capacitor.isNativePlatform()) {
-        const native = await requestNativePosition()
-        loading.value = false
-        if (native) return native
-      }
-    } catch {}
     return new Promise((resolve) => {
       if (!navigator.geolocation) {
         loading.value = false

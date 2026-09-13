@@ -10,8 +10,6 @@ import { createApp, DefineComponent, h } from 'vue'
 import { ZiggyVue } from '../../vendor/tightenco/ziggy'
 import { setupPrimeVue } from './plugins/primevue'
 import { register as registerSw } from './pwa/pwa.service'
-import { useNativeShell } from './composables/useNativeShell'
-import { useNativePush } from './composables/useNativePush'
 import { useOverlaySafeArea } from './composables/useOverlaySafeArea'
 import { useLastRoute } from './composables/useLastRoute'
 
@@ -40,12 +38,6 @@ createInertiaApp({
       void (async () => {
         try {
           useOverlaySafeArea().initOverlaySafeArea()
-        } catch {}
-        try {
-          await useNativeShell().initNativeShell()
-        } catch {}
-        try {
-          await useNativePush().initNativePush()
         } catch {}
         try {
           const auth = (props.initialPage.props as unknown as { auth?: { user?: { id?: number } } }).auth

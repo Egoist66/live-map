@@ -1,13 +1,11 @@
 import { computed } from 'vue'
-import { usePlatform } from '@/composables/usePlatform'
 
 /**
  * Классы и стили раскладки чата.
  *
  * Высота фрейма считается через CSS-класс `h-app-full` (шапка + нижнее меню
- * + safe-area). Ручной оффсет клавиатуры применяется только на вебе:
- * в нативном WebView ресайз клавиатуры делает Capacitor, двойной сдвиг
- * уводил бы инпут вниз.
+ * + safe-area). Ручной оффсет клавиатуры применяется только на вебе
+ * и только не на десктопе.
  *
  * @param keyboardHeight высота клавиатуры из useChatViewport
  * @param isChatKeyboardOpen true когда клавиатура открыта в поле сообщения
@@ -24,8 +22,6 @@ export function useChatLayout(
   const frameClass = 'flex flex-col lg:flex-row lg:gap-4 w-full min-w-0 overflow-hidden overscroll-contain bg-transparent'
   const sidebarCardClass = 'w-full lg:w-[360px] lg:min-w-[360px] flex-1 lg:flex-none min-h-0 lg:h-full lg:max-h-full bg-white dark:bg-zinc-900 rounded-none lg:rounded-2xl border-0 lg:border border-stone-200 dark:border-zinc-800 flex-col overflow-hidden max-w-full'
   const windowCardClass = 'flex-1 min-h-0 bg-white dark:bg-zinc-900 rounded-none lg:rounded-2xl border-0 lg:border border-stone-200 dark:border-zinc-800 flex-col overflow-hidden min-w-0 w-full max-w-full'
-
-  const { isNative } = usePlatform()
 
   /**
    * Ручной оффсет клавиатуры запрещён на десктопе: высота фрейма
@@ -46,7 +42,7 @@ export function useChatLayout(
     }
     const open = isChatKeyboardOpen?.value ?? false
     const height = keyboardHeight?.value ?? 0
-    if (!open || !height || isNative) {
+    if (!open || !height) {
       return {}
     }
     const offset = `calc(100dvh - var(--app-header-sm) - var(--sat) - ${height}px)`

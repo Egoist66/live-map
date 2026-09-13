@@ -1,5 +1,11 @@
 # Dev-лог
 
+## 2026-09-13 — Capacitor полностью удалён, только web
+- 🗑️ Удалены `android/`, `capacitor.config.ts`, все `@capacitor/*` + `@capawesome/capacitor-badge` (pnpm), `kreait/firebase-php` (composer), скрипты `cap:*`/`mobile:*`, `docs/mobile-capacitor.md`.
+- 🗑️ Бэкенд: удалены `MobileAuthController`, `DeviceTokenController`, `DeviceToken` (+миграция), `FcmService` и его вызовы (чат/мэтч/SOS/нотификации — остался `WebPushService`), роуты `/auth/token` и `/device-tokens`, секция `firebase` из `config/services.php`, `deviceTokens()` из `User`.
+- 🧹 Фронт: удалены `usePlatform/useNativeShell/useNativePush/useAppBadge`, `mobile.api`; хуки переведены на web (`useAuthStorage`, `useGeolocation`, `useLastRoute`, `useChatLayout`, `usePinCommentInput`, `usePwaInstallBanner/usePwaSettings`, `useAppNotifications`, `pwa.service`); в настройках убраны APK/натив-пуш блоки.
+- ✅ Проверки: `vue-tsc --noEmit` ок., `php -l` ок., `route:list` ок.
+
 ## 2026-09-13 — Capacitor-каркас: Android + dual-auth API без ломки web
 - 📱 Установлены `@capacitor/core/cli/android + 9 плагинов` (geolocation/push/camera/preferences/haptics/status-bar/splash/keyboard/app), создан `capacitor.config.ts` (`com.upin.live`, `server.url`, `CAP_SERVER_URL`), добавлен `android/`, скрипты `mobile:build/cap:sync/open`.
 - 🔑 Dual-auth: `HasApiTokens` + guard `sanctum`, `POST/DELETE /api/auth/token`, `device_tokens` (миграция + `DeviceToken` + `DeviceTokenController`), старые группы `api.php` переведены на `auth:web,sanctum` — web-cookie работает как раньше, Bearer добавлен опцией.

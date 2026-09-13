@@ -103,14 +103,6 @@ class UserNotifier
         } catch (\Throwable $e) {
             Log::warning('notification webpush failed', ['id' => (string) $row->id, 'error' => $e->getMessage()]);
         }
-        try {
-            $push = $notification->pushPayload();
-            if ($push) {
-                app(FcmService::class)->sendToUser($user, $push);
-            }
-        } catch (\Throwable $e) {
-            Log::warning('notification fcm failed', ['id' => (string) $row->id, 'error' => $e->getMessage()]);
-        }
     }
 
     /**

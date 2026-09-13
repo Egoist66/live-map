@@ -20,7 +20,6 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('throttle:60,1')->group(function () {
     Route::get('/version', [VersionController::class, 'show']);
-    Route::post('/auth/token', [\App\Http\Controllers\MobileAuthController::class, 'store'])->middleware('throttle:10,1');
     Route::get('/nbrb/convert', [NbrbController::class, 'convert']);
     Route::get('/nbrb/dynamics/{curId}', [NbrbController::class, 'dynamics'])->whereNumber('curId');
     Route::get('/nbrb/currencies/{curId?}', [NbrbController::class, 'currencies'])->whereNumber('curId');
@@ -31,10 +30,6 @@ Route::get('/reference', [\App\Http\Controllers\ReferencePageController::class, 
 Route::get('/reference/{slug}', [\App\Http\Controllers\ReferencePageController::class, 'show']);
 
 Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function () {
-    Route::delete('/auth/token', [\App\Http\Controllers\MobileAuthController::class, 'destroy']);
-    Route::get('/device-tokens', [\App\Http\Controllers\DeviceTokenController::class, 'index']);
-    Route::post('/device-tokens', [\App\Http\Controllers\DeviceTokenController::class, 'store'])->middleware('throttle:social-write');
-    Route::delete('/device-tokens', [\App\Http\Controllers\DeviceTokenController::class, 'destroy'])->middleware('throttle:social-write');
     Route::get('/pins/mine', [PinController::class, 'mine']);
     Route::get('/pins/mine/scheduled', [PinController::class, 'scheduled']);
     Route::get('/pins/mine/archived', [PinController::class, 'archived']);

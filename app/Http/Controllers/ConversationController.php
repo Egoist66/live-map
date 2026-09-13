@@ -146,10 +146,6 @@ class ConversationController extends Controller
                     $push = app(\App\Services\WebPushService::class);
                     if ($push->isConfigured()) $push->sendChatMessage($other, $me, $conv->id, (string) $request->input('message'));
                 } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('chat webpush failed: '.$e->getMessage()); }
-                try {
-                    $fcm = app(\App\Services\FcmService::class);
-                    if ($fcm->isConfigured()) $fcm->sendChatMessage($other, $me, $conv->id, (string) $request->input('message'));
-                } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('chat fcm failed: '.$e->getMessage()); }
             }
             $conv->load('participants:id,name,avatar_path');
             return response()->json(['id'=>$conv->id,'existing'=>false,'conversation'=>$conv],201);

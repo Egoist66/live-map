@@ -212,7 +212,7 @@ html.dark .bg-stone-900\/90, html.dark .bg-black\/50, html.dark .bg-black\/60 { 
 
 /* Единые отступы приложения под WebView/браузер.
    --sat/--sab дублируют env(), чтобы все calc() считали одинаково.
-   useNativeShell добавляет .no-safe-area-top, если WebView отдал env() нулём. */
+   useOverlaySafeArea добавляет .no-safe-area-top, если WebView отдал env() нулём. */
 :root {
   --sat-real: env(safe-area-inset-top, 0px);
   --sab-real: env(safe-area-inset-bottom, 0px);
@@ -257,13 +257,12 @@ html.native-keyboard-open .h-app-full {
 .h-app-map-desktop {
   height: calc(100dvh - var(--app-header-md));
 }
-/* Десктопная карта в центрированной оболочке (как хедер/футер):
-   сверху отступ 16px, снизу встык — белой полосы нет.
+/* Десктопная карта на всю ширину: вычитаем только шапку.
    На мобилке класс пустой, работает обычный h-app-full. */
 @media (min-width: 1024px) {
   .map-desktop-frame {
-    height: calc(100dvh - var(--app-header-md) - 16px);
-    max-height: calc(100dvh - var(--app-header-md) - 16px);
+    height: calc(100dvh - var(--app-header-md) - var(--sat));
+    max-height: calc(100dvh - var(--app-header-md) - var(--sat));
   }
 }
 /* Обычные страницы: min-height учитывает шапку и вырез; зазор под нижнее
@@ -351,7 +350,7 @@ html.native-keyboard-open .mobile-bottom-nav {
 
 /* Нативный верх: шапка и оверлеи карты под статус-баром/вырезом.
    Отступы берутся из --sat (единый контроллер useOverlaySafeArea),
-   useNativeShell добавляет .no-safe-area-top, если WebView отдал env() нулём. */
+   useOverlaySafeArea добавляет .no-safe-area-top, если WebView отдал env() нулём. */
 .native-safe-top { padding-top: var(--sat); }
 .no-safe-area-top .native-safe-top { padding-top: 28px; }
 .native-safe-offset-top { top: calc(var(--sat) + 8px); }
