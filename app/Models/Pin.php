@@ -54,7 +54,7 @@ class Pin extends Model
     }
 
     protected $fillable = [
-        'user_id','title','body','category','gender_audience','latitude','longitude','real_lat','real_lng','location_precision',
+        'user_id','district_id','title','body','category','gender_audience','latitude','longitude','real_lat','real_lng','location_precision',
         'radius_meters','visibility_radius_km','expires_at','publish_at','status','priority','is_pinned','is_sponsored','is_boosted','boosted_until','views_count','likes_count','reactions_count','comments_count','is_anonymous','district_name','country','country_code','photo_path','meta'
     ];
 
@@ -74,6 +74,11 @@ class Pin extends Model
     ];
 
     public function user(): BelongsTo { return $this->belongsTo(User::class); }
+
+    /**
+     * Район пина: null — обычный пин, иначе виден только жителям района.
+     */
+    public function district(): BelongsTo { return $this->belongsTo(District::class); }
 
     /**
      * SOS-вызов этого пина (только для категории SOS).
@@ -190,6 +195,7 @@ class Pin extends Model
         $blurMeters = static::blurMetersFor($this->location_precision, $meta);
         return [
             'id' => $this->id,
+            'district_id' => $this->district_id ? (int) $this->district_id : null,
             'title' => $this->title,
             'body' => $this->body,
             'category' => $this->category,

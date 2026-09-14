@@ -14,5 +14,6 @@ export const createPinSchema = toTypedSchema(
     gender_audience: z.enum(['all', 'male', 'female']).optional(),
     radius_meters: z.number().min(500).max(50000).optional(),
     publish_at: z.string().nullable().optional(),
+    district_id: z.number().int().positive().nullable().optional(),
   }),
 )

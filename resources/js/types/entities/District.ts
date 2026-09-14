@@ -1,7 +1,7 @@
 /**
  * UDistrict — свой район-заливка на карте.
  */
-export type DistrictRole = 'owner' | 'member' | 'pending' | 'guest'
+export type DistrictRole = 'owner' | 'member' | 'pending' | 'invited' | 'guest'
 
 /**
  * Интерес островка.

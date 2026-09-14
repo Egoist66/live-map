@@ -81,10 +81,18 @@ class District extends Model
     }
 
     /**
+     * Исходящие приглашения владельца (ждут ответа).
+     */
+    public function invitedMembers(): HasMany
+    {
+        return $this->members()->where('status', DistrictMember::STATUS_INVITED);
+    }
+
+    /**
      * Роль пользователя в районе.
      *
      * @param int|null $userId кто смотрит
-     * @return string owner|member|pending|guest
+     * @return string owner|member|pending|invited|guest
      */
     public function roleOf(?int $userId): string
     {
@@ -101,8 +109,28 @@ class District extends Model
         if ($status === DistrictMember::STATUS_PENDING) {
             return 'pending';
         }
+        if ($status === DistrictMember::STATUS_INVITED) {
+            return 'invited';
+        }
 
         return 'guest';
+    }
+
+    /**
+     * Житель ли пользователь (владелец входит по праву).
+     *
+     * @param int|null $userId кто смотрит
+     * @return bool true для owner/member
+     */
+    public function isResident(?int $userId): bool
+    {
+        if (!$userId) {
+            return false;
+        }
+
+        $role = $this->roleOf($userId);
+
+        return in_array($role, ['owner', 'member'], true);
     }
 
     /**

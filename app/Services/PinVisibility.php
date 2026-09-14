@@ -73,17 +73,28 @@ class PinVisibility
 
     /**
      * Полная проверка для чтения (index/show/realtime/подписки).
+     *
+     * Районный пин (district_id) виден только жителям района
+     * (owner/member) плюс своей зоне: гость в зоне, но без
+     * членства, не видит его до вступления.
      */
     public static function canView(?User $viewer, Pin $pin, ?float $liveLat = null, ?float $liveLng = null): bool
     {
         if ($viewer && $viewer->isAdmin()) {
             return true;
         }
-        if ($viewer && Pin::isSosCategory($pin->category ?? null) && $pin->status === 'active' && ! $pin->isExpired()) {
-            return true;
-        }
         $viewerId = $viewer?->id;
         if ($viewerId && (int) $pin->user_id === (int) $viewerId) {
+            return true;
+        }
+        $districtId = (int) ($pin->district_id ?? 0);
+        if ($districtId > 0) {
+            $isResident = DistrictService::isResident($districtId, $viewerId);
+            if (!$isResident) {
+                return false;
+            }
+        }
+        if ($viewer && Pin::isSosCategory($pin->category ?? null) && $pin->status === 'active' && ! $pin->isExpired()) {
             return true;
         }
         if (!$pin->isVisibleForGender($viewer)) {

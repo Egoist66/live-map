@@ -84,6 +84,9 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::post('/districts/{district}/join', [\App\Http\Controllers\DistrictController::class, 'join'])->middleware('throttle:social-write');
     Route::delete('/districts/{district}/leave', [\App\Http\Controllers\DistrictController::class, 'leave'])->middleware('throttle:social-write');
     Route::post('/districts/{district}/invites', [\App\Http\Controllers\DistrictController::class, 'invite'])->middleware('throttle:social-write');
+    Route::post('/districts/{district}/invites/accept', [\App\Http\Controllers\DistrictController::class, 'acceptInvite'])->middleware('throttle:social-write');
+    Route::post('/districts/{district}/invites/decline', [\App\Http\Controllers\DistrictController::class, 'declineInvite'])->middleware('throttle:social-write');
+    Route::delete('/districts/{district}/invites/{user}', [\App\Http\Controllers\DistrictController::class, 'cancelInvite'])->middleware('throttle:social-write');
     Route::post('/districts/{district}/members/{user}/approve', [\App\Http\Controllers\DistrictController::class, 'approve'])->middleware('throttle:social-write');
     Route::post('/districts/{district}/members/{user}/reject', [\App\Http\Controllers\DistrictController::class, 'reject'])->middleware('throttle:social-write');
     Route::delete('/districts/{district}/members/{user}', [\App\Http\Controllers\DistrictController::class, 'kick'])->middleware('throttle:social-write');

@@ -38,6 +38,34 @@ async function declineFromToast(t: any) {
   await pinAct.declineInvite(activity)
   remove(t.id)
 }
+
+/**
+ * Принять приглашение в район прямо из тоста.
+ */
+async function acceptDistrictFromToast(t: any) {
+  const districtId = Number(t.districtId || 0)
+  if (districtId > 0) {
+    try {
+      const { districtsApi } = await import('@/services/districts.api')
+      await districtsApi.acceptInvite(districtId)
+    } catch {}
+  }
+  remove(t.id)
+}
+
+/**
+ * Отклонить приглашение в район прямо из тоста.
+ */
+async function declineDistrictFromToast(t: any) {
+  const districtId = Number(t.districtId || 0)
+  if (districtId > 0) {
+    try {
+      const { districtsApi } = await import('@/services/districts.api')
+      await districtsApi.declineInvite(districtId)
+    } catch {}
+  }
+  remove(t.id)
+}
 </script>
 <template>
   <div class="fixed top-[calc(var(--app-header-md)+var(--sat)+0.5rem)] sm:top-4 right-3 sm:right-4 left-3 sm:left-auto z-[9999] sm:w-[380px] flex flex-col gap-3 pointer-events-none">
@@ -70,6 +98,10 @@ async function declineFromToast(t: any) {
           <div v-if="t.kind === 'invite' && t.pinId" class="flex items-center gap-2 mt-2" @click.stop>
             <Button label="Принять" icon="pi pi-check" size="small" severity="success" rounded @click.stop="acceptFromToast(t)" />
             <Button label="Отклонить" icon="pi pi-times" size="small" severity="secondary" outlined rounded @click.stop="declineFromToast(t)" />
+          </div>
+          <div v-if="t.kind === 'district-invite' && t.districtId" class="flex items-center gap-2 mt-2" @click.stop>
+            <Button label="Принять" icon="pi pi-check" size="small" severity="success" rounded @click.stop="acceptDistrictFromToast(t)" />
+            <Button label="Отклонить" icon="pi pi-times" size="small" severity="secondary" outlined rounded @click.stop="declineDistrictFromToast(t)" />
           </div>
         </div>
         <button @click.stop="remove(t.id)" class="shrink-0 w-8 h-8 grid place-items-center rounded-full hover:bg-stone-100 dark:hover:bg-zinc-800 text-stone-400 hover:text-stone-600 transition">

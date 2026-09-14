@@ -630,14 +630,41 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
   let districtTipTimer: ReturnType<typeof setTimeout> | null = null
   let districtMenu: HTMLElement | null = null
   let districtMenuId = 0
-  let districtMenuCb: ((action: 'open' | 'delete', id: number) => void) | null = null
+  let districtMenuLngLat: { lat: number; lng: number } | null = null
+  let districtMenuCb: ((action: 'open' | 'delete' | 'create-pin', id: number, lngLat?: { lat: number; lng: number } | null) => void) | null = null
+
+  /**
+   * Экранные координаты в lngLat карты для точки пина района.
+   *
+   * @param clientX экранный X
+   * @param clientY экранный Y
+   * @returns lat/lng клика или null
+   */
+  function pointToLngLat(clientX: number, clientY: number): { lat: number; lng: number } | null {
+    try {
+      if (!map || !mapContainer.value?.getBoundingClientRect) {
+        return null
+      }
+      const rect = mapContainer.value.getBoundingClientRect()
+      const ll = (map as any)?.unproject?.([clientX - rect.left, clientY - rect.top])
+      const lat = Number(ll?.lat)
+      const lng = Number(ll?.lng)
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        return null
+      }
+
+      return { lat, lng }
+    } catch {
+      return null
+    }
+  }
 
   /**
    * Подписаться на действия контекстного меню района.
    *
-   * @param cb обработчик (open|delete, id района)
+   * @param cb обработчик (open|delete|create-pin, id района, координаты клика)
    */
-  function onDistrictMenu(cb: (action: 'open' | 'delete', id: number) => void): void {
+  function onDistrictMenu(cb: (action: 'open' | 'delete' | 'create-pin', id: number, lngLat?: { lat: number; lng: number } | null) => void): void {
     districtMenuCb = cb
   }
 
@@ -650,10 +677,11 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
       const target = (e.target as HTMLElement | null)?.closest?.('[data-act]') as HTMLElement | null
       const act = target?.dataset.act
       const id = districtMenuId
+      const lngLat = districtMenuLngLat
       hideDistrictMenu()
       if (!act || !(id > 0)) return
       if (act === 'cancel') return
-      try { districtMenuCb?.(act as 'open' | 'delete', id) } catch {}
+      try { districtMenuCb?.(act as 'open' | 'delete' | 'create-pin', id, lngLat) } catch {}
     })
     document.body.appendChild(menu)
     districtMenu = menu
@@ -667,21 +695,29 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
   }
 
   /**
-   * Показать меню района: открыть всем, удалить — владельцу.
+   * Показать меню района: открыть всем, пин — жителям, удалить — владельцу.
    *
    * @param d карточка района
    * @param x экранная координата
    * @param y экранная координата
+   * @param lngLat координаты клика для точки пина
    */
-  function showDistrictMenu(d: any, x: number, y: number): void {
+  function showDistrictMenu(d: any, x: number, y: number, lngLat?: { lat: number; lng: number } | null): void {
     const menu = ensureDistrictMenu()
     hideDistrictTip()
     hideCtxMenu()
     districtMenuId = Number(d?.id) || 0
+    districtMenuLngLat = lngLat && Number.isFinite(Number(lngLat.lat)) && Number.isFinite(Number(lngLat.lng))
+      ? { lat: Number(lngLat.lat), lng: Number(lngLat.lng) }
+      : null
     if (!(districtMenuId > 0)) return
     const canDelete = d?.role === 'owner'
+    const canPin = d?.role === 'owner' || d?.role === 'member'
     menu.innerHTML =
       `<button data-act="open" class="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold hover:bg-violet-50 dark:hover:bg-violet-950/40 dark:text-white flex items-center gap-2">🏘️ Открыть район</button>` +
+      (canPin
+        ? `<button data-act="create-pin" class="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold hover:bg-violet-50 dark:hover:bg-violet-950/40 dark:text-white flex items-center gap-2">📍 Создать пин района</button>`
+        : ``) +
       (canDelete
         ? `<button data-act="del" class="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600 dark:hover:text-red-400 flex items-center gap-2">🗑 Удалить район</button>`
         : ``) +
@@ -699,6 +735,7 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
   function hideDistrictMenu(): void {
     if (districtMenu) districtMenu.classList.add('hidden')
     districtMenuId = 0
+    districtMenuLngLat = null
   }
 
   /**
@@ -882,7 +919,7 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
           try { e.preventDefault() } catch {}
           try { e.stopPropagation() } catch {}
           districtClickAt = Date.now()
-          try { showDistrictMenu(d, e.clientX, e.clientY) } catch {}
+          try { showDistrictMenu(d, e.clientX, e.clientY, pointToLngLat(e.clientX, e.clientY)) } catch {}
         })
         const marker = new maplibregl.Marker({ element: el as unknown as HTMLElement, anchor: 'center' })
           .setLngLat([centerLng, centerLat] as any)
@@ -1017,7 +1054,7 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
 
   /**
    * Применяет изменения карты из поллинга.
-   * @param payload upsert/deleted/counters из /api/realtime/sync
+   * @param payload upsert/deleted/counters/districts из /api/realtime/sync
    */
   function applyMapSync(payload: any): void {
     if (!payload) return
@@ -1039,6 +1076,17 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
         try { (store as any).patchCounts?.(Number(id), counts.reactions_count, counts.comments_count) } catch {}
         touched = true
       }
+    }
+    const districtsUpsert = Array.isArray(payload.districts_upsert) ? payload.districts_upsert : []
+    if (districtsUpsert.length) {
+      try {
+        const districtStore = useDistrictsStore()
+        for (const d of districtsUpsert) {
+          if (!d?.id) continue
+          try { districtStore.upsertRealtime(d) } catch {}
+        }
+        try { renderDistricts(districtStore.districts as any) } catch {}
+      } catch {}
     }
     if (touched) scheduleRenderPins()
   }

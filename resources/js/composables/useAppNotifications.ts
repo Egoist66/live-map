@@ -35,6 +35,8 @@ export type AppToast = {
   kind?: string | null
   /** Id пина для accept/decline прямо из тоста. */
   pinId?: number | null
+  /** Id района для accept/decline приглашения прямо из тоста. */
+  districtId?: number | null
   /** Id строки inbox (uuid) для гашения счётчика после accept/decline. */
   activityId?: string | number | null
 }
@@ -223,8 +225,24 @@ function handleDistrict(district: any, type: string) {
       type: 'friend',
       icon: 'pi pi-ticket',
       title: `Приглашение в район «${String(district.name || '').slice(0, 40)}»`,
-      body: `${inviter.name || 'Владелец'} добавил вас в жители — чат открыт`,
+      body: `${inviter.name || 'Владелец'} зовёт в жители — примите или отклоните`,
       avatar: avatarSrcFor(inviter),
+      link,
+      createdAt: Date.now(),
+      kind: 'district-invite',
+      districtId: id,
+    })
+    return
+  }
+  if (type === 'district.invite_accepted') {
+    const accepter = district.accepter || {}
+    push({
+      id: `district-invite-acc-${id}-${Date.now()}`,
+      type: 'friend',
+      icon: 'pi pi-check-circle',
+      title: `${accepter.name || 'Новый житель'} принял приглашение`,
+      body: `Район «${String(district.name || '').slice(0, 40)}» — пины и чат открыты`,
+      avatar: avatarSrcFor(accepter),
       link,
       createdAt: Date.now(),
     })

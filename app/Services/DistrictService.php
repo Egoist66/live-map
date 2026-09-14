@@ -99,6 +99,28 @@ class DistrictService
     }
 
     /**
+     * Житель ли пользователь района (владелец — всегда да).
+     *
+     * @param int $districtId район
+     * @param int|null $userId кто смотрит
+     * @return bool true для owner/member
+     */
+    public static function isResident(int $districtId, ?int $userId): bool
+    {
+        if (!$userId || $districtId <= 0) {
+            return false;
+        }
+
+        $district = District::find($districtId);
+
+        if (!$district) {
+            return false;
+        }
+
+        return $district->isResident($userId);
+    }
+
+    /**
      * Лежит ли точка внутри района (лучевой алгоритм по внешнему кольцу).
      *
      * @param array $geometry GeoJSON MultiPolygon

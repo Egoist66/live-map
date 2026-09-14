@@ -59,6 +59,7 @@ export function usePinCreate(onSuccess?: () => void) {
       gender_audience: 'all',
       latitude: 0,
       longitude: 0,
+      district_id: null,
       location_precision: 'exact',
       is_anonymous: false,
       radius_meters: 1000,
@@ -72,6 +73,7 @@ export function usePinCreate(onSuccess?: () => void) {
   const [gender_audience] = defineField('gender_audience')
   const [latitude] = defineField('latitude')
   const [longitude] = defineField('longitude')
+  const [district_id] = defineField('district_id')
   const [location_precision] = defineField('location_precision')
   const [is_anonymous] = defineField('is_anonymous')
   const [radius_meters] = defineField('radius_meters')
@@ -95,6 +97,16 @@ export function usePinCreate(onSuccess?: () => void) {
 
   function setCoords(lat: number, lng: number) {
     setValues({ latitude: Number(lat.toFixed(7)), longitude: Number(lng.toFixed(7)) } as any)
+  }
+
+  /**
+   * Привязать создание к району: пин увидят только жители.
+   *
+   * @param districtId id района или null для обычного пина
+   */
+  function setDistrict(districtId: number | null): void {
+    const clean = districtId && districtId > 0 ? districtId : null
+    setValues({ district_id: clean } as any)
   }
 
   function toggleSchedule(on?: boolean) {
@@ -171,10 +183,11 @@ export function usePinCreate(onSuccess?: () => void) {
       }
       const pin = await store.createPin(payload)
       const scheduled = (pin as any)?.is_scheduled || (pin as any)?.status === 'scheduled'
-      toast.add({ severity: 'success', summary: scheduled ? `Запланирован на ${scheduleLabel.value}` : 'Пин создан', life: 2500 })
+      const isDistrictPin = Number(payload.district_id) > 0
+      toast.add({ severity: 'success', summary: scheduled ? `Запланирован на ${scheduleLabel.value}` : isDistrictPin ? 'Пин района создан' : 'Пин создан', detail: isDistrictPin ? 'Видят только жители района' : undefined, life: 2500 })
       scheduleEnabled.value = false
       sos.resetSos()
-      resetForm({ values: { ...vals, title: '', body: '', publish_at: null, gender_audience: (vals as any).gender_audience ?? 'all' } as any })
+      resetForm({ values: { ...vals, title: '', body: '', publish_at: null, district_id: null, gender_audience: (vals as any).gender_audience ?? 'all' } as any })
       try { await limitInfo.refresh() } catch {}
       onSuccess?.()
     } catch (e: any) {
@@ -214,6 +227,7 @@ export function usePinCreate(onSuccess?: () => void) {
     gender_audience,
     latitude,
     longitude,
+    district_id,
     location_precision,
     is_anonymous,
     radius_meters,
@@ -224,6 +238,7 @@ export function usePinCreate(onSuccess?: () => void) {
     creating: store.creating,
     error,
     setCoords,
+    setDistrict,
     submit,
     setValues,
     resetForm,

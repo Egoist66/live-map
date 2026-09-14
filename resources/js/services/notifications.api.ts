@@ -76,7 +76,12 @@ export function describeInboxRow(row: InboxNotification): InboxText {
   if (row.type === 'district.invited') {
     const d = (data as any).district ?? {}
     const name = d.inviter?.name || 'Владелец'
-    return { emoji: '🎫', title: `Приглашение в район «${d.name || ''}»`, body: `${name} добавил вас в жители — чат открыт`, link: `/map?district=${d.id || ''}`, avatar: d.inviter?.avatar_url ?? null }
+    return { emoji: '🎫', title: `Приглашение в район «${d.name || ''}»`, body: `${name} зовёт в жители — примите или отклоните`, link: `/map?district=${d.id || ''}`, avatar: d.inviter?.avatar_url ?? null }
+  }
+  if (row.type === 'district.invite_accepted') {
+    const d = (data as any).district ?? {}
+    const name = d.accepter?.name || 'Новый житель'
+    return { emoji: '✅', title: `${name} принял приглашение`, body: `Район «${d.name || ''}» — пины и чат открыты`, link: `/map?district=${d.id || ''}`, avatar: d.accepter?.avatar_url ?? null }
   }
   if (row.type === 'report.created') {
     const r = data.report ?? {}

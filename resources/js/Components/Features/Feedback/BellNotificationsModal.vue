@@ -543,6 +543,10 @@ function openNews(item: any) {
                           <div class="text-xs text-stone-500 dark:text-zinc-400 truncate">
                             {{ describeInboxRow(n).body }}
                           </div>
+                          <div v-if="n.type === 'district.invited' && !n.read_at" class="flex items-center gap-2 mt-2" @click.stop>
+                            <Button label="Принять" icon="pi pi-check" size="small" severity="success" rounded @click.stop="pinAct.acceptDistrictInvite(n)" />
+                            <Button label="Отклонить" icon="pi pi-times" size="small" severity="secondary" outlined rounded @click.stop="pinAct.declineDistrictInvite(n)" />
+                          </div>
                         </div>
                         <span
                           v-if="!n.read_at"

@@ -175,6 +175,65 @@ async function declineInvite(a: PinActivityItem): Promise<void> {
 }
 
 /**
+ * Достать id района из строки приглашения district.invited.
+ * @param n строка inbox
+ * @returns id района или 0
+ */
+function inviteDistrictId(n: InboxNotification): number {
+  const id = Number((n.data as any)?.district?.id || 0)
+  return Number.isFinite(id) ? id : 0
+}
+
+/**
+ * Принять приглашение в район из уведомлений: сервер ставит approved,
+ * открывает пины и чат. Строку помечаем прочитанной и гасим счётчики.
+ * @param n строка inbox типа district.invited
+ */
+async function acceptDistrictInvite(n: InboxNotification): Promise<void> {
+  const districtId = inviteDistrictId(n)
+  if (!districtId) return
+  try {
+    const { districtsApi } = await import('@/services/districts.api')
+    await districtsApi.acceptInvite(districtId)
+  } catch {
+    return
+  }
+  markInboxRead(n)
+}
+
+/**
+ * Отклонить приглашение в район из уведомлений (тихо).
+ * @param n строка inbox типа district.invited
+ */
+async function declineDistrictInvite(n: InboxNotification): Promise<void> {
+  const districtId = inviteDistrictId(n)
+  if (!districtId) return
+  try {
+    const { districtsApi } = await import('@/services/districts.api')
+    await districtsApi.declineInvite(districtId)
+  } catch {
+    return
+  }
+  markInboxRead(n)
+}
+
+/**
+ * Локально погасить строку inbox и счётчики после accept/decline.
+ * @param n строка inbox
+ */
+function markInboxRead(n: InboxNotification): void {
+  if (!n.read_at) {
+    n.read_at = new Date().toISOString()
+    unread.value = Math.max(0, unread.value - 1)
+    try { useBadgeStore().decActivity() } catch {}
+  }
+  const item = activities.value.find((a) => String(a.id) === n.id)
+  if (item && !item.read_at) item.read_at = n.read_at
+  try {
+    void notificationsApi.markRead([n.id])
+  } catch {}
+}
+/**
  * Удалить всю ленту активности навсегда.
  * Подтверждение — на вызывающей стороне (useAppConfirm в setup-скоупе).
  */
@@ -428,5 +487,5 @@ export function usePinActivity() {
   const loveUnread = computed(() => loveActivities.value.filter((a) => !a.read_at).length)
   const flowUnread = computed(() => flowActivities.value.filter((a) => !a.read_at).length)
   const photoUnread = computed(() => photoActivities.value.filter((a) => !a.read_at).length)
-  return { activities, unread, loading, clearing, hasData, pinActivities, eventActivities, pinUnread, eventUnread, loveActivities, flowActivities, subActivities, photoActivities, loveUnread, flowUnread, photoUnread, otherNotifications, otherUnread, describe, refresh, markAllRead, markOne, clearAll, goPin, goNotification, resolveTarget, acceptInvite, declineInvite, invitePinId, init, subscribe }
+  return { activities, unread, loading, clearing, hasData, pinActivities, eventActivities, pinUnread, eventUnread, loveActivities, flowActivities, subActivities, photoActivities, loveUnread, flowUnread, photoUnread, otherNotifications, otherUnread, describe, refresh, markAllRead, markOne, clearAll, goPin, goNotification, resolveTarget, acceptInvite, declineInvite, invitePinId, acceptDistrictInvite, declineDistrictInvite, init, subscribe }
 }

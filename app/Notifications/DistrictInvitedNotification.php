@@ -8,8 +8,9 @@ use App\Models\User;
 /**
  * Приглашение в UDistrict (от владельца, вне зоны тоже видно).
  *
- * Приглашённый сразу становится жителем: район открывается
- * по диплинку /map?district=, даже если вне его домашней зоны.
+ * Это именно приглашение: житель добавляется только после кнопки
+ * «Принять» в уведомлениях или карточке района. «Отклонить» тихо
+ * удаляет приглашение, владельца не спамим (как инвайты в пины).
  */
 class DistrictInvitedNotification extends UserNotification
 {
@@ -44,7 +45,7 @@ class DistrictInvitedNotification extends UserNotification
     {
         return [
             'title' => '🎫 Вас пригласили в район «'.$this->district->name.'»',
-            'body' => ($this->inviter->name ?: 'Владелец').' добавил вас в жители — общий чат открыт',
+            'body' => ($this->inviter->name ?: 'Владелец').' зовёт в жители — примите или отклоните',
             'url' => '/map?district='.$this->district->id,
             'tag' => 'district-invite-'.$this->district->id,
             'avatar' => $this->inviter->avatar_url,

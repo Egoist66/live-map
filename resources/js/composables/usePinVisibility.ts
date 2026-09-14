@@ -1,4 +1,5 @@
 import { usePage } from '@inertiajs/vue3'
+import { useDistrictsStore } from '@/stores/districts'
 
 function toRad(v: number): number {
   return (v * Math.PI) / 180
@@ -21,10 +22,37 @@ function authUser(): any {
 }
 
 /**
- * Клиентская проверка видимости пина: страна + зона.
+ * Житель ли текущий пользователь района (по слою карты).
+ *
+ * Район вне стора считаем доступным: бэк уже отфильтровал,
+ * раз пин долетел — пользователь житель.
+ *
+ * @param districtId id района пина
+ * @returns true если можно показать районный пин
+ */
+function isDistrictResident(districtId: number): boolean {
+  try {
+    const store = useDistrictsStore?.()
+    const list = (store as any)?.districts ?? []
+    const found = (Array.isArray(list) ? list : []).find((d: any) => Number(d?.id) === Number(districtId))
+    if (!found) {
+      return true
+    }
+    const role = String(found.role ?? 'guest')
+
+    return role === 'owner' || role === 'member'
+  } catch {
+    return true
+  }
+}
+
+/**
+ * Клиентская проверка видимости пина: район + страна + зона.
  * Дублирует бэкенд PinVisibility, чтобы realtime из общей
  * Map-рассылки не показывал чужие страны (Польша → Минск).
- * Активный SOS виден всем, как на бэкенде.
+ * Районный пин виден только жителям района: гость в зоне,
+ * но без членства, не видит его до вступления.
+ * Активный SOS виден всем, как на бэкенде, кроме районных.
  *
  * @param pin пин из realtime или API
  * @param livePos живая геопозиция, если гео включено
@@ -39,10 +67,14 @@ export function isPinVisibleLocally(pin: any, livePos?: { lat: number; lng: numb
     if (user.is_admin || user.role === 'admin') {
       return true
     }
-    if (String(pin?.category ?? '').toLowerCase() === 'sos' && String(pin?.status ?? 'active') === 'active') {
+    if (pin?.is_owner || Number(pin?.user_id) === Number(user.id)) {
       return true
     }
-    if (pin?.is_owner || Number(pin?.user_id) === Number(user.id)) {
+    const districtId = Number(pin?.district_id ?? 0)
+    if (districtId > 0 && !isDistrictResident(districtId)) {
+      return false
+    }
+    if (String(pin?.category ?? '').toLowerCase() === 'sos' && String(pin?.status ?? 'active') === 'active') {
       return true
     }
     const audience = String(pin?.gender_audience || 'all')

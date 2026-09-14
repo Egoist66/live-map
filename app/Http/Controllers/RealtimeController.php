@@ -440,7 +440,7 @@ class RealtimeController extends Controller
      */
     private function mapChanges(int $userId, array $data, ?Carbon $since): array
     {
-        $empty = ['upsert' => [], 'deleted' => [], 'counters' => []];
+        $empty = ['upsert' => [], 'deleted' => [], 'counters' => [], 'districts_upsert' => [], 'districts_deleted' => []];
 
         $known = $this->parseIds($data['known_ids'] ?? null);
 
@@ -476,6 +476,19 @@ class RealtimeController extends Controller
             ->limit(50)
             ->get();
 
+        $memberDistrictIds = $this->memberDistrictIds($userId);
+        $isDistrictVisible = function ($p) use ($userId, $memberDistrictIds): bool {
+            $districtId = (int) ($p->district_id ?? 0);
+            if ($districtId <= 0) {
+                return true;
+            }
+            if ((int) $p->user_id === (int) $userId) {
+                return true;
+            }
+
+            return isset($memberDistrictIds[$districtId]);
+        };
+        $upsert = $upsert->filter($isDistrictVisible)->values();
         $upsertPins = $upsert->map(fn ($p) => $p->toPublicArray($userId))->all();
 
         $sosLive = $this->liveSosPins($userId, $since);
@@ -496,8 +509,69 @@ class RealtimeController extends Controller
         }
 
         $empty['upsert'] = $upsertPins;
+        $empty['districts_upsert'] = $this->liveDistricts($userId, $data, $since);
 
         return $empty;
+    }
+
+    /**
+     * Свежие районы в bbox для polling-режима: без этого новый район
+     * виден только по сокету или после движения карты (рассинхрон).
+     *
+     * @param int $userId смотрящий
+     * @param array $data параметры тика с bbox
+     * @param Carbon|null $since момент прошлого тика
+     * @return array публичные карточки районов
+     */
+    private function liveDistricts(int $userId, array $data, ?Carbon $since): array
+    {
+        if (!$since) {
+            return [];
+        }
+
+        try {
+            $minLat = min((float) $data['min_lat'], (float) $data['max_lat']);
+            $maxLat = max((float) $data['min_lat'], (float) $data['max_lat']);
+            $minLng = min((float) $data['min_lng'], (float) $data['max_lng']);
+            $maxLng = max((float) $data['min_lng'], (float) $data['max_lng']);
+
+            $rows = \App\Models\District::with('owner:id,name,avatar_path')
+                ->withCount('approvedMembers')
+                ->whereBetween('center_lat', [$minLat, $maxLat])
+                ->whereBetween('center_lng', [$minLng, $maxLng])
+                ->where('updated_at', '>', $since)
+                ->orderBy('updated_at')
+                ->limit(30)
+                ->get();
+
+            return $rows->map(fn ($d) => $d->toPublicArray($userId))->all();
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    /**
+     * Id районов, где пользователь житель.
+     *
+     * @param int $userId смотрящий
+     * @return array<int,true>
+     */
+    private function memberDistrictIds(int $userId): array
+    {
+        try {
+            $owned = \App\Models\District::where('user_id', $userId)->pluck('id');
+            $member = \App\Models\DistrictMember::where('user_id', $userId)
+                ->where('status', \App\Models\DistrictMember::STATUS_APPROVED)
+                ->pluck('district_id');
+            $map = [];
+            foreach ($owned->merge($member)->unique() as $id) {
+                $map[(int) $id] = true;
+            }
+
+            return $map;
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     /**
@@ -515,13 +589,26 @@ class RealtimeController extends Controller
         }
 
         try {
+            $memberIds = $this->memberDistrictIds($userId);
             $pins = Pin::active()
                 ->where('category', 'sos')
                 ->where('updated_at', '>', $since)
                 ->with('user:id,name,avatar_path,level')
                 ->orderBy('updated_at')
                 ->limit(10)
-                ->get();
+                ->get()
+                ->filter(function ($p) use ($userId, $memberIds) {
+                    $districtId = (int) ($p->district_id ?? 0);
+                    if ($districtId <= 0) {
+                        return true;
+                    }
+                    if ((int) $p->user_id === (int) $userId) {
+                        return true;
+                    }
+
+                    return isset($memberIds[$districtId]);
+                })
+                ->values();
 
             return $pins->map(fn ($p) => $p->toPublicArray($userId))->all();
         } catch (\Throwable) {
@@ -544,13 +631,26 @@ class RealtimeController extends Controller
         }
 
         try {
+            $memberIds = $this->memberDistrictIds($userId);
             $pins = Pin::active()
                 ->whereIn('id', \App\Models\PinInvite::where('invitee_id', $userId)->select('pin_id'))
                 ->where('updated_at', '>', $since)
                 ->with('user:id,name,avatar_path,level')
                 ->orderBy('updated_at')
                 ->limit(10)
-                ->get();
+                ->get()
+                ->filter(function ($p) use ($userId, $memberIds) {
+                    $districtId = (int) ($p->district_id ?? 0);
+                    if ($districtId <= 0) {
+                        return true;
+                    }
+                    if ((int) $p->user_id === (int) $userId) {
+                        return true;
+                    }
+
+                    return isset($memberIds[$districtId]);
+                })
+                ->values();
 
             return $pins->map(fn ($p) => $p->toPublicArray($userId, true))->all();
         } catch (\Throwable) {

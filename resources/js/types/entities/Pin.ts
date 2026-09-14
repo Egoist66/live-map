@@ -11,6 +11,7 @@ export type PinGenderAudience = 'all' | 'male' | 'female'
 
 export interface Pin {
   id: number
+  district_id?: number | null
   title: string
   body: string | null
   category: PinCategory
@@ -60,6 +61,7 @@ export interface CreatePinPayload {
   gender_audience?: PinGenderAudience
   latitude: number
   longitude: number
+  district_id?: number | null
   location_precision?: LocationPrecision
   blur_meters?: number
   is_anonymous?: boolean

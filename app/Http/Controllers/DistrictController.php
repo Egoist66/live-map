@@ -11,6 +11,7 @@ use App\Models\DistrictMember;
 use App\Models\Message;
 use App\Models\User;
 use App\Notifications\DistrictInvitedNotification;
+use App\Notifications\DistrictInviteAcceptedNotification;
 use App\Notifications\DistrictJoinRequestedNotification;
 use App\Notifications\DistrictRequestApprovedNotification;
 use App\Services\ContentModeration;
@@ -184,6 +185,7 @@ class DistrictController extends Controller
         abort_if($role === 'owner', 422, 'Это ваш район — заявки не нужны.');
         abort_if($role === 'member', 422, 'Вы уже живёте в этом районе.');
         abort_if($role === 'pending', 422, 'Заявка уже отправлена — дождитесь решения владельца.');
+        abort_if($role === 'invited', 422, 'Вас уже пригласили — примите приглашение или отклоните его.');
 
         $member = DistrictMember::create([
             'district_id' => $district->id,
@@ -202,11 +204,11 @@ class DistrictController extends Controller
     }
 
     /**
-     * Пригласить в район (только владелец): сразу житель, вне зоны тоже ок.
+     * Пригласить в район (только владелец): именно приглашение, не авто-вход.
      *
-     * Приглашённый не шлёт заявку — его добавляют напрямую,
-     * открывают чат и шлют уведомление с диплинком /map?district=.
-     * Так зовут тех, кто район на карте даже не видит.
+     * Приглашённый сам решает кнопками «Принять / Отклонить» в уведомлениях
+     * или карточке района. До принятия в жители и чат не добавляем, пины
+     * района ему закрыты. Так зовут тех, кто район на карте даже не видит.
      */
     public function invite(Request $request, District $district)
     {
@@ -230,31 +232,124 @@ class DistrictController extends Controller
         if ($existing && $existing->status === DistrictMember::STATUS_APPROVED) {
             abort(422, 'Уже живёт в этом районе.');
         }
+        if ($existing && $existing->status === DistrictMember::STATUS_INVITED) {
+            abort(422, 'Приглашение уже отправлено — ждите ответа.');
+        }
+        if ($existing && $existing->status === DistrictMember::STATUS_PENDING) {
+            abort(422, 'Человек сам кинул заявку — одобрите её во вкладке «Заявки».');
+        }
 
         if ($existing) {
-            $existing->status = DistrictMember::STATUS_APPROVED;
+            $existing->status = DistrictMember::STATUS_INVITED;
             $existing->save();
         } else {
             DistrictMember::create([
                 'district_id' => $district->id,
                 'user_id' => $inviteeId,
-                'status' => DistrictMember::STATUS_APPROVED,
+                'status' => DistrictMember::STATUS_INVITED,
             ]);
         }
-
-        $conversation = $this->ensureChat($district);
-        $conversation->participantRows()->updateOrCreate(
-            ['user_id' => $inviteeId],
-            ['joined_at' => now(), 'hidden_at' => null]
-        );
-        $this->systemMessage($conversation, '🎫 '.($invitee->name ?? 'Новый житель').' вступил(а) в район по приглашению.');
 
         UserNotifier::send($invitee, new DistrictInvitedNotification($district->fresh(), $inviter));
 
         $district->load('owner:id,name,avatar_path');
         broadcast(new DistrictUpdated($district))->toOthers();
 
-        return response()->json(['ok' => true, 'status' => DistrictMember::STATUS_APPROVED], 201);
+        return response()->json(['ok' => true, 'status' => DistrictMember::STATUS_INVITED], 201);
+    }
+
+    /**
+     * Принять приглашение в район (только приглашённый).
+     *
+     * Ставит approved, открывает пины и общий чат, гасит своё
+     * уведомление district.invited и сообщает владельцу о новом жителе.
+     */
+    public function acceptInvite(Request $request, District $district)
+    {
+        $user = $request->user();
+        $member = $district->members()
+            ->where('user_id', $user->id)
+            ->where('status', DistrictMember::STATUS_INVITED)
+            ->firstOrFail();
+        $member->status = DistrictMember::STATUS_APPROVED;
+        $member->save();
+
+        $conversation = $this->ensureChat($district);
+        $conversation->participantRows()->updateOrCreate(
+            ['user_id' => $user->id],
+            ['joined_at' => now(), 'hidden_at' => null]
+        );
+        $this->systemMessage($conversation, '🎉 ' . ($user->name ?? 'Новый житель') . ' вступил(а) в район по приглашению.');
+        $this->markInviteNotificationRead((int) $user->id, (int) $district->id);
+
+        $owner = $district->owner;
+        if ($owner && (int) $owner->id !== (int) $user->id) {
+            UserNotifier::send($owner, new DistrictInviteAcceptedNotification($district->fresh(), $user));
+        }
+
+        $district->load('owner:id,name,avatar_path');
+        broadcast(new DistrictUpdated($district))->toOthers();
+
+        return response()->json(['ok' => true, 'status' => DistrictMember::STATUS_APPROVED, 'role' => 'member']);
+    }
+
+    /**
+     * Отклонить приглашение в район (только приглашённый).
+     *
+     * Тихо удаляет приглашение и гасит уведомление. Владельца не спамим.
+     */
+    public function declineInvite(Request $request, District $district)
+    {
+        $user = $request->user();
+        $member = $district->members()
+            ->where('user_id', $user->id)
+            ->where('status', DistrictMember::STATUS_INVITED)
+            ->firstOrFail();
+        $member->delete();
+        $this->markInviteNotificationRead((int) $user->id, (int) $district->id);
+
+        $district->load('owner:id,name,avatar_path');
+        broadcast(new DistrictUpdated($district))->toOthers();
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Отозвать приглашение (только владелец): приглашённый его больше не увидит.
+     */
+    public function cancelInvite(Request $request, District $district, User $user)
+    {
+        $this->assertOwner($request->user(), $district);
+
+        $member = $district->members()
+            ->where('user_id', $user->id)
+            ->where('status', DistrictMember::STATUS_INVITED)
+            ->firstOrFail();
+        $member->delete();
+        $this->markInviteNotificationRead((int) $user->id, (int) $district->id);
+
+        $district->load('owner:id,name,avatar_path');
+        broadcast(new DistrictUpdated($district))->toOthers();
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Пометить прочитанным уведомление о приглашении в район.
+     *
+     * @param int $userId приглашённый
+     * @param int $districtId район
+     */
+    private function markInviteNotificationRead(int $userId, int $districtId): void
+    {
+        try {
+            \Illuminate\Notifications\DatabaseNotification::where('notifiable_id', $userId)
+                ->where('type', 'district.invited')
+                ->where('key', 'district-invite:'.$districtId)
+                ->whereNull('read_at')
+                ->update(['read_at' => now()]);
+        } catch (\Throwable) {
+        }
     }
 
     /**
@@ -344,7 +439,7 @@ class DistrictController extends Controller
     }
 
     /**
-     * Жители и заявки (заявки — только владельцу).
+     * Жители, заявки и исходящие приглашения (заявки и приглашения — только владельцу).
      */
     public function members(Request $request, District $district)
     {
@@ -369,6 +464,7 @@ class DistrictController extends Controller
         }
 
         $pending = [];
+        $invited = [];
         if ($role === 'owner') {
             $pending = $district->pendingMembers()->with('user:id,name,avatar_path')->get()->map(fn (DistrictMember $member) => [
                 'id' => $member->user->id,
@@ -376,9 +472,15 @@ class DistrictController extends Controller
                 'avatar_url' => $member->user->avatar_url,
                 'since' => $member->created_at?->toISOString(),
             ])->values();
+            $invited = $district->invitedMembers()->with('user:id,name,avatar_path')->get()->map(fn (DistrictMember $member) => [
+                'id' => $member->user->id,
+                'name' => $member->user->name,
+                'avatar_url' => $member->user->avatar_url,
+                'since' => $member->created_at?->toISOString(),
+            ])->values();
         }
 
-        return response()->json(['residents' => $residents, 'pending' => $pending, 'role' => $role]);
+        return response()->json(['residents' => $residents, 'pending' => $pending, 'invited' => $invited, 'role' => $role]);
     }
 
     /**

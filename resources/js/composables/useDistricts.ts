@@ -3,6 +3,7 @@ import { useToast } from 'primevue/usetoast'
 import { districtsApi } from '@/services/districts.api'
 import { busOn } from '@/services/realtime-bus'
 import { useDistrictsStore } from '@/stores/districts'
+import { useViewportBreakpoints } from '@/composables/useViewportBreakpoints'
 import type { CreateDistrictPayload, DistrictDetails, DistrictResident } from '@/types/entities/District'
 
 /**
@@ -35,9 +36,16 @@ export function useDistricts() {
   /** Жители и заявки выбранного района. */
   const residents = ref<DistrictResident[]>([])
   const pending = ref<DistrictResident[]>([])
+  /** Исходящие приглашения владельца (ждут ответа). */
+  const invited = ref<DistrictResident[]>([])
   /** Свои районы для хаба. */
   const myDistricts = ref<Awaited<ReturnType<typeof districtsApi.list>>>([])
   const myLoading = ref(false)
+
+  /** Мобильный вьюпорт: создание районов кистью недоступно, только список + заявка. */
+  const { isMobile } = useViewportBreakpoints()
+  /** Создание районов разрешено только на десктопе. */
+  const canCreate = computed(() => !isMobile.value)
 
   const isOwner = computed(() => selected.value?.role === 'owner')
   const canSeeInside = computed(() => selected.value && (selected.value.role === 'owner' || selected.value.role === 'member'))
@@ -84,6 +92,7 @@ export function useDistricts() {
       selected.value = await districtsApi.show(id)
       residents.value = []
       pending.value = []
+      invited.value = []
       detailsOpen.value = true
       await loadMembers(id)
     } catch (e: any) {
@@ -101,10 +110,11 @@ export function useDistricts() {
     selected.value = null
     residents.value = []
     pending.value = []
+    invited.value = []
   }
 
   /**
-   * Подтянуть жителей и заявки выбранного района.
+   * Подтянуть жителей, заявки и приглашения выбранного района.
    *
    * @param id id района
    */
@@ -113,6 +123,7 @@ export function useDistricts() {
       const data = await districtsApi.members(id)
       residents.value = data.residents ?? []
       pending.value = data.pending ?? []
+      invited.value = data.invited ?? []
       if (selected.value && data.role) {
         selected.value.role = data.role as DistrictDetails['role']
       }
@@ -163,6 +174,59 @@ export function useDistricts() {
       syncLayerCard()
     } catch (e: any) {
       fail(e, 'Не удалось выйти')
+    }
+  }
+
+  /**
+   * Принять приглашение в выбранный район (только приглашённый).
+   *
+   * Открывает пины района и общий чат.
+   */
+  async function acceptInvite(): Promise<void> {
+    if (!selected.value) {
+      return
+    }
+    try {
+      await districtsApi.acceptInvite(selected.value.id)
+      toast?.add({ severity: 'success', summary: 'Вы в районе', detail: 'Пины района и общий чат открыты', life: 3000 })
+      await refreshSelected()
+      syncLayerCard()
+    } catch (e: any) {
+      fail(e, 'Не удалось принять приглашение')
+    }
+  }
+
+  /**
+   * Отклонить приглашение в выбранный район (тихо, владельца не спамим).
+   */
+  async function declineInvite(): Promise<void> {
+    if (!selected.value) {
+      return
+    }
+    try {
+      await districtsApi.declineInvite(selected.value.id)
+      toast?.add({ severity: 'success', summary: 'Приглашение отклонено', life: 2500 })
+      await refreshSelected()
+      syncLayerCard()
+    } catch (e: any) {
+      fail(e, 'Не удалось отклонить приглашение')
+    }
+  }
+
+  /**
+   * Отозвать исходящее приглашение (владелец).
+   *
+   * @param userId кого отменяем
+   */
+  async function cancelInvite(userId: number): Promise<void> {
+    if (!selected.value) {
+      return
+    }
+    try {
+      await districtsApi.cancelInvite(selected.value.id, userId)
+      await refreshSelected()
+    } catch (e: any) {
+      fail(e, 'Не удалось отозвать приглашение')
     }
   }
 
@@ -276,11 +340,13 @@ export function useDistricts() {
   }
 
   /**
-   * Открыть хаб UDistrict (список + рисование).
+   * Открыть хаб UDistrict (список + рисование на десктопе, только список на мобиле).
    */
   function openHub(): void {
     hubOpen.value = true
-    void loadMine()
+    if (!isMobile.value) {
+      void loadMine()
+    }
   }
 
   /**
@@ -290,7 +356,7 @@ export function useDistricts() {
    */
   function setHubOpen(v: boolean): void {
     hubOpen.value = v
-    if (v) {
+    if (v && !isMobile.value) {
       void loadMine()
     }
   }
@@ -376,8 +442,11 @@ export function useDistricts() {
     detailsLoading,
     residents,
     pending,
+    invited,
     myDistricts,
     myLoading,
+    isMobile,
+    canCreate,
     isOwner,
     canSeeInside,
     toggleVisible,
@@ -393,6 +462,9 @@ export function useDistricts() {
     refreshSelected,
     joinSelected,
     leaveSelected,
+    acceptInvite,
+    declineInvite,
+    cancelInvite,
     approveMember,
     rejectMember,
     kickMember,

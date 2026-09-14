@@ -82,13 +82,18 @@ export function useMapPage() {
   })
 
   /**
-   * Подтянуть UDistrict-заливки в видимом прямоугольнике (троттлинг 2с).
+   * Подтянуть UDistrict-заливки в видимом прямоугольнике (троттлинг 0.8с).
    *
-   * @param force игнорировать троттлинг (включение слоя, повтор)
+   * Первый fetch после открытия карты идёт по стартовому центру,
+   * живой GPS прилетает позже и двигает карту — без форса второй
+   * fetch режется троттлингом и район появляется только после
+   * следующего движения карты (задержка/рассинхрон).
+   *
+   * @param force игнорировать троттлинг (включение слоя, GPS-фикс, повтор)
    */
   async function fetchDistrictsForView(force = false): Promise<void> {
     const now = Date.now()
-    if (!force && now - lastDistrictsFetch < 2000) return
+    if (!force && now - lastDistrictsFetch < 800) return
     lastDistrictsFetch = now
     try {
       const bounds = (mapApi as any).map?.getBounds?.()
@@ -103,9 +108,14 @@ export function useMapPage() {
   }
 
   /**
-   * Начать рисование района кистью.
+   * Начать рисование района кистью (только десктоп).
    */
   function startDistrictPaint(): void {
+    if (districts.canCreate && !districts.canCreate.value) {
+      districts.hubOpen.value = true
+      toast?.add({ severity: 'info', summary: 'Только список', detail: 'На телефоне районы не рисуют — выбери район и кинь заявку', life: 3500 })
+      return
+    }
     districts.hubOpen.value = false
     pinDetails.closePin()
     districts.closeDistrict()
@@ -242,7 +252,7 @@ export function useMapPage() {
     if (!ok) {
       return
     }
-    toast?.add({ severity: 'success', summary: 'Приглашён', detail: 'Человек сразу стал жителем — увидит район даже вне зоны', life: 3000 })
+    toast?.add({ severity: 'success', summary: 'Приглашение отправлено', detail: 'Человек сам решит: примет или отклонит в уведомлениях', life: 3500 })
     try {
       await districts.refreshSelected()
     } catch {}
@@ -289,6 +299,13 @@ export function useMapPage() {
   const { visible: homeZoneVisible, toggle: toggleHomeZone, set: setHomeZoneVisible } = useHomeZoneVisibility()
   const myPos = ref<{ lat: number; lng: number } | null>(null)
   const geoNotice = ref<{ place: string } | null>(null)
+  /**
+   * Живой гео-фикс получен (GPS/GeolocateControl).
+   * Зону и точку рисуем только после него: иначе зона сначала
+   * встаёт по якорю из профиля/кэша в стороне, а потом прыгает
+   * к реальной точке — визуально как баг.
+   */
+  const hasLiveFix = ref(false)
   let flewToLive = false
   let unsubGeolocate: (() => void) | null = null
   let lastStreetPos: { lat: number; lng: number; at: number } | null = null
@@ -365,7 +382,7 @@ export function useMapPage() {
     return Math.min(Math.max(1, wanted), maxHomeRadiusKm(userPlan.value, isAdmin))
   })
   const homeZone = computed(() => {
-    if (!myPos.value) return null
+    if (!myPos.value || !hasLiveFix.value) return null
     return { lat: myPos.value.lat, lng: myPos.value.lng, radiusKm: homeRadiusKm.value }
   })
   function applyHomeZone() {
@@ -423,14 +440,51 @@ export function useMapPage() {
       return
     }
     pinCreate.setCoords(lngLat.lat, lngLat.lng)
+    try { pinCreate.setDistrict(null) } catch {}
     fetchPinAddress(lngLat.lat, lngLat.lng)
     mapApi.addTempMarker(lngLat)
     try { void pinCreate.refreshLimit() } catch {}
     showCreate.value = true
   }
 
+  /**
+   * Открыть создание районного пина из меню района (правый клик).
+   *
+   * Точка — место клика внутри заливки, пин увидят только жители
+   * района в своей зоне. Гость без членства не видит его до вступления.
+   *
+   * @param districtId район для привязки
+   * @param lngLat точка клика внутри заливки (или null — центр района)
+   */
+  function openDistrictPinCreate(districtId: number, lngLat?: { lat: number; lng: number } | null): void {
+    if (!(districtId > 0)) return
+    if (paint.painting.value) return
+    const card: any = districts.store.districts.find((d: any) => Number(d.id) === Number(districtId)) ?? null
+    const role = String(card?.role ?? '')
+    if (role !== 'owner' && role !== 'member') {
+      toast?.add({ severity: 'warn', summary: 'Только для жителей', detail: 'Пин района могут ставить только его жители', life: 3500 })
+      return
+    }
+    const lat = lngLat && Number.isFinite(Number(lngLat.lat)) ? Number(lngLat.lat) : Number(card?.center_lat)
+    const lng = lngLat && Number.isFinite(Number(lngLat.lng)) ? Number(lngLat.lng) : Number(card?.center_lng)
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return
+    const guard = useHomeZoneGuard()
+    const zone = guard.check(lat, lng, myPos.value)
+    if (!zone.ok) {
+      toast?.add({ severity: 'warn', summary: 'Вне вашей зоны', detail: zone.message, life: 5000 })
+      return
+    }
+    pinCreate.setCoords(lat, lng)
+    try { pinCreate.setDistrict(districtId) } catch {}
+    fetchPinAddress(lat, lng)
+    try { mapApi.addTempMarker({ lat, lng }) } catch {}
+    try { void pinCreate.refreshLimit() } catch {}
+    showCreate.value = true
+  }
+
   function closeCreate() {
     showCreate.value = false
+    try { pinCreate.setDistrict(null) } catch {}
     mapApi.removeTempMarker()
   }
 
@@ -542,6 +596,7 @@ export function useMapPage() {
       }
       pinCreate.setCoords(c.lat, c.lng)
     }
+    try { pinCreate.setDistrict(null) } catch {}
     try { void pinCreate.refreshLimit() } catch {}
     showCreate.value = true
   }
@@ -605,9 +660,8 @@ export function useMapPage() {
       } catch {}
       const lngLat = [start.center.lng, start.center.lat] as any
       await mapApi.initMap(lngLat, onMapClick, start.zoom)
-      if (start.hasPrecise) mapApi.showUserLocation(start.center.lat, start.center.lng)
       mapApi.renderPins()
-      applyHomeZone()
+      try { (mapApi as any).hideHomeZone?.() } catch {}
       mapApi.bindRealtime()
       wireDistricts()
     } else {
@@ -619,6 +673,7 @@ export function useMapPage() {
     try { geo = await requestGeolocation() } catch { geo = null }
     if (geo) {
       const sane = isSaneFix(geo.accuracy)
+      hasLiveFix.value = true
       myPos.value = { lat: geo.lat, lng: geo.lng }
       if (sane) {
         saveLastPos(geo.lat, geo.lng)
@@ -626,6 +681,8 @@ export function useMapPage() {
       }
       maybeFetchStreet(geo.lat, geo.lng)
       try { await fetchNearby(geo.lat, geo.lng, undefined, { lat: geo.lat, lng: geo.lng }) } catch {}
+      try { await fetchDistrictsForView(true) } catch {}
+      try { mapApi.renderDistricts(districts.store.districts as any) } catch {}
       mapApi.showUserLocation(geo.lat, geo.lng)
       applyHomeZone()
       if (sane && !flewToLive) {
@@ -634,6 +691,10 @@ export function useMapPage() {
       }
       mapApi.renderPins()
       setTimeout(() => applyHomeZone(), 1200)
+    } else if (myPos.value) {
+      hasLiveFix.value = true
+      mapApi.showUserLocation(myPos.value.lat, myPos.value.lng)
+      applyHomeZone()
     }
     unsubGeolocate = mapApi.onGeolocate?.((e: any) => {
       const raw = e?.coords ?? e
@@ -642,6 +703,7 @@ export function useMapPage() {
       if (!Number.isFinite(lat) || !Number.isFinite(lng)) return
       const rawAcc = Number(raw?.accuracy)
       const sane = isSaneFix(Number.isFinite(rawAcc) ? rawAcc : null)
+      hasLiveFix.value = true
       myPos.value = { lat, lng }
       if (sane) {
         saveLastPos(lat, lng)
@@ -650,6 +712,7 @@ export function useMapPage() {
       maybeFetchStreet(lat, lng)
       mapApi.showUserLocation(lat, lng)
       applyHomeZone()
+      try { void fetchDistrictsForView() } catch {}
       if (sane && !flewToLive) {
         flewToLive = true
         try { mapApi.flyToMyLocation?.(lat, lng) } catch {}
@@ -686,16 +749,20 @@ export function useMapPage() {
    *
    * Мазки ловит SVG-оверлей (DistrictPaintOverlay), маппинг
    * экрана в координаты — в onOverlayStrokeEnd выше.
+   * Слушаем moveend и zoomend: зум без панорамы тоже меняет
+   * набор районов, иначе слой отстаёт от вьюпорта.
    */
   function wireDistricts(): void {
     try { (mapApi as any).onDistrictClick?.((id: number) => { void districts.openDistrict(id) }) } catch {}
     try {
-      ;(mapApi as any).onDistrictMenu?.((action: 'open' | 'delete', id: number) => {
+      ;(mapApi as any).onDistrictMenu?.((action: 'open' | 'delete' | 'create-pin', id: number, lngLat?: { lat: number; lng: number } | null) => {
         if (action === 'delete') void deleteDistrictById(id)
+        else if (action === 'create-pin') openDistrictPinCreate(id, lngLat ?? null)
         else void districts.openDistrict(id)
       })
     } catch {}
     try { (mapApi as any).map?.on?.('moveend', onDistrictsMoveEnd) } catch {}
+    try { (mapApi as any).map?.on?.('zoomend', onDistrictsMoveEnd) } catch {}
     if (districts.districtsVisible.value) {
       try { mapApi.renderDistricts(districts.store.districts as any) } catch {}
     } else {
@@ -781,6 +848,7 @@ export function useMapPage() {
     window.removeEventListener('keydown', onEsc)
     window.removeEventListener('map:open-create', openCreateFromUI)
     try { (mapApi as any).map?.off?.('moveend', onDistrictsMoveEnd) } catch {}
+    try { (mapApi as any).map?.off?.('zoomend', onDistrictsMoveEnd) } catch {}
     try { unsubGeolocate?.() } catch {}
     unsubGeolocate = null
     try { (mapApi as any).unbindRealtime?.() } catch {}
@@ -791,8 +859,8 @@ export function useMapPage() {
   return {
     store, categories, customCats, selectedCategory, filteredPins, pinDetails, pinCreate, pinEdit, mapApi,
     showCreate, pinAddress, loadingPinAddress, myStreet, loadingStreet,
-    radiusOptions, radiusLabel, homeZone, homeZoneVisible, toggleHomeZone, setHomeZoneVisible, openCreate, openCreateFromUI, closeCreate, deleteSelectedPin, saveEdit, deleteCustomCategory, init, destroy,
-    deleteMutation, geoNotice, dismissGeoNotice, locateMe,
+    radiusOptions, radiusLabel, homeZone, homeZoneVisible, toggleHomeZone, setHomeZoneVisible, openCreate, openDistrictPinCreate, openCreateFromUI, closeCreate, deleteSelectedPin, saveEdit, deleteCustomCategory, init, destroy,
+    deleteMutation, geoNotice, dismissGeoNotice, locateMe, hasLiveFix,
     districts, paint, pendingGeometry, createError, districtLimitText, brushPx, districtInvite,
     startDistrictPaint, finishDistrictPaint, saveDistrict, saveSelectedDistrict, flyToDistrict, openDistrictChat, deleteDistrict,
     openDistrictInvite, sendDistrictInvite,

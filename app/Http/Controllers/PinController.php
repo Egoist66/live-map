@@ -23,6 +23,8 @@ class PinController extends Controller
         $liveLat = $request->filled('user_lat') ? (float) $request->input('user_lat') : null;
         $liveLng = $request->filled('user_lng') ? (float) $request->input('user_lng') : null;
 
+        $memberDistrictIds = $this->memberDistrictIds($viewerId);
+
         if ($viewer && !$viewer->isAdmin()) {
             $zone = \App\Services\HomeZoneService::zoneFor($viewer, $liveLat, $liveLng);
             if ($zone === null) {
@@ -50,8 +52,16 @@ class PinController extends Controller
         }
         $pins = $q->boostedFirst()->with('user:id,name,avatar_path,level')->limit(100)->get();
         $invitedIds = $viewerId ? \App\Models\PinInvite::where('invitee_id', $viewerId)->whereIn('pin_id', $pins->pluck('id'))->pluck('pin_id')->map(fn($v) => (int) $v)->flip() : collect();
-        $visible = $pins->filter(function ($p) use ($viewer, $viewerId, $liveLat, $liveLng, $invitedIds) {
-            if ($viewerId && ((int) $p->user_id === (int) $viewerId || isset($invitedIds[(int) $p->id]))) {
+        $visible = $pins->filter(function ($p) use ($viewer, $viewerId, $liveLat, $liveLng, $invitedIds, $memberDistrictIds) {
+            $districtId = (int) ($p->district_id ?? 0);
+            $isOwner = $viewerId && (int) $p->user_id === (int) $viewerId;
+            if ($districtId > 0 && !$isOwner && !isset($memberDistrictIds[$districtId])) {
+                return false;
+            }
+            if ($isOwner || isset($invitedIds[(int) $p->id])) {
+                if ($districtId > 0 && !$isOwner && !isset($memberDistrictIds[$districtId])) {
+                    return false;
+                }
                 return true;
             }
             return \App\Services\PinVisibility::canView($viewer, $p, $liveLat, $liveLng);
@@ -77,7 +87,14 @@ class PinController extends Controller
                     ->with('user:id,name,avatar_path,level')
                     ->limit(50)
                     ->get()
-                    ->filter(fn ($p) => $p->isVisibleForGender($viewer));
+                    ->filter(function ($p) use ($viewer, $memberDistrictIds, $viewerId) {
+                        $districtId = (int) ($p->district_id ?? 0);
+                        $isOwner = $viewerId && (int) $p->user_id === (int) $viewerId;
+                        if ($districtId > 0 && !$isOwner && !isset($memberDistrictIds[$districtId])) {
+                            return false;
+                        }
+                        return $p->isVisibleForGender($viewer);
+                    });
                 $visible = $visible->concat($invitedExtra)->values();
                 $allInvitedIds = \App\Models\PinInvite::where('invitee_id', $viewerId)
                     ->whereIn('pin_id', $visible->pluck('id'))
@@ -176,8 +193,19 @@ class PinController extends Controller
             'publish_at' => 'sometimes|nullable|date|after:now|before:+31 days',
             'user_lat' => 'sometimes|nullable|numeric|between:-90,90',
             'user_lng' => 'sometimes|nullable|numeric|between:-180,180',
+            'district_id' => 'sometimes|nullable|integer|exists:districts,id',
             'sos_confirmed' => 'sometimes|boolean',
         ]);
+
+        $district = null;
+        $districtId = isset($data['district_id']) ? (int) $data['district_id'] : 0;
+        if ($districtId > 0) {
+            $district = \App\Models\District::findOrFail($districtId);
+            abort_unless($district->isResident($user->id) || $user->isAdmin(), 403, 'Пин района могут ставить только его жители.');
+            $geometry = is_array($district->geometry) ? $district->geometry : [];
+            $inside = \App\Services\DistrictService::containsPoint($geometry, (float) $data['latitude'], (float) $data['longitude']);
+            abort_unless($inside, 422, 'Пин района должен стоять внутри его заливки.');
+        }
 
         $sosCategory = Pin::isSosCategory($data['category'] ?? null);
         $sosConfirmed = (bool) ($data['sos_confirmed'] ?? false);
@@ -190,6 +218,7 @@ class PinController extends Controller
         CountryResolver::assertPinAllowed($user, (float) $data['latitude'], (float) $data['longitude'], isset($data['user_lat']) ? (float) $data['user_lat'] : null, isset($data['user_lng']) ? (float) $data['user_lng'] : null);
         HomeZoneService::assertInsideZone($user, (float) $data['latitude'], (float) $data['longitude'], isset($data['user_lat']) ? (float) $data['user_lat'] : null, isset($data['user_lng']) ? (float) $data['user_lng'] : null);
         unset($data['user_lat'], $data['user_lng']);
+        $data['district_id'] = $district ? (int) $district->id : null;
 
         try {
             $resolved = CountryResolver::fromCoords((float) $data['latitude'], (float) $data['longitude']);
@@ -337,5 +366,32 @@ class PinController extends Controller
         $pin->load('user:id,name,avatar_path,level');
         try { broadcast(new PinUpdated($pin))->toOthers(); } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
         return response()->json($boost, 201);
+    }
+
+    /**
+     * Id районов, где пользователь житель (владелец + approved).
+     *
+     * @param int|null $viewerId кто смотрит
+     * @return array<int,true> мапа id -> true для быстрой проверки
+     */
+    private function memberDistrictIds(?int $viewerId): array
+    {
+        if (!$viewerId) {
+            return [];
+        }
+
+        $owned = \App\Models\District::where('user_id', $viewerId)->pluck('id');
+        $member = \App\Models\DistrictMember::where('user_id', $viewerId)
+            ->where('status', \App\Models\DistrictMember::STATUS_APPROVED)
+            ->pluck('district_id');
+
+        $ids = $owned->merge($member)->unique()->values();
+
+        $map = [];
+        foreach ($ids as $id) {
+            $map[(int) $id] = true;
+        }
+
+        return $map;
     }
 }

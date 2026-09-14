@@ -6,17 +6,21 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Участник UDistrict: заявка (pending) или одобренный житель (approved).
+ * Участник UDistrict: заявка (pending), одобренный житель (approved)
+ * или исходящее приглашение владельца (invited — ждёт ответа).
  *
  * @property int $id
  * @property int $district_id
  * @property int $user_id
- * @property string $status pending|approved
+ * @property string $status pending|approved|invited
  */
 class DistrictMember extends Model
 {
     public const STATUS_PENDING = 'pending';
+
     public const STATUS_APPROVED = 'approved';
+
+    public const STATUS_INVITED = 'invited';
 
     protected $fillable = ['district_id', 'user_id', 'status'];
 

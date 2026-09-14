@@ -1,5 +1,11 @@
 # Dev-лог
 
+## 2026-09-14 — Пины района по правому клику + фикс задержки районов
+- 🏘️ Новый `pins.district_id` (миграция `2026_10_08_000001`, `nullOnDelete`): правый клик по заливке → «📍 Создать пин района» (только owner/member), точка — место клика, бэк проверяет жительство + точку внутри геометрии + зону.
+- 🔒 Видимость: районный пин видят только жители (owner/member) в своей зоне; гость в зоне без членства не видит до вступления; SOS/инвайт районное ограничение не снимают; админ/автор видят всегда (`PinVisibility`, `PinController`, `RealtimeController`, `isPinVisibleLocally`).
+- ⚡ Фикс рассинхрона районов: троттлинг `fetchDistrictsForView` 2с→0.8с, догрузка на `zoomend`, форс-fetch после живого GPS и геолокации, районы в polling-тике (`districts_upsert` в `mapChanges` + `applyMapSync`), мгновенный рендер созданного (`upsertRealtime`).
+- Проверки: `php -l` ✅, миграция не прогонялась — нет доступа к БД локально (`php artisan migrate` 2002).
+
 ## 2026-09-14 — Expo-пуши в upin-mobile + AES-256-GCM для messages
 - 📲 Пустая `expo_push_tokens`: бэк принимал только `ExponentPushToken[` — теперь оба формата (`Exponent/ExpoPushToken[...]`, трим, `platform` до 32, миграция widen), фильтр `ExpoPushService::isExpoToken()` тот же; `POST /expo-push-tokens/test` возвращает `tokens` для диагностики.
 - 🌉 Мост WebView: `expo-push.ts` читает токен из `UPinApp/UPin/window.expoPushToken`, слушает `upin:push-token/upin-push-token/expo-push-token/push-token` + `message` (RN→Web), шлёт оба `get-expo-push-token/getExpoPushToken`, ретраи 40×3с + focus/visible/online/auth-changed; `useAuthStorage` диспатчит `upin:auth-changed` после login/logout (был вечный 401 первого bind).

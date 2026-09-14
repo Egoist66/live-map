@@ -55,9 +55,9 @@ export const districtsApi = {
   },
 
   /**
-   * Жители и заявки района.
+   * Жители, заявки и исходящие приглашения района.
    */
-  async members(id: number): Promise<{ residents: DistrictResident[]; pending: DistrictResident[]; role: string }> {
+  async members(id: number): Promise<{ residents: DistrictResident[]; pending: DistrictResident[]; invited: DistrictResident[]; role: string }> {
     const { data } = await api.get(`/api/districts/${id}/members`)
     return data
   },
@@ -71,13 +71,45 @@ export const districtsApi = {
   },
 
   /**
-   * Пригласить жителя (владелец): сразу в район и чат, вне зоны тоже ок.
+   * Пригласить жителя (владелец): шлёт приглашение, житель входит
+   * только после «Принять» в уведомлениях/карточке, вне зоны тоже ок.
    *
    * @param id id района
    * @param userId кого зовём
    */
   async invite(id: number, userId: number): Promise<{ ok: boolean; status: string }> {
     const { data } = await api.post(`/api/districts/${id}/invites`, { user_id: userId })
+    return data
+  },
+
+  /**
+   * Принять приглашение в район (только приглашённый).
+   *
+   * @param id id района
+   */
+  async acceptInvite(id: number): Promise<{ ok: boolean; status: string; role: string }> {
+    const { data } = await api.post(`/api/districts/${id}/invites/accept`)
+    return data
+  },
+
+  /**
+   * Отклонить приглашение в район (только приглашённый, тихо).
+   *
+   * @param id id района
+   */
+  async declineInvite(id: number): Promise<{ ok: boolean }> {
+    const { data } = await api.post(`/api/districts/${id}/invites/decline`)
+    return data
+  },
+
+  /**
+   * Отозвать приглашение (только владелец).
+   *
+   * @param id id района
+   * @param userId кого отменяем
+   */
+  async cancelInvite(id: number, userId: number): Promise<{ ok: boolean }> {
+    const { data } = await api.delete(`/api/districts/${id}/invites/${userId}`)
     return data
   },
 
