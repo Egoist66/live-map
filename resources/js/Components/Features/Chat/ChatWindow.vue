@@ -49,7 +49,7 @@ function replyPreview(message: any): string {
       <div><div class="w-16 h-16 rounded-2xl bg-violet-50 dark:bg-zinc-800 grid place-items-center mx-auto text-2xl mb-3">💬</div><div class="font-semibold dark:text-white">Выберите чат</div><div class="text-xs mt-1">Или найдите человека через поиск</div></div>
     </div>
     <template v-else>
-      <div :class="datingEntry ? 'pl-1 pr-2 lg:px-4 py-2 border-b border-rose-200 flex items-center gap-2 shrink-0 bg-gradient-to-r from-rose-500 to-orange-400 text-white sticky top-0 z-10 min-w-0 rounded-t-none lg:rounded-t-2xl min-h-[60px]' : 'pl-1 pr-2 lg:px-4 py-2 border-b dark:border-zinc-800 flex items-center gap-2 shrink-0 bg-white/95 dark:bg-zinc-900/95 backdrop-blur sticky top-0 z-10 min-w-0 rounded-t-none lg:rounded-t-2xl min-h-[60px]'">
+      <div :class="datingEntry ? 'pl-1 pr-2 lg:px-4 py-2 border-b border-rose-200 flex items-center gap-2 shrink-0 bg-gradient-to-r from-rose-500 to-orange-400 text-white sticky top-0 z-30 min-w-0 rounded-t-none lg:rounded-t-2xl min-h-[60px]' : 'pl-1 pr-2 lg:px-4 py-2 border-b dark:border-zinc-800 flex items-center gap-2 shrink-0 bg-white/95 dark:bg-zinc-900/95 backdrop-blur sticky top-0 z-30 min-w-0 rounded-t-none lg:rounded-t-2xl min-h-[60px]'">
         <button @click="emit('back')" :class="datingEntry ? 'text-white hover:bg-white/20' : 'hover:bg-black/10'" class="lg:hidden w-9 h-9 grid place-items-center rounded-full active:scale-95 shrink-0 text-xl leading-none">‹</button>
         <button v-if="datingEntry" @click="emit('swipesBack')" title="Назад в свайпы" class="!hidden sm:!grid w-9 h-9 place-items-center rounded-full bg-white/20 hover:bg-white/30 active:scale-95 shrink-0"><i class="pi pi-heart-fill text-sm"></i></button>
         <Link :href="activeConv?.other ? `/users/${activeConv.other.id}` : '#'" class="flex items-center gap-2.5 hover:opacity-80 min-w-0 flex-1 overflow-hidden py-0.5">
@@ -61,7 +61,7 @@ function replyPreview(message: any): string {
           <Button @click="emit('refresh')" :loading="refreshing" icon="pi pi-refresh" rounded text :severity="datingEntry ? undefined : 'secondary'" :class="datingEntry ? '!text-white hover:!bg-white/20' : ''" class="!w-9 !h-9 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" aria-label="Обновить" />
           <div class="relative">
             <button @click="emit('toggleMenu')" :class="datingEntry ? 'hover:bg-white/20' : 'hover:bg-stone-100 dark:hover:bg-zinc-800'" class="w-9 h-9 grid place-items-center rounded-full active:scale-95 text-lg leading-none">⋯</button>
-            <div v-if="showMenu" class="absolute right-0 top-10 w-52 bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl shadow-xl py-1.5 z-30 overflow-hidden">
+            <div v-if="showMenu" class="absolute right-0 top-10 w-52 bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl shadow-xl py-1.5 z-50 overflow-hidden">
               <button v-if="activeConv?.type === 'district' && activeConv?.can_invite" @click="emit('menuClose'); emit('inviteDistrict')" class="w-full flex items-center gap-2.5 text-left px-4 py-3 text-sm font-medium text-violet-700 dark:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-500/10 active:bg-violet-100 transition"><i class="pi pi-user-plus text-xs"></i>Пригласить в район</button>
               <button @click="emit('menuClose'); emit('wallpaper')" class="w-full flex items-center gap-2.5 text-left px-4 py-3 text-sm font-medium dark:text-zinc-100 hover:bg-stone-50 dark:hover:bg-zinc-700/60 active:bg-stone-100 transition"><i class="pi pi-image text-xs text-stone-400"></i>Фон чата</button>
               <button @click="emit('menuClose'); emit('deleteChat')" class="w-full flex items-center gap-2.5 text-left px-4 py-3 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 active:bg-red-100 transition"><i class="pi pi-trash text-xs"></i>Удалить чат</button>
@@ -71,7 +71,7 @@ function replyPreview(message: any): string {
           <button @click="emit('close')" title="Закрыть чат" :class="datingEntry ? 'bg-white/20 hover:bg-white/30' : 'bg-stone-100 dark:bg-zinc-800 hover:bg-stone-200'" class="w-9 h-9 grid place-items-center rounded-full active:scale-95 transition shrink-0"><i class="pi pi-times text-sm" :class="datingEntry ? 'text-white' : 'text-stone-600 dark:text-zinc-300'"></i></button>
         </div>
       </div>
-      <div v-if="showMenu" @click="emit('menuClose')" class="fixed inset-0 z-5 lg:hidden"></div>
+      <div v-if="showMenu" @click="emit('menuClose')" class="fixed inset-0 z-20"></div>
       <div v-if="(pinned || []).length" class="shrink-0 border-b dark:border-zinc-800 bg-violet-50/80 dark:bg-violet-950/30 px-2 lg:px-4 py-1.5 min-w-0">
         <div class="flex items-center gap-1.5 text-[11px] font-bold text-violet-700 dark:text-violet-300 px-1 mb-1"><span>📌 Закрепы</span><span class="opacity-70">{{ (pinned || []).length }}/{{ pinLimitLabel || '∞' }}</span></div>
         <div class="flex gap-1.5 overflow-x-auto pb-0.5">
@@ -81,10 +81,11 @@ function replyPreview(message: any): string {
           </div>
         </div>
       </div>
-      <div id="chat-messages" class="relative flex-1 overflow-auto overscroll-contain [scrollbar-width:thin] max-lg:[-ms-overflow-style:none] max-lg:[scrollbar-width:none] max-lg:[&::-webkit-scrollbar]:hidden p-3 lg:p-4 bg-stone-50/50 dark:bg-zinc-950/30 min-w-0 w-full max-w-full">
+      <div class="relative flex-1 min-h-0 min-w-0 w-full max-w-full overflow-hidden bg-stone-50/50 dark:bg-zinc-950/30">
         <div v-if="wallpaper.hasWallpaper.value" aria-hidden="true" class="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat" :style="(wallpaper.wallpaperLayerStyle.value as any)" />
         <div v-if="wallpaper.hasWallpaper.value" aria-hidden="true" class="pointer-events-none absolute inset-0 bg-white/60 dark:bg-black/60" />
-        <div class="relative z-10 min-h-full">
+        <div id="chat-messages" class="relative z-10 h-full overflow-auto overscroll-contain [scrollbar-width:thin] max-lg:[-ms-overflow-style:none] max-lg:[scrollbar-width:none] max-lg:[&::-webkit-scrollbar]:hidden p-3 lg:p-4 min-w-0 w-full max-w-full bg-transparent">
+        <div class="min-h-full">
         <div v-if="loading" class="flex justify-center py-6"><span class="w-6 h-6 border-2 border-violet-200 border-t-violet-600 rounded-full animate-spin"></span></div>
         <div v-else-if="!(messages || []).length" class="h-full grid place-items-center text-stone-400 text-sm text-center"><div><div class="text-3xl mb-2">✉️</div><div>Пока пусто — напишите первым</div></div></div>
         <template v-for="m in (messages || [])" :key="m?.id">
@@ -108,6 +109,7 @@ function replyPreview(message: any): string {
           </div>
           </template>
         </div>
+        </div>
       </div>
       <ContextMenu ref="cm" :model="menuModel" :pt="menuPt" />
       <div class="relative p-2 lg:p-3 border-t dark:border-zinc-800 bg-white dark:bg-zinc-900 shrink-0 flex-none pb-[calc(0.5rem+var(--sab))] lg:pb-3 w-full max-w-full min-w-0 rounded-b-none lg:rounded-b-2xl">
@@ -118,13 +120,13 @@ function replyPreview(message: any): string {
           </div>
           <button @click="emit('cancelReply')" aria-label="Отменить ответ" class="w-7 h-7 shrink-0 grid place-items-center rounded-full hover:bg-violet-100 dark:hover:bg-white/10 text-stone-500 active:scale-95 transition"><i class="pi pi-times text-xs"></i></button>
         </div>
-        <div v-if="emojiOpen" class="absolute bottom-full left-2 right-2 mb-2 bg-white dark:bg-zinc-800 border rounded-[20px] shadow-xl p-3 z-30 max-h-[42dvh] overflow-auto">
+        <div v-if="emojiOpen" class="absolute bottom-full left-2 right-2 mb-2 bg-white dark:bg-zinc-800 border rounded-[20px] shadow-xl p-3 z-50 max-h-[42dvh] overflow-auto">
           <div v-for="g in emojiGroups" :key="g.label" class="mb-2 last:mb-0">
             <div class="text-[10px] font-bold tracking-widest uppercase text-stone-400 mb-1.5">{{ g.label }}</div>
             <div class="flex flex-wrap gap-1"><button v-for="e in g.emojis" :key="e" @click="emit('pickEmoji', e)" class="w-10 h-10 grid place-items-center hover:bg-stone-100 rounded-xl text-[20px]">{{ e }}</button></div>
           </div>
         </div>
-        <div v-if="emojiOpen" @click="emit('emojiClose')" class="fixed inset-0 z-10"></div>
+        <div v-if="emojiOpen" @click="emit('emojiClose')" class="fixed inset-0 z-40"></div>
         <div v-if="attachmentName || previewUrl" class="flex items-center gap-2 bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-800 rounded-2xl px-2.5 py-2 mb-2 min-w-0">
           <img v-if="previewUrl" :src="previewUrl" alt="" class="w-10 h-10 rounded-xl object-cover shrink-0" />
           <span v-else class="w-10 h-10 rounded-xl bg-violet-600/10 grid place-items-center shrink-0"><i class="pi pi-file text-lg text-violet-600 dark:text-violet-300"></i></span>
@@ -155,7 +157,7 @@ function replyPreview(message: any): string {
           <input type="file" data-chat-file class="hidden" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip" @change="(e:any)=>{ const f = e.target.files?.[0] ?? null; emit('pickFile', f); e.target.value = '' }" />
           <div class="relative shrink-0">
             <Button @click="composerMenu.toggle()" icon="pi pi-ellipsis-h" severity="secondary" outlined rounded class="!w-11 !h-11 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-label]:hidden [&_.p-button-icon]:!m-0" aria-label="Ещё" />
-            <div v-if="composerMenu.open.value" class="absolute bottom-full left-0 mb-2 w-52 bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl shadow-xl py-1.5 z-30 overflow-hidden">
+            <div v-if="composerMenu.open.value" class="absolute bottom-full left-0 mb-2 w-52 bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl shadow-xl py-1.5 z-50 overflow-hidden">
               <button @click="(e:any)=>{ composerMenu.close(); const btn = e?.currentTarget as HTMLElement | null; const root = btn?.closest?.('[data-chat-input]') as HTMLElement | null; const inp = root?.querySelector?.('[data-chat-file]') as HTMLInputElement | null; inp?.click() }" class="w-full flex items-center gap-2.5 text-left px-4 py-3 text-sm font-medium dark:text-zinc-100 hover:bg-stone-50 dark:hover:bg-zinc-700/60 active:bg-stone-100 transition"><i class="pi pi-paperclip text-xs text-stone-400"></i>Документ</button>
               <button @click="composerMenu.close(); emit('toggleEmoji')" class="w-full flex items-center gap-2.5 text-left px-4 py-3 text-sm font-medium dark:text-zinc-100 hover:bg-stone-50 dark:hover:bg-zinc-700/60 active:bg-stone-100 transition"><span class="text-base leading-none">😊</span>Смайлы</button>
               <button @click="composerMenu.close(); emit('share-location')" class="w-full flex items-center gap-2.5 text-left px-4 py-3 text-sm font-medium dark:text-zinc-100 hover:bg-stone-50 dark:hover:bg-zinc-700/60 active:bg-stone-100 transition"><i class="pi pi-map-marker text-xs text-stone-400"></i>Геопозиция</button>
@@ -165,7 +167,7 @@ function replyPreview(message: any): string {
           <Button v-if="input.trim() || attachmentName" @click="emit('send')" :loading="sending" :disabled="!input.trim() && !attachmentName" icon="pi pi-send" rounded class="!w-11 !h-11 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-label]:hidden [&_.p-button-icon]:!m-0" aria-label="Отправить" />
           <Button v-else @click="emit('startVoice')" icon="pi pi-microphone" severity="secondary" outlined rounded class="!w-11 !h-11 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-label]:hidden [&_.p-button-icon]:!m-0" aria-label="Голосовое сообщение" />
         </div>
-        <div v-if="composerMenu.open.value" @click="composerMenu.close()" class="fixed inset-0 z-20"></div>
+        <div v-if="composerMenu.open.value" @click="composerMenu.close()" class="fixed inset-0 z-40"></div>
       </div>
     </template>
   </div>
