@@ -113,6 +113,24 @@ function push(t: AppToast) {
  * заменил баннер, а не сложил второй.
  */
 async function notifyHidden(t: AppToast): Promise<void> {
+  // Нативный мост: скрытая вкладка внутри WebView (фон/свёрнуто) — просим приложение
+  // показать системное уведомление (шторка + бейдж). На чистом вебе ReactNativeWebView
+  // отсутствует — ветка пропускается, поведение веба не меняется.
+  try {
+    const w = window as any
+    if (w?.ReactNativeWebView?.postMessage) {
+      const kind = t.type === 'message' ? 'message' : t.type === 'match' ? 'chat' : 'social'
+      const url = t.link.startsWith('http') ? t.link : `${window.location.origin}${t.link.startsWith('/') ? '' : '/'}${t.link}`
+      w.ReactNativeWebView.postMessage(JSON.stringify({
+        type: 'notify',
+        kind,
+        eventId: t.id,
+        title: t.title,
+        body: t.body,
+        url,
+      }))
+    }
+  } catch {}
   try {
     const sub = await getSubscription().catch(() => null)
     if (sub) return

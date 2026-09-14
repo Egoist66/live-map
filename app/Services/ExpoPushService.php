@@ -59,8 +59,16 @@ class ExpoPushService
 
         $badge = $userId ? $this->unreadBadge($userId) : 1;
         $url = $this->absoluteUrl((string) ($webPayload['url'] ?? '/'));
+        $resolvedChannel = $channelId ?? $this->channelForUrl($url);
+        // Тип для data.type: message/chat → сообщения, остальное → social. Мобилка по нему
+        // выбирает канал/бейдж и дедупит bus+push.
+        $type = str_contains($url, '/chat') ? 'message' : 'social';
 
         $sent = 0;
+        $headers = ['Accept' => 'application/json'];
+        if ($token = (string) config('services.expo.access_token', env('EXPO_ACCESS_TOKEN', ''))) {
+            if ($token !== '') $headers['Authorization'] = 'Bearer '.$token;
+        }
         foreach (array_chunk($tokens, 100) as $chunk) {
             $messages = array_map(fn ($to) => [
                 'to' => $to,
@@ -68,12 +76,13 @@ class ExpoPushService
                 'body' => (string) ($webPayload['body'] ?? ''),
                 'badge' => $badge,
                 'sound' => 'default',
-                'channelId' => $channelId ?? $this->channelForUrl($url),
-                'data' => ['url' => $url],
+                'priority' => 'high',
+                'channelId' => $resolvedChannel,
+                'data' => ['url' => $url, 'type' => $type],
             ], $chunk);
 
             try {
-                $res = Http::timeout(10)->post(self::ENDPOINT, $messages);
+                $res = Http::timeout(10)->withHeaders($headers)->post(self::ENDPOINT, $messages);
                 if (! $res->successful()) {
                     Log::warning('expo push http failed', ['status' => $res->status(), 'body' => mb_substr((string) $res->body(), 0, 500)]);
                     continue;

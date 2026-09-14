@@ -20,7 +20,7 @@ class PhotoCommentedNotification extends UserNotification
 
     public function type(): string { return 'photo.commented'; }
 
-    public function category(): string { return 'pin'; }
+    public function category(): string { return 'event'; }
 
     public function dedupeKey(): ?string { return 'photo-comment:'.$this->comment->id; }
 

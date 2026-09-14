@@ -18,7 +18,7 @@ class PhotoLikedNotification extends UserNotification
 
     public function type(): string { return 'photo.liked'; }
 
-    public function category(): string { return 'pin'; }
+    public function category(): string { return 'event'; }
 
     public function dedupeKey(): ?string
     {

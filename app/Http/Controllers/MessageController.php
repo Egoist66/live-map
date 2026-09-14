@@ -116,8 +116,6 @@ class MessageController extends Controller
         try {
             $ids = $conversation->participantRows()->where('user_id', '!=', $sender->id)->pluck('user_id');
             if ($ids->isEmpty()) return;
-            $push = app(WebPushService::class);
-            if (! $push->isConfigured()) return;
             $senderModel = $sender instanceof User ? $sender : User::select('id', 'name', 'avatar_path')->find($sender->id);
             $text = trim((string) $msg->body);
             if ($text === '' && $msg->attachment_path) {
@@ -125,7 +123,12 @@ class MessageController extends Controller
                 $text = ($msg->attachment_kind === 'image' ? '📷 Фото' : '📎 Файл') . $label;
             }
             foreach (User::whereIn('id', $ids)->select('id', 'name', 'avatar_path')->get() as $recipient) {
-                $push->sendChatMessage($recipient, $senderModel ?? $recipient, $conversation->id, $text);
+                // Web Push — только если настроен VAPID (для веба), Expo — всегда (для Android).
+                // Раньше тут был ранний return при ненастроенном VAPID — он глушил и Expo.
+                try {
+                    $push = app(WebPushService::class);
+                    if ($push->isConfigured()) $push->sendChatMessage($recipient, $senderModel ?? $recipient, $conversation->id, $text);
+                } catch (\Throwable) {}
                 try { app(\App\Services\ExpoPushService::class)->sendChatMessage($recipient, $senderModel ?? $recipient, $conversation->id, $text); } catch (\Throwable) {}
             }
         } catch (\Throwable $e) {

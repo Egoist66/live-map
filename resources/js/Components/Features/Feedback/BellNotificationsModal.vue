@@ -389,6 +389,60 @@ function openNews(item: any) {
                       </button>
                     </div>
                   </div>
+                  <div v-if="pinAct.photoActivities.value.length" class="mb-3">
+                    <div
+                      class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500 px-2 py-1.5 flex items-center gap-1.5"
+                    >
+                      Фото
+                      <span
+                        v-if="pinAct.photoUnread.value"
+                        class="bg-sky-500 text-white text-[10px] px-1.5 py-0.5 rounded-full"
+                        >{{ pinAct.photoUnread.value }}</span
+                      >
+                    </div>
+                    <div class="space-y-1">
+                      <button
+                        v-for="a in pinAct.photoActivities.value"
+                        :key="a.id"
+                        @click="bell.close(); pinAct.goPin(a)"
+                        :class="
+                          !a.read_at
+                            ? 'bg-sky-50 dark:bg-sky-500/10 border border-sky-200 dark:border-sky-800'
+                            : 'hover:bg-stone-50 dark:hover:bg-zinc-800 border border-transparent'
+                        "
+                        class="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition min-h-[56px]"
+                      >
+                        <span class="relative shrink-0"
+                          ><Avatar
+                            :image="avatarSrcFor(a.actor)"
+                            shape="circle"
+                            class="!w-10 !h-10 [&_img]:object-cover"
+                            :pt="{ image: { class: 'object-cover' } }" /><span
+                            class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center border-2 border-white dark:border-zinc-900 text-[10px] bg-sky-500"
+                            >{{ pinAct.describe(a).emoji }}</span
+                          ></span
+                        >
+                        <div class="min-w-0 flex-1">
+                          <div class="flex items-center gap-1.5">
+                            <span class="text-sm font-semibold dark:text-white truncate">Фото</span
+                            ><span
+                              v-if="a.created_at"
+                              class="text-[11px] text-stone-400 dark:text-zinc-500 shrink-0"
+                              >{{ fmtTime(a.created_at) }}</span
+                            >
+                          </div>
+                          <div class="text-xs text-stone-500 dark:text-zinc-400 truncate">
+                            {{ pinAct.describe(a).text }}
+                          </div>
+                        </div>
+                        <span
+                          v-if="!a.read_at"
+                          class="w-2.5 h-2.5 bg-sky-500 rounded-full shrink-0"
+                        ></span>
+                        <i v-else class="pi pi-chevron-right text-stone-300 dark:text-zinc-600 text-xs shrink-0"></i>
+                      </button>
+                    </div>
+                  </div>
                   <div v-if="pinAct.subActivities.value.length" class="mb-3">
                     <div
                       class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500 px-2 py-1.5 flex items-center gap-1.5"
@@ -621,7 +675,7 @@ function openNews(item: any) {
               <div v-if="!pinAct.pinActivities.value.length" class="py-10 text-center px-4">
                 <div class="w-12 h-12 rounded-2xl bg-stone-100 dark:bg-zinc-800 grid place-items-center mx-auto text-xl">📍</div>
                 <div class="text-sm font-semibold dark:text-white mt-3">Реакций на пины нет</div>
-                <div class="text-xs text-stone-500 dark:text-zinc-400 mt-1">Лайки ULove и UFlow — во вкладке «События»</div>
+                <div class="text-xs text-stone-500 dark:text-zinc-400 mt-1">Лайки фото, ULove и UFlow — во вкладке «События»</div>
               </div>
               <div v-else class="space-y-1">
                 <div
@@ -642,14 +696,14 @@ function openNews(item: any) {
                       class="!w-10 !h-10 [&_img]:object-cover"
                       :pt="{ image: { class: 'object-cover' } }" /><span
                       class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center border-2 border-white dark:border-zinc-900 text-[10px]"
-                      :class="a.kind === 'comment' ? 'bg-violet-600' : a.kind === 'mention' ? 'bg-amber-500' : a.kind === 'photo_comment' || a.kind === 'photo_like' ? 'bg-sky-500' : a.kind === 'sub_pin' ? 'bg-emerald-500' : a.kind === 'invite' ? 'bg-amber-500' : a.kind === 'invite_accepted' ? 'bg-emerald-500' : 'bg-rose-500'"
+                      :class="a.kind === 'comment' ? 'bg-violet-600' : a.kind === 'mention' ? 'bg-amber-500' : a.kind === 'sub_pin' ? 'bg-emerald-500' : a.kind === 'invite' ? 'bg-amber-500' : a.kind === 'invite_accepted' ? 'bg-emerald-500' : 'bg-rose-500'"
                       >{{ pinAct.describe(a).emoji }}</span
                     ></span
                   >
                   <div class="min-w-0 flex-1">
                     <div class="flex items-center gap-1.5">
                       <span class="text-sm font-semibold dark:text-white truncate">{{
-                        a.pin?.title || (a.kind === 'sub_pin' ? "Новый пин" : a.photo ? "Ваше фото" : a.kind === 'mention' ? "Вас упомянули" : a.kind === 'invite' ? "Приглашение в пин" : a.kind === 'invite_accepted' ? "Приглашение принято" : "Ваш пин")
+                        a.pin?.title || (a.kind === 'sub_pin' ? "Новый пин" : a.kind === 'mention' ? "Вас упомянули" : a.kind === 'invite' ? "Приглашение в пин" : a.kind === 'invite_accepted' ? "Приглашение принято" : "Ваш пин")
                       }}</span
                       ><span
                         v-if="a.created_at"

@@ -9,14 +9,18 @@ declare global {
 
 let bound: string | null = null
 let attempts = 0
+let listenersAttached = false
 
 async function bind(token: string): Promise<void> {
   if (!token || token === bound) return
-  bound = token
   try {
     await api.post('/api/expo-push-tokens', { token, platform: window.UPinApp?.platform ?? null })
-  } catch {
+    bound = token
+  } catch (e: any) {
+    // 401 = ещё не залогинен (SPA-логин позже инициализации): не фиксируем bound,
+    // повторим при фокусе/смене аккаунта. Остальные ошибки — тоже ретраим ограниченно.
     bound = null
+    if (e?.response?.status !== 401 && attempts < 12) window.setTimeout(tick, 5000)
   }
 }
 
@@ -44,6 +48,7 @@ function tick(): void {
 
 export function initExpoPushBinding(): void {
   try {
+    // Только внутри нативного WebView — на чистом вебе выходим, ничего не меняем.
     if (!window.ReactNativeWebView) return
     const t = current()
     if (t) {
@@ -52,9 +57,38 @@ export function initExpoPushBinding(): void {
       requestToken()
       window.setTimeout(tick, 3000)
     }
-    window.addEventListener('upin:push-token', (e) => {
-      const token = (e as CustomEvent<{ token?: string }>).detail?.token
-      if (token) void bind(token)
-    })
+    if (!listenersAttached) {
+      listenersAttached = true
+      window.addEventListener('upin:push-token', (e) => {
+        const token = (e as CustomEvent<{ token?: string }>).detail?.token
+        if (token) void bind(token)
+      })
+      // Повторная привязка после SPA-логина/смены аккаунта: токен уже есть в WebView,
+      // а сессии на момент init ещё не было (401). Веб-поведение не трогаем.
+      window.addEventListener('focus', () => {
+        const cur = current()
+        if (cur && cur !== bound) void bind(cur)
+      })
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState !== 'visible') return
+        const cur = current()
+        if (cur && cur !== bound) void bind(cur)
+      })
+      window.addEventListener('upin:auth-changed' as any, () => {
+        bound = null
+        const cur = current()
+        if (cur) void bind(cur)
+        else requestToken()
+      })
+    }
+  } catch {}
+}
+
+/** Принудительно сбросить привязку (вызывать после logout/login, смены аккаунта). */
+export function resetExpoPushBinding(): void {
+  try {
+    bound = null
+    attempts = 0
+    window.dispatchEvent(new CustomEvent('upin:auth-changed'))
   } catch {}
 }

@@ -199,24 +199,42 @@ async function clearAll(): Promise<void> {
 }
 
 /**
- * Виды, которые относятся строго к пинам/фото (вкладка «Пины»).
- * Остальное (ULove, UFlow, подписки на фото/уровень) — вкладка «События».
+ * Виды строго про пины карты (вкладка «Пины»).
+ * Галерея (photo_like, photo_comment, mention с фото) — вкладка «События».
  */
-export const PIN_ACTIVITY_KINDS = ['reaction', 'comment', 'mention', 'photo_comment', 'photo_like', 'sub_pin', 'invite', 'invite_accepted'] as const
+export const PIN_ACTIVITY_KINDS = ['reaction', 'comment', 'mention', 'sub_pin', 'invite', 'invite_accepted'] as const
+
+/**
+ * Виды галереи фото (вкладка «События», секция «Фото»).
+ */
+export const PHOTO_ACTIVITY_KINDS = ['photo_like', 'photo_comment'] as const
 
 /**
  * Проверка: активность относится к пинам, а не к общим событиям.
- * Mention с фото считаем пином, обычный mention без пина — событием.
+ * Mention только с пином считаем пином, mention с фото — событием.
  * @param a элемент ленты
  * @returns true если показать во вкладке «Пины»
  */
 export function isPinActivity(a: PinActivityItem): boolean {
   if (a.kind === 'mention') {
-    const hasPhoto = Number((a as any).photo?.id || (a as any).photo_id || 0) > 0
     const hasPin = Number((a as any).pin?.id || (a as any).pin_id || 0) > 0
-    return hasPhoto || hasPin
+    return hasPin
   }
   return (PIN_ACTIVITY_KINDS as readonly string[]).includes(a.kind)
+}
+
+/**
+ * Проверка: активность относится к галерее фото.
+ * @param a элемент ленты
+ * @returns true если это лайк/коммент фото или упоминание с фото
+ */
+export function isPhotoActivity(a: PinActivityItem): boolean {
+  if ((PHOTO_ACTIVITY_KINDS as readonly string[]).includes(a.kind)) return true
+  if (a.kind === 'mention') {
+    const hasPhoto = Number((a as any).photo?.id || (a as any).photo_id || 0) > 0
+    return hasPhoto
+  }
+  return false
 }
 
 /**
@@ -406,7 +424,9 @@ export function usePinActivity() {
   const loveActivities = computed(() => eventActivities.value.filter((a) => a.kind === 'swipe_like' || a.kind === 'match'))
   const flowActivities = computed(() => eventActivities.value.filter((a) => a.kind === 'flow_like' || a.kind === 'flow_comment' || a.kind === 'flow_reply' || a.kind === 'flow_mention' || a.kind === 'sub_flow_post'))
   const subActivities = computed(() => eventActivities.value.filter((a) => a.kind === 'sub_photo' || a.kind === 'sub_level'))
+  const photoActivities = computed(() => eventActivities.value.filter((a) => isPhotoActivity(a)))
   const loveUnread = computed(() => loveActivities.value.filter((a) => !a.read_at).length)
   const flowUnread = computed(() => flowActivities.value.filter((a) => !a.read_at).length)
-  return { activities, unread, loading, clearing, hasData, pinActivities, eventActivities, pinUnread, eventUnread, loveActivities, flowActivities, subActivities, loveUnread, flowUnread, otherNotifications, otherUnread, describe, refresh, markAllRead, markOne, clearAll, goPin, goNotification, resolveTarget, acceptInvite, declineInvite, invitePinId, init, subscribe }
+  const photoUnread = computed(() => photoActivities.value.filter((a) => !a.read_at).length)
+  return { activities, unread, loading, clearing, hasData, pinActivities, eventActivities, pinUnread, eventUnread, loveActivities, flowActivities, subActivities, photoActivities, loveUnread, flowUnread, photoUnread, otherNotifications, otherUnread, describe, refresh, markAllRead, markOne, clearAll, goPin, goNotification, resolveTarget, acceptInvite, declineInvite, invitePinId, init, subscribe }
 }

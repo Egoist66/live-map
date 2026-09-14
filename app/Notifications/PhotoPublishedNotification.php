@@ -18,7 +18,7 @@ class PhotoPublishedNotification extends UserNotification
 
     public function type(): string { return 'photo.published'; }
 
-    public function category(): string { return 'pin'; }
+    public function category(): string { return 'event'; }
 
     public function dedupeKey(): ?string { return 'photo-published:'.$this->photo->id; }
 
