@@ -82,6 +82,7 @@ class ChatAttachmentController extends Controller
             'attachment_mime' => null,
             'attachment_size' => null,
             'attachment_kind' => null,
+            'attachment_duration' => null,
             'type' => 'text',
         ]);
 
@@ -111,6 +112,7 @@ class ChatAttachmentController extends Controller
                 'attachment_mime' => null,
                 'attachment_size' => null,
                 'attachment_kind' => null,
+                'attachment_duration' => null,
                 'type' => 'text',
             ]);
 

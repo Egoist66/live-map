@@ -38,6 +38,22 @@ export function resetChatSession(): void {
   } catch {}
 }
 
+/**
+ * Вид вложения для optimistic-сообщения по mime файла.
+ *
+ * @param file выбранный файл
+ * @returns image для картинок, voice для аудио, file для остального
+ */
+function voiceKindFor(file: File): 'image' | 'voice' | 'file' {
+  if (/^image\//i.test(file.type)) {
+    return 'image'
+  }
+  if (/^audio\//i.test(file.type)) {
+    return 'voice'
+  }
+  return 'file'
+}
+
 export function useChat() {
   const conversations = ref<Conversation[]>([])
   const activeConv = ref<ConversationDetail | null>(null)
@@ -337,7 +353,7 @@ export function useChat() {
     }
   }
 
-  async function sendMessage(body: string, replyTo?: any | null, attachmentFile?: File | null) {
+  async function sendMessage(body: string, replyTo?: any | null, attachmentFile?: File | null, voiceDuration?: number | null) {
     const targetId = selectedId.value
     const text = body.trim()
     if (!targetId || (!text && !attachmentFile)) return
@@ -351,20 +367,24 @@ export function useChat() {
       body: replyTo.body,
       sender_id: replyTo.sender_id,
       sender_name: replyTo.sender?.name ?? null,
+      kind: replyTo.attachment?.kind ?? replyTo.type ?? null,
+      duration: replyTo.attachment?.duration ?? null,
     } : null
+    const optimisticKind = attachmentFile ? voiceKindFor(attachmentFile) : null
     const optimisticAttachment = attachmentFile ? {
       url: URL.createObjectURL(attachmentFile),
       name: attachmentFile.name,
       size: attachmentFile.size,
-      kind: /^image\//i.test(attachmentFile.type) ? 'image' : 'file',
+      kind: optimisticKind,
+      duration: voiceDuration ?? null,
       local: true,
     } : null
-    const optimistic: any = { id: tempId, conversation_id: targetId, reply_to_id: replyTo?.id ?? null, reply_to: replySnapshot, sender_id: uid, body: text, type: optimisticAttachment ? optimisticAttachment.kind : 'text', attachment: optimisticAttachment, created_at: new Date().toISOString(), pending: true }
+    const optimistic: any = { id: tempId, conversation_id: targetId, reply_to_id: replyTo?.id ?? null, reply_to: replySnapshot, sender_id: uid, body: text, type: optimisticAttachment ? optimisticKind : 'text', attachment: optimisticAttachment, created_at: new Date().toISOString(), pending: true }
     messages.value.push(optimistic)
     history.notifyAppended()
     sending.value = true
     try {
-      const msg = await chatApi.sendMessage(targetId, text, replyTo?.id ?? null, attachmentFile ?? null)
+      const msg = await chatApi.sendMessage(targetId, text, replyTo?.id ?? null, attachmentFile ?? null, voiceDuration ?? null)
       if (optimisticAttachment?.url) {
         try { URL.revokeObjectURL(optimisticAttachment.url) } catch {}
       }

@@ -97,7 +97,7 @@ export const chatApi = {
     const { data } = await api.get<Message[]>(`/api/conversations/${convId}/messages`, { params: { before } })
     return data
   },
-  async sendMessage(convId: number, body: string, replyToId?: number | null, attachment?: File | null) {
+  async sendMessage(convId: number, body: string, replyToId?: number | null, attachment?: File | null, voiceDuration?: number | null) {
     if (!attachment) {
       const { data } = await api.post<Message>(`/api/conversations/${convId}/messages`, { body, reply_to_id: replyToId ?? null })
       return data
@@ -105,6 +105,7 @@ export const chatApi = {
     const form = new FormData()
     form.append('body', body || '')
     if (replyToId != null) form.append('reply_to_id', String(replyToId))
+    if (voiceDuration != null) form.append('voice_duration', String(voiceDuration))
     form.append('attachment', attachment, attachment.name)
     const { data } = await api.post<Message>(`/api/conversations/${convId}/messages`, form)
     return data

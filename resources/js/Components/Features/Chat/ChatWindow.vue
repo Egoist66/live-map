@@ -6,20 +6,24 @@ import Textarea from 'primevue/textarea'
 import ContextMenu from 'primevue/contextmenu'
 import OnlineDot from '@/Components/Features/Feedback/OnlineDot.vue'
 import MessageBubble from '@/Components/Features/Chat/MessageBubble.vue'
+import VoiceMessagePlayer from '@/Components/Features/Chat/VoiceMessagePlayer.vue'
 import { avatarSrcFor } from '@/composables/useAvatar'
 import { useMessageContextMenu } from '@/composables/useMessageContextMenu'
+import { useMessageSwipe } from '@/composables/useMessageSwipe'
 import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
 import { useChatLayout } from '@/composables/useChatLayout'
 import { useChatComposerMenu } from '@/composables/useChatComposerMenu'
 import { useEnterToSend } from '@/composables/useEnterToSend'
+import { formatVoiceTime, VOICE_MAX_SECONDS } from '@/composables/useVoiceRecorder'
 
 const { windowCardClass } = useChatLayout()
 const composerMenu = useChatComposerMenu()
 const { handleEnterToSend } = useEnterToSend()
 
-const props = defineProps<{ selectedId: number | null; activeConv: any; messages: any[]; loading: boolean; sending: boolean; refreshing: boolean; typing: boolean; online: boolean; input: string; emojiOpen: boolean; emojiGroups: any[]; editingId: number | null; editingBody: string; showMenu: boolean; keyboardStyle: any; locating?: boolean; isOwnMessage: (m: any) => boolean; messageStatus: (m: any) => string; formatTime: (s: string) => string; pinned?: any[]; pinLimitLabel?: string; flashId?: number | null; datingEntry?: boolean; datingBadge?: string | null; replyTo?: any | null; attachmentName?: string | null; attachmentSize?: number | null; previewUrl?: string | null; attachError?: string | null; attaching?: boolean }>()
-const emit = defineEmits<{ (e: 'update:input', v: string): void; (e: 'update:editingBody', v: string): void; (e: 'send'): void; (e: 'share-location'): void; (e: 'typing'): void; (e: 'stopTyping'): void; (e: 'refresh'): void; (e: 'back'): void; (e: 'close'): void; (e: 'toggleMenu'): void; (e: 'menuClose'): void; (e: 'deleteChat'): void; (e: 'block'): void; (e: 'toggleEmoji'): void; (e: 'emojiClose'): void; (e: 'pickEmoji', v: string): void; (e: 'pickEmojiEdit', v: string): void; (e: 'startEdit', m: any): void; (e: 'saveEdit'): void; (e: 'cancelEdit'): void; (e: 'deleteMessage', id: number): void; (e: 'togglePin', m: any): void; (e: 'unpin', id: number): void; (e: 'jumpToMessage', id: number): void; (e: 'swipesBack'): void; (e: 'reply', m: any): void; (e: 'cancelReply'): void; (e: 'pickFile', f: File | null): void; (e: 'removeFile'): void; (e: 'pasteImage', ev: ClipboardEvent): void }>()
+const props = defineProps<{ selectedId: number | null; activeConv: any; messages: any[]; loading: boolean; sending: boolean; refreshing: boolean; typing: boolean; online: boolean; input: string; emojiOpen: boolean; emojiGroups: any[]; editingId: number | null; editingBody: string; showMenu: boolean; keyboardStyle: any; locating?: boolean; isOwnMessage: (m: any) => boolean; messageStatus: (m: any) => string; formatTime: (s: string) => string; pinned?: any[]; pinLimitLabel?: string; flashId?: number | null; datingEntry?: boolean; datingBadge?: string | null; replyTo?: any | null; attachmentName?: string | null; attachmentSize?: number | null; previewUrl?: string | null; attachError?: string | null; attaching?: boolean; voiceRecording?: boolean; voiceDuration?: number; voiceLevel?: number; voiceError?: string | null; voicePreviewUrl?: string | null; voicePreviewDuration?: number; hasVoicePreview?: boolean }>()
+const emit = defineEmits<{ (e: 'update:input', v: string): void; (e: 'update:editingBody', v: string): void; (e: 'send'): void; (e: 'share-location'): void; (e: 'typing'): void; (e: 'stopTyping'): void; (e: 'refresh'): void; (e: 'back'): void; (e: 'close'): void; (e: 'toggleMenu'): void; (e: 'menuClose'): void; (e: 'deleteChat'): void; (e: 'block'): void; (e: 'toggleEmoji'): void; (e: 'emojiClose'): void; (e: 'pickEmoji', v: string): void; (e: 'pickEmojiEdit', v: string): void; (e: 'startEdit', m: any): void; (e: 'saveEdit'): void; (e: 'cancelEdit'): void; (e: 'deleteMessage', id: number): void; (e: 'togglePin', m: any): void; (e: 'unpin', id: number): void; (e: 'jumpToMessage', id: number): void; (e: 'swipesBack'): void; (e: 'reply', m: any): void; (e: 'cancelReply'): void; (e: 'pickFile', f: File | null): void; (e: 'removeFile'): void; (e: 'pasteImage', ev: ClipboardEvent): void; (e: 'startVoice'): void; (e: 'stopVoice'): void; (e: 'cancelVoice'): void; (e: 'sendVoice'): void; (e: 'discardVoice'): void }>()
 const { cm, menuModel, bindMessage } = useMessageContextMenu({ isOwn: (m: any) => props.isOwnMessage(m), onEdit: (m: any) => emit('startEdit', m), onDelete: (id: number) => emit('deleteMessage', id), onPin: (m: any) => emit('togglePin', m), onReply: (m: any) => emit('reply', m) })
+const swipe = useMessageSwipe({ onReply: (m: any) => emit('reply', m) })
 const { menuPt } = useDropdownMenuStyle()
 
 function pinPreview(body: string): string {
@@ -27,8 +31,13 @@ function pinPreview(body: string): string {
   return t.length > 60 ? `${t.slice(0, 60)}…` : t
 }
 
-function replyPreview(body: string): string {
-  const t = (body || '').replace(/\s+/g, ' ').trim()
+function replyPreview(message: any): string {
+  const kind = String(message?.attachment?.kind ?? message?.type ?? '')
+  if (kind === 'voice' || kind === 'audio') {
+    const secs = Number(message?.attachment?.duration ?? 0)
+    return secs > 0 ? `🎤 Голосовое · ${secs} c` : '🎤 Голосовое'
+  }
+  const t = String(message?.body ?? '').replace(/\s+/g, ' ').trim()
   return t.length > 80 ? `${t.slice(0, 80)}…` : t
 }
 </script>
@@ -84,7 +93,8 @@ function replyPreview(body: string): string {
                     </div>
                   </div>
                 </div>
-                <div v-else v-on="bindMessage(m)" :class="['rounded-2xl transition-shadow duration-500 scroll-mt-2', flashId === m.id ? 'ring-2 ring-violet-500 shadow-lg' : '']">
+                <div v-else v-on="swipe.merge(swipe.bindSwipe(m), bindMessage(m))" :style="swipe.swipeStyle(m)" :class="['relative rounded-2xl transition-shadow duration-500 scroll-mt-2 touch-pan-y', flashId === m.id ? 'ring-2 ring-violet-500 shadow-lg' : '', (swipe.offsets.value[m.id] ?? 0) ? '' : 'transition-transform duration-200']">
+                  <div v-if="swipe.hintId.value === m.id" class="absolute top-1/2 -translate-y-1/2 z-10 w-8 h-8 grid place-items-center rounded-full bg-violet-600 text-white shadow-lg pointer-events-none" :class="isOwnMessage(m) ? 'left-1' : 'right-1'"><i class="pi pi-reply text-sm"></i></div>
                   <MessageBubble :message="m" :own="isOwnMessage(m)" :status="messageStatus(m)" :time="formatTime(m.created_at)" @edit="(mm:any)=>emit('startEdit', mm)" @delete="(id:number)=>emit('deleteMessage', id)" @pin="(mm:any)=>emit('togglePin', mm)" @reply="(mm:any)=>emit('reply', mm)" @jump="(id:number)=>emit('jumpToMessage', id)" />
                 </div>
           </div>
@@ -95,7 +105,7 @@ function replyPreview(body: string): string {
         <div v-if="replyTo" class="flex items-center gap-2.5 bg-violet-50 dark:bg-violet-500/10 border-l-[3px] border-violet-500 rounded-r-xl rounded-l-sm px-3 py-2 mb-2 min-w-0">
           <div class="flex-1 min-w-0">
             <div class="text-[11px] font-bold text-violet-600 dark:text-violet-300 truncate">↩ {{ isOwnMessage(replyTo) ? 'Вы' : (replyTo.sender?.name || 'Сообщение') }}</div>
-            <div class="text-xs text-stone-500 dark:text-zinc-400 truncate">{{ replyPreview(replyTo.body) }}</div>
+            <div class="text-xs text-stone-500 dark:text-zinc-400 truncate">{{ replyPreview(replyTo) }}</div>
           </div>
           <button @click="emit('cancelReply')" aria-label="Отменить ответ" class="w-7 h-7 shrink-0 grid place-items-center rounded-full hover:bg-violet-100 dark:hover:bg-white/10 text-stone-500 active:scale-95 transition"><i class="pi pi-times text-xs"></i></button>
         </div>
@@ -117,7 +127,22 @@ function replyPreview(body: string): string {
           <button @click="emit('removeFile')" aria-label="Убрать файл" class="w-7 h-7 shrink-0 grid place-items-center rounded-full hover:bg-violet-100 dark:hover:bg-white/10 text-stone-500 active:scale-95 transition"><i class="pi pi-times text-xs"></i></button>
         </div>
         <div v-if="attachError" class="text-[11px] text-red-600 dark:text-red-400 px-1 mb-1.5">{{ attachError }}</div>
-        <div data-chat-input class="relative flex gap-2 items-end min-w-0 w-full max-w-full">
+        <div v-if="voiceError" class="text-[11px] text-red-600 dark:text-red-400 px-1 mb-1.5">{{ voiceError }}</div>
+        <div v-if="voiceRecording" class="relative flex gap-2 items-center min-w-0 w-full max-w-full bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-800 rounded-2xl px-2.5 py-1.5">
+          <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse shrink-0"></span>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-semibold tabular-nums dark:text-white">{{ formatVoiceTime(voiceDuration ?? 0) }} / {{ formatVoiceTime(VOICE_MAX_SECONDS) }}</div>
+            <div class="h-1 mt-1 rounded-full bg-red-100 dark:bg-red-500/20 overflow-hidden"><div class="h-full rounded-full bg-red-500 transition-[width] duration-150" :style="{ width: `${Math.round((voiceLevel ?? 0) * 100)}%` }"></div></div>
+          </div>
+          <Button @click="emit('cancelVoice')" icon="pi pi-trash" severity="danger" text rounded class="!w-11 !h-11 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-label]:hidden [&_.p-button-icon]:!m-0" aria-label="Отменить запись" />
+          <Button @click="emit('stopVoice')" icon="pi pi-stop" severity="danger" rounded class="!w-11 !h-11 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-label]:hidden [&_.p-button-icon]:!m-0" aria-label="Остановить" />
+        </div>
+        <div v-else-if="hasVoicePreview" class="relative flex gap-2 items-center min-w-0 w-full max-w-full bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-800 rounded-2xl px-2.5 py-1.5">
+          <div class="flex-1 min-w-0"><VoiceMessagePlayer :src="voicePreviewUrl ?? null" :duration="voicePreviewDuration" /></div>
+          <Button @click="emit('discardVoice')" icon="pi pi-trash" severity="danger" text rounded class="!w-11 !h-11 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-label]:hidden [&_.p-button-icon]:!m-0" aria-label="Удалить запись" />
+          <Button @click="emit('sendVoice')" :loading="sending" icon="pi pi-send" rounded class="!w-11 !h-11 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-label]:hidden [&_.p-button-icon]:!m-0" aria-label="Отправить голосовое" />
+        </div>
+        <div v-else data-chat-input class="relative flex gap-2 items-end min-w-0 w-full max-w-full">
           <input type="file" data-chat-file class="hidden" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip" @change="(e:any)=>{ const f = e.target.files?.[0] ?? null; emit('pickFile', f); e.target.value = '' }" />
           <div class="relative shrink-0">
             <Button @click="composerMenu.toggle()" icon="pi pi-ellipsis-h" severity="secondary" outlined rounded class="!w-11 !h-11 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-label]:hidden [&_.p-button-icon]:!m-0" aria-label="Ещё" />
@@ -128,7 +153,8 @@ function replyPreview(body: string): string {
             </div>
           </div>
           <Textarea :model-value="input" @update:model-value="(v:any)=>emit('update:input', v)" @input="emit('typing')" @blur="emit('stopTyping')" @keydown="(e:any)=>handleEnterToSend(e, () => emit('send'))" @keydown.escape="emit('emojiClose')" @paste="(e:any)=>emit('pasteImage', e as ClipboardEvent)" placeholder="Сообщение..." rows="1" autoResize maxlength="2000" fluid class="!rounded-2xl flex-1 min-w-0 max-h-32" enterkeyhint="enter" />
-          <Button @click="emit('send')" :loading="sending" :disabled="!input.trim() && !attachmentName" icon="pi pi-send" rounded class="!w-11 !h-11 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-label]:hidden [&_.p-button-icon]:!m-0" aria-label="Отправить" />
+          <Button v-if="input.trim() || attachmentName" @click="emit('send')" :loading="sending" :disabled="!input.trim() && !attachmentName" icon="pi pi-send" rounded class="!w-11 !h-11 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-label]:hidden [&_.p-button-icon]:!m-0" aria-label="Отправить" />
+          <Button v-else @click="emit('startVoice')" icon="pi pi-microphone" severity="secondary" outlined rounded class="!w-11 !h-11 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-label]:hidden [&_.p-button-icon]:!m-0" aria-label="Голосовое сообщение" />
         </div>
         <div v-if="composerMenu.open.value" @click="composerMenu.close()" class="fixed inset-0 z-20"></div>
       </div>

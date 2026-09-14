@@ -17,6 +17,12 @@ class ChatAttachment
     /** Макс вес вложения: 10 МБ. */
     public const MAX_BYTES = 10 * 1024 * 1024;
 
+    /** Макс вес голосового сообщения: 5 МБ (минута opus занимает < 1 МБ). */
+    public const VOICE_MAX_BYTES = 5 * 1024 * 1024;
+
+    /** Макс длительность голосового сообщения в секундах. */
+    public const VOICE_MAX_SECONDS = 60;
+
     /** Срок хранения вложений в днях: дальше удаляются автоматически. */
     public const RETENTION_DAYS = 15;
 
@@ -44,6 +50,24 @@ class ChatAttachment
     ];
 
     /**
+     * Голосовые сообщения: расширение => допустимые mime.
+     *
+     * Запись идёт через MediaRecorder: Chrome/Android даёт audio/webm
+     * с opus, Safari/iOS — audio/mp4 (m4a), Firefox — audio/ogg.
+     * Mime сравнивается без параметров после «;» (codecs=opus и т.п.).
+     */
+    public const VOICE = [
+        'webm' => ['audio/webm', 'video/webm'],
+        'ogg' => ['audio/ogg', 'video/ogg'],
+        'oga' => ['audio/ogg'],
+        'opus' => ['audio/ogg', 'audio/opus'],
+        'm4a' => ['audio/mp4', 'audio/x-m4a', 'audio/m4a'],
+        'mp4' => ['audio/mp4'],
+        'mp3' => ['audio/mpeg', 'audio/mp3'],
+        'wav' => ['audio/wav', 'audio/x-wav', 'audio/wave'],
+    ];
+
+    /**
      * Диск для вложений: s3 при настройке, иначе public.
      *
      * @return string
@@ -60,18 +84,11 @@ class ChatAttachment
      * Проверяет файл по размеру, расширению и mime.
      *
      * @param UploadedFile $file загруженный файл
-     * @return string kind: image|file
+     * @return string kind: image|file|voice
      * @throws ValidationException
      */
     public static function validate(UploadedFile $file): string
     {
-        $size = $file->getSize() ?: 0;
-        if ($size > self::MAX_BYTES) {
-            throw ValidationException::withMessages([
-                'attachment' => 'Файл больше 10 МБ',
-            ]);
-        }
-
         $original = (string) $file->getClientOriginalName();
         $ext = strtolower(pathinfo($original, PATHINFO_EXTENSION));
         $parts = array_map('strtolower', explode('.', $original));
@@ -81,6 +98,17 @@ class ChatAttachment
                     'attachment' => 'Такой тип файла запрещён',
                 ]);
             }
+        }
+
+        if (isset(self::VOICE[$ext])) {
+            return self::validateVoice($file, $ext);
+        }
+
+        $size = $file->getSize() ?: 0;
+        if ($size > self::MAX_BYTES) {
+            throw ValidationException::withMessages([
+                'attachment' => 'Файл больше 10 МБ',
+            ]);
         }
 
         if (! isset(self::ALLOWED[$ext])) {
@@ -102,12 +130,44 @@ class ChatAttachment
     }
 
     /**
+     * Проверяет голосовое сообщение: вес и соответствие mime расширению.
+     *
+     * Длительность (макс 60 c) режется на клиенте рекордером — сюда
+     * минутный opus в любом случае проходит по весу с запасом.
+     *
+     * @param UploadedFile $file загруженный аудиофайл
+     * @param string $ext расширение файла
+     * @return string всегда 'voice'
+     * @throws ValidationException
+     */
+    public static function validateVoice(UploadedFile $file, string $ext): string
+    {
+        $size = $file->getSize() ?: 0;
+        if ($size > self::VOICE_MAX_BYTES) {
+            throw ValidationException::withMessages([
+                'attachment' => 'Голосовое сообщение больше 5 МБ',
+            ]);
+        }
+
+        $raw = strtolower((string) $file->getMimeType());
+        $mime = explode(';', $raw)[0];
+        $mime = trim($mime);
+        if (! in_array($mime, self::VOICE[$ext], true)) {
+            throw ValidationException::withMessages([
+                'attachment' => 'Файл не похож на голосовое сообщение',
+            ]);
+        }
+
+        return 'voice';
+    }
+
+    /**
      * Сохраняет вложение в chat-attachments.
      *
-     * Фото жмёт через ImageOptimizer, документы кладёт как есть.
+     * Фото жмёт через ImageOptimizer, документы и голосовые кладёт как есть.
      *
      * @param UploadedFile $file проверенный файл
-     * @param string $kind image|file
+     * @param string $kind image|file|voice
      * @return array{path: string, name: string, mime: string, size: int, kind: string}
      */
     public static function store(UploadedFile $file, string $kind): array

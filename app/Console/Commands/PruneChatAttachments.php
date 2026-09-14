@@ -34,6 +34,7 @@ class PruneChatAttachments extends Command
                 'attachment_mime' => null,
                 'attachment_size' => null,
                 'attachment_kind' => null,
+                'attachment_duration' => null,
                 'type' => 'text',
             ]);
         $this->info("Pruned $count attachments");

@@ -5,9 +5,28 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * Сообщение чата: текст, вложения и голосовые.
+ *
+ * Голосовое — это вложение с kind=voice и длительностью
+ * в attachment_duration (секунды, макс 60).
+ *
+ * @property int $id
+ * @property int $conversation_id
+ * @property int|null $reply_to_id
+ * @property int $sender_id
+ * @property string $body
+ * @property string $type
+ * @property string|null $attachment_path
+ * @property string|null $attachment_name
+ * @property string|null $attachment_mime
+ * @property int|null $attachment_size
+ * @property string|null $attachment_kind
+ * @property int|null $attachment_duration
+ */
 class Message extends Model
 {
-    protected $fillable = ['conversation_id','reply_to_id','sender_id','body','type','read_at','delivered_at','edited_at','pinned_at','pinned_by','attachment_path','attachment_name','attachment_mime','attachment_size','attachment_kind'];
+    protected $fillable = ['conversation_id','reply_to_id','sender_id','body','type','read_at','delivered_at','edited_at','pinned_at','pinned_by','attachment_path','attachment_name','attachment_mime','attachment_size','attachment_kind','attachment_duration'];
     protected $casts = ['read_at' => 'datetime', 'delivered_at' => 'datetime', 'edited_at' => 'datetime', 'pinned_at' => 'datetime'];
 
     public function conversation(): BelongsTo { return $this->belongsTo(Conversation::class); }
@@ -27,22 +46,32 @@ class Message extends Model
 
     /**
      * Короткое представление цитируемого сообщения для ответа.
+     *
+     * У голосового без текста подставляется подпись с длительностью,
+     * чтобы цитата не была пустой.
      */
     public function replyToPayload(): ?array
     {
         $orig = $this->relationLoaded('replyTo') ? $this->replyTo : $this->replyTo()->first();
         if (! $orig) return null;
         $sender = $orig->relationLoaded('sender') ? $orig->sender : $orig->sender()->first(['id', 'name']);
+        $body = (string) $orig->body;
+        if ($body === '' && $orig->attachment_kind === 'voice') {
+            $body = '🎤 Голосовое сообщение';
+            if ($orig->attachment_duration) {
+                $body .= ' ('.$orig->attachment_duration.' c)';
+            }
+        }
         return [
             'id' => $orig->id,
-            'body' => $orig->body,
+            'body' => $body,
             'sender_id' => $orig->sender_id,
             'sender_name' => $sender?->name,
         ];
     }
 
     /**
-     * Пейлоад вложения для фронта: url, имя, mime, размер, вид.
+     * Пейлоад вложения для фронта: url, имя, mime, размер, вид, длительность.
      *
      * @return array|null
      */
@@ -58,6 +87,7 @@ class Message extends Model
             'mime' => $this->attachment_mime,
             'size' => $this->attachment_size !== null ? (int) $this->attachment_size : null,
             'kind' => $this->attachment_kind,
+            'duration' => $this->attachment_duration !== null ? (int) $this->attachment_duration : null,
         ];
     }
 

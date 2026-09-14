@@ -25,6 +25,11 @@ export function chatPreviewText(lastMessage: Message | null | undefined, emptyLa
   }
   const attachment = (lastMessage as any)?.attachment ?? null
   const kind = String(attachment?.kind ?? (lastMessage as any)?.type ?? '')
+  if (kind === 'voice' || kind === 'audio') {
+    const secs = Number((attachment as any)?.duration ?? 0)
+    const label = secs > 0 ? `🎤 Голосовое · ${secs} c` : '🎤 Голосовое'
+    return `${prefix}${label}`
+  }
   if (attachment?.url || kind === 'image' || kind === 'file') {
     const name = String(attachment?.name ?? '').trim()
     const label = kind === 'image' ? '📷 Фото' : '📎 Файл'

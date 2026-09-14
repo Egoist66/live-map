@@ -45,13 +45,18 @@ class MessageController extends Controller
             'body' => 'nullable|string|max:2000',
             'attachment' => 'nullable|file|max:10240',
             'reply_to_id' => 'nullable|integer|exists:messages,id',
+            'voice_duration' => 'nullable|integer|min:1|max:60',
         ]);
         $body = trim((string) ($data['body'] ?? ''));
         $hasFile = $request->hasFile('attachment');
         abort_if($body === '' && ! $hasFile, 422, 'Нужно сообщение или файл');
         $attachment = $this->resolveAttachment($request);
         $replyToId = $this->resolveReplyTo($conversation, $data['reply_to_id'] ?? null);
-        return $this->storeInline($request, $conversation, $request->user(), $body, $replyToId, $attachment);
+        $voiceDuration = isset($data['voice_duration']) ? (int) $data['voice_duration'] : null;
+        if ($voiceDuration !== null && ($attachment['kind'] ?? null) !== 'voice') {
+            $voiceDuration = null;
+        }
+        return $this->storeInline($request, $conversation, $request->user(), $body, $replyToId, $attachment, $voiceDuration);
     }
 
     /**
@@ -79,7 +84,7 @@ class MessageController extends Controller
         return ChatAttachment::store($file, $kind);
     }
 
-    public function storeInline(Request $request, Conversation $conversation, $sender, string $body, ?int $replyToId = null, ?array $attachment = null)
+    public function storeInline(Request $request, Conversation $conversation, $sender, string $body, ?int $replyToId = null, ?array $attachment = null, ?int $voiceDuration = null)
     {
         $conversation->loadMissing('participants:id,name,message_privacy,allow_random_messages');
         $other = $conversation->participants->firstWhere('id','!=',$sender->id);
@@ -90,7 +95,8 @@ class MessageController extends Controller
             abort(403, $reason);
         }
         $kind = $attachment['kind'] ?? null;
-        $type = $kind === 'image' ? 'image' : ($kind === 'file' ? 'file' : 'text');
+        $type = $kind === 'image' ? 'image' : ($kind === 'voice' ? 'voice' : ($kind === 'file' ? 'file' : 'text'));
+        $duration = $kind === 'voice' && $voiceDuration ? max(1, min(60, $voiceDuration)) : null;
         $msg = Message::create([
             'conversation_id' => $conversation->id,
             'reply_to_id' => $replyToId,
@@ -102,6 +108,7 @@ class MessageController extends Controller
             'attachment_mime' => $attachment['mime'] ?? null,
             'attachment_size' => $attachment['size'] ?? null,
             'attachment_kind' => $kind,
+            'attachment_duration' => $duration,
         ]);
         $msg->load(['sender:id,name,avatar_path','replyTo.sender:id,name','conversation.participantRows']);
         $conversation->update(['last_message_at'=>$msg->created_at]);
@@ -119,8 +126,15 @@ class MessageController extends Controller
             $senderModel = $sender instanceof User ? $sender : User::select('id', 'name', 'avatar_path')->find($sender->id);
             $text = trim((string) $msg->body);
             if ($text === '' && $msg->attachment_path) {
-                $label = $msg->attachment_name ? ' ' . $msg->attachment_name : '';
-                $text = ($msg->attachment_kind === 'image' ? '📷 Фото' : '📎 Файл') . $label;
+                if ($msg->attachment_kind === 'voice') {
+                    $text = '🎤 Голосовое сообщение';
+                    if ($msg->attachment_duration) {
+                        $text .= ' ('.$msg->attachment_duration.' c)';
+                    }
+                } else {
+                    $label = $msg->attachment_name ? ' ' . $msg->attachment_name : '';
+                    $text = ($msg->attachment_kind === 'image' ? '📷 Фото' : '📎 Файл') . $label;
+                }
             }
             foreach (User::whereIn('id', $ids)->select('id', 'name', 'avatar_path')->get() as $recipient) {
                 // Web Push — только если настроен VAPID (для веба), Expo — всегда (для Android).

@@ -19,9 +19,9 @@
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-title" content="{{ config('seo.site_name') }}">
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-        <meta name="msapplication-TileColor" content="#0F172A">
+        <meta name="msapplication-TileColor" content="#0B0F1A">
         <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
-        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0F172A">
+        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0B0F1A">
 
         <meta property="og:site_name" content="{{ config('seo.site_name') }}">
         <meta property="og:type" content="{{ config('seo.og_type', 'website') }}">
@@ -48,7 +48,7 @@
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700,800,900&family=inter:400,500,600&display=swap" rel="stylesheet" />
         <script>
-            (function(){ try{ var s=localStorage.getItem('theme'); var m=window.matchMedia('(prefers-color-scheme: dark)').matches; var d=s ? s==='dark' : m; if(d) document.documentElement.classList.add('dark'); document.documentElement.style.colorScheme = d?'dark':'light'; }catch(e){} })();
+            (function(){ try{ var s=localStorage.getItem('theme'); var m=window.matchMedia('(prefers-color-scheme: dark)').matches; var d=s ? s==='dark' : m; if(d) document.documentElement.classList.add('dark'); document.documentElement.style.colorScheme = d?'dark':'light'; var bg=d?'#0B0F1A':'#ffffff'; document.documentElement.style.backgroundColor=bg; }catch(e){} })();
         </script>
         <script type="application/ld+json">
         {

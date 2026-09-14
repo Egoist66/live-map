@@ -1,5 +1,12 @@
 # Dev-лог
 
+## 2026-09-14 — WebView тёмная тема, свайп-ответ, голосовые до 1 мин
+- 🌙 WebView тёмная тема: белые полосы у статус-бара/жестов убраны — единый `#0B0F1A`: фон `<html>/<body>` + `overscroll-behavior-y: none`, `useTheme` красит `theme-color` и фон при смене темы, инлайн-скрипт в `app.blade.php` ставит фон до CSS (без белой вспышки), у нижнего меню глухая тёмная подложка + filler под safe-area.
+- ↩ Свайп-ответ: новый хук `useMessageSwipe` (горизонтальный жест в любую сторону, порог 55px, вертикальный скролл не ломается, long-press-меню не конфликтует) + иконка-подсказка; `ChatWindow` склеивает жесты свайпа и контекстного меню.
+- 🎤 Голосовые сообщения (макс 60 c): хук `useVoiceRecorder` (opus/webm 32 кбит/с, автостоп на лимите, превью для прослушивания, уровень микрофона), `useVoicePlayer` (один активный плеер) + `VoiceMessagePlayer`, кнопка-микрофон в композере вместо отправки, запись/превью-панели на PrimeVue, Escape отменяет.
+- 🗄 Бэкенд: `ChatAttachment::VOICE` (webm/ogg/m4a/mp3/wav, макс 5 МБ), `voice_duration` (1–60 c) → `attachment_duration`, тип `voice`, пуши/цитаты/превью «🎤 Голосовое»; миграция `2026_09_30_000003_add_voice_to_messages` (накатить `php artisan migrate`).
+- Проверки: `php -l` ✅, `vue-tsc --noEmit` ✅ (миграция не прогонялась — нет доступа к БД локально).
+
 ## 2026-09-13 — Capacitor полностью удалён, только web
 - 🗑️ Удалены `android/`, `capacitor.config.ts`, все `@capacitor/*` + `@capawesome/capacitor-badge` (pnpm), `kreait/firebase-php` (composer), скрипты `cap:*`/`mobile:*`, `docs/mobile-capacitor.md`.
 - 🗑️ Бэкенд: удалены `MobileAuthController`, `DeviceTokenController`, `DeviceToken` (+миграция), `FcmService` и его вызовы (чат/мэтч/SOS/нотификации — остался `WebPushService`), роуты `/auth/token` и `/device-tokens`, секция `firebase` из `config/services.php`, `deviceTokens()` из `User`.

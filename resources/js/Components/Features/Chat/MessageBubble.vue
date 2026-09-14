@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import Image from 'primevue/image'
 import MessageTicks from '@/Components/Features/Feedback/MessageTicks.vue'
+import VoiceMessagePlayer from '@/Components/Features/Chat/VoiceMessagePlayer.vue'
 import { renderWithMentions } from '@/composables/useMentions'
 import { useMentionNavigate } from '@/composables/useMentionNavigate'
 
@@ -11,13 +12,20 @@ const mentionNav = useMentionNavigate()
 
 const quote = computed(() => (props.message as any)?.reply_to ?? null)
 const quoteSnippet = computed(() => {
-  const t = String(quote.value?.body ?? '').replace(/\s+/g, ' ').trim()
+  const q = quote.value as any
+  const kind = String(q?.kind ?? '')
+  if ((kind === 'voice' || kind === 'audio') && !String(q?.body ?? '').trim()) {
+    const secs = Number(q?.duration ?? 0)
+    return secs > 0 ? `🎤 Голосовое · ${secs} c` : '🎤 Голосовое'
+  }
+  const t = String(q?.body ?? '').replace(/\s+/g, ' ').trim()
   if (t) {
     return t.length > 90 ? `${t.slice(0, 90)}…` : t
   }
   return 'Файл'
 })
 const attachment = computed(() => (props.message as any)?.attachment ?? null)
+const isVoice = computed(() => attachment.value?.kind === 'voice' || (props.message as any)?.type === 'voice')
 const attachmentSize = computed(() => {
   const s = Number(attachment.value?.size) || 0
   if (!s) {
@@ -46,6 +54,9 @@ const attachmentSize = computed(() => {
           <div v-if="attachment?.url && attachment?.kind === 'image'" class="mb-1.5 min-w-0">
             <Image :src="attachment.url" :alt="attachment.name || 'Фото'" preview class="block rounded-xl overflow-hidden chat-image-preview" image-class="block w-full max-h-64 object-cover cursor-zoom-in" />
           </div>
+          <div v-else-if="isVoice" class="mb-1 min-w-0">
+            <VoiceMessagePlayer :src="attachment?.url" :duration="(attachment as any)?.duration" :own="own" />
+          </div>
           <div v-else-if="attachment?.url" class="mb-1.5 min-w-0">
             <a :href="attachment.url" target="_blank" rel="noopener" download class="flex items-center gap-2.5 rounded-xl px-3 py-2 min-w-0" :class="own ? 'bg-black/15 hover:bg-black/20' : 'bg-violet-50 dark:bg-violet-500/10 hover:bg-violet-100 dark:hover:bg-violet-500/20'">
               <i class="pi pi-file text-xl shrink-0"></i>
@@ -57,7 +68,7 @@ const attachmentSize = computed(() => {
             </a>
           </div>
           <div v-if="message.body" class="whitespace-pre-wrap break-words overflow-wrap-anywhere [overflow-wrap:anywhere] min-w-0 msg-body" v-html="renderWithMentions(message.body || '')" @click="mentionNav.onRichClick"></div>
-          <div v-else-if="attachment?.url" class="text-xs opacity-70 truncate">{{ attachment.name || 'Файл' }}</div>
+          <div v-else-if="attachment?.url && !isVoice" class="text-xs opacity-70 truncate">{{ attachment.name || 'Файл' }}</div>
           <div :class="own ? 'text-violet-100' : 'text-stone-400'" class="text-[11px] lg:text-[10px] mt-1 text-right flex items-center justify-end gap-1.5">
             <span>{{ time }}</span>
             <span v-if="(message as any).is_edited" class="opacity-70">· изм.</span>

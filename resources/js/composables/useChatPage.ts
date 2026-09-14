@@ -12,6 +12,7 @@ import { useChatBadges } from '@/composables/useChatBadges'
 import { useChatNavigation } from '@/composables/useChatNavigation'
 import { useChatAttachment } from '@/composables/useChatAttachment'
 import { useChatLocation } from '@/composables/useChatLocation'
+import { useVoiceRecorder } from '@/composables/useVoiceRecorder'
 import { chatApi } from '@/services/chat.api'
 
 export function useChatPage(initialConversationId?: number) {
@@ -51,6 +52,7 @@ export function useChatPage(initialConversationId?: number) {
   const pins = usePinnedMessages(chat.messages as any)
   const attachment = useChatAttachment()
   const chatLocation = useChatLocation()
+  const voice = useVoiceRecorder()
 
   watch(() => chat.activeConv.value, (conv: any) => {
     if (conv?.id) void pins.load(conv.id, { pinned: conv.pinned, pin_limit: conv.pin_limit })
@@ -176,6 +178,59 @@ export function useChatPage(initialConversationId?: number) {
     focusChatInput()
   }
 
+  /**
+   * Начинает запись голосового: закрывает эмодзи/редактирование.
+   * @returns void
+   */
+  async function handleStartVoice(): Promise<void> {
+    chat.cancelEdit()
+    emoji.close()
+    const ok = await voice.start()
+    if (!ok && voice.error.value) {
+      toast?.add({ severity: 'warn', summary: 'Голосовое', detail: voice.error.value, life: 3500 })
+    }
+  }
+
+  /**
+   * Останавливает запись — дальше превью для прослушивания.
+   * @returns void
+   */
+  async function handleStopVoice(): Promise<void> {
+    await voice.stop()
+  }
+
+  /**
+   * Отменяет запись и убирает превью.
+   * @returns void
+   */
+  async function handleCancelVoice(): Promise<void> {
+    await voice.cancel()
+    voice.discardPreview()
+  }
+
+  /**
+   * Отправляет записанное голосовое с длительностью.
+   * @returns void
+   */
+  async function handleSendVoice(): Promise<void> {
+    const done = voice.finish()
+    if (!done) {
+      return
+    }
+    if (done.file.size > 5 * 1024 * 1024) {
+      toast?.add({ severity: 'warn', summary: 'Голосовое', detail: 'Запись больше 5 МБ — попробуйте короче', life: 3500 })
+      return
+    }
+    const quoted = reply.replyTo.value
+    try {
+      await chat.sendMessage('', quoted, done.file, done.duration)
+      reply.cancelReply()
+    } catch (e: any) {
+      const msg = e?.response?.data?.message || e?.response?.data?.errors?.attachment?.[0] || 'Не удалось отправить голосовое'
+      toast?.add({ severity: 'error', summary: 'Не отправлено', detail: msg, life: 3500 })
+    }
+  }
+
   const timeCache = new Map<string,string>()
   function formatTime(s: string | null | undefined) {
     if (!s) return ''
@@ -293,7 +348,7 @@ export function useChatPage(initialConversationId?: number) {
 
   function closeSheet() { sheet.value = null }
 
-  watch(() => chat.selectedId.value, (id) => { reply.cancelReply(); if (id) focusChatInput() })
+  watch(() => chat.selectedId.value, (id) => { reply.cancelReply(); voice.cancel(); voice.discardPreview(); if (id) focusChatInput() })
 
   function backToList() { nav.backToList(emoji.close, chat.cancelEdit, showChatMenu) }
 
@@ -302,6 +357,8 @@ export function useChatPage(initialConversationId?: number) {
       if (emoji.open.value) { emoji.close(); return }
       if (chat.editingId.value !== null) { chat.cancelEdit(); return }
       if (reply.replyTo.value) { reply.cancelReply(); return }
+      if (voice.isRecording.value) { voice.cancel(); return }
+      if (voice.hasPreview.value) { voice.discardPreview(); return }
       if (showChatMenu.value) { showChatMenu.value = false; return }
       backToList()
     }
@@ -387,8 +444,8 @@ export function useChatPage(initialConversationId?: number) {
 
   return {
     chat, friendsApi, blocksApi, emoji, badgeSync, pins, togglePin, uloveConversations, uloveUnread,
-    input, inputRef, editInputRef, tab, showChatMenu, sheet, showPrivacy, privacy, creatingChat, confirm, confirmVisible, isOwnMessage, bindSheet,
-    handleSend, handlePickFile, handlePasteImage, handleShareLocation, locating: chatLocation.locating, attachment, formatTime, onPickEmoji, onPickEmojiForEdit, handleStartEdit, startChatWith, addFriendFromSearch, savePrivacy, doConfirm, closeSheet, backToList,
+    input, inputRef, editInputRef, tab, showChatMenu, sheet, showPrivacy, privacy, creatingChat, confirm, confirmVisible, isOwnMessage, bindSheet, voice,
+    handleSend, handlePickFile, handlePasteImage, handleShareLocation, handleStartVoice, handleStopVoice, handleCancelVoice, handleSendVoice, locating: chatLocation.locating, attachment, formatTime, onPickEmoji, onPickEmojiForEdit, handleStartEdit, startChatWith, addFriendFromSearch, savePrivacy, doConfirm, closeSheet, backToList,
     askBlock, askDeleteChat, askClearAllChats, askDeleteMessage, askRemoveFriend, askUnblock,
     init, openTarget, reply, handleStartReply, jumpToMessage,
   }
