@@ -32,6 +32,10 @@ export type RealtimeEventMap = {
   'chat:peer': { conversationId: number; peer: any }
   /** Изменения карты из поллинга */
   'map:pins': { upsert: any[]; deleted: number[]; counters: Record<number, { reactions_count: number; comments_count: number }> }
+  /** Район изменился (сокет map-канала): обновить слой и открытую карточку */
+  'map:district-changed': { id: number }
+  /** Район удалён (сокет map-канала): убрать слой и закрыть карточку */
+  'map:district-deleted': { id: number }
   /** Квитанции доставки/прочтения из поллинга */
   'chat:receipts': any[]
   /** Хвост id открытого диалога: клиент вычищает локально удалённые */

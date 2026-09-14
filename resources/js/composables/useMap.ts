@@ -1,6 +1,7 @@
 import { ref, watch, nextTick } from 'vue'
 import * as maplibregl from 'maplibre-gl'
 import { usePins } from './usePins'
+import { useDistrictsStore } from '@/stores/districts'
 import { useCustomCategories } from './useCustomCategories'
 import { isPinAlive } from './usePinExpiry'
 import { useThrottledMapFetch } from './useThrottledMapFetch'
@@ -86,6 +87,8 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
         map.resize()
         if (homeZoneState) drawHomeZone(homeZoneState.lat, homeZoneState.lng, homeZoneState.radiusKm)
         renderPins()
+        renderDistricts(lastDistricts)
+        if (lastDraftGeoJson) previewDraft(lastDraftGeoJson)
       }
       map.once('load', onReady)
       map.once('idle', onReady)
@@ -106,6 +109,12 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
         console.error('Map error', e)
       })
       if (onMapClick) map.on('click', onMapClick)
+      try {
+        map.on('styledata', () => {
+          try { renderDistricts(lastDistricts) } catch {}
+          try { if (lastDraftGeoJson) previewDraft(lastDraftGeoJson) } catch {}
+        })
+      } catch {}
       map.on('click', hideCtxMenu)
       map.on('click', hidePinTip)
       map.on('dragstart', hideCtxMenu)
@@ -603,6 +612,386 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
     try { map.flyTo({ center: [lng, lat] as any, zoom: z, duration: 900 }) } catch {}
   }
 
+  let lastDistricts: any[] = []
+  let districtsHidden = false
+  let lastDraftGeoJson: any | null = null
+  let districtClickCb: ((id: number) => void) | null = null
+  let districtClickAt = 0
+
+  interface DistrictMarkerEntry {
+    marker: any
+    svg: SVGSVGElement
+    path: SVGPathElement
+    district: any
+  }
+  let districtMarkers: DistrictMarkerEntry[] = []
+  let districtEventsBound = false
+  let districtTip: HTMLElement | null = null
+  let districtTipTimer: ReturnType<typeof setTimeout> | null = null
+  let districtMenu: HTMLElement | null = null
+  let districtMenuId = 0
+  let districtMenuCb: ((action: 'open' | 'delete', id: number) => void) | null = null
+
+  /**
+   * Подписаться на действия контекстного меню района.
+   *
+   * @param cb обработчик (open|delete, id района)
+   */
+  function onDistrictMenu(cb: (action: 'open' | 'delete', id: number) => void): void {
+    districtMenuCb = cb
+  }
+
+  function ensureDistrictMenu(): HTMLElement {
+    if (districtMenu) return districtMenu
+    const menu = document.createElement('div')
+    menu.className =
+      'hidden fixed z-50 bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-xl shadow-[0_10px_28px_rgba(76,29,149,0.25)] p-1.5 min-w-[180px]'
+    menu.addEventListener('click', (e: Event) => {
+      const target = (e.target as HTMLElement | null)?.closest?.('[data-act]') as HTMLElement | null
+      const act = target?.dataset.act
+      const id = districtMenuId
+      hideDistrictMenu()
+      if (!act || !(id > 0)) return
+      if (act === 'cancel') return
+      try { districtMenuCb?.(act as 'open' | 'delete', id) } catch {}
+    })
+    document.body.appendChild(menu)
+    districtMenu = menu
+    document.addEventListener('click', (e: Event) => {
+      if (districtMenu && !districtMenu.contains(e.target as Node)) hideDistrictMenu()
+    })
+    document.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Escape') hideDistrictMenu()
+    })
+    return menu
+  }
+
+  /**
+   * Показать меню района: открыть всем, удалить — владельцу.
+   *
+   * @param d карточка района
+   * @param x экранная координата
+   * @param y экранная координата
+   */
+  function showDistrictMenu(d: any, x: number, y: number): void {
+    const menu = ensureDistrictMenu()
+    hideDistrictTip()
+    hideCtxMenu()
+    districtMenuId = Number(d?.id) || 0
+    if (!(districtMenuId > 0)) return
+    const canDelete = d?.role === 'owner'
+    menu.innerHTML =
+      `<button data-act="open" class="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold hover:bg-violet-50 dark:hover:bg-violet-950/40 dark:text-white flex items-center gap-2">🏘️ Открыть район</button>` +
+      (canDelete
+        ? `<button data-act="del" class="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600 dark:hover:text-red-400 flex items-center gap-2">🗑 Удалить район</button>`
+        : ``) +
+      `<button data-act="cancel" class="w-full text-left px-3 py-2 rounded-lg text-xs text-stone-500 dark:text-zinc-400 hover:bg-stone-50 dark:hover:bg-zinc-700">Отмена</button>`
+    // normalize dataset key: del -> delete
+    menu.querySelector('[data-act="del"]')?.setAttribute('data-act', 'delete')
+    menu.style.left = `${x}px`
+    menu.style.top = `${y}px`
+    menu.classList.remove('hidden')
+    const rect = menu.getBoundingClientRect()
+    if (rect.right > window.innerWidth) menu.style.left = `${window.innerWidth - rect.width - 8}px`
+    if (rect.bottom > window.innerHeight) menu.style.top = `${y - rect.height - 8}px`
+  }
+
+  function hideDistrictMenu(): void {
+    if (districtMenu) districtMenu.classList.add('hidden')
+    districtMenuId = 0
+  }
+
+  /**
+   * Экранировать пользовательский текст для тултипа.
+   */
+  function escapeTipText(v: unknown): string {
+    return String(v ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+  }
+
+  /**
+   * Подпись интереса для тултипа района.
+   */
+  function districtInterestEmoji(interest: unknown): string {
+    const map: Record<string, string> = {
+      neighbors: '🏘️',
+      sport: '⚽',
+      music: '🎵',
+      pets: '🐾',
+      kids: '🧸',
+      food: '🍲',
+      study: '📚',
+      games: '🎮',
+      art: '🎨',
+      help: '🤝',
+    }
+    return map[String(interest ?? '')] ?? '🏘️'
+  }
+
+  function ensureDistrictTip(): HTMLElement {
+    if (districtTip) return districtTip
+    const tip = document.createElement('div')
+    tip.className =
+      'hidden fixed z-[40] pointer-events-none max-w-[260px] bg-white dark:bg-zinc-800 border border-violet-200 dark:border-violet-900/60 rounded-2xl shadow-[0_12px_32px_rgba(76,29,149,0.25)] overflow-hidden'
+    tip.style.transform = 'translate(-50%, calc(-100% - 14px))'
+    document.body.appendChild(tip)
+    districtTip = tip
+    return tip
+  }
+
+  /**
+   * Показать тултип района при наведении: кто, чей, сколько жителей.
+   *
+   * @param d карточка района
+   * @param x экранная координата курсора
+   * @param y экранная координата курсора
+   */
+  function showDistrictTip(d: any, x: number, y: number): void {
+    const tip = ensureDistrictTip()
+    const name = escapeTipText(d?.name ?? 'Район')
+    const owner = escapeTipText(d?.owner?.name ?? '—')
+    const members = Number(d?.members_count ?? 1)
+    tip.innerHTML =
+      `<div class="p-3 bg-white dark:bg-zinc-800">` +
+      `<div class="flex items-center gap-1.5"><span class="text-xs bg-violet-700 text-white rounded-full px-2 py-0.5 font-semibold">${districtInterestEmoji(d?.interest)} UDistrict</span></div>` +
+      `<div class="font-bold text-[13px] leading-tight mt-1.5 text-stone-900 dark:text-white">${name}</div>` +
+      `<div class="text-[11px] text-stone-500 dark:text-zinc-400 mt-1">Владелец: ${owner} · 👥 ${members}</div>` +
+      `<div class="text-[11px] font-bold text-violet-700 dark:text-violet-300 mt-1">Клик — открыть район</div>` +
+      `</div><div class="h-1 w-full bg-gradient-to-r from-violet-700 to-purple-900"></div>`
+    tip.style.left = `${x}px`
+    tip.style.top = `${y}px`
+    tip.classList.remove('hidden')
+    if (districtTipTimer) clearTimeout(districtTipTimer)
+    districtTipTimer = setTimeout(hideDistrictTip, 3500)
+  }
+
+  function hideDistrictTip(): void {
+    if (districtTipTimer) {
+      clearTimeout(districtTipTimer)
+      districtTipTimer = null
+    }
+    districtTip?.classList.add('hidden')
+  }
+
+  /**
+   * Подписаться на клик по заливке района.
+   * @param cb обработчик с id района
+   */
+  function onDistrictClick(cb: (id: number) => void): void {
+    districtClickCb = cb
+  }
+
+  /**
+   * Клик по чужой заливке не должен открывать создание пина.
+   * @returns true если только что кликнули район
+   */
+  function shouldSuppressMapClick(): boolean {
+    return Date.now() - districtClickAt < 500
+  }
+
+  /**
+   * Все кольца заливки района плоским списком.
+   *
+   * @param d карточка района
+   * @returns кольца [lng,lat]
+   */
+  function districtRings(d: any): Array<Array<[number, number]>> {
+    const coords = d?.geometry?.coordinates
+    if (!Array.isArray(coords)) return []
+    const rings: Array<Array<[number, number]>> = []
+    for (const polygon of coords) {
+      if (!Array.isArray(polygon)) continue
+      for (const ring of polygon) {
+        if (Array.isArray(ring) && ring.length >= 4) rings.push(ring)
+      }
+    }
+    return rings
+  }
+
+  function clearDistrictMarkers(): void {
+    for (const entry of districtMarkers) {
+      try { entry.marker.remove() } catch {}
+    }
+    districtMarkers = []
+  }
+
+  function ensureDistrictEvents(): void {
+    if (!map || districtEventsBound) return
+    districtEventsBound = true
+    const update = () => {
+      try { updateDistrictMarkers() } catch {}
+    }
+    try {
+      map.on('move', update)
+      map.on('zoom', update)
+      map.on('resize', update)
+    } catch {}
+  }
+
+  /**
+   * Перерисовать UDistrict-заливки тёмно-фиолетовым.
+   *
+   * Рендер — SVG-маркерами (как круг домашней зоны): не зависит
+   * от стиля карты и виден всегда. Клик по заливке открывает район.
+   *
+   * @param list районы из стора
+   */
+  function renderDistricts(list: any[]): void {
+    lastDistricts = Array.isArray(list) ? [...list] : []
+    clearDistrictMarkers()
+    if (!map || !loaded.value) return
+    ensureDistrictEvents()
+    for (const d of lastDistricts) {
+      try {
+        const rings = districtRings(d)
+        if (!rings.length) continue
+        const centerLng = Number(d.center_lng)
+        const centerLat = Number(d.center_lat)
+        if (!Number.isFinite(centerLng) || !Number.isFinite(centerLat)) continue
+        const el = document.createElement('div')
+        el.style.pointerEvents = 'auto'
+        el.style.cursor = 'pointer'
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+        svg.style.display = 'block'
+        svg.style.overflow = 'visible'
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+        path.setAttribute('fill', 'rgba(76,29,149,0.32)')
+        path.setAttribute('stroke', '#6D28D9')
+        path.setAttribute('stroke-width', '2')
+        path.setAttribute('fill-rule', 'evenodd')
+        path.style.pointerEvents = 'auto'
+        svg.appendChild(path)
+        el.appendChild(svg)
+        const id = Number(d.id)
+        el.addEventListener('click', (e: Event) => {
+          try { e.stopPropagation() } catch {}
+          hideDistrictTip()
+          districtClickAt = Date.now()
+          try { districtClickCb?.(id) } catch {}
+        })
+        el.addEventListener('mouseenter', (e: MouseEvent) => {
+          try { showDistrictTip(d, e.clientX, e.clientY) } catch {}
+        })
+        el.addEventListener('mouseleave', () => {
+          try { hideDistrictTip() } catch {}
+        })
+        el.addEventListener('contextmenu', (e: MouseEvent) => {
+          try { e.preventDefault() } catch {}
+          try { e.stopPropagation() } catch {}
+          districtClickAt = Date.now()
+          try { showDistrictMenu(d, e.clientX, e.clientY) } catch {}
+        })
+        const marker = new maplibregl.Marker({ element: el as unknown as HTMLElement, anchor: 'center' })
+          .setLngLat([centerLng, centerLat] as any)
+          .addTo(map)
+        districtMarkers.push({ marker, svg, path, district: d })
+      } catch (e) {
+        try { console.warn('UDistrict marker failed', e) } catch {}
+      }
+    }
+    updateDistrictMarkers()
+    applyDistrictsVisibility()
+  }
+
+  /**
+   * Пересчитать пиксели заливок под текущий зум/центр.
+   */
+  function updateDistrictMarkers(): void {
+    if (!map || !districtMarkers.length) return
+    for (const entry of districtMarkers) {
+      try {
+        const d = entry.district
+        const rings = districtRings(d)
+        if (!rings.length) continue
+        const anchor = map.project([Number(d.center_lng), Number(d.center_lat)])
+        if (!anchor) continue
+        let minX = Infinity
+        let minY = Infinity
+        let maxX = -Infinity
+        let maxY = -Infinity
+        const projected = rings.map((ring) =>
+          ring.map((pt) => {
+            const s = map.project([Number(pt[0]), Number(pt[1])])
+            const x = Number(s?.x)
+            const y = Number(s?.y)
+            if (Number.isFinite(x) && Number.isFinite(y)) {
+              if (x < minX) minX = x
+              if (y < minY) minY = y
+              if (x > maxX) maxX = x
+              if (y > maxY) maxY = y
+            }
+            return { x, y }
+          }),
+        )
+        if (!Number.isFinite(minX) || !Number.isFinite(maxX)) continue
+        const pad = 6
+        const w = Math.min(Math.max(Math.ceil(maxX - minX + pad * 2), 12), 6000)
+        const h = Math.min(Math.max(Math.ceil(maxY - minY + pad * 2), 12), 6000)
+        const originX = anchor.x - w / 2
+        const originY = anchor.y - h / 2
+        const pathData = projected
+          .map((ring) => `M${ring.map((p) => `${(p.x - originX).toFixed(1)},${(p.y - originY).toFixed(1)}`).join(' L')} Z`)
+          .join(' ')
+        entry.svg.setAttribute('width', String(w))
+        entry.svg.setAttribute('height', String(h))
+        entry.svg.style.width = `${w}px`
+        entry.svg.style.height = `${h}px`
+        const el = entry.marker.getElement() as HTMLElement | null
+        if (el) {
+          el.style.width = `${w}px`
+          el.style.height = `${h}px`
+        }
+        entry.path.setAttribute('d', pathData)
+      } catch {}
+    }
+  }
+
+  /**
+   * Применить запомненную видимость к маркерам заливок.
+   */
+  function applyDistrictsVisibility(): void {
+    for (const entry of districtMarkers) {
+      try {
+        const el = entry.marker.getElement() as HTMLElement | null
+        if (el) el.style.display = districtsHidden ? 'none' : ''
+      } catch {}
+    }
+  }
+
+  /**
+   * Показать/скрыть слой районов без потери данных.
+   * @param visible виден ли слой
+   */
+  function setDistrictsVisible(visible: boolean): void {
+    districtsHidden = !visible
+    applyDistrictsVisibility()
+  }
+
+  /**
+   * Превью черновика кисти поверх карты.
+   * @param geojson заливка-черновик или null для очистки
+   */
+  function previewDraft(geojson: any | null): void {
+    lastDraftGeoJson = geojson ?? null
+    if (!map || !loaded.value) return
+    try {
+      if (!(map as any).getSource?.('udistrict-draft')) {
+        ;(map as any).addSource('udistrict-draft', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
+        ;(map as any).addLayer({ id: 'udistrict-draft-fill', type: 'fill', source: 'udistrict-draft', paint: { 'fill-color': '#4C1D95', 'fill-opacity': 0.4 } })
+        ;(map as any).addLayer({ id: 'udistrict-draft-line', type: 'line', source: 'udistrict-draft', paint: { 'line-color': '#4C1D95', 'line-width': 2, 'line-dasharray': [4, 3] } })
+      }
+      const data = !geojson
+        ? { type: 'FeatureCollection', features: [] }
+        : { type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: geojson }] }
+      ;(map as any).getSource('udistrict-draft')?.setData(data)
+    } catch (e) {
+      try { console.warn('UDistrict draft preview failed', e) } catch {}
+    }
+  }
+
   let homeMarker: maplibregl.Marker | null = null
 
   function drawHomeMarker(_lat: number, _lng: number, _radiusKm: number) {}
@@ -717,11 +1106,28 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
         try { (store as any).patchCounts?.(Number(e.pin_id), e.reactions_count, e.comments_count) } catch {}
         renderPins()
       }
+      const districtStore = useDistrictsStore()
+      const onDistrictChanged = (e: any) => {
+        if (!e?.district?.id) return
+        try { districtStore.upsertRealtime(e.district) } catch {}
+        try { renderDistricts(districtStore.districts as any) } catch {}
+        try { busEmit('map:district-changed', { id: Number(e.district.id) }) } catch {}
+      }
+      const onDistrictDeleted = (e: any) => {
+        const id = Number(e?.districtId)
+        if (!(id > 0)) return
+        try { districtStore.removeRealtime(id) } catch {}
+        try { renderDistricts(districtStore.districts as any) } catch {}
+        try { busEmit('map:district-deleted', { id }) } catch {}
+      }
       ch.listen('.pin.created', onCreated)
         .listen('.pin.deleted', onDeleted)
         .listen('.pin.updated', onUpdated)
         .listen('.pin.activity', onActivity)
         .listen('.pin.counters', onActivity)
+        .listen('.district.created', onDistrictChanged)
+        .listen('.district.updated', onDistrictChanged)
+        .listen('.district.deleted', onDistrictDeleted)
       mapBusUnsubs.push(busOn('map:pins', (payload: any) => applyMapSync(payload)))
     }
     doBind()
@@ -753,12 +1159,27 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
   function destroyMap(): void {
     hidePinTip()
     hideCtxMenu()
+    hideDistrictTip()
+    hideDistrictMenu()
+    try { districtMenu?.remove(); districtMenu = null } catch {}
+    try { districtTip?.remove(); districtTip = null } catch {}
     if (tipTimer) { clearTimeout(tipTimer); tipTimer = null }
     try { unbindRealtime() } catch {}
     try { markers.forEach((m) => m.remove()); markers = [] } catch {}
     try { if (userDot) { userDot.remove(); userDot = null } } catch {}
     try { removeTempMarker() } catch {}
     try { if (homeZoneMarker) { homeZoneMarker.remove(); homeZoneMarker = null } } catch {}
+    try { clearDistrictMarkers() } catch {}
+    districtEventsBound = false
+    try {
+      for (const layerId of ['udistrict-draft-line', 'udistrict-draft-fill']) {
+        try { (map as any)?.getLayer?.(layerId) && (map as any).removeLayer(layerId) } catch {}
+      }
+      try { (map as any)?.getSource?.('udistrict-draft') && (map as any).removeSource('udistrict-draft') } catch {}
+    } catch {}
+    lastDistricts = []
+    lastDraftGeoJson = null
+    districtClickCb = null
     try { if (homeMarker) { homeMarker.remove(); homeMarker = null } } catch {}
     try { (map as any)?.off?.('movestart', hidePinTip) } catch {}
     try { (map as any)?.off?.('zoomstart', hidePinTip) } catch {}
@@ -771,5 +1192,5 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
   function setThemeStyle(isDark: boolean) {
     return
   }
-  return { mapContainer, initMap, renderPins, addTempMarker, removeTempMarker, showUserLocation, triggerGeolocate, onGeolocate, getCenter, flyToMyLocation, flyToHomeZone, bindRealtime, unbindRealtime, destroyMap, setThemeStyle, showHomeZone, hideHomeZone, loaded, errorMsg, wsConnected, get map() { return map } }
+  return { mapContainer, initMap, renderPins, addTempMarker, removeTempMarker, showUserLocation, triggerGeolocate, onGeolocate, getCenter, flyToMyLocation, flyToHomeZone, bindRealtime, unbindRealtime, destroyMap, setThemeStyle, showHomeZone, hideHomeZone, renderDistricts, setDistrictsVisible, previewDraft, onDistrictClick, onDistrictMenu, shouldSuppressMapClick, loaded, errorMsg, wsConnected, get map() { return map } }
 }

@@ -17,9 +17,18 @@ class MessageSent implements ShouldBroadcastNow
 
     public function broadcastOn(): array
     {
-        $otherId = $this->message->conversation->participantRows->pluck('user_id')->firstWhere(fn($id)=>$id!==$this->message->sender_id);
+        // Групповые чаты (UDistrict): сообщение едет всем участникам,
+        // иначе район узнаёт о нём только первый в списке.
+        $ids = $this->message->conversation->participantRows
+            ->pluck('user_id')
+            ->filter(fn ($id) => (int) $id !== (int) $this->message->sender_id)
+            ->unique()
+            ->values();
         $channels = [new PrivateChannel('chat.' . $this->message->conversation_id)];
-        if($otherId) $channels[] = new PrivateChannel('user.'.$otherId);
+        foreach ($ids as $uid) {
+            $channels[] = new PrivateChannel('user.' . $uid);
+        }
+
         return $channels;
     }
 

@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Conversation extends Model
 {
-    protected $fillable = ['type','created_by','pin_id','last_message_at'];
+    protected $fillable = ['type','created_by','pin_id','district_id','last_message_at'];
     protected $casts = ['last_message_at' => 'datetime'];
 
     public function participants(): BelongsToMany
@@ -19,6 +19,7 @@ class Conversation extends Model
     public function participantRows(): HasMany { return $this->hasMany(ConversationParticipant::class); }
     public function messages(): HasMany { return $this->hasMany(Message::class)->orderBy('created_at'); }
     public function creator(): BelongsTo { return $this->belongsTo(User::class,'created_by'); }
+    public function district(): BelongsTo { return $this->belongsTo(District::class); }
 
     public function otherParticipant(int $userId): ?User
     {

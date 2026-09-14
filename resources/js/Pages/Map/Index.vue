@@ -4,6 +4,11 @@ import { onMounted, onUnmounted } from 'vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import MapTopBar from '@/Components/Features/Map/MapTopBar.vue'
 import MapCreateDialog from '@/Components/Features/Map/MapCreateDialog.vue'
+import DistrictHubDialog from '@/Components/Features/Map/DistrictHubDialog.vue'
+import DistrictPaintBar from '@/Components/Features/Map/DistrictPaintBar.vue'
+import DistrictPaintOverlay from '@/Components/Features/Map/DistrictPaintOverlay.vue'
+import DistrictCreateDialog from '@/Components/Features/Map/DistrictCreateDialog.vue'
+import DistrictDetailsCard from '@/Components/Features/Map/DistrictDetailsCard.vue'
 import SosModeBanner from '@/Components/Features/Map/SosModeBanner.vue'
 import PinDetailsCard from '@/Components/Features/Map/PinDetailsCard.vue'
 import ReportDialog from '@/Components/Features/Map/ReportDialog.vue'
@@ -23,7 +28,7 @@ import Checkbox from 'primevue/checkbox'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 const seo = useSeo({ title: 'Карта — UPin', description: 'Живая карта UPin.', noindex: true })
-const { store, categories, customCats, selectedCategory, filteredPins, pinDetails, pinCreate, pinEdit, mapApi, showCreate, pinAddress, loadingPinAddress, myStreet, loadingStreet, radiusOptions, radiusLabel, homeZone, homeZoneVisible, toggleHomeZone, closeCreate, deleteSelectedPin, saveEdit, deleteCustomCategory, init, destroy, showLiveInfo, showMyPins, myPins, handleMineClick, flyToPin, geoNotice, dismissGeoNotice, locateMe } = useMapPage() as any
+const { store, categories, customCats, selectedCategory, filteredPins, pinDetails, pinCreate, pinEdit, mapApi, showCreate, pinAddress, loadingPinAddress, myStreet, loadingStreet, radiusOptions, radiusLabel, homeZone, homeZoneVisible, toggleHomeZone, closeCreate, deleteSelectedPin, saveEdit, deleteCustomCategory, init, destroy, showLiveInfo, showMyPins, myPins, handleMineClick, flyToPin, setLiveInfo, setMyPins, geoNotice, dismissGeoNotice, locateMe, districts, paint, pendingGeometry, createError, districtLimitText, brushPx, startDistrictPaint, finishDistrictPaint, saveDistrict, flyToDistrict, openDistrictChat, deleteDistrict, openPinFromDistrict, onOverlayStrokeEnd, saveSelectedDistrict, setShowCreate } = useMapPage() as any
 const { selectedPin, comments, threadedComments, replyTo, replyTarget, cancelReply, commentText, react, sendComment, editingCommentId, editingContent, deletingCommentId, highlightCommentId, startEditComment, cancelEditComment, saveEditComment, deleteComment, reactAsyncStatus, createCommentAsyncStatus, boostMutation, updateCommentMutation } = pinDetails as any
 const mentions = useMentions()
 const reportDialog = useReportDialog()
@@ -104,11 +109,12 @@ onUnmounted(() => {
     <div class="w-full bg-[#eaf0f6] dark:bg-[#0B0F1A]">
       <div class="h-app-full map-desktop-frame relative w-full min-h-[380px] bg-[#eaf0f6] dark:bg-[#0B0F1A] overflow-hidden border-0">
       <div ref="mapContainer" class="absolute inset-0 w-full h-full bg-[#eaf0f6] dark:bg-[#0B0F1A]"></div>
+      <DistrictPaintOverlay :armed="paint.armed.value" :brush-px="brushPx" :draft-strokes="paint.strokes.value" :map="mapApi.map" @stroke-end="onOverlayStrokeEnd" />
       <div v-if="!loaded" class="absolute inset-0 grid place-items-center bg-[#eef3f8] dark:bg-[#0B0F1A] z-[5]">
-        <div class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-700 rounded-2xl px-5 py-4 shadow flex items-center gap-3"><span class="w-5 h-5 border-2 border-stone-200 dark:border-zinc-700 border-t-stone-900 dark:border-t-white rounded-full animate-spin"></span><span class="text-sm font-medium dark:text-zinc-100">Загружаем карту…</span></div>
+        <div class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-700 rounded-2xl px-5 py-4 shadow flex items-center gap-3"><i class="pi pi-spin pi-spinner text-xl text-stone-900 dark:text-white shrink-0"></i><span class="text-sm font-medium dark:text-zinc-100">Загружаем карту…</span></div>
       </div>
       <div class="native-safe-offset-top absolute left-2 right-2 sm:left-4 sm:right-auto sm:max-w-[420px] flex flex-col gap-2 sm:gap-2.5 z-10 pointer-events-none">
-        <MapTopBar :count="(filteredPins as any)?.value?.length ?? store.pins.length" :loading="store.loading" :refreshing="mapRefresh.refreshing.value" :categories="categories" :selected-category="selectedCategory" @update:category="(v:any)=>selectedCategory=v" @info="showLiveInfo = true" @mine="handleMineClick" @refresh="refreshMap" />
+        <MapTopBar :count="(filteredPins as any)?.value?.length ?? store.pins.length" :loading="store.loading" :refreshing="mapRefresh.refreshing.value" :categories="categories" :selected-category="selectedCategory" @update:category="(v:any)=>selectedCategory=v" @info="showLiveInfo = true" @mine="handleMineClick" @refresh="refreshMap" @districts="districts.openHub()" />
         <SosModeBanner v-if="sosMode.isSosMode.value" @chat="goSosChat" @close="onSosClosed" />
         <DefaultModeHint place="map" />
         <Transition name="fade">
@@ -129,8 +135,12 @@ onUnmounted(() => {
           </div>
         </Transition>
       </div>
-      <MapCreateDialog :open="showCreate" @update:open="(v:boolean)=>showCreate=v" :pin-create="pinCreate" :custom-cats="customCats" :categories="categories" :pin-address="pinAddress" :loading-address="loadingPinAddress" :radius-options="radiusOptions" :radius-label="radiusLabel" :sos-limits="sosMode.sos.limits" @close="closeCreate" @delete-custom-category="deleteCustomCategory" />
-      <div v-if="homeZone" class="above-bottomnav absolute left-3 z-10 bg-white/95 dark:bg-zinc-900/95 backdrop-blur border border-violet-200 dark:border-violet-900/60 rounded-2xl px-3 py-2 shadow flex items-center gap-2">
+      <MapCreateDialog :open="showCreate" @update:open="setShowCreate" :pin-create="pinCreate" :custom-cats="customCats" :categories="categories" :pin-address="pinAddress" :loading-address="loadingPinAddress" :radius-options="radiusOptions" :radius-label="radiusLabel" :sos-limits="sosMode.sos.limits" @close="closeCreate" @delete-custom-category="deleteCustomCategory" />
+      <DistrictHubDialog :open="districts.hubOpen.value" @update:open="districts.setHubOpen" :nearby="districts.store.districts" :mine="districts.myDistricts.value" :loading-mine="districts.myLoading.value" :layer-visible="districts.districtsVisible.value" :limit-text="districtLimitText" @paint="startDistrictPaint" @open="flyToDistrict" @toggle-layer="districts.toggleVisible()" />
+      <DistrictPaintBar v-if="paint.painting.value" :brush-radius="paint.brushRadiusM.value" :strokes-count="paint.strokesCount.value" :can-undo="paint.canUndo.value" :can-finish="paint.canFinish.value" :touch-paint="paint.touchPaint.value" @update:brush="paint.setBrushRadius" @toggle-touch="paint.setTouchPaint" @undo="paint.undoStroke()" @clear="paint.clearStrokes()" @finish="finishDistrictPaint" @cancel="paint.cancelPainting()" />
+      <DistrictCreateDialog :open="districts.createOpen.value" @update:open="districts.setCreateOpen" :saving="districts.store.saving" :strokes-count="pendingGeometry?.coordinates?.length ?? 0" :server-error="createError" @save="saveDistrict" />
+      <DistrictDetailsCard :open="districts.detailsOpen.value" @update:open="districts.setDetailsOpen" :district="districts.selected.value" :residents="districts.residents.value" :pending="districts.pending.value" :loading="districts.detailsLoading.value" @close="districts.closeDistrict()" @join="districts.joinSelected()" @leave="districts.leaveSelected()" @approve="districts.approveMember" @reject="districts.rejectMember" @kick="districts.kickMember" @delete="deleteDistrict" @save="saveSelectedDistrict" @chat="openDistrictChat" @open-pin="openPinFromDistrict" />
+      <div v-if="homeZone" class="absolute left-3 bottom-12 z-10 bg-white/95 dark:bg-zinc-900/95 backdrop-blur border border-violet-200 dark:border-violet-900/60 rounded-2xl px-3 py-2 shadow flex items-center gap-2">
         <button type="button" @click="mapApi.flyToHomeZone?.(homeZone.lat, homeZone.lng, homeZone.radiusKm)" title="Показать мою зону" class="w-5 h-5 rounded-full bg-violet-500/15 border border-dashed border-violet-500 grid place-items-center shrink-0 hover:bg-violet-500/30 transition">
           <span class="w-1.5 h-1.5 rounded-full bg-violet-600 block pointer-events-none"></span>
         </button>
@@ -144,7 +154,7 @@ onUnmounted(() => {
         <PinDetailsCard v-if="selectedPin" :pin="selectedPin" :comments="threadedComments" :highlight-comment-id="highlightCommentId" :comment-text="commentText" @update:comment="(v:string)=>commentText=v" :creating-comment="createCommentAsyncStatus?.value==='loading'" :editing-comment-id="editingCommentId" :editing-content="editingContent" @update:edit-content="(v:string)=>editingContent=v" :saving-comment="updateCommentMutation?.asyncStatus?.value==='loading'" :deleting-comment-id="deletingCommentId" :reacting="reactAsyncStatus?.value==='loading'" :reporting="reportDialog.sending.value" :pin-edit="pinEdit" :categories="categories" :deleting="store.deleting" :auth-id="($page as any).props.auth?.user?.id ?? 0" :is-admin="!!(($page as any).props.auth?.user?.is_admin || ($page as any).props.auth?.user?.role === 'admin')" :reply-to="replyTo" :mentions="mentions" @close="pinDetails.closePin()" @delete="deleteSelectedPin" @react="(k:string)=>react(selectedPin, k)" @report="reportDialog.openReport('pin', selectedPin.id, selectedPin.title)" @send-comment="sendComment" @reply="(r:any,t:any)=>replyTarget(r,t)" @cancel-reply="cancelReply" @start-edit-comment="startEditComment" @cancel-edit-comment="cancelEditComment" @save-edit-comment="saveEditComment" @delete-comment="deleteComment" @save-edit="saveEdit" @sos-chat="goSosChat" @sos-closed="onSosClosed" />
       </Transition>
       <ReportDialog :dialog="reportDialog" />
-      <MapInfoDialogs :live-open="showLiveInfo" @update:live="(v:boolean)=>showLiveInfo=v" :my-open="showMyPins" @update:my="(v:boolean)=>showMyPins=v" :my-pins="myPins" :format-time="formatTime" @fly="flyToPin" />
+      <MapInfoDialogs :live-open="showLiveInfo" @update:live="setLiveInfo" :my-open="showMyPins" @update:my="setMyPins" :my-pins="myPins" :format-time="formatTime" @fly="flyToPin" />
       </div>
     </div>
   </AuthenticatedLayout>

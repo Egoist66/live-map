@@ -38,7 +38,7 @@ class MessageController extends Controller
         abort_unless($conversation->hasParticipant($request->user()->id),403);
         $conversation->loadMissing('participants:id,name,message_privacy,allow_random_messages');
         $other = $conversation->participants->firstWhere('id','!=',$request->user()->id);
-        if ($other && $reason = $request->user()->messageBlockReason($other)) {
+        if ($conversation->type !== 'district' && $other && $reason = $request->user()->messageBlockReason($other)) {
             abort(403, $reason);
         }
         $data = $request->validate([
@@ -88,7 +88,7 @@ class MessageController extends Controller
     {
         $conversation->loadMissing('participants:id,name,message_privacy,allow_random_messages');
         $other = $conversation->participants->firstWhere('id','!=',$sender->id);
-        if ($other && $reason = $sender->messageBlockReason($other)) {
+        if ($conversation->type !== 'district' && $other && $reason = $sender->messageBlockReason($other)) {
             if ($attachment) {
                 ChatAttachment::delete($attachment['path']);
             }

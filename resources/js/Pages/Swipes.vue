@@ -364,7 +364,7 @@ onMounted(async () => {
                 <span class="w-10 h-10 rounded-2xl bg-zinc-500/15 text-stone-500 dark:text-zinc-300 grid place-items-center shrink-0"><i class="pi pi-images" /></span>
                 <div class="min-w-0 flex-1">
                   <div class="text-sm font-black text-stone-900 dark:text-white">До 5 фото в анкете <span class="text-amber-500">PRO</span></div>
-                  <div class="text-[11px] text-stone-500 dark:text-zinc-400">Free — до 3 фото · фото добавляют в профиле</div>
+                  <div class="text-[11px] text-stone-500 dark:text-zinc-400">Free — до 5 фото · фото добавляют в профиле</div>
                 </div>
                 <Link href="/profile"><Button label="Фото" icon="pi pi-camera" rounded outlined size="small" /></Link>
               </div>
@@ -381,13 +381,13 @@ onMounted(async () => {
           </template>
 
           <template v-else>
-          <div class="mt-3 mb-3 sm:mt-4 sm:mb-0 relative select-none">
-            <div v-if="s.loading.value" class="rounded-[20px] min-[411px]:rounded-[24px] border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 h-[calc(100dvh-180px-var(--sab))] min-h-[400px] min-[411px]:h-[calc(100dvh-170px-var(--sab))] min-[411px]:min-h-[480px] sm:h-[62dvh] sm:min-h-[400px] sm:max-h-[540px] grid place-items-center">
+          <div class="swipes-feed mt-3 mb-3 sm:mt-4 sm:mb-0 relative select-none max-sm:overflow-hidden max-sm:overscroll-none">
+            <div v-if="s.loading.value" class="rounded-[20px] min-[411px]:rounded-[24px] border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 h-[calc(100dvh-180px-var(--sab)-var(--sat))] min-h-[400px] min-[411px]:h-[calc(100dvh-170px-var(--sab)-var(--sat))] min-[411px]:min-h-[480px] sm:h-[62dvh] sm:min-h-[400px] sm:max-h-[540px] grid place-items-center">
               <i class="pi pi-spin pi-spinner text-2xl text-stone-400 dark:text-zinc-500" />
             </div>
 
             <div v-else-if="s.current.value">
-              <div class="swipe-deck relative h-[calc(100dvh-180px-var(--sab))] min-h-[400px] min-[411px]:h-[calc(100dvh-170px-var(--sab))] min-[411px]:min-h-[480px] sm:h-[62dvh] sm:min-h-[400px] sm:max-h-[540px]">
+              <div class="swipe-deck relative h-[calc(100dvh-180px-var(--sab)-var(--sat))] min-h-[400px] min-[411px]:h-[calc(100dvh-170px-var(--sab)-var(--sat))] min-[411px]:min-h-[480px] sm:h-[62dvh] sm:min-h-[400px] sm:max-h-[540px] overscroll-none">
               <div
                 v-if="s.next.value"
                 class="absolute inset-0 z-0 rounded-[24px] overflow-hidden bg-zinc-900 dark:bg-zinc-950 shadow-soft ring-1 ring-black/10 dark:ring-white/10 pointer-events-none"
@@ -413,7 +413,7 @@ onMounted(async () => {
               </div>
 
               <div
-                class="swipe-top absolute inset-0 z-10 rounded-[24px] overflow-hidden bg-zinc-900 dark:bg-zinc-950 shadow-soft touch-pan-y ring-1 ring-black/10 dark:ring-white/10 cursor-grab active:cursor-grabbing"
+                class="swipe-top absolute inset-0 z-10 rounded-[24px] overflow-hidden bg-zinc-900 dark:bg-zinc-950 shadow-soft touch-none overscroll-none ring-1 ring-black/10 dark:ring-white/10 cursor-grab active:cursor-grabbing"
                 :style="s.topCardStyle.value"
                 @pointerdown="s.dragStart($event.clientX, $event.clientY)"
                 @pointermove="s.dragMove($event.clientX, $event.clientY)"
@@ -777,8 +777,11 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.touch-pan-y {
-  touch-action: pan-y;
+@media (max-width: 639px) {
+  .swipes-feed,
+  .swipe-deck {
+    overscroll-behavior: none;
+  }
 }
 .swipe-deck {
   perspective: 1200px;

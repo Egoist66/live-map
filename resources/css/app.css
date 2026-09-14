@@ -207,8 +207,25 @@ html.dark .bg-stone-900\/90, html.dark .bg-black\/50, html.dark .bg-black\/60 { 
   .pb-safe { padding-bottom: var(--sab) !important; }
   .pt-safe { padding-top: var(--sat) !important; }
   .pb-safe-or-2 { padding-bottom: calc(0.5rem + var(--sab)) !important; }
-  .min-h-dvh { min-height: 100dvh; }
-  .h-dvh-app { height: 100dvh; }
+  .min-h-dvh { min-height: 100vh; min-height: 100svh; min-height: 100dvh; }
+  .h-dvh-app { height: 100vh; height: 100svh; height: 100dvh; }
+}
+
+/* Мобильный шелл без пустых полос: фон тянется на всю высоту
+   вьюпорта, корень Inertia занимает минимум экран (WebView,
+   безрамочные дисплеи, скрытие/показ шторок браузера). */
+html, body { min-height: 100vh; min-height: 100svh; min-height: 100dvh; }
+#app { min-height: 100vh; min-height: 100svh; min-height: 100dvh; }
+
+/* Старые WebView без dvh: откат ключевых фреймов на vh,
+   иначе calc(100dvh-…) разваливается и даёт пустые полосы. */
+@supports not (height: 100dvh) {
+  .swipe-deck { height: calc(100vh - 180px - var(--sab) - var(--sat)) !important; }
+  .page-scroll { min-height: calc(100vh - var(--app-header-sm) - var(--sat)) !important; }
+  .h-app-full {
+    height: calc(100vh - var(--app-header-sm) - var(--sat) - var(--app-bottomnav) - var(--sab)) !important;
+    max-height: calc(100vh - var(--app-header-sm) - var(--sat) - var(--app-bottomnav) - var(--sab)) !important;
+  }
 }
 
 /* Единые отступы приложения под WebView/браузер.
@@ -262,8 +279,8 @@ html.native-keyboard-open .h-app-full {
    На мобилке класс пустой, работает обычный h-app-full. */
 @media (min-width: 1024px) {
   .map-desktop-frame {
-    height: calc(100dvh - var(--app-header-md) - var(--sat));
-    max-height: calc(100dvh - var(--app-header-md) - var(--sat));
+    height: calc(100dvh - var(--app-header-md));
+    max-height: calc(100dvh - var(--app-header-md));
   }
 }
 /* Обычные страницы: min-height учитывает шапку и вырез; зазор под нижнее
@@ -371,6 +388,11 @@ html.native-keyboard-open .mobile-bottom-nav {
    useOverlaySafeArea добавляет .no-safe-area-top, если WebView отдал env() нулём. */
 .native-safe-top { padding-top: var(--sat); }
 .no-safe-area-top .native-safe-top { padding-top: 28px; }
+@media (min-width: 1024px) {
+  .no-safe-area-top { --sat: 0px; }
+  .native-safe-top,
+  .no-safe-area-top .native-safe-top { padding-top: 0; }
+}
 .native-safe-offset-top { top: calc(var(--sat) + 8px); }
 .no-safe-area-top .native-safe-offset-top { top: 36px; }
 @media (min-width: 640px) {

@@ -74,6 +74,18 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::get('/admin/reports', [ReportController::class, 'index']);
     Route::post('/admin/reports/{report}/resolve', [ReportController::class, 'resolve']);
     Route::apiResource('zone-subscriptions', ZoneSubscriptionController::class)->only(['index','store','destroy']);
+    Route::get('/districts', [\App\Http\Controllers\DistrictController::class, 'index']);
+    Route::post('/districts', [\App\Http\Controllers\DistrictController::class, 'store'])->middleware('throttle:social-write');
+    Route::get('/districts/{district}', [\App\Http\Controllers\DistrictController::class, 'show']);
+    Route::patch('/districts/{district}', [\App\Http\Controllers\DistrictController::class, 'update'])->middleware('throttle:social-write');
+    Route::put('/districts/{district}', [\App\Http\Controllers\DistrictController::class, 'update'])->middleware('throttle:social-write');
+    Route::delete('/districts/{district}', [\App\Http\Controllers\DistrictController::class, 'destroy'])->middleware('throttle:social-write');
+    Route::get('/districts/{district}/members', [\App\Http\Controllers\DistrictController::class, 'members']);
+    Route::post('/districts/{district}/join', [\App\Http\Controllers\DistrictController::class, 'join'])->middleware('throttle:social-write');
+    Route::delete('/districts/{district}/leave', [\App\Http\Controllers\DistrictController::class, 'leave'])->middleware('throttle:social-write');
+    Route::post('/districts/{district}/members/{user}/approve', [\App\Http\Controllers\DistrictController::class, 'approve'])->middleware('throttle:social-write');
+    Route::post('/districts/{district}/members/{user}/reject', [\App\Http\Controllers\DistrictController::class, 'reject'])->middleware('throttle:social-write');
+    Route::delete('/districts/{district}/members/{user}', [\App\Http\Controllers\DistrictController::class, 'kick'])->middleware('throttle:social-write');
     Route::get('/custom-categories', [CustomCategoryController::class, 'index']);
     Route::post('/custom-categories', [CustomCategoryController::class, 'store'])->middleware('throttle:social-write');
     Route::delete('/custom-categories/{customCategory}', [CustomCategoryController::class, 'destroy'])->middleware('throttle:social-write');

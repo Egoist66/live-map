@@ -1,5 +1,5 @@
 import { ref, computed, watch, nextTick } from 'vue'
-import { usePage } from '@inertiajs/vue3'
+import { router, usePage } from '@inertiajs/vue3'
 import { usePins } from '@/composables/usePins'
 import { useMap } from '@/composables/useMap'
 import { usePinDetails } from '@/composables/usePinDetails'
@@ -10,6 +10,9 @@ import { usePinCreate } from '@/composables/usePinCreate'
 import { usePinEdit } from '@/composables/usePinEdit'
 import { useToast } from 'primevue/usetoast'
 import { useMapOverlays } from '@/composables/useMapOverlays'
+import { useDistricts } from '@/composables/useDistricts'
+import { useDistrictPaint } from '@/composables/useDistrictPaint'
+import { countGeometryPoints } from '@/utils/districtGeo'
 import { useAppConfirm } from '@/composables/useAppConfirm'
 import { useCustomCategories } from '@/composables/useCustomCategories'
 import { useHomeZoneVisibility } from '@/composables/useHomeZoneVisibility'
@@ -50,6 +53,205 @@ export function useMapPage() {
     (lat, lng) => mapApi.map?.flyTo({ center: [lng, lat] as any, zoom: 15, duration: 900 }),
     (p) => pinDetails.openPin(p),
   )
+
+  const districts = useDistricts()
+  const paint = useDistrictPaint()
+  const pendingGeometry = ref<any | null>(null)
+  const createError = ref<string | null>(null)
+  let lastDistrictsFetch = 0
+
+  /**
+   * Визуальная ширина кисти в пикселях SVG-оверлея.
+   */
+  const brushPx = computed(() => {
+    const radius = Number(paint.brushRadiusM.value)
+    if (radius <= 150) return 14
+    if (radius <= 280) return 22
+    return 34
+  })
+
+  const districtLimitText = computed(() => {
+    const plan = userPlan.value
+    const isAdmin = !!((page.props.auth?.user as any)?.is_admin || (page.props.auth?.user as any)?.role === 'admin')
+    if (isAdmin) return 'Своих районов — безлимит'
+    if (plan === 'business') return 'Business: до 15 своих районов'
+    if (plan === 'pro') return 'Pro: до 5 своих районов'
+    return 'Free: 2 своих района бесплатно'
+  })
+
+  /**
+   * Подтянуть UDistrict-заливки в видимом прямоугольнике (троттлинг 2с).
+   *
+   * @param force игнорировать троттлинг (включение слоя, повтор)
+   */
+  async function fetchDistrictsForView(force = false): Promise<void> {
+    const now = Date.now()
+    if (!force && now - lastDistrictsFetch < 2000) return
+    lastDistrictsFetch = now
+    try {
+      const bounds = (mapApi as any).map?.getBounds?.()
+      if (!bounds) return
+      await districts.store.fetchInBbox({
+        minLat: bounds.getSouth(),
+        maxLat: bounds.getNorth(),
+        minLng: bounds.getWest(),
+        maxLng: bounds.getEast(),
+      })
+    } catch {}
+  }
+
+  /**
+   * Начать рисование района кистью.
+   */
+  function startDistrictPaint(): void {
+    districts.hubOpen.value = false
+    pinDetails.closePin()
+    districts.closeDistrict()
+    createError.value = null
+    paint.startPainting()
+    toast?.add({ severity: 'info', summary: 'Кисть UDistrict', detail: 'Закрась кусочек карты: зажми Alt и веди мышью, на мобилке — пальцем', life: 4000 })
+  }
+
+  /**
+   * Завершить мазки и открыть форму создания.
+   */
+  function finishDistrictPaint(): void {
+    const geometry = paint.takeDraft()
+    if (!geometry) {
+      toast?.add({ severity: 'warn', summary: 'Пустая заливка', detail: 'Сначала закрась кусочек карты кистью', life: 3000 })
+      return
+    }
+    if (countGeometryPoints(geometry) > 600) {
+      toast?.add({ severity: 'warn', summary: 'Слишком большая заливка', detail: 'Рисуй компактный островок — меньше мазков', life: 3500 })
+      return
+    }
+    pendingGeometry.value = geometry
+    createError.value = null
+    districts.createOpen.value = true
+  }
+
+  /**
+   * Сохранить район из черновика кисти.
+   */
+  async function saveDistrict(payload: { name: string; description: string | null; interest: string }): Promise<void> {
+    if (!pendingGeometry.value) return
+    createError.value = null
+    try {
+      const created: any = await districts.store.createDistrict({
+        ...payload,
+        geometry: pendingGeometry.value,
+        user_lat: myPos.value?.lat ?? null,
+        user_lng: myPos.value?.lng ?? null,
+      })
+      pendingGeometry.value = null
+      districts.createOpen.value = false
+      districts.setVisible(true)
+      try { mapApi.setDistrictsVisible(true) } catch {}
+      mapApi.renderDistricts(districts.store.districts as any)
+      toast?.add({ severity: 'success', summary: 'Район создан', detail: 'Заливка видна всем, пины внутри — только жителям', life: 3500 })
+      try { await districts.loadMine() } catch {}
+      try {
+        const lat = Number(created.center_lat)
+        const lng = Number(created.center_lng)
+        if (Number.isFinite(lat) && Number.isFinite(lng)) {
+          try { (mapApi as any).map?.flyTo?.({ center: [lng, lat] as any, zoom: 14, duration: 900 }) } catch {}
+        }
+      } catch {}
+    } catch (e: any) {
+      const message = e?.response?.data?.message ?? 'Не удалось создать район'
+      createError.value = message
+      toast?.add({ severity: 'error', summary: 'Не сохранено', detail: message, life: 5000 })
+    }
+  }
+
+  /**
+   * Догрузка заливок по движению карты (с троттлингом внутри).
+   */
+  function onDistrictsMoveEnd(): void {
+    void fetchDistrictsForView()
+  }
+
+  /**
+   * Открыть район из хаба с перелётом карты.
+   */
+  async function flyToDistrict(id: number): Promise<void> {
+    districts.hubOpen.value = false
+    const card: any = districts.store.districts.find((d: any) => d.id === id) ?? districts.myDistricts.value.find((d: any) => d.id === id)
+    if (card && Number.isFinite(Number(card.center_lat)) && Number.isFinite(Number(card.center_lng))) {
+      try { (mapApi as any).map?.flyTo?.({ center: [Number(card.center_lng), Number(card.center_lat)] as any, zoom: 14, duration: 900 }) } catch {}
+    }
+    await districts.openDistrict(id)
+  }
+
+  /**
+   * Открыть общий чат района.
+   */
+  function openDistrictChat(conversationId: number): void {
+    if (!(conversationId > 0)) return
+    districts.closeDistrict()
+    try {
+      router.visit(`/chat/${conversationId}`)
+    } catch {
+      window.location.href = `/chat/${conversationId}`
+    }
+  }
+
+  /**
+   * Открыть пин из модалки района (модалка уступает место пину).
+   *
+   * @param pin пин из списка района
+   */
+  function openPinFromDistrict(pin: any): void {
+    districts.closeDistrict()
+    pinDetails.openPin(pin)
+  }
+
+  /**
+   * Сохранить правки района с живой позицией для проверки зоны.
+   *
+   * @param payload поля формы
+   */
+  async function saveSelectedDistrict(payload: { name: string; description: string | null; interest: string }): Promise<boolean> {
+    return districts.saveSelected({
+      ...payload,
+      user_lat: myPos.value?.lat ?? null,
+      user_lng: myPos.value?.lng ?? null,
+    })
+  }
+
+  /**
+   * Удалить выбранный район после подтверждения.
+   */
+  async function deleteDistrict(): Promise<void> {
+    if (!districts.selected.value) return
+    await deleteDistrictById(Number(districts.selected.value.id))
+  }
+
+  /**
+   * Удалить район по id (правая кнопка мыши, хаб, карточка).
+   *
+   * @param id id района
+   */
+  async function deleteDistrictById(id: number): Promise<void> {
+    if (!(id > 0)) return
+    const known: any =
+      districts.store.districts.find((d: any) => Number(d.id) === id) ??
+      districts.myDistricts.value.find((d: any) => Number(d.id) === id) ??
+      (Number(districts.selected.value?.id) === id ? districts.selected.value : null)
+    const ok = await confirmDelete(`Район «${known?.name ?? 'без названия'}» исчезнет с карты вместе с общим чатом.`)
+    if (!ok) return
+    try {
+      const { districtsApi } = await import('@/services/districts.api')
+      await districtsApi.remove(id)
+      districts.store.removeRealtime(id)
+      if (Number(districts.selected.value?.id) === id) districts.closeDistrict()
+      mapApi.renderDistricts(districts.store.districts as any)
+      toast?.add({ severity: 'success', summary: 'Район удалён', life: 2500 })
+      try { await districts.loadMine() } catch {}
+    } catch (e: any) {
+      toast?.add({ severity: 'error', summary: 'Не удалось удалить', detail: e?.response?.data?.message, life: 3500 })
+    }
+  }
 
   watch(isDark, (v) => mapApi.setThemeStyle(v))
 
@@ -183,6 +385,8 @@ export function useMapPage() {
   }
 
   function openCreate(lngLat: any) {
+    if (paint.painting.value) return
+    if ((mapApi as any).shouldSuppressMapClick?.()) return
     const guard = useHomeZoneGuard()
     const zone = guard.check(Number(lngLat.lat), Number(lngLat.lng), myPos.value)
     if (!zone.ok) {
@@ -201,6 +405,19 @@ export function useMapPage() {
     mapApi.removeTempMarker()
   }
 
+  /**
+   * Сеттер диалога создания для шаблонов (прямое присваивание затрёт ref).
+   *
+   * @param v открыт ли диалог
+   */
+  function setShowCreate(v: boolean): void {
+    if (!v) {
+      closeCreate()
+      return
+    }
+    showCreate.value = true
+  }
+
   watch(showCreate, (v) => {
     if (!v || pinAddress.value) return
     const lat = (pinCreate.values as any)?.value?.latitude
@@ -211,6 +428,34 @@ export function useMapPage() {
   watch(homeZone, () => applyHomeZone())
 
   watch(homeZoneVisible, () => applyHomeZone())
+
+  watch(
+    () => districts.store.districts,
+    (list) => {
+      if (districts.districtsVisible.value) {
+        try { mapApi.renderDistricts(list as any) } catch {}
+      }
+    },
+    { deep: true },
+  )
+
+  watch(
+    () => districts.districtsVisible.value,
+    (visible) => {
+      try { mapApi.setDistrictsVisible(visible) } catch {}
+      if (visible) {
+        try { mapApi.renderDistricts(districts.store.districts as any) } catch {}
+        void fetchDistrictsForView(true)
+      }
+    },
+  )
+
+  watch(
+    () => paint.draftGeometry.value,
+    (geometry) => {
+      try { mapApi.previewDraft(geometry) } catch {}
+    },
+  )
 
   async function deleteSelectedPin() {
     if (!pinDetails.selectedPin.value) return
@@ -274,6 +519,9 @@ export function useMapPage() {
 
   function onEsc(e: KeyboardEvent) {
     if (e.key !== 'Escape') return
+    if (districts.createOpen.value) { districts.createOpen.value = false; return }
+    if (paint.painting.value) { paint.cancelPainting(); return }
+    if (districts.detailsOpen.value) { districts.closeDistrict(); return }
     if (showCreate.value) { closeCreate(); return }
     if (pinEdit.editing.value) { pinEdit.cancel(); return }
     if (pinDetails.editingCommentId.value) { pinDetails.cancelEditComment(); return }
@@ -332,6 +580,7 @@ export function useMapPage() {
       mapApi.renderPins()
       applyHomeZone()
       mapApi.bindRealtime()
+      wireDistricts()
     } else {
       await mapApi.initMap(null, onMapClick)
       mapApi.bindRealtime()
@@ -379,6 +628,71 @@ export function useMapPage() {
     }) ?? null
     try { void consumePendingPin() } catch {}
     try { openCreateIfRequested() } catch {}
+  }
+
+  /**
+   * Принять мазок с SVG-оверлея: экран в координаты, в черновик кисти.
+   *
+   * @param points точки мазка в пикселях оверлея
+   */
+  function onOverlayStrokeEnd(points: Array<{ x: number; y: number }>): void {
+    const map = (mapApi as any).map
+    if (!map?.unproject) {
+      return
+    }
+    const lngLat: Array<{ lat: number; lng: number }> = []
+    for (const point of points ?? []) {
+      try {
+        const ll = map.unproject([point.x, point.y])
+        if (Number.isFinite(ll?.lat) && Number.isFinite(ll?.lng)) {
+          lngLat.push({ lat: Number(ll.lat), lng: Number(ll.lng) })
+        }
+      } catch {}
+    }
+    paint.addStroke(lngLat)
+  }
+
+  /**
+   * Подключить UDistrict-слой: клики по заливкам, догрузка по вьюпорту.
+   *
+   * Мазки ловит SVG-оверлей (DistrictPaintOverlay), маппинг
+   * экрана в координаты — в onOverlayStrokeEnd выше.
+   */
+  function wireDistricts(): void {
+    try { (mapApi as any).onDistrictClick?.((id: number) => { void districts.openDistrict(id) }) } catch {}
+    try {
+      ;(mapApi as any).onDistrictMenu?.((action: 'open' | 'delete', id: number) => {
+        if (action === 'delete') void deleteDistrictById(id)
+        else void districts.openDistrict(id)
+      })
+    } catch {}
+    try { (mapApi as any).map?.on?.('moveend', onDistrictsMoveEnd) } catch {}
+    if (districts.districtsVisible.value) {
+      try { mapApi.renderDistricts(districts.store.districts as any) } catch {}
+    } else {
+      try { mapApi.setDistrictsVisible(false) } catch {}
+    }
+    void fetchDistrictsForView()
+    void openDistrictIfRequested()
+  }
+
+  /**
+   * Открыть район по ?district= (диплинк из уведомлений).
+   */
+  async function openDistrictIfRequested(): Promise<void> {
+    let districtId = 0
+    try {
+      const url = new URL(window.location.href)
+      districtId = Number(url.searchParams.get('district') || 0)
+      if (districtId > 0) {
+        url.searchParams.delete('district')
+        window.history.replaceState({}, '', url.toString())
+      }
+    } catch {
+      districtId = 0
+    }
+    if (!(districtId > 0)) return
+    await flyToDistrict(districtId)
   }
 
   function readPendingPin(): { pinId: number; commentId: number | null } | null {
@@ -437,6 +751,7 @@ export function useMapPage() {
   function destroy() {
     window.removeEventListener('keydown', onEsc)
     window.removeEventListener('map:open-create', openCreateFromUI)
+    try { (mapApi as any).map?.off?.('moveend', onDistrictsMoveEnd) } catch {}
     try { unsubGeolocate?.() } catch {}
     unsubGeolocate = null
     try { (mapApi as any).unbindRealtime?.() } catch {}
@@ -449,6 +764,9 @@ export function useMapPage() {
     showCreate, pinAddress, loadingPinAddress, myStreet, loadingStreet,
     radiusOptions, radiusLabel, homeZone, homeZoneVisible, toggleHomeZone, setHomeZoneVisible, openCreate, openCreateFromUI, closeCreate, deleteSelectedPin, saveEdit, deleteCustomCategory, init, destroy,
     deleteMutation, geoNotice, dismissGeoNotice, locateMe,
+    districts, paint, pendingGeometry, createError, districtLimitText, brushPx,
+    startDistrictPaint, finishDistrictPaint, saveDistrict, saveSelectedDistrict, flyToDistrict, openDistrictChat, deleteDistrict,
+    openPinFromDistrict, onOverlayStrokeEnd, setShowCreate,
     ...overlays,
   }
 }

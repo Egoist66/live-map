@@ -14,7 +14,7 @@ const emit = defineEmits<{ (e: 'close'): void; (e: 'openChat', id: number): void
           <button class="w-full px-4 py-3.5 rounded-2xl bg-stone-100 text-[15px] font-medium justify-center mt-1" @click="emit('close')">Отмена</button>
         </template>
         <template v-else-if="sheet.type === 'chat'">
-          <div class="px-4 py-3 border-b mb-1"><div class="text-[15px] font-bold truncate">{{ sheet.data?.other?.name }}</div></div>
+          <div class="px-4 py-3 border-b mb-1"><div class="text-[15px] font-bold truncate">{{ sheet.data?.title || sheet.data?.other?.name }}</div></div>
           <button @click="emit('openChat', sheet.data?.id)" class="w-full px-4 py-3.5 rounded-2xl hover:bg-violet-50 text-[15px] font-medium text-left text-violet-700">Открыть чат</button>
           <button @click="emit('deleteChat', sheet.data?.id)" class="w-full px-4 py-3.5 rounded-2xl text-[15px] font-medium text-left text-red-600">Удалить чат</button>
           <button v-if="sheet.data?.other?.id" @click="emit('block', sheet.data.other.id, sheet.data.other.name)" class="w-full px-4 py-3.5 rounded-2xl text-[15px] font-medium text-left text-red-600">Заблокировать</button>

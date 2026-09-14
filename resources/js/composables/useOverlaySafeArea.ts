@@ -57,8 +57,9 @@ export function useOverlaySafeArea() {
   /**
    * Применяет замеренные инсеты как CSS-переменные на <html>.
    *
-   * Нулевой замер означает «env() пуст» — переменные не трогаем,
-   * остаются env()-значения и фолбэк `.no-safe-area-top` из CSS.
+   * Нулевой верхний замер означает «WebView не отдал env()» —
+   * включаем фолбэк `.no-safe-area-top` (28px под шторку/вырез),
+   * чтобы контент не уезжал под статус-бар на безрамочных дисплеях.
    *
    * @returns void
    */
@@ -71,6 +72,9 @@ export function useOverlaySafeArea() {
     safeBottom.value = Math.round(bottom)
     if (top > 0) {
       root.style.setProperty('--sat-real', `${Math.round(top)}px`)
+      root.classList.remove('no-safe-area-top')
+    } else {
+      root.classList.add('no-safe-area-top')
     }
     if (bottom > 0) {
       root.style.setProperty('--sab-real', `${Math.round(bottom)}px`)

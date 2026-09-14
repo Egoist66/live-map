@@ -145,6 +145,8 @@ class User extends Authenticatable
     public function subscribers() { return $this->hasMany(UserSubscription::class, 'target_id'); }
     public function flowPosts() { return $this->hasMany(FlowPost::class); }
     public function flowComments() { return $this->hasMany(FlowPostComment::class); }
+    public function districts() { return $this->hasMany(District::class); }
+    public function districtMemberships() { return $this->hasMany(DistrictMember::class); }
 
     public function isAdmin(): bool { return $this->is_admin || $this->role === 'admin'; }
     public function isBanned(): bool { return $this->banned_at !== null; }
@@ -153,6 +155,9 @@ class User extends Authenticatable
 
     public const FREE_PINS_LIMIT = 3;
     public const FREE_PIN_INVITES_MONTH_LIMIT = 3;
+    public const FREE_DISTRICTS_LIMIT = 2;
+    public const PRO_DISTRICTS_LIMIT = 5;
+    public const BUSINESS_DISTRICTS_LIMIT = 15;
 
     public function livePinsCount(): int
     {
@@ -167,6 +172,35 @@ class User extends Authenticatable
         if ($this->isAdmin()) return true;
         if (in_array($this->effectivePlan(), ['pro','business'])) return true;
         return $this->livePinsCount() < self::FREE_PINS_LIMIT;
+    }
+
+    /**
+     * Лимит своих UDistrict-районов по тарифу.
+     *
+     * Free — 2, Pro — 5, Business — 15, админ — безлимит (null).
+     *
+     * @return int|null максимум районов, null — безлимит
+     */
+    public function districtsLimit(): ?int
+    {
+        if ($this->isAdmin()) return null;
+        return match ($this->effectivePlan()) {
+            'business' => self::BUSINESS_DISTRICTS_LIMIT,
+            'pro' => self::PRO_DISTRICTS_LIMIT,
+            default => self::FREE_DISTRICTS_LIMIT,
+        };
+    }
+
+    /**
+     * Может ли пользователь создать ещё один район.
+     *
+     * @return bool true когда лимит тарифа не исчерпан
+     */
+    public function canCreateDistrict(): bool
+    {
+        $limit = $this->districtsLimit();
+        if ($limit === null) return true;
+        return $this->districts()->count() < $limit;
     }
 
     /**
@@ -373,13 +407,20 @@ class User extends Authenticatable
 
     public function canModerate(): bool { return $this->isModerator(); }
 
+    /**
+     * Лимит фото в галерее профиля по тарифу.
+     *
+     * Free даёт 5 бесплатных фото, Pro — 6, Business/админ — 15.
+     *
+     * @return int максимальное число фото
+     */
     public function photoLimit(): int
     {
         if ($this->isAdmin()) return 15;
         return match ($this->effectivePlan()) {
             'business' => 15,
             'pro' => 6,
-            default => 3,
+            default => 5,
         };
     }
 

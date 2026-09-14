@@ -92,7 +92,7 @@ const ulove = useUlovePrivacy()
         <Card v-if="photoPrivacy" class="!border-stone-200 !rounded-3xl !shadow-none" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
           <template #content>
             <div class="text-sm font-semibold dark:text-white">Кто может комментировать мои фото</div>
-            <p class="text-xs text-stone-500 mt-1 leading-relaxed">Галерея в профиле: 3 фото на Free, 6 на Pro, 15 на Business.</p>
+            <p class="text-xs text-stone-500 mt-1 leading-relaxed">Галерея в профиле: 5 фото на Free, 6 на Pro, 15 на Business.</p>
             <div class="mt-3 grid gap-1.5">
               <button v-for="o in photoPrivacy.options" :key="o.value" type="button" @click="photoPrivacy.save(o.value)" :disabled="photoPrivacy.saving.value" :class="['flex items-center gap-2.5 px-3 py-2.5 rounded-2xl border text-left transition active:scale-[0.99] disabled:opacity-60', photoPrivacy.value.value === o.value ? 'bg-stone-900 text-white border-stone-900 dark:bg-white dark:text-stone-900 dark:border-white' : 'bg-white dark:bg-white/[0.06] border-stone-200 dark:border-white/10 text-stone-700 dark:text-zinc-100']">
                 <i :class="[o.icon, 'text-sm']" />

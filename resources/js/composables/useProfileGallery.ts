@@ -2,18 +2,28 @@ import { computed, ref } from 'vue'
 import { galleryApi, type GalleryPhoto } from '@/services/gallery.api'
 import { compressImageFile } from '@/utils/image'
 
-export const GALLERY_LIMITS: Record<string, number> = { free: 3, pro: 6, business: 15 }
+/**
+ * Лимиты галереи по тарифам: free — 5 бесплатных фото.
+ */
+export const GALLERY_LIMITS: Record<string, number> = { free: 5, pro: 6, business: 15 }
 
+/**
+ * Лимит галереи для тарифа.
+ *
+ * @param plan тариф пользователя
+ * @param isAdmin админ — всегда 15
+ * @returns лимит фото
+ */
 export function galleryLimitFor(plan?: string | null, isAdmin?: boolean): number {
   if (isAdmin) return 15
   if (plan === 'business') return 15
   if (plan === 'pro') return 6
-  return 3
+  return 5
 }
 
 export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean }) {
   const photos = ref<GalleryPhoto[]>([])
-  const limit = ref(3)
+  const limit = ref(5)
   const canAdd = ref(false)
   const canComment = ref(true)
   const privacy = ref('everyone')

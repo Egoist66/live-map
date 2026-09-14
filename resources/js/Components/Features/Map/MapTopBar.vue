@@ -7,7 +7,7 @@ import Dialog from 'primevue/dialog'
 import { useFilterDialog } from '@/composables/useFilterDialog'
 
 const props = defineProps<{ count: number; loading: boolean; refreshing?: boolean; categories: any[]; selectedCategory: any }>()
-const emit = defineEmits<{ (e: 'update:category', v: any): void; (e: 'info'): void; (e: 'mine'): void; (e: 'refresh'): void }>()
+const emit = defineEmits<{ (e: 'update:category', v: any): void; (e: 'info'): void; (e: 'mine'): void; (e: 'refresh'): void; (e: 'districts'): void }>()
 
 const dlg = useFilterDialog()
 
@@ -26,18 +26,17 @@ const iconOff = 'bg-white dark:bg-white/10 shadow-sm border border-stone-200/60 
   <Card class="pointer-events-auto !rounded-full !shadow-float !border-stone-200/70 dark:!border-white/10 !bg-white/85 dark:!bg-zinc-900/80 backdrop-blur-xl !py-1 !pl-1 !pr-1 min-[411px]:!py-1.5 min-[411px]:!pl-1.5 min-[411px]:!pr-1.5 w-full sm:w-auto max-w-full min-w-0 overflow-hidden" :pt="{ body: { class: '!p-0' }, content: { class: '!p-0' } }">
     <template #content>
       <div class="flex items-center gap-1 min-[411px]:gap-1.5 max-w-full min-w-0">
-        <button @click="dlg.show()" class="flex-1 sm:flex-none min-w-0 flex items-center gap-1.5 min-[411px]:gap-2 rounded-full pl-2.5 min-[411px]:pl-3 pr-2 min-[411px]:pr-2.5 py-[6px] min-[411px]:py-[7px] text-[12px] min-[411px]:text-[13px] font-semibold transition active:scale-95 bg-stone-100/80 dark:bg-white/[0.07] text-ink-900 dark:text-zinc-100 hover:bg-stone-100 dark:hover:bg-white/10 border border-stone-200/60 dark:border-white/10">
+        <button @click="dlg.show()" class="flex-1 sm:flex-none min-w-0 flex items-center gap-1.5 min-[411px]:gap-2 rounded-full pl-2.5 min-[411px]:pl-3 pr-2 min-[411px]:pr-2.5 py-[6px] min-[411px]:py-[7px] text-[12px] min-[411px]:text-[13px] font-bold transition active:scale-95 bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-glow hover:opacity-90 border border-transparent">
+          <i class="pi pi-sliders-h text-xs shrink-0"></i>
           <span v-if="activeMeta" class="truncate">{{ (activeMeta as any).i }} {{ (activeMeta as any).l }}</span>
           <span v-else class="truncate">Все пины</span>
-          <span v-if="selectedCategory !== 'all'" @click.stop="emit('update:category', 'all')" class="w-5 h-5 rounded-full bg-stone-300/70 dark:bg-white/15 grid place-items-center shrink-0 hover:bg-stone-300 dark:hover:bg-white/25"><i class="pi pi-times text-[9px]"></i></span>
-        </button>
-        <button @click="dlg.show()" class="relative shrink-0 h-[32px] min-[411px]:h-[34px] px-3 min-[411px]:px-4 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-[12px] min-[411px]:text-[13px] font-bold flex items-center gap-1.5 min-[411px]:gap-2 shadow-glow transition hover:opacity-90 active:scale-95">
-          <i class="pi pi-sliders-h text-xs"></i><span class="hidden min-[380px]:inline">Фильтры</span>
-          <span v-if="selectedCategory !== 'all'" class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+          <span v-if="selectedCategory !== 'all'" class="w-1.5 h-1.5 rounded-full bg-white animate-pulse shrink-0"></span>
+          <span v-if="selectedCategory !== 'all'" @click.stop="emit('update:category', 'all')" class="w-5 h-5 rounded-full bg-white/20 grid place-items-center shrink-0 hover:bg-white/30"><i class="pi pi-times text-[9px]"></i></span>
         </button>
         <Tag @click="emit('info')" :value="String(count)" severity="contrast" rounded class="shrink-0 ml-auto !bg-ink-900 dark:!bg-white !text-white dark:!text-ink-900 !shadow-soft cursor-pointer hover:opacity-90 !text-sm min-[411px]:!text-base !font-black !px-3 min-[411px]:!px-4 !py-1.5 min-[411px]:!py-2">
-          <template #icon><span v-if="loading" class="w-4 h-4 border-2 border-white/30 dark:border-ink-900/30 border-t-white dark:border-t-ink-900 rounded-full animate-spin"></span><span v-else class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse inline-block"></span></template>
+          <template #icon><i v-if="loading" class="pi pi-spin pi-spinner text-white dark:text-ink-900"></i><span v-else class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse inline-block"></span></template>
         </Tag>
+        <Button icon="pi pi-th-large" rounded text size="small" title="UDistrict — свои районы" aria-label="UDistrict — свои районы" class="shrink-0 !w-[32px] !h-[32px] min-[411px]:!w-[34px] min-[411px]:!h-[34px] !p-0 !text-violet-700 dark:!text-violet-300" @click="emit('districts')" />
         <Button icon="pi pi-refresh" rounded text size="small" :loading="!!refreshing" title="Обновить карту" aria-label="Обновить карту" class="shrink-0 !w-[32px] !h-[32px] min-[411px]:!w-[34px] min-[411px]:!h-[34px] !p-0" @click="emit('refresh')" />
       </div>
     </template>

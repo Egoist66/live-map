@@ -36,6 +36,7 @@ onMounted(() => { screenLock.init(); hotkeys.init() })
     </header>
     <AppUserMenu v-model:menu-ref="menu" :user="user" :avatar-src="avatarSrc" :items="(menuItems as any)" />
     <AppDrawerMenu :open="showDrawer" @update:open="(v:boolean)=>showDrawer=v" :user="user" :avatar-src="avatarSrc" :settings-href="settingsHref" @logout="logout" />
+    <div v-if="route().current('swipes*')" class="native-safe-top lg:hidden" aria-hidden="true" />
     <div v-if="$slots.header" class="bg-white dark:bg-zinc-900 border-b border-stone-200/60 dark:border-zinc-800">
       <div class="mx-auto max-w-[1280px] px-4 sm:px-6 py-4 sm:py-6"><slot name="header" /></div>
     </div>

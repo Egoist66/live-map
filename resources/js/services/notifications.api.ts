@@ -64,6 +64,15 @@ export function describeInboxRow(row: InboxNotification): InboxText {
     const name = a.name || 'Пользователь'
     return { emoji: '✅', title: 'Заявка принята', body: `${name} принял заявку`, link: '/chat?tab=friends', avatar: a.avatar_url ?? null }
   }
+  if (row.type === 'district.join_requested') {
+    const d = (data as any).district ?? {}
+    const name = d.requester?.name || 'Кто-то'
+    return { emoji: '🏘️', title: `Заявка в район «${d.name || ''}»`, body: `${name} хочет жить в вашем районе`, link: `/map?district=${d.id || ''}`, avatar: d.requester?.avatar_url ?? null }
+  }
+  if (row.type === 'district.request_approved') {
+    const d = (data as any).district ?? {}
+    return { emoji: '🎉', title: `Вы в районе «${d.name || ''}»`, body: 'Пины района и общий чат открыты', link: `/map?district=${d.id || ''}`, avatar: null }
+  }
   if (row.type === 'report.created') {
     const r = data.report ?? {}
     const title = r.target_title || `${r.target_type ?? ''} #${r.target_id ?? ''}`

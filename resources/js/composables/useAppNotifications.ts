@@ -181,6 +181,41 @@ function isDuplicateEvent(key: string, ttlMs = 20000): boolean {
   }
   return false
 }
+/**
+ * Тост заявки/решения по UDistrict-району.
+ */
+function handleDistrict(district: any, type: string) {
+  const id = Number(district?.id) || 0
+  if (!id) return
+  if (isDuplicateEvent(`district-${type}-${id}`)) return
+  const link = `/map?district=${id}`
+  if (type === 'district.join_requested') {
+    const r = district.requester || {}
+    push({
+      id: `district-req-${id}-${Date.now()}`,
+      type: 'friend',
+      icon: 'pi pi-home',
+      title: `Заявка в район «${String(district.name || '').slice(0, 40)}»`,
+      body: `${r.name || 'Кто-то'} хочет жить в вашем районе`,
+      avatar: avatarSrcFor(r),
+      link,
+      createdAt: Date.now(),
+    })
+    return
+  }
+  if (type === 'district.request_approved') {
+    push({
+      id: `district-ok-${id}-${Date.now()}`,
+      type: 'friend',
+      icon: 'pi pi-check-circle',
+      title: `Вы в районе «${String(district.name || '').slice(0, 40)}»`,
+      body: 'Пины района и общий чат открыты',
+      avatar: null,
+      link,
+      createdAt: Date.now(),
+    })
+  }
+}
 function handleFriendship(e: any) {
   const f = e?.friendship
   if (!f) return
@@ -473,6 +508,10 @@ function handleNotification(e: any) {
   }
   if (data.friendship) {
     handleFriendship({ friendship: data.friendship })
+    return
+  }
+  if (data.district) {
+    handleDistrict(data.district, String(n.type || ''))
     return
   }
   if (data.report) {

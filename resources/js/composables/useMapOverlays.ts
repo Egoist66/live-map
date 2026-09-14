@@ -7,6 +7,17 @@ export function useMapOverlays(flyTo: (lat: number, lng: number) => void, openPi
   const showMyPins = ref(false)
   const myPins = computed(() => (store.pins as any[]).filter((p: any) => p.is_owner))
 
+  /**
+   * Сеттеры диалогов для шаблонов (прямое присваивание затрёт ref).
+   */
+  function setLiveInfo(v: boolean): void {
+    showLiveInfo.value = v
+  }
+
+  function setMyPins(v: boolean): void {
+    showMyPins.value = v
+  }
+
   function handleMineClick() {
     selectedCategory.value = 'mine'
     showMyPins.value = true
@@ -18,5 +29,5 @@ export function useMapOverlays(flyTo: (lat: number, lng: number) => void, openPi
     setTimeout(() => openPin(p), 350)
   }
 
-  return { showLiveInfo, showMyPins, myPins, handleMineClick, flyToPin }
+  return { showLiveInfo, showMyPins, myPins, handleMineClick, flyToPin, setLiveInfo, setMyPins }
 }
