@@ -27,7 +27,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Message extends Model
 {
     protected $fillable = ['conversation_id','reply_to_id','sender_id','body','type','read_at','delivered_at','edited_at','pinned_at','pinned_by','attachment_path','attachment_name','attachment_mime','attachment_size','attachment_kind','attachment_duration'];
-    protected $casts = ['read_at' => 'datetime', 'delivered_at' => 'datetime', 'edited_at' => 'datetime', 'pinned_at' => 'datetime'];
+    protected $casts = [
+        'body' => \App\Casts\MessageBodyCast::class,
+        'read_at' => 'datetime',
+        'delivered_at' => 'datetime',
+        'edited_at' => 'datetime',
+        'pinned_at' => 'datetime',
+    ];
 
     public function conversation(): BelongsTo { return $this->belongsTo(Conversation::class); }
     public function sender(): BelongsTo { return $this->belongsTo(User::class,'sender_id'); }

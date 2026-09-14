@@ -46,4 +46,6 @@ return [
         'access_token' => env('EXPO_ACCESS_TOKEN'),
     ],
 
+    'messages_crypto_key' => env('MESSAGE_CRYPTO_KEY'),
+
 ];

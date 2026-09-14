@@ -40,6 +40,9 @@ export function useAuthStorage() {
         try {
             localStorage.setItem(MIRROR_KEY, token);
         } catch {}
+        try {
+            window.dispatchEvent(new CustomEvent('upin:auth-changed'));
+        } catch {}
     }
 
     async function loadToken(): Promise<string | null> {
@@ -54,6 +57,9 @@ export function useAuthStorage() {
         memoryToken = null;
         try {
             localStorage.removeItem(MIRROR_KEY);
+        } catch {}
+        try {
+            window.dispatchEvent(new CustomEvent('upin:auth-changed'));
         } catch {}
     }
 

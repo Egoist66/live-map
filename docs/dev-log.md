@@ -1,5 +1,12 @@
 # Dev-лог
 
+## 2026-09-14 — Expo-пуши в upin-mobile + AES-256-GCM для messages
+- 📲 Пустая `expo_push_tokens`: бэк принимал только `ExponentPushToken[` — теперь оба формата (`Exponent/ExpoPushToken[...]`, трим, `platform` до 32, миграция widen), фильтр `ExpoPushService::isExpoToken()` тот же; `POST /expo-push-tokens/test` возвращает `tokens` для диагностики.
+- 🌉 Мост WebView: `expo-push.ts` читает токен из `UPinApp/UPin/window.expoPushToken`, слушает `upin:push-token/upin-push-token/expo-push-token/push-token` + `message` (RN→Web), шлёт оба `get-expo-push-token/getExpoPushToken`, ретраи 40×3с + focus/visible/online/auth-changed; `useAuthStorage` диспатчит `upin:auth-changed` после login/logout (был вечный 401 первого bind).
+- 🔒 `messages.body` шифруется AES-256-GCM (`MessageCrypto`, формат `gcm1:base64(iv+tag+cipher)`, ключ `MESSAGE_CRYPTO_KEY` base64-32 либо производный от `APP_KEY`); каст `MessageBodyCast` (legacy-plaintext читается, пишется всегда шифр); backfill `php artisan chat:encrypt-messages --dry-run`; фронт без изменений (по TLS открытый текст).
+- ⚠️ На проде: задать `MESSAGE_CRYPTO_KEY` (`php -r "echo base64_encode(random_bytes(32)).PHP_EOL;"`), накатить миграции, прогнать `chat:encrypt-messages`, проверить `expo-push-tokens/test` (`tokens>0`, `sent>0`), в upin-mobile проверить инжект `UPinApp.expoPushToken` + обработку `type:'notify'`.
+- Проверки: `php -l` ✅, криптороундтрип ✅, `vue-tsc --noEmit` ✅.
+
 ## 2026-09-14 — WebView тёмная тема, свайп-ответ, голосовые до 1 мин
 - 🌙 WebView тёмная тема: белые полосы у статус-бара/жестов убраны — единый `#0B0F1A`: фон `<html>/<body>` + `overscroll-behavior-y: none`, `useTheme` красит `theme-color` и фон при смене темы, инлайн-скрипт в `app.blade.php` ставит фон до CSS (без белой вспышки), у нижнего меню глухая тёмная подложка + filler под safe-area.
 - ↩ Свайп-ответ: новый хук `useMessageSwipe` (горизонтальный жест в любую сторону, порог 55px, вертикальный скролл не ломается, long-press-меню не конфликтует) + иконка-подсказка; `ChatWindow` склеивает жесты свайпа и контекстного меню.

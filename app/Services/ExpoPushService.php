@@ -19,6 +19,19 @@ class ExpoPushService
 {
     private const ENDPOINT = 'https://exp.host/--/api/v2/push/send';
 
+    /**
+     * Проверка токена Expo: классический ExponentPushToken[...] и короткий ExpoPushToken[...].
+     *
+     * @param string $token
+     * @return bool
+     */
+    public static function isExpoToken(string $token): bool
+    {
+        $token = trim($token);
+
+        return str_starts_with($token, 'ExponentPushToken[') || str_starts_with($token, 'ExpoPushToken[');
+    }
+
     public function sendToUser(User $user, array $webPayload, ?string $channelId = null): int
     {
         $tokens = $user->expoPushTokens()->pluck('token')->all();
@@ -52,7 +65,7 @@ class ExpoPushService
      */
     public function send(array $tokens, array $webPayload, ?string $channelId, ?int $userId = null): int
     {
-        $tokens = array_values(array_unique(array_filter($tokens, fn ($t) => str_starts_with((string) $t, 'ExponentPushToken['))));
+        $tokens = array_values(array_unique(array_filter($tokens, fn ($t) => self::isExpoToken((string) $t))));
         if (empty($tokens)) {
             return 0;
         }
