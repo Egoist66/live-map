@@ -8,7 +8,7 @@ import { useViewportBreakpoints } from '@/composables/useViewportBreakpoints'
 defineProps<{ user: any; avatarSrc: string; dashboardHref: string; badgeTotal: number; lockEnabled?: boolean }>()
 const emit = defineEmits<{ (e: 'bell'): void; (e: 'menu', ev: Event): void; (e: 'drawer'): void; (e: 'lock'): void }>()
 
-const { isXs, isXxs } = useViewportBreakpoints()
+const { isXxs } = useViewportBreakpoints()
 </script>
 <template>
   <div class="mx-auto flex h-14 w-full min-w-0 max-w-[1280px] items-center gap-1 px-2 min-[411px]:h-16 min-[411px]:gap-2 min-[411px]:px-3 sm:px-6">
@@ -26,7 +26,7 @@ const { isXs, isXxs } = useViewportBreakpoints()
     <span class="min-w-0 flex-1" />
 
     <div class="flex shrink-0 items-center gap-1 min-[411px]:gap-1.5 sm:gap-2">
-      <button v-if="lockEnabled && !isXs" @click="emit('lock')" title="Заблокировать" aria-label="Заблокировать" class="grid h-10 w-10 place-items-center rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow-soft hover:bg-stone-50 dark:hover:bg-zinc-700 transition active:scale-95">
+      <button v-if="lockEnabled" @click="emit('lock')" title="Заблокировать" aria-label="Заблокировать" class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow-soft hover:bg-stone-50 dark:hover:bg-zinc-700 transition active:scale-95 min-[411px]:h-10 min-[411px]:w-10">
         <i class="pi pi-lock text-stone-600 dark:text-zinc-300"></i>
       </button>
       <button @click="emit('bell')" aria-label="Уведомления" class="relative grid h-9 w-9 place-items-center rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow-soft hover:bg-stone-50 dark:hover:bg-zinc-700 transition active:scale-95 min-[411px]:h-10 min-[411px]:w-10">

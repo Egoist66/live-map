@@ -68,11 +68,11 @@ function switchTab(next: 'ulove' | 'upin'): void {
       </div>
     </div>
 
-    <section class="max-w-[1280px] mx-auto px-4 sm:px-6 pt-4 sm:pt-10 pb-8 sm:pb-10 grid lg:grid-cols-[1.05fr_0.95fr] gap-6 sm:gap-10 items-center overflow-hidden">
-      <div>
-        <div class="inline-flex items-center gap-2 bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-full pl-1.5 pr-3 py-1 shadow-soft">
-          <Tag :class="['!text-white !rounded-full !px-2.5 !py-1 !text-[11px] !font-bold tracking-wide !border-0', landing.theme.value.badge]"><span class="w-1.5 h-1.5 bg-white rounded-full animate-pulse inline-block mr-1.5 align-middle"></span>{{ landing.content.value.badge }}</Tag>
-          <span class="text-xs font-medium text-stone-600 dark:text-zinc-400">{{ landing.content.value.badgeNote }}</span>
+    <section class="max-w-[1280px] w-full mx-auto px-4 sm:px-6 pt-4 sm:pt-10 pb-8 sm:pb-10 grid lg:grid-cols-[1.05fr_0.95fr] gap-6 sm:gap-10 items-center overflow-hidden">
+      <div class="min-w-0">
+        <div class="inline-flex max-w-full flex-wrap items-center gap-2 bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-full pl-1.5 pr-3 py-1 shadow-soft min-w-0">
+          <Tag :class="['!text-white !rounded-full !px-2.5 !py-1 !text-[11px] !font-bold tracking-wide !border-0 shrink-0', landing.theme.value.badge]"><span class="w-1.5 h-1.5 bg-white rounded-full animate-pulse inline-block mr-1.5 align-middle"></span>{{ landing.content.value.badge }}</Tag>
+          <span class="text-xs font-medium text-stone-600 dark:text-zinc-400 min-w-0 break-words">{{ landing.content.value.badgeNote }}</span>
         </div>
         <h1 class="mt-5 sm:mt-6 text-[30px] sm:text-[48px] lg:text-[64px] font-black tracking-[-0.04em] sm:tracking-[-0.05em] leading-[0.95] sm:leading-[0.85] dark:text-white break-words text-balance">{{ landing.content.value.titleTop }}<br /><span :class="landing.theme.value.accentText">{{ landing.content.value.titleAccent }}</span> {{ landing.content.value.titleTail }}</h1>
         <p class="mt-5 text-[15px] sm:text-[17px] leading-relaxed text-stone-600 dark:text-zinc-400 max-w-[560px]">{{ landing.content.value.description }}</p>
@@ -92,7 +92,7 @@ function switchTab(next: 'ulove' | 'upin'): void {
         <button type="button" :class="['mt-4 text-[13px] font-bold hover:opacity-80', landing.theme.value.accentText]" @click="switchTab(landing.isUlove.value ? 'upin' : 'ulove')">{{ landing.content.value.crossHint }}</button>
       </div>
 
-      <div class="relative w-full max-w-[560px] justify-self-center lg:justify-self-end">
+      <div class="relative w-full max-w-[560px] min-w-0 justify-self-center lg:justify-self-end">
         <Card v-if="landing.isUlove.value" class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[28px] !shadow-float !p-3">
           <template #content>
             <div
@@ -161,14 +161,14 @@ function switchTab(next: 'ulove' | 'upin'): void {
               <div class="absolute top-[22%] left-[16%] pointer-events-none"><span class="block w-9 h-9 rounded-full bg-white shadow-lg grid place-items-center text-base">☕</span></div>
               <div class="absolute top-[55%] left-[68%] pointer-events-none"><span class="block w-9 h-9 rounded-full bg-white shadow-lg grid place-items-center text-base">🐕</span></div>
               <div class="absolute top-[38%] left-[46%] pointer-events-none"><span class="block w-11 h-11 rounded-full bg-gradient-to-r from-sky-500 to-indigo-500 shadow-lg shadow-sky-500/40 grid place-items-center text-lg ring-4 ring-white/40">📍</span></div>
-              <div class="relative flex justify-between items-center">
-                <Badge value="📍 Рядом сейчас" class="!bg-white/90 !text-ink-900 !rounded-full !px-3 !py-1.5 !text-xs !font-bold !border-0" />
-                <Badge value="без точного адреса" class="!bg-black/50 !text-white !rounded-full !px-3 !py-1.5 !text-xs !font-bold !border !border-white/20" />
+              <div class="relative flex flex-wrap items-center justify-between gap-2">
+                <Badge value="📍 Рядом сейчас" class="!bg-white/90 !text-ink-900 !rounded-full !px-3 !py-1.5 !text-xs !font-bold !border-0 max-w-full" />
+                <Badge value="без точного адреса" class="!bg-black/50 !text-white !rounded-full !px-3 !py-1.5 !text-xs !font-bold !border !border-white/20 max-w-full" />
               </div>
               <div class="relative mt-[38%] sm:mt-[34%] space-y-2">
-                <div v-for="pin in landing.pinSamples" :key="pin.title" class="bg-white/95 dark:bg-zinc-900/95 backdrop-blur rounded-2xl px-3.5 py-2.5 flex items-center gap-3 shadow">
+                <div v-for="pin in landing.pinSamples" :key="pin.title" class="bg-white/95 dark:bg-zinc-900/95 backdrop-blur rounded-2xl px-3.5 py-2.5 flex items-center gap-3 shadow min-w-0">
                   <span class="w-9 h-9 rounded-xl bg-stone-100 dark:bg-zinc-800 grid place-items-center text-base shrink-0">{{ pin.emoji }}</span>
-                  <div class="min-w-0"><div class="text-[13px] font-bold truncate dark:text-white">{{ pin.title }}</div><div class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">{{ pin.meta }}</div></div>
+                  <div class="min-w-0 flex-1"><div class="text-[13px] font-bold truncate dark:text-white">{{ pin.title }}</div><div class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">{{ pin.meta }}</div></div>
                 </div>
               </div>
             </div>
