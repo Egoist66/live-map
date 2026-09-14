@@ -145,6 +145,7 @@ class ConversationController extends Controller
                 try {
                     $push = app(\App\Services\WebPushService::class);
                     if ($push->isConfigured()) $push->sendChatMessage($other, $me, $conv->id, (string) $request->input('message'));
+                    try { app(\App\Services\ExpoPushService::class)->sendChatMessage($other, $me, $conv->id, (string) $request->input('message')); } catch (\Throwable) {}
                 } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('chat webpush failed: '.$e->getMessage()); }
             }
             $conv->load('participants:id,name,avatar_path');

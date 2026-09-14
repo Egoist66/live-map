@@ -200,6 +200,7 @@ class SosService
                 if ($push->isConfigured()) {
                     $push->sendChatMessage($creator, $user, $conversation->id, (string) $message->body);
                 }
+                try { app(ExpoPushService::class)->sendChatMessage($creator, $user, $conversation->id, (string) $message->body); } catch (\Throwable) {}
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::warning('sos webpush failed: '.$e->getMessage());
             }

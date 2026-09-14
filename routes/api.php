@@ -160,6 +160,10 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::delete('/push-subscriptions', [PushSubscriptionController::class, 'destroy'])->middleware('throttle:social-write');
     Route::post('/push-subscriptions/test', [PushSubscriptionController::class, 'test'])->middleware('throttle:push-test');
 
+    Route::post('/expo-push-tokens', [\App\Http\Controllers\ExpoPushTokenController::class, 'store'])->middleware('throttle:social-write');
+    Route::delete('/expo-push-tokens', [\App\Http\Controllers\ExpoPushTokenController::class, 'destroy'])->middleware('throttle:social-write');
+    Route::post('/expo-push-tokens/test', [\App\Http\Controllers\ExpoPushTokenController::class, 'test'])->middleware('throttle:push-test');
+
     Route::post('/admin/impersonation/stop', [\App\Http\Controllers\AdminImpersonationController::class, 'stop']);
     Route::get('/security/impersonations', [\App\Http\Controllers\AdminImpersonationController::class, 'myHistory']);
     Route::post('/security/impersonations/read', [\App\Http\Controllers\AdminImpersonationController::class, 'markSeen']);

@@ -35,6 +35,9 @@ createInertiaApp({
       try {
         registerSw()
       } catch {}
+      try {
+        void import('./native/expo-push').then((m) => m.initExpoPushBinding()).catch(() => {})
+      } catch {}
       void (async () => {
         try {
           useOverlaySafeArea().initOverlaySafeArea()

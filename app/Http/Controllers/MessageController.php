@@ -126,6 +126,7 @@ class MessageController extends Controller
             }
             foreach (User::whereIn('id', $ids)->select('id', 'name', 'avatar_path')->get() as $recipient) {
                 $push->sendChatMessage($recipient, $senderModel ?? $recipient, $conversation->id, $text);
+                try { app(\App\Services\ExpoPushService::class)->sendChatMessage($recipient, $senderModel ?? $recipient, $conversation->id, $text); } catch (\Throwable) {}
             }
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('chat webpush failed: '.$e->getMessage());

@@ -702,6 +702,7 @@ class DatingService
                 if ($push->isConfigured()) {
                     $push->sendChatMessage($other, $me, $conv->id, '💞 У вас новый мэтч! Загляните в чат.');
                 }
+                try { app(\App\Services\ExpoPushService::class)->sendChatMessage($other, $me, $conv->id, '💞 У вас новый мэтч! Загляните в чат.'); } catch (\Throwable) {}
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::warning('match webpush failed: '.$e->getMessage());
             }

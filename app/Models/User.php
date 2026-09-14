@@ -139,6 +139,7 @@ class User extends Authenticatable
     public function friendshipsReceived() { return $this->hasMany(Friendship::class, 'addressee_id'); }
     public function conversations() { return $this->belongsToMany(Conversation::class, 'conversation_participants')->withPivot('last_read_at','joined_at'); }
     public function pushSubscriptions() { return $this->hasMany(PushSubscription::class); }
+    public function expoPushTokens() { return $this->hasMany(ExpoPushToken::class); }
     public function profilePhotos() { return $this->hasMany(ProfilePhoto::class); }
     public function subscriptions() { return $this->hasMany(UserSubscription::class, 'subscriber_id'); }
     public function subscribers() { return $this->hasMany(UserSubscription::class, 'target_id'); }

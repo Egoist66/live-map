@@ -99,6 +99,7 @@ class UserNotifier
             $push = $notification->pushPayload();
             if ($push) {
                 app(WebPushService::class)->sendToUser($user, $push);
+                app(ExpoPushService::class)->sendToUser($user, $push);
             }
         } catch (\Throwable $e) {
             Log::warning('notification webpush failed', ['id' => (string) $row->id, 'error' => $e->getMessage()]);
