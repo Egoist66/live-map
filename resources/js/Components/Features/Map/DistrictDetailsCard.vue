@@ -28,6 +28,7 @@ const emit = defineEmits<{
   (e: 'delete'): void
   (e: 'save', v: { name: string; description: string | null; interest: string }): void
   (e: 'chat', conversationId: number): void
+  (e: 'invite'): void
   (e: 'open-pin', pin: any): void
 }>()
 
@@ -146,6 +147,7 @@ function pinTime(pin: any): string {
             <Button v-if="isGuest" label="Хочу в район" icon="pi pi-send" rounded size="small" class="!bg-gradient-to-r !from-violet-700 !to-purple-900 !border-0 !text-white !shadow-glow font-bold hover:!opacity-90 hover:!brightness-110 active:scale-95 transition" @click="emit('join')" />
             <Button v-if="isMember || isPending" label="Выйти" rounded outlined size="small" severity="secondary" class="hover:!bg-stone-100 dark:hover:!bg-white/10 active:scale-95 transition" @click="emit('leave')" />
             <Button v-if="canChat" label="Общий чат" icon="pi pi-comments" rounded size="small" class="!bg-stone-900 dark:!bg-white dark:!text-stone-900 !border-0 hover:!opacity-90 active:scale-95 transition" @click="emit('chat', Number(district.conversation_id))" />
+            <Button v-if="isOwner" label="Пригласить" icon="pi pi-user-plus" rounded size="small" outlined class="hover:!bg-violet-50 dark:hover:!bg-violet-950/40 active:scale-95 transition" @click="emit('invite')" />
             <Button v-if="isOwner && !editing" icon="pi pi-pencil" rounded size="small" outlined severity="secondary" title="Править" aria-label="Править район" class="!w-10 !h-10 !p-0 active:scale-95 transition" @click="startEdit" />
             <Button v-if="isOwner" icon="pi pi-trash" rounded size="small" severity="danger" title="Удалить район" aria-label="Удалить район" class="!w-10 !h-10 !p-0 active:scale-95 transition" @click="emit('delete')" />
           </div>

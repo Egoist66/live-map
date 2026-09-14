@@ -10,6 +10,7 @@ use App\Models\District;
 use App\Models\DistrictMember;
 use App\Models\Message;
 use App\Models\User;
+use App\Notifications\DistrictInvitedNotification;
 use App\Notifications\DistrictJoinRequestedNotification;
 use App\Notifications\DistrictRequestApprovedNotification;
 use App\Services\ContentModeration;
@@ -198,6 +199,62 @@ class DistrictController extends Controller
         broadcast(new DistrictUpdated($district))->toOthers();
 
         return response()->json(['ok' => true, 'status' => $member->status, 'role' => 'pending'], 201);
+    }
+
+    /**
+     * Пригласить в район (только владелец): сразу житель, вне зоны тоже ок.
+     *
+     * Приглашённый не шлёт заявку — его добавляют напрямую,
+     * открывают чат и шлют уведомление с диплинком /map?district=.
+     * Так зовут тех, кто район на карте даже не видит.
+     */
+    public function invite(Request $request, District $district)
+    {
+        $this->assertOwner($request->user(), $district);
+
+        $data = $request->validate([
+            'user_id' => 'required|exists:users,id',
+        ]);
+
+        $inviter = $request->user();
+        $inviteeId = (int) $data['user_id'];
+        abort_if($inviteeId === (int) $district->user_id, 422, 'Это ваш район — приглашать себя не нужно.');
+
+        $invitee = User::findOrFail($inviteeId);
+        $reason = $inviter->messageBlockReason($invitee);
+        if ($reason && ! $inviter->isAdmin()) {
+            abort(403, $reason);
+        }
+
+        $existing = $district->members()->where('user_id', $inviteeId)->first();
+        if ($existing && $existing->status === DistrictMember::STATUS_APPROVED) {
+            abort(422, 'Уже живёт в этом районе.');
+        }
+
+        if ($existing) {
+            $existing->status = DistrictMember::STATUS_APPROVED;
+            $existing->save();
+        } else {
+            DistrictMember::create([
+                'district_id' => $district->id,
+                'user_id' => $inviteeId,
+                'status' => DistrictMember::STATUS_APPROVED,
+            ]);
+        }
+
+        $conversation = $this->ensureChat($district);
+        $conversation->participantRows()->updateOrCreate(
+            ['user_id' => $inviteeId],
+            ['joined_at' => now(), 'hidden_at' => null]
+        );
+        $this->systemMessage($conversation, '🎫 '.($invitee->name ?? 'Новый житель').' вступил(а) в район по приглашению.');
+
+        UserNotifier::send($invitee, new DistrictInvitedNotification($district->fresh(), $inviter));
+
+        $district->load('owner:id,name,avatar_path');
+        broadcast(new DistrictUpdated($district))->toOthers();
+
+        return response()->json(['ok' => true, 'status' => DistrictMember::STATUS_APPROVED], 201);
     }
 
     /**

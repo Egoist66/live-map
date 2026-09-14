@@ -73,6 +73,11 @@ export function describeInboxRow(row: InboxNotification): InboxText {
     const d = (data as any).district ?? {}
     return { emoji: '🎉', title: `Вы в районе «${d.name || ''}»`, body: 'Пины района и общий чат открыты', link: `/map?district=${d.id || ''}`, avatar: null }
   }
+  if (row.type === 'district.invited') {
+    const d = (data as any).district ?? {}
+    const name = d.inviter?.name || 'Владелец'
+    return { emoji: '🎫', title: `Приглашение в район «${d.name || ''}»`, body: `${name} добавил вас в жители — чат открыт`, link: `/map?district=${d.id || ''}`, avatar: d.inviter?.avatar_url ?? null }
+  }
   if (row.type === 'report.created') {
     const r = data.report ?? {}
     const title = r.target_title || `${r.target_type ?? ''} #${r.target_id ?? ''}`

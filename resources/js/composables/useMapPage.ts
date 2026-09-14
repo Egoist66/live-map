@@ -12,6 +12,7 @@ import { useToast } from 'primevue/usetoast'
 import { useMapOverlays } from '@/composables/useMapOverlays'
 import { useDistricts } from '@/composables/useDistricts'
 import { useDistrictPaint } from '@/composables/useDistrictPaint'
+import { useDistrictInvite } from '@/composables/useDistrictInvite'
 import { countGeometryPoints } from '@/utils/districtGeo'
 import { useAppConfirm } from '@/composables/useAppConfirm'
 import { useCustomCategories } from '@/composables/useCustomCategories'
@@ -56,6 +57,7 @@ export function useMapPage() {
 
   const districts = useDistricts()
   const paint = useDistrictPaint()
+  const districtInvite = useDistrictInvite()
   const pendingGeometry = ref<any | null>(null)
   const createError = ref<string | null>(null)
   let lastDistrictsFetch = 0
@@ -109,7 +111,7 @@ export function useMapPage() {
     districts.closeDistrict()
     createError.value = null
     paint.startPainting()
-    toast?.add({ severity: 'info', summary: 'Кисть UDistrict', detail: 'Закрась кусочек карты: зажми Alt и веди мышью, на мобилке — пальцем', life: 4000 })
+    toast?.add({ severity: 'info', summary: 'Кисть UDistrict', detail: 'Закрась кусочек или обведи круг — внутри всё зальётся островком', life: 4000 })
   }
 
   /**
@@ -217,6 +219,33 @@ export function useMapPage() {
       user_lat: myPos.value?.lat ?? null,
       user_lng: myPos.value?.lng ?? null,
     })
+  }
+
+  /**
+   * Открыть приглашение в выбранный район (владелец).
+   */
+  function openDistrictInvite(): void {
+    const selected = districts.selected.value
+    if (!selected) {
+      return
+    }
+    districtInvite.show(Number(selected.id), String(selected.name ?? ''))
+  }
+
+  /**
+   * Пригласить человека в выбранный район.
+   *
+   * @param userId кого зовём
+   */
+  async function sendDistrictInvite(userId: number): Promise<void> {
+    const ok = await districtInvite.invite(userId)
+    if (!ok) {
+      return
+    }
+    toast?.add({ severity: 'success', summary: 'Приглашён', detail: 'Человек сразу стал жителем — увидит район даже вне зоны', life: 3000 })
+    try {
+      await districts.refreshSelected()
+    } catch {}
   }
 
   /**
@@ -764,8 +793,9 @@ export function useMapPage() {
     showCreate, pinAddress, loadingPinAddress, myStreet, loadingStreet,
     radiusOptions, radiusLabel, homeZone, homeZoneVisible, toggleHomeZone, setHomeZoneVisible, openCreate, openCreateFromUI, closeCreate, deleteSelectedPin, saveEdit, deleteCustomCategory, init, destroy,
     deleteMutation, geoNotice, dismissGeoNotice, locateMe,
-    districts, paint, pendingGeometry, createError, districtLimitText, brushPx,
+    districts, paint, pendingGeometry, createError, districtLimitText, brushPx, districtInvite,
     startDistrictPaint, finishDistrictPaint, saveDistrict, saveSelectedDistrict, flyToDistrict, openDistrictChat, deleteDistrict,
+    openDistrictInvite, sendDistrictInvite,
     openPinFromDistrict, onOverlayStrokeEnd, setShowCreate,
     ...overlays,
   }

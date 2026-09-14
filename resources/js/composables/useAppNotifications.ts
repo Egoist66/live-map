@@ -214,6 +214,20 @@ function handleDistrict(district: any, type: string) {
       link,
       createdAt: Date.now(),
     })
+    return
+  }
+  if (type === 'district.invited') {
+    const inviter = district.inviter || {}
+    push({
+      id: `district-invite-${id}-${Date.now()}`,
+      type: 'friend',
+      icon: 'pi pi-ticket',
+      title: `Приглашение в район «${String(district.name || '').slice(0, 40)}»`,
+      body: `${inviter.name || 'Владелец'} добавил вас в жители — чат открыт`,
+      avatar: avatarSrcFor(inviter),
+      link,
+      createdAt: Date.now(),
+    })
   }
 }
 function handleFriendship(e: any) {

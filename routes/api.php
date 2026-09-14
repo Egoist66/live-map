@@ -83,6 +83,7 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::get('/districts/{district}/members', [\App\Http\Controllers\DistrictController::class, 'members']);
     Route::post('/districts/{district}/join', [\App\Http\Controllers\DistrictController::class, 'join'])->middleware('throttle:social-write');
     Route::delete('/districts/{district}/leave', [\App\Http\Controllers\DistrictController::class, 'leave'])->middleware('throttle:social-write');
+    Route::post('/districts/{district}/invites', [\App\Http\Controllers\DistrictController::class, 'invite'])->middleware('throttle:social-write');
     Route::post('/districts/{district}/members/{user}/approve', [\App\Http\Controllers\DistrictController::class, 'approve'])->middleware('throttle:social-write');
     Route::post('/districts/{district}/members/{user}/reject', [\App\Http\Controllers\DistrictController::class, 'reject'])->middleware('throttle:social-write');
     Route::delete('/districts/{district}/members/{user}', [\App\Http\Controllers\DistrictController::class, 'kick'])->middleware('throttle:social-write');

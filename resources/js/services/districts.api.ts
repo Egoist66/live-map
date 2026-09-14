@@ -71,6 +71,17 @@ export const districtsApi = {
   },
 
   /**
+   * Пригласить жителя (владелец): сразу в район и чат, вне зоны тоже ок.
+   *
+   * @param id id района
+   * @param userId кого зовём
+   */
+  async invite(id: number, userId: number): Promise<{ ok: boolean; status: string }> {
+    const { data } = await api.post(`/api/districts/${id}/invites`, { user_id: userId })
+    return data
+  },
+
+  /**
    * Выйти из района / отозвать заявку.
    */
   async leave(id: number): Promise<{ ok: boolean }> {

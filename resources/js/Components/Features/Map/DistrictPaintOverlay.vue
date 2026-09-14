@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import type { BrushPoint } from '@/utils/districtGeo'
+import { strokeToRing, type BrushPoint } from '@/utils/districtGeo'
 
-const props = defineProps<{ armed: boolean; brushPx: number; draftStrokes: BrushPoint[][]; map: any }>()
+const props = defineProps<{ armed: boolean; brushPx: number; brushRadiusM?: number; draftStrokes: BrushPoint[][]; map: any }>()
 const emit = defineEmits<{ (e: 'stroke-end', points: Array<{ x: number; y: number }>): void }>()
 
 /** Живой мазок в пикселях экрана. */
@@ -16,6 +16,9 @@ let lastY = 0
 
 /**
  * Спроецировать черновик в экран (пересчёт при каждом движении карты).
+ *
+ * Замкнутые контуры рисуем залитым островком (как сохранится),
+ * обычные мазки — лентой по центру.
  */
 const draftPolygons = computed(() => {
   void frame.value
@@ -24,11 +27,16 @@ const draftPolygons = computed(() => {
     return [] as Array<Array<{ x: number; y: number }>>
   }
   const out: Array<Array<{ x: number; y: number }>> = []
+  const brushM = Number(props.brushRadiusM ?? 220) || 220
   for (const stroke of props.draftStrokes ?? []) {
+    const ring = strokeToRing(stroke ?? [], brushM)
+    const source: Array<{ lng: number; lat: number }> = ring?.length
+      ? ring.map(([lng, lat]) => ({ lng, lat }))
+      : (stroke ?? [])
     const pts: Array<{ x: number; y: number }> = []
-    for (const p of stroke ?? []) {
+    for (const p of source) {
       try {
-        const s = map.project([Number(p.lng), Number(p.lat)])
+        const s = map.project([Number((p as any).lng), Number((p as any).lat)])
         if (Number.isFinite(s?.x) && Number.isFinite(s?.y)) {
           pts.push({ x: s.x, y: s.y })
         }

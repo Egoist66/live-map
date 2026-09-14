@@ -21,6 +21,7 @@ const emit = defineEmits<{
           <div class="text-[13px] font-black dark:text-white leading-tight">Кисть UDistrict</div>
           <div class="text-[11px] text-stone-500 dark:text-zinc-400 leading-tight hidden sm:flex items-center gap-1">Зажми <kbd class="px-1.5 py-0.5 rounded-md bg-stone-100 dark:bg-white/10 border border-stone-200 dark:border-white/10 text-[10px] font-black text-stone-700 dark:text-zinc-200 leading-none">Alt</kbd> и веди мышью с левой кнопкой</div>
           <div class="text-[11px] text-stone-500 dark:text-zinc-400 leading-tight sm:hidden">Веди пальцем по карте</div>
+          <div class="text-[11px] text-violet-700 dark:text-violet-300 leading-tight font-semibold">Обведи круг — внутри всё зальётся островком</div>
         </div>
         <div class="flex items-center gap-1 shrink-0">
           <button

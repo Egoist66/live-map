@@ -68,6 +68,9 @@ export function simplifyStroke(points: BrushPoint[], tolerance = 0.0004): BrushP
 /**
  * Превратить мазок в кольцо полигона шириной с кисть.
  *
+ * Замкнутый контур (круг/обводка куска карты) становится полностью
+ * залитым островком: берём внешнюю границу мазка, а не ленту-линию.
+ *
  * @param points точки мазка (минимум 1)
  * @param brushRadiusM радиус кисти в метрах
  * @returns замкнутое кольцо [lng,lat] или null для пустого мазка
@@ -79,6 +82,9 @@ export function strokeToRing(points: BrushPoint[], brushRadiusM: number): Array<
   }
   if (line.length === 1) {
     return circleRing(line[0], brushRadiusM)
+  }
+  if (isClosedLoop(line, brushRadiusM)) {
+    return closedLoopRing(line, brushRadiusM)
   }
   const left: Array<[number, number]> = []
   const right: Array<[number, number]> = []
@@ -93,6 +99,104 @@ export function strokeToRing(points: BrushPoint[], brushRadiusM: number): Array<
   const ring = [...left, ...right.reverse()]
   ring.push(ring[0])
   return ring
+}
+
+/**
+ * Замкнут ли мазок в кольцо (обвёл кусок/круг).
+ *
+ * @param line упрощённый мазок
+ * @param brushRadiusM радиус кисти в метрах
+ * @returns true когда начало и конец рядом, а мазок длинный
+ */
+export function isClosedLoop(line: BrushPoint[], brushRadiusM: number): boolean {
+  if (line.length < 4) {
+    return false
+  }
+  const first = line[0]
+  const last = line[line.length - 1]
+  const gapM = haversineM(first.lat, first.lng, last.lat, last.lng)
+  const totalM = strokeLengthM(line)
+  if (!(totalM > Math.max(brushRadiusM * 3, 120))) {
+    return false
+  }
+  const snapM = Math.max(brushRadiusM * 2.5, 80)
+  if (gapM < snapM) {
+    return true
+  }
+  return gapM < totalM * 0.08
+}
+
+/**
+ * Залитый островок из замкнутого контура: внешняя граница мазка.
+ *
+ * Строим левую и правую offset-линии по кольцу и забираем ту,
+ * что больше по площади — это внешняя сторона круга.
+ *
+ * @param line упрощённый замкнутый мазок
+ * @param brushRadiusM радиус кисти в метрах
+ * @returns замкнутое кольцо островка
+ */
+function closedLoopRing(line: BrushPoint[], brushRadiusM: number): Array<[number, number]> {
+  const loop = [...line]
+  const first = loop[0]
+  const last = loop[loop.length - 1]
+  if (first.lat !== last.lat || first.lng !== last.lng) {
+    loop.push({ ...first })
+  }
+  const left: Array<[number, number]> = []
+  const right: Array<[number, number]> = []
+  for (let i = 0; i < loop.length - 1; i++) {
+    const prev = loop[(i - 1 + loop.length - 1) % (loop.length - 1)]
+    const next = loop[(i + 1) % (loop.length - 1)]
+    const normal = strokeNormal(prev, next)
+    const center = loop[i]
+    left.push(offsetPoint(center, normal, brushRadiusM))
+    right.push(offsetPoint(center, { x: -normal.x, y: -normal.y }, brushRadiusM))
+  }
+  left.push(left[0])
+  right.push(right[0])
+  const leftArea = Math.abs(ringArea(left))
+  const rightArea = Math.abs(ringArea(right))
+  const outer = leftArea >= rightArea ? left : right
+  if (outer.length >= 4) {
+    return outer
+  }
+  const fallback = loop.map((p) => [p.lng, p.lat] as [number, number])
+  fallback.push(fallback[0])
+  return fallback
+}
+
+/**
+ * Длина мазка в метрах.
+ */
+function strokeLengthM(line: BrushPoint[]): number {
+  let total = 0
+  for (let i = 1; i < line.length; i++) {
+    total += haversineM(line[i - 1].lat, line[i - 1].lng, line[i].lat, line[i].lng)
+  }
+  return total
+}
+
+/**
+ * Расстояние между точками в метрах (haversine).
+ */
+function haversineM(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const rad = Math.PI / 180
+  const dLat = (lat2 - lat1) * rad
+  const dLng = (lng2 - lng1) * rad
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(dLng / 2) * Math.sin(dLng / 2)
+  return 2 * 6371000 * Math.asin(Math.sqrt(a))
+}
+
+/**
+ * Площадь кольца (shoelace) для выбора внешней границы.
+ */
+function ringArea(ring: Array<[number, number]>): number {
+  let sum = 0
+  for (let i = 0; i + 1 < ring.length; i++) {
+    sum += ring[i][0] * ring[i + 1][1] - ring[i + 1][0] * ring[i][1]
+  }
+  return sum / 2
 }
 
 /**
