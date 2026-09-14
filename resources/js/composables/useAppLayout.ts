@@ -29,7 +29,6 @@ export function useAppLayout() {
   const authSession = useAuthSession()
   const realtimeMode = useRealtimeMode()
   const realtimePoller = useRealtimePoller()
-  const showDrawer = ref(false)
   const menu = ref()
   const isAdmin = computed(() => !!user.value?.is_admin || user.value?.role === 'admin')
   const menuItems = computed(() => [
@@ -44,7 +43,6 @@ export function useAppLayout() {
     { label: 'Выйти', icon: 'pi pi-sign-out', accent: 'red', danger: true, command: () => doLogout() },
   ])
   function toggleMenu(e: Event) { menu.value.toggle(e) }
-  function closeDrawer() { showDrawer.value = false }
   async function doLogout() {
     try { authSession.resetAll() } catch {}
     try { await useLastRoute().forgetLastRoute() } catch {}
@@ -74,6 +72,6 @@ export function useAppLayout() {
   }
   onMounted(() => { badge.init(); presence.connect(); appNotes.init(); pinActivity.init(); adminReports.init(); updates.init(); proc.init(); buildVersion.init(); void initRealtime() })
   onBeforeUnmount(() => presence.disconnect())
-  router.on('navigate', () => { presence.connect(); showDrawer.value = false })
-  return { badge, presence, user, avatarSrc, dashboardHref, settingsHref, bell, pinActivity, adminReports, updates, showDrawer, menu, menuItems, isAdmin, toggleMenu, closeDrawer, logout }
+  router.on('navigate', () => { presence.connect() })
+  return { badge, presence, user, avatarSrc, dashboardHref, settingsHref, bell, pinActivity, adminReports, updates, menu, menuItems, isAdmin, toggleMenu, logout }
 }

@@ -13,15 +13,17 @@ import { useMessageSwipe } from '@/composables/useMessageSwipe'
 import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
 import { useChatLayout } from '@/composables/useChatLayout'
 import { useChatComposerMenu } from '@/composables/useChatComposerMenu'
+import { useChatWallpaper } from '@/composables/useChatWallpaper'
 import { useEnterToSend } from '@/composables/useEnterToSend'
 import { formatVoiceTime, VOICE_MAX_SECONDS } from '@/composables/useVoiceRecorder'
 
 const { windowCardClass } = useChatLayout()
 const composerMenu = useChatComposerMenu()
+const wallpaper = useChatWallpaper()
 const { handleEnterToSend } = useEnterToSend()
 
 const props = defineProps<{ selectedId: number | null; activeConv: any; messages: any[]; loading: boolean; sending: boolean; refreshing: boolean; typing: boolean; online: boolean; input: string; emojiOpen: boolean; emojiGroups: any[]; editingId: number | null; editingBody: string; showMenu: boolean; keyboardStyle: any; locating?: boolean; isOwnMessage: (m: any) => boolean; messageStatus: (m: any) => string; formatTime: (s: string) => string; pinned?: any[]; pinLimitLabel?: string; flashId?: number | null; datingEntry?: boolean; datingBadge?: string | null; replyTo?: any | null; attachmentName?: string | null; attachmentSize?: number | null; previewUrl?: string | null; attachError?: string | null; attaching?: boolean; voiceRecording?: boolean; voiceDuration?: number; voiceLevel?: number; voiceError?: string | null; voicePreviewUrl?: string | null; voicePreviewDuration?: number; hasVoicePreview?: boolean }>()
-const emit = defineEmits<{ (e: 'update:input', v: string): void; (e: 'update:editingBody', v: string): void; (e: 'send'): void; (e: 'share-location'): void; (e: 'typing'): void; (e: 'stopTyping'): void; (e: 'refresh'): void; (e: 'back'): void; (e: 'close'): void; (e: 'toggleMenu'): void; (e: 'menuClose'): void; (e: 'deleteChat'): void; (e: 'block'): void; (e: 'toggleEmoji'): void; (e: 'emojiClose'): void; (e: 'pickEmoji', v: string): void; (e: 'pickEmojiEdit', v: string): void; (e: 'startEdit', m: any): void; (e: 'saveEdit'): void; (e: 'cancelEdit'): void; (e: 'deleteMessage', id: number): void; (e: 'togglePin', m: any): void; (e: 'unpin', id: number): void; (e: 'jumpToMessage', id: number): void; (e: 'swipesBack'): void; (e: 'reply', m: any): void; (e: 'cancelReply'): void; (e: 'pickFile', f: File | null): void; (e: 'removeFile'): void; (e: 'pasteImage', ev: ClipboardEvent): void; (e: 'startVoice'): void; (e: 'stopVoice'): void; (e: 'cancelVoice'): void; (e: 'sendVoice'): void; (e: 'discardVoice'): void; (e: 'inviteDistrict'): void }>()
+const emit = defineEmits<{ (e: 'update:input', v: string): void; (e: 'update:editingBody', v: string): void; (e: 'send'): void; (e: 'share-location'): void; (e: 'typing'): void; (e: 'stopTyping'): void; (e: 'refresh'): void; (e: 'back'): void; (e: 'close'): void; (e: 'toggleMenu'): void; (e: 'menuClose'): void; (e: 'wallpaper'): void; (e: 'deleteChat'): void; (e: 'block'): void; (e: 'toggleEmoji'): void; (e: 'emojiClose'): void; (e: 'pickEmoji', v: string): void; (e: 'pickEmojiEdit', v: string): void; (e: 'startEdit', m: any): void; (e: 'saveEdit'): void; (e: 'cancelEdit'): void; (e: 'deleteMessage', id: number): void; (e: 'togglePin', m: any): void; (e: 'unpin', id: number): void; (e: 'jumpToMessage', id: number): void; (e: 'swipesBack'): void; (e: 'reply', m: any): void; (e: 'cancelReply'): void; (e: 'pickFile', f: File | null): void; (e: 'removeFile'): void; (e: 'pasteImage', ev: ClipboardEvent): void; (e: 'startVoice'): void; (e: 'stopVoice'): void; (e: 'cancelVoice'): void; (e: 'sendVoice'): void; (e: 'discardVoice'): void; (e: 'inviteDistrict'): void }>()
 const { cm, menuModel, bindMessage } = useMessageContextMenu({ isOwn: (m: any) => props.isOwnMessage(m), onEdit: (m: any) => emit('startEdit', m), onDelete: (id: number) => emit('deleteMessage', id), onPin: (m: any) => emit('togglePin', m), onReply: (m: any) => emit('reply', m) })
 const swipe = useMessageSwipe({ onReply: (m: any) => emit('reply', m) })
 const { menuPt } = useDropdownMenuStyle()
@@ -61,6 +63,7 @@ function replyPreview(message: any): string {
             <button @click="emit('toggleMenu')" :class="datingEntry ? 'hover:bg-white/20' : 'hover:bg-stone-100 dark:hover:bg-zinc-800'" class="w-9 h-9 grid place-items-center rounded-full active:scale-95 text-lg leading-none">⋯</button>
             <div v-if="showMenu" class="absolute right-0 top-10 w-52 bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl shadow-xl py-1.5 z-30 overflow-hidden">
               <button v-if="activeConv?.type === 'district' && activeConv?.can_invite" @click="emit('menuClose'); emit('inviteDistrict')" class="w-full flex items-center gap-2.5 text-left px-4 py-3 text-sm font-medium text-violet-700 dark:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-500/10 active:bg-violet-100 transition"><i class="pi pi-user-plus text-xs"></i>Пригласить в район</button>
+              <button @click="emit('menuClose'); emit('wallpaper')" class="w-full flex items-center gap-2.5 text-left px-4 py-3 text-sm font-medium dark:text-zinc-100 hover:bg-stone-50 dark:hover:bg-zinc-700/60 active:bg-stone-100 transition"><i class="pi pi-image text-xs text-stone-400"></i>Фон чата</button>
               <button @click="emit('menuClose'); emit('deleteChat')" class="w-full flex items-center gap-2.5 text-left px-4 py-3 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 active:bg-red-100 transition"><i class="pi pi-trash text-xs"></i>Удалить чат</button>
               <button v-if="activeConv?.other" @click="emit('menuClose'); emit('block')" class="w-full flex items-center gap-2.5 text-left px-4 py-3 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 active:bg-red-100 transition"><i class="pi pi-ban text-xs"></i>Заблокировать</button>
             </div>
@@ -79,6 +82,9 @@ function replyPreview(message: any): string {
         </div>
       </div>
       <div id="chat-messages" class="relative flex-1 overflow-auto overscroll-contain [scrollbar-width:thin] max-lg:[-ms-overflow-style:none] max-lg:[scrollbar-width:none] max-lg:[&::-webkit-scrollbar]:hidden p-3 lg:p-4 bg-stone-50/50 dark:bg-zinc-950/30 min-w-0 w-full max-w-full">
+        <div v-if="wallpaper.hasWallpaper.value" aria-hidden="true" class="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat" :style="(wallpaper.wallpaperLayerStyle.value as any)" />
+        <div v-if="wallpaper.hasWallpaper.value" aria-hidden="true" class="pointer-events-none absolute inset-0 bg-white/60 dark:bg-black/60" />
+        <div class="relative z-10 min-h-full">
         <div v-if="loading" class="flex justify-center py-6"><span class="w-6 h-6 border-2 border-violet-200 border-t-violet-600 rounded-full animate-spin"></span></div>
         <div v-else-if="!(messages || []).length" class="h-full grid place-items-center text-stone-400 text-sm text-center"><div><div class="text-3xl mb-2">✉️</div><div>Пока пусто — напишите первым</div></div></div>
         <template v-for="m in (messages || [])" :key="m?.id">
@@ -101,6 +107,7 @@ function replyPreview(message: any): string {
                 </div>
           </div>
           </template>
+        </div>
       </div>
       <ContextMenu ref="cm" :model="menuModel" :pt="menuPt" />
       <div class="relative p-2 lg:p-3 border-t dark:border-zinc-800 bg-white dark:bg-zinc-900 shrink-0 flex-none pb-[calc(0.5rem+var(--sab))] lg:pb-3 w-full max-w-full min-w-0 rounded-b-none lg:rounded-b-2xl">

@@ -6,7 +6,7 @@ import Button from 'primevue/button'
 import { useViewportBreakpoints } from '@/composables/useViewportBreakpoints'
 
 defineProps<{ user: any; avatarSrc: string; dashboardHref: string; badgeTotal: number; lockEnabled?: boolean }>()
-const emit = defineEmits<{ (e: 'bell'): void; (e: 'menu', ev: Event): void; (e: 'drawer'): void; (e: 'lock'): void }>()
+const emit = defineEmits<{ (e: 'bell'): void; (e: 'menu', ev: Event): void; (e: 'lock'): void }>()
 
 const { isXxs } = useViewportBreakpoints()
 </script>
@@ -35,12 +35,11 @@ const { isXxs } = useViewportBreakpoints()
         <span v-if="badgeTotal" class="absolute -top-1 -right-1 h-[18px] min-w-[18px] rounded-full bg-red-500 animate-ping opacity-30"></span>
       </button>
       <Link href="/map" class="hidden sm:inline-flex items-center gap-2 bg-ink-900 dark:bg-white dark:text-ink-900 text-white rounded-full px-5 py-2 text-sm font-semibold hover:bg-ink-800 transition whitespace-nowrap">+ Создать пин</Link>
-      <Button @click="emit('menu', $event)" severity="secondary" outlined rounded class="hidden sm:inline-flex !p-1 !pl-2 !pr-3 !bg-white dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 shadow-soft">
+      <Button @click="emit('menu', $event)" severity="secondary" outlined rounded aria-label="Меню профиля" class="!p-1 !pl-1 sm:!pl-2 sm:!pr-3 !bg-white dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 shadow-soft">
         <Avatar :image="avatarSrc" shape="circle" size="normal" class="!w-7 !h-7" />
         <span class="text-sm font-semibold text-ink-900 dark:text-white max-w-[120px] truncate hidden sm:inline">{{ user?.name }}</span>
-        <i class="pi pi-chevron-down text-xs text-stone-500" />
+        <i class="pi pi-chevron-down text-xs text-stone-500 hidden sm:inline" />
       </Button>
-      <Button @click="emit('drawer')" severity="secondary" outlined rounded aria-label="Открыть меню" class="lg:!hidden !h-9 !w-9 !p-0 !rounded-full !bg-white dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 shadow-soft min-[411px]:!h-10 min-[411px]:!w-10" icon="pi pi-bars" />
     </div>
   </div>
 </template>

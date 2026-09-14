@@ -50,19 +50,19 @@ const { setTheme } = useTheme()
                   </div>
                 </Tab>
               </TabList>
-              <TabPanels class="!bg-transparent !p-0">
-                <TabPanel value="profile"><SettingsProfileTab :must-verify-email="mustVerifyEmail" :status="status" :bio-empty="s.bioPreviewEmpty.value" :bio-text="s.bioPreviewText.value" /></TabPanel>
-                <TabPanel value="billing"><SettingsBillingTab :user="s.u.value" :zone-count="s.zoneCount.value" @profile="s.active.value = 'profile'" /></TabPanel>
-                <TabPanel value="quests"><SettingsQuestsTab @billing="s.active.value = 'billing'" /></TabPanel>
-                <TabPanel value="pins"><SettingsMyPinsTab :pins="(s.myPins.value as any)" :loading="(s.loadingPins.value as any)" :deleting="false" :updating-id="(s.updatingId as any)?.value ?? null" :format-date="formatDate" :format-time="formatTime" @delete="s.deleteMyPin" @audience="(id: number, v: string) => (s.updateAudience as any)(id, v)" /></TabPanel>
-                <TabPanel value="archive"><SettingsArchiveTab /></TabPanel>
-                <TabPanel value="privacy"><SettingsPrivacyTab :user="s.u.value" :invisible="s.invisible" :hidden="s.hidden" :blur="s.blur" :photo-privacy="s.photoPrivacy" :home-radius="s.homeRadius" @profile="s.active.value = 'profile'" /></TabPanel>
-                <TabPanel value="appearance"><SettingsAppearanceTab :theme="s.theme.value" @theme="setTheme" /></TabPanel>
-                <TabPanel value="security"><SettingsSecurityTab /></TabPanel>
-                <TabPanel v-if="(s.showProcedures as any).value" value="procedures"><SettingsProceduresTab :proc="s.proc" /></TabPanel>
-                <TabPanel value="support"><SettingsSupportTab :subject="s.support.supportSubject.value" @update:subject="(v:string)=>s.support.supportSubject.value=v" :body="s.support.supportBody.value" @update:body="(v:string)=>s.support.supportBody.value=v" :donate-sel="s.support.donateSel.value" @update:donate="s.support.setDonate" :rate="s.ex.usdRate.value" :rate-loading="s.ex.loading.value" @send="s.support.mailToSupport()" @donate="s.support.mailToDonate(s.ex)" @reload="s.ex.load" /></TabPanel>
-                <TabPanel value="app"><SettingsAppTab /></TabPanel>
-                <TabPanel v-if="s.isAdmin.value" value="admin"><SettingsAdminTab :admin="s.admin" :reports="s.reports" :imp="s.imp" /></TabPanel>
+              <TabPanels class="!bg-transparent !p-0 !min-w-0 !max-w-full !overflow-hidden">
+                <TabPanel value="profile" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsProfileTab :must-verify-email="mustVerifyEmail" :status="status" :bio-empty="s.bioPreviewEmpty.value" :bio-text="s.bioPreviewText.value" /></TabPanel>
+                <TabPanel value="billing" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsBillingTab :user="s.u.value" :zone-count="s.zoneCount.value" @profile="s.active.value = 'profile'" /></TabPanel>
+                <TabPanel value="quests" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsQuestsTab @billing="s.active.value = 'billing'" /></TabPanel>
+                <TabPanel value="pins" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsMyPinsTab :pins="(s.myPins.value as any)" :loading="(s.loadingPins.value as any)" :deleting="false" :updating-id="(s.updatingId as any)?.value ?? null" :format-date="formatDate" :format-time="formatTime" @delete="s.deleteMyPin" @audience="(id: number, v: string) => (s.updateAudience as any)(id, v)" /></TabPanel>
+                <TabPanel value="archive" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsArchiveTab /></TabPanel>
+                <TabPanel value="privacy" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsPrivacyTab :user="s.u.value" :invisible="s.invisible" :hidden="s.hidden" :blur="s.blur" :photo-privacy="s.photoPrivacy" :home-radius="s.homeRadius" @profile="s.active.value = 'profile'" /></TabPanel>
+                <TabPanel value="appearance" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsAppearanceTab :theme="s.theme.value" @theme="setTheme" /></TabPanel>
+                <TabPanel value="security" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsSecurityTab /></TabPanel>
+                <TabPanel v-if="(s.showProcedures as any).value" value="procedures" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsProceduresTab :proc="s.proc" /></TabPanel>
+                <TabPanel value="support" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsSupportTab :subject="s.support.supportSubject.value" @update:subject="(v:string)=>s.support.supportSubject.value=v" :body="s.support.supportBody.value" @update:body="(v:string)=>s.support.supportBody.value=v" :donate-sel="s.support.donateSel.value" @update:donate="s.support.setDonate" :rate="s.ex.usdRate.value" :rate-loading="s.ex.loading.value" @send="s.support.mailToSupport()" @donate="s.support.mailToDonate(s.ex)" @reload="s.ex.load" /></TabPanel>
+                <TabPanel value="app" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsAppTab /></TabPanel>
+                <TabPanel v-if="s.isAdmin.value" value="admin" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsAdminTab :admin="s.admin" :reports="s.reports" :imp="s.imp" /></TabPanel>
               </TabPanels>
             </Tabs>
           </div>
@@ -104,5 +104,11 @@ const { setTheme } = useTheme()
 .settings-tabs :deep(.p-tablist-prev-button),
 .settings-tabs :deep(.p-tablist-next-button) {
   display: none !important;
+}
+.settings-root :deep(.p-tabpanels),
+.settings-root :deep(.p-tabpanel) {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
 }
 </style>

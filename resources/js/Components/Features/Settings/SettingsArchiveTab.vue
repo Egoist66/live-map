@@ -61,23 +61,23 @@ async function onClearAll(): Promise<void> {
 }
 </script>
 <template>
-  <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }">
+  <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft min-w-0 max-w-full overflow-hidden" :pt="{ body: { class: '!p-4 sm:!p-6 min-w-0 max-w-full' }, content: { class: '!p-0 min-w-0 max-w-full' } }">
     <template #content>
-      <div class="flex items-start justify-between gap-3 flex-wrap">
-        <div>
+      <div class="flex items-start justify-between gap-3 flex-wrap min-w-0">
+        <div class="min-w-0 flex-1 basis-48">
           <h3 class="font-black tracking-tight text-lg dark:text-white">Архив документов</h3>
           <p class="text-sm text-stone-500 mt-1">Ваши файлы из разных чатов: фото и документы.</p>
         </div>
-        <Button v-if="archive.items.value.length" label="Удалить все" icon="pi pi-trash" severity="danger" outlined rounded size="small" :loading="archive.clearing.value" @click="onClearAll" />
+        <Button v-if="archive.items.value.length" label="Удалить все" icon="pi pi-trash" severity="danger" outlined rounded size="small" class="shrink-0" :loading="archive.clearing.value" @click="onClearAll" />
       </div>
-      <Message severity="warn" :closable="false" class="!rounded-2xl !text-xs mt-4">Файлы хранятся 15 дней, затем удаляются автоматически.</Message>
+      <Message severity="warn" :closable="false" class="!rounded-2xl !text-xs mt-4 break-words">Файлы хранятся 15 дней, затем удаляются автоматически.</Message>
       <div v-if="archive.loading.value" class="mt-5 flex items-center gap-2 text-sm text-stone-500"><span class="w-4 h-4 border-2 border-stone-200 border-t-stone-900 rounded-full animate-spin"></span> Загружаем…</div>
-      <div v-else-if="archive.error.value" class="mt-5"><Message severity="error" :closable="false" class="!rounded-2xl !text-xs">{{ archive.error.value }}</Message></div>
-      <div v-else-if="archive.items.value.length" class="mt-5 grid sm:grid-cols-2 gap-3">
-        <Card v-for="item in archive.items.value" :key="item.id" class="!border-stone-200 !rounded-3xl !shadow-none !bg-white dark:!bg-zinc-800 relative" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
+      <div v-else-if="archive.error.value" class="mt-5 min-w-0"><Message severity="error" :closable="false" class="!rounded-2xl !text-xs break-words">{{ archive.error.value }}</Message></div>
+      <div v-else-if="archive.items.value.length" class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3 min-w-0">
+        <Card v-for="item in archive.items.value" :key="item.id" class="!border-stone-200 !rounded-3xl !shadow-none !bg-white dark:!bg-zinc-800 relative min-w-0 max-w-full overflow-hidden" :pt="{ body: { class: '!p-4 min-w-0 max-w-full' }, content: { class: '!p-0 min-w-0 max-w-full' } }">
           <template #content>
             <Button @click="onDeleteOne(item.id)" :loading="archive.deletingId.value === item.id" rounded text severity="secondary" class="!absolute !top-3 !right-3 !w-7 !h-7 !p-0" icon="pi pi-times" aria-label="Удалить" />
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-3 min-w-0">
               <img v-if="item.attachment?.kind === 'image' && item.attachment?.url" :src="item.attachment.url" alt="" loading="lazy" class="w-12 h-12 rounded-2xl object-cover shrink-0" />
               <span v-else class="w-12 h-12 rounded-2xl bg-violet-600/10 grid place-items-center shrink-0"><i class="pi pi-file text-xl text-violet-600 dark:text-violet-300"></i></span>
               <div class="min-w-0 flex-1">
@@ -85,12 +85,12 @@ async function onClearAll(): Promise<void> {
                 <div class="text-xs text-stone-500 mt-0.5">{{ archive.formatSize(item.attachment?.size) }}</div>
               </div>
             </div>
-            <div class="flex items-center gap-1.5 mt-3 text-[11px] flex-wrap">
-              <Tag v-if="item.chat_with" :value="item.chat_with.name" icon="pi pi-user" class="!bg-stone-100 !text-stone-600 !rounded-full !text-[11px] !border-0" />
-              <Tag :value="archive.expiresIn(item.expires_at)" icon="pi pi-clock" class="!bg-amber-100 !text-amber-800 !rounded-full !text-[11px] !border-0" />
+            <div class="flex items-center gap-1.5 mt-3 text-[11px] flex-wrap min-w-0">
+              <Tag v-if="item.chat_with" :value="item.chat_with.name" icon="pi pi-user" class="!bg-stone-100 !text-stone-600 !rounded-full !text-[11px] !border-0 !max-w-full [&>[data-pc-name=label]]:!truncate [&>[data-pc-name=label]]:!min-w-0" />
+              <Tag :value="archive.expiresIn(item.expires_at)" icon="pi pi-clock" class="!bg-amber-100 !text-amber-800 !rounded-full !text-[11px] !border-0 !max-w-full shrink-0" />
             </div>
-            <div class="mt-3 flex gap-2">
-              <Button label="Скачать" icon="pi pi-download" outlined rounded size="small" class="w-full" :loading="isDownloading(item)" @click="onDownload(item)" />
+            <div class="mt-3 flex gap-2 min-w-0">
+              <Button label="Скачать" icon="pi pi-download" outlined rounded size="small" class="w-full min-w-0" :loading="isDownloading(item)" @click="onDownload(item)" />
             </div>
           </template>
         </Card>
