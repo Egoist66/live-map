@@ -95,7 +95,7 @@ onMounted(async () => {
   </Head>
   <component :is="Layout">
     <div class="page-scroll bg-surface dark:bg-[#090E1A]">
-      <div class="max-w-[640px] mx-auto px-3 sm:px-6 py-3 sm:py-6 pb-2 sm:pb-[calc(2rem+var(--sab))]">
+      <div class="max-w-[640px] mx-auto px-3 sm:px-6 pt-3 pb-1 sm:py-6 sm:pb-[calc(2rem+var(--sab))]">
 
         <div class="text-center">
           <div class="flex items-center justify-center gap-2.5">
@@ -381,13 +381,13 @@ onMounted(async () => {
           </template>
 
           <template v-else>
-          <div class="mt-3 sm:mt-4 relative select-none">
-            <div v-if="s.loading.value" class="rounded-[20px] min-[411px]:rounded-[24px] border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 h-[calc(100dvh-220px)] min-h-[380px] min-[411px]:h-[calc(100dvh-160px)] min-[411px]:min-h-[460px] sm:h-[62dvh] sm:min-h-[400px] sm:max-h-[540px] grid place-items-center">
+          <div class="mt-3 mb-3 sm:mt-4 sm:mb-0 relative select-none">
+            <div v-if="s.loading.value" class="rounded-[20px] min-[411px]:rounded-[24px] border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 h-[calc(100dvh-180px-var(--sab))] min-h-[400px] min-[411px]:h-[calc(100dvh-170px-var(--sab))] min-[411px]:min-h-[480px] sm:h-[62dvh] sm:min-h-[400px] sm:max-h-[540px] grid place-items-center">
               <i class="pi pi-spin pi-spinner text-2xl text-stone-400 dark:text-zinc-500" />
             </div>
 
             <div v-else-if="s.current.value">
-              <div class="swipe-deck relative h-[calc(100dvh-220px)] min-h-[380px] min-[411px]:h-[calc(100dvh-160px)] min-[411px]:min-h-[460px] sm:h-[62dvh] sm:min-h-[400px] sm:max-h-[540px]">
+              <div class="swipe-deck relative h-[calc(100dvh-180px-var(--sab))] min-h-[400px] min-[411px]:h-[calc(100dvh-170px-var(--sab))] min-[411px]:min-h-[480px] sm:h-[62dvh] sm:min-h-[400px] sm:max-h-[540px]">
               <div
                 v-if="s.next.value"
                 class="absolute inset-0 z-0 rounded-[24px] overflow-hidden bg-zinc-900 dark:bg-zinc-950 shadow-soft ring-1 ring-black/10 dark:ring-white/10 pointer-events-none"
@@ -482,14 +482,15 @@ onMounted(async () => {
                 <div v-if="s.current.value.liked_me" class="absolute top-24 right-4 pointer-events-none">
                   <Chip label="Лайкнул тебя" icon="pi pi-heart-fill" class="!rounded-full !bg-rose-500 !text-white !border-0" />
                 </div>
-                <button
-                  type="button"
+                <Button
+                  icon="pi pi-info-circle"
+                  rounded
                   aria-label="Подробнее об анкете"
                   title="Подробнее — интересы, о себе"
-                  class="absolute top-11 left-4 w-10 h-10 rounded-full bg-black/45 backdrop-blur grid place-items-center text-white text-lg active:scale-95 transition pointer-events-auto"
+                  class="!absolute !top-11 !left-4 !z-30 !w-10 !h-10 !p-0 !rounded-full !bg-black/45 !border-0 !text-white backdrop-blur active:!scale-95"
                   @pointerdown.stop
                   @click="detailsCard = s.current.value"
-                >ⓘ</button>
+                />
 
                 <div class="absolute bottom-0 inset-x-0 p-3 pr-[108px] min-[411px]:p-4 min-[411px]:pr-[124px] sm:p-5 text-white pointer-events-none">
                   <div class="flex items-baseline gap-2">
