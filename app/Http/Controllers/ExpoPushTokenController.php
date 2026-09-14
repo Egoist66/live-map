@@ -20,6 +20,8 @@ class ExpoPushTokenController extends Controller
             ['user_id' => $request->user()->id, 'platform' => $data['platform'] ?? null]
         );
 
+        \Illuminate\Support\Facades\Log::info('expo push token bound', ['user_id' => $request->user()->id]);
+
         return response()->json(['ok' => true]);
     }
 

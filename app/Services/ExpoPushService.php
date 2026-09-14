@@ -74,6 +74,10 @@ class ExpoPushService
 
             try {
                 $res = Http::timeout(10)->post(self::ENDPOINT, $messages);
+                if (! $res->successful()) {
+                    Log::warning('expo push http failed', ['status' => $res->status(), 'body' => mb_substr((string) $res->body(), 0, 500)]);
+                    continue;
+                }
                 $tickets = $res->json('data');
                 if (! is_array($tickets)) {
                     $tickets = [];
