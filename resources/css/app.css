@@ -240,7 +240,7 @@ html, body { min-height: 100vh; min-height: 100svh; min-height: 100dvh; }
   --app-header-md: 64px;
   --app-bottomnav: 68px;
 }
-.no-safe-area-top { --sat: 28px; }
+.no-safe-area-top { --sat: 0px; }
 
 /* Полноэкранные поверхности (карта/чат): ровно место между шапкой и нижним меню. */
 .h-app-full {
@@ -386,18 +386,18 @@ html.native-keyboard-open .mobile-bottom-nav {
 /* Нативный верх: шапка и оверлеи карты под статус-баром/вырезом.
    Отступы берутся из --sat (единый контроллер useOverlaySafeArea),
    useOverlaySafeArea добавляет .no-safe-area-top, если WebView отдал env() нулём. */
-.native-safe-top { padding-top: var(--sat); }
-.no-safe-area-top .native-safe-top { padding-top: 28px; }
+.native-safe-top { padding-top: var(--sat-real, 0px); }
+.no-safe-area-top .native-safe-top { padding-top: 0; }
 @media (min-width: 1024px) {
   .no-safe-area-top { --sat: 0px; }
   .native-safe-top,
   .no-safe-area-top .native-safe-top { padding-top: 0; }
 }
 .native-safe-offset-top { top: calc(var(--sat) + 8px); }
-.no-safe-area-top .native-safe-offset-top { top: 36px; }
+.no-safe-area-top .native-safe-offset-top { top: 8px; }
 @media (min-width: 640px) {
   .native-safe-offset-top { top: calc(var(--sat) + 16px); }
-  .no-safe-area-top .native-safe-offset-top { top: 44px; }
+  .no-safe-area-top .native-safe-offset-top { top: 16px; }
 }
 
 @media (max-width: 640px) {
