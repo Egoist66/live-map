@@ -91,7 +91,7 @@ export function describeInboxRow(row: InboxNotification): InboxText {
   }
   if (row.type === 'security.impersonation') {
     const log = data.log ?? {}
-    return { emoji: '🔒', title: 'Вход администрации', body: `${log.reason || 'Основание указано в журнале'}`.slice(0, 120), link: '/settings/procedures', avatar: null }
+    return { emoji: '🔒', title: 'Служебный вход', body: `${log.reason || 'Основание указано в журнале'}`.slice(0, 120), link: '/settings/procedures', avatar: null }
   }
   if (row.type === 'sos.chat_closed') {
     const s = (data as any).sos_chat_closed ?? {}

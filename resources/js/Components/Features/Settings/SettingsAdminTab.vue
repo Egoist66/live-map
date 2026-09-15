@@ -30,7 +30,7 @@ const reportFilters = [
 <template>
   <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-6' }, content: { class: '!p-0' } }">
     <template #content>
-      <h3 class="font-black tracking-tight text-lg dark:text-white">Админ</h3>
+      <h3 class="font-black tracking-tight text-lg dark:text-white">Модерация</h3>
       <p class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Жалобы, скрытие профилей и удаление аккаунтов.</p>
       <div class="mt-5 space-y-4 max-w-xl">
         <Card class="!border-amber-200 dark:!border-amber-950 !rounded-3xl !shadow-none !bg-white dark:!bg-zinc-900" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
@@ -87,7 +87,7 @@ const reportFilters = [
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
                 <div class="text-sm font-semibold dark:text-white">Скрыть мой профиль из поиска</div>
-                <p class="text-xs text-stone-500 dark:text-zinc-400 mt-1 leading-relaxed">Тебя не найдут через поиск, не откроют профиль и не увидят твои пины. Для остальных админов ты всё равно виден.</p>
+                <p class="text-xs text-stone-500 dark:text-zinc-400 mt-1 leading-relaxed">Тебя не найдут через поиск, не откроют профиль и не увидят твои пины. Для остальных модераторов ты всё равно виден.</p>
               </div>
               <ToggleSwitch :modelValue="admin.selfHidden.value" @update:modelValue="(v:boolean)=>admin.toggleSelf(v)" :disabled="admin.selfLoading.value" class="shrink-0" :pt="{ root: { class: '!shrink-0' } }" />
             </div>

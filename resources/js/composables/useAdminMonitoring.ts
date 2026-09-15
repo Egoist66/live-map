@@ -187,7 +187,7 @@ export function useAdminMonitoring() {
         syncAuthUser(updated)
       }
       if (isSelf(user) && isDemotion({ role: prevRole, is_admin: prevIsAdmin }, role)) {
-        toast?.add({ severity: 'warn', summary: 'Роль изменена. Админ-доступ потерян', life: 3500 })
+        toast?.add({ severity: 'warn', summary: 'Роль изменена. Доступ к панели модерации потерян', life: 3500 })
         router.visit('/')
         return
       }

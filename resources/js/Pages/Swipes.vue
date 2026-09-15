@@ -133,7 +133,7 @@ onMounted(async () => {
             <Button icon="pi pi-user-edit" severity="secondary" rounded outlined size="small" aria-label="Моя анкета" title="Моя анкета — что ищешь, о себе, интересы" @click="s.goTab('questionnaire')" />
             <Button icon="pi pi-question-circle" severity="secondary" rounded outlined size="small" aria-label="Как работают свайпы" title="Как работают свайпы" @click="s.showHelp.value = true" />
             <Button icon="pi pi-sliders-h" severity="secondary" rounded outlined size="small" aria-label="Фильтры" @click="s.showFilters.value = true" />
-            <Button v-if="s.canResetHistory.value" icon="pi pi-trash" severity="warn" rounded outlined size="small" aria-label="Сбросить просмотренные" :title="s.isAdmin.value ? 'Сбросить просмотренные (админ, безлимит)' : 'Сбросить просмотренные (1 раз)'" :loading="s.resetting.value" @click="s.resetHistory()" />
+            <Button v-if="s.canResetHistory.value" icon="pi pi-trash" severity="warn" rounded outlined size="small" aria-label="Сбросить просмотренные" :title="s.isAdmin.value ? 'Сбросить просмотренные (безлимит)' : 'Сбросить просмотренные (1 раз)'" :loading="s.resetting.value" @click="s.resetHistory()" />
           </div>
 
           <div v-if="s.matches.value.length" class="mt-4 hidden sm:block">
@@ -736,7 +736,7 @@ onMounted(async () => {
           <div>Фильтр «Люди рядом» — опционален. Free: рядом до 10 км, всё дальше — PRO безлимит.</div>
           <div>Свайпы безлимитные. Сообщения без мэтча: Free {{ s.quota.value ? `${s.quota.value.left}/${s.quota.value.limit}` : '3/3' }}, PRO — 10/мес. Взаимный лайк (мэтч) открывает чат всегда, даже при исчерпанном лимите.</div>
           <div>Избранное — лайкнутые без мэтча. Лимиты: Free до 2, Pro до 5, Business до 15.</div>
-          <div>Просвайпанных можно вернуть один раз кнопкой «Начать заново» — лента снова покажет всех. Админу сброс доступен безлимитно.</div>
+          <div>Просвайпанных можно вернуть один раз кнопкой «Начать заново» — лента снова покажет всех.</div>
           <div>Таб «Активные» — кто сейчас в ULove. Открывай анкету, пиши, если человек не закрыл сообщения.</div>
           <div>Кнопка ⓘ на карточке — подробная анкета: что ищет, интересы, о себе. Своя анкета — иконка-карандаш сверху.</div>
           <div class="rounded-2xl bg-stone-100 dark:bg-zinc-800 px-3 py-2 text-center font-bold">Строго 18+</div>

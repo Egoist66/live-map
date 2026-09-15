@@ -22,7 +22,7 @@ export const SETTINGS_TAB_INDEX: Record<SettingsTabId, string> = {
   profile: '0', billing: '1', quests: '2', pins: '3', archive: '4', privacy: '5', appearance: '6', security: '7', procedures: '8', support: '9', app: '10', admin: '11',
 }
 
-export const ADMIN_TAB = { id: 'admin' as const, label: 'Админ', icon: 'pi pi-shield', desc: 'Скрытие, удаление' } as const
+export const ADMIN_TAB = { id: 'admin' as const, label: 'Модерация', icon: 'pi pi-shield', desc: 'Скрытие, удаление' } as const
 
 export function useSettingsTabs() {
   const page = usePage()

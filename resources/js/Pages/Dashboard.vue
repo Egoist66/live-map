@@ -43,7 +43,7 @@ onMounted(async () => { await design.init() })
           @click="dash.goAdmin"
         >
           <span class="grid h-5 w-5 shrink-0 place-items-center rounded-md bg-ink-900 text-white dark:bg-white dark:text-zinc-900"><i class="pi pi-shield text-[10px]"></i></span>
-          <span class="truncate">Администратор · Админ-панель →</span>
+          <span class="truncate">Модератор · Панель модерации →</span>
         </button>
 
         <ProfileDesignHero

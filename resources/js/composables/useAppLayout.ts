@@ -34,7 +34,7 @@ export function useAppLayout() {
   const menuItems = computed(() => [
     { label: user.value?.name || '', sublabel: user.value?.email || '', isHeader: true },
     { separator: true },
-    ...(isAdmin.value ? [{ label: 'Админ-панель', icon: 'pi pi-shield', accent: 'amber', active: route().current('admin'), command: () => router.visit(route('admin')) }] : []),
+    ...(isAdmin.value ? [{ label: 'Панель модерации', icon: 'pi pi-shield', accent: 'amber', active: route().current('admin'), command: () => router.visit(route('admin')) }] : []),
     { label: 'Настройки', icon: 'pi pi-cog', accent: 'slate', active: route().current('profile.edit'), command: () => router.visit(settingsHref.value) },
     { label: 'Карта', icon: 'pi pi-map', accent: 'teal', active: route().current('map'), command: () => router.visit(route('map')) },
     { label: 'ULove', icon: 'pi pi-heart', accent: 'red', active: route().current('swipes'), command: () => router.visit(route('swipes')) },

@@ -40,16 +40,220 @@
         @if(config('seo.twitter_site'))
             <meta name="twitter:site" content="{{ config('seo.twitter_site') }}">
         @endif
-
         <title inertia>{{ config('seo.default_title') }}</title>
         <link rel="icon" href="/favicon.ico" sizes="any">
         <link rel="icon" href="/pwa-icon.svg" type="image/svg+xml">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700,800,900&family=inter:400,500,600&display=swap" rel="stylesheet" />
-        <script>
+        <script nonce="{{ $cspNonce ?? '' }}">
             (function(){ try{ var s=localStorage.getItem('theme'); var m=window.matchMedia('(prefers-color-scheme: dark)').matches; var d=s ? s==='dark' : m; if(d) document.documentElement.classList.add('dark'); document.documentElement.style.colorScheme = d?'dark':'light'; var bg=d?'#0B0F1A':'#ffffff'; document.documentElement.style.backgroundColor=bg; }catch(e){} })();
         </script>
+        {{-- UPin splash: брендированный экран загрузки PWA (первый кадр до CSS/JS) --}}
+        <style nonce="{{ $cspNonce ?? '' }}">
+          #pwa-splash {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background: radial-gradient(120% 90% at 50% 0%, #1B2350 0%, #0B0F1A 55%, #070B16 100%);
+            color: #fff;
+            transition: opacity .55s ease, visibility .55s ease;
+          }
+          #pwa-splash.done {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+          }
+          #pwa-splash .sp-map {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            opacity: .55;
+          }
+          #pwa-splash .sp-glow {
+            position: absolute;
+            border-radius: 9999px;
+            filter: blur(90px);
+            animation: sp-drift 9s ease-in-out infinite alternate;
+          }
+          #pwa-splash .sp-glow-a {
+            width: 420px;
+            height: 420px;
+            left: -120px;
+            top: -120px;
+            background: #5B5BFF;
+            opacity: .35;
+          }
+          #pwa-splash .sp-glow-b {
+            width: 360px;
+            height: 360px;
+            right: -110px;
+            bottom: -90px;
+            background: #06B6D4;
+            opacity: .22;
+            animation-delay: -4s;
+          }
+          @keyframes sp-drift {
+            from { transform: translate3d(0, 0, 0) scale(1); }
+            to { transform: translate3d(40px, 30px, 0) scale(1.12); }
+          }
+          #pwa-splash .sp-rings {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 300px;
+            height: 300px;
+            transform: translate(-50%, -50%);
+          }
+          #pwa-splash .sp-ring {
+            position: absolute;
+            inset: 0;
+            border-radius: 9999px;
+            border: 1.5px solid rgba(255, 255, 255, .22);
+            animation: sp-ring 2.8s ease-out infinite;
+          }
+          #pwa-splash .sp-ring:nth-child(2) { animation-delay: .9s; }
+          #pwa-splash .sp-ring:nth-child(3) { animation-delay: 1.8s; }
+          @keyframes sp-ring {
+            from { transform: scale(.35); opacity: .9; }
+            to { transform: scale(1.15); opacity: 0; }
+          }
+          #pwa-splash .sp-card {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 0 32px;
+            animation: sp-rise .7s cubic-bezier(.22, 1, .36, 1) both;
+          }
+          @keyframes sp-rise {
+            from { transform: translateY(18px); opacity: 0; }
+            to { transform: none; opacity: 1; }
+          }
+          #pwa-splash .sp-logo {
+            width: 96px;
+            height: 96px;
+            border-radius: 28px;
+            background: linear-gradient(135deg, #6D6DFF, #4A3AFF);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 18px 60px -12px rgba(91, 91, 255, .75), inset 0 1px 0 rgba(255, 255, 255, .35);
+            animation: sp-float 3.2s ease-in-out infinite;
+          }
+          @keyframes sp-float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+          }
+          #pwa-splash .sp-name {
+            margin: 20px 0 0;
+            font-family: Figtree, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            font-size: 44px;
+            line-height: 1;
+            font-weight: 800;
+            letter-spacing: .01em;
+          }
+          #pwa-splash .sp-tag {
+            margin-top: 12px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 14px;
+            border-radius: 999px;
+            font-size: 13.5px;
+            font-weight: 600;
+            letter-spacing: .04em;
+            color: #DDE1FF;
+            background: rgba(255, 255, 255, .08);
+            border: 1px solid rgba(255, 255, 255, .14);
+          }
+          #pwa-splash .sp-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 999px;
+            background: #34D399;
+            animation: sp-blink 1.6s ease-out infinite;
+          }
+          @keyframes sp-blink {
+            0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, .65); }
+            70% { box-shadow: 0 0 0 9px rgba(52, 211, 153, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+          }
+          #pwa-splash .sp-chips {
+            margin-top: 18px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+          }
+          #pwa-splash .sp-chip {
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: rgba(255, 255, 255, .85);
+            background: rgba(255, 255, 255, .06);
+            border: 1px solid rgba(255, 255, 255, .1);
+          }
+          #pwa-splash .sp-bar {
+            margin-top: 26px;
+            width: 184px;
+            height: 5px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, .12);
+            overflow: hidden;
+          }
+          #pwa-splash .sp-bar > span {
+            display: block;
+            height: 100%;
+            width: 40%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, #5B5BFF, #06B6D4);
+            animation: sp-load 1.15s ease-in-out infinite;
+          }
+          @keyframes sp-load {
+            0% { transform: translateX(-110%); }
+            100% { transform: translateX(280%); }
+          }
+          #pwa-splash .sp-love {
+            margin: 22px 0 0;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12.5px;
+            font-weight: 500;
+            letter-spacing: .02em;
+            color: rgba(255, 255, 255, .62);
+          }
+          #pwa-splash .sp-love svg {
+            animation: sp-beat 1.4s ease-in-out infinite;
+          }
+          @keyframes sp-beat {
+            0%, 100% { transform: scale(1); }
+            25% { transform: scale(1.22); }
+            45% { transform: scale(1); }
+          }
+          #pwa-splash .sp-ping {
+            transform-origin: center;
+            transform-box: fill-box;
+            animation: sp-svgping 2.4s ease-out infinite;
+          }
+          @keyframes sp-svgping {
+            0% { transform: scale(.4); opacity: .8; }
+            100% { transform: scale(1.6); opacity: 0; }
+          }
+          @media (prefers-reduced-motion: reduce) {
+            #pwa-splash *, #pwa-splash *::before, #pwa-splash *::after {
+              animation: none !important;
+            }
+          }
+        </style>
         <script type="application/ld+json">
         {
             "@@context": "https://schema.org",
@@ -74,11 +278,88 @@
             "logo": "{{ url('/favicon.ico') }}"
         }
         </script>
-        @routes
+        {!! app(\Tighten\Ziggy\BladeRouteGenerator::class)->generate(nonce: $cspNonce ?? null) !!}
         @vite(['resources/js/app.ts'])
         @inertiaHead
     </head>
     <body class="font-sans antialiased bg-surface dark:bg-[#0B0F1A] text-ink-900 dark:text-zinc-100">
+        <div id="pwa-splash" role="status" aria-label="UPin загружается">
+            <svg class="sp-map" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+                <g stroke="rgba(255,255,255,.07)" stroke-width="2" fill="none">
+                    <path d="M-20 120 C 80 110, 180 140, 420 115" />
+                    <path d="M-20 260 C 90 250, 200 280, 420 255" />
+                    <path d="M-20 400 C 100 390, 210 420, 420 395" />
+                    <path d="M-20 540 C 90 530, 200 560, 420 535" />
+                    <path d="M-20 680 C 100 670, 210 700, 420 675" />
+                    <path d="M60 -20 C 55 200, 75 500, 60 820" />
+                    <path d="M150 -20 C 145 200, 165 500, 150 820" />
+                    <path d="M240 -20 C 235 200, 255 500, 240 820" />
+                    <path d="M330 -20 C 325 200, 345 500, 330 820" />
+                </g>
+                <path d="M-20 470 C 80 440, 120 520, 200 500 C 280 480, 300 560, 420 530" stroke="rgba(6,182,212,.28)" stroke-width="14" fill="none" stroke-linecap="round" />
+                <g fill="rgba(255,255,255,.045)">
+                    <rect x="170" y="140" width="52" height="44" rx="8" />
+                    <rect x="258" y="290" width="56" height="46" rx="8" />
+                    <rect x="76" y="570" width="58" height="48" rx="8" />
+                    <rect x="262" y="600" width="50" height="42" rx="8" />
+                </g>
+                <g>
+                    <circle cx="84" cy="180" r="16" fill="none" stroke="#5B5BFF" stroke-width="2" class="sp-ping" />
+                    <circle cx="84" cy="180" r="8" fill="#5B5BFF" />
+                    <circle cx="318" cy="430" r="16" fill="none" stroke="#FF6B8B" stroke-width="2" class="sp-ping" style="animation-delay:.8s" />
+                    <circle cx="318" cy="430" r="8" fill="#FF6B8B" />
+                    <circle cx="196" cy="636" r="16" fill="none" stroke="#06B6D4" stroke-width="2" class="sp-ping" style="animation-delay:1.6s" />
+                    <circle cx="196" cy="636" r="8" fill="#06B6D4" />
+                </g>
+            </svg>
+            <div class="sp-glow sp-glow-a"></div>
+            <div class="sp-glow sp-glow-b"></div>
+            <div class="sp-rings" aria-hidden="true">
+                <div class="sp-ring"></div>
+                <div class="sp-ring"></div>
+                <div class="sp-ring"></div>
+            </div>
+            <div class="sp-card">
+                <div class="sp-logo">
+                    <svg width="52" height="52" viewBox="0 0 512 512" aria-hidden="true">
+                        <path d="M256 108c-70 0-122 52-122 120 0 92 112 176 112 176s112-84 112-176c0-68-52-120-102-120z" fill="#fff"/>
+                        <circle cx="256" cy="228" r="52" fill="#5B5BFF"/>
+                        <circle cx="256" cy="228" r="22" fill="#fff"/>
+                    </svg>
+                </div>
+                <div class="sp-name">UPin</div>
+                <div class="sp-tag"><span class="sp-dot"></span>живая карта района</div>
+                <div class="sp-chips">
+                    <span class="sp-chip">📍 Пины рядом</span>
+                    <span class="sp-chip">💬 Чаты</span>
+                    <span class="sp-chip">💞 ULove</span>
+                </div>
+                <div class="sp-bar"><span></span></div>
+                <div class="sp-love">
+                    сделано с
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="#FF6B8B" aria-hidden="true">
+                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                    </svg>
+                    ulove к своему району
+                </div>
+            </div>
+        </div>
+        <script nonce="{{ $cspNonce ?? '' }}">
+            (function () {
+                var el = document.getElementById('pwa-splash');
+                if (!el) return;
+                var hide = function () {
+                    if (!el || el.classList.contains('done')) return;
+                    el.classList.add('done');
+                    setTimeout(function () { if (el && el.parentNode) el.parentNode.removeChild(el); }, 750);
+                };
+                window.__upinHideSplash = hide;
+                window.addEventListener('load', function () { setTimeout(hide, 2200); });
+                document.addEventListener('visibilitychange', function () { if (!document.hidden) setTimeout(hide, 1200); });
+                window.addEventListener('pageshow', function (e) { if (e.persisted) hide(); });
+                setTimeout(hide, 6000);
+            })();
+        </script>
         @inertia
     </body>
 </html>

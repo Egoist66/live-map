@@ -5,6 +5,7 @@ import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import Message from 'primevue/message'
+import Tag from 'primevue/tag'
 import { DISTRICT_INTEREST_OPTIONS } from '@/utils/districtGeo'
 
 const props = defineProps<{ open: boolean; saving: boolean; strokesCount: number; serverError?: string | null }>()
@@ -41,24 +42,53 @@ function submit(): void {
 }
 </script>
 <template>
-  <Dialog :visible="open" modal dismissableMask header="Новый район" :style="{ width: '560px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-[24px] !border-stone-200 dark:!border-white/10 overflow-hidden !bg-white dark:!bg-zinc-900' }, header: { class: '!p-5 sm:!p-6 !pb-0 !border-0 !bg-white dark:!bg-zinc-900' }, content: { class: '!p-5 sm:!px-6 !bg-white dark:!bg-zinc-900 !max-h-[70dvh] !overflow-y-auto' }, footer: { class: '!p-5 sm:!px-6 !pt-0 !border-0 !bg-white dark:!bg-zinc-900' } }" @update:visible="(v:boolean)=>emit('update:open', v)">
+  <Dialog :visible="open" modal dismissableMask :style="{ width: '560px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-[24px] !border-stone-200 dark:!border-white/10 overflow-hidden !bg-white dark:!bg-zinc-900' }, header: { class: '!p-0 !border-0 !bg-white dark:!bg-zinc-900' }, content: { class: '!px-5 !py-0 sm:!px-6 !bg-white dark:!bg-zinc-900 !max-h-[70dvh] !overflow-y-auto' }, footer: { class: '!p-5 sm:!px-6 !pt-2 !border-0 !bg-white dark:!bg-zinc-900' } }" @update:visible="(v:boolean)=>emit('update:open', v)">
     <template #header>
-      <div class="flex items-center gap-3">
-        <span class="w-11 h-11 rounded-2xl bg-gradient-to-br from-violet-700 to-purple-900 text-white grid place-items-center shadow-glow shrink-0"><i class="pi pi-palette" /></span>
-        <div class="min-w-0"><div class="font-black text-[17px] tracking-tight dark:text-white">Новый район</div><div class="text-xs text-stone-500 dark:text-zinc-400">Заливка из {{ strokesCount }} {{ strokesCount === 1 ? 'мазка' : 'мазков' }} · увидят все</div></div>
+      <div class="w-full">
+        <div class="relative h-[118px] sm:h-[132px] overflow-hidden bg-gradient-to-br from-violet-700 via-purple-800 to-indigo-950 dark:from-violet-800 dark:via-purple-950 dark:to-black">
+          <i class="pi pi-map-marker absolute left-8 top-4 text-white/20 text-3xl -rotate-12 pointer-events-none" />
+          <i class="pi pi-home absolute left-[38%] bottom-3 text-white/10 text-4xl rotate-6 pointer-events-none" />
+          <i class="pi pi-heart absolute right-20 top-6 text-white/15 text-2xl rotate-12 pointer-events-none" />
+          <i class="pi pi-users absolute right-8 bottom-5 text-white/10 text-3xl -rotate-6 pointer-events-none" />
+          <div class="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/45 to-transparent pointer-events-none" />
+          <div class="absolute left-5 top-4 sm:left-6"><Tag value="Новый район" icon="pi pi-sparkles" severity="contrast" class="!rounded-full !text-[11px] !font-bold !bg-white/15 !text-white !border !border-white/25 backdrop-blur" /></div>
+          <div class="absolute left-5 bottom-2.5 sm:left-6 text-[11px] font-semibold text-white/80">сообщество · заливка из {{ strokesCount }} {{ strokesCount === 1 ? 'мазка' : 'мазков' }} · увидят все</div>
+        </div>
+        <div class="px-5 sm:px-6">
+          <div class="flex items-end gap-3 -mt-8">
+            <span class="w-16 h-16 rounded-full bg-gradient-to-br from-violet-600 to-purple-900 text-white grid place-items-center shadow-glow shrink-0 ring-4 ring-white dark:ring-zinc-900 text-xl"><i class="pi pi-palette" /></span>
+            <div class="min-w-0 flex-1 pb-0.5">
+              <InputText v-model="name" maxlength="80" placeholder="Название района" class="w-full !border-0 !bg-transparent !shadow-none !ring-0 !rounded-none !px-0 !py-0 !font-black !text-[19px] !tracking-tight dark:!text-white placeholder:!text-stone-400 placeholder:!font-bold focus:!border-0 focus:!shadow-none focus:!ring-0" />
+              <div class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">вы — создатель · заявки решаете вы</div>
+            </div>
+          </div>
+        </div>
       </div>
     </template>
-    <div class="flex flex-col gap-3.5">
-      <div>
-        <label class="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500">Название</label>
-        <InputText v-model="name" maxlength="80" placeholder="Тихий дворик" class="w-full mt-1" />
+    <div class="flex flex-col gap-4 pt-4">
+      <div class="grid grid-cols-3 gap-2">
+        <div class="rounded-2xl border border-stone-200 dark:border-white/10 bg-stone-50 dark:bg-white/5 px-2.5 py-2.5 flex flex-col gap-1.5">
+          <span class="w-8 h-8 rounded-xl bg-violet-600/15 text-violet-700 dark:text-violet-300 grid place-items-center text-sm shrink-0"><i class="pi pi-comments" /></span>
+          <div class="text-[11px] font-bold leading-tight dark:text-white">Общий чат</div>
+          <div class="text-[10px] leading-tight text-stone-500 dark:text-zinc-400">появится сразу</div>
+        </div>
+        <div class="rounded-2xl border border-stone-200 dark:border-white/10 bg-stone-50 dark:bg-white/5 px-2.5 py-2.5 flex flex-col gap-1.5">
+          <span class="w-8 h-8 rounded-xl bg-teal-600/15 text-teal-700 dark:text-teal-300 grid place-items-center text-sm shrink-0"><i class="pi pi-users" /></span>
+          <div class="text-[11px] font-bold leading-tight dark:text-white">Участники</div>
+          <div class="text-[10px] leading-tight text-stone-500 dark:text-zinc-400">вы — первый</div>
+        </div>
+        <div class="rounded-2xl border border-stone-200 dark:border-white/10 bg-stone-50 dark:bg-white/5 px-2.5 py-2.5 flex flex-col gap-1.5">
+          <span class="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-700 dark:text-amber-300 grid place-items-center text-sm shrink-0"><i class="pi pi-user-plus" /></span>
+          <div class="text-[11px] font-bold leading-tight dark:text-white">Заявки</div>
+          <div class="text-[10px] leading-tight text-stone-500 dark:text-zinc-400">пускать или нет</div>
+        </div>
       </div>
       <div>
-        <label class="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500">Чем тут занимаются</label>
-        <Textarea v-model="description" maxlength="500" rows="3" auto-resize placeholder="Вечерний футбол, соседи с собаками, книжный клуб…" class="w-full mt-1" />
+        <label class="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500">О районе</label>
+        <Textarea v-model="description" maxlength="500" rows="3" auto-resize placeholder="Вечерний футбол, соседи с собаками, книжный клуб…" class="w-full mt-1.5" />
       </div>
       <div>
-        <label class="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500">Интерес островка</label>
+        <label class="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500">Интересы</label>
         <div class="mt-1.5 flex flex-wrap gap-1.5">
           <button
             v-for="o in DISTRICT_INTEREST_OPTIONS"
@@ -70,7 +100,7 @@ function submit(): void {
         </div>
       </div>
       <Message v-if="formError || serverError" severity="error" :closable="false" class="!rounded-2xl !text-xs">{{ formError || serverError }}</Message>
-      <div class="rounded-2xl bg-violet-50 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-900/60 px-3.5 py-2.5 text-[11px] leading-snug text-violet-900 dark:text-violet-200">Пины внутри увидят только жители. Чтобы попасть внутрь, люди кинут заявку — вы решите, пускать или нет. У района появится общий чат.</div>
+      <div class="rounded-2xl bg-violet-50 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-900/60 px-3.5 py-2.5 text-[11px] leading-snug text-violet-900 dark:text-violet-200 flex gap-2"><i class="pi pi-lock text-xs mt-0.5 shrink-0" /><span>Закрытое сообщество: пины внутри увидят только жители. Чтобы попасть внутрь, люди кинут заявку — вы решите, пускать или нет.</span></div>
     </div>
     <template #footer>
       <div class="flex flex-col-reverse sm:flex-row gap-2">

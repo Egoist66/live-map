@@ -16,6 +16,6 @@
     @endif
     <tr><td style="color: #78716c;">Отправитель</td><td>{{ $report->reporter?->name }} ({{ $report->reporter?->email }})</td></tr>
   </table>
-  <p style="margin: 16px 0 0; color: #78716c; font-size: 13px;">Разобрать жалобу можно в админке: Настройки → Админ → Жалобы.</p>
+  <p style="margin: 16px 0 0; color: #78716c; font-size: 13px;">Жалоба передана модераторам и скоро будет рассмотрена.</p>
 </body>
 </html>

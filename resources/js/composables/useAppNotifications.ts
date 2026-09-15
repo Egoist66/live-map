@@ -1,7 +1,7 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
 import { avatarSrcFor } from '@/composables/useAvatar'
-import { getSubscription, showLocal } from '@/pwa/push.service'
+import { getSubscription, showLocal, type ForegroundPush } from '@/pwa/push.service'
 import { useScreenLock } from '@/composables/useScreenLock'
 import { useFileDownload } from '@/composables/useFileDownload'
 import { busOn } from '@/services/realtime-bus'
@@ -98,6 +98,7 @@ function playTick() {
 }
 function push(t: AppToast) {
   if (isLockedNow()) return
+  noteToastSignature(t.title, t.body)
   toasts.value = [t, ...toasts.value].slice(0, 3)
   playTick()
   const timer = setTimeout(() => remove(t.id), 5500)
@@ -143,6 +144,81 @@ async function notifyHidden(t: AppToast): Promise<void> {
 function remove(id: string) {
   toasts.value = toasts.value.filter(x => x.id !== id)
   const tm = timers.get(id); if (tm) { clearTimeout(tm); timers.delete(id) }
+}
+/** Сигнатуры недавно показанных тостов: защита SW-фолбэка от дублей с Echo. */
+const recentToastSignatures = new Map<string, number>()
+const SIGNATURE_TTL_MS = 10000
+const SW_FALLBACK_DELAY_MS = 1500
+
+function toastSignature(title: string, body: string): string {
+  const raw = `${title} ${body}`.toLowerCase().replace(/\s+/g, ' ').trim()
+  return raw.slice(0, 160)
+}
+
+function noteToastSignature(title: string, body: string): void {
+  try {
+    recentToastSignatures.set(toastSignature(title, body), Date.now())
+    if (recentToastSignatures.size > 200) {
+      const first = recentToastSignatures.keys().next().value as string | undefined
+      if (first !== undefined) recentToastSignatures.delete(first)
+    }
+  } catch {}
+}
+
+function seenToastRecently(title: string, body: string): boolean {
+  try {
+    const at = recentToastSignatures.get(toastSignature(title, body))
+    return at !== undefined && Date.now() - at < SIGNATURE_TTL_MS
+  } catch {
+    return false
+  }
+}
+
+function swPushToastKind(link: string): { type: AppToast['type']; icon: string } {
+  if (link.startsWith('/chat')) return { type: 'message', icon: 'pi pi-comments' }
+  if (link.startsWith('/swipes')) return { type: 'match', icon: 'pi pi-heart-fill' }
+  if (link.startsWith('/flow')) return { type: 'pin', icon: 'pi pi-file' }
+  if (link.startsWith('/map')) return { type: 'pin', icon: 'pi pi-map-marker' }
+  return { type: 'pin', icon: 'pi pi-bell' }
+}
+/**
+ * Фолбэк тоста из сервис-воркера (`upin:sw-push`).
+ *
+ * SW пересылает пуш сфокусированной вкладке вместо системного баннера.
+ * Если Echo жив — тот же тост уже показан, гасим по сигнатуре с задержкой.
+ * Если сокет мёртв — это единственная доставка: in-app тост, а для успевшей
+ * скрыться вкладки — локальный баннер (серверный SW сознательно пропустил).
+ */
+function handleSwPush(event: Event): void {
+  const detail = (event as CustomEvent<ForegroundPush>).detail
+  if (!detail) return
+  const title = String(detail.title || 'UPin').slice(0, 120)
+  const body = String(detail.body || 'Новое уведомление').slice(0, 140)
+  const link = String(detail.url || '/map')
+  const tag = String(detail.tag || 'upin-push')
+  const avatar = typeof detail.avatar === 'string' ? detail.avatar : null
+  if (seenToastRecently(title, body)) return
+  window.setTimeout(() => {
+    try {
+      if (isLockedNow()) return
+      if (seenToastRecently(title, body)) return
+      if (typeof document !== 'undefined' && document.hidden) {
+        void showLocal(title, { body, url: link, avatar, tag: `sw-${tag}` })
+        return
+      }
+      const kind = swPushToastKind(link)
+      push({
+        id: `sw-${tag}-${Date.now()}`,
+        type: kind.type,
+        icon: kind.icon,
+        title,
+        body,
+        avatar,
+        link,
+        createdAt: Date.now(),
+      })
+    } catch {}
+  }, SW_FALLBACK_DELAY_MS)
 }
 function handleMessage(e: any) {
   const msg = e?.message
@@ -582,7 +658,7 @@ function handleImpersonation(e: any) {
     id: `imp-${log.id}-${Date.now()}`,
     type: 'security',
     icon: 'pi pi-shield',
-    title: 'Вход администрации в ваш аккаунт',
+    title: 'Служебный вход в ваш аккаунт',
     body: `${log.reason || 'Основание указано в журнале'}`.slice(0, 90),
     avatar: null,
     link: '/settings/procedures',
@@ -655,6 +731,9 @@ async function showInitialUnreads(): Promise<void> {
 function init() {
   if (inited) return
   inited = true
+  try {
+    window.addEventListener('upin:sw-push', handleSwPush)
+  } catch {}
   subscribe()
   void showInitialUnreads()
   window.addEventListener('focus', subscribe)

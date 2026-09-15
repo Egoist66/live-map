@@ -72,6 +72,7 @@ export default defineConfig({
             manifest: {
                 name: 'UPin — Живая карта района',
                 short_name: 'UPin',
+                id: '/?source=pwa',
                 description: 'Гиперлокальная карта района: пины соседей рядом, чаты, события и помощь.',
                 start_url: '/?source=pwa',
                 scope: '/',
@@ -112,7 +113,7 @@ export default defineConfig({
                             seenUrls.add(entry.url);
                             return !alreadySeen;
                         });
-                        for (const f of ['offline.html', 'pwa-192x192.png', 'pwa-512x512.png', 'pwa-icon.svg', 'favicon.ico']) {
+                        for (const f of ['offline.html', 'pwa-192x192.png', 'pwa-512x512.png', 'maskable-512x512.png', 'apple-touch-icon.png', 'pwa-icon.svg', 'favicon.ico']) {
                             const alreadyListed = deduped.some((m) => m.url === `/${f}`);
                             if (alreadyListed) continue;
                             const revision = fileRevision(f);
@@ -163,6 +164,12 @@ export default defineConfig({
                         handler: 'NetworkFirst',
                         method: 'GET',
                         options: { cacheName: 'pwa-api', networkTimeoutSeconds: 4, expiration: { maxEntries: 50, maxAgeSeconds: 300 }, cacheableResponse: { statuses: [0, 200] } },
+                    },
+                    {
+                        urlPattern: ({ url }) => url.pathname.startsWith('/api/') && url.pathname !== '/api/version',
+                        handler: 'NetworkFirst',
+                        method: 'GET',
+                        options: { cacheName: 'pwa-api', networkTimeoutSeconds: 3, expiration: { maxEntries: 100, maxAgeSeconds: 120 }, cacheableResponse: { statuses: [0, 200] } },
                     },
                 ],
             },

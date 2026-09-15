@@ -257,7 +257,7 @@ function openNews(item: any) {
                         ></span>
                         <div class="min-w-0 flex-1">
                           <div class="text-sm font-semibold dark:text-white truncate">
-                            Вход администрации
+                            Служебный вход
                           </div>
                           <div class="text-xs text-stone-500 dark:text-zinc-400 truncate">
                             {{ (l.reason || '').slice(0, 80) }}{{ l.started_at ? ` · ${fmtTime(l.started_at)}` : '' }}

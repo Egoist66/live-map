@@ -17,7 +17,7 @@ defineProps<{ mgr: any }>()
         <span class="w-9 h-9 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white grid place-items-center shrink-0"><i class="pi pi-wrench text-sm" /></span>
         <div class="flex-1 min-w-0">
           <div class="font-black dark:text-white">Режим обслуживания</div>
-          <div class="text-xs text-stone-500 dark:text-zinc-400">Закрывает приложение заглушкой для всех, кроме админов.</div>
+          <div class="text-xs text-stone-500 dark:text-zinc-400">Закрывает приложение заглушкой для всех, кроме модераторов.</div>
         </div>
         <Tag :value="mgr.enabled.value ? 'включён' : 'выключен'" :severity="mgr.enabled.value ? 'danger' : 'success'" class="!text-[9px]" />
       </div>
@@ -39,7 +39,7 @@ defineProps<{ mgr: any }>()
           <Textarea v-model="mgr.message.value" rows="3" autoResize placeholder="Что случилось и когда вернёмся..." class="w-full mt-1" maxlength="1000" />
           <div class="text-[11px] text-stone-400 dark:text-zinc-500 mt-1 text-right">{{ mgr.message.value.length }} / 1000</div>
         </div>
-        <Message v-if="mgr.enabled.value" severity="warn" :closable="false" class="!rounded-2xl !text-xs">Приложение закрыто для всех, кроме админов. Вход по паролю для остальных недоступен.</Message>
+        <Message v-if="mgr.enabled.value" severity="warn" :closable="false" class="!rounded-2xl !text-xs">Приложение закрыто для всех, кроме модераторов. Вход по паролю для остальных недоступен.</Message>
         <Button label="Сохранить" rounded :loading="mgr.saving.value" :disabled="!mgr.canSave()" @click="mgr.save()" class="!bg-stone-900 dark:!bg-white dark:!text-ink-900 !border-0 !font-bold" />
       </div>
     </template>

@@ -45,7 +45,7 @@ function fmt(dt: string | null) {
             <i class="pi pi-eye text-red-500 text-sm shrink-0" />
             <div class="min-w-0 flex-1">
               <div class="text-[13px] font-semibold truncate dark:text-white">{{ l.target?.name || ('#' + l.target?.id) }} <span class="font-normal text-stone-400">· {{ l.target?.email || '' }}</span></div>
-              <div class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">админ: {{ l.admin?.name || ('#' + l.admin?.id) }} · {{ fmt(l.started_at) }}</div>
+              <div class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">модератор: {{ l.admin?.name || ('#' + l.admin?.id) }} · {{ fmt(l.started_at) }}</div>
             </div>
             <Tag v-if="l.seen_at" value="прочитано" severity="success" class="!text-[9px]" />
             <Tag v-else value="не прочитано" severity="danger" class="!text-[9px]" />

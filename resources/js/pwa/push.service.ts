@@ -1,5 +1,19 @@
 import { APP_BADGE, APP_ICON, vapidPublicKey } from './pwa.config'
+import { savePushSubscription } from './pwa.api'
 import type { LocalNotifyOptions, PushPermission } from './types'
+
+/**
+ * Пейлоад пуша, пересланный сервис-воркером на сфокусированную страницу.
+ * Серверный формат повторяет WebPushService: title/body/url/tag/avatar.
+ */
+export interface ForegroundPush {
+  title?: string
+  body?: string
+  url?: string
+  tag?: string
+  avatar?: string | null
+  icon?: string
+}
 
 function base64ToBytes(base64: string): Uint8Array {
   const padded = base64.replace(/-/g, '+').replace(/_/g, '/') + '='.repeat((4 - (base64.length % 4)) % 4)
@@ -131,4 +145,102 @@ export async function showLocal(title: string, options: LocalNotifyOptions = {})
   try {
     new Notification(title, payload)
   } catch {}
+}
+
+/**
+ * Подписка на пуши, пересланные SW сфокусированной странице.
+ *
+ * SW шлёт `upin-push`, когда окно в фокусе: системный баннер пропущен,
+ * потому что realtime-шина (Echo) уже показала in-app тост. Событие —
+ * страховка и точка расширения шины: страница решает, что делать с дублем.
+ *
+ * @param cb обработчик пересланного пейлоада
+ * @returns функция отписки
+ */
+export function onForegroundPush(cb: (push: ForegroundPush) => void): () => void {
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
+    return () => {}
+  }
+
+  const handler = (event: MessageEvent) => {
+    const data = (event as MessageEvent).data as { type?: string; push?: ForegroundPush } | null
+
+    if (!data || data.type !== 'upin-push') {
+      return
+    }
+
+    try {
+      cb(data.push || {})
+    } catch {}
+  }
+
+  navigator.serviceWorker.addEventListener('message', handler)
+
+  return () => navigator.serviceWorker.removeEventListener('message', handler)
+}
+
+/**
+ * Подписка на сигнал протухшей push-подписки (`pushsubscriptionchange`).
+ *
+ * @param cb обработчик сигнала — переподписаться и сохранить endpoint
+ * @returns функция отписки
+ */
+export function onPushResubscribe(cb: () => void): () => void {
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
+    return () => {}
+  }
+
+  const handler = (event: MessageEvent) => {
+    const data = (event as MessageEvent).data as { type?: string } | null
+
+    if (!data || data.type !== 'upin-push-resubscribe') {
+      return
+    }
+
+    try {
+      cb()
+    } catch {}
+  }
+
+  navigator.serviceWorker.addEventListener('message', handler)
+
+  return () => navigator.serviceWorker.removeEventListener('message', handler)
+}
+
+/**
+ * Самолечение push-подписки: по сигналу SW тихо переподписаться
+ * и сохранить свежий endpoint на сервере, чтобы пуши не переставали прилетать.
+ */
+async function healSubscription(): Promise<void> {
+  try {
+    if (permissionState() !== 'granted') {
+      return
+    }
+
+    const sub = await subscribe()
+    await savePushSubscription(subscriptionPayload(sub))
+  } catch {}
+}
+
+/**
+ * Глобальные push-мосты страницы: проброс foreground-пушей в шину
+ * (`window` CustomEvent `upin:sw-push`) и самолечение подписки.
+ * Вызывать один раз из точки входа приложения.
+ *
+ * @returns функция остановки мостов
+ */
+export function startPushBridges(): () => void {
+  const offForeground = onForegroundPush((push) => {
+    try {
+      window.dispatchEvent(new CustomEvent<ForegroundPush>('upin:sw-push', { detail: push }))
+    } catch {}
+  })
+  const offResubscribe = onPushResubscribe(() => {
+    void healSubscription()
+  })
+
+  return () => {
+    offForeground()
+    offResubscribe()
+  }
 }

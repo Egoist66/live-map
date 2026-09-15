@@ -56,7 +56,7 @@ function ago(iso?: string | null) {
             <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white dark:border-zinc-900" />
           </div>
           <div class="min-w-0 flex-1">
-            <div class="text-sm font-semibold truncate dark:text-white">{{ u.name }} <Tag v-if="u.is_admin" value="ADMIN" severity="warn" class="!text-[9px] !py-0 ml-1" /></div>
+            <div class="text-sm font-semibold truncate dark:text-white">{{ u.name }} <Tag v-if="u.is_admin" value="МОДЕРАТОР" severity="warn" class="!text-[9px] !py-0 ml-1" /></div>
             <div class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">{{ u.email }} · {{ u.plan }} · {{ ago(u.last_seen_at) }}</div>
           </div>
         </div>

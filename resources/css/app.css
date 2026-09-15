@@ -571,6 +571,40 @@ div#p-license-host {
 .p-avatar img { object-fit: cover !important; width: 100% !important; height: 100% !important; }
 .p-avatar { overflow: hidden; }
 
+/* Шапка на мобилке: кнопки замка, колокольчика и аватара — строго круглые,
+   иначе глобальный min-height:44px и паддинги PrimeVue растягивают их в овалы.
+   Селектор с button/p-button нужен, чтобы перебить .p-button:not(.p-button-icon-only).
+   justify-content обязателен: у PrimeVue Button нет центрирования контента,
+   в фиксированной ширине аватар липнет влево. */
+@media (max-width: 640px) {
+  button.topbar-round-btn,
+  button.topbar-round-btn.p-button {
+    width: 36px !important;
+    min-width: 36px !important;
+    max-width: 36px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    max-height: 36px !important;
+    padding: 0 !important;
+    border-radius: 9999px !important;
+    justify-content: center !important;
+  }
+  button.topbar-round-btn.p-button .p-avatar { width: 28px !important; height: 28px !important; }
+}
+@media (min-width: 411px) and (max-width: 640px) {
+  button.topbar-round-btn,
+  button.topbar-round-btn.p-button {
+    width: 40px !important;
+    min-width: 40px !important;
+    max-width: 40px !important;
+    height: 40px !important;
+    min-height: 40px !important;
+    max-height: 40px !important;
+    justify-content: center !important;
+  }
+  button.topbar-round-btn.p-button .p-avatar { width: 32px !important; height: 32px !important; }
+}
+
 /* Toasts: strong contrast in dark theme */
 .dark .p-toast-message { box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45); }
 .dark .p-toast-message-success { background: rgba(20, 83, 45, 0.94) !important; border-color: rgba(74, 222, 128, 0.55) !important; color: #f0fdf4 !important; }

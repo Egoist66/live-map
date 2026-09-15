@@ -52,7 +52,7 @@ onMounted(() => maintenance.load())
 onMounted(() => refs.load())
 </script>
 <template>
-  <Head title="Админ-панель" />
+  <Head title="Панель модерации" />
   <AuthenticatedLayout>
     <Toast />
     <div class="page-scroll bg-surface dark:bg-[#090E1A]">
@@ -62,7 +62,7 @@ onMounted(() => refs.load())
             <div class="flex flex-wrap items-center gap-3 overflow-hidden">
               <span class="w-11 h-11 rounded-2xl bg-white/10 text-white grid place-items-center shrink-0"><i class="pi pi-shield" /></span>
               <div class="min-w-0 flex-1">
-                <h1 class="text-lg sm:text-2xl font-black tracking-tight">Админ-панель</h1>
+                <h1 class="text-lg sm:text-2xl font-black tracking-tight">Панель модерации</h1>
                 <p class="text-white/50 text-xs sm:text-sm">Мониторинг онлайна, статистика роста и модерация.</p>
               </div>
               <Button label="Мой профиль" rounded outlined size="small" class="!text-white !border-white/30 hover:!bg-white hover:!text-stone-900 !text-xs !font-bold [&_.p-button-label]:hidden min-[420px]:[&_.p-button-label]:inline" @click="router.visit('/profile')" />
@@ -78,7 +78,7 @@ onMounted(() => refs.load())
             <Tab value="stats" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-chart-bar text-xs" /><span class="tab-label">Статистика</span></span></Tab>
             <Tab value="manage" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-users text-xs" /><span class="tab-label">Управление</span></span></Tab>
             <Tab value="security" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-shield text-xs" /><span class="tab-label">Безопасность</span><Badge v-if="logins.stats.value.failed_today" :value="logins.stats.value.failed_today > 99 ? '99+' : String(logins.stats.value.failed_today)" severity="danger" /></span></Tab>
-            <Tab value="admin" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-cog text-xs" /><span class="tab-label">Администрирование</span><Badge v-if="reports.pendingCount.value" :value="reports.pendingCount.value > 99 ? '99+' : String(reports.pendingCount.value)" severity="danger" /></span></Tab>
+            <Tab value="admin" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-cog text-xs" /><span class="tab-label">Модерация</span><Badge v-if="reports.pendingCount.value" :value="reports.pendingCount.value > 99 ? '99+' : String(reports.pendingCount.value)" severity="danger" /></span></Tab>
             <Tab value="refs" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-book text-xs" /><span class="tab-label">Справочники</span></span></Tab>
           </TabList>
           <TabPanels class="!p-0 !pt-4 !bg-transparent">
@@ -123,7 +123,7 @@ onMounted(() => refs.load())
       </div>
       <AdminImpersonateDialog :imp="imp" />
       <Dialog :visible="!!mon.pendingSelfRole.value" @update:visible="(v:boolean)=>{ if(!v) mon.cancelSelfRoleChange() }" modal header="Снять с себя права?" :style="{ width: '400px', maxWidth: '94vw' }">
-        <p class="text-sm text-stone-600 dark:text-zinc-300">Сменить свою роль с <b>admin</b> на <b>{{ mon.pendingSelfRole.value?.role }}</b>? Ты потеряешь доступ к админ-панели.</p>
+        <p class="text-sm text-stone-600 dark:text-zinc-300">Сменить свою роль с <b>admin</b> на <b>{{ mon.pendingSelfRole.value?.role }}</b>? Ты потеряешь доступ к панели модерации.</p>
         <template #footer>
           <Button label="Отмена" text @click="mon.cancelSelfRoleChange()" />
           <Button label="Снять права" severity="danger" :loading="mon.actingId.value !== null" @click="mon.confirmSelfRoleChange()" />

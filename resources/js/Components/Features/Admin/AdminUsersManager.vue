@@ -30,7 +30,7 @@ const filterOptions = [
   { label: 'Онлайн', value: 'online' },
   { label: 'Новые 7д', value: 'new' },
   { label: 'Скрытые', value: 'hidden' },
-  { label: 'Админы', value: 'admins' },
+  { label: 'Модераторы', value: 'admins' },
 ]
 const sortOptions = [
   { label: 'Сначала активные', value: 'last_seen' },

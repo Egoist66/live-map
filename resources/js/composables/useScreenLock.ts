@@ -10,6 +10,7 @@ const CODE_KEY = 'screenlock:code'
 const TIMEOUT_KEY = 'screenlock:timeout'
 const KIND_KEY = 'screenlock:kind'
 const LS_MIRROR = 'screenlock:state'
+const LS_SERVER = 'screenlock:server-enabled'
 
 function readMirror(): { enabled: boolean; timeout: number; kind: LockKind } {
   try {
@@ -29,6 +30,42 @@ function readMirror(): { enabled: boolean; timeout: number; kind: LockKind } {
 function writeMirror(enabledVal: boolean, timeout: number, kindVal: LockKind) {
   try {
     localStorage.setItem(LS_MIRROR, JSON.stringify({ enabled: enabledVal, timeout, kind: kindVal }))
+  } catch {}
+}
+
+/**
+ * Последнее известное состояние локера: истина сервера при онлайне,
+ * намерение юзера при офлайн-сохранении. Лечит баг: запрос упал
+ * (419/500/офлайн на старте), а протухший код в IndexedDB включал
+ * локер, хотя в БД пароль уже null.
+ *
+ * @returns true/false — последнее состояние, null — неизвестно
+ */
+function readServerEnabled(): boolean | null {
+  try {
+    const raw = localStorage.getItem(LS_SERVER)
+    if (raw === '1') return true
+    if (raw === '0') return false
+    return null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Запомнить последнее известное состояние локера.
+ *
+ * @param value true — включён, false — выключен
+ */
+function writeServerEnabled(value: boolean): void {
+  try {
+    localStorage.setItem(LS_SERVER, value ? '1' : '0')
+  } catch {}
+}
+
+function clearServerEnabled(): void {
+  try {
+    localStorage.removeItem(LS_SERVER)
   } catch {}
 }
 
@@ -71,6 +108,7 @@ export function resetScreenLockSession(): void {
   initialized.value = false
   lastPoke = 0
   error.value = null
+  clearServerEnabled()
   writeMirror(false, timeoutMin.value, kind.value)
   broadcastLockState()
   void kvDel(CODE_KEY).catch(() => {})
@@ -162,6 +200,7 @@ export function useScreenLock() {
       enabled.value = fetchedState.enabled
       timeoutMin.value = fetchedState.timeout
       kind.value = fetchedState.kind
+      writeServerEnabled(fetchedState.enabled)
       const localState = await readLocal()
       const hasServerCode = fetchedState.enabled
       cachedCode = hasServerCode ? localState.code : null
@@ -173,11 +212,22 @@ export function useScreenLock() {
         await kvSet(TIMEOUT_KEY, String(fetchedState.timeout))
         await kvSet(KIND_KEY, fetchedState.kind)
       }
-    } catch {
+    } catch (e: any) {
       offline.value = true
       const local = await readLocal()
-      cachedCode = local.code
-      enabled.value = !!local.code
+      if (e?.response?.status === 401) {
+        cachedCode = null
+        enabled.value = false
+        clearServerEnabled()
+        await kvDel(CODE_KEY)
+      } else if (readServerEnabled() === false) {
+        cachedCode = null
+        enabled.value = false
+        await kvDel(CODE_KEY)
+      } else {
+        cachedCode = local.code
+        enabled.value = !!local.code
+      }
       timeoutMin.value = local.timeout
       kind.value = local.kind
     } finally {
@@ -205,6 +255,7 @@ export function useScreenLock() {
       } catch (e: any) {
         if (e?.response) throw e
         offline.value = true
+        writeServerEnabled(true)
         enabled.value = true
         timeoutMin.value = timeout
         kind.value = k
@@ -239,6 +290,7 @@ export function useScreenLock() {
         if (e?.response) throw e
         offline.value = true
       }
+      writeServerEnabled(false)
       await writeLocal(null, timeoutMin.value, kind.value)
     } catch {
       error.value = 'Не удалось выключить'

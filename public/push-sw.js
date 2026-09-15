@@ -1,25 +1,40 @@
+/**
+ * UPin push-воркер: подключается к сгенерированному sw.js через importScripts.
+ *
+ * Маршрутизация пуша:
+ * - окно в фокусе — realtime-шина (Echo) уже показала in-app тост,
+ *   системный баннер не дублируем, пейлоад отдаём странице сообщением `upin-push`;
+ * - окно видно, но не в фокусе / окон нет — всегда системный баннер;
+ * - подписка протухла (`pushsubscriptionchange`) — просим страницу переподписаться.
+ */
+
 let screenLocked = false
+
 self.addEventListener('message', (event) => {
   const d = event.data || {}
   if (d.type === 'screen-lock') screenLocked = !!d.locked
 })
-self.addEventListener('push', (event) => {
-  if (screenLocked) return
-  let data = {}
+
+function parsePushData(event) {
+  if (!event.data) return null
   try {
-    data = event.data ? event.data.json() : {}
+    return event.data.json() || {}
   } catch {
-    data = { body: event.data ? event.data.text() : '' }
+    const text = event.data.text()
+    return text ? { body: text } : null
   }
-  const visibleClient = (async () => {
-    try {
-      const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
-      return clients.some((c) => c.visibilityState === 'visible')
-    } catch {
-      return false
-    }
-  })()
-  const title = data.title || 'UPin'
+}
+
+async function focusedClients() {
+  try {
+    const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+    return all.filter((c) => c.visibilityState === 'visible' && c.focused !== false)
+  } catch {
+    return []
+  }
+}
+
+function buildOptions(data) {
   const options = {
     body: data.body || 'Новое уведомление',
     tag: data.tag || 'upin-push',
@@ -34,24 +49,69 @@ self.addEventListener('push', (event) => {
     dir: 'auto',
     data: { url: data.url || '/chat' },
   }
-  if (data.actions) options.actions = data.actions
+  if (Array.isArray(data.actions) && data.actions.length > 0) {
+    options.actions = data.actions
+  } else {
+    options.actions = [
+      { action: 'open', title: 'Открыть' },
+      { action: 'close', title: 'Закрыть' },
+    ]
+  }
+  return options
+}
+
+self.addEventListener('push', (event) => {
+  if (screenLocked) return
+  const data = parsePushData(event)
+  if (!data) return
+  const title = data.title || 'UPin'
+  const options = buildOptions(data)
   event.waitUntil(
     (async () => {
-      if (await visibleClient) return
+      const focused = await focusedClients()
+      if (focused.length > 0) {
+        for (const client of focused) {
+          try {
+            client.postMessage({ type: 'upin-push', push: data })
+          } catch {}
+        }
+        return
+      }
       await self.registration.showNotification(title, options)
+    })(),
+  )
+})
+
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil(
+    (async () => {
+      try {
+        const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+        for (const client of all) {
+          try {
+            client.postMessage({ type: 'upin-push-resubscribe' })
+          } catch {}
+        }
+      } catch {}
     })(),
   )
 })
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-  const url = (event.notification.data && event.notification.data.url) || '/'
-  const target = new URL(url, self.location.origin).href
+  if (event.action === 'close') return
+  const rawUrl = (event.notification.data && event.notification.data.url) || '/'
+  let target = rawUrl
+  try {
+    target = new URL(rawUrl, self.location.origin).href
+  } catch {
+    target = self.location.origin + '/'
+  }
   event.waitUntil(
     (async () => {
       const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
       for (const client of clients) {
-        if (client.url === target || client.url.startsWith(self.location.origin + url)) {
+        if (client.url === target) {
           await client.focus()
           return
         }

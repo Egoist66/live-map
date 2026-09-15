@@ -11,11 +11,22 @@ server {
     limit_conn_status 429;
     limit_conn addr 50;
 
+    server_tokens off;
+
+    # Базовые заголовки безопасности для всех ответов (динамика и статика).
+    # CSP и HSTS ставит Laravel (нужны per-request nonce и проверка HTTPS).
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "accelerometer=(), ambient-light-sensor=(), autoplay=(self), battery=(), bluetooth=(), browsing-topics=(), camera=(self), display-capture=(), document-domain=(), encrypted-media=(), fullscreen=(self), gamepad=(), geolocation=(self), gyroscope=(), hid=(), identity-credentials-get=(), idle-detection=(), local-fonts=(self), magnetometer=(), microphone=(self), midi=(), otp-credentials=(), payment=(self), picture-in-picture=(self), publickey-credentials-create=(self), publickey-credentials-get=(self), screen-wake-lock=(self), serial=(), speaker-selection=(), storage-access=(), sync-xhr=(), usb=(), web-share=(self), window-management=(), xr-spatial-tracking=()" always;
+    add_header Cross-Origin-Opener-Policy "same-origin-allow-popups" always;
+
     location ~ ^/(login|register|forgot-password|reset-password|email/verification-notification|confirm-password) {
         limit_req zone=auth burst=10 nodelay;
         proxy_http_version 1.1;
         proxy_set_header Host $http_host;
         proxy_set_header Scheme $scheme;
+        proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "Upgrade";
@@ -27,6 +38,7 @@ server {
         proxy_http_version 1.1;
         proxy_set_header Host $http_host;
         proxy_set_header Scheme $scheme;
+        proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "Upgrade";
@@ -37,6 +49,7 @@ server {
         proxy_http_version 1.1;
         proxy_set_header Host $http_host;
         proxy_set_header Scheme $scheme;
+        proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header SERVER_PORT $server_port;
         proxy_set_header REMOTE_ADDR $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -45,11 +58,24 @@ server {
         proxy_pass http://127.0.0.1:8080;
     }
 
+    # Картинки: хотлинк с чужих сайтов режем 403, свой сайт и прямые заходы — можно.
+    location ~* \.(jpg|jpeg|png|gif|webp|avif|svg|ico|bmp)$ {
+        limit_req zone=general burst=100 nodelay;
+        if ($hotlink_deny = 1) { return 403; }
+        proxy_http_version 1.1;
+        proxy_set_header Host $http_host;
+        proxy_set_header Scheme $scheme;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_pass http://127.0.0.1:8000;
+    }
+
     location / {
         limit_req zone=general burst=100 nodelay;
         proxy_http_version 1.1;
         proxy_set_header Host $http_host;
         proxy_set_header Scheme $scheme;
+        proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "Upgrade";

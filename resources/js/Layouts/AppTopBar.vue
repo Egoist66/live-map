@@ -26,16 +26,16 @@ const { isXxs } = useViewportBreakpoints()
     <span class="min-w-0 flex-1" />
 
     <div class="flex shrink-0 items-center gap-1 min-[411px]:gap-1.5 sm:gap-2">
-      <button v-if="lockEnabled" @click="emit('lock')" title="Заблокировать" aria-label="Заблокировать" class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow-soft hover:bg-stone-50 dark:hover:bg-zinc-700 transition active:scale-95 min-[411px]:h-10 min-[411px]:w-10">
+      <button v-if="lockEnabled" @click="emit('lock')" title="Заблокировать" aria-label="Заблокировать" class="topbar-round-btn grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow-soft hover:bg-stone-50 dark:hover:bg-zinc-700 transition active:scale-95 min-[411px]:h-10 min-[411px]:w-10">
         <i class="pi pi-lock text-stone-600 dark:text-zinc-300"></i>
       </button>
-      <button @click="emit('bell')" aria-label="Уведомления" class="relative grid h-9 w-9 place-items-center rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow-soft hover:bg-stone-50 dark:hover:bg-zinc-700 transition active:scale-95 min-[411px]:h-10 min-[411px]:w-10">
+      <button @click="emit('bell')" aria-label="Уведомления" class="topbar-round-btn relative grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow-soft hover:bg-stone-50 dark:hover:bg-zinc-700 transition active:scale-95 min-[411px]:h-10 min-[411px]:w-10">
         <i class="pi pi-bell text-sm text-stone-600 dark:text-zinc-300"></i>
         <span v-if="badgeTotal" class="absolute -top-1 -right-1 grid h-[18px] min-w-[18px] place-items-center rounded-full border-2 border-white dark:border-zinc-900 bg-red-500 px-1 text-[10px] font-bold text-white">{{ badgeTotal > 9 ? '9+' : badgeTotal }}</span>
         <span v-if="badgeTotal" class="absolute -top-1 -right-1 h-[18px] min-w-[18px] rounded-full bg-red-500 animate-ping opacity-30"></span>
       </button>
       <Link href="/map" class="hidden sm:inline-flex items-center gap-2 bg-ink-900 dark:bg-white dark:text-ink-900 text-white rounded-full px-5 py-2 text-sm font-semibold hover:bg-ink-800 transition whitespace-nowrap">+ Создать пин</Link>
-      <Button @click="emit('menu', $event)" severity="secondary" outlined rounded aria-label="Меню профиля" class="!p-1 !pl-1 sm:!pl-2 sm:!pr-3 !bg-white dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 shadow-soft">
+      <Button @click="emit('menu', $event)" severity="secondary" outlined rounded aria-label="Меню профиля" class="topbar-round-btn !p-1 !pl-1 sm:!pl-2 sm:!pr-3 !bg-white dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 shadow-soft">
         <Avatar :image="avatarSrc" shape="circle" size="normal" class="!w-7 !h-7" />
         <span class="text-sm font-semibold text-ink-900 dark:text-white max-w-[120px] truncate hidden sm:inline">{{ user?.name }}</span>
         <i class="pi pi-chevron-down text-xs text-stone-500 hidden sm:inline" />

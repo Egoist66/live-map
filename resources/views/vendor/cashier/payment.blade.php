@@ -182,7 +182,7 @@
         </div>
     </div>
 
-    <script>
+    <script nonce="{{ $cspNonce ?? '' }}">
         window.stripe = Stripe('{{ $stripeKey }}');
 
         new Vue({

@@ -10,6 +10,8 @@ import { createApp, DefineComponent, h } from 'vue'
 import { ZiggyVue } from '../../vendor/tightenco/ziggy'
 import { setupPrimeVue } from './plugins/primevue'
 import { register as registerSw } from './pwa/pwa.service'
+import { startPushBridges } from './pwa/push.service'
+import { hideSplash } from './composables/useSplash'
 import { useOverlaySafeArea } from './composables/useOverlaySafeArea'
 import { useLastRoute } from './composables/useLastRoute'
 
@@ -34,6 +36,12 @@ createInertiaApp({
     if (!import.meta.env.SSR) {
       try {
         registerSw()
+      } catch {}
+      try {
+        hideSplash()
+      } catch {}
+      try {
+        startPushBridges()
       } catch {}
       try {
         void import('./native/expo-push').then((m) => m.initExpoPushBinding()).catch(() => {})
