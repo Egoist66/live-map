@@ -21,6 +21,7 @@ import ProfileThoughtDialog from '@/Components/Features/Profile/ProfileThoughtDi
 import ReportDialog from '@/Components/Features/Map/ReportDialog.vue'
 import { useReportDialog } from '@/composables/useReportDialog'
 import { useProfileDesign } from '@/composables/useProfileDesign'
+import { useProfileLayout } from '@/composables/useProfileLayout'
 import { useProfileThought } from '@/composables/useProfileThought'
 import { planOf } from '@/composables/usePlanLimits'
 import { onMounted } from 'vue'
@@ -28,6 +29,7 @@ import { onMounted } from 'vue'
 const props = defineProps<{ profileUser: any; isOwn: boolean; friendship: any; isFriend: boolean; isPending: boolean; isBlocked?: boolean; isBlockedBy?: boolean; canMessage: boolean; canMessageReason: string | null; subscription?: { subscribed: boolean; notify_pin: boolean; notify_photo: boolean; notify_level: boolean; notify_post?: boolean } }>()
 
 const design = useProfileDesign(props)
+const { single: isSingleColumn } = useProfileLayout()
 const { page, gallery, people, search, photoComments } = design
 const reportDialog = useReportDialog()
 const thought = useProfileThought(() => props.profileUser.thought)
@@ -42,7 +44,7 @@ onMounted(async () => { await design.init() })
   <AuthenticatedLayout>
     <Toast />
     <div class="page-scroll bg-surface dark:bg-[#090E1A]">
-      <div class="max-w-[1040px] mx-auto px-3 sm:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4">
+      <div class="max-w-[1040px] lg:max-w-[1120px] mx-auto px-3 sm:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4">
         <div v-if="page.isLocked.value" class="rounded-[24px] border border-stone-200 bg-white shadow-soft p-6 flex flex-col items-center text-center gap-3 dark:border-zinc-800 dark:bg-zinc-900">
           <button type="button" class="h-16 w-16 overflow-hidden rounded-[22px] bg-stone-100 dark:bg-zinc-800" @click="page.showAvatar.value = true">
             <Avatar :image="page.avatarSrc.value" shape="square" class="!h-full !w-full [&_img]:object-cover" />
@@ -77,99 +79,123 @@ onMounted(async () => { await design.init() })
             @edit-thought="thought.openDialog()"
           />
 
+          <!-- Десктоп: две колонки в духе VK/FB — сайдбар + лента. Мобайл: одна лента как раньше. -->
           <div
-            v-if="!isOwn && !page.isLocked.value"
-            class="flex items-center gap-2 rounded-[24px] border border-stone-200 bg-white shadow-soft p-2.5 dark:border-zinc-800 dark:bg-zinc-900"
+            :class="isSingleColumn
+              ? 'space-y-3 sm:space-y-4'
+              : 'space-y-3 sm:space-y-4 lg:space-y-0 lg:grid lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-4 lg:items-start'"
           >
-            <Button
-              v-if="!page.isFriend.value && !page.isPending.value && !page.isBlocked.value"
-              label="В друзья"
-              icon="pi pi-user-plus"
-              rounded
-              :loading="page.profile.loading.value"
-              class="!flex-1 !rounded-full !border-0 !bg-ink-900 !text-[13px] !font-bold !text-white dark:!bg-white/[0.08] dark:!text-white hover:!opacity-90"
-              @click="page.onAdd()"
-            />
-            <Button
-              v-else-if="page.isFriend.value"
-              label="В друзьях"
-              icon="pi pi-check"
-              rounded
-              class="!flex-1 !rounded-full !border-0 !bg-emerald-50 !text-[13px] !font-bold !text-emerald-700 dark:!bg-emerald-500/15 dark:!text-emerald-300"
-              @click="page.askRemove()"
-            />
-            <Button
-              v-else-if="page.isPending.value"
-              label="Ожидает"
-              icon="pi pi-clock"
-              rounded
-              disabled
-              class="!flex-1 !rounded-full !border-0 !bg-stone-100 !text-[13px] !font-bold !text-stone-500 dark:!bg-white/[0.06] dark:!text-zinc-400"
-            />
-            <UserSubscribeButton
-              v-if="!page.isBlocked.value && page.isFriend.value"
-              :user-id="profileUser.id"
-              :initial="design.subscription"
-              :compact="true"
-              :is-friend="page.isFriend.value"
-            />
-            <ProfileMoreMenu
-              v-if="!page.isBlocked.value"
-              :user-id="profileUser.id"
-              :user-name="profileUser.name"
-              button-class="!w-10 !h-10 !p-0 !rounded-full !border-0 !bg-stone-100 !text-stone-600 dark:!bg-white/[0.06] dark:!text-zinc-200"
-              @share="page.share()"
-              @block="page.askBlock()"
-              @remove="page.askRemove()"
-              @report="reportDialog.openReport('user', profileUser.id, profileUser.name)"
-            />
-            <Button
-              v-else
-              label="Разблокировать"
-              icon="pi pi-ban"
-              :loading="page.profile.loading.value"
-              severity="danger"
-              outlined
-              rounded
-              class="!flex-1 !rounded-full !text-[13px] !font-bold"
-              @click="page.onUnblock()"
-            />
+            <aside class="min-w-0 space-y-3 sm:space-y-4">
+              <div
+                v-if="!isOwn && !page.isLocked.value"
+                class="flex items-center gap-2 rounded-[24px] border border-stone-200 bg-white shadow-soft p-2.5 dark:border-zinc-800 dark:bg-zinc-900"
+              >
+                <Button
+                  v-if="!page.isFriend.value && !page.isPending.value && !page.isBlocked.value"
+                  label="В друзья"
+                  icon="pi pi-user-plus"
+                  rounded
+                  :loading="page.profile.loading.value"
+                  class="!flex-1 !rounded-full !border-0 !bg-ink-900 !text-[13px] !font-bold !text-white dark:!bg-white/[0.08] dark:!text-white hover:!opacity-90"
+                  @click="page.onAdd()"
+                />
+                <Button
+                  v-else-if="page.isFriend.value"
+                  label="В друзьях"
+                  icon="pi pi-check"
+                  rounded
+                  class="!flex-1 !rounded-full !border-0 !bg-emerald-50 !text-[13px] !font-bold !text-emerald-700 dark:!bg-emerald-500/15 dark:!text-emerald-300"
+                  @click="page.askRemove()"
+                />
+                <Button
+                  v-else-if="page.isPending.value"
+                  label="Ожидает"
+                  icon="pi pi-clock"
+                  rounded
+                  disabled
+                  class="!flex-1 !rounded-full !border-0 !bg-stone-100 !text-[13px] !font-bold !text-stone-500 dark:!bg-white/[0.06] dark:!text-zinc-400"
+                />
+                <UserSubscribeButton
+                  v-if="!page.isBlocked.value && page.isFriend.value"
+                  :user-id="profileUser.id"
+                  :initial="design.subscription"
+                  :compact="true"
+                  :is-friend="page.isFriend.value"
+                />
+                <ProfileMoreMenu
+                  v-if="!page.isBlocked.value"
+                  :user-id="profileUser.id"
+                  :user-name="profileUser.name"
+                  button-class="!w-10 !h-10 !p-0 !rounded-full !border-0 !bg-stone-100 !text-stone-600 dark:!bg-white/[0.06] dark:!text-zinc-200"
+                  @share="page.share()"
+                  @block="page.askBlock()"
+                  @remove="page.askRemove()"
+                  @report="reportDialog.openReport('user', profileUser.id, profileUser.name)"
+                />
+                <Button
+                  v-else
+                  label="Разблокировать"
+                  icon="pi pi-ban"
+                  :loading="page.profile.loading.value"
+                  severity="danger"
+                  outlined
+                  rounded
+                  class="!flex-1 !rounded-full !text-[13px] !font-bold"
+                  @click="page.onUnblock()"
+                />
+              </div>
+
+              <div :class="isSingleColumn ? '' : 'lg:hidden'">
+                <ProfileDesignQuickNav
+                  :is-own="isOwn"
+                  variant="tiles"
+                  @profile="isOwn ? design.onEdit() : design.scrollTop()"
+                  @friends="people.openFriends(profileUser.id, profileUser.name)"
+                  @search="search.openDialog()"
+                  @share="page.share()"
+                />
+              </div>
+              <div :class="isSingleColumn ? 'hidden' : 'hidden lg:block'">
+                <ProfileDesignQuickNav
+                  :is-own="isOwn"
+                  variant="sidebar"
+                  @profile="isOwn ? design.onEdit() : design.scrollTop()"
+                  @friends="people.openFriends(profileUser.id, profileUser.name)"
+                  @search="search.openDialog()"
+                  @share="page.share()"
+                />
+              </div>
+
+              <ProfileDesignGallery
+                :photos="design.galleryPreview.value"
+                :loading="gallery.loading.value"
+                :add-slots="design.addSlots.value"
+                :uploading="gallery.uploading.value"
+                @all="gallery.openDialog()"
+                @open="(photo) => gallery.open(photo)"
+                @add="design.openPicker()"
+              />
+            </aside>
+
+            <div class="min-w-0 space-y-3 sm:space-y-4">
+              <ProfileDesignInfo
+                :status-text="design.statusText.value"
+                :online="page.online.value"
+                :user-name="profileUser.name"
+                :is-own="isOwn"
+                :age-text="design.infoTiles.ageText.value"
+                :gender-label="design.infoTiles.genderLabel.value"
+                :residence-text="design.infoTiles.residenceText.value"
+                :bio-text="design.page.bioText.value"
+                :bio-preview="design.bioPreview.value"
+                @edit="design.onEdit()"
+              />
+
+              <ProfileDesignSwipes @go="design.goSwipes()" />
+
+              <ProfileDesignFlow :user-id="profileUser.id" :is-own="isOwn" />
+            </div>
           </div>
-
-          <ProfileDesignQuickNav
-            :is-own="isOwn"
-            @profile="isOwn ? design.onEdit() : design.scrollTop()"
-            @friends="people.openFriends(profileUser.id, profileUser.name)"
-            @search="search.openDialog()"
-            @share="page.share()"
-          />
-
-          <ProfileDesignGallery
-            :photos="design.galleryPreview.value"
-            :loading="gallery.loading.value"
-            :add-slots="design.addSlots.value"
-            :uploading="gallery.uploading.value"
-            @all="gallery.openDialog()"
-            @open="(photo) => gallery.open(photo)"
-            @add="design.openPicker()"
-          />
-
-          <ProfileDesignInfo
-            :status-text="design.statusText.value"
-            :online="page.online.value"
-            :user-name="profileUser.name"
-            :is-own="isOwn"
-            :age-text="design.infoTiles.ageText.value"
-            :gender-label="design.infoTiles.genderLabel.value"
-            :residence-text="design.infoTiles.residenceText.value"
-            :bio-text="design.page.bioText.value"
-            :bio-preview="design.bioPreview.value"
-            @edit="design.onEdit()"
-          />
-
-          <ProfileDesignSwipes @go="design.goSwipes()" />
-
-          <ProfileDesignFlow :user-id="profileUser.id" :is-own="isOwn" />
         </template>
 
         <ProfileFriendsDialog :people="people" />

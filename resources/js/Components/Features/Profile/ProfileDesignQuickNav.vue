@@ -1,7 +1,14 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-const props = withDefaults(defineProps<{ isOwn?: boolean }>(), { isOwn: true })
+const props = withDefaults(
+  defineProps<{
+    isOwn?: boolean
+    /** tiles — плитка для мобайла, sidebar — вертикальное меню для десктоп-сайдбара в духе VK. */
+    variant?: 'tiles' | 'sidebar'
+  }>(),
+  { isOwn: true, variant: 'tiles' },
+)
 
 const emit = defineEmits<{
   (e: 'profile'): void
@@ -63,7 +70,27 @@ function onAction(key: QuickNavKey): void {
 </script>
 
 <template>
-  <nav aria-label="Быстрые действия профиля" class="grid gap-2 sm:gap-3" :class="actions.length === 4 ? 'grid-cols-4' : 'grid-cols-3'">
+  <nav
+    v-if="variant === 'sidebar'"
+    aria-label="Меню профиля"
+    class="rounded-[24px] border border-stone-200 bg-white shadow-soft p-2 dark:border-zinc-800 dark:bg-zinc-900"
+  >
+    <button
+      v-for="action in actions"
+      :key="action.key"
+      type="button"
+      class="group flex w-full items-center gap-3 rounded-2xl px-2.5 py-2.5 text-left transition hover:bg-stone-100 active:scale-[0.99] dark:hover:bg-white/[0.06]"
+      @click="onAction(action.key)"
+    >
+      <span :class="['grid h-10 w-10 shrink-0 place-items-center rounded-xl border', action.tile]">
+        <i :class="[action.icon, action.iconColor, 'text-base drop-shadow']"></i>
+      </span>
+      <span class="min-w-0 flex-1 truncate text-sm font-bold text-ink-900 dark:text-zinc-100">{{ action.label }}</span>
+      <i class="pi pi-chevron-right shrink-0 text-xs text-stone-300 transition group-hover:translate-x-0.5 dark:text-zinc-600"></i>
+    </button>
+  </nav>
+
+  <nav v-else aria-label="Быстрые действия профиля" class="grid gap-2 sm:gap-3" :class="actions.length === 4 ? 'grid-cols-4' : 'grid-cols-3'">
     <div v-for="action in actions" :key="action.key" class="flex min-w-0 flex-col items-center gap-1.5">
       <button
         type="button"

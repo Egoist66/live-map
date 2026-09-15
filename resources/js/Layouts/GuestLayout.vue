@@ -3,6 +3,7 @@ import { Link } from '@inertiajs/vue3'
 import Card from 'primevue/card'
 import PageTransition from '@/Components/Features/Feedback/PageTransition.vue'
 import AppFooter from '@/Layouts/AppFooter.vue'
+import BrandMark from '@/Components/Brand/BrandMark.vue'
 import PwaInstallBanner from '@/Components/Features/Pwa/PwaInstallBanner.vue'
 import PwaUpdateBanner from '@/Components/Features/Pwa/PwaUpdateBanner.vue'
 const isFaq = route().current('faq')
@@ -18,7 +19,7 @@ const isFaq = route().current('faq')
       </div>
       <div class="relative p-8 xl:p-9 flex flex-col w-full">
         <Link href="/" class="flex items-center gap-2.5 shrink-0">
-          <span class="w-9 h-9 rounded-xl bg-white text-ink-900 grid place-items-center font-black text-sm shadow-soft">◉</span>
+          <span class="w-9 h-9 rounded-xl overflow-hidden shadow-soft shrink-0 grid place-items-center"><BrandMark class="h-full w-full" /></span>
           <span class="font-black tracking-[-0.03em] text-xl">U<span class="font-light opacity-80">Pin</span></span>
         </Link>
         <div class="mt-8">
@@ -52,7 +53,7 @@ const isFaq = route().current('faq')
         <template v-else>
           <div class="w-full max-w-[440px] min-w-0">
             <Link href="/" class="lg:hidden flex items-center gap-2.5 mb-5 sm:mb-6">
-              <span class="w-9 h-9 rounded-xl bg-ink-900 dark:bg-white text-white dark:text-ink-900 grid place-items-center text-sm shrink-0">◉</span>
+              <span class="w-9 h-9 rounded-xl overflow-hidden shrink-0 grid place-items-center"><BrandMark class="h-full w-full" /></span>
               <span class="font-black tracking-[-0.03em] text-xl text-ink-900 dark:text-white">U<span class="font-light text-ink-600 dark:text-zinc-400">Pin</span></span>
             </Link>
             <Card class="w-full max-w-full !bg-white dark:!bg-zinc-900 !border !border-stone-200/70 dark:!border-zinc-800 !rounded-[20px] sm:!rounded-[24px] !shadow-float !p-0">

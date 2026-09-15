@@ -1,9 +1,10 @@
 /**
- * Стартовый splash-экран PWA.
+ * Тонкий градиентный лоадер сверху (`#mini-loader`).
  *
- * Разметка и стили заставки живут инлайном в `resources/views/app.blade.php`,
- * чтобы первый кадр рисовался до загрузки CSS/JS (cold start PWA).
- * Этот хук только гасит заставку после монтирования Vue.
+ * Разметка и стили живут инлайном в `resources/views/app.blade.php`,
+ * чтобы первый кадр рисовался до загрузки CSS/JS.
+ * Системный сплэш PWA (иконка + UPin из манифеста) рисует сам Chrome,
+ * этот хук гасит только наш `#mini-loader` после монтирования Vue.
  * Фолбэк-таймеры внутри blade дублируют скрытие на случай сбоя JS.
  *
  * @example
@@ -14,24 +15,45 @@
  * ```
  */
 
-const SPLASH_ID = 'pwa-splash'
-const REMOVE_AFTER_MS = 750
-const PAINT_DELAY_MS = 350
+const LOADER_ID = 'mini-loader'
+const LEGACY_SPLASH_ID = 'pwa-splash'
+const REMOVE_AFTER_MS = 500
+const PAINT_DELAY_MS = 100
 
 type BladeSplashBridge = {
   __upinHideSplash?: () => void
 }
 
-function splashEl(): HTMLElement | null {
+/**
+ * Найти узел лоадера в DOM.
+ *
+ * @returns узел лоадера или null
+ */
+function loaderEl(): HTMLElement | null {
   if (typeof document === 'undefined') {
     return null
   }
 
-  return document.getElementById(SPLASH_ID)
+  return document.getElementById(LOADER_ID)
 }
 
 /**
- * Плавно скрыть splash и убрать узел из DOM.
+ * Убрать остаток legacy-сплэша, если он вдруг остался в DOM.
+ */
+function removeLegacySplash(): void {
+  if (typeof document === 'undefined') {
+    return
+  }
+
+  const legacy = document.getElementById(LEGACY_SPLASH_ID)
+
+  if (legacy) {
+    legacy.remove()
+  }
+}
+
+/**
+ * Плавно скрыть лоадер и убрать узел из DOM.
  */
 export function hideSplash(): void {
   const bridge = window as unknown as BladeSplashBridge
@@ -46,29 +68,35 @@ export function hideSplash(): void {
     return
   }
 
-  const el = splashEl()
+  const el = loaderEl()
 
   if (!el) {
+    removeLegacySplash()
+
     return
   }
 
   el.classList.add('done')
-  window.setTimeout(() => el.remove(), REMOVE_AFTER_MS)
+
+  window.setTimeout(() => {
+    el.remove()
+    removeLegacySplash()
+  }, REMOVE_AFTER_MS)
 }
 
 /**
- * Хук-обёртка над скрытием splash-экрана.
+ * Хук-обёртка над скрытием лоадера.
  *
- * @returns методы скрытия и проверки видимости заставки
+ * @returns методы скрытия и проверки видимости лоадера
  */
 export function useSplash() {
   /**
-   * Проверить, видна ли заставка прямо сейчас.
+   * Проверить, виден ли лоадер прямо сейчас.
    *
-   * @returns true, если узел splash ещё в DOM
+   * @returns true, если узел лоадера ещё в DOM
    */
   function isVisible(): boolean {
-    return splashEl() !== null
+    return loaderEl() !== null
   }
 
   return { hideSplash, isVisible }

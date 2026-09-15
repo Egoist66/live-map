@@ -2,6 +2,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { Head } from '@inertiajs/vue3'
 import Toast from 'primevue/toast'
+import Button from 'primevue/button'
 import AvatarPreview from '@/Components/Features/Media/AvatarPreview.vue'
 import ProfileDesignHero from '@/Components/Features/Profile/ProfileDesignHero.vue'
 import ProfileDesignQuickNav from '@/Components/Features/Profile/ProfileDesignQuickNav.vue'
@@ -15,6 +16,7 @@ import ProfilePhotoViewer from '@/Components/Features/Profile/ProfilePhotoViewer
 import ChatSearchDialog from '@/Components/Features/Chat/ChatSearchDialog.vue'
 import ProfileThoughtDialog from '@/Components/Features/Profile/ProfileThoughtDialog.vue'
 import { useDashboardDesign } from '@/composables/useDashboardDesign'
+import { useProfileLayout } from '@/composables/useProfileLayout'
 import { useProfileThought } from '@/composables/useProfileThought'
 import { planOf } from '@/composables/usePlanLimits'
 import { onMounted } from 'vue'
@@ -22,6 +24,7 @@ import { onMounted } from 'vue'
 const props = defineProps<{ user: any; isOwn?: boolean }>()
 
 const design = useDashboardDesign(props.user, props.isOwn)
+const { single: isSingleColumn } = useProfileLayout()
 const { dash, gallery, people, search, photoComments } = design
 const thought = useProfileThought(() => dash.u.value.thought)
 const pickerInput = design.pickerInput
@@ -35,7 +38,7 @@ onMounted(async () => { await design.init() })
   <AuthenticatedLayout>
     <Toast />
     <div class="page-scroll bg-surface dark:bg-[#090E1A]">
-      <div class="max-w-[1040px] mx-auto px-3 sm:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4">
+      <div class="max-w-[1040px] lg:max-w-[1120px] mx-auto px-3 sm:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4">
         <button
           v-if="dash.isAdmin.value && dash.isOwn.value"
           type="button"
@@ -46,6 +49,8 @@ onMounted(async () => { await design.init() })
           <span class="truncate">Модератор · Панель модерации →</span>
         </button>
 
+
+      
         <ProfileDesignHero
           :user="dash.u.value"
           :avatar-src="dash.avatarSrc.value"
@@ -68,39 +73,63 @@ onMounted(async () => { await design.init() })
           @edit-thought="thought.openDialog()"
         />
 
-        <ProfileDesignQuickNav
-          @profile="dash.goSettings()"
-          @friends="people.openFriends(dash.u.value.id, dash.u.value.name)"
-          @search="search.openDialog()"
-          @share="dash.share()"
-        />
+        <!-- Десктоп: две колонки в духе VK/FB — сайдбар + лента. Мобайл: одна лента как раньше. -->
+        <div
+          :class="isSingleColumn
+            ? 'space-y-3 sm:space-y-4'
+            : 'space-y-3 sm:space-y-4 lg:space-y-0 lg:grid lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-4 lg:items-start'"
+        >
+          <aside class="min-w-0 space-y-3 sm:space-y-4">
+            <!-- Одна колонка: ряд-плитка на любой ширине. Две: плитка на мобайле, меню на десктопе. -->
+            <div :class="isSingleColumn ? '' : 'lg:hidden'">
+              <ProfileDesignQuickNav
+                variant="tiles"
+                @profile="dash.goSettings()"
+                @friends="people.openFriends(dash.u.value.id, dash.u.value.name)"
+                @search="search.openDialog()"
+                @share="dash.share()"
+              />
+            </div>
+            <div :class="isSingleColumn ? 'hidden' : 'hidden lg:block'">
+              <ProfileDesignQuickNav
+                variant="sidebar"
+                @profile="dash.goSettings()"
+                @friends="people.openFriends(dash.u.value.id, dash.u.value.name)"
+                @search="search.openDialog()"
+                @share="dash.share()"
+              />
+            </div>
 
-        <ProfileDesignGallery
-          :photos="design.galleryPreview.value"
-          :loading="gallery.loading.value"
-          :add-slots="design.addSlots.value"
-          :uploading="gallery.uploading.value"
-          @all="gallery.openDialog()"
-          @open="(photo) => gallery.open(photo)"
-          @add="design.openPicker()"
-        />
+            <ProfileDesignGallery
+              :photos="design.galleryPreview.value"
+              :loading="gallery.loading.value"
+              :add-slots="design.addSlots.value"
+              :uploading="gallery.uploading.value"
+              @all="gallery.openDialog()"
+              @open="(photo) => gallery.open(photo)"
+              @add="design.openPicker()"
+            />
+          </aside>
 
-        <ProfileDesignInfo
-          :status-text="design.statusText.value"
-          :online="dash.presence.value.active"
-          :user-name="dash.u.value.name"
-          :is-own="true"
-          :age-text="design.infoTiles.ageText.value"
-          :gender-label="design.infoTiles.genderLabel.value"
-          :residence-text="design.infoTiles.residenceText.value"
-          :bio-text="dash.bioText.value"
-          :bio-preview="design.bioPreview.value"
-          @edit="dash.goSettings()"
-        />
+          <div class="min-w-0 space-y-3 sm:space-y-4">
+            <ProfileDesignInfo
+              :status-text="design.statusText.value"
+              :online="dash.presence.value.active"
+              :user-name="dash.u.value.name"
+              :is-own="true"
+              :age-text="design.infoTiles.ageText.value"
+              :gender-label="design.infoTiles.genderLabel.value"
+              :residence-text="design.infoTiles.residenceText.value"
+              :bio-text="dash.bioText.value"
+              :bio-preview="design.bioPreview.value"
+              @edit="dash.goSettings()"
+            />
 
-        <ProfileDesignSwipes @go="design.goSwipes()" />
+            <ProfileDesignSwipes @go="design.goSwipes()" />
 
-        <ProfileDesignFlow :user-id="dash.u.value.id" :is-own="true" />
+            <ProfileDesignFlow :user-id="dash.u.value.id" :is-own="true" />
+          </div>
+        </div>
 
         <ProfileFriendsDialog :people="people" />
         <ProfileThoughtDialog :open="thought.open.value" :draft="thought.draft.value" :saving="thought.saving.value" :error="thought.error.value" @update:draft="(v:string)=>thought.setDraft(v)" @close="thought.close()" @save="thought.save()" />

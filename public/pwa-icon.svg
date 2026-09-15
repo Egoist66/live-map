@@ -1,5 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#5B5BFF"/>
+  <defs>
+    <linearGradient id="upin-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6D6DFF"/>
+      <stop offset="1" stop-color="#4A3AFF"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#upin-bg)"/>
   <path d="M256 108c-70 0-122 52-122 120 0 92 112 176 112 176s112-84 112-176c0-68-52-120-102-120z" fill="#fff"/>
   <circle cx="256" cy="228" r="52" fill="#5B5BFF"/>
   <circle cx="256" cy="228" r="22" fill="#fff"/>
