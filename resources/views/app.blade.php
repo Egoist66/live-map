@@ -221,24 +221,6 @@
             0% { transform: translateX(-110%); }
             100% { transform: translateX(280%); }
           }
-          #pwa-splash .sp-love {
-            margin: 22px 0 0;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 12.5px;
-            font-weight: 500;
-            letter-spacing: .02em;
-            color: rgba(255, 255, 255, .62);
-          }
-          #pwa-splash .sp-love svg {
-            animation: sp-beat 1.4s ease-in-out infinite;
-          }
-          @keyframes sp-beat {
-            0%, 100% { transform: scale(1); }
-            25% { transform: scale(1.22); }
-            45% { transform: scale(1); }
-          }
           #pwa-splash .sp-ping {
             transform-origin: center;
             transform-box: fill-box;
@@ -335,13 +317,6 @@
                     <span class="sp-chip">💞 ULove</span>
                 </div>
                 <div class="sp-bar"><span></span></div>
-                <div class="sp-love">
-                    сделано с
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="#FF6B8B" aria-hidden="true">
-                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                    </svg>
-                    ulove к своему району
-                </div>
             </div>
         </div>
         <script nonce="{{ $cspNonce ?? '' }}">

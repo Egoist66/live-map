@@ -2,7 +2,6 @@
 import { Link } from '@inertiajs/vue3'
 import ApplicationLogo from '@/Components/Brand/ApplicationLogo.vue'
 import Avatar from 'primevue/avatar'
-import Button from 'primevue/button'
 import { useViewportBreakpoints } from '@/composables/useViewportBreakpoints'
 
 defineProps<{ user: any; avatarSrc: string; dashboardHref: string; badgeTotal: number; lockEnabled?: boolean }>()
@@ -35,11 +34,10 @@ const { isXxs } = useViewportBreakpoints()
         <span v-if="badgeTotal" class="absolute -top-1 -right-1 h-[18px] min-w-[18px] rounded-full bg-red-500 animate-ping opacity-30"></span>
       </button>
       <Link href="/map" class="hidden sm:inline-flex items-center gap-2 bg-ink-900 dark:bg-white dark:text-ink-900 text-white rounded-full px-5 py-2 text-sm font-semibold hover:bg-ink-800 transition whitespace-nowrap">+ Создать пин</Link>
-      <Button @click="emit('menu', $event)" severity="secondary" outlined rounded aria-label="Меню профиля" class="topbar-round-btn !p-1 !pl-1 sm:!pl-2 sm:!pr-3 !bg-white dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 shadow-soft">
-        <Avatar :image="avatarSrc" shape="circle" size="normal" class="!w-7 !h-7" />
+      <button @click="emit('menu', $event)" aria-label="Меню профиля" class="grid h-10 w-10 !min-h-[40px] shrink-0 place-items-center overflow-hidden rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow-soft hover:bg-stone-50 dark:hover:bg-zinc-700 transition active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-brand-500/60 sm:flex sm:h-11 sm:w-auto sm:items-center sm:gap-2 sm:px-3">
+        <Avatar :image="avatarSrc" shape="circle" size="normal" class="!w-8 !h-8" />
         <span class="text-sm font-semibold text-ink-900 dark:text-white max-w-[120px] truncate hidden sm:inline">{{ user?.name }}</span>
-        <i class="pi pi-chevron-down text-xs text-stone-500 hidden sm:inline" />
-      </Button>
+      </button>
     </div>
   </div>
 </template>

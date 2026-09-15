@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Vite;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -36,6 +37,9 @@ class SecurityHeaders
     {
         $nonce = base64_encode(random_bytes(16));
         view()->share('cspNonce', $nonce);
+        // Подписываем тем же nonce инлайн-скрипт префетча чанков,
+        // который генерирует сам Vite (@vite) — иначе его режет script-src.
+        Vite::useCspNonce($nonce);
 
         /** @var Response $response */
         $response = $next($request);
@@ -77,6 +81,9 @@ class SecurityHeaders
             "'self'",
             'data:',
             'blob:',
+            // Любой https: картинки/шрифты скрипты не исполняют, а хосты
+            // хранилищ и CDN-редиректы заранее не перечислить (S3, бани…).
+            'https:',
             'https://tile.openstreetmap.org',
             'https://*.tile.openstreetmap.org',
             'https://basemaps.cartocdn.com',
@@ -107,7 +114,7 @@ class SecurityHeaders
             "default-src 'self'",
             'script-src '.implode(' ', array_unique($script)),
             'style-src '.implode(' ', array_unique($style)),
-            "font-src 'self' https://fonts.bunny.net data:",
+            "font-src 'self' https://fonts.bunny.net https: data:",
             'img-src '.implode(' ', array_unique($img)),
             "media-src 'self' blob: data:",
             'connect-src '.implode(' ', array_unique($connect)),
