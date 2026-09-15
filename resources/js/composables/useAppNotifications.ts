@@ -1,7 +1,7 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
 import { avatarSrcFor } from '@/composables/useAvatar'
-import { getSubscription, showLocal, type ForegroundPush } from '@/pwa/push.service'
+import { showLocal, type ForegroundPush } from '@/pwa/push.service'
 import { useScreenLock } from '@/composables/useScreenLock'
 import { useFileDownload } from '@/composables/useFileDownload'
 import { busOn } from '@/services/realtime-bus'
@@ -109,11 +109,12 @@ function push(t: AppToast) {
   } catch {}
 }
 /**
- * Системный баннер для скрытой вкладки — без дубля с серверным web-push.
+ * Системный баннер для скрытой вкладки — быстрый локальный путь.
  *
- * Если у устройства есть push-подписка, серверный пуш уже покажет баннер
- * через SW — локальный не нужен. Тег стабилен на событие, чтобы повтор
- * заменил баннер, а не сложил второй.
+ * Срабатывает из шины (`user:message.sent` несут и сокет Echo, и поллер),
+ * поэтому покрывает оба транспорта realtime. Показывается всегда, а не
+ * только без push-подписки: тег стабилен на событие и совпадает с серверным
+ * web-push, так что долетевший позже серверный баннер заменит локальный.
  */
 async function notifyHidden(t: AppToast): Promise<void> {
   // Нативный мост: скрытая вкладка внутри WebView (фон/свёрнуто) — просим приложение
@@ -135,11 +136,25 @@ async function notifyHidden(t: AppToast): Promise<void> {
     }
   } catch {}
   try {
-    const sub = await getSubscription().catch(() => null)
-    if (sub) return
-    const tag = t.id.replace(/-\d+$/, '')
+    const tag = stableHiddenTag(t)
     await showLocal(t.title, { body: t.body, url: t.link, avatar: t.avatar, tag })
   } catch {}
+}
+/**
+ * Стабильный тег системного баннера: для чата совпадает с серверным
+ * web-push (`chat-{id}`), повторы заменяют баннер, а не плодят новый.
+ *
+ * @param t тост, для которого строится тег
+ * @returns тег уведомления
+ */
+function stableHiddenTag(t: AppToast): string {
+  if (t.type === 'message') {
+    const match = t.link.match(/\/chat\/(\d+)/)
+    if (match) {
+      return `chat-${match[1]}`
+    }
+  }
+  return t.id.replace(/-\d+$/, '')
 }
 function remove(id: string) {
   toasts.value = toasts.value.filter(x => x.id !== id)

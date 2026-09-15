@@ -127,12 +127,13 @@ export function subscriptionPayload(sub: PushSubscription): { endpoint: string; 
 export async function showLocal(title: string, options: LocalNotifyOptions = {}): Promise<void> {
   if (!('Notification' in window) || Notification.permission !== 'granted') return
   const { body, tag, url, avatar } = options
-  const payload: NotificationOptions & { vibrate?: number[] } = {
+  const payload: NotificationOptions & { vibrate?: number[]; renotify?: boolean } = {
     body: body ?? '',
     tag: tag ?? `local-${Date.now()}`,
     icon: avatar || APP_ICON,
     badge: APP_BADGE,
     vibrate: [120, 60, 120],
+    renotify: true,
     data: url ? { url } : undefined,
   }
   try {

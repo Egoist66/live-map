@@ -14,6 +14,7 @@ import { useAuthSession } from '@/composables/useAuthSession'
 import { useLastRoute } from '@/composables/useLastRoute'
 import { useRealtimeMode } from '@/composables/useRealtimeMode'
 import { useRealtimePoller, watchRealtimeMode } from '@/composables/useRealtimePoller'
+import { usePwaPushAuto } from '@/composables/usePwaPushAuto'
 
 export function useAppLayout() {
   const badge = useBadgeStore()
@@ -29,6 +30,7 @@ export function useAppLayout() {
   const authSession = useAuthSession()
   const realtimeMode = useRealtimeMode()
   const realtimePoller = useRealtimePoller()
+  usePwaPushAuto()
   const menu = ref()
   const isAdmin = computed(() => !!user.value?.is_admin || user.value?.role === 'admin')
   const menuItems = computed(() => [

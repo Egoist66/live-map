@@ -28,7 +28,7 @@ function parsePushData(event) {
 async function focusedClients() {
   try {
     const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
-    return all.filter((c) => c.visibilityState === 'visible' && c.focused !== false)
+    return all.filter((c) => c.visibilityState === 'visible' && c.focused === true)
   } catch {
     return []
   }
