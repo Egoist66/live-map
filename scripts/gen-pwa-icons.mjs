@@ -3,8 +3,9 @@
  *
  * Рисует фирменный пин (белый круг + клин, бренд-ядро) на градиенте
  * #6D6DFF → #4A3AFF — та же геометрия, что в `public/pwa-icon.svg`.
- * Пишет PNG (192/512/maskable/apple-touch) и настоящий `favicon.ico`
- * (PNG внутри ICO-контейнера) вместо прежнего пустого файла.
+ * Рендер с суперсэмплингом: ровные края без лесенки на любых размерах.
+ * Пишет PNG (192/512/maskable/apple-touch) и настоящий мульти-`favicon.ico`
+ * (кадры 16/32/48, чёткий во вкладках) вместо прежнего пустого файла.
  *
  * Запуск: `node scripts/gen-pwa-icons.mjs`
  */
@@ -76,39 +77,60 @@ function inPinTriangle(px, py) {
 }
 
 /**
- * Растр иконки: фон-градиент, скругление, пин заданного масштаба.
+ * Цвет точки в дизайн-координатах: ровная геометрия пина,
+ * альфа отдельно — край сглаживается честно на любом фоне.
  */
-function paint(size, { rounded, pinScale, pinShiftY }) {
+function shadeAt(fx, fy, size, { rounded, pinScale, pinShiftY }) {
+  let alpha = 255
+  if (rounded) {
+    const radius = (112 / 512) * size
+    const cx = Math.min(Math.max(fx, radius), size - radius)
+    const cy = Math.min(Math.max(fy, radius), size - radius)
+    if (dist2(fx, fy, cx, cy) > radius * radius) alpha = 0
+  }
+  const t = fy / size
+  const dx = (fx / size) * 512
+  const dy = (fy / size) * 512
+  const qx = (dx - 256) / pinScale + 256
+  const qy = (dy - 256 - pinShiftY) / pinScale + 256
+  const inWhite = dist2(qx, qy, 256, 218) <= 116 * 116 || inPinTriangle(qx, qy)
+  const inBrand = dist2(qx, qy, 256, 218) <= 52 * 52
+  const inCore = dist2(qx, qy, 256, 218) <= 22 * 22
+  let rgb = [0, 1, 2].map((i) => BG_TOP[i] + (BG_BOTTOM[i] - BG_TOP[i]) * t)
+  if (inWhite) rgb = WHITE
+  if (inBrand) rgb = BRAND
+  if (inCore) rgb = WHITE
+  return [rgb[0], rgb[1], rgb[2], alpha]
+}
+
+/**
+ * Растр иконки: фон-градиент, скругление, пин заданного масштаба.
+ * Суперсэмплинг: мелким размерам больше сэмплов — там лесенка заметнее.
+ */
+function paint(size, opts) {
+  const samples = size >= 256 ? 4 : 8
   const px = Buffer.alloc(size * size * 4)
-  const radius = (112 / 512) * size
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       const o = (y * size + x) * 4
-      if (rounded) {
-        const cx = Math.min(Math.max(x + 0.5, radius), size - radius)
-        const cy = Math.min(Math.max(y + 0.5, radius), size - radius)
-        if (dist2(x + 0.5, y + 0.5, cx, cy) > radius * radius) {
-          px[o + 3] = 0
-          continue
+      let r = 0
+      let g = 0
+      let b = 0
+      let a = 0
+      for (let sy = 0; sy < samples; sy++) {
+        for (let sx = 0; sx < samples; sx++) {
+          const c = shadeAt(x + (sx + 0.5) / samples, y + (sy + 0.5) / samples, size, opts)
+          r += c[0]
+          g += c[1]
+          b += c[2]
+          a += c[3]
         }
       }
-      const t = y / Math.max(size - 1, 1)
-      const bg = [0, 1, 2].map((i) => Math.round(BG_TOP[i] + (BG_BOTTOM[i] - BG_TOP[i]) * t))
-      const dx = ((x + 0.5) / size) * 512
-      const dy = ((y + 0.5) / size) * 512
-      const qx = (dx - 256) / pinScale + 256
-      const qy = (dy - 256 - pinShiftY) / pinScale + 256
-      const inWhite = dist2(qx, qy, 256, 218) <= 116 * 116 || inPinTriangle(qx, qy)
-      const inBrand = dist2(qx, qy, 256, 218) <= 52 * 52
-      const inCore = dist2(qx, qy, 256, 218) <= 22 * 22
-      let rgb = bg
-      if (inWhite) rgb = WHITE
-      if (inBrand) rgb = BRAND
-      if (inCore) rgb = WHITE
-      px[o] = rgb[0]
-      px[o + 1] = rgb[1]
-      px[o + 2] = rgb[2]
-      px[o + 3] = 255
+      const n = samples * samples
+      px[o] = Math.round(r / n)
+      px[o + 1] = Math.round(g / n)
+      px[o + 2] = Math.round(b / n)
+      px[o + 3] = Math.round(a / n)
     }
   }
   return encodePng(size, px)
@@ -121,23 +143,30 @@ function writePng(size, opts, out) {
 }
 
 /**
- * Настоящий .ico: PNG-кадр внутри ICO-контейнера (понимают все браузеры).
+ * Настоящий мульти-.ico: PNG-кадры 16/32/48 внутри ICO-контейнера.
+ * Каждый размер рисуется нативно — чётко во вкладках и закладках.
  */
-function writeIco(png, out) {
+function writeIco(entries, out) {
   const header = Buffer.alloc(6)
   header.writeUInt16LE(0, 0)
   header.writeUInt16LE(1, 2)
-  header.writeUInt16LE(1, 4)
-  const entry = Buffer.alloc(16)
-  entry[0] = 64
-  entry[1] = 64
-  entry[2] = 0
-  entry[3] = 0
-  entry.writeUInt16LE(1, 4)
-  entry.writeUInt16LE(32, 6)
-  entry.writeUInt32LE(png.length, 8)
-  entry.writeUInt32LE(22, 12)
-  const file = Buffer.concat([header, entry, png])
+  header.writeUInt16LE(entries.length, 4)
+  let offset = 6 + 16 * entries.length
+  const dir = []
+  for (const e of entries) {
+    const entry = Buffer.alloc(16)
+    entry[0] = e.size >= 256 ? 0 : e.size
+    entry[1] = e.size >= 256 ? 0 : e.size
+    entry[2] = 0
+    entry[3] = 0
+    entry.writeUInt16LE(1, 4)
+    entry.writeUInt16LE(32, 6)
+    entry.writeUInt32LE(e.png.length, 8)
+    entry.writeUInt32LE(offset, 12)
+    offset += e.png.length
+    dir.push(entry)
+  }
+  const file = Buffer.concat([header, ...dir, ...entries.map((e) => e.png)])
   writeFileSync(out, file)
   console.log('wrote', out, file.length)
 }
@@ -151,5 +180,8 @@ writePng(512, full, 'public/pwa-512x512.png')
 writePng(512, maskable, 'public/maskable-512x512.png')
 writePng(180, touch, 'public/apple-touch-icon.png')
 
-const faviconPng = paint(64, { rounded: true, pinScale: 0.9, pinShiftY: 0 })
-writeIco(faviconPng, 'public/favicon.ico')
+const faviconFrames = [48, 32, 16].map((s) => ({
+  size: s,
+  png: paint(s, { rounded: true, pinScale: 0.9, pinShiftY: 0 }),
+}))
+writeIco(faviconFrames, 'public/favicon.ico')

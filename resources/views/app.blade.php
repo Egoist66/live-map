@@ -146,6 +146,24 @@
             justify-content: center;
             box-shadow: 0 18px 60px -12px rgba(91, 91, 255, .75), inset 0 1px 0 rgba(255, 255, 255, .35);
             animation: sp-float 3.2s ease-in-out infinite;
+            position: relative;
+            overflow: hidden;
+          }
+          #pwa-splash .sp-logo::after {
+            content: '';
+            position: absolute;
+            top: -20%;
+            bottom: -20%;
+            width: 45%;
+            left: -60%;
+            background: linear-gradient(105deg, transparent, rgba(255, 255, 255, .5), transparent);
+            transform: skewX(-18deg);
+            pointer-events: none;
+            animation: sp-shine 2.6s ease-in-out infinite;
+          }
+          @keyframes sp-shine {
+            0% { left: -60%; }
+            55%, 100% { left: 130%; }
           }
           @keyframes sp-float {
             0%, 100% { transform: translateY(0); }
@@ -158,6 +176,17 @@
             line-height: 1;
             font-weight: 800;
             letter-spacing: .01em;
+          }
+          #pwa-splash .sp-hook {
+            margin-top: 10px;
+            font-size: 17px;
+            font-weight: 700;
+            letter-spacing: .01em;
+            background: linear-gradient(90deg, #A5AAFF, #67E8F9 50%, #FDA4AF);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            animation: sp-rise .7s .12s cubic-bezier(.22, 1, .36, 1) both;
           }
           #pwa-splash .sp-tag {
             margin-top: 12px;
@@ -172,6 +201,7 @@
             color: #DDE1FF;
             background: rgba(255, 255, 255, .08);
             border: 1px solid rgba(255, 255, 255, .14);
+            animation: sp-rise .7s .2s cubic-bezier(.22, 1, .36, 1) both;
           }
           #pwa-splash .sp-dot {
             width: 8px;
@@ -191,6 +221,7 @@
             gap: 8px;
             flex-wrap: wrap;
             justify-content: center;
+            animation: sp-rise .7s .28s cubic-bezier(.22, 1, .36, 1) both;
           }
           #pwa-splash .sp-chip {
             padding: 6px 12px;
@@ -208,6 +239,7 @@
             border-radius: 999px;
             background: rgba(255, 255, 255, .12);
             overflow: hidden;
+            animation: sp-rise .7s .36s cubic-bezier(.22, 1, .36, 1) both;
           }
           #pwa-splash .sp-bar > span {
             display: block;
@@ -221,6 +253,30 @@
             0% { transform: translateX(-110%); }
             100% { transform: translateX(280%); }
           }
+          #mini-loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            z-index: 9998;
+            overflow: hidden;
+            background: rgba(91, 91, 255, .12);
+            transition: opacity .4s ease, visibility .4s ease;
+          }
+          #mini-loader.done {
+            opacity: 0;
+            visibility: hidden;
+          }
+          #mini-loader > span {
+            display: block;
+            height: 100%;
+            width: 35%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, #5B5BFF, #06B6D4, #FDA4AF);
+            box-shadow: 0 0 12px rgba(91, 91, 255, .8);
+            animation: sp-load 1.1s ease-in-out infinite;
+          }
           #pwa-splash .sp-ping {
             transform-origin: center;
             transform-box: fill-box;
@@ -231,7 +287,8 @@
             100% { transform: scale(1.6); opacity: 0; }
           }
           @media (prefers-reduced-motion: reduce) {
-            #pwa-splash *, #pwa-splash *::before, #pwa-splash *::after {
+            #pwa-splash *, #pwa-splash *::before, #pwa-splash *::after,
+            #mini-loader *, #mini-loader *::before, #mini-loader *::after {
               animation: none !important;
             }
           }
@@ -310,6 +367,7 @@
                     </svg>
                 </div>
                 <div class="sp-name">UPin</div>
+                <div class="sp-hook">Твой район оживает здесь</div>
                 <div class="sp-tag"><span class="sp-dot"></span>живая карта района</div>
                 <div class="sp-chips">
                     <span class="sp-chip">📍 Пины рядом</span>
@@ -319,14 +377,38 @@
                 <div class="sp-bar"><span></span></div>
             </div>
         </div>
+        <div id="mini-loader" role="status" aria-label="Загрузка"><span></span></div>
         <script nonce="{{ $cspNonce ?? '' }}">
             (function () {
-                var el = document.getElementById('pwa-splash');
-                if (!el) return;
+                var splash = document.getElementById('pwa-splash');
+                var mini = document.getElementById('mini-loader');
+                var isPwa = false;
+                try {
+                    isPwa = window.matchMedia('(display-mode: standalone)').matches
+                        || window.matchMedia('(display-mode: fullscreen)').matches
+                        || window.matchMedia('(display-mode: minimal-ui)').matches
+                        || (window.navigator && window.navigator.standalone === true)
+                        || /(^|[?&])source=pwa/.test(window.location.search);
+                } catch (e) {}
+                if (!isPwa) {
+                    if (splash && splash.parentNode) splash.parentNode.removeChild(splash);
+                    splash = null;
+                } else {
+                    if (mini && mini.parentNode) mini.parentNode.removeChild(mini);
+                    mini = null;
+                }
                 var hide = function () {
-                    if (!el || el.classList.contains('done')) return;
-                    el.classList.add('done');
-                    setTimeout(function () { if (el && el.parentNode) el.parentNode.removeChild(el); }, 750);
+                    [splash, mini].forEach(function (el) {
+                        if (!el || el.classList.contains('done')) return;
+                        el.classList.add('done');
+                    });
+                    setTimeout(function () {
+                        [splash, mini].forEach(function (el) {
+                            if (el && el.parentNode) el.parentNode.removeChild(el);
+                        });
+                        splash = null;
+                        mini = null;
+                    }, 750);
                 };
                 window.__upinHideSplash = hide;
                 window.addEventListener('load', function () { setTimeout(hide, 2200); });
