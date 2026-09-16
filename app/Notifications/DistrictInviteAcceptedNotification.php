@@ -44,7 +44,7 @@ class DistrictInviteAcceptedNotification extends UserNotification
         return [
             'title' => '✅ '.($this->accepter->name ?: 'Новый житель').' принял приглашение',
             'body' => 'Район «'.$this->district->name.'»: открыт доступ к пинам и чату',
-            'url' => '/map?district='.$this->district->id,
+            'url' => '/districts/'.$this->district->id,
             'tag' => 'district-invite-accepted-'.$this->district->id,
             'avatar' => $this->accepter->avatar_url,
         ];

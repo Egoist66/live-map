@@ -13,7 +13,11 @@ import DistrictMemberRow from '@/Components/Features/Districts/DistrictMemberRow
 import DistrictPinRow from '@/Components/Features/Districts/DistrictPinRow.vue'
 import DistrictInterestPicker from '@/Components/Features/Districts/DistrictInterestPicker.vue'
 import DistrictInviteDialog from '@/Components/Features/Map/DistrictInviteDialog.vue'
+import DistrictNewsCard from '@/Components/Features/Districts/DistrictNewsCard.vue'
+import DistrictNewsComposer from '@/Components/Features/Districts/DistrictNewsComposer.vue'
 import { useDistrictShowPage } from '@/composables/useDistrictShowPage'
+import { useDistrictNews } from '@/composables/useDistrictNews'
+import { computed } from 'vue'
 import type { DistrictDetails } from '@/types/entities/District'
 
 const props = defineProps<{
@@ -22,9 +26,16 @@ const props = defineProps<{
 }>()
 
 const page = useDistrictShowPage(props.districtId, props.initialDistrict)
+const news = useDistrictNews(props.districtId, page.isOwner)
+const canCommentNews = computed(() => page.isOwner.value || page.isMember.value)
+const newsCanSubmit = computed(() => {
+  const ready = news.body.value.trim().length >= 2 && !news.saving.value
+  return ready
+})
 
 onMounted(async () => {
   await page.init()
+  await news.load()
 })
 </script>
 
@@ -54,6 +65,11 @@ onMounted(async () => {
             :pins-count="page.district.value.pins_count"
             :role-label="page.roleLabel.value"
             :role-tone="page.roleTone.value"
+            :cover-url="page.coverUrl.value"
+            :can-edit-cover="page.isOwner.value"
+            :uploading-cover="page.cover.uploading.value"
+            @edit-cover="page.cover.openPicker()"
+            @remove-cover="page.cover.remove()"
           >
             <template #actions>
               <Button v-if="page.isGuest.value" label="Вступить" icon="pi pi-user-plus" rounded class="w-full !border-0 !bg-blue-600 !text-sm !font-bold !text-white hover:!bg-blue-500 sm:w-auto sm:flex-1" @click="page.join()" />
@@ -95,6 +111,42 @@ onMounted(async () => {
           <div class="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_300px]">
             <div class="min-w-0">
               <div v-if="page.activeTab.value === 'feed'" class="grid gap-3">
+                <DistrictNewsComposer
+                  v-if="page.isOwner.value"
+                  :title="news.title.value"
+                  :body="news.body.value"
+                  :body-left="news.bodyLeft.value"
+                  :image-preview="news.imagePreview.value"
+                  :saving="news.saving.value"
+                  :editing="news.editingId.value !== null"
+                  :can-submit="newsCanSubmit"
+                  @update:title="(v: string | undefined) => news.title.value = v ?? ''"
+                  @update:body="(v: string | undefined) => { const text = v ?? ''; news.body.value = text; news.bodyLeft.value = 2000 - text.length }"
+                  @pick-image="(f: File | null) => news.pickImage(f)"
+                  @clear-image="news.pickImage(null)"
+                  @submit="news.submit()"
+                  @cancel="news.resetComposer()"
+                />
+                <div v-if="news.loading.value" class="grid gap-3">
+                  <div class="h-36 animate-pulse rounded-3xl bg-white dark:bg-zinc-900" />
+                </div>
+                <div v-else-if="news.posts.value.length" class="grid gap-3">
+                  <DistrictNewsCard
+                    v-for="post in news.posts.value"
+                    :key="post.id"
+                    :post="post"
+                    :district-id="props.districtId"
+                    :can-comment="canCommentNews"
+                    :like-busy="!!news.likeBusy.value[post.id]"
+                    @like="news.toggleLike"
+                    @edit="news.startEdit"
+                    @delete="news.remove"
+                    @comments-delta="(postId: number, delta: number) => news.applyCommentsDelta(postId, delta)"
+                  />
+                </div>
+                <div v-else class="rounded-2xl border border-dashed border-stone-300 p-3 text-center text-xs text-stone-400 dark:border-zinc-700 dark:text-zinc-500">
+                  Новостей пока нет — {{ page.isOwner.value ? 'расскажите жителям, что происходит' : 'загляните позже' }}
+                </div>
                 <div class="rounded-3xl border border-stone-200/70 bg-white p-4 sm:p-5 dark:border-zinc-800 dark:bg-zinc-900">
                   <div class="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-zinc-500">О сообществе</div>
                   <p v-if="page.district.value.description" class="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed text-ink-900 dark:text-zinc-100">
@@ -246,6 +298,13 @@ onMounted(async () => {
       @update:open="page.invite.setOpen"
       @update:query="page.invite.search"
       @invite="page.sendInvite"
+    />
+    <input
+      :ref="page.cover.setFileInput"
+      type="file"
+      accept="image/*"
+      class="hidden"
+      @change="page.cover.onFile"
     />
   </AuthenticatedLayout>
 </template>

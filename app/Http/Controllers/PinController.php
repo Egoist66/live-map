@@ -280,6 +280,12 @@ class PinController extends Controller
                 \App\Services\UserSubscriptionNotifier::pinCreated($pin);
             } catch (\Throwable) {
             }
+            try {
+                if ((int) ($pin->district_id ?? 0) > 0) {
+                    \App\Services\DistrictNotifier::pinCreated($pin->refresh());
+                }
+            } catch (\Throwable) {
+            }
         }
 
         return response()->json(array_merge($pin->toPublicArray($user->id), ['my_reaction' => null]), 201);

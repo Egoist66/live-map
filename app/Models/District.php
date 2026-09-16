@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * UDistrict — свой район: залитый кистью островок внутри домашней зоны.
@@ -22,6 +24,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property float $center_lat центроид для bbox-индекса
  * @property float $center_lng центроид для bbox-индекса
  * @property int|null $conversation_id общий чат района
+ * @property string|null $cover_path путь обложки в сторадже (видна всем)
+ * @property string|null $cover_url публичный URL обложки
  */
 class District extends Model
 {
@@ -46,17 +50,50 @@ class District extends Model
         'name',
         'description',
         'interest',
+        'cover_path',
         'geometry',
         'center_lat',
         'center_lng',
         'conversation_id',
     ];
 
+    protected $appends = ['cover_url'];
+
     protected $casts = [
         'geometry' => 'array',
         'center_lat' => 'decimal:7',
         'center_lng' => 'decimal:7',
     ];
+
+    /**
+     * Диск обложек: S3 когда настроен, иначе локальный public.
+     *
+     * @return string имя диска
+     */
+    public static function coverDisk(): string
+    {
+        $isS3 = config('filesystems.default') === 's3' && config('filesystems.disks.s3.bucket');
+
+        return $isS3 ? 's3' : 'public';
+    }
+
+    /**
+     * Публичный URL общей обложки района.
+     *
+     * Обложка одна на всех (ставит владелец), в отличие от фона чата.
+     *
+     * @return Attribute<string|null, never>
+     */
+    protected function coverUrl(): Attribute
+    {
+        return Attribute::get(function (): ?string {
+            if (!$this->cover_path) {
+                return null;
+            }
+
+            return Storage::disk(self::coverDisk())->url($this->cover_path);
+        });
+    }
 
     public function owner(): BelongsTo { return $this->belongsTo(User::class, 'user_id'); }
 
@@ -156,6 +193,7 @@ class District extends Model
             'members_count' => (int) ($this->getAttribute('approved_members_count') ?? $this->approvedMembers()->count()) + 1,
             'role' => $this->roleOf($viewerId),
             'conversation_id' => $this->conversation_id,
+            'cover_url' => $this->cover_url,
             'created_at' => $this->created_at?->toISOString(),
         ];
     }

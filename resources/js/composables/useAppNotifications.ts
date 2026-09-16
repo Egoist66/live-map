@@ -275,13 +275,24 @@ function isDuplicateEvent(key: string, ttlMs = 20000): boolean {
   return false
 }
 /**
- * Тост заявки/решения по UDistrict-району.
+ * Тост событий UDistrict: заявки, пины внутри, новости района.
+ *
+ * Жители получают новости района и пины внутри — ссылка всегда
+ * ведёт сразу на страницу района без захода на карту.
+ *
+ * @param district полезная нагрузка района из уведомления
+ * @param type тип строки inbox
+ * @param activity activity-пейлоад с актором для аватара
  */
-function handleDistrict(district: any, type: string) {
+function handleDistrict(district: any, type: string, activity: any = null) {
   const id = Number(district?.id) || 0
   if (!id) return
-  if (isDuplicateEvent(`district-${type}-${id}`)) return
-  const link = `/map?district=${id}`
+  const detailKey = String(
+    district.pin_id ?? district.post_id ?? district.comment_id ?? district.post_title ?? '',
+  )
+  if (isDuplicateEvent(`district-${type}-${id}-${detailKey}`)) return
+  const link = `/districts/${id}`
+  const actorAvatar = avatarSrcFor(activity?.actor ?? null)
   if (type === 'district.join_requested') {
     const r = district.requester || {}
     push({
@@ -334,6 +345,75 @@ function handleDistrict(district: any, type: string) {
       title: `${accepter.name || 'Новый житель'} принял приглашение`,
       body: `Район «${String(district.name || '').slice(0, 40)}» — пины и чат открыты`,
       avatar: avatarSrcFor(accepter),
+      link,
+      createdAt: Date.now(),
+    })
+    return
+  }
+  if (type === 'district.pin_created') {
+    const pinTitle = String(district.pin_title || '').slice(0, 60)
+    push({
+      id: `district-pin-${id}-${Date.now()}`,
+      type: 'pin',
+      icon: 'pi pi-map-marker',
+      title: `Новый пин в «${String(district.name || '').slice(0, 40)}»`,
+      body: pinTitle ? `«${pinTitle}»` : 'Житель поставил пин внутри района',
+      avatar: actorAvatar,
+      link,
+      createdAt: Date.now(),
+    })
+    return
+  }
+  if (type === 'district.post_published') {
+    const postTitle = String(district.post_title || district.post_excerpt || '').slice(0, 60)
+    push({
+      id: `district-post-${id}-${Date.now()}`,
+      type: 'friend',
+      icon: 'pi pi-megaphone',
+      title: `Новость в «${String(district.name || '').slice(0, 40)}»`,
+      body: postTitle || 'Владелец опубликовал новость',
+      avatar: actorAvatar,
+      link,
+      createdAt: Date.now(),
+    })
+    return
+  }
+  if (type === 'district.post_commented') {
+    const excerpt = String(district.excerpt || '').slice(0, 80)
+    push({
+      id: `district-post-comment-${id}-${Date.now()}`,
+      type: 'friend',
+      icon: 'pi pi-comment',
+      title: `Комментарий в «${String(district.name || '').slice(0, 40)}»`,
+      body: excerpt || 'Новый комментарий к новости',
+      avatar: actorAvatar,
+      link,
+      createdAt: Date.now(),
+    })
+    return
+  }
+  if (type === 'district.post_replied') {
+    const excerpt = String(district.excerpt || '').slice(0, 80)
+    push({
+      id: `district-post-reply-${id}-${Date.now()}`,
+      type: 'friend',
+      icon: 'pi pi-reply',
+      title: `Ответ в «${String(district.name || '').slice(0, 40)}»`,
+      body: excerpt || 'Ответили на ваш комментарий',
+      avatar: actorAvatar,
+      link,
+      createdAt: Date.now(),
+    })
+    return
+  }
+  if (type === 'district.post_liked') {
+    push({
+      id: `district-post-like-${id}-${Date.now()}`,
+      type: 'friend',
+      icon: 'pi pi-heart',
+      title: `Лайк в «${String(district.name || '').slice(0, 40)}»`,
+      body: 'Оценили вашу новость',
+      avatar: actorAvatar,
       link,
       createdAt: Date.now(),
     })
@@ -625,6 +705,10 @@ function handleNotification(e: any) {
     handleSosChatClosed(data.sos_chat_closed)
     return
   }
+  if (data.district && String(n.type || '').startsWith('district.')) {
+    handleDistrict(data.district, String(n.type || ''), data.activity ?? null)
+    return
+  }
   if (data.activity) {
     handlePinActivity({ activity: data.activity })
     return
@@ -634,7 +718,7 @@ function handleNotification(e: any) {
     return
   }
   if (data.district) {
-    handleDistrict(data.district, String(n.type || ''))
+    handleDistrict(data.district, String(n.type || ''), data.activity ?? null)
     return
   }
   if (data.report) {

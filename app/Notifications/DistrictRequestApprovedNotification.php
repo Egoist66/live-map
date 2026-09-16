@@ -35,7 +35,7 @@ class DistrictRequestApprovedNotification extends UserNotification
         return [
             'title' => 'Вы в районе «'.$this->district->name.'»',
             'body' => 'Владелец одобрил заявку — пины района и общий чат открыты',
-            'url' => '/map?district='.$this->district->id,
+            'url' => '/districts/'.$this->district->id,
             'tag' => 'district-approved-'.$this->district->id,
             'avatar' => null,
         ];

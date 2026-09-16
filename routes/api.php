@@ -90,6 +90,17 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::post('/districts/{district}/members/{user}/approve', [\App\Http\Controllers\DistrictController::class, 'approve'])->middleware('throttle:social-write');
     Route::post('/districts/{district}/members/{user}/reject', [\App\Http\Controllers\DistrictController::class, 'reject'])->middleware('throttle:social-write');
     Route::delete('/districts/{district}/members/{user}', [\App\Http\Controllers\DistrictController::class, 'kick'])->middleware('throttle:social-write');
+    Route::post('/districts/{district}/cover', [\App\Http\Controllers\DistrictController::class, 'uploadCover'])->middleware('throttle:social-write');
+    Route::delete('/districts/{district}/cover', [\App\Http\Controllers\DistrictController::class, 'destroyCover'])->middleware('throttle:social-write');
+    Route::get('/districts/{district}/posts', [\App\Http\Controllers\DistrictPostController::class, 'index']);
+    Route::post('/districts/{district}/posts', [\App\Http\Controllers\DistrictPostController::class, 'store'])->middleware('throttle:social-write');
+    Route::patch('/districts/{district}/posts/{post}', [\App\Http\Controllers\DistrictPostController::class, 'update'])->middleware('throttle:social-write');
+    Route::delete('/districts/{district}/posts/{post}', [\App\Http\Controllers\DistrictPostController::class, 'destroy'])->middleware('throttle:social-write');
+    Route::post('/districts/{district}/posts/{post}/like', [\App\Http\Controllers\DistrictPostController::class, 'toggleLike'])->middleware('throttle:reactions');
+    Route::get('/districts/{district}/posts/{post}/comments', [\App\Http\Controllers\DistrictPostCommentController::class, 'index']);
+    Route::post('/districts/{district}/posts/{post}/comments', [\App\Http\Controllers\DistrictPostCommentController::class, 'store'])->middleware('throttle:comments-write');
+    Route::patch('/districts/{district}/posts/{post}/comments/{comment}', [\App\Http\Controllers\DistrictPostCommentController::class, 'update'])->middleware('throttle:comments-write');
+    Route::delete('/districts/{district}/posts/{post}/comments/{comment}', [\App\Http\Controllers\DistrictPostCommentController::class, 'destroy'])->middleware('throttle:social-write');
     Route::get('/custom-categories', [CustomCategoryController::class, 'index']);
     Route::post('/custom-categories', [CustomCategoryController::class, 'store'])->middleware('throttle:social-write');
     Route::delete('/custom-categories/{customCategory}', [CustomCategoryController::class, 'destroy'])->middleware('throttle:social-write');

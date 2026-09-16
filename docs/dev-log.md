@@ -1,5 +1,13 @@
 # Dev-лог
 
+## 2026-09-16 — Новости района + уведомления жителям о пинах
+- 📰 Новости UDistrict: `district_posts` + ветки `district_post_comments` + `district_post_likes`; публикует только владелец (картинка до 10МБ через `ImageOptimizer`), лайкают/комментируют жители, читают все.
+- 🔔 Жители получают всё: пин внутри (`district.pin_created` из `PinController::store`), новость (`district.post_published`), коммент/ответ/лайк (`district.post_commented/replied/liked`) — всё через `DistrictNotifier` + `UserNotifier` (realtime + push), ссылки сразу на `/districts/{id}`.
+- 🎨 Лента `Districts/Show`: композер владельца + `DistrictNewsCard` с ветками (ответы, удаление), счётчики через `applyCommentsDelta`; хуки `useDistrictNews`/`useDistrictNewsComments`, тосты и колокольчик (`describeInboxRow`) под новые типы.
+- 🖼️ Общая обложка района: `cover_path` + `cover_url`, ставит владелец (`POST/DELETE /api/districts/{id}/cover`), видят все; шапка выше (`h-36/sm:h-52`), аватар с рамкой не режется.
+- 🔗 Клик по названию чата района ведёт сразу на `/districts/{id}` без карты; туда же переведены район-уведомления и тосты.
+- Проверки: `vue-tsc --noEmit` ✅, `php -l` новых контроллеров/нотификаций ✅ (миграции `cover`, `district_posts` — прогнать `php artisan migrate`).
+
 ## 2026-09-16 — Районы как VK-сообщества: отдельные роуты вместо модалок
 - ✨ Новые Inertia-роуты: `/districts` (витрина), `/districts/create` (создание), `/districts/{id}` (страница группы) — `DistrictController::page*` с SSR-карточкой, список догружается API.
 - 🎨 Стиль VK-группы в нашем дизайне: нейтральная обложка с точечным паттерном (без фиолетового градиента), квадратный аватар с буквой (без 🏠-эмодзи), синий акцент `blue-600`, табы «Лента · Участники · Информация · Заявки» как в профиле.

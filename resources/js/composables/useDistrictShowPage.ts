@@ -5,6 +5,7 @@ import { districtsApi } from '@/services/districts.api'
 import { busOn } from '@/services/realtime-bus'
 import { useDistrictsStore } from '@/stores/districts'
 import { useDistrictInvite } from '@/composables/useDistrictInvite'
+import { useDistrictCover } from '@/composables/useDistrictCover'
 import { useAppConfirm } from '@/composables/useAppConfirm'
 import { districtInterestLabel } from '@/utils/districtGeo'
 import type { DistrictDetails, DistrictResident } from '@/types/entities/District'
@@ -103,6 +104,9 @@ export function useDistrictShowPage(districtId: number, initialDistrict: Distric
     }
     return null
   })
+
+  const coverUrl = computed(() => district.value?.cover_url ?? null)
+  const cover = useDistrictCover(district, isOwner)
 
   /**
    * Показать ошибку тостом.
@@ -500,6 +504,8 @@ export function useDistrictShowPage(districtId: number, initialDistrict: Distric
     typeLine,
     roleLabel,
     roleTone,
+    coverUrl,
+    cover,
     invite,
     init,
     refresh,

@@ -40,6 +40,7 @@ export interface District {
   members_count: number
   role: DistrictRole
   conversation_id: number | null
+  cover_url: string | null
   created_at?: string | null
 }
 

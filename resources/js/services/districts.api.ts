@@ -55,6 +55,29 @@ export const districtsApi = {
   },
 
   /**
+   * Поставить общую обложку (только владелец, видят все).
+   *
+   * @param id id района
+   * @param file картинка обложки
+   */
+  async uploadCover(id: number, file: File): Promise<DistrictDetails> {
+    const form = new FormData()
+    form.append('cover', file)
+    const { data } = await api.post<DistrictDetails>(`/api/districts/${id}/cover`, form)
+    return data
+  },
+
+  /**
+   * Убрать общую обложку (только владелец).
+   *
+   * @param id id района
+   */
+  async removeCover(id: number): Promise<DistrictDetails> {
+    const { data } = await api.delete<DistrictDetails>(`/api/districts/${id}/cover`)
+    return data
+  },
+
+  /**
    * Жители, заявки и исходящие приглашения района.
    */
   async members(id: number): Promise<{ residents: DistrictResident[]; pending: DistrictResident[]; invited: DistrictResident[]; role: string }> {

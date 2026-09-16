@@ -16,9 +16,11 @@ use App\Notifications\DistrictJoinRequestedNotification;
 use App\Notifications\DistrictRequestApprovedNotification;
 use App\Services\ContentModeration;
 use App\Services\DistrictService;
+use App\Services\ImageOptimizer;
 use App\Services\UserNotifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -249,13 +251,89 @@ class DistrictController extends Controller
 
         $districtId = (int) $district->id;
         $conversation = $district->conversation;
+        $coverPath = $district->cover_path;
         $district->delete();
+        if ($coverPath) {
+            try {
+                Storage::disk(District::coverDisk())->delete($coverPath);
+            } catch (\Throwable) {
+            }
+        }
         if ($conversation) {
             $conversation->delete();
         }
         broadcast(new DistrictDeleted($districtId))->toOthers();
 
         return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Поставить общую обложку района (только владелец).
+     *
+     * Обложка одна на всех жителей и гостей, в отличие от фона чата.
+     *
+     * @param Request $request текущий запрос
+     * @param District $district район
+     * @return \Illuminate\Http\JsonResponse обновлённая карточка
+     */
+    public function uploadCover(Request $request, District $district)
+    {
+        $this->assertOwner($request->user(), $district);
+
+        $request->validate([
+            'cover' => 'required|image|max:10240',
+        ]);
+
+        $path = ImageOptimizer::storeOptimized(
+            $request->file('cover'),
+            'district-covers',
+            District::coverDisk(),
+            ['maxSide' => 1920]
+        );
+
+        $old = $district->cover_path;
+
+        $district->forceFill(['cover_path' => $path])->save();
+
+        if ($old && $old !== $path) {
+            try {
+                Storage::disk(District::coverDisk())->delete($old);
+            } catch (\Throwable) {
+            }
+        }
+
+        $district->load('owner:id,name,avatar_path');
+        broadcast(new DistrictUpdated($district))->toOthers();
+
+        return response()->json($this->detailsArray($district, $request->user()?->id));
+    }
+
+    /**
+     * Убрать общую обложку района (только владелец).
+     *
+     * @param Request $request текущий запрос
+     * @param District $district район
+     * @return \Illuminate\Http\JsonResponse обновлённая карточка
+     */
+    public function destroyCover(Request $request, District $district)
+    {
+        $this->assertOwner($request->user(), $district);
+
+        $old = $district->cover_path;
+
+        $district->forceFill(['cover_path' => null])->save();
+
+        if ($old) {
+            try {
+                Storage::disk(District::coverDisk())->delete($old);
+            } catch (\Throwable) {
+            }
+        }
+
+        $district->load('owner:id,name,avatar_path');
+        broadcast(new DistrictUpdated($district))->toOthers();
+
+        return response()->json($this->detailsArray($district, $request->user()?->id));
     }
 
     /**

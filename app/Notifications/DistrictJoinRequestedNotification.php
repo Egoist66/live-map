@@ -41,7 +41,7 @@ class DistrictJoinRequestedNotification extends UserNotification
         return [
             'title' => 'Заявка в район «'.$this->district->name.'»',
             'body' => ($this->requester->name ?: 'Кто-то').' хочет жить в вашем районе',
-            'url' => '/map?district='.$this->district->id,
+            'url' => '/districts/'.$this->district->id,
             'tag' => 'district-request-'.$this->district->id.'-'.$this->requester->id,
             'avatar' => $this->requester->avatar_url,
         ];

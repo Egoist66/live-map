@@ -46,7 +46,7 @@ class DistrictInvitedNotification extends UserNotification
         return [
             'title' => '🎫 Вас пригласили в район «'.$this->district->name.'»',
             'body' => ($this->inviter->name ?: 'Владелец').' зовёт в жители — примите или отклоните',
-            'url' => '/map?district='.$this->district->id,
+            'url' => '/districts/'.$this->district->id,
             'tag' => 'district-invite-'.$this->district->id,
             'avatar' => $this->inviter->avatar_url,
         ];

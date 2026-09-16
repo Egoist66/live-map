@@ -67,21 +67,43 @@ export function describeInboxRow(row: InboxNotification): InboxText {
   if (row.type === 'district.join_requested') {
     const d = (data as any).district ?? {}
     const name = d.requester?.name || 'Кто-то'
-    return { emoji: '🏘️', title: `Заявка в район «${d.name || ''}»`, body: `${name} хочет жить в вашем районе`, link: `/map?district=${d.id || ''}`, avatar: d.requester?.avatar_url ?? null }
+    return { emoji: '🏘️', title: `Заявка в район «${d.name || ''}»`, body: `${name} хочет жить в вашем районе`, link: `/districts/${d.id || ''}`, avatar: d.requester?.avatar_url ?? null }
   }
   if (row.type === 'district.request_approved') {
     const d = (data as any).district ?? {}
-    return { emoji: '🎉', title: `Вы в районе «${d.name || ''}»`, body: 'Пины района и общий чат открыты', link: `/map?district=${d.id || ''}`, avatar: null }
+    return { emoji: '🎉', title: `Вы в районе «${d.name || ''}»`, body: 'Пины района и общий чат открыты', link: `/districts/${d.id || ''}`, avatar: null }
   }
   if (row.type === 'district.invited') {
     const d = (data as any).district ?? {}
     const name = d.inviter?.name || 'Владелец'
-    return { emoji: '🎫', title: `Приглашение в район «${d.name || ''}»`, body: `${name} зовёт в жители — примите или отклоните`, link: `/map?district=${d.id || ''}`, avatar: d.inviter?.avatar_url ?? null }
+    return { emoji: '🎫', title: `Приглашение в район «${d.name || ''}»`, body: `${name} зовёт в жители — примите или отклоните`, link: `/districts/${d.id || ''}`, avatar: d.inviter?.avatar_url ?? null }
   }
   if (row.type === 'district.invite_accepted') {
     const d = (data as any).district ?? {}
     const name = d.accepter?.name || 'Новый житель'
-    return { emoji: '✅', title: `${name} принял приглашение`, body: `Район «${d.name || ''}» — пины и чат открыты`, link: `/map?district=${d.id || ''}`, avatar: d.accepter?.avatar_url ?? null }
+    return { emoji: '✅', title: `${name} принял приглашение`, body: `Район «${d.name || ''}» — пины и чат открыты`, link: `/districts/${d.id || ''}`, avatar: d.accepter?.avatar_url ?? null }
+  }
+  if (row.type === 'district.pin_created') {
+    const d = (data as any).district ?? {}
+    const pinTitle = String(d.pin_title || '').slice(0, 60)
+    return { emoji: '📍', title: `Новый пин в «${d.name || ''}»`, body: pinTitle ? `«${pinTitle}»` : 'Житель поставил пин внутри', link: `/districts/${d.id || ''}`, avatar: (data as any)?.activity?.actor?.avatar_url ?? null }
+  }
+  if (row.type === 'district.post_published') {
+    const d = (data as any).district ?? {}
+    const postTitle = String(d.post_title || d.post_excerpt || '').slice(0, 80)
+    return { emoji: '📢', title: `Новость в «${d.name || ''}»`, body: postTitle || 'Владелец опубликовал новость', link: `/districts/${d.id || ''}`, avatar: (data as any)?.activity?.actor?.avatar_url ?? null }
+  }
+  if (row.type === 'district.post_commented') {
+    const d = (data as any).district ?? {}
+    return { emoji: '💬', title: `Комментарий в «${d.name || ''}»`, body: String(d.excerpt || 'Новый комментарий').slice(0, 80), link: `/districts/${d.id || ''}`, avatar: (data as any)?.activity?.actor?.avatar_url ?? null }
+  }
+  if (row.type === 'district.post_replied') {
+    const d = (data as any).district ?? {}
+    return { emoji: '↩️', title: `Ответ в «${d.name || ''}»`, body: String(d.excerpt || 'Ответили на комментарий').slice(0, 80), link: `/districts/${d.id || ''}`, avatar: (data as any)?.activity?.actor?.avatar_url ?? null }
+  }
+  if (row.type === 'district.post_liked') {
+    const d = (data as any).district ?? {}
+    return { emoji: '❤️', title: `Лайк в «${d.name || ''}»`, body: 'Оценили вашу новость', link: `/districts/${d.id || ''}`, avatar: (data as any)?.activity?.actor?.avatar_url ?? null }
   }
   if (row.type === 'report.created') {
     const r = data.report ?? {}
