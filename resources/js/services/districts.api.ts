@@ -23,6 +23,16 @@ export const districtsApi = {
   },
 
   /**
+   * Глобальный поиск районов по названию для таба «Районы».
+   *
+   * @param query строка поиска (мин. 2 символа)
+   */
+  async search(query: string): Promise<District[]> {
+    const { data } = await api.get<District[]>('/api/districts', { params: { search: query.trim() } })
+    return Array.isArray(data) ? data : []
+  },
+
+  /**
    * Создать район из заливки кисти.
    */
   async create(payload: CreateDistrictPayload): Promise<DistrictDetails> {

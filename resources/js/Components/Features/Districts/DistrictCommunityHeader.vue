@@ -39,30 +39,30 @@ const roleClass = computed(() => {
 </script>
 
 <template>
-  <div class="overflow-hidden rounded-3xl border border-stone-200/70 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-    <div class="relative h-36 bg-stone-100 sm:h-52 dark:bg-zinc-800">
+  <div class="isolate overflow-hidden rounded-3xl border border-stone-200/70 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+    <div class="relative h-32 bg-stone-100 sm:h-48 dark:bg-zinc-800">
       <img
         v-if="coverUrl"
         :src="coverUrl"
         alt=""
-        class="absolute inset-0 h-full w-full object-cover"
+        class="absolute inset-0 z-0 h-full w-full object-cover"
       />
       <div
         v-else
-        class="absolute inset-0 opacity-60 dark:opacity-40"
+        class="absolute inset-0 z-0 opacity-60 dark:opacity-40"
         style="background-image: radial-gradient(circle at 1px 1px, rgba(100,116,139,0.28) 1px, transparent 0); background-size: 18px 18px"
       />
       <div
         v-if="coverUrl"
-        class="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/35 to-transparent"
+        class="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-12 bg-gradient-to-t from-black/35 to-transparent"
       />
       <i
         v-if="!coverUrl"
-        class="pi pi-users absolute right-4 top-4 text-2xl text-stone-300 sm:text-3xl dark:text-zinc-700"
+        class="pi pi-users absolute right-4 top-4 z-[1] text-2xl text-stone-300 sm:text-3xl dark:text-zinc-700"
       />
       <div
         v-if="canEditCover"
-        class="absolute bottom-3 right-3 flex items-center gap-2"
+        class="absolute bottom-3 right-3 z-[2] flex items-center gap-2"
       >
         <Button
           :label="coverUrl ? 'Сменить' : 'Добавить обложку'"
@@ -86,13 +86,13 @@ const roleClass = computed(() => {
         />
       </div>
     </div>
-    <div class="px-4 pb-4 sm:px-6 sm:pb-5">
-      <div class="flex items-start gap-3 sm:gap-4">
-        <div class="-mt-10 grid h-20 w-20 shrink-0 place-items-center rounded-2xl border-4 border-white bg-blue-600 text-3xl font-black text-white shadow-soft sm:-mt-14 sm:h-28 sm:w-28 sm:rounded-3xl sm:text-4xl dark:border-zinc-900">
+    <div class="relative z-10 px-4 pb-4 sm:px-6 sm:pb-5">
+      <div class="flex items-end gap-3 sm:gap-4">
+        <div class="relative z-10 -mt-8 grid h-16 w-16 shrink-0 place-items-center rounded-2xl border-4 border-white bg-blue-600 text-2xl font-black text-white shadow-md sm:-mt-12 sm:h-24 sm:w-24 sm:rounded-3xl sm:text-4xl dark:border-zinc-900">
           {{ avatarLetter }}
         </div>
-        <div class="min-w-0 flex-1 pt-2 sm:pt-3">
-          <h1 class="truncate text-lg font-black tracking-tight text-ink-900 sm:text-2xl dark:text-white">
+        <div class="min-w-0 flex-1 pb-0.5 sm:pb-1">
+          <h1 class="break-words text-lg font-black leading-tight tracking-tight text-ink-900 sm:text-2xl dark:text-white">
             {{ name }}
           </h1>
           <p class="mt-0.5 truncate text-xs text-stone-500 sm:text-[13px] dark:text-zinc-400">

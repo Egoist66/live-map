@@ -1,5 +1,13 @@
 # Dev-лог
 
+## 2026-09-16 — Таб «Районы» в глобальном поиске + аккуратная шапка района
+- 🔍 Глобальный поиск (Ctrl+K) теперь с табами «Люди · Районы»: районы ищутся по названию (`GET /api/districts?search=`, топ-20), из выдачи можно открыть страницу, вступить одной кнопкой (роль сразу обновляется) и уйти в общий чат знакомиться внутри.
+- 🐞 Иконка поиска на профиле открывала другой диалог (`ChatSearchDialog` через локальный `usePeopleSearch`), а не глобальный — поэтому табов не было видно: таб «Районы» добавлен и туда (таб синхронизирован через `peopleSearch.activeTab`), чинит сразу профиль, дашборд и чат.
+- 🧩 Новое: стор `peopleSearch` держит `activeTab/districtQuery/districtResults` (pinia, дебаунс 300мс), хук `useGlobalDistrictSearch` (открыть/вступить/чат + тосты), `districtsApi.search(q)`; бэк `DistrictController::index` фильтрует `name LIKE %term%`.
+- 🧩 Новое: стор `peopleSearch` держит `activeTab/districtQuery/districtResults` (pinia, дебаунс 300мс), хук `useGlobalDistrictSearch` (открыть/вступить/чат + тосты), `districtsApi.search(q)`; бэк `DistrictController::index` фильтрует `name LIKE %term%`.
+- 🎨 Шапка района больше не спорит с обложкой: слои `z-0/z-10` + `isolate`, аватар ровно внахлёст наполовину, название без жёсткого `truncate`.
+- Проверки: `vue-tsc --noEmit` ✅, `php -l DistrictController` ✅.
+
 ## 2026-09-16 — Новости района + уведомления жителям о пинах
 - 📰 Новости UDistrict: `district_posts` + ветки `district_post_comments` + `district_post_likes`; публикует только владелец (картинка до 10МБ через `ImageOptimizer`), лайкают/комментируют жители, читают все.
 - 🔔 Жители получают всё: пин внутри (`district.pin_created` из `PinController::store`), новость (`district.post_published`), коммент/ответ/лайк (`district.post_commented/replied/liked`) — всё через `DistrictNotifier` + `UserNotifier` (realtime + push), ссылки сразу на `/districts/{id}`.

@@ -116,14 +116,24 @@ class DistrictController extends Controller
 
     /**
      * Районы в видимом прямоугольнике карты.
+     *
+     * Поддерживает глобальный поиск по названию (?search=):
+     * используется табом «Районы» в глобальном поиске — находит
+     * сообщество, откуда можно вступить и знакомиться внутри.
      */
     public function index(Request $request)
     {
         $viewerId = $request->user()?->id;
 
-        $query = District::with('owner:id,name,avatar_path')->withCount('approvedMembers')->latest()->limit(200);
+        $isSearch = $request->filled('search');
+        $limit = $isSearch ? 20 : 200;
 
-        if ($request->boolean('mine')) {
+        $query = District::with('owner:id,name,avatar_path')->withCount('approvedMembers')->latest()->limit($limit);
+
+        if ($isSearch) {
+            $term = mb_substr(trim((string) $request->input('search')), 0, 80);
+            $query->where('name', 'like', '%'.$term.'%');
+        } elseif ($request->boolean('mine')) {
             $ownedIds = $request->user()->districts()->pluck('districts.id');
             $memberIds = $request->user()->districtMemberships()->where('status', DistrictMember::STATUS_APPROVED)->pluck('district_id');
             $query->whereIn('id', $ownedIds->merge($memberIds)->unique()->values()->all() ?: [0]);
