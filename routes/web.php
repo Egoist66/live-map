@@ -41,6 +41,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/chat/{conversation?}', fn (?int $conversation = null) => Inertia::render('Chat/Index', ['conversationId' => $conversation]))->name('chat');
     Route::get('/users/{user}', [ProfileController::class, 'publicShow'])->name('users.show');
     Route::get('/map', fn () => Inertia::render('Map/Index'))->name('map');
+    Route::get('/districts', [\App\Http\Controllers\DistrictController::class, 'pageIndex'])->name('districts.index');
+    Route::get('/districts/create', [\App\Http\Controllers\DistrictController::class, 'pageCreate'])->name('districts.create');
+    Route::get('/districts/{district}', [\App\Http\Controllers\DistrictController::class, 'pageShow'])->whereNumber('district')->name('districts.show');
     Route::get('/settings/{identifier?}/{tab?}', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->middleware('throttle:profile-write')->name('profile.update');
     Route::patch('/profile/thought', [ProfileController::class, 'updateThought'])->middleware('throttle:profile-write')->name('profile.thought');

@@ -46,7 +46,7 @@ function onSelect(v: any) {
         <div class="flex items-center justify-between gap-3">
           <div class="min-w-0">
             <h3 class="font-bold tracking-tight text-[15px] dark:text-white leading-tight">Вид профиля</h3>
-            <p class="text-xs text-stone-500 mt-0.5 truncate">{{ columnsHint }} · только десктоп</p>
+            <p class="text-xs text-stone-500 mt-0.5 truncate">{{ columnsHint }}</p>
           </div>
           <span class="shrink-0 w-8 h-8 rounded-xl grid place-items-center text-sm bg-blue-600/10 text-blue-600"><i class="pi pi-th-large text-xs" /></span>
         </div>

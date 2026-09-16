@@ -4,7 +4,7 @@ import { computed } from 'vue'
 const props = withDefaults(
   defineProps<{
     isOwn?: boolean
-    /** tiles — плитка для мобайла, sidebar — вертикальное меню для десктоп-сайдбара в духе VK. */
+    /** tiles — плитка для мобайла, sidebar — вертикальное меню для десктоп-сайдбара. */
     variant?: 'tiles' | 'sidebar'
   }>(),
   { isOwn: true, variant: 'tiles' },

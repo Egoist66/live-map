@@ -34,11 +34,14 @@ function onFile(e: Event): void {
     modal
     header="Редактировать пост"
     :dismissable-mask="true"
+    :draggable="false"
     :block-scroll="true"
+    :style="{ width: '100vw', maxWidth: '100vw', height: '100dvh', maxHeight: '100dvh', margin: '0', borderRadius: '0', border: '0' }"
     :pt="{
       root: { class: '!m-0 !h-[100dvh] !max-h-[100dvh] !w-screen !max-w-[100vw] !rounded-none !border-0' },
+      mask: { class: '!p-0 !items-stretch !justify-center' },
       header: { class: '!px-4 !py-3 sm:!px-6' },
-      content: { class: '!px-4 sm:!px-6 !pb-4 !h-full' },
+      content: { class: '!px-4 sm:!px-6 !pb-4 !h-full !max-h-full !overflow-y-auto' },
       footer: { class: '!px-4 sm:!px-6 !py-3' },
     }"
     @hide="props.composer.reset()"

@@ -6,7 +6,7 @@ import { createPinia } from 'pinia'
 import { PiniaColada } from '@pinia/colada'
 import { createInertiaApp } from '@inertiajs/vue3'
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers'
-import { createApp, DefineComponent, h } from 'vue'
+import { createSSRApp, DefineComponent, h } from 'vue'
 import { ZiggyVue } from '../../vendor/tightenco/ziggy'
 import { setupPrimeVue } from './plugins/primevue'
 import { register as registerSw } from './pwa/pwa.service'
@@ -26,7 +26,7 @@ createInertiaApp({
   resolve: (name) => resolvePageComponent(`./Pages/${name}.vue`, import.meta.glob<DefineComponent>('./Pages/**/*.vue')),
   setup({ el, App, props, plugin }) {
     const pinia = createPinia()
-    const app = createApp({ render: () => h(App, props) })
+    const app = createSSRApp({ render: () => h(App, props) })
     app.use(plugin)
     app.use(ZiggyVue)
     app.use(pinia)

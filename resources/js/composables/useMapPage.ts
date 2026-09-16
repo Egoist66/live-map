@@ -14,6 +14,7 @@ import { useDistricts } from '@/composables/useDistricts'
 import { useDistrictPaint } from '@/composables/useDistrictPaint'
 import { useDistrictInvite } from '@/composables/useDistrictInvite'
 import { countGeometryPoints } from '@/utils/districtGeo'
+import { saveDistrictDraft } from '@/composables/useDistrictDraft'
 import { useAppConfirm } from '@/composables/useAppConfirm'
 import { useCustomCategories } from '@/composables/useCustomCategories'
 import { useHomeZoneVisibility } from '@/composables/useHomeZoneVisibility'
@@ -125,7 +126,10 @@ export function useMapPage() {
   }
 
   /**
-   * Завершить мазки и открыть форму создания.
+   * Завершить мазки и уйти на страницу создания.
+   *
+   * Модалка убрана: черновик едет в sessionStorage, форма —
+   * на /districts/create в стиле группы.
    */
   function finishDistrictPaint(): void {
     const geometry = paint.takeDraft()
@@ -137,13 +141,20 @@ export function useMapPage() {
       toast?.add({ severity: 'warn', summary: 'Слишком большая заливка', detail: 'Рисуй компактный островок — меньше мазков', life: 3500 })
       return
     }
+    const strokesCount = paint.strokesCount.value
     pendingGeometry.value = geometry
     createError.value = null
-    districts.createOpen.value = true
+    saveDistrictDraft(geometry, strokesCount)
+    paint.clearStrokes()
+    router.visit('/districts/create')
   }
 
   /**
-   * Сохранить район из черновика кисти.
+   * Сохранить район из черновика кисти (старая модалка).
+   *
+   * Оставлен для совместимости: успех уводит на страницу сообщества.
+   *
+   * @param payload поля формы
    */
   async function saveDistrict(payload: { name: string; description: string | null; interest: string }): Promise<void> {
     if (!pendingGeometry.value) return
@@ -160,15 +171,9 @@ export function useMapPage() {
       districts.setVisible(true)
       try { mapApi.setDistrictsVisible(true) } catch {}
       mapApi.renderDistricts(districts.store.districts as any)
-      toast?.add({ severity: 'success', summary: 'Район создан', detail: 'Заливка видна всем, пины внутри — только жителям', life: 3500 })
+      toast?.add({ severity: 'success', summary: 'Район создан', detail: 'Открываем страницу сообщества', life: 3000 })
       try { await districts.loadMine() } catch {}
-      try {
-        const lat = Number(created.center_lat)
-        const lng = Number(created.center_lng)
-        if (Number.isFinite(lat) && Number.isFinite(lng)) {
-          try { (mapApi as any).map?.flyTo?.({ center: [lng, lat] as any, zoom: 14, duration: 900 }) } catch {}
-        }
-      } catch {}
+      router.visit(`/districts/${created.id}`)
     } catch (e: any) {
       const message = e?.response?.data?.message ?? 'Не удалось создать район'
       createError.value = message
@@ -184,15 +189,16 @@ export function useMapPage() {
   }
 
   /**
-   * Открыть район из хаба с перелётом карты.
+   * Открыть район на странице сообщества с перелётом карты.
+   *
+   * Модалка деталей больше не используется: отдельный роут
+   * /districts/{id} в стиле группы.
+   *
+   * @param id id района
    */
   async function flyToDistrict(id: number): Promise<void> {
     districts.hubOpen.value = false
-    const card: any = districts.store.districts.find((d: any) => d.id === id) ?? districts.myDistricts.value.find((d: any) => d.id === id)
-    if (card && Number.isFinite(Number(card.center_lat)) && Number.isFinite(Number(card.center_lng))) {
-      try { (mapApi as any).map?.flyTo?.({ center: [Number(card.center_lng), Number(card.center_lat)] as any, zoom: 14, duration: 900 }) } catch {}
-    }
-    await districts.openDistrict(id)
+    router.visit(`/districts/${id}`)
   }
 
   /**
@@ -753,12 +759,12 @@ export function useMapPage() {
    * набор районов, иначе слой отстаёт от вьюпорта.
    */
   function wireDistricts(): void {
-    try { (mapApi as any).onDistrictClick?.((id: number) => { void districts.openDistrict(id) }) } catch {}
+    try { (mapApi as any).onDistrictClick?.((id: number) => { router.visit(`/districts/${id}`) }) } catch {}
     try {
       ;(mapApi as any).onDistrictMenu?.((action: 'open' | 'delete' | 'create-pin', id: number, lngLat?: { lat: number; lng: number } | null) => {
         if (action === 'delete') void deleteDistrictById(id)
         else if (action === 'create-pin') openDistrictPinCreate(id, lngLat ?? null)
-        else void districts.openDistrict(id)
+        else router.visit(`/districts/${id}`)
       })
     } catch {}
     try { (mapApi as any).map?.on?.('moveend', onDistrictsMoveEnd) } catch {}
@@ -774,6 +780,8 @@ export function useMapPage() {
 
   /**
    * Открыть район по ?district= (диплинк из уведомлений).
+   *
+   * Уводит на страницу сообщества.
    */
   async function openDistrictIfRequested(): Promise<void> {
     let districtId = 0
@@ -788,7 +796,7 @@ export function useMapPage() {
       districtId = 0
     }
     if (!(districtId > 0)) return
-    await flyToDistrict(districtId)
+    router.visit(`/districts/${districtId}`)
   }
 
   function readPendingPin(): { pinId: number; commentId: number | null } | null {

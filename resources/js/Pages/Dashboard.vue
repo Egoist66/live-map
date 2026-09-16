@@ -73,15 +73,15 @@ onMounted(async () => { await design.init() })
           @edit-thought="thought.openDialog()"
         />
 
-        <!-- Десктоп: две колонки в духе VK/FB — сайдбар + лента. Мобайл: одна лента как раньше. -->
+        <!-- Одна колонка — лента, две — сайдбар + лента на любой ширине. -->
         <div
           :class="isSingleColumn
             ? 'space-y-3 sm:space-y-4'
             : 'space-y-3 sm:space-y-4 lg:space-y-0 lg:grid lg:grid-cols-[300px_minmax(0,1fr)] lg:gap-4 lg:items-start'"
         >
           <aside class="min-w-0 space-y-3 sm:space-y-4">
-            <!-- Одна колонка: ряд-плитка на любой ширине. Две: плитка на мобайле, меню на десктопе. -->
-            <div :class="isSingleColumn ? '' : 'lg:hidden'">
+            <!-- Одна колонка: ряд-плитка на любой ширине. Две: сайдбар-меню на любой ширине. -->
+            <div :class="isSingleColumn ? '' : 'hidden'">
               <ProfileDesignQuickNav
                 variant="tiles"
                 @profile="dash.goSettings()"
@@ -90,7 +90,7 @@ onMounted(async () => { await design.init() })
                 @share="dash.share()"
               />
             </div>
-            <div :class="isSingleColumn ? 'hidden' : 'hidden lg:block'">
+            <div :class="isSingleColumn ? 'hidden' : ''">
               <ProfileDesignQuickNav
                 variant="sidebar"
                 @profile="dash.goSettings()"
@@ -116,13 +116,11 @@ onMounted(async () => { await design.init() })
               :status-text="design.statusText.value"
               :online="dash.presence.value.active"
               :user-name="dash.u.value.name"
-              :is-own="true"
               :age-text="design.infoTiles.ageText.value"
               :gender-label="design.infoTiles.genderLabel.value"
               :residence-text="design.infoTiles.residenceText.value"
               :bio-text="dash.bioText.value"
               :bio-preview="design.bioPreview.value"
-              @edit="dash.goSettings()"
             />
 
             <ProfileDesignSwipes @go="design.goSwipes()" />

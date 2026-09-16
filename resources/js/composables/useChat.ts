@@ -279,8 +279,13 @@ export function useChat() {
     }
     selectedId.value = id
     const cached = conversations.value.find((c) => c?.id === id) as any
-    if (cached?.other) {
-      activeConv.value = { id, other: cached.other, participants: [] } as any
+    const cachedType = String(cached?.type ?? 'direct')
+    const isCachedDistrict = cachedType === 'district'
+    if (cached && (cached?.other || isCachedDistrict)) {
+      const districtId = Number(cached?.district_id ?? 0)
+      const districtTitle = cached?.title ?? null
+      const inviteRight = cached?.can_invite ?? false
+      activeConv.value = { id, type: cachedType, district_id: districtId, title: districtTitle, can_invite: inviteRight, other: cached.other ?? null, participants: [] } as any
       if (cached.last_message) messages.value = [cached.last_message as any]
       else messages.value = []
     } else {

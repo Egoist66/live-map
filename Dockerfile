@@ -39,6 +39,7 @@ ENV VITE_APP_NAME=${VITE_APP_NAME}
 
 RUN composer dump-autoload --optimize \
     && if [ -f pnpm-lock.yaml ]; then pnpm --config.minimum-release-age=0 run build:ssr; else npm run build:ssr; fi \
+    && test -f bootstrap/ssr/ssr.js \
     && mkdir -p storage/logs storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache database \
     && touch database/database.sqlite \
     && chown -R www-data:www-data storage bootstrap/cache database \

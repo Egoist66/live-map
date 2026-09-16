@@ -20,12 +20,14 @@ import { useAppLayout } from '@/composables/useAppLayout'
 import { useAppHotkeys } from '@/composables/useAppHotkeys'
 import { useScreenLock } from '@/composables/useScreenLock'
 import { useScreenLockScroll } from '@/composables/useScreenLockScroll'
+import { useGlobalDialogScrollLock } from '@/composables/useGlobalDialogScrollLock'
 import { onMounted } from 'vue'
 
 const { badge, user, avatarSrc, dashboardHref, bell, updates, menu, menuItems, isAdmin, toggleMenu, logout } = useAppLayout()
 const hotkeys = useAppHotkeys()
 const screenLock = useScreenLock()
 useScreenLockScroll()
+useGlobalDialogScrollLock()
 onMounted(() => { screenLock.init(); hotkeys.init() })
 </script>
 <template>

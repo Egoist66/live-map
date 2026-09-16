@@ -6,16 +6,11 @@ defineProps<{
   statusText: string
   online: boolean
   userName: string
-  isOwn: boolean
   ageText: string
   genderLabel: string
   residenceText: string
   bioText: string
   bioPreview: string
-}>()
-
-const emit = defineEmits<{
-  (e: 'edit'): void
 }>()
 
 const modal = useInfoTileModal()
@@ -31,16 +26,6 @@ const chevronCls = 'pi pi-chevron-right shrink-0 text-xs text-stone-300 dark:tex
   <section class="rounded-[24px] border border-stone-200 bg-white shadow-soft p-4 sm:p-5 dark:border-zinc-800 dark:bg-zinc-900">
     <div class="flex items-center justify-between">
       <h2 class="text-lg sm:text-xl font-extrabold tracking-tight text-ink-900 dark:text-white">Общая информация</h2>
-      <button
-        v-if="isOwn"
-        type="button"
-        title="Редактировать"
-        aria-label="Редактировать"
-        class="grid h-9 w-9 place-items-center rounded-full border border-stone-200 bg-stone-100 text-stone-500 transition hover:bg-stone-200/70 active:scale-95 dark:border-zinc-800 dark:bg-white/[0.03] dark:text-zinc-300 dark:hover:bg-white/[0.06]"
-        @click="emit('edit')"
-      >
-        <i class="pi pi-pencil text-sm"></i>
-      </button>
     </div>
 
     <div class="mt-3 grid grid-cols-2 gap-2 sm:gap-3">

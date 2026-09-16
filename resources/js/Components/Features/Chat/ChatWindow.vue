@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
+import { toRef } from 'vue'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
 import Textarea from 'primevue/textarea'
@@ -12,6 +13,7 @@ import { useMessageContextMenu } from '@/composables/useMessageContextMenu'
 import { useMessageSwipe } from '@/composables/useMessageSwipe'
 import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
 import { useChatLayout } from '@/composables/useChatLayout'
+import { useChatHeaderLink } from '@/composables/useChatHeaderLink'
 import { useChatComposerMenu } from '@/composables/useChatComposerMenu'
 import { useChatWallpaper } from '@/composables/useChatWallpaper'
 import { useEnterToSend } from '@/composables/useEnterToSend'
@@ -27,6 +29,7 @@ const emit = defineEmits<{ (e: 'update:input', v: string): void; (e: 'update:edi
 const { cm, menuModel, bindMessage } = useMessageContextMenu({ isOwn: (m: any) => props.isOwnMessage(m), onEdit: (m: any) => emit('startEdit', m), onDelete: (id: number) => emit('deleteMessage', id), onPin: (m: any) => emit('togglePin', m), onReply: (m: any) => emit('reply', m) })
 const swipe = useMessageSwipe({ onReply: (m: any) => emit('reply', m) })
 const { menuPt } = useDropdownMenuStyle()
+const headerLink = useChatHeaderLink(toRef(props, 'activeConv'))
 
 function pinPreview(body: string): string {
   const t = (body || '').replace(/\s+/g, ' ').trim()
@@ -52,7 +55,7 @@ function replyPreview(message: any): string {
       <div :class="datingEntry ? 'pl-1 pr-2 lg:px-4 py-2 border-b border-rose-200 flex items-center gap-2 shrink-0 bg-gradient-to-r from-rose-500 to-orange-400 text-white sticky top-0 z-30 min-w-0 rounded-t-none lg:rounded-t-2xl min-h-[60px]' : 'pl-1 pr-2 lg:px-4 py-2 border-b dark:border-zinc-800 flex items-center gap-2 shrink-0 bg-white/95 dark:bg-zinc-900/95 backdrop-blur sticky top-0 z-30 min-w-0 rounded-t-none lg:rounded-t-2xl min-h-[60px]'">
         <button @click="emit('back')" :class="datingEntry ? 'text-white hover:bg-white/20' : 'hover:bg-black/10'" class="lg:hidden w-9 h-9 grid place-items-center rounded-full active:scale-95 shrink-0 text-xl leading-none">‹</button>
         <button v-if="datingEntry" @click="emit('swipesBack')" title="Назад в свайпы" class="!hidden sm:!grid w-9 h-9 place-items-center rounded-full bg-white/20 hover:bg-white/30 active:scale-95 shrink-0"><i class="pi pi-heart-fill text-sm"></i></button>
-        <Link :href="activeConv?.other ? `/users/${activeConv.other.id}` : '#'" class="flex items-center gap-2.5 hover:opacity-80 min-w-0 flex-1 overflow-hidden py-0.5">
+        <Link :href="headerLink.headerHref.value" class="flex items-center gap-2.5 hover:opacity-80 min-w-0 flex-1 overflow-hidden py-0.5">
           <span class="relative block shrink-0 w-10 h-10"><span v-if="activeConv?.title" class="w-10 h-10 rounded-full bg-gradient-to-br from-violet-700 to-purple-900 text-white grid place-items-center">🏘️</span><Avatar v-else :image="avatarSrcFor(activeConv?.other)" shape="circle" class="!w-10 !h-10 [&_img]:object-cover" :class="datingEntry ? 'ring-2 ring-white/70' : ''" :pt="{ image: { class: 'object-cover' } }" /><OnlineDot v-if="!activeConv?.title" :online="online" /></span>
           <span class="min-w-0 flex-1 block"><span class="block text-[15px] lg:text-sm font-semibold truncate hover:underline leading-snug" :class="datingEntry ? 'text-white' : 'dark:text-white'">{{ activeConv?.title || activeConv?.other?.name }}</span><span v-if="typing" class="mt-0.5 block text-xs leading-none animate-pulse" :class="datingEntry ? 'text-white/90' : 'text-violet-600'">печатает...</span><span v-else-if="activeConv?.title" class="mt-0.5 block text-xs leading-none text-violet-600">🏘️ Общий чат района</span><span v-else-if="datingBadge" class="mt-0.5 text-[11px] font-bold leading-none flex items-center gap-1" :class="datingEntry ? 'text-white/90' : 'text-rose-500'"><i class="pi pi-heart-fill text-[10px]"></i>{{ datingBadge }}</span><span v-else class="mt-0.5 block text-xs leading-none" :class="datingEntry ? 'text-white/80' : (online ? 'text-emerald-600' : 'text-red-500')">{{ online ? 'в сети' : 'оффлайн' }}</span></span>
         </Link>

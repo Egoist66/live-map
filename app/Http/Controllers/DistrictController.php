@@ -19,6 +19,8 @@ use App\Services\DistrictService;
 use App\Services\UserNotifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
+use Inertia\Response;
 
 /**
  * UDistrict: свои районы-заливки внутри домашней зоны.
@@ -26,9 +28,90 @@ use Illuminate\Support\Facades\DB;
  * Районы видят все, пины внутри — только участники.
  * Доступ — по заявкам с одобрением владельца, у каждого
  * района свой общий чат (conversation type=district).
+ *
+  * Web-методы page* отдают страницы (Inertia), API-методы —
+ * JSON для карты и живых обновлений.
  */
 class DistrictController extends Controller
 {
+    /**
+     * Страница списка районов: свои + витрина.
+     *
+     * Сам список догружается API (/api/districts), здесь только
+     * лимиты тарифа для кнопки создания.
+     *
+     * @param Request $request текущий запрос
+     * @return Response Inertia-страница Districts/Index
+     */
+    public function pageIndex(Request $request): Response
+    {
+        $user = $request->user();
+
+        return Inertia::render('Districts/Index', [
+            'canCreate' => $user->canCreateDistrict(),
+            'limitText' => $this->limitText($user),
+        ]);
+    }
+
+    /**
+     * Страница создания района из заливки кисти.
+     *
+     * Геометрия не едет в SSR — тяжёлая, лежит в sessionStorage
+     * черновиком с карты (useDistrictDraft). Здесь только лимиты.
+     *
+     * @param Request $request текущий запрос
+     * @return Response Inertia-страница Districts/Create
+     */
+    public function pageCreate(Request $request): Response
+    {
+        $user = $request->user();
+
+        return Inertia::render('Districts/Create', [
+            'canCreate' => $user->canCreateDistrict(),
+            'limitText' => $this->limitText($user),
+        ]);
+    }
+
+    /**
+     * Страница района в духе группы: обложка, аватары, табы.
+     *
+     * SSR отдаёт начальную карточку (без мигания), живые правки
+     * приезжают API + realtime-шиной на фронте.
+     *
+     * @param Request $request текущий запрос
+     * @param District $district район из route-model binding
+     * @return Response Inertia-страница Districts/Show
+     */
+    public function pageShow(Request $request, District $district): Response
+    {
+        $viewerId = $request->user()?->id;
+        $district->load('owner:id,name,avatar_path');
+
+        return Inertia::render('Districts/Show', [
+            'districtId' => (int) $district->id,
+            'initialDistrict' => $this->detailsArray($district, $viewerId),
+        ]);
+    }
+
+    /**
+     * Текст лимита районов для кнопки создания.
+     *
+     * @param User $user кто смотрит
+     * @return string понятная строка лимита
+     */
+    private function limitText(User $user): string
+    {
+        $limit = $user->districtsLimit();
+
+        if ($limit === null) {
+            return 'Без лимита районов';
+        }
+
+        $used = $user->districts()->count();
+
+        return "Ваши районы: {$used} из {$limit}";
+    }
+
     /**
      * Районы в видимом прямоугольнике карты.
      */

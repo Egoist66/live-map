@@ -79,7 +79,7 @@ onMounted(async () => { await design.init() })
             @edit-thought="thought.openDialog()"
           />
 
-          <!-- Десктоп: две колонки в духе VK/FB — сайдбар + лента. Мобайл: одна лента как раньше. -->
+          <!-- Одна колонка — лента, две — сайдбар + лента на любой ширине. -->
           <div
             :class="isSingleColumn
               ? 'space-y-3 sm:space-y-4'
@@ -145,7 +145,7 @@ onMounted(async () => { await design.init() })
                 />
               </div>
 
-              <div :class="isSingleColumn ? '' : 'lg:hidden'">
+              <div :class="isSingleColumn ? '' : 'hidden'">
                 <ProfileDesignQuickNav
                   :is-own="isOwn"
                   variant="tiles"
@@ -155,7 +155,7 @@ onMounted(async () => { await design.init() })
                   @share="page.share()"
                 />
               </div>
-              <div :class="isSingleColumn ? 'hidden' : 'hidden lg:block'">
+              <div :class="isSingleColumn ? 'hidden' : ''">
                 <ProfileDesignQuickNav
                   :is-own="isOwn"
                   variant="sidebar"
@@ -182,13 +182,11 @@ onMounted(async () => { await design.init() })
                 :status-text="design.statusText.value"
                 :online="page.online.value"
                 :user-name="profileUser.name"
-                :is-own="isOwn"
                 :age-text="design.infoTiles.ageText.value"
                 :gender-label="design.infoTiles.genderLabel.value"
                 :residence-text="design.infoTiles.residenceText.value"
                 :bio-text="design.page.bioText.value"
                 :bio-preview="design.bioPreview.value"
-                @edit="design.onEdit()"
               />
 
               <ProfileDesignSwipes @go="design.goSwipes()" />

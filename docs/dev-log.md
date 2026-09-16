@@ -1,5 +1,18 @@
 # Dev-лог
 
+## 2026-09-16 — Районы как VK-сообщества: отдельные роуты вместо модалок
+- ✨ Новые Inertia-роуты: `/districts` (витрина), `/districts/create` (создание), `/districts/{id}` (страница группы) — `DistrictController::page*` с SSR-карточкой, список догружается API.
+- 🎨 Стиль VK-группы в нашем дизайне: нейтральная обложка с точечным паттерном (без фиолетового градиента), квадратный аватар с буквой (без 🏠-эмодзи), синий акцент `blue-600`, табы «Лента · Участники · Информация · Заявки» как в профиле.
+- 🗺️ Карта переведена на роуты: клик по заливке и `?district=` ведут на `/districts/{id}`, финиш кисти кладёт черновик в `sessionStorage` (`useDistrictDraft`) и уводит на `/districts/create`.
+- 📱 Адаптив: мобила — одна колонка, кнопки на всю ширину; десктоп — `1fr + 300px` с сайдбаром; тёмная тема через `dark:`-ветки везде.
+- Проверки: `vue-tsc --noEmit` ✅, `php -l` контроллера и роутов ✅.
+
+## 2026-09-15 — Inertia SSR на проде: гидратация + Laravel Cloud
+- 🐞 Прод отдавал пустой `div#app[data-page]` (CSR): SSR-бандл собирался (`build:ssr` → `bootstrap/ssr/ssr.js`), но SSR-процесс не был запущен — Laravel молча откатывался в CSR.
+- 🔧 Фикс кода: `app.ts` `createApp` → `createSSRApp` (иначе нет гидратации SSR-HTML), `config/inertia.php` на `env(INERTIA_SSR_*)` + `ensure_bundle_exists`, `Dockerfile` проверяет `bootstrap/ssr/ssr.js`, `supervisord.conf` запускает `php artisan inertia:start-ssr` (для Docker/VPS).
+- ☁️ Laravel Cloud (`upin.laravel.cloud`): включить `Use Inertia SSR` в App compute + build `pnpm run build:ssr` + `INERTIA_SSR_ENABLED=true` и редеплой — свой supervisord там не нужен.
+- Проверки: `vue-tsc --noEmit` ✅, `config:show inertia.ssr` ✅.
+
 ## 2026-09-15 — Системные уведомления в PWA: автоподписка + локальный фолбэк
 - 🐞 Причина тишины: закрытая/свёрнутая PWA не держит ни сокет Echo (рвётся через 60с в фоне), ни поллер (тики только на видимой вкладке) — доставка идёт только серверным web-push, а подписка оформлялась лишь вручную тумблером в настройках.
 - 🔧 Новый `usePwaPushAuto` (запуск из `useAppLayout`): в standalone само оформляет и привязывает подписку — тихо при готовом разрешении, с однократным системным запросом при `default` (флаг `upin:pwa-push-asked`).
