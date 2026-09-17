@@ -24,6 +24,20 @@ class FlowRepliedNotification extends UserNotification
 
     public function dedupeKey(): ?string { return 'flow-reply:'.$this->comment->id; }
 
+    public function pushPayload(): ?array
+    {
+        $name = $this->actor->name ?: 'Кто-то';
+        $excerpt = static::excerpt($this->comment->content);
+
+        return [
+            'title' => 'Ответ на комментарий',
+            'body' => $excerpt ? "{$name}: {$excerpt}" : "{$name} ответил вам в UFlow",
+            'url' => '/flow/post/'.$this->post->id,
+            'tag' => 'flow-'.$this->post->id.'-reply-'.$this->comment->id,
+            'avatar' => $this->actor->avatar_url,
+        ];
+    }
+
     public function payload(string $id): array
     {
         return [

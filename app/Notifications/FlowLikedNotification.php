@@ -36,4 +36,17 @@ class FlowLikedNotification extends UserNotification
             ]),
         ];
     }
+
+    public function pushPayload(): ?array
+    {
+        $name = $this->actor->name ?: 'Кто-то';
+
+        return [
+            'title' => 'Новый лайк',
+            'body' => "{$name} оценил ваш пост в UFlow",
+            'url' => '/flow/post/'.$this->post->id,
+            'tag' => "flow-{$this->post->id}-like-{$this->actor->id}",
+            'avatar' => $this->actor->avatar_url,
+        ];
+    }
 }

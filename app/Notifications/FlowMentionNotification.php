@@ -24,6 +24,20 @@ class FlowMentionNotification extends UserNotification
 
     public function dedupeKey(): ?string { return 'flow-mention:'.$this->comment->id; }
 
+    public function pushPayload(): ?array
+    {
+        $name = $this->actor->name ?: 'Кто-то';
+        $excerpt = static::excerpt($this->comment->content);
+
+        return [
+            'title' => 'Вас упомянули',
+            'body' => $excerpt ? "{$name}: {$excerpt}" : "{$name} упомянул вас в UFlow",
+            'url' => '/flow/post/'.$this->post->id,
+            'tag' => 'flow-'.$this->post->id.'-mention-'.$this->comment->id,
+            'avatar' => $this->actor->avatar_url,
+        ];
+    }
+
     public function payload(string $id): array
     {
         return [

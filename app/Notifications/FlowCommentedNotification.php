@@ -24,6 +24,20 @@ class FlowCommentedNotification extends UserNotification
 
     public function dedupeKey(): ?string { return 'flow-comment:'.$this->comment->id; }
 
+    public function pushPayload(): ?array
+    {
+        $name = $this->actor->name ?: 'Кто-то';
+        $excerpt = static::excerpt($this->comment->content);
+
+        return [
+            'title' => 'Новый комментарий',
+            'body' => $excerpt ? "{$name}: {$excerpt}" : "{$name} прокомментировал ваш пост в UFlow",
+            'url' => '/flow/post/'.$this->post->id,
+            'tag' => 'flow-'.$this->post->id.'-comment-'.$this->comment->id,
+            'avatar' => $this->actor->avatar_url,
+        ];
+    }
+
     public function payload(string $id): array
     {
         return [
