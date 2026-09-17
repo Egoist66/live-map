@@ -19,7 +19,7 @@ import type { District } from '@/types/entities/District'
  */
 export function useGlobalDistrictSearch() {
   const store = usePeopleSearchStore()
-  const { districtQuery, districtResults, districtSearching, districtSuggestions, districtSuggestionsLoading } = storeToRefs(store)
+  const { districtQuery, districtResults, districtSearching, districtSuggestions, districtSuggestionsLoading, districtsHasMore, loadingMoreDistricts } = storeToRefs(store)
 
   const joiningId = ref<number | null>(null)
 
@@ -140,6 +140,9 @@ export function useGlobalDistrictSearch() {
     openDistrict,
     openChat,
     joinDistrict,
+    districtsHasMore,
+    loadingMoreDistricts,
+    loadMore: store.loadMoreDistricts,
     setQuery: store.setDistrictQuery,
   }
 }

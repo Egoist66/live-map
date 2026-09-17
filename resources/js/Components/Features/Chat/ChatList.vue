@@ -10,8 +10,9 @@ import { avatarSrcFor } from '@/composables/useAvatar'
 import { useChatPreview } from '@/composables/useChatPreview'
 import { useChatRowMenu } from '@/composables/useChatRowMenu'
 import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
+import InfiniteSentinel from '@/Components/Ui/List/InfiniteSentinel.vue'
 
-const props = defineProps<{ conversations: any[]; uloveConversations?: any[]; friends: any[]; pendingIn: any[]; blocked: any[]; tab: string; selectedId: number | null; filter: string; isOnline: (id?: number, lastSeenAt?: string | null) => boolean; formatTime: (s: string) => string }>()
+const props = withDefaults(defineProps<{ conversations: any[]; uloveConversations?: any[]; friends: any[]; pendingIn: any[]; blocked: any[]; tab: string; selectedId: number | null; filter: string; conversationsSentinel?: unknown; conversationsHasMore?: boolean; conversationsLoadingMore?: boolean; friendsSentinel?: unknown; friendsHasMore?: boolean; friendsLoadingMore?: boolean; isOnline: (id?: number, lastSeenAt?: string | null) => boolean; formatTime: (s: string) => string }>(), { conversationsHasMore: false, conversationsLoadingMore: false, friendsHasMore: false, friendsLoadingMore: false })
 
 /** Мэтчи ULove с учётом строки поиска. */
 const filteredUlove = computed(() => {
@@ -65,6 +66,7 @@ const { menuPt } = useDropdownMenuStyle()
           <Button @click.stop="(e: Event) => rowMenu.open(e, { kind: 'chat', id: c.id, userId: c.other?.id, userName: c.other?.name })" icon="pi pi-ellipsis-h" text rounded severity="secondary" class="!w-7 !h-7 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" aria-label="Меню чата" title="Меню чата" />
         </div>
       </div>
+      <InfiniteSentinel :sentinel="conversationsSentinel as any" :has-more="!!conversationsHasMore" :loading="!!conversationsLoadingMore" />
     </div>
     <div v-if="tab === 'ulove'" class="divide-y dark:divide-zinc-800">
       <div v-if="!filteredUlove.length" class="p-6 sm:p-8 text-center">
@@ -102,6 +104,7 @@ const { menuPt } = useDropdownMenuStyle()
           <Button @click.stop="(e: Event) => rowMenu.open(e, { kind: 'friend', friendship: f, other: f.other, userId: f.other?.id, userName: f.other?.name })" icon="pi pi-ellipsis-h" text rounded severity="secondary" class="!w-7 !h-7 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" aria-label="Меню" title="Меню" />
         </div>
       </div>
+      <InfiniteSentinel :sentinel="friendsSentinel as any" :has-more="!!friendsHasMore" :loading="!!friendsLoadingMore" />
     </div>
     <div v-if="tab === 'requests'" class="divide-y dark:divide-zinc-800">
       <div v-if="!pendingIn.length" class="p-6 text-center text-sm text-stone-500">Нет заявок</div>

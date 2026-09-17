@@ -30,7 +30,8 @@ export function useInviteUserSearch() {
       timer = setTimeout(() => resolve(), 300)
     })
     try {
-      results.value = await chatApi.search(q.trim())
+      const res = await chatApi.search(q.trim())
+      results.value = Array.isArray(res) ? res : (((res as { data?: unknown })?.data as unknown[] | undefined) ?? [])
     } catch {
       results.value = []
     } finally {

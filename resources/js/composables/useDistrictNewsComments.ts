@@ -4,7 +4,7 @@ import { districtPostCommentsApi } from '@/services/district-posts.api'
 import type { DistrictPostComment } from '@/types/entities/DistrictPost'
 
 /**
- * Ветка комментариев новости района: список, ответы, удаление.
+ * Ветка комментариев новости района: список, ответы, удаление + infinite scroll.
  *
  * Писать могут жители, читать — все, кто видит район.
  * Уведомления автору новости и родителя шлёт бэк.
@@ -32,6 +32,10 @@ export function useDistrictNewsComments(
   /** Ветки верхнего уровня. */
   const comments = ref<DistrictPostComment[]>([])
   const loading = ref(false)
+  const loadingMore = ref(false)
+  const hasMore = ref(true)
+  const page = ref(1)
+  const lastPage = ref(1)
   const sending = ref(false)
   const replyTo = ref<DistrictPostComment | null>(null)
   const draft = ref('')
@@ -41,13 +45,43 @@ export function useDistrictNewsComments(
    */
   async function load(): Promise<void> {
     loading.value = true
+    hasMore.value = true
     try {
       const res = await districtPostCommentsApi.list(districtId, postId, 1)
       comments.value = res.data
+      page.value = 1
+      lastPage.value = res.last_page ?? 1
+      hasMore.value = page.value < lastPage.value
     } catch {
       toast?.add({ severity: 'error', summary: 'Не вышло загрузить комментарии', life: 2500 })
     } finally {
       loading.value = false
+    }
+  }
+
+  /**
+   * Догрузить следующую страницу для infinite scroll.
+   *
+   * @returns false когда страниц больше нет
+   */
+  async function loadMore(): Promise<boolean> {
+    if (loading.value || loadingMore.value || !hasMore.value) return false
+    loadingMore.value = true
+    try {
+      const next = page.value + 1
+      const res = await districtPostCommentsApi.list(districtId, postId, next)
+      const rows = Array.isArray(res.data) ? res.data : []
+      const known = new Set(comments.value.map((c) => c.id))
+      const fresh = rows.filter((c) => !known.has(c.id))
+      comments.value = [...comments.value, ...fresh]
+      page.value = next
+      lastPage.value = res.last_page ?? page.value
+      hasMore.value = page.value < lastPage.value && rows.length > 0
+      return fresh.length > 0
+    } catch {
+      return false
+    } finally {
+      loadingMore.value = false
     }
   }
 
@@ -136,10 +170,13 @@ export function useDistrictNewsComments(
   return {
     comments,
     loading,
+    loadingMore,
+    hasMore,
     sending,
     replyTo,
     draft,
     load,
+    loadMore,
     setReply,
     send,
     remove,

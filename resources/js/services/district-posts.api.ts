@@ -11,13 +11,14 @@ export const districtPostsApi = {
    * @param districtId id района
    * @param page страница пагинации
    */
-  async list(districtId: number, page = 1): Promise<{ data: DistrictPost[]; last_page: number }> {
+  async list(districtId: number, page = 1): Promise<{ data: DistrictPost[]; last_page: number; current_page: number }> {
     const { data } = await api.get(`/api/districts/${districtId}/posts`, { params: { page } })
     const rows = Array.isArray((data as { data?: unknown })?.data)
       ? (data as { data: DistrictPost[] }).data
       : []
     const lastPage = Number((data as { last_page?: number })?.last_page ?? 1)
-    return { data: rows, last_page: Number.isFinite(lastPage) ? lastPage : 1 }
+    const currentPage = Number((data as { current_page?: number })?.current_page ?? page)
+    return { data: rows, last_page: Number.isFinite(lastPage) ? lastPage : 1, current_page: Number.isFinite(currentPage) ? currentPage : page }
   },
 
   /**
@@ -109,13 +110,14 @@ export const districtPostCommentsApi = {
     districtId: number,
     postId: number,
     page = 1,
-  ): Promise<{ data: DistrictPostComment[]; last_page: number }> {
+  ): Promise<{ data: DistrictPostComment[]; last_page: number; current_page: number }> {
     const { data } = await api.get(`/api/districts/${districtId}/posts/${postId}/comments`, { params: { page } })
     const rows = Array.isArray((data as { data?: unknown })?.data)
       ? (data as { data: DistrictPostComment[] }).data
       : []
     const lastPage = Number((data as { last_page?: number })?.last_page ?? 1)
-    return { data: rows, last_page: Number.isFinite(lastPage) ? lastPage : 1 }
+    const currentPage = Number((data as { current_page?: number })?.current_page ?? page)
+    return { data: rows, last_page: Number.isFinite(lastPage) ? lastPage : 1, current_page: Number.isFinite(currentPage) ? currentPage : page }
   },
 
   /**

@@ -19,10 +19,13 @@ class MessageController extends Controller
         abort_unless($conversation->hasParticipant($request->user()->id),403);
         $clearedAt = $conversation->participantRows()->where('user_id', $request->user()->id)->value('cleared_at');
         $before = $request->input('before');
+        $limit = max(1, min(50, (int) $request->input('limit', 30)));
         $q = $conversation->messages()->with(['sender:id,name,avatar_path', 'replyTo.sender:id,name'])->reorder()->orderByDesc('id');
         if ($before) $q->where('id','<',$before);
         if ($clearedAt) $q->where('created_at', '>', $clearedAt);
-        $collection = $q->limit(30)->get();
+        $collection = $q->limit($limit + 1)->get();
+        $hasMore = $collection->count() > $limit;
+        $collection = $collection->take($limit);
         $undelivered = $collection->where('sender_id','!=',$request->user()->id)->whereNull('delivered_at')->pluck('id');
         if($undelivered->isNotEmpty()){
             Message::whereIn('id',$undelivered)->update(['delivered_at'=>now()]);
@@ -30,7 +33,7 @@ class MessageController extends Controller
             try{ broadcast(new \App\Events\MessageDelivered($conversation->id,$undelivered->toArray(),$request->user()->id))->toOthers(); }catch(\Throwable $e){ \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
         }
         $messages = $collection->reverse()->values()->map->toArrayPayload();
-        return response()->json($messages);
+        return response()->json(['data' => $messages, 'has_more' => $hasMore]);
     }
 
     public function store(Request $request, Conversation $conversation)

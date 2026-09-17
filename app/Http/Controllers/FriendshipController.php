@@ -13,10 +13,13 @@ class FriendshipController extends Controller
     public function index(Request $request)
     {
         $u = $request->user();
-        $friends = Friendship::where('status','accepted')
+        $perPage = max(1, min(50, (int) $request->input('per_page', 20)));
+        $friendsQuery = Friendship::where('status','accepted')
             ->where(fn($q)=>$q->where('requester_id',$u->id)->orWhere('addressee_id',$u->id))
             ->with(['requester:id,name,avatar_path,last_seen_at,is_invisible,plan,role,is_admin','addressee:id,name,avatar_path,last_seen_at,is_invisible,plan,role,is_admin'])
-            ->get()->map(function($f) use ($u){
+            ->orderByDesc('updated_at');
+        $friendsPage = $friendsQuery->paginate($perPage);
+        $friends = $friendsPage->getCollection()->map(function($f) use ($u){
                 $other = $f->requester_id===$u->id ? $f->addressee : $f->requester;
                 $hiddenOnline = $other && $other->isInvisibleActive() && !$u->isAdmin();
                 if ($other && $hiddenOnline) $other->setAttribute('last_seen_at', null);
@@ -29,15 +32,22 @@ class FriendshipController extends Controller
                     'other'=>$other,
                     'created_at'=>$f->created_at,
                 ];
-            });
-        $pendingIn = Friendship::where('status','pending')->where('addressee_id',$u->id)->with('requester:id,name,avatar_path,last_seen_at,is_invisible,plan,role,is_admin')->get()->each(function($f) use ($u) {
+            })->values();
+        $pendingIn = Friendship::where('status','pending')->where('addressee_id',$u->id)->with('requester:id,name,avatar_path,last_seen_at,is_invisible,plan,role,is_admin')->orderByDesc('id')->limit(50)->get()->each(function($f) use ($u) {
             if ($f->requester && $f->requester->isInvisibleActive() && !$u->isAdmin()) $f->requester->setAttribute('last_seen_at', null);
             $f->requester?->setAttribute('is_invisible', $f->requester->isInvisibleActive());
         });
-        $pendingOut = Friendship::where('status','pending')->where('requester_id',$u->id)->with('addressee:id,name,avatar_path')->get();
+        $pendingOut = Friendship::where('status','pending')->where('requester_id',$u->id)->with('addressee:id,name,avatar_path')->orderByDesc('id')->limit(50)->get();
         $limit = $u->hiddenFriendsLimit();
         return response()->json([
             'friends'=>$friends,
+            'friends_meta' => [
+                'current_page' => $friendsPage->currentPage(),
+                'last_page' => $friendsPage->lastPage(),
+                'per_page' => $friendsPage->perPage(),
+                'total' => $friendsPage->total(),
+                'has_more' => $friendsPage->hasMorePages(),
+            ],
             'pending_in'=>$pendingIn,
             'pending_out'=>$pendingOut,
             'hidden_limit'=>$limit,
@@ -73,16 +83,19 @@ class FriendshipController extends Controller
         $viewer = $request->user();
         $isOwn = $viewer && $viewer->id === $user->id;
         $canSeeHidden = $isOwn || ($viewer && $viewer->isAdmin());
+        $perPage = max(1, min(50, (int) $request->input('per_page', 20)));
         $query = Friendship::where('status', 'accepted')
             ->where(fn($q) => $q->where('requester_id', $user->id)->orWhere('addressee_id', $user->id))
-            ->with(['requester:id,name,avatar_path,last_seen_at,is_invisible', 'addressee:id,name,avatar_path,last_seen_at,is_invisible']);
+            ->with(['requester:id,name,avatar_path,last_seen_at,is_invisible', 'addressee:id,name,avatar_path,last_seen_at,is_invisible'])
+            ->orderByDesc('updated_at');
         if (!$canSeeHidden) {
             $query->where(function ($q) use ($user) {
                 $q->where(function ($x) use ($user) { $x->where('requester_id', $user->id)->where('hidden_by_requester', false); })
                   ->orWhere(function ($x) use ($user) { $x->where('addressee_id', $user->id)->where('hidden_by_addressee', false); });
             });
         }
-        $friends = $query->get()->map(function ($f) use ($user, $isOwn, $canSeeHidden, $viewer) {
+        $friendsPage = $query->paginate($perPage);
+        $friends = $friendsPage->getCollection()->map(function ($f) use ($user, $isOwn, $canSeeHidden, $viewer) {
             $other = $f->requester_id === $user->id ? $f->addressee : $f->requester;
             if ($other) {
                 $hiddenOnline = $other->isInvisibleActive() && (! $viewer || ! $viewer->isAdmin());
@@ -99,7 +112,17 @@ class FriendshipController extends Controller
             if (!$row['other'] || (int) $row['other']->id !== User::GHOST_USER_ID) return false;
             return !User::isGhostSeer($viewer);
         })->values();
-        return response()->json(['friends' => $friends, 'is_own' => $isOwn]);
+        return response()->json([
+            'friends' => $friends,
+            'is_own' => $isOwn,
+            'meta' => [
+                'current_page' => $friendsPage->currentPage(),
+                'last_page' => $friendsPage->lastPage(),
+                'per_page' => $friendsPage->perPage(),
+                'total' => $friendsPage->total(),
+                'has_more' => $friendsPage->hasMorePages(),
+            ],
+        ]);
     }
 
     public function store(Request $request)

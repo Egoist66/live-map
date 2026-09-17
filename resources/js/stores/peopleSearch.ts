@@ -10,11 +10,23 @@ import type { District } from '@/types/entities/District'
 export type GlobalSearchTab = 'people' | 'districts'
 
 /**
- * Глобальный поиск по приложению для Ctrl+K.
+ * Нормализовать ответ поиска людей к массиву.
+ *
+ * @param data ответ API (массив или пагинация)
+ */
+function normalizePeople(data: unknown): any[] {
+  if (Array.isArray(data)) return data
+  const rows = (data as { data?: unknown })?.data
+  return Array.isArray(rows) ? rows : []
+}
+
+/**
+ * Глобальный поиск по приложению для Ctrl+K с infinite scroll.
  *
  * Держит состояние диалога, активный таб, строку запроса и результаты:
- * люди — через `/api/chat/users/search`, районы — через
- * `/api/districts?search=` (найти, вступить, знакомиться внутри).
+ * люди — через `/api/chat/users/search?page=`, районы — через
+ * `/api/districts?search=&page=`. Догрузка — `loadMorePeople()` /
+ * `loadMoreDistricts()` по sentinel внизу списка.
  */
 export const usePeopleSearchStore = defineStore('peopleSearch', () => {
   const open = ref(false)
@@ -22,9 +34,17 @@ export const usePeopleSearchStore = defineStore('peopleSearch', () => {
   const query = ref('')
   const results = ref<any[]>([])
   const searching = ref(false)
+  const loadingMorePeople = ref(false)
+  const peopleHasMore = ref(false)
+  const peoplePage = ref(1)
+  const peopleLastPage = ref(1)
   const districtQuery = ref('')
   const districtResults = ref<District[]>([])
   const districtSearching = ref(false)
+  const loadingMoreDistricts = ref(false)
+  const districtsHasMore = ref(false)
+  const districtPage = ref(1)
+  const districtLastPage = ref(1)
   /** Первые существующие районы для пустого таба «Районы» (максимум 3). */
   const districtSuggestions = ref<District[]>([])
   const districtSuggestionsLoading = ref(false)
@@ -58,9 +78,13 @@ export const usePeopleSearchStore = defineStore('peopleSearch', () => {
     query.value = ''
     results.value = []
     searching.value = false
+    peopleHasMore.value = false
+    peoplePage.value = 1
     districtQuery.value = ''
     districtResults.value = []
     districtSearching.value = false
+    districtsHasMore.value = false
+    districtPage.value = 1
     if (timer) {
       clearTimeout(timer)
       timer = null
@@ -85,6 +109,7 @@ export const usePeopleSearchStore = defineStore('peopleSearch', () => {
     if (trimmed.length < 2) {
       results.value = []
       searching.value = false
+      peopleHasMore.value = false
       if (timer) {
         clearTimeout(timer)
         timer = null
@@ -102,22 +127,53 @@ export const usePeopleSearchStore = defineStore('peopleSearch', () => {
 
     timer = setTimeout(async () => {
       try {
-        const data = await chatApi.search(trimmed)
+        const data = await chatApi.search(trimmed, 1)
         if (current !== seq) {
           return
         }
-        results.value = (data as any[]) ?? []
+        results.value = normalizePeople(data)
+        peoplePage.value = Number((data as { current_page?: number })?.current_page ?? 1)
+        peopleLastPage.value = Number((data as { last_page?: number })?.last_page ?? 1)
+        peopleHasMore.value = !!(data as { has_more?: boolean })?.has_more
       } catch {
         if (current !== seq) {
           return
         }
         results.value = []
+        peopleHasMore.value = false
       } finally {
         if (current === seq) {
           searching.value = false
         }
       }
     }, 300)
+  }
+
+  /**
+   * Догрузить следующую страницу людей для infinite scroll.
+   *
+   * @returns false когда страниц больше нет
+   */
+  async function loadMorePeople(): Promise<boolean> {
+    const trimmed = query.value.trim()
+    if (trimmed.length < 2 || searching.value || loadingMorePeople.value || !peopleHasMore.value) return false
+    loadingMorePeople.value = true
+    try {
+      const next = peoplePage.value + 1
+      const data = await chatApi.search(trimmed, next)
+      const rows = normalizePeople(data)
+      const known = new Set(results.value.map((u) => Number(u?.id)))
+      const fresh = rows.filter((u) => !known.has(Number(u?.id)))
+      results.value = [...results.value, ...fresh]
+      peoplePage.value = Number((data as { current_page?: number })?.current_page ?? next)
+      peopleLastPage.value = Number((data as { last_page?: number })?.last_page ?? peoplePage.value)
+      peopleHasMore.value = !!(data as { has_more?: boolean })?.has_more && rows.length > 0
+      return fresh.length > 0
+    } catch {
+      return false
+    } finally {
+      loadingMorePeople.value = false
+    }
   }
 
   /**
@@ -132,6 +188,7 @@ export const usePeopleSearchStore = defineStore('peopleSearch', () => {
     if (trimmed.length < 2) {
       districtResults.value = []
       districtSearching.value = false
+      districtsHasMore.value = false
       if (districtTimer) {
         clearTimeout(districtTimer)
         districtTimer = null
@@ -150,22 +207,53 @@ export const usePeopleSearchStore = defineStore('peopleSearch', () => {
 
     districtTimer = setTimeout(async () => {
       try {
-        const rows = await districtsApi.search(term)
+        const res = await districtsApi.search(term, 1)
         if (current !== districtSeq) {
           return
         }
-        districtResults.value = rows ?? []
+        districtResults.value = res.data ?? []
+        districtPage.value = res.current_page ?? 1
+        districtLastPage.value = res.last_page ?? 1
+        districtsHasMore.value = !!res.has_more
       } catch {
         if (current !== districtSeq) {
           return
         }
         districtResults.value = []
+        districtsHasMore.value = false
       } finally {
         if (current === districtSeq) {
           districtSearching.value = false
         }
       }
     }, 300)
+  }
+
+  /**
+   * Догрузить следующую страницу районов для infinite scroll.
+   *
+   * @returns false когда страниц больше нет
+   */
+  async function loadMoreDistricts(): Promise<boolean> {
+    const trimmed = districtQuery.value.trim()
+    if (trimmed.length < 2 || districtSearching.value || loadingMoreDistricts.value || !districtsHasMore.value) return false
+    loadingMoreDistricts.value = true
+    try {
+      const next = districtPage.value + 1
+      const res = await districtsApi.search(trimmed, next)
+      const rows = res.data ?? []
+      const known = new Set(districtResults.value.map((r) => Number(r.id)))
+      const fresh = rows.filter((r) => !known.has(Number(r.id)))
+      districtResults.value = [...districtResults.value, ...fresh]
+      districtPage.value = res.current_page ?? next
+      districtLastPage.value = res.last_page ?? districtPage.value
+      districtsHasMore.value = !!res.has_more && rows.length > 0
+      return fresh.length > 0
+    } catch {
+      return false
+    } finally {
+      loadingMoreDistricts.value = false
+    }
   }
 
   /**
@@ -210,9 +298,13 @@ export const usePeopleSearchStore = defineStore('peopleSearch', () => {
     query,
     results,
     searching,
+    loadingMorePeople,
+    peopleHasMore,
     districtQuery,
     districtResults,
     districtSearching,
+    loadingMoreDistricts,
+    districtsHasMore,
     districtSuggestions,
     districtSuggestionsLoading,
     openDialog,
@@ -220,6 +312,8 @@ export const usePeopleSearchStore = defineStore('peopleSearch', () => {
     setQuery,
     setActiveTab,
     setDistrictQuery,
+    loadMorePeople,
+    loadMoreDistricts,
     patchDistrict,
     ensureDistrictSuggestions,
   }

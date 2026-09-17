@@ -18,6 +18,8 @@ import DistrictNewsComposer from '@/Components/Features/Districts/DistrictNewsCo
 import { useDistrictShowPage } from '@/composables/useDistrictShowPage'
 import { useDistrictNews } from '@/composables/useDistrictNews'
 import { computed } from 'vue'
+import InfiniteSentinel from '@/Components/Ui/List/InfiniteSentinel.vue'
+import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 import type { DistrictDetails } from '@/types/entities/District'
 
 const props = defineProps<{
@@ -28,6 +30,9 @@ const props = defineProps<{
 const page = useDistrictShowPage(props.districtId, props.initialDistrict)
 const news = useDistrictNews(props.districtId, page.isOwner)
 const canCommentNews = computed(() => page.isOwner.value || page.isMember.value)
+const newsHasMore = computed(() => news.hasMore.value)
+const newsLoadingMore = computed(() => news.loadingMore.value)
+const { sentinel: newsSentinel } = useInfiniteScroll({ hasMore: newsHasMore, loading: newsLoadingMore, onLoadMore: () => news.loadMore() })
 const newsCanSubmit = computed(() => {
   const ready = news.body.value.trim().length >= 2 && !news.saving.value
   return ready

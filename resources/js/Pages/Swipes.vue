@@ -7,6 +7,8 @@ import DatingQuestionnaireForm from '@/Components/Features/Dating/DatingQuestion
 import SwipeDetailsDialog from '@/Components/Features/Dating/SwipeDetailsDialog.vue'
 import DefaultModeHint from '@/Components/Features/Mode/DefaultModeHint.vue'
 import { useSwipes } from '@/composables/useSwipes'
+import InfiniteSentinel from '@/Components/Ui/List/InfiniteSentinel.vue'
+import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 import { useSwipeCardPhotos } from '@/composables/useSwipeCardPhotos'
 import { useSwipesMobileMenu } from '@/composables/useSwipesMobileMenu'
 import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
@@ -37,6 +39,15 @@ const mobileMenu = useSwipesMobileMenu()
 const { selectPt } = useDropdownMenuStyle()
 
 const detailsCard = ref<any | null>(null)
+const activeHasMore = computed(() => s.activeHasMore.value)
+const activeLoadingMore = computed(() => s.loadingMoreLists.value)
+const { sentinel: activeSentinel } = useInfiniteScroll({ hasMore: activeHasMore, loading: activeLoadingMore, onLoadMore: () => s.loadMoreActive() })
+const favHasMore = computed(() => s.favoritesHasMore.value)
+const { sentinel: favSentinel } = useInfiniteScroll({ hasMore: favHasMore, loading: activeLoadingMore, onLoadMore: () => s.loadMoreFavorites() })
+const admHasMore = computed(() => s.admirersHasMore.value)
+const { sentinel: admSentinel } = useInfiniteScroll({ hasMore: admHasMore, loading: activeLoadingMore, onLoadMore: () => s.loadMoreAdmirers() })
+const matchHasMore = computed(() => s.matchesHasMore.value)
+const { sentinel: matchSentinel } = useInfiniteScroll({ hasMore: matchHasMore, loading: activeLoadingMore, onLoadMore: () => s.loadMoreMatches() })
 
 function goalShort(card: any): string {
   const custom = String(card?.custom_goal ?? '').trim()
@@ -193,7 +204,7 @@ onMounted(async () => {
                   <div v-if="!u.can_message && u.can_message_reason" class="mt-1 text-[10px] leading-tight text-stone-400 dark:text-zinc-500">{{ u.can_message_reason }}</div>
                 </div>
               </div>
-              <div class="mt-2 text-center">
+              <InfiniteSentinel :sentinel="activeSentinel" :has-more="s.activeHasMore.value" :loading="s.loadingMoreLists.value" />`r`n              <div class="mt-2 text-center">
                 <Button label="Обновить" icon="pi pi-refresh" severity="secondary" rounded outlined size="small" :loading="s.activeLoading.value" @click="s.loadActive()" />
               </div>
             </div>

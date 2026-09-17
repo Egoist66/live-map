@@ -17,12 +17,21 @@ import { useEnterToSend } from '@/composables/useEnterToSend'
 import { usePeopleSearchStore } from '@/stores/peopleSearch'
 import type { GlobalSearchTab } from '@/stores/peopleSearch'
 import DistrictSearchList from '@/Components/Features/Districts/DistrictSearchList.vue'
+import InfiniteSentinel from '@/Components/Ui/List/InfiniteSentinel.vue'
+import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
+import { computed } from 'vue'
 
 const search = useGlobalPeopleSearch()
 const districts = useGlobalDistrictSearch()
 const peopleStore = usePeopleSearchStore()
 const { isDesktop } = useEnterToSend()
 const { isFriend, isPending, showAdd, addTitle } = useChatSearchList()
+const peopleHasMore = computed(() => peopleStore.peopleHasMore)
+const peopleLoadingMore = computed(() => peopleStore.loadingMorePeople)
+const { sentinel: peopleSentinel } = useInfiniteScroll({ hasMore: peopleHasMore, loading: peopleLoadingMore, onLoadMore: () => peopleStore.loadMorePeople() })
+const districtsHasMore = computed(() => peopleStore.districtsHasMore)
+const districtsLoadingMore = computed(() => peopleStore.loadingMoreDistricts)
+const { sentinel: districtsSentinel } = useInfiniteScroll({ hasMore: districtsHasMore, loading: districtsLoadingMore, onLoadMore: () => peopleStore.loadMoreDistricts() })
 
 /**
  * Переключить таб глобального поиска.
@@ -197,7 +206,7 @@ function onTab(value: string | number | undefined): void {
             v-if="districts.districtResults.value.length"
             class="mt-3 max-h-[60dvh] sm:max-h-[52vh] overflow-auto divide-y divide-stone-100 dark:divide-zinc-800 border rounded-2xl bg-white dark:bg-zinc-900 dark:border-zinc-700 shadow-sm"
           >
-            <DistrictSearchList :rows="districts.districtResults.value" @open="(id) => districts.openDistrict(id)" @chat="(row) => districts.openChat(row)" />
+            <DistrictSearchList :rows="districts.districtResults.value" @open="(id) => districts.openDistrict(id)" @chat="(row) => districts.openChat(row)" />`r`n            <InfiniteSentinel :sentinel="districtsSentinel" :has-more="peopleStore.districtsHasMore" :loading="peopleStore.loadingMoreDistricts" />
           </div>
 
           <div

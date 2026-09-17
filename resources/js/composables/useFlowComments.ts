@@ -5,17 +5,25 @@ import { flowApi } from '@/services/flow.api'
 import type { FlowComment } from '@/types/flow'
 
 /**
- * Ветка комментариев поста UFlow: список, ответы, удаление.
+ * Ветка комментариев поста UFlow: список, ответы, удаление + infinite scroll.
+ *
+ * Первая страница грузится `load()`, дальше `loadMore()` по sentinel.
+ * Новые ответы вшиваются в родителя, топ-комменты — в конец.
  *
  * @param postId пост
  * @example
  * const thread = useFlowComments(12)
  * await thread.load()
+ * // <InfiniteSentinel :sentinel="thread.sentinel" :has-more="thread.hasMore" :loading="thread.loadingMore" />
  */
 export function useFlowComments(postId: number) {
   const store = useFlowStore()
   const comments = ref<FlowComment[]>([])
   const loading = ref(false)
+  const loadingMore = ref(false)
+  const hasMore = ref(true)
+  const page = ref(1)
+  const lastPage = ref(1)
   const sending = ref(false)
   const replyTo = ref<FlowComment | null>(null)
   const draft = ref('')
@@ -33,11 +41,41 @@ export function useFlowComments(postId: number) {
    */
   async function load(): Promise<void> {
     loading.value = true
+    hasMore.value = true
     try {
       const res = await flowApi.comments(postId, 1)
       comments.value = res.data
+      page.value = res.current_page ?? 1
+      lastPage.value = res.last_page ?? 1
+      hasMore.value = page.value < lastPage.value
     } finally {
       loading.value = false
+    }
+  }
+
+  /**
+   * Догрузить следующую страницу для infinite scroll.
+   *
+   * @returns false когда страниц больше нет
+   */
+  async function loadMore(): Promise<boolean> {
+    if (loading.value || loadingMore.value || !hasMore.value) return false
+    loadingMore.value = true
+    try {
+      const next = page.value + 1
+      const res = await flowApi.comments(postId, next)
+      const rows = Array.isArray(res.data) ? res.data : []
+      const known = new Set(comments.value.map((c) => c.id))
+      const fresh = rows.filter((c) => !known.has(c.id))
+      comments.value = [...comments.value, ...fresh]
+      page.value = res.current_page ?? next
+      lastPage.value = res.last_page ?? page.value
+      hasMore.value = page.value < lastPage.value && rows.length > 0
+      return fresh.length > 0
+    } catch {
+      return false
+    } finally {
+      loadingMore.value = false
     }
   }
 
@@ -109,5 +147,5 @@ export function useFlowComments(postId: number) {
     store.applyCommentsDelta(postId, -removed)
   }
 
-  return { comments, loading, sending, replyTo, draft, anonymousReply, load, setReply, send, remove }
+  return { comments, loading, loadingMore, hasMore, sending, replyTo, draft, anonymousReply, load, loadMore, setReply, send, remove }
 }

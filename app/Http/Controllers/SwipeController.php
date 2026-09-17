@@ -31,9 +31,12 @@ class SwipeController extends Controller
             'radius_km' => 'nullable|integer|min:1|max:500',
             'interests' => 'nullable|array|max:10',
             'interests.*' => 'string|max:40',
+            'exclude_ids' => 'nullable|array|max:200',
+            'exclude_ids.*' => 'integer|min:1',
+            'limit' => 'nullable|integer|min:1|max:30',
         ]);
 
-        $cards = $this->dating->feed($me, $data);
+        $cards = $this->dating->feed($me, $data, (int) ($data['limit'] ?? 20));
 
         return response()->json([
             'cards' => $cards,
@@ -77,8 +80,15 @@ class SwipeController extends Controller
     public function matches(Request $request)
     {
         $this->dating->assertAdult($request->user());
+        $page = max(1, (int) $request->input('page', 1));
+        $perPage = max(1, min(30, (int) $request->input('per_page', 20)));
+        $res = $this->dating->matches($request->user(), $page, $perPage);
         return response()->json([
-            'matches' => $this->dating->matches($request->user()),
+            'matches' => $res['matches'],
+            'current_page' => $res['current_page'],
+            'last_page' => $res['last_page'],
+            'total' => $res['total'],
+            'has_more' => $res['has_more'],
             'quota' => $this->dating->quotaState($request->user()),
         ]);
     }
@@ -92,8 +102,10 @@ class SwipeController extends Controller
     public function favorites(Request $request)
     {
         $this->dating->assertAdult($request->user());
+        $page = max(1, (int) $request->input('page', 1));
+        $perPage = max(1, min(30, (int) $request->input('per_page', 20)));
 
-        return response()->json($this->dating->favorites($request->user()));
+        return response()->json($this->dating->favorites($request->user(), $page, $perPage));
     }
 
     /**
@@ -106,8 +118,10 @@ class SwipeController extends Controller
     public function admirers(Request $request)
     {
         $this->dating->assertAdult($request->user());
+        $page = max(1, (int) $request->input('page', 1));
+        $perPage = max(1, min(30, (int) $request->input('per_page', 20)));
 
-        return response()->json($this->dating->admirers($request->user()));
+        return response()->json($this->dating->admirers($request->user(), $page, $perPage));
     }
 
     /**
@@ -134,9 +148,16 @@ class SwipeController extends Controller
     public function active(Request $request)
     {
         $this->dating->assertAdult($request->user());
+        $page = max(1, (int) $request->input('page', 1));
+        $perPage = max(1, min(30, (int) $request->input('per_page', 20)));
+        $res = $this->dating->active($request->user(), $perPage, $page);
 
         return response()->json([
-            'active' => $this->dating->active($request->user()),
+            'active' => $res['active'],
+            'current_page' => $res['current_page'],
+            'last_page' => $res['last_page'],
+            'total' => $res['total'],
+            'has_more' => $res['has_more'],
             'quota' => $this->dating->quotaState($request->user()),
         ]);
     }

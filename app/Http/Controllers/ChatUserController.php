@@ -14,20 +14,23 @@ class ChatUserController extends Controller
         $q = trim($request->input('q',''));
         abort_if(strlen($q)<2,422,'Минимум 2 символа');
         $me=$request->user();
+        $perPage = max(1, min(30, (int) $request->input('per_page', 20)));
         $blocked = $me->isAdmin() ? collect() : UserBlock::where('blocker_id',$me->id)->pluck('blocked_id')->merge(UserBlock::where('blocked_id',$me->id)->pluck('blocker_id'))->unique();
-        $users = User::where('id','!=',$me->id)
+        $base = User::where('id','!=',$me->id)
             ->whereNotIn('id',$blocked)
             ->whereNotIn('id', User::hiddenFromSearchFor($me))
-            ->where(fn($qq)=>$qq->where('name','like',"%$q%")->orWhere('email','like',"%$q%"))
-            ->select('id','name','avatar_path','message_privacy','allow_random_messages','last_seen_at','is_invisible','plan','role','is_admin')
-            ->limit(20)->get();
+            ->where(fn($qq)=>$qq->where('name','like',"%$q%")->orWhere('email','like',"%$q%"));
+        $page = $base->select('id','name','avatar_path','message_privacy','allow_random_messages','last_seen_at','is_invisible','plan','role','is_admin')
+            ->orderBy('name')
+            ->paginate($perPage);
+        $users = $page->getCollection();
         $ids = $users->pluck('id')->all();
         $friendships = Friendship::where(function($q) use ($me,$ids){
                 $q->where('requester_id',$me->id)->whereIn('addressee_id',$ids);
             })->orWhere(function($q) use ($me,$ids){
                 $q->where('addressee_id',$me->id)->whereIn('requester_id',$ids);
             })->get()->keyBy(fn($f)=> $f->requester_id===$me->id ? $f->addressee_id : $f->requester_id);
-        return $users->map(fn($u)=>[
+        $rows = $users->map(fn($u)=>[
                 'id'=>$u->id,
                 'name'=>$u->name,
                 'avatar_path'=>$u->avatar_path,
@@ -41,8 +44,15 @@ class ChatUserController extends Controller
                 'is_friend'=>($friendships[$u->id]?->status ?? null)==='accepted',
                 'is_pending'=>($friendships[$u->id]?->status ?? null)==='pending',
                 'friendship_outgoing'=>($friendships[$u->id]?->status ?? null)==='pending' ? ($friendships[$u->id]->requester_id===$me->id) : null,
-            ]);
-        return response()->json($users);
+            ])->values();
+        return response()->json([
+            'data' => $rows,
+            'current_page' => $page->currentPage(),
+            'last_page' => $page->lastPage(),
+            'per_page' => $page->perPage(),
+            'total' => $page->total(),
+            'has_more' => $page->hasMorePages(),
+        ]);
     }
 
     public function heartbeat(Request $request)

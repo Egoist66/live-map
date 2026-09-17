@@ -54,8 +54,17 @@ export interface ActiveCard extends SwipeCard {
   can_message_reason: string | null
 }
 
+/** Пагинированный ответ списков свайпов. */
+export interface SwipePage<T> {
+  current_page: number
+  last_page: number
+  total: number
+  has_more: boolean
+  quota?: SwipeQuota
+}
+
 export const datingApi = {
-  async feed(filters: Partial<SwipeFilters>) {
+  async feed(filters: Partial<SwipeFilters>, excludeIds: number[] = [], limit = 20) {
     const params: Record<string, unknown> = {}
     if (filters.goal) params.goal = filters.goal
     if (filters.gender && filters.gender !== 'all') params.gender = filters.gender
@@ -63,6 +72,8 @@ export const datingApi = {
     if (filters.age_max) params.age_max = filters.age_max
     if (filters.radius_km) params.radius_km = filters.radius_km
     if (filters.interests?.length) params['interests[]'] = filters.interests
+    if (excludeIds.length) params['exclude_ids[]'] = excludeIds
+    params.limit = limit
     const { data } = await api.get('/api/swipes/feed', { params })
     return data as { cards: SwipeCard[]; quota: SwipeQuota }
   },
@@ -70,21 +81,21 @@ export const datingApi = {
     const { data } = await api.post('/api/swipes/action', { user_id, action, incognito })
     return data as { matched: boolean; match_id: number | null; conversation_id: number | null; is_incognito?: boolean; quota: SwipeQuota }
   },
-  async matches() {
-    const { data } = await api.get('/api/swipes/matches')
-    return data as { matches: Array<{ match_id: number; created_at: string; conversation_id: number | null; user: { id: number; name: string; avatar_url: string | null; last_seen_at: string | null } }>; quota: SwipeQuota }
+  async matches(page = 1, perPage = 20) {
+    const { data } = await api.get('/api/swipes/matches', { params: { page, per_page: perPage } })
+    return data as { matches: Array<{ match_id: number; created_at: string; conversation_id: number | null; user: { id: number; name: string; avatar_url: string | null; last_seen_at: string | null } }>; quota: SwipeQuota } & SwipePage<unknown>
   },
-  async active() {
-    const { data } = await api.get('/api/swipes/active')
-    return data as { active: ActiveCard[]; quota: SwipeQuota }
+  async active(page = 1, perPage = 20) {
+    const { data } = await api.get('/api/swipes/active', { params: { page, per_page: perPage } })
+    return data as { active: ActiveCard[]; quota: SwipeQuota } & SwipePage<unknown>
   },
-  async favorites() {
-    const { data } = await api.get('/api/swipes/favorites')
-    return data as { favorites: SwipeCard[]; limit: number }
+  async favorites(page = 1, perPage = 20) {
+    const { data } = await api.get('/api/swipes/favorites', { params: { page, per_page: perPage } })
+    return data as { favorites: SwipeCard[]; limit: number } & SwipePage<unknown>
   },
-  async admirers() {
-    const { data } = await api.get('/api/swipes/admirers')
-    return data as { admirers: Array<SwipeCard & { is_incognito?: boolean; created_at?: string }>; total: number; incognito_count: number }
+  async admirers(page = 1, perPage = 20) {
+    const { data } = await api.get('/api/swipes/admirers', { params: { page, per_page: perPage } })
+    return data as { admirers: Array<SwipeCard & { is_incognito?: boolean; created_at?: string }>; total: number; incognito_count: number } & SwipePage<unknown>
   },
   async removeFavorite(userId: number) {
     const { data } = await api.delete(`/api/swipes/favorites/${userId}`)

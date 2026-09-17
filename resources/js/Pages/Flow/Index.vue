@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { Head } from '@inertiajs/vue3'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import Button from 'primevue/button'
@@ -9,8 +9,10 @@ import Toast from 'primevue/toast'
 import FlowDeleteDialog from '@/Components/Features/Flow/FlowDeleteDialog.vue'
 import FlowEditDialog from '@/Components/Features/Flow/FlowEditDialog.vue'
 import FlowPostCard from '@/Components/Features/Flow/FlowPostCard.vue'
+import InfiniteSentinel from '@/Components/Ui/List/InfiniteSentinel.vue'
 import { useFlowFeed } from '@/composables/useFlowFeed'
 import { useFlowComposer } from '@/composables/useFlowComposer'
+import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 import type { FlowPost } from '@/types/flow'
 
 const props = defineProps<{ postId?: number | null }>()
@@ -20,6 +22,14 @@ const editor = useFlowComposer()
 const editOpen = ref(false)
 const searchInput = ref('')
 let searchTimer: ReturnType<typeof setTimeout> | null = null
+
+const feedHasMore = computed(() => feed.store.page < feed.store.lastPage)
+const feedLoadingMore = computed(() => feed.store.loadingMore)
+const { sentinel: feedSentinel } = useInfiniteScroll({
+  hasMore: feedHasMore,
+  loading: feedLoadingMore,
+  onLoadMore: () => feed.store.loadMore(),
+})
 
 function onSearch() {
   if (searchTimer) clearTimeout(searchTimer)
@@ -82,9 +92,9 @@ onMounted(() => feed.init())
             @edit="openEdit($event)"
             @delete="feed.askDelete($event)"
           />
-          <div class="flex justify-center pt-1">
+          <InfiniteSentinel :sentinel="feedSentinel" :has-more="feed.store.page < feed.store.lastPage" :loading="feed.store.loadingMore" end-text="Это все новости" />
+          <div v-if="feed.store.page < feed.store.lastPage" class="flex justify-center pt-1">
             <Button
-              v-if="feed.store.hasMore()"
               label="Показать ещё"
               rounded
               outlined

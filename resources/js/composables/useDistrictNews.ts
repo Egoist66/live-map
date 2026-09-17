@@ -30,6 +30,12 @@ export function useDistrictNews(districtId: number, isOwner: Ref<boolean>) {
   const posts = ref<DistrictPost[]>([])
   /** Грузится ли лента. */
   const loading = ref(false)
+  /** Догрузка следующей страницы. */
+  const loadingMore = ref(false)
+  /** Есть ли ещё страницы. */
+  const hasMore = ref(true)
+  const page = ref(1)
+  const lastPage = ref(1)
   /** Идёт ли публикация/сохранение. */
   const saving = ref(false)
   /** Занятые лайком посты. */
@@ -56,13 +62,43 @@ export function useDistrictNews(districtId: number, isOwner: Ref<boolean>) {
       return
     }
     loading.value = true
+    hasMore.value = true
     try {
       const res = await districtPostsApi.list(districtId, 1)
       posts.value = res.data
+      page.value = res.current_page ?? 1
+      lastPage.value = res.last_page ?? 1
+      hasMore.value = page.value < lastPage.value
     } catch {
       toast?.add({ severity: 'error', summary: 'Не вышло загрузить новости', life: 2500 })
     } finally {
       loading.value = false
+    }
+  }
+
+  /**
+   * Догрузить следующую страницу новостей для infinite scroll.
+   *
+   * @returns false когда страниц больше нет
+   */
+  async function loadMore(): Promise<boolean> {
+    if (!(districtId > 0) || loading.value || loadingMore.value || !hasMore.value) return false
+    loadingMore.value = true
+    try {
+      const next = page.value + 1
+      const res = await districtPostsApi.list(districtId, next)
+      const rows = Array.isArray(res.data) ? res.data : []
+      const known = new Set(posts.value.map((p) => p.id))
+      const fresh = rows.filter((p) => !known.has(p.id))
+      posts.value = [...posts.value, ...fresh]
+      page.value = res.current_page ?? next
+      lastPage.value = res.last_page ?? page.value
+      hasMore.value = page.value < lastPage.value && rows.length > 0
+      return fresh.length > 0
+    } catch {
+      return false
+    } finally {
+      loadingMore.value = false
     }
   }
 
@@ -231,6 +267,8 @@ export function useDistrictNews(districtId: number, isOwner: Ref<boolean>) {
   return {
     posts,
     loading,
+    loadingMore,
+    hasMore,
     saving,
     likeBusy,
     title,
@@ -239,6 +277,7 @@ export function useDistrictNews(districtId: number, isOwner: Ref<boolean>) {
     imagePreview,
     editingId,
     load,
+    loadMore,
     pickImage,
     resetComposer,
     startEdit,

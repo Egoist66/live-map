@@ -3,10 +3,11 @@ import type { PinComment, CreateCommentPayload } from '@/types/entities/Comment'
 import type { PaginatedResponse } from '@/types/api/pagination'
 
 export const commentsApi = {
-  async list(pinId: number): Promise<PinComment[]> {
-    const { data } = await api.get<PaginatedResponse<PinComment> | PinComment[]>(`/api/pins/${pinId}/comments`)
-    if (Array.isArray(data)) return data
-    return (data as PaginatedResponse<PinComment>).data ?? []
+  async list(pinId: number, page = 1): Promise<{ data: PinComment[]; current_page: number; last_page: number }> {
+    const { data } = await api.get<PaginatedResponse<PinComment> | PinComment[]>(`/api/pins/${pinId}/comments`, { params: { page } })
+    if (Array.isArray(data)) return { data, current_page: 1, last_page: 1 }
+    const res = data as PaginatedResponse<PinComment>
+    return { data: res.data ?? [], current_page: res.current_page ?? page, last_page: res.last_page ?? page }
   },
 
   async create(pinId: number, content: string, is_anonymous?: boolean, parent_id?: number | null): Promise<PinComment> {

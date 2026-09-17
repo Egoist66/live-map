@@ -57,20 +57,53 @@ export function usePinDetails() {
 
   const activePinId = computed(() => selectedPin.value?.id ?? null)
 
+  const commentsPage = ref(1)
+  const commentsLastPage = ref(1)
+  const commentsHasMore = ref(true)
+  const commentsLoadingMore = ref(false)
+
   const commentsQuery = useQuery(() => {
     const id = activePinId.value
     if (!id) return { key: ['comments', 'empty'] as any, query: () => Promise.resolve([]), enabled: false } as any
-    return { ...commentsByPinQuery(id), enabled: !!id } as any
+    return { ...commentsByPinQuery(id, 1), enabled: !!id } as any
   })
 
   async function loadComments(id: number): Promise<void> {
+    commentsHasMore.value = true
     try {
-      const list = await commentsApi.list(id)
-      comments.value = list
-      try { cache?.setQueryData(COMMENT_KEYS.byPin(id) as any, list as any) } catch {}
+      const res = await commentsApi.list(id, 1)
+      comments.value = res.data
+      commentsPage.value = res.current_page ?? 1
+      commentsLastPage.value = res.last_page ?? 1
+      commentsHasMore.value = commentsPage.value < commentsLastPage.value
+      try { cache?.setQueryData(COMMENT_KEYS.byPin(id) as any, res.data as any) } catch {}
     } catch {
       comments.value = []
+      commentsHasMore.value = false
     }
+  }
+
+  /**
+   * Догрузить следующую страницу комментариев пина для infinite scroll.
+   *
+   * @returns false когда страниц больше нет
+   */
+  async function loadMoreComments(): Promise<boolean> {
+    const id = activePinId.value
+    if (!id || commentsLoadingMore.value || !commentsHasMore.value) return false
+    commentsLoadingMore.value = true
+    try {
+      const next = commentsPage.value + 1
+      const res = await commentsApi.list(id, next)
+      const rows = res.data ?? []
+      const known = new Set(comments.value.map((c) => c.id))
+      const fresh = rows.filter((c) => !known.has(c.id))
+      comments.value = [...comments.value, ...fresh]
+      commentsPage.value = res.current_page ?? next
+      commentsLastPage.value = res.last_page ?? commentsPage.value
+      commentsHasMore.value = commentsPage.value < commentsLastPage.value && rows.length > 0
+      return fresh.length > 0
+    } catch { return false } finally { commentsLoadingMore.value = false }
   }
 
   function openPin(pin: Pin, commentId?: number | null): void {
@@ -272,7 +305,7 @@ export function usePinDetails() {
 
   return {
     selectedPin, comments, threadedComments, replyTo, replyTarget, cancelReply, commentText, commentTextAttrs, commentFormErrors, editingCommentId, editingContent, deletingCommentId, highlightCommentId,
-    openPin, openPinById, closePin, loadComments, react, sendComment, boost, startEditComment, cancelEditComment, saveEditComment, deleteComment, useCommentsQuery, formatTime,
+    openPin, openPinById, closePin, loadComments, loadMoreComments, commentsHasMore, commentsLoadingMore, react, sendComment, boost, startEditComment, cancelEditComment, saveEditComment, deleteComment, useCommentsQuery, formatTime,
     commentsQuery,
     reactMutation, reactStatus: (reactMutation as any).state, reactAsyncStatus: (reactMutation as any).asyncStatus,
     createCommentMutation, createCommentStatus: (createCommentMutation as any).state, createCommentAsyncStatus: (createCommentMutation as any).asyncStatus,

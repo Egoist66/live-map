@@ -1,10 +1,21 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import Dialog from 'primevue/dialog'
 import { avatarSrcFor } from '@/composables/useAvatar'
 import { isRecentlySeen } from '@/composables/usePresence'
+import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
+import InfiniteSentinel from '@/Components/Ui/List/InfiniteSentinel.vue'
 import { formatRelative } from '@/utils/date'
 
-defineProps<{ people: any }>()
+const props = defineProps<{ people: any }>()
+
+const friendsHasMore = computed(() => !!props.people.friendsHasMore?.value)
+const friendsLoadingMore = computed(() => !!props.people.friendsLoadingMore?.value)
+const { sentinel: friendsSentinel } = useInfiniteScroll({
+  hasMore: friendsHasMore,
+  loading: friendsLoadingMore,
+  onLoadMore: () => props.people.loadMoreFriends?.(),
+})
 
 /**
  * Подпись статуса: «в сети» или относительное время последнего визита.
@@ -46,6 +57,7 @@ function isOnline(other: any): boolean {
         </span>
         <i class="pi pi-chevron-right text-xs text-stone-300 dark:text-zinc-600 shrink-0"></i>
       </button>
+      <InfiniteSentinel :sentinel="friendsSentinel" :has-more="people.friendsHasMore?.value ?? false" :loading="people.friendsLoadingMore?.value ?? false" />
     </div>
   </Dialog>
 </template>

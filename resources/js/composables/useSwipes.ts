@@ -63,6 +63,15 @@ export function useSwipes() {
   const activeTab = ref<SwipeTab>('feed')
   const activeUsers = ref<ActiveCard[]>([])
   const activeLoading = ref(false)
+  const loadingMoreLists = ref(false)
+  const activeHasMore = ref(true)
+  const activePage = ref(1)
+  const favoritesHasMore = ref(true)
+  const favoritesPage = ref(1)
+  const admirersHasMore = ref(true)
+  const admirersPage = ref(1)
+  const matchesHasMore = ref(true)
+  const matchesPage = ref(1)
   const quota = ref<SwipeQuota | null>(null)
   const loading = ref(false)
   const acting = ref(false)
@@ -432,22 +441,47 @@ export function useSwipes() {
   }
 
   /**
-   * Загрузить активных сейчас в ULove (онлайн).
+   * Загрузить активных сейчас в ULove (онлайн) — первая страница.
+   * Дальше — loadMoreActive() по sentinel.
    * @returns void
    */
   async function loadActive(): Promise<void> {
     activeLoading.value = true
     error.value = null
     try {
-      const res = await datingApi.active()
+      const res = await datingApi.active(1, 20)
       activeUsers.value = res.active
       quota.value = res.quota
+      activePage.value = (res as { current_page?: number }).current_page ?? 1
+      activeHasMore.value = !!(res as { has_more?: boolean }).has_more
     } catch (e: unknown) {
       if (handleGate(e)) return
       applyFeedError(e, 'Не удалось загрузить активных')
     } finally {
       activeLoading.value = false
     }
+  }
+
+  /**
+   * Догрузить следующую страницу активных для infinite scroll.
+   *
+   * @returns false когда страниц больше нет
+   */
+  async function loadMoreActive(): Promise<boolean> {
+    if (activeLoading.value || loadingMoreLists.value || !activeHasMore.value) return false
+    loadingMoreLists.value = true
+    try {
+      const next = activePage.value + 1
+      const res = await datingApi.active(next, 20)
+      const rows = res.active ?? []
+      const known = new Set(activeUsers.value.map((u) => u.id))
+      const fresh = rows.filter((u) => !known.has(u.id))
+      activeUsers.value = [...activeUsers.value, ...fresh]
+      activePage.value = (res as { current_page?: number }).current_page ?? next
+      activeHasMore.value = !!(res as { has_more?: boolean }).has_more && rows.length > 0
+      if ((res as { quota?: SwipeQuota }).quota) quota.value = (res as { quota: SwipeQuota }).quota
+      return fresh.length > 0
+    } catch { return false } finally { loadingMoreLists.value = false }
   }
 
   /**
@@ -480,15 +514,17 @@ export function useSwipes() {
   }
 
   /**
-   * Загрузить мэтчи.
+   * Загрузить мэтчи — первая страница, дальше loadMoreMatches().
    *
    * @returns void
    */
   async function loadMatches(): Promise<void> {
     try {
-      const res = await datingApi.matches()
+      const res = await datingApi.matches(1, 20)
       matches.value = res.matches
       quota.value = res.quota
+      matchesPage.value = (res as { current_page?: number }).current_page ?? 1
+      matchesHasMore.value = !!(res as { has_more?: boolean }).has_more
     } catch (e: unknown) {
       if (handleGate(e)) return
       matches.value = []
@@ -496,16 +532,39 @@ export function useSwipes() {
   }
 
   /**
-   * Загрузить избранное (лайкнутые без мэтча).
+   * Догрузить мэтчи для горизонтального infinite scroll.
+   *
+   * @returns false когда страниц больше нет
+   */
+  async function loadMoreMatches(): Promise<boolean> {
+    if (loadingMoreLists.value || !matchesHasMore.value) return false
+    loadingMoreLists.value = true
+    try {
+      const next = matchesPage.value + 1
+      const res = await datingApi.matches(next, 20)
+      const rows = res.matches ?? []
+      const known = new Set(matches.value.map((m) => m.match_id))
+      const fresh = rows.filter((m) => !known.has(m.match_id))
+      matches.value = [...matches.value, ...fresh]
+      matchesPage.value = (res as { current_page?: number }).current_page ?? next
+      matchesHasMore.value = !!(res as { has_more?: boolean }).has_more && rows.length > 0
+      return fresh.length > 0
+    } catch { return false } finally { loadingMoreLists.value = false }
+  }
+
+  /**
+   * Загрузить избранное (лайкнутые без мэтча) — первая страница.
    *
    * @returns void
    */
   async function loadFavorites(): Promise<void> {
     favoritesLoading.value = true
     try {
-      const res = await datingApi.favorites()
+      const res = await datingApi.favorites(1, 20)
       favorites.value = res.favorites
       favoritesLimit.value = res.limit
+      favoritesPage.value = (res as { current_page?: number }).current_page ?? 1
+      favoritesHasMore.value = !!(res as { has_more?: boolean }).has_more
     } catch (e: unknown) {
       if (handleGate(e)) return
       favorites.value = []
@@ -515,22 +574,67 @@ export function useSwipes() {
   }
 
   /**
-   * Загрузить «Кто меня лайкнул»: открытые + тайные поклонники.
+   * Догрузить избранное для infinite scroll.
+   *
+   * @returns false когда страниц больше нет
+   */
+  async function loadMoreFavorites(): Promise<boolean> {
+    if (favoritesLoading.value || loadingMoreLists.value || !favoritesHasMore.value) return false
+    loadingMoreLists.value = true
+    try {
+      const next = favoritesPage.value + 1
+      const res = await datingApi.favorites(next, 20)
+      const rows = res.favorites ?? []
+      const known = new Set(favorites.value.map((f) => f.id))
+      const fresh = rows.filter((f) => !known.has(f.id))
+      favorites.value = [...favorites.value, ...fresh]
+      favoritesPage.value = (res as { current_page?: number }).current_page ?? next
+      favoritesHasMore.value = !!(res as { has_more?: boolean }).has_more && rows.length > 0
+      return fresh.length > 0
+    } catch { return false } finally { loadingMoreLists.value = false }
+  }
+
+  /**
+   * Загрузить «Кто меня лайкнул» — первая страница.
    * @returns void
    */
   async function loadAdmirers(): Promise<void> {
     admirersLoading.value = true
     try {
-      const res = await datingApi.admirers()
+      const res = await datingApi.admirers(1, 20)
       admirers.value = res.admirers
       admirersTotal.value = res.total
       admirersIncognito.value = res.incognito_count
+      admirersPage.value = (res as { current_page?: number }).current_page ?? 1
+      admirersHasMore.value = !!(res as { has_more?: boolean }).has_more
     } catch (e: unknown) {
       if (handleGate(e)) return
       admirers.value = []
     } finally {
       admirersLoading.value = false
     }
+  }
+
+  /**
+   * Догрузить поклонников для infinite scroll.
+   *
+   * @returns false когда страниц больше нет
+   */
+  async function loadMoreAdmirers(): Promise<boolean> {
+    if (admirersLoading.value || loadingMoreLists.value || !admirersHasMore.value) return false
+    loadingMoreLists.value = true
+    try {
+      const next = admirersPage.value + 1
+      const res = await datingApi.admirers(next, 20)
+      const rows = res.admirers ?? []
+      const known = new Set(admirers.value.map((a) => `${a.id}-${a.is_incognito ? 'inc' : 'open'}`))
+      const fresh = rows.filter((a) => !known.has(`${a.id}-${a.is_incognito ? 'inc' : 'open'}`))
+      admirers.value = [...admirers.value, ...fresh]
+      admirersPage.value = (res as { current_page?: number }).current_page ?? next
+      admirersHasMore.value = !!(res as { has_more?: boolean }).has_more && rows.length > 0
+      admirersTotal.value = res.total ?? admirersTotal.value
+      return fresh.length > 0
+    } catch { return false } finally { loadingMoreLists.value = false }
   }
 
   /**
@@ -628,12 +732,14 @@ export function useSwipes() {
 
   /**
    * Догрузить ленту в фоне, когда карточки заканчиваются.
+   * Шлёт exclude_ids виденных — бэк исключает дубли без сброса истории.
    *
    * @returns void
    */
   async function loadMore(): Promise<void> {
     try {
-      const res = await datingApi.feed(filters.value)
+      const exclude = cards.value.map((c) => c.id).slice(-200)
+      const res = await datingApi.feed(filters.value, exclude, 20)
       quota.value = res.quota
       const known = new Set(cards.value.map((c) => c.id))
       const fresh = res.cards.filter((c) => !known.has(c.id))
@@ -905,15 +1011,19 @@ export function useSwipes() {
     hasMore,
     seenCount,
     matches,
+    matchesHasMore,
     favorites,
     favoritesLimit,
     favoritesCount,
     favoritesLoading,
+    favoritesHasMore,
     admirers,
     admirersTotal,
     admirersIncognito,
     admirersLoading,
+    admirersHasMore,
     loadAdmirers,
+    loadMoreAdmirers,
     incognitoLike,
     canIncognito,
     planLabel,
@@ -921,10 +1031,14 @@ export function useSwipes() {
     goTab,
     activeUsers,
     activeLoading,
+    activeHasMore,
     loadActive,
+    loadMoreActive,
     hasActiveFilters,
     feedExhausted,
     loadFavorites,
+    loadMoreFavorites,
+    loadingMoreLists,
     removeFavorite,
     quota,
     quotaLabel,
@@ -964,6 +1078,7 @@ export function useSwipes() {
     ageLabel,
     loadFeed,
     loadMatches,
+    loadMoreMatches,
     subscribeRealtime,
     applyFilters,
     resetFilters,

@@ -362,19 +362,30 @@ class DatingService
      * Избранное: лайкнутые без мэтча, свежие сверху.
      *
      * @param User $me
-     * @return array{favorites:array<int,array<string,mixed>>,limit:int}
+     * @param int $page страница 1-based
+     * @param int $perPage размер страницы
+     * @return array{favorites:array<int,array<string,mixed>>,limit:int,current_page:int,last_page:int,total:int,has_more:bool}
      */
-    public function favorites(User $me): array
+    public function favorites(User $me, int $page = 1, int $perPage = 20): array
     {
         $matched = $this->matchedIds($me);
-        $query = SwipeAction::where('liker_id', $me->id)->where('action', 'like')->orderByDesc('id')->limit(50);
+        $totalQuery = SwipeAction::where('liker_id', $me->id)->where('action', 'like');
+
+        if ($matched) {
+            $totalQuery->whereNotIn('liked_id', $matched);
+        }
+
+        $total = (int) (clone $totalQuery)->count();
+        $lastPage = max(1, (int) ceil($total / max(1, $perPage)));
+        $page = max(1, min($page, $lastPage));
+        $query = SwipeAction::where('liker_id', $me->id)->where('action', 'like')->orderByDesc('id');
 
         if ($matched) {
             $query->whereNotIn('liked_id', $matched);
         }
 
-        $ids = $query->pluck('liked_id')->map(fn ($id) => (int) $id)->all();
-        $users = User::whereIn('id', $ids)->get()->keyBy('id');
+        $ids = $query->forPage($page, $perPage)->pluck('liked_id')->map(fn ($id) => (int) $id)->all();
+        $users = $ids ? User::whereIn('id', $ids)->get()->keyBy('id') : collect();
         $likedMe = SwipeAction::where('liked_id', $me->id)->where('action', 'like')->pluck('liker_id')->map(fn ($id) => (int) $id)->flip();
 
         $cards = [];
@@ -389,7 +400,14 @@ class DatingService
             $cards[] = $this->cardFor($candidate, $me, $this->distanceKm($me, $candidate), false, isset($likedMe[$id]));
         }
 
-        return ['favorites' => $cards, 'limit' => $this->favoritesLimitFor($me)];
+        return [
+            'favorites' => $cards,
+            'limit' => $this->favoritesLimitFor($me),
+            'current_page' => $page,
+            'last_page' => $lastPage,
+            'total' => $total,
+            'has_more' => $page < $lastPage,
+        ];
     }
 
     /**
@@ -397,14 +415,19 @@ class DatingService
      * Инкогнито без мэтча отдаём анонимно, после мэтча раскрываем.
      *
      * @param User $me
-     * @return array{admirers:array<int,array<string,mixed>>,total:int,incognito_count:int}
+     * @param int $page страница
+     * @param int $perPage размер страницы
+     * @return array{admirers:array<int,array<string,mixed>>,total:int,incognito_count:int,current_page:int,last_page:int,has_more:bool}
      */
-    public function admirers(User $me): array
+    public function admirers(User $me, int $page = 1, int $perPage = 20): array
     {
+        $total = (int) SwipeAction::where('liked_id', $me->id)->where('action', 'like')->count();
+        $lastPage = max(1, (int) ceil($total / max(1, $perPage)));
+        $page = max(1, min($page, $lastPage));
         $rows = SwipeAction::where('liked_id', $me->id)
             ->where('action', 'like')
             ->orderByDesc('id')
-            ->limit(50)
+            ->forPage($page, $perPage)
             ->get();
 
         $matchedFlip = array_flip($this->matchedIds($me));
@@ -445,7 +468,14 @@ class DatingService
             $cards[] = $card;
         }
 
-        return ['admirers' => $cards, 'total' => count($cards), 'incognito_count' => $incognitoCount];
+        return [
+            'admirers' => $cards,
+            'total' => $total,
+            'incognito_count' => $incognitoCount,
+            'current_page' => $page,
+            'last_page' => $lastPage,
+            'has_more' => $page < $lastPage,
+        ];
     }
 
     /**
@@ -717,9 +747,11 @@ class DatingService
      * По умолчанию — без geo-ограничений: видны все люди в системе,
      * независимо от расстояния. Фильтр «рядом» (radius_km) опционален
      * и упирается в тариф: Free — до 10 км, PRO — безлимит.
+     * Для бесконечной колоды фронт шлёт exclude_ids уже виденных,
+     * бэк их исключает — дублей нет без сброса истории.
      *
      * @param User $me
-     * @param array{goal?:string,gender?:string,age_min?:int,age_max?:int,radius_km?:int,interests?:string[]} $filters
+     * @param array{goal?:string,gender?:string,age_min?:int,age_max?:int,radius_km?:int,interests?:string[],exclude_ids?:int[]} $filters
      * @param int $limit
      * @return array<int, array<string,mixed>>
      */
@@ -739,9 +771,13 @@ class DatingService
             ->values()
             ->all();
 
+        $extraExclude = isset($filters['exclude_ids']) && is_array($filters['exclude_ids'])
+            ? array_map('intval', array_slice($filters['exclude_ids'], 0, 200))
+            : [];
+
         $exclude = array_values(array_unique(array_map(
             'intval',
-            array_merge([$me->id], $actedIds, $hiddenIds, $blockedIds, [User::GHOST_USER_ID])
+            array_merge([$me->id], $actedIds, $hiddenIds, $blockedIds, $extraExclude, [User::GHOST_USER_ID])
         )));
 
         $genderPref = $filters['gender'] ?? $me->dating_gender_pref ?? 'all';
@@ -846,9 +882,10 @@ class DatingService
      *
      * @param User $me
      * @param int $limit
-     * @return array<int, array<string,mixed>>
+     * @param int $page страница 1-based
+     * @return array{active:array<int,array<string,mixed>>,current_page:int,last_page:int,total:int,has_more:bool}
      */
-    public function active(User $me, int $limit = 50): array
+    public function active(User $me, int $limit = 20, int $page = 1): array
     {
         $threshold = MonitoringService::onlineThreshold();
 
@@ -868,7 +905,7 @@ class DatingService
 
         $adultThreshold = Carbon::now()->subYears(self::ADULT_AGE)->toDateString();
 
-        $candidates = User::whereNotIn('id', $exclude)
+        $baseQuery = User::whereNotIn('id', $exclude)
             ->where('dating_enabled', true)
             ->where('last_seen_at', '>=', $threshold)
             ->where(function ($ageQuery) use ($adultThreshold) {
@@ -876,7 +913,14 @@ class DatingService
             })
             ->when(! $me->isAdmin() && ! User::isGhostSeer($me), function ($query) {
                 $query->where('is_admin', false);
-            })
+            });
+
+        $total = (int) (clone $baseQuery)->count();
+        $perPage = max(1, $limit);
+        $lastPage = max(1, (int) ceil($total / $perPage));
+        $page = max(1, min($page, $lastPage));
+
+        $candidates = (clone $baseQuery)
             ->select([
                 'id', 'name', 'gender', 'birth_date', 'bio', 'avatar_path',
                 'home_city', 'home_lat', 'home_lng', 'last_seen_at',
@@ -886,7 +930,7 @@ class DatingService
             ])
             ->with(['profilePhotos' => fn ($q) => $q->orderBy('sort_order')->limit(self::SWIPE_PHOTOS_LIMIT_PRO)])
             ->orderByDesc('last_seen_at')
-            ->limit($limit)
+            ->forPage($page, $perPage)
             ->get();
 
         $likedMeIds = SwipeAction::where('liked_id', $me->id)
@@ -911,22 +955,34 @@ class DatingService
             $result[] = $card;
         }
 
-        return $result;
+        return [
+            'active' => $result,
+            'current_page' => $page,
+            'last_page' => $lastPage,
+            'total' => $total,
+            'has_more' => $page < $lastPage,
+        ];
     }
 
     /**
      * Список мэтчей пользователя.
      *
      * @param User $me
-     * @return array<int, array<string,mixed>>
+     * @param int $page страница
+     * @param int $perPage размер страницы
+     * @return array{matches:array<int,array<string,mixed>>,current_page:int,last_page:int,total:int,has_more:bool}
      */
-    public function matches(User $me): array
+    public function matches(User $me, int $page = 1, int $perPage = 20): array
     {
-        $rows = DatingMatch::where('user_a_id', $me->id)
-            ->orWhere('user_b_id', $me->id)
+        $base = DatingMatch::where('user_a_id', $me->id)->orWhere('user_b_id', $me->id);
+        $total = (int) (clone $base)->count();
+        $perPage = max(1, $perPage);
+        $lastPage = max(1, (int) ceil($total / $perPage));
+        $page = max(1, min($page, $lastPage));
+        $rows = (clone $base)
             ->with(['userA:id,name,avatar_path,last_seen_at', 'userB:id,name,avatar_path,last_seen_at'])
             ->orderByDesc('created_at')
-            ->limit(50)
+            ->forPage($page, $perPage)
             ->get();
 
         $convByOther = $this->directConversationMap($me);
@@ -948,7 +1004,13 @@ class DatingService
             ];
         }
 
-        return $cards;
+        return [
+            'matches' => $cards,
+            'current_page' => $page,
+            'last_page' => $lastPage,
+            'total' => $total,
+            'has_more' => $page < $lastPage,
+        ];
     }
 
     /**

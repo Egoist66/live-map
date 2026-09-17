@@ -110,8 +110,12 @@ export function useChat() {
 
   const unreadTotal = computed(() => conversations.value.filter((c) => Number(c?.unread_count || 0) > 0).length)
   const unreadMessagesTotal = computed(() => conversations.value.reduce((s, c) => s + (Number(c?.unread_count) || 0), 0))
+  const conversationsPage = ref(1)
+  const conversationsLastPage = ref(1)
+  const conversationsHasMore = ref(false)
+  const conversationsLoadingMore = ref(false)
   const history = useChatHistory(messages, {
-    loadPage: (beforeId: number) => chatApi.messages(selectedId.value!, beforeId),
+    loadPage: (beforeId: number) => chatApi.messagesPage(selectedId.value!, beforeId, 30),
     getKey: () => selectedId.value,
   })
 
@@ -221,8 +225,37 @@ export function useChat() {
     try {
       const data = await loadConversationsInflight
       conversations.value = mergeConversationPreviews(normalizeConversations(data))
+      // Первая страница; hasMore узнаем лениво при скролле сайдбара
+      conversationsPage.value = 1
+      try {
+        const meta = await chatApi.conversationsPage(1, 20)
+        conversationsLastPage.value = meta.last_page ?? 1
+        conversationsHasMore.value = !!meta.has_more
+      } catch { conversationsHasMore.value = false }
       return conversations.value
     } finally { loadConversationsInflight = null; w.__conversationsInflight = null }
+  }
+
+  /**
+   * Догрузить следующую страницу диалогов для infinite scroll сайдбара.
+   *
+   * @returns false когда страниц больше нет
+   */
+  async function loadMoreConversations(): Promise<boolean> {
+    if (conversationsLoadingMore.value || !conversationsHasMore.value) return false
+    conversationsLoadingMore.value = true
+    try {
+      const next = conversationsPage.value + 1
+      const res = await chatApi.conversationsPage(next, 20)
+      const rows = normalizeConversations(res.data)
+      const known = new Set(conversations.value.map((c) => Number(c?.id)))
+      const fresh = rows.filter((c) => !known.has(Number(c?.id)))
+      conversations.value = mergeConversationPreviews([...conversations.value, ...fresh])
+      conversationsPage.value = res.current_page ?? next
+      conversationsLastPage.value = res.last_page ?? conversationsPage.value
+      conversationsHasMore.value = !!res.has_more
+      return fresh.length > 0
+    } catch { return false } finally { conversationsLoadingMore.value = false }
   }
 
   async function refresh() {
@@ -877,7 +910,7 @@ export function useChat() {
     try {
       const res = await chatApi.search(q)
       if (ctrl.signal.aborted) return
-      searchResults.value = res
+      searchResults.value = Array.isArray(res) ? res : ((res as { data?: unknown })?.data as unknown[] ?? [])
     } catch (e: any) {
       if (e?.name === 'CanceledError' || e?.code === 'ERR_CANCELED' || ctrl.signal.aborted) return
       throw e
@@ -989,6 +1022,7 @@ export function useChat() {
     conversations, activeConv, messages, loading, sending, refreshing, typingUsers,
     searchQuery, searchResults, searching, selectedId, error, unreadTotal, unreadMessagesTotal,
     editingId, editingBody, history,
-    loadConversations, refresh, openConversation, createConversation, sendMessage, startEdit, cancelEdit, saveEdit, deleteMessage, deleteConversation, clearAllConversations, searchUsers, notifyTyping, stopTyping, handleIncoming, handleUpdated, subscribeGlobal, resetChatRealtime,
+    conversationsHasMore, conversationsLoadingMore,
+    loadConversations, loadMoreConversations, refresh, openConversation, createConversation, sendMessage, startEdit, cancelEdit, saveEdit, deleteMessage, deleteConversation, clearAllConversations, searchUsers, notifyTyping, stopTyping, handleIncoming, handleUpdated, subscribeGlobal, resetChatRealtime,
   }
 }

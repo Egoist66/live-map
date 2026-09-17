@@ -126,14 +126,28 @@ class DistrictController extends Controller
         $viewerId = $request->user()?->id;
 
         $isSearch = $request->filled('search');
-        $limit = $isSearch ? 20 : 200;
+        $perPage = max(1, min(50, (int) $request->input('per_page', 20)));
 
-        $query = District::with('owner:id,name,avatar_path')->withCount('approvedMembers')->latest()->limit($limit);
+        $query = District::with('owner:id,name,avatar_path')->withCount('approvedMembers')->latest();
 
         if ($isSearch) {
             $term = mb_substr(trim((string) $request->input('search')), 0, 80);
             $query->where('name', 'like', '%'.$term.'%');
-        } elseif ($request->boolean('mine')) {
+            $page = $query->paginate($perPage);
+            $rows = $page->getCollection()->map(fn (District $district) => $district->toPublicArray($viewerId))->values();
+            return response()->json([
+                'data' => $rows,
+                'current_page' => $page->currentPage(),
+                'last_page' => $page->lastPage(),
+                'per_page' => $page->perPage(),
+                'total' => $page->total(),
+                'has_more' => $page->hasMorePages(),
+            ]);
+        }
+
+        $limit = 200;
+
+        if ($request->boolean('mine')) {
             $ownedIds = $request->user()->districts()->pluck('districts.id');
             $memberIds = $request->user()->districtMemberships()->where('status', DistrictMember::STATUS_APPROVED)->pluck('district_id');
             $query->whereIn('id', $ownedIds->merge($memberIds)->unique()->values()->all() ?: [0]);
@@ -146,7 +160,7 @@ class DistrictController extends Controller
             $query->whereBetween('center_lng', [min($minLng, $maxLng), max($minLng, $maxLng)]);
         }
 
-        $districts = $query->get();
+        $districts = $query->limit($limit)->get();
 
         return response()->json($districts->map(fn (District $district) => $district->toPublicArray($viewerId))->values());
     }

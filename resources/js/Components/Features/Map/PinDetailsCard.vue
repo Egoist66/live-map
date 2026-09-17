@@ -19,10 +19,11 @@ import LikersDialog from '@/Components/Features/Feedback/LikersDialog.vue'
 import { useCommentComposer } from '@/composables/useCommentComposer'
 import { usePinCommentInput } from '@/composables/usePinCommentInput'
 import { useEnterToSend } from '@/composables/useEnterToSend'
+import InfiniteSentinel from '@/Components/Ui/List/InfiniteSentinel.vue'
 import { formatTime } from '@/utils/date'
 import PinInviteButton from '@/Components/Features/Map/PinInviteButton.vue'
 
-const props = defineProps<{ pin: any; comments: any[]; highlightCommentId?: number | null; commentText: string; creatingComment: boolean; editingCommentId: number | null; editingContent: string; savingComment: boolean; deletingCommentId?: number | null; reacting: boolean; reporting: boolean; pinEdit: any; categories: any[]; deleting: boolean; authId: number; isAdmin?: boolean; replyTo: any; mentions: any }>()
+const props = withDefaults(defineProps<{ pin: any; comments: any[]; highlightCommentId?: number | null; commentText: string; creatingComment: boolean; editingCommentId: number | null; editingContent: string; savingComment: boolean; deletingCommentId?: number | null; reacting: boolean; reporting: boolean; pinEdit: any; categories: any[]; deleting: boolean; authId: number; isAdmin?: boolean; replyTo: any; mentions: any; commentsSentinel?: unknown; commentsHasMore?: boolean; commentsLoadingMore?: boolean }>(), { commentsHasMore: false, commentsLoadingMore: false })
 const emit = defineEmits<{ (e: 'close'): void; (e: 'delete'): void; (e: 'react', k: string): void; (e: 'report'): void; (e: 'sendComment'): void; (e: 'update:comment', v: string): void; (e: 'update:editContent', v: string): void; (e: 'startEditComment', c: any): void; (e: 'cancelEditComment'): void; (e: 'saveEditComment'): void; (e: 'deleteComment', c: any): void; (e: 'saveEdit'): void; (e: 'reply', root: any, target: any): void; (e: 'cancelReply'): void; (e: 'sosChat', conversationId: number): void; (e: 'sosClosed'): void }>()
 const blur = computed(() => pinBlurInfo(props.pin))
 const isSosPin = computed(() => String(props.pin?.category ?? '').toLowerCase() === 'sos')
@@ -220,6 +221,7 @@ function canDeleteComment(c: any): boolean {
         </div>
       </div>
       <div v-if="!comments.length" class="text-center py-10"><div class="text-xs text-stone-400 mt-2">Комментариев пока нет<br />Будь первым</div></div>
+      <InfiniteSentinel :sentinel="commentsSentinel as any" :has-more="!!commentsHasMore" :loading="!!commentsLoadingMore" />
     </div>
     <div class="p-3 pb-[calc(0.75rem+var(--sab))] border-t bg-white dark:bg-zinc-900 dark:border-zinc-700 shrink-0">
       <div v-if="replyTo" class="mb-2 flex items-center gap-2 text-[11px] bg-violet-50 dark:bg-violet-950/40 border border-violet-200 dark:border-violet-800 text-violet-800 dark:text-violet-200 rounded-full pl-3 pr-1.5 py-1 w-fit max-w-full">

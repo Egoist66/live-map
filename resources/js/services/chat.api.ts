@@ -10,25 +10,25 @@ export const chatApi = {
     const { data } = await api.post('/api/chat/heartbeat')
     return data
   },
-  async search(q: string) {
-    const { data } = await api.get('/api/chat/users/search', { params: { q } })
-    return data
+  async search(q: string, page = 1, perPage = 20) {
+    const { data } = await api.get('/api/chat/users/search', { params: { q, page, per_page: perPage } })
+    return data as { data: any[]; current_page: number; last_page: number; has_more: boolean } | any[]
   },
   async updatePrivacy(data: { message_privacy: string; allow_random_messages: boolean }) {
     const { data: res } = await api.patch('/api/chat/privacy', data)
     return res
   },
 
-  async friendships() {
-    const { data } = await api.get<FriendshipsState & { hidden_limit?: number | null; hidden_count?: number; hidden_unlimited?: boolean }>('/api/friendships')
+  async friendships(page = 1, perPage = 20) {
+    const { data } = await api.get<FriendshipsState & { hidden_limit?: number | null; hidden_count?: number; hidden_unlimited?: boolean; friends_meta?: { current_page: number; last_page: number; has_more: boolean; total: number } }>('/api/friendships', { params: { page, per_page: perPage } })
     return data
   },
   async toggleHidden(id: number, is_hidden?: boolean) {
     const { data } = await api.patch(`/api/friendships/${id}/hidden`, is_hidden === undefined ? {} : { is_hidden })
     return data
   },
-  async publicFriends(userId: number) {
-    const { data } = await api.get(`/api/users/${userId}/friends`)
+  async publicFriends(userId: number, page = 1, perPage = 20) {
+    const { data } = await api.get(`/api/users/${userId}/friends`, { params: { page, per_page: perPage } })
     return data
   },
   async addFriend(user_id: number) {
@@ -65,9 +65,28 @@ export const chatApi = {
     return data
   },
 
-  async conversations() {
-    const { data } = await api.get<Conversation[]>('/api/conversations')
-    return data
+  async conversations(page = 1, perPage = 20) {
+    const { data } = await api.get<Conversation[] | { data: Conversation[]; has_more: boolean; current_page: number; last_page: number }>('/api/conversations', { params: { page, per_page: perPage } })
+    if (Array.isArray(data)) return data
+    if (Array.isArray((data as { data?: unknown })?.data)) return (data as { data: Conversation[] }).data
+    return []
+  },
+  /**
+   * Одна страница диалогов с метой для infinite scroll.
+   *
+   * @param page страница
+   * @param perPage размер
+   */
+  async conversationsPage(page = 1, perPage = 20): Promise<{ data: Conversation[]; has_more: boolean; current_page: number; last_page: number }> {
+    const { data } = await api.get('/api/conversations', { params: { page, per_page: perPage } })
+    if (Array.isArray(data)) return { data, has_more: false, current_page: 1, last_page: 1 }
+    const rows = Array.isArray((data as { data?: unknown })?.data) ? (data as { data: Conversation[] }).data : []
+    return {
+      data: rows,
+      has_more: !!(data as { has_more?: boolean })?.has_more,
+      current_page: Number((data as { current_page?: number })?.current_page ?? page),
+      last_page: Number((data as { last_page?: number })?.last_page ?? page),
+    }
   },
   async createConversation(user_id: number, message?: string) {
     const { data } = await api.post('/api/conversations', { user_id, message })
@@ -93,9 +112,27 @@ export const chatApi = {
     return data
   },
 
-  async messages(convId: number, before?: number) {
-    const { data } = await api.get<Message[]>(`/api/conversations/${convId}/messages`, { params: { before } })
-    return data
+  async messages(convId: number, before?: number, limit = 30) {
+    const { data } = await api.get<Message[] | { data: Message[]; has_more: boolean }>(`/api/conversations/${convId}/messages`, { params: { before, limit } })
+    // Бэк отдаёт {data, has_more}; старые кэши могли отдать массив — нормализуем оба.
+    if (Array.isArray(data)) return data
+    if (Array.isArray((data as { data?: unknown })?.data)) return data as unknown as Message[]
+    return [] as Message[]
+  },
+  /**
+   * Страница истории с флагом has_more для infinite scroll вверх.
+   *
+   * @param convId id диалога
+   * @param before грузить старше этого id
+   * @param limit размер страницы
+   */
+  async messagesPage(convId: number, before?: number, limit = 30): Promise<{ data: Message[]; has_more: boolean }> {
+    const { data } = await api.get(`/api/conversations/${convId}/messages`, { params: { before, limit } })
+    if (Array.isArray(data)) return { data, has_more: data.length >= limit }
+    return {
+      data: Array.isArray((data as { data?: unknown })?.data) ? (data as { data: Message[] }).data : [],
+      has_more: !!(data as { has_more?: boolean })?.has_more,
+    }
   },
   async sendMessage(convId: number, body: string, replyToId?: number | null, attachment?: File | null, voiceDuration?: number | null) {
     if (!attachment) {

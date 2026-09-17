@@ -26,10 +26,18 @@ export const districtsApi = {
    * Глобальный поиск районов по названию для таба «Районы».
    *
    * @param query строка поиска (мин. 2 символа)
+   * @param page страница для infinite scroll
    */
-  async search(query: string): Promise<District[]> {
-    const { data } = await api.get<District[]>('/api/districts', { params: { search: query.trim() } })
-    return Array.isArray(data) ? data : []
+  async search(query: string, page = 1): Promise<{ data: District[]; current_page: number; last_page: number; has_more: boolean }> {
+    const { data } = await api.get('/api/districts', { params: { search: query.trim(), page } })
+    if (Array.isArray(data)) return { data, current_page: 1, last_page: 1, has_more: false }
+    const rows = Array.isArray((data as { data?: unknown })?.data) ? (data as { data: District[] }).data : []
+    return {
+      data: rows,
+      current_page: Number((data as { current_page?: number })?.current_page ?? page),
+      last_page: Number((data as { last_page?: number })?.last_page ?? page),
+      has_more: !!(data as { has_more?: boolean })?.has_more,
+    }
   },
 
   /**

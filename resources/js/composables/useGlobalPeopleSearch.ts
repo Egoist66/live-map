@@ -19,7 +19,7 @@ import { usePresenceState, isRecentlySeen } from '@/composables/usePresence'
  */
 export function useGlobalPeopleSearch() {
   const store = usePeopleSearchStore()
-  const { open, query, results, searching } = storeToRefs(store)
+  const { open, query, results, searching, peopleHasMore, loadingMorePeople } = storeToRefs(store)
 
   const creating = ref(false)
 

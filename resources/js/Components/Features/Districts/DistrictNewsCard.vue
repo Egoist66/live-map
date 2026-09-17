@@ -6,6 +6,8 @@ import Button from 'primevue/button'
 import Card from 'primevue/card'
 import InputText from 'primevue/inputtext'
 import { useDistrictNewsComments } from '@/composables/useDistrictNewsComments'
+import InfiniteSentinel from '@/Components/Ui/List/InfiniteSentinel.vue'
+import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 import { formatFlowDate } from '@/utils/flowDate'
 import type { DistrictPost } from '@/types/entities/DistrictPost'
 
@@ -31,6 +33,9 @@ const thread = useDistrictNewsComments(
 )
 
 const commentsOpened = computed(() => expanded.value)
+const threadHasMore = computed(() => thread.hasMore.value)
+const threadLoadingMore = computed(() => thread.loadingMore.value)
+const { sentinel: threadSentinel } = useInfiniteScroll({ hasMore: threadHasMore, loading: threadLoadingMore, onLoadMore: () => thread.loadMore() })
 
 async function toggleComments(): Promise<void> {
   expanded.value = !expanded.value

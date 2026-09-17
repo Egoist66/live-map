@@ -13,16 +13,18 @@ class ConversationController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
+        $perPage = max(1, min(50, (int) $request->input('per_page', 20)));
         $myRows = \App\Models\ConversationParticipant::where('user_id', $user->id)
             ->whereNull('hidden_at')
             ->get(['conversation_id', 'cleared_at'])
             ->keyBy('conversation_id');
-        $convs = Conversation::whereHas('participantRows', fn($q)=>$q->where('user_id',$user->id)->whereNull('hidden_at'))
+        $page = Conversation::whereHas('participantRows', fn($q)=>$q->where('user_id',$user->id)->whereNull('hidden_at'))
             ->with(['participants' => fn($q)=>$q->select('users.id','users.name','users.avatar_path','users.last_seen_at','users.is_invisible','users.plan','users.role','users.is_admin','users.dating_goal','users.dating_interests'), 'messages'=>fn($q)=>$q->reorder()->latest('id')->limit(1), 'district:id,name,user_id'])
             ->withCount(['messages as unread_count'=>fn($q)=>$q->where('sender_id','!=',$user->id)->whereNull('read_at')])
             ->orderByDesc('last_message_at')
             ->orderByDesc('updated_at')
-            ->get();
+            ->paginate($perPage);
+        $convs = $page->getCollection();
         $matchedIds = \App\Models\DatingMatch::where('user_a_id', $user->id)
             ->orWhere('user_b_id', $user->id)
             ->get()
@@ -59,8 +61,20 @@ class ConversationController extends Controller
                     'last_message_at'=>$c->last_message_at,
                     'updated_at'=>$c->updated_at,
                 ];
-            });
-        return response()->json($convs);
+            })->values();
+        // Backward-compatible: plain array when one page, paginated envelope otherwise.
+        // Frontend usePaginatedList handles both shapes.
+        if ($page->lastPage() <= 1) {
+            return response()->json($convs);
+        }
+        return response()->json([
+            'data' => $convs,
+            'current_page' => $page->currentPage(),
+            'last_page' => $page->lastPage(),
+            'per_page' => $page->perPage(),
+            'total' => $page->total(),
+            'has_more' => $page->hasMorePages(),
+        ]);
     }
 
     public function show(Request $request, Conversation $conversation)

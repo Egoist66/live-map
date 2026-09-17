@@ -9,6 +9,8 @@ import InputText from 'primevue/inputtext'
 import Checkbox from 'primevue/checkbox'
 import { useFlowComments } from '@/composables/useFlowComments'
 import { useLikersPreview } from '@/composables/useLikersPreview'
+import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
+import InfiniteSentinel from '@/Components/Ui/List/InfiniteSentinel.vue'
 import LikersDialog from '@/Components/Features/Feedback/LikersDialog.vue'
 import { formatFlowDate } from '@/utils/flowDate'
 import type { FlowComment, FlowPost } from '@/types/flow'
@@ -23,6 +25,13 @@ const emit = defineEmits<{
 
 const expanded = ref(false)
 const thread = useFlowComments(props.post.id)
+const threadHasMore = computed(() => thread.hasMore.value)
+const threadLoadingMore = computed(() => thread.loadingMore.value)
+const { sentinel: threadSentinel } = useInfiniteScroll({
+  hasMore: threadHasMore,
+  loading: threadLoadingMore,
+  onLoadMore: () => thread.loadMore(),
+})
 const postLikers = useLikersPreview(
   'flow',
   () => props.post?.id ?? null,
@@ -177,6 +186,7 @@ async function share(): Promise<void> {
               </div>
             </div>
           </div>
+          <InfiniteSentinel :sentinel="threadSentinel" :has-more="thread.hasMore.value" :loading="thread.loadingMore.value" />
 
           <div class="sticky bottom-0 -mx-1 mt-3 bg-white/95 pb-1 pt-2 backdrop-blur dark:bg-zinc-900/95">
             <div v-if="thread.replyTo.value" class="mb-2 flex min-w-0 items-center gap-2 rounded-full bg-violet-50 py-1.5 pl-3 pr-1.5 text-xs text-stone-600 dark:bg-violet-950/50 dark:text-zinc-300">
