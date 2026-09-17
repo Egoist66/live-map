@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import { datingApi } from '@/services/dating.api'
 import { datingQuestionnaireSchema } from '@/validation/schemas/dating.schema'
+import { isUnchangedPayload } from '@/composables/useUnchangedGuard'
 
 /**
  * Анкета ULove: создание и редактирование «о себе».
@@ -96,6 +97,27 @@ export function useDatingQuestionnaire() {
       })
       errors.value = flat
       return false
+    }
+    const origin = authUser.value ?? {}
+    const unchanged = isUnchangedPayload(
+      {
+        dating_enabled: enabled.value,
+        dating_goal: goal.value,
+        dating_custom_goal: parsed.data.dating_custom_goal,
+        dating_about: parsed.data.dating_about,
+        dating_interests: parsed.data.dating_interests ?? [],
+      },
+      {
+        dating_enabled: origin.dating_enabled ?? true,
+        dating_goal: origin.dating_goal ?? null,
+        dating_custom_goal: origin.dating_custom_goal ?? null,
+        dating_about: origin.dating_about ?? null,
+        dating_interests: origin.dating_interests ?? [],
+      },
+      ['dating_enabled', 'dating_goal', 'dating_custom_goal', 'dating_about', 'dating_interests'],
+    )
+    if (unchanged) {
+      return true
     }
     saving.value = true
     try {

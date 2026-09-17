@@ -4,6 +4,7 @@ import { updatePinSchema } from '@/validation/schemas/updatePin.schema'
 import { usePinsStore } from '@/stores/pins'
 import { useSosConfirm } from '@/composables/useSosConfirm'
 import { useToast } from 'primevue/usetoast'
+import { isUnchangedPayload } from '@/composables/useUnchangedGuard'
 
 export function usePinEdit() {
   const store = usePinsStore()
@@ -35,26 +36,36 @@ export function usePinEdit() {
   const [gender_audience] = defineField('gender_audience')
 
   const error = ref<unknown>(null)
+  /** Снимок пина на момент start() для пропуска запроса без изменений. */
+  const editSnapshot = ref<Record<string, unknown> | null>(null)
 
   function start(pin: any) {
     targetId.value = pin.id
     sos.resetSos()
     setValues({ title: pin.title, body: pin.body || '', category: pin.category, gender_audience: pin.gender_audience ?? 'all' } as any)
+    editSnapshot.value = { title: pin.title, body: pin.body || '', category: pin.category, gender_audience: pin.gender_audience ?? 'all' }
     editing.value = true
   }
 
   function cancel() {
     editing.value = false
     targetId.value = null
+    editSnapshot.value = null
     sos.resetSos()
   }
 
   const save = handleSubmit(async (vals: any) => {
     if (!targetId.value) return null
+    const snapshot = editSnapshot.value
+    if (snapshot !== null && isUnchangedPayload(vals, snapshot, ['title', 'body', 'category', 'gender_audience'])) {
+      toast.add({ severity: 'info', summary: 'Без изменений', detail: 'Нечего сохранять', life: 2000 })
+      return null
+    }
     try {
       const payload = { ...vals, sos_confirmed: sos.sosConfirmed.value }
       const data = await (store.updatePin as any)({ id: targetId.value, payload })
       editing.value = false
+      editSnapshot.value = null
       sos.resetSos()
       toast.add({ severity: 'success', summary: 'Сохранено', life: 2000 })
       return data

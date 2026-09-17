@@ -10,6 +10,7 @@ import { normalizeCountryCode } from './useResidence'
 import { planOf } from './usePlanLimits'
 import { useCountryMismatch } from './useCountryMismatch'
 import { reverseGeocode } from '@/services/geo.api'
+import { isUnchangedPayload } from './useUnchangedGuard'
 
 export function useProfileForm() {
   const page = usePage()
@@ -97,7 +98,38 @@ export function useProfileForm() {
     lng: (values as any).home_lng,
   }))
 
+  /** Ключи формы, участвующие в сохранении (plan — только для UI-лимитов). */
+  const dirtyKeys = [
+    'name',
+    'gender',
+    'birth_date',
+    'country',
+    'country_code',
+    'email',
+    'home_lat',
+    'home_lng',
+    'home_city',
+    'home_address',
+    'home_visibility',
+    'home_show_exact',
+    'home_radius_km',
+    'bio',
+    'is_anonymous_default',
+  ]
+
   const submit = handleSubmit(async (vals: any) => {
+    const payload: any = { ...vals }
+    if (typeof payload.bio === 'string') {
+      const t = payload.bio.trim()
+      payload.bio = t === '' ? null : t
+    }
+    if (payload.bio === '') payload.bio = null
+    if (payload.country_code) payload.country_code = normalizeCountryCode(payload.country_code)
+    if (payload.birth_date === '') payload.birth_date = null
+    if (isUnchangedPayload(payload, user.value ?? {}, dirtyKeys)) {
+      toast?.add({ severity: 'info', summary: 'Без изменений', detail: 'Нечего сохранять', life: 2000 })
+      return
+    }
     if (!isAdmin.value) {
       const residenceOk = await residenceCheck.recheckCountry()
       if (!residenceOk) {
@@ -107,14 +139,6 @@ export function useProfileForm() {
         return
       }
     }
-    const payload: any = { ...vals }
-    if (typeof payload.bio === 'string') {
-      const t = payload.bio.trim()
-      payload.bio = t === '' ? null : t
-    }
-    if (payload.bio === '') payload.bio = null
-    if (payload.country_code) payload.country_code = normalizeCountryCode(payload.country_code)
-    if (payload.birth_date === '') payload.birth_date = null
     router.patch(route('profile.update'), payload, {
       preserveScroll: true,
       onSuccess: () => toast?.add({ severity: 'success', summary: 'Профиль сохранён', life: 2000 }),

@@ -4,6 +4,7 @@ import { commentsByPinQuery, COMMENT_KEYS } from '@/queries/comments'
 import { PIN_KEYS } from '@/queries/pins'
 import { commentsApi } from '@/services/comments.api'
 import { useAppConfirm } from '@/composables/useAppConfirm'
+import { isSameText } from '@/composables/useUnchangedGuard'
 import { reactionsApi } from '@/services/reactions.api'
 import { pinsApi } from '@/services/pins.api'
 import { formatTime } from '@/utils/date'
@@ -13,6 +14,28 @@ import { createCommentSchema } from '@/validation/schemas/comment.schema'
 import type { Pin, BoostType } from '@/types/entities/Pin'
 import type { PinComment } from '@/types/entities/Comment'
 import type { ReactionType } from '@/types/entities/Reaction'
+
+/**
+ * Ищет исходный текст комментария по id среди веток и ответов.
+ *
+ * @param rows ветки комментариев пина
+ * @param id id комментария или ответа
+ * @returns текст комментария или null когда не найден
+ */
+function findCommentContent(rows: PinComment[], id: number): string | null {
+  for (const item of rows) {
+    if (Number(item.id) === id) {
+      return String((item as any).content ?? '')
+    }
+    const replies = Array.isArray((item as any).replies) ? (item as any).replies : []
+    for (const reply of replies) {
+      if (Number(reply.id) === id) {
+        return String(reply.content ?? '')
+      }
+    }
+  }
+  return null
+}
 
 export function usePinDetails() {
   const selectedPin = ref<Pin | null>(null)
@@ -173,6 +196,13 @@ export function usePinDetails() {
   async function saveEditComment(): Promise<void> {
     if (!editingCommentId.value) return
     if (!editingContent.value.trim()) { toast?.add({ severity: 'warn', summary: 'Пустой комментарий', life: 2000 }); return }
+    const targetId = editingCommentId.value
+    const original = findCommentContent(comments.value, targetId)
+    if (original !== null && isSameText(editingContent.value, original)) {
+      toast?.add({ severity: 'info', summary: 'Без изменений', detail: 'Нечего сохранять', life: 2000 })
+      cancelEditComment()
+      return
+    }
     try {
       await (updateCommentMutation as any).mutateAsync({ id: editingCommentId.value, content: editingContent.value.trim() })
       editingCommentId.value = null

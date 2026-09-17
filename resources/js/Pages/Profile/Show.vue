@@ -151,7 +151,7 @@ onMounted(async () => { await design.init() })
                   variant="tiles"
                   @profile="isOwn ? design.onEdit() : design.scrollTop()"
                   @friends="people.openFriends(profileUser.id, profileUser.name)"
-                  @districts="design.goDistricts()"
+                  @districts="design.goDistricts"
                   @search="search.openDialog()"
                   @share="page.share()"
                 />
@@ -162,7 +162,7 @@ onMounted(async () => { await design.init() })
                   variant="sidebar"
                   @profile="isOwn ? design.onEdit() : design.scrollTop()"
                   @friends="people.openFriends(profileUser.id, profileUser.name)"
-                  @districts="design.goDistricts()"
+                  @districts="design.goDistricts"
                   @search="search.openDialog()"
                   @share="page.share()"
                 />

@@ -7,6 +7,7 @@ import { usePeopleSearch } from '@/composables/usePeopleSearch'
 import { useProfilePhotoComments } from '@/composables/useProfilePhotoComments'
 import { useAvatarPreview } from '@/composables/useAvatarPreview'
 import { useSwipesCta } from '@/composables/useSwipesCta'
+import { useDistrictsCta } from '@/composables/useDistrictsCta'
 import { usePhotoPicker } from '@/composables/usePhotoPicker'
 import { planOf } from '@/composables/usePlanLimits'
 import { useProfileInfoTiles } from '@/composables/useProfileInfoTiles'
@@ -40,6 +41,7 @@ export function useProfileDesign(props: {
   const people = useProfilePeople()
   const search = usePeopleSearch()
   const { goSwipes } = useSwipesCta()
+  const { goDistricts } = useDistrictsCta()
 
   const photoComments = useProfilePhotoComments(
     () => gallery.active.value?.id ?? null,
@@ -117,11 +119,6 @@ export function useProfileDesign(props: {
   /** Открывает карту. */
   function onOpenMap(): void {
     router.visit('/map')
-  }
-
-  /** Открывает страницу районов. */
-  function goDistricts(): void {
-    router.visit('/districts')
   }
 
   /** Открывает редактирование профиля. */

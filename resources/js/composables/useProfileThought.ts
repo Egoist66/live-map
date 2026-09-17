@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { api } from '@/services/api'
+import { isSameText } from '@/composables/useUnchangedGuard'
 
 /** Максимум символов короткой мысли. */
 export const THOUGHT_MAX_LENGTH = 140
@@ -64,6 +65,11 @@ export function useProfileThought(
   async function save(): Promise<void> {
     const value = draft.value.trim().slice(0, THOUGHT_MAX_LENGTH)
     const next = value === '' ? null : value
+    const current = committed.value === undefined ? initial() : committed.value
+    if (isSameText(next, current)) {
+      open.value = false
+      return
+    }
     saving.value = true
     error.value = null
     try {

@@ -3,6 +3,7 @@ import { useToast } from 'primevue/usetoast'
 import { districtPostsApi } from '@/services/district-posts.api'
 import { compressImageFile } from '@/utils/image'
 import type { DistrictPost } from '@/types/entities/DistrictPost'
+import { isSameText } from '@/composables/useUnchangedGuard'
 
 /**
  * Новости района: лента, композер владельца, лайки.
@@ -42,6 +43,8 @@ export function useDistrictNews(districtId: number, isOwner: Ref<boolean>) {
 
   /** Редактируемый пост владельца. */
   const editingId = ref<number | null>(null)
+  /** Снимок новости на момент startEdit для пропуска запроса без изменений. */
+  const editSnapshot = ref<{ title: string; body: string } | null>(null)
 
   const bodyLeft = ref(2000)
 
@@ -89,6 +92,7 @@ export function useDistrictNews(districtId: number, isOwner: Ref<boolean>) {
     bodyLeft.value = 2000
     pickImage(null)
     editingId.value = null
+    editSnapshot.value = null
   }
 
   /**
@@ -102,6 +106,7 @@ export function useDistrictNews(districtId: number, isOwner: Ref<boolean>) {
     bodyLeft.value = 2000 - body.value.length
     pickImage(null)
     editingId.value = post.id
+    editSnapshot.value = { title: post.title ?? '', body: post.body }
   }
 
   /**
@@ -121,6 +126,16 @@ export function useDistrictNews(districtId: number, isOwner: Ref<boolean>) {
     saving.value = true
     try {
       const cleanTitle = title.value.trim() || null
+      const snapshot = editSnapshot.value
+      if (editingId.value && snapshot !== null && image.value === null) {
+        const titleSame = isSameText(cleanTitle, snapshot.title)
+        const bodySame = isSameText(cleanBody, snapshot.body)
+        if (titleSame && bodySame) {
+          toast?.add({ severity: 'info', summary: 'Без изменений', detail: 'Нечего сохранять', life: 2000 })
+          resetComposer()
+          return true
+        }
+      }
       const small = image.value ? await compressImageFile(image.value, 1600, 0.82) : null
       if (editingId.value) {
         const updated = await districtPostsApi.update(districtId, editingId.value, {

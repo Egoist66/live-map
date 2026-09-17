@@ -3,6 +3,7 @@ import { usePage } from '@inertiajs/vue3'
 import { useToast } from 'primevue/usetoast'
 import { useFlowStore } from '@/stores/flow'
 import { flowApi } from '@/services/flow.api'
+import { isSameText } from '@/composables/useUnchangedGuard'
 
 const MAX_BODY = 2000
 const MAX_TITLE = 150
@@ -35,6 +36,8 @@ export function useFlowComposer(existingId?: number | null) {
   const removeImage = ref(false)
   const saving = ref(false)
   const editingId = ref<number | null>(existingId ?? null)
+  /** Снимок поста на момент startEdit для пропуска запроса без изменений. */
+  const editSnapshot = ref<{ title: string; body: string; anonymous: boolean } | null>(null)
 
   const me = computed(() => (usePage().props.auth as { user?: { is_anonymous_default?: boolean; effective_plan?: string } }).user)
   const isPro = computed(() => {
@@ -77,6 +80,7 @@ export function useFlowComposer(existingId?: number | null) {
     title.value = currentTitle ?? ''
     body.value = currentBody
     isAnonymous.value = anonymous
+    editSnapshot.value = { title: currentTitle ?? '', body: currentBody, anonymous }
     image.value = null
     removeImage.value = false
     if (imagePreview.value) URL.revokeObjectURL(imagePreview.value)
@@ -93,6 +97,7 @@ export function useFlowComposer(existingId?: number | null) {
     pickImage(null)
     removeImage.value = false
     editingId.value = null
+    editSnapshot.value = null
   }
 
   /**
@@ -105,6 +110,16 @@ export function useFlowComposer(existingId?: number | null) {
     saving.value = true
     try {
       if (editingId.value) {
+        const snapshot = editSnapshot.value
+        const textsSame = snapshot !== null
+          && isSameText(head, snapshot.title)
+          && isSameText(text, snapshot.body)
+          && isAnonymous.value === snapshot.anonymous
+        if (textsSame && image.value === null && !removeImage.value) {
+          toast?.add({ severity: 'info', summary: 'Без изменений', detail: 'Нечего сохранять', life: 2000 })
+          reset()
+          return true
+        }
         const updated = await flowApi.update(editingId.value, {
           title: head || null,
           body: text,

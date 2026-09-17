@@ -10,6 +10,7 @@ import { useDistrictCover } from '@/composables/useDistrictCover'
 import { useAppConfirm } from '@/composables/useAppConfirm'
 import { districtInterestLabel } from '@/utils/districtGeo'
 import type { DistrictDetails, DistrictResident } from '@/types/entities/District'
+import { isUnchangedPayload } from '@/composables/useUnchangedGuard'
 
 /**
  * Страница района: данные, табы, заявки, живой рефреш.
@@ -397,9 +398,16 @@ export function useDistrictShowPage(districtId: number, initialDistrict: Distric
       toast?.add({ severity: 'warn', summary: 'Короткое название', detail: 'Минимум 3 символа', life: 2500 })
       return false
     }
+    const description = editDescription.value.trim() || null
+    const draft = { name: clean, description, interest: editInterest.value }
+    const origin = district.value ?? {}
+    if (isUnchangedPayload(draft, origin as Record<string, unknown>, ['name', 'description', 'interest'])) {
+      toast?.add({ severity: 'info', summary: 'Без изменений', detail: 'Нечего сохранять', life: 2000 })
+      editing.value = false
+      return true
+    }
     saving.value = true
     try {
-      const description = editDescription.value.trim() || null
       const updated = await districtsApi.update(districtId, { name: clean, description, interest: editInterest.value })
       district.value = updated
       store.upsertRealtime(updated)
