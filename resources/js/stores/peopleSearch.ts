@@ -25,11 +25,15 @@ export const usePeopleSearchStore = defineStore('peopleSearch', () => {
   const districtQuery = ref('')
   const districtResults = ref<District[]>([])
   const districtSearching = ref(false)
+  /** Первые существующие районы для пустого таба «Районы» (максимум 3). */
+  const districtSuggestions = ref<District[]>([])
+  const districtSuggestionsLoading = ref(false)
 
   let timer: ReturnType<typeof setTimeout> | null = null
   let seq = 0
   let districtTimer: ReturnType<typeof setTimeout> | null = null
   let districtSeq = 0
+  let suggestionsLoaded = false
 
   /**
    * Открыть глобальный диалог поиска.
@@ -174,6 +178,30 @@ export const usePeopleSearchStore = defineStore('peopleSearch', () => {
     if (target) {
       Object.assign(target, patch)
     }
+    const suggested = districtSuggestions.value.find((row) => Number(row.id) === Number(id))
+    if (suggested) {
+      Object.assign(suggested, patch)
+    }
+  }
+
+  /**
+   * Подтянуть первые существующие районы для пустого таба (максимум 3).
+   * Грузится один раз за сессию, повторные вызовы — из кэша.
+   */
+  async function ensureDistrictSuggestions(): Promise<void> {
+    if (suggestionsLoaded || districtSuggestionsLoading.value) {
+      return
+    }
+    districtSuggestionsLoading.value = true
+    try {
+      const rows = await districtsApi.list()
+      districtSuggestions.value = (rows ?? []).slice(0, 3)
+      suggestionsLoaded = true
+    } catch {
+      districtSuggestions.value = []
+    } finally {
+      districtSuggestionsLoading.value = false
+    }
   }
 
   return {
@@ -185,11 +213,14 @@ export const usePeopleSearchStore = defineStore('peopleSearch', () => {
     districtQuery,
     districtResults,
     districtSearching,
+    districtSuggestions,
+    districtSuggestionsLoading,
     openDialog,
     closeDialog,
     setQuery,
     setActiveTab,
     setDistrictQuery,
     patchDistrict,
+    ensureDistrictSuggestions,
   }
 })

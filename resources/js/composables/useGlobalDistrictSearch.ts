@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { router } from '@inertiajs/vue3'
 import { useToast } from 'primevue/usetoast'
 import { storeToRefs } from 'pinia'
@@ -19,7 +19,7 @@ import type { District } from '@/types/entities/District'
  */
 export function useGlobalDistrictSearch() {
   const store = usePeopleSearchStore()
-  const { districtQuery, districtResults, districtSearching } = storeToRefs(store)
+  const { districtQuery, districtResults, districtSearching, districtSuggestions, districtSuggestionsLoading } = storeToRefs(store)
 
   const joiningId = ref<number | null>(null)
 
@@ -32,6 +32,19 @@ export function useGlobalDistrictSearch() {
   })()
 
   const hasQuery = computed(() => districtQuery.value.trim().length >= 2)
+
+  /** Первые существующие районы для пустого таба — максимум 3. */
+  const suggestedDistricts = computed(() => districtSuggestions.value.slice(0, 3))
+
+  watch(
+    () => store.activeTab,
+    (tab) => {
+      if (tab === 'districts') {
+        void store.ensureDistrictSuggestions()
+      }
+    },
+    { immediate: true },
+  )
 
   /**
    * Первая буква названия для аватара района.
@@ -117,6 +130,8 @@ export function useGlobalDistrictSearch() {
     districtQuery,
     districtResults,
     districtSearching,
+    suggestedDistricts,
+    districtSuggestionsLoading,
     joiningId,
     hasQuery,
     letterOf,

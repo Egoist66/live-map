@@ -119,6 +119,11 @@ export function useProfileDesign(props: {
     router.visit('/map')
   }
 
+  /** Открывает страницу районов. */
+  function goDistricts(): void {
+    router.visit('/districts')
+  }
+
   /** Открывает редактирование профиля. */
   function onEdit(): void {
     router.visit(route('profile.edit'))
@@ -159,5 +164,6 @@ export function useProfileDesign(props: {
     onEdit,
     scrollTop,
     goSwipes,
+    goDistricts,
   }
 }

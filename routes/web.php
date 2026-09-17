@@ -52,7 +52,13 @@ Route::middleware('auth')->group(function () {
     Route::post('/terms/accept', [\App\Http\Controllers\TermsController::class, 'accept'])->name('terms.accept');
 });
 
-Route::fallback(function () {
+Route::fallback(function (\Illuminate\Http\Request $request) {
+    // Ассеты/SW/API не должны получать HTML-редирект: иначе браузер
+    // ругается "non-JavaScript MIME type text/html" на модульных скриптах.
+    if ($request->is('build/*', 'sw.js', 'workbox*', 'manifest.webmanifest', 'api/*', 'broadcasting/*', 'reverb/*', 'up')) {
+        abort(404);
+    }
+
     if (!auth()->check()) {
         return redirect()->route('login');
     }

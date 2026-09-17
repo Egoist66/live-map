@@ -2,6 +2,7 @@ import { computed, onBeforeUnmount, ref } from 'vue'
 import { router } from '@inertiajs/vue3'
 import { useToast } from 'primevue/usetoast'
 import { districtsApi } from '@/services/districts.api'
+import { chatApi } from '@/services/chat.api'
 import { busOn } from '@/services/realtime-bus'
 import { useDistrictsStore } from '@/stores/districts'
 import { useDistrictInvite } from '@/composables/useDistrictInvite'
@@ -52,6 +53,8 @@ export function useDistrictShowPage(districtId: number, initialDistrict: Distric
   const editDescription = ref('')
   const editInterest = ref('neighbors')
   const saving = ref(false)
+  /** Открываем личку с владельцем. */
+  const writingOwner = ref(false)
 
   const isOwner = computed(() => district.value?.role === 'owner')
   const isMember = computed(() => district.value?.role === 'member')
@@ -299,6 +302,29 @@ export function useDistrictShowPage(districtId: number, initialDistrict: Distric
   }
 
   /**
+   * Написать владельцу в личку: открывает диалог 1-1 с админом.
+   * Себе не пишем — кнопка скрыта через isOwner в шаблоне.
+   */
+  async function writeToOwner(): Promise<void> {
+    const ownerId = Number(district.value?.owner?.id)
+    if (!(ownerId > 0) || isOwner.value || writingOwner.value) {
+      return
+    }
+    writingOwner.value = true
+    try {
+      const res = await chatApi.createConversation(ownerId)
+      const chatId = Number(res?.id)
+      if (chatId > 0) {
+        router.visit(`/chat/${chatId}`)
+      }
+    } catch (error: unknown) {
+      fail(error, 'Не удалось открыть чат')
+    } finally {
+      writingOwner.value = false
+    }
+  }
+
+  /**
    * Открыть диалог приглашения (владелец).
    */
   function openInvite(): void {
@@ -492,6 +518,7 @@ export function useDistrictShowPage(districtId: number, initialDistrict: Distric
     editDescription,
     editInterest,
     saving,
+    writingOwner,
     isOwner,
     isMember,
     isGuest,
@@ -518,6 +545,7 @@ export function useDistrictShowPage(districtId: number, initialDistrict: Distric
     kickMember,
     cancelInvite,
     openChat,
+    writeToOwner,
     openInvite,
     sendInvite,
     share,

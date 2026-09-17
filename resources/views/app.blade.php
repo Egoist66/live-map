@@ -85,7 +85,7 @@
             }
           }
         </style>
-        <script type="application/ld+json">
+        <script type="application/ld+json" nonce="{{ $cspNonce ?? '' }}">
         {
             "@@context": "https://schema.org",
             "@@type": "WebSite",
@@ -100,7 +100,7 @@
             }
         }
         </script>
-        <script type="application/ld+json">
+        <script type="application/ld+json" nonce="{{ $cspNonce ?? '' }}">
         {
             "@@context": "https://schema.org",
             "@@type": "Organization",

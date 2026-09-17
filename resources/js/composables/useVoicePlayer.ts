@@ -22,6 +22,7 @@ export function useVoicePlayer(fallbackDuration?: number | null) {
   const isPlaying = ref(false)
   const current = ref(0)
   const total = ref(Number(fallbackDuration) > 0 ? Number(fallbackDuration) : 0)
+  const error = ref<string | null>(null)
 
   const progress = computed(() => {
     if (!total.value) {
@@ -41,6 +42,7 @@ export function useVoicePlayer(fallbackDuration?: number | null) {
     el.ontimeupdate = null
     el.onloadedmetadata = null
     el.onended = null
+    el.onerror = null
     if (activeAudio === el) {
       activeAudio = null
     }
@@ -69,9 +71,14 @@ export function useVoicePlayer(fallbackDuration?: number | null) {
       current.value = el.currentTime || 0
     }
     el.onloadedmetadata = () => {
+      error.value = null
       if (Number.isFinite(el.duration) && el.duration > 0) {
         total.value = el.duration
       }
+    }
+    el.onerror = () => {
+      isPlaying.value = false
+      error.value = 'Не удалось загрузить аудио — проверьте соединение'
     }
     el.onended = () => {
       isPlaying.value = false
@@ -100,7 +107,10 @@ export function useVoicePlayer(fallbackDuration?: number | null) {
       return
     }
     if (el.paused) {
-      el.play().catch(() => {})
+      error.value = null
+      el.play().catch(() => {
+        error.value = 'Не удалось воспроизвести — файл заблокирован или недоступен'
+      })
       return
     }
     el.pause()
@@ -131,5 +141,5 @@ export function useVoicePlayer(fallbackDuration?: number | null) {
     audioRef.value = null
   })
 
-  return { audioRef, isPlaying, current, total, progress, currentLabel, totalLabel, toggle, seek }
+  return { audioRef, isPlaying, current, total, progress, currentLabel, totalLabel, error, toggle, seek }
 }

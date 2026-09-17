@@ -268,7 +268,7 @@ onMounted(async () => {
                   {{ page.district.value.owner.name }}
                 </Link>
                 <div class="text-[11px] text-stone-500 dark:text-zinc-400">администратор сообщества</div>
-                <Button v-if="page.canChat.value" label="Открыть чат" icon="pi pi-comments" rounded size="small" class="mt-3 w-full !border-0 !bg-ink-900 !text-white dark:!bg-white dark:!text-ink-900" @click="page.openChat()" />
+                <Button v-if="!page.isOwner.value" label="Написать" icon="pi pi-send" rounded size="small" :loading="page.writingOwner.value" class="mt-3 w-full !border-0 !bg-ink-900 !text-white dark:!bg-white dark:!text-ink-900" @click="page.writeToOwner()" />
               </div>
               <div class="rounded-3xl border border-stone-200/70 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
                 <div class="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-zinc-500">На карте</div>

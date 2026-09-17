@@ -13,11 +13,12 @@ const props = withDefaults(
 const emit = defineEmits<{
   (e: 'profile'): void
   (e: 'friends'): void
+  (e: 'districts'): void
   (e: 'search'): void
   (e: 'share'): void
 }>()
 
-type QuickNavKey = 'profile' | 'friends' | 'search' | 'share'
+type QuickNavKey = 'profile' | 'friends' | 'districts' | 'search' | 'share'
 
 const allActions: Array<{ key: QuickNavKey; label: string; icon: string; tile: string; iconColor: string }> = [
   {
@@ -32,6 +33,13 @@ const allActions: Array<{ key: QuickNavKey; label: string; icon: string; tile: s
     label: 'Друзья',
     icon: 'pi pi-users',
     tile: '!border-0 !bg-gradient-to-br !from-emerald-500 !to-teal-600 hover:!from-emerald-400 hover:!to-teal-500 shadow-[0_8px_20px_-8px_rgba(16,185,129,0.7)]',
+    iconColor: '!text-white',
+  },
+  {
+    key: 'districts',
+    label: 'Районы',
+    icon: 'pi pi-map-marker',
+    tile: '!border-0 !bg-gradient-to-br !from-sky-500 !to-blue-600 hover:!from-sky-400 hover:!to-blue-500 shadow-[0_8px_20px_-8px_rgba(14,165,233,0.7)]',
     iconColor: '!text-white',
   },
   {
@@ -50,11 +58,18 @@ const allActions: Array<{ key: QuickNavKey; label: string; icon: string; tile: s
   },
 ]
 
-/** Поиск людей — только из своего профиля, в чужом его нет. */
+/** Поиск людей — только из своего профиля, в чужом его нет. Районы видны везде. */
 const actions = computed(() => {
   const isOwnProfile = props.isOwn
   if (isOwnProfile) return allActions
   return allActions.filter((action) => action.key !== 'search')
+})
+
+/** Сетка плиток под число действий: 3, 4 или 5 в ряд. */
+const tilesGridClass = computed(() => {
+  if (actions.value.length >= 5) return 'grid-cols-5'
+  if (actions.value.length === 4) return 'grid-cols-4'
+  return 'grid-cols-3'
 })
 
 /**
@@ -64,6 +79,7 @@ const actions = computed(() => {
 function onAction(key: QuickNavKey): void {
   if (key === 'profile') emit('profile')
   else if (key === 'friends') emit('friends')
+  else if (key === 'districts') emit('districts')
   else if (key === 'search') emit('search')
   else emit('share')
 }
@@ -90,7 +106,7 @@ function onAction(key: QuickNavKey): void {
     </button>
   </nav>
 
-  <nav v-else aria-label="Быстрые действия профиля" class="grid gap-2 sm:gap-3" :class="actions.length === 4 ? 'grid-cols-4' : 'grid-cols-3'">
+  <nav v-else aria-label="Быстрые действия профиля" class="grid gap-2 sm:gap-3" :class="tilesGridClass">
     <div v-for="action in actions" :key="action.key" class="flex min-w-0 flex-col items-center gap-1.5">
       <button
         type="button"

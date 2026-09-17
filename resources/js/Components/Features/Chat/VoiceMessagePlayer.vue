@@ -35,6 +35,7 @@ const player = useVoicePlayer(props.duration ?? null)
       <div class="text-[11px] mt-1 tabular-nums" :class="own ? 'text-violet-100' : 'text-stone-400'">
         {{ player.isPlaying.value || player.current.value > 0 ? player.currentLabel.value : player.totalLabel.value }}
       </div>
+      <div v-if="player.error.value" class="text-[11px] mt-0.5 text-red-500">{{ player.error.value }}</div>
     </div>
     <i class="pi pi-microphone shrink-0 text-sm" :class="own ? 'text-white/70' : 'text-stone-400'"></i>
   </div>

@@ -67,9 +67,11 @@ class SecurityHeaders
         $relaxed = $request->routeIs('cashier.*');
 
         $script = ["'self'", "'nonce-{$nonce}'"];
-        $style = ["'self'", "'unsafe-inline'", 'https://fonts.bunny.net'];
+        $style = ["'self'", "'unsafe-inline'", 'https://fonts.bunny.net', 'https://fonts.googleapis.com'];
         $connect = [
             "'self'",
+            'https:',
+            'wss:',
             'https://nominatim.openstreetmap.org',
             'https://api.nbrb.by',
             'https://tile.openstreetmap.org',
@@ -116,7 +118,7 @@ class SecurityHeaders
             'style-src '.implode(' ', array_unique($style)),
             "font-src 'self' https://fonts.bunny.net https: data:",
             'img-src '.implode(' ', array_unique($img)),
-            "media-src 'self' blob: data:",
+            "media-src 'self' https: blob: data:",
             'connect-src '.implode(' ', array_unique($connect)),
             "worker-src 'self' blob:",
             'frame-src '.implode(' ', array_unique($frame)),

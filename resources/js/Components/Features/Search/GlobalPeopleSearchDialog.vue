@@ -16,7 +16,7 @@ import { useChatSearchList } from '@/composables/useChatSearchUser'
 import { useEnterToSend } from '@/composables/useEnterToSend'
 import { usePeopleSearchStore } from '@/stores/peopleSearch'
 import type { GlobalSearchTab } from '@/stores/peopleSearch'
-import { districtInterestLabel } from '@/utils/districtGeo'
+import DistrictSearchList from '@/Components/Features/Districts/DistrictSearchList.vue'
 
 const search = useGlobalPeopleSearch()
 const districts = useGlobalDistrictSearch()
@@ -197,59 +197,7 @@ function onTab(value: string | number | undefined): void {
             v-if="districts.districtResults.value.length"
             class="mt-3 max-h-[60dvh] sm:max-h-[52vh] overflow-auto divide-y divide-stone-100 dark:divide-zinc-800 border rounded-2xl bg-white dark:bg-zinc-900 dark:border-zinc-700 shadow-sm"
           >
-            <div
-              v-for="row in districts.districtResults.value"
-              :key="row.id"
-              @click="districts.openDistrict(row.id)"
-              @keydown.enter="districts.openDistrict(row.id)"
-              tabindex="0"
-              role="link"
-              class="flex items-center justify-between p-3 select-none cursor-pointer hover:bg-stone-50 dark:hover:bg-zinc-800/60 transition rounded-xl"
-            >
-              <div class="flex items-center gap-2.5 min-w-0">
-                <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-blue-600 text-sm font-black text-white">{{ districts.letterOf(row.name) }}</span>
-                <div class="min-w-0">
-                  <div class="text-sm font-medium truncate dark:text-white">{{ row.name }}</div>
-                  <div class="text-[11px] text-stone-500 truncate dark:text-zinc-400">{{ districtInterestLabel(row.interest) }} · {{ row.members_count }} уч.</div>
-                </div>
-              </div>
-
-              <div class="flex gap-1.5 shrink-0 ml-2 items-center">
-                <Button
-                  v-if="districts.canChat(row)"
-                  @click.stop="districts.openChat(row)"
-                  rounded
-                  title="Открыть общий чат"
-                  aria-label="Открыть общий чат"
-                  icon="pi pi-comments"
-                  class="!w-9 !h-9 !p-0"
-                />
-                <Button
-                  v-if="districts.canJoin(row)"
-                  @click.stop="districts.joinDistrict(row)"
-                  :loading="Number(districts.joiningId.value) === Number(row.id)"
-                  rounded
-                  size="small"
-                  label="Вступить"
-                  icon="pi pi-user-plus"
-                  class="!border-0 !bg-blue-600 !text-xs !font-bold !text-white hover:!bg-blue-500"
-                />
-                <span
-                  v-else-if="row.role === 'pending'"
-                  title="Заявка отправлена"
-                  class="w-9 h-9 grid place-items-center rounded-full bg-stone-100 text-stone-400 dark:bg-zinc-800 dark:text-zinc-500"
-                >
-                  <i class="pi pi-clock text-sm" />
-                </span>
-                <span
-                  v-else-if="row.role === 'member' || row.role === 'owner'"
-                  title="Вы уже в районе"
-                  class="w-9 h-9 grid place-items-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-                >
-                  <i class="pi pi-check text-sm" />
-                </span>
-              </div>
-            </div>
+            <DistrictSearchList :rows="districts.districtResults.value" @open="(id) => districts.openDistrict(id)" @chat="(row) => districts.openChat(row)" />
           </div>
 
           <div
@@ -257,6 +205,14 @@ function onTab(value: string | number | undefined): void {
             class="mt-4 text-center py-6 text-sm text-stone-500 dark:text-zinc-400"
           >
             Ничего не найдено — попробуй другой запрос
+          </div>
+          <div
+            v-else-if="districts.suggestedDistricts.value.length || districts.districtSuggestionsLoading.value"
+            class="mt-3 max-h-[60dvh] sm:max-h-[52vh] overflow-auto divide-y divide-stone-100 dark:divide-zinc-800 border rounded-2xl bg-white dark:bg-zinc-900 dark:border-zinc-700 shadow-sm"
+          >
+            <div class="px-3 pt-2.5 text-[11px] font-bold uppercase tracking-wide text-stone-400 dark:text-zinc-500">Существующие районы</div>
+            <div v-if="districts.districtSuggestionsLoading.value && !districts.suggestedDistricts.value.length" class="p-4 text-center"><i class="pi pi-spin pi-spinner text-violet-400 text-sm" /></div>
+            <DistrictSearchList :rows="districts.suggestedDistricts.value" @open="(id) => districts.openDistrict(id)" @chat="(row) => districts.openChat(row)" />
           </div>
           <div
             v-else
