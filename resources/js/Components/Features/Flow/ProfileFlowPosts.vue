@@ -8,6 +8,8 @@ import FlowComposer from '@/Components/Features/Flow/FlowComposer.vue'
 import FlowDeleteDialog from '@/Components/Features/Flow/FlowDeleteDialog.vue'
 import FlowEditDialog from '@/Components/Features/Flow/FlowEditDialog.vue'
 import FlowPostCard from '@/Components/Features/Flow/FlowPostCard.vue'
+import InfiniteSentinel from '@/Components/Ui/List/InfiniteSentinel.vue'
+import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 import { useFlowComposer } from '@/composables/useFlowComposer'
 import { useFlowFeed } from '@/composables/useFlowFeed'
 import type { FlowPost } from '@/types/flow'
@@ -23,6 +25,13 @@ const editOpen = ref(false)
 const allOpen = ref(false)
 const previewPosts = computed(() => feed.store.posts.slice(0, previewLimit.value))
 const hiddenCount = computed(() => Math.max(0, feed.store.posts.length - previewLimit.value))
+const allHasMore = computed(() => feed.store.page < feed.store.lastPage)
+const allLoadingMore = computed(() => feed.store.loadingMore)
+const { sentinel: allSentinel } = useInfiniteScroll({
+  hasMore: allHasMore,
+  loading: allLoadingMore,
+  onLoadMore: () => feed.store.loadMore(),
+})
 
 /** Открывает большую модалку со всеми постами. */
 function openAll(): void {
@@ -89,6 +98,7 @@ onMounted(() => feed.init())
           @edit="openEdit($event)"
           @delete="feed.askDelete($event)"
         />
+        <InfiniteSentinel :sentinel="allSentinel" :has-more="feed.store.page < feed.store.lastPage" :loading="feed.store.loadingMore" end-text="Это все посты" />
       </div>
     </Dialog>
     <FlowEditDialog v-model:visible="editOpen" :composer="editor" />

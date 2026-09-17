@@ -1,6 +1,12 @@
 import { api } from './api'
 import type { Conversation, ConversationDetail, Message, FriendshipsState } from '@/types/entities/Chat'
 
+/**
+ * Размер страницы истории чата: первые 15 при открытии, дальше по 15 вверх.
+ * Совпадает с MessageController::HISTORY_PAGE_SIZE.
+ */
+export const CHAT_HISTORY_PAGE_SIZE = 15
+
 export const chatApi = {
   async me() {
     const { data } = await api.get('/api/chat/me')
@@ -112,7 +118,7 @@ export const chatApi = {
     return data
   },
 
-  async messages(convId: number, before?: number, limit = 30) {
+  async messages(convId: number, before?: number, limit = CHAT_HISTORY_PAGE_SIZE) {
     const { data } = await api.get<Message[] | { data: Message[]; has_more: boolean }>(`/api/conversations/${convId}/messages`, { params: { before, limit } })
     // Бэк отдаёт {data, has_more}; старые кэши могли отдать массив — нормализуем оба.
     if (Array.isArray(data)) return data
@@ -126,7 +132,7 @@ export const chatApi = {
    * @param before грузить старше этого id
    * @param limit размер страницы
    */
-  async messagesPage(convId: number, before?: number, limit = 30): Promise<{ data: Message[]; has_more: boolean }> {
+  async messagesPage(convId: number, before?: number, limit = CHAT_HISTORY_PAGE_SIZE): Promise<{ data: Message[]; has_more: boolean }> {
     const { data } = await api.get(`/api/conversations/${convId}/messages`, { params: { before, limit } })
     if (Array.isArray(data)) return { data, has_more: data.length >= limit }
     return {

@@ -1,7 +1,7 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import { useToast } from 'primevue/usetoast'
-import { chatApi } from '@/services/chat.api'
+import { chatApi, CHAT_HISTORY_PAGE_SIZE } from '@/services/chat.api'
 import { useChatHistory } from '@/composables/useChatHistory'
 import { busOn, registerPollContextProvider } from '@/services/realtime-bus'
 import { ensureUserChannel, leaveUserChannel } from '@/composables/useUserChannel'
@@ -115,9 +115,21 @@ export function useChat() {
   const conversationsHasMore = ref(false)
   const conversationsLoadingMore = ref(false)
   const history = useChatHistory(messages, {
-    loadPage: (beforeId: number) => chatApi.messagesPage(selectedId.value!, beforeId, 30),
+    loadPage: (beforeId: number) => chatApi.messagesPage(selectedId.value!, beforeId, CHAT_HISTORY_PAGE_SIZE),
     getKey: () => selectedId.value,
   })
+
+  /**
+   * Начальный флаг hasMore из ответа диалога: точный messages_has_more
+   * с бэка, иначе эвристика по размеру первой страницы.
+   * @param detail ответ getConversation
+   */
+  function initialHasMore(detail: ConversationDetail): boolean {
+    if (typeof (detail as { messages_has_more?: unknown }).messages_has_more === 'boolean') {
+      return (detail as { messages_has_more: boolean }).messages_has_more
+    }
+    return (Array.isArray(detail.messages) ? detail.messages.length : 0) >= CHAT_HISTORY_PAGE_SIZE
+  }
 
   function getEcho(): any {
     return (window as any).Echo
@@ -270,7 +282,7 @@ export function useChat() {
         activeConv.value = d
         messages.value = mergeFetched(currentId, Array.isArray(d.messages) ? d.messages : [])
         await nextTick()
-        history.scrollToBottom()
+        history.reset(initialHasMore(d))
       }
     } finally { refreshing.value = false }
   }
@@ -347,7 +359,7 @@ export function useChat() {
       subscribeChat(id)
       try { syncRealtimeNow() } catch {}
       await nextTick()
-      history.reset()
+      history.reset(initialHasMore(d))
     } catch (e) {
       if (selectedId.value === id) { selectedId.value = null; activeConv.value = null; messages.value = []; loading.value = false }
       throw e
@@ -983,7 +995,7 @@ export function useChat() {
         chatApi.markRead(id).catch(() => {})
       }
       await nextTick()
-      history.scrollToBottom()
+      history.reset(initialHasMore(d))
     } catch {}
   }
 

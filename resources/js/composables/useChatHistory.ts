@@ -54,11 +54,12 @@ export function useChatHistory(source: Ref<Message[]>, loader: ChatHistoryLoader
   }
 
   /**
-   * Сброс при смене диалога: новый ключ, есть ещё история, докат вниз.
+   * Сброс при смене диалога: новый ключ, докат вниз.
+   * @param assumeMore есть ли старше (с бэка messages_has_more); по умолчанию true
    */
-  function reset(): void {
+  function reset(assumeMore = true): void {
     currentKey = loader.getKey()
-    hasMore.value = true
+    hasMore.value = assumeMore
     loadingOlder.value = false
     scrollToBottom()
   }

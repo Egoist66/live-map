@@ -14,12 +14,17 @@ use Illuminate\Http\Request;
 
 class MessageController extends Controller
 {
+    /**
+     * Размер страницы истории чата: как в мессенджерах, подгрузка порциями вверх.
+     */
+    public const HISTORY_PAGE_SIZE = 15;
+
     public function index(Request $request, Conversation $conversation)
     {
         abort_unless($conversation->hasParticipant($request->user()->id),403);
         $clearedAt = $conversation->participantRows()->where('user_id', $request->user()->id)->value('cleared_at');
         $before = $request->input('before');
-        $limit = max(1, min(50, (int) $request->input('limit', 30)));
+        $limit = max(1, min(50, (int) $request->input('limit', self::HISTORY_PAGE_SIZE)));
         $q = $conversation->messages()->with(['sender:id,name,avatar_path', 'replyTo.sender:id,name'])->reorder()->orderByDesc('id');
         if ($before) $q->where('id','<',$before);
         if ($clearedAt) $q->where('created_at', '>', $clearedAt);

@@ -82,14 +82,16 @@ class ConversationController extends Controller
         abort_unless($conversation->hasParticipant($request->user()->id), 403, 'Этот чат принадлежит другому аккаунту. Войдите под нужным пользователем.');
         $clearedAt = $conversation->participantRows()->where('user_id', $request->user()->id)->value('cleared_at');
         $conversation->load(['participants:id,name,avatar_path,last_seen_at,is_invisible,plan,role,is_admin,dating_goal,dating_interests', 'district:id,name,user_id']);
+        $pageSize = MessageController::HISTORY_PAGE_SIZE;
         $rawMessages = $conversation->messages()
             ->with(['sender:id,name,avatar_path', 'replyTo.sender:id,name'])
             ->when($clearedAt, fn ($q) => $q->where('created_at', '>', $clearedAt))
             ->reorder()
             ->orderByDesc('id')
-            ->limit(100)
-            ->get()
-            ->reverse()
+            ->limit($pageSize + 1)
+            ->get();
+        $hasMoreMessages = $rawMessages->count() > $pageSize;
+        $rawMessages = $rawMessages->take($pageSize)->reverse()
             ->values();
         $undelivered = $rawMessages->where('sender_id','!=',$request->user()->id)->whereNull('delivered_at')->pluck('id');
         if($undelivered->isNotEmpty()){
@@ -115,6 +117,7 @@ class ConversationController extends Controller
             'other'=>$other ? ['id'=>$other->id,'name'=>$other->name,'avatar_path'=>$other->avatar_path,'avatar_url'=>$other->avatar_url,'last_seen_at'=>$lastSeen,'is_invisible'=>$other->isInvisibleActive(),'is_match'=>$isMatch,'dating_goal'=>$other->dating_goal,'dating_interests'=>$other->dating_interests ?? []] : null,
             'participants'=>$conversation->participants->map(fn($p)=> array_merge($p->toArray(), ['avatar_url'=>$p->avatar_url])),
             'messages'=>$messages,
+            'messages_has_more'=>$hasMoreMessages,
             'pinned'=>$pinned,
             'pin_limit'=>$request->user()->pinnedMessagesLimit(),
         ]);
