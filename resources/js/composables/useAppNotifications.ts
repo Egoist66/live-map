@@ -295,12 +295,13 @@ function handleDistrict(district: any, type: string, activity: any = null) {
   const actorAvatar = avatarSrcFor(activity?.actor ?? null)
   if (type === 'district.join_requested') {
     const r = district.requester || {}
+    const requesterName = r.name || 'Кто-то'
     push({
       id: `district-req-${id}-${Date.now()}`,
       type: 'friend',
       icon: 'pi pi-home',
-      title: `Заявка в район «${String(district.name || '').slice(0, 40)}»`,
-      body: `${r.name || 'Кто-то'} хочет жить в вашем районе`,
+      title: `Пользователь ${requesterName} — заявка в район`,
+      body: `Пользователь ${requesterName} отправил заявку на вступление в район «${String(district.name || '').slice(0, 40)}»`,
       avatar: avatarSrcFor(r),
       link,
       createdAt: Date.now(),

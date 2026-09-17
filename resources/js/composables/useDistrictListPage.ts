@@ -1,5 +1,6 @@
 import { computed, onMounted, ref } from 'vue'
 import { router } from '@inertiajs/vue3'
+import { useToast } from 'primevue/usetoast'
 import { districtsApi } from '@/services/districts.api'
 import type { District } from '@/types/entities/District'
 
@@ -24,6 +25,16 @@ export function useDistrictListPage(canCreate: boolean, limitText: string) {
   const loadingAll = ref(false)
   /** Поиск по названию. */
   const query = ref('')
+  /** Id района с летящей заявкой (лоадер кнопки). */
+  const joiningId = ref<number | null>(null)
+
+  const toast = (() => {
+    try {
+      return useToast()
+    } catch {
+      return null as never
+    }
+  })()
 
   const filteredAll = computed(() => {
     const clean = query.value.trim().toLowerCase()
@@ -100,6 +111,108 @@ export function useDistrictListPage(canCreate: boolean, limitText: string) {
     query.value = value
   }
 
+  /**
+   * Применить новую роль к карточке в обоих списках.
+   *
+   * @param id id района
+   * @param role новая роль
+   */
+  function applyRole(id: number, role: District['role']): void {
+    const patch = (rows: District[]): District[] => {
+      return rows.map((row) => {
+        if (row.id !== id) {
+          return row
+        }
+        return { ...row, role }
+      })
+    }
+    mine.value = patch(mine.value)
+    all.value = patch(all.value)
+  }
+
+  /**
+   * Показать ошибку тостом.
+   *
+   * @param error ответ API
+   * @param fallback запасной текст
+   */
+  function fail(error: unknown, fallback: string): void {
+    const detail = (error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback
+    toast?.add({ severity: 'error', summary: 'Районы', detail, life: 3500 })
+  }
+
+  /**
+   * Бросить заявку на вступление прямо из списка, не открывая карточку.
+   *
+   * @param id id района
+   * @example
+   * await list.joinDistrict(district.id)
+   */
+  async function joinDistrict(id: number): Promise<void> {
+    if (joiningId.value !== null) {
+      return
+    }
+    joiningId.value = id
+    try {
+      const res = await districtsApi.join(id)
+      const role = (res?.role ?? 'pending') as District['role']
+      applyRole(id, role)
+      toast?.add({ severity: 'success', summary: 'Заявка отправлена', detail: 'Владелец решит, пускать ли вас', life: 3000 })
+      await loadMine()
+    } catch (error: unknown) {
+      fail(error, 'Не удалось отправить заявку')
+    } finally {
+      joiningId.value = null
+    }
+  }
+
+  /**
+   * Принять приглашение прямо из списка.
+   *
+   * @param id id района
+   */
+  async function acceptDistrictInvite(id: number): Promise<void> {
+    if (joiningId.value !== null) {
+      return
+    }
+    joiningId.value = id
+    try {
+      const res = await districtsApi.acceptInvite(id)
+      const role = (res?.role ?? 'member') as District['role']
+      applyRole(id, role)
+      toast?.add({ severity: 'success', summary: 'Вы в районе', detail: 'Пины и общий чат открыты', life: 3000 })
+      await loadMine()
+    } catch (error: unknown) {
+      fail(error, 'Не удалось принять приглашение')
+    } finally {
+      joiningId.value = null
+    }
+  }
+
+  /**
+   * Отозвать заявку на вступление прямо из списка.
+   *
+   * @param id id района
+   * @example
+   * await list.cancelJoinRequest(district.id)
+   */
+  async function cancelJoinRequest(id: number): Promise<void> {
+    if (joiningId.value !== null) {
+      return
+    }
+    joiningId.value = id
+    try {
+      await districtsApi.leave(id)
+      applyRole(id, 'guest')
+      toast?.add({ severity: 'success', summary: 'Заявка отозвана', life: 2500 })
+      await loadMine()
+    } catch (error: unknown) {
+      fail(error, 'Не удалось отозвать заявку')
+    } finally {
+      joiningId.value = null
+    }
+  }
+
   onMounted(() => {
     void init()
   })
@@ -111,6 +224,7 @@ export function useDistrictListPage(canCreate: boolean, limitText: string) {
     loadingMine,
     loadingAll,
     query,
+    joiningId,
     canCreate,
     limitText,
     isEmpty,
@@ -121,5 +235,8 @@ export function useDistrictListPage(canCreate: boolean, limitText: string) {
     openDistrict,
     goCreate,
     setQuery,
+    joinDistrict,
+    acceptDistrictInvite,
+    cancelJoinRequest,
   }
 }

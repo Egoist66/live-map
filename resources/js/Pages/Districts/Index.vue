@@ -57,12 +57,14 @@ function letterOf(name: string): string {
                 <Skeleton height="64px" class="!rounded-2xl" />
               </div>
               <div v-else class="grid gap-1.5">
-                <button
+                <div
                   v-for="district in list.mine.value"
                   :key="district.id"
-                  type="button"
-                  class="flex items-center gap-2.5 rounded-2xl border border-blue-100 bg-blue-50/50 p-2.5 text-left transition hover:border-blue-300 active:scale-[0.99] dark:border-blue-500/20 dark:bg-blue-500/10"
+                  role="button"
+                  tabindex="0"
+                  class="flex cursor-pointer items-center gap-2.5 rounded-2xl border border-blue-100 bg-blue-50/50 p-2.5 text-left transition hover:border-blue-300 active:scale-[0.99] dark:border-blue-500/20 dark:bg-blue-500/10"
                   @click="list.openDistrict(district.id)"
+                  @keydown.enter="list.openDistrict(district.id)"
                 >
                   <span class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-blue-600 text-lg font-black text-white">{{ letterOf(district.name) }}</span>
                   <span class="min-w-0 flex-1">
@@ -70,7 +72,7 @@ function letterOf(name: string): string {
                     <span class="block truncate text-[11px] text-stone-500 dark:text-zinc-400">{{ districtInterestLabel(district.interest) }} · {{ district.members_count }} уч.</span>
                   </span>
                   <i class="pi pi-chevron-right shrink-0 text-xs text-stone-300 dark:text-zinc-600" />
-                </button>
+                </div>
               </div>
             </div>
 
@@ -82,20 +84,51 @@ function letterOf(name: string): string {
                 <Skeleton height="64px" class="!rounded-2xl" />
               </div>
               <div v-else-if="list.filteredAll.value.length" class="grid gap-1.5">
-                <button
+                <div
                   v-for="district in list.filteredAll.value"
                   :key="district.id"
-                  type="button"
+                  role="button"
+                  tabindex="0"
                   class="flex items-center gap-2.5 rounded-2xl border border-stone-200/70 bg-white p-2.5 text-left transition hover:border-blue-300 active:scale-[0.99] dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-blue-500/40"
                   @click="list.openDistrict(district.id)"
+                  @keydown.enter="list.openDistrict(district.id)"
                 >
                   <span class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-stone-100 text-lg font-black text-stone-600 dark:bg-white/10 dark:text-zinc-200">{{ letterOf(district.name) }}</span>
-                  <span class="min-w-0 flex-1">
+                  <span class="min-w-0 flex-1 cursor-pointer">
                     <span class="block truncate text-[13px] font-bold text-ink-900 dark:text-white">{{ district.name }}</span>
                     <span class="block truncate text-[11px] text-stone-500 dark:text-zinc-400">{{ districtInterestLabel(district.interest) }} · {{ district.members_count }} уч.</span>
                   </span>
-                  <i class="pi pi-chevron-right shrink-0 text-xs text-stone-300 dark:text-zinc-600" />
-                </button>
+                  <Button
+                    v-if="district.role === 'guest'"
+                    label="Вступить"
+                    size="small"
+                    rounded
+                    :loading="list.joiningId.value === district.id"
+                    class="!border-0 !bg-blue-600 !text-xs !font-bold !text-white hover:!bg-blue-500"
+                    @click.stop="list.joinDistrict(district.id)"
+                  />
+                  <Button
+                    v-else-if="district.role === 'invited'"
+                    label="Принять"
+                    size="small"
+                    rounded
+                    :loading="list.joiningId.value === district.id"
+                    class="!border-0 !bg-emerald-500 !text-xs !font-bold !text-white"
+                    @click.stop="list.acceptDistrictInvite(district.id)"
+                  />
+                  <Button
+                    v-else-if="district.role === 'pending'"
+                    label="Отменить заявку"
+                    size="small"
+                    rounded
+                    outlined
+                    severity="secondary"
+                    :loading="list.joiningId.value === district.id"
+                    class="!text-xs !font-bold"
+                    @click.stop="list.cancelJoinRequest(district.id)"
+                  />
+                  <i v-else class="pi pi-chevron-right shrink-0 text-xs text-stone-300 dark:text-zinc-600" />
+                </div>
               </div>
               <div v-else-if="list.isNothingFound.value" class="rounded-2xl border border-dashed border-stone-300 p-4 text-center text-xs text-stone-400 dark:border-zinc-700 dark:text-zinc-500">
                 Ничего не нашли — попробуйте другой запрос

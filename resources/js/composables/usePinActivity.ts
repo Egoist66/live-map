@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue'
 import { router } from '@inertiajs/vue3'
-import { pinActivityApi, type PinActivityItem } from '@/services/pinActivity.api'
+import type { PinActivityItem } from '@/services/pinActivity.api'
 import { notificationsApi, toActivityItem, describeInboxRow, type InboxNotification } from '@/services/notifications.api'
 import { pinInvitesApi } from '@/services/pinInvites.api'
 import { useFileDownload } from '@/composables/useFileDownload'
@@ -116,8 +116,7 @@ async function markOne(a: PinActivityItem) {
   unread.value = Math.max(0, unread.value - 1)
   try { useBadgeStore().decActivity() } catch {}
   try {
-    if (typeof a.id === 'number') await pinActivityApi.markRead([a.id])
-    else await notificationsApi.markRead([String(a.id)])
+    await notificationsApi.markRead([String(a.id)])
   } catch {}
 }
 

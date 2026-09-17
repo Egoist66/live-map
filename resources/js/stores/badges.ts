@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import { chatApi } from '@/services/chat.api'
-import { pinActivityApi } from '@/services/pinActivity.api'
+import { notificationsApi } from '@/services/notifications.api'
 import { api } from '@/services/api'
 import { busOn } from '@/services/realtime-bus'
 import { ensureUserChannel, leaveUserChannel } from '@/composables/useUserChannel'
@@ -85,7 +85,7 @@ export const useBadgeStore = defineStore('badges', () => {
       const [convs, fr, ac, rep, upd, sec] = await Promise.all([
         convsPromise,
         chatApi.friendships().catch(() => ({ pending_in: [] } as any)),
-        pinActivityApi.unreadCount().catch(() => 0),
+        notificationsApi.unreadCount().then((r) => r.total).catch(() => 0),
         repPromise,
         updPromise,
         api.get('/api/security/impersonations').then((r) => Number(r.data?.unread ?? 0)).catch(() => 0),

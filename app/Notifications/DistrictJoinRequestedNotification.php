@@ -38,9 +38,11 @@ class DistrictJoinRequestedNotification extends UserNotification
 
     public function pushPayload(): ?array
     {
+        $requesterName = $this->requester->name ?: 'Кто-то';
+
         return [
-            'title' => 'Заявка в район «'.$this->district->name.'»',
-            'body' => ($this->requester->name ?: 'Кто-то').' хочет жить в вашем районе',
+            'title' => 'Пользователь '.$requesterName.' — заявка в район',
+            'body' => 'Пользователь '.$requesterName.' отправил заявку на вступление в район «'.$this->district->name.'»',
             'url' => '/districts/'.$this->district->id,
             'tag' => 'district-request-'.$this->district->id.'-'.$this->requester->id,
             'avatar' => $this->requester->avatar_url,

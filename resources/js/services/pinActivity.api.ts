@@ -24,24 +24,35 @@ export interface PinActivityItem {
   actor: { id: number; name?: string; avatar_path?: string | null; avatar_url?: string | null }
 }
 
+/**
+ * Legacy-фасад ленты активности.
+ *
+ * Старые эндпоинты `/api/pin-activities*` удалены (таблица pin_activities
+ * дропнута миграцией 2026_10_03_000002), единый inbox — `/api/notifications*`.
+ * Методы сохранены для совместимости и проксируют в notifications,
+ * чтобы клик по районам/профилю не давал 404.
+ */
 export const pinActivityApi = {
   async list() {
-    const { data } = await api.get('/api/pin-activities')
-    return data?.data ?? data ?? []
+    const { data } = await api.get('/api/notifications', { params: { per_page: 30 } })
+    const rows = data?.data ?? data ?? []
+    const list = Array.isArray(rows) ? rows : []
+    return list.map((row: any) => ({ ...(row?.data?.activity ?? {}), id: row?.id, read_at: row?.read_at, created_at: row?.created_at }))
   },
   async unreadCount() {
-    const { data } = await api.get('/api/pin-activities/unread-count')
+    const { data } = await api.get('/api/notifications/unread-count')
     return Number(data?.count ?? 0)
   },
-  async markRead(ids?: number[]) {
-    const { data } = await api.post('/api/pin-activities/read', ids?.length ? { ids } : { all: true })
+  async markRead(ids?: Array<number | string>) {
+    const payload = ids?.length ? { ids: ids.map((id) => String(id)) } : { all: true }
+    const { data } = await api.post('/api/notifications/read', payload)
     return data
   },
   /**
    * Удалить всю ленту активности навсегда.
    */
   async clear() {
-    const { data } = await api.delete('/api/pin-activities')
+    const { data } = await api.delete('/api/notifications')
     return data
   },
 }

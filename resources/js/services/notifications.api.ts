@@ -67,7 +67,7 @@ export function describeInboxRow(row: InboxNotification): InboxText {
   if (row.type === 'district.join_requested') {
     const d = (data as any).district ?? {}
     const name = d.requester?.name || 'Кто-то'
-    return { emoji: '🏘️', title: `Заявка в район «${d.name || ''}»`, body: `${name} хочет жить в вашем районе`, link: `/districts/${d.id || ''}`, avatar: d.requester?.avatar_url ?? null }
+    return { emoji: '🏘️', title: `Пользователь ${name} — заявка в район`, body: `Пользователь ${name} отправил заявку на вступление в район «${d.name || ''}»`, link: `/districts/${d.id || ''}`, avatar: d.requester?.avatar_url ?? null }
   }
   if (row.type === 'district.request_approved') {
     const d = (data as any).district ?? {}
