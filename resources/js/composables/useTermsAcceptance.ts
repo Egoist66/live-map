@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
+import { route } from '@/route'
 
 /**
  * Принятие публичной оферты при первом входе.

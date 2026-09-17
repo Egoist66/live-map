@@ -7,6 +7,7 @@ import { useCountryMismatch } from '@/composables/useCountryMismatch'
 import { useSignupGoals } from '@/composables/useSignupGoals'
 import { useToast } from 'primevue/usetoast'
 import { router } from '@inertiajs/vue3'
+import { route } from '@/route'
 
 export function useLoginForm() {
   const showPass = ref(false)

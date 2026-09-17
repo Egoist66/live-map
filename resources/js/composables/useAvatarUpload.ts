@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue'
 import { usePage, router } from '@inertiajs/vue3'
+import { route } from '@/route'
 import { useToast } from 'primevue/usetoast'
 import { avatarSrcFor } from '@/composables/useAvatar'
 import { useAvatarCropper } from '@/composables/useAvatarCropper'

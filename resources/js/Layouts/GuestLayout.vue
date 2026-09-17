@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
+import { route } from '@/route'
 import Card from 'primevue/card'
 import PageTransition from '@/Components/Features/Feedback/PageTransition.vue'
 import AppFooter from '@/Layouts/AppFooter.vue'

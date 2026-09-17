@@ -1,5 +1,12 @@
 import { watch, onBeforeUnmount } from 'vue'
 
+/**
+ * Превью аватара: лок body + закрытие по Escape, пока открыто.
+ * На сервере (SSR) — no-op: immediate-watcher молча выходит без `window`.
+ *
+ * @param open геттер флага открытия
+ * @param onClose колбэк закрытия по Escape
+ */
 export function useAvatarPreview(open: () => boolean, onClose: () => void) {
   let prevBody = ''
   let prevHtml = ''
@@ -22,6 +29,7 @@ export function useAvatarPreview(open: () => boolean, onClose: () => void) {
     if (e.key === 'Escape') onClose()
   }
   watch(open, (v) => {
+    if (typeof window === 'undefined') return
     if (v) {
       lock()
       window.addEventListener('keydown', onKey)
@@ -32,6 +40,6 @@ export function useAvatarPreview(open: () => boolean, onClose: () => void) {
   }, { immediate: true })
   onBeforeUnmount(() => {
     unlock()
-    window.removeEventListener('keydown', onKey)
+    if (typeof window !== 'undefined') window.removeEventListener('keydown', onKey)
   })
 }

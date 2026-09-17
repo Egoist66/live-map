@@ -1,5 +1,6 @@
 import { computed } from 'vue'
 import { usePage } from '@inertiajs/vue3'
+import { route } from '@/route'
 import { avatarSrcFor } from '@/composables/useAvatar'
 
 export function useNavigation() {

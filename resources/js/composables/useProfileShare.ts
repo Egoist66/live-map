@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { useToast } from 'primevue/usetoast'
+import { route } from '@/route'
 
 export function useProfileShare() {
   const toast = (() => { try { return useToast() } catch { return null as any } })()

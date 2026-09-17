@@ -1,8 +1,62 @@
 import Echo from 'laravel-echo'
 import Pusher from 'pusher-js'
-// @ts-ignore
-window.Pusher = Pusher
-Pusher.logToConsole = false
+
+/**
+ * Realtime-подключение к Reverb через laravel-echo.
+ *
+ * Модуль без сайд-эффектов при импорте: всё стартует через `initEcho()`
+ * (клиент вызывает его из app.ts). Статические импорты (например, из
+ * useAuthSession) безопасны для SSR — на Node `initEcho` сразу выходит.
+ */
+
+let echoStarted = false
+
+/**
+ * Инициализирует realtime-соединение. На сервере (SSR) — no-op.
+ */
+export function initEcho(): void {
+  if (typeof window === 'undefined' || echoStarted) return
+  echoStarted = true
+
+  // @ts-ignore
+  window.Pusher = Pusher
+  Pusher.logToConsole = false
+
+  if (!rawKey) {
+    console.warn('[reverb] VITE_REVERB_APP_KEY missing — Echo disabled, realtime off')
+    // @ts-ignore
+    window.Echo = null
+    return
+  }
+
+  const params = resolveReverbParams()
+  console.info('[reverb] connect', params.host, params.port, params.tls ? 'wss' : 'ws')
+  // @ts-ignore
+  window.Echo = new Echo({
+    broadcaster: 'reverb',
+    key: rawKey,
+    wsHost: params.host,
+    wsPort: params.port,
+    wssPort: params.port,
+    forceTLS: params.tls,
+    enabledTransports: params.tls ? ['wss'] : ['ws'],
+    disableStats: true,
+    authEndpoint: resolveAuthEndpoint(),
+    auth: { headers: resolveAuthHeaders() },
+  })
+
+  if ((window as any).Echo?.connector?.pusher) {
+    const c = (window as any).Echo.connector.pusher.connection
+    c.bind('error', (e: any) => console.warn('[reverb] error', e))
+    c.bind('failed', () => console.warn('[reverb] failed'))
+    c.bind('disconnected', () => console.warn('[reverb] disconnected'))
+    c.bind('connected', () => console.info('[reverb] connected'))
+  }
+
+  try {
+    if ((window as any).Echo) setupIdleDisconnect()
+  } catch {}
+}
 
 /**
  * Резолвит параметры подключения к Reverb с фолбэком на same-origin.
@@ -46,40 +100,12 @@ function resolveAuthHeaders(): Record<string, string> {
   } catch {}
   return headers
 }
-if (!rawKey) {
-  console.warn('[reverb] VITE_REVERB_APP_KEY missing — Echo disabled, realtime off')
-  // @ts-ignore
-  window.Echo = null
-} else {
-  const params = resolveReverbParams()
-  console.info('[reverb] connect', params.host, params.port, params.tls ? 'wss' : 'ws')
-  // @ts-ignore
-  window.Echo = new Echo({
-    broadcaster: 'reverb',
-    key: rawKey,
-    wsHost: params.host,
-    wsPort: params.port,
-    wssPort: params.port,
-    forceTLS: params.tls,
-    enabledTransports: params.tls ? ['wss'] : ['ws'],
-    disableStats: true,
-    authEndpoint: resolveAuthEndpoint(),
-    auth: { headers: resolveAuthHeaders() },
-  })
-}
-if ((window as any).Echo?.connector?.pusher) {
-  const c = (window as any).Echo.connector.pusher.connection
-  c.bind('error', (e: any) => console.warn('[reverb] error', e))
-  c.bind('failed', () => console.warn('[reverb] failed'))
-  c.bind('disconnected', () => console.warn('[reverb] disconnected'))
-  c.bind('connected', () => console.info('[reverb] connected'))
-}
-
 /**
  * Полный сброс realtime при смене аккаунта: покинуть приватные каналы
  * и разорвать сокет, чтобы чужой user.* не долетал в новый аккаунт.
  */
 export function resetEchoSession(channels: string[] = []): void {
+  if (typeof window === 'undefined') return
   try {
     const echo = (window as any).Echo
     if (!echo) return
@@ -142,7 +168,3 @@ function setupIdleDisconnect(): void {
     if ((event as PageTransitionEvent).persisted) connect()
   })
 }
-
-try {
-  if (typeof document !== 'undefined' && (window as any).Echo) setupIdleDisconnect()
-} catch {}

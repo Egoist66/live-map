@@ -1,5 +1,6 @@
 import { computed, onMounted, ref } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
+import { route } from '@/route'
 import { useBadgeStore } from '@/stores/badges'
 import { useSeo } from '@/composables/useSeo'
 import { useProfileShare } from '@/composables/useProfileShare'

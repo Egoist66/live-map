@@ -1,7 +1,7 @@
 import '../css/app.css'
 import 'primeicons/primeicons.css'
 import './bootstrap'
-import './echo'
+import { initEcho } from './echo'
 import { createPinia } from 'pinia'
 import { PiniaColada } from '@pinia/colada'
 import { createInertiaApp } from '@inertiajs/vue3'
@@ -34,6 +34,9 @@ createInertiaApp({
     setupPrimeVue(app)
     app.mount(el)
     if (!import.meta.env.SSR) {
+      try {
+        initEcho()
+      } catch {}
       try {
         registerSw()
       } catch {}

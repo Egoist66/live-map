@@ -22,10 +22,13 @@ createServer((page) =>
     resolve: (name) => resolvePageComponent(`./Pages/${name}.vue`, import.meta.glob<DefineComponent>('./Pages/**/*.vue')),
     setup({ App, props, plugin }) {
       const pinia = createPinia()
-      const ziggy: any = (page.props as any).ziggy
+      const ziggy: any = (page.props as any).ziggy ?? {}
+      const ziggyConfig = { ...ziggy, location: new URL(ziggy?.location ?? 'http://localhost') }
+      // Конфиг для SSR-safe `route()` из `@/route`: скрипты не видят blade-глобал Ziggy.
+      ;(globalThis as any).Ziggy = ziggyConfig
       const app = createSSRApp({ render: () => h(App, props) })
         .use(plugin)
-        .use(ZiggyVue, { ...ziggy, location: new URL(ziggy?.location ?? 'http://localhost') } as any)
+        .use(ZiggyVue, ziggyConfig as any)
         .use(pinia)
         .use(PiniaColada)
       setupPrimeVue(app)

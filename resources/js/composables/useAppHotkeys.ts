@@ -1,5 +1,6 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { router } from '@inertiajs/vue3'
+import { route } from '@/route'
 import { useBellNotifications } from '@/composables/useBellNotifications'
 
 /**

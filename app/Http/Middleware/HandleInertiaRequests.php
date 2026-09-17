@@ -39,6 +39,14 @@ class HandleInertiaRequests extends Middleware
             ],
             'unreadCount' => $request->user() ? $request->user()->unreadMessagesCount() : 0,
             'appVersion' => AppVersionService::version(),
+            // Роуты для ZiggyVue в SSR (resources/js/ssr.ts): Node-процесс
+            // не видит blade-скрипт @routes, без этого route()/current() падают
+            // и Inertia молча откатывается в CSR (пустой div#app).
+            'ziggy' => function () use ($request) {
+                return array_merge((new \Tighten\Ziggy\Ziggy)->toArray(), [
+                    'location' => $request->url(),
+                ]);
+            },
         ];
     }
 }

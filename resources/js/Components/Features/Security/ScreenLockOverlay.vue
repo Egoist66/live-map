@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
+import { route } from '@/route'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
 import { useScreenLock } from '@/composables/useScreenLock'
@@ -60,6 +61,7 @@ function logout() {
 }
 
 watch(() => lock.locked.value, (v) => {
+  if (typeof window === 'undefined') return
   if (v) {
     input.value = ''
     showPass.value = false

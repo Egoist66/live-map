@@ -1,5 +1,6 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useBadgeStore } from '@/stores/badges'
+import { route } from '@/route'
 
 /**
  * Состояние нижней мобильной навигации.

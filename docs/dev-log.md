@@ -1,5 +1,14 @@
 # Dev-лог
 
+## 2026-09-17 — SSR реально чиним: рендер падал, сервер был running
+- 🐞 Прод отдавал пустой `div#app`, хотя `inertia:check-ssr` писал running: Node-процесс жил, но каждый рендер бросал исключение — Laravel молча откатывался в CSR. Локальный стенд (`POST /render` в `node bootstrap/ssr/ssr.js`) воспроизвёл падение.
+- 🔧 `echo.ts`: топ-левел `window.Pusher/new Echo` ронял импорт SSR-бандла (тянулся через `useAuthSession`) — сайд-эффекты переехали в `initEcho()`, `app.ts` вызывает его только на клиенте.
+- 🔧 `HandleInertiaRequests::share()` теперь отдаёт `ziggy` (роуты + `location`): Node не видит blade-скрипт `@routes`, без этого `route().current()` падало.
+- 🧩 Новое: `@/route` — SSR-safe обёртка над Ziggy (браузер: blade-глобал, SSR: `globalThis.Ziggy` из `ssr.ts`); голый глобал `route()` выпилен из всех `.ts` и `<script>` (16 композаблов + 9 `.vue`), в шаблонах остался плагин.
+- 🔧 SSR-гарды `typeof window/document === 'undefined'`: `ScreenLockOverlay` (immediate-watcher), `useBodyLock`, `useAvatarPreview` (+JSDoc).
+- 📦 `package.json` `build` теперь включает `vite build --ssr` — дефолтная build-команда Cloud собирает SSR-бандл сама, `bootstrap/ssr/` остаётся в `.gitignore`.
+- Проверки: пачечный рендер 16/16 страниц через локальный SSR (`Welcome`…`Admin/Index`, нулевой stderr) ✅, `vue-tsc` в составе `build:ssr` ✅. Дальше: коммит → пуш → редеплой Cloud (там только код, env/тумблер уже стоят).
+
 ## 2026-09-16 — Таб «Районы» в глобальном поиске + аккуратная шапка района
 - 🔍 Глобальный поиск (Ctrl+K) теперь с табами «Люди · Районы»: районы ищутся по названию (`GET /api/districts?search=`, топ-20), из выдачи можно открыть страницу, вступить одной кнопкой (роль сразу обновляется) и уйти в общий чат знакомиться внутри.
 - 🐞 Иконка поиска на профиле открывала другой диалог (`ChatSearchDialog` через локальный `usePeopleSearch`), а не глобальный — поэтому табов не было видно: таб «Районы» добавлен и туда (таб синхронизирован через `peopleSearch.activeTab`), чинит сразу профиль, дашборд и чат.

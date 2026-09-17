@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3'
+import { route } from '@/route'
 import ProfileFlowPosts from '@/Components/Features/Flow/ProfileFlowPosts.vue'
 
 defineProps<{

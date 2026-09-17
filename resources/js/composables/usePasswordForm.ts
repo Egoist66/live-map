@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import { useForm } from 'vee-validate'
 import { updatePasswordSchema } from '@/validation/schemas/password.schema'
 import { router } from '@inertiajs/vue3'
+import { route } from '@/route'
 import { useToast } from 'primevue/usetoast'
 
 export function usePasswordForm() {

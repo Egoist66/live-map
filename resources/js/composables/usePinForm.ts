@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import { route } from '@/route'
 import { usePins } from './usePins'
 import { useHomeZoneGuard } from './useHomeZoneGuard'
 import type { CreatePinPayload, PinCategory } from '@/types/entities/Pin'

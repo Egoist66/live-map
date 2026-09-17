@@ -1,4 +1,5 @@
 import { router } from '@inertiajs/vue3'
+import { route } from '@/route'
 
 /**
  * Переход на страницу списка районов (витрина сообществ).
@@ -13,7 +14,7 @@ export function useDistrictsCta() {
    * Открывает страницу районов через Inertia-визит.
    */
   function goDistricts(): void {
-    router.visit(route('districts.index'))
+    router.visit('/districts')
   }
 
   return { goDistricts }

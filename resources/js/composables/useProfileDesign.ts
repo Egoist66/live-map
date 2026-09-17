@@ -1,5 +1,6 @@
 import { computed } from 'vue'
 import { router } from '@inertiajs/vue3'
+import { route } from '@/route'
 import { useProfileShowPage } from '@/composables/useProfileShowPage'
 import { useProfileGallery } from '@/composables/useProfileGallery'
 import { useProfilePeople } from '@/composables/useProfilePeople'

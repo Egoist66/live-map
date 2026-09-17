@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
 import { Head, Link, useForm } from '@inertiajs/vue3'
+import { route } from '@/route'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
 import Card from 'primevue/card'
