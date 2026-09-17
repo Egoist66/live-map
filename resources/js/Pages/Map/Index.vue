@@ -23,6 +23,7 @@ import { useMapRefresh } from '@/composables/useMapRefresh'
 import { useMapPinChat } from '@/composables/useMapPinChat'
 import { useMentions } from '@/composables/useMentions'
 import { useReportDialog } from '@/composables/useReportDialog'
+import { useDistrictsCta } from '@/composables/useDistrictsCta'
 import { formatTime } from '@/utils/date'
 import Toast from 'primevue/toast'
 import Button from 'primevue/button'
@@ -37,6 +38,7 @@ const { sentinel: pinCommentsSentinel } = useInfiniteScroll({ hasMore: pinCommen
 const { selectedPin, comments, threadedComments, replyTo, replyTarget, cancelReply, commentText, react, sendComment, editingCommentId, editingContent, deletingCommentId, highlightCommentId, startEditComment, cancelEditComment, saveEditComment, deleteComment, reactAsyncStatus, createCommentAsyncStatus, boostMutation, updateCommentMutation } = pinDetails as any
 const mentions = useMentions()
 const reportDialog = useReportDialog()
+const { goDistricts } = useDistrictsCta()
 const { mapContainer, loaded } = mapApi
 const sosMode = useSosMode()
 const mapRefresh = useMapRefresh(mapApi)
@@ -119,7 +121,7 @@ onUnmounted(() => {
         <div class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-700 rounded-2xl px-5 py-4 shadow flex items-center gap-3"><i class="pi pi-spin pi-spinner text-xl text-stone-900 dark:text-white shrink-0"></i><span class="text-sm font-medium dark:text-zinc-100">Загружаем карту…</span></div>
       </div>
       <div class="absolute left-2 right-2 sm:left-4 sm:right-auto sm:max-w-[420px] flex flex-col gap-2 sm:gap-2.5 z-10 pointer-events-none native-safe-offset-top max-sm:!top-2">
-        <MapTopBar :count="(filteredPins as any)?.value?.length ?? store.pins.length" :loading="store.loading" :refreshing="mapRefresh.refreshing.value" :categories="categories" :selected-category="selectedCategory" @update:category="(v:any)=>selectedCategory=v" @info="showLiveInfo = true" @mine="handleMineClick" @refresh="refreshMap" @districts="districts.openHub()" />
+        <MapTopBar :count="(filteredPins as any)?.value?.length ?? store.pins.length" :loading="store.loading" :refreshing="mapRefresh.refreshing.value" :categories="categories" :selected-category="selectedCategory" @update:category="(v:any)=>selectedCategory=v" @info="showLiveInfo = true" @mine="handleMineClick" @refresh="refreshMap" @districts="goDistricts" />
         <SosModeBanner v-if="sosMode.isSosMode.value" @chat="goSosChat" @close="onSosClosed" />
         <DefaultModeHint place="map" />
         <Transition name="fade">

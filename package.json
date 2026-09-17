@@ -3,7 +3,7 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "vue-tsc && vite build && node scripts/copy-sw.mjs",
+        "build": "vue-tsc && vite build && node scripts/copy-sw.mjs && vite build --ssr",
         "build:ssr": "vue-tsc && vite build && node scripts/copy-sw.mjs && vite build --ssr",
         "pwa:copy": "node scripts/copy-sw.mjs",
         "dev": "concurrently \"php artisan serve\" \"php artisan reverb:start --debug\" \"vite\"",

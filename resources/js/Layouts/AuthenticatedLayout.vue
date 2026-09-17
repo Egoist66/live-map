@@ -31,7 +31,7 @@ useGlobalDialogScrollLock()
 onMounted(() => { screenLock.init(); hotkeys.init() })
 </script>
 <template>
-  <div class="min-h-screen bg-surface dark:bg-[#0B0F1A] overflow-x-clip">
+  <div class="flex min-h-screen min-h-dvh flex-col bg-surface dark:bg-[#0B0F1A] overflow-x-clip">
     <header v-if="!route().current('swipes*')" class="native-safe-top sticky top-0 z-50 glass border-b border-stone-200/70 dark:border-zinc-800 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-zinc-900/70">
       <AppTopBar :user="user" :avatar-src="avatarSrc" :dashboard-href="dashboardHref" :badge-total="badge.total" :lock-enabled="screenLock.enabled.value" @bell="bell.open()" @menu="toggleMenu" @lock="screenLock.lockNow()" />
     </header>
@@ -40,10 +40,10 @@ onMounted(() => { screenLock.init(); hotkeys.init() })
     <div v-if="$slots.header" class="bg-white dark:bg-zinc-900 border-b border-stone-200/60 dark:border-zinc-800">
       <div class="mx-auto max-w-[1280px] px-4 sm:px-6 py-4 sm:py-6"><slot name="header" /></div>
     </div>
-    <main :class="route().current('chat') || route().current('map') ? 'pb-0 lg:pb-0 overflow-hidden overscroll-none' : 'pb-[calc(var(--app-bottomnav)+var(--sab))] lg:pb-0'">
+    <main :class="route().current('chat') || route().current('map') ? 'flex-1 pb-0 lg:pb-0 overflow-hidden overscroll-none' : 'flex-1 pb-[calc(var(--app-bottomnav)+var(--sab))] lg:pb-0'">
       <PageTransition><slot /></PageTransition>
     </main>
-    <div v-if="!route().current('chat') && !route().current('map')" :class="['pb-[calc(var(--app-bottomnav)+var(--sab))] lg:pb-0', route().current('swipes') ? 'hidden lg:block' : '']">
+    <div v-if="!route().current('chat') && !route().current('map')" :class="['mt-auto pb-[calc(var(--app-bottomnav)+var(--sab))] lg:pb-0', route().current('swipes') ? 'hidden lg:block' : '']">
       <AppFooter />
     </div>
     <MobileBottomNav />

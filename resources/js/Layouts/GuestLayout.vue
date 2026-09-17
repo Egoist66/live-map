@@ -10,7 +10,7 @@ const isFaq = route().current('faq')
 </script>
 
 <template>
-  <div class="min-h-screen flex bg-surface dark:bg-[#0B0F1A]">
+  <div class="min-h-screen min-h-dvh flex bg-surface dark:bg-[#0B0F1A]">
     <div class="hidden lg:flex w-[360px] xl:w-[400px] shrink-0 bg-ink-900 text-white relative overflow-hidden">
       <div class="absolute inset-0">
         <div class="absolute inset-0 opacity-[0.04]" style="background-image: radial-gradient(circle at 1px 1px, white 1px, transparent 0); background-size: 24px 24px"></div>
@@ -44,8 +44,9 @@ const isFaq = route().current('faq')
         </div>
       </div>
     </div>
-    <div :class="isFaq ? 'flex-1 flex flex-col px-0 py-0 relative dark:bg-[#0B0F1A] overflow-auto min-w-0 w-full' : 'flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6 sm:py-10 relative dark:bg-[#0B0F1A] min-w-0 w-full'">
+    <div :class="isFaq ? 'flex-1 flex flex-col px-0 py-0 relative dark:bg-[#0B0F1A] overflow-auto min-w-0 w-full' : 'flex-1 flex flex-col items-center px-4 sm:px-6 py-6 sm:py-10 relative dark:bg-[#0B0F1A] min-w-0 w-full'">
       <div class="absolute inset-0 -z-10 bg-gradient-to-b from-white to-surface dark:from-zinc-900 dark:to-[#0B0F1A]"></div>
+      <div :class="isFaq ? 'flex w-full flex-1 flex-col' : 'flex w-full flex-1 items-center justify-center'">
       <PageTransition>
         <template v-if="isFaq">
           <slot />
@@ -67,7 +68,8 @@ const isFaq = route().current('faq')
           </div>
           </template>
         </PageTransition>
-        <div v-if="isFaq" class="mt-auto">
+        </div>
+        <div class="mt-auto w-full">
           <AppFooter />
         </div>
       </div>
