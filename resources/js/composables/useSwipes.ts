@@ -276,23 +276,23 @@ export function useSwipes() {
   })
 
   /**
-   * Сила штампа лайка 0..1.
+   * Сила штампа лайка 0..1. Лайк — свайп влево.
    *
    * @returns доля проявления
    */
   const likeStrength = computed(() => {
     if (leaving.value && flyDir.value === 'like') return 1
-    return Math.max(0, Math.min(dragX.value / 110, 1))
+    return Math.max(0, Math.min(-dragX.value / 110, 1))
   })
 
   /**
-   * Сила штампа паса 0..1.
+   * Сила штампа паса 0..1. Пас — свайп вправо.
    *
    * @returns доля проявления
    */
   const passStrength = computed(() => {
     if (leaving.value && flyDir.value === 'pass') return 1
-    return Math.max(0, Math.min(-dragX.value / 110, 1))
+    return Math.max(0, Math.min(dragX.value / 110, 1))
   })
 
   /** Максимальная дата рождения для гейта 18+ (сегодня минус 18 лет). */
@@ -902,6 +902,7 @@ export function useSwipes() {
 
   /**
    * Конец перетаскивания: резкий сдвиг = улёт.
+   * Влево — лайк, вправо — пас.
    *
    * @returns void
    */
@@ -910,11 +911,11 @@ export function useSwipes() {
     dragging.value = false
     const threshold = 110
     const shiftX = dragX.value
-    if (shiftX > threshold) {
+    if (shiftX < -threshold) {
       await swipe('like')
       return
     }
-    if (shiftX < -threshold) {
+    if (shiftX > threshold) {
       await swipe('pass')
       return
     }

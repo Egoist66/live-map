@@ -186,6 +186,7 @@ onMounted(async () => { await design.init() })
                 :user-name="profileUser.name"
                 :age-text="design.infoTiles.ageText.value"
                 :gender-label="design.infoTiles.genderLabel.value"
+                :gender-value="profileUser.gender"
                 :residence-text="design.infoTiles.residenceText.value"
                 :bio-text="design.page.bioText.value"
                 :bio-preview="design.bioPreview.value"

@@ -10,6 +10,7 @@ import 'swiper/css'
 import { useBodyLock } from '@/composables/useBodyLock'
 import { usePhotoViewer } from '@/composables/usePhotoViewer'
 import { usePhotoViewerSwiper } from '@/composables/usePhotoViewerSwiper'
+import { usePhotoViewerZoom } from '@/composables/usePhotoViewerZoom'
 import { useMentionInput } from '@/composables/useMentionInput'
 import { useEnterToSend } from '@/composables/useEnterToSend'
 import { renderWithMentions } from '@/composables/useMentions'
@@ -24,6 +25,7 @@ useBodyLock(() => !!props.gallery.viewerOpen?.value)
 
 const viewer = usePhotoViewer(props.gallery, props.comments)
 const swiper = usePhotoViewerSwiper(props.gallery, { onEscape: () => props.gallery.close() })
+const viewerZoom = usePhotoViewerZoom()
 const mentionInput = useMentionInput({
   getText: () => props.comments.draft.value ?? '',
   setText: (v: string) => { props.comments.draft.value = v },
@@ -59,13 +61,15 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
       </div>
       <div class="flex-1 min-h-0 overflow-y-auto overscroll-contain">
         <div class="relative bg-black">
-          <Swiper class="w-full" :slides-per-view="1" :space-between="0" :auto-height="true" :observer="true" :observe-parents="true" :update-on-window-resize="true" :initial-slide="swiper.activeIndex()" @swiper="swiper.registerMobile" @slideChange="swiper.onSlideChange">
+            <Swiper class="w-full" :slides-per-view="1" :space-between="0" :speed="350" :loop="gallery.photos.value.length > 1" :auto-height="true" :observer="true" :observe-parents="true" :update-on-window-resize="true" :modules="viewerZoom.modules" :zoom="viewerZoom.options" :initial-slide="swiper.activeIndex()" @swiper="swiper.registerMobile" @slideChange="swiper.onSlideChange">
             <SwiperSlide v-for="p in gallery.photos.value" :key="p.id" class="!flex items-center justify-center bg-black">
-              <img :src="p.url" :alt="p.caption || 'Фото'" loading="lazy" draggable="false" class="block w-full max-h-[52dvh] object-contain object-center select-none" />
+              <div class="swiper-zoom-container">
+                <img :src="p.url" :alt="p.caption || 'Фото'" loading="lazy" draggable="false" class="block w-full max-h-[52dvh] object-contain object-center select-none" />
+              </div>
             </SwiperSlide>
           </Swiper>
-          <Button icon="pi pi-chevron-left" rounded text size="small" class="!absolute left-1.5 top-1/2 -translate-y-1/2 z-10 !bg-black/40 !text-white !border-0 !w-9 !h-9" @click="gallery.stepPhoto(-1)" aria-label="Назад" />
-          <Button icon="pi pi-chevron-right" rounded text size="small" class="!absolute right-1.5 top-1/2 -translate-y-1/2 z-10 !bg-black/40 !text-white !border-0 !w-9 !h-9" @click="gallery.stepPhoto(1)" aria-label="Вперёд" />
+          <Button v-if="gallery.photos.value.length > 1" icon="pi pi-chevron-left" rounded text size="small" class="!absolute left-1.5 top-1/2 -translate-y-1/2 z-10 !bg-black/40 !text-white !border-0 !w-9 !h-9" @click="gallery.stepPhoto(-1)" aria-label="Назад" />
+          <Button v-if="gallery.photos.value.length > 1" icon="pi pi-chevron-right" rounded text size="small" class="!absolute right-1.5 top-1/2 -translate-y-1/2 z-10 !bg-black/40 !text-white !border-0 !w-9 !h-9" @click="gallery.stepPhoto(1)" aria-label="Вперёд" />
         </div>
         <div class="px-4 pt-2.5 flex items-center gap-1">
           <Button :icon="gallery.active.value.liked ? 'pi pi-heart-fill' : 'pi pi-heart'" rounded text :loading="viewer.likeLoading.value" :class="['!w-10 !h-10', gallery.active.value.liked ? '!text-red-500' : '']" @click="viewer.onLike(viewer.incognito.value)" :aria-label="gallery.active.value.liked ? 'Убрать лайк' : 'Лайк'" v-tooltip.bottom="photoLikers.tooltip.value" @mouseenter="photoLikers.ensure()" />
@@ -96,14 +100,23 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
           <div v-else-if="!comments.comments.value.length" class="text-xs text-stone-400 py-2">Комментариев пока нет — стань первым</div>
           <div v-for="c in comments.comments.value" :key="c.id" :id="`photo-comment-${c.id}`" :class="['flex gap-2.5 items-start rounded-xl px-2 py-1 -mx-2', Number(gallery.highlightCommentId?.value) === Number(c.id) ? 'bg-violet-50 dark:bg-violet-950/40 ring-1 ring-violet-500/40' : '']">
             <span class="w-7 h-7 shrink-0 rounded-full bg-stone-200 dark:bg-white/10 grid place-items-center text-[11px] font-black text-stone-600 dark:text-zinc-200">{{ (c.user?.name || '?').slice(0, 1).toUpperCase() }}</span>
-            <div class="min-w-0 flex-1 text-sm break-words dark:text-zinc-100"><span class="font-bold mr-1">{{ c.user?.name || 'Пользователь' }}</span><span class="comment-body" v-html="renderWithMentions(c.content || '')" @click="mentionNav.onRichClick"></span></div>
+            <div class="min-w-0 flex-1">
+              <div class="text-sm break-words dark:text-zinc-100"><span class="font-bold mr-1">{{ c.user?.name || 'Пользователь' }}</span><span class="comment-body" v-html="renderWithMentions(c.content || '')" @click="mentionNav.onRichClick"></span></div>
+              <button v-if="canComment()" type="button" class="mt-0.5 px-1 py-1 -ml-1 text-[11px] font-semibold text-stone-400 hover:text-violet-600 active:text-violet-600 dark:text-zinc-500" @click="comments.setReply({ id: c.id, name: c.user?.name || 'Пользователь' })">Ответить</button>
+            </div>
             <Button v-if="isOwn" icon="pi pi-times" text rounded size="small" class="!w-8 !h-8 shrink-0" @click="comments.remove(c.id)" aria-label="Удалить комментарий" />
           </div>
           <Message v-if="comments.error.value" severity="error" :closable="false" class="!rounded-2xl !text-xs">{{ comments.error.value }}</Message>
         </div>
       </div>
       <div class="shrink-0 px-3 pt-2.5 border-t border-stone-200/70 dark:border-white/10 pb-[max(0.625rem,var(--sab))]">
-        <div v-if="canComment()" class="relative flex items-end gap-2">
+        <div v-if="canComment()" class="relative flex flex-col gap-2">
+          <div v-if="comments.replyTo.value" class="flex min-w-0 items-center gap-2 rounded-full bg-violet-50 py-1.5 pl-3 pr-1.5 text-xs text-stone-600 dark:bg-violet-950/50 dark:text-zinc-300">
+            <i class="pi pi-reply shrink-0 text-[11px] text-violet-500" />
+            <span class="min-w-0 flex-1 truncate">Ответ для <b>@{{ comments.replyTo.value.name }}</b></span>
+            <Button icon="pi pi-times" text rounded severity="secondary" class="!h-7 !w-7 shrink-0" @click="comments.setReply(null)" aria-label="Отменить ответ" />
+          </div>
+          <div class="flex items-end gap-2">
           <span class="w-8 h-8 shrink-0 rounded-full bg-stone-200 dark:bg-white/10 grid place-items-center text-[11px] font-black text-stone-500">Вы</span>
           <Textarea v-model="comments.draft.value" :placeholder="commentPlaceholder" rows="1" autoResize maxlength="1000" enterkeyhint="enter" class="flex-1 min-w-0 !rounded-2xl !text-sm max-h-32" @input="mentionInput.onInput()" @click="mentionInput.onInput()" @focus="mentionInput.onFocus()" @keydown="(e:any)=>handleEnterToSend(e, sendPhotoComment)" />
           <Button icon="pi pi-send" rounded :loading="comments.sending.value" :disabled="!comments.draft.value.trim()" class="!bg-violet-600 !border-violet-600 shrink-0" @click="sendPhotoComment" aria-label="Отправить" />
@@ -116,6 +129,7 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
               </button>
               <div v-if="!mentionInput.mentions.mentionResults.value.length" class="px-4 py-3 text-xs text-stone-400">Никого не нашли</div>
             </template>
+          </div>
           </div>
         </div>
         <p v-else class="text-xs text-stone-400 px-1">Автор ограничил комментирование</p>
@@ -139,4 +153,5 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
 .comment-body :deep(.mention){color:#7c3aed;font-weight:700}
 .comment-body :deep(.mention-link){cursor:pointer}
 :global(.dark) .comment-body :deep(.mention){color:#a78bfa}
+.swiper-zoom-container{width:100%;height:100%;display:flex;align-items:center;justify-content:center;touch-action:none}
 </style>

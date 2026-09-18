@@ -497,6 +497,20 @@ function handlePinActivity(e: any) {
     })
     return
   }
+  if (a.kind === 'scheduled_published') {
+    const title = (a.excerpt || a.pin?.title || 'пин').toString().slice(0, 60)
+    push({
+      id: `pin-scheduled-${a.id}-${Date.now()}`,
+      type: 'pin',
+      icon: 'pi pi-clock',
+      title: 'Ваш запланированный пин опубликован',
+      body: `«${title}» уже на карте`.slice(0, 90),
+      avatar: avatarSrcFor(actor),
+      link: activityLink(a),
+      createdAt: Date.now(),
+    })
+    return
+  }
   if (a.kind === 'sub_photo') {
     push({
       id: `pin-sub-photo-${a.id}-${Date.now()}`,

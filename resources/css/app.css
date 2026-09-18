@@ -378,6 +378,12 @@ html.native-keyboard-open .mobile-bottom-nav {
     padding-left: 1rem !important;
     padding-right: 1rem !important;
   }
+  /* Боковые дроверы (left/right) всегда впритык к краю — без горизонтальных паддингов маски */
+  .overlay-safe .p-drawer-mask.p-drawer-left,
+  .overlay-safe .p-drawer-mask.p-drawer-right {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
   .overlay-safe .p-toast {
     top: 1rem !important;
   }

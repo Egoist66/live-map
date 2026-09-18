@@ -19,7 +19,15 @@ function fileRevision(rel) {
 }
 
 export default defineConfig({
-    resolve: { alias: { '@': path.resolve(__dirname, 'resources/js') } },
+    resolve: {
+        alias: {
+            '@': path.resolve(__dirname, 'resources/js'),
+            // TS-маппинг `ziggy-js -> vendor/tightenco/ziggy` из tsconfig/jsconfig
+            // Vite не читает, поэтому дублируем здесь, иначе
+            // `import ... from "ziggy-js"` падает с Failed to resolve import.
+            'ziggy-js': path.resolve(__dirname, 'vendor/tightenco/ziggy'),
+        },
+    },
     build: {
         chunkSizeWarningLimit: 1100,
         rollupOptions: {

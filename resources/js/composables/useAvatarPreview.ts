@@ -1,29 +1,28 @@
 import { watch, onBeforeUnmount } from 'vue'
+import { acquireScrollLock, releaseScrollLock } from '@/composables/useScrollLock'
 
 /**
  * Превью аватара: лок body + закрытие по Escape, пока открыто.
  * На сервере (SSR) — no-op: immediate-watcher молча выходит без `window`.
  *
+ * Лок идёт через ref-counted менеджер скролла, поэтому превью
+ * корректно живёт рядом с вьювером фото и масками Dialog.
+ *
  * @param open геттер флага открытия
  * @param onClose колбэк закрытия по Escape
+ * @param owner имя владельца лока
  */
-export function useAvatarPreview(open: () => boolean, onClose: () => void) {
-  let prevBody = ''
-  let prevHtml = ''
+export function useAvatarPreview(open: () => boolean, onClose: () => void, owner = 'avatar-preview') {
   let locked = false
   function lock() {
     if (locked || typeof document === 'undefined') return
     locked = true
-    prevBody = document.body.style.overflow
-    prevHtml = document.documentElement.style.overflow
-    document.body.style.overflow = 'hidden'
-    document.documentElement.style.overflow = 'hidden'
+    acquireScrollLock(owner)
   }
   function unlock() {
     if (!locked || typeof document === 'undefined') return
     locked = false
-    document.body.style.overflow = prevBody
-    document.documentElement.style.overflow = prevHtml
+    releaseScrollLock(owner)
   }
   function onKey(e: KeyboardEvent) {
     if (e.key === 'Escape') onClose()

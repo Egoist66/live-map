@@ -28,6 +28,7 @@ export function useFlowComments(postId: number) {
   const replyTo = ref<FlowComment | null>(null)
   const draft = ref('')
   const anonymousReply = ref(false)
+  let replyMention = ''
   const toast = (() => {
     try {
       return useToast()
@@ -81,10 +82,30 @@ export function useFlowComments(postId: number) {
 
   /**
    * Выбрать комментарий для ответа.
+   *
+   * Ответ конкретному человеку начинается с `@имя `: ник подставляется
+   * автоматически, обычный комментарий остаётся чистым. Анониму нечего
+   * подставлять — у него нет ника. Сброс убирает только авто-префикс.
+   *
    * @param comment комментарий или null для сброса
    */
   function setReply(comment: FlowComment | null): void {
+    if (replyMention && draft.value.startsWith(replyMention)) {
+      draft.value = draft.value.slice(replyMention.length)
+    }
+    replyMention = ''
     replyTo.value = comment
+    if (!comment) {
+      return
+    }
+    const targetName = comment.is_anonymous ? '' : (comment.author?.name || '')
+    if (!targetName) {
+      return
+    }
+    replyMention = `@${targetName} `
+    if (!draft.value.startsWith(replyMention)) {
+      draft.value = `${replyMention}${draft.value}`
+    }
   }
 
   /**
@@ -115,6 +136,7 @@ export function useFlowComments(postId: number) {
       store.applyCommentsDelta(postId, 1)
       draft.value = ''
       replyTo.value = null
+      replyMention = ''
       return true
     } catch (error) {
       const detail = (error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Не вышло отправить'

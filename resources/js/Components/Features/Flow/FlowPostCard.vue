@@ -8,6 +8,8 @@ import Card from 'primevue/card'
 import InputText from 'primevue/inputtext'
 import Checkbox from 'primevue/checkbox'
 import { useFlowComments } from '@/composables/useFlowComments'
+import { usePhotoLightbox } from '@/composables/usePhotoLightbox'
+import PhotoLightbox from '@/Components/Features/Media/PhotoLightbox.vue'
 import { useLikersPreview } from '@/composables/useLikersPreview'
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 import InfiniteSentinel from '@/Components/Ui/List/InfiniteSentinel.vue'
@@ -25,6 +27,7 @@ const emit = defineEmits<{
 
 const expanded = ref(false)
 const thread = useFlowComments(props.post.id)
+const lightbox = usePhotoLightbox()
 const threadHasMore = computed(() => thread.hasMore.value)
 const threadLoadingMore = computed(() => thread.loadingMore.value)
 const { sentinel: threadSentinel } = useInfiniteScroll({
@@ -129,8 +132,11 @@ async function share(): Promise<void> {
         <h3 v-if="post.title" class="mt-3 text-[17px] font-black leading-snug tracking-tight text-ink-900 dark:text-white break-words">{{ post.title }}</h3>
         <p class="mt-1.5 whitespace-pre-line break-words text-[15px] leading-relaxed text-ink-900 dark:text-zinc-100" :class="!post.title && 'mt-3'">{{ post.body }}</p>
         <div v-if="post.image_url" class="mt-3 overflow-hidden rounded-2xl border border-stone-200 dark:border-zinc-800">
-          <img :src="post.image_url" alt="Фото поста" loading="lazy" class="max-h-[420px] w-full object-cover" />
+          <button type="button" class="block w-full cursor-zoom-in" aria-label="Открыть фото на весь экран" @click="lightbox.openSingle(post.image_url, post.title || 'Фото поста')">
+            <img :src="post.image_url" alt="Фото поста" loading="lazy" class="max-h-[420px] w-full object-cover" />
+          </button>
         </div>
+        <PhotoLightbox :photos="lightbox.photos.value" :index="lightbox.index.value" :open="lightbox.open.value" @close="lightbox.close()" @update:index="(v: number) => lightbox.index.value = v" />
 
         <div class="mt-3 flex items-center gap-1 border-t border-stone-100 dark:border-zinc-800 pt-2">
           <Button

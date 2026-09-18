@@ -20,6 +20,11 @@ class PinController extends Controller
         $viewer = Auth::user();
         $viewerId = Auth::id();
 
+        try {
+            \App\Services\ScheduledPinPublisher::publishDue(20);
+        } catch (\Throwable) {
+        }
+
         $liveLat = $request->filled('user_lat') ? (float) $request->input('user_lat') : null;
         $liveLng = $request->filled('user_lng') ? (float) $request->input('user_lng') : null;
 
@@ -147,6 +152,10 @@ class PinController extends Controller
     public function mine(Request $request)
     {
         $user = $request->user();
+        try {
+            \App\Services\ScheduledPinPublisher::publishDue(20);
+        } catch (\Throwable) {
+        }
         $pins = Pin::where('user_id', $user->id)->whereIn('status', ['active', 'scheduled'])->latest()->limit(50)->with('user:id,name,avatar_path,level')->get();
         $myReactions = \App\Models\Reaction::where('user_id', $user->id)->where('reactable_type', 'pin')->whereIn('reactable_id', $pins->pluck('id'))->pluck('type', 'reactable_id');
         return response()->json($pins->map(fn($p) => array_merge($p->toPublicArray($user->id), ['my_reaction' => $myReactions[$p->id] ?? null])));
@@ -164,6 +173,10 @@ class PinController extends Controller
     public function scheduled(Request $request)
     {
         $user = $request->user();
+        try {
+            \App\Services\ScheduledPinPublisher::publishDue(20);
+        } catch (\Throwable) {
+        }
         $pins = Pin::where('user_id', $user->id)->scheduled()->latest('publish_at')->limit(50)->with('user:id,name,avatar_path,level')->get();
         return response()->json($pins->map(fn($p) => $p->toPublicArray($user->id)));
     }

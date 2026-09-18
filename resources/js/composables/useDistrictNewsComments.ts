@@ -39,6 +39,7 @@ export function useDistrictNewsComments(
   const sending = ref(false)
   const replyTo = ref<DistrictPostComment | null>(null)
   const draft = ref('')
+  let replyMention = ''
 
   /**
    * Загрузить первую страницу веток.
@@ -88,10 +89,29 @@ export function useDistrictNewsComments(
   /**
    * Выбрать комментарий для ответа.
    *
+   * Ответ конкретному человеку начинается с `@имя `: ник подставляется
+   * автоматически, обычный комментарий остаётся чистым.
+   * Сброс убирает только авто-префикс.
+   *
    * @param comment ветка или null для сброса
    */
   function setReply(comment: DistrictPostComment | null): void {
+    if (replyMention && draft.value.startsWith(replyMention)) {
+      draft.value = draft.value.slice(replyMention.length)
+    }
+    replyMention = ''
     replyTo.value = comment
+    if (!comment) {
+      return
+    }
+    const targetName = comment.author?.name || ''
+    if (!targetName) {
+      return
+    }
+    replyMention = `@${targetName} `
+    if (!draft.value.startsWith(replyMention)) {
+      draft.value = `${replyMention}${draft.value}`
+    }
   }
 
   /**
@@ -123,6 +143,7 @@ export function useDistrictNewsComments(
       onDelta?.(1)
       draft.value = ''
       replyTo.value = null
+      replyMention = ''
       return true
     } catch {
       toast?.add({ severity: 'error', summary: 'Не вышло отправить', life: 3000 })

@@ -159,10 +159,19 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
     }
   }
 
+  /**
+   * Листает фото вьювера по кругу: после последнего идёт первое.
+   * @param dir направление: 1 — вперёд, -1 — назад
+   */
   function stepPhoto(dir: 1 | -1) {
-    const i = photos.value.findIndex((x) => x.id === active.value?.id)
-    const n = i + dir
-    if (i >= 0 && n >= 0 && n < photos.value.length) active.value = photos.value[n]
+    const total = photos.value.length
+    if (!total) {
+      return
+    }
+    const current = photos.value.findIndex((x) => x.id === active.value?.id)
+    const base = current >= 0 ? current : 0
+    const next = (base + dir + total) % total
+    active.value = photos.value[next]
   }
 
   function close() {

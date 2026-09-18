@@ -482,11 +482,11 @@ onMounted(async () => {
                 <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent pointer-events-none" />
 
                 <div
-                  class="absolute top-12 left-5 rotate-[-12deg] border-4 border-emerald-400 text-emerald-300 font-black text-2xl px-3 py-1 rounded-xl bg-black/20"
+                  class="absolute top-12 right-5 rotate-[12deg] border-4 border-emerald-400 text-emerald-300 font-black text-2xl px-3 py-1 rounded-xl bg-black/20"
                   :style="{ opacity: s.likeStrength.value, transform: `scale(${0.8 + s.likeStrength.value * 0.3})` }"
                 >ЛАЙК</div>
                 <div
-                  class="absolute top-12 right-5 rotate-[12deg] border-4 border-rose-500 text-rose-400 font-black text-2xl px-3 py-1 rounded-xl bg-black/20"
+                  class="absolute top-12 left-5 rotate-[-12deg] border-4 border-rose-500 text-rose-400 font-black text-2xl px-3 py-1 rounded-xl bg-black/20"
                   :style="{ opacity: s.passStrength.value, transform: `scale(${0.8 + s.passStrength.value * 0.3})` }"
                 >ПАС</div>
 
@@ -543,11 +543,11 @@ onMounted(async () => {
                 <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
                 <div
                   v-if="s.exiting.value.dir === 'like'"
-                  class="absolute top-5 left-5 rotate-[-12deg] border-4 border-emerald-400 text-emerald-300 font-black text-2xl px-3 py-1 rounded-xl bg-black/20"
+                  class="absolute top-5 right-5 rotate-[12deg] border-4 border-emerald-400 text-emerald-300 font-black text-2xl px-3 py-1 rounded-xl bg-black/20"
                 >ЛАЙК</div>
                 <div
                   v-else
-                  class="absolute top-5 right-5 rotate-[12deg] border-4 border-rose-500 text-rose-400 font-black text-2xl px-3 py-1 rounded-xl bg-black/20"
+                  class="absolute top-5 left-5 rotate-[-12deg] border-4 border-rose-500 text-rose-400 font-black text-2xl px-3 py-1 rounded-xl bg-black/20"
                 >ПАС</div>
                 <div class="absolute bottom-0 inset-x-0 p-4 sm:p-5 text-white">
                   <div class="flex items-baseline gap-2">
@@ -609,55 +609,142 @@ onMounted(async () => {
           <Drawer
             :visible="mobileMenu.isOpen.value"
             position="right"
-            class="!w-[78vw] !max-w-[300px]"
-            :pt="{ header: { class: '!pb-2' }, content: { class: '!pt-1' } }"
+            :show-close-icon="false"
+            :block-scroll="true"
+            class="ulove-drawer !w-[86vw] !max-w-[340px] sm:!w-[360px] sm:!max-w-[360px] !rounded-l-[28px] !rounded-r-none !overflow-hidden !border-0"
+            :pt="{
+              root: { class: '!bg-[#FFF7F5] dark:!bg-zinc-900 !border-0 !inset-y-0 !right-0 !mr-0 !ml-auto !h-dvh !max-h-dvh' },
+              mask: { class: '!p-0 !m-0' },
+              header: { class: '!p-0 !m-0 w-full !border-0 !bg-transparent' },
+              title: { class: '!m-0 w-full max-w-full' },
+              content: { class: '!p-0 !bg-transparent !overflow-y-auto overscroll-contain [overscroll-behavior:contain] [-webkit-overflow-scrolling:touch]' },
+            }"
             @update:visible="(v:boolean) => { v ? mobileMenu.open() : mobileMenu.close() }"
           >
             <template #header>
-              <div class="flex items-center gap-2">
-                <span class="w-9 h-9 rounded-2xl bg-gradient-to-br from-rose-500 via-fuchsia-500 to-orange-400 grid place-items-center text-white shadow-lg shadow-rose-500/30"><i class="pi pi-heart-fill" /></span>
-                <span>
-                  <span class="block text-[20px] font-black leading-none tracking-[-0.03em] bg-gradient-to-r from-rose-500 via-fuchsia-500 to-orange-400 bg-clip-text text-transparent">ULove</span>
-                  <span class="mt-0.5 block text-[11px] leading-none text-stone-400 dark:text-zinc-500">дейтинг внутри UPin</span>
-                </span>
+              <div class="relative w-full max-w-full overflow-hidden bg-gradient-to-br from-rose-500 via-fuchsia-500 to-orange-400 px-3 pt-[max(0.875rem,env(safe-area-inset-top))] pb-3.5 text-white">
+                <div class="relative flex w-full max-w-full flex-wrap items-center gap-1.5">
+                  <span class="inline-flex min-w-0 items-center gap-1.5 rounded-full bg-black/25 backdrop-blur px-2.5 py-1.5 text-[11px] sm:text-[12px] font-bold ring-1 ring-white/30"><span class="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-pulse shrink-0" /><span class="truncate">{{ s.activeUsers.value.length }} онлайн</span></span>
+                  <span class="inline-flex min-w-0 items-center gap-1.5 rounded-full bg-black/25 backdrop-blur px-2.5 py-1.5 text-[11px] sm:text-[12px] font-bold ring-1 ring-white/30"><i class="pi pi-heart-fill text-[11px] shrink-0" /><span class="truncate">{{ s.matches.value.length }} мэтчей</span></span>
+                  <span class="flex-1" />
+                  <Button icon="pi pi-times" rounded text aria-label="Закрыть меню" class="!w-9 !h-9 !p-0 !text-white hover:!bg-white/20 active:!scale-95 shrink-0 touch-manipulation" @click="mobileMenu.close()" />
+                </div>
               </div>
             </template>
-            <div class="flex flex-col gap-1.5 pt-1">
-              <Button label="Лента" rounded :outlined="s.activeTab.value !== 'feed'" class="w-full !justify-start" :class="s.activeTab.value === 'feed' ? '!bg-gradient-to-br !from-rose-500 !to-orange-400 !border-0 !text-white !shadow-lg !shadow-rose-500/25' : ''" @click="mobileMenu.selectTab(s, 'feed')">
-                <template #icon>
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><rect x="7" y="4" width="10" height="16" rx="2.5" /><path stroke-linecap="round" stroke-linejoin="round" d="M2.5 12H5m-2.5 0L4 10.5M2.5 12L4 13.5M21.5 12H19m2.5 0L20 10.5m1.5 1.5L20 13.5" /></svg>
-                </template>
-              </Button>
-              <Button label="Активные · онлайн" icon="pi pi-users" rounded :outlined="s.activeTab.value !== 'active'" class="w-full !justify-start" :class="s.activeTab.value === 'active' ? '!bg-gradient-to-br !from-emerald-500 !to-teal-500 !border-0 !text-white !shadow-lg !shadow-emerald-500/25' : ''" @click="mobileMenu.selectTab(s, 'active')" />
-              <Button :label="`Избранное · ${s.favoritesCount.value}/${s.favoritesLimit.value}`" icon="pi pi-star" rounded :outlined="s.activeTab.value !== 'favorites'" class="w-full !justify-start" :class="s.activeTab.value === 'favorites' ? '!bg-gradient-to-br !from-amber-400 !to-orange-500 !border-0 !text-white !shadow-lg !shadow-amber-500/25' : ''" @click="mobileMenu.selectTab(s, 'favorites')" />
-              <Button :label="`Лайки мне · ${s.admirersTotal.value}`" icon="pi pi-heart" rounded :outlined="s.activeTab.value !== 'admirers'" class="w-full !justify-start" :class="s.activeTab.value === 'admirers' ? '!bg-gradient-to-br !from-fuchsia-500 !to-rose-500 !border-0 !text-white !shadow-lg !shadow-fuchsia-500/25' : ''" @click="mobileMenu.selectTab(s, 'admirers')" />
-              <Button label="Анкета · моя" icon="pi pi-user-edit" rounded :outlined="s.activeTab.value !== 'questionnaire'" class="w-full !justify-start" :class="s.activeTab.value === 'questionnaire' ? '!bg-gradient-to-br !from-violet-500 !to-fuchsia-500 !border-0 !text-white !shadow-lg !shadow-violet-500/25' : ''" @click="mobileMenu.selectTab(s, 'questionnaire')" />
-              <Button label="PRO · плюшки" icon="pi pi-crown" rounded :outlined="s.activeTab.value !== 'premium'" class="w-full !justify-start" :class="s.activeTab.value === 'premium' ? '!bg-gradient-to-br !from-amber-400 !to-orange-500 !border-0 !text-white !shadow-lg !shadow-amber-500/25' : ''" @click="mobileMenu.selectTab(s, 'premium')" />
-            </div>
-            <div v-if="s.matches.value.length" class="mt-4">
-              <div class="px-1 mb-1.5 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500"><i class="pi pi-heart-fill text-[10px] text-emerald-500" />Мэтчи · чат открыт</div>
-              <button
-                v-for="m in s.matches.value"
-                :key="m.match_id"
-                type="button"
-                class="w-full flex items-center gap-2.5 p-1.5 rounded-2xl hover:bg-stone-100 dark:hover:bg-zinc-800 active:scale-[0.99] transition text-left"
-                @click="mobileMenu.openMatch(s, m)"
-              >
-                <span class="relative shrink-0">
-                  <Avatar :image="m.user.avatar_url ?? undefined" :label="!m.user.avatar_url ? (m.user.name ?? '?').slice(0, 1) : undefined" shape="circle" class="!w-11 !h-11 ring-2 ring-emerald-400 dark:ring-emerald-500" />
-                  <span class="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-emerald-500 grid place-items-center ring-2 ring-white dark:ring-zinc-900"><i class="pi pi-heart-fill text-white text-[8px]" /></span>
-                </span>
-                <span class="min-w-0 flex-1 text-sm font-bold truncate text-stone-800 dark:text-zinc-100">{{ m.user.name }}</span>
-                <i class="pi pi-chevron-right text-stone-300 dark:text-zinc-600 text-xs shrink-0" />
-              </button>
-            </div>
-            <div class="mt-4">
-              <div class="px-1 mb-1.5 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500"><i class="pi pi-sliders-h text-[10px] text-fuchsia-500" />Панель</div>
-              <div class="mb-2 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-rose-500/10 to-orange-400/10 border border-rose-200/70 dark:border-rose-900/60 px-3 py-1 text-[11px] font-bold text-rose-600 dark:text-rose-300"><i class="pi pi-send text-[10px]" />{{ s.quotaLabel.value }}</div>
-              <div class="flex flex-col gap-1.5">
-                <Button label="Фильтры" icon="pi pi-sliders-h" rounded outlined size="small" class="w-full !justify-start" @click="mobileMenu.openFilters(s)" />
-                <Button label="Как работают свайпы" icon="pi pi-question-circle" rounded outlined size="small" class="w-full !justify-start" @click="mobileMenu.openHelp(s)" />
+            <div class="px-3 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] min-w-0 max-w-full">
+              <div class="px-2 mb-1.5 flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-stone-400 dark:text-zinc-500"><i class="pi pi-compass text-[11px] text-rose-500 dark:text-rose-400" />Навигация</div>
+              <div class="flex flex-col gap-2">
+                <Button unstyled class="ulove-nav group w-full !p-0" @click="mobileMenu.selectTab(s, 'feed')">
+                  <span class="flex items-center gap-3 w-full p-2.5 pr-3 rounded-2xl text-left transition-all duration-200 active:scale-[0.98]" :class="s.activeTab.value === 'feed' ? 'bg-gradient-to-br from-rose-500 to-orange-400 text-white shadow-lg shadow-rose-500/30 ring-1 ring-rose-300/50' : 'bg-white dark:bg-white/5 border border-stone-200/80 dark:border-white/10 hover:border-rose-300 dark:hover:border-rose-500/40 hover:shadow-md hover:shadow-rose-500/10'">
+                    <span class="w-11 h-11 rounded-2xl grid place-items-center text-lg shrink-0 transition" :class="s.activeTab.value === 'feed' ? 'bg-white/20 ring-1 ring-white/40' : 'bg-gradient-to-br from-rose-500/15 to-orange-400/15 text-rose-500 dark:text-rose-400'"><i class="pi pi-images" /></span>
+                    <span class="min-w-0 flex-1">
+                      <span class="block text-sm font-black leading-tight" :class="s.activeTab.value === 'feed' ? 'text-white' : 'text-stone-900 dark:text-white'">Лента</span>
+                      <span class="block text-[11px] leading-tight mt-0.5" :class="s.activeTab.value === 'feed' ? 'text-white/80' : 'text-stone-500 dark:text-zinc-400'">Листай людей · безлимит</span>
+                    </span>
+                    <i class="pi pi-chevron-right text-xs shrink-0" :class="s.activeTab.value === 'feed' ? 'text-white/80' : 'text-stone-300 dark:text-zinc-600 group-hover:translate-x-0.5 transition'" />
+                  </span>
+                </Button>
+                <Button unstyled class="ulove-nav group w-full !p-0" @click="mobileMenu.selectTab(s, 'active')">
+                  <span class="flex items-center gap-3 w-full p-2.5 pr-3 rounded-2xl text-left transition-all duration-200 active:scale-[0.98]" :class="s.activeTab.value === 'active' ? 'bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/30 ring-1 ring-emerald-300/50' : 'bg-white dark:bg-white/5 border border-stone-200/80 dark:border-white/10 hover:border-emerald-300 dark:hover:border-emerald-500/40 hover:shadow-md hover:shadow-emerald-500/10'">
+                    <span class="relative w-11 h-11 rounded-2xl grid place-items-center text-lg shrink-0 transition" :class="s.activeTab.value === 'active' ? 'bg-white/20 ring-1 ring-white/40' : 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400'">
+                      <i class="pi pi-bolt" />
+                      <span v-if="s.activeUsers.value.length" class="absolute -top-1 -right-1 min-w-[20px] h-5 px-1 rounded-full bg-emerald-500 text-white text-[10px] font-black grid place-items-center ring-2 ring-white dark:ring-zinc-900">{{ s.activeUsers.value.length }}</span>
+                    </span>
+                    <span class="min-w-0 flex-1">
+                      <span class="block text-sm font-black leading-tight" :class="s.activeTab.value === 'active' ? 'text-white' : 'text-stone-900 dark:text-white'">Активные · онлайн</span>
+                      <span class="block text-[11px] leading-tight mt-0.5" :class="s.activeTab.value === 'active' ? 'text-white/80' : 'text-stone-500 dark:text-zinc-400'">Кто сейчас в ULove</span>
+                    </span>
+                    <i class="pi pi-chevron-right text-xs shrink-0" :class="s.activeTab.value === 'active' ? 'text-white/80' : 'text-stone-300 dark:text-zinc-600 group-hover:translate-x-0.5 transition'" />
+                  </span>
+                </Button>
+                <Button unstyled class="ulove-nav group w-full !p-0" @click="mobileMenu.selectTab(s, 'favorites')">
+                  <span class="flex items-center gap-3 w-full p-2.5 pr-3 rounded-2xl text-left transition-all duration-200 active:scale-[0.98]" :class="s.activeTab.value === 'favorites' ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-lg shadow-amber-500/30 ring-1 ring-amber-200/60' : 'bg-white dark:bg-white/5 border border-stone-200/80 dark:border-white/10 hover:border-amber-300 dark:hover:border-amber-500/40 hover:shadow-md hover:shadow-amber-500/10'">
+                    <span class="w-11 h-11 rounded-2xl grid place-items-center text-lg shrink-0 transition" :class="s.activeTab.value === 'favorites' ? 'bg-white/20 ring-1 ring-white/40' : 'bg-amber-500/10 text-amber-500 dark:text-amber-400'">
+                      <i class="pi pi-star-fill" />
+                    </span>
+                    <span class="min-w-0 flex-1">
+                      <span class="block text-sm font-black leading-tight" :class="s.activeTab.value === 'favorites' ? 'text-white' : 'text-stone-900 dark:text-white'">Избранное</span>
+                      <span class="block text-[11px] leading-tight mt-0.5" :class="s.activeTab.value === 'favorites' ? 'text-white/80' : 'text-stone-500 dark:text-zinc-400'">Кого ты лайкнул</span>
+                    </span>
+                    <i class="pi pi-chevron-right text-xs shrink-0" :class="s.activeTab.value === 'favorites' ? 'text-white/80' : 'text-stone-300 dark:text-zinc-600 group-hover:translate-x-0.5 transition'" />
+                  </span>
+                </Button>
+                <Button unstyled class="ulove-nav group w-full !p-0" @click="mobileMenu.selectTab(s, 'admirers')">
+                  <span class="relative flex items-center gap-3 w-full p-2.5 pr-3 rounded-2xl text-left transition-all duration-200 active:scale-[0.98] overflow-hidden" :class="s.activeTab.value === 'admirers' ? 'bg-gradient-to-br from-fuchsia-500 to-rose-500 text-white shadow-lg shadow-fuchsia-500/30 ring-1 ring-fuchsia-300/50' : 'bg-white dark:bg-white/5 border border-fuchsia-200/70 dark:border-fuchsia-500/20 hover:border-fuchsia-300 hover:shadow-md hover:shadow-fuchsia-500/10'">
+                    <span v-if="s.admirersTotal.value" class="absolute top-0 right-0 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-bl-xl" :class="s.activeTab.value === 'admirers' ? 'bg-white/25 text-white' : 'bg-gradient-to-r from-fuchsia-500 to-rose-500 text-white'">+{{ s.admirersTotal.value }} новых</span>
+                    <span class="w-11 h-11 rounded-2xl grid place-items-center text-lg shrink-0 transition" :class="s.activeTab.value === 'admirers' ? 'bg-white/20 ring-1 ring-white/40' : 'bg-gradient-to-br from-fuchsia-500/15 to-rose-500/15 text-fuchsia-500 dark:text-fuchsia-400'"><i class="pi pi-heart-fill heartbeat" /></span>
+                    <span class="min-w-0 flex-1">
+                      <span class="block text-sm font-black leading-tight" :class="s.activeTab.value === 'admirers' ? 'text-white' : 'text-stone-900 dark:text-white'">Лайки мне</span>
+                      <span class="block text-[11px] leading-tight mt-0.5" :class="s.activeTab.value === 'admirers' ? 'text-white/80' : 'text-stone-500 dark:text-zinc-400'">Кто в тебя влюбился</span>
+                    </span>
+                    <i class="pi pi-chevron-right text-xs shrink-0" :class="s.activeTab.value === 'admirers' ? 'text-white/80' : 'text-stone-300 dark:text-zinc-600 group-hover:translate-x-0.5 transition'" />
+                  </span>
+                </Button>
+                <Button unstyled class="ulove-nav group w-full !p-0" @click="mobileMenu.selectTab(s, 'questionnaire')">
+                  <span class="flex items-center gap-3 w-full p-2.5 pr-3 rounded-2xl text-left transition-all duration-200 active:scale-[0.98]" :class="s.activeTab.value === 'questionnaire' ? 'bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white shadow-lg shadow-violet-500/30 ring-1 ring-violet-300/50' : 'bg-white dark:bg-white/5 border border-stone-200/80 dark:border-white/10 hover:border-violet-300 dark:hover:border-violet-500/40 hover:shadow-md hover:shadow-violet-500/10'">
+                    <span class="w-11 h-11 rounded-2xl grid place-items-center text-lg shrink-0 transition" :class="s.activeTab.value === 'questionnaire' ? 'bg-white/20 ring-1 ring-white/40' : 'bg-violet-500/10 text-violet-500 dark:text-violet-400'"><i class="pi pi-user-edit" /></span>
+                    <span class="min-w-0 flex-1">
+                      <span class="block text-sm font-black leading-tight" :class="s.activeTab.value === 'questionnaire' ? 'text-white' : 'text-stone-900 dark:text-white'">Моя анкета</span>
+                      <span class="block text-[11px] leading-tight mt-0.5" :class="s.activeTab.value === 'questionnaire' ? 'text-white/80' : 'text-stone-500 dark:text-zinc-400'">Как тебя видят в ленте</span>
+                    </span>
+                    <i class="pi pi-chevron-right text-xs shrink-0" :class="s.activeTab.value === 'questionnaire' ? 'text-white/80' : 'text-stone-300 dark:text-zinc-600 group-hover:translate-x-0.5 transition'" />
+                  </span>
+                </Button>
+                <Button unstyled class="ulove-nav group w-full !p-0" @click="mobileMenu.selectTab(s, 'premium')">
+                  <span class="relative flex items-center gap-3 w-full p-2.5 pr-3 rounded-2xl text-left transition-all duration-200 active:scale-[0.98] overflow-hidden pro-shine" :class="s.activeTab.value === 'premium' ? 'bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500 text-white shadow-lg shadow-orange-500/40 ring-1 ring-amber-200/70' : 'bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/30 border border-amber-300/70 dark:border-amber-500/30 hover:shadow-md hover:shadow-amber-500/20'">
+                    <span class="w-11 h-11 rounded-2xl grid place-items-center text-lg shrink-0 bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-md shadow-amber-500/40"><i class="pi pi-crown" /></span>
+                    <span class="min-w-0 flex-1">
+                      <span class="flex items-center gap-1.5 text-sm font-black leading-tight" :class="s.activeTab.value === 'premium' ? 'text-white' : 'text-stone-900 dark:text-white'">PRO · плюшки <span class="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full" :class="s.activeTab.value === 'premium' ? 'bg-white/25 text-white' : 'bg-stone-900 dark:bg-white text-white dark:text-stone-900'">PRO</span></span>
+                      <span class="block text-[11px] leading-tight mt-0.5" :class="s.activeTab.value === 'premium' ? 'text-white/85' : 'text-amber-700/80 dark:text-amber-200/70'">Инкогнито · радиус · хайды</span>
+                    </span>
+                    <i class="pi pi-chevron-right text-xs shrink-0" :class="s.activeTab.value === 'premium' ? 'text-white/80' : 'text-amber-400 group-hover:translate-x-0.5 transition'" />
+                  </span>
+                </Button>
               </div>
+            </div>
+            <div v-if="s.matches.value.length" class="px-3 mt-2">
+              <div class="rounded-3xl p-3 bg-gradient-to-br from-emerald-500/10 via-teal-500/10 to-rose-500/10 border border-emerald-200/60 dark:border-emerald-500/20">
+                <div class="px-1 mb-2 flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-emerald-700 dark:text-emerald-300"><span class="w-6 h-6 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white grid place-items-center"><i class="pi pi-heart-fill text-[11px]" /></span>Мэтчи · чат открыт</div>
+                <div class="flex flex-col gap-1">
+                  <button
+                    v-for="m in s.matches.value"
+                    :key="m.match_id"
+                    type="button"
+                    class="group w-full flex items-center gap-2.5 p-2 rounded-2xl bg-white/80 dark:bg-white/5 border border-white dark:border-white/10 hover:border-emerald-300 dark:hover:border-emerald-500/40 hover:shadow-md hover:shadow-emerald-500/10 active:scale-[0.99] transition text-left"
+                    @click="mobileMenu.openMatch(s, m)"
+                  >
+                    <span class="relative shrink-0">
+                      <span class="block p-[2px] rounded-full bg-gradient-to-br from-emerald-400 via-teal-400 to-rose-400">
+                        <Avatar :image="m.user.avatar_url ?? undefined" :label="!m.user.avatar_url ? (m.user.name ?? '?').slice(0, 1) : undefined" shape="circle" class="!w-10 !h-10 !border-2 !border-white dark:!border-zinc-900" />
+                      </span>
+                      <span class="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-gradient-to-br from-rose-500 to-orange-400 grid place-items-center ring-2 ring-white dark:ring-zinc-900"><i class="pi pi-heart-fill text-white text-[8px]" /></span>
+                    </span>
+                    <span class="min-w-0 flex-1">
+                      <span class="block text-sm font-black truncate text-stone-900 dark:text-white leading-tight">{{ m.user.name }}</span>
+                      <span class="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-300"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />напиши первой · мэтч ждёт</span>
+                    </span>
+                    <span class="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 grid place-items-center shrink-0 group-hover:bg-emerald-500 group-hover:text-white transition"><i class="pi pi-send text-xs" /></span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="px-3 mt-3 pb-2">
+              <div class="px-2 mb-1.5 flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-stone-400 dark:text-zinc-500"><i class="pi pi-sparkles text-[11px] text-fuchsia-500 dark:text-fuchsia-400" />Быстрые действия</div>
+              <div class="grid grid-cols-2 gap-2">
+                <Button unstyled class="w-full !p-0" @click="mobileMenu.openFilters(s)">
+                  <span class="flex flex-col items-start gap-2 w-full p-3 rounded-2xl text-left bg-white dark:bg-white/5 border border-stone-200/80 dark:border-white/10 hover:border-fuchsia-300 dark:hover:border-fuchsia-500/40 hover:shadow-md hover:shadow-fuchsia-500/10 active:scale-[0.97] transition">
+                    <span class="w-9 h-9 rounded-xl bg-gradient-to-br from-fuchsia-500 to-violet-500 text-white grid place-items-center shadow-md shadow-fuchsia-500/30"><i class="pi pi-sliders-h" /></span>
+                    <span><span class="block text-[13px] font-black text-stone-900 dark:text-white leading-tight">Фильтры</span><span class="block text-[11px] text-stone-500 dark:text-zinc-400 leading-tight mt-0.5">Цель · возраст · рядом</span></span>
+                  </span>
+                </Button>
+                <Button unstyled class="w-full !p-0" @click="mobileMenu.openHelp(s)">
+                  <span class="flex flex-col items-start gap-2 w-full p-3 rounded-2xl text-left bg-white dark:bg-white/5 border border-stone-200/80 dark:border-white/10 hover:border-violet-300 dark:hover:border-violet-500/40 hover:shadow-md hover:shadow-violet-500/10 active:scale-[0.97] transition">
+                    <span class="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-500 text-white grid place-items-center shadow-md shadow-violet-500/30"><i class="pi pi-question-circle" /></span>
+                    <span><span class="block text-[13px] font-black text-stone-900 dark:text-white leading-tight">Как это работает</span><span class="block text-[11px] text-stone-500 dark:text-zinc-400 leading-tight mt-0.5">Мэтчи · лимиты · 18+</span></span>
+                  </span>
+                </Button>
+              </div>
+              <div class="mt-2 flex items-center gap-2 rounded-2xl px-3 py-2.5 bg-gradient-to-r from-rose-500/10 via-fuchsia-500/10 to-orange-400/10 border border-rose-200/60 dark:border-rose-500/20 text-[11px] font-bold text-rose-700 dark:text-rose-200"><i class="pi pi-info-circle shrink-0" /><span>{{ s.isQuotaEmpty.value ? 'Лимит исчерпан — мэтчи пишут бесплатно' : 'Без мэтча: ' + s.quotaLabel.value + ' · мэтч открывает чат всегда' }}</span></div>
             </div>
           </Drawer>
         </template>
@@ -788,7 +875,64 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+.ulove-drawer :deep(.p-drawer-header) {
+  padding: 0;
+}
+.float-heart {
+  animation: ulove-float 3.2s ease-in-out infinite;
+}
+.float-heart-delayed {
+  animation: ulove-float 4.1s ease-in-out 0.8s infinite;
+}
+@keyframes ulove-float {
+  0%, 100% { transform: translateY(0) rotate(-8deg); opacity: 0.35; }
+  50% { transform: translateY(-6px) rotate(8deg); opacity: 0.6; }
+}
+.heartbeat {
+  animation: ulove-beat 1.6s ease-in-out infinite;
+  transform-origin: center;
+}
+@keyframes ulove-beat {
+  0%, 100% { transform: scale(1); }
+  15% { transform: scale(1.18); }
+  30% { transform: scale(1); }
+  45% { transform: scale(1.12); }
+}
+.pro-shine::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 40%, rgba(255, 255, 255, 0.45) 50%, transparent 60%);
+  transform: translateX(-120%);
+  animation: ulove-shine 3.5s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes ulove-shine {
+  0%, 60% { transform: translateX(-120%); }
+  100% { transform: translateX(120%); }
+}
+.ulove-nav :deep(.p-button) {
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+/* Сайдбар вплотную к правому краю: убиваем десктопный зазор */
+.ulove-drawer {
+  right: 0 !important;
+  margin-right: 0 !important;
+  margin-left: auto !important;
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+.ulove-drawer :deep(.p-drawer-content) {
+  padding: 0;
+  overflow-x: hidden;
+}
 @media (max-width: 639px) {
+  .ulove-drawer {
+    width: 86vw !important;
+    max-width: 340px !important;
+  }
   .swipes-feed,
   .swipe-deck {
     overscroll-behavior: none;
@@ -833,21 +977,21 @@ onMounted(async () => {
 }
 @keyframes fly-like {
   from {
-    transform: translate(var(--from-x, 0px), var(--from-y, 0px)) rotate(8deg);
-    opacity: 1;
-  }
-  to {
-    transform: translate(110vw, 140px) rotate(30deg);
-    opacity: 0;
-  }
-}
-@keyframes fly-pass {
-  from {
     transform: translate(var(--from-x, 0px), var(--from-y, 0px)) rotate(-8deg);
     opacity: 1;
   }
   to {
     transform: translate(-110vw, 140px) rotate(-30deg);
+    opacity: 0;
+  }
+}
+@keyframes fly-pass {
+  from {
+    transform: translate(var(--from-x, 0px), var(--from-y, 0px)) rotate(8deg);
+    opacity: 1;
+  }
+  to {
+    transform: translate(110vw, 140px) rotate(30deg);
     opacity: 0;
   }
 }</style>

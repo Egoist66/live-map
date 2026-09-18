@@ -75,9 +75,6 @@ const attachmentSize = computed(() => {
             <MessageTicks v-if="own" :status="status" />
           </div>
         </div>
-        <div v-if="!(message as any).pending" class="lg:hidden flex justify-end gap-1.5 mt-1.5 opacity-60">
-          <button @click="emit('reply', message)" class="text-[11px] px-2.5 py-1 rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow-sm flex items-center gap-1">↩ Ответить</button>
-        </div>
       </div>
     </div>
   </div>

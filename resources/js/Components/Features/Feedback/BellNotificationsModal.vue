@@ -700,7 +700,7 @@ function openNews(item: any) {
                       class="!w-10 !h-10 [&_img]:object-cover"
                       :pt="{ image: { class: 'object-cover' } }" /><span
                       class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center border-2 border-white dark:border-zinc-900 text-[10px]"
-                      :class="a.kind === 'comment' ? 'bg-violet-600' : a.kind === 'mention' ? 'bg-amber-500' : a.kind === 'sub_pin' ? 'bg-emerald-500' : a.kind === 'invite' ? 'bg-amber-500' : a.kind === 'invite_accepted' ? 'bg-emerald-500' : 'bg-rose-500'"
+                      :class="a.kind === 'comment' ? 'bg-violet-600' : a.kind === 'mention' ? 'bg-amber-500' : a.kind === 'sub_pin' ? 'bg-emerald-500' : a.kind === 'scheduled_published' ? 'bg-emerald-500' : a.kind === 'invite' ? 'bg-amber-500' : a.kind === 'invite_accepted' ? 'bg-emerald-500' : 'bg-rose-500'"
                       >{{ pinAct.describe(a).emoji }}</span
                     ></span
                   >

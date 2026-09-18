@@ -3,6 +3,7 @@ import { usePage } from '@inertiajs/vue3'
 import { useToast } from 'primevue/usetoast'
 import { useFlowStore } from '@/stores/flow'
 import { flowApi } from '@/services/flow.api'
+import { downscaleImage } from '@/composables/useImageDownscale'
 import { isSameText } from '@/composables/useUnchangedGuard'
 
 const MAX_BODY = 2000
@@ -50,20 +51,35 @@ export function useFlowComposer(existingId?: number | null) {
 
   /**
    * Подставить файл картинки и превью.
-   * @param file файл
+   * Картинка жмётся до веба, чтобы пройти серверные лимиты.
+   * @param file файл или null для очистки
    */
-  function pickImage(file: File | null): void {
-    image.value = file
-    removeImage.value = false
-    if (imagePreview.value) URL.revokeObjectURL(imagePreview.value)
-    imagePreview.value = file ? URL.createObjectURL(file) : null
+  async function pickImage(file: File | null): Promise<void> {
+    if (imagePreview.value) {
+      URL.revokeObjectURL(imagePreview.value)
+      imagePreview.value = null
+    }
+    if (!file) {
+      image.value = null
+      removeImage.value = false
+      return
+    }
+    try {
+      const ready = await downscaleImage(file)
+      image.value = ready
+      removeImage.value = false
+      imagePreview.value = URL.createObjectURL(ready)
+    } catch {
+      image.value = null
+      toast?.add({ severity: 'error', summary: 'Картинка не подошла', detail: 'Не вышло прочитать файл — попробуй JPG или PNG', life: 3000 })
+    }
   }
 
   /**
    * Убрать картинку.
    */
   function clearImage(): void {
-    pickImage(null)
+    void pickImage(null)
     removeImage.value = true
   }
 
@@ -94,7 +110,7 @@ export function useFlowComposer(existingId?: number | null) {
     title.value = ''
     body.value = ''
     isAnonymous.value = !!me.value?.is_anonymous_default && isPro.value
-    pickImage(null)
+    void pickImage(null)
     removeImage.value = false
     editingId.value = null
     editSnapshot.value = null

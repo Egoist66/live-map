@@ -6,6 +6,8 @@ import Button from 'primevue/button'
 import Card from 'primevue/card'
 import InputText from 'primevue/inputtext'
 import { useDistrictNewsComments } from '@/composables/useDistrictNewsComments'
+import { usePhotoLightbox } from '@/composables/usePhotoLightbox'
+import PhotoLightbox from '@/Components/Features/Media/PhotoLightbox.vue'
 import InfiniteSentinel from '@/Components/Ui/List/InfiniteSentinel.vue'
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 import { formatFlowDate } from '@/utils/flowDate'
@@ -26,6 +28,7 @@ const emit = defineEmits<{
 }>()
 
 const expanded = ref(false)
+const lightbox = usePhotoLightbox()
 const thread = useDistrictNewsComments(
   props.districtId,
   props.post.id,
@@ -68,8 +71,11 @@ async function toggleComments(): Promise<void> {
         <h3 v-if="post.title" class="mt-3 break-words text-[17px] font-black leading-snug tracking-tight text-ink-900 dark:text-white">{{ post.title }}</h3>
         <p class="mt-1.5 whitespace-pre-line break-words text-[15px] leading-relaxed text-ink-900 dark:text-zinc-100" :class="!post.title && 'mt-3'">{{ post.body }}</p>
         <div v-if="post.image_url" class="mt-3 overflow-hidden rounded-2xl border border-stone-200 dark:border-zinc-800">
-          <img :src="post.image_url" alt="Фото новости" loading="lazy" class="max-h-[420px] w-full object-cover" />
+          <button type="button" class="block w-full cursor-zoom-in" aria-label="Открыть фото на весь экран" @click="lightbox.openSingle(post.image_url, post.title || 'Фото новости')">
+            <img :src="post.image_url" alt="Фото новости" loading="lazy" class="max-h-[420px] w-full object-cover" />
+          </button>
         </div>
+        <PhotoLightbox :photos="lightbox.photos.value" :index="lightbox.index.value" :open="lightbox.open.value" @close="lightbox.close()" @update:index="(v: number) => lightbox.index.value = v" />
 
         <div class="mt-3 flex items-center gap-1 border-t border-stone-100 pt-2 dark:border-zinc-800">
           <Button

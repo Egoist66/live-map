@@ -22,13 +22,13 @@ const emit = defineEmits<{ (e: 'update:tab', v: any): void; (e: 'update:filter',
         <Button @click="emit('refresh')" :loading="refreshing" icon="pi pi-refresh" rounded severity="secondary" text class="!w-8 !h-8 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" aria-label="Обновить" />
         <Button v-if="conversations.length" @click="emit('clearAllChats')" icon="pi pi-trash" rounded severity="danger" text class="!w-8 !h-8 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" aria-label="Удалить все чаты" title="Удалить все чаты" />
       </div>
-      <Tabs :value="tab" @update:value="(v:any)=>emit('update:tab', v)" class="w-full block">
-        <TabList class="!bg-stone-100 dark:!bg-zinc-800 !rounded-full !p-1 !border-0 !flex-nowrap !overflow-x-auto scrollbar-none snap-x">
-          <Tab value="chats" class="!rounded-full !text-xs !py-2 !px-3 !whitespace-nowrap snap-start shrink-0">Чаты <Badge v-if="unreadTotal" :value="unreadTotal > 9 ? '9+' : String(unreadTotal)" severity="danger" class="ml-1 !text-[10px]" /></Tab>
-          <Tab value="ulove" class="!rounded-full !text-xs !py-2 !px-3 !whitespace-nowrap snap-start shrink-0">💞 ULove <Badge v-if="uloveUnread" :value="uloveUnread > 9 ? '9+' : String(uloveUnread)" severity="danger" class="ml-1 !text-[10px]" /></Tab>
-          <Tab value="friends" class="!rounded-full !text-xs !py-2 !px-3 !whitespace-nowrap snap-start shrink-0">Друзья</Tab>
-          <Tab value="requests" class="!rounded-full !text-xs !py-2 !px-3 !whitespace-nowrap snap-start shrink-0">Заявки <Badge v-if="pendingCount" :value="String(pendingCount)" severity="warn" class="ml-1 !text-[10px]" /></Tab>
-          <Tab value="blocked" class="!rounded-full !text-xs !py-2 !px-3 !whitespace-nowrap snap-start shrink-0">Блок <Badge v-if="blockedCount" :value="String(blockedCount)" severity="secondary" class="ml-1 !text-[10px]" /></Tab>
+      <Tabs :value="tab" :showNavigators="false" @update:value="(v:any)=>emit('update:tab', v)" class="w-full block chat-tabs">
+        <TabList class="!flex-nowrap !overflow-x-auto overscroll-x-contain scrollbar-none snap-x [&_.p-tablist-tab-list]:flex [&_.p-tablist-tab-list]:!justify-between [&_.p-tablist-content]:!border-0">
+          <Tab value="chats" class="chat-tab !text-xs !py-2 !px-1 !whitespace-nowrap snap-start shrink-0">Чаты <Badge v-if="unreadTotal" :value="unreadTotal > 9 ? '9+' : String(unreadTotal)" severity="danger" class="ml-1 !text-[10px]" /></Tab>
+          <Tab value="ulove" class="chat-tab !text-xs !py-2 !px-1 !whitespace-nowrap snap-start shrink-0">💞 ULove <Badge v-if="uloveUnread" :value="uloveUnread > 9 ? '9+' : String(uloveUnread)" severity="danger" class="ml-1 !text-[10px]" /></Tab>
+          <Tab value="friends" class="chat-tab !text-xs !py-2 !px-1 !whitespace-nowrap snap-start shrink-0">Друзья</Tab>
+          <Tab value="requests" class="chat-tab !text-xs !py-2 !px-1 !whitespace-nowrap snap-start shrink-0">Заявки <Badge v-if="pendingCount" :value="String(pendingCount)" severity="warn" class="ml-1 !text-[10px]" /></Tab>
+          <Tab value="blocked" class="chat-tab !text-xs !py-2 !px-1 !whitespace-nowrap snap-start shrink-0">Блок <Badge v-if="blockedCount" :value="String(blockedCount)" severity="secondary" class="ml-1 !text-[10px]" /></Tab>
         </TabList>
       </Tabs>
     </div>
@@ -45,3 +45,17 @@ const emit = defineEmits<{ (e: 'update:tab', v: any): void; (e: 'update:filter',
     </div>
   </div>
 </template>
+<style scoped>
+.chat-tabs .p-tablist { background: transparent; border: 0; border-radius: 0; padding: 0; }
+.chat-tabs .p-tablist-content { padding: 0; border: 0; scrollbar-width: none; -ms-overflow-style: none; }
+.chat-tabs .p-tablist-content { padding: 0; scrollbar-width: none; -ms-overflow-style: none; }
+.chat-tabs .p-tablist-content::-webkit-scrollbar { display: none; width: 0; height: 0; }
+.chat-tabs .p-tablist-active-bar { display: block; height: 3px; border-radius: 9999px; background: #5b5bff; box-shadow: 0 1px 6px rgba(91, 91, 255, 0.5); transition: left 0.35s cubic-bezier(0.16, 1, 0.3, 1), width 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+.chat-tab { background: transparent; border: 0; box-shadow: none; color: #78716c; font-weight: 700; }
+.chat-tab:hover { background: transparent; color: #1c1917; }
+.chat-tab.p-tab-active { background: transparent; color: #5b5bff; box-shadow: none; }
+.chat-tab:focus-visible { outline: none; box-shadow: none; color: #5b5bff; }
+:global(.dark) .chat-tab { color: #a1a1aa; }
+:global(.dark) .chat-tab:hover { background: transparent; color: #ffffff; }
+:global(.dark) .chat-tab.p-tab-active { background: transparent; color: #8186ff; box-shadow: none; }
+</style>

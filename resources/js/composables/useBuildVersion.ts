@@ -44,8 +44,18 @@ async function fetchLatestVersion(): Promise<string | null> {
 
 /**
  * Сверить версию билда с сервером.
+ *
+ * Флаг залипает: раз показанное обновление не гаснет само по себе.
+ * Во время rolling-деплоя инстансы отдают разные версии и опросы
+ * флиппуют mismatch — без latch баннер появляется и мгновенно
+ * пропадает. Снимается только руками: `refreshApp`/`dismissBuildUpdate`.
+ *
+ * @returns true когда обновление доступно (включая залипшее)
  */
 export async function checkForBuildUpdate(): Promise<boolean> {
+  if (buildUpdateAvailable.value) {
+    return true
+  }
   if (checking.value || refreshing.value) {
     return buildUpdateAvailable.value
   }
@@ -67,13 +77,15 @@ export async function checkForBuildUpdate(): Promise<boolean> {
     }
 
     const mismatch = latest !== initialVersion.value
-    if (mismatch && latest === readDismissedVersion()) {
-      buildUpdateAvailable.value = false
+    if (!mismatch) {
       return false
     }
-    buildUpdateAvailable.value = mismatch
+    if (latest === readDismissedVersion()) {
+      return false
+    }
+    buildUpdateAvailable.value = true
 
-    return mismatch
+    return true
   } catch {
     return buildUpdateAvailable.value
   } finally {

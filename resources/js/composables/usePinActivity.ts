@@ -260,7 +260,7 @@ async function clearAll(): Promise<void> {
  * Виды строго про пины карты (вкладка «Пины»).
  * Галерея (photo_like, photo_comment, mention с фото) — вкладка «События».
  */
-export const PIN_ACTIVITY_KINDS = ['reaction', 'comment', 'mention', 'sub_pin', 'invite', 'invite_accepted'] as const
+export const PIN_ACTIVITY_KINDS = ['reaction', 'comment', 'mention', 'sub_pin', 'scheduled_published', 'invite', 'invite_accepted'] as const
 
 /**
  * Виды галереи фото (вкладка «События», секция «Фото»).
@@ -343,6 +343,10 @@ function describe(a: PinActivityItem): { emoji: string; text: string } {
   if (a.kind === 'sub_pin') {
     const title = (a as any).excerpt || a.pin?.title || 'новый пин'
     return { emoji: '📍', text: `${name} создал пин «${title}»` }
+  }
+  if (a.kind === 'scheduled_published') {
+    const title = (a as any).excerpt || a.pin?.title || 'пин'
+    return { emoji: '🕓', text: `Ваш запланированный пин «${title}» опубликован` }
   }
   if (a.kind === 'invite') {
     const title = a.pin?.title || 'пин'

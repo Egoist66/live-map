@@ -1,25 +1,29 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import Dialog from 'primevue/dialog'
 import { useInfoTileModal } from '@/composables/useInfoTileModal'
+import { useInfoTileStyle } from '@/composables/useInfoTileStyle'
 
-defineProps<{
+const props = defineProps<{
   statusText: string
   online: boolean
   userName: string
   ageText: string
   genderLabel: string
+  genderValue?: string | null
   residenceText: string
   bioText: string
   bioPreview: string
 }>()
 
 const modal = useInfoTileModal()
+const tiles = useInfoTileStyle()
 
-const tileCls = 'w-full flex items-center gap-3 rounded-2xl border border-stone-200 bg-stone-100/70 px-3 py-3 text-left transition hover:bg-stone-100 active:scale-[0.99] dark:border-zinc-800 dark:bg-white/[0.03] dark:hover:bg-white/[0.06]'
-const iconCls = 'grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-stone-200 bg-white text-stone-500 dark:border-transparent dark:bg-zinc-800 dark:text-zinc-300'
-const labelCls = 'block text-xs text-stone-500 dark:text-zinc-500'
-const valueCls = 'block truncate text-sm font-bold text-ink-900 dark:text-zinc-100'
-const chevronCls = 'pi pi-chevron-right shrink-0 text-xs text-stone-300 dark:text-zinc-600'
+const tileCls = tiles.tileCls
+const labelCls = tiles.labelCls
+const valueCls = tiles.valueCls
+const chevronCls = tiles.chevronCls
+const genderIcon = computed(() => tiles.genderIconFor(props.genderValue))
 </script>
 
 <template>
@@ -30,8 +34,8 @@ const chevronCls = 'pi pi-chevron-right shrink-0 text-xs text-stone-300 dark:tex
 
     <div class="mt-3 grid grid-cols-2 gap-2 sm:gap-3">
       <button type="button" :class="tileCls" @click="modal.show('Статус', statusText)">
-        <span :class="iconCls">
-          <span class="h-3.5 w-3.5 rounded-full" :class="online ? 'bg-emerald-500' : 'bg-stone-300 dark:bg-zinc-600'"></span>
+        <span :class="tiles.iconFor('status')">
+          <span class="h-3.5 w-3.5 rounded-full bg-white/95 shadow-inner"></span>
         </span>
         <span class="min-w-0 flex-1">
           <span :class="labelCls">Статус</span>
@@ -41,7 +45,7 @@ const chevronCls = 'pi pi-chevron-right shrink-0 text-xs text-stone-300 dark:tex
       </button>
 
       <button type="button" :class="tileCls" @click="modal.show('Имя', userName)">
-        <span :class="iconCls"><i class="pi pi-user"></i></span>
+        <span :class="tiles.iconFor('name')"><i class="pi pi-user"></i></span>
         <span class="min-w-0 flex-1">
           <span :class="labelCls">Имя</span>
           <span :class="valueCls">{{ userName }}</span>
@@ -50,7 +54,7 @@ const chevronCls = 'pi pi-chevron-right shrink-0 text-xs text-stone-300 dark:tex
       </button>
 
       <button v-if="ageText" type="button" :class="tileCls" @click="modal.show('Возраст', ageText)">
-        <span :class="iconCls"><i class="pi pi-gift"></i></span>
+        <span :class="tiles.iconFor('age')"><i class="pi pi-gift"></i></span>
         <span class="min-w-0 flex-1">
           <span :class="labelCls">Возраст</span>
           <span :class="valueCls">{{ ageText }}</span>
@@ -59,7 +63,7 @@ const chevronCls = 'pi pi-chevron-right shrink-0 text-xs text-stone-300 dark:tex
       </button>
 
       <button v-if="genderLabel" type="button" :class="tileCls" @click="modal.show('Пол', genderLabel)">
-        <span :class="iconCls"><i class="pi pi-id-card"></i></span>
+        <span :class="tiles.iconFor('gender')"><i :class="genderIcon"></i></span>
         <span class="min-w-0 flex-1">
           <span :class="labelCls">Пол</span>
           <span :class="valueCls">{{ genderLabel }}</span>
@@ -68,7 +72,7 @@ const chevronCls = 'pi pi-chevron-right shrink-0 text-xs text-stone-300 dark:tex
       </button>
 
       <button type="button" :class="tileCls" @click="modal.show('Город', residenceText)">
-        <span :class="iconCls"><i class="pi pi-map-marker"></i></span>
+        <span :class="tiles.iconFor('city')"><i class="pi pi-map-marker"></i></span>
         <span class="min-w-0 flex-1">
           <span :class="labelCls">Город</span>
           <span :class="valueCls">{{ residenceText }}</span>
@@ -77,7 +81,7 @@ const chevronCls = 'pi pi-chevron-right shrink-0 text-xs text-stone-300 dark:tex
       </button>
 
       <button type="button" :class="tileCls" @click="modal.show('О себе', bioText || 'Пока пусто — расскажи о себе в настройках профиля')">
-        <span :class="iconCls"><i class="pi pi-align-left"></i></span>
+        <span :class="tiles.iconFor('bio')"><i class="pi pi-sparkles"></i></span>
         <span class="min-w-0 flex-1">
           <span :class="labelCls">О себе</span>
           <span :class="valueCls">{{ bioPreview || '—' }}</span>
@@ -86,7 +90,7 @@ const chevronCls = 'pi pi-chevron-right shrink-0 text-xs text-stone-300 dark:tex
       </button>
     </div>
 
-    <Dialog :visible="modal.open.value" @update:visible="(v:boolean)=>{ if(!v) modal.close() }" modal dismissableMask :closable="true" :draggable="false" :style="{ width: '320px', maxWidth: 'calc(100vw - 2rem)' }">
+    <Dialog v-model:visible="modal.open.value" modal dismissableMask :closable="true" :draggable="false" :style="{ width: '320px', maxWidth: 'calc(100vw - 2rem)' }">
       <template #header><span class="font-bold">{{ modal.title.value }}</span></template>
       <p class="text-sm leading-relaxed break-words text-ink-900 dark:text-zinc-100">{{ modal.text.value }}</p>
     </Dialog>

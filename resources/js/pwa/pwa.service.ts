@@ -2,6 +2,8 @@ import { SW_URL } from './pwa.config'
 import type { BeforeInstallPromptEvent, PwaDisplayMode, SwUpdateHandler } from './types'
 
 let registration: ServiceWorkerRegistration | null = null
+let registerPromise: Promise<ServiceWorkerRegistration | null> | null = null
+let skipWaitingRefresh = false
 let deferredPrompt: BeforeInstallPromptEvent | null = null
 let updateHandler: SwUpdateHandler | null = null
 let promptListeners: Array<() => void> = []
@@ -26,6 +28,14 @@ function bindOnce(): void {
   })
   window.addEventListener('online', () => onlineListeners.forEach((cb) => cb(true)))
   window.addEventListener('offline', () => onlineListeners.forEach((cb) => cb(false)))
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (skipWaitingRefresh) {
+        skipWaitingRefresh = false
+        window.location.reload()
+      }
+    })
+  }
 }
 
 export function onInstallChange(cb: () => void): () => void {
@@ -77,33 +87,82 @@ export function isOnline(): boolean {
   return typeof navigator === 'undefined' ? true : navigator.onLine
 }
 
+/**
+ * Регистрирует service worker оболочки.
+ *
+ * Вызовы из `app.ts` и `usePwa.init()` идут почти одновременно после mount:
+ * без общего in-flight промиса оба видят `registration === null` и делают
+ * параллельный `register('/sw.js')` с двойными `updatefound`-подписками.
+ * Общий промис гарантирует одну регистрацию на страницу.
+ *
+ * @returns регистрация SW или null когда API недоступен
+ */
 export async function register(): Promise<ServiceWorkerRegistration | null> {
   bindOnce()
-  if (!isSupported()) return null
-  if (registration) return registration
-  try {
-    registration = await navigator.serviceWorker.register(SW_URL, { scope: '/' })
-    if (registration.waiting) updateHandler?.(registration)
-    registration.addEventListener('updatefound', () => {
-      const worker = registration?.installing
-      if (!worker) return
-      worker.addEventListener('statechange', () => {
-        if (worker.state === 'installed' && navigator.serviceWorker.controller) {
-          updateHandler?.(registration as ServiceWorkerRegistration)
-        }
-      })
-    })
+  if (!isSupported()) {
+    return null
+  }
+  if (registration) {
     return registration
+  }
+  if (!registerPromise) {
+    registerPromise = performRegister().finally(() => {
+      registerPromise = null
+    })
+  }
+  return registerPromise
+}
+
+/**
+ * Одна попытка регистрации с подпиской на обновления.
+ *
+ * @returns регистрация SW или null при ошибке (повтор разрешён)
+ */
+async function performRegister(): Promise<ServiceWorkerRegistration | null> {
+  let current: ServiceWorkerRegistration | null = null
+  try {
+    current = await navigator.serviceWorker.register(SW_URL, { scope: '/' })
   } catch {
     return null
   }
+  registration = current
+  if (current.waiting) {
+    updateHandler?.(current)
+  }
+  current.addEventListener('updatefound', () => {
+    const worker = registration?.installing
+    if (!worker) {
+      return
+    }
+    worker.addEventListener('statechange', () => {
+      const hasController = !!navigator.serviceWorker.controller
+      if (worker.state === 'installed' && hasController) {
+        updateHandler?.(registration as ServiceWorkerRegistration)
+      }
+    })
+  })
+  return current
 }
 
+/**
+ * Применить обновление SW: разбудить waiting-воркер и перезагрузиться.
+ *
+ * Всегда заканчивается перезагрузкой: по `controllerchange` после
+ * `SKIP_WAITING`, а если SW сообщение не обработал — по таймауту.
+ * Кнопка «Обновить» не бывает холостой.
+ */
 export async function applyUpdate(): Promise<void> {
   const reg = registration ?? (await navigator.serviceWorker?.getRegistration('/').catch(() => null))
   const waiting = reg?.waiting
   if (waiting) {
+    skipWaitingRefresh = true
     waiting.postMessage({ type: 'SKIP_WAITING' })
+    window.setTimeout(() => {
+      if (skipWaitingRefresh) {
+        skipWaitingRefresh = false
+        window.location.reload()
+      }
+    }, 2500)
     return
   }
   window.location.reload()

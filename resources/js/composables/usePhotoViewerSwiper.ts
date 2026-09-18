@@ -46,7 +46,8 @@ export function usePhotoViewerSwiper(gallery: GalleryLike, opts?: { onEscape?: (
   function onSlideChange(s: any) {
     if (syncing || !isVisible(s)) return
     const list = gallery.photos.value || []
-    const p = list[s?.activeIndex]
+    const realIndex = typeof s?.realIndex === 'number' ? s.realIndex : s?.activeIndex
+    const p = list[realIndex]
     if (p && p.id !== gallery.active.value?.id) {
       syncing = true
       ;(gallery.active as Ref<any>).value = p
@@ -54,12 +55,20 @@ export function usePhotoViewerSwiper(gallery: GalleryLike, opts?: { onEscape?: (
     }
   }
 
-  function syncToActive(speed = 0) {
+  /**
+   * Переводит слайдер на активное фото.
+   * В loop-режиме идёт через `slideToLoop`, иначе обычный `slideTo`.
+   * @param speed скорость анимации в мс (0 — мгновенно, для открытия)
+   */
+  function syncToActive(speed = 350) {
     const i = activeIndex()
     for (const s of allSwipers()) {
       try {
         if (typeof s.update === 'function') s.update()
-        if (s.activeIndex !== i && typeof s.slideTo === 'function') s.slideTo(i, speed)
+        if (s.activeIndex !== i || s?.params?.loop) {
+          if (s?.params?.loop && typeof s.slideToLoop === 'function') s.slideToLoop(i, speed)
+          else if (typeof s.slideTo === 'function') s.slideTo(i, speed)
+        }
       } catch { /* noop */ }
     }
   }
@@ -83,7 +92,7 @@ export function usePhotoViewerSwiper(gallery: GalleryLike, opts?: { onEscape?: (
       if (!gallery.viewerOpen.value || syncing) return
       syncing = true
       try {
-        syncToActive(0)
+        syncToActive()
       } finally {
         syncing = false
       }

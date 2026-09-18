@@ -1,13 +1,6 @@
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed } from 'vue'
 import { usePwa } from '@/composables/usePwa'
 import { useBuildVersion } from '@/composables/useBuildVersion'
-
-/**
- * Владелец видимого баннера: только один экземпляр показывает баннер,
- * остальные молчат. Защита от задвоения при смене лейаутов.
- */
-let bannerOwner: symbol | null = null
-const ownershipEpoch = ref(0)
 
 /**
  * Баннер обновления приложения.
@@ -15,39 +8,17 @@ const ownershipEpoch = ref(0)
  * Показывается когда вышел новый билд (деплой в Laravel Cloud)
  * или service worker нашел обновление. Кнопка стирает весь кэш
  * и перезагружает приложение на свежую версию.
+ *
+ * Владение не нужно: лейауты per-page, одновременно смонтирован всегда
+ * один экземпляр баннера. Старый механизм owner/epoch давал мигание
+ * «появился и пропал» на каждой навигации (размонтирование + захват),
+ * поэтому видимость — чистая функция залипающих флагов.
  */
 export function useAppRefreshBanner() {
   const pwa = usePwa()
   const build = useBuildVersion()
-  const instanceId = Symbol('pwa-update-banner')
-  const isOwner = ref(false)
 
-  /**
-   * Захватывает право показывать баннер, если оно свободно.
-   */
-  function tryClaim(): void {
-    if (bannerOwner === null) {
-      bannerOwner = instanceId
-      isOwner.value = true
-    }
-  }
-
-  /**
-   * Освобождает право показа при размонтировании.
-   */
-  function releaseClaim(): void {
-    if (bannerOwner === instanceId) {
-      bannerOwner = null
-      isOwner.value = false
-      ownershipEpoch.value += 1
-    }
-  }
-
-  onMounted(tryClaim)
-  onBeforeUnmount(releaseClaim)
-  watch(ownershipEpoch, tryClaim)
-
-  const visible = computed(() => isOwner.value && (pwa.needUpdate.value || build.buildUpdateAvailable.value))
+  const visible = computed(() => pwa.needUpdate.value || build.buildUpdateAvailable.value)
   const isBuildUpdate = computed(() => build.buildUpdateAvailable.value)
   const busy = computed(() => build.refreshing.value)
 

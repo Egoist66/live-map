@@ -45,6 +45,7 @@ export function usePinDetails() {
   const editingContent = ref<string>('')
   const deletingCommentId = ref<number | null>(null)
   const replyTo = ref<PinComment | null>(null)
+  let replyMention = ''
   const toast = (() => { try { return useToast() } catch { return null as any } })()
   const cache = (() => { try { return useQueryCache() } catch { return null as any } })()
   const { confirmDelete } = useAppConfirm()
@@ -151,16 +152,45 @@ export function usePinDetails() {
     return roots
   })
 
+  /**
+   * Нацелить поле ввода на ответ: подставляет `@имя ` адресата.
+   *
+   * Ответ конкретному человеку начинается с ника автоматически,
+   * обычный комментарий — чистый текст. Анониму ник не подставляется.
+   * Повторный вызов сначала снимает старый авто-префикс.
+   *
+   * @param root корневой комментарий ветки
+   * @param target конкретный адресат внутри ветки (по умолчанию корень)
+   */
   function replyTarget(root: PinComment, target?: PinComment | null): void {
     replyTo.value = root
-    const t = (target ?? root) as any
-    const name = t.is_anonymous ? null : t.user?.name
-    const cur = commentText.value || ''
-    if (name && !cur.startsWith(`@${name}`)) commentText.value = `@${name} ${cur}`
+    const current = String(commentText.value || '')
+    if (replyMention && current.startsWith(replyMention)) {
+      commentText.value = current.slice(replyMention.length)
+    }
+    replyMention = ''
+    const addressee = (target ?? root) as any
+    const name = addressee.is_anonymous ? null : addressee.user?.name
+    if (!name) {
+      return
+    }
+    replyMention = `@${name} `
+    const rest = String(commentText.value || '')
+    if (!rest.startsWith(replyMention)) {
+      commentText.value = `${replyMention}${rest}`
+    }
   }
 
+  /**
+   * Снять ответ: убирает и авто-подставленный `@ник ` из поля.
+   */
   function cancelReply(): void {
     replyTo.value = null
+    const current = String(commentText.value || '')
+    if (replyMention && current.startsWith(replyMention)) {
+      commentText.value = current.slice(replyMention.length)
+    }
+    replyMention = ''
   }
 
   function useCommentsQuery(pinId: () => number | null) {
@@ -202,6 +232,7 @@ export function usePinDetails() {
     await (createCommentMutation as any).mutateAsync({ pinId: selectedPin.value.id, content: vals.content, parent_id: parentId })
     resetCommentForm()
     replyTo.value = null
+    replyMention = ''
     await loadComments(selectedPin.value.id)
     if (selectedPin.value) selectedPin.value.comments_count = (selectedPin.value.comments_count || 0) + 1
   })

@@ -122,6 +122,7 @@ onMounted(async () => { await design.init() })
               :user-name="dash.u.value.name"
               :age-text="design.infoTiles.ageText.value"
               :gender-label="design.infoTiles.genderLabel.value"
+              :gender-value="dash.u.value.gender"
               :residence-text="design.infoTiles.residenceText.value"
               :bio-text="dash.bioText.value"
               :bio-preview="design.bioPreview.value"

@@ -1,4 +1,5 @@
 import { onBeforeUnmount, onMounted } from 'vue'
+import { acquireScrollLock, releaseScrollLock } from '@/composables/useScrollLock'
 
 /**
  * Глобальный лок скролла страницы при открытых модалках.
@@ -9,14 +10,17 @@ import { onBeforeUnmount, onMounted } from 'vue'
  * возвращает как было. Счётчик не нужен: состояние выводится
  * из фактического DOM, поэтому вложенные модалки корректны.
  *
+ * Сам лок идёт через ref-counted менеджер скролла, поэтому
+ * не конфликтует с вьювером фото и превью аватара: скролл
+ * вернётся, только когда закроется последний оверлей.
+ *
  * Подключается один раз в `AuthenticatedLayout`.
  *
  * @example
  * useGlobalDialogScrollLock()
  */
 export function useGlobalDialogScrollLock() {
-  let prevBody = ''
-  let prevHtml = ''
+  const owner = 'global-dialogs'
   let locked = false
   let observer: MutationObserver | null = null
 
@@ -53,7 +57,7 @@ export function useGlobalDialogScrollLock() {
   }
 
   /**
-   * Блокирует скролл страницы, запомнив предыдущее состояние.
+   * Блокирует скролл страницы через общий менеджер.
    */
   function lock(): void {
     if (locked) {
@@ -61,10 +65,7 @@ export function useGlobalDialogScrollLock() {
     }
 
     locked = true
-    prevBody = document.body.style.overflow
-    prevHtml = document.documentElement.style.overflow
-    document.body.style.overflow = 'hidden'
-    document.documentElement.style.overflow = 'hidden'
+    acquireScrollLock(owner)
   }
 
   /**
@@ -76,8 +77,7 @@ export function useGlobalDialogScrollLock() {
     }
 
     locked = false
-    document.body.style.overflow = prevBody
-    document.documentElement.style.overflow = prevHtml
+    releaseScrollLock(owner)
   }
 
   /**

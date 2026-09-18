@@ -1,63 +1,102 @@
 import { computed, onMounted, ref } from 'vue'
-import { usePage } from '@inertiajs/vue3'
 import { usePwa } from '@/composables/usePwa'
+import { useBuildVersion } from '@/composables/useBuildVersion'
 import { usePwaInstallGuide } from '@/composables/usePwaInstallGuide'
 
-/** Сколько дней после регистрации считать пользователя новичком. */
-export const PWA_NEWCOMER_DAYS = 14
+/** Через сколько дней после закрытия снова предложить установку. */
+export const PWA_INSTALL_SNOOZE_DAYS = 14
 
 const DISMISS_KEY = 'pwa-install-dismissed'
+const DAY_MS = 24 * 60 * 60 * 1000
 
 /**
- * Баннер «Установить UPin» для новичков и всех, у кого доступен промпт.
+ * Прочитать время последнего закрытия баннера.
  *
- * Показывается, пока не установлен standalone и не закрыт окончательно
- * (localStorage): либо есть системный промпт, либо пользователь новичок.
- * Без промпта кнопка ведёт на инструкцию под платформу.
+ * @returns timestamp закрытия или 0 (включая легаси «1» — предлагаем снова)
+ */
+function readDismissedAt(): number {
+  const raw = readStored(DISMISS_KEY)
+  const parsed = Number(raw)
+  if (!raw || Number.isNaN(parsed) || parsed < 0) {
+    return 0
+  }
+  return parsed
+}
+
+/**
+ * Прочитать значение из localStorage/sessionStorage (максимум из обоих).
+ *
+ * @param key ключ
+ * @returns значение или null
+ */
+function readStored(key: string): string | null {
+  let fromLocal: string | null = null
+  let fromSession: string | null = null
+  try {
+    fromLocal = localStorage.getItem(key)
+  } catch {}
+  try {
+    fromSession = sessionStorage.getItem(key)
+  } catch {}
+  if (fromLocal !== null && fromSession !== null) {
+    return String(Math.max(Number(fromLocal) || 0, Number(fromSession) || 0))
+  }
+  return fromLocal ?? fromSession
+}
+
+/**
+ * Баннер «Установить UPin»: предлагается всегда, пока не standalone.
+ *
+ * Виден всем гостям и пользователям без установленного приложения:
+ * либо системный промпт, либо инструкция под платформу. Закрытие —
+ * это snooze на `PWA_INSTALL_SNOOZE_DAYS`, а не вечный отказ: предложение
+ * возвращается. Молчит, пока висит обновление (деплой): приоритет
+ * у баннера обновления, иначе два баннера на одной геометрии.
+ * Стартует скрытым, чтобы перемонтирование на навигации не давало вспышки.
  *
  * @returns состояние баннера и действия
  * @example
  * const { visible, install, dismiss } = usePwaInstallBanner()
  */
 export function usePwaInstallBanner() {
-  const { canInstall, standalone, promptInstall } = usePwa()
+  const { canInstall, standalone, promptInstall, needUpdate } = usePwa()
+  const build = useBuildVersion()
   const guide = usePwaInstallGuide()
-  // Детерминированный старт для SSR: сервер и первая гидрация всегда
-  // видят dismissed=false. Флаг из стореджа подтягивается в onMounted,
-  // иначе баннер мигает по-разному и даёт hydration mismatch.
-  const dismissed = ref(false)
+  // Старт скрытым (snooze): точная метка из стореджа подтягивается в onMounted.
+  // Наоборот (видимый → скрытый) даёт вспышку на каждой навигации: лейауты
+  // per-page, баннер перемонтируется, первый paint рисует его, а onMounted
+  // тут же гасит через leave-transition — «появляется и исчезает».
+  // Скрытый старт и для SSR детерминирован: сервер и гидрация совпадают.
+  const dismissedAt = ref(Date.now())
 
   onMounted(() => {
-    try {
-      dismissed.value = localStorage.getItem(DISMISS_KEY) === '1' || sessionStorage.getItem(DISMISS_KEY) === '1'
-    } catch {}
+    dismissedAt.value = readDismissedAt()
   })
 
-  /** Пользователь новичок: гость или регистрация в последние дни. */
-  const isNewcomer = computed(() => {
-    let createdAt: string | null = null
-    try {
-      createdAt = (usePage().props.auth as any)?.user?.created_at ?? null
-    } catch {
-      createdAt = null
-    }
-    if (!createdAt) return true
-    const created = new Date(createdAt).getTime()
-    if (Number.isNaN(created)) return true
-    const ageMs = Date.now() - created
-    return ageMs < PWA_NEWCOMER_DAYS * 24 * 60 * 60 * 1000
-  })
+  /** Баннер закрыт прямо сейчас (действует snooze после «Позже»). */
+  const dismissed = computed(() => Date.now() - dismissedAt.value < PWA_INSTALL_SNOOZE_DAYS * DAY_MS)
 
-  /** Показывать баннер, пока не установлен standalone и не закрыт. */
+  /** Висит необработанное обновление: приоритет у баннера обновления. */
+  const updatePending = computed(() => needUpdate.value || build.buildUpdateAvailable.value)
+
+  /** Показывать всем без установленного приложения, кроме snooze. */
   const visible = computed(() => {
-    if (standalone.value || dismissed.value) return false
-    return canInstall.value || isNewcomer.value
+    if (standalone.value || dismissed.value) {
+      return false
+    }
+    if (updatePending.value) {
+      return false
+    }
+    return true
   })
 
+  /**
+   * Отложить предложение: snooze, баннер вернётся через `PWA_INSTALL_SNOOZE_DAYS`.
+   */
   function dismiss(): void {
-    dismissed.value = true
+    dismissedAt.value = Date.now()
     try {
-      localStorage.setItem(DISMISS_KEY, '1')
+      localStorage.setItem(DISMISS_KEY, String(dismissedAt.value))
     } catch {}
   }
 
@@ -68,8 +107,10 @@ export function usePwaInstallBanner() {
       return
     }
     const outcome = await promptInstall()
-    if (outcome !== 'unavailable') dismiss()
+    if (outcome !== 'unavailable') {
+      dismiss()
+    }
   }
 
-  return { canInstall, standalone, dismissed, visible, isNewcomer, hint: guide.hint, install, dismiss }
+  return { canInstall, standalone, dismissed, visible, updatePending, hint: guide.hint, install, dismiss }
 }
