@@ -47,7 +47,9 @@ export function usePeopleSearch() {
     searching.value = true
     timer = setTimeout(async () => {
       try {
-        results.value = (await chatApi.search(q)) as any[]
+        const res = await chatApi.search(q)
+        const nested = (res as { data?: unknown })?.data
+        results.value = Array.isArray(res) ? res : (Array.isArray(nested) ? nested : [])
       } catch {
         results.value = []
       } finally {

@@ -107,7 +107,9 @@ export function useMentions() {
     timer = setTimeout(async () => {
       mentionLoading.value = true
       try {
-        mentionResults.value = (await chatApi.search(query)) as MentionUser[]
+        const res = await chatApi.search(query)
+        const nested = (res as { data?: unknown })?.data
+        mentionResults.value = Array.isArray(res) ? (res as MentionUser[]) : (Array.isArray(nested) ? (nested as MentionUser[]) : [])
       } catch {
         mentionResults.value = []
       } finally {

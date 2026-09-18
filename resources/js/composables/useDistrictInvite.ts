@@ -88,7 +88,8 @@ export function useDistrictInvite() {
     searchTimer = setTimeout(async () => {
       try {
         const { data } = await api.get('/api/chat/users/search', { params: { q: clean } })
-        const rows = Array.isArray(data) ? data : []
+        const nested = (data as { data?: unknown })?.data
+        const rows = Array.isArray(data) ? data : (Array.isArray(nested) ? nested : [])
         results.value = rows
       } catch {
         results.value = []

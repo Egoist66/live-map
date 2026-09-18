@@ -33,7 +33,9 @@ export function useMentionNavigate() {
       return false
     }
     try {
-      const results = (await chatApi.search(query)) as Array<{ id: number; name: string }>
+      const res = await chatApi.search(query)
+      const nested = (res as { data?: unknown })?.data
+      const results = Array.isArray(res) ? (res as Array<{ id: number; name: string }>) : (Array.isArray(nested) ? (nested as Array<{ id: number; name: string }>) : [])
       const exact = results.find((u) => u.name.toLowerCase() === query.toLowerCase())
       const target = exact ?? results[0]
       if (!target?.id) {
