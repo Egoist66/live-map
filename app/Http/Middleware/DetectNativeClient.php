@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Гибкий SSR: WebView и приватные экраны идут в CSR.
+ * Гибкий SSR: только WebView идёт в CSR, обычный браузер — в SSR.
  *
  * Ставится ДО HandleInertiaRequests (prepend в bootstrap/app.php):
  * тушит `inertia.ssr.enabled` до того, как Inertia решит,
@@ -25,7 +25,11 @@ class DetectNativeClient
     public function __construct(private readonly NativeClientDetector $detector) {}
 
     /**
-     * Отключить SSR для натива и app-роутов, пометить ответ.
+     * Отключить SSR для нативной WebView, пометить ответ.
+     *
+     * Обычный браузер всегда идёт в SSR (даже приватные app-роуты):
+     * принудительный CSR-bypass прячет краши Node-рендера и даёт
+     * пустой div#app[data-page] вместо предрендера.
      *
      * @param Request $request текущий запрос
      * @param Closure $next следующий слой стека
