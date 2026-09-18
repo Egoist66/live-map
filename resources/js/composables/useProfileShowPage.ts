@@ -1,4 +1,5 @@
 import { computed, ref } from 'vue'
+import { useMounted } from '@vueuse/core'
 import { usePresenceState, isRecentlySeen } from '@/composables/usePresence'
 import { useUserProfile } from '@/composables/useUserProfile'
 import { useProfileShare } from '@/composables/useProfileShare'
@@ -28,8 +29,16 @@ export function useProfileShowPage(props: { profileUser: any; isOwn: boolean; is
     return isRecentlySeen(props.profileUser?.last_seen_at)
   })
   const { shareProfile, sharing } = useProfileShare()
+  /**
+   * Флаг гидрации: на сервере и первой отрисовке клиента — false.
+   * Относительное время («5 минут назад») зависит от Date.now(),
+   * поэтому рендерим его только после mount — иначе SSR и клиент
+   * расходятся на границе минуты и Vue ругается hydration mismatch.
+   */
+  const mounted = useMounted()
   const lastSeenText = computed(() => {
     if (online.value) return 'в сети'
+    if (!mounted.value) return 'оффлайн'
     const v = props.profileUser.last_seen_at
     if (!v) return 'оффлайн'
     try { return formatRelative(v) } catch { return 'оффлайн' }

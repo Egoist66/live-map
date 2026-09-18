@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 
 /**
  * Выбор колонок профиля: 'one' — лента, 'two' — сайдбар + лента.
@@ -12,9 +12,14 @@ const COLUMNS_KEY = 'live-map:profile-columns'
 /**
  * Читает сохранённый выбор колонок.
  *
+ * На сервере (SSR) всегда возвращает 'two', чтобы HTML сервера
+ * совпадал с первой гидрацией клиента и не было mismatch.
+ * Реальное значение из localStorage подтягивается в onMounted.
+ *
  * @returns 'one' — принудительно одна колонка, иначе 'two'
  */
 function readColumns(): ProfileColumns {
+  if (typeof window === 'undefined') return 'two'
   try {
     if (localStorage.getItem(COLUMNS_KEY) === 'one') return 'one'
   } catch {}
@@ -24,8 +29,11 @@ function readColumns(): ProfileColumns {
 /**
  * Общий выбор на всё приложение: один ref на модуль делят настройки
  * и обе страницы профиля, поэтому переключение видно везде сразу.
+ *
+ * Инициализируется детерминированно 'two' — так SSR и первая гидрация
+ * всегда совпадают. Синхронизация с localStorage происходит в onMounted.
  */
-const sharedColumns = ref<ProfileColumns>(readColumns())
+const sharedColumns = ref<ProfileColumns>('two')
 
 /** Слушатель кросс-таб синхронизации вешается один раз. */
 let storageBound = false
@@ -36,6 +44,7 @@ let storageBound = false
  */
 function bindCrossTabSync(): void {
   if (storageBound) return
+  if (typeof window === 'undefined') return
   storageBound = true
   try {
     window.addEventListener('storage', (event) => {
@@ -61,6 +70,10 @@ function bindCrossTabSync(): void {
  */
 export function useProfileLayout() {
   bindCrossTabSync()
+  onMounted(() => {
+    sharedColumns.value = readColumns()
+    bindCrossTabSync()
+  })
   const single = computed<boolean>(() => sharedColumns.value === 'one')
 
   const columnOptions = [

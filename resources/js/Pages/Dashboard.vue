@@ -83,18 +83,22 @@ onMounted(async () => { await design.init() })
             <!-- Одна колонка: ряд-плитка на любой ширине. Две: сайдбар-меню на любой ширине. -->
             <div :class="isSingleColumn ? '' : 'hidden'">
               <ProfileDesignQuickNav
+                :is-own="true"
                 variant="tiles"
                 @profile="dash.goSettings()"
                 @friends="people.openFriends(dash.u.value.id, dash.u.value.name)"
+                @districts="design.goDistricts()"
                 @search="search.openDialog()"
                 @share="dash.share()"
               />
             </div>
             <div :class="isSingleColumn ? 'hidden' : ''">
               <ProfileDesignQuickNav
+                :is-own="true"
                 variant="sidebar"
                 @profile="dash.goSettings()"
                 @friends="people.openFriends(dash.u.value.id, dash.u.value.name)"
+                @districts="design.goDistricts()"
                 @search="search.openDialog()"
                 @share="dash.share()"
               />

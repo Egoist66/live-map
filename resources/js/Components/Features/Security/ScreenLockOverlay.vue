@@ -72,7 +72,9 @@ watch(() => lock.locked.value, (v) => {
   }
 }, { immediate: true })
 
-onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
+onBeforeUnmount(() => {
+  if (typeof window !== 'undefined') window.removeEventListener('keydown', onKey)
+})
 </script>
 <template>
   <Teleport to="body">

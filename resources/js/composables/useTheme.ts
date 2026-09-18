@@ -1,12 +1,36 @@
-import { ref, watch, computed } from 'vue'
+import { ref, watch, computed, onMounted } from 'vue'
 
-const stored = typeof window !== 'undefined' ? localStorage.getItem('theme') : null
-const theme = ref<'light' | 'dark' | 'system'>((stored as any) || 'system')
-const mql = typeof window !== 'undefined' ? window.matchMedia('(prefers-color-scheme: dark)') : null
-const systemDark = ref(mql?.matches ?? false)
+/**
+ * Детерминированный старт для SSR: сервер и первая гидрация всегда
+ * видят 'system' + systemDark=false. Реальные значения из localStorage
+ * и matchMedia подтягиваются в onMounted (после гидрации), поэтому
+ * mismatch в ThemeToggle/hint исключён. Визуально тема не мигает:
+ * blade-скрипт в app.blade.php уже выставил .dark до монтирования Vue.
+ */
+const theme = ref<'light' | 'dark' | 'system'>('system')
+const systemDark = ref(false)
+let mql: MediaQueryList | null = null
+let synced = false
 
-if (mql) {
-  mql.addEventListener('change', (e) => { systemDark.value = e.matches; if (theme.value === 'system') apply() })
+/**
+ * Синхронизирует тему с браузером (только клиент, после гидрации).
+ */
+function syncFromBrowser(): void {
+  if (typeof window === 'undefined' || synced) return
+  synced = true
+  try {
+    const stored = localStorage.getItem('theme')
+    if (stored === 'light' || stored === 'dark' || stored === 'system') theme.value = stored
+  } catch {}
+  try {
+    mql = window.matchMedia('(prefers-color-scheme: dark)')
+    systemDark.value = mql.matches
+    mql.addEventListener('change', (e) => {
+      systemDark.value = e.matches
+      if (theme.value === 'system') apply()
+    })
+  } catch {}
+  apply()
 }
 
 /**
@@ -71,17 +95,38 @@ function syncSystemChrome(isDark: boolean): void {
   notifyNativeTheme(isDark, bg)
 }
 
-if (typeof window !== 'undefined') {
-  apply()
-  watch(theme, (v) => {
+watch(theme, (v) => {
+  if (typeof window === 'undefined') return
+  try {
     localStorage.setItem('theme', v)
-    apply()
-  })
-}
+  } catch {}
+  apply()
+})
 
 const isDark = computed(() => theme.value === 'dark' || (theme.value === 'system' && systemDark.value))
 
+/**
+ * Глобальная синхронизация темы после гидрации (только клиент).
+ * Вызывается один раз из app.ts после mount — первая отрисовка
+ * уже совпала с SSR, дальше идёт обычный реактивный патч без warning.
+ */
+export function initTheme(): void {
+  if (typeof window === 'undefined' || synced) return
+  setTimeout(() => syncFromBrowser(), 0)
+}
+
+/**
+ * Доступ к теме. Первый вызов в браузере планирует синхронизацию
+ * с localStorage/matchMedia после монтирования (без mismatch).
+ *
+ * @returns тема, флаг тёмной темы и переключатели
+ */
 export function useTheme() {
+  if (typeof window !== 'undefined') {
+    try {
+      onMounted(() => syncFromBrowser())
+    } catch {}
+  }
   function setTheme(v: 'light'|'dark'|'system'){ theme.value = v }
   function toggle() { theme.value = isDark.value ? 'light' : 'dark' }
   return { theme, isDark, setTheme, toggle, systemDark }

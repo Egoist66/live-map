@@ -5,13 +5,20 @@
         <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content, viewport-fit=cover">
         <meta name="color-scheme" content="light dark">
         <meta name="theme-color" content="{{ config('seo.theme_color', '#0F172A') }}">
-        <meta name="robots" content="{{ config('seo.robots') }}">
+        {{-- Нативу (upin-mobile WebView) SEO-разметка не нужна: режем вес head и шлем noindex,
+             чтобы ?client=native случайно не попал в индекс. --}}
+        @php($isNativeClient = $isNative ?? false)
+        <meta name="robots" content="{{ $isNativeClient ? 'noindex, nofollow' : config('seo.robots') }}">
         <meta name="author" content="{{ config('seo.author') }}">
+        @if(!$isNativeClient)
         <meta name="description" content="{{ config('seo.default_description') }}">
         <meta name="keywords" content="{{ implode(', ', config('seo.keywords', [])) }}">
+        @endif
         <meta name="format-detection" content="telephone=no">
         <meta name="vapid-public-key" content="{{ config('services.webpush.vapid.public_key') }}">
+        @if(!$isNativeClient)
         <link rel="canonical" href="{{ url()->current() }}">
+        @endif
 
         <link rel="manifest" href="/manifest.webmanifest">
         <meta name="mobile-web-app-capable" content="yes">
@@ -24,6 +31,7 @@
         <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0F121F">
 
         <meta property="og:site_name" content="{{ config('seo.site_name') }}">
+        @if(!$isNativeClient)
         <meta property="og:type" content="{{ config('seo.og_type', 'website') }}">
         <meta property="og:locale" content="{{ config('seo.locale', 'ru_RU') }}">
         <meta property="og:url" content="{{ url()->current() }}">
@@ -39,6 +47,7 @@
         <meta name="twitter:image" content="{{ url(config('seo.image', '/og-cover.jpg')) }}">
         @if(config('seo.twitter_site'))
             <meta name="twitter:site" content="{{ config('seo.twitter_site') }}">
+        @endif
         @endif
         <title inertia>{{ config('seo.default_title') }}</title>
         <link rel="icon" href="/favicon.ico" sizes="any">
@@ -85,6 +94,7 @@
             }
           }
         </style>
+        @if(!$isNativeClient)
         <script type="application/ld+json" nonce="{{ $cspNonce ?? '' }}">
         {
             "@@context": "https://schema.org",
@@ -109,6 +119,7 @@
             "logo": "{{ url('/favicon.ico') }}"
         }
         </script>
+        @endif
         {!! app(\Tighten\Ziggy\BladeRouteGenerator::class)->generate(nonce: $cspNonce ?? null) !!}
         @vite(['resources/js/app.ts'])
         @inertiaHead

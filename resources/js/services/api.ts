@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { getStoredTokenSync } from '@/composables/useAuthStorage'
+import { nativeClientHeader } from '@/composables/useNativeClient'
 
 const apiBaseUrl = import.meta.env.VITE_API_URL || ''
 
@@ -15,6 +16,7 @@ api.interceptors.request.use((c) => {
   if (token && c.headers) c.headers['X-CSRF-TOKEN'] = token
   const bearer = getStoredTokenSync()
   if (bearer && c.headers && !c.headers['Authorization']) c.headers['Authorization'] = `Bearer ${bearer}`
+  if (c.headers && !c.headers['X-UPin-Client']) c.headers['X-UPin-Client'] = nativeClientHeader()
   try {
     const sid = (window as any).Echo?.socketId?.()
     if (sid && c.headers) c.headers['X-Socket-ID'] = sid

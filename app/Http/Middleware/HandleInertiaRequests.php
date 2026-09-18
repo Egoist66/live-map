@@ -26,11 +26,14 @@ class HandleInertiaRequests extends Middleware
     /**
      * Define the props that are shared by default.
      *
-     * @return array<string, mixed>
+     * @param Request $request текущий запрос
+     * @return array<string, mixed> общие пропсы Inertia
      */
     public function share(Request $request): array
     {
-        return [
+        $isNative = (bool) $request->attributes->get('is_native', false);
+
+        $shared = [
             ...parent::share($request),
             'auth' => [
                 'user' => $request->user(),
@@ -39,6 +42,10 @@ class HandleInertiaRequests extends Middleware
             ],
             'unreadCount' => $request->user() ? $request->user()->unreadMessagesCount() : 0,
             'appVersion' => AppVersionService::version(),
+            'client' => [
+                'isNative' => $isNative,
+                'ssrBypass' => (bool) $request->attributes->get('ssr_bypass', false),
+            ],
             // Роуты для ZiggyVue в SSR (resources/js/ssr.ts): Node-процесс
             // не видит blade-скрипт @routes, без этого route()/current() падают
             // и Inertia молча откатывается в CSR (пустой div#app).
@@ -48,5 +55,7 @@ class HandleInertiaRequests extends Middleware
                 ]);
             },
         ];
+
+        return $shared;
     }
 }

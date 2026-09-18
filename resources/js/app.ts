@@ -14,6 +14,8 @@ import { startPushBridges } from './pwa/push.service'
 import { hideSplash } from './composables/useSplash'
 import { useOverlaySafeArea } from './composables/useOverlaySafeArea'
 import { useLastRoute } from './composables/useLastRoute'
+import { initTheme } from './composables/useTheme'
+import { persistNativeMarker } from './composables/useNativeClient'
 
 const appName = import.meta.env.VITE_APP_NAME || 'UPin'
 
@@ -34,6 +36,12 @@ createInertiaApp({
     setupPrimeVue(app)
     app.mount(el)
     if (!import.meta.env.SSR) {
+      try {
+        persistNativeMarker()
+      } catch {}
+      try {
+        initTheme()
+      } catch {}
       try {
         initEcho()
       } catch {}

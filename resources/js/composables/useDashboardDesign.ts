@@ -5,6 +5,7 @@ import { useProfilePeople } from '@/composables/useProfilePeople'
 import { usePeopleSearch } from '@/composables/usePeopleSearch'
 import { useProfilePhotoComments } from '@/composables/useProfilePhotoComments'
 import { useSwipesCta } from '@/composables/useSwipesCta'
+import { useDistrictsCta } from '@/composables/useDistrictsCta'
 import { usePhotoPicker } from '@/composables/usePhotoPicker'
 import { planOf } from '@/composables/usePlanLimits'
 import { useProfileInfoTiles } from '@/composables/useProfileInfoTiles'
@@ -30,6 +31,7 @@ export function useDashboardDesign(propsUser?: any, propsIsOwn?: boolean) {
   const people = useProfilePeople()
   const search = usePeopleSearch()
   const { goSwipes } = useSwipesCta()
+  const { goDistricts } = useDistrictsCta()
 
   const photoComments = useProfilePhotoComments(
     () => gallery.active.value?.id ?? null,
@@ -111,5 +113,6 @@ export function useDashboardDesign(propsUser?: any, propsIsOwn?: boolean) {
     openPicker,
     handlePickerChange,
     goSwipes,
+    goDistricts,
   }
 }
