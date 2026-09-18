@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import { usePwa } from '@/composables/usePwa'
 import { usePwaInstallGuide } from '@/composables/usePwaInstallGuide'
@@ -22,11 +22,16 @@ const DISMISS_KEY = 'pwa-install-dismissed'
 export function usePwaInstallBanner() {
   const { canInstall, standalone, promptInstall } = usePwa()
   const guide = usePwaInstallGuide()
+  // Детерминированный старт для SSR: сервер и первая гидрация всегда
+  // видят dismissed=false. Флаг из стореджа подтягивается в onMounted,
+  // иначе баннер мигает по-разному и даёт hydration mismatch.
   const dismissed = ref(false)
 
-  try {
-    dismissed.value = localStorage.getItem(DISMISS_KEY) === '1' || sessionStorage.getItem(DISMISS_KEY) === '1'
-  } catch {}
+  onMounted(() => {
+    try {
+      dismissed.value = localStorage.getItem(DISMISS_KEY) === '1' || sessionStorage.getItem(DISMISS_KEY) === '1'
+    } catch {}
+  })
 
   /** Пользователь новичок: гость или регистрация в последние дни. */
   const isNewcomer = computed(() => {

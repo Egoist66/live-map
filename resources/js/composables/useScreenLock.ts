@@ -75,10 +75,22 @@ export function sanitizeLockCode(v: unknown, kind: string): string {
   return s.replace(/\D/g, '').slice(0, 4)
 }
 
-const mirror = typeof localStorage !== 'undefined' ? readMirror() : { enabled: false, timeout: 5, kind: 'pin4' as LockKind }
-const enabled = ref(mirror.enabled)
-const timeoutMin = ref(mirror.timeout)
-const kind = ref<LockKind>(mirror.kind)
+/**
+ * Детерминированный старт для SSR: сервер и первая гидрация всегда
+ * видят выключенный локер (enabled=false, pin4, 5 мин). Зеркало из
+ * localStorage подтягивается в init() после монтирования, поэтому
+ * кнопка замка в шапке не даёт mismatch. Модульный уровень никогда
+ * не читает localStorage: в Node его нет, а на клиенте чтение при
+ * импорте расходилось бы с серверным HTML.
+ */
+const DEFAULT_MIRROR: { enabled: boolean; timeout: number; kind: LockKind } = {
+  enabled: false,
+  timeout: 5,
+  kind: 'pin4',
+}
+const enabled = ref(DEFAULT_MIRROR.enabled)
+const timeoutMin = ref(DEFAULT_MIRROR.timeout)
+const kind = ref<LockKind>(DEFAULT_MIRROR.kind)
 const locked = ref(false)
 const loading = ref(false)
 const saving = ref(false)
@@ -187,6 +199,16 @@ export function useScreenLock() {
     if (initialized.value) {
       arm()
       return
+    }
+    // Быстрый путь без сети: зеркало из localStorage применяется после
+    // монтирования, а не при импорте модуля — первый рендер клиента
+    // совпадает с SSR (mismatch в шапке исключён), актуальные значения
+    // всё равно придут из load() ниже.
+    if (typeof window !== 'undefined') {
+      const mirror = readMirror()
+      enabled.value = mirror.enabled
+      timeoutMin.value = mirror.timeout
+      kind.value = mirror.kind
     }
     await load()
   }

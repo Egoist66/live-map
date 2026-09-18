@@ -12,7 +12,12 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
  * // isXs.value === true при ширине <= 410px
  */
 export function useViewportBreakpoints() {
-  const width = ref(typeof window !== 'undefined' ? window.innerWidth : 1280)
+  // Детерминированный старт для SSR: сервер и первая гидрация всегда
+  // видят 1280. Реальная ширина подтягивается в onMounted (после
+  // гидрации), поэтому mismatch в ApplicationLogo compact и
+  // responsive-ветках исключён. Один кадр десктопной раскладки на
+  // мобайле после гидрации — штатный реактивный патч без warning.
+  const width = ref(1280)
 
   const updateWidth = (): void => {
     width.value = window.innerWidth

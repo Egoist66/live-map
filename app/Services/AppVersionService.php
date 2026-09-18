@@ -17,10 +17,10 @@ class AppVersionService
      */
     public static function version(): string
     {
-        $fromEnv = (string) env('APP_VERSION', '');
+        $fromConfig = (string) config('app.version', '');
 
-        if ($fromEnv !== '') {
-            return $fromEnv;
+        if ($fromConfig !== '') {
+            return $fromConfig;
         }
 
         $manifest = public_path('build/manifest.json');

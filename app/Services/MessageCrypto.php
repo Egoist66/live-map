@@ -100,7 +100,7 @@ class MessageCrypto
             return self::$cachedKey;
         }
 
-        $configured = (string) config('services.messages_crypto_key', env('MESSAGE_CRYPTO_KEY', ''));
+        $configured = (string) config('services.messages_crypto_key', '');
         $decoded = $configured !== '' ? base64_decode($configured, true) : false;
 
         if (is_string($decoded) && strlen($decoded) === 32) {

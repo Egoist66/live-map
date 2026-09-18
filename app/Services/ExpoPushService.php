@@ -79,7 +79,7 @@ class ExpoPushService
 
         $sent = 0;
         $headers = ['Accept' => 'application/json'];
-        if ($token = (string) config('services.expo.access_token', env('EXPO_ACCESS_TOKEN', ''))) {
+        if ($token = (string) config('services.expo.access_token', '')) {
             if ($token !== '') $headers['Authorization'] = 'Bearer '.$token;
         }
         foreach (array_chunk($tokens, 100) as $chunk) {

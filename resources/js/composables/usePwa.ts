@@ -16,7 +16,10 @@ import type { PwaDisplayMode } from '@/pwa/types'
 
 const needUpdate = ref(false)
 const canInstall = ref(false)
-const online = ref(typeof navigator === 'undefined' ? true : navigator.onLine)
+// Детерминированный старт для SSR: сервер и первая гидрация всегда
+// видят online=true. Реальное значение подтягивается в init()/refresh()
+// после монтирования (иначе офлайн-первый-визит даёт mismatch).
+const online = ref(true)
 const standalone = ref(false)
 const displayMode = ref<PwaDisplayMode>('browser')
 const supported = ref(false)
