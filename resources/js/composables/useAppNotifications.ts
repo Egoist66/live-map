@@ -482,7 +482,6 @@ function handlePinActivity(e: any) {
   if (a.owner_id && uid && Number(a.owner_id) !== uid) return
   const actor = a.actor || {}
   const name = actor.name || 'Кто-то'
-  const actorLink = `/users/${actor.id || a.actor_id || ''}`
   if (a.kind === 'sub_pin') {
     const title = (a.excerpt || a.pin?.title || 'новый пин').toString().slice(0, 60)
     push({
@@ -525,16 +524,6 @@ function handlePinActivity(e: any) {
     return
   }
   if (a.kind === 'sub_level') {
-    push({
-      id: `pin-sub-level-${a.id}-${Date.now()}`,
-      type: 'friend',
-      icon: 'pi pi-star',
-      title: `${name} — репутация изменилась`,
-      body: (a.excerpt || 'Обновление профиля').toString().slice(0, 90),
-      avatar: avatarSrcFor(actor),
-      link: actorLink,
-      createdAt: Date.now(),
-    })
     return
   }
   const pinTitle = a.pin?.title || a.photo?.caption || 'ваша запись'

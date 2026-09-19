@@ -8,7 +8,6 @@ use App\Models\ProfilePhoto;
 use App\Models\User;
 use App\Models\UserBlock;
 use App\Models\UserSubscription;
-use App\Notifications\LevelChangedNotification;
 use App\Notifications\PhotoPublishedNotification;
 use App\Notifications\PinPublishedNotification;
 use Illuminate\Support\Facades\Log;
@@ -56,29 +55,12 @@ class UserSubscriptionNotifier
     }
 
     /**
-     * Уведомить подписчиков о смене репутации / уровня.
-     */
-    public static function levelChanged(User $user, ?int $oldScore, ?string $oldLevel): void
-    {
-        try {
-            $subscriberIds = self::eligibleSubscribers($user->id, 'notify_level');
-            $isLevelUp = $oldLevel !== null && $oldLevel !== (string) $user->level;
-            $excerpt = $isLevelUp
-                ? 'Новый уровень: '.$user->level
-                : 'Репутация: '.(int) $user->reputation_score.' ★';
-            $subscribers = User::whereIn('id', $subscriberIds)->get();
-            foreach ($subscribers as $subscriber) {
-                UserNotifier::send($subscriber, new LevelChangedNotification($user, (int) $subscriber->id, $excerpt));
-            }
-        } catch (\Throwable $e) {
-            Log::warning('user subscription level notify failed', ['error' => $e->getMessage()]);
-        }
-    }
-
-    /**
      * Подписчики с включённым флагом, только друзья и без взаимных блокировок.
      *
-     * @param string $flag notify_pin|notify_photo|notify_level
+     * Репутация/уровень — приватны и подписчикам не рассылаются:
+     * свой итог каждый видит лично в недельном отчёте (rewards.weekly).
+     *
+     * @param string $flag notify_pin|notify_photo
      * @return array<int>
      */
     private static function eligibleSubscribers(int $targetId, string $flag): array

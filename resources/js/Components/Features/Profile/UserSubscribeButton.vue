@@ -22,7 +22,7 @@ const sub = useUserSubscriptions(props.userId, props.initial)
     rounded
     class="!rounded-xl !text-[13px] !font-bold shrink-0"
     :aria-label="sub.subscribed.value ? 'Отписаться от обновлений' : 'Подписаться на обновления'"
-    :title="sub.subscribed.value ? 'Посты, пины, фото, репутация' : 'Посты, пины, фото, репутация'"
+    :title="sub.subscribed.value ? 'Посты, пины, фото' : 'Посты, пины, фото'"
     @click="sub.toggle()"
   />
 </template>

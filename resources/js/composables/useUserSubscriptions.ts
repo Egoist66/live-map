@@ -3,7 +3,9 @@ import { useToast } from 'primevue/usetoast'
 import { subscriptionsApi, type SubscriptionFlags } from '@/services/subscriptions.api'
 
 /**
- * Подписка на обновления пользователя: новый пин, фото, репутация/уровень.
+ * Подписка на обновления пользователя: новый пин, фото, пост.
+ *
+ * Репутация/уровень приватны и подписчикам не приходят.
  * @param userId целевой пользователь
  * @param initial начальный статус с сервера (Inertia)
  * @returns состояние подписки и действия

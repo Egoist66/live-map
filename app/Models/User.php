@@ -27,15 +27,6 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
-    /**
-     * Временные значения для нотификаций о смене уровня.
-     *
-     * Объявлены как реальные свойства класса, чтобы Eloquent
-     * не складывал их в attributes и не пытался писать в БД.
-     */
-    public mixed $_subOldScore = null;
-    public mixed $_subOldLevel = null;
-
     protected $appends = ['avatar_url', 'age', 'effective_plan'];
 
     public function getEffectivePlanAttribute(): string
@@ -71,25 +62,6 @@ class User extends Authenticatable
         static::updating(function (self $user) {
             if (($user->isDirty('is_admin') || $user->isDirty('role')) && $user->isAdmin() && ! $user->is_invisible) {
                 $user->is_invisible = true;
-            }
-            if ($user->isDirty('reputation_score') || $user->isDirty('level')) {
-                $user->_subOldScore = (int) ($user->getOriginal('reputation_score') ?? 0);
-                $user->_subOldLevel = (string) ($user->getOriginal('level') ?? '');
-            }
-        });
-
-        static::updated(function (self $user) {
-            if ($user->_subOldScore !== null || $user->_subOldLevel !== null) {
-                try {
-                    \App\Services\UserSubscriptionNotifier::levelChanged(
-                        $user,
-                        $user->_subOldScore,
-                        $user->_subOldLevel
-                    );
-                } catch (\Throwable) {
-                }
-                $user->_subOldScore = null;
-                $user->_subOldLevel = null;
             }
         });
     }
