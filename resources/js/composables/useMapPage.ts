@@ -62,6 +62,9 @@ export function useMapPage() {
   const pendingGeometry = ref<any | null>(null)
   const createError = ref<string | null>(null)
   let lastDistrictsFetch = 0
+  let districtsInflight = false
+  let districtsBlockedUntil = 0
+  let lastDistrictsBbox: { minLat: number; maxLat: number; minLng: number; maxLng: number } | null = null
 
   /**
    * Визуальная ширина кисти в пикселях SVG-оверлея.
@@ -83,7 +86,12 @@ export function useMapPage() {
   })
 
   /**
-   * Подтянуть UDistrict-заливки в видимом прямоугольнике (троттлинг 0.8с).
+   * Подтянуть UDistrict-заливки в видимом прямоугольнике.
+   *
+   * Троттлинг 3с + пропуск микродвижений bbox: панорамирование карты
+   * иначе засыпает /api/districts и упирается в 429 вместе с пинами
+   * и тиком realtime/sync. Параллельные вызовы схлопываются флагом,
+   * после 429 держим паузу 15с.
    *
    * Первый fetch после открытия карты идёт по стартовому центру,
    * живой GPS прилетает позже и двигает карту — без форса второй
@@ -94,27 +102,78 @@ export function useMapPage() {
    */
   async function fetchDistrictsForView(force = false): Promise<void> {
     const now = Date.now()
-    if (!force && now - lastDistrictsFetch < 800) return
-    lastDistrictsFetch = now
+    if (!force && now < districtsBlockedUntil) {
+      return
+    }
+    if (!force && now - lastDistrictsFetch < 3000) {
+      return
+    }
+    if (districtsInflight) {
+      return
+    }
+    let bbox: { minLat: number; maxLat: number; minLng: number; maxLng: number } | null = null
     try {
       const bounds = (mapApi as any).map?.getBounds?.()
-      if (!bounds) return
-      await districts.store.fetchInBbox({
+      if (!bounds) {
+        return
+      }
+      bbox = {
         minLat: bounds.getSouth(),
         maxLat: bounds.getNorth(),
         minLng: bounds.getWest(),
         maxLng: bounds.getEast(),
-      })
-    } catch {}
+      }
+    } catch {
+      return
+    }
+    if (!force && lastDistrictsBbox && isSameBbox(lastDistrictsBbox, bbox)) {
+      return
+    }
+    districtsInflight = true
+    lastDistrictsFetch = now
+    try {
+      await districts.store.fetchInBbox(bbox)
+      lastDistrictsBbox = bbox
+    } catch (e: any) {
+      if (Number(e?.response?.status) === 429) {
+        districtsBlockedUntil = Date.now() + 15000
+      }
+    } finally {
+      districtsInflight = false
+    }
   }
 
   /**
-   * Начать рисование района кистью (только десктоп).
+   * bbox почти не сдвинулся — новый запрос не нужен.
+   *
+   * @param prev прошлый прямоугольник
+   * @param next новый прямоугольник
+   * @returns true если сдвиг меньше эпсилон
+   */
+  function isSameBbox(
+    prev: { minLat: number; maxLat: number; minLng: number; maxLng: number },
+    next: { minLat: number; maxLat: number; minLng: number; maxLng: number },
+  ): boolean {
+    const eps = 0.002
+    const dLat = Math.abs(prev.minLat - next.minLat) + Math.abs(prev.maxLat - next.maxLat)
+    const dLng = Math.abs(prev.minLng - next.minLng) + Math.abs(prev.maxLng - next.maxLng)
+    return dLat < eps && dLng < eps
+  }
+
+  /**
+   * Начать рисование района кистью с панели инструментов карты.
+   *
+   * Кнопка-палитра возле рефреша сразу вооружает кисть: на десктопе
+   * мазок идёт с зажатым Alt + левая кнопка мыши. На мобилке
+   * рисование недоступно — показываем предупреждение и ничего не открываем.
    */
   function startDistrictPaint(): void {
-    if (districts.canCreate && !districts.canCreate.value) {
-      districts.hubOpen.value = true
-      toast?.add({ severity: 'info', summary: 'Только список', detail: 'На телефоне районы не рисуют — выбери район и кинь заявку', life: 3500 })
+    const canDraw = districts.canCreate?.value ?? true
+    if (!canDraw) {
+      toast?.add({ severity: 'warn', summary: 'Недоступно на телефоне', detail: 'Нарисовать район можно только с компьютера: зажми Alt и веди мышью', life: 3500 })
+      return
+    }
+    if (paint.painting.value) {
       return
     }
     districts.hubOpen.value = false
@@ -122,7 +181,7 @@ export function useMapPage() {
     districts.closeDistrict()
     createError.value = null
     paint.startPainting()
-    toast?.add({ severity: 'info', summary: 'Кисть UDistrict', detail: 'Закрась кусочек или обведи круг — внутри всё зальётся островком', life: 4000 })
+    toast?.add({ severity: 'info', summary: 'Кисть UDistrict', detail: 'Зажми Alt и веди мышью с левой кнопкой — обведи круг, внутри всё зальётся', life: 4000 })
   }
 
   /**
@@ -183,8 +242,17 @@ export function useMapPage() {
 
   /**
    * Догрузка заливок по движению карты (с троттлингом внутри).
+   *
+   * Во время рисования кистью карту не дёргаем запросами: мазки и так
+   * перерисовывают превью на каждый кадр, лишний fetch даёт 429 и рвёт штрих.
    */
   function onDistrictsMoveEnd(): void {
+    if (paint.painting.value) {
+      return
+    }
+    if (typeof document !== 'undefined' && document.hidden) {
+      return
+    }
     void fetchDistrictsForView()
   }
 

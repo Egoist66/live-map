@@ -15,23 +15,40 @@ export const useDistrictsStore = defineStore('districts', () => {
   const error = ref<string | null>(null)
   const saving = ref(false)
 
+  let inflight: Promise<District[]> | null = null
+
   /**
    * Подтянуть районы в прямоугольнике карты.
+   *
+   * Параллельные moveend/zoomend схлопываются в один полёт: иначе
+   * панорамирование плодит дубли /api/districts и ловит 429.
+   * 429 молча пропускаем без ошибки-тоста — следующий тик догрузит.
    *
    * @param bbox видимый прямоугольник
    */
   async function fetchInBbox(bbox: { minLat: number; maxLat: number; minLng: number; maxLng: number }): Promise<District[]> {
+    if (inflight) {
+      return inflight
+    }
     loading.value = true
     error.value = null
-    try {
-      districts.value = await districtsApi.list(bbox)
-      return districts.value
-    } catch (e: any) {
-      error.value = e?.response?.data?.message ?? 'Не удалось загрузить районы'
-      return districts.value
-    } finally {
-      loading.value = false
-    }
+    inflight = districtsApi
+      .list(bbox)
+      .then((rows) => {
+        districts.value = rows
+        return districts.value
+      })
+      .catch((e: any) => {
+        if (Number(e?.response?.status) !== 429) {
+          error.value = e?.response?.data?.message ?? 'Не удалось загрузить районы'
+        }
+        return districts.value
+      })
+      .finally(() => {
+        inflight = null
+        loading.value = false
+      })
+    return inflight
   }
 
   /**

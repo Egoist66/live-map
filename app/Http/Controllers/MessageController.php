@@ -32,12 +32,9 @@ class MessageController extends Controller
         $collection = $q->limit($limit + 1)->get();
         $hasMore = $collection->count() > $limit;
         $collection = $collection->take($limit);
-        $undelivered = $collection->where('sender_id','!=',$request->user()->id)->whereNull('delivered_at')->pluck('id');
-        if($undelivered->isNotEmpty()){
-            Message::whereIn('id',$undelivered)->update(['delivered_at'=>now()]);
-            $collection->each(function($m) use ($undelivered){ if($undelivered->contains($m->id)) $m->delivered_at = now(); });
-            try{ broadcast(new \App\Events\MessageDelivered($conversation->id,$undelivered->toArray(),$request->user()->id))->toOthers(); }catch(\Throwable $e){ \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
-        }
+        // Доставку отмечает отдельный POST /conversations/{id}/delivered
+        // (фронт шлёт его сам) — из чтения истории write и broadcast убраны,
+        // чтобы открытие чата не блокировалось на UPDATE + Reverb.
         $messages = $collection->reverse()->values()->map->toArrayPayload();
         return response()->json(['data' => $messages, 'has_more' => $hasMore]);
     }

@@ -27,6 +27,10 @@ export const useBadgeStore = defineStore('badges', () => {
   let lastRequestAt = 0
   let lastPollTickAt = 0
   let suppressUntil = 0
+  let lastFetchAt = 0
+  let fetchBlockedUntil = 0
+  const FETCH_MIN_INTERVAL = 15000
+  const FETCH_BLOCK_AFTER_429 = 20000
 
   function getUid(): number {
     try {
@@ -47,12 +51,20 @@ export const useBadgeStore = defineStore('badges', () => {
    *
    * В polling-режиме тик идёт каждые ~2.5с и привозит готовые
    * badges:update — зеркальные user:*-события поллера не должны
-   * устраивать тяжёлый fetch() на каждый тик, пропускаем их.
+   * устраивать тяжёлый fetch() из 6 параллельных запросов на каждый
+   * тик, иначе общий throttle:120,1 уходит в 429 при движении карты.
    */
   function scheduleFetch() {
-    if (fetchTimer) return
-    if (Date.now() - lastPollTickAt < 8000) return
-    fetchTimer = setTimeout(() => { fetchTimer = null; fetch() }, 400)
+    if (fetchTimer) {
+      return
+    }
+    if (Date.now() - lastPollTickAt < 30000) {
+      return
+    }
+    fetchTimer = setTimeout(() => {
+      fetchTimer = null
+      void fetch()
+    }, 1500)
   }
 
   function handleIncomingMessage(e: any) {
@@ -72,7 +84,24 @@ export const useBadgeStore = defineStore('badges', () => {
     } catch { return false }
   }
 
-  async function fetch() {
+  /**
+   * Затянуть счётчики бейджей одним пакетом.
+   *
+   * Шесть параллельных запросов разом — главный кандидат на 429 рядом
+   * с тиком realtime/sync и догрузкой карты. Не чаще раза в 15с, после
+   * 429 молчим 20с: свежие цифры всё равно привозит badges:update тика.
+   *
+   * @param force игнорировать минимальный интервал (первая загрузка)
+   */
+  async function fetch(force = false) {
+    const now = Date.now()
+    if (!force && now < fetchBlockedUntil) {
+      return
+    }
+    if (!force && now - lastFetchAt < FETCH_MIN_INTERVAL) {
+      return
+    }
+    lastFetchAt = now
     try {
       const w = window as any
       const convsPromise = w.__conversationsInflight ? w.__conversationsInflight : chatApi.conversations().catch(() => [] as any[])
@@ -82,7 +111,7 @@ export const useBadgeStore = defineStore('badges', () => {
       const updPromise = readIsAdmin()
         ? Promise.resolve(0)
         : api.get('/api/updates/unread').then((r) => Number(r.data?.count ?? 0)).catch(() => 0)
-      const [convs, fr, ac, rep, upd, sec] = await Promise.all([
+      const results = await Promise.allSettled([
         convsPromise,
         chatApi.friendships().catch(() => ({ pending_in: [] } as any)),
         notificationsApi.unreadCount().then((r) => r.total).catch(() => 0),
@@ -90,6 +119,25 @@ export const useBadgeStore = defineStore('badges', () => {
         updPromise,
         api.get('/api/security/impersonations').then((r) => Number(r.data?.unread ?? 0)).catch(() => 0),
       ])
+      const valueOf = (index: number, fallback: unknown) => {
+        const settled = results[index]
+        if (settled.status !== 'fulfilled') {
+          return fallback
+        }
+        return settled.value
+      }
+      const convs = valueOf(0, [])
+      const fr = valueOf(1, { pending_in: [] })
+      const ac = valueOf(2, 0)
+      const rep = valueOf(3, 0)
+      const upd = valueOf(4, 0)
+      const sec = valueOf(5, 0)
+      const throttled = results.some(
+        (r) => r.status === 'rejected' && Number((r.reason as any)?.response?.status) === 429,
+      )
+      if (throttled) {
+        fetchBlockedUntil = Date.now() + FETCH_BLOCK_AFTER_429
+      }
       unread.value = (convs as any[]).filter((c: any) => Number(c?.unread_count || 0) > 0).length
       unreadMessages.value = (convs as any[]).reduce((s: number, c: any) => s + (Number(c?.unread_count) || 0), 0)
       pending.value = (fr.pending_in?.length || 0)
@@ -159,11 +207,18 @@ export const useBadgeStore = defineStore('badges', () => {
   function incReports() { noteMutation(); reports.value += 1 }
   function decReports() { noteMutation(); reports.value = Math.max(0, reports.value - 1) }
 
+  /**
+   * Перезагрузка по возврату во вкладку, но не чаще интервала fetch.
+   */
+  function onWindowFocus(): void {
+    void fetch()
+  }
+
   async function init() {
     if (inited) return
     inited = true
     loading.value = true
-    await fetch()
+    await fetch(true)
     subscribe()
     try {
       busOn('badges:update', (b: any) => applyPollBadges(b))
@@ -173,7 +228,7 @@ export const useBadgeStore = defineStore('badges', () => {
       })
     } catch {}
     loading.value = false
-    window.addEventListener('focus', fetch)
+    window.addEventListener('focus', onWindowFocus)
   }
 
   /**
@@ -194,7 +249,7 @@ export const useBadgeStore = defineStore('badges', () => {
     if (b.reports_pending != null) setReports(Number(b.reports_pending))
   }
 
-  function refresh() { return fetch() }
+  function refresh() { return fetch(true) }
 
   /**
    * Сбросить бейджи при смене аккаунта.

@@ -26,6 +26,15 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\SecurityHeaders::class,
         ]);
 
+        // Gzip текстовых ответов (JSON/Inertia/HTML): жмёт поллинг карты и чата.
+        // Бинарное, стримы и редиректы middleware пропускает сам.
+        $middleware->append(\App\Http\Middleware\CompressResponse::class);
+
+        // ETag/304 для GET /api/* + публичный кэш справочников (version/nbrb/reference).
+        $middleware->api(append: [
+            \App\Http\Middleware\CacheApiResponses::class,
+        ]);
+
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
             'moderator' => \App\Http\Middleware\AdminMiddleware::class.':moderator',

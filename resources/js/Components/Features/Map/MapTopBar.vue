@@ -6,7 +6,7 @@ import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import { useFilterDialog } from '@/composables/useFilterDialog'
 
-const props = defineProps<{ count: number; loading: boolean; refreshing?: boolean; categories: any[]; selectedCategory: any }>()
+const props = defineProps<{ count: number; loading: boolean; refreshing?: boolean; categories: any[]; selectedCategory: any; canDrawDistrict?: boolean }>()
 const emit = defineEmits<{ (e: 'update:category', v: any): void; (e: 'info'): void; (e: 'mine'): void; (e: 'refresh'): void; (e: 'districts'): void }>()
 
 const dlg = useFilterDialog()
@@ -36,7 +36,7 @@ const iconOff = 'bg-white dark:bg-white/10 shadow-sm border border-stone-200/60 
         <Tag @click="emit('info')" :value="String(count)" severity="contrast" rounded class="shrink-0 ml-auto !bg-ink-900 dark:!bg-white !text-white dark:!text-ink-900 !shadow-soft cursor-pointer hover:opacity-90 !text-sm min-[411px]:!text-base !font-black !px-3 min-[411px]:!px-4 !py-1.5 min-[411px]:!py-2">
           <template #icon><i v-if="loading" class="pi pi-spin pi-spinner text-white dark:text-ink-900"></i><span v-else class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse inline-block"></span></template>
         </Tag>
-        <Button icon="pi pi-th-large" rounded text size="small" title="UDistrict — свои районы" aria-label="UDistrict — свои районы" class="shrink-0 !w-[32px] !h-[32px] min-[411px]:!w-[34px] min-[411px]:!h-[34px] !p-0 !text-violet-700 dark:!text-violet-300" @click="emit('districts')" />
+        <Button icon="pi pi-palette" rounded text size="small" :disabled="!(canDrawDistrict ?? true)" :title="(canDrawDistrict ?? true) ? 'Нарисовать район (зажми Alt и веди мышью с левой кнопкой)' : 'Рисование районов недоступно на телефоне'" :aria-label="(canDrawDistrict ?? true) ? 'Нарисовать район' : 'Рисование районов недоступно на телефоне'" class="shrink-0 !w-[32px] !h-[32px] min-[411px]:!w-[34px] min-[411px]:!h-[34px] !p-0 !text-violet-700 dark:!text-violet-300 disabled:!opacity-40" @click="emit('districts')" />
         <Button icon="pi pi-refresh" rounded text size="small" :loading="!!refreshing" title="Обновить карту" aria-label="Обновить карту" class="shrink-0 !w-[32px] !h-[32px] min-[411px]:!w-[34px] min-[411px]:!h-[34px] !p-0" @click="emit('refresh')" />
       </div>
     </template>
