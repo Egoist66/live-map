@@ -21,7 +21,8 @@ export interface PhotoZoomOptions {
  *
  * Жесты: pinch двумя пальцами (с фокусом под пальцами), перетаскивание
  * увеличенного фото, колесо мыши на десктопе, двойной тап/клик (1x ↔ крупный),
- * свайп при масштабе 1 для листания. Кнопки `zoomIn/zoomOut/toggle` — для UI.
+ * свайп при масштабе 1 для листания (палец на таче, drag левой кнопкой мыши
+ * на десктопе). Кнопки `zoomIn/zoomOut/toggle` — для UI.
  * Всё состояние и жесты живут здесь, компонент только биндит `imgStyle`.
  *
  * @param stage элемент-сцена, на который вешаются слушатели жестов
@@ -295,12 +296,75 @@ export function usePhotoZoom(stage: Ref<HTMLElement | null>, options: PhotoZoomO
     clampTranslate()
   }
 
+  let mouseDown = false
+  let mouseStartX = 0
+  let mouseStartY = 0
+  let mouseBaseX = 0
+  let mouseBaseY = 0
+
+  /**
+   * Начало drag мышью: при масштабе 1 тянем кадр к свайпу,
+   * при зуме — панорамируем увеличенное фото.
+   */
+  function onMouseDown(event: MouseEvent): void {
+    if (event.button !== 0) {
+      return
+    }
+    mouseDown = true
+    mouseStartX = event.clientX
+    mouseStartY = event.clientY
+    mouseBaseX = translateX.value
+    mouseBaseY = translateY.value
+    gesturing.value = true
+  }
+
+  /**
+   * Drag мышью: живое смещение кадра за курсором.
+   */
+  function onMouseMove(event: MouseEvent): void {
+    if (!mouseDown) {
+      return
+    }
+    const shiftX = event.clientX - mouseStartX
+    const shiftY = event.clientY - mouseStartY
+    if (scale.value <= 1) {
+      translateX.value = mouseBaseX + shiftX
+      translateY.value = 0
+      return
+    }
+    translateX.value = mouseBaseX + shiftX
+    translateY.value = mouseBaseY + shiftY
+    clampTranslate()
+  }
+
+  /**
+   * Конец drag мышью: при масштабе 1 — свайп листания, иначе — кламп пана.
+   */
+  function onMouseUp(event: MouseEvent): void {
+    if (!mouseDown) {
+      return
+    }
+    mouseDown = false
+    gesturing.value = false
+    const shiftX = event.clientX - mouseStartX
+    const shiftY = event.clientY - mouseStartY
+    if (scale.value <= 1) {
+      fireSwipe(shiftX, shiftY)
+      reset()
+      return
+    }
+    clampTranslate()
+  }
+
   function attach(el: HTMLElement): void {
     el.addEventListener('touchstart', onTouchStart, { passive: true })
     el.addEventListener('touchmove', onTouchMove, { passive: false })
     el.addEventListener('touchend', onTouchEnd)
     el.addEventListener('touchcancel', onTouchEnd)
     el.addEventListener('wheel', onWheel, { passive: false })
+    el.addEventListener('mousedown', onMouseDown)
+    window.addEventListener('mousemove', onMouseMove)
+    window.addEventListener('mouseup', onMouseUp)
   }
 
   function detach(el: HTMLElement): void {
@@ -309,6 +373,9 @@ export function usePhotoZoom(stage: Ref<HTMLElement | null>, options: PhotoZoomO
     el.removeEventListener('touchend', onTouchEnd)
     el.removeEventListener('touchcancel', onTouchEnd)
     el.removeEventListener('wheel', onWheel)
+    el.removeEventListener('mousedown', onMouseDown)
+    window.removeEventListener('mousemove', onMouseMove)
+    window.removeEventListener('mouseup', onMouseUp)
   }
 
   let attachedEl: HTMLElement | null = null

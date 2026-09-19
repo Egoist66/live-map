@@ -60,7 +60,7 @@ watch(
           <Button icon="pi pi-search-plus" text rounded class="!text-white/90 !w-10 !h-10" aria-label="Приблизить" @click="zoom.zoomIn()" />
           <Button icon="pi pi-times" text rounded class="!text-white/90 !w-10 !h-10" aria-label="Закрыть" @click="emit('close')" />
         </div>
-        <div ref="stageRef" class="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden touch-none select-none">
+        <div ref="stageRef" class="relative flex min-h-0 flex-1 cursor-grab items-center justify-center overflow-hidden touch-none select-none active:cursor-grabbing">
           <img
             :key="current.src"
             :src="current.src"
@@ -75,7 +75,7 @@ watch(
             icon="pi pi-chevron-left"
             rounded
             text
-            class="!absolute left-1.5 top-1/2 -translate-y-1/2 !bg-black/40 !text-white !border-0 !w-10 !h-10"
+            class="!absolute left-1.5 top-1/2 !hidden -translate-y-1/2 !bg-black/40 !text-white !border-0 !w-10 !h-10 sm:!inline-flex"
             aria-label="Назад"
             @click="goPrev()"
           />
@@ -84,10 +84,21 @@ watch(
             icon="pi pi-chevron-right"
             rounded
             text
-            class="!absolute right-1.5 top-1/2 -translate-y-1/2 !bg-black/40 !text-white !border-0 !w-10 !h-10"
+            class="!absolute right-1.5 top-1/2 !hidden -translate-y-1/2 !bg-black/40 !text-white !border-0 !w-10 !h-10 sm:!inline-flex"
             aria-label="Вперёд"
             @click="goNext()"
           />
+          <div v-if="hasMany" class="absolute bottom-3 left-1/2 z-10 inline-flex max-w-[calc(100%-1rem)] -translate-x-1/2 flex-nowrap items-center gap-1.5 overflow-hidden rounded-full bg-black/55 px-3 py-1.5 backdrop-blur-sm">
+            <button
+              v-for="(photo, i) in photos"
+              :key="photo.src"
+              type="button"
+              :aria-label="`Слайд ${i + 1}`"
+              :aria-current="i === index ? 'true' : undefined"
+              :class="['h-[6px] w-[6px] shrink-0 rounded-full !min-h-0 !min-w-0 !border-0 !p-0 transition-colors duration-200', i === index ? 'scale-110 bg-white' : 'bg-white/40 hover:bg-white/75']"
+              @click="emit('update:index', i)"
+            />
+          </div>
         </div>
         <p v-if="current.alt" class="shrink-0 truncate px-4 pb-[max(0.75rem,var(--sab))] pt-2 text-center text-[13px] text-white/70">{{ current.alt }}</p>
       </div>

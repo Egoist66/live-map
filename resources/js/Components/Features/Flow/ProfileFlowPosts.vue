@@ -48,11 +48,19 @@ function goAuthorPosts(): void {
 }
 
 /**
+ * Хэштег из поста профиля — в общую ленту с фильтром.
+ * @param name имя тега без #
+ */
+function goTag(name: string): void {
+  router.visit(`${route('flow')}?tag=${encodeURIComponent(name)}`)
+}
+
+/**
  * Редактировать пост прямо на странице профиля.
  * @param post пост
  */
 function openEdit(post: FlowPost): void {
-  editor.startEdit(post.id, post.title, post.body, post.is_anonymous, post.image_url ?? null)
+  editor.startEdit(post)
   editOpen.value = true
 }
 
@@ -80,6 +88,7 @@ onMounted(() => feed.init())
         @like="feed.toggleLike($event)"
         @edit="openEdit($event)"
         @delete="feed.askDelete($event)"
+        @tag="goTag($event)"
       />
       <div v-if="hiddenCount > 0 && previewModal" class="flex justify-center">
         <Button :label="`Показать ещё · ${hiddenCount}`" icon="pi pi-chevron-down" rounded outlined size="small" @click="openAll()" />
@@ -98,6 +107,7 @@ onMounted(() => feed.init())
           @like="feed.toggleLike($event)"
           @edit="openEdit($event)"
           @delete="feed.askDelete($event)"
+          @tag="goTag($event)"
         />
         <InfiniteSentinel :sentinel="allSentinel" :has-more="feed.store.page < feed.store.lastPage" :loading="feed.store.loadingMore" end-text="Это все посты" />
       </div>

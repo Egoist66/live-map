@@ -8,6 +8,7 @@ use App\Events\TypingIndicator;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\User;
+use App\Services\ActivityRewards;
 use App\Services\ChatAttachment;
 use App\Services\WebPushService;
 use Illuminate\Http\Request;
@@ -123,7 +124,18 @@ class MessageController extends Controller
         $conversation->participantRows()->whereNotNull('hidden_at')->update(['hidden_at'=>null]);
         try{ broadcast(new MessageSent($msg))->toOthers(); }catch(\Throwable $e){ \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
         $this->pushToRecipients($conversation, $sender, $msg);
-        return response()->json($msg->toArrayPayload(),201);
+        $payload = $msg->toArrayPayload();
+        $senderModel = $sender instanceof User ? $sender : User::find($sender->id);
+
+        if ($senderModel) {
+            $reward = ActivityRewards::award($senderModel, 'chat_message');
+
+            if ($reward !== null) {
+                $payload['reward'] = $reward;
+            }
+        }
+
+        return response()->json($payload,201);
     }
 
     private function pushToRecipients(Conversation $conversation, $sender, Message $msg): void

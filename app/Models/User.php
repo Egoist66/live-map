@@ -12,7 +12,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['name', 'email', 'password', 'gender', 'birth_date', 'country', 'country_code', 'plan', 'latitude', 'longitude', 'role', 'is_admin', 'is_hidden_from_search', 'dating_enabled', 'dating_goal', 'signup_goal', 'default_mode', 'default_mode_set_at', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_gender_pref', 'dating_hide_name', 'dating_hide_age', 'dating_match_only', 'random_chats_used', 'random_chats_month', 'avatar_path', 'home_lat', 'home_lng', 'home_city', 'home_address', 'home_visibility', 'home_show_exact', 'home_radius_km', 'bio', 'thought', 'reputation_score', 'level', 'quest_cooldown_until', 'quest_last_track', 'quest_granted_at', 'is_anonymous_default', 'default_location_precision', 'default_blur_meters', 'message_privacy', 'allow_random_messages', 'photo_comments_privacy', 'settings', 'last_seen_at', 'is_invisible', 'screen_lock_code', 'screen_lock_timeout', 'screen_lock_kind', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at', 'terms_accepted_at', 'terms_version'])]
+#[Fillable(['name', 'email', 'password', 'gender', 'birth_date', 'country', 'country_code', 'plan', 'latitude', 'longitude', 'role', 'is_admin', 'is_hidden_from_search', 'dating_enabled', 'dating_goal', 'signup_goal', 'default_mode', 'default_mode_set_at', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_gender_pref', 'dating_hide_name', 'dating_hide_age', 'dating_match_only', 'random_chats_used', 'random_chats_month', 'avatar_path', 'home_lat', 'home_lng', 'home_city', 'home_address', 'home_visibility', 'home_show_exact', 'home_radius_km', 'bio', 'thought', 'reputation_score', 'level', 'quest_cooldown_until', 'quest_last_track', 'quest_granted_at', 'is_anonymous_default', 'default_location_precision', 'default_blur_meters', 'message_privacy', 'allow_random_messages', 'photo_comments_privacy', 'flow_comments_privacy', 'settings', 'last_seen_at', 'is_invisible', 'screen_lock_code', 'screen_lock_timeout', 'screen_lock_kind', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at', 'terms_accepted_at', 'terms_version'])]
 #[Hidden(['password', 'remember_token', 'screen_lock_code'])]
 /**
  * Пользователь приложения.
@@ -438,6 +438,25 @@ class User extends Authenticatable
     {
         if ($this->id === $owner->id || $this->isAdmin()) return true;
         return match ($owner->photo_comments_privacy ?? 'everyone') {
+            'everyone' => true,
+            'friends' => Friendship::areFriends($this->id, $owner->id),
+            'none' => false,
+            default => true,
+        };
+    }
+
+    /**
+     * Может ли смотрящий комментировать посты автора в UFlow.
+     *
+     * Свои посты и админ — всегда, остальные по настройке автора
+     * flow_comments_privacy: everyone|friends|none (как у фото).
+     *
+     * @param User $owner автор поста
+     */
+    public function canCommentFlowPost(User $owner): bool
+    {
+        if ($this->id === $owner->id || $this->isAdmin()) return true;
+        return match ($owner->flow_comments_privacy ?? 'everyone') {
             'everyone' => true,
             'friends' => Friendship::areFriends($this->id, $owner->id),
             'none' => false,

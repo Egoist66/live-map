@@ -27,9 +27,29 @@ export interface QuestTrack {
   quests: QuestItem[]
 }
 
+export interface RatingCatalogAction {
+  code: string
+  points: number
+  weekly_cap: number
+  label: string
+}
+
+export interface WeeklyActionProgress extends RatingCatalogAction {
+  used: number
+  earned: number
+}
+
+export interface WeeklyProgress {
+  week_key: string
+  total_earned: number
+  actions: WeeklyActionProgress[]
+}
+
 export interface QuestState {
   cycle_key: string
   rating: any
+  rating_catalog: RatingCatalogAction[]
+  weekly: WeeklyProgress
   tracks: Record<'pins' | 'swipes', QuestTrack>
   can_claim: Record<'pins' | 'swipes', { allowed: boolean; reason: string | null }>
   cooldown_until: string | null

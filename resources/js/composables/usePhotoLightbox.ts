@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import type { FlowMedia } from '@/types/flow'
 
 /**
  * Фото для полноэкранного лайтбокса.
@@ -56,11 +57,32 @@ export function usePhotoLightbox() {
   }
 
   /**
+   * Открыть медиа поста со слайда: в лайтбоксе листаются только фото,
+   * видео смотрится в ленте (там контролы).
+   *
+   * @param media весь набор слайдов поста
+   * @param slideIndex индекс слайда, по которому кликнули
+   * @param alt подпись
+   */
+  function openFlowMedia(media: FlowMedia[], slideIndex = 0, alt = 'Фото поста'): void {
+    const rows = Array.isArray(media) ? media : []
+    const items = rows
+      .filter((m) => m?.kind === 'photo' && m?.url)
+      .map((m) => ({ src: String(m.url), alt }))
+    if (!items.length) {
+      return
+    }
+    const clickedUrl = String(rows[slideIndex]?.url ?? '')
+    const startIndex = items.findIndex((item) => item.src === clickedUrl)
+    openPhotos(items, startIndex === -1 ? 0 : startIndex)
+  }
+
+  /**
    * Закрыть просмотр.
    */
   function close(): void {
     open.value = false
   }
 
-  return { photos, index, open, openPhotos, openSingle, close }
+  return { photos, index, open, openPhotos, openSingle, openFlowMedia, close }
 }

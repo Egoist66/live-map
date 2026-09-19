@@ -90,9 +90,9 @@ function replyPreview(message: any): string {
         <div id="chat-messages" class="relative z-10 h-full overflow-auto overscroll-contain [scrollbar-width:thin] max-lg:[-ms-overflow-style:none] max-lg:[scrollbar-width:none] max-lg:[&::-webkit-scrollbar]:hidden p-3 lg:p-4 min-w-0 w-full max-w-full bg-transparent">
         <div class="min-h-full">
         <div :ref="historyTopSentinel as any" aria-hidden="true" class="h-px w-full" />
-        <div v-if="historyLoading" class="flex justify-center py-3"><span class="w-5 h-5 border-2 border-violet-200 border-t-violet-600 rounded-full animate-spin"></span></div>
-        <div v-else-if="historyHasMore && (messages || []).length" class="py-2 text-center text-[11px] text-stone-400">Потяни вверх — подгрузим старше</div>
         <div v-if="loading" class="flex justify-center py-6"><span class="w-6 h-6 border-2 border-violet-200 border-t-violet-600 rounded-full animate-spin"></span></div>
+        <div v-else-if="historyLoading" class="flex justify-center py-3"><span class="w-5 h-5 border-2 border-violet-200 border-t-violet-600 rounded-full animate-spin"></span></div>
+        <div v-else-if="historyHasMore && (messages || []).length" class="py-2 text-center text-[11px] text-stone-400">Потяни вверх — подгрузим старше</div>
         <div v-else-if="!(messages || []).length" class="h-full grid place-items-center text-stone-400 text-sm text-center"><div><div class="text-3xl mb-2">✉️</div><div>Пока пусто — напишите первым</div></div></div>
         <template v-for="m in (messages || [])" :key="m?.id">
           <div v-if="m" :id="`msg-${m.id}`" class="pb-2.5">

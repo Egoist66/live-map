@@ -12,3 +12,4 @@ Schedule::command('pins:publish')->everyMinute();
 Schedule::command('pins:prune')->everyFiveMinutes();
 Schedule::command('plans:downgrade-expired')->daily();
 Schedule::command('chat:prune-attachments')->daily();
+Schedule::command('rewards:weekly-recap')->weeklyOn(1, '9:00');

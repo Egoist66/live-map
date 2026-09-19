@@ -6,6 +6,7 @@ use App\Events\DistrictUpdated;
 use App\Models\District;
 use App\Models\DistrictPost;
 use App\Models\DistrictPostComment;
+use App\Services\ActivityRewards;
 use App\Services\ContentModeration;
 use App\Services\DistrictNotifier;
 use Illuminate\Http\Request;
@@ -154,7 +155,14 @@ class DistrictPostCommentController extends Controller
 
         DistrictNotifier::postCommented($post->refresh(), $viewer, $comment->refresh());
 
-        return response()->json($this->serialize($comment->refresh(), $viewer), 201);
+        $payload = $this->serialize($comment->refresh(), $viewer);
+        $reward = ActivityRewards::award($viewer, 'district_comment', 'district_post', $post->id);
+
+        if ($reward !== null) {
+            $payload['reward'] = $reward;
+        }
+
+        return response()->json($payload, 201);
     }
 
     /**

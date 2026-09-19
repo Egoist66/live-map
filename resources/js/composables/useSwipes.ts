@@ -5,6 +5,7 @@ import { datingApi } from '@/services/dating.api'
 import { busOn } from '@/services/realtime-bus'
 import { ensureUserChannel } from '@/composables/useUserChannel'
 import { pokeRealtime } from '@/composables/useRealtimePoller'
+import { useRewardToast } from '@/composables/useRewardToast'
 import type { ActiveCard, SwipeCard, SwipeFilters, SwipeQuota } from '@/services/dating.api'
 
 /** Лимит радиуса «рядом» для Free, км. PRO — безлимит. */
@@ -49,6 +50,7 @@ export function swipeTabPath(tab: SwipeTab): string {
  * @returns состояние ленты и действия свайпов
  */
 export function useSwipes() {
+  const rewards = useRewardToast()
   const cards = ref<SwipeCard[]>([])
   const index = ref(0)
   const matches = ref<Array<{ match_id: number; conversation_id: number | null; user: { id: number; name: string; avatar_url: string | null } }>>([])
@@ -705,6 +707,7 @@ export function useSwipes() {
       await waitFrame(360)
       const res = await pending
       quota.value = res.quota
+      rewards.applyReward(res)
       if (res.matched) {
         matchedCard.value = card
         matchedConversationId.value = res.conversation_id
@@ -976,6 +979,7 @@ export function useSwipes() {
     try {
       const res = await datingApi.act(userId, 'like', false)
       quota.value = res.quota
+      rewards.applyReward(res)
       if (res.matched) {
         await loadMatches()
         await loadAdmirers()

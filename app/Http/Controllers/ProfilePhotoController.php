@@ -8,6 +8,7 @@ use App\Models\ProfilePhotoComment;
 use App\Models\ProfilePhotoLike;
 use App\Models\User;
 use App\Models\UserBlock;
+use App\Services\ActivityRewards;
 use App\Services\ContentModeration;
 use App\Services\ImageOptimizer;
 use App\Services\Mentions;
@@ -90,7 +91,14 @@ class ProfilePhotoController extends Controller
             \App\Services\UserSubscriptionNotifier::photoCreated($fresh);
         } catch (\Throwable) {
         }
-        return response()->json($this->serialize($fresh, $user), 201);
+        $payload = $this->serialize($fresh, $user);
+        $reward = ActivityRewards::award($user, 'photo_upload', 'profile_photo', (int) $photo->id);
+
+        if ($reward !== null) {
+            $payload['reward'] = $reward;
+        }
+
+        return response()->json($payload, 201);
     }
 
     public function update(Request $request, ProfilePhoto $photo)
@@ -140,7 +148,25 @@ class ProfilePhotoController extends Controller
         ProfilePhotoLike::create(['photo_id' => $photo->id, 'user_id' => $viewer->id, 'is_incognito' => $incognito]);
         $photo->increment('likes_count');
         PinActivityNotifier::photoLiked($photo->refresh(), $viewer);
-        return response()->json(['liked' => true, 'likes_count' => (int) $photo->refresh()->likes_count, 'is_incognito' => $incognito]);
+
+        $response = ['liked' => true, 'likes_count' => (int) $photo->refresh()->likes_count, 'is_incognito' => $incognito];
+        $isSelfLike = (int) $viewer->id === (int) $photo->user_id;
+
+        if (! $isSelfLike) {
+            $reward = ActivityRewards::award($viewer, 'photo_like', 'profile_photo', $photo->id);
+
+            if ($reward !== null) {
+                $response['reward'] = $reward;
+            }
+
+            $owner = $photo->user;
+
+            if ($owner && (int) $owner->id !== (int) $viewer->id) {
+                ActivityRewards::award($owner, 'photo_liked', 'profile_photo', $photo->id, (string) $viewer->id);
+            }
+        }
+
+        return response()->json($response);
     }
 
     /**

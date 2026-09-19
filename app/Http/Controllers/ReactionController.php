@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Pin;
 use App\Models\PinComment;
 use App\Models\Reaction;
+use App\Services\ActivityRewards;
 use App\Services\PinActivityNotifier;
 use Illuminate\Http\Request;
 
@@ -94,6 +95,17 @@ class ReactionController extends Controller
             PinActivityNotifier::reaction($model, $request->user(), $data['type']);
             $model->refresh();
         }
-        return response()->json(['reacted' => true, 'type' => $data['type'], 'reactions_count' => $model->reactions_count ?? 0, 'likes_count' => $model->likes_count ?? 0]);
+        $response = ['reacted' => true, 'type' => $data['type'], 'reactions_count' => $model->reactions_count ?? 0, 'likes_count' => $model->likes_count ?? 0];
+        $ownerId = (int) ($model->user_id ?? 0);
+
+        if ($ownerId !== (int) $request->user()->id) {
+            $reward = ActivityRewards::award($request->user(), 'pin_reaction', $data['reactable_type'], (int) $data['reactable_id']);
+
+            if ($reward !== null) {
+                $response['reward'] = $reward;
+            }
+        }
+
+        return response()->json($response);
     }
 }

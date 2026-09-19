@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import Message from 'primevue/message'
@@ -12,11 +12,13 @@ import TabPanel from 'primevue/tabpanel'
 import Skeleton from 'primevue/skeleton'
 import QuestRankBar from '@/Components/Features/Quests/QuestRankBar.vue'
 import QuestCard from '@/Components/Features/Quests/QuestCard.vue'
+import QuestRatingTab from '@/Components/Features/Quests/QuestRatingTab.vue'
 import QuestPremiumModal from '@/Components/Features/Quests/QuestPremiumModal.vue'
 import { useQuests } from '@/composables/useQuests'
 
 const emit = defineEmits<{ (e: 'billing'): void }>()
 const q = useQuests()
+const section = ref<'tasks' | 'rating'>('tasks')
 
 onMounted(async () => {
   await q.init()
@@ -33,6 +35,14 @@ onMounted(async () => {
     <Message v-if="q.store.error" severity="error" :closable="false" class="!rounded-2xl">{{ q.store.error }}</Message>
 
     <template v-if="q.store.state">
+      <div class="flex gap-2">
+        <button type="button" :class="['flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-bold border', section === 'tasks' ? '!bg-ink-900 !text-white !border-ink-900 dark:!bg-white dark:!text-ink-900 dark:!border-white' : 'bg-white text-stone-600 border-stone-200 dark:bg-zinc-900 dark:text-zinc-300 dark:border-zinc-800']" @click="section = 'tasks'"><i class="pi pi-trophy text-xs" />Задания</button>
+        <button type="button" :class="['flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-bold border', section === 'rating' ? '!bg-ink-900 !text-white !border-ink-900 dark:!bg-white dark:!text-ink-900 dark:!border-white' : 'bg-white text-stone-600 border-stone-200 dark:bg-zinc-900 dark:text-zinc-300 dark:border-zinc-800']" @click="section = 'rating'"><i class="pi pi-star text-xs" />Система рейтинга</button>
+      </div>
+
+      <QuestRatingTab v-if="section === 'rating'" />
+
+      <template v-if="section === 'tasks'">
       <Message v-if="q.store.onCooldown" severity="warn" :closable="false" class="!rounded-2xl">
         🎉 PRO активен/недавно получен. Следующие задания — через {{ q.store.state.cooldown_days_left }} дн. Хочешь PRO раньше — купи в тарифе.
         <Button label="К тарифу" link size="small" @click="emit('billing')" />
@@ -72,6 +82,7 @@ onMounted(async () => {
       <div class="text-center">
         <Button label="Обновить прогресс" icon="pi pi-refresh" text size="small" :loading="q.store.loading" @click="q.store.refresh()" />
       </div>
+      </template>
     </template>
 
     <QuestPremiumModal :granted="q.store.justGranted" :premium-days="q.store.state?.premium_days ?? 7" @close="q.store.closeGranted()" @billing="emit('billing')" />

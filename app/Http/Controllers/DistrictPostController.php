@@ -6,6 +6,7 @@ use App\Events\DistrictUpdated;
 use App\Models\District;
 use App\Models\DistrictPost;
 use App\Models\DistrictPostLike;
+use App\Services\ActivityRewards;
 use App\Services\ContentModeration;
 use App\Services\DistrictNotifier;
 use App\Services\ImageOptimizer;
@@ -172,7 +173,14 @@ class DistrictPostController extends Controller
         } catch (\Throwable) {
         }
 
-        return response()->json($this->serialize($post->refresh(), $user), 201);
+        $payload = $this->serialize($post->refresh(), $user);
+        $reward = ActivityRewards::award($user, 'district_post', 'district_post', $post->id);
+
+        if ($reward !== null) {
+            $payload['reward'] = $reward;
+        }
+
+        return response()->json($payload, 201);
     }
 
     /**
@@ -303,6 +311,23 @@ class DistrictPostController extends Controller
         $post->increment('likes_count');
         DistrictNotifier::postLiked($post->refresh(), $user);
 
-        return response()->json(['liked' => true, 'likes_count' => (int) $post->refresh()->likes_count]);
+        $response = ['liked' => true, 'likes_count' => (int) $post->refresh()->likes_count];
+        $isSelfLike = (int) $user->id === (int) $post->user_id;
+
+        if (! $isSelfLike) {
+            $reward = ActivityRewards::award($user, 'district_like', 'district_post', $post->id);
+
+            if ($reward !== null) {
+                $response['reward'] = $reward;
+            }
+
+            $author = $post->user;
+
+            if ($author && (int) $author->id !== (int) $user->id) {
+                ActivityRewards::award($author, 'district_liked', 'district_post', $post->id, (string) $user->id);
+            }
+        }
+
+        return response()->json($response);
     }
 }

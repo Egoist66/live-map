@@ -12,7 +12,7 @@ import SettingsHiddenFriends from './SettingsHiddenFriends.vue'
 import HomeZoneField from '@/Components/Features/HomeZone/HomeZoneField.vue'
 import { planOf } from '@/composables/usePlanLimits'
 import { useUlovePrivacy } from '@/composables/useUlovePrivacy'
-defineProps<{ user: any; invisible: any; hidden?: any; blur: any; photoPrivacy?: any; homeRadius?: any }>()
+defineProps<{ user: any; invisible: any; hidden?: any; blur: any; photoPrivacy?: any; flowPrivacy?: any; homeRadius?: any }>()
 const emit = defineEmits<{ (e: 'profile'): void }>()
 
 const privacyTab = ref<'map' | 'ulove'>('map')
@@ -103,6 +103,22 @@ const ulove = useUlovePrivacy()
             <div v-if="photoPrivacy.saving.value" class="text-xs text-stone-400 mt-2">Сохраняем…</div>
             <div v-else-if="photoPrivacy.saved.value" class="text-xs text-emerald-600 mt-2">✓ Сохранено</div>
             <Message v-if="photoPrivacy.error.value" severity="error" :closable="false" class="!mt-2 !rounded-2xl !text-xs">{{ photoPrivacy.error.value }}</Message>
+          </template>
+        </Card>
+        <Card v-if="flowPrivacy" class="!border-stone-200 !rounded-3xl !shadow-none" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
+          <template #content>
+            <div class="text-sm font-semibold dark:text-white">Кто может комментировать мои посты</div>
+            <p class="text-xs text-stone-500 mt-1 leading-relaxed">Лента UFlow: читать могут все, писать — по твоему выбору.</p>
+            <div class="mt-3 grid gap-1.5">
+              <button v-for="o in flowPrivacy.options" :key="o.value" type="button" @click="flowPrivacy.save(o.value)" :disabled="flowPrivacy.saving.value" :class="['flex items-center gap-2.5 px-3 py-2.5 rounded-2xl border text-left transition active:scale-[0.99] disabled:opacity-60', flowPrivacy.value.value === o.value ? 'bg-stone-900 text-white border-stone-900 dark:bg-white dark:text-stone-900 dark:border-white' : 'bg-white dark:bg-white/[0.06] border-stone-200 dark:border-white/10 text-stone-700 dark:text-zinc-100']">
+                <i :class="[o.icon, 'text-sm']" />
+                <span class="text-xs font-bold">{{ o.label }}</span>
+                <i v-if="flowPrivacy.value.value === o.value" class="pi pi-check ml-auto text-xs" />
+              </button>
+            </div>
+            <div v-if="flowPrivacy.saving.value" class="text-xs text-stone-400 mt-2">Сохраняем…</div>
+            <div v-else-if="flowPrivacy.saved.value" class="text-xs text-emerald-600 mt-2">✓ Сохранено</div>
+            <Message v-if="flowPrivacy.error.value" severity="error" :closable="false" class="!mt-2 !rounded-2xl !text-xs">{{ flowPrivacy.error.value }}</Message>
           </template>
         </Card>
         </div>

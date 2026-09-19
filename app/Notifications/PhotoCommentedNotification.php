@@ -32,7 +32,7 @@ class PhotoCommentedNotification extends UserNotification
                 'photo_id' => $this->photo->id,
                 'photo_comment_id' => $this->comment->id,
                 'excerpt' => static::excerpt($this->comment->content),
-                'photo' => ['id' => $this->photo->id, 'user_id' => $this->photo->user_id, 'caption' => $this->photo->caption],
+                'photo' => static::photoShape($this->photo),
                 'actor' => static::actorShape($this->actor),
             ]),
         ];

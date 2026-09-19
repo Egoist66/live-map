@@ -16,12 +16,15 @@ use Illuminate\Support\Facades\Storage;
  *
  * @property int $id
  * @property int $user_id
+ * @property int|null $repost_of_id
+ * @property string|null $repost_comment
  * @property string|null $title
  * @property string $body
  * @property string|null $image_path
  * @property bool $is_anonymous
  * @property int $likes_count
  * @property int $comments_count
+ * @property int $reposts_count
  * @property \Carbon\Carbon $created_at
  * @property \Carbon\Carbon $updated_at
  */
@@ -29,6 +32,8 @@ class FlowPost extends Model
 {
     protected $fillable = [
         'user_id',
+        'repost_of_id',
+        'repost_comment',
         'title',
         'body',
         'image_path',
@@ -59,6 +64,46 @@ class FlowPost extends Model
     public function likes(): HasMany
     {
         return $this->hasMany(FlowPostLike::class, 'post_id');
+    }
+
+    /**
+     * Оригинал репоста (null — обычный пост).
+     */
+    public function original(): BelongsTo
+    {
+        return $this->belongsTo(FlowPost::class, 'repost_of_id');
+    }
+
+    /**
+     * Репосты этого поста.
+     */
+    public function reposts(): HasMany
+    {
+        return $this->hasMany(FlowPost::class, 'repost_of_id');
+    }
+
+    /**
+     * Медиа поста по порядку (фото/видео).
+     */
+    public function media(): HasMany
+    {
+        return $this->hasMany(FlowPostMedia::class, 'post_id')->orderBy('sort_order');
+    }
+
+    /**
+     * Опрос поста (один на пост).
+     */
+    public function poll(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(FlowPoll::class, 'post_id');
+    }
+
+    /**
+     * Хэштеги поста.
+     */
+    public function tags(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Tag::class, 'flow_post_tag', 'post_id', 'tag_id');
     }
 
     /**

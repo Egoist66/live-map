@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import { useFlowStore } from '@/stores/flow'
+import { useRewardToast } from '@/composables/useRewardToast'
 import { flowApi } from '@/services/flow.api'
 import type { FlowFilter } from '@/types/flow'
 
@@ -16,6 +17,7 @@ import type { FlowFilter } from '@/types/flow'
  */
 export function useFlowFeed(options?: { authorId?: number | null; postId?: number | null }) {
   const store = useFlowStore()
+  const rewards = useRewardToast()
   const pendingDeleteId = ref<number | null>(null)
   const likeBusy = ref<Record<number, boolean>>({})
 
@@ -33,7 +35,7 @@ export function useFlowFeed(options?: { authorId?: number | null; postId?: numbe
 
   /**
    * Первичная загрузка: один пост по сегменту /flow/post/ID
-   * или лента (диплинк ?author= из профилей).
+   * или лента (диплинк ?author= из профилей, ?tag= из хэштегов).
    * Явные опции важнее параметров URL.
    */
   async function init(): Promise<void> {
@@ -41,11 +43,14 @@ export function useFlowFeed(options?: { authorId?: number | null; postId?: numbe
     const authorParam = url.searchParams.get('author')
     const authorFromUrl = authorParam ? Number(authorParam) : null
     const resolvedAuthor = options?.authorId ?? (Number.isFinite(authorFromUrl) && authorFromUrl ? authorFromUrl : null)
+    const tagFromUrl = url.searchParams.get('tag')
     const postId = options?.postId ?? null
     const hasPostLink = !!postId
+    store.subscribeRealtime()
     await store.load({
       filter: hasPostLink || options?.authorId || resolvedAuthor ? 'all' : store.filter,
       authorId: hasPostLink ? null : resolvedAuthor,
+      tag: tagFromUrl,
       postId: postId ?? undefined,
     })
   }
@@ -67,6 +72,33 @@ export function useFlowFeed(options?: { authorId?: number | null; postId?: numbe
   }
 
   /**
+   * Фильтр по хэштегу (клик из поста или трендов).
+   * @param tag имя тега без # или null для сброса
+   */
+  async function setTag(tag: string | null): Promise<void> {
+    try {
+      const url = new URL(window.location.href)
+      if (tag) url.searchParams.set('tag', tag)
+      else url.searchParams.delete('tag')
+      window.history.replaceState({}, '', url.toString())
+    } catch { /* URL не критичен */ }
+    await store.load({ filter: store.filter, authorId: options?.authorId ?? null, search: '', tag })
+  }
+
+  /**
+   * Сбросить фильтр автора и тега, вернуться ко всей ленте.
+   */
+  async function clearAuthor(): Promise<void> {
+    try {
+      const url = new URL(window.location.href)
+      url.searchParams.delete('author')
+      url.searchParams.delete('tag')
+      window.history.replaceState({}, '', url.toString())
+    } catch {}
+    await store.load({ filter: 'all', authorId: null, search: '', tag: null })
+  }
+
+  /**
    * Лайк / анлайк без перезагрузки.
    * @param postId пост
    */
@@ -76,6 +108,7 @@ export function useFlowFeed(options?: { authorId?: number | null; postId?: numbe
     try {
       const res = await flowApi.toggleLike(postId)
       store.applyLike(postId, res.liked, res.likes_count)
+      rewards.applyReward(res)
     } finally {
       const next = { ...likeBusy.value }
       delete next[postId]
@@ -93,26 +126,22 @@ export function useFlowFeed(options?: { authorId?: number | null; postId?: numbe
 
   /**
    * Подтвердить удаление.
+   *
+   * Удаление репоста откатывает счётчик и флаг у оригинала,
+   * иначе карточка оригинала навсегда остаётся «репостнутой».
    */
   async function confirmDelete(): Promise<void> {
     const id = pendingDeleteId.value
     if (!id) return
     pendingDeleteId.value = null
+    const target = store.posts.find((item) => item.id === id)
     await flowApi.remove(id)
-    store.removePost(id)
+    if (target?.repost_of_id) {
+      store.revertRepost(id, target.repost_of_id)
+    } else {
+      store.removePost(id)
+    }
   }
 
-  /**
-   * Сбросить фильтр автора (диплинк ?author=) и вернуться ко всей ленте.
-   */
-  async function clearAuthor(): Promise<void> {
-    try {
-      const url = new URL(window.location.href)
-      url.searchParams.delete('author')
-      window.history.replaceState({}, '', url.toString())
-    } catch {}
-    await store.load({ filter: 'all', authorId: null, search: '' })
-  }
-
-  return { store, tabs, pendingDeleteId, likeBusy, isPro, me, init, setFilter, setSearch, toggleLike, askDelete, confirmDelete, clearAuthor }
+  return { store, tabs, pendingDeleteId, likeBusy, isPro, me, init, setFilter, setSearch, setTag, toggleLike, askDelete, confirmDelete, clearAuthor }
 }

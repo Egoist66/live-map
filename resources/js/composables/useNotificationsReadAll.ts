@@ -30,6 +30,21 @@ export function useNotificationsReadAll() {
   })
 
   /**
+   * Гасит колокольчик при открытии: inbox (пины/события), новости и безопасность.
+   *
+   * Чаты и заявки не трогает — их прочтение требует открытия диалога,
+   * поэтому счётчик сообщений остаётся. Вызывать после refresh() ленты,
+   * чтобы hasUnread уже знал свежие счётчики с сервера.
+   *
+   * @returns void
+   * @example
+   * await readAllState.markBellOpened()
+   */
+  async function markBellOpened(): Promise<void> {
+    await readAll()
+  }
+
+  /**
    * Помечает всё прочитанным параллельно, ошибки одного источника
    * не отменяют остальные.
    *
@@ -57,5 +72,5 @@ export function useNotificationsReadAll() {
     }
   }
 
-  return { reading, hasUnread, readAll }
+  return { reading, hasUnread, readAll, markBellOpened }
 }

@@ -1,6 +1,7 @@
 import { ref, type Ref } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { districtPostsApi } from '@/services/district-posts.api'
+import { useRewardToast } from '@/composables/useRewardToast'
 import { compressImageFile } from '@/utils/image'
 import type { DistrictPost } from '@/types/entities/DistrictPost'
 import { isSameText } from '@/composables/useUnchangedGuard'
@@ -28,6 +29,7 @@ export function useDistrictNews(districtId: number, isOwner: Ref<boolean>) {
 
   /** Лента новостей. */
   const posts = ref<DistrictPost[]>([])
+  const rewards = useRewardToast()
   /** Грузится ли лента. */
   const loading = ref(false)
   /** Догрузка следующей страницы. */
@@ -188,6 +190,7 @@ export function useDistrictNews(districtId: number, isOwner: Ref<boolean>) {
           image: small,
         })
         posts.value = [created, ...posts.value]
+        rewards.applyReward(created)
         toast?.add({ severity: 'success', summary: 'Новость опубликована', detail: 'Жители получат уведомление', life: 2500 })
       }
       resetComposer()
@@ -233,6 +236,7 @@ export function useDistrictNews(districtId: number, isOwner: Ref<boolean>) {
     likeBusy.value = { ...likeBusy.value, [postId]: true }
     try {
       const res = await districtPostsApi.toggleLike(districtId, postId)
+      rewards.applyReward(res)
       posts.value = posts.value.map((item) => {
         if (item.id !== postId) {
           return item

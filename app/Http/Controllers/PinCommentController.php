@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Pin;
 use App\Models\PinComment;
+use App\Services\ActivityRewards;
 use App\Services\ContentModeration;
 use App\Services\Mentions;
 use App\Services\PinActivityNotifier;
@@ -56,7 +57,14 @@ class PinCommentController extends Controller
         PinActivityNotifier::mentions($pin, $request->user(), $comment, $mentionedIds);
         if ($comment->is_anonymous) $comment->setRelation('user', null);
         else $comment->load('user:id,name,avatar_path');
-        return response()->json($comment, 201);
+        $payload = $comment->toArray();
+        $reward = ActivityRewards::award($request->user(), 'pin_comment', 'pin', $pin->id);
+
+        if ($reward !== null) {
+            $payload['reward'] = $reward;
+        }
+
+        return response()->json($payload, 201);
     }
 
     public function update(Request $request, PinComment $comment)

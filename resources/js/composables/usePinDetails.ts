@@ -6,6 +6,7 @@ import { commentsApi } from '@/services/comments.api'
 import { useAppConfirm } from '@/composables/useAppConfirm'
 import { isSameText } from '@/composables/useUnchangedGuard'
 import { reactionsApi } from '@/services/reactions.api'
+import { useRewardToast } from '@/composables/useRewardToast'
 import { pinsApi } from '@/services/pins.api'
 import { formatTime } from '@/utils/date'
 import { useToast } from 'primevue/usetoast'
@@ -47,6 +48,7 @@ export function usePinDetails() {
   const replyTo = ref<PinComment | null>(null)
   let replyMention = ''
   const toast = (() => { try { return useToast() } catch { return null as any } })()
+  const rewards = useRewardToast()
   const cache = (() => { try { return useQueryCache() } catch { return null as any } })()
   const { confirmDelete } = useAppConfirm()
 
@@ -211,6 +213,7 @@ export function usePinDetails() {
       if (typeof data.likes_count === 'number') pin.likes_count = data.likes_count
       if ('type' in data) pin.my_reaction = data.type
       else if (data.reacted === false) pin.my_reaction = null
+      rewards.applyReward(data)
       try { cache?.invalidateQueries({ key: PIN_KEYS.all() as any }) } catch {}
     },
   })
@@ -222,6 +225,7 @@ export function usePinDetails() {
   const createCommentMutation = useMutation({
     mutation: ({ pinId, content, parent_id }: { pinId: number; content: string; parent_id?: number | null }) => commentsApi.create(pinId, content, undefined, parent_id ?? null),
     onSuccess: (_data: any, vars: any) => {
+      rewards.applyReward(_data)
       try { cache?.invalidateQueries({ key: COMMENT_KEYS.byPin((vars as any).pinId) as any }) } catch {}
     },
   })

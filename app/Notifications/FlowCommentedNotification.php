@@ -46,7 +46,7 @@ class FlowCommentedNotification extends UserNotification
                 'flow_post_id' => $this->post->id,
                 'flow_comment_id' => $this->comment->id,
                 'excerpt' => static::excerpt($this->comment->content),
-                'flow_post' => ['id' => $this->post->id, 'user_id' => $this->post->user_id],
+                'flow_post' => static::flowPostShape($this->post),
                 'actor' => static::actorShape($this->actor),
             ]),
         ];

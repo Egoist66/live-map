@@ -106,6 +106,19 @@ class ProfileController extends Controller
         return response()->json(['is_invisible' => $user->isInvisibleActive(), 'can_use_invisible' => $user->canUseInvisible()]);
     }
 
+    /**
+     * Кто может комментировать посты пользователя в UFlow.
+     *
+     * @param Request $request запрос с flow_comments_privacy
+     */
+    public function updateFlowCommentsPrivacy(Request $request)
+    {
+        $request->validate(['flow_comments_privacy' => 'required|in:everyone,friends,none']);
+        $request->user()->forceFill(['flow_comments_privacy' => $request->input('flow_comments_privacy')])->save();
+
+        return response()->json(['flow_comments_privacy' => $request->user()->flow_comments_privacy]);
+    }
+
     public function dashboard(Request $request, ?string $identifier = null): Response|RedirectResponse
     {
         $auth = $request->user();

@@ -14,44 +14,214 @@ use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 
+/**
+ * Корневой сервис-провайдер приложения.
+ *
+ * Зачем нужен:
+ * - Это точка входа для глобальной инициализации приложения. Laravel
+ *   автоматически вызывает у него два этапа при загрузке:
+ *   1) `register()` — привязка сервисов в IoC-контейнер (без обращения
+ *      к другим сервисам);
+ *   2) `boot()` — настройка уже зарегистрированных сервисов
+ *      (события, политики доступа, rate-лимитеры, URL, Vite).
+ * - В данном проекте провайдер выполняет четыре ответственности:
+ *   1) Принудительная HTTPS-схема за reverse-proxy (по заголовку
+ *      `X-Forwarded-Proto`), чтобы `route()`/`asset()` генерировали
+ *      корректные ссылки.
+ *   2) Настройка Vite (`prefetch`), чтобы ускорить подгрузку чанков фронта.
+ *   3) Регистрация Gate-политик (`Pin` → `PinPolicy`,
+ *      `PinComment` → `CommentPolicy`) + глобальный `Gate::before`
+ *      для администратора (админ проходит любую проверку).
+ *   4) Регистрация именованных rate-лимитеров (`RateLimiter::for(...)`),
+ *      которые затем используются в роутах через `throttle:<name>`
+ *      для защиты auth, пинов, комментариев, чата, realtime и т.д.
+ *
+ * Когда срабатывает:
+ * - Один раз за жизненный цикл HTTP-запроса / Artisan-команды /
+ *   queue-воркера, после регистрации всех провайдеров из
+ *   `bootstrap/providers.php` и `config/app.php`.
+ *
+ * @see \Illuminate\Support\ServiceProvider Базовый класс провайдеров.
+ * @see \App\Policies\PinPolicy Правила доступа к пинам.
+ * @see \App\Policies\CommentPolicy Правила доступа к комментариям.
+ */
 class AppServiceProvider extends ServiceProvider
 {
+    /**
+     * Зарегистрировать сервисы в IoC-контейнере.
+     *
+     * Сейчас привязок нет: метод оставлен пустым как точка расширения.
+     * Сюда добавляют `$this->app->singleton(...)` / `bind(...)`, когда
+     * появится сервис, требующий ленивой регистрации без сайд-эффектов.
+     *
+     * @return void
+     */
     public function register(): void {}
 
+    /**
+     * Проинициализировать сервисы приложения.
+     *
+     * Делегирует работу приватным методам — один метод = одно действие
+     * (Правило №3 проекта). Вызывается после того, как все провайдеры
+     * прошли `register()`, поэтому здесь безопасно обращаться к
+     * фасадам `URL`, `Vite`, `Gate`, `RateLimiter`.
+     *
+     * @return void
+     */
     public function boot(): void
     {
-        if (request()->header('X-Forwarded-Proto') === 'https') {
-            URL::forceScheme('https');
+        $this->configureUrlScheme();
+        $this->configureVitePrefetch();
+        $this->registerAuthorizationPolicies();
+        $this->registerRateLimiters();
+    }
+
+    /**
+     * Принудительно включить HTTPS-схему за reverse-proxy.
+     *
+     * Если прокси (nginx/Caddy/Cloudflare) терминирует TLS и прокидывает
+     * заголовок `X-Forwarded-Proto: https`, Laravel иначе сгенерирует
+     * http-ссылки. `URL::forceScheme('https')` это исправляет.
+     *
+     * @return void
+     */
+    private function configureUrlScheme(): void
+    {
+        $forwardedProto = request()->header('X-Forwarded-Proto');
+
+        $isBehindHttpsProxy = $forwardedProto === 'https';
+
+        if (! $isBehindHttpsProxy) {
+            return;
         }
+
+        URL::forceScheme('https');
+    }
+
+    /**
+     * Настроить предзагрузку Vite-чанков.
+     *
+     * `prefetch(concurrency: 3)` добавляет `<link rel="prefetch">`
+     * для ленивых чанков, чтобы навигация по SPA ощущалась быстрее,
+     * но не перегружала сеть (не более 3 параллельных загрузок).
+     *
+     * @return void
+     */
+    private function configureVitePrefetch(): void
+    {
         Vite::prefetch(concurrency: 3);
+    }
+
+    /**
+     * Зарегистрировать политики авторизации и суперадмина.
+     *
+     * - `Pin` проверяется через `PinPolicy`;
+     * - `PinComment` проверяется через `CommentPolicy`;
+     * - `Gate::before` даёт пользователю с `isAdmin() === true`
+     *   автоматический доступ к любой способности (`return true`),
+     *   для обычных пользователей возвращает `null` и проверка
+     *   продолжается в конкретной политике.
+     *
+     * @return void
+     */
+    private function registerAuthorizationPolicies(): void
+    {
         Gate::policy(Pin::class, PinPolicy::class);
         Gate::policy(PinComment::class, CommentPolicy::class);
-        Gate::before(function ($user, $ability) {
-            if ($user->isAdmin()) return true;
+
+        Gate::before(function ($user, string $ability): ?bool {
+            if ($user->isAdmin()) {
+                return true;
+            }
+
+            return null;
+        });
+    }
+
+    /**
+     * Зарегистрировать именованные rate-лимитеры.
+     *
+     * Ключ ограничения выбирается замыканиями:
+     * - `$keyByIp` — для гостевых auth-эндпоинтов (юзера ещё нет);
+     * - `$keyByUser` — для авторизованных действий (изоляция по юзеру).
+     *
+     * Имя лимитера = значение для middleware `throttle:<name>` в роутах.
+     *
+     * @return void
+     */
+    private function registerRateLimiters(): void
+    {
+        /** @var callable(Request): string Ключ лимита по ID пользователя. */
+        $keyByUser = fn (Request $request) => 'user:'.$request->user()?->getAuthIdentifier();
+
+        /** @var callable(Request): string Ключ лимита по IP-адресу. */
+        $keyByIp = fn (Request $request) => 'ip:'.$request->ip();
+
+        $this->registerAuthRateLimiters($keyByUser, $keyByIp);
+        $this->registerDomainRateLimiters($keyByUser);
+    }
+
+    /**
+     * Зарегистрировать лимитеры auth-зоны (защита от брутфорса/спама).
+     *
+     * @param callable(Request): string $keyByUser Ключ лимита по пользователю.
+     * @param callable(Request): string $keyByIp   Ключ лимита по IP.
+     *
+     * @return void
+     */
+    private function registerAuthRateLimiters(callable $keyByUser, callable $keyByIp): void
+    {
+        RateLimiter::for('auth-login', function (Request $request) use ($keyByIp) {
+            return Limit::perMinute(10)->by($keyByIp($request));
         });
 
-        $byUser = fn (Request $r) => 'user:'.$r->user()?->getAuthIdentifier();
-        $byIp = fn (Request $r) => 'ip:'.$r->ip();
+        RateLimiter::for('auth-register', function (Request $request) use ($keyByIp) {
+            return Limit::perMinute(5)->by($keyByIp($request));
+        });
 
-        RateLimiter::for('auth-login', fn (Request $r) => Limit::perMinute(10)->by($byIp($r)));
-        RateLimiter::for('auth-register', fn (Request $r) => Limit::perMinute(5)->by($byIp($r)));
-        RateLimiter::for('auth-forgot', fn (Request $r) => Limit::perMinute(3)->by($byIp($r)));
-        RateLimiter::for('auth-reset', fn (Request $r) => Limit::perMinute(6)->by($byIp($r)));
-        RateLimiter::for('auth-confirm', fn (Request $r) => Limit::perMinute(10)->by($byUser($r)));
+        RateLimiter::for('auth-forgot', function (Request $request) use ($keyByIp) {
+            return Limit::perMinute(3)->by($keyByIp($request));
+        });
 
-        RateLimiter::for('pins-write', fn (Request $r) => Limit::perMinute(20)->by($byUser($r)));
-        RateLimiter::for('pins-index', fn (Request $r) => Limit::perMinute(120)->by($byUser($r)));
-        RateLimiter::for('comments-write', fn (Request $r) => Limit::perMinute(60)->by($byUser($r)));
-        RateLimiter::for('messages-write', fn (Request $r) => Limit::perMinute(60)->by($byUser($r)));
-        RateLimiter::for('pin-toggle', fn (Request $r) => Limit::perMinute(60)->by($byUser($r)));
-        RateLimiter::for('chat-signal', fn (Request $r) => Limit::perMinute(120)->by($byUser($r)));
-        RateLimiter::for('realtime-sync', fn (Request $r) => Limit::perMinute(60)->by($byUser($r)));
-        RateLimiter::for('reactions', fn (Request $r) => Limit::perMinute(120)->by($byUser($r)));
-        RateLimiter::for('chat-search', fn (Request $r) => Limit::perMinute(30)->by($byUser($r)));
-        RateLimiter::for('social-write', fn (Request $r) => Limit::perMinute(60)->by($byUser($r)));
-        RateLimiter::for('screen-lock', fn (Request $r) => Limit::perMinute(30)->by($byUser($r)));
-        RateLimiter::for('reports', fn (Request $r) => Limit::perMinute(10)->by($byUser($r)));
-        RateLimiter::for('push-test', fn (Request $r) => Limit::perMinute(10)->by($byUser($r)));
-        RateLimiter::for('profile-write', fn (Request $r) => Limit::perMinute(30)->by($byUser($r)));
+        RateLimiter::for('auth-reset', function (Request $request) use ($keyByIp) {
+            return Limit::perMinute(6)->by($keyByIp($request));
+        });
+
+        RateLimiter::for('auth-confirm', function (Request $request) use ($keyByUser) {
+            return Limit::perMinute(10)->by($keyByUser($request));
+        });
+    }
+
+    /**
+     * Зарегистрировать лимитеры доменной зоны (пины, чат, соцсети).
+     *
+     * @param callable(Request): string $keyByUser Ключ лимита по пользователю.
+     *
+     * @return void
+     */
+    private function registerDomainRateLimiters(callable $keyByUser): void
+    {
+        $limitsByName = [
+            'pins-index' => 120,
+            'pins-write' => 20,
+            'comments-write' => 60,
+            'messages-write' => 60,
+            'pin-toggle' => 60,
+            'chat-signal' => 120,
+            'realtime-sync' => 60,
+            'reactions' => 120,
+            'chat-search' => 30,
+            'social-write' => 60,
+            'screen-lock' => 30,
+            'reports' => 10,
+            'push-test' => 10,
+            'profile-write' => 30,
+        ];
+
+        foreach ($limitsByName as $limiterName => $perMinute) {
+            RateLimiter::for($limiterName, function (Request $request) use ($keyByUser, $perMinute) {
+                return Limit::perMinute($perMinute)->by($keyByUser($request));
+            });
+        }
     }
 }

@@ -61,9 +61,14 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::patch('/flow-posts/{post}', [\App\Http\Controllers\FlowPostController::class, 'update'])->middleware('throttle:social-write');
     Route::delete('/flow-posts/{post}', [\App\Http\Controllers\FlowPostController::class, 'destroy'])->middleware('throttle:social-write');
     Route::post('/flow-posts/{post}/like', [\App\Http\Controllers\FlowPostController::class, 'toggleLike'])->middleware('throttle:reactions');
+    Route::post('/flow-posts/{post}/repost', [\App\Http\Controllers\FlowPostController::class, 'repost'])->middleware('throttle:social-write');
     Route::get('/flow-posts/{post}/likers', [\App\Http\Controllers\FlowPostController::class, 'likers']);
     Route::get('/flow-posts/{post}/comments', [\App\Http\Controllers\FlowPostCommentController::class, 'index']);
     Route::post('/flow-posts/{post}/comments', [\App\Http\Controllers\FlowPostCommentController::class, 'store'])->middleware('throttle:comments-write');
+    Route::get('/flow-posts/{post}/comments/{comment}/replies', [\App\Http\Controllers\FlowPostCommentController::class, 'replies']);
+    Route::post('/flow-polls/{poll}/vote', [\App\Http\Controllers\FlowPollController::class, 'vote'])->middleware('throttle:reactions');
+    Route::post('/flow-polls/{poll}/close', [\App\Http\Controllers\FlowPollController::class, 'close'])->middleware('throttle:social-write');
+    Route::get('/flow-tags/trending', [\App\Http\Controllers\FlowTagController::class, 'trending']);
     Route::patch('/flow-comments/{comment}', [\App\Http\Controllers\FlowPostCommentController::class, 'update']);
     Route::put('/flow-comments/{comment}', [\App\Http\Controllers\FlowPostCommentController::class, 'update']);
     Route::delete('/flow-comments/{comment}', [\App\Http\Controllers\FlowPostCommentController::class, 'destroy'])->middleware('throttle:social-write');
@@ -113,6 +118,7 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::patch('/user/invisible', [\App\Http\Controllers\ProfileController::class, 'toggleInvisible']);
     Route::patch('/user/default-mode', [\App\Http\Controllers\ProfileController::class, 'updateDefaultMode'])->middleware('throttle:profile-write');
     Route::patch('/user/photo-comments-privacy', [\App\Http\Controllers\ProfilePhotoController::class, 'updatePrivacy']);
+    Route::patch('/user/flow-comments-privacy', [\App\Http\Controllers\ProfileController::class, 'updateFlowCommentsPrivacy']);
 
     Route::get('/users/{user}/photos', [\App\Http\Controllers\ProfilePhotoController::class, 'index']);
     Route::post('/photos', [\App\Http\Controllers\ProfilePhotoController::class, 'store'])->middleware('throttle:social-write');

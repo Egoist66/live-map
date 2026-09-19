@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\FlowPost;
 use App\Models\FlowPostComment;
 use App\Models\UserBlock;
+use App\Services\ActivityRewards;
 use App\Services\ContentModeration;
 use App\Services\FlowPostNotifier;
 use App\Services\Mentions;
@@ -36,6 +37,11 @@ class FlowPostCommentController extends Controller
         })->exists();
 
         abort_if($blocked, 403, 'Недоступно');
+
+        if ($owner->is_admin) {
+            return;
+        }
+
         abort_unless($owner->isDiscoverableBy($viewer), 404);
     }
 
@@ -78,8 +84,11 @@ class FlowPostCommentController extends Controller
         if ($comment->relationLoaded('replies')) {
             $replies = $comment->replies->map(fn ($reply) => $this->serialize($reply, $viewer))->values();
             $payload['replies'] = $replies;
-            $payload['replies_count'] = $replies->count();
         }
+
+        $payload['replies_count'] = $comment->relationLoaded('replies')
+            ? count($payload['replies'] ?? [])
+            : (int) ($comment->replies_count ?? 0);
 
         return $payload;
     }
@@ -87,26 +96,68 @@ class FlowPostCommentController extends Controller
     /**
      * Список комментариев поста.
      *
-     * @param Request $request запрос
+     * Сортировка: new — сначала старые (чтение сверху вниз),
+     * top — сначала обсуждаемые (по числу ответов).
+     *
+     * @param Request $request запрос с sort
      * @param FlowPost $post пост
      */
     public function index(Request $request, FlowPost $post)
     {
         $viewer = $request->user();
 
+        $data = $request->validate([
+            'sort' => 'sometimes|in:new,top',
+        ]);
+
         if ((int) $viewer->id !== (int) $post->user_id) {
             $this->abortIfBlocked($viewer, $post->user);
         }
 
-        $comments = $post->comments()
+        $query = $post->comments()
             ->whereNull('parent_id')
-            ->with(['user:id,name,avatar_path', 'replies' => fn ($query) => $query->oldest()->with('user:id,name,avatar_path')])
-            ->oldest()
-            ->paginate(20);
+            ->with(['user:id,name,avatar_path', 'replies' => fn ($child) => $child->oldest()->with('user:id,name,avatar_path')])
+            ->withCount('replies');
+
+        if (($data['sort'] ?? 'new') === 'top') {
+            $query->orderByDesc('replies_count')->oldest();
+        } else {
+            $query->oldest();
+        }
+
+        $comments = $query->paginate(20);
 
         $comments->getCollection()->transform(fn ($comment) => $this->serialize($comment, $viewer));
 
         return $comments;
+    }
+
+    /**
+     * Дети ответа: ленивая подгрузка глубокой ветки (3+ уровень).
+     *
+     * @param Request $request запрос
+     * @param FlowPost $post пост
+     * @param FlowPostComment $comment родительский ответ
+     */
+    public function replies(Request $request, FlowPost $post, FlowPostComment $comment)
+    {
+        abort_unless((int) $comment->post_id === (int) $post->id, 404);
+
+        $viewer = $request->user();
+
+        if ((int) $viewer->id !== (int) $post->user_id) {
+            $this->abortIfBlocked($viewer, $post->user);
+        }
+
+        $children = $comment->replies()
+            ->with('user:id,name,avatar_path')
+            ->withCount('replies')
+            ->oldest()
+            ->paginate(20);
+
+        $children->getCollection()->transform(fn ($reply) => $this->serialize($reply, $viewer));
+
+        return $children;
     }
 
     /**
@@ -122,6 +173,8 @@ class FlowPostCommentController extends Controller
         if ((int) $viewer->id !== (int) $post->user_id) {
             $this->abortIfBlocked($viewer, $post->user);
         }
+
+        abort_unless($viewer->canCommentFlowPost($post->user), 403, 'Автор запретил комментировать пост');
 
         $data = $request->validate([
             'content' => 'required|string|max:1000',
@@ -153,7 +206,14 @@ class FlowPostCommentController extends Controller
         FlowPostNotifier::commented($post->refresh(), $viewer, $comment->refresh());
         FlowPostNotifier::mentions($post, $viewer, $comment, $mentionedIds);
 
-        return response()->json($this->serialize($comment->refresh(), $viewer), 201);
+        $payload = $this->serialize($comment->refresh(), $viewer);
+        $reward = ActivityRewards::award($viewer, 'flow_comment', 'flow_post', $post->id);
+
+        if ($reward !== null) {
+            $payload['reward'] = $reward;
+        }
+
+        return response()->json($payload, 201);
     }
 
     /**

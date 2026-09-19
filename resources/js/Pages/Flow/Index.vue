@@ -12,12 +12,14 @@ import FlowPostCard from '@/Components/Features/Flow/FlowPostCard.vue'
 import InfiniteSentinel from '@/Components/Ui/List/InfiniteSentinel.vue'
 import { useFlowFeed } from '@/composables/useFlowFeed'
 import { useFlowComposer } from '@/composables/useFlowComposer'
+import { useFlowTags } from '@/composables/useFlowTags'
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 import type { FlowPost } from '@/types/flow'
 
 const props = defineProps<{ postId?: number | null }>()
 
 const feed = useFlowFeed({ postId: props.postId ?? null })
+const tags = useFlowTags()
 const editor = useFlowComposer()
 const editOpen = ref(false)
 const searchInput = ref('')
@@ -37,11 +39,14 @@ function onSearch() {
 }
 
 function openEdit(post: FlowPost) {
-  editor.startEdit(post.id, post.title, post.body, post.is_anonymous, post.image_url ?? null)
+  editor.startEdit(post)
   editOpen.value = true
 }
 
-onMounted(() => feed.init())
+onMounted(() => {
+  void feed.init()
+  void tags.load()
+})
 </script>
 
 <template>
@@ -58,6 +63,23 @@ onMounted(() => feed.init())
         <div v-if="feed.store.authorId" class="flex items-center justify-between gap-2 rounded-2xl bg-blue-600/10 dark:bg-blue-500/10 border border-blue-600/20 px-4 py-2.5 text-sm font-semibold text-blue-700 dark:text-blue-300">
           <span>Посты пользователя</span>
           <button class="underline hover:no-underline" @click="feed.clearAuthor()">Вся лента</button>
+        </div>
+
+        <div v-if="feed.store.tag" class="flex items-center justify-between gap-2 rounded-2xl bg-violet-600/10 dark:bg-violet-500/10 border border-violet-600/20 px-4 py-2.5 text-sm font-semibold text-violet-700 dark:text-violet-300">
+          <span class="truncate">#{{ feed.store.tag }}</span>
+          <button class="underline hover:no-underline shrink-0" @click="feed.setTag(null)">Вся лента</button>
+        </div>
+
+        <div v-if="tags.trending.value.length" class="trend-chips flex gap-1.5 overflow-x-auto pb-1">
+          <button
+            v-for="t in tags.trending.value"
+            :key="t.id"
+            type="button"
+            :class="['shrink-0 rounded-full border px-3 py-1.5 text-xs font-bold transition active:scale-95', feed.store.tag === t.name ? 'bg-violet-600 border-violet-600 text-white' : 'bg-white dark:bg-zinc-900 border-stone-200 dark:border-zinc-700 text-stone-600 dark:text-zinc-300']"
+            @click="feed.setTag(feed.store.tag === t.name ? null : t.name)"
+          >
+            #{{ t.name }}
+          </button>
         </div>
 
         <div class="flex flex-col min-[411px]:flex-col sm:flex-row sm:items-center gap-2 min-w-0 max-w-full">
@@ -91,6 +113,7 @@ onMounted(() => feed.init())
             @like="feed.toggleLike($event)"
             @edit="openEdit($event)"
             @delete="feed.askDelete($event)"
+            @tag="feed.setTag($event)"
           />
           <InfiniteSentinel :sentinel="feedSentinel" :has-more="feed.store.page < feed.store.lastPage" :loading="feed.store.loadingMore" end-text="Это все новости" />
           <div v-if="feed.store.page < feed.store.lastPage" class="flex justify-center pt-1">
@@ -111,3 +134,12 @@ onMounted(() => feed.init())
     <FlowDeleteDialog :visible="feed.pendingDeleteId.value !== null" @cancel="feed.pendingDeleteId.value = null" @confirm="feed.confirmDelete()" />
   </AuthenticatedLayout>
 </template>
+
+<style scoped>
+.trend-chips {
+  scrollbar-width: none;
+}
+.trend-chips::-webkit-scrollbar {
+  display: none;
+}
+</style>

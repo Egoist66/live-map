@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
+use App\Services\ActivityRewards;
 use App\Services\DatingService;
 use Illuminate\Http\Request;
 
@@ -66,9 +68,34 @@ class SwipeController extends Controller
             (bool) ($data['incognito'] ?? false)
         );
 
-        return response()->json(array_merge($result, [
+        $me = $request->user();
+        $otherId = (int) $data['user_id'];
+        $swipeAction = $data['action'] === 'like' ? 'swipe_like' : 'swipe_pass';
+        $reward = ActivityRewards::award($me, $swipeAction, 'user', $otherId);
+
+        if (! empty($result['matched'])) {
+            $matchReward = ActivityRewards::award($me, 'swipe_match', 'user', $otherId);
+
+            if ($matchReward !== null) {
+                $reward = $matchReward;
+            }
+
+            $partner = User::find($otherId);
+
+            if ($partner) {
+                ActivityRewards::award($partner, 'swipe_match', 'user', (int) $me->id);
+            }
+        }
+
+        $response = array_merge($result, [
             'quota' => $this->dating->quotaState($request->user()),
-        ]), $result['matched'] ? 201 : 200);
+        ]);
+
+        if ($reward !== null) {
+            $response['reward'] = $reward;
+        }
+
+        return response()->json($response, $result['matched'] ? 201 : 200);
     }
 
     /**

@@ -31,7 +31,7 @@ class FlowLikedNotification extends UserNotification
             'activity' => static::activityShape($id, 'flow_like', $this->ownerId, [
                 'actor_id' => $this->actor->id,
                 'flow_post_id' => $this->post->id,
-                'flow_post' => ['id' => $this->post->id, 'user_id' => $this->post->user_id],
+                'flow_post' => static::flowPostShape($this->post),
                 'actor' => static::actorShape($this->actor),
             ]),
         ];

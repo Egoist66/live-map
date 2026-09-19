@@ -340,6 +340,10 @@ function describe(a: PinActivityItem): { emoji: string; text: string } {
     const excerpt = (a as unknown as { excerpt?: string }).excerpt
     return { emoji: '📣', text: excerpt ? `${name} упомянул вас в UFlow: ${excerpt}` : `${name} упомянул вас в UFlow` }
   }
+  if (a.kind === 'flow_repost') {
+    const excerpt = (a as unknown as { excerpt?: string }).excerpt
+    return { emoji: '🔁', text: excerpt ? `${name} репостнул с цитатой: ${excerpt}` : `${name} поделился вашим постом в UFlow` }
+  }
   if (a.kind === 'sub_pin') {
     const title = (a as any).excerpt || a.pin?.title || 'новый пин'
     return { emoji: '📍', text: `${name} создал пин «${title}»` }
@@ -484,7 +488,7 @@ export function usePinActivity() {
   const pinUnread = computed(() => pinUnreadCount.value)
   const eventUnread = computed(() => eventUnreadCount.value)
   const loveActivities = computed(() => eventActivities.value.filter((a) => a.kind === 'swipe_like' || a.kind === 'match'))
-  const flowActivities = computed(() => eventActivities.value.filter((a) => a.kind === 'flow_like' || a.kind === 'flow_comment' || a.kind === 'flow_reply' || a.kind === 'flow_mention' || a.kind === 'sub_flow_post'))
+  const flowActivities = computed(() => eventActivities.value.filter((a) => a.kind === 'flow_like' || a.kind === 'flow_comment' || a.kind === 'flow_reply' || a.kind === 'flow_mention' || a.kind === 'flow_repost' || a.kind === 'sub_flow_post'))
   const subActivities = computed(() => eventActivities.value.filter((a) => a.kind === 'sub_photo' || a.kind === 'sub_level'))
   const photoActivities = computed(() => eventActivities.value.filter((a) => isPhotoActivity(a)))
   const loveUnread = computed(() => loveActivities.value.filter((a) => !a.read_at).length)

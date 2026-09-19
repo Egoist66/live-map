@@ -9,6 +9,7 @@ import { useHomeZoneGuard } from '@/composables/useHomeZoneGuard'
 import { usePage } from '@inertiajs/vue3'
 import { PIN_CATEGORIES } from '@/composables/usePins'
 import { useSosConfirm } from '@/composables/useSosConfirm'
+import { useRewardToast } from '@/composables/useRewardToast'
 import { useToast } from 'primevue/usetoast'
 
 function pad(n: number): string {
@@ -28,6 +29,7 @@ function fromLocalInput(v: string): Date | null {
 export function usePinCreate(onSuccess?: () => void) {
   const store = usePinsStore()
   const toast = useToast()
+  const rewards = useRewardToast()
   const showCoords = ref(false)
   const scheduleEnabled = ref(false)
   const limitInfo = usePinLimit()
@@ -182,6 +184,7 @@ export function usePinCreate(onSuccess?: () => void) {
         payload.publish_at = null
       }
       const pin = await store.createPin(payload)
+      rewards.applyReward(pin)
       const scheduled = (pin as any)?.is_scheduled || (pin as any)?.status === 'scheduled'
       const isDistrictPin = Number(payload.district_id) > 0
       toast.add({ severity: 'success', summary: scheduled ? `Запланирован на ${scheduleLabel.value}` : isDistrictPin ? 'Пин района создан' : 'Пин создан', detail: isDistrictPin ? 'Видят только жители района' : undefined, life: 2500 })

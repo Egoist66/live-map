@@ -114,6 +114,8 @@ class QuestService
         return [
             'cycle_key' => $cycle,
             'rating' => ReputationService::state($user),
+            'rating_catalog' => ActivityRewards::catalog(),
+            'weekly' => ActivityRewards::weeklyStats($user),
             'tracks' => $tracks,
             'can_claim' => [
                 'pins' => self::canClaim($user, 'pins', $tracks['pins']['is_complete'], $onCooldown, $isPremium),

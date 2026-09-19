@@ -6,6 +6,7 @@ use App\Events\PinCreated;
 use App\Events\PinDeleted;
 use App\Events\PinUpdated;
 use App\Models\Pin;
+use App\Services\ActivityRewards;
 use App\Services\ContentModeration;
 use App\Services\CountryResolver;
 use App\Services\HomeZoneService;
@@ -301,7 +302,14 @@ class PinController extends Controller
             }
         }
 
-        return response()->json(array_merge($pin->toPublicArray($user->id), ['my_reaction' => null]), 201);
+        $response = array_merge($pin->toPublicArray($user->id), ['my_reaction' => null]);
+        $reward = ActivityRewards::award($user, 'pin_create', 'pin', $pin->id);
+
+        if ($reward !== null) {
+            $response['reward'] = $reward;
+        }
+
+        return response()->json($response, 201);
     }
 
     public function update(Request $request, Pin $pin)

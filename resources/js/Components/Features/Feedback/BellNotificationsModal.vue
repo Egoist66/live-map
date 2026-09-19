@@ -20,10 +20,12 @@ import { useSecurityImpersonations } from "@/composables/useSecurityImpersonatio
 import { avatarSrcFor } from "@/composables/useAvatar";
 import { useAppConfirm } from "@/composables/useAppConfirm";
 import { useNotificationsReadAll } from "@/composables/useNotificationsReadAll";
+import { useNotificationMedia } from "@/composables/useNotificationMedia";
 import { describeInboxRow } from "@/services/notifications.api";
 
 const bell = useBellNotifications();
 const readAllState = useNotificationsReadAll();
+const media = useNotificationMedia();
 const pinAct = usePinActivity();
 const admRep = useAdminReports();
 const updates = useAppUpdates();
@@ -39,15 +41,19 @@ async function askClearActivities() {
 }
 watch(
   () => bell.isOpen.value,
-  (open) => {
-    if (open) {
-      bell.tab.value = "events";
-      pinAct.refresh();
-      admRep.refresh();
-      updates.loadUnread();
-      updates.loadHistory();
-      proc.load();
+  async (open) => {
+    if (!open) {
+      return;
     }
+    bell.tab.value = "events";
+    await Promise.allSettled([
+      pinAct.refresh(),
+      admRep.refresh(),
+      updates.loadUnread(),
+      updates.loadHistory(),
+      proc.load(),
+    ]);
+    await readAllState.markBellOpened();
   }
 );
 function goProcedures() {
@@ -381,6 +387,13 @@ function openNews(item: any) {
                             {{ pinAct.describe(a).text }}
                           </div>
                         </div>
+                        <img
+                          v-if="media.entityImage(a)"
+                          :src="media.entityImage(a) || ''"
+                          alt="Миниатюра поста"
+                          loading="lazy"
+                          class="w-11 h-11 rounded-xl object-cover shrink-0 border border-stone-200 dark:border-zinc-700"
+                        />
                         <span
                           v-if="!a.read_at"
                           class="w-2.5 h-2.5 bg-sky-500 rounded-full shrink-0"
@@ -435,6 +448,13 @@ function openNews(item: any) {
                             {{ pinAct.describe(a).text }}
                           </div>
                         </div>
+                        <img
+                          v-if="media.entityImage(a)"
+                          :src="media.entityImage(a) || ''"
+                          alt="Миниатюра фото"
+                          loading="lazy"
+                          class="w-11 h-11 rounded-xl object-cover shrink-0 border border-stone-200 dark:border-zinc-700"
+                        />
                         <span
                           v-if="!a.read_at"
                           class="w-2.5 h-2.5 bg-sky-500 rounded-full shrink-0"
@@ -484,6 +504,13 @@ function openNews(item: any) {
                             {{ pinAct.describe(a).text }}
                           </div>
                         </div>
+                        <img
+                          v-if="media.entityImage(a)"
+                          :src="media.entityImage(a) || ''"
+                          alt="Миниатюра"
+                          loading="lazy"
+                          class="w-11 h-11 rounded-xl object-cover shrink-0 border border-stone-200 dark:border-zinc-700"
+                        />
                         <span
                           v-if="!a.read_at"
                           class="w-2.5 h-2.5 bg-violet-500 rounded-full shrink-0"

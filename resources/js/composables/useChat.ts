@@ -6,6 +6,7 @@ import { useChatHistory } from '@/composables/useChatHistory'
 import { busOn, registerPollContextProvider } from '@/services/realtime-bus'
 import { ensureUserChannel, leaveUserChannel } from '@/composables/useUserChannel'
 import { pokeRealtime, syncRealtimeNow } from '@/composables/useRealtimePoller'
+import { useRewardToast } from '@/composables/useRewardToast'
 import type { Conversation, ConversationDetail, Message } from '@/types/entities/Chat'
 
 let searchAbort: AbortController | null = null
@@ -55,6 +56,7 @@ function voiceKindFor(file: File): 'image' | 'voice' | 'file' {
 }
 
 export function useChat() {
+  const rewards = useRewardToast()
   const conversations = ref<Conversation[]>([])
   const activeConv = ref<ConversationDetail | null>(null)
   const messages = ref<Message[]>([])
@@ -117,6 +119,8 @@ export function useChat() {
   const history = useChatHistory(messages, {
     loadPage: (beforeId: number) => chatApi.messagesPage(selectedId.value!, beforeId, CHAT_HISTORY_PAGE_SIZE),
     getKey: () => selectedId.value,
+  }, {
+    isSuspended: () => loading.value,
   })
 
   /**
@@ -435,6 +439,7 @@ export function useChat() {
     sending.value = true
     try {
       const msg = await chatApi.sendMessage(targetId, text, replyTo?.id ?? null, attachmentFile ?? null, voiceDuration ?? null)
+      rewards.applyReward(msg)
       if (optimisticAttachment?.url) {
         try { URL.revokeObjectURL(optimisticAttachment.url) } catch {}
       }

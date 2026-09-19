@@ -76,6 +76,37 @@ abstract class UserNotification
     }
 
     /**
+     * Краткое фото для пейлоада (колокольчик показывает миниатюру сущности).
+     *
+     * @param \App\Models\ProfilePhoto $photo фото профиля
+     * @return array{id:int,user_id:int,caption:string|null,url:string|null}
+     */
+    protected static function photoShape($photo): array
+    {
+        return [
+            'id' => (int) $photo->id,
+            'user_id' => (int) $photo->user_id,
+            'caption' => $photo->caption,
+            'url' => $photo->url,
+        ];
+    }
+
+    /**
+     * Краткий пост UFlow для пейлоада (колокольчик показывает миниатюру картинки).
+     *
+     * @param \App\Models\FlowPost $post пост ленты
+     * @return array{id:int,user_id:int,image_url:string|null}
+     */
+    protected static function flowPostShape($post): array
+    {
+        return [
+            'id' => (int) $post->id,
+            'user_id' => (int) $post->user_id,
+            'image_url' => $post->image_url,
+        ];
+    }
+
+    /**
      * Краткий актор для пейлоада.
      */
     protected static function actorShape(User $actor, bool $incognito = false): array

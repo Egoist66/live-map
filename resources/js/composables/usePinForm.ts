@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import { route } from '@/route'
 import { usePins } from './usePins'
+import { useRewardToast } from './useRewardToast'
 import { useHomeZoneGuard } from './useHomeZoneGuard'
 import type { CreatePinPayload, PinCategory } from '@/types/entities/Pin'
 
@@ -10,6 +11,7 @@ import type { CreatePinPayload, PinCategory } from '@/types/entities/Pin'
  */
 export function usePinForm(onCreated?: () => void) {
   const { createPin } = usePins()
+  const rewards = useRewardToast()
   const zoneGuard = useHomeZoneGuard()
   const newPin = ref<CreatePinPayload>({
     title: '',
@@ -33,7 +35,8 @@ export function usePinForm(onCreated?: () => void) {
     const livePos = readLivePos()
     const zone = zoneGuard.check(Number(newPin.value.latitude), Number(newPin.value.longitude), livePos)
     if (!zone.ok) throw new Error(zone.message || 'Точка вне вашей зоны')
-    await createPin(newPin.value)
+    const pin = await createPin(newPin.value)
+    rewards.applyReward(pin)
     newPin.value.title = ''
     newPin.value.body = ''
     onCreated?.()

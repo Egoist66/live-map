@@ -606,6 +606,19 @@ function handlePinActivity(e: any) {
     })
     return
   }
+  if (a.kind === 'flow_repost') {
+    push({
+      id: `pin-${a.id}-${Date.now()}`,
+      type: 'pin',
+      icon: 'pi pi-forward',
+      title: 'Репост',
+      body: flowExcerpt ? `${name}: ${flowExcerpt}` : `${name} поделился вашим постом в UFlow`.slice(0, 90),
+      avatar: avatarSrcFor(actor),
+      link: flowLink,
+      createdAt: Date.now(),
+    })
+    return
+  }
   if (a.kind === 'invite') {
     const title = (a.pin?.title || 'пин').toString().slice(0, 60)
     const pinId = Number((a as any).pin?.id || (a as any).pin_id || 0) || null

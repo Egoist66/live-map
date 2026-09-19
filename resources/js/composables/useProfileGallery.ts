@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
 import { galleryApi, type GalleryPhoto } from '@/services/gallery.api'
+import { useRewardToast } from '@/composables/useRewardToast'
 import { compressImageFile } from '@/utils/image'
 
 /**
@@ -22,6 +23,7 @@ export function galleryLimitFor(plan?: string | null, isAdmin?: boolean): number
 }
 
 export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean }) {
+  const rewards = useRewardToast()
   const photos = ref<GalleryPhoto[]>([])
   const limit = ref(5)
   const canAdd = ref(false)
@@ -63,6 +65,7 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
     try {
       const small = await compressImageFile(file)
       const created = await galleryApi.upload(small, caption)
+      rewards.applyReward(created)
       photos.value.unshift(created)
       await load()
       return created
@@ -102,6 +105,7 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
 
   async function toggleLike(photo: GalleryPhoto, incognito = false) {
     const res = await galleryApi.toggleLike(photo.id, incognito)
+    rewards.applyReward(res)
     const apply = (p: GalleryPhoto) => {
       p.liked = res.liked
       p.likes_count = res.likes_count

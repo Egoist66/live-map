@@ -13,6 +13,7 @@ import AppUpdateModal from '@/Components/Features/Updates/AppUpdateModal.vue'
 import ConfirmDialog from 'primevue/confirmdialog'
 import AppHotkeysDialog from '@/Components/Features/Feedback/AppHotkeysDialog.vue'
 import GlobalPeopleSearchDialog from '@/Components/Features/Search/GlobalPeopleSearchDialog.vue'
+import MiniChatDock from '@/Components/Features/Chat/MiniChatDock.vue'
 import ScreenLockOverlay from '@/Components/Features/Security/ScreenLockOverlay.vue'
 import TermsAcceptanceModal from '@/Components/Features/Legal/TermsAcceptanceModal.vue'
 import DefaultModeChoiceModal from '@/Components/Features/Mode/DefaultModeChoiceModal.vue'
@@ -54,6 +55,7 @@ onMounted(() => { screenLock.init(); hotkeys.init() })
     <PwaUpdateBanner />
     <AppHotkeysDialog />
     <GlobalPeopleSearchDialog />
+    <MiniChatDock />
     <ScreenLockOverlay />
     <TermsAcceptanceModal />
     <DefaultModeChoiceModal />

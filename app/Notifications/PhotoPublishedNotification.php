@@ -28,7 +28,7 @@ class PhotoPublishedNotification extends UserNotification
             'activity' => static::activityShape($id, 'sub_photo', $this->ownerId, [
                 'actor_id' => $this->actor->id,
                 'photo_id' => $this->photo->id,
-                'photo' => ['id' => $this->photo->id, 'user_id' => $this->photo->user_id, 'caption' => $this->photo->caption],
+                'photo' => static::photoShape($this->photo),
                 'actor' => static::actorShape($this->actor),
             ]),
         ];

@@ -15,6 +15,17 @@ export interface ChatHistoryLoader {
   getKey: () => number | null
 }
 
+export interface ChatHistoryOptions {
+  /**
+   * Возвращает true, пока догрузка истории запрещена
+   * (например идёт первичная загрузка диалога — тогда
+   * должен быть виден только один центральный лоадер).
+   *
+   * @returns true если loadOlder нужно пропустить
+   */
+  isSuspended?: () => boolean
+}
+
 /**
  * История чата с бесконечной подгрузкой вверх.
  *
@@ -25,11 +36,12 @@ export interface ChatHistoryLoader {
  *
  * @param source живой список сообщений диалога (старые первые)
  * @param loader загрузчик страниц + ключ диалога
+ * @param options необязательные флаги (isSuspended блокирует loadOlder)
  * @example
  * const history = useChatHistory(messages, { loadPage: (b) => chatApi.messages(id, b), getKey: () => id })
  * // <div ref="history.topSentinel" />
  */
-export function useChatHistory(source: Ref<Message[]>, loader: ChatHistoryLoader) {
+export function useChatHistory(source: Ref<Message[]>, loader: ChatHistoryLoader, options: ChatHistoryOptions = {}) {
   const loadingOlder = ref(false)
   const hasMore = ref(true)
   const topSentinel = ref<HTMLElement | null>(null)
@@ -99,6 +111,7 @@ export function useChatHistory(source: Ref<Message[]>, loader: ChatHistoryLoader
    */
   async function loadOlder(): Promise<boolean> {
     if (loadingOlder.value || !hasMore.value) return false
+    if (options.isSuspended?.()) return false
     const key = loader.getKey()
     if (!key) return false
     const first = source.value.find((m) => Number(m?.id) > 0)
@@ -167,7 +180,7 @@ export function useChatHistory(source: Ref<Message[]>, loader: ChatHistoryLoader
       observer = new IntersectionObserver(
         (entries) => {
           const hit = entries.some((e) => e.isIntersecting)
-          if (hit) void loadOlder()
+          if (hit && !options.isSuspended?.()) void loadOlder()
         },
         { root: containerEl(), rootMargin: '400px 0px 0px 0px', threshold: 0 },
       )

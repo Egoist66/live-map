@@ -13,6 +13,7 @@ use App\Notifications\FlowLikedNotification;
 use App\Notifications\FlowMentionNotification;
 use App\Notifications\FlowPostedNotification;
 use App\Notifications\FlowRepliedNotification;
+use App\Notifications\FlowRepostedNotification;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -151,6 +152,32 @@ class FlowPostNotifier
             }
         } catch (\Throwable $e) {
             Log::warning('flow mention notify failed', ['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Уведомить автора оригинала о репосте.
+     *
+     * @param FlowPost $repost созданный репост
+     * @param FlowPost $root корень цепочки
+     * @param User $actor кто репостнул
+     */
+    public static function reposted(FlowPost $repost, FlowPost $root, User $actor): void
+    {
+        $ownerId = (int) $root->user_id;
+
+        if ($ownerId === (int) $actor->id) {
+            return;
+        }
+
+        try {
+            $owner = User::find($ownerId);
+
+            if ($owner) {
+                UserNotifier::send($owner, new FlowRepostedNotification($repost, $root, $actor, $ownerId));
+            }
+        } catch (\Throwable $e) {
+            Log::warning('flow repost notify failed', ['error' => $e->getMessage()]);
         }
     }
 

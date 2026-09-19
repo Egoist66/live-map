@@ -9,18 +9,61 @@ export type FlowAuthor = {
   avatar_url: string | null
 }
 
+/** Встроенный оригинал репоста (автор скрыт при анонимности). */
+export type FlowRepostOrigin = {
+  id: number
+  title: string | null
+  body: string
+  image_url: string | null
+  author: FlowAuthor
+}
+
+/** Медиа поста: фото или видео. */
+export type FlowMedia = {
+  id: number
+  kind: 'photo' | 'video'
+  url: string | null
+  duration_sec: number | null
+}
+
+/** Вариант опроса. */
+export type FlowPollOption = {
+  id: number
+  text: string
+  votes_count: number
+}
+
+/** Опрос поста. */
+export type FlowPoll = {
+  id: number
+  closed: boolean
+  closes_at: string | null
+  total_votes: number
+  voted_option_id: number | null
+  options: FlowPollOption[]
+}
+
 /** Пост ленты. */
 export type FlowPost = {
   id: number
   title: string | null
   body: string
   image_url: string | null
+  media: FlowMedia[]
+  poll: FlowPoll | null
+  tags: string[]
   is_anonymous: boolean
   likes_count: number
   comments_count: number
+  repost_of_id: number | null
+  repost_comment: string | null
+  reposts_count: number
+  my_repost_id: number | null
+  repost: FlowRepostOrigin | null
   liked: boolean
   can_edit: boolean
   can_delete: boolean
+  can_comment: boolean
   created_at: string | null
   updated_at: string | null
   author: FlowAuthor
@@ -42,6 +85,16 @@ export type FlowComment = {
   replies_count?: number
 }
 
+/** Сортировка ветки комментариев. */
+export type FlowCommentsSort = 'new' | 'top'
+
+/** Тег из трендов. */
+export type FlowTag = {
+  id: number
+  name: string
+  posts_count: number
+}
+
 /** Фильтр ленты. */
 export type FlowFilter = 'all' | 'subscriptions' | 'mine'
 
@@ -50,12 +103,14 @@ export type FlowFilter = 'all' | 'subscriptions' | 'mine'
  * @param filter вкладка ленты
  * @param authorId посты конкретного пользователя (профиль)
  * @param search поиск по тексту
+ * @param tag фильтр по хэштегу
  * @param postId открыть один пост (диплинк из уведомлений)
  */
 export type FlowQuery = {
   filter?: FlowFilter
   authorId?: number | null
   search?: string
+  tag?: string | null
   postId?: number | null
   page?: number
 }

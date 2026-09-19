@@ -1,8 +1,10 @@
 import { ref } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { useFlowStore } from '@/stores/flow'
+import { useRewardToast } from '@/composables/useRewardToast'
 import { flowApi } from '@/services/flow.api'
-import type { FlowComment } from '@/types/flow'
+import { busOn } from '@/services/realtime-bus'
+import type { FlowComment, FlowCommentsSort } from '@/types/flow'
 
 /**
  * Ветка комментариев поста UFlow: список, ответы, удаление + infinite scroll.
@@ -18,6 +20,7 @@ import type { FlowComment } from '@/types/flow'
  */
 export function useFlowComments(postId: number) {
   const store = useFlowStore()
+  const rewards = useRewardToast()
   const comments = ref<FlowComment[]>([])
   const loading = ref(false)
   const loadingMore = ref(false)
@@ -28,6 +31,10 @@ export function useFlowComments(postId: number) {
   const replyTo = ref<FlowComment | null>(null)
   const draft = ref('')
   const anonymousReply = ref(false)
+  const sort = ref<FlowCommentsSort>('new')
+  const childrenPage = ref<Record<number, number>>({})
+  const childrenLast = ref<Record<number, number>>({})
+  const childrenLoading = ref<Record<number, boolean>>({})
   let replyMention = ''
   const toast = (() => {
     try {
@@ -39,18 +46,82 @@ export function useFlowComments(postId: number) {
 
   /**
    * Загрузить первую страницу комментариев.
+   *
+   * Ошибка (нет доступа, пост скрыт) показывает тост вместо
+   * необработанного rejection в консоли.
    */
   async function load(): Promise<void> {
     loading.value = true
     hasMore.value = true
     try {
-      const res = await flowApi.comments(postId, 1)
+      const res = await flowApi.comments(postId, 1, sort.value)
       comments.value = res.data
       page.value = res.current_page ?? 1
       lastPage.value = res.last_page ?? 1
       hasMore.value = page.value < lastPage.value
+    } catch {
+      toast?.add({ severity: 'error', summary: 'Не удалось загрузить комментарии', life: 2500 })
     } finally {
       loading.value = false
+    }
+  }
+
+  /**
+   * Сменить сортировку ветки и перезагрузить.
+   * @param next new — сначала старые, top — сначала обсуждаемые
+   */
+  async function setSort(next: FlowCommentsSort): Promise<void> {
+    if (sort.value === next) return
+    sort.value = next
+    await load()
+  }
+
+  /**
+   * Есть ли ещё дети у ответа (3+ уровень ветки).
+   * @param comment ответ
+   */
+  function hasMoreChildren(comment: FlowComment): boolean {
+    const total = comment.replies_count ?? (comment.replies?.length ?? 0)
+    const shown = comment.replies?.length ?? 0
+    if (total <= shown) return false
+    const last = childrenLast.value[comment.id] ?? 1
+    const current = childrenPage.value[comment.id] ?? 0
+    return current < last || (current === 0 && total > 0 && shown === 0)
+  }
+
+  /**
+   * Грузятся ли дети ответа прямо сейчас.
+   * @param comment ответ
+   */
+  function isLoadingChildren(comment: FlowComment): boolean {
+    return !!childrenLoading.value[comment.id]
+  }
+
+  /**
+   * Лениво подгрузить детей ответа (глубокая ветка).
+   * @param comment ответ-родитель
+   */
+  async function loadChildren(comment: FlowComment): Promise<void> {
+    const id = comment.id
+    if (childrenLoading.value[id]) return
+    const next = (childrenPage.value[id] ?? 0) + 1
+    const last = childrenLast.value[id] ?? Number.MAX_SAFE_INTEGER
+    if (next > last) return
+    childrenLoading.value = { ...childrenLoading.value, [id]: true }
+    try {
+      const res = await flowApi.commentReplies(postId, id, next)
+      const rows = Array.isArray(res.data) ? res.data : []
+      const known = new Set((comment.replies ?? []).map((c) => c.id))
+      const fresh = rows.filter((c) => !known.has(c.id))
+      comment.replies = [...(comment.replies ?? []), ...fresh]
+      childrenPage.value = { ...childrenPage.value, [id]: res.current_page ?? next }
+      childrenLast.value = { ...childrenLast.value, [id]: res.last_page ?? next }
+    } catch {
+      toast?.add({ severity: 'error', summary: 'Не удалось загрузить ответы', life: 2500 })
+    } finally {
+      const rest = { ...childrenLoading.value }
+      delete rest[id]
+      childrenLoading.value = rest
     }
   }
 
@@ -64,7 +135,7 @@ export function useFlowComments(postId: number) {
     loadingMore.value = true
     try {
       const next = page.value + 1
-      const res = await flowApi.comments(postId, next)
+      const res = await flowApi.comments(postId, next, sort.value)
       const rows = Array.isArray(res.data) ? res.data : []
       const known = new Set(comments.value.map((c) => c.id))
       const fresh = rows.filter((c) => !known.has(c.id))
@@ -134,6 +205,7 @@ export function useFlowComments(postId: number) {
         comments.value = [...comments.value, created]
       }
       store.applyCommentsDelta(postId, 1)
+      rewards.applyReward(created)
       draft.value = ''
       replyTo.value = null
       replyMention = ''
@@ -169,5 +241,31 @@ export function useFlowComments(postId: number) {
     store.applyCommentsDelta(postId, -removed)
   }
 
-  return { comments, loading, loadingMore, hasMore, sending, replyTo, draft, anonymousReply, load, loadMore, setReply, send, remove }
+  /**
+   * Живая ветка: чужой коммент/ответ из шины перезагружает список.
+   *
+   * Черновик и выбор ответа не трогаем, отправка в полёте
+   * блокирует перезагрузку. Работает на сокетах и поллинге.
+   *
+   * @param isOpen открыта ли ветка прямо сейчас
+   * @returns функция отписки для onUnmounted
+   */
+  function subscribeLive(isOpen: () => boolean): () => void {
+    try {
+      return busOn('user:notification.created', (e: unknown) => {
+        if (!isOpen() || sending.value) return
+        const activity = (e as { notification?: { data?: { activity?: { kind?: string; flow_post?: { id?: number }; flow_post_id?: number } } } })?.notification?.data?.activity
+        if (!activity) return
+        const kind = String(activity.kind ?? '')
+        if (kind !== 'flow_comment' && kind !== 'flow_reply') return
+        const incomingId = Number(activity.flow_post?.id ?? activity.flow_post_id ?? 0)
+        if (incomingId !== postId) return
+        void load()
+      })
+    } catch {
+      return () => {}
+    }
+  }
+
+  return { comments, loading, loadingMore, hasMore, sending, replyTo, draft, anonymousReply, sort, load, loadMore, setSort, hasMoreChildren, isLoadingChildren, loadChildren, setReply, send, remove, subscribeLive }
 }

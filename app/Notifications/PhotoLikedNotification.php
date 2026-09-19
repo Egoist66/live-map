@@ -32,7 +32,7 @@ class PhotoLikedNotification extends UserNotification
                 'actor_id' => $this->actor->id,
                 'photo_id' => $this->photo->id,
                 'related_user_id' => $this->actor->id,
-                'photo' => ['id' => $this->photo->id, 'user_id' => $this->photo->user_id, 'caption' => $this->photo->caption],
+                'photo' => static::photoShape($this->photo),
                 'actor' => static::actorShape($this->actor),
             ]),
         ];

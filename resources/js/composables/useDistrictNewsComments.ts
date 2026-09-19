@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { districtPostCommentsApi } from '@/services/district-posts.api'
+import { useRewardToast } from '@/composables/useRewardToast'
 import type { DistrictPostComment } from '@/types/entities/DistrictPost'
 
 /**
@@ -31,6 +32,7 @@ export function useDistrictNewsComments(
 
   /** Ветки верхнего уровня. */
   const comments = ref<DistrictPostComment[]>([])
+  const rewards = useRewardToast()
   const loading = ref(false)
   const loadingMore = ref(false)
   const hasMore = ref(true)
@@ -141,6 +143,7 @@ export function useDistrictNewsComments(
         comments.value = [...comments.value, created]
       }
       onDelta?.(1)
+      rewards.applyReward(created)
       draft.value = ''
       replyTo.value = null
       replyMention = ''
