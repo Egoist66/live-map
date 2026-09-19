@@ -185,6 +185,7 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::delete('/messages/{message}/pin', [MessageController::class, 'unpin'])->middleware('throttle:pin-toggle');
 
     Route::get('/chat/attachments', [\App\Http\Controllers\ChatAttachmentController::class, 'index']);
+    Route::get('/chat/attachments/download-all', [\App\Http\Controllers\ChatAttachmentController::class, 'downloadAll']);
     Route::get('/chat/attachments/{message}/download', [\App\Http\Controllers\ChatAttachmentController::class, 'download']);
     Route::delete('/chat/attachments', [\App\Http\Controllers\ChatAttachmentController::class, 'clear'])->middleware('throttle:social-write');
     Route::delete('/chat/attachments/{message}', [\App\Http\Controllers\ChatAttachmentController::class, 'destroy'])->middleware('throttle:social-write');

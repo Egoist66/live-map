@@ -200,4 +200,7 @@ export const chatApi = {
     const { data } = await api.delete('/api/chat/attachments')
     return data
   },
+  downloadArchiveUrl() {
+    return '/api/chat/attachments/download-all'
+  },
 }

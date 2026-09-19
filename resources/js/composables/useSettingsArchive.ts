@@ -1,5 +1,7 @@
 import { ref } from 'vue'
+import { useToast } from 'primevue/usetoast'
 import { chatApi } from '@/services/chat.api'
+import { useFileDownload } from '@/composables/useFileDownload'
 
 /** Элемент архива вложений. */
 export type ArchiveItem = {
@@ -14,8 +16,8 @@ export type ArchiveItem = {
 }
 
 /**
- * Архив отправленных документов из чатов.
- * Список, удаление по одному и очистка всего.
+ * Архив отправленных документов из чатов (фото и файлы, без голосовых).
+ * Список, скачивание всего одним ZIP, удаление по одному и очистка всего.
  * @example
  * const { items, fetchAll, removeOne, clearAll } = useSettingsArchive()
  */
@@ -25,6 +27,15 @@ export function useSettingsArchive() {
   const error = ref<string | null>(null)
   const deletingId = ref<number | null>(null)
   const clearing = ref(false)
+  const downloadingAll = ref(false)
+  const files = useFileDownload()
+  const toast = (() => {
+    try {
+      return useToast()
+    } catch {
+      return null
+    }
+  })()
 
   /**
    * Загружает первую страницу архива.
@@ -57,6 +68,26 @@ export function useSettingsArchive() {
     }
   }
 
+  /**
+   * Скачивает весь архив одним ZIP (фото и документы, сжатие DEFLATE).
+   */
+  async function downloadAll(): Promise<void> {
+    if (downloadingAll.value) {
+      return
+    }
+    downloadingAll.value = true
+    try {
+      const ok = await files.download(chatApi.downloadArchiveUrl(), 'archive.zip')
+      if (!ok) {
+        toast?.add({ severity: 'error', summary: 'Не вышло скачать архив', life: 3000 })
+      }
+    } catch (e: any) {
+      const detail = e?.response?.data?.message ?? 'Не вышло скачать архив'
+      toast?.add({ severity: 'error', summary: 'Архив', detail, life: 4000 })
+    } finally {
+      downloadingAll.value = false
+    }
+  }
   /**
    * Удаляет все вложения пользователя.
    */
@@ -104,5 +135,5 @@ export function useSettingsArchive() {
     return days >= 2 ? `ещё ${days} дн.` : 'меньше суток'
   }
 
-  return { items, loading, error, deletingId, clearing, fetchAll, removeOne, clearAll, formatSize, expiresIn }
+  return { items, loading, error, deletingId, clearing, downloadingAll, fetchAll, removeOne, clearAll, downloadAll, formatSize, expiresIn }
 }

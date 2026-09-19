@@ -1,13 +1,12 @@
-import { useToast } from 'primevue/usetoast'
 import { useQuestStore } from '@/stores/quests'
 import type { ActivityReward, WithReward } from '@/types/rewards'
 
 /**
- * Показ награды за активность: тост +N и живое обновление шкалы ранга.
+ * Тихое применение награды: только живое обновление шкалы ранга.
  *
- * Бэк присылает `reward` в ответах на действия (пост, лайк, свайп…).
- * Стор квестов патчится свежим `rating` из ответа — ранг растёт
- * сразу, без перезагрузки. Повышение ранга — отдельным тостом.
+ * Никаких тостов за действия — единственное уведомление о наградах
+ * приходит раз в неделю в колокольчик (понедельничный итог).
+ * Прогресс недели виден в табе «Задания → Система рейтинга».
  *
  * @example
  * const rewards = useRewardToast()
@@ -17,17 +16,9 @@ import type { ActivityReward, WithReward } from '@/types/rewards'
  * @returns применение награды из ответа API
  */
 export function useRewardToast() {
-  const toast = (() => {
-    try {
-      return useToast()
-    } catch {
-      return null
-    }
-  })()
-
   /**
-   * Показать награду из ответа API и обновить ранг в сторе.
-   * Молча выходит, если награды нет (кап исчерпан или анлайк).
+   * Подменить рейтинг в сторе квестов свежим состоянием из награды.
+   * Молча выходит, если награды нет (кап исчерпан, повтор или анлайк).
    * @param payload ответ API с опциональным полем reward
    */
   function applyReward(payload: unknown): void {
@@ -38,23 +29,6 @@ export function useRewardToast() {
     }
 
     patchRating(reward)
-
-    if (reward.leveled_up) {
-      toast?.add({
-        severity: 'success',
-        summary: `Новый ранг: ${reward.level_name}!`,
-        detail: `+${reward.awarded} ★ · всего ${reward.score}`,
-        life: 5000,
-      })
-      return
-    }
-
-    toast?.add({
-      severity: 'success',
-      summary: `+${reward.awarded} ★`,
-      detail: `Ранг растёт: всего ${reward.score}`,
-      life: 2500,
-    })
   }
 
   /**
@@ -69,7 +43,7 @@ export function useRewardToast() {
         store.state = { ...store.state, rating: reward.rating as never }
       }
     } catch {
-      // стор недоступен — тоста достаточно
+      // стор недоступен — очки всё равно начислены на бэке
     }
   }
 

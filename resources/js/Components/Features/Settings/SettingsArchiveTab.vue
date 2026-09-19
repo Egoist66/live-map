@@ -66,9 +66,12 @@ async function onClearAll(): Promise<void> {
       <div class="flex items-start justify-between gap-3 flex-wrap min-w-0">
         <div class="min-w-0 flex-1 basis-48">
           <h3 class="font-black tracking-tight text-lg dark:text-white">Архив документов</h3>
-          <p class="text-sm text-stone-500 mt-1">Ваши файлы из разных чатов: фото и документы.</p>
+          <p class="text-sm text-stone-500 mt-1">Ваши файлы из разных чатов: фото и документы, без голосовых.</p>
         </div>
-        <Button v-if="archive.items.value.length" label="Удалить все" icon="pi pi-trash" severity="danger" outlined rounded size="small" class="shrink-0" :loading="archive.clearing.value" @click="onClearAll" />
+        <div v-if="archive.items.value.length" class="flex gap-2 shrink-0 flex-wrap">
+          <Button label="Скачать всё ZIP" icon="pi pi-download" outlined rounded size="small" :loading="archive.downloadingAll.value" @click="archive.downloadAll()" />
+          <Button label="Удалить все" icon="pi pi-trash" severity="danger" outlined rounded size="small" :loading="archive.clearing.value" @click="onClearAll" />
+        </div>
       </div>
       <Message severity="warn" :closable="false" class="!rounded-2xl !text-xs mt-4 break-words">Файлы хранятся 15 дней, затем удаляются автоматически.</Message>
       <div v-if="archive.loading.value" class="mt-5 flex items-center gap-2 text-sm text-stone-500"><span class="w-4 h-4 border-2 border-stone-200 border-t-stone-900 rounded-full animate-spin"></span> Загружаем…</div>

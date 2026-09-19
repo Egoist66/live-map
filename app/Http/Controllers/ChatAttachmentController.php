@@ -9,11 +9,32 @@ use Illuminate\Http\Request;
 /**
  * Архив вложений пользователя: документы и фото из чатов.
  *
+ * Голосовые сообщения в архив не попадают — только документы и фото.
  * Показывает только отправленные текущим пользователем файлы.
  * Срок хранения — ChatAttachment::RETENTION_DAYS дней, дальше чистит планировщик.
  */
 class ChatAttachmentController extends Controller
 {
+    /** Максимум файлов в одном ZIP-архиве. */
+    private const ZIP_MAX_FILES = 100;
+
+    /** Максимум суммарного веса ZIP-архива: 200 МБ. */
+    private const ZIP_MAX_BYTES = 200 * 1024 * 1024;
+
+    /**
+     * Запрос вложений архива: отправленные файлы юзера без голосовых.
+     *
+     * @param int $me id текущего пользователя
+     */
+    private function archiveQuery(int $me)
+    {
+        return Message::where('sender_id', $me)
+            ->whereNotNull('attachment_path')
+            ->where(fn ($query) => $query
+                ->where('attachment_kind', '!=', 'voice')
+                ->orWhereNull('attachment_kind'));
+    }
+
     /**
      * Список отправленных вложений с контекстом чата.
      *
@@ -23,8 +44,7 @@ class ChatAttachmentController extends Controller
     public function index(Request $request)
     {
         $me = $request->user()->id;
-        $items = Message::where('sender_id', $me)
-            ->whereNotNull('attachment_path')
+        $items = $this->archiveQuery($me)
             ->with(['conversation.participants' => fn ($q) => $q->select('users.id', 'users.name')])
             ->latest('id')
             ->paginate(30);
@@ -62,6 +82,125 @@ class ChatAttachmentController extends Controller
         }
 
         return \Illuminate\Support\Facades\Storage::disk($disk)->download($path, $name, $headers);
+    }
+
+    /**
+     * Скачать весь архив одним ZIP: документы и фото без голосовых,
+     * сжатие DEFLATE (максимум для ZIP). Временный файл удаляется
+     * сразу после отправки — место на сервере не занимает.
+     *
+     * @param Request $request
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+     */
+    public function downloadAll(Request $request)
+    {
+        $me = $request->user()->id;
+        $disk = ChatAttachment::disk();
+        $storage = \Illuminate\Support\Facades\Storage::disk($disk);
+
+        $messages = $this->archiveQuery($me)->oldest('id')->limit(self::ZIP_MAX_FILES + 1)->get();
+
+        abort_if($messages->isEmpty(), 422, 'Архив пуст — нечего упаковывать');
+        abort_if($messages->count() > self::ZIP_MAX_FILES, 422, 'Файлов больше сотни — удалите старые, потом качайте');
+
+        $entries = [];
+
+        foreach ($messages as $message) {
+            $path = $message->attachment_path;
+
+            if (! $path || ! $storage->exists($path)) {
+                continue;
+            }
+
+            $entries[] = $message;
+        }
+
+        abort_if(empty($entries), 404, 'Файлы уже удалены');
+
+        $zipName = 'archive-'.now()->format('Y-m-d').'.zip';
+        $zipPath = tempnam(sys_get_temp_dir(), 'archive-');
+
+        $zip = new \ZipArchive();
+        abort_if($zip->open($zipPath, \ZipArchive::OVERWRITE) !== true, 500, 'Не вышло упаковать архив');
+
+        $usedNames = [];
+        $tmpFiles = [];
+        $total = 0;
+
+        try {
+            foreach ($entries as $message) {
+                try {
+                    $bytes = $storage->get($message->attachment_path);
+                } catch (\Throwable) {
+                    continue;
+                }
+
+                $total += strlen($bytes);
+                abort_if($total > self::ZIP_MAX_BYTES, 422, 'Архив тяжелее 200 МБ — удалите старые файлы');
+
+                $tmp = tempnam(sys_get_temp_dir(), 'archive-file-');
+                file_put_contents($tmp, $bytes);
+                $tmpFiles[] = $tmp;
+
+                $entryName = $this->zipEntryName($message, $usedNames);
+                $zip->addFile($tmp, $entryName);
+                $zip->setCompressionName($entryName, \ZipArchive::CM_DEFLATE);
+            }
+        } catch (\Throwable $e) {
+            $zip->close();
+
+            foreach ($tmpFiles as $tmp) {
+                @unlink($tmp);
+            }
+
+            @unlink($zipPath);
+
+            throw $e;
+        }
+
+        $zip->close();
+
+        foreach ($tmpFiles as $tmp) {
+            @unlink($tmp);
+        }
+
+        if (empty($usedNames)) {
+            @unlink($zipPath);
+            abort(404, 'Файлы уже удалены');
+        }
+
+        return response()->download($zipPath, $zipName, ['Content-Type' => 'application/zip'])->deleteFileAfterSend(true);
+    }
+
+    /**
+     * Безопасное уникальное имя файла внутри ZIP.
+     *
+     * @param Message $message сообщение с вложением
+     * @param array<string> $usedNames уже занятые имена
+     * @return string имя записи
+     */
+    private function zipEntryName(Message $message, array &$usedNames): string
+    {
+        $raw = $message->attachment_name ?: basename((string) $message->attachment_path);
+        $clean = preg_replace('/[^\p{L}\p{N}._-]+/u', '_', (string) $raw);
+        $clean = trim((string) $clean, '._');
+
+        if ($clean === '') {
+            $clean = 'file-'.$message->id;
+        }
+
+        $name = $clean;
+        $counter = 1;
+
+        while (isset($usedNames[$name])) {
+            $counter++;
+            $dot = strrpos($clean, '.');
+            $name = $dot === false ? "{$clean}-{$counter}" : substr($clean, 0, $dot)."-{$counter}".substr($clean, $dot);
+        }
+
+        $usedNames[$name] = true;
+
+        return $name;
     }
 
     /**
