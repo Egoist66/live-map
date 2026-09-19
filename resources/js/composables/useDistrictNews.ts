@@ -2,7 +2,7 @@ import { ref, type Ref } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { districtPostsApi } from '@/services/district-posts.api'
 import { useRewardToast } from '@/composables/useRewardToast'
-import { compressImageFile } from '@/utils/image'
+import { useImageCompress } from '@/composables/useImageCompress'
 import type { DistrictPost } from '@/types/entities/DistrictPost'
 import { isSameText } from '@/composables/useUnchangedGuard'
 
@@ -30,6 +30,7 @@ export function useDistrictNews(districtId: number, isOwner: Ref<boolean>) {
   /** Лента новостей. */
   const posts = ref<DistrictPost[]>([])
   const rewards = useRewardToast()
+  const { compressImageFast } = useImageCompress()
   /** Грузится ли лента. */
   const loading = ref(false)
   /** Догрузка следующей страницы. */
@@ -174,7 +175,7 @@ export function useDistrictNews(districtId: number, isOwner: Ref<boolean>) {
           return true
         }
       }
-      const small = image.value ? await compressImageFile(image.value, 1600, 0.82) : null
+      const small = image.value ? await compressImageFast(image.value, 1600, 0.82) : null
       if (editingId.value) {
         const updated = await districtPostsApi.update(districtId, editingId.value, {
           title: cleanTitle,

@@ -131,8 +131,8 @@ export function useMapPage() {
    * Модалка убрана: черновик едет в sessionStorage, форма —
    * на /districts/create в стиле группы.
    */
-  function finishDistrictPaint(): void {
-    const geometry = paint.takeDraft()
+  async function finishDistrictPaint(): Promise<void> {
+    const geometry = await paint.takeDraftAsync()
     if (!geometry) {
       toast?.add({ severity: 'warn', summary: 'Пустая заливка', detail: 'Сначала закрась кусочек карты кистью', life: 3000 })
       return

@@ -4,7 +4,8 @@ import { route } from '@/route'
 import { useToast } from 'primevue/usetoast'
 import { avatarSrcFor } from '@/composables/useAvatar'
 import { useAvatarCropper } from '@/composables/useAvatarCropper'
-import { compressImageFile, MAX_PHOTO_INPUT_BYTES } from '@/utils/image'
+import { MAX_PHOTO_INPUT_BYTES } from '@/utils/image'
+import { useImageCompress } from '@/composables/useImageCompress'
 
 /**
  * Загрузка аватара: выбор → позиционирование в кропере → сжатие → отправка.
@@ -20,6 +21,7 @@ export function useAvatarUpload() {
   const avatarOk = ref(false)
   const showPreview = ref(false)
   const crop = useAvatarCropper()
+  const { compressImageFast } = useImageCompress()
   const toast = (() => { try { return useToast() } catch { return null as any } })()
 
   const avatarSrc = computed(() => {
@@ -78,7 +80,7 @@ export function useAvatarUpload() {
     if (!avatarFile.value) return
     uploading.value = true
     try {
-      const small = await compressImageFile(avatarFile.value, 800, 0.84, 2 * 1024 * 1024)
+      const small = await compressImageFast(avatarFile.value, 800, 0.84, 2 * 1024 * 1024)
       const fd = new FormData()
       fd.append('avatar', small)
       router.post(route('profile.avatar'), fd, {

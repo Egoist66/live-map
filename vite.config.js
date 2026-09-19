@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import laravel from 'laravel-vite-plugin';
 import vue from '@vitejs/plugin-vue';
 import { VitePWA } from 'vite-plugin-pwa';
+import { compression } from 'vite-plugin-compression2';
 import path from 'path';
 import { createHash } from 'crypto';
 import { existsSync, readFileSync } from 'fs';
@@ -30,6 +31,9 @@ export default defineConfig({
     },
     build: {
         chunkSizeWarningLimit: 1100,
+        reportCompressedSize: false,
+        cssCodeSplit: true,
+        modulePreload: { polyfill: false },
         rollupOptions: {
             output: {
                 manualChunks(id) {
@@ -56,6 +60,9 @@ export default defineConfig({
                 },
             },
         },
+    },
+    worker: {
+        format: 'es',
     },
     plugins: [
         laravel({
@@ -183,5 +190,7 @@ export default defineConfig({
             },
             devOptions: { enabled: false },
         }),
+        compression({ include: /\.(js|css|html|svg|json)$/, threshold: 10240, deleteOriginalAssets: false }),
+        compression({ include: /\.(js|css|html|svg|json)$/, threshold: 10240, deleteOriginalAssets: false, algorithm: 'brotliCompress' }),
     ],
 });

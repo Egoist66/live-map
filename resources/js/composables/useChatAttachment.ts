@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { compressImageFile } from '@/utils/image'
+import { useImageCompress } from '@/composables/useImageCompress'
 
 /** Макс вес вложения в чате: 10 МБ. */
 export const CHAT_MAX_BYTES = 10 * 1024 * 1024
@@ -73,6 +73,7 @@ export function useChatAttachment() {
   const previewUrl = ref<string | null>(null)
   const error = ref<string | null>(null)
   const processing = ref(false)
+  const { compressImageFast } = useImageCompress()
 
   /**
    * Проверяет файл до отправки: тип и вес.
@@ -112,7 +113,7 @@ export function useChatAttachment() {
     }
     processing.value = true
     try {
-      const next = isChatImage(target.name) ? await compressImageFile(target, 1920, 0.84, CHAT_COMPRESSED_TARGET) : target
+      const next = isChatImage(target.name) ? await compressImageFast(target, 1920, 0.84, CHAT_COMPRESSED_TARGET) : target
       if (next.size > CHAT_MAX_BYTES) {
         error.value = 'Файл больше 10 МБ'
         return false

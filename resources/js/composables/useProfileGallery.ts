@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue'
 import { galleryApi, type GalleryPhoto } from '@/services/gallery.api'
 import { useRewardToast } from '@/composables/useRewardToast'
-import { compressImageFile } from '@/utils/image'
+import { useImageCompress } from '@/composables/useImageCompress'
 
 /**
  * Лимиты галереи по тарифам: free — 5 бесплатных фото.
@@ -24,6 +24,7 @@ export function galleryLimitFor(plan?: string | null, isAdmin?: boolean): number
 
 export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean }) {
   const rewards = useRewardToast()
+  const { compressImageFast } = useImageCompress()
   const photos = ref<GalleryPhoto[]>([])
   const limit = ref(5)
   const canAdd = ref(false)
@@ -63,7 +64,7 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
     uploading.value = true
     error.value = null
     try {
-      const small = await compressImageFile(file)
+      const small = await compressImageFast(file)
       const created = await galleryApi.upload(small, caption)
       rewards.applyReward(created)
       photos.value.unshift(created)
@@ -86,7 +87,7 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
   }
 
   async function replace(photo: GalleryPhoto, file: File) {
-    const small = await compressImageFile(file)
+    const small = await compressImageFast(file)
     const updated = await galleryApi.replace(photo.id, small)
     const i = photos.value.findIndex((p) => p.id === photo.id)
     if (i >= 0) photos.value[i] = updated

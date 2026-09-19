@@ -2,7 +2,8 @@ import { ref, type Ref } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { districtsApi } from '@/services/districts.api'
 import { useDistrictsStore } from '@/stores/districts'
-import { compressImageFile, MAX_PHOTO_INPUT_BYTES } from '@/utils/image'
+import { MAX_PHOTO_INPUT_BYTES } from '@/utils/image'
+import { useImageCompress } from '@/composables/useImageCompress'
 import type { DistrictDetails } from '@/types/entities/District'
 
 /**
@@ -22,6 +23,7 @@ export function useDistrictCover(
   isOwner: Ref<boolean>,
 ) {
   const store = useDistrictsStore()
+  const { compressImageFast } = useImageCompress()
 
   const toast = (() => {
     try {
@@ -117,7 +119,7 @@ export function useDistrictCover(
     uploading.value = true
 
     try {
-      const small = await compressImageFile(file, 1920, 0.84)
+      const small = await compressImageFast(file, 1920, 0.84)
       const updated = await districtsApi.uploadCover(currentId, small)
       applyUpdated(updated)
       toast?.add({ severity: 'success', summary: 'Обложка обновлена', detail: 'Её видят все жители и гости', life: 2500 })

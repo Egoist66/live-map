@@ -1,5 +1,6 @@
 import { computed, onBeforeUnmount, ref } from 'vue'
 import { strokesToGeometry, type BrushPoint } from '@/utils/districtGeo'
+import { useDistrictGeoWorker } from '@/composables/useDistrictGeoWorker'
 
 /**
  * Кисть UDistrict: заливка куска карты мазками.
@@ -37,6 +38,8 @@ export function useDistrictPaint() {
     }
     return strokesToGeometry(all, brushRadiusM.value)
   })
+
+  const { strokesToGeometryAsync } = useDistrictGeoWorker()
 
   const strokesCount = computed(() => strokes.value.length + (currentStroke.value?.length ? 1 : 0))
   const canUndo = computed(() => strokes.value.length > 0 && !currentStroke.value)
@@ -113,6 +116,28 @@ export function useDistrictPaint() {
    */
   function takeDraft(): ReturnType<typeof strokesToGeometry> {
     const geometry = draftGeometry.value
+    cancelPainting()
+    return geometry
+  }
+
+  /**
+   * Забрать готовую заливку через воркер (не фризит UI на больших мазках).
+   *
+   * Превью `draftGeometry` остаётся синхронным для 60fps, а финальный
+   * подсчёт перед сохранением едет в воркер.
+   *
+   * @returns геометрия черновика или null
+   */
+  async function takeDraftAsync(): Promise<ReturnType<typeof strokesToGeometry>> {
+    const all = [...strokes.value]
+    if (currentStroke.value?.length) {
+      all.push(currentStroke.value)
+    }
+    if (!all.length) {
+      cancelPainting()
+      return null
+    }
+    const geometry = await strokesToGeometryAsync(all, brushRadiusM.value)
     cancelPainting()
     return geometry
   }
@@ -207,6 +232,7 @@ export function useDistrictPaint() {
     startPainting,
     cancelPainting,
     takeDraft,
+    takeDraftAsync,
     addStroke,
     undoStroke,
     clearStrokes,

@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import { kvDel, kvGet, kvSet } from '@/db/app.db'
-import { compressImageFile } from '@/utils/image'
+import { useImageCompress } from '@/composables/useImageCompress'
 
 /**
  * Пресет фона чата.
@@ -56,6 +56,7 @@ let ownerKey: string | null = null
  */
 export function useChatWallpaper() {
   const presets = CHAT_WALLPAPER_PRESETS
+  const { compressImageFast } = useImageCompress()
 
   const hasWallpaper = computed(() => activePresetId.value !== CHAT_WALLPAPER_PRESETS[0].id)
 
@@ -139,7 +140,7 @@ export function useChatWallpaper() {
     isSaving.value = true
     saveError.value = null
     try {
-      const compressed = await compressImageFile(file, MAX_WALLPAPER_SIDE, 0.78, MAX_WALLPAPER_BYTES)
+      const compressed = await compressImageFast(file, MAX_WALLPAPER_SIDE, 0.78, MAX_WALLPAPER_BYTES)
       const url = await readFileAsDataUrl(compressed)
       customImageUrl.value = url
       activePresetId.value = CUSTOM_WALLPAPER_ID
