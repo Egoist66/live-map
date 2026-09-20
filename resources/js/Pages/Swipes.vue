@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, usePage } from '@inertiajs/vue3'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import GuestLayout from '@/Layouts/GuestLayout.vue'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import DatingQuestionnaireForm from '@/Components/Features/Dating/DatingQuestionnaireForm.vue'
@@ -98,6 +98,13 @@ onMounted(async () => {
     await s.loadActive()
   }
 })
+
+onUnmounted(() => {
+  try {
+    ;(window as any).__swipesRealtimeStop?.()
+    ;(window as any).__swipesRealtimeStop = null
+  } catch {}
+})
 </script>
 
 <template>
@@ -135,6 +142,16 @@ onMounted(async () => {
             <Button icon="pi pi-arrow-left" rounded text aria-label="Выйти из свайпов" title="Выйти из свайпов" class="!w-7 !h-7 sm:!w-10 sm:!h-10 !p-0 shrink-0" @click="mobileMenu.goBack()" />
             <Button icon="pi pi-user" rounded text aria-label="Мой профиль" title="Мой профиль" class="!w-7 !h-7 sm:!w-10 sm:!h-10 !p-0 shrink-0" @click="mobileMenu.goProfile()" />
             <span class="flex-1" />
+            <Button
+              v-if="s.activeTab.value === 'feed' && !s.loading.value && !s.current.value"
+              icon="pi pi-bars"
+              rounded
+              text
+              aria-label="Меню свайпов"
+              title="Меню свайпов — лента, избранное, лайки, анкета, PRO"
+              class="!w-7 !h-7 sm:!w-10 sm:!h-10 !p-0 shrink-0 sm:hidden"
+              @click="mobileMenu.open()"
+            />
           </div>
           <div class="mt-2 sm:mt-4 hidden sm:flex items-center gap-2">
             <Button icon="pi pi-bars" severity="secondary" rounded outlined size="small" aria-label="Меню свайпов" title="Лента · Активные · Избранное · Лайки · Анкета · PRO" @click="mobileMenu.open()" />
@@ -144,7 +161,7 @@ onMounted(async () => {
             <Button icon="pi pi-user-edit" severity="secondary" rounded outlined size="small" aria-label="Моя анкета" title="Моя анкета — что ищешь, о себе, интересы" @click="s.goTab('questionnaire')" />
             <Button icon="pi pi-question-circle" severity="secondary" rounded outlined size="small" aria-label="Как работают свайпы" title="Как работают свайпы" @click="s.showHelp.value = true" />
             <Button icon="pi pi-sliders-h" severity="secondary" rounded outlined size="small" aria-label="Фильтры" @click="s.showFilters.value = true" />
-            <Button v-if="s.canResetHistory.value" icon="pi pi-trash" severity="warn" rounded outlined size="small" aria-label="Сбросить просмотренные" :title="s.isAdmin.value ? 'Сбросить просмотренные (безлимит)' : 'Сбросить просмотренные (1 раз)'" :loading="s.resetting.value" @click="s.resetHistory()" />
+            <Button v-if="s.canResetHistory.value" icon="pi pi-trash" severity="warn" rounded outlined size="small" aria-label="Сбросить просмотренные" :title="s.resetTitle.value" :loading="s.resetting.value" @click="s.resetHistory()" />
           </div>
 
           <div v-if="s.matches.value.length" class="mt-4 hidden sm:block">
@@ -156,9 +173,9 @@ onMounted(async () => {
                 class="shrink-0 flex flex-col items-center w-[64px] rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
                 @click="s.openChat(m.user.id, m.conversation_id)"
               >
-                <span class="relative block">
-                  <Avatar :image="m.user.avatar_url ?? undefined" :label="!m.user.avatar_url ? (m.user.name ?? '?').slice(0, 1) : undefined" shape="circle" size="large" class="!w-14 !h-14 ring-2 ring-emerald-400 dark:ring-emerald-500" />
-                  <span class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 grid place-items-center ring-2 ring-white dark:ring-zinc-900"><i class="pi pi-heart-fill text-white text-[10px]" /></span>
+                <span class="relative block w-14 h-14 shrink-0">
+                  <Avatar :image="m.user.avatar_url ?? undefined" :label="!m.user.avatar_url ? (m.user.name ?? '?').slice(0, 1) : undefined" shape="circle" class="!w-14 !h-14 !text-xl block overflow-hidden ring-2 ring-emerald-400 dark:ring-emerald-500" />
+                  <span class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 grid place-items-center ring-2 ring-white dark:ring-[#090E1A]"><i class="pi pi-heart-fill text-white text-[10px] leading-none" /></span>
                 </span>
                 <span class="mt-1.5 text-[11px] font-semibold leading-tight text-stone-600 dark:text-zinc-200 truncate w-full text-center">{{ m.user.name }}</span>
               </button>
@@ -178,7 +195,7 @@ onMounted(async () => {
               <div class="grid grid-cols-2 gap-1.5 min-[411px]:gap-2">
                 <div
                   v-for="u in s.activeUsers.value"
-                  :key="u.id"
+                  :key="u.id ?? u.name"
                   class="rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3 flex flex-col items-center text-center"
                 >
                   <Link :href="`/users/${u.id}`" class="relative shrink-0">
@@ -226,7 +243,7 @@ onMounted(async () => {
             <div v-else-if="s.favorites.value.length" class="mt-4 space-y-2">
               <div
                 v-for="f in s.favorites.value"
-                :key="f.id"
+                :key="f.id ?? f.name"
                 class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3"
               >
                 <Link :href="`/users/${f.id}`" class="shrink-0"><Avatar :image="f.avatar_url ?? undefined" :label="!f.avatar_url ? (f.name ?? '?').slice(0, 1) : undefined" shape="circle" class="!w-12 !h-12" /></Link>
@@ -255,7 +272,7 @@ onMounted(async () => {
               <div v-if="s.admirersIncognito.value" class="text-center text-[11px] font-bold text-violet-600 dark:text-violet-300">🕵️ {{ s.admirersIncognito.value }} — тайные поклонники (PRO)</div>
               <div
                 v-for="f in s.admirers.value"
-                :key="`${f.id}-${f.is_incognito ? 'inc' : 'open'}`"
+                :key="s.admirerKey(f)"
                 class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3"
               >
                 <component :is="f.is_incognito ? 'span' : Link" :href="f.is_incognito ? undefined : `/users/${f.id}`" class="shrink-0">
@@ -346,6 +363,15 @@ onMounted(async () => {
               </div>
 
               <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
+                <span class="w-10 h-10 rounded-2xl bg-sky-500/15 text-sky-600 dark:text-sky-300 grid place-items-center shrink-0"><i class="pi pi-send" /></span>
+                <div class="min-w-0 flex-1">
+                  <div class="text-sm font-black text-stone-900 dark:text-white">Скрыть расстояние <span class="text-amber-500">PRO</span></div>
+                  <div class="text-[11px] text-stone-500 dark:text-zinc-400">{{ s.privacy.value.dating_hide_distance ? 'Расстояние скрыто · виден только город' : 'Все видят расстояние до тебя' }}</div>
+                </div>
+                <ToggleSwitch class="shrink-0" :model-value="s.privacy.value.dating_hide_distance" input-id="premium-hide-distance" @update:model-value="(v:boolean)=>s.setPrivacyFlag('dating_hide_distance', v)" />
+              </div>
+
+              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
                 <span class="w-10 h-10 rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 grid place-items-center shrink-0"><i class="pi pi-lock" /></span>
                 <div class="min-w-0 flex-1">
                   <div class="text-sm font-black text-stone-900 dark:text-white">Пишут только мэтчи <span class="text-emerald-500">Free</span></div>
@@ -384,9 +410,9 @@ onMounted(async () => {
                 <span class="w-10 h-10 rounded-2xl bg-orange-500/15 text-orange-500 grid place-items-center shrink-0"><i class="pi pi-refresh" /></span>
                 <div class="min-w-0 flex-1">
                   <div class="text-sm font-black text-stone-900 dark:text-white">Начать заново</div>
-                  <div class="text-[11px] text-stone-500 dark:text-zinc-400">{{ s.canResetHistory.value ? 'Вернёт всех просвайпанных в ленту' : 'Одноразовый сброс уже использован' }}</div>
+                  <div class="text-[11px] text-stone-500 dark:text-zinc-400">{{ s.resetDescription.value }}</div>
                 </div>
-                <Button v-if="s.canResetHistory.value" :label="s.isAdmin.value ? 'Сбросить' : 'Сбросить (1 раз)'" icon="pi pi-trash" severity="warn" rounded outlined size="small" :loading="s.resetting.value" @click="s.resetHistory()" />
+                <Button v-if="s.canResetHistory.value" :label="(s.isAdmin.value || s.isPro.value) ? 'Сбросить' : 'Сбросить (1 раз)'" icon="pi pi-trash" severity="warn" rounded outlined size="small" :loading="s.resetting.value" @click="s.resetHistory()" />
               </div>
             </div>
           </template>
@@ -571,14 +597,25 @@ onMounted(async () => {
             <div v-else class="rounded-[24px] border border-dashed border-stone-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-6 sm:p-8 text-center">
               <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-rose-500 to-orange-400 text-white grid place-items-center"><i class="pi pi-heart-fill text-xl" /></div>
               <template v-if="s.feedExhausted.value && !s.hasActiveFilters.value">
-                <div class="mt-4 text-lg font-black text-stone-900 dark:text-white">Ты просвайпал(а) всех в ULove 🎉</div>
-                <div class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Лайкнутые сохранены в «Избранном». Новые люди появляются каждый день — загляни позже.</div>
-                <div class="mt-4 flex gap-2 justify-center flex-wrap">
-                  <Button label="Моё избранное" rounded size="small" class="!bg-gradient-to-br !from-rose-500 !to-orange-400 !border-0 !text-white" @click="s.goTab('favorites')" />
-                  <Button label="Обновить" severity="secondary" rounded outlined size="small" @click="s.loadFeed()" />
-                  <Button v-if="s.canResetHistory.value" :label="s.isAdmin.value ? 'Сбросить просмотренные' : 'Начать заново (1 раз)'" icon="pi pi-trash" severity="warn" rounded outlined size="small" :loading="s.resetting.value" @click="s.resetHistory()" />
-                </div>
-                <div v-if="!s.canResetHistory.value" class="mt-2 text-[11px] text-stone-400 dark:text-zinc-500">Одноразовый сброс уже использован</div>
+                <template v-if="s.isPro.value">
+                  <div class="mt-4 text-lg font-black text-stone-900 dark:text-white">Ты просвайпал(а) всех текущих в ULove 🎉</div>
+                  <div class="text-sm text-stone-500 dark:text-zinc-400 mt-1">PRO листает безлимитно: покажи всех снова — лента вернёт просвайпанных. Лайкнутые сохранены в «Избранном».</div>
+                  <div class="mt-4 flex gap-2 justify-center flex-wrap">
+                    <Button label="Моё избранное" rounded size="small" class="!bg-gradient-to-br !from-rose-500 !to-orange-400 !border-0 !text-white" @click="s.goTab('favorites')" />
+                    <Button label="Обновить" severity="secondary" rounded outlined size="small" @click="s.loadFeed()" />
+                    <Button label="Показать снова" icon="pi pi-refresh" severity="warn" rounded outlined size="small" :loading="s.resetting.value" @click="s.resetHistory()" />
+                  </div>
+                </template>
+                <template v-else>
+                  <div class="mt-4 text-lg font-black text-stone-900 dark:text-white">Ты просвайпал(а) всех в ULove 🎉</div>
+                  <div class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Лайкнутые сохранены в «Избранном». Новые люди появляются каждый день — загляни позже.</div>
+                  <div class="mt-4 flex gap-2 justify-center flex-wrap">
+                    <Button label="Моё избранное" rounded size="small" class="!bg-gradient-to-br !from-rose-500 !to-orange-400 !border-0 !text-white" @click="s.goTab('favorites')" />
+                    <Button label="Обновить" severity="secondary" rounded outlined size="small" @click="s.loadFeed()" />
+                    <Button v-if="s.canResetHistory.value" label="Начать заново (1 раз)" icon="pi pi-trash" severity="warn" rounded outlined size="small" :loading="s.resetting.value" @click="s.resetHistory()" />
+                  </div>
+                  <div v-if="!s.canResetHistory.value" class="mt-2 text-[11px] text-stone-400 dark:text-zinc-500">Одноразовый сброс уже использован</div>
+                </template>
               </template>
               <template v-else>
                 <div class="mt-4 text-lg font-black text-stone-900 dark:text-white">Лента пуста</div>
@@ -713,15 +750,15 @@ onMounted(async () => {
                     class="group w-full flex items-center gap-2.5 p-2 rounded-2xl bg-white/80 dark:bg-white/5 border border-white dark:border-white/10 hover:border-emerald-300 dark:hover:border-emerald-500/40 hover:shadow-md hover:shadow-emerald-500/10 active:scale-[0.99] transition text-left"
                     @click="mobileMenu.openMatch(s, m)"
                   >
-                    <span class="relative shrink-0">
-                      <span class="block p-[2px] rounded-full bg-gradient-to-br from-emerald-400 via-teal-400 to-rose-400">
-                        <Avatar :image="m.user.avatar_url ?? undefined" :label="!m.user.avatar_url ? (m.user.name ?? '?').slice(0, 1) : undefined" shape="circle" class="!w-10 !h-10 !border-2 !border-white dark:!border-zinc-900" />
+                    <span class="relative block w-11 h-11 shrink-0">
+                      <span class="block w-11 h-11 p-[2px] rounded-full bg-gradient-to-br from-emerald-400 via-teal-400 to-rose-400">
+                        <Avatar :image="m.user.avatar_url ?? undefined" :label="!m.user.avatar_url ? (m.user.name ?? '?').slice(0, 1) : undefined" shape="circle" class="!w-full !h-full block overflow-hidden" />
                       </span>
-                      <span class="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-gradient-to-br from-rose-500 to-orange-400 grid place-items-center ring-2 ring-white dark:ring-zinc-900"><i class="pi pi-heart-fill text-white text-[8px]" /></span>
+                      <span class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-gradient-to-br from-rose-500 to-orange-400 grid place-items-center ring-2 ring-white dark:ring-zinc-900"><i class="pi pi-heart-fill text-white text-[10px] leading-none" /></span>
                     </span>
-                    <span class="min-w-0 flex-1">
+                    <span class="min-w-0 flex-1 leading-tight">
                       <span class="block text-sm font-black truncate text-stone-900 dark:text-white leading-tight">{{ m.user.name }}</span>
-                      <span class="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-300"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />напиши первой · мэтч ждёт</span>
+                      <span class="mt-0.5 flex items-center gap-1.5 text-[11px] font-semibold leading-tight text-emerald-600 dark:text-emerald-300"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" /><span class="truncate">напиши первой · мэтч ждёт</span></span>
                     </span>
                     <span class="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 grid place-items-center shrink-0 group-hover:bg-emerald-500 group-hover:text-white transition"><i class="pi pi-send text-xs" /></span>
                   </button>
@@ -804,6 +841,10 @@ onMounted(async () => {
               <ToggleSwitch class="shrink-0" v-model="s.privacy.value.dating_hide_age" input-id="hide-age" />
               <label for="hide-age" class="text-sm text-stone-700 dark:text-zinc-200">Скрыть возраст <span class="text-amber-500 font-bold">PRO</span></label>
             </div>
+            <div class="flex items-center gap-3 opacity-80">
+              <ToggleSwitch class="shrink-0" v-model="s.privacy.value.dating_hide_distance" input-id="hide-distance" />
+              <label for="hide-distance" class="text-sm text-stone-700 dark:text-zinc-200">Скрыть расстояние · виден только город <span class="text-amber-500 font-bold">PRO</span></label>
+            </div>
             <Button label="Сохранить приватность" severity="secondary" size="small" rounded outlined :loading="s.savingPrivacy.value" @click="s.savePrivacy()" />
           </div>
           <div class="flex gap-2 pb-[var(--sab)]">
@@ -830,11 +871,11 @@ onMounted(async () => {
 
       <Dialog :visible="s.showHelp.value" @update:visible="(v:boolean)=>{ s.showHelp.value = v }" modal header="Как работают свайпы" :style="{ width: '420px', maxWidth: '94vw', maxHeight: '92dvh' }" :pt="dialogPt">
         <div class="flex flex-col gap-3 text-sm text-stone-600 dark:text-zinc-300 pt-1">
-          <div>Лента — без geo-ограничений: листай всех людей в системе, не важно где они находятся.</div>
-          <div>Фильтр «Люди рядом» — опционален. Free: рядом до 10 км, всё дальше — PRO безлимит.</div>
+          <div>ULove — без географии: листай, свайпай и находи людей со всего приложения, не важно в каком они городе. Главное — что человек в UPin. Логика пинов и карты здесь не действует.</div>
+          <div>Фильтр «Люди рядом» — только если хочешь локально. Без него показывают всех. Free: рядом до 10 км, дальше — PRO.</div>
           <div>Свайпы безлимитные. Сообщения без мэтча: Free {{ s.quota.value ? `${s.quota.value.left}/${s.quota.value.limit}` : '3/3' }}, PRO — 10/мес. Взаимный лайк (мэтч) открывает чат всегда, даже при исчерпанном лимите.</div>
           <div>Избранное — лайкнутые без мэтча. Лимиты: Free до 2, Pro до 5, Business до 15.</div>
-          <div>Просвайпанных можно вернуть один раз кнопкой «Начать заново» — лента снова покажет всех.</div>
+          <div>Всех просвайпал(а)? Free возвращает ленту один раз кнопкой «Начать заново», а PRO — безлимитно кнопкой «Показать снова».</div>
           <div>Таб «Активные» — кто сейчас в ULove. Открывай анкету, пиши, если человек не закрыл сообщения.</div>
           <div>Кнопка ⓘ на карточке — подробная анкета: что ищет, интересы, о себе. Своя анкета — иконка-карандаш сверху.</div>
           <div class="rounded-2xl bg-stone-100 dark:bg-zinc-800 px-3 py-2 text-center font-bold">Строго 18+</div>

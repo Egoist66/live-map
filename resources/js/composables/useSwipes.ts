@@ -103,14 +103,25 @@ export function useSwipes() {
   const isAdmin = computed(() => !!authUser.value?.is_admin || authUser.value?.role === 'admin')
 
   /**
+   * PRO-тариф: pro/business/админ. Даёт безлимитный сброс ленты и PRO-плюшки.
+   *
+   * @returns true если включён PRO
+   */
+  const isPro = computed(() => {
+    if (isAdmin.value) {
+      return true
+    }
+
+    const plan = authUser.value?.effective_plan || authUser.value?.plan || 'free'
+
+    return plan === 'pro' || plan === 'business'
+  })
+
+  /**
    * Может ли скрывать лайк: PRO / Business / админ.
    * @returns true если доступен анонимный лайк
    */
-  const canIncognito = computed(() => {
-    if (isAdmin.value) return true
-    const plan = (authUser.value?.effective_plan || authUser.value?.plan || 'free') as string
-    return plan === 'pro' || plan === 'business'
-  })
+  const canIncognito = computed(() => isPro.value)
 
   /**
    * Название тарифа для PRO-таба.
@@ -172,9 +183,10 @@ export function useSwipes() {
   })
 
   const privacy = ref({
-    dating_match_only: false,
-    dating_hide_name: false,
-    dating_hide_age: false,
+    dating_match_only: !!authUser.value?.dating_match_only,
+    dating_hide_name: !!authUser.value?.dating_hide_name,
+    dating_hide_age: !!authUser.value?.dating_hide_age,
+    dating_hide_distance: !!authUser.value?.dating_hide_distance,
   })
 
   const dragX = ref(0)
@@ -218,8 +230,42 @@ export function useSwipes() {
   /** Лимит радиуса по тарифу. Null — безлимит (PRO). */
   const radiusLimit = computed(() => quota.value?.radius_limit ?? FREE_SWIPES_RADIUS_KM)
 
-  /** Доступен ли сброс истории (админ — всегда, остальные — один раз). */
+  /** Доступен ли сброс истории (админ и PRO — всегда, Free — один раз). */
   const canResetHistory = computed(() => quota.value?.can_reset ?? false)
+
+  /**
+   * Подсказка кнопки сброса просмотренных по тарифу.
+   *
+   * @returns текст для title кнопки
+   */
+  const resetTitle = computed(() => {
+    if (isAdmin.value) {
+      return 'Сбросить просмотренные (безлимит)'
+    }
+
+    if (isPro.value) {
+      return 'Сбросить просмотренные (PRO — безлимит)'
+    }
+
+    return 'Сбросить просмотренные (1 раз)'
+  })
+
+  /**
+   * Пояснение сброса в PRO-блоке: у PRO сброс бесконечный, у Free одноразовый.
+   *
+   * @returns текст описания сброса
+   */
+  const resetDescription = computed(() => {
+    if (isPro.value) {
+      return 'PRO: сброс безлимитный — листай заново когда угодно'
+    }
+
+    if (canResetHistory.value) {
+      return 'Вернёт всех просвайпанных в ленту'
+    }
+
+    return 'Одноразовый сброс уже использован'
+  })
 
   /**
    * Подпись радиуса с пометкой PRO.
@@ -489,6 +535,10 @@ export function useSwipes() {
   /**
    * Подписаться на realtime мэтчей/лайков: обновляет шапку мэтчей,
    * даже если уведомление прилетело вне страницы ULove.
+   *
+   * Слушаем только канонические user:* события: сокет (useUserChannel)
+   * эмитит только их, а поллер дублирует каждое событие парой
+   * notify:* + user:* — подписка на обе ветки давала двойной рефетч.
    * @returns функция отписки
    */
   function subscribeRealtime(): () => void {
@@ -505,8 +555,6 @@ export function useSwipes() {
       ensureUserChannel()
       offs.push(busOn('user:match.created', () => onMatch()))
       offs.push(busOn('user:swipe.liked', () => onLiked()))
-      offs.push(busOn('notify:match', () => onMatch()))
-      offs.push(busOn('notify:swipe', () => onLiked()))
       return () => {
         offs.forEach((off) => {
           try { off() } catch { return }
@@ -618,6 +666,20 @@ export function useSwipes() {
   }
 
   /**
+   * Стабильный ключ поклонника для v-for и дедупа подгрузки.
+   * У «Тайного поклонника» id скрыт (null) — ключ по времени лайка.
+   *
+   * @param a карточка поклонника
+   * @returns уникальный ключ строки
+   */
+  function admirerKey(a: { id: number | null; is_incognito?: boolean; created_at?: string }): string {
+    if (a.is_incognito) {
+      return `inc-${a.created_at ?? 'unknown'}`
+    }
+    return `open-${a.id ?? 'unknown'}`
+  }
+
+  /**
    * Догрузить поклонников для infinite scroll.
    *
    * @returns false когда страниц больше нет
@@ -629,8 +691,8 @@ export function useSwipes() {
       const next = admirersPage.value + 1
       const res = await datingApi.admirers(next, 20)
       const rows = res.admirers ?? []
-      const known = new Set(admirers.value.map((a) => `${a.id}-${a.is_incognito ? 'inc' : 'open'}`))
-      const fresh = rows.filter((a) => !known.has(`${a.id}-${a.is_incognito ? 'inc' : 'open'}`))
+      const known = new Set(admirers.value.map((a) => admirerKey(a)))
+      const fresh = rows.filter((a) => !known.has(admirerKey(a)))
       admirers.value = [...admirers.value, ...fresh]
       admirersPage.value = (res as { current_page?: number }).current_page ?? next
       admirersHasMore.value = !!(res as { has_more?: boolean }).has_more && rows.length > 0
@@ -642,10 +704,11 @@ export function useSwipes() {
   /**
    * Убрать человека из избранного.
    *
-   * @param userId id пользователя
+   * @param userId id пользователя (null невозможен — в избранном только открытые)
    * @returns void
    */
-  async function removeFavorite(userId: number): Promise<void> {
+  async function removeFavorite(userId: number | null): Promise<void> {
+    if (userId == null) return
     try {
       await datingApi.removeFavorite(userId)
       favorites.value = favorites.value.filter((f) => f.id !== userId)
@@ -692,7 +755,7 @@ export function useSwipes() {
    */
   async function swipe(action: 'like' | 'pass'): Promise<void> {
     const card = current.value
-    if (!card || acting.value || leaving.value) return
+    if (!card || card.id == null || acting.value || leaving.value) return
     acting.value = true
     leaving.value = true
     flyDir.value = action
@@ -741,7 +804,8 @@ export function useSwipes() {
    */
   async function loadMore(): Promise<void> {
     try {
-      const exclude = cards.value.map((c) => c.id).slice(-200)
+      const seenIds = cards.value.map((c) => c.id)
+      const exclude = seenIds.filter((id): id is number => id != null).slice(-200)
       const res = await datingApi.feed(filters.value, exclude, 20)
       quota.value = res.quota
       const known = new Set(cards.value.map((c) => c.id))
@@ -758,11 +822,12 @@ export function useSwipes() {
    * Если id комнаты уже известен (мэтч), открываем её сразу,
    * иначе создаём через готовую систему чатов.
    *
-   * @param userId id собеседника
+   * @param userId id собеседника (null невозможен — мэтч всегда раскрыт)
    * @param conversationId известный id комнаты (мэтч)
    * @returns void
    */
-  async function openChat(userId: number, conversationId?: number | null): Promise<void> {
+  async function openChat(userId: number | null, conversationId?: number | null): Promise<void> {
+    if (userId == null) return
     if (conversationId) {
       matchedCard.value = null
       matchedConversationId.value = null
@@ -789,10 +854,11 @@ export function useSwipes() {
   /**
    * Написать без мэтча (тратит квоту free 3 / pro 10).
    *
-   * @param userId id собеседника
+   * @param userId id собеседника (null у инкогнито — кнопка там скрыта)
    * @returns void
    */
-  async function writeWithoutMatch(userId: number): Promise<void> {
+  async function writeWithoutMatch(userId: number | null): Promise<void> {
+    if (userId == null) return
     await openChat(userId)
   }
 
@@ -858,12 +924,12 @@ export function useSwipes() {
   /**
    * Переключить флаг приватности с проверкой тарифа.
    *
-   * Скрытие имени/возраста — PRO, «только мэтчи» — бесплатно.
+   * Скрытие имени/возраста/расстояния — PRO, «только мэтчи» — бесплатно.
    *
    * @param key флаг приватности
    * @param next новое значение
    */
-  async function setPrivacyFlag(key: 'dating_hide_name' | 'dating_hide_age' | 'dating_match_only', next: boolean): Promise<void> {
+  async function setPrivacyFlag(key: 'dating_hide_name' | 'dating_hide_age' | 'dating_hide_distance' | 'dating_match_only', next: boolean): Promise<void> {
     const needsPro = key !== 'dating_match_only'
     if (next && needsPro && !canIncognito.value) {
       const featureName = key === 'dating_hide_name' ? 'Скрытие имени' : 'Скрытие возраста'
@@ -945,7 +1011,7 @@ export function useSwipes() {
   /**
    * Сбросить просмотренные свайпы и снова листать всех.
    *
-   * Админ — безлимитно, обычный пользователь — один раз (Free).
+   * Админ и PRO — безлимитно, Free — один раз.
    * Чистит историю like/pass, перезагружает ленту с избранным.
    *
    * @returns void
@@ -970,9 +1036,10 @@ export function useSwipes() {
 
   /**
    * Лайк в ответ из «Меня лайкнули».
-   * @param userId id пользователя
+   * @param userId id пользователя (null у инкогнито — кнопка там скрыта)
    */
-  async function swipeAdmirer(userId: number): Promise<void> {
+  async function swipeAdmirer(userId: number | null): Promise<void> {
+    if (userId == null) return
     if (acting.value) return
     acting.value = true
     error.value = null
@@ -1029,8 +1096,12 @@ export function useSwipes() {
     admirersHasMore,
     loadAdmirers,
     loadMoreAdmirers,
+    admirerKey,
     incognitoLike,
     canIncognito,
+    isPro,
+    resetTitle,
+    resetDescription,
     planLabel,
     activeTab,
     goTab,

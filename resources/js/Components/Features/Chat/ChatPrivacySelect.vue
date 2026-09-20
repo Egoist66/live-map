@@ -1,20 +1,14 @@
 <script setup lang="ts">
 import Select from 'primevue/select'
-import Checkbox from 'primevue/checkbox'
-import { PRIVACY_OPTIONS, isRandomDisabledFor } from '@/composables/usePrivacySettings'
+import { PRIVACY_OPTIONS } from '@/composables/usePrivacySettings'
 import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
 
-const props = defineProps<{ privacy: { message_privacy: string; allow_random_messages: boolean } }>()
+const props = defineProps<{ privacy: { message_privacy: string } }>()
 const emit = defineEmits<{ (e: 'savePrivacy'): void }>()
 const { selectPt } = useDropdownMenuStyle()
 
 function onPrivacyChange(v: any) {
   props.privacy.message_privacy = v
-  emit('savePrivacy')
-}
-
-function onRandomChange(v: any) {
-  props.privacy.allow_random_messages = !!v
   emit('savePrivacy')
 }
 </script>
@@ -47,12 +41,5 @@ function onRandomChange(v: any) {
         </span>
       </template>
     </Select>
-    <label
-      class="flex items-center gap-2.5 text-xs p-3 lg:p-2 rounded-xl border bg-white dark:bg-zinc-900 dark:text-zinc-200 border-stone-200 dark:border-zinc-700"
-      :class="isRandomDisabledFor(privacy.message_privacy) ? 'opacity-60' : ''"
-    >
-      <Checkbox :modelValue="privacy.allow_random_messages" @update:modelValue="onRandomChange" :disabled="isRandomDisabledFor(privacy.message_privacy)" binary inputId="allow-random" />
-      <span class="text-[13px] lg:text-xs select-none">Разрешить рандомным писать</span>
-    </label>
   </div>
 </template>

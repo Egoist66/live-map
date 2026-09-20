@@ -1,5 +1,6 @@
 import { computed, ref, watch, type Ref } from 'vue'
 import { usePage } from '@inertiajs/vue3'
+import { useAnonymousLikePromo } from '@/composables/useAnonymousLikePromo'
 
 interface PhotoLike {
   id: number
@@ -27,10 +28,11 @@ export function usePhotoViewer(gallery: GalleryLike, comments: CommentsLike) {
   const confirmDelete = ref(false)
   const likeLoading = ref(false)
   const saveLoading = ref(false)
-  const incognito = ref(false)
+  const anonPromo = useAnonymousLikePromo()
 
   /**
-   * Может ли ставить анонимный лайк: только PRO.
+   * Есть ли у юзера анонимные лайки: только PRO/Business/админ.
+   * Нужно чтобы не показывать PRO-промо тем, у кого PRO уже есть.
    * @returns true если PRO/Business/админ
    */
   const canIncognito = computed(() => {
@@ -58,12 +60,22 @@ export function usePhotoViewer(gallery: GalleryLike, comments: CommentsLike) {
     { immediate: true },
   )
 
-  async function onLike(useIncognito = false) {
+  /**
+   * Лайк активного фото (всегда открытый) + промо анонимных лайков при первом лайке.
+   *
+   * @returns результат toggleLike галереи
+   */
+  async function onLike() {
     const p = gallery.active.value
-    if (!p || likeLoading.value) return
+    if (!p || likeLoading.value) {
+      return null
+    }
     likeLoading.value = true
     try {
-      await gallery.toggleLike(p, useIncognito && canIncognito.value)
+      const res = await gallery.toggleLike(p, false)
+      const liked = !!(res as { liked?: boolean } | null)?.liked
+      anonPromo.maybeShowOnFirstLike({ liked, canIncognito: canIncognito.value })
+      return res
     } finally {
       likeLoading.value = false
     }
@@ -122,8 +134,9 @@ export function usePhotoViewer(gallery: GalleryLike, comments: CommentsLike) {
     confirmDelete,
     likeLoading,
     saveLoading,
-    incognito,
     canIncognito,
+    anonPromoVisible: anonPromo.promoVisible,
+    closeAnonPromo: anonPromo.closePromo,
     onLike,
     onSaveCaption,
     startEdit,

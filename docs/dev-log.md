@@ -1,5 +1,26 @@
 # Dev-лог
 
+## 2026-09-20 — Свайпы: гонки закрыты, инкогнито больше не палит id
+- 🔒 Гонка взаимного лайка: весь `recordAction` теперь в одной транзакции — пара сериализуется `lockForUpdate` по ordered user-строкам (порядок одинаковый → без дедлоков), `firstOrCreate DatingMatch` с фолбэком на `QueryException` (unique `user_a/user_b`), `updateOrCreate SwipeAction` с перечитыванием при дубле unique. Уведомляет только создатель мэтча (`isNewMatch`) — двойные мэтч-тосты/пуши/чаты исключены; чат собирается чистым `matchConversationTx`, анонс (`announceMatchConversation`) после коммита.
+- 🔕 Новизна лайка по факту записи (`wasRecentlyCreated || wasChanged('action')`): повторный like тихий, `pass → like` уведомляет заново, `like → pass` отзывает висящий `dating.liked` (`withdrawLike` через `deleteUnread`) — stale-пингов «тебя лайкнули» больше нет. Семантика задокументирована: последнее действие решает (строка одна, unique `liker/liked`).
+- 🕵️ Инкогнито закрыто: `briefFor`, `actorShape`, `RealtimeController::brief` и карточка `admirers()` отдают `id: null` + занулённые `goal/about/interests/last_seen_at` — по пингу анкету не открыть, раскрытие только при мэтче. Фронт: `SwipeCard.id: number | null`, ключ поклонников `admirerKey()` (инкогнито — по `created_at`), гарды `null` в `swipe/swipeAdmirer/writeWithoutMatch/removeFavorite/openChat`.
+- ➡️ Push о мэтче оставлен только второй стороне — сознательно: у автора модалка из ответа + `MatchCreated`/inbox на все устройства, а пуш бил бы по девайсу в руках (подавления foreground нет).
+- Проверки: `php -l` 4 файла ✅, `vue-tsc --noEmit` ✅ (по пути поправлены 5 ошибок типов).
+
+## 2026-09-20 — Свайпы + realtime: убраны двойные рефетчи и повторные пуши
+- 🔔 Двойной рефетч: поллер зеркалит каждое событие парой `notify:*` + `user:*`, а `useSwipes.subscribeRealtime` слушал обе ветки — каждый лайк/мэтч давал `loadFeed+loadAdmirers` / `loadMatches+loadFavorites` дважды. Оставлена подписка только на канонические `user:match.created` / `user:swipe.liked` (сокет других имён не эмитит). Плюс `Swipes.vue` теперь отписывается в `onUnmounted` (раньше подписка висела до следующего визита).
+- 🔕 Повторный лайк больше не спамит: `recordAction` переиспользует уже посчитанный `$alreadyLiked` — `notifyLiked` (inbox + `swipe.liked` + пуши) уходит только за новый лайк, даблклики и повторы тихие.
+- 🛡️ Сайд-эффекты после коммита: `ensureMatchConversation` слал `MessageSent`-broadcast и пуши мэтча внутри `DB::transaction` — при rollback приходило уведомление о несуществующем чате. Транзакция теперь только пишет (чат + участники + системное сообщение), broadcast/push — после, в `broadcastMatchMessage` / `pushMatchMessage` с тем же пейлоадом.
+- ⚡ `matchedIds` — один запрос с `orWhere` вместо двух `pluck` (дёргается из `favoritesCount`, `favorites`, `admirers`, `active`).
+- ❌ Не подтверждено и не тронуто: `toOthers()` на серверных broadcast — `X-Socket-ID` шлётся из `api.ts`, исключается только сокет-автор, мультидевайс цел; повтор тостов после полной перезагрузки — intended (напоминание о непрочитанных, `initialShown` уже guards ремаунты); `ShouldBroadcastNow` оставлен — воркера очереди в compose нет, перевод на очередь убил бы realtime.
+- Проверки: `php -l` ✅, `vue-tsc --noEmit` ✅.
+
+## 2026-09-20 — Галерея без чекбокса анонимного лайка + промо PRO при первом лайке
+- 🕵️ Чекбокс «Анонимный лайк — PRO» убран из `ProfilePhotoViewer` (сырой `input[type=checkbox]` заменён ничем — лайки фото теперь всегда открытые). Вместе с ним ушёл `incognito`-ref из `usePhotoViewer`: `onLike()` всегда шлёт `toggleLike(p, false)` и возвращает результат. Бэк (`ProfilePhotoController`, `canUseIncognitoLike`) не тронут — старые инкогнито-лайки продолжают отображаться как «Тайный поклонник».
+- 💜 Первый лайк показывает красивое промо (PrimeVue `Dialog`, градиент violet→fuchsia→indigo, `base-z-index 3000` поверх вьювера): «Анонимные лайки — … нужен тариф PRO» + кнопки «Понятно» / «Выбрать PRO» (`/settings/billing`). Логика в новом хуке `useAnonymousLikePromo` (флаг `live-map:anon-like-promo-seen` через `useStorage` из vueuse — показ один раз, только не-PRO и только при постановке лайка, не при снятии).
+- 💳 Опция переехала в тариф PRO: новый пункт «Анонимные лайки фото — тебя видят как „Тайного поклонника“» в `usePlanDetails` (Business покрыт через «Всё из PRO») + упоминание в FAQ-тарифах.
+- Проверки: `vue-tsc --noEmit` ✅.
+
 ## 2026-09-19 — Убраны уведомления подписчикам о чужой репутации
 - 🐞 Баг: каждое сообщение в чате начисляло автору очки (`chat_message` в `MessageController`), меняло `reputation_score` → хуки `User` слали `LevelChangedNotification` всем подписчикам → тост «Имя — репутация изменилась» при каждом сообщении. Репутация — личное дело каждого, итог каждый видит сам в недельном отчёте (`rewards.weekly`).
 - 🔧 Удалены хуки `updating/updated` по репутации и временные поля `_subOldScore/_subOldLevel` в `User`, метод `UserSubscriptionNotifier::levelChanged` и класс `LevelChangedNotification`. Фронт: ветка тоста `sub_level` в `useAppNotifications` больше не пушит (история старых записей в колокольчике и `usePinActivity` продолжают их корректно отображать), подпись кнопки подписки — «Посты, пины, фото». Колонка `notify_level` и API-флаги оставлены как есть (без миграции, просто больше ничего не читают).

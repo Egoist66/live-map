@@ -64,11 +64,22 @@ class ChatUserController extends Controller
         return response()->json(['ok' => true]);
     }
 
+    /**
+     * Сохранение приватности чата — только дропдаун message_privacy.
+     *
+     * @param Request $request запрос с message_privacy (everyone|friends|none)
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function privacy(Request $request)
     {
-        $request->validate(['message_privacy'=>'required|in:everyone,friends,none','allow_random_messages'=>'required|boolean']);
-        $request->user()->update($request->only(['message_privacy','allow_random_messages']));
-        return response()->json($request->user()->only(['message_privacy','allow_random_messages','photo_comments_privacy']));
+        $request->validate(['message_privacy' => 'required|in:everyone,friends,none', 'allow_random_messages' => 'sometimes|boolean']);
+        $user = $request->user();
+        $user->message_privacy = $request->input('message_privacy');
+        if ($request->has('allow_random_messages')) {
+            $user->allow_random_messages = (bool) $request->input('allow_random_messages');
+        }
+        $user->save();
+        return response()->json($user->only(['message_privacy', 'allow_random_messages', 'photo_comments_privacy']));
     }
 
     public function me(Request $request)

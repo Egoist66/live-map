@@ -4,7 +4,8 @@ import { api } from './api'
  * API дейтинг-ленты: свайпы, мэтчи, квоты, настройки.
  */
 export interface SwipeCard {
-  id: number
+  /** id кандидата; null у «Тайного поклонника» (инкогнито скрывает и id). */
+  id: number | null
   name: string
   is_anonymous: boolean
   age: number | null
@@ -17,6 +18,7 @@ export interface SwipeCard {
   is_pro?: boolean
   city: string | null
   distance_km: number | null
+  distance_hidden: boolean
   goal: string | null
   custom_goal: string | null
   about: string | null
@@ -67,7 +69,8 @@ export const datingApi = {
   async feed(filters: Partial<SwipeFilters>, excludeIds: number[] = [], limit = 20) {
     const params: Record<string, unknown> = {}
     if (filters.goal) params.goal = filters.goal
-    if (filters.gender && filters.gender !== 'all') params.gender = filters.gender
+    // Пол шлём всегда: явное «Все» в UI должно побеждать сохранённый dating_gender_pref.
+    params.gender = filters.gender || 'all'
     if (filters.age_min) params.age_min = filters.age_min
     if (filters.age_max) params.age_max = filters.age_max
     if (filters.radius_km) params.radius_km = filters.radius_km

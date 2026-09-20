@@ -352,12 +352,13 @@ class RealtimeController extends Controller
 
     /**
      * Краткий профиль для уведомлений (повторяет DatingService::briefFor).
+     * Инкогнито скрывает и id: по пингу нельзя открыть анкету.
      */
     private function brief($user, bool $incognito = false): array
     {
         if ($incognito) {
             return [
-                'id' => (int) $user->id,
+                'id' => null,
                 'name' => 'Тайный поклонник',
                 'avatar_url' => null,
                 'is_incognito' => true,

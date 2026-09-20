@@ -108,11 +108,12 @@ abstract class UserNotification
 
     /**
      * Краткий актор для пейлоада.
+     * Инкогнито скрывает и id: по уведомлению нельзя открыть анкету.
      */
     protected static function actorShape(User $actor, bool $incognito = false): array
     {
         if ($incognito) {
-            return ['id' => $actor->id, 'name' => 'Тайный поклонник', 'avatar_path' => null, 'avatar_url' => null];
+            return ['id' => null, 'name' => 'Тайный поклонник', 'avatar_path' => null, 'avatar_url' => null];
         }
 
         return [

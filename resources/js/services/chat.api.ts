@@ -20,7 +20,11 @@ export const chatApi = {
     const { data } = await api.get('/api/chat/users/search', { params: { q, page, per_page: perPage } })
     return data as { data: any[]; current_page: number; last_page: number; has_more: boolean } | any[]
   },
-  async updatePrivacy(data: { message_privacy: string; allow_random_messages: boolean }) {
+  /**
+   * Сохранение приватности чата — только дропдаун message_privacy.
+   * @param data `{ message_privacy: everyone|friends|none }`
+   */
+  async updatePrivacy(data: { message_privacy: string }) {
     const { data: res } = await api.patch('/api/chat/privacy', data)
     return res
   },

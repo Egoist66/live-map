@@ -10,6 +10,7 @@ use App\Models\SwipeAction;
 use App\Models\User;
 use App\Models\UserBlock;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -192,14 +193,14 @@ class DatingService
     /**
      * Может ли пользователь сбросить историю сейчас.
      *
-     * Админ — всегда, остальные — один раз.
+     * Админ и PRO/Business — безлимитно, Free — один раз.
      *
      * @param User $user
      * @return bool
      */
     public function canResetHistory(User $user): bool
     {
-        if ($user->isAdmin()) {
+        if ($user->isPro()) {
             return true;
         }
 
@@ -215,7 +216,7 @@ class DatingService
     public function quotaState(User $user): array
     {
         $radiusLimit = $this->radiusLimitFor($user);
-        $resetUsed = $user->isAdmin() ? false : $this->hasUsedSwipeReset($user);
+        $resetUsed = $user->isPro() ? false : $this->hasUsedSwipeReset($user);
 
         $base = [
             'radius_limit' => $radiusLimit,
@@ -334,10 +335,17 @@ class DatingService
      */
     private function matchedIds(User $me): array
     {
-        $a = DatingMatch::where('user_a_id', $me->id)->pluck('user_b_id');
-        $b = DatingMatch::where('user_b_id', $me->id)->pluck('user_a_id');
+        $ids = DatingMatch::where('user_a_id', $me->id)
+            ->orWhere('user_b_id', $me->id)
+            ->get(['user_a_id', 'user_b_id']);
 
-        return $a->merge($b)->map(fn ($id) => (int) $id)->unique()->values()->all();
+        $all = [];
+
+        foreach ($ids as $row) {
+            $all[] = (int) $row->user_a_id === $me->id ? (int) $row->user_b_id : (int) $row->user_a_id;
+        }
+
+        return array_values(array_unique($all));
     }
 
     /**
@@ -452,7 +460,7 @@ class DatingService
             $card['is_incognito'] = $isIncognito;
             $card['created_at'] = $row->created_at?->toISOString();
             if ($isIncognito) {
-                $card['id'] = $candidate->id;
+                $card['id'] = null;
                 $card['name'] = 'Тайный поклонник';
                 $card['is_anonymous'] = true;
                 $card['avatar_url'] = null;
@@ -463,7 +471,10 @@ class DatingService
                 $card['distance_km'] = null;
                 $card['bio'] = null;
                 $card['about'] = null;
+                $card['goal'] = null;
+                $card['custom_goal'] = null;
                 $card['interests'] = [];
+                $card['last_seen_at'] = null;
             }
             $cards[] = $card;
         }
@@ -495,7 +506,7 @@ class DatingService
      *
      * Удаляет все SwipeAction автора — лента снова покажет всех кандидатов.
      * Мэтчи и чаты не трогает, только история like/pass.
-     * Админ — безлимитно, остальные — один раз.
+     * Админ и PRO/Business — безлимитно, Free — один раз.
      *
      * @param User $me
      * @return int число удалённых записей
@@ -506,7 +517,9 @@ class DatingService
     {
         $fresh = $me->refresh();
 
-        if (! $fresh->isAdmin() && $this->hasUsedSwipeReset($fresh)) {
+        $unlimited = $fresh->isPro();
+
+        if (! $unlimited && $this->hasUsedSwipeReset($fresh)) {
             throw new HttpResponseException(response()->json([
                 'message' => 'Ты уже использовал(а) одноразовый сброс. Дальше — PRO без ограничений.',
                 'quota' => $this->quotaState($fresh),
@@ -515,7 +528,7 @@ class DatingService
 
         $deleted = SwipeAction::where('liker_id', $me->id)->delete();
 
-        if (! $fresh->isAdmin()) {
+        if (! $unlimited) {
             $settings = $fresh->settings ?? [];
             $settings['swipe_reset_used'] = true;
             $fresh->forceFill(['settings' => $settings])->saveQuietly();
@@ -529,7 +542,9 @@ class DatingService
      *
      * Инкогнито-лайк (PRO) скрывает автора в «Кто меня лайкнул» и в колокольчике,
      * но после взаимного мэтча обе анкеты раскрываются.
-     * Каждый лайк попадает в уведомления получателя.
+     * Уведомления уходят только за новые события: повторный like тихий,
+     * из двух одновременных взаимных лайков уведомляет только создатель мэтча.
+     * Вся запись — в одной транзакции, сайд-эффекты (inbox/broadcast/push) — после коммита.
      *
      * @param User $me
      * @param int $otherId
@@ -561,55 +576,113 @@ class DatingService
             }
         }
 
-        DB::transaction(function () use ($me, $otherId, $action, $incognito) {
-            SwipeAction::updateOrCreate(
-                ['liker_id' => $me->id, 'liked_id' => $otherId],
-                ['action' => $action, 'is_incognito' => $action === 'like' ? $incognito : false]
-            );
+        $outcome = DB::transaction(function () use ($me, $otherId, $action, $incognito) {
+            try {
+                $row = SwipeAction::updateOrCreate(
+                    ['liker_id' => $me->id, 'liked_id' => $otherId],
+                    ['action' => $action, 'is_incognito' => $action === 'like' ? $incognito : false]
+                );
+            } catch (QueryException $e) {
+                $row = SwipeAction::where('liker_id', $me->id)->where('liked_id', $otherId)->firstOrFail();
+                $row->fill(['action' => $action, 'is_incognito' => $action === 'like' ? $incognito : false]);
+                $row->save();
+            }
+
+            $actionChanged = $row->wasRecentlyCreated || $row->wasChanged('action');
+
+            if ($action !== 'like') {
+                return ['type' => 'pass', 'withdrewLike' => $actionChanged];
+            }
+
+            $reciprocal = SwipeAction::where('liker_id', $otherId)
+                ->where('liked_id', $me->id)
+                ->where('action', 'like')
+                ->exists();
+
+            if (! $reciprocal) {
+                return ['type' => 'like', 'isNewLike' => $actionChanged];
+            }
+
+            User::whereIn('id', [$me->id, $otherId])->orderBy('id')->lockForUpdate()->get();
+
+            [$low, $high] = DatingMatch::orderedPair($me->id, $otherId);
+
+            try {
+                $match = DatingMatch::firstOrCreate([
+                    'user_a_id' => $low,
+                    'user_b_id' => $high,
+                ]);
+                $isNewMatch = $match->wasRecentlyCreated;
+            } catch (QueryException $e) {
+                $match = DatingMatch::where('user_a_id', $low)->where('user_b_id', $high)->firstOrFail();
+                $isNewMatch = false;
+            }
+
+            $conversation = $this->matchConversationTx($me, $other);
+
+            return [
+                'type' => 'match',
+                'match_id' => (int) $match->id,
+                'conversation_id' => (int) $conversation->id,
+                'isNewMatch' => $isNewMatch,
+            ];
         });
 
-        if ($action !== 'like') {
+        if ($outcome['type'] === 'pass') {
+            if ($outcome['withdrewLike']) {
+                $this->withdrawLike($me, $other);
+            }
+
             return ['matched' => false, 'match_id' => null, 'conversation_id' => null, 'is_incognito' => false];
         }
 
-        $reciprocal = SwipeAction::where('liker_id', $otherId)
-            ->where('liked_id', $me->id)
-            ->where('action', 'like')
-            ->exists();
-
-        if (! $reciprocal) {
-            $this->notifyLiked($me, $other, $incognito);
+        if ($outcome['type'] === 'like') {
+            if ($outcome['isNewLike']) {
+                $this->notifyLiked($me, $other, $incognito);
+            }
 
             return ['matched' => false, 'match_id' => null, 'conversation_id' => null, 'is_incognito' => $incognito];
         }
 
-        [$low, $high] = DatingMatch::orderedPair($me->id, $otherId);
+        if ($outcome['isNewMatch']) {
+            $this->notifyMatched($me->refresh(), $other->refresh(), $outcome['match_id'], $outcome['conversation_id']);
+            $this->announceMatchConversation($outcome['conversation_id'], $me, $other);
+        }
 
-        $match = DatingMatch::firstOrCreate([
-            'user_a_id' => $low,
-            'user_b_id' => $high,
-        ]);
+        return ['matched' => true, 'match_id' => $outcome['match_id'], 'conversation_id' => $outcome['conversation_id'], 'is_incognito' => $incognito];
+    }
 
-        $conversation = $this->ensureMatchConversation($me->refresh(), $other);
-
-        $this->notifyMatched($me->refresh(), $other->refresh(), $match->id, $conversation->id);
-
-        return ['matched' => true, 'match_id' => $match->id, 'conversation_id' => $conversation->id, 'is_incognito' => $incognito];
+    /**
+     * Отозвать лайк: гасит висящее уведомление dating.liked у получателя,
+     * чтобы после pass не оставался stale-пинг «тебя лайкнули».
+     *
+     * @param User $me автор отозванного лайка
+     * @param User $other получатель
+     * @return void
+     */
+    private function withdrawLike(User $me, User $other): void
+    {
+        try {
+            UserNotifier::deleteUnread((int) $other->id, 'dating.liked', 'dating-liked:'.$me->id);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('swipe_like withdraw failed: '.$e->getMessage());
+        }
     }
 
     /**
      * Краткий профиль для realtime-уведомлений.
-     * Инкогнито скрывает имя/аватар, но факт лайка остаётся.
+     * Инкогнито скрывает id/имя/аватар: по пингу нельзя открыть анкету,
+     * она раскрывается только после взаимного мэтча.
      *
      * @param User $user
      * @param bool $incognito
-     * @return array{id:int,name:string,avatar_url:string|null,is_incognito:bool}
+     * @return array{id:int|null,name:string,avatar_url:string|null,is_incognito:bool}
      */
     private function briefFor(User $user, bool $incognito = false): array
     {
         if ($incognito) {
             return [
-                'id' => (int) $user->id,
+                'id' => null,
                 'name' => 'Тайный поклонник',
                 'avatar_url' => null,
                 'is_incognito' => true,
@@ -699,46 +772,103 @@ class DatingService
             return $existing;
         }
 
-        return DB::transaction(function () use ($me, $other) {
-            $conv = Conversation::create([
-                'type' => 'direct',
-                'created_by' => $me->id,
-                'last_message_at' => now(),
-            ]);
+        $conv = DB::transaction(fn () => $this->matchConversationTx($me, $other));
+        $this->announceMatchConversation((int) $conv->id, $me, $other);
 
-            $conv->participantRows()->createMany([
-                ['user_id' => $me->id, 'joined_at' => now()],
-                ['user_id' => $other->id, 'joined_at' => now()],
-            ]);
+        return $conv;
+    }
 
-            $msg = Message::create([
-                'conversation_id' => $conv->id,
-                'sender_id' => $me->id,
-                'body' => '💞 Это мэтч! Вы понравились друг другу — общайтесь свободно, лимиты здесь не действуют.',
-                'type' => 'system',
-            ]);
+    /**
+     * Чистое создание direct-чата мэтча: только запись в БД, без сайд-эффектов.
+     * Вызывать внутри транзакции — broadcast и пуши уходят отдельно после коммита.
+     *
+     * @param User $me автор мэтча
+     * @param User $other второй участник
+     * @return Conversation
+     */
+    private function matchConversationTx(User $me, User $other): Conversation
+    {
+        $conv = Conversation::create([
+            'type' => 'direct',
+            'created_by' => $me->id,
+            'last_message_at' => now(),
+        ]);
 
-            $msg->load('sender:id,name,avatar_path');
-            $conv->update(['last_message_at' => $msg->created_at]);
+        $conv->participantRows()->createMany([
+            ['user_id' => $me->id, 'joined_at' => now()],
+            ['user_id' => $other->id, 'joined_at' => now()],
+        ]);
 
-            try {
-                broadcast(new \App\Events\MessageSent($msg->load('conversation.participantRows')))->toOthers();
-            } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage());
+        $msg = Message::create([
+            'conversation_id' => $conv->id,
+            'sender_id' => $me->id,
+            'body' => '💞 Это мэтч! Вы понравились друг другу — общайтесь свободно, лимиты здесь не действуют.',
+            'type' => 'system',
+        ]);
+
+        $msg->load('sender:id,name,avatar_path');
+        $conv->update(['last_message_at' => $msg->created_at]);
+
+        return $conv;
+    }
+
+    /**
+     * Анонс системного сообщения мэтча: realtime + пуш второму участнику.
+     * Только после коммита, чтобы не уведомлять о чате, который откатится.
+     *
+     * @param int $conversationId id direct-чата мэтча
+     * @param User $me автор мэтча
+     * @param User $other второй участник
+     * @return void
+     */
+    private function announceMatchConversation(int $conversationId, User $me, User $other): void
+    {
+        $msg = Message::where('conversation_id', $conversationId)->latest('id')->first();
+
+        if (! $msg) {
+            return;
+        }
+
+        $this->broadcastMatchMessage($msg);
+        $this->pushMatchMessage($me, $other, $conversationId);
+    }
+
+    /**
+     * Разослать системное сообщение мэтча по realtime (после коммита,
+     * чтобы не уведомлять о чате, который откатится).
+     *
+     * @param Message $msg системное сообщение мэтча
+     * @return void
+     */
+    private function broadcastMatchMessage(Message $msg): void
+    {
+        try {
+            $msg->loadMissing(['sender:id,name,avatar_path', 'conversation.participantRows']);
+            broadcast(new \App\Events\MessageSent($msg))->toOthers();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage());
+        }
+    }
+
+    /**
+     * Пуши о новом мэтче второму участнику (после коммита).
+     *
+     * @param User $me автор мэтча
+     * @param User $other второй участник
+     * @param int $conversationId id direct-чата мэтча
+     * @return void
+     */
+    private function pushMatchMessage(User $me, User $other, int $conversationId): void
+    {
+        try {
+            $push = app(\App\Services\WebPushService::class);
+            if ($push->isConfigured()) {
+                $push->sendChatMessage($other, $me, $conversationId, '💞 У вас новый мэтч! Загляните в чат.');
             }
-
-            try {
-                $push = app(\App\Services\WebPushService::class);
-                if ($push->isConfigured()) {
-                    $push->sendChatMessage($other, $me, $conv->id, '💞 У вас новый мэтч! Загляните в чат.');
-                }
-                try { app(\App\Services\ExpoPushService::class)->sendChatMessage($other, $me, $conv->id, '💞 У вас новый мэтч! Загляните в чат.'); } catch (\Throwable) {}
-            } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::warning('match webpush failed: '.$e->getMessage());
-            }
-
-            return $conv;
-        });
+            try { app(\App\Services\ExpoPushService::class)->sendChatMessage($other, $me, $conversationId, '💞 У вас новый мэтч! Загляните в чат.'); } catch (\Throwable) {}
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('match webpush failed: '.$e->getMessage());
+        }
     }
 
     /**
@@ -784,7 +914,18 @@ class DatingService
         $goal = $filters['goal'] ?? null;
         $ageMin = isset($filters['age_min']) ? (int) $filters['age_min'] : null;
         $ageMax = isset($filters['age_max']) ? (int) $filters['age_max'] : null;
+
+        // Перевёрнутый диапазон «от–до» нормализуем, иначе лента всегда пуста.
+        if ($ageMin !== null && $ageMax !== null && $ageMin > $ageMax) {
+            [$ageMin, $ageMax] = [$ageMax, $ageMin];
+        }
+
         $wantedInterests = $filters['interests'] ?? [];
+
+        // PHP-фильтры (радиус, интересы) режут выборку после БД,
+        // поэтому при них берём пул кандидатов шире.
+        $hasPhpFilters = ($radiusKm !== null && $radiusKm > 0) || ! empty($wantedInterests);
+        $poolLimit = $hasPhpFilters ? 200 : 60;
 
         $query = User::whereNotIn('id', $exclude)
             ->where('dating_enabled', true);
@@ -820,12 +961,12 @@ class DatingService
             ->select([
                 'id', 'name', 'gender', 'birth_date', 'bio', 'avatar_path',
                 'home_city', 'home_lat', 'home_lng', 'last_seen_at',
-                'dating_goal', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_hide_name', 'dating_hide_age',
+                'dating_goal', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_hide_name', 'dating_hide_age', 'dating_hide_distance',
                 'plan', 'plan_expires_at', 'is_admin', 'role',
             ])
             ->with(['profilePhotos' => fn ($q) => $q->orderBy('sort_order')->limit(self::SWIPE_PHOTOS_LIMIT_PRO)])
             ->orderByDesc('last_seen_at')
-            ->limit(60)
+            ->limit($poolLimit)
             ->get();
 
         $likedMeIds = SwipeAction::where('liked_id', $me->id)
@@ -924,7 +1065,7 @@ class DatingService
             ->select([
                 'id', 'name', 'gender', 'birth_date', 'bio', 'avatar_path',
                 'home_city', 'home_lat', 'home_lng', 'last_seen_at',
-                'dating_goal', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_hide_name', 'dating_hide_age',
+                'dating_goal', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_hide_name', 'dating_hide_age', 'dating_hide_distance',
                 'dating_match_only', 'message_privacy', 'allow_random_messages',
                 'plan', 'plan_expires_at', 'is_admin', 'role',
             ])
@@ -1056,6 +1197,7 @@ class DatingService
 
         $hideName = (bool) $candidate->dating_hide_name && ! $canSeeReal;
         $hideAge = (bool) $candidate->dating_hide_age && ! $canSeeReal;
+        $hideDistance = (bool) ($candidate->dating_hide_distance ?? false) && ! $canSeeReal;
 
         $photos = $candidate->relationLoaded('profilePhotos')
             ? $candidate->profilePhotos
@@ -1092,7 +1234,8 @@ class DatingService
             'photos_limit' => $photosLimit,
             'is_pro' => $isProCandidate,
             'city' => $candidate->home_city,
-            'distance_km' => $distanceKm !== null ? round($distanceKm, 1) : null,
+            'distance_km' => $hideDistance || $distanceKm === null ? null : round($distanceKm, 1),
+            'distance_hidden' => $hideDistance,
             'goal' => $candidate->dating_goal,
             'custom_goal' => $candidate->dating_custom_goal,
             'about' => $candidate->dating_about,

@@ -192,7 +192,7 @@ class SwipeController extends Controller
     /**
      * Сбросить просмотренные свайпы.
      *
-     * Админ — безлимитно, остальные — один раз (Free).
+     * Админ и PRO/Business — безлимитно, Free — один раз.
      *
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
@@ -223,7 +223,7 @@ class SwipeController extends Controller
     /**
      * Настройки дейтинга и приватности.
      *
-     * Скрытие имени/возраста — PRO. Режим "только мэтчи" доступен всем.
+     * Скрытие имени/возраста/расстояния — PRO. Режим "только мэтчи" доступен всем.
      *
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
@@ -243,6 +243,7 @@ class SwipeController extends Controller
             'dating_gender_pref' => 'sometimes|in:male,female,all',
             'dating_hide_name' => 'sometimes|boolean',
             'dating_hide_age' => 'sometimes|boolean',
+            'dating_hide_distance' => 'sometimes|boolean',
             'dating_match_only' => 'sometimes|boolean',
         ]);
 
@@ -269,7 +270,7 @@ class SwipeController extends Controller
             ...($data['dating_interests'] ?? [])
         );
 
-        $wantsHide = ($data['dating_hide_name'] ?? false) || ($data['dating_hide_age'] ?? false);
+        $wantsHide = ($data['dating_hide_name'] ?? false) || ($data['dating_hide_age'] ?? false) || ($data['dating_hide_distance'] ?? false);
 
         if ($wantsHide && ! $me->isPro()) {
             return response()->json([
@@ -288,6 +289,7 @@ class SwipeController extends Controller
             'dating_gender_pref',
             'dating_hide_name',
             'dating_hide_age',
+            'dating_hide_distance',
             'dating_match_only',
         ]));
     }

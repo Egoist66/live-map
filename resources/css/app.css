@@ -306,7 +306,7 @@ html.native-keyboard-open .h-app-full {
 /* Тёмная тема: глухая подложка у меню и запас под ним — системная
    полоса жестов красится в тот же цвет, белого стыка нет. */
 html.dark .mobile-bottom-nav {
-  background-color: rgba(24,24,27,0.97) !important;
+  background-color: rgba(11, 15, 27, 0.97) !important;
 }
 .mobile-bottom-nav::after {
   content: '';

@@ -21,7 +21,7 @@ export interface PinActivityItem {
   pin?: { id: number; title?: string; category?: string } | null
   photo?: { id: number; user_id?: number; caption?: string | null; url?: string | null } | null
   flow_post?: { id: number; user_id?: number; image_url?: string | null } | null
-  actor: { id: number; name?: string; avatar_path?: string | null; avatar_url?: string | null }
+  actor: { id: number | null; name?: string; avatar_path?: string | null; avatar_url?: string | null }
 }
 
 /**

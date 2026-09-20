@@ -40,7 +40,7 @@ export function useChatPage(initialConversationId?: number) {
   const showChatMenu = ref(false)
   const sheet = ref<{ type: 'message' | 'chat' | 'friend' | 'request' | 'search', data: any } | null>(null)
   const showPrivacy = ref(false)
-  const privacy = ref({ message_privacy: 'everyone', allow_random_messages: true })
+  const privacy = ref({ message_privacy: 'everyone' })
   const creatingChat = ref(false)
   const confirm = ref<{ type: 'block' | 'deleteChat' | 'clearAllChats' | 'deleteMessage' | 'removeFriend' | 'unblock', payload: any, title: string, msg: string, icon: string, confirmLabel: string, severity: 'danger' | 'primary' } | null>(null)
   const confirmVisible = computed({ get: () => !!confirm.value, set: (v) => { if (!v) confirm.value = null } })
@@ -293,7 +293,7 @@ export function useChatPage(initialConversationId?: number) {
   }
 
   async function savePrivacy() {
-    await chatApi.updatePrivacy(privacy.value as any)
+    await chatApi.updatePrivacy({ message_privacy: privacy.value.message_privacy })
   }
 
   function askBlock(userId: number, name?: string) {
@@ -436,7 +436,7 @@ export function useChatPage(initialConversationId?: number) {
     } catch {}
     badgeSync.setUnread(chat.unreadTotal.value)
     badgeSync.setUnreadMessages(chat.unreadMessagesTotal.value)
-    try { const me = await chatApi.me(); privacy.value.message_privacy = me.message_privacy; privacy.value.allow_random_messages = me.allow_random_messages } catch {}
+    try { const me = await chatApi.me(); privacy.value.message_privacy = me.message_privacy ?? 'everyone' } catch {}
     if (targetId && !chat.selectedId.value) {
       await openTarget(targetId)
     }

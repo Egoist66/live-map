@@ -7,6 +7,7 @@ import Message from 'primevue/message'
 import ProgressSpinner from 'primevue/progressspinner'
 import { Swiper, SwiperSlide } from 'swiper/vue'
 import 'swiper/css'
+import { Link } from '@inertiajs/vue3'
 import { useBodyLock } from '@/composables/useBodyLock'
 import { usePhotoViewer } from '@/composables/usePhotoViewer'
 import { usePhotoViewerSwiper } from '@/composables/usePhotoViewerSwiper'
@@ -72,7 +73,7 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
           <Button v-if="gallery.photos.value.length > 1" icon="pi pi-chevron-right" rounded text size="small" class="!absolute right-1.5 top-1/2 -translate-y-1/2 z-10 !bg-black/40 !text-white !border-0 !w-9 !h-9" @click="gallery.stepPhoto(1)" aria-label="Вперёд" />
         </div>
         <div class="px-4 pt-2.5 flex items-center gap-1">
-          <Button :icon="gallery.active.value.liked ? 'pi pi-heart-fill' : 'pi pi-heart'" rounded text :loading="viewer.likeLoading.value" :class="['!w-10 !h-10', gallery.active.value.liked ? '!text-red-500' : '']" @click="viewer.onLike(viewer.incognito.value)" :aria-label="gallery.active.value.liked ? 'Убрать лайк' : 'Лайк'" v-tooltip.bottom="photoLikers.tooltip.value" @mouseenter="photoLikers.ensure()" />
+          <Button :icon="gallery.active.value.liked ? 'pi pi-heart-fill' : 'pi pi-heart'" rounded text :loading="viewer.likeLoading.value" :class="['!w-10 !h-10', gallery.active.value.liked ? '!text-red-500' : '']" @click="viewer.onLike()" :aria-label="gallery.active.value.liked ? 'Убрать лайк' : 'Лайк'" v-tooltip.bottom="photoLikers.tooltip.value" @mouseenter="photoLikers.ensure()" />
           <Button icon="pi pi-comment" rounded text class="!w-10 !h-10" aria-label="Комментарии" />
           <span class="flex-1" />
           <template v-if="isOwn">
@@ -80,10 +81,6 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
             <Button icon="pi pi-refresh" rounded text class="!w-10 !h-10" @click="viewer.onPickReplace" aria-label="Заменить фото" />
             <input :ref="viewer.setReplaceInput" type="file" accept="image/*" class="hidden" @change="viewer.onReplaceFile" />
           </template>
-          <label class="ml-1 flex items-center gap-1.5 border-l border-stone-200/70 dark:border-white/10 pl-2.5 text-[11px] text-stone-500 dark:text-zinc-400 cursor-pointer" title="Анонимный лайк — PRO">
-            <input type="checkbox" v-model="viewer.incognito.value" :disabled="!viewer.canIncognito.value" class="accent-violet-600 w-3.5 h-3.5" />
-            🕵️<span class="font-bold text-violet-500">PRO</span>
-          </label>
         </div>
         <button type="button" class="px-4 text-sm font-black text-left hover:opacity-70" @click="photoLikers.open()" v-tooltip.bottom="photoLikers.tooltip.value" @mouseenter="photoLikers.ensure()">{{ gallery.active.value.likes_count }} отметок «Нравится»</button>
         <LikersDialog :visible="photoLikers.opened.value" @update:visible="(v:boolean)=>{ v ? photoLikers.open() : photoLikers.close() }" title="Лайки" :likers="photoLikers.likers.value" :loading="photoLikers.loading.value" :total="photoLikers.total.value" :base-z-index="3000" />
@@ -146,6 +143,19 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
           <Button label="Удалить" severity="danger" @click="viewer.onDelete" />
         </div>
       </template>
+    </Dialog>
+  </Teleport>
+  <Teleport to="body">
+    <Dialog :visible="viewer.anonPromoVisible.value" @update:visible="(v:boolean)=>{ if (!v) viewer.closeAnonPromo() }" modal :draggable="false" :base-z-index="3000" class="!rounded-3xl" :style="{ width: '380px', maxWidth: 'calc(100vw - 2rem)' }" :pt="{ root: { class: '!rounded-3xl !border-0' }, content: { class: '!p-0' }, header: { class: '!hidden' } }">
+      <div class="bg-gradient-to-br from-violet-600 via-fuchsia-600 to-indigo-600 p-6 text-white text-center">
+        <div class="w-16 h-16 mx-auto rounded-3xl bg-white/20 grid place-items-center text-3xl">🕵️</div>
+        <div class="mt-3 text-xl font-black">Анонимные лайки</div>
+        <div class="mt-1 text-sm text-white/85">Можно лайкать фото так, чтобы вас видели как «Тайного поклонника». Для этого нужен тариф PRO.</div>
+        <div class="mt-4 flex gap-2 justify-center">
+          <Button label="Понятно" rounded size="small" class="!bg-white !text-violet-700 !border-0 !font-bold" @click="viewer.closeAnonPromo()" />
+          <Link href="/settings/billing"><Button label="Выбрать PRO" rounded outlined size="small" class="!border-white !text-white" /></Link>
+        </div>
+      </div>
     </Dialog>
   </Teleport>
 </template>
