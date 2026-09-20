@@ -528,7 +528,7 @@ class DistrictController extends Controller
     private function markInviteNotificationRead(int $userId, int $districtId): void
     {
         try {
-            \Illuminate\Notifications\DatabaseNotification::where('notifiable_id', $userId)
+            \App\Models\UserDatabaseNotification::where('notifiable_id', $userId)
                 ->where('type', 'district.invited')
                 ->where('key', 'district-invite:'.$districtId)
                 ->whereNull('read_at')

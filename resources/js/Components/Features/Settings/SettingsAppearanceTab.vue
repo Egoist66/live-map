@@ -8,7 +8,7 @@ import { useProfileLayout } from '@/composables/useProfileLayout'
 defineProps<{ theme?: any }>()
 const emit = defineEmits<{ (e: 'theme', v: any): void }>()
 const { options, active, hint, select } = useAppearanceTheme()
-const { motionOff, setMotionOff } = useMotion()
+const { animationsEnabled } = useMotion()
 const { columns, columnOptions, columnsHint, selectColumns } = useProfileLayout()
 
 function onSelect(v: any) {
@@ -49,9 +49,9 @@ function onSelect(v: any) {
         <div class="flex items-center justify-between gap-3">
           <div class="min-w-0">
             <h3 class="font-bold tracking-tight text-[15px] dark:text-white leading-tight">Анимации</h3>
-            <p class="text-xs text-stone-500 mt-0.5 truncate">Выключить переходы и эффекты для скорости</p>
+            <p class="text-xs text-stone-500 mt-0.5 truncate">Плавные переходы между экранами и эффекты</p>
           </div>
-          <ToggleSwitch :modelValue="motionOff" @update:modelValue="(v:boolean)=>setMotionOff(v)" input-id="appearance-motion-off" class="shrink-0" />
+          <ToggleSwitch v-model="animationsEnabled" input-id="appearance-motion" class="shrink-0" />
         </div>
       </div>
       <div class="mt-4 pt-4 border-t border-stone-200/70 dark:border-zinc-800">

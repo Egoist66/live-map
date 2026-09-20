@@ -11,6 +11,9 @@ import Tag from 'primevue/tag'
 import Paginator from 'primevue/paginator'
 import ProgressSpinner from 'primevue/progressspinner'
 import { avatarSrcFor } from '@/composables/useAvatar'
+import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
+
+const { selectPt } = useDropdownMenuStyle()
 
 defineProps<{ list: any[]; meta: any; page: number; query: string; filter: string; sort: string; limit: number; loading: boolean; actingId: number | null; admin: any; authUserId?: number | null }>()
 const emit = defineEmits<{
@@ -48,6 +51,28 @@ const roleOptions = [
   { label: 'moderator', value: 'moderator' },
   { label: 'admin', value: 'admin' },
 ]
+
+/**
+ * Подпись действующего тарифа под селектом плана.
+ *
+ * Показывает effective-план (по нему считаются лимиты), а не сырое
+ * поле: тариф с прошедшим сроком действует как free.
+ *
+ * @param u строка пользователя из списка мониторинга
+ * @returns подпись вида «Действует: Pro до 12.10.2026» или «Free»
+ */
+function planCaption(u: any): string {
+  const effective = String(u?.effective_plan ?? u?.plan ?? 'free')
+  if (effective !== 'pro' && effective !== 'business') return 'Действует: Free'
+  const label = effective === 'business' ? 'Business' : 'Pro'
+  if (!u?.plan_expires_at) return `Действует: ${label} · без срока`
+  try {
+    const date = new Date(u.plan_expires_at).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    return `Действует: ${label} до ${date}`
+  } catch {
+    return `Действует: ${label}`
+  }
+}
 </script>
 <template>
   <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0' } }">
@@ -59,7 +84,7 @@ const roleOptions = [
       </IconField>
       <div class="mt-2.5 flex gap-1.5 flex-wrap items-center">
         <SelectButton :modelValue="filter" @update:modelValue="(v:string)=>emit('filter', v)" :options="filterOptions" optionLabel="label" optionValue="value" :allowEmpty="false" size="small" class="flex-wrap max-w-full" />
-        <Select :modelValue="sort" @update:modelValue="(v:string)=>emit('sort', v)" :options="sortOptions" optionLabel="label" optionValue="value" size="small" rounded class="ml-auto" />
+        <Select :modelValue="sort" @update:modelValue="(v:string)=>emit('sort', v)" :options="sortOptions" optionLabel="label" optionValue="value" size="small" appendTo="body" scrollHeight="16rem" :pt="selectPt" class="ml-auto" />
       </div>
       <div v-if="loading" class="py-8 grid place-items-center"><ProgressSpinner style="width:24px;height:24px" :strokeWidth="6" /></div>
       <div v-else-if="!list.length" class="py-8 text-center text-sm text-stone-400 dark:text-zinc-500">Ничего не найдено</div>
@@ -80,9 +105,10 @@ const roleOptions = [
             <Tag v-if="u.is_hidden_from_search" value="скрыт" severity="contrast" class="!text-[9px]" />
             <Tag v-if="u.banned_at" value="забанен" severity="danger" class="!text-[9px]" />
           </div>
+          <div class="text-[11px] text-stone-400 dark:text-zinc-500">{{ planCaption(u) }}</div>
           <div class="mt-2.5 flex gap-1.5 flex-wrap items-center">
-            <Select :modelValue="u.plan" @change="(e:any)=>emit('plan', u, e.value)" :options="planOptions" optionLabel="label" optionValue="value" size="small" :disabled="actingId === u.id" checkmark />
-            <Select :modelValue="u.role || 'user'" @change="(e:any)=>emit('role', u, e.value)" :options="roleOptions" optionLabel="label" optionValue="value" size="small" :disabled="actingId === u.id || (!!u.is_admin && !(authUserId && Number(u.id) === Number(authUserId)))" :title="authUserId && Number(u.id) === Number(authUserId) ? 'Сменить свою роль' : undefined" checkmark />
+            <Select :modelValue="u.plan" @change="(e:any)=>emit('plan', u, e.value)" :options="planOptions" optionLabel="label" optionValue="value" size="small" appendTo="body" scrollHeight="16rem" :pt="selectPt" :disabled="actingId === u.id" checkmark />
+            <Select :modelValue="u.role || 'user'" @change="(e:any)=>emit('role', u, e.value)" :options="roleOptions" optionLabel="label" optionValue="value" size="small" appendTo="body" scrollHeight="16rem" :pt="selectPt" :disabled="actingId === u.id || (!!u.is_admin && !(authUserId && Number(u.id) === Number(authUserId)))" :title="authUserId && Number(u.id) === Number(authUserId) ? 'Сменить свою роль' : undefined" checkmark />
             <span class="flex-1" />
             <Button @click="admin.toggleUser(u)" :loading="admin.togglingId.value === u.id" :label="u.is_hidden_from_search ? 'Показать' : 'Скрыть'" size="small" rounded :outlined="!u.is_hidden_from_search" class="!text-xs !py-1" :severity="u.is_hidden_from_search ? 'success' : 'secondary'" />
             <Button v-if="!u.banned_at" @click="emit('ban', u)" :disabled="!!u.is_admin" icon="pi pi-ban" size="small" rounded outlined severity="danger" title="Забанить" />

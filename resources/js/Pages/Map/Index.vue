@@ -2,7 +2,6 @@
 import { Head, router } from '@inertiajs/vue3'
 import { computed, onMounted, onUnmounted } from 'vue'
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import MapTopBar from '@/Components/Features/Map/MapTopBar.vue'
 import MapCreateDialog from '@/Components/Features/Map/MapCreateDialog.vue'
 import DistrictHubDialog from '@/Components/Features/Map/DistrictHubDialog.vue'
@@ -109,8 +108,7 @@ onUnmounted(() => {
 </script>
 <template>
   <Head :title="seo.title.value"><meta head-key="robots" name="robots" content="noindex, nofollow" /></Head>
-  <AuthenticatedLayout>
-    <Toast />
+  <Toast />
     <div class="w-full bg-[#eaf0f6] dark:bg-[#0B0F1A]">
       <div class="h-app-full map-desktop-frame relative w-full min-h-[380px] bg-[#eaf0f6] dark:bg-[#0B0F1A] overflow-hidden border-0">
       <div ref="mapContainer" class="absolute inset-0 w-full h-full bg-[#eaf0f6] dark:bg-[#0B0F1A]"></div>
@@ -163,7 +161,6 @@ onUnmounted(() => {
       <MapInfoDialogs :live-open="showLiveInfo" @update:live="setLiveInfo" :my-open="showMyPins" @update:my="setMyPins" :my-pins="myPins" :format-time="formatTime" @fly="flyToPin" />
       </div>
     </div>
-  </AuthenticatedLayout>
 </template>
 <style scoped>
 .fade-enter-active,.fade-leave-active{transition:opacity .22s ease}

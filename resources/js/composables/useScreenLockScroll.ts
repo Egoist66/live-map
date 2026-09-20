@@ -1,11 +1,28 @@
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useScreenLock } from '@/composables/useScreenLock'
+import { acquireScrollLock, releaseScrollLock } from '@/composables/useScrollLock'
 
 const SCROLL_KEYS = new Set(['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End'])
 
+/**
+ * Владелец лока в ref-counted менеджере (см. useScrollLock).
+ */
+const SCROLL_OWNER = 'screen-lock'
+
+/**
+ * Скролл-лок скринлокера.
+ *
+ * `overflow` захватываем ТОЛЬКО через общий менеджер: свой снапшот
+ * `overflow` здесь раньше затирал чужой (модалки/вьюверы) и наоборот —
+ * менеджер запоминал наш `hidden` как исходный и при разблокировке
+ * возвращал страницу в `overflow: hidden` навсегда (лечилось только
+ * перезагрузкой). `position:fixed/top/width/touchAction/overscroll`
+ * менеджер не трогает — их храним локально, конфликта нет.
+ */
+
 export function useScreenLockScroll() {
   const { locked } = useScreenLock()
-  const prev = ref({ bodyOverflow: '', htmlOverflow: '', bodyOverscroll: '', htmlOverscroll: '', bodyTouch: '', bodyPosition: '', bodyTop: '', bodyWidth: '' })
+  const prev = ref({ bodyOverscroll: '', htmlOverscroll: '', bodyTouch: '', bodyPosition: '', bodyTop: '', bodyWidth: '' })
   const scrollY = ref(0)
   const active = ref(false)
 
@@ -62,8 +79,6 @@ export function useScreenLockScroll() {
     active.value = true
     scrollY.value = window.scrollY || 0
     prev.value = {
-      bodyOverflow: document.body.style.overflow,
-      htmlOverflow: document.documentElement.style.overflow,
       bodyOverscroll: (document.body.style as any).overscrollBehavior,
       htmlOverscroll: (document.documentElement.style as any).overscrollBehavior,
       bodyTouch: (document.body.style as any).touchAction,
@@ -71,9 +86,10 @@ export function useScreenLockScroll() {
       bodyTop: document.body.style.top,
       bodyWidth: document.body.style.width,
     }
-    document.documentElement.style.overflow = 'hidden'
+    // overflow — только через менеджер: счётчик владельцев вернёт скролл,
+    // когда закроются ВСЕ оверлеи (локер + модалки + вьюверы).
+    acquireScrollLock(SCROLL_OWNER)
     ;(document.documentElement.style as any).overscrollBehavior = 'none'
-    document.body.style.overflow = 'hidden'
     ;(document.body.style as any).overscrollBehavior = 'none'
     document.body.style.position = 'fixed'
     document.body.style.top = `-${scrollY.value}px`
@@ -84,9 +100,10 @@ export function useScreenLockScroll() {
   function unlockBody() {
     if (!active.value) return
     active.value = false
-    document.documentElement.style.overflow = prev.value.htmlOverflow
+    // Сначала отдаём свой голос в менеджере: пока висит чужой оверлей
+    // (модалка, leave-transition нашего же оверлея), overflow остаётся hidden.
+    releaseScrollLock(SCROLL_OWNER)
     ;(document.documentElement.style as any).overscrollBehavior = prev.value.htmlOverscroll
-    document.body.style.overflow = prev.value.bodyOverflow
     ;(document.body.style as any).overscrollBehavior = prev.value.bodyOverscroll
     ;(document.body.style as any).touchAction = prev.value.bodyTouch
     document.body.style.position = prev.value.bodyPosition

@@ -59,12 +59,32 @@ export const adminApi = {
     const { data } = await api.get('/api/admin/login-attempts', { params })
     return data
   },
+  async markLoginAttemptsSeen() {
+    const { data } = await api.post('/api/admin/login-attempts/seen')
+    return data
+  },
   async banUser(userId: number, reason?: string) {
     const { data } = await api.post(`/api/admin/users/${userId}/ban`, reason ? { reason } : {})
     return data
   },
   async unbanUser(userId: number) {
     const { data } = await api.delete(`/api/admin/users/${userId}/ban`)
+    return data
+  },
+  async accessStatus() {
+    const { data } = await api.get('/api/admin/access/status')
+    return data
+  },
+  async requestAccessCode(email: string) {
+    const { data } = await api.post('/api/admin/access/code', { email })
+    return data
+  },
+  async verifyAccessCode(email: string, code: string) {
+    const { data } = await api.post('/api/admin/access/verify', { email, code })
+    return data
+  },
+  async lockAccess() {
+    const { data } = await api.post('/api/admin/access/lock')
     return data
   },
   async maintenance() {

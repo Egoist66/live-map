@@ -211,8 +211,11 @@ class DatingService
     /**
      * Состояние квоты для бейджа в UI.
      *
+     * План и лимиты — строго по действующему тарифу (effectivePlan):
+     * протухший PRO считается как free и по сообщениям, и по сбросу.
+     *
      * @param User $user
-     * @return array{limit:int,used:int,left:int,plan:string,radius_limit:int|null,can_reset:bool,reset_used:bool}
+     * @return array{limit:int,used:int,left:int,plan:string,plan_expires_at:string|null,radius_limit:int|null,can_reset:bool,reset_used:bool}
      */
     public function quotaState(User $user): array
     {
@@ -223,6 +226,7 @@ class DatingService
             'radius_limit' => $radiusLimit,
             'can_reset' => $this->canResetHistory($user),
             'reset_used' => $resetUsed,
+            'plan_expires_at' => $user->plan_expires_at?->toISOString(),
         ];
 
         if ($user->isAdmin()) {

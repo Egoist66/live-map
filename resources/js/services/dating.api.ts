@@ -38,12 +38,13 @@ export interface SwipeFilters {
   interests: string[]
 }
 
-/** Квота рандомных чатов. */
+/** Квота рандомных чатов. План и лимиты — по действующему тарифу. */
 export interface SwipeQuota {
   limit: number
   used: number
   left: number
   plan: string
+  plan_expires_at: string | null
   radius_limit: number | null
   can_reset: boolean
   reset_used: boolean

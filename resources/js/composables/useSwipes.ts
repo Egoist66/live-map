@@ -5,6 +5,7 @@ import { datingApi } from '@/services/dating.api'
 import { busOn } from '@/services/realtime-bus'
 import { ensureUserChannel } from '@/composables/useUserChannel'
 import { pokeRealtime } from '@/composables/useRealtimePoller'
+import { shouldSkipMotion } from '@/composables/useMotion'
 import { useRewardToast } from '@/composables/useRewardToast'
 import type { ActiveCard, SwipeCard, SwipeFilters, SwipeQuota } from '@/services/dating.api'
 
@@ -195,8 +196,8 @@ export function useSwipes() {
   const dragStartX = ref(0)
   const dragStartY = ref(0)
   const leaving = ref(false)
-  const flyDir = ref<'like' | 'pass' | null>(null)
-  const exiting = ref<{ card: SwipeCard; dir: 'like' | 'pass'; fromX: number; fromY: number } | null>(null)
+  const flyDir = ref<'like' | 'left' | 'right' | null>(null)
+  const exiting = ref<{ card: SwipeCard; dir: 'like' | 'left' | 'right'; fromX: number; fromY: number } | null>(null)
 
   const current = computed(() => cards.value[index.value] ?? null)
   const next = computed(() => cards.value[index.value + 1] ?? null)
@@ -225,6 +226,27 @@ export function useSwipes() {
     if (!quota.value) return ''
     if (quota.value.limit < 0) return 'Безлимит'
     return `Сообщения: ${quota.value.left}/${quota.value.limit}`
+  })
+
+  /**
+   * Срок действующего тарифа для PRO-таба.
+   *
+   * Дата приходит из квоты бэка (по ней же считаются лимиты),
+   * поэтому подпись всегда согласуется с лимитами.
+   *
+   * @returns «до 12.10.2026», «без срока» или пусто для Free
+   */
+  const planExpiresLabel = computed(() => {
+    const plan = quota.value?.plan ?? ''
+    if (plan !== 'pro' && plan !== 'business') return ''
+    const raw = quota.value?.plan_expires_at
+    if (!raw) return 'без срока'
+    try {
+      const date = new Date(raw).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })
+      return `до ${date}`
+    } catch {
+      return ''
+    }
   })
 
   /** Лимит радиуса по тарифу. Null — безлимит (PRO). */
@@ -324,24 +346,24 @@ export function useSwipes() {
   })
 
   /**
-   * Сила штампа лайка 0..1. Лайк — свайп влево.
+   * Сила штампа лайка 0..1.
    *
-   * @returns доля проявления
+   * Свайп-жест нейтральный (просто листание), штампы скрыты:
+   * всегда 0, лайк ставится только кнопкой.
+   *
+   * @returns доля проявления (всегда 0)
    */
-  const likeStrength = computed(() => {
-    if (leaving.value && flyDir.value === 'like') return 1
-    return Math.max(0, Math.min(-dragX.value / 110, 1))
-  })
+  const likeStrength = computed(() => 0)
 
   /**
-   * Сила штампа паса 0..1. Пас — свайп вправо.
+   * Сила штампа паса 0..1.
    *
-   * @returns доля проявления
+   * Свайп-жест нейтральный (просто листание), штампы скрыты:
+   * всегда 0, пас отдельным действием больше не отправляется.
+   *
+   * @returns доля проявления (всегда 0)
    */
-  const passStrength = computed(() => {
-    if (leaving.value && flyDir.value === 'pass') return 1
-    return Math.max(0, Math.min(dragX.value / 110, 1))
-  })
+  const passStrength = computed(() => 0)
 
   /** Максимальная дата рождения для гейта 18+ (сегодня минус 18 лет). */
   const adultMaxDate = computed(() => {
@@ -747,13 +769,67 @@ export function useSwipes() {
   }
 
   /**
-   * Отправить свайп за текущую карточку с улётом за экран.
+   * Полистать дальше без оценки: нейтральный свайп влево/вправо.
+   *
+   * Ничего не отправляет на бэк (ни like, ни pass) — просто улёт
+   * карты за экран и переход к следующей. Лайк ставится только
+   * кнопкой через `swipe('like')`.
+   *
+   * Улёт ждём только когда анимации включены: при `motion-off`
+   * keyframes убиты kill-switch за 0.01мс, а 360мс ожидания
+   * превратились бы в мёртвый фриз на каждый свайп.
+   *
+   * @param dir направление улёта, по умолчанию вправо
+   * @returns void
+   *
+   * @example
+   * await skip('left')
+   */
+  async function skip(dir: 'left' | 'right' = 'right'): Promise<void> {
+    const card = current.value
+    if (!card || acting.value || leaving.value) return
+    acting.value = true
+    leaving.value = true
+    flyDir.value = dir
+    exiting.value = { card, dir, fromX: dragX.value, fromY: dragY.value }
+    dragging.value = false
+    dragX.value = 0
+    dragY.value = 0
+    error.value = null
+    try {
+      await waitFrame(shouldSkipMotion() ? 30 : 360)
+      index.value += 1
+      if (index.value >= cards.value.length - 3) {
+        void loadMore()
+      }
+    } finally {
+      exiting.value = null
+      leaving.value = false
+      flyDir.value = null
+      acting.value = false
+    }
+  }
+
+  /**
+   * Поставить лайк текущей карточке кнопкой с улётом за экран.
    * PRO может лайкнуть инкогнито: себя скрыть, но в уведомления попасть.
    *
-   * @param action like|pass
+   * Свайп-жест (drag) лайк больше не ставит — он лишь листает
+   * через `skip()`. Значение 'pass' оставлено для совместимости
+   * и тоже работает как нейтральный пропуск без записи на бэк.
+   *
+   * Улёт ждём только когда анимации включены: при `motion-off`
+   * keyframes убиты kill-switch за 0.01мс, а 360мс ожидания
+   * превратились бы в мёртвый фриз на каждый свайп.
+   *
+   * @param action like — отправить лайк; pass — просто листать дальше
    * @returns void
    */
   async function swipe(action: 'like' | 'pass'): Promise<void> {
+    if (action === 'pass') {
+      await skip('right')
+      return
+    }
     const card = current.value
     if (!card || card.id == null || acting.value || leaving.value) return
     acting.value = true
@@ -767,7 +843,7 @@ export function useSwipes() {
     try {
       const useIncognito = action === 'like' && incognitoLike.value && canIncognito.value
       const pending = datingApi.act(card.id, action, useIncognito)
-      await waitFrame(360)
+      await waitFrame(shouldSkipMotion() ? 30 : 360)
       const res = await pending
       quota.value = res.quota
       rewards.applyReward(res)
@@ -970,8 +1046,9 @@ export function useSwipes() {
   }
 
   /**
-   * Конец перетаскивания: резкий сдвиг = улёт.
-   * Влево — лайк, вправо — пас.
+   * Конец перетаскивания: резкий сдвиг = нейтральный улёт.
+   * Влево и вправо — просто следующая анкета, без like/pass.
+   * Лайк ставится только кнопкой.
    *
    * @returns void
    */
@@ -981,11 +1058,11 @@ export function useSwipes() {
     const threshold = 110
     const shiftX = dragX.value
     if (shiftX < -threshold) {
-      await swipe('like')
+      await skip('left')
       return
     }
     if (shiftX > threshold) {
-      await swipe('pass')
+      await skip('right')
       return
     }
     dragX.value = 0
@@ -1118,6 +1195,7 @@ export function useSwipes() {
     removeFavorite,
     quota,
     quotaLabel,
+    planExpiresLabel,
     isQuotaEmpty,
     radiusLimit,
     canResetHistory,
@@ -1159,6 +1237,7 @@ export function useSwipes() {
     applyFilters,
     resetFilters,
     swipe,
+    skip,
     toggleInterest,
     openChat,
     writeWithoutMatch,

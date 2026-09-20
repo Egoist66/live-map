@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import GuestLayout from '@/Layouts/GuestLayout.vue'
 import { Head, Link } from '@inertiajs/vue3'
 import { useRegisterForm } from '@/composables/useAuthForm'
 import { useSignupGoals } from '@/composables/useSignupGoals'
@@ -26,8 +25,7 @@ function onCountryChange(v: string): void {
 </script>
 
 <template>
-  <GuestLayout>
-    <Head title="Регистрация" />
+  <Head title="Регистрация" />
     <h1 class="text-[22px] font-black tracking-tight text-ink-900 dark:text-white">Создай аккаунт</h1>
     <p class="text-sm text-stone-500 dark:text-zinc-400 mt-1">💘 ULove знакомит рядом · 📍 пины показывают жизнь района</p>
     <form @submit.prevent="f.submit" class="mt-6 space-y-4">
@@ -111,7 +109,6 @@ function onCountryChange(v: string): void {
       <Button :loading="f.isSubmitting.value" type="submit" label="Создать аккаунт →" class="w-full !bg-ink-900 dark:!bg-[#FAFAFA] !border-ink-900 dark:!border-[#FAFAFA] !text-white dark:!text-[#0F172A] !rounded-full !py-3.5 [&_.p-button-label]:!text-white dark:[&_.p-button-label]:!text-[#0F172A]" />
       <div class="text-sm text-center text-stone-500 dark:text-zinc-400">Уже есть? <Link :href="route('login')" class="font-semibold text-ink-900 dark:text-white hover:underline">Войти</Link></div>
     </form>
-  </GuestLayout>
 </template>
 
 <style scoped>

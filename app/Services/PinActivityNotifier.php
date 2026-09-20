@@ -16,7 +16,7 @@ use App\Notifications\PhotoMentionNotification;
 use App\Notifications\PinCommentedNotification;
 use App\Notifications\PinMentionNotification;
 use App\Notifications\PinReactionNotification;
-use Illuminate\Notifications\DatabaseNotification;
+use App\Models\UserDatabaseNotification;
 use Illuminate\Support\Facades\Log;
 
 class PinActivityNotifier
@@ -93,7 +93,7 @@ class PinActivityNotifier
      * Лайк анкеты в ULove: попадает в колокольчик получателя.
      * Инкогнито (PRO) скрывает имя/аватар, но счётчик и сам факт остаются.
      */
-    public static function swipeLiked(User $liker, User $liked, bool $isIncognito = false): ?DatabaseNotification
+    public static function swipeLiked(User $liker, User $liked, bool $isIncognito = false): ?UserDatabaseNotification
     {
         if ((int) $liker->id === (int) $liked->id) {
             return null;
@@ -111,7 +111,7 @@ class PinActivityNotifier
             UserNotifier::send($recipient, new DatingMatchedNotification($actor, (int) $recipient->id, $matchId));
         }
         try {
-            DatabaseNotification::where('type', 'dating.liked')
+            UserDatabaseNotification::where('type', 'dating.liked')
                 ->where(function ($q) use ($me, $other) {
                     $q->where(fn ($x) => $x->where('notifiable_id', $me->id)->where('key', 'dating-liked:'.$other->id))
                         ->orWhere(fn ($x) => $x->where('notifiable_id', $other->id)->where('key', 'dating-liked:'.$me->id));
@@ -126,7 +126,7 @@ class PinActivityNotifier
     /**
      * Лайк фото профиля: попадает в колокольчик владельца фото.
      */
-    public static function photoLiked(ProfilePhoto $photo, User $actor): ?DatabaseNotification
+    public static function photoLiked(ProfilePhoto $photo, User $actor): ?UserDatabaseNotification
     {
         $ownerId = (int) $photo->user_id;
         if ((int) $actor->id === $ownerId) {

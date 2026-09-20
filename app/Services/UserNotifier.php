@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Events\NotificationCreated;
 use App\Models\User;
+use App\Models\UserDatabaseNotification;
 use App\Notifications\UserNotification;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Log;
@@ -27,8 +28,14 @@ class UserNotifier
         try {
             $type = $notification->type();
             $key = $notification->dedupeKey();
+            // Админские типы пишутся базовым классом открытым текстом:
+            // по ним есть JSON-запросы data->update_id. Пользовательские —
+            // шифрованной моделью (пейлоад data в конверте __enc).
+            $model = str_starts_with($type, 'app.')
+                ? DatabaseNotification::class
+                : UserDatabaseNotification::class;
             if ($key !== null) {
-                $existing = DatabaseNotification::where('notifiable_type', $user->getMorphClass())
+                $existing = $model::where('notifiable_type', $user->getMorphClass())
                     ->where('notifiable_id', $user->getKey())
                     ->where('type', $type)
                     ->where('key', $key)
@@ -47,7 +54,7 @@ class UserNotifier
                 }
             }
             $id = (string) Str::uuid();
-            $row = new DatabaseNotification();
+            $row = new $model();
             $row->forceFill([
                 'id' => $id,
                 'type' => $type,
@@ -75,7 +82,7 @@ class UserNotifier
     public static function deleteUnread(int $userId, string $type, string $key): void
     {
         try {
-            DatabaseNotification::where('notifiable_id', $userId)
+            UserDatabaseNotification::where('notifiable_id', $userId)
                 ->where('type', $type)
                 ->where('key', $key)
                 ->whereNull('read_at')

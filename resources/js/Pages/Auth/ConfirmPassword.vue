@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import GuestLayout from '@/Layouts/GuestLayout.vue'
 import { Head, useForm } from '@inertiajs/vue3'
 import { route } from '@/route'
 import { ref } from 'vue'
@@ -11,8 +10,7 @@ const show = ref(false)
 const submit = () => { form.post(route('password.confirm'), { onFinish: () => form.reset() }) }
 </script>
 <template>
-  <GuestLayout>
-    <Head title="Подтвердите пароль" />
+  <Head title="Подтвердите пароль" />
     <Message severity="info" :closable="false" class="!rounded-2xl">Это защищённый раздел. Подтвердите пароль, чтобы продолжить.</Message>
     <form @submit.prevent="submit" class="mt-4 space-y-4">
       <div>
@@ -27,5 +25,4 @@ const submit = () => { form.post(route('password.confirm'), { onFinish: () => fo
         <Button type="submit" :loading="form.processing" label="Подтвердить" class="!bg-ink-900 dark:!bg-[#FAFAFA] !border-ink-900 dark:!border-[#FAFAFA] !text-white dark:!text-[#0F172A] !rounded-full !px-6 !font-bold [&_.p-button-label]:!text-white dark:[&_.p-button-label]:!text-[#0F172A]" />
       </div>
     </form>
-  </GuestLayout>
 </template>

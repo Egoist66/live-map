@@ -124,7 +124,7 @@ class ExpoPushService
     private function unreadBadge(int $userId): int
     {
         try {
-            return (int) \Illuminate\Notifications\DatabaseNotification::where('notifiable_type', (new User)->getMorphClass())
+            return (int) \App\Models\UserDatabaseNotification::where('notifiable_type', (new User)->getMorphClass())
                 ->where('notifiable_id', $userId)
                 ->whereNull('read_at')
                 ->count() + 1;

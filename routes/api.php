@@ -211,6 +211,10 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::post('/quests/refresh', [\App\Http\Controllers\QuestController::class, 'refresh'])->middleware('throttle:social-write');
     Route::post('/quests/claim', [\App\Http\Controllers\QuestController::class, 'claim'])->middleware('throttle:social-write');
 
+    Route::get('/subscription/status', [\App\Http\Controllers\SubscriptionController::class, 'status']);
+    Route::post('/subscription/renew', [\App\Http\Controllers\SubscriptionController::class, 'renew'])->middleware('throttle:social-write');
+    Route::post('/subscription/cancel', [\App\Http\Controllers\SubscriptionController::class, 'cancel'])->middleware('throttle:social-write');
+
     Route::get('/sos/mine', [\App\Http\Controllers\SosController::class, 'mine']);
     Route::get('/pins/{pin}/sos', [\App\Http\Controllers\SosController::class, 'show']);
     Route::post('/pins/{pin}/sos/accept', [\App\Http\Controllers\SosController::class, 'accept'])->middleware('throttle:social-write');
@@ -233,6 +237,11 @@ Route::middleware(['web', 'auth:web,sanctum', 'admin', 'throttle:120,1'])->group
     Route::post('/admin/users/{user}/ban', [AdminUserController::class, 'ban']);
     Route::delete('/admin/users/{user}/ban', [AdminUserController::class, 'unban']);
     Route::get('/admin/login-attempts', [\App\Http\Controllers\AdminLoginAttemptController::class, 'index']);
+    Route::post('/admin/login-attempts/seen', [\App\Http\Controllers\AdminLoginAttemptController::class, 'seen']);
+    Route::get('/admin/access/status', [\App\Http\Controllers\AdminAccessController::class, 'status']);
+    Route::post('/admin/access/code', [\App\Http\Controllers\AdminAccessController::class, 'code'])->middleware('throttle:30,1,admin-access-code');
+    Route::post('/admin/access/verify', [\App\Http\Controllers\AdminAccessController::class, 'verify'])->middleware('throttle:30,1,admin-access-verify');
+    Route::post('/admin/access/lock', [\App\Http\Controllers\AdminAccessController::class, 'lock']);
     Route::get('/admin/maintenance', [\App\Http\Controllers\AdminMaintenanceController::class, 'show']);
     Route::put('/admin/maintenance', [\App\Http\Controllers\AdminMaintenanceController::class, 'update']);
     Route::post('/admin/realtime/mode', [\App\Http\Controllers\RealtimeController::class, 'setMode']);

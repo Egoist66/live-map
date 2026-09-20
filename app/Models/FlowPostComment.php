@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\EncryptedTextCast;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -31,6 +32,7 @@ class FlowPostComment extends Model
 
     protected $casts = [
         'is_anonymous' => 'boolean',
+        'content' => EncryptedTextCast::class,
     ];
 
     /**

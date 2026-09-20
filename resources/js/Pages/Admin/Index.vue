@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { Head, router } from '@inertiajs/vue3'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import Dialog from 'primevue/dialog'
 import Toast from 'primevue/toast'
 import Badge from 'primevue/badge'
+import Message from 'primevue/message'
+import InputText from 'primevue/inputtext'
+import InputOtp from 'primevue/inputotp'
 import Tabs from 'primevue/tabs'
 import TabList from 'primevue/tablist'
 import Tab from 'primevue/tab'
@@ -31,7 +33,8 @@ import { useAdminImpersonate } from '@/composables/useAdminImpersonate'
 import { useAdminImpersonationLogs } from '@/composables/useAdminImpersonationLogs'
 import { useAdminLoginAttempts } from '@/composables/useAdminLoginAttempts'
 import { useAppMaintenance } from '@/composables/useAppMaintenance'
-import { onMounted, ref } from 'vue'
+import { useAdminAccess } from '@/composables/useAdminAccess'
+import { onMounted, ref, watch } from 'vue'
 
 const tab = ref('stats')
 
@@ -44,17 +47,36 @@ const impLogs = useAdminImpersonationLogs()
 const logins = useAdminLoginAttempts()
 const maintenance = useAppMaintenance()
 const refs = useAdminReference()
-reports.init()
-onMounted(() => appUpdates.load())
-onMounted(() => impLogs.load())
-onMounted(() => logins.load())
-onMounted(() => maintenance.load())
-onMounted(() => refs.load())
+const access = useAdminAccess()
+
+/**
+ * Подтянуть данные панели после открытия гейта.
+ *
+ * До ввода пароля ничего чувствительного не грузим.
+ */
+function loadAll(): void {
+  reports.init()
+  void appUpdates.load()
+  void impLogs.load()
+  void logins.load()
+  void maintenance.load()
+  void refs.load()
+}
+
+onMounted(() => void access.check())
+watch(
+  () => access.unlocked.value,
+  (v) => {
+    if (v) loadAll()
+  },
+)
+watch(tab, (v) => {
+  if (v === 'security' && access.unlocked.value) void logins.openTab()
+})
 </script>
 <template>
   <Head title="Панель модерации" />
-  <AuthenticatedLayout>
-    <Toast />
+  <Toast />
     <div class="page-scroll bg-surface dark:bg-[#090E1A]">
       <div class="max-w-[1280px] mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4">
         <Card class="!bg-stone-900 dark:!bg-zinc-900 !text-white !border-0 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-6' }, content: { class: '!p-0' } }">
@@ -67,17 +89,28 @@ onMounted(() => refs.load())
               </div>
               <Button label="Мой профиль" rounded outlined size="small" class="!text-white !border-white/30 hover:!bg-white hover:!text-stone-900 !text-xs !font-bold [&_.p-button-label]:hidden min-[420px]:[&_.p-button-label]:inline" @click="router.visit('/profile')" />
               <Button icon="pi pi-refresh" rounded class="!bg-white !text-stone-900 !border-white !text-sm !font-bold [&_.p-button-label]:hidden min-[420px]:[&_.p-button-label]:inline" :loading="mon.loadingOverview.value" label="Обновить" @click="mon.refreshAll()" />
+              <Button v-if="access.unlocked.value" icon="pi pi-lock" rounded outlined size="small" aria-label="Закрыть панель" title="Закрыть панель до следующего ввода пароля" class="!text-white !border-white/30 hover:!bg-white hover:!text-stone-900 !w-8 !h-8 !p-0" @click="access.lock()" />
             </div>
           </template>
         </Card>
 
+        <template v-if="!access.unlocked.value">
+          <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-8 sm:!p-10' }, content: { class: '!p-0 text-center' } }">
+            <template #content>
+              <div class="mx-auto w-14 h-14 rounded-2xl bg-stone-900 dark:bg-white text-white dark:text-stone-900 grid place-items-center"><i class="pi pi-lock text-xl" /></div>
+              <div class="mt-4 text-lg font-black dark:text-white">{{ access.checking.value ? 'Проверяем доступ…' : 'Панель закрыта' }}</div>
+              <div v-if="!access.checking.value" class="mt-1 text-sm text-stone-500 dark:text-zinc-400">Введи код из почты, чтобы открыть модерацию.</div>
+            </template>
+          </Card>
+        </template>
+        <template v-else>
         <AdminStatsCards :overview="mon.overview.value" :pct="mon.onlinePct.value" :loading="mon.loadingOverview.value" />
 
         <Tabs v-model:value="tab" class="min-w-0 admin-tabs">
           <TabList class="!bg-transparent" :pt="{ activeBar: { class: '!bg-violet-600' } }">
             <Tab value="stats" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-chart-bar text-xs" /><span class="tab-label">Статистика</span></span></Tab>
             <Tab value="manage" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-users text-xs" /><span class="tab-label">Управление</span></span></Tab>
-            <Tab value="security" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-shield text-xs" /><span class="tab-label">Безопасность</span><Badge v-if="logins.stats.value.failed_today" :value="logins.stats.value.failed_today > 99 ? '99+' : String(logins.stats.value.failed_today)" severity="danger" /></span></Tab>
+            <Tab value="security" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-shield text-xs" /><span class="tab-label">Безопасность</span><Badge v-if="logins.unseenCount.value" :value="logins.unseenCount.value > 99 ? '99+' : String(logins.unseenCount.value)" severity="danger" /></span></Tab>
             <Tab value="admin" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-cog text-xs" /><span class="tab-label">Модерация</span><Badge v-if="reports.pendingCount.value" :value="reports.pendingCount.value > 99 ? '99+' : String(reports.pendingCount.value)" severity="danger" /></span></Tab>
             <Tab value="refs" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-book text-xs" /><span class="tab-label">Справочники</span></span></Tab>
           </TabList>
@@ -120,7 +153,59 @@ onMounted(() => refs.load())
             </TabPanel>
           </TabPanels>
         </Tabs>
+        </template>
       </div>
+      <Dialog :visible="!access.unlocked.value && !access.checking.value" modal :closable="false" :draggable="false" header="Панель модерации закрыта" :style="{ width: '400px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-[24px] overflow-hidden' }, header: { class: '!p-5 !pb-0 !border-0 dark:!bg-zinc-900 dark:!text-white' }, content: { class: '!px-5 !py-4 dark:!bg-zinc-900' }, footer: { class: '!px-5 !pb-5 !pt-1 !border-0 dark:!bg-zinc-900' } }">
+        <div class="flex items-center gap-3">
+          <span class="w-11 h-11 rounded-2xl bg-stone-900 dark:bg-white text-white dark:text-stone-900 grid place-items-center shrink-0"><i class="pi pi-envelope" /></span>
+          <p class="text-sm text-stone-600 dark:text-zinc-300">{{ access.step.value === 'code' ? 'Код отправлен на почту — введи 6 цифр. Действует 10 минут.' : 'Введи свою почту — пришлём туда одноразовый код.' }}</p>
+        </div>
+        <template v-if="access.step.value === 'email'">
+          <label class="mt-4 block text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500">Твоя почта</label>
+          <InputText v-model="access.email.value" type="email" inputmode="email" fluid placeholder="admin@example.com" class="mt-1 !rounded-2xl" @keyup.enter="access.requestCode()" />
+        </template>
+        <template v-else>
+          <div class="mt-4 text-xs text-stone-500 dark:text-zinc-400">Код для <b class="dark:text-zinc-200">{{ access.email.value }}</b> · истекает через {{ access.codeTtlLabel.value }}</div>
+          <div class="mt-2 flex justify-center">
+            <InputOtp v-model="access.code.value" :length="6" integerOnly />
+          </div>
+          <div class="mt-2 flex gap-2 justify-center flex-wrap">
+            <Button
+              :label="access.cooldownLeft.value > 0 ? `Отправить заново (${access.cooldownLeft.value}с)` : 'Отправить заново'"
+              link
+              size="small"
+              :disabled="access.cooldownLeft.value > 0 || access.acting.value"
+              class="!text-xs"
+              @click="access.requestCode()"
+            />
+            <Button label="Другая почта" link size="small" class="!text-xs" @click="access.backToEmail()" />
+          </div>
+        </template>
+        <Message v-if="access.error.value" severity="error" :closable="false" class="!mt-3 !rounded-2xl !text-xs">{{ access.error.value }}</Message>
+        <template #footer>
+          <Button
+            v-if="access.step.value === 'email'"
+            label="Отправить код"
+            icon="pi pi-send"
+            rounded
+            :loading="access.acting.value"
+            :disabled="!access.email.value.trim()"
+            class="w-full !bg-stone-900 dark:!bg-white dark:!text-stone-900 !text-white !font-bold !border-0"
+            @click="access.requestCode()"
+          />
+          <Button
+            v-else
+            label="Открыть панель"
+            icon="pi pi-lock-open"
+            rounded
+            :loading="access.acting.value"
+            :disabled="access.code.value.trim().length !== 6"
+            class="w-full !bg-stone-900 dark:!bg-white dark:!text-stone-900 !text-white !font-bold !border-0"
+            @click="access.verify()"
+          />
+          <Button label="Мой профиль" link size="small" class="w-full !text-xs !mt-1" @click="router.visit('/profile')" />
+        </template>
+      </Dialog>
       <AdminImpersonateDialog :imp="imp" />
       <Dialog :visible="!!mon.pendingSelfRole.value" @update:visible="(v:boolean)=>{ if(!v) mon.cancelSelfRoleChange() }" modal header="Снять с себя права?" :style="{ width: '400px', maxWidth: '94vw' }">
         <p class="text-sm text-stone-600 dark:text-zinc-300">Сменить свою роль с <b>admin</b> на <b>{{ mon.pendingSelfRole.value?.role }}</b>? Ты потеряешь доступ к панели модерации.</p>
@@ -137,5 +222,4 @@ onMounted(() => refs.load())
         </template>
       </Dialog>
     </div>
-  </AuthenticatedLayout>
 </template>

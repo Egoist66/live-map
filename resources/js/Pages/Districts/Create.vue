@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3'
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import Toast from 'primevue/toast'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
@@ -19,8 +18,7 @@ const page = useDistrictCreatePage(props.canCreate, props.limitText)
 
 <template>
   <Head title="Новое сообщество" />
-  <AuthenticatedLayout>
-    <Toast />
+  <Toast />
     <div class="bg-surface dark:bg-[#090E1A]">
       <div class="mx-auto max-w-[1000px] px-3 py-3 sm:px-6 sm:py-6">
         <div class="mb-3 flex items-center gap-2 text-[13px] font-semibold text-stone-500 dark:text-zinc-400">
@@ -114,5 +112,4 @@ const page = useDistrictCreatePage(props.canCreate, props.limitText)
         </div>
       </div>
     </div>
-  </AuthenticatedLayout>
 </template>

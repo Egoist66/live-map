@@ -19,7 +19,11 @@ const { pageKey, transitionName, blurActiveElement } = usePageTransition({ prese
   <!-- Без mode="out-in": out-in держит старое дерево в leave-лимбо, где
        vee-validate/PrimeVue-эффекты патчат уже разобранные Teleport/Portal
        (`insertBefore of null`), а брошенное исключение гасит саму анимацию.
-       Одновременный кроссфейд безопасен и реально виден между экранами. -->
+       Одновременный кроссфейд безопасен и реально виден между экранами.
+       Структура намеренно ОДНА при вкл/выкл анимациях (без v-if по motion):
+       переключение ветки после монтирования (флаг из localStorage) посреди
+       асинхронной гидратации (async-компоненты в дереве) даёт mismatch.
+       OFF гасится именем `page-instant` + CSS kill-switch — мгновенно. -->
   <Transition :name="transitionName" :appear="appear" @before-leave="blurActiveElement">
     <div :key="pageKey" class="page-transition-wrapper">
       <slot />

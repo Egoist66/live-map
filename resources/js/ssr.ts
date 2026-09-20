@@ -7,6 +7,7 @@ import { ZiggyVue } from '../../vendor/tightenco/ziggy'
 import { createPinia } from 'pinia'
 import { PiniaColada } from '@pinia/colada'
 import { setupPrimeVue } from './plugins/primevue'
+import { applyPersistentLayout } from './composables/usePersistentLayout'
 
 const appName = import.meta.env.VITE_APP_NAME || 'UPin'
 
@@ -19,7 +20,11 @@ createServer((page) =>
       if (title.includes(appName)) return title
       return `${title} — ${appName}`
     },
-    resolve: (name) => resolvePageComponent(`./Pages/${name}.vue`, import.meta.glob<DefineComponent>('./Pages/**/*.vue')),
+    resolve: async (name) => {
+      const module = await resolvePageComponent<DefineComponent>(`./Pages/${name}.vue`, import.meta.glob<DefineComponent>('./Pages/**/*.vue'))
+      applyPersistentLayout(name, module.default)
+      return module
+    },
     setup({ App, props, plugin }) {
       const pinia = createPinia()
       const ziggy: any = (page.props as any).ziggy ?? {}

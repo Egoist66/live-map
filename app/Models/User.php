@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Database\Factories\UserFactory;
+use App\Casts\EncryptedTextCast;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -538,6 +539,10 @@ class User extends Authenticatable
             'banned_at' => 'datetime',
             'pins_today_date' => 'date',
             'trial_ends_at' => 'datetime',
+            'bio' => EncryptedTextCast::class,
+            'thought' => EncryptedTextCast::class,
+            'dating_about' => EncryptedTextCast::class,
+            'dating_custom_goal' => EncryptedTextCast::class,
         ];
     }
 }

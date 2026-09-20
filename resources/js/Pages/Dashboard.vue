@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { Head } from '@inertiajs/vue3'
 import Toast from 'primevue/toast'
 import Button from 'primevue/button'
@@ -36,8 +35,7 @@ onMounted(async () => { await design.init() })
 
 <template>
   <Head :title="dash.seo.title.value"><meta head-key="robots" name="robots" content="noindex, nofollow" /></Head>
-  <AuthenticatedLayout>
-    <Toast />
+  <Toast />
     <div class="page-scroll bg-surface dark:bg-[#090E1A]">
       <div class="max-w-[1040px] lg:max-w-[1120px] mx-auto px-3 sm:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4">
         <button
@@ -145,5 +143,4 @@ onMounted(async () => { await design.init() })
       </div>
       <AvatarPreview :src="dash.avatarSrc.value" :name="dash.u.value.name" :open="dash.showAvatar.value" @close="dash.closeAvatar()" />
     </div>
-  </AuthenticatedLayout>
 </template>

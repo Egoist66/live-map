@@ -1,8 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, usePage } from '@inertiajs/vue3'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import GuestLayout from '@/Layouts/GuestLayout.vue'
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import DatingQuestionnaireForm from '@/Components/Features/Dating/DatingQuestionnaireForm.vue'
 import SwipeDetailsDialog from '@/Components/Features/Dating/SwipeDetailsDialog.vue'
 import DefaultModeHint from '@/Components/Features/Mode/DefaultModeHint.vue'
@@ -31,7 +29,6 @@ const seo = useSeo({
 
 const page = usePage()
 const isAuth = computed(() => !!(page.props.auth as any)?.user)
-const Layout = computed(() => (isAuth.value ? AuthenticatedLayout : GuestLayout))
 
 const s = useSwipes()
 const cardPhotos = useSwipeCardPhotos(() => s.current.value)
@@ -111,8 +108,7 @@ onUnmounted(() => {
   <Head :title="seo.title.value">
     <meta head-key="description" name="description" :content="seo.description.value" />
   </Head>
-  <component :is="Layout">
-    <div class="page-scroll bg-surface dark:bg-[#090E1A]">
+  <div class="page-scroll bg-surface dark:bg-[#090E1A]">
       <div class="max-w-[640px] mx-auto px-3 sm:px-6 pt-3 pb-1 sm:py-6 sm:pb-[calc(2rem+var(--sab))]">
 
         <div class="text-center">
@@ -315,7 +311,7 @@ onUnmounted(() => {
                 <span class="w-10 h-10 rounded-2xl bg-white/20 grid place-items-center"><i class="pi pi-crown" /></span>
                 <div class="min-w-0 flex-1">
                   <div class="text-base font-black">ULove PRO</div>
-                  <div class="text-xs text-white/80">Твой тариф: {{ s.planLabel.value }}</div>
+                  <div class="text-xs text-white/80">Твой тариф: {{ s.planLabel.value }}<span v-if="s.planExpiresLabel.value"> · {{ s.planExpiresLabel.value }}</span></div>
                 </div>
                 <Chip :label="s.quotaLabel.value" icon="pi pi-send" class="!rounded-full !bg-white/20 !text-white !border-0 text-xs" />
               </div>
@@ -507,15 +503,6 @@ onUnmounted(() => {
                 />
                 <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent pointer-events-none" />
 
-                <div
-                  class="absolute top-12 right-5 rotate-[12deg] border-4 border-emerald-400 text-emerald-300 font-black text-2xl px-3 py-1 rounded-xl bg-black/20"
-                  :style="{ opacity: s.likeStrength.value, transform: `scale(${0.8 + s.likeStrength.value * 0.3})` }"
-                >ЛАЙК</div>
-                <div
-                  class="absolute top-12 left-5 rotate-[-12deg] border-4 border-rose-500 text-rose-400 font-black text-2xl px-3 py-1 rounded-xl bg-black/20"
-                  :style="{ opacity: s.passStrength.value, transform: `scale(${0.8 + s.passStrength.value * 0.3})` }"
-                >ПАС</div>
-
                 <div v-if="s.current.value.liked_me" class="absolute top-24 right-4 pointer-events-none">
                   <Chip label="Лайкнул тебя" icon="pi pi-heart-fill" class="!rounded-full !bg-rose-500 !text-white !border-0" />
                 </div>
@@ -553,7 +540,7 @@ onUnmounted(() => {
               <div
                 v-if="s.exiting.value"
                 class="fly-card absolute inset-0 z-20 rounded-[24px] overflow-hidden bg-zinc-900 dark:bg-zinc-950 shadow-soft ring-1 ring-black/10 dark:ring-white/10 pointer-events-none"
-                :class="s.exiting.value.dir === 'like' ? 'fly-like' : 'fly-pass'"
+                :class="s.exiting.value.dir === 'right' ? 'fly-pass' : 'fly-like'"
                 :style="{ '--from-x': `${s.exiting.value.fromX}px`, '--from-y': `${s.exiting.value.fromY}px` }"
               >
                 <img
@@ -567,14 +554,6 @@ onUnmounted(() => {
                   <span class="text-white text-7xl font-black">{{ (s.exiting.value.card.name ?? '?').slice(0, 1) }}</span>
                 </div>
                 <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
-                <div
-                  v-if="s.exiting.value.dir === 'like'"
-                  class="absolute top-5 right-5 rotate-[12deg] border-4 border-emerald-400 text-emerald-300 font-black text-2xl px-3 py-1 rounded-xl bg-black/20"
-                >ЛАЙК</div>
-                <div
-                  v-else
-                  class="absolute top-5 left-5 rotate-[-12deg] border-4 border-rose-500 text-rose-400 font-black text-2xl px-3 py-1 rounded-xl bg-black/20"
-                >ПАС</div>
                 <div class="absolute bottom-0 inset-x-0 p-4 sm:p-5 text-white">
                   <div class="flex items-baseline gap-2">
                     <span class="text-[24px] sm:text-[26px] font-black leading-none">{{ s.exiting.value.card.name }}</span>
@@ -912,7 +891,6 @@ onUnmounted(() => {
         </div>
       </Dialog>
     </div>
-  </component>
 </template>
 
 <style scoped>

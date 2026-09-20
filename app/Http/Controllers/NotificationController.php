@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\UserDatabaseNotification;
 use App\Services\UserNotifier;
 use Illuminate\Http\Request;
-use Illuminate\Notifications\DatabaseNotification;
 
 /**
  * Единый inbox уведомлений (таблица notifications).
@@ -23,7 +23,7 @@ class NotificationController extends Controller
             'category' => ['sometimes', 'in:pin,event'],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:50'],
         ]);
-        $query = DatabaseNotification::where('notifiable_type', $request->user()->getMorphClass())
+        $query = UserDatabaseNotification::where('notifiable_type', $request->user()->getMorphClass())
             ->where('notifiable_id', $request->user()->id)
             ->latest('updated_at');
         if (! empty($data['category'])) {
@@ -40,7 +40,7 @@ class NotificationController extends Controller
      */
     public function unreadCount(Request $request)
     {
-        $base = DatabaseNotification::where('notifiable_type', $request->user()->getMorphClass())
+        $base = UserDatabaseNotification::where('notifiable_type', $request->user()->getMorphClass())
             ->where('notifiable_id', $request->user()->id)
             ->whereNull('read_at');
         $pins = (clone $base)->where('category', 'pin')->count();
@@ -64,7 +64,7 @@ class NotificationController extends Controller
             'ids' => ['sometimes', 'array'],
             'ids.*' => ['string'],
         ]);
-        $query = DatabaseNotification::where('notifiable_type', $request->user()->getMorphClass())
+        $query = UserDatabaseNotification::where('notifiable_type', $request->user()->getMorphClass())
             ->where('notifiable_id', $request->user()->id)
             ->whereNull('read_at');
         if (! ($data['all'] ?? false)) {
@@ -91,7 +91,7 @@ class NotificationController extends Controller
         $data = $request->validate([
             'category' => ['sometimes', 'in:pin,event'],
         ]);
-        $query = DatabaseNotification::where('notifiable_type', $request->user()->getMorphClass())
+        $query = UserDatabaseNotification::where('notifiable_type', $request->user()->getMorphClass())
             ->where('notifiable_id', $request->user()->id);
         if (! empty($data['category'])) {
             $query->where('category', $data['category']);

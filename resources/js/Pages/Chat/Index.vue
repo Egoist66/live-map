@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue'
+import { Head } from '@inertiajs/vue3'
 import Toast from 'primevue/toast'
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import ChatSidebar from '@/Components/Features/Chat/ChatSidebar.vue'
 import ChatWindow from '@/Components/Features/Chat/ChatWindow.vue'
 // Диалоги открываются только по действию — грузим лениво, первым paint не блокируют.
@@ -89,8 +89,8 @@ watch(() => props.conversationId, (id) => { if (id) void openTarget(id) })
 onMounted(async () => { await init(); datingTheme.checkEntry() })
 </script>
 <template>
-  <AuthenticatedLayout>
-    <Toast />
+  <Head title="Чаты" />
+  <Toast />
     <div :class="pageClass">
       <div :class="frameClass" class="h-app-full" :style="frameStyle">
         <ChatSidebar :tab="tab" @update:tab="(v:any)=>tab=v" :unread-total="unreadTotal" :ulove-unread="uloveUnread" :pending-count="pendingIn.length" :blocked-count="blocked.length" :refreshing="refreshing" :conversations="(filters.filteredConversations.value as any)" :ulove-conversations="(uloveConversations as any)" :friends="(filters.filteredFriends.value as any)" :pending-in="(filters.filteredPendingIn.value as any)" :blocked="(filters.filteredBlocked.value as any)" :filter="filters.chatFilter.value" @update:filter="(v:string)=>filters.chatFilter.value=v" :selected-id="selectedId" :conversations-sentinel="convSentinel" :conversations-has-more="convHasMore" :conversations-loading-more="convLoadingMore" :friends-sentinel="friendsSentinel" :friends-has-more="friendsHasMore" :friends-loading-more="friendsLoadingMore" :privacy="privacy" :show-privacy="showPrivacy" @update:show-privacy="(v:boolean)=>showPrivacy=v" :is-online="isOnline" :format-time="formatTime" @refresh="refresh" @people="filters.showPeopleSearch.value = true" @open="openConversation" @start-chat="startChatWith" @delete-chat="askDeleteChat" @clear-all-chats="askClearAllChats" @block="askBlock" @unblock="askUnblock" @remove-friend="askRemoveFriend" @accept="(id:number)=>friendsApi.accept(id)" @decline="(id:number)=>friendsApi.decline(id)" @save-privacy="savePrivacy" />
@@ -102,5 +102,4 @@ onMounted(async () => { await init(); datingTheme.checkEntry() })
     <ChatWallpaperDialog :open="wallpaperOpen" @update:open="(v:boolean)=>wallpaperOpen=v" />
     <DistrictInviteDialog :open="districtInvite.open.value" @update:open="districtInvite.setOpen" :district-name="districtInvite.districtName.value" :query="districtInvite.query.value" @update:query="districtInvite.search" :results="districtInvite.results.value" :searching="districtInvite.searching.value" :inviting-id="districtInvite.invitingId.value" :error="districtInvite.error.value" @invite="sendDistrictInviteFromChat" />
     <ChatBottomSheet :sheet="sheet" :is-own-message="isOwnMessage" @close="closeSheet" @open-chat="openConversation" @start-chat="startChatWith" @edit="(m:any)=>{ closeSheet(); handleStartEdit(m) }" @delete-message="(id:number)=>{ closeSheet(); askDeleteMessage(id) }" @delete-chat="(id?:number)=>askDeleteChat(id)" @block="askBlock" @unblock="askUnblock" @remove-friend="askRemoveFriend" @accept="(id:number)=>{ closeSheet(); friendsApi.accept(id) }" @decline="(id:number)=>{ friendsApi.decline(id); closeSheet() }" @add="(id:number)=>{ closeSheet(); friendsApi.add(id) }" />
-  </AuthenticatedLayout>
 </template>

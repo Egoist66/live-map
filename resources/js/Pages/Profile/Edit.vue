@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { Head } from '@inertiajs/vue3'
 import { useTheme } from '@/composables/useTheme'
 import { useSettingsPage } from '@/composables/useSettingsPage'
@@ -33,8 +32,7 @@ const { setTheme } = useTheme()
 </script>
 <template>
   <Head title="Настройки" />
-  <AuthenticatedLayout>
-    <Toast />
+  <Toast />
     <div class="page-scroll bg-surface dark:bg-[#090E1A] overflow-x-hidden">
       <div class="max-w-[1280px] mx-auto px-3 sm:px-6 py-4 sm:py-6 overflow-hidden">
         <div class="grid lg:grid-cols-[300px_1fr] gap-4 sm:gap-6 items-start content-start w-full lg:items-start">
@@ -71,7 +69,6 @@ const { setTheme } = useTheme()
       <AvatarPreview :src="s.avatarSrc.value" :name="s.u.value.name" :open="s.showAvatar.value" @close="s.showAvatar.value = false" />
       <AdminImpersonateDialog :imp="s.imp" />
     </div>
-  </AuthenticatedLayout>
 </template>
 <style scoped>
 .settings-root {

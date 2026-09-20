@@ -1,4 +1,4 @@
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 
 /**
  * Ключ флага «анимации выключены» в localStorage.
@@ -71,12 +71,48 @@ export function initMotion(): void {
 }
 
 /**
+ * Проверяет системный `prefers-reduced-motion` (только клиент).
+ * На сервере всегда false — SSR-разметка детерминирована.
+ *
+ * @returns true если ОС просит уменьшить движение
+ */
+export function prefersReducedMotion(): boolean {
+  if (typeof window === 'undefined') {
+    return false
+  }
+
+  try {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Нужно ли пропускать JS-ожидания анимаций (улёт свайпа и т.п.).
+ * True когда анимации выключены в настройках ИЛИ их просит
+ * выключить ОС. SSR-безопасно: на сервере всегда false.
+ *
+ * Без этого `swipe()` ждал бы 360мс несуществующую анимацию
+ * (keyframes убиты kill-switch за 0.01мс) — мёртвый фриз
+ * при каждом свайпе с выключенными анимациями.
+ *
+ * @returns true если анимацию ждать не надо
+ */
+export function shouldSkipMotion(): boolean {
+  return motionOff.value || prefersReducedMotion()
+}
+
+/**
  * Доступ к настройке анимаций. Первый вызов в браузере планирует
  * синхронизацию с localStorage после монтирования (без mismatch).
  *
- * @returns флаг отключения анимаций и переключатели
+ * Свитч в UI — позитивный: ON = анимации ВКЛЮЧЕНЫ (по умолчанию).
+ * Внутренности хранят инверсию `motionOff`, наружу торчат оба флага.
+ *
+ * @returns флаги и переключатели анимаций
  * @example
- * const { motionOff, setMotionOff } = useMotion()
+ * const { animationsEnabled, setAnimationsEnabled } = useMotion()
  */
 export function useMotion() {
   if (typeof window !== 'undefined') {
@@ -86,9 +122,34 @@ export function useMotion() {
   }
 
   /**
+   * Анимации включены (инверсия внутреннего флага).
+   * Writable: можно биндить напрямую в `v-model` PrimeVue ToggleSwitch.
+   */
+  const animationsEnabled = computed({
+    get: () => !motionOff.value,
+    set: (value: boolean) => {
+      motionOff.value = !value
+    },
+  })
+
+  /**
    * Включает/выключает все анимации приложения.
    *
+   * @param value true — анимации включены
+   */
+  function setAnimationsEnabled(value: boolean): void {
+    motionOff.value = !value
+  }
+
+  function toggleAnimations(): void {
+    motionOff.value = !motionOff.value
+  }
+
+  /**
+   * Включает/выключает все анимации приложения (негативная форма).
+   *
    * @param value true — выключить анимации
+   * @deprecated используй setAnimationsEnabled
    */
   function setMotionOff(value: boolean): void {
     motionOff.value = value
@@ -98,5 +159,5 @@ export function useMotion() {
     motionOff.value = !motionOff.value
   }
 
-  return { motionOff, setMotionOff, toggleMotionOff }
+  return { motionOff, animationsEnabled, setAnimationsEnabled, toggleAnimations, setMotionOff, toggleMotionOff }
 }

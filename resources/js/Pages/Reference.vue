@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import { Head, Link, usePage } from '@inertiajs/vue3'
+import { Head, Link } from '@inertiajs/vue3'
 import { computed, onMounted } from 'vue'
-import GuestLayout from '@/Layouts/GuestLayout.vue'
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import { useSeo } from '@/composables/useSeo'
 import { usePublicReference } from '@/composables/usePublicReference'
 import Card from 'primevue/card'
@@ -15,10 +13,6 @@ const seo = useSeo({
   description: 'Контакты, политика конфиденциальности и публичная оферта UPin.',
   keywords: ['UPin', 'контакты', 'политика конфиденциальности', 'оферта'],
 })
-
-const page = usePage()
-const isAuth = computed(() => !!(page.props.auth as any)?.user)
-const Layout = computed(() => (isAuth.value ? AuthenticatedLayout : GuestLayout))
 
 const { page: refPage, loading, notFound, fallbackTitle, load } = usePublicReference(props.slug)
 
@@ -38,8 +32,7 @@ onMounted(() => load())
   <Head :title="seo.title.value">
     <meta head-key="description" name="description" :content="seo.description.value" />
   </Head>
-  <component :is="Layout">
-    <div class="page-scroll bg-surface dark:bg-[#090E1A]">
+  <div class="page-scroll bg-surface dark:bg-[#090E1A]">
       <div class="max-w-[900px] mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-[calc(2rem+var(--sab))]">
         <div class="text-center">
           <h1 class="text-[28px] sm:text-[42px] font-black tracking-[-0.04em] leading-[1.05] sm:leading-none dark:text-white text-balance">{{ pageTitle }}</h1>
@@ -133,5 +126,4 @@ onMounted(() => load())
         </div>
       </div>
     </div>
-  </component>
 </template>

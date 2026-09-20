@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\EncryptedTextCast;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,7 +14,7 @@ class PinComment extends Model
 
     protected $fillable = ['pin_id', 'user_id', 'parent_id', 'content', 'is_anonymous'];
 
-    protected $casts = ['is_anonymous' => 'boolean'];
+    protected $casts = ['is_anonymous' => 'boolean', 'content' => EncryptedTextCast::class];
 
     public function pin(): BelongsTo { return $this->belongsTo(Pin::class); }
     public function user(): BelongsTo { return $this->belongsTo(User::class); }

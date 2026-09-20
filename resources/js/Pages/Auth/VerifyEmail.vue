@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import GuestLayout from '@/Layouts/GuestLayout.vue'
 import { Head, Link, useForm } from '@inertiajs/vue3'
 import { route } from '@/route'
 import Button from 'primevue/button'
@@ -12,8 +11,7 @@ const submit = () => { form.post(route('verification.send')) }
 const verificationLinkSent = computed(() => props.status === 'verification-link-sent')
 </script>
 <template>
-  <GuestLayout>
-    <Head title="Подтверждение почты" />
+  <Head title="Подтверждение почты" />
     <Message severity="info" :closable="false" class="!rounded-2xl">Спасибо за регистрацию! Подтвердите почту, перейдя по ссылке из письма. Если не получили — отправим заново.</Message>
     <Message v-if="verificationLinkSent" severity="success" :closable="false" class="mt-3 !rounded-2xl">Новая ссылка отправлена на указанный при регистрации email.</Message>
     <form @submit.prevent="submit" class="mt-6">
@@ -22,5 +20,4 @@ const verificationLinkSent = computed(() => props.status === 'verification-link-
         <Link :href="route('logout')" method="post" as="button" class="rounded-full text-sm text-stone-600 dark:text-zinc-400 underline hover:text-ink-900 dark:hover:text-white">Выйти</Link>
       </div>
     </form>
-  </GuestLayout>
 </template>

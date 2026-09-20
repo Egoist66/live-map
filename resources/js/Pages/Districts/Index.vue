@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3'
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import Toast from 'primevue/toast'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
@@ -30,8 +29,7 @@ function letterOf(name: string): string {
 
 <template>
   <Head title="Районы" />
-  <AuthenticatedLayout>
-    <Toast />
+  <Toast />
     <div class="bg-surface dark:bg-[#090E1A]">
       <div class="mx-auto max-w-[1000px] px-3 py-3 sm:px-6 sm:py-6">
         <div class="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_300px]">
@@ -157,5 +155,4 @@ function letterOf(name: string): string {
         </div>
       </div>
     </div>
-  </AuthenticatedLayout>
 </template>

@@ -47,6 +47,11 @@ class AdminUserController extends Controller
      * Свою роль менять можно, но снятие admin с себя запрещено,
      * если это последний администратор в системе.
      *
+     * Выдача pro/business без явной даты ставит срок +30 дней,
+     * если текущий срок отсутствует или уже прошёл: иначе тариф
+     * выглядел бы выданным, а лимиты считались бы по free
+     * (действующий тариф — effectivePlan, не сырое поле plan).
+     *
      * @param Request $request
      * @param User $user
      * @return \Illuminate\Http\JsonResponse
@@ -72,9 +77,7 @@ class AdminUserController extends Controller
         }
         if (isset($data['plan'])) {
             $user->plan = $data['plan'];
-            $user->plan_expires_at = $data['plan'] === 'free'
-                ? null
-                : (isset($data['plan_expires_at']) ? \Carbon\Carbon::parse($data['plan_expires_at']) : $user->plan_expires_at);
+            $user->plan_expires_at = $this->resolvePlanExpiry($data['plan'], $data['plan_expires_at'] ?? null, $user->plan_expires_at);
         } elseif (isset($data['plan_expires_at'])) {
             $user->plan_expires_at = \Carbon\Carbon::parse($data['plan_expires_at']);
         }
@@ -84,6 +87,41 @@ class AdminUserController extends Controller
         }
         $user->save();
         return response()->json(['id' => $user->id, 'plan' => $user->plan, 'effective_plan' => $user->effectivePlan(), 'plan_expires_at' => $user->plan_expires_at?->toISOString(), 'role' => $user->role, 'is_admin' => $user->isAdmin()]);
+    }
+
+    /**
+     * Посчитать срок действия тарифа при смене плана.
+     *
+     * Free срок не имеет. Платному без явной даты даём +30 дней,
+     * если прежний срок отсутствует или уже прошёл; будущий срок
+     * сохраняем, чтобы не урезать уже оплаченное.
+     *
+     * @param string $plan новый план (free|pro|business)
+     * @param string|null $requested явная дата из запроса
+     * @param mixed $current текущий срок из базы
+     * @return \Carbon\Carbon|null
+     */
+    private function resolvePlanExpiry(string $plan, ?string $requested, mixed $current): ?\Carbon\Carbon
+    {
+        if ($plan === 'free') {
+            return null;
+        }
+
+        if ($requested !== null) {
+            return \Carbon\Carbon::parse($requested);
+        }
+
+        try {
+            $currentExpiry = $current ? \Carbon\Carbon::parse($current) : null;
+        } catch (\Throwable) {
+            $currentExpiry = null;
+        }
+
+        if ($currentExpiry && $currentExpiry->isFuture()) {
+            return $currentExpiry;
+        }
+
+        return \Carbon\Carbon::now()->addDays(30);
     }
 
     public function search(Request $request)

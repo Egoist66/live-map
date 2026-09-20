@@ -1,9 +1,5 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3'
-import { computed } from 'vue'
-import GuestLayout from '@/Layouts/GuestLayout.vue'
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
-import { usePage } from '@inertiajs/vue3'
 import { useSeo } from '@/composables/useSeo'
 import { useFaq } from '@/composables/useFaq'
 import Card from 'primevue/card'
@@ -17,9 +13,6 @@ const seo = useSeo({
   description: 'Ответы про UPin простым языком: регистрация, пины и аудитория по полу, страна проживания, жизнь пина (Free 4 ч, Pro 12 ч, Business без срока), радиус 5-50 км, приватность, тарифы, новости приложения и карта района.',
   keywords: ['UPin FAQ','что такое UPin','пины','приватность','тарифы'],
 })
-const page = usePage()
-const isAuth = computed(() => !!(page.props.auth as any)?.user)
-const Layout = computed(() => isAuth.value ? AuthenticatedLayout : GuestLayout)
 const { open, sections } = useFaq()
 </script>
 
@@ -28,8 +21,7 @@ const { open, sections } = useFaq()
     <meta head-key="description" name="description" :content="seo.description.value" />
     <component :is="'script'" type="application/ld+json" v-html="JSON.stringify({ '@context':'https://schema.org','@type':'FAQPage', mainEntity: sections.map(s=>({ '@type':'Question', name:s.q, acceptedAnswer:{ '@type':'Answer', text:s.a }})) })"></component>
   </Head>
-  <component :is="Layout">
-    <div class="page-scroll bg-surface dark:bg-[#090E1A]">
+  <div class="page-scroll bg-surface dark:bg-[#090E1A]">
       <div class="max-w-[900px] mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-[calc(2rem+var(--sab))]">
         <div class="text-center">
           <Card class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-700 !rounded-full !shadow-soft !inline-flex">
@@ -72,5 +64,4 @@ const { open, sections } = useFaq()
         </div>
       </div>
     </div>
-  </component>
 </template>

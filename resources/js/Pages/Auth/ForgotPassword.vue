@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import GuestLayout from '@/Layouts/GuestLayout.vue'
 import { Head, useForm } from '@inertiajs/vue3'
 import { route } from '@/route'
 import InputText from 'primevue/inputtext'
@@ -11,8 +10,7 @@ const form = useForm({ email: '' })
 const submit = () => { form.post(route('password.email')) }
 </script>
 <template>
-  <GuestLayout>
-    <Head title="Восстановление пароля" />
+  <Head title="Восстановление пароля" />
     <Message severity="info" :closable="false" class="mb-4 !rounded-2xl">Забыли пароль? Укажите email, и мы отправим ссылку для сброса пароля.</Message>
     <Message v-if="props.status" severity="success" :closable="false" class="mb-4 !rounded-2xl">{{ props.status }}</Message>
     <form @submit.prevent="submit" class="space-y-4">
@@ -23,5 +21,4 @@ const submit = () => { form.post(route('password.email')) }
       </div>
       <Button type="submit" :loading="form.processing" label="Отправить ссылку" class="w-full !bg-ink-900 dark:!bg-[#FAFAFA] !border-ink-900 dark:!border-[#FAFAFA] !text-white dark:!text-[#0F172A] !rounded-full !py-3.5 !font-bold [&_.p-button-label]:!text-white dark:[&_.p-button-label]:!text-[#0F172A]" />
     </form>
-  </GuestLayout>
 </template>

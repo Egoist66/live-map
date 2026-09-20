@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import GuestLayout from '@/Layouts/GuestLayout.vue'
 import { Head, useForm } from '@inertiajs/vue3'
 import { route } from '@/route'
 import { ref } from 'vue'
@@ -13,8 +12,7 @@ const show2 = ref(false)
 const submit = () => { form.post(route('password.store'), { onFinish: () => form.reset('password', 'password_confirmation') }) }
 </script>
 <template>
-  <GuestLayout>
-    <Head title="Новый пароль" />
+  <Head title="Новый пароль" />
     <form @submit.prevent="submit" class="space-y-4">
       <div>
         <label class="text-[13px] font-semibold text-ink-900 dark:text-zinc-100">Email</label>
@@ -39,5 +37,4 @@ const submit = () => { form.post(route('password.store'), { onFinish: () => form
       </div>
       <Button type="submit" :loading="form.processing" label="Сохранить пароль" class="w-full !bg-ink-900 dark:!bg-[#FAFAFA] !border-ink-900 dark:!border-[#FAFAFA] !text-white dark:!text-[#0F172A] !rounded-full !py-3.5 !font-bold [&_.p-button-label]:!text-white dark:[&_.p-button-label]:!text-[#0F172A]" />
     </form>
-  </GuestLayout>
 </template>

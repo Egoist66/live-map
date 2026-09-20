@@ -20,6 +20,17 @@ function fileRevision(rel) {
 }
 
 export default defineConfig({
+    // Dev-сервер: порт строго 5173 — без strictPort второй Vite молча
+    // уезжал на 5174, а страницы продолжали ломиться на 5173 через прокси
+    // и получали 504 + `Failed to fetch dynamically imported module`.
+    // host специально НЕ трогаем: с host:true Vite биндится на [::] и
+    // laravel-vite-plugin пишет в hot-файл http://[::]:5173 — браузер
+    // отвергает такой URL (ERR_ADDRESS_INVALID). Дефолтный localhost
+    // прокси Herd/Valet резолвит сам.
+    server: {
+        port: 5173,
+        strictPort: true,
+    },
     resolve: {
         // Одна копия Vue на весь бандл: без dedupe рантайм может разъехаться
         // по чанкам (primevue/form/vendor) и дать несогласованные vnode —

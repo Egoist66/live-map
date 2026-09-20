@@ -1,12 +1,25 @@
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { adminApi } from '@/services/admin.api'
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null
 
+/**
+ * Логи входов для таба «Безопасность».
+ *
+ * Бейдж таба — непрочитанные фейлы: открываем таб — список
+ * обновляется и счётчик гаснет, новые попытки зажигают снова.
+ *
+ * @returns состояние логов и действия
+ */
 export function useAdminLoginAttempts() {
   const items = ref<any[]>([])
   const meta = ref<any>({ total: 0, per_page: 20, current_page: 1, last_page: 1 })
-  const stats = ref<{ failed_today: number; banned_total: number }>({ failed_today: 0, banned_total: 0 })
+  const stats = ref<{ failed_today: number; failed_unseen?: number; banned_total: number }>({ failed_today: 0, banned_total: 0 })
+
+  /**
+   * Число для бейджа таба: непрочитанное, фолбэк — объём за 24ч.
+   */
+  const unseenCount = computed(() => stats.value.failed_unseen ?? stats.value.failed_today)
   const loading = ref(false)
   const error = ref<string | null>(null)
   const query = ref('')
@@ -94,7 +107,31 @@ export function useAdminLoginAttempts() {
     }
   }
 
+  /**
+   * Пометить попытки прочитанными: бейдж таба гаснет.
+   */
+  async function markSeen(): Promise<void> {
+    try {
+      const d: any = await adminApi.markLoginAttemptsSeen()
+      if (d?.stats) stats.value = d.stats
+      else stats.value = { ...stats.value, failed_unseen: 0 }
+    } catch {
+      return
+    }
+  }
+
+  /**
+   * Открытие таба «Безопасность»: свежий список + гашение счётчика.
+   *
+   * Гасим строго после загрузки, чтобы метка не ушла раньше
+   * данных и бейдж не зажёгся от уже показанных попыток.
+   */
+  async function openTab(): Promise<void> {
+    await load()
+    await markSeen()
+  }
+
   watch(filter, () => void load())
 
-  return { items, meta, stats, loading, error, query, filter, page, actingId, load, setQuery, setFilter, setPage, ban, unban }
+  return { items, meta, stats, unseenCount, loading, error, query, filter, page, actingId, load, openTab, markSeen, setQuery, setFilter, setPage, ban, unban }
 }

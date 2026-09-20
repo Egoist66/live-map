@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { Head } from '@inertiajs/vue3'
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import SelectButton from 'primevue/selectbutton'
@@ -51,8 +50,7 @@ onMounted(() => {
 
 <template>
   <Head title="UFlow — лента" />
-  <AuthenticatedLayout>
-    <Toast />
+  <Toast />
     <div class="page-scroll bg-surface dark:bg-[#090E1A]">
       <div class="mx-auto max-w-[680px] px-2 sm:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4">
         <div class="flex items-center gap-3">
@@ -132,7 +130,6 @@ onMounted(() => {
     <FlowEditDialog v-model:visible="editOpen" :composer="editor" />
 
     <FlowDeleteDialog :visible="feed.pendingDeleteId.value !== null" @cancel="feed.pendingDeleteId.value = null" @confirm="feed.confirmDelete()" />
-  </AuthenticatedLayout>
 </template>
 
 <style scoped>

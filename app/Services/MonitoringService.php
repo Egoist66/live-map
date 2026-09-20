@@ -138,6 +138,8 @@ class MonitoringService
             'avatar_path' => $u->avatar_path,
             'avatar_url' => $u->avatar_url,
             'plan' => $u->plan,
+            'effective_plan' => $u->effectivePlan(),
+            'plan_expires_at' => $u->plan_expires_at?->toISOString(),
             'role' => $u->role,
             'is_admin' => $u->isAdmin(),
             'is_hidden_from_search' => (bool) $u->is_hidden_from_search,

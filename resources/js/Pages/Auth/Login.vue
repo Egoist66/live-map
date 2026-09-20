@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import GuestLayout from '@/Layouts/GuestLayout.vue'
 import { Head, Link } from '@inertiajs/vue3'
 import { useLoginForm } from '@/composables/useAuthForm'
 import InputText from 'primevue/inputtext'
@@ -11,8 +10,7 @@ const { email, emailAttrs, password, passwordAttrs, remember, errors, showPass, 
 </script>
 
 <template>
-  <GuestLayout>
-    <Head title="Вход" />
+  <Head title="Вход" />
     <Message v-if="status" severity="success" class="mb-4 w-full">{{ status }}</Message>
     <h1 class="text-[22px] font-black tracking-tight text-ink-900 dark:text-white">С возвращением</h1>
     <p class="text-sm text-stone-500 dark:text-zinc-400 mt-1">💘 ULove с мэтчами и 📍 пины района уже ждут</p>
@@ -39,5 +37,4 @@ const { email, emailAttrs, password, passwordAttrs, remember, errors, showPass, 
         <Link :href="route('register')" class="font-semibold bg-stone-100 dark:bg-zinc-800 hover:bg-stone-200 dark:hover:bg-zinc-700 text-ink-900 dark:text-white border border-stone-200 dark:border-zinc-700 rounded-full px-4 py-2 transition shrink-0">Регистрация →</Link>
       </div>
     </form>
-  </GuestLayout>
 </template>
