@@ -13,6 +13,9 @@ return new class extends Migration
             $table->foreignId('liker_id')->constrained('users')->cascadeOnDelete();
             $table->foreignId('liked_id')->constrained('users')->cascadeOnDelete();
             $table->enum('action', ['like', 'pass'])->default('like');
+            // Дублирует add_incognito_to_swipe_actions: та миграция датирована раньше
+            // создания таблицы, поэтому на свежих базах шла до неё и падала.
+            $table->boolean('is_incognito')->default(false);
             $table->timestamps();
 
             $table->unique(['liker_id', 'liked_id']);

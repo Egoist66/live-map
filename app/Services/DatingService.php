@@ -13,6 +13,7 @@ use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Дейтинг-ядро: свайпы, мэтчи, лента, квоты рандомных чатов.
@@ -576,17 +577,10 @@ class DatingService
             }
         }
 
-        $outcome = DB::transaction(function () use ($me, $otherId, $action, $incognito) {
-            try {
-                $row = SwipeAction::updateOrCreate(
-                    ['liker_id' => $me->id, 'liked_id' => $otherId],
-                    ['action' => $action, 'is_incognito' => $action === 'like' ? $incognito : false]
-                );
-            } catch (QueryException $e) {
-                $row = SwipeAction::where('liker_id', $me->id)->where('liked_id', $otherId)->firstOrFail();
-                $row->fill(['action' => $action, 'is_incognito' => $action === 'like' ? $incognito : false]);
-                $row->save();
-            }
+        $swipePayload = $this->swipePayload($action, $incognito);
+
+        $outcome = DB::transaction(function () use ($me, $otherId, $action, $swipePayload) {
+            $row = $this->storeSwipe((int) $me->id, $otherId, $swipePayload);
 
             $actionChanged = $row->wasRecentlyCreated || $row->wasChanged('action');
 
@@ -618,7 +612,11 @@ class DatingService
                 $isNewMatch = false;
             }
 
-            $conversation = $this->matchConversationTx($me, $other);
+            $conversation = Conversation::findDirect($me->id, $otherId);
+
+            if (! $conversation) {
+                $conversation = $this->matchConversationTx($me, $other);
+            }
 
             return [
                 'type' => 'match',
@@ -650,6 +648,74 @@ class DatingService
         }
 
         return ['matched' => true, 'match_id' => $outcome['match_id'], 'conversation_id' => $outcome['conversation_id'], 'is_incognito' => $incognito];
+    }
+
+    /**
+     * Пейлоад записи свайпа для updateOrCreate.
+     *
+     * Колонки is_incognito может не быть на базах, где миграция
+     * add_incognito_to_swipe_actions не applied (порядок миграций) —
+     * тогда пишем только action, иначе любой свайп давал бы 500.
+     *
+     * @param string $action like|pass
+     * @param bool $incognito запрошенное инкогнито
+     * @return array{action:string,is_incognito?:bool}
+     */
+    private function swipePayload(string $action, bool $incognito): array
+    {
+        $payload = ['action' => $action];
+
+        $hasIncognito = Schema::hasColumn('swipe_actions', 'is_incognito');
+
+        if ($hasIncognito) {
+            $payload['is_incognito'] = $action === 'like' && $incognito;
+        }
+
+        return $payload;
+    }
+
+    /**
+     * Сохранить свайп идемпотентно: одна строка на пару (liker_id, liked_id).
+     *
+     * Гонка unique ловится QueryException и чинится перечитыванием + save.
+     * Если колонки is_incognito нет — повтор без неё, чтобы не падать в 500.
+     *
+     * @param int $likerId автор свайпа
+     * @param int $likedId получатель свайпа
+     * @param array{action:string,is_incognito?:bool} $payload
+     * @return SwipeAction
+     */
+    private function storeSwipe(int $likerId, int $likedId, array $payload): SwipeAction
+    {
+        try {
+            return SwipeAction::updateOrCreate(
+                ['liker_id' => $likerId, 'liked_id' => $likedId],
+                $payload
+            );
+        } catch (QueryException $e) {
+            $existing = SwipeAction::where('liker_id', $likerId)
+                ->where('liked_id', $likedId)
+                ->first();
+
+            if ($existing === null) {
+                $plain = ['action' => $payload['action']];
+
+                return SwipeAction::updateOrCreate(
+                    ['liker_id' => $likerId, 'liked_id' => $likedId],
+                    $plain
+                );
+            }
+
+            try {
+                $existing->fill($payload);
+                $existing->save();
+            } catch (QueryException $retry) {
+                $existing->fill(['action' => $payload['action']]);
+                $existing->save();
+            }
+
+            return $existing;
+        }
     }
 
     /**

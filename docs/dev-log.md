@@ -1,5 +1,11 @@
 # Dev-лог
 
+## 2026-09-20 — Свайпы: фикс 500 на prod при любом свайпе
+- 🐞 Причина: миграция `add_incognito_to_swipe_actions` датирована `2026_09_10`, а создание таблицы `swipe_actions` — `2026_09_26`: на свежих базах (laravel.cloud) alter шёл до create → колонки `is_incognito` нет → `updateOrCreate` с ней кидал `QueryException`, а фолбэк (`firstOrFail` + `fill` + `save` с той же колонкой) падал повторно уже вне catch → 500 на каждый `POST /api/swipes/action`.
+- 🛡️ `DatingService`: новые хелперы `swipePayload()` (колонку `is_incognito` пишет только если `Schema::hasColumn` её видит) и `storeSwipe()` (гонка unique чинится перечитыванием; нет строки — повтор без инкогнито; `save` тоже с ретраем без колонки). Повторный мэтч переиспользует `Conversation::findDirect` вместо создания дубля direct-чата.
+- 🗄️ Миграции: `create_swipe_tables` теперь создаёт `is_incognito` сразу; `add_incognito...` стала идемпотентной (гарды `hasTable`/`hasColumn` в `up`/`down`) — безопасна и на старых, и на свежих базах. На проде после деплоя докатить `php artisan migrate --force`.
+- Проверки: `php -l` ✅.
+
 ## 2026-09-20 — Свайпы: гонки закрыты, инкогнито больше не палит id
 - 🔒 Гонка взаимного лайка: весь `recordAction` теперь в одной транзакции — пара сериализуется `lockForUpdate` по ordered user-строкам (порядок одинаковый → без дедлоков), `firstOrCreate DatingMatch` с фолбэком на `QueryException` (unique `user_a/user_b`), `updateOrCreate SwipeAction` с перечитыванием при дубле unique. Уведомляет только создатель мэтча (`isNewMatch`) — двойные мэтч-тосты/пуши/чаты исключены; чат собирается чистым `matchConversationTx`, анонс (`announceMatchConversation`) после коммита.
 - 🔕 Новизна лайка по факту записи (`wasRecentlyCreated || wasChanged('action')`): повторный like тихий, `pass → like` уведомляет заново, `like → pass` отзывает висящий `dating.liked` (`withdrawLike` через `deleteUnread`) — stale-пингов «тебя лайкнули» больше нет. Семантика задокументирована: последнее действие решает (строка одна, unique `liker/liked`).
