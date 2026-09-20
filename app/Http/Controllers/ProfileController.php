@@ -45,6 +45,9 @@ class ProfileController extends Controller
         $home = $user->publicHomeFor($auth);
         $base = $user->only(['id','name','gender','birth_date','country','country_code','avatar_path','level','reputation_score','created_at','home_city','home_visibility','home_radius_km','bio','thought','last_seen_at','is_invisible','photo_comments_privacy']);
         $base['age'] = $user->age;
+        $base['plan'] = $user->plan ?? 'free';
+        $base['plan_expires_at'] = $user->plan_expires_at?->toISOString();
+        $base['effective_plan'] = $user->effectivePlan();
         if (!$isOwn) unset($base['birth_date']);
         if ($isOwn) {
             $base['home_lat'] = $user->home_lat;

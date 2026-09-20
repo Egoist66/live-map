@@ -19,7 +19,7 @@ class AdminUserController extends Controller
             $query->where(fn ($w) => $w->where('name', 'like', "%$q%")->orWhere('email', 'like', "%$q%"));
         }
         $threshold = now()->subMinutes(\App\Services\MonitoringService::ONLINE_MINUTES);
-        $users = $query->select('id', 'name', 'email', 'avatar_path', 'role', 'is_admin', 'is_hidden_from_search', 'plan', 'last_seen_at', 'is_invisible', 'created_at', 'banned_at', 'banned_reason')
+        $users = $query->select('id', 'name', 'email', 'avatar_path', 'role', 'is_admin', 'is_hidden_from_search', 'plan', 'plan_expires_at', 'last_seen_at', 'is_invisible', 'created_at', 'banned_at', 'banned_reason')
             ->paginate((int) ($data['per_page'] ?? 20));
         $users->getCollection()->transform(fn ($u) => [
             'id' => $u->id,
@@ -31,6 +31,8 @@ class AdminUserController extends Controller
             'is_admin' => $u->isAdmin(),
             'is_hidden_from_search' => (bool) $u->is_hidden_from_search,
             'plan' => $u->plan,
+            'effective_plan' => $u->effectivePlan(),
+            'plan_expires_at' => $u->plan_expires_at?->toISOString(),
             'is_online' => $u->last_seen_at && $u->last_seen_at->gte($threshold),
             'last_seen_at' => $u->last_seen_at?->toISOString(),
             'is_invisible' => (bool) $u->is_invisible,
@@ -129,7 +131,7 @@ class AdminUserController extends Controller
         $q = trim($request->input('q', ''));
         abort_if(strlen($q) < 2, 422, 'Минимум 2 символа');
         $users = User::where(fn($qq) => $qq->where('name', 'like', "%$q%")->orWhere('email', 'like', "%$q%"))
-            ->select('id', 'name', 'email', 'avatar_path', 'role', 'is_admin', 'is_hidden_from_search', 'plan')
+            ->select('id', 'name', 'email', 'avatar_path', 'role', 'is_admin', 'is_hidden_from_search', 'plan', 'plan_expires_at')
             ->limit(20)->get()
             ->map(fn($u) => [
                 'id' => $u->id,
@@ -141,6 +143,8 @@ class AdminUserController extends Controller
                 'is_admin' => $u->isAdmin(),
                 'is_hidden_from_search' => (bool) $u->is_hidden_from_search,
                 'plan' => $u->plan,
+                'effective_plan' => $u->effectivePlan(),
+                'plan_expires_at' => $u->plan_expires_at?->toISOString(),
             ]);
         return response()->json($users);
     }
