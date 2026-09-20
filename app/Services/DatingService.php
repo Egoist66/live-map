@@ -579,7 +579,7 @@ class DatingService
 
         $swipePayload = $this->swipePayload($action, $incognito);
 
-        $outcome = DB::transaction(function () use ($me, $otherId, $action, $swipePayload) {
+        $outcome = DB::transaction(function () use ($me, $other, $otherId, $action, $swipePayload) {
             $row = $this->storeSwipe((int) $me->id, $otherId, $swipePayload);
 
             $actionChanged = $row->wasRecentlyCreated || $row->wasChanged('action');

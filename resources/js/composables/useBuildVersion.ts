@@ -16,6 +16,7 @@ import { hardRefreshToLatest } from '@/pwa/cache.service'
 
 const POLL_INTERVAL_MS = 60 * 1000
 const DISMISSED_KEY = 'uconnect-dismissed-build'
+const APPLIED_KEY = 'uconnect-applied-build'
 
 const initialVersion = ref<string | null>(null)
 const latestVersion = ref<string | null>(null)
@@ -37,7 +38,7 @@ function readInitialVersion(): string | null {
 }
 
 async function fetchLatestVersion(): Promise<string | null> {
-  const response = await api.get('/api/version')
+  const response = await api.get('/api/version', { params: { t: Date.now() } })
   const version = (response.data as Record<string, unknown>)?.version
   return typeof version === 'string' && version !== '' ? version : null
 }
@@ -49,6 +50,11 @@ async function fetchLatestVersion(): Promise<string | null> {
  * Во время rolling-деплоя инстансы отдают разные версии и опросы
  * флиппуют mismatch — без latch баннер появляется и мгновенно
  * пропадает. Снимается только руками: `refreshApp`/`dismissBuildUpdate`.
+ *
+ * Анти-луп: версия, до которой пользователь уже обновился кнопкой
+ * (`APPLIED_KEY`), баннер больше не поднимает — даже если после
+ * перезагрузки сервер/кэш всё ещё отдают старый `appVersion`
+ * (stale HTML, rolling-инстанс). Один деплой — один баннер.
  *
  * @returns true когда обновление доступно (включая залипшее)
  */
@@ -78,9 +84,14 @@ export async function checkForBuildUpdate(): Promise<boolean> {
 
     const mismatch = latest !== initialVersion.value
     if (!mismatch) {
+      removeAppliedVersion(latest)
       return false
     }
     if (latest === readDismissedVersion()) {
+      return false
+    }
+    if (latest === readAppliedVersion()) {
+      buildUpdateAvailable.value = false
       return false
     }
     buildUpdateAvailable.value = true
@@ -106,6 +117,34 @@ function readDismissedVersion(): string | null {
 }
 
 /**
+ * Версия, до которой пользователь уже обновился кнопкой «Обновить».
+ * Баннер для неё больше не показывается (один деплой — один баннер).
+ *
+ * @returns хэш применённого билда или null
+ */
+function readAppliedVersion(): string | null {
+  try {
+    return window.localStorage.getItem(APPLIED_KEY)
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Убрать метку применённой версии, когда она совпала с запущенной.
+ * Хранилище не копит устаревшие хэши между деплоями.
+ *
+ * @param runningVersion версия, которую реально отдаёт сервер
+ */
+function removeAppliedVersion(runningVersion: string): void {
+  try {
+    if (window.localStorage.getItem(APPLIED_KEY) === runningVersion) {
+      window.localStorage.removeItem(APPLIED_KEY)
+    }
+  } catch {}
+}
+
+/**
  * Скрыть баннер до следующего билда.
  * Запоминает текущую серверную версию, чтобы опросы не поднимали баннер снова.
  */
@@ -120,6 +159,11 @@ export function dismissBuildUpdate(): void {
 
 /**
  * Стереть весь кэш и перезагрузиться на свежий билд.
+ *
+ * Перед перезагрузкой пишет `APPLIED_KEY`: после релоада опрос сравнит
+ * серверную версию с применённой и не поднимет баннер повторно,
+ * даже если HTML/инстанс отдали stale-версию. Следующий деплой даст
+ * новый хэш — баннер покажется снова ровно один раз.
  */
 export async function refreshApp(): Promise<void> {
   if (refreshing.value) {
@@ -128,8 +172,23 @@ export async function refreshApp(): Promise<void> {
 
   refreshing.value = true
   buildUpdateAvailable.value = false
+
+  let target = latestVersion.value
+  if (target === null) {
+    try {
+      const fresh = await fetchLatestVersion()
+      if (fresh !== null) {
+        target = fresh
+        latestVersion.value = fresh
+      }
+    } catch {}
+  }
+
   try {
     window.localStorage.removeItem(DISMISSED_KEY)
+    if (target !== null) {
+      window.localStorage.setItem(APPLIED_KEY, target)
+    }
   } catch {}
 
   try {

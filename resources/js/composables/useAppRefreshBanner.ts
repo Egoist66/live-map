@@ -9,6 +9,9 @@ import { useBuildVersion } from '@/composables/useBuildVersion'
  * или service worker нашел обновление. Кнопка стирает весь кэш
  * и перезагружает приложение на свежую версию.
  *
+ * Один деплой — один баннер: после нажатия «Обновить» версия
+ * помечается применённой, повторный показ для неё подавлен.
+ *
  * Владение не нужно: лейауты per-page, одновременно смонтирован всегда
  * один экземпляр баннера. Старый механизм owner/epoch давал мигание
  * «появился и пропал» на каждой навигации (размонтирование + захват),
@@ -24,6 +27,7 @@ export function useAppRefreshBanner() {
 
   async function apply(): Promise<void> {
     if (build.buildUpdateAvailable.value) {
+      pwa.dismissUpdate()
       await build.refreshApp()
       return
     }

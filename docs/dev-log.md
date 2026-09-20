@@ -1,7 +1,7 @@
 # Dev-лог
 
 ## 2026-09-20 — Свайпы: фикс 500 на prod при любом свайпе
-- 🐞 Причина: миграция `add_incognito_to_swipe_actions` датирована `2026_09_10`, а создание таблицы `swipe_actions` — `2026_09_26`: на свежих базах (laravel.cloud) alter шёл до create → колонки `is_incognito` нет → `updateOrCreate` с ней кидал `QueryException`, а фолбэк (`firstOrFail` + `fill` + `save` с той же колонкой) падал повторно уже вне catch → 500 на каждый `POST /api/swipes/action`.
+- 🐞 Причина №1 (подтверждена логом prod: `matchConversationTx(): Argument #2 ($other) must be of type User, null given`): в `recordAction` транзакция `DB::transaction(function () use ($me, $otherId, ...))` не захватывала `$other`, но использовала её в ветке мэтча — PHP подставлял `null` → `TypeError` → 500 ровно при взаимном лайке. Исправлено: `$other` добавлен в `use`.
 - 🛡️ `DatingService`: новые хелперы `swipePayload()` (колонку `is_incognito` пишет только если `Schema::hasColumn` её видит) и `storeSwipe()` (гонка unique чинится перечитыванием; нет строки — повтор без инкогнито; `save` тоже с ретраем без колонки). Повторный мэтч переиспользует `Conversation::findDirect` вместо создания дубля direct-чата.
 - 🗄️ Миграции: `create_swipe_tables` теперь создаёт `is_incognito` сразу; `add_incognito...` стала идемпотентной (гарды `hasTable`/`hasColumn` в `up`/`down`) — безопасна и на старых, и на свежих базах. На проде после деплоя докатить `php artisan migrate --force`.
 - Проверки: `php -l` ✅.

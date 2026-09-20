@@ -14,6 +14,9 @@ import {
 } from '@/pwa/pwa.service'
 import type { PwaDisplayMode } from '@/pwa/types'
 
+const SW_APPLIED_KEY = 'uconnect-sw-applied-at'
+const SW_SUPPRESS_MS = 30 * 60 * 1000
+
 const needUpdate = ref(false)
 const canInstall = ref(false)
 // Детерминированный старт для SSR: сервер и первая гидрация всегда
@@ -34,6 +37,41 @@ function refresh(): void {
   online.value = isOnlineNow()
 }
 
+/**
+ * Проверить, применял ли пользователь SW-обновление недавно.
+ *
+ * После `applyUpdate` + перезагрузки браузер может снова отдать
+ * `waiting`-воркер (stale SW) — без паузы баннер вернулся бы сразу,
+ * и клики «Обновить» зациклились бы. Следующий деплой всё равно
+ * поднимется через флаг билда, так что пауза безопасна.
+ *
+ * @returns true когда обновление применяли меньше 30 минут назад
+ */
+function isSwRecentlyApplied(): boolean {
+  try {
+    const raw = window.localStorage.getItem(SW_APPLIED_KEY)
+    if (!raw) {
+      return false
+    }
+    const appliedAt = Number(raw)
+    if (!Number.isFinite(appliedAt)) {
+      return false
+    }
+    return Date.now() - appliedAt < SW_SUPPRESS_MS
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Запомнить момент применения SW-обновления (анти-луп баннера).
+ */
+function markSwApplied(): void {
+  try {
+    window.localStorage.setItem(SW_APPLIED_KEY, String(Date.now()))
+  } catch {}
+}
+
 export function usePwa() {
   const isNativeLike = computed(() => standalone.value || displayMode.value !== 'browser')
 
@@ -49,6 +87,9 @@ export function usePwa() {
       online.value = v
     })
     onUpdate(() => {
+      if (isSwRecentlyApplied()) {
+        return
+      }
       needUpdate.value = true
     })
     try {
@@ -65,6 +106,7 @@ export function usePwa() {
 
   async function applyUpdate(): Promise<void> {
     needUpdate.value = false
+    markSwApplied()
     await applySwUpdate()
   }
 
