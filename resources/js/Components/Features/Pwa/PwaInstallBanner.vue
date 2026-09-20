@@ -1,6 +1,9 @@
 <script setup lang="ts">
+import { defineAsyncComponent } from 'vue'
 import { usePwaInstallBanner } from '@/composables/usePwaInstallBanner'
-import PwaInstallGuideDialog from '@/Components/Features/Pwa/PwaInstallGuideDialog.vue'
+
+// Гайд-диалог (PrimeVue Dialog + Teleport) — только по клику, грузим лениво.
+const PwaInstallGuideDialog = defineAsyncComponent(() => import('@/Components/Features/Pwa/PwaInstallGuideDialog.vue'))
 
 const { canInstall, visible, hint, install, dismiss } = usePwaInstallBanner()
 </script>

@@ -19,10 +19,18 @@ class PageController extends Controller
     /**
      * Главная страница.
      *
-     * @return InertiaResponse
+     * Залогиненного сразу уводим в профиль без промежуточного лендинга:
+     * иначе холодный старт (ввод домена, запуск PWA со start_url `/`)
+     * показывает Welcome и только потом JS-редирект — мигание старта.
+     *
+     * @return InertiaResponse|RedirectResponse лендинг гостям, редирект в профиль своим
      */
-    public function welcome(): InertiaResponse
+    public function welcome(): InertiaResponse|RedirectResponse
     {
+        if (auth()->check()) {
+            return redirect()->route('dashboard');
+        }
+
         $canLogin = Route::has('login');
         $canRegister = Route::has('register');
 

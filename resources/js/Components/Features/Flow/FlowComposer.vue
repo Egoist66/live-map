@@ -1,11 +1,13 @@
 <script setup lang="ts">
+import { defineAsyncComponent } from 'vue'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import Checkbox from 'primevue/checkbox'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import Select from 'primevue/select'
-import FlowComposerPreview from '@/Components/Features/Flow/FlowComposerPreview.vue'
+// Превью на swiper нужно только при аттаче фото — грузим лениво.
+const FlowComposerPreview = defineAsyncComponent(() => import('@/Components/Features/Flow/FlowComposerPreview.vue'))
 import { useFlowComposer, POLL_DURATION_OPTIONS } from '@/composables/useFlowComposer'
 
 const props = defineProps<{ compact?: boolean }>()

@@ -1,5 +1,38 @@
 # Dev-лог
 
+## 2026-09-20 — Тяжёлое грузится лениво: async-компоненты + swiper/realtime вне критического пути
+- 🔍 Аудит: страницы Inertia уже сплитятся по роутам (`import.meta.glob` без eager), `maplibre` (~990KB) — только на `/map`. Но: `swiper` сидел в общем `vendor` (все страницы), 8 оверлеев лежали в чанке `AuthenticatedLayout` (каждая залогиненная страница), `realtime` (echo+pusher, 72KB) грузился даже гостям из `app.ts`.
+- 🔧 `defineAsyncComponent`: 8 редких оверлеев в `AuthenticatedLayout` (колокол, беты, хоткеи, глобойск, мини-чат, термы, выбор режима, апдейты); `ProfilePhotoViewer` + `ChatSearchDialog` в `Profile/Show` и `Dashboard`; все 5 диалогов в `Chat/Index`; `FlowMediaCarousel`/`FlowComposerPreview` (swiper) в ленте/композере/редакторе; `PwaInstallGuideDialog` в баннере и настройках. Мгновенно нужное оставлено статикой: тосты, скринлок (приватность), `ConfirmDialog`, топбар/футер/навигация.
+- 🔧 `app.ts`: `echo` — динамический импорт только при `auth.user.id` (гости минус 72KB realtime).
+- 🔧 `vite.config`: чанк `swiper` — `manualChunks` до этого принудительно пихал ВЕСЬ `node_modules` в `vendor`, игнорируя async-границы. Теперь swiper в отдельном ленивом чанке (там только async-импорты; если появится статический — станет eager, следим за билдом).
+- 📉 Замер (raw): `AuthenticatedLayout` 218 → 112KB (−49%), `vendor` 461 → 354KB (−23%), `swiper` 96KB lazy, `app` −1KB. PrimeVue/maplibre без изменений (UI-кит и карта по требованию).
+- Проверки: `vue-tsc --noEmit` ✅, `vite build` ✅, `vite build --ssr` ✅.
+
+## 2026-09-20 — Настройка «Отключить анимации» во внешнем виде
+- ✨ Новый хук `useMotion` (синглтон как `useTheme`, SSR-безопасный): флаг `motionOff` в `localStorage (motion-off)`, применяет класс `motion-off` на `<html>`, `initMotion()` вызван в `app.ts` рядом с `initTheme()`.
+- 🎨 CSS kill-switch в `app.css`: `.motion-off` гасит все `transition`/`animation` и плавный скролл.
+- 🔧 `usePageTransition`: при включённом флаге переходы между экранами — `page-instant` (мгновенно, без анимации).
+- 🖥️ `SettingsAppearanceTab`: новая секция «Анимации» с PrimeVue `ToggleSwitch` («Выключить переходы и эффекты для скорости»).
+- Проверки: `vue-tsc --noEmit` ✅.
+
+## 2026-09-20 — Залогиненных с `/` сразу в профиль, без мигания лендинга
+- 🐞 Симптом: открываешь корень сайта авторизованным (ввод домена, запуск PWA со `start_url: /`) — сначала мигает стартовая Welcome-страница и только потом JS (`useLastRoute`) увозит внутрь. Промежуточный экран лишний.
+- 🔧 `PageController@welcome`: ранний `return redirect()->route('dashboard')` для `auth()->check()` — серверный 302 сразу в `/profile`, лендинг рендерится только гостям. Неверифицированных `verified`-middleware на `/profile` штатно отправит на подтверждение почты.
+- 🔧 `useLastRoute`: код-возврат на последний экран оставлен как страховка от протухшего PWA-кэша `/`, докблоки обновлены под новую реальность.
+- Пост-логин/регистрация не трогал: там осознанный лендинг по режиму (`landingPath`: `/map` для UPin, `/swipes` для ULove).
+- Проверки: `php -l` ✅, `route:list` (`dashboard → profile/{identifier?}`) ✅.
+
+## 2026-09-20 — `insertBefore of null` остался + умерла анимация переходов: убран `mode out-in`, Teleport'ы за mount-гейтом
+- 🐞 Симптом: после прошлого фикса ошибка в консоли осталась, а красивая анимация перехода между экранами вообще перестала работать. Связано напрямую: исключение бросалось посреди transition — Vue обрывал анимацию целиком.
+- 🔍 Причина №1 (главная): `PageTransition` с `mode="out-in"` держал старое дерево в leave-лимбо, где vee-validate/PrimeVue-эффекты продолжали патчить уже разобранные Teleport/Portal (`insert` ← `process` ← effect в стеке). Плюс ключ был `component:url` — query-обновления и polling перезапускали transition посреди ввода в формы.
+- 🔍 Причина №2: в `GuestLayout` баннеры `PwaInstallBanner`/`PwaUpdateBanner` (внутри Transition + PrimeVue Dialog с Teleport) монтировались во время гидратации, а их `visible` флипается в `onMounted` из стореджа — enter-transition во время гидратации на каждой гостевой странице (Login/Register — место краша из стека `form-*.js`).
+- 🔧 `PageTransition`: убран `mode` (одновременный кроссфейд вместо `out-in` — анимация снова видна, лимбо-окна нет), добавлен `@before-leave` blur активного элемента (сфокусированный инпут в удаляемом дереве — классический триггер), `appear: false` оставлен.
+- 🔧 `usePageTransition`: ключ теперь `component:path` без query/hash; удалён вращий `transitionAppear: true` (компонент использует `appear: false`); убраны `prefersReduced`/`onMounted` из хука (reduced-motion уже покрыт CSS `@media`); добавлен JSDoc.
+- 🔧 `GuestLayout`: PWA-баннеры за `isClientReady`, как раньше в `AuthenticatedLayout`.
+- 🔧 Сырые `<Teleport to="body">` создаются только после mount через `useMounted` из `@vueuse`: `PhotoLightbox`, `AvatarPreview`, `ProfilePhotoViewer` (3 шт.), вьювер аватара в `Profile/Show`. Все по умолчанию закрыты — визуально ноль изменений, SSR-разметка совпадает.
+- ⚠️ После деплоя проверить на проде: жёсткая перезагрузка (Ctrl+Shift+R) + инкогнито без PWA-кэша, походить Login ↔ Register ↔ Map; в консоли должно быть чисто, переходы — плавный кроссфейд.
+- Проверки: `vue-tsc --noEmit` ✅, `vite build` ✅, `vite build --ssr` ✅.
+
 ## 2026-09-20 — Прод: краш `insertBefore of null` в PrimeVue-чанке при входе
 - 🐞 Симптом: на проде (только прод — там включён Inertia SSR) в консоли `TypeError: Cannot read properties of null (reading 'insertBefore')`, стек `insert (primevue-*.js)` ← `Teleport.process (form-*.js)` ← patch ← effect. В dev SSR нет — не воспроизводится.
 - 🔍 Причина: не PrimeVue (его `Portal` SSR-безопасен — Teleport рендерит только после `mounted`), а наши сырые `<Teleport to="body">` + `<Transition>` (`ScreenLockOverlay`, `AvatarPreview`, `PhotoLightbox`, `ProfilePhotoViewer`, `Teleport` в `Profile/Show`) и `PageTransition` с `appear: true` + `mode out-in` поверх всего SSR-дерева. Оверлеи в layout при старте синхронно переключаются из состояния, которое сервер не видел (скринлок/термы/модалки читают localStorage/API в `onMounted`), — `Teleport.process` получает null-контейнер.

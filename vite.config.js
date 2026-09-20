@@ -46,6 +46,12 @@ export default defineConfig({
                         if (id.includes('primevue') || id.includes('@primeuix')) return 'primevue';
                         if (id.includes('pusher-js') || id.includes('laravel-echo')) return 'realtime';
                         if (id.includes('vee-validate') || id.includes('zod')) return 'form';
+                        // Swiper импортируется ТОЛЬКО из async-компонентов
+                        // (карусели/вьюверы через defineAsyncComponent), поэтому
+                        // живёт в отдельном ленивом чанке, а не в общем vendor.
+                        // Если где-то появится статический импорт swiper —
+                        // чанк станет eager для всех, следи за билдом.
+                        if (id.includes('swiper')) return 'swiper';
                         return 'vendor';
                     }
                 },
@@ -59,6 +65,8 @@ export default defineConfig({
                         if (id.includes('primevue') || id.includes('@primeuix')) return 'primevue';
                         if (id.includes('pusher-js') || id.includes('laravel-echo')) return 'realtime';
                         if (id.includes('vee-validate') || id.includes('zod')) return 'form';
+                        // См. комментарий выше: swiper — только ленивый чанк.
+                        if (id.includes('swiper')) return 'swiper';
                         return 'vendor';
                     }
                 },

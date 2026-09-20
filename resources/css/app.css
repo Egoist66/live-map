@@ -569,6 +569,18 @@ div#p-license-host {
   }
 }
 
+/* Ручное отключение анимаций из настроек (Внешний вид → Анимации).
+   Класс `motion-off` ставит useMotion на <html>. Гасит всё: переходы
+   страниц, микродвижения, спиннеры-анимации и плавный скролл. */
+.motion-off,
+.motion-off *,
+.motion-off *::before,
+.motion-off *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+
 @media (max-width: 640px) {
   .p-tabs .p-tablist { scrollbar-width: none; }
   .p-tabs .p-tablist::-webkit-scrollbar { display: none; }

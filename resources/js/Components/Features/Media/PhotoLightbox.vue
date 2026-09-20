@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { useMounted } from '@vueuse/core'
 import Button from 'primevue/button'
 import { useAvatarPreview } from '@/composables/useAvatarPreview'
 import { usePhotoZoom } from '@/composables/usePhotoZoom'
@@ -7,6 +8,10 @@ import type { LightboxPhoto } from '@/composables/usePhotoLightbox'
 
 const props = defineProps<{ photos: LightboxPhoto[]; index: number; open: boolean }>()
 const emit = defineEmits<{ (e: 'close'): void; (e: 'update:index', value: number): void }>()
+
+// Teleport к body создаём только после mount: во время SSR-гидратации
+// `Teleport.process` с несовпавшим контентом даёт `insertBefore of null`.
+const isMounted = useMounted()
 
 useAvatarPreview(() => props.open, () => emit('close'))
 
@@ -43,7 +48,7 @@ watch(
 </script>
 
 <template>
-  <Teleport to="body">
+  <Teleport v-if="isMounted" to="body">
     <Transition name="fade">
       <div
         v-if="open && current"

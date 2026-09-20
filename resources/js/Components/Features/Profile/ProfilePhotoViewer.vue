@@ -8,6 +8,7 @@ import ProgressSpinner from 'primevue/progressspinner'
 import { Swiper, SwiperSlide } from 'swiper/vue'
 import 'swiper/css'
 import { Link } from '@inertiajs/vue3'
+import { useMounted } from '@vueuse/core'
 import { useBodyLock } from '@/composables/useBodyLock'
 import { usePhotoViewer } from '@/composables/usePhotoViewer'
 import { usePhotoViewerSwiper } from '@/composables/usePhotoViewerSwiper'
@@ -21,6 +22,10 @@ import LikersDialog from '@/Components/Features/Feedback/LikersDialog.vue'
 import { avatarSrcFor } from '@/composables/useAvatar'
 
 const props = defineProps<{ gallery: any; comments: any; isOwn: boolean; userName?: string; avatarSrc?: string }>()
+
+// Teleport'ы к body создаём только после mount: во время SSR-гидратации
+// `Teleport.process` с несовпавшим контентом даёт `insertBefore of null`.
+const isMounted = useMounted()
 
 useBodyLock(() => !!props.gallery.viewerOpen?.value)
 
@@ -51,6 +56,8 @@ function sendPhotoComment(): void {
 const canComment = () => !!(props.gallery.active.value?.can_comment || props.gallery.canComment?.value)
 </script>
 <template>
+  <!-- eslint-disable-next-line vue/no-multiple-template-root -->
+  <template v-if="isMounted">
   <Teleport to="body">
     <div v-if="gallery.viewerOpen.value && gallery.active.value" class="fixed inset-0 z-[2000] h-[100dvh] flex flex-col bg-white dark:bg-zinc-950 md:mx-auto md:max-w-[720px] md:border-x md:border-stone-200/70 dark:md:border-white/10" role="dialog" aria-modal="true">
       <div class="shrink-0 flex items-center gap-2.5 pl-1 pr-3 h-14 border-b border-stone-200/70 dark:border-white/10">
@@ -158,6 +165,7 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
       </div>
     </Dialog>
   </Teleport>
+  </template>
 </template>
 <style scoped>
 .comment-body :deep(.mention){color:#7c3aed;font-weight:700}

@@ -1,11 +1,13 @@
 <script setup lang="ts">
+import { defineAsyncComponent } from 'vue'
 import Button from 'primevue/button'
 import Checkbox from 'primevue/checkbox'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
-import FlowComposerPreview from '@/Components/Features/Flow/FlowComposerPreview.vue'
-import FlowMediaCarousel from '@/Components/Features/Flow/FlowMediaCarousel.vue'
+// Swiper-превью/карусель — тяжёлые, диалог открывается редко: грузим лениво.
+const FlowComposerPreview = defineAsyncComponent(() => import('@/Components/Features/Flow/FlowComposerPreview.vue'))
+const FlowMediaCarousel = defineAsyncComponent(() => import('@/Components/Features/Flow/FlowMediaCarousel.vue'))
 import { useFlowComposer } from '@/composables/useFlowComposer'
 
 const props = defineProps<{ composer: ReturnType<typeof useFlowComposer> }>()

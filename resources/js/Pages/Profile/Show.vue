@@ -15,8 +15,9 @@ import ProfileMoreMenu from '@/Components/Features/Profile/ProfileMoreMenu.vue'
 import UserSubscribeButton from '@/Components/Features/Profile/UserSubscribeButton.vue'
 import ProfileFriendsDialog from '@/Components/Features/Profile/ProfileFriendsDialog.vue'
 import ProfileGalleryDialog from '@/Components/Features/Profile/ProfileGalleryDialog.vue'
-import ProfilePhotoViewer from '@/Components/Features/Profile/ProfilePhotoViewer.vue'
-import ChatSearchDialog from '@/Components/Features/Chat/ChatSearchDialog.vue'
+// Тяжёлые диалоги (swiper, поиск) — только по открытию, грузим лениво.
+const ProfilePhotoViewer = defineAsyncComponent(() => import('@/Components/Features/Profile/ProfilePhotoViewer.vue'))
+const ChatSearchDialog = defineAsyncComponent(() => import('@/Components/Features/Chat/ChatSearchDialog.vue'))
 import ProfileThoughtDialog from '@/Components/Features/Profile/ProfileThoughtDialog.vue'
 import ReportDialog from '@/Components/Features/Map/ReportDialog.vue'
 import { useReportDialog } from '@/composables/useReportDialog'
@@ -24,7 +25,8 @@ import { useProfileDesign } from '@/composables/useProfileDesign'
 import { useProfileLayout } from '@/composables/useProfileLayout'
 import { useProfileThought } from '@/composables/useProfileThought'
 import { planOf } from '@/composables/usePlanLimits'
-import { onMounted } from 'vue'
+import { defineAsyncComponent, onMounted } from 'vue'
+import { useMounted } from '@vueuse/core'
 
 const props = defineProps<{ profileUser: any; isOwn: boolean; friendship: any; isFriend: boolean; isPending: boolean; isBlocked?: boolean; isBlockedBy?: boolean; canMessage: boolean; canMessageReason: string | null; subscription?: { subscribed: boolean; notify_pin: boolean; notify_photo: boolean; notify_level: boolean; notify_post?: boolean } }>()
 
@@ -35,6 +37,9 @@ const reportDialog = useReportDialog()
 const thought = useProfileThought(() => props.profileUser.thought)
 const pickerInput = design.pickerInput
 const handlePickerChange = design.handlePickerChange
+// Вьювер аватара (Teleport к body) создаём только после mount:
+// во время SSR-гидратации `Teleport.process` даёт `insertBefore of null`.
+const isMounted = useMounted()
 
 onMounted(async () => { await design.init() })
 </script>
@@ -208,7 +213,7 @@ onMounted(async () => { await design.init() })
 
         <input ref="pickerInput" type="file" accept="image/*" class="absolute w-px h-px opacity-0 overflow-hidden pointer-events-none" tabindex="-1" aria-hidden="true" @change="handlePickerChange" />
 
-        <Teleport to="body">
+        <Teleport v-if="isMounted" to="body">
           <div v-if="page.showAvatar.value" @click="page.showAvatar.value = false" class="fixed inset-0 z-[100] bg-black/80 grid place-items-center p-3 sm:p-4 cursor-zoom-out overflow-auto">
             <Avatar :image="page.avatarSrc.value" shape="square" class="m-auto !w-auto !h-auto max-w-full max-h-[90dvh] !rounded-3xl [&_img]:!rounded-3xl [&_img]:max-h-[90dvh] [&_img]:object-contain" />
           </div>

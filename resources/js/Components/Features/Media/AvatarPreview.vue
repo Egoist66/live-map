@@ -1,11 +1,17 @@
 <script setup lang="ts">
+import { useMounted } from '@vueuse/core'
 import { useAvatarPreview } from '@/composables/useAvatarPreview'
 const props = defineProps<{ src: string; name?: string; open: boolean }>()
 const emit = defineEmits<{ (e:'close'):void }>()
+
+// Teleport к body создаём только после mount: во время SSR-гидратации
+// `Teleport.process` с несовпавшим контентом даёт `insertBefore of null`.
+const isMounted = useMounted()
+
 useAvatarPreview(() => props.open, () => emit('close'))
 </script>
 <template>
-  <Teleport to="body">
+  <Teleport v-if="isMounted" to="body">
     <Transition name="fade">
       <div v-if="open" class="fixed inset-0 z-[100] grid place-items-center p-3 sm:p-6 overflow-y-auto overscroll-contain" role="dialog" aria-modal="true">
         <div class="fixed inset-0 bg-ink-900/70 dark:bg-black/80 backdrop-blur-sm" @click="emit('close')"></div>

@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import { defineAsyncComponent } from 'vue'
 import Card from 'primevue/card'
 import { useToast } from 'primevue/usetoast'
 import { usePwaSettings } from '@/composables/usePwaSettings'
 import { usePwaInstallGuide } from '@/composables/usePwaInstallGuide'
 import PwaPushToggle from '@/Components/Features/Pwa/PwaPushToggle.vue'
-import PwaInstallGuideDialog from '@/Components/Features/Pwa/PwaInstallGuideDialog.vue'
+// Гайд-диалог — только по клику, грузим лениво.
+const PwaInstallGuideDialog = defineAsyncComponent(() => import('@/Components/Features/Pwa/PwaInstallGuideDialog.vue'))
 import SettingsDefaultMode from '@/Components/Features/Settings/SettingsDefaultMode.vue'
 import SettingsHotkeysSection from '@/Components/Features/Settings/SettingsHotkeysSection.vue'
 

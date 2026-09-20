@@ -12,11 +12,15 @@ const props = withDefaults(defineProps<{
   appear: false,
 })
 
-const { pageKey, transitionName, transitionMode } = usePageTransition({ preset: props.preset })
+const { pageKey, transitionName, blurActiveElement } = usePageTransition({ preset: props.preset })
 </script>
 
 <template>
-  <Transition :name="transitionName" :mode="transitionMode" :appear="appear">
+  <!-- Без mode="out-in": out-in держит старое дерево в leave-лимбо, где
+       vee-validate/PrimeVue-эффекты патчат уже разобранные Teleport/Portal
+       (`insertBefore of null`), а брошенное исключение гасит саму анимацию.
+       Одновременный кроссфейд безопасен и реально виден между экранами. -->
+  <Transition :name="transitionName" :appear="appear" @before-leave="blurActiveElement">
     <div :key="pageKey" class="page-transition-wrapper">
       <slot />
     </div>

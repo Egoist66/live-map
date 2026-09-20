@@ -7,8 +7,10 @@ import BrandMark from '@/Components/Brand/BrandMark.vue'
 import PwaInstallBanner from '@/Components/Features/Pwa/PwaInstallBanner.vue'
 import PwaUpdateBanner from '@/Components/Features/Pwa/PwaUpdateBanner.vue'
 import { useGuestLayout } from '@/composables/useGuestLayout'
+import { useClientReady } from '@/composables/useClientReady'
 
 const { isFaq, shouldShowFooter } = useGuestLayout()
+const { isClientReady } = useClientReady()
 </script>
 
 <template>
@@ -75,7 +77,13 @@ const { isFaq, shouldShowFooter } = useGuestLayout()
           <AppFooter />
         </div>
       </div>
-      <PwaInstallBanner />
-      <PwaUpdateBanner />
+      <!-- Баннеры с Transition + PrimeVue Dialog (Teleport) монтируем только
+           после гидратации: их visible флипается в onMounted из стореджа,
+           чего сервер не видел — enter-transition во время гидратации даёт
+           `insertBefore of null`. См. useClientReady. -->
+      <template v-if="isClientReady">
+        <PwaInstallBanner />
+        <PwaUpdateBanner />
+      </template>
     </div>
 </template>

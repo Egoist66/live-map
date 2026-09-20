@@ -12,14 +12,15 @@ import ProfileDesignSwipes from '@/Components/Features/Profile/ProfileDesignSwip
 import ProfileDesignFlow from '@/Components/Features/Profile/ProfileDesignFlow.vue'
 import ProfileFriendsDialog from '@/Components/Features/Profile/ProfileFriendsDialog.vue'
 import ProfileGalleryDialog from '@/Components/Features/Profile/ProfileGalleryDialog.vue'
-import ProfilePhotoViewer from '@/Components/Features/Profile/ProfilePhotoViewer.vue'
-import ChatSearchDialog from '@/Components/Features/Chat/ChatSearchDialog.vue'
+// Тяжёлые диалоги (swiper, поиск) — только по открытию, грузим лениво.
+const ProfilePhotoViewer = defineAsyncComponent(() => import('@/Components/Features/Profile/ProfilePhotoViewer.vue'))
+const ChatSearchDialog = defineAsyncComponent(() => import('@/Components/Features/Chat/ChatSearchDialog.vue'))
 import ProfileThoughtDialog from '@/Components/Features/Profile/ProfileThoughtDialog.vue'
 import { useDashboardDesign } from '@/composables/useDashboardDesign'
 import { useProfileLayout } from '@/composables/useProfileLayout'
 import { useProfileThought } from '@/composables/useProfileThought'
 import { planOf } from '@/composables/usePlanLimits'
-import { onMounted } from 'vue'
+import { defineAsyncComponent, onMounted } from 'vue'
 
 const props = defineProps<{ user: any; isOwn?: boolean }>()
 

@@ -1,7 +1,6 @@
 import '../css/app.css'
 import 'primeicons/primeicons.css'
 import './bootstrap'
-import { initEcho } from './echo'
 import { createPinia } from 'pinia'
 import { PiniaColada } from '@pinia/colada'
 import { createInertiaApp } from '@inertiajs/vue3'
@@ -15,6 +14,7 @@ import { hideSplash } from './composables/useSplash'
 import { useOverlaySafeArea } from './composables/useOverlaySafeArea'
 import { useLastRoute } from './composables/useLastRoute'
 import { initTheme } from './composables/useTheme'
+import { initMotion } from './composables/useMotion'
 import { persistNativeMarker } from './composables/useNativeClient'
 
 const appName = import.meta.env.VITE_APP_NAME || 'UPin'
@@ -43,8 +43,20 @@ createInertiaApp({
         initTheme()
       } catch {}
       try {
-        initEcho()
+        initMotion()
       } catch {}
+      // Realtime (laravel-echo + pusher-js, ~70KB) грузим только залогиненным:
+      // гостям на лендинге/логине он не нужен.
+      const pageAuth = (props.initialPage.props as unknown as { auth?: { user?: { id?: number } } }).auth
+      const authUserId = Number(pageAuth?.user?.id) || 0
+      void (async () => {
+        if (authUserId > 0) {
+          try {
+            const echo = await import('./echo')
+            echo.initEcho()
+          } catch {}
+        }
+      })()
       try {
         registerSw()
       } catch {}
@@ -62,8 +74,7 @@ createInertiaApp({
           useOverlaySafeArea().initOverlaySafeArea()
         } catch {}
         try {
-          const auth = (props.initialPage.props as unknown as { auth?: { user?: { id?: number } } }).auth
-          await useLastRoute().initLastRoute(Number(auth?.user?.id) || 0)
+          await useLastRoute().initLastRoute(authUserId)
         } catch {}
       })()
     }

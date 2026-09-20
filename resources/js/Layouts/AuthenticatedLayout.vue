@@ -1,22 +1,26 @@
 <script setup lang="ts">
+import { defineAsyncComponent } from 'vue'
 import AppTopBar from '@/Layouts/AppTopBar.vue'
 import AppUserMenu from '@/Layouts/AppUserMenu.vue'
 import MobileBottomNav from '@/Components/Features/Navigation/MobileBottomNav.vue'
 import AppFooter from '@/Layouts/AppFooter.vue'
 import PageTransition from '@/Components/Features/Feedback/PageTransition.vue'
 import GlobalNotificationToasts from '@/Components/Features/Feedback/GlobalNotificationToasts.vue'
-import BellNotificationsModal from '@/Components/Features/Feedback/BellNotificationsModal.vue'
-import BetaNoticeModal from '@/Components/Features/Feedback/BetaNoticeModal.vue'
 import PwaInstallBanner from '@/Components/Features/Pwa/PwaInstallBanner.vue'
 import PwaUpdateBanner from '@/Components/Features/Pwa/PwaUpdateBanner.vue'
-import AppUpdateModal from '@/Components/Features/Updates/AppUpdateModal.vue'
 import ConfirmDialog from 'primevue/confirmdialog'
-import AppHotkeysDialog from '@/Components/Features/Feedback/AppHotkeysDialog.vue'
-import GlobalPeopleSearchDialog from '@/Components/Features/Search/GlobalPeopleSearchDialog.vue'
-import MiniChatDock from '@/Components/Features/Chat/MiniChatDock.vue'
 import ScreenLockOverlay from '@/Components/Features/Security/ScreenLockOverlay.vue'
-import TermsAcceptanceModal from '@/Components/Features/Legal/TermsAcceptanceModal.vue'
-import DefaultModeChoiceModal from '@/Components/Features/Mode/DefaultModeChoiceModal.vue'
+// Тяжёлые/редкие оверлеи — асинхронно: грузятся после mount параллельно,
+// первый paint не блокируют. Тосты, скринлок и ConfirmDialog оставлены
+// статическими — они нужны мгновенно (ранние уведомления, приватность).
+const BellNotificationsModal = defineAsyncComponent(() => import('@/Components/Features/Feedback/BellNotificationsModal.vue'))
+const BetaNoticeModal = defineAsyncComponent(() => import('@/Components/Features/Feedback/BetaNoticeModal.vue'))
+const AppHotkeysDialog = defineAsyncComponent(() => import('@/Components/Features/Feedback/AppHotkeysDialog.vue'))
+const GlobalPeopleSearchDialog = defineAsyncComponent(() => import('@/Components/Features/Search/GlobalPeopleSearchDialog.vue'))
+const MiniChatDock = defineAsyncComponent(() => import('@/Components/Features/Chat/MiniChatDock.vue'))
+const TermsAcceptanceModal = defineAsyncComponent(() => import('@/Components/Features/Legal/TermsAcceptanceModal.vue'))
+const DefaultModeChoiceModal = defineAsyncComponent(() => import('@/Components/Features/Mode/DefaultModeChoiceModal.vue'))
+const AppUpdateModal = defineAsyncComponent(() => import('@/Components/Features/Updates/AppUpdateModal.vue'))
 import { useAppLayout } from '@/composables/useAppLayout'
 import { useAppHotkeys } from '@/composables/useAppHotkeys'
 import { useScreenLock } from '@/composables/useScreenLock'

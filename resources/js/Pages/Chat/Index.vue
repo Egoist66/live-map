@@ -1,14 +1,15 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue'
 import Toast from 'primevue/toast'
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
 import ChatSidebar from '@/Components/Features/Chat/ChatSidebar.vue'
 import ChatWindow from '@/Components/Features/Chat/ChatWindow.vue'
-import ChatSearchDialog from '@/Components/Features/Chat/ChatSearchDialog.vue'
-import ChatConfirmDialog from '@/Components/Features/Chat/ChatConfirmDialog.vue'
-import ChatBottomSheet from '@/Components/Features/Chat/ChatBottomSheet.vue'
-import ChatWallpaperDialog from '@/Components/Features/Chat/ChatWallpaperDialog.vue'
-import DistrictInviteDialog from '@/Components/Features/Map/DistrictInviteDialog.vue'
+// Диалоги открываются только по действию — грузим лениво, первым paint не блокируют.
+const ChatSearchDialog = defineAsyncComponent(() => import('@/Components/Features/Chat/ChatSearchDialog.vue'))
+const ChatConfirmDialog = defineAsyncComponent(() => import('@/Components/Features/Chat/ChatConfirmDialog.vue'))
+const ChatBottomSheet = defineAsyncComponent(() => import('@/Components/Features/Chat/ChatBottomSheet.vue'))
+const ChatWallpaperDialog = defineAsyncComponent(() => import('@/Components/Features/Chat/ChatWallpaperDialog.vue'))
+const DistrictInviteDialog = defineAsyncComponent(() => import('@/Components/Features/Map/DistrictInviteDialog.vue'))
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 import { useChatOnline } from '@/composables/useChatOnline'
 import { useChatPage } from '@/composables/useChatPage'

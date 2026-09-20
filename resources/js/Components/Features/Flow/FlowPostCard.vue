@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref } from 'vue'
+import { computed, defineAsyncComponent, onUnmounted, ref } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import { useToast } from 'primevue/usetoast'
 import Avatar from 'primevue/avatar'
@@ -11,7 +11,8 @@ import { useFlowComments } from '@/composables/useFlowComments'
 import { useFlowRepost } from '@/composables/useFlowRepost'
 import { usePhotoLightbox } from '@/composables/usePhotoLightbox'
 import PhotoLightbox from '@/Components/Features/Media/PhotoLightbox.vue'
-import FlowMediaCarousel from '@/Components/Features/Flow/FlowMediaCarousel.vue'
+// Карусель на swiper — тяжёлая, грузится отдельным чанком параллельно.
+const FlowMediaCarousel = defineAsyncComponent(() => import('@/Components/Features/Flow/FlowMediaCarousel.vue'))
 import FlowPollCard from '@/Components/Features/Flow/FlowPollCard.vue'
 import FlowRichText from '@/Components/Features/Flow/FlowRichText.vue'
 import FlowRepostDialog from '@/Components/Features/Flow/FlowRepostDialog.vue'
