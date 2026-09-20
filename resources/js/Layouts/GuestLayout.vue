@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
-import { route } from '@/route'
 import Card from 'primevue/card'
 import PageTransition from '@/Components/Features/Feedback/PageTransition.vue'
 import AppFooter from '@/Layouts/AppFooter.vue'
 import BrandMark from '@/Components/Brand/BrandMark.vue'
 import PwaInstallBanner from '@/Components/Features/Pwa/PwaInstallBanner.vue'
 import PwaUpdateBanner from '@/Components/Features/Pwa/PwaUpdateBanner.vue'
-const isFaq = route().current('faq')
+import { useGuestLayout } from '@/composables/useGuestLayout'
+
+const { isFaq, shouldShowFooter } = useGuestLayout()
 </script>
 
 <template>
@@ -70,7 +71,7 @@ const isFaq = route().current('faq')
           </template>
         </PageTransition>
         </div>
-        <div class="mt-auto w-full">
+        <div v-if="shouldShowFooter" class="mt-auto w-full">
           <AppFooter />
         </div>
       </div>

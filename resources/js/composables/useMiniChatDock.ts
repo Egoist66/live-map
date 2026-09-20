@@ -35,12 +35,17 @@ export function useMiniChatDock() {
     },
   })
 
+  /**
+   * Бейдж FAB: число чатов с непрочитанным — та же логика,
+   * что в колокольчике. Пока список дока не открыт, берём
+   * счётчик из глобального стора (тоже по чатам, не по сообщениям).
+   */
   const unreadBadge = computed(() => {
     const fromList = Number(mini.unreadTotal.value || 0)
     if (fromList > 0) {
       return fromList
     }
-    return Number(badges.unreadMessages || 0)
+    return Number(badges.unread || 0)
   })
 
   const unreadLabel = computed(() => {

@@ -32,7 +32,32 @@ const windows = ref<MiniWindow[]>([])
 const conversations = ref<Conversation[]>([])
 const listLoading = ref(false)
 const query = ref('')
+const recentIds = new Map<number, number>()
 let busBound = false
+
+/**
+ * Короткий дедуп двойной доставки: сокет (user:message.sent)
+ * и поллер (chat:message) несут одно и то же сообщение.
+ * Без него превью наращивало unread_count дважды.
+ *
+ * @param id id сообщения
+ * @returns true если это дубль в окне 5с
+ */
+function isDuplicateMessage(id: number): boolean {
+  const now = Date.now()
+  const prev = recentIds.get(id)
+  if (prev !== undefined && now - prev < 5000) {
+    return true
+  }
+  recentIds.set(id, now)
+  if (recentIds.size > 500) {
+    const first = recentIds.keys().next().value as number | undefined
+    if (first !== undefined) {
+      recentIds.delete(first)
+    }
+  }
+  return false
+}
 
 /**
  * Сбросить мини-чат при смене аккаунта/выходе.
@@ -43,6 +68,7 @@ export function resetMiniChat(): void {
   conversations.value = []
   listLoading.value = false
   query.value = ''
+  recentIds.clear()
 }
 
 function getUid(): number {
@@ -120,6 +146,7 @@ function patchPreview(convId: number, msg: Message, unreadInc: boolean): void {
 function onMessage(e: unknown): void {
   const msg = (e as { message?: Message })?.message
   if (!msg?.id) return
+  if (isDuplicateMessage(Number(msg.id))) return
   const convId = Number(msg.conversation_id)
   const own = Number(msg.sender_id) === getUid()
   const win = findWindow(convId)
@@ -347,12 +374,22 @@ export function useMiniChat() {
 
   const myId = computed(() => getUid())
 
+  /**
+   * Бейдж дока: число чатов с непрочитанным — как в колокольчике,
+   * а не сумма сообщений (200 + 300 сообщений = 2, а не 500).
+   */
   const unreadTotal = computed(() => {
-    const total = conversations.value.reduce((sum, conv) => {
+    return conversations.value.filter((conv) => Number(conv?.unread_count || 0) > 0).length
+  })
+
+  /**
+   * Сумма непрочитанных сообщений по всем чатам (для будущего использования).
+   */
+  const unreadMessagesTotal = computed(() => {
+    return conversations.value.reduce((sum, conv) => {
       const unread = Number(conv?.unread_count || 0)
       return sum + unread
     }, 0)
-    return total
   })
 
   const filtered = computed(() => {
@@ -493,5 +530,5 @@ export function useMiniChat() {
     router.visit(`/chat/${convId}`)
   }
 
-  return { listOpen, windows, conversations, filtered, listLoading, query, myId, unreadTotal, refreshList, toggleList, closeList, openWindow, closeWindow, loadMore, send, goFull }
+  return { listOpen, windows, conversations, filtered, listLoading, query, myId, unreadTotal, unreadMessagesTotal, refreshList, toggleList, closeList, openWindow, closeWindow, loadMore, send, goFull }
 }
