@@ -1,5 +1,12 @@
 # Dev-лог
 
+## 2026-09-20 — Баннер «Вышло обновление»: бесконечный показ после «Обновить» убран
+- 🐞 Причина: `checkForBuildUpdate` залипал флагом без памяти о действии пользователя — после `refreshApp` + перезагрузки опрос снова видел mismatch (stale HTML из кэша, rolling-инстанс с другой версией, закэшированный HTTP-ответ `/api/version`) и тут же поднимал баннер снова. Клик «Обновить» зацикливался.
+- 🔧 Один деплой — один баннер: `refreshApp` перед перезагрузкой пишет применённую версию в `localStorage (uconnect-applied-build)`, опрос её больше не поднимает; метка чистится сама, когда запущенная версия с ней совпала. Следующий деплой даст новый хэш — баннер покажется снова ровно один раз.
+- 🔧 Опрос `GET /api/version` теперь с bust-параметром `?t=`, а `VersionController::show` отдаёт `Cache-Control: no-store` — stale-версия из HTTP-кэша исключена.
+- 🔧 SW-ветка: `usePwa.applyUpdate` пишет метку времени (`uconnect-sw-applied-at`), `onUpdate` игнорит `waiting`-воркер 30 минут после применения; `useAppRefreshBanner.apply` при билдовом обновлении гасит и SW-флаг.
+- Проверки: `php -l` ✅, `vue-tsc --noEmit` ✅.
+
 ## 2026-09-20 — Свайпы: фикс 500 на prod при любом свайпе
 - 🐞 Причина №1 (подтверждена логом prod: `matchConversationTx(): Argument #2 ($other) must be of type User, null given`): в `recordAction` транзакция `DB::transaction(function () use ($me, $otherId, ...))` не захватывала `$other`, но использовала её в ветке мэтча — PHP подставлял `null` → `TypeError` → 500 ровно при взаимном лайке. Исправлено: `$other` добавлен в `use`.
 - 🛡️ `DatingService`: новые хелперы `swipePayload()` (колонку `is_incognito` пишет только если `Schema::hasColumn` её видит) и `storeSwipe()` (гонка unique чинится перечитыванием; нет строки — повтор без инкогнито; `save` тоже с ретраем без колонки). Повторный мэтч переиспользует `Conversation::findDirect` вместо создания дубля direct-чата.
