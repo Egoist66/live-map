@@ -21,6 +21,10 @@ function fileRevision(rel) {
 
 export default defineConfig({
     resolve: {
+        // Одна копия Vue на весь бандл: без dedupe рантайм может разъехаться
+        // по чанкам (primevue/form/vendor) и дать несогласованные vnode —
+        // тот же `insertBefore of null` в проде.
+        dedupe: ['vue'],
         alias: {
             '@': path.resolve(__dirname, 'resources/js'),
             // TS-маппинг `ziggy-js -> vendor/tightenco/ziggy` из tsconfig/jsconfig

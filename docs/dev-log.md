@@ -1,5 +1,14 @@
 # Dev-лог
 
+## 2026-09-20 — Прод: краш `insertBefore of null` в PrimeVue-чанке при входе
+- 🐞 Симптом: на проде (только прод — там включён Inertia SSR) в консоли `TypeError: Cannot read properties of null (reading 'insertBefore')`, стек `insert (primevue-*.js)` ← `Teleport.process (form-*.js)` ← patch ← effect. В dev SSR нет — не воспроизводится.
+- 🔍 Причина: не PrimeVue (его `Portal` SSR-безопасен — Teleport рендерит только после `mounted`), а наши сырые `<Teleport to="body">` + `<Transition>` (`ScreenLockOverlay`, `AvatarPreview`, `PhotoLightbox`, `ProfilePhotoViewer`, `Teleport` в `Profile/Show`) и `PageTransition` с `appear: true` + `mode out-in` поверх всего SSR-дерева. Оверлеи в layout при старте синхронно переключаются из состояния, которое сервер не видел (скринлок/термы/модалки читают localStorage/API в `onMounted`), — `Teleport.process` получает null-контейнер.
+- 🔧 Новый хук `useClientReady` (mounted + `nextTick`): блок оверлеев в `AuthenticatedLayout` (тосты, модалки, скринлок, `ConfirmDialog`) монтируется только после settled-гидратации. На сервере эти оверлеи всё равно закрыты — пользы от их SSR ноль, визуально без изменений.
+- 🔧 `PageTransition`: `appear` по умолчанию `false` — appear-анимация первого кадра не имеет смысла при SSR (контент уже отрисован) и роняет Teleport внутри страницы.
+- 🔧 `vite.config`: `resolve.dedupe: ['vue']` — одна копия рантайма на бандл, чтобы Vue не разъезжался по чанкам `primevue/form/vendor` с несогласованными vnode.
+- ⚠️ После деплоя проверить на проде: жёсткая перезагрузка (Ctrl+Shift+R) + инкогнито без PWA-кэша; если ошибка останется — прислать URL страницы и полный стек с source maps.
+- Проверки: `vue-tsc --noEmit` ✅.
+
 ## 2026-09-20 — Баннер «Вышло обновление»: бесконечный показ после «Обновить» убран
 - 🐞 Причина: `checkForBuildUpdate` залипал флагом без памяти о действии пользователя — после `refreshApp` + перезагрузки опрос снова видел mismatch (stale HTML из кэша, rolling-инстанс с другой версией, закэшированный HTTP-ответ `/api/version`) и тут же поднимал баннер снова. Клик «Обновить» зацикливался.
 - 🔧 Один деплой — один баннер: `refreshApp` перед перезагрузкой пишет применённую версию в `localStorage (uconnect-applied-build)`, опрос её больше не поднимает; метка чистится сама, когда запущенная версия с ней совпала. Следующий деплой даст новый хэш — баннер покажется снова ровно один раз.

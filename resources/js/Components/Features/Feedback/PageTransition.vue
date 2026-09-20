@@ -6,7 +6,10 @@ const props = withDefaults(defineProps<{
   appear?: boolean
 }>(), {
   preset: 'fade-slide',
-  appear: true,
+  // appear выключен сознательно: appear-transition поверх SSR-гидратации
+  // роняет Teleport внутри страницы (`insertBefore of null`), а визуальной
+  // пользы на первом кадре нет — контент уже отрисован сервером.
+  appear: false,
 })
 
 const { pageKey, transitionName, transitionMode } = usePageTransition({ preset: props.preset })
