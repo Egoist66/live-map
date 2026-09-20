@@ -57,7 +57,7 @@ watch(
         aria-modal="true"
         aria-label="Просмотр фото"
       >
-        <div class="flex shrink-0 items-center gap-1 px-2 pt-[max(0.5rem,var(--sab))] text-white">
+        <div class="flex shrink-0 items-center gap-1 px-2 pt-[max(0.5rem,var(--sat))] text-white">
           <span v-if="hasMany" class="px-3 text-[13px] font-bold tabular-nums opacity-80">{{ index + 1 }} / {{ photos.length }}</span>
           <span v-else class="flex-1" />
           <span class="flex-1" v-if="hasMany" />

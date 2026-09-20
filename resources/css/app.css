@@ -735,3 +735,20 @@ div#p-license-host {
 .overlay-safe .p-dialog-mask.dialog-fullscreen-mask {
   padding: 0 !important;
 }
+
+/* Полноэкранные вьюверы фото (UGallery ProfilePhotoViewer, PhotoLightbox).
+   iOS Safari: шапка без отступа под вырез уезжает под системные иконки
+   и кнопка «Назад» становится некликабельной; явная высота 100dvh на
+   fixed-контейнере прыгает при показе/скрытии тулбара — вместо неё
+   стабильный inset:0 (top:0 + bottom:0). Вертикальные жесты внутри
+   скроллера оставляем браузеру (pan-y), горизонтальные — Swiper.
+   Блок в конце файла намеренно: выигрывает ничьи специфичности. */
+.viewer-fullscreen-header {
+  padding-top: var(--sat, 0px);
+  min-height: calc(3.5rem + var(--sat, 0px));
+}
+.viewer-fullscreen-scroll {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}

@@ -59,15 +59,15 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
   <!-- eslint-disable-next-line vue/no-multiple-template-root -->
   <template v-if="isMounted">
   <Teleport to="body">
-    <div v-if="gallery.viewerOpen.value && gallery.active.value" class="fixed inset-0 z-[2000] h-[100dvh] flex flex-col bg-white dark:bg-zinc-950 md:mx-auto md:max-w-[720px] md:border-x md:border-stone-200/70 dark:md:border-white/10" role="dialog" aria-modal="true">
-      <div class="shrink-0 flex items-center gap-2.5 pl-1 pr-3 h-14 border-b border-stone-200/70 dark:border-white/10">
+    <div v-if="gallery.viewerOpen.value && gallery.active.value" class="fixed inset-0 z-[2000] flex flex-col bg-white dark:bg-zinc-950 md:mx-auto md:max-w-[720px] md:border-x md:border-stone-200/70 dark:md:border-white/10" role="dialog" aria-modal="true">
+      <div class="shrink-0 flex items-center gap-2.5 pl-1 pr-3 border-b border-stone-200/70 dark:border-white/10 viewer-fullscreen-header">
         <Button icon="pi pi-arrow-left" rounded text class="!w-10 !h-10" @click="gallery.close()" aria-label="Назад" />
         <img v-if="avatarSrc" :src="avatarSrc" alt="" loading="lazy" draggable="false" class="block w-8 h-8 rounded-full object-cover object-center bg-stone-100 dark:bg-white/10" />
         <span v-else class="w-8 h-8 rounded-full bg-violet-100 dark:bg-white/10 grid place-items-center text-xs font-black text-violet-700 dark:text-zinc-200">{{ (userName || '?').slice(0, 1).toUpperCase() }}</span>
         <span class="font-bold text-sm truncate flex-1">{{ userName }}</span>
         <Button v-if="isOwn" icon="pi pi-trash" rounded text size="small" severity="danger" @click="viewer.confirmDelete.value = true" aria-label="Удалить фото" />
       </div>
-      <div class="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+      <div class="flex-1 min-h-0 overflow-y-auto overscroll-contain viewer-fullscreen-scroll">
         <div class="relative bg-black">
             <Swiper class="w-full" :slides-per-view="1" :space-between="0" :speed="350" :loop="gallery.photos.value.length > 1" :auto-height="true" :observer="true" :observe-parents="true" :update-on-window-resize="true" :modules="viewerZoom.modules" :zoom="viewerZoom.options" :initial-slide="swiper.activeIndex()" @swiper="swiper.registerMobile" @slideChange="swiper.onSlideChange">
             <SwiperSlide v-for="p in gallery.photos.value" :key="p.id" class="!flex items-center justify-center bg-black">
@@ -171,5 +171,5 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
 .comment-body :deep(.mention){color:#7c3aed;font-weight:700}
 .comment-body :deep(.mention-link){cursor:pointer}
 :global(.dark) .comment-body :deep(.mention){color:#a78bfa}
-.swiper-zoom-container{width:100%;height:100%;display:flex;align-items:center;justify-content:center;touch-action:none}
+.swiper-zoom-container{width:100%;height:100%;display:flex;align-items:center;justify-content:center;touch-action:pan-y}
 </style>
