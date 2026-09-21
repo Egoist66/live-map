@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 
@@ -74,6 +75,7 @@ class AppServiceProvider extends ServiceProvider
         $this->configureVitePrefetch();
         $this->registerAuthorizationPolicies();
         $this->registerRateLimiters();
+        $this->shareSeoHead();
     }
 
     /**
@@ -110,6 +112,57 @@ class AppServiceProvider extends ServiceProvider
     private function configureVitePrefetch(): void
     {
         Vite::prefetch(concurrency: 3);
+    }
+
+    /**
+     * Поделиться динамическим SEO с корневым blade-шаблоном.
+     *
+     * View-композер для resources/views/app.blade.php: кладёт в вид
+     * $seoHead (мета для head) и $seoIntegrations (верификации, счётчики,
+     * произвольные скрипты из админки). Значения берутся из
+     * SeoSettingsService — то, что админ сохранил в панели SEO,
+     * применяется без правки кода. При ошибке БД отдаём дефолты
+     * из config/seo.php, чтобы страница никогда не падала.
+     *
+     * @return void
+     */
+    private function shareSeoHead(): void
+    {
+        View::composer('app', static function (\Illuminate\View\View $view): void {
+            try {
+                $currentRequest = request();
+                $currentPath = '/' . ltrim($currentRequest->path(), '/');
+
+                if ($currentPath === '//') {
+                    $currentPath = '/';
+                }
+
+                $head = \App\Services\SeoSettingsService::forHead($currentRequest->url(), $currentPath);
+                $integrations = \App\Services\SeoSettingsService::integrations();
+            } catch (\Throwable) {
+                $head = [
+                    'site_name' => config('seo.site_name'),
+                    'title' => config('seo.default_title'),
+                    'description' => config('seo.default_description'),
+                    'keywords' => implode(', ', config('seo.keywords', [])),
+                    'author' => config('seo.author'),
+                    'locale' => config('seo.locale', 'ru_RU'),
+                    'og_type' => config('seo.og_type', 'website'),
+                    'twitter_card' => config('seo.twitter_card', 'summary_large_image'),
+                    'twitter_site' => config('seo.twitter_site'),
+                    'theme_color' => config('seo.theme_color', '#0F172A'),
+                    'og_image' => config('seo.image', '/og-cover.jpg'),
+                    'og_title' => config('seo.default_title'),
+                    'og_description' => config('seo.default_description'),
+                    'canonical' => url()->current(),
+                    'robots' => config('seo.robots'),
+                ];
+                $integrations = ['scripts_enabled' => false];
+            }
+
+            $view->with('seoHead', $head);
+            $view->with('seoIntegrations', $integrations);
+        });
     }
 
     /**

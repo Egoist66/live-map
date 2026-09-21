@@ -16,6 +16,7 @@ import { useLastRoute } from '@/composables/useLastRoute'
 import { useRealtimeMode } from '@/composables/useRealtimeMode'
 import { useRealtimePoller, watchRealtimeMode } from '@/composables/useRealtimePoller'
 import { usePwaPushAuto } from '@/composables/usePwaPushAuto'
+import { useIdleTask } from '@/composables/useIdleTask'
 
 export function useAppLayout() {
   const badge = useBadgeStore()
@@ -73,7 +74,25 @@ export function useAppLayout() {
       realtimePoller.ensure(current)
     } catch {}
   }
-  onMounted(() => { badge.init(); presence.connect(); appNotes.init(); pinActivity.init(); adminReports.init(); updates.init(); proc.init(); buildVersion.init(); void initRealtime() })
+  // Некритичное — в idle: 8 инитов (~15 API) больше не штормят сеть
+  // и main thread до первого paint (Lighthouse: TBT 1100мс, TTI 12.7с).
+  // Топбар/меню рисуются сразу, цифры бейджей догоняют через ~1.5с.
+  const { runWhenIdle } = useIdleTask()
+  onMounted(() => {
+    void runWhenIdle(async () => {
+      await Promise.allSettled([
+        badge.init(),
+        presence.connect(),
+        appNotes.init(),
+        pinActivity.init(),
+        adminReports.init(),
+        updates.init(),
+        proc.init(),
+        buildVersion.init(),
+        initRealtime(),
+      ])
+    })
+  })
   onBeforeUnmount(() => presence.disconnect())
   router.on('navigate', () => { presence.connect() })
   return { badge, presence, user, avatarSrc, dashboardHref, settingsHref, bell, pinActivity, adminReports, updates, menu, menuItems, isAdmin, toggleMenu, logout }

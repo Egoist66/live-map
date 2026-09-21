@@ -2,57 +2,50 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\SeoSettingsService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\URL;
 
+/**
+ * Публичные SEO-эндпоинты: robots.txt и sitemap.xml.
+ *
+ * Содержимое строится через SeoSettingsService, поэтому всё, что админ
+ * меняет в панели SEO (режим robots, исключения sitemap, доп. URL),
+ * применяется мгновенно без правки кода.
+ */
 class SeoController extends Controller
 {
+    /**
+     * Отдать robots.txt.
+     *
+     * @param Request $request текущий запрос
+     * @return Response текстовый ответ
+     */
     public function robots(Request $request): Response
     {
         $base = rtrim(config('app.url'), '/');
         $isProd = app()->environment('production');
 
-        if (!$isProd) {
-            $content = "User-agent: *\nDisallow: /\n";
-            return response($content, 200)->header('Content-Type', 'text/plain');
-        }
-
-        $content = implode("\n", [
-            "User-agent: *",
-            "Allow: /",
-            "Disallow: /admin",
-            "Disallow: /dashboard",
-            "Disallow: /profile",
-            "Disallow: /chat",
-            "Disallow: /settings",
-            "Disallow: /api/",
-            "Disallow: /*?*",
-            "Disallow: /login",
-            "Disallow: /register",
-            "Crawl-delay: 1",
-            "",
-            "Sitemap: {$base}/sitemap.xml",
-        ]);
+        $content = SeoSettingsService::buildRobots($base, $isProd);
 
         return response($content, 200)->header('Content-Type', 'text/plain');
     }
 
+    /**
+     * Отдать sitemap.xml.
+     *
+     * @return Response XML-ответ
+     */
     public function sitemap(): Response
     {
         $base = rtrim(config('app.url'), '/');
         $now = now()->toAtomString();
 
-        $urls = [
-            ['loc' => $base.'/', 'priority' => '1.0', 'changefreq' => 'daily'],
-            ['loc' => $base.'/faq', 'priority' => '0.8', 'changefreq' => 'weekly'],
-            ['loc' => $base.'/contacts', 'priority' => '0.5', 'changefreq' => 'monthly'],
-            ['loc' => $base.'/privacy', 'priority' => '0.4', 'changefreq' => 'monthly'],
-            ['loc' => $base.'/offer', 'priority' => '0.4', 'changefreq' => 'monthly'],
-            ['loc' => $base.'/map', 'priority' => '0.9', 'changefreq' => 'hourly'],
-            ['loc' => $base.'/login', 'priority' => '0.3', 'changefreq' => 'monthly'],
-            ['loc' => $base.'/register', 'priority' => '0.5', 'changefreq' => 'monthly'],
-        ];
+        if (! SeoSettingsService::sitemap()['enabled']) {
+            abort(404);
+        }
+
+        $urls = SeoSettingsService::buildSitemapUrls($base);
 
         $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
         $xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";

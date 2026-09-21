@@ -107,7 +107,20 @@ function switchTab(next: 'ulove' | 'upin'): void {
                 :key="profile.name"
                 :class="['absolute inset-0 transition-all duration-700 ease-out', hero.slideClass(slideIndex)]"
               >
-                <img :src="profile.photo" class="absolute inset-0 w-full h-full object-cover" :alt="`Анкета ULove — ${profile.name}`" @error="hero.onPhotoError(profile)" />
+                <!-- Первый слайд — LCP лендинга: eager + high, остальные лениво.
+                     Размеры держат интринсик до загрузки (600×600 у Ани,
+                     800×640 у остальных — object-cover выравнивает). -->
+                <img
+                  :src="profile.photo"
+                  class="absolute inset-0 w-full h-full object-cover"
+                  :alt="`Анкета ULove — ${profile.name}`"
+                  :loading="slideIndex === 0 ? 'eager' : 'lazy'"
+                  :fetchpriority="slideIndex === 0 ? 'high' : 'auto'"
+                  decoding="async"
+                  width="800"
+                  height="640"
+                  @error="hero.onPhotoError(profile)"
+                />
                 <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-black/20"></div>
                 <div class="absolute top-4 left-4 right-4 flex justify-between items-center">
                   <Badge :value="profile.distance" class="!bg-white/90 !text-ink-900 !rounded-full !px-3 !py-1.5 !text-xs !font-bold !border-0" />
@@ -144,9 +157,9 @@ function switchTab(next: 'ulove' | 'upin'): void {
             </div>
             <div class="flex items-center justify-between px-1 pt-3">
               <div class="flex items-center gap-2">
-                <Avatar image="https://i.pravatar.cc/100?img=12" shape="circle" size="normal" />
-                <Avatar image="https://i.pravatar.cc/100?img=32" shape="circle" size="normal" class="-ml-4" />
-                <Avatar image="https://i.pravatar.cc/100?img=5" shape="circle" size="normal" class="-ml-4" />
+                <Avatar image="/landing/face-1.jpg" aria-label="Пользователь UPin" shape="circle" size="normal" />
+                <Avatar image="/landing/face-2.jpg" aria-label="Пользователь UPin" shape="circle" size="normal" class="-ml-4" />
+                <Avatar image="/landing/face-3.jpg" aria-label="Пользователь UPin" shape="circle" size="normal" class="-ml-4" />
                 <span class="text-xs font-medium text-stone-500 dark:text-zinc-500 ml-1">уже листают рядом</span>
               </div>
               <span class="text-xs font-black bg-gradient-to-r from-rose-500 via-fuchsia-500 to-orange-400 bg-clip-text text-transparent">ULOVE</span>

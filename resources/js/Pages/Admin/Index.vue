@@ -26,8 +26,10 @@ import AdminImpersonationLogs from '@/Components/Features/Admin/AdminImpersonati
 import AdminLoginAttempts from '@/Components/Features/Admin/AdminLoginAttempts.vue'
 import AdminMaintenanceManager from '@/Components/Features/Admin/AdminMaintenanceManager.vue'
 import AdminReferencesManager from '@/Components/Features/Admin/AdminReferencesManager.vue'
+import AdminSeoManager from '@/Components/Features/Admin/AdminSeoManager.vue'
 import SettingsAdminTab from '@/Components/Features/Settings/SettingsAdminTab.vue'
 import { useAdminReference } from '@/composables/useAdminReference'
+import { useAdminSeo } from '@/composables/useAdminSeo'
 import { useAdminAppUpdates } from '@/composables/useAdminAppUpdates'
 import { useAdminImpersonate } from '@/composables/useAdminImpersonate'
 import { useAdminImpersonationLogs } from '@/composables/useAdminImpersonationLogs'
@@ -47,6 +49,7 @@ const impLogs = useAdminImpersonationLogs()
 const logins = useAdminLoginAttempts()
 const maintenance = useAppMaintenance()
 const refs = useAdminReference()
+const seo = useAdminSeo()
 const access = useAdminAccess()
 
 /**
@@ -61,6 +64,7 @@ function loadAll(): void {
   void logins.load()
   void maintenance.load()
   void refs.load()
+  void seo.load()
 }
 
 onMounted(() => void access.check())
@@ -113,6 +117,7 @@ watch(tab, (v) => {
             <Tab value="security" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-shield text-xs" /><span class="tab-label">Безопасность</span><Badge v-if="logins.unseenCount.value" :value="logins.unseenCount.value > 99 ? '99+' : String(logins.unseenCount.value)" severity="danger" /></span></Tab>
             <Tab value="admin" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-cog text-xs" /><span class="tab-label">Модерация</span><Badge v-if="reports.pendingCount.value" :value="reports.pendingCount.value > 99 ? '99+' : String(reports.pendingCount.value)" severity="danger" /></span></Tab>
             <Tab value="refs" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-book text-xs" /><span class="tab-label">Справочники</span></span></Tab>
+            <Tab value="seo" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-globe text-xs" /><span class="tab-label">SEO</span></span></Tab>
           </TabList>
           <TabPanels class="!p-0 !pt-4 !bg-transparent">
             <TabPanel value="stats">
@@ -149,6 +154,11 @@ watch(tab, (v) => {
             <TabPanel value="refs">
               <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
                 <AdminReferencesManager :mgr="refs" />
+              </div>
+            </TabPanel>
+            <TabPanel value="seo">
+              <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
+                <AdminSeoManager :mgr="seo" />
               </div>
             </TabPanel>
           </TabPanels>

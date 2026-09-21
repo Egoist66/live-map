@@ -47,11 +47,13 @@ export function useFlowRepost() {
    * @returns заголовок, текст и картинка для отображения
    */
   function displayOf(post: FlowPost): { title: string | null; body: string; imageUrl: string | null } {
+    // Бэкенд местами отдаёт пустую строку вместо null — нормализуем,
+    // иначе шаблон рисует `<img src="">` (битый запрос + `unsized-images` в Lighthouse).
     const origin = post.repost
     if (post.repost_of_id && origin && !post.repost_comment) {
-      return { title: origin.title, body: origin.body, imageUrl: origin.image_url }
+      return { title: origin.title, body: origin.body, imageUrl: origin.image_url || null }
     }
-    return { title: post.title, body: post.body, imageUrl: post.image_url }
+    return { title: post.title, body: post.body, imageUrl: post.image_url || null }
   }
 
   /**

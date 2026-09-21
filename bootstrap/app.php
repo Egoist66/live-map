@@ -30,6 +30,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // Бинарное, стримы и редиректы middleware пропускает сам.
         $middleware->append(\App\Http\Middleware\CompressResponse::class);
 
+        // Годовой immutable-кэш версионированной статики Vite (/build/*).
+        // Повторный визит не качает те же ~1.7МБ (Lighthouse cache-insight).
+        $middleware->append(\App\Http\Middleware\CacheStaticAssets::class);
+
         // ETag/304 для GET /api/* + публичный кэш справочников (version/nbrb/reference).
         $middleware->api(append: [
             \App\Http\Middleware\CacheApiResponses::class,

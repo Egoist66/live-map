@@ -129,7 +129,8 @@
 - `GET /chat/me {id,name,avatar,privacy,unread_count,last_seen,is_invisible,can_use_invisible}`; `GET /chat/users/search?q≥2` (`throttle:chat-search` 30/мин, исключает блоки + `is_hidden_from_search`, `{can_message,reason,is_friend,is_pending}`); `PATCH /chat/privacy {message_privacy,allow_random_messages}`.
 - ScreenLock: `GET /user/screen-lock {enabled,timeout,kind}`, `PUT {kind:pin4|alpha8, code:^\\d{4}$|^[A-Za-z0-9]{8}$, timeout:1|5|10}` (plaintext в `screen_lock_code`), `DELETE`, `POST /user/screen-lock/verify {code}` (`throttle:screen-lock`, 404 если нет, 422 если неверно, `hash_equals`).
 - NBRB (без auth, `throttle:60,1`, прокси `api.nbrb.by/exrates` + `Cache::remember`): `GET /nbrb/currencies/{curId?} (?all, 24ч)`, `GET /nbrb/rates/{code?} (?ondate,periodicity0|1,parammode0|1|2; 6ч/30д)`, `GET /nbrb/dynamics/{curId} (?startdate,enddate ≤365д, 12ч)`, `GET /nbrb/convert (?amount,from USD|код,ondate → {byn}, 6ч/30д)`. Даун → 502, нет → 404 `{message}`.
- - SEO (web): `GET /robots.txt` (не-prod `Disallow:/`, prod `Allow:/ + Disallow:/admin,/dashboard,/profile,/chat,/settings,/api/,/*?*,/login,/register + Sitemap`), `GET /sitemap.xml` (`/,/faq,/contacts,/privacy,/offer,/map,/login,/register`).
+ - SEO (web): `GET /robots.txt` и `GET /sitemap.xml` строятся через `SeoSettingsService` (настройки из админки → SEO, хранение `app_settings seo.*`, дефолты из `config/seo.php`).
+ - SEO-центр (админ, `AdminSeoController`): `GET /admin/seo` (всё одним запросом), `PUT /admin/seo/global|integrations|pages|robots|sitemap`. Blade `app` получает `$seoHead/$seoIntegrations` (композер в `AppServiceProvider`), Inertia шарит `seo` для SPA (`useSeo` подхватывает переопределения страниц).
 
 ## 15. PushSubscription + WebPushService
 

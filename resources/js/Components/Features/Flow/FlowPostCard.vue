@@ -162,7 +162,9 @@ async function share(): Promise<void> {
         />
         <div v-else-if="shown.imageUrl" class="mt-3 overflow-hidden rounded-2xl border border-stone-200 dark:border-zinc-800">
           <button type="button" class="block w-full cursor-zoom-in" aria-label="Открыть фото на весь экран" @click="lightbox.openSingle(shown.imageUrl, shown.title || 'Фото поста')">
-            <img :src="shown.imageUrl" alt="Фото поста" loading="lazy" class="max-h-[420px] w-full object-cover" />
+            <!-- Явные размеры + aspect держат место до загрузки (CLS),
+                 decoding async не блочит main thread. -->
+            <img :src="shown.imageUrl" alt="Фото поста" loading="lazy" decoding="async" width="800" height="600" class="aspect-[4/3] max-h-[420px] w-full object-cover" />
           </button>
         </div>
         <FlowPollCard v-if="post.poll" :post-id="post.id" :poll="post.poll" :can-close="post.can_delete" />

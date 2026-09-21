@@ -26,6 +26,15 @@ class ImageOptimizer
     /** Качество JPEG/WebP: 82 — баланс веса и картинки. */
     public const DEFAULT_QUALITY = 82;
 
+    /** Длинная сторона превью галереи: сетка 4 колонки ~84px, retina ×2 + запас. */
+    public const THUMB_MAX_SIDE = 480;
+
+    /** Качество превью: мелкий размер скрывает артефакты. */
+    public const THUMB_QUALITY = 76;
+
+    /** Оригиналы галереи: 1920 избыточны (Lighthouse image-delivery −1МБ). */
+    public const GALLERY_MAX_SIDE = 1280;
+
     /** Ниже этого веса и размера не пережимаем, чтобы не терять качество. */
     private const SKIP_BELOW_BYTES = 400 * 1024;
 
@@ -67,6 +76,105 @@ class ImageOptimizer
     }
 
     /**
+     * Путь превью для сохранённого файла: `<dir>/thumbs/<basename>`.
+     *
+     * @param string $path путь оригинала на диске
+     * @return string путь превью на том же диске
+     */
+    public static function thumbPathFor(string $path): string
+    {
+        $dir = trim(dirname($path), '/');
+        $dir = $dir === '' || $dir === '.' ? '' : $dir.'/';
+
+        return $dir.'thumbs/'.basename($path);
+    }
+
+    /**
+     * Сгенерировать превью (480px) для уже сохранённого файла.
+     *
+     * Сетка галереи — ~84px на ячейку: оригинал 1440px (400КБ) там
+     * избыточен, превью ~30–60КБ (Lighthouse `image-delivery-insight`).
+     * Маленькие оригиналы (≤480) не дублируем — возвращаем null,
+     * вызывающий код откатывается на оригинал.
+     *
+     * @param string $path путь оригинала на диске
+     * @param string $disk диск Laravel
+     * @param int $maxSide длинная сторона превью
+     * @param int $quality качество 1-100
+     * @return string|null путь превью или null
+     */
+    public static function storeThumbnail(
+        string $path,
+        string $disk,
+        int $maxSide = self::THUMB_MAX_SIDE,
+        int $quality = self::THUMB_QUALITY
+    ): ?string {
+        if (! function_exists('imagecreatetruecolor') || ! function_exists('getimagesize')) {
+            return null;
+        }
+
+        try {
+            $binary = Storage::disk($disk)->get($path);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        if (! is_string($binary) || $binary === '') {
+            return null;
+        }
+
+        $tmpIn = tempnam(sys_get_temp_dir(), 'imgthumb');
+
+        if ($tmpIn === false) {
+            return null;
+        }
+
+        file_put_contents($tmpIn, $binary);
+
+        $info = @getimagesize($tmpIn);
+        $mime = is_array($info) ? (string) ($info['mime'] ?? '') : '';
+
+        if ($mime === '' || $mime === 'image/svg+xml') {
+            @unlink($tmpIn);
+
+            return null;
+        }
+
+        $tmpOut = self::resizeIntoTmp($tmpIn, $mime, $maxSide, $quality);
+        @unlink($tmpIn);
+
+        if ($tmpOut === null) {
+            return null;
+        }
+
+        $thumbPath = self::thumbPathFor($path);
+
+        try {
+            $stored = Storage::disk($disk)->put($thumbPath, (string) file_get_contents($tmpOut));
+        } catch (\Throwable) {
+            $stored = false;
+        }
+
+        @unlink($tmpOut);
+
+        return $stored ? $thumbPath : null;
+    }
+
+    /**
+     * Удалить превью оригинала, если оно было.
+     *
+     * @param string $path путь оригинала на диске
+     * @param string $disk диск Laravel
+     */
+    public static function deleteThumbnails(string $path, string $disk): void
+    {
+        try {
+            Storage::disk($disk)->delete(self::thumbPathFor($path));
+        } catch (\Throwable) {
+        }
+    }
+
+    /**
      * Пытается сжать картинку во временный файл.
      *
      * @param  UploadedFile  $file  исходник
@@ -92,28 +200,58 @@ class ImageOptimizer
             return null;
         }
 
+        $mime = (string) ($info['mime'] ?? '');
+
+        return self::resizeIntoTmp($tmpSource, $mime, $maxSide, $quality);
+    }
+
+    /**
+     * Ресайз файла в tmp: общее ядро для аплоада и превью.
+     *
+     * Маленький файл И маленькую картинку не трогаем (null — оставить как есть).
+     * Для превью это означает «оригинал и так ≤480 — отдельный файл не нужен».
+     *
+     * @param string $realPath путь исходника
+     * @param string $mime mime-тип (уточняется по содержимому)
+     * @param int $maxSide потолок длинной стороны
+     * @param int $quality качество 1-100
+     * @return string|null путь tmp-файла или null
+     */
+    private static function resizeIntoTmp(string $realPath, string $mime, int $maxSide, int $quality): ?string
+    {
+        $info = @getimagesize($realPath);
+
+        if ($info === false) {
+            return null;
+        }
+
         $width = (int) $info[0];
         $height = (int) $info[1];
-        $mime = (string) ($info['mime'] ?? '');
+        $detected = (string) ($info['mime'] ?? '');
+
+        if ($detected !== '') {
+            $mime = $detected;
+        }
 
         if ($width <= 0 || $height <= 0) {
             return null;
         }
 
-        $isSmallFile = ($file->getSize() ?: 0) < self::SKIP_BELOW_BYTES;
+        $fileSize = is_file($realPath) ? (int) filesize($realPath) : 0;
+        $isSmallFile = $fileSize > 0 && $fileSize < self::SKIP_BELOW_BYTES;
         $isSmallImage = max($width, $height) <= $maxSide;
 
         if ($isSmallFile && $isSmallImage) {
             return null;
         }
 
-        $source = self::createSource($tmpSource, $mime);
+        $source = self::createSource($realPath, $mime);
 
         if ($source === null) {
             return null;
         }
 
-        $source = self::applyExifOrientation($source, $tmpSource);
+        $source = self::applyExifOrientation($source, $realPath);
 
         $scale = min(1, $maxSide / max($width, $height));
         $newWidth = max(1, (int) round($width * $scale));

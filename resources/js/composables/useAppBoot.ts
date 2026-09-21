@@ -1,6 +1,7 @@
 import { register as registerSw } from '@/pwa/pwa.service'
 import { startPushBridges } from '@/pwa/push.service'
 import { hideSplash } from '@/composables/useSplash'
+import { useIdleTask } from '@/composables/useIdleTask'
 import { useOverlaySafeArea } from '@/composables/useOverlaySafeArea'
 import { useLastRoute } from '@/composables/useLastRoute'
 import { initTheme } from '@/composables/useTheme'
@@ -94,8 +95,10 @@ export function useAppBoot() {
   /**
    * Выполнить весь клиентский бут после монтирования Vue.
    *
-   * Порядок шагов сохранён из app.ts: нативный маркер → тема →
-   * motion → realtime → SW → splash → push-мосты → expo → навигация.
+   * Визуальное (маркер, тема, motion, сплэш, safe-area) — сразу, это
+   * первый paint. Тяжёлое сетевое (echo ~70КБ, SW-регистрация + прекеш,
+   * push-мосты, expo) — в idle: раньше всё это ехало до paint и вместе
+   * с 8 инитами лейаута давало TBT 1100мс (Lighthouse).
    *
    * @param authUserId id пользователя из initialPage (0 — гость)
    * @returns void
@@ -110,12 +113,21 @@ export function useAppBoot() {
     await safeRun(() => persistNativeMarker())
     await safeRun(() => initTheme())
     await safeRun(() => initMotion())
-    await safeRun(() => bootRealtime(authUserId))
-    await safeRun(() => registerSw())
     await safeRun(() => hideSplash())
-    await safeRun(() => startPushBridges())
-    await safeRun(() => bootExpoPush())
     await safeRun(() => bootNavigation(authUserId))
+
+    const { runWhenIdle } = useIdleTask()
+
+    await safeRun(() =>
+      runWhenIdle(async () => {
+        await Promise.allSettled([
+          bootRealtime(authUserId),
+          registerSw(),
+          startPushBridges(),
+          bootExpoPush(),
+        ])
+      }),
+    )
   }
 
   /**

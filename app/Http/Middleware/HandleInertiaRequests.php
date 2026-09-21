@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Services\AppVersionService;
+use App\Services\SeoSettingsService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -42,6 +43,15 @@ class HandleInertiaRequests extends Middleware
             ],
             'unreadCount' => $request->user() ? $request->user()->unreadMessagesCount() : 0,
             'appVersion' => AppVersionService::version(),
+            'seo' => function () use ($request) {
+                $path = '/' . ltrim($request->path(), '/');
+
+                if ($path === '//') {
+                    $path = '/';
+                }
+
+                return SeoSettingsService::forInertia($path);
+            },
             'client' => [
                 'isNative' => $isNative,
                 'ssrBypass' => (bool) $request->attributes->get('ssr_bypass', false),

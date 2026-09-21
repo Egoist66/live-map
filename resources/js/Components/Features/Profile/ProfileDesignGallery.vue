@@ -37,7 +37,11 @@ const emit = defineEmits<{
         class="group relative aspect-square overflow-hidden rounded-xl bg-stone-100 transition active:scale-[0.97] dark:bg-zinc-800"
         @click="emit('open', photo)"
       >
-        <img :src="photo.url" :alt="photo.caption || 'фото'" loading="lazy" decoding="async" class="h-full w-full object-cover transition duration-300 group-hover:scale-[1.06]" />
+        <!-- Сетка ~84px: грузим превью 480px (~40КБ), а не оригинал 1440px
+             (~400КБ) — Lighthouse `image-delivery-insight`. thumb_url нет
+             у старых фото (до бэкфилла) — откат на оригинал. aspect-square
+             + размеры держат место (CLS). -->
+        <img :src="photo.thumb_url || photo.url" :alt="photo.caption || 'фото'" loading="lazy" decoding="async" width="320" height="320" class="h-full w-full object-cover transition duration-300 group-hover:scale-[1.06]" />
         <span class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/0 opacity-0 transition duration-300 group-hover:opacity-100"></span>
         <span class="pointer-events-none absolute inset-x-0 bottom-0 flex translate-y-1 items-center justify-center gap-3 pb-2 text-[11px] font-bold text-white opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100">
           <span class="flex items-center gap-1"><i :class="photo.liked ? 'pi pi-heart-fill' : 'pi pi-heart'" class="text-[11px]"></i>{{ photo.likes_count || 0 }}</span>

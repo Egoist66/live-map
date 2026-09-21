@@ -24,12 +24,15 @@ const SWIPE_THRESHOLD = 40
  * @example const hero = useWelcomeHeroSwiper()
  */
 export function useWelcomeHeroSwiper() {
+  // Фото лендинга — локальные (`public/landing/`): внешние CDN (pravatar,
+  // unsplash) давали лишний DNS/TLS-хендшейк, нулевой кэш-контроль и риск
+  // «битых лиц» при недоступности чужих хостов. Файлы скачаны 1:1.
   const profiles = ref<WelcomeHeroProfile[]>([
     {
       name: 'Аня',
       age: 24,
-      photo: 'https://i.pravatar.cc/600?img=47',
-      fallbackPhoto: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&h=640&q=80',
+      photo: '/landing/hero-anya.jpg',
+      fallbackPhoto: '/landing/hero-anya-fallback.jpg',
       distance: '● РЯДОМ · 1,2 км',
       pin: '📍 пин рядом',
       tags: ['☕ кофе и прогулки', '🎬 кино'],
@@ -37,7 +40,7 @@ export function useWelcomeHeroSwiper() {
     {
       name: 'Макс',
       age: 27,
-      photo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=800&h=640&q=80',
+      photo: '/landing/hero-maks.jpg',
       distance: '● РЯДОМ · 800 м',
       pin: '📍 пин рядом',
       tags: ['🏃 бег по утрам', '🎸 гитара'],
@@ -45,7 +48,7 @@ export function useWelcomeHeroSwiper() {
     {
       name: 'Дима',
       age: 26,
-      photo: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=800&h=640&q=80',
+      photo: '/landing/hero-dima.jpg',
       distance: '● РЯДОМ · 2,1 км',
       pin: '📍 пин рядом',
       tags: ['⚽ футбол с друзьями', '🎮 игры'],
@@ -53,7 +56,7 @@ export function useWelcomeHeroSwiper() {
     {
       name: 'София',
       age: 23,
-      photo: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=800&h=640&q=80',
+      photo: '/landing/hero-sofia.jpg',
       distance: '● РЯДОМ · 1,8 км',
       pin: '📍 пин рядом',
       tags: ['🍷 винные бары', '✈️ путешествия'],

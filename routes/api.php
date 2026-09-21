@@ -250,6 +250,12 @@ Route::middleware(['web', 'auth:web,sanctum', 'admin', 'throttle:120,1'])->group
     Route::delete('/admin/users/{user}', [AdminUserController::class, 'destroy']);
     Route::post('/admin/users/{user}/impersonate', [\App\Http\Controllers\AdminImpersonationController::class, 'impersonate']);
     Route::get('/admin/impersonations', [\App\Http\Controllers\AdminImpersonationController::class, 'index']);
+    Route::get('/admin/seo', [\App\Http\Controllers\AdminSeoController::class, 'show']);
+    Route::put('/admin/seo/global', [\App\Http\Controllers\AdminSeoController::class, 'updateGlobal']);
+    Route::put('/admin/seo/integrations', [\App\Http\Controllers\AdminSeoController::class, 'updateIntegrations']);
+    Route::put('/admin/seo/pages', [\App\Http\Controllers\AdminSeoController::class, 'updatePages']);
+    Route::put('/admin/seo/robots', [\App\Http\Controllers\AdminSeoController::class, 'updateRobots']);
+    Route::put('/admin/seo/sitemap', [\App\Http\Controllers\AdminSeoController::class, 'updateSitemap']);
     Route::get('/admin/reference', [\App\Http\Controllers\AdminReferencePageController::class, 'index']);
     Route::post('/admin/reference', [\App\Http\Controllers\AdminReferencePageController::class, 'store']);
     Route::patch('/admin/reference/{referencePage}', [\App\Http\Controllers\AdminReferencePageController::class, 'update']);

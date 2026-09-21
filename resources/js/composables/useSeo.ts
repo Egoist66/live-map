@@ -1,4 +1,5 @@
 import { computed } from 'vue'
+import { usePage } from '@inertiajs/vue3'
 
 type SeoInput = {
   title: string
@@ -11,26 +12,83 @@ type SeoInput = {
   jsonLd?: Record<string, unknown> | Record<string, unknown>[]
 }
 
+type SharedSeoPage = {
+  title?: string | null
+  description?: string | null
+  keywords?: string | null
+  og_title?: string | null
+  og_description?: string | null
+  og_image?: string | null
+  canonical?: string | null
+  robots?: string | null
+  enabled?: boolean
+}
+
+/**
+ * Хук SEO-мета для страницы (Inertia Head).
+ *
+ * Приоритет значений:
+ * 1. Переопределение из панели SEO (админка → SEO → Страницы) — сервер
+ *    кладёт его в shared-проп `seo.page` для текущего пути;
+ * 2. Значения, захардкоженные в странице (input) — остаются как были,
+ *    если админ ничего не задал для этого пути;
+ * 3. Приватные страницы (`noindex: true`) всегда отдают `noindex, nofollow`.
+ *
+ * @param input захардкоженные мета страницы
+ * @returns title/description/canonical/robots/head для `<Head>`.
+ * @example
+ * const seo = useSeo({ title: 'FAQ — UPin', description: '…' })
+ */
 export function useSeo(input: SeoInput) {
-  const title = computed(() => input.title)
-  const description = computed(() => input.description)
-  const canonical = computed(() => input.canonical ?? (typeof window !== 'undefined' ? window.location.href : undefined))
-  const robots = computed(() => (input.noindex ? 'noindex, nofollow' : undefined))
+  const sharedPage = computed<SharedSeoPage | null>(() => {
+    try {
+      const raw = (usePage().props as unknown as { seo?: { page?: SharedSeoPage } }).seo
+      const row = raw?.page
+      if (row && row.enabled !== false && (row.title || row.description)) return row
+      return null
+    } catch {
+      return null
+    }
+  })
+
+  const overrideKeywords = computed<string[] | null>(() => {
+    const raw = sharedPage.value?.keywords
+    if (!raw) return null
+    const parts = raw
+      .split(',')
+      .map((part) => part.trim())
+      .filter((part) => part !== '')
+    return parts.length ? parts : null
+  })
+
+  const title = computed(() => sharedPage.value?.title || input.title)
+  const description = computed(() => sharedPage.value?.description || input.description)
+  const keywords = computed(() => overrideKeywords.value ?? input.keywords)
+  const canonical = computed(
+    () => sharedPage.value?.canonical || input.canonical || (typeof window !== 'undefined' ? window.location.href : undefined),
+  )
+  const robots = computed(() => {
+    if (input.noindex) return 'noindex, nofollow'
+    return sharedPage.value?.robots || undefined
+  })
+  const image = computed(() => sharedPage.value?.og_image || input.image)
+  const ogTitle = computed(() => sharedPage.value?.og_title || title.value)
+  const ogDescription = computed(() => sharedPage.value?.og_description || description.value)
 
   const head = computed(() => ({
-    title: input.title,
+    title: title.value,
     meta: [
-      { name: 'description', content: input.description },
-      ...(input.keywords?.length ? [{ name: 'keywords', content: input.keywords.join(', ') }] : []),
+      { name: 'description', content: description.value },
+      ...(keywords.value?.length ? [{ name: 'keywords', content: keywords.value.join(', ') }] : []),
       ...(robots.value ? [{ name: 'robots', content: robots.value }] : []),
-      { property: 'og:title', content: input.title },
-      { property: 'og:description', content: input.description },
+      { property: 'og:title', content: ogTitle.value },
+      { property: 'og:description', content: ogDescription.value },
       { property: 'og:type', content: input.type ?? 'website' },
       ...(canonical.value ? [{ property: 'og:url', content: canonical.value }] : []),
-      ...(input.image ? [{ property: 'og:image', content: input.image }] : []),
-      { name: 'twitter:title', content: input.title },
-      { name: 'twitter:description', content: input.description },
-      ...(input.image ? [{ name: 'twitter:image', content: input.image }] : []),
+      ...(image.value ? [{ property: 'og:image', content: image.value }] : []),
+      { name: 'twitter:title', content: ogTitle.value },
+      { name: 'twitter:description', content: ogDescription.value },
+      ...(image.value ? [{ name: 'twitter:image', content: image.value }] : []),
       ...(canonical.value ? [{ name: 'canonical', content: canonical.value }] : []),
     ].filter(Boolean),
   }))

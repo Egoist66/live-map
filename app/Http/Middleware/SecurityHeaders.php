@@ -67,6 +67,17 @@ class SecurityHeaders
         $relaxed = $request->routeIs('cashier.*');
 
         $script = ["'self'", "'nonce-{$nonce}'"];
+        // Хосты счётчиков из панели SEO (Google/Yandex/Meta/VK): их внешние
+        // <script src> должны проходить script-src без правки кода.
+        $analyticsScripts = [
+            'https://www.googletagmanager.com',
+            'https://www.google-analytics.com',
+            'https://googletagmanager.com',
+            'https://mc.yandex.ru',
+            'https://yandex.ru',
+            'https://connect.facebook.net',
+            'https://vk.com',
+        ];
         $style = ["'self'", "'unsafe-inline'", 'https://fonts.bunny.net', 'https://fonts.googleapis.com'];
         $connect = [
             "'self'",
@@ -78,6 +89,10 @@ class SecurityHeaders
             'https://*.tile.openstreetmap.org',
             'https://basemaps.cartocdn.com',
             'https://demotiles.maplibre.org',
+            'https://www.google-analytics.com',
+            'https://*.google-analytics.com',
+            'https://mc.yandex.ru',
+            'https://yandex.ru',
         ];
         $img = [
             "'self'",
@@ -90,11 +105,25 @@ class SecurityHeaders
             'https://*.tile.openstreetmap.org',
             'https://basemaps.cartocdn.com',
             'https://demotiles.maplibre.org',
-            'https://i.pravatar.cc',
-            'https://images.unsplash.com',
+            // pravatar/unsplash убраны: фото лендинга теперь локальные
+            // (`public/landing/`). ui-avatars оставлен — фолбэк аватарок
+            // без фото (`useAvatar.ts`) по-прежнему внешний.
             'https://ui-avatars.com',
+            'https://mc.yandex.ru',
         ];
         $frame = ["'self'"];
+
+        foreach ($analyticsScripts as $analyticsHost) {
+            $script[] = $analyticsHost;
+        }
+
+        // Произвольные скрипты из панели SEO (админ осознанно включил):
+        // их инлайн-код без nonce требует 'unsafe-inline' — добавляем
+        // только когда админ реально сохранил кастомный код, иначе
+        // политика остаётся строгой (nonce-only).
+        if (self::hasCustomSeoScripts()) {
+            $script[] = "'unsafe-inline'";
+        }
 
         if ($relaxed) {
             $script[] = 'https://cdn.jsdelivr.net';
@@ -130,6 +159,30 @@ class SecurityHeaders
         ]);
 
         $response->headers->set('Content-Security-Policy', $policy);
+    }
+
+    /**
+     * Есть ли включённые кастомные SEO-скрипты из админки.
+     *
+     * @return bool true — добавить 'unsafe-inline' в script-src
+     */
+    private static function hasCustomSeoScripts(): bool
+    {
+        try {
+            $integrations = \App\Services\SeoSettingsService::integrations();
+        } catch (\Throwable) {
+            return false;
+        }
+
+        if (empty($integrations['scripts_enabled'])) {
+            return false;
+        }
+
+        $head = trim((string) ($integrations['head_scripts'] ?? ''));
+        $bodyStart = trim((string) ($integrations['body_start_scripts'] ?? ''));
+        $bodyEnd = trim((string) ($integrations['body_end_scripts'] ?? ''));
+
+        return $head !== '' || $bodyStart !== '' || $bodyEnd !== '';
     }
 
     /**

@@ -42,6 +42,7 @@ class ProfilePhotoController extends Controller
             'id' => $photo->id,
             'user_id' => $photo->user_id,
             'url' => $photo->url,
+            'thumb_url' => $photo->thumb_url,
             'caption' => $photo->caption,
             'likes_count' => (int) $photo->likes_count,
             'comments_count' => (int) $photo->comments_count,
@@ -75,7 +76,13 @@ class ProfilePhotoController extends Controller
         ]);
         $user = $request->user();
         if ($request->filled('caption')) ContentModeration::assertClean($request->input('caption'));
-        $path = ImageOptimizer::storeOptimized($request->file('photo'), 'profile-photos', $this->disk());
+        $disk = $this->disk();
+        $path = ImageOptimizer::storeOptimized(
+            $request->file('photo'),
+            'profile-photos',
+            $disk,
+            ['maxSide' => ImageOptimizer::GALLERY_MAX_SIDE]
+        );
         try {
             $photo = \Illuminate\Support\Facades\DB::transaction(function () use ($user, $path, $request) {
                 $locked = \App\Models\User::whereKey($user->id)->lockForUpdate()->first();
@@ -83,8 +90,17 @@ class ProfilePhotoController extends Controller
                 return $locked->profilePhotos()->create(['path' => $path, 'caption' => $request->input('caption')]);
             });
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Storage::disk($this->disk())->delete($path);
+            \Illuminate\Support\Facades\Storage::disk($disk)->delete($path);
             throw $e;
+        }
+        // Превью 480px для сетки — best-effort: аплоад не падает из-за него.
+        try {
+            $thumbPath = ImageOptimizer::storeThumbnail($path, $disk);
+
+            if (is_string($thumbPath)) {
+                $photo->forceFill(['thumb_path' => $thumbPath])->save();
+            }
+        } catch (\Throwable) {
         }
         $fresh = $photo->refresh();
         try {
@@ -113,7 +129,22 @@ class ProfilePhotoController extends Controller
         if ($request->has('caption')) $data['caption'] = $request->input('caption') ?: null;
         if ($request->hasFile('photo')) {
             Storage::disk($this->disk())->delete($photo->path);
-            $data['path'] = ImageOptimizer::storeOptimized($request->file('photo'), 'profile-photos', $this->disk());
+            ImageOptimizer::deleteThumbnails($photo->path, $this->disk());
+            $data['path'] = ImageOptimizer::storeOptimized(
+                $request->file('photo'),
+                'profile-photos',
+                $this->disk(),
+                ['maxSide' => ImageOptimizer::GALLERY_MAX_SIDE]
+            );
+            $data['thumb_path'] = null;
+            try {
+                $thumbPath = ImageOptimizer::storeThumbnail($data['path'], $this->disk());
+
+                if (is_string($thumbPath)) {
+                    $data['thumb_path'] = $thumbPath;
+                }
+            } catch (\Throwable) {
+            }
         }
         if ($data) $photo->update($data);
         return response()->json($this->serialize($photo->refresh(), $request->user()));
@@ -123,6 +154,7 @@ class ProfilePhotoController extends Controller
     {
         abort_unless($request->user()->id === $photo->user_id || $request->user()->isAdmin(), 403);
         Storage::disk($this->disk())->delete($photo->path);
+        ImageOptimizer::deleteThumbnails($photo->path, $this->disk());
         if ($this->disk() !== 'public') Storage::disk('public')->delete($photo->path);
         $photo->delete();
         return response()->json(['ok' => true]);

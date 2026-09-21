@@ -1,5 +1,27 @@
 # Dev-лог
 
+## 2026-09-21 — Фото лендинга локально: `public/landing/` вместо pravatar/unsplash
+- 🔍 Аудит: hero-слайдер (`useWelcomeHeroSwiper`) и аватары «уже листают» (`Welcome.vue`) тянули лица с `i.pravatar.cc` / `images.unsplash.com` — лишний DNS/TLS-хендшейк, нулевой кэш-контроль и риск битых фото при недоступности чужих хостов.
+- 🔧 Скачаны 1:1 в `public/landing/` (проверены `getimagesize`, все JPEG): `hero-anya.jpg` (pravatar 47, 600px) + `hero-anya-fallback.jpg`, `hero-maks/dima/sofia.jpg` (unsplash 800×640), `face-1/2/3.jpg` (pravatar 100px, ~3КБ). Суммарно ~285КБ.
+- 🔧 Хук и `Welcome.vue` переведены на `/landing/*`; первый слайд (LCP лендинга) — `eager` + `fetchpriority=high`, остальные `lazy`; аватарам добавлен `aria-label→alt`. CSP `img-src`: `pravatar`/`unsplash` удалены, `ui-avatars.com` оставлен (фолбэк безфотоюзеров в `useAvatar.ts` — общеапповый, не лендинг).
+- ⚠️ Рядом замечено, не тронуто: `public/og-cover.jpg` отсутствует (SEO `og:image` ведёт в 404, проверено повторно 21.09 — файла всё ещё нет) — нужен дизайн-ассет. Ошибка `vue-tsc` в WIP `AdminSeoManager.vue(70)` уже исправлена на твоей стороне (перепроверка 21.09: `vue-tsc --noEmit`, exit 0).
+
+## 2026-09-21 — Временная OG-обложка `public/og-cover.jpg` (1200×630)
+- 🔧 Сгенерирована Pillow-скриптом в стилистике лендинга: тёмный градиент + светящиеся пятна, логотип UPin + «ПИЛОТ», бейдж «Гиперлокальная соцсеть», заголовок «Всё районное — на одной карте», подзаголовок, мини-статы (Пины/Знакомства/Чаты), справа стеклянная карта с маршрутом, светящимся пином, плашкой «Рядом сейчас» и карточкой «Мэтч → чат». Segoe UI (кириллица), JPEG q86.
+- 🐞 По пути пойман классический грабель PIL: полупрозрачные заливки при рисовании напрямую на RGBA заменяют пиксели, а не блендятся — всё полупрозрачное рисуется на отдельном overlay-слое + `alpha_composite`.
+- ⚠️ Временная заглушка до настоящего дизайна: заменить файл, когда будет ассет от дизайнера (имя и размеры 1200×630 уже зашиты в SEO-мета).
+- Проверки: `getimagesize` 1200×630 JPEG 68КБ ✅, визуально ок ✅. Код не тронут — пересборка не требуется (`public/` едет как есть).
+- Проверки: `php -l` ✅, `vue-tsc` по нашим файлам чисто ✅, `vite build` ✅, в бандле `pravatar|unsplash` — 0 совпадений, `/landing/hero` в `Welcome-*` ✅.
+
+## 2026-09-21 — Lighthouse Performance 30 → фиксы (SW-флуд, API-шторм, картинки, шрифты, кэш)
+- 🐞 Замер `/profile` (mobile, Moto G): FCP 3.1с, LCP 8.2с, SI 5.7с, TBT 1100мс, CLS 0.245, TTI 12.7с. Драйверы из отчёта: 221 запрос/2.5МБ (132 докачки чанков после load), ~15 API параллельно на mount, картинки 1440px в сетке 84px (~1МБ), `cacheLifetimeMs: 0` на `/build/*`, CLS от подмены figtree 700/800, LCP-аватар без приоритета, `<img src="">` в ленте.
+- 🔧 SW (`vite.config.js`): прекеш был `**/*.{js,css,html,woff2}` — на первом визите качал весь билд (~130 файлов). Ужат до шелла (app/vendor/primevue/form/realtime/css + офлайн/иконки): в `sw.js` осталось ~15 записей. Ленивые чанки — новый runtime-кэш `pwa-build` (CacheFirst, 30д; имена хэшированы = иммутабельны).
+- 🔧 API-шторм: новый `useIdleTask().runWhenIdle()` (`requestIdleCallback` + фолбэк, SSR no-op). `useAppLayout` перенёс 8 инитов (бейджи, presence, уведомления, пины, админ-репорты, апдейты, имперсонации, версия, realtime) в idle одним `Promise.allSettled`; `useAppBoot` — echo/SW/пуши/expo тоже в idle. Визуальное (тема, motion, сплэш, safe-area) осталось синхронным.
+- 🔧 Картинки: `ImageOptimizer` — общий `resizeIntoTmp()` + `storeThumbnail()`/`deleteThumbnails()`/`thumbPathFor()` (480px/q76, `<dir>/thumbs/`); новые аплоады галереи жмутся до 1280px (`GALLERY_MAX_SIDE`); миграция `thumb_path` + `thumb_url` в сериалайзере (фолбэк на оригинал); удаление чистит превью; команда `photos:backfill-thumbs` (чанки, идемпотентна, `--dry-run`). Сетка (`ProfileDesignGallery`) грузит `thumb_url`, + `width/height` против CLS; вьювер — по-прежнему оригинал.
+- 🔧 Шрифты/кэш/LCP/мелочь: `app.blade.php` — `preconnect crossorigin` + прелоад figtree 700/800 woff2 (их поздняя подмена давала CLS 0.24; async-вариант отклонён — инлайн-`onload` режется нашим CSP); новый `CacheStaticAssets` (годовой `immutable` для `/build/*`, зареган глобально); hero-аватар — `fetchpriority=high`/`eager` через `pt.image` + `aria-label→alt` (чинит и `image-alt`); `useFlowRepost.displayOf` нормализует `''→null` (убит `<img src="">`), фото поста — `width/height` + `aspect-[4/3]` + `decoding=async`.
+- ⚠️ Замер был с расширениями (runWarnings; `fonts.googleapis.com Open Sans` в коде вообще нет — это инжект расширения). Перемерять в инкогнито. Порядок деплоя: 1) `migrate` (nullable-колонка, обратно совместимо), 2) код, 3) `photos:backfill-thumbs`. Следующие кандидаты (не влезли): ленивый маунт 10 диалогов лейаута (`v-if` по open-флагам, ~33КБ), avatar-thumb 256, Ziggy `only`-фильтр (`config/ziggy.php`).
+- Проверки: `php -l` 7 файлов ✅, `migrate --pretend` ✅, деградация без GD (null + фолбэк, без фаталов) ✅, `vue-tsc --noEmit` ✅, `pnpm build` (клиент + SSR) ✅, прекеш `sw.js` ~15 записей ✅.
+
 ## 2026-09-20 — 504 + Failed to fetch dynamically imported module: retry в resolve
 - 🐞 Симптом (dev): первая навигация на тяжёлую страницу (Dashboard, профиль) — `504` + `Failed to fetch dynamically imported module`, жёсткая перезагрузка чинит.
 - 🔍 Причина: не дубли Vite (проверено — один процесс, strictPort на месте), а холодный transform: первый запрос чанка страницы тянет всё дерево зависимостей и не укладывается в таймаут прокси перед Vite. Повторный запрос забирает уже прогретый модуль — поэтому reload помогает.
@@ -466,3 +488,13 @@
 - Backend: `QuestCatalog`, `QuestService` (замер/выдача), `ReputationService` (ранги), модели `UserQuestProgress` + `QuestReward`, `QuestController` (`GET /api/quests`, `POST /api/quests/refresh`, `POST /api/quests/claim`), миграция `2026_10_04_000002_quest_system` (level → varchar(32), quest-поля юзера, 2 таблицы).
 - Frontend: `services/quests.api.ts`, `stores/quests.ts`, `useQuests` + `useRank`, компоненты `QuestRankBar` / `QuestCard` / `QuestPremiumModal` / `SettingsQuestsTab`, таб «Задания» в настройках.
 - Проверки: `php artisan migrate` ✅, `php -l` ✅, `vue-tsc --noEmit` ✅ (чисто).
+
+## 2026-09-21 — SEO-центр в админке (как в WordPress)
+- 🌍 Новый таб **«SEO»** в панели модерации (`/admin`): 5 секций — Общее, Страницы, Счётчики, Скрипты, Robots и Sitemap. Всё меняется динамически, в код лезть не нужно.
+- 📝 Общее: site_name, title/description со счётчиками и Google-превью (как в Yoast), keywords, author, locale, OG/Twitter, цвет темы, OG-картинка, robots по умолчанию. Старые значения из `config/seo.php` — дефолты, ничего не удалено.
+- 📄 Страницы: переопределения title/description/keywords/OG/canonical/robots для любого пути (`/`, `/map`, `/faq`, …) + свои пути; вкл/выкл без удаления.
+- 📊 Счётчики: достаточно вставить ID — Google Analytics (G-…), GTM, Яндекс.Метрика, Facebook/VK пиксели и верификации Google/Yandex/Bing подключаются сами в `<head>`.
+- 🧩 Скрипты: три слота — в `<head>`, после открытия `<body>`, перед `</body>` (чаты, A/B-тесты, виджеты). Тумблер вкл/выкл; при кастомном коде CSP сам ослабляется до `unsafe-inline`, иначе остаётся строгой (nonce).
+- 🕷 Robots и Sitemap: режим авто (базовые Disallow + свои Allow/Disallow, Crawl-delay, ссылка на sitemap) или полностью свой текст; sitemap — вкл/выкл, исключения путей, доп. URL; кнопки просмотра `/robots.txt` и `/sitemap.xml`.
+- Техника: `SeoSettingsService` (хранение в `app_settings` под `seo.*`, кэш, дефолты из конфига), `AdminSeoController` (`GET|PUT /api/admin/seo…`), `SeoController` переведён на сервис, `HandleInertiaRequests` шарит `seo` для SPA, `AppServiceProvider::shareSeoHead` отдаёт `$seoHead/$seoIntegrations` в blade, `SecurityHeaders` разрешает хосты аналитики; фронт — `services/admin-seo.api.ts`, `useAdminSeo`, `AdminSeoManager.vue`, `useSeo` подхватывает переопределения страниц из shared-пропсов.
+- Проверки: `php -l` ✅, `route:list admin/seo` ✅ (6 роутов), tinker (global/pages/robots/sitemap + forHead) ✅, `vue-tsc --noEmit` ✅ (чисто).

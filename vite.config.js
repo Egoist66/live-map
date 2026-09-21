@@ -133,7 +133,21 @@ export default defineConfig({
                 ],
             },
             workbox: {
-                globPatterns: ['**/*.{js,css,html,woff2}'],
+                // Прекеш — ТОЛЬКО шелл (первый визит по 3G): entry + общие
+                // вендоры + офлайн. Раньше тут было `**/*.{js,css,html,woff2}` —
+                // SW на первом визите качал ВЕСЬ билд (~130 чанков, ~2.5МБ:
+                // все страницы, диалоги, maplibre), забивал канал и ронял
+                // LCP/TTI. Ленивые чанки — через runtime-кэш `/build/` ниже.
+                globPatterns: [
+                    'assets/app-*.{js,css}',
+                    'assets/vendor-*.js',
+                    'assets/primevue-*.js',
+                    'assets/form-*.js',
+                    'assets/realtime-*.js',
+                    'assets/rolldown-runtime-*.js',
+                    'assets/api-*.js',
+                    'offline.html',
+                ],
                 manifestTransforms: [
                     (entries) => {
                         const normalized = entries.map((entry) => {
@@ -196,6 +210,14 @@ export default defineConfig({
                         urlPattern: ({ request }) => request.destination === 'image',
                         handler: 'StaleWhileRevalidate',
                         options: { cacheName: 'pwa-images', expiration: { maxEntries: 150, maxAgeSeconds: 604800 }, cacheableResponse: { statuses: [0, 200] } },
+                    },
+                    {
+                        // Хэшированные чанки Vite иммутабельны: повторный визит —
+                        // мгновенно из кэша, без похода в сеть. Ленивые страницы
+                        // и диалоги подхватываются по требованию, а не прекешем.
+                        urlPattern: ({ url }) => url.pathname.startsWith('/build/'),
+                        handler: 'CacheFirst',
+                        options: { cacheName: 'pwa-build', expiration: { maxEntries: 150, maxAgeSeconds: 2592000 }, cacheableResponse: { statuses: [0, 200] } },
                     },
                     {
                         urlPattern: ({ url }) => url.pathname.startsWith('/api/pins') || url.pathname.startsWith('/api/conversations'),

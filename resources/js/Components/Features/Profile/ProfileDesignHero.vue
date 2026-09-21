@@ -40,9 +40,14 @@ const emit = defineEmits<{
           aria-label="Открыть фото"
           @click="emit('avatar')"
         >
+          <!-- LCP-элемент страницы: eager + fetchpriority, иначе Lighthouse
+               `lcp-discovery-insight` штрафует. aria-label уходит в alt
+               (аудит `image-alt`), размеры — против CLS. -->
           <Avatar
             :image="avatarSrc"
+            :aria-label="`Фото профиля ${user.name}`"
             shape="square"
+            :pt="{ image: { fetchpriority: 'high', loading: 'eager', decoding: 'async', width: 256, height: 256 } }"
             class="!h-full !w-full !rounded-[22px] [&_img]:!rounded-[22px] [&_img]:object-cover"
           />
           <OnlineDot
