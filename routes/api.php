@@ -121,6 +121,7 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::patch('/user/default-mode', [\App\Http\Controllers\ProfileController::class, 'updateDefaultMode'])->middleware('throttle:profile-write');
     Route::patch('/user/photo-comments-privacy', [\App\Http\Controllers\ProfilePhotoController::class, 'updatePrivacy']);
     Route::patch('/user/flow-comments-privacy', [\App\Http\Controllers\ProfileController::class, 'updateFlowCommentsPrivacy']);
+    Route::patch('/user/call-cooldown', [\App\Http\Controllers\ProfileController::class, 'updateCallCooldown']);
 
     Route::get('/users/{user}/photos', [\App\Http\Controllers\ProfilePhotoController::class, 'index']);
     Route::post('/photos', [\App\Http\Controllers\ProfilePhotoController::class, 'store'])->middleware('throttle:social-write');

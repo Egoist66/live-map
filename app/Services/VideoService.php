@@ -32,6 +32,8 @@ class VideoService
     /**
      * Кулдаун повторного дозвонка после отказа (отклонили / не взяли /
      * сбросили до ответа). Состоявшийся разговор под него не попадает.
+     * По умолчанию выключен — работает только у тех, кто включил
+     * «Защиту от дозвонов» в настройках (users.call_cooldown_enabled).
      */
     public const REDIAL_COOLDOWN_SEC = 300;
 
@@ -497,6 +499,8 @@ class VideoService
      * Считаются только несостоявшиеся прямые звонки от меня ему
      * (declined/timeout/отбой до ответа). Состоявшийся разговор
      * кулдауна не даёт — перезвонить можно сразу.
+     * Кулдаун применяется только когда его включил принимающий
+     * (настройка «Защита от дозвонов»), иначе дозвон свободный.
      *
      * @param int $callerId кто звонит
      * @param int $calleeId кому звонят
@@ -506,6 +510,12 @@ class VideoService
      */
     private function assertRedialAllowed(int $callerId, int $calleeId): void
     {
+        $callee = User::find($calleeId);
+
+        if (! $callee || ! (bool) $callee->call_cooldown_enabled) {
+            return;
+        }
+
         $last = VideoCall::where('caller_id', $callerId)
             ->where('callee_id', $calleeId)
             ->whereIn('mode', [VideoCall::MODE_MATCH, VideoCall::MODE_DIRECT])

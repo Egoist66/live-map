@@ -136,6 +136,20 @@ class ProfileController extends Controller
     }
 
     /**
+     * Защита от дозвонов: если я отклонил звонок, тот же человек
+     * не сможет перезвонить мне 5 минут. По умолчанию выключена.
+     *
+     * @param Request $request запрос с call_cooldown_enabled
+     */
+    public function updateCallCooldown(Request $request)
+    {
+        $request->validate(['call_cooldown_enabled' => 'required|boolean']);
+        $request->user()->forceFill(['call_cooldown_enabled' => $request->boolean('call_cooldown_enabled')])->save();
+
+        return response()->json(['call_cooldown_enabled' => (bool) $request->user()->call_cooldown_enabled]);
+    }
+
+    /**
      * Кто может комментировать посты пользователя в UFlow.
      *
      * @param Request $request запрос с flow_comments_privacy
