@@ -321,11 +321,16 @@ export const useVideoStore = defineStore('video', () => {
 
   /**
    * «Дальше»: завершить текущий и искать следующего.
+   * Старый звонок чистим локально сразу, чтобы перепривязка peer
+   * не путала прошлую пару с новой.
    */
   async function nextRoulette(): Promise<void> {
     const callId = call.value?.id ?? null
     error.value = null
     info.value = null
+    clearRingTimer()
+    call.value = null
+    incoming.value = null
     status.value = 'searching'
     try {
       const res = await videoApi.rouletteNext(callId)

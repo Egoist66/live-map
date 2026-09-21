@@ -7,6 +7,7 @@ use App\Events\VideoSignalEvent;
 use App\Models\Conversation;
 use App\Models\DatingMatch;
 use App\Models\Friendship;
+use App\Models\Message;
 use App\Models\User;
 use App\Models\UserBlock;
 use App\Models\VideoCall;
@@ -26,7 +27,13 @@ use Illuminate\Support\Facades\Log;
 class VideoService
 {
     /** Лимит рулетки для Free в сутки. PRO/админ — безлимит. */
-    public const FREE_ROULETTE_PER_DAY = 20;
+    public const FREE_ROULETTE_PER_DAY = 5;
+
+    /**
+     * Кулдаун повторного дозвонка после отказа (отклонили / не взяли /
+     * сбросили до ответа). Состоявшийся разговор под него не попадает.
+     */
+    public const REDIAL_COOLDOWN_SEC = 300;
 
     /** Очередь рулетки живёт столько без heartbeat. */
     public const QUEUE_TTL_SEC = 90;
@@ -66,6 +73,7 @@ class VideoService
 
         abort_if($this->hasLiveCall($caller->id), 409, 'У тебя уже есть активный звонок');
         abort_if($this->hasLiveCall($calleeId), 409, 'Собеседник сейчас занят');
+        $this->assertRedialAllowed($caller->id, $calleeId);
 
         $call = VideoCall::create([
             'mode' => $match ? VideoCall::MODE_MATCH : VideoCall::MODE_DIRECT,
@@ -127,6 +135,7 @@ class VideoService
         ])->save();
 
         $this->storeAndBroadcast($call, $user->id, VideoSignal::KIND_DECLINED, null);
+        $this->writeChatHistory($call, 'missed', $user->id);
         $this->pruneSignals($call->id);
 
         return $call->refresh();
@@ -147,12 +156,18 @@ class VideoService
             return $call;
         }
 
+        $wasActive = $call->status === VideoCall::STATUS_ACTIVE;
+        $startedAt = $call->started_at;
+
         $call->forceFill([
             'status' => VideoCall::STATUS_ENDED,
             'ended_at' => now(),
         ])->save();
 
         $this->storeAndBroadcast($call, $user->id, VideoSignal::KIND_HANGUP, null);
+        // Carbon 3 отдаёт знаковый diff по умолчанию — берём абсолютный.
+        $duration = $wasActive && $startedAt ? (int) max(0, now()->diffInSeconds($startedAt, true)) : null;
+        $this->writeChatHistory($call, $wasActive ? 'ended' : 'missed', $user->id, $duration);
         $this->pruneSignals($call->id);
 
         return $call->refresh();
@@ -166,8 +181,8 @@ class VideoService
      *
      * @param User $sender отправитель
      * @param VideoCall $call звонок
-     * @param string $kind offer|answer|ice
-     * @param array|null $payload SDP или ICE-кандидат
+     * @param string $kind offer|answer|ice|chat
+     * @param array|null $payload SDP, ICE-кандидат или {text} чата звонка
      * @return VideoSignal сохранённый сигнал
      */
     public function signal(User $sender, VideoCall $call, string $kind, ?array $payload): VideoSignal
@@ -296,6 +311,38 @@ class VideoService
     }
 
     /**
+     * Сигналы звонка для добивки опросом (мёртвый realtime).
+     *
+     * Клиент тянет курсором after_id и разносит каждый в ту же шину
+     * user:video.signal — дальше работают те же хендлеры, что для сокета.
+     * Чужие (свои) фреймы не отдаём: отправитель их уже знает.
+     *
+     * @param VideoCall $call звонок
+     * @param int $userId смотрящий (должен быть участником)
+     * @param int $afterId последний известный id сигнала
+     * @return array payloads как broadcastWith у VideoSignalEvent
+     */
+    public function callSignals(VideoCall $call, int $userId, int $afterId = 0): array
+    {
+        abort_unless($call->involves($userId), 403, 'Чужой звонок');
+
+        return VideoSignal::where('call_id', $call->id)
+            ->where('sender_id', '!=', $userId)
+            ->when($afterId > 0, fn ($q) => $q->where('id', '>', $afterId))
+            ->orderBy('id')
+            ->limit(50)
+            ->get()
+            ->map(fn ($signal) => [
+                'id' => (int) $signal->id,
+                'call_id' => (int) $signal->call_id,
+                'sender_id' => (int) $signal->sender_id,
+                'kind' => (string) $signal->kind,
+                'payload' => $signal->payload,
+            ])
+            ->all();
+    }
+
+    /**
      * Свежие входящие звонки для polling-тика.
      *
      * @param int $userId пользователь
@@ -398,6 +445,40 @@ class VideoService
     }
 
     /**
+     * Сколько живых мест в очереди рулетки (для бейджа «сейчас в рулетке»).
+     *
+     * Только чтение без лока: место живо, пока свежая метка и member-ключ.
+     *
+     * @return int
+     */
+    public function queueCount(): int
+    {
+        $queue = $this->readQueue();
+        $now = now()->timestamp;
+        $count = 0;
+
+        foreach ($queue as $row) {
+            $userId = (int) ($row['user_id'] ?? 0);
+
+            if ($userId <= 0) {
+                continue;
+            }
+
+            if (($now - (int) ($row['at'] ?? 0)) > self::QUEUE_TTL_SEC) {
+                continue;
+            }
+
+            if (! Cache::has($this->memberKey($userId))) {
+                continue;
+            }
+
+            $count++;
+        }
+
+        return $count;
+    }
+
+    /**
      * Есть ли у пользователя живой звонок.
      *
      * @param int $userId пользователь
@@ -408,6 +489,49 @@ class VideoService
         return VideoCall::where(fn ($q) => $q->where('caller_id', $userId)->orWhere('callee_id', $userId))
             ->whereIn('status', [VideoCall::STATUS_RINGING, VideoCall::STATUS_ACTIVE])
             ->exists();
+    }
+
+    /**
+     * Проверить кулдаун повторного дозвонка после отказа.
+     *
+     * Считаются только несостоявшиеся прямые звонки от меня ему
+     * (declined/timeout/отбой до ответа). Состоявшийся разговор
+     * кулдауна не даёт — перезвонить можно сразу.
+     *
+     * @param int $callerId кто звонит
+     * @param int $calleeId кому звонят
+     * @return void
+     *
+     * @throws HttpResponseException 429 с остатком кулдауна
+     */
+    private function assertRedialAllowed(int $callerId, int $calleeId): void
+    {
+        $last = VideoCall::where('caller_id', $callerId)
+            ->where('callee_id', $calleeId)
+            ->whereIn('mode', [VideoCall::MODE_MATCH, VideoCall::MODE_DIRECT])
+            ->where(fn ($q) => $q
+                ->whereIn('status', [VideoCall::STATUS_DECLINED, VideoCall::STATUS_TIMEOUT])
+                ->orWhere(fn ($x) => $x->where('status', VideoCall::STATUS_ENDED)->whereNull('started_at')))
+            ->orderByDesc('id')
+            ->first();
+
+        if (! $last || ! $last->ended_at) {
+            return;
+        }
+
+        $wait = self::REDIAL_COOLDOWN_SEC - now()->diffInSeconds($last->ended_at, true);
+
+        if ($wait <= 0) {
+            return;
+        }
+
+        $label = $wait >= 60
+            ? 'через '.ceil($wait / 60).' мин'
+            : "через $wait сек";
+
+        throw new HttpResponseException(response()->json([
+            'message' => "Собеседник отклонил звонок. Повторно — $label.",
+        ], 429));
     }
 
     /**
@@ -470,6 +594,7 @@ class VideoService
             Log::warning('video timeout broadcast failed: '.$e->getMessage());
         }
 
+        $this->writeChatHistory($call, 'missed', (int) $call->caller_id);
         $this->pruneSignals($call->id);
     }
 
@@ -527,6 +652,77 @@ class VideoService
         } catch (\Throwable $e) {
             Log::warning('video incoming broadcast failed: '.$e->getMessage());
         }
+    }
+
+    /**
+     * Записать итог звонка в direct-чат системным сообщением.
+     *
+     * Только режимы match/direct (у рулетки чата нет). Сообщение летит
+     * обычным MessageSent — открытый диалог и превью обновляются сами,
+     * в polling доедет следующим тиком как новое сообщение.
+     * Переходы терминальные (один финиш — одна запись), дублей нет.
+     *
+     * @param VideoCall $call завершённый звонок
+     * @param string $kind missed|ended
+     * @param int $actorId кто завершил (подпись sender_id)
+     * @param int|null $durationSec длительность для ended
+     * @return void
+     */
+    private function writeChatHistory(VideoCall $call, string $kind, int $actorId, ?int $durationSec = null): void
+    {
+        if (! in_array($call->mode, [VideoCall::MODE_MATCH, VideoCall::MODE_DIRECT], true)) {
+            return;
+        }
+
+        try {
+            $conv = Conversation::findDirect((int) $call->caller_id, (int) $call->callee_id);
+
+            if (! $conv) {
+                return;
+            }
+
+            $body = $kind === 'ended'
+                ? '📞 Видеозвонок · '.$this->formatDuration($durationSec ?? 0)
+                : '📞 Пропущенный видеозвонок';
+
+            $msg = Message::create([
+                'conversation_id' => $conv->id,
+                'sender_id' => $actorId,
+                'body' => $body,
+                'type' => 'system',
+            ]);
+
+            $conv->update(['last_message_at' => $msg->created_at]);
+            $conv->participantRows()->update(['hidden_at' => null]);
+
+            $msg->loadMissing(['sender:id,name,avatar_path', 'conversation.participantRows']);
+            broadcast(new \App\Events\MessageSent($msg))->toOthers();
+        } catch (\Throwable $e) {
+            Log::warning('video chat history failed: '.$e->getMessage());
+        }
+    }
+
+    /**
+     * Человеческая длительность звонка.
+     *
+     * @param int $sec секунды
+     * @return string «меньше минуты», «4:07», «1:02:03»
+     */
+    private function formatDuration(int $sec): string
+    {
+        if ($sec < 60) {
+            return 'меньше минуты';
+        }
+
+        $hours = intdiv($sec, 3600);
+        $mins = intdiv($sec % 3600, 60);
+        $secs = $sec % 60;
+
+        if ($hours > 0) {
+            return sprintf('%d:%02d:%02d', $hours, $mins, $secs);
+        }
+
+        return sprintf('%d:%02d', $mins, $secs);
     }
 
     /**
@@ -616,7 +812,11 @@ class VideoService
             ->where('created_at', '>=', now()->startOfDay())
             ->count();
 
-        abort_if($today >= self::FREE_ROULETTE_PER_DAY, 402, 'Дневной лимит рулетки исчерпан — оформи PRO');
+        if ($today >= self::FREE_ROULETTE_PER_DAY) {
+            throw new HttpResponseException(response()->json([
+                'message' => 'Дневной лимит рулетки исчерпан — оформи PRO',
+            ], 402));
+        }
     }
 
     /**

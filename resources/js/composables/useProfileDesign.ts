@@ -82,11 +82,9 @@ export function useProfileDesign(props: {
   const statusText = computed(() => (page.online.value ? 'онлайн' : 'оффлайн'))
   const presenceText = computed(() => (page.online.value ? 'в сети' : page.lastSeenText.value))
 
-  /** Строка под именем: мысль пользователя или текст «О себе». */
+  /** Строка под именем: только мысль пользователя, «О себе» — отдельное поле. */
   const headlineText = computed(() => {
-    const thought = (props.profileUser.thought || '').trim()
-    if (thought) return thought
-    return page.bioText.value
+    return (props.profileUser.thought || '').trim()
   })
 
   /** Одна пустая ячейка с крестиком для добавления фото (только свои, пока есть лимит). */

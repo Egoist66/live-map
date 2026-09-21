@@ -60,11 +60,9 @@ export function useDashboardDesign(propsUser?: any, propsIsOwn?: boolean) {
     return `${text.slice(0, 80).trimEnd()}…`
   })
 
-  /** Строка под именем: мысль пользователя или текст «О себе». */
+  /** Строка под именем: только мысль пользователя, «О себе» — отдельное поле. */
   const headlineText = computed(() => {
-    const thought = (dash.u.value.thought || '').trim()
-    if (thought) return thought
-    return dash.bioText.value
+    return (dash.u.value.thought || '').trim()
   })
 
   /** Одна пустая ячейка с крестиком для добавления фото (пока есть лимит). */

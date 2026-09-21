@@ -17,6 +17,7 @@ export function useUserMedia() {
   const error = ref<string | null>(null)
   const hasVideo = ref(true)
   const hasAudio = ref(true)
+  const facing = ref<'user' | 'environment'>('user')
 
   /**
    * Захватить камеру и микрофон.
@@ -71,6 +72,40 @@ export function useUserMedia() {
   }
 
   /**
+   * Переключить камеру фронталка↔тыльная (мобила).
+   *
+   * Новый трек берём ДО остановки старого: если устройство одно
+   * или запрос отклонён — останемся на рабочей камере.
+   *
+   * @returns новый видеотрек или null
+   */
+  async function switchCamera(): Promise<MediaStreamTrack | null> {
+    const old = stream.value?.getVideoTracks()[0] ?? null
+    const nextFacing = facing.value === 'user' ? 'environment' : 'user'
+    try {
+      const next = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: nextFacing } }, audio: false })
+      const track = next.getVideoTracks()[0] ?? null
+      if (!track || !stream.value) {
+        try {
+          next.getTracks().forEach((t) => t.stop())
+        } catch {}
+        return null
+      }
+      if (old) {
+        stream.value.removeTrack(old)
+        try {
+          old.stop()
+        } catch {}
+      }
+      stream.value.addTrack(track)
+      facing.value = nextFacing
+      return track
+    } catch {
+      return null
+    }
+  }
+
+  /**
    * Погасить все треки и освободить устройства.
    */
   function stop(): void {
@@ -80,5 +115,5 @@ export function useUserMedia() {
     stream.value = null
   }
 
-  return { stream, starting, error, hasVideo, hasAudio, start, toggleMute, toggleCamera, stop }
+  return { stream, starting, error, hasVideo, hasAudio, facing, start, toggleMute, toggleCamera, switchCamera, stop }
 }

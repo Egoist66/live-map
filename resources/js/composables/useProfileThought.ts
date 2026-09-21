@@ -52,8 +52,10 @@ export function useProfileThought(
   /**
    * Строка для UI: сохранённое значение, иначе фолбэк.
    *
-   * @param current актуальная строка (мысль или «О себе»)
-   * @param emptyFallback строка при очищенной мысли (текст «О себе»)
+   * «О себе» сюда не подставляется — это отдельное поле пользователя.
+   *
+   * @param current актуальная мысль
+   * @param emptyFallback строка при очищенной мысли (обычно пусто)
    * @returns текст для отображения под именем
    */
   function display(current: string, emptyFallback: string): string {

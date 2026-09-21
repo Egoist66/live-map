@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3'
+import { defineAsyncComponent, onMounted, ref } from 'vue'
 import { useWelcome } from '@/composables/useWelcome'
 import { useWelcomeMode } from '@/composables/useWelcomeMode'
 import { useWelcomeHeroSwiper } from '@/composables/useWelcomeHeroSwiper'
@@ -9,6 +10,16 @@ import Card from 'primevue/card'
 import Tag from 'primevue/tag'
 import Badge from 'primevue/badge'
 import Avatar from 'primevue/avatar'
+
+// Лендинг без лейаута: у залогиненных здесь тоже должен ловиться
+// входящий видеозвонок. Хост монтируем только на клиенте после mount
+// (Teleport в body на SSR роняет рендер), гостям он не нужен,
+// но isClient-гейт дешевле ветвления по auth.
+const VideoGlobalHost = defineAsyncComponent(() => import('@/Components/Features/Video/VideoGlobalHost.vue'))
+const videoHostReady = ref(false)
+onMounted(() => {
+  videoHostReady.value = true
+})
 
 const w = useWelcome()
 const landing = useWelcomeMode()
@@ -245,5 +256,6 @@ function switchTab(next: 'ulove' | 'upin'): void {
     </section>
 
     <AppFooter class="mt-auto w-full" />
+    <VideoGlobalHost v-if="videoHostReady" />
   </div>
 </template>

@@ -30,6 +30,15 @@ class User extends Authenticatable
 
     protected $appends = ['avatar_url', 'age', 'effective_plan'];
 
+    /**
+     * Дефолты модели: автоответ «меня нет онлайн» включён по умолчанию.
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'auto_reply_enabled' => true,
+    ];
+
     public function getEffectivePlanAttribute(): string
     {
         return $this->effectivePlan();

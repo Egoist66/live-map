@@ -84,8 +84,10 @@ class VideoController extends Controller
     }
 
     /**
-     * переслать signaling-фрейм (offer/answer/ice).
+     * переслать signaling-фрейм (offer/answer/ice) или сообщение чата звонка.
      *
+     * Чат звонка едет тем же транспортом (broadcast + таблица для polling),
+     * отдельным видом фрейма kind=chat с текстом до 500 символов.
      * ICE trickle шлёт много мелких запросов — лимитер chat-signal (120/мин).
      *
      * @param Request $request
@@ -95,17 +97,44 @@ class VideoController extends Controller
     public function signal(Request $request, VideoCall $call)
     {
         $data = $request->validate([
-            'kind' => 'required|in:offer,answer,ice',
+            'kind' => 'required|in:offer,answer,ice,chat',
             'payload' => 'nullable|array',
         ]);
 
-        $signal = $this->video->signal($request->user(), $call, $data['kind'], $data['payload'] ?? null);
+        $payload = $data['payload'] ?? null;
+
+        if ($data['kind'] === 'chat') {
+            $text = trim((string) ($payload['text'] ?? ''));
+            abort_if($text === '', 422, 'Пустое сообщение');
+            abort_if(mb_strlen($text) > 500, 422, 'Сообщение до 500 символов');
+            $payload = ['text' => $text];
+        }
+
+        $signal = $this->video->signal($request->user(), $call, $data['kind'], $payload);
 
         return response()->json([
             'id' => (int) $signal->id,
             'call_id' => (int) $call->id,
             'kind' => (string) $signal->kind,
         ], 201);
+    }
+
+    /**
+     * Сигналы звонка курсором (добивка при мёртвом realtime).
+     *
+     * @param Request $request
+     * @param VideoCall $call
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function signals(Request $request, VideoCall $call)
+    {
+        $data = $request->validate([
+            'after_id' => 'nullable|integer|min:0',
+        ]);
+
+        return response()->json([
+            'signals' => $this->video->callSignals($call, (int) $request->user()->id, (int) ($data['after_id'] ?? 0)),
+        ]);
     }
 
     /**
@@ -134,6 +163,19 @@ class VideoController extends Controller
     {
         return response()->json([
             'incoming' => $this->video->pendingIncoming($request->user()),
+        ]);
+    }
+
+    /**
+     * Сколько людей сейчас в очереди рулетки (живые места).
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function rouletteStats(Request $request)
+    {
+        return response()->json([
+            'waiting' => $this->video->queueCount(),
         ]);
     }
 

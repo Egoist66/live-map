@@ -41,6 +41,8 @@ export function usePeerConnection() {
   let isCaller = false
   let offBus: (() => void) | null = null
   let offerStarted = false
+  /** Id уже разобранных offer/answer: опрос добивки может продублировать сокет. */
+  const seenRemoteIds = new Set<number>()
 
   /**
    * Создать соединение и подписаться на сигналы звонка.
@@ -55,6 +57,7 @@ export function usePeerConnection() {
     boundCallId = callId
     isCaller = caller
     offerStarted = false
+    seenRemoteIds.clear()
     signalingError.value = null
 
     const next = new RTCPeerConnection({ iceServers: iceServers() })
@@ -121,14 +124,20 @@ export function usePeerConnection() {
   /**
    * Разобрать входящий signaling-фрейм своего звонка.
    *
-   * Дедуп поллинга гарантирует: повторный offer сюда не придёт,
-   * но setRemoteDescription обёрнут на случай гонки сокет+polling.
+   * Дедуп offer/answer по id: опрос добивки при мёртвом сокете может
+   * принести то, что уже пришло по сокету — повторный setRemoteDescription
+   * уронил бы соединение, поэтому дубли молча пропускаем.
    *
    * @param e событие user:video.signal (формат шины)
    */
-  async function onSignal(e: { call_id: number; kind: string; payload: any }): Promise<void> {
+  async function onSignal(e: { id?: number; call_id: number; kind: string; payload: any }): Promise<void> {
     if (!pc || e.call_id !== boundCallId) return
     const kind = String(e.kind)
+    const sid = Number(e.id ?? 0)
+    if ((kind === 'offer' || kind === 'answer') && sid > 0) {
+      if (seenRemoteIds.has(sid)) return
+      seenRemoteIds.add(sid)
+    }
     try {
       if (kind === 'accepted' && isCaller) {
         await startOffer()
@@ -175,6 +184,38 @@ export function usePeerConnection() {
   }
 
   /**
+   * Подменить исходящий видеотрек наживую (флип камеры, шаринг экрана).
+   * Переподключения не нужно: replaceTrack не рвёт peer и не требует
+   * нового offer — собеседник просто видит новый кадр.
+   *
+   * @param track новый видеотрек
+   * @returns true если подмена удалась
+   */
+  async function replaceVideoTrack(track: MediaStreamTrack): Promise<boolean> {
+    if (!pc) return false
+    try {
+      const sender = pc.getSenders().find((s) => s.track?.kind === 'video')
+      if (sender) {
+        await sender.replaceTrack(track)
+      } else {
+        pc.addTrack(track)
+      }
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * Id звонка, к которому привязан peer (для реактивной перепривязки).
+   *
+   * @returns id звонка или null когда соединения нет
+   */
+  function currentId(): number | null {
+    return boundCallId
+  }
+
+  /**
    * Закрыть соединение и снять подписку.
    */
   function close(): void {
@@ -191,5 +232,5 @@ export function usePeerConnection() {
     connectionState.value = 'idle'
   }
 
-  return { remoteStream, connectionState, signalingError, bind, startOffer, retry, close }
+  return { remoteStream, connectionState, signalingError, bind, startOffer, retry, replaceVideoTrack, close, currentId }
 }

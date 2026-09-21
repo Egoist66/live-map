@@ -26,6 +26,7 @@ const quoteSnippet = computed(() => {
 })
 const attachment = computed(() => (props.message as any)?.attachment ?? null)
 const isVoice = computed(() => attachment.value?.kind === 'voice' || (props.message as any)?.type === 'voice')
+const isSystem = computed(() => String((props.message as any)?.type ?? '') === 'system')
 const attachmentSize = computed(() => {
   const s = Number(attachment.value?.size) || 0
   if (!s) {
@@ -42,7 +43,12 @@ const attachmentSize = computed(() => {
 })
 </script>
 <template>
-  <div :class="own ? 'flex justify-end' : 'flex justify-start'" class="min-w-0 w-full max-w-full">
+  <div v-if="isSystem" class="flex justify-center w-full max-w-full py-1">
+    <div class="max-w-[92%] rounded-full bg-stone-200/70 dark:bg-zinc-800 px-3.5 py-1.5 text-center text-xs leading-snug text-stone-500 dark:text-zinc-300 shadow-sm">
+      {{ (message as any)?.body }}<span class="opacity-70"> · {{ time }}</span>
+    </div>
+  </div>
+  <div v-else :class="own ? 'flex justify-end' : 'flex justify-start'" class="min-w-0 w-full max-w-full">
     <div class="flex items-end gap-1.5 sm:gap-2 max-w-[88%] sm:max-w-[72%] lg:max-w-[68%] min-w-0" :class="own ? 'flex-row-reverse' : 'flex-row'">
       <div class="relative min-w-0 flex-1 select-none">
         <div :class="['rounded-[18px] lg:rounded-2xl px-3.5 py-2.5 lg:px-3 lg:py-2 text-[15px] lg:text-sm leading-[1.4] shadow-sm transition-all duration-300', own ? 'bg-violet-600 text-white rounded-br-[6px]' : 'bg-white dark:bg-zinc-800 dark:text-white border border-stone-200 dark:border-zinc-700 rounded-bl-[6px]', (message as any).pending ? 'opacity-60 scale-[0.98]' : 'opacity-100 scale-100', (message as any).failed ? '!bg-red-500' : '', (message as any).justSent ? 'ring-2 ring-violet-300' : '']">

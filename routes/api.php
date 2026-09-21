@@ -159,8 +159,10 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::post('/video/{call}/decline', [\App\Http\Controllers\VideoController::class, 'decline'])->middleware('throttle:social-write');
     Route::post('/video/{call}/hangup', [\App\Http\Controllers\VideoController::class, 'hangup'])->middleware('throttle:social-write');
     Route::post('/video/{call}/signal', [\App\Http\Controllers\VideoController::class, 'signal'])->middleware('throttle:chat-signal');
+    Route::get('/video/{call}/signals', [\App\Http\Controllers\VideoController::class, 'signals'])->middleware('throttle:chat-signal');
     Route::get('/video/{call}', [\App\Http\Controllers\VideoController::class, 'show']);
     Route::get('/video/pending/incoming', [\App\Http\Controllers\VideoController::class, 'pending']);
+    Route::get('/video/roulette/stats', [\App\Http\Controllers\VideoController::class, 'rouletteStats']);
     Route::post('/video/roulette/join', [\App\Http\Controllers\VideoController::class, 'rouletteJoin'])->middleware('throttle:social-write');
     Route::post('/video/roulette/next', [\App\Http\Controllers\VideoController::class, 'rouletteNext'])->middleware('throttle:social-write');
     Route::post('/video/roulette/leave', [\App\Http\Controllers\VideoController::class, 'rouletteLeave'])->middleware('throttle:social-write');

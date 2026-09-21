@@ -33,12 +33,13 @@ export interface VideoIncomingEvent {
 
 /**
  * Signaling-фрейм (сокет + polling несут один формат).
+ * kind=chat — сообщение чата звонка, payload {text}.
  */
 export interface VideoSignalEvent {
   id: number
   call_id: number
   sender_id: number
-  kind: 'offer' | 'answer' | 'ice' | 'accepted' | 'declined' | 'hangup' | 'timeout' | 'joined'
+  kind: 'offer' | 'answer' | 'ice' | 'accepted' | 'declined' | 'hangup' | 'timeout' | 'joined' | 'chat'
   payload: any
 }
 
@@ -65,9 +66,16 @@ export const videoApi = {
     const { data } = await api.post(`/api/video/${callId}/hangup`)
     return data as { call: VideoCallPayload }
   },
-  async signal(callId: number, kind: 'offer' | 'answer' | 'ice', payload: unknown) {
+  async signal(callId: number, kind: 'offer' | 'answer' | 'ice' | 'chat', payload: unknown) {
     const { data } = await api.post(`/api/video/${callId}/signal`, { kind, payload })
     return data as { id: number; call_id: number; kind: string }
+  },
+  /**
+   * Сигналы звонка курсором (добивка при мёртвом realtime).
+   */
+  async signals(callId: number, afterId = 0) {
+    const { data } = await api.get(`/api/video/${callId}/signals`, { params: { after_id: afterId || undefined } })
+    return data as { signals: VideoSignalEvent[] }
   },
   async show(callId: number) {
     const { data } = await api.get(`/api/video/${callId}`)
@@ -79,6 +87,13 @@ export const videoApi = {
   async pending() {
     const { data } = await api.get('/api/video/pending/incoming')
     return data as { incoming: VideoIncomingEvent[] }
+  },
+  /**
+   * Сколько людей сейчас в очереди рулетки.
+   */
+  async rouletteStats() {
+    const { data } = await api.get('/api/video/roulette/stats')
+    return data as { waiting: number }
   },
   async rouletteJoin(gender?: string | null) {
     const { data } = await api.post('/api/video/roulette/join', gender ? { gender } : {})

@@ -26,25 +26,42 @@ let ringTimer: ReturnType<typeof setInterval> | null = null
 const isRoulette = computed(() => v.store.incoming?.mode === 'roulette')
 const peerName = computed(() => v.store.incoming?.peer.name ?? 'Собеседник')
 const peerAvatar = computed(() => v.store.incoming?.peer.avatar_url ?? null)
+/** Рулетка в авто-режиме принимает пару сама — диалог не показываем. */
+const autoRoulette = computed(() => v.rouletteAuto.value && isRoulette.value)
 
 watch(
   () => v.store.status,
   (next) => {
-    visible.value = next === 'ringing-in'
-    if (next === 'ringing-in') startRing()
+    visible.value = next === 'ringing-in' && !autoRoulette.value
+    if (visible.value) startRing()
     else stopRing()
   },
   { immediate: true },
 )
 
+watch(autoRoulette, (auto) => {
+  if (auto) {
+    visible.value = false
+    stopRing()
+  }
+})
+
 /**
  * Двухтональный рингтон на WebAudio, пока висит диалог.
+ * Контекст будим явно: на нетронутой вкладке Chrome держит его
+ * suspended и звонок проходит бесшумно. Плюс вибрация на мобиле.
  */
 function startRing(): void {
   stopRing()
   try {
     if (!audioCtx) audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
     const ctx = audioCtx
+    try {
+      if (ctx.state === 'suspended') void ctx.resume()
+    } catch {}
+    try {
+      if ('vibrate' in navigator) (navigator as any).vibrate([300, 150, 300])
+    } catch {}
     let high = false
     ringTimer = setInterval(() => {
       try {
@@ -80,6 +97,7 @@ onBeforeUnmount(() => stopRing())
     modal
     :closable="false"
     :draggable="false"
+    :show-header="false"
     appendTo="body"
     class="w-[calc(100vw-2rem)] max-w-[380px]"
     :pt="dialogPt"
@@ -121,6 +139,7 @@ onBeforeUnmount(() => stopRing())
           @click="v.decline()"
         />
       </div>
+      <div class="mt-3 text-[11px] leading-snug text-stone-400 dark:text-zinc-500">Собеседник может записать разговор — не показывай лишнего</div>
     </div>
   </Dialog>
 </template>
