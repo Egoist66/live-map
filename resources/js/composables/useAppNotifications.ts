@@ -87,11 +87,20 @@ function currentConversationId(): number | null {
   const m = window.location.pathname.match(/\/chat\/(\d+)/)
   return m ? Number(m[1]) : null
 }
+function canVibrateNow(): boolean {
+  try {
+    const nav = navigator as Navigator & { userActivation?: { hasBeenActive?: boolean; isActive?: boolean } }
+    if (nav.userActivation) return !!(nav.userActivation.hasBeenActive || nav.userActivation.isActive)
+  } catch {}
+  return false
+}
 function playTick() {
   try {
     const ctx = (window as any)._audioCtx as AudioContext | undefined
     let ac: AudioContext
     if (!ctx) { ac = new (window.AudioContext || (window as any).webkitAudioContext)(); (window as any)._audioCtx = ac } else ac = ctx
+    if (ac.state === 'suspended') { void ac.resume().catch(() => {}) }
+    if (ac.state !== 'running') return
     const o = ac.createOscillator(); const g = ac.createGain()
     o.frequency.value = 880; o.type = 'sine'; g.gain.value = 0.08
     o.connect(g).connect(ac.destination); o.start(); g.gain.exponentialRampToValueAtTime(0.01, ac.currentTime + 0.22); o.stop(ac.currentTime + 0.23)
@@ -104,7 +113,7 @@ function push(t: AppToast) {
   playTick()
   const timer = setTimeout(() => remove(t.id), 5500)
   timers.set(t.id, timer)
-  if ('vibrate' in navigator) try { (navigator as any).vibrate(120) } catch {}
+  if ('vibrate' in navigator && canVibrateNow()) try { (navigator as any).vibrate(120) } catch {}
   try {
     if (typeof document !== 'undefined' && document.hidden) void notifyHidden(t)
   } catch {}

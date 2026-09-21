@@ -48,6 +48,7 @@ class VideoService
      * Кнопка видео живёт в шапке диалога — раз чат уже есть, звонить
      * можно: мэтч даёт режим match + match_id, остальное — direct.
      * Посторонним без диалога и связи — 403. Лимитов на прямые нет.
+     * Выключенный приём у собеседника (video_calls_enabled) — 403.
      *
      * @param User $caller кто звонит
      * @param int $calleeId кому звонят
@@ -70,6 +71,7 @@ class VideoService
         abort_unless($match || $isFriend || $hasChat, 403, 'Сначала начни чат или добавь в друзья');
 
         $this->assertNotBlocked($caller->id, $calleeId);
+        abort_if(! (bool) $callee->video_calls_enabled, 403, 'Собеседник отключил видеозвонки');
         $this->sweepTimeouts($caller->id);
         $this->sweepTimeouts($calleeId);
 
@@ -205,6 +207,7 @@ class VideoService
     public function joinRoulette(User $user, array $filters = []): array
     {
         $this->dating->assertAdult($user);
+        abort_if(! (bool) $user->video_calls_enabled, 403, 'Включи приём видеозвонков в настройках');
         $this->assertRouletteQuota($user);
         $this->sweepTimeouts($user->id);
 

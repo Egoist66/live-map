@@ -117,6 +117,15 @@ class SecurityHeaders
             $script[] = $analyticsHost;
         }
 
+        // Счётчики из панели SEO (GTM/GA/Yandex/FB) грузят внешние tag.js,
+        // которые затем исполняют динамический инлайн-код (yandex `prepare.js`
+        // и вебвизор так и делают): без 'unsafe-inline' консоль завалена
+        // `Executing inline script violates ... script-src`, а метрика молчит.
+        // Наш собственный инлайн при этом остаётся подписанным nonce.
+        if (self::hasAnalyticsScripts()) {
+            $script[] = "'unsafe-inline'";
+        }
+
         // Произвольные скрипты из панели SEO (админ осознанно включил):
         // их инлайн-код без nonce требует 'unsafe-inline' — добавляем
         // только когда админ реально сохранил кастомный код, иначе
@@ -159,6 +168,46 @@ class SecurityHeaders
         ]);
 
         $response->headers->set('Content-Security-Policy', $policy);
+    }
+
+    /**
+     * Включён ли хотя бы один стандартный счётчик из админки
+     * (GTM/GA/Yandex/Facebook/VK ids при scripts_enabled).
+     *
+     * Их внешние tag.js исполняют динамический инлайн-код, который
+     * nonce не покрывает — без 'unsafe-inline' браузер режет его
+     * (`prepare.js: Executing inline script violates ... script-src`).
+     *
+     * @return bool true — ослабить script-src до 'unsafe-inline'
+     */
+    private static function hasAnalyticsScripts(): bool
+    {
+        try {
+            $integrations = \App\Services\SeoSettingsService::integrations();
+        } catch (\Throwable) {
+            return false;
+        }
+
+        if (empty($integrations['scripts_enabled'])) {
+            return false;
+        }
+
+        $keys = [
+            'google_tag_manager_id',
+            'google_analytics_id',
+            'yandex_metrica_id',
+            'facebook_pixel_id',
+            'vk_pixel_id',
+        ];
+
+        foreach ($keys as $key) {
+            $value = trim((string) ($integrations[$key] ?? ''));
+            if ($value !== '') {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

@@ -150,6 +150,20 @@ class ProfileController extends Controller
     }
 
     /**
+     * Приём видеозвонков: выключено — не дозвонится никто, даже друзья.
+     * Исходящие звонки остаются доступны (как запрет входящих в Telegram).
+     *
+     * @param Request $request запрос с video_calls_enabled
+     */
+    public function updateVideoCalls(Request $request)
+    {
+        $request->validate(['video_calls_enabled' => 'required|boolean']);
+        $request->user()->forceFill(['video_calls_enabled' => $request->boolean('video_calls_enabled')])->save();
+
+        return response()->json(['video_calls_enabled' => (bool) $request->user()->video_calls_enabled]);
+    }
+
+    /**
      * Кто может комментировать посты пользователя в UFlow.
      *
      * @param Request $request запрос с flow_comments_privacy

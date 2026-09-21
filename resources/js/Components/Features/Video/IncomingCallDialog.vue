@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useVideoSession } from '@/composables/useVideoSession'
+import { useRingtone } from '@/composables/useRingtone'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
@@ -11,6 +12,7 @@ import Dialog from 'primevue/dialog'
  */
 
 const v = useVideoSession()
+const ring = useRingtone()
 
 const visible = ref(false)
 
@@ -19,9 +21,6 @@ const dialogPt = {
   header: { class: '!hidden' },
   content: { class: '!p-0 !bg-white dark:!bg-zinc-900' },
 }
-
-let audioCtx: AudioContext | null = null
-let ringTimer: ReturnType<typeof setInterval> | null = null
 
 const isRoulette = computed(() => v.store.incoming?.mode === 'roulette')
 const peerName = computed(() => v.store.incoming?.peer.name ?? 'Собеседник')
@@ -33,8 +32,8 @@ watch(
   () => v.store.status,
   (next) => {
     visible.value = next === 'ringing-in' && !autoRoulette.value
-    if (visible.value) startRing()
-    else stopRing()
+    if (visible.value) ring.startRing()
+    else ring.stopRing()
   },
   { immediate: true },
 )
@@ -42,53 +41,11 @@ watch(
 watch(autoRoulette, (auto) => {
   if (auto) {
     visible.value = false
-    stopRing()
+    ring.stopRing()
   }
 })
 
-/**
- * Двухтональный рингтон на WebAudio, пока висит диалог.
- * Контекст будим явно: на нетронутой вкладке Chrome держит его
- * suspended и звонок проходит бесшумно. Плюс вибрация на мобиле.
- */
-function startRing(): void {
-  stopRing()
-  try {
-    if (!audioCtx) audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
-    const ctx = audioCtx
-    try {
-      if (ctx.state === 'suspended') void ctx.resume()
-    } catch {}
-    try {
-      if ('vibrate' in navigator) (navigator as any).vibrate([300, 150, 300])
-    } catch {}
-    let high = false
-    ringTimer = setInterval(() => {
-      try {
-        const osc = ctx.createOscillator()
-        const gain = ctx.createGain()
-        osc.frequency.value = high ? 660 : 520
-        high = !high
-        osc.type = 'sine'
-        gain.gain.value = 0.06
-        osc.connect(gain).connect(ctx.destination)
-        osc.start()
-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35)
-        osc.stop(ctx.currentTime + 0.36)
-      } catch {}
-    }, 450)
-  } catch {}
-}
-
-/**
- * Остановить рингтон.
- */
-function stopRing(): void {
-  if (ringTimer) clearInterval(ringTimer)
-  ringTimer = null
-}
-
-onBeforeUnmount(() => stopRing())
+onBeforeUnmount(() => ring.stopRing())
 </script>
 
 <template>

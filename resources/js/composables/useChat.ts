@@ -334,7 +334,7 @@ export function useChat() {
       const districtId = Number(cached?.district_id ?? 0)
       const districtTitle = cached?.title ?? null
       const inviteRight = cached?.can_invite ?? false
-      activeConv.value = { id, type: cachedType, district_id: districtId, title: districtTitle, can_invite: inviteRight, other: cached.other ?? null, participants: [] } as any
+      activeConv.value = { id, type: cachedType, district_id: districtId, title: districtTitle, can_invite: inviteRight, other: cached.other ?? null, participants: [], wallpaper: (cached as any)?.wallpaper ?? null } as any
       if (cached.last_message) messages.value = [cached.last_message as any]
       else messages.value = []
     } else {

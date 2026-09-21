@@ -43,6 +43,37 @@ interface PrivateInviteEvent {
 }
 
 /**
+ * Назначить поток элементу и запустить воспроизведение.
+ *
+ * srcObject трогаем только при смене потока (иначе мерцание),
+ * play() зовём всегда: без него удалённое видео со звуком может
+ * стоять чёрным (автоплей-политика режет play без жеста).
+ *
+ * @param el видеоэлемент
+ * @param stream поток для показа
+ * @param isRemote true для чужого видео (ставим флаг блокировки звука)
+ * @param onBlocked колбэк блокировки автоплея со звуком
+ */
+async function playVideoEl(
+  el: HTMLVideoElement,
+  stream: MediaStream,
+  isRemote: boolean,
+  onBlocked: () => void,
+): Promise<void> {
+  if (el.srcObject !== stream) {
+    el.srcObject = stream
+  }
+  try {
+    await el.play()
+  } catch (e) {
+    const name = (e as Error)?.name ?? ''
+    if (isRemote && name === 'NotAllowedError') {
+      onBlocked()
+    }
+  }
+}
+
+/**
  * Видеосессия: связывает стор, медиа и P2P-соединение.
  *
  * Компонент только показывает <video> и кнопки: вся механика
@@ -73,6 +104,8 @@ export function useVideoSession() {
   const pendingInvite = sharedPendingInvite
   const rouletteCount = ref<number | null>(null)
   const sharing = ref(false)
+  /** Браузер запретил autoplay удалённого видео со звуком — ждём тап. */
+  const remoteAudioBlocked = ref(false)
 
   let cameraTrackBackup: MediaStreamTrack | null = null
   let shareTrack: MediaStreamTrack | null = null
@@ -91,7 +124,10 @@ export function useVideoSession() {
     (next) => {
       if (next === 'searching') startHeartbeat()
       else stopHeartbeat()
-      if (next === 'idle') peer.close()
+      if (next === 'idle') {
+        peer.close()
+        remoteAudioBlocked.value = false
+      }
       if (next === 'searching' || next === 'ringing-out' || next === 'active') {
         overlayOpen.value = true
       } else if (next === 'ringing-in' && !sharedRouletteAuto.value) {
@@ -195,12 +231,17 @@ export function useVideoSession() {
     overlayOpen.value = false
   }
 
+  /** Отметить автоплей-блок удалённого звука (покажем кнопку-тап). */
+  function markRemoteBlocked(): void {
+    remoteAudioBlocked.value = true
+  }
+
   /**
    * Прицепить локальный поток к <video> (на случай позднего маунта).
    */
   function attachLocal(): void {
     if (media.stream.value && localRef.value) {
-      localRef.value.srcObject = media.stream.value
+      void playVideoEl(localRef.value, media.stream.value, false, markRemoteBlocked)
     }
   }
 
@@ -208,13 +249,20 @@ export function useVideoSession() {
    * Ref-колбэк локального <video>: элемент пересоздаётся при смене
    * состояния (превью поиска → PiP звонка), поток цепляем сразу.
    *
+   * Идемпотентно: srcObject переназначаем только при смене потока —
+   * иначе каждый ре-рендер (тикер секунд, чат) ронял бы кадр и давал
+   * мерцание собственного превью.
+   *
    * @param el DOM-узел или null при размонтировании
    */
   function setLocalEl(el: unknown): void {
     const node = el as HTMLVideoElement | null
+    if (!node) {
+      return
+    }
     localRef.value = node
-    if (node && media.stream.value) {
-      node.srcObject = media.stream.value
+    if (media.stream.value) {
+      void playVideoEl(node, media.stream.value, false, markRemoteBlocked)
     }
   }
 
@@ -226,22 +274,40 @@ export function useVideoSession() {
    */
   function setRemoteEl(el: unknown): void {
     const node = el as HTMLVideoElement | null
+    if (!node) {
+      return
+    }
     remoteRef.value = node
     const ready = peer.remoteStream.value
-    if (node && ready && ready.getTracks().length > 0) {
-      node.srcObject = ready
+    if (ready && ready.getTracks().length > 0) {
+      void playVideoEl(node, ready, true, markRemoteBlocked)
     }
   }
 
   /**
-   * Прицепить удалённый поток к <video>.
+   * Прицепить удалённый поток к <video> и запустить воспроизведение.
    *
    * @param remote поток собеседника
    */
   function attachRemote(remote: MediaStream): void {
     if (remoteRef.value) {
-      remoteRef.value.srcObject = remote
+      void playVideoEl(remoteRef.value, remote, true, markRemoteBlocked)
     }
+  }
+
+  /**
+   * Разблокировать звук удалённого видео тапом (автоплей-политика).
+   * Звать из жеста пользователя (кнопка «Включить звук»).
+   */
+  async function unlockRemoteAudio(): Promise<void> {
+    const node = remoteRef.value
+    if (!node) {
+      return
+    }
+    try {
+      await node.play()
+      remoteAudioBlocked.value = false
+    } catch {}
   }
 
   /**
@@ -580,7 +646,11 @@ export function useVideoSession() {
         } catch {}
         return
       }
+      try {
+        track.contentHint = 'detail'
+      } catch {}
       const current = media.stream.value.getVideoTracks()[0] ?? null
+      const hadSender = peer.hasVideoSender()
       if (current) {
         try {
           media.stream.value.removeTrack(current)
@@ -594,6 +664,9 @@ export function useVideoSession() {
         await stopShare()
         notice.value = 'Не удалось начать демонстрацию'
         return
+      }
+      if (!hadSender) {
+        await peer.renegotiate()
       }
       sharing.value = true
       attachLocal()
@@ -695,6 +768,8 @@ export function useVideoSession() {
     rouletteCount,
     loadRouletteCount,
     sharing,
+    remoteAudioBlocked,
+    unlockRemoteAudio,
     flipCamera,
     shareScreen,
     stopShare,

@@ -22,6 +22,10 @@ export function useUserMedia() {
   /**
    * Захватить камеру и микрофон.
    *
+   * Каскад попыток: сначала всё вместе, при отказе — только видео,
+   * затем только аудио. Так звонок с одной камерой (или одним
+   * микрофоном) всё равно состоится, а не упадёт целиком.
+   *
    * @returns локальный поток
    */
   async function start(): Promise<MediaStream> {
@@ -29,10 +33,46 @@ export function useUserMedia() {
     starting.value = true
     error.value = null
     try {
-      const next = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
-        audio: { echoCancellation: true, noiseSuppression: true },
-      })
+      const full = await tryCapture(true, true)
+      if (full) return full
+      const videoOnly = await tryCapture(true, false)
+      if (videoOnly) {
+        error.value = 'Микрофон недоступен — собеседник тебя не услышит'
+        return videoOnly
+      }
+      const audioOnly = await tryCapture(false, true)
+      if (audioOnly) {
+        error.value = 'Камера недоступна — собеседник тебя не увидит'
+        return audioOnly
+      }
+      error.value = 'Нет доступа к камере или микрофону — проверь разрешения браузера'
+      throw new Error(error.value)
+    } finally {
+      starting.value = false
+    }
+  }
+
+  /**
+   * Одна попытка захвата с заданным набором устройств.
+   *
+   * @param video брать ли видео
+   * @param audio брать ли аудио
+   * @returns поток или null при отказе
+   */
+  async function tryCapture(video: boolean, audio: boolean): Promise<MediaStream | null> {
+    try {
+      const constraints: MediaStreamConstraints = {}
+      if (video) {
+        constraints.video = { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' }
+      } else {
+        constraints.video = false
+      }
+      if (audio) {
+        constraints.audio = { echoCancellation: true, noiseSuppression: true }
+      } else {
+        constraints.audio = false
+      }
+      const next = await navigator.mediaDevices.getUserMedia(constraints)
       stream.value = next
       const videoTrack = next.getVideoTracks()[0] ?? null
       const audioTrack = next.getAudioTracks()[0] ?? null
@@ -40,10 +80,7 @@ export function useUserMedia() {
       hasAudio.value = !!audioTrack
       return next
     } catch {
-      error.value = 'Нет доступа к камере или микрофону — проверь разрешения браузера'
-      throw new Error(error.value)
-    } finally {
-      starting.value = false
+      return null
     }
   }
 

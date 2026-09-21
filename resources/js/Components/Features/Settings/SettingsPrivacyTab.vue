@@ -13,6 +13,7 @@ import HomeZoneField from '@/Components/Features/HomeZone/HomeZoneField.vue'
 import { planOf } from '@/composables/usePlanLimits'
 import { useUlovePrivacy } from '@/composables/useUlovePrivacy'
 import { useCallCooldown } from '@/composables/useCallCooldown'
+import { useVideoCallsEnabled } from '@/composables/useVideoCallsEnabled'
 defineProps<{ user: any; invisible: any; hidden?: any; blur: any; photoPrivacy?: any; flowPrivacy?: any; homeRadius?: any }>()
 const emit = defineEmits<{ (e: 'profile'): void }>()
 
@@ -23,6 +24,7 @@ const privacyTabOptions = [
 ] as const
 const ulove = useUlovePrivacy()
 const calls = useCallCooldown()
+const videoCalls = useVideoCallsEnabled()
 </script>
 <template>
   <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }">
@@ -102,6 +104,19 @@ const calls = useCallCooldown()
             </div>
             <div v-if="calls.loading.value" class="text-xs text-stone-400 mt-2">Сохраняем…</div>
             <Message v-if="calls.error.value" severity="error" :closable="false" class="!mt-3 !rounded-2xl !text-xs">{{ calls.error.value }}</Message>
+          </template>
+        </Card>
+        <Card class="!border-stone-200 !rounded-3xl !shadow-none" :class="videoCalls.enabled.value ? '!bg-emerald-50 !border-emerald-200 dark:!bg-emerald-950/30 dark:!border-emerald-900' : ''" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
+          <template #content>
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="text-sm font-semibold dark:text-white">Звонки · принимать видеозвонки</div>
+                <p class="text-xs text-stone-500 mt-1 leading-relaxed">Выключено — тебе не дозвонится никто, даже друзья и мэтчи. Сам звонить сможешь как обычно.</p>
+              </div>
+              <ToggleSwitch :modelValue="videoCalls.enabled.value" :disabled="videoCalls.loading.value" class="shrink-0" @update:modelValue="(next:boolean)=>videoCalls.toggle(next)" />
+            </div>
+            <div v-if="videoCalls.loading.value" class="text-xs text-stone-400 mt-2">Сохраняем…</div>
+            <Message v-if="videoCalls.error.value" severity="error" :closable="false" class="!mt-3 !rounded-2xl !text-xs">{{ videoCalls.error.value }}</Message>
           </template>
         </Card>
         <Card v-if="photoPrivacy" class="!border-stone-200 !rounded-3xl !shadow-none" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">

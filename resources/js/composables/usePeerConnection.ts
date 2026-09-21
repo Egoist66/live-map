@@ -4,8 +4,11 @@ import { busOn } from '@/services/realtime-bus'
 import { pokeRealtime } from '@/composables/useRealtimePoller'
 
 /**
- * ICE-серверы: свой TURN из env, иначе публичный STUN.
- * Без TURN ~треть звонков за NAT не соединится.
+ * ICE-серверы: свой TURN из env, иначе публичные STUN.
+ * Без TURN ~треть звонков за NAT не соединится — для 100% нужен
+ * свой coturn (VITE_TURN_URLS/USERNAME/CREDENTIAL в .env).
+ *
+ * @returns список ICE-серверов для RTCPeerConnection
  */
 function iceServers(): RTCIceServer[] {
   const urls = (import.meta.env.VITE_TURN_URLS as string | undefined) || ''
@@ -15,7 +18,11 @@ function iceServers(): RTCIceServer[] {
     const parsed = urls.split(',').map((u) => u.trim()).filter(Boolean)
     return [{ urls: parsed, username, credential }]
   }
-  return [{ urls: ['stun:stun.l.google.com:19302'] }]
+  return [
+    { urls: ['stun:stun.l.google.com:19302'] },
+    { urls: ['stun:stun1.l.google.com:19302'] },
+    { urls: ['stun:stun.cloudflare.com:3478'] },
+  ]
 }
 
 /**
@@ -25,6 +32,13 @@ function iceServers(): RTCIceServer[] {
  * невозможен: callee только отвечает. Сигналы шлём через REST
  * (сервер дублирует их в broadcast + таблицу для polling),
  * принимаем через шину user:video.signal в обоих режимах.
+ *
+ * Защита от дублей (сокет + опрос приносят одно и то же):
+ * - offer/answer дедупятся по id строки;
+ * - повторный offer в неверном signalingState молча пропускается
+ *   (раньше он ронял setRemoteDescription → «Сбой соединения»);
+ * - ICE-кандидаты до установки remote description копятся в очереди
+ *   (раньше терялись → чёрный экран без звука за NAT).
  *
  * @example
  * const peer = usePeerConnection()
@@ -43,6 +57,12 @@ export function usePeerConnection() {
   let offerStarted = false
   /** Id уже разобранных offer/answer: опрос добивки может продублировать сокет. */
   const seenRemoteIds = new Set<number>()
+  /** ICE-кандидаты, пришедшие до setRemoteDescription — жмут очередь. */
+  let pendingIce: RTCIceCandidateInit[] = []
+  /** Сколько авто-рестартов уже сделано на этом соединении. */
+  let autoRestarts = 0
+  /** Таймер перевода disconnected → failed (сеть может сама отойти). */
+  let disconnectTimer: ReturnType<typeof setTimeout> | null = null
 
   /**
    * Создать соединение и подписаться на сигналы звонка.
@@ -57,6 +77,8 @@ export function usePeerConnection() {
     boundCallId = callId
     isCaller = caller
     offerStarted = false
+    autoRestarts = 0
+    pendingIce = []
     seenRemoteIds.clear()
     signalingError.value = null
 
@@ -67,10 +89,27 @@ export function usePeerConnection() {
     const remote = new MediaStream()
     remoteStream.value = remote
 
-    local.getTracks().forEach((track) => next.addTrack(track, local))
+    const localTracks = local.getTracks()
+    for (const track of localTracks) {
+      next.addTrack(track, local)
+    }
 
     next.ontrack = (e) => {
-      e.streams[0]?.getTracks().forEach((track) => remote.addTrack(track))
+      const incoming = e.track ?? null
+      if (incoming) {
+        const known = remote.getTrackById(incoming.id)
+        if (!known) {
+          remote.addTrack(incoming)
+        }
+      } else {
+        const fallbackTracks = e.streams[0]?.getTracks() ?? []
+        for (const track of fallbackTracks) {
+          const known = remote.getTrackById(track.id)
+          if (!known) {
+            remote.addTrack(track)
+          }
+        }
+      }
       onRemote(remote)
     }
 
@@ -82,8 +121,26 @@ export function usePeerConnection() {
 
     next.onconnectionstatechange = () => {
       connectionState.value = next.connectionState
-      if (next.connectionState === 'failed') {
-        signalingError.value = 'Соединение не установилось — попробуй «Дальше»'
+      const state = next.connectionState
+      if (state === 'connected') {
+        clearDisconnectTimer()
+        signalingError.value = null
+        return
+      }
+      if (state === 'connecting') {
+        return
+      }
+      if (state === 'disconnected') {
+        armDisconnectTimer()
+        return
+      }
+      if (state === 'failed') {
+        clearDisconnectTimer()
+        void handleFailed()
+        return
+      }
+      if (state === 'closed') {
+        clearDisconnectTimer()
       }
     }
 
@@ -91,6 +148,49 @@ export function usePeerConnection() {
 
     // Offer шлём только по accepted: callee к этому моменту уже
     // принял и поднял peer, гонки offer-до-accept нет.
+  }
+
+  /**
+   * Отложенный перевод долгого disconnected в failed-логику.
+   * Кратковременные просадки сети (переход между Wi-Fi/LTE) сами
+   * возвращаются в connected — не пугаем пользователя раньше времени.
+   */
+  function armDisconnectTimer(): void {
+    clearDisconnectTimer()
+    disconnectTimer = setTimeout(() => {
+      disconnectTimer = null
+      if (pc && pc.connectionState === 'disconnected' && boundCallId != null) {
+        void handleFailed()
+      }
+    }, 8000)
+  }
+
+  /** Снять таймер disconnected. */
+  function clearDisconnectTimer(): void {
+    if (disconnectTimer) {
+      clearTimeout(disconnectTimer)
+    }
+    disconnectTimer = null
+  }
+
+  /**
+   * Реакция на failed: caller один раз перезапускает ICE сам,
+   * callee ждёт новый offer (кнопка «Обновить» — только у caller).
+   */
+  async function handleFailed(): Promise<void> {
+    if (!pc || boundCallId == null) {
+      return
+    }
+    if (isCaller && autoRestarts < 1) {
+      autoRestarts += 1
+      signalingError.value = null
+      offerStarted = false
+      await startOffer(true)
+      return
+    }
+    signalingError.value = isCaller
+      ? 'Соединение не установилось — попробуй «Обновить»'
+      : 'Соединение не установилось — ждём переподключения собеседника'
   }
 
   /**
@@ -106,6 +206,7 @@ export function usePeerConnection() {
       await pc.setLocalDescription(offer)
       await postSignal('offer', { type: offer.type, sdp: offer.sdp })
     } catch {
+      offerStarted = false
       signalingError.value = 'Не удалось начать звонок'
     }
   }
@@ -122,11 +223,30 @@ export function usePeerConnection() {
   }
 
   /**
+   * Перенегоциация после addTrack (шаринг экрана как новый m-line).
+   * replaceTrack её не требует, этот путь — только фолбэк.
+   *
+   * @returns true если offer ушёл
+   */
+  async function renegotiate(): Promise<boolean> {
+    if (!pc || boundCallId == null || !isCaller) {
+      return false
+    }
+    if (pc.signalingState !== 'stable') {
+      return false
+    }
+    offerStarted = false
+    await startOffer(false)
+    return offerStarted
+  }
+
+  /**
    * Разобрать входящий signaling-фрейм своего звонка.
    *
    * Дедуп offer/answer по id: опрос добивки при мёртвом сокете может
    * принести то, что уже пришло по сокету — повторный setRemoteDescription
    * уронил бы соединение, поэтому дубли молча пропускаем.
+   * Ролевые гарды: caller игнорирует чужие offer, callee — чужие answer.
    *
    * @param e событие user:video.signal (формат шины)
    */
@@ -143,26 +263,55 @@ export function usePeerConnection() {
         await startOffer()
         return
       }
-      if (kind === 'offer' && !isCaller) {
+      if (kind === 'offer') {
+        if (isCaller) return
+        if (pc.signalingState !== 'stable' && pc.signalingState !== 'have-local-offer') {
+          return
+        }
         await pc.setRemoteDescription(new RTCSessionDescription(e.payload))
+        await flushPendingIce()
         const answer = await pc.createAnswer()
         await pc.setLocalDescription(answer)
         await postSignal('answer', { type: answer.type, sdp: answer.sdp })
         return
       }
-      if (kind === 'answer' && isCaller) {
-        if (pc.signalingState !== 'stable') {
-          await pc.setRemoteDescription(new RTCSessionDescription(e.payload))
+      if (kind === 'answer') {
+        if (!isCaller) return
+        if (pc.signalingState !== 'have-local-offer') {
+          return
         }
+        await pc.setRemoteDescription(new RTCSessionDescription(e.payload))
+        await flushPendingIce()
         return
       }
       if (kind === 'ice' && e.payload) {
+        if (!pc.remoteDescription) {
+          pendingIce.push(e.payload as RTCIceCandidateInit)
+          return
+        }
         try {
           await pc.addIceCandidate(new RTCIceCandidate(e.payload))
         } catch {}
       }
     } catch {
       signalingError.value = 'Сбой соединения — попробуй переподключиться'
+    }
+  }
+
+  /**
+   * Слить накопленные ICE-кандидаты после установки remote description.
+   * Кандидаты, пришедшие раньше offer/answer, иначе терялись навсегда.
+   */
+  async function flushPendingIce(): Promise<void> {
+    if (!pc) {
+      return
+    }
+    const queued = pendingIce
+    pendingIce = []
+    for (const init of queued) {
+      try {
+        await pc.addIceCandidate(new RTCIceCandidate(init))
+      } catch {}
     }
   }
 
@@ -216,9 +365,23 @@ export function usePeerConnection() {
   }
 
   /**
+   * Есть ли исходящий видеосендер (нужен ли offer после addTrack).
+   *
+   * @returns true когда видео уже negotiated и хватит replaceTrack
+   */
+  function hasVideoSender(): boolean {
+    try {
+      return !!pc?.getSenders().some((s) => s.track?.kind === 'video')
+    } catch {
+      return false
+    }
+  }
+
+  /**
    * Закрыть соединение и снять подписку.
    */
   function close(): void {
+    clearDisconnectTimer()
     try {
       offBus?.()
     } catch {}
@@ -228,9 +391,10 @@ export function usePeerConnection() {
     } catch {}
     pc = null
     boundCallId = null
+    pendingIce = []
     remoteStream.value = null
     connectionState.value = 'idle'
   }
 
-  return { remoteStream, connectionState, signalingError, bind, startOffer, retry, replaceVideoTrack, close, currentId }
+  return { remoteStream, connectionState, signalingError, bind, startOffer, retry, renegotiate, hasVideoSender, replaceVideoTrack, close, currentId }
 }

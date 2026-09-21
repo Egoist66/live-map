@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useVideoSession } from '@/composables/useVideoSession'
 import { useVideoCallChat } from '@/composables/useVideoCallChat'
+import { useVideoFullscreen } from '@/composables/useVideoFullscreen'
 import { reactionsApi } from '@/services/reactions.api'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
@@ -15,10 +16,18 @@ import InputText from 'primevue/inputtext'
  */
 
 const v = useVideoSession()
+const fs = useVideoFullscreen()
 const callChat = useVideoCallChat(() => v.store.call?.id ?? null)
 const chatOpen = ref(false)
 const chatText = ref('')
-const stageRef = ref<HTMLDivElement | null>(null)
+
+/**
+ * Стабильные ref-колбэки (не инлайн-стрелки): инлайн создавал новую
+ * функцию каждый ре-рендер (тикер секунд, чат) — Vue перецеплял
+ * srcObject и собственное превью мерцало. Эти ссылки константны.
+ */
+const setLocalEl = (el: unknown): void => v.setLocalEl(el)
+const setRemoteEl = (el: unknown): void => v.setRemoteEl(el)
 
 watch(
   () => v.store.status,
@@ -106,25 +115,9 @@ async function goPrivate(): Promise<void> {
   await v.createPrivateChat()
 }
 
-/**
- * Развернуть сцену звонка во весь экран и обратно.
- * На iOS requestFullscreen для div нет — падаем назад
- * на нативный fullscreen самого <video> (webkitEnterFullscreen).
- */
-async function toggleFullscreen(): Promise<void> {
-  try {
-    if (document.fullscreenElement) {
-      await document.exitFullscreen()
-      return
-    }
-    await stageRef.value?.requestFullscreen()
-  } catch {
-    try {
-      const remote = v.remoteRef.value as HTMLVideoElement | null
-      const anyRemote = remote as (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null
-      anyRemote?.webkitEnterFullscreen?.()
-    } catch {}
-  }
+/** Полный экран сцены через хук (натив → iOS → CSS-фолбэк). */
+function toggleFullscreen(): void {
+  void fs.toggleFullscreen(() => v.remoteRef.value)
 }
 
 /**
@@ -188,17 +181,7 @@ function onClose(): void {
       </div>
 
       <!-- Вход в рулетку / ошибка прямого звонка -->
-      <div v-if="v.store.status === 'idle'" class="relative p-5 sm:p-6 text-center">
-        <Button
-          icon="pi pi-times"
-          rounded
-          text
-          severity="secondary"
-          aria-label="Закрыть"
-          title="Закрыть"
-          class="!absolute !top-3 !right-3 !w-9 !h-9 !p-0"
-          @click="v.closeOverlay()"
-        />
+      <div v-if="v.store.status === 'idle'" class="p-5 sm:p-6 text-center">
         <template v-if="v.store.entryContext === 'direct'">
           <div class="w-16 h-16 mx-auto rounded-2xl bg-stone-200 dark:bg-zinc-800 grid place-items-center text-stone-500 dark:text-zinc-300">
             <i class="pi pi-phone text-2xl" />
@@ -235,7 +218,7 @@ function onClose(): void {
       <div v-else-if="v.store.status === 'searching'" class="p-4 sm:p-5">
         <div class="relative rounded-2xl overflow-hidden bg-zinc-900 aspect-video lg:aspect-[21/9]">
           <video
-            :ref="(el) => v.setLocalEl(el)"
+            :ref="setLocalEl"
             autoplay
             playsinline
             muted
@@ -286,10 +269,18 @@ function onClose(): void {
         <template v-if="isRouletteRoom">
           <div class="grid gap-3 lg:grid-cols-[1fr_320px]">
             <div>
-              <div ref="stageRef" class="relative rounded-2xl overflow-hidden bg-zinc-900 aspect-video lg:aspect-auto lg:h-[46dvh] lg:min-h-[320px]">
-                <video :ref="(el) => v.setRemoteEl(el)" autoplay playsinline class="absolute inset-0 w-full h-full object-cover" />
+              <div
+                :ref="fs.setStageEl"
+                :class="[
+                  'overflow-hidden bg-zinc-900',
+                  fs.pseudoFullscreen.value
+                    ? 'fixed inset-0 z-[9999]'
+                    : 'relative rounded-2xl aspect-video lg:aspect-auto lg:h-[46dvh] lg:min-h-[320px]',
+                ]"
+              >
+                <video :ref="setRemoteEl" autoplay playsinline class="absolute inset-0 w-full h-full object-cover" />
                 <video
-                  :ref="(el) => v.setLocalEl(el)"
+                  :ref="setLocalEl"
                   autoplay
                   playsinline
                   muted
@@ -299,6 +290,10 @@ function onClose(): void {
                   <Chip :label="peerName" class="!rounded-full !bg-black/50 !text-white !border-0 !text-xs !max-w-full [&_.p-chip-label]:truncate" />
                   <Chip v-if="v.peer.connectionState.value !== 'connected' && !v.peer.signalingError.value" label="Соединение…" icon="pi pi-spin pi-spinner" class="!rounded-full !bg-black/50 !text-amber-300 !border-0 !text-xs" />
                 </div>
+              </div>
+              <div v-if="v.remoteAudioBlocked.value" class="mt-2 rounded-2xl bg-sky-500/10 border border-sky-500/30 px-3 py-2 text-xs text-sky-700 dark:text-sky-300 flex items-center gap-2 flex-wrap">
+                <span class="flex-1 min-w-[180px]">Браузер заблокировал звук — нажми, чтобы услышать собеседника</span>
+                <Button label="Включить звук" icon="pi pi-volume-up" rounded size="small" @click="v.unlockRemoteAudio()" />
               </div>
               <div v-if="v.peer.signalingError.value" class="mt-2 rounded-2xl bg-amber-500/10 border border-amber-500/30 px-3 py-2 text-xs text-amber-700 dark:text-amber-300 flex items-center gap-2 flex-wrap">
                 <span class="flex-1 min-w-[180px]">{{ v.peer.signalingError.value }}</span>
@@ -372,10 +367,16 @@ function onClose(): void {
           </div>
         </template>
         <template v-else>
-          <div class="relative rounded-2xl overflow-hidden bg-zinc-900 aspect-video">
-            <video :ref="(el) => v.setRemoteEl(el)" autoplay playsinline class="absolute inset-0 w-full h-full object-cover" />
+          <div
+            :ref="fs.setStageEl"
+            :class="[
+              'overflow-hidden bg-zinc-900',
+              fs.pseudoFullscreen.value ? 'fixed inset-0 z-[9999]' : 'relative rounded-2xl aspect-video',
+            ]"
+          >
+            <video :ref="setRemoteEl" autoplay playsinline class="absolute inset-0 w-full h-full object-cover" />
             <video
-              :ref="(el) => v.setLocalEl(el)"
+              :ref="setLocalEl"
               autoplay
               playsinline
               muted
@@ -385,6 +386,10 @@ function onClose(): void {
               <Chip :label="peerName" class="!rounded-full !bg-black/50 !text-white !border-0 !text-xs !max-w-full [&_.p-chip-label]:truncate" />
               <Chip v-if="v.peer.connectionState.value !== 'connected' && !v.peer.signalingError.value" label="Соединение…" icon="pi pi-spin pi-spinner" class="!rounded-full !bg-black/50 !text-amber-300 !border-0 !text-xs" />
             </div>
+          </div>
+          <div v-if="v.remoteAudioBlocked.value" class="mt-2 rounded-2xl bg-sky-500/10 border border-sky-500/30 px-3 py-2 text-xs text-sky-700 dark:text-sky-300 flex items-center gap-2 flex-wrap">
+            <span class="flex-1 min-w-[180px]">Браузер заблокировал звук — нажми, чтобы услышать собеседника</span>
+            <Button label="Включить звук" icon="pi pi-volume-up" rounded size="small" @click="v.unlockRemoteAudio()" />
           </div>
           <div v-if="v.peer.signalingError.value" class="mt-2 rounded-2xl bg-amber-500/10 border border-amber-500/30 px-3 py-2 text-xs text-amber-700 dark:text-amber-300 flex items-center gap-2 flex-wrap">
             <span class="flex-1 min-w-[180px]">{{ v.peer.signalingError.value }}</span>
