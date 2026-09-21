@@ -1,13 +1,24 @@
 import { ref, computed, watch } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import { adminApi } from '@/services/admin.api'
+import { useStaffRole } from '@/composables/useStaffRole'
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null
 
+/**
+ * Поиск и действия над пользователями в панели модерации.
+ *
+ * Модераторы ищут, скрывают и удаляют только обычных
+ * пользователей; админов им бэкенд не отдаёт в поиске,
+ * а мутации по админам запрещает (403). Полные проверки —
+ * в `useStaffRole().canManageUser()`.
+ */
 export function useAdminUsers() {
   const page = usePage()
+  const staff = useStaffRole()
   const authUser = computed(() => (page.props.auth as any)?.user)
-  const isAdmin = computed(() => !!authUser.value?.is_admin || authUser.value?.role === 'admin')
+  const isAdmin = staff.isAdmin
+  const isModerator = staff.isModerator
   const selfHidden = ref(!!authUser.value?.is_hidden_from_search)
   const selfLoading = ref(false)
 
@@ -22,7 +33,7 @@ export function useAdminUsers() {
   watch(() => (authUser.value as any)?.is_hidden_from_search, (v) => { selfHidden.value = !!v })
 
   async function toggleSelf(value?: boolean) {
-    if (!isAdmin.value) return
+    if (!isModerator.value) return
     const next = value ?? !selfHidden.value
     selfLoading.value = true
     error.value = null
@@ -45,7 +56,7 @@ export function useAdminUsers() {
   }
 
   async function searchNow(q: string) {
-    if (!isAdmin.value) return
+    if (!isModerator.value) return
     const term = q.trim()
     if (term.length < 2) { results.value = []; searching.value = false; return }
     searching.value = true
@@ -65,6 +76,7 @@ export function useAdminUsers() {
   })
 
   async function toggleUser(user: any, value?: boolean) {
+    if (!staff.canManageUser(user)) return
     const next = value ?? !user.is_hidden_from_search
     togglingId.value = user.id
     error.value = null
@@ -87,12 +99,13 @@ export function useAdminUsers() {
   }
 
   function askDelete(user: any) {
+    if (!staff.canManageUser(user)) return
     confirmDelete.value = user
   }
 
   async function doDelete() {
     const user = confirmDelete.value
-    if (!user) return
+    if (!user || !staff.canManageUser(user)) return
     deletingId.value = user.id
     error.value = null
     try {
@@ -107,5 +120,5 @@ export function useAdminUsers() {
     }
   }
 
-  return { isAdmin, selfHidden, selfLoading, toggleSelf, query, results, searching, error, togglingId, deletingId, confirmDelete, askDelete, doDelete, closeConfirm: () => (confirmDelete.value = null), toggleUser, searchNow }
+  return { isAdmin, isModerator, canManageUser: staff.canManageUser, isAdminAccount: staff.isAdminAccount, selfHidden, selfLoading, toggleSelf, query, results, searching, error, togglingId, deletingId, confirmDelete, askDelete, doDelete, closeConfirm: () => (confirmDelete.value = null), toggleUser, searchNow }
 }

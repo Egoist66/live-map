@@ -35,10 +35,11 @@ export function useAppLayout() {
   usePwaPushAuto()
   const menu = ref()
   const isAdmin = computed(() => !!user.value?.is_admin || user.value?.role === 'admin')
+  const isModerator = computed(() => isAdmin.value || user.value?.role === 'moderator')
   const menuItems = computed(() => [
     { label: user.value?.name || '', sublabel: user.value?.email || '', isHeader: true },
     { separator: true },
-    ...(isAdmin.value ? [{ label: 'Панель модерации', icon: 'pi pi-shield', accent: 'amber', active: route().current('admin'), command: () => router.visit(route('admin')) }] : []),
+    ...(isModerator.value ? [{ label: 'Панель модерации', icon: 'pi pi-shield', accent: 'amber', active: route().current('admin'), command: () => router.visit(route('admin')) }] : []),
     { label: 'Настройки', icon: 'pi pi-cog', accent: 'slate', active: route().current('profile.edit'), command: () => router.visit(settingsHref.value) },
     { label: 'Карта', icon: 'pi pi-map', accent: 'teal', active: route().current('map'), command: () => router.visit(route('map')) },
     { label: 'ULove', icon: 'pi pi-heart', accent: 'red', active: route().current('swipes'), command: () => router.visit(route('swipes')) },
@@ -95,5 +96,5 @@ export function useAppLayout() {
   })
   onBeforeUnmount(() => presence.disconnect())
   router.on('navigate', () => { presence.connect() })
-  return { badge, presence, user, avatarSrc, dashboardHref, settingsHref, bell, pinActivity, adminReports, updates, menu, menuItems, isAdmin, toggleMenu, logout }
+  return { badge, presence, user, avatarSrc, dashboardHref, settingsHref, bell, pinActivity, adminReports, updates, menu, menuItems, isAdmin, isModerator, toggleMenu, logout }
 }

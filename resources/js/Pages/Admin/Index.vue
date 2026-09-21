@@ -37,9 +37,11 @@ import { useAdminLoginAttempts } from '@/composables/useAdminLoginAttempts'
 import { useAppMaintenance } from '@/composables/useAppMaintenance'
 import { useAdminAccess } from '@/composables/useAdminAccess'
 import { useAdminTabs } from '@/composables/useAdminTabs'
+import { useStaffRole } from '@/composables/useStaffRole'
 import { onMounted, watch } from 'vue'
 
-const { tab } = useAdminTabs()
+const staff = useStaffRole()
+const { tab, setTab } = useAdminTabs()
 
 const mon = useAdminMonitoring()
 const admin = useAdminUsers()
@@ -57,15 +59,27 @@ const access = useAdminAccess()
  * Подтянуть данные панели после открытия гейта.
  *
  * До ввода пароля ничего чувствительного не грузим.
+ * Модератору грузим только его табы (Статистика, Модерация,
+ * Справочники, SEO): Управление и Безопасность — лишь админам.
  */
 function loadAll(): void {
   reports.init()
+  void refs.load()
+  void seo.load()
+  if (!staff.isAdmin.value) return
   void appUpdates.load()
   void impLogs.load()
   void logins.load()
   void maintenance.load()
-  void refs.load()
-  void seo.load()
+}
+
+/**
+ * Модератора без полных прав выкидываем с закрытых табов.
+ *
+ * Срабатывает и при прямом заходе по ?tab=manage.
+ */
+function enforceVisibleTab(): void {
+  if (!staff.isAdmin.value && !staff.canViewTab(tab.value)) setTab('stats')
 }
 
 onMounted(() => void access.check())
@@ -76,8 +90,13 @@ watch(
   },
 )
 watch(tab, (v) => {
+  if (!staff.isAdmin.value && !staff.canViewTab(v)) {
+    setTab('stats')
+    return
+  }
   if (v === 'security' && access.unlocked.value) void logins.openTab()
 })
+enforceVisibleTab()
 </script>
 <template>
   <Head title="Панель модерации" />
@@ -114,8 +133,8 @@ watch(tab, (v) => {
         <Tabs v-model:value="tab" class="min-w-0 admin-tabs">
           <TabList class="!bg-transparent" :pt="{ activeBar: { class: '!bg-violet-600' } }">
             <Tab value="stats" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-chart-bar text-xs" /><span class="tab-label">Статистика</span></span></Tab>
-            <Tab value="manage" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-users text-xs" /><span class="tab-label">Управление</span></span></Tab>
-            <Tab value="security" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-shield text-xs" /><span class="tab-label">Безопасность</span><Badge v-if="logins.unseenCount.value" :value="logins.unseenCount.value > 99 ? '99+' : String(logins.unseenCount.value)" severity="danger" /></span></Tab>
+            <Tab v-if="staff.isAdmin.value" value="manage" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-users text-xs" /><span class="tab-label">Управление</span></span></Tab>
+            <Tab v-if="staff.isAdmin.value" value="security" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-shield text-xs" /><span class="tab-label">Безопасность</span><Badge v-if="logins.unseenCount.value" :value="logins.unseenCount.value > 99 ? '99+' : String(logins.unseenCount.value)" severity="danger" /></span></Tab>
             <Tab value="admin" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-cog text-xs" /><span class="tab-label">Модерация</span><Badge v-if="reports.pendingCount.value" :value="reports.pendingCount.value > 99 ? '99+' : String(reports.pendingCount.value)" severity="danger" /></span></Tab>
             <Tab value="refs" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-book text-xs" /><span class="tab-label">Справочники</span></span></Tab>
             <Tab value="seo" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-globe text-xs" /><span class="tab-label">SEO</span></span></Tab>
@@ -130,7 +149,7 @@ watch(tab, (v) => {
                 />
               </div>
             </TabPanel>
-            <TabPanel value="manage">
+            <TabPanel v-if="staff.isAdmin.value" value="manage">
               <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
                 <AdminUsersManager
                   :list="mon.users.value" :meta="mon.usersMeta.value" :page="mon.usersPage.value" :query="mon.usersQuery.value" :filter="mon.usersFilter.value" :sort="mon.usersSort.value" :limit="mon.usersLimit.value" :loading="mon.loadingUsers.value" :acting-id="mon.actingId.value" :admin="admin" :auth-user-id="mon.authUserId.value"
@@ -143,7 +162,7 @@ watch(tab, (v) => {
                 </div>
               </div>
             </TabPanel>
-            <TabPanel value="security">
+            <TabPanel v-if="staff.isAdmin.value" value="security">
               <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
                 <AdminLoginAttempts :attempts="logins" />
                 <AdminImpersonationLogs :logs="impLogs" />

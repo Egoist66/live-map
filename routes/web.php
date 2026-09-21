@@ -13,7 +13,7 @@ Route::get('/', [PageController::class, 'welcome']);
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/profile/{identifier?}', [ProfileController::class, 'dashboard'])->name('dashboard');
     Route::get('/dashboard/{identifier?}', [PageController::class, 'dashboardRedirect'])->where('identifier', '.*');
-    Route::get('/admin', [PageController::class, 'admin'])->middleware('admin')->name('admin');
+    Route::get('/admin', [PageController::class, 'admin'])->middleware('admin:moderator')->name('admin');
 });
 
 Route::get('/faq', [PageController::class, 'faq'])->name('faq');

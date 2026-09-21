@@ -77,7 +77,24 @@ export const useBadgeStore = defineStore('badges', () => {
     scheduleFetch()
   }
 
-  function readIsAdmin(): boolean {
+  /**
+   * Может ли пользователь разбирать жалобы (модератор и выше).
+   *
+   * Админ — тоже модератор, поэтому бейдж pending-жалоб
+   * показываем всей staff-команде, а не только админам.
+   */
+  function readCanModerate(): boolean {
+    try {
+      const u = (usePage().props.auth as any)?.user
+      return !!u?.is_admin || u?.role === 'admin' || u?.role === 'moderator'
+    } catch { return false }
+  }
+
+  /**
+   * Полный админ (новости обновлений ему не показываем —
+   * он их публикует; модератор видит новости как обычный юзер).
+   */
+  function readIsFullAdmin(): boolean {
     try {
       const u = (usePage().props.auth as any)?.user
       return !!u?.is_admin || u?.role === 'admin'
@@ -105,10 +122,10 @@ export const useBadgeStore = defineStore('badges', () => {
     try {
       const w = window as any
       const convsPromise = w.__conversationsInflight ? w.__conversationsInflight : chatApi.conversations().catch(() => [] as any[])
-      const repPromise = readIsAdmin()
+      const repPromise = readCanModerate()
         ? api.get('/api/admin/reports', { params: { status: 'pending', per_page: 1 } }).then((r) => Number(r.data?.pending_count ?? 0)).catch(() => 0)
         : Promise.resolve(0)
-      const updPromise = readIsAdmin()
+      const updPromise = readIsFullAdmin()
         ? Promise.resolve(0)
         : api.get('/api/updates/unread').then((r) => Number(r.data?.count ?? 0)).catch(() => 0)
       const results = await Promise.allSettled([

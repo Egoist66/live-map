@@ -50,9 +50,17 @@ class ReportController extends Controller
         return response()->json($report, 201);
     }
 
+    /**
+     * Список жалоб для таба «Модерация».
+     *
+     * Доступен модераторам и админам (админ — тоже модератор).
+     *
+     * @param Request $request запрос со статусом фильтра
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function index(Request $request)
     {
-        abort_unless($request->user()->isAdmin(), 403);
+        abort_unless($request->user()->canModerate(), 403);
         $status = $request->query('status', 'pending');
         $q = Report::with(['reporter:id,name,avatar_path'])->latest();
         if (in_array($status, ['pending', 'resolved', 'dismissed'], true)) {
@@ -69,9 +77,18 @@ class ReportController extends Controller
         ]);
     }
 
+    /**
+     * Принять или отклонить жалобу.
+     *
+     * Доступен модераторам и админам.
+     *
+     * @param Request $request запрос с новым статусом
+     * @param Report $report жалоба
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function resolve(Request $request, Report $report)
     {
-        abort_unless($request->user()->isAdmin(), 403);
+        abort_unless($request->user()->canModerate(), 403);
         $data = $request->validate(['status' => 'required|in:resolved,dismissed']);
         $report->update([
             'status' => $data['status'],

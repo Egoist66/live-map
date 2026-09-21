@@ -46,6 +46,9 @@ class AdminUserController extends Controller
     /**
      * Обновить план/роль пользователя.
      *
+     * Только полные админы: модератор не должен выдавать роли
+     * (иначе повысит себя до админа) и менять тарифы.
+     *
      * Свою роль менять можно, но снятие admin с себя запрещено,
      * если это последний администратор в системе.
      *
@@ -54,12 +57,14 @@ class AdminUserController extends Controller
      * выглядел бы выданным, а лимиты считались бы по free
      * (действующий тариф — effectivePlan, не сырое поле plan).
      *
-     * @param Request $request
-     * @param User $user
+     * @param Request $request запрос с plan/role
+     * @param User $user целевой пользователь
      * @return \Illuminate\Http\JsonResponse
      */
     public function update(Request $request, User $user)
     {
+        abort_unless($request->user()->isAdmin(), 403, 'Смена роли и тарифа — только для администраторов');
+
         $data = $request->validate([
             'plan' => 'nullable|in:free,pro,business',
             'plan_expires_at' => 'nullable|date|after:now',
@@ -126,12 +131,25 @@ class AdminUserController extends Controller
         return \Carbon\Carbon::now()->addDays(30);
     }
 
+    /**
+     * Поиск пользователей для таба «Модерация».
+     *
+     * Модераторам админов не показываем вообще: по отношению
+     * к админу у модератора нет никаких действий — ни скрыть,
+     * ни удалить, вообще ничего.
+     *
+     * @param Request $request запрос с q
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function search(Request $request)
     {
         $q = trim($request->input('q', ''));
         abort_if(strlen($q) < 2, 422, 'Минимум 2 символа');
-        $users = User::where(fn($qq) => $qq->where('name', 'like', "%$q%")->orWhere('email', 'like', "%$q%"))
-            ->select('id', 'name', 'email', 'avatar_path', 'role', 'is_admin', 'is_hidden_from_search', 'plan', 'plan_expires_at')
+        $users = User::where(fn($qq) => $qq->where('name', 'like', "%$q%")->orWhere('email', 'like', "%$q%"));
+        if (! $request->user()->isAdmin()) {
+            $users->where('is_admin', false)->where('role', '!=', 'admin');
+        }
+        $users = $users->select('id', 'name', 'email', 'avatar_path', 'role', 'is_admin', 'is_hidden_from_search', 'plan', 'plan_expires_at')
             ->limit(20)->get()
             ->map(fn($u) => [
                 'id' => $u->id,
@@ -149,8 +167,20 @@ class AdminUserController extends Controller
         return response()->json($users);
     }
 
+    /**
+     * Скрыть пользователя из поиска или вернуть обратно.
+     *
+     * Модератору запрещено трогать админов: скрытие чужого
+     * админ-аккаунта доступно только полному администратору.
+     *
+     * @param Request $request запрос с флагом is_hidden_from_search
+     * @param User $user целевой пользователь
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function updateVisibility(Request $request, User $user)
     {
+        abort_if($user->isAdmin() && ! $request->user()->isAdmin(), 403, 'Модератор не может скрывать администратора');
+
         $data = $request->validate(['is_hidden_from_search' => 'required|boolean']);
         $user->forceFill(['is_hidden_from_search' => $data['is_hidden_from_search']])->save();
         return response()->json([
@@ -177,10 +207,20 @@ class AdminUserController extends Controller
         return response()->json(['id' => $user->id, 'banned_at' => null, 'banned_reason' => null]);
     }
 
+    /**
+     * Удалить аккаунт пользователя целиком.
+     *
+     * Модератор может удалять только обычных пользователей:
+     * удаление админа — только полным администратором.
+     *
+     * @param Request $request текущий запрос
+     * @param User $user целевой пользователь
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function destroy(Request $request, User $user)
     {
         abort_if($user->id === $request->user()->id, 422, 'Нельзя удалить себя здесь — используйте удаление в Безопасности');
-        abort_if($user->isAdmin() && !$request->user()->is_admin, 403, 'Нельзя удалить администратора');
+        abort_if($user->isAdmin() && ! $request->user()->isAdmin(), 403, 'Модератор не может удалить администратора');
         $user->delete();
         return response()->json(['ok' => true]);
     }

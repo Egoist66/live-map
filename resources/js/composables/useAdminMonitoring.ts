@@ -2,12 +2,14 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
 import { useToast } from 'primevue/usetoast'
 import { adminApi } from '@/services/admin.api'
+import { useStaffRole } from '@/composables/useStaffRole'
 
 export type OnlineLimit = 10 | 20 | 50 | 100
 export type UsersFilter = 'all' | 'online' | 'new' | 'hidden' | 'admins'
 export type UsersSort = 'last_seen' | 'newest' | 'oldest' | 'name'
 
 export function useAdminMonitoring() {
+  const staff = useStaffRole()
   const overview = ref<any | null>(null)
   const loadingOverview = ref(false)
   const points = ref<any[]>([])
@@ -125,6 +127,7 @@ export function useAdminMonitoring() {
   }
 
   async function loadUsers() {
+    if (!staff.isAdmin.value) return
     loadingUsers.value = true
     try {
       const d: any = await adminApi.users({ q: usersQuery.value.trim() || undefined, filter: usersFilter.value, sort: usersSort.value, per_page: usersLimit.value, page: usersPage.value })

@@ -222,34 +222,22 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::post('/pins/{pin}/sos/close', [\App\Http\Controllers\SosController::class, 'close'])->middleware('throttle:social-write');
 });
 
-Route::middleware(['web', 'auth:web,sanctum', 'admin', 'throttle:120,1'])->group(function () {
-    Route::get('/admin/updates', [\App\Http\Controllers\AdminAppUpdateController::class, 'index']);
-    Route::post('/admin/updates', [\App\Http\Controllers\AdminAppUpdateController::class, 'store']);
-    Route::patch('/admin/updates/{appUpdate}', [\App\Http\Controllers\AdminAppUpdateController::class, 'update']);
-    Route::delete('/admin/updates/{appUpdate}', [\App\Http\Controllers\AdminAppUpdateController::class, 'destroy']);
-    Route::get('/admin/monitoring/overview', [\App\Http\Controllers\AdminMonitoringController::class, 'overview']);
-    Route::get('/admin/monitoring/chart', [\App\Http\Controllers\AdminMonitoringController::class, 'chart']);
-    Route::get('/admin/monitoring/export', [\App\Http\Controllers\AdminMonitoringController::class, 'export']);
-    Route::get('/admin/monitoring/online', [\App\Http\Controllers\AdminMonitoringController::class, 'online']);
-    Route::get('/admin/monitoring/users', [\App\Http\Controllers\AdminMonitoringController::class, 'users']);
-    Route::get('/admin/users', [AdminUserController::class, 'index']);
-    Route::get('/admin/users/search', [AdminUserController::class, 'search']);
-    Route::post('/admin/users/{user}/ban', [AdminUserController::class, 'ban']);
-    Route::delete('/admin/users/{user}/ban', [AdminUserController::class, 'unban']);
-    Route::get('/admin/login-attempts', [\App\Http\Controllers\AdminLoginAttemptController::class, 'index']);
-    Route::post('/admin/login-attempts/seen', [\App\Http\Controllers\AdminLoginAttemptController::class, 'seen']);
+// Табы модератора: Статистика, Модерация, Справочники, SEO.
+// Админ проходит тоже: canModerate() включает админов.
+// Действия по отношению к админам модератору запрещены
+// внутри контроллеров (AdminUserController).
+Route::middleware(['web', 'auth:web,sanctum', 'admin:moderator', 'throttle:120,1'])->group(function () {
     Route::get('/admin/access/status', [\App\Http\Controllers\AdminAccessController::class, 'status']);
     Route::post('/admin/access/code', [\App\Http\Controllers\AdminAccessController::class, 'code'])->middleware('throttle:30,1,admin-access-code');
     Route::post('/admin/access/verify', [\App\Http\Controllers\AdminAccessController::class, 'verify'])->middleware('throttle:30,1,admin-access-verify');
     Route::post('/admin/access/lock', [\App\Http\Controllers\AdminAccessController::class, 'lock']);
-    Route::get('/admin/maintenance', [\App\Http\Controllers\AdminMaintenanceController::class, 'show']);
-    Route::put('/admin/maintenance', [\App\Http\Controllers\AdminMaintenanceController::class, 'update']);
-    Route::post('/admin/realtime/mode', [\App\Http\Controllers\RealtimeController::class, 'setMode']);
-    Route::patch('/admin/users/{user}', [AdminUserController::class, 'update']);
+    Route::get('/admin/monitoring/overview', [\App\Http\Controllers\AdminMonitoringController::class, 'overview']);
+    Route::get('/admin/monitoring/chart', [\App\Http\Controllers\AdminMonitoringController::class, 'chart']);
+    Route::get('/admin/monitoring/export', [\App\Http\Controllers\AdminMonitoringController::class, 'export']);
+    Route::get('/admin/monitoring/online', [\App\Http\Controllers\AdminMonitoringController::class, 'online']);
+    Route::get('/admin/users/search', [AdminUserController::class, 'search']);
     Route::patch('/admin/users/{user}/visibility', [AdminUserController::class, 'updateVisibility']);
     Route::delete('/admin/users/{user}', [AdminUserController::class, 'destroy']);
-    Route::post('/admin/users/{user}/impersonate', [\App\Http\Controllers\AdminImpersonationController::class, 'impersonate']);
-    Route::get('/admin/impersonations', [\App\Http\Controllers\AdminImpersonationController::class, 'index']);
     Route::get('/admin/seo', [\App\Http\Controllers\AdminSeoController::class, 'show']);
     Route::put('/admin/seo/global', [\App\Http\Controllers\AdminSeoController::class, 'updateGlobal']);
     Route::put('/admin/seo/integrations', [\App\Http\Controllers\AdminSeoController::class, 'updateIntegrations']);
@@ -262,4 +250,25 @@ Route::middleware(['web', 'auth:web,sanctum', 'admin', 'throttle:120,1'])->group
     Route::delete('/admin/reference/{referencePage}', [\App\Http\Controllers\AdminReferencePageController::class, 'destroy']);
     Route::post('/admin/reference/{referencePage}/attachments', [\App\Http\Controllers\AdminReferencePageController::class, 'uploadAttachment']);
     Route::delete('/admin/reference/{referencePage}/attachments/{index}', [\App\Http\Controllers\AdminReferencePageController::class, 'destroyAttachment'])->whereNumber('index');
+});
+
+// Только полные админы: Управление, Безопасность, роли/тарифы,
+// баны, вход в чужой аккаунт, обновления, maintenance, realtime.
+Route::middleware(['web', 'auth:web,sanctum', 'admin', 'throttle:120,1'])->group(function () {
+    Route::get('/admin/updates', [\App\Http\Controllers\AdminAppUpdateController::class, 'index']);
+    Route::post('/admin/updates', [\App\Http\Controllers\AdminAppUpdateController::class, 'store']);
+    Route::patch('/admin/updates/{appUpdate}', [\App\Http\Controllers\AdminAppUpdateController::class, 'update']);
+    Route::delete('/admin/updates/{appUpdate}', [\App\Http\Controllers\AdminAppUpdateController::class, 'destroy']);
+    Route::get('/admin/monitoring/users', [\App\Http\Controllers\AdminMonitoringController::class, 'users']);
+    Route::get('/admin/users', [AdminUserController::class, 'index']);
+    Route::post('/admin/users/{user}/ban', [AdminUserController::class, 'ban']);
+    Route::delete('/admin/users/{user}/ban', [AdminUserController::class, 'unban']);
+    Route::get('/admin/login-attempts', [\App\Http\Controllers\AdminLoginAttemptController::class, 'index']);
+    Route::post('/admin/login-attempts/seen', [\App\Http\Controllers\AdminLoginAttemptController::class, 'seen']);
+    Route::get('/admin/maintenance', [\App\Http\Controllers\AdminMaintenanceController::class, 'show']);
+    Route::put('/admin/maintenance', [\App\Http\Controllers\AdminMaintenanceController::class, 'update']);
+    Route::post('/admin/realtime/mode', [\App\Http\Controllers\RealtimeController::class, 'setMode']);
+    Route::patch('/admin/users/{user}', [AdminUserController::class, 'update']);
+    Route::post('/admin/users/{user}/impersonate', [\App\Http\Controllers\AdminImpersonationController::class, 'impersonate']);
+    Route::get('/admin/impersonations', [\App\Http\Controllers\AdminImpersonationController::class, 'index']);
 });

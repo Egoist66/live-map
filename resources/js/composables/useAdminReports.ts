@@ -18,10 +18,16 @@ let busBound = false
 let inited = false
 let toast: any = null
 
-function readIsAdmin(): boolean {
+/**
+ * Может ли текущий пользователь работать с жалобами.
+ *
+ * Модераторы разбирают жалобы наравне с админами
+ * (админ — тоже модератор).
+ */
+function readCanModerate(): boolean {
   try {
     const u = (usePage().props.auth as any)?.user
-    return !!u?.is_admin || u?.role === 'admin'
+    return !!u?.is_admin || u?.role === 'admin' || u?.role === 'moderator'
   } catch { return false }
 }
 
@@ -61,7 +67,7 @@ function subscribe() {
 }
 
 async function refresh() {
-  if (!readIsAdmin()) return
+  if (!readCanModerate()) return
   loading.value = true
   error.value = null
   try {
@@ -100,14 +106,20 @@ function setFilter(f: ReportFilter) {
 }
 
 function goReports() {
-  router.visit('/settings?tab=admin')
+  try {
+    const u = (usePage().props.auth as any)?.user
+    const fullAdmin = !!u?.is_admin || u?.role === 'admin'
+    router.visit(fullAdmin ? '/settings?tab=admin' : '/admin?tab=admin')
+  } catch {
+    router.visit('/admin?tab=admin')
+  }
 }
 
 function init() {
   if (inited) return
   inited = true
   try { toast = useToast() } catch { toast = null }
-  if (!readIsAdmin()) return
+  if (!readCanModerate()) return
   void refresh()
   subscribe()
   window.addEventListener('focus', subscribe)

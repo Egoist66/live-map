@@ -14,9 +14,11 @@ import ProgressSpinner from 'primevue/progressspinner'
 import { onMounted } from 'vue'
 import { avatarSrcFor } from '@/composables/useAvatar'
 import { useRealtimeMode } from '@/composables/useRealtimeMode'
+import { useStaffRole } from '@/composables/useStaffRole'
 
 defineProps<{ admin: any; reports: any; imp?: any }>()
 
+const staff = useStaffRole()
 const realtime = useRealtimeMode()
 onMounted(() => { realtime.init().catch(() => {}) })
 
@@ -33,7 +35,7 @@ const reportFilters = [
       <h3 class="font-black tracking-tight text-lg dark:text-white">Модерация</h3>
       <p class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Жалобы, скрытие профилей и удаление аккаунтов.</p>
       <div class="mt-5 space-y-4 max-w-xl">
-        <Card class="!border-amber-200 dark:!border-amber-950 !rounded-3xl !shadow-none !bg-white dark:!bg-zinc-900" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
+        <Card v-if="staff.isAdmin.value" class="!border-amber-200 dark:!border-amber-950 !rounded-3xl !shadow-none !bg-white dark:!bg-zinc-900" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
           <template #content>
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
@@ -98,6 +100,7 @@ const reportFilters = [
           <template #content>
             <div class="text-sm font-semibold dark:text-white">Скрыть / удалить чужой аккаунт</div>
             <p class="text-xs text-stone-500 dark:text-zinc-400 mt-1">Найди по имени или email (мин. 2 символа). Скрытый пропадает из поиска, профиля и карты у обычных пользователей.</p>
+            <p v-if="!staff.isAdmin.value" class="text-xs text-amber-600 dark:text-amber-400 mt-1">Аккаунты администраторов тебе недоступны — их может трогать только админ.</p>
             <IconField class="mt-3">
               <InputIcon class="pi pi-search" />
               <InputText :modelValue="admin.query.value" @update:modelValue="(v:string|undefined)=>admin.query.value=v ?? ''" placeholder="Имя или email..." fluid size="small" rounded />
@@ -114,9 +117,9 @@ const reportFilters = [
                   </div>
                 </div>
                 <div class="flex gap-1.5 shrink-0 items-center">
-                  <Button @click="admin.toggleUser(u)" :loading="admin.togglingId.value === u.id" :label="u.is_hidden_from_search ? 'Показать' : 'Скрыть'" size="small" rounded :outlined="!u.is_hidden_from_search" class="!text-xs" :severity="u.is_hidden_from_search ? 'success' : 'secondary'" />
-                  <Button v-if="imp" @click="imp.ask(u)" :disabled="!!u.is_admin" icon="pi pi-sign-in" size="small" rounded outlined severity="warn" title="Войти в аккаунт" />
-                  <Button @click="admin.askDelete(u)" :disabled="u.is_admin" icon="pi pi-trash" size="small" rounded outlined severity="danger" title="Удалить вообще" />
+                  <Button @click="admin.toggleUser(u)" :loading="admin.togglingId.value === u.id" :disabled="!admin.canManageUser(u)" :label="u.is_hidden_from_search ? 'Показать' : 'Скрыть'" size="small" rounded :outlined="!u.is_hidden_from_search" class="!text-xs" :severity="u.is_hidden_from_search ? 'success' : 'secondary'" />
+                  <Button v-if="imp && staff.isAdmin.value" @click="imp.ask(u)" :disabled="!!u.is_admin" icon="pi pi-sign-in" size="small" rounded outlined severity="warn" title="Войти в аккаунт" />
+                  <Button @click="admin.askDelete(u)" :disabled="!admin.canManageUser(u)" icon="pi pi-trash" size="small" rounded outlined severity="danger" title="Удалить вообще" />
                 </div>
               </div>
             </div>
