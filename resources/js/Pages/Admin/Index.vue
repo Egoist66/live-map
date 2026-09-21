@@ -36,9 +36,10 @@ import { useAdminImpersonationLogs } from '@/composables/useAdminImpersonationLo
 import { useAdminLoginAttempts } from '@/composables/useAdminLoginAttempts'
 import { useAppMaintenance } from '@/composables/useAppMaintenance'
 import { useAdminAccess } from '@/composables/useAdminAccess'
-import { onMounted, ref, watch } from 'vue'
+import { useAdminTabs } from '@/composables/useAdminTabs'
+import { onMounted, watch } from 'vue'
 
-const tab = ref('stats')
+const { tab } = useAdminTabs()
 
 const mon = useAdminMonitoring()
 const admin = useAdminUsers()

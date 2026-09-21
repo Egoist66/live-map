@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { useAdminTabs, type AdminSeoSection } from '@/composables/useAdminTabs'
 import Card from 'primevue/card'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
@@ -16,9 +16,9 @@ defineProps<{ mgr: any }>()
 
 const origin = typeof window !== 'undefined' ? window.location.origin : ''
 
-const section = ref('general')
+const { seoSection, setSeoSection } = useAdminTabs()
 
-const sectionOptions = [
+const sectionOptions: Array<{ label: string; value: AdminSeoSection; icon: string }> = [
   { label: 'Общее', value: 'general', icon: 'pi pi-globe' },
   { label: 'Страницы', value: 'pages', icon: 'pi pi-file' },
   { label: 'Счётчики', value: 'integrations', icon: 'pi pi-chart-line' },
@@ -54,18 +54,18 @@ function counterClass(ok: boolean) {
           :key="option.value"
           size="small"
           rounded
-          :outlined="section !== option.value"
-          :severity="section === option.value ? undefined : 'secondary'"
+          :outlined="seoSection !== option.value"
+          :severity="seoSection === option.value ? undefined : 'secondary'"
           :icon="option.icon"
           :label="option.label"
-          @click="section = option.value"
+          @click="setSeoSection(option.value)"
         />
       </div>
 
       <div v-if="mgr.loading.value" class="py-8 grid place-items-center"><ProgressSpinner style="width:24px;height:24px" :strokeWidth="6" /></div>
 
       <!-- ===== Общее ===== -->
-      <div v-else-if="section === 'general'" class="mt-4 space-y-3">
+      <div v-else-if="seoSection === 'general'" class="mt-4 space-y-3">
         <div class="rounded-2xl border border-stone-200 dark:border-zinc-700 p-3.5 bg-stone-50 dark:bg-zinc-800/60">
           <div class="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500">Предпросмотр в Google</div>
           <div class="mt-2 text-[#1a0dab] dark:text-[#8ab4f8] text-lg leading-snug break-words">{{ mgr.global.value.default_title || 'Заголовок страницы' }}</div>
@@ -144,7 +144,7 @@ function counterClass(ok: boolean) {
       </div>
 
       <!-- ===== Страницы ===== -->
-      <div v-else-if="section === 'pages'" class="mt-4 space-y-3">
+      <div v-else-if="seoSection === 'pages'" class="mt-4 space-y-3">
         <div class="flex items-center justify-between gap-2 flex-wrap">
           <div class="text-sm font-bold dark:text-white">Переопределения для {{ mgr.pages.value.length }} стр.</div>
           <Button label="Добавить страницу" icon="pi pi-plus" size="small" rounded @click="mgr.openCreatePage()" />
@@ -166,7 +166,7 @@ function counterClass(ok: boolean) {
       </div>
 
       <!-- ===== Счётчики ===== -->
-      <div v-else-if="section === 'integrations'" class="mt-4 space-y-3">
+      <div v-else-if="seoSection === 'integrations'" class="mt-4 space-y-3">
         <Message severity="info" :closable="false" class="!rounded-2xl !text-xs">Достаточно вставить ID — теги Google/Yandex подключатся сами. Верификации попадут в meta-теги автоматически.</Message>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
@@ -206,7 +206,7 @@ function counterClass(ok: boolean) {
       </div>
 
       <!-- ===== Скрипты ===== -->
-      <div v-else-if="section === 'scripts'" class="mt-4 space-y-3">
+      <div v-else-if="seoSection === 'scripts'" class="mt-4 space-y-3">
         <label class="flex items-center justify-between gap-3 rounded-2xl border border-stone-200 dark:border-zinc-700 px-3.5 py-3 cursor-pointer">
           <span class="text-sm font-bold dark:text-white">Включить кастомные скрипты</span>
           <ToggleSwitch :modelValue="mgr.integrations.value.scripts_enabled" @update:modelValue="(v:boolean)=>mgr.integrations.value.scripts_enabled=v" />
@@ -228,7 +228,7 @@ function counterClass(ok: boolean) {
       </div>
 
       <!-- ===== Robots и Sitemap ===== -->
-      <div v-else-if="section === 'crawl'" class="mt-4 space-y-3">
+      <div v-else-if="seoSection === 'crawl'" class="mt-4 space-y-3">
         <div class="flex gap-2 flex-wrap">
           <a href="/robots.txt" target="_blank" rel="noopener"><Button label="robots.txt" icon="pi pi-external-link" size="small" rounded outlined /></a>
           <a href="/sitemap.xml" target="_blank" rel="noopener"><Button label="sitemap.xml" icon="pi pi-external-link" size="small" rounded outlined /></a>

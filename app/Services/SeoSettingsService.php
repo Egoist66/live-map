@@ -378,6 +378,13 @@ class SeoSettingsService
     /**
      * Готовый набор для Inertia shared props (SPA-навигация).
      *
+     * Помимо переопределения текущей страницы (`page`) отдаём и глобальные
+     * настройки (`global`), чтобы фронт (`useSeo`) мог подхватить заданные
+     * в админке title/description/keywords/robots по умолчанию, а не только
+     * захардкоженные в страницах значения. Без этого правки раздела
+     * «SEO → Общее» никак не отражались на сайте: Inertia `<Head>`
+     * перезаписывает серверный `<title>` сразу после гидратации.
+     *
      * @param string $path текущий путь
      * @return array<string, mixed>
      */
@@ -386,10 +393,21 @@ class SeoSettingsService
         $global = self::global();
         $page = self::pageFor($path);
 
+        $globalKeywords = $global['keywords'] ?? [];
+        $globalKeywords = is_array($globalKeywords) ? array_values($globalKeywords) : [];
+
         return [
             'title' => $page['title'] ?? $global['default_title'],
             'description' => $page['description'] ?? $global['default_description'],
             'page' => $page,
+            'global' => [
+                'site_name' => $global['site_name'] ?? null,
+                'title' => $global['default_title'] ?? null,
+                'description' => $global['default_description'] ?? null,
+                'keywords' => $globalKeywords,
+                'robots' => $global['robots_default'] ?? null,
+                'og_image' => $global['og_image'] ?? null,
+            ],
         ];
     }
 

@@ -24,17 +24,28 @@ type SharedSeoPage = {
   enabled?: boolean
 }
 
+type SharedSeoGlobal = {
+  site_name?: string | null
+  title?: string | null
+  description?: string | null
+  keywords?: string[] | null
+  robots?: string | null
+  og_image?: string | null
+}
+
 /**
  * Хук SEO-мета для страницы (Inertia Head).
  *
  * Приоритет значений:
  * 1. Переопределение из панели SEO (админка → SEO → Страницы) — сервер
  *    кладёт его в shared-проп `seo.page` для текущего пути;
- * 2. Значения, захардкоженные в странице (input) — остаются как были,
- *    если админ ничего не задал для этого пути;
- * 3. Приватные страницы (`noindex: true`) всегда отдают `noindex, nofollow`.
+ * 2. Глобальные настройки из панели SEO (админка → SEO → Общее) —
+ *    сервер кладёт их в shared-проп `seo.global`;
+ * 3. Значения, захардкоженные в странице (input) — последний фолбэк,
+ *    если админ ничего не задал;
+ * 4. Приватные страницы (`noindex: true`) всегда отдают `noindex, nofollow`.
  *
- * @param input захардкоженные мета страницы
+ * @param input захардкоженные мета страницы (фолбэк, если админка пуста)
  * @returns title/description/canonical/robots/head для `<Head>`.
  * @example
  * const seo = useSeo({ title: 'FAQ — UPin', description: '…' })
@@ -51,6 +62,15 @@ export function useSeo(input: SeoInput) {
     }
   })
 
+  const sharedGlobal = computed<SharedSeoGlobal | null>(() => {
+    try {
+      const raw = (usePage().props as unknown as { seo?: { global?: SharedSeoGlobal } }).seo
+      return raw?.global ?? null
+    } catch {
+      return null
+    }
+  })
+
   const overrideKeywords = computed<string[] | null>(() => {
     const raw = sharedPage.value?.keywords
     if (!raw) return null
@@ -61,17 +81,23 @@ export function useSeo(input: SeoInput) {
     return parts.length ? parts : null
   })
 
-  const title = computed(() => sharedPage.value?.title || input.title)
-  const description = computed(() => sharedPage.value?.description || input.description)
-  const keywords = computed(() => overrideKeywords.value ?? input.keywords)
+  const globalKeywords = computed<string[] | null>(() => {
+    const list = sharedGlobal.value?.keywords
+    if (!Array.isArray(list) || !list.length) return null
+    return list
+  })
+
+  const title = computed(() => sharedPage.value?.title || sharedGlobal.value?.title || input.title)
+  const description = computed(() => sharedPage.value?.description || sharedGlobal.value?.description || input.description)
+  const keywords = computed(() => overrideKeywords.value ?? globalKeywords.value ?? input.keywords)
   const canonical = computed(
     () => sharedPage.value?.canonical || input.canonical || (typeof window !== 'undefined' ? window.location.href : undefined),
   )
   const robots = computed(() => {
     if (input.noindex) return 'noindex, nofollow'
-    return sharedPage.value?.robots || undefined
+    return sharedPage.value?.robots || sharedGlobal.value?.robots || undefined
   })
-  const image = computed(() => sharedPage.value?.og_image || input.image)
+  const image = computed(() => sharedPage.value?.og_image || sharedGlobal.value?.og_image || input.image)
   const ogTitle = computed(() => sharedPage.value?.og_title || title.value)
   const ogDescription = computed(() => sharedPage.value?.og_description || description.value)
 
