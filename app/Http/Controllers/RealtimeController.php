@@ -57,6 +57,7 @@ class RealtimeController extends Controller
             'since' => 'nullable|integer|min:0',
             'conversation_id' => 'nullable|integer',
             'after_id' => 'nullable|integer|min:0',
+            'video_after_id' => 'nullable|integer|min:0',
             'min_lat' => 'nullable|numeric|between:-90,90',
             'max_lat' => 'nullable|numeric|between:-90,90',
             'min_lng' => 'nullable|numeric|between:-180,180',
@@ -98,7 +99,10 @@ class RealtimeController extends Controller
             'friendships' => $this->freshFriendships($user->id, $window),
             'matches' => $this->freshMatches($user->id, $window),
             'swipe_likes' => $this->freshSwipeLikes($user->id, $window),
+            'video_incoming' => app(\App\Services\VideoService::class)->freshIncoming($user->id, $window),
+            'video_signals' => app(\App\Services\VideoService::class)->freshSignals($user->id, $window, (int) ($data['video_after_id'] ?? 0)),
             'notifications' => $this->freshNotifications($user->id, $window),
+            'wallpapers' => $this->freshWallpapers($convIds, $window),
             'peer' => $openId ? $this->peerState($user, $openId) : null,
             'map' => $this->mapChanges($user->id, $data, $window),
             'receipts' => $this->freshReceipts($user->id, $window),
@@ -176,6 +180,29 @@ class RealtimeController extends Controller
             ->get();
 
         return $rows->map->toArrayPayload()->all();
+    }
+
+    /**
+     * Свежие фоны бесед: смена одним собеседником применяется у всех.
+     *
+     * @param int[] $convIds диалоги
+     * @param Carbon|null $since момент прошлого тика
+     * @return array<int,array{conversation_id:int,wallpaper:array}>
+     */
+    private function freshWallpapers(array $convIds, ?Carbon $since): array
+    {
+        if (empty($convIds) || ! $since) {
+            return [];
+        }
+        return Conversation::whereIn('id', $convIds)
+            ->where('wallpaper_updated_at', '>', $since)
+            ->limit(20)
+            ->get()
+            ->map(fn ($conv) => [
+                'conversation_id' => (int) $conv->id,
+                'wallpaper' => $conv->wallpaperPayload(),
+            ])
+            ->all();
     }
 
     /**

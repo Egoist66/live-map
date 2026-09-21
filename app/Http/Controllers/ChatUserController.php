@@ -93,10 +93,59 @@ class ChatUserController extends Controller
             'avatar_url'=>$u->avatar_url,
             'message_privacy'=>$u->message_privacy,
             'allow_random_messages'=>$u->allow_random_messages,
+            'auto_reply_enabled'=>(bool) $u->auto_reply_enabled,
+            'auto_reply_text'=>$u->auto_reply_text,
             'unread_count'=>$u->unreadMessagesCount(),
             'last_seen_at'=>$u->last_seen_at?->toISOString(),
             'is_invisible'=>$u->isInvisibleActive(),
             'can_use_invisible'=>$u->canUseInvisible(),
+        ]);
+    }
+
+    /**
+     * Текущие настройки автоответа «меня нет онлайн».
+     *
+     * @param Request $request запрос
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function autoReplyShow(Request $request)
+    {
+        $u = $request->user();
+
+        return response()->json([
+            'enabled' => (bool) $u->auto_reply_enabled,
+            'text' => $u->auto_reply_text,
+            'default_text' => \App\Models\User::AUTO_REPLY_DEFAULT,
+            'has_email' => trim((string) $u->email) !== '',
+        ]);
+    }
+
+    /**
+     * Сохранить настройки автоответа.
+     *
+     * @param Request $request запрос с enabled и необязательным text
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function autoReplyUpdate(Request $request)
+    {
+        $data = $request->validate([
+            'enabled' => 'required|boolean',
+            'text' => 'nullable|string|max:500',
+        ]);
+
+        $user = $request->user();
+        $user->auto_reply_enabled = (bool) $data['enabled'];
+
+        $custom = trim((string) ($data['text'] ?? ''));
+
+        $user->auto_reply_text = $custom !== '' ? mb_substr($custom, 0, 500) : null;
+        $user->save();
+
+        return response()->json([
+            'enabled' => (bool) $user->auto_reply_enabled,
+            'text' => $user->auto_reply_text,
+            'default_text' => \App\Models\User::AUTO_REPLY_DEFAULT,
+            'has_email' => trim((string) $user->email) !== '',
         ]);
     }
 }

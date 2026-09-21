@@ -28,6 +28,21 @@ export const chatApi = {
     const { data: res } = await api.patch('/api/chat/privacy', data)
     return res
   },
+  /**
+   * Настройки автоответа «меня нет онлайн».
+   */
+  async getAutoReply() {
+    const { data } = await api.get('/api/chat/auto-reply')
+    return data as { enabled: boolean; text: string | null; default_text: string; has_email: boolean }
+  },
+  /**
+   * Сохранить автоответ: вкл/выкл + свой текст (пусто = дефолтный).
+   * @param payload `{ enabled: boolean; text?: string }`
+   */
+  async updateAutoReply(payload: { enabled: boolean; text?: string | null }) {
+    const { data } = await api.patch('/api/chat/auto-reply', payload)
+    return data as { enabled: boolean; text: string | null; default_text: string; has_email: boolean }
+  },
 
   async friendships(page = 1, perPage = 20) {
     const { data } = await api.get<FriendshipsState & { hidden_limit?: number | null; hidden_count?: number; hidden_unlimited?: boolean; friends_meta?: { current_page: number; last_page: number; has_more: boolean; total: number } }>('/api/friendships', { params: { page, per_page: perPage } })
@@ -168,6 +183,27 @@ export const chatApi = {
   async markDelivered(convId: number) {
     const { data } = await api.post(`/api/conversations/${convId}/delivered`)
     return data
+  },
+  /**
+   * Общий фон беседы: применяется у всех участников сразу.
+   * @param convId id диалога
+   * @param payload пресет/цвет/сброс; картинка — File через multipart
+   */
+  async updateWallpaper(convId: number, payload: { type: 'none' | 'preset' | 'color' | 'image'; preset?: string | null; color?: string | null; image?: File | null }) {
+    if (payload.image instanceof File) {
+      const form = new FormData()
+      form.append('type', 'image')
+      form.append('image', payload.image, payload.image.name)
+      const { data } = await api.post(`/api/conversations/${convId}/wallpaper`, form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      return (data as { wallpaper: unknown }).wallpaper
+    }
+    const body: Record<string, unknown> = { type: payload.type }
+    if (payload.type === 'preset') body.preset = payload.preset
+    if (payload.type === 'color') body.color = payload.color
+    const { data } = await api.patch(`/api/conversations/${convId}/wallpaper`, body)
+    return (data as { wallpaper: unknown }).wallpaper
   },
   /**
    * Шлёт серверный typing-сигнал: бэкенд транслирует его через Reverb

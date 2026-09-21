@@ -1,5 +1,43 @@
 # Dev-лог
 
+## 2026-09-21 — Входящий звонок перекрывался навигацией: teleport диалогов в body
+- 🐞 Баг: модалка входящего тонула под шапкой/нижним меню — «Принять» не нажать. Причина: видеодиалоги живут внутри `PageTransition` (трансформ ломает `position: fixed` маски PrimeVue), ни один Dialog в проекте не использовал `appendTo`.
+- 🔧 `IncomingCallDialog` + `VideoOverlay`: `appendTo="body"` — маска и окно телепортируются в body поверх всего (z маски PrimeVue > z-50 шапки и z-40 нижнего меню).
+- Проверки: `vue-tsc` ✅. Проверить вживую: входящий на втором аккаунте — диалог по центру поверх всего, кнопки жмутся.
+
+## 2026-09-21 — Видео из чата: звонки всем собеседникам + честная модалка ошибки
+- 🐞 Баг: кнопка видео в шапке чата отвечала 403 «Видео — для мэтчей и друзей», хотя диалог есть. Причина: чат ≠ дружба (мэтч-чаты и переписки без accepted-дружбы резались правилом).
+- 🔧 Правило смягчено: звонок разрешён при мэтче, дружбе ИЛИ общем direct-диалоге (`Conversation::findDirect`); мэтч — режим `match`, остальное — `direct`. Посторонним без всего — 403 «Сначала начни чат или добавь в друзья».
+- 🔧 Модалка больше не врёт: контекст `entryContext` (`roulette|direct`) — ошибка прямого звонка показывает «Не получилось позвонить» + [Понятно], а не вход в рулетку.
+- Проверки: `php -l` ✅, `vue-tsc` ✅, smoke (чат без дружбы→`direct` ✅, ghost→403 ✅, тестовая дружба 2↔7 восстановлена ✅, звонки/сигналы вычищены ✅).
+
+## 2026-09-21 — Видео до идеала: оба транспорта, ротация рулетки, адаптивные модалки
+- 🔧 Websocket: без изменений (broadcast + user-канал с ретраем) — основной путь.
+- 🔧 Polling: `postSignal` пинает поллер в burst (ответ ~1с вместо ~2.5с); хост добивает `ringing-out` опросом `show()` + пинает offer при `active` (эмуляция потерянного `accepted`); `pending`-полл теперь и в `searching` (был только idle — искавший с мёртвым сокетом висел вечно).
+- 🔧 Рулетка: `recentlyPaired` (минута) — «Дальше» и авто-rejoin не сводят ту же пару; конец по инициативе пира в active — авто-поиск нового с инфо-строкой; отказ/таймаут — инфо без автопоиска. Новый `store.info` (скайбокс) отдельно от `error`.
+- 🔧 Peer: `retry()` — ручной iceRestart-offer для caller при `failed`; callee чинится только «Дальше»/отбоем (подсказка в UI).
+- 🔧 Модалки: тёмная шапка/фон через `pt` (была белая шапка на тёмном теле), `max-h + scroll` контента, адаптивные паддинги/PiP/чипы, явная кнопка «Закрыть» при ошибке, кнопка «Обновить» соединение при failed (caller).
+- Проверки: `php -l` ✅, `vue-tsc` ✅, smoke ротации (пара→re-join без мэтча ✅, данные вычищены ✅). Тест вживую: оба обновить вкладку, звонок друг→друг и рулетка на двух аккаунтах.
+
+## 2026-09-21 — Видео не долетало до второй стороны: добивка + ретраи + eviction SW
+- 🔍 Факты: звонки в БД создавались (`direct`, потом `ended` по таймеру звонящего) — POST уходил, а входящий на втором аккаунте не всплывал. Кандидаты: протухший прод-SW отдавал старый бандл без видеокода (видны `bad-precaching-response .../build/*.js 404`), user-канал мог не подписаться если Echo поднялся позже mount, плюс краш `IncomingCallDialog` (TDZ, уже чинён).
+- 🔧 Бэк: `GET /api/video/pending/incoming` (`VideoService::pendingIncoming` — ringing за последние 40с) + роут; `migrate` нечего (таблицы уже есть).
+- 🔧 Фронт: `VideoGlobalHost` добирает входящие поллингом раз в 5с пока сокет мёртв (при живом сокете полл не ходит, дедуп по callId в `handleIncoming`); `ensureUserChannel` — ретрай подписки раз в 2с пока нет Echo/uid; `pwa.service` в DEV однократно выносит старый SW и чистит `pwa-*/workbox-*` кэши.
+- Проверки: `php -l` ✅, `route:list` (10 роутов) ✅, `vue-tsc` ✅, tinker-smoke (pending видит звонок ✅, после hangup пусто ✅, тестовые данные вычищены ✅). Для проверки вживую обеим сторонам обновить вкладку.
+
+## 2026-09-21 — Видео из чатов для друзей + глобальный хост звонков
+- 🔧 Бэк: `VideoService::startMatchCall` пускает не только мэтч, но и accepted-дружбу (`Friendship::areFriends`); без мэтча звонок идёт в новом режиме `VideoCall::MODE_DIRECT` (`match_id=null`), с мэтчем — как раньше `match`. Посторонним — 403 «Видео — для мэтчей и друзей». Блоки/занятость/18+ без изменений.
+- 🔧 Фронт: новый `useChatVideoCall(activeConv)` (peer из личного диалога, районные чаты без кнопки), кнопка `pi-video` в шапке `ChatWindow` + `videoCall`-эмит, проводка `@video-call` в `Chat/Index.vue`; типы `VideoCallPayload/VideoIncomingEvent` расширены `mode: direct` (оверлей для direct — как мэтч, без «Дальше»); ошибка допуска открывает оверлей с текстом вместо тишины.
+- 🔧 Глобализация: новый `VideoGlobalHost` (bindRealtime + оба диалога) смонтирован в `AuthenticatedLayout` асинхронно — входящие доходят в чате/карте, а не только в свайпах; дубли из `Swipes.vue` убраны (кнопки мэтчей и рулетки остались).
+- Проверки: `php -l` ✅, `vue-tsc --noEmit` ✅, tinker-smoke (друг→`mode:direct` ✅, посторонний→403 ✅, тестовые дружба/звонки/сигналы вычищены ✅).
+
+## 2026-09-21 — Видео P2P + Reverb: мэтч-звонки и рулетка в свайпах (сокет + polling)
+- 🔧 Бэк: миграция `video_calls` + `video_signals` (сигналы персистентны — polling забирает их через sync, сокет — через broadcast); модели `VideoCall/VideoSignal`; события `VideoIncoming (video.incoming)` и `VideoSignalEvent (video.signal)` на оба `user.*`-канала; `VideoService` (мэтч-проверка, busy-контроль, ленивый ringing-таймаут 40с без cron, очередь рулетки на Cache+lock, Free-лимит рулетки 20/день, PRO безлимит, 18+ через `assertAdult`); `VideoController` (9 роутов `/api/video/*`, ICE — `throttle:chat-signal`); `RealtimeController::sync` отдаёт `video_incoming` + `video_signals[video_after_id]`.
+- 🔧 Фронт: `video.api`, Pinia `stores/videoRoulette` (сессия, входящие, lifecycle, busy-автоотклонение), `useUserMedia` (камера/мик, мьют), `usePeerConnection` (RTCPeerConnection, offer всегда caller — glare невозможен, trickle ICE через REST), `useVideoSession` (оркестратор-синглтон: медиа → звонок → peer, heartbeat очереди 45с, авто-открытие оверлея, реф-колбэки переживают пересоздание <video>); шина `user:video.*`, `useUserChannel` + поллер разносят оба транспорта в один формат с дедупом сигналов (повторный offer не уронит соединение).
+- 🔧 UI (только PrimeVue + Tailwind): `IncomingCallDialog` (WebAudio-рингтон, Принять/Отклонить), `VideoOverlay` (вход в рулетку, поиск с превью, дозвон, активный звонок: PiP, elapsed, mute/cam/hangup, «Дальше» + жалоба в `/api/reports` для рулетки); в `Swipes.vue` — кнопка `pi-video` у каждого мэтча + промо-карта «Видео-рулетка», `bindRealtime` на mount. TURN — `VITE_TURN_URLS/USERNAME/CREDENTIAL` в `.env.example` (без TURN ~30% звонков за NAT не встанет; дефолт — публичный STUN).
+- ⚠️ Не влезло / следующим шагом: heartbeat `last_seen` в очереди (сейчас живость по TTL+rejoin), звонки из drawer-мэтчей на мобиле (там только чат), авто-«Дальше» по таймеру сессии, звонок из диалога чата мэтча, coturn в `docker-compose`, ручные QA на двух устройствах (Safari `playsinline`).
+- Проверки: `php -l` ✅, `migrate` ✅, `vue-tsc --noEmit` ✅, tinker-smoke (ringing→incoming→accept→offer→signals→hangup ✅, рулетка a-wait/b-match ✅), тестовые строки из БД вычищены ✅.
+
 ## 2026-09-21 — Фото лендинга локально: `public/landing/` вместо pravatar/unsplash
 - 🔍 Аудит: hero-слайдер (`useWelcomeHeroSwiper`) и аватары «уже листают» (`Welcome.vue`) тянули лица с `i.pravatar.cc` / `images.unsplash.com` — лишний DNS/TLS-хендшейк, нулевой кэш-контроль и риск битых фото при недоступности чужих хостов.
 - 🔧 Скачаны 1:1 в `public/landing/` (проверены `getimagesize`, все JPEG): `hero-anya.jpg` (pravatar 47, 600px) + `hero-anya-fallback.jpg`, `hero-maks/dima/sofia.jpg` (unsplash 800×640), `face-1/2/3.jpg` (pravatar 100px, ~3КБ). Суммарно ~285КБ.

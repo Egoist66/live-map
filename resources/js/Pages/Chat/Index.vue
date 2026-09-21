@@ -9,12 +9,15 @@ const ChatSearchDialog = defineAsyncComponent(() => import('@/Components/Feature
 const ChatConfirmDialog = defineAsyncComponent(() => import('@/Components/Features/Chat/ChatConfirmDialog.vue'))
 const ChatBottomSheet = defineAsyncComponent(() => import('@/Components/Features/Chat/ChatBottomSheet.vue'))
 const ChatWallpaperDialog = defineAsyncComponent(() => import('@/Components/Features/Chat/ChatWallpaperDialog.vue'))
+const ChatPresetsDialog = defineAsyncComponent(() => import('@/Components/Features/Chat/ChatPresetsDialog.vue'))
+const ChatAutoReplyDialog = defineAsyncComponent(() => import('@/Components/Features/Chat/ChatAutoReplyDialog.vue'))
 const DistrictInviteDialog = defineAsyncComponent(() => import('@/Components/Features/Map/DistrictInviteDialog.vue'))
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 import { useChatOnline } from '@/composables/useChatOnline'
 import { useChatPage } from '@/composables/useChatPage'
 import { useChatFilters } from '@/composables/useChatFilters'
 import { useChatDatingTheme } from '@/composables/useChatDatingTheme'
+import { useChatVideoCall } from '@/composables/useChatVideoCall'
 import { useChatMessageStatus } from '@/composables/useChatMessageStatus'
 import { useChatViewport } from '@/composables/useChatViewport'
 import { useChatWallpaper } from '@/composables/useChatWallpaper'
@@ -81,9 +84,66 @@ const { messageStatus } = useChatMessageStatus(isOwnMessage)
 const { pageClass, frameClass, frameStyle } = useChatLayout(keyboardHeight, isChatKeyboardOpen)
 function closeConfirm() { confirm.value = null }
 const datingTheme = useChatDatingTheme(chat.activeConv, chat.selectedId)
+const chatVideo = useChatVideoCall(chat.activeConv)
 const wallpaper = useChatWallpaper()
 const wallpaperOpen = ref(false)
-void wallpaper.init()
+
+/**
+ * Общий фон беседы: привязка к открытому диалогу.
+ * Смена любым собеседником прилетает сокетом/поллингом сама.
+ */
+watch(() => (activeConv.value as any)?.id, () => {
+  wallpaper.bindConversation(
+    Number((activeConv.value as any)?.id) || null,
+    (activeConv.value as any)?.wallpaper,
+  )
+}, { immediate: true })
+
+const presetsOpen = ref(false)
+const autoReplyOpen = ref(false)
+
+/**
+ * Подставить пресет в поле ввода (через пробел к черновику).
+ * @param text текст пресета
+ */
+function insertPreset(text: string): void {
+  const clean = text.trim()
+  if (!clean) return
+  input.value = input.value.trim() === '' ? clean : `${input.value.replace(/\s+$/u, '')} ${clean}`
+}
+
+/**
+ * Отправить пресет сразу, не трогая черновик.
+ * @param text текст пресета
+ */
+async function sendPreset(text: string): Promise<void> {
+  const clean = text.trim()
+  if (!clean || !selectedId.value) {
+    insertPreset(clean)
+    return
+  }
+  const quoted = reply.replyTo.value
+  try {
+    await chat.sendMessage(clean, quoted)
+    reply.cancelReply()
+  } catch (e: any) {
+    const msg = e?.response?.data?.message || 'Не удалось отправить пресет'
+    toast?.add({ severity: 'error', summary: 'Не отправлено', detail: msg, life: 3500 })
+  }
+}
+
+/**
+ * Тост после сохранения автоответа.
+ * @param enabled включён ли автоответ
+ */
+function onAutoReplySaved(enabled: boolean): void {
+  toast?.add({
+    severity: enabled ? 'success' : 'info',
+    summary: enabled ? 'Автоответ включён' : 'Автоответ выключен',
+    detail: enabled ? 'Когда тебя нет онлайн, собеседник получит сообщение, а тебе придёт пинг на email.' : 'Автоответ больше не отправляется.',
+    life: 4000,
+  })
+}
 
 watch(() => props.conversationId, (id) => { if (id) void openTarget(id) })
 onMounted(async () => { await init(); datingTheme.checkEntry() })
@@ -94,12 +154,14 @@ onMounted(async () => { await init(); datingTheme.checkEntry() })
     <div :class="pageClass">
       <div :class="frameClass" class="h-app-full" :style="frameStyle">
         <ChatSidebar :tab="tab" @update:tab="(v:any)=>tab=v" :unread-total="unreadTotal" :ulove-unread="uloveUnread" :pending-count="pendingIn.length" :blocked-count="blocked.length" :refreshing="refreshing" :conversations="(filters.filteredConversations.value as any)" :ulove-conversations="(uloveConversations as any)" :friends="(filters.filteredFriends.value as any)" :pending-in="(filters.filteredPendingIn.value as any)" :blocked="(filters.filteredBlocked.value as any)" :filter="filters.chatFilter.value" @update:filter="(v:string)=>filters.chatFilter.value=v" :selected-id="selectedId" :conversations-sentinel="convSentinel" :conversations-has-more="convHasMore" :conversations-loading-more="convLoadingMore" :friends-sentinel="friendsSentinel" :friends-has-more="friendsHasMore" :friends-loading-more="friendsLoadingMore" :privacy="privacy" :show-privacy="showPrivacy" @update:show-privacy="(v:boolean)=>showPrivacy=v" :is-online="isOnline" :format-time="formatTime" @refresh="refresh" @people="filters.showPeopleSearch.value = true" @open="openConversation" @start-chat="startChatWith" @delete-chat="askDeleteChat" @clear-all-chats="askClearAllChats" @block="askBlock" @unblock="askUnblock" @remove-friend="askRemoveFriend" @accept="(id:number)=>friendsApi.accept(id)" @decline="(id:number)=>friendsApi.decline(id)" @save-privacy="savePrivacy" />
-        <ChatWindow :selected-id="selectedId" :active-conv="activeConv" :messages="messages" :loading="loading" :sending="sending" :refreshing="refreshing" :typing="[...typingUsers].some((id:any)=>id===activeConv?.other?.id)" :online="isOnline(activeConv?.other?.id, (activeConv?.other as any)?.last_seen_at)" :dating-entry="datingTheme.isDatingEntry.value" :dating-badge="datingTheme.badge.value" @swipes-back="datingTheme.backToSwipes()" :input="input" @update:input="(v:string)=>input=v" :emoji-open="emojiOpen" :emoji-groups="EMOJI_GROUPS" :editing-id="editingId" :editing-body="editingBody" @update:editing-body="(v:string)=>editingBody=v" :show-menu="showChatMenu" :keyboard-style="{}" :is-own-message="isOwnMessage" :message-status="messageStatus" :format-time="formatTime" :reply-to="reply.replyTo.value" :attachment-name="attachment.file.value?.name ?? null" :attachment-size="attachment.file.value?.size ?? null" :preview-url="attachment.previewUrl.value" :attach-error="attachment.error.value" :attaching="attachment.processing.value" :locating="locating" @send="handleSend" @share-location="handleShareLocation" @pick-file="handlePickFile" @paste-image="handlePasteImage" @remove-file="attachment.clear()" @typing="notifyTyping" @stop-typing="stopTyping" @refresh="refresh" @back="backToList" @close="backToList" @toggle-menu="showChatMenu = !showChatMenu" @menu-close="showChatMenu = false" @wallpaper="wallpaperOpen = true" @delete-chat="() => askDeleteChat()" @block="activeConv?.other && askBlock(activeConv.other.id, activeConv.other.name)" @toggle-emoji="toggleEmoji" @emoji-close="emoji.close()" @pick-emoji="onPickEmoji" @pick-emoji-edit="onPickEmojiForEdit" @start-edit="handleStartEdit" @save-edit="saveEdit" @cancel-edit="cancelEdit" @delete-message="askDeleteMessage" :pinned="pins.pinned.value" :pin-limit-label="pins.limitLabel()" :flash-id="pins.flashId.value" @toggle-pin="togglePin" @unpin="(id:number)=>pins.unpin(id)" @jump-to-message="jumpToMessage" @reply="handleStartReply" :voice-recording="voice.isRecording.value" :voice-duration="voice.duration.value" :voice-level="voice.level.value" :voice-error="voice.error.value" :voice-preview-url="voice.previewUrl.value" :voice-preview-duration="voice.previewDuration.value" :has-voice-preview="voice.hasPreview.value" @start-voice="handleStartVoice" @stop-voice="handleStopVoice" @cancel-voice="handleCancelVoice" @send-voice="handleSendVoice" @discard-voice="voice.discardPreview()" @cancel-reply="reply.cancelReply()" @invite-district="openDistrictInviteFromChat(activeConv)" :history-top-sentinel="setHistoryTop" :history-has-more="chat.history.hasMore.value" :history-loading="chat.history.loadingOlder.value" />
+        <ChatWindow :selected-id="selectedId" :active-conv="activeConv" :messages="messages" :loading="loading" :sending="sending" :refreshing="refreshing" :typing="[...typingUsers].some((id:any)=>id===activeConv?.other?.id)" :online="isOnline(activeConv?.other?.id, (activeConv?.other as any)?.last_seen_at)" :dating-entry="datingTheme.isDatingEntry.value" :dating-badge="datingTheme.badge.value" @swipes-back="datingTheme.backToSwipes()" :input="input" @update:input="(v:string)=>input=v" :emoji-open="emojiOpen" :emoji-groups="EMOJI_GROUPS" :editing-id="editingId" :editing-body="editingBody" @update:editing-body="(v:string)=>editingBody=v" :show-menu="showChatMenu" :keyboard-style="{}" :is-own-message="isOwnMessage" :message-status="messageStatus" :format-time="formatTime" :reply-to="reply.replyTo.value" :attachment-name="attachment.file.value?.name ?? null" :attachment-size="attachment.file.value?.size ?? null" :preview-url="attachment.previewUrl.value" :attach-error="attachment.error.value" :attaching="attachment.processing.value" :locating="locating" @send="handleSend" @share-location="handleShareLocation" @pick-file="handlePickFile" @paste-image="handlePasteImage" @remove-file="attachment.clear()" @typing="notifyTyping" @stop-typing="stopTyping" @refresh="refresh" @back="backToList" @close="backToList" @video-call="chatVideo.callPeer()" @toggle-menu="showChatMenu = !showChatMenu" @menu-close="showChatMenu = false" @wallpaper="wallpaperOpen = true" @presets="presetsOpen = true" @auto-reply="autoReplyOpen = true" @delete-chat="() => askDeleteChat()" @block="activeConv?.other && askBlock(activeConv.other.id, activeConv.other.name)" @toggle-emoji="toggleEmoji" @emoji-close="emoji.close()" @pick-emoji="onPickEmoji" @pick-emoji-edit="onPickEmojiForEdit" @start-edit="handleStartEdit" @save-edit="saveEdit" @cancel-edit="cancelEdit" @delete-message="askDeleteMessage" :pinned="pins.pinned.value" :pin-limit-label="pins.limitLabel()" :flash-id="pins.flashId.value" @toggle-pin="togglePin" @unpin="(id:number)=>pins.unpin(id)" @jump-to-message="jumpToMessage" @reply="handleStartReply" :voice-recording="voice.isRecording.value" :voice-duration="voice.duration.value" :voice-level="voice.level.value" :voice-error="voice.error.value" :voice-preview-url="voice.previewUrl.value" :voice-preview-duration="voice.previewDuration.value" :has-voice-preview="voice.hasPreview.value" @start-voice="handleStartVoice" @stop-voice="handleStopVoice" @cancel-voice="handleCancelVoice" @send-voice="handleSendVoice" @discard-voice="voice.discardPreview()" @cancel-reply="reply.cancelReply()" @invite-district="openDistrictInviteFromChat(activeConv)" :history-top-sentinel="setHistoryTop" :history-has-more="chat.history.hasMore.value" :history-loading="chat.history.loadingOlder.value" />
       </div>
     </div>
     <ChatSearchDialog :open="filters.showPeopleSearch.value" @update:open="(v:boolean)=>filters.showPeopleSearch.value=v" :query="searchQuery" @update:query="(v:string)=>searchQuery=v" :results="searchResults" :searching="searching" :creating="creatingChat" :is-online="isOnline" @chat="(u:any)=>{ startChatWith(u); filters.showPeopleSearch.value = false }" @add="addFriendFromSearch" @block="askBlock" />
     <ChatConfirmDialog :confirm="confirm" @close="closeConfirm" @ok="doConfirm" />
-    <ChatWallpaperDialog :open="wallpaperOpen" @update:open="(v:boolean)=>wallpaperOpen=v" />
+    <ChatWallpaperDialog :open="wallpaperOpen" :conversation-id="selectedId" @update:open="(v:boolean)=>wallpaperOpen=v" />
+    <ChatPresetsDialog :open="presetsOpen" @update:open="(v:boolean)=>presetsOpen=v" @select="insertPreset" @send="sendPreset" />
+    <ChatAutoReplyDialog :open="autoReplyOpen" @update:open="(v:boolean)=>autoReplyOpen=v" @saved="onAutoReplySaved" />
     <DistrictInviteDialog :open="districtInvite.open.value" @update:open="districtInvite.setOpen" :district-name="districtInvite.districtName.value" :query="districtInvite.query.value" @update:query="districtInvite.search" :results="districtInvite.results.value" :searching="districtInvite.searching.value" :inviting-id="districtInvite.invitingId.value" :error="districtInvite.error.value" @invite="sendDistrictInviteFromChat" />
     <ChatBottomSheet :sheet="sheet" :is-own-message="isOwnMessage" @close="closeSheet" @open-chat="openConversation" @start-chat="startChatWith" @edit="(m:any)=>{ closeSheet(); handleStartEdit(m) }" @delete-message="(id:number)=>{ closeSheet(); askDeleteMessage(id) }" @delete-chat="(id?:number)=>askDeleteChat(id)" @block="askBlock" @unblock="askUnblock" @remove-friend="askRemoveFriend" @accept="(id:number)=>{ closeSheet(); friendsApi.accept(id) }" @decline="(id:number)=>{ friendsApi.decline(id); closeSheet() }" @add="(id:number)=>{ closeSheet(); friendsApi.add(id) }" />
 </template>

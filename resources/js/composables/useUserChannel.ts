@@ -17,6 +17,8 @@ const USER_EVENTS = [
   'pin.counters',
   'match.created',
   'swipe.liked',
+  'video.incoming',
+  'video.signal',
   'report.created',
   'impersonation.started',
   'notification.created',
@@ -25,6 +27,7 @@ const USER_EVENTS = [
 let channel: any = null
 let channelUid: number | null = null
 let reconnectBound = false
+let retryTimer: ReturnType<typeof setInterval> | null = null
 
 function getEcho(): any {
   return (window as any).Echo
@@ -61,6 +64,9 @@ function bindReconnectOnce(): void {
  * события раздаются подписчикам через шину (user:message.sent и т.д.).
  * Переключение аккаунта разруливается само: новый uid — новый канал.
  *
+ * Если Echo ещё не поднят (инит едет в idle после mount), подписка
+ * не теряется: ретрай раз в 2с до успеха, дальше сам останавливается.
+ *
  * @example
  * ensureUserChannel()
  * busOn('user:message.sent', (e) => handleMessage(e))
@@ -68,10 +74,19 @@ function bindReconnectOnce(): void {
 export function ensureUserChannel(): void {
   try {
     const echo = getEcho()
-    if (!echo) return
+    if (!echo) {
+      armRetry()
+      return
+    }
     const uid = getUid()
-    if (!uid) return
-    if (channel && channelUid === uid) return
+    if (!uid) {
+      armRetry()
+      return
+    }
+    if (channel && channelUid === uid) {
+      stopRetry()
+      return
+    }
     if (channel) leaveUserChannel()
     channelUid = uid
     channel = echo.private(`user.${uid}`)
@@ -85,7 +100,28 @@ export function ensureUserChannel(): void {
       } catch {}
     })
     bindReconnectOnce()
+    stopRetry()
   } catch {}
+}
+
+/**
+ * Включить ретрай подписки (один интервал на приложение).
+ */
+function armRetry(): void {
+  if (retryTimer || typeof window === 'undefined') return
+  retryTimer = setInterval(() => {
+    try {
+      ensureUserChannel()
+    } catch {}
+  }, 2000)
+}
+
+/**
+ * Остановить ретрай подписки.
+ */
+function stopRetry(): void {
+  if (retryTimer) clearInterval(retryTimer)
+  retryTimer = null
 }
 
 /**

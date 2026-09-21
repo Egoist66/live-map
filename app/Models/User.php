@@ -13,7 +13,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['name', 'profile_slug', 'email', 'password', 'gender', 'birth_date', 'country', 'country_code', 'plan', 'latitude', 'longitude', 'role', 'is_admin', 'is_hidden_from_search', 'dating_enabled', 'dating_goal', 'signup_goal', 'default_mode', 'default_mode_set_at', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_gender_pref', 'dating_hide_name', 'dating_hide_age', 'dating_hide_distance', 'dating_match_only', 'random_chats_used', 'random_chats_month', 'avatar_path', 'home_lat', 'home_lng', 'home_city', 'home_address', 'home_visibility', 'home_show_exact', 'home_radius_km', 'bio', 'thought', 'reputation_score', 'level', 'quest_cooldown_until', 'quest_last_track', 'quest_granted_at', 'is_anonymous_default', 'default_location_precision', 'default_blur_meters', 'message_privacy', 'allow_random_messages', 'photo_comments_privacy', 'flow_comments_privacy', 'settings', 'last_seen_at', 'is_invisible', 'screen_lock_code', 'screen_lock_timeout', 'screen_lock_kind', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at', 'terms_accepted_at', 'terms_version'])]
+#[Fillable(['name', 'profile_slug', 'email', 'password', 'gender', 'birth_date', 'country', 'country_code', 'plan', 'latitude', 'longitude', 'role', 'is_admin', 'is_hidden_from_search', 'dating_enabled', 'dating_goal', 'signup_goal', 'default_mode', 'default_mode_set_at', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_gender_pref', 'dating_hide_name', 'dating_hide_age', 'dating_hide_distance', 'dating_match_only', 'random_chats_used', 'random_chats_month', 'avatar_path', 'home_lat', 'home_lng', 'home_city', 'home_address', 'home_visibility', 'home_show_exact', 'home_radius_km', 'bio', 'thought', 'reputation_score', 'level', 'quest_cooldown_until', 'quest_last_track', 'quest_granted_at', 'is_anonymous_default', 'default_location_precision', 'default_blur_meters', 'message_privacy', 'allow_random_messages', 'photo_comments_privacy', 'flow_comments_privacy', 'auto_reply_enabled', 'auto_reply_text', 'settings', 'last_seen_at', 'is_invisible', 'screen_lock_code', 'screen_lock_timeout', 'screen_lock_kind', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at', 'terms_accepted_at', 'terms_version'])]
 #[Hidden(['password', 'remember_token', 'screen_lock_code'])]
 /**
  * Пользователь приложения.
@@ -590,6 +590,47 @@ class User extends Authenticatable
             ->count();
     }
 
+    /**
+     * Дефолтный текст автоответа, когда свой не задан.
+     */
+    public const AUTO_REPLY_DEFAULT = '👋 Привет! Я пока не онлайн, поэтому пообщаемся чуть позже. Я уже получил уведомление о твоём сообщении и обязательно отвечу!';
+
+    /**
+     * Считается ли пользователь отошедшим (для автоответа).
+     *
+     * Порог 3 минуты совпадает с фронтовым ONLINE_THRESHOLD_MS.
+     *
+     * @return bool true если last_seen_at отсутствует или старше порога
+     */
+    public function isAway(): bool
+    {
+        if (! $this->last_seen_at) {
+            return true;
+        }
+
+        try {
+            return $this->last_seen_at->lt(now()->subMinutes(3));
+        } catch (\Throwable) {
+            return true;
+        }
+    }
+
+    /**
+     * Текст автоответа: свой или дефолтный.
+     *
+     * @return string готовый текст сообщения
+     */
+    public function autoReplyTextOrDefault(): string
+    {
+        $custom = trim((string) ($this->auto_reply_text ?? ''));
+
+        if ($custom !== '') {
+            return mb_substr($custom, 0, 500);
+        }
+
+        return self::AUTO_REPLY_DEFAULT;
+    }
+
     protected function casts(): array
     {
         return [
@@ -608,6 +649,7 @@ class User extends Authenticatable
             'dating_match_only' => 'boolean',
             'is_anonymous_default' => 'boolean',
             'allow_random_messages' => 'boolean',
+            'auto_reply_enabled' => 'boolean',
             'is_admin' => 'boolean',
             'is_hidden_from_search' => 'boolean',
             'is_invisible' => 'boolean',

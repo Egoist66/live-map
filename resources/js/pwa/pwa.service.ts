@@ -90,16 +90,26 @@ export function isOnline(): boolean {
 /**
  * Регистрирует service worker оболочки.
  *
+ * В dev (Vite HMR) регистрация запрещена: `public/sw.js` — артефакт
+ * последнего продакшен-билда, в dev он перехватывает навигации,
+ * тянет несуществующий `/build/*` (404 в precache) и мешает
+ * восстановлению после 504 холодного transform. Пуши в dev ходят
+ * через явный флоу подписки, а не через авторегистрацию.
+ *
  * Вызовы из `app.ts` и `usePwa.init()` идут почти одновременно после mount:
  * без общего in-flight промиса оба видят `registration === null` и делают
  * параллельный `register('/sw.js')` с двойными `updatefound`-подписками.
  * Общий промис гарантирует одну регистрацию на страницу.
  *
- * @returns регистрация SW или null когда API недоступен
+ * @returns регистрация SW или null когда API недоступен / dev-режим
  */
 export async function register(): Promise<ServiceWorkerRegistration | null> {
   bindOnce()
   if (!isSupported()) {
+    return null
+  }
+  if (import.meta.env.DEV) {
+    void evictDevWorkers()
     return null
   }
   if (registration) {
@@ -111,6 +121,30 @@ export async function register(): Promise<ServiceWorkerRegistration | null> {
     })
   }
   return registerPromise
+}
+
+/**
+ * Выгнать протувший прод-SW из dev-вкладки (один раз за сессию).
+ *
+ * `public/sw.js` от прошлого билда перехватывает навигации dev,
+ * отдаёт старые бандлы без свежего кода и тянет 404 precache —
+ * из-за него звонки/фиксы «не доходят» хотя код уже на месте.
+ * В проде не вызывается (guard выше по import.meta.env.DEV).
+ */
+async function evictDevWorkers(): Promise<void> {
+  try {
+    if (sessionStorage.getItem('upin:sw-evict-dev')) return
+    sessionStorage.setItem('upin:sw-evict-dev', '1')
+  } catch {}
+  try {
+    const regs = await navigator.serviceWorker.getRegistrations()
+    await Promise.all(regs.map((reg) => reg.unregister().catch(() => false)))
+  } catch {}
+  try {
+    const keys = await caches.keys()
+    const stale = keys.filter((key) => key.startsWith('pwa-') || key.startsWith('workbox-'))
+    await Promise.all(stale.map((key) => caches.delete(key).catch(() => false)))
+  } catch {}
 }
 
 /**

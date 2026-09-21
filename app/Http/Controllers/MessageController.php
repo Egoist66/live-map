@@ -121,8 +121,15 @@ class MessageController extends Controller
         $conversation->participantRows()->whereNotNull('hidden_at')->update(['hidden_at'=>null]);
         try{ broadcast(new MessageSent($msg))->toOthers(); }catch(\Throwable $e){ \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
         $this->pushToRecipients($conversation, $sender, $msg);
-        $payload = $msg->toArrayPayload();
         $senderModel = $sender instanceof User ? $sender : User::find($sender->id);
+        if ($senderModel) {
+            try {
+                app(\App\Services\ChatAutoReply::class)->maybeReply($conversation, $senderModel, $msg);
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('chat autoreply failed: '.$e->getMessage());
+            }
+        }
+        $payload = $msg->toArrayPayload();
 
         if ($senderModel) {
             $reward = ActivityRewards::award($senderModel, 'chat_message');

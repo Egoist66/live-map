@@ -1,0 +1,42 @@
+import { computed, type Ref } from 'vue'
+import { useVideoSession } from '@/composables/useVideoSession'
+
+/**
+ * Видеозвонок из шапки чата в один тап.
+ *
+ * Допуск проверяет бэк (мэтч, дружба или общий диалог + без блоков):
+ * кнопка видна во всех личных диалогах.
+ *
+ * @param activeConv активный диалог (ref из useChat)
+ * @returns флаг кнопки и действие звонка
+ *
+ * @example
+ * const chatVideo = useChatVideoCall(chat.activeConv)
+ * <Button v-if="chatVideo.canCall.value" @click="chatVideo.callPeer()" />
+ */
+export function useChatVideoCall(activeConv: Ref<any>) {
+  const video = useVideoSession()
+
+  /** Id собеседника личного диалога (у районных/групп — null). */
+  const peerId = computed(() => {
+    const conv = activeConv.value
+    if (!conv || conv.title) return null
+    const id = Number(conv.other?.id ?? 0)
+    return id > 0 ? id : null
+  })
+
+  /** Показывать ли кнопку видео: личный диалог + не в звонке. */
+  const canCall = computed(() => peerId.value !== null && !video.store.inCall)
+
+  /**
+   * Позвонить собеседнику: камера → звонок → оверлей откроется сам.
+   * Ошибка допуска (посторонний) показывается оверлеем с текстом.
+   */
+  async function callPeer(): Promise<void> {
+    const id = peerId.value
+    if (id === null) return
+    await video.callMatch(id)
+  }
+
+  return { peerId, canCall, callPeer }
+}

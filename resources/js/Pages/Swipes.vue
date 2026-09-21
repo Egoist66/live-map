@@ -5,6 +5,7 @@ import DatingQuestionnaireForm from '@/Components/Features/Dating/DatingQuestion
 import SwipeDetailsDialog from '@/Components/Features/Dating/SwipeDetailsDialog.vue'
 import DefaultModeHint from '@/Components/Features/Mode/DefaultModeHint.vue'
 import { useSwipes } from '@/composables/useSwipes'
+import { useVideoSession } from '@/composables/useVideoSession'
 import InfiniteSentinel from '@/Components/Ui/List/InfiniteSentinel.vue'
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 import { useSwipeCardPhotos } from '@/composables/useSwipeCardPhotos'
@@ -32,6 +33,7 @@ const page = usePage()
 const isAuth = computed(() => !!(page.props.auth as any)?.user)
 
 const s = useSwipes()
+const v = useVideoSession()
 const cardPhotos = useSwipeCardPhotos(() => s.current.value)
 const mobileMenu = useSwipesMobileMenu()
 const { selectPt } = useDropdownMenuStyle()
@@ -165,20 +167,48 @@ onUnmounted(() => {
           <div v-if="s.matches.value.length" class="mt-4 hidden sm:block">
             <div class="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500 mb-2">Мэтчи · чат открыт</div>
             <div class="flex gap-3 overflow-x-auto pb-2 pt-1 -mx-1 px-1">
-              <button
+              <div
                 v-for="m in s.matches.value"
                 :key="m.match_id"
-                class="shrink-0 flex flex-col items-center w-[64px] rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
-                @click="s.openChat(m.user.id, m.conversation_id)"
+                class="shrink-0 flex flex-col items-center w-[72px] rounded-xl focus:outline-none"
               >
-                <span class="relative block w-14 h-14 shrink-0">
-                  <Avatar :image="m.user.avatar_url ?? undefined" :label="!m.user.avatar_url ? (m.user.name ?? '?').slice(0, 1) : undefined" shape="circle" class="!w-14 !h-14 !text-xl block overflow-hidden ring-2 ring-emerald-400 dark:ring-emerald-500" />
-                  <span class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 grid place-items-center ring-2 ring-white dark:ring-[#090E1A]"><i class="pi pi-heart-fill text-white text-[10px] leading-none" /></span>
-                </span>
-                <span class="mt-1.5 text-[11px] font-semibold leading-tight text-stone-600 dark:text-zinc-200 truncate w-full text-center">{{ m.user.name }}</span>
-              </button>
+                <button
+                  class="flex flex-col items-center w-full rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
+                  @click="s.openChat(m.user.id, m.conversation_id)"
+                >
+                  <span class="relative block w-14 h-14 shrink-0">
+                    <Avatar :image="m.user.avatar_url ?? undefined" :label="!m.user.avatar_url ? (m.user.name ?? '?').slice(0, 1) : undefined" shape="circle" class="!w-14 !h-14 !text-xl block overflow-hidden ring-2 ring-emerald-400 dark:ring-emerald-500" />
+                    <span class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 grid place-items-center ring-2 ring-white dark:ring-[#090E1A]"><i class="pi pi-heart-fill text-white text-[10px] leading-none" /></span>
+                  </span>
+                  <span class="mt-1.5 text-[11px] font-semibold leading-tight text-stone-600 dark:text-zinc-200 truncate w-full text-center">{{ m.user.name }}</span>
+                </button>
+                <Button
+                  icon="pi pi-video"
+                  rounded
+                  outlined
+                  size="small"
+                  severity="success"
+                  aria-label="Позвонить по видео"
+                  title="Позвонить по видео"
+                  class="!w-8 !h-8 !p-0 mt-1"
+                  :disabled="v.store.inCall"
+                  @click="v.callMatch(m.user.id)"
+                />
+              </div>
             </div>
           </div>
+
+          <button
+            class="mt-3 w-full flex items-center gap-3 rounded-[20px] border border-rose-200 dark:border-rose-900 bg-gradient-to-r from-rose-500/10 via-fuchsia-500/10 to-orange-400/10 p-4 text-left shadow-soft active:scale-[0.99] transition"
+            @click="v.openRoulette()"
+          >
+            <span class="w-11 h-11 rounded-2xl bg-gradient-to-br from-rose-500 to-orange-400 text-white grid place-items-center shrink-0"><i class="pi pi-video text-lg" /></span>
+            <span class="min-w-0 flex-1">
+              <span class="block text-sm font-black text-stone-900 dark:text-white">Видео-рулетка</span>
+              <span class="block text-xs text-stone-500 dark:text-zinc-400">Случайный собеседник по видео · Free 20/день</span>
+            </span>
+            <i class="pi pi-chevron-right ml-auto text-stone-300 dark:text-zinc-600 shrink-0" />
+          </button>
 
           <div v-if="s.error.value" class="mt-3 text-sm text-rose-600 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-2xl px-4 py-3">
             {{ s.error.value }}
@@ -1016,3 +1046,4 @@ onUnmounted(() => {
     opacity: 0;
   }
 }</style>
+

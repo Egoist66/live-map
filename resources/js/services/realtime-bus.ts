@@ -40,6 +40,8 @@ export type RealtimeEventMap = {
   'chat:receipts': any[]
   /** Хвост id открытого диалога: клиент вычищает локально удалённые */
   'chat:open-ids': { conversationId: number; ids: number[] }
+  /** Общий фон беседы сменился (сокет conversation.wallpaper / поллинг wallpapers) */
+  'chat:wallpaper': { conversation_id: number; wallpaper: unknown }
   /** Единый user-канал: сырые события (user:message.sent и т.д.) */
   'user:message.sent': any
   'user:message.updated': any
@@ -56,6 +58,10 @@ export type RealtimeEventMap = {
   'user:impersonation.started': any
   /** Единое inbox-уведомление (таблица notifications): тосты и колокольчик */
   'user:notification.created': { notification: any }
+  /** Входящий видеозвонок (сокет VideoIncoming / поллинг freshIncoming) */
+  'user:video.incoming': { call_id: number; mode: string; caller: any; callee: any }
+  /** Signaling-фрейм звонка (сокет VideoSignalEvent / поллинг freshSignals) */
+  'user:video.signal': { id: number; call_id: number; sender_id: number; kind: string; payload: any }
   /** Переподключение сокета: подписчикам стоит освежить данные */
   'user:reconnected': any
   /** Счётчики бейджей одним пакетом */

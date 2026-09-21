@@ -1,4 +1,5 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { router } from '@inertiajs/vue3'
 import { useBadgeStore } from '@/stores/badges'
 import { route } from '@/route'
 
@@ -20,13 +21,83 @@ export function useMobileBottomNav() {
   const total = computed(() => badge.unread)
 
   /**
-   * Проверяет активность пункта меню.
+   * Реактивный путь текущей страницы.
+   *
+   * Ziggy `route().current()` читает `window.location` напрямую и не
+   * реактивен: после клиентского перехода Inertia панель не
+   * пересчитывалась и подсветка застревала на старом пункте.
+   * Поэтому путь тянем в ref и обновляем по событию навигации —
+   * шаблон пересчитывает классы сам, без ре-рендера сверху.
+   */
+  const currentPath = ref('')
+
+  /**
+   * Синхронизирует путь с адресной строкой.
+   *
+   * @returns void
+   */
+  function syncPath(): void {
+    try {
+      currentPath.value = window.location.pathname
+    } catch {
+      currentPath.value = ''
+    }
+  }
+
+  /**
+   * Базовый путь пункта меню (без query и хоста).
    *
    * @param name имя роута
-   * @returns true если роут текущий
+   * @returns путь вроде `/map` или пусто при ошибке
+   */
+  function basePathOf(name: string): string {
+    try {
+      const href: unknown = route(name, {}, false)
+      if (typeof href !== 'string') return ''
+      const cut = href.split('?')[0].split('#')[0]
+      return cut === '' ? '/' : cut
+    } catch {
+      return ''
+    }
+  }
+
+  /**
+   * Проверяет активность пункта меню по префиксу пути.
+   *
+   * Префикс (а не точное равенство) нужен для вложенных экранов:
+   * `/swipes/favorites`, `/chat/5`, `/flow/post/1` подсвечивают
+   * свой раздел. Чтение `currentPath` делает проверку реактивной.
+   *
+   * @param name имя роута
+   * @returns true если текущий путь — сам раздел или его подраздел
    */
   function isActive(name: string): boolean {
-    return route().current(name)
+    const path = currentPath.value
+    if (!path) return false
+    const base = basePathOf(name)
+    if (!base) return false
+    if (path === base) return true
+    const withSlash = base.endsWith('/') ? base : `${base}/`
+    return path.startsWith(withSlash)
+  }
+
+  /**
+   * Классы пункта навигации.
+   *
+   * Активный — фирменный цвет логотипа (brand-500 #5B5BFF, в тёмной
+   * теме осветлённый #A5B4FC) плюс тонированная подложка-пилюля.
+   * Неактивный — приглушённый серый, хорошо отличимый от активного.
+   *
+   * @param name имя роута
+   * @returns строка классов для Link пункта меню
+   * @example
+   * :class="navLinkClass('map')"
+   */
+  function navLinkClass(name: string): string {
+    if (isActive(name)) {
+      return 'text-brand-600 dark:text-[#A5B4FC] bg-brand-50 dark:bg-brand-500/20'
+    }
+    return 'text-stone-500 dark:text-zinc-400'
   }
 
   const navHidden = computed(() => keyboardOpen.value)
@@ -121,7 +192,15 @@ export function useMobileBottomNav() {
     syncHtmlClass()
   }
 
+  let stopNavigate: (() => void) | null = null
+
   onMounted(() => {
+    syncPath()
+    try {
+      stopNavigate = router.on('navigate', () => syncPath())
+    } catch {
+      stopNavigate = null
+    }
     const viewport = window.visualViewport
     if (viewport) {
       viewport.addEventListener('resize', onViewportChange)
@@ -135,6 +214,10 @@ export function useMobileBottomNav() {
   })
 
   onBeforeUnmount(() => {
+    try {
+      stopNavigate?.()
+    } catch {}
+    stopNavigate = null
     const viewport = window.visualViewport
     if (viewport) {
       viewport.removeEventListener('resize', onViewportChange)
@@ -146,5 +229,5 @@ export function useMobileBottomNav() {
     document.documentElement.classList.remove('native-keyboard-open')
   })
 
-  return { dashboardHref, isActive, total, navHidden, keyboardOpen }
+  return { dashboardHref, isActive, navLinkClass, total, navHidden, keyboardOpen }
 }

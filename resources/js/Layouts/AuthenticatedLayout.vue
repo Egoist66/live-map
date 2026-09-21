@@ -22,6 +22,7 @@ const TermsAcceptanceModal = defineAsyncComponent(() => import('@/Components/Fea
 const DefaultModeChoiceModal = defineAsyncComponent(() => import('@/Components/Features/Mode/DefaultModeChoiceModal.vue'))
 const AppUpdateModal = defineAsyncComponent(() => import('@/Components/Features/Updates/AppUpdateModal.vue'))
 const SubscriptionRenewalDialog = defineAsyncComponent(() => import('@/Components/Features/Subscription/SubscriptionRenewalDialog.vue'))
+const VideoGlobalHost = defineAsyncComponent(() => import('@/Components/Features/Video/VideoGlobalHost.vue'))
 import { useAppLayout } from '@/composables/useAppLayout'
 import { useAppHotkeys } from '@/composables/useAppHotkeys'
 import { useScreenLock } from '@/composables/useScreenLock'
@@ -59,6 +60,7 @@ onMounted(() => { screenLock.init(); hotkeys.init() })
          иначе SSR-краш `insertBefore of null` в Teleport.process. См. useClientReady. -->
     <template v-if="isClientReady">
       <GlobalNotificationToasts />
+      <VideoGlobalHost />
       <BellNotificationsModal />
       <BetaNoticeModal />
       <PwaInstallBanner />

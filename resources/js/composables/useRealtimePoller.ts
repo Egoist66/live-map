@@ -25,6 +25,7 @@ let slowRunning = false
 let ticking = false
 let burstUntil = 0
 let lastMsgId = 0
+let lastVideoSignalId = 0
 let lastTime = 0
 let consecutiveErrors = 0
 let backoffUntil = 0
@@ -33,6 +34,7 @@ let modeListenerAttached = false
 let trackingAttached = false
 const emittedKeys = new Set<string>()
 const seenMessageIds = new Set<number>()
+const seenVideoSignalIds = new Set<number>()
 
 /**
  * Дедуп тостов при нахлёсте окон тиков (событие может прийти дважды).
@@ -174,6 +176,25 @@ export function useRealtimePoller() {
   }
 
   /**
+   * Дедуп signaling-фреймов видео: окно sync отдаёт с запасом,
+   * один offer может вернуться в нескольких тиках подряд.
+   * Повторный offer/answer обязательно игнорируем — иначе
+   * setRemoteDescription уронит живое соединение.
+   *
+   * @param id id строки video_signals
+   * @returns true если уже разносили
+   */
+  function alreadySeenVideoSignal(id: number): boolean {
+    if (seenVideoSignalIds.has(id)) return true
+    seenVideoSignalIds.add(id)
+    if (seenVideoSignalIds.size > SEEN_CAP) {
+      const first = seenVideoSignalIds.values().next().value as number | undefined
+      if (first !== undefined) seenVideoSignalIds.delete(first)
+    }
+    return false
+  }
+
+  /**
    * Один тик вотчера режима (дешёвый, 1 запрос в минуту).
    */
   async function tickSlow(): Promise<void> {
@@ -203,6 +224,7 @@ export function useRealtimePoller() {
       params: {
         since: lastTime || undefined,
         after_id: lastMsgId || undefined,
+        video_after_id: lastVideoSignalId || undefined,
         conversation_id: ctx.conversationId || undefined,
         min_lat: bbox?.minLat,
         max_lat: bbox?.maxLat,
@@ -265,6 +287,19 @@ export function useRealtimePoller() {
       busEmit('notify:swipe', e)
       busEmit('user:swipe.liked', e)
     })
+    const videoIncoming = Array.isArray(data?.video_incoming) ? data.video_incoming : []
+    videoIncoming.forEach((e: any) => {
+      if (e?.call_id == null || alreadyEmitted(`video:${e.call_id}`)) return
+      busEmit('user:video.incoming', e)
+    })
+    const videoSignals = Array.isArray(data?.video_signals) ? data.video_signals : []
+    for (const s of videoSignals) {
+      if (s?.id == null) continue
+      const sid = Number(s.id)
+      if (sid > lastVideoSignalId) lastVideoSignalId = sid
+      if (alreadySeenVideoSignal(sid)) continue
+      busEmit('user:video.signal', s)
+    }
     const inbox = Array.isArray(data?.notifications) ? data.notifications : []
     inbox.forEach((e: any) => {
       const n = e?.notification
@@ -275,6 +310,11 @@ export function useRealtimePoller() {
     if (receipts.length) {
       busEmit('chat:receipts', receipts)
       mirrorReceipts(receipts)
+    }
+    const wallpapers = Array.isArray((data as any)?.wallpapers) ? (data as any).wallpapers : []
+    for (const w of wallpapers) {
+      if (w?.conversation_id == null || !w?.wallpaper) continue
+      busEmit('chat:wallpaper', { conversation_id: Number(w.conversation_id), wallpaper: w.wallpaper })
     }
     if (data?.map) busEmit('map:pins', data.map)
     if (data?.peer && ctx.conversationId) {
@@ -372,9 +412,11 @@ export function useRealtimePoller() {
     consecutiveErrors = 0
     lastActivitySync = 0
     lastMsgId = 0
+    lastVideoSignalId = 0
     lastTime = 0
     emittedKeys.clear()
     seenMessageIds.clear()
+    seenVideoSignalIds.clear()
   }
 
   /**

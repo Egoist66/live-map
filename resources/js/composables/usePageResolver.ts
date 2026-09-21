@@ -27,6 +27,10 @@ import type { DefineComponent } from 'vue'
 export function usePageResolver(pageModules: Record<string, () => Promise<DefineComponent>>) {
   /** Пауза перед повтором, чтобы Vite в dev успел прогреть transform. */
   const RETRY_DELAY_MS = 800
+  /** Максимум жёстких перезагрузок страницы за окно — дальше петля, стоим. */
+  const MAX_RELOADS = 2
+  /** Окно счётчика перезагрузок. */
+  const RELOAD_WINDOW_MS = 5 * 60 * 1000
 
   /**
    * Загрузить модуль страницы и назначить персистентный лейаут.
@@ -58,6 +62,10 @@ export function usePageResolver(pageModules: Record<string, () => Promise<Define
    * на свежий манифест. На SSR (`window` нет) — просто проброс ошибки,
    * перезагружаться там некуда и нечем.
    *
+   * Петля от бесконечных перезагрузок закрыта счётчиком: больше
+   * MAX_RELOADS за RELOAD_WINDOW_MS — не перезагружаемся, а бросаем
+   * исходную ошибку (видно реальную причину, а не вечный спиннер).
+   *
    * @param name имя Inertia-страницы
    * @returns модуль страницы
    * @throws исходная ошибка загрузки
@@ -77,12 +85,42 @@ export function usePageResolver(pageModules: Record<string, () => Promise<Define
       } catch {
         const isClient = typeof window !== 'undefined'
 
-        if (isClient) {
+        if (isClient && allowReload(name)) {
           window.location.reload()
         }
 
         throw firstError
       }
+    }
+  }
+
+  /**
+   * Можно ли сейчас жёстко перезагрузиться под эту страницу.
+   *
+   * Счётчик в sessionStorage: пережил reload, умер со вкладкой.
+   * Истёкшее окно сбрасывается — разовые сбои через час снова лечатся.
+   *
+   * @param name имя Inertia-страницы
+   * @returns true если лимит перезагрузок не исчерпан (и счётчик записан)
+   */
+  function allowReload(name: string): boolean {
+    try {
+      const key = `upin:page-reload:${name}`
+      const raw = sessionStorage.getItem(key)
+      const now = Date.now()
+      const parsed = raw ? (JSON.parse(raw) as { count?: number; firstAt?: number }) : null
+      const fresh = parsed && now - (parsed.firstAt ?? 0) < RELOAD_WINDOW_MS
+      const count = fresh ? Number(parsed?.count ?? 0) : 0
+
+      if (count >= MAX_RELOADS) {
+        return false
+      }
+
+      sessionStorage.setItem(key, JSON.stringify({ count: count + 1, firstAt: fresh ? parsed?.firstAt : now }))
+
+      return true
+    } catch {
+      return true
     }
   }
 

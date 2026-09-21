@@ -60,6 +60,7 @@ class ConversationController extends Controller
                     'unread_count'=>$unread,
                     'last_message_at'=>$c->last_message_at,
                     'updated_at'=>$c->updated_at,
+                    'wallpaper'=>$c->wallpaperPayload(),
                 ];
             })->values();
         // Backward-compatible: plain array when one page, paginated envelope otherwise.
@@ -120,6 +121,7 @@ class ConversationController extends Controller
             'messages_has_more'=>$hasMoreMessages,
             'pinned'=>$pinned,
             'pin_limit'=>$request->user()->pinnedMessagesLimit(),
+            'wallpaper'=>$conversation->wallpaperPayload(),
         ]);
     }
 
@@ -204,6 +206,71 @@ class ConversationController extends Controller
             try{ broadcast(new \App\Events\MessageDelivered($conversation->id,$ids->toArray(),$request->user()->id))->toOthers(); }catch(\Throwable $e){ \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
         }
         return response()->json(['ok'=>true,'delivered_ids'=>$ids]);
+    }
+
+    /**
+     * Общий фон беседы: смена применяется у всех участников сразу.
+     *
+     * Картинка грузится в сторедж (а не в IndexedDB), поэтому реально
+     * сохраняется и одинакова на всех устройствах собеседников.
+     */
+    public function updateWallpaper(Request $request, Conversation $conversation)
+    {
+        abort_unless($conversation->hasParticipant($request->user()->id), 403);
+        $data = $request->validate([
+            'type' => 'required|in:none,preset,color,image',
+            'preset' => 'nullable|in:dusk,sunset,ocean,forest,berry,graphite',
+            'color' => ['nullable', 'regex:/^#[0-9a-fA-F]{6}$/'],
+            'image' => 'nullable|image|mimes:jpg,jpeg,png,webp,gif|max:5120',
+        ]);
+        $type = (string) $data['type'];
+        if ($type === 'preset' && empty($data['preset'])) {
+            abort(422, 'Выберите пресет');
+        }
+        if ($type === 'color' && empty($data['color'])) {
+            abort(422, 'Выберите цвет');
+        }
+        if ($type === 'image' && ! $request->hasFile('image')) {
+            abort(422, 'Приложите картинку');
+        }
+        $oldPath = $conversation->wallpaper_image_path;
+        $preset = $type === 'preset' ? (string) $data['preset'] : null;
+        $color = $type === 'color' ? strtolower((string) $data['color']) : null;
+        $imagePath = $type === 'image' ? $oldPath : null;
+        if ($type === 'image' && $request->hasFile('image')) {
+            $disk = config('filesystems.default') === 's3' && (bool) config('filesystems.disks.s3.bucket')
+                ? 's3'
+                : 'public';
+            $imagePath = \App\Services\ImageOptimizer::storeOptimized(
+                $request->file('image'),
+                'chat-wallpapers',
+                $disk,
+                ['maxSide' => 1280, 'quality' => 78],
+            );
+        }
+        $conversation->update([
+            'wallpaper_type' => $type === 'none' ? null : $type,
+            'wallpaper_preset' => $preset,
+            'wallpaper_color' => $color,
+            'wallpaper_image_path' => $imagePath,
+            'wallpaper_updated_at' => now(),
+        ]);
+        if ($oldPath && $oldPath !== $imagePath) {
+            try {
+                $disk = config('filesystems.default') === 's3' && (bool) config('filesystems.disks.s3.bucket')
+                    ? 's3'
+                    : 'public';
+                \Illuminate\Support\Facades\Storage::disk($disk)->delete($oldPath);
+            } catch (\Throwable) {
+            }
+        }
+        $conversation->refresh();
+        try {
+            broadcast(new \App\Events\ConversationWallpaperUpdated($conversation, (int) $request->user()->id))->toOthers();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage());
+        }
+        return response()->json(['wallpaper' => $conversation->wallpaperPayload()]);
     }
 
     public function destroy(Request $request, Conversation $conversation)

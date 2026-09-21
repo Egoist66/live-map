@@ -115,6 +115,8 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::post('/chat/heartbeat', [ChatUserController::class, 'heartbeat'])->middleware('throttle:chat-signal');
     Route::get('/chat/users/search', [ChatUserController::class, 'search'])->middleware('throttle:chat-search');
     Route::patch('/chat/privacy', [ChatUserController::class, 'privacy']);
+    Route::get('/chat/auto-reply', [ChatUserController::class, 'autoReplyShow']);
+    Route::patch('/chat/auto-reply', [ChatUserController::class, 'autoReplyUpdate']);
     Route::patch('/user/invisible', [\App\Http\Controllers\ProfileController::class, 'toggleInvisible']);
     Route::patch('/user/default-mode', [\App\Http\Controllers\ProfileController::class, 'updateDefaultMode'])->middleware('throttle:profile-write');
     Route::patch('/user/photo-comments-privacy', [\App\Http\Controllers\ProfilePhotoController::class, 'updatePrivacy']);
@@ -152,6 +154,16 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::get('/swipes/quota', [SwipeController::class, 'quota']);
     Route::patch('/swipes/settings', [SwipeController::class, 'settings'])->middleware('throttle:profile-write');
     Route::post('/swipes/verify-age', [SwipeController::class, 'verifyAge'])->middleware('throttle:profile-write');
+    Route::post('/video/match/call', [\App\Http\Controllers\VideoController::class, 'callMatch'])->middleware('throttle:social-write');
+    Route::post('/video/{call}/accept', [\App\Http\Controllers\VideoController::class, 'accept'])->middleware('throttle:social-write');
+    Route::post('/video/{call}/decline', [\App\Http\Controllers\VideoController::class, 'decline'])->middleware('throttle:social-write');
+    Route::post('/video/{call}/hangup', [\App\Http\Controllers\VideoController::class, 'hangup'])->middleware('throttle:social-write');
+    Route::post('/video/{call}/signal', [\App\Http\Controllers\VideoController::class, 'signal'])->middleware('throttle:chat-signal');
+    Route::get('/video/{call}', [\App\Http\Controllers\VideoController::class, 'show']);
+    Route::get('/video/pending/incoming', [\App\Http\Controllers\VideoController::class, 'pending']);
+    Route::post('/video/roulette/join', [\App\Http\Controllers\VideoController::class, 'rouletteJoin'])->middleware('throttle:social-write');
+    Route::post('/video/roulette/next', [\App\Http\Controllers\VideoController::class, 'rouletteNext'])->middleware('throttle:social-write');
+    Route::post('/video/roulette/leave', [\App\Http\Controllers\VideoController::class, 'rouletteLeave'])->middleware('throttle:social-write');
     Route::patch('/friendships/{friendship}/hidden', [FriendshipController::class, 'toggleHidden']);
     Route::get('/users/{user}/friends', [FriendshipController::class, 'publicList']);
 
@@ -169,6 +181,7 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::get('/conversations/{conversation}', [ConversationController::class, 'show']);
     Route::post('/conversations/{conversation}/read', [ConversationController::class, 'markRead'])->middleware('throttle:chat-signal');
     Route::post('/conversations/{conversation}/delivered', [ConversationController::class, 'markDelivered'])->middleware('throttle:chat-signal');
+    Route::match(['patch', 'post'], '/conversations/{conversation}/wallpaper', [ConversationController::class, 'updateWallpaper'])->middleware('throttle:social-write');
     Route::delete('/conversations', [ConversationController::class, 'clearAll'])->middleware('throttle:social-write');
     Route::delete('/conversations/{conversation}', [ConversationController::class, 'destroy'])->middleware('throttle:social-write');
 
