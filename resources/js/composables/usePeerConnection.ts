@@ -46,25 +46,75 @@ function isRetryable(e: unknown): boolean {
 }
 
 /**
- * ICE-серверы: свой TURN из env, иначе публичные STUN.
- * Без TURN ~треть звонков за NAT не соединится — для 100% нужен
- * свой coturn (VITE_TURN_URLS/USERNAME/CREDENTIAL в .env).
+ * Запасной ICE-конфиг: STUN всегда + статический TURN из env, если задан.
+ * Основной путь — resolveIceServers() с бэкенда (/api/video/ice-servers),
+ * где креды временные и не светятся в бандле.
  *
  * @returns список ICE-серверов для RTCPeerConnection
  */
-function iceServers(): RTCIceServer[] {
-  const urls = (import.meta.env.VITE_TURN_URLS as string | undefined) || ''
-  const username = (import.meta.env.VITE_TURN_USERNAME as string | undefined) || ''
-  const credential = (import.meta.env.VITE_TURN_CREDENTIAL as string | undefined) || ''
-  if (urls && username && credential) {
-    const parsed = urls.split(',').map((u) => u.trim()).filter(Boolean)
-    return [{ urls: parsed, username, credential }]
-  }
-  return [
+function fallbackIceServers(): RTCIceServer[] {
+  const stun: RTCIceServer[] = [
     { urls: ['stun:stun.l.google.com:19302'] },
     { urls: ['stun:stun1.l.google.com:19302'] },
     { urls: ['stun:stun.cloudflare.com:3478'] },
   ]
+  const urls = (import.meta.env.VITE_TURN_URLS as string | undefined) || ''
+  const username = (import.meta.env.VITE_TURN_USERNAME as string | undefined) || ''
+  const credential = (import.meta.env.VITE_TURN_CREDENTIAL as string | undefined) || ''
+  if (!urls || !username || !credential) {
+    return stun
+  }
+  const parsed = urls.split(',').map((u) => u.trim()).filter(Boolean)
+  if (parsed.length === 0) {
+    return stun
+  }
+  return [...stun, { urls: parsed, username, credential }]
+}
+
+/** Кэш ICE с бэкенда: креды временные, храним до ttl (минус запас). */
+let cachedIce: { servers: RTCIceServer[]; turnConfigured: boolean; fetchedAt: number; ttlMs: number } | null = null
+let iceInflight: Promise<{ servers: RTCIceServer[]; turnConfigured: boolean }> | null = null
+
+/**
+ * ICE-серверы с бэкенда с кэшем и фолбэком на STUN.
+ *
+ * Без TURN ~треть звонков за NAT не соединится — для 100% нужен
+ * TURN (TURN_URLS/*, TURN_SECRET или CF_TURN_* в env сервера).
+ * Фолбэк молча отдаёт STUN, чтобы звонок хотя бы попробовал встать,
+ * а оверлей предупредил через turnConfigured=false.
+ *
+ * @param force true чтобы пропустить кэш (после failed с iceRestart)
+ * @returns серверы + флаг наличия TURN
+ */
+export async function resolveIceServers(
+  force = false,
+): Promise<{ servers: RTCIceServer[]; turnConfigured: boolean }> {
+  const now = Date.now()
+  if (!force && cachedIce && now - cachedIce.fetchedAt < cachedIce.ttlMs) {
+    return { servers: cachedIce.servers, turnConfigured: cachedIce.turnConfigured }
+  }
+  if (!force && iceInflight) {
+    return iceInflight
+  }
+  const load = (async () => {
+    try {
+      const res = await videoApi.iceServers()
+      const servers = Array.isArray(res.iceServers) && res.iceServers.length > 0 ? res.iceServers : fallbackIceServers()
+      const turnConfigured = !!res.turnConfigured
+      const ttlSec = Number(res.ttl) || 3600
+      const ttlMs = Math.max(60_000, Math.min(ttlSec * 1000 - 60_000, 23 * 3600 * 1000))
+      cachedIce = { servers, turnConfigured, fetchedAt: Date.now(), ttlMs }
+      return { servers, turnConfigured }
+    } catch {
+      const servers = fallbackIceServers()
+      cachedIce = { servers, turnConfigured: false, fetchedAt: Date.now(), ttlMs: 60_000 }
+      return { servers, turnConfigured: false }
+    } finally {
+      iceInflight = null
+    }
+  })()
+  iceInflight = load
+  return load
 }
 
 /**
@@ -82,15 +132,17 @@ function iceServers(): RTCIceServer[] {
  * - ICE-кандидаты до установки remote description копятся в очереди
  *   (раньше терялись → чёрный экран без звука за NAT).
  *
- * @example
- * const peer = usePeerConnection()
- * peer.bind(callId, isCaller, localStream, (remote) => { videoEl.srcObject = remote })
- * // offer/answer/ice прилетят сами, отправка — внутри
- */
+  * @example
+  * const peer = usePeerConnection()
+  * await peer.bind(callId, isCaller, localStream, (remote) => { videoEl.srcObject = remote })
+  * // offer/answer/ice прилетят сами, отправка — внутри
+  */
 export function usePeerConnection() {
   const remoteStream = ref<MediaStream | null>(null)
   const connectionState = ref<RTCPeerConnectionState | 'idle'>('idle')
   const signalingError = ref<string | null>(null)
+  /** null — ICE ещё не запрашивали; false — только STUN, часть звонков за NAT не встанет. */
+  const iceTurnConfigured = ref<boolean | null>(null)
   /** Счётчики сигналинга для диагностики («Соединение…» показывает их). */
   const signalStats = ref({
     offerSent: 0,
@@ -126,12 +178,16 @@ export function usePeerConnection() {
   /**
    * Создать соединение и подписаться на сигналы звонка.
    *
+   * ICE берём с бэкенда (кэш resolveIceServers): там временные TURN-креды.
+   * Поэтому async — peer создаём только после ответа, иначе STUN-only
+   * соединение за NAT встанет чёрным экраном без звука.
+   *
    * @param callId id звонка
    * @param caller true если мы caller (создаём offer после accepted)
    * @param local локальный поток с камеры
    * @param onRemote колбэк с удалённым потоком
    */
-  function bind(callId: number, caller: boolean, local: MediaStream, onRemote: (s: MediaStream) => void): void {
+  async function bind(callId: number, caller: boolean, local: MediaStream, onRemote: (s: MediaStream) => void): Promise<void> {
     close()
     boundCallId = callId
     isCaller = caller
@@ -150,7 +206,12 @@ export function usePeerConnection() {
       lastError: null,
     }
 
-    const next = new RTCPeerConnection({ iceServers: iceServers() })
+    const ice = await resolveIceServers()
+    iceTurnConfigured.value = ice.turnConfigured
+    if (boundCallId !== callId) {
+      return
+    }
+    const next = new RTCPeerConnection({ iceServers: ice.servers })
     pc = next
     connectionState.value = next.connectionState
 
@@ -524,5 +585,5 @@ export function usePeerConnection() {
     connectionState.value = 'idle'
   }
 
-  return { remoteStream, connectionState, signalingError, signalStats, signalLabel, bind, startOffer, retry, renegotiate, hasVideoSender, replaceVideoTrack, close, currentId }
+  return { remoteStream, connectionState, signalingError, signalStats, signalLabel, iceTurnConfigured, bind, startOffer, retry, renegotiate, hasVideoSender, replaceVideoTrack, close, currentId }
 }

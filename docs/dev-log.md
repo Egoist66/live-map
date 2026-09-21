@@ -1,5 +1,12 @@
 # Dev-лог
 
+## 2026-09-21 — Видео: ICE с бэкенда + TURN для Laravel Cloud (лечим чёрный экран за NAT)
+- 🐞 Симптом на проде: звонок поступает и принимается (сигналинг ок), но оба чёрные и не слышат друг друга. Корень: TURN не настроен — только публичный STUN, а за симметричным NAT/мобильными сетями медиа без relay не встаёт. Плюс баг фронта: при заданном TURN список STUN выбрасывался целиком.
+- 🔧 Бэк: новый `TurnService::iceConfig()` (STUN всегда + TURN когда есть) и `GET /api/video/ice-servers` (до show-роутов, иначе `{call}` съест путь). Три режима: статика `TURN_URLS/USERNAME/CREDENTIAL` (свой coturn или Metered/Xirsys), временные креды `TURN_URLS+TURN_SECRET` (coturn REST по HMAC), Cloudflare Calls `CF_TURN_KEY_ID/CF_TURN_API_TOKEN` (кэш 12ч). Легаси `VITE_TURN_*` читаются как фолбэк.
+- 🔧 Фронт: `usePeerConnection.resolveIceServers()` (кэш на ttl, дедуп параллельных запросов, фолбэк на STUN) + `bind()` стал async — peer создаём только после ICE; все 5 вызовов в `useVideoSession` переведены на await, ICE греется параллельно с `getUserMedia`. Оверлей показывает плашку «relay-сервер не настроен» при `turnConfigured=false`.
+- ℹ️ Laravel Cloud: свой coturn там не поднять (нет UDP-портов) — в прод ставить Metered.ca (5 минут, вставить выданное в TURN_*) или Cloudflare Calls TURN. Без этого звонки внутри одного Wi-Fi идут, а через разных операторов — нет.
+- Проверки: `php -l` ✅ (TurnService, VideoController, api.php), `route:list` ✅ (`ice-servers` до `{call}`), tinker ✅ (дефолт STUN+false, статика STUN+TURN+true, REST `expiry:u42`+HMAC), `vue-tsc` ✅. Вживую осталось: задать TURN_*, задеплоить, жёсткий рефреш обоих, звонок с LTE↔Wi-Fi — видео+звук в обе стороны, плашки про relay нет.
+
 ## 2026-09-21 — Треды комментов живьём: сокет + polling + ответ автору в галерее
 - 🔧 Единый сигнал `CommentThreadUpdated(kind,id)` (без содержимого — приватность) в публичный канал `threads.{kind}.{id}`; `touch()` из store/update/destroy пинов, UFlow, новостей района и фото. Сокет — мгновенно.
 - 🔧 Polling-добивка: sync принимает `watch_threads "pin:5:123"` (макс 5) и отдаёт только новее (`thread_updates`); поллер разносит в шину `thread:updated`. Общий хук `useThreadLive` (сокет-канал + шина + контекст поллинга + дебаунс 800мс) подключён к 4 тредам: пины, UFlow (вместо inbox-триггера — тосты идут своим путём), новости района, фото.

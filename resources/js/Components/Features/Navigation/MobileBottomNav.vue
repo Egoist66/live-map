@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
 import { useMobileBottomNav } from '@/composables/useMobileBottomNav'
-import { useVideoSession } from '@/composables/useVideoSession'
 
 const { dashboardHref, isActive, navLinkClass, total, navHidden } = useMobileBottomNav()
-const video = useVideoSession()
 </script>
 
 <template>
@@ -13,7 +11,7 @@ const video = useVideoSession()
     :aria-hidden="navHidden ? 'true' : undefined"
     class="mobile-bottom-nav pb-[var(--sab)] lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-[#0B0F1B]/95 backdrop-blur-xl border-t border-stone-200 dark:border-white/10"
   >
-    <div class="grid grid-cols-6 items-end px-1 pt-1.5 pb-2 min-h-[60px]">
+    <div class="grid grid-cols-5 items-end px-1 pt-1.5 pb-2 min-h-[60px]">
       <Link
         :href="dashboardHref"
         :aria-current="isActive('dashboard') ? 'page' : undefined"
@@ -59,17 +57,6 @@ const video = useVideoSession()
           :class="isActive('flow') ? 'bg-gradient-to-r from-sky-500 via-blue-600 to-fuchsia-500 dark:from-sky-400 dark:via-blue-400 dark:to-fuchsia-400 bg-clip-text text-transparent opacity-100' : 'opacity-75'"
         >UFlow</span>
       </Link>
-
-      <button
-        type="button"
-        aria-label="Видео-рулетка"
-        title="Видео-рулетка"
-        class="flex flex-col items-center justify-center gap-1 py-1.5 rounded-2xl active:scale-95 transition min-h-[52px] text-stone-500 dark:text-zinc-400"
-        @click="video.openRouletteFromNav()"
-      >
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
-        <span class="text-[10px] font-bold leading-none opacity-75">Видео</span>
-      </button>
 
       <Link
         :href="route('chat')"

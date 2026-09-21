@@ -198,18 +198,6 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <button
-            class="mt-3 w-full flex items-center gap-3 rounded-[20px] border border-rose-200 dark:border-rose-900 bg-gradient-to-r from-rose-500/10 via-fuchsia-500/10 to-orange-400/10 p-4 text-left shadow-soft active:scale-[0.99] transition"
-            @click="v.openRoulette()"
-          >
-            <span class="w-11 h-11 rounded-2xl bg-gradient-to-br from-rose-500 to-orange-400 text-white grid place-items-center shrink-0"><i class="pi pi-video text-lg" /></span>
-            <span class="min-w-0 flex-1">
-              <span class="block text-sm font-black text-stone-900 dark:text-white">Видео-рулетка</span>
-              <span class="block text-xs text-stone-500 dark:text-zinc-400">Случайный собеседник по видео · Free 5/день</span>
-            </span>
-            <i class="pi pi-chevron-right ml-auto text-stone-300 dark:text-zinc-600 shrink-0" />
-          </button>
-
           <div v-if="s.error.value" class="mt-3 text-sm text-rose-600 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-2xl px-4 py-3">
             {{ s.error.value }}
           </div>

@@ -2,7 +2,7 @@ import { onUnmounted, ref, watch } from 'vue'
 import { router } from '@inertiajs/vue3'
 import { useVideoStore } from '@/stores/videoRoulette'
 import { useUserMedia } from '@/composables/useUserMedia'
-import { usePeerConnection } from '@/composables/usePeerConnection'
+import { resolveIceServers, usePeerConnection } from '@/composables/usePeerConnection'
 import { videoApi } from '@/services/video.api'
 import type { VideoPeer } from '@/services/video.api'
 import { chatApi } from '@/services/chat.api'
@@ -145,7 +145,7 @@ export function useVideoSession() {
     (callId) => {
       const peerBrief = store.call?.peer ?? null
       if (peerBrief) lastPeer.value = peerBrief
-      if (callId != null) ensurePeerForCall()
+      if (callId != null) void ensurePeerForCall()
     },
   )
 
@@ -313,11 +313,17 @@ export function useVideoSession() {
   /**
    * Убедиться что камера захвачена (показывает понятную ошибку).
    *
+   * Параллельно греем ICE с бэкенда: пока пользователь разрешает
+   * камеру, TURN-креды уже в кэше и bind() не ждёт лишний RTT.
+   *
    * @returns false когда доступа нет — дальше не идём
    */
   async function ensureMedia(): Promise<boolean> {
     try {
-      await media.start()
+      const mediaPromise = media.start()
+      const icePromise = resolveIceServers().catch(() => null)
+      await mediaPromise
+      await icePromise
       attachLocal()
       return true
     } catch {
@@ -342,7 +348,7 @@ export function useVideoSession() {
       await store.callMatch(userId)
       const callId = store.call?.id
       if (callId && media.stream.value) {
-        peer.bind(callId, true, media.stream.value, attachRemote)
+        await peer.bind(callId, true, media.stream.value, attachRemote)
       }
       if (store.error) {
         store.entryContext = 'direct'
@@ -371,7 +377,7 @@ export function useVideoSession() {
         if (!ok) overlayOpen.value = false
         return
       }
-      peer.bind(callId, false, media.stream.value, attachRemote)
+      await peer.bind(callId, false, media.stream.value, attachRemote)
       await store.acceptIncoming()
       attachLocal()
       await ensureCallerOffer()
@@ -461,7 +467,7 @@ export function useVideoSession() {
       rouletteAuto.value = true
       pendingInvite.value = null
       await store.joinRoulette()
-      wireRoulettePeer()
+      await wireRoulettePeer()
       await maybeAutoAcceptRoulette()
     } finally {
       busy.value = false
@@ -473,13 +479,14 @@ export function useVideoSession() {
    *
    * Caller ждёт accepted (offer уйдёт сам), callee ждёт offer.
    * Вызывается после join/next и при смене звонка в active.
+   * Async: ICE берём с бэкенда до создания RTCPeerConnection.
    */
-  function wireRoulettePeer(): void {
+  async function wireRoulettePeer(): Promise<void> {
     const callId = store.call?.id
     const stream = media.stream.value
     if (!callId || !stream) return
     const caller = !!store.call?.is_caller
-    peer.bind(callId, caller, stream, attachRemote)
+    await peer.bind(callId, caller, stream, attachRemote)
   }
 
   /**
@@ -489,14 +496,15 @@ export function useVideoSession() {
    * (входящее событие → pullRouletteCall), мимо join/next — peer под
    * звонок никто не поднимал, offer не уходил и оба висели в
    * «соединяется». Вызывается вотчером на смену звонка.
+   * Async: bind ждёт ICE с бэкенда, зовём через void из вотчера.
    */
-  function ensurePeerForCall(): void {
+  async function ensurePeerForCall(): Promise<void> {
     const callId = store.call?.id
     const stream = media.stream.value
     if (!callId || !stream) return
     if (peer.currentId() === callId) return
     const caller = !!store.call?.is_caller
-    peer.bind(callId, caller, stream, attachRemote)
+    await peer.bind(callId, caller, stream, attachRemote)
   }
 
   /**
@@ -517,7 +525,7 @@ export function useVideoSession() {
       const ok = await ensureMedia()
       const callId = store.incoming?.callId ?? store.call?.id
       if (!ok || !media.stream.value || !callId) return
-      peer.bind(callId, false, media.stream.value, attachRemote)
+      await peer.bind(callId, false, media.stream.value, attachRemote)
       await store.acceptIncoming()
       attachLocal()
       await ensureCallerOffer()
@@ -537,7 +545,7 @@ export function useVideoSession() {
   async function ensureCallerOffer(): Promise<void> {
     if (store.status !== 'active') return
     if (!store.call?.is_caller) return
-    if (peer.currentId() !== store.call.id) ensurePeerForCall()
+    if (peer.currentId() !== store.call.id) await ensurePeerForCall()
     if (peer.currentId() == null) return
     await peer.startOffer()
   }
@@ -556,7 +564,7 @@ export function useVideoSession() {
       rouletteAuto.value = true
       pendingInvite.value = null
       await store.nextRoulette()
-      wireRoulettePeer()
+      await wireRoulettePeer()
       await maybeAutoAcceptRoulette()
     } finally {
       busy.value = false

@@ -38,12 +38,9 @@ function openPost(): void {
     ]"
     @click="openPost"
   >
-    <div class="flex items-center gap-1.5 px-2.5 pt-2">
-      <i :class="isDistrict ? 'pi pi-megaphone' : 'pi pi-file-edit'" class="text-[11px]" :style="{ color: own ? 'inherit' : '#8b5cf6' }" />
-      <span class="truncate text-[11px] font-bold uppercase tracking-wide opacity-80">
-        {{ isDistrict ? 'Новость района' : 'Пост' }}
-        <template v-if="post.district_name"> · {{ post.district_name }}</template>
-      </span>
+    <div v-if="isDistrict && post.district_name" class="flex items-center gap-1.5 px-2.5 pt-2">
+      <i class="pi pi-megaphone text-[11px]" :style="{ color: own ? 'inherit' : '#8b5cf6' }" />
+      <span class="truncate text-[11px] font-bold uppercase tracking-wide opacity-80">{{ post.district_name }}</span>
     </div>
     <div v-if="isUnavailable" class="px-2.5 py-2 text-xs opacity-70">Пост удалён или недоступен</div>
     <template v-else>

@@ -156,6 +156,7 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::get('/swipes/quota', [SwipeController::class, 'quota']);
     Route::patch('/swipes/settings', [SwipeController::class, 'settings'])->middleware('throttle:profile-write');
     Route::post('/swipes/verify-age', [SwipeController::class, 'verifyAge'])->middleware('throttle:profile-write');
+    Route::get('/video/ice-servers', [\App\Http\Controllers\VideoController::class, 'iceServers']);
     Route::post('/video/match/call', [\App\Http\Controllers\VideoController::class, 'callMatch'])->middleware('throttle:social-write');
     Route::post('/video/{call}/accept', [\App\Http\Controllers\VideoController::class, 'accept'])->middleware('throttle:social-write');
     Route::post('/video/{call}/decline', [\App\Http\Controllers\VideoController::class, 'decline'])->middleware('throttle:social-write');

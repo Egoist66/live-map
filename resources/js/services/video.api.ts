@@ -45,12 +45,31 @@ export interface VideoSignalEvent {
 }
 
 /**
+ * ICE-конфиг с бэкенда: STUN всегда + TURN когда настроен.
+ * turnConfigured=false — часть звонков за NAT не соединится.
+ */
+export interface IceServersResponse {
+  iceServers: RTCIceServer[]
+  turnConfigured: boolean
+  ttl: number
+}
+
+/**
  * API видеозвонков: мэтч-звонки и рулетка.
  *
  * SDP/ICE идут через signal(): сервер пишет строку в video_signals
  * (для polling) и шлёт broadcast получателю (для сокета).
  */
 export const videoApi = {
+  /**
+   * ICE-серверы для RTCPeerConnection (кэшировать на ttl ответа).
+   *
+   * @returns список серверов + флаг наличия TURN
+   */
+  async iceServers() {
+    const { data } = await api.get('/api/video/ice-servers')
+    return data as IceServersResponse
+  },
   async callMatch(userId: number) {
     const { data } = await api.post('/api/video/match/call', { user_id: userId })
     return data as { call: VideoCallPayload }

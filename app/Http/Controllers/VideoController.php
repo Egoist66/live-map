@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\VideoCall;
+use App\Services\TurnService;
 use App\Services\VideoService;
 use Illuminate\Http\Request;
 
@@ -14,7 +15,24 @@ use Illuminate\Http\Request;
  */
 class VideoController extends Controller
 {
-    public function __construct(private VideoService $video) {}
+    public function __construct(private VideoService $video, private TurnService $turn) {}
+
+    /**
+     * ICE-конфиг для WebRTC: STUN всегда + TURN когда настроен.
+     *
+     * Фронт запрашивает перед созданием RTCPeerConnection и кэширует
+     * на ttl ответа. Флаг turnConfigured=false — звонки за симметричным
+     * NAT не встанут, клиент показывает предупреждение.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function iceServers(Request $request)
+    {
+        $config = $this->turn->iceConfig((int) $request->user()->id);
+
+        return response()->json($config);
+    }
 
     /**
      * Позвонить напрямую: мэтчу или другу.
