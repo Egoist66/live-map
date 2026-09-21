@@ -8,7 +8,7 @@ import { resetAdminReports } from '@/composables/useAdminReports'
 import { resetSecurityImpersonations } from '@/composables/useSecurityImpersonations'
 import { resetScreenLockSession, useScreenLock } from '@/composables/useScreenLock'
 import { useBadgeStore } from '@/stores/badges'
-import { resetEchoSession } from '@/echo'
+import { resetEchoSession } from '@/services/echo-session'
 import { stopRealtimePoller } from '@/composables/useRealtimePoller'
 
 const trackedUid = ref<number | null>(null)

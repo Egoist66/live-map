@@ -1,12 +1,16 @@
 import Echo from 'laravel-echo'
 import Pusher from 'pusher-js'
 
+export { resetEchoSession } from '@/services/echo-session'
+
 /**
  * Realtime-подключение к Reverb через laravel-echo.
  *
  * Модуль без сайд-эффектов при импорте: всё стартует через `initEcho()`
- * (клиент вызывает его из app.ts). Статические импорты (например, из
- * useAuthSession) безопасны для SSR — на Node `initEcho` сразу выходит.
+ * (клиент вызывает его из `useAppBoot` только для залогиненных).
+ * Не импортировать статически из главного чанка: тянет
+ * `laravel-echo` + `pusher-js` (~70 КБ) даже гостям. Для сброса сессии
+ * есть лёгкий `@/services/echo-session` без тяжёлых зависимостей.
  */
 
 let echoStarted = false
@@ -99,24 +103,6 @@ function resolveAuthHeaders(): Record<string, string> {
     if (mirrored) headers['Authorization'] = `Bearer ${mirrored}`
   } catch {}
   return headers
-}
-/**
- * Полный сброс realtime при смене аккаунта: покинуть приватные каналы
- * и разорвать сокет, чтобы чужой user.* не долетал в новый аккаунт.
- */
-export function resetEchoSession(channels: string[] = []): void {
-  if (typeof window === 'undefined') return
-  try {
-    const echo = (window as any).Echo
-    if (!echo) return
-    channels.forEach((ch) => {
-      try { echo.leave(ch) } catch {}
-    })
-    try {
-      const pusher = echo.connector?.pusher
-      if (pusher?.disconnect) pusher.disconnect()
-    } catch {}
-  } catch {}
 }
 
 /**
