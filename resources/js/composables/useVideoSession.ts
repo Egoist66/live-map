@@ -76,7 +76,13 @@ export function useVideoSession() {
       if (next === 'searching') startHeartbeat()
       else stopHeartbeat()
       if (next === 'idle') peer.close()
-      if (store.inCall) overlayOpen.value = true
+      if (next === 'searching' || next === 'ringing-out' || next === 'active') {
+        overlayOpen.value = true
+      } else if (next === 'ringing-in' && !sharedRouletteAuto.value) {
+        // Входящий принимает диалог «Принять/Отклонить» — пустой оверлей
+        // «Видео» поверх него не открываем (на мобилке перекрывал кнопки).
+        overlayOpen.value = false
+      }
       if (next === 'ringing-in') void maybeAutoAcceptRoulette()
       if (next === 'active') void ensureCallerOffer()
     },

@@ -128,6 +128,16 @@ async function toggleFullscreen(): Promise<void> {
 }
 
 /**
+ * Оверлей не показываем поверх входящего прямого звонка:
+ * там работает диалог «Принять/Отклонить», а пустая шапка «Видео»
+ * (телепорт в body позже диалога) перекрывала бы его кнопки.
+ * В авто-рулетке входящего диалога нет — оверлей остаётся.
+ */
+const overlayVisible = computed(
+  () => v.overlayOpen.value && !(v.store.status === 'ringing-in' && !v.rouletteAuto.value),
+)
+
+/**
  * Закрытие диалога крестиком: в поиске — выйти из очереди,
  * в звонке — диалог немодально не закрывается (только hangup).
  */
@@ -138,7 +148,7 @@ function onClose(): void {
 
 <template>
   <Dialog
-    :visible="v.overlayOpen.value"
+    :visible="overlayVisible"
     modal
     :closable="!v.store.inCall"
     :draggable="false"
@@ -233,6 +243,20 @@ function onClose(): void {
         <div class="mt-1 text-center text-xs text-stone-400 dark:text-zinc-500">Это ты — собеседник увидит тебя после соединения</div>
         <div class="mt-3 flex justify-center">
           <Button label="Отмена" icon="pi pi-times" rounded outlined severity="secondary" @click="v.leaveRoulette()" />
+        </div>
+      </div>
+
+      <!-- Автосоединение пары рулетки (доли секунды, вместо диалога «Принять») -->
+      <div v-else-if="v.store.status === 'ringing-in'" class="p-5 sm:p-6 text-center">
+        <Avatar
+          :image="v.store.incoming?.peer.avatar_url ?? undefined"
+          :label="!v.store.incoming?.peer.avatar_url ? peerName.slice(0, 1) : undefined"
+          shape="circle"
+          class="!w-20 !h-20 !text-3xl"
+        />
+        <div class="mt-3 text-lg font-black">{{ peerName }}</div>
+        <div class="mt-1 text-sm text-stone-500 dark:text-white/70 flex items-center justify-center gap-2">
+          <i class="pi pi-spin pi-spinner" /> Соединяем с собеседником…
         </div>
       </div>
 
