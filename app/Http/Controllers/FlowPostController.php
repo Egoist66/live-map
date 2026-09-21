@@ -135,6 +135,7 @@ class FlowPostController extends Controller
             'author' => $canSeeAuthor && $author ? [
                 'id' => $author->id,
                 'name' => $author->name,
+                'profile_slug' => $author->profile_slug,
                 'avatar_url' => $author->avatar_url,
             ] : [
                 'id' => null,
@@ -156,7 +157,7 @@ class FlowPostController extends Controller
             return null;
         }
 
-        $post->loadMissing(['original.user:id,name,avatar_path', 'original.media']);
+        $post->loadMissing(['original.user:id,name,profile_slug,avatar_path', 'original.media']);
 
         $original = $post->original;
 
@@ -177,6 +178,7 @@ class FlowPostController extends Controller
             $authorPayload = [
                 'id' => $author->id,
                 'name' => $author->name,
+                'profile_slug' => $author->profile_slug,
                 'avatar_url' => $author->avatar_url,
             ];
         } else {
@@ -220,7 +222,7 @@ class FlowPostController extends Controller
         ]);
 
         $filter = $data['filter'] ?? 'all';
-        $query = FlowPost::with(['user:id,name,avatar_path', 'media', 'poll.options', 'tags:id,name'])->latest();
+        $query = FlowPost::with(['user:id,name,profile_slug,avatar_path', 'media', 'poll.options', 'tags:id,name'])->latest();
 
         $hiddenIds = \App\Models\User::hiddenFromSearchFor($viewer);
 
@@ -704,7 +706,7 @@ class FlowPostController extends Controller
             'comment' => 'nullable|string|max:500',
         ]);
 
-        $post->loadMissing('user:id,name,avatar_path');
+        $post->loadMissing('user:id,name,profile_slug,avatar_path');
 
         abort_if((int) $post->user_id === (int) $user->id, 422, 'Это уже ваш пост');
 
@@ -712,7 +714,7 @@ class FlowPostController extends Controller
 
         if ($post->repost_of_id) {
             $root = FlowPost::findOrFail((int) $post->repost_of_id);
-            $root->loadMissing('user:id,name,avatar_path');
+            $root->loadMissing('user:id,name,profile_slug,avatar_path');
         } else {
             $root = $post;
         }
@@ -830,7 +832,7 @@ class FlowPostController extends Controller
         }
 
         $likes = FlowPostLike::where('post_id', $post->id)
-            ->with('user:id,name,avatar_path')
+            ->with('user:id,name,profile_slug,avatar_path')
             ->orderByDesc('id')
             ->limit(50)
             ->get();
@@ -841,6 +843,7 @@ class FlowPostController extends Controller
             return [
                 'user_id' => $user?->id ?? $like->user_id,
                 'name' => $user?->name ?? 'Пользователь',
+                'profile_slug' => $user?->profile_slug,
                 'avatar_url' => $user?->avatar_url,
             ];
         })->values();

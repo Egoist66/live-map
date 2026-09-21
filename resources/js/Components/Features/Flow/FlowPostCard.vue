@@ -23,6 +23,7 @@ import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 import InfiniteSentinel from '@/Components/Ui/List/InfiniteSentinel.vue'
 import LikersDialog from '@/Components/Features/Feedback/LikersDialog.vue'
 import { formatFlowDate } from '@/utils/flowDate'
+import { useProfileUrl } from '@/composables/useProfileUrl'
 import type { FlowComment, FlowPost } from '@/types/flow'
 
 const props = defineProps<{ post: FlowPost; likeBusy?: boolean }>()
@@ -42,6 +43,7 @@ const shown = computed(() => reposter.displayOf(props.post))
 const isQuote = computed(() => !!props.post.repost_comment && !!props.post.repost)
 const isReposted = computed(() => !!props.post.my_repost_id)
 const lightbox = usePhotoLightbox()
+const { userProfileUrl } = useProfileUrl()
 const threadHasMore = computed(() => thread.hasMore.value)
 const threadLoadingMore = computed(() => thread.loadingMore.value)
 const { sentinel: threadSentinel } = useInfiniteScroll({
@@ -130,7 +132,7 @@ async function share(): Promise<void> {
           <Avatar v-else icon="pi pi-user-secret" shape="circle" class="!w-11 !h-11 !bg-stone-900 !text-white dark:!bg-zinc-700" />
           <div class="min-w-0 flex-1">
             <div class="flex items-center gap-2 min-w-0">
-              <Link v-if="post.author.id" :href="`/users/${post.author.id}`" class="truncate text-[15px] font-bold text-ink-900 dark:text-white hover:underline">
+              <Link v-if="post.author.id" :href="userProfileUrl(post.author)" class="truncate text-[15px] font-bold text-ink-900 dark:text-white hover:underline">
                 {{ post.author.name }}
               </Link>
               <span v-else class="truncate text-[15px] font-bold text-ink-900 dark:text-white">{{ post.author.name }}</span>

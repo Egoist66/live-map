@@ -761,6 +761,7 @@ class DatingService
         return [
             'id' => (int) $user->id,
             'name' => (string) $user->name,
+            'profile_slug' => $user->profile_slug,
             'avatar_url' => $user->avatar_url,
             'is_incognito' => false,
         ];
@@ -1029,7 +1030,7 @@ class DatingService
 
         $candidates = $query
             ->select([
-                'id', 'name', 'gender', 'birth_date', 'bio', 'avatar_path',
+                'id', 'name', 'profile_slug', 'gender', 'birth_date', 'bio', 'avatar_path',
                 'home_city', 'home_lat', 'home_lng', 'last_seen_at',
                 'dating_goal', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_hide_name', 'dating_hide_age', 'dating_hide_distance',
                 'plan', 'plan_expires_at', 'is_admin', 'role',
@@ -1133,7 +1134,7 @@ class DatingService
 
         $candidates = (clone $baseQuery)
             ->select([
-                'id', 'name', 'gender', 'birth_date', 'bio', 'avatar_path',
+                'id', 'name', 'profile_slug', 'gender', 'birth_date', 'bio', 'avatar_path',
                 'home_city', 'home_lat', 'home_lng', 'last_seen_at',
                 'dating_goal', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_hide_name', 'dating_hide_age', 'dating_hide_distance',
                 'dating_match_only', 'message_privacy', 'allow_random_messages',
@@ -1294,6 +1295,7 @@ class DatingService
         return [
             'id' => $candidate->id,
             'name' => $hideName ? 'Аноним' : $candidate->name,
+            'profile_slug' => $hideName ? null : $candidate->profile_slug,
             'is_anonymous' => $hideName,
             'age' => $hideAge ? null : $candidate->age,
             'age_hidden' => $hideAge,

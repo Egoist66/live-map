@@ -9,6 +9,7 @@ import { flowApi } from '@/services/flow.api'
 export interface LikerItem {
   user_id: number | null
   name: string
+  profile_slug?: string | null
   avatar_url: string | null
   is_incognito?: boolean
   type?: string
@@ -124,6 +125,7 @@ export function useLikersPreview(
         likers.value = (res.likers ?? []).map((l) => ({
           user_id: l.user_id,
           name: l.is_incognito ? 'Тайный поклонник' : l.name,
+          profile_slug: l.is_incognito ? null : (l.profile_slug ?? null),
           avatar_url: l.avatar_url,
           is_incognito: l.is_incognito,
         }))
@@ -133,6 +135,7 @@ export function useLikersPreview(
         likers.value = (res.likers ?? []).map((l) => ({
           user_id: l.user_id,
           name: l.name,
+          profile_slug: l.profile_slug ?? null,
           avatar_url: l.avatar_url,
           type: l.type,
         }))
@@ -142,6 +145,7 @@ export function useLikersPreview(
         likers.value = (res.likers ?? []).map((l) => ({
           user_id: l.user_id,
           name: l.name,
+          profile_slug: l.profile_slug ?? null,
           avatar_url: l.avatar_url,
         }))
         serverTotal.value = Number(res.total ?? 0)

@@ -177,7 +177,7 @@ class ProfilePhotoController extends Controller
     {
         $viewer = $request->user();
         if ($viewer->id !== $photo->user_id) $this->abortIfBlocked($viewer, $photo->user);
-        $likes = ProfilePhotoLike::where('photo_id', $photo->id)->with('user:id,name,avatar_path,last_seen_at')->latest()->limit(50)->get();
+        $likes = ProfilePhotoLike::where('photo_id', $photo->id)->with('user:id,name,profile_slug,avatar_path,last_seen_at')->latest()->limit(50)->get();
         $isOwner = $viewer->id === $photo->user_id || $viewer->isAdmin();
         $list = $likes->map(function ($like) use ($isOwner) {
             $isIncognito = (bool) $like->is_incognito;
@@ -188,6 +188,7 @@ class ProfilePhotoController extends Controller
             return [
                 'user_id' => $u?->id ?? $like->user_id,
                 'name' => $isIncognito ? 'Тайный поклонник' : ($u?->name ?? 'Пользователь'),
+                'profile_slug' => $isIncognito ? null : $u?->profile_slug,
                 'avatar_url' => $isIncognito ? null : $u?->avatar_url,
                 'is_incognito' => $isIncognito,
                 'created_at' => $like->created_at?->toISOString(),

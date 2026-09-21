@@ -6,6 +6,7 @@ import { storeToRefs } from 'pinia'
 import { chatApi } from '@/services/chat.api'
 import { usePeopleSearchStore } from '@/stores/peopleSearch'
 import { usePresenceState, isRecentlySeen } from '@/composables/usePresence'
+import { useProfileUrl } from '@/composables/useProfileUrl'
 
 /**
  * Глобальный поиск людей по Ctrl+K.
@@ -22,6 +23,8 @@ export function useGlobalPeopleSearch() {
   const { open, query, results, searching, peopleHasMore, loadingMorePeople } = storeToRefs(store)
 
   const creating = ref(false)
+
+  const { userProfileUrl } = useProfileUrl()
 
   const toast = (() => {
     try {
@@ -174,11 +177,11 @@ export function useGlobalPeopleSearch() {
 
   /**
    * Перейти в профиль человека и закрыть диалог.
-   * @param userId id пользователя
+   * @param user найденный пользователь (слаг приоритетнее id)
    */
-  function openProfile(userId: number): void {
+  function openProfile(user: { id: number; profile_slug?: string | null }): void {
     store.closeDialog()
-    router.visit(`/users/${userId}`)
+    router.visit(userProfileUrl(user))
   }
 
   /**

@@ -14,6 +14,7 @@ import { avatarSrcFor } from '@/composables/useAvatar'
 import { useChatSearchList } from '@/composables/useChatSearchUser'
 import { useGlobalDistrictSearch } from '@/composables/useGlobalDistrictSearch'
 import { useEnterToSend } from '@/composables/useEnterToSend'
+import { useProfileUrl } from '@/composables/useProfileUrl'
 import { usePeopleSearchStore } from '@/stores/peopleSearch'
 import type { GlobalSearchTab } from '@/stores/peopleSearch'
 
@@ -24,6 +25,7 @@ const emit = defineEmits<{ (e: 'update:open', v: boolean): void; (e: 'update:que
 const { isFriend, isPending, showAdd, addTitle } = useChatSearchList()
 const districts = useGlobalDistrictSearch()
 const peopleStore = usePeopleSearchStore()
+const { userProfileUrl } = useProfileUrl()
 
 /**
  * Переключить таб поиска.
@@ -66,7 +68,7 @@ function goDistrict(id: number): void {
           </div>
           <div v-if="results.length" class="mt-3 max-h-[60dvh] sm:max-h-[52vh] overflow-auto divide-y border rounded-2xl bg-white dark:bg-zinc-900 dark:border-zinc-700 shadow-sm">
             <div v-for="u in results" :key="u.id" class="flex items-center justify-between p-3 select-none">
-              <Link :href="`/users/${u.id}`" class="flex items-center gap-2.5 min-w-0">
+              <Link :href="userProfileUrl(u)" class="flex items-center gap-2.5 min-w-0">
                 <span class="relative shrink-0"><Avatar :image="avatarSrcFor(u)" shape="circle" size="normal" class="!w-9 !h-9 [&_img]:object-cover" /><OnlineDot :online="isOnline(u.id, u.last_seen_at)" size="w-3 h-3" /></span>
                 <div class="min-w-0"><div class="text-sm font-medium truncate">{{ u.name }}</div></div>
               </Link>

@@ -36,7 +36,7 @@ export interface District {
   geometry: DistrictGeometry
   center_lat: number
   center_lng: number
-  owner: { id: number; name: string; avatar_url: string | null } | null
+  owner: { id: number; name: string; profile_slug?: string | null; avatar_url: string | null } | null
   members_count: number
   role: DistrictRole
   conversation_id: number | null
@@ -60,6 +60,7 @@ export interface DistrictDetails extends District {
 export interface DistrictResident {
   id: number
   name: string
+  profile_slug?: string | null
   avatar_url: string | null
   since?: string | null
   is_owner?: boolean

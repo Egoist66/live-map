@@ -631,10 +631,11 @@ class DistrictController extends Controller
         $viewer = $request->user();
         $role = $district->roleOf($viewer?->id);
 
-        $approved = $district->approvedMembers()->with('user:id,name,avatar_path')->get();
+        $approved = $district->approvedMembers()->with('user:id,name,profile_slug,avatar_path')->get();
         $residents = $approved->map(fn (DistrictMember $member) => [
             'id' => $member->user->id,
             'name' => $member->user->name,
+            'profile_slug' => $member->user->profile_slug,
             'avatar_url' => $member->user->avatar_url,
             'since' => $member->created_at?->toISOString(),
         ])->values();
@@ -642,6 +643,7 @@ class DistrictController extends Controller
             $residents->prepend([
                 'id' => $district->owner->id,
                 'name' => $district->owner->name,
+                'profile_slug' => $district->owner->profile_slug,
                 'avatar_url' => $district->owner->avatar_url,
                 'since' => $district->created_at?->toISOString(),
                 'is_owner' => true,
@@ -651,15 +653,17 @@ class DistrictController extends Controller
         $pending = [];
         $invited = [];
         if ($role === 'owner') {
-            $pending = $district->pendingMembers()->with('user:id,name,avatar_path')->get()->map(fn (DistrictMember $member) => [
+            $pending = $district->pendingMembers()->with('user:id,name,profile_slug,avatar_path')->get()->map(fn (DistrictMember $member) => [
                 'id' => $member->user->id,
                 'name' => $member->user->name,
+                'profile_slug' => $member->user->profile_slug,
                 'avatar_url' => $member->user->avatar_url,
                 'since' => $member->created_at?->toISOString(),
             ])->values();
-            $invited = $district->invitedMembers()->with('user:id,name,avatar_path')->get()->map(fn (DistrictMember $member) => [
+            $invited = $district->invitedMembers()->with('user:id,name,profile_slug,avatar_path')->get()->map(fn (DistrictMember $member) => [
                 'id' => $member->user->id,
                 'name' => $member->user->name,
+                'profile_slug' => $member->user->profile_slug,
                 'avatar_url' => $member->user->avatar_url,
                 'since' => $member->created_at?->toISOString(),
             ])->values();

@@ -19,7 +19,7 @@ class ConversationController extends Controller
             ->get(['conversation_id', 'cleared_at'])
             ->keyBy('conversation_id');
         $page = Conversation::whereHas('participantRows', fn($q)=>$q->where('user_id',$user->id)->whereNull('hidden_at'))
-            ->with(['participants' => fn($q)=>$q->select('users.id','users.name','users.avatar_path','users.last_seen_at','users.is_invisible','users.plan','users.role','users.is_admin','users.dating_goal','users.dating_interests'), 'messages'=>fn($q)=>$q->reorder()->latest('id')->limit(1), 'district:id,name,user_id'])
+            ->with(['participants' => fn($q)=>$q->select('users.id','users.name','users.profile_slug','users.avatar_path','users.last_seen_at','users.is_invisible','users.plan','users.role','users.is_admin','users.dating_goal','users.dating_interests'), 'messages'=>fn($q)=>$q->reorder()->latest('id')->limit(1), 'district:id,name,user_id'])
             ->withCount(['messages as unread_count'=>fn($q)=>$q->where('sender_id','!=',$user->id)->whereNull('read_at')])
             ->orderByDesc('last_message_at')
             ->orderByDesc('updated_at')
@@ -55,7 +55,7 @@ class ConversationController extends Controller
                     'district_id'=>$c->district_id,
                     'title'=>$c->type === 'district' ? ($c->district?->name ?? 'Район') : null,
                     'can_invite'=>$isDistrictOwner,
-                    'other'=>$other ? ['id'=>$other->id,'name'=>$other->name,'avatar_path'=>$other->avatar_path,'avatar_url'=>$other->avatar_url,'last_seen_at'=>$lastSeen,'is_invisible'=>$other->isInvisibleActive(),'is_match'=>$c->type === 'direct' && isset($matchedIds[$other->id]),'dating_goal'=>$other->dating_goal,'dating_interests'=>$other->dating_interests ?? []] : null,
+                    'other'=>$other ? ['id'=>$other->id,'name'=>$other->name,'profile_slug'=>$other->profile_slug,'avatar_path'=>$other->avatar_path,'avatar_url'=>$other->avatar_url,'last_seen_at'=>$lastSeen,'is_invisible'=>$other->isInvisibleActive(),'is_match'=>$c->type === 'direct' && isset($matchedIds[$other->id]),'dating_goal'=>$other->dating_goal,'dating_interests'=>$other->dating_interests ?? []] : null,
                     'last_message'=>$last,
                     'unread_count'=>$unread,
                     'last_message_at'=>$c->last_message_at,
@@ -81,7 +81,7 @@ class ConversationController extends Controller
     {
         abort_unless($conversation->hasParticipant($request->user()->id), 403, 'Этот чат принадлежит другому аккаунту. Войдите под нужным пользователем.');
         $clearedAt = $conversation->participantRows()->where('user_id', $request->user()->id)->value('cleared_at');
-        $conversation->load(['participants:id,name,avatar_path,last_seen_at,is_invisible,plan,role,is_admin,dating_goal,dating_interests', 'district:id,name,user_id']);
+        $conversation->load(['participants:id,name,profile_slug,avatar_path,last_seen_at,is_invisible,plan,role,is_admin,dating_goal,dating_interests', 'district:id,name,user_id']);
         $pageSize = MessageController::HISTORY_PAGE_SIZE;
         $rawMessages = $conversation->messages()
             ->with(['sender:id,name,avatar_path', 'replyTo.sender:id,name'])
@@ -114,7 +114,7 @@ class ConversationController extends Controller
             'district_id'=>$conversation->district_id,
             'title'=>$conversation->type === 'district' ? ($conversation->district?->name ?? 'Район') : null,
             'can_invite'=>$canInvite,
-            'other'=>$other ? ['id'=>$other->id,'name'=>$other->name,'avatar_path'=>$other->avatar_path,'avatar_url'=>$other->avatar_url,'last_seen_at'=>$lastSeen,'is_invisible'=>$other->isInvisibleActive(),'is_match'=>$isMatch,'dating_goal'=>$other->dating_goal,'dating_interests'=>$other->dating_interests ?? []] : null,
+            'other'=>$other ? ['id'=>$other->id,'name'=>$other->name,'profile_slug'=>$other->profile_slug,'avatar_path'=>$other->avatar_path,'avatar_url'=>$other->avatar_url,'last_seen_at'=>$lastSeen,'is_invisible'=>$other->isInvisibleActive(),'is_match'=>$isMatch,'dating_goal'=>$other->dating_goal,'dating_interests'=>$other->dating_interests ?? []] : null,
             'participants'=>$conversation->participants->map(fn($p)=> array_merge($p->toArray(), ['avatar_url'=>$p->avatar_url])),
             'messages'=>$messages,
             'messages_has_more'=>$hasMoreMessages,

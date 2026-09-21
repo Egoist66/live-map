@@ -43,7 +43,7 @@ function isOnline(other: any): boolean {
     <div v-if="people.friendsLoading.value" class="py-8 text-center text-sm text-stone-400">Загружаем друзей…</div>
     <div v-else-if="!people.friends.value.length" class="py-8 text-center text-sm text-stone-400">Пока пусто</div>
     <div v-else class="max-h-[60dvh] overflow-y-auto -mx-1 px-1">
-      <button v-for="f in people.friends.value" :key="f.id" type="button" @click="people.goProfile(f.other.id)" class="w-full min-h-[60px] flex items-center gap-3 px-2 py-1.5 rounded-2xl hover:bg-stone-50 dark:hover:bg-white/5 active:scale-[0.99] transition text-left overflow-hidden">
+      <button v-for="f in people.friends.value" :key="f.id" type="button" @click="people.goProfile(f.other)" class="w-full min-h-[60px] flex items-center gap-3 px-2 py-1.5 rounded-2xl hover:bg-stone-50 dark:hover:bg-white/5 active:scale-[0.99] transition text-left overflow-hidden">
         <span class="relative shrink-0">
           <img :src="avatarSrcFor(f.other) || undefined" class="w-10 h-10 rounded-full object-cover shrink-0" alt="" />
           <span v-if="isOnline(f.other)" class="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white dark:border-zinc-900" title="В сети" />

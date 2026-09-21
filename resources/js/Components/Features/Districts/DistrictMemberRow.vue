@@ -2,14 +2,18 @@
 import { Link } from '@inertiajs/vue3'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
+import { useProfileUrl } from '@/composables/useProfileUrl'
 
 defineProps<{
   userId: number
+  profileSlug?: string | null
   name: string
   avatarUrl: string | null
   badge: string | null
   action: 'none' | 'kick' | 'approve' | 'cancel'
 }>()
+
+const { userProfileUrl } = useProfileUrl()
 
 const emit = defineEmits<{
   (e: 'kick', userId: number): void
@@ -21,13 +25,13 @@ const emit = defineEmits<{
 
 <template>
   <div class="flex items-center gap-2.5 rounded-2xl border border-stone-200/70 bg-white p-2.5 transition hover:border-blue-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-blue-500/40">
-    <Link :href="`/users/${userId}`" class="relative shrink-0">
+    <Link :href="userProfileUrl({ id: userId, profile_slug: profileSlug })" class="relative shrink-0">
       <Avatar :image="avatarUrl ?? undefined" :label="!avatarUrl ? name.slice(0, 1).toUpperCase() : undefined" shape="circle" class="!h-10 !w-10" />
       <span v-if="badge === 'owner'" class="absolute -bottom-1 -right-1 grid h-4 w-4 place-items-center rounded-full bg-amber-400 ring-2 ring-white dark:ring-zinc-900" title="Владелец">
         <i class="pi pi-crown text-[8px] text-white" />
       </span>
     </Link>
-    <Link :href="`/users/${userId}`" class="min-w-0 flex-1 truncate text-[13px] font-bold text-ink-900 hover:underline sm:text-sm dark:text-white">
+    <Link :href="userProfileUrl({ id: userId, profile_slug: profileSlug })" class="min-w-0 flex-1 truncate text-[13px] font-bold text-ink-900 hover:underline sm:text-sm dark:text-white">
       {{ name }}
     </Link>
     <span v-if="badge === 'pending'" class="shrink-0 rounded-full bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-800 dark:bg-amber-500/15 dark:text-amber-300">

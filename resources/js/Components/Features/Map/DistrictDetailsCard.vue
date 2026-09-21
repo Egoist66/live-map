@@ -14,6 +14,7 @@ import Tab from 'primevue/tab'
 import TabPanels from 'primevue/tabpanels'
 import TabPanel from 'primevue/tabpanel'
 import { DISTRICT_INTEREST_OPTIONS, districtInterestLabel } from '@/utils/districtGeo'
+import { useProfileUrl } from '@/composables/useProfileUrl'
 import type { DistrictDetails, DistrictResident } from '@/types/entities/District'
 
 const props = defineProps<{ open: boolean; district: DistrictDetails | null; residents: DistrictResident[]; pending: DistrictResident[]; invited: DistrictResident[]; loading: boolean }>()
@@ -36,6 +37,7 @@ const emit = defineEmits<{
 }>()
 
 const tab = ref('main')
+const { userProfileUrl } = useProfileUrl()
 const editing = ref(false)
 const editName = ref('')
 const editDescription = ref('')
@@ -128,7 +130,7 @@ function pinTime(pin: any): string {
         <div class="mt-2 flex items-center gap-2 flex-wrap text-[12px] font-semibold">
           <span class="bg-stone-100 text-stone-600 dark:bg-white/10 dark:text-zinc-200 rounded-full px-2.5 py-1">👥 {{ district.members_count }}</span>
           <span class="bg-stone-100 text-stone-600 dark:bg-white/10 dark:text-zinc-200 rounded-full px-2.5 py-1">📍 {{ district.pins_count }}</span>
-          <Link v-if="district.owner" :href="`/users/${district.owner.id}`" class="text-[11px] text-stone-500 dark:text-zinc-400 hover:text-violet-700 dark:hover:text-violet-200 hover:underline px-1">Владелец: {{ district.owner.name }}</Link>
+          <Link v-if="district.owner" :href="userProfileUrl(district.owner)" class="text-[11px] text-stone-500 dark:text-zinc-400 hover:text-violet-700 dark:hover:text-violet-200 hover:underline px-1">Владелец: {{ district.owner.name }}</Link>
         </div>
         <div v-if="editing" class="mt-3 flex flex-col gap-2">
           <Textarea v-model="editDescription" maxlength="500" rows="2" auto-resize placeholder="Чем тут занимаются" class="w-full !rounded-2xl !text-sm" />
@@ -196,11 +198,11 @@ function pinTime(pin: any): string {
             <div class="px-3 sm:px-4 py-3.5">
               <div v-if="residents.length" class="grid grid-cols-1 min-[411px]:grid-cols-2 gap-2">
                 <div v-for="r in residents" :key="r.id" class="flex items-center gap-2.5 rounded-2xl border border-stone-200 dark:border-white/10 bg-white dark:bg-white/[0.06] p-2.5 transition hover:border-violet-300 dark:hover:border-violet-400/40 hover:bg-stone-50 dark:hover:bg-white/[0.09]">
-                  <Link :href="`/users/${r.id}`" class="relative shrink-0 hover:opacity-85 transition">
+                  <Link :href="userProfileUrl(r)" class="relative shrink-0 hover:opacity-85 transition">
                     <Avatar :image="r.avatar_url ?? undefined" :label="!r.avatar_url ? (r.name ?? '?').slice(0, 1) : undefined" shape="circle" class="!w-10 !h-10 sm:!w-9 sm:!h-9" />
                     <span v-if="r.is_owner" class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-amber-400 grid place-items-center ring-2 ring-white dark:ring-zinc-900" title="Владелец"><i class="pi pi-crown text-[8px] text-white" /></span>
                   </Link>
-                  <Link :href="`/users/${r.id}`" class="min-w-0 flex-1 text-[13px] sm:text-sm font-bold truncate text-stone-900 dark:text-white hover:underline">{{ r.name }}</Link>
+                  <Link :href="userProfileUrl(r)" class="min-w-0 flex-1 text-[13px] sm:text-sm font-bold truncate text-stone-900 dark:text-white hover:underline">{{ r.name }}</Link>
                   <Button v-if="isOwner && !r.is_owner" icon="pi pi-user-minus" rounded outlined severity="danger" size="small" title="Исключить" aria-label="Исключить жителя" class="!w-10 !h-10 sm:!w-9 sm:!h-9 !p-0 shrink-0 hover:!bg-red-50 dark:hover:!bg-red-950/40 active:scale-95 transition" @click="emit('kick', r.id)" />
                 </div>
               </div>
@@ -213,16 +215,16 @@ function pinTime(pin: any): string {
                 <div class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500 mb-1.5">Приглашены · ждут ответа</div>
                 <div class="flex flex-col gap-2">
                   <div v-for="p in invited" :key="p.id" class="flex items-center gap-2.5 rounded-2xl border border-violet-200 dark:border-violet-400/30 bg-violet-50 dark:bg-violet-950/30 p-2.5 transition hover:border-violet-300 dark:hover:border-violet-400/50">
-                    <Link :href="`/users/${p.id}`" class="shrink-0 hover:opacity-85 transition"><Avatar :image="p.avatar_url ?? undefined" :label="!p.avatar_url ? (p.name ?? '?').slice(0, 1) : undefined" shape="circle" class="!w-11 !h-11 sm:!w-10 sm:!h-10" /></Link>
-                    <Link :href="`/users/${p.id}`" class="min-w-0 flex-1 text-[13px] sm:text-sm font-bold truncate text-stone-900 dark:text-white hover:underline">{{ p.name }}</Link>
+                    <Link :href="userProfileUrl(p)" class="shrink-0 hover:opacity-85 transition"><Avatar :image="p.avatar_url ?? undefined" :label="!p.avatar_url ? (p.name ?? '?').slice(0, 1) : undefined" shape="circle" class="!w-11 !h-11 sm:!w-10 sm:!h-10" /></Link>
+                    <Link :href="userProfileUrl(p)" class="min-w-0 flex-1 text-[13px] sm:text-sm font-bold truncate text-stone-900 dark:text-white hover:underline">{{ p.name }}</Link>
                     <Button label="Отозвать" rounded outlined severity="secondary" size="small" class="shrink-0 active:scale-95 transition" @click="emit('cancel-invite', p.id)" />
                   </div>
                 </div>
               </div>
               <div v-if="pending.length" class="flex flex-col gap-2">
                 <div v-for="p in pending" :key="p.id" class="flex items-center gap-2.5 rounded-2xl border border-amber-200 dark:border-amber-400/30 bg-amber-50 dark:bg-amber-950/30 p-2.5 transition hover:border-amber-300 dark:hover:border-amber-400/50">
-                  <Link :href="`/users/${p.id}`" class="shrink-0 hover:opacity-85 transition"><Avatar :image="p.avatar_url ?? undefined" :label="!p.avatar_url ? (p.name ?? '?').slice(0, 1) : undefined" shape="circle" class="!w-11 !h-11 sm:!w-10 sm:!h-10" /></Link>
-                  <Link :href="`/users/${p.id}`" class="min-w-0 flex-1 text-[13px] sm:text-sm font-bold truncate text-stone-900 dark:text-white hover:underline">{{ p.name }}</Link>
+                    <Link :href="userProfileUrl(p)" class="shrink-0 hover:opacity-85 transition"><Avatar :image="p.avatar_url ?? undefined" :label="!p.avatar_url ? (p.name ?? '?').slice(0, 1) : undefined" shape="circle" class="!w-11 !h-11 sm:!w-10 sm:!h-10" /></Link>
+                    <Link :href="userProfileUrl(p)" class="min-w-0 flex-1 text-[13px] sm:text-sm font-bold truncate text-stone-900 dark:text-white hover:underline">{{ p.name }}</Link>
                   <Button icon="pi pi-check" rounded size="small" title="Принять" aria-label="Принять заявку" class="!w-11 !h-11 sm:!w-10 sm:!h-10 !p-0 shrink-0 !bg-emerald-500 !border-0 hover:!bg-emerald-400 dark:hover:!bg-emerald-400 active:scale-95 transition" @click="emit('approve', p.id)" />
                   <Button icon="pi pi-times" rounded outlined severity="danger" size="small" title="Отклонить" aria-label="Отклонить заявку" class="!w-11 !h-11 sm:!w-10 sm:!h-10 !p-0 shrink-0 hover:!bg-red-50 dark:hover:!bg-red-950/40 active:scale-95 transition" @click="emit('reject', p.id)" />
                 </div>

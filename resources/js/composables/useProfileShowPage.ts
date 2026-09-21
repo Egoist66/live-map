@@ -73,6 +73,6 @@ export function useProfileShowPage(props: { profileUser: any; isOwn: boolean; is
   function askBlock() { confirm.value = { title: 'Заблокировать?', msg: `Заблокировать ${props.profileUser.name}?`, action: onBlock } }
   function closeConfirm() { confirm.value = null }
   async function runConfirm() { const a = confirm.value?.action; confirm.value = null; if (a) await a() }
-  function share() { shareProfile({ id: props.profileUser.id, name: props.profileUser.name }) }
+  function share() { shareProfile({ id: props.profileUser.id, profile_slug: props.profileUser.profile_slug, name: props.profileUser.name }) }
   return { avatarSrc, profile, showAvatar, bioText, bioEmpty, isFriend, isPending, isBlocked, isBlockedBy, canMessage, reason, confirm, isLocked, online, sharing, lastSeenText, registeredAt, homeLabel, hasHome, levelLabel: LEVEL_LABEL, sync, onAdd, onRemove, onBlock, onUnblock, onChat, askRemove, askBlock, closeConfirm, runConfirm, share }
 }

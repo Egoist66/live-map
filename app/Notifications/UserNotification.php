@@ -119,6 +119,7 @@ abstract class UserNotification
         return [
             'id' => $actor->id,
             'name' => $actor->name,
+            'profile_slug' => $actor->profile_slug,
             'avatar_path' => $actor->avatar_path,
             'avatar_url' => $actor->avatar_url,
         ];

@@ -16,6 +16,7 @@ export interface GalleryPhoto {
 export interface PhotoLiker {
   user_id: number | null
   name: string
+  profile_slug?: string | null
   avatar_url: string | null
   is_incognito: boolean
   created_at?: string

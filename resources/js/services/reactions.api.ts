@@ -4,6 +4,7 @@ import type { ReactableType, ReactionType, ToggleReactionResponse, ReportPayload
 export interface PinLiker {
   user_id: number
   name: string
+  profile_slug?: string | null
   avatar_url: string | null
   type: ReactionType
   created_at?: string

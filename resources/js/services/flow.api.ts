@@ -199,5 +199,6 @@ export const flowApi = {
 export interface FlowLiker {
   user_id: number
   name: string
+  profile_slug?: string | null
   avatar_url: string | null
 }

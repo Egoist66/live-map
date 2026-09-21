@@ -368,6 +368,7 @@ class RealtimeController extends Controller
         return [
             'id' => (int) $user->id,
             'name' => (string) $user->name,
+            'profile_slug' => $user->profile_slug ?? null,
             'avatar_url' => $user->avatar_url,
             'is_incognito' => false,
         ];

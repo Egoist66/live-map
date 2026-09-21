@@ -1,5 +1,6 @@
 import { router } from '@inertiajs/vue3'
 import { chatApi } from '@/services/chat.api'
+import { useProfileUrl } from '@/composables/useProfileUrl'
 
 /**
  * Переход по клику на @упоминание в тексте.
@@ -22,6 +23,7 @@ import { chatApi } from '@/services/chat.api'
  * @returns действия для перехода по упоминаниям
  */
 export function useMentionNavigate() {
+  const { userProfileUrl } = useProfileUrl()
   /**
    * Открывает профиль пользователя по имени из упоминания.
    * @param name имя без `@`
@@ -35,13 +37,13 @@ export function useMentionNavigate() {
     try {
       const res = await chatApi.search(query)
       const nested = (res as { data?: unknown })?.data
-      const results = Array.isArray(res) ? (res as Array<{ id: number; name: string }>) : (Array.isArray(nested) ? (nested as Array<{ id: number; name: string }>) : [])
+      const results = Array.isArray(res) ? (res as Array<{ id: number; name: string; profile_slug?: string | null }>) : (Array.isArray(nested) ? (nested as Array<{ id: number; name: string; profile_slug?: string | null }>) : [])
       const exact = results.find((u) => u.name.toLowerCase() === query.toLowerCase())
       const target = exact ?? results[0]
       if (!target?.id) {
         return false
       }
-      router.visit(`/users/${target.id}`)
+      router.visit(userProfileUrl(target))
       return true
     } catch {
       return false

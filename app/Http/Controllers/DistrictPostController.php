@@ -41,7 +41,7 @@ class DistrictPostController extends Controller
      */
     private function serialize(DistrictPost $post, $viewer): array
     {
-        $post->loadMissing('user:id,name,avatar_path');
+        $post->loadMissing('user:id,name,profile_slug,avatar_path');
 
         $author = $post->user;
         $viewerId = $viewer ? (int) $viewer->id : 0;
@@ -68,6 +68,7 @@ class DistrictPostController extends Controller
             'author' => $author ? [
                 'id' => $author->id,
                 'name' => $author->name,
+                'profile_slug' => $author->profile_slug,
                 'avatar_url' => $author->avatar_url,
             ] : [
                 'id' => null,

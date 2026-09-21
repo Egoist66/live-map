@@ -8,6 +8,7 @@ import { useBadgeStore } from '@/stores/badges'
 import { useAppUpdates } from '@/composables/useAppUpdates'
 import { busOn } from '@/services/realtime-bus'
 import { ensureUserChannel, leaveUserChannel } from '@/composables/useUserChannel'
+import { useProfileUrl } from '@/composables/useProfileUrl'
 
 const activities = ref<PinActivityItem[]>([])
 const inboxRows = ref<InboxNotification[]>([])
@@ -382,7 +383,9 @@ function describe(a: PinActivityItem): { emoji: string; text: string } {
 }
 
 function resolveTarget(a: PinActivityItem): { url: string; pending: any } {
-  const actorId = Number((a as unknown as { actor?: { id?: number } }).actor?.id || 0) || null
+  const { userProfileUrl } = useProfileUrl()
+  const actor = (a as unknown as { actor?: { id?: number; profile_slug?: string | null } }).actor ?? null
+  const actorId = Number(actor?.id || 0) || null
   if (a.kind === 'swipe_like') {
     return { url: '/swipes?tab=admirers', pending: null }
   }
@@ -403,11 +406,13 @@ function resolveTarget(a: PinActivityItem): { url: string; pending: any } {
     return { url, pending: { type: 'pin', pinId, commentId } }
   }
   if (photoId && photoUserId) {
-    const url = `/users/${photoUserId}?photo=${photoId}${photoCommentId ? `&comment=${photoCommentId}` : ''}`
+    const isActorPhoto = actor !== null && Number(actor.id || 0) === photoUserId
+    const photoOwner = isActorPhoto ? actor : { id: photoUserId }
+    const url = userProfileUrl(photoOwner, { photo: photoId, comment: photoCommentId })
     return { url, pending: { type: 'photo', photoId, commentId: photoCommentId, userId: photoUserId } }
   }
   if (actorId) {
-    return { url: `/users/${actorId}`, pending: null }
+    return { url: userProfileUrl(actor ?? { id: actorId }), pending: null }
   }
   return { url: '/map', pending: null }
 }

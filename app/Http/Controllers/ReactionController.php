@@ -24,7 +24,7 @@ class ReactionController extends Controller
 
         $reactions = Reaction::where('reactable_type', 'pin')
             ->where('reactable_id', $pin->id)
-            ->with('user:id,name,avatar_path')
+            ->with('user:id,name,profile_slug,avatar_path')
             ->latest()
             ->limit(50)
             ->get();
@@ -35,6 +35,7 @@ class ReactionController extends Controller
             return [
                 'user_id' => $user?->id ?? $reaction->user_id,
                 'name' => $user?->name ?? 'Пользователь',
+                'profile_slug' => $user?->profile_slug,
                 'avatar_url' => $user?->avatar_url,
                 'type' => $reaction->type,
                 'created_at' => $reaction->created_at?->toISOString(),

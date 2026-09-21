@@ -10,6 +10,7 @@ import { avatarSrcFor } from '@/composables/useAvatar'
 import { useChatPreview } from '@/composables/useChatPreview'
 import { useChatRowMenu } from '@/composables/useChatRowMenu'
 import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
+import { useProfileUrl } from '@/composables/useProfileUrl'
 import InfiniteSentinel from '@/Components/Ui/List/InfiniteSentinel.vue'
 
 const props = withDefaults(defineProps<{ conversations: any[]; uloveConversations?: any[]; friends: any[]; pendingIn: any[]; blocked: any[]; tab: string; selectedId: number | null; filter: string; conversationsSentinel?: unknown; conversationsHasMore?: boolean; conversationsLoadingMore?: boolean; friendsSentinel?: unknown; friendsHasMore?: boolean; friendsLoadingMore?: boolean; isOnline: (id?: number, lastSeenAt?: string | null) => boolean; formatTime: (s: string) => string }>(), { conversationsHasMore: false, conversationsLoadingMore: false, friendsHasMore: false, friendsLoadingMore: false })
@@ -32,6 +33,7 @@ const rowMenu = useChatRowMenu({
 })
 const menuAnchor = rowMenu.menu
 const { menuPt } = useDropdownMenuStyle()
+const { userProfileUrl } = useProfileUrl()
 </script>
 <template>
   <div class="flex-1 overflow-auto overscroll-contain [scrollbar-width:thin] max-lg:[-ms-overflow-style:none] max-lg:[scrollbar-width:none] max-lg:[&::-webkit-scrollbar]:hidden min-h-0 w-full max-w-full">
@@ -95,7 +97,7 @@ const { menuPt } = useDropdownMenuStyle()
     <div v-if="tab === 'friends'" class="divide-y dark:divide-zinc-800">
       <div v-if="!friends.length" class="p-6 text-center text-sm text-stone-500">Нет друзей</div>
       <div v-for="f in friends" :key="f.id" class="flex items-center justify-between p-3.5 lg:p-3 select-none active:bg-stone-50 group">
-        <Link :href="`/users/${f.other?.id}`" class="flex items-center gap-3 hover:opacity-80 min-w-0">
+        <Link :href="userProfileUrl(f.other)" class="flex items-center gap-3 hover:opacity-80 min-w-0">
           <span class="relative shrink-0"><Avatar :image="avatarSrcFor(f.other)" shape="circle" class="[&_img]:object-cover" :pt="{ image: { class: 'object-cover' } }" /><OnlineDot :online="isOnline(f.other?.id, (f.other as any)?.last_seen_at)" /></span>
           <span class="text-[15px] lg:text-sm font-medium dark:text-white truncate hover:underline">{{ f.other?.name }}</span>
         </Link>
@@ -109,7 +111,7 @@ const { menuPt } = useDropdownMenuStyle()
     <div v-if="tab === 'requests'" class="divide-y dark:divide-zinc-800">
       <div v-if="!pendingIn.length" class="p-6 text-center text-sm text-stone-500">Нет заявок</div>
       <div v-for="r in pendingIn" :key="r.id" class="flex items-center justify-between p-3.5 lg:p-3 gap-2 select-none">
-        <Link :href="`/users/${r.requester?.id}`" class="flex items-center gap-3 hover:opacity-80 min-w-0">
+        <Link :href="userProfileUrl(r.requester)" class="flex items-center gap-3 hover:opacity-80 min-w-0">
           <span class="relative shrink-0"><Avatar :image="avatarSrcFor(r.requester)" shape="circle" class="[&_img]:object-cover" :pt="{ image: { class: 'object-cover' } }" /><OnlineDot :online="isOnline(r.requester?.id, (r.requester as any)?.last_seen_at)" /></span>
           <span class="text-[15px] lg:text-sm dark:text-white truncate hover:underline">{{ r.requester?.name }}</span>
         </Link>

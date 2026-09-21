@@ -13,7 +13,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['name', 'email', 'password', 'gender', 'birth_date', 'country', 'country_code', 'plan', 'latitude', 'longitude', 'role', 'is_admin', 'is_hidden_from_search', 'dating_enabled', 'dating_goal', 'signup_goal', 'default_mode', 'default_mode_set_at', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_gender_pref', 'dating_hide_name', 'dating_hide_age', 'dating_hide_distance', 'dating_match_only', 'random_chats_used', 'random_chats_month', 'avatar_path', 'home_lat', 'home_lng', 'home_city', 'home_address', 'home_visibility', 'home_show_exact', 'home_radius_km', 'bio', 'thought', 'reputation_score', 'level', 'quest_cooldown_until', 'quest_last_track', 'quest_granted_at', 'is_anonymous_default', 'default_location_precision', 'default_blur_meters', 'message_privacy', 'allow_random_messages', 'photo_comments_privacy', 'flow_comments_privacy', 'settings', 'last_seen_at', 'is_invisible', 'screen_lock_code', 'screen_lock_timeout', 'screen_lock_kind', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at', 'terms_accepted_at', 'terms_version'])]
+#[Fillable(['name', 'profile_slug', 'email', 'password', 'gender', 'birth_date', 'country', 'country_code', 'plan', 'latitude', 'longitude', 'role', 'is_admin', 'is_hidden_from_search', 'dating_enabled', 'dating_goal', 'signup_goal', 'default_mode', 'default_mode_set_at', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_gender_pref', 'dating_hide_name', 'dating_hide_age', 'dating_hide_distance', 'dating_match_only', 'random_chats_used', 'random_chats_month', 'avatar_path', 'home_lat', 'home_lng', 'home_city', 'home_address', 'home_visibility', 'home_show_exact', 'home_radius_km', 'bio', 'thought', 'reputation_score', 'level', 'quest_cooldown_until', 'quest_last_track', 'quest_granted_at', 'is_anonymous_default', 'default_location_precision', 'default_blur_meters', 'message_privacy', 'allow_random_messages', 'photo_comments_privacy', 'flow_comments_privacy', 'settings', 'last_seen_at', 'is_invisible', 'screen_lock_code', 'screen_lock_timeout', 'screen_lock_kind', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at', 'terms_accepted_at', 'terms_version'])]
 #[Hidden(['password', 'remember_token', 'screen_lock_code'])]
 /**
  * Пользователь приложения.
@@ -58,13 +58,93 @@ class User extends Authenticatable
             if (! $user->is_invisible && ($user->is_admin || $user->role === 'admin')) {
                 $user->is_invisible = true;
             }
+
+            self::assignProfileSlug($user);
+        });
+
+        static::created(function (self $user) {
+            self::replaceTemporaryProfileSlug($user);
         });
 
         static::updating(function (self $user) {
             if (($user->isDirty('is_admin') || $user->isDirty('role')) && $user->isAdmin() && ! $user->is_invisible) {
                 $user->is_invisible = true;
             }
+
+            if ($user->isDirty('name')) {
+                $service = app(\App\Services\ProfileSlugService::class);
+
+                $user->profile_slug = $service->uniqueSlug((string) $user->name, (int) $user->id);
+            }
         });
+    }
+
+    /**
+     * Назначить слаг профиля из имени, если он пуст.
+     *
+     * Ручной `profile_slug` (импорт, сиды) не перезаписывается.
+     * Уже занятый слаг не правится здесь — уникальность гарантирует
+     * сервис генерацией суффикса.
+     *
+     * @param self $user создаваемый либо обновляемый пользователь
+     * @return void
+     */
+    private static function assignProfileSlug(self $user): void
+    {
+        $stored = trim((string) ($user->profile_slug ?? ''));
+
+        if ($stored !== '') {
+            return;
+        }
+
+        $service = app(\App\Services\ProfileSlugService::class);
+
+        $ignoreId = $user->exists ? (int) $user->id : null;
+
+        $user->profile_slug = $service->uniqueSlug((string) ($user->name ?? ''), $ignoreId);
+    }
+
+    /**
+     * Заменить временный слаг (`user`, `user-N`) на `user-{id}`.
+     *
+     * Временный слаг ставится при создании, когда id ещё неизвестен
+     * (пустое либо числовое имя). После вставки id известен —
+     * делаем детерминированный фолбэк без перезаписи событий.
+     *
+     * @param self $user только что созданный пользователь
+     * @return void
+     */
+    private static function replaceTemporaryProfileSlug(self $user): void
+    {
+        $stored = trim((string) ($user->profile_slug ?? ''));
+
+        $isTemporary = preg_match('/^user(-\d+)?$/', $stored) === 1;
+
+        if (! $isTemporary) {
+            return;
+        }
+
+        $service = app(\App\Services\ProfileSlugService::class);
+
+        $slug = $service->uniqueSlug((string) ($user->name ?? ''), (int) $user->id);
+
+        $user->forceFill(['profile_slug' => $slug])->saveQuietly();
+    }
+
+    /**
+     * Канонический идентификатор профиля для URL: слаг либо id.
+     *
+     * @return string слаг профиля или числовой id строкой
+     */
+    public function profileIdentifier(): string
+    {
+        $stored = trim((string) ($this->profile_slug ?? ''));
+
+        if ($stored !== '') {
+            return $stored;
+        }
+
+        return (string) (int) $this->id;
     }
 
     /**

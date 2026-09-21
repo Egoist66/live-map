@@ -6,6 +6,7 @@ import { useScreenLock } from '@/composables/useScreenLock'
 import { useFileDownload } from '@/composables/useFileDownload'
 import { busOn } from '@/services/realtime-bus'
 import { ensureUserChannel, leaveUserChannel } from '@/composables/useUserChannel'
+import { useProfileUrl } from '@/composables/useProfileUrl'
 
 function isLockedNow(): boolean {
   try { return useScreenLock().locked.value } catch { return false }
@@ -457,20 +458,24 @@ function handleFriendship(e: any) {
  * Повторяет логику resolveTarget/usePinActivity и WebPushService на бэке.
  */
 function activityLink(a: any): string {
+  const { userProfileUrl } = useProfileUrl()
   const pinId = Number(a?.pin?.id || a?.pin_id || 0) || null
   const commentId = Number(a?.comment_id || 0) || null
   const photoId = Number(a?.photo?.id || a?.photo_id || 0) || null
   const photoCommentId = Number(a?.photo_comment_id || 0) || null
+  const actor = (a?.actor ?? null) as { id?: number; profile_slug?: string | null } | null
   const actorId = Number(a?.actor?.id || a?.actor_id || 0) || null
   const photoUserId = Number(a?.photo?.user_id || actorId || 0) || null
   if (pinId) {
     return `/map?pin=${pinId}${commentId ? `&comment=${commentId}` : ''}`
   }
   if (photoId && photoUserId) {
-    return `/users/${photoUserId}?photo=${photoId}${photoCommentId ? `&comment=${photoCommentId}` : ''}`
+    const isActorPhoto = actor !== null && Number(actor.id || 0) === photoUserId
+    const photoOwner = isActorPhoto ? actor : { id: photoUserId }
+    return userProfileUrl(photoOwner, { photo: photoId, comment: photoCommentId })
   }
   if (actorId) {
-    return `/users/${actorId}`
+    return userProfileUrl(actor ?? { id: actorId })
   }
   return '/map'
 }

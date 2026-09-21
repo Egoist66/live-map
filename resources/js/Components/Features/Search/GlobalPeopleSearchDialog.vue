@@ -92,8 +92,8 @@ function onTab(value: string | number | undefined): void {
             <div
               v-for="u in search.results.value"
               :key="u.id"
-              @click="search.openProfile(u.id)"
-              @keydown.enter="search.openProfile(u.id)"
+              @click="search.openProfile(u)"
+              @keydown.enter="search.openProfile(u)"
               tabindex="0"
               role="link"
               class="flex items-center justify-between p-3 select-none cursor-pointer hover:bg-stone-50 dark:hover:bg-zinc-800/60 transition rounded-xl"

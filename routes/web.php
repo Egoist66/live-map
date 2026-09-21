@@ -28,7 +28,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/flow', [PageController::class, 'flow'])->name('flow');
     Route::get('/flow/post/{post}', [PageController::class, 'flowPost'])->whereNumber('post')->name('flow.post');
     Route::get('/chat/{conversation?}', [PageController::class, 'chat'])->name('chat');
-    Route::get('/users/{user}', [ProfileController::class, 'publicShow'])->name('users.show');
+    Route::get('/users/{profile}', [ProfileController::class, 'publicShow'])->name('users.show');
     Route::get('/map', [PageController::class, 'map'])->name('map');
     Route::get('/districts', [\App\Http\Controllers\DistrictController::class, 'pageIndex'])->name('districts.index');
     Route::get('/districts/create', [\App\Http\Controllers\DistrictController::class, 'pageCreate'])->name('districts.create');

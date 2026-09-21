@@ -111,7 +111,7 @@ class SosController extends Controller
      */
     protected function callPayload(\App\Models\SosCall $call, int $viewerId): array
     {
-        $call->loadMissing(['pin', 'responder:id,name,avatar_path', 'creator:id,name,avatar_path']);
+        $call->loadMissing(['pin', 'responder:id,name,profile_slug,avatar_path', 'creator:id,name,profile_slug,avatar_path']);
 
         $pin = $call->pin;
 
@@ -121,7 +121,7 @@ class SosController extends Controller
             'is_participant' => $call->isParticipant($viewerId),
             'is_creator' => (int) $call->creator_id === $viewerId,
             'responder' => $call->responder ? array_merge(
-                $call->responder->only(['id', 'name', 'avatar_path']),
+                $call->responder->only(['id', 'name', 'profile_slug', 'avatar_path']),
                 ['avatar_url' => $call->responder->avatar_url]
             ) : null,
             'conversation_id' => $call->conversation_id,

@@ -10,6 +10,7 @@ import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 import { useSwipeCardPhotos } from '@/composables/useSwipeCardPhotos'
 import { useSwipesMobileMenu } from '@/composables/useSwipesMobileMenu'
 import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
+import { useProfileUrl } from '@/composables/useProfileUrl'
 import { useSeo } from '@/composables/useSeo'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
@@ -34,6 +35,7 @@ const s = useSwipes()
 const cardPhotos = useSwipeCardPhotos(() => s.current.value)
 const mobileMenu = useSwipesMobileMenu()
 const { selectPt } = useDropdownMenuStyle()
+const { userProfileUrl } = useProfileUrl()
 
 const detailsCard = ref<any | null>(null)
 const activeHasMore = computed(() => s.activeHasMore.value)
@@ -194,11 +196,11 @@ onUnmounted(() => {
                   :key="u.id ?? u.name"
                   class="rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3 flex flex-col items-center text-center"
                 >
-                  <Link :href="`/users/${u.id}`" class="relative shrink-0">
+                  <Link :href="userProfileUrl(u)" class="relative shrink-0">
                     <Avatar :image="u.avatar_url ?? undefined" :label="!u.avatar_url ? (u.name ?? '?').slice(0, 1) : undefined" shape="circle" class="!w-16 !h-16" />
                     <span class="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white dark:border-zinc-900" title="В сети" />
                   </Link>
-                  <Link :href="`/users/${u.id}`" class="mt-2 min-w-0 w-full">
+                  <Link :href="userProfileUrl(u)" class="mt-2 min-w-0 w-full">
                     <div class="text-sm font-bold truncate text-stone-900 dark:text-white">{{ u.name }} · {{ s.ageLabel(u) }}</div>
                     <div v-if="u.city" class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">{{ u.city }}</div>
                     <div v-if="u.distance_km != null" class="text-[11px] text-stone-500 dark:text-zinc-400">{{ u.distance_km }} км</div>
@@ -242,8 +244,8 @@ onUnmounted(() => {
                 :key="f.id ?? f.name"
                 class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3"
               >
-                <Link :href="`/users/${f.id}`" class="shrink-0"><Avatar :image="f.avatar_url ?? undefined" :label="!f.avatar_url ? (f.name ?? '?').slice(0, 1) : undefined" shape="circle" class="!w-12 !h-12" /></Link>
-                <Link :href="`/users/${f.id}`" class="min-w-0 flex-1">
+                <Link :href="userProfileUrl(f)" class="shrink-0"><Avatar :image="f.avatar_url ?? undefined" :label="!f.avatar_url ? (f.name ?? '?').slice(0, 1) : undefined" shape="circle" class="!w-12 !h-12" /></Link>
+                <Link :href="userProfileUrl(f)" class="min-w-0 flex-1">
                   <div class="text-sm font-bold truncate text-stone-900 dark:text-white">{{ f.name }}<span class="font-semibold text-stone-500 dark:text-zinc-400"> · {{ s.ageLabel(f) }}</span></div>
                   <div v-if="f.city" class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">{{ f.city }}</div>
                 </Link>
@@ -271,10 +273,10 @@ onUnmounted(() => {
                 :key="s.admirerKey(f)"
                 class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3"
               >
-                <component :is="f.is_incognito ? 'span' : Link" :href="f.is_incognito ? undefined : `/users/${f.id}`" class="shrink-0">
+                <component :is="f.is_incognito ? 'span' : Link" :href="f.is_incognito ? undefined : userProfileUrl(f)" class="shrink-0">
                   <Avatar :image="(!f.is_incognito && f.avatar_url) ? f.avatar_url : undefined" :label="f.is_incognito ? '🕵️' : (!f.avatar_url ? (f.name ?? '?').slice(0, 1) : undefined)" shape="circle" class="!w-12 !h-12" />
                 </component>
-                <component :is="f.is_incognito ? 'span' : Link" :href="f.is_incognito ? undefined : `/users/${f.id}`" class="min-w-0 flex-1">
+                <component :is="f.is_incognito ? 'span' : Link" :href="f.is_incognito ? undefined : userProfileUrl(f)" class="min-w-0 flex-1">
                   <div class="text-sm font-bold truncate text-stone-900 dark:text-white">{{ f.is_incognito ? 'Тайный поклонник' : f.name }}<span v-if="!f.is_incognito" class="font-semibold text-stone-500 dark:text-zinc-400"> · {{ s.ageLabel(f) }}</span></div>
                   <div v-if="f.is_incognito" class="text-[11px] text-violet-500 font-bold">Скрыл себя · PRO · лайкни в ответ — откроется при мэтче</div>
                   <div v-else-if="f.city" class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">{{ f.city }}</div>

@@ -223,7 +223,7 @@ class Pin extends Model
             'blur_meters' => $blurMeters,
             'blur_label' => $blurMeters > 0 ? static::formatMeters($blurMeters) : null,
             'blur_hint' => static::blurHintFor($this->location_precision, $meta),
-            'user' => $this->is_anonymous && !$isOwner ? null : ($this->user ? array_merge($this->user->only(['id', 'name', 'avatar_path', 'level']), ['avatar_url' => $this->user->avatar_url]) : null),
+            'user' => $this->is_anonymous && !$isOwner ? null : ($this->user ? array_merge($this->user->only(['id', 'name', 'profile_slug', 'avatar_path', 'level']), ['avatar_url' => $this->user->avatar_url]) : null),
             'created_at' => $this->created_at,
         ];
     }

@@ -4,9 +4,12 @@ import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import ProgressSpinner from 'primevue/progressspinner'
 import { reactionEmoji, type LikerItem } from '@/composables/useLikersPreview'
+import { useProfileUrl } from '@/composables/useProfileUrl'
 
 defineProps<{ visible: boolean; title: string; likers: LikerItem[]; loading: boolean; total: number; showType?: boolean; baseZIndex?: number }>()
 const emit = defineEmits<{ (e: 'update:visible', v: boolean): void }>()
+
+const { userProfileUrl } = useProfileUrl()
 
 function initialOf(name: string): string {
   return (name || '?').slice(0, 1).toUpperCase()
@@ -41,7 +44,7 @@ function initialOf(name: string): string {
           :is="l.user_id ? Link : 'div'"
           v-for="l in likers"
           :key="`${l.user_id ?? 'inc'}-${l.name}`"
-          :href="l.user_id ? `/users/${l.user_id}` : undefined"
+          :href="l.user_id ? userProfileUrl(l) : undefined"
           class="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-2xl text-left transition hover:bg-stone-100 dark:hover:bg-zinc-800"
         >
           <img v-if="l.avatar_url" :src="l.avatar_url" alt="" loading="lazy" class="w-9 h-9 rounded-full object-cover shrink-0 bg-stone-100 dark:bg-white/10" />

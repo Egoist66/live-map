@@ -19,7 +19,7 @@ class UserSubscriptionController extends Controller
     public function index(Request $request)
     {
         $subs = UserSubscription::where('subscriber_id', $request->user()->id)
-            ->with('target:id,name,avatar_path,level,reputation_score')
+            ->with('target:id,name,profile_slug,avatar_path,level,reputation_score')
             ->latest()
             ->get();
 
@@ -31,7 +31,7 @@ class UserSubscriptionController extends Controller
             'notify_level' => (bool) $s->notify_level,
             'notify_post' => (bool) ($s->notify_post ?? true),
             'target' => $s->target ? array_merge(
-                $s->target->only(['id', 'name', 'level', 'reputation_score']),
+                $s->target->only(['id', 'name', 'profile_slug', 'level', 'reputation_score']),
                 ['avatar_url' => $s->target->avatar_url]
             ) : null,
             'created_at' => $s->created_at?->toISOString(),

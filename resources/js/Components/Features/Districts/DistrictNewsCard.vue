@@ -11,6 +11,7 @@ import PhotoLightbox from '@/Components/Features/Media/PhotoLightbox.vue'
 import InfiniteSentinel from '@/Components/Ui/List/InfiniteSentinel.vue'
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 import { formatFlowDate } from '@/utils/flowDate'
+import { useProfileUrl } from '@/composables/useProfileUrl'
 import type { DistrictPost } from '@/types/entities/DistrictPost'
 
 const props = defineProps<{
@@ -39,6 +40,7 @@ const commentsOpened = computed(() => expanded.value)
 const threadHasMore = computed(() => thread.hasMore.value)
 const threadLoadingMore = computed(() => thread.loadingMore.value)
 const { sentinel: threadSentinel } = useInfiniteScroll({ hasMore: threadHasMore, loading: threadLoadingMore, onLoadMore: () => thread.loadMore() })
+const { userProfileUrl } = useProfileUrl()
 
 async function toggleComments(): Promise<void> {
   expanded.value = !expanded.value
@@ -56,7 +58,7 @@ async function toggleComments(): Promise<void> {
           <Avatar v-if="post.author.avatar_url" :image="post.author.avatar_url" shape="circle" class="!h-11 !w-11" />
           <Avatar v-else icon="pi pi-megaphone" shape="circle" class="!h-11 !w-11 !bg-blue-600 !text-white" />
           <div class="min-w-0 flex-1">
-            <Link v-if="post.author.id" :href="`/users/${post.author.id}`" class="truncate text-[15px] font-bold text-ink-900 hover:underline dark:text-white">
+            <Link v-if="post.author.id" :href="userProfileUrl(post.author)" class="truncate text-[15px] font-bold text-ink-900 hover:underline dark:text-white">
               {{ post.author.name }}
             </Link>
             <span v-else class="truncate text-[15px] font-bold text-ink-900 dark:text-white">{{ post.author.name }}</span>

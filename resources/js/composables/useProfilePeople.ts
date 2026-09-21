@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import { router } from '@inertiajs/vue3'
 import { chatApi } from '@/services/chat.api'
+import { useProfileUrl } from '@/composables/useProfileUrl'
 
 /**
  * Друзья профиля: модалка списка с infinite scroll.
@@ -14,6 +15,7 @@ import { chatApi } from '@/services/chat.api'
  * // <InfiniteSentinel :sentinel="..." :has-more="people.friendsHasMore" :loading="people.friendsLoadingMore" />
  */
 export function useProfilePeople() {
+  const { userProfileUrl } = useProfileUrl()
   const friendsOpen = ref(false)
   const friendsTitle = ref('')
   const friends = ref<any[]>([])
@@ -105,9 +107,9 @@ export function useProfilePeople() {
     }
   }
 
-  function goProfile(id: number) {
+  function goProfile(user: { id: number; profile_slug?: string | null }) {
     closeFriends()
-    router.visit(`/users/${id}`)
+    router.visit(userProfileUrl(user))
   }
 
   return {

@@ -20,7 +20,7 @@ class ChatUserController extends Controller
             ->whereNotIn('id',$blocked)
             ->whereNotIn('id', User::hiddenFromSearchFor($me))
             ->where(fn($qq)=>$qq->where('name','like',"%$q%")->orWhere('email','like',"%$q%"));
-        $page = $base->select('id','name','avatar_path','message_privacy','allow_random_messages','last_seen_at','is_invisible','plan','role','is_admin')
+        $page = $base->select('id','name','profile_slug','avatar_path','message_privacy','allow_random_messages','last_seen_at','is_invisible','plan','role','is_admin')
             ->orderBy('name')
             ->paginate($perPage);
         $users = $page->getCollection();
@@ -33,6 +33,7 @@ class ChatUserController extends Controller
         $rows = $users->map(fn($u)=>[
                 'id'=>$u->id,
                 'name'=>$u->name,
+                'profile_slug'=>$u->profile_slug,
                 'avatar_path'=>$u->avatar_path,
                 'avatar_url'=>$u->avatar_url,
                 'can_message'=>$me->canMessageUser($u),

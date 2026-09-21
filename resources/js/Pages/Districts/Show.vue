@@ -16,6 +16,7 @@ import DistrictNewsCard from '@/Components/Features/Districts/DistrictNewsCard.v
 import DistrictNewsComposer from '@/Components/Features/Districts/DistrictNewsComposer.vue'
 import { useDistrictShowPage } from '@/composables/useDistrictShowPage'
 import { useDistrictNews } from '@/composables/useDistrictNews'
+import { useProfileUrl } from '@/composables/useProfileUrl'
 import { computed } from 'vue'
 import InfiniteSentinel from '@/Components/Ui/List/InfiniteSentinel.vue'
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
@@ -28,6 +29,7 @@ const props = defineProps<{
 
 const page = useDistrictShowPage(props.districtId, props.initialDistrict)
 const news = useDistrictNews(props.districtId, page.isOwner)
+const { userProfileUrl } = useProfileUrl()
 const canCommentNews = computed(() => page.isOwner.value || page.isMember.value)
 const newsHasMore = computed(() => news.hasMore.value)
 const newsLoadingMore = computed(() => news.loadingMore.value)
@@ -189,6 +191,7 @@ onMounted(async () => {
                     v-for="resident in page.residents.value"
                     :key="resident.id"
                     :user-id="resident.id"
+                    :profile-slug="resident.profile_slug"
                     :name="resident.name"
                     :avatar-url="resident.avatar_url"
                     :badge="resident.is_owner ? 'owner' : null"
@@ -217,7 +220,7 @@ onMounted(async () => {
                   </div>
                   <div v-if="page.district.value.owner" class="flex justify-between gap-3 py-3">
                     <span class="flex items-center gap-2 text-stone-500 dark:text-zinc-400"><i class="pi pi-crown" />Владелец</span>
-                    <Link :href="`/users/${page.district.value.owner.id}`" class="truncate font-semibold text-blue-600 hover:underline dark:text-blue-400">
+                    <Link :href="userProfileUrl(page.district.value.owner)" class="truncate font-semibold text-blue-600 hover:underline dark:text-blue-400">
                       {{ page.district.value.owner.name }}
                     </Link>
                   </div>
@@ -233,6 +236,7 @@ onMounted(async () => {
                       v-for="person in page.invited.value"
                       :key="person.id"
                       :user-id="person.id"
+                      :profile-slug="person.profile_slug"
                       :name="person.name"
                       :avatar-url="person.avatar_url"
                       badge="invited"
@@ -249,6 +253,7 @@ onMounted(async () => {
                       v-for="person in page.pending.value"
                       :key="person.id"
                       :user-id="person.id"
+                      :profile-slug="person.profile_slug"
                       :name="person.name"
                       :avatar-url="person.avatar_url"
                       badge="pending"
@@ -267,7 +272,7 @@ onMounted(async () => {
             <aside class="grid min-w-0 gap-3">
               <div class="rounded-3xl border border-stone-200/70 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
                 <div class="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-zinc-500">Контакты</div>
-                <Link v-if="page.district.value.owner" :href="`/users/${page.district.value.owner.id}`" class="mt-2 block truncate text-sm font-bold text-blue-600 hover:underline dark:text-blue-400">
+                <Link v-if="page.district.value.owner" :href="userProfileUrl(page.district.value.owner)" class="mt-2 block truncate text-sm font-bold text-blue-600 hover:underline dark:text-blue-400">
                   {{ page.district.value.owner.name }}
                 </Link>
                 <div class="text-[11px] text-stone-500 dark:text-zinc-400">администратор сообщества</div>

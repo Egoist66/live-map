@@ -188,6 +188,7 @@ class District extends Model
             'owner' => $this->owner ? [
                 'id' => $this->owner->id,
                 'name' => $this->owner->name,
+                'profile_slug' => $this->owner->profile_slug,
                 'avatar_url' => $this->owner->avatar_url,
             ] : null,
             'members_count' => (int) ($this->getAttribute('approved_members_count') ?? $this->approvedMembers()->count()) + 1,

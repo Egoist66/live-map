@@ -39,7 +39,7 @@ export function useDashboardPage(propsUser?: any, propsIsOwn?: boolean) {
   function goSettings() { router.visit(settingsHref.value) }
   function goAdmin() { router.visit(route('admin')) }
   function goFaq() { router.visit('/faq') }
-  function share() { shareProfile({ id: u.value.id, name: u.value.name }) }
+  function share() { shareProfile({ id: u.value.id, profile_slug: u.value.profile_slug, name: u.value.name }) }
   const levelName = computed(() => LEVEL_LABEL[u.value?.level] || u.value?.level || 'Новичок')
   const registeredAt = computed(() => {
     try { return new Date(u.value.created_at).toLocaleDateString('ru-RU') } catch { return '' }

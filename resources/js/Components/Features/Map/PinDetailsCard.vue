@@ -21,6 +21,7 @@ import { usePinCommentInput } from '@/composables/usePinCommentInput'
 import { useEnterToSend } from '@/composables/useEnterToSend'
 import InfiniteSentinel from '@/Components/Ui/List/InfiniteSentinel.vue'
 import { formatTime } from '@/utils/date'
+import { useProfileUrl } from '@/composables/useProfileUrl'
 import PinInviteButton from '@/Components/Features/Map/PinInviteButton.vue'
 
 const props = withDefaults(defineProps<{ pin: any; comments: any[]; highlightCommentId?: number | null; commentText: string; creatingComment: boolean; editingCommentId: number | null; editingContent: string; savingComment: boolean; deletingCommentId?: number | null; reacting: boolean; reporting: boolean; pinEdit: any; categories: any[]; deleting: boolean; authId: number; isAdmin?: boolean; replyTo: any; mentions: any; commentsSentinel?: unknown; commentsHasMore?: boolean; commentsLoadingMore?: boolean }>(), { commentsHasMore: false, commentsLoadingMore: false })
@@ -35,6 +36,7 @@ const { handleEnterToSend, enterPlaceholder } = useEnterToSend()
 const editCommentPlaceholder = enterPlaceholder('Shift+Enter — новая строка', 'Новая строка')
 const newCommentPlaceholder = enterPlaceholder('Написать комментарий... Shift+Enter — новая строка', 'Написать комментарий...')
 const mentionNav = useMentionNavigate()
+const { userProfileUrl } = useProfileUrl()
 const pinLikers = useLikersPreview(
   'pin',
   () => props.pin?.id ?? null,
@@ -168,7 +170,7 @@ function canDeleteComment(c: any): boolean {
         <span class="text-xs bg-stone-100 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 text-stone-700 dark:text-zinc-200 rounded-full px-2.5 py-1 font-medium">{{ catMeta ? `${catMeta.i} ${catMeta.l}` : pin.category }}</span>
         <span v-if="(pin.gender_audience ?? 'all') === 'female'" class="text-xs bg-pink-600 text-white rounded-full px-2.5 py-1 font-medium">👩 Только женщины</span>
         <span v-else-if="(pin.gender_audience ?? 'all') === 'male'" class="text-xs bg-sky-600 text-white rounded-full px-2.5 py-1 font-medium">👨 Только мужчины</span>
-        <Link v-if="pin.user && !pin.is_anonymous" :href="`/users/${pin.user.id}`" class="hover:opacity-80"><Chip :label="`${pin.user?.name} · ${pin.user?.level || 'novice'}`" :image="avatarSrcFor(pin.user) || undefined" class="!bg-white dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 !rounded-full !text-xs !text-ink-900 dark:!text-zinc-100" /></Link>
+        <Link v-if="pin.user && !pin.is_anonymous" :href="userProfileUrl(pin.user)" class="hover:opacity-80"><Chip :label="`${pin.user?.name} · ${pin.user?.level || 'novice'}`" :image="avatarSrcFor(pin.user) || undefined" class="!bg-white dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 !rounded-full !text-xs !text-ink-900 dark:!text-zinc-100" /></Link>
         <span class="text-xs bg-amber-50 dark:bg-amber-500/15 border border-amber-200 dark:border-amber-400/30 text-amber-800 dark:text-amber-300 rounded-full px-2.5 py-1">{{ pin.expires_at ? `до ${formatTime(pin.expires_at)}` : '∞ бессрочно' }}</span>
       </div>
       <div v-if="!pinEdit.editing.value" class="mt-3">

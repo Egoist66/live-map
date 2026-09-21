@@ -1,22 +1,31 @@
 import { ref } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { route } from '@/route'
+import { useProfileUrl } from '@/composables/useProfileUrl'
 
 export function useProfileShare() {
   const toast = (() => { try { return useToast() } catch { return null as any } })()
   const sharing = ref(false)
   const copied = ref(false)
+  const { userProfileUrl } = useProfileUrl()
 
-  function getUrl(userId: number | string) {
-    try {
-      if (typeof route !== 'undefined' && route().has('users.show')) return route('users.show', userId as any)
-    } catch {}
-    return `${window.location.origin}/users/${userId}`
+  function profileIdentifier(user: { id: number | string; profile_slug?: string | null }): string {
+    const slug = typeof user.profile_slug === 'string' ? user.profile_slug.trim() : ''
+
+    return slug !== '' ? slug : String(user.id)
   }
 
-  async function shareProfile(user: { id: number | string; name?: string }) {
+  function getUrl(user: { id: number | string; profile_slug?: string | null }) {
+    const identifier = profileIdentifier(user)
+    try {
+      if (typeof route !== 'undefined' && route().has('users.show')) return route('users.show', identifier as any)
+    } catch {}
+    return `${window.location.origin}${userProfileUrl(user)}`
+  }
+
+  async function shareProfile(user: { id: number | string; profile_slug?: string | null; name?: string }) {
     sharing.value = true
-    const url = getUrl(user.id)
+    const url = getUrl(user)
     const title = user.name ? `Профиль ${user.name} — UPin` : 'Профиль — UPin'
     const text = user.name ? `Посмотри профиль ${user.name} на UPin` : 'Посмотри профиль на UPin'
     try {

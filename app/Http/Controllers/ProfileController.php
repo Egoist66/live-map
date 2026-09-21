@@ -15,8 +15,34 @@ use Inertia\Response;
 
 class ProfileController extends Controller
 {
-    public function publicShow(Request $request, \App\Models\User $user): Response
+    /**
+     * Публичный профиль по слагу никнейма (`/users/anna-ivanova`).
+     *
+     * Числовой идентификатор (`/users/123`) тоже принимается для
+     * совместимости со старыми ссылками, но отвечает 301 редиректом
+     * на канонический слаг с сохранением query-строки (`?photo=`,
+     * `?comment=`). Под капотом всё по-прежнему работает по id.
+     *
+     * @param Request $request запрос
+     * @param string $profile слаг профиля либо числовой id
+     */
+    public function publicShow(Request $request, string $profile): Response|RedirectResponse
     {
+        $slugService = app(\App\Services\ProfileSlugService::class);
+
+        $user = $slugService->resolve($profile);
+
+        abort_if($user === null, 404);
+
+        $isNumericVisit = ctype_digit(trim($profile));
+
+        if ($isNumericVisit && $user->profileIdentifier() !== trim($profile)) {
+            return redirect()->route('users.show', array_merge(
+                ['profile' => $user->profileIdentifier()],
+                $request->query()
+            ), 301);
+        }
+
         $auth = $request->user();
         $isOwn = $auth && $auth->id === $user->id;
         if (!$isOwn && $auth && !$user->isDiscoverableBy($auth)) abort(404);
@@ -43,7 +69,7 @@ class ProfileController extends Controller
             $showLastSeen = null;
         }
         $home = $user->publicHomeFor($auth);
-        $base = $user->only(['id','name','gender','birth_date','country','country_code','avatar_path','level','reputation_score','created_at','home_city','home_visibility','home_radius_km','bio','thought','last_seen_at','is_invisible','photo_comments_privacy']);
+        $base = $user->only(['id','profile_slug','name','gender','birth_date','country','country_code','avatar_path','level','reputation_score','created_at','home_city','home_visibility','home_radius_km','bio','thought','last_seen_at','is_invisible','photo_comments_privacy']);
         $base['age'] = $user->age;
         $base['plan'] = $user->plan ?? 'free';
         $base['plan_expires_at'] = $user->plan_expires_at?->toISOString();
@@ -138,7 +164,7 @@ class ProfileController extends Controller
         } elseif (is_numeric($identifier)) {
             $profileUser = \App\Models\User::findOrFail((int) $identifier);
             if ($profileUser->id !== $auth->id && !$auth->isAdmin()) {
-                return redirect()->route('users.show', $profileUser->id);
+                return redirect()->route('users.show', ['profile' => $profileUser->profileIdentifier()]);
             }
         } else {
             abort(404);

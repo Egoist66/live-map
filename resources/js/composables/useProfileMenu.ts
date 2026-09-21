@@ -4,6 +4,7 @@ import { useToast } from 'primevue/usetoast'
 
 export type ProfileMenuTarget = {
   id: number | string
+  profile_slug?: string | null
   name?: string
 }
 
@@ -54,7 +55,7 @@ export function useProfileMenu() {
   async function share(): Promise<void> {
     if (!target.value) return
     close()
-    await shareProfile({ id: target.value.id, name: target.value.name })
+    await shareProfile({ id: target.value.id, profile_slug: target.value.profile_slug, name: target.value.name })
   }
 
   /**
@@ -62,7 +63,7 @@ export function useProfileMenu() {
    */
   async function copyLink(): Promise<void> {
     if (!target.value) return
-    const url = getUrl(target.value.id)
+    const url = getUrl({ id: target.value.id, profile_slug: target.value.profile_slug })
     close()
     try {
       if (navigator.clipboard?.writeText) {

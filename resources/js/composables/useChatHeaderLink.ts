@@ -1,5 +1,6 @@
 import { computed } from 'vue'
 import type { Ref } from 'vue'
+import { useProfileUrl } from '@/composables/useProfileUrl'
 
 /**
  * Ссылка шапки чата: район ведёт на страницу района, личка — в профиль.
@@ -14,6 +15,8 @@ import type { Ref } from 'vue'
  * <Link :href="headerLink.href.value" />
  */
 export function useChatHeaderLink(activeConv: Ref<any>) {
+  const { userProfileUrl } = useProfileUrl()
+
   const conversationType = computed(() => String(activeConv.value?.type ?? 'direct'))
 
   const isDistrictChat = computed(() => conversationType.value === 'district')
@@ -34,6 +37,8 @@ export function useChatHeaderLink(activeConv: Ref<any>) {
     return isValid ? rawId : 0
   })
 
+  const peer = computed(() => activeConv.value?.other ?? null)
+
   const headerHref = computed(() => {
     const isDistrictTarget = isDistrictChat.value && districtId.value > 0
 
@@ -44,7 +49,7 @@ export function useChatHeaderLink(activeConv: Ref<any>) {
     const isUserTarget = peerId.value > 0
 
     if (isUserTarget) {
-      return `/users/${peerId.value}`
+      return userProfileUrl(peer.value)
     }
 
     return '#'
