@@ -87,8 +87,16 @@ export const galleryCommentsApi = {
     if (Array.isArray(data)) return data
     return (data as { data: GalleryComment[] }).data ?? []
   },
-  async create(photoId: number, content: string): Promise<GalleryComment> {
-    const { data } = await api.post<GalleryComment>(`/api/photos/${photoId}/comments`, { content })
+  /**
+   * Отправить комментарий; replyToId привязывает ответ к родителю —
+   * бэк уведомит его автора даже без @ в тексте.
+   *
+   * @param photoId фото
+   * @param content текст
+   * @param replyToId id родительского комментария
+   */
+  async create(photoId: number, content: string, replyToId?: number | null): Promise<GalleryComment> {
+    const { data } = await api.post<GalleryComment>(`/api/photos/${photoId}/comments`, { content, reply_to_id: replyToId ?? null })
     return data
   },
   async remove(id: number): Promise<{ ok: boolean }> {

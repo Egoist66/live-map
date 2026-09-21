@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { galleryCommentsApi, type GalleryComment } from '@/services/gallery.api'
+import { bindThreadLive } from '@/composables/useThreadLive'
 
 /**
  * Адресат ответа в комментариях фото: тредов нет (API плоский),
@@ -99,7 +100,7 @@ export function useProfilePhotoComments(getPhotoId: () => number | null, onCount
     sending.value = true
     error.value = null
     try {
-      const created = await galleryCommentsApi.create(id, text)
+      const created = await galleryCommentsApi.create(id, text, replyTo.value?.id ?? null)
       comments.value.push(created)
       draft.value = ''
       replyTo.value = null
@@ -119,6 +120,27 @@ export function useProfilePhotoComments(getPhotoId: () => number | null, onCount
     comments.value = comments.value.filter((c) => c.id !== id)
     onCount?.(comments.value.length)
   }
+
+  /**
+   * Живая лента фото: чужой коммент из шины перезагружает список.
+   * Сокет треда + добивка watch_threads в поллинге. Черновик и ответ
+   * не трогаем, отправка в полёте блокирует перезагрузку.
+   */
+  bindThreadLive({
+    kind: 'photo',
+    id: () => getPhotoId(),
+    knownMax: () => {
+      let max = 0
+      for (const c of comments.value) {
+        const id = Number((c as any)?.id ?? 0)
+        if (id > max) max = id
+      }
+      return max
+    },
+    onChanged: () => void load(),
+    isOpen: () => getPhotoId() !== null,
+    isBusy: () => sending.value,
+  })
 
   return { comments, loading, sending, draft, error, replyTo, load, send, remove, reset, setReply }
 }

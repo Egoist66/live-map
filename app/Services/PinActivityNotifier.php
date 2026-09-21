@@ -13,6 +13,7 @@ use App\Notifications\DatingMatchedNotification;
 use App\Notifications\PhotoCommentedNotification;
 use App\Notifications\PhotoLikedNotification;
 use App\Notifications\PhotoMentionNotification;
+use App\Notifications\PhotoRepliedNotification;
 use App\Notifications\PinCommentedNotification;
 use App\Notifications\PinMentionNotification;
 use App\Notifications\PinReactionNotification;
@@ -84,6 +85,26 @@ class PinActivityNotifier
             $owner = User::find((int) $ownerId);
             if ($owner) {
                 UserNotifier::send($owner, new PhotoMentionNotification($photo, $actor, $comment, (int) $ownerId));
+            }
+            UserNotifier::deleteUnread((int) $ownerId, 'photo.commented', 'photo-comment:'.$comment->id);
+        }
+    }
+
+    /**
+     * Ответить автору родительского комментария (ответ без @ тоже доходит).
+     *
+     * @param ProfilePhoto $photo фото
+     * @param User $actor автор ответа
+     * @param ProfilePhotoComment $comment ответ
+     * @param int $parentAuthorId автор родителя
+     * @return void
+     */
+    public static function photoReplied(ProfilePhoto $photo, User $actor, ProfilePhotoComment $comment, int $parentAuthorId): void
+    {
+        foreach (Mentions::notifyableIds([$parentAuthorId], (int) $actor->id) as $ownerId) {
+            $owner = User::find((int) $ownerId);
+            if ($owner) {
+                UserNotifier::send($owner, new PhotoRepliedNotification($photo, $actor, $comment, (int) $ownerId));
             }
             UserNotifier::deleteUnread((int) $ownerId, 'photo.commented', 'photo-comment:'.$comment->id);
         }

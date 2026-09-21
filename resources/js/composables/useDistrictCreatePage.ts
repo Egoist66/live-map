@@ -108,7 +108,7 @@ export function useDistrictCreatePage(canCreate: boolean, limitText: string) {
     }
     const draft = loadDistrictDraft()
     if (!draft) {
-      formError.value = 'Нет заливки: нарисуйте район на карте кистью'
+      formError.value = 'Нет заливки: нарисуйте район на карте чертежом'
       hasDraft.value = false
       return
     }

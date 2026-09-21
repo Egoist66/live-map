@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
@@ -8,6 +8,8 @@ import InputText from 'primevue/inputtext'
 import { useDistrictNewsComments } from '@/composables/useDistrictNewsComments'
 import { usePhotoLightbox } from '@/composables/usePhotoLightbox'
 import PhotoLightbox from '@/Components/Features/Media/PhotoLightbox.vue'
+import PostShareDialog from '@/Components/Features/Chat/PostShareDialog.vue'
+import { usePostShare } from '@/composables/usePostShare'
 import InfiniteSentinel from '@/Components/Ui/List/InfiniteSentinel.vue'
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 import { formatFlowDate } from '@/utils/flowDate'
@@ -30,6 +32,7 @@ const emit = defineEmits<{
 
 const expanded = ref(false)
 const lightbox = usePhotoLightbox()
+const sharer = usePostShare()
 const thread = useDistrictNewsComments(
   props.districtId,
   props.post.id,
@@ -48,6 +51,28 @@ async function toggleComments(): Promise<void> {
     await thread.load()
   }
 }
+
+/**
+ * Открыть модалку «Отправить как сообщение»: выбор получателей.
+ */
+function openShareDialog(): void {
+  sharer.open({
+    type: 'district',
+    id: props.post.id,
+    district_id: props.post.district_id,
+    title: props.post.title,
+    excerpt: String(props.post.body ?? '').replace(/\s+/g, ' ').trim().slice(0, 160) || null,
+    image_url: props.post.image_url,
+    author_name: props.post.author?.name ?? null,
+  })
+}
+
+const stopThreadLive = thread.subscribeLive(() => expanded.value)
+onBeforeUnmount(() => {
+  try {
+    stopThreadLive()
+  } catch {}
+})
 </script>
 
 <template>
@@ -91,6 +116,8 @@ async function toggleComments(): Promise<void> {
           />
           <span v-if="post.likes_count > 0" class="px-1 text-[13px] font-bold text-stone-500 dark:text-zinc-400">{{ post.likes_count }}</span>
           <Button icon="pi pi-comment" text rounded severity="secondary" :label="String(post.comments_count)" @click="toggleComments()" />
+          <span class="flex-1" />
+          <Button icon="pi pi-send" text rounded severity="secondary" aria-label="Отправить как сообщение" title="Отправить как сообщение" v-tooltip.bottom="'Отправить как сообщение'" @click="openShareDialog()" />
         </div>
 
         <div v-if="expanded" class="mt-2 border-t border-stone-100 pt-3 dark:border-zinc-800">
@@ -156,6 +183,7 @@ async function toggleComments(): Promise<void> {
         <button v-else-if="post.comments_count > 0" class="mt-2 text-[13px] font-semibold text-stone-500 hover:underline" @click="toggleComments()">
           Показать комментарии ({{ post.comments_count }})
         </button>
+        <PostShareDialog :sharer="(sharer as any)" />
       </article>
     </template>
   </Card>

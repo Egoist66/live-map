@@ -266,7 +266,7 @@ export const PIN_ACTIVITY_KINDS = ['reaction', 'comment', 'mention', 'sub_pin', 
 /**
  * Виды галереи фото (вкладка «События», секция «Фото»).
  */
-export const PHOTO_ACTIVITY_KINDS = ['photo_like', 'photo_comment'] as const
+export const PHOTO_ACTIVITY_KINDS = ['photo_like', 'photo_comment', 'photo_reply'] as const
 
 /**
  * Проверка: активность относится к пинам, а не к общим событиям.
@@ -374,6 +374,9 @@ function describe(a: PinActivityItem): { emoji: string; text: string } {
   }
   if (a.kind === 'photo_comment') {
     return { emoji: '📷', text: a.excerpt ? `${name}: ${a.excerpt}` : `${name} прокомментировал фото` }
+  }
+  if (a.kind === 'photo_reply') {
+    return { emoji: '↩️', text: a.excerpt ? `${name} ответил вам: ${a.excerpt}` : `${name} ответил на ваш комментарий к фото` }
   }
   if (a.kind === 'comment') {
     return { emoji: '💬', text: a.excerpt ? `${name}: ${a.excerpt}` : `${name} прокомментировал пин` }

@@ -72,6 +72,10 @@ export function useMentions() {
   let tokenStart = -1
   let tokenCursor = 0
   let timer: any = null
+  /** Конец последнего вставленного `@имя `: всё левее — завершённый меншен. */
+  let appliedEnd = -1
+  /** Точный текст вставленного меншена для проверки живости. */
+  let appliedText = ''
 
   function close() {
     mentionOpen.value = false
@@ -81,10 +85,22 @@ export function useMentions() {
   }
 
   function detect(text: string, cursor?: number): void {
-    const pos = cursor ?? (text ?? '').length
-    const before = (text ?? '').slice(0, pos)
+    const full = text ?? ''
+    const pos = cursor ?? full.length
+    const before = full.slice(0, pos)
+    // Вставленный меншен удалили/поправили — сбрасываем границу.
+    if (appliedEnd >= 0 && !full.includes(appliedText)) {
+      appliedEnd = -1
+      appliedText = ''
+    }
     const at = before.lastIndexOf('@')
     if (at < 0 || (at > 0 && !/[\s\n]/.test(before[at - 1]))) {
+      close()
+      return
+    }
+    // Ближайший @ левее завершённого меншена, а курсор правее:
+    // упоминание уже маякнули, дальше идёт текст комментария — не ищем.
+    if (appliedEnd >= 0 && at < appliedEnd && pos >= appliedEnd) {
       close()
       return
     }
@@ -123,6 +139,8 @@ export function useMentions() {
     const insert = `@${user.name} `
     const next = (text ?? '').slice(0, tokenStart) + insert + (text ?? '').slice(tokenCursor)
     const cursor = tokenStart + insert.length
+    appliedText = insert
+    appliedEnd = cursor
     close()
     return { text: next, cursor }
   }

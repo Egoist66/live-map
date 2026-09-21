@@ -205,6 +205,7 @@ class FlowPostCommentController extends Controller
         $mentionedIds = Mentions::extractIds($data['content'], $viewer->id);
         FlowPostNotifier::commented($post->refresh(), $viewer, $comment->refresh());
         FlowPostNotifier::mentions($post, $viewer, $comment, $mentionedIds);
+        \App\Events\CommentThreadUpdated::touch('flow', (int) $post->id);
 
         $payload = $this->serialize($comment->refresh(), $viewer);
         $reward = ActivityRewards::award($viewer, 'flow_comment', 'flow_post', $post->id);
@@ -232,6 +233,8 @@ class FlowPostCommentController extends Controller
 
         $comment->update(['content' => trim($data['content'])]);
 
+        \App\Events\CommentThreadUpdated::touch('flow', (int) $comment->post_id);
+
         return response()->json($this->serialize($comment->refresh(), $user));
     }
 
@@ -254,6 +257,7 @@ class FlowPostCommentController extends Controller
         $comment->replies()->delete();
         $comment->delete();
         $post->decrement('comments_count', $removed);
+        \App\Events\CommentThreadUpdated::touch('flow', (int) $post->id);
 
         return response()->json(['ok' => true]);
     }

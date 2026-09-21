@@ -242,13 +242,25 @@ class ProfilePhotoController extends Controller
         $viewer = $request->user();
         if ($viewer->id !== $photo->user_id) $this->abortIfBlocked($viewer, $photo->user);
         abort_unless($viewer->canCommentProfilePhoto($photo->user), 403, 'Автор запретил комментировать фото');
-        $data = $request->validate(['content' => 'required|string|max:1000']);
+        $data = $request->validate([
+            'content' => 'required|string|max:1000',
+            'reply_to_id' => 'nullable|integer|min:1',
+        ]);
         ContentModeration::assertClean($data['content']);
+        $parent = null;
+        if (! empty($data['reply_to_id'])) {
+            $parent = ProfilePhotoComment::whereKey($data['reply_to_id'])->where('photo_id', $photo->id)->first();
+            abort_unless($parent, 422, 'Комментарий для ответа не найден');
+        }
         $comment = $photo->comments()->create(['user_id' => $viewer->id, 'content' => $data['content']]);
         $photo->increment('comments_count');
         $mentionedIds = Mentions::extractIds($data['content'], $viewer->id);
         PinActivityNotifier::photoComment($photo, $viewer, $comment, $mentionedIds);
         PinActivityNotifier::photoMentions($photo, $viewer, $comment, $mentionedIds);
+        if ($parent && (int) $parent->user_id !== (int) $viewer->id) {
+            PinActivityNotifier::photoReplied($photo, $viewer, $comment, (int) $parent->user_id);
+        }
+        \App\Events\CommentThreadUpdated::touch('photo', (int) $photo->id);
         $comment->load('user:id,name,avatar_path');
         return response()->json($comment, 201);
     }
@@ -261,6 +273,7 @@ class ProfilePhotoController extends Controller
         $photo = $comment->photo;
         $comment->delete();
         $photo->decrement('comments_count');
+        \App\Events\CommentThreadUpdated::touch('photo', (int) $photo->id);
         return response()->json(['ok' => true]);
     }
 

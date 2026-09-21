@@ -181,7 +181,7 @@ export function useMapPage() {
     districts.closeDistrict()
     createError.value = null
     paint.startPainting()
-    toast?.add({ severity: 'info', summary: 'Кисть UDistrict', detail: 'Зажми Alt и веди мышью с левой кнопкой — обведи круг, внутри всё зальётся', life: 4000 })
+    toast?.add({ severity: 'info', summary: 'Чертёж UDistrict', detail: 'Зажми Alt и веди мышью с левой кнопкой — обведи круг, внутри всё зальётся', life: 4000 })
   }
 
   /**
@@ -193,7 +193,7 @@ export function useMapPage() {
   async function finishDistrictPaint(): Promise<void> {
     const geometry = await paint.takeDraftAsync()
     if (!geometry) {
-      toast?.add({ severity: 'warn', summary: 'Пустая заливка', detail: 'Сначала закрась кусочек карты кистью', life: 3000 })
+      toast?.add({ severity: 'warn', summary: 'Пустая заливка', detail: 'Сначала закрась кусочек карты чертежом', life: 3000 })
       return
     }
     if (countGeometryPoints(geometry) > 600) {

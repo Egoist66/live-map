@@ -154,6 +154,7 @@ class DistrictPostCommentController extends Controller
         broadcast(new DistrictUpdated($district))->toOthers();
 
         DistrictNotifier::postCommented($post->refresh(), $viewer, $comment->refresh());
+        \App\Events\CommentThreadUpdated::touch('district', (int) $post->id);
 
         $payload = $this->serialize($comment->refresh(), $viewer);
         $reward = ActivityRewards::award($viewer, 'district_comment', 'district_post', $post->id);
@@ -187,6 +188,8 @@ class DistrictPostCommentController extends Controller
 
         $comment->update(['content' => trim($data['content'])]);
 
+        \App\Events\CommentThreadUpdated::touch('district', (int) $post->id);
+
         return response()->json($this->serialize($comment->refresh(), $user));
     }
 
@@ -216,6 +219,7 @@ class DistrictPostCommentController extends Controller
         $comment->delete();
         $post->decrement('comments_count', $removed);
         broadcast(new DistrictUpdated($district))->toOthers();
+        \App\Events\CommentThreadUpdated::touch('district', (int) $post->id);
 
         return response()->json(['ok' => true]);
     }

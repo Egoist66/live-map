@@ -702,16 +702,19 @@ function handlePinActivity(e: any) {
     ? (a.excerpt ? `${name}: ${a.excerpt}` : `${name} прокомментировал «${pinTitle}»`).slice(0, 90)
     : a.kind === 'photo_comment'
       ? (a.excerpt ? `${name}: ${a.excerpt}` : `${name} прокомментировал фото`).slice(0, 90)
-      : a.kind === 'mention'
-        ? (a.excerpt ? `${name} упомянул вас: ${a.excerpt}` : `${name} упомянул вас в «${pinTitle}»`).slice(0, 90)
-        : `${name} ${emoji[a.reaction_type] || '⭐'} «${pinTitle}»`.slice(0, 90)
+      : a.kind === 'photo_reply'
+        ? (a.excerpt ? `${name} ответил вам: ${a.excerpt}` : `${name} ответил на ваш комментарий к фото`).slice(0, 90)
+        : a.kind === 'mention'
+          ? (a.excerpt ? `${name} упомянул вас: ${a.excerpt}` : `${name} упомянул вас в «${pinTitle}»`).slice(0, 90)
+          : `${name} ${emoji[a.reaction_type] || '⭐'} «${pinTitle}»`.slice(0, 90)
   const isCommentKind = a.kind === 'comment' || a.kind === 'photo_comment'
   const isMentionKind = a.kind === 'mention'
+  const isReplyKind = a.kind === 'photo_reply'
   push({
     id: `pin-${a.id}-${Date.now()}`,
     type: 'pin',
-    icon: isCommentKind ? 'pi pi-comments' : isMentionKind ? 'pi pi-at' : 'pi pi-heart',
-    title: isCommentKind ? 'Новый комментарий' : isMentionKind ? 'Вас упомянули' : 'Новая реакция',
+    icon: isCommentKind ? 'pi pi-comments' : isMentionKind ? 'pi pi-at' : isReplyKind ? 'pi pi-reply' : 'pi pi-heart',
+    title: isCommentKind ? 'Новый комментарий' : isMentionKind ? 'Вас упомянули' : isReplyKind ? 'Ответ на комментарий' : 'Новая реакция',
     body,
     avatar: avatarSrcFor(actor),
     link: activityLink(a),

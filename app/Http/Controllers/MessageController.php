@@ -52,17 +52,76 @@ class MessageController extends Controller
             'attachment' => 'nullable|file|max:10240',
             'reply_to_id' => 'nullable|integer|exists:messages,id',
             'voice_duration' => 'nullable|integer|min:1|max:60',
+            'shared_post_type' => 'nullable|in:flow,district',
+            'shared_post_id' => 'nullable|integer|min:1',
         ]);
         $body = trim((string) ($data['body'] ?? ''));
         $hasFile = $request->hasFile('attachment');
-        abort_if($body === '' && ! $hasFile, 422, 'Нужно сообщение или файл');
+        $shared = $this->resolveSharedPost($request->user(), $data['shared_post_type'] ?? null, isset($data['shared_post_id']) ? (int) $data['shared_post_id'] : null);
+        abort_if($body === '' && ! $hasFile && ! $shared, 422, 'Нужно сообщение или файл');
         $attachment = $this->resolveAttachment($request);
         $replyToId = $this->resolveReplyTo($conversation, $data['reply_to_id'] ?? null);
         $voiceDuration = isset($data['voice_duration']) ? (int) $data['voice_duration'] : null;
         if ($voiceDuration !== null && ($attachment['kind'] ?? null) !== 'voice') {
             $voiceDuration = null;
         }
-        return $this->storeInline($request, $conversation, $request->user(), $body, $replyToId, $attachment, $voiceDuration);
+        return $this->storeInline($request, $conversation, $request->user(), $body, $replyToId, $attachment, $voiceDuration, $shared);
+    }
+
+    /**
+     * Проверить пересланный пост: тип + существование + видимость для отправителя.
+     *
+     * Анонимность не блокирует шаринг — автор скрывается в пейлоаде.
+     * Блокировка между отправителем и автором поста блокирует шаринг чужого поста.
+     *
+     * @param \App\Models\User $sender отправитель
+     * @param string|null $type flow|district
+     * @param int|null $postId id поста
+     * @return array{type:string,id:int}|null
+     */
+    public function resolveSharedPost($sender, ?string $type, ?int $postId): ?array
+    {
+        if (! $type && ! $postId) {
+            return null;
+        }
+
+        abort_if(! $type || ! $postId, 422, 'Укажите тип и id поста');
+
+        if ($type === 'flow') {
+            $post = \App\Models\FlowPost::with('user:id,name,is_admin')->find($postId);
+            abort_if(! $post, 404, 'Пост не найден');
+
+            $author = $post->user;
+
+            if ($author && (int) $author->id !== (int) $sender->id && ! $sender->isAdmin()) {
+                $blocked = \App\Models\UserBlock::where(function ($query) use ($sender, $author) {
+                    $query->where(function ($inner) use ($sender, $author) {
+                        $inner->where('blocker_id', $sender->id)->where('blocked_id', $author->id);
+                    })->orWhere(function ($inner) use ($sender, $author) {
+                        $inner->where('blocker_id', $author->id)->where('blocked_id', $sender->id);
+                    });
+                })->exists();
+
+                abort_if($blocked, 403, 'Недоступно');
+
+                if (! $author->is_admin) {
+                    abort_unless($author->isDiscoverableBy($sender), 404, 'Пост не найден');
+                }
+            }
+
+            return ['type' => 'flow', 'id' => (int) $post->id];
+        }
+
+        if ($type === 'district') {
+            $post = \App\Models\DistrictPost::find($postId);
+            abort_if(! $post, 404, 'Новость не найдена');
+
+            return ['type' => 'district', 'id' => (int) $post->id];
+        }
+
+        abort(422, 'Неизвестный тип поста');
+
+        return null;
     }
 
     /**
@@ -90,7 +149,22 @@ class MessageController extends Controller
         return ChatAttachment::store($file, $kind);
     }
 
-    public function storeInline(Request $request, Conversation $conversation, $sender, string $body, ?int $replyToId = null, ?array $attachment = null, ?int $voiceDuration = null)
+    /**
+     * Создать сообщение внутри чата: текст / вложение / пересланный пост.
+     *
+     * Пересылка поста хранится полями shared_post_type + shared_post_id,
+     * тип сообщения — post (превью строится живым в Message::sharedPostPayload).
+     *
+     * @param Request $request запрос
+     * @param Conversation $conversation чат
+     * @param mixed $sender отправитель
+     * @param string $body сопроводительный текст
+     * @param int|null $replyToId цитата
+     * @param array|null $attachment вложение
+     * @param int|null $voiceDuration длительность голосового
+     * @param array|null $shared ['type' => flow|district, 'id' => int]
+     */
+    public function storeInline(Request $request, Conversation $conversation, $sender, string $body, ?int $replyToId = null, ?array $attachment = null, ?int $voiceDuration = null, ?array $shared = null)
     {
         $conversation->loadMissing('participants:id,name,message_privacy,allow_random_messages');
         $other = $conversation->participants->firstWhere('id','!=',$sender->id);
@@ -101,11 +175,13 @@ class MessageController extends Controller
             abort(403, $reason);
         }
         $kind = $attachment['kind'] ?? null;
-        $type = $kind === 'image' ? 'image' : ($kind === 'voice' ? 'voice' : ($kind === 'file' ? 'file' : 'text'));
+        $type = $shared ? 'post' : ($kind === 'image' ? 'image' : ($kind === 'voice' ? 'voice' : ($kind === 'file' ? 'file' : 'text')));
         $duration = $kind === 'voice' && $voiceDuration ? max(1, min(60, $voiceDuration)) : null;
         $msg = Message::create([
             'conversation_id' => $conversation->id,
             'reply_to_id' => $replyToId,
+            'shared_post_type' => $shared['type'] ?? null,
+            'shared_post_id' => $shared['id'] ?? null,
             'sender_id' => $sender->id,
             'body' => $body,
             'type' => $type,
@@ -149,6 +225,9 @@ class MessageController extends Controller
             if ($ids->isEmpty()) return;
             $senderModel = $sender instanceof User ? $sender : User::select('id', 'name', 'avatar_path')->find($sender->id);
             $text = trim((string) $msg->body);
+            if ($text === '' && $msg->shared_post_type) {
+                $text = $msg->shared_post_type === 'district' ? '📰 Новость района' : '📝 Пост';
+            }
             if ($text === '' && $msg->attachment_path) {
                 if ($msg->attachment_kind === 'voice') {
                     $text = '🎤 Голосовое сообщение';

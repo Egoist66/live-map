@@ -143,7 +143,7 @@ function letterOf(name: string): string {
                 <span class="grid h-10 w-10 place-items-center rounded-xl bg-blue-600/10 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400"><i class="pi pi-palette" /></span>
                 <div class="text-sm font-black text-ink-900 dark:text-white">Свой район</div>
               </div>
-              <p class="mt-2 text-[13px] leading-relaxed text-stone-500 dark:text-zinc-400">Нарисуйте заливку кистью на карте — назовёте и откроете здесь, как группу.</p>
+              <p class="mt-2 text-[13px] leading-relaxed text-stone-500 dark:text-zinc-400">Нарисуйте заливку чертежом на карте — назовёте и откроете здесь, как группу.</p>
               <Button v-if="list.canCreate" label="Нарисовать район" icon="pi pi-arrow-right" icon-pos="right" rounded size="small" class="mt-3 w-full !border-0 !bg-blue-600 !text-white hover:!bg-blue-500" @click="list.goCreate()" />
               <div v-else class="mt-3 rounded-2xl bg-amber-50 p-3 text-[12px] leading-relaxed text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">{{ list.limitText }}</div>
             </div>

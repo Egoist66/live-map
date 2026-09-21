@@ -14,6 +14,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $id
  * @property int $conversation_id
  * @property int|null $reply_to_id
+ * @property string|null $shared_post_type flow|district — тип пересланного поста
+ * @property int|null $shared_post_id id пересланного поста
  * @property int $sender_id
  * @property string $body
  * @property string $type
@@ -26,7 +28,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class Message extends Model
 {
-    protected $fillable = ['conversation_id','reply_to_id','sender_id','body','type','read_at','delivered_at','edited_at','pinned_at','pinned_by','attachment_path','attachment_name','attachment_mime','attachment_size','attachment_kind','attachment_duration'];
+    protected $fillable = ['conversation_id','reply_to_id','shared_post_type','shared_post_id','sender_id','body','type','read_at','delivered_at','edited_at','pinned_at','pinned_by','attachment_path','attachment_name','attachment_mime','attachment_size','attachment_kind','attachment_duration'];
     protected $casts = [
         'body' => \App\Casts\MessageBodyCast::class,
         'read_at' => 'datetime',
@@ -97,6 +99,104 @@ class Message extends Model
         ];
     }
 
+    /**
+     * Пейлоад пересланного поста для фронта: превью + диплинк.
+     *
+     * Пост подгружается живым (а не снапшотом), чтобы получатель видел
+     * актуальный текст и мог провалиться в него по клику. Если пост удалён
+     * или скрыт анонимностью/блоком — отдаём заглушку с флагом unavailable.
+     *
+     * @param \App\Models\User|null $viewer получатель для проверки видимости
+     * @return array|null
+     */
+    public function sharedPostPayload($viewer = null): ?array
+    {
+        $type = (string) ($this->shared_post_type ?? '');
+        $postId = (int) ($this->shared_post_id ?? 0);
+
+        if (($type !== 'flow' && $type !== 'district') || $postId <= 0) {
+            return null;
+        }
+
+        if ($type === 'flow') {
+            $post = \App\Models\FlowPost::with(['user:id,name,profile_slug,avatar_path', 'media'])->find($postId);
+
+            if (! $post) {
+                return $this->sharedPostStub($type, $postId);
+            }
+
+            $isOwn = $viewer && (int) $viewer->id === (int) $post->user_id;
+            $canSeeAuthor = ! $post->is_anonymous || $isOwn || ($viewer && $viewer->isAdmin());
+            $author = $post->user;
+
+            $firstPhoto = $post->media
+                ->first(fn ($item) => $item->kind === 'photo' && $item->url);
+
+            $excerpt = (string) ($post->title ? $post->title.' — ' : '').$post->body;
+            $excerpt = trim(preg_replace('/\s+/u', ' ', $excerpt) ?? '');
+
+            if (mb_strlen($excerpt) > 160) {
+                $excerpt = mb_substr($excerpt, 0, 160).'…';
+            }
+
+            return [
+                'type' => 'flow',
+                'id' => (int) $post->id,
+                'title' => $post->title,
+                'excerpt' => $excerpt !== '' ? $excerpt : null,
+                'image_url' => $firstPhoto?->url ?? $post->image_url,
+                'author_name' => $canSeeAuthor && $author ? $author->name : 'Аноним',
+                'url' => '/flow/post/'.$post->id,
+            ];
+        }
+
+        $post = \App\Models\DistrictPost::with(['user:id,name,profile_slug,avatar_path', 'district:id,name'])->find($postId);
+
+        if (! $post) {
+            return $this->sharedPostStub($type, $postId);
+        }
+
+        $excerpt = (string) ($post->title ? $post->title.' — ' : '').$post->body;
+        $excerpt = trim(preg_replace('/\s+/u', ' ', $excerpt) ?? '');
+
+        if (mb_strlen($excerpt) > 160) {
+            $excerpt = mb_substr($excerpt, 0, 160).'…';
+        }
+
+        return [
+            'type' => 'district',
+            'id' => (int) $post->id,
+            'district_id' => (int) $post->district_id,
+            'district_name' => $post->district?->name,
+            'title' => $post->title,
+            'excerpt' => $excerpt !== '' ? $excerpt : null,
+            'image_url' => $post->image_url,
+            'author_name' => $post->user?->name ?? 'Владелец',
+            'url' => '/districts/'.(int) $post->district_id.'?post='.(int) $post->id,
+        ];
+    }
+
+    /**
+     * Заглушка удалённого/недоступного поста.
+     *
+     * @param string $type тип поста
+     * @param int $postId id поста
+     * @return array<string,mixed>
+     */
+    private function sharedPostStub(string $type, int $postId): array
+    {
+        return [
+            'type' => $type,
+            'id' => $postId,
+            'title' => null,
+            'excerpt' => null,
+            'image_url' => null,
+            'author_name' => null,
+            'url' => $type === 'flow' ? '/flow/post/'.$postId : null,
+            'unavailable' => true,
+        ];
+    }
+
     public function toArrayPayload(): array
     {
         return [
@@ -104,6 +204,7 @@ class Message extends Model
             'conversation_id' => $this->conversation_id,
             'reply_to_id' => $this->reply_to_id,
             'reply_to' => $this->reply_to_id ? $this->replyToPayload() : null,
+            'shared_post' => $this->sharedPostPayload(),
             'sender_id' => $this->sender_id,
             'body' => $this->body,
             'type' => $this->type,

@@ -261,6 +261,7 @@ class AppServiceProvider extends ServiceProvider
             'messages-write' => 60,
             'pin-toggle' => 60,
             'chat-signal' => 120,
+            'video-signal' => 300,
             'realtime-sync' => 60,
             'reactions' => 120,
             'chat-search' => 30,

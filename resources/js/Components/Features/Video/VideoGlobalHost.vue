@@ -26,6 +26,10 @@ let signalsTimer: ReturnType<typeof setInterval> | null = null
 /** Курсор добивки сигналов + звонок, к которому он относится. */
 const signalCursor = ref(0)
 const signalCallId = ref<number | null>(null)
+/** Опрос сигналов уже летит (не громоздим дубли на медленной сети). */
+let signalsInFlight = false
+/** До какого момента не опрашивать сигналы после 429. */
+let signalsBlockedUntil = 0
 
 /** Жив ли сокет: тогда входящие едут сами, полл не нужен. */
 function socketAlive(): boolean {
@@ -96,6 +100,8 @@ async function pollOwnCall(): Promise<void> {
  */
 async function pollSignals(): Promise<void> {
   if (document.hidden) return
+  if (Date.now() < signalsBlockedUntil) return
+  if (signalsInFlight) return
   const callId = v.store.call?.id ?? null
   const status = v.store.status
   if (!callId || (status !== 'active' && status !== 'ringing-out' && status !== 'ringing-in')) {
@@ -107,6 +113,7 @@ async function pollSignals(): Promise<void> {
     signalCallId.value = callId
     signalCursor.value = 0
   }
+  signalsInFlight = true
   try {
     const res = await videoApi.signals(callId, signalCursor.value)
     for (const s of res.signals ?? []) {
@@ -114,7 +121,14 @@ async function pollSignals(): Promise<void> {
       if (sid > signalCursor.value) signalCursor.value = sid
       if (sid > 0) busEmit('user:video.signal', s)
     }
-  } catch {}
+  } catch (e) {
+    const httpStatus = (e as { response?: { status?: number } })?.response?.status
+    if (httpStatus === 429) {
+      signalsBlockedUntil = Date.now() + 10000
+    }
+  } finally {
+    signalsInFlight = false
+  }
 }
 
 onMounted(() => {

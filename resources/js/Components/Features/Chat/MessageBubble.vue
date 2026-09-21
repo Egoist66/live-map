@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import Image from 'primevue/image'
 import MessageTicks from '@/Components/Features/Feedback/MessageTicks.vue'
 import VoiceMessagePlayer from '@/Components/Features/Chat/VoiceMessagePlayer.vue'
+import SharedPostCard from '@/Components/Features/Chat/SharedPostCard.vue'
 import { renderWithMentions } from '@/composables/useMentions'
 import { useMentionNavigate } from '@/composables/useMentionNavigate'
 
@@ -25,6 +26,7 @@ const quoteSnippet = computed(() => {
   return 'Файл'
 })
 const attachment = computed(() => (props.message as any)?.attachment ?? null)
+const sharedPost = computed(() => (props.message as any)?.shared_post ?? null)
 const isVoice = computed(() => attachment.value?.kind === 'voice' || (props.message as any)?.type === 'voice')
 const isSystem = computed(() => String((props.message as any)?.type ?? '') === 'system')
 const attachmentSize = computed(() => {
@@ -57,6 +59,9 @@ const attachmentSize = computed(() => {
             <span :class="own ? 'text-violet-100' : 'text-violet-600 dark:text-violet-300'" class="block text-[11px] lg:text-[10px] font-bold truncate">{{ quote.sender_name || 'Сообщение' }}</span>
             <span :class="own ? 'text-violet-50/90' : 'text-stone-500 dark:text-zinc-400'" class="block text-xs lg:text-[11px] truncate">{{ quoteSnippet || '…' }}</span>
           </button>
+          <div v-if="sharedPost" class="mb-1.5 min-w-0">
+            <SharedPostCard :post="sharedPost" :own="own" />
+          </div>
           <div v-if="attachment?.url && attachment?.kind === 'image'" class="mb-1.5 min-w-0">
             <Image :src="attachment.url" :alt="attachment.name || 'Фото'" preview class="block rounded-xl overflow-hidden chat-image-preview" image-class="block w-full max-h-64 object-cover cursor-zoom-in" />
           </div>

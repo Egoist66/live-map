@@ -225,6 +225,7 @@ export function useRealtimePoller() {
         since: lastTime || undefined,
         after_id: lastMsgId || undefined,
         video_after_id: lastVideoSignalId || undefined,
+        watch_threads: ctx.watchThreads || undefined,
         conversation_id: ctx.conversationId || undefined,
         min_lat: bbox?.minLat,
         max_lat: bbox?.maxLat,
@@ -299,6 +300,11 @@ export function useRealtimePoller() {
       if (sid > lastVideoSignalId) lastVideoSignalId = sid
       if (alreadySeenVideoSignal(sid)) continue
       busEmit('user:video.signal', s)
+    }
+    const threadUpdates = Array.isArray(data?.thread_updates) ? data.thread_updates : []
+    for (const t of threadUpdates) {
+      if (!t?.kind || t?.id == null) continue
+      busEmit('thread:updated', { kind: String(t.kind), id: Number(t.id), lastId: Number(t.last_id ?? 0) })
     }
     const inbox = Array.isArray(data?.notifications) ? data.notifications : []
     inbox.forEach((e: any) => {

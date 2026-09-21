@@ -33,7 +33,7 @@ function roleChip(role: string): string {
     <div class="flex flex-col gap-4">
       <button v-if="canCreate ?? true" type="button" class="flex items-center gap-3 rounded-2xl bg-gradient-to-r from-violet-700 to-purple-900 text-white p-3.5 shadow-glow transition hover:opacity-95 active:scale-[0.99] text-left" @click="emit('paint')">
         <span class="w-11 h-11 rounded-2xl bg-white/20 grid place-items-center shrink-0"><i class="pi pi-palette" /></span>
-        <span class="min-w-0 flex-1"><span class="block text-sm font-black">Нарисовать район</span><span class="block text-[11px] text-white/75 leading-snug">Кисть: зажми Alt и веди мышью, на мобилке — пальцем. Круг зальётся целиком</span></span>
+        <span class="min-w-0 flex-1"><span class="block text-sm font-black">Нарисовать район</span><span class="block text-[11px] text-white/75 leading-snug">Чертёж: зажми Alt и веди мышью, на мобилке — пальцем. Круг зальётся целиком</span></span>
         <i class="pi pi-chevron-right text-white/60 shrink-0" />
       </button>
       <label class="flex items-center gap-2.5 text-[13px] font-semibold dark:text-zinc-100 cursor-pointer select-none">

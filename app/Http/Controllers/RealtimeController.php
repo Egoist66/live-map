@@ -58,6 +58,7 @@ class RealtimeController extends Controller
             'conversation_id' => 'nullable|integer',
             'after_id' => 'nullable|integer|min:0',
             'video_after_id' => 'nullable|integer|min:0',
+            'watch_threads' => 'nullable|string|max:200',
             'min_lat' => 'nullable|numeric|between:-90,90',
             'max_lat' => 'nullable|numeric|between:-90,90',
             'min_lng' => 'nullable|numeric|between:-180,180',
@@ -101,6 +102,7 @@ class RealtimeController extends Controller
             'swipe_likes' => $this->freshSwipeLikes($user->id, $window),
             'video_incoming' => app(\App\Services\VideoService::class)->freshIncoming($user->id, $window),
             'video_signals' => app(\App\Services\VideoService::class)->freshSignals($user->id, $window, (int) ($data['video_after_id'] ?? 0)),
+            'thread_updates' => $this->freshThreads($data['watch_threads'] ?? null),
             'notifications' => $this->freshNotifications($user->id, $window),
             'wallpapers' => $this->freshWallpapers($convIds, $window),
             'peer' => $openId ? $this->peerState($user, $openId) : null,
@@ -399,6 +401,80 @@ class RealtimeController extends Controller
             'avatar_url' => $user->avatar_url,
             'is_incognito' => false,
         ];
+    }
+
+    /**
+     * Свежие треды комментариев для открытых веток.
+     *
+     * Клиент шлёт watch_threads "pin:5:123,flow:9:45" (вид:id:последний
+     * известный id, максимум 5 веток) — возвращаем только те, где есть
+     * новее. Видимость не проверяем: пейлоад без содержимого, клиент
+     * подтянет список обычным REST с его проверками.
+     *
+     * @param string|null $raw сырая строка тика
+     * @return array<int, array{kind:string,id:int,last_id:int}>
+     */
+    private function freshThreads(?string $raw): array
+    {
+        if (! $raw) {
+            return [];
+        }
+
+        $out = [];
+        $seen = [];
+
+        foreach (explode(',', $raw) as $part) {
+            $chunks = explode(':', trim($part));
+
+            if (count($chunks) !== 3) {
+                continue;
+            }
+
+            [$kind, $id, $known] = $chunks;
+            $id = (int) $id;
+            $known = (int) $known;
+
+            if (! in_array($kind, ['pin', 'flow', 'district', 'photo'], true) || $id <= 0 || $known < 0) {
+                continue;
+            }
+
+            $key = "$kind:$id";
+
+            if (isset($seen[$key]) || count($out) >= 5) {
+                continue;
+            }
+
+            $seen[$key] = true;
+            $lastId = $this->threadLastId($kind, $id);
+
+            if ($lastId > $known) {
+                $out[] = ['kind' => $kind, 'id' => $id, 'last_id' => $lastId];
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Максимальный id комментария ветки.
+     *
+     * @param string $kind вид треда
+     * @param int $id id объекта
+     * @return int 0 когда пусто
+     */
+    private function threadLastId(string $kind, int $id): int
+    {
+        try {
+            return match ($kind) {
+                'pin' => (int) \App\Models\PinComment::where('pin_id', $id)->max('id'),
+                'flow' => (int) \App\Models\FlowPostComment::where('post_id', $id)->max('id'),
+                'district' => (int) \App\Models\DistrictPostComment::where('post_id', $id)->max('id'),
+                'photo' => (int) \App\Models\ProfilePhotoComment::where('photo_id', $id)->max('id'),
+                default => 0,
+            };
+        } catch (\Throwable) {
+            return 0;
+        }
     }
 
     /**

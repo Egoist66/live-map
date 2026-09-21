@@ -16,6 +16,8 @@ const FlowMediaCarousel = defineAsyncComponent(() => import('@/Components/Featur
 import FlowPollCard from '@/Components/Features/Flow/FlowPollCard.vue'
 import FlowRichText from '@/Components/Features/Flow/FlowRichText.vue'
 import FlowRepostDialog from '@/Components/Features/Flow/FlowRepostDialog.vue'
+import PostShareDialog from '@/Components/Features/Chat/PostShareDialog.vue'
+import { usePostShare } from '@/composables/usePostShare'
 import FlowCommentItem from '@/Components/Features/Flow/FlowCommentItem.vue'
 import RepostIcon from '@/Components/Ui/Icons/RepostIcon.vue'
 import { useLikersPreview } from '@/composables/useLikersPreview'
@@ -59,6 +61,7 @@ const postLikers = useLikersPreview(
 const stopLive = thread.subscribeLive(() => expanded.value)
 onUnmounted(() => stopLive())
 const sharing = ref(false)
+const sharer = usePostShare()
 const toast = (() => {
   try {
     return useToast()
@@ -79,8 +82,22 @@ function replyName(c: FlowComment): string {
 }
 
 /**
+ * Открыть модалку «Отправить как сообщение»: выбор получателей.
+ */
+function openShareDialog(): void {
+  const shownPost = shown.value
+  sharer.open({
+    type: 'flow',
+    id: props.post.repost_of_id && props.post.repost && !props.post.repost_comment ? props.post.repost.id : props.post.id,
+    title: shownPost.title,
+    excerpt: (shownPost.body || '').replace(/\s+/g, ' ').trim().slice(0, 160) || null,
+    image_url: shownPost.imageUrl,
+    author_name: props.post.author?.name ?? null,
+  })
+}
+/**
  * Поделиться постом: системный шаринг или копия ссылки в буфер.
- * Ссылка вида /flow?post=ID открывается у любого пользователя.
+ * Ссылка вида /flow/post/ID открывается у любого пользователя.
  */
 async function share(): Promise<void> {
   if (sharing.value) return
@@ -215,7 +232,8 @@ async function share(): Promise<void> {
             <template #icon><RepostIcon :size="18" /></template>
           </Button>
           <span class="flex-1" />
-          <Button icon="pi pi-share-alt" text rounded severity="secondary" :loading="sharing" @click="share()" />
+          <Button icon="pi pi-send" text rounded severity="secondary" aria-label="Отправить как сообщение" title="Отправить как сообщение" v-tooltip.bottom="'Отправить как сообщение'" @click="openShareDialog()" />
+          <Button icon="pi pi-share-alt" text rounded severity="secondary" aria-label="Поделиться ссылкой" title="Поделиться ссылкой" :loading="sharing" @click="share()" />
         </div>
         <div v-if="post.repost" class="mt-2 flex items-center gap-1.5 border-t border-stone-100 dark:border-zinc-800 pt-2 text-xs text-stone-400 dark:text-zinc-500">
           <RepostIcon :size="12" class="shrink-0 text-violet-500" />
@@ -290,6 +308,7 @@ async function share(): Promise<void> {
         </button>
         <LikersDialog :visible="postLikers.opened.value" @update:visible="(v:boolean)=>{ v ? postLikers.open() : postLikers.close() }" title="Лайки" :likers="postLikers.likers.value" :loading="postLikers.loading.value" :total="postLikers.total.value" />
         <FlowRepostDialog :post="repostTarget" @close="repostTarget = null" />
+        <PostShareDialog :sharer="(sharer as any)" />
       </article>
     </template>
   </Card>

@@ -52,7 +52,7 @@ function submit(): void {
           <i class="pi pi-users absolute right-8 bottom-5 text-white/10 text-3xl -rotate-6 pointer-events-none" />
           <div class="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-black/45 to-transparent pointer-events-none" />
           <div class="absolute left-5 top-4 sm:left-6"><Tag value="Новый район" icon="pi pi-sparkles" severity="contrast" class="!rounded-full !text-[11px] !font-bold !bg-white/15 !text-white !border !border-white/25 backdrop-blur" /></div>
-          <div class="absolute left-5 bottom-2.5 sm:left-6 text-[11px] font-semibold text-white/80">сообщество · заливка из {{ strokesCount }} {{ strokesCount === 1 ? 'мазка' : 'мазков' }} · увидят все</div>
+          <div class="absolute left-5 bottom-2.5 sm:left-6 text-[11px] font-semibold text-white/80">сообщество · заливка из {{ strokesCount }} {{ strokesCount === 1 ? 'чертежа' : 'чертежей' }} · увидят все</div>
         </div>
         <div class="px-5 sm:px-6">
           <div class="flex items-end gap-3 -mt-8">

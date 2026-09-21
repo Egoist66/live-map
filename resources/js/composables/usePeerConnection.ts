@@ -1,7 +1,49 @@
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { videoApi } from '@/services/video.api'
 import { busOn } from '@/services/realtime-bus'
 import { pokeRealtime } from '@/composables/useRealtimePoller'
+
+/** Паузы между повторными отправками сигнала (429/сеть). */
+const RETRY_DELAYS_MS = [500, 1000, 2000, 4000]
+
+/**
+ * Подождать заданное время (бэкофф ретраев).
+ *
+ * @param ms миллисекунд
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms)
+  })
+}
+
+/**
+ * HTTP-статус ошибки отправки (сеть — 'сеть').
+ *
+ * @param e ошибка axios
+ * @returns статус или текст
+ */
+function statusOf(e: unknown): string {
+  const status = (e as { response?: { status?: number } })?.response?.status
+  if (!status) {
+    return 'сеть'
+  }
+  return String(status)
+}
+
+/**
+ * Можно ли повторить отправку (429, 5xx, обрыв сети).
+ *
+ * @param e ошибка axios
+ * @returns true когда повтор имеет смысл
+ */
+function isRetryable(e: unknown): boolean {
+  const status = (e as { response?: { status?: number } })?.response?.status
+  if (!status) {
+    return true
+  }
+  return status === 429 || status >= 500
+}
 
 /**
  * ICE-серверы: свой TURN из env, иначе публичные STUN.
@@ -49,6 +91,23 @@ export function usePeerConnection() {
   const remoteStream = ref<MediaStream | null>(null)
   const connectionState = ref<RTCPeerConnectionState | 'idle'>('idle')
   const signalingError = ref<string | null>(null)
+  /** Счётчики сигналинга для диагностики («Соединение…» показывает их). */
+  const signalStats = ref({
+    offerSent: 0,
+    answerSent: 0,
+    iceSent: 0,
+    offerRecv: 0,
+    answerRecv: 0,
+    iceRecv: 0,
+    lastError: null as string | null,
+  })
+  /** Компактная строка счётчиков для оверлея. */
+  const signalLabel = computed(() => {
+    const s = signalStats.value
+    const sdpUp = s.offerSent + s.answerSent
+    const sdpDown = s.offerRecv + s.answerRecv
+    return `SDP ↑${sdpUp} ↓${sdpDown} · ICE ↑${s.iceSent} ↓${s.iceRecv}`
+  })
 
   let pc: RTCPeerConnection | null = null
   let boundCallId: number | null = null
@@ -81,6 +140,15 @@ export function usePeerConnection() {
     pendingIce = []
     seenRemoteIds.clear()
     signalingError.value = null
+    signalStats.value = {
+      offerSent: 0,
+      answerSent: 0,
+      iceSent: 0,
+      offerRecv: 0,
+      answerRecv: 0,
+      iceRecv: 0,
+      lastError: null,
+    }
 
     const next = new RTCPeerConnection({ iceServers: iceServers() })
     pc = next
@@ -115,7 +183,7 @@ export function usePeerConnection() {
 
     next.onicecandidate = (e) => {
       if (e.candidate && boundCallId) {
-        void postSignal('ice', e.candidate.toJSON())
+        void postSignal('ice', e.candidate.toJSON(), 2)
       }
     }
 
@@ -125,6 +193,7 @@ export function usePeerConnection() {
       if (state === 'connected') {
         clearDisconnectTimer()
         signalingError.value = null
+        signalStats.value.lastError = null
         return
       }
       if (state === 'connecting') {
@@ -196,6 +265,10 @@ export function usePeerConnection() {
   /**
    * Caller: создать offer после accepted (или сразу при bind).
    *
+   * Отправка с ретраями: если сервер вернул 429/5xx — offerStarted
+   * сбрасываем, иначе повторный «Обновить» упрётся в no-op и звонок
+   * навсегда останется чёрным.
+   *
    * @param restart true для iceRestart при ручном переподключении
    */
   async function startOffer(restart = false): Promise<void> {
@@ -204,7 +277,11 @@ export function usePeerConnection() {
     try {
       const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true, iceRestart: restart })
       await pc.setLocalDescription(offer)
-      await postSignal('offer', { type: offer.type, sdp: offer.sdp })
+      const sent = await postSignal('offer', { type: offer.type, sdp: offer.sdp }, 4)
+      if (!sent) {
+        offerStarted = false
+        signalingError.value = 'Offer не ушёл — попробуй «Обновить»'
+      }
     } catch {
       offerStarted = false
       signalingError.value = 'Не удалось начать звонок'
@@ -254,9 +331,9 @@ export function usePeerConnection() {
     if (!pc || e.call_id !== boundCallId) return
     const kind = String(e.kind)
     const sid = Number(e.id ?? 0)
-    if ((kind === 'offer' || kind === 'answer') && sid > 0) {
-      if (seenRemoteIds.has(sid)) return
-      seenRemoteIds.add(sid)
+    const isHandshake = kind === 'offer' || kind === 'answer'
+    if (isHandshake && sid > 0 && seenRemoteIds.has(sid)) {
+      return
     }
     try {
       if (kind === 'accepted' && isCaller) {
@@ -272,7 +349,15 @@ export function usePeerConnection() {
         await flushPendingIce()
         const answer = await pc.createAnswer()
         await pc.setLocalDescription(answer)
-        await postSignal('answer', { type: answer.type, sdp: answer.sdp })
+        const sent = await postSignal('answer', { type: answer.type, sdp: answer.sdp }, 4)
+        if (!sent) {
+          signalingError.value = 'Answer не ушёл — попроси собеседника нажать «Обновить»'
+          return
+        }
+        signalStats.value.offerRecv += 1
+        if (sid > 0) {
+          seenRemoteIds.add(sid)
+        }
         return
       }
       if (kind === 'answer') {
@@ -282,9 +367,14 @@ export function usePeerConnection() {
         }
         await pc.setRemoteDescription(new RTCSessionDescription(e.payload))
         await flushPendingIce()
+        signalStats.value.answerRecv += 1
+        if (sid > 0) {
+          seenRemoteIds.add(sid)
+        }
         return
       }
       if (kind === 'ice' && e.payload) {
+        signalStats.value.iceRecv += 1
         if (!pc.remoteDescription) {
           pendingIce.push(e.payload as RTCIceCandidateInit)
           return
@@ -316,20 +406,58 @@ export function usePeerConnection() {
   }
 
   /**
-   * Отправить signaling-фрейм через REST.
+   * Отправить signaling-фрейм через REST с ретраями.
    *
+   * Ретраи обязательны: отправка делит минуту с остальным трафиком,
+   * единичный 429/обрыв сети не должен навсегда ронять звонок.
    * После отправки пинаем realtime-поллер в burst: в polling-режиме
    * ответ прилетит следующим быстрым тиком (~1с вместо ~2.5с).
    *
    * @param kind offer|answer|ice
    * @param payload SDP или кандидат
+   * @param retries сколько раз повторять при 429/5xx/сети
+   * @returns true когда сервер принял фрейм
    */
-  async function postSignal(kind: 'offer' | 'answer' | 'ice', payload: unknown): Promise<void> {
-    if (boundCallId == null) return
-    try {
-      await videoApi.signal(boundCallId, kind, payload as Record<string, unknown>)
-      pokeRealtime()
-    } catch {}
+  async function postSignal(kind: 'offer' | 'answer' | 'ice', payload: unknown, retries = 0): Promise<boolean> {
+    if (boundCallId == null) {
+      return false
+    }
+    let attempt = 0
+    for (;;) {
+      try {
+        await videoApi.signal(boundCallId, kind, payload as Record<string, unknown>)
+        pokeRealtime()
+        bumpSent(kind)
+        return true
+      } catch (e) {
+        const retryable = isRetryable(e)
+        if (!retryable || attempt >= retries) {
+          signalStats.value.lastError = `${kind} не ушёл (${statusOf(e)})`
+          return false
+        }
+        const wait = RETRY_DELAYS_MS[Math.min(attempt, RETRY_DELAYS_MS.length - 1)]
+        attempt += 1
+        await sleep(wait)
+        if (boundCallId == null) {
+          return false
+        }
+      }
+    }
+  }
+
+  /**
+   * Увеличить счётчик отправленных фреймов.
+   *
+   * @param kind offer|answer|ice
+   */
+  function bumpSent(kind: 'offer' | 'answer' | 'ice'): void {
+    if (kind === 'offer') {
+      signalStats.value.offerSent += 1
+    } else if (kind === 'answer') {
+      signalStats.value.answerSent += 1
+    } else {
+      signalStats.value.iceSent += 1
+    }
   }
 
   /**
@@ -396,5 +524,5 @@ export function usePeerConnection() {
     connectionState.value = 'idle'
   }
 
-  return { remoteStream, connectionState, signalingError, bind, startOffer, retry, renegotiate, hasVideoSender, replaceVideoTrack, close, currentId }
+  return { remoteStream, connectionState, signalingError, signalStats, signalLabel, bind, startOffer, retry, renegotiate, hasVideoSender, replaceVideoTrack, close, currentId }
 }

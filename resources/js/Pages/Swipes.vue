@@ -249,7 +249,8 @@ onUnmounted(() => {
                   <div v-if="!u.can_message && u.can_message_reason" class="mt-1 text-[10px] leading-tight text-stone-400 dark:text-zinc-500">{{ u.can_message_reason }}</div>
                 </div>
               </div>
-              <InfiniteSentinel :sentinel="activeSentinel" :has-more="s.activeHasMore.value" :loading="s.loadingMoreLists.value" />`r`n              <div class="mt-2 text-center">
+              <InfiniteSentinel :sentinel="activeSentinel" :has-more="s.activeHasMore.value" :loading="s.loadingMoreLists.value" />
+              <div class="mt-2 text-center">
                 <Button label="Обновить" icon="pi pi-refresh" severity="secondary" rounded outlined size="small" :loading="s.activeLoading.value" @click="s.loadActive()" />
               </div>
             </div>
@@ -789,6 +790,13 @@ onUnmounted(() => {
                   <span class="flex flex-col items-start gap-2 w-full p-3 rounded-2xl text-left bg-white dark:bg-white/5 border border-stone-200/80 dark:border-white/10 hover:border-violet-300 dark:hover:border-violet-500/40 hover:shadow-md hover:shadow-violet-500/10 active:scale-[0.97] transition">
                     <span class="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-500 text-white grid place-items-center shadow-md shadow-violet-500/30"><i class="pi pi-question-circle" /></span>
                     <span><span class="block text-[13px] font-black text-stone-900 dark:text-white leading-tight">Как это работает</span><span class="block text-[11px] text-stone-500 dark:text-zinc-400 leading-tight mt-0.5">Мэтчи · лимиты · 18+</span></span>
+                  </span>
+                </Button>
+                <Button unstyled class="w-full !p-0 col-span-2" @click="mobileMenu.close(); v.openRouletteFromNav()">
+                  <span class="flex items-center gap-3 w-full p-3 rounded-2xl text-left bg-gradient-to-br from-rose-500/10 via-fuchsia-500/10 to-orange-400/10 border border-rose-200/60 dark:border-rose-500/20 hover:shadow-md hover:shadow-rose-500/10 active:scale-[0.97] transition">
+                    <span class="w-9 h-9 rounded-xl bg-gradient-to-br from-rose-500 to-orange-400 text-white grid place-items-center shadow-md shadow-rose-500/30 shrink-0"><i class="pi pi-video" /></span>
+                    <span class="min-w-0 flex-1"><span class="block text-[13px] font-black text-stone-900 dark:text-white leading-tight">Видео-рулетка</span><span class="block text-[11px] text-stone-500 dark:text-zinc-400 leading-tight mt-0.5">Случайный собеседник по видео · Free 5/день</span></span>
+                    <i class="pi pi-chevron-right text-xs text-stone-300 dark:text-zinc-600 shrink-0" />
                   </span>
                 </Button>
               </div>

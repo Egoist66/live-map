@@ -3,7 +3,7 @@ import { useToast } from 'primevue/usetoast'
 import { useFlowStore } from '@/stores/flow'
 import { useRewardToast } from '@/composables/useRewardToast'
 import { flowApi } from '@/services/flow.api'
-import { busOn } from '@/services/realtime-bus'
+import { bindThreadLive } from '@/composables/useThreadLive'
 import type { FlowComment, FlowCommentsSort } from '@/types/flow'
 
 /**
@@ -244,27 +244,34 @@ export function useFlowComments(postId: number) {
   /**
    * Живая ветка: чужой коммент/ответ из шины перезагружает список.
    *
-   * Черновик и выбор ответа не трогаем, отправка в полёте
-   * блокирует перезагрузку. Работает на сокетах и поллинге.
+   * Сигнал идёт сокетом треда и добивкой watch_threads в поллинге —
+   * оба транспорта несут один формат, черновик и ответ не трогаем,
+   * отправка в полёте блокирует перезагрузку.
    *
    * @param isOpen открыта ли ветка прямо сейчас
    * @returns функция отписки для onUnmounted
    */
   function subscribeLive(isOpen: () => boolean): () => void {
-    try {
-      return busOn('user:notification.created', (e: unknown) => {
-        if (!isOpen() || sending.value) return
-        const activity = (e as { notification?: { data?: { activity?: { kind?: string; flow_post?: { id?: number }; flow_post_id?: number } } } })?.notification?.data?.activity
-        if (!activity) return
-        const kind = String(activity.kind ?? '')
-        if (kind !== 'flow_comment' && kind !== 'flow_reply') return
-        const incomingId = Number(activity.flow_post?.id ?? activity.flow_post_id ?? 0)
-        if (incomingId !== postId) return
-        void load()
-      })
-    } catch {
-      return () => {}
+    const maxId = () => {
+      let max = 0
+      for (const c of comments.value) {
+        const id = Number((c as any)?.id ?? 0)
+        if (id > max) max = id
+        for (const r of (c as any)?.replies ?? []) {
+          const rid = Number((r as any)?.id ?? 0)
+          if (rid > max) max = rid
+        }
+      }
+      return max
     }
+    return bindThreadLive({
+      kind: 'flow',
+      id: () => postId,
+      knownMax: maxId,
+      onChanged: () => void load(),
+      isOpen,
+      isBusy: () => sending.value,
+    })
   }
 
   return { comments, loading, loadingMore, hasMore, sending, replyTo, draft, anonymousReply, sort, load, loadMore, setSort, hasMoreChildren, isLoadingChildren, loadChildren, setReply, send, remove, subscribeLive }

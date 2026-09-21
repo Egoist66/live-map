@@ -7,6 +7,7 @@ import { useAppConfirm } from '@/composables/useAppConfirm'
 import { isSameText } from '@/composables/useUnchangedGuard'
 import { reactionsApi } from '@/services/reactions.api'
 import { useRewardToast } from '@/composables/useRewardToast'
+import { bindThreadLive } from '@/composables/useThreadLive'
 import { pinsApi } from '@/services/pins.api'
 import { formatTime } from '@/utils/date'
 import { useToast } from 'primevue/usetoast'
@@ -130,6 +131,35 @@ export function usePinDetails() {
   }
 
   function closePin(): void { selectedPin.value = null; replyTo.value = null; highlightCommentId.value = null }
+
+  /**
+   * Живая ветка открытого пина: чужой коммент/ответ/правка/удаление
+   * из шины перезагружает первую страницу. Сокет треда + добивка
+   * watch_threads в поллинге несут один формат. Черновик vee-validate
+   * и выбор ответа не трогаем. Глубже первой страницы не дёргаем —
+   * там работает infinite scroll.
+   */
+  bindThreadLive({
+    kind: 'pin',
+    id: () => activePinId.value,
+    knownMax: () => {
+      let max = 0
+      for (const c of comments.value as any[]) {
+        const id = Number(c?.id ?? 0)
+        if (id > max) max = id
+        for (const r of c?.replies ?? []) {
+          const rid = Number((r as any)?.id ?? 0)
+          if (rid > max) max = rid
+        }
+      }
+      return max
+    },
+    onChanged: () => {
+      const id = activePinId.value
+      if (id && commentsPage.value <= 1) void loadComments(id)
+    },
+    isOpen: () => selectedPin.value !== null,
+  })
 
   const threadedComments = computed(() => {
     const list = (comments.value || []) as any[]

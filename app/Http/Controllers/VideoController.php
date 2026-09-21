@@ -91,7 +91,9 @@ class VideoController extends Controller
      * отдельным видом фрейма kind=chat с текстом до 500 символов.
      * Приглашение в приват — kind=private_invite c id созданного диалога,
      * второй участник видит баннер «перейти в чат» даже после отбоя.
-     * ICE trickle шлёт много мелких запросов — лимитер chat-signal (120/мин).
+     * Сигналинг идёт отдельным ведром throttle:video-signal (300/мин):
+     * делить корзину с typing/read нельзя — иначе offer тонет в 429
+     * и звонок навсегда остаётся чёрным с «Соединение…».
      *
      * @param Request $request
      * @param VideoCall $call

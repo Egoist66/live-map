@@ -55,6 +55,7 @@ class PinCommentController extends Controller
         $mentionedIds = Mentions::extractIds($data['content'], $request->user()->id);
         PinActivityNotifier::comment($pin, $request->user(), $comment, $mentionedIds);
         PinActivityNotifier::mentions($pin, $request->user(), $comment, $mentionedIds);
+        \App\Events\CommentThreadUpdated::touch('pin', (int) $pin->id);
         if ($comment->is_anonymous) $comment->setRelation('user', null);
         else $comment->load('user:id,name,avatar_path');
         $payload = $comment->toArray();
@@ -82,6 +83,7 @@ class PinCommentController extends Controller
         $comment->update(['content' => $data['content']]);
         $newMentioned = array_diff(Mentions::extractIds($data['content'], $user->id), $oldMentioned);
         if ($newMentioned) PinActivityNotifier::mentions($comment->pin, $user, $comment->refresh(), array_values($newMentioned));
+        \App\Events\CommentThreadUpdated::touch('pin', (int) $comment->pin_id);
         if (!$user->isAdmin()) {
             $key = "comment_edit:{$user->id}:{$comment->pin_id}:" . now()->toDateString();
             Cache::put($key, ((int) Cache::get($key, 0)) + 1, now()->endOfDay());
@@ -115,6 +117,7 @@ class PinCommentController extends Controller
         $comment->delete();
         $pin->decrement('comments_count', $removed);
         PinActivityNotifier::counters($pin);
+        \App\Events\CommentThreadUpdated::touch('pin', (int) $pin->id);
         if ($limited) {
             Cache::put($limitKey, ((int) Cache::get($limitKey, 0)) + 1, now()->endOfDay());
         }

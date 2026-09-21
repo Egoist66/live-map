@@ -587,6 +587,28 @@ export function useVideoSession() {
   }
 
   /**
+   * Открыть рулетку из навигации с любой страницы.
+   *
+   * Лайаут персистентный — оверлей откроется сразу, визит на свайпы
+   * догонит следом. Гостей ведём на логин (анонимной рулетки нет).
+   */
+  function openRouletteFromNav(): void {
+    try {
+      const uid = Number((window as any)?.__inertia_page?.props?.auth?.user?.id || 0)
+      if (!uid) {
+        router.visit('/login')
+        return
+      }
+    } catch {}
+    try {
+      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/swipes')) {
+        router.visit('/swipes')
+      }
+    } catch {}
+    openRoulette()
+  }
+
+  /**
    * Подтянуть счётчик очереди для бейджа «сейчас в рулетке».
    */
   async function loadRouletteCount(): Promise<void> {
@@ -778,6 +800,7 @@ export function useVideoSession() {
     setLocalEl,
     setRemoteEl,
     openRoulette,
+    openRouletteFromNav,
     closeOverlay,
     callMatch,
     accept,

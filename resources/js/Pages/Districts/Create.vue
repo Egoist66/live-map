@@ -97,11 +97,11 @@ const page = useDistrictCreatePage(props.canCreate, props.limitText)
                 <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400"><i class="pi pi-check" /></span>
                 <div class="min-w-0 text-[13px]">
                   <div class="font-bold text-ink-900 dark:text-white">Готова к публикации</div>
-                  <div class="truncate text-[11px] text-stone-500 dark:text-zinc-400">{{ page.strokesCount.value }} мазка · {{ page.pointsCount.value }} точек</div>
+                  <div class="truncate text-[11px] text-stone-500 dark:text-zinc-400">{{ page.strokesCount.value }} {{ page.strokesCount.value === 1 ? 'чертежа' : 'чертежей' }} · {{ page.pointsCount.value }} точек</div>
                 </div>
               </div>
               <div v-else class="mt-2 text-[13px] leading-relaxed text-stone-500 dark:text-zinc-400">
-                Нет заливки. Нарисуйте район кистью на карте — потом вернитесь сюда.
+                Нет заливки. Нарисуйте район чертежом на карте — потом вернитесь сюда.
               </div>
               <Button :label="page.hasDraft.value ? 'Перерисовать' : 'Нарисовать на карте'" icon="pi pi-palette" rounded outlined size="small" class="mt-3 w-full" @click="page.backToMap()" />
             </div>

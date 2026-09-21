@@ -24,6 +24,13 @@ export function chatPreviewText(lastMessage: Message | null | undefined, emptyLa
     return `${prefix}${text}`
   }
   const attachment = (lastMessage as any)?.attachment ?? null
+  const shared = (lastMessage as any)?.shared_post ?? null
+  if (shared && (shared.type === 'flow' || shared.type === 'district')) {
+    const label = shared.type === 'district' ? '📰 Новость района' : '📝 Пост'
+    const title = String(shared.title ?? shared.excerpt ?? '').replace(/\s+/g, ' ').trim()
+    const short = title.length > 80 ? `${title.slice(0, 80)}…` : title
+    return short ? `${prefix}${label} · ${short}` : `${prefix}${label}`
+  }
   const kind = String(attachment?.kind ?? (lastMessage as any)?.type ?? '')
   if (kind === 'voice' || kind === 'audio') {
     const secs = Number((attachment as any)?.duration ?? 0)

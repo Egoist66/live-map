@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { districtPostCommentsApi } from '@/services/district-posts.api'
 import { useRewardToast } from '@/composables/useRewardToast'
+import { bindThreadLive } from '@/composables/useThreadLive'
 import type { DistrictPostComment } from '@/types/entities/DistrictPost'
 
 /**
@@ -204,5 +205,38 @@ export function useDistrictNewsComments(
     setReply,
     send,
     remove,
+    subscribeLive,
+  }
+
+  /**
+   * Живая ветка: чужой коммент/ответ из шины перезагружает список.
+   *
+   * Сигнал идёт сокетом треда и добивкой watch_threads в поллинге.
+   * Черновик и выбор ответа не трогаем, отправка в полёте блокирует.
+   *
+   * @param isOpen открыта ли ветка прямо сейчас
+   * @returns функция отписки для onUnmounted
+   */
+  function subscribeLive(isOpen: () => boolean): () => void {
+    const maxId = () => {
+      let max = 0
+      for (const c of comments.value) {
+        const id = Number((c as any)?.id ?? 0)
+        if (id > max) max = id
+        for (const r of (c as any)?.replies ?? []) {
+          const rid = Number((r as any)?.id ?? 0)
+          if (rid > max) max = rid
+        }
+      }
+      return max
+    }
+    return bindThreadLive({
+      kind: 'district',
+      id: () => postId,
+      knownMax: maxId,
+      onChanged: () => void load(),
+      isOpen,
+      isBusy: () => sending.value,
+    })
   }
 }

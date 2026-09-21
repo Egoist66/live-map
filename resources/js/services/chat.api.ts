@@ -176,6 +176,20 @@ export const chatApi = {
     const { data } = await api.patch<Message>(`/api/messages/${messageId}`, { body })
     return data
   },
+  /**
+   * Поделиться постом в личке с одним или несколькими пользователями.
+   * Каждому создаётся/находится direct-диалог, туда падает message типа post.
+   * @param payload получатели, тип и id поста, сопроводительный текст
+   */
+  async sharePost(payload: { user_ids: number[]; post_type: 'flow' | 'district'; post_id: number; comment?: string | null }) {
+    const { data } = await api.post('/api/chat/share-post', {
+      user_ids: payload.user_ids,
+      post_type: payload.post_type,
+      post_id: payload.post_id,
+      comment: payload.comment ?? null,
+    })
+    return data as { sent: { conversation_id: number; message: Message }[]; skipped: { user_id: number; reason: string }[] }
+  },
   async deleteMessage(messageId: number) {
     const { data } = await api.delete(`/api/messages/${messageId}`)
     return data

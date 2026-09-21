@@ -70,6 +70,8 @@ export type RealtimeEventMap = {
   'badges:request': number
   /** Новые новости для очереди апдейтов */
   'notify:update': { updates: any[] }
+  /** Тред комментариев изменился (сокет + polling несут один формат) */
+  'thread:updated': { kind: string; id: number; lastId: number }
   /** Смена режима realtime: socket|polling */
   'realtime:mode': string
 }
@@ -78,6 +80,8 @@ export type PollContext = {
   conversationId: number | null
   mapBbox?: { minLat: number; maxLat: number; minLng: number; maxLng: number } | null
   knownPinIds?: number[]
+  /** Открытые треды "вид:id:последний_известный_id" для добивки комментариев. */
+  watchThreads?: string | null
 }
 
 type Handler<T> = (payload: T) => void
@@ -147,6 +151,7 @@ export function getPollContext(): PollContext {
       if (part.conversationId != null) merged.conversationId = part.conversationId
       if (part.mapBbox !== undefined) merged.mapBbox = part.mapBbox
       if (part.knownPinIds !== undefined) merged.knownPinIds = part.knownPinIds
+      if (part.watchThreads !== undefined) merged.watchThreads = part.watchThreads
     })
   } catch {}
   return merged
