@@ -90,14 +90,19 @@ async function pollOwnCall(): Promise<void> {
  * Каждый фрейм кладём в ту же шину — дальше работают те же хендлеры
  * (peer с дедупом по id, стор, чат звонка). Так P2P живёт вообще
  * без realtime: чистый REST-поллинг вместо сигналинга.
+ * Бонус: пока P2P не в connected — опрашиваем даже при живом сокете,
+ * иначе offer/answer, ушедший раньше подписки пира, теряется навсегда
+ * («Соединение…» висит вечно при зелёном сокете).
  */
 async function pollSignals(): Promise<void> {
-  if (document.hidden || socketAlive() || !myUid()) return
+  if (document.hidden) return
   const callId = v.store.call?.id ?? null
   const status = v.store.status
   if (!callId || (status !== 'active' && status !== 'ringing-out' && status !== 'ringing-in')) {
     return
   }
+  const peerConnected = v.peer.connectionState.value === 'connected'
+  if (socketAlive() && peerConnected) return
   if (signalCallId.value !== callId) {
     signalCallId.value = callId
     signalCursor.value = 0

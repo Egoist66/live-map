@@ -12,8 +12,8 @@ export type VideoStatus = 'idle' | 'searching' | 'ringing-out' | 'ringing-in' | 
 let realtimeBound = false
 let ringTimer: ReturnType<typeof setTimeout> | null = null
 
-/** Сколько ждём ответа на исходящий до авто-отбоя (сервер гасит позже). */
-const RING_TIMEOUT_MS = 35000
+/** Сколько ждём ответа на исходящий до авто-отбоя (вровень с серверным RING_TTL_SEC=40). */
+const RING_TIMEOUT_MS = 40000
 
 /**
  * Стор видеозвонков: мэтч-звонки и рулетка.

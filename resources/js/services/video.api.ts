@@ -34,12 +34,13 @@ export interface VideoIncomingEvent {
 /**
  * Signaling-фрейм (сокет + polling несут один формат).
  * kind=chat — сообщение чата звонка, payload {text}.
+ * kind=private_invite — приглашение в приватный чат, payload {conversation_id}.
  */
 export interface VideoSignalEvent {
   id: number
   call_id: number
   sender_id: number
-  kind: 'offer' | 'answer' | 'ice' | 'accepted' | 'declined' | 'hangup' | 'timeout' | 'joined' | 'chat'
+  kind: 'offer' | 'answer' | 'ice' | 'accepted' | 'declined' | 'hangup' | 'timeout' | 'joined' | 'chat' | 'private_invite'
   payload: any
 }
 
@@ -66,7 +67,7 @@ export const videoApi = {
     const { data } = await api.post(`/api/video/${callId}/hangup`)
     return data as { call: VideoCallPayload }
   },
-  async signal(callId: number, kind: 'offer' | 'answer' | 'ice' | 'chat', payload: unknown) {
+  async signal(callId: number, kind: 'offer' | 'answer' | 'ice' | 'chat' | 'private_invite', payload: unknown) {
     const { data } = await api.post(`/api/video/${callId}/signal`, { kind, payload })
     return data as { id: number; call_id: number; kind: string }
   },

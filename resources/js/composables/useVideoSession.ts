@@ -6,6 +6,8 @@ import { usePeerConnection } from '@/composables/usePeerConnection'
 import { videoApi } from '@/services/video.api'
 import type { VideoPeer } from '@/services/video.api'
 import { chatApi } from '@/services/chat.api'
+import { busOn } from '@/services/realtime-bus'
+import { pokeRealtime } from '@/composables/useRealtimePoller'
 
 /** Heartbeat очереди рулетки: сервер держит место QUEUE_TTL_SEC. */
 const ROULETTE_HEARTBEAT_MS = 45000
@@ -23,9 +25,22 @@ const overlayOpen = ref(false)
 const sharedRouletteAuto = ref(false)
 /** Последний собеседник рулетки (для «уйти в приват» после смены пары). */
 const sharedLastPeer = ref<VideoPeer | null>(null)
+/** Приглашение в приватный чат от собеседника (живёт дольше звонка). */
+const sharedPendingInvite = ref<{ conversationId: number; fromName: string } | null>(null)
+/** Подписка на инвайты уже висит (одна на приложение). */
+let inviteBusBound = false
 /** Защита от двойного автоприёма одной и той же пары. */
 let autoAccepting = false
 let heartbeat: ReturnType<typeof setInterval> | null = null
+
+/**
+ * Приглашение в приват: payload {conversation_id} от второго участника.
+ */
+interface PrivateInviteEvent {
+  call_id: number
+  kind: string
+  payload?: { conversation_id?: number } | null
+}
 
 /**
  * Видеосессия: связывает стор, медиа и P2P-соединение.
@@ -55,6 +70,7 @@ export function useVideoSession() {
   const notice = sharedNotice
   const rouletteAuto = sharedRouletteAuto
   const lastPeer = sharedLastPeer
+  const pendingInvite = sharedPendingInvite
   const rouletteCount = ref<number | null>(null)
   const sharing = ref(false)
 
@@ -103,9 +119,80 @@ export function useVideoSession() {
 
   /**
    * Подписаться на входящие звонки (сокет + polling).
+   * Заодно вешаем разовую подписку на приглашения в приват.
    */
   function bindRealtime(): void {
     store.bindRealtime()
+    bindInviteBus()
+  }
+
+  /**
+   * Разовая подписка на private_invite (одна на приложение).
+   * Инвайт переживает звонок: висит баннером, пока не примут/отклонят.
+   */
+  function bindInviteBus(): void {
+    if (inviteBusBound) return
+    inviteBusBound = true
+    busOn('user:video.signal', (e) => handlePrivateInvite(e as PrivateInviteEvent))
+  }
+
+  /**
+   * Разобрать входящее приглашение в приватный чат.
+   *
+   * @param e событие user:video.signal
+   */
+  function handlePrivateInvite(e: PrivateInviteEvent): void {
+    if (!e || String(e.kind) !== 'private_invite') return
+    const conversationId = Number(e.payload?.conversation_id ?? 0)
+    if (!conversationId) return
+    pendingInvite.value = {
+      conversationId,
+      fromName: lastPeer.value?.name ?? 'Собеседник',
+    }
+  }
+
+  /**
+   * Принять приглашение в приват: гасим видео и переходим в чат.
+   * Уходят оба — пригласивший уже там, второго ведёт эта кнопка.
+   */
+  async function acceptPrivateInvite(): Promise<void> {
+    const conversationId = pendingInvite.value?.conversationId ?? null
+    if (!conversationId || busy.value) return
+    busy.value = true
+    try {
+      await leaveVideoSilently()
+      pendingInvite.value = null
+      router.visit(`/chat/${conversationId}?from=roulette`)
+    } finally {
+      busy.value = false
+    }
+  }
+
+  /**
+   * Отклонить приглашение в приват (остаёмся в рулетке).
+   */
+  function declinePrivateInvite(): void {
+    pendingInvite.value = null
+  }
+
+  /**
+   * Тихо свернуть видео (очередь/звонок/камера) без навигации.
+   * Общий знаменатель для «в приват» и принятия чужого инвайта.
+   */
+  async function leaveVideoSilently(): Promise<void> {
+    peer.close()
+    media.stop()
+    resetSharing()
+    rouletteAuto.value = false
+    try {
+      const callId = store.call?.id ?? store.incoming?.callId ?? null
+      if (callId) await videoApi.hangup(callId)
+    } catch {}
+    try {
+      await videoApi.rouletteLeave()
+    } catch {}
+    store.resetSession()
+    overlayOpen.value = false
   }
 
   /**
@@ -202,18 +289,34 @@ export function useVideoSession() {
 
   /**
    * Принять входящий: peer поднимаем ДО accept, чтобы не потерять offer.
+   * Оверлей открываем оптимистично — принявший всегда видит звонок,
+   * а не пустоту; при ошибке accept та же модалка покажет её текст.
    */
   async function accept(): Promise<void> {
     if (busy.value) return
     busy.value = true
     notice.value = null
+    const incomingMode = store.incoming?.mode ?? store.call?.mode ?? null
+    overlayOpen.value = true
     try {
       const ok = await ensureMedia()
       const callId = store.incoming?.callId ?? store.call?.id
-      if (!ok || !media.stream.value || !callId) return
+      if (!ok || !media.stream.value || !callId) {
+        if (!ok) overlayOpen.value = false
+        return
+      }
       peer.bind(callId, false, media.stream.value, attachRemote)
       await store.acceptIncoming()
       attachLocal()
+      await ensureCallerOffer()
+    } catch {
+      // accept упал (звонок протух/завершён): стор уже в idle,
+      // поэтому контекст выставляем из запомненного режима —
+      // иначе модалка покажет вход в рулетку вместо текста ошибки.
+      if (!rouletteAuto.value && incomingMode !== 'roulette') {
+        store.entryContext = 'direct'
+      }
+      overlayOpen.value = true
     } finally {
       busy.value = false
     }
@@ -235,6 +338,7 @@ export function useVideoSession() {
     media.stop()
     resetSharing()
     if (wasRoulette) rouletteAuto.value = false
+    pendingInvite.value = null
     await store.hangup()
     overlayOpen.value = false
   }
@@ -242,6 +346,8 @@ export function useVideoSession() {
   /**
    * Уйти в приват: создать личный чат с собеседником рулетки
    * и перейти туда, видеозвонок завершается.
+   * Второму участнику уходит private_invite — он видит баннер
+   * «позвали в приват» и переходит той же кнопкой.
    *
    * @returns false когда собеседник неизвестен или чат не создался
    */
@@ -257,16 +363,15 @@ export function useVideoSession() {
         notice.value = 'Не удалось создать чат'
         return false
       }
-      peer.close()
-      media.stop()
-      resetSharing()
-      rouletteAuto.value = false
-      try {
-        const callId = store.call?.id ?? store.incoming?.callId ?? null
-        if (callId) await videoApi.hangup(callId)
-      } catch {}
-      store.resetSession()
-      overlayOpen.value = false
+      const callId = store.call?.id ?? store.incoming?.callId ?? null
+      if (callId) {
+        try {
+          await videoApi.signal(callId, 'private_invite', { conversation_id: convId })
+          pokeRealtime()
+        } catch {}
+      }
+      pendingInvite.value = null
+      await leaveVideoSilently()
       router.visit(`/chat/${convId}?from=roulette`)
       return true
     } catch {
@@ -288,6 +393,7 @@ export function useVideoSession() {
       const ok = await ensureMedia()
       if (!ok) return
       rouletteAuto.value = true
+      pendingInvite.value = null
       await store.joinRoulette()
       wireRoulettePeer()
       await maybeAutoAcceptRoulette()
@@ -382,6 +488,7 @@ export function useVideoSession() {
       const ok = media.stream.value ? true : await ensureMedia()
       if (!ok) return
       rouletteAuto.value = true
+      pendingInvite.value = null
       await store.nextRoulette()
       wireRoulettePeer()
       await maybeAutoAcceptRoulette()
@@ -398,6 +505,7 @@ export function useVideoSession() {
     media.stop()
     resetSharing()
     rouletteAuto.value = false
+    pendingInvite.value = null
     await store.leaveRoulette()
     store.resetSession()
   }
@@ -581,6 +689,9 @@ export function useVideoSession() {
     overlayOpen,
     rouletteAuto,
     lastPeer,
+    pendingInvite,
+    acceptPrivateInvite,
+    declinePrivateInvite,
     rouletteCount,
     loadRouletteCount,
     sharing,

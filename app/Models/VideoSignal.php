@@ -36,6 +36,9 @@ class VideoSignal extends Model
 
     public const KIND_JOINED = 'joined';
 
+    /** Приглашение в приватный чат: payload {conversation_id}. */
+    public const KIND_PRIVATE_INVITE = 'private_invite';
+
     protected $fillable = [
         'call_id',
         'sender_id',

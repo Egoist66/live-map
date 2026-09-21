@@ -84,10 +84,13 @@ class VideoController extends Controller
     }
 
     /**
-     * переслать signaling-фрейм (offer/answer/ice) или сообщение чата звонка.
+     * переслать signaling-фрейм (offer/answer/ice), сообщение чата звонка
+     * или приглашение в приватный чат.
      *
      * Чат звонка едет тем же транспортом (broadcast + таблица для polling),
      * отдельным видом фрейма kind=chat с текстом до 500 символов.
+     * Приглашение в приват — kind=private_invite c id созданного диалога,
+     * второй участник видит баннер «перейти в чат» даже после отбоя.
      * ICE trickle шлёт много мелких запросов — лимитер chat-signal (120/мин).
      *
      * @param Request $request
@@ -97,7 +100,7 @@ class VideoController extends Controller
     public function signal(Request $request, VideoCall $call)
     {
         $data = $request->validate([
-            'kind' => 'required|in:offer,answer,ice,chat',
+            'kind' => 'required|in:offer,answer,ice,chat,private_invite',
             'payload' => 'nullable|array',
         ]);
 
@@ -108,6 +111,12 @@ class VideoController extends Controller
             abort_if($text === '', 422, 'Пустое сообщение');
             abort_if(mb_strlen($text) > 500, 422, 'Сообщение до 500 символов');
             $payload = ['text' => $text];
+        }
+
+        if ($data['kind'] === 'private_invite') {
+            $conversationId = (int) ($payload['conversation_id'] ?? 0);
+            abort_if($conversationId < 1, 422, 'Нет id диалога');
+            $payload = ['conversation_id' => $conversationId];
         }
 
         $signal = $this->video->signal($request->user(), $call, $data['kind'], $payload);

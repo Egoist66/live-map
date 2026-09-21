@@ -180,6 +180,12 @@ function onClose(): void {
       <div v-if="v.store.info || v.notice.value" class="mx-4 mt-1 rounded-2xl bg-sky-500/10 border border-sky-500/30 px-4 py-2.5 text-sm text-sky-700 dark:text-sky-300">
         {{ v.store.info || v.notice.value }}
       </div>
+      <div v-if="v.pendingInvite.value" class="mx-4 mt-1 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 px-4 py-2.5 flex items-center gap-2 flex-wrap">
+        <i class="pi pi-send text-emerald-600 dark:text-emerald-300 shrink-0" />
+        <span class="flex-1 min-w-[160px] text-sm text-emerald-700 dark:text-emerald-200 font-semibold">{{ v.pendingInvite.value.fromName }} зовёт в приватный чат</span>
+        <Button label="Перейти" icon="pi pi-arrow-right" rounded size="small" severity="success" :loading="v.busy.value" @click="v.acceptPrivateInvite()" />
+        <Button icon="pi pi-times" rounded text severity="secondary" size="small" aria-label="Отклонить" title="Остаться в рулетке" @click="v.declinePrivateInvite()" />
+      </div>
 
       <!-- Вход в рулетку / ошибка прямого звонка -->
       <div v-if="v.store.status === 'idle'" class="relative p-5 sm:p-6 text-center">
