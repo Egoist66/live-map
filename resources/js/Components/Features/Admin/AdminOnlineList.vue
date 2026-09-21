@@ -8,9 +8,15 @@ import InputIcon from 'primevue/inputicon'
 import Tag from 'primevue/tag'
 import Paginator from 'primevue/paginator'
 import ProgressSpinner from 'primevue/progressspinner'
+import { computed } from 'vue'
 import { avatarSrcFor } from '@/composables/useAvatar'
+import { useUserRole } from '@/composables/useUserRole'
 
-defineProps<{ list: any[]; meta: any; page: number; limit: number; query: string; loading: boolean }>()
+const { withRoleTags } = useUserRole()
+
+const props = defineProps<{ list: any[]; meta: any; page: number; limit: number; query: string; loading: boolean }>()
+
+const rows = computed(() => withRoleTags(props.list))
 const emit = defineEmits<{
   (e: 'update:query', v: string): void
   (e: 'limit', v: number): void
@@ -50,13 +56,13 @@ function ago(iso?: string | null) {
       <div v-if="loading" class="py-8 grid place-items-center"><ProgressSpinner style="width:24px;height:24px" :strokeWidth="6" /></div>
       <div v-else-if="!list.length" class="py-8 text-center text-sm text-stone-400 dark:text-zinc-500">Никого нет в онлайне</div>
       <div v-else class="mt-3 divide-y divide-stone-100 dark:divide-zinc-800">
-        <div v-for="u in list" :key="u.id" class="flex items-center gap-2.5 py-2.5">
+        <div v-for="u in rows" :key="u.id" class="flex items-center gap-2.5 py-2.5">
           <div class="relative shrink-0">
             <Avatar :image="avatarSrcFor(u)" shape="circle" class="!w-9 !h-9 [&_img]:object-cover" />
             <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white dark:border-zinc-900" />
           </div>
           <div class="min-w-0 flex-1">
-            <div class="text-sm font-semibold truncate dark:text-white">{{ u.name }} <Tag v-if="u.is_admin" value="МОДЕРАТОР" severity="warn" class="!text-[9px] !py-0 ml-1" /></div>
+            <div class="text-sm font-semibold truncate dark:text-white">{{ u.name }} <Tag v-if="u.tag" :value="u.tag.label" :severity="u.tag.severity" class="!text-[9px] !py-0 ml-1" /></div>
             <div class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">{{ u.email }} · {{ u.plan }} · {{ ago(u.last_seen_at) }}</div>
           </div>
         </div>

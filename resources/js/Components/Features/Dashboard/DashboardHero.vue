@@ -3,9 +3,15 @@ import Card from 'primevue/card'
 import Avatar from 'primevue/avatar'
 import Tag from 'primevue/tag'
 import Button from 'primevue/button'
+import { computed } from 'vue'
 import { planOf } from '@/composables/usePlanLimits'
+import { useUserRole } from '@/composables/useUserRole'
 
-defineProps<{ user: any; avatarSrc: string; levelLabel: any; levelColor: any; planLabel: any; planColor: any; sharing: boolean }>()
+const { roleTag } = useUserRole()
+
+const props = defineProps<{ user: any; avatarSrc: string; levelLabel: any; levelColor: any; planLabel: any; planColor: any; sharing: boolean }>()
+
+const tag = computed(() => roleTag(props.user))
 const emit = defineEmits<{ (e: 'avatar'): void; (e: 'map'): void; (e: 'chat'): void; (e: 'share'): void; (e: 'friends'): void; (e: 'search'): void; (e: 'gallery'): void }>()
 </script>
 <template>
@@ -20,7 +26,7 @@ const emit = defineEmits<{ (e: 'avatar'): void; (e: 'map'): void; (e: 'chat'): v
           <div class="min-w-0 flex-1 overflow-hidden">
             <div class="flex flex-wrap items-center gap-2 min-w-0">
               <h1 class="text-[20px] sm:text-[26px] font-black tracking-tight leading-none break-all min-w-0">{{ user.name }}</h1>
-              <Tag v-if="user.is_admin || user.role === 'admin'" value="МОДЕРАТОР" class="!bg-amber-400 !text-stone-900 !border-0 !font-black !text-xs !rounded-full" />
+              <Tag v-if="tag" :value="tag.label" :class="tag.label === 'АДМИН' ? '!bg-red-500 !text-white !border-0 !font-black !text-xs !rounded-full' : '!bg-amber-400 !text-stone-900 !border-0 !font-black !text-xs !rounded-full'" />
             </div>
             <p class="text-white/60 text-sm mt-2 truncate break-all">{{ user.email }}</p>
             <p class="text-white/40 text-xs mt-1.5 flex flex-wrap items-center gap-2">
