@@ -26,6 +26,7 @@ Route::get('/privacy', [PageController::class, 'reference'])->defaults('slug', '
 Route::get('/offer', [PageController::class, 'reference'])->defaults('slug', 'offer')->name('offer');
 Route::middleware('auth')->group(function () {
     Route::get('/cabinet', [\App\Http\Controllers\BusinessController::class, 'index'])->name('cabinet.index');
+    Route::get('/cabinet/pins', [\App\Http\Controllers\BusinessController::class, 'pinsPage'])->name('cabinet.pins');
     Route::get('/cabinet/onboarding', [\App\Http\Controllers\BusinessController::class, 'onboarding'])->name('cabinet.onboarding');
     Route::get('/cabinet/settings', [\App\Http\Controllers\BusinessController::class, 'settings'])->name('cabinet.settings');
     Route::get('/flow', [PageController::class, 'flow'])->name('flow');

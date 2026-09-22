@@ -30,15 +30,23 @@ class VideoIncoming implements ShouldBroadcastNow
         public array $callerBrief,
         public array $calleeBrief,
         public bool $audioOnly = false,
+        public ?array $peerBrief = null,
+        public ?int $recipientId = null,
     ) {}
 
     /**
-     * Каналы обоих участников: рулетка ждёт с двух сторон сразу.
+     * Канал получателя: пир персонализирован под него (peer — всегда второй
+     * участник), поэтому клиент не гадает по своему id и не путает стороны
+     * при протухшем кэше аккаунта.
      *
      * @return array<int, \Illuminate\Broadcasting\PrivateChannel>
      */
     public function broadcastOn(): array
     {
+        if ($this->recipientId) {
+            return [new PrivateChannel('user.'.$this->recipientId)];
+        }
+
         return [
             new PrivateChannel('user.'.$this->callerBrief['id']),
             new PrivateChannel('user.'.$this->calleeBrief['id']),
@@ -56,6 +64,8 @@ class VideoIncoming implements ShouldBroadcastNow
             'audio_only' => $this->audioOnly,
             'caller' => $this->callerBrief,
             'callee' => $this->calleeBrief,
+            'peer' => $this->peerBrief,
+            'recipient_id' => $this->recipientId,
         ];
     }
 

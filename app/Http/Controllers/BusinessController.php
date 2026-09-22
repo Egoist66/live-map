@@ -44,6 +44,14 @@ class BusinessController extends Controller
     }
 
     /**
+     * Пины компании в кабинете.
+     */
+    public function pinsPage(): Response
+    {
+        return Inertia::render('Business/Pins');
+    }
+
+    /**
      * Настройки бизнеса: профиль, тариф, уведомления, приложение.
      *
      * Только бизнес-сущности, без персональных разделов
@@ -165,6 +173,38 @@ class BusinessController extends Controller
         $business = $this->businesses->submitForVerification($request->user());
 
         return new BusinessResource($business);
+    }
+
+    /**
+     * Загрузить логотип компании (владелец или админ).
+     */
+    public function logo(Request $request, Business $business): BusinessResource
+    {
+        $user = $request->user();
+
+        abort_unless($business->user_id === $user->id || $user->isAdmin(), 403);
+
+        $request->validate(['logo' => 'required|image|max:2048']);
+
+        $path = \App\Services\ImageOptimizer::storeOptimized(
+            $request->file('logo'),
+            'business-logos',
+            'public',
+            ['maxSide' => \App\Services\ImageOptimizer::GALLERY_MAX_SIDE]
+        );
+
+        $old = $business->logo_path;
+
+        $business->forceFill(['logo_path' => $path])->save();
+
+        if (is_string($old) && $old !== '') {
+            try {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($old);
+            } catch (\Throwable) {
+            }
+        }
+
+        return new BusinessResource($business->fresh());
     }
 
     /**

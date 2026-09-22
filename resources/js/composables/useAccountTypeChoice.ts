@@ -44,10 +44,38 @@ export function useAccountTypeChoice() {
     visible.value = true
   }
 
-  function maybeShowAuth(): void {
-    if (needsAuthChoice.value && !visible.value) {
-      visible.value = true
+  let syncing = false
+
+  /**
+   * Тихо сохранить запомненный выбор на сервер без модалки.
+   *
+   * Раз запомнили — больше не спрашиваем: ни после логаута,
+   * ни при пустом account_type у старых аккаунтов.
+   */
+  async function syncStored(): Promise<void> {
+    if (!needsAuthChoice.value || !stored.value || syncing) {
+      return
     }
+    syncing = true
+    try {
+      const res = await businessApi.setAccountType(stored.value)
+      if (authUser.value) {
+        authUser.value.account_type = res.account_type
+      }
+    } catch {} finally {
+      syncing = false
+    }
+  }
+
+  function maybeShowAuth(): void {
+    if (!needsAuthChoice.value || visible.value) {
+      return
+    }
+    if (stored.value) {
+      void syncStored()
+      return
+    }
+    visible.value = true
   }
 
   function hide(): void {
@@ -111,6 +139,7 @@ export function useAccountTypeChoice() {
     isBusiness,
     maybeShowGuest,
     maybeShowAuth,
+    syncStored,
     hide,
     chooseGuest,
     chooseAuth,

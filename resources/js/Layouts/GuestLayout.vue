@@ -24,7 +24,7 @@ const { isClientReady } = useClientReady()
       <div class="relative p-8 xl:p-9 flex flex-col w-full">
         <Link href="/" class="flex items-center gap-2.5 shrink-0">
           <span class="w-9 h-9 rounded-xl overflow-hidden shadow-soft shrink-0 grid place-items-center"><BrandMark class="h-full w-full" /></span>
-          <span class="font-black tracking-[-0.03em] text-xl">U<span class="font-light opacity-80">Pin</span> <span class="font-black text-xs tracking-wide bg-gradient-to-r from-indigo-300 to-violet-300 bg-clip-text text-transparent">Pro</span></span>
+          <span class="font-black tracking-[-0.03em] text-xl">U<span class="font-light opacity-80">Pin</span></span>
         </Link>
         <div class="mt-8">
           <div class="inline-flex items-center gap-2 bg-white/10 backdrop-blur border border-white/15 rounded-full px-3 py-1.5 text-xs font-medium">
@@ -59,7 +59,7 @@ const { isClientReady } = useClientReady()
           <div class="guest-auth w-full max-w-[440px] min-w-0 mx-auto">
             <Link href="/" class="lg:hidden flex items-center gap-2.5 mb-5 sm:mb-6">
               <span class="w-9 h-9 rounded-xl overflow-hidden shrink-0 grid place-items-center"><BrandMark class="h-full w-full" /></span>
-              <span class="font-black tracking-[-0.03em] text-xl text-ink-900 dark:text-white">U<span class="font-light text-ink-600 dark:text-zinc-400">Pin</span> <span class="font-black text-xs tracking-wide bg-gradient-to-r from-indigo-500 to-violet-600 bg-clip-text text-transparent">Pro</span></span>
+              <span class="font-black tracking-[-0.03em] text-xl text-ink-900 dark:text-white">U<span class="font-light text-ink-600 dark:text-zinc-400">Pin</span></span>
             </Link>
             <Card class="w-full max-w-full !bg-white dark:!bg-zinc-900 !border !border-stone-200/70 dark:!border-zinc-800 !rounded-[20px] sm:!rounded-[24px] !shadow-float !p-0">
               <template #content>

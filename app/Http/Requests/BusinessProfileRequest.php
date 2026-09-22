@@ -32,6 +32,7 @@ class BusinessProfileRequest extends FormRequest
             'lat' => ['nullable', 'numeric', 'between:-90,90'],
             'lng' => ['nullable', 'numeric', 'between:-180,180'],
             'description' => ['nullable', 'string', 'max:2000'],
+            'services' => ['nullable', 'string', 'max:2000'],
             'phone' => ['nullable', 'string', 'max:32'],
             'website' => ['nullable', 'string', 'max:255'],
             'working_hours' => ['nullable', 'array'],

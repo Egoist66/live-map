@@ -37,6 +37,7 @@ export interface BusinessProfile {
   verified_at: string | null
   is_active: boolean
   subscription_plan: string
+  owner_profile?: string | null
 }
 
 export interface BusinessStats {
@@ -80,6 +81,15 @@ export interface BusinessMapItem {
   logo_url: string | null
   pins_count: number
   owner_profile: string | null
+}
+
+/**
+ * Фото компании для витрины на карте.
+ */
+export interface BusinessPhoto {
+  id: number
+  url: string | null
+  caption: string | null
 }
 
 export interface BusinessProfilePayload {

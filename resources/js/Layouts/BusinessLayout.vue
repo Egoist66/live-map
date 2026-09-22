@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { Link, router, usePage } from '@inertiajs/vue3'
 import { route } from '@/route'
 import AppFooter from '@/Layouts/AppFooter.vue'
+import ApplicationLogo from '@/Components/Brand/ApplicationLogo.vue'
 import AppUserMenu from '@/Layouts/AppUserMenu.vue'
 import Avatar from 'primevue/avatar'
 import GlobalNotificationToasts from '@/Components/Features/Feedback/GlobalNotificationToasts.vue'
@@ -36,12 +37,14 @@ const menuUser = computed(() => {
   return { name: companyName.value, email }
 })
 
+/**
+ * В навигации только рабочие разделы: карта, чаты, реквизиты.
+ * Кабинет — по логотипу, настройки — из дропдауна компании.
+ */
 const nav = [
-  { label: 'Дашборд', href: '/cabinet', icon: 'pi pi-th-large', match: (p: string) => p === '/cabinet' },
   { label: 'Карта', href: '/map', icon: 'pi pi-map-marker', match: (p: string) => p.startsWith('/map') },
   { label: 'Чаты', href: '/chat', icon: 'pi pi-comments', match: (p: string) => p.startsWith('/chat') },
   { label: 'Реквизиты', href: '/cabinet/onboarding', icon: 'pi pi-id-card', match: (p: string) => p.startsWith('/cabinet/onboarding') },
-  { label: 'Настройки', href: '/cabinet/settings', icon: 'pi pi-cog', match: (p: string) => p.startsWith('/cabinet/settings') },
 ]
 
 const currentPath = computed(() => {
@@ -56,6 +59,7 @@ const menuItems = computed(() => [
   { label: companyName.value, sublabel: (user.value as { email?: string } | null)?.email || '', isHeader: true },
   { separator: true },
   { label: 'Кабинет', icon: 'pi pi-th-large', accent: 'violet', active: currentPath.value === '/cabinet', command: () => router.visit('/cabinet') },
+  { label: 'Мои пины', icon: 'pi pi-list', accent: 'teal', active: currentPath.value.startsWith('/cabinet/pins'), command: () => router.visit('/cabinet/pins') },
   { label: 'Реквизиты компании', icon: 'pi pi-id-card', accent: 'slate', active: currentPath.value.startsWith('/cabinet/onboarding'), command: () => router.visit('/cabinet/onboarding') },
   { label: 'Настройки', icon: 'pi pi-cog', accent: 'slate', active: currentPath.value.startsWith('/cabinet/settings'), command: () => router.visit('/cabinet/settings') },
   { label: 'Карта', icon: 'pi pi-map', accent: 'teal', active: currentPath.value.startsWith('/map'), command: () => router.visit('/map') },
@@ -77,9 +81,8 @@ function logout(): void {
   <div class="flex min-h-screen min-h-dvh flex-col bg-surface dark:bg-[#0B0F1A] overflow-x-clip">
     <header class="native-safe-top sticky top-0 z-50 glass border-b border-stone-200/70 dark:border-zinc-800 backdrop-blur">
       <div class="mx-auto max-w-[1280px] px-4 sm:px-6 h-16 flex items-center gap-3">
-        <Link href="/cabinet" class="flex items-center gap-2 min-w-0 shrink-0">
-          <span class="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 grid place-items-center text-white shrink-0"><i class="pi pi-briefcase text-sm" /></span>
-          <span class="font-black tracking-tight text-[17px] dark:text-white truncate">Бизнес<span class="font-light text-stone-500"> · кабинет</span></span>
+        <Link href="/cabinet" class="min-w-0 shrink-0" aria-label="Кабинет">
+          <ApplicationLogo pro />
         </Link>
         <BusinessVerificationBadge :status="status" class="hidden sm:inline-flex shrink-0" />
         <nav class="hidden lg:flex items-center gap-1 ml-4">
@@ -117,7 +120,7 @@ function logout(): void {
       class="mobile-bottom-nav lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/90 dark:bg-zinc-900/90 backdrop-blur border-t border-stone-200 dark:border-zinc-800"
       style="padding-bottom: var(--sab)"
     >
-      <div class="grid grid-cols-5">
+      <div class="grid grid-cols-3">
         <Link
           v-for="item in nav"
           :key="item.label"

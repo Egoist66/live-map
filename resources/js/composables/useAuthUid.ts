@@ -1,4 +1,4 @@
-import { usePage } from '@inertiajs/vue3'
+import { router, usePage } from '@inertiajs/vue3'
 
 
 /**
@@ -11,6 +11,26 @@ import { usePage } from '@inertiajs/vue3'
  * в модуле — читать можно из интервалов и Pinia-экшенов.
  */
 let cachedUid = 0
+/** Синхронизация с навигацией уже висит (одна на приложение). */
+let routerBound = false
+
+/**
+ * Подписаться на смену страницы: логаут/логин другим аккаунтом без
+ * перезагрузки иначе оставлял чужой id в кэше — и звонки «приходили
+ * от себя». Разовая подписка, дальше uid всегда свежий.
+ */
+function bindRouterSync(): void {
+  if (routerBound) return
+  routerBound = true
+  try {
+    router.on('success', (event) => {
+      try {
+        const user = (event.detail.page.props.auth as { user?: { id?: number } } | undefined)?.user
+        cachedUid = Number(user?.id || 0)
+      } catch {}
+    })
+  } catch {}
+}
 
 /**
  * Запомнить id юзера из текущей Inertia-страницы.
@@ -25,6 +45,7 @@ let cachedUid = 0
  * }
  */
 export function captureAuthUid(): void {
+  bindRouterSync()
   try {
     const user = (usePage().props.auth as { user?: { id?: number } } | undefined)?.user
     const id = Number(user?.id || 0)

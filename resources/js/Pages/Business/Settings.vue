@@ -9,6 +9,8 @@ import { useSeo } from '@/composables/useSeo'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import ToggleSwitch from 'primevue/toggleswitch'
+import BusinessPhotosManager from '@/Components/Features/Business/BusinessPhotosManager.vue'
+import BusinessLogoPicker from '@/Components/Features/Business/BusinessLogoPicker.vue'
 import type { BusinessDashboard } from '@/types/entities/Business'
 
 defineOptions({
@@ -45,7 +47,7 @@ async function onPushToggle(): Promise<void> {
     <Card class="!rounded-[24px] !border-stone-200 dark:!border-zinc-800 !bg-white dark:!bg-zinc-900 !shadow-sm">
       <template #content>
         <div class="flex items-start gap-3">
-          <span class="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white grid place-items-center shrink-0"><i class="pi pi-briefcase" /></span>
+          <BusinessLogoPicker />
           <div class="min-w-0 flex-1">
             <div class="font-black text-[16px] dark:text-white truncate">{{ settings.profile.value?.name ?? 'Моя компания' }}</div>
             <div class="text-[13px] text-stone-500 dark:text-zinc-400 mt-0.5">
@@ -54,7 +56,21 @@ async function onPushToggle(): Promise<void> {
             <div class="text-[13px] text-stone-500 dark:text-zinc-400 truncate">{{ settings.profile.value?.legal_address ?? 'Юридический адрес не указан' }}</div>
           </div>
         </div>
-        <Link href="/cabinet/onboarding"><Button label="Реквизиты компании" icon="pi pi-id-card" outlined class="w-full mt-4 !rounded-full" /></Link>
+        <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <Link href="/cabinet/onboarding"><Button label="Реквизиты" icon="pi pi-id-card" outlined class="w-full !rounded-full" /></Link>
+          <Link v-if="settings.profile.value?.owner_profile" :href="`/users/${settings.profile.value.owner_profile}`"><Button label="Как видят клиенты" icon="pi pi-eye" outlined class="w-full !rounded-full" /></Link>
+        </div>
+      </template>
+    </Card>
+
+    <Card class="!rounded-[24px] !border-stone-200 dark:!border-zinc-800 !bg-white dark:!bg-zinc-900 !shadow-sm">
+      <template #content>
+        <div class="font-black text-[16px] dark:text-white">Фотографии</div>
+        <p class="text-[13px] text-stone-500 dark:text-zinc-400 mt-0.5">Листаются в пинах компании на карте.</p>
+        <div class="mt-2">
+          <BusinessPhotosManager v-if="settings.profile.value" :business-id="settings.profile.value.id" />
+          <div v-else class="text-sm text-stone-500 dark:text-zinc-400">Загружаем профиль…</div>
+        </div>
       </template>
     </Card>
 

@@ -22,6 +22,16 @@ const LEGAL_FORM_OPTIONS = [
   { label: 'Другое', value: 'other' },
 ]
 
+export const BUSINESS_WEEK_DAYS = [
+  { key: 'mon', label: 'Пн' },
+  { key: 'tue', label: 'Вт' },
+  { key: 'wed', label: 'Ср' },
+  { key: 'thu', label: 'Чт' },
+  { key: 'fri', label: 'Пт' },
+  { key: 'sat', label: 'Сб' },
+  { key: 'sun', label: 'Вс' },
+]
+
 /**
  * Онбординг компании в 3 шага (законодательство РБ).
  *
@@ -37,6 +47,25 @@ export function useBusinessOnboarding() {
   const step = ref(0)
   const loaded = ref(false)
 
+  /**
+   * Часы работы по дням недели: пусто — выходной.
+   */
+  const hours = ref<Record<string, string>>({ mon: '', tue: '', wed: '', thu: '', fri: '', sat: '', sun: '' })
+
+  /**
+   * Часы без пустых дней для сохранения.
+   */
+  function cleanHours(): Record<string, string> | null {
+    const out: Record<string, string> = {}
+    for (const day of BUSINESS_WEEK_DAYS) {
+      const value = String(hours.value[day.key] ?? '').trim().slice(0, 64)
+      if (value !== '') {
+        out[day.key] = value
+      }
+    }
+    return Object.keys(out).length > 0 ? out : null
+  }
+
   const { defineField, handleSubmit, errors, values, setValues } = useForm({
     validationSchema: businessSchema,
     initialValues: {
@@ -51,6 +80,7 @@ export function useBusinessOnboarding() {
       lat: null,
       lng: null,
       description: null,
+      services: null,
       phone: null,
       website: null,
     } as any,
@@ -67,6 +97,7 @@ export function useBusinessOnboarding() {
   const [lat] = defineField('lat')
   const [lng] = defineField('lng')
   const [description] = defineField('description')
+  const [services] = defineField('services')
   const [phone] = defineField('phone')
   const [website] = defineField('website')
 
@@ -139,6 +170,12 @@ export function useBusinessOnboarding() {
       await store.loadAll()
       const profile = store.profile
       if (profile) {
+        const savedHours = (profile as { working_hours?: Record<string, string> | null }).working_hours
+        if (savedHours && typeof savedHours === 'object') {
+          for (const day of BUSINESS_WEEK_DAYS) {
+            hours.value[day.key] = String(savedHours[day.key] ?? '')
+          }
+        }
         setValues({
           name: profile.name ?? '',
           category: profile.category ?? null,
@@ -151,6 +188,7 @@ export function useBusinessOnboarding() {
           lat: profile.lat ?? null,
           lng: profile.lng ?? null,
           description: profile.description ?? null,
+          services: (profile as { services?: string | null }).services ?? null,
           phone: profile.phone ?? null,
           website: profile.website ?? null,
         })
@@ -170,7 +208,8 @@ export function useBusinessOnboarding() {
   })
 
   const finish = handleSubmit(async (vals) => {
-    const saved = await store.save(vals as unknown as BusinessProfilePayload)
+    const payload = { ...(vals as Record<string, unknown>), working_hours: cleanHours() }
+    const saved = await store.save(payload as unknown as BusinessProfilePayload)
     if (!saved) {
       toast.add({ severity: 'error', summary: 'Ошибка', detail: store.error ?? 'Проверьте поля', life: 4000 })
       return
@@ -185,6 +224,8 @@ export function useBusinessOnboarding() {
   return {
     step,
     loaded,
+    hours,
+    weekDays: BUSINESS_WEEK_DAYS,
     missing,
     isComplete,
     goToMissing,
@@ -205,6 +246,7 @@ export function useBusinessOnboarding() {
     lat,
     lng,
     description,
+    services,
     phone,
     website,
     stepValid,

@@ -66,6 +66,10 @@ director_name, verification_status, verification_notes, verified_at, logo_path`.
 - `GET /api/businesses/{id}/pins` → живые пины компании для модалки.
 - Пины: `promo` (до 140 символов, только бизнес, с модерацией) +
   `is_business` в каждом `toPublicArray` (включая realtime).
+- Фото: `business_photos` (макс 10) + `businesses.services` (о себе/услуги);
+  `GET /api/businesses/{id}/photos`, `POST/DELETE` (владелец/админ),
+  `GET /api/business-photos/by-owner/{user}` для карточки пина;
+  листалка — Galleria в `PinDetailsCard`, загрузка — `BusinessPhotosManager`.
 - `GET /api/business` → кабинет-профиль (`BusinessResource`).
 - `PATCH /api/business` (throttle profile-write) → обновление профиля РБ.
 - `GET /api/business/dashboard` → `{business, stats, recent_pins, earn}`.
@@ -106,11 +110,16 @@ Realtime (правило №10, №13):
   компании (Кабинет, Реквизиты, Настройки, Карта, Чаты, Выйти через
   `AppUserMenu`), десктоп-пилюли и мобильный bottom-nav
   (Дашборд, Карта, Чаты, Реквизиты, Настройки), тёмная тема (правило №14).
-- Страницы: `Pages/Business/Index.vue` (официальный hero + шаги проверки +
-  статистика + продвижение), `Pages/Business/Onboarding.vue`
-  (подстановка реквизитов с регистрации + «осталось дозаполнить»),
-  `Pages/Business/Settings.vue` (компания, тариф, уведомления, вид,
-  приложение — только бизнес-сущности).
+- Страницы: `Pages/Business/Index.vue` (официальный hero с логотипом +
+  шаги проверки + статистика + продвижение + пины со ссылками
+  `/map?pin=`), `Pages/Business/Pins.vue` (все пины с итогами),
+  `Pages/Business/Onboarding.vue` (подстановка реквизитов с регистрации +
+  «осталось дозаполнить» + часы работы + услуги),
+  `Pages/Business/Settings.vue` (логотип, предпросмотр «Как видят клиенты»,
+  фото, тариф, уведомления, вид, приложение — только бизнес-сущности).
+- Профиль максимум: логотип (`POST /api/businesses/{id}/logo`),
+  часы работы (редактор Пн–Вс), услуги, фото (до 10) — всё видно клиентам
+  в `Business/Show` и тултипах карты.
 - Бизнес-лок: свайпы и UFlow закрыты редиректом в кабинет (`PageController`),
   модалка ulove/upin не показывается бизнесу (`useDefaultMode`),
   топбар/нижнее меню/дропдаун прячут ULove и UFlow (`isBusiness`).

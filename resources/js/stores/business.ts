@@ -93,6 +93,30 @@ export const useBusinessStore = defineStore('business', () => {
   }
 
   /**
+   * Загрузить логотип компании.
+   * @param file картинка
+   * @returns true если сохранён
+   */
+  async function uploadLogo(file: File): Promise<boolean> {
+    if (!profile.value || saving.value) {
+      return false
+    }
+    saving.value = true
+    error.value = null
+    try {
+      profile.value = await businessApi.uploadLogo(profile.value.id, file)
+      await refreshDashboard()
+      return true
+    } catch (e: unknown) {
+      const message = (e as { response?: { data?: { message?: string } } })?.response?.data?.message
+      error.value = message ?? 'Не получилось загрузить логотип'
+      return false
+    } finally {
+      saving.value = false
+    }
+  }
+
+  /**
    * Применить верификацию из realtime-события.
    * @param next свежий профиль из broadcast
    */
@@ -117,6 +141,7 @@ export const useBusinessStore = defineStore('business', () => {
     refreshDashboard,
     save,
     submit,
+    uploadLogo,
     applyRealtime,
   }
 })

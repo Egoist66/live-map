@@ -22,11 +22,14 @@ import { useEnterToSend } from '@/composables/useEnterToSend'
 import InfiniteSentinel from '@/Components/Ui/List/InfiniteSentinel.vue'
 import { formatTime } from '@/utils/date'
 import { useProfileUrl } from '@/composables/useProfileUrl'
+import { usePinCompanyPhotos } from '@/composables/usePinCompanyPhotos'
+import Galleria from 'primevue/galleria'
 import PinInviteButton from '@/Components/Features/Map/PinInviteButton.vue'
 
 const props = withDefaults(defineProps<{ pin: any; comments: any[]; highlightCommentId?: number | null; commentText: string; creatingComment: boolean; editingCommentId: number | null; editingContent: string; savingComment: boolean; deletingCommentId?: number | null; reacting: boolean; reporting: boolean; pinEdit: any; categories: any[]; deleting: boolean; authId: number; isAdmin?: boolean; replyTo: any; mentions: any; commentsSentinel?: unknown; commentsHasMore?: boolean; commentsLoadingMore?: boolean }>(), { commentsHasMore: false, commentsLoadingMore: false })
 const emit = defineEmits<{ (e: 'close'): void; (e: 'delete'): void; (e: 'react', k: string): void; (e: 'report'): void; (e: 'sendComment'): void; (e: 'update:comment', v: string): void; (e: 'update:editContent', v: string): void; (e: 'startEditComment', c: any): void; (e: 'cancelEditComment'): void; (e: 'saveEditComment'): void; (e: 'deleteComment', c: any): void; (e: 'saveEdit'): void; (e: 'reply', root: any, target: any): void; (e: 'cancelReply'): void; (e: 'sosChat', conversationId: number): void; (e: 'sosClosed'): void }>()
 const blur = computed(() => pinBlurInfo(props.pin))
+const companyGallery = usePinCompanyPhotos(() => props.pin)
 const isSosPin = computed(() => String(props.pin?.category ?? '').toLowerCase() === 'sos')
 const isEditingPin = computed(() => !!props.pinEdit?.editing?.value)
 const catMeta = computed(() => (props.categories as any[]).find((c: any) => c.v === props.pin?.category) ?? null)
@@ -168,6 +171,27 @@ function canDeleteComment(c: any): boolean {
       <SosPinActions v-if="!pinEdit.editing.value && isSosPin" :pin-id="Number(pin.id)" :is-owner="!!pin.is_owner" :auth-id="Number(authId)" class="mt-3" @chat="(id:number)=>emit('sosChat', id)" @closed="emit('sosClosed')" />
       <p v-if="!pinEdit.editing.value && pin.body" class="text-sm text-stone-600 dark:text-zinc-300 mt-2 leading-relaxed break-words overflow-wrap-anywhere comment-body" v-html="renderWithMentions(pin.body || '')" @click="mentionNav.onRichClick"></p>
       <div v-if="!pinEdit.editing.value && (pin as any).promo" class="mt-2 text-[13px] font-bold leading-snug bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-xl px-3 py-2 shadow-glow">📢 {{ (pin as any).promo }}</div>
+      <div v-if="!pinEdit.editing.value && companyGallery.photos.value.length" class="mt-2 -mx-1">
+        <Galleria
+          :value="companyGallery.photos.value"
+          :num-visible="3"
+          :show-thumbnails="companyGallery.photos.value.length > 1"
+          :show-indicators="companyGallery.photos.value.length > 1"
+          :change-item-on-indicator-hover="false"
+          :circular="companyGallery.photos.value.length > 1"
+          container-class="!rounded-2xl overflow-hidden border border-stone-200 dark:border-zinc-700"
+        >
+          <template #item="{ item }">
+            <img :src="(item as any).url" :alt="(item as any).caption ?? 'Фото компании'" class="w-full h-52 sm:h-60 object-cover" loading="lazy" />
+          </template>
+          <template #thumbnail="{ item }">
+            <img :src="(item as any).url" :alt="(item as any).caption ?? ''" class="w-14 h-14 object-cover rounded-lg" loading="lazy" />
+          </template>
+          <template #caption="{ item }">
+            <div v-if="(item as any).caption" class="text-[12px] font-semibold bg-black/55 text-white rounded-full px-3 py-1">{{ (item as any).caption }}</div>
+          </template>
+        </Galleria>
+      </div>
       <div v-if="!pinEdit.editing.value && (pin as any).is_invited" class="mt-2 text-[11px] leading-snug bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 rounded-xl px-2.5 py-1.5">🎫 Вас пригласили в этот пин — он виден вне зоны и страны</div>
       <div v-if="!pinEdit.editing.value && Number((pin as any).district_id) > 0" class="mt-2 text-[11px] leading-snug bg-violet-50 dark:bg-violet-950/40 border border-violet-200 dark:border-violet-800 text-violet-800 dark:text-violet-200 rounded-xl px-2.5 py-1.5">🏘️ Пин района · видят только жители в своей зоне</div>
       <div v-if="!pinEdit.editing.value && blur" title="Точка на карте сдвинута от реального места" class="mt-2 text-[11px] leading-snug bg-violet-50 dark:bg-violet-950/40 border border-violet-200 dark:border-violet-800 text-violet-800 dark:text-violet-200 rounded-xl px-2.5 py-1.5">📍 {{ blur.hint }}</div>

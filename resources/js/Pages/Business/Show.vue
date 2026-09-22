@@ -17,6 +17,7 @@ interface PublicBusiness {
   lat: number | null
   lng: number | null
   description: string | null
+  services: string | null
   phone: string | null
   website: string | null
   working_hours: Record<string, string> | null
@@ -108,6 +109,13 @@ const websiteHref = computed(() => {
         <template #content>
           <div class="font-black text-[16px] dark:text-white">О компании</div>
           <p class="mt-1.5 text-sm leading-relaxed text-stone-600 dark:text-zinc-300 whitespace-pre-line">{{ business.description }}</p>
+        </template>
+      </Card>
+
+      <Card v-if="business.services" class="!rounded-[24px] !border-stone-200 dark:!border-zinc-800 !bg-white dark:!bg-zinc-900 !shadow-sm">
+        <template #content>
+          <div class="font-black text-[16px] dark:text-white">Услуги</div>
+          <p class="mt-1.5 text-sm leading-relaxed text-stone-600 dark:text-zinc-300 whitespace-pre-line">{{ business.services }}</p>
         </template>
       </Card>
 

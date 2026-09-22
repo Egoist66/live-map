@@ -362,6 +362,30 @@ class VideoService
      * @param \Carbon\Carbon|null $since момент прошлого тика
      * @return array payloads как broadcastWith
      */
+    /**
+     * Payload входящего для конкретного смотрящего: пир считает сервер
+     * (второй участник), клиент берёт готовое и не гадает по своему id.
+     *
+     * @param VideoCall $call звонок (caller/callee подгружены)
+     * @param int $viewerId смотрящий
+     * @return array payload как broadcastWith у VideoIncoming
+     */
+    private function incomingPayload(VideoCall $call, int $viewerId): array
+    {
+        $callerBrief = $this->brief($call->caller);
+        $calleeBrief = $this->brief($call->callee);
+
+        return [
+            'call_id' => (int) $call->id,
+            'mode' => (string) $call->mode,
+            'audio_only' => (bool) $call->audio_only,
+            'caller' => $callerBrief,
+            'callee' => $calleeBrief,
+            'peer' => (int) $call->caller_id === $viewerId ? $calleeBrief : $callerBrief,
+            'recipient_id' => $viewerId,
+        ];
+    }
+
     public function freshIncoming(int $userId, ?Carbon $since): array
     {
         if (! $since) {
@@ -377,13 +401,7 @@ class VideoService
             ->limit(10)
             ->get();
 
-        return $rows->map(fn ($call) => [
-            'call_id' => (int) $call->id,
-            'mode' => (string) $call->mode,
-            'audio_only' => (bool) $call->audio_only,
-            'caller' => $this->brief($call->caller),
-            'callee' => $this->brief($call->callee),
-        ])->all();
+        return $rows->map(fn ($call) => $this->incomingPayload($call, $userId))->all();
     }
 
     /**
@@ -450,13 +468,7 @@ class VideoService
             ->limit(5)
             ->get();
 
-        return $rows->map(fn ($call) => [
-            'call_id' => (int) $call->id,
-            'mode' => (string) $call->mode,
-            'audio_only' => (bool) $call->audio_only,
-            'caller' => $this->brief($call->caller),
-            'callee' => $this->brief($call->callee),
-        ])->all();
+        return $rows->map(fn ($call) => $this->incomingPayload($call, (int) $user->id))->all();
     }
 
     /**
@@ -639,28 +651,6 @@ class VideoService
             'payload' => $payload,
         ]);
 
-        // ВРЕМЕННАЯ диагностика битого SDP (убрать после починки звонков):
-        // пишет полный json-кодированный sdp с id строки — так видны
-        // невидимые символы и обрезка, а id позволяет сверить именно тот
-        // фрейм, что упал у получателя. IP в логах не светим.
-        if (in_array($kind, [VideoSignal::KIND_OFFER, VideoSignal::KIND_ANSWER], true) && is_string($payload['sdp'] ?? null)) {
-            $sdp = (string) $payload['sdp'];
-            $hash = 5381;
-            $sdpLen = strlen($sdp);
-            for ($i = 0; $i < $sdpLen; $i++) {
-                $hash = (($hash * 33) + ord($sdp[$i])) & 0xFFFFFFFF;
-            }
-            Log::info('video.sdp_debug', [
-                'sid' => (int) $signal->id,
-                'call' => (int) $call->id,
-                'kind' => $kind,
-                'type' => (string) ($payload['type'] ?? ''),
-                'len' => $sdpLen,
-                'hash' => sprintf('%08x', $hash),
-                'full' => json_encode($sdp),
-            ]);
-        }
-
         try {
             broadcast(new VideoSignalEvent(
                 (int) $signal->id,
@@ -678,34 +668,6 @@ class VideoService
     }
 
     /**
-     * ВРЕМЕННЫЙ приём эхоконтроля SDP от клиента (убрать после починки).
-     * Клиент присылает те байты, что реально дошли до его парсера, —
-     * сверяем с video.sdp_debug по sid побайтово.
-     *
-     * @param int $userId кто прислал
-     * @param int $signalId id исходного фрейма
-     * @param string $kind offer|answer
-     * @param string $sdp полученный текст SDP
-     * @return void
-     */
-    public function reportSdp(int $userId, int $signalId, string $kind, string $sdp): void
-    {
-        $hash = 5381;
-        $sdpLen = strlen($sdp);
-        for ($i = 0; $i < $sdpLen; $i++) {
-            $hash = (($hash * 33) + ord($sdp[$i])) & 0xFFFFFFFF;
-        }
-        Log::warning('video.sdp_report', [
-            'sid' => $signalId,
-            'from' => $userId,
-            'kind' => $kind,
-            'len' => $sdpLen,
-            'hash' => sprintf('%08x', $hash),
-            'full' => mb_substr(json_encode($sdp), 0, 4000),
-        ]);
-    }
-
-    /**
      * Разослать входящий звонок обоим участникам.
      *
      * @param VideoCall $call звонок
@@ -715,16 +677,28 @@ class VideoService
     {
         $call->loadMissing(['caller:id,name,avatar_path', 'callee:id,name,avatar_path']);
 
-        try {
-            broadcast(new VideoIncoming(
-                (int) $call->id,
-                (string) $call->mode,
-                $this->brief($call->caller),
-                $this->brief($call->callee),
-                (bool) $call->audio_only,
-            ))->toOthers();
-        } catch (\Throwable $e) {
-            Log::warning('video incoming broadcast failed: '.$e->getMessage());
+        $callerBrief = $this->brief($call->caller);
+        $calleeBrief = $this->brief($call->callee);
+
+        // Персонально каждому: пир считает сервер по auth, а не клиент
+        // по закэшированному id (тот протухает при смене аккаунта без
+        // перезагрузки — и звонок «приходит от себя»).
+        foreach ([(int) $call->caller_id, (int) $call->callee_id] as $recipientId) {
+            $peerBrief = $recipientId === (int) $call->caller_id ? $calleeBrief : $callerBrief;
+
+            try {
+                broadcast(new VideoIncoming(
+                    (int) $call->id,
+                    (string) $call->mode,
+                    $callerBrief,
+                    $calleeBrief,
+                    (bool) $call->audio_only,
+                    $peerBrief,
+                    $recipientId,
+                ))->toOthers();
+            } catch (\Throwable $e) {
+                Log::warning('video incoming broadcast failed: '.$e->getMessage());
+            }
         }
     }
 

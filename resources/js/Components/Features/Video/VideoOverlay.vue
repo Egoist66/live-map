@@ -296,7 +296,7 @@ function onClose(): void {
                 <Button label="Включить звук" icon="pi pi-volume-up" rounded size="small" @click="v.unlockRemoteAudio()" />
               </div>
               <div v-if="v.peer.connectionState.value !== 'connected'" class="mt-2 text-center font-mono text-[11px] text-stone-400 dark:text-zinc-500">{{ v.peer.signalLabel.value }}<span v-if="v.peer.signalStats.value.lastError" class="text-amber-600 dark:text-amber-300"> · {{ v.peer.signalStats.value.lastError }}</span></div>
-              <div v-if="v.peer.signalFailure.value" class="mt-1 text-center font-mono text-[11px] text-rose-500">сигнал {{ v.peer.signalFailure.value.kind }} · {{ v.peer.signalFailure.value.state }} · sdp {{ v.peer.signalFailure.value.sdpLen }}#{{ v.peer.signalFailure.value.sdpHash }} · {{ v.peer.signalFailure.value.message }}</div>
+              <div v-if="v.peer.signalFailure.value" class="mt-1 text-center font-mono text-[11px] text-rose-500">сигнал {{ v.peer.signalFailure.value.kind }} · {{ v.peer.signalFailure.value.state }} · {{ v.peer.signalFailure.value.message }}</div>
               <div v-if="v.peer.iceTurnConfigured.value === false" class="mt-2 rounded-2xl bg-amber-500/10 border border-amber-500/30 px-3 py-2 text-xs text-amber-700 dark:text-amber-300 text-center">Прямое соединение может не установиться из-за сети — relay-сервер не настроен</div>
               <div v-if="v.peer.signalingError.value" class="mt-2 rounded-2xl bg-amber-500/10 border border-amber-500/30 px-3 py-2 text-xs text-amber-700 dark:text-amber-300 flex items-center gap-2 flex-wrap">
                 <span class="flex-1 min-w-[180px]">{{ v.peer.signalingError.value }}</span>

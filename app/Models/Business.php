@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -52,6 +53,7 @@ class Business extends Model
         'lat',
         'lng',
         'description',
+        'services',
         'phone',
         'website',
         'working_hours',
@@ -80,6 +82,11 @@ class Business extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function photos(): HasMany
+    {
+        return $this->hasMany(BusinessPhoto::class)->orderBy('sort_order')->orderBy('id');
     }
 
     /**
@@ -144,6 +151,7 @@ class Business extends Model
             'lat' => $this->lat !== null ? (float) $this->lat : null,
             'lng' => $this->lng !== null ? (float) $this->lng : null,
             'description' => $this->description,
+            'services' => $this->services,
             'phone' => $this->phone,
             'website' => $this->website,
             'working_hours' => $this->working_hours,
@@ -160,6 +168,7 @@ class Business extends Model
     public function toCabinetArray(): array
     {
         $public = $this->toPublicArray();
+        $public['owner_profile'] = $this->user?->profileIdentifier();
 
         $public['legal_form'] = $this->legal_form;
         $public['unp'] = $this->unp;

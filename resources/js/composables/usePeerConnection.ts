@@ -7,22 +7,6 @@ import { pokeRealtime } from '@/composables/useRealtimePoller'
 const RETRY_DELAYS_MS = [500, 1000, 2000, 4000]
 
 /**
- * Контрольная сумма строки (djb2, hex): сверяем SDP дошедший до парсера
- * с серверным (video.sdp_debug пишет такой же). SDP — ASCII, поэтому
- * побайтово сходится с PHP-версией.
- *
- * @param raw строка SDP
- * @returns hex-хеш
- */
-function hashSdp(raw: string): string {
-  let hash = 5381
-  for (let i = 0; i < raw.length; i++) {
-    hash = ((hash * 33 + raw.charCodeAt(i)) >>> 0)
-  }
-  return hash.toString(16).padStart(8, '0')
-}
-
-/**
  * Подождать заданное время (бэкофф ретраев).
  *
  * @param ms миллисекунд
@@ -169,8 +153,8 @@ export function usePeerConnection() {
     iceRecv: 0,
     lastError: null as string | null,
   })
-  /** Последний провал обработки сигнала (вид/состояние/ошибка/SDP) — показываем в оверлее. */
-  const signalFailure = ref<{ kind: string; state: string; message: string; sdpLen: number; sdpHash: string } | null>(null)
+  /** Последний провал обработки сигнала (вид/состояние/ошибка) — показываем в оверлее. */
+  const signalFailure = ref<{ kind: string; state: string; message: string } | null>(null)
   /** Компактная строка счётчиков для оверлея. */
   const signalLabel = computed(() => {
     const s = signalStats.value
@@ -542,14 +526,7 @@ export function usePeerConnection() {
       if ((kind === 'offer' || kind === 'answer') && sid > 0) {
         seenRemoteIds.delete(sid)
       }
-      const rawSdp = typeof (e.payload as { sdp?: unknown } | null)?.sdp === 'string'
-        ? (e.payload as { sdp: string }).sdp
-        : ''
-      signalFailure.value = { kind, state, message, sdpLen: rawSdp.length, sdpHash: hashSdp(rawSdp) }
-      // ВРЕМЕННО: шлём дошедшие байты на сервер для побайтовой сверки.
-      if (rawSdp && (kind === 'offer' || kind === 'answer') && boundCallId != null) {
-        void videoApi.reportSdp(boundCallId, sid, kind, rawSdp)
-      }
+      signalFailure.value = { kind, state, message }
       try {
         console.warn('[video] signal failed', {
           kind,

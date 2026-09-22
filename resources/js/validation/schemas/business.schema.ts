@@ -43,6 +43,8 @@ export const businessSchema = toTypedSchema(
       z.number({ invalid_type_error: 'Долгота — число' }).min(-180).max(180).nullable().optional(),
     ),
     description: z.preprocess(toNull, z.string().max(2000).nullable().optional()),
+    services: z.preprocess(toNull, z.string().max(2000).nullable().optional()),
+    working_hours: z.record(z.string().max(64)).nullable().optional(),
     phone: z.preprocess(toNull, z.string().max(32).nullable().optional()),
     website: z.preprocess(toNull, z.string().max(255).nullable().optional()),
   }),

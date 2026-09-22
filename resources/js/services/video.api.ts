@@ -24,6 +24,7 @@ export interface VideoCallPayload {
 
 /**
  * Событие входящего звонка (сокет + polling несут один формат).
+ * peer считает сервер под получателя — клиент берёт готовое.
  */
 export interface VideoIncomingEvent {
   call_id: number
@@ -31,6 +32,8 @@ export interface VideoIncomingEvent {
   audio_only: boolean
   caller: VideoPeer
   callee: VideoPeer
+  peer?: VideoPeer | null
+  recipient_id?: number | null
 }
 
 /**
@@ -91,15 +94,6 @@ export const videoApi = {
   async signal(callId: number, kind: 'offer' | 'answer' | 'ice' | 'chat' | 'private_invite', payload: unknown) {
     const { data } = await api.post(`/api/video/${callId}/signal`, { kind, payload })
     return data as { id: number; call_id: number; kind: string }
-  },
-  /**
-   * ВРЕМЕННО: отправить серверу те байты SDP, что дошли до парсера
-   * (сверка с video.sdp_debug по sid). Только при провале парсинга.
-   */
-  async reportSdp(callId: number, signalId: number, kind: string, sdp: string) {
-    try {
-      await api.post(`/api/video/${callId}/sdp-report`, { signal_id: signalId, kind, sdp })
-    } catch {}
   },
   /**
    * Сигналы звонка курсором (добивка при мёртвом realtime).

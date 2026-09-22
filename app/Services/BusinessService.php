@@ -277,7 +277,7 @@ class BusinessService
         $keys = [
             'name', 'category', 'legal_form', 'unp', 'reg_number',
             'address', 'legal_address', 'director_name', 'lat', 'lng',
-            'description', 'phone', 'website', 'working_hours', 'is_active',
+            'description', 'services', 'phone', 'website', 'working_hours', 'is_active',
         ];
 
         $out = [];

@@ -74,7 +74,14 @@ export const useVideoStore = defineStore('video', () => {
    *
    * @param e событие user:video.incoming (формат шины: mode строкой)
    */
-  function handleIncoming(e: { call_id: number; mode: string; audio_only?: boolean; caller: any; callee: any }): void {
+  function handleIncoming(e: {
+    call_id: number
+    mode: string
+    audio_only?: boolean
+    caller: any
+    callee: any
+    peer?: { id: number; name: string; avatar_url: string | null } | null
+  }): void {
     if (!e || e.call_id == null) return
     const callId = Number(e.call_id)
     if (call.value?.id === callId || incoming.value?.callId === callId) return
@@ -86,8 +93,12 @@ export const useVideoStore = defineStore('video', () => {
       declineBusy(e.call_id)
       return
     }
+    // Пира даёт сервер (peer — всегда второй участник). Старая выборка
+    // по закэшированному uid — только фолбэк: кэш протухает при смене
+    // аккаунта без перезагрузки и показывал «звонок от себя».
     const uid = currentAuthUid()
-    const peer = uid > 0 && e.caller?.id === uid ? e.callee : e.caller
+    const fallback = uid > 0 && Number(e.caller?.id ?? 0) === uid ? e.callee : e.caller
+    const peer = e.peer?.id ? e.peer : fallback
     incoming.value = {
       callId: Number(e.call_id),
       mode: String(e.mode || 'match'),

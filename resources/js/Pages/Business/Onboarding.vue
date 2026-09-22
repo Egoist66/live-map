@@ -71,6 +71,10 @@ const stepItems = [{ label: 'Компания' }, { label: 'Реквизиты �
               <label class="text-[13px] font-semibold dark:text-zinc-100">О компании</label>
               <Textarea v-model="ob.description.value" rows="3" auto-resize placeholder="Чем полезны соседям?" class="w-full mt-1.5 !rounded-2xl" />
             </div>
+            <div>
+              <label class="text-[13px] font-semibold dark:text-zinc-100">Услуги</label>
+              <Textarea v-model="ob.services.value" rows="3" auto-resize placeholder="Стрижка, кофе с собой, ремонт…" class="w-full mt-1.5 !rounded-2xl" />
+            </div>
           </template>
 
           <template v-else-if="ob.step.value === 1">
@@ -119,6 +123,16 @@ const stepItems = [{ label: 'Компания' }, { label: 'Реквизиты �
               <div>
                 <label class="text-[13px] font-semibold dark:text-zinc-100">Сайт</label>
                 <InputText v-model="ob.website.value" placeholder="https://…" class="w-full mt-1.5 !rounded-2xl" />
+              </div>
+            </div>
+            <div>
+              <label class="text-[13px] font-semibold dark:text-zinc-100">Часы работы</label>
+              <p class="text-[12px] text-stone-500 dark:text-zinc-400 mt-0.5">Пустой день — выходной. Видят клиенты в профиле компании.</p>
+              <div class="mt-2 space-y-1.5">
+                <div v-for="day in ob.weekDays" :key="day.key" class="flex items-center gap-2.5">
+                  <span class="w-8 shrink-0 text-[13px] font-bold text-stone-500 dark:text-zinc-400">{{ day.label }}</span>
+                  <InputText v-model="ob.hours.value[day.key]" placeholder="9:00–21:00" class="flex-1 !rounded-2xl" />
+                </div>
               </div>
             </div>
           </template>

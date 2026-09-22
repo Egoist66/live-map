@@ -177,7 +177,6 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::post('/video/{call}/decline', [\App\Http\Controllers\VideoController::class, 'decline'])->middleware('throttle:social-write');
     Route::post('/video/{call}/hangup', [\App\Http\Controllers\VideoController::class, 'hangup'])->middleware('throttle:social-write');
     Route::post('/video/{call}/signal', [\App\Http\Controllers\VideoController::class, 'signal'])->middleware('throttle:video-signal');
-    Route::post('/video/{call}/sdp-report', [\App\Http\Controllers\VideoController::class, 'sdpReport'])->middleware('throttle:video-signal');
     Route::post('/video/roulette/join', [\App\Http\Controllers\VideoController::class, 'rouletteJoin'])->middleware('throttle:social-write');
     Route::post('/video/roulette/next', [\App\Http\Controllers\VideoController::class, 'rouletteNext'])->middleware('throttle:social-write');
     Route::post('/video/roulette/leave', [\App\Http\Controllers\VideoController::class, 'rouletteLeave'])->middleware('throttle:social-write');
@@ -253,6 +252,11 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::patch('/account-type', [\App\Http\Controllers\AccountTypeController::class, 'update']);
     Route::get('/businesses/map', [\App\Http\Controllers\BusinessController::class, 'map']);
     Route::get('/businesses/{business}/pins', [\App\Http\Controllers\BusinessController::class, 'pins']);
+    Route::get('/businesses/{business}/photos', [\App\Http\Controllers\BusinessPhotoController::class, 'index']);
+    Route::get('/business-photos/by-owner/{user}', [\App\Http\Controllers\BusinessPhotoController::class, 'byOwner']);
+    Route::post('/businesses/{business}/photos', [\App\Http\Controllers\BusinessPhotoController::class, 'store'])->middleware('throttle:social-write');
+    Route::post('/businesses/{business}/logo', [\App\Http\Controllers\BusinessController::class, 'logo'])->middleware('throttle:social-write');
+    Route::delete('/businesses/{business}/photos/{photo}', [\App\Http\Controllers\BusinessPhotoController::class, 'destroy'])->middleware('throttle:social-write');
     Route::get('/business', [\App\Http\Controllers\BusinessController::class, 'show']);
     Route::patch('/business', [\App\Http\Controllers\BusinessController::class, 'update'])->middleware('throttle:profile-write');
     Route::get('/business/dashboard', [\App\Http\Controllers\BusinessController::class, 'dashboard']);

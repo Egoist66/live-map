@@ -1,4 +1,5 @@
 import { computed, onMounted } from 'vue'
+import { useToast } from 'primevue/usetoast'
 import { useBusinessStore } from '@/stores/business'
 import { useTheme } from '@/composables/useTheme'
 import { usePush } from '@/composables/usePush'
@@ -30,6 +31,7 @@ export function useBusinessSettings() {
   const push = usePush()
   const pwa = usePwaSettings()
   const guide = usePwaInstallGuide()
+  const toast = useToast()
 
   const profile = computed(() => store.profile)
   const isVerified = computed(() => store.profile?.verification_status === 'verified')
@@ -56,6 +58,21 @@ export function useBusinessSettings() {
     }
   }
 
+  /**
+   * Загрузить логотип компании.
+   * @param file картинка
+   * @returns true если сохранён
+   */
+  async function uploadLogoFile(file: File): Promise<boolean> {
+    const ok = await store.uploadLogo(file)
+    if (ok) {
+      toast.add({ severity: 'success', summary: 'Логотип обновлён', detail: 'Клиенты видят его на карте и в профиле', life: 3000 })
+    } else {
+      toast.add({ severity: 'error', summary: 'Не загрузилось', detail: store.error ?? 'Попробуйте другой файл', life: 4000 })
+    }
+    return ok
+  }
+
   onMounted(() => {
     void load()
   })
@@ -72,5 +89,6 @@ export function useBusinessSettings() {
     pwa,
     guide,
     load,
+    uploadLogoFile,
   }
 }

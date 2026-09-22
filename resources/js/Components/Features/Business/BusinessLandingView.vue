@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
 import AppFooter from '@/Layouts/AppFooter.vue'
+import ApplicationLogo from '@/Components/Brand/ApplicationLogo.vue'
 import { useBusinessLanding } from '@/composables/useBusinessLanding'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
@@ -13,10 +14,9 @@ const landing = useBusinessLanding()
   <div class="min-h-screen flex flex-col bg-surface dark:bg-[#0B0F1A] text-ink-900 dark:text-zinc-100 antialiased overflow-x-hidden">
     <header class="native-safe-top sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/70 backdrop-blur border-b border-stone-200/60 dark:border-zinc-800">
       <div class="max-w-[1280px] mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2">
-        <Link href="/" class="flex items-center gap-2 min-w-0 shrink-0">
-          <span class="w-8 h-8 sm:w-9 sm:h-9 rounded-[10px] sm:rounded-xl grid place-items-center text-white shadow-soft shrink-0 bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500"><i class="pi pi-briefcase text-sm" /></span>
-          <span class="font-black tracking-[-0.03em] text-[17px] sm:text-[19px] whitespace-nowrap">U<span class="font-light text-ink-600 dark:text-zinc-400">Pin</span> <span class="font-black text-[11px] sm:text-[12px] tracking-wide bg-gradient-to-r from-indigo-500 to-violet-600 bg-clip-text text-transparent">Pro</span></span>
-          <span class="hidden sm:inline ml-2 text-xs font-black tracking-wide text-indigo-600 dark:text-indigo-400 border-l border-stone-200 dark:border-zinc-700 pl-3">ДЛЯ БИЗНЕСА</span>
+        <Link href="/" class="flex items-center gap-2 min-w-0 shrink-0" aria-label="UPin Pro — на главную">
+          <ApplicationLogo pro />
+          <span class="hidden sm:inline ml-1 text-xs font-black tracking-wide text-indigo-600 dark:text-indigo-400 border-l border-stone-200 dark:border-zinc-700 pl-3">ДЛЯ БИЗНЕСА</span>
         </Link>
         <nav class="flex items-center gap-2 shrink-0">
           <Link :href="landing.loginCta.value.href"><Button :label="landing.loginCta.value.label" class="!bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white !px-4 sm:!px-6 !py-2 sm:!py-2.5 !rounded-full !text-[13px] sm:!text-sm !font-semibold !border-0 shadow-soft whitespace-nowrap" /></Link>
@@ -24,25 +24,25 @@ const landing = useBusinessLanding()
       </div>
     </header>
 
-    <section class="max-w-[1280px] w-full mx-auto px-4 sm:px-6 pt-6 sm:pt-12 pb-8 grid lg:grid-cols-[1.05fr_0.95fr] gap-6 sm:gap-10 items-center">
-      <div class="min-w-0">
-        <div class="inline-flex max-w-full flex-wrap items-center gap-2 bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-full pl-1.5 pr-3 py-1 shadow-soft">
+    <section class="max-w-[1280px] w-full mx-auto px-4 sm:px-6 pt-8 sm:pt-12 pb-8 grid lg:grid-cols-[1.05fr_0.95fr] gap-8 sm:gap-10 items-center">
+      <div class="min-w-0 flex flex-col items-center text-center">
+        <div class="inline-flex max-w-full flex-wrap justify-center items-center gap-2 bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-full pl-1.5 pr-3 py-1 shadow-soft">
           <Tag class="!text-white !rounded-full !px-2.5 !py-1 !text-[11px] !font-bold tracking-wide !border-0 !bg-gradient-to-r !from-indigo-500 !to-violet-600"><span class="w-1.5 h-1.5 bg-white rounded-full animate-pulse inline-block mr-1.5 align-middle"></span>{{ landing.content.badge }}</Tag>
           <span class="text-xs font-medium text-stone-600 dark:text-zinc-400 min-w-0 break-words">{{ landing.content.badgeNote }}</span>
         </div>
-        <h1 class="mt-5 text-[32px] sm:text-[48px] lg:text-[60px] font-black tracking-[-0.04em] leading-[0.95] dark:text-white break-words text-balance">{{ landing.content.titleTop }}<br /><span class="bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500 bg-clip-text text-transparent">{{ landing.content.titleAccent }}</span></h1>
-        <p class="mt-5 text-[15px] sm:text-[17px] leading-relaxed text-stone-600 dark:text-zinc-400 max-w-[560px]">{{ landing.content.description }}</p>
-        <div class="mt-6 flex flex-col sm:flex-row gap-2.5">
-          <Link :href="landing.primaryCta.value.href" class="w-full sm:w-auto"><Button :label="landing.primaryCta.value.label" class="w-full sm:w-auto !text-white !px-7 !py-3.5 !rounded-full !font-bold !border-0 shadow-soft !bg-gradient-to-r !from-indigo-500 !to-violet-600" /></Link>
-          <Link :href="landing.loginCta.value.href" class="w-full sm:w-auto"><Button label="Войти в кабинет" severity="secondary" outlined class="w-full sm:w-auto !px-7 !py-3.5 !rounded-full !font-semibold !bg-white dark:!bg-zinc-900" /></Link>
+        <h1 class="mt-5 text-[34px] sm:text-[52px] lg:text-[60px] font-black tracking-[-0.04em] leading-[0.95] dark:text-white break-words text-balance">{{ landing.content.titleTop }}<br /><span class="bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500 bg-clip-text text-transparent">{{ landing.content.titleAccent }}</span></h1>
+        <p class="mt-5 text-[15px] sm:text-[17px] leading-relaxed text-stone-600 dark:text-zinc-400 max-w-[560px] text-balance">{{ landing.content.description }}</p>
+        <div class="mt-7 flex flex-col sm:flex-row justify-center gap-2.5 w-full sm:w-auto">
+          <Link :href="landing.primaryCta.value.href" class="w-full sm:w-auto"><Button :label="landing.primaryCta.value.label" class="w-full sm:w-auto !text-white !px-9 !py-4 !rounded-full !font-bold !text-[15px] !border-0 shadow-float !bg-gradient-to-r !from-indigo-500 !to-violet-600 hover:opacity-95 active:scale-[0.99]" /></Link>
+          <Link :href="landing.loginCta.value.href" class="w-full sm:w-auto"><Button label="Войти в кабинет" severity="secondary" outlined class="w-full sm:w-auto !px-9 !py-4 !rounded-full !font-semibold !text-[15px] !bg-white dark:!bg-zinc-900 active:scale-[0.99]" /></Link>
         </div>
-        <div class="mt-6 flex items-center gap-4 sm:gap-6 flex-wrap py-4 border-y border-stone-200/60 dark:border-zinc-800 max-w-[520px]">
-          <div v-for="(stat, statIndex) in landing.content.stats" :key="stat.value" class="flex items-center gap-4 sm:gap-6">
-            <div><div class="font-black text-xl tracking-tight">{{ stat.value }}</div><div class="text-xs font-medium text-stone-500 dark:text-zinc-500 uppercase tracking-wide">{{ stat.note }}</div></div>
-            <div v-if="statIndex < landing.content.stats.length - 1" class="hidden sm:block w-px h-10 bg-stone-200 dark:bg-zinc-800"></div>
+        <div class="mt-7 flex items-stretch justify-center gap-5 sm:gap-8 py-4 border-y border-stone-200/60 dark:border-zinc-800">
+          <div v-for="stat in landing.content.stats" :key="stat.value">
+            <div class="font-black text-xl sm:text-2xl tracking-tight">{{ stat.value }}</div>
+            <div class="text-[11px] sm:text-xs font-medium text-stone-500 dark:text-zinc-500 uppercase tracking-wide mt-0.5">{{ stat.note }}</div>
           </div>
         </div>
-        <div class="mt-4 flex items-center gap-2 text-xs text-stone-500 dark:text-zinc-500">
+        <div class="mt-4 flex items-center justify-center gap-2 text-xs text-stone-500 dark:text-zinc-500">
           <span class="w-7 h-7 rounded-full bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-700 grid place-items-center shrink-0">✓</span> {{ landing.content.trust }}
         </div>
         <button type="button" class="mt-4 text-[13px] font-bold text-indigo-600 dark:text-indigo-400 hover:opacity-80" @click="landing.switchToPerson()">Я персона, а не компания →</button>

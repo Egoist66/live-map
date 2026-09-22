@@ -19,7 +19,10 @@ import Avatar from 'primevue/avatar'
 // но isClient-гейт дешевле ветвления по auth.
 const VideoGlobalHost = defineAsyncComponent(() => import('@/Components/Features/Video/VideoGlobalHost.vue'))
 const AccountTypeGateModal = defineAsyncComponent(() => import('@/Components/Features/Business/AccountTypeGateModal.vue'))
-const BusinessLandingView = defineAsyncComponent(() => import('@/Components/Features/Business/BusinessLandingView.vue'))
+// Статический импорт сознательно: async-компонент монтируется позже и на
+// перезагрузке секунду виден стандартный ULove-лендинг. Бизнес-ветка
+// должна рисоваться синхронно с первым кадром.
+import BusinessLandingView from '@/Components/Features/Business/BusinessLandingView.vue'
 const videoHostReady = ref(false)
 onMounted(() => {
   videoHostReady.value = true
@@ -72,7 +75,7 @@ function switchTab(next: 'ulove' | 'upin'): void {
       <div class="max-w-[1280px] mx-auto px-2 min-[411px]:px-4 sm:px-6 h-14 min-[411px]:h-[64px] flex items-center justify-between gap-2 min-w-0">
         <Link href="/" class="flex items-center gap-2 min-w-0 shrink-0">
           <span :class="['w-8 h-8 min-[411px]:w-9 min-[411px]:h-9 rounded-[10px] min-[411px]:rounded-xl grid place-items-center text-white shadow-soft transition-colors duration-300 shrink-0', landing.theme.value.logo]"><i :class="[landing.theme.value.logoIcon, 'text-sm']" /></span>
-          <span class="font-black tracking-[-0.03em] text-[17px] min-[411px]:text-[19px] whitespace-nowrap">U<span class="font-light text-ink-600 dark:text-zinc-400">Pin</span> <span class="font-black text-[11px] min-[411px]:text-[12px] tracking-wide bg-gradient-to-r from-indigo-500 to-violet-600 bg-clip-text text-transparent">Pro</span></span>
+          <span class="font-black tracking-[-0.03em] text-[17px] min-[411px]:text-[19px] whitespace-nowrap">U<span class="font-light text-ink-600 dark:text-zinc-400">Pin</span></span>
           <span class="hidden sm:inline ml-2 text-xs font-black tracking-wide bg-gradient-to-r from-rose-500 via-fuchsia-500 to-orange-400 bg-clip-text text-transparent border-l border-stone-200 dark:border-zinc-700 pl-3">{{ landing.isUlove.value ? 'ULOVE · ЗНАКОМСТВА РЯДОМ' : 'UPIN · КАРТА РЯДОМ' }}</span>
         </Link>
         <nav class="flex items-center gap-1 min-[411px]:gap-2 shrink-0">
