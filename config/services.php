@@ -48,4 +48,11 @@ return [
 
     'messages_crypto_key' => env('MESSAGE_CRYPTO_KEY'),
 
+    'turn' => [
+        'urls' => env('TURN_URLS', ''),
+        'username' => env('TURN_USERNAME', ''),
+        'credential' => env('TURN_CREDENTIAL', ''),
+        'secret' => env('TURN_SECRET', ''),
+    ],
+
 ];

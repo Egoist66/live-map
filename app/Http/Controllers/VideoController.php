@@ -31,6 +31,13 @@ class VideoController extends Controller
     {
         $config = $this->turn->iceConfig((int) $request->user()->id);
 
+        if ($request->user()->isAdmin()) {
+            $config['debug'] = array_merge(
+                $this->turn->debugSources(),
+                ['servers_count' => count($config['iceServers'] ?? [])]
+            );
+        }
+
         return response()->json($config);
     }
 

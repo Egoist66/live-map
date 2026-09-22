@@ -187,7 +187,19 @@ class TurnService
     }
 
     /**
-     * Первая непустая env-переменная из списка.
+     * Откуда взяли значение при последнем чтении (для админ-диагностики
+     * в iceServers: видно, доехал ли env до рантайма или смотрим в кэш).
+     *
+     * @var array<string, string>
+     */
+    private array $sources = [];
+
+    /**
+     * Первая непустая переменная из списка.
+     *
+     * Порядок: живой env рантайма → config (запечён config:cache при старте
+     * контейнера, когда env уже на месте) → пусто. Легаси VITE_* живут
+     * только в env и подхватываются той же очередью.
      *
      * @param string[] $names имена переменных
      * @return string значение или пустая строка
@@ -197,11 +209,52 @@ class TurnService
         foreach ($names as $name) {
             $value = trim((string) env($name, ''));
             if ($value !== '') {
+                $this->sources[$name] = 'env';
                 return $value;
+            }
+            $key = $this->configKey($name);
+            if ($key !== null) {
+                $fromConfig = trim((string) config($key, ''));
+                if ($fromConfig !== '') {
+                    $this->sources[$name] = 'config';
+                    return $fromConfig;
+                }
             }
         }
 
+        $this->sources[$names[0]] = 'none';
+
         return '';
+    }
+
+    /**
+     * Ключ config/services.php для серверной переменной (VITE_* — только env).
+     *
+     * @param string $name имя переменной
+     * @return string|null ключ конфига или null когда его нет
+     */
+    private function configKey(string $name): ?string
+    {
+        return match ($name) {
+            'TURN_URLS' => 'services.turn.urls',
+            'TURN_USERNAME' => 'services.turn.username',
+            'TURN_CREDENTIAL' => 'services.turn.credential',
+            'TURN_SECRET' => 'services.turn.secret',
+            default => null,
+        };
+    }
+
+    /**
+     * Диагностика источников (только факты наличия, без самих секретов).
+     *
+     * @return array{urls_from:string,auth_from:string}
+     */
+    public function debugSources(): array
+    {
+        return [
+            'urls_from' => $this->sources['TURN_URLS'] ?? $this->sources['VITE_TURN_URLS'] ?? 'none',
+            'auth_from' => $this->sources['TURN_SECRET'] ?? $this->sources['TURN_USERNAME'] ?? 'none',
+        ];
     }
 
     /**

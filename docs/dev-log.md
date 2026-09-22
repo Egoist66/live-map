@@ -1,5 +1,11 @@
 # Dev-лог
 
+## 2026-09-22 — TURN: чтение через config + админ-диагностика ice-servers
+- 🐞 Симптом: `TURN_URLS/USERNAME/CREDENTIAL` заданы в env прода (Laravel Cloud), редеплой сделан — а `/api/video/ice-servers` упорно отдаёт `turnConfigured:false`. Подозрение: до рантайма переменные не доезжают (порядок «сохранил env → деплой», кэш конфига, чужое окружение) — вслепую не видно.
+- 🔧 `config/services.php`: секция `turn` (urls/username/credential/secret через `env()`); `TurnService::envFirst()` идёт очередью живой env → запечённый config → пусто (легаси `VITE_*` — только env). Какой источник сработал — пишется в `$sources`.
+- 🔧 `VideoController@iceServers`: админу в ответ добавляется `debug: {urls_from, auth_from, servers_count}` (только факты `env/config/none`, без секретов) — endpoint сам скажет, видит ли рантайм переменные.
+- Проверки: `php -l` ✅ ×3. Вживую: пуш → деплой Cloud → админом открыть `/api/video/ice-servers` и прислать `debug`.
+
 ## 2026-09-22 — Видео: дабл-вотчеры рвали P2P + добивка сигналов сразу после bind
 - 🐞 Симптом: дозвон идёт (и прямые, и рулетка), обе стороны принимают — а видео чёрное у обоих и локально, и на проде. Разбор: `useVideoSession()` дёргают 4+ компонента (VideoGlobalHost, VideoOverlay, IncomingCallDialog, свайпы, чат) — каждый вешал свои `watch(store.status / store.call.id)`: смена звонка запускала несколько параллельных `peer.bind` (гонка RTCPeerConnection, утечки подписок шины), а размонтирование любого компонента (уход со свайпов) гасило общий heartbeat очереди через `onUnmounted`. Плюс окно гонки в `bind()`: пока ждали ICE с бэкенда, accepted/offer уже уходил в пустоту (подписки ещё не было) — спасали только тики поллера за 2–3с, иногда поздно.
 - 🔧 `useVideoSession`: вотчеры регистрируются один раз на приложение (`bindSessionWatchesOnce` + флаг `sessionWatchesBound`); `onUnmounted(stopHeartbeat)` удалён — heartbeat целиком владеет вотчер статуса (старт на searching, стоп на остальном), уход со страницы очередь больше не убивает. `setLocalEl/setRemoteEl` чистят shared-рефы при размонтировании (раньше `attachRemote` играл в откреплённый узел — новый экран чёрный); вотчер `media.stream` идёт через `playVideoEl`, а не голый `srcObject`.
