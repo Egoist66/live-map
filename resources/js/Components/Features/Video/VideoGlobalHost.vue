@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, ref } from 'vue'
 import { useVideoSession } from '@/composables/useVideoSession'
+import { useRealtimeMode } from '@/composables/useRealtimeMode'
 import { currentAuthUid } from '@/composables/useAuthUid'
 import { videoApi } from '@/services/video.api'
 import { busEmit } from '@/services/realtime-bus'
@@ -20,6 +21,7 @@ import VideoOverlay from '@/Components/Features/Video/VideoOverlay.vue'
  */
 
 const v = useVideoSession()
+const { isPolling } = useRealtimeMode()
 
 let pendingTimer: ReturnType<typeof setInterval> | null = null
 let statusTimer: ReturnType<typeof setInterval> | null = null
@@ -48,9 +50,15 @@ function myUid(): number {
   return currentAuthUid()
 }
 
-/** Подобрать висящие входящие, если realtime молчит. */
+/**
+ * Подобрать висящие входящие, если realtime молчит.
+ * В polling-режиме не ходим: быстрый тик синка уже несёт video_incoming
+ * каждые ~2.5с, опрос был бы чистым дублем (12 запросов/мин с вкладки).
+ * Этот поллер — страховка только для socket-режима с мёртвым сокетом.
+ */
 async function pollPending(): Promise<void> {
   if (document.hidden || socketAlive() || !myUid()) return
+  if (isPolling.value) return
   const status = v.store.status
   if (status !== 'idle' && status !== 'searching') return
   try {

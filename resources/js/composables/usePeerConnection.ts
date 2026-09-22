@@ -172,8 +172,12 @@ export function usePeerConnection() {
   let pendingIce: RTCIceCandidateInit[] = []
   /** Сколько авто-рестартов уже сделано на этом соединении. */
   let autoRestarts = 0
+  /** Сколько раз перепосылали offer без ответа (answer потерялся/429). */
+  let offerRetries = 0
   /** Таймер перевода disconnected → failed (сеть может сама отойти). */
   let disconnectTimer: ReturnType<typeof setTimeout> | null = null
+  /** Сторож неотвеченного offer: answer мог потеряться в мёртвом realtime. */
+  let offerWatchdog: ReturnType<typeof setTimeout> | null = null
 
   /**
    * Создать соединение и подписаться на сигналы звонка.
@@ -193,6 +197,8 @@ export function usePeerConnection() {
     isCaller = caller
     offerStarted = false
     autoRestarts = 0
+    offerRetries = 0
+    clearOfferWatchdog()
     pendingIce = []
     seenRemoteIds.clear()
     signalingError.value = null
@@ -368,11 +374,54 @@ export function usePeerConnection() {
       if (!sent) {
         offerStarted = false
         signalingError.value = 'Offer не ушёл — попробуй «Обновить»'
+        return
       }
+      armOfferWatchdog()
     } catch {
       offerStarted = false
       signalingError.value = 'Не удалось начать звонок'
     }
+  }
+
+  /**
+   * Сторож неотвеченного offer: в polling-режиме answer идёт 3–5с и может
+   * потеряться (429/обрыв) — тогда caller вечно висит в have-local-offer,
+   * а callee давно ждёт. Перепосылаем offer с iceRestart, максимум дважды.
+   */
+  function armOfferWatchdog(): void {
+    clearOfferWatchdog()
+    offerWatchdog = setTimeout(() => {
+      offerWatchdog = null
+      void resendUnansweredOffer()
+    }, 8000)
+  }
+
+  /** Снять сторожа неотвеченного offer. */
+  function clearOfferWatchdog(): void {
+    if (offerWatchdog) {
+      clearTimeout(offerWatchdog)
+    }
+    offerWatchdog = null
+  }
+
+  /**
+   * Перепослать offer, на который не пришёл answer.
+   * Проверка signalingState отличает «answer потерялся» от «answer в пути».
+   */
+  async function resendUnansweredOffer(): Promise<void> {
+    if (!pc || boundCallId == null || !isCaller) {
+      return
+    }
+    if (pc.signalingState !== 'have-local-offer') {
+      return
+    }
+    if (offerRetries >= 2) {
+      signalingError.value = 'Собеседник не отвечает на запрос соединения — попробуй «Обновить»'
+      return
+    }
+    offerRetries += 1
+    offerStarted = false
+    await startOffer(true)
   }
 
   /**
@@ -454,6 +503,7 @@ export function usePeerConnection() {
         }
         await pc.setRemoteDescription(new RTCSessionDescription(e.payload))
         await flushPendingIce()
+        clearOfferWatchdog()
         signalStats.value.answerRecv += 1
         if (sid > 0) {
           seenRemoteIds.add(sid)
@@ -470,8 +520,19 @@ export function usePeerConnection() {
           await pc.addIceCandidate(new RTCIceCandidate(e.payload))
         } catch {}
       }
-    } catch {
+    } catch (err) {
       signalingError.value = 'Сбой соединения — попробуй переподключиться'
+      try {
+        console.warn('[video] signal failed', {
+          kind,
+          sid,
+          callId: e.call_id,
+          signaling: pc?.signalingState,
+          connection: pc?.connectionState,
+          isCaller,
+          err: (err as Error)?.message ?? String(err),
+        })
+      } catch {}
     }
   }
 
@@ -597,6 +658,7 @@ export function usePeerConnection() {
    */
   function close(): void {
     clearDisconnectTimer()
+    clearOfferWatchdog()
     try {
       offBus?.()
     } catch {}
