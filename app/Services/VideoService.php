@@ -632,9 +632,17 @@ class VideoService
      */
     private function storeAndBroadcast(VideoCall $call, int $senderId, string $kind, ?array $payload): VideoSignal
     {
+        $signal = VideoSignal::create([
+            'call_id' => $call->id,
+            'sender_id' => $senderId,
+            'kind' => $kind,
+            'payload' => $payload,
+        ]);
+
         // ВРЕМЕННАЯ диагностика битого SDP (убрать после починки звонков):
-        // пишет длину и json-кодированные голову/хвост sdp — так видны
-        // невидимые символы, обрезка и потеря \r\n. IP в логах не светим.
+        // пишет полный json-кодированный sdp с id строки — так видны
+        // невидимые символы и обрезка, а id позволяет сверить именно тот
+        // фрейм, что упал у получателя. IP в логах не светим.
         if (in_array($kind, [VideoSignal::KIND_OFFER, VideoSignal::KIND_ANSWER], true) && is_string($payload['sdp'] ?? null)) {
             $sdp = (string) $payload['sdp'];
             $hash = 5381;
@@ -643,24 +651,15 @@ class VideoService
                 $hash = (($hash * 33) + ord($sdp[$i])) & 0xFFFFFFFF;
             }
             Log::info('video.sdp_debug', [
+                'sid' => (int) $signal->id,
                 'call' => (int) $call->id,
                 'kind' => $kind,
                 'type' => (string) ($payload['type'] ?? ''),
                 'len' => $sdpLen,
                 'hash' => sprintf('%08x', $hash),
-                'crlf' => substr_count($sdp, "\r\n"),
-                'lf' => substr_count($sdp, "\n"),
-                'head' => mb_substr(json_encode(mb_substr($sdp, 0, 200)), 0, 400),
-                'tail' => mb_substr(json_encode(mb_substr($sdp, -200)), 0, 400),
+                'full' => json_encode($sdp),
             ]);
         }
-
-        $signal = VideoSignal::create([
-            'call_id' => $call->id,
-            'sender_id' => $senderId,
-            'kind' => $kind,
-            'payload' => $payload,
-        ]);
 
         try {
             broadcast(new VideoSignalEvent(
@@ -676,6 +675,34 @@ class VideoService
         }
 
         return $signal;
+    }
+
+    /**
+     * ВРЕМЕННЫЙ приём эхоконтроля SDP от клиента (убрать после починки).
+     * Клиент присылает те байты, что реально дошли до его парсера, —
+     * сверяем с video.sdp_debug по sid побайтово.
+     *
+     * @param int $userId кто прислал
+     * @param int $signalId id исходного фрейма
+     * @param string $kind offer|answer
+     * @param string $sdp полученный текст SDP
+     * @return void
+     */
+    public function reportSdp(int $userId, int $signalId, string $kind, string $sdp): void
+    {
+        $hash = 5381;
+        $sdpLen = strlen($sdp);
+        for ($i = 0; $i < $sdpLen; $i++) {
+            $hash = (($hash * 33) + ord($sdp[$i])) & 0xFFFFFFFF;
+        }
+        Log::warning('video.sdp_report', [
+            'sid' => $signalId,
+            'from' => $userId,
+            'kind' => $kind,
+            'len' => $sdpLen,
+            'hash' => sprintf('%08x', $hash),
+            'full' => mb_substr(json_encode($sdp), 0, 4000),
+        ]);
     }
 
     /**

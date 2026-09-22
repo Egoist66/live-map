@@ -546,6 +546,10 @@ export function usePeerConnection() {
         ? (e.payload as { sdp: string }).sdp
         : ''
       signalFailure.value = { kind, state, message, sdpLen: rawSdp.length, sdpHash: hashSdp(rawSdp) }
+      // ВРЕМЕННО: шлём дошедшие байты на сервер для побайтовой сверки.
+      if (rawSdp && (kind === 'offer' || kind === 'answer') && boundCallId != null) {
+        void videoApi.reportSdp(boundCallId, sid, kind, rawSdp)
+      }
       try {
         console.warn('[video] signal failed', {
           kind,

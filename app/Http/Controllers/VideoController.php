@@ -157,6 +157,28 @@ class VideoController extends Controller
     }
 
     /**
+     * ВРЕМЕННЫЙ эхоконтроль SDP от клиента (убрать после починки звонков).
+     *
+     * @param Request $request
+     * @param VideoCall $call
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function sdpReport(Request $request, VideoCall $call)
+    {
+        $data = $request->validate([
+            'signal_id' => 'required|integer|min:1',
+            'kind' => 'required|in:offer,answer',
+            'sdp' => 'required|string|max:8000',
+        ]);
+
+        abort_unless($call->involves((int) $request->user()->id), 403, 'Чужой звонок');
+
+        $this->video->reportSdp((int) $request->user()->id, (int) $data['signal_id'], (string) $data['kind'], (string) $data['sdp']);
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
      * Сигналы звонка курсором (добивка при мёртвом realtime).
      *
      * @param Request $request

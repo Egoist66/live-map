@@ -93,6 +93,15 @@ export const videoApi = {
     return data as { id: number; call_id: number; kind: string }
   },
   /**
+   * ВРЕМЕННО: отправить серверу те байты SDP, что дошли до парсера
+   * (сверка с video.sdp_debug по sid). Только при провале парсинга.
+   */
+  async reportSdp(callId: number, signalId: number, kind: string, sdp: string) {
+    try {
+      await api.post(`/api/video/${callId}/sdp-report`, { signal_id: signalId, kind, sdp })
+    } catch {}
+  },
+  /**
    * Сигналы звонка курсором (добивка при мёртвом realtime).
    */
   async signals(callId: number, afterId = 0) {

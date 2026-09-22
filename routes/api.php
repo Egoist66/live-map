@@ -177,6 +177,7 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::post('/video/{call}/decline', [\App\Http\Controllers\VideoController::class, 'decline'])->middleware('throttle:social-write');
     Route::post('/video/{call}/hangup', [\App\Http\Controllers\VideoController::class, 'hangup'])->middleware('throttle:social-write');
     Route::post('/video/{call}/signal', [\App\Http\Controllers\VideoController::class, 'signal'])->middleware('throttle:video-signal');
+    Route::post('/video/{call}/sdp-report', [\App\Http\Controllers\VideoController::class, 'sdpReport'])->middleware('throttle:video-signal');
     Route::post('/video/roulette/join', [\App\Http\Controllers\VideoController::class, 'rouletteJoin'])->middleware('throttle:social-write');
     Route::post('/video/roulette/next', [\App\Http\Controllers\VideoController::class, 'rouletteNext'])->middleware('throttle:social-write');
     Route::post('/video/roulette/leave', [\App\Http\Controllers\VideoController::class, 'rouletteLeave'])->middleware('throttle:social-write');
