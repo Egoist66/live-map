@@ -55,7 +55,7 @@ class ScheduledPinPublisher
                 continue;
             }
 
-            $pin = Pin::with('user:id,name,avatar_path,level')->find($id);
+            $pin = Pin::with('user:id,name,avatar_path,level,account_type')->find($id);
 
             if (! $pin) {
                 continue;

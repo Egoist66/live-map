@@ -14,6 +14,8 @@ export interface Pin {
   district_id?: number | null
   title: string
   body: string | null
+  promo?: string | null
+  is_business?: boolean
   category: PinCategory
   gender_audience: PinGenderAudience
   latitude: number
@@ -57,6 +59,7 @@ export interface Pin {
 export interface CreatePinPayload {
   title: string
   body?: string | null
+  promo?: string | null
   category: PinCategory
   gender_audience?: PinGenderAudience
   latitude: number
@@ -70,7 +73,7 @@ export interface CreatePinPayload {
   publish_at?: string | null
 }
 
-export type UpdatePinPayload = Partial<Pick<CreatePinPayload, 'title' | 'body' | 'category' | 'publish_at' | 'gender_audience'>>
+export type UpdatePinPayload = Partial<Pick<CreatePinPayload, 'title' | 'body' | 'promo' | 'category' | 'publish_at' | 'gender_audience'>>
 
 export interface NearbyParams {
   lat: number

@@ -2,7 +2,10 @@
 import { Link } from '@inertiajs/vue3'
 import { useMobileBottomNav } from '@/composables/useMobileBottomNav'
 
-const { dashboardHref, isActive, navLinkClass, total, navHidden } = useMobileBottomNav()
+const { dashboardHref, isActive, isActivePath, navLinkClass, total, navHidden, isBusiness } = useMobileBottomNav()
+
+const businessActiveClass = 'text-brand-600 dark:text-[#A5B4FC] bg-brand-50 dark:bg-brand-500/20'
+const businessIdleClass = 'text-stone-500 dark:text-zinc-400'
 </script>
 
 <template>
@@ -11,8 +14,19 @@ const { dashboardHref, isActive, navLinkClass, total, navHidden } = useMobileBot
     :aria-hidden="navHidden ? 'true' : undefined"
     class="mobile-bottom-nav pb-[var(--sab)] lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-[#0B0F1B]/95 backdrop-blur-xl border-t border-stone-200 dark:border-white/10"
   >
-    <div class="grid grid-cols-5 items-end px-1 pt-1.5 pb-2 min-h-[60px]">
+    <div :class="isBusiness ? 'grid grid-cols-3 items-end px-1 pt-1.5 pb-2 min-h-[60px]' : 'grid grid-cols-5 items-end px-1 pt-1.5 pb-2 min-h-[60px]'">
       <Link
+        v-if="isBusiness"
+        href="/cabinet"
+        :aria-current="isActivePath('/cabinet') ? 'page' : undefined"
+        class="flex flex-col items-center justify-center gap-1 py-1.5 rounded-2xl active:scale-95 transition min-h-[52px]"
+        :class="isActivePath('/cabinet') ? businessActiveClass : businessIdleClass"
+      >
+        <svg class="w-6 h-6" :fill="isActivePath('/cabinet') ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+        <span class="text-[10px] font-bold leading-none" :class="isActivePath('/cabinet') ? 'opacity-100' : 'opacity-75'">Кабинет</span>
+      </Link>
+      <Link
+        v-else
         :href="dashboardHref"
         :aria-current="isActive('dashboard') ? 'page' : undefined"
         class="flex flex-col items-center justify-center gap-1 py-1.5 rounded-2xl active:scale-95 transition min-h-[52px]"
@@ -33,6 +47,7 @@ const { dashboardHref, isActive, navLinkClass, total, navHidden } = useMobileBot
       </Link>
 
       <Link
+        v-if="!isBusiness"
         :href="route('swipes')"
         :aria-current="isActive('swipes') ? 'page' : undefined"
         class="flex flex-col items-center justify-center gap-1 py-1.5 rounded-2xl active:scale-95 transition min-h-[52px]"
@@ -46,6 +61,7 @@ const { dashboardHref, isActive, navLinkClass, total, navHidden } = useMobileBot
       </Link>
 
       <Link
+        v-if="!isBusiness"
         :href="route('flow')"
         :aria-current="isActive('flow') ? 'page' : undefined"
         class="flex flex-col items-center justify-center gap-1 py-1.5 rounded-2xl active:scale-95 transition min-h-[52px]"

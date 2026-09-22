@@ -81,10 +81,17 @@ class PageController extends Controller
     /**
      * Лента свайпов без вкладки.
      *
-     * @return InertiaResponse
+     * Бизнес-аккаунтам свайпы недоступны: это режим персоны,
+     * компании живут в кабинете (/business) + карта + чаты.
+     *
+     * @return InertiaResponse|RedirectResponse
      */
-    public function swipes(): InertiaResponse
+    public function swipes(): InertiaResponse|RedirectResponse
     {
+        if (auth()->check() && auth()->user()->isBusinessAccount()) {
+            return redirect()->route('cabinet.index');
+        }
+
         return Inertia::render('Swipes');
     }
 
@@ -92,10 +99,14 @@ class PageController extends Controller
      * Лента свайпов с вкладкой.
      *
      * @param string $tab
-     * @return InertiaResponse
+     * @return InertiaResponse|RedirectResponse
      */
-    public function swipesTab(string $tab): InertiaResponse
+    public function swipesTab(string $tab): InertiaResponse|RedirectResponse
     {
+        if (auth()->check() && auth()->user()->isBusinessAccount()) {
+            return redirect()->route('cabinet.index');
+        }
+
         return Inertia::render('Swipes', ['tab' => $tab]);
     }
 
@@ -113,10 +124,17 @@ class PageController extends Controller
     /**
      * Лента Flow.
      *
-     * @return InertiaResponse
+     * Бизнес-аккаунтам недоступна, как и свайпы: UFlow — режим
+     * персоны, компании работают через кабинет, карту и чаты.
+     *
+     * @return InertiaResponse|RedirectResponse
      */
-    public function flow(): InertiaResponse
+    public function flow(): InertiaResponse|RedirectResponse
     {
+        if (auth()->check() && auth()->user()->isBusinessAccount()) {
+            return redirect()->route('cabinet.index');
+        }
+
         return Inertia::render('Flow/Index');
     }
 
@@ -124,10 +142,14 @@ class PageController extends Controller
      * Конкретный пост во Flow.
      *
      * @param int $post
-     * @return InertiaResponse
+     * @return InertiaResponse|RedirectResponse
      */
-    public function flowPost(int $post): InertiaResponse
+    public function flowPost(int $post): InertiaResponse|RedirectResponse
     {
+        if (auth()->check() && auth()->user()->isBusinessAccount()) {
+            return redirect()->route('cabinet.index');
+        }
+
         return Inertia::render('Flow/Index', ['postId' => $post]);
     }
 

@@ -28,6 +28,37 @@ export function useBusinessDashboard() {
   const needsVerification = computed(() => store.profile?.verification_status !== 'verified')
   const recentPins = computed(() => store.dashboard?.recent_pins ?? [])
 
+  /**
+   * Шаги проверки для hero кабинета: реквизиты → проверка → проверено.
+   */
+  const verificationSteps = computed(() => {
+    const status = store.profile?.verification_status ?? 'draft'
+    const hasDetails =
+      String(store.profile?.name ?? '').trim().length >= 2 &&
+      /^\d{9}$/.test(String(store.profile?.unp ?? '')) &&
+      String(store.profile?.legal_address ?? '').trim().length > 3
+
+    if (status === 'verified') {
+      return [
+        { label: 'Реквизиты', state: 'done' },
+        { label: 'Проверка', state: 'done' },
+        { label: 'Проверено', state: 'done' },
+      ]
+    }
+    if (status === 'pending') {
+      return [
+        { label: 'Реквизиты', state: 'done' },
+        { label: 'Проверка', state: 'active' },
+        { label: 'Проверено', state: 'todo' },
+      ]
+    }
+    return [
+      { label: 'Реквизиты', state: hasDetails ? 'done' : 'active' },
+      { label: 'Проверка', state: 'todo' },
+      { label: 'Проверено', state: 'todo' },
+    ]
+  })
+
   async function load(): Promise<void> {
     if (!store.dashboard && !store.loading) {
       await store.loadAll()
@@ -42,5 +73,5 @@ export function useBusinessDashboard() {
     void load()
   })
 
-  return { store, cards, needsVerification, recentPins, load, refresh }
+  return { store, cards, needsVerification, recentPins, verificationSteps, load, refresh }
 }

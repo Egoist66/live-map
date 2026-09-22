@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3'
-import { defineAsyncComponent, onMounted, ref } from 'vue'
+import { computed, defineAsyncComponent, onMounted, ref } from 'vue'
 import { useWelcome } from '@/composables/useWelcome'
 import { useWelcomeMode } from '@/composables/useWelcomeMode'
 import { useWelcomeHeroSwiper } from '@/composables/useWelcomeHeroSwiper'
 import { useAccountTypeChoice } from '@/composables/useAccountTypeChoice'
+import { useBusinessLanding } from '@/composables/useBusinessLanding'
 import AppFooter from '@/Layouts/AppFooter.vue'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
@@ -18,6 +19,7 @@ import Avatar from 'primevue/avatar'
 // но isClient-гейт дешевле ветвления по auth.
 const VideoGlobalHost = defineAsyncComponent(() => import('@/Components/Features/Video/VideoGlobalHost.vue'))
 const AccountTypeGateModal = defineAsyncComponent(() => import('@/Components/Features/Business/AccountTypeGateModal.vue'))
+const BusinessLandingView = defineAsyncComponent(() => import('@/Components/Features/Business/BusinessLandingView.vue'))
 const videoHostReady = ref(false)
 onMounted(() => {
   videoHostReady.value = true
@@ -27,6 +29,15 @@ const w = useWelcome()
 const landing = useWelcomeMode()
 const hero = useWelcomeHeroSwiper()
 const gate = useAccountTypeChoice()
+
+/**
+ * Гость-компания после выбора (и после логаута — выбор живёт
+ * в localStorage) видит свой лендинг UPin Pro вместо общего.
+ */
+const isBusinessLanding = computed(() => !landing.isAuthenticated.value && gate.stored.value === 'business')
+const bizLanding = useBusinessLanding()
+const seoTitle = computed(() => (isBusinessLanding.value ? bizLanding.seo.value.title : landing.seo.value.title))
+const seoDescription = computed(() => (isBusinessLanding.value ? bizLanding.seo.value.description : landing.seo.value.description))
 
 const tabOptions = [
   { label: 'ULove', icon: '💘', value: 'ulove' },
@@ -44,13 +55,15 @@ function switchTab(next: 'ulove' | 'upin'): void {
 </script>
 
 <template>
-  <Head :title="landing.seo.value.title">
-    <meta head-key="description" name="description" :content="landing.seo.value.description" />
-    <meta head-key="og:title" property="og:title" :content="landing.seo.value.title" />
-    <meta head-key="og:description" property="og:description" :content="landing.seo.value.description" />
+  <Head :title="seoTitle">
+    <meta head-key="description" name="description" :content="seoDescription" />
+    <meta head-key="og:title" property="og:title" :content="seoTitle" />
+    <meta head-key="og:description" property="og:description" :content="seoDescription" />
   </Head>
   <div class="min-h-screen flex flex-col bg-surface dark:bg-[#0B0F1A] text-ink-900 dark:text-zinc-100 antialiased selection:bg-rose-500 selection:text-white overflow-x-hidden">
+    <BusinessLandingView v-if="isBusinessLanding" />
     <div
+      v-else
       :class="gate.visible.value ? 'blur-2xl saturate-150 brightness-90 pointer-events-none select-none' : ''"
       class="flex flex-col min-h-screen transition-all duration-500"
       :aria-hidden="gate.visible.value ? 'true' : undefined"
@@ -59,7 +72,7 @@ function switchTab(next: 'ulove' | 'upin'): void {
       <div class="max-w-[1280px] mx-auto px-2 min-[411px]:px-4 sm:px-6 h-14 min-[411px]:h-[64px] flex items-center justify-between gap-2 min-w-0">
         <Link href="/" class="flex items-center gap-2 min-w-0 shrink-0">
           <span :class="['w-8 h-8 min-[411px]:w-9 min-[411px]:h-9 rounded-[10px] min-[411px]:rounded-xl grid place-items-center text-white shadow-soft transition-colors duration-300 shrink-0', landing.theme.value.logo]"><i :class="[landing.theme.value.logoIcon, 'text-sm']" /></span>
-          <span class="font-black tracking-[-0.03em] text-[17px] min-[411px]:text-[19px] whitespace-nowrap">U<span class="font-light text-ink-600 dark:text-zinc-400">Pin</span></span>
+          <span class="font-black tracking-[-0.03em] text-[17px] min-[411px]:text-[19px] whitespace-nowrap">U<span class="font-light text-ink-600 dark:text-zinc-400">Pin</span> <span class="font-black text-[11px] min-[411px]:text-[12px] tracking-wide bg-gradient-to-r from-indigo-500 to-violet-600 bg-clip-text text-transparent">Pro</span></span>
           <span class="hidden sm:inline ml-2 text-xs font-black tracking-wide bg-gradient-to-r from-rose-500 via-fuchsia-500 to-orange-400 bg-clip-text text-transparent border-l border-stone-200 dark:border-zinc-700 pl-3">{{ landing.isUlove.value ? 'ULOVE · ЗНАКОМСТВА РЯДОМ' : 'UPIN · КАРТА РЯДОМ' }}</span>
         </Link>
         <nav class="flex items-center gap-1 min-[411px]:gap-2 shrink-0">

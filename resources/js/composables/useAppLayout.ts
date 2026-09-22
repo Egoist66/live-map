@@ -36,17 +36,51 @@ export function useAppLayout() {
   const menu = ref()
   const isAdmin = computed(() => !!user.value?.is_admin || user.value?.role === 'admin')
   const isModerator = computed(() => isAdmin.value || user.value?.role === 'moderator')
-  const menuItems = computed(() => [
-    { label: user.value?.name || '', sublabel: user.value?.email || '', isHeader: true },
-    { separator: true },
-    ...(isModerator.value ? [{ label: 'Панель модерации', icon: 'pi pi-shield', accent: 'amber', active: route().current('admin'), command: () => router.visit(route('admin')) }] : []),
-    { label: 'Настройки', icon: 'pi pi-cog', accent: 'slate', active: route().current('profile.edit'), command: () => router.visit(settingsHref.value) },
-    { label: 'Карта', icon: 'pi pi-map', accent: 'teal', active: route().current('map'), command: () => router.visit(route('map')) },
-    { label: 'ULove', icon: 'pi pi-heart', accent: 'red', active: route().current('swipes'), command: () => router.visit(route('swipes')) },
-    { label: 'UFlow', icon: 'pi pi-align-justify', svg: 'flow', accent: 'sky', active: route().current('flow'), command: () => router.visit(route('flow')) },
-    { separator: true },
-    { label: 'Выйти', icon: 'pi pi-sign-out', accent: 'red', danger: true, command: () => doLogout() },
-  ])
+  /**
+   * Бизнес-аккаунт: в дропдауне только бизнес-разделы
+   * (кабинет, карта, чаты, настройки бизнеса) — никаких
+   * свайпов, ULove и UFlow.
+   */
+  const isBusinessAccount = computed(() => {
+    try {
+      return (user.value as { account_type?: string } | null)?.account_type === 'business'
+    } catch {
+      return false
+    }
+  })
+  const menuItems = computed(() => {
+    const header = { label: user.value?.name || '', sublabel: user.value?.email || '', isHeader: true }
+    const moderation = isModerator.value
+      ? [{ label: 'Панель модерации', icon: 'pi pi-shield', accent: 'amber', active: route().current('admin'), command: () => router.visit(route('admin')) }]
+      : []
+    const logoutItem = { label: 'Выйти', icon: 'pi pi-sign-out', accent: 'red', danger: true, command: () => doLogout() }
+
+    if (isBusinessAccount.value) {
+      return [
+        header,
+        { separator: true },
+        ...moderation,
+        { label: 'Кабинет бизнеса', icon: 'pi pi-briefcase', accent: 'violet', active: route().current('cabinet.*'), command: () => router.visit('/cabinet') },
+        { label: 'Карта', icon: 'pi pi-map', accent: 'teal', active: route().current('map'), command: () => router.visit(route('map')) },
+        { label: 'Чаты', icon: 'pi pi-comments', accent: 'sky', active: route().current('chat'), command: () => router.visit(route('chat')) },
+        { label: 'Настройки бизнеса', icon: 'pi pi-cog', accent: 'slate', active: route().current('cabinet.settings'), command: () => router.visit('/cabinet/settings') },
+        { separator: true },
+        logoutItem,
+      ]
+    }
+
+    return [
+      header,
+      { separator: true },
+      ...moderation,
+      { label: 'Настройки', icon: 'pi pi-cog', accent: 'slate', active: route().current('profile.edit'), command: () => router.visit(settingsHref.value) },
+      { label: 'Карта', icon: 'pi pi-map', accent: 'teal', active: route().current('map'), command: () => router.visit(route('map')) },
+      { label: 'ULove', icon: 'pi pi-heart', accent: 'red', active: route().current('swipes'), command: () => router.visit(route('swipes')) },
+      { label: 'UFlow', icon: 'pi pi-align-justify', svg: 'flow', accent: 'sky', active: route().current('flow'), command: () => router.visit(route('flow')) },
+      { separator: true },
+      logoutItem,
+    ]
+  })
   function toggleMenu(e: Event) { menu.value.toggle(e) }
   async function doLogout() {
     try { authSession.resetAll() } catch {}
@@ -96,5 +130,5 @@ export function useAppLayout() {
   })
   onBeforeUnmount(() => presence.disconnect())
   router.on('navigate', () => { presence.connect() })
-  return { badge, presence, user, avatarSrc, dashboardHref, settingsHref, bell, pinActivity, adminReports, updates, menu, menuItems, isAdmin, isModerator, toggleMenu, logout }
+  return { badge, presence, user, avatarSrc, dashboardHref, settingsHref, bell, pinActivity, adminReports, updates, menu, menuItems, isAdmin, isModerator, isBusinessAccount, toggleMenu, logout }
 }

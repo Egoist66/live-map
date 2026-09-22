@@ -14,7 +14,6 @@ import ScreenLockOverlay from '@/Components/Features/Security/ScreenLockOverlay.
 // первый paint не блокируют. Тосты, скринлок и ConfirmDialog оставлены
 // статическими — они нужны мгновенно (ранние уведомления, приватность).
 const BellNotificationsModal = defineAsyncComponent(() => import('@/Components/Features/Feedback/BellNotificationsModal.vue'))
-const BetaNoticeModal = defineAsyncComponent(() => import('@/Components/Features/Feedback/BetaNoticeModal.vue'))
 const AppHotkeysDialog = defineAsyncComponent(() => import('@/Components/Features/Feedback/AppHotkeysDialog.vue'))
 const GlobalPeopleSearchDialog = defineAsyncComponent(() => import('@/Components/Features/Search/GlobalPeopleSearchDialog.vue'))
 const MiniChatDock = defineAsyncComponent(() => import('@/Components/Features/Chat/MiniChatDock.vue'))
@@ -32,7 +31,7 @@ import { useGlobalDialogScrollLock } from '@/composables/useGlobalDialogScrollLo
 import { useClientReady } from '@/composables/useClientReady'
 import { onMounted } from 'vue'
 
-const { badge, user, avatarSrc, dashboardHref, bell, updates, menu, menuItems, isAdmin, toggleMenu, logout } = useAppLayout()
+const { badge, user, avatarSrc, dashboardHref, bell, updates, menu, menuItems, isAdmin, isBusinessAccount, toggleMenu, logout } = useAppLayout()
 const { isClientReady } = useClientReady()
 const hotkeys = useAppHotkeys()
 const screenLock = useScreenLock()
@@ -43,7 +42,7 @@ onMounted(() => { screenLock.init(); hotkeys.init() })
 <template>
   <div class="flex min-h-screen min-h-dvh flex-col bg-surface dark:bg-[#0B0F1A] overflow-x-clip">
     <header v-if="!route().current('swipes*')" class="native-safe-top sticky top-0 z-50 glass border-b border-stone-200/70 dark:border-zinc-800 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-zinc-900/70">
-      <AppTopBar :user="user" :avatar-src="avatarSrc" :dashboard-href="dashboardHref" :badge-total="badge.total" :lock-enabled="screenLock.enabled.value" @bell="bell.open()" @menu="toggleMenu" @lock="screenLock.lockNow()" />
+      <AppTopBar :user="user" :avatar-src="avatarSrc" :dashboard-href="dashboardHref" :badge-total="badge.total" :lock-enabled="screenLock.enabled.value" :is-business="isBusinessAccount" @bell="bell.open()" @menu="toggleMenu" @lock="screenLock.lockNow()" />
     </header>
     <AppUserMenu v-model:menu-ref="menu" :user="user" :avatar-src="avatarSrc" :items="(menuItems as any)" />
     <div v-if="route().current('swipes*')" class="native-safe-top lg:hidden" aria-hidden="true" />
@@ -63,7 +62,6 @@ onMounted(() => { screenLock.init(); hotkeys.init() })
       <GlobalNotificationToasts />
       <VideoGlobalHost />
       <BellNotificationsModal />
-      <BetaNoticeModal />
       <PwaInstallBanner />
       <PwaUpdateBanner />
       <AppHotkeysDialog />

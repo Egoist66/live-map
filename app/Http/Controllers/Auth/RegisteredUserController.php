@@ -133,7 +133,7 @@ class RegisteredUserController extends Controller
         Auth::login($user);
 
         if ($isBusiness) {
-            return redirect(route('business.onboarding', absolute: false));
+            return redirect(route('cabinet.onboarding', absolute: false));
         }
 
         return redirect($this->landingFor($defaultMode));

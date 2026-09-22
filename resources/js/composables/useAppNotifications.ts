@@ -926,7 +926,7 @@ function handleBusinessVerified(e: { business?: { id?: number; name?: string } }
     title: 'Компания проверена',
     body: `${business.name ?? 'Бизнес'} — бейдж «Проверено» включён`.slice(0, 90),
     avatar: null,
-    link: '/business',
+    link: '/cabinet',
     createdAt: Date.now(),
   })
 }

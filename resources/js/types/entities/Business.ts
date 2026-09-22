@@ -62,6 +62,26 @@ export interface BusinessDashboard {
   earn: BusinessEarnHint[]
 }
 
+/**
+ * Компания на карте: особая метка домашней зоны.
+ */
+export interface BusinessMapItem {
+  id: number
+  name: string
+  category: string | null
+  address: string | null
+  lat: number | null
+  lng: number | null
+  description: string | null
+  phone: string | null
+  website: string | null
+  working_hours: Record<string, string> | null
+  is_verified: boolean
+  logo_url: string | null
+  pins_count: number
+  owner_profile: string | null
+}
+
 export interface BusinessProfilePayload {
   name: string
   category?: string | null

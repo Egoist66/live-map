@@ -54,7 +54,7 @@ class Pin extends Model
     }
 
     protected $fillable = [
-        'user_id','district_id','title','body','category','gender_audience','latitude','longitude','real_lat','real_lng','location_precision',
+        'user_id','district_id','title','body','promo','category','gender_audience','latitude','longitude','real_lat','real_lng','location_precision',
         'radius_meters','visibility_radius_km','expires_at','publish_at','status','priority','is_pinned','is_sponsored','is_boosted','boosted_until','views_count','likes_count','reactions_count','comments_count','is_anonymous','district_name','country','country_code','photo_path','meta'
     ];
 
@@ -193,11 +193,15 @@ class Pin extends Model
         $isOwner = $viewerId && $this->user_id === $viewerId;
         $meta = is_array($this->meta) ? $this->meta : (is_string($this->meta) ? json_decode($this->meta, true) : []);
         $blurMeters = static::blurMetersFor($this->location_precision, $meta);
+        $owner = $this->relationLoaded('user') ? $this->user : null;
+        $isBusiness = $owner ? (string) ($owner->account_type ?? 'person') === 'business' : false;
         return [
             'id' => $this->id,
             'district_id' => $this->district_id ? (int) $this->district_id : null,
             'title' => $this->title,
             'body' => $this->body,
+            'promo' => $this->promo ?? null,
+            'is_business' => $isBusiness,
             'category' => $this->category,
             'gender_audience' => static::normalizeGenderAudience($this->gender_audience ?? 'all'),
             'latitude' => (float) $this->latitude,

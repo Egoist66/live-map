@@ -22,6 +22,7 @@ import { planOf, maxHomeRadiusKm } from '@/composables/usePlanLimits'
 import { resolveInitialCenter, homeAnchorOf, isSaneFix } from '@/composables/useMapInitialCenter'
 import { haversineKm } from '@/utils/geo'
 import { useHomeZoneGuard } from '@/composables/useHomeZoneGuard'
+import { useBusinessMarkers } from '@/composables/useBusinessMarkers'
 
 export function useMapPage() {
   const { store, selectedCategory, filteredPins, fetchNearby } = usePins()
@@ -50,6 +51,25 @@ export function useMapPage() {
     pinDetails.openPin(p)
     nextTick(() => pinEdit.start(p))
   })
+
+  const bizMarkers = useBusinessMarkers()
+
+  /**
+   * Подключить слой компаний: особые метки + модалка пинов.
+   *
+   * Клик по пину компании из модалки — долететь и открыть карточку.
+   */
+  function wireBusinesses(): void {
+    try {
+      bizMarkers.attach(mapApi as any, {
+        openPin: (pin: any) => {
+          try {
+            pinDetails.openPinById(Number(pin.id))
+          } catch {}
+        },
+      })
+    } catch {}
+  }
 
   const overlays = useMapOverlays(
     (lat, lng) => mapApi.map?.flyTo({ center: [lng, lat] as any, zoom: 15, duration: 900 }),
@@ -738,10 +758,12 @@ export function useMapPage() {
       try { (mapApi as any).hideHomeZone?.() } catch {}
       mapApi.bindRealtime()
       wireDistricts()
+      wireBusinesses()
     } else {
       await mapApi.initMap(null, onMapClick)
       mapApi.bindRealtime()
       try { await fetchNearby(0, 20) } catch {}
+      wireBusinesses()
     }
     let geo: { lat: number; lng: number; accuracy: number | null } | null = null
     try { geo = await requestGeolocation() } catch { geo = null }
@@ -923,6 +945,7 @@ export function useMapPage() {
   function destroy() {
     window.removeEventListener('keydown', onEsc)
     window.removeEventListener('map:open-create', openCreateFromUI)
+    try { bizMarkers.detach() } catch {}
     try { (mapApi as any).map?.off?.('moveend', onDistrictsMoveEnd) } catch {}
     try { (mapApi as any).map?.off?.('zoomend', onDistrictsMoveEnd) } catch {}
     try { unsubGeolocate?.() } catch {}

@@ -324,6 +324,14 @@ html.native-keyboard-open .mobile-bottom-nav {
   opacity: 0;
   pointer-events: none;
 }
+/* Шаги онбординга бизнеса на узких экранах: подписи меньше,
+   иначе «Точка и контакты» рвёт строку и дёргает вёрстку. */
+@media (max-width: 420px) {
+  .p-steps .p-steps-item-label {
+    font-size: 11px !important;
+    line-height: 1.25 !important;
+  }
+}
 /* Плавучие элементы поверх карты/чата всегда выше нижнего меню. */
 .above-bottomnav {
   bottom: calc(12px + var(--app-bottomnav) + var(--sab)) !important;

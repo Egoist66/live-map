@@ -404,7 +404,7 @@ class User extends Authenticatable
     public function landingPath(): string
     {
         if ($this->isBusinessAccount()) {
-            return route('business.index', absolute: false);
+            return route('cabinet.index', absolute: false);
         }
 
         if ($this->defaultMode() === 'upin') {

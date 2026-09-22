@@ -57,6 +57,7 @@ export function usePinCreate(onSuccess?: () => void) {
     initialValues: {
       title: '',
       body: '',
+      promo: '',
       category: 'announcement',
       gender_audience: 'all',
       latitude: 0,
@@ -71,6 +72,7 @@ export function usePinCreate(onSuccess?: () => void) {
 
   const [title, titleAttrs] = defineField('title')
   const [body] = defineField('body')
+  const [promo] = defineField('promo')
   const [category] = defineField('category')
   const [gender_audience] = defineField('gender_audience')
   const [latitude] = defineField('latitude')
@@ -190,7 +192,7 @@ export function usePinCreate(onSuccess?: () => void) {
       toast.add({ severity: 'success', summary: scheduled ? `Запланирован на ${scheduleLabel.value}` : isDistrictPin ? 'Пин района создан' : 'Пин создан', detail: isDistrictPin ? 'Видят только жители района' : undefined, life: 2500 })
       scheduleEnabled.value = false
       sos.resetSos()
-      resetForm({ values: { ...vals, title: '', body: '', publish_at: null, district_id: null, gender_audience: (vals as any).gender_audience ?? 'all' } as any })
+      resetForm({ values: { ...vals, title: '', body: '', promo: '', publish_at: null, district_id: null, gender_audience: (vals as any).gender_audience ?? 'all' } as any })
       try { await limitInfo.refresh() } catch {}
       onSuccess?.()
     } catch (e: any) {
@@ -226,6 +228,7 @@ export function usePinCreate(onSuccess?: () => void) {
     title,
     titleAttrs,
     body,
+    promo,
     category,
     gender_audience,
     latitude,

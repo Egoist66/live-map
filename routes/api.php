@@ -251,6 +251,8 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::post('/pins/{pin}/sos/close', [\App\Http\Controllers\SosController::class, 'close'])->middleware('throttle:social-write');
 
     Route::patch('/account-type', [\App\Http\Controllers\AccountTypeController::class, 'update']);
+    Route::get('/businesses/map', [\App\Http\Controllers\BusinessController::class, 'map']);
+    Route::get('/businesses/{business}/pins', [\App\Http\Controllers\BusinessController::class, 'pins']);
     Route::get('/business', [\App\Http\Controllers\BusinessController::class, 'show']);
     Route::patch('/business', [\App\Http\Controllers\BusinessController::class, 'update'])->middleware('throttle:profile-write');
     Route::get('/business/dashboard', [\App\Http\Controllers\BusinessController::class, 'dashboard']);

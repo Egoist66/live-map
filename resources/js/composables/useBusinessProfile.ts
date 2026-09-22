@@ -65,7 +65,7 @@ export function useBusinessProfile() {
     if (status === 'verified') return 'Проверено'
     if (status === 'pending') return 'На проверке'
     if (status === 'rejected') return 'Отклонено'
-    return 'Черновик'
+    return 'Не проверен'
   })
 
   /**

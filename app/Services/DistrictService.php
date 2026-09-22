@@ -160,7 +160,7 @@ class DistrictService
         $candidates = Pin::active()
             ->whereBetween('latitude', [$centerLat - 0.5, $centerLat + 0.5])
             ->whereBetween('longitude', [$centerLng - 0.5, $centerLng + 0.5])
-            ->with('user:id,name,avatar_path,level')
+            ->with('user:id,name,avatar_path,level,account_type')
             ->limit(200)
             ->get();
 

@@ -106,6 +106,29 @@ class ProfileController extends Controller
                 $subscription = null;
             }
         }
+        if ($user->isBusinessAccount()) {
+            $company = \App\Models\Business::where('user_id', $user->id)
+                ->orderByDesc('id')
+                ->first();
+
+            abort_if($company === null || ! $company->is_active, 404);
+
+            return Inertia::render('Business/Show', [
+                'business' => $company->toPublicArray(),
+                'owner' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'avatar_url' => $user->avatar_url,
+                    'last_seen_at' => $showLastSeen?->toISOString(),
+                ],
+                'isOwn' => $isOwn,
+                'canMessage' => $canMessage,
+                'canMessageReason' => $reason,
+                'isBlocked' => $isBlocked,
+                'isBlockedBy' => $isBlockedBy,
+            ]);
+        }
+
         return Inertia::render('Profile/Show', [
             'profileUser' => array_merge($base, ['avatar_url' => $user->avatar_url, 'last_seen_at' => $showLastSeen?->toISOString(), 'is_invisible' => $user->isInvisibleActive()]),
             'isOwn' => $isOwn,
@@ -179,6 +202,9 @@ class ProfileController extends Controller
     public function dashboard(Request $request, ?string $identifier = null): Response|RedirectResponse
     {
         $auth = $request->user();
+        if ($identifier === null && $auth->isBusinessAccount()) {
+            return redirect()->route('cabinet.index');
+        }
         if ($identifier === null) {
             $profileUser = $auth;
             return Inertia::render('Dashboard', [

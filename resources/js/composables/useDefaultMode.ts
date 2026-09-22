@@ -76,6 +76,12 @@ export function useDefaultMode() {
   }
 
   function maybeShow(): void {
+    try {
+      const accountType = (page.props as unknown as { auth?: { user?: { account_type?: string } | null } }).auth?.user?.account_type
+      if (accountType === 'business') {
+        return
+      }
+    } catch {}
     if (needsChoice.value && !visible.value) {
       visible.value = true
     }

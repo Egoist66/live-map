@@ -1,5 +1,5 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { router } from '@inertiajs/vue3'
+import { router, usePage } from '@inertiajs/vue3'
 import { useBadgeStore } from '@/stores/badges'
 import { route } from '@/route'
 
@@ -15,7 +15,20 @@ import { route } from '@/route'
  */
 export function useMobileBottomNav() {
   const badge = useBadgeStore()
+  const page = usePage()
   const keyboardOpen = ref(false)
+
+  /**
+   * Бизнес-аккаунт: нижнее меню без персональных разделов
+   * (профиль персоны, ULove, UFlow) — только кабинет, карта и чат.
+   */
+  const isBusiness = computed(() => {
+    try {
+      return (page.props as unknown as { auth?: { user?: { account_type?: string } | null } }).auth?.user?.account_type === 'business'
+    } catch {
+      return false
+    }
+  })
 
   const dashboardHref = computed(() => route('dashboard'))
   const total = computed(() => badge.unread)
@@ -101,6 +114,22 @@ export function useMobileBottomNav() {
   }
 
   const navHidden = computed(() => keyboardOpen.value)
+
+  /**
+   * Активность по пути без Ziggy-имён (для разделов вроде `/cabinet`,
+   * которых может не быть в конфиге): точное совпадение или префикс.
+   *
+   * @param path путь раздела вроде `/cabinet`
+   * @returns true если текущий путь — сам раздел или его подраздел
+   * @example :class="isActivePath('/cabinet') ? active : idle"
+   */
+  function isActivePath(path: string): boolean {
+    const current = currentPath.value
+    if (!current || !path) return false
+    if (current === path) return true
+    const withSlash = path.endsWith('/') ? path : `${path}/`
+    return current.startsWith(withSlash)
+  }
 
   /**
    * Десктоп с физической клавиатурой: visualViewport не сжимается,
@@ -229,5 +258,5 @@ export function useMobileBottomNav() {
     document.documentElement.classList.remove('native-keyboard-open')
   })
 
-  return { dashboardHref, isActive, navLinkClass, total, navHidden, keyboardOpen }
+  return { dashboardHref, isActive, isActivePath, navLinkClass, total, navHidden, keyboardOpen, isBusiness }
 }

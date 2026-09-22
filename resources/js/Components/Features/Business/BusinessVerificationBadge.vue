@@ -15,7 +15,7 @@ const meta = computed(() => {
   if (props.status === 'rejected') {
     return { label: 'Отклонено', icon: 'pi pi-times-circle', cls: '!bg-red-500 !border-0' }
   }
-  return { label: 'Черновик', icon: 'pi pi-pencil', cls: '!bg-zinc-500 !border-0' }
+  return { label: 'Не проверен', icon: 'pi pi-pencil', cls: '!bg-zinc-500 !border-0' }
 })
 </script>
 

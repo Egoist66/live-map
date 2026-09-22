@@ -34,6 +34,9 @@ class BusinessService
         return Business::create([
             'user_id' => $user->id,
             'name' => $user->name ?? 'Мой бизнес',
+            'lat' => $user->home_lat,
+            'lng' => $user->home_lng,
+            'address' => $user->home_city,
             'is_active' => true,
             'verification_status' => 'draft',
             'subscription_plan' => 'free',

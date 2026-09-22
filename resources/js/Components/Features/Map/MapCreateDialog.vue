@@ -6,7 +6,10 @@ import Textarea from 'primevue/textarea'
 import Select from 'primevue/select'
 import { usePinAudience } from '@/composables/usePinAudience'
 import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
+import { useBusinessAccount } from '@/composables/useBusinessAccount'
 import { SOS_WARNING_TEXT, SOS_WARNING_TITLE } from '@/composables/useSosConfirm'
+
+const { isBusiness } = useBusinessAccount()
 
 const props = withDefaults(defineProps<{ open: boolean; pinCreate: any; customCats: any; categories: any[]; pinAddress: string; loadingAddress: boolean; radiusOptions: any[]; radiusLabel?: string; sosLimits?: { used: number; limit: number; left: number; is_pro: boolean } | null }>(), { radiusLabel: '1 км', sosLimits: null })
 const emit = defineEmits<{ (e: 'update:open', v: boolean): void; (e: 'close'): void; (e: 'delete-custom-category', slug: string): void }>()
@@ -45,6 +48,12 @@ async function createCustomAndSelect() {
         <label class="text-[10px] font-bold tracking-wide uppercase text-stone-500">Подробности</label>
         <Textarea v-model="pinCreate.body.value" placeholder="Адрес, время, контакты…" rows="2" autoResize maxlength="1000" class="w-full mt-1 !rounded-2xl" />
         <small class="text-red-500 text-xs">{{ pinCreate.errors.value.body }}</small>
+      </div>
+      <div v-if="isBusiness" class="rounded-2xl border-2 border-indigo-200 dark:border-indigo-800 bg-indigo-50/60 dark:bg-indigo-950/30 p-3">
+        <label class="text-[10px] font-bold tracking-wide uppercase text-indigo-600 dark:text-indigo-300">Промо-подпись · видна на карте</label>
+        <InputText v-model="pinCreate.promo.value" placeholder="Напр. −20% сегодня до 22:00" maxlength="140" class="w-full mt-1 !rounded-2xl" />
+        <small class="text-red-500 text-xs">{{ pinCreate.errors.value.promo }}</small>
+        <p class="text-[11px] text-indigo-500 dark:text-indigo-300 mt-1">Короткий завлекающий текст под пином — видят все рядом. Необязательно.</p>
       </div>
       <div>
         <label class="text-[10px] font-bold tracking-wide uppercase text-stone-500">Категория</label>

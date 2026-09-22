@@ -27,11 +27,12 @@ export function usePinEdit() {
 
   const { defineField, handleSubmit, setValues, values, errors, resetForm } = useForm({
     validationSchema: updatePinSchema,
-    initialValues: { title: '', body: '', category: 'announcement', gender_audience: 'all' } as any,
+    initialValues: { title: '', body: '', promo: '', category: 'announcement', gender_audience: 'all' } as any,
   })
 
   const [title, titleAttrs] = defineField('title')
   const [body] = defineField('body')
+  const [promo] = defineField('promo')
   const [category] = defineField('category')
   const [gender_audience] = defineField('gender_audience')
 
@@ -42,8 +43,8 @@ export function usePinEdit() {
   function start(pin: any) {
     targetId.value = pin.id
     sos.resetSos()
-    setValues({ title: pin.title, body: pin.body || '', category: pin.category, gender_audience: pin.gender_audience ?? 'all' } as any)
-    editSnapshot.value = { title: pin.title, body: pin.body || '', category: pin.category, gender_audience: pin.gender_audience ?? 'all' }
+    setValues({ title: pin.title, body: pin.body || '', promo: pin.promo || '', category: pin.category, gender_audience: pin.gender_audience ?? 'all' } as any)
+    editSnapshot.value = { title: pin.title, body: pin.body || '', promo: pin.promo || '', category: pin.category, gender_audience: pin.gender_audience ?? 'all' }
     editing.value = true
   }
 
@@ -57,7 +58,7 @@ export function usePinEdit() {
   const save = handleSubmit(async (vals: any) => {
     if (!targetId.value) return null
     const snapshot = editSnapshot.value
-    if (snapshot !== null && isUnchangedPayload(vals, snapshot, ['title', 'body', 'category', 'gender_audience'])) {
+    if (snapshot !== null && isUnchangedPayload(vals, snapshot, ['title', 'body', 'promo', 'category', 'gender_audience'])) {
       toast.add({ severity: 'info', summary: 'Без изменений', detail: 'Нечего сохранять', life: 2000 })
       return null
     }
@@ -75,5 +76,5 @@ export function usePinEdit() {
     }
   })
 
-  return { editing, targetId, title, titleAttrs, body, category, gender_audience, values, errors, start, cancel, save, setValues, resetForm, error, updating: store.updating, sos, selectCategory }
+  return { editing, targetId, title, titleAttrs, body, promo, category, gender_audience, values, errors, start, cancel, save, setValues, resetForm, error, updating: store.updating, sos, selectCategory }
 }

@@ -245,36 +245,52 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
     if (!document.getElementById('pin-soft-pulse-style')) {
       const s = document.createElement('style')
       s.id = 'pin-soft-pulse-style'
-      s.textContent = `@keyframes softPulse{0%,100%{transform:scale(1);opacity:0.55}50%{transform:scale(1.85);opacity:0}} @keyframes gentleBreath{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}} @keyframes pinGlow{0%,100%{box-shadow:0 0 0 0 rgba(250,204,21,0.5)}50%{box-shadow:0 0 0 10px rgba(250,204,21,0)}} @keyframes badgePop{0%{transform:translateX(-50%) scale(0.5)}60%{transform:translateX(-50%) scale(1.15)}100%{transform:translateX(-50%) scale(1)}} @keyframes sosBlink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.35;transform:scale(0.9)}} @keyframes inviteRing{0%,100%{transform:scale(1);opacity:0.7}50%{transform:scale(1.6);opacity:0}}`
+      s.textContent = `@keyframes softPulse{0%,100%{transform:scale(1);opacity:0.55}50%{transform:scale(1.85);opacity:0}} @keyframes gentleBreath{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}} @keyframes pinGlow{0%,100%{box-shadow:0 0 0 0 rgba(250,204,21,0.5)}50%{box-shadow:0 0 0 10px rgba(250,204,21,0)}} @keyframes badgePop{0%{transform:translateX(-50%) scale(0.5)}60%{transform:translateX(-50%) scale(1.15)}100%{transform:translateX(-50%) scale(1)}} @keyframes sosBlink{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.35;transform:scale(0.9)}} @keyframes inviteRing{0%,100%{transform:scale(1);opacity:0.7}50%{transform:scale(1.6);opacity:0}} @keyframes bizRing{0%,100%{transform:scale(1);opacity:0.65}50%{transform:scale(1.55);opacity:0}}`
       document.head.appendChild(s)
     }
     pins.forEach((p: any, idx: number) => {
+      const isBusinessPin = !!(p as any).is_business
       const wrap = document.createElement('div')
       wrap.className = 'relative grid place-items-center cursor-pointer will-change-transform'
-      const sz = Math.round(34 * scale)
+      const bizScale = isBusinessPin ? 1.45 : 1
+      const sz = Math.round(34 * scale * bizScale)
       wrap.style.width = sz+'px'
       wrap.style.height = sz+'px'
+      if (isBusinessPin) wrap.style.zIndex = '10'
       const isInvited = !!p.is_invited
-      const baseColor = isInvited ? '#10B981' : p.is_boosted ? '#F59E0B' : p.is_sponsored || p.priority==='sponsored' ? '#7C3AED' : colorFor(p.category)
+      const baseColor = isInvited ? '#10B981' : p.is_boosted ? '#F59E0B' : isBusinessPin ? '#6366F1' : p.is_sponsored || p.priority==='sponsored' ? '#7C3AED' : colorFor(p.category)
       const isBoosted = !!p.is_boosted
       const isSosPin = String((p as any).category ?? '') === 'sos'
+      const plainBusiness = isBusinessPin && !isBoosted && !isSosPin && !isInvited
       const halo = document.createElement('div')
       halo.className = 'absolute rounded-full'
-      halo.style.width = (isBoosted? 38*scale : 30*scale)+'px'
-      halo.style.height = (isBoosted? 38*scale : 30*scale)+'px'
+      halo.style.width = (isBoosted? 38*scale : 30*scale*bizScale)+'px'
+      halo.style.height = (isBoosted? 38*scale : 30*scale*bizScale)+'px'
       halo.style.background = baseColor
-      halo.style.opacity = isBoosted ? '0.38' : '0.32'
-      halo.style.animation = `softPulse 2.2s ease-in-out infinite`
+      halo.style.opacity = isBoosted ? '0.38' : plainBusiness ? '0.5' : '0.32'
+      halo.style.animation = plainBusiness ? `bizRing 1.5s ease-in-out infinite` : `softPulse 2.2s ease-in-out infinite`
       halo.style.animationDelay = `${(idx % 5) * 0.28}s`
       if(isBoosted) halo.style.animation = `pinGlow 1.8s ease-in-out infinite, softPulse 2.2s ease-in-out infinite`
+      if (plainBusiness) {
+        const haloOuter = document.createElement('div')
+        haloOuter.className = 'absolute rounded-full'
+        haloOuter.style.width = (44*scale)+'px'
+        haloOuter.style.height = (44*scale)+'px'
+        haloOuter.style.background = '#8B5CF6'
+        haloOuter.style.opacity = '0.35'
+        haloOuter.style.animation = `bizRing 1.5s ease-in-out infinite`
+        haloOuter.style.animationDelay = `${(idx % 5) * 0.28 + 0.5}s`
+        wrap.appendChild(haloOuter)
+      }
       const core = document.createElement('div')
       core.className = 'relative rounded-full border-[3px] border-white shadow-[0_4px_16px_rgba(15,23,42,0.35),0_0_0_1px_rgba(15,23,42,0.1)] grid place-items-center'
-      core.style.width = (isBoosted? 28*scale : 22*scale)+'px'
-      core.style.height = (isBoosted? 28*scale : 22*scale)+'px'
+      core.style.width = (isBoosted? 28*scale : 22*scale*bizScale)+'px'
+      core.style.height = (isBoosted? 28*scale : 22*scale*bizScale)+'px'
       core.style.background = baseColor
       core.style.animation = `gentleBreath 2.6s ease-in-out infinite`
       core.style.animationDelay = `${(idx % 7) * 0.18}s`
       if (isBoosted) { core.style.boxShadow = '0 0 0 4px rgba(251,191,36,0.55), 0 0 18px rgba(251,191,36,0.9), 0 4px 16px rgba(15,23,42,0.35)'; core.style.borderColor = 'white' }
+      else if (plainBusiness) { core.style.boxShadow = '0 0 0 4px rgba(99,102,241,0.5), 0 0 26px rgba(99,102,241,0.9), 0 4px 16px rgba(15,23,42,0.35)'; core.style.borderColor = 'white' }
       else core.style.boxShadow = '0 2px 12px rgba(15,23,42,0.32), 0 0 0 2px rgba(255,255,255,0.9)'
       if (isInvited && !isSosPin) {
         halo.style.background = '#10B981'
@@ -348,6 +364,32 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
         badge.style.zIndex = '5'
         if (animateId === p.id) badge.style.animation = 'badgePop 0.35s ease-out'
         wrap.appendChild(badge)
+      }
+      if (isBusinessPin) {
+        const promoText = String((p as any).promo || p.title || '').trim().slice(0, 60)
+        if (promoText !== '') {
+          const promoLabel = document.createElement('div')
+          promoLabel.textContent = ((p as any).promo ? '📢 ' : '🏢 ') + promoText
+          promoLabel.style.position = 'absolute'
+          promoLabel.style.bottom = '-15px'
+          promoLabel.style.left = '50%'
+          promoLabel.style.transform = 'translateX(-50%)'
+          promoLabel.style.background = 'linear-gradient(135deg, #4F46E5, #7C3AED)'
+          promoLabel.style.color = '#fff'
+          promoLabel.style.fontSize = '10px'
+          promoLabel.style.fontWeight = '800'
+          promoLabel.style.lineHeight = '1.2'
+          promoLabel.style.padding = '4px 8px'
+          promoLabel.style.borderRadius = '999px'
+          promoLabel.style.whiteSpace = 'nowrap'
+          promoLabel.style.overflow = 'hidden'
+          promoLabel.style.textOverflow = 'ellipsis'
+          promoLabel.style.maxWidth = '170px'
+          promoLabel.style.pointerEvents = 'none'
+          promoLabel.style.boxShadow = '0 2px 12px rgba(79,70,229,0.55), 0 0 0 1px rgba(255,255,255,0.9)'
+          promoLabel.style.zIndex = '6'
+          wrap.appendChild(promoLabel)
+        }
       }
       wrap.addEventListener('mouseenter', (e: any) => showPinTip(p, e.clientX, e.clientY))
       wrap.addEventListener('mousemove', (e: any) => { if (pinTooltip && !pinTooltip.classList.contains('hidden')) { pinTooltip.style.left = e.clientX + 'px'; pinTooltip.style.top = e.clientY + 'px' } })

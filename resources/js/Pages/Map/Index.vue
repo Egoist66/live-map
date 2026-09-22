@@ -14,6 +14,7 @@ import SosModeBanner from '@/Components/Features/Map/SosModeBanner.vue'
 import PinDetailsCard from '@/Components/Features/Map/PinDetailsCard.vue'
 import ReportDialog from '@/Components/Features/Map/ReportDialog.vue'
 import MapInfoDialogs from '@/Components/Features/Map/MapInfoDialogs.vue'
+import BusinessMapModal from '@/Components/Features/Business/BusinessMapModal.vue'
 import DefaultModeHint from '@/Components/Features/Mode/DefaultModeHint.vue'
 import { useSeo } from '@/composables/useSeo'
 import { useMapPage } from '@/composables/useMapPage'
@@ -159,6 +160,7 @@ onUnmounted(() => {
       </Transition>
       <ReportDialog :dialog="reportDialog" />
       <MapInfoDialogs :live-open="showLiveInfo" @update:live="setLiveInfo" :my-open="showMyPins" @update:my="setMyPins" :my-pins="myPins" :format-time="formatTime" @fly="flyToPin" />
+      <BusinessMapModal />
       </div>
     </div>
 </template>

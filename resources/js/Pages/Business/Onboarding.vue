@@ -6,6 +6,7 @@ import { useBusinessOnboarding } from '@/composables/useBusinessOnboarding'
 import { useSeo } from '@/composables/useSeo'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
+import Message from 'primevue/message'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import Select from 'primevue/select'
@@ -30,6 +31,22 @@ const stepItems = [{ label: 'Компания' }, { label: 'Реквизиты �
     </div>
 
     <Steps :model="stepItems" :active-step="ob.step.value" class="w-full" />
+
+    <Message v-if="ob.loaded.value && ob.isComplete.value" severity="success" class="w-full">
+      Все обязательные реквизиты уже заполнены — проверьте данные ниже и отправьте заявку.
+    </Message>
+    <Message v-else-if="ob.loaded.value && ob.missing.value.length" severity="info" class="w-full">
+      <span class="font-semibold">Осталось дозаполнить:</span>
+      <span class="inline-flex flex-wrap gap-1.5 ml-1">
+        <button
+          v-for="field in ob.missing.value"
+          :key="field.key"
+          type="button"
+          class="underline font-semibold hover:opacity-80"
+          @click="ob.goToMissing(field)"
+        >{{ field.label }}</button>
+      </span>
+    </Message>
 
     <Card class="!rounded-[24px] !border-stone-200 dark:!border-zinc-800 !bg-white dark:!bg-zinc-900 !shadow-sm">
       <template #content>

@@ -53,7 +53,7 @@ class PinController extends Controller
             $hide = $blocked->merge($blockedBy)->unique()->filter();
             if ($hide->isNotEmpty()) $q->whereNotIn('user_id', $hide);
         }
-        $pins = $q->boostedFirst()->with('user:id,name,avatar_path,level')->limit(100)->get();
+        $pins = $q->boostedFirst()->with('user:id,name,avatar_path,level,account_type')->limit(100)->get();
         $invitedIds = $viewerId ? \App\Models\PinInvite::where('invitee_id', $viewerId)->whereIn('pin_id', $pins->pluck('id'))->pluck('pin_id')->map(fn($v) => (int) $v)->flip() : collect();
         $visible = $pins->filter(function ($p) use ($viewer, $viewerId, $liveLat, $liveLng, $invitedIds, $memberDistrictIds) {
             $districtId = (int) ($p->district_id ?? 0);
@@ -73,7 +73,7 @@ class PinController extends Controller
             $sosExtra = Pin::active()
                 ->where('category', 'sos')
                 ->whereNotIn('id', $visible->pluck('id')->all() ?: [0])
-                ->with('user:id,name,avatar_path,level')
+                ->with('user:id,name,avatar_path,level,account_type')
                 ->limit(20)
                 ->get()
                 ->filter(fn ($p) => \App\Services\PinVisibility::canView($viewer, $p, $liveLat, $liveLng));
@@ -87,7 +87,7 @@ class PinController extends Controller
                 $invitedExtra = Pin::active()
                     ->whereIn('id', \App\Models\PinInvite::where('invitee_id', $viewerId)->select('pin_id'))
                     ->whereNotIn('id', $knownIds)
-                    ->with('user:id,name,avatar_path,level')
+                    ->with('user:id,name,avatar_path,level,account_type')
                     ->limit(50)
                     ->get()
                     ->filter(function ($p) use ($viewer, $memberDistrictIds, $viewerId) {
@@ -150,7 +150,7 @@ class PinController extends Controller
     public function mine(Request $request)
     {
         $user = $request->user();
-        $pins = Pin::where('user_id', $user->id)->whereIn('status', ['active', 'scheduled'])->latest()->limit(50)->with('user:id,name,avatar_path,level')->get();
+        $pins = Pin::where('user_id', $user->id)->whereIn('status', ['active', 'scheduled'])->latest()->limit(50)->with('user:id,name,avatar_path,level,account_type')->get();
         $myReactions = \App\Models\Reaction::where('user_id', $user->id)->where('reactable_type', 'pin')->whereIn('reactable_id', $pins->pluck('id'))->pluck('type', 'reactable_id');
         return response()->json($pins->map(fn($p) => array_merge($p->toPublicArray($user->id), ['my_reaction' => $myReactions[$p->id] ?? null])));
     }
@@ -160,14 +160,14 @@ class PinController extends Controller
         $user = $request->user();
         $pins = Pin::where('user_id', $user->id)
             ->where(fn($q) => $q->whereIn('status', ['expired', 'archived'])->orWhere('expires_at', '<=', now()))
-            ->latest()->limit(50)->with('user:id,name,avatar_path,level')->get();
+            ->latest()->limit(50)->with('user:id,name,avatar_path,level,account_type')->get();
         return response()->json($pins->map(fn($p) => $p->toPublicArray($user->id)));
     }
 
     public function scheduled(Request $request)
     {
         $user = $request->user();
-        $pins = Pin::where('user_id', $user->id)->scheduled()->latest('publish_at')->limit(50)->with('user:id,name,avatar_path,level')->get();
+        $pins = Pin::where('user_id', $user->id)->scheduled()->latest('publish_at')->limit(50)->with('user:id,name,avatar_path,level,account_type')->get();
         return response()->json($pins->map(fn($p) => $p->toPublicArray($user->id)));
     }
 
@@ -179,6 +179,7 @@ class PinController extends Controller
         $data = $request->validate([
             'title' => 'required|string|max:100',
             'body' => 'nullable|string|max:1000',
+            'promo' => 'nullable|string|max:140',
             'category' => ['required', 'string', 'max:32', 'regex:/^[a-z0-9_]+$/i', function ($attr, $val, $fail) use ($user) {
                 $v = Pin::normalizeCategory($val);
                 if (!Pin::canUseCategory($user, $v)) {
@@ -232,7 +233,10 @@ class PinController extends Controller
         } catch (\Throwable) {
         }
 
-        ContentModeration::assertClean($data['title'] ?? null, $data['body'] ?? null);
+        if (! $user->isBusinessAccount()) {
+            unset($data['promo']);
+        }
+        ContentModeration::assertClean($data['title'] ?? null, $data['body'] ?? null, $data['promo'] ?? null);
         $data['category'] = Pin::normalizeCategory($data['category']);
         $data['gender_audience'] = Pin::normalizeGenderAudience($data['gender_audience'] ?? 'all');
 
@@ -307,6 +311,7 @@ class PinController extends Controller
         $data = $request->validate([
             'title' => 'sometimes|required|string|max:100',
             'body' => 'nullable|string|max:1000',
+            'promo' => 'nullable|string|max:140',
             'category' => ['sometimes', 'required', 'string', 'max:32', 'regex:/^[a-z0-9_]+$/i', function ($attr, $val, $fail) use ($request) {
                 $v = Pin::normalizeCategory($val);
                 if (!Pin::canUseCategory($request->user(), $v)) {
@@ -323,7 +328,10 @@ class PinController extends Controller
         unset($data['sos_confirmed']);
         abort_if($sosSwitch && ! $sosConfirmed, 422, 'SOS-пин — только для реальной чрезвычайной ситуации. Вы несёте ответственность за ложное объявление: пользователи вправе пожаловаться администрации приложения и в соответствующие органы.');
         if (array_key_exists('gender_audience', $data)) $data['gender_audience'] = Pin::normalizeGenderAudience($data['gender_audience']);
-        ContentModeration::assertClean($data['title'] ?? $pin->title, array_key_exists('body', $data) ? $data['body'] : $pin->body);
+        if (! $request->user()->isBusinessAccount()) {
+            unset($data['promo']);
+        }
+        ContentModeration::assertClean($data['title'] ?? $pin->title, array_key_exists('body', $data) ? $data['body'] : $pin->body, array_key_exists('promo', $data) ? $data['promo'] : $pin->promo);
         if ($pin->status === 'scheduled' && array_key_exists('publish_at', $data)) {
             $pin->publish_at = $data['publish_at'] ? \Carbon\Carbon::parse($data['publish_at']) : null;
             unset($data['publish_at']);
