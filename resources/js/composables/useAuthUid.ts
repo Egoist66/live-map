@@ -1,5 +1,6 @@
 import { usePage } from '@inertiajs/vue3'
 
+
 /**
  * Id текущего пользователя, доступный из любого места.
  *
