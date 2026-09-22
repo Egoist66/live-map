@@ -85,7 +85,7 @@ const form = useBusinessRegisterForm()
       </div>
 
       <Button :loading="form.isSubmitting.value" type="submit" label="Создать кабинет компании →" class="w-full !bg-gradient-to-r !from-indigo-500 !to-violet-600 !border-0 !text-white !rounded-full !py-3.5" />
-      <div class="text-sm text-center text-stone-500 dark:text-zinc-400">Уже есть кабинет? <Link :href="route('login')" class="font-semibold text-ink-900 dark:text-white hover:underline">Войти</Link></div>
+      <div class="text-sm text-center text-stone-500 dark:text-zinc-400">Уже есть кабинет? <Link href="/login?account=business" class="font-semibold text-ink-900 dark:text-white hover:underline">Войти</Link></div>
     </form>
   </div>
 </template>

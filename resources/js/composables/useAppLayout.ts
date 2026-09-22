@@ -61,7 +61,6 @@ export function useAppLayout() {
         { separator: true },
         ...moderation,
         { label: 'Кабинет бизнеса', icon: 'pi pi-briefcase', accent: 'violet', active: route().current('cabinet.*'), command: () => router.visit('/cabinet') },
-        { label: 'Карта', icon: 'pi pi-map', accent: 'teal', active: route().current('map'), command: () => router.visit(route('map')) },
         { label: 'Чаты', icon: 'pi pi-comments', accent: 'sky', active: route().current('chat'), command: () => router.visit(route('chat')) },
         { label: 'Настройки бизнеса', icon: 'pi pi-cog', accent: 'slate', active: route().current('cabinet.settings'), command: () => router.visit('/cabinet/settings') },
         { separator: true },

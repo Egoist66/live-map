@@ -62,7 +62,6 @@ const menuItems = computed(() => [
   { label: 'Мои пины', icon: 'pi pi-list', accent: 'teal', active: currentPath.value.startsWith('/cabinet/pins'), command: () => router.visit('/cabinet/pins') },
   { label: 'Реквизиты компании', icon: 'pi pi-id-card', accent: 'slate', active: currentPath.value.startsWith('/cabinet/onboarding'), command: () => router.visit('/cabinet/onboarding') },
   { label: 'Настройки', icon: 'pi pi-cog', accent: 'slate', active: currentPath.value.startsWith('/cabinet/settings'), command: () => router.visit('/cabinet/settings') },
-  { label: 'Карта', icon: 'pi pi-map', accent: 'teal', active: currentPath.value.startsWith('/map'), command: () => router.visit('/map') },
   { label: 'Чаты', icon: 'pi pi-comments', accent: 'sky', active: currentPath.value.startsWith('/chat'), command: () => router.visit('/chat') },
   { separator: true },
   { label: 'Выйти', icon: 'pi pi-sign-out', accent: 'red', danger: true, command: () => logout() },
@@ -101,7 +100,6 @@ function logout(): void {
           </Link>
         </nav>
         <div class="ml-auto flex items-center gap-2 shrink-0">
-          <Link href="/map" class="hidden sm:inline-flex text-sm font-semibold text-stone-500 dark:text-zinc-400 hover:text-ink-900 dark:hover:text-white px-3 py-2">Карта</Link>
           <button type="button" aria-label="Меню компании" class="grid h-10 w-10 place-items-center overflow-hidden rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow-soft hover:bg-stone-50 dark:hover:bg-zinc-700 transition active:scale-95" @click="toggleMenu">
             <Avatar :image="avatarSrc" shape="circle" size="normal" class="!w-8 !h-8" />
           </button>

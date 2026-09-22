@@ -19,7 +19,12 @@ export function useWelcome() {
   const isAuthenticated = computed(() => !!((page.props as any).auth as any)?.user)
   const authUser = computed(() => ((page.props as any).auth as any)?.user ?? null)
 
+  const isBusinessAccount = computed(() => authUser.value?.account_type === 'business')
+
   const homeLanding = computed(() => {
+    if (isBusinessAccount.value) {
+      return '/cabinet'
+    }
     const raw = authUser.value?.default_mode
     if (raw === 'upin' || raw === 'ulove') {
       return raw === 'upin' ? '/map' : '/swipes'
@@ -39,6 +44,9 @@ export function useWelcome() {
     if (!isAuthenticated.value) {
       return 'Создать анкету ULove →'
     }
+    if (isBusinessAccount.value) {
+      return 'Открыть кабинет →'
+    }
     return isUpinHome.value ? 'Открыть карту →' : 'Открыть ULove →'
   })
   const profileCtaHref = computed(() => {
@@ -51,8 +59,11 @@ export function useWelcome() {
     if (!isAuthenticated.value) {
       return 'Войти'
     }
+    if (isBusinessAccount.value) {
+      return 'Открыть кабинет'
+    }
     return isUpinHome.value ? 'Открыть карту' : 'Открыть ULove'
   })
 
-  return { seo, isAuthenticated, primaryCtaHref, primaryCtaLabel, profileCtaHref, profileCtaLabel }
+  return { seo, isAuthenticated, isBusinessAccount, primaryCtaHref, primaryCtaLabel, profileCtaHref, profileCtaLabel }
 }

@@ -55,7 +55,7 @@ function switchTab(next: LandingTab): void {
         </Link>
         <nav class="flex items-center gap-1 min-[411px]:gap-2 shrink-0">
           <Link href="/map" class="hidden sm:inline-flex text-sm font-semibold text-stone-500 dark:text-zinc-400 hover:text-ink-900 dark:hover:text-white px-3 py-2">Карта</Link>
-          <Link :href="w.profileCtaHref.value"><Button :label="w.profileCtaLabel.value" class="!bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white !px-4 min-[411px]:!px-6 !py-2 min-[411px]:!py-2.5 !rounded-full !text-[13px] min-[411px]:!text-sm !font-semibold hover:!bg-ink-800 dark:hover:!bg-zinc-100 !border-0 shadow-soft whitespace-nowrap" /></Link>
+          <Link :href="landing.isBusiness.value && !landing.isAuthenticated.value ? '/login?account=business' : w.profileCtaHref.value"><Button :label="landing.isBusiness.value && !landing.isAuthenticated.value ? 'Войти в кабинет' : w.profileCtaLabel.value" class="!bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white !px-4 min-[411px]:!px-6 !py-2 min-[411px]:!py-2.5 !rounded-full !text-[13px] min-[411px]:!text-sm !font-semibold hover:!bg-ink-800 dark:hover:!bg-zinc-100 !border-0 shadow-soft whitespace-nowrap" /></Link>
         </nav>
       </div>
     </header>
@@ -115,16 +115,15 @@ function switchTab(next: LandingTab): void {
               <div
                 v-for="(profile, slideIndex) in hero.profiles.value"
                 :key="profile.name"
-                :class="['absolute inset-0 transition-all duration-700 ease-out', hero.slideClass(slideIndex)]"
+                :class="['absolute inset-0', hero.slideClass(slideIndex)]"
               >
-                <!-- Первый слайд — LCP лендинга: eager + high, остальные лениво.
-                     Размеры держат интринсик до загрузки (600×600 у Ани,
-                     800×640 у остальных — object-cover выравнивает). -->
+                <!-- Все фото грузим сразу: ленивая подгрузка давала пустой
+                     слайд при клике по точке — второй визуальный баг. -->
                 <img
                   :src="profile.photo"
                   class="absolute inset-0 w-full h-full object-cover"
                   :alt="`Анкета ULove — ${profile.name}`"
-                  :loading="slideIndex === 0 ? 'eager' : 'lazy'"
+                  loading="eager"
                   :fetchpriority="slideIndex === 0 ? 'high' : 'auto'"
                   decoding="async"
                   width="800"
@@ -153,16 +152,16 @@ function switchTab(next: LandingTab): void {
                 </div>
               </div>
             </div>
-            <div class="flex justify-center items-center gap-1 pt-3">
+            <div class="flex justify-center items-center pt-3">
               <button
                 v-for="(profile, dotIndex) in hero.profiles.value"
                 :key="profile.name"
                 type="button"
                 :aria-label="`Показать ${profile.name}`"
-                class="h-8 px-1.5 grid place-items-center"
+                class="w-8 h-8 grid place-items-center shrink-0"
                 @click="hero.goTo(dotIndex)"
               >
-                <span :class="['block h-2 rounded-full transition-all', dotIndex === hero.activeIndex.value ? 'w-6 bg-gradient-to-r from-rose-500 to-orange-400' : 'w-2 bg-stone-300 dark:bg-zinc-600']" />
+                <span :class="['block h-2 rounded-full transition-[width,background-color] duration-300', dotIndex === hero.activeIndex.value ? 'w-6 bg-gradient-to-r from-rose-500 to-orange-400' : 'w-2 bg-stone-300 dark:bg-zinc-600']" />
               </button>
             </div>
             <div class="flex items-center justify-between px-1 pt-3">

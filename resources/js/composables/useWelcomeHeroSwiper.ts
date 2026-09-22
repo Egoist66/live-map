@@ -17,7 +17,7 @@ const AUTOPLAY_DELAY = 3500
 const SWIPE_THRESHOLD = 40
 
 /**
- * Hero-слайдер лендинга: два профиля с автолистанием и свайпом.
+ * Hero-слайдер лендинга: профили с автолистанием, точками и свайпом.
  *
  * Вся логика hero-карточки живет здесь, компонент только отображает.
  * @returns профили, активный индекс и обработчики для шаблона
@@ -65,27 +65,53 @@ export function useWelcomeHeroSwiper() {
 
   const activeIndex = ref(0)
   const isPaused = ref(false)
+  /** Уходящий слайд: гаснет на месте, без прыжка вбок. */
+  const leavingIndex = ref<number | null>(null)
+  /** Направление последнего перехода: откуда въезжает новый слайд. */
+  const direction = ref<1 | -1>(1)
 
   let timer: ReturnType<typeof setInterval> | null = null
   let touchStartX: number | null = null
+  let clearTimer: ReturnType<typeof setTimeout> | null = null
 
   /**
    * Переходит к слайду с нормализацией индекса по кругу.
+   *
+   * Уходящий слайд только гаснет на месте, въезжающий едет со стороны
+   * движения, остальные перекладываются мгновенно (они невидимы).
+   * Любой ручной переход перезапускает автоплей — таймер больше
+   * не дёргает слайдер сразу после клика по точке.
+   *
    * @param index целевой индекс слайда
+   * @param dir явное направление (вперёд/назад), иначе по индексам
    */
-  function goTo(index: number): void {
+  function goTo(index: number, dir?: 1 | -1): void {
     const total = profiles.value.length
-    activeIndex.value = ((index % total) + total) % total
+    const next = ((index % total) + total) % total
+    restartAutoplay()
+    if (next === activeIndex.value) {
+      return
+    }
+    direction.value = dir ?? (next > activeIndex.value ? 1 : -1)
+    leavingIndex.value = activeIndex.value
+    activeIndex.value = next
+    if (clearTimer !== null) {
+      clearTimeout(clearTimer)
+    }
+    clearTimer = setTimeout(() => {
+      leavingIndex.value = null
+      clearTimer = null
+    }, 550)
   }
 
   /** Показывает следующий профиль. */
   function goNext(): void {
-    goTo(activeIndex.value + 1)
+    goTo(activeIndex.value + 1, 1)
   }
 
   /** Показывает предыдущий профиль. */
   function goPrev(): void {
-    goTo(activeIndex.value - 1)
+    goTo(activeIndex.value - 1, -1)
   }
 
   /** Останавливает текущий таймер автолистания. */
@@ -104,6 +130,13 @@ export function useWelcomeHeroSwiper() {
         goNext()
       }
     }, AUTOPLAY_DELAY)
+  }
+
+  /** Перезапускает часы автоплея (ручной переход). */
+  function restartAutoplay(): void {
+    if (timer !== null) {
+      startAutoplay()
+    }
   }
 
   /** Ставит автолистание на паузу (наведение мыши). */
@@ -157,19 +190,33 @@ export function useWelcomeHeroSwiper() {
 
   /**
    * Возвращает CSS-классы видимости слайда.
+   *
+   * transition висит только на движущихся слайдах: уходящий гаснет
+   * на месте, въезжающий едет со стороны, припаркованные стоят
+   * без анимации — клики по точкам больше ничего не дёргают.
+   *
    * @param index индекс слайда
-   * @returns классы активного или скрытого слайда
+   * @returns классы активного, уходящего или припаркованного слайда
    */
   function slideClass(index: number): string {
     if (index === activeIndex.value) {
-      return 'opacity-100 translate-x-0 pointer-events-auto z-[1]'
+      return 'opacity-100 translate-x-0 pointer-events-auto z-[1] transition-transform transition-opacity duration-500 ease-out'
     }
-    const direction = index > activeIndex.value ? 'translate-x-8' : '-translate-x-8'
-    return `opacity-0 pointer-events-none ${direction}`
+    if (index === leavingIndex.value) {
+      return 'opacity-0 translate-x-0 pointer-events-none transition-opacity duration-500 ease-out'
+    }
+    const offscreen = direction.value === 1 ? 'translate-x-8' : '-translate-x-8'
+    return `opacity-0 pointer-events-none ${offscreen}`
   }
 
   onMounted(startAutoplay)
-  onUnmounted(stopAutoplay)
+  onUnmounted(() => {
+    stopAutoplay()
+    if (clearTimer !== null) {
+      clearTimeout(clearTimer)
+      clearTimer = null
+    }
+  })
 
   return {
     profiles,
