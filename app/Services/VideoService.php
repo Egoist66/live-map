@@ -637,11 +637,17 @@ class VideoService
         // невидимые символы, обрезка и потеря \r\n. IP в логах не светим.
         if (in_array($kind, [VideoSignal::KIND_OFFER, VideoSignal::KIND_ANSWER], true) && is_string($payload['sdp'] ?? null)) {
             $sdp = (string) $payload['sdp'];
+            $hash = 5381;
+            $sdpLen = strlen($sdp);
+            for ($i = 0; $i < $sdpLen; $i++) {
+                $hash = (($hash * 33) + ord($sdp[$i])) & 0xFFFFFFFF;
+            }
             Log::info('video.sdp_debug', [
                 'call' => (int) $call->id,
                 'kind' => $kind,
                 'type' => (string) ($payload['type'] ?? ''),
-                'len' => strlen($sdp),
+                'len' => $sdpLen,
+                'hash' => sprintf('%08x', $hash),
                 'crlf' => substr_count($sdp, "\r\n"),
                 'lf' => substr_count($sdp, "\n"),
                 'head' => mb_substr(json_encode(mb_substr($sdp, 0, 200)), 0, 400),

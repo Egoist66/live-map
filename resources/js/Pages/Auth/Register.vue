@@ -86,7 +86,7 @@ function backToChoice(): void {
         <Select v-model="f.gender.value" :options="g.options" optionLabel="label" optionValue="value" placeholder="Выбери пол" checkmark fluid class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.gender" />
         <small class="auth-err">{{ f.errors.value.gender }}</small>
       </div>
-      <div class="grid grid-cols-2 gap-3">
+      <div class="grid grid-cols-1 min-[420px]:grid-cols-2 gap-3">
         <div class="min-w-0">
           <label class="auth-label">Дата рождения</label>
           <DatePicker v-model="bd.birthDateInput.value" v-bind="bd.birthDatePickerProps.value" placeholder="12.07.1997" class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.birth_date" />

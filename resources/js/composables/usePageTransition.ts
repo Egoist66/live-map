@@ -2,7 +2,7 @@ import { computed } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import { useMotion } from '@/composables/useMotion'
 
-export type PageTransitionPreset = 'fade-slide' | 'fade-blur' | 'slide' | 'scale'
+export type PageTransitionPreset = 'fade-slide' | 'fade-blur' | 'slide' | 'scale' | 'none'
 
 export interface UsePageTransitionOptions {
   preset?: PageTransitionPreset
@@ -41,7 +41,7 @@ export function usePageTransition(options: UsePageTransitionOptions = {}) {
   })
 
   const transitionName = computed(() => {
-    if (motionOff.value) {
+    if (motionOff.value || preset === 'none') {
       return 'page-instant'
     }
 

@@ -41,7 +41,7 @@ const form = useBusinessRegisterForm()
         <small class="auth-err">{{ form.errors.value.legal_form }}</small>
       </div>
 
-      <div class="grid grid-cols-2 gap-3">
+      <div class="grid grid-cols-1 min-[420px]:grid-cols-2 gap-3">
         <div class="min-w-0">
           <label class="auth-label">УНП (9 цифр) *</label>
           <InputText v-model="form.unp.value" v-bind="form.unpAttrs" inputmode="numeric" placeholder="123456789" class="w-full mt-1.5 auth-input font-mono" :invalid="!!form.errors.value.unp" />

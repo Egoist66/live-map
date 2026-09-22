@@ -84,7 +84,7 @@ const stepItems = [{ label: 'Компания' }, { label: 'Реквизиты �
               <label class="text-[13px] font-semibold dark:text-zinc-100">Фактический адрес / точка</label>
               <InputText v-model="ob.address.value" placeholder="Где вас найти на карте" class="w-full mt-1.5 !rounded-2xl" />
             </div>
-            <div class="grid grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 min-[420px]:grid-cols-2 gap-3">
               <div>
                 <label class="text-[13px] font-semibold dark:text-zinc-100">Широта</label>
                 <InputText v-model="ob.lat.value" inputmode="decimal" placeholder="53.9" class="w-full mt-1.5 !rounded-2xl font-mono" />

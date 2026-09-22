@@ -9,12 +9,12 @@ import PwaUpdateBanner from '@/Components/Features/Pwa/PwaUpdateBanner.vue'
 import { useGuestLayout } from '@/composables/useGuestLayout'
 import { useClientReady } from '@/composables/useClientReady'
 
-const { isFaq, shouldShowFooter } = useGuestLayout()
+const { isFaq, isAuthPage, shouldShowFooter } = useGuestLayout()
 const { isClientReady } = useClientReady()
 </script>
 
 <template>
-  <div class="min-h-screen min-h-dvh flex bg-surface dark:bg-[#0B0F1A]">
+  <div class="min-h-screen min-h-dvh flex w-full overflow-x-clip bg-surface dark:bg-[#0B0F1A]">
     <div class="hidden lg:flex w-[360px] xl:w-[400px] shrink-0 bg-ink-900 text-white relative overflow-hidden">
       <div class="absolute inset-0">
         <div class="absolute inset-0 opacity-[0.04]" style="background-image: radial-gradient(circle at 1px 1px, white 1px, transparent 0); background-size: 24px 24px"></div>
@@ -48,15 +48,15 @@ const { isClientReady } = useClientReady()
         </div>
       </div>
     </div>
-    <div :class="isFaq ? 'flex-1 flex flex-col px-0 py-0 relative dark:bg-[#0B0F1A] overflow-auto min-w-0 w-full' : 'flex-1 flex flex-col items-center px-4 sm:px-6 py-6 sm:py-10 relative dark:bg-[#0B0F1A] min-w-0 w-full'">
+    <div :class="isFaq ? 'flex-1 flex flex-col px-0 py-0 relative dark:bg-[#0B0F1A] overflow-auto min-w-0 w-full overflow-x-clip' : 'flex-1 flex flex-col items-center px-4 sm:px-6 py-6 sm:py-10 relative dark:bg-[#0B0F1A] min-w-0 w-full overflow-x-clip'">
       <div class="absolute inset-0 -z-10 bg-gradient-to-b from-white to-surface dark:from-zinc-900 dark:to-[#0B0F1A]"></div>
-      <div :class="isFaq ? 'flex w-full flex-1 flex-col' : 'flex w-full flex-1 items-center justify-center'">
-      <PageTransition>
+      <div :class="isFaq ? 'flex w-full flex-1 flex-col min-w-0' : 'flex w-full flex-1 items-center justify-center min-w-0'">
+      <PageTransition :preset="isAuthPage ? 'none' : 'fade-slide'">
         <template v-if="isFaq">
           <slot />
         </template>
         <template v-else>
-          <div class="w-full max-w-[440px] min-w-0">
+          <div class="guest-auth w-full max-w-[440px] min-w-0 mx-auto">
             <Link href="/" class="lg:hidden flex items-center gap-2.5 mb-5 sm:mb-6">
               <span class="w-9 h-9 rounded-xl overflow-hidden shrink-0 grid place-items-center"><BrandMark class="h-full w-full" /></span>
               <span class="font-black tracking-[-0.03em] text-xl text-ink-900 dark:text-white">U<span class="font-light text-ink-600 dark:text-zinc-400">Pin</span></span>

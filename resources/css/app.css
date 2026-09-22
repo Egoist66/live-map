@@ -13,7 +13,7 @@
     --bg: #0B0F1A;
     --ink: #F8FAFC;
   }
-   html { scrollbar-gutter: auto; color-scheme: light; overflow-x: clip; max-width: 100vw; background: #F8F7F3; overscroll-behavior-y: none; }
+   html { scrollbar-gutter: stable; color-scheme: light; overflow-x: clip; max-width: 100vw; background: #F8F7F3; overscroll-behavior-y: none; }
    html.dark { color-scheme: dark; background: #0B0F1A; }
    body {
      background: var(--bg);
@@ -501,7 +501,19 @@ div#p-license-host {
   display: none !important;
 }
 
-.page-transition-wrapper { will-change: transform, opacity; }
+.page-transition-wrapper { will-change: transform, opacity; min-width: 0; width: 100%; overflow-x: clip; }
+
+/* iOS Safari зумит вьюпорт при фокусе полей мельче 16px — на логине и
+   регистрации это выглядит как дёрганье формы. На мобиле все поля
+   гостевых форм — 16px, десктоп не трогаем. */
+@media (max-width: 640px) {
+  .guest-auth .p-inputtext,
+  .guest-auth .p-select-label,
+  .guest-auth .p-datepicker-input,
+  .guest-auth input {
+    font-size: 16px !important;
+  }
+}
 
 /* Переходы между экранами: ТОЛЬКО opacity + transform.
    Полноэкранный `filter: blur()` здесь запрещён: блюр всего дерева

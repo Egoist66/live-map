@@ -7,6 +7,22 @@ import { pokeRealtime } from '@/composables/useRealtimePoller'
 const RETRY_DELAYS_MS = [500, 1000, 2000, 4000]
 
 /**
+ * Контрольная сумма строки (djb2, hex): сверяем SDP дошедший до парсера
+ * с серверным (video.sdp_debug пишет такой же). SDP — ASCII, поэтому
+ * побайтово сходится с PHP-версией.
+ *
+ * @param raw строка SDP
+ * @returns hex-хеш
+ */
+function hashSdp(raw: string): string {
+  let hash = 5381
+  for (let i = 0; i < raw.length; i++) {
+    hash = ((hash * 33 + raw.charCodeAt(i)) >>> 0)
+  }
+  return hash.toString(16).padStart(8, '0')
+}
+
+/**
  * Подождать заданное время (бэкофф ретраев).
  *
  * @param ms миллисекунд
@@ -153,8 +169,8 @@ export function usePeerConnection() {
     iceRecv: 0,
     lastError: null as string | null,
   })
-  /** Последний провал обработки сигнала (вид/состояние/ошибка) — показываем в оверлее. */
-  const signalFailure = ref<{ kind: string; state: string; message: string } | null>(null)
+  /** Последний провал обработки сигнала (вид/состояние/ошибка/SDP) — показываем в оверлее. */
+  const signalFailure = ref<{ kind: string; state: string; message: string; sdpLen: number; sdpHash: string } | null>(null)
   /** Компактная строка счётчиков для оверлея. */
   const signalLabel = computed(() => {
     const s = signalStats.value
@@ -512,15 +528,24 @@ export function usePeerConnection() {
         } catch {}
       }
     } catch (err) {
-      signalingError.value = 'Сбой соединения — попробуй переподключиться'
+      const state = String(pc?.signalingState ?? 'none')
+      const message = (err as Error)?.message ?? String(err)
+      // SDP на сервере побайтово целый (проверено video.sdp_debug) — если
+      // парсер его не читает, дело в старом/багgy-браузере принимающего.
+      if (/parse.*SessionDescription/i.test(message)) {
+        signalingError.value = 'Браузер не смог прочитать звонок — обнови его до последней версии и попробуй ещё'
+      } else {
+        signalingError.value = 'Сбой соединения — попробуй переподключиться'
+      }
       // Провал обработки — снимаем раннюю метку дедупа, чтобы следующая
       // доставка того же фрейма попробовала снова, а не игнорировалась.
       if ((kind === 'offer' || kind === 'answer') && sid > 0) {
         seenRemoteIds.delete(sid)
       }
-      const state = String(pc?.signalingState ?? 'none')
-      const message = (err as Error)?.message ?? String(err)
-      signalFailure.value = { kind, state, message }
+      const rawSdp = typeof (e.payload as { sdp?: unknown } | null)?.sdp === 'string'
+        ? (e.payload as { sdp: string }).sdp
+        : ''
+      signalFailure.value = { kind, state, message, sdpLen: rawSdp.length, sdpHash: hashSdp(rawSdp) }
       try {
         console.warn('[video] signal failed', {
           kind,
