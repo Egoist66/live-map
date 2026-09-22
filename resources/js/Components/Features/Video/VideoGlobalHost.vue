@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, ref } from 'vue'
 import { useVideoSession } from '@/composables/useVideoSession'
+import { currentAuthUid } from '@/composables/useAuthUid'
 import { videoApi } from '@/services/video.api'
 import { busEmit } from '@/services/realtime-bus'
 import IncomingCallDialog from '@/Components/Features/Video/IncomingCallDialog.vue'
@@ -44,11 +45,7 @@ function socketAlive(): boolean {
 
 /** Id текущего юзера (0 — гость: добивки не нужны, будет 401-спам). */
 function myUid(): number {
-  try {
-    return Number((window as any)?.__inertia_page?.props?.auth?.user?.id || 0)
-  } catch {
-    return 0
-  }
+  return currentAuthUid()
 }
 
 /** Подобрать висящие входящие, если realtime молчит. */

@@ -5,6 +5,7 @@ import type { VideoCallPayload } from '@/services/video.api'
 import { busOn } from '@/services/realtime-bus'
 import { ensureUserChannel } from '@/composables/useUserChannel'
 import { pokeRealtime } from '@/composables/useRealtimePoller'
+import { currentAuthUid } from '@/composables/useAuthUid'
 
 /** Статус видеосессии. */
 export type VideoStatus = 'idle' | 'searching' | 'ringing-out' | 'ringing-in' | 'active'
@@ -84,11 +85,8 @@ export const useVideoStore = defineStore('video', () => {
       declineBusy(e.call_id)
       return
     }
-    let uid = 0
-    try {
-      uid = Number((window as any)?.__inertia_page?.props?.auth?.user?.id || 0)
-    } catch {}
-    const peer = e.caller?.id === uid ? e.callee : e.caller
+    const uid = currentAuthUid()
+    const peer = uid > 0 && e.caller?.id === uid ? e.callee : e.caller
     incoming.value = {
       callId: Number(e.call_id),
       mode: String(e.mode || 'match'),

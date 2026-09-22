@@ -278,6 +278,32 @@ export function usePeerConnection() {
 
     // Offer шлём только по accepted: callee к этому моменту уже
     // принял и поднял peer, гонки offer-до-accept нет.
+    //
+    // Мгновенная добивка: offer/accepted мог уйти пока мы ждали ICE
+    // с бэкенда (подписки ещё не было) — без неё P2P висел чёрным до
+    // тика поллера. Дедуп по id делает повтор безопасным.
+    void catchUp()
+  }
+
+  /**
+   * Подобрать сигналы звонка, ушедшие до подписки на шину.
+   *
+   * Закрывает окно гонки bind: пока ждали ICE с бэкенда, вторая сторона
+   * могла уже принять (accepted) или прислать offer — сокет их принёс
+   * в пустоту, а peer без них навсегда чёрный. Тянем всё с нуля через
+   * тот же onSignal (дедуп по id отсечёт повторы от сокета/поллера).
+   */
+  async function catchUp(): Promise<void> {
+    const callId = boundCallId
+    if (callId == null) return
+    try {
+      const res = await videoApi.signals(callId, 0)
+      const rows = Array.isArray(res.signals) ? res.signals : []
+      for (const row of rows) {
+        if (boundCallId !== callId || !pc) return
+        await onSignal(row)
+      }
+    } catch {}
   }
 
   /**

@@ -1,8 +1,9 @@
-import { onUnmounted, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { router } from '@inertiajs/vue3'
 import { useVideoStore } from '@/stores/videoRoulette'
 import { useUserMedia } from '@/composables/useUserMedia'
 import { resolveIceServers, usePeerConnection } from '@/composables/usePeerConnection'
+import { captureAuthUid, currentAuthUid } from '@/composables/useAuthUid'
 import { videoApi } from '@/services/video.api'
 import type { VideoPeer } from '@/services/video.api'
 import { chatApi } from '@/services/chat.api'
@@ -32,6 +33,11 @@ let inviteBusBound = false
 /** Защита от двойного автоприёма одной и той же пары. */
 let autoAccepting = false
 let heartbeat: ReturnType<typeof setInterval> | null = null
+/** Вотчеры сессии уже зарегистрированы (хук зовут 4+ компонентов — без гарда каждый вешал свой watch и дублировал bind/accept). */
+let sessionWatchesBound = false
+/** Последние живые <video>-узлы: нужны чтобы чистить shared-рефы при размонтировании. */
+let lastLocalNode: HTMLVideoElement | null = null
+let lastRemoteNode: HTMLVideoElement | null = null
 
 /**
  * Приглашение в приват: payload {conversation_id} от второго участника.
@@ -89,6 +95,7 @@ async function playVideoEl(
  * <video :ref="v.remoteRef" autoplay playsinline />
  */
 export function useVideoSession() {
+  captureAuthUid()
   const store = useVideoStore()
   if (!sharedMedia) sharedMedia = useUserMedia()
   if (!sharedPeer) sharedPeer = usePeerConnection()
@@ -110,48 +117,61 @@ export function useVideoSession() {
   let cameraTrackBackup: MediaStreamTrack | null = null
   let shareTrack: MediaStreamTrack | null = null
 
-  watch(
-    () => media.stream.value,
-    (next) => {
-      if (next && localRef.value) {
-        localRef.value.srcObject = next
-      }
-    },
-  )
+  bindSessionWatchesOnce()
 
-  watch(
-    () => store.status,
-    (next) => {
-      if (next === 'searching') startHeartbeat()
-      else stopHeartbeat()
-      if (next === 'idle') {
-        peer.close()
-        remoteAudioBlocked.value = false
-      }
-      if (next === 'searching' || next === 'ringing-out' || next === 'active') {
-        overlayOpen.value = true
-      } else if (next === 'ringing-in' && !sharedRouletteAuto.value) {
-        // Входящий принимает диалог «Принять/Отклонить» — пустой оверлей
-        // «Видео» поверх него не открываем (на мобилке перекрывал кнопки).
-        overlayOpen.value = false
-      }
-      if (next === 'ringing-in') void maybeAutoAcceptRoulette()
-      if (next === 'active') void ensureCallerOffer()
-    },
-  )
+  /**
+   * Зарегистрировать вотчеры сессии один раз на приложение.
+   *
+   * Хук дёргают VideoGlobalHost, VideoOverlay, IncomingCallDialog, свайпы и
+   * чат — без гарда каждый инстанс вешал свои watch на те же стор-поля:
+   * смена звонка запускала 3-5 параллельных peer.bind (гонка PC, утечки
+   * подписок шины), а размонтирование любого компонента (уход со свайпов)
+   * гасило общий heartbeat очереди через onUnmounted. Heartbeat теперь
+   * целиком владеет вотчер статуса: старт на searching, стоп на остальном.
+   */
+  function bindSessionWatchesOnce(): void {
+    if (sessionWatchesBound) return
+    sessionWatchesBound = true
 
-  watch(
-    () => store.call?.id ?? null,
-    (callId) => {
-      const peerBrief = store.call?.peer ?? null
-      if (peerBrief) lastPeer.value = peerBrief
-      if (callId != null) void ensurePeerForCall()
-    },
-  )
+    watch(
+      () => media.stream.value,
+      (next) => {
+        if (next && localRef.value) {
+          void playVideoEl(localRef.value, next, false, markRemoteBlocked)
+        }
+      },
+    )
 
-  onUnmounted(() => {
-    stopHeartbeat()
-  })
+    watch(
+      () => store.status,
+      (next) => {
+        if (next === 'searching') startHeartbeat()
+        else stopHeartbeat()
+        if (next === 'idle') {
+          peer.close()
+          remoteAudioBlocked.value = false
+        }
+        if (next === 'searching' || next === 'ringing-out' || next === 'active') {
+          overlayOpen.value = true
+        } else if (next === 'ringing-in' && !sharedRouletteAuto.value) {
+          // Входящий принимает диалог «Принять/Отклонить» — пустой оверлей
+          // «Видео» поверх него не открываем (на мобилке перекрывал кнопки).
+          overlayOpen.value = false
+        }
+        if (next === 'ringing-in') void maybeAutoAcceptRoulette()
+        if (next === 'active') void ensureCallerOffer()
+      },
+    )
+
+    watch(
+      () => store.call?.id ?? null,
+      (callId) => {
+        const peerBrief = store.call?.peer ?? null
+        if (peerBrief) lastPeer.value = peerBrief
+        if (callId != null) void ensurePeerForCall()
+      },
+    )
+  }
 
   /**
    * Подписаться на входящие звонки (сокет + polling).
@@ -258,8 +278,16 @@ export function useVideoSession() {
   function setLocalEl(el: unknown): void {
     const node = el as HTMLVideoElement | null
     if (!node) {
+      // Размонтирование старого <video> (поиск → звонок): чистим только если
+      // ref всё ещё указывает на него, иначе attachRemote/play уходили в
+      // откреплённый узел и новый экран оставался чёрным.
+      if (lastLocalNode && localRef.value === lastLocalNode) {
+        localRef.value = null
+      }
+      lastLocalNode = null
       return
     }
+    lastLocalNode = node
     localRef.value = node
     if (media.stream.value) {
       void playVideoEl(node, media.stream.value, false, markRemoteBlocked)
@@ -275,8 +303,13 @@ export function useVideoSession() {
   function setRemoteEl(el: unknown): void {
     const node = el as HTMLVideoElement | null
     if (!node) {
+      if (lastRemoteNode && remoteRef.value === lastRemoteNode) {
+        remoteRef.value = null
+      }
+      lastRemoteNode = null
       return
     }
+    lastRemoteNode = node
     remoteRef.value = node
     const ready = peer.remoteStream.value
     if (ready && ready.getTracks().length > 0) {
@@ -599,15 +632,14 @@ export function useVideoSession() {
    *
    * Лайаут персистентный — оверлей откроется сразу, визит на свайпы
    * догонит следом. Гостей ведём на логин (анонимной рулетки нет).
+   * Uid берём из useAuthUid: старый путь через window.__inertia_page
+   * всегда давал 0 и гнал залогиненных на /login → /profile.
    */
   function openRouletteFromNav(): void {
-    try {
-      const uid = Number((window as any)?.__inertia_page?.props?.auth?.user?.id || 0)
-      if (!uid) {
-        router.visit('/login')
-        return
-      }
-    } catch {}
+    if (!currentAuthUid()) {
+      router.visit('/login')
+      return
+    }
     try {
       if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/swipes')) {
         router.visit('/swipes')

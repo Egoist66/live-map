@@ -62,6 +62,7 @@ export function resetAppNotifications(): void {
   subscribedUid = null
   inited = false
   initialShown = false
+  toastedInboxIds.clear()
   seenMsgIds = new Set<number>()
   seenEventAt = new Map<string, number>()
   timers.forEach((t) => clearTimeout(t))
@@ -821,6 +822,99 @@ function handleReport(e: any) {
     createdAt: Date.now(),
   })
 }
+/**
+ * Страховка тостов при мёртвом realtime.
+ *
+ * Симптом: подписчик видит +1 в колокольчике (цифры едут REST-опросом
+ * бейджей), а тост не всплывает — сокет молчит и user:notification.created
+ * не приходит. Раз в TOAST_POLL_MS смотрим свежие непрочитанные строки
+ * inbox и прогоняем через тот же handleNotification. При живом сокете
+ * пропускаем тик: события и так показывают тосты, дубли не нужны
+ * (двойная защита — recordInboxToast + 20с-дедуп notif-{id}).
+ */
+
+const TOAST_POLL_MS = 20000
+const TOAST_FRESH_MS = 120000
+let toastPollTimer: ReturnType<typeof setInterval> | null = null
+/** Id inbox-строк, уже показанных тостами (живут дольше 20с-дедупа). */
+const toastedInboxIds = new Set<string>()
+
+/** Жив ли сокет: тогда тосты едут событиями, опрос не нужен. */
+function socketAlive(): boolean {
+  try {
+    const echo = (window as any).Echo
+    return echo?.connector?.pusher?.connection?.state === 'connected'
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Запомнить строку, пришедшую живым событием, чтобы опрос не продублировал.
+ *
+ * @param e событие user:notification.created
+ */
+function recordInboxToast(e: any): void {
+  try {
+    const id = String(e?.notification?.id ?? '')
+    if (!id) return
+    toastedInboxIds.add(id)
+    if (toastedInboxIds.size > 200) {
+      const first = toastedInboxIds.values().next().value as string | undefined
+      if (first !== undefined) toastedInboxIds.delete(first)
+    }
+  } catch {}
+}
+
+/**
+ * Возраст строки inbox в мс (по updated_at, иначе created_at).
+ *
+ * @param n строка inbox
+ * @returns возраст или null когда дату не разобрать
+ */
+function rowAgeMs(n: any): number | null {
+  try {
+    const raw = n?.updated_at || n?.created_at
+    const at = raw ? Date.parse(String(raw)) : NaN
+    if (!Number.isFinite(at)) return null
+    return Date.now() - at
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Добить тосты опросом inbox (мёртвый сокет, отвалившийся user-канал).
+ * Старые непрочитанные не трогаем: их пользователь уже видел в ленте.
+ */
+async function pollToastUnreads(): Promise<void> {
+  if (typeof document !== 'undefined' && document.hidden) return
+  if (!subscribedUid) return
+  if (socketAlive()) return
+  try {
+    const { notificationsApi } = await import('@/services/notifications.api')
+    const rows = await notificationsApi.list().catch(() => [] as any[])
+    const list = Array.isArray(rows) ? rows : []
+    let toasted = 0
+    for (const n of list) {
+      try {
+        const id = String(n?.id ?? '')
+        if (!id || n?.read_at) continue
+        if (toastedInboxIds.has(id)) continue
+        toastedInboxIds.add(id)
+        const age = rowAgeMs(n)
+        if (age === null || age > TOAST_FRESH_MS) continue
+        handleNotification({ notification: n })
+        toasted += 1
+      } catch {}
+    }
+    if (toasted > 0) {
+      try {
+        console.info(`[notify] toast fallback: ${toasted}`)
+      } catch {}
+    }
+  } catch {}
+}
 function subscribe() {
   try {
     const uid = getUid()
@@ -833,7 +927,9 @@ function subscribe() {
       busBound = true
       busOn('user:message.sent', handleMessage)
       busOn('user:notification.created', handleNotification)
+      busOn('user:notification.created', recordInboxToast)
     }
+    void pollToastUnreads()
   } catch {}
 }
 /**
@@ -870,6 +966,9 @@ function init() {
   subscribe()
   void showInitialUnreads()
   window.addEventListener('focus', subscribe)
+  if (!toastPollTimer && typeof window !== 'undefined') {
+    toastPollTimer = setInterval(() => void pollToastUnreads(), TOAST_POLL_MS)
+  }
 }
 export function useAppNotifications() {
   onMounted(() => init())
