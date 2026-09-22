@@ -5,7 +5,6 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Бизнес-профиль компании для кабинета (РБ-законодательство).
@@ -36,7 +35,9 @@ use Illuminate\Support\Facades\Storage;
  * @property string|null $verification_notes
  * @property \Carbon\Carbon|null $verified_at
  * @property string|null $logo_path
+ * @property string|null $cover_path
  * @property-read string|null $logo_url
+ * @property-read string|null $cover_url
  */
 class Business extends Model
 {
@@ -63,6 +64,7 @@ class Business extends Model
         'verification_notes',
         'verified_at',
         'logo_path',
+        'cover_path',
     ];
 
     protected $casts = [
@@ -73,7 +75,7 @@ class Business extends Model
         'verified_at' => 'datetime',
     ];
 
-    protected $appends = ['logo_url'];
+    protected $appends = ['logo_url', 'cover_url'];
 
     public const LEGAL_FORMS = ['ooo', 'ip', 'odo', 'zao', 'self_employed', 'craft', 'other'];
 
@@ -125,15 +127,12 @@ class Business extends Model
 
     public function getLogoUrlAttribute(): ?string
     {
-        if (empty($this->logo_path)) {
-            return null;
-        }
+        return \App\Services\MediaDisk::url($this->logo_path);
+    }
 
-        try {
-            return Storage::disk('public')->url($this->logo_path);
-        } catch (\Throwable) {
-            return null;
-        }
+    public function getCoverUrlAttribute(): ?string
+    {
+        return \App\Services\MediaDisk::url($this->cover_path);
     }
 
     /**
@@ -157,6 +156,7 @@ class Business extends Model
             'working_hours' => $this->working_hours,
             'is_verified' => $this->isVerified(),
             'logo_url' => $this->logo_url,
+            'cover_url' => $this->cover_url,
         ];
     }
 

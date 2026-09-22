@@ -4,7 +4,6 @@ import { h } from 'vue'
 import BusinessLayout from '@/Layouts/BusinessLayout.vue'
 import BusinessStatCard from '@/Components/Features/Business/BusinessStatCard.vue'
 import BusinessVerificationBadge from '@/Components/Features/Business/BusinessVerificationBadge.vue'
-import AccountTypeGateModal from '@/Components/Features/Business/AccountTypeGateModal.vue'
 import { useBusinessDashboard } from '@/composables/useBusinessDashboard'
 import { useSeo } from '@/composables/useSeo'
 import Button from 'primevue/button'
@@ -33,6 +32,8 @@ if (props.initialDashboard && !dash.store.dashboard) {
   <Head title="Кабинет бизнеса" />
   <div class="space-y-4 pb-2">
     <section class="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-indigo-950 via-indigo-900 to-violet-900 text-white shadow-float">
+      <img v-if="dash.store.profile?.cover_url" :src="dash.store.profile.cover_url" alt="" aria-hidden="true" class="absolute inset-0 w-full h-full object-cover pointer-events-none" />
+      <div class="absolute inset-0 pointer-events-none bg-gradient-to-t from-indigo-950/85 via-indigo-950/45 to-indigo-950/25"></div>
       <div class="absolute inset-0 pointer-events-none" style="background-image: radial-gradient(circle at 85% 15%, rgba(255,255,255,.14) 0 2px, transparent 3px), radial-gradient(circle at 70% 80%, rgba(255,255,255,.10) 0 2px, transparent 3px); background-size: 72px 72px;"></div>
       <div class="absolute -top-20 -right-20 w-72 h-72 rounded-full bg-violet-500/30 blur-[70px] pointer-events-none"></div>
       <div class="relative p-5 sm:p-7">
@@ -165,5 +166,4 @@ if (props.initialDashboard && !dash.store.dashboard) {
       </Card>
     </div>
   </div>
-  <AccountTypeGateModal mode="auth" />
 </template>

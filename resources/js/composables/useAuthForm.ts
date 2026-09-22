@@ -144,20 +144,9 @@ export function useRegisterForm() {
   }
 
   const submit = handleSubmit(async (vals: any) => {
-    const payload = { ...vals, home_radius_km: 5 }
+    const payload = { ...vals, home_radius_km: 5, account_type: 'person' }
     if (goalPreset.locked) {
       payload.signup_goal = goalPreset.goal
-    }
-    try {
-      const params = new URLSearchParams(window.location.search)
-      const storedChoice = window.localStorage.getItem('upin_account_choice')
-      const isBusiness = params.get('account') === 'business' || storedChoice === 'business' || payload.signup_goal === 'business'
-      payload.account_type = isBusiness ? 'business' : 'person'
-      if (isBusiness) {
-        payload.signup_goal = 'business'
-      }
-    } catch {
-      payload.account_type = payload.signup_goal === 'business' ? 'business' : 'person'
     }
     const residenceOk = await residenceCheck.recheckCountry()
     if (!residenceOk) {

@@ -2,9 +2,9 @@ import { computed, ref } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 
 /**
- * Вкладка лендинга: ULove-знакомства или UPin-карта.
+ * Вкладка лендинга: ULove-знакомства, UPin-карта или UPin Business.
  */
-export type LandingTab = 'ulove' | 'upin'
+export type LandingTab = 'ulove' | 'upin' | 'business'
 
 const STORAGE_KEY = 'welcome_landing_tab'
 
@@ -45,6 +45,7 @@ const ULove_CONTENT = {
     ],
     chips: ['Пин-свидание в 2 клика', 'Без точного адреса', 'Вопросы и помощь рядом'],
     ctaLabel: 'Открыть карту →',
+    ctaHref: '/map',
   },
   privacy: {
     tag: '🔒 Приватность по умолчанию',
@@ -91,6 +92,7 @@ const UPIN_CONTENT = {
     ],
     chips: ['Фильтр одним тапом', 'Живут часы', 'Комменты и чат'],
     ctaLabel: 'Открыть карту →',
+    ctaHref: '/map',
   },
   privacy: {
     tag: '🔒 Адрес — только твой',
@@ -105,6 +107,50 @@ const PIN_SAMPLES = [
   { emoji: '🐕', title: 'Кто гуляет с собакой?', meta: 'Парк за домом · выхожу в 19:00 · 800 м' },
   { emoji: '🚴', title: 'Велозаезд в субботу', meta: 'Собираю компанию · старт в 10:00 · 1,2 км' },
 ]
+
+const BUSINESS_CONTENT = {
+  badge: 'UPIN PRO · БИЗНЕС',
+  badgeNote: 'кабинет компании · проверка по УНП · клиенты с карты',
+  titleTop: 'Клиенты рядом.',
+  titleAccent: 'UPin Pro',
+  titleTail: '— официально.',
+  description:
+    'Кабинет компании, проверка по УНП и метка на карте, которую видят все. Пины бизнеса больше и заметнее, promo-подпись завлекает. Работаем по законодательству Республики Беларусь.',
+  secondaryLabel: 'Как это работает',
+  trust: 'Проверка по УНП · Бейдж «Проверено» · Отмена в 1 клик',
+  stats: [
+    { value: '50 км', note: 'радиус видимости' },
+    { value: '×1.45', note: 'пины заметнее' },
+    { value: 'УНП', note: 'проверка РБ' },
+  ],
+  steps: [
+    { icon: 'pi-id-card', title: '01 · Регистрация по УНП', text: 'Форма, УНП из 9 цифр и юридический адрес. Реквизиты подставятся в кабинет сами.' },
+    { icon: 'pi-verified', title: '02 · Проверка и метка', text: 'После проверки компания появляется на карте у всех — особая метка со списком пинов.' },
+    { icon: 'pi-chart-line', title: '03 · Клиенты и продвижение', text: 'Заметные пины, promo-подпись, статистика просмотров. Продвижение — поштучно.' },
+  ],
+  finalTitle: 'Готовы к клиентам с карты?',
+  finalText: 'Регистрация компании за 3 минуты — дальше проверим УНП и включим метку.',
+  crossHint: 'Ты персона? Смотри ULove →',
+  spotlight: {
+    tag: '💼 ВИЗИТКА БИЗНЕСА · $9.99/МЕС',
+    title: 'Платите за клиентов, а не за тариф.',
+    text: 'Бессрочные пины, радиус 50 км, адрес, телефон, часы и бейдж «Проверено». Плюс поштучно: рекламный пин, пуш по району, купон с кнопкой «Маршрут».',
+    tiles: [
+      { top: '🏢 Метка компании', sub: 'Видны всем на карте · список пинов' },
+      { top: '📢 Promo-подпись', sub: '−20% сегодня · видят все рядом' },
+      { top: '👁 Статистика', sub: 'Просмотры, лайки, маршруты' },
+    ],
+    chips: ['Бессрочные пины', 'Бейдж «Проверено»', 'Пуш по району'],
+    ctaLabel: 'Создать кабинет →',
+    ctaHref: '/register?account=business',
+  },
+  privacy: {
+    tag: '🇧🇾 Работаем по РБ',
+    title: 'Компания под контролем.',
+    text: 'Проверка по УНП из 9 цифр и юридическому адресу. Верифицированные получают бейдж доверия и бессрочные пины.',
+    chips: ['УНП 9 цифр', 'Юрадрес', 'Проверка'],
+  },
+}
 
 const PIN_CHIPS = ['Пин в 2 клика', 'Без точного адреса', 'Вопросы и помощь рядом']
 
@@ -129,11 +175,12 @@ export function useWelcomeMode() {
   }
 
   const isUlove = computed(() => tab.value === 'ulove')
-  const content = computed(() => (isUlove.value ? ULove_CONTENT : UPIN_CONTENT))
+  const isBusiness = computed(() => tab.value === 'business')
+  const content = computed(() => (isUlove.value ? ULove_CONTENT : tab.value === 'upin' ? UPIN_CONTENT : BUSINESS_CONTENT))
 
   /**
-   * Палитра активной стороны: ULove — розово-оранжевая, UPin — голубая.
-   * Полные строки классов, чтобы Tailwind JIT их увидел.
+   * Палитра активной стороны: ULove — розово-оранжевая, UPin — голубая,
+   * Business — индиго-фиолетовая. Полные строки классов, чтобы Tailwind JIT их увидел.
    */
   const theme = computed(() =>
     isUlove.value
@@ -145,17 +192,50 @@ export function useWelcomeMode() {
           logo: 'bg-gradient-to-br from-rose-500 via-fuchsia-500 to-orange-400',
           logoIcon: 'pi pi-heart-fill',
         }
-      : {
-          accentText: 'bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500 bg-clip-text text-transparent',
-          ctaBtn: '!bg-gradient-to-r !from-sky-500 !via-blue-500 !to-indigo-500',
-          badge: '!bg-gradient-to-r !from-sky-500 !via-blue-500 !to-indigo-500',
-          stepIcon: 'bg-gradient-to-r from-sky-500 to-indigo-500',
-          logo: 'bg-gradient-to-br from-sky-500 via-blue-500 to-indigo-500',
-          logoIcon: 'pi pi-map-marker',
-        },
+      : isBusiness.value
+        ? {
+            accentText: 'bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500 bg-clip-text text-transparent',
+            ctaBtn: '!bg-gradient-to-r !from-indigo-500 !to-violet-600',
+            badge: '!bg-gradient-to-r !from-indigo-500 !to-violet-600',
+            stepIcon: 'bg-gradient-to-br from-indigo-500 to-violet-600',
+            logo: 'bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500',
+            logoIcon: 'pi pi-briefcase',
+          }
+        : {
+            accentText: 'bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500 bg-clip-text text-transparent',
+            ctaBtn: '!bg-gradient-to-r !from-sky-500 !via-blue-500 !to-indigo-500',
+            badge: '!bg-gradient-to-r !from-sky-500 !via-blue-500 !to-indigo-500',
+            stepIcon: 'bg-gradient-to-r from-sky-500 to-indigo-500',
+            logo: 'bg-gradient-to-br from-sky-500 via-blue-500 to-indigo-500',
+            logoIcon: 'pi pi-map-marker',
+          },
+  )
+
+  /**
+   * Подпись в шапке под активной стороной.
+   */
+  const headerTag = computed(() =>
+    isUlove.value ? 'ULOVE · ЗНАКОМСТВА РЯДОМ' : isBusiness.value ? 'UPIN PRO · ДЛЯ БИЗНЕСА' : 'UPIN · КАРТА РЯДОМ',
+  )
+
+  const headerTagClass = computed(() =>
+    isUlove.value
+      ? 'bg-gradient-to-r from-rose-500 via-fuchsia-500 to-orange-400'
+      : isBusiness.value
+        ? 'bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500'
+        : 'bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500',
   )
 
   const primaryCta = computed(() => {
+    if (isBusiness.value) {
+      if (!isAuthenticated.value) {
+        return { href: '/register?account=business', label: 'Открыть кабинет →' }
+      }
+      const accountType = (authUser.value as { account_type?: string } | null)?.account_type
+      return accountType === 'business'
+        ? { href: '/cabinet', label: 'Открыть кабинет →' }
+        : { href: '/map', label: 'Открыть карту →' }
+    }
     if (!isAuthenticated.value) {
       return { href: '/register', label: isUlove.value ? 'Создать анкету ULove →' : 'Создать аккаунт UPin →' }
     }
@@ -172,11 +252,17 @@ export function useWelcomeMode() {
           description:
             'ULove — знакомства рядом: свайпы, мэтч открывает чат. Карта и пины в помощь: вопросы, события и встречи рядом без точного адреса.',
         }
-      : {
-          title: 'UPin — карта района и соседи рядом | ULove',
-          description:
-            'UPin — живая карта района: пины соседей, события, помощь и встречи рядом в 2 клика, без точного адреса. Плюс ULove — знакомства рядом.',
-        },
+      : isBusiness.value
+        ? {
+            title: 'UPin Pro — кабинет для бизнеса | Клиенты с карты',
+            description:
+              'UPin Pro для бизнеса: кабинет компании, проверка по УНП РБ, метка на карте, заметные пины и клиенты рядом.',
+          }
+        : {
+            title: 'UPin — карта района и соседи рядом | ULove',
+            description:
+              'UPin — живая карта района: пины соседей, события, помощь и встречи рядом в 2 клика, без точного адреса. Плюс ULove — знакомства рядом.',
+          },
   )
 
   function setTab(next: LandingTab): void {
@@ -189,7 +275,7 @@ export function useWelcomeMode() {
     }
   }
 
-  return { tab, isUlove, content, theme, primaryCta, seo, isAuthenticated, setTab, pinSamples: PIN_SAMPLES, pinChips: PIN_CHIPS }
+  return { tab, isUlove, isBusiness, content, theme, headerTag, headerTagClass, primaryCta, seo, isAuthenticated, setTab, pinSamples: PIN_SAMPLES, pinChips: PIN_CHIPS }
 }
 
 /**
@@ -201,7 +287,7 @@ export function readLandingTab(): LandingTab | null {
   try {
     if (typeof window !== 'undefined') {
       const stored = window.localStorage.getItem(STORAGE_KEY)
-      if (stored === 'ulove' || stored === 'upin') {
+      if (stored === 'ulove' || stored === 'upin' || stored === 'business') {
         return stored
       }
     }
@@ -220,6 +306,9 @@ function readInitial(authUser: any): LandingTab {
   const stored = readLandingTab()
   if (stored) {
     return stored
+  }
+  if (authUser?.account_type === 'business') {
+    return 'business'
   }
   const raw = authUser?.default_mode
   if (raw === 'upin' || raw === 'ulove') {

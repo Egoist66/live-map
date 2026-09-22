@@ -256,6 +256,7 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::get('/business-photos/by-owner/{user}', [\App\Http\Controllers\BusinessPhotoController::class, 'byOwner']);
     Route::post('/businesses/{business}/photos', [\App\Http\Controllers\BusinessPhotoController::class, 'store'])->middleware('throttle:social-write');
     Route::post('/businesses/{business}/logo', [\App\Http\Controllers\BusinessController::class, 'logo'])->middleware('throttle:social-write');
+    Route::post('/businesses/{business}/cover', [\App\Http\Controllers\BusinessController::class, 'cover'])->middleware('throttle:social-write');
     Route::delete('/businesses/{business}/photos/{photo}', [\App\Http\Controllers\BusinessPhotoController::class, 'destroy'])->middleware('throttle:social-write');
     Route::get('/business', [\App\Http\Controllers\BusinessController::class, 'show']);
     Route::patch('/business', [\App\Http\Controllers\BusinessController::class, 'update'])->middleware('throttle:profile-write');

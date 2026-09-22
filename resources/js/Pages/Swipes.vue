@@ -5,7 +5,6 @@ import DatingQuestionnaireForm from '@/Components/Features/Dating/DatingQuestion
 import SwipeDetailsDialog from '@/Components/Features/Dating/SwipeDetailsDialog.vue'
 import DefaultModeHint from '@/Components/Features/Mode/DefaultModeHint.vue'
 import { useSwipes } from '@/composables/useSwipes'
-import { useVideoSession } from '@/composables/useVideoSession'
 import InfiniteSentinel from '@/Components/Ui/List/InfiniteSentinel.vue'
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 import { useSwipeCardPhotos } from '@/composables/useSwipeCardPhotos'
@@ -33,7 +32,6 @@ const page = usePage()
 const isAuth = computed(() => !!(page.props.auth as any)?.user)
 
 const s = useSwipes()
-const v = useVideoSession()
 const cardPhotos = useSwipeCardPhotos(() => s.current.value)
 const mobileMenu = useSwipesMobileMenu()
 const { selectPt } = useDropdownMenuStyle()
@@ -182,18 +180,7 @@ onUnmounted(() => {
                   </span>
                   <span class="mt-1.5 text-[11px] font-semibold leading-tight text-stone-600 dark:text-zinc-200 truncate w-full text-center">{{ m.user.name }}</span>
                 </button>
-                <Button
-                  icon="pi pi-phone"
-                  rounded
-                  outlined
-                  size="small"
-                  severity="success"
-                  aria-label="Позвонить голосом"
-                  title="Позвонить голосом"
-                  class="!w-8 !h-8 !p-0 mt-1"
-                  :disabled="v.store.inCall"
-                  @click="v.callMatch(m.user.id)"
-                />
+
               </div>
             </div>
           </div>
@@ -780,13 +767,7 @@ onUnmounted(() => {
                     <span><span class="block text-[13px] font-black text-stone-900 dark:text-white leading-tight">Как это работает</span><span class="block text-[11px] text-stone-500 dark:text-zinc-400 leading-tight mt-0.5">Мэтчи · лимиты · 18+</span></span>
                   </span>
                 </Button>
-                <Button unstyled class="w-full !p-0 col-span-2" @click="mobileMenu.close(); v.openRouletteFromNav()">
-                  <span class="flex items-center gap-3 w-full p-3 rounded-2xl text-left bg-gradient-to-br from-rose-500/10 via-fuchsia-500/10 to-orange-400/10 border border-rose-200/60 dark:border-rose-500/20 hover:shadow-md hover:shadow-rose-500/10 active:scale-[0.97] transition">
-                    <span class="w-9 h-9 rounded-xl bg-gradient-to-br from-rose-500 to-orange-400 text-white grid place-items-center shadow-md shadow-rose-500/30 shrink-0"><i class="pi pi-phone" /></span>
-                    <span class="min-w-0 flex-1"><span class="block text-[13px] font-black text-stone-900 dark:text-white leading-tight">Голосовая рулетка</span><span class="block text-[11px] text-stone-500 dark:text-zinc-400 leading-tight mt-0.5">Случайный собеседник голосом · Free 5/день</span></span>
-                    <i class="pi pi-chevron-right text-xs text-stone-300 dark:text-zinc-600 shrink-0" />
-                  </span>
-                </Button>
+
               </div>
               <div class="mt-2 flex items-center gap-2 rounded-2xl px-3 py-2.5 bg-gradient-to-r from-rose-500/10 via-fuchsia-500/10 to-orange-400/10 border border-rose-200/60 dark:border-rose-500/20 text-[11px] font-bold text-rose-700 dark:text-rose-200"><i class="pi pi-info-circle shrink-0" /><span>{{ s.isQuotaEmpty.value ? 'Лимит исчерпан — мэтчи пишут бесплатно' : 'Без мэтча: ' + s.quotaLabel.value + ' · мэтч открывает чат всегда' }}</span></div>
             </div>

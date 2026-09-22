@@ -11,10 +11,9 @@ export const SIGNUP_GOALS = [
   { label: '💬 Общение', value: 'chat' },
   { label: '🎯 По интересам', value: 'interests' },
   { label: '📍 Соседи и карта', value: 'neighbors' },
-  { label: '🏢 Бизнес', value: 'business' },
 ] as const
 
-export type SignupGoal = (typeof SIGNUP_GOALS)[number]['value'] | 'business'
+export type SignupGoal = (typeof SIGNUP_GOALS)[number]['value']
 
 /**
  * Пресет цели из таба лендинга.
@@ -53,17 +52,6 @@ export function useSignupGoals() {
  */
 function readPreset(): SignupPreset {
   const base = [...SIGNUP_GOALS].map((goal) => ({ ...goal }))
-
-  try {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search)
-      const storedChoice = window.localStorage.getItem('upin_account_choice')
-      if (params.get('account') === 'business' || storedChoice === 'business') {
-        return { locked: true, goal: 'business' as SignupPreset['goal'], options: base }
-      }
-    }
-  } catch {}
-
   const landingTab = readLandingTab()
 
   if (landingTab === 'upin') {
@@ -71,7 +59,7 @@ function readPreset(): SignupPreset {
   }
 
   if (landingTab === 'ulove') {
-    const withoutNeighbors = base.filter((goal) => goal.value !== 'neighbors' && goal.value !== 'business')
+    const withoutNeighbors = base.filter((goal) => goal.value !== 'neighbors')
     return { locked: false, goal: 'love', options: withoutNeighbors }
   }
 

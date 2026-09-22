@@ -9,32 +9,26 @@
 Кабинет — удобный, мощный, информативный: профиль по законодательству РБ,
 дашборд (просмотры, пины, лайки), подсказки заработка, карта и промо.
 
-## Вход: персона или компания
+## Вход: третий таб UPin Business
 
-1. Первый визит (гость) — модалка `AccountTypeGateModal` поверх
-   максимально заблюренного лендинга: `backdrop-blur-2xl + bg-black/60`,
-   сам контент `Welcome` дополнительно уходит в `blur-2xl + saturate-150`
-   и `pointer-events-none` (не кликается, не выделяется).
-   Маска не закрывается кликом/Escape (`dismissable-mask=false`).
-   - Выбор гостя → `localStorage upin_account_choice` + редирект:
-     персона → `/register`, компания → `/register?account=business`.
-2. Регистрация разделена:
-   - Персона — старая форма (цели, пол, карта), без упоминаний бизнеса.
-   - Компания — `BusinessRegisterForm` + `useBusinessRegisterForm` +
-     `business-register.schema`: название, email, форма собственности,
-     УНП 9 цифр, юрадрес, телефон, город, пароль. Ноль слов про дейтинг.
+Никаких модалок и запоминаний: на общем лендинге три таба —
+ULove / UPin / Business (`useWelcomeMode`, таб `business` со своим
+контентом, палитрой, CTA и SEO; выбор таба живёт в `welcome_landing_tab`).
+
+1. Таб Business — лендинг UPin Pro: hero с превью метки компании,
+   шаги, тарифная панель. CTA ведут с `?account=business`:
+   регистрация → `/register?account=business`, вход → `/login?account=business`.
+2. Регистрация разделена только по query-параметру:
+   - Персона — обычная форма (цели, пол, карта), всегда `account_type=person`.
+   - Компания (`?account=business`) — `BusinessRegisterForm` +
+     `useBusinessRegisterForm` + `business-register.schema`: название,
+     email, форма собственности, УНП 9 цифр, юрадрес, телефон, город,
+     пароль. Ноль слов про дейтинг.
    - Бэк принимает `account_type=business` без `gender`, создаёт
      `Business`-профиль с реквизитами сразу. После регистрации →
      `/cabinet/onboarding`.
-3. Залогиненный без `account_type` — та же модалка, но выбор сохраняется
-   через `PATCH /api/account-type`. `landingPath()` бизнеса — `/cabinet`.
-4. Выбор «Я — компания» живёт в `localStorage` и переживает логаут:
-   после выхода гость видит свой лендинг `BusinessLandingView`
-   (UPin Pro, хук `useBusinessLanding`) вместо общего, вход — с бизнес-
-   шапкой (`Login.vue` показывает «Вход в кабинет» при stored=business).
-
-Логика только в хуке `useAccountTypeChoice` (AGENTS №1), состояние первого
-визита — там же, серверный тип — в `auth.user.account_type`.
+3. Вход с `?account=business` — та же форма, но шапка «Вход в кабинет».
+   `landingPath()` бизнеса — `/cabinet`.
 
 ## Сущности
 

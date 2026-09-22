@@ -31,7 +31,7 @@ import { useChatOnline } from "@/composables/useChatOnline";
 import { useChatPage } from "@/composables/useChatPage";
 import { useChatFilters } from "@/composables/useChatFilters";
 import { useChatDatingTheme } from "@/composables/useChatDatingTheme";
-import { useChatVoiceCall } from "@/composables/useChatVoiceCall";
+
 import { useChatMessageStatus } from "@/composables/useChatMessageStatus";
 import { useChatViewport } from "@/composables/useChatViewport";
 import { useChatWallpaper } from "@/composables/useChatWallpaper";
@@ -89,6 +89,7 @@ const {
   togglePin,
   uloveConversations,
   uloveUnread,
+  isBusiness,
   input,
   tab,
   showChatMenu,
@@ -202,7 +203,7 @@ function closeConfirm() {
   confirm.value = null;
 }
 const datingTheme = useChatDatingTheme(chat.activeConv, chat.selectedId);
-const chatVoice = useChatVoiceCall(chat.activeConv);
+
 const wallpaper = useChatWallpaper();
 const wallpaperOpen = ref(false);
 
@@ -281,7 +282,9 @@ watch(
 );
 onMounted(async () => {
   await init();
-  datingTheme.checkEntry();
+  if (!isBusiness.value) {
+    datingTheme.checkEntry();
+  }
 });
 </script>
 <template>
@@ -292,6 +295,7 @@ onMounted(async () => {
       <ChatSidebar
         :tab="tab"
         @update:tab="(v: any) => tab = v"
+        :is-business="isBusiness"
         :unread-total="unreadTotal"
         :ulove-unread="uloveUnread"
         :pending-count="pendingIn.length"
@@ -338,8 +342,8 @@ onMounted(async () => {
         :refreshing="refreshing"
         :typing="[...typingUsers].some((id: any) => id === activeConv?.other?.id)"
         :online="isOnline(activeConv?.other?.id, (activeConv?.other as any)?.last_seen_at)"
-        :dating-entry="datingTheme.isDatingEntry.value"
-        :dating-badge="datingTheme.badge.value"
+        :dating-entry="!isBusiness && datingTheme.isDatingEntry.value"
+        :dating-badge="isBusiness ? null : datingTheme.badge.value"
         @swipes-back="datingTheme.backToSwipes()"
         :input="input"
         @update:input="(v: string) => input = v"
@@ -370,7 +374,7 @@ onMounted(async () => {
         @refresh="refresh"
         @back="backToList"
         @close="backToList"
-        @voice-call="chatVoice.callPeer()"
+
         @toggle-menu="showChatMenu = !showChatMenu"
         @menu-close="showChatMenu = false"
         @wallpaper="wallpaperOpen = true"

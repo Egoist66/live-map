@@ -117,6 +117,30 @@ export const useBusinessStore = defineStore('business', () => {
   }
 
   /**
+   * Загрузить баннер-обложку компании.
+   * @param file картинка
+   * @returns true если сохранена
+   */
+  async function uploadCover(file: File): Promise<boolean> {
+    if (!profile.value || saving.value) {
+      return false
+    }
+    saving.value = true
+    error.value = null
+    try {
+      profile.value = await businessApi.uploadCover(profile.value.id, file)
+      await refreshDashboard()
+      return true
+    } catch (e: unknown) {
+      const message = (e as { response?: { data?: { message?: string } } })?.response?.data?.message
+      error.value = message ?? 'Не получилось загрузить обложку'
+      return false
+    } finally {
+      saving.value = false
+    }
+  }
+
+  /**
    * Применить верификацию из realtime-события.
    * @param next свежий профиль из broadcast
    */
@@ -142,6 +166,7 @@ export const useBusinessStore = defineStore('business', () => {
     save,
     submit,
     uploadLogo,
+    uploadCover,
     applyRealtime,
   }
 })

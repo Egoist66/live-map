@@ -27,6 +27,7 @@ export interface BusinessProfile {
   working_hours: Record<string, string> | null
   is_verified: boolean
   logo_url: string | null
+  cover_url?: string | null
   legal_form: BusinessLegalForm
   unp: string | null
   reg_number: string | null

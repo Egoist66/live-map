@@ -69,6 +69,15 @@ export const businessApi = {
     return (data as { data: BusinessProfile }).data ?? (data as BusinessProfile)
   },
 
+  async uploadCover(id: number, file: File): Promise<BusinessProfile> {
+    const form = new FormData()
+    form.append('cover', file)
+    const { data } = await api.post<{ data: BusinessProfile } | BusinessProfile>(`/api/businesses/${id}/cover`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    } as never)
+    return (data as { data: BusinessProfile }).data ?? (data as BusinessProfile)
+  },
+
   async setAccountType(accountType: AccountType): Promise<{ account_type: AccountType; landing: string }> {
     const { data } = await api.patch<{ account_type: AccountType; landing: string }>('/api/account-type', {
       account_type: accountType,

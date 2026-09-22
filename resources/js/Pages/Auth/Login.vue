@@ -2,19 +2,14 @@
 import { computed } from 'vue'
 import { Head, Link } from '@inertiajs/vue3'
 import { useLoginForm } from '@/composables/useAuthForm'
-import { useAccountTypeChoice } from '@/composables/useAccountTypeChoice'
 import InputText from 'primevue/inputtext'
 import Checkbox from 'primevue/checkbox'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
 defineProps<{ canResetPassword: boolean; status?: string | null }>()
 const { email, emailAttrs, password, passwordAttrs, remember, errors, showPass, submit, isSubmitting } = useLoginForm()
-const gate = useAccountTypeChoice()
 
 const isBusiness = computed(() => {
-  if (gate.stored.value === 'business') {
-    return true
-  }
   try {
     if (typeof window !== 'undefined') {
       return new URLSearchParams(window.location.search).get('account') === 'business'

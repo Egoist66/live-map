@@ -23,6 +23,7 @@ interface PublicBusiness {
   working_hours: Record<string, string> | null
   is_verified: boolean
   logo_url: string | null
+  cover_url?: string | null
 }
 
 const props = defineProps<{
@@ -65,6 +66,8 @@ const websiteHref = computed(() => {
   <Head :title="business.name" />
   <div class="max-w-[760px] mx-auto space-y-3 pb-2">
     <section class="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-indigo-950 via-indigo-900 to-violet-900 text-white shadow-float">
+      <img v-if="business.cover_url" :src="business.cover_url" alt="" aria-hidden="true" class="absolute inset-0 w-full h-full object-cover pointer-events-none" />
+      <div v-if="business.cover_url" class="absolute inset-0 pointer-events-none bg-gradient-to-t from-indigo-950/85 via-indigo-950/45 to-indigo-950/25"></div>
       <div class="absolute -top-20 -right-20 w-72 h-72 rounded-full bg-violet-500/30 blur-[70px] pointer-events-none"></div>
       <div class="relative p-5 sm:p-7">
         <div class="flex flex-wrap items-start gap-4">

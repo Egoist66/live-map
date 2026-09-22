@@ -39,7 +39,7 @@ function bindRouterSync(): void {
  * (usePage работает только в setup-контексте).
  *
  * @example
- * export function useVideoSession() {
+ * export function useSomeFeature() {
  *   captureAuthUid()
  *   // ...
  * }

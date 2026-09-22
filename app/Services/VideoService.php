@@ -16,6 +16,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Голосовые звонки 1-1: мэтч-звонки и рулетка поверх WebRTC P2P (аудио).
@@ -41,6 +42,27 @@ class VideoService
     public const QUEUE_TTL_SEC = 90;
 
     public function __construct(private DatingService $dating) {}
+
+    /** Кэш проверки таблиц на запрос: тик sync ходит сюда постоянно. */
+    private static ?bool $tablesReady = null;
+
+    /**
+     * Живы ли таблицы звонков (после дропа звонки отключены).
+     *
+     * @return bool
+     */
+    private function tablesReady(): bool
+    {
+        if (self::$tablesReady === null) {
+            try {
+                self::$tablesReady = Schema::hasTable('video_calls') && Schema::hasTable('video_signals');
+            } catch (\Throwable) {
+                self::$tablesReady = false;
+            }
+        }
+
+        return self::$tablesReady;
+    }
 
     /**
      * Позвонить напрямую: мэтч, друг или собеседник из чата.
@@ -388,7 +410,7 @@ class VideoService
 
     public function freshIncoming(int $userId, ?Carbon $since): array
     {
-        if (! $since) {
+        if (! $since || ! $this->tablesReady()) {
             return [];
         }
 
@@ -414,7 +436,7 @@ class VideoService
      */
     public function freshSignals(int $userId, ?Carbon $since, int $afterId = 0): array
     {
-        if (! $since) {
+        if (! $since || ! $this->tablesReady()) {
             return [];
         }
 
@@ -458,6 +480,10 @@ class VideoService
      */
     public function pendingIncoming(User $user): array
     {
+        if (! $this->tablesReady()) {
+            return [];
+        }
+
         $this->sweepTimeouts($user->id);
 
         $rows = VideoCall::where(fn ($q) => $q->where('caller_id', $user->id)->orWhere('callee_id', $user->id))
@@ -480,6 +506,10 @@ class VideoService
      */
     public function queueCount(): int
     {
+        if (! $this->tablesReady()) {
+            return 0;
+        }
+
         $queue = $this->readQueue();
         $now = now()->timestamp;
         $count = 0;

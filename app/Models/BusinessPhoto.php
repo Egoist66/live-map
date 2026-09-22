@@ -2,9 +2,9 @@
 
 namespace App\Models;
 
+use App\Services\MediaDisk;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Фото компании для витрины на карте и публичного профиля.
@@ -31,15 +31,7 @@ class BusinessPhoto extends Model
 
     public function getUrlAttribute(): ?string
     {
-        if (empty($this->path)) {
-            return null;
-        }
-
-        try {
-            return Storage::disk('public')->url($this->path);
-        } catch (\Throwable) {
-            return null;
-        }
+        return MediaDisk::url($this->path);
     }
 
     /**

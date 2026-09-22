@@ -7,10 +7,10 @@ use App\Models\BusinessPhoto;
 use App\Models\User;
 use App\Services\ContentModeration;
 use App\Services\ImageOptimizer;
+use App\Services\MediaDisk;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Фотографии компании: витрина для пинов на карте и профиля.
@@ -67,10 +67,12 @@ class BusinessPhotoController extends Controller
             ContentModeration::assertClean($request->input('caption'));
         }
 
+        $disk = MediaDisk::disk();
+
         $path = ImageOptimizer::storeOptimized(
             $request->file('photo'),
             'business-photos',
-            'public',
+            $disk,
             ['maxSide' => ImageOptimizer::GALLERY_MAX_SIDE]
         );
 
@@ -87,7 +89,7 @@ class BusinessPhotoController extends Controller
                 ]);
             });
         } catch (\Throwable $e) {
-            Storage::disk('public')->delete($path);
+            MediaDisk::delete($path);
             throw $e;
         }
 
@@ -104,7 +106,7 @@ class BusinessPhotoController extends Controller
         abort_unless($business->user_id === $user->id || $user->isAdmin(), 403);
         abort_unless($photo->business_id === $business->id, 404);
 
-        Storage::disk('public')->delete($photo->path);
+        MediaDisk::delete($photo->path);
         $photo->delete();
 
         return response()->json(['ok' => true]);

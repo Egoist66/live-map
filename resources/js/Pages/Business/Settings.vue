@@ -11,6 +11,7 @@ import Card from 'primevue/card'
 import ToggleSwitch from 'primevue/toggleswitch'
 import BusinessPhotosManager from '@/Components/Features/Business/BusinessPhotosManager.vue'
 import BusinessLogoPicker from '@/Components/Features/Business/BusinessLogoPicker.vue'
+import BusinessCoverPicker from '@/Components/Features/Business/BusinessCoverPicker.vue'
 import type { BusinessDashboard } from '@/types/entities/Business'
 
 defineOptions({
@@ -59,6 +60,16 @@ async function onPushToggle(): Promise<void> {
         <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
           <Link href="/cabinet/onboarding"><Button label="Реквизиты" icon="pi pi-id-card" outlined class="w-full !rounded-full" /></Link>
           <Link v-if="settings.profile.value?.owner_profile" :href="`/users/${settings.profile.value.owner_profile}`"><Button label="Как видят клиенты" icon="pi pi-eye" outlined class="w-full !rounded-full" /></Link>
+        </div>
+      </template>
+    </Card>
+
+    <Card class="!rounded-[24px] !border-stone-200 dark:!border-zinc-800 !bg-white dark:!bg-zinc-900 !shadow-sm">
+      <template #content>
+        <div class="font-black text-[16px] dark:text-white">Обложка</div>
+        <p class="text-[13px] text-stone-500 dark:text-zinc-400 mt-0.5">Баннер плашки кабинета и профиля.</p>
+        <div class="mt-2">
+          <BusinessCoverPicker />
         </div>
       </template>
     </Card>

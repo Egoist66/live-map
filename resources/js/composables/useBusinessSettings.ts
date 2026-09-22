@@ -73,6 +73,21 @@ export function useBusinessSettings() {
     return ok
   }
 
+  /**
+   * Загрузить баннер-обложку компании.
+   * @param file картинка
+   * @returns true если сохранена
+   */
+  async function uploadCoverFile(file: File): Promise<boolean> {
+    const ok = await store.uploadCover(file)
+    if (ok) {
+      toast.add({ severity: 'success', summary: 'Обложка обновлена', detail: 'Фон плашки кабинета и профиля', life: 3000 })
+    } else {
+      toast.add({ severity: 'error', summary: 'Не загрузилось', detail: store.error ?? 'Попробуйте другой файл', life: 4000 })
+    }
+    return ok
+  }
+
   onMounted(() => {
     void load()
   })
@@ -90,5 +105,6 @@ export function useBusinessSettings() {
     guide,
     load,
     uploadLogoFile,
+    uploadCoverFile,
   }
 }

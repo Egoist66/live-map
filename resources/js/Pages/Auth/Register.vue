@@ -6,7 +6,6 @@ import { useSignupGoals } from '@/composables/useSignupGoals'
 import { useBirthDateField } from '@/composables/useBirthDate'
 import { useGender } from '@/composables/useGender'
 import { useUserAge } from '@/composables/useUserAge'
-import { useAccountTypeChoice } from '@/composables/useAccountTypeChoice'
 import { RESIDENCE_COUNTRIES } from '@/composables/useResidence'
 import BusinessRegisterForm from '@/Components/Features/Business/BusinessRegisterForm.vue'
 import InputText from 'primevue/inputtext'
@@ -14,12 +13,11 @@ import Button from 'primevue/button'
 import Select from 'primevue/select'
 import DatePicker from 'primevue/datepicker'
 
-const gate = useAccountTypeChoice()
-
+/**
+ * Ветка компании — только по ?account=business с таба UPin Business.
+ * Никакого запоминания: таб лендинга всё решает.
+ */
 const isBusiness = computed(() => {
-  if (gate.stored.value === 'business') {
-    return true
-  }
   try {
     if (typeof window !== 'undefined') {
       return new URLSearchParams(window.location.search).get('account') === 'business'
@@ -41,9 +39,6 @@ function onCountryChange(v: string): void {
 }
 
 function backToChoice(): void {
-  try {
-    window.localStorage.removeItem('upin_account_choice')
-  } catch {}
   window.location.href = '/register'
 }
 </script>

@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\VideoCall;
 use App\Models\VideoSignal;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Чистит метаданные звонков старше ретеншна.
@@ -25,6 +26,12 @@ class PruneVideoCalls extends Command
      */
     public function handle(): int
     {
+        if (! Schema::hasTable('video_calls') || ! Schema::hasTable('video_signals')) {
+            $this->info('Video tables dropped, nothing to prune');
+
+            return 0;
+        }
+
         $days = max(1, (int) $this->option('days'));
 
         $calls = VideoCall::whereNotIn('status', [VideoCall::STATUS_RINGING, VideoCall::STATUS_ACTIVE])

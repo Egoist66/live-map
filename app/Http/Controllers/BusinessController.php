@@ -189,7 +189,7 @@ class BusinessController extends Controller
         $path = \App\Services\ImageOptimizer::storeOptimized(
             $request->file('logo'),
             'business-logos',
-            'public',
+            \App\Services\MediaDisk::disk(),
             ['maxSide' => \App\Services\ImageOptimizer::GALLERY_MAX_SIDE]
         );
 
@@ -197,12 +197,36 @@ class BusinessController extends Controller
 
         $business->forceFill(['logo_path' => $path])->save();
 
-        if (is_string($old) && $old !== '') {
-            try {
-                \Illuminate\Support\Facades\Storage::disk('public')->delete($old);
-            } catch (\Throwable) {
-            }
-        }
+        \App\Services\MediaDisk::delete($old);
+
+        return new BusinessResource($business->fresh());
+    }
+
+    /**
+     * Загрузить баннер-обложку компании (владелец или админ).
+     *
+     * Обложка — фон hero-плашки кабинета и публичного профиля.
+     */
+    public function cover(Request $request, Business $business): BusinessResource
+    {
+        $user = $request->user();
+
+        abort_unless($business->user_id === $user->id || $user->isAdmin(), 403);
+
+        $request->validate(['cover' => 'required|image|max:5120']);
+
+        $path = \App\Services\ImageOptimizer::storeOptimized(
+            $request->file('cover'),
+            'business-covers',
+            \App\Services\MediaDisk::disk(),
+            ['maxSide' => 1920]
+        );
+
+        $old = $business->cover_path;
+
+        $business->forceFill(['cover_path' => $path])->save();
+
+        \App\Services\MediaDisk::delete($old);
 
         return new BusinessResource($business->fresh());
     }

@@ -29,14 +29,37 @@ export function useChatPage(initialConversationId?: number) {
   const tab = ref<'chats' | 'ulove' | 'friends' | 'requests' | 'blocked'>('chats')
 
   /**
+   * Бизнес-аккаунт: ULove-таба нет вообще — только чаты.
+   */
+  const isBusiness = computed(() => {
+    try {
+      return ((usePage().props as unknown as { auth?: { user?: { account_type?: string } | null } }).auth?.user?.account_type ?? 'person') === 'business'
+    } catch {
+      return false
+    }
+  })
+
+  /**
    * Чаты мэтчей ULove: собеседник с is_match и только direct.
    * SOS-диалоги (type=sos) сюда не попадают — у них обычный стиль.
+   * Бизнесу — пусто: мэтчей у компаний не бывает.
    * @returns диалоги ULove
    */
-  const uloveConversations = computed(() => chat.conversations.value.filter((c: any) => (c?.type ?? 'direct') === 'direct' && !!(c?.other as any)?.is_match))
+  const uloveConversations = computed(() => {
+    if (isBusiness.value) {
+      return []
+    }
+    return chat.conversations.value.filter((c: any) => (c?.type ?? 'direct') === 'direct' && !!(c?.other as any)?.is_match)
+  })
 
   /** Непрочитанные диалоги ULove (счётчик таба). */
   const uloveUnread = computed(() => uloveConversations.value.filter((c: any) => Number(c?.unread_count || 0) > 0).length)
+
+  watch(tab, (next) => {
+    if (isBusiness.value && next === 'ulove') {
+      tab.value = 'chats'
+    }
+  })
   const showChatMenu = ref(false)
   const sheet = ref<{ type: 'message' | 'chat' | 'friend' | 'request' | 'search', data: any } | null>(null)
   const showPrivacy = ref(false)
@@ -443,7 +466,7 @@ export function useChatPage(initialConversationId?: number) {
   }
 
   return {
-    chat, friendsApi, blocksApi, emoji, badgeSync, pins, togglePin, uloveConversations, uloveUnread,
+    chat, friendsApi, blocksApi, emoji, badgeSync, pins, togglePin, uloveConversations, uloveUnread, isBusiness,
     input, inputRef, editInputRef, tab, showChatMenu, sheet, showPrivacy, privacy, creatingChat, confirm, confirmVisible, isOwnMessage, bindSheet, voice,
     handleSend, handlePickFile, handlePasteImage, handleShareLocation, handleStartVoice, handleStopVoice, handleCancelVoice, handleSendVoice, locating: chatLocation.locating, attachment, formatTime, onPickEmoji, onPickEmojiForEdit, handleStartEdit, startChatWith, addFriendFromSearch, savePrivacy, doConfirm, closeSheet, backToList,
     askBlock, askDeleteChat, askClearAllChats, askDeleteMessage, askRemoveFriend, askUnblock,
