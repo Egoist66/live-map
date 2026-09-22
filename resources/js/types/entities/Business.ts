@@ -17,6 +17,7 @@ export type BusinessVerificationStatus = 'draft' | 'pending' | 'verified' | 'rej
 export interface BusinessProfile {
   id: number
   name: string
+  brand: string | null
   category: string | null
   address: string | null
   lat: number | null
@@ -90,6 +91,7 @@ export interface BusinessAd {
 export interface BusinessMapItem {
   id: number
   name: string
+  brand: string | null
   category: string | null
   address: string | null
   lat: number | null
@@ -115,6 +117,7 @@ export interface BusinessPhoto {
 
 export interface BusinessProfilePayload {
   name: string
+  brand?: string | null
   category?: string | null
   legal_form: BusinessLegalForm
   unp?: string | null

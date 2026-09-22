@@ -12,7 +12,8 @@ use Illuminate\Foundation\Events\Dispatchable;
  * Бизнес прошёл проверку — уведомить владельца в realtime.
  *
  * Фронт слушает private `user.{id}` событие `business.verified`
- * в useBusinessProfile + useAppNotifications (тост + звук).
+ * в useBusinessRealtime (кабинет: стор + статус), useBusinessProfile
+ * и useAppNotifications (тост + звук).
  */
 class BusinessVerified implements ShouldBroadcastNow
 {

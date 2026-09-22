@@ -57,6 +57,11 @@ const stepItems = [{ label: 'Компания' }, { label: 'Реквизиты �
               <InputText v-model="ob.name.value" v-bind="ob.nameAttrs" placeholder="ООО «Кофейня у парка»" class="w-full mt-1.5 !rounded-2xl" :invalid="!!ob.errors.value.name" />
               <small class="text-red-500">{{ ob.errors.value.name }}</small>
             </div>
+            <div>
+              <label class="text-[13px] font-semibold dark:text-zinc-100">Бренд</label>
+              <InputText v-model="ob.brand.value" placeholder="Как клиенты ищут вас на карте" class="w-full mt-1.5 !rounded-2xl" />
+              <p class="text-[12px] text-stone-500 dark:text-zinc-400 mt-1">Витринное название для поиска — юрназвание часто канцелярское, а бренд помнят.</p>
+            </div>
             <div class="grid sm:grid-cols-2 gap-3">
               <div>
                 <label class="text-[13px] font-semibold dark:text-zinc-100">Форма собственности *</label>
@@ -103,17 +108,13 @@ const stepItems = [{ label: 'Компания' }, { label: 'Реквизиты �
           <template v-else>
             <div>
               <label class="text-[13px] font-semibold dark:text-zinc-100">Фактический адрес / точка</label>
-              <InputText v-model="ob.address.value" placeholder="Где вас найти на карте" class="w-full mt-1.5 !rounded-2xl" />
-            </div>
-            <div class="grid grid-cols-1 min-[420px]:grid-cols-2 gap-3">
-              <div>
-                <label class="text-[13px] font-semibold dark:text-zinc-100">Широта</label>
-                <InputText v-model="ob.lat.value" inputmode="decimal" placeholder="53.9" class="w-full mt-1.5 !rounded-2xl font-mono" />
+              <InputText v-model="ob.address.value" placeholder="г. Минск, ул. Ленина, 1" class="w-full mt-1.5 !rounded-2xl" @blur="ob.maybeDetectCoords()" />
+              <div class="mt-2 flex flex-wrap gap-2">
+                <Button label="Найти на карте" icon="pi pi-map-marker" size="small" rounded :loading="ob.geocoding.value" class="!bg-indigo-600 !border-indigo-600 hover:!bg-indigo-500" @click="ob.detectCoords()" type="button" />
+                <Button v-if="String(ob.values.legal_address ?? '').trim() !== ''" label="Как юр. адрес" icon="pi pi-id-card" size="small" rounded outlined @click="ob.useLegalAddressAsPoint()" type="button" />
               </div>
-              <div>
-                <label class="text-[13px] font-semibold dark:text-zinc-100">Долгота</label>
-                <InputText v-model="ob.lng.value" inputmode="decimal" placeholder="27.56" class="w-full mt-1.5 !rounded-2xl font-mono" />
-              </div>
+              <p class="mt-2 text-[12px] font-semibold" :class="String(ob.values.lat ?? '') !== '' && String(ob.values.lng ?? '') !== '' ? 'text-emerald-600 dark:text-emerald-400' : 'text-stone-500 dark:text-zinc-400'">{{ ob.coordsLabel.value }}</p>
+              <p class="text-[12px] text-stone-500 dark:text-zinc-400">Широту и долготу вводить не нужно — считаем сами по адресу, точка пригодится карте и поиску.</p>
             </div>
             <div class="grid sm:grid-cols-2 gap-3">
               <div>

@@ -2,12 +2,14 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { chatApi } from '@/services/chat.api'
 import { districtsApi } from '@/services/districts.api'
+import { businessApi } from '@/services/business.api'
 import type { District } from '@/types/entities/District'
+import type { BusinessMapItem } from '@/types/entities/Business'
 
 /**
- * Активный таб глобального поиска: люди или районы.
+ * Активный таб глобального поиска: люди, районы или организации.
  */
-export type GlobalSearchTab = 'people' | 'districts'
+export type GlobalSearchTab = 'people' | 'districts' | 'organizations'
 
 /**
  * Нормализовать ответ поиска людей к массиву.
@@ -25,8 +27,9 @@ function normalizePeople(data: unknown): any[] {
  *
  * Держит состояние диалога, активный таб, строку запроса и результаты:
  * люди — через `/api/chat/users/search?page=`, районы — через
- * `/api/districts?search=&page=`. Догрузка — `loadMorePeople()` /
- * `loadMoreDistricts()` по sentinel внизу списка.
+ * `/api/districts?search=&page=`, организации — через
+ * `/api/businesses/search?q=` (название + бренд). Догрузка —
+ * `loadMorePeople()` / `loadMoreDistricts()` по sentinel внизу списка.
  */
 export const usePeopleSearchStore = defineStore('peopleSearch', () => {
   const open = ref(false)
@@ -48,12 +51,18 @@ export const usePeopleSearchStore = defineStore('peopleSearch', () => {
   /** Первые существующие районы для пустого таба «Районы» (максимум 3). */
   const districtSuggestions = ref<District[]>([])
   const districtSuggestionsLoading = ref(false)
+  /** Поиск организаций по названию и бренду (таб «Организации»). */
+  const orgQuery = ref('')
+  const orgResults = ref<BusinessMapItem[]>([])
+  const orgSearching = ref(false)
 
   let timer: ReturnType<typeof setTimeout> | null = null
   let seq = 0
   let districtTimer: ReturnType<typeof setTimeout> | null = null
   let districtSeq = 0
   let suggestionsLoaded = false
+  let orgTimer: ReturnType<typeof setTimeout> | null = null
+  let orgSeq = 0
 
   /**
    * Открыть глобальный диалог поиска.
@@ -64,14 +73,14 @@ export const usePeopleSearchStore = defineStore('peopleSearch', () => {
 
   /**
    * Переключить таб поиска.
-   * @param tab таб «people» или «districts»
+   * @param tab таб «people», «districts» или «organizations»
    */
   function setActiveTab(tab: GlobalSearchTab): void {
     activeTab.value = tab
   }
 
   /**
-   * Закрыть диалог и сбросить оба запроса.
+   * Закрыть диалог и сбросить все запросы.
    */
   function closeDialog(): void {
     open.value = false
@@ -85,6 +94,9 @@ export const usePeopleSearchStore = defineStore('peopleSearch', () => {
     districtSearching.value = false
     districtsHasMore.value = false
     districtPage.value = 1
+    orgQuery.value = ''
+    orgResults.value = []
+    orgSearching.value = false
     if (timer) {
       clearTimeout(timer)
       timer = null
@@ -93,8 +105,65 @@ export const usePeopleSearchStore = defineStore('peopleSearch', () => {
       clearTimeout(districtTimer)
       districtTimer = null
     }
+    if (orgTimer) {
+      clearTimeout(orgTimer)
+      orgTimer = null
+    }
     seq += 1
     districtSeq += 1
+    orgSeq += 1
+  }
+
+  /**
+   * Установить запрос поиска организаций с дебаунсом 300мс.
+   *
+   * Ищем по названию и бренду: юрназвание часто канцелярское,
+   * а клиенты помнят бренд.
+   *
+   * @param value новая строка поиска
+   */
+  function setOrgQuery(value: string): void {
+    orgQuery.value = value
+
+    const trimmed = value.trim()
+
+    if (trimmed.length < 2) {
+      orgResults.value = []
+      orgSearching.value = false
+      if (orgTimer) {
+        clearTimeout(orgTimer)
+        orgTimer = null
+      }
+      return
+    }
+
+    if (orgTimer) {
+      clearTimeout(orgTimer)
+    }
+
+    orgSearching.value = true
+
+    const current = ++orgSeq
+    const term = trimmed
+
+    orgTimer = setTimeout(async () => {
+      try {
+        const rows = await businessApi.searchOrganizations(term)
+        if (current !== orgSeq) {
+          return
+        }
+        orgResults.value = rows ?? []
+      } catch {
+        if (current !== orgSeq) {
+          return
+        }
+        orgResults.value = []
+      } finally {
+        if (current === orgSeq) {
+          orgSearching.value = false
+        }
+      }
+    }, 300)
   }
 
   /**
@@ -307,11 +376,15 @@ export const usePeopleSearchStore = defineStore('peopleSearch', () => {
     districtsHasMore,
     districtSuggestions,
     districtSuggestionsLoading,
+    orgQuery,
+    orgResults,
+    orgSearching,
     openDialog,
     closeDialog,
     setQuery,
     setActiveTab,
     setDistrictQuery,
+    setOrgQuery,
     loadMorePeople,
     loadMoreDistricts,
     patchDistrict,

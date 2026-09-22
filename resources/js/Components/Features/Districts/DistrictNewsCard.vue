@@ -14,6 +14,7 @@ import InfiniteSentinel from '@/Components/Ui/List/InfiniteSentinel.vue'
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 import { formatFlowDate } from '@/utils/flowDate'
 import { useProfileUrl } from '@/composables/useProfileUrl'
+import CompanyNewsBadge from '@/Components/Features/Business/CompanyNewsBadge.vue'
 import type { DistrictPost } from '@/types/entities/DistrictPost'
 
 const props = defineProps<{
@@ -80,15 +81,18 @@ onBeforeUnmount(() => {
     <template #content>
       <article class="p-3 sm:p-5">
         <div class="flex items-start gap-3">
-          <Avatar v-if="post.author.avatar_url" :image="post.author.avatar_url" shape="circle" class="!h-11 !w-11" />
-          <Avatar v-else icon="pi pi-megaphone" shape="circle" class="!h-11 !w-11 !bg-blue-600 !text-white" />
-          <div class="min-w-0 flex-1">
-            <Link v-if="post.author.id" :href="userProfileUrl(post.author)" class="truncate text-[15px] font-bold text-ink-900 hover:underline dark:text-white">
-              {{ post.author.name }}
-            </Link>
-            <span v-else class="truncate text-[15px] font-bold text-ink-900 dark:text-white">{{ post.author.name }}</span>
-            <div class="text-xs text-stone-400">{{ formatFlowDate(post.created_at) }}</div>
-          </div>
+          <CompanyNewsBadge v-if="(post as any).company" :company="(post as any).company" class="min-w-0 flex-1" />
+          <template v-else>
+            <Avatar v-if="post.author.avatar_url" :image="post.author.avatar_url" shape="circle" class="!h-11 !w-11" />
+            <Avatar v-else icon="pi pi-megaphone" shape="circle" class="!h-11 !w-11 !bg-blue-600 !text-white" />
+            <div class="min-w-0 flex-1">
+              <Link v-if="post.author.id" :href="userProfileUrl(post.author)" class="truncate text-[15px] font-bold text-ink-900 hover:underline dark:text-white">
+                {{ post.author.name }}
+              </Link>
+              <span v-else class="truncate text-[15px] font-bold text-ink-900 dark:text-white">{{ post.author.name }}</span>
+              <div class="text-xs text-stone-400">{{ formatFlowDate(post.created_at) }}</div>
+            </div>
+          </template>
           <div v-if="post.can_edit || post.can_delete" class="flex shrink-0 gap-1">
             <Button v-if="post.can_edit" icon="pi pi-pencil" text rounded severity="secondary" class="!h-8 !w-8" @click="emit('edit', post)" />
             <Button v-if="post.can_delete" icon="pi pi-trash" text rounded severity="danger" class="!h-8 !w-8" @click="emit('delete', post.id)" />

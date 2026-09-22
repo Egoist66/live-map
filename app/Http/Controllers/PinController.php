@@ -118,10 +118,36 @@ class PinController extends Controller
             }
         }
         $myReactions = $viewerId ? \App\Models\Reaction::where('user_id', $viewerId)->where('reactable_type', 'pin')->whereIn('reactable_id', $visible->pluck('id'))->pluck('type', 'reactable_id') : collect();
+        $this->attachCompanies($visible);
         return response()->json($visible->map(function ($p) use ($viewerId, $myReactions, $allInvitedIds) {
             $isInvited = $viewerId && isset($allInvitedIds[(int) $p->id]);
             return array_merge($p->toPublicArray($viewerId, (bool) $isInvited), ['my_reaction' => $myReactions[$p->id] ?? null]);
         }));
+    }
+
+    /**
+     * Прикрепить визитки компаний к бизнес-пинам одним запросом.
+     *
+     * Маркер бизнеса на карте показывает логотип + бренд + бейдж
+     * проверки: без батча каждый пин тянул бы свой Business (N+1).
+     * Не бизнес-пины и владельцы без профиля получают company=null.
+     *
+     * @param \Illuminate\Support\Collection<int, Pin> $pins пины выдачи карты
+     * @return void
+     */
+    private function attachCompanies($pins): void
+    {
+        $ownerIds = $pins->pluck('user_id')->filter()->map(fn ($v) => (int) $v)->unique()->values()->all();
+
+        if ($ownerIds === []) {
+            return;
+        }
+
+        $map = \App\Models\Business::briefMapForOwners($ownerIds);
+
+        foreach ($pins as $pin) {
+            $pin->setAttribute('company', $map[(int) $pin->user_id] ?? null);
+        }
     }
 
     public function show(Request $request, Pin $pin)
@@ -144,6 +170,7 @@ class PinController extends Controller
         $pin->load('user:id,name,avatar_path,level');
         $my = $viewerId ? \App\Models\Reaction::where('user_id', $viewerId)->where('reactable_type', 'pin')->where('reactable_id', $pin->id)->value('type') : null;
         $isInvited = $viewerId ? \App\Services\PinVisibility::isInvited($pin, (int) $viewerId) : false;
+        $this->attachCompanies(collect([$pin]));
         return response()->json(array_merge($pin->toPublicArray($viewerId, (bool) $isInvited), ['my_reaction' => $my]));
     }
 

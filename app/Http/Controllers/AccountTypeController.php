@@ -22,7 +22,22 @@ class AccountTypeController extends Controller
 
         $type = $request->validated()['account_type'];
 
-        $user->forceFill(['account_type' => $type])->save();
+        $patch = ['account_type' => $type];
+
+        if ($type === 'business') {
+            if (($user->role ?? 'user') === 'user') {
+                $patch['role'] = 'organization';
+            }
+
+            if (($user->plan ?? 'free') !== 'business') {
+                $patch['plan'] = 'business';
+                $patch['plan_expires_at'] = now()->addDays(30);
+            } elseif ($user->plan_expires_at === null) {
+                $patch['plan_expires_at'] = now()->addDays(30);
+            }
+        }
+
+        $user->forceFill($patch)->save();
 
         if ($type === 'business') {
             app(\App\Services\BusinessService::class)->profileFor($user->fresh());

@@ -8,6 +8,7 @@ import { useBusinessSettings } from '@/composables/useBusinessSettings'
 import { useSeo } from '@/composables/useSeo'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
+import InputText from 'primevue/inputtext'
 import ToggleSwitch from 'primevue/toggleswitch'
 import BusinessPhotosManager from '@/Components/Features/Business/BusinessPhotosManager.vue'
 import BusinessLogoPicker from '@/Components/Features/Business/BusinessLogoPicker.vue'
@@ -50,14 +51,22 @@ async function onPushToggle(): Promise<void> {
         <div class="flex items-start gap-3">
           <BusinessLogoPicker />
           <div class="min-w-0 flex-1">
-            <div class="font-black text-[16px] dark:text-white truncate">{{ settings.profile.value?.name ?? 'Моя компания' }}</div>
+            <div class="font-black text-[16px] dark:text-white truncate">{{ settings.profile.value?.brand || settings.profile.value?.name || 'Моя компания' }}</div>
             <div class="text-[13px] text-stone-500 dark:text-zinc-400 mt-0.5">
               {{ settings.legalFormLabel(settings.profile.value?.legal_form) }} · УНП {{ settings.profile.value?.unp ?? '—' }}
             </div>
             <div class="text-[13px] text-stone-500 dark:text-zinc-400 truncate">{{ settings.profile.value?.legal_address ?? 'Юридический адрес не указан' }}</div>
           </div>
         </div>
-        <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div class="mt-4 rounded-2xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/60 p-3.5">
+          <label class="text-[13px] font-bold dark:text-white">Бренд — название для клиентов</label>
+          <p class="text-[12px] text-stone-500 dark:text-zinc-400 mt-0.5">Видно везде: кабинет, витрина, карта и поиск. Юрназвание остаётся в реквизитах.</p>
+          <div class="mt-2 flex gap-2">
+            <InputText v-model="settings.brandDraft.value" @update:model-value="settings.brandTouched.value = true" maxlength="255" placeholder="Например: Кофейня у парка" fluid class="!rounded-2xl flex-1" />
+            <Button label="Сохранить" size="small" rounded :loading="settings.store.saving" :disabled="settings.store.saving" class="!bg-indigo-600 !border-indigo-600 hover:!bg-indigo-500 shrink-0" @click="settings.saveBrand()" />
+          </div>
+        </div>
+        <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
           <Link href="/cabinet/onboarding"><Button label="Реквизиты" icon="pi pi-id-card" outlined class="w-full !rounded-full" /></Link>
           <Link v-if="settings.profile.value?.owner_profile" :href="`/users/${settings.profile.value.owner_profile}`"><Button label="Как видят клиенты" icon="pi pi-eye" outlined class="w-full !rounded-full" /></Link>
         </div>

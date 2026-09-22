@@ -12,6 +12,7 @@ import type { BusinessAd, BusinessVerificationStatus } from '@/types/entities/Bu
 interface PublicBusiness {
   id: number
   name: string
+  brand: string | null
   category: string | null
   address: string | null
   lat: number | null
@@ -78,7 +79,8 @@ const websiteHref = computed(() => {
           </span>
           <div class="min-w-0 flex-1">
             <div class="text-[11px] font-bold tracking-[0.18em] uppercase text-white/60">Компания</div>
-            <h1 class="text-[22px] sm:text-[28px] font-black tracking-tight leading-tight">{{ business.name }}</h1>
+            <h1 class="text-[22px] sm:text-[28px] font-black tracking-tight leading-tight">{{ business.brand || business.name }}</h1>
+            <p v-if="business.brand && business.brand !== business.name" class="text-[13px] text-white/70 mt-0.5 truncate">{{ business.name }}</p>
             <p v-if="business.category || business.address" class="text-[13px] text-white/70 mt-1 truncate">
               {{ business.category ?? '' }}{{ business.category && business.address ? ' · ' : '' }}{{ business.address ?? '' }}
             </p>

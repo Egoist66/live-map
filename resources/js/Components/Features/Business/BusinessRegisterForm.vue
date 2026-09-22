@@ -61,6 +61,12 @@ const form = useBusinessRegisterForm()
       </div>
 
       <div>
+        <label class="auth-label">Бренд</label>
+        <InputText v-model="form.brand.value" placeholder="Как клиенты ищут вас на карте" class="w-full mt-1.5 auth-input" :invalid="!!form.errors.value.brand" />
+        <small class="auth-err">{{ form.errors.value.brand }}</small>
+      </div>
+
+      <div>
         <label class="auth-label">Телефон компании</label>
         <InputText v-model="form.phone.value" placeholder="+375 29 000-00-00" class="w-full mt-1.5 auth-input" :invalid="!!form.errors.value.phone" />
         <small class="auth-err">{{ form.errors.value.phone }}</small>

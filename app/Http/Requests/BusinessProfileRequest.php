@@ -22,6 +22,7 @@ class BusinessProfileRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'min:2', 'max:255'],
+            'brand' => ['nullable', 'string', 'max:255'],
             'category' => ['nullable', 'string', 'max:100'],
             'legal_form' => ['required', 'string', 'in:' . implode(',', Business::LEGAL_FORMS)],
             'unp' => ['nullable', 'string', 'regex:/^\d{9}$/'],

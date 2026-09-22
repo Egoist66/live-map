@@ -16,6 +16,8 @@ use Illuminate\Support\Facades\Storage;
  *
  * @property int $id
  * @property int $user_id
+ * @property int|null $business_id новость компании (пост от бренда, всегда в топе)
+ * @property int|null $business_ad_id связь 1-к-1 с рекламой кабинета
  * @property int|null $repost_of_id
  * @property string|null $repost_comment
  * @property string|null $title
@@ -32,6 +34,8 @@ class FlowPost extends Model
 {
     protected $fillable = [
         'user_id',
+        'business_id',
+        'business_ad_id',
         'repost_of_id',
         'repost_comment',
         'title',
@@ -48,6 +52,32 @@ class FlowPost extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Компания-автор новости (null — обычный пользовательский пост).
+     */
+    public function business(): BelongsTo
+    {
+        return $this->belongsTo(Business::class);
+    }
+
+    /**
+     * Реклама кабинета, породившая пост (null — обычный пост).
+     */
+    public function businessAd(): BelongsTo
+    {
+        return $this->belongsTo(BusinessAd::class);
+    }
+
+    /**
+     * Новость компании ли это (пост от бренда).
+     *
+     * @return bool true когда привязана компания
+     */
+    public function isCompanyNews(): bool
+    {
+        return $this->business_id !== null;
     }
 
     /**

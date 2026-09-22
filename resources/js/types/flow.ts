@@ -43,11 +43,22 @@ export type FlowPoll = {
   options: FlowPollOption[]
 }
 
+/** Компания-автор новости (пост от бренда). */
+export type FlowCompany = {
+  id: number
+  name: string
+  brand: string | null
+  logo_url: string | null
+  is_verified: boolean
+  owner_profile: string | null
+}
+
 /** Пост ленты. */
 export type FlowPost = {
   id: number
   title: string | null
   body: string
+  company: FlowCompany | null
   image_url: string | null
   media: FlowMedia[]
   poll: FlowPoll | null

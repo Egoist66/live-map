@@ -69,6 +69,7 @@ class User extends Authenticatable
                 $user->is_invisible = true;
             }
 
+            self::ensureOrganizationDefaults($user);
             self::assignProfileSlug($user);
         });
 
@@ -87,6 +88,42 @@ class User extends Authenticatable
                 $user->profile_slug = $service->uniqueSlug((string) $user->name, (int) $user->id);
             }
         });
+    }
+
+    /**
+     * Дефолты организации при создании: кабинет = роль organization + тариф business.
+     *
+     * Раз зашли в кабинет — значит оплатили business: персонам (account_type=person)
+     * ничего не трогаем, бизнесу без явного плана выдаём business +30 дней.
+     * Роль organization ставим только когда роль ещё дефолтная (user/пусто),
+     * чтобы сиды и админ-импорт с явной ролью не перезаписывались.
+     *
+     * @param self $user создаваемый пользователь
+     * @return void
+     */
+    private static function ensureOrganizationDefaults(self $user): void
+    {
+        $isBusiness = ($user->account_type ?? 'person') === 'business';
+
+        if (! $isBusiness) {
+            return;
+        }
+
+        $role = trim((string) ($user->role ?? ''));
+
+        if ($role === '' || $role === 'user') {
+            $user->role = 'organization';
+        }
+
+        $plan = trim((string) ($user->plan ?? ''));
+
+        if ($plan === '' || $plan === 'free') {
+            $user->plan = 'business';
+
+            if (empty($user->plan_expires_at)) {
+                $user->plan_expires_at = now()->addDays(30);
+            }
+        }
     }
 
     /**
@@ -211,10 +248,25 @@ class User extends Authenticatable
     public function districts() { return $this->hasMany(District::class); }
     public function districtMemberships() { return $this->hasMany(DistrictMember::class); }
 
+    /**
+     * Все допустимые роли: user — персона, organization — компания
+     * (кабинет, тариф business), moderator/admin — staff панели модерации.
+     */
+    public const ROLES = ['user', 'moderator', 'admin', 'organization'];
+
     public function isAdmin(): bool { return $this->is_admin || $this->role === 'admin'; }
     public function isBanned(): bool { return $this->banned_at !== null; }
     public function isModerator(): bool { return $this->isAdmin() || $this->role === 'moderator'; }
     public function hasRole(string $role): bool { return $this->role === $role || $this->isAdmin(); }
+
+    /**
+     * Организация ли это (роль organization — кабинет компании).
+     *
+     * Роль не даёт staff-прав: модерация только у moderator/admin.
+     *
+     * @return bool true когда role=organization
+     */
+    public function isOrganization(): bool { return $this->role === 'organization'; }
 
     public const FREE_PINS_LIMIT = 3;
     public const FREE_PIN_INVITES_MONTH_LIMIT = 3;

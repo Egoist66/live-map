@@ -394,7 +394,7 @@ class BusinessService
     private function filterProfileData(array $data): array
     {
         $keys = [
-            'name', 'category', 'legal_form', 'unp', 'reg_number',
+            'name', 'brand', 'category', 'legal_form', 'unp', 'reg_number',
             'address', 'legal_address', 'director_name', 'lat', 'lng',
             'description', 'services', 'phone', 'website', 'working_hours', 'is_active',
         ];

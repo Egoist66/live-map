@@ -20,6 +20,7 @@ const legalForms = ['ooo', 'ip', 'odo', 'zao', 'self_employed', 'craft', 'other'
 export const businessSchema = toTypedSchema(
   z.object({
     name: z.string().min(1, 'Название обязательно').min(2, 'Минимум 2 символа').max(255),
+    brand: z.preprocess(toNull, z.string().max(255).nullable().optional()),
     category: z.preprocess(toNull, z.string().max(100).nullable().optional()),
     legal_form: z.enum(legalForms, { errorMap: () => ({ message: 'Выбери форму' }) }),
     unp: z.preprocess(

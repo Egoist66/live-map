@@ -4,6 +4,8 @@ import { h } from 'vue'
 import BusinessLayout from '@/Layouts/BusinessLayout.vue'
 import BusinessStatCard from '@/Components/Features/Business/BusinessStatCard.vue'
 import BusinessVerificationBadge from '@/Components/Features/Business/BusinessVerificationBadge.vue'
+import BusinessAdDistrictDialog from '@/Components/Features/Business/BusinessAdDistrictDialog.vue'
+import BusinessFinderCard from '@/Components/Features/Business/BusinessFinderCard.vue'
 import { useBusinessDashboard } from '@/composables/useBusinessDashboard'
 import { useBusinessPinGate } from '@/composables/useBusinessPinGate'
 import { useBusinessAds } from '@/composables/useBusinessAds'
@@ -51,7 +53,7 @@ if (props.initialDashboard && !dash.store.dashboard) {
           <div class="min-w-0 flex-1">
             <div class="text-[11px] font-bold tracking-[0.18em] uppercase text-white/60">Кабинет компании</div>
             <h1 class="text-[22px] sm:text-[28px] font-black tracking-tight leading-tight truncate">
-              {{ dash.store.profile?.name ?? 'Моя компания' }}
+              {{ dash.store.profile?.brand || dash.store.profile?.name || 'Моя компания' }}
             </h1>
             <p class="text-[13px] text-white/70 mt-1 truncate">
               УНП {{ dash.store.profile?.unp ?? '—' }} · {{ dash.store.profile?.address ?? dash.store.profile?.legal_address ?? 'адрес не указан' }}
@@ -185,7 +187,7 @@ if (props.initialDashboard && !dash.store.dashboard) {
       <template #title>
         <span class="flex items-center justify-between gap-2">
           <span class="text-[16px] font-black dark:text-white">Реклама компании</span>
-          <span class="text-[11px] font-bold text-stone-400 dark:text-zinc-500">{{ ads.quotaLabel.value }}</span>
+          <span class="text-[11px] font-bold text-stone-400 dark:text-zinc-500 text-right">{{ ads.quotaLabel.value }}<br />{{ ads.districtQuotaLabel.value }}</span>
         </span>
       </template>
       <template #content>
@@ -197,7 +199,7 @@ if (props.initialDashboard && !dash.store.dashboard) {
             <InputText v-model="ads.title.value" maxlength="100" placeholder="Заголовок новости или акции" fluid class="!rounded-2xl" />
             <Textarea v-model="ads.body.value" rows="2" maxlength="1000" auto-resize fluid placeholder="Текст — что, где и до какого числа…" class="!rounded-2xl !text-sm" />
             <div class="flex items-center gap-2">
-              <span class="text-[12px] text-stone-500 dark:text-zinc-400 flex-1">{{ ads.quotaLabel.value }}</span>
+              <span class="text-[12px] text-stone-500 dark:text-zinc-400 flex-1">Выйдет в UFlow от бренда · {{ ads.quotaLabel.value }}</span>
               <Button label="Опубликовать" icon="pi pi-megaphone" size="small" rounded :loading="ads.saving.value" :disabled="!ads.canSubmit.value" class="!bg-gradient-to-r !from-indigo-500 !to-violet-600 !border-0 !text-white" @click="ads.publish()" />
             </div>
           </div>
@@ -212,6 +214,7 @@ if (props.initialDashboard && !dash.store.dashboard) {
             <div v-for="ad in ads.ads.value" :key="ad.id" class="rounded-2xl border border-stone-200 dark:border-zinc-700 px-3.5 py-2.5">
               <div class="flex items-center gap-2">
                 <div class="text-sm font-bold truncate dark:text-white flex-1">📢 {{ ad.title }}</div>
+                <Button icon="pi pi-send" size="small" rounded outlined title="Разместить в районах" aria-label="Разместить в районах" class="!w-8 !h-8 !p-0 shrink-0" @click="ads.openPlaceDialog(ad)" />
                 <Button icon="pi pi-trash" size="small" rounded outlined severity="danger" title="Удалить" aria-label="Удалить рекламу" class="!w-8 !h-8 !p-0 shrink-0" @click="ads.remove(ad.id)" />
               </div>
               <div class="text-[13px] text-stone-600 dark:text-zinc-300 mt-0.5 whitespace-pre-line break-words">{{ ad.body }}</div>
@@ -220,5 +223,9 @@ if (props.initialDashboard && !dash.store.dashboard) {
         </div>
       </template>
     </Card>
+
+    <BusinessFinderCard />
+
+    <BusinessAdDistrictDialog :ads="ads" />
   </div>
 </template>

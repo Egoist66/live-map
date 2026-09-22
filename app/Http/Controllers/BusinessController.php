@@ -145,6 +145,47 @@ class BusinessController extends Controller
     }
 
     /**
+     * Поиск организаций по названию и бренду.
+     *
+     * Отдельный поиск для таба «Организации»: юрназвание часто
+     * канцелярское, а клиенты ищут бренд. Только активные компании,
+     * сортировка — проверенные первыми, затем свежие.
+     *
+     * @param Request $request запрос с q (минимум 2 символа)
+     * @return JsonResponse до 20 компаний публичным массивом
+     */
+    public function search(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'q' => 'required|string|min:2|max:100',
+        ]);
+
+        $queryText = trim($data['q']);
+
+        $companies = Business::query()
+            ->where('is_active', true)
+            ->where(function ($where) use ($queryText) {
+                $where->where('name', 'like', "%{$queryText}%")
+                    ->orWhere('brand', 'like', "%{$queryText}%")
+                    ->orWhere('category', 'like', "%{$queryText}%");
+            })
+            ->with('user:id,profile_slug,name')
+            ->orderByDesc('verification_status')
+            ->orderByDesc('updated_at')
+            ->limit(20)
+            ->get();
+
+        $items = $companies->map(function (Business $business) {
+            $public = $business->toPublicArray();
+            $public['owner_profile'] = $business->user?->profileIdentifier();
+
+            return $public;
+        })->values();
+
+        return response()->json($items);
+    }
+
+    /**
      * Живые пины компании для модалки на карте.
      */
     public function pins(Request $request, Business $business): JsonResponse
@@ -209,6 +250,7 @@ class BusinessController extends Controller
         if (mb_strlen($queryText) >= 1) {
             $query->where(function ($where) use ($queryText) {
                 $where->where('name', 'like', "%{$queryText}%")
+                    ->orWhere('brand', 'like', "%{$queryText}%")
                     ->orWhere('unp', 'like', "%{$queryText}%")
                     ->orWhere('legal_address', 'like', "%{$queryText}%")
                     ->orWhereHas('user', function ($userQuery) use ($queryText) {

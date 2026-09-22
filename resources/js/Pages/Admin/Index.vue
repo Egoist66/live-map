@@ -254,6 +254,14 @@ enforceVisibleTab()
           <Button label="Снять права" severity="danger" :loading="mon.actingId.value !== null" @click="mon.confirmSelfRoleChange()" />
         </template>
       </Dialog>
+      <Dialog :visible="!!mon.pendingOrganizationRole.value" @update:visible="(v:boolean)=>{ if(!v) mon.cancelOrganizationRoleChange() }" modal header="Выдать роль «организация»?" :style="{ width: '440px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-[24px] overflow-hidden' }, header: { class: '!p-5 !pb-0 !border-0 dark:!bg-zinc-900 dark:!text-white' }, content: { class: '!px-5 !py-4 dark:!bg-zinc-900' }, footer: { class: '!px-5 !pb-5 !pt-1 !border-0 dark:!bg-zinc-900' } }">
+        <Message severity="warn" :closable="false" class="!rounded-2xl !text-xs">Данный аккаунт персональный и не связан с предпринимательской деятельностью.</Message>
+        <p class="mt-3 text-sm text-stone-600 dark:text-zinc-300">Выдать <b>{{ mon.pendingOrganizationRole.value?.user?.name }}</b> ({{ mon.pendingOrganizationRole.value?.user?.email }}) роль «организация»? Вместе с ролью автоматически включится тариф <b>business</b> — как у всех, кто зашёл в кабинет компании.</p>
+        <template #footer>
+          <Button label="Отмена" text @click="mon.cancelOrganizationRoleChange()" />
+          <Button label="Выдать организацию" severity="warn" :loading="mon.actingId.value !== null" @click="mon.confirmOrganizationRoleChange()" />
+        </template>
+      </Dialog>
       <Dialog :visible="!!admin.confirmDelete.value" @update:visible="(v:boolean)=>{ if(!v) admin.closeConfirm() }" modal header="Удалить аккаунт?" :style="{ width: '400px', maxWidth: '94vw' }">
         <p class="text-sm text-stone-600 dark:text-zinc-300">Удалить <b>{{ admin.confirmDelete.value?.name }}</b> ({{ admin.confirmDelete.value?.email }})? Это нельзя отменить.</p>
         <template #footer>

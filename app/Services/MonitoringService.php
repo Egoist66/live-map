@@ -131,6 +131,15 @@ class MonitoringService
 
     protected function userRow(User $u, bool $isOnline): array
     {
+        $isBusiness = ($u->account_type ?? 'person') === 'business';
+        $brief = null;
+
+        try {
+            $brief = $u->businessBrief();
+        } catch (\Throwable) {
+            $brief = null;
+        }
+
         return [
             'id' => $u->id,
             'name' => $u->name,
@@ -142,6 +151,7 @@ class MonitoringService
             'plan_expires_at' => $u->plan_expires_at?->toISOString(),
             'role' => $u->role,
             'is_admin' => $u->isAdmin(),
+            'is_organization' => $u->isOrganization(),
             'is_hidden_from_search' => (bool) $u->is_hidden_from_search,
             'is_invisible' => (bool) $u->is_invisible,
             'is_online' => $isOnline,
@@ -150,6 +160,9 @@ class MonitoringService
             'last_seen_at' => $u->last_seen_at?->toISOString(),
             'created_at' => $u->created_at?->toISOString(),
             'pins_count' => $u->pins_count ?? 0,
+            'account_type' => $u->account_type ?? 'person',
+            'is_business' => $isBusiness,
+            'business' => $brief,
         ];
     }
 
@@ -158,7 +171,7 @@ class MonitoringService
         $perPage = max(5, min(100, $perPage));
         $threshold = self::onlineThreshold();
 
-        $query = User::withCount('pins')
+        $query = User::with('businesses')->withCount('pins')
             ->where('last_seen_at', '>=', $threshold)
             ->orderByDesc('last_seen_at');
 
@@ -175,7 +188,7 @@ class MonitoringService
         $perPage = max(10, min(100, $perPage));
         $threshold = self::onlineThreshold();
 
-        $query = User::withCount('pins');
+        $query = User::with('businesses')->withCount('pins');
 
         if ($q && strlen(trim($q)) >= 1) {
             $term = trim($q);
@@ -187,6 +200,7 @@ class MonitoringService
             'new' => $query->where('created_at', '>=', now()->subDays(7)),
             'hidden' => $query->where('is_hidden_from_search', true),
             'admins' => $query->where(fn ($w) => $w->where('is_admin', true)->orWhere('role', 'admin')),
+            'organizations' => $query->where(fn ($w) => $w->where('role', 'organization')->orWhere('account_type', 'business')),
             default => null,
         };
 

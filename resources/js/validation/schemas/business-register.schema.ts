@@ -15,6 +15,7 @@ export const businessRegisterSchema = toTypedSchema(
   z
     .object({
       name: z.string().min(1, 'Название компании обязательно').min(2, 'Минимум 2 символа').max(255),
+      brand: z.preprocess(toNull, z.string().max(255).nullable().optional()),
       email: z.string().min(1, 'Email обязателен').email('Некорректный email'),
       password: z.string().min(8, 'Минимум 8 символов'),
       password_confirmation: z.string().min(1, 'Подтвердите пароль'),

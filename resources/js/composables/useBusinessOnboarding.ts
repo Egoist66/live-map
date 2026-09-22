@@ -3,6 +3,7 @@ import { router } from '@inertiajs/vue3'
 import { useForm } from 'vee-validate'
 import { useToast } from 'primevue/usetoast'
 import { businessSchema } from '@/validation/schemas/business.schema'
+import { forwardGeocodePlace } from '@/services/geo.api'
 import { useBusinessStore } from '@/stores/business'
 import type { BusinessProfilePayload } from '@/types/entities/Business'
 
@@ -70,6 +71,7 @@ export function useBusinessOnboarding() {
     validationSchema: businessSchema,
     initialValues: {
       name: '',
+      brand: null,
       category: null,
       legal_form: 'ooo',
       unp: null,
@@ -87,6 +89,7 @@ export function useBusinessOnboarding() {
   })
 
   const [name, nameAttrs] = defineField('name')
+  const [brand] = defineField('brand')
   const [category] = defineField('category')
   const [legalForm] = defineField('legal_form')
   const [unp, unpAttrs] = defineField('unp')
@@ -110,6 +113,83 @@ export function useBusinessOnboarding() {
     }
     return true
   })
+
+  /** Идёт ли поиск координат по адресу. */
+  const geocoding = ref(false)
+
+  /**
+   * Подпись текущих координат точки.
+   */
+  const coordsLabel = computed(() => {
+    const latNum = Number(values.lat)
+    const lngNum = Number(values.lng)
+    if (Number.isFinite(latNum) && Number.isFinite(lngNum) && String(values.lat ?? '') !== '' && String(values.lng ?? '') !== '') {
+      return `📍 ${latNum.toFixed(5)}, ${lngNum.toFixed(5)} — точка на карте задана`
+    }
+    return 'Точка на карте не задана'
+  })
+
+  /**
+   * Найти координаты по фактическому адресу (Nominatim, с кэшем).
+   *
+   * Широту/долготу руками никто не вводит: владелец пишет адрес
+   * (или жмёт «как юр. адрес»), координаты считаются автоматом
+   * и едут в lat/lng — дальше пригодятся карте и поиску.
+   *
+   * @returns true когда точка найдена и подставлена
+   */
+  async function detectCoords(): Promise<boolean> {
+    const rawAddress = String(values.address ?? '').trim()
+    const rawLegal = String(values.legal_address ?? '').trim()
+    const query = rawAddress !== '' ? rawAddress : rawLegal
+    if (query === '' || geocoding.value) {
+      return false
+    }
+    geocoding.value = true
+    try {
+      const found = await forwardGeocodePlace(`${query}, Беларусь`)
+        ?? await forwardGeocodePlace(query)
+      if (!found) {
+        toast.add({ severity: 'warn', summary: 'Не нашли адрес', detail: 'Уточни улицу и дом — например «г. Минск, ул. Ленина, 1»', life: 4500 })
+        return false
+      }
+      lat.value = String(found.lat)
+      lng.value = String(found.lng)
+      toast.add({ severity: 'success', summary: 'Точка найдена', detail: `${found.lat.toFixed(5)}, ${found.lng.toFixed(5)}`, life: 2500 })
+      return true
+    } finally {
+      geocoding.value = false
+    }
+  }
+
+  /**
+   * Тихий поиск координат при уходе с поля адреса.
+   *
+   * Срабатывает только когда точки ещё нет — уже заданную
+   * вручную найденную точку не перезатираем.
+   */
+  async function maybeDetectCoords(): Promise<void> {
+    if (String(values.lat ?? '') !== '' && String(values.lng ?? '') !== '') {
+      return
+    }
+    if (String(values.address ?? '').trim() === '') {
+      return
+    }
+    await detectCoords()
+  }
+
+  /**
+   * Подставить юр. адрес в фактический и найти координаты.
+   */
+  async function useLegalAddressAsPoint(): Promise<void> {
+    const rawLegal = String(values.legal_address ?? '').trim()
+    if (rawLegal === '') {
+      toast.add({ severity: 'warn', summary: 'Юр. адрес пуст', detail: 'Заполни его на шаге «Реквизиты РБ»', life: 3500 })
+      return
+    }
+    address.value = rawLegal
+    await detectCoords()
+  }
 
   function next(): void {
     if (!stepValid.value || step.value >= 2) {
@@ -178,6 +258,7 @@ export function useBusinessOnboarding() {
         }
         setValues({
           name: profile.name ?? '',
+          brand: profile.brand ?? null,
           category: profile.category ?? null,
           legal_form: profile.legal_form ?? 'ooo',
           unp: profile.unp ?? null,
@@ -243,6 +324,7 @@ export function useBusinessOnboarding() {
     values,
     name,
     nameAttrs,
+    brand,
     category,
     legalForm,
     unp,
@@ -262,6 +344,11 @@ export function useBusinessOnboarding() {
     next,
     back,
     finish,
+    geocoding,
+    coordsLabel,
+    detectCoords,
+    maybeDetectCoords,
+    useLegalAddressAsPoint,
     setValues,
     store,
     legalFormOptions: LEGAL_FORM_OPTIONS,

@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $id
  * @property int $user_id
  * @property string $name
+ * @property string|null $brand Витринное название/бренд для поиска и показа
  * @property string|null $category
  * @property string $legal_form ooo|ip|odo|zao|self_employed|craft|other
  * @property string|null $unp УНП, 9 цифр
@@ -44,6 +45,7 @@ class Business extends Model
     protected $fillable = [
         'user_id',
         'name',
+        'brand',
         'category',
         'legal_form',
         'unp',
@@ -125,6 +127,52 @@ class Business extends Model
         return $this->verification_status === 'verified';
     }
 
+    /**
+     * Короткие визитки компаний для пачки владельцев одним запросом.
+     *
+     * Нужно маркерам бизнес-пинов на карте (логотип + бренд + бейдж
+     * «Проверено» без N+1): берём свежий активный профиль владельца.
+     *
+     * @param int[] $userIds id владельцев пинов
+     * @return array<int, array{name:string,brand:string|null,logo_url:string|null,is_verified:bool}>
+     */
+    public static function briefMapForOwners(array $userIds): array
+    {
+        $ids = array_values(array_unique(array_map('intval', $userIds)));
+
+        if ($ids === []) {
+            return [];
+        }
+
+        try {
+            $rows = static::query()
+                ->whereIn('user_id', $ids)
+                ->orderByDesc('id')
+                ->get();
+        } catch (\Throwable) {
+            return [];
+        }
+
+        $map = [];
+
+        foreach ($rows as $business) {
+            $ownerId = (int) $business->user_id;
+
+            if (isset($map[$ownerId])) {
+                continue;
+            }
+
+            $map[$ownerId] = [
+                'name' => (string) ($business->name ?? ''),
+                'brand' => $business->brand ?? null,
+                'logo_url' => $business->logo_url,
+                'is_verified' => $business->isVerified(),
+            ];
+        }
+
+        return $map;
+    }
+
     public function isPending(): bool
     {
         return $this->verification_status === 'pending';
@@ -161,6 +209,7 @@ class Business extends Model
             'id' => $this->id,
             'user_id' => $this->user_id,
             'name' => $this->name,
+            'brand' => $this->brand,
             'category' => $this->category,
             'legal_form' => $this->legal_form,
             'is_organization' => $this->isOrganization(),

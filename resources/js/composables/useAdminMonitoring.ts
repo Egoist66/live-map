@@ -5,8 +5,19 @@ import { adminApi } from '@/services/admin.api'
 import { useStaffRole } from '@/composables/useStaffRole'
 
 export type OnlineLimit = 10 | 20 | 50 | 100
-export type UsersFilter = 'all' | 'online' | 'new' | 'hidden' | 'admins'
+export type UsersFilter = 'all' | 'online' | 'new' | 'hidden' | 'admins' | 'organizations'
 export type UsersSort = 'last_seen' | 'newest' | 'oldest' | 'name'
+
+/**
+ * Предупреждение при выдаче роли organization персональному аккаунту.
+ *
+ * Дублирует текст бэкенда (AdminUserController::organizationRoleWarning):
+ * аккаунт person без бизнес-профиля с предпринимательской деятельностью
+ * не связан — роль предназначена только для кабинета компании.
+ */
+export const ORGANIZATION_ROLE_WARNING =
+  'Данный аккаунт персональный и не связан с предпринимательской деятельностью. ' +
+  'Роль «организация» предназначена только для кабинета компании (account_type=business с реквизитами и тарифом business).'
 
 export function useAdminMonitoring() {
   const staff = useStaffRole()
@@ -37,6 +48,7 @@ export function useAdminMonitoring() {
 
   const actingId = ref<number | null>(null)
   const pendingSelfRole = ref<{ user: any; role: string; prevRole: string } | null>(null)
+  const pendingOrganizationRole = ref<{ user: any; prevRole: string } | null>(null)
   let toast: any = null
   try { toast = useToast() } catch { toast = null }
   let timer: ReturnType<typeof setInterval> | null = null
@@ -176,16 +188,40 @@ export function useAdminMonitoring() {
     } finally { actingId.value = null }
   }
 
-  async function setRole(user: any, role: string) {
+  /**
+   * Персональный ли аккаунт (не кабинет компании).
+   *
+   * Кабинет = account_type business или уже есть бизнес-профиль;
+   * остальное — персона, с предпринимательской деятельностью не связана.
+   *
+   * @param user строка списка пользователей
+   * @returns true когда аккаунт персональный
+   */
+  function isPersonalAccount(user: any): boolean {
+    if (!user) return true
+    if (user.account_type === 'business' || user.is_business) return false
+    if (user.business) return false
+    return true
+  }
+
+  async function setRole(user: any, role: string, extra: { confirm_personal?: boolean } = {}) {
     if (!user || user.role === role) return
     actingId.value = user.id
     error.value = null
     const prevRole = user.role
     const prevIsAdmin = user.is_admin
     try {
-      const updated: any = await adminApi.updateUser(user.id, { role })
+      const updated: any = await adminApi.updateUser(user.id, { role, ...extra })
       user.role = updated.role
       user.is_admin = updated.is_admin
+      if (updated.plan) user.plan = updated.plan
+      if (updated.effective_plan) user.effective_plan = updated.effective_plan
+      if ('plan_expires_at' in updated) user.plan_expires_at = updated.plan_expires_at
+      if (updated.account_type) user.account_type = updated.account_type
+      if (role === 'organization' && !updated.plan) {
+        user.plan = 'business'
+        user.effective_plan = 'business'
+      }
       if (isSelf(user)) {
         syncAuthUser(updated)
       }
@@ -194,7 +230,11 @@ export function useAdminMonitoring() {
         router.visit('/')
         return
       }
-      toast?.add({ severity: 'success', summary: 'Роль обновлена', life: 2000 })
+      if (updated.role_warning) {
+        toast?.add({ severity: 'warn', summary: String(updated.role_warning), life: 6000 })
+      } else {
+        toast?.add({ severity: 'success', summary: role === 'organization' ? 'Роль обновлена: организация + тариф business' : 'Роль обновлена', life: 2000 })
+      }
     } catch (e: any) {
       const message = e?.response?.data?.message || 'Не удалось сменить роль'
       error.value = message
@@ -207,8 +247,13 @@ export function useAdminMonitoring() {
 
   /**
    * Запросить смену роли. Свою с понижением — только через подтверждение.
+   *
+   * Роль organization персональному аккаунту — только через диалог
+   * с предупреждением (аккаунт не связан с предпринимательской
+   * деятельностью): бэкенд без confirm_personal ответит 422.
+   *
    * @param user строка списка пользователей
-   * @param role новая роль user|moderator|admin
+   * @param role новая роль user|moderator|admin|organization
    * @returns Promise<void>
    */
   async function requestRoleChange(user: any, role: string): Promise<void> {
@@ -219,7 +264,33 @@ export function useAdminMonitoring() {
       pendingSelfRole.value = { user, role, prevRole: user.role }
       return
     }
+    if (role === 'organization' && isPersonalAccount(user)) {
+      pendingOrganizationRole.value = { user, prevRole: user.role }
+      return
+    }
     await setRole(user, role)
+  }
+
+  /**
+   * Подтвердить выдачу роли organization персональному аккаунту.
+   *
+   * Шлёт confirm_personal: бэкенд выдаст роль + тариф business,
+   * а предупреждение продублирует тостом.
+   *
+   * @returns Promise<void>
+   */
+  async function confirmOrganizationRoleChange(): Promise<void> {
+    const pending = pendingOrganizationRole.value
+    if (!pending) return
+    pendingOrganizationRole.value = null
+    await setRole(pending.user, 'organization', { confirm_personal: true })
+  }
+
+  /**
+   * Отменить выдачу роли organization (подтверждение отклонено).
+   */
+  function cancelOrganizationRoleChange(): void {
+    pendingOrganizationRole.value = null
   }
 
   /**
@@ -271,9 +342,10 @@ export function useAdminMonitoring() {
     overview, loadingOverview, points, summary, chartDays, loadingChart, exporting, error,
     online, onlineMeta, onlinePage, onlineLimit, onlineQuery, loadingOnline,
     users, usersMeta, usersPage, usersLimit, usersQuery, usersFilter, usersSort, loadingUsers,
-    actingId, onlinePct, maxChart, authUserId, pendingSelfRole,
+    actingId, onlinePct, maxChart, authUserId, pendingSelfRole, pendingOrganizationRole,
     loadOverview, loadChart, exportExcel, loadOnline, loadUsers, refreshAll,
     setOnlineLimit, setOnlinePage, setUsersPage, setUsersFilter, setPlan, setRole,
-    requestRoleChange, confirmSelfRoleChange, cancelSelfRoleChange, isSelf,
+    requestRoleChange, confirmSelfRoleChange, cancelSelfRoleChange,
+    confirmOrganizationRoleChange, cancelOrganizationRoleChange, isPersonalAccount, isSelf,
   }
 }

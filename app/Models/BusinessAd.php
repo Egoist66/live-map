@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * Реклама проверенного бизнеса: новость или акция компании.
@@ -40,6 +42,22 @@ class BusinessAd extends Model
     }
 
     /**
+     * Пост-новость компании в UFlow (1-к-1, создаётся при публикации).
+     */
+    public function flowPost(): HasOne
+    {
+        return $this->hasOne(FlowPost::class, 'business_ad_id');
+    }
+
+    /**
+     * Копии рекламы в районах.
+     */
+    public function districtPosts(): HasMany
+    {
+        return $this->hasMany(DistrictPost::class, 'business_ad_id');
+    }
+
+    /**
      * Сколько рекламы бизнес выпустил за скользящие 7 дней.
      *
      * @param int $businessId бизнес
@@ -50,6 +68,28 @@ class BusinessAd extends Model
         return static::where('business_id', $businessId)
             ->where('created_at', '>=', now()->subDays(7))
             ->count();
+    }
+
+    /**
+     * Сколько размещений в районах бизнес сделал за скользящие 7 дней.
+     *
+     * Отдельная квота (не путать с витринными): организация может
+     * разместить рекламу максимум в 3 районах в неделю.
+     *
+     * @param int $businessId бизнес
+     * @return int использовано районных слотов
+     */
+    public static function districtPlacementsThisWeek(int $businessId): int
+    {
+        try {
+            return DistrictPost::whereHas('businessAd', function ($q) use ($businessId) {
+                $q->where('business_id', $businessId);
+            })
+                ->where('created_at', '>=', now()->subDays(7))
+                ->count();
+        } catch (\Throwable) {
+            return 0;
+        }
     }
 
     /**

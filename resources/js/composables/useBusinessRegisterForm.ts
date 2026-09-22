@@ -40,6 +40,7 @@ export function useBusinessRegisterForm() {
     validationSchema: businessRegisterSchema,
     initialValues: {
       name: '',
+      brand: null,
       email: '',
       password: '',
       password_confirmation: '',
@@ -52,6 +53,7 @@ export function useBusinessRegisterForm() {
   })
 
   const [name, nameAttrs] = defineField('name')
+  const [brand] = defineField('brand')
   const [email, emailAttrs] = defineField('email')
   const [password, passwordAttrs] = defineField('password')
   const [passwordConfirmation, passwordConfirmationAttrs] = defineField('password_confirmation')
@@ -64,6 +66,7 @@ export function useBusinessRegisterForm() {
   const submit = handleSubmit(async (vals: any) => {
     const payload = {
       name: vals.name,
+      brand: vals.brand ?? null,
       email: vals.email,
       password: vals.password,
       password_confirmation: vals.password_confirmation,
@@ -92,6 +95,7 @@ export function useBusinessRegisterForm() {
   return {
     name,
     nameAttrs,
+    brand,
     email,
     emailAttrs,
     password,

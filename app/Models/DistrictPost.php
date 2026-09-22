@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Storage;
  *
  * @property int $id
  * @property int $district_id
+ * @property int|null $business_ad_id копия рекламы компании (null — обычная новость)
  * @property int $user_id автор (владелец района)
  * @property string|null $title заголовок
  * @property string $body текст новости
@@ -29,6 +30,7 @@ class DistrictPost extends Model
 {
     protected $fillable = [
         'district_id',
+        'business_ad_id',
         'user_id',
         'title',
         'body',
@@ -45,6 +47,24 @@ class DistrictPost extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Реклама компании, копией которой является пост (null — обычная новость).
+     */
+    public function businessAd(): BelongsTo
+    {
+        return $this->belongsTo(BusinessAd::class);
+    }
+
+    /**
+     * Реклама компании ли это (а не новость владельца района).
+     *
+     * @return bool true когда пост — копия business_ads
+     */
+    public function isCompanyAd(): bool
+    {
+        return $this->business_ad_id !== null;
     }
 
     public function comments(): HasMany

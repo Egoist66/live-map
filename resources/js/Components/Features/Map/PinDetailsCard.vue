@@ -131,7 +131,7 @@ function canDeleteComment(c: any): boolean {
 </script>
 <template>
   <div v-if="pin" ref="cardRef" :style="cardStyle" :class="isEditingPin ? 'sm:max-h-[calc(100dvh-2rem)]' : 'sm:max-h-none'" class="above-bottomnav absolute inset-x-2 sm:inset-x-auto top-auto max-h-[72dvh] sm:right-4 sm:top-4 sm:w-[380px] bg-white dark:bg-zinc-900 rounded-[20px] shadow-float border border-stone-200 dark:border-zinc-700 flex flex-col overflow-hidden z-20">
-    <div class="p-4 sm:p-5 border-b border-stone-200 dark:border-zinc-700 shrink-0" :class="isEditingPin ? 'max-h-[30dvh] sm:max-h-[280px] overflow-y-auto min-h-0' : ''">
+    <div class="p-4 sm:p-5 border-b border-stone-200 dark:border-zinc-700 shrink-0 min-h-0 overflow-y-auto overscroll-contain" :class="isEditingPin ? 'max-h-[30dvh] sm:max-h-[280px]' : 'max-h-[44dvh] sm:max-h-[380px]'">
       <div v-if="!pinEdit.editing.value" class="flex justify-between items-start gap-3">
         <h3 class="font-bold leading-tight pr-2 text-[15px] break-words min-w-0 flex-1">{{ pin.title }}</h3>
         <div class="flex items-center gap-1 shrink-0">
@@ -182,7 +182,7 @@ function canDeleteComment(c: any): boolean {
           container-class="!rounded-2xl overflow-hidden border border-stone-200 dark:border-zinc-700"
         >
           <template #item="{ item }">
-            <img :src="(item as any).url" :alt="(item as any).caption ?? 'Фото компании'" class="w-full h-52 sm:h-60 object-cover" loading="lazy" />
+            <img :src="(item as any).url" :alt="(item as any).caption ?? 'Фото компании'" class="w-full h-44 sm:h-52 object-cover" loading="lazy" />
           </template>
           <template #thumbnail="{ item }">
             <img :src="(item as any).url" :alt="(item as any).caption ?? ''" class="w-14 h-14 object-cover rounded-lg" loading="lazy" />
@@ -219,7 +219,7 @@ function canDeleteComment(c: any): boolean {
         <button @click="emit('report')" :disabled="reporting" class="w-10 h-10 rounded-full grid place-items-center border active:scale-95 transition disabled:opacity-50 bg-zinc-500/10 dark:bg-zinc-500/15 border-zinc-500/25 dark:border-zinc-500/30 text-zinc-500 dark:text-zinc-300 hover:bg-red-500/15 hover:border-red-500/40 hover:text-red-500 dark:hover:text-red-400">⚠</button>
       </div>
     </div>
-    <div ref="listRef" class="flex-1 overflow-y-auto overscroll-contain p-4 space-y-3 bg-stone-50/40 dark:bg-black/30" :class="isEditingPin ? 'min-h-[160px] sm:min-h-[240px]' : ''" style="webkit-overflow-scrolling: touch;">
+    <div ref="listRef" class="flex-1 min-h-[140px] sm:min-h-[200px] overflow-y-auto overscroll-contain p-4 space-y-3 bg-stone-50/40 dark:bg-black/30" :class="isEditingPin ? 'min-h-[160px] sm:min-h-[240px]' : ''" style="webkit-overflow-scrolling: touch;">
       <div v-for="root in comments" :key="root.id" :id="`pin-comment-${root.id}`" :class="['bg-white dark:bg-zinc-800 border rounded-2xl p-3.5', Number(highlightCommentId) === Number(root.id) ? 'border-violet-500 ring-2 ring-violet-500/40' : 'border-stone-200 dark:border-zinc-700']">
         <div class="font-semibold text-xs flex items-center gap-2 dark:text-zinc-100">
           <img v-if="!root.is_anonymous" :src="avatarSrcFor(root.user)" class="w-6 h-6 rounded-full object-cover shrink-0" alt="" />

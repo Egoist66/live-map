@@ -15,6 +15,7 @@ export interface DistrictPost {
   district_id: number
   title: string | null
   body: string
+  company: import('@/types/flow').FlowCompany | null
   image_url: string | null
   likes_count: number
   comments_count: number

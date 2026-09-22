@@ -252,7 +252,7 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
       const isBusinessPin = !!(p as any).is_business
       const wrap = document.createElement('div')
       wrap.className = 'relative grid place-items-center cursor-pointer will-change-transform'
-      const bizScale = isBusinessPin ? 1.45 : 1
+      const bizScale = isBusinessPin ? 2 : 1
       const sz = Math.round(34 * scale * bizScale)
       wrap.style.width = sz+'px'
       wrap.style.height = sz+'px'
@@ -317,6 +317,57 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
       if(isBoosted) { inner.className='rounded-full bg-white text-amber-600 grid place-items-center font-black'; inner.style.fontSize='9px'; inner.style.width=(12*scale)+'px'; inner.style.height=(12*scale)+'px' }
       if (isInvited && !isSosPin && !isBoosted) { inner.className='rounded-full bg-white grid place-items-center'; inner.style.fontSize='8px'; inner.style.width=(12*scale)+'px'; inner.style.height=(12*scale)+'px'; inner.textContent='✉️' }
       if (!isSosPin) core.appendChild(inner)
+      if (plainBusiness) {
+        const company = (p as any).company ?? null
+        const brandName = String(company?.brand || (p as any).user?.name || '').trim()
+        const logoUrl = String(company?.logo_url ?? '').trim()
+        core.style.borderRadius = '18px'
+        core.style.background = 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 60%, #9333EA 100%)'
+        core.style.width = (34*scale)+'px'
+        core.style.height = (34*scale)+'px'
+        core.innerHTML = ''
+        if (logoUrl !== '') {
+          const logo = document.createElement('img')
+          logo.src = logoUrl
+          logo.alt = brandName || 'Логотип компании'
+          logo.loading = 'lazy'
+          logo.style.width = '100%'
+          logo.style.height = '100%'
+          logo.style.objectFit = 'cover'
+          logo.style.borderRadius = '15px'
+          logo.style.pointerEvents = 'none'
+          logo.addEventListener('error', () => logo.remove())
+          core.appendChild(logo)
+        } else {
+          const emoji = document.createElement('div')
+          emoji.textContent = '🏢'
+          emoji.style.fontSize = Math.round(20*scale)+'px'
+          emoji.style.lineHeight = '1'
+          emoji.style.pointerEvents = 'none'
+          core.appendChild(emoji)
+        }
+        if (company?.is_verified) {
+          const check = document.createElement('div')
+          check.textContent = '✓'
+          check.style.position = 'absolute'
+          check.style.right = '-5px'
+          check.style.bottom = '-5px'
+          const checkSize = Math.round(17*scale)
+          check.style.width = checkSize+'px'
+          check.style.height = checkSize+'px'
+          check.style.borderRadius = '999px'
+          check.style.background = '#10B981'
+          check.style.color = '#fff'
+          check.style.fontSize = Math.round(11*scale)+'px'
+          check.style.fontWeight = '900'
+          check.style.display = 'grid'
+          check.style.placeItems = 'center'
+          check.style.border = '2px solid #fff'
+          check.style.boxShadow = '0 2px 8px rgba(16,185,129,0.6)'
+          check.style.pointerEvents = 'none'
+          core.appendChild(check)
+        }
+      }
       wrap.appendChild(halo)
       wrap.appendChild(core)
       if (isInvited) {
@@ -366,25 +417,28 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
         wrap.appendChild(badge)
       }
       if (isBusinessPin) {
-        const promoText = String((p as any).promo || p.title || '').trim().slice(0, 60)
-        if (promoText !== '') {
+        const company = (p as any).company ?? null
+        const brandName = String(company?.brand || (p as any).user?.name || '').trim()
+        const promoText = String((p as any).promo || '').trim().slice(0, 60)
+        const labelText = (promoText !== '' ? promoText : (brandName || String(p.title || '').trim())).slice(0, 60)
+        if (labelText !== '') {
           const promoLabel = document.createElement('div')
-          promoLabel.textContent = ((p as any).promo ? '📢 ' : '🏢 ') + promoText
+          promoLabel.textContent = (promoText !== '' ? '📢 ' : '🏢 ') + labelText
           promoLabel.style.position = 'absolute'
-          promoLabel.style.bottom = '-15px'
+          promoLabel.style.bottom = '-16px'
           promoLabel.style.left = '50%'
           promoLabel.style.transform = 'translateX(-50%)'
           promoLabel.style.background = 'linear-gradient(135deg, #4F46E5, #7C3AED)'
           promoLabel.style.color = '#fff'
-          promoLabel.style.fontSize = '10px'
+          promoLabel.style.fontSize = '11px'
           promoLabel.style.fontWeight = '800'
           promoLabel.style.lineHeight = '1.2'
-          promoLabel.style.padding = '4px 8px'
+          promoLabel.style.padding = '5px 10px'
           promoLabel.style.borderRadius = '999px'
           promoLabel.style.whiteSpace = 'nowrap'
           promoLabel.style.overflow = 'hidden'
           promoLabel.style.textOverflow = 'ellipsis'
-          promoLabel.style.maxWidth = '170px'
+          promoLabel.style.maxWidth = '200px'
           promoLabel.style.pointerEvents = 'none'
           promoLabel.style.boxShadow = '0 2px 12px rgba(79,70,229,0.55), 0 0 0 1px rgba(255,255,255,0.9)'
           promoLabel.style.zIndex = '6'

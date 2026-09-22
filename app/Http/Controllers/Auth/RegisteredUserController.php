@@ -66,6 +66,7 @@ class RegisteredUserController extends Controller
             $rules['unp'] = 'required|string|regex:/^\d{9}$/';
             $rules['legal_address'] = 'required|string|min:4|max:255';
             $rules['phone'] = 'nullable|string|max:32';
+            $rules['brand'] = 'nullable|string|max:255';
         } else {
             $rules['gender'] = 'required|in:male,female,other';
         }
@@ -95,7 +96,7 @@ class RegisteredUserController extends Controller
 
         $defaultMode = $this->defaultModeFor($signupGoal);
 
-        $user = User::create([
+        $userPayload = [
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
@@ -113,13 +114,22 @@ class RegisteredUserController extends Controller
             'account_type' => $accountType,
             'dating_enabled' => ! $isBusiness,
             'dating_goal' => $datingGoal,
-        ]);
+        ];
+
+        if ($isBusiness) {
+            $userPayload['role'] = 'organization';
+            $userPayload['plan'] = 'business';
+            $userPayload['plan_expires_at'] = now()->addDays(30);
+        }
+
+        $user = User::create($userPayload);
 
         if ($isBusiness) {
             $business = app(\App\Services\BusinessService::class)->profileFor($user);
 
             $business->forceFill([
                 'name' => $request->string('name')->toString(),
+                'brand' => $request->input('brand'),
                 'legal_form' => $request->string('legal_form')->toString(),
                 'unp' => $request->string('unp')->toString(),
                 'legal_address' => $request->string('legal_address')->toString(),

@@ -15,6 +15,7 @@ import PhotoLightbox from '@/Components/Features/Media/PhotoLightbox.vue'
 const FlowMediaCarousel = defineAsyncComponent(() => import('@/Components/Features/Flow/FlowMediaCarousel.vue'))
 import FlowPollCard from '@/Components/Features/Flow/FlowPollCard.vue'
 import FlowRichText from '@/Components/Features/Flow/FlowRichText.vue'
+import CompanyNewsBadge from '@/Components/Features/Business/CompanyNewsBadge.vue'
 import FlowRepostDialog from '@/Components/Features/Flow/FlowRepostDialog.vue'
 import PostShareDialog from '@/Components/Features/Chat/PostShareDialog.vue'
 import { usePostShare } from '@/composables/usePostShare'
@@ -145,20 +146,23 @@ async function share(): Promise<void> {
     <template #content>
       <article class="p-3 sm:p-5">
         <div class="flex items-start gap-3">
-          <Avatar v-if="post.author.avatar_url" :image="post.author.avatar_url" shape="circle" class="!w-11 !h-11" />
-          <Avatar v-else icon="pi pi-user-secret" shape="circle" class="!w-11 !h-11 !bg-stone-900 !text-white dark:!bg-zinc-700" />
-          <div class="min-w-0 flex-1">
-            <div class="flex items-center gap-2 min-w-0">
-              <Link v-if="post.author.id" :href="userProfileUrl(post.author)" class="truncate text-[15px] font-bold text-ink-900 dark:text-white hover:underline">
-                {{ post.author.name }}
-              </Link>
-              <span v-else class="truncate text-[15px] font-bold text-ink-900 dark:text-white">{{ post.author.name }}</span>
-              <span v-if="post.is_anonymous" class="shrink-0 inline-flex items-center gap-1 rounded-full bg-stone-100 dark:bg-zinc-800 px-2 py-0.5 text-[11px] font-semibold text-stone-500 dark:text-zinc-400">
-                <i class="pi pi-eye-slash text-[10px]" />аноним
-              </span>
+          <CompanyNewsBadge v-if="(post as any).company" :company="(post as any).company" class="min-w-0 flex-1" />
+          <template v-else>
+            <Avatar v-if="post.author.avatar_url" :image="post.author.avatar_url" shape="circle" class="!w-11 !h-11" />
+            <Avatar v-else icon="pi pi-user-secret" shape="circle" class="!w-11 !h-11 !bg-stone-900 !text-white dark:!bg-zinc-700" />
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2 min-w-0">
+                <Link v-if="post.author.id" :href="userProfileUrl(post.author)" class="truncate text-[15px] font-bold text-ink-900 dark:text-white hover:underline">
+                  {{ post.author.name }}
+                </Link>
+                <span v-else class="truncate text-[15px] font-bold text-ink-900 dark:text-white">{{ post.author.name }}</span>
+                <span v-if="post.is_anonymous" class="shrink-0 inline-flex items-center gap-1 rounded-full bg-stone-100 dark:bg-zinc-800 px-2 py-0.5 text-[11px] font-semibold text-stone-500 dark:text-zinc-400">
+                  <i class="pi pi-eye-slash text-[10px]" />аноним
+                </span>
+              </div>
+              <div class="text-xs text-stone-400">{{ formatFlowDate(post.created_at) }}</div>
             </div>
-            <div class="text-xs text-stone-400">{{ formatFlowDate(post.created_at) }}</div>
-          </div>
+          </template>
           <div v-if="post.can_edit || post.can_delete" class="flex shrink-0 gap-1">
             <Button v-if="post.can_edit" icon="pi pi-pencil" text rounded severity="secondary" class="!w-8 !h-8" @click="emit('edit', post)" />
             <Button v-if="post.can_delete" icon="pi pi-trash" text rounded severity="danger" class="!w-8 !h-8" @click="emit('delete', post.id)" />
@@ -192,9 +196,19 @@ async function share(): Promise<void> {
           @click="reposter.goPost(post.repost.id)"
         >
           <div class="flex items-center gap-2 px-3 pt-2.5">
-            <Avatar v-if="post.repost.author.avatar_url" :image="post.repost.author.avatar_url" shape="circle" class="!w-6 !h-6" />
-            <Avatar v-else icon="pi pi-user-secret" shape="circle" class="!w-6 !h-6 !bg-stone-200 dark:!bg-zinc-700" />
-            <span class="truncate text-[13px] font-bold text-ink-900 dark:text-white">{{ post.repost.author.name }}</span>
+            <template v-if="(post.repost as any).company">
+              <span class="grid place-items-center !w-6 !h-6 rounded-full overflow-hidden bg-gradient-to-br from-indigo-500 to-violet-600 text-white text-xs shrink-0">
+                <img v-if="(post.repost as any).company.logo_url" :src="(post.repost as any).company.logo_url" alt="" class="w-full h-full object-cover" loading="lazy" />
+                <span v-else>🏢</span>
+              </span>
+              <span class="truncate text-[13px] font-bold text-ink-900 dark:text-white">{{ (post.repost as any).company.brand || (post.repost as any).company.name }}</span>
+              <span class="shrink-0 inline-flex items-center gap-1 rounded-full bg-indigo-500/10 dark:bg-indigo-500/15 px-2 py-0.5 text-[10px] font-bold text-indigo-600 dark:text-indigo-300">📢 компания</span>
+            </template>
+            <template v-else>
+              <Avatar v-if="post.repost.author.avatar_url" :image="post.repost.author.avatar_url" shape="circle" class="!w-6 !h-6" />
+              <Avatar v-else icon="pi pi-user-secret" shape="circle" class="!w-6 !h-6 !bg-stone-200 dark:!bg-zinc-700" />
+              <span class="truncate text-[13px] font-bold text-ink-900 dark:text-white">{{ post.repost.author.name }}</span>
+            </template>
           </div>
           <div v-if="post.repost.title" class="px-3 pt-1 text-[14px] font-black leading-snug text-ink-900 dark:text-white break-words">{{ post.repost.title }}</div>
           <p class="px-3 pt-0.5 text-[13px] leading-relaxed text-stone-600 dark:text-zinc-300 break-words">{{ reposter.originExcerpt(post.repost) }}</p>

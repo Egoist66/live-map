@@ -76,7 +76,7 @@ class FlowPostController extends Controller
      */
     private function serialize(FlowPost $post, $viewer, array $pollVotes = [], array $myReposts = []): array
     {
-        $post->loadMissing(['user:id,name,avatar_path,flow_comments_privacy', 'media', 'poll.options', 'tags:id,name']);
+        $post->loadMissing(['user:id,name,avatar_path,flow_comments_privacy', 'media', 'poll.options', 'tags:id,name', 'business.user:id,profile_slug']);
 
         $author = $post->user;
         $isOwn = $viewer && (int) $viewer->id === (int) $post->user_id;
@@ -110,10 +110,25 @@ class FlowPostController extends Controller
 
         $rootId = (int) ($post->repost_of_id ?: $post->id);
 
+        $company = null;
+        $business = $post->business;
+
+        if ($business) {
+            $company = [
+                'id' => (int) $business->id,
+                'name' => (string) ($business->name ?? ''),
+                'brand' => $business->brand ?? null,
+                'logo_url' => $business->logo_url,
+                'is_verified' => $business->isVerified(),
+                'owner_profile' => $business->user?->profileIdentifier(),
+            ];
+        }
+
         return [
             'id' => $post->id,
             'title' => $post->title,
             'body' => $post->body,
+            'company' => $company,
             'image_url' => $firstPhotoUrl ?? $post->image_url,
             'media' => $media,
             'poll' => $post->poll ? FlowPollService::serialize($post->poll, $viewer, $pollVotes) : null,
@@ -157,12 +172,26 @@ class FlowPostController extends Controller
             return null;
         }
 
-        $post->loadMissing(['original.user:id,name,profile_slug,avatar_path', 'original.media']);
+        $post->loadMissing(['original.user:id,name,profile_slug,avatar_path', 'original.media', 'original.business.user:id,profile_slug']);
 
         $original = $post->original;
 
         if (! $original) {
             return null;
+        }
+
+        $originalCompany = null;
+        $originalBusiness = $original->business;
+
+        if ($originalBusiness) {
+            $originalCompany = [
+                'id' => (int) $originalBusiness->id,
+                'name' => (string) ($originalBusiness->name ?? ''),
+                'brand' => $originalBusiness->brand ?? null,
+                'logo_url' => $originalBusiness->logo_url,
+                'is_verified' => $originalBusiness->isVerified(),
+                'owner_profile' => $originalBusiness->user?->profileIdentifier(),
+            ];
         }
 
         $originalPhoto = $original->media
@@ -195,6 +224,7 @@ class FlowPostController extends Controller
             'body' => $original->body,
             'image_url' => $originalPhoto?->url ?? $original->image_url,
             'author' => $authorPayload,
+            'company' => $originalCompany,
         ];
     }
 
@@ -222,7 +252,7 @@ class FlowPostController extends Controller
         ]);
 
         $filter = $data['filter'] ?? 'all';
-        $query = FlowPost::with(['user:id,name,profile_slug,avatar_path', 'media', 'poll.options', 'tags:id,name'])->latest();
+        $query = FlowPost::with(['user:id,name,profile_slug,avatar_path', 'media', 'poll.options', 'tags:id,name', 'business.user:id,profile_slug']);
 
         $hiddenIds = \App\Models\User::hiddenFromSearchFor($viewer);
 
@@ -276,6 +306,10 @@ class FlowPostController extends Controller
                 $query->whereHas('tags', fn ($tagQuery) => $tagQuery->where('name', $tagName));
             }
         }
+
+        $query
+            ->orderByRaw('(flow_posts.business_id IS NOT NULL) DESC')
+            ->latest();
 
         $posts = $query->paginate(10);
 

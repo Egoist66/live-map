@@ -21,7 +21,13 @@ export const adminApi = {
     const { data } = await api.post('/api/admin/impersonation/stop')
     return data
   },
-  async updateUser(userId: number, payload: { plan?: string; role?: string }) {
+  /**
+   * Смена плана/роли пользователя.
+   *
+   * Для выдачи роли organization персональному аккаунту нужен флаг
+   * confirm_personal — иначе бэкенд вернёт 422 с предупреждением.
+   */
+  async updateUser(userId: number, payload: { plan?: string; role?: string; confirm_personal?: boolean }) {
     const { data } = await api.patch(`/api/admin/users/${userId}`, payload)
     return data
   },

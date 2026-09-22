@@ -28,8 +28,6 @@ const gate = useBusinessPinGate()
         <h1 class="text-[22px] sm:text-[26px] font-black tracking-tight dark:text-white">Пины компании</h1>
         <p class="text-[13px] text-stone-500 dark:text-zinc-400 mt-0.5">Живые и запланированные · клик открывает пин на карте</p>
       </div>
-      <Link v-if="gate.canCreatePin.value" href="/map"><Button label="+ Пин" icon="pi pi-map-marker" rounded class="!bg-gradient-to-r !from-indigo-500 !to-violet-600 !border-0 !text-white" /></Link>
-      <span v-else :title="gate.gateHint.value ?? ''"><Button label="+ Пин" icon="pi pi-lock" rounded disabled class="!bg-stone-200 dark:!bg-zinc-800 !text-stone-400 !border-0" /></span>
     </div>
 
     <Message v-if="!gate.canCreatePin.value" severity="warn" class="w-full">

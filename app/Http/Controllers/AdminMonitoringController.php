@@ -164,7 +164,7 @@ class AdminMonitoringController extends Controller
     {
         $data = $request->validate([
             'q' => 'nullable|string|max:100',
-            'filter' => 'nullable|in:all,online,new,hidden,admins',
+            'filter' => 'nullable|in:all,online,new,hidden,admins,organizations',
             'sort' => 'nullable|in:last_seen,newest,oldest,name',
             'per_page' => 'nullable|integer|min:10|max:100',
         ]);

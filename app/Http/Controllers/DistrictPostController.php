@@ -41,7 +41,7 @@ class DistrictPostController extends Controller
      */
     private function serialize(DistrictPost $post, $viewer): array
     {
-        $post->loadMissing('user:id,name,profile_slug,avatar_path');
+        $post->loadMissing(['user:id,name,profile_slug,avatar_path', 'businessAd.business.user:id,profile_slug']);
 
         $author = $post->user;
         $viewerId = $viewer ? (int) $viewer->id : 0;
@@ -52,11 +52,26 @@ class DistrictPostController extends Controller
 
         $isOwner = $viewer && ((int) $viewer->id === (int) $post->user_id || $viewer->isAdmin());
 
+        $company = null;
+        $business = $post->businessAd?->business;
+
+        if ($business) {
+            $company = [
+                'id' => (int) $business->id,
+                'name' => (string) ($business->name ?? ''),
+                'brand' => $business->brand ?? null,
+                'logo_url' => $business->logo_url,
+                'is_verified' => $business->isVerified(),
+                'owner_profile' => $business->user?->profileIdentifier(),
+            ];
+        }
+
         return [
             'id' => $post->id,
             'district_id' => $post->district_id,
             'title' => $post->title,
             'body' => $post->body,
+            'company' => $company,
             'image_url' => $post->image_url,
             'likes_count' => (int) $post->likes_count,
             'comments_count' => (int) $post->comments_count,

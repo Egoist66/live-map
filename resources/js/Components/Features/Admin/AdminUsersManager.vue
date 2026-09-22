@@ -35,6 +35,7 @@ const filterOptions = [
   { label: 'Новые 7д', value: 'new' },
   { label: 'Скрытые', value: 'hidden' },
   { label: 'Модераторы', value: 'admins' },
+  { label: 'Организации', value: 'organizations' },
 ]
 const sortOptions = [
   { label: 'Сначала активные', value: 'last_seen' },
@@ -49,6 +50,7 @@ const planOptions = [
 ]
 const roleOptions = [
   { label: 'user', value: 'user' },
+  { label: 'организация', value: 'organization' },
   { label: 'moderator', value: 'moderator' },
   { label: 'admin', value: 'admin' },
 ]
@@ -103,6 +105,7 @@ function planCaption(u: any): string {
             <Tag v-if="u.is_online" value="онлайн" severity="success" class="!text-[9px]" />
             <Tag v-else value="офлайн" severity="secondary" class="!text-[9px]" />
             <Tag v-if="authUserId && Number(u.id) === Number(authUserId)" value="это вы" severity="warn" class="!text-[9px]" />
+            <Tag v-if="u.role === 'organization' || u.is_organization" value="организация" severity="info" class="!text-[9px]" />
             <Tag v-if="u.is_hidden_from_search" value="скрыт" severity="contrast" class="!text-[9px]" />
             <Tag v-if="u.banned_at" value="забанен" severity="danger" class="!text-[9px]" />
           </div>

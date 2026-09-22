@@ -95,6 +95,11 @@ class AdminUserController extends Controller
      * выглядел бы выданным, а лимиты считались бы по free
      * (действующий тариф — effectivePlan, не сырое поле plan).
      *
+     * Роль organization автоматически выдаёт тариф business (+30 дней,
+     * если срок пуст/прошёл): раз зашли в кабинет — значит оплатили.
+     * Персональному аккаунту (person без бизнес-профиля) роль выдаётся
+     * только с флагом confirm_personal, иначе 422 с предупреждением.
+     *
      * @param Request $request запрос с plan/role
      * @param User $user целевой пользователь
      * @return \Illuminate\Http\JsonResponse
@@ -106,7 +111,8 @@ class AdminUserController extends Controller
         $data = $request->validate([
             'plan' => 'nullable|in:free,pro,business',
             'plan_expires_at' => 'nullable|date|after:now',
-            'role' => 'nullable|in:user,moderator,admin',
+            'role' => 'nullable|in:user,moderator,admin,organization',
+            'confirm_personal' => 'nullable|boolean',
         ]);
         $isSelf = $user->id === $request->user()->id;
         $demotesSelfFromAdmin = $isSelf
@@ -120,6 +126,19 @@ class AdminUserController extends Controller
                 ->count();
             abort_if($otherAdmins === 0, 422, 'Нельзя снять роль последнего администратора');
         }
+        $assignOrganization = isset($data['role']) && $data['role'] === 'organization';
+        $roleWarning = null;
+
+        if ($assignOrganization) {
+            $roleWarning = $this->organizationRoleWarning($user);
+
+            abort_if(
+                $roleWarning !== null && empty($data['confirm_personal']),
+                422,
+                $roleWarning
+            );
+        }
+
         if (isset($data['plan'])) {
             $user->plan = $data['plan'];
             $user->plan_expires_at = $this->resolvePlanExpiry($data['plan'], $data['plan_expires_at'] ?? null, $user->plan_expires_at);
@@ -130,8 +149,49 @@ class AdminUserController extends Controller
             $user->role = $data['role'];
             $user->is_admin = $data['role'] === 'admin';
         }
+        if ($assignOrganization && ! isset($data['plan'])) {
+            $user->plan = 'business';
+            $user->plan_expires_at = $this->resolvePlanExpiry('business', $data['plan_expires_at'] ?? null, $user->plan_expires_at);
+        }
         $user->save();
-        return response()->json(['id' => $user->id, 'plan' => $user->plan, 'effective_plan' => $user->effectivePlan(), 'plan_expires_at' => $user->plan_expires_at?->toISOString(), 'role' => $user->role, 'is_admin' => $user->isAdmin()]);
+        return response()->json(['id' => $user->id, 'plan' => $user->plan, 'effective_plan' => $user->effectivePlan(), 'plan_expires_at' => $user->plan_expires_at?->toISOString(), 'role' => $user->role, 'is_admin' => $user->isAdmin(), 'account_type' => $user->account_type ?? 'person', 'role_warning' => $roleWarning]);
+    }
+
+    /**
+     * Предупреждение при выдаче роли organization персональному аккаунту.
+     *
+     * Организация — это кабинет компании (account_type=business + реквизиты).
+     * Персональный аккаунт (person без бизнес-профиля) с предпринимательской
+     * деятельностью не связан: выдача ему роли organization без подтверждения
+     * блокируется (422), с подтверждением — пропускается, но предупреждение
+     * возвращается в ответе для тоста в админке.
+     *
+     * @param User $user целевой пользователь
+     * @return string|null текст предупреждения или null когда всё чисто
+     */
+    private function organizationRoleWarning(User $user): ?string
+    {
+        $isBusiness = ($user->account_type ?? 'person') === 'business';
+
+        if ($isBusiness) {
+            return null;
+        }
+
+        $hasBusiness = false;
+
+        try {
+            $hasBusiness = \App\Models\Business::where('user_id', $user->id)->exists();
+        } catch (\Throwable) {
+            $hasBusiness = false;
+        }
+
+        if ($hasBusiness) {
+            return null;
+        }
+
+        return 'Данный аккаунт персональный и не связан с предпринимательской деятельностью. '
+            . 'Роль «организация» предназначена только для кабинета компании '
+            . '(account_type=business с реквизитами и тарифом business).';
     }
 
     /**

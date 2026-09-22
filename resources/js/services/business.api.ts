@@ -28,6 +28,15 @@ export const businessApi = {
     return Array.isArray(data) ? data : []
   },
 
+  /**
+   * Поиск организаций по названию и бренду (таб «Организации»).
+   * @param q запрос минимум 2 символа
+   */
+  async searchOrganizations(q: string): Promise<BusinessMapItem[]> {
+    const { data } = await api.get<BusinessMapItem[]>(`/api/businesses/search`, { params: { q } })
+    return Array.isArray(data) ? data : []
+  },
+
   async companyPins(id: number): Promise<Pin[]> {
     const { data } = await api.get<Pin[] | { data: Pin[] }>(`/api/businesses/${id}/pins`)
     if (Array.isArray(data)) return data
@@ -111,6 +120,24 @@ export const businessApi = {
   async adsQuota(): Promise<{ used: number; limit: number; left: number }> {
     const { data } = await api.get('/api/business/ads/quota')
     return { used: Number(data?.used ?? 0), limit: Number(data?.limit ?? 3), left: Number(data?.left ?? 0) }
+  },
+
+  /**
+   * Остаток недельных размещений в районах (3 в неделю).
+   */
+  async districtQuota(): Promise<{ used: number; limit: number; left: number }> {
+    const { data } = await api.get('/api/business/ads/district-quota')
+    return { used: Number(data?.used ?? 0), limit: Number(data?.limit ?? 3), left: Number(data?.left ?? 0) }
+  },
+
+  /**
+   * Разместить рекламу в районах организации.
+   * @param adId id рекламы кабинета
+   * @param districtIds районы-жители организации
+   */
+  async placeAdInDistricts(adId: number, districtIds: number[]): Promise<{ placed: number[]; skipped: Array<{ district_id: number; reason: string }>; quota: { used: number; limit: number; left: number } }> {
+    const { data } = await api.post(`/api/business-ads/${adId}/districts`, { district_ids: districtIds })
+    return data
   },
 
   /**

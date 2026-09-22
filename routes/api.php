@@ -251,6 +251,7 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
 
     Route::patch('/account-type', [\App\Http\Controllers\AccountTypeController::class, 'update']);
     Route::get('/businesses/map', [\App\Http\Controllers\BusinessController::class, 'map']);
+    Route::get('/businesses/search', [\App\Http\Controllers\BusinessController::class, 'search']);
     Route::get('/businesses/{business}/pins', [\App\Http\Controllers\BusinessController::class, 'pins']);
     Route::get('/businesses/{business}/photos', [\App\Http\Controllers\BusinessPhotoController::class, 'index']);
     Route::get('/business-photos/by-owner/{user}', [\App\Http\Controllers\BusinessPhotoController::class, 'byOwner']);
@@ -264,9 +265,11 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::post('/business/submit', [\App\Http\Controllers\BusinessController::class, 'submit'])->middleware('throttle:social-write');
     Route::get('/businesses/{business}/ads', [\App\Http\Controllers\BusinessAdController::class, 'index']);
     Route::get('/business/ads/quota', [\App\Http\Controllers\BusinessAdController::class, 'quota']);
+    Route::get('/business/ads/district-quota', [\App\Http\Controllers\BusinessAdController::class, 'districtQuota']);
     Route::post('/businesses/{business}/ads', [\App\Http\Controllers\BusinessAdController::class, 'store'])->middleware('throttle:social-write');
     Route::patch('/business-ads/{ad}', [\App\Http\Controllers\BusinessAdController::class, 'update'])->middleware('throttle:social-write');
     Route::delete('/business-ads/{ad}', [\App\Http\Controllers\BusinessAdController::class, 'destroy'])->middleware('throttle:social-write');
+    Route::post('/business-ads/{ad}/districts', [\App\Http\Controllers\BusinessAdController::class, 'placeInDistricts'])->middleware('throttle:social-write');
 });
 
 // Табы модератора: Статистика, Модерация, Справочники, SEO.

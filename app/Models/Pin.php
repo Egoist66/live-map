@@ -202,6 +202,7 @@ class Pin extends Model
             'body' => $this->body,
             'promo' => $this->promo ?? null,
             'is_business' => $isBusiness,
+            'company' => $this->getAttribute('company'),
             'category' => $this->category,
             'gender_audience' => static::normalizeGenderAudience($this->gender_audience ?? 'all'),
             'latitude' => (float) $this->latitude,

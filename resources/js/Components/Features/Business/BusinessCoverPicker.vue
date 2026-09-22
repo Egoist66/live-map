@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useBusinessSettings } from '@/composables/useBusinessSettings'
+import BusinessCoverCropDialog from '@/Components/Features/Business/BusinessCoverCropDialog.vue'
 
 const settings = useBusinessSettings()
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -18,7 +19,7 @@ async function onFile(event: Event): Promise<void> {
   if (!file) {
     return
   }
-  await settings.uploadCoverFile(file)
+  await settings.pickCoverFile(file)
 }
 </script>
 
@@ -39,5 +40,6 @@ async function onFile(event: Event): Promise<void> {
     </div>
     <p class="mt-1.5 text-[12px] text-stone-500 dark:text-zinc-400">Широкая картинка — фон плашки кабинета и профиля компании.</p>
     <input ref="fileInput" type="file" accept="image/*" class="hidden" @change="onFile" />
+    <BusinessCoverCropDialog :crop="settings.coverCrop" :saving="settings.store.saving" @cancel="settings.cancelCoverCrop()" @confirm="settings.confirmCoverCrop()" />
   </div>
 </template>
