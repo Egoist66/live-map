@@ -632,6 +632,23 @@ class VideoService
      */
     private function storeAndBroadcast(VideoCall $call, int $senderId, string $kind, ?array $payload): VideoSignal
     {
+        // ВРЕМЕННАЯ диагностика битого SDP (убрать после починки звонков):
+        // пишет длину и json-кодированные голову/хвост sdp — так видны
+        // невидимые символы, обрезка и потеря \r\n. IP в логах не светим.
+        if (in_array($kind, [VideoSignal::KIND_OFFER, VideoSignal::KIND_ANSWER], true) && is_string($payload['sdp'] ?? null)) {
+            $sdp = (string) $payload['sdp'];
+            Log::info('video.sdp_debug', [
+                'call' => (int) $call->id,
+                'kind' => $kind,
+                'type' => (string) ($payload['type'] ?? ''),
+                'len' => strlen($sdp),
+                'crlf' => substr_count($sdp, "\r\n"),
+                'lf' => substr_count($sdp, "\n"),
+                'head' => mb_substr(json_encode(mb_substr($sdp, 0, 200)), 0, 400),
+                'tail' => mb_substr(json_encode(mb_substr($sdp, -200)), 0, 400),
+            ]);
+        }
+
         $signal = VideoSignal::create([
             'call_id' => $call->id,
             'sender_id' => $senderId,
