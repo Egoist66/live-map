@@ -4,6 +4,7 @@ import { defineAsyncComponent, onMounted, ref } from 'vue'
 import { useWelcome } from '@/composables/useWelcome'
 import { useWelcomeMode } from '@/composables/useWelcomeMode'
 import { useWelcomeHeroSwiper } from '@/composables/useWelcomeHeroSwiper'
+import { useAccountTypeChoice } from '@/composables/useAccountTypeChoice'
 import AppFooter from '@/Layouts/AppFooter.vue'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
@@ -25,6 +26,7 @@ onMounted(() => {
 const w = useWelcome()
 const landing = useWelcomeMode()
 const hero = useWelcomeHeroSwiper()
+const gate = useAccountTypeChoice()
 
 const tabOptions = [
   { label: 'ULove', icon: '💘', value: 'ulove' },
@@ -48,6 +50,11 @@ function switchTab(next: 'ulove' | 'upin'): void {
     <meta head-key="og:description" property="og:description" :content="landing.seo.value.description" />
   </Head>
   <div class="min-h-screen flex flex-col bg-surface dark:bg-[#0B0F1A] text-ink-900 dark:text-zinc-100 antialiased selection:bg-rose-500 selection:text-white overflow-x-hidden">
+    <div
+      :class="gate.visible.value ? 'blur-2xl saturate-150 brightness-90 pointer-events-none select-none' : ''"
+      class="flex flex-col min-h-screen transition-all duration-500"
+      :aria-hidden="gate.visible.value ? 'true' : undefined"
+    >
     <header class="native-safe-top sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/70 backdrop-blur border-b border-stone-200/60 dark:border-zinc-800">
       <div class="max-w-[1280px] mx-auto px-2 min-[411px]:px-4 sm:px-6 h-14 min-[411px]:h-[64px] flex items-center justify-between gap-2 min-w-0">
         <Link href="/" class="flex items-center gap-2 min-w-0 shrink-0">
@@ -258,6 +265,7 @@ function switchTab(next: 'ulove' | 'upin'): void {
 
     <AppFooter class="mt-auto w-full" />
     <VideoGlobalHost v-if="videoHostReady" />
+    </div>
     <AccountTypeGateModal mode="guest" />
   </div>
 </template>

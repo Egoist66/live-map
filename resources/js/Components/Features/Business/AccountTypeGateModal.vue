@@ -33,13 +33,15 @@ async function pick(next: 'person' | 'business'): Promise<void> {
     modal
     :draggable="false"
     :closable="false"
+    :dismissable-mask="false"
+    :close-on-escape="false"
     :show-header="false"
     position="center"
     :style="{ width: '620px', maxWidth: 'calc(100vw - 2rem)' }"
     :pt="{
       root: { class: '!border-0 overflow-hidden !bg-white dark:!bg-zinc-900 shadow-2xl !rounded-[28px]' },
       content: { class: '!p-0 !bg-white dark:!bg-zinc-900' },
-      mask: { class: '!backdrop-blur-md !bg-black/45' },
+      mask: { class: '!backdrop-blur-2xl !backdrop-saturate-150 !bg-black/60' },
     }"
   >
     <div class="max-h-[92dvh] overflow-y-auto overscroll-contain">

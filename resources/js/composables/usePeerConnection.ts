@@ -153,6 +153,8 @@ export function usePeerConnection() {
     iceRecv: 0,
     lastError: null as string | null,
   })
+  /** Последний провал обработки сигнала (вид/состояние/ошибка) — показываем в оверлее. */
+  const signalFailure = ref<{ kind: string; state: string; message: string } | null>(null)
   /** Компактная строка счётчиков для оверлея. */
   const signalLabel = computed(() => {
     const s = signalStats.value
@@ -202,6 +204,7 @@ export function usePeerConnection() {
     pendingIce = []
     seenRemoteIds.clear()
     signalingError.value = null
+    signalFailure.value = null
     signalStats.value = {
       offerSent: 0,
       answerSent: 0,
@@ -450,8 +453,15 @@ export function usePeerConnection() {
     const kind = String(e.kind)
     const sid = Number(e.id ?? 0)
     const isHandshake = kind === 'offer' || kind === 'answer'
-    if (isHandshake && sid > 0 && seenRemoteIds.has(sid)) {
-      return
+    if (isHandshake && sid > 0) {
+      // Метку ставим ДО обработки, а не после answer: один и тот же offer
+      // прилетает дважды почти одновременно (сокет + опрос добивки), и пока
+      // первый ждёт setRemoteDescription, второй проходит гард состояния —
+      // конкурентный setRemoteDescription ронял звонок «Сбоем соединения».
+      if (seenRemoteIds.has(sid)) {
+        return
+      }
+      seenRemoteIds.add(sid)
     }
     try {
       if (kind === 'accepted' && isCaller) {
@@ -469,13 +479,15 @@ export function usePeerConnection() {
         await pc.setLocalDescription(answer)
         const sent = await postSignal('answer', { type: answer.type, sdp: answer.sdp }, 4)
         if (!sent) {
+          // Answer не ушёл (429/сеть) — снимаем метку, чтобы повторная
+          // доставка того же offer его переобработала, а не игнорировала.
+          if (sid > 0) {
+            seenRemoteIds.delete(sid)
+          }
           signalingError.value = 'Answer не ушёл — попроси собеседника нажать «Обновить»'
           return
         }
         signalStats.value.offerRecv += 1
-        if (sid > 0) {
-          seenRemoteIds.add(sid)
-        }
         return
       }
       if (kind === 'answer') {
@@ -487,9 +499,6 @@ export function usePeerConnection() {
         await flushPendingIce()
         clearOfferWatchdog()
         signalStats.value.answerRecv += 1
-        if (sid > 0) {
-          seenRemoteIds.add(sid)
-        }
         return
       }
       if (kind === 'ice' && e.payload) {
@@ -504,15 +513,23 @@ export function usePeerConnection() {
       }
     } catch (err) {
       signalingError.value = 'Сбой соединения — попробуй переподключиться'
+      // Провал обработки — снимаем раннюю метку дедупа, чтобы следующая
+      // доставка того же фрейма попробовала снова, а не игнорировалась.
+      if ((kind === 'offer' || kind === 'answer') && sid > 0) {
+        seenRemoteIds.delete(sid)
+      }
+      const state = String(pc?.signalingState ?? 'none')
+      const message = (err as Error)?.message ?? String(err)
+      signalFailure.value = { kind, state, message }
       try {
         console.warn('[video] signal failed', {
           kind,
           sid,
           callId: e.call_id,
-          signaling: pc?.signalingState,
+          signaling: state,
           connection: pc?.connectionState,
           isCaller,
-          err: (err as Error)?.message ?? String(err),
+          err: message,
         })
       } catch {}
     }
@@ -619,5 +636,5 @@ export function usePeerConnection() {
     connectionState.value = 'idle'
   }
 
-  return { remoteStream, connectionState, signalingError, signalStats, signalLabel, iceTurnConfigured, bind, startOffer, retry, close, currentId }
+  return { remoteStream, connectionState, signalingError, signalFailure, signalStats, signalLabel, iceTurnConfigured, bind, startOffer, retry, close, currentId }
 }

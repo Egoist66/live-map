@@ -1,15 +1,32 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { Head, Link } from '@inertiajs/vue3'
 import { useRegisterForm } from '@/composables/useAuthForm'
 import { useSignupGoals } from '@/composables/useSignupGoals'
 import { useBirthDateField } from '@/composables/useBirthDate'
 import { useGender } from '@/composables/useGender'
 import { useUserAge } from '@/composables/useUserAge'
+import { useAccountTypeChoice } from '@/composables/useAccountTypeChoice'
 import { RESIDENCE_COUNTRIES } from '@/composables/useResidence'
+import BusinessRegisterForm from '@/Components/Features/Business/BusinessRegisterForm.vue'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import Select from 'primevue/select'
 import DatePicker from 'primevue/datepicker'
+
+const gate = useAccountTypeChoice()
+
+const isBusiness = computed(() => {
+  if (gate.stored.value === 'business') {
+    return true
+  }
+  try {
+    if (typeof window !== 'undefined') {
+      return new URLSearchParams(window.location.search).get('account') === 'business'
+    }
+  } catch {}
+  return false
+})
 
 const f = useRegisterForm()
 const goals = useSignupGoals()
@@ -22,22 +39,33 @@ function onCountryChange(v: string): void {
   const prevCode = (f.values as any).country_code
   f.setValues({ country: v, country_code: found ? found.code : prevCode } as any)
 }
+
+function backToChoice(): void {
+  try {
+    window.localStorage.removeItem('upin_account_choice')
+  } catch {}
+  window.location.href = '/register'
+}
 </script>
 
 <template>
   <Head title="Регистрация" />
+  <template v-if="isBusiness">
+    <BusinessRegisterForm />
+    <div class="mt-4 text-center">
+      <button type="button" class="text-[13px] font-semibold text-stone-500 dark:text-zinc-400 hover:underline" @click="backToChoice">
+        Я не компания — обычная регистрация
+      </button>
+    </div>
+  </template>
+  <template v-else>
     <h1 class="text-[22px] font-black tracking-tight text-ink-900 dark:text-white">Создай аккаунт</h1>
-    <p class="text-sm text-stone-500 dark:text-zinc-400 mt-1">💘 ULove знакомит рядом · 📍 пины показывают жизнь района · 🏢 бизнесу — кабинет</p>
-    <form @submit.prevent="f.submit" class="mt-6 space-y-4">
-      <div v-if="String((f.values as any).signup_goal ?? f.goalPreset.goal) === 'business'" class="rounded-2xl border-2 border-indigo-200 dark:border-indigo-900 bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-950/40 dark:to-violet-950/20 p-3.5 flex items-center gap-3">
-        <span class="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 grid place-items-center text-lg shrink-0">🏢</span>
-        <div class="text-[13px] leading-snug text-stone-600 dark:text-zinc-300"><span class="font-bold text-ink-900 dark:text-white">Ты — компания</span> — после регистрации откроем кабинет: реквизиты по РБ, проверка по УНП, карта для клиентов 🏢</div>
-      </div>
-      <div v-else-if="!f.goalPreset.locked" class="rounded-2xl border-2 border-rose-200 dark:border-rose-900 bg-gradient-to-br from-rose-50 to-orange-50 dark:from-rose-950/40 dark:to-orange-950/20 p-3.5">
-        <label class="auth-label">💘 Зачем ты здесь? *</label>
+    <p class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Знакомства рядом и жизнь района на карте</p>
+    <form class="mt-6 space-y-4" @submit.prevent="f.submit">
+      <div v-if="!f.goalPreset.locked" class="rounded-2xl border-2 border-rose-200 dark:border-rose-900 bg-gradient-to-br from-rose-50 to-orange-50 dark:from-rose-950/40 dark:to-orange-950/20 p-3.5">
+        <label class="auth-label">Зачем ты здесь? *</label>
         <Select v-model="f.signup_goal.value" :options="goals.preset.options" optionLabel="label" optionValue="value" placeholder="Выбери цель" checkmark fluid class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.signup_goal" />
         <small class="auth-err">{{ f.errors.value.signup_goal }}</small>
-        <small class="text-stone-500 dark:text-zinc-400">После регистрации откроем ULove — листай людей рядом 💘</small>
       </div>
       <div v-else class="rounded-2xl border-2 border-sky-200 dark:border-sky-900 bg-gradient-to-br from-sky-50 to-indigo-50 dark:from-sky-950/40 dark:to-indigo-950/20 p-3.5 flex items-center gap-3">
         <span class="w-10 h-10 rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-600 grid place-items-center text-lg shrink-0">📍</span>
@@ -82,7 +110,7 @@ function onCountryChange(v: string): void {
         <label class="auth-label">Пароль</label>
         <div class="relative mt-1.5">
           <InputText v-model="f.password.value" v-bind="f.passwordAttrs" :type="f.showPass.value ? 'text' : 'password'" placeholder="••••••••" class="w-full auth-input !pr-11" :invalid="!!f.errors.value.password" />
-          <button type="button" @click="f.showPass.value = !f.showPass.value" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-white/10 grid place-items-center text-stone-500 dark:text-zinc-400 text-sm" tabindex="-1">{{ f.showPass.value ? '🙈' : '👁' }}</button>
+          <button type="button" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-white/10 grid place-items-center text-stone-500 dark:text-zinc-400 text-sm" tabindex="-1" @click="f.showPass.value = !f.showPass.value">{{ f.showPass.value ? '🙈' : '👁' }}</button>
         </div>
         <small class="auth-err">{{ f.errors.value.password }}</small>
       </div>
@@ -90,7 +118,7 @@ function onCountryChange(v: string): void {
         <label class="auth-label">Подтверди пароль</label>
         <div class="relative mt-1.5">
           <InputText v-model="f.password_confirmation.value" v-bind="f.passwordConfirmationAttrs" :type="f.showPass2.value ? 'text' : 'password'" placeholder="••••••••" class="w-full auth-input !pr-11" :invalid="!!f.errors.value.password_confirmation" />
-          <button type="button" @click="f.showPass2.value = !f.showPass2.value" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-white/10 grid place-items-center text-stone-500 dark:text-zinc-400 text-sm" tabindex="-1">{{ f.showPass2.value ? '🙈' : '👁' }}</button>
+          <button type="button" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-white/10 grid place-items-center text-stone-500 dark:text-zinc-400 text-sm" tabindex="-1" @click="f.showPass2.value = !f.showPass2.value">{{ f.showPass2.value ? '🙈' : '👁' }}</button>
         </div>
         <small class="auth-err">{{ f.errors.value.password_confirmation }}</small>
       </div>
@@ -113,6 +141,7 @@ function onCountryChange(v: string): void {
       <Button :loading="f.isSubmitting.value" type="submit" label="Создать аккаунт →" class="w-full !bg-ink-900 dark:!bg-[#FAFAFA] !border-ink-900 dark:!border-[#FAFAFA] !text-white dark:!text-[#0F172A] !rounded-full !py-3.5 [&_.p-button-label]:!text-white dark:[&_.p-button-label]:!text-[#0F172A]" />
       <div class="text-sm text-center text-stone-500 dark:text-zinc-400">Уже есть? <Link :href="route('login')" class="font-semibold text-ink-900 dark:text-white hover:underline">Войти</Link></div>
     </form>
+  </template>
 </template>
 
 <style scoped>

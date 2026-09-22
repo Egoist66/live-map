@@ -28,20 +28,26 @@ class RegisteredUserController extends Controller
     /**
      * Handle an incoming registration request.
      *
-     * Домашняя зона на регистрации не настраивается: всем выдаётся
-     * Free-радиус 10 км по умолчанию, меняется позже в тарифе/настройках.
-     * Геопозиция опциональна: без неё карта откроется по стране/городу.
-     * ULove включён всем по умолчанию; любовные цели уводят в свайпы.
+     * Два сценария: персона (пол, цели, гео) и компания (реквизиты РБ:
+     * форма, УНП, юрадрес — без дейтинга). Домашняя зона не настраивается:
+     * всем выдаётся Free-радиус 10 км по умолчанию.
      *
      * @throws ValidationException
      */
     public function store(Request $request): RedirectResponse
     {
-        $request->validate([
+        $accountType = $request->string('account_type')->toString();
+
+        if (! in_array($accountType, ['person', 'business'], true)) {
+            $accountType = $request->string('signup_goal')->toString() === 'business' ? 'business' : 'person';
+        }
+
+        $isBusiness = $accountType === 'business';
+
+        $rules = [
             'name' => 'required|string|max:255',
             'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'gender' => 'required|in:male,female,other',
             'birth_date' => 'nullable|date|before:today|after:1900-01-01',
             'country' => 'nullable|string|max:120',
             'country_code' => 'nullable|string|max:8',
@@ -52,30 +58,51 @@ class RegisteredUserController extends Controller
             'home_address' => 'nullable|string|max:255',
             'signup_goal' => 'required|in:love,flirt,friendship,chat,interests,neighbors,business',
             'account_type' => 'nullable|in:person,business',
+        ];
+
+        if ($isBusiness) {
+            $rules['gender'] = 'nullable|in:male,female,other';
+            $rules['legal_form'] = 'required|string|in:ooo,ip,odo,zao,self_employed,craft,other';
+            $rules['unp'] = 'required|string|regex:/^\d{9}$/';
+            $rules['legal_address'] = 'required|string|min:4|max:255';
+            $rules['phone'] = 'nullable|string|max:32';
+        } else {
+            $rules['gender'] = 'required|in:male,female,other';
+        }
+
+        $request->validate($rules, [
+            'unp.regex' => 'УНП — строго 9 цифр',
+            'legal_form.in' => 'Выберите форму собственности',
         ]);
 
-        CountryResolver::assertResidenceAllowed($request->input('country'), $request->input('country_code'), $request->input('home_lat'), $request->input('home_lng'));
+        $country = $request->input('country');
+        $countryCode = $request->input('country_code');
 
-        $signupGoal = $request->string('signup_goal')->toString();
+        if ($isBusiness && empty($country)) {
+            $country = 'Беларусь';
+            $countryCode = 'by';
+        }
+
+        CountryResolver::assertResidenceAllowed($country, $countryCode, $request->input('home_lat'), $request->input('home_lng'));
+
+        $signupGoal = 'business';
+
+        if (! $isBusiness) {
+            $signupGoal = $request->string('signup_goal')->toString();
+        }
 
         $datingGoal = $this->datingGoalFor($signupGoal);
 
         $defaultMode = $this->defaultModeFor($signupGoal);
 
-        $accountType = $request->string('account_type')->toString();
-
-        if (! in_array($accountType, ['person', 'business'], true)) {
-            $accountType = $signupGoal === 'business' ? 'business' : 'person';
-        }
-
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'gender' => $request->gender,
+            'gender' => $request->input('gender'),
             'birth_date' => $request->birth_date,
-            'country' => $request->country,
-            'country_code' => $request->country_code ? mb_strtolower(trim((string) $request->country_code)) : null,
+            'country' => $country,
+            'country_code' => $countryCode ? mb_strtolower(trim((string) $countryCode)) : null,
             'home_city' => $request->home_city,
             'home_lat' => $request->home_lat,
             'home_lng' => $request->home_lng,
@@ -84,19 +111,28 @@ class RegisteredUserController extends Controller
             'default_mode' => $defaultMode,
             'default_mode_set_at' => now(),
             'account_type' => $accountType,
-            'dating_enabled' => true,
+            'dating_enabled' => ! $isBusiness,
             'dating_goal' => $datingGoal,
         ]);
 
-        if ($accountType === 'business') {
-            app(\App\Services\BusinessService::class)->profileFor($user);
+        if ($isBusiness) {
+            $business = app(\App\Services\BusinessService::class)->profileFor($user);
+
+            $business->forceFill([
+                'name' => $request->string('name')->toString(),
+                'legal_form' => $request->string('legal_form')->toString(),
+                'unp' => $request->string('unp')->toString(),
+                'legal_address' => $request->string('legal_address')->toString(),
+                'phone' => $request->input('phone'),
+                'address' => $request->input('home_city'),
+            ])->save();
         }
 
         event(new Registered($user));
 
         Auth::login($user);
 
-        if ($accountType === 'business') {
+        if ($isBusiness) {
             return redirect(route('business.onboarding', absolute: false));
         }
 

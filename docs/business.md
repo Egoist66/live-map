@@ -11,13 +11,21 @@
 
 ## Вход: персона или компания
 
-1. Первый визит (гость) — модалка `AccountTypeGateModal` поверх заблюренного
-   лендинга: «Я — персона» / «Я — компания».
+1. Первый визит (гость) — модалка `AccountTypeGateModal` поверх
+   максимально заблюренного лендинга: `backdrop-blur-2xl + bg-black/60`,
+   сам контент `Welcome` дополнительно уходит в `blur-2xl + saturate-150`
+   и `pointer-events-none` (не кликается, не выделяется).
+   Маска не закрывается кликом/Escape (`dismissable-mask=false`).
    - Выбор гостя → `localStorage upin_account_choice` + редирект:
      персона → `/register`, компания → `/register?account=business`.
-   - Фон за модалкой — `backdrop-blur`, контент лендинга не кликается.
-2. Регистрация — `account_type: person|business` (+ `signup_goal=business`
-   для компаний). Бизнес после регистрации → `/business/onboarding`.
+2. Регистрация разделена:
+   - Персона — старая форма (цели, пол, карта), без упоминаний бизнеса.
+   - Компания — `BusinessRegisterForm` + `useBusinessRegisterForm` +
+     `business-register.schema`: название, email, форма собственности,
+     УНП 9 цифр, юрадрес, телефон, город, пароль. Ноль слов про дейтинг.
+   - Бэк принимает `account_type=business` без `gender`, создаёт
+     `Business`-профиль с реквизитами сразу. После регистрации →
+     `/business/onboarding`.
 3. Залогиненный без `account_type` — та же модалка, но выбор сохраняется
    через `PATCH /api/account-type`. `landingPath()` бизнеса — `/business`.
 
