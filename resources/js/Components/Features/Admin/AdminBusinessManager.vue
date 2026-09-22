@@ -57,23 +57,23 @@ function legalFormLabel(legalForm: string): string {
   <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0' } }">
     <template #content>
       <div class="flex items-center gap-2 flex-wrap">
-        <div class="font-black dark:text-white">Бизнес-заявки <span class="text-xs font-bold text-stone-400 dark:text-zinc-500">· {{ queue.total }}</span></div>
-        <Tag v-if="queue.pendingCount > 0" :value="`на проверке: ${queue.pendingCount}`" severity="warn" class="!text-[10px] ml-auto" />
-        <Button icon="pi pi-refresh" rounded text size="small" :loading="queue.loading" aria-label="Обновить очередь" @click="queue.load()" />
+        <div class="font-black dark:text-white">Бизнес-заявки <span class="text-xs font-bold text-stone-400 dark:text-zinc-500">· {{ queue.total.value }}</span></div>
+        <Tag v-if="queue.pendingCount.value > 0" :value="`на проверке: ${queue.pendingCount.value}`" severity="warn" class="!text-[10px] ml-auto" />
+        <Button icon="pi pi-refresh" rounded text size="small" :loading="queue.loading.value" aria-label="Обновить очередь" @click="queue.load()" />
       </div>
       <IconField class="mt-3">
         <InputIcon class="pi pi-search" />
-        <InputText :modelValue="queue.query" @update:modelValue="(v:string|undefined)=>queue.setQuery(v ?? '')" placeholder="Название, УНП, email владельца..." fluid size="small" rounded />
+        <InputText :modelValue="queue.query.value" @update:modelValue="(v:string|undefined)=>queue.setQuery(v ?? '')" placeholder="Название, УНП, email владельца..." fluid size="small" rounded />
       </IconField>
       <div class="mt-2.5">
-        <SelectButton :modelValue="queue.status" @update:modelValue="(v:string)=>queue.setStatus(v as any)" :options="statusOptions" optionLabel="label" optionValue="value" :allowEmpty="false" size="small" class="flex-wrap max-w-full" />
+        <SelectButton :modelValue="queue.status.value" @update:modelValue="(v:string)=>queue.setStatus(v as any)" :options="statusOptions" optionLabel="label" optionValue="value" :allowEmpty="false" size="small" class="flex-wrap max-w-full" />
       </div>
-      <div v-if="queue.loading" class="py-8 grid place-items-center"><ProgressSpinner style="width:24px;height:24px" :strokeWidth="6" /></div>
-      <div v-else-if="!queue.items.length" class="py-8 text-center text-sm text-stone-400 dark:text-zinc-500">
-        {{ queue.status === 'pending' ? 'Заявок на проверке нет — новые прилетят сюда автоматически' : 'Ничего не найдено' }}
+      <div v-if="queue.loading.value" class="py-8 grid place-items-center"><ProgressSpinner style="width:24px;height:24px" :strokeWidth="6" /></div>
+      <div v-else-if="!queue.items.value.length" class="py-8 text-center text-sm text-stone-400 dark:text-zinc-500">
+        {{ queue.status.value === 'pending' ? 'Заявок на проверке нет — новые прилетят сюда автоматически' : 'Ничего не найдено' }}
       </div>
       <div v-else class="mt-3 space-y-2">
-        <div v-for="b in queue.items" :key="b.id" class="rounded-2xl border border-stone-200 dark:border-zinc-700 p-3">
+        <div v-for="b in queue.items.value" :key="b.id" class="rounded-2xl border border-stone-200 dark:border-zinc-700 p-3">
           <div class="flex items-center gap-2.5 min-w-0">
             <div class="relative shrink-0">
               <Avatar :image="b.logo_url || avatarSrcFor({ avatar_path: null })" shape="circle" class="!w-9 !h-9 [&_img]:object-cover" />
@@ -93,27 +93,27 @@ function legalFormLabel(legalForm: string): string {
           </div>
           <div v-if="b.verification_notes" class="mt-1.5 text-[12px] text-red-600 dark:text-red-400">Причина отказа: {{ b.verification_notes }}</div>
           <div v-if="b.verification_status === 'pending'" class="mt-2.5 flex gap-1.5 flex-wrap items-center">
-            <Button label="Одобрить" icon="pi pi-check" size="small" rounded :loading="queue.actingId === b.id" class="!text-xs !bg-emerald-600 !border-emerald-600" @click="queue.verify(b)" />
-            <Button label="Отклонить" icon="pi pi-times" size="small" rounded outlined severity="danger" :disabled="queue.actingId === b.id" class="!text-xs" @click="queue.askReject(b)" />
+            <Button label="Одобрить" icon="pi pi-check" size="small" rounded :loading="queue.actingId.value === b.id" class="!text-xs !bg-emerald-600 !border-emerald-600" @click="queue.verify(b)" />
+            <Button label="Отклонить" icon="pi pi-times" size="small" rounded outlined severity="danger" :disabled="queue.actingId.value === b.id" class="!text-xs" @click="queue.askReject(b)" />
             <span class="flex-1" />
             <span class="text-[11px] text-stone-400">пинов: {{ b.pins_live ?? 0 }}</span>
           </div>
         </div>
       </div>
       <Paginator
-        v-if="queue.lastPage > 1"
+        v-if="queue.lastPage.value > 1"
         :rows="20"
-        :totalRecords="queue.total"
-        :first="(queue.page - 1) * 20"
+        :totalRecords="queue.total.value"
+        :first="(queue.page.value - 1) * 20"
         class="mt-3"
         @page="(e:any)=>queue.setPage(e.page + 1)"
       />
-      <Dialog :visible="!!queue.rejectTarget" @update:visible="(v:boolean)=>{ if(!v) queue.closeReject() }" modal header="Отклонить заявку?" :style="{ width: '420px', maxWidth: '94vw' }">
-        <p class="text-sm text-stone-600 dark:text-zinc-300">Компания <b>{{ queue.rejectTarget?.name }}</b> увидит причину в кабинете.</p>
-        <Textarea v-model="queue.rejectReason" rows="3" fluid placeholder="Причина отказа (минимум 3 символа)..." class="mt-3 !rounded-2xl" />
+      <Dialog :visible="!!queue.rejectTarget.value" @update:visible="(v:boolean)=>{ if(!v) queue.closeReject() }" modal header="Отклонить заявку?" :style="{ width: '420px', maxWidth: '94vw' }">
+        <p class="text-sm text-stone-600 dark:text-zinc-300">Компания <b>{{ queue.rejectTarget.value?.name }}</b> увидит причину в кабинете.</p>
+        <Textarea v-model="queue.rejectReason.value" rows="3" fluid placeholder="Причина отказа (минимум 3 символа)..." class="mt-3 !rounded-2xl" />
         <template #footer>
           <Button label="Отмена" text @click="queue.closeReject()" />
-          <Button label="Отклонить" severity="danger" :disabled="queue.rejectReason.trim().length < 3" :loading="queue.actingId !== null" @click="queue.confirmReject()" />
+          <Button label="Отклонить" severity="danger" :disabled="queue.rejectReason.value.trim().length < 3" :loading="queue.actingId.value !== null" @click="queue.confirmReject()" />
         </template>
       </Dialog>
     </template>

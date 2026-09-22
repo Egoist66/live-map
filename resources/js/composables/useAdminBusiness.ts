@@ -41,7 +41,8 @@ export function useAdminBusiness() {
   async function load(): Promise<void> {
     loading.value = true
     try {
-      const res = await businessApi.adminQueue(status.value, query.value.trim(), page.value)
+      const searchText = String(query.value ?? '').trim()
+      const res = await businessApi.adminQueue(status.value, searchText, page.value)
       items.value = Array.isArray(res?.data) ? res.data : []
       total.value = Number(res?.total ?? items.value.length)
       lastPage.value = Number(res?.last_page ?? 1)
@@ -58,7 +59,7 @@ export function useAdminBusiness() {
    * @param value строка поиска
    */
   function setQuery(value: string): void {
-    query.value = value
+    query.value = String(value ?? '')
     page.value = 1
     if (searchTimer) clearTimeout(searchTimer)
     searchTimer = setTimeout(() => void load(), 400)
@@ -108,7 +109,7 @@ export function useAdminBusiness() {
    */
   async function confirmReject(): Promise<void> {
     const target = rejectTarget.value
-    const reason = rejectReason.value.trim()
+    const reason = String(rejectReason.value ?? '').trim()
     if (!target || reason.length < 3 || actingId.value !== null) return
     actingId.value = target.id
     try {
@@ -139,7 +140,8 @@ export function useAdminBusiness() {
   function upsertIncoming(business: BusinessProfile, bump = true): void {
     if (bump) pendingCount.value += 1
     if (status.value !== 'pending' && status.value !== 'all') return
-    if (query.value.trim() !== '') {
+    const searchText = String(query.value ?? '').trim()
+    if (searchText !== '') {
       void load()
       return
     }
