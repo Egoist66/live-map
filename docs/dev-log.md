@@ -1,5 +1,15 @@
 # Dev-лог
 
+## 2026-09-22 — Видео: массовые 429 душили сигналинг (поллеры съедали общий лимит)
+- 🐞 Симптом: звонок соединяется, `signals: []`, чёрный экран + «сбой подключения», в консоли пачка 429 (`video/signals`, `realtime/sync`, даже `notifications`). Арифметика: все эти роуты сидели в общем ведре `throttle:120,1`, а во время звонка одна вкладка жрёт sync 24–60/мин (burst 1с после каждого poke — видео пинает постоянно) + signals 30 + show 20 + pending 12 ≈ 90–120/мин. Ведро переполнялось и резало всё разом, включая именной `realtime-sync:60` (burst в одиночку его выбирал).
+- 🔧 Бэк: новый лимитер `polling` (300/мин на юзера) + отдельная группа для горячих GET-поллеров (`realtime/mode`, `realtime/sync`, `video/ice-servers`, `video/{call}/signals`, `video/{call}`, `video/pending/incoming`, `video/roulette/stats`) — порядок `ice-servers` до `{call}` сохранён; `realtime-sync` поднят 60→120. POST-сигналинг остался в основной группе (объёма хватает с запасом).
+- 🔧 Фронт: burst поллера 1с→1.5с, окно 15с→10с; `pollSignals` 2с→2.5с, `pollOwnCall` 3с→4с (сокет — основной транспорт, опросы — страховка, задержка некритична).
+- Проверки: `php -l` ✅, `route:list` ✅ (13 video + 2 realtime, дублей нет), `vue-tsc` ✅. Вживую: пуш → деплой → жёсткий рефреш обоих → звонок без 429 в консоли.
+
+## 2026-09-22 — TURN на проде поднялся (Metered, static)
+- ✅ `/api/video/ice-servers` отдаёт `turnConfigured:true`, в списке `turn/turns:standard.relay.metered.ca` (80, 80/tcp, 443, 443/tcp-tls), `ttl:86400`. Предыдущий `false` вылечился выкатом свежего кода + сохранёнными env (`TURN_URLS/USERNAME/CREDENTIAL`) — рантайм переменные видит.
+- ⏳ Осталось: убедиться что задеплоен фронт с фиксом вотчеров/`catchUp` (`pnpm run build` + деплой), жёсткий рефреш у обоих, контрольный звонок Wi-Fi↔LTE (статус `connected`, счётчики `SDP/ICE` растут, плашки про relay нет).
+
 ## 2026-09-22 — TURN: чтение через config + админ-диагностика ice-servers
 - 🐞 Симптом: `TURN_URLS/USERNAME/CREDENTIAL` заданы в env прода (Laravel Cloud), редеплой сделан — а `/api/video/ice-servers` упорно отдаёт `turnConfigured:false`. Подозрение: до рантайма переменные не доезжают (порядок «сохранил env → деплой», кэш конфига, чужое окружение) — вслепую не видно.
 - 🔧 `config/services.php`: секция `turn` (urls/username/credential/secret через `env()`); `TurnService::envFirst()` идёт очередью живой env → запечённый config → пусто (легаси `VITE_*` — только env). Какой источник сработал — пишется в `$sources`.

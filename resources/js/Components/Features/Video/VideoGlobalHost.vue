@@ -14,7 +14,7 @@ import VideoOverlay from '@/Components/Features/Video/VideoOverlay.vue'
  *
  * Добивка при мёртвом сокете (оба транспорта realtime молчат):
  * - idle/searching: подбираем висящие входящие раз в 5 секунд;
- * - ringing-out: опрашиваем статус своего звонка раз в 3 секунды —
+ * - ringing-out: опрашиваем статус своего звонка раз в 4 секунды —
  *   accepted подхватываем локально, конец гасим без ожидания сигнала.
  * При живом сокете поллы не ходят.
  */
@@ -131,8 +131,8 @@ async function pollSignals(): Promise<void> {
 onMounted(() => {
   v.bindRealtime()
   pendingTimer = setInterval(() => void pollPending(), 5000)
-  statusTimer = setInterval(() => void pollOwnCall(), 3000)
-  signalsTimer = setInterval(() => void pollSignals(), 2000)
+  statusTimer = setInterval(() => void pollOwnCall(), 4000)
+  signalsTimer = setInterval(() => void pollSignals(), 2500)
 })
 
 onBeforeUnmount(() => {

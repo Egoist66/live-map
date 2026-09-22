@@ -29,6 +29,22 @@ Route::middleware('throttle:60,1')->group(function () {
 Route::get('/reference', [\App\Http\Controllers\ReferencePageController::class, 'index']);
 Route::get('/reference/{slug}', [\App\Http\Controllers\ReferencePageController::class, 'show']);
 
+// Горячие поллеры: тикают каждые 2-4с с каждой вкладки и делят общее ведро
+// throttle:120,1 с остальным API — во время звонка сами себя душили в 429
+// (sync + signals + show + pending ≈ 90-120/мин на вкладку), сигналинг умирал
+// и звонок оставался чёрным. Живут в отдельном ведре throttle:polling (300/мин
+// на юзера), именные лимитеры (realtime-sync, video-signal) поверх остаются.
+// Порядок важен: ice-servers — до /video/{call}, иначе {call} съест путь.
+Route::middleware(['web', 'auth:web,sanctum', 'throttle:polling'])->group(function () {
+    Route::get('/realtime/mode', [\App\Http\Controllers\RealtimeController::class, 'mode']);
+    Route::get('/realtime/sync', [\App\Http\Controllers\RealtimeController::class, 'sync'])->middleware('throttle:realtime-sync');
+    Route::get('/video/ice-servers', [\App\Http\Controllers\VideoController::class, 'iceServers']);
+    Route::get('/video/{call}/signals', [\App\Http\Controllers\VideoController::class, 'signals'])->middleware('throttle:video-signal');
+    Route::get('/video/{call}', [\App\Http\Controllers\VideoController::class, 'show']);
+    Route::get('/video/pending/incoming', [\App\Http\Controllers\VideoController::class, 'pending']);
+    Route::get('/video/roulette/stats', [\App\Http\Controllers\VideoController::class, 'rouletteStats']);
+});
+
 Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function () {
     Route::get('/pins/mine', [PinController::class, 'mine']);
     Route::get('/pins/mine/scheduled', [PinController::class, 'scheduled']);
@@ -156,16 +172,11 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::get('/swipes/quota', [SwipeController::class, 'quota']);
     Route::patch('/swipes/settings', [SwipeController::class, 'settings'])->middleware('throttle:profile-write');
     Route::post('/swipes/verify-age', [SwipeController::class, 'verifyAge'])->middleware('throttle:profile-write');
-    Route::get('/video/ice-servers', [\App\Http\Controllers\VideoController::class, 'iceServers']);
     Route::post('/video/match/call', [\App\Http\Controllers\VideoController::class, 'callMatch'])->middleware('throttle:social-write');
     Route::post('/video/{call}/accept', [\App\Http\Controllers\VideoController::class, 'accept'])->middleware('throttle:social-write');
     Route::post('/video/{call}/decline', [\App\Http\Controllers\VideoController::class, 'decline'])->middleware('throttle:social-write');
     Route::post('/video/{call}/hangup', [\App\Http\Controllers\VideoController::class, 'hangup'])->middleware('throttle:social-write');
     Route::post('/video/{call}/signal', [\App\Http\Controllers\VideoController::class, 'signal'])->middleware('throttle:video-signal');
-    Route::get('/video/{call}/signals', [\App\Http\Controllers\VideoController::class, 'signals'])->middleware('throttle:video-signal');
-    Route::get('/video/{call}', [\App\Http\Controllers\VideoController::class, 'show']);
-    Route::get('/video/pending/incoming', [\App\Http\Controllers\VideoController::class, 'pending']);
-    Route::get('/video/roulette/stats', [\App\Http\Controllers\VideoController::class, 'rouletteStats']);
     Route::post('/video/roulette/join', [\App\Http\Controllers\VideoController::class, 'rouletteJoin'])->middleware('throttle:social-write');
     Route::post('/video/roulette/next', [\App\Http\Controllers\VideoController::class, 'rouletteNext'])->middleware('throttle:social-write');
     Route::post('/video/roulette/leave', [\App\Http\Controllers\VideoController::class, 'rouletteLeave'])->middleware('throttle:social-write');
@@ -195,8 +206,6 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::post('/conversations/{conversation}/typing', [MessageController::class, 'typing'])->middleware('throttle:chat-signal');
     Route::post('/chat/share-post', [\App\Http\Controllers\PostShareController::class, 'store'])->middleware('throttle:social-write');
 
-    Route::get('/realtime/mode', [\App\Http\Controllers\RealtimeController::class, 'mode']);
-    Route::get('/realtime/sync', [\App\Http\Controllers\RealtimeController::class, 'sync'])->middleware('throttle:realtime-sync');
     Route::patch('/messages/{message}', [MessageController::class, 'update']);
     Route::delete('/messages/{message}', [MessageController::class, 'destroy']);
     Route::get('/conversations/{conversation}/pinned', [MessageController::class, 'pinned']);

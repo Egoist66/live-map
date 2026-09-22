@@ -3,10 +3,10 @@ import { busEmit, busOn, getPollContext } from '@/services/realtime-bus'
 
 /** Тик живого поллинга: компромисс задержки и нагрузки (24 запроса/мин) */
 const FAST_INTERVAL = 2500
-/** Тик в burst-режиме после исходящего действия */
-const BURST_INTERVAL = 1000
+/** Тик в burst-режиме после исходящего действия (был 1с — в сумме с остальными поллерами упирался в throttle) */
+const BURST_INTERVAL = 1500
 /** Сколько держать ускоренный режим после poke */
-const BURST_WINDOW = 15000
+const BURST_WINDOW = 10000
 /** Дебаунс ручного syncNow */
 const POKE_DEBOUNCE = 800
 /** Пауза между попытками после ошибки: растёт экспоненциально до потолка */

@@ -252,9 +252,27 @@ class TurnService
     public function debugSources(): array
     {
         return [
-            'urls_from' => $this->sources['TURN_URLS'] ?? $this->sources['VITE_TURN_URLS'] ?? 'none',
-            'auth_from' => $this->sources['TURN_SECRET'] ?? $this->sources['TURN_USERNAME'] ?? 'none',
+            'urls_from' => $this->firstHit(['TURN_URLS', 'VITE_TURN_URLS']),
+            'auth_from' => $this->firstHit(['TURN_USERNAME', 'VITE_TURN_USERNAME', 'TURN_SECRET']),
         ];
+    }
+
+    /**
+     * Первый источник из списка, давший значение (env/config, иначе none).
+     *
+     * @param string[] $names имена переменных по приоритету
+     * @return string источник или none
+     */
+    private function firstHit(array $names): string
+    {
+        foreach ($names as $name) {
+            $hit = $this->sources[$name] ?? 'none';
+            if ($hit !== 'none') {
+                return $hit;
+            }
+        }
+
+        return 'none';
     }
 
     /**
