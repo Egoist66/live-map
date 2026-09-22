@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * Видеозвонок 1-1: направленный звонок по мэтчу или пара из рулетки.
+ * Голосовой звонок 1-1: направленный звонок по мэтчу или пара из рулетки.
  *
  * Жизненный цикл: ringing → active → ended | declined | timeout | busy.
  * Звонок ringing старше RING_TTL_SEC считается протухшим (лениво гасится
@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  *
  * @property int $id
  * @property string $mode match|roulette
+ * @property bool $audio_only голосовой звонок без камеры
  * @property int $caller_id
  * @property int $callee_id
  * @property int|null $match_id
@@ -48,6 +49,7 @@ class VideoCall extends Model
 
     protected $fillable = [
         'mode',
+        'audio_only',
         'caller_id',
         'callee_id',
         'match_id',

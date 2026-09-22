@@ -1,0 +1,100 @@
+# Кабинет бизнеса — документация
+
+## Идея в 30 секунд
+
+Бизнес платит не за «тариф», а за клиентов рядом. Платформа зарабатывает
+на визитке ($9.99/мес), рекламных пинах ($9.99/7 дней), пушах по району
+(от $14.99) и купонах ($4.99). Позже — комиссия 5–10% за бронь/заказ.
+
+Кабинет — удобный, мощный, информативный: профиль по законодательству РБ,
+дашборд (просмотры, пины, лайки), подсказки заработка, карта и промо.
+
+## Вход: персона или компания
+
+1. Первый визит (гость) — модалка `AccountTypeGateModal` поверх заблюренного
+   лендинга: «Я — персона» / «Я — компания».
+   - Выбор гостя → `localStorage upin_account_choice` + редирект:
+     персона → `/register`, компания → `/register?account=business`.
+   - Фон за модалкой — `backdrop-blur`, контент лендинга не кликается.
+2. Регистрация — `account_type: person|business` (+ `signup_goal=business`
+   для компаний). Бизнес после регистрации → `/business/onboarding`.
+3. Залогиненный без `account_type` — та же модалка, но выбор сохраняется
+   через `PATCH /api/account-type`. `landingPath()` бизнеса — `/business`.
+
+Логика только в хуке `useAccountTypeChoice` (AGENTS №1), состояние первого
+визита — там же, серверный тип — в `auth.user.account_type`.
+
+## Сущности
+
+### User.account_type
+
+- `person|business`, default `person` (миграция `2026_09_27_000001`).
+- `isBusinessAccount()`, `activeBusiness()`, `landingPath()` → бизнес всегда
+  в `/business` (см. `User.php`).
+- Регистрация: `RegisteredUserController` принимает `account_type`,
+  создаёт черновик `Business` через `BusinessService::profileFor`.
+
+### Business (расширено под РБ)
+
+Миграция `2026_09_27_000002`: `legal_form, unp, reg_number, legal_address,
+director_name, verification_status, verification_notes, verified_at, logo_path`.
+
+- `legal_form`: `ooo|ip|odo|zao|self_employed|craft|other`.
+- `unp`: строго 9 цифр (`/^\d{9}$/` и на бэке, и в zod-схеме).
+- `verification_status`: `draft|pending|verified|rejected`.
+- Верифицированный получает: бейдж «Проверено», бессрочные пины,
+  радиус 50 км, пуш-рассылку, купоны с кнопкой «Маршрут».
+- Смена `unp|legal_form|name` у verified → снова `pending` (защита от подмены).
+
+## API
+
+- `PATCH /api/account-type {account_type}` → `{account_type, landing}`.
+- `GET /api/business` → кабинет-профиль (`BusinessResource`).
+- `PATCH /api/business` (throttle profile-write) → обновление профиля РБ.
+- `GET /api/business/dashboard` → `{business, stats, recent_pins, earn}`.
+- `POST /api/business/submit` (throttle social-write) → `pending`.
+- Админ: `POST /api/admin/business/{id}/verify|reject {reason}`.
+
+Realtime (правило №10, №13):
+- `BusinessVerificationSubmitted` → private `user.{adminId}`,
+  as `business.verification.submitted` — админ видит заявку живьём.
+- `BusinessVerified` → private `user.{owner}`,
+  as `business.verified` — тост + звук у владельца через
+  `useAppNotifications` и `useBusinessProfile`.
+
+## Фронт
+
+- Типы: `types/entities/Business.ts` (`BusinessProfile, BusinessDashboard…`).
+- Сервис: `services/business.api.ts` (axios, `X-Socket-ID` из общего `api`).
+- Стор: `stores/business.ts` (Pinia, правило №8) — `profile/dashboard`,
+  `load/loadDashboard/save/submit`, подписка на `business.verified`.
+- Хуки (правило №1, №11):
+  - `useAccountTypeChoice` — гейт персона/компания (localStorage + API).
+  - `useBusinessProfile` — форма кабинета (vee-validate + zod).
+  - `useBusinessDashboard` — дашборд (фасад над стором).
+  - `useBusinessOnboarding` — 3 шага РБ: компания → реквизиты → точка.
+- Схема: `validation/schemas/business.schema.ts` (УНП 9 цифр, юрадрес,
+  телефон BY).
+- Компоненты (только PrimeVue, правило №5):
+  - `AccountTypeGateModal` — блюр-гейт первого визита.
+  - `BusinessStatCard`, `BusinessVerificationBadge`.
+- Лейаут: `Layouts/BusinessLayout.vue` — сайдбар (Дашборд, Пины, Продвижение,
+  Настройки), топбар с бейджем верификации, мобильный bottom-nav,
+  тёмная тема (правило №14).
+- Страницы: `Pages/Business/Index.vue` (дашборд), `Pages/Business/Onboarding.vue`.
+- Роуты: `/business` (index), `/business/onboarding` (Ziggy `business.*`).
+
+## Монетизация связка (см. docs/monetization.md)
+
+Кабинет показывает `earn`-подсказки из `BusinessService::earnHints`:
+verify → first_pin → push → coupon. Оплата — шторка `[За кредиты] [Pro]`
+в местах упора (402), пуш-лимит N/сутки, цены — в конфиге.
+
+## Чек-лист приёмки
+
+- [ ] Гость видит блюр + модалку персона/компания, выбор ведёт в регистрацию.
+- [ ] Регистрация компании → онбординг РБ (УНП 9 цифр, юрадрес).
+- [ ] Кабинет: цифры, последние пины, earn-подсказки, тёмная тема + мобилка.
+- [ ] Submit → админу прилетает `business.verification.submitted`.
+- [ ] Verify → владельцу тост `business.verified` (socket + realtime-bus + пуш).
+- [ ] `vue-tsc` зелёный, dev-лог обновлён.

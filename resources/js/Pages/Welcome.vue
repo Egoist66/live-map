@@ -12,10 +12,11 @@ import Badge from 'primevue/badge'
 import Avatar from 'primevue/avatar'
 
 // Лендинг без лейаута: у залогиненных здесь тоже должен ловиться
-// входящий видеозвонок. Хост монтируем только на клиенте после mount
+// входящий звонок. Хост монтируем только на клиенте после mount
 // (Teleport в body на SSR роняет рендер), гостям он не нужен,
 // но isClient-гейт дешевле ветвления по auth.
 const VideoGlobalHost = defineAsyncComponent(() => import('@/Components/Features/Video/VideoGlobalHost.vue'))
+const AccountTypeGateModal = defineAsyncComponent(() => import('@/Components/Features/Business/AccountTypeGateModal.vue'))
 const videoHostReady = ref(false)
 onMounted(() => {
   videoHostReady.value = true
@@ -257,5 +258,6 @@ function switchTab(next: 'ulove' | 'upin'): void {
 
     <AppFooter class="mt-auto w-full" />
     <VideoGlobalHost v-if="videoHostReady" />
+    <AccountTypeGateModal mode="guest" />
   </div>
 </template>

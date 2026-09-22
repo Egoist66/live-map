@@ -248,6 +248,12 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::post('/pins/{pin}/sos/accept', [\App\Http\Controllers\SosController::class, 'accept'])->middleware('throttle:social-write');
     Route::post('/pins/{pin}/sos/decline', [\App\Http\Controllers\SosController::class, 'decline'])->middleware('throttle:social-write');
     Route::post('/pins/{pin}/sos/close', [\App\Http\Controllers\SosController::class, 'close'])->middleware('throttle:social-write');
+
+    Route::patch('/account-type', [\App\Http\Controllers\AccountTypeController::class, 'update']);
+    Route::get('/business', [\App\Http\Controllers\BusinessController::class, 'show']);
+    Route::patch('/business', [\App\Http\Controllers\BusinessController::class, 'update'])->middleware('throttle:profile-write');
+    Route::get('/business/dashboard', [\App\Http\Controllers\BusinessController::class, 'dashboard']);
+    Route::post('/business/submit', [\App\Http\Controllers\BusinessController::class, 'submit'])->middleware('throttle:social-write');
 });
 
 // Табы модератора: Статистика, Модерация, Справочники, SEO.
@@ -281,8 +287,11 @@ Route::middleware(['web', 'auth:web,sanctum', 'admin:moderator', 'throttle:120,1
 });
 
 // Только полные админы: Управление, Безопасность, роли/тарифы,
-// баны, вход в чужой аккаунт, обновления, maintenance, realtime.
+// баны, вход в чужой аккаунт, обновления, maintenance, realtime,
+// верификация бизнеса по РБ.
 Route::middleware(['web', 'auth:web,sanctum', 'admin', 'throttle:120,1'])->group(function () {
+    Route::post('/admin/business/{business}/verify', [\App\Http\Controllers\BusinessController::class, 'verify']);
+    Route::post('/admin/business/{business}/reject', [\App\Http\Controllers\BusinessController::class, 'reject']);
     Route::get('/admin/updates', [\App\Http\Controllers\AdminAppUpdateController::class, 'index']);
     Route::post('/admin/updates', [\App\Http\Controllers\AdminAppUpdateController::class, 'store']);
     Route::patch('/admin/updates/{appUpdate}', [\App\Http\Controllers\AdminAppUpdateController::class, 'update']);

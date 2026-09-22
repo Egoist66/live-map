@@ -3,6 +3,7 @@ export type UserRole = 'user' | 'moderator' | 'admin'
 export type UserLevel = 'novice' | 'explorer' | 'local' | 'veteran' | string
 export type UserGender = 'male' | 'female' | 'other'
 export type DefaultMode = 'ulove' | 'upin'
+export type AccountType = 'person' | 'business'
 
 export interface User {
   id: number
@@ -13,6 +14,7 @@ export interface User {
   signup_goal?: string | null
   default_mode?: DefaultMode | null
   default_mode_set_at?: string | null
+  account_type?: AccountType | null
   avatar_path: string | null
   avatar_url: string | null
   home_lat: number | null

@@ -56,9 +56,11 @@ export type RealtimeEventMap = {
   'user:swipe.liked': any
   'user:report.created': any
   'user:impersonation.started': any
+  'user:business.verified': { business: any }
+  'user:business.verification.submitted': { business: any }
   /** Единое inbox-уведомление (таблица notifications): тосты и колокольчик */
   'user:notification.created': { notification: any }
-  /** Входящий видеозвонок (сокет VideoIncoming / поллинг freshIncoming) */
+  /** Входящий звонок (сокет VideoIncoming / поллинг freshIncoming) */
   'user:video.incoming': { call_id: number; mode: string; caller: any; callee: any }
   /** Signaling-фрейм звонка (сокет VideoSignalEvent / поллинг freshSignals) */
   'user:video.signal': { id: number; call_id: number; sender_id: number; kind: string; payload: any }

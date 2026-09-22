@@ -20,6 +20,7 @@ const GlobalPeopleSearchDialog = defineAsyncComponent(() => import('@/Components
 const MiniChatDock = defineAsyncComponent(() => import('@/Components/Features/Chat/MiniChatDock.vue'))
 const TermsAcceptanceModal = defineAsyncComponent(() => import('@/Components/Features/Legal/TermsAcceptanceModal.vue'))
 const DefaultModeChoiceModal = defineAsyncComponent(() => import('@/Components/Features/Mode/DefaultModeChoiceModal.vue'))
+const AccountTypeGateModal = defineAsyncComponent(() => import('@/Components/Features/Business/AccountTypeGateModal.vue'))
 const AppUpdateModal = defineAsyncComponent(() => import('@/Components/Features/Updates/AppUpdateModal.vue'))
 const SubscriptionRenewalDialog = defineAsyncComponent(() => import('@/Components/Features/Subscription/SubscriptionRenewalDialog.vue'))
 const VideoGlobalHost = defineAsyncComponent(() => import('@/Components/Features/Video/VideoGlobalHost.vue'))
@@ -72,6 +73,7 @@ onMounted(() => { screenLock.init(); hotkeys.init() })
       <TermsAcceptanceModal />
       <SubscriptionRenewalDialog />
       <DefaultModeChoiceModal />
+      <AccountTypeGateModal mode="auth" />
       <AppUpdateModal :update="updates.current.value" :position="0" :total="updates.queue.value.length" @read="updates.dismissCurrent()" @later="updates.snooze()" @all="updates.dismissAll()" />
       <ConfirmDialog :style="{ width: '400px', maxWidth: '92vw' }" :pt="{ root: { class: '!rounded-[24px] !border-stone-200 dark:!border-white/10 overflow-hidden !bg-white dark:!bg-zinc-900' }, header: { class: '!p-5 !pb-0 !border-0' }, title: { class: '!font-black !text-[17px] !tracking-tight' }, content: { class: '!px-5 !py-4 !text-sm !text-stone-600 dark:!text-zinc-300 !leading-relaxed' }, footer: { class: '!px-5 !pb-5 !pt-0 !border-0 !flex !gap-2' }, acceptButton: { class: '!rounded-full !bg-gradient-to-r !from-rose-500 !to-red-600 !border-0 !px-5 !shadow-glow' }, rejectButton: { class: '!rounded-full !px-5' }, headerIcon: { class: '!w-10 !h-10 !rounded-2xl !bg-gradient-to-br !from-rose-500 !to-red-600 !text-white !grid !place-items-center !mr-3' } }">
         <template #icon><i class="pi pi-trash text-base"></i></template>

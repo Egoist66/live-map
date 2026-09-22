@@ -27,9 +27,13 @@ function onCountryChange(v: string): void {
 <template>
   <Head title="Регистрация" />
     <h1 class="text-[22px] font-black tracking-tight text-ink-900 dark:text-white">Создай аккаунт</h1>
-    <p class="text-sm text-stone-500 dark:text-zinc-400 mt-1">💘 ULove знакомит рядом · 📍 пины показывают жизнь района</p>
+    <p class="text-sm text-stone-500 dark:text-zinc-400 mt-1">💘 ULove знакомит рядом · 📍 пины показывают жизнь района · 🏢 бизнесу — кабинет</p>
     <form @submit.prevent="f.submit" class="mt-6 space-y-4">
-      <div v-if="!f.goalPreset.locked" class="rounded-2xl border-2 border-rose-200 dark:border-rose-900 bg-gradient-to-br from-rose-50 to-orange-50 dark:from-rose-950/40 dark:to-orange-950/20 p-3.5">
+      <div v-if="String((f.values as any).signup_goal ?? f.goalPreset.goal) === 'business'" class="rounded-2xl border-2 border-indigo-200 dark:border-indigo-900 bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-950/40 dark:to-violet-950/20 p-3.5 flex items-center gap-3">
+        <span class="w-10 h-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 grid place-items-center text-lg shrink-0">🏢</span>
+        <div class="text-[13px] leading-snug text-stone-600 dark:text-zinc-300"><span class="font-bold text-ink-900 dark:text-white">Ты — компания</span> — после регистрации откроем кабинет: реквизиты по РБ, проверка по УНП, карта для клиентов 🏢</div>
+      </div>
+      <div v-else-if="!f.goalPreset.locked" class="rounded-2xl border-2 border-rose-200 dark:border-rose-900 bg-gradient-to-br from-rose-50 to-orange-50 dark:from-rose-950/40 dark:to-orange-950/20 p-3.5">
         <label class="auth-label">💘 Зачем ты здесь? *</label>
         <Select v-model="f.signup_goal.value" :options="goals.preset.options" optionLabel="label" optionValue="value" placeholder="Выбери цель" checkmark fluid class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.signup_goal" />
         <small class="auth-err">{{ f.errors.value.signup_goal }}</small>

@@ -183,13 +183,13 @@ onUnmounted(() => {
                   <span class="mt-1.5 text-[11px] font-semibold leading-tight text-stone-600 dark:text-zinc-200 truncate w-full text-center">{{ m.user.name }}</span>
                 </button>
                 <Button
-                  icon="pi pi-video"
+                  icon="pi pi-phone"
                   rounded
                   outlined
                   size="small"
                   severity="success"
-                  aria-label="Позвонить по видео"
-                  title="Позвонить по видео"
+                  aria-label="Позвонить голосом"
+                  title="Позвонить голосом"
                   class="!w-8 !h-8 !p-0 mt-1"
                   :disabled="v.store.inCall"
                   @click="v.callMatch(m.user.id)"
@@ -782,8 +782,8 @@ onUnmounted(() => {
                 </Button>
                 <Button unstyled class="w-full !p-0 col-span-2" @click="mobileMenu.close(); v.openRouletteFromNav()">
                   <span class="flex items-center gap-3 w-full p-3 rounded-2xl text-left bg-gradient-to-br from-rose-500/10 via-fuchsia-500/10 to-orange-400/10 border border-rose-200/60 dark:border-rose-500/20 hover:shadow-md hover:shadow-rose-500/10 active:scale-[0.97] transition">
-                    <span class="w-9 h-9 rounded-xl bg-gradient-to-br from-rose-500 to-orange-400 text-white grid place-items-center shadow-md shadow-rose-500/30 shrink-0"><i class="pi pi-video" /></span>
-                    <span class="min-w-0 flex-1"><span class="block text-[13px] font-black text-stone-900 dark:text-white leading-tight">Видео-рулетка</span><span class="block text-[11px] text-stone-500 dark:text-zinc-400 leading-tight mt-0.5">Случайный собеседник по видео · Free 5/день</span></span>
+                    <span class="w-9 h-9 rounded-xl bg-gradient-to-br from-rose-500 to-orange-400 text-white grid place-items-center shadow-md shadow-rose-500/30 shrink-0"><i class="pi pi-phone" /></span>
+                    <span class="min-w-0 flex-1"><span class="block text-[13px] font-black text-stone-900 dark:text-white leading-tight">Голосовая рулетка</span><span class="block text-[11px] text-stone-500 dark:text-zinc-400 leading-tight mt-0.5">Случайный собеседник голосом · Free 5/день</span></span>
                     <i class="pi pi-chevron-right text-xs text-stone-300 dark:text-zinc-600 shrink-0" />
                   </span>
                 </Button>

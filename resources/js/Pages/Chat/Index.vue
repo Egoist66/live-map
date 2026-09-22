@@ -31,7 +31,7 @@ import { useChatOnline } from "@/composables/useChatOnline";
 import { useChatPage } from "@/composables/useChatPage";
 import { useChatFilters } from "@/composables/useChatFilters";
 import { useChatDatingTheme } from "@/composables/useChatDatingTheme";
-import { useChatVideoCall } from "@/composables/useChatVideoCall";
+import { useChatVoiceCall } from "@/composables/useChatVoiceCall";
 import { useChatMessageStatus } from "@/composables/useChatMessageStatus";
 import { useChatViewport } from "@/composables/useChatViewport";
 import { useChatWallpaper } from "@/composables/useChatWallpaper";
@@ -202,7 +202,7 @@ function closeConfirm() {
   confirm.value = null;
 }
 const datingTheme = useChatDatingTheme(chat.activeConv, chat.selectedId);
-const chatVideo = useChatVideoCall(chat.activeConv);
+const chatVoice = useChatVoiceCall(chat.activeConv);
 const wallpaper = useChatWallpaper();
 const wallpaperOpen = ref(false);
 
@@ -370,7 +370,7 @@ onMounted(async () => {
         @refresh="refresh"
         @back="backToList"
         @close="backToList"
-        @video-call="chatVideo.callPeer()"
+        @voice-call="chatVoice.callPeer()"
         @toggle-menu="showChatMenu = !showChatMenu"
         @menu-close="showChatMenu = false"
         @wallpaper="wallpaperOpen = true"

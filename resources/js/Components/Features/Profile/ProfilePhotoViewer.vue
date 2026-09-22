@@ -69,10 +69,10 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
       </div>
       <div class="flex-1 min-h-0 overflow-y-auto overscroll-contain viewer-fullscreen-scroll">
         <div class="relative bg-black">
-            <Swiper class="w-full" :slides-per-view="1" :space-between="0" :speed="350" :loop="gallery.photos.value.length > 1" :auto-height="true" :observer="true" :observe-parents="true" :update-on-window-resize="true" :modules="viewerZoom.modules" :zoom="viewerZoom.options" :initial-slide="swiper.activeIndex()" @swiper="swiper.registerMobile" @slideChange="swiper.onSlideChange">
+            <Swiper class="w-full h-[44dvh] sm:h-[52dvh]" :slides-per-view="1" :space-between="0" :speed="350" :loop="false" :modules="viewerZoom.modules" :zoom="viewerZoom.options" :initial-slide="swiper.activeIndex()" @swiper="swiper.registerMobile" @slideChange="swiper.onSlideChange">
             <SwiperSlide v-for="p in gallery.photos.value" :key="p.id" class="!flex items-center justify-center bg-black">
               <div class="swiper-zoom-container">
-                <img :src="p.url" :alt="p.caption || 'Фото'" loading="lazy" draggable="false" class="block w-full max-h-[52dvh] object-contain object-center select-none" />
+                <img :src="p.url" :alt="p.caption || 'Фото'" loading="lazy" draggable="false" class="block w-full max-h-full object-contain object-center select-none" />
               </div>
             </SwiperSlide>
           </Swiper>

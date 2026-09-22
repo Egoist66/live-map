@@ -134,7 +134,7 @@ export async function resolveIceServers(
  *
   * @example
   * const peer = usePeerConnection()
-  * await peer.bind(callId, isCaller, localStream, (remote) => { videoEl.srcObject = remote })
+   * await peer.bind(callId, isCaller, localStream, (remote) => { audioEl.srcObject = remote })
   * // offer/answer/ice прилетят сами, отправка — внутри
   */
 export function usePeerConnection() {
@@ -188,7 +188,7 @@ export function usePeerConnection() {
    *
    * @param callId id звонка
    * @param caller true если мы caller (создаём offer после accepted)
-   * @param local локальный поток с камеры
+    * @param local локальный аудиопоток с микрофона
    * @param onRemote колбэк с удалённым потоком
    */
   async function bind(callId: number, caller: boolean, local: MediaStream, onRemote: (s: MediaStream) => void): Promise<void> {
@@ -368,7 +368,7 @@ export function usePeerConnection() {
     if (!pc || offerStarted || boundCallId == null) return
     offerStarted = true
     try {
-      const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true, iceRestart: restart })
+      const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: false, iceRestart: restart })
       await pc.setLocalDescription(offer)
       const sent = await postSignal('offer', { type: offer.type, sdp: offer.sdp }, 4)
       if (!sent) {
@@ -433,24 +433,6 @@ export function usePeerConnection() {
     signalingError.value = null
     offerStarted = false
     await startOffer(true)
-  }
-
-  /**
-   * Перенегоциация после addTrack (шаринг экрана как новый m-line).
-   * replaceTrack её не требует, этот путь — только фолбэк.
-   *
-   * @returns true если offer ушёл
-   */
-  async function renegotiate(): Promise<boolean> {
-    if (!pc || boundCallId == null || !isCaller) {
-      return false
-    }
-    if (pc.signalingState !== 'stable') {
-      return false
-    }
-    offerStarted = false
-    await startOffer(false)
-    return offerStarted
   }
 
   /**
@@ -609,48 +591,12 @@ export function usePeerConnection() {
   }
 
   /**
-   * Подменить исходящий видеотрек наживую (флип камеры, шаринг экрана).
-   * Переподключения не нужно: replaceTrack не рвёт peer и не требует
-   * нового offer — собеседник просто видит новый кадр.
-   *
-   * @param track новый видеотрек
-   * @returns true если подмена удалась
-   */
-  async function replaceVideoTrack(track: MediaStreamTrack): Promise<boolean> {
-    if (!pc) return false
-    try {
-      const sender = pc.getSenders().find((s) => s.track?.kind === 'video')
-      if (sender) {
-        await sender.replaceTrack(track)
-      } else {
-        pc.addTrack(track)
-      }
-      return true
-    } catch {
-      return false
-    }
-  }
-
-  /**
    * Id звонка, к которому привязан peer (для реактивной перепривязки).
    *
    * @returns id звонка или null когда соединения нет
    */
   function currentId(): number | null {
     return boundCallId
-  }
-
-  /**
-   * Есть ли исходящий видеосендер (нужен ли offer после addTrack).
-   *
-   * @returns true когда видео уже negotiated и хватит replaceTrack
-   */
-  function hasVideoSender(): boolean {
-    try {
-      return !!pc?.getSenders().some((s) => s.track?.kind === 'video')
-    } catch {
-      return false
-    }
   }
 
   /**
@@ -673,5 +619,5 @@ export function usePeerConnection() {
     connectionState.value = 'idle'
   }
 
-  return { remoteStream, connectionState, signalingError, signalStats, signalLabel, iceTurnConfigured, bind, startOffer, retry, renegotiate, hasVideoSender, replaceVideoTrack, close, currentId }
+  return { remoteStream, connectionState, signalingError, signalStats, signalLabel, iceTurnConfigured, bind, startOffer, retry, close, currentId }
 }

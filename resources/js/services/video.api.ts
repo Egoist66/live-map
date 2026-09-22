@@ -1,7 +1,7 @@
 import { api } from './api'
 
 /**
- * Короткий профиль собеседника видеозвонка.
+ * Короткий профиль собеседника звонка.
  */
 export interface VideoPeer {
   id: number
@@ -15,6 +15,7 @@ export interface VideoPeer {
 export interface VideoCallPayload {
   id: number
   mode: 'match' | 'roulette' | 'direct'
+  audio_only: boolean
   status: string
   is_caller: boolean
   created_at: string | null
@@ -27,6 +28,7 @@ export interface VideoCallPayload {
 export interface VideoIncomingEvent {
   call_id: number
   mode: 'match' | 'roulette' | 'direct'
+  audio_only: boolean
   caller: VideoPeer
   callee: VideoPeer
 }
@@ -55,7 +57,7 @@ export interface IceServersResponse {
 }
 
 /**
- * API видеозвонков: мэтч-звонки и рулетка.
+ * API голосовых звонков: мэтч-звонки и рулетка.
  *
  * SDP/ICE идут через signal(): сервер пишет строку в video_signals
  * (для polling) и шлёт broadcast получателю (для сокета).
@@ -70,8 +72,8 @@ export const videoApi = {
     const { data } = await api.get('/api/video/ice-servers')
     return data as IceServersResponse
   },
-  async callMatch(userId: number) {
-    const { data } = await api.post('/api/video/match/call', { user_id: userId })
+  async callMatch(userId: number, audioOnly = false) {
+    const { data } = await api.post('/api/video/match/call', { user_id: userId, audio_only: audioOnly })
     return data as { call: VideoCallPayload }
   },
   async accept(callId: number) {
@@ -115,8 +117,8 @@ export const videoApi = {
     const { data } = await api.get('/api/video/roulette/stats')
     return data as { waiting: number }
   },
-  async rouletteJoin(gender?: string | null) {
-    const { data } = await api.post('/api/video/roulette/join', gender ? { gender } : {})
+  async rouletteJoin(gender?: string | null, audioOnly = false) {
+    const { data } = await api.post('/api/video/roulette/join', { ...(gender ? { gender } : {}), audio_only: audioOnly })
     return data as { matched: boolean; call: VideoCallPayload | null }
   },
   async rouletteNext(callId?: number | null, gender?: string | null) {

@@ -13,12 +13,11 @@ import { pokeRealtime } from '@/composables/useRealtimePoller'
 /** Heartbeat очереди рулетки: сервер держит место QUEUE_TTL_SEC. */
 const ROULETTE_HEARTBEAT_MS = 45000
 
-// Синглтоны модуля: камера и peer одни на приложение, иначе два
-// компонента (превью поиска + окно звонка) разорвут друг друга.
+// Синглтоны модуля: микрофон и peer одни на приложение, иначе два
+// компонента (поиск + окно звонка) разорвут друг друга.
 let sharedMedia: ReturnType<typeof useUserMedia> | null = null
 let sharedPeer: ReturnType<typeof usePeerConnection> | null = null
-const sharedLocalRef = ref<HTMLVideoElement | null>(null)
-const sharedRemoteRef = ref<HTMLVideoElement | null>(null)
+const sharedRemoteRef = ref<HTMLMediaElement | null>(null)
 const sharedBusy = ref(false)
 const sharedNotice = ref<string | null>(null)
 const overlayOpen = ref(false)
@@ -35,9 +34,8 @@ let autoAccepting = false
 let heartbeat: ReturnType<typeof setInterval> | null = null
 /** Вотчеры сессии уже зарегистрированы (хук зовут 4+ компонентов — без гарда каждый вешал свой watch и дублировал bind/accept). */
 let sessionWatchesBound = false
-/** Последние живые <video>-узлы: нужны чтобы чистить shared-рефы при размонтировании. */
-let lastLocalNode: HTMLVideoElement | null = null
-let lastRemoteNode: HTMLVideoElement | null = null
+/** Последний живой узел удалённого звука: чистим shared-реф при размонтировании. */
+let lastRemoteNode: HTMLMediaElement | null = null
 
 /**
  * Приглашение в приват: payload {conversation_id} от второго участника.
@@ -51,17 +49,16 @@ interface PrivateInviteEvent {
 /**
  * Назначить поток элементу и запустить воспроизведение.
  *
- * srcObject трогаем только при смене потока (иначе мерцание),
- * play() зовём всегда: без него удалённое видео со звуком может
- * стоять чёрным (автоплей-политика режет play без жеста).
+ * srcObject трогаем только при смене потока, play() зовём всегда:
+ * автоплей-политика может резать play без жеста.
  *
- * @param el видеоэлемент
- * @param stream поток для показа
- * @param isRemote true для чужого видео (ставим флаг блокировки звука)
+ * @param el медиа-элемент
+ * @param stream поток для воспроизведения
+ * @param isRemote true для чужого звука (ставим флаг блокировки)
  * @param onBlocked колбэк блокировки автоплея со звуком
  */
 async function playVideoEl(
-  el: HTMLVideoElement,
+  el: HTMLMediaElement,
   stream: MediaStream,
   isRemote: boolean,
   onBlocked: () => void,
@@ -80,10 +77,10 @@ async function playVideoEl(
 }
 
 /**
- * Видеосессия: связывает стор, медиа и P2P-соединение.
+ * Голосовая сессия: связывает стор, микрофон и P2P-соединение.
  *
- * Компонент только показывает <video> и кнопки: вся механика
- * (камера → звонок → offer/answer → отбой → heartbeat) здесь.
+ * Компонент только показывает плитки и кнопки: вся механика
+ * (микрофон → звонок → offer/answer → отбой → heartbeat) здесь.
  * Работает в обоих realtime-режимах: сигналинг идёт через шину,
  * куда дублируют и сокет, и polling.
  *
@@ -91,8 +88,7 @@ async function playVideoEl(
  * const v = useVideoSession()
  * v.bindRealtime()
  * await v.callMatch(42)
- * <video :ref="v.localRef" autoplay playsinline muted />
- * <video :ref="v.remoteRef" autoplay playsinline />
+ * <audio :ref="v.setRemoteEl" autoplay class="hidden" />
  */
 export function useVideoSession() {
   captureAuthUid()
@@ -102,7 +98,6 @@ export function useVideoSession() {
   const media = sharedMedia
   const peer = sharedPeer
 
-  const localRef = sharedLocalRef
   const remoteRef = sharedRemoteRef
   const busy = sharedBusy
   const notice = sharedNotice
@@ -110,12 +105,8 @@ export function useVideoSession() {
   const lastPeer = sharedLastPeer
   const pendingInvite = sharedPendingInvite
   const rouletteCount = ref<number | null>(null)
-  const sharing = ref(false)
-  /** Браузер запретил autoplay удалённого видео со звуком — ждём тап. */
+  /** Браузер запретил autoplay удалённого звука — ждём тап. */
   const remoteAudioBlocked = ref(false)
-
-  let cameraTrackBackup: MediaStreamTrack | null = null
-  let shareTrack: MediaStreamTrack | null = null
 
   bindSessionWatchesOnce()
 
@@ -134,15 +125,6 @@ export function useVideoSession() {
     sessionWatchesBound = true
 
     watch(
-      () => media.stream.value,
-      (next) => {
-        if (next && localRef.value) {
-          void playVideoEl(localRef.value, next, false, markRemoteBlocked)
-        }
-      },
-    )
-
-    watch(
       () => store.status,
       (next) => {
         if (next === 'searching') startHeartbeat()
@@ -155,7 +137,7 @@ export function useVideoSession() {
           overlayOpen.value = true
         } else if (next === 'ringing-in' && !sharedRouletteAuto.value) {
           // Входящий принимает диалог «Принять/Отклонить» — пустой оверлей
-          // «Видео» поверх него не открываем (на мобилке перекрывал кнопки).
+          // Пустой оверлей поверх него не открываем (на мобилке перекрывал кнопки).
           overlayOpen.value = false
         }
         if (next === 'ringing-in') void maybeAutoAcceptRoulette()
@@ -208,7 +190,7 @@ export function useVideoSession() {
   }
 
   /**
-   * Принять приглашение в приват: гасим видео и переходим в чат.
+    * Принять приглашение в приват: гасим звонок и переходим в чат.
    * Уходят оба — пригласивший уже там, второго ведёт эта кнопка.
    */
   async function acceptPrivateInvite(): Promise<void> {
@@ -232,13 +214,12 @@ export function useVideoSession() {
   }
 
   /**
-   * Тихо свернуть видео (очередь/звонок/камера) без навигации.
+   * Тихо свернуть звонок (очередь/звонок/микрофон) без навигации.
    * Общий знаменатель для «в приват» и принятия чужого инвайта.
    */
   async function leaveVideoSilently(): Promise<void> {
     peer.close()
     media.stop()
-    resetSharing()
     rouletteAuto.value = false
     try {
       const callId = store.call?.id ?? store.incoming?.callId ?? null
@@ -257,51 +238,13 @@ export function useVideoSession() {
   }
 
   /**
-   * Прицепить локальный поток к <video> (на случай позднего маунта).
-   */
-  function attachLocal(): void {
-    if (media.stream.value && localRef.value) {
-      void playVideoEl(localRef.value, media.stream.value, false, markRemoteBlocked)
-    }
-  }
-
-  /**
-   * Ref-колбэк локального <video>: элемент пересоздаётся при смене
-   * состояния (превью поиска → PiP звонка), поток цепляем сразу.
-   *
-   * Идемпотентно: srcObject переназначаем только при смене потока —
-   * иначе каждый ре-рендер (тикер секунд, чат) ронял бы кадр и давал
-   * мерцание собственного превью.
-   *
-   * @param el DOM-узел или null при размонтировании
-   */
-  function setLocalEl(el: unknown): void {
-    const node = el as HTMLVideoElement | null
-    if (!node) {
-      // Размонтирование старого <video> (поиск → звонок): чистим только если
-      // ref всё ещё указывает на него, иначе attachRemote/play уходили в
-      // откреплённый узел и новый экран оставался чёрным.
-      if (lastLocalNode && localRef.value === lastLocalNode) {
-        localRef.value = null
-      }
-      lastLocalNode = null
-      return
-    }
-    lastLocalNode = node
-    localRef.value = node
-    if (media.stream.value) {
-      void playVideoEl(node, media.stream.value, false, markRemoteBlocked)
-    }
-  }
-
-  /**
-   * Ref-колбэк удалённого <video>: ontrack мог выстрелить раньше маунта
+   * Ref-колбэк удалённого <audio>: ontrack мог выстрелить раньше маунта
    * (быстрое соединение) — тогда цепляем уже готовый поток из peer.
    *
    * @param el DOM-узел или null при размонтировании
    */
   function setRemoteEl(el: unknown): void {
-    const node = el as HTMLVideoElement | null
+    const node = el as HTMLMediaElement | null
     if (!node) {
       if (lastRemoteNode && remoteRef.value === lastRemoteNode) {
         remoteRef.value = null
@@ -318,7 +261,7 @@ export function useVideoSession() {
   }
 
   /**
-   * Прицепить удалённый поток к <video> и запустить воспроизведение.
+   * Прицепить удалённый поток к <audio> и запустить воспроизведение.
    *
    * @param remote поток собеседника
    */
@@ -329,7 +272,7 @@ export function useVideoSession() {
   }
 
   /**
-   * Разблокировать звук удалённого видео тапом (автоплей-политика).
+    * Разблокировать звук собеседника тапом (автоплей-политика).
    * Звать из жеста пользователя (кнопка «Включить звук»).
    */
   async function unlockRemoteAudio(): Promise<void> {
@@ -344,10 +287,10 @@ export function useVideoSession() {
   }
 
   /**
-   * Убедиться что камера захвачена (показывает понятную ошибку).
+   * Убедиться что микрофон захвачен (показывает понятную ошибку).
    *
    * Параллельно греем ICE с бэкенда: пока пользователь разрешает
-   * камеру, TURN-креды уже в кэше и bind() не ждёт лишний RTT.
+   * доступ, TURN-креды уже в кэше и bind() не ждёт лишний RTT.
    *
    * @returns false когда доступа нет — дальше не идём
    */
@@ -357,7 +300,6 @@ export function useVideoSession() {
       const icePromise = resolveIceServers().catch(() => null)
       await mediaPromise
       await icePromise
-      attachLocal()
       return true
     } catch {
       notice.value = media.error.value
@@ -366,7 +308,7 @@ export function useVideoSession() {
   }
 
   /**
-   * Позвонить напрямую: мэтчу или другу (допуск проверяет бэк).
+   * Позвонить напрямую голосом: мэтчу или другу (допуск проверяет бэк).
    * Ошибка допуска (посторонний) показывает оверлей с текстом.
    *
    * @param userId id собеседника
@@ -378,7 +320,7 @@ export function useVideoSession() {
     try {
       const ok = await ensureMedia()
       if (!ok || !media.stream.value) return
-      await store.callMatch(userId)
+      await store.callMatch(userId, true)
       const callId = store.call?.id
       if (callId && media.stream.value) {
         await peer.bind(callId, true, media.stream.value, attachRemote)
@@ -412,7 +354,6 @@ export function useVideoSession() {
       }
       await peer.bind(callId, false, media.stream.value, attachRemote)
       await store.acceptIncoming()
-      attachLocal()
       await ensureCallerOffer()
     } catch {
       // accept упал (звонок протух/завершён): стор уже в idle,
@@ -435,13 +376,12 @@ export function useVideoSession() {
     await store.declineIncoming()
   }
   /**
-   * Положить трубку и погасить камеру.
+   * Положить трубку и освободить микрофон.
    */
   async function hangup(): Promise<void> {
     const wasRoulette = store.call?.mode === 'roulette' || rouletteAuto.value
     peer.close()
     media.stop()
-    resetSharing()
     if (wasRoulette) rouletteAuto.value = false
     pendingInvite.value = null
     await store.hangup()
@@ -450,7 +390,7 @@ export function useVideoSession() {
 
   /**
    * Уйти в приват: создать личный чат с собеседником рулетки
-   * и перейти туда, видеозвонок завершается.
+    * и перейти туда, звонок завершается.
    * Второму участнику уходит private_invite — он видит баннер
    * «позвали в приват» и переходит той же кнопкой.
    *
@@ -487,7 +427,7 @@ export function useVideoSession() {
     }
   }
   /**
-   * Встать в очередь рулетки (камеру греем заранее для превью).
+   * Встать в очередь голосовой рулетки.
    * Включает авто-режим: пару принимаем сами, как в чатрулетке.
    */
   async function joinRoulette(): Promise<void> {
@@ -499,7 +439,7 @@ export function useVideoSession() {
       if (!ok) return
       rouletteAuto.value = true
       pendingInvite.value = null
-      await store.joinRoulette()
+      await store.joinRoulette(true)
       await wireRoulettePeer()
       await maybeAutoAcceptRoulette()
     } finally {
@@ -560,7 +500,6 @@ export function useVideoSession() {
       if (!ok || !media.stream.value || !callId) return
       await peer.bind(callId, false, media.stream.value, attachRemote)
       await store.acceptIncoming()
-      attachLocal()
       await ensureCallerOffer()
     } finally {
       busy.value = false
@@ -591,7 +530,6 @@ export function useVideoSession() {
     busy.value = true
     try {
       peer.close()
-      if (sharing.value) await stopShare()
       const ok = media.stream.value ? true : await ensureMedia()
       if (!ok) return
       rouletteAuto.value = true
@@ -605,12 +543,11 @@ export function useVideoSession() {
   }
 
   /**
-   * Выйти из рулетки: очередь + камера.
+   * Выйти из рулетки: очередь + микрофон.
    */
   async function leaveRoulette(): Promise<void> {
     peer.close()
     media.stop()
-    resetSharing()
     rouletteAuto.value = false
     pendingInvite.value = null
     await store.leaveRoulette()
@@ -670,128 +607,11 @@ export function useVideoSession() {
   }
 
   /**
-   * Переключить камеру фронталка↔тыльная без разрыва соединения.
-   * Во время шаринга недоступно.
-   */
-  async function flipCamera(): Promise<void> {
-    if (!media.stream.value || sharing.value || busy.value) return
-    busy.value = true
-    try {
-      const track = await media.switchCamera()
-      if (!track) {
-        notice.value = 'Вторая камера не найдена'
-        return
-      }
-      const ok = await peer.replaceVideoTrack(track)
-      if (!ok) notice.value = 'Не удалось переключить камеру'
-      attachLocal()
-    } finally {
-      busy.value = false
-    }
-  }
-
-  /**
-   * Начать демонстрацию экрана (как в Meet): трек камеры паркуем,
-   * шлём экран тем же peer без переподключения. Остановка шаринга
-   * системной кнопкой браузера сама вернёт камеру (onended).
-   */
-  async function shareScreen(): Promise<void> {
-    if (sharing.value || !media.stream.value || busy.value) return
-    busy.value = true
-    notice.value = null
-    try {
-      const next = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false })
-      const track = next.getVideoTracks()[0] ?? null
-      if (!track || !media.stream.value) {
-        try {
-          next.getTracks().forEach((t) => t.stop())
-        } catch {}
-        return
-      }
-      try {
-        track.contentHint = 'detail'
-      } catch {}
-      const current = media.stream.value.getVideoTracks()[0] ?? null
-      const hadSender = peer.hasVideoSender()
-      if (current) {
-        try {
-          media.stream.value.removeTrack(current)
-        } catch {}
-      }
-      media.stream.value.addTrack(track)
-      cameraTrackBackup = current
-      shareTrack = track
-      const ok = await peer.replaceVideoTrack(track)
-      if (!ok) {
-        await stopShare()
-        notice.value = 'Не удалось начать демонстрацию'
-        return
-      }
-      if (!hadSender) {
-        await peer.renegotiate()
-      }
-      sharing.value = true
-      attachLocal()
-      track.onended = () => {
-        void stopShare()
-      }
-    } catch {
-      notice.value = 'Не удалось начать демонстрацию экрана'
-    } finally {
-      busy.value = false
-    }
-  }
-
-  /**
-   * Вернуть камеру после шаринга.
-   */
-  async function stopShare(): Promise<void> {
-    if (!sharing.value) return
-    try {
-      shareTrack?.stop()
-    } catch {}
-    shareTrack = null
-    const cam = cameraTrackBackup
-    cameraTrackBackup = null
-    sharing.value = false
-    if (cam && media.stream.value) {
-      try {
-        media.stream.value.getVideoTracks().forEach((t) => {
-          try {
-            media.stream.value?.removeTrack(t)
-          } catch {}
-        })
-        media.stream.value.addTrack(cam)
-        await peer.replaceVideoTrack(cam)
-        attachLocal()
-      } catch {}
-    }
-  }
-
-  /**
-   * Сбросить состояние шаринга при выходе из звонка.
-   * Треки гасит media.stop(), здесь только флаги.
-   */
-  function resetSharing(): void {
-    sharing.value = false
-    cameraTrackBackup = null
-    shareTrack = null
-  }
-
-  /**
    * Переключить микрофон.
    */
   function toggleMute(): void {
     const enabled = media.toggleMute()
     store.muted = !enabled
-  }
-
-  /**
-   * Переключить камеру.
-   */
-  function toggleCamera(): void {
-    const enabled = media.toggleCamera()
-    store.camOff = !enabled
   }
 
   /**
@@ -802,7 +622,7 @@ export function useVideoSession() {
     stopHeartbeat()
     heartbeat = setInterval(() => {
       if (store.status === 'searching') {
-        void store.joinRoulette()
+        void store.joinRoulette(true)
       }
     }, ROULETTE_HEARTBEAT_MS)
   }
@@ -817,7 +637,6 @@ export function useVideoSession() {
     store,
     media,
     peer,
-    localRef,
     remoteRef,
     busy,
     notice,
@@ -829,15 +648,9 @@ export function useVideoSession() {
     declinePrivateInvite,
     rouletteCount,
     loadRouletteCount,
-    sharing,
     remoteAudioBlocked,
     unlockRemoteAudio,
-    flipCamera,
-    shareScreen,
-    stopShare,
     bindRealtime,
-    attachLocal,
-    setLocalEl,
     setRemoteEl,
     openRoulette,
     openRouletteFromNav,
@@ -851,7 +664,6 @@ export function useVideoSession() {
     leaveRoulette,
     createPrivateChat,
     toggleMute,
-    toggleCamera,
   }
 }
 

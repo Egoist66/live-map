@@ -8,7 +8,7 @@ use App\Services\VideoService;
 use Illuminate\Http\Request;
 
 /**
- * Видеозвонки: мэтч-звонки и рулетка поверх WebRTC P2P.
+ * Голосовые звонки: мэтч-звонки и рулетка поверх WebRTC P2P (аудио).
  *
  * Тонкий контроллер: вся механика (мэтч-проверки, очередь, таймауты,
  * broadcast + персистентность сигналов) — в VideoService.
@@ -51,9 +51,10 @@ class VideoController extends Controller
     {
         $data = $request->validate([
             'user_id' => 'required|integer|min:1|exists:users,id',
+            'audio_only' => 'nullable|boolean',
         ]);
 
-        $call = $this->video->startMatchCall($request->user(), (int) $data['user_id']);
+        $call = $this->video->startMatchCall($request->user(), (int) $data['user_id'], (bool) ($data['audio_only'] ?? false));
 
         return response()->json([
             'call' => $this->video->toPayload($call, (int) $request->user()->id),
@@ -225,9 +226,10 @@ class VideoController extends Controller
     {
         $data = $request->validate([
             'gender' => 'nullable|in:male,female,all',
+            'audio_only' => 'nullable|boolean',
         ]);
 
-        $result = $this->video->joinRoulette($request->user(), $data);
+        $result = $this->video->joinRoulette($request->user(), $data, (bool) ($data['audio_only'] ?? false));
         $call = $result['call'];
 
         return response()->json([

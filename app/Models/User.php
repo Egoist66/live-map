@@ -13,7 +13,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['name', 'profile_slug', 'email', 'password', 'gender', 'birth_date', 'country', 'country_code', 'plan', 'latitude', 'longitude', 'role', 'is_admin', 'is_hidden_from_search', 'dating_enabled', 'dating_goal', 'signup_goal', 'default_mode', 'default_mode_set_at', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_gender_pref', 'dating_hide_name', 'dating_hide_age', 'dating_hide_distance', 'dating_match_only', 'random_chats_used', 'random_chats_month', 'avatar_path', 'home_lat', 'home_lng', 'home_city', 'home_address', 'home_visibility', 'home_show_exact', 'home_radius_km', 'bio', 'thought', 'reputation_score', 'level', 'quest_cooldown_until', 'quest_last_track', 'quest_granted_at', 'is_anonymous_default', 'default_location_precision', 'default_blur_meters', 'message_privacy', 'allow_random_messages', 'call_cooldown_enabled', 'video_calls_enabled', 'photo_comments_privacy', 'flow_comments_privacy', 'auto_reply_enabled', 'auto_reply_text', 'settings', 'last_seen_at', 'is_invisible', 'screen_lock_code', 'screen_lock_timeout', 'screen_lock_kind', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at', 'terms_accepted_at', 'terms_version'])]
+#[Fillable(['name', 'profile_slug', 'email', 'password', 'gender', 'birth_date', 'country', 'country_code', 'plan', 'latitude', 'longitude', 'role', 'account_type', 'is_admin', 'is_hidden_from_search', 'dating_enabled', 'dating_goal', 'signup_goal', 'default_mode', 'default_mode_set_at', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_gender_pref', 'dating_hide_name', 'dating_hide_age', 'dating_hide_distance', 'dating_match_only', 'random_chats_used', 'random_chats_month', 'avatar_path', 'home_lat', 'home_lng', 'home_city', 'home_address', 'home_visibility', 'home_show_exact', 'home_radius_km', 'bio', 'thought', 'reputation_score', 'level', 'quest_cooldown_until', 'quest_last_track', 'quest_granted_at', 'is_anonymous_default', 'default_location_precision', 'default_blur_meters', 'message_privacy', 'allow_random_messages', 'call_cooldown_enabled', 'video_calls_enabled', 'photo_comments_privacy', 'flow_comments_privacy', 'auto_reply_enabled', 'auto_reply_text', 'settings', 'last_seen_at', 'is_invisible', 'screen_lock_code', 'screen_lock_timeout', 'screen_lock_kind', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at', 'terms_accepted_at', 'terms_version'])]
 #[Hidden(['password', 'remember_token', 'screen_lock_code'])]
 /**
  * Пользователь приложения.
@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Storage;
  * @property string|null $signup_goal Цель захода: love|flirt|friendship|chat|interests везут в ULove-свайпы, neighbors — на карту.
  * @property string|null $default_mode Стартовый режим: ulove|upin. NULL — режим не выбран, показать модалку.
  * @property \Carbon\Carbon|null $default_mode_set_at Когда выбран стартовый режим.
+ * @property string $account_type Тип аккаунта: person|business. business ведёт в кабинет компании.
  * @property string|null $dating_goal Цель анкеты ULove.
  * @property string|null $thought Короткая мысль под именем в профиле (до 140 символов).
  */
@@ -361,12 +362,51 @@ class User extends Authenticatable
     }
 
     /**
+     * Бизнес-аккаунт ли это (персона vs компания).
+     *
+     * @return bool true для account_type=business
+     */
+    public function isBusinessAccount(): bool
+    {
+        return ($this->account_type ?? 'person') === 'business';
+    }
+
+    /**
+     * Активный бизнес-профиль владельца (первый активный).
+     *
+     * @return \App\Models\Business|null
+     */
+    public function activeBusiness(): ?Business
+    {
+        if (! $this->relationLoaded('businesses')) {
+            $this->load('businesses');
+        }
+
+        $list = $this->getRelation('businesses');
+
+        foreach ($list as $business) {
+            if ((bool) $business->is_active) {
+                return $business;
+            }
+        }
+
+        return $list->first();
+    }
+
+    /**
      * URL стартового экрана по режиму.
      *
-     * @return string путь /map для UPin, иначе /swipes
+     * Бизнес-аккаунты всегда стартуют с кабинета /business,
+     * остальные — по default_mode (UPin → /map, иначе /swipes).
+     *
+     * @return string путь кабинета бизнеса либо карты/свайпов
      */
     public function landingPath(): string
     {
+        if ($this->isBusinessAccount()) {
+            return route('business.index', absolute: false);
+        }
+
         if ($this->defaultMode() === 'upin') {
             return route('map', absolute: false);
         }

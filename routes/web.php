@@ -25,6 +25,8 @@ Route::get('/contacts', [PageController::class, 'reference'])->defaults('slug', 
 Route::get('/privacy', [PageController::class, 'reference'])->defaults('slug', 'privacy')->name('privacy');
 Route::get('/offer', [PageController::class, 'reference'])->defaults('slug', 'offer')->name('offer');
 Route::middleware('auth')->group(function () {
+    Route::get('/business', [\App\Http\Controllers\BusinessController::class, 'index'])->name('business.index');
+    Route::get('/business/onboarding', [\App\Http\Controllers\BusinessController::class, 'onboarding'])->name('business.onboarding');
     Route::get('/flow', [PageController::class, 'flow'])->name('flow');
     Route::get('/flow/post/{post}', [PageController::class, 'flowPost'])->whereNumber('post')->name('flow.post');
     Route::get('/chat/{conversation?}', [PageController::class, 'chat'])->name('chat');

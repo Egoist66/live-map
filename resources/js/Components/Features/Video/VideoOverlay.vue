@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { usePage } from '@inertiajs/vue3'
 import { useVideoSession } from '@/composables/useVideoSession'
 import { useVideoCallChat } from '@/composables/useVideoCallChat'
-import { useVideoFullscreen } from '@/composables/useVideoFullscreen'
 import { reactionsApi } from '@/services/reactions.api'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
@@ -11,38 +11,29 @@ import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 
 /**
- * Оверлей видеозвонка: вход в рулетку, поиск, дозвон и активный звонок.
+ * Оверлей голосового звонка: вход в рулетку, поиск, дозвон и активный звонок.
  * Компонент только отображает useVideoSession, логика — в хуке и сторе.
  */
 
 const v = useVideoSession()
-const fs = useVideoFullscreen()
 const callChat = useVideoCallChat(() => v.store.call?.id ?? null)
-const chatOpen = ref(false)
 const chatText = ref('')
 
 /**
- * Стабильные ref-колбэки (не инлайн-стрелки): инлайн создавал новую
- * функцию каждый ре-рендер (тикер секунд, чат) — Vue перецеплял
- * srcObject и собственное превью мерцало. Эти ссылки константны.
+ * Стабильный ref-колбэк удалённого звука (не инлайн-стрелка): инлайн
+ * создавал новую функцию каждый ре-рендер и Vue перецеплял srcObject.
  */
-const setLocalEl = (el: unknown): void => v.setLocalEl(el)
 const setRemoteEl = (el: unknown): void => v.setRemoteEl(el)
 
 watch(
   () => v.store.status,
   (next) => {
     if (next === 'idle') {
-      chatOpen.value = false
       chatText.value = ''
       callChat.reset()
     }
   },
 )
-
-watch(chatOpen, (open) => {
-  if (open) callChat.markRead()
-})
 
 const roomPt = {
   root: { class: '!rounded-3xl !border-0 !bg-white dark:!bg-zinc-950 overflow-hidden' },
@@ -53,7 +44,11 @@ const roomPt = {
 const isRoulette = computed(() => v.store.call?.mode === 'roulette')
 const isCaller = computed(() => !!v.store.call?.is_caller)
 const peerName = computed(() => v.store.call?.peer.name ?? v.store.incoming?.peer.name ?? 'Собеседник')
+const peerAvatar = computed(() => v.store.call?.peer.avatar_url ?? v.store.incoming?.peer.avatar_url ?? null)
 const hasNotice = computed(() => !!(v.store.error || v.store.info || v.notice.value))
+const page = usePage()
+const myAvatar = computed(() => (page.props as any)?.auth?.user?.avatar_url ?? null)
+const myName = computed(() => String((page.props as any)?.auth?.user?.name ?? 'Вы'))
 
 /**
  * Режим комнаты рулетки: широкий диалог на весь экран с видео и чатом
@@ -93,7 +88,7 @@ async function reportAndNext(): Promise<void> {
   const peerId = v.store.call?.peer.id
   if (peerId) {
     try {
-      await reactionsApi.report('user', peerId, 'abuse', 'Видео-рулетка')
+      await reactionsApi.report('user', peerId, 'abuse', 'Голосовая рулетка')
     } catch {}
   }
   await v.nextRoulette()
@@ -109,20 +104,15 @@ async function sendChat(): Promise<void> {
 
 /**
  * Уйти в приват: создать личный чат с собеседником и перейти туда.
- * Видео завершается, собеседник остаётся в списке чатов.
+ * Звонок завершается, собеседник остаётся в списке чатов.
  */
 async function goPrivate(): Promise<void> {
   await v.createPrivateChat()
 }
 
-/** Полный экран сцены через хук (натив → iOS → CSS-фолбэк). */
-function toggleFullscreen(): void {
-  void fs.toggleFullscreen(() => v.remoteRef.value)
-}
-
 /**
  * Оверлей не показываем поверх входящего прямого звонка:
- * там работает диалог «Принять/Отклонить», а пустая шапка «Видео»
+ * там работает диалог «Принять/Отклонить», а пустая шапка «Звонок»
  * (телепорт в body позже диалога) перекрывала бы его кнопки.
  * В авто-рулетке входящего диалога нет — оверлей остаётся.
  */
@@ -153,9 +143,9 @@ function onClose(): void {
     <template #header>
       <div class="flex items-center gap-2 min-w-0">
         <span class="w-8 h-8 rounded-xl bg-gradient-to-br from-rose-500 to-orange-400 grid place-items-center text-white shrink-0">
-          <i class="pi pi-video text-sm" />
+          <i class="pi pi-phone text-sm" />
         </span>
-        <span class="font-black text-stone-900 dark:text-white truncate">{{ isRouletteRoom ? 'Рулетка' : 'Видео' }}</span>
+        <span class="font-black text-stone-900 dark:text-white truncate">{{ isRouletteRoom ? 'Рулетка' : 'Звонок' }}</span>
         <Chip v-if="v.store.status === 'active'" :label="elapsedLabel" icon="pi pi-clock" class="!rounded-full !text-xs shrink-0" />
         <Chip
           v-if="isRouletteRoom && v.rouletteCount.value !== null && v.store.status !== 'active'"
@@ -193,10 +183,10 @@ function onClose(): void {
         </template>
         <template v-else>
           <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-rose-500 to-orange-400 grid place-items-center text-white">
-            <i class="pi pi-video text-2xl" />
+            <i class="pi pi-phone text-2xl" />
           </div>
-          <div class="mt-4 text-lg font-black">Видео-рулетка</div>
-          <div class="mt-1 text-sm text-stone-500 dark:text-white/70">Случайный собеседник по видео. Free — 5 в день, PRO — безлимит.</div>
+          <div class="mt-4 text-lg font-black">Голосовая рулетка</div>
+          <div class="mt-1 text-sm text-stone-500 dark:text-white/70">Случайный собеседник голосом. Free — 5 в день, PRO — безлимит.</div>
           <div v-if="v.rouletteCount.value !== null" class="mt-2 flex justify-center">
             <Chip :label="`Сейчас в рулетке: ${v.rouletteCount.value}`" icon="pi pi-users" class="!rounded-full !text-xs" />
           </div>
@@ -216,20 +206,21 @@ function onClose(): void {
 
       <!-- Поиск пары -->
       <div v-else-if="v.store.status === 'searching'" class="p-4 sm:p-5">
-        <div class="relative rounded-2xl overflow-hidden bg-zinc-900 aspect-video lg:aspect-[21/9]">
-          <video
-            :ref="setLocalEl"
-            autoplay
-            playsinline
-            muted
-            class="absolute inset-0 w-full h-full object-cover mirror"
-          />
-          <div class="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/70 to-transparent flex items-center gap-2 text-white">
-            <i class="pi pi-spin pi-spinner" />
-            <span class="text-sm font-semibold">Ищем собеседника… соединим автоматически</span>
+        <div class="rounded-2xl overflow-hidden bg-gradient-to-br from-zinc-800 to-zinc-900 aspect-video lg:aspect-[21/9] grid place-items-center">
+          <div class="text-center px-4">
+            <Avatar
+              :image="myAvatar ?? undefined"
+              :label="!myAvatar ? myName.slice(0, 1) : undefined"
+              shape="circle"
+              class="!w-20 !h-20 !text-3xl ring-4 ring-white/20"
+            />
+            <div class="mt-3 text-white font-black">{{ myName }} (вы)</div>
+            <div class="mt-1 text-sm text-white/60 flex items-center justify-center gap-2">
+              <i class="pi pi-spin pi-spinner" /> Ищем собеседника… соединим автоматически
+            </div>
           </div>
         </div>
-        <div class="mt-1 text-center text-xs text-stone-400 dark:text-zinc-500">Это ты — собеседник увидит тебя после соединения</div>
+        <div class="mt-1 text-center text-xs text-stone-400 dark:text-zinc-500">Голосовая рулетка — собеседник услышит тебя после соединения</div>
         <div class="mt-3 flex justify-center">
           <Button label="Отмена" icon="pi pi-times" rounded outlined severity="secondary" @click="v.leaveRoulette()" />
         </div>
@@ -259,44 +250,53 @@ function onClose(): void {
         />
         <div class="mt-3 text-lg font-black">{{ peerName }}</div>
         <div class="mt-1 text-sm text-stone-500 dark:text-white/70 flex items-center justify-center gap-2">
-          <i class="pi pi-spin pi-spinner" /> Соединяем…
+          <i class="pi pi-spin pi-spinner" /> Дозваниваемся…
         </div>
         <Button label="Отмена" icon="pi pi-times" rounded outlined severity="secondary" class="mt-4" @click="v.hangup()" />
       </div>
 
-      <!-- Активный звонок: рулетка — комната на весь диалог, прямые — компактно -->
+      <!-- Активный звонок: плитки с фото, рулетка — с чатом комнаты -->
       <div v-else-if="v.store.status === 'active'" class="p-4 sm:p-5">
-        <template v-if="isRouletteRoom">
-          <div class="grid gap-3 lg:grid-cols-[1fr_320px]">
+        <div>
+          <audio :ref="setRemoteEl" autoplay class="hidden" />
+          <div class="grid gap-3" :class="isRouletteRoom ? 'lg:grid-cols-[1fr_320px]' : ''">
             <div>
-              <div
-                :ref="fs.setStageEl"
-                :class="[
-                  'overflow-hidden bg-zinc-900',
-                  fs.pseudoFullscreen.value
-                    ? 'fixed inset-0 z-[9999]'
-                    : 'relative rounded-2xl aspect-video lg:aspect-auto lg:h-[46dvh] lg:min-h-[320px]',
-                ]"
-              >
-                <video :ref="setRemoteEl" autoplay playsinline class="absolute inset-0 w-full h-full object-cover" />
-                <video
-                  :ref="setLocalEl"
-                  autoplay
-                  playsinline
-                  muted
-                  class="absolute bottom-3 right-3 w-20 sm:w-28 aspect-[3/4] object-cover rounded-xl ring-2 ring-white/40 mirror"
-                />
+              <div class="relative rounded-2xl overflow-hidden bg-gradient-to-br from-zinc-800 to-zinc-900 aspect-[4/3] sm:aspect-video grid place-items-center">
+                <div class="text-center px-4">
+                  <Avatar
+                    :image="peerAvatar ?? undefined"
+                    :label="!peerAvatar ? peerName.slice(0, 1) : undefined"
+                    shape="circle"
+                    class="!w-24 !h-24 !text-4xl ring-4 ring-white/20"
+                  />
+                  <div class="mt-3 text-white font-black text-lg truncate max-w-[240px]">{{ peerName }}</div>
+                  <div class="mt-1 text-xs text-white/60 flex items-center justify-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>голосовой звонок</span>
+                  </div>
+                </div>
                 <div class="absolute top-3 left-3 max-w-[70%] flex gap-1.5 flex-wrap">
                   <Chip :label="peerName" class="!rounded-full !bg-black/50 !text-white !border-0 !text-xs !max-w-full [&_.p-chip-label]:truncate" />
                   <Chip v-if="v.peer.connectionState.value !== 'connected' && !v.peer.signalingError.value" label="Соединение…" icon="pi pi-spin pi-spinner" class="!rounded-full !bg-black/50 !text-amber-300 !border-0 !text-xs" />
                 </div>
               </div>
+              <div class="mt-3 flex items-center gap-3 rounded-2xl bg-stone-100 dark:bg-zinc-900 px-3 py-2.5">
+                <Avatar
+                  :image="myAvatar ?? undefined"
+                  :label="!myAvatar ? myName.slice(0, 1) : undefined"
+                  shape="circle"
+                  class="!w-10 !h-10"
+                />
+                <span class="flex-1 min-w-0 text-sm font-bold truncate">{{ myName }} (вы)</span>
+                <i v-if="v.store.muted" class="pi pi-microphone-slash text-rose-500" title="Микрофон выключен" />
+                <i v-else class="pi pi-microphone text-emerald-500" title="Микрофон включён" />
+              </div>
               <div v-if="v.remoteAudioBlocked.value" class="mt-2 rounded-2xl bg-sky-500/10 border border-sky-500/30 px-3 py-2 text-xs text-sky-700 dark:text-sky-300 flex items-center gap-2 flex-wrap">
                 <span class="flex-1 min-w-[180px]">Браузер заблокировал звук — нажми, чтобы услышать собеседника</span>
                 <Button label="Включить звук" icon="pi pi-volume-up" rounded size="small" @click="v.unlockRemoteAudio()" />
               </div>
-<div v-if="v.peer.connectionState.value !== 'connected'" class="mt-2 text-center font-mono text-[11px] text-stone-400 dark:text-zinc-500">{{ v.peer.signalLabel.value }}<span v-if="v.peer.signalStats.value.lastError" class="text-amber-600 dark:text-amber-300"> · {{ v.peer.signalStats.value.lastError }}</span></div>
-<div v-if="v.peer.iceTurnConfigured.value === false" class="mt-2 rounded-2xl bg-amber-500/10 border border-amber-500/30 px-3 py-2 text-xs text-amber-700 dark:text-amber-300 text-center">Прямое соединение может не установиться из-за сети — relay-сервер не настроен</div>
+              <div v-if="v.peer.connectionState.value !== 'connected'" class="mt-2 text-center font-mono text-[11px] text-stone-400 dark:text-zinc-500">{{ v.peer.signalLabel.value }}<span v-if="v.peer.signalStats.value.lastError" class="text-amber-600 dark:text-amber-300"> · {{ v.peer.signalStats.value.lastError }}</span></div>
+              <div v-if="v.peer.iceTurnConfigured.value === false" class="mt-2 rounded-2xl bg-amber-500/10 border border-amber-500/30 px-3 py-2 text-xs text-amber-700 dark:text-amber-300 text-center">Прямое соединение может не установиться из-за сети — relay-сервер не настроен</div>
               <div v-if="v.peer.signalingError.value" class="mt-2 rounded-2xl bg-amber-500/10 border border-amber-500/30 px-3 py-2 text-xs text-amber-700 dark:text-amber-300 flex items-center gap-2 flex-wrap">
                 <span class="flex-1 min-w-[180px]">{{ v.peer.signalingError.value }}</span>
                 <Button v-if="isCaller" label="Обновить" icon="pi pi-refresh" rounded outlined size="small" severity="warn" @click="v.peer.retry()" />
@@ -310,34 +310,16 @@ function onClose(): void {
                   title="Микрофон"
                   @click="v.toggleMute()"
                 />
-                <Button
-                  :icon="v.store.camOff ? 'pi pi-video-slash' : 'pi pi-video'"
-                  rounded
-                  :severity="v.store.camOff ? 'danger' : 'secondary'"
-                  aria-label="Камера"
-                  title="Камера"
-                  @click="v.toggleCamera()"
-                />
-                <Button icon="pi pi-sync" rounded severity="secondary" aria-label="Переключить камеру" title="Переключить камеру" @click="v.flipCamera()" />
-                <Button
-                  icon="pi pi-desktop"
-                  rounded
-                  :severity="v.sharing.value ? 'success' : 'secondary'"
-                  aria-label="Демонстрация экрана"
-                  title="Демонстрация экрана"
-                  @click="v.sharing.value ? v.stopShare() : v.shareScreen()"
-                />
-                <Button icon="pi pi-expand" rounded severity="secondary" aria-label="Во весь экран" title="Во весь экран" @click="toggleFullscreen()" />
                 <Button icon="pi pi-phone" rounded severity="danger" aria-label="Завершить" title="Завершить" class="!bg-rose-600 !border-rose-600 rotate-[135deg]" @click="v.hangup()" />
               </div>
-              <div class="mt-3 flex items-center justify-center gap-2 flex-wrap">
+              <div v-if="isRoulette" class="mt-3 flex items-center justify-center gap-2 flex-wrap">
                 <Button label="Дальше" icon="pi pi-arrow-right" rounded :loading="v.busy.value" class="!bg-gradient-to-br !from-rose-500 !to-orange-400 !border-0 max-sm:flex-1" @click="v.nextRoulette()" />
                 <Button label="В приват" icon="pi pi-send" rounded outlined severity="info" :loading="v.busy.value" title="Создать личный чат и перейти туда" class="max-sm:flex-1" @click="goPrivate()" />
                 <Button icon="pi pi-flag" rounded severity="warn" outlined aria-label="Пожаловаться" title="Пожаловаться и дальше" @click="reportAndNext()" />
               </div>
               <div class="mt-2 text-center text-[11px] leading-snug text-stone-400 dark:text-zinc-500">Собеседник может записать разговор</div>
             </div>
-            <div class="rounded-2xl border border-stone-200 dark:border-zinc-800 overflow-hidden flex flex-col min-h-[280px] lg:min-h-0 lg:max-h-[62dvh]">
+            <div v-if="isRouletteRoom" class="rounded-2xl border border-stone-200 dark:border-zinc-800 overflow-hidden flex flex-col min-h-[280px] lg:min-h-0 lg:max-h-[62dvh]">
               <div class="flex items-center gap-2 px-3 py-2.5 text-sm font-bold border-b border-stone-200 dark:border-zinc-800">
                 <i class="pi pi-comments" />
                 <span class="flex-1">Чат комнаты</span>
@@ -353,7 +335,7 @@ function onClose(): void {
                     {{ m.text }}
                   </div>
                 </div>
-                <div v-else class="text-xs text-stone-400 dark:text-zinc-500">Поздоровайся и обменяйся контактами, не прерывая видео</div>
+                <div v-else class="text-xs text-stone-400 dark:text-zinc-500">Поздоровайся и обменяйся контактами, не прерывая разговор</div>
               </div>
               <div class="border-t border-stone-200 dark:border-zinc-800 p-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] flex gap-2">
                 <InputText
@@ -367,108 +349,8 @@ function onClose(): void {
               </div>
             </div>
           </div>
-        </template>
-        <template v-else>
-          <div
-            :ref="fs.setStageEl"
-            :class="[
-              'overflow-hidden bg-zinc-900',
-              fs.pseudoFullscreen.value ? 'fixed inset-0 z-[9999]' : 'relative rounded-2xl aspect-video',
-            ]"
-          >
-            <video :ref="setRemoteEl" autoplay playsinline class="absolute inset-0 w-full h-full object-cover" />
-            <video
-              :ref="setLocalEl"
-              autoplay
-              playsinline
-              muted
-              class="absolute bottom-3 right-3 w-20 sm:w-24 aspect-[3/4] object-cover rounded-xl ring-2 ring-white/40 mirror"
-            />
-            <div class="absolute top-3 left-3 max-w-[70%] flex gap-1.5 flex-wrap">
-              <Chip :label="peerName" class="!rounded-full !bg-black/50 !text-white !border-0 !text-xs !max-w-full [&_.p-chip-label]:truncate" />
-              <Chip v-if="v.peer.connectionState.value !== 'connected' && !v.peer.signalingError.value" label="Соединение…" icon="pi pi-spin pi-spinner" class="!rounded-full !bg-black/50 !text-amber-300 !border-0 !text-xs" />
-            </div>
-          </div>
-          <div v-if="v.remoteAudioBlocked.value" class="mt-2 rounded-2xl bg-sky-500/10 border border-sky-500/30 px-3 py-2 text-xs text-sky-700 dark:text-sky-300 flex items-center gap-2 flex-wrap">
-            <span class="flex-1 min-w-[180px]">Браузер заблокировал звук — нажми, чтобы услышать собеседника</span>
-            <Button label="Включить звук" icon="pi pi-volume-up" rounded size="small" @click="v.unlockRemoteAudio()" />
-          </div>
-          <div v-if="v.peer.signalingError.value" class="mt-2 rounded-2xl bg-amber-500/10 border border-amber-500/30 px-3 py-2 text-xs text-amber-700 dark:text-amber-300 flex items-center gap-2 flex-wrap">
-            <span class="flex-1 min-w-[180px]">{{ v.peer.signalingError.value }}</span>
-            <Button v-if="isCaller" label="Обновить" icon="pi pi-refresh" rounded outlined size="small" severity="warn" @click="v.peer.retry()" />
-          </div>
-          <div v-if="v.peer.iceTurnConfigured.value === false" class="mt-2 rounded-2xl bg-amber-500/10 border border-amber-500/30 px-3 py-2 text-xs text-amber-700 dark:text-amber-300 text-center">Прямое соединение может не установиться из-за сети — relay-сервер не настроен</div>
-          <div class="mt-3 flex items-center justify-center gap-2 flex-wrap">
-            <Button
-              :icon="v.store.muted ? 'pi pi-microphone-slash' : 'pi pi-microphone'"
-              rounded
-              :severity="v.store.muted ? 'danger' : 'secondary'"
-              aria-label="Микрофон"
-              title="Микрофон"
-              @click="v.toggleMute()"
-            />
-            <Button
-              :icon="v.store.camOff ? 'pi pi-video-slash' : 'pi pi-video'"
-              rounded
-              :severity="v.store.camOff ? 'danger' : 'secondary'"
-              aria-label="Камера"
-              title="Камера"
-              @click="v.toggleCamera()"
-            />
-            <Button icon="pi pi-sync" rounded severity="secondary" aria-label="Переключить камеру" title="Переключить камеру (фронталка/тыльная)" @click="v.flipCamera()" />
-            <Button
-              icon="pi pi-desktop"
-              rounded
-              :severity="v.sharing.value ? 'success' : 'secondary'"
-              aria-label="Демонстрация экрана"
-              title="Демонстрация экрана"
-              @click="v.sharing.value ? v.stopShare() : v.shareScreen()"
-            />
-            <Button icon="pi pi-expand" rounded severity="secondary" aria-label="Во весь экран" title="Во весь экран" @click="toggleFullscreen()" />
-            <Button v-if="isRoulette" label="Дальше" icon="pi pi-arrow-right" rounded :loading="v.busy.value" @click="v.nextRoulette()" />
-            <Button v-if="isRoulette" icon="pi pi-flag" rounded severity="warn" outlined aria-label="Пожаловаться" title="Пожаловаться и дальше" @click="reportAndNext()" />
-            <Button icon="pi pi-phone" rounded severity="danger" aria-label="Завершить" title="Завершить" class="!bg-rose-600 !border-rose-600 rotate-[135deg]" @click="v.hangup()" />
-          </div>
-          <div class="mt-2 text-center text-[11px] leading-snug text-stone-400 dark:text-zinc-500">Собеседник может записать разговор</div>
-          <div class="mt-3 rounded-2xl border border-stone-200 dark:border-zinc-800 overflow-hidden">
-            <button class="w-full flex items-center gap-2 px-3 py-2.5 text-sm font-bold text-left" @click="chatOpen = !chatOpen">
-              <i class="pi pi-comments" />
-              <span class="flex-1">Чат звонка</span>
-              <span v-if="callChat.unread.value > 0 && !chatOpen" class="min-w-5 h-5 px-1 rounded-full bg-rose-500 text-white text-[11px] font-black grid place-items-center">{{ callChat.unread.value }}</span>
-              <i class="pi text-xs text-stone-400" :class="chatOpen ? 'pi-chevron-up' : 'pi-chevron-down'" />
-            </button>
-            <div v-if="chatOpen" class="border-t border-stone-200 dark:border-zinc-800 p-3">
-              <div v-if="callChat.messages.value.length" class="max-h-40 overflow-y-auto flex flex-col gap-1.5 mb-2">
-                <div
-                  v-for="m in callChat.messages.value"
-                  :key="m.id"
-                  class="max-w-[85%] rounded-2xl px-3 py-1.5 text-sm break-words"
-                  :class="m.mine ? 'self-end bg-violet-600 text-white rounded-br-md' : 'self-start bg-stone-100 dark:bg-zinc-800 rounded-bl-md'"
-                >
-                  {{ m.text }}
-                </div>
-              </div>
-              <div v-else class="mb-2 text-xs text-stone-400 dark:text-zinc-500">Обменяйтесь контактами, не прерывая видео</div>
-              <div class="flex gap-2">
-                <InputText
-                  v-model="chatText"
-                  placeholder="Сообщение…"
-                  maxlength="500"
-                  class="flex-1 !rounded-full"
-                  @keydown.enter="sendChat()"
-                />
-                <Button icon="pi pi-send" rounded aria-label="Отправить" :loading="callChat.sending.value" :disabled="!chatText.trim()" @click="sendChat()" />
-              </div>
-            </div>
-          </div>
-        </template>
+        </div>
       </div>
     </div>
   </Dialog>
 </template>
-
-<style scoped>
-.mirror {
-  transform: scaleX(-1);
-}
-</style>

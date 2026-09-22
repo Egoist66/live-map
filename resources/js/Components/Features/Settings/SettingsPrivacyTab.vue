@@ -110,7 +110,7 @@ const videoCalls = useVideoCallsEnabled()
           <template #content>
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
-                <div class="text-sm font-semibold dark:text-white">Звонки · принимать видеозвонки</div>
+                <div class="text-sm font-semibold dark:text-white">Звонки · принимать голосовые звонки</div>
                 <p class="text-xs text-stone-500 mt-1 leading-relaxed">Выключено — тебе не дозвонится никто, даже друзья и мэтчи. Сам звонить сможешь как обычно.</p>
               </div>
               <ToggleSwitch :modelValue="videoCalls.enabled.value" :disabled="videoCalls.loading.value" class="shrink-0" @update:modelValue="(next:boolean)=>videoCalls.toggle(next)" />

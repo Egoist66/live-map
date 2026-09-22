@@ -9,7 +9,7 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * Входящий видеозвонок: доставляется обоим участникам.
+ * Входящий голосовой звонок: доставляется обоим участникам.
  *
  * Сокет — мгновенно, polling — следующим тиком sync() (freshVideoIncoming).
  * Фронт слушает каноническое user:video.incoming в обоих режимах.
@@ -29,6 +29,7 @@ class VideoIncoming implements ShouldBroadcastNow
         public string $mode,
         public array $callerBrief,
         public array $calleeBrief,
+        public bool $audioOnly = false,
     ) {}
 
     /**
@@ -52,6 +53,7 @@ class VideoIncoming implements ShouldBroadcastNow
         return [
             'call_id' => $this->callId,
             'mode' => $this->mode,
+            'audio_only' => $this->audioOnly,
             'caller' => $this->callerBrief,
             'callee' => $this->calleeBrief,
         ];

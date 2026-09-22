@@ -22,6 +22,8 @@ const USER_EVENTS = [
   'report.created',
   'impersonation.started',
   'notification.created',
+  'business.verified',
+  'business.verification.submitted',
 ] as const
 
 let channel: any = null

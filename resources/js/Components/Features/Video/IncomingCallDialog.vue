@@ -7,7 +7,7 @@ import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 
 /**
- * Диалог входящего видеозвонка (мэтч, друг или рулетка).
+ * Диалог входящего голосового звонка (мэтч, друг или рулетка).
  * Логики нет: показывает стор и дергает useVideoSession.
  */
 
@@ -61,7 +61,7 @@ onBeforeUnmount(() => ring.stopRing())
   >
     <div class="p-5 sm:p-6 text-center text-stone-900 dark:text-white">
       <div class="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500">
-        {{ isRoulette ? 'Видео-рулетка' : 'Входящий видеозвонок' }}
+        {{ isRoulette ? 'Голосовая рулетка' : 'Входящий звонок' }}
       </div>
       <div class="mt-4 flex justify-center">
         <Avatar
@@ -75,7 +75,7 @@ onBeforeUnmount(() => ring.stopRing())
         {{ peerName }}
       </div>
       <div class="text-sm text-stone-500 dark:text-zinc-400">
-        {{ isRoulette ? 'случайный собеседник на связи' : 'хочет поговорить по видео' }}
+        {{ isRoulette ? 'случайный собеседник на связи' : 'хочет поговорить голосом' }}
       </div>
       <div class="mt-5 flex gap-2 justify-center flex-wrap">
         <Button
@@ -96,7 +96,7 @@ onBeforeUnmount(() => ring.stopRing())
           @click="v.decline()"
         />
       </div>
-      <div class="mt-3 text-[11px] leading-snug text-stone-400 dark:text-zinc-500">Собеседник может записать разговор — не показывай лишнего</div>
+      <div class="mt-3 text-[11px] leading-snug text-stone-400 dark:text-zinc-500">Собеседник может записать разговор</div>
     </div>
   </Dialog>
 </template>

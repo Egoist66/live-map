@@ -56,8 +56,11 @@ export function usePhotoViewerSwiper(gallery: GalleryLike, opts?: { onEscape?: (
   }
 
   /**
-   * Переводит слайдер на активное фото.
-   * В loop-режиме идёт через `slideToLoop`, иначе обычный `slideTo`.
+   * Переводит слайдер на активное фото обычным `slideTo`.
+   * Loop-режим во вьювере отключён намеренно: он клонирует слайды
+   * (визуальные дубли) и вместе с auto-height/observer дёргает
+   * высоту при любом изменении рядом (пилюля ответа, textarea).
+   * Зацикливание даёт `stepPhoto` галереи через остаток от деления.
    * @param speed скорость анимации в мс (0 — мгновенно, для открытия)
    */
   function syncToActive(speed = 350) {
@@ -65,10 +68,7 @@ export function usePhotoViewerSwiper(gallery: GalleryLike, opts?: { onEscape?: (
     for (const s of allSwipers()) {
       try {
         if (typeof s.update === 'function') s.update()
-        if (s.activeIndex !== i || s?.params?.loop) {
-          if (s?.params?.loop && typeof s.slideToLoop === 'function') s.slideToLoop(i, speed)
-          else if (typeof s.slideTo === 'function') s.slideTo(i, speed)
-        }
+        if (s.activeIndex !== i && typeof s.slideTo === 'function') s.slideTo(i, speed)
       } catch { /* noop */ }
     }
   }

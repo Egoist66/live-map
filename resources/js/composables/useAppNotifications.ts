@@ -14,7 +14,7 @@ function isLockedNow(): boolean {
 
 export type AppToast = {
   id: string
-  type: 'message' | 'friend' | 'pin' | 'report' | 'security' | 'match' | 'sos'
+  type: 'message' | 'friend' | 'pin' | 'report' | 'security' | 'match' | 'sos' | 'business'
   title: string
   body: string
   avatar: string | null
@@ -915,6 +915,38 @@ async function pollToastUnreads(): Promise<void> {
     }
   } catch {}
 }
+function handleBusinessVerified(e: { business?: { id?: number; name?: string } }): void {
+  const business = e?.business
+  if (!business?.id) return
+  if (isDuplicateEvent(`biz-verified-${business.id}`)) return
+  push({
+    id: `biz-verified-${business.id}-${Date.now()}`,
+    type: 'business',
+    icon: 'pi pi-verified',
+    title: 'Компания проверена',
+    body: `${business.name ?? 'Бизнес'} — бейдж «Проверено» включён`.slice(0, 90),
+    avatar: null,
+    link: '/business',
+    createdAt: Date.now(),
+  })
+}
+
+function handleBusinessSubmitted(e: { business?: { id?: number; name?: string } }): void {
+  if (!adminMode || !e?.business?.id) return
+  const business = e.business
+  if (isDuplicateEvent(`biz-sub-${business.id}`)) return
+  push({
+    id: `biz-sub-${business.id}-${Date.now()}`,
+    type: 'business',
+    icon: 'pi pi-briefcase',
+    title: 'Новая заявка бизнеса',
+    body: `${business.name ?? 'Компания'} — проверка по УНП`.slice(0, 90),
+    avatar: null,
+    link: '/settings?tab=admin',
+    createdAt: Date.now(),
+  })
+}
+
 function subscribe() {
   try {
     const uid = getUid()
@@ -928,6 +960,8 @@ function subscribe() {
       busOn('user:message.sent', handleMessage)
       busOn('user:notification.created', handleNotification)
       busOn('user:notification.created', recordInboxToast)
+      busOn('user:business.verified', handleBusinessVerified)
+      busOn('user:business.verification.submitted', handleBusinessSubmitted)
     }
     void pollToastUnreads()
   } catch {}

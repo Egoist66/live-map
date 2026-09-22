@@ -50,7 +50,8 @@ class RegisteredUserController extends Controller
             'home_lng' => 'nullable|numeric|between:-180,180',
             'home_radius_km' => 'nullable|integer|min:1|max:10',
             'home_address' => 'nullable|string|max:255',
-            'signup_goal' => 'required|in:love,flirt,friendship,chat,interests,neighbors',
+            'signup_goal' => 'required|in:love,flirt,friendship,chat,interests,neighbors,business',
+            'account_type' => 'nullable|in:person,business',
         ]);
 
         CountryResolver::assertResidenceAllowed($request->input('country'), $request->input('country_code'), $request->input('home_lat'), $request->input('home_lng'));
@@ -60,6 +61,12 @@ class RegisteredUserController extends Controller
         $datingGoal = $this->datingGoalFor($signupGoal);
 
         $defaultMode = $this->defaultModeFor($signupGoal);
+
+        $accountType = $request->string('account_type')->toString();
+
+        if (! in_array($accountType, ['person', 'business'], true)) {
+            $accountType = $signupGoal === 'business' ? 'business' : 'person';
+        }
 
         $user = User::create([
             'name' => $request->name,
@@ -76,13 +83,22 @@ class RegisteredUserController extends Controller
             'signup_goal' => $signupGoal,
             'default_mode' => $defaultMode,
             'default_mode_set_at' => now(),
+            'account_type' => $accountType,
             'dating_enabled' => true,
             'dating_goal' => $datingGoal,
         ]);
 
+        if ($accountType === 'business') {
+            app(\App\Services\BusinessService::class)->profileFor($user);
+        }
+
         event(new Registered($user));
 
         Auth::login($user);
+
+        if ($accountType === 'business') {
+            return redirect(route('business.onboarding', absolute: false));
+        }
 
         return redirect($this->landingFor($defaultMode));
     }
@@ -95,7 +111,7 @@ class RegisteredUserController extends Controller
      */
     private function datingGoalFor(string $signupGoal): ?string
     {
-        if ($signupGoal === 'neighbors') {
+        if ($signupGoal === 'neighbors' || $signupGoal === 'business') {
             return null;
         }
 

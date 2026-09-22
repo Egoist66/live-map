@@ -2,7 +2,7 @@ import { computed, type Ref } from 'vue'
 import { useVideoSession } from '@/composables/useVideoSession'
 
 /**
- * Видеозвонок из шапки чата в один тап.
+ * Голосовой звонок из шапки чата в один тап.
  *
  * Допуск проверяет бэк (мэтч, дружба или общий диалог + без блоков):
  * кнопка видна во всех личных диалогах.
@@ -11,10 +11,10 @@ import { useVideoSession } from '@/composables/useVideoSession'
  * @returns флаг кнопки и действие звонка
  *
  * @example
- * const chatVideo = useChatVideoCall(chat.activeConv)
- * <Button v-if="chatVideo.canCall.value" @click="chatVideo.callPeer()" />
+ * const chatVoice = useChatVoiceCall(chat.activeConv)
+ * <Button v-if="chatVoice.canCall.value" @click="chatVoice.callPeer()" />
  */
-export function useChatVideoCall(activeConv: Ref<any>) {
+export function useChatVoiceCall(activeConv: Ref<any>) {
   const video = useVideoSession()
 
   /** Id собеседника личного диалога (у районных/групп — null). */
@@ -25,11 +25,11 @@ export function useChatVideoCall(activeConv: Ref<any>) {
     return id > 0 ? id : null
   })
 
-  /** Показывать ли кнопку видео: личный диалог + не в звонке. */
+  /** Показывать ли кнопку звонка: личный диалог + не в звонке. */
   const canCall = computed(() => peerId.value !== null && !video.store.inCall)
 
   /**
-   * Позвонить собеседнику: камера → звонок → оверлей откроется сам.
+   * Позвонить собеседнику голосом: микрофон → звонок → оверлей откроется сам.
    * Ошибка допуска (посторонний) показывается оверлеем с текстом.
    */
   async function callPeer(): Promise<void> {

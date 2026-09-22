@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Один signaling-фрейм видеозвонка (offer/answer/ice/accepted/...).
+ * Один signaling-фрейм звонка (offer/answer/ice/accepted/...).
  *
  * Персистентность — ключ к polling-режиму: сокет доставляет событие
  * мгновенно через broadcast, а клиент без сокета забирает те же строки

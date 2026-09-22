@@ -17,7 +17,7 @@ let ringTimer: ReturnType<typeof setTimeout> | null = null
 const RING_TIMEOUT_MS = 40000
 
 /**
- * Стор видеозвонков: мэтч-звонки и рулетка.
+ * Стор голосовых звонков: мэтч-звонки и рулетка.
  *
  * Бизнес-сущность живёт в pinia (Правило №8): статус сессии, текущий
  * звонок, входящие, lifecycle-сигналы. SDP/ICE фреймы стор не трогает —
@@ -34,13 +34,14 @@ const RING_TIMEOUT_MS = 40000
 export const useVideoStore = defineStore('video', () => {
   const status = ref<VideoStatus>('idle')
   const call = ref<VideoCallPayload | null>(null)
-  const incoming = ref<{ callId: number; mode: string; peer: { id: number; name: string; avatar_url: string | null } } | null>(null)
+  const incoming = ref<{ callId: number; mode: string; audioOnly: boolean; peer: { id: number; name: string; avatar_url: string | null } } | null>(null)
   const error = ref<string | null>(null)
   const info = ref<string | null>(null)
   /** Контекст пустого оверлея: roulette — вход в рулетку, direct — ошибка прямого звонка. */
   const entryContext = ref<'roulette' | 'direct' | null>(null)
+  /** Режим текущей очереди рулетки: переживает heartbeat и автопоиск после отбоя. */
+  const queueAudioOnly = ref(false)
   const muted = ref(false)
-  const camOff = ref(false)
   const connectedAt = ref<number | null>(null)
 
   /** Жива ли сессия (есть звонок на экране). */
@@ -73,7 +74,7 @@ export const useVideoStore = defineStore('video', () => {
    *
    * @param e событие user:video.incoming (формат шины: mode строкой)
    */
-  function handleIncoming(e: { call_id: number; mode: string; caller: any; callee: any }): void {
+  function handleIncoming(e: { call_id: number; mode: string; audio_only?: boolean; caller: any; callee: any }): void {
     if (!e || e.call_id == null) return
     const callId = Number(e.call_id)
     if (call.value?.id === callId || incoming.value?.callId === callId) return
@@ -90,6 +91,7 @@ export const useVideoStore = defineStore('video', () => {
     incoming.value = {
       callId: Number(e.call_id),
       mode: String(e.mode || 'match'),
+      audioOnly: !!e.audio_only,
       peer: {
         id: Number(peer?.id || 0),
         name: String(peer?.name || 'Собеседник'),
@@ -147,10 +149,11 @@ export const useVideoStore = defineStore('video', () => {
       const wasRoulette = call.value?.mode === 'roulette'
       const wasLive = status.value === 'active'
       const peerName = call.value?.peer.name ?? incoming.value?.peer.name ?? 'Собеседник'
+      const keepAudio = queueAudioOnly.value
       resetSession()
       if (wasRoulette && wasLive) {
         info.value = `${peerName} отключился — ищем нового…`
-        void joinRoulette()
+        void joinRoulette(keepAudio)
       } else if (kind === 'declined') {
         info.value = `${peerName} отклонил звонок`
       } else if (kind === 'timeout') {
@@ -211,12 +214,12 @@ export const useVideoStore = defineStore('video', () => {
    *
    * @param userId id собеседника
    */
-  async function callMatch(userId: number): Promise<void> {
+  async function callMatch(userId: number, audioOnly = false): Promise<void> {
     if (status.value !== 'idle') return
     error.value = null
     info.value = null
     try {
-      const res = await videoApi.callMatch(userId)
+      const res = await videoApi.callMatch(userId, audioOnly)
       call.value = res.call
       status.value = 'ringing-out'
       armRingTimer(res.call.id)
@@ -280,13 +283,14 @@ export const useVideoStore = defineStore('video', () => {
    * Встать в очередь рулетки (идемпотентно: повторный join из searching
    * обновляет место в очереди — так работает heartbeat).
    */
-  async function joinRoulette(): Promise<void> {
+  async function joinRoulette(audioOnly = false): Promise<void> {
     if (status.value !== 'idle' && status.value !== 'searching') return
     error.value = null
     info.value = null
+    queueAudioOnly.value = audioOnly
     status.value = 'searching'
     try {
-      const res = await videoApi.rouletteJoin()
+      const res = await videoApi.rouletteJoin(null, audioOnly)
       if (res.matched && res.call) {
         onMatched(res.call)
       }
@@ -311,7 +315,7 @@ export const useVideoStore = defineStore('video', () => {
     if (nextCall.is_caller) {
       status.value = 'ringing-out'
     } else {
-      incoming.value = { callId: nextCall.id, mode: nextCall.mode, peer: nextCall.peer }
+      incoming.value = { callId: nextCall.id, mode: nextCall.mode, audioOnly: !!nextCall.audio_only, peer: nextCall.peer }
       status.value = 'ringing-in'
     }
     armRingTimer(nextCall.id)
@@ -327,6 +331,7 @@ export const useVideoStore = defineStore('video', () => {
     error.value = null
     info.value = null
     clearRingTimer()
+    queueAudioOnly.value = !!call.value?.audio_only
     call.value = null
     incoming.value = null
     status.value = 'searching'
@@ -367,12 +372,12 @@ export const useVideoStore = defineStore('video', () => {
   function resetSession(): void {
     clearRingTimer()
     stopElapsed()
+    queueAudioOnly.value = false
     call.value = null
     incoming.value = null
     connectedAt.value = null
     elapsedSec.value = 0
     muted.value = false
-    camOff.value = false
     status.value = 'idle'
   }
 
@@ -400,7 +405,6 @@ export const useVideoStore = defineStore('video', () => {
     info,
     entryContext,
     muted,
-    camOff,
     elapsedSec,
     inCall,
     bindRealtime,

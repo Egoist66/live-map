@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Видеозвонки 1-1: мэтч-звонки и рулетка поверх WebRTC P2P.
+ * Голосовые звонки 1-1: мэтч-звонки и рулетка поверх WebRTC P2P (аудио).
  *
  * Сервер — только сигналинг и сведение пар: SDP/ICE идут через
  * broadcast (сокет) + таблицу video_signals (polling через sync()),
@@ -45,18 +45,19 @@ class VideoService
     /**
      * Позвонить напрямую: мэтч, друг или собеседник из чата.
      *
-     * Кнопка видео живёт в шапке диалога — раз чат уже есть, звонить
+     * Кнопка звонка живёт в шапке диалога — раз чат уже есть, звонить
      * можно: мэтч даёт режим match + match_id, остальное — direct.
      * Посторонним без диалога и связи — 403. Лимитов на прямые нет.
      * Выключенный приём у собеседника (video_calls_enabled) — 403.
      *
      * @param User $caller кто звонит
      * @param int $calleeId кому звонят
+     * @param bool $audioOnly голосовой звонок без камеры
      * @return VideoCall созданный звонок в ringing
      *
      * @throws HttpResponseException 403 нет связи/гейт, 409 собеседник занят
      */
-    public function startMatchCall(User $caller, int $calleeId): VideoCall
+    public function startMatchCall(User $caller, int $calleeId, bool $audioOnly = false): VideoCall
     {
         $this->dating->assertAdult($caller);
 
@@ -71,7 +72,7 @@ class VideoService
         abort_unless($match || $isFriend || $hasChat, 403, 'Сначала начни чат или добавь в друзья');
 
         $this->assertNotBlocked($caller->id, $calleeId);
-        abort_if(! (bool) $callee->video_calls_enabled, 403, 'Собеседник отключил видеозвонки');
+        abort_if(! (bool) $callee->video_calls_enabled, 403, 'Собеседник отключил звонки');
         $this->sweepTimeouts($caller->id);
         $this->sweepTimeouts($calleeId);
 
@@ -81,6 +82,7 @@ class VideoService
 
         $call = VideoCall::create([
             'mode' => $match ? VideoCall::MODE_MATCH : VideoCall::MODE_DIRECT,
+            'audio_only' => $audioOnly,
             'caller_id' => $caller->id,
             'callee_id' => $calleeId,
             'match_id' => $match?->id,
@@ -202,12 +204,13 @@ class VideoService
      *
      * @param User $user ищущий
      * @param array $filters genitalia goal/gender как в ленте (optional)
+     * @param bool $audioOnly голосовая рулетка без камеры
      * @return array{matched:bool, call:VideoCall|null}
      */
-    public function joinRoulette(User $user, array $filters = []): array
+    public function joinRoulette(User $user, array $filters = [], bool $audioOnly = false): array
     {
         $this->dating->assertAdult($user);
-        abort_if(! (bool) $user->video_calls_enabled, 403, 'Включи приём видеозвонков в настройках');
+        abort_if(! (bool) $user->video_calls_enabled, 403, 'Включи приём звонков в настройках');
         $this->assertRouletteQuota($user);
         $this->sweepTimeouts($user->id);
 
@@ -215,13 +218,13 @@ class VideoService
 
         $partnerId = null;
 
-        Cache::lock('video:roulette:lock', 5)->block(3, function () use ($user, $filters, &$partnerId) {
+        Cache::lock('video:roulette:lock', 5)->block(3, function () use ($user, $filters, $audioOnly, &$partnerId) {
             $queue = $this->readQueue();
             $queue = $this->pruneQueue($queue);
 
             $queue = array_values(array_filter($queue, fn ($row) => (int) $row['user_id'] !== (int) $user->id));
 
-            $partnerId = $this->pickPartner($user, $queue, $filters);
+            $partnerId = $this->pickPartner($user, $queue, $filters, $audioOnly);
 
             if ($partnerId !== null) {
                 $queue = array_values(array_filter($queue, fn ($row) => (int) $row['user_id'] !== (int) $partnerId));
@@ -232,6 +235,7 @@ class VideoService
                     'user_id' => (int) $user->id,
                     'at' => now()->timestamp,
                     'gender' => $filters['gender'] ?? null,
+                    'audio' => $audioOnly,
                 ];
                 $this->writeQueue($queue);
                 Cache::put($this->memberKey($user->id), $filters, now()->addSeconds(self::QUEUE_TTL_SEC));
@@ -244,6 +248,7 @@ class VideoService
 
         $call = VideoCall::create([
             'mode' => VideoCall::MODE_ROULETTE,
+            'audio_only' => $audioOnly,
             'caller_id' => (int) $partnerId,
             'callee_id' => (int) $user->id,
             'match_id' => null,
@@ -286,11 +291,13 @@ class VideoService
      */
     public function nextRoulette(User $user, ?VideoCall $call = null): array
     {
+        $audioOnly = (bool) ($call?->audio_only ?? false);
+
         if ($call && $call->involves($user->id) && $call->isLive()) {
             $this->hangup($user, $call);
         }
 
-        return $this->joinRoulette($user);
+        return $this->joinRoulette($user, [], $audioOnly);
     }
 
     /**
@@ -298,7 +305,7 @@ class VideoService
      *
      * @param VideoCall $call звонок
      * @param int $viewerId смотрящий
-     * @return array{id:int,mode:string,status:string,is_caller:bool,peer:array}
+     * @return array{id:int,mode:string,audio_only:bool,status:string,is_caller:bool,peer:array}
      */
     public function toPayload(VideoCall $call, int $viewerId): array
     {
@@ -308,6 +315,7 @@ class VideoService
         return [
             'id' => (int) $call->id,
             'mode' => (string) $call->mode,
+            'audio_only' => (bool) $call->audio_only,
             'status' => (string) $call->status,
             'is_caller' => (int) $call->caller_id === $viewerId,
             'created_at' => $call->created_at?->toISOString(),
@@ -372,6 +380,7 @@ class VideoService
         return $rows->map(fn ($call) => [
             'call_id' => (int) $call->id,
             'mode' => (string) $call->mode,
+            'audio_only' => (bool) $call->audio_only,
             'caller' => $this->brief($call->caller),
             'callee' => $this->brief($call->callee),
         ])->all();
@@ -444,6 +453,7 @@ class VideoService
         return $rows->map(fn ($call) => [
             'call_id' => (int) $call->id,
             'mode' => (string) $call->mode,
+            'audio_only' => (bool) $call->audio_only,
             'caller' => $this->brief($call->caller),
             'callee' => $this->brief($call->callee),
         ])->all();
@@ -661,6 +671,7 @@ class VideoService
                 (string) $call->mode,
                 $this->brief($call->caller),
                 $this->brief($call->callee),
+                (bool) $call->audio_only,
             ))->toOthers();
         } catch (\Throwable $e) {
             Log::warning('video incoming broadcast failed: '.$e->getMessage());
@@ -695,8 +706,8 @@ class VideoService
             }
 
             $body = $kind === 'ended'
-                ? '📞 Видеозвонок · '.$this->formatDuration($durationSec ?? 0)
-                : '📞 Пропущенный видеозвонок';
+                ? '📞 Звонок · '.$this->formatDuration($durationSec ?? 0)
+                : '📞 Пропущенный звонок';
 
             $msg = Message::create([
                 'conversation_id' => $conv->id,
@@ -906,11 +917,14 @@ class VideoService
      * @param User $me ищущий
      * @param array $queue живая очередь
      * @param array $filters фильтры (gender)
+     * @param bool $audioOnly ищущий хочет голосом — сначала ищем такого же
      * @return int|null id партнёра
      */
-    private function pickPartner(User $me, array $queue, array $filters): ?int
+    private function pickPartner(User $me, array $queue, array $filters, bool $audioOnly): ?int
     {
         usort($queue, fn ($a, $b) => (int) ($a['at'] ?? 0) <=> (int) ($b['at'] ?? 0));
+
+        $fallbackId = null;
 
         foreach ($queue as $row) {
             $candidateId = (int) ($row['user_id'] ?? 0);
@@ -946,9 +960,15 @@ class VideoService
                 }
             }
 
-            return $candidateId;
+            $candidateAudio = (bool) ($row['audio'] ?? false);
+
+            if ($candidateAudio === $audioOnly) {
+                return $candidateId;
+            }
+
+            $fallbackId ??= $candidateId;
         }
 
-        return null;
+        return $fallbackId;
     }
 }
