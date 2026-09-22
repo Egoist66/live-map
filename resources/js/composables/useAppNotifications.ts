@@ -5,6 +5,7 @@ import { showLocal, type ForegroundPush } from '@/pwa/push.service'
 import { useScreenLock } from '@/composables/useScreenLock'
 import { useFileDownload } from '@/composables/useFileDownload'
 import { busOn } from '@/services/realtime-bus'
+import { subjectWord } from '@/services/notifications.api'
 import { ensureUserChannel, leaveUserChannel } from '@/composables/useUserChannel'
 import { useProfileUrl } from '@/composables/useProfileUrl'
 
@@ -307,12 +308,15 @@ function handleDistrict(district: any, type: string, activity: any = null) {
   if (type === 'district.join_requested') {
     const r = district.requester || {}
     const requesterName = r.name || 'Кто-то'
+    const subject = subjectWord(r)
+    const purpose = String(district.request_message ?? r.request_message ?? '').trim()
+    const purposeSuffix = purpose !== '' ? ` · Цель: ${purpose.slice(0, 80)}` : ''
     push({
       id: `district-req-${id}-${Date.now()}`,
       type: 'friend',
       icon: 'pi pi-home',
-      title: `Пользователь ${requesterName} — заявка в район`,
-      body: `Пользователь ${requesterName} отправил заявку на вступление в район «${String(district.name || '').slice(0, 40)}»`,
+      title: `${subject} ${requesterName} — заявка в район`,
+      body: `${subject} ${requesterName} отправил заявку на вступление в район «${String(district.name || '').slice(0, 40)}»${purposeSuffix}`,
       avatar: avatarSrcFor(r),
       link,
       createdAt: Date.now(),
@@ -326,6 +330,19 @@ function handleDistrict(district: any, type: string, activity: any = null) {
       icon: 'pi pi-check-circle',
       title: `Вы в районе «${String(district.name || '').slice(0, 40)}»`,
       body: 'Пины района и общий чат открыты',
+      avatar: null,
+      link,
+      createdAt: Date.now(),
+    })
+    return
+  }
+  if (type === 'district.request_rejected') {
+    push({
+      id: `district-no-${id}-${Date.now()}`,
+      type: 'friend',
+      icon: 'pi pi-times-circle',
+      title: `Заявка в «${String(district.name || '').slice(0, 40)}» отклонена`,
+      body: 'Владелец решил не пускать — можно написать ему в личку',
       avatar: null,
       link,
       createdAt: Date.now(),
@@ -350,11 +367,12 @@ function handleDistrict(district: any, type: string, activity: any = null) {
   }
   if (type === 'district.invite_accepted') {
     const accepter = district.accepter || {}
+    const verb = subjectWord(accepter) === 'Организация' ? 'приняла приглашение' : 'принял приглашение'
     push({
       id: `district-invite-acc-${id}-${Date.now()}`,
       type: 'friend',
       icon: 'pi pi-check-circle',
-      title: `${accepter.name || 'Новый житель'} принял приглашение`,
+      title: `${accepter.name || 'Новый житель'} ${verb}`,
       body: `Район «${String(district.name || '').slice(0, 40)}» — пины и чат открыты`,
       avatar: avatarSrcFor(accepter),
       link,
@@ -451,12 +469,13 @@ function handleFriendship(e: any) {
     })
   } else if (f.status === 'accepted' && Number(f.requester_id) === uid) {
     const a = f.addressee || {}
+    const verb = subjectWord(a) === 'Организация' ? 'приняла заявку' : 'принял заявку'
     push({
       id: `fr-acc-${f.id}-${Date.now()}`,
       type: 'friend',
       icon: 'pi pi-user-plus',
       title: 'Заявка принята',
-      body: `${a.name || 'Пользователь'} принял заявку`,
+      body: `${a.name || 'Пользователь'} ${verb}`,
       avatar: avatarSrcFor(a),
       link: '/chat?tab=friends',
       createdAt: Date.now(),
@@ -760,9 +779,35 @@ function handleNotification(e: any) {
     handleReport({ report: data.report })
     return
   }
+  if (data.business && String(n.type || '').startsWith('business.')) {
+    handleBusinessInbox(String(n.type), data.business)
+    return
+  }
   if (data.log) {
     handleImpersonation({ log: data.log })
     return
+  }
+}
+
+/**
+ * Тост из inbox-строки бизнеса (polling/toast-fallback путь).
+ *
+ * Сокет и поллер несут одну строку (дедуп notif-{id} выше),
+ * тип строки: business.submitted|business.verified|business.rejected.
+ * @param type тип inbox-строки
+ * @param business пейлоад компании
+ */
+function handleBusinessInbox(type: string, business: any): void {
+  if (type === 'business.verified') {
+    handleBusinessVerified({ business })
+    return
+  }
+  if (type === 'business.rejected') {
+    handleBusinessRejected({ business })
+    return
+  }
+  if (type === 'business.submitted') {
+    handleBusinessSubmitted({ business })
   }
 }
 function handleSosChatClosed(s: any) {
@@ -802,7 +847,7 @@ function handleImpersonation(e: any) {
 function isAdminNow(): boolean {
   try {
     const u = (usePage().props.auth as any)?.user
-    return !!u?.is_admin || u?.role === 'admin'
+    return !!u?.is_admin || u?.role === 'admin' || u?.role === 'moderator'
   } catch { return false }
 }
 function handleReport(e: any) {
@@ -810,7 +855,8 @@ function handleReport(e: any) {
   if (isDuplicateEvent(`rep-${e.report.id}`)) return
   const r = e.report
   const title = r.target_title || `${r.target_type} #${r.target_id}`
-  const body = (r.description ? `${r.description} — ` : '') + `от ${r.reporter?.name || 'пользователя'}`
+  const from = r.reporter?.name ? r.reporter.name : subjectWord(r.reporter) === 'Организация' ? 'организации' : 'пользователя'
+  const body = (r.description ? `${r.description} — ` : '') + `от ${from}`
   push({
     id: `rep-${r.id}-${Date.now()}`,
     type: 'report',
@@ -931,7 +977,7 @@ function handleBusinessVerified(e: { business?: { id?: number; name?: string } }
   })
 }
 
-function handleBusinessSubmitted(e: { business?: { id?: number; name?: string } }): void {
+function handleBusinessSubmitted(e: { business?: { id?: number; name?: string; unp?: string | null } }): void {
   if (!adminMode || !e?.business?.id) return
   const business = e.business
   if (isDuplicateEvent(`biz-sub-${business.id}`)) return
@@ -940,9 +986,30 @@ function handleBusinessSubmitted(e: { business?: { id?: number; name?: string } 
     type: 'business',
     icon: 'pi pi-briefcase',
     title: 'Новая заявка бизнеса',
-    body: `${business.name ?? 'Компания'} — проверка по УНП`.slice(0, 90),
+    body: `${business.name ?? 'Компания'} — проверка по УНП${business.unp ? ` ${business.unp}` : ''}`.slice(0, 90),
     avatar: null,
-    link: '/settings?tab=admin',
+    link: '/admin?tab=business',
+    createdAt: Date.now(),
+  })
+}
+
+/**
+ * Тост владельцу: проверка отклонена (сокет business.rejected / inbox).
+ * @param e событие с business {id,name,verification_notes}
+ */
+function handleBusinessRejected(e: { business?: { id?: number; name?: string; verification_notes?: string | null } }): void {
+  const business = e?.business
+  if (!business?.id) return
+  if (isDuplicateEvent(`biz-rejected-${business.id}`)) return
+  const reason = String(business.verification_notes ?? '').slice(0, 90)
+  push({
+    id: `biz-rejected-${business.id}-${Date.now()}`,
+    type: 'business',
+    icon: 'pi pi-times-circle',
+    title: 'Проверка отклонена',
+    body: reason || `${business.name ?? 'Бизнес'} — исправьте реквизиты и отправьте снова`.slice(0, 90),
+    avatar: null,
+    link: '/cabinet/onboarding',
     createdAt: Date.now(),
   })
 }
@@ -961,6 +1028,7 @@ function subscribe() {
       busOn('user:notification.created', handleNotification)
       busOn('user:notification.created', recordInboxToast)
       busOn('user:business.verified', handleBusinessVerified)
+      busOn('user:business.rejected', handleBusinessRejected)
       busOn('user:business.verification.submitted', handleBusinessSubmitted)
     }
     void pollToastUnreads()

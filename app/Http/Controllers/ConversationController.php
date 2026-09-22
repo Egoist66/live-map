@@ -19,7 +19,7 @@ class ConversationController extends Controller
             ->get(['conversation_id', 'cleared_at'])
             ->keyBy('conversation_id');
         $page = Conversation::whereHas('participantRows', fn($q)=>$q->where('user_id',$user->id)->whereNull('hidden_at'))
-            ->with(['participants' => fn($q)=>$q->select('users.id','users.name','users.profile_slug','users.avatar_path','users.last_seen_at','users.is_invisible','users.plan','users.role','users.is_admin','users.dating_goal','users.dating_interests'), 'messages'=>fn($q)=>$q->reorder()->latest('id')->limit(1), 'district:id,name,user_id'])
+            ->with(['participants' => fn($q)=>$q->select('users.id','users.name','users.profile_slug','users.avatar_path','users.last_seen_at','users.is_invisible','users.plan','users.role','users.is_admin','users.account_type','users.dating_goal','users.dating_interests'), 'messages'=>fn($q)=>$q->reorder()->latest('id')->limit(1), 'district:id,name,user_id'])
             ->withCount(['messages as unread_count'=>fn($q)=>$q->where('sender_id','!=',$user->id)->whereNull('read_at')])
             ->orderByDesc('last_message_at')
             ->orderByDesc('updated_at')
@@ -30,8 +30,15 @@ class ConversationController extends Controller
             ->get()
             ->map(fn($m) => $m->user_a_id === $user->id ? $m->user_b_id : $m->user_a_id)
             ->flip();
+        $otherIds = $convs
+            ->map(fn($c) => $c->participants->firstWhere('id', '!=', $user->id)?->id)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+        $orgMap = $this->organizationMap($otherIds);
         $convs = $convs
-            ->map(function($c) use ($user, $myRows, $matchedIds){
+            ->map(function($c) use ($user, $myRows, $matchedIds, $orgMap){
                 $other = $c->participants->firstWhere('id','!=',$user->id);
                 $lastSeen = $other && $other->isInvisibleActive() && !$user->isAdmin() ? null : $other?->last_seen_at?->toISOString();
                 $clearedAt = $myRows->get($c->id)?->cleared_at;
@@ -48,6 +55,7 @@ class ConversationController extends Controller
                         ->count();
                 }
                 $isDistrictOwner = $c->type === 'district' && $c->district && ((int) $c->district->user_id === (int) $user->id || $user->isAdmin());
+                $otherOrg = $other ? ($orgMap[(int) $other->id] ?? null) : null;
                 return [
                     'id'=>$c->id,
                     'type'=>$c->type,
@@ -55,7 +63,7 @@ class ConversationController extends Controller
                     'district_id'=>$c->district_id,
                     'title'=>$c->type === 'district' ? ($c->district?->name ?? 'Район') : null,
                     'can_invite'=>$isDistrictOwner,
-                    'other'=>$other ? ['id'=>$other->id,'name'=>$other->name,'profile_slug'=>$other->profile_slug,'avatar_path'=>$other->avatar_path,'avatar_url'=>$other->avatar_url,'last_seen_at'=>$lastSeen,'is_invisible'=>$other->isInvisibleActive(),'is_match'=>$c->type === 'direct' && isset($matchedIds[$other->id]),'dating_goal'=>$other->dating_goal,'dating_interests'=>$other->dating_interests ?? []] : null,
+                    'other'=>$other ? ['id'=>$other->id,'name'=>$other->name,'profile_slug'=>$other->profile_slug,'avatar_path'=>$other->avatar_path,'avatar_url'=>$other->avatar_url,'last_seen_at'=>$lastSeen,'is_invisible'=>$other->isInvisibleActive(),'is_match'=>$c->type === 'direct' && isset($matchedIds[$other->id]),'dating_goal'=>$other->dating_goal,'dating_interests'=>$other->dating_interests ?? [],'account_type'=>$other->account_type ?? 'person','is_business'=>($other->account_type ?? 'person') === 'business','is_organization'=>(bool) ($otherOrg['is_organization'] ?? false),'business'=>$otherOrg] : null,
                     'last_message'=>$last,
                     'unread_count'=>$unread,
                     'last_message_at'=>$c->last_message_at,
@@ -82,7 +90,7 @@ class ConversationController extends Controller
     {
         abort_unless($conversation->hasParticipant($request->user()->id), 403, 'Этот чат принадлежит другому аккаунту. Войдите под нужным пользователем.');
         $clearedAt = $conversation->participantRows()->where('user_id', $request->user()->id)->value('cleared_at');
-        $conversation->load(['participants:id,name,profile_slug,avatar_path,last_seen_at,is_invisible,plan,role,is_admin,dating_goal,dating_interests', 'district:id,name,user_id']);
+        $conversation->load(['participants:id,name,profile_slug,avatar_path,last_seen_at,is_invisible,plan,role,is_admin,account_type,dating_goal,dating_interests', 'district:id,name,user_id']);
         $pageSize = MessageController::HISTORY_PAGE_SIZE;
         $rawMessages = $conversation->messages()
             ->with(['sender:id,name,avatar_path', 'replyTo.sender:id,name'])
@@ -108,6 +116,7 @@ class ConversationController extends Controller
             ? \App\Models\DatingMatch::between($request->user()->id, $other->id) !== null
             : false;
         $canInvite = $conversation->type === 'district' && $conversation->district && ((int) $conversation->district->user_id === (int) $request->user()->id || $request->user()->isAdmin());
+        $otherOrg = $other ? ($this->organizationMap([(int) $other->id])[(int) $other->id] ?? null) : null;
         return response()->json([
             'id'=>$conversation->id,
             'type'=>$conversation->type,
@@ -115,7 +124,7 @@ class ConversationController extends Controller
             'district_id'=>$conversation->district_id,
             'title'=>$conversation->type === 'district' ? ($conversation->district?->name ?? 'Район') : null,
             'can_invite'=>$canInvite,
-            'other'=>$other ? ['id'=>$other->id,'name'=>$other->name,'profile_slug'=>$other->profile_slug,'avatar_path'=>$other->avatar_path,'avatar_url'=>$other->avatar_url,'last_seen_at'=>$lastSeen,'is_invisible'=>$other->isInvisibleActive(),'is_match'=>$isMatch,'dating_goal'=>$other->dating_goal,'dating_interests'=>$other->dating_interests ?? []] : null,
+            'other'=>$other ? ['id'=>$other->id,'name'=>$other->name,'profile_slug'=>$other->profile_slug,'avatar_path'=>$other->avatar_path,'avatar_url'=>$other->avatar_url,'last_seen_at'=>$lastSeen,'is_invisible'=>$other->isInvisibleActive(),'is_match'=>$isMatch,'dating_goal'=>$other->dating_goal,'dating_interests'=>$other->dating_interests ?? [],'account_type'=>$other->account_type ?? 'person','is_business'=>($other->account_type ?? 'person') === 'business','is_organization'=>(bool) ($otherOrg['is_organization'] ?? false),'business'=>$otherOrg] : null,
             'participants'=>$conversation->participants->map(fn($p)=> array_merge($p->toArray(), ['avatar_url'=>$p->avatar_url])),
             'messages'=>$messages,
             'messages_has_more'=>$hasMoreMessages,
@@ -290,5 +299,74 @@ class ConversationController extends Controller
             ->whereNull('hidden_at')
             ->update(['hidden_at'=>$now,'cleared_at'=>$now]);
         return response()->json(['ok'=>true,'cleared'=>$cleared]);
+    }
+
+    /**
+     * Карта организаций для списка id пользователей.
+     *
+     * Батч-загрузка бизнесов одним запросом (без N+1): для каждого
+     * business-аккаунта отдаём legal_form + is_organization + статус.
+     * Персоны и бизнес без профиля — null (фронт скрывает бейдж).
+     *
+     * @param int[] $userIds id пользователей
+     * @return array<int, array{legal_form:string,is_organization:bool,is_verified:bool,verification_status:string,name:string}|null>
+     */
+    private function organizationMap(array $userIds): array
+    {
+        $ids = array_values(array_unique(array_map('intval', $userIds)));
+
+        if (empty($ids)) {
+            return [];
+        }
+
+        try {
+            $users = User::whereIn('id', $ids)
+                ->select('id', 'name', 'account_type')
+                ->get()
+                ->keyBy('id');
+
+            $businesses = \App\Models\Business::whereIn('user_id', $ids)
+                ->orderByDesc('id')
+                ->get()
+                ->keyBy('user_id');
+        } catch (\Throwable) {
+            return [];
+        }
+
+        $map = [];
+
+        foreach ($ids as $id) {
+            $user = $users->get($id);
+
+            if (! $user || ($user->account_type ?? 'person') !== 'business') {
+                $map[$id] = null;
+
+                continue;
+            }
+
+            $business = $businesses->get($id);
+
+            if (! $business) {
+                $map[$id] = [
+                    'legal_form' => 'ooo',
+                    'is_organization' => true,
+                    'is_verified' => false,
+                    'verification_status' => 'draft',
+                    'name' => (string) ($user->name ?? ''),
+                ];
+
+                continue;
+            }
+
+            $map[$id] = [
+                'legal_form' => (string) ($business->legal_form ?? 'ooo'),
+                'is_organization' => $business->isOrganization(),
+                'is_verified' => $business->isVerified(),
+                'verification_status' => (string) ($business->verification_status ?? 'draft'),
+                'name' => (string) ($business->name ?? $user->name ?? ''),
+            ];
+        }
+
+        return $map;
     }
 }

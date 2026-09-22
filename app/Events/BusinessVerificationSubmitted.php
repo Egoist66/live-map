@@ -9,7 +9,11 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 
 /**
- * Бизнес отправил документы на проверку — уведомить админов.
+ * Бизнес отправил документы на проверку — уведомить админов и модераторов.
+ *
+ * Канал: private `user.{staffId}` для каждого staff (is_admin / role admin|moderator).
+ * Фронт staff слушает `.business.verification.submitted` через Echo,
+ * дублирует inbox-уведомлением (UserNotifier) для polling-режима.
  */
 class BusinessVerificationSubmitted implements ShouldBroadcastNow
 {
@@ -22,10 +26,13 @@ class BusinessVerificationSubmitted implements ShouldBroadcastNow
      */
     public function broadcastOn(): array
     {
-        $adminIds = \App\Models\User::where('is_admin', true)
+        $staffIds = \App\Models\User::where('is_admin', true)
             ->orWhere('role', 'admin')
+            ->orWhere('role', 'moderator')
             ->pluck('id')
             ->all();
+
+        $adminIds = $staffIds;
 
         $channels = [];
 

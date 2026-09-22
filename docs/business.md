@@ -66,16 +66,28 @@ director_name, verification_status, verification_notes, verified_at, logo_path`.
   листалка — Galleria в `PinDetailsCard`, загрузка — `BusinessPhotosManager`.
 - `GET /api/business` → кабинет-профиль (`BusinessResource`).
 - `PATCH /api/business` (throttle profile-write) → обновление профиля РБ.
-- `GET /api/business/dashboard` → `{business, stats, recent_pins, earn}`.
-- `POST /api/business/submit` (throttle social-write) → `pending`.
-- Админ: `POST /api/admin/business/{id}/verify|reject {reason}`.
+- `GET /api/business/dashboard` → `{business, stats, recent_pins, recent_ads, ads_quota, earn}`.
+- `POST /api/business/submit` (throttle social-write) → `pending`
+  (повтор в pending — 409 «уже на проверке»).
+- Админ+модератор: `GET /api/admin/businesses?status,q` (очередь заявок,
+  таб «Бизнес»), `POST /api/admin/business/{id}/verify|reject {reason}`.
+- Реклама (только verified): `GET /api/businesses/{id}/ads` (витрина, все),
+  `GET /api/business/ads/quota`, `POST /api/businesses/{id}/ads`,
+  `PATCH/DELETE /api/business-ads/{ad}` — лимит 3 в скользящие 7 дней (429).
+- Районы: `POST /api/districts/{id}/join {message?}` — организации обязаны
+  указать цель вступления (мин. 10 символов); `members` отдаёт владельцу
+  цель + org-флаги заявок; отказ — inbox `district.request_rejected`.
 
 Realtime (правило №10, №13):
-- `BusinessVerificationSubmitted` → private `user.{adminId}`,
-  as `business.verification.submitted` — админ видит заявку живьём.
-- `BusinessVerified` → private `user.{owner}`,
-  as `business.verified` — тост + звук у владельца через
-  `useAppNotifications` и `useBusinessProfile`.
+- `BusinessVerificationSubmitted` → private `user.{staffId}` (админы +
+  модераторы), as `business.verification.submitted` — очередь «Бизнес»
+  обновляется живьём (socket + `business:pending` в sync + inbox).
+- `BusinessVerified` / `BusinessRejected` → private `user.{owner}`,
+  as `business.verified|rejected` — тост + звук у владельца через
+  `useAppNotifications` и `useBusinessProfile` (+ `business:status` в sync).
+- Уведомления именуют организации словом «Организация»
+  (`UserNotification::subjectWord` по `is_organization` актора):
+  заявки в район, дружба, жалобы, пины — и в пушах, и в тостах, и в ленте.
 
 ## Фронт
 

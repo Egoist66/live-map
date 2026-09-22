@@ -11,6 +11,7 @@ import { useAppConfirm } from '@/composables/useAppConfirm'
 import { districtInterestLabel } from '@/utils/districtGeo'
 import type { DistrictDetails, DistrictResident } from '@/types/entities/District'
 import { isUnchangedPayload } from '@/composables/useUnchangedGuard'
+import { useDistrictJoinRequest } from '@/composables/useDistrictJoinRequest'
 
 /**
  * Страница района: данные, табы, заявки, живой рефреш.
@@ -56,6 +57,13 @@ export function useDistrictShowPage(districtId: number, initialDistrict: Distric
   const saving = ref(false)
   /** Открываем личку с владельцем. */
   const writingOwner = ref(false)
+  const writingMemberId = ref<number | null>(null)
+  /** Заявка в район: организациям — модалка цели вступления. */
+  const joinRequest = useDistrictJoinRequest()
+  const joinDialogOpen = joinRequest.dialogOpen
+  const joinMessage = joinRequest.message
+  const joinSending = joinRequest.sending
+  const isBusiness = joinRequest.isBusiness
 
   const isOwner = computed(() => district.value?.role === 'owner')
   const isMember = computed(() => district.value?.role === 'member')
@@ -184,14 +192,22 @@ export function useDistrictShowPage(districtId: number, initialDistrict: Distric
 
   /**
    * Кинуть заявку в район.
+   *
+   * Организации — через модалку цели вступления, персоны — в один клик
+   * (общая логика useDistrictJoinRequest).
    */
   async function join(): Promise<void> {
-    try {
-      await districtsApi.join(districtId)
-      toast?.add({ severity: 'success', summary: 'Заявка отправлена', detail: 'Владелец решит, пускать ли вас', life: 3000 })
+    await joinRequest.request(districtId, String(district.value?.name ?? ''), refresh)
+  }
+
+  /**
+   * Отправить заявку с текущей целью из модалки.
+   */
+  async function confirmJoinRequest(): Promise<void> {
+    const wasOpen = joinDialogOpen.value
+    await joinRequest.confirm()
+    if (wasOpen && !joinDialogOpen.value) {
       await refresh()
-    } catch (error: unknown) {
-      fail(error, 'Не удалось отправить заявку')
     }
   }
 
@@ -322,6 +338,28 @@ export function useDistrictShowPage(districtId: number, initialDistrict: Distric
       fail(error, 'Не удалось открыть чат')
     } finally {
       writingOwner.value = false
+    }
+  }
+
+  /**
+   * Связаться с заявителем в личке (владелец): открыть диалог 1-1,
+   * чтобы уточнить цель вступления перед решением.
+   *
+   * @param userId автор заявки
+   */
+  async function writeToMember(userId: number): Promise<void> {
+    if (!(userId > 0) || writingMemberId.value !== null) return
+    writingMemberId.value = userId
+    try {
+      const res = await chatApi.createConversation(userId)
+      const chatId = Number(res?.id)
+      if (chatId > 0) {
+        router.visit(`/chat/${chatId}`)
+      }
+    } catch (error: unknown) {
+      fail(error, 'Не удалось открыть чат')
+    } finally {
+      writingMemberId.value = null
     }
   }
 
@@ -545,6 +583,13 @@ export function useDistrictShowPage(districtId: number, initialDistrict: Distric
     init,
     refresh,
     join,
+    joinDialogOpen,
+    joinMessage,
+    joinSending,
+    isBusiness,
+    confirmJoinRequest,
+    writingMemberId,
+    writeToMember,
     leave,
     acceptInvite,
     declineInvite,

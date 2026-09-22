@@ -2,12 +2,16 @@
 
 namespace App\Services;
 
+use App\Events\BusinessRejected;
 use App\Events\BusinessVerificationSubmitted;
 use App\Events\BusinessVerified;
 use App\Models\Business;
 use App\Models\Pin;
 use App\Models\PinView;
 use App\Models\User;
+use App\Notifications\BusinessRejectedNotification;
+use App\Notifications\BusinessSubmittedNotification;
+use App\Notifications\BusinessVerifiedNotification;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -81,6 +85,10 @@ class BusinessService
     /**
      * Отправить профиль на проверку (draft|rejected → pending).
      *
+     * Повторная отправка той же заявки запрещена: если статус уже
+     * pending — отвечаем 409 с понятным текстом, фронт показывает
+     * предупреждение «уже на проверке» вместо тихого ресабмита.
+     *
      * @param User $user владелец
      * @return Business
      */
@@ -90,7 +98,13 @@ class BusinessService
 
         abort_unless($business->user_id === $user->id || $user->isAdmin(), 403);
 
-        abort_if($business->isVerified(), 422, 'Бизнес уже verified');
+        abort_if($business->isVerified(), 422, 'Бизнес уже проверен');
+
+        abort_if(
+            $business->isPending(),
+            409,
+            'Заявка уже на проверке — дождитесь решения модерации'
+        );
 
         $this->assertReadyForVerification($business);
 
@@ -99,25 +113,29 @@ class BusinessService
             'verification_notes' => null,
         ])->save();
 
+        $fresh = $business->fresh();
+
         try {
-            broadcast(new BusinessVerificationSubmitted($business))->toOthers();
+            broadcast(new BusinessVerificationSubmitted($fresh))->toOthers();
         } catch (\Throwable $e) {
             \Log::warning('business.verify broadcast failed', ['id' => $business->id]);
         }
 
-        return $business->fresh();
+        $this->notifyStaffSubmitted($fresh);
+
+        return $fresh;
     }
 
     /**
-     * Верифицировать бизнес (только админ).
+     * Верифицировать бизнес (админ или модератор).
      *
      * @param Business $business
-     * @param User $admin
+     * @param User $admin staff (admin|moderator)
      * @return Business
      */
     public function verify(Business $business, User $admin): Business
     {
-        abort_unless($admin->isAdmin(), 403);
+        abort_unless($admin->isModerator(), 403, 'Проверка бизнеса — только для модерации');
 
         $business->forceFill([
             'verification_status' => 'verified',
@@ -133,20 +151,22 @@ class BusinessService
             \Log::warning('business.verified broadcast failed', ['id' => $business->id]);
         }
 
+        $this->notifyOwnerVerified($fresh);
+
         return $fresh;
     }
 
     /**
-     * Отклонить с причиной (только админ).
+     * Отклонить с причиной (админ или модератор).
      *
      * @param Business $business
-     * @param User $admin
+     * @param User $admin staff (admin|moderator)
      * @param string $reason
      * @return Business
      */
     public function reject(Business $business, User $admin, string $reason): Business
     {
-        abort_unless($admin->isAdmin(), 403);
+        abort_unless($admin->isModerator(), 403, 'Проверка бизнеса — только для модерации');
 
         $clean = mb_substr(trim($reason), 0, 1000);
 
@@ -158,7 +178,17 @@ class BusinessService
             'verified_at' => null,
         ])->save();
 
-        return $business->fresh();
+        $fresh = $business->fresh();
+
+        try {
+            broadcast(new BusinessRejected($fresh))->toOthers();
+        } catch (\Throwable $e) {
+            \Log::warning('business.rejected broadcast failed', ['id' => $business->id]);
+        }
+
+        $this->notifyOwnerRejected($fresh);
+
+        return $fresh;
     }
 
     /**
@@ -208,6 +238,17 @@ class BusinessService
 
         $isVerified = $business->isVerified();
 
+        $recentAds = \App\Models\BusinessAd::where('business_id', $business->id)
+            ->orderByDesc('created_at')
+            ->limit(5)
+            ->get()
+            ->map(fn (\App\Models\BusinessAd $ad) => $ad->toPublicArray())
+            ->values()
+            ->all();
+
+        $adsUsed = \App\Models\BusinessAd::usedThisWeek($business->id);
+        $adsLimit = \App\Http\Controllers\BusinessAdController::WEEKLY_LIMIT;
+
         return [
             'business' => $business->toCabinetArray(),
             'stats' => [
@@ -219,6 +260,12 @@ class BusinessService
                 'comments_total' => (int) $commentsTotal,
             ],
             'recent_pins' => $recentPins,
+            'recent_ads' => $recentAds,
+            'ads_quota' => [
+                'used' => $adsUsed,
+                'limit' => $adsLimit,
+                'left' => max(0, $adsLimit - $adsUsed),
+            ],
             'earn' => $this->earnHints($business, (int) $viewsWeek, (int) $liveCount),
         ];
     }
@@ -266,6 +313,78 @@ class BusinessService
         ];
 
         return $hints;
+    }
+
+    /**
+     * Разослать inbox-уведомления staff (админы + модераторы) о новой заявке.
+     *
+     * Websocket может не дойти (polling-режим, офлайн) — inbox
+     * подхватывается RealtimeController::sync и тостом useAppNotifications.
+     *
+     * @param Business $business заявка в pending
+     * @return void
+     */
+    private function notifyStaffSubmitted(Business $business): void
+    {
+        try {
+            $staff = User::where('is_admin', true)
+                ->orWhere('role', 'admin')
+                ->orWhere('role', 'moderator')
+                ->get();
+
+            foreach ($staff as $member) {
+                \App\Services\UserNotifier::send(
+                    $member,
+                    new BusinessSubmittedNotification($business)
+                );
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('business.submitted notify failed', ['id' => $business->id]);
+        }
+    }
+
+    /**
+     * Уведомить владельца о пройденной проверке (inbox + push).
+     *
+     * @param Business $business проверенный бизнес
+     * @return void
+     */
+    private function notifyOwnerVerified(Business $business): void
+    {
+        try {
+            $owner = $business->user ?? User::find($business->user_id);
+
+            if ($owner) {
+                \App\Services\UserNotifier::send(
+                    $owner,
+                    new BusinessVerifiedNotification($business)
+                );
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('business.verified notify failed', ['id' => $business->id]);
+        }
+    }
+
+    /**
+     * Уведомить владельца об отказе (inbox + push, с причиной).
+     *
+     * @param Business $business отклонённый бизнес
+     * @return void
+     */
+    private function notifyOwnerRejected(Business $business): void
+    {
+        try {
+            $owner = $business->user ?? User::find($business->user_id);
+
+            if ($owner) {
+                \App\Services\UserNotifier::send(
+                    $owner,
+                    new BusinessRejectedNotification($business)
+                );
+            }
+        } catch (\Throwable $e) {
+            \Log::warning('business.rejected notify failed', ['id' => $business->id]);
+        }
     }
 
     /**

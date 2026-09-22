@@ -120,7 +120,10 @@ export function useGlobalDistrictSearch() {
       })
     } catch (error: unknown) {
       const detail = (error as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Не удалось отправить заявку'
-      toast?.add({ severity: 'error', summary: 'Ошибка', detail, life: 3500 })
+      toast?.add({ severity: 'error', summary: 'Ошибка', detail, life: 4000 })
+      if (/цель/i.test(detail)) {
+        router.visit(`/districts/${Number(row.id)}`)
+      }
     } finally {
       joiningId.value = null
     }

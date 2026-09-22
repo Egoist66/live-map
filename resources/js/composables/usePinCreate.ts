@@ -199,8 +199,11 @@ export function usePinCreate(onSuccess?: () => void) {
       error.value = e
       const status = e?.response?.status
       const serverMsg = e?.response?.data?.message || ''
+      const isVerificationGate = status === 403 && /проверк/i.test(serverMsg)
       const isLimit = status === 429 || /лимит/i.test(serverMsg)
-      if (isLimit) {
+      if (isVerificationGate) {
+        toast.add({ severity: 'warn', summary: 'Нужна проверка компании', detail: serverMsg, life: 6000 })
+      } else if (isLimit) {
         const msg = serverMsg || limitInfo.warning.value || 'Лимит free тарифа: максимум 3 живых пина'
         const isSosLimit = /sos/i.test(serverMsg)
         toast.add({ severity: 'warn', summary: isSosLimit ? 'Лимит SOS' : 'Лимит пинов', detail: msg, life: 5000 })

@@ -262,6 +262,11 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::patch('/business', [\App\Http\Controllers\BusinessController::class, 'update'])->middleware('throttle:profile-write');
     Route::get('/business/dashboard', [\App\Http\Controllers\BusinessController::class, 'dashboard']);
     Route::post('/business/submit', [\App\Http\Controllers\BusinessController::class, 'submit'])->middleware('throttle:social-write');
+    Route::get('/businesses/{business}/ads', [\App\Http\Controllers\BusinessAdController::class, 'index']);
+    Route::get('/business/ads/quota', [\App\Http\Controllers\BusinessAdController::class, 'quota']);
+    Route::post('/businesses/{business}/ads', [\App\Http\Controllers\BusinessAdController::class, 'store'])->middleware('throttle:social-write');
+    Route::patch('/business-ads/{ad}', [\App\Http\Controllers\BusinessAdController::class, 'update'])->middleware('throttle:social-write');
+    Route::delete('/business-ads/{ad}', [\App\Http\Controllers\BusinessAdController::class, 'destroy'])->middleware('throttle:social-write');
 });
 
 // Табы модератора: Статистика, Модерация, Справочники, SEO.
@@ -280,6 +285,9 @@ Route::middleware(['web', 'auth:web,sanctum', 'admin:moderator', 'throttle:120,1
     Route::get('/admin/users/search', [AdminUserController::class, 'search']);
     Route::patch('/admin/users/{user}/visibility', [AdminUserController::class, 'updateVisibility']);
     Route::delete('/admin/users/{user}', [AdminUserController::class, 'destroy']);
+    Route::get('/admin/businesses', [\App\Http\Controllers\BusinessController::class, 'adminIndex']);
+    Route::post('/admin/business/{business}/verify', [\App\Http\Controllers\BusinessController::class, 'verify']);
+    Route::post('/admin/business/{business}/reject', [\App\Http\Controllers\BusinessController::class, 'reject']);
     Route::get('/admin/seo', [\App\Http\Controllers\AdminSeoController::class, 'show']);
     Route::put('/admin/seo/global', [\App\Http\Controllers\AdminSeoController::class, 'updateGlobal']);
     Route::put('/admin/seo/integrations', [\App\Http\Controllers\AdminSeoController::class, 'updateIntegrations']);
@@ -295,11 +303,10 @@ Route::middleware(['web', 'auth:web,sanctum', 'admin:moderator', 'throttle:120,1
 });
 
 // Только полные админы: Управление, Безопасность, роли/тарифы,
-// баны, вход в чужой аккаунт, обновления, maintenance, realtime,
-// верификация бизнеса по РБ.
+// баны, вход в чужой аккаунт, обновления, maintenance, realtime.
+// Верификация бизнеса — в группе модераторов выше (admin:moderator),
+// чтобы заявки видели и обрабатывали и модераторы, и админы.
 Route::middleware(['web', 'auth:web,sanctum', 'admin', 'throttle:120,1'])->group(function () {
-    Route::post('/admin/business/{business}/verify', [\App\Http\Controllers\BusinessController::class, 'verify']);
-    Route::post('/admin/business/{business}/reject', [\App\Http\Controllers\BusinessController::class, 'reject']);
     Route::get('/admin/updates', [\App\Http\Controllers\AdminAppUpdateController::class, 'index']);
     Route::post('/admin/updates', [\App\Http\Controllers\AdminAppUpdateController::class, 'store']);
     Route::patch('/admin/updates/{appUpdate}', [\App\Http\Controllers\AdminAppUpdateController::class, 'update']);

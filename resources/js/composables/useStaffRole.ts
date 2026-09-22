@@ -7,7 +7,7 @@ import type { AdminTabId } from '@/composables/useAdminTabs'
  *
  * Управление и Безопасность — только для админов.
  */
-export const MODERATOR_TABS: readonly AdminTabId[] = ['stats', 'admin', 'refs', 'seo']
+export const MODERATOR_TABS: readonly AdminTabId[] = ['stats', 'admin', 'business', 'refs', 'seo']
 
 /**
  * Минимальная форма пользователя для проверки «свой/чужой админ».
@@ -45,7 +45,7 @@ export function useStaffRole() {
 
   const allowedTabs = computed<readonly AdminTabId[]>(() => {
     if (isAdmin.value) {
-      return ['stats', 'manage', 'security', 'admin', 'refs', 'seo']
+      return ['stats', 'manage', 'security', 'admin', 'business', 'refs', 'seo']
     }
 
     return MODERATOR_TABS

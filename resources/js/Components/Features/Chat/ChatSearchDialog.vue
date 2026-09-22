@@ -9,6 +9,7 @@ import TabPanel from 'primevue/tabpanel'
 import Avatar from 'primevue/avatar'
 import InputText from 'primevue/inputtext'
 import OnlineDot from '@/Components/Features/Feedback/OnlineDot.vue'
+import OrgBadge from '@/Components/Features/Chat/OrgBadge.vue'
 import DistrictSearchList from '@/Components/Features/Districts/DistrictSearchList.vue'
 import { avatarSrcFor } from '@/composables/useAvatar'
 import { useChatSearchList } from '@/composables/useChatSearchUser'
@@ -70,7 +71,7 @@ function goDistrict(id: number): void {
             <div v-for="u in results" :key="u.id" class="flex items-center justify-between p-3 select-none">
               <Link :href="userProfileUrl(u)" class="flex items-center gap-2.5 min-w-0">
                 <span class="relative shrink-0"><Avatar :image="avatarSrcFor(u)" shape="circle" size="normal" class="!w-9 !h-9 [&_img]:object-cover" /><OnlineDot :online="isOnline(u.id, u.last_seen_at)" size="w-3 h-3" /></span>
-                <div class="min-w-0"><div class="text-sm font-medium truncate">{{ u.name }}</div></div>
+                <div class="min-w-0"><div class="text-sm font-medium truncate">{{ u.name }} <OrgBadge :is-organization="u.is_organization" /></div></div>
               </Link>
               <div class="flex gap-1.5 shrink-0 ml-2 items-center">
                 <button v-if="u.can_message !== false" @click="emit('chat', u)" :disabled="creating" title="Написать сообщение" aria-label="Написать сообщение" class="w-9 h-9 grid place-items-center rounded-full bg-ink-900 text-white transition hover:opacity-90 active:scale-95 disabled:opacity-40 dark:bg-white dark:text-zinc-900"><i class="pi pi-send text-sm" /></button>

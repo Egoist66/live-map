@@ -28,18 +28,8 @@ class FriendRequestedNotification extends UserNotification
                 'requester_id' => $f->requester_id,
                 'addressee_id' => $f->addressee_id,
                 'status' => $f->status,
-                'requester' => $f->requester ? [
-                    'id' => $f->requester->id,
-                    'name' => $f->requester->name,
-                    'avatar_path' => $f->requester->avatar_path,
-                    'avatar_url' => $f->requester->avatar_url,
-                ] : null,
-                'addressee' => $f->addressee ? [
-                    'id' => $f->addressee->id,
-                    'name' => $f->addressee->name,
-                    'avatar_path' => $f->addressee->avatar_path,
-                    'avatar_url' => $f->addressee->avatar_url,
-                ] : null,
+                'requester' => $f->requester ? static::actorShape($f->requester) : null,
+                'addressee' => $f->addressee ? static::actorShape($f->addressee) : null,
             ],
         ];
     }

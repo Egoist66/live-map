@@ -109,11 +109,22 @@ abstract class UserNotification
     /**
      * Краткий актор для пейлоада.
      * Инкогнито скрывает и id: по уведомлению нельзя открыть анкету.
+     *
+     * Организации несут флаги account_type/is_organization/is_verified:
+     * фронт по ним пишет «Организация», а не «Пользователь».
      */
     protected static function actorShape(User $actor, bool $incognito = false): array
     {
         if ($incognito) {
             return ['id' => null, 'name' => 'Тайный поклонник', 'avatar_path' => null, 'avatar_url' => null];
+        }
+
+        $brief = null;
+
+        try {
+            $brief = $actor->businessBrief();
+        } catch (\Throwable) {
+            $brief = null;
         }
 
         return [
@@ -122,7 +133,42 @@ abstract class UserNotification
             'profile_slug' => $actor->profile_slug,
             'avatar_path' => $actor->avatar_path,
             'avatar_url' => $actor->avatar_url,
+            'account_type' => $actor->account_type ?? 'person',
+            'is_business' => $actor->isBusinessAccount(),
+            'is_organization' => (bool) ($brief['is_organization'] ?? false),
+            'is_verified' => (bool) ($brief['is_verified'] ?? false),
         ];
+    }
+
+    /**
+     * Слово-субъект для текстов уведомлений: организация или пользователь.
+     *
+     * Организации (ООО/ИП — is_organization) именуются «Организация»,
+     * все остальные — «Пользователь».
+     *
+     * @param User|array<string, mixed>|null $actor актор из пейлоада
+     * @return string Организация|Пользователь
+     */
+    public static function subjectWord($actor): string
+    {
+        try {
+            if ($actor instanceof User) {
+                $brief = $actor->businessBrief();
+
+                return ! empty($brief['is_organization']) ? 'Организация' : 'Пользователь';
+            }
+
+            if (is_array($actor) && ! empty($actor['is_organization'])) {
+                return 'Организация';
+            }
+
+            if (is_array($actor) && ($actor['account_type'] ?? 'person') === 'business' && ! array_key_exists('is_organization', $actor)) {
+                return 'Организация';
+            }
+        } catch (\Throwable) {
+        }
+
+        return 'Пользователь';
     }
 
     /**

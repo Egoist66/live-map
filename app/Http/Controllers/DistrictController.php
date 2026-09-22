@@ -14,6 +14,7 @@ use App\Notifications\DistrictInvitedNotification;
 use App\Notifications\DistrictInviteAcceptedNotification;
 use App\Notifications\DistrictJoinRequestedNotification;
 use App\Notifications\DistrictRequestApprovedNotification;
+use App\Notifications\DistrictRequestRejectedNotification;
 use App\Services\ContentModeration;
 use App\Services\DistrictService;
 use App\Services\ImageOptimizer;
@@ -362,6 +363,10 @@ class DistrictController extends Controller
 
     /**
      * Кинуть заявку в район.
+     *
+     * Организации указывают цель вступления обязательно (фронт показывает
+     * им модалку с полем «Цель»), персоны — по желанию. Цель видит
+     * организатор в табе «Заявки» и в уведомлении.
      */
     public function join(Request $request, District $district)
     {
@@ -372,15 +377,31 @@ class DistrictController extends Controller
         abort_if($role === 'pending', 422, 'Заявка уже отправлена — дождитесь решения владельца.');
         abort_if($role === 'invited', 422, 'Вас уже пригласили — примите приглашение или отклоните его.');
 
+        $data = $request->validate([
+            'message' => 'nullable|string|max:500',
+        ]);
+
+        $message = mb_substr(trim((string) ($data['message'] ?? '')), 0, 500);
+        $message = $message === '' ? null : $message;
+
+        if ($user->isBusinessAccount()) {
+            abort_if(
+                $message === null || mb_strlen($message) < 10,
+                422,
+                'Организациям нужно указать цель вступления (минимум 10 символов) — владелец решит, принять ли вас.'
+            );
+        }
+
         $member = DistrictMember::create([
             'district_id' => $district->id,
             'user_id' => $user->id,
             'status' => DistrictMember::STATUS_PENDING,
+            'message' => $message,
         ]);
 
         $owner = $district->owner;
         if ($owner) {
-            UserNotifier::send($owner, new DistrictJoinRequestedNotification($district, $user));
+            UserNotifier::send($owner, new DistrictJoinRequestedNotification($district, $user, $message));
         }
         $district->load('owner:id,name,avatar_path');
         broadcast(new DistrictUpdated($district))->toOthers();
@@ -554,7 +575,16 @@ class DistrictController extends Controller
             ['user_id' => $user->id],
             ['joined_at' => now(), 'hidden_at' => null]
         );
-        $this->systemMessage($conversation, '🎉 ' . ($user->name ?? 'Новый житель') . ' вступил(а) в район.');
+
+        $joinedWord = 'вступил(а) в район.';
+
+        try {
+            $brief = $user->businessBrief();
+            $joinedWord = ! empty($brief['is_organization']) ? 'вступила в район.' : 'вступил(а) в район.';
+        } catch (\Throwable) {
+        }
+
+        $this->systemMessage($conversation, '🎉 ' . ($user->name ?? 'Новый житель') . ' ' . $joinedWord);
         UserNotifier::send($user, new DistrictRequestApprovedNotification($district->fresh()));
 
         $district->load('owner:id,name,avatar_path');
@@ -565,6 +595,9 @@ class DistrictController extends Controller
 
     /**
      * Отклонить заявку (только владелец).
+     *
+     * Отказ больше не тихий: автор получает inbox-уведомление
+     * district.request_rejected с подсказкой написать владельцу.
      */
     public function reject(Request $request, District $district, User $user)
     {
@@ -573,6 +606,12 @@ class DistrictController extends Controller
         $member = $district->members()->where('user_id', $user->id)->firstOrFail();
         abort_if($member->status === DistrictMember::STATUS_APPROVED, 422, 'Жителя нельзя отклонить — сначала исключите его.');
         $member->delete();
+
+        try {
+            UserNotifier::send($user, new DistrictRequestRejectedNotification($district->fresh()));
+        } catch (\Throwable) {
+        }
+
         $district->load('owner:id,name,avatar_path');
         broadcast(new DistrictUpdated($district))->toOthers();
 
@@ -653,13 +692,35 @@ class DistrictController extends Controller
         $pending = [];
         $invited = [];
         if ($role === 'owner') {
-            $pending = $district->pendingMembers()->with('user:id,name,profile_slug,avatar_path')->get()->map(fn (DistrictMember $member) => [
-                'id' => $member->user->id,
-                'name' => $member->user->name,
-                'profile_slug' => $member->user->profile_slug,
-                'avatar_url' => $member->user->avatar_url,
-                'since' => $member->created_at?->toISOString(),
-            ])->values();
+            $pending = $district->pendingMembers()->with('user:id,name,profile_slug,avatar_path,account_type')->get()->map(function (DistrictMember $member) {
+                $org = null;
+
+                try {
+                    $brief = $member->user->businessBrief();
+                    $org = $brief ? [
+                        'legal_form' => $brief['legal_form'],
+                        'is_organization' => $brief['is_organization'],
+                        'is_verified' => $brief['is_verified'],
+                        'verification_status' => $brief['verification_status'],
+                        'name' => $brief['name'],
+                    ] : null;
+                } catch (\Throwable) {
+                    $org = null;
+                }
+
+                return [
+                    'id' => $member->user->id,
+                    'name' => $member->user->name,
+                    'profile_slug' => $member->user->profile_slug,
+                    'avatar_url' => $member->user->avatar_url,
+                    'since' => $member->created_at?->toISOString(),
+                    'message' => $member->message,
+                    'account_type' => $member->user->account_type ?? 'person',
+                    'is_business' => ($member->user->account_type ?? 'person') === 'business',
+                    'is_organization' => (bool) ($org['is_organization'] ?? false),
+                    'business' => $org,
+                ];
+            })->values();
             $invited = $district->invitedMembers()->with('user:id,name,profile_slug,avatar_path')->get()->map(fn (DistrictMember $member) => [
                 'id' => $member->user->id,
                 'name' => $member->user->name,

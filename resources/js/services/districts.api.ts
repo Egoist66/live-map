@@ -105,9 +105,16 @@ export const districtsApi = {
 
   /**
    * Кинуть заявку в район.
+   *
+   * Организации указывают цель вступления обязательно (минимум 10
+   * символов) — бэк вернёт 422 без неё. Персоны — по желанию.
+   *
+   * @param id id района
+   * @param message цель вступления (до 500 символов)
    */
-  async join(id: number): Promise<{ ok: boolean; status: string; role: string }> {
-    const { data } = await api.post(`/api/districts/${id}/join`)
+  async join(id: number, message?: string): Promise<{ ok: boolean; status: string; role: string }> {
+    const clean = String(message ?? '').trim()
+    const { data } = await api.post(`/api/districts/${id}/join`, clean !== '' ? { message: clean.slice(0, 500) } : {})
     return data
   },
 

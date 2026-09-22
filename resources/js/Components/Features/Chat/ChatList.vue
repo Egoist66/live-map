@@ -6,6 +6,7 @@ import Button from 'primevue/button'
 import Menu from 'primevue/menu'
 import Dialog from 'primevue/dialog'
 import OnlineDot from '@/Components/Features/Feedback/OnlineDot.vue'
+import OrgBadge from '@/Components/Features/Chat/OrgBadge.vue'
 import { avatarSrcFor } from '@/composables/useAvatar'
 import { useChatPreview } from '@/composables/useChatPreview'
 import { useChatRowMenu } from '@/composables/useChatRowMenu'
@@ -58,7 +59,7 @@ const { userProfileUrl } = useProfileUrl()
             <OnlineDot v-if="!c.title" :online="isOnline(c.other?.id, c.other?.last_seen_at)" />
           </span>
           <div class="flex-1 min-w-0">
-            <div class="flex justify-between items-baseline gap-2"><span class="text-[15px] lg:text-sm font-semibold dark:text-white truncate">{{ c.title || c.other?.name || 'Чат' }}</span><span v-if="c.last_message_at" class="text-[11px] text-stone-400 shrink-0">{{ formatTime(c.last_message_at) }}</span></div>
+            <div class="flex justify-between items-baseline gap-2"><span class="text-[15px] lg:text-sm font-semibold dark:text-white truncate">{{ c.title || c.other?.name || 'Чат' }} <OrgBadge :is-organization="c.other?.is_organization" /></span><span v-if="c.last_message_at" class="text-[11px] text-stone-400 shrink-0">{{ formatTime(c.last_message_at) }}</span></div>
             <div v-if="c.title" class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5 text-violet-600">🏘️ Общий чат района<span class="text-stone-300">·</span><span class="truncate text-stone-500">{{ previewText(c.last_message) }}</span></div>
             <div v-else class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5" :class="isOnline(c.other?.id, c.other?.last_seen_at) ? 'text-emerald-600' : 'text-red-500'">{{ isOnline(c.other?.id, c.other?.last_seen_at) ? 'в сети' : 'оффлайн' }}<span class="text-stone-300">·</span><span class="truncate text-stone-500">{{ previewText(c.last_message) }}</span><span v-if="(c.last_message as any)?.is_edited" class="text-[10px] text-stone-400">(изм.)</span></div>
           </div>

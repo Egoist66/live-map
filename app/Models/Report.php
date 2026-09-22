@@ -43,7 +43,21 @@ class Report extends Model
 
     public function toNotifyArray(): array
     {
-        $reporter = $this->relationLoaded('reporter') ? $this->reporter : $this->reporter()->first(['id', 'name', 'avatar_path']);
+        $reporter = $this->relationLoaded('reporter') ? $this->reporter : $this->reporter()->first(['id', 'name', 'avatar_path', 'account_type']);
+
+        $reporterPayload = ['id' => $this->reporter_id];
+
+        if ($reporter) {
+            $reporterPayload = array_merge($reporter->only(['id', 'name']), ['avatar_url' => $reporter->avatar_url]);
+
+            try {
+                $brief = $reporter->businessBrief();
+                $reporterPayload['account_type'] = $reporter->account_type ?? 'person';
+                $reporterPayload['is_organization'] = (bool) ($brief['is_organization'] ?? false);
+            } catch (\Throwable) {
+            }
+        }
+
         return [
             'id' => $this->id,
             'target_type' => $this->target_type,
@@ -54,7 +68,7 @@ class Report extends Model
             'description' => $this->description,
             'status' => $this->status,
             'created_at' => $this->created_at,
-            'reporter' => $reporter ? array_merge($reporter->only(['id', 'name']), ['avatar_url' => $reporter->avatar_url]) : ['id' => $this->reporter_id],
+            'reporter' => $reporterPayload,
         ];
     }
 }

@@ -23,6 +23,7 @@ const USER_EVENTS = [
   'impersonation.started',
   'notification.created',
   'business.verified',
+  'business.rejected',
   'business.verification.submitted',
 ] as const
 

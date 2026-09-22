@@ -113,6 +113,14 @@ class ProfileController extends Controller
 
             abort_if($company === null || ! $company->is_active, 404);
 
+            $ads = \App\Models\BusinessAd::where('business_id', $company->id)
+                ->orderByDesc('created_at')
+                ->limit(30)
+                ->get()
+                ->map(fn (\App\Models\BusinessAd $ad) => $ad->toPublicArray())
+                ->values()
+                ->all();
+
             return Inertia::render('Business/Show', [
                 'business' => $company->toPublicArray(),
                 'owner' => [
@@ -126,6 +134,7 @@ class ProfileController extends Controller
                 'canMessageReason' => $reason,
                 'isBlocked' => $isBlocked,
                 'isBlockedBy' => $isBlockedBy,
+                'initialAds' => $ads,
             ]);
         }
 

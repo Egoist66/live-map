@@ -7,7 +7,7 @@ import { useSeo } from '@/composables/useSeo'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import Message from 'primevue/message'
-import type { BusinessVerificationStatus } from '@/types/entities/Business'
+import type { BusinessAd, BusinessVerificationStatus } from '@/types/entities/Business'
 
 interface PublicBusiness {
   id: number
@@ -34,11 +34,12 @@ const props = defineProps<{
   canMessageReason: string | null
   isBlocked?: boolean
   isBlockedBy?: boolean
+  initialAds?: BusinessAd[]
 }>()
 
 useSeo({ title: `${props.business.name} — компания на карте`, description: props.business.description ?? 'Профиль компании.', noindex: true })
 
-const page = useBusinessPublicPage(props.owner.id)
+const page = useBusinessPublicPage(props.owner.id, props.business.id, props.initialAds ?? [])
 
 const badgeStatus = computed<BusinessVerificationStatus>(() => (props.business.is_verified ? 'verified' : 'draft'))
 
@@ -119,6 +120,18 @@ const websiteHref = computed(() => {
         <template #content>
           <div class="font-black text-[16px] dark:text-white">Услуги</div>
           <p class="mt-1.5 text-sm leading-relaxed text-stone-600 dark:text-zinc-300 whitespace-pre-line">{{ business.services }}</p>
+        </template>
+      </Card>
+
+      <Card v-if="page.ads.value.length" class="!rounded-[24px] !border-stone-200 dark:!border-zinc-800 !bg-white dark:!bg-zinc-900 !shadow-sm">
+        <template #content>
+          <div class="font-black text-[16px] dark:text-white">Новости и акции</div>
+          <div class="mt-3 space-y-2">
+            <div v-for="ad in page.ads.value" :key="ad.id" class="rounded-2xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/60 px-4 py-3">
+              <div class="text-sm font-bold dark:text-white">📢 {{ ad.title }}</div>
+              <p class="mt-1 text-sm leading-relaxed text-stone-600 dark:text-zinc-300 whitespace-pre-line break-words">{{ ad.body }}</p>
+            </div>
+          </div>
         </template>
       </Card>
 

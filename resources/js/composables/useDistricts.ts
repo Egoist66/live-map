@@ -3,6 +3,7 @@ import { useToast } from 'primevue/usetoast'
 import { districtsApi } from '@/services/districts.api'
 import { busOn } from '@/services/realtime-bus'
 import { useDistrictsStore } from '@/stores/districts'
+import { useDistrictJoinRequest } from '@/composables/useDistrictJoinRequest'
 import { useViewportBreakpoints } from '@/composables/useViewportBreakpoints'
 import type { CreateDistrictPayload, DistrictDetails, DistrictResident } from '@/types/entities/District'
 
@@ -41,6 +42,8 @@ export function useDistricts() {
   /** Свои районы для хаба. */
   const myDistricts = ref<Awaited<ReturnType<typeof districtsApi.list>>>([])
   const myLoading = ref(false)
+  /** Заявка в район: организациям — модалка цели вступления. */
+  const joinRequest = useDistrictJoinRequest()
 
   /** Мобильный вьюпорт: создание районов кистью недоступно, только список + заявка. */
   const { isMobile } = useViewportBreakpoints()
@@ -145,19 +148,18 @@ export function useDistricts() {
 
   /**
    * Кинуть заявку в выбранный район.
+   *
+   * Организации — через модалку цели вступления, персоны — в один клик
+   * (общая логика useDistrictJoinRequest).
    */
   async function joinSelected(): Promise<void> {
     if (!selected.value) {
       return
     }
-    try {
-      await districtsApi.join(selected.value.id)
-      toast?.add({ severity: 'success', summary: 'Заявка отправлена', detail: 'Владелец решит, пускать ли вас в район', life: 3000 })
+    await joinRequest.request(selected.value.id, String(selected.value.name ?? ''), async () => {
       await refreshSelected()
       syncLayerCard()
-    } catch (e: any) {
-      fail(e, 'Не удалось отправить заявку')
-    }
+    })
   }
 
   /**
@@ -461,6 +463,7 @@ export function useDistricts() {
     loadMembers,
     refreshSelected,
     joinSelected,
+    joinRequest,
     leaveSelected,
     acceptInvite,
     declineInvite,

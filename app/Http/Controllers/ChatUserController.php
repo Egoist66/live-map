@@ -20,32 +20,67 @@ class ChatUserController extends Controller
             ->whereNotIn('id',$blocked)
             ->whereNotIn('id', User::hiddenFromSearchFor($me))
             ->where(fn($qq)=>$qq->where('name','like',"%$q%")->orWhere('email','like',"%$q%"));
-        $page = $base->select('id','name','profile_slug','avatar_path','message_privacy','allow_random_messages','last_seen_at','is_invisible','plan','role','is_admin')
+        $page = $base->select('id','name','profile_slug','avatar_path','message_privacy','allow_random_messages','last_seen_at','is_invisible','plan','role','is_admin','account_type')
             ->orderBy('name')
             ->paginate($perPage);
         $users = $page->getCollection();
         $ids = $users->pluck('id')->all();
+        $orgBusinesses = [];
+        try {
+            $orgBusinesses = \App\Models\Business::whereIn('user_id', $ids ?: [0])
+                ->orderByDesc('id')
+                ->get()
+                ->keyBy('user_id');
+        } catch (\Throwable) {
+            $orgBusinesses = collect();
+        }
         $friendships = Friendship::where(function($q) use ($me,$ids){
                 $q->where('requester_id',$me->id)->whereIn('addressee_id',$ids);
             })->orWhere(function($q) use ($me,$ids){
                 $q->where('addressee_id',$me->id)->whereIn('requester_id',$ids);
             })->get()->keyBy(fn($f)=> $f->requester_id===$me->id ? $f->addressee_id : $f->requester_id);
-        $rows = $users->map(fn($u)=>[
-                'id'=>$u->id,
-                'name'=>$u->name,
-                'profile_slug'=>$u->profile_slug,
-                'avatar_path'=>$u->avatar_path,
-                'avatar_url'=>$u->avatar_url,
-                'can_message'=>$me->canMessageUser($u),
-                'can_message_reason'=>$me->messageBlockReason($u),
-                'message_privacy'=>$u->message_privacy,
-                'allow_random_messages'=>$u->allow_random_messages,
-                'last_seen_at'=>$u->isInvisibleActive() && !$me->isAdmin() ? null : $u->last_seen_at?->toISOString(),
-                'is_invisible'=>$u->isInvisibleActive(),
-                'is_friend'=>($friendships[$u->id]?->status ?? null)==='accepted',
-                'is_pending'=>($friendships[$u->id]?->status ?? null)==='pending',
-                'friendship_outgoing'=>($friendships[$u->id]?->status ?? null)==='pending' ? ($friendships[$u->id]->requester_id===$me->id) : null,
-            ])->values();
+        $rows = $users->map(function($u) use ($me, $friendships, $orgBusinesses){
+                $isBusiness = ($u->account_type ?? 'person') === 'business';
+                $businessRow = $isBusiness ? ($orgBusinesses[$u->id] ?? null) : null;
+                $business = null;
+
+                if ($isBusiness) {
+                    $business = $businessRow ? [
+                        'legal_form' => (string) ($businessRow->legal_form ?? 'ooo'),
+                        'is_organization' => $businessRow->isOrganization(),
+                        'is_verified' => $businessRow->isVerified(),
+                        'verification_status' => (string) ($businessRow->verification_status ?? 'draft'),
+                        'name' => (string) ($businessRow->name ?? $u->name ?? ''),
+                    ] : [
+                        'legal_form' => 'ooo',
+                        'is_organization' => true,
+                        'is_verified' => false,
+                        'verification_status' => 'draft',
+                        'name' => (string) ($u->name ?? ''),
+                    ];
+                }
+
+                return [
+                    'id'=>$u->id,
+                    'name'=>$u->name,
+                    'profile_slug'=>$u->profile_slug,
+                    'avatar_path'=>$u->avatar_path,
+                    'avatar_url'=>$u->avatar_url,
+                    'account_type'=>$u->account_type ?? 'person',
+                    'is_business'=>$isBusiness,
+                    'is_organization'=>(bool) ($business['is_organization'] ?? false),
+                    'business'=>$business,
+                    'can_message'=>$me->canMessageUser($u),
+                    'can_message_reason'=>$me->messageBlockReason($u),
+                    'message_privacy'=>$u->message_privacy,
+                    'allow_random_messages'=>$u->allow_random_messages,
+                    'last_seen_at'=>$u->isInvisibleActive() && !$me->isAdmin() ? null : $u->last_seen_at?->toISOString(),
+                    'is_invisible'=>$u->isInvisibleActive(),
+                    'is_friend'=>($friendships[$u->id]?->status ?? null)==='accepted',
+                    'is_pending'=>($friendships[$u->id]?->status ?? null)==='pending',
+                    'friendship_outgoing'=>($friendships[$u->id]?->status ?? null)==='pending' ? ($friendships[$u->id]->requester_id===$me->id) : null,
+                ];
+            })->values();
         return response()->json([
             'data' => $rows,
             'current_page' => $page->currentPage(),

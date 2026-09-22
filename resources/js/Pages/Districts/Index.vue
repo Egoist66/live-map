@@ -7,6 +7,7 @@ import IconField from 'primevue/iconfield'
 import InputIcon from 'primevue/inputicon'
 import Skeleton from 'primevue/skeleton'
 import { useDistrictListPage } from '@/composables/useDistrictListPage'
+import DistrictJoinRequestDialog from '@/Components/Features/Districts/DistrictJoinRequestDialog.vue'
 import { districtInterestLabel } from '@/utils/districtGeo'
 
 const props = defineProps<{
@@ -103,7 +104,7 @@ function letterOf(name: string): string {
                     rounded
                     :loading="list.joiningId.value === district.id"
                     class="!border-0 !bg-blue-600 !text-xs !font-bold !text-white hover:!bg-blue-500"
-                    @click.stop="list.joinDistrict(district.id)"
+                    @click.stop="list.joinDistrict(district.id, district.name)"
                   />
                   <Button
                     v-else-if="district.role === 'invited'"
@@ -155,4 +156,14 @@ function letterOf(name: string): string {
         </div>
       </div>
     </div>
+    <DistrictJoinRequestDialog
+      :open="list.joinRequest.dialogOpen.value"
+      :district-name="list.joinRequest.districtName.value"
+      :message="list.joinRequest.message.value"
+      :sending="list.joinRequest.sending.value"
+      :is-business="list.joinRequest.isBusiness.value"
+      @update:open="(v: boolean) => (list.joinRequest.dialogOpen.value = v)"
+      @update:message="(v: string) => (list.joinRequest.message.value = v)"
+      @submit="list.joinRequest.confirm()"
+    />
 </template>

@@ -3,6 +3,7 @@ import { Head, Link } from '@inertiajs/vue3'
 import { h } from 'vue'
 import BusinessLayout from '@/Layouts/BusinessLayout.vue'
 import { useBusinessPins } from '@/composables/useBusinessPins'
+import { useBusinessPinGate } from '@/composables/useBusinessPinGate'
 import { useSeo } from '@/composables/useSeo'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
@@ -16,6 +17,7 @@ defineOptions({
 useSeo({ title: 'Пины компании — UPin Pro', description: 'Все пины компании со статистикой.', noindex: true })
 
 const list = useBusinessPins()
+const gate = useBusinessPinGate()
 </script>
 
 <template>
@@ -26,8 +28,14 @@ const list = useBusinessPins()
         <h1 class="text-[22px] sm:text-[26px] font-black tracking-tight dark:text-white">Пины компании</h1>
         <p class="text-[13px] text-stone-500 dark:text-zinc-400 mt-0.5">Живые и запланированные · клик открывает пин на карте</p>
       </div>
-      <Link href="/map"><Button label="+ Пин" icon="pi pi-map-marker" rounded class="!bg-gradient-to-r !from-indigo-500 !to-violet-600 !border-0 !text-white" /></Link>
+      <Link v-if="gate.canCreatePin.value" href="/map"><Button label="+ Пин" icon="pi pi-map-marker" rounded class="!bg-gradient-to-r !from-indigo-500 !to-violet-600 !border-0 !text-white" /></Link>
+      <span v-else :title="gate.gateHint.value ?? ''"><Button label="+ Пин" icon="pi pi-lock" rounded disabled class="!bg-stone-200 dark:!bg-zinc-800 !text-stone-400 !border-0" /></span>
     </div>
+
+    <Message v-if="!gate.canCreatePin.value" severity="warn" class="w-full">
+      {{ gate.gateHint.value }} Пины компании видят все сотрудники организации.
+      <Link href="/cabinet/onboarding" class="font-bold underline ml-1">К реквизитам →</Link>
+    </Message>
 
     <div class="grid grid-cols-4 gap-2 sm:gap-3">
       <Card class="!rounded-2xl !border-stone-200 dark:!border-zinc-800 !bg-white dark:!bg-zinc-900 !shadow-sm"><template #content><div class="text-center py-1"><div class="text-xl sm:text-2xl font-black dark:text-white">{{ list.totals.value.count }}</div><div class="text-[11px] font-medium text-stone-500 dark:text-zinc-400 uppercase">пинов</div></div></template></Card>
@@ -44,7 +52,7 @@ const list = useBusinessPins()
     <div v-else-if="!list.pins.value.length" class="rounded-[24px] border-2 border-dashed border-stone-200 dark:border-zinc-700 p-6 text-center">
       <div class="text-[15px] font-black dark:text-white">Пинов пока нет</div>
       <p class="text-[13px] text-stone-500 dark:text-zinc-400 mt-1">Создайте первый пин на карте — клиенты увидят его рядом.</p>
-      <Link href="/map" class="inline-block mt-3"><Button label="Создать пин" icon="pi pi-map-marker" rounded class="!bg-gradient-to-r !from-indigo-500 !to-violet-600 !border-0 !text-white" /></Link>
+      <Link v-if="gate.canCreatePin.value" href="/map" class="inline-block mt-3"><Button label="Создать пин" icon="pi pi-map-marker" rounded class="!bg-gradient-to-r !from-indigo-500 !to-violet-600 !border-0 !text-white" /></Link>
     </div>
     <div v-else class="space-y-2">
       <Link

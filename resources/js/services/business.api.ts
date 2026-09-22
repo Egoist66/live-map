@@ -1,5 +1,5 @@
 import { api } from './api'
-import type { AccountType, BusinessDashboard, BusinessMapItem, BusinessPhoto, BusinessProfile, BusinessProfilePayload } from '@/types/entities/Business'
+import type { AccountType, BusinessAd, BusinessDashboard, BusinessMapItem, BusinessPhoto, BusinessProfile, BusinessProfilePayload } from '@/types/entities/Business'
 import type { Pin } from '@/types/entities/Pin'
 
 export const businessApi = {
@@ -83,5 +83,70 @@ export const businessApi = {
       account_type: accountType,
     })
     return data
+  },
+
+  /**
+   * Очередь заявок для модерации (staff: админы + модераторы).
+   * @param status фильтр статуса (по умолчанию pending)
+   * @param q поиск по названию/УНП/email
+   * @param page страница
+   */
+  async adminQueue(status = 'pending', q = '', page = 1): Promise<{ data: BusinessProfile[]; total: number; pending_count: number; current_page: number; last_page: number }> {
+    const { data } = await api.get('/api/admin/businesses', { params: { status, q: q || undefined, page } })
+    return data
+  },
+
+  /**
+   * Реклама компании для витрины (видят все).
+   * @param businessId id компании
+   */
+  async listAds(businessId: number): Promise<BusinessAd[]> {
+    const { data } = await api.get<BusinessAd[]>(`/api/businesses/${businessId}/ads`)
+    return Array.isArray(data) ? data : []
+  },
+
+  /**
+   * Остаток недельного лимита рекламы (3 в неделю).
+   */
+  async adsQuota(): Promise<{ used: number; limit: number; left: number }> {
+    const { data } = await api.get('/api/business/ads/quota')
+    return { used: Number(data?.used ?? 0), limit: Number(data?.limit ?? 3), left: Number(data?.left ?? 0) }
+  },
+
+  /**
+   * Опубликовать рекламу (только проверенный бизнес).
+   * @param businessId id компании
+   * @param payload заголовок + текст
+   */
+  async createAd(businessId: number, payload: { title: string; body: string }): Promise<BusinessAd> {
+    const { data } = await api.post<BusinessAd>(`/api/businesses/${businessId}/ads`, payload)
+    return data
+  },
+
+  /**
+   * Удалить рекламу (слот недели не возвращается).
+   * @param adId id рекламы
+   */
+  async deleteAd(adId: number): Promise<void> {
+    await api.delete(`/api/business-ads/${adId}`)
+  },
+
+  /**
+   * Одобрить заявку (staff).
+   * @param id id бизнеса
+   */
+  async adminVerify(id: number): Promise<BusinessProfile> {
+    const { data } = await api.post<{ data: BusinessProfile } | BusinessProfile>(`/api/admin/business/${id}/verify`)
+    return (data as { data: BusinessProfile }).data ?? (data as BusinessProfile)
+  },
+
+  /**
+   * Отклонить заявку с причиной (staff).
+   * @param id id бизнеса
+   * @param reason причина отказа
+   */
+  async adminReject(id: number, reason: string): Promise<BusinessProfile> {
+    const { data } = await api.post<{ data: BusinessProfile } | BusinessProfile>(`/api/admin/business/${id}/reject`, { reason })
+    return (data as { data: BusinessProfile }).data ?? (data as BusinessProfile)
   },
 }

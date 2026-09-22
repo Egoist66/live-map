@@ -10,6 +10,7 @@ import DistrictPaintOverlay from '@/Components/Features/Map/DistrictPaintOverlay
 import DistrictCreateDialog from '@/Components/Features/Map/DistrictCreateDialog.vue'
 import DistrictDetailsCard from '@/Components/Features/Map/DistrictDetailsCard.vue'
 import DistrictInviteDialog from '@/Components/Features/Map/DistrictInviteDialog.vue'
+import DistrictJoinRequestDialog from '@/Components/Features/Districts/DistrictJoinRequestDialog.vue'
 import SosModeBanner from '@/Components/Features/Map/SosModeBanner.vue'
 import PinDetailsCard from '@/Components/Features/Map/PinDetailsCard.vue'
 import ReportDialog from '@/Components/Features/Map/ReportDialog.vue'
@@ -145,6 +146,17 @@ onUnmounted(() => {
       <DistrictCreateDialog :open="districts.createOpen.value && ((districts as any).canCreate?.value ?? true)" @update:open="districts.setCreateOpen" :saving="districts.store.saving" :strokes-count="pendingGeometry?.coordinates?.length ?? 0" :server-error="createError" @save="saveDistrict" />
       <DistrictDetailsCard :open="districts.detailsOpen.value" @update:open="districts.setDetailsOpen" :district="districts.selected.value" :residents="districts.residents.value" :pending="districts.pending.value" :invited="districts.invited.value" :loading="districts.detailsLoading.value" @close="districts.closeDistrict()" @join="districts.joinSelected()" @leave="districts.leaveSelected()" @accept-invite="districts.acceptInvite()" @decline-invite="districts.declineInvite()" @cancel-invite="districts.cancelInvite" @approve="districts.approveMember" @reject="districts.rejectMember" @kick="districts.kickMember" @delete="deleteDistrict" @save="saveSelectedDistrict" @chat="openDistrictChat" @invite="openDistrictInvite" @open-pin="openPinFromDistrict" />
       <DistrictInviteDialog :open="districtInvite.open.value" @update:open="districtInvite.setOpen" :district-name="districtInvite.districtName.value" :query="districtInvite.query.value" @update:query="districtInvite.search" :results="districtInvite.results.value" :searching="districtInvite.searching.value" :inviting-id="districtInvite.invitingId.value" :error="districtInvite.error.value" @invite="sendDistrictInvite" />
+      <DistrictJoinRequestDialog
+        v-if="(districts as any).joinRequest"
+        :open="(districts as any).joinRequest.dialogOpen.value"
+        :district-name="(districts as any).joinRequest.districtName.value"
+        :message="(districts as any).joinRequest.message.value"
+        :sending="(districts as any).joinRequest.sending.value"
+        :is-business="(districts as any).joinRequest.isBusiness.value"
+        @update:open="(v: boolean) => ((districts as any).joinRequest.dialogOpen.value = v)"
+        @update:message="(v: string) => ((districts as any).joinRequest.message.value = v)"
+        @submit="(districts as any).joinRequest.confirm()"
+      />
       <div v-if="homeZone" class="absolute left-3 bottom-12 z-10 bg-white/95 dark:bg-zinc-900/95 backdrop-blur border border-violet-200 dark:border-violet-900/60 rounded-2xl px-3 py-2 shadow flex items-center gap-2">
         <button type="button" @click="mapApi.flyToHomeZone?.(homeZone.lat, homeZone.lng, homeZone.radiusKm)" title="Показать мою зону" class="w-5 h-5 rounded-full bg-violet-500/15 border border-dashed border-violet-500 grid place-items-center shrink-0 hover:bg-violet-500/30 transition">
           <span class="w-1.5 h-1.5 rounded-full bg-violet-600 block pointer-events-none"></span>

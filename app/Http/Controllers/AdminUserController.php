@@ -19,27 +19,65 @@ class AdminUserController extends Controller
             $query->where(fn ($w) => $w->where('name', 'like', "%$q%")->orWhere('email', 'like', "%$q%"));
         }
         $threshold = now()->subMinutes(\App\Services\MonitoringService::ONLINE_MINUTES);
-        $users = $query->select('id', 'name', 'email', 'avatar_path', 'role', 'is_admin', 'is_hidden_from_search', 'plan', 'plan_expires_at', 'last_seen_at', 'is_invisible', 'created_at', 'banned_at', 'banned_reason')
+        $users = $query->select('id', 'name', 'email', 'avatar_path', 'role', 'is_admin', 'is_hidden_from_search', 'plan', 'plan_expires_at', 'last_seen_at', 'is_invisible', 'created_at', 'banned_at', 'banned_reason', 'account_type')
             ->paginate((int) ($data['per_page'] ?? 20));
-        $users->getCollection()->transform(fn ($u) => [
-            'id' => $u->id,
-            'name' => $u->name,
-            'email' => $u->email,
-            'avatar_path' => $u->avatar_path,
-            'avatar_url' => $u->avatar_url,
-            'role' => $u->role,
-            'is_admin' => $u->isAdmin(),
-            'is_hidden_from_search' => (bool) $u->is_hidden_from_search,
-            'plan' => $u->plan,
-            'effective_plan' => $u->effectivePlan(),
-            'plan_expires_at' => $u->plan_expires_at?->toISOString(),
-            'is_online' => $u->last_seen_at && $u->last_seen_at->gte($threshold),
-            'last_seen_at' => $u->last_seen_at?->toISOString(),
-            'is_invisible' => (bool) $u->is_invisible,
-            'banned_at' => $u->banned_at?->toISOString(),
-            'banned_reason' => $u->banned_reason,
-            'created_at' => $u->created_at?->toISOString(),
-        ]);
+        $rows = $users->getCollection();
+        $businessMap = [];
+        try {
+            $businessMap = \App\Models\Business::whereIn('user_id', $rows->pluck('id')->all() ?: [0])
+                ->orderByDesc('id')
+                ->get()
+                ->keyBy('user_id');
+        } catch (\Throwable) {
+            $businessMap = collect();
+        }
+        $users->getCollection()->transform(function ($u) use ($threshold, $businessMap) {
+            $isBusiness = ($u->account_type ?? 'person') === 'business';
+            $businessRow = $isBusiness ? ($businessMap[$u->id] ?? null) : null;
+            $business = null;
+
+            if ($isBusiness) {
+                $business = $businessRow ? [
+                    'legal_form' => (string) ($businessRow->legal_form ?? 'ooo'),
+                    'is_organization' => $businessRow->isOrganization(),
+                    'is_verified' => $businessRow->isVerified(),
+                    'verification_status' => (string) ($businessRow->verification_status ?? 'draft'),
+                    'unp' => $businessRow->unp,
+                    'name' => (string) ($businessRow->name ?? $u->name ?? ''),
+                ] : [
+                    'legal_form' => 'ooo',
+                    'is_organization' => true,
+                    'is_verified' => false,
+                    'verification_status' => 'draft',
+                    'unp' => null,
+                    'name' => (string) ($u->name ?? ''),
+                ];
+            }
+
+            return [
+                'id' => $u->id,
+                'name' => $u->name,
+                'email' => $u->email,
+                'avatar_path' => $u->avatar_path,
+                'avatar_url' => $u->avatar_url,
+                'role' => $u->role,
+                'is_admin' => $u->isAdmin(),
+                'is_hidden_from_search' => (bool) $u->is_hidden_from_search,
+                'plan' => $u->plan,
+                'effective_plan' => $u->effectivePlan(),
+                'plan_expires_at' => $u->plan_expires_at?->toISOString(),
+                'account_type' => $u->account_type ?? 'person',
+                'is_business' => $isBusiness,
+                'is_organization' => (bool) ($business['is_organization'] ?? false),
+                'business' => $business,
+                'is_online' => $u->last_seen_at && $u->last_seen_at->gte($threshold),
+                'last_seen_at' => $u->last_seen_at?->toISOString(),
+                'is_invisible' => (bool) $u->is_invisible,
+                'banned_at' => $u->banned_at?->toISOString(),
+                'banned_reason' => $u->banned_reason,
+                'created_at' => $u->created_at?->toISOString(),
+            ];
+        });
         return response()->json($users);
     }
 
@@ -149,22 +187,46 @@ class AdminUserController extends Controller
         if (! $request->user()->isAdmin()) {
             $users->where('is_admin', false)->where('role', '!=', 'admin');
         }
-        $users = $users->select('id', 'name', 'email', 'avatar_path', 'role', 'is_admin', 'is_hidden_from_search', 'plan', 'plan_expires_at')
-            ->limit(20)->get()
-            ->map(fn($u) => [
-                'id' => $u->id,
-                'name' => $u->name,
-                'email' => $u->email,
-                'avatar_path' => $u->avatar_path,
-                'avatar_url' => $u->avatar_url,
-                'role' => $u->role,
-                'is_admin' => $u->isAdmin(),
-                'is_hidden_from_search' => (bool) $u->is_hidden_from_search,
-                'plan' => $u->plan,
-                'effective_plan' => $u->effectivePlan(),
-                'plan_expires_at' => $u->plan_expires_at?->toISOString(),
-            ]);
-        return response()->json($users);
+        $rows = $users->select('id', 'name', 'email', 'avatar_path', 'role', 'is_admin', 'is_hidden_from_search', 'plan', 'plan_expires_at', 'account_type')
+            ->limit(20)->get();
+        $businessMap = [];
+        try {
+            $businessMap = \App\Models\Business::whereIn('user_id', $rows->pluck('id')->all() ?: [0])
+                ->orderByDesc('id')
+                ->get()
+                ->keyBy('user_id');
+        } catch (\Throwable) {
+            $businessMap = collect();
+        }
+        $mapped = $rows
+            ->map(function($u) use ($businessMap) {
+                $isBusiness = ($u->account_type ?? 'person') === 'business';
+                $businessRow = $isBusiness ? ($businessMap[$u->id] ?? null) : null;
+
+                return [
+                    'id' => $u->id,
+                    'name' => $u->name,
+                    'email' => $u->email,
+                    'avatar_path' => $u->avatar_path,
+                    'avatar_url' => $u->avatar_url,
+                    'role' => $u->role,
+                    'is_admin' => $u->isAdmin(),
+                    'is_hidden_from_search' => (bool) $u->is_hidden_from_search,
+                    'plan' => $u->plan,
+                    'effective_plan' => $u->effectivePlan(),
+                    'plan_expires_at' => $u->plan_expires_at?->toISOString(),
+                    'account_type' => $u->account_type ?? 'person',
+                    'is_business' => $isBusiness,
+                    'is_organization' => $isBusiness && ($businessRow ? $businessRow->isOrganization() : true),
+                    'business' => $isBusiness ? [
+                        'legal_form' => (string) ($businessRow->legal_form ?? 'ooo'),
+                        'is_verified' => $businessRow ? $businessRow->isVerified() : false,
+                        'verification_status' => (string) ($businessRow->verification_status ?? 'draft'),
+                        'unp' => $businessRow?->unp,
+                    ] : null,
+                ];
+            });
+        return response()->json($mapped);
     }
 
     /**

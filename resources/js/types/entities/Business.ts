@@ -39,6 +39,12 @@ export interface BusinessProfile {
   is_active: boolean
   subscription_plan: string
   owner_profile?: string | null
+  owner_id?: number | null
+  owner_name?: string | null
+  owner_email?: string | null
+  is_organization?: boolean
+  pins_live?: number
+  services?: string | null
 }
 
 export interface BusinessStats {
@@ -61,7 +67,21 @@ export interface BusinessDashboard {
   stats: BusinessStats
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   recent_pins: Array<any>
+  recent_ads: BusinessAd[]
+  ads_quota: { used: number; limit: number; left: number }
   earn: BusinessEarnHint[]
+}
+
+/**
+ * Реклама проверенной компании: новость или акция.
+ */
+export interface BusinessAd {
+  id: number
+  business_id: number
+  title: string
+  body: string
+  created_at: string | null
+  updated_at: string | null
 }
 
 /**

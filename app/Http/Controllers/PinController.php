@@ -174,6 +174,11 @@ class PinController extends Controller
     public function store(Request $request)
     {
         $user = $request->user();
+
+        if ($user->isBusinessAccount()) {
+            $this->assertBusinessVerified($user);
+        }
+
         abort_unless($user->canCreatePin(), 429, 'Лимит free тарифа: максимум 3 живых пина. Истёкшие и удалённые освобождают место — дождись или удали лишний.');
 
         $data = $request->validate([
@@ -390,6 +395,29 @@ class PinController extends Controller
         $pin->load('user:id,name,avatar_path,level');
         try { broadcast(new PinUpdated($pin))->toOthers(); } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
         return response()->json($boost, 201);
+    }
+
+    /**
+     * Бизнес-аккаунт может ставить пины только после проверки по УНП.
+     *
+     * Пины бизнеса — витрина организации: видны всем пользователям карты
+     * и всем сотрудникам в кабинете (BusinessController::pins по user_id
+     * владельца). Без бейджа «Проверено» ставить их нельзя.
+     *
+     * @param \App\Models\User $user автор пина
+     * @return void
+     */
+    private function assertBusinessVerified($user): void
+    {
+        try {
+            $business = \App\Models\Business::where('user_id', $user->id)
+                ->orderByDesc('id')
+                ->first();
+        } catch (\Throwable) {
+            $business = null;
+        }
+
+        abort_if(! $business || ! $business->isVerified(), 403, 'Пины доступны после проверки компании по УНП. Отправьте реквизиты на проверку в кабинете — после одобрения модерацией сможете ставить пины.');
     }
 
     /**

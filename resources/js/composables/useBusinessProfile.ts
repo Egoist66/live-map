@@ -3,9 +3,11 @@ import { useForm } from 'vee-validate'
 import { useToast } from 'primevue/usetoast'
 import { businessSchema } from '@/validation/schemas/business.schema'
 import { useBusinessStore } from '@/stores/business'
+import { busOn } from '@/services/realtime-bus'
 import type { BusinessProfilePayload } from '@/types/entities/Business'
 
 let realtimeBound = false
+let busBound = false
 
 /**
  * Форма профиля бизнеса в кабинете (vee-validate + zod, РБ-поля).
@@ -89,31 +91,70 @@ export function useBusinessProfile() {
 
   /**
    * Отправить на проверку по УНП.
+   *
+   * 409 от бэка = заявка уже на проверке: показываем предупреждение,
+   * а не «успешно отправлено» (п.2 — защита от повторной отправки).
    */
   async function submitVerification(): Promise<void> {
+    if (store.profile?.verification_status === 'pending') {
+      toast.add({ severity: 'warn', summary: 'Уже на проверке', detail: 'Заявка уже отправлена — дождитесь решения модерации', life: 4500 })
+      return
+    }
     const ok = await store.submit()
     if (ok) {
       toast.add({ severity: 'success', summary: 'Отправлено', detail: 'Заявка на проверку принята', life: 3500 })
-    } else {
-      toast.add({ severity: 'warn', summary: 'Проверьте реквизиты', detail: store.error ?? 'Нужны УНП и юрадрес', life: 4500 })
+      return
     }
+    const detail = store.error ?? 'Нужны УНП и юрадрес'
+    const alreadyPending = /уже на проверке/i.test(detail)
+    toast.add({
+      severity: alreadyPending ? 'warn' : 'error',
+      summary: alreadyPending ? 'Уже на проверке' : 'Проверьте реквизиты',
+      detail,
+      life: 4500,
+    })
   }
 
   function handleVerified(event: { business?: Record<string, unknown> }): void {
     if (event?.business) {
       store.applyRealtime(event.business as unknown as Parameters<typeof store.applyRealtime>[0])
-      toast.add({ severity: 'success', summary: 'Компания проверена', detail: 'Бейдж «Проверено» включён', life: 5000 })
+      toast.add({ severity: 'success', summary: 'Компания проверена', detail: 'Бейдж «Проверено» включён — пины разблокированы', life: 5000 })
     } else {
       void store.refreshDashboard()
     }
   }
 
+  function handleRejected(event: { business?: Record<string, unknown> }): void {
+    if (event?.business) {
+      store.applyRealtime(event.business as unknown as Parameters<typeof store.applyRealtime>[0])
+      const notes = String((event.business as Record<string, unknown>).verification_notes ?? '').slice(0, 120)
+      toast.add({ severity: 'error', summary: 'Проверка отклонена', detail: notes || 'Исправьте реквизиты и отправьте снова', life: 6000 })
+    } else {
+      void store.refreshDashboard()
+    }
+  }
+
+  function handleStatus(event: { business?: Record<string, unknown> }): void {
+    if (event?.business) {
+      store.applyRealtime(event.business as unknown as Parameters<typeof store.applyRealtime>[0])
+    }
+  }
+
   /**
    * Живое обновление верификации (realtime bus + websocket).
+   *
+   * Socket: private `user.{uid}` события business.verified/rejected.
+   * Polling: шина business:status из useRealtimePoller (sync-бизнес).
    * @param uid id владельца
    */
   function bindRealtime(uid: number): void {
     userId.value = uid
+    if (!busBound) {
+      busBound = true
+      busOn('user:business.verified', handleVerified)
+      busOn('user:business.rejected', handleRejected)
+      busOn('business:status', handleStatus)
+    }
     if (realtimeBound) {
       return
     }
@@ -126,6 +167,7 @@ export function useBusinessProfile() {
       }
       try {
         echo.private(`user.${uid}`).listen('.business.verified', handleVerified as (e: never) => void)
+        echo.private(`user.${uid}`).listen('.business.rejected', handleRejected as (e: never) => void)
       } catch {}
     }
     tryBind()

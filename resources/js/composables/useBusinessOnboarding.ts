@@ -208,6 +208,11 @@ export function useBusinessOnboarding() {
   })
 
   const finish = handleSubmit(async (vals) => {
+    if (store.profile?.verification_status === 'pending') {
+      toast.add({ severity: 'warn', summary: 'Уже на проверке', detail: 'Заявка уже отправлена — дождитесь решения модерации', life: 4500 })
+      router.visit('/cabinet')
+      return
+    }
     const payload = { ...(vals as Record<string, unknown>), working_hours: cleanHours() }
     const saved = await store.save(payload as unknown as BusinessProfilePayload)
     if (!saved) {
@@ -217,6 +222,10 @@ export function useBusinessOnboarding() {
     const sent = await store.submit()
     if (sent) {
       toast.add({ severity: 'success', summary: 'Готово', detail: 'Компания отправлена на проверку', life: 3500 })
+    } else {
+      const detail = store.error ?? 'Проверьте поля'
+      const alreadyPending = /уже на проверке/i.test(detail)
+      toast.add({ severity: alreadyPending ? 'warn' : 'error', summary: alreadyPending ? 'Уже на проверке' : 'Не отправлено', detail, life: 4500 })
     }
     router.visit('/cabinet')
   })

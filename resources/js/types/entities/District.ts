@@ -56,6 +56,9 @@ export interface DistrictDetails extends District {
 
 /**
  * Житель или заявка района.
+ *
+ * message — цель вступления из заявки (видит только владелец
+ * в табе «Заявки»); org-флаги — для бейджа «организация».
  */
 export interface DistrictResident {
   id: number
@@ -64,6 +67,17 @@ export interface DistrictResident {
   avatar_url: string | null
   since?: string | null
   is_owner?: boolean
+  message?: string | null
+  account_type?: string | null
+  is_business?: boolean
+  is_organization?: boolean
+  business?: {
+    legal_form: string
+    is_organization: boolean
+    is_verified: boolean
+    verification_status: string
+    name: string
+  } | null
 }
 
 /**

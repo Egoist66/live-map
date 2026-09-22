@@ -12,6 +12,7 @@ import DistrictMemberRow from '@/Components/Features/Districts/DistrictMemberRow
 import DistrictPinRow from '@/Components/Features/Districts/DistrictPinRow.vue'
 import DistrictInterestPicker from '@/Components/Features/Districts/DistrictInterestPicker.vue'
 import DistrictInviteDialog from '@/Components/Features/Map/DistrictInviteDialog.vue'
+import DistrictJoinRequestDialog from '@/Components/Features/Districts/DistrictJoinRequestDialog.vue'
 import DistrictNewsCard from '@/Components/Features/Districts/DistrictNewsCard.vue'
 import DistrictNewsComposer from '@/Components/Features/Districts/DistrictNewsComposer.vue'
 import { useDistrictShowPage } from '@/composables/useDistrictShowPage'
@@ -258,8 +259,11 @@ onMounted(async () => {
                       :avatar-url="person.avatar_url"
                       badge="pending"
                       action="approve"
+                      :message="person.message ?? null"
+                      :is-organization="person.is_organization ?? false"
                       @approve="page.approveMember"
                       @reject="page.rejectMember"
+                      @contact="page.writeToMember"
                     />
                   </div>
                   <div v-else class="rounded-2xl border border-dashed border-stone-300 p-3 text-center text-xs text-stone-400 dark:border-zinc-700 dark:text-zinc-500">
@@ -306,6 +310,16 @@ onMounted(async () => {
       @update:open="page.invite.setOpen"
       @update:query="page.invite.search"
       @invite="page.sendInvite"
+    />
+    <DistrictJoinRequestDialog
+      :open="page.joinDialogOpen.value"
+      :district-name="page.district.value?.name ?? ''"
+      :message="page.joinMessage.value"
+      :sending="page.joinSending.value"
+      :is-business="page.isBusiness.value"
+      @update:open="(v: boolean) => (page.joinDialogOpen.value = v)"
+      @update:message="(v: string) => (page.joinMessage.value = v)"
+      @submit="page.confirmJoinRequest()"
     />
     <input
       :ref="page.cover.setFileInput"

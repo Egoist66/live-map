@@ -1,17 +1,24 @@
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { router } from '@inertiajs/vue3'
 import { useToast } from 'primevue/usetoast'
 import { chatApi } from '@/services/chat.api'
+import { businessApi } from '@/services/business.api'
+import type { BusinessAd } from '@/types/entities/Business'
 
 /**
- * Публичная страница компании: написать владельцу в чат.
+ * Публичная страница компании: написать владельцу в чат + реклама.
  *
  * @param ownerId id владельца компании
- * @returns флаг отправки и действие чата
- * @example const { writing, writeToCompany } = useBusinessPublicPage(owner.id)
+ * @param businessId id компании для витрины рекламы
+ * @param initialAds SSR-список рекламы (без мигания)
+ * @returns флаг отправки, действие чата и рекламу витрины
+ * @example const { writing, writeToCompany, ads } = useBusinessPublicPage(owner.id, business.id, initialAds)
  */
-export function useBusinessPublicPage(ownerId: number) {
+export function useBusinessPublicPage(ownerId: number, businessId = 0, initialAds: BusinessAd[] = []) {
   const writing = ref(false)
+  /** Реклама компании для витрины (видят все). */
+  const ads = ref<BusinessAd[]>(Array.isArray(initialAds) ? initialAds : [])
+  const adsLoading = ref(false)
 
   const toast = (() => {
     try {
@@ -41,5 +48,23 @@ export function useBusinessPublicPage(ownerId: number) {
     }
   }
 
-  return { writing, writeToCompany }
+  /**
+   * Освежить витрину рекламы (после SSR — свежие сверху).
+   */
+  async function loadAds(): Promise<void> {
+    if (!(businessId > 0)) return
+    adsLoading.value = true
+    try {
+      ads.value = await businessApi.listAds(businessId)
+    } catch {
+    } finally {
+      adsLoading.value = false
+    }
+  }
+
+  onMounted(() => {
+    void loadAds()
+  })
+
+  return { writing, writeToCompany, ads, adsLoading, loadAds }
 }

@@ -29,20 +29,19 @@ class DistrictInviteAcceptedNotification extends UserNotification
                 'name' => $this->district->name,
                 'interest' => $this->district->interest,
                 'conversation_id' => $this->district->conversation_id,
-                'accepter' => [
-                    'id' => $this->accepter->id,
-                    'name' => $this->accepter->name,
-                    'avatar_path' => $this->accepter->avatar_path,
-                    'avatar_url' => $this->accepter->avatar_url,
-                ],
+                'accepter' => static::actorShape($this->accepter),
             ],
         ];
     }
 
     public function pushPayload(): ?array
     {
+        $subject = static::subjectWord($this->accepter);
+        $name = $this->accepter->name ?: 'Новый житель';
+        $verb = $subject === 'Организация' ? 'приняла приглашение' : 'принял приглашение';
+
         return [
-            'title' => '✅ '.($this->accepter->name ?: 'Новый житель').' принял приглашение',
+            'title' => '✅ '.$name.' '.$verb,
             'body' => 'Район «'.$this->district->name.'»: открыт доступ к пинам и чату',
             'url' => '/districts/'.$this->district->id,
             'tag' => 'district-invite-accepted-'.$this->district->id,

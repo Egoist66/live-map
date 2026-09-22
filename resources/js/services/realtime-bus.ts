@@ -57,7 +57,12 @@ export type RealtimeEventMap = {
   'user:report.created': any
   'user:impersonation.started': any
   'user:business.verified': { business: any }
+  'user:business.rejected': { business: any }
   'user:business.verification.submitted': { business: any }
+  /** Реактивный статус проверки бизнеса владельца (polling + socket) */
+  'business:status': { business: any }
+  /** Очередь заявок для staff: счётчик + свежие pending (polling) */
+  'business:pending': { count: number; items: any[] }
   /** Единое inbox-уведомление (таблица notifications): тосты и колокольчик */
   'user:notification.created': { notification: any }
   /** Входящий звонок (сокет VideoIncoming / поллинг freshIncoming) */

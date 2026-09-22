@@ -81,6 +81,11 @@ class Business extends Model
 
     public const VERIFICATION_STATUSES = ['draft', 'pending', 'verified', 'rejected'];
 
+    /**
+     * Формы собственности, которые считаются организацией (ООО, ИП и др. юрлица).
+     */
+    public const ORG_LEGAL_FORMS = ['ooo', 'ip', 'odo', 'zao'];
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -125,6 +130,16 @@ class Business extends Model
         return $this->verification_status === 'pending';
     }
 
+    /**
+     * Организация ли это (ООО / ИП / ОДО / ЗАО).
+     *
+     * @return bool true для юрлиц и ИП
+     */
+    public function isOrganization(): bool
+    {
+        return in_array($this->legal_form, self::ORG_LEGAL_FORMS, true);
+    }
+
     public function getLogoUrlAttribute(): ?string
     {
         return \App\Services\MediaDisk::url($this->logo_path);
@@ -144,8 +159,11 @@ class Business extends Model
     {
         return [
             'id' => $this->id,
+            'user_id' => $this->user_id,
             'name' => $this->name,
             'category' => $this->category,
+            'legal_form' => $this->legal_form,
+            'is_organization' => $this->isOrganization(),
             'address' => $this->address,
             'lat' => $this->lat !== null ? (float) $this->lat : null,
             'lng' => $this->lng !== null ? (float) $this->lng : null,
@@ -155,6 +173,7 @@ class Business extends Model
             'website' => $this->website,
             'working_hours' => $this->working_hours,
             'is_verified' => $this->isVerified(),
+            'verification_status' => $this->verification_status,
             'logo_url' => $this->logo_url,
             'cover_url' => $this->cover_url,
         ];
@@ -169,8 +188,9 @@ class Business extends Model
     {
         $public = $this->toPublicArray();
         $public['owner_profile'] = $this->user?->profileIdentifier();
-
-        $public['legal_form'] = $this->legal_form;
+        $public['owner_id'] = $this->user_id;
+        $public['owner_name'] = $this->user?->name;
+        $public['owner_email'] = $this->user?->email;
         $public['unp'] = $this->unp;
         $public['reg_number'] = $this->reg_number;
         $public['legal_address'] = $this->legal_address;

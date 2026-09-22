@@ -372,6 +372,46 @@ class User extends Authenticatable
     }
 
     /**
+     * Краткая сводка организации для диалогов/админки.
+     *
+     * Только для account_type=business с профилем ООО/ИП и др:
+     * возвращает legal_form + is_organization + статус проверки.
+     * Для персон — null, фронт скрывает бейдж.
+     *
+     * @return array{legal_form:string,is_organization:bool,is_verified:bool,verification_status:string,name:string}|null
+     */
+    public function businessBrief(): ?array
+    {
+        if (! $this->isBusinessAccount()) {
+            return null;
+        }
+
+        try {
+            $business = $this->activeBusiness();
+        } catch (\Throwable) {
+            $business = null;
+        }
+
+        if (! $business) {
+            return [
+                'legal_form' => 'ooo',
+                'is_organization' => true,
+                'is_verified' => false,
+                'verification_status' => 'draft',
+                'name' => (string) ($this->name ?? ''),
+            ];
+        }
+
+        return [
+            'legal_form' => (string) ($business->legal_form ?? 'ooo'),
+            'is_organization' => $business->isOrganization(),
+            'is_verified' => $business->isVerified(),
+            'verification_status' => (string) ($business->verification_status ?? 'draft'),
+            'name' => (string) ($business->name ?? $this->name ?? ''),
+        ];
+    }
+
+    /**
      * Активный бизнес-профиль владельца (первый активный).
      *
      * @return \App\Models\Business|null

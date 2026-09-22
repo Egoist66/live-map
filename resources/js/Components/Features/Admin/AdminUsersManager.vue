@@ -12,6 +12,7 @@ import Paginator from 'primevue/paginator'
 import ProgressSpinner from 'primevue/progressspinner'
 import { avatarSrcFor } from '@/composables/useAvatar'
 import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
+import OrgBadge from '@/Components/Features/Chat/OrgBadge.vue'
 
 const { selectPt } = useDropdownMenuStyle()
 
@@ -96,8 +97,8 @@ function planCaption(u: any): string {
               <span v-if="u.is_online" class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white dark:border-zinc-900" />
             </div>
             <div class="min-w-0 flex-1">
-              <div class="text-sm font-semibold truncate dark:text-white">{{ u.name }}</div>
-              <div class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">{{ u.email }} · пинов {{ u.pins_count ?? 0 }}</div>
+              <div class="text-sm font-semibold truncate dark:text-white">{{ u.name }} <OrgBadge :is-organization="u.is_organization" /></div>
+              <div class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">{{ u.email }} · пинов {{ u.pins_count ?? 0 }}<span v-if="u.is_business"> · {{ u.business?.legal_form === 'ip' ? 'ИП' : u.business?.legal_form === 'ooo' ? 'ООО' : u.business?.legal_form ?? 'бизнес' }}{{ u.business?.unp ? ` · УНП ${u.business.unp}` : '' }} · {{ u.business?.verification_status === 'verified' ? 'проверен' : u.business?.verification_status === 'pending' ? 'на проверке' : u.business?.verification_status === 'rejected' ? 'отклонён' : 'не проверен' }}</span></div>
             </div>
             <Tag v-if="u.is_online" value="онлайн" severity="success" class="!text-[9px]" />
             <Tag v-else value="офлайн" severity="secondary" class="!text-[9px]" />

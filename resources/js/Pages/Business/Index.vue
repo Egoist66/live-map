@@ -5,9 +5,13 @@ import BusinessLayout from '@/Layouts/BusinessLayout.vue'
 import BusinessStatCard from '@/Components/Features/Business/BusinessStatCard.vue'
 import BusinessVerificationBadge from '@/Components/Features/Business/BusinessVerificationBadge.vue'
 import { useBusinessDashboard } from '@/composables/useBusinessDashboard'
+import { useBusinessPinGate } from '@/composables/useBusinessPinGate'
+import { useBusinessAds } from '@/composables/useBusinessAds'
 import { useSeo } from '@/composables/useSeo'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
+import InputText from 'primevue/inputtext'
+import Textarea from 'primevue/textarea'
 import Message from 'primevue/message'
 import Skeleton from 'primevue/skeleton'
 import type { BusinessDashboard } from '@/types/entities/Business'
@@ -21,6 +25,8 @@ const props = defineProps<{ initialDashboard?: BusinessDashboard | null }>()
 useSeo({ title: 'Кабинет бизнеса — UPin', description: 'Просмотры, пины и заработок компании на карте.', noindex: true })
 
 const dash = useBusinessDashboard()
+const gate = useBusinessPinGate()
+const ads = useBusinessAds()
 
 if (props.initialDashboard && !dash.store.dashboard) {
   dash.store.dashboard = props.initialDashboard
@@ -76,7 +82,11 @@ if (props.initialDashboard && !dash.store.dashboard) {
         </div>
 
         <div class="mt-5 flex flex-col sm:flex-row gap-2">
-          <Link href="/map" class="flex-1"><Button label="Создать пин на карте" icon="pi pi-map-marker" class="w-full !bg-white !text-indigo-950 !border-0 !rounded-full !font-bold hover:!bg-indigo-50" /></Link>
+          <Link v-if="gate.canCreatePin.value" href="/map" class="flex-1"><Button label="Создать пин на карте" icon="pi pi-map-marker" class="w-full !bg-white !text-indigo-950 !border-0 !rounded-full !font-bold hover:!bg-indigo-50" /></Link>
+          <div v-else class="flex-1">
+            <Button label="Создать пин на карте" icon="pi pi-lock" disabled class="w-full !bg-white/40 !text-indigo-950/60 !border-0 !rounded-full !font-bold" :title="gate.gateHint.value ?? ''" />
+            <div class="mt-1.5 text-[12px] text-white/70 flex items-center gap-1.5"><i class="pi pi-info-circle text-[11px]" />{{ gate.gateHint.value }}</div>
+          </div>
           <Link href="/cabinet/onboarding" class="flex-1"><Button label="Реквизиты компании" icon="pi pi-id-card" outlined class="w-full !border-white/30 !text-white !rounded-full !font-semibold hover:!bg-white/10" /></Link>
         </div>
       </div>
@@ -86,8 +96,12 @@ if (props.initialDashboard && !dash.store.dashboard) {
       Проверка отклонена: {{ dash.store.profile?.verification_notes ?? 'исправьте реквизиты' }}. Обновите данные и отправьте снова.
     </Message>
 
-    <Message v-if="dash.needsVerification.value && dash.store.profile?.verification_status !== 'rejected'" severity="warn" class="w-full">
-      Пройдите проверку по УНП — откроются бейдж «Проверено», бессрочные пины и пуш-рассылка.
+    <Message v-if="dash.store.profile?.verification_status === 'pending'" severity="info" class="w-full">
+      Заявка уже на проверке — дождитесь решения модерации. Статус обновится автоматически, без перезагрузки.
+    </Message>
+
+    <Message v-if="dash.needsVerification.value && dash.store.profile?.verification_status !== 'rejected' && dash.store.profile?.verification_status !== 'pending'" severity="warn" class="w-full">
+      Пройдите проверку по УНП — откроются бейдж «Проверено», бессрочные пины и пуш-рассылка. Пины компании видят все сотрудники организации.
       <Link href="/cabinet/onboarding" class="font-bold underline ml-1">Заполнить реквизиты →</Link>
     </Message>
 
@@ -135,8 +149,9 @@ if (props.initialDashboard && !dash.store.dashboard) {
         <template #content>
           <div v-if="!dash.recentPins.value.length" class="rounded-2xl border-2 border-dashed border-stone-200 dark:border-zinc-700 p-4 text-center">
             <div class="text-sm font-bold dark:text-white">Пинов пока нет</div>
-            <div class="text-[13px] text-stone-500 dark:text-zinc-400 mt-1">Первый пин приводит первых клиентов с карты.</div>
-            <Link href="/map" class="inline-block mt-3"><Button label="Создать первый пин" icon="pi pi-map-marker" size="small" rounded class="!bg-gradient-to-r !from-indigo-500 !to-violet-600 !border-0 !text-white" /></Link>
+            <div class="text-[13px] text-stone-500 dark:text-zinc-400 mt-1">Первый пин приводит первых клиентов с карты. Пины компании видят все сотрудники организации.</div>
+            <Link v-if="gate.canCreatePin.value" href="/map" class="inline-block mt-3"><Button label="Создать первый пин" icon="pi pi-map-marker" size="small" rounded class="!bg-gradient-to-r !from-indigo-500 !to-violet-600 !border-0 !text-white" /></Link>
+            <div v-else class="mt-3 text-[12px] text-stone-500 dark:text-zinc-400 flex items-center justify-center gap-1.5"><i class="pi pi-lock text-[11px]" />{{ gate.gateHint.value }}</div>
           </div>
           <div v-else class="space-y-2">
             <Link
@@ -165,5 +180,45 @@ if (props.initialDashboard && !dash.store.dashboard) {
         </template>
       </Card>
     </div>
+
+    <Card class="!rounded-[24px] !border-stone-200 dark:!border-zinc-800 !bg-white dark:!bg-zinc-900 !shadow-sm">
+      <template #title>
+        <span class="flex items-center justify-between gap-2">
+          <span class="text-[16px] font-black dark:text-white">Реклама компании</span>
+          <span class="text-[11px] font-bold text-stone-400 dark:text-zinc-500">{{ ads.quotaLabel.value }}</span>
+        </span>
+      </template>
+      <template #content>
+        <div v-if="!ads.isVerified.value" class="rounded-2xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/60 p-3.5 text-[13px] text-stone-500 dark:text-zinc-400 flex items-center gap-2">
+          <i class="pi pi-lock text-[13px]" />Реклама откроется после проверки компании — максимум 3 новости в неделю, без спама.
+        </div>
+        <div v-else class="space-y-2.5">
+          <div class="rounded-2xl border border-stone-200 dark:border-zinc-700 p-3.5 space-y-2">
+            <InputText v-model="ads.title.value" maxlength="100" placeholder="Заголовок новости или акции" fluid class="!rounded-2xl" />
+            <Textarea v-model="ads.body.value" rows="2" maxlength="1000" auto-resize fluid placeholder="Текст — что, где и до какого числа…" class="!rounded-2xl !text-sm" />
+            <div class="flex items-center gap-2">
+              <span class="text-[12px] text-stone-500 dark:text-zinc-400 flex-1">{{ ads.quotaLabel.value }}</span>
+              <Button label="Опубликовать" icon="pi pi-megaphone" size="small" rounded :loading="ads.saving.value" :disabled="!ads.canSubmit.value" class="!bg-gradient-to-r !from-indigo-500 !to-violet-600 !border-0 !text-white" @click="ads.publish()" />
+            </div>
+          </div>
+          <div v-if="ads.loading.value" class="space-y-2">
+            <Skeleton v-for="i in 2" :key="i" height="64px" class="!rounded-2xl" />
+          </div>
+          <div v-else-if="!ads.ads.value.length" class="rounded-2xl border-2 border-dashed border-stone-200 dark:border-zinc-700 p-4 text-center">
+            <div class="text-sm font-bold dark:text-white">Пока тихо</div>
+            <div class="text-[13px] text-stone-500 dark:text-zinc-400 mt-1">Первая новость увидят все на витрине компании.</div>
+          </div>
+          <div v-else class="space-y-2">
+            <div v-for="ad in ads.ads.value" :key="ad.id" class="rounded-2xl border border-stone-200 dark:border-zinc-700 px-3.5 py-2.5">
+              <div class="flex items-center gap-2">
+                <div class="text-sm font-bold truncate dark:text-white flex-1">📢 {{ ad.title }}</div>
+                <Button icon="pi pi-trash" size="small" rounded outlined severity="danger" title="Удалить" aria-label="Удалить рекламу" class="!w-8 !h-8 !p-0 shrink-0" @click="ads.remove(ad.id)" />
+              </div>
+              <div class="text-[13px] text-stone-600 dark:text-zinc-300 mt-0.5 whitespace-pre-line break-words">{{ ad.body }}</div>
+            </div>
+          </div>
+        </div>
+      </template>
+    </Card>
   </div>
 </template>

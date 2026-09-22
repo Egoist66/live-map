@@ -32,6 +32,8 @@ let backoffUntil = 0
 let lastActivitySync = 0
 let modeListenerAttached = false
 let trackingAttached = false
+let lastBusinessStatus: string | null = null
+const seenBusinessPendingIds = new Set<number>()
 const emittedKeys = new Set<string>()
 const seenMessageIds = new Set<number>()
 const seenVideoSignalIds = new Set<number>()
@@ -312,6 +314,33 @@ export function useRealtimePoller() {
       if (!n?.id || alreadyEmitted(`notif:${n.id}`)) return
       busEmit('user:notification.created', { notification: n })
     })
+    const business = (data as any)?.business ?? null
+    if (business?.verification_status) {
+      const status = String(business.verification_status)
+      if (lastBusinessStatus === null) {
+        lastBusinessStatus = status
+      } else if (status !== lastBusinessStatus) {
+        lastBusinessStatus = status
+        busEmit('business:status', { business })
+        if (status === 'verified') busEmit('user:business.verified', { business })
+        else if (status === 'rejected') busEmit('user:business.rejected', { business })
+      }
+    }
+    const pending = (data as any)?.business_pending ?? null
+    if (pending && typeof pending.count === 'number') {
+      const items = Array.isArray(pending.items) ? pending.items : []
+      for (const item of items) {
+        const id = Number(item?.id ?? 0)
+        if (!id || seenBusinessPendingIds.has(id)) continue
+        seenBusinessPendingIds.add(id)
+        if (seenBusinessPendingIds.size > 200) {
+          const first = seenBusinessPendingIds.values().next().value as number | undefined
+          if (first !== undefined) seenBusinessPendingIds.delete(first)
+        }
+        busEmit('user:business.verification.submitted', { business: item })
+      }
+      busEmit('business:pending', { count: Number(pending.count), items })
+    }
     const receipts = Array.isArray(data?.receipts) ? data.receipts : []
     if (receipts.length) {
       busEmit('chat:receipts', receipts)
@@ -420,6 +449,8 @@ export function useRealtimePoller() {
     lastMsgId = 0
     lastVideoSignalId = 0
     lastTime = 0
+    lastBusinessStatus = null
+    seenBusinessPendingIds.clear()
     emittedKeys.clear()
     seenMessageIds.clear()
     seenVideoSignalIds.clear()

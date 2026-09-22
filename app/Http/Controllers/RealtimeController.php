@@ -104,6 +104,8 @@ class RealtimeController extends Controller
             'video_signals' => app(\App\Services\VideoService::class)->freshSignals($user->id, $window, (int) ($data['video_after_id'] ?? 0)),
             'thread_updates' => $this->freshThreads($data['watch_threads'] ?? null),
             'notifications' => $this->freshNotifications($user->id, $window),
+            'business' => $this->freshBusiness($user, $window),
+            'business_pending' => $this->freshBusinessPending($user, $window),
             'wallpapers' => $this->freshWallpapers($convIds, $window),
             'peer' => $openId ? $this->peerState($user, $openId) : null,
             'map' => $this->mapChanges($user->id, $data, $window),
@@ -504,6 +506,81 @@ class RealtimeController extends Controller
     }
 
     /**
+     * Свежий статус проверки бизнеса владельца.
+     *
+     * Кабинет обновляется реактивно без перезагрузки: поллер сравнивает
+     * verification_status и разносит user:business.* в шину, тосты
+     * дополнительно дублируются inbox-уведомлениями (notifications).
+     *
+     * @param \App\Models\User $user смотрящий
+     * @param Carbon|null $since момент прошлого тика
+     * @return array|null кабинетный массив бизнеса
+     */
+    private function freshBusiness($user, ?Carbon $since): ?array
+    {
+        if (($user->account_type ?? 'person') !== 'business') {
+            return null;
+        }
+
+        try {
+            $business = \App\Models\Business::where('user_id', $user->id)
+                ->orderByDesc('id')
+                ->first();
+
+            if (! $business) {
+                return null;
+            }
+
+            return $business->toCabinetArray();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Свежие заявки бизнеса для staff (админы + модераторы).
+     *
+     * Очередь модерации обновляется реактивно: новые pending-заявки
+     * и смена счётчика прилетают в тике polling и сокетом
+     * `business.verification.submitted`.
+     *
+     * @param \App\Models\User $user смотрящий
+     * @param Carbon|null $since момент прошлого тика
+     * @return array{count:int,items:array}|null
+     */
+    private function freshBusinessPending($user, ?Carbon $since): ?array
+    {
+        try {
+            if (! $user->isModerator()) {
+                return null;
+            }
+        } catch (\Throwable) {
+            return null;
+        }
+
+        try {
+            $count = \App\Models\Business::where('verification_status', 'pending')->count();
+
+            $items = [];
+
+            if ($since) {
+                $items = \App\Models\Business::where('verification_status', 'pending')
+                    ->where('updated_at', '>', $since)
+                    ->with('user:id,name,email')
+                    ->orderByDesc('updated_at')
+                    ->limit(10)
+                    ->get()
+                    ->map(fn ($business) => $business->toCabinetArray())
+                    ->all();
+            }
+
+            return ['count' => (int) $count, 'items' => $items];
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
      * Свежее состояние собеседника открытого диалога («в сети»).
      *
      * @param \App\Models\User $user смотрящий
@@ -866,6 +943,15 @@ class RealtimeController extends Controller
 
             if ($isAdmin) {
                 $badges['reports_pending'] = Report::where('status', 'pending')->count();
+            }
+
+            try {
+                $staffUser = \App\Models\User::find($userId);
+
+                if ($staffUser && $staffUser->isModerator()) {
+                    $badges['business_pending'] = \App\Models\Business::where('verification_status', 'pending')->count();
+                }
+            } catch (\Throwable) {
             }
 
             return $badges;

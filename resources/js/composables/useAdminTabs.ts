@@ -3,7 +3,7 @@ import { ref, watch } from 'vue'
 /**
  * ID главной вкладки админ-панели.
  */
-export type AdminTabId = 'stats' | 'manage' | 'security' | 'admin' | 'refs' | 'seo'
+export type AdminTabId = 'stats' | 'manage' | 'security' | 'admin' | 'business' | 'refs' | 'seo'
 
 /**
  * ID подвкладки SEO-центра (активна только при `tab === 'seo'`).
@@ -18,6 +18,7 @@ export const ADMIN_TABS: readonly AdminTabId[] = [
   'manage',
   'security',
   'admin',
+  'business',
   'refs',
   'seo',
 ]

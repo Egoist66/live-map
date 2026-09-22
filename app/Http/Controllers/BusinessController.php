@@ -176,6 +176,73 @@ class BusinessController extends Controller
     }
 
     /**
+     * Очередь заявок для модерации (админы + модераторы).
+     *
+     * Фильтр status: pending|verified|rejected|draft|all (по умолчанию pending).
+     * Поиск по названию, УНП, email владельца. Пагинация для таба «Бизнес».
+     *
+     * @param Request $request запрос с status|q|per_page
+     * @return JsonResponse очередь заявок
+     */
+    public function adminIndex(Request $request): JsonResponse
+    {
+        abort_unless($request->user()->isModerator(), 403, 'Очередь бизнеса — только для модерации');
+
+        $data = $request->validate([
+            'status' => 'nullable|string|in:pending,verified,rejected,draft,all',
+            'q' => 'nullable|string|max:100',
+            'per_page' => 'nullable|integer|min:5|max:100',
+        ]);
+
+        $status = $data['status'] ?? 'pending';
+        $queryText = trim($data['q'] ?? '');
+        $perPage = (int) ($data['per_page'] ?? 20);
+
+        $query = Business::query()
+            ->with('user:id,name,email,avatar_path,account_type,last_seen_at')
+            ->orderByDesc('updated_at');
+
+        if ($status !== 'all') {
+            $query->where('verification_status', $status);
+        }
+
+        if (mb_strlen($queryText) >= 1) {
+            $query->where(function ($where) use ($queryText) {
+                $where->where('name', 'like', "%{$queryText}%")
+                    ->orWhere('unp', 'like', "%{$queryText}%")
+                    ->orWhere('legal_address', 'like', "%{$queryText}%")
+                    ->orWhereHas('user', function ($userQuery) use ($queryText) {
+                        $userQuery->where('name', 'like', "%{$queryText}%")
+                            ->orWhere('email', 'like', "%{$queryText}%");
+                    });
+            });
+        }
+
+        $page = $query->paginate($perPage);
+
+        $items = $page->getCollection()->map(function (Business $business) {
+            $cabinet = $business->toCabinetArray();
+            $cabinet['pins_live'] = Pin::where('user_id', $business->user_id)
+                ->whereIn('status', ['active', 'scheduled'])
+                ->where(function ($where) {
+                    $where->whereNull('expires_at')->orWhere('expires_at', '>', now());
+                })
+                ->count();
+
+            return $cabinet;
+        })->values();
+
+        return response()->json([
+            'data' => $items,
+            'current_page' => $page->currentPage(),
+            'last_page' => $page->lastPage(),
+            'per_page' => $page->perPage(),
+            'total' => $page->total(),
+            'pending_count' => Business::where('verification_status', 'pending')->count(),
+        ]);
+    }
+
+    /**
      * Загрузить логотип компании (владелец или админ).
      */
     public function logo(Request $request, Business $business): BusinessResource

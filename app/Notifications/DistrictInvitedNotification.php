@@ -31,12 +31,7 @@ class DistrictInvitedNotification extends UserNotification
                 'name' => $this->district->name,
                 'interest' => $this->district->interest,
                 'conversation_id' => $this->district->conversation_id,
-                'inviter' => [
-                    'id' => $this->inviter->id,
-                    'name' => $this->inviter->name,
-                    'avatar_path' => $this->inviter->avatar_path,
-                    'avatar_url' => $this->inviter->avatar_url,
-                ],
+                'inviter' => static::actorShape($this->inviter),
             ],
         ];
     }

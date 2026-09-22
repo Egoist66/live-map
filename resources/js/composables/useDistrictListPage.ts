@@ -2,6 +2,7 @@ import { computed, onMounted, ref } from 'vue'
 import { router } from '@inertiajs/vue3'
 import { useToast } from 'primevue/usetoast'
 import { districtsApi } from '@/services/districts.api'
+import { useDistrictJoinRequest } from '@/composables/useDistrictJoinRequest'
 import type { District } from '@/types/entities/District'
 
 /**
@@ -27,6 +28,8 @@ export function useDistrictListPage(canCreate: boolean, limitText: string) {
   const query = ref('')
   /** Id района с летящей заявкой (лоадер кнопки). */
   const joiningId = ref<number | null>(null)
+  /** Заявка в район: организациям — модалка цели вступления. */
+  const joinRequest = useDistrictJoinRequest()
 
   const toast = (() => {
     try {
@@ -144,23 +147,26 @@ export function useDistrictListPage(canCreate: boolean, limitText: string) {
   /**
    * Бросить заявку на вступление прямо из списка, не открывая карточку.
    *
+   * Организации — через модалку цели вступления, персоны — в один клик
+   * (общая логика useDistrictJoinRequest).
+   *
    * @param id id района
+   * @param name название района для заголовка модалки
    * @example
-   * await list.joinDistrict(district.id)
+   * await list.joinDistrict(district.id, district.name)
    */
-  async function joinDistrict(id: number): Promise<void> {
-    if (joiningId.value !== null) {
+  async function joinDistrict(id: number, name = ''): Promise<void> {
+    if (joiningId.value !== null || joinRequest.sending.value) {
       return
     }
-    joiningId.value = id
+    if (!joinRequest.isBusiness.value) {
+      joiningId.value = id
+    }
     try {
-      const res = await districtsApi.join(id)
-      const role = (res?.role ?? 'pending') as District['role']
-      applyRole(id, role)
-      toast?.add({ severity: 'success', summary: 'Заявка отправлена', detail: 'Владелец решит, пускать ли вас', life: 3000 })
-      await loadMine()
-    } catch (error: unknown) {
-      fail(error, 'Не удалось отправить заявку')
+      await joinRequest.request(id, name, async () => {
+        applyRole(id, 'pending')
+        await loadMine()
+      })
     } finally {
       joiningId.value = null
     }
@@ -236,6 +242,7 @@ export function useDistrictListPage(canCreate: boolean, limitText: string) {
     goCreate,
     setQuery,
     joinDistrict,
+    joinRequest,
     acceptDistrictInvite,
     cancelJoinRequest,
   }

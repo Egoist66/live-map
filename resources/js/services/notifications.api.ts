@@ -48,6 +48,27 @@ export interface InboxText {
 }
 
 /**
+ * Слово-субъект для текстов уведомлений: организация или пользователь.
+ *
+ * Организации (ООО/ИП — is_organization в пейлоаде актора) именуются
+ * «Организация», все остальные — «Пользователь».
+ *
+ * @param actor актор из пейлоада (requester/accepter/reporter/actor)
+ * @returns Организация|Пользователь
+ * @example subjectWord(row.data.district?.requester) // 'Организация'
+ */
+export function subjectWord(actor: unknown): 'Организация' | 'Пользователь' {
+  try {
+    const person = actor as Record<string, unknown> | null
+    if (person && person.is_organization === true) return 'Организация'
+    if (person && String(person.account_type ?? '') === 'business' && !('is_organization' in (person as object))) {
+      return 'Организация'
+    }
+  } catch {}
+  return 'Пользователь'
+}
+
+/**
  * Текст и ссылка строки без activity (дружба, жалобы, безопасность, новости).
  * @param row строка inbox
  * @returns готовое представление для секции «Уведомления»
@@ -62,16 +83,24 @@ export function describeInboxRow(row: InboxNotification): InboxText {
   if (row.type === 'friend.accepted') {
     const a = data.friendship?.addressee ?? {}
     const name = a.name || 'Пользователь'
-    return { emoji: '✅', title: 'Заявка принята', body: `${name} принял заявку`, link: '/chat?tab=friends', avatar: a.avatar_url ?? null }
+    const verb = subjectWord(a) === 'Организация' ? 'приняла заявку' : 'принял заявку'
+    return { emoji: '✅', title: 'Заявка принята', body: `${name} ${verb}`, link: '/chat?tab=friends', avatar: a.avatar_url ?? null }
   }
   if (row.type === 'district.join_requested') {
     const d = (data as any).district ?? {}
     const name = d.requester?.name || 'Кто-то'
-    return { emoji: '🏘️', title: `Пользователь ${name} — заявка в район`, body: `Пользователь ${name} отправил заявку на вступление в район «${d.name || ''}»`, link: `/districts/${d.id || ''}`, avatar: d.requester?.avatar_url ?? null }
+    const subject = subjectWord(d.requester)
+    const purpose = String(d.request_message ?? d.requester?.request_message ?? '').trim()
+    const purposeSuffix = purpose !== '' ? ` · Цель: ${purpose.slice(0, 80)}` : ''
+    return { emoji: '🏘️', title: `${subject} ${name} — заявка в район`, body: `${subject} ${name} отправил заявку на вступление в район «${d.name || ''}»${purposeSuffix}`, link: `/districts/${d.id || ''}`, avatar: d.requester?.avatar_url ?? null }
   }
   if (row.type === 'district.request_approved') {
     const d = (data as any).district ?? {}
     return { emoji: '🎉', title: `Вы в районе «${d.name || ''}»`, body: 'Пины района и общий чат открыты', link: `/districts/${d.id || ''}`, avatar: null }
+  }
+  if (row.type === 'district.request_rejected') {
+    const d = (data as any).district ?? {}
+    return { emoji: '🚫', title: `Заявка в «${d.name || ''}» отклонена`, body: 'Владелец решил не пускать — можно написать ему в личку', link: `/districts/${d.id || ''}`, avatar: null }
   }
   if (row.type === 'district.invited') {
     const d = (data as any).district ?? {}
@@ -81,7 +110,8 @@ export function describeInboxRow(row: InboxNotification): InboxText {
   if (row.type === 'district.invite_accepted') {
     const d = (data as any).district ?? {}
     const name = d.accepter?.name || 'Новый житель'
-    return { emoji: '✅', title: `${name} принял приглашение`, body: `Район «${d.name || ''}» — пины и чат открыты`, link: `/districts/${d.id || ''}`, avatar: d.accepter?.avatar_url ?? null }
+    const verb = subjectWord(d.accepter) === 'Организация' ? 'приняла приглашение' : 'принял приглашение'
+    return { emoji: '✅', title: `${name} ${verb}`, body: `Район «${d.name || ''}» — пины и чат открыты`, link: `/districts/${d.id || ''}`, avatar: d.accepter?.avatar_url ?? null }
   }
   if (row.type === 'district.pin_created') {
     const d = (data as any).district ?? {}
@@ -108,7 +138,8 @@ export function describeInboxRow(row: InboxNotification): InboxText {
   if (row.type === 'report.created') {
     const r = data.report ?? {}
     const title = r.target_title || `${r.target_type ?? ''} #${r.target_id ?? ''}`
-    const body = (r.description ? `${r.description} — ` : '') + `от ${r.reporter?.name || 'пользователя'}`
+    const from = r.reporter?.name ? r.reporter.name : subjectWord(r.reporter) === 'Организация' ? 'организации' : 'пользователя'
+    const body = (r.description ? `${r.description} — ` : '') + `от ${from}`
     return { emoji: '🚩', title: `Жалоба: ${r.reason_label || r.reason || ''}`, body: `${title} · ${body}`.slice(0, 120), link: '/settings?tab=admin', avatar: r.reporter?.avatar_url ?? null }
   }
   if (row.type === 'security.impersonation') {
