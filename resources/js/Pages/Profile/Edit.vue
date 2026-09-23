@@ -15,11 +15,14 @@ import SettingsSecurityTab from '@/Components/Features/Settings/SettingsSecurity
 import SettingsProceduresTab from '@/Components/Features/Settings/SettingsProceduresTab.vue'
 import SettingsSupportTab from '@/Components/Features/Settings/SettingsSupportTab.vue'
 import SettingsAppTab from '@/Components/Features/Settings/SettingsAppTab.vue'
+import SettingsAboutSection from '@/Components/Features/Settings/SettingsAboutSection.vue'
 import SettingsAdminTab from '@/Components/Features/Settings/SettingsAdminTab.vue'
 import AdminImpersonateDialog from '@/Components/Features/Admin/AdminImpersonateDialog.vue'
 import AvatarPreview from '@/Components/Features/Media/AvatarPreview.vue'
 import Toast from 'primevue/toast'
+import { computed } from 'vue'
 import { planOf } from '@/composables/usePlanLimits'
+import { useAppModulesStore } from '@/stores/appModules'
 import Tabs from 'primevue/tabs'
 import TabList from 'primevue/tablist'
 import Tab from 'primevue/tab'
@@ -29,11 +32,14 @@ import TabPanel from 'primevue/tabpanel'
 const props = defineProps<{ mustVerifyEmail: boolean; status?: string | null; user: any; initialTab?: string | null }>()
 const s = useSettingsPage(props)
 const { setTheme } = useTheme()
+const modules = useAppModulesStore()
+const showPinsTab = computed(() => modules.isEnabled('upin'))
+const showQuestsTab = computed(() => modules.isEnabled('ulove') || modules.isEnabled('upin'))
 </script>
 <template>
   <Head title="Настройки" />
   <Toast />
-    <div class="page-scroll bg-surface dark:bg-[#090E1A] overflow-x-hidden">
+    <div class="page-scroll bg-surface dark:bg-[#0F121F] overflow-x-hidden">
       <div class="max-w-[1280px] mx-auto px-3 sm:px-6 py-4 sm:py-6 overflow-hidden">
         <div class="grid lg:grid-cols-[300px_1fr] gap-4 sm:gap-6 items-start content-start w-full lg:items-start">
           <SettingsSidebar :menu-model="s.menuModel.value" :plan="planOf(s.u.value)" :pins-today="s.u.value.pins_today_count || 0" :pins-limit="planOf(s.u.value) === 'free' ? '3' : '∞'" :zone-count="s.zoneCount.value" :proc-unread="s.proc.unread.value" @billing="s.active.value = 'billing'" />
@@ -50,9 +56,9 @@ const { setTheme } = useTheme()
               </TabList>
               <TabPanels class="!bg-transparent !p-0 !min-w-0 !max-w-full !overflow-hidden">
                 <TabPanel value="profile" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsProfileTab :must-verify-email="mustVerifyEmail" :status="status" :bio-empty="s.bioPreviewEmpty.value" :bio-text="s.bioPreviewText.value" /></TabPanel>
-                <TabPanel value="billing" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsBillingTab :user="s.u.value" :zone-count="s.zoneCount.value" @profile="s.active.value = 'profile'" /></TabPanel>
-                <TabPanel value="quests" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsQuestsTab @billing="s.active.value = 'billing'" /></TabPanel>
-                <TabPanel value="pins" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsMyPinsTab :pins="(s.myPins.value as any)" :loading="(s.loadingPins.value as any)" :deleting="false" :updating-id="(s.updatingId as any)?.value ?? null" :format-date="formatDate" :format-time="formatTime" @delete="s.deleteMyPin" @audience="(id: number, v: string) => (s.updateAudience as any)(id, v)" /></TabPanel>
+                <TabPanel value="billing" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsBillingTab :user="s.u.value" :zone-count="s.zoneCount.value" /></TabPanel>
+                <TabPanel v-if="showQuestsTab" value="quests" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsQuestsTab @billing="s.active.value = 'billing'" /></TabPanel>
+                <TabPanel v-if="showPinsTab" value="pins" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsMyPinsTab :pins="(s.myPins.value as any)" :loading="(s.loadingPins.value as any)" :deleting="false" :updating-id="(s.updatingId as any)?.value ?? null" :format-date="formatDate" :format-time="formatTime" @delete="s.deleteMyPin" @audience="(id: number, v: string) => (s.updateAudience as any)(id, v)" /></TabPanel>
                 <TabPanel value="archive" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsArchiveTab /></TabPanel>
                 <TabPanel value="privacy" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsPrivacyTab :user="s.u.value" :invisible="s.invisible" :hidden="s.hidden" :blur="s.blur" :photo-privacy="s.photoPrivacy" :flow-privacy="s.flowPrivacy" :home-radius="s.homeRadius" @profile="s.active.value = 'profile'" /></TabPanel>
                 <TabPanel value="appearance" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsAppearanceTab :theme="s.theme.value" @theme="setTheme" /></TabPanel>
@@ -60,6 +66,7 @@ const { setTheme } = useTheme()
                 <TabPanel v-if="(s.showProcedures as any).value" value="procedures" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsProceduresTab :proc="s.proc" /></TabPanel>
                 <TabPanel value="support" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsSupportTab :subject="s.support.supportSubject.value" @update:subject="(v:string)=>s.support.supportSubject.value=v" :body="s.support.supportBody.value" @update:body="(v:string)=>s.support.supportBody.value=v" :donate-sel="s.support.donateSel.value" @update:donate="s.support.setDonate" :rate="s.ex.usdRate.value" :rate-loading="s.ex.loading.value" @send="s.support.mailToSupport()" @donate="s.support.mailToDonate(s.ex)" @reload="s.ex.load" /></TabPanel>
                 <TabPanel value="app" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsAppTab /></TabPanel>
+                <TabPanel value="about" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsAboutSection /></TabPanel>
                 <TabPanel v-if="s.isAdmin.value" value="admin" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsAdminTab :admin="s.admin" :reports="s.reports" :imp="s.imp" /></TabPanel>
               </TabPanels>
             </Tabs>

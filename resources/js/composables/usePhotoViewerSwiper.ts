@@ -43,8 +43,48 @@ export function usePhotoViewerSwiper(gallery: GalleryLike, opts?: { onEscape?: (
     if (gallery.viewerOpen.value) syncToActive(0)
   }
 
+  /**
+   * Живой инстанс Swiper для зум-фолбэка (даблклик/даблтап вручную).
+   */
+  function zoomTarget(): any | null {
+    const live = liveSwipers()
+    if (live.length > 0) {
+      return live[0]
+    }
+    const all = allSwipers()
+    return all.length > 0 ? all[0] : null
+  }
+
+  /**
+   * Гасит зум перед сменой слайда: увеличенный кадр не должен
+   * переезжать на соседнее фото в зумированном виде.
+   */
+  function zoomOutAll(): void {
+    for (const s of allSwipers()) {
+      try {
+        s?.zoom?.out?.()
+      } catch { /* noop */ }
+    }
+  }
+
+  /**
+   * Ручной тоггл зума (даблклик / даблтап по фото).
+   * Страховка поверх встроенного `doubleTap` Swiper: если жест
+   * съел внешний скролл-контейнер, зум всё равно сработает.
+   */
+  function toggleZoom(): void {
+    const target = zoomTarget()
+    if (!target) {
+      return
+    }
+    try {
+      target?.zoom?.toggle?.()
+    } catch { /* noop */ }
+  }
+
   function onSlideChange(s: any) {
     if (syncing || !isVisible(s)) return
+    zoomOutAll()
     const list = gallery.photos.value || []
     const realIndex = typeof s?.realIndex === 'number' ? s.realIndex : s?.activeIndex
     const p = list[realIndex]
@@ -65,6 +105,7 @@ export function usePhotoViewerSwiper(gallery: GalleryLike, opts?: { onEscape?: (
    */
   function syncToActive(speed = 350) {
     const i = activeIndex()
+    zoomOutAll()
     for (const s of allSwipers()) {
       try {
         if (typeof s.update === 'function') s.update()
@@ -118,5 +159,5 @@ export function usePhotoViewerSwiper(gallery: GalleryLike, opts?: { onEscape?: (
     },
   )
 
-  return { desktopSwiper, mobileSwiper, ready, activeIndex, registerDesktop, registerMobile, onSlideChange, syncToActive }
+  return { desktopSwiper, mobileSwiper, ready, activeIndex, registerDesktop, registerMobile, onSlideChange, syncToActive, toggleZoom, zoomOutAll }
 }

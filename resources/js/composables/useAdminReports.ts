@@ -115,10 +115,22 @@ function goReports() {
   }
 }
 
+/**
+ * Забирает ToastService, пока мы в setup-контексте.
+ *
+ * `init()` едет в idle-колбэке вне setup: тамошний `useToast()`
+ * лишь варнит в консоль (`inject() can only be used inside setup()`)
+ * и возвращает undefined — тосты молча мертвы. Поэтому захват
+ * только здесь (экспорт зовётся из setup компонентов).
+ */
+function acquireToast(): void {
+  if (toast) return
+  try { toast = useToast() } catch { toast = null }
+}
+
 function init() {
   if (inited) return
   inited = true
-  try { toast = useToast() } catch { toast = null }
   if (!readCanModerate()) return
   void refresh()
   subscribe()
@@ -139,6 +151,7 @@ export function resetAdminReports(): void {
 }
 
 export function useAdminReports() {
+  acquireToast()
   const hasData = computed(() => reports.value.length > 0)
   return { reports, pendingCount, loading, filter, actingId, error, hasData, refresh, resolve, setFilter, goReports, init, subscribe }
 }

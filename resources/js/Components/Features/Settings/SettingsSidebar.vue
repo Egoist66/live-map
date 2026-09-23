@@ -1,10 +1,15 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import Card from 'primevue/card'
 import Menu from 'primevue/menu'
 import Button from 'primevue/button'
+import { useAppModulesStore } from '@/stores/appModules'
 
 defineProps<{ menuModel: any; plan: string; pinsToday: number; pinsLimit: string; zoneCount: number; procUnread?: number }>()
 const emit = defineEmits<{ (e: 'billing'): void }>()
+
+const modules = useAppModulesStore()
+const showMapMetrics = computed(() => modules.isEnabled('upin'))
 </script>
 <template>
   <aside class="hidden lg:block self-start space-y-4 h-fit shrink-0">
@@ -24,7 +29,7 @@ const emit = defineEmits<{ (e: 'billing'): void }>()
         <Card class="!bg-gradient-to-br !from-amber-50 !to-orange-50 dark:!from-amber-950/20 dark:!to-orange-950/20 !border-amber-200 dark:!border-amber-900 !rounded-3xl !shadow-none mt-4" :pt="{ body: { class: '!p-3' }, content: { class: '!p-0' } }">
           <template #content>
             <div class="text-xs font-bold dark:text-white">Тариф {{ plan }}</div>
-            <div class="text-xs text-stone-600 mt-1">{{ pinsToday }}/{{ pinsLimit }} пинов сегодня · {{ zoneCount }} подписок</div>
+            <div v-if="showMapMetrics" class="text-xs text-stone-600 mt-1">{{ pinsToday }}/{{ pinsLimit }} пинов сегодня · {{ zoneCount }} подписок</div>
             <Button @click="emit('billing')" label="Управление →" link size="small" class="!px-0 !text-xs !font-semibold !mt-2" />
           </template>
         </Card>

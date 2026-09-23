@@ -1,8 +1,9 @@
 import { ref, computed, watch } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import { useSecurityImpersonations } from '@/composables/useSecurityImpersonations'
+import { useAppModulesStore } from '@/stores/appModules'
 
-export type SettingsTabId = 'profile'|'billing'|'quests'|'privacy'|'appearance'|'security'|'pins'|'support'|'app'|'procedures'|'admin'|'archive'
+export type SettingsTabId = 'profile'|'billing'|'quests'|'privacy'|'appearance'|'security'|'pins'|'support'|'app'|'about'|'procedures'|'admin'|'archive'
 
 export const SETTINGS_TABS = [
   { id: 'profile' as const, label: 'Профиль', icon: 'pi pi-user', desc: 'Фото, имя, дом' },
@@ -16,10 +17,11 @@ export const SETTINGS_TABS = [
   { id: 'procedures' as const, label: 'Процедуры', icon: 'pi pi-building-columns', desc: 'Доступы, закон' },
   { id: 'support' as const, label: 'Поддержка', icon: 'pi pi-heart', desc: 'Письмо, донат' },
   { id: 'app' as const, label: 'Приложение', icon: 'pi pi-mobile', desc: 'Установка, кэш' },
+  { id: 'about' as const, label: 'О сервисе', icon: 'pi pi-info-circle', desc: 'FAQ, контакты, документы' },
 ] as const
 
 export const SETTINGS_TAB_INDEX: Record<SettingsTabId, string> = {
-  profile: '0', billing: '1', quests: '2', pins: '3', archive: '4', privacy: '5', appearance: '6', security: '7', procedures: '8', support: '9', app: '10', admin: '11',
+  profile: '0', billing: '1', quests: '2', pins: '3', archive: '4', privacy: '5', appearance: '6', security: '7', procedures: '8', support: '9', app: '10', about: '11', admin: '12',
 }
 
 export const ADMIN_TAB = { id: 'admin' as const, label: 'Модерация', icon: 'pi pi-shield', desc: 'Скрытие, удаление' } as const
@@ -27,11 +29,34 @@ export const ADMIN_TAB = { id: 'admin' as const, label: 'Модерация', ic
 export function useSettingsTabs() {
   const page = usePage()
   const isAdmin = computed(() => !!((page.props.auth as any)?.user?.is_admin) || (page.props.auth as any)?.user?.role === 'admin')
+  const modules = useAppModulesStore()
+
+  try {
+    modules.ensureInit((page.props as any)?.auth?.user ?? null)
+  } catch {
+  }
+
+  /**
+   * Таб виден при включённом модуле: пины — только с картой,
+   * задания — со свайпами или картой, остальное — системное.
+   */
+  const isTabVisible = (id: string): boolean => {
+    if (id === 'pins') {
+      return modules.isEnabled('upin')
+    }
+
+    if (id === 'quests') {
+      return modules.isEnabled('ulove') || modules.isEnabled('upin')
+    }
+
+    return true
+  }
+
   const active = ref<SettingsTabId>('profile')
   try {
     const all = [...SETTINGS_TABS, ADMIN_TAB]
     const valid = (t: unknown): t is SettingsTabId =>
-      typeof t === 'string' && (all as any[]).some((x) => x.id === t) && (t !== 'admin' || isAdmin.value)
+      typeof t === 'string' && (all as any[]).some((x) => x.id === t) && (t !== 'admin' || isAdmin.value) && isTabVisible(t)
     const fromRoute = (page.props as any)?.initialTab
     const fromQuery = new URLSearchParams(window.location.search).get('tab')
     if (valid(fromRoute)) active.value = fromRoute
@@ -40,8 +65,16 @@ export function useSettingsTabs() {
   const proc = useSecurityImpersonations()
   const showProcedures = computed(() => proc.items.value.length > 0 || proc.unread.value > 0 || active.value === 'procedures')
   const tabs = computed(() => {
-    const base = SETTINGS_TABS.filter((t) => t.id !== 'procedures' || showProcedures.value)
+    const base = SETTINGS_TABS.filter((t) => (t.id !== 'procedures' || showProcedures.value) && isTabVisible(t.id))
     return isAdmin.value ? [...base, ADMIN_TAB] : [...base]
+  })
+
+  watch(tabs, (visible) => {
+    const ids = new Set(visible.map((t) => t.id))
+
+    if (!ids.has(active.value)) {
+      active.value = 'profile'
+    }
   })
   const tabIndex = SETTINGS_TAB_INDEX
   const activeIndex = computed(() => tabIndex[active.value])

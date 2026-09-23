@@ -148,6 +148,13 @@ export function useRegisterForm() {
     if (goalPreset.locked) {
       payload.signup_goal = goalPreset.goal
     }
+    try {
+      const { useAppModulesStore } = await import('@/stores/appModules')
+      const remembered = useAppModulesStore().registrationPayload()
+      payload.landing_tab = remembered.landing_tab
+      payload.enabled_modules = remembered.enabled_modules
+    } catch {
+    }
     const residenceOk = await residenceCheck.recheckCountry()
     if (!residenceOk) {
       const msg = residenceCheck.countryWarning.value || 'Страна не совпадает с геолокацией'

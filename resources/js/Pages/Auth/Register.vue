@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
 import { Head, Link } from '@inertiajs/vue3'
 import { useRegisterForm } from '@/composables/useAuthForm'
+import { useAuthTheme } from '@/composables/useAuthTheme'
 import { useSignupGoals } from '@/composables/useSignupGoals'
 import { useBirthDateField } from '@/composables/useBirthDate'
 import { useGender } from '@/composables/useGender'
@@ -14,17 +14,11 @@ import Select from 'primevue/select'
 import DatePicker from 'primevue/datepicker'
 
 /**
- * Ветка компании — только по ?account=business с таба UPin Business.
- * Никакого запоминания: таб лендинга всё решает.
+ * Ветка компании — по ?account=business, иначе тема
+ * из запомненного таба лендинга (ULove без сайдбара).
  */
-const isBusiness = computed(() => {
-  try {
-    if (typeof window !== 'undefined') {
-      return new URLSearchParams(window.location.search).get('account') === 'business'
-    }
-  } catch {}
-  return false
-})
+const t = useAuthTheme()
+const isBusiness = t.isBusiness
 
 const f = useRegisterForm()
 const goals = useSignupGoals()
@@ -54,8 +48,14 @@ function backToChoice(): void {
     </div>
   </template>
   <template v-else>
-    <h1 class="text-[22px] font-black tracking-tight text-ink-900 dark:text-white">Создай аккаунт</h1>
-    <p class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Знакомства рядом и жизнь района на карте</p>
+    <div class="flex items-center gap-3">
+      <span v-if="t.isUlove.value" class="w-11 h-11 rounded-2xl bg-gradient-to-br from-rose-500 via-fuchsia-500 to-orange-400 grid place-items-center text-white shadow-lg shadow-rose-500/30 shrink-0"><i class="pi pi-heart-fill" /></span>
+      <span v-else class="w-11 h-11 rounded-2xl bg-gradient-to-br from-sky-500 via-blue-500 to-indigo-500 grid place-items-center text-white shadow-lg shadow-sky-500/30 shrink-0"><i class="pi pi-map-marker" /></span>
+      <div class="min-w-0">
+        <h1 class="text-[22px] font-black tracking-tight text-ink-900 dark:text-white leading-tight">{{ t.registerTitle.value }}</h1>
+        <p class="text-[13px] text-stone-500 dark:text-zinc-400">{{ t.registerSub.value }}</p>
+      </div>
+    </div>
     <form class="mt-6 space-y-4" @submit.prevent="f.submit">
       <div v-if="!f.goalPreset.locked" class="rounded-2xl border-2 border-rose-200 dark:border-rose-900 bg-gradient-to-br from-rose-50 to-orange-50 dark:from-rose-950/40 dark:to-orange-950/20 p-3.5">
         <label class="auth-label">Зачем ты здесь? *</label>
@@ -133,7 +133,7 @@ function backToChoice(): void {
           <button v-if="f.values.home_lat && !f.addrLoading.value" type="button" class="shrink-0 w-7 h-7 rounded-full hover:bg-stone-100 dark:hover:bg-white/10 grid place-items-center text-stone-400 dark:text-zinc-400" title="Убрать точку" @click="f.clearLocation"><i class="pi pi-times text-[11px]"></i></button>
         </div>
       </div>
-      <Button :loading="f.isSubmitting.value" type="submit" label="Создать аккаунт →" class="w-full !bg-ink-900 dark:!bg-[#FAFAFA] !border-ink-900 dark:!border-[#FAFAFA] !text-white dark:!text-[#0F172A] !rounded-full !py-3.5 [&_.p-button-label]:!text-white dark:[&_.p-button-label]:!text-[#0F172A]" />
+      <Button :loading="f.isSubmitting.value" type="submit" :label="t.isUlove.value ? 'Создать анкету →' : 'Создать аккаунт →'" :class="t.submitClass.value" />
       <div class="text-sm text-center text-stone-500 dark:text-zinc-400">Уже есть? <Link :href="route('login')" class="font-semibold text-ink-900 dark:text-white hover:underline">Войти</Link></div>
     </form>
   </template>

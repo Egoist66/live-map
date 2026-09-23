@@ -9,7 +9,9 @@ import ProfileDesignQuickNav from '@/Components/Features/Profile/ProfileDesignQu
 import ProfileDesignGallery from '@/Components/Features/Profile/ProfileDesignGallery.vue'
 import ProfileDesignInfo from '@/Components/Features/Profile/ProfileDesignInfo.vue'
 import ProfileDesignSwipes from '@/Components/Features/Profile/ProfileDesignSwipes.vue'
-import ProfileDesignFlow from '@/Components/Features/Profile/ProfileDesignFlow.vue'
+// Изоляция модулей: uflow/ulove-блоки — лениво (см. Dashboard).
+const ProfileDesignFlow = defineAsyncComponent(() => import('@/Components/Features/Profile/ProfileDesignFlow.vue'))
+const UloveProfileView = defineAsyncComponent(() => import('@/Components/Features/Dating/UloveProfileView.vue'))
 import ProfileMoreMenu from '@/Components/Features/Profile/ProfileMoreMenu.vue'
 import UserSubscribeButton from '@/Components/Features/Profile/UserSubscribeButton.vue'
 import ProfileFriendsDialog from '@/Components/Features/Profile/ProfileFriendsDialog.vue'
@@ -24,10 +26,64 @@ import { useProfileDesign } from '@/composables/useProfileDesign'
 import { useProfileLayout } from '@/composables/useProfileLayout'
 import { useProfileThought } from '@/composables/useProfileThought'
 import { planOf } from '@/composables/usePlanLimits'
-import { defineAsyncComponent, onMounted } from 'vue'
+import { computed, defineAsyncComponent, onMounted, ref } from 'vue'
 import { useMounted } from '@vueuse/core'
+import { router, usePage } from '@inertiajs/vue3'
+import { useAppModulesStore } from '@/stores/appModules'
+
+const DatingQuestionnaireDialog = defineAsyncComponent(() => import('@/Components/Features/Dating/DatingQuestionnaireForm.vue'))
 
 const props = defineProps<{ profileUser: any; isOwn: boolean; friendship: any; isFriend: boolean; isPending: boolean; isBlocked?: boolean; isBlockedBy?: boolean; canMessage: boolean; canMessageReason: string | null; subscription?: { subscribed: boolean; notify_pin: boolean; notify_photo: boolean; notify_level: boolean; notify_post?: boolean } }>()
+
+const modules = useAppModulesStore()
+
+try {
+  modules.ensureInit((usePage().props as any)?.auth?.user ?? null)
+} catch {
+}
+
+/**
+ * Чистый ULove-режим (карта и лента выключены): профиль —
+ * Tinder-карточка из анкеты + регистрации, без стен и друзей.
+ */
+const showUlove = computed(
+  () => modules.isEnabled('ulove') && !modules.isEnabled('upin') && !modules.isEnabled('uflow'),
+)
+
+/**
+ * Фото для Tinder-профиля: только галерея, без дублей.
+ * Аватар галереей не считается — идёт отдельным фолбэком
+ * обложки в `UloveProfileView`, иначе счётчик врёт («1 из 5»
+ * при пустой галерее).
+ */
+const ulovePhotos = computed(() => {
+  const urls: string[] = []
+  const galleryPhotos = (design.galleryPreview.value ?? []) as Array<{ url?: string }>
+
+  for (const photo of galleryPhotos) {
+    const url = String(photo?.url ?? '')
+
+    if (url !== '' && !urls.includes(url)) {
+      urls.push(url)
+    }
+  }
+
+  return urls
+})
+
+const showDatingEdit = ref(false)
+
+/**
+ * Анкета сохранена: закрыть диалог и подтянуть свежий profileUser.
+ */
+function onDatingSaved(): void {
+  showDatingEdit.value = false
+
+  try {
+    router.reload({ only: ['profileUser'] })
+  } catch {
+  }
+}
 
 const design = useProfileDesign(props)
 const { single: isSingleColumn } = useProfileLayout()
@@ -46,7 +102,7 @@ onMounted(async () => { await design.init() })
 <template>
   <Head :title="profileUser.name" />
   <Toast />
-    <div class="page-scroll bg-surface dark:bg-[#090E1A]">
+    <div class="page-scroll bg-surface dark:bg-[#0F121F]">
       <div class="max-w-[1040px] lg:max-w-[1120px] mx-auto px-3 sm:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4">
         <div v-if="page.isLocked.value" class="rounded-[24px] border border-stone-200 bg-white shadow-soft p-6 flex flex-col items-center text-center gap-3 dark:border-zinc-800 dark:bg-zinc-900">
           <button type="button" class="h-16 w-16 overflow-hidden rounded-[22px] bg-stone-100 dark:bg-zinc-800" @click="page.showAvatar.value = true">
@@ -60,6 +116,22 @@ onMounted(async () => { await design.init() })
         </div>
 
         <template v-else>
+          <UloveProfileView
+            v-if="showUlove"
+            :profile-user="profileUser"
+            :photos="ulovePhotos"
+            :avatar="page.avatarSrc.value"
+            :gallery="gallery"
+            :is-own="isOwn"
+            :online="page.online.value"
+            :can-message="page.canMessage.value"
+            :can-message-reason="isBlocked ? 'Пользователь заблокирован' : null"
+            @edit="isOwn ? (showDatingEdit = true) : design.onEdit()"
+            @message="page.onChat()"
+            @photos="gallery.openDialog()"
+            @add-photos="design.openPicker()"
+          />
+          <template v-else>
           <ProfileDesignHero
             :user="profileUser"
             :avatar-src="page.avatarSrc.value"
@@ -195,17 +267,21 @@ onMounted(async () => { await design.init() })
                 :bio-preview="design.bioPreview.value"
               />
 
-              <ProfileDesignSwipes @go="design.goSwipes()" />
+              <ProfileDesignSwipes v-if="modules.isEnabled('ulove')" @go="design.goSwipes()" />
 
-              <ProfileDesignFlow :user-id="profileUser.id" :is-own="isOwn" />
+              <ProfileDesignFlow v-if="modules.isEnabled('uflow')" :user-id="profileUser.id" :is-own="isOwn" />
             </div>
           </div>
+          </template>
         </template>
 
         <ProfileFriendsDialog :people="people" />
         <ProfileThoughtDialog :open="thought.open.value" :draft="thought.draft.value" :saving="thought.saving.value" :error="thought.error.value" @update:draft="(v:string)=>thought.setDraft(v)" @close="thought.close()" @save="thought.save()" />
         <ChatSearchDialog :open="search.open.value" @update:open="(v:boolean)=>{ if(!v) search.closeDialog() }" :query="search.query.value" @update:query="(v:string)=>search.setQuery(v)" :results="search.results.value" :searching="search.searching.value" :creating="search.creating.value" :is-online="(id?:number,lastSeen?:string|null)=>search.isOnline(id,lastSeen)" @chat="search.startChat" @add="search.addFriend" @block="search.askBlock" />
         <ProfileGalleryDialog :gallery="gallery" :is-own="isOwn" :plan="planOf(profileUser)" />
+        <Dialog :visible="showDatingEdit" @update:visible="(v:boolean)=>{ if(!v) showDatingEdit = false }" modal header="Моя анкета" :style="{ width: '480px', maxWidth: 'calc(100vw - 2rem)' }" :pt="{ root: { class: '!rounded-3xl dark:!bg-zinc-900 dark:!border-zinc-700' }, content: { class: '!max-h-[78dvh] !overflow-y-auto' } }">
+          <DatingQuestionnaireDialog @saved="onDatingSaved" />
+        </Dialog>
         <ProfilePhotoViewer :gallery="gallery" :comments="photoComments" :is-own="isOwn" :user-name="profileUser.name" :avatar-src="page.avatarSrc.value" />
         <ReportDialog :dialog="reportDialog" />
 

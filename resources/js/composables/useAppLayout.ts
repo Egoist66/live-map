@@ -1,6 +1,7 @@
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { router } from '@inertiajs/vue3'
 import { route } from '@/route'
+import { useAppModulesStore } from '@/stores/appModules'
 import { useBadgeStore } from '@/stores/badges'
 import { usePresence } from '@/composables/usePresence'
 import { useNavigation } from '@/composables/useNavigation'
@@ -17,6 +18,7 @@ import { useRealtimeMode } from '@/composables/useRealtimeMode'
 import { useRealtimePoller, watchRealtimeMode } from '@/composables/useRealtimePoller'
 import { usePwaPushAuto } from '@/composables/usePwaPushAuto'
 import { useIdleTask } from '@/composables/useIdleTask'
+import { useModuleRouteGuard } from '@/composables/useModuleRouteGuard'
 
 export function useAppLayout() {
   const badge = useBadgeStore()
@@ -34,6 +36,22 @@ export function useAppLayout() {
   const realtimePoller = useRealtimePoller()
   usePwaPushAuto()
   const menu = ref()
+  const modules = useAppModulesStore()
+
+  try {
+    useModuleRouteGuard().init()
+  } catch {
+  }
+  try {
+    modules.ensureInit(user.value)
+  } catch {
+  }
+  watch(user, (next) => {
+    try {
+      modules.syncUserRef(next)
+    } catch {
+    }
+  })
   const isAdmin = computed(() => !!user.value?.is_admin || user.value?.role === 'admin')
   const isModerator = computed(() => isAdmin.value || user.value?.role === 'moderator')
   /**
@@ -68,18 +86,45 @@ export function useAppLayout() {
       ]
     }
 
+    const personSections: any[] = [
+      { label: 'Настройки', icon: 'pi pi-cog', accent: 'slate', active: route().current('profile.edit'), command: () => router.visit(settingsHref.value) },
+    ]
+
+    if (modules.isEnabled('upin')) {
+      personSections.push({ label: 'Карта', icon: 'pi pi-map', accent: 'teal', active: route().current('map'), command: () => router.visit(route('map')) })
+    }
+
+    if (modules.isEnabled('ulove')) {
+      personSections.push({ label: 'ULove', icon: 'pi pi-heart', accent: 'red', active: route().current('swipes'), command: () => router.visit(route('swipes')) })
+    }
+
+    if (modules.isEnabled('uflow')) {
+      personSections.push({ label: 'UFlow', icon: 'pi pi-align-justify', svg: 'flow', accent: 'sky', active: route().current('flow'), command: () => router.visit(route('flow')) })
+    }
+
+    if (modules.isEnabled('districts')) {
+      personSections.push({ label: 'Районы', icon: 'pi pi-users', accent: 'teal', active: route().current('districts.*'), command: () => router.visit(route('districts.index')) })
+    }
+
+    if (modules.isEnabled('business')) {
+      personSections.push({ label: 'Кабинет бизнеса', icon: 'pi pi-briefcase', accent: 'violet', active: route().current('cabinet.*'), command: () => router.visit('/cabinet') })
+    }
+
     return [
       header,
       { separator: true },
       ...moderation,
-      { label: 'Настройки', icon: 'pi pi-cog', accent: 'slate', active: route().current('profile.edit'), command: () => router.visit(settingsHref.value) },
-      { label: 'Карта', icon: 'pi pi-map', accent: 'teal', active: route().current('map'), command: () => router.visit(route('map')) },
-      { label: 'ULove', icon: 'pi pi-heart', accent: 'red', active: route().current('swipes'), command: () => router.visit(route('swipes')) },
-      { label: 'UFlow', icon: 'pi pi-align-justify', svg: 'flow', accent: 'sky', active: route().current('flow'), command: () => router.visit(route('flow')) },
+      ...personSections,
       { separator: true },
       logoutItem,
     ]
   })
+
+  const navVisibility = computed(() => ({
+    showMap: modules.isEnabled('upin'),
+    showLove: modules.isEnabled('ulove'),
+    showFlow: modules.isEnabled('uflow'),
+  }))
   function toggleMenu(e: Event) { menu.value.toggle(e) }
   async function doLogout() {
     try { authSession.resetAll() } catch {}
@@ -129,5 +174,5 @@ export function useAppLayout() {
   })
   onBeforeUnmount(() => presence.disconnect())
   router.on('navigate', () => { presence.connect() })
-  return { badge, presence, user, avatarSrc, dashboardHref, settingsHref, bell, pinActivity, adminReports, updates, menu, menuItems, isAdmin, isModerator, isBusinessAccount, toggleMenu, logout }
+  return { badge, presence, user, avatarSrc, dashboardHref, settingsHref, bell, pinActivity, adminReports, updates, menu, menuItems, navVisibility, isAdmin, isModerator, isBusinessAccount, toggleMenu, logout }
 }

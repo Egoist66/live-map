@@ -2,6 +2,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { router } from '@inertiajs/vue3'
 import { route } from '@/route'
 import { useBellNotifications } from '@/composables/useBellNotifications'
+import { useAppModulesStore } from '@/stores/appModules'
 
 /**
  * Горячие клавиши десктопа: навигация, действия, поиск.
@@ -25,6 +26,8 @@ export type AppHotkeyId =
   | 'focus-search'
   | 'global-people-search'
   | 'show-help'
+  | 'swipe-pass'
+  | 'swipe-like'
 
 export interface AppHotkeyDef {
   id: AppHotkeyId
@@ -38,6 +41,45 @@ export interface AppHotkeyGroup {
   label: string
   items: AppHotkeyDef[]
 }
+
+/**
+ * Горячие клавиши чистого ULove-режима: только знакомства.
+ *
+ * Стрелки листают колоду (← пропустить, → лайк), навигация —
+ * профиль, свайпы, чат и настройки. Карты, ленты и пинов здесь нет.
+ */
+export const ULOVE_HOTKEY_GROUPS: AppHotkeyGroup[] = [
+  {
+    id: 'swipes',
+    label: 'Свайпы',
+    items: [
+      { id: 'swipe-pass', keys: ['←'], title: 'Пропустить', desc: 'Свайп влево в ленте' },
+      { id: 'swipe-like', keys: ['→'], title: 'Лайк', desc: 'Свайп вправо в ленте' },
+    ],
+  },
+  {
+    id: 'nav',
+    label: 'Переходы',
+    items: [
+      { id: 'go-profile', keys: ['P', 'Alt+1'], title: 'Профиль', desc: 'Открыть свой профиль' },
+      { id: 'go-swipes', keys: ['L', 'Alt+2'], title: 'ULove', desc: 'Открыть знакомства' },
+      { id: 'go-chat', keys: ['C', 'Alt+3'], title: 'Чат', desc: 'Открыть сообщения' },
+      { id: 'go-settings', keys: ['S'], title: 'Настройки', desc: 'Открыть настройки' },
+    ],
+  },
+  {
+    id: 'actions',
+    label: 'Действия',
+    items: [
+      { id: 'open-bell', keys: ['B'], title: 'Уведомления', desc: 'Открыть колокол' },
+    ],
+  },
+  {
+    id: 'search',
+    label: 'Поиск',
+    items: [{ id: 'show-help', keys: ['?'], title: 'Помощь', desc: 'Показать все горячие клавиши' }],
+  },
+]
 
 /**
  * Описание всех горячих клавиш для секции настроек и диалога помощи.
@@ -175,10 +217,29 @@ export function useAppHotkeys() {
   })
 
   /**
+   * Чистый ULove-режим: карта и лента выключены — действуют
+   * только знакомства (стрелки листают колоду, лишнего нет).
+   */
+  const uloveMode = computed(() => {
+    try {
+      const modules = useAppModulesStore()
+      return modules.isEnabled('ulove') && !modules.isEnabled('upin') && !modules.isEnabled('uflow')
+    } catch {
+      return false
+    }
+  })
+
+  const groups = computed(() => (uloveMode.value ? ULOVE_HOTKEY_GROUPS : APP_HOTKEY_GROUPS))
+
+  /**
    * Выполнить действие горячей клавиши.
    * @param id идентификатор действия
    */
   async function runHotkey(id: AppHotkeyId): Promise<void> {
+    if (uloveMode.value && (id === 'go-map' || id === 'go-flow' || id === 'new-pin' || id === 'focus-search' || id === 'global-people-search')) {
+      return
+    }
+
     switch (id) {
       case 'go-profile':
         router.visit(route('dashboard'))
@@ -256,6 +317,28 @@ export function useAppHotkeys() {
     }
   }
 
+  /**
+   * Свайп стрелкой в ULove-режиме: событие слушает страница свайпов.
+   * @param dir направление колоды
+   */
+  function emitSwipe(dir: 'like' | 'pass'): void {
+    try {
+      window.dispatchEvent(new CustomEvent('ulove:swipe', { detail: dir }))
+    } catch {
+    }
+  }
+
+  /**
+   * Открыта ли лента свайпов (стрелки действуют только там).
+   */
+  function isSwipesRoute(): boolean {
+    try {
+      return route().current('swipes*')
+    } catch {
+      return window.location.pathname.startsWith('/swipes')
+    }
+  }
+
   function onKeydown(e: KeyboardEvent): void {
     if (!enabled.value) return
     if (!isDesktopKeyboard()) return
@@ -265,13 +348,16 @@ export function useAppHotkeys() {
     const code = (e as any).code ?? ''
 
     if (withCtrl && (key.toLowerCase() === 'k' || code === 'KeyK')) {
+      if (uloveMode.value) {
+        return
+      }
       e.preventDefault()
       openGlobalPeopleSearch()
       return
     }
 
     if (e.altKey && !withCtrl) {
-      const altTarget = altDigitTarget(key)
+      const altTarget = uloveMode.value ? altDigitTargetUlove(key) : altDigitTarget(key)
       if (altTarget) {
         e.preventDefault()
         void runHotkey(altTarget)
@@ -287,14 +373,23 @@ export function useAppHotkeys() {
 
     if (isTypingTarget(e.target)) return
 
+    if (uloveMode.value && (code === 'ArrowLeft' || code === 'ArrowRight') && isSwipesRoute()) {
+      e.preventDefault()
+      emitSwipe(code === 'ArrowRight' ? 'like' : 'pass')
+      return
+    }
+
     if (key === '/' || key === '?') {
+      if (uloveMode.value && key === '/') {
+        return
+      }
       e.preventDefault()
       const target: AppHotkeyId = e.shiftKey || key === '?' ? 'show-help' : 'focus-search'
       void runHotkey(target)
       return
     }
 
-    const single = singleKeyTarget(code, key)
+    const single = uloveMode.value ? singleKeyTargetUlove(code, key) : singleKeyTarget(code, key)
     if (single) {
       e.preventDefault()
       void runHotkey(single)
@@ -318,6 +413,20 @@ export function useAppHotkeys() {
   }
 
   /**
+   * Alt+цифра в ULove-режиме: только знакомства.
+   * @param key нажатая клавиша
+   * @returns действие или null
+   */
+  function altDigitTargetUlove(key: string): AppHotkeyId | null {
+    switch (key) {
+      case '1': return 'go-profile'
+      case '2': return 'go-swipes'
+      case '3': return 'go-chat'
+      default: return null
+    }
+  }
+
+  /**
    * Одиночная буквенная клавиша (по коду раскладконезависимо).
    * @param code физический код клавиши
    * @param key символ с учётом раскладки
@@ -332,6 +441,22 @@ export function useAppHotkeys() {
     if (code === 'KeyC' || latin === 'c' || latin === 'с') return 'go-chat'
     if (code === 'KeyS' || latin === 's' || latin === 'ы') return 'go-settings'
     if (code === 'KeyN' || latin === 'n' || latin === 'т') return 'new-pin'
+    if (code === 'KeyB' || latin === 'b' || latin === 'и') return 'open-bell'
+    return null
+  }
+
+  /**
+   * Одиночная клавиша в ULove-режиме: без карты, ленты и пинов.
+   * @param code физический код клавиши
+   * @param key символ с учётом раскладки
+   * @returns действие или null
+   */
+  function singleKeyTargetUlove(code: string, key: string): AppHotkeyId | null {
+    const latin = key.toLowerCase()
+    if (code === 'KeyP' || latin === 'p') return 'go-profile'
+    if (code === 'KeyL' || latin === 'l' || latin === 'д') return 'go-swipes'
+    if (code === 'KeyC' || latin === 'c' || latin === 'с') return 'go-chat'
+    if (code === 'KeyS' || latin === 's' || latin === 'ы') return 'go-settings'
     if (code === 'KeyB' || latin === 'b' || latin === 'и') return 'open-bell'
     return null
   }
@@ -352,5 +477,5 @@ export function useAppHotkeys() {
     inited = false
   })
 
-  return { enabled, showHelp, isDesktop, groups: APP_HOTKEY_GROUPS, init, runHotkey, setHelp, setEnabled }
+  return { enabled, showHelp, isDesktop, groups, uloveMode, init, runHotkey, setHelp, setEnabled }
 }

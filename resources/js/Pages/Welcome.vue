@@ -44,7 +44,7 @@ function switchTab(next: LandingTab): void {
     <meta head-key="og:title" property="og:title" :content="landing.seo.value.title" />
     <meta head-key="og:description" property="og:description" :content="landing.seo.value.description" />
   </Head>
-  <div class="min-h-screen flex flex-col bg-surface dark:bg-[#0B0F1A] text-ink-900 dark:text-zinc-100 antialiased selection:bg-rose-500 selection:text-white overflow-x-hidden">
+  <div class="min-h-screen flex flex-col bg-surface dark:bg-[#0F121F] text-ink-900 dark:text-zinc-100 antialiased selection:bg-rose-500 selection:text-white overflow-x-hidden">
     <div class="flex flex-col min-h-screen">
     <header class="native-safe-top sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/70 backdrop-blur border-b border-stone-200/60 dark:border-zinc-800">
       <div class="max-w-[1280px] mx-auto px-2 min-[411px]:px-4 sm:px-6 h-14 min-[411px]:h-[64px] flex items-center justify-between gap-2 min-w-0">
@@ -178,7 +178,7 @@ function switchTab(next: LandingTab): void {
 
         <Card v-else-if="landing.tab.value === 'upin'" class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[28px] !shadow-float !p-3">
           <template #content>
-            <div class="rounded-[18px] overflow-hidden relative bg-gradient-to-br from-teal-600 via-indigo-700 to-[#0B0F1A] border border-stone-200 dark:border-zinc-700 p-4 sm:p-5 min-h-[320px]">
+            <div class="rounded-[18px] overflow-hidden relative bg-gradient-to-br from-teal-600 via-indigo-700 to-[#0F121F] border border-stone-200 dark:border-zinc-700 p-4 sm:p-5 min-h-[320px]">
               <div class="absolute inset-0 opacity-20 pointer-events-none" style="background-image: radial-gradient(circle at 20% 30%, rgba(255,255,255,.5) 0 2px, transparent 2px), radial-gradient(circle at 70% 20%, rgba(255,255,255,.4) 0 2px, transparent 2px), radial-gradient(circle at 85% 65%, rgba(255,255,255,.4) 0 2px, transparent 2px), radial-gradient(circle at 40% 75%, rgba(255,255,255,.35) 0 2px, transparent 2px); background-size: 90px 90px;"></div>
               <div class="absolute top-[22%] left-[16%] pointer-events-none"><span class="block w-9 h-9 rounded-full bg-white shadow-lg grid place-items-center text-base">☕</span></div>
               <div class="absolute top-[55%] left-[68%] pointer-events-none"><span class="block w-9 h-9 rounded-full bg-white shadow-lg grid place-items-center text-base">🐕</span></div>

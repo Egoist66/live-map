@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppImage from '@/Components/Ui/Media/AppImage.vue'
 import Dialog from 'primevue/dialog'
 import Message from 'primevue/message'
 import ProgressSpinner from 'primevue/progressspinner'
@@ -22,7 +23,7 @@ defineProps<{ gallery: any; isOwn: boolean; plan?: string }>()
       </div>
       <div v-else class="grid grid-cols-3 gap-1 mt-3 sm:grid-cols-4 sm:gap-2 sm:auto-rows-[140px]">
         <button v-for="(p, i) in gallery.photos.value" :key="p.id" type="button" @click="gallery.open(p)" :class="['group relative aspect-square sm:aspect-auto overflow-hidden rounded-xl bg-stone-100 dark:bg-white/5 focus:outline-none focus:ring-2 focus:ring-violet-500', gallery.mosaicClass(i)]" :title="p.caption || 'Фото'">
-          <img :src="p.url" :alt="p.caption || 'Фото'" loading="lazy" draggable="false" class="block w-full h-full object-cover object-center select-none" />
+          <AppImage :src="p.url" :alt="p.caption || 'Фото'" class="block w-full h-full" img-class="block w-full h-full object-cover object-center select-none" />
           <span class="absolute inset-0 bg-black/0 group-hover:bg-black/45 transition hidden sm:flex items-center justify-center gap-3 opacity-0 group-hover:opacity-100 text-white text-sm font-bold">
             <span class="flex items-center gap-1"><i :class="p.liked ? 'pi pi-heart-fill' : 'pi pi-heart'" />{{ p.likes_count }}</span>
             <span class="flex items-center gap-1"><i class="pi pi-comment" />{{ p.comments_count }}</span>

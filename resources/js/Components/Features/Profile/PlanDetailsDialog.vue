@@ -52,7 +52,7 @@ const emit = defineEmits<{ (e: 'close'): void; (e: 'choose', id: PlanId): void }
     </div>
     <template #footer>
       <div v-if="plan" class="flex flex-col sm:flex-row sm:items-center gap-2">
-        <div class="text-xs text-stone-500 dark:text-zinc-400 flex-1">Выбор применится после кнопки «Сохранить» в профиле</div>
+        <div class="text-xs text-stone-500 dark:text-zinc-400 flex-1">Тариф общий для всего приложения — вступит сразу после выбора</div>
         <Button
           :label="currentPlan === plan.id ? 'Это твой тариф ✓' : `Выбрать ${plan.name}`"
           :disabled="currentPlan === plan.id"

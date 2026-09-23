@@ -17,7 +17,7 @@ const hotkeys = useAppHotkeys()
         <ToggleSwitch :modelValue="hotkeys.enabled.value" @update:modelValue="(v:boolean)=>hotkeys.setEnabled(v)" class="shrink-0" />
       </div>
       <div class="mt-5 space-y-5">
-        <div v-for="group in hotkeys.groups" :key="group.id">
+        <div v-for="group in hotkeys.groups.value" :key="group.id">
           <div class="text-xs font-bold uppercase tracking-widest text-stone-400 dark:text-zinc-500">{{ group.label }}</div>
           <div class="mt-2 space-y-1.5">
             <button

@@ -15,6 +15,53 @@ export const PRIVACY_OPTIONS = [
 ]
 
 /**
+ * Значение приватности ULove-режима (чистый ulove без upin/uflow).
+ *
+ * `everyone` — пишут все со свайпов, `matches` — только взаимные мэтчи.
+ */
+export type UlovePrivacyValue = 'everyone' | 'matches'
+
+/**
+ * Опции приватности для чистого ULove-режима.
+ *
+ * Никаких отсылок к друзьям, карте, пинам и UFlow —
+ * только «все со свайпов» либо «только мэтчи».
+ */
+export const ULOVE_PRIVACY_OPTIONS = [
+  { label: 'Все со свайпов могут писать', value: 'everyone' as UlovePrivacyValue, icon: 'pi pi-globe' },
+  { label: 'Только мэтчи', value: 'matches' as UlovePrivacyValue, icon: 'pi pi-heart-fill' },
+]
+
+/**
+ * Маппит флаг dating_match_only в значение селекта ULove.
+ *
+ * @param flag значение dating_match_only с бэка
+ * @returns matches если только мэтчи, иначе everyone
+ */
+export function uloveValueFromFlag(flag: unknown): UlovePrivacyValue {
+  return flag ? 'matches' : 'everyone'
+}
+
+/**
+ * Маппит значение селекта ULove во флаг dating_match_only.
+ *
+ * @param value значение селекта
+ * @returns true если выбраны только мэтчи
+ */
+export function uloveFlagFromValue(value: string): boolean {
+  return value === 'matches'
+}
+
+/**
+ * Короткий лейбл приватности ULove для компактных мест.
+ *
+ * @param v значение ulove-приватности
+ */
+export function getUlovePrivacyShortLabel(v: string) {
+  return v === 'matches' ? 'Мэтчи' : 'Все'
+}
+
+/**
  * Короткий лейбл приватности для компактных мест.
  *
  * @param v значение message_privacy

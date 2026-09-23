@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
 import { usePage } from '@inertiajs/vue3'
+import { useAppModulesStore } from '@/stores/appModules'
 
 /**
  * Вкладка лендинга: ULove-знакомства, UPin-карта или UPin Business.
@@ -174,6 +175,11 @@ export function useWelcomeMode() {
     tab.value = readInitial(authUser.value)
   }
 
+  try {
+    useAppModulesStore().ensureInit(authUser.value)
+  } catch {
+  }
+
   const isUlove = computed(() => tab.value === 'ulove')
   const isBusiness = computed(() => tab.value === 'business')
   const content = computed(() => (isUlove.value ? ULove_CONTENT : tab.value === 'upin' ? UPIN_CONTENT : BUSINESS_CONTENT))
@@ -271,6 +277,10 @@ export function useWelcomeMode() {
       if (typeof window !== 'undefined') {
         window.localStorage.setItem(STORAGE_KEY, next)
       }
+    } catch {
+    }
+    try {
+      useAppModulesStore().rememberLandingTab(next)
     } catch {
     }
   }

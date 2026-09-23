@@ -26,31 +26,33 @@ import { useAppHotkeys } from '@/composables/useAppHotkeys'
 import { useScreenLock } from '@/composables/useScreenLock'
 import { useScreenLockScroll } from '@/composables/useScreenLockScroll'
 import { useGlobalDialogScrollLock } from '@/composables/useGlobalDialogScrollLock'
+import { useGlobalDialogDismiss } from '@/composables/useGlobalDialogDismiss'
 import { useClientReady } from '@/composables/useClientReady'
 import { onMounted } from 'vue'
 
-const { badge, user, avatarSrc, dashboardHref, bell, updates, menu, menuItems, isAdmin, isBusinessAccount, toggleMenu, logout } = useAppLayout()
+const { badge, user, avatarSrc, dashboardHref, bell, updates, menu, menuItems, navVisibility, isAdmin, isBusinessAccount, toggleMenu, logout } = useAppLayout()
 const { isClientReady } = useClientReady()
 const hotkeys = useAppHotkeys()
 const screenLock = useScreenLock()
 useScreenLockScroll()
 useGlobalDialogScrollLock()
+useGlobalDialogDismiss()
 onMounted(() => { screenLock.init(); hotkeys.init() })
 </script>
 <template>
-  <div class="flex min-h-screen min-h-dvh flex-col bg-surface dark:bg-[#0B0F1A] overflow-x-clip">
+  <div class="flex min-h-screen min-h-dvh flex-col bg-surface dark:bg-[#0F121F] overflow-x-clip">
     <header v-if="!route().current('swipes*')" class="native-safe-top sticky top-0 z-50 glass border-b border-stone-200/70 dark:border-zinc-800 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-zinc-900/70">
-      <AppTopBar :user="user" :avatar-src="avatarSrc" :dashboard-href="dashboardHref" :badge-total="badge.total" :lock-enabled="screenLock.enabled.value" :is-business="isBusinessAccount" @bell="bell.open()" @menu="toggleMenu" @lock="screenLock.lockNow()" />
+      <AppTopBar :user="user" :avatar-src="avatarSrc" :dashboard-href="dashboardHref" :badge-total="badge.total" :lock-enabled="screenLock.enabled.value" :is-business="isBusinessAccount" :show-map="navVisibility.showMap" :show-love="navVisibility.showLove" :show-flow="navVisibility.showFlow" @bell="bell.open()" @menu="toggleMenu" @lock="screenLock.lockNow()" />
     </header>
     <AppUserMenu v-model:menu-ref="menu" :user="user" :avatar-src="avatarSrc" :items="(menuItems as any)" />
     <div v-if="route().current('swipes*')" class="native-safe-top lg:hidden" aria-hidden="true" />
     <div v-if="$slots.header" class="bg-white dark:bg-zinc-900 border-b border-stone-200/60 dark:border-zinc-800">
       <div class="mx-auto max-w-[1280px] px-4 sm:px-6 py-4 sm:py-6"><slot name="header" /></div>
     </div>
-    <main :class="route().current('chat') || route().current('map') ? 'flex-1 pb-0 lg:pb-0 overflow-hidden overscroll-none' : 'flex-1 pb-[calc(var(--app-bottomnav)+var(--sab))] lg:pb-0'">
+    <main :class="route().current('chat') || route().current('map') || route().current('swipes*') ? 'flex-1 pb-0 lg:pb-0 overflow-hidden overscroll-none' : 'flex-1 pb-[calc(var(--app-bottomnav)+var(--sab))] lg:pb-0'">
       <PageTransition><slot /></PageTransition>
     </main>
-    <div v-if="!route().current('chat') && !route().current('map')" :class="['mt-auto pb-[calc(var(--app-bottomnav)+var(--sab))] lg:pb-0', route().current('swipes') ? 'hidden lg:block' : '']">
+    <div v-if="!route().current('chat') && !route().current('map') && !route().current('swipes*')" class="mt-auto hidden pb-[calc(var(--app-bottomnav)+var(--sab))] lg:block lg:pb-0">
       <AppFooter />
     </div>
     <MobileBottomNav />
@@ -63,7 +65,7 @@ onMounted(() => { screenLock.init(); hotkeys.init() })
       <PwaUpdateBanner />
       <AppHotkeysDialog />
       <GlobalPeopleSearchDialog />
-      <MiniChatDock />
+      <MiniChatDock v-if="!route().current('swipes*')" />
       <ScreenLockOverlay />
       <TermsAcceptanceModal />
       <SubscriptionRenewalDialog />

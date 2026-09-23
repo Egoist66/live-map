@@ -4,6 +4,7 @@ import { Head } from "@inertiajs/vue3";
 import Toast from "primevue/toast";
 import ChatSidebar from "@/Components/Features/Chat/ChatSidebar.vue";
 import ChatWindow from "@/Components/Features/Chat/ChatWindow.vue";
+import ChatPeerPanel from "@/Components/Features/Chat/ChatPeerPanel.vue";
 // Диалоги открываются только по действию — грузим лениво, первым paint не блокируют.
 const ChatSearchDialog = defineAsyncComponent(
   () => import("@/Components/Features/Chat/ChatSearchDialog.vue")
@@ -90,6 +91,7 @@ const {
   uloveConversations,
   uloveUnread,
   isBusiness,
+  uloveOnly,
   input,
   tab,
   showChatMenu,
@@ -204,6 +206,16 @@ function closeConfirm() {
 }
 const datingTheme = useChatDatingTheme(chat.activeConv, chat.selectedId);
 
+/**
+ * Собеседник открытого диалога для правой Tinder-панели.
+ */
+const peer = computed(() => (activeConv.value as any)?.other ?? null);
+const peerProfileUrl = computed(() => {
+  const slug = (peer.value as any)?.profile_slug;
+  return slug ? `/users/${slug}` : null;
+});
+const showPeerPanel = computed(() => !!selectedId.value && !!peer.value);
+
 const wallpaper = useChatWallpaper();
 const wallpaperOpen = ref(false);
 
@@ -296,6 +308,7 @@ onMounted(async () => {
         :tab="tab"
         @update:tab="(v: any) => tab = v"
         :is-business="isBusiness"
+        :ulove-only="uloveOnly"
         :unread-total="unreadTotal"
         :ulove-unread="uloveUnread"
         :pending-count="pendingIn.length"
@@ -414,6 +427,13 @@ onMounted(async () => {
         :history-top-sentinel="setHistoryTop"
         :history-has-more="chat.history.hasMore.value"
         :history-loading="chat.history.loadingOlder.value"
+      />
+      <ChatPeerPanel
+        v-if="showPeerPanel"
+        :peer="peer"
+        :badge="datingTheme.badge.value"
+        :profile-url="peerProfileUrl"
+        @block="activeConv?.other && askBlock(activeConv.other.id, activeConv.other.name)"
       />
     </div>
   </div>

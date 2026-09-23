@@ -8,7 +8,7 @@ const hotkeys = useAppHotkeys()
 <template>
   <Dialog :visible="hotkeys.showHelp.value" @update:visible="(v:boolean)=>hotkeys.setHelp(v)" modal header="Горячие клавиши" :style="{ width: '440px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-[24px]' } }">
     <div class="space-y-4">
-      <div v-for="group in hotkeys.groups" :key="group.id">
+      <div v-for="group in hotkeys.groups.value" :key="group.id">
         <div class="text-xs font-bold uppercase tracking-widest text-stone-400 dark:text-zinc-500">{{ group.label }}</div>
         <div class="mt-1.5 space-y-1">
           <div v-for="item in group.items" :key="item.id" class="flex items-center gap-3 text-sm">

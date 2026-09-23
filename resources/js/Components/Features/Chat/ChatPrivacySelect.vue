@@ -1,26 +1,28 @@
 <script setup lang="ts">
+import { toRef } from 'vue'
 import Select from 'primevue/select'
-import { PRIVACY_OPTIONS } from '@/composables/usePrivacySettings'
 import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
+import { useChatPrivacy, type ChatPrivacyState } from '@/composables/useChatPrivacy'
 
-const props = defineProps<{ privacy: { message_privacy: string } }>()
+const props = withDefaults(defineProps<{ privacy: ChatPrivacyState; uloveOnly?: boolean }>(), { uloveOnly: false })
 const emit = defineEmits<{ (e: 'savePrivacy'): void }>()
 const { selectPt } = useDropdownMenuStyle()
+const chatPrivacy = useChatPrivacy(toRef(props, 'privacy') as any, toRef(props, 'uloveOnly'))
 
 function onPrivacyChange(v: any) {
-  props.privacy.message_privacy = v
+  chatPrivacy.applyValue(String(v))
   emit('savePrivacy')
 }
 </script>
 <template>
   <div class="space-y-2 min-w-0">
     <Select
-      :modelValue="privacy.message_privacy"
+      :modelValue="chatPrivacy.currentValue.value"
       @update:modelValue="onPrivacyChange"
-      :options="PRIVACY_OPTIONS"
+      :options="chatPrivacy.options.value"
       optionLabel="label"
       optionValue="value"
-      placeholder="Кто может писать"
+      :placeholder="uloveOnly ? 'Кто может писать в ULove' : 'Кто может писать'"
       checkmark
       scrollHeight="12rem"
       fluid
@@ -29,10 +31,10 @@ function onPrivacyChange(v: any) {
     >
       <template #value="p">
         <span v-if="p.value" class="flex items-center gap-2 text-sm text-stone-900 dark:text-zinc-100 truncate">
-          <i :class="(PRIVACY_OPTIONS.find((o) => o.value === p.value)?.icon ?? 'pi pi-lock') + ' text-xs text-violet-600 dark:text-violet-400 shrink-0'"></i>
-          <span class="truncate">{{ PRIVACY_OPTIONS.find((o) => o.value === p.value)?.label }}</span>
+          <i :class="(chatPrivacy.options.value.find((o) => o.value === p.value)?.icon ?? 'pi pi-lock') + ' text-xs text-violet-600 dark:text-violet-400 shrink-0'"></i>
+          <span class="truncate">{{ chatPrivacy.options.value.find((o) => o.value === p.value)?.label }}</span>
         </span>
-        <span v-else class="text-sm text-stone-400 dark:text-zinc-500">Кто может писать</span>
+        <span v-else class="text-sm text-stone-400 dark:text-zinc-500">{{ uloveOnly ? 'Кто может писать в ULove' : 'Кто может писать' }}</span>
       </template>
       <template #option="p">
         <span class="flex items-center gap-2 text-sm truncate">

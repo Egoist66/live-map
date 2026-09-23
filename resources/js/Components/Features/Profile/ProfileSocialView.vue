@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
@@ -13,7 +13,11 @@ import { useSwipesCta } from '@/composables/useSwipesCta'
 import { ageLabel, calcAge } from '@/composables/useUserAge'
 import { useSwipeTabs } from '@/composables/useSwipeTabs'
 import { usePhotoPicker } from '@/composables/usePhotoPicker'
-import ProfileFlowPosts from '@/Components/Features/Flow/ProfileFlowPosts.vue'
+import { useAppModulesStore } from '@/stores/appModules'
+
+// Лениво: ProfileFlowPosts тянет стор/композер/карточки UFlow (чанк mod-uflow).
+// Static import качал бы ленту даже ulove-only пользователям, открывшим профиль.
+const ProfileFlowPosts = defineAsyncComponent(() => import('@/Components/Features/Flow/ProfileFlowPosts.vue'))
 
 const props = defineProps<{
   user: any
@@ -63,6 +67,24 @@ const { pickerInput, openPicker, handlePickerChange } = usePhotoPicker({
 })
 const g = useGender()
 const { goSwipes } = useSwipesCta()
+
+/**
+ * Вкладка Flow видна только при включённом uflow: иначе ulove-only
+ * пользователь видел бы пустой таб, а чанк ленты грузился бы зря.
+ */
+const showFlow = computed(() => {
+  try {
+    return useAppModulesStore().isEnabled('uflow')
+  } catch {
+    return true
+  }
+})
+
+watch(showFlow, (visible) => {
+  if (!visible && tab.value === 'flow') {
+    tab.value = 'short'
+  }
+})
 
 const ageText = computed(() => {
   const direct = props.user?.age != null ? ageLabel(Number(props.user.age)) : ''
@@ -152,7 +174,7 @@ const statCls = 'flex-1 min-w-0 flex flex-col items-center sm:block sm:text-left
         <button type="button" @click="tab = 'short'" :class="['shrink-0 whitespace-nowrap px-3 sm:px-4 py-3 text-[13px] sm:text-sm font-bold border-b-[3px] -mb-px transition', tab === 'short' ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'border-transparent text-stone-500 dark:text-zinc-400 hover:text-ink-900 dark:hover:text-zinc-200']">О себе</button>
         <button type="button" @click="tab = 'gallery'" :class="['shrink-0 whitespace-nowrap px-3 sm:px-4 py-3 text-[13px] sm:text-sm font-bold border-b-[3px] -mb-px transition', tab === 'gallery' ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'border-transparent text-stone-500 dark:text-zinc-400 hover:text-ink-900 dark:hover:text-zinc-200']">Галерея</button>
         <button type="button" @click="tab = 'info'" :class="['shrink-0 whitespace-nowrap px-3 sm:px-4 py-3 text-[13px] sm:text-sm font-bold border-b-[3px] -mb-px transition', tab === 'info' ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'border-transparent text-stone-500 dark:text-zinc-400 hover:text-ink-900 dark:hover:text-zinc-200']">Информация</button>
-        <button type="button" @click="tab = 'flow'" :class="['shrink-0 whitespace-nowrap px-3 sm:px-4 py-3 text-[13px] sm:text-sm font-bold border-b-[3px] -mb-px transition', tab === 'flow' ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'border-transparent text-stone-500 dark:text-zinc-400 hover:text-ink-900 dark:hover:text-zinc-200']">Flow</button>
+        <button v-if="showFlow" type="button" @click="tab = 'flow'" :class="['shrink-0 whitespace-nowrap px-3 sm:px-4 py-3 text-[13px] sm:text-sm font-bold border-b-[3px] -mb-px transition', tab === 'flow' ? 'border-blue-600 text-blue-600 dark:text-blue-400' : 'border-transparent text-stone-500 dark:text-zinc-400 hover:text-ink-900 dark:hover:text-zinc-200']">Flow</button>
       </div>
     </div>
 
@@ -231,8 +253,19 @@ const statCls = 'flex-1 min-w-0 flex flex-col items-center sm:block sm:text-left
       </div>
     </div>
 
-    <div v-else class="p-4 sm:p-6" @touchstart.passive="swipe.onTouchStart" @touchend.passive="swipe.onTouchEnd">
-      <ProfileFlowPosts :user-id="(user as any).id" :is-own="isOwn" :show-header="false" />
+    <div v-else-if="tab === 'flow' && showFlow" class="p-4 sm:p-6" @touchstart.passive="swipe.onTouchStart" @touchend.passive="swipe.onTouchEnd">
+      <Suspense>
+        <ProfileFlowPosts :user-id="(user as any).id" :is-own="isOwn" :show-header="false" />
+        <template #fallback>
+          <div class="animate-pulse rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 text-sm text-stone-400">Загружаем ленту…</div>
+        </template>
+      </Suspense>
+    </div>
+
+    <div v-else-if="tab === 'flow'" class="p-4 sm:p-6" @touchstart.passive="swipe.onTouchStart" @touchend.passive="swipe.onTouchEnd">
+      <div class="py-10 px-6 text-center border border-dashed border-stone-200 dark:border-zinc-700 rounded-2xl">
+        <div class="text-sm text-stone-500 dark:text-zinc-400">Раздел UFlow выключен. Включите его в настройках «Приложение», чтобы видеть посты.</div>
+      </div>
     </div>
   </div>
 </template>

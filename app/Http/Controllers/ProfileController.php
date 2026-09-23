@@ -69,7 +69,13 @@ class ProfileController extends Controller
             $showLastSeen = null;
         }
         $home = $user->publicHomeFor($auth);
-        $base = $user->only(['id','profile_slug','name','gender','birth_date','country','country_code','avatar_path','level','reputation_score','created_at','home_city','home_visibility','home_radius_km','bio','thought','last_seen_at','is_invisible','photo_comments_privacy']);
+        $base = $user->only(['id','profile_slug','name','gender','birth_date','country','country_code','avatar_path','level','reputation_score','created_at','home_city','home_visibility','home_radius_km','bio','thought','last_seen_at','is_invisible','photo_comments_privacy','dating_enabled','dating_goal','dating_custom_goal','dating_about','dating_interests']);
+        if ($isOwn) {
+            $base['dating_hide_name'] = (bool) $user->dating_hide_name;
+            $base['dating_hide_age'] = (bool) $user->dating_hide_age;
+            $base['dating_hide_distance'] = (bool) $user->dating_hide_distance;
+            $base['dating_match_only'] = (bool) $user->dating_match_only;
+        }
         $base['age'] = $user->age;
         $base['plan'] = $user->plan ?? 'free';
         $base['plan_expires_at'] = $user->plan_expires_at?->toISOString();
@@ -336,6 +342,33 @@ class ProfileController extends Controller
         ])->save();
 
         return response()->json([
+            'default_mode' => $user->default_mode,
+            'landing' => $user->landingPath(),
+        ]);
+    }
+
+    /**
+     * Смена набора включённых модулей (изоляция ULove/UPin/UFlow/районы/бизнес).
+     *
+     * Первый модуль списка — primary (стартовый экран). Пустой список
+     * запрещён: хотя бы один раздел всегда включён.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function updateAppModules(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'modules' => ['required', 'array', 'min:1'],
+            'modules.*' => ['required', 'string', 'in:ulove,upin,uflow,districts,business'],
+        ]);
+
+        $user = $request->user();
+        $modules = array_values(array_unique(array_map('strval', $data['modules'])));
+        $user->setEnabledModules($modules);
+
+        return response()->json([
+            'modules' => $user->enabledModules(),
             'default_mode' => $user->default_mode,
             'landing' => $user->landingPath(),
         ]);

@@ -174,6 +174,20 @@ export function useSwipes() {
     router.visit(swipeTabPath(tab))
   }
 
+  /**
+   * Открыт таб-роут вместо ленты (активные, избранное, лайки,
+   * анкета, PRO): сверху нужна стрелка назад к ленте.
+   */
+  const showTabBack = computed(() => activeTab.value !== 'feed')
+
+  /**
+   * Вернуться из таба-роута на ленту свайпов.
+   */
+  function backToFeed(): void {
+    if (activeTab.value === 'feed') return
+    goTab('feed')
+  }
+
   const filters = ref<SwipeFilters>({
     goal: null,
     gender: 'all',
@@ -225,7 +239,7 @@ export function useSwipes() {
   const quotaLabel = computed(() => {
     if (!quota.value) return ''
     if (quota.value.limit < 0) return 'Безлимит'
-    return `Сообщения: ${quota.value.left}/${quota.value.limit}`
+    return `Осталось сообщений: ${quota.value.left} из ${quota.value.limit}`
   })
 
   /**
@@ -1008,8 +1022,12 @@ export function useSwipes() {
   async function setPrivacyFlag(key: 'dating_hide_name' | 'dating_hide_age' | 'dating_hide_distance' | 'dating_match_only', next: boolean): Promise<void> {
     const needsPro = key !== 'dating_match_only'
     if (next && needsPro && !canIncognito.value) {
-      const featureName = key === 'dating_hide_name' ? 'Скрытие имени' : 'Скрытие возраста'
-      askPremium(featureName)
+      const featureNames = {
+        dating_hide_name: 'Скрытие имени',
+        dating_hide_age: 'Скрытие возраста',
+        dating_hide_distance: 'Скрытие расстояния',
+      } as const
+      askPremium(featureNames[key])
       return
     }
     privacy.value[key] = next
@@ -1182,6 +1200,8 @@ export function useSwipes() {
     planLabel,
     activeTab,
     goTab,
+    showTabBack,
+    backToFeed,
     activeUsers,
     activeLoading,
     activeHasMore,

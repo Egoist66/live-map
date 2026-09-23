@@ -270,9 +270,18 @@ class SwipeController extends Controller
             ...($data['dating_interests'] ?? [])
         );
 
-        $wantsHide = ($data['dating_hide_name'] ?? false) || ($data['dating_hide_age'] ?? false) || ($data['dating_hide_distance'] ?? false);
+        $hideKeys = ['dating_hide_name', 'dating_hide_age', 'dating_hide_distance'];
 
-        if ($wantsHide && ! $me->isPro()) {
+        $enablingHide = false;
+
+        foreach ($hideKeys as $key) {
+            if (array_key_exists($key, $data) && (bool) $data[$key] && ! (bool) $me->$key) {
+                $enablingHide = true;
+                break;
+            }
+        }
+
+        if ($enablingHide && ! $me->isPro()) {
             return response()->json([
                 'message' => 'Скрытие имени и возраста — PRO-функция. Заполните профиль и оформите PRO.',
             ], 402);

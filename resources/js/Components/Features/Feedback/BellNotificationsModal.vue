@@ -10,13 +10,14 @@ import Tab from "primevue/tab";
 import TabPanels from "primevue/tabpanels";
 import TabPanel from "primevue/tabpanel";
 import ProgressSpinner from "primevue/progressspinner";
-import { watch } from "vue";
+import { watch, computed } from "vue";
 import { router } from "@inertiajs/vue3";
 import { useBellNotifications } from "@/composables/useBellNotifications";
 import { usePinActivity } from "@/composables/usePinActivity";
 import { useAdminReports } from "@/composables/useAdminReports";
 import { useAppUpdates } from "@/composables/useAppUpdates";
 import { useSecurityImpersonations } from "@/composables/useSecurityImpersonations";
+import { useBellUloveMode, countAppUnread, uloveHeaderBadge } from "@/composables/useBellUloveMode";
 import { avatarSrcFor } from "@/composables/useAvatar";
 import { useAppConfirm } from "@/composables/useAppConfirm";
 import { useNotificationsReadAll } from "@/composables/useNotificationsReadAll";
@@ -30,6 +31,29 @@ const pinAct = usePinActivity();
 const admRep = useAdminReports();
 const updates = useAppUpdates();
 const proc = useSecurityImpersonations();
+const bellMode = useBellUloveMode();
+const uloveOnly = bellMode.uloveOnly;
+/** App-уведомления (от разработчиков) для ULove-режима: только type app.*. */
+const appNotifications = computed(() => bellMode.onlyApp(pinAct.otherNotifications.value));
+const appUnread = computed(() => countAppUnread(appNotifications.value));
+/** Бейдж шапки в ULove-режиме: ULove + сообщения + безопасность + app + новости. */
+const uloveBadge = computed(() =>
+  uloveHeaderBadge({
+    loveUnread: pinAct.loveUnread.value,
+    chatUnread: bell.unreadCount.value,
+    securityUnread: proc.unread.value,
+    appUnread: appUnread.value,
+    newsUnread: updates.unreadCount.value,
+  }),
+);
+/** Есть ли что показать в ULove-режиме (события без пинов/друзей). */
+const uloveHasData = computed(
+  () =>
+    pinAct.loveActivities.value.length > 0 ||
+    appNotifications.value.length > 0 ||
+    proc.items.value.length > 0 ||
+    bell.conversations.value.length > 0,
+);
 const { confirmDelete } = useAppConfirm();
 async function askClearActivities() {
   const ok = await confirmDelete(
@@ -132,7 +156,7 @@ function openNews(item: any) {
             class="!w-9 !h-9"
           />
           <Button
-            v-if="pinAct.activities.value.length"
+            v-if="pinAct.activities.value.length && !uloveOnly"
             @click="askClearActivities()"
             :loading="pinAct.clearing.value"
             icon="pi pi-trash"
@@ -144,8 +168,8 @@ function openNews(item: any) {
             class="!w-9 !h-9"
           />
           <Badge
-            v-if="bell.unreadCount.value + bell.pending.value.length + pinAct.unread.value + admRep.pendingCount.value + updates.unreadCount.value + proc.unread.value"
-            :value="(bell.unreadCount.value + bell.pending.value.length + pinAct.unread.value + admRep.pendingCount.value + updates.unreadCount.value + proc.unread.value)>9?'9+':String(bell.unreadCount.value + bell.pending.value.length + pinAct.unread.value + admRep.pendingCount.value + updates.unreadCount.value + proc.unread.value)"
+            v-if="uloveOnly ? uloveBadge : (bell.unreadCount.value + bell.pending.value.length + pinAct.unread.value + admRep.pendingCount.value + updates.unreadCount.value + proc.unread.value)"
+            :value="(uloveOnly ? uloveBadge : (bell.unreadCount.value + bell.pending.value.length + pinAct.unread.value + admRep.pendingCount.value + updates.unreadCount.value + proc.unread.value))>9?'9+':String(uloveOnly ? uloveBadge : (bell.unreadCount.value + bell.pending.value.length + pinAct.unread.value + admRep.pendingCount.value + updates.unreadCount.value + proc.unread.value))"
             severity="danger"
           />
         </div>
@@ -156,10 +180,10 @@ function openNews(item: any) {
         <TabList class="!bg-transparent overflow-x-auto" :pt="{ activeBar: { class: '!bg-violet-600' } }">
           <Tab value="events" class="!text-[13px] !font-bold whitespace-nowrap">
             <span class="flex items-center gap-1.5">События
-              <Badge v-if="pinAct.eventUnread.value + bell.pending.value.length + bell.unreadCount.value + proc.unread.value" :value="(pinAct.eventUnread.value + bell.pending.value.length + bell.unreadCount.value + proc.unread.value) > 9 ? '9+' : String(pinAct.eventUnread.value + bell.pending.value.length + bell.unreadCount.value + proc.unread.value)" severity="danger" class="!text-[10px] !min-w-[20px] !h-5" />
+              <Badge v-if="uloveOnly ? (pinAct.loveUnread.value + bell.unreadCount.value + proc.unread.value + appUnread) : (pinAct.eventUnread.value + bell.pending.value.length + bell.unreadCount.value + proc.unread.value)" :value="((uloveOnly ? (pinAct.loveUnread.value + bell.unreadCount.value + proc.unread.value + appUnread) : (pinAct.eventUnread.value + bell.pending.value.length + bell.unreadCount.value + proc.unread.value))) > 9 ? '9+' : String(uloveOnly ? (pinAct.loveUnread.value + bell.unreadCount.value + proc.unread.value + appUnread) : (pinAct.eventUnread.value + bell.pending.value.length + bell.unreadCount.value + proc.unread.value))" severity="danger" class="!text-[10px] !min-w-[20px] !h-5" />
             </span>
           </Tab>
-          <Tab value="pins" class="!text-[13px] !font-bold whitespace-nowrap">
+          <Tab v-if="!uloveOnly" value="pins" class="!text-[13px] !font-bold whitespace-nowrap">
             <span class="flex items-center gap-1.5">Пины
               <Badge v-if="pinAct.pinUnread.value" :value="pinAct.pinUnread.value > 9 ? '9+' : String(pinAct.pinUnread.value)" severity="danger" class="!text-[10px] !min-w-[20px] !h-5" />
             </span>
@@ -175,17 +199,17 @@ function openNews(item: any) {
                 <ProgressSpinner style="width:26px;height:26px" :strokeWidth="6" />
               </div>
               <template v-else>
-                <div v-if="!bell.hasData.value && !pinAct.eventActivities.value.length && !pinAct.otherNotifications.value.length && !admRep.reports.value.length && !proc.items.value.length" class="py-10 text-center px-4">
+                <div v-if="uloveOnly ? !uloveHasData : (!bell.hasData.value && !pinAct.eventActivities.value.length && !pinAct.otherNotifications.value.length && !admRep.reports.value.length && !proc.items.value.length)" class="py-10 text-center px-4">
                   <div
                     class="w-12 h-12 rounded-2xl bg-stone-100 dark:bg-zinc-800 grid place-items-center mx-auto text-xl"
                   >
-                    🔔
+                    {{ uloveOnly ? '💞' : '🔔' }}
                   </div>
                   <div class="text-sm font-semibold dark:text-white mt-3">Пока тихо</div>
-                  <div class="text-xs text-stone-500 dark:text-zinc-400 mt-1">Новых сообщений, заявок, лайков и постов нет</div>
+                  <div class="text-xs text-stone-500 dark:text-zinc-400 mt-1">{{ uloveOnly ? 'Новых мэтчей, сообщений и новостей нет' : 'Новых сообщений, заявок, лайков и постов нет' }}</div>
                 </div>
                 <template v-else>
-                  <div v-if="admRep.reports.value.length" class="mb-3">
+                  <div v-if="!uloveOnly && admRep.reports.value.length" class="mb-3">
                     <div
                       class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500 px-2 py-1.5 flex items-center gap-1.5"
                     >
@@ -341,7 +365,7 @@ function openNews(item: any) {
                       </button>
                     </div>
                   </div>
-                  <div v-if="pinAct.flowActivities.value.length" class="mb-3">
+                  <div v-if="!uloveOnly && pinAct.flowActivities.value.length" class="mb-3">
                     <div
                       class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500 px-2 py-1.5 flex items-center gap-1.5"
                     >
@@ -402,7 +426,7 @@ function openNews(item: any) {
                       </button>
                     </div>
                   </div>
-                  <div v-if="pinAct.photoActivities.value.length" class="mb-3">
+                  <div v-if="!uloveOnly && pinAct.photoActivities.value.length" class="mb-3">
                     <div
                       class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500 px-2 py-1.5 flex items-center gap-1.5"
                     >
@@ -463,7 +487,7 @@ function openNews(item: any) {
                       </button>
                     </div>
                   </div>
-                  <div v-if="pinAct.subActivities.value.length" class="mb-3">
+                  <div v-if="!uloveOnly && pinAct.subActivities.value.length" class="mb-3">
                     <div
                       class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500 px-2 py-1.5 flex items-center gap-1.5"
                     >
@@ -519,20 +543,20 @@ function openNews(item: any) {
                       </button>
                     </div>
                   </div>
-                  <div v-if="pinAct.otherNotifications.value.length" class="mb-3">
+                  <div v-if="(uloveOnly ? appNotifications.length : pinAct.otherNotifications.value.length)" class="mb-3">
                     <div
                       class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500 px-2 py-1.5 flex items-center gap-1.5"
                     >
-                      Уведомления
+                      {{ uloveOnly ? 'Приложение' : 'Уведомления' }}
                       <span
-                        v-if="pinAct.otherUnread.value"
+                        v-if="uloveOnly ? appUnread : pinAct.otherUnread.value"
                         class="bg-violet-600 text-white text-[10px] px-1.5 py-0.5 rounded-full"
-                        >{{ pinAct.otherUnread.value }}</span
+                        >{{ uloveOnly ? appUnread : pinAct.otherUnread.value }}</span
                       >
                     </div>
                     <div class="space-y-1">
                       <button
-                        v-for="n in pinAct.otherNotifications.value"
+                        v-for="n in (uloveOnly ? appNotifications : pinAct.otherNotifications.value)"
                         :key="n.id"
                         @click="bell.close(); pinAct.goNotification(n)"
                         :class="
@@ -584,7 +608,7 @@ function openNews(item: any) {
                       </button>
                     </div>
                   </div>
-                  <div v-if="bell.pending.value.length" class="mb-3">
+                  <div v-if="!uloveOnly && bell.pending.value.length" class="mb-3">
                     <div
                       class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500 px-2 py-1.5 flex items-center gap-1.5"
                     >
@@ -685,7 +709,7 @@ function openNews(item: any) {
               </template>
             </div>
           </TabPanel>
-          <TabPanel value="pins">
+          <TabPanel v-if="!uloveOnly" value="pins">
             <div class="notif-scroll">
               <div class="px-2 py-1.5 flex items-center gap-1.5">
                 <span class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500">Активность пинов</span>

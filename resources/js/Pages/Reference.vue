@@ -32,7 +32,7 @@ onMounted(() => load())
   <Head :title="seo.title.value">
     <meta head-key="description" name="description" :content="seo.description.value" />
   </Head>
-  <div class="page-scroll bg-surface dark:bg-[#090E1A]">
+  <div class="page-scroll bg-surface dark:bg-[#0F121F]">
       <div class="max-w-[900px] mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-[calc(2rem+var(--sab))]">
         <div class="text-center">
           <h1 class="text-[28px] sm:text-[42px] font-black tracking-[-0.04em] leading-[1.05] sm:leading-none dark:text-white text-balance">{{ pageTitle }}</h1>

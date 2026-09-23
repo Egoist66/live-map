@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
 import AvatarPreview from '@/Components/Features/Media/AvatarPreview.vue'
-import PlanDetailsDialog from '@/Components/Features/Profile/PlanDetailsDialog.vue'
 import { useProfileForm } from '@/composables/useProfileForm'
-import { usePlanDetails, type PlanId } from '@/composables/usePlanDetails'
 import { useBirthDateField } from '@/composables/useBirthDate'
 import { useAvatarUpload } from '@/composables/useAvatarUpload'
 import { useGender } from '@/composables/useGender'
+import { computed } from 'vue'
 import { RESIDENCE_COUNTRIES } from '@/composables/useResidence'
 import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
+import { useAppModulesStore } from '@/stores/appModules'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import Button from 'primevue/button'
@@ -26,24 +26,15 @@ const bd = useBirthDateField(f.birth_date as any)
 const a = useAvatarUpload()
 const g = useGender()
 const { selectPt } = useDropdownMenuStyle()
-const planDialog = usePlanDetails()
-const planOptions = [{ label:'Free — 3 пина · 10 км', value:'free', icon:'pi pi-ticket' },{ label:'Pro — Безлимит · 15 км', value:'pro', icon:'pi pi-bolt' },{ label:'Business — Безлимит · 50 км', value:'business', icon:'pi pi-briefcase' }]
-
-/**
- * Выбрать тариф из модалки: подставляет значение и закрывает.
- * @param id идентификатор тарифа
- */
-function choosePlan(id: PlanId): void {
-  ;(f.plan.value as any) = id
-  planDialog.hide()
-}
+const modules = useAppModulesStore()
+const showMapFields = computed(() => modules.isEnabled('upin'))
 </script>
 <template>
   <section>
     <header>
       <div class="min-w-0">
         <h2 class="font-bold dark:text-white">Данные аккаунта</h2>
-        <p class="text-sm text-zinc-500 mt-1">Аватар, Контакты и домашняя точка. Радиус зоны — в разделе «Приватность».</p>
+        <p class="text-sm text-zinc-500 mt-1">{{ showMapFields ? 'Аватар, Контакты и домашняя точка. Радиус зоны — в разделе «Приватность».' : 'Аватар, контакты и данные для анкеты.' }}</p>
       </div>
     </header>
     <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft mt-6" :pt="{ body:{ class:'!p-4' }, content:{ class:'!p-0' } }">
@@ -117,7 +108,7 @@ function choosePlan(id: PlanId): void {
         <div>
           <label class="text-sm font-medium dark:text-white">Страна проживания</label>
           <Select v-model="f.country.value" :options="[...RESIDENCE_COUNTRIES]" optionLabel="name" optionValue="name" placeholder="Беларусь" checkmark editable fluid class="w-full mt-1 !rounded-xl" :pt="selectPt" @update:model-value="(v:string)=>{ const c=[...RESIDENCE_COUNTRIES].find(x=>x.name===v); f.setValues({ country: v, country_code: c ? c.code : (f.values as any).country_code } as any) }" />
-          <p class="text-[11px] text-stone-400 mt-1">Пины — только в своей стране</p>
+          <p v-if="showMapFields" class="text-[11px] text-stone-400 mt-1">Пины — только в своей стране</p>
           <small v-if="f.countryWarning.value" class="text-amber-600 dark:text-amber-400">⚠️ {{ f.countryWarning.value }}</small>
           <Message v-if="f.errors.value.country" severity="error" :closable="false" class="mt-1 !rounded-xl !py-1 !text-xs">{{ f.errors.value.country }}</Message>
         </div>
@@ -127,7 +118,7 @@ function choosePlan(id: PlanId): void {
           <Message v-if="f.errors.value.home_city" severity="error" :closable="false" class="mt-1 !rounded-xl !py-1 !text-xs">{{ f.errors.value.home_city }}</Message>
         </div>
       </div>
-      <Card class="!bg-zinc-50 dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 !rounded-3xl !shadow-none" :pt="{ body:{ class:'!p-4' }, content:{ class:'!p-0' } }">
+      <Card v-if="showMapFields" class="!bg-zinc-50 dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 !rounded-3xl !shadow-none" :pt="{ body:{ class:'!p-4' }, content:{ class:'!p-0' } }">
         <template #content>
           <div class="flex items-center justify-between"><h4 class="text-sm font-bold dark:text-white">Домашняя точка</h4><Button @click="f.useMyLocation" label="Моя геопозиция" size="small" rounded class="!bg-black dark:!bg-white !border-black dark:!border-white !text-white dark:!text-black" /></div>
           <p class="text-[11px] text-stone-500 mt-1">Радиус зоны настраивается в разделе «Приватность».</p>
@@ -146,54 +137,7 @@ function choosePlan(id: PlanId): void {
           <small class="text-stone-400">{{ (f.bio.value || '').length }} / 10000</small>
         </div>
       </div>
-      <label class="flex items-center gap-2 text-sm dark:text-white"><Checkbox v-model="f.is_anonymous_default.value" :binary="true" /> Создавать пины анонимно по умолчанию</label>
-      <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-700 !rounded-3xl" :pt="{ body:{ class:'!p-4' }, content:{ class:'!p-0' } }">
-        <template #content>
-          <h4 class="text-sm font-black dark:text-white">Тариф — {{ ({free:'Бесплатный',pro:'Pro',business:'Бизнес'} as any)[f.values.plan] }}</h4>
-          <p class="text-xs text-zinc-500 mt-1">Переключи тариф — вступают сразу.</p>
-          <Select
-            v-model="f.plan.value"
-            :options="planOptions"
-            optionLabel="label"
-            optionValue="value"
-            placeholder="Выбери тариф"
-            checkmark
-            scrollHeight="12rem"
-            fluid
-            class="w-full min-w-0 mt-3 !rounded-xl"
-            :pt="{
-              root: { class: '!rounded-xl !border-stone-200 dark:!border-zinc-700 !bg-white dark:!bg-zinc-900' },
-              label: { class: '!text-sm !py-2.5 !text-stone-900 dark:!text-zinc-100 placeholder:!text-stone-400 dark:placeholder:!text-zinc-500' },
-              dropdown: { class: '!w-9' },
-              dropdownIcon: { class: '!text-xs !text-stone-400 dark:!text-zinc-500' },
-              overlay: { class: '!rounded-xl !border !border-stone-200 dark:!border-zinc-700 !bg-white dark:!bg-zinc-900 !shadow-xl !max-w-[calc(100vw-2rem)] !overflow-hidden' },
-              listContainer: { class: '!bg-white dark:!bg-zinc-900 !p-1.5' },
-              list: { class: '!bg-white dark:!bg-zinc-900 !flex !flex-col !gap-0.5' },
-              option: { class: '!rounded-lg !px-3 !py-2.5 !text-sm !text-stone-800 dark:!text-zinc-100 hover:!bg-stone-100 dark:hover:!bg-zinc-800' },
-            }"
-          >
-            <template #value="p">
-              <span v-if="p.value" class="flex items-center gap-2 text-sm text-stone-900 dark:text-zinc-100 truncate">
-                <i :class="(planOptions.find((o) => o.value === p.value)?.icon ?? 'pi pi-ticket') + ' text-xs text-violet-600 dark:text-violet-400 shrink-0'"></i>
-                <span class="truncate">{{ planOptions.find((o) => o.value === p.value)?.label }}</span>
-              </span>
-              <span v-else class="text-sm text-stone-400 dark:text-zinc-500">Выбери тариф</span>
-            </template>
-            <template #option="p">
-              <span class="flex items-center gap-2 text-sm truncate">
-                <i :class="p.option.icon + ' text-xs opacity-60 shrink-0'"></i>
-                <span class="truncate">{{ p.option.label }}</span>
-              </span>
-            </template>
-          </Select>
-          <div class="mt-3 grid sm:grid-cols-3 gap-2">
-            <Card @click="planDialog.showPlan('free')" :class="['!rounded-3xl !cursor-pointer !transition', f.values.plan==='free'?'!bg-ink-900 dark:!bg-white !text-white dark:!text-ink-900 !border-ink-900 dark:!border-white':'!bg-stone-50 dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 !text-stone-800 dark:!text-zinc-200']" :pt="{ body:{ class:'!p-3' }, content:{ class:'!p-0' } }"><template #content><div class="text-sm font-bold">Free</div><div class="text-xs opacity-70">3 пина · 10 км · 4 ч</div><div class="text-xs font-bold mt-1">Бесплатно</div><div class="text-[11px] font-semibold mt-1 underline underline-offset-2">Что входит?</div></template></Card>
-            <Card @click="planDialog.showPlan('pro')" :class="['!rounded-3xl !cursor-pointer !transition', f.values.plan==='pro'?'!bg-gradient-to-br !from-violet-600 !to-indigo-600 !text-white !border-violet-600':'!bg-amber-50 dark:!bg-amber-950/30 !border-amber-200 dark:!border-amber-800 !text-stone-800 dark:!text-zinc-200']" :pt="{ body:{ class:'!p-3' }, content:{ class:'!p-0' } }"><template #content><div class="text-sm font-black">Pro</div><div class="text-xs opacity-80">Безлимит · 15 км · 12 ч</div><div class="text-xs font-bold mt-1">$4.99 / мес</div><div class="text-[11px] font-semibold mt-1 underline underline-offset-2">Что входит?</div></template></Card>
-            <Card @click="planDialog.showPlan('business')" :class="['!rounded-3xl !cursor-pointer !transition', f.values.plan==='business'?'!bg-ink-900 dark:!bg-white !text-white dark:!text-ink-900 !border-ink-900 dark:!border-white':'!bg-stone-50 dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 !text-stone-800 dark:!text-zinc-200']" :pt="{ body:{ class:'!p-3' }, content:{ class:'!p-0' } }"><template #content><div class="text-sm font-bold">Business</div><div class="text-xs opacity-70">Безлимит · 50 км · ∞</div><div class="text-xs font-bold mt-1">$19.99 / мес</div><div class="text-[11px] font-semibold mt-1 underline underline-offset-2">Что входит?</div></template></Card>
-          </div>
-          <PlanDetailsDialog :plan="planDialog.dialogPlan.value" :current-plan="String(f.values.plan ?? 'free')" @close="planDialog.hide()" @choose="choosePlan" />
-        </template>
-      </Card>
+      <label v-if="showMapFields" class="flex items-center gap-2 text-sm dark:text-white"><Checkbox v-model="f.is_anonymous_default.value" :binary="true" /> Создавать пины анонимно по умолчанию</label>
       <Message v-if="mustVerifyEmail && f.user.value.email_verified_at === null" severity="warn" :closable="false" class="!rounded-2xl">
         Почта не подтверждена. <Link :href="route('verification.send')" method="post" as="button" class="underline font-medium">Отправить письмо</Link>
         <div v-if="status==='verification-link-sent'" class="text-green-700 mt-1">Письмо отправлено</div>

@@ -1,6 +1,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
 import { useBadgeStore } from '@/stores/badges'
+import { useAppModulesStore } from '@/stores/appModules'
 import { route } from '@/route'
 
 /**
@@ -34,6 +35,63 @@ export function useMobileBottomNav() {
   const total = computed(() => badge.unread)
 
   /**
+   * Видимость пунктов по включённым модулям.
+   *
+   * Изоляция: ULove-пользователь не видит карту и ленту,
+   * UPin-пользователь — свайпы. Лишнее довключается в настройках.
+   * Профиль и чат — всегда (общее ядро).
+   */
+  const modules = useAppModulesStore()
+
+  const showMap = computed(() => isBusiness.value || modules.isEnabled('upin'))
+  const showLove = computed(() => !isBusiness.value && modules.isEnabled('ulove'))
+  const showFlow = computed(() => !isBusiness.value && modules.isEnabled('uflow'))
+  const showDistricts = computed(() => !isBusiness.value && modules.isEnabled('districts'))
+
+  /**
+   * Класс сетки под число видимых пунктов.
+   *
+   * Полные имена классов — Tailwind JIT видит их статически.
+   */
+  const gridClass = computed(() => {
+    if (isBusiness.value) {
+      return 'grid grid-cols-3 items-end px-1 pt-1.5 pb-2 min-h-[60px]'
+    }
+
+    let count = 2
+
+    if (showMap.value) {
+      count += 1
+    }
+
+    if (showLove.value) {
+      count += 1
+    }
+
+    if (showFlow.value) {
+      count += 1
+    }
+
+    if (showDistricts.value) {
+      count += 1
+    }
+
+    if (count <= 3) {
+      return 'grid grid-cols-3 items-end px-1 pt-1.5 pb-2 min-h-[60px]'
+    }
+
+    if (count === 4) {
+      return 'grid grid-cols-4 items-end px-1 pt-1.5 pb-2 min-h-[60px]'
+    }
+
+    if (count >= 6) {
+      return 'grid grid-cols-6 items-end px-1 pt-1.5 pb-2 min-h-[60px]'
+    }
+
+    return 'grid grid-cols-5 items-end px-1 pt-1.5 pb-2 min-h-[60px]'
+  })
+
+  /**
    * Реактивный путь текущей страницы.
    *
    * Ziggy `route().current()` читает `window.location` напрямую и не
@@ -55,6 +113,7 @@ export function useMobileBottomNav() {
     } catch {
       currentPath.value = ''
     }
+    syncHtmlClass()
   }
 
   /**
@@ -113,7 +172,21 @@ export function useMobileBottomNav() {
     return 'text-stone-500 dark:text-zinc-400'
   }
 
-  const navHidden = computed(() => keyboardOpen.value)
+  /**
+   * На свайпах ULove нижнее меню скрыто, как в Tinder:
+   * профиль, сообщения и разделы — в верхнем баре и шторке.
+   */
+  const onSwipes = computed(() => {
+    const path = currentPath.value
+
+    if (!path) {
+      return false
+    }
+
+    return path === '/swipes' || path.startsWith('/swipes/')
+  })
+
+  const navHidden = computed(() => keyboardOpen.value || onSwipes.value)
 
   /**
    * Активность по пути без Ziggy-имён (для разделов вроде `/cabinet`,
@@ -166,7 +239,10 @@ export function useMobileBottomNav() {
   }
 
   /**
-   * Синхронизирует класс на <html> для CSS-скрытия меню.
+   * Синхронизирует классы на <html> для CSS-скрытия меню.
+   *
+   * Клавиатура и свайпы ULove (там свой топбар, как в Tinder)
+   * прячут нижнее меню через CSS-трансформ без скачков вёрстки.
    *
    * @returns void
    */
@@ -174,9 +250,14 @@ export function useMobileBottomNav() {
     const root = document.documentElement
     if (keyboardOpen.value) {
       root.classList.add('native-keyboard-open')
-      return
+    } else {
+      root.classList.remove('native-keyboard-open')
     }
-    root.classList.remove('native-keyboard-open')
+    if (onSwipes.value) {
+      root.classList.add('native-swipes')
+    } else {
+      root.classList.remove('native-swipes')
+    }
   }
 
   /**
@@ -256,7 +337,8 @@ export function useMobileBottomNav() {
     document.removeEventListener('focusin', onFocusIn)
     document.removeEventListener('focusout', onFocusOut)
     document.documentElement.classList.remove('native-keyboard-open')
+    document.documentElement.classList.remove('native-swipes')
   })
 
-  return { dashboardHref, isActive, isActivePath, navLinkClass, total, navHidden, keyboardOpen, isBusiness }
+  return { dashboardHref, isActive, isActivePath, navLinkClass, total, navHidden, keyboardOpen, isBusiness, showMap, showLove, showFlow, showDistricts, gridClass }
 }

@@ -7,7 +7,7 @@ import { usePwaInstallGuide } from '@/composables/usePwaInstallGuide'
 import PwaPushToggle from '@/Components/Features/Pwa/PwaPushToggle.vue'
 // Гайд-диалог — только по клику, грузим лениво.
 const PwaInstallGuideDialog = defineAsyncComponent(() => import('@/Components/Features/Pwa/PwaInstallGuideDialog.vue'))
-import SettingsDefaultMode from '@/Components/Features/Settings/SettingsDefaultMode.vue'
+import SettingsModulesSection from '@/Components/Features/Settings/SettingsModulesSection.vue'
 import SettingsHotkeysSection from '@/Components/Features/Settings/SettingsHotkeysSection.vue'
 
 const s = usePwaSettings()
@@ -27,7 +27,7 @@ async function onClearCache() {
         <h3 class="font-black tracking-tight text-lg dark:text-white">Приложение</h3>
         <p class="text-sm text-stone-500 mt-1">Установка, оффлайн-режим и уведомления на этом устройстве.</p>
         <div class="mt-6 space-y-4 max-w-xl">
-          <SettingsDefaultMode />
+          <SettingsModulesSection />
           <div class="flex items-center gap-3 rounded-2xl border border-stone-200/70 dark:border-zinc-800 px-4 py-3">
             <i class="pi pi-mobile text-lg text-indigo-500 shrink-0" />
             <div class="flex-1 text-sm">

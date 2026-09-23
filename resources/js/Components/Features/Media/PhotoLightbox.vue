@@ -31,7 +31,24 @@ function goPrev(): void {
   }
 }
 
-const zoom = usePhotoZoom(stageRef, { onSwipeLeft: goNext, onSwipeRight: goPrev })
+const zoom = usePhotoZoom(stageRef, {
+  onSwipeLeft: goNext,
+  onSwipeRight: goPrev,
+  onSwipeDown: () => emit('close'),
+})
+
+/**
+ * Клик по пустой области сцены (мимо фото и кнопок) — закрыть.
+ * Клик после drag-свайпа игнорим: это конец жеста, а не закрытие.
+ */
+function onStageClick(event: MouseEvent): void {
+  if (zoom.consumeDragged()) {
+    return
+  }
+  if (event.target === stageRef.value) {
+    emit('close')
+  }
+}
 
 watch(
   () => props.index,
@@ -65,7 +82,7 @@ watch(
           <Button icon="pi pi-search-plus" text rounded class="!text-white/90 !w-10 !h-10" aria-label="Приблизить" @click="zoom.zoomIn()" />
           <Button icon="pi pi-times" text rounded class="!text-white/90 !w-10 !h-10" aria-label="Закрыть" @click="emit('close')" />
         </div>
-        <div ref="stageRef" class="relative flex min-h-0 flex-1 cursor-grab items-center justify-center overflow-hidden touch-none select-none active:cursor-grabbing">
+        <div ref="stageRef" class="relative flex min-h-0 flex-1 cursor-grab items-center justify-center overflow-hidden touch-none select-none active:cursor-grabbing" @click="onStageClick">
           <img
             :key="current.src"
             :src="current.src"
@@ -73,7 +90,6 @@ watch(
             :style="zoom.imgStyle.value"
             draggable="false"
             class="max-h-full max-w-full object-contain will-change-transform"
-            @dblclick="zoom.toggle()"
           />
           <Button
             v-if="hasMany && index > 0"

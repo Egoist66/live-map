@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import Card from 'primevue/card'
 import Button from 'primevue/button'
@@ -12,10 +12,18 @@ import SettingsHiddenFriends from './SettingsHiddenFriends.vue'
 import HomeZoneField from '@/Components/Features/HomeZone/HomeZoneField.vue'
 import { planOf } from '@/composables/usePlanLimits'
 import { useUlovePrivacy } from '@/composables/useUlovePrivacy'
+import { useAppModulesStore } from '@/stores/appModules'
 defineProps<{ user: any; invisible: any; hidden?: any; blur: any; photoPrivacy?: any; flowPrivacy?: any; homeRadius?: any }>()
 const emit = defineEmits<{ (e: 'profile'): void }>()
 
-const privacyTab = ref<'map' | 'ulove'>('map')
+const modules = useAppModulesStore()
+const showMapSection = computed(() => modules.isEnabled('upin'))
+const showUloveSection = computed(() => modules.isEnabled('ulove'))
+const showFlowSection = computed(() => modules.isEnabled('uflow'))
+const showFriendsSection = computed(() => !modules.isIsolated || modules.isEnabled('upin') || modules.isEnabled('uflow'))
+const showSelector = computed(() => showMapSection.value && showUloveSection.value)
+
+const privacyTab = ref<'map' | 'ulove'>(modules.isEnabled('upin') ? 'map' : 'ulove')
 const privacyTabOptions = [
   { label: '⚙️ Общее', value: 'map' },
   { label: '💘 ULove', value: 'ulove' },
@@ -26,10 +34,10 @@ const ulove = useUlovePrivacy()
   <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }">
     <template #content>
       <h3 class="font-black tracking-tight text-lg dark:text-white">Приватность</h3>
-      <p class="text-sm text-stone-500 mt-1">Ты — не точка, ты — пин. Управляй видимостью своей геопозиции и анонимностью.</p>
+      <p class="text-sm text-stone-500 mt-1">{{ showMapSection ? 'Ты — не точка, ты — пин. Управляй видимостью своей геопозиции и анонимностью.' : 'Управляй видимостью анкеты и анонимностью знакомств.' }}</p>
       <div class="mt-5 max-w-xl">
-        <SelectButton v-model="privacyTab" :options="[...privacyTabOptions]" option-label="label" option-value="value" class="w-full" />
-        <div v-if="privacyTab === 'map'" class="mt-4 space-y-4">
+        <SelectButton v-if="showSelector" v-model="privacyTab" :options="[...privacyTabOptions]" option-label="label" option-value="value" class="w-full" />
+        <div v-if="showMapSection && privacyTab === 'map'" class="mt-4 space-y-4">
         <Card class="!bg-stone-50 dark:!bg-zinc-800 !border-stone-200 !rounded-3xl !shadow-none" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
           <template #content>
             <div class="text-sm font-semibold dark:text-white">Базовые принципы</div>
@@ -88,7 +96,7 @@ const ulove = useUlovePrivacy()
             <Message v-if="invisible.error.value" severity="error" :closable="false" class="!mt-3 !rounded-2xl !text-xs">{{ invisible.error.value }}</Message>
           </template>
         </Card>
-        <SettingsHiddenFriends v-if="hidden" :hidden="hidden" />
+        <SettingsHiddenFriends v-if="hidden && showFriendsSection" :hidden="hidden" />
         <Card v-if="photoPrivacy" class="!border-stone-200 !rounded-3xl !shadow-none" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
           <template #content>
             <div class="text-sm font-semibold dark:text-white">Кто может комментировать мои фото</div>
@@ -105,7 +113,7 @@ const ulove = useUlovePrivacy()
             <Message v-if="photoPrivacy.error.value" severity="error" :closable="false" class="!mt-2 !rounded-2xl !text-xs">{{ photoPrivacy.error.value }}</Message>
           </template>
         </Card>
-        <Card v-if="flowPrivacy" class="!border-stone-200 !rounded-3xl !shadow-none" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
+        <Card v-if="flowPrivacy && showFlowSection" class="!border-stone-200 !rounded-3xl !shadow-none" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
           <template #content>
             <div class="text-sm font-semibold dark:text-white">Кто может комментировать мои посты</div>
             <p class="text-xs text-stone-500 mt-1 leading-relaxed">Лента UFlow: читать могут все, писать — по твоему выбору.</p>
@@ -122,7 +130,7 @@ const ulove = useUlovePrivacy()
           </template>
         </Card>
         </div>
-        <div v-else class="mt-4 space-y-4">
+        <div v-else-if="showUloveSection" class="mt-4 space-y-4">
           <div class="rounded-3xl border-2 border-rose-200 dark:border-rose-900 bg-gradient-to-br from-rose-50 to-orange-50 dark:from-rose-950/40 dark:to-orange-950/20 p-4">
             <div class="text-sm font-semibold dark:text-white">💘 ULove — платные фишки</div>
             <p class="text-xs text-stone-500 mt-1 leading-relaxed">Включай приватность знакомств. Твой тариф: {{ ulove.planLabel.value }}.</p>

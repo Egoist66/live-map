@@ -13,7 +13,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['name', 'profile_slug', 'email', 'password', 'gender', 'birth_date', 'country', 'country_code', 'plan', 'latitude', 'longitude', 'role', 'account_type', 'is_admin', 'is_hidden_from_search', 'dating_enabled', 'dating_goal', 'signup_goal', 'default_mode', 'default_mode_set_at', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_gender_pref', 'dating_hide_name', 'dating_hide_age', 'dating_hide_distance', 'dating_match_only', 'random_chats_used', 'random_chats_month', 'avatar_path', 'home_lat', 'home_lng', 'home_city', 'home_address', 'home_visibility', 'home_show_exact', 'home_radius_km', 'bio', 'thought', 'reputation_score', 'level', 'quest_cooldown_until', 'quest_last_track', 'quest_granted_at', 'is_anonymous_default', 'default_location_precision', 'default_blur_meters', 'message_privacy', 'allow_random_messages', 'call_cooldown_enabled', 'video_calls_enabled', 'photo_comments_privacy', 'flow_comments_privacy', 'auto_reply_enabled', 'auto_reply_text', 'settings', 'last_seen_at', 'is_invisible', 'screen_lock_code', 'screen_lock_timeout', 'screen_lock_kind', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at', 'terms_accepted_at', 'terms_version'])]
+#[Fillable(['name', 'profile_slug', 'email', 'password', 'gender', 'birth_date', 'country', 'country_code', 'plan', 'latitude', 'longitude', 'role', 'account_type', 'is_admin', 'is_hidden_from_search', 'dating_enabled', 'dating_goal', 'signup_goal', 'default_mode', 'default_mode_set_at', 'enabled_modules', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_gender_pref', 'dating_hide_name', 'dating_hide_age', 'dating_hide_distance', 'dating_match_only', 'random_chats_used', 'random_chats_month', 'avatar_path', 'home_lat', 'home_lng', 'home_city', 'home_address', 'home_visibility', 'home_show_exact', 'home_radius_km', 'bio', 'thought', 'reputation_score', 'level', 'quest_cooldown_until', 'quest_last_track', 'quest_granted_at', 'is_anonymous_default', 'default_location_precision', 'default_blur_meters', 'message_privacy', 'allow_random_messages', 'call_cooldown_enabled', 'video_calls_enabled', 'photo_comments_privacy', 'flow_comments_privacy', 'auto_reply_enabled', 'auto_reply_text', 'settings', 'last_seen_at', 'is_invisible', 'screen_lock_code', 'screen_lock_timeout', 'screen_lock_kind', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at', 'terms_accepted_at', 'terms_version'])]
 #[Hidden(['password', 'remember_token', 'screen_lock_code'])]
 /**
  * Пользователь приложения.
@@ -21,6 +21,7 @@ use Illuminate\Support\Facades\Storage;
  * @property string|null $signup_goal Цель захода: love|flirt|friendship|chat|interests везут в ULove-свайпы, neighbors — на карту.
  * @property string|null $default_mode Стартовый режим: ulove|upin. NULL — режим не выбран, показать модалку.
  * @property \Carbon\Carbon|null $default_mode_set_at Когда выбран стартовый режим.
+ * @property array<string>|null $enabled_modules Включённые модули: ulove|upin|uflow|districts|business. NULL — legacy, все включены.
  * @property string $account_type Тип аккаунта: person|business. business ведёт в кабинет компании.
  * @property string|null $dating_goal Цель анкеты ULove.
  * @property string|null $thought Короткая мысль под именем в профиле (до 140 символов).
@@ -495,8 +496,18 @@ class User extends Authenticatable
      */
     public function landingPath(): string
     {
+        $enabled = $this->enabledModules();
+
         if ($this->isBusinessAccount()) {
+            if ($enabled !== null && ! in_array('business', $enabled, true)) {
+                return $this->modulePath($enabled[0] ?? 'upin');
+            }
+
             return route('cabinet.index', absolute: false);
+        }
+
+        if ($enabled !== null) {
+            return $this->modulePath($enabled[0] ?? $this->defaultMode());
         }
 
         if ($this->defaultMode() === 'upin') {
@@ -504,6 +515,23 @@ class User extends Authenticatable
         }
 
         return route('swipes', absolute: false);
+    }
+
+    /**
+     * Путь стартового экрана модуля.
+     *
+     * @param string $module ulove|upin|uflow|districts|business
+     * @return string
+     */
+    private function modulePath(string $module): string
+    {
+        return match ($module) {
+            'upin' => route('map', absolute: false),
+            'uflow' => route('flow', absolute: false),
+            'districts' => route('districts.index', absolute: false),
+            'business' => route('cabinet.index', absolute: false),
+            default => route('swipes', absolute: false),
+        };
     }
 
     /**
@@ -522,6 +550,84 @@ class User extends Authenticatable
             'default_mode' => $normalized,
             'default_mode_set_at' => now(),
         ])->save();
+    }
+
+    /**
+     * Все модули приложения, известные системе.
+     *
+     * @return string[]
+     */
+    public static function allModules(): array
+    {
+        return ['ulove', 'upin', 'uflow', 'districts', 'business'];
+    }
+
+    /**
+     * Включённые модули пользователя.
+     *
+     * NULL в базе = legacy-режим: человек пользовался всем сразу,
+     * ничего не скрываем. Явный массив = изоляция: виден только
+     * выбранный набор, остальное довключается в настройках.
+     *
+     * @return string[]|null null — legacy (все включены)
+     */
+    public function enabledModules(): ?array
+    {
+        $raw = $this->enabled_modules;
+
+        if ($raw === null) {
+            return null;
+        }
+
+        $allowed = self::allModules();
+        $clean = array_values(array_intersect(array_map('strval', (array) $raw), $allowed));
+
+        return $clean === [] ? [$this->defaultMode()] : $clean;
+    }
+
+    /**
+     * Включён ли модуль с учётом legacy-режима.
+     *
+     * @param string $module ulove|upin|uflow|districts|business
+     * @return bool
+     */
+    public function hasModule(string $module): bool
+    {
+        $enabled = $this->enabledModules();
+
+        if ($enabled === null) {
+            return true;
+        }
+
+        return in_array($module, $enabled, true);
+    }
+
+    /**
+     * Сохраняет набор включённых модулей и стартовый экран.
+     *
+     * Первый модуль списка становится primary: он же пишется
+     * в default_mode для совместимости (ulove|upin), бизнес
+     * стартует с кабинета через landingPath.
+     *
+     * @param string[] $modules непустой список из allModules()
+     * @return void
+     */
+    public function setEnabledModules(array $modules): void
+    {
+        $allowed = self::allModules();
+        $clean = array_values(array_intersect(array_map('strval', $modules), $allowed));
+
+        abort_if($clean === [], 422, 'Выбери хотя бы один раздел');
+
+        $primary = $clean[0];
+        $payload = ['enabled_modules' => $clean];
+
+        if (in_array($primary, ['ulove', 'upin'], true)) {
+            $payload['default_mode'] = $primary;
+            $payload['default_mode_set_at'] = now();
+        }
+
+        $this->forceFill($payload)->save();
     }
 
     public function canUseIncognitoLike(): bool { return $this->isPro(); }
@@ -801,6 +907,7 @@ class User extends Authenticatable
             'quest_cooldown_until' => 'datetime',
             'quest_granted_at' => 'datetime',
             'default_mode_set_at' => 'datetime',
+            'enabled_modules' => 'array',
             'banned_at' => 'datetime',
             'pins_today_date' => 'date',
             'trial_ends_at' => 'datetime',

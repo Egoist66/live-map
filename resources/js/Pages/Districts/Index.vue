@@ -31,7 +31,7 @@ function letterOf(name: string): string {
 <template>
   <Head title="Районы" />
   <Toast />
-    <div class="bg-surface dark:bg-[#090E1A]">
+    <div class="bg-surface dark:bg-[#0F121F]">
       <div class="mx-auto max-w-[1000px] px-3 py-3 sm:px-6 sm:py-6">
         <div class="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_300px]">
           <div class="grid min-w-0 gap-3">

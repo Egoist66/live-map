@@ -111,11 +111,11 @@ onUnmounted(() => {
 <template>
   <Head :title="seo.title.value"><meta head-key="robots" name="robots" content="noindex, nofollow" /></Head>
   <Toast />
-    <div class="w-full bg-[#eaf0f6] dark:bg-[#0B0F1A]">
-      <div class="h-app-full map-desktop-frame relative w-full min-h-[380px] bg-[#eaf0f6] dark:bg-[#0B0F1A] overflow-hidden border-0">
-      <div ref="mapContainer" class="absolute inset-0 w-full h-full bg-[#eaf0f6] dark:bg-[#0B0F1A]"></div>
+    <div class="w-full bg-[#eaf0f6] dark:bg-[#0F121F]">
+      <div class="h-app-full map-desktop-frame relative w-full min-h-[380px] bg-[#eaf0f6] dark:bg-[#0F121F] overflow-hidden border-0">
+      <div ref="mapContainer" class="absolute inset-0 w-full h-full bg-[#eaf0f6] dark:bg-[#0F121F]"></div>
       <DistrictPaintOverlay v-if="(districts as any).canCreate?.value ?? true" :armed="paint.armed.value" :brush-px="brushPx" :brush-radius-m="paint.brushRadiusM.value" :draft-strokes="paint.strokes.value" :map="mapApi.map" @stroke-end="onOverlayStrokeEnd" />
-      <div v-if="!loaded" class="absolute inset-0 grid place-items-center bg-[#eef3f8] dark:bg-[#0B0F1A] z-[5]">
+      <div v-if="!loaded" class="absolute inset-0 grid place-items-center bg-[#eef3f8] dark:bg-[#0F121F] z-[5]">
         <div class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-700 rounded-2xl px-5 py-4 shadow flex items-center gap-3"><i class="pi pi-spin pi-spinner text-xl text-stone-900 dark:text-white shrink-0"></i><span class="text-sm font-medium dark:text-zinc-100">Загружаем карту…</span></div>
       </div>
       <div class="absolute left-2 right-2 sm:left-4 sm:right-auto sm:max-w-[420px] flex flex-col gap-2 sm:gap-2.5 z-10 pointer-events-none native-safe-offset-top max-sm:!top-2">

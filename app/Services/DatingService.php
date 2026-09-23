@@ -30,7 +30,11 @@ class DatingService
 
     public const BUSINESS_FAVORITES_LIMIT = 15;
 
-    public const SWIPE_PHOTOS_LIMIT = 3;
+    /**
+     * В ленте ULove видно до 5 фото всем: анкета держит 5,
+     * все 5 листаются в свайпах и без PRO.
+     */
+    public const SWIPE_PHOTOS_LIMIT = 5;
 
     public const SWIPE_PHOTOS_LIMIT_PRO = 5;
 

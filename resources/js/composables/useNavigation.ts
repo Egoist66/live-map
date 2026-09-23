@@ -3,6 +3,15 @@ import { usePage } from '@inertiajs/vue3'
 import { route } from '@/route'
 import { avatarSrcFor } from '@/composables/useAvatar'
 
+/**
+ * Навигационные ссылки шапки и логотипа.
+ *
+ * Логотип всегда ведёт на профиль: бизнес — в кабинет,
+ * персона — на свой профиль (`/profile`), а не в свайпы.
+ * Модульные дома (свайпы/карта) живут в нижнем меню.
+ *
+ * @returns пользователь, аватар и домашние ссылки
+ */
 export function useNavigation() {
   const page = usePage()
   const user = computed(() => (page.props.auth as any).user)

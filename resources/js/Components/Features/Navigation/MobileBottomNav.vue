@@ -2,7 +2,7 @@
 import { Link } from '@inertiajs/vue3'
 import { useMobileBottomNav } from '@/composables/useMobileBottomNav'
 
-const { dashboardHref, isActive, isActivePath, navLinkClass, total, navHidden, isBusiness } = useMobileBottomNav()
+const { dashboardHref, isActive, isActivePath, navLinkClass, total, navHidden, isBusiness, showMap, showLove, showFlow, showDistricts, gridClass } = useMobileBottomNav()
 
 const businessActiveClass = 'text-brand-600 dark:text-[#A5B4FC] bg-brand-50 dark:bg-brand-500/20'
 const businessIdleClass = 'text-stone-500 dark:text-zinc-400'
@@ -12,9 +12,9 @@ const businessIdleClass = 'text-stone-500 dark:text-zinc-400'
   <nav
     aria-label="Мобильная навигация"
     :aria-hidden="navHidden ? 'true' : undefined"
-    class="mobile-bottom-nav pb-[var(--sab)] lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-[#0B0F1B]/95 backdrop-blur-xl border-t border-stone-200 dark:border-white/10"
+    class="mobile-bottom-nav pb-[var(--sab)] lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-[#0F121F]/95 backdrop-blur-xl border-t border-stone-200 dark:border-white/10"
   >
-    <div :class="isBusiness ? 'grid grid-cols-3 items-end px-1 pt-1.5 pb-2 min-h-[60px]' : 'grid grid-cols-5 items-end px-1 pt-1.5 pb-2 min-h-[60px]'">
+    <div :class="gridClass">
       <Link
         v-if="isBusiness"
         href="/cabinet"
@@ -37,6 +37,7 @@ const businessIdleClass = 'text-stone-500 dark:text-zinc-400'
       </Link>
 
       <Link
+        v-if="showMap"
         :href="route('map')"
         :aria-current="isActive('map') ? 'page' : undefined"
         class="flex flex-col items-center justify-center gap-1 py-1.5 rounded-2xl active:scale-95 transition min-h-[52px]"
@@ -47,7 +48,7 @@ const businessIdleClass = 'text-stone-500 dark:text-zinc-400'
       </Link>
 
       <Link
-        v-if="!isBusiness"
+        v-if="showLove"
         :href="route('swipes')"
         :aria-current="isActive('swipes') ? 'page' : undefined"
         class="flex flex-col items-center justify-center gap-1 py-1.5 rounded-2xl active:scale-95 transition min-h-[52px]"
@@ -61,7 +62,7 @@ const businessIdleClass = 'text-stone-500 dark:text-zinc-400'
       </Link>
 
       <Link
-        v-if="!isBusiness"
+        v-if="showFlow"
         :href="route('flow')"
         :aria-current="isActive('flow') ? 'page' : undefined"
         class="flex flex-col items-center justify-center gap-1 py-1.5 rounded-2xl active:scale-95 transition min-h-[52px]"
@@ -75,6 +76,17 @@ const businessIdleClass = 'text-stone-500 dark:text-zinc-400'
       </Link>
 
       <Link
+        v-if="showDistricts"
+        :href="route('districts.index')"
+        :aria-current="isActive('districts.index') ? 'page' : undefined"
+        class="flex flex-col items-center justify-center gap-1 py-1.5 rounded-2xl active:scale-95 transition min-h-[52px]"
+        :class="navLinkClass('districts.index')"
+      >
+        <svg class="w-6 h-6" :fill="isActive('districts.index') ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        <span class="text-[10px] font-bold leading-none" :class="isActive('districts.index') ? 'opacity-100' : 'opacity-75'">Районы</span>
+      </Link>
+
+      <Link
         :href="route('chat')"
         :aria-current="isActive('chat') ? 'page' : undefined"
         class="flex flex-col items-center justify-center gap-1 py-1.5 rounded-2xl active:scale-95 transition relative min-h-[52px]"
@@ -82,7 +94,7 @@ const businessIdleClass = 'text-stone-500 dark:text-zinc-400'
       >
         <span class="relative">
           <svg class="w-6 h-6" :fill="isActive('chat') ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-          <span v-if="total" class="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold grid place-items-center leading-none border-2 border-white dark:border-[#0B0F1B]">{{ total>9?'9+':total }}</span>
+          <span v-if="total" class="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold grid place-items-center leading-none border-2 border-white dark:border-[#0F121F]">{{ total>9?'9+':total }}</span>
         </span>
         <span class="text-[10px] font-bold leading-none" :class="isActive('chat') ? 'opacity-100' : 'opacity-75'">Чат</span>
       </Link>

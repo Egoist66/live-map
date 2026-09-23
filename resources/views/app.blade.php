@@ -165,7 +165,7 @@
         @vite(['resources/js/app.ts'])
         @inertiaHead
     </head>
-    <body class="font-sans antialiased bg-surface dark:bg-[#0B0F1A] text-ink-900 dark:text-zinc-100">
+    <body class="font-sans antialiased bg-surface dark:bg-[#0F121F] text-ink-900 dark:text-zinc-100">
         @if(!$isNativeClient && !empty(($seoIntegrations ?? [])['scripts_enabled']) && !empty(($seoIntegrations ?? [])['body_start_scripts']))
         {!! ($seoIntegrations ?? [])['body_start_scripts'] !!}
         @endif

@@ -4,29 +4,35 @@
 
 @layer base {
   :root {
-    --bg: #F8F7F3;
+    --bg: #FFFFFF;
     --ink: #0F172A;
     --brand: #5B5BFF;
     --teal: #06B6D4;
   }
    html.dark {
-    --bg: #0B0F1A;
+    --bg: #0F121F;
     --ink: #F8FAFC;
   }
-   html { scrollbar-gutter: stable; color-scheme: light; overflow-x: clip; max-width: 100vw; background: #F8F7F3; overscroll-behavior-y: none; }
-   html.dark { color-scheme: dark; background: #0B0F1A; }
+   html { color-scheme: light; overflow-x: clip; background: #FFFFFF; overscroll-behavior-y: none; }
+   html.dark { color-scheme: dark; background: #0F121F; }
    body {
      background: var(--bg);
      color: var(--ink);
      -webkit-font-smoothing: antialiased;
      text-rendering: optimizeLegibility;
      overflow-x: clip;
-     max-width: 100vw;
      overscroll-behavior-y: none;
    }
-   html.dark body { background: #0B0F1A; color: #E2E8F0; }
+   html.dark body { background: #0F121F; color: #E2E8F0; }
   ::selection { background: #0F172A; color: white; }
   html.dark ::selection { background: #5B5BFF; }
+}
+
+/* Старые WebView без `overflow: clip` (Chrome < 90): неизвестное значение
+   отбрасывается, и улетевшие карты свайпов начинают рвать страницу вправо.
+   Фолбэк — классический hidden на корне (только для древних движков). */
+@supports not (overflow-x: clip) {
+  html, body { overflow-x: hidden; }
 }
 
 @layer components {
@@ -36,7 +42,7 @@
     -webkit-backdrop-filter: blur(16px) saturate(180%);
   }
   html.dark .glass {
-    background: rgba(16, 20, 33, 0.72) !important;
+    background: rgba(15, 18, 31, 0.72) !important;
     border-color: rgba(255,255,255,0.08) !important;
   }
   .card {
@@ -75,9 +81,9 @@ html.dark .scroll-neat::-webkit-scrollbar-thumb { background: rgba(255,255,255,0
 html.dark .scroll-neat::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.32); }
 
 .maplibregl-popup-content { @apply !rounded-2xl !shadow-float !border !border-stone-200 !p-0 overflow-hidden dark:!bg-zinc-900 dark:!border-zinc-700; }
-html.dark .maplibregl-ctrl-group { background: #1a1d26 !important; border-color: #2a2f3f !important; box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important; }
+html.dark .maplibregl-ctrl-group { background: #151928 !important; border-color: #252B45 !important; box-shadow: 0 8px 32px rgba(0,0,0,0.4) !important; }
 html.dark .maplibregl-ctrl button { filter: invert(0.85) hue-rotate(180deg); }
-html.dark .maplibregl-ctrl-attrib { background: rgba(16,20,33,0.85) !important; color: #a1a1aa !important; }
+html.dark .maplibregl-ctrl-attrib { background: rgba(15,18,31,0.85) !important; color: #a1a1aa !important; }
 html.dark .maplibregl-ctrl-attrib a { color: #e4e4e7 !important; }
 
 html.dark .bg-white, html.dark .\!bg-white { --tw-bg-opacity: 1; background-color: rgb(24 24 27 / var(--tw-bg-opacity)) !important; }
@@ -94,14 +100,14 @@ html.dark .bg-gray-50, html.dark .bg-gray-100, html.dark .bg-gray-200, html.dark
 html.dark .bg-slate-50, html.dark .bg-slate-100, html.dark .bg-slate-200 { --tw-bg-opacity: 1; background-color: rgb(39 39 42 / var(--tw-bg-opacity)) !important; }
 html.dark .bg-zinc-50, html.dark .bg-zinc-100, html.dark .\!bg-zinc-100 { --tw-bg-opacity: 1; background-color: rgb(39 39 42 / var(--tw-bg-opacity)) !important; }
 html.dark .bg-zinc-200, html.dark .\!bg-zinc-200 { --tw-bg-opacity: 1; background-color: rgb(63 63 70 / var(--tw-bg-opacity)) !important; }
-html.dark .bg-surface, html.dark .\!bg-surface { --tw-bg-opacity: 1; background-color: #0B0F1A !important; }
+html.dark .bg-surface, html.dark .\!bg-surface { --tw-bg-opacity: 1; background-color: #0F121F !important; }
 html.dark .bg-amber-50, html.dark .\!bg-amber-50 { --tw-bg-opacity: 1; background-color: rgba(120,53,15,0.25) !important; }
 html.dark .bg-orange-50, html.dark .\!bg-orange-50 { --tw-bg-opacity: 1; background-color: rgba(124,45,18,0.25) !important; }
 html.dark .bg-violet-50, html.dark .\!bg-violet-50, html.dark .bg-indigo-50, html.dark .\!bg-indigo-50 { --tw-bg-opacity: 1; background-color: rgb(39 39 42 / var(--tw-bg-opacity)) !important; }
 html.dark .bg-red-50, html.dark .\!bg-red-50 { --tw-bg-opacity: 1; background-color: rgba(127,29,29,0.25) !important; }
-html.dark .bg-\[\#eaf0f6\], html.dark .bg-\[\#eef2f7\], html.dark .bg-\[\#eef3f8\], html.dark .bg-\[\#F8F7F3\] { background-color: #0f172a !important; }
+html.dark .bg-\[\#eaf0f6\], html.dark .bg-\[\#eef2f7\], html.dark .bg-\[\#eef3f8\], html.dark .bg-\[\#F8F7F3\] { background-color: #0F121F !important; }
 html.dark .from-white:not(.bg-clip-text) { --tw-gradient-from: #18181b var(--tw-gradient-from-position); --tw-gradient-to: rgb(24 24 27 / 0) var(--tw-gradient-to-position); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
-html.dark .to-surface { --tw-gradient-to: #090E1A var(--tw-gradient-to-position); }
+html.dark .to-surface { --tw-gradient-to: #0F121F var(--tw-gradient-to-position); }
 html.dark .border-stone-200, html.dark .\!border-stone-200, html.dark .\!border { border-color: rgb(39 39 42) !important; }
 html.dark .border-stone-100, html.dark .\!border-stone-100 { border-color: rgb(39 39 42) !important; }
 html.dark .border-stone-300, html.dark .\!border-stone-300, html.dark .\!border-stone-900 { border-color: rgb(63 63 70) !important; }
@@ -320,6 +326,12 @@ html.dark .mobile-bottom-nav {
   pointer-events: none;
 }
 html.native-keyboard-open .mobile-bottom-nav {
+  transform: translateY(110%);
+  opacity: 0;
+  pointer-events: none;
+}
+/* Свайпы ULove живут без нижнего меню, как в Tinder. */
+html.native-swipes .mobile-bottom-nav {
   transform: translateY(110%);
   opacity: 0;
   pointer-events: none;
@@ -756,12 +768,35 @@ div#p-license-host {
   padding: 0 !important;
 }
 
+/* Свайп-закрытие диалогов (useGlobalDialogDismiss + useSwipeToClose).
+   Ручка-«пилюля» для безшапочных нижних шторок: только тач-экраны,
+   на десктопе с мышью affordance не нужен. Во время тянучки
+   отключаем transition, чтобы диалог ехал за пальцем 1:1. */
+.dlg-swipe-handle { display: none; }
+@media (pointer: coarse) {
+  .dlg-swipe-handle {
+    display: block;
+    width: 40px;
+    height: 4px;
+    margin: 10px auto 2px;
+    border-radius: 9999px;
+    background: rgba(0, 0, 0, 0.18);
+    touch-action: pan-x pan-y;
+  }
+  .dark .dlg-swipe-handle { background: rgba(255, 255, 255, 0.28); }
+  .p-dialog-header { cursor: grab; touch-action: pan-x pan-y; }
+}
+.p-dialog.dlg-dragging { transition: none !important; }
+
 /* Полноэкранные вьюверы фото (UGallery ProfilePhotoViewer, PhotoLightbox).
    iOS Safari: шапка без отступа под вырез уезжает под системные иконки
    и кнопка «Назад» становится некликабельной; явная высота 100dvh на
    fixed-контейнере прыгает при показе/скрытии тулбара — вместо неё
    стабильный inset:0 (top:0 + bottom:0). Вертикальные жесты внутри
    скроллера оставляем браузеру (pan-y), горизонтальные — Swiper.
+   Зум-контейнер Swiper — без touch-action ограничений (как в
+   официальном swiper/css/zoom): `pan-y` отдавал вертикаль браузеру
+   через pointercancel и убивал pinch; зумированный слайд — none.
    Блок в конце файла намеренно: выигрывает ничьи специфичности. */
 .viewer-fullscreen-header {
   padding-top: var(--sat, 0px);

@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useMounted } from '@vueuse/core'
 import { useAvatarPreview } from '@/composables/useAvatarPreview'
+import { useSwipeToClose } from '@/composables/useSwipeToClose'
 const props = defineProps<{ src: string; name?: string; open: boolean }>()
 const emit = defineEmits<{ (e:'close'):void }>()
 
@@ -9,6 +11,9 @@ const emit = defineEmits<{ (e:'close'):void }>()
 const isMounted = useMounted()
 
 useAvatarPreview(() => props.open, () => emit('close'))
+
+const cardRef = ref<HTMLElement | null>(null)
+useSwipeToClose(cardRef, { onClose: () => emit('close'), enabled: () => props.open })
 </script>
 <template>
   <Teleport v-if="isMounted" to="body">
@@ -16,7 +21,7 @@ useAvatarPreview(() => props.open, () => emit('close'))
       <div v-if="open" class="fixed inset-0 z-[100] grid place-items-center p-3 sm:p-6 overflow-y-auto overscroll-contain" role="dialog" aria-modal="true">
         <div class="fixed inset-0 bg-ink-900/70 dark:bg-black/80 backdrop-blur-sm" @click="emit('close')"></div>
         <Transition name="zoom" appear>
-          <div class="relative m-auto pointer-events-auto bg-white dark:bg-zinc-900 rounded-[24px] p-2 shadow-float border border-white/20 dark:border-zinc-700 w-[min(94vw,640px)] max-h-[calc(100dvh-1.5rem)] overflow-hidden flex flex-col">
+          <div ref="cardRef" class="relative m-auto pointer-events-auto bg-white dark:bg-zinc-900 rounded-[24px] p-2 shadow-float border border-white/20 dark:border-zinc-700 w-[min(94vw,640px)] max-h-[calc(100dvh-1.5rem)] overflow-hidden flex flex-col">
             <img :src="src" :alt="name||'avatar'" class="w-full h-[min(86vw,560px,72dvh)] max-h-[72dvh] object-cover object-center rounded-[16px] bg-stone-100 dark:bg-zinc-800" />
             <div class="flex items-center justify-between gap-4 px-2 py-3 shrink-0">
               <div class="min-w-0">

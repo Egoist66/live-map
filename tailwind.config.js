@@ -37,9 +37,9 @@ export default {
                     coral: '#FF6B4A',
                 },
                 surface: {
-                    DEFAULT: '#F8F7F3',
+                    DEFAULT: '#FFFFFF',
                     card: '#FFFFFF',
-                    muted: '#F1F0ED',
+                    muted: '#F3F4F6',
                 },
             },
             borderRadius: {

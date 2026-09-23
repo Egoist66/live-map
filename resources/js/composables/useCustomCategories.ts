@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue'
 import { usePage } from '@inertiajs/vue3'
-import { PIN_CATEGORIES } from './usePins'
+import { PIN_CATEGORIES } from '@/composables/pinCategories'
 import { customCategoriesApi } from '@/services/custom-categories.api'
 import { planOf } from './usePlanLimits'
 

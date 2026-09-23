@@ -128,6 +128,7 @@ class ChatUserController extends Controller
             'avatar_url'=>$u->avatar_url,
             'message_privacy'=>$u->message_privacy,
             'allow_random_messages'=>$u->allow_random_messages,
+            'dating_match_only'=>(bool) $u->dating_match_only,
             'auto_reply_enabled'=>(bool) $u->auto_reply_enabled,
             'auto_reply_text'=>$u->auto_reply_text,
             'unread_count'=>$u->unreadMessagesCount(),

@@ -1,7 +1,12 @@
 <script setup lang="ts">
+import { defineAsyncComponent } from 'vue'
 import { router } from '@inertiajs/vue3'
 import { route } from '@/route'
-import ProfileFlowPosts from '@/Components/Features/Flow/ProfileFlowPosts.vue'
+
+// Лениво: тянет стор/композер/карточки UFlow (чанк mod-uflow).
+// Родители (Dashboard/Profile) и так гейтят нас через v-if isEnabled('uflow'),
+// поэтому static import здесь качал бы uflow-код даже ulove-only пользователям.
+const ProfileFlowPosts = defineAsyncComponent(() => import('@/Components/Features/Flow/ProfileFlowPosts.vue'))
 
 defineProps<{
   userId: number

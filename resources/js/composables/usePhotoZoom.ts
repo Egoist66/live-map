@@ -10,20 +10,27 @@ export interface PhotoZoomOptions {
   doubleTapScale?: number
   /** Порог свайпа для листания при масштабе 1 (по умолчанию 60px). */
   swipeThresholdPx?: number
+  /** Порог свайпа вниз для закрытия при масштабе 1 (по умолчанию 90px). */
+  swipeDownThresholdPx?: number
   /** Свайп влево при масштабе 1 (следующее фото). */
   onSwipeLeft?: () => void
   /** Свайп вправо при масштабе 1 (предыдущее фото). */
   onSwipeRight?: () => void
+  /** Свайп вниз при масштабе 1 (закрыть просмотр). Только тач, мышь игнорит. */
+  onSwipeDown?: () => void
 }
 
 /**
  * Щипковый зум фото для полноэкранного просмотра.
  *
  * Жесты: pinch двумя пальцами (с фокусом под пальцами), перетаскивание
- * увеличенного фото, колесо мыши на десктопе, двойной тап/клик (1x ↔ крупный),
- * свайп при масштабе 1 для листания (палец на таче, drag левой кнопкой мыши
- * на десктопе). Кнопки `zoomIn/zoomOut/toggle` — для UI.
+ * увеличенного фото, колесо мыши на десктопе, двойной тап/клик (1x ↔ крупный
+ * с фокусом в точке тапа), свайп при масштабе 1 для листания (палец на таче,
+ * drag левой кнопкой мыши на десктопе), свайп вниз при масштабе 1 — закрыть
+ * (`onSwipeDown`, только тач). Кнопки `zoomIn/zoomOut/toggle` — для UI.
  * Всё состояние и жесты живут здесь, компонент только биндит `imgStyle`.
+ * Даблклик мыши обрабатывается внутри (с подавлением синтетического
+ * `dblclick` после тач-даблтапа), поэтому `@dblclick` в шаблоне не нужен.
  *
  * @param stage элемент-сцена, на который вешаются слушатели жестов
  * @param options лимиты масштаба и колбэки свайпов
@@ -37,6 +44,7 @@ export function usePhotoZoom(stage: Ref<HTMLElement | null>, options: PhotoZoomO
   const maxScale = options.maxScale ?? 4
   const doubleTapScale = options.doubleTapScale ?? 2.5
   const swipeThreshold = options.swipeThresholdPx ?? 60
+  const swipeDownThreshold = options.swipeDownThresholdPx ?? 90
 
   const scale = ref(1)
   const translateX = ref(0)
@@ -108,17 +116,34 @@ export function usePhotoZoom(stage: Ref<HTMLElement | null>, options: PhotoZoomO
   }
 
   /**
-   * Переключить 1x ↔ крупный план (даблклик).
+   * Переключить 1x ↔ крупный план (даблтап/даблклик).
+   *
+   * Приближение держит точку тапа под пальцем: сдвиг считается так,
+   * чтобы тапнутая точка сцены осталась на месте после масштабирования.
+   *
+   * @param focusX смещение точки тапа от центра сцены по X (по умолчанию 0)
+   * @param focusY смещение точки тапа от центра сцены по Y (по умолчанию 0)
    */
-  function toggle(): void {
+  function toggle(focusX = 0, focusY = 0): void {
     if (scale.value > 1.05) {
       reset()
       return
     }
     scale.value = doubleTapScale
-    translateX.value = 0
-    translateY.value = 0
+    translateX.value = focusX * (1 - doubleTapScale)
+    translateY.value = focusY * (1 - doubleTapScale)
     clampTranslate()
+  }
+
+  /**
+   * Смещение точки сцены относительно её центра.
+   */
+  function offsetFromCenter(clientX: number, clientY: number): { x: number; y: number } {
+    const rect = stage.value?.getBoundingClientRect()
+    if (!rect) {
+      return { x: 0, y: 0 }
+    }
+    return { x: clientX - (rect.left + rect.width / 2), y: clientY - (rect.top + rect.height / 2) }
   }
 
   function touchDistance(a: Touch, b: Touch): number {
@@ -133,6 +158,21 @@ export function usePhotoZoom(stage: Ref<HTMLElement | null>, options: PhotoZoomO
       return { x: 0, y: 0 }
     }
     return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
+  }
+
+  /** Жест ушёл в drag: следующий `click` — отмена, не закрытие. */
+  let draggedFar = false
+
+  /**
+   * Был ли последний жест драгом, а не кликом/тапом.
+   * Сбрасывает флаг: один вызов — одна проверка для `click`-хендлера.
+   *
+   * @returns true — клик после драга, закрывать по нему нельзя
+   */
+  function consumeDragged(): boolean {
+    const wasDrag = draggedFar
+    draggedFar = false
+    return wasDrag
   }
 
   let pinchDistance = 0
@@ -152,6 +192,7 @@ export function usePhotoZoom(stage: Ref<HTMLElement | null>, options: PhotoZoomO
 
   function onTouchStart(event: TouchEvent): void {
     gesturing.value = true
+    draggedFar = false
     const touches = Array.from(event.touches)
     if (touches.length === 2) {
       wasPinch = true
@@ -208,6 +249,7 @@ export function usePhotoZoom(stage: Ref<HTMLElement | null>, options: PhotoZoomO
     const movedY = Math.abs(point.clientY - swipeStartY)
     if (movedX > 8 || movedY > 8) {
       tapMoved = true
+      draggedFar = true
     }
     if (scale.value <= 1) {
       return
@@ -226,29 +268,70 @@ export function usePhotoZoom(stage: Ref<HTMLElement | null>, options: PhotoZoomO
     onPanMove(event)
   }
 
-  function fireSwipe(sideways: number, vertical: number): void {
-    const dominant = Math.abs(sideways) > Math.abs(vertical) * 1.5
-    if (!dominant || Math.abs(sideways) < swipeThreshold) {
+  /**
+   * Разбирает завершённый жест при масштабе 1: горизонтальный свайп —
+   * листание, вертикальный свайп вниз — закрытие (`onSwipeDown`).
+   *
+   * @param allowVertical разрешить закрытие свайпом вниз (только тач)
+   */
+  function fireSwipe(sideways: number, vertical: number, allowVertical = true): void {
+    const absX = Math.abs(sideways)
+    const absY = Math.abs(vertical)
+    const horizontal = absX > absY * 1.5
+    if (horizontal) {
+      if (absX < swipeThreshold) {
+        return
+      }
+      if (sideways < 0) {
+        options.onSwipeLeft?.()
+        return
+      }
+      options.onSwipeRight?.()
       return
     }
-    if (sideways < 0) {
-      options.onSwipeLeft?.()
-      return
+    const verticalDown = vertical > 0 && absY > absX * 1.5
+    if (allowVertical && verticalDown && absY >= swipeDownThreshold) {
+      options.onSwipeDown?.()
     }
-    options.onSwipeRight?.()
   }
 
-  function fireDoubleTap(): void {
+  /** Момент последнего тач-даблтапа: давит синтетический `dblclick` следом. */
+  let lastTouchToggleAt = 0
+
+  /**
+   * Проверяет даблтап и переключает зум с фокусом в точке тапа.
+   *
+   * @returns true — был даблтап (свайп и сброс после него не нужны)
+   */
+  function fireDoubleTap(tapClientX: number, tapClientY: number): boolean {
     const now = Date.now()
     const quickTap = now - tapStartAt < 300 && !tapMoved
     if (!quickTap) {
-      return
+      return false
     }
     const doubleTap = now - lastTapAt < 320
     lastTapAt = now
-    if (doubleTap) {
-      toggle()
+    if (!doubleTap) {
+      return false
     }
+    const focus = offsetFromCenter(tapClientX, tapClientY)
+    toggle(focus.x, focus.y)
+    lastTouchToggleAt = now
+    return true
+  }
+
+  /**
+   * Даблклик мыши: тот же `toggle`, но с игнором синтетического
+   * `dblclick`, который мобильный браузер шлёт после тач-даблтапа
+   * (иначе второй тоггл тут же отменил бы зум).
+   */
+  function onDblClick(event: MouseEvent): void {
+    const sinceTouchToggle = Date.now() - lastTouchToggleAt
+    if (sinceTouchToggle < 600) {
+      return
+    }
+    const focus = offsetFromCenter(event.clientX, event.clientY)
+    toggle(focus.x, focus.y)
   }
 
   function onTouchEnd(event: TouchEvent): void {
@@ -273,14 +356,19 @@ export function usePhotoZoom(stage: Ref<HTMLElement | null>, options: PhotoZoomO
     if (scale.value <= 1) {
       const endX = event.changedTouches[0]?.clientX ?? swipeStartX
       const endY = event.changedTouches[0]?.clientY ?? swipeStartY
+      const wasDoubleTap = fireDoubleTap(endX, endY)
+      if (wasDoubleTap) {
+        return
+      }
       const sideways = endX - swipeStartX
       const vertical = endY - swipeStartY
       fireSwipe(sideways, vertical)
-      fireDoubleTap()
       reset()
       return
     }
-    fireDoubleTap()
+    const endTapX = event.changedTouches[0]?.clientX ?? swipeStartX
+    const endTapY = event.changedTouches[0]?.clientY ?? swipeStartY
+    fireDoubleTap(endTapX, endTapY)
   }
 
   function onWheel(event: WheelEvent): void {
@@ -315,6 +403,7 @@ export function usePhotoZoom(stage: Ref<HTMLElement | null>, options: PhotoZoomO
     mouseStartY = event.clientY
     mouseBaseX = translateX.value
     mouseBaseY = translateY.value
+    draggedFar = false
     gesturing.value = true
   }
 
@@ -327,6 +416,9 @@ export function usePhotoZoom(stage: Ref<HTMLElement | null>, options: PhotoZoomO
     }
     const shiftX = event.clientX - mouseStartX
     const shiftY = event.clientY - mouseStartY
+    if (Math.abs(shiftX) > 10 || Math.abs(shiftY) > 10) {
+      draggedFar = true
+    }
     if (scale.value <= 1) {
       translateX.value = mouseBaseX + shiftX
       translateY.value = 0
@@ -349,7 +441,7 @@ export function usePhotoZoom(stage: Ref<HTMLElement | null>, options: PhotoZoomO
     const shiftX = event.clientX - mouseStartX
     const shiftY = event.clientY - mouseStartY
     if (scale.value <= 1) {
-      fireSwipe(shiftX, shiftY)
+      fireSwipe(shiftX, shiftY, false)
       reset()
       return
     }
@@ -363,6 +455,7 @@ export function usePhotoZoom(stage: Ref<HTMLElement | null>, options: PhotoZoomO
     el.addEventListener('touchcancel', onTouchEnd)
     el.addEventListener('wheel', onWheel, { passive: false })
     el.addEventListener('mousedown', onMouseDown)
+    el.addEventListener('dblclick', onDblClick)
     window.addEventListener('mousemove', onMouseMove)
     window.addEventListener('mouseup', onMouseUp)
   }
@@ -374,6 +467,7 @@ export function usePhotoZoom(stage: Ref<HTMLElement | null>, options: PhotoZoomO
     el.removeEventListener('touchcancel', onTouchEnd)
     el.removeEventListener('wheel', onWheel)
     el.removeEventListener('mousedown', onMouseDown)
+    el.removeEventListener('dblclick', onDblClick)
     window.removeEventListener('mousemove', onMouseMove)
     window.removeEventListener('mouseup', onMouseUp)
   }
@@ -402,5 +496,5 @@ export function usePhotoZoom(stage: Ref<HTMLElement | null>, options: PhotoZoomO
     }
   })
 
-  return { scale, imgStyle, reset, zoomIn, zoomOut, toggle }
+  return { scale, imgStyle, reset, zoomIn, zoomOut, toggle, consumeDragged }
 }

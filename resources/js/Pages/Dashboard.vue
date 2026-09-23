@@ -8,7 +8,11 @@ import ProfileDesignQuickNav from '@/Components/Features/Profile/ProfileDesignQu
 import ProfileDesignGallery from '@/Components/Features/Profile/ProfileDesignGallery.vue'
 import ProfileDesignInfo from '@/Components/Features/Profile/ProfileDesignInfo.vue'
 import ProfileDesignSwipes from '@/Components/Features/Profile/ProfileDesignSwipes.vue'
-import ProfileDesignFlow from '@/Components/Features/Profile/ProfileDesignFlow.vue'
+// Изоляция модулей: uflow/ulove-блоки профиля — лениво, иначе их код
+// (сторы, композер, карточки) качается даже upin-only пользователям,
+// открывшим Dashboard. v-if по isEnabled решает показ, async — загрузку.
+const ProfileDesignFlow = defineAsyncComponent(() => import('@/Components/Features/Profile/ProfileDesignFlow.vue'))
+const UloveProfileView = defineAsyncComponent(() => import('@/Components/Features/Dating/UloveProfileView.vue'))
 import ProfileFriendsDialog from '@/Components/Features/Profile/ProfileFriendsDialog.vue'
 import ProfileGalleryDialog from '@/Components/Features/Profile/ProfileGalleryDialog.vue'
 // Тяжёлые диалоги (swiper, поиск) — только по открытию, грузим лениво.
@@ -19,7 +23,12 @@ import { useDashboardDesign } from '@/composables/useDashboardDesign'
 import { useProfileLayout } from '@/composables/useProfileLayout'
 import { useProfileThought } from '@/composables/useProfileThought'
 import { planOf } from '@/composables/usePlanLimits'
-import { defineAsyncComponent, onMounted } from 'vue'
+import { computed, defineAsyncComponent, onMounted, ref } from 'vue'
+import { router, usePage } from '@inertiajs/vue3'
+import { useAppModulesStore } from '@/stores/appModules'
+import Dialog from 'primevue/dialog'
+
+const DatingQuestionnaireDialog = defineAsyncComponent(() => import('@/Components/Features/Dating/DatingQuestionnaireForm.vue'))
 
 const props = defineProps<{ user: any; isOwn?: boolean }>()
 
@@ -30,14 +39,77 @@ const thought = useProfileThought(() => dash.u.value.thought)
 const pickerInput = design.pickerInput
 const handlePickerChange = design.handlePickerChange
 
+const modules = useAppModulesStore()
+
+try {
+  modules.ensureInit((usePage().props as any)?.auth?.user ?? null)
+} catch {
+}
+
+/**
+ * Чистый ULove-режим: свой профиль — Tinder-карточка из анкеты.
+ */
+const showUlove = computed(
+  () => modules.isEnabled('ulove') && !modules.isEnabled('upin') && !modules.isEnabled('uflow'),
+)
+
+/**
+ * Фото для Tinder-профиля: только галерея, без дублей.
+ * Аватар галереей не считается — идёт отдельным фолбэком
+ * обложки в `UloveProfileView`, иначе счётчик врёт («1 из 5»
+ * при пустой галерее).
+ */
+const ulovePhotos = computed(() => {
+  const urls: string[] = []
+  const galleryPhotos = (design.galleryPreview.value ?? []) as Array<{ url?: string }>
+
+  for (const photo of galleryPhotos) {
+    const url = String(photo?.url ?? '')
+
+    if (url !== '' && !urls.includes(url)) {
+      urls.push(url)
+    }
+  }
+
+  return urls
+})
+
+const showDatingEdit = ref(false)
+
+/**
+ * Анкета сохранена: закрыть диалог и обновить данные.
+ */
+function onDatingSaved(): void {
+  showDatingEdit.value = false
+
+  try {
+    router.reload({ only: ['user'] })
+  } catch {
+  }
+}
+
 onMounted(async () => { await design.init() })
 </script>
 
 <template>
   <Head :title="dash.seo.title.value"><meta head-key="robots" name="robots" content="noindex, nofollow" /></Head>
   <Toast />
-    <div class="page-scroll bg-surface dark:bg-[#090E1A]">
+    <div class="page-scroll bg-surface dark:bg-[#0F121F]">
       <div class="max-w-[1040px] lg:max-w-[1120px] mx-auto px-3 sm:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4">
+        <UloveProfileView
+          v-if="showUlove"
+          :profile-user="dash.u.value"
+          :photos="ulovePhotos"
+          :avatar="dash.avatarSrc.value"
+          :gallery="gallery"
+          :is-own="true"
+          :online="dash.presence.value.active"
+          @edit="showDatingEdit = true"
+          @message="dash.goChat()"
+          @photos="gallery.openDialog()"
+          @add-photos="design.openPicker()"
+        />
+        <template v-else>
         <button
           v-if="dash.isAdmin.value && dash.isOwn.value"
           type="button"
@@ -127,16 +199,20 @@ onMounted(async () => { await design.init() })
               :bio-preview="design.bioPreview.value"
             />
 
-            <ProfileDesignSwipes @go="design.goSwipes()" />
+            <ProfileDesignSwipes v-if="modules.isEnabled('ulove')" @go="design.goSwipes()" />
 
-            <ProfileDesignFlow :user-id="dash.u.value.id" :is-own="true" />
+            <ProfileDesignFlow v-if="modules.isEnabled('uflow')" :user-id="dash.u.value.id" :is-own="true" />
           </div>
         </div>
+        </template>
 
         <ProfileFriendsDialog :people="people" />
         <ProfileThoughtDialog :open="thought.open.value" :draft="thought.draft.value" :saving="thought.saving.value" :error="thought.error.value" @update:draft="(v:string)=>thought.setDraft(v)" @close="thought.close()" @save="thought.save()" />
         <ChatSearchDialog :open="search.open.value" @update:open="(v:boolean)=>{ if(!v) search.closeDialog() }" :query="search.query.value" @update:query="(v:string)=>search.setQuery(v)" :results="search.results.value" :searching="search.searching.value" :creating="search.creating.value" :is-online="(id?:number,lastSeen?:string|null)=>search.isOnline(id,lastSeen)" @chat="search.startChat" @add="search.addFriend" @block="search.askBlock" />
         <ProfileGalleryDialog :gallery="gallery" :is-own="true" :plan="planOf(dash.u.value)" />
+        <Dialog :visible="showDatingEdit" @update:visible="(v:boolean)=>{ if(!v) showDatingEdit = false }" modal header="Моя анкета" :style="{ width: '480px', maxWidth: 'calc(100vw - 2rem)' }" :pt="{ root: { class: '!rounded-3xl dark:!bg-zinc-900 dark:!border-zinc-700' }, content: { class: '!max-h-[78dvh] !overflow-y-auto' } }">
+          <DatingQuestionnaireDialog @saved="onDatingSaved" />
+        </Dialog>
         <ProfilePhotoViewer :gallery="gallery" :comments="photoComments" :is-own="true" :user-name="dash.u.value.name" :avatar-src="dash.avatarSrc.value" />
 
         <input ref="pickerInput" type="file" accept="image/*" class="absolute w-px h-px opacity-0 overflow-hidden pointer-events-none" tabindex="-1" aria-hidden="true" @change="handlePickerChange" />

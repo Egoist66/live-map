@@ -102,6 +102,11 @@ export function useDefaultMode() {
     try {
       await axios.patch('/api/user/default-mode', { default_mode: next })
       syncUser(next)
+      try {
+        const { useAppModulesStore } = await import('@/stores/appModules')
+        useAppModulesStore().adoptPrimaryLocal(next)
+      } catch {
+      }
       visible.value = false
     } catch (err: any) {
       error.value = err?.response?.data?.message || 'Не получилось сохранить выбор'

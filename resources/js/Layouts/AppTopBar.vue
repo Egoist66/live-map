@@ -5,8 +5,8 @@ import Avatar from 'primevue/avatar'
 import { useViewportBreakpoints } from '@/composables/useViewportBreakpoints'
 
 withDefaults(
-  defineProps<{ user: any; avatarSrc: string; dashboardHref: string; badgeTotal: number; lockEnabled?: boolean; isBusiness?: boolean }>(),
-  { isBusiness: false },
+  defineProps<{ user: any; avatarSrc: string; dashboardHref: string; badgeTotal: number; lockEnabled?: boolean; isBusiness?: boolean; showMap?: boolean; showLove?: boolean; showFlow?: boolean }>(),
+  { isBusiness: false, showMap: true, showLove: true, showFlow: true },
 )
 const emit = defineEmits<{ (e: 'bell'): void; (e: 'menu', ev: Event): void; (e: 'lock'): void }>()
 
@@ -20,10 +20,10 @@ const { isXxs } = useViewportBreakpoints()
 
     <nav aria-label="Основная навигация" class="hidden lg:flex items-center gap-1 bg-stone-100/80 dark:bg-zinc-800 p-1 rounded-full border border-stone-200/60 dark:border-zinc-700 shrink-0">
       <Link v-if="isBusiness" href="/cabinet" :class="['px-4 py-1.5 rounded-full text-[13px] font-semibold transition', route().current('cabinet.*') ? 'bg-white dark:bg-zinc-700 shadow-soft text-ink-900 dark:text-white border border-stone-200 dark:border-zinc-600' : 'text-stone-500 dark:text-zinc-400 hover:text-ink-900 dark:hover:text-white']">Кабинет</Link>
-      <Link :href="route('map')" :class="['px-4 py-1.5 rounded-full text-[13px] font-semibold transition', route().current('map') ? 'bg-white dark:bg-zinc-700 shadow-soft text-ink-900 dark:text-white border border-stone-200 dark:border-zinc-600' : 'text-stone-500 dark:text-zinc-400 hover:text-ink-900 dark:hover:text-white']">Карта</Link>
+      <Link v-if="showMap" :href="route('map')" :class="['px-4 py-1.5 rounded-full text-[13px] font-semibold transition', route().current('map') ? 'bg-white dark:bg-zinc-700 shadow-soft text-ink-900 dark:text-white border border-stone-200 dark:border-zinc-600' : 'text-stone-500 dark:text-zinc-400 hover:text-ink-900 dark:hover:text-white']">Карта</Link>
       <Link :href="route('chat')" :class="['px-4 py-1.5 rounded-full text-[13px] font-semibold transition relative', route().current('chat') ? 'bg-white dark:bg-zinc-700 shadow-soft text-ink-900 dark:text-white border border-stone-200 dark:border-zinc-600' : 'text-stone-500 dark:text-zinc-400 hover:text-ink-900 dark:hover:text-white']">Чат</Link>
-      <Link v-if="!isBusiness" :href="route('swipes')" title="ULove" :class="['px-4 py-1.5 rounded-full transition inline-flex items-center', route().current('swipes') ? 'bg-white dark:bg-zinc-700 shadow-soft border border-stone-200' : 'hover:text-ink-900']"><span class="text-[13px] font-black tracking-tight leading-none bg-gradient-to-r from-rose-500 via-fuchsia-500 to-orange-400 dark:from-rose-400 dark:via-fuchsia-400 dark:to-orange-300 bg-clip-text text-transparent">ULove</span></Link>
-      <Link v-if="!isBusiness" :href="route('flow')" title="UFlow" :class="['px-4 py-1.5 rounded-full transition inline-flex items-center', route().current('flow') ? 'bg-white dark:bg-zinc-700 shadow-soft border border-stone-200' : 'hover:text-ink-900']"><span class="text-[13px] font-black tracking-tight leading-none bg-gradient-to-r from-sky-500 via-blue-600 to-fuchsia-500 dark:from-sky-400 dark:via-blue-400 dark:to-fuchsia-400 bg-clip-text text-transparent">UFlow</span></Link>
+      <Link v-if="!isBusiness && showLove" :href="route('swipes')" title="ULove" :class="['px-4 py-1.5 rounded-full transition inline-flex items-center', route().current('swipes') ? 'bg-white dark:bg-zinc-700 shadow-soft border border-stone-200' : 'hover:text-ink-900']"><span class="text-[13px] font-black tracking-tight leading-none bg-gradient-to-r from-rose-500 via-fuchsia-500 to-orange-400 dark:from-rose-400 dark:via-fuchsia-400 dark:to-orange-300 bg-clip-text text-transparent">ULove</span></Link>
+      <Link v-if="!isBusiness && showFlow" :href="route('flow')" title="UFlow" :class="['px-4 py-1.5 rounded-full transition inline-flex items-center', route().current('flow') ? 'bg-white dark:bg-zinc-700 shadow-soft border border-stone-200' : 'hover:text-ink-900']"><span class="text-[13px] font-black tracking-tight leading-none bg-gradient-to-r from-sky-500 via-blue-600 to-fuchsia-500 dark:from-sky-400 dark:via-blue-400 dark:to-fuchsia-400 bg-clip-text text-transparent">UFlow</span></Link>
     </nav>
 
     <span class="min-w-0 flex-1" />
@@ -37,7 +37,7 @@ const { isXxs } = useViewportBreakpoints()
         <span v-if="badgeTotal" class="absolute -top-1 -right-1 grid h-[18px] min-w-[18px] place-items-center rounded-full border-2 border-white dark:border-zinc-900 bg-red-500 px-1 text-[10px] font-bold text-white">{{ badgeTotal > 9 ? '9+' : badgeTotal }}</span>
         <span v-if="badgeTotal" class="absolute -top-1 -right-1 h-[18px] min-w-[18px] rounded-full bg-red-500 animate-ping opacity-30"></span>
       </button>
-      <Link v-if="!route().current('map')" href="/map" class="hidden sm:inline-flex items-center gap-2 bg-ink-900 dark:bg-white dark:text-ink-900 text-white rounded-full px-5 py-2 text-sm font-semibold hover:bg-ink-800 dark:hover:bg-zinc-200 transition whitespace-nowrap">+ Создать пин</Link>
+      <Link v-if="showMap && !route().current('map')" href="/map" class="hidden sm:inline-flex items-center gap-2 bg-ink-900 dark:bg-white dark:text-ink-900 text-white rounded-full px-5 py-2 text-sm font-semibold hover:bg-ink-800 dark:hover:bg-zinc-200 transition whitespace-nowrap">+ Создать пин</Link>
       <button @click="emit('menu', $event)" aria-label="Меню профиля" class="grid h-10 w-10 !min-h-[40px] shrink-0 place-items-center overflow-hidden rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow-soft hover:bg-stone-50 dark:hover:bg-zinc-700 transition active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-brand-500/60 sm:flex sm:h-11 sm:w-auto sm:items-center sm:gap-2 sm:px-3">
         <Avatar :image="avatarSrc" shape="circle" size="normal" class="!w-8 !h-8" />
         <span class="text-sm font-semibold text-ink-900 dark:text-white max-w-[120px] truncate hidden sm:inline">{{ user?.name }}</span>

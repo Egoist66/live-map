@@ -6,16 +6,28 @@ import AppFooter from '@/Layouts/AppFooter.vue'
 import BrandMark from '@/Components/Brand/BrandMark.vue'
 import PwaInstallBanner from '@/Components/Features/Pwa/PwaInstallBanner.vue'
 import PwaUpdateBanner from '@/Components/Features/Pwa/PwaUpdateBanner.vue'
+import { computed } from 'vue'
 import { useGuestLayout } from '@/composables/useGuestLayout'
+import { useAuthTheme } from '@/composables/useAuthTheme'
 import { useClientReady } from '@/composables/useClientReady'
+import { useGlobalDialogDismiss } from '@/composables/useGlobalDialogDismiss'
+
+useGlobalDialogDismiss()
 
 const { isFaq, isAuthPage, shouldShowFooter } = useGuestLayout()
 const { isClientReady } = useClientReady()
+const authTheme = useAuthTheme()
+
+/**
+ * ULove-вход без левого сайдбара: как в Tinder — только
+ * центрированная карточка на чистом фоне.
+ */
+const hideSidebar = computed(() => isAuthPage.value && authTheme.isUlove.value)
 </script>
 
 <template>
-  <div class="min-h-screen min-h-dvh flex w-full overflow-x-clip bg-surface dark:bg-[#0B0F1A]">
-    <div class="hidden lg:flex w-[360px] xl:w-[400px] shrink-0 bg-ink-900 text-white relative overflow-hidden">
+  <div class="min-h-screen min-h-dvh flex w-full overflow-x-clip bg-surface dark:bg-[#0F121F]">
+    <div v-if="!hideSidebar" class="hidden lg:flex w-[360px] xl:w-[400px] shrink-0 bg-ink-900 text-white relative overflow-hidden">
       <div class="absolute inset-0">
         <div class="absolute inset-0 opacity-[0.04]" style="background-image: radial-gradient(circle at 1px 1px, white 1px, transparent 0); background-size: 24px 24px"></div>
         <div class="absolute -top-24 -right-24 w-[520px] h-[520px] bg-gradient-to-br from-brand-500 via-violet-600 to-accent-teal rounded-full blur-[90px] opacity-25"></div>
@@ -48,16 +60,20 @@ const { isClientReady } = useClientReady()
         </div>
       </div>
     </div>
-    <div :class="isFaq ? 'flex-1 flex flex-col px-0 py-0 relative dark:bg-[#0B0F1A] overflow-auto min-w-0 w-full overflow-x-clip' : 'flex-1 flex flex-col items-center px-4 sm:px-6 py-6 sm:py-10 relative dark:bg-[#0B0F1A] min-w-0 w-full overflow-x-clip'">
-      <div class="absolute inset-0 -z-10 bg-gradient-to-b from-white to-surface dark:from-zinc-900 dark:to-[#0B0F1A]"></div>
+    <div :class="isFaq ? 'flex-1 flex flex-col px-0 py-0 relative dark:bg-[#0F121F] overflow-auto min-w-0 w-full overflow-x-clip' : 'flex-1 flex flex-col items-center px-4 sm:px-6 py-6 sm:py-10 relative dark:bg-[#0F121F] min-w-0 w-full overflow-x-clip'">
+      <div class="absolute inset-0 -z-10 bg-gradient-to-b from-white to-surface dark:from-zinc-900 dark:to-[#0F121F]"></div>
       <div :class="isFaq ? 'flex w-full flex-1 flex-col min-w-0' : 'flex w-full flex-1 items-center justify-center min-w-0'">
       <PageTransition :preset="isAuthPage ? 'none' : 'fade-slide'">
         <template v-if="isFaq">
           <slot />
         </template>
         <template v-else>
-          <div class="guest-auth w-full max-w-[440px] min-w-0 mx-auto">
-            <Link href="/" class="lg:hidden flex items-center gap-2.5 mb-5 sm:mb-6">
+          <div :class="authTheme.isUlove.value ? 'w-full max-w-[400px] min-w-0 mx-auto' : 'guest-auth w-full max-w-[440px] min-w-0 mx-auto'">
+            <Link v-if="authTheme.isUlove.value" href="/" class="flex items-center justify-center gap-2 mb-5 sm:mb-6">
+              <span class="w-10 h-10 rounded-2xl bg-gradient-to-br from-rose-500 via-fuchsia-500 to-orange-400 grid place-items-center text-white shadow-lg shadow-rose-500/30"><i class="pi pi-heart-fill" /></span>
+              <span class="font-black tracking-[-0.04em] text-[26px] bg-gradient-to-r from-rose-500 via-fuchsia-500 to-orange-400 dark:from-rose-400 dark:via-fuchsia-400 dark:to-orange-300 bg-clip-text text-transparent">ULove</span>
+            </Link>
+            <Link v-else href="/" class="lg:hidden flex items-center gap-2.5 mb-5 sm:mb-6">
               <span class="w-9 h-9 rounded-xl overflow-hidden shrink-0 grid place-items-center"><BrandMark class="h-full w-full" /></span>
               <span class="font-black tracking-[-0.03em] text-xl text-ink-900 dark:text-white">U<span class="font-light text-ink-600 dark:text-zinc-400">Pin</span></span>
             </Link>
@@ -68,12 +84,12 @@ const { isClientReady } = useClientReady()
                 </div>
               </template>
             </Card>
-            <div class="text-xs text-stone-500 dark:text-zinc-400 mt-4 text-center max-w-full px-2 text-balance">Защищено приватностью по умолчанию · Размытие 200м · Блок в 1 клик</div>
+            <div class="text-xs text-stone-500 dark:text-zinc-400 mt-4 text-center max-w-full px-2 text-balance">{{ authTheme.isUlove.value ? 'Мэтч открывает чат · Анонимно по желанию · Блок в 1 клик' : 'Защищено приватностью по умолчанию · Размытие 200м · Блок в 1 клик' }}</div>
           </div>
           </template>
         </PageTransition>
         </div>
-        <div v-if="shouldShowFooter" class="mt-auto w-full">
+        <div v-if="shouldShowFooter" class="mt-auto hidden w-full lg:block">
           <AppFooter />
         </div>
       </div>

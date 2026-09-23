@@ -13,7 +13,9 @@ import { useChatNavigation } from '@/composables/useChatNavigation'
 import { useChatAttachment } from '@/composables/useChatAttachment'
 import { useChatLocation } from '@/composables/useChatLocation'
 import { useVoiceRecorder } from '@/composables/useVoiceRecorder'
+import { useAppModulesStore } from '@/stores/appModules'
 import { chatApi } from '@/services/chat.api'
+import { datingApi } from '@/services/dating.api'
 
 export function useChatPage(initialConversationId?: number) {
   const chat = useChat()
@@ -39,6 +41,21 @@ export function useChatPage(initialConversationId?: number) {
     }
   })
 
+  const modules = useAppModulesStore()
+
+  try {
+    modules.ensureInit((usePage().props as unknown as { auth?: { user?: unknown } }).auth?.user ?? null)
+  } catch {
+  }
+
+  /**
+   * Чистый ULove-режим: только мэтчи и блок.
+   * Никакого поиска людей, друзей и заявок.
+   */
+  const uloveOnly = computed(
+    () => !isBusiness.value && modules.isEnabled('ulove') && !modules.isEnabled('upin') && !modules.isEnabled('uflow'),
+  )
+
   /**
    * Чаты мэтчей ULove: собеседник с is_match и только direct.
    * SOS-диалоги (type=sos) сюда не попадают — у них обычный стиль.
@@ -49,7 +66,14 @@ export function useChatPage(initialConversationId?: number) {
     if (isBusiness.value) {
       return []
     }
-    return chat.conversations.value.filter((c: any) => (c?.type ?? 'direct') === 'direct' && !!(c?.other as any)?.is_match)
+
+    const directs = chat.conversations.value.filter((c: any) => (c?.type ?? 'direct') === 'direct')
+
+    if (uloveOnly.value) {
+      return directs
+    }
+
+    return directs.filter((c: any) => !!(c?.other as any)?.is_match)
   })
 
   /** Непрочитанные диалоги ULove (счётчик таба). */
@@ -59,11 +83,15 @@ export function useChatPage(initialConversationId?: number) {
     if (isBusiness.value && next === 'ulove') {
       tab.value = 'chats'
     }
+
+    if (uloveOnly.value && next !== 'ulove' && next !== 'blocked') {
+      tab.value = 'ulove'
+    }
   })
   const showChatMenu = ref(false)
   const sheet = ref<{ type: 'message' | 'chat' | 'friend' | 'request' | 'search', data: any } | null>(null)
   const showPrivacy = ref(false)
-  const privacy = ref({ message_privacy: 'everyone' })
+  const privacy = ref({ message_privacy: 'everyone', dating_match_only: false })
   const creatingChat = ref(false)
   const confirm = ref<{ type: 'block' | 'deleteChat' | 'clearAllChats' | 'deleteMessage' | 'removeFriend' | 'unblock', payload: any, title: string, msg: string, icon: string, confirmLabel: string, severity: 'danger' | 'primary' } | null>(null)
   const confirmVisible = computed({ get: () => !!confirm.value, set: (v) => { if (!v) confirm.value = null } })
@@ -315,7 +343,19 @@ export function useChatPage(initialConversationId?: number) {
     }
   }
 
+  /**
+   * Сохраняет приватность с учётом режима.
+   *
+   * ULove-режим (только ulove без upin/uflow): селект «Все со свайпов /
+   * Только мэтчи» пишет флаг dating_match_only через дейтинг-настройки.
+   * Обычный режим: классический message_privacy через чат-API.
+   */
   async function savePrivacy() {
+    if (uloveOnly.value) {
+      await datingApi.updateSettings({ dating_match_only: !!privacy.value.dating_match_only })
+      return
+    }
+
     await chatApi.updatePrivacy({ message_privacy: privacy.value.message_privacy })
   }
 
@@ -413,6 +453,11 @@ export function useChatPage(initialConversationId?: number) {
   }
 
   function resolveInitialTab() {
+    if (uloveOnly.value) {
+      tab.value = 'ulove'
+      return
+    }
+
     try {
       const q = new URLSearchParams(window.location.search)
       const t = q.get('tab')
@@ -459,14 +504,23 @@ export function useChatPage(initialConversationId?: number) {
     } catch {}
     badgeSync.setUnread(chat.unreadTotal.value)
     badgeSync.setUnreadMessages(chat.unreadMessagesTotal.value)
-    try { const me = await chatApi.me(); privacy.value.message_privacy = me.message_privacy ?? 'everyone' } catch {}
+    try {
+      const me = await chatApi.me()
+      privacy.value.message_privacy = me.message_privacy ?? 'everyone'
+      if (typeof me.dating_match_only === 'boolean') {
+        privacy.value.dating_match_only = me.dating_match_only
+      } else {
+        const authFlag = (pageProps.auth?.user as any)?.dating_match_only
+        privacy.value.dating_match_only = !!authFlag
+      }
+    } catch {}
     if (targetId && !chat.selectedId.value) {
       await openTarget(targetId)
     }
   }
 
   return {
-    chat, friendsApi, blocksApi, emoji, badgeSync, pins, togglePin, uloveConversations, uloveUnread, isBusiness,
+    chat, friendsApi, blocksApi, emoji, badgeSync, pins, togglePin, uloveConversations, uloveUnread, isBusiness, uloveOnly,
     input, inputRef, editInputRef, tab, showChatMenu, sheet, showPrivacy, privacy, creatingChat, confirm, confirmVisible, isOwnMessage, bindSheet, voice,
     handleSend, handlePickFile, handlePasteImage, handleShareLocation, handleStartVoice, handleStopVoice, handleCancelVoice, handleSendVoice, locating: chatLocation.locating, attachment, formatTime, onPickEmoji, onPickEmojiForEdit, handleStartEdit, startChatWith, addFriendFromSearch, savePrivacy, doConfirm, closeSheet, backToList,
     askBlock, askDeleteChat, askClearAllChats, askDeleteMessage, askRemoveFriend, askUnblock,

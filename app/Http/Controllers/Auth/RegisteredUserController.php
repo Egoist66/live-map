@@ -58,6 +58,9 @@ class RegisteredUserController extends Controller
             'home_address' => 'nullable|string|max:255',
             'signup_goal' => 'required|in:love,flirt,friendship,chat,interests,neighbors,business',
             'account_type' => 'nullable|in:person,business',
+            'landing_tab' => 'nullable|in:ulove,upin,business',
+            'enabled_modules' => 'nullable|array',
+            'enabled_modules.*' => 'nullable|string|in:ulove,upin,uflow,districts,business',
         ];
 
         if ($isBusiness) {
@@ -94,7 +97,8 @@ class RegisteredUserController extends Controller
 
         $datingGoal = $this->datingGoalFor($signupGoal);
 
-        $defaultMode = $this->defaultModeFor($signupGoal);
+        $defaultMode = $this->defaultModeFor($signupGoal, $request->input('landing_tab'));
+        $enabledModules = $this->enabledModulesFor($signupGoal, $request->input('landing_tab'), $request->input('enabled_modules'));
 
         $userPayload = [
             'name' => $request->name,
@@ -111,6 +115,7 @@ class RegisteredUserController extends Controller
             'signup_goal' => $signupGoal,
             'default_mode' => $defaultMode,
             'default_mode_set_at' => now(),
+            'enabled_modules' => $enabledModules,
             'account_type' => $accountType,
             'dating_enabled' => ! $isBusiness,
             'dating_goal' => $datingGoal,
@@ -165,18 +170,60 @@ class RegisteredUserController extends Controller
     }
 
     /**
-     * Стартовый режим из цели захода.
+     * Стартовый режим из цели захода и таба лендинга.
+     *
+     * Таб лендинга приоритетнее: человек выбрал сторону до
+     * регистрации, запоминаем её как домашнюю. Иначе — по цели.
      *
      * @param string $signupGoal цель с формы регистрации
+     * @param mixed $landingTab таб лендинга из localStorage (ulove|upin)
      * @return string ulove для знакомств, upin для карты
      */
-    private function defaultModeFor(string $signupGoal): string
+    private function defaultModeFor(string $signupGoal, mixed $landingTab): string
     {
-        if ($signupGoal === 'neighbors') {
+        $tab = is_string($landingTab) ? mb_strtolower(trim($landingTab)) : '';
+
+        if (in_array($tab, ['ulove', 'upin'], true)) {
+            return $tab;
+        }
+
+        if ($signupGoal === 'neighbors' || $signupGoal === 'business') {
             return 'upin';
         }
 
         return 'ulove';
+    }
+
+    /**
+     * Изоляция модулей для новичка: только выбранная сторона.
+     *
+     * Остальное (карта, лента, районы) довключается в настройках
+     * «Приложение». Явный список с фронта — если прошёл валидацию.
+     *
+     * @param string $signupGoal цель с формы регистрации
+     * @param mixed $landingTab таб лендинга (ulove|upin)
+     * @param mixed $requested явный список модулей с фронта
+     * @return string[] один модуль изоляции
+     */
+    private function enabledModulesFor(string $signupGoal, mixed $landingTab, mixed $requested): array
+    {
+        if ($signupGoal === 'business') {
+            return ['business'];
+        }
+
+        if (is_array($requested)) {
+            $allowed = User::allModules();
+            $clean = array_values(array_intersect(array_map('strval', $requested), $allowed));
+            $personClean = array_values(array_filter($clean, static fn (string $module): bool => $module !== 'business'));
+
+            if ($personClean !== []) {
+                return [$personClean[0]];
+            }
+        }
+
+        $mode = $this->defaultModeFor($signupGoal, $landingTab);
+
+        return [$mode];
     }
 
     /**

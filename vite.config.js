@@ -52,6 +52,85 @@ export default defineConfig({
         rollupOptions: {
             output: {
                 manualChunks(id) {
+                    // Изоляция модулей: тяжёлые разделы — отдельными ленивыми
+                    // чанками, грузятся только когда раздел включён и открыт.
+                    // Inertia и так сплитит по страницам, это дотягивает
+                    // фичи/сторы несомых разделов из общего чанка.
+                    //
+                    // Фишка приложения: человек пользуется только тем, что
+                    // включил (ulove ИЛИ карта ИЛИ лента...). Выбрал ulove
+                    // при регистрации — первый визит тянет только app +
+                    // mod-ulove (+ общие vendor/primevue). Включил карту
+                    // в настройках — чанк mod-upin догружается по требованию
+                    // (preload в useAppModulesSettings). Выключил — чистка
+                    // кэшей pwa-build/pages/api + reload, код раздела больше
+                    // не грузится. Поэтому:
+                    // - общие ядро/профиль/чат/настройки НЕ должны статически
+                    //   импортировать код разделов (см. pinCategories,
+                    //   async ProfileFlowPosts/UloveProfileView);
+                    // - лёгкие CTA/константы остаются в ядре, тяжёлое
+                    //   (сторы, maplibre, композеры) — только в mod-*.
+                    if (id.includes('resources/js/')) {
+                        if (
+                            id.includes('/Pages/Map/') ||
+                            id.includes('/Features/Map/') ||
+                            id.includes('/Features/HomeZone/') ||
+                            id.includes('/stores/pins') ||
+                            id.includes('/composables/useMap.ts') ||
+                            id.includes('/composables/useMapPage') ||
+                            id.includes('/composables/useMapOverlays') ||
+                            id.includes('/composables/useMapRefresh') ||
+                            id.includes('/composables/useThrottledMapFetch') ||
+                            id.includes('/composables/usePins.ts') ||
+                            id.includes('/composables/usePinCreate') ||
+                            id.includes('/composables/usePinEdit') ||
+                            id.includes('/composables/usePinForm') ||
+                            id.includes('/composables/usePinLimit') ||
+                            id.includes('/composables/usePinVisibility') ||
+                            id.includes('/composables/useSosMode') ||
+                            id.includes('/composables/useBusinessMarkers') ||
+                            id.includes('/composables/useReportDialog') ||
+                            id.includes('/composables/useCustomCategories') ||
+                            id.includes('/services/pins.api') ||
+                            id.includes('/services/pinInvites.api') ||
+                            id.includes('/services/custom-categories.api')
+                        ) return 'mod-upin';
+                        if (
+                            id.includes('/Pages/Business/') ||
+                            id.includes('/Features/Business/') ||
+                            id.includes('/Layouts/BusinessLayout') ||
+                            id.includes('/stores/business') ||
+                            id.includes('/composables/useBusiness')
+                        ) return 'mod-business';
+                        if (
+                            id.includes('/Pages/Flow/') ||
+                            id.includes('/Features/Flow/') ||
+                            id.includes('/Components/Features/Profile/ProfileDesignFlow') ||
+                            id.includes('/Components/Features/Profile/ProfileFlowPosts') ||
+                            id.includes('/stores/flow') ||
+                            id.includes('/composables/useFlow') ||
+                            id.includes('/services/flow.api')
+                        ) return 'mod-uflow';
+                        if (
+                            id.includes('/Pages/Districts/') ||
+                            id.includes('/Features/Districts/') ||
+                            id.includes('/stores/districts') ||
+                            id.includes('/composables/useDistrict') ||
+                            id.includes('/services/districts.api')
+                        ) return 'mod-districts';
+                        if (
+                            id.includes('/Pages/Swipes') ||
+                            id.includes('/Features/Dating/') ||
+                            id.includes('/composables/useSwipes.ts') ||
+                            id.includes('/composables/useSwipesMobileMenu') ||
+                            id.includes('/composables/useSwipeCardPhotos') ||
+                            id.includes('/composables/useSwipeStamps') ||
+                            id.includes('/composables/useSwipePhotoViewer') ||
+                            id.includes('/composables/useDatingQuestionnaire') ||
+                            id.includes('/composables/useUloveProfile') ||
+                            id.includes('/services/dating.api')
+                        ) return 'mod-ulove';
+                    }
                     if (id.includes('node_modules')) {
                         if (id.includes('maplibre-gl')) return 'maplibre';
                         if (id.includes('primevue') || id.includes('@primeuix')) return 'primevue';
@@ -71,6 +150,73 @@ export default defineConfig({
         rolldownOptions: {
             output: {
                 manualChunks(id) {
+                    if (process.env.MOD_DEBUG && (id.includes('appModules') || id.includes('MobileBottomNav') || id.includes('AuthStorage') || id.includes('PinActivity') || id.includes('primevue'))) {
+                        // eslint-disable-next-line no-console
+                        console.log(`[mod-debug] id=${id}`);
+                    }
+                    // Зеркало rollupOptions выше: те же mod-* границы,
+                    // чтобы dev/prod и rollup/rolldown давали одинаковый сплит.
+                    if (id.includes('resources/js/')) {
+                        if (
+                            id.includes('/Pages/Map/') ||
+                            id.includes('/Features/Map/') ||
+                            id.includes('/Features/HomeZone/') ||
+                            id.includes('/stores/pins') ||
+                            id.includes('/composables/useMap.ts') ||
+                            id.includes('/composables/useMapPage') ||
+                            id.includes('/composables/useMapOverlays') ||
+                            id.includes('/composables/useMapRefresh') ||
+                            id.includes('/composables/useThrottledMapFetch') ||
+                            id.includes('/composables/usePins.ts') ||
+                            id.includes('/composables/usePinCreate') ||
+                            id.includes('/composables/usePinEdit') ||
+                            id.includes('/composables/usePinForm') ||
+                            id.includes('/composables/usePinLimit') ||
+                            id.includes('/composables/usePinVisibility') ||
+                            id.includes('/composables/useSosMode') ||
+                            id.includes('/composables/useBusinessMarkers') ||
+                            id.includes('/composables/useReportDialog') ||
+                            id.includes('/composables/useCustomCategories') ||
+                            id.includes('/services/pins.api') ||
+                            id.includes('/services/pinInvites.api') ||
+                            id.includes('/services/custom-categories.api')
+                        ) return 'mod-upin';
+                        if (
+                            id.includes('/Pages/Business/') ||
+                            id.includes('/Features/Business/') ||
+                            id.includes('/Layouts/BusinessLayout') ||
+                            id.includes('/stores/business') ||
+                            id.includes('/composables/useBusiness')
+                        ) return 'mod-business';
+                        if (
+                            id.includes('/Pages/Flow/') ||
+                            id.includes('/Features/Flow/') ||
+                            id.includes('/Components/Features/Profile/ProfileDesignFlow') ||
+                            id.includes('/Components/Features/Profile/ProfileFlowPosts') ||
+                            id.includes('/stores/flow') ||
+                            id.includes('/composables/useFlow') ||
+                            id.includes('/services/flow.api')
+                        ) return 'mod-uflow';
+                        if (
+                            id.includes('/Pages/Districts/') ||
+                            id.includes('/Features/Districts/') ||
+                            id.includes('/stores/districts') ||
+                            id.includes('/composables/useDistrict') ||
+                            id.includes('/services/districts.api')
+                        ) return 'mod-districts';
+                        if (
+                            id.includes('/Pages/Swipes') ||
+                            id.includes('/Features/Dating/') ||
+                            id.includes('/composables/useSwipes.ts') ||
+                            id.includes('/composables/useSwipesMobileMenu') ||
+                            id.includes('/composables/useSwipeCardPhotos') ||
+                            id.includes('/composables/useSwipeStamps') ||
+                            id.includes('/composables/useSwipePhotoViewer') ||
+                            id.includes('/composables/useDatingQuestionnaire') ||
+                            id.includes('/composables/useUloveProfile') ||
+                            id.includes('/services/dating.api')
+                        ) return 'mod-ulove';
+                    }
                     if (id.includes('node_modules')) {
                         if (id.includes('maplibre-gl')) return 'maplibre';
                         if (id.includes('primevue') || id.includes('@primeuix')) return 'primevue';
@@ -116,8 +262,8 @@ export default defineConfig({
                 scope: '/',
                 display: 'standalone',
                 orientation: 'any',
-                background_color: '#0B0F1A',
-                theme_color: '#0B0F1A',
+                background_color: '#0F121F',
+                theme_color: '#0F121F',
                 lang: 'ru-RU',
                 dir: 'ltr',
                 categories: ['social', 'navigation', 'lifestyle'],

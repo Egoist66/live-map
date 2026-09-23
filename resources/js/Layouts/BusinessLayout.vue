@@ -15,6 +15,7 @@ import { useBadgeStore } from '@/stores/badges'
 import { useBellNotifications } from '@/composables/useBellNotifications'
 import { useAppNotifications } from '@/composables/useAppNotifications'
 import { useBusinessRealtime } from '@/composables/useBusinessRealtime'
+import { useGlobalDialogDismiss } from '@/composables/useGlobalDialogDismiss'
 import type { BusinessVerificationStatus } from '@/types/entities/Business'
 
 const BellNotificationsModal = defineAsyncComponent(() => import('@/Components/Features/Feedback/BellNotificationsModal.vue'))
@@ -27,6 +28,7 @@ const badge = useBadgeStore()
 const bell = useBellNotifications()
 useAppNotifications()
 useBusinessRealtime()
+useGlobalDialogDismiss()
 const menu = ref()
 
 onMounted(() => {
@@ -91,7 +93,7 @@ function logout(): void {
 </script>
 
 <template>
-  <div class="flex min-h-screen min-h-dvh flex-col bg-surface dark:bg-[#0B0F1A] overflow-x-clip">
+  <div class="flex min-h-screen min-h-dvh flex-col bg-surface dark:bg-[#0F121F] overflow-x-clip">
     <header class="native-safe-top sticky top-0 z-50 glass border-b border-stone-200/70 dark:border-zinc-800 backdrop-blur">
       <div class="mx-auto max-w-[1280px] px-4 sm:px-6 h-16 flex items-center gap-3">
         <Link href="/cabinet" class="min-w-0 shrink-0" aria-label="Кабинет">

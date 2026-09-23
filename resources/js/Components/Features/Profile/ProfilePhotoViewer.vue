@@ -8,7 +8,9 @@ import ProgressSpinner from 'primevue/progressspinner'
 import { Swiper, SwiperSlide } from 'swiper/vue'
 import 'swiper/css'
 import { Link } from '@inertiajs/vue3'
+import { ref } from 'vue'
 import { useMounted } from '@vueuse/core'
+import { useSwipeToClose } from '@/composables/useSwipeToClose'
 import { useBodyLock } from '@/composables/useBodyLock'
 import { usePhotoViewer } from '@/composables/usePhotoViewer'
 import { usePhotoViewerSwiper } from '@/composables/usePhotoViewerSwiper'
@@ -45,6 +47,12 @@ const photoLikers = useLikersPreview(
 const commentPlaceholder = enterPlaceholder('Добавить комментарий… Shift+Enter — новая строка', 'Добавить комментарий…')
 const mentionNav = useMentionNavigate()
 
+const viewerHeaderRef = ref<HTMLElement | null>(null)
+useSwipeToClose(viewerHeaderRef, {
+  onClose: () => props.gallery.close(),
+  enabled: () => !!props.gallery.viewerOpen?.value,
+})
+
 /**
  * Отправляет комментарий к фото и закрывает подсказки.
  */
@@ -60,7 +68,7 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
   <template v-if="isMounted">
   <Teleport to="body">
     <div v-if="gallery.viewerOpen.value && gallery.active.value" class="fixed inset-0 z-[2000] flex flex-col bg-white dark:bg-zinc-950 md:mx-auto md:max-w-[720px] md:border-x md:border-stone-200/70 dark:md:border-white/10" role="dialog" aria-modal="true">
-      <div class="shrink-0 flex items-center gap-2.5 pl-1 pr-3 border-b border-stone-200/70 dark:border-white/10 viewer-fullscreen-header">
+      <div ref="viewerHeaderRef" class="shrink-0 flex items-center gap-2.5 pl-1 pr-3 border-b border-stone-200/70 dark:border-white/10 viewer-fullscreen-header">
         <Button icon="pi pi-arrow-left" rounded text class="!w-10 !h-10" @click="gallery.close()" aria-label="Назад" />
         <img v-if="avatarSrc" :src="avatarSrc" alt="" loading="lazy" draggable="false" class="block w-8 h-8 rounded-full object-cover object-center bg-stone-100 dark:bg-white/10" />
         <span v-else class="w-8 h-8 rounded-full bg-violet-100 dark:bg-white/10 grid place-items-center text-xs font-black text-violet-700 dark:text-zinc-200">{{ (userName || '?').slice(0, 1).toUpperCase() }}</span>
@@ -171,5 +179,6 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
 .comment-body :deep(.mention){color:#7c3aed;font-weight:700}
 .comment-body :deep(.mention-link){cursor:pointer}
 :global(.dark) .comment-body :deep(.mention){color:#a78bfa}
-.swiper-zoom-container{width:100%;height:100%;display:flex;align-items:center;justify-content:center;touch-action:pan-y}
+.swiper-zoom-container{width:100%;height:100%;display:flex;align-items:center;justify-content:center}
+.swiper-slide-zoomed{cursor:move;touch-action:none}
 </style>
