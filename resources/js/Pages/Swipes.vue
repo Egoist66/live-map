@@ -139,7 +139,7 @@ onUnmounted(() => {
   <Head :title="seo.title.value">
     <meta head-key="description" name="description" :content="seo.description.value" />
   </Head>
-  <div class="page-scroll w-full min-w-0 bg-transparent" :class="s.isContentTab.value ? 'swipes-tab-scroll scroll-neat' : ''">
+  <div class="page-scroll swipes-tab-scroll scroll-neat w-full min-w-0 bg-transparent">
       <div class="max-w-[640px] w-full min-w-0 mx-auto px-4 sm:px-6 pt-3 pb-1 sm:py-6 sm:pb-[calc(2rem+var(--sab))]">
 
         <h1 class="sr-only">ULove — знакомства рядом</h1>
@@ -269,7 +269,7 @@ onUnmounted(() => {
                 <Button icon="pi pi-send" rounded size="small" aria-label="Написать" title="Написать" :loading="s.creatingChat.value" class="!w-10 !h-10 !p-0 shrink-0" @click="s.writeWithoutMatch(f.id)" />
                 <Button icon="pi pi-times" rounded size="small" severity="secondary" outlined aria-label="Убрать" title="Убрать из избранного" class="!w-10 !h-10 !p-0 shrink-0" @click="s.removeFavorite(f.id)" />
               </div>
-              <div class="text-center text-[11px] text-stone-400 dark:text-zinc-500">Занято {{ s.favoritesCount.value }} из {{ s.favoritesLimit.value }} · Free: до 2 · Pro: до 5</div>
+              <div class="text-center text-[11px] text-stone-400 dark:text-zinc-500">Занято {{ s.favoritesCount.value }} из {{ s.favoritesLimit.value }} · Free: до 3 · Pro: до 5</div>
             </div>
             <div v-else class="mt-4 rounded-[24px] border border-dashed border-stone-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-6 sm:p-8 text-center">
               <div class="w-14 h-14 mx-auto rounded-2xl bg-rose-500/10 text-rose-500 grid place-items-center"><i class="pi pi-star text-xl" /></div>
@@ -399,7 +399,7 @@ onUnmounted(() => {
                 <span class="w-10 h-10 rounded-2xl bg-amber-500/15 text-amber-500 grid place-items-center shrink-0"><i class="pi pi-star" /></span>
                 <div class="min-w-0 flex-1">
                   <div class="text-sm font-black text-stone-900 dark:text-white">Избранное {{ s.favoritesCount.value }}/{{ s.favoritesLimit.value }}</div>
-                  <div class="text-[11px] text-stone-500 dark:text-zinc-400">Free — до 2 · Pro — до 5 · Business — до 15</div>
+                  <div class="text-[11px] text-stone-500 dark:text-zinc-400">Free — до 3 · Pro — до 5 · Business — до 15</div>
                 </div>
                 <Button label="Открыть" icon="pi pi-star" rounded outlined size="small" @click="s.goTab('favorites')" />
               </div>
@@ -465,7 +465,7 @@ onUnmounted(() => {
               </div>
 
               <div
-                class="swipe-top absolute inset-0 z-10 rounded-xl overflow-hidden bg-zinc-200 dark:bg-zinc-800 shadow-soft touch-none overscroll-none cursor-grab active:cursor-grabbing"
+                class="swipe-top absolute inset-0 z-10 rounded-xl overflow-hidden bg-zinc-200 dark:bg-zinc-800 shadow-soft touch-pan-y overscroll-contain cursor-grab active:cursor-grabbing"
                 :style="s.topCardStyle.value"
                 @pointerdown="s.dragStart($event.clientX, $event.clientY)"
                 @pointermove="s.dragMove($event.clientX, $event.clientY)"
@@ -859,7 +859,7 @@ onUnmounted(() => {
           <div>ULove — без географии: листай, свайпай и находи людей со всего приложения, не важно в каком они городе. Главное — что человек в UPin. Логика пинов и карты здесь не действует.</div>
           <div>Фильтр «Люди рядом» — только если хочешь локально. Без него показывают всех. Free: рядом до 10 км, дальше — PRO.</div>
           <div>Свайпы безлимитные. Сообщения без мэтча: Free {{ s.quota.value ? `${s.quota.value.left}/${s.quota.value.limit}` : '3/3' }}, PRO — 10/мес. Взаимный лайк (мэтч) открывает чат всегда, даже при исчерпанном лимите.</div>
-          <div>Избранное — лайкнутые без мэтча. Лимиты: Free до 2, Pro до 5, Business до 15.</div>
+          <div>Избранное — свежие лайкнутые без мэтча. Лимиты: Free до 3, Pro до 5, Business до 15. Лайки сверх лимита тоже ждут мэтча — человек их видит.</div>
           <div>Всех просвайпал(а)? Free возвращает ленту один раз кнопкой «Начать заново», а PRO — безлимитно кнопкой «Показать снова».</div>
           <div>Таб «Активные» — кто сейчас в ULove. Открывай анкету, пиши, если человек не закрыл сообщения.</div>
           <div>Кнопка ⓘ на карточке — подробная анкета: что ищет, интересы, о себе. Своя анкета — иконка-карандаш сверху.</div>

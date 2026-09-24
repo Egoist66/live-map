@@ -24,7 +24,7 @@ class DatingService
 
     public const PRO_RANDOM_LIMIT = 10;
 
-    public const FREE_FAVORITES_LIMIT = 2;
+    public const FREE_FAVORITES_LIMIT = 3;
 
     public const PRO_FAVORITES_LIMIT = 5;
 
@@ -376,7 +376,11 @@ class DatingService
     }
 
     /**
-     * Избранное: лайкнутые без мэтча, свежие сверху.
+     * Избранное: лайкнутые без мэтча, свежие сверху, не больше лимита тарифа.
+     *
+     * Лайки сверх лимита никуда не деваются: они ждут мэтча
+     * (получатель их видит, мэтч срабатывает), просто в избранном
+     * показываются только свежие по лимиту (Free — 3, Pro — 5, Business — 15).
      *
      * @param User $me
      * @param int $page страница 1-based
@@ -385,23 +389,44 @@ class DatingService
      */
     public function favorites(User $me, int $page = 1, int $perPage = 20): array
     {
+        $limit = $this->favoritesLimitFor($me);
+        $perPage = max(1, $perPage);
+
         $matched = $this->matchedIds($me);
-        $totalQuery = SwipeAction::where('liker_id', $me->id)->where('action', 'like');
+
+        $totalQuery = SwipeAction::where('liker_id', $me->id)
+            ->where('action', 'like');
 
         if ($matched) {
             $totalQuery->whereNotIn('liked_id', $matched);
         }
 
-        $total = (int) (clone $totalQuery)->count();
-        $lastPage = max(1, (int) ceil($total / max(1, $perPage)));
+        $storedTotal = (int) (clone $totalQuery)->count();
+        $total = min($storedTotal, $limit);
+
+        $lastPage = max(1, (int) ceil($total / $perPage));
         $page = max(1, min($page, $lastPage));
-        $query = SwipeAction::where('liker_id', $me->id)->where('action', 'like')->orderByDesc('id');
 
-        if ($matched) {
-            $query->whereNotIn('liked_id', $matched);
+        $offset = ($page - 1) * $perPage;
+        $take = max(0, min($perPage, $total - $offset));
+
+        $ids = [];
+
+        if ($take > 0) {
+            $rowsQuery = SwipeAction::where('liker_id', $me->id)
+                ->where('action', 'like')
+                ->orderByDesc('id');
+
+            if ($matched) {
+                $rowsQuery->whereNotIn('liked_id', $matched);
+            }
+
+            $ids = $rowsQuery->offset($offset)
+                ->limit($take)
+                ->pluck('liked_id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
         }
-
-        $ids = $query->forPage($page, $perPage)->pluck('liked_id')->map(fn ($id) => (int) $id)->all();
         $users = $ids ? User::whereIn('id', $ids)->get()->keyBy('id') : collect();
         $likedMe = SwipeAction::where('liked_id', $me->id)->where('action', 'like')->pluck('liker_id')->map(fn ($id) => (int) $id)->flip();
 
@@ -419,7 +444,7 @@ class DatingService
 
         return [
             'favorites' => $cards,
-            'limit' => $this->favoritesLimitFor($me),
+            'limit' => $limit,
             'current_page' => $page,
             'last_page' => $lastPage,
             'total' => $total,
@@ -549,6 +574,10 @@ class DatingService
     /**
      * Записать свайп и при взаимности создать мэтч.
      *
+     * Лайк пишется всегда, даже когда избранное переполнено:
+     * лишние лайки просто не показываются в избранном (там только
+     * свежие по лимиту тарифа), но ждут мэтча — получатель видит
+     * лайк в «Кто меня лайкнул» и колокольчике, мэтч срабатывает.
      * Инкогнито-лайк (PRO) скрывает автора в «Кто меня лайкнул» и в колокольчике,
      * но после взаимного мэтча обе анкеты раскрываются.
      * Уведомления уходят только за новые события: повторный like тихий,
@@ -574,15 +603,6 @@ class DatingService
             throw new HttpResponseException(response()->json([
                 'message' => 'Анонимный лайк — PRO-функция. Оформите PRO, чтобы скрывать себя.',
             ], 402));
-        }
-
-        if ($action === 'like') {
-            $alreadyLiked = SwipeAction::where('liker_id', $me->id)->where('liked_id', $otherId)->where('action', 'like')->exists();
-
-            if (! $alreadyLiked && $this->favoritesCount($me) >= $this->favoritesLimitFor($me)) {
-                $limit = $this->favoritesLimitFor($me);
-                abort(422, "Избранное переполнено ({$limit}). Убери кого-то из избранного или возьми Pro.");
-            }
         }
 
         $swipePayload = $this->swipePayload($action, $incognito);
@@ -947,11 +967,54 @@ class DatingService
     }
 
     /**
+     * Пол, который ищем по умолчанию: сохранённый выбор,
+     * иначе противоположный своему (мужчина → девушки и наоборот).
+     *
+     * @param User $me
+     * @return string male|female|all
+     */
+    public function defaultGenderPref(User $me): string
+    {
+        $saved = $me->dating_gender_pref;
+
+        if (in_array($saved, ['male', 'female'], true)) {
+            return $saved;
+        }
+
+        $opposite = $this->oppositeGender($me->gender);
+
+        return $opposite ?? 'all';
+    }
+
+    /**
+     * Противоположный пол для дефолтного фильтра «кого ищешь».
+     *
+     * @param string|null $gender свой пол
+     * @return string|null male|female либо null когда определить нельзя
+     */
+    private function oppositeGender(?string $gender): ?string
+    {
+        if ($gender === 'male') {
+            return 'female';
+        }
+
+        if ($gender === 'female') {
+            return 'male';
+        }
+
+        return null;
+    }
+
+    /**
      * Лента кандидатов для свайпов.
      *
+     * В ленте — только совершеннолетние с указанной датой рождения:
+     * возраст неизвестен — в свайпах не показываем (строго 18+).
      * По умолчанию — без geo-ограничений: видны все люди в системе,
      * независимо от расстояния. Фильтр «рядом» (radius_km) опционален
      * и упирается в тариф: Free — до 10 км, PRO — безлимит.
+     * Пол по умолчанию — сохранённый выбор, иначе противоположный
+     * своему (мужчина листает девушек и наоборот).
      * Для бесконечной колоды фронт шлёт exclude_ids уже виденных,
      * бэк их исключает — дублей нет без сброса истории.
      *
@@ -985,7 +1048,10 @@ class DatingService
             array_merge([$me->id], $actedIds, $hiddenIds, $blockedIds, $extraExclude, [User::GHOST_USER_ID])
         )));
 
-        $genderPref = $filters['gender'] ?? $me->dating_gender_pref ?? 'all';
+        $explicitGender = $filters['gender'] ?? null;
+        $genderPref = in_array($explicitGender, ['male', 'female', 'all'], true)
+            ? $explicitGender
+            : $this->defaultGenderPref($me);
         $goal = $filters['goal'] ?? null;
         $ageMin = isset($filters['age_min']) ? (int) $filters['age_min'] : null;
         $ageMax = isset($filters['age_max']) ? (int) $filters['age_max'] : null;
@@ -1027,9 +1093,8 @@ class DatingService
             $query->where('birth_date', '>=', $minBirth);
         } else {
             $adultThreshold = Carbon::now()->subYears(self::ADULT_AGE)->toDateString();
-            $query->where(function ($ageQuery) use ($adultThreshold) {
-                $ageQuery->whereNull('birth_date')->orWhere('birth_date', '<=', $adultThreshold);
-            });
+            $query->whereNotNull('birth_date');
+            $query->where('birth_date', '<=', $adultThreshold);
         }
 
         $candidates = $query
@@ -1124,9 +1189,8 @@ class DatingService
         $baseQuery = User::whereNotIn('id', $exclude)
             ->where('dating_enabled', true)
             ->where('last_seen_at', '>=', $threshold)
-            ->where(function ($ageQuery) use ($adultThreshold) {
-                $ageQuery->whereNull('birth_date')->orWhere('birth_date', '<=', $adultThreshold);
-            })
+            ->whereNotNull('birth_date')
+            ->where('birth_date', '<=', $adultThreshold)
             ->when(! $me->isAdmin() && ! User::isGhostSeer($me), function ($query) {
                 $query->where('is_admin', false);
             });

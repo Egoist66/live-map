@@ -141,47 +141,29 @@ export const useAppModulesStore = defineStore('appModules', () => {
   const saving = ref(false)
   const error = ref<string | null>(null)
   const ready = ref(false)
-  const isStaff = ref(false)
 
-  const isIsolated = computed(() => enabled.value !== null && !isStaff.value)
+  const isIsolated = computed(() => enabled.value !== null)
 
   const primary = computed<AppModule>(() => enabled.value?.[0] ?? 'ulove')
 
   const home = computed(() => MODULE_HOME[primary.value])
 
   /**
-   * Включён ли модуль с учётом legacy-режима и staff-доступа.
+   * Включён ли модуль с учётом legacy-режима.
    *
-   * Админы и модераторы видят всё сразу — надо тестировать
-   * все стороны без переключения тумблеров.
+   * Админы и модераторы — на общих основаниях: разделы включаются
+   * и выключаются в настройках как у всех, без хардкода.
+   * Legacy (`enabled === null`) видит всё.
    *
    * @param module модуль для проверки
    * @returns true если виден в навигации
    */
   function isEnabled(module: AppModule): boolean {
-    if (isStaff.value) {
-      return true
-    }
-
     if (enabled.value === null) {
       return true
     }
 
     return enabled.value.includes(module)
-  }
-
-  /**
-   * Staff-признак пользователя (админ или модератор).
-   *
-   * @param authUser auth.user или null
-   * @returns true для тестировщиков всех сторон
-   */
-  function staffOf(authUser: any): boolean {
-    try {
-      return !!authUser?.is_admin || authUser?.role === 'admin' || authUser?.role === 'moderator'
-    } catch {
-      return false
-    }
   }
 
   /**
@@ -210,8 +192,6 @@ export const useAppModulesStore = defineStore('appModules', () => {
    * @param authUser auth.user со страницы (null для гостя)
    */
   function ensureInit(authUser: any): void {
-    isStaff.value = staffOf(authUser)
-
     if (ready.value) {
       syncUserRef(authUser)
       return
@@ -267,8 +247,6 @@ export const useAppModulesStore = defineStore('appModules', () => {
    * @param authUser свежий auth.user
    */
   function syncUserRef(authUser: any): void {
-    isStaff.value = staffOf(authUser)
-
     if (!authUser) {
       loadGuestMemory()
       return

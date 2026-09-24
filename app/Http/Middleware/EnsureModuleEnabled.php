@@ -11,8 +11,9 @@ class EnsureModuleEnabled
     /**
      * Изоляция модулей на уровне роутов.
      *
-     * Гости, legacy-аккаунты (enabled_modules = NULL) и staff
-     * (админы/модераторы видят всё для тестов) проходят всегда.
+     * Гости и legacy-аккаунты (enabled_modules = NULL) проходят всегда.
+     * Админы и модераторы — на общих основаниях: разделы точно так же
+     * включаются и выключаются в настройках «Приложение», без хардкода.
      * Остальным без включённого модуля — редирект на их стартовый экран.
      *
      * @param \Illuminate\Http\Request $request
@@ -25,10 +26,6 @@ class EnsureModuleEnabled
         $user = $request->user();
 
         if (! $user) {
-            return $next($request);
-        }
-
-        if ($user->isAdmin() || $user->canModerate()) {
             return $next($request);
         }
 

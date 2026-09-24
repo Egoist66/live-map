@@ -304,13 +304,14 @@ html.native-keyboard-open .h-app-full {
     min-height: calc(100dvh - var(--app-header-md));
   }
 }
-/* Контентные табы свайпов (анкета, списки, PRO): собственный скроллер
-   на высоту вьюпорта. Лента остаётся app-frame без скролла, а длинные
-   формы/списки листаются и на десктопе, и на мобиле независимо
-   от скролла страницы (main для swipes* — overflow-hidden).
-   Шапки над скроллером нет, нижнее меню на свайпах спрятано —
-   вычитаем только верхний сейф-инсет (на мобиле его даёт спейсер
-   native-safe-top, на десктопе --sat равен нулю). */
+/* Свайпы (лента, списки, анкета, PRO): собственный скроллер
+    на высоту вьюпорта. Длинные формы и списки листаются и на десктопе,
+    и на мобиле независимо от скролла страницы
+    (main для swipes* — overflow-hidden).
+    Шапки над скроллером нет, на десктопе нижнего меню тоже нет —
+    вычитаем только верхний сейф-инсет. На мобиле снизу фиксированное
+    меню — вычитаем и его, иначе низ контента уходит под меню
+    и скролл визуально «стоит» при видимом скроллбаре. */
 .swipes-tab-scroll {
   height: calc(100dvh - var(--sat));
   max-height: calc(100dvh - var(--sat));
@@ -326,10 +327,20 @@ html.native-keyboard-open .h-app-full {
     max-height: calc(100vh - var(--sat)) !important;
   }
 }
-/* Мобила: запас под шторку жестов в конце скролла — нижнее меню
-   на свайпах спрятано, внутренний pb-1 страницы его не покрывает. */
+@media (max-width: 1023.98px) {
+  @supports not (height: 100dvh) {
+    .swipes-tab-scroll {
+      height: calc(100vh - var(--app-bottomnav) - var(--sab) - var(--sat)) !important;
+      max-height: calc(100vh - var(--app-bottomnav) - var(--sab) - var(--sat)) !important;
+    }
+  }
+}
+/* Мобила: скроллер ниже фиксированного меню + запас под шторку
+    жестов в конце скролла. */
 @media (max-width: 1023.98px) {
   .swipes-tab-scroll {
+    height: calc(100dvh - var(--app-bottomnav) - var(--sab) - var(--sat));
+    max-height: calc(100dvh - var(--app-bottomnav) - var(--sab) - var(--sat));
     padding-bottom: calc(1rem + var(--sab));
   }
 }

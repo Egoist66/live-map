@@ -34,6 +34,16 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Фронт-бандл резолвит ziggy-js в vendor/tightenco/ziggy (composer-пакет),
+      # без него сборка падает с UNLOADABLE_DEPENDENCY. Скрипты композера
+      # пропускаем: для vite build нужны только файлы пакета.
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+
+      - run: composer install --no-scripts --no-progress --prefer-dist
+
       - name: Build client bundle
         run: pnpm exec vite build
 

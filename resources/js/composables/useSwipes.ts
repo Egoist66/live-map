@@ -56,7 +56,7 @@ export function useSwipes() {
   const index = ref(0)
   const matches = ref<Array<{ match_id: number; conversation_id: number | null; user: { id: number; name: string; avatar_url: string | null } }>>([])
   const favorites = ref<SwipeCard[]>([])
-  const favoritesLimit = ref(2)
+  const favoritesLimit = ref(3)
   const favoritesLoading = ref(false)
   const admirers = ref<Array<SwipeCard & { is_incognito?: boolean }>>([])
   const admirersTotal = ref(0)
@@ -183,10 +183,10 @@ export function useSwipes() {
   /**
    * Контентный таб (всё кроме ленты): списки, анкета, PRO.
    *
-   * Лента — app-frame с фиксированной колодой без скролла,
-   * а контентные табы живут в собственном скроллере
-   * `.swipes-tab-scroll`: длинные списки и форма анкеты листаются
-   * и на десктопе, и на мобиле независимо от скролла страницы.
+   * Вся страница свайпов живёт в собственном скроллере
+   * `.swipes-tab-scroll`: лента и длинные списки листаются
+   * и на десктопе, и на мобиле независимо от скролла страницы
+   * (main для swipes* — overflow-hidden).
    */
   const isContentTab = computed(() => activeTab.value !== 'feed')
 
@@ -198,9 +198,26 @@ export function useSwipes() {
     goTab('feed')
   }
 
+  /**
+   * Пол по умолчанию для фильтра «кого показать»: сохранённый выбор,
+   * иначе противоположный своему (мужчина листает девушек и наоборот).
+   * Сброс фильтров возвращается именно к нему, история свайпов
+   * при этом не трогается.
+   *
+   * @returns male|female|all
+   */
+  function defaultGender(): string {
+    const saved = authUser.value?.dating_gender_pref
+    if (saved === 'male' || saved === 'female') return saved
+    const own = authUser.value?.gender
+    if (own === 'male') return 'female'
+    if (own === 'female') return 'male'
+    return 'all'
+  }
+
   const filters = ref<SwipeFilters>({
     goal: null,
-    gender: 'all',
+    gender: defaultGender(),
     age_min: null,
     age_max: null,
     radius_km: null,
@@ -232,19 +249,25 @@ export function useSwipes() {
   /**
    * Есть ли активные фильтры ленты.
    *
+   * Пол сравниваем с дефолтом (противоположный своему),
+   * а не с «Все»: дефолтный пол фильтром не считается.
+   *
    * @returns true если хоть один фильтр задан
    */
   const hasActiveFilters = computed(() => {
     const f = filters.value
-    return !!(f.goal || (f.gender && f.gender !== 'all') || f.age_min || f.age_max || f.radius_km || (f.interests && f.interests.length))
+    return !!(f.goal || (f.gender && f.gender !== defaultGender()) || f.age_min || f.age_max || f.radius_km || (f.interests && f.interests.length))
   })
 
   /**
-   * Лента исчерпана: загрузка кончилась, а карточек нет.
+   * Лента исчерпана: все загруженные карточки просмотрены.
+   *
+   * Колода хранит просмотренные (индекс в конце), поэтому пустого
+   * массива недостаточно — проверяем и положение индекса.
    *
    * @returns true когда всех просвайпали
    */
-  const feedExhausted = computed(() => !loading.value && !error.value && !current.value && cards.value.length === 0)
+  const feedExhausted = computed(() => !loading.value && !error.value && !current.value && (cards.value.length === 0 || index.value >= cards.value.length))
 
   const quotaLabel = computed(() => {
     if (!quota.value) return ''
@@ -776,14 +799,20 @@ export function useSwipes() {
   }
 
   /**
-   * Сбросить фильтры.
+   * Сбросить фильтры к значениям по умолчанию.
+   *
+   * Пол возвращается к дефолту (сохранённый выбор, иначе
+   * противоположный своему), остальное — в нейтраль.
+   * История свайпов не трогается: просмотренные в ленту
+   * не возвращаются, для этого есть отдельная одноразовая
+   * (Free) кнопка сброса истории.
    *
    * @returns void
    */
   async function resetFilters(): Promise<void> {
     filters.value = {
       goal: null,
-      gender: 'all',
+      gender: defaultGender(),
       age_min: null,
       age_max: null,
       radius_km: null,
@@ -793,11 +822,11 @@ export function useSwipes() {
   }
 
   /**
-   * Полистать дальше без оценки: нейтральный свайп влево/вправо.
+   * Полистать дальше с оценкой «пропуск»: пишет pass на бэк и уводит карту.
    *
-   * Ничего не отправляет на бэк (ни like, ни pass) — просто улёт
-   * карты за экран и переход к следующей. Лайк ставится только
-   * кнопкой через `swipe('like')`.
+   * Пропущенные не возвращаются в ленту до сброса истории —
+   * ни сброс фильтров, ни перезаход их не вернут. Лайк ставится
+   * только кнопкой через `swipe('like')`.
    *
    * Улёт ждём только когда анимации включены: при `motion-off`
    * keyframes убиты kill-switch за 0.01мс, а 360мс ожидания
@@ -821,7 +850,13 @@ export function useSwipes() {
     dragY.value = 0
     error.value = null
     try {
+      const pending = card.id == null
+        ? Promise.resolve(null)
+        : datingApi.act(card.id, 'pass', false).catch(() => null)
       await waitFrame(shouldSkipMotion() ? 30 : 360)
+      const res = await pending
+      if (res?.quota) quota.value = res.quota
+      if (res) rewards.applyReward(res)
       index.value += 1
       if (index.value >= cards.value.length - 3) {
         void loadMore()
@@ -838,15 +873,16 @@ export function useSwipes() {
    * Поставить лайк текущей карточке кнопкой с улётом за экран.
    * PRO может лайкнуть инкогнито: себя скрыть, но в уведомления попасть.
    *
-   * Свайп-жест (drag) лайк больше не ставит — он лишь листает
-   * через `skip()`. Значение 'pass' оставлено для совместимости
-   * и тоже работает как нейтральный пропуск без записи на бэк.
+   * Свайп-жест (drag) и значение 'pass' — это пропуск через `skip()`
+   * с записью pass на бэк: анкета не вернётся до сброса истории.
+   * Лайк сверх лимита избранного всё равно пишется и ждёт мэтча —
+   * в избранном видны только свежие по лимиту тарифа (Free — 3).
    *
    * Улёт ждём только когда анимации включены: при `motion-off`
    * keyframes убиты kill-switch за 0.01мс, а 360мс ожидания
    * превратились бы в мёртвый фриз на каждый свайп.
    *
-   * @param action like — отправить лайк; pass — просто листать дальше
+   * @param action like — отправить лайк; pass — пропустить с записью
    * @returns void
    */
   async function swipe(action: 'like' | 'pass'): Promise<void> {
@@ -1074,9 +1110,9 @@ export function useSwipes() {
   }
 
   /**
-   * Конец перетаскивания: резкий сдвиг = нейтральный улёт.
-   * Влево и вправо — просто следующая анкета, без like/pass.
-   * Лайк ставится только кнопкой.
+   * Конец перетаскивания: резкий сдвиг = пропуск с записью pass.
+   * Влево и вправо — следующая анкета, пропущенная не вернётся
+   * до сброса истории. Лайк ставится только кнопкой.
    *
    * @returns void
    */
