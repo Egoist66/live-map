@@ -27,6 +27,8 @@ export interface AuthBackdropTokens {
   blobBClass: string
   /** Декоративный паттерн поверх */
   pattern: AuthBackdropPattern
+  /** Тематическая рамка стеклянной карточки (полные строки для JIT) */
+  cardClass: string
 }
 
 /**
@@ -71,6 +73,7 @@ export function useAuthBackdrop() {
         blobAClass: 'bg-gradient-to-br from-amber-400/50 to-orange-500/40 dark:from-amber-500/25 dark:to-orange-600/20',
         blobBClass: 'bg-gradient-to-tr from-violet-500/40 to-indigo-600/30 dark:from-violet-600/20 dark:to-indigo-800/20',
         pattern: 'skyline',
+        cardClass: '!border-amber-200/70 dark:!border-amber-300/20 dark:!shadow-[0_0_70px_-18px_rgba(245,158,11,0.4)]',
       }
     }
 
@@ -82,6 +85,7 @@ export function useAuthBackdrop() {
         blobAClass: 'bg-gradient-to-br from-rose-300/60 to-fuchsia-300/50 dark:from-rose-600/20 dark:to-fuchsia-700/15',
         blobBClass: 'bg-gradient-to-tr from-orange-200/60 to-rose-200/50 dark:from-orange-500/10 dark:to-rose-600/10',
         pattern: 'hearts',
+        cardClass: '!border-rose-200/80 dark:!border-rose-400/20 dark:!shadow-[0_0_70px_-18px_rgba(244,63,94,0.45)] shadow-[0_24px_70px_-24px_rgba(244,63,94,0.5)]',
       }
     }
 
@@ -92,6 +96,7 @@ export function useAuthBackdrop() {
       blobAClass: 'bg-gradient-to-br from-sky-400/50 to-blue-500/40 dark:from-sky-500/25 dark:to-blue-700/20',
       blobBClass: 'bg-gradient-to-tr from-indigo-400/40 to-teal-300/40 dark:from-indigo-600/20 dark:to-teal-500/15',
       pattern: 'pins',
+      cardClass: '!border-sky-200/70 dark:!border-sky-400/20 dark:!shadow-[0_0_70px_-18px_rgba(56,189,248,0.35)]',
     }
   })
 

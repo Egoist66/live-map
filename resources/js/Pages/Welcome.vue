@@ -105,7 +105,7 @@ function switchTab(next: LandingTab): void {
         <Card v-if="landing.isUlove.value" class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[28px] !shadow-float !p-3">
           <template #content>
             <div
-              class="aspect-[4/3.4] rounded-[18px] overflow-hidden relative bg-stone-100 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700"
+              class="aspect-[3/4] rounded-xl overflow-hidden relative bg-stone-100 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700"
               @mouseenter="hero.pause()"
               @mouseleave="hero.resume()"
               @touchstart="hero.onTouchStart"
@@ -116,6 +116,11 @@ function switchTab(next: LandingTab): void {
                 :key="profile.name"
                 :class="['absolute inset-0', hero.slideClass(slideIndex)]"
               >
+                <!-- Анатомия 1:1 как настоящая карточка свайпов
+                     (`Swipes.vue`): портрет, затемнение, имя +
+                     возраст, цель, город и дистанция, кнопка info,
+                     чипы интересов. Кнопок действий НА карточке
+                     в продукте нет — они под колодой. -->
                 <!-- Все фото грузим сразу: ленивая подгрузка давала пустой
                      слайд при клике по точке — второй визуальный баг. -->
                 <img
@@ -125,31 +130,43 @@ function switchTab(next: LandingTab): void {
                   loading="eager"
                   :fetchpriority="slideIndex === 0 ? 'high' : 'auto'"
                   decoding="async"
-                  width="800"
-                  height="640"
+                  width="600"
+                  height="800"
                   @error="hero.onPhotoError(profile)"
                 />
-                <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-black/20"></div>
-                <div class="absolute top-4 left-4 right-4 flex justify-between items-center">
-                  <Badge :value="profile.distance" class="!bg-white/90 !text-ink-900 !rounded-full !px-3 !py-1.5 !text-xs !font-bold !border-0" />
-                  <Badge :value="profile.pin" class="!bg-black/50 !text-white !rounded-full !px-3 !py-1.5 !text-xs !font-bold !border !border-white/20" />
-                </div>
-                <div class="absolute bottom-4 left-4 right-4">
-                  <div class="text-white font-black text-xl leading-tight">{{ profile.name }}, {{ profile.age }}</div>
-                  <div class="mt-2 flex gap-1.5 flex-wrap">
-                    <Tag
-                      v-for="tag in profile.tags"
-                      :key="tag"
-                      class="!bg-white/15 !border !border-white/20 !text-white !rounded-full !px-2.5 !py-1 !text-[11px] !font-semibold"
-                    >{{ tag }}</Tag>
+                <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent"></div>
+                <div class="absolute bottom-0 inset-x-0 p-4 text-white">
+                  <div class="flex items-end gap-2">
+                    <div class="min-w-0 flex-1">
+                      <div class="flex items-baseline gap-2">
+                        <span class="text-[28px] font-bold leading-none truncate">{{ profile.name }}</span>
+                        <span class="text-[22px] font-light leading-none shrink-0">{{ profile.age }}</span>
+                      </div>
+                      <div class="mt-1.5 space-y-0.5 text-[15px] leading-snug text-white/95">
+                        <div class="truncate">💘 {{ profile.goal }}</div>
+                        <div class="truncate">📍 {{ profile.city }} · {{ profile.distance }}</div>
+                      </div>
+                    </div>
+                    <span class="w-9 h-9 rounded-full bg-white text-stone-700 grid place-items-center shrink-0 shadow" aria-hidden="true"><i class="pi pi-info text-sm" /></span>
                   </div>
-                  <div class="mt-3 flex gap-2">
-                    <Button icon="pi pi-times" rounded class="!w-12 !h-12 !bg-white !text-ink-900 !border-0 shadow-lg" aria-label="Пропустить" />
-                    <Button icon="pi pi-heart-fill" rounded class="!w-12 !h-12 !bg-gradient-to-r !from-rose-500 !to-orange-400 !text-white !border-0 shadow-lg shadow-rose-500/30" aria-label="Лайк" />
-                    <div class="ml-auto self-center bg-white/90 rounded-full px-3 py-2 text-xs font-bold text-ink-900">💬 мэтч → чат</div>
+                  <div class="mt-2 flex flex-wrap gap-1.5">
+                    <span
+                      v-for="tag in profile.tags.slice(0, 4)"
+                      :key="tag"
+                      class="rounded-full border border-white/40 px-2.5 py-1 text-xs font-semibold text-white"
+                    >{{ tag }}</span>
                   </div>
                 </div>
               </div>
+            </div>
+            <!-- Декоративная панель действий как в продукте
+                 (`SwipeActionsBar`): пас, суперлайк, лайк, написать.
+                 Не кликабельна — это витрина, не колода. -->
+            <div class="flex items-center justify-center gap-3 px-4 pt-3" aria-hidden="true">
+              <span class="w-12 h-12 grid place-items-center rounded-full bg-white dark:bg-zinc-800 shadow-[0_2px_10px_rgba(0,0,0,0.18)] shrink-0"><i class="pi pi-times text-lg leading-none text-[#FF4458]" /></span>
+              <span class="w-12 h-12 grid place-items-center rounded-full bg-white dark:bg-zinc-800 shadow-[0_2px_10px_rgba(0,0,0,0.18)] shrink-0"><i class="pi pi-heart-fill text-lg leading-none text-[#1786FF]" /></span>
+              <span class="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#FD267D] to-[#FF7854] text-white shadow-lg shadow-rose-500/40"><i class="pi pi-heart-fill text-2xl leading-none" /></span>
+              <span class="w-12 h-12 grid place-items-center rounded-full bg-white dark:bg-zinc-800 shadow-[0_2px_10px_rgba(0,0,0,0.18)] shrink-0"><i class="pi pi-send text-lg leading-none text-[#9B49DF]" /></span>
             </div>
             <div class="flex justify-center items-center pt-3">
               <button

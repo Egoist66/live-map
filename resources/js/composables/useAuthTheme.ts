@@ -1,5 +1,6 @@
 import { computed } from 'vue'
-import { useAppModulesStore } from '@/stores/appModules'
+import { usePage } from '@inertiajs/vue3'
+import { useAppModulesStore, type AppModule } from '@/stores/appModules'
 
 /**
  * Тема страниц входа и регистрации.
@@ -8,6 +9,9 @@ export type AuthTheme = 'ulove' | 'upin' | 'business'
 
 /**
  * Тема auth-форм по запомненному выбору стороны приложения.
+ *
+ * Приоритет: `?account=business` → cookie `upin_side` (видна и SSR,
+ * первый кадр сразу правильный, без флеша) → localStorage → upin.
  *
  * Гость выбрал ULove на лендинге — формы в Tinder-стиле
  * (огонь, розовый градиент, тексты про мэтчи, фон с сердцами).
@@ -36,12 +40,29 @@ export function useAuthTheme() {
     }
   })
 
+  /**
+   * Подсказка сервера из cookie `upin_side`: единственный источник
+   * темы, доступный и SSR, и клиенту. Убирает флеш чужой темы
+   * на первом кадре (сервер рендерит сразу правильно).
+   */
+  const serverSide = computed<AppModule | null>(() => {
+    try {
+      const raw = (usePage().props as any)?.client?.side
+      const normalized = String(raw ?? '').trim().toLowerCase()
+      const known: AppModule[] = ['ulove', 'upin', 'uflow', 'districts', 'business']
+
+      return (known as string[]).includes(normalized) ? (normalized as AppModule) : null
+    } catch {
+      return null
+    }
+  })
+
   const theme = computed<AuthTheme>(() => {
     if (isBusinessQuery.value) {
       return 'business'
     }
 
-    const primary = store.enabled?.[0]
+    const primary = serverSide.value ?? store.enabled?.[0]
 
     if (primary === 'ulove' || primary === 'business') {
       return primary

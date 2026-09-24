@@ -55,6 +55,7 @@ class HandleInertiaRequests extends Middleware
             'client' => [
                 'isNative' => $isNative,
                 'ssrBypass' => (bool) $request->attributes->get('ssr_bypass', false),
+                'side' => self::guestSide($request),
             ],
             // Роуты для ZiggyVue в SSR (resources/js/ssr.ts): Node-процесс
             // не видит blade-скрипт @routes, без этого route()/current() падают
@@ -67,5 +68,35 @@ class HandleInertiaRequests extends Middleware
         ];
 
         return $shared;
+    }
+
+    /**
+     * Выбранная гостем сторона приложения из cookie для SSR.
+     *
+     * Сервер не видит localStorage, а auth-страницы (вход/регистрация)
+     * темизируются по запомненному табу лендинга. Без этой подсказки
+     * SSR рендерит тему по умолчанию — клиент после гидратации
+     * перекрашивает страницу (флеш чужой иконки + mismatch).
+     *
+     * @param Request $request текущий запрос
+     * @return string|null ulove|upin|uflow|districts|business либо null
+     */
+    private static function guestSide(Request $request): ?string
+    {
+        $side = $request->cookie('upin_side');
+
+        if (! is_string($side)) {
+            return null;
+        }
+
+        $side = strtolower(trim($side));
+
+        $allowed = ['ulove', 'upin', 'uflow', 'districts', 'business'];
+
+        if (! in_array($side, $allowed, true)) {
+            return null;
+        }
+
+        return $side;
     }
 }

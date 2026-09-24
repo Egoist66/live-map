@@ -31,6 +31,12 @@ export const MODULE_META: Record<AppModule, { label: string; icon: string; desc:
 const STORAGE_MODULES = 'upin.app.modules'
 const STORAGE_PRIMARY = 'upin.app.primary'
 const LEGACY_TAB = 'welcome_landing_tab'
+/**
+ * Cookie выбранной стороны для SSR: сервер не видит localStorage,
+ * а без подсказки рендерит тему по умолчанию — отсюда флеш чужой
+ * темы и mismatch гидратации на входе/регистрации.
+ */
+const COOKIE_SIDE = 'upin_side'
 
 /**
  * Проверяет значение на принадлежность к модулям.
@@ -225,6 +231,7 @@ export const useAppModulesStore = defineStore('appModules', () => {
 
     if (Array.isArray(storedModules)) {
       enabled.value = cleanList(storedModules, storedPrimary ?? 'ulove')
+      persistLocal()
       return
     }
 
@@ -395,7 +402,28 @@ export const useAppModulesStore = defineStore('appModules', () => {
   }
 
   /**
+   * Пишет выбранную сторону в cookie для SSR (см. COOKIE_SIDE).
+   *
+   * @param primary стартовый модуль
+   */
+  function writeSideCookie(primary: AppModule): void {
+    try {
+      if (typeof document === 'undefined') {
+        return
+      }
+
+      const oneYear = 60 * 60 * 24 * 365
+
+      document.cookie = `${COOKIE_SIDE}=${primary}; Max-Age=${oneYear}; Path=/; SameSite=Lax`
+    } catch {
+    }
+  }
+
+  /**
    * Локальное зеркало выбора (переживает разлогин).
+   *
+   * Заодно зеркалит primary в cookie, чтобы сервер и SSR
+   * сразу рендерили правильную тему auth-страниц без флеша.
    */
   function persistLocal(): void {
     if (enabled.value === null) {
@@ -404,6 +432,7 @@ export const useAppModulesStore = defineStore('appModules', () => {
 
     writeStorage(STORAGE_MODULES, enabled.value)
     writeStorage(STORAGE_PRIMARY, enabled.value[0])
+    writeSideCookie(enabled.value[0])
   }
 
   /**

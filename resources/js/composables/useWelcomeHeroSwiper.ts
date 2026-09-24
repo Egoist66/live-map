@@ -2,14 +2,20 @@ import { onMounted, onUnmounted, ref } from 'vue'
 
 /**
  * Профиль для hero-слайдера на главной.
+ *
+ * Поля повторяют анатомию настоящей карточки свайпов
+ * (`Swipes.vue`): имя + возраст, цель, город и дистанция,
+ * интересы чистыми чипами — чтобы демо на лендинге не
+ * диссонировало с реальным продуктом.
  */
 export interface WelcomeHeroProfile {
   name: string
   age: number
   photo: string
   fallbackPhoto?: string
+  goal: string
+  city: string
   distance: string
-  pin: string
   tags: string[]
 }
 
@@ -33,33 +39,37 @@ export function useWelcomeHeroSwiper() {
       age: 24,
       photo: '/landing/hero-anya.jpg',
       fallbackPhoto: '/landing/hero-anya-fallback.jpg',
-      distance: '● РЯДОМ · 1,2 км',
-      pin: '📍 пин рядом',
-      tags: ['☕ кофе и прогулки', '🎬 кино'],
+      goal: 'Серьёзные отношения',
+      city: 'Минск',
+      distance: '1,2 км',
+      tags: ['Кофе и прогулки', 'Кино'],
     },
     {
       name: 'Макс',
       age: 27,
       photo: '/landing/hero-maks.jpg',
-      distance: '● РЯДОМ · 800 м',
-      pin: '📍 пин рядом',
-      tags: ['🏃 бег по утрам', '🎸 гитара'],
+      goal: 'Активный отдых',
+      city: 'Минск',
+      distance: '800 м',
+      tags: ['Бег по утрам', 'Гитара'],
     },
     {
       name: 'Дима',
       age: 26,
       photo: '/landing/hero-dima.jpg',
-      distance: '● РЯДОМ · 2,1 км',
-      pin: '📍 пин рядом',
-      tags: ['⚽ футбол с друзьями', '🎮 игры'],
+      goal: 'Дружба и общение',
+      city: 'Минск',
+      distance: '2,1 км',
+      tags: ['Футбол с друзьями', 'Игры'],
     },
     {
       name: 'София',
       age: 23,
       photo: '/landing/hero-sofia.jpg',
-      distance: '● РЯДОМ · 1,8 км',
-      pin: '📍 пин рядом',
-      tags: ['🍷 винные бары', '✈️ путешествия'],
+      goal: 'Отношения',
+      city: 'Минск',
+      distance: '1,8 км',
+      tags: ['Винные бары', 'Путешествия'],
     },
   ])
 
