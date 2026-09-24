@@ -4,9 +4,10 @@ import { usePage } from '@inertiajs/vue3'
 /**
  * Состояние гостевого лейаута (вход, регистрация, FAQ).
  *
- * Определяет, нужно ли показывать подвал. На страницах
- * входа и регистрации футер скрыт на всех устройствах,
- * чтобы форма занимала весь экран без лишнего скролла.
+ * Определяет, нужно ли показывать подвал и сайдбар. На страницах
+ * auth-флоу (`Auth/*`: вход, регистрация, восстановление пароля)
+ * футер и левый сайдбар скрыты на всех устройствах — только
+ * центрированная карточка на тематическом фоне `AuthBackdrop`.
  *
  * @returns флаги гостевого лейаута
  * @example
@@ -18,9 +19,9 @@ export function useGuestLayout() {
   const isFaq = computed(() => page.component === 'Faq')
 
   const isAuthPage = computed(() => {
-    const componentName = page.component
+    const componentName = String(page.component ?? '')
 
-    return componentName === 'Auth/Login' || componentName === 'Auth/Register'
+    return componentName === 'Auth/Login' || componentName === 'Auth/Register' || componentName.startsWith('Auth/')
   })
 
   const shouldShowFooter = computed(() => !isAuthPage.value)

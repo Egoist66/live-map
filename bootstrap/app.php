@@ -63,6 +63,18 @@ return Application::configure(basePath: dirname(__DIR__))
             }
         });
         $exceptions->render(function (\Throwable $e, Request $request) {
+            // Гость на защищённом роуте (auth-middleware) обязан уехать на логин,
+            // а не получить Inertia-страницу 500: AuthenticationException — не
+            // HttpException, без этого гарда $status ниже посчитался бы как 500.
+            // Валидацию тоже пропускаем — у неё свой редирект back с ошибками.
+            if ($e instanceof \Illuminate\Auth\AuthenticationException) {
+                return null;
+            }
+
+            if ($e instanceof \Illuminate\Validation\ValidationException) {
+                return null;
+            }
+
             if ($request->is('api/*') || $request->is('build/*') || $request->expectsJson()) {
                 return null;
             }

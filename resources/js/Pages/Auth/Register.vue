@@ -63,8 +63,8 @@ function backToChoice(): void {
         <small class="auth-err">{{ f.errors.value.signup_goal }}</small>
       </div>
       <div v-else class="rounded-2xl border-2 border-sky-200 dark:border-sky-900 bg-gradient-to-br from-sky-50 to-indigo-50 dark:from-sky-950/40 dark:to-indigo-950/20 p-3.5 flex items-center gap-3">
-        <span class="w-10 h-10 rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-600 grid place-items-center text-lg shrink-0">📍</span>
-        <div class="text-[13px] leading-snug text-stone-600 dark:text-zinc-300"><span class="font-bold text-ink-900 dark:text-white">Ты с UPin</span> — после регистрации откроем карту: кидай пины, зови рядом 📍</div>
+        <span class="w-10 h-10 rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-600 grid place-items-center text-white shrink-0"><i class="pi pi-map-marker" /></span>
+        <div class="text-[13px] leading-snug text-stone-600 dark:text-zinc-300"><span class="font-bold text-ink-900 dark:text-white">Ты с UPin</span> — после регистрации откроем карту: кидай пины, зови рядом</div>
       </div>
       <div>
         <label class="auth-label">Имя / ник</label>
@@ -98,14 +98,14 @@ function backToChoice(): void {
         <label class="auth-label">Страна проживания</label>
         <Select v-model="f.country.value" :options="[...RESIDENCE_COUNTRIES]" optionLabel="name" optionValue="name" placeholder="Беларусь" checkmark editable fluid class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.country" @update:model-value="onCountryChange" />
         <small class="text-stone-500 dark:text-zinc-400">Пины можно создавать только в своей стране</small>
-        <small v-if="f.countryWarning.value" class="block text-amber-600 dark:text-amber-400">⚠️ {{ f.countryWarning.value }}</small>
+        <small v-if="f.countryWarning.value" class="block text-amber-600 dark:text-amber-400"><i class="pi pi-exclamation-triangle mr-1" />{{ f.countryWarning.value }}</small>
         <small class="auth-err">{{ f.errors.value.country }}</small>
       </div>
       <div>
         <label class="auth-label">Пароль</label>
         <div class="relative mt-1.5">
           <InputText v-model="f.password.value" v-bind="f.passwordAttrs" :type="f.showPass.value ? 'text' : 'password'" placeholder="••••••••" class="w-full auth-input !pr-11" :invalid="!!f.errors.value.password" />
-          <button type="button" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-white/10 grid place-items-center text-stone-500 dark:text-zinc-400 text-sm" tabindex="-1" @click="f.showPass.value = !f.showPass.value">{{ f.showPass.value ? '🙈' : '👁' }}</button>
+          <button type="button" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-white/10 grid place-items-center text-stone-500 dark:text-zinc-400 text-sm" tabindex="-1" aria-label="Показать пароль"><i :class="f.showPass.value ? 'pi pi-eye-slash' : 'pi pi-eye'" /></button>
         </div>
         <small class="auth-err">{{ f.errors.value.password }}</small>
       </div>
@@ -113,7 +113,7 @@ function backToChoice(): void {
         <label class="auth-label">Подтверди пароль</label>
         <div class="relative mt-1.5">
           <InputText v-model="f.password_confirmation.value" v-bind="f.passwordConfirmationAttrs" :type="f.showPass2.value ? 'text' : 'password'" placeholder="••••••••" class="w-full auth-input !pr-11" :invalid="!!f.errors.value.password_confirmation" />
-          <button type="button" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-white/10 grid place-items-center text-stone-500 dark:text-zinc-400 text-sm" tabindex="-1" @click="f.showPass2.value = !f.showPass2.value">{{ f.showPass2.value ? '🙈' : '👁' }}</button>
+          <button type="button" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-white/10 grid place-items-center text-stone-500 dark:text-zinc-400 text-sm" tabindex="-1" aria-label="Показать пароль"><i :class="f.showPass2.value ? 'pi pi-eye-slash' : 'pi pi-eye'" /></button>
         </div>
         <small class="auth-err">{{ f.errors.value.password_confirmation }}</small>
       </div>

@@ -17,10 +17,11 @@ export function useDashboardPage(propsUser?: any, propsIsOwn?: boolean) {
   const page = usePage()
   const auth = (page.props.auth as any).user
   const u = computed(() => propsUser || auth)
-  const isOwn = computed(() => propsIsOwn ?? u.value.id === auth.id)
+  const isGuest = computed(() => !u.value)
+  const isOwn = computed(() => propsIsOwn ?? (u.value != null && auth != null && u.value.id === auth.id))
   const showAvatar = ref(false)
   const avatarSrc = computed(() => avatarSrcFor(u.value))
-  const bioText = computed(() => (u.value.bio || '').trim())
+  const bioText = computed(() => (u.value?.bio || '').trim())
   const bioEmpty = computed(() => bioText.value.length === 0)
   const settingsHref = computed(() => {
     return route('profile.edit')
@@ -44,6 +45,35 @@ export function useDashboardPage(propsUser?: any, propsIsOwn?: boolean) {
   const registeredAt = computed(() => {
     try { return new Date(u.value.created_at).toLocaleDateString('ru-RU') } catch { return '' }
   })
-  onMounted(() => { if (isOwn.value) badges.init() })
-  return { seo, auth, u, isOwn, isAdmin, showAvatar, avatarSrc, bioText, bioEmpty, settingsHref, sharing, presence, levelLabel: LEVEL_LABEL, levelColor: LEVEL_COLOR, planLabel: PLAN_LABEL, planColor: PLAN_COLOR, levelName, registeredAt, openAvatar, closeAvatar, goMap, goChat, goSettings, goAdmin, goFaq, share }
+  /**
+   * Увести гостя на логин при протухшем SPA-состоянии.
+   *
+   * Свежий визит сервер уже редиректит сам (auth-middleware),
+   * это страховка клиента: логаут в другой вкладке + возврат
+   * на смонтированный Dashboard без пользователя.
+   */
+  function ensureAuth(): void {
+    if (u.value) {
+      return
+    }
+
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    try {
+      router.visit('/login', { replace: true })
+    } catch {
+    }
+  }
+  onMounted(() => {
+    ensureAuth()
+
+    if (!u.value) {
+      return
+    }
+
+    if (isOwn.value) badges.init()
+  })
+  return { seo, auth, u, isGuest, isOwn, isAdmin, showAvatar, avatarSrc, bioText, bioEmpty, settingsHref, sharing, presence, ensureAuth, levelLabel: LEVEL_LABEL, levelColor: LEVEL_COLOR, planLabel: PLAN_LABEL, planColor: PLAN_COLOR, levelName, registeredAt, openAvatar, closeAvatar, goMap, goChat, goSettings, goAdmin, goFaq, share }
 }

@@ -217,6 +217,11 @@ class ProfileController extends Controller
     public function dashboard(Request $request, ?string $identifier = null): Response|RedirectResponse
     {
         $auth = $request->user();
+
+        if ($auth === null) {
+            return redirect()->route('login');
+        }
+
         if ($identifier === null && $auth->isBusinessAccount()) {
             return redirect()->route('cabinet.index');
         }
@@ -250,6 +255,11 @@ class ProfileController extends Controller
     public function edit(Request $request, ?string $identifier = null, ?string $tab = null): Response|RedirectResponse
     {
         $auth = $request->user();
+
+        if ($auth === null) {
+            return redirect()->route('login');
+        }
+
         $tabIds = ['profile', 'billing', 'quests', 'pins', 'privacy', 'appearance', 'security', 'procedures', 'support', 'app', 'about', 'admin', 'archive'];
         if ($tab === null && $identifier !== null && in_array($identifier, $tabIds, true) && $identifier !== 'admin') {
             $tab = $identifier;

@@ -4,6 +4,7 @@ import Card from 'primevue/card'
 import PageTransition from '@/Components/Features/Feedback/PageTransition.vue'
 import AppFooter from '@/Layouts/AppFooter.vue'
 import BrandMark from '@/Components/Brand/BrandMark.vue'
+import AuthBackdrop from '@/Components/Features/Auth/AuthBackdrop.vue'
 import PwaInstallBanner from '@/Components/Features/Pwa/PwaInstallBanner.vue'
 import PwaUpdateBanner from '@/Components/Features/Pwa/PwaUpdateBanner.vue'
 import { computed } from 'vue'
@@ -19,10 +20,11 @@ const { isClientReady } = useClientReady()
 const authTheme = useAuthTheme()
 
 /**
- * ULove-вход без левого сайдбара: как в Tinder — только
- * центрированная карточка на чистом фоне.
+ * Вход и регистрация без левого сайдбара во всех темах:
+ * только центрированная стеклянная карточка на тематическом
+ * анимированном фоне (`AuthBackdrop`: пины, skyline, сердца).
  */
-const hideSidebar = computed(() => isAuthPage.value && authTheme.isUlove.value)
+const hideSidebar = computed(() => isAuthPage.value)
 </script>
 
 <template>
@@ -61,7 +63,11 @@ const hideSidebar = computed(() => isAuthPage.value && authTheme.isUlove.value)
       </div>
     </div>
     <div :class="isFaq ? 'flex-1 flex flex-col px-0 py-0 relative dark:bg-[#0F121F] overflow-auto min-w-0 w-full overflow-x-clip' : 'flex-1 flex flex-col items-center px-4 sm:px-6 py-6 sm:py-10 relative dark:bg-[#0F121F] min-w-0 w-full overflow-x-clip'">
-      <div class="absolute inset-0 -z-10 bg-gradient-to-b from-white to-surface dark:from-zinc-900 dark:to-[#0F121F]"></div>
+      <div v-if="!isAuthPage" class="absolute inset-0 -z-10 bg-gradient-to-b from-white to-surface dark:from-zinc-900 dark:to-[#0F121F]"></div>
+      <!-- Фон только после гидратации: тема читается из localStorage,
+           чего SSR не видел — ранний рендер дал бы mismatch.
+           Плавное появление — заодно парадный вход страницы. -->
+      <AuthBackdrop v-else-if="isClientReady" class="-z-10" />
       <div :class="isFaq ? 'flex w-full flex-1 flex-col min-w-0' : 'flex w-full flex-1 items-center justify-center min-w-0'">
       <PageTransition :preset="isAuthPage ? 'none' : 'fade-slide'">
         <template v-if="isFaq">
@@ -73,11 +79,11 @@ const hideSidebar = computed(() => isAuthPage.value && authTheme.isUlove.value)
               <span class="w-10 h-10 rounded-2xl bg-gradient-to-br from-rose-500 via-fuchsia-500 to-orange-400 grid place-items-center text-white shadow-lg shadow-rose-500/30"><i class="pi pi-heart-fill" /></span>
               <span class="font-black tracking-[-0.04em] text-[26px] bg-gradient-to-r from-rose-500 via-fuchsia-500 to-orange-400 dark:from-rose-400 dark:via-fuchsia-400 dark:to-orange-300 bg-clip-text text-transparent">ULove</span>
             </Link>
-            <Link v-else href="/" class="lg:hidden flex items-center gap-2.5 mb-5 sm:mb-6">
+            <Link v-else href="/" class="flex items-center gap-2.5 mb-5 sm:mb-6">
               <span class="w-9 h-9 rounded-xl overflow-hidden shrink-0 grid place-items-center"><BrandMark class="h-full w-full" /></span>
               <span class="font-black tracking-[-0.03em] text-xl text-ink-900 dark:text-white">U<span class="font-light text-ink-600 dark:text-zinc-400">Pin</span></span>
             </Link>
-            <Card class="w-full max-w-full !bg-white dark:!bg-zinc-900 !border !border-stone-200/70 dark:!border-zinc-800 !rounded-[20px] sm:!rounded-[24px] !shadow-float !p-0">
+            <Card class="w-full max-w-full !bg-white/85 dark:!bg-zinc-900/80 backdrop-blur-xl !border !border-white/50 dark:!border-white/10 !rounded-[20px] sm:!rounded-[24px] !shadow-float !p-0">
               <template #content>
                 <div class="p-5 sm:p-8">
                   <slot />

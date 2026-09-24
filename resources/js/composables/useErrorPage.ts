@@ -1,5 +1,5 @@
 import { computed } from 'vue'
-import { router } from '@inertiajs/vue3'
+import { router, usePage } from '@inertiajs/vue3'
 
 /**
  * Контент тематичной страницы ошибки по HTTP-статусу.
@@ -59,7 +59,8 @@ const FALLBACK: ErrorPageContent = {
  * Логика страницы ошибки (компонент только отображает).
  *
  * Главная кнопка ведёт в профиль, запасная — назад по истории
- * (если истории нет — тоже в профиль).
+ * (если истории нет — тоже в профиль). Гостей ведём на логин,
+ * иначе клик по «В профиль» закольцует гостя на гарде auth.
  *
  * @param status HTTP-статус от сервера (по умолчанию 404)
  * @returns контент и действия страницы
@@ -68,6 +69,28 @@ const FALLBACK: ErrorPageContent = {
  * await page.goProfile()
  */
 export function useErrorPage(status?: number | string) {
+  /**
+   * Домашний экран с учётом авторизации.
+   *
+   * @returns '/profile' своим, '/login' гостям
+   */
+  function homeForViewer(): string {
+    let userId = 0
+
+    try {
+      userId = Number((usePage().props as any)?.auth?.user?.id || 0)
+    } catch {
+      userId = 0
+    }
+
+    const isGuest = !Number.isFinite(userId) || userId <= 0
+
+    if (isGuest) {
+      return '/login'
+    }
+
+    return '/profile'
+  }
   const code = computed(() => {
     const parsed = Number(status)
 
@@ -85,14 +108,16 @@ export function useErrorPage(status?: number | string) {
   })
 
   /**
-   * Вернуть пользователя в его профиль.
+   * Вернуть пользователя на его домашний экран.
    */
   function goProfile(): void {
+    const home = homeForViewer()
+
     try {
-      router.visit('/profile')
+      router.visit(home)
     } catch {
       try {
-        window.location.assign('/profile')
+        window.location.assign(home)
       } catch {
       }
     }

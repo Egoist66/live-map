@@ -16,7 +16,7 @@ const t = useAuthTheme()
     <Message v-if="status" severity="success" class="mb-4 w-full">{{ status }}</Message>
     <div class="flex items-center gap-3">
       <span v-if="t.isUlove.value" class="w-11 h-11 rounded-2xl bg-gradient-to-br from-rose-500 via-fuchsia-500 to-orange-400 grid place-items-center text-white shadow-lg shadow-rose-500/30 shrink-0"><i class="pi pi-heart-fill" /></span>
-      <span v-else-if="t.isBusiness.value" class="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 grid place-items-center text-xl shrink-0">🏢</span>
+      <span v-else-if="t.isBusiness.value" class="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 grid place-items-center text-white shrink-0"><i class="pi pi-briefcase" /></span>
       <span v-else class="w-11 h-11 rounded-2xl bg-gradient-to-br from-sky-500 via-blue-500 to-indigo-500 grid place-items-center text-white shadow-lg shadow-sky-500/30 shrink-0"><i class="pi pi-map-marker" /></span>
       <div class="min-w-0">
         <h1 class="text-[22px] font-black tracking-tight text-ink-900 dark:text-white leading-tight">{{ t.loginTitle.value }}</h1>
@@ -33,7 +33,7 @@ const t = useAuthTheme()
         <label class="text-[13px] font-semibold text-ink-900 dark:text-zinc-100">Пароль</label>
         <div class="relative mt-1.5">
           <InputText v-model="password" v-bind="passwordAttrs" :type="showPass ? 'text' : 'password'" placeholder="••••••••" class="w-full pr-11" :invalid="!!errors.password" />
-          <button type="button" @click="showPass=!showPass" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-white/10 grid place-items-center text-stone-500 dark:text-zinc-400 text-sm" tabindex="-1" aria-label="Показать пароль">{{ showPass?'🙈':'👁' }}</button>
+          <button type="button" @click="showPass=!showPass" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-white/10 grid place-items-center text-stone-500 dark:text-zinc-400 text-sm" tabindex="-1" aria-label="Показать пароль"><i :class="showPass ? 'pi pi-eye-slash' : 'pi pi-eye'" /></button>
         </div>
         <small class="text-red-500 dark:text-red-400">{{ errors.password }}</small>
       </div>

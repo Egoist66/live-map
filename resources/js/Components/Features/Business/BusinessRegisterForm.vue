@@ -11,7 +11,7 @@ const form = useBusinessRegisterForm()
 <template>
   <div>
     <div class="flex items-center gap-3">
-      <span class="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 grid place-items-center text-xl shrink-0">🏢</span>
+      <span class="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 grid place-items-center text-white shrink-0"><i class="pi pi-briefcase" /></span>
       <div class="min-w-0">
         <h1 class="text-[22px] font-black tracking-tight text-ink-900 dark:text-white leading-tight">Регистрация компании</h1>
         <p class="text-[13px] text-stone-500 dark:text-zinc-400">Кабинет для бизнеса · проверка по УНП · карта для клиентов</p>
@@ -76,7 +76,7 @@ const form = useBusinessRegisterForm()
         <label class="auth-label">Пароль</label>
         <div class="relative mt-1.5">
           <InputText v-model="form.password.value" v-bind="form.passwordAttrs" :type="form.showPass.value ? 'text' : 'password'" placeholder="Минимум 8 символов" class="w-full auth-input !pr-11" :invalid="!!form.errors.value.password" />
-          <button type="button" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-white/10 grid place-items-center text-stone-500 dark:text-zinc-400 text-sm" tabindex="-1" @click="form.showPass.value = !form.showPass.value">{{ form.showPass.value ? '🙈' : '👁' }}</button>
+          <button type="button" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-white/10 grid place-items-center text-stone-500 dark:text-zinc-400 text-sm" tabindex="-1" @click="form.showPass.value = !form.showPass.value"><i :class="form.showPass.value ? 'pi pi-eye-slash' : 'pi pi-eye'" /></button>
         </div>
         <small class="auth-err">{{ form.errors.value.password }}</small>
       </div>
@@ -85,7 +85,7 @@ const form = useBusinessRegisterForm()
         <label class="auth-label">Подтвердите пароль</label>
         <div class="relative mt-1.5">
           <InputText v-model="form.passwordConfirmation.value" v-bind="form.passwordConfirmationAttrs" :type="form.showPass2.value ? 'text' : 'password'" placeholder="Повторите пароль" class="w-full auth-input !pr-11" :invalid="!!form.errors.value.password_confirmation" />
-          <button type="button" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-white/10 grid place-items-center text-stone-500 dark:text-zinc-400 text-sm" tabindex="-1" @click="form.showPass2.value = !form.showPass2.value">{{ form.showPass2.value ? '🙈' : '👁' }}</button>
+          <button type="button" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-white/10 grid place-items-center text-stone-500 dark:text-zinc-400 text-sm" tabindex="-1" @click="form.showPass2.value = !form.showPass2.value"><i :class="form.showPass2.value ? 'pi pi-eye-slash' : 'pi pi-eye'" /></button>
         </div>
         <small class="auth-err">{{ form.errors.value.password_confirmation }}</small>
       </div>
