@@ -141,10 +141,10 @@ onUnmounted(() => {
     <meta head-key="description" name="description" :content="seo.description.value" />
   </Head>
   <div class="w-full min-w-0 bg-transparent" :class="s.activeTab.value === 'feed' ? 'swipes-feed-lock' : 'page-scroll swipes-tab-scroll scroll-neat'">
-      <div class="w-full min-w-0 mx-auto max-w-[640px] px-4 sm:px-6" :class="s.activeTab.value === 'feed' ? 'swipes-feed-inner pt-2 sm:py-6 sm:pb-[calc(2rem+var(--sab))]' : 'pt-3 pb-1 sm:py-6 sm:pb-[calc(2rem+var(--sab))]'">
+      <div class="w-full min-w-0 mx-auto max-w-[640px] px-4 sm:px-6" :class="s.activeTab.value === 'feed' ? 'swipes-feed-inner pt-1 sm:py-6 sm:pb-[calc(2rem+var(--sab))]' : 'pt-3 pb-1 sm:py-6 sm:pb-[calc(2rem+var(--sab))]'">
 
         <h1 class="sr-only">ULove — знакомства рядом</h1>
-        <div class="flex items-center px-1 py-2 shrink-0">
+        <div class="flex items-center px-1 py-1 sm:py-2 shrink-0">
           <Button icon="pi pi-user" rounded text aria-label="Мой профиль" title="Мой профиль" class="!w-10 !h-10 !p-0 shrink-0 !text-stone-400 dark:!text-zinc-500 hover:!text-stone-600 dark:hover:!text-zinc-300 [&_.p-button-icon]:!text-xl" @click="mobileMenu.goProfile()" />
           <Button v-if="isAuth && s.showTabBack.value" icon="pi pi-arrow-left" rounded text aria-label="Назад к ленте" title="Назад к ленте" class="!w-10 !h-10 !p-0 shrink-0 !text-stone-400 dark:!text-zinc-500 hover:!text-stone-600 dark:hover:!text-zinc-300 [&_.p-button-icon]:!text-xl" @click="s.backToFeed()" />
           <span v-else-if="isAuth" class="w-10 shrink-0" aria-hidden="true" />
@@ -1065,8 +1065,11 @@ onUnmounted(() => {
    равно растянется на остаток, в блочной — встанет на этот размер. */
 @media (max-width: 639.98px) {
   .swipes-feed-lock {
-    height: calc(100dvh - var(--app-bottomnav) - var(--sab) - var(--sat));
-    max-height: calc(100dvh - var(--app-bottomnav) - var(--sab) - var(--sat));
+    /* Нижнего меню на свайпах нет: native-swipes прячет его как в Tinder,
+       да и fixed-меню вне потока — вся высота от сейф-зоны до низа
+       экрана отдана ленте, пустого места снизу не остаётся. */
+    height: calc(100dvh - var(--sat));
+    max-height: calc(100dvh - var(--sat));
     overflow: hidden;
     display: flex;
     flex-direction: column;
@@ -1090,7 +1093,7 @@ onUnmounted(() => {
   .swipes-feed-lock .swipes-feed-skeleton {
     flex: 1 1 auto;
     height: auto;
-    min-height: calc(100dvh - var(--app-bottomnav) - var(--sab) - var(--sat) - 172px);
+    min-height: calc(100dvh - var(--sat) - 188px);
   }
 }
 /* Планшеты / ландшафт / узкий десктоп: лок остаётся скроллируемым
@@ -1103,12 +1106,12 @@ onUnmounted(() => {
   }
   @media (max-width: 639.98px) {
     .swipes-feed-lock {
-      height: calc(100vh - var(--app-bottomnav) - var(--sab) - var(--sat));
-      max-height: calc(100vh - var(--app-bottomnav) - var(--sab) - var(--sat));
+      height: calc(100vh - var(--sat));
+      max-height: calc(100vh - var(--sat));
     }
     .swipes-feed-lock .swipe-deck,
     .swipes-feed-lock .swipes-feed-skeleton {
-      min-height: calc(100vh - var(--app-bottomnav) - var(--sab) - var(--sat) - 172px);
+      min-height: calc(100vh - var(--sat) - 188px);
     }
   }
 }
