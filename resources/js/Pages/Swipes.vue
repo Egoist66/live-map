@@ -140,11 +140,11 @@ onUnmounted(() => {
   <Head :title="seo.title.value">
     <meta head-key="description" name="description" :content="seo.description.value" />
   </Head>
-  <div class="page-scroll swipes-tab-scroll scroll-neat w-full min-w-0 bg-transparent">
-      <div class="max-w-[640px] w-full min-w-0 mx-auto px-4 sm:px-6 pt-3 pb-1 sm:py-6 sm:pb-[calc(2rem+var(--sab))]">
+  <div class="w-full min-w-0 bg-transparent" :class="s.activeTab.value === 'feed' ? 'swipes-feed-lock' : 'page-scroll swipes-tab-scroll scroll-neat'">
+      <div class="w-full min-w-0 mx-auto max-w-[640px] px-4 sm:px-6" :class="s.activeTab.value === 'feed' ? 'swipes-feed-inner pt-2 sm:py-6 sm:pb-[calc(2rem+var(--sab))]' : 'pt-3 pb-1 sm:py-6 sm:pb-[calc(2rem+var(--sab))]'">
 
         <h1 class="sr-only">ULove — знакомства рядом</h1>
-        <div class="flex items-center px-1 py-2">
+        <div class="flex items-center px-1 py-2 shrink-0">
           <Button icon="pi pi-user" rounded text aria-label="Мой профиль" title="Мой профиль" class="!w-10 !h-10 !p-0 shrink-0 !text-stone-400 dark:!text-zinc-500 hover:!text-stone-600 dark:hover:!text-zinc-300 [&_.p-button-icon]:!text-xl" @click="mobileMenu.goProfile()" />
           <Button v-if="isAuth && s.showTabBack.value" icon="pi pi-arrow-left" rounded text aria-label="Назад к ленте" title="Назад к ленте" class="!w-10 !h-10 !p-0 shrink-0 !text-stone-400 dark:!text-zinc-500 hover:!text-stone-600 dark:hover:!text-zinc-300 [&_.p-button-icon]:!text-xl" @click="s.backToFeed()" />
           <span v-else-if="isAuth" class="w-10 shrink-0" aria-hidden="true" />
@@ -469,13 +469,13 @@ onUnmounted(() => {
           </template>
 
           <template v-else>
-          <div class="swipes-feed mt-1 mb-3 sm:mt-4 sm:mb-0 relative select-none overscroll-none sm:max-w-[420px] sm:mx-auto sm:w-full">
-            <div v-if="s.loading.value" class="rounded-xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 h-[calc(100dvh-180px-var(--sab)-var(--sat))] min-h-[400px] min-[411px]:h-[calc(100dvh-170px-var(--sab)-var(--sat))] min-[411px]:min-h-[480px] sm:h-[62dvh] sm:min-h-[400px] sm:max-h-[540px] grid place-items-center">
+          <div class="swipes-feed mt-1 sm:mt-4 relative select-none overscroll-none sm:max-w-[420px] sm:mx-auto sm:w-full">
+            <div v-if="s.loading.value" class="swipes-feed-skeleton rounded-xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 grid place-items-center sm:h-[62dvh] sm:min-h-[400px] sm:max-h-[540px]">
               <i class="pi pi-spin pi-spinner text-2xl text-stone-400 dark:text-zinc-500" />
             </div>
 
             <div v-else-if="s.current.value">
-              <div class="swipe-deck relative h-[calc(100dvh-180px-var(--sab)-var(--sat))] min-h-[400px] min-[411px]:h-[calc(100dvh-170px-var(--sab)-var(--sat))] min-[411px]:min-h-[480px] sm:h-[62dvh] sm:min-h-[400px] sm:max-h-[540px] overscroll-none">
+              <div class="swipe-deck relative overscroll-none sm:h-[62dvh] sm:min-h-[400px] sm:max-h-[540px]">
               <div
                 v-if="s.next.value"
                 class="absolute inset-0 z-0 rounded-xl overflow-hidden bg-zinc-200 dark:bg-zinc-800 shadow-soft pointer-events-none"
@@ -1021,6 +1021,75 @@ onUnmounted(() => {
   .swipes-feed,
   .swipe-deck {
     overscroll-behavior: none;
+  }
+}
+/* Экран ленты на мобиле — как страница без вложенного скролла:
+   ровно высота между сейф-зоной сверху и нижним меню, скролла нет,
+   верх + карточка + кнопки всегда видны целиком. */
+.swipes-feed-lock {
+  height: calc(100dvh - var(--sat));
+  max-height: calc(100dvh - var(--sat));
+  overflow-y: auto;
+  overflow-x: clip;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+.swipes-feed-inner {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+.swipes-feed {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.swipe-deck {
+  flex: 1 1 auto;
+  min-height: 300px;
+}
+.swipes-feed-skeleton {
+  flex: 1 1 auto;
+  min-height: 300px;
+}
+@media (max-width: 1023.98px) {
+  .swipes-feed-lock {
+    height: calc(100dvh - var(--app-bottomnav) - var(--sab) - var(--sat));
+    max-height: calc(100dvh - var(--app-bottomnav) - var(--sab) - var(--sat));
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    overscroll-behavior: none;
+  }
+  .swipes-feed-inner {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+  }
+  .swipes-feed-lock .swipes-feed {
+    flex: 1 1 auto;
+    min-height: 0;
+    margin-bottom: 0;
+  }
+  .swipes-feed-lock .swipe-deck,
+  .swipes-feed-lock .swipes-feed-skeleton {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto;
+  }
+}
+@supports not (height: 100dvh) {
+  .swipes-feed-lock {
+    height: calc(100vh - var(--sat));
+    max-height: calc(100vh - var(--sat));
+  }
+  @media (max-width: 1023.98px) {
+    .swipes-feed-lock {
+      height: calc(100vh - var(--app-bottomnav) - var(--sab) - var(--sat));
+      max-height: calc(100vh - var(--app-bottomnav) - var(--sab) - var(--sat));
+    }
   }
 }
 .swipe-deck {

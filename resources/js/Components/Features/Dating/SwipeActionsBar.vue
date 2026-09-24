@@ -30,11 +30,11 @@ defineEmits<{
 }>()
 
 const sideBtn =
-  'w-16 h-16 grid place-items-center rounded-full bg-white dark:bg-zinc-800 shadow-[0_2px_10px_rgba(0,0,0,0.18)] dark:shadow-black/60 transition active:scale-90 disabled:opacity-40 shrink-0'
+  'w-14 h-14 grid place-items-center rounded-full bg-white dark:bg-zinc-800 shadow-[0_2px_10px_rgba(0,0,0,0.18)] dark:shadow-black/60 transition active:scale-90 disabled:opacity-40 shrink-0'
 </script>
 
 <template>
-  <div class="mt-3 flex items-center justify-center gap-3 sm:gap-4 pb-[var(--sab)]">
+  <div class="mt-2 flex shrink-0 items-center justify-center gap-3 pb-[var(--sab)]">
     <button
       type="button"
       :disabled="acting"
@@ -43,8 +43,8 @@ const sideBtn =
       :class="sideBtn"
       @click="$emit('pass')"
     >
-      <i v-if="!acting" class="pi pi-times text-2xl leading-none text-[#FF4458]" />
-      <i v-else class="pi pi-spin pi-spinner text-xl leading-none text-[#FF4458]" />
+      <i v-if="!acting" class="pi pi-times text-xl leading-none text-[#FF4458]" />
+      <i v-else class="pi pi-spin pi-spinner text-lg leading-none text-[#FF4458]" />
     </button>
 
     <button
@@ -56,8 +56,8 @@ const sideBtn =
       class="relative"
       @click="$emit('superlike')"
     >
-      <i v-if="!acting" class="pi pi-heart-fill text-2xl leading-none text-[#1786FF]" />
-      <i v-else class="pi pi-spin pi-spinner text-xl leading-none text-[#1786FF]" />
+      <i v-if="!acting" class="pi pi-heart-fill text-xl leading-none text-[#1786FF]" />
+      <i v-else class="pi pi-spin pi-spinner text-lg leading-none text-[#1786FF]" />
       <span
         v-if="superLeft"
         class="absolute -top-1 -right-1 grid h-5 min-w-[20px] place-items-center rounded-full bg-[#1786FF] px-1 text-[10px] font-black text-white ring-2 ring-white dark:ring-zinc-900"
@@ -69,11 +69,11 @@ const sideBtn =
       :disabled="acting"
       aria-label="Лайк"
       title="Лайк"
-      class="grid h-[84px] w-[84px] shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#FD267D] to-[#FF7854] text-white shadow-lg shadow-rose-500/40 transition active:scale-90 disabled:opacity-40"
+      class="grid h-[72px] w-[72px] shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#FD267D] to-[#FF7854] text-white shadow-lg shadow-rose-500/40 transition active:scale-90 disabled:opacity-40"
       @click="$emit('like')"
     >
-      <i v-if="!acting" class="pi pi-heart-fill heartbeat text-4xl leading-none" />
-      <i v-else class="pi pi-spin pi-spinner text-3xl leading-none" />
+      <i v-if="!acting" class="pi pi-heart-fill heartbeat text-3xl leading-none" />
+      <i v-else class="pi pi-spin pi-spinner text-2xl leading-none" />
     </button>
 
     <button
@@ -84,8 +84,8 @@ const sideBtn =
       :class="sideBtn"
       @click="$emit('write')"
     >
-      <i v-if="!writing" class="pi pi-send text-2xl leading-none text-[#9B49DF]" />
-      <i v-else class="pi pi-spin pi-spinner text-xl leading-none text-[#9B49DF]" />
+      <i v-if="!writing" class="pi pi-send text-xl leading-none text-[#9B49DF]" />
+      <i v-else class="pi pi-spin pi-spinner text-lg leading-none text-[#9B49DF]" />
     </button>
   </div>
 </template>
