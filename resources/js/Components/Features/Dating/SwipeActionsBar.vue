@@ -34,7 +34,7 @@ const sideBtn =
 </script>
 
 <template>
-  <div class="mt-2 flex shrink-0 items-center justify-center gap-3 pb-[var(--sab)]">
+  <div class="mt-2 flex shrink-0 items-center justify-center gap-3 px-4 pt-1 pb-[max(12px,var(--sab))]">
     <button
       type="button"
       :disabled="acting"

@@ -474,7 +474,7 @@ onUnmounted(() => {
               <i class="pi pi-spin pi-spinner text-2xl text-stone-400 dark:text-zinc-500" />
             </div>
 
-            <div v-else-if="s.current.value">
+            <div v-else-if="s.current.value" class="swipes-card-wrap">
               <div class="swipe-deck relative overscroll-none sm:h-[62dvh] sm:min-h-[400px] sm:max-h-[540px]">
               <div
                 v-if="s.next.value"
@@ -1046,15 +1046,24 @@ onUnmounted(() => {
   flex: 1 1 auto;
   min-height: 0;
 }
-.swipe-deck {
+/* Обёртка текущей карточки: продолжает flex-цепочку до колоды,
+   иначе absolute-содержимое колоды даёт высоту 0 и карточка исчезает. */
+.swipes-card-wrap {
+  display: flex;
+  flex-direction: column;
   flex: 1 1 auto;
-  min-height: 300px;
+  min-height: 0;
 }
+.swipe-deck,
 .swipes-feed-skeleton {
   flex: 1 1 auto;
-  min-height: 300px;
 }
-@media (max-width: 1023.98px) {
+/* Телефоны (портрет): никакого вложенного скролла — верхняя панель,
+   карточка и кнопки ровно на один экран. min-height у колоды —
+   страховка от схлопывания: высота лока минус верхняя панель,
+   отступы и панель кнопок (~172px). Во flex-раскладке колода всё
+   равно растянется на остаток, в блочной — встанет на этот размер. */
+@media (max-width: 639.98px) {
   .swipes-feed-lock {
     height: calc(100dvh - var(--app-bottomnav) - var(--sab) - var(--sat));
     max-height: calc(100dvh - var(--app-bottomnav) - var(--sab) - var(--sat));
@@ -1073,22 +1082,33 @@ onUnmounted(() => {
     min-height: 0;
     margin-bottom: 0;
   }
+  .swipes-feed-lock .swipes-card-wrap {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
   .swipes-feed-lock .swipe-deck,
   .swipes-feed-lock .swipes-feed-skeleton {
     flex: 1 1 auto;
-    min-height: 0;
     height: auto;
+    min-height: calc(100dvh - var(--app-bottomnav) - var(--sab) - var(--sat) - 172px);
   }
 }
+/* Планшеты / ландшафт / узкий десктоп: лок остаётся скроллируемым
+   (базовые правила выше), колода — фиксированной десктопной высоты
+   sm:h-[62dvh], ничего не клиппится. */
 @supports not (height: 100dvh) {
   .swipes-feed-lock {
     height: calc(100vh - var(--sat));
     max-height: calc(100vh - var(--sat));
   }
-  @media (max-width: 1023.98px) {
+  @media (max-width: 639.98px) {
     .swipes-feed-lock {
       height: calc(100vh - var(--app-bottomnav) - var(--sab) - var(--sat));
       max-height: calc(100vh - var(--app-bottomnav) - var(--sab) - var(--sat));
+    }
+    .swipes-feed-lock .swipe-deck,
+    .swipes-feed-lock .swipes-feed-skeleton {
+      min-height: calc(100vh - var(--app-bottomnav) - var(--sab) - var(--sat) - 172px);
     }
   }
 }
