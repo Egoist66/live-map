@@ -15,19 +15,28 @@ const SWIPE_MAX_DRIFT_PX = 60
  * Её наличие = диалог закрываемый (`closable`), системные
  * (скринлок, термы, SOS) кнопки не имеют — их не трогаем.
  *
+ * PrimeVue v5 переименовал класс в `p-dialog-close-button`
+ * (в v4 был `p-dialog-header-close`) — ищем оба.
+ *
  * @param mask маска диалога `.p-dialog-mask`
- * @returns кнопка `.p-dialog-header-close` или null
+ * @returns кнопка закрытия или null
  */
 function closeButtonOf(mask: HTMLElement): HTMLElement | null {
-  return mask.querySelector('.p-dialog-header-close')
+  const current = mask.querySelector<HTMLElement>('.p-dialog-close-button')
+
+  if (current) {
+    return current
+  }
+
+  return mask.querySelector<HTMLElement>('.p-dialog-header-close')
 }
 
 /**
  * Закрывает диалог так же, как клик по крестику:
  * PrimeVue сам эмитит `update:visible=false`, родитель закроется.
- * Без крестика (нижние шторки без шапки) — синтетический клик
- * по маске: собственный `dismissableMask` PrimeVue решает сам,
- * нам лишь нужен честный путь закрытия.
+ * Без крестика (нижние шторки без шапки) — честно replay'им тап
+ * по маске парой `mousedown`+`mouseup`: именно её слушает
+ * PrimeVue v5 (`dismissableMask`), синтетический `click` он игнорирует.
  *
  * @param mask маска диалога `.p-dialog-mask`
  */
@@ -40,9 +49,10 @@ function requestDialogClose(mask: HTMLElement): void {
   }
 
   try {
-    const synthetic = new MouseEvent('click', { bubbles: true, cancelable: true })
-    ;(synthetic as any).__dlgFallback = true
-    mask.dispatchEvent(synthetic)
+    const down = new MouseEvent('mousedown', { bubbles: true, cancelable: true })
+    const up = new MouseEvent('mouseup', { bubbles: true, cancelable: true })
+    mask.dispatchEvent(down)
+    mask.dispatchEvent(up)
   } catch {
   }
 }
@@ -127,6 +137,9 @@ interface SwipeState {
  * Вешает на диалог закрытие свайпом вниз за шапку/ручку.
  * Скролл контента не ломаем: жест начинается только в зоне шапки,
  * `preventDefault` — лишь после committed-вертикали вниз.
+ * Системные модалки без крестика, но с шапкой (термы, SOS,
+ * age-gate) пропускаем целиком: тянучка без закрытия только
+ * вводит в заблуждение — жест там запрещён.
  *
  * @param mask маска диалога `.p-dialog-mask`
  * @param dialog корень `.p-dialog`
@@ -134,6 +147,14 @@ interface SwipeState {
  */
 function attachSwipeToClose(mask: HTMLElement, dialog: HTMLElement): () => void {
   ensureSwipeHandle(mask, dialog)
+
+  const closable = closeButtonOf(mask) !== null
+  const hasHeader = dialog.querySelector('.p-dialog-header') !== null
+
+  if (!closable && hasHeader) {
+    return () => {}
+  }
+
   const zones = swipeZonesOf(dialog)
 
   if (!zones.length) {

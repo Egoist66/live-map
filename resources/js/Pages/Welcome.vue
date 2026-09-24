@@ -61,7 +61,6 @@ function switchTab(next: LandingTab): void {
     </header>
 
     <div class="max-w-[1280px] mx-auto px-4 sm:px-6 pt-4 sm:pt-6 flex flex-col items-center gap-2">
-      <div class="text-[10px] font-black tracking-[0.22em] uppercase text-stone-400 dark:text-zinc-500">Выбери сторону</div>
       <div class="relative inline-flex max-w-full rounded-full bg-white/70 dark:bg-zinc-900/70 backdrop-blur border border-stone-200/80 dark:border-zinc-700/60 p-1 shadow-soft">
         <span
           :class="['absolute top-1 bottom-1 left-1 w-[calc(33.333%-4px)] rounded-full shadow-md transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]', thumbGradient[landing.tab.value], thumbPosition[landing.tab.value]]"

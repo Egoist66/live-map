@@ -31,6 +31,27 @@ export function useMobileBottomNav() {
     }
   })
 
+  /**
+   * Стафф (админ/модератор): мобильное меню без лишнего.
+   *
+   * Районы — пользовательский раздел сообществ, стаффу он не нужен
+   * в нижней навигации (есть веб-доступ по прямой ссылке и админка).
+   * Прячем только на мобиле, чтобы уложиться в 5 пунктов.
+   */
+  const isStaff = computed(() => {
+    const authUser = (page.props as unknown as { auth?: { user?: { is_admin?: boolean; role?: string } | null } }).auth?.user
+
+    if (!authUser) {
+      return false
+    }
+
+    const isAdminFlag = Boolean(authUser.is_admin)
+    const isAdminRole = authUser.role === 'admin'
+    const isModeratorRole = authUser.role === 'moderator'
+
+    return isAdminFlag || isAdminRole || isModeratorRole
+  })
+
   const dashboardHref = computed(() => route('dashboard'))
   const total = computed(() => badge.unread)
 
@@ -46,7 +67,17 @@ export function useMobileBottomNav() {
   const showMap = computed(() => isBusiness.value || modules.isEnabled('upin'))
   const showLove = computed(() => !isBusiness.value && modules.isEnabled('ulove'))
   const showFlow = computed(() => !isBusiness.value && modules.isEnabled('uflow'))
-  const showDistricts = computed(() => !isBusiness.value && modules.isEnabled('districts'))
+  const showDistricts = computed(() => {
+    if (isBusiness.value) {
+      return false
+    }
+
+    if (isStaff.value) {
+      return false
+    }
+
+    return modules.isEnabled('districts')
+  })
 
   /**
    * Класс сетки под число видимых пунктов.
@@ -340,5 +371,5 @@ export function useMobileBottomNav() {
     document.documentElement.classList.remove('native-swipes')
   })
 
-  return { dashboardHref, isActive, isActivePath, navLinkClass, total, navHidden, keyboardOpen, isBusiness, showMap, showLove, showFlow, showDistricts, gridClass }
+  return { dashboardHref, isActive, isActivePath, navLinkClass, total, navHidden, keyboardOpen, isBusiness, isStaff, showMap, showLove, showFlow, showDistricts, gridClass }
 }

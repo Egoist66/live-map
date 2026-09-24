@@ -181,6 +181,16 @@ export function useSwipes() {
   const showTabBack = computed(() => activeTab.value !== 'feed')
 
   /**
+   * Контентный таб (всё кроме ленты): списки, анкета, PRO.
+   *
+   * Лента — app-frame с фиксированной колодой без скролла,
+   * а контентные табы живут в собственном скроллере
+   * `.swipes-tab-scroll`: длинные списки и форма анкеты листаются
+   * и на десктопе, и на мобиле независимо от скролла страницы.
+   */
+  const isContentTab = computed(() => activeTab.value !== 'feed')
+
+  /**
    * Вернуться из таба-роута на ленту свайпов.
    */
   function backToFeed(): void {
@@ -1201,6 +1211,7 @@ export function useSwipes() {
     activeTab,
     goTab,
     showTabBack,
+    isContentTab,
     backToFeed,
     activeUsers,
     activeLoading,

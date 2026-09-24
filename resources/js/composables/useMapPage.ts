@@ -19,10 +19,10 @@ import { useAppConfirm } from '@/composables/useAppConfirm'
 import { useCustomCategories } from '@/composables/useCustomCategories'
 import { useHomeZoneVisibility } from '@/composables/useHomeZoneVisibility'
 import { planOf, maxHomeRadiusKm } from '@/composables/usePlanLimits'
+import { useAppModulesStore } from '@/stores/appModules'
 import { resolveInitialCenter, homeAnchorOf, isSaneFix } from '@/composables/useMapInitialCenter'
 import { haversineKm } from '@/utils/geo'
 import { useHomeZoneGuard } from '@/composables/useHomeZoneGuard'
-import { useBusinessMarkers } from '@/composables/useBusinessMarkers'
 
 export function useMapPage() {
   const { store, selectedCategory, filteredPins, fetchNearby } = usePins()
@@ -52,16 +52,43 @@ export function useMapPage() {
     nextTick(() => pinEdit.start(p))
   })
 
-  const bizMarkers = useBusinessMarkers()
+  /**
+   * Бизнес-маркеры: только при включённом модуле бизнеса.
+   *
+   * useBusinessMarkers живёт в чанке mod-business (бизнес-стор):
+   * статический импорт тянул бы весь бизнес-код на карту даже
+   * upin-only пользователям. Поэтому грузим лениво по требованию.
+   */
+  let bizMarkers: { attach: (map: unknown, hooks: unknown) => void; detach: () => void } | null = null
 
   /**
    * Подключить слой компаний: особые метки + модалка пинов.
    *
    * Клик по пину компании из модалки — долететь и открыть карточку.
+   * Без модуля бизнеса — no-op, чанк mod-business не грузится.
    */
-  function wireBusinesses(): void {
+  async function wireBusinesses(): Promise<void> {
+    let enabled = false
+
     try {
-      bizMarkers.attach(mapApi as any, {
+      enabled = useAppModulesStore().isEnabled('business')
+    } catch {
+      enabled = false
+    }
+
+    if (!enabled) {
+      return
+    }
+
+    try {
+      const { useBusinessMarkers } = await import('@/composables/useBusinessMarkers')
+      bizMarkers = useBusinessMarkers() as unknown as typeof bizMarkers
+    } catch {
+      return
+    }
+
+    try {
+      bizMarkers?.attach(mapApi as any, {
         openPin: (pin: any) => {
           try {
             pinDetails.openPinById(Number(pin.id))
@@ -758,12 +785,12 @@ export function useMapPage() {
       try { (mapApi as any).hideHomeZone?.() } catch {}
       mapApi.bindRealtime()
       wireDistricts()
-      wireBusinesses()
+      void wireBusinesses()
     } else {
       await mapApi.initMap(null, onMapClick)
       mapApi.bindRealtime()
       try { await fetchNearby(0, 20) } catch {}
-      wireBusinesses()
+      void wireBusinesses()
     }
     let geo: { lat: number; lng: number; accuracy: number | null } | null = null
     try { geo = await requestGeolocation() } catch { geo = null }
@@ -945,7 +972,7 @@ export function useMapPage() {
   function destroy() {
     window.removeEventListener('keydown', onEsc)
     window.removeEventListener('map:open-create', openCreateFromUI)
-    try { bizMarkers.detach() } catch {}
+    try { bizMarkers?.detach() } catch {}
     try { (mapApi as any).map?.off?.('moveend', onDistrictsMoveEnd) } catch {}
     try { (mapApi as any).map?.off?.('zoomend', onDistrictsMoveEnd) } catch {}
     try { unsubGeolocate?.() } catch {}

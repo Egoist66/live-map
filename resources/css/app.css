@@ -304,6 +304,35 @@ html.native-keyboard-open .h-app-full {
     min-height: calc(100dvh - var(--app-header-md));
   }
 }
+/* Контентные табы свайпов (анкета, списки, PRO): собственный скроллер
+   на высоту вьюпорта. Лента остаётся app-frame без скролла, а длинные
+   формы/списки листаются и на десктопе, и на мобиле независимо
+   от скролла страницы (main для swipes* — overflow-hidden).
+   Шапки над скроллером нет, нижнее меню на свайпах спрятано —
+   вычитаем только верхний сейф-инсет (на мобиле его даёт спейсер
+   native-safe-top, на десктопе --sat равен нулю). */
+.swipes-tab-scroll {
+  height: calc(100dvh - var(--sat));
+  max-height: calc(100dvh - var(--sat));
+  overflow-y: auto;
+  overflow-x: clip;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+@supports not (height: 100dvh) {
+  .swipes-tab-scroll {
+    height: calc(100vh - var(--sat)) !important;
+    max-height: calc(100vh - var(--sat)) !important;
+  }
+}
+/* Мобила: запас под шторку жестов в конце скролла — нижнее меню
+   на свайпах спрятано, внутренний pb-1 страницы его не покрывает. */
+@media (max-width: 1023.98px) {
+  .swipes-tab-scroll {
+    padding-bottom: calc(1rem + var(--sab));
+  }
+}
 /* Нижнее меню прячется при открытой клавиатуре (класс ставит useMobileBottomNav). */
 .mobile-bottom-nav {
   transition: transform 0.22s ease, opacity 0.22s ease;
@@ -771,7 +800,11 @@ div#p-license-host {
 /* Свайп-закрытие диалогов (useGlobalDialogDismiss + useSwipeToClose).
    Ручка-«пилюля» для безшапочных нижних шторок: только тач-экраны,
    на десктопе с мышью affordance не нужен. Во время тянучки
-   отключаем transition, чтобы диалог ехал за пальцем 1:1. */
+   отключаем transition, чтобы диалог ехал за пальцем 1:1.
+   `touch-action: pan-x` (без pan-y): вертикаль жеста обязана
+   доходить до наших touch-хендлеров — иначе браузер перехватывает
+   пан скроллом, рвёт последовательность pointercancel'ом и жест
+   умирает на полпути; горизонталь остаётся нативной. */
 .dlg-swipe-handle { display: none; }
 @media (pointer: coarse) {
   .dlg-swipe-handle {
@@ -781,10 +814,10 @@ div#p-license-host {
     margin: 10px auto 2px;
     border-radius: 9999px;
     background: rgba(0, 0, 0, 0.18);
-    touch-action: pan-x pan-y;
+    touch-action: pan-x;
   }
   .dark .dlg-swipe-handle { background: rgba(255, 255, 255, 0.28); }
-  .p-dialog-header { cursor: grab; touch-action: pan-x pan-y; }
+  .p-dialog-header { cursor: grab; touch-action: pan-x; }
 }
 .p-dialog.dlg-dragging { transition: none !important; }
 

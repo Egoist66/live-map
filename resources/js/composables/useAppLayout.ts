@@ -66,6 +66,15 @@ export function useAppLayout() {
       return false
     }
   })
+  /**
+   * Пункты дропдауна профиля без дублей навигации.
+   *
+   * Всё, что уже есть в десктопном топбаре (Кабинет, Карта, Чат,
+   * ULove, UFlow) или в мобильном нижнем меню (плюс Районы),
+   * из дропдауна убрано — для всех пользователей, не только стаффа.
+   * Остаются только уникальные разделы: модерация, настройки,
+   * переход в кабинет бизнеса для персоны и выход.
+   */
   const menuItems = computed(() => {
     const header = { label: user.value?.name || '', sublabel: user.value?.email || '', isHeader: true }
     const moderation = isModerator.value
@@ -78,8 +87,6 @@ export function useAppLayout() {
         header,
         { separator: true },
         ...moderation,
-        { label: 'Кабинет бизнеса', icon: 'pi pi-briefcase', accent: 'violet', active: route().current('cabinet.*'), command: () => router.visit('/cabinet') },
-        { label: 'Чаты', icon: 'pi pi-comments', accent: 'sky', active: route().current('chat'), command: () => router.visit(route('chat')) },
         { label: 'Настройки бизнеса', icon: 'pi pi-cog', accent: 'slate', active: route().current('cabinet.settings'), command: () => router.visit('/cabinet/settings') },
         { separator: true },
         logoutItem,
@@ -89,22 +96,6 @@ export function useAppLayout() {
     const personSections: any[] = [
       { label: 'Настройки', icon: 'pi pi-cog', accent: 'slate', active: route().current('profile.edit'), command: () => router.visit(settingsHref.value) },
     ]
-
-    if (modules.isEnabled('upin')) {
-      personSections.push({ label: 'Карта', icon: 'pi pi-map', accent: 'teal', active: route().current('map'), command: () => router.visit(route('map')) })
-    }
-
-    if (modules.isEnabled('ulove')) {
-      personSections.push({ label: 'ULove', icon: 'pi pi-heart', accent: 'red', active: route().current('swipes'), command: () => router.visit(route('swipes')) })
-    }
-
-    if (modules.isEnabled('uflow')) {
-      personSections.push({ label: 'UFlow', icon: 'pi pi-align-justify', svg: 'flow', accent: 'sky', active: route().current('flow'), command: () => router.visit(route('flow')) })
-    }
-
-    if (modules.isEnabled('districts')) {
-      personSections.push({ label: 'Районы', icon: 'pi pi-users', accent: 'teal', active: route().current('districts.*'), command: () => router.visit(route('districts.index')) })
-    }
 
     if (modules.isEnabled('business')) {
       personSections.push({ label: 'Кабинет бизнеса', icon: 'pi pi-briefcase', accent: 'violet', active: route().current('cabinet.*'), command: () => router.visit('/cabinet') })

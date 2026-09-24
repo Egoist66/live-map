@@ -5,6 +5,7 @@
     "scripts": {
         "build": "vue-tsc && vite build && node scripts/copy-sw.mjs && vite build --ssr",
         "build:ssr": "vue-tsc && vite build && node scripts/copy-sw.mjs && vite build --ssr",
+        "check:isolation": "node scripts/check-bundle-isolation.mjs",
         "pwa:copy": "node scripts/copy-sw.mjs",
         "dev": "concurrently \"php -d upload_max_filesize=64M -d post_max_size=64M artisan serve\" \"php artisan reverb:start --debug\" \"vite\"",
         "dev:ssr": "concurrently \"php -d upload_max_filesize=64M -d post_max_size=64M artisan serve\" \"php artisan reverb:start --debug\" \"php artisan inertia:start-ssr\" \"vite\"",

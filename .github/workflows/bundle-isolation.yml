@@ -1,0 +1,41 @@
+name: bundle-isolation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'resources/js/**'
+      - 'vite.config.js'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'scripts/check-bundle-isolation.mjs'
+  pull_request:
+    paths:
+      - 'resources/js/**'
+      - 'vite.config.js'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'scripts/check-bundle-isolation.mjs'
+
+jobs:
+  isolation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build client bundle
+        run: pnpm exec vite build
+
+      - name: Check bundle isolation
+        run: pnpm check:isolation

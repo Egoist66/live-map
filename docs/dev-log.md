@@ -1087,3 +1087,20 @@
 - Hydration `container is empty` — не баг кода: в `pnpm dev` SSR-сервер не поднят (он только в `dev:ssr`), Laravel отдаёт пустой `#app`, клиент честно делает full mount. Плюс этот же варнинг усиливал упавший рендер профиля (краш `slice` ронял и SSR) — уже починен. Проверка для прода: варнинга там быть не должно (supervisord держит `inertia:start-ssr`).
 - `PrimeUI license is not configured` — шум вендора: PrimeVue v5 всегда дергает `verifyLicense` при install, ключа нет — только warn в консоль, функционала ноль. Баннер-DOM уже прячется кодом (`primevue.ts` + CSS); глушить чужой warn перехватом консоли не стал принципиально.
 - Проверки: `vue-tsc --noEmit` — ок.
+
+
+## 2026-09-24 — Изоляция бандла по модулям: грузится только включённое
+
+- 🔧 Диагноз по манифесту сборки: entry статически тянул чужие чанки — ulove-only визит качал код карты/ленты/бизнеса. Причины: `ProfileFlowPosts`/`UloveProfileView`/`ProfileDesignFlow` статикой в профиле и дашборде; `useBusinessMarkers` (бизнес-стор) статикой в `useMapPage`; `PIN_CATEGORIES` лежали в `usePins` рядом со стором и тянули пины за константой.
+- 🔧 Фиксы: `pinCategories.ts` — чистый модуль констант без стора (`usePins` реэкспортит для совместимости); `ProfileFlowPosts`/`UloveProfileView`/`ProfileDesignFlow` — `defineAsyncComponent` + `v-if isEnabled(...)`, таб Flow в `ProfileSocialView` скрыт без uflow; `wireBusinesses` в `useMapPage` — dynamic import за гейтом `isEnabled('business')` (карта без бизнеса бизнес-стор не грузит).
+- 🔧 `vite.config`: ручные `mod-*` правила по подстрокам путей УДАЛЕНЫ — они стаскивали общий код в чанки разделов, и entry грузил чужие модули всем. Свой код режет сам Rolldown по графу импортов (мелкие гранулярные чанки), группируем только вендоров (maplibre/primevue/realtime/form/swiper/vendor) — прекеш PWA на них опирается. Механика разделов не менялась: включение догружает страницу раздела (`MODULE_PRELOADERS`), выключение чистит кэши `pwa-build/pages/api` + reload.
+- 🔧 Замер по манифесту: entry — 12 мелких shared-чанков без кода разделов; Swipes тянет только dating-хуки, Flow — только flow, Dashboard — ничего лишнего (uflow/ulove динамикой), карта — пины/районы/api + ленивые бизнес-маркеры. Стили сплитуются по страницам (`Swipes-*.css` отдельно).
+- Проверки: `vue-tsc --noEmit` ✅, `vite build` ✅, `vite build --ssr` ✅.
+
+
+## 2026-09-24 — CI-гейт изоляции бандла
+
+- 🔧 Новый `scripts/check-bundle-isolation.mjs` (`pnpm check:isolation`): после `vite build` читает манифест и считает транзитивное статическое замыкание entry. Фейлит сборку, если в первом визите есть: чанки maplibre/swiper; чанки с именами кода разделов (сторы/api/хуки pins/flow/districts/business/dating/swipes — кроме явного CORE_ALLOWLIST тонких общих модулей); API-маркеры разделов в байтах (`/api/pins/mine`, `/api/flow-posts`, `/api/districts`, `/api/business`, `/api/swipes` — переживают минификацию).
+- 🔧 Sanity против слепоты: гейт обязан видеть `/api/swipes` в замыкании Swipes и maplibre в замыкании Map — иначе падает с "misconfigured". Диагностика утечки: `node scripts/check-bundle-isolation.mjs --entry resources/js/Pages/Map/Index.vue`.
+- 🔧 Воркфлоу `.github/workflows/bundle-isolation.yml`: build + гейт на push/PR при изменениях фронта. Сейчас: entry closure 13 чанков, OK.
+- Проверки: `pnpm check:isolation` ✅ (exit 0), негативный прогон на Map — LEAK-метки на месте ✅.

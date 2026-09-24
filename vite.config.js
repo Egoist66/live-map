@@ -52,85 +52,23 @@ export default defineConfig({
         rollupOptions: {
             output: {
                 manualChunks(id) {
-                    // Изоляция модулей: тяжёлые разделы — отдельными ленивыми
-                    // чанками, грузятся только когда раздел включён и открыт.
-                    // Inertia и так сплитит по страницам, это дотягивает
-                    // фичи/сторы несомых разделов из общего чанка.
+                    // Группируем ТОЛЬКО вендоров: стабильные крупные либы
+                    // лежат в своих чанках (прекеш PWA на них опирается).
                     //
-                    // Фишка приложения: человек пользуется только тем, что
-                    // включил (ulove ИЛИ карта ИЛИ лента...). Выбрал ulove
-                    // при регистрации — первый визит тянет только app +
-                    // mod-ulove (+ общие vendor/primevue). Включил карту
-                    // в настройках — чанк mod-upin догружается по требованию
-                    // (preload в useAppModulesSettings). Выключил — чистка
-                    // кэшей pwa-build/pages/api + reload, код раздела больше
-                    // не грузится. Поэтому:
-                    // - общие ядро/профиль/чат/настройки НЕ должны статически
-                    //   импортировать код разделов (см. pinCategories,
-                    //   async ProfileFlowPosts/UloveProfileView);
-                    // - лёгкие CTA/константы остаются в ядре, тяжёлое
-                    //   (сторы, maplibre, композеры) — только в mod-*.
-                    if (id.includes('resources/js/')) {
-                        if (
-                            id.includes('/Pages/Map/') ||
-                            id.includes('/Features/Map/') ||
-                            id.includes('/Features/HomeZone/') ||
-                            id.includes('/stores/pins') ||
-                            id.includes('/composables/useMap.ts') ||
-                            id.includes('/composables/useMapPage') ||
-                            id.includes('/composables/useMapOverlays') ||
-                            id.includes('/composables/useMapRefresh') ||
-                            id.includes('/composables/useThrottledMapFetch') ||
-                            id.includes('/composables/usePins.ts') ||
-                            id.includes('/composables/usePinCreate') ||
-                            id.includes('/composables/usePinEdit') ||
-                            id.includes('/composables/usePinForm') ||
-                            id.includes('/composables/usePinLimit') ||
-                            id.includes('/composables/usePinVisibility') ||
-                            id.includes('/composables/useSosMode') ||
-                            id.includes('/composables/useBusinessMarkers') ||
-                            id.includes('/composables/useReportDialog') ||
-                            id.includes('/composables/useCustomCategories') ||
-                            id.includes('/services/pins.api') ||
-                            id.includes('/services/pinInvites.api') ||
-                            id.includes('/services/custom-categories.api')
-                        ) return 'mod-upin';
-                        if (
-                            id.includes('/Pages/Business/') ||
-                            id.includes('/Features/Business/') ||
-                            id.includes('/Layouts/BusinessLayout') ||
-                            id.includes('/stores/business') ||
-                            id.includes('/composables/useBusiness')
-                        ) return 'mod-business';
-                        if (
-                            id.includes('/Pages/Flow/') ||
-                            id.includes('/Features/Flow/') ||
-                            id.includes('/Components/Features/Profile/ProfileDesignFlow') ||
-                            id.includes('/Components/Features/Profile/ProfileFlowPosts') ||
-                            id.includes('/stores/flow') ||
-                            id.includes('/composables/useFlow') ||
-                            id.includes('/services/flow.api')
-                        ) return 'mod-uflow';
-                        if (
-                            id.includes('/Pages/Districts/') ||
-                            id.includes('/Features/Districts/') ||
-                            id.includes('/stores/districts') ||
-                            id.includes('/composables/useDistrict') ||
-                            id.includes('/services/districts.api')
-                        ) return 'mod-districts';
-                        if (
-                            id.includes('/Pages/Swipes') ||
-                            id.includes('/Features/Dating/') ||
-                            id.includes('/composables/useSwipes.ts') ||
-                            id.includes('/composables/useSwipesMobileMenu') ||
-                            id.includes('/composables/useSwipeCardPhotos') ||
-                            id.includes('/composables/useSwipeStamps') ||
-                            id.includes('/composables/useSwipePhotoViewer') ||
-                            id.includes('/composables/useDatingQuestionnaire') ||
-                            id.includes('/composables/useUloveProfile') ||
-                            id.includes('/services/dating.api')
-                        ) return 'mod-ulove';
-                    }
+                    // Свой код (resources/js) НЕ трогаем специально: Rolldown
+                    // сам режет его на мелкие чанки по графу импортов, и это
+                    // и есть изоляция модулей — ulove-страница тянет только
+                    // dating/api и свайп-хуки, карта — pins/districts/api,
+                    // ядро — только общее. Проверено манифестом сборки:
+                    // entry тянет ~15 мелких shared-чанков без кода разделов.
+                    // (Раньше тут были mod-* правила по подстрокам путей —
+                    // они стаскивали общий код в чанки разделов, и entry
+                    // грузил чужие модули всем. Больше так не делаем.)
+                    //
+                    // Правила включения/выключения разделов от этого не
+                    // зависят: включение догружает страницу раздела
+                    // (useAppModulesSettings.preload -> import Pages/...),
+                    // выключение чистит кэши pwa-build/pages/api + reload.
                     if (id.includes('node_modules')) {
                         if (id.includes('maplibre-gl')) return 'maplibre';
                         if (id.includes('primevue') || id.includes('@primeuix')) return 'primevue';
@@ -150,79 +88,33 @@ export default defineConfig({
         rolldownOptions: {
             output: {
                 manualChunks(id) {
-                    if (process.env.MOD_DEBUG && (id.includes('appModules') || id.includes('MobileBottomNav') || id.includes('AuthStorage') || id.includes('PinActivity') || id.includes('primevue'))) {
-                        // eslint-disable-next-line no-console
-                        console.log(`[mod-debug] id=${id}`);
-                    }
-                    // Зеркало rollupOptions выше: те же mod-* границы,
-                    // чтобы dev/prod и rollup/rolldown давали одинаковый сплит.
-                    if (id.includes('resources/js/')) {
-                        if (
-                            id.includes('/Pages/Map/') ||
-                            id.includes('/Features/Map/') ||
-                            id.includes('/Features/HomeZone/') ||
-                            id.includes('/stores/pins') ||
-                            id.includes('/composables/useMap.ts') ||
-                            id.includes('/composables/useMapPage') ||
-                            id.includes('/composables/useMapOverlays') ||
-                            id.includes('/composables/useMapRefresh') ||
-                            id.includes('/composables/useThrottledMapFetch') ||
-                            id.includes('/composables/usePins.ts') ||
-                            id.includes('/composables/usePinCreate') ||
-                            id.includes('/composables/usePinEdit') ||
-                            id.includes('/composables/usePinForm') ||
-                            id.includes('/composables/usePinLimit') ||
-                            id.includes('/composables/usePinVisibility') ||
-                            id.includes('/composables/useSosMode') ||
-                            id.includes('/composables/useBusinessMarkers') ||
-                            id.includes('/composables/useReportDialog') ||
-                            id.includes('/composables/useCustomCategories') ||
-                            id.includes('/services/pins.api') ||
-                            id.includes('/services/pinInvites.api') ||
-                            id.includes('/services/custom-categories.api')
-                        ) return 'mod-upin';
-                        if (
-                            id.includes('/Pages/Business/') ||
-                            id.includes('/Features/Business/') ||
-                            id.includes('/Layouts/BusinessLayout') ||
-                            id.includes('/stores/business') ||
-                            id.includes('/composables/useBusiness')
-                        ) return 'mod-business';
-                        if (
-                            id.includes('/Pages/Flow/') ||
-                            id.includes('/Features/Flow/') ||
-                            id.includes('/Components/Features/Profile/ProfileDesignFlow') ||
-                            id.includes('/Components/Features/Profile/ProfileFlowPosts') ||
-                            id.includes('/stores/flow') ||
-                            id.includes('/composables/useFlow') ||
-                            id.includes('/services/flow.api')
-                        ) return 'mod-uflow';
-                        if (
-                            id.includes('/Pages/Districts/') ||
-                            id.includes('/Features/Districts/') ||
-                            id.includes('/stores/districts') ||
-                            id.includes('/composables/useDistrict') ||
-                            id.includes('/services/districts.api')
-                        ) return 'mod-districts';
-                        if (
-                            id.includes('/Pages/Swipes') ||
-                            id.includes('/Features/Dating/') ||
-                            id.includes('/composables/useSwipes.ts') ||
-                            id.includes('/composables/useSwipesMobileMenu') ||
-                            id.includes('/composables/useSwipeCardPhotos') ||
-                            id.includes('/composables/useSwipeStamps') ||
-                            id.includes('/composables/useSwipePhotoViewer') ||
-                            id.includes('/composables/useDatingQuestionnaire') ||
-                            id.includes('/composables/useUloveProfile') ||
-                            id.includes('/services/dating.api')
-                        ) return 'mod-ulove';
-                    }
+                    // Группируем ТОЛЬКО вендоров: стабильные крупные либы
+                    // лежат в своих чанках (прекеш PWA на них опирается).
+                    //
+                    // Свой код (resources/js) НЕ трогаем специально: Rolldown
+                    // сам режет его на мелкие чанки по графу импортов, и это
+                    // и есть изоляция модулей — ulove-страница тянет только
+                    // dating/api и свайп-хуки, карта — pins/districts/api,
+                    // ядро — только общее. Проверено манифестом сборки:
+                    // entry тянет ~15 мелких shared-чанков без кода разделов.
+                    // (Раньше тут были mod-* правила по подстрокам путей —
+                    // они стаскивали общий код в чанки разделов, и entry
+                    // грузил чужие модули всем. Больше так не делаем.)
+                    //
+                    // Правила включения/выключения разделов от этого не
+                    // зависят: включение догружает страницу раздела
+                    // (useAppModulesSettings.preload -> import Pages/...),
+                    // выключение чистит кэши pwa-build/pages/api + reload.
                     if (id.includes('node_modules')) {
                         if (id.includes('maplibre-gl')) return 'maplibre';
                         if (id.includes('primevue') || id.includes('@primeuix')) return 'primevue';
                         if (id.includes('pusher-js') || id.includes('laravel-echo')) return 'realtime';
                         if (id.includes('vee-validate') || id.includes('zod')) return 'form';
-                        // См. комментарий выше: swiper — только ленивый чанк.
+                        // Swiper импортируется ТОЛЬКО из async-компонентов
+                        // (карусели/вьюверы через defineAsyncComponent), поэтому
+                        // живёт в отдельном ленивом чанке, а не в общем vendor.
+                        // Если где-то появится статический импорт swiper —
+                        // чанк станет eager для всех, следи за билдом.
                         if (id.includes('swiper')) return 'swiper';
                         return 'vendor';
                     }

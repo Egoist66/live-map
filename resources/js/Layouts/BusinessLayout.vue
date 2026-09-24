@@ -71,14 +71,17 @@ const currentPath = computed(() => {
   }
 })
 
+/**
+ * Дропдаун компании без дублей навигации.
+ *
+ * Кабинет — по логотипу, Карта/Чаты/Реквизиты уже есть в десктопном
+ * и мобильном меню — в дропдауне остаются только уникальные разделы.
+ */
 const menuItems = computed(() => [
   { label: companyName.value, sublabel: (user.value as { email?: string } | null)?.email || '', isHeader: true },
   { separator: true },
-  { label: 'Кабинет', icon: 'pi pi-th-large', accent: 'violet', active: currentPath.value === '/cabinet', command: () => router.visit('/cabinet') },
   { label: 'Мои пины', icon: 'pi pi-list', accent: 'teal', active: currentPath.value.startsWith('/cabinet/pins'), command: () => router.visit('/cabinet/pins') },
-  { label: 'Реквизиты компании', icon: 'pi pi-id-card', accent: 'slate', active: currentPath.value.startsWith('/cabinet/onboarding'), command: () => router.visit('/cabinet/onboarding') },
   { label: 'Настройки', icon: 'pi pi-cog', accent: 'slate', active: currentPath.value.startsWith('/cabinet/settings'), command: () => router.visit('/cabinet/settings') },
-  { label: 'Чаты', icon: 'pi pi-comments', accent: 'sky', active: currentPath.value.startsWith('/chat'), command: () => router.visit('/chat') },
   { separator: true },
   { label: 'Выйти', icon: 'pi pi-sign-out', accent: 'red', danger: true, command: () => logout() },
 ])

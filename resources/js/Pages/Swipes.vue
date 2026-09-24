@@ -139,7 +139,7 @@ onUnmounted(() => {
   <Head :title="seo.title.value">
     <meta head-key="description" name="description" :content="seo.description.value" />
   </Head>
-  <div class="page-scroll w-full min-w-0 bg-transparent">
+  <div class="page-scroll w-full min-w-0 bg-transparent" :class="s.isContentTab.value ? 'swipes-tab-scroll scroll-neat' : ''">
       <div class="max-w-[640px] w-full min-w-0 mx-auto px-4 sm:px-6 pt-3 pb-1 sm:py-6 sm:pb-[calc(2rem+var(--sab))]">
 
         <h1 class="sr-only">ULove — знакомства рядом</h1>
