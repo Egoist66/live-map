@@ -39,6 +39,7 @@ import { useChatWallpaper } from "@/composables/useChatWallpaper";
 import { useChatLayout } from "@/composables/useChatLayout";
 import { usePageScrollLock } from "@/composables/usePageScrollLock";
 import { useDistrictInvite } from "@/composables/useDistrictInvite";
+import { useChatPeerPanel } from "@/composables/useChatPeerPanel";
 import { useToast } from "primevue/usetoast";
 
 usePageScrollLock();
@@ -214,7 +215,16 @@ const peerProfileUrl = computed(() => {
   const slug = (peer.value as any)?.profile_slug;
   return slug ? `/users/${slug}` : null;
 });
-const showPeerPanel = computed(() => !!selectedId.value && !!peer.value);
+const peerPanel = useChatPeerPanel();
+/**
+ * Панель видна только при включённом ULove (не бизнес): фото профиля,
+ * мэтч-бейдж, «Открыть профиль» и «Заблокировать». Сворачивается
+ * тогглом в шапке — чат занимает всю ширину, выбор запоминается.
+ */
+const peerPanelAvailable = computed(
+  () => peerPanel.enabled.value && !isBusiness.value && !!selectedId.value && !!peer.value
+);
+const showPeerPanel = computed(() => peerPanelAvailable.value && peerPanel.open.value);
 
 const wallpaper = useChatWallpaper();
 const wallpaperOpen = ref(false);
@@ -358,6 +368,9 @@ onMounted(async () => {
         :dating-entry="!isBusiness && datingTheme.isDatingEntry.value"
         :dating-badge="isBusiness ? null : datingTheme.badge.value"
         @swipes-back="datingTheme.backToSwipes()"
+        :peer-panel-available="peerPanelAvailable"
+        :peer-panel-open="peerPanel.open.value"
+        @toggle-peer="peerPanel.toggle()"
         :input="input"
         @update:input="(v: string) => input = v"
         :emoji-open="emojiOpen"

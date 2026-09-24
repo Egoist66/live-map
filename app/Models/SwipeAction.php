@@ -15,14 +15,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $liker_id
  * @property int $liked_id
  * @property string $action like|pass
+ * @property bool $is_incognito
+ * @property bool $is_superlike
  */
 class SwipeAction extends Model
 {
-    protected $fillable = ['liker_id', 'liked_id', 'action', 'is_incognito'];
+    protected $fillable = ['liker_id', 'liked_id', 'action', 'is_incognito', 'is_superlike'];
 
     protected function casts(): array
     {
-        return ['is_incognito' => 'boolean'];
+        return ['is_incognito' => 'boolean', 'is_superlike' => 'boolean'];
     }
 
     public function liker(): BelongsTo

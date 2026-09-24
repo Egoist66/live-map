@@ -7,7 +7,7 @@ import { ensureUserChannel } from '@/composables/useUserChannel'
 import { pokeRealtime } from '@/composables/useRealtimePoller'
 import { shouldSkipMotion } from '@/composables/useMotion'
 import { useRewardToast } from '@/composables/useRewardToast'
-import type { ActiveCard, SwipeCard, SwipeFilters, SwipeQuota } from '@/services/dating.api'
+import type { ActiveCard, SwipeCard, SwipeExtras, SwipeFilters, SwipeQuota } from '@/services/dating.api'
 
 /** Лимит радиуса «рядом» для Free, км. PRO — безлимит. */
 export const FREE_SWIPES_RADIUS_KM = 10
@@ -92,6 +92,9 @@ export function useSwipes() {
   const savingPrivacy = ref(false)
   const showPaywall = ref(false)
   const paywallFeature = ref('')
+  const buyingExtras = ref(false)
+  /** Последний свайп в ленте — кандидат на откат (только свежий). */
+  const lastSwiped = ref<{ card: SwipeCard; action: 'like' | 'pass' | 'superlike' } | null>(null)
 
   const page = usePage()
   const authUser = computed(() => (page.props.auth as any)?.user)
@@ -352,6 +355,61 @@ export function useSwipes() {
     if (!quota.value) return false
     if (quota.value.limit < 0) return false
     return quota.value.left <= 0
+  })
+
+  /** Дефолт экстра-состояния до первой квоты с бэка. */
+  const emptyExtras: SwipeExtras = {
+    superlikes_left: 0,
+    superlikes_daily: 1,
+    superlike_balance: 0,
+    boosts_balance: 0,
+    boost_active: false,
+    boost_until: null,
+    undos_left: 0,
+    can_undo: false,
+  }
+
+  /** Разовые товары: суперлайки, буст, откаты (из quotaState). */
+  const extras = computed<SwipeExtras>(() => quota.value?.extras ?? emptyExtras)
+
+  /** Остаток суперлайков. <0 — безлимит (админ). */
+  const superlikesLeft = computed(() => extras.value.superlikes_left)
+
+  /** Остаток откатов в день. <0 — безлимит (PRO). */
+  const undosLeft = computed(() => extras.value.undos_left)
+
+  /** Можно ли откатить: есть свежий свайп в ленте и лимит. */
+  const canUndo = computed(() => {
+    if (!lastSwiped.value || acting.value || leaving.value) return false
+    if (!extras.value.can_undo) return false
+    return extras.value.undos_left !== 0
+  })
+
+  /**
+   * Подпись остатка для бейджа: число или ∞.
+   * @param left остаток (<0 — безлимит)
+   * @returns текст бейджа
+   */
+  function leftLabel(left: number): string {
+    return left < 0 ? '∞' : String(left)
+  }
+
+  /** Активен ли буст моего профиля прямо сейчас. */
+  const boostActive = computed(() => extras.value.boost_active)
+
+  /**
+   * Подпись конца буста для баннера.
+   * @returns «до 21:40» или пусто
+   */
+  const boostUntilLabel = computed(() => {
+    const raw = extras.value.boost_until
+    if (!raw) return ''
+    try {
+      const time = new Date(raw).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+      return `до ${time}`
+    } catch {
+      return ''
+    }
   })
 
   /**
@@ -857,6 +915,7 @@ export function useSwipes() {
       const res = await pending
       if (res?.quota) quota.value = res.quota
       if (res) rewards.applyReward(res)
+      lastSwiped.value = { card, action: 'pass' }
       index.value += 1
       if (index.value >= cards.value.length - 3) {
         void loadMore()
@@ -866,6 +925,144 @@ export function useSwipes() {
       leaving.value = false
       flyDir.value = null
       acting.value = false
+    }
+  }
+
+  /**
+   * Отправить суперлайк текущей карточке: усиленный лайк с улётом.
+   *
+   * Тратит дневной запас (Free — 1/день, PRO — 5/день) или купленный баланс.
+   * Получатель видит синюю звезду в уведомлении и в «Лайки мне»,
+   * автор поднимается в его ленте. Лимит избранного не блокирует.
+   *
+   * @returns void
+   */
+  async function superlike(): Promise<void> {
+    const card = current.value
+    if (!card || card.id == null || acting.value || leaving.value) return
+    if (superlikesLeft.value === 0) {
+      error.value = 'Суперлайки кончились — докупи пак во вкладке PRO или дождись завтра.'
+      return
+    }
+    acting.value = true
+    leaving.value = true
+    flyDir.value = 'like'
+    exiting.value = { card, dir: 'like', fromX: dragX.value, fromY: dragY.value }
+    dragging.value = false
+    dragX.value = 0
+    dragY.value = 0
+    error.value = null
+    try {
+      const useIncognito = incognitoLike.value && canIncognito.value
+      const pending = datingApi.act(card.id, 'like', useIncognito, true)
+      await waitFrame(shouldSkipMotion() ? 30 : 360)
+      const res = await pending
+      quota.value = res.quota
+      rewards.applyReward(res)
+      if (res.matched) {
+        matchedCard.value = card
+        matchedConversationId.value = res.conversation_id
+        await loadMatches()
+      }
+      lastSwiped.value = { card, action: 'superlike' }
+      index.value += 1
+      void loadFavorites()
+      try { pokeRealtime() } catch {}
+      if (index.value >= cards.value.length - 3) {
+        void loadMore()
+      }
+    } catch (e: unknown) {
+      if (handleGate(e)) return
+      const err = e as { response?: { data?: { message?: string; quota?: SwipeQuota } } }
+      if (err.response?.data?.quota) quota.value = err.response?.data?.quota as SwipeQuota
+      error.value = err.response?.data?.message ?? 'Не удалось отправить суперлайк'
+    } finally {
+      exiting.value = null
+      leaving.value = false
+      flyDir.value = null
+      acting.value = false
+    }
+  }
+
+  /**
+   * Откатить последний свайп в ленте: анкета вернётся наверх колоды.
+   *
+   * Откатывается только свежий свайп (сверка по id на бэке).
+   * Мэтч от этого лайка растворится, чат останется.
+   * Free — 1 откат в день, PRO — безлимит.
+   *
+   * @returns void
+   */
+  async function undoLast(): Promise<void> {
+    const target = lastSwiped.value
+    if (!target || target.card.id == null || acting.value || leaving.value) return
+    acting.value = true
+    error.value = null
+    try {
+      const res = await datingApi.undo(target.card.id)
+      quota.value = res.quota
+      cards.value.splice(index.value, 0, res.card)
+      lastSwiped.value = null
+      if (target.action !== 'pass') void loadFavorites()
+      void loadAdmirers()
+    } catch (e: unknown) {
+      if (handleGate(e)) return
+      const err = e as { response?: { data?: { message?: string; quota?: SwipeQuota } } }
+      if (err.response?.data?.quota) quota.value = err.response?.data?.quota as SwipeQuota
+      error.value = err.response?.data?.message ?? 'Не удалось откатить свайп'
+    } finally {
+      acting.value = false
+    }
+  }
+
+  /**
+   * Включить буст профиля на 30 минут: анкета летит первой в чужих лентах.
+   *
+   * PRO — один бесплатный в месяц, остальные — за купленные кредиты.
+   *
+   * @returns void
+   */
+  async function activateBoost(): Promise<void> {
+    if (acting.value || buyingExtras.value) return
+    buyingExtras.value = true
+    error.value = null
+    try {
+      const res = await datingApi.boost()
+      quota.value = res.quota
+    } catch (e: unknown) {
+      if (handleGate(e)) return
+      const err = e as { response?: { status?: number; data?: { message?: string; quota?: SwipeQuota } } }
+      if (err.response?.data?.quota) quota.value = err.response?.data?.quota as SwipeQuota
+      if (err.response?.status === 402 || err.response?.status === 409) {
+        error.value = err.response?.data?.message ?? 'Буст недоступен'
+        return
+      }
+      error.value = err.response?.data?.message ?? 'Не удалось включить буст'
+    } finally {
+      buyingExtras.value = false
+    }
+  }
+
+  /**
+   * Купить разовый товар (стаб оплаты: начисляет сразу, шлюз подключится сюда).
+   *
+   * @param item superlike_pack (+5) или boost (+1)
+   * @returns void
+   */
+  async function purchaseExtras(item: 'superlike_pack' | 'boost'): Promise<void> {
+    if (buyingExtras.value) return
+    buyingExtras.value = true
+    error.value = null
+    try {
+      const res = await datingApi.purchaseExtras(item)
+      quota.value = res.quota
+    } catch (e: unknown) {
+      if (handleGate(e)) return
+      const err = e as { response?: { data?: { message?: string; quota?: SwipeQuota } } }
+      if (err.response?.data?.quota) quota.value = err.response?.data?.quota as SwipeQuota
+      error.value = err.response?.data?.message ?? 'Не удалось оформить покупку'
+    } finally {
+      buyingExtras.value = false
     }
   }
 
@@ -912,6 +1109,7 @@ export function useSwipes() {
         matchedConversationId.value = res.conversation_id
         await loadMatches()
       }
+      lastSwiped.value = { card, action: 'like' }
       index.value += 1
       if (action === 'like') void loadFavorites()
       if (action === 'like') {
@@ -1264,6 +1462,15 @@ export function useSwipes() {
     quotaLabel,
     planExpiresLabel,
     isQuotaEmpty,
+    extras,
+    superlikesLeft,
+    undosLeft,
+    canUndo,
+    leftLabel,
+    boostActive,
+    boostUntilLabel,
+    buyingExtras,
+    lastSwiped,
     radiusLimit,
     canResetHistory,
     isRadiusPro,
@@ -1304,6 +1511,10 @@ export function useSwipes() {
     applyFilters,
     resetFilters,
     swipe,
+    superlike,
+    undoLast,
+    activateBoost,
+    purchaseExtras,
     skip,
     toggleInterest,
     openChat,

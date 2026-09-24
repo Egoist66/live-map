@@ -47,7 +47,7 @@ class SwipeController extends Controller
     }
 
     /**
-     * Лайк или пас.
+     * Лайк, пас или суперлайк.
      *
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
@@ -59,13 +59,15 @@ class SwipeController extends Controller
             'user_id' => 'required|exists:users,id',
             'action' => 'required|in:like,pass',
             'incognito' => 'sometimes|boolean',
+            'superlike' => 'sometimes|boolean',
         ]);
 
         $result = $this->dating->recordAction(
             $request->user(),
             (int) $data['user_id'],
             $data['action'],
-            (bool) ($data['incognito'] ?? false)
+            (bool) ($data['incognito'] ?? false),
+            (bool) ($data['superlike'] ?? false)
         );
 
         $me = $request->user();
@@ -187,6 +189,72 @@ class SwipeController extends Controller
             'has_more' => $res['has_more'],
             'quota' => $this->dating->quotaState($request->user()),
         ]);
+    }
+
+    /**
+     * Откатить последний свайп: вернуть анкету в начало колоды.
+     *
+     * Free — раз в день, PRO/Business — безлимит.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function undo(Request $request)
+    {
+        $this->dating->assertAdult($request->user());
+
+        $data = $request->validate([
+            'user_id' => 'nullable|integer|min:1',
+        ]);
+
+        $result = $this->dating->undoLastSwipe(
+            $request->user(),
+            isset($data['user_id']) ? (int) $data['user_id'] : null
+        );
+
+        return response()->json(array_merge($result, [
+            'quota' => $this->dating->quotaState($request->user()),
+        ]));
+    }
+
+    /**
+     * Включить буст профиля на 30 минут.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function boost(Request $request)
+    {
+        $this->dating->assertAdult($request->user());
+
+        $result = $this->dating->activateBoost($request->user());
+
+        return response()->json(array_merge($result, [
+            'quota' => $this->dating->quotaState($request->user()),
+        ]));
+    }
+
+    /**
+     * Купить разовый экстра-товар (пак суперлайков / буст).
+     *
+     * Стаб оплаты: начисляет сразу. Сюда подключается шлюз.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function purchase(Request $request)
+    {
+        $this->dating->assertAdult($request->user());
+
+        $data = $request->validate([
+            'item' => 'required|in:superlike_pack,boost',
+        ]);
+
+        $result = $this->dating->purchaseExtras($request->user(), $data['item']);
+
+        return response()->json(array_merge($result, [
+            'quota' => $this->dating->quotaState($request->user()),
+        ]));
     }
 
     /**

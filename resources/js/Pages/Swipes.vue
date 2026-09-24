@@ -200,6 +200,10 @@ onUnmounted(() => {
             {{ s.error.value }}
           </div>
 
+          <div v-if="s.boostActive.value" class="mt-3 flex items-center gap-2 rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 px-4 py-2.5 text-[13px] font-black text-white shadow-soft">
+            <i class="pi pi-bolt" /><span>Буст активен {{ s.boostUntilLabel.value }} — тебя видят первым</span>
+          </div>
+
           <template v-if="s.activeTab.value === 'active'">
             <div v-if="s.activeLoading.value" class="mt-4 rounded-[24px] border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 h-[40dvh] min-h-[240px] grid place-items-center">
               <i class="pi pi-spin pi-spinner text-2xl text-stone-400 dark:text-zinc-500" />
@@ -298,6 +302,7 @@ onUnmounted(() => {
                   <div v-if="f.is_incognito" class="text-[11px] text-violet-500 font-bold">Скрыл себя · PRO · лайкни в ответ — откроется при мэтче</div>
                   <div v-else-if="f.city" class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">{{ f.city }}</div>
                 </component>
+                <Chip v-if="f.is_superlike" label="Суперлайк" icon="pi pi-star-fill" class="!rounded-full !text-[10px] !bg-[#1786FF] !text-white !border-0" />
                 <Chip v-if="f.liked_me || f.is_match" label="Взаимно" icon="pi pi-heart-fill" class="!rounded-full !text-[10px]" />
                 <Button v-if="!f.is_incognito" icon="pi pi-heart-fill" rounded size="small" aria-label="Лайк в ответ" title="Лайк в ответ" :loading="s.acting.value" class="!w-10 !h-10 !p-0 shrink-0" @click="s.swipeAdmirer(f.id)" />
                 <Button v-if="!f.is_incognito" icon="pi pi-send" rounded size="small" severity="secondary" outlined aria-label="Написать" title="Написать" :loading="s.creatingChat.value" class="!w-10 !h-10 !p-0 shrink-0" @click="s.writeWithoutMatch(f.id)" />
@@ -429,6 +434,36 @@ onUnmounted(() => {
                 </div>
                 <Button v-if="s.canResetHistory.value" :label="(s.isAdmin.value || s.isPro.value) ? 'Сбросить' : 'Сбросить (1 раз)'" icon="pi pi-trash" severity="warn" rounded outlined size="small" :loading="s.resetting.value" @click="s.resetHistory()" />
               </div>
+
+              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
+                <span class="w-10 h-10 rounded-2xl bg-sky-500/15 text-[#1786FF] grid place-items-center shrink-0"><i class="pi pi-star-fill" /></span>
+                <div class="min-w-0 flex-1">
+                  <div class="text-sm font-black text-stone-900 dark:text-white">Суперлайки · осталось {{ s.leftLabel(s.superlikesLeft.value) }}</div>
+                  <div class="text-[11px] text-stone-500 dark:text-zinc-400">Free — 1/день · PRO — 5/день · пак +5 — отдельная покупка</div>
+                </div>
+                <Button label="Пак +5" icon="pi pi-plus" rounded outlined size="small" :loading="s.buyingExtras.value" @click="s.purchaseExtras('superlike_pack')" />
+              </div>
+
+              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
+                <span class="w-10 h-10 rounded-2xl bg-amber-500/15 text-amber-500 grid place-items-center shrink-0"><i class="pi pi-bolt" /></span>
+                <div class="min-w-0 flex-1">
+                  <div class="text-sm font-black text-stone-900 dark:text-white">{{ s.boostActive.value ? `Буст активен ${s.boostUntilLabel.value}` : 'Буст профиля · 30 мин в топе' }}</div>
+                  <div class="text-[11px] text-stone-500 dark:text-zinc-400">{{ s.boostActive.value ? 'Твоя анкета летит первой в чужих лентах' : `Куплено: ${s.extras.value.boosts_balance} · PRO — 1 в месяц бесплатно` }}</div>
+                </div>
+                <div class="flex gap-1.5 shrink-0">
+                  <Button v-if="!s.boostActive.value" label="Включить" icon="pi pi-bolt" rounded size="small" :loading="s.buyingExtras.value" @click="s.activateBoost()" />
+                  <Button label="+1" icon="pi pi-plus" rounded outlined size="small" :loading="s.buyingExtras.value" @click="s.purchaseExtras('boost')" />
+                </div>
+              </div>
+
+              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
+                <span class="w-10 h-10 rounded-2xl bg-yellow-500/15 text-[#FFC629] grid place-items-center shrink-0"><i class="pi pi-undo" /></span>
+                <div class="min-w-0 flex-1">
+                  <div class="text-sm font-black text-stone-900 dark:text-white">Откат свайпа · осталось {{ s.leftLabel(s.undosLeft.value) }}</div>
+                  <div class="text-[11px] text-stone-500 dark:text-zinc-400">Free — 1/день · PRO — безлимит · кнопка — жёлтая стрелка под колодой</div>
+                </div>
+                <Button label="К ленте" icon="pi pi-images" rounded outlined size="small" @click="s.goTab('feed')" />
+              </div>
             </div>
           </template>
 
@@ -525,8 +560,10 @@ onUnmounted(() => {
                 />
                 <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent pointer-events-none" />
 
-                <div v-if="s.current.value.liked_me" class="absolute top-14 left-4 z-30 pointer-events-none">
+                <div v-if="s.current.value.liked_me" class="absolute top-14 left-4 z-30 pointer-events-none flex flex-col items-start gap-1.5">
                   <span class="inline-flex items-center gap-1 rounded-full bg-[#21D07A] px-2.5 py-1 text-[11px] font-black text-white shadow"><i class="pi pi-heart-fill text-[10px]" />Лайкнул тебя</span>
+                  <span v-if="s.current.value.is_superlike" class="inline-flex items-center gap-1 rounded-full bg-[#1786FF] px-2.5 py-1 text-[11px] font-black text-white shadow"><i class="pi pi-star-fill text-[10px]" />Суперлайк</span>
+                  <span v-if="s.current.value.is_boosted" class="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2.5 py-1 text-[11px] font-black text-white shadow"><i class="pi pi-bolt text-[10px]" />В топе</span>
                 </div>
 
                 <div class="absolute bottom-0 inset-x-0 p-4 text-white pointer-events-none">
@@ -619,12 +656,13 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <div v-if="s.current.value" class="mt-3 flex items-center justify-center gap-2.5 sm:gap-3.5 pb-[var(--sab)]">
-            <Button icon="pi pi-refresh" rounded aria-label="Начать заново" :title="s.resetTitle.value" :disabled="!s.canResetHistory.value" :loading="s.resetting.value" class="!w-[52px] !h-[52px] !p-0 !text-lg !text-[#FFC629] !bg-white dark:!bg-zinc-800 !border-0 !rounded-full !shadow-[0_2px_10px_rgba(0,0,0,0.18)] dark:!shadow-black/60 disabled:!opacity-40 active:!scale-90" @click="s.resetHistory()" />
-            <Button icon="pi pi-times" rounded aria-label="Пропустить" title="Пропустить" :disabled="s.acting.value" :loading="s.acting.value" class="!w-[68px] !h-[68px] !p-0 !text-[28px] !text-[#FF4458] !bg-white dark:!bg-zinc-800 !border-0 !rounded-full !shadow-[0_2px_10px_rgba(0,0,0,0.18)] dark:!shadow-black/60 disabled:!opacity-40 active:!scale-90" @click="s.swipe('pass')" />
-            <Button icon="pi pi-heart-fill" rounded aria-label="Лайк" title="Лайк" :disabled="s.acting.value" :loading="s.acting.value" class="!w-[68px] !h-[68px] !p-0 !text-[30px] !text-[#21D07A] !bg-white dark:!bg-zinc-800 !border-0 !rounded-full !shadow-[0_2px_10px_rgba(0,0,0,0.18)] dark:!shadow-black/60 disabled:!opacity-40 active:!scale-90" @click="s.swipe('like')" />
-            <Button icon="pi pi-star-fill" rounded aria-label="Кто лайкнул тебя" title="Кто лайкнул тебя" class="!w-[52px] !h-[52px] !p-0 !text-lg !text-[#1786FF] !bg-white dark:!bg-zinc-800 !border-0 !rounded-full !shadow-[0_2px_10px_rgba(0,0,0,0.18)] dark:!shadow-black/60 active:!scale-90" @click="s.goTab('admirers')" />
-            <Button icon="pi pi-send" rounded aria-label="Написать" title="Написать без мэтча" :disabled="s.creatingChat.value" :loading="s.creatingChat.value" class="!w-[52px] !h-[52px] !p-0 !text-lg !text-[#9B49DF] !bg-white dark:!bg-zinc-800 !border-0 !rounded-full !shadow-[0_2px_10px_rgba(0,0,0,0.18)] dark:!shadow-black/60 disabled:!opacity-40 active:!scale-90" @click="s.writeWithoutMatch(s.current.value.id)" />
+          <div v-if="s.current.value" class="mt-3 flex items-center justify-center gap-[6px] sm:gap-3.5 pb-[var(--sab)]">
+            <Button icon="pi pi-undo" rounded aria-label="Откатить последний свайп" :title="`Откатить последний свайп · осталось: ${s.leftLabel(s.undosLeft.value)}`" :disabled="!s.canUndo.value" :loading="s.acting.value" class="!w-11 !h-11 !p-0 !text-base !text-[#FFC629] !bg-white dark:!bg-zinc-800 !border-0 !rounded-full !shadow-[0_2px_10px_rgba(0,0,0,0.18)] dark:!shadow-black/60 disabled:!opacity-40 active:!scale-90" @click="s.undoLast()" />
+            <Button icon="pi pi-times" rounded aria-label="Пропустить" title="Пропустить" :disabled="s.acting.value" :loading="s.acting.value" class="!w-[60px] !h-[60px] sm:!w-[68px] sm:!h-[68px] !p-0 !text-2xl sm:!text-[28px] !text-[#FF4458] !bg-white dark:!bg-zinc-800 !border-0 !rounded-full !shadow-[0_2px_10px_rgba(0,0,0,0.18)] dark:!shadow-black/60 disabled:!opacity-40 active:!scale-90" @click="s.swipe('pass')" />
+            <Button icon="pi pi-star-fill" rounded aria-label="Суперлайк" :title="`Суперлайк · осталось: ${s.leftLabel(s.superlikesLeft.value)}`" :badge="s.leftLabel(s.superlikesLeft.value)" :disabled="s.acting.value" :loading="s.acting.value" class="!w-11 !h-11 !p-0 !text-base !text-[#1786FF] !bg-white dark:!bg-zinc-800 !border-0 !rounded-full !shadow-[0_2px_10px_rgba(0,0,0,0.18)] dark:!shadow-black/60 disabled:!opacity-40 active:!scale-90" @click="s.superlike()" />
+            <Button icon="pi pi-heart-fill" rounded aria-label="Лайк" title="Лайк" :disabled="s.acting.value" :loading="s.acting.value" class="!w-[60px] !h-[60px] sm:!w-[68px] sm:!h-[68px] !p-0 !text-2xl sm:!text-[30px] !text-[#21D07A] !bg-white dark:!bg-zinc-800 !border-0 !rounded-full !shadow-[0_2px_10px_rgba(0,0,0,0.18)] dark:!shadow-black/60 disabled:!opacity-40 active:!scale-90" @click="s.swipe('like')" />
+            <Button icon="pi pi-heart" rounded aria-label="Кто лайкнул тебя" title="Кто лайкнул тебя" class="!w-11 !h-11 !p-0 !text-base !text-[#FD267D] !bg-white dark:!bg-zinc-800 !border-0 !rounded-full !shadow-[0_2px_10px_rgba(0,0,0,0.18)] dark:!shadow-black/60 active:!scale-90" @click="s.goTab('admirers')" />
+            <Button icon="pi pi-send" rounded aria-label="Написать" title="Написать без мэтча" :disabled="s.creatingChat.value" :loading="s.creatingChat.value" class="!w-11 !h-11 !p-0 !text-base !text-[#9B49DF] !bg-white dark:!bg-zinc-800 !border-0 !rounded-full !shadow-[0_2px_10px_rgba(0,0,0,0.18)] dark:!shadow-black/60 disabled:!opacity-40 active:!scale-90" @click="s.writeWithoutMatch(s.current.value.id)" />
           </div>
           </template>
 
@@ -860,6 +898,8 @@ onUnmounted(() => {
           <div>Фильтр «Люди рядом» — только если хочешь локально. Без него показывают всех. Free: рядом до 10 км, дальше — PRO.</div>
           <div>Свайпы безлимитные. Сообщения без мэтча: Free {{ s.quota.value ? `${s.quota.value.left}/${s.quota.value.limit}` : '3/3' }}, PRO — 10/мес. Взаимный лайк (мэтч) открывает чат всегда, даже при исчерпанном лимите.</div>
           <div>Избранное — свежие лайкнутые без мэтча. Лимиты: Free до 3, Pro до 5, Business до 15. Лайки сверх лимита тоже ждут мэтча — человек их видит.</div>
+          <div>Лента умная: выше те, кто лайкнул тебя (особенно суперлайком), кто онлайн, с общими интересами и целью, с фото, рядом и новички.</div>
+          <div>Синяя звезда — суперлайк: Free 1/день, PRO 5/день, пак +5 докупается. Жёлтая стрелка — откат последнего свайпа: Free 1/день, PRO безлимитно. Молния — буст: 30 минут в топе чужих лент (PRO — 1 в месяц бесплатно).</div>
           <div>Всех просвайпал(а)? Free возвращает ленту один раз кнопкой «Начать заново», а PRO — безлимитно кнопкой «Показать снова».</div>
           <div>Таб «Активные» — кто сейчас в ULove. Открывай анкету, пиши, если человек не закрыл сообщения.</div>
           <div>Кнопка ⓘ на карточке — подробная анкета: что ищет, интересы, о себе. Своя анкета — иконка-карандаш сверху.</div>

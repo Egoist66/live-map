@@ -13,6 +13,7 @@ class DatingLikedNotification extends UserNotification
         private User $liker,
         private int $ownerId,
         private bool $incognito = false,
+        private bool $superlike = false,
     ) {}
 
     public function type(): string { return 'dating.liked'; }
@@ -28,6 +29,7 @@ class DatingLikedNotification extends UserNotification
                 'actor_id' => $this->liker->id,
                 'related_user_id' => $this->liker->id,
                 'is_incognito' => $this->incognito,
+                'is_superlike' => $this->superlike,
                 'actor' => static::actorShape($this->liker, $this->incognito),
             ]),
         ];
@@ -35,9 +37,19 @@ class DatingLikedNotification extends UserNotification
 
     public function pushPayload(): ?array
     {
+        $title = $this->superlike ? '⭐ Тебе отправили суперлайк!' : '💘 Тебя лайкнули в ULove';
+
+        $body = $this->incognito
+            ? 'Тайный поклонник отреагировал на твою анкету'
+            : ($this->liker->name.' отреагировал на твою анкету');
+
+        if ($this->superlike && ! $this->incognito) {
+            $body = $this->liker->name.' выделил(а) тебя суперлайком!';
+        }
+
         return [
-            'title' => '💘 Тебя лайкнули в ULove',
-            'body' => $this->incognito ? 'Тайный поклонник отреагировал на твою анкету' : ($this->liker->name.' отреагировал на твою анкету'),
+            'title' => $title,
+            'body' => $body,
             'url' => '/swipes?tab=admirers',
             'tag' => 'dating-liked-'.$this->liker->id,
             'avatar' => $this->incognito ? null : $this->liker->avatar_url,

@@ -26,6 +26,10 @@ export interface SwipeCard {
   last_seen_at: string | null
   is_match: boolean
   liked_me: boolean
+  /** Лайкнул меня суперлайком — подсветить синей звездой. */
+  is_superlike?: boolean
+  /** У кандидата активен буст — летит первым в лентах. */
+  is_boosted?: boolean
 }
 
 /** Фильтры ленты знакомств. */
@@ -48,6 +52,20 @@ export interface SwipeQuota {
   radius_limit: number | null
   can_reset: boolean
   reset_used: boolean
+  /** Разовые экстра-товары: суперлайки, буст, откаты. -1 в остатках — безлимит. */
+  extras?: SwipeExtras
+}
+
+/** Состояние экстра-товаров ULove из quotaState бэка. */
+export interface SwipeExtras {
+  superlikes_left: number
+  superlikes_daily: number
+  superlike_balance: number
+  boosts_balance: number
+  boost_active: boolean
+  boost_until: string | null
+  undos_left: number
+  can_undo: boolean
 }
 
 /** Анкета из таба «Активные» (онлайн). */
@@ -81,9 +99,9 @@ export const datingApi = {
     const { data } = await api.get('/api/swipes/feed', { params })
     return data as { cards: SwipeCard[]; quota: SwipeQuota }
   },
-  async act(user_id: number, action: 'like' | 'pass', incognito = false) {
-    const { data } = await api.post('/api/swipes/action', { user_id, action, incognito })
-    return data as { matched: boolean; match_id: number | null; conversation_id: number | null; is_incognito?: boolean; quota: SwipeQuota }
+  async act(user_id: number, action: 'like' | 'pass', incognito = false, superlike = false) {
+    const { data } = await api.post('/api/swipes/action', { user_id, action, incognito, superlike })
+    return data as { matched: boolean; match_id: number | null; conversation_id: number | null; is_incognito?: boolean; is_superlike?: boolean; quota: SwipeQuota }
   },
   async matches(page = 1, perPage = 20) {
     const { data } = await api.get('/api/swipes/matches', { params: { page, per_page: perPage } })
@@ -118,7 +136,33 @@ export const datingApi = {
     return data as { ok: boolean; age: number }
   },
   /**
-   * Сбросить просмотренные свайпы (только админ, для тестов).
+   * Откатить последний свайп: вернуть анкету в начало колоды.
+   * @param userId ожидаемый id (сверка «последний ли»), null — просто последний
+   * @returns откаченное действие и rebuilt-карточка
+   */
+  async undo(userId?: number | null) {
+    const { data } = await api.post('/api/swipes/undo', userId != null ? { user_id: userId } : {})
+    return data as { user_id: number; action: string; card: SwipeCard; quota: SwipeQuota }
+  },
+  /**
+   * Включить буст профиля на 30 минут.
+   * @returns конец буста и свежая квота
+   */
+  async boost() {
+    const { data } = await api.post('/api/swipes/boost')
+    return data as { boost_until: string; quota: SwipeQuota }
+  },
+  /**
+   * Купить разовый товар (стаб оплаты: начисляет сразу).
+   * @param item superlike_pack (+5) или boost (+1)
+   * @returns начисленное и свежее состояние экстра
+   */
+  async purchaseExtras(item: 'superlike_pack' | 'boost') {
+    const { data } = await api.post('/api/swipes/extras/purchase', { item })
+    return data as { item: string; granted: number; extras: SwipeExtras; quota: SwipeQuota }
+  },
+  /**
+   * Сбросить просмотренные свайпы. Free — один раз, PRO — безлимит.
    * @returns число удалённых записей
    */
   async resetHistory() {

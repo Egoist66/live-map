@@ -113,14 +113,15 @@ class PinActivityNotifier
     /**
      * Лайк анкеты в ULove: попадает в колокольчик получателя.
      * Инкогнито (PRO) скрывает имя/аватар, но счётчик и сам факт остаются.
+     * Суперлайк выделяется отдельным текстом уведомления.
      */
-    public static function swipeLiked(User $liker, User $liked, bool $isIncognito = false): ?UserDatabaseNotification
+    public static function swipeLiked(User $liker, User $liked, bool $isIncognito = false, bool $isSuperlike = false): ?UserDatabaseNotification
     {
         if ((int) $liker->id === (int) $liked->id) {
             return null;
         }
 
-        return UserNotifier::send($liked, new DatingLikedNotification($liker, (int) $liked->id, $isIncognito));
+        return UserNotifier::send($liked, new DatingLikedNotification($liker, (int) $liked->id, $isIncognito, $isSuperlike));
     }
 
     /**

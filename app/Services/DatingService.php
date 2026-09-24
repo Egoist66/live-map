@@ -31,6 +31,31 @@ class DatingService
     public const BUSINESS_FAVORITES_LIMIT = 15;
 
     /**
+     * Бесплатных суперлайков в день: всем — 1, PRO/Business — 5.
+     * Докупаются паками по SUPERLIKE_PACK_SIZE в баланс.
+     */
+    public const SUPERLIKE_FREE_DAILY = 1;
+
+    public const SUPERLIKE_PRO_DAILY = 5;
+
+    public const SUPERLIKE_PACK_SIZE = 5;
+
+    /**
+     * Длительность буста профиля, минут: анкета летит первой в чужих лентах.
+     */
+    public const BOOST_MINUTES = 30;
+
+    /**
+     * Откатов последнего свайпа в день для Free. PRO/Business — безлимит.
+     */
+    public const UNDO_FREE_DAILY = 1;
+
+    /**
+     * Разовые товары ULove для отдельной покупки.
+     */
+    public const EXTRAS_ITEMS = ['superlike_pack', 'boost'];
+
+    /**
      * В ленте ULove видно до 5 фото всем: анкета держит 5,
      * все 5 листаются в свайпах и без PRO.
      */
@@ -213,13 +238,200 @@ class DatingService
     }
 
     /**
+     * Дневной лимит суперлайков по тарифу.
+     *
+     * @param User $user
+     * @return int
+     */
+    public function superlikeAllowance(User $user): int
+    {
+        if ($user->isAdmin()) {
+            return PHP_INT_MAX;
+        }
+
+        return $user->isPro() ? self::SUPERLIKE_PRO_DAILY : self::SUPERLIKE_FREE_DAILY;
+    }
+
+    /**
+     * Обнулить дневной счётчик суперлайков при смене дня.
+     *
+     * @param User $user
+     * @return void
+     */
+    public function resetSuperlikesIfNeeded(User $user): void
+    {
+        $today = Carbon::now()->toDateString();
+
+        $day = $user->superlikes_day instanceof \Carbon\CarbonInterface
+            ? $user->superlikes_day->toDateString()
+            : (string) ($user->superlikes_day ?? '');
+
+        if ($day !== $today) {
+            $user->forceFill([
+                'superlikes_used' => 0,
+                'superlikes_day' => $today,
+            ])->saveQuietly();
+        }
+    }
+
+    /**
+     * Сколько суперлайков доступно: дневные + купленный баланс. -1 — безлимит.
+     *
+     * @param User $user
+     * @return int
+     */
+    public function superlikesLeft(User $user): int
+    {
+        if ($user->isAdmin()) {
+            return -1;
+        }
+
+        $this->resetSuperlikesIfNeeded($user->refresh());
+
+        $freeLeft = max(0, $this->superlikeAllowance($user) - (int) $user->superlikes_used);
+
+        return $freeLeft + (int) $user->superlikes_balance;
+    }
+
+    /**
+     * Списать один суперлайк: сначала дневные, потом баланс.
+     *
+     * @param User $user
+     * @return void
+     *
+     * @throws HttpResponseException 402 когда суперлайки кончились
+     */
+    public function consumeSuperlike(User $user): void
+    {
+        if ($user->isAdmin()) {
+            return;
+        }
+
+        $this->resetSuperlikesIfNeeded($user->refresh());
+
+        $used = (int) $user->superlikes_used;
+        $allowance = $this->superlikeAllowance($user);
+
+        if ($used < $allowance) {
+            $user->forceFill(['superlikes_used' => $used + 1])->saveQuietly();
+
+            return;
+        }
+
+        $balance = (int) $user->superlikes_balance;
+
+        if ($balance <= 0) {
+            throw new HttpResponseException(response()->json([
+                'message' => 'Суперлайки на сегодня кончились. Возвращайся завтра или докупи пак.',
+                'quota' => $this->quotaState($user->refresh()),
+            ], 402));
+        }
+
+        $user->forceFill(['superlikes_balance' => $balance - 1])->saveQuietly();
+    }
+
+    /**
+     * Обнулить дневной счётчик откатов при смене дня.
+     *
+     * @param User $user
+     * @return void
+     */
+    public function resetUndosIfNeeded(User $user): void
+    {
+        $today = Carbon::now()->toDateString();
+
+        $day = $user->undos_day instanceof \Carbon\CarbonInterface
+            ? $user->undos_day->toDateString()
+            : (string) ($user->undos_day ?? '');
+
+        if ($day !== $today) {
+            $user->forceFill([
+                'undos_used' => 0,
+                'undos_day' => $today,
+            ])->saveQuietly();
+        }
+    }
+
+    /**
+     * Сколько откатов последнего свайпа доступно. -1 — безлимит (PRO).
+     *
+     * @param User $user
+     * @return int
+     */
+    public function undosLeft(User $user): int
+    {
+        if ($user->isPro()) {
+            return -1;
+        }
+
+        $this->resetUndosIfNeeded($user->refresh());
+
+        return max(0, self::UNDO_FREE_DAILY - (int) $user->undos_used);
+    }
+
+    /**
+     * Активен ли буст профиля (анкета летит первой в чужих лентах).
+     *
+     * @param User $user
+     * @return bool
+     */
+    public function isBoostActive(User $user): bool
+    {
+        $until = $user->boost_until;
+
+        if (! $until) {
+            return false;
+        }
+
+        try {
+            return Carbon::parse($until)->isFuture();
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    /**
+     * Состояние разовых экстра-товаров для фронта.
+     *
+     * @param User $user
+     * @return array{superlikes_left:int,superlikes_daily:int,superlike_balance:int,boosts_balance:int,boost_active:bool,boost_until:string|null,undos_left:int,can_undo:bool}
+     */
+    public function extrasState(User $user): array
+    {
+        $fresh = $user->refresh();
+
+        $canUndo = SwipeAction::where('liker_id', $fresh->id)
+            ->orderByDesc('id')
+            ->exists();
+
+        $boostUntil = null;
+
+        try {
+            $boostUntil = $fresh->boost_until ? Carbon::parse($fresh->boost_until)->toISOString() : null;
+        } catch (\Throwable) {
+            $boostUntil = null;
+        }
+
+        return [
+            'superlikes_left' => $this->superlikesLeft($fresh),
+            'superlikes_daily' => $this->superlikeAllowance($fresh),
+            'superlike_balance' => (int) $fresh->superlikes_balance,
+            'boosts_balance' => (int) $fresh->boosts_balance,
+            'boost_active' => $this->isBoostActive($fresh),
+            'boost_until' => $boostUntil,
+            'undos_left' => $this->undosLeft($fresh),
+            'can_undo' => $canUndo,
+        ];
+    }
+
+    /**
      * Состояние квоты для бейджа в UI.
      *
      * План и лимиты — строго по действующему тарифу (effectivePlan):
      * протухший PRO считается как free и по сообщениям, и по сбросу.
      *
      * @param User $user
-     * @return array{limit:int,used:int,left:int,plan:string,plan_expires_at:string|null,radius_limit:int|null,can_reset:bool,reset_used:bool}
+     * @return array{limit:int,used:int,left:int,plan:string,plan_expires_at:string|null,radius_limit:int|null,can_reset:bool,reset_used:bool,extras:array}
      */
     public function quotaState(User $user): array
     {
@@ -231,6 +443,7 @@ class DatingService
             'can_reset' => $this->canResetHistory($user),
             'reset_used' => $resetUsed,
             'plan_expires_at' => $user->plan_expires_at?->toISOString(),
+            'extras' => $this->extrasState($user),
         ];
 
         if ($user->isAdmin()) {
@@ -414,8 +627,13 @@ class DatingService
 
         if ($take > 0) {
             $rowsQuery = SwipeAction::where('liker_id', $me->id)
-                ->where('action', 'like')
-                ->orderByDesc('id');
+                ->where('action', 'like');
+
+            if (Schema::hasColumn('swipe_actions', 'is_superlike')) {
+                $rowsQuery->orderByDesc('is_superlike');
+            }
+
+            $rowsQuery->orderByDesc('id');
 
             if ($matched) {
                 $rowsQuery->whereNotIn('liked_id', $matched);
@@ -492,6 +710,7 @@ class DatingService
             $distance = $this->distanceKm($me, $candidate);
             $card = $this->cardFor($candidate, $me, $distance, $isMatch, true);
             $card['is_incognito'] = $isIncognito;
+            $card['is_superlike'] = (bool) ($row->is_superlike ?? false);
             $card['created_at'] = $row->created_at?->toISOString();
             if ($isIncognito) {
                 $card['id'] = null;
@@ -572,12 +791,202 @@ class DatingService
     }
 
     /**
+     * Откатить последний свайп: вернуть анкету в начало колоды.
+     *
+     * Откатывается только самый свежий свайп автора (фронт шлёт его user_id
+     * для сверки). Лайк гасит своё уведомление; мэтч, созданный этим лайком,
+     * растворяется (чат остаётся, бесплатная переписка по нему закрывается).
+     * Free — UNDO_FREE_DAILY в день, PRO/Business — безлимит.
+     *
+     * @param User $me
+     * @param int|null $userId ожидаемый id откатываемого (сверка «последний ли»)
+     * @return array{user_id:int,action:string,card:array<string,mixed>}
+     *
+     * @throws HttpResponseException 422 когда откатывать нечего / не последний, 403 когда дневной лимит исчерпан
+     */
+    public function undoLastSwipe(User $me, ?int $userId = null): array
+    {
+        $fresh = $me->refresh();
+
+        $last = SwipeAction::where('liker_id', $fresh->id)
+            ->orderByDesc('id')
+            ->first();
+
+        if (! $last) {
+            throw new HttpResponseException(response()->json([
+                'message' => 'Откатывать нечего — свайпов пока не было.',
+                'quota' => $this->quotaState($fresh),
+            ], 422));
+        }
+
+        if ($userId !== null && (int) $last->liked_id !== $userId) {
+            throw new HttpResponseException(response()->json([
+                'message' => 'Откатить можно только последний свайп.',
+                'quota' => $this->quotaState($fresh),
+            ], 422));
+        }
+
+        if (! $fresh->isPro()) {
+            $this->resetUndosIfNeeded($fresh);
+
+            $used = (int) $fresh->undos_used;
+
+            if ($used >= self::UNDO_FREE_DAILY) {
+                throw new HttpResponseException(response()->json([
+                    'message' => 'Откаты на сегодня кончились. PRO откатывает безлимитно.',
+                    'quota' => $this->quotaState($fresh),
+                ], 403));
+            }
+
+            $fresh->forceFill(['undos_used' => $used + 1])->saveQuietly();
+        }
+
+        $otherId = (int) $last->liked_id;
+        $wasLike = $last->action === 'like';
+
+        $last->delete();
+
+        if ($wasLike) {
+            $other = User::find($otherId);
+
+            if ($other) {
+                $this->withdrawLike($fresh, $other);
+            }
+
+            $match = DatingMatch::between($fresh->id, $otherId);
+
+            if ($match) {
+                $match->delete();
+            }
+        }
+
+        $other = User::find($otherId);
+
+        abort_if(! $other, 404, 'Анкета больше недоступна');
+
+        $card = $this->cardFor($other, $fresh, $this->distanceKm($fresh, $other), false, false);
+
+        return [
+            'user_id' => $otherId,
+            'action' => $wasLike ? 'like' : 'pass',
+            'card' => $card,
+        ];
+    }
+
+    /**
+     * Включить буст профиля на BOOST_MINUTES: анкета летит первой в чужих лентах.
+     *
+     * PRO/Business — один бесплатный буст в календарный месяц,
+     * остальные — за купленные кредиты boosts_balance.
+     *
+     * @param User $me
+     * @return array{boost_until:string}
+     *
+     * @throws HttpResponseException 402 когда бустов нет, 409 когда буст уже активен
+     */
+    public function activateBoost(User $me): array
+    {
+        $fresh = $me->refresh();
+
+        if ($this->isBoostActive($fresh)) {
+            throw new HttpResponseException(response()->json([
+                'message' => 'Буст уже активен — дождись конца.',
+                'quota' => $this->quotaState($fresh),
+            ], 409));
+        }
+
+        if ($fresh->isPro()) {
+            $month = Carbon::now()->format('Y-m');
+
+            if (($fresh->boost_month ?? null) !== $month) {
+                $fresh->forceFill(['boost_month' => $month])->saveQuietly();
+
+                return $this->startBoost($fresh);
+            }
+        }
+
+        $balance = (int) $fresh->boosts_balance;
+
+        if ($balance <= 0) {
+            throw new HttpResponseException(response()->json([
+                'message' => 'Нет доступных бустов. PRO получает один в месяц, остальные докупаются.',
+                'quota' => $this->quotaState($fresh),
+            ], 402));
+        }
+
+        $fresh->forceFill(['boosts_balance' => $balance - 1])->saveQuietly();
+
+        return $this->startBoost($fresh->refresh());
+    }
+
+    /**
+     * Старт буста: проставить boost_until на BOOST_MINUTES вперёд.
+     *
+     * @param User $me
+     * @return array{boost_until:string}
+     */
+    private function startBoost(User $me): array
+    {
+        $until = Carbon::now()->addMinutes(self::BOOST_MINUTES);
+
+        $me->forceFill(['boost_until' => $until])->saveQuietly();
+
+        return ['boost_until' => $until->toISOString()];
+    }
+
+    /**
+     * Купить разовый экстра-товар ULove.
+     *
+     * СТАБ ОПЛАТЫ: сейчас начисляет сразу, как SubscriptionController::renew
+     * выдаёт тариф без списания. Сюда подключается платёжный шлюз
+     * (счёт → webhook → начисление); сигнатура и ответ уже под него.
+     *
+     * @param User $me
+     * @param string $item superlike_pack|boost
+     * @return array{item:string,granted:int,extras:array}
+     *
+     * @throws HttpResponseException 422 при неизвестном товаре
+     */
+    public function purchaseExtras(User $me, string $item): array
+    {
+        if (! in_array($item, self::EXTRAS_ITEMS, true)) {
+            throw new HttpResponseException(response()->json([
+                'message' => 'Неизвестный товар.',
+            ], 422));
+        }
+
+        $fresh = $me->refresh();
+
+        if ($item === 'superlike_pack') {
+            $granted = self::SUPERLIKE_PACK_SIZE;
+
+            $fresh->forceFill([
+                'superlikes_balance' => (int) $fresh->superlikes_balance + $granted,
+            ])->saveQuietly();
+        } else {
+            $granted = 1;
+
+            $fresh->forceFill([
+                'boosts_balance' => (int) $fresh->boosts_balance + $granted,
+            ])->saveQuietly();
+        }
+
+        return [
+            'item' => $item,
+            'granted' => $granted,
+            'extras' => $this->extrasState($fresh->refresh()),
+        ];
+    }
+
+    /**
      * Записать свайп и при взаимности создать мэтч.
      *
      * Лайк пишется всегда, даже когда избранное переполнено:
      * лишние лайки просто не показываются в избранном (там только
      * свежие по лимиту тарифа), но ждут мэтча — получатель видит
      * лайк в «Кто меня лайкнул» и колокольчике, мэтч срабатывает.
+     * Суперлайк — усиленный лайк: тратит дневной/купленный запас,
+     * выделяется у получателя и поднимает автора в его ленте.
      * Инкогнито-лайк (PRO) скрывает автора в «Кто меня лайкнул» и в колокольчике,
      * но после взаимного мэтча обе анкеты раскрываются.
      * Уведомления уходят только за новые события: повторный like тихий,
@@ -588,9 +997,10 @@ class DatingService
      * @param int $otherId
      * @param string $action like|pass
      * @param bool $incognito скрыть себя (только PRO)
-     * @return array{matched:bool,match_id:int|null,conversation_id:int|null,is_incognito:bool}
+     * @param bool $superlike усиленный лайк (только с action=like)
+     * @return array{matched:bool,match_id:int|null,conversation_id:int|null,is_incognito:bool,is_superlike:bool}
      */
-    public function recordAction(User $me, int $otherId, string $action, bool $incognito = false): array
+    public function recordAction(User $me, int $otherId, string $action, bool $incognito = false, bool $superlike = false): array
     {
         abort_if($me->id === $otherId, 422, 'Нельзя лайкать себя');
 
@@ -605,7 +1015,12 @@ class DatingService
             ], 402));
         }
 
-        $swipePayload = $this->swipePayload($action, $incognito);
+        if ($superlike) {
+            abort_if($action !== 'like', 422, 'Суперлайк можно отправить только с лайком');
+            $this->consumeSuperlike($me);
+        }
+
+        $swipePayload = $this->swipePayload($action, $incognito, $superlike);
 
         $outcome = DB::transaction(function () use ($me, $other, $otherId, $action, $swipePayload) {
             $row = $this->storeSwipe((int) $me->id, $otherId, $swipePayload);
@@ -659,15 +1074,15 @@ class DatingService
                 $this->withdrawLike($me, $other);
             }
 
-            return ['matched' => false, 'match_id' => null, 'conversation_id' => null, 'is_incognito' => false];
+            return ['matched' => false, 'match_id' => null, 'conversation_id' => null, 'is_incognito' => false, 'is_superlike' => false];
         }
 
         if ($outcome['type'] === 'like') {
             if ($outcome['isNewLike']) {
-                $this->notifyLiked($me, $other, $incognito);
+                $this->notifyLiked($me, $other, $incognito, $superlike);
             }
 
-            return ['matched' => false, 'match_id' => null, 'conversation_id' => null, 'is_incognito' => $incognito];
+            return ['matched' => false, 'match_id' => null, 'conversation_id' => null, 'is_incognito' => $incognito, 'is_superlike' => $superlike];
         }
 
         if ($outcome['isNewMatch']) {
@@ -675,28 +1090,31 @@ class DatingService
             $this->announceMatchConversation($outcome['conversation_id'], $me, $other);
         }
 
-        return ['matched' => true, 'match_id' => $outcome['match_id'], 'conversation_id' => $outcome['conversation_id'], 'is_incognito' => $incognito];
+        return ['matched' => true, 'match_id' => $outcome['match_id'], 'conversation_id' => $outcome['conversation_id'], 'is_incognito' => $incognito, 'is_superlike' => $superlike];
     }
 
     /**
      * Пейлоад записи свайпа для updateOrCreate.
      *
-     * Колонки is_incognito может не быть на базах, где миграция
-     * add_incognito_to_swipe_actions не applied (порядок миграций) —
-     * тогда пишем только action, иначе любой свайп давал бы 500.
+     * Колонок is_incognito/is_superlike может не быть на базах, где миграции
+     * не applied (порядок миграций) — тогда пишем только action,
+     * иначе любой свайп давал бы 500.
      *
      * @param string $action like|pass
      * @param bool $incognito запрошенное инкогнито
-     * @return array{action:string,is_incognito?:bool}
+     * @param bool $superlike запрошенный суперлайк
+     * @return array{action:string,is_incognito?:bool,is_superlike?:bool}
      */
-    private function swipePayload(string $action, bool $incognito): array
+    private function swipePayload(string $action, bool $incognito, bool $superlike = false): array
     {
         $payload = ['action' => $action];
 
-        $hasIncognito = Schema::hasColumn('swipe_actions', 'is_incognito');
-
-        if ($hasIncognito) {
+        if (Schema::hasColumn('swipe_actions', 'is_incognito')) {
             $payload['is_incognito'] = $action === 'like' && $incognito;
+        }
+
+        if (Schema::hasColumn('swipe_actions', 'is_superlike')) {
+            $payload['is_superlike'] = $action === 'like' && $superlike;
         }
 
         return $payload;
@@ -798,12 +1216,13 @@ class DatingService
      * @param User $liker
      * @param User $liked
      * @param bool $incognito
+     * @param bool $superlike
      * @return void
      */
-    private function notifyLiked(User $liker, User $liked, bool $incognito = false): void
+    private function notifyLiked(User $liker, User $liked, bool $incognito = false, bool $superlike = false): void
     {
         try {
-            PinActivityNotifier::swipeLiked($liker, $liked, $incognito);
+            PinActivityNotifier::swipeLiked($liker, $liked, $incognito, $superlike);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('swipe_like activity failed: '.$e->getMessage());
         }
@@ -1015,6 +1434,11 @@ class DatingService
      * и упирается в тариф: Free — до 10 км, PRO — безлимит.
      * Пол по умолчанию — сохранённый выбор, иначе противоположный
      * своему (мужчина листает девушек и наоборот).
+     * Порядок — умный скоринг релевантности (scoreCandidate),
+     * а не просто «кто позже заходил»: взаимные лайки и суперлайки,
+     * онлайн, общие интересы и цель, фото и заполненность анкеты,
+     * близость, новички и активный буст — плюс лёгкий джиттер,
+     * чтобы выдача не была статичной.
      * Для бесконечной колоды фронт шлёт exclude_ids уже виденных,
      * бэк их исключает — дублей нет без сброса истории.
      *
@@ -1100,7 +1524,7 @@ class DatingService
         $candidates = $query
             ->select([
                 'id', 'name', 'profile_slug', 'gender', 'birth_date', 'bio', 'avatar_path',
-                'home_city', 'home_lat', 'home_lng', 'last_seen_at',
+                'home_city', 'home_lat', 'home_lng', 'last_seen_at', 'created_at', 'boost_until',
                 'dating_goal', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_hide_name', 'dating_hide_age', 'dating_hide_distance',
                 'plan', 'plan_expires_at', 'is_admin', 'role',
             ])
@@ -1109,10 +1533,7 @@ class DatingService
             ->limit($poolLimit)
             ->get();
 
-        $likedMeIds = SwipeAction::where('liked_id', $me->id)
-            ->where('action', 'like')
-            ->pluck('liker_id')
-            ->flip();
+        $likedMeSuper = $this->superlikeSendersMap($me);
 
         $matchedIds = DatingMatch::where('user_a_id', $me->id)
             ->orWhere('user_b_id', $me->id)
@@ -1120,7 +1541,12 @@ class DatingService
             ->map(fn ($m) => $m->user_a_id === $me->id ? $m->user_b_id : $m->user_a_id)
             ->flip();
 
-        $cards = [];
+        $myInterests = $me->dating_interests ?? [];
+        $myInterests = is_array($myInterests) ? $myInterests : [];
+
+        $myGoal = $me->dating_goal;
+
+        $scored = [];
 
         foreach ($candidates as $candidate) {
             if (! empty($wantedInterests)) {
@@ -1144,14 +1570,197 @@ class DatingService
             }
 
             $isMatch = isset($matchedIds[$candidate->id]);
-            $cards[] = $this->cardFor($candidate, $me, $distance, $isMatch, isset($likedMeIds[$candidate->id]));
 
-            if (count($cards) >= $limit) {
-                break;
-            }
+            $score = $this->scoreCandidate($candidate, $distance, $likedMeSuper, $myInterests, $myGoal);
+
+            $scored[] = [
+                'candidate' => $candidate,
+                'distance' => $distance,
+                'isMatch' => $isMatch,
+                'score' => $score,
+            ];
+        }
+
+        usort($scored, fn ($a, $b) => $b['score'] <=> $a['score']);
+
+        $top = array_slice($scored, 0, max(1, $limit));
+
+        $cards = [];
+
+        foreach ($top as $row) {
+            $candidate = $row['candidate'];
+
+            $likedMe = isset($likedMeSuper[$candidate->id]);
+
+            $card = $this->cardFor($candidate, $me, $row['distance'], $row['isMatch'], $likedMe);
+
+            $card['is_superlike'] = $likedMe && ($likedMeSuper[$candidate->id] ?? false);
+            $card['is_boosted'] = $this->isBoostActive($candidate);
+            $card['score'] = $row['score'];
+
+            $cards[] = $card;
         }
 
         return $cards;
+    }
+
+    /**
+     * Карта «кто лайкнул меня суперлайком»: liker_id → is_superlike.
+     *
+     * Колонки может не быть на старых базах — тогда все флаги false.
+     *
+     * @param User $me
+     * @return array<int,bool>
+     */
+    private function superlikeSendersMap(User $me): array
+    {
+        $map = [];
+
+        $base = SwipeAction::where('liked_id', $me->id)
+            ->where('action', 'like');
+
+        if (! Schema::hasColumn('swipe_actions', 'is_superlike')) {
+            $ids = (clone $base)->pluck('liker_id')->all();
+
+            foreach ($ids as $likerId) {
+                $map[(int) $likerId] = false;
+            }
+
+            return $map;
+        }
+
+        $pairs = (clone $base)->pluck('is_superlike', 'liker_id')->all();
+
+        foreach ($pairs as $likerId => $flag) {
+            $map[(int) $likerId] = (bool) $flag;
+        }
+
+        return $map;
+    }
+
+    /**
+     * Релевантность кандидата для зрителя: чем выше, тем раньше в ленте.
+     *
+     * Веса: лайкнул меня +40 (суперлайк +20 сверху), активный буст +120,
+     * онлайн <=15 мин +25 (<=1 ч +15, <=суток +8), общие интересы +6
+     * (потолок +18), совпавшая цель +10, есть фото +8, заполнено «о себе» +4,
+     * PRO +4, рядом <=5 км +10 (<=25 км +6, <=100 км +3),
+     * новичок (меньше 7 дней) +12, джиттер 0..6 против статичности.
+     *
+     * @param User $candidate кандидат
+     * @param float|null $distanceKm расстояние или null
+     * @param array<int,bool> $likedMeSuper кто лайкнул (и супер ли)
+     * @param string[] $myInterests интересы зрителя
+     * @param string|null $myGoal цель зрителя
+     * @return int итоговый вес
+     */
+    private function scoreCandidate(User $candidate, ?float $distance, array $likedMeSuper, array $myInterests, ?string $myGoal): int
+    {
+        $score = 0;
+
+        $likedMe = isset($likedMeSuper[$candidate->id]);
+
+        if ($likedMe) {
+            $score += 40;
+        }
+
+        if ($likedMe && ($likedMeSuper[$candidate->id] ?? false)) {
+            $score += 20;
+        }
+
+        if ($this->isBoostActive($candidate)) {
+            $score += 120;
+        }
+
+        $seenMinutes = $this->seenMinutesAgo($candidate);
+
+        if ($seenMinutes !== null && $seenMinutes <= 15) {
+            $score += 25;
+        } elseif ($seenMinutes !== null && $seenMinutes <= 60) {
+            $score += 15;
+        } elseif ($seenMinutes !== null && $seenMinutes <= 1440) {
+            $score += 8;
+        }
+
+        $have = $candidate->dating_interests ?? [];
+        $have = is_array($have) ? $have : [];
+
+        $sharedCount = count(array_intersect($myInterests, $have));
+        $score += min(18, $sharedCount * 6);
+
+        if ($myGoal && $candidate->dating_goal && $candidate->dating_goal === $myGoal) {
+            $score += 10;
+        }
+
+        $photoCount = $candidate->relationLoaded('profilePhotos')
+            ? $candidate->profilePhotos->count()
+            : 0;
+
+        if ($photoCount > 0 || $candidate->avatar_url) {
+            $score += 8;
+        }
+
+        if (trim((string) ($candidate->dating_about ?? '')) !== '') {
+            $score += 4;
+        }
+
+        if ($candidate->isPro()) {
+            $score += 4;
+        }
+
+        if ($distance !== null && $distance <= 5) {
+            $score += 10;
+        } elseif ($distance !== null && $distance <= 25) {
+            $score += 6;
+        } elseif ($distance !== null && $distance <= 100) {
+            $score += 3;
+        }
+
+        if ($this->isNewcomer($candidate)) {
+            $score += 12;
+        }
+
+        $score += mt_rand(0, 6);
+
+        return $score;
+    }
+
+    /**
+     * Сколько минут назад кандидат был в сети. Null — неизвестно.
+     *
+     * @param User $candidate
+     * @return int|null
+     */
+    private function seenMinutesAgo(User $candidate): ?int
+    {
+        if (! $candidate->last_seen_at) {
+            return null;
+        }
+
+        try {
+            return max(0, $candidate->last_seen_at->diffInMinutes(now()));
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Новичок ли кандидат (регистрация меньше 7 дней назад).
+     *
+     * @param User $candidate
+     * @return bool
+     */
+    private function isNewcomer(User $candidate): bool
+    {
+        if (! $candidate->created_at) {
+            return false;
+        }
+
+        try {
+            return $candidate->created_at->diffInDays(now()) < 7;
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     /**
@@ -1383,6 +1992,8 @@ class DatingService
             'last_seen_at' => $candidate->last_seen_at?->toISOString(),
             'is_match' => $isMatch,
             'liked_me' => $likedMe,
+            'is_superlike' => false,
+            'is_boosted' => false,
         ];
     }
 
