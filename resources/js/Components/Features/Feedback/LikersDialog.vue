@@ -21,7 +21,7 @@ function initialOf(name: string): string {
     @update:visible="(v: boolean) => emit('update:visible', v)"
     modal
     :draggable="false"
-    :closable="true"
+    :closable="false"
     :base-z-index="baseZIndex ?? 0"
     :style="{ width: '360px', maxWidth: 'calc(100vw - 2rem)' }"
     :pt="{ root: { class: '!rounded-[24px] !border-stone-200 dark:!border-zinc-800 overflow-hidden' }, header: { class: '!p-0 !border-0' }, content: { class: '!p-0 !bg-white dark:!bg-zinc-900' } }"
@@ -33,7 +33,7 @@ function initialOf(name: string): string {
           <div class="text-[15px] font-black dark:text-white leading-none">{{ title }}</div>
           <div class="text-xs text-stone-500 dark:text-zinc-400 mt-1">{{ total }}</div>
         </div>
-        <Button icon="pi pi-times" rounded text size="small" class="!w-8 !h-8 shrink-0" @click="emit('update:visible', false)" aria-label="Закрыть" />
+        <Button icon="pi pi-times" rounded text size="small" class="!w-8 !h-8 shrink-0 !border-0 !shadow-none" @click="emit('update:visible', false)" aria-label="Закрыть" />
       </div>
     </template>
     <div class="px-3 pb-[calc(0.75rem+var(--sab))]">

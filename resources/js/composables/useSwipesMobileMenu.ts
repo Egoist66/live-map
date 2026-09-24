@@ -126,5 +126,15 @@ export function useSwipesMobileMenu() {
     store.showHelp.value = true
   }
 
-  return { isOpen, open, close, toggle, selectTab, openMatch, goBack, goProfile, openFilters, openHelp }
+  /**
+   * Откатить последний свайп из бокового меню.
+   *
+   * @param store стор свайпов из useSwipes
+   */
+  async function undoSwipe(store: SwipesStore): Promise<void> {
+    close()
+    await store.undoLast()
+  }
+
+  return { isOpen, open, close, toggle, selectTab, openMatch, goBack, goProfile, openFilters, openHelp, undoSwipe }
 }

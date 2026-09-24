@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { Link } from '@inertiajs/vue3'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
 import Chip from 'primevue/chip'
 import Dialog from 'primevue/dialog'
+import { useProfileUrl } from '@/composables/useProfileUrl'
 import type { SwipeCard } from '@/services/dating.api'
 
 const props = defineProps<{ card: SwipeCard | null }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
+
+const { userProfileUrl } = useProfileUrl()
 
 const open = computed(() => !!props.card)
 
@@ -43,7 +47,13 @@ function ageText(card: SwipeCard): string {
       <div class="flex items-center gap-3">
         <Avatar :image="card.avatar_url ?? undefined" :label="!card.avatar_url ? (card.name ?? '?').slice(0, 1) : undefined" shape="circle" size="xlarge" class="!w-16 !h-16" />
         <div class="min-w-0">
-          <div class="text-lg font-black truncate text-stone-900 dark:text-white">{{ card.name }} · {{ ageText(card) }}</div>
+          <Link
+            v-if="card.id != null"
+            :href="userProfileUrl(card)"
+            class="text-lg font-black truncate text-stone-900 dark:text-white hover:underline"
+            title="Открыть профиль"
+          >{{ card.name }} · {{ ageText(card) }}</Link>
+          <div v-else class="text-lg font-black truncate text-stone-900 dark:text-white">{{ card.name }} · {{ ageText(card) }}</div>
           <div v-if="card.city || card.distance_km != null" class="text-xs text-stone-500 dark:text-zinc-400 truncate">
             {{ [card.city, card.distance_km != null ? `${card.distance_km} км` : null].filter(Boolean).join(' · ') }}
           </div>

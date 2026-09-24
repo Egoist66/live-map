@@ -1,10 +1,23 @@
 <script setup lang="ts">
 import { useAppNotifications } from '@/composables/useAppNotifications'
 import { usePinActivity } from '@/composables/usePinActivity'
+import { useToastSwipeDismiss } from '@/composables/useToastSwipeDismiss'
 import Button from 'primevue/button'
 
 const { toasts, remove, openToast } = useAppNotifications()
 const pinAct = usePinActivity()
+const swipe = useToastSwipeDismiss()
+
+/**
+ * Открыть тост по тапу (после свайпа клик гасится хуком).
+ */
+function onToastClick(t: any): void {
+  if (!swipe.shouldOpen(t.id)) {
+    return
+  }
+
+  openToast(t)
+}
 
 /**
  * Принять приглашение прямо из тоста: гасим тост, счётчик гаснет
@@ -73,8 +86,10 @@ async function declineDistrictFromToast(t: any) {
       <div
         v-for="t in toasts"
         :key="t.id"
-        @click="openToast(t)"
-        class="pointer-events-auto group cursor-pointer bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-[20px] shadow-[0_12px_40px_rgba(0,0,0,0.16)] p-3.5 flex gap-3 items-center hover:scale-[1.01] active:scale-[0.99] transition-all"
+        v-on="swipe.bindToast(t, () => remove(t.id))"
+        :style="swipe.toastStyle(t.id)"
+        @click="onToastClick(t)"
+        class="pointer-events-auto group cursor-pointer bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-[20px] shadow-[0_12px_40px_rgba(0,0,0,0.16)] p-3.5 flex gap-3 items-center hover:scale-[1.01] active:scale-[0.99] transition-all touch-pan-y"
       >
         <div class="relative shrink-0">
           <img v-if="t.avatar" :src="t.avatar" class="w-11 h-11 rounded-full object-cover border border-stone-200 dark:border-zinc-700 bg-stone-100 dark:bg-zinc-800" :alt="t.title" />

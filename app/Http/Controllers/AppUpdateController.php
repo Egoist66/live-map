@@ -41,6 +41,8 @@ class AppUpdateController extends Controller
 
     public function index(Request $request)
     {
+        \App\Services\AppModulesWelcomeNews::ensureDelivered($request->user());
+
         $rows = $this->baseQuery($request)
             ->latest('updated_at')
             ->limit(20)
@@ -51,6 +53,8 @@ class AppUpdateController extends Controller
 
     public function unread(Request $request)
     {
+        \App\Services\AppModulesWelcomeNews::ensureDelivered($request->user());
+
         $total = (clone $this->baseQuery($request))->whereNull('read_at')->count();
         $rows = $this->baseQuery($request)
             ->whereNull('read_at')
@@ -69,10 +73,12 @@ class AppUpdateController extends Controller
     public function markRead(Request $request, AppUpdate $appUpdate)
     {
         abort_unless($appUpdate->is_published, 404);
-        $this->baseQuery($request)
-            ->whereNull('read_at')
-            ->where('data->update_id', $appUpdate->id)
-            ->update(['read_at' => now()]);
+        $query = $this->baseQuery($request)->whereNull('read_at');
+        $updateId = (int) $appUpdate->id;
+        $query->where(function ($inner) use ($updateId) {
+            $inner->where('data->update_id', $updateId)
+                ->orWhere('data->update->id', $updateId);
+        })->update(['read_at' => now()]);
 
         return response()->json(['ok' => true]);
     }

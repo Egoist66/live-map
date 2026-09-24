@@ -129,6 +129,8 @@ class RegisteredUserController extends Controller
 
         $user = User::create($userPayload);
 
+        \App\Services\AppModulesWelcomeNews::ensureDelivered($user);
+
         if ($isBusiness) {
             $business = app(\App\Services\BusinessService::class)->profileFor($user);
 

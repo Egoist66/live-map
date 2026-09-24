@@ -217,14 +217,19 @@ const peerProfileUrl = computed(() => {
 });
 const peerPanel = useChatPeerPanel();
 /**
- * Панель видна только при включённом ULove (не бизнес): фото профиля,
- * мэтч-бейдж, «Открыть профиль» и «Заблокировать». Сворачивается
- * тогглом в шапке — чат занимает всю ширину, выбор запоминается.
+ * Панель видна только при включённом ULove (не бизнес). По умолчанию
+ * открыта лишь в чистом ULove-режиме — с другими разделами скрыта,
+ * пока не попросит тоггл в шапке (выбор запоминается в хуке).
  */
 const peerPanelAvailable = computed(
   () => peerPanel.enabled.value && !isBusiness.value && !!selectedId.value && !!peer.value
 );
 const showPeerPanel = computed(() => peerPanelAvailable.value && peerPanel.open.value);
+/**
+ * Тема панели и её тоггла: дефолтный Tinder-стиль — только когда
+ * в приложении остался один ULove, иначе — стиль карты UPin.
+ */
+const peerTone = computed(() => (uloveOnly.value ? 'ulove' : 'upin'));
 
 const wallpaper = useChatWallpaper();
 const wallpaperOpen = ref(false);
@@ -370,6 +375,7 @@ onMounted(async () => {
         @swipes-back="datingTheme.backToSwipes()"
         :peer-panel-available="peerPanelAvailable"
         :peer-panel-open="peerPanel.open.value"
+        :peer-tone="peerTone"
         @toggle-peer="peerPanel.toggle()"
         :input="input"
         @update:input="(v: string) => input = v"
@@ -446,6 +452,7 @@ onMounted(async () => {
         :peer="peer"
         :badge="datingTheme.badge.value"
         :profile-url="peerProfileUrl"
+        :variant="peerTone"
         @block="activeConv?.other && askBlock(activeConv.other.id, activeConv.other.name)"
       />
     </div>

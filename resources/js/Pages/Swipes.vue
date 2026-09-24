@@ -3,6 +3,7 @@ import { Head, Link, usePage } from '@inertiajs/vue3'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import DatingQuestionnaireForm from '@/Components/Features/Dating/DatingQuestionnaireForm.vue'
 import SwipeDetailsDialog from '@/Components/Features/Dating/SwipeDetailsDialog.vue'
+import SwipeActionsBar from '@/Components/Features/Dating/SwipeActionsBar.vue'
 import MatchSplash from '@/Components/Features/Dating/MatchSplash.vue'
 import AppImage from '@/Components/Ui/Media/AppImage.vue'
 import { useSwipes } from '@/composables/useSwipes'
@@ -304,7 +305,7 @@ onUnmounted(() => {
                 </component>
                 <Chip v-if="f.is_superlike" label="Суперлайк" icon="pi pi-star-fill" class="!rounded-full !text-[10px] !bg-[#1786FF] !text-white !border-0" />
                 <Chip v-if="f.liked_me || f.is_match" label="Взаимно" icon="pi pi-heart-fill" class="!rounded-full !text-[10px]" />
-                <Button v-if="!f.is_incognito" icon="pi pi-heart-fill" rounded size="small" aria-label="Лайк в ответ" title="Лайк в ответ" :loading="s.acting.value" class="!w-10 !h-10 !p-0 shrink-0" @click="s.swipeAdmirer(f.id)" />
+                <Button v-if="!f.is_incognito" icon="pi pi-heart-fill" rounded size="small" aria-label="Лайк в ответ" title="Лайк в ответ" :loading="s.acting.value && s.actingId.value === f.id" class="!w-10 !h-10 !p-0 shrink-0" @click="s.swipeAdmirer(f.id)" />
                 <Button v-if="!f.is_incognito" icon="pi pi-send" rounded size="small" severity="secondary" outlined aria-label="Написать" title="Написать" :loading="s.creatingChat.value" class="!w-10 !h-10 !p-0 shrink-0" @click="s.writeWithoutMatch(f.id)" />
               </div>
             </div>
@@ -460,7 +461,7 @@ onUnmounted(() => {
                 <span class="w-10 h-10 rounded-2xl bg-yellow-500/15 text-[#FFC629] grid place-items-center shrink-0"><i class="pi pi-undo" /></span>
                 <div class="min-w-0 flex-1">
                   <div class="text-sm font-black text-stone-900 dark:text-white">Откат свайпа · осталось {{ s.leftLabel(s.undosLeft.value) }}</div>
-                  <div class="text-[11px] text-stone-500 dark:text-zinc-400">Free — 1/день · PRO — безлимит · кнопка — жёлтая стрелка под колодой</div>
+                  <div class="text-[11px] text-stone-500 dark:text-zinc-400">Free — 1/день · PRO — безлимит · откат — в боковом меню</div>
                 </div>
                 <Button label="К ленте" icon="pi pi-images" rounded outlined size="small" @click="s.goTab('feed')" />
               </div>
@@ -570,7 +571,14 @@ onUnmounted(() => {
                   <div class="flex items-end gap-2">
                     <div class="min-w-0 flex-1">
                       <div class="flex items-baseline gap-2">
-                        <span class="text-[28px] font-bold leading-none truncate">{{ s.current.value.name }}</span>
+                        <Link
+                          v-if="s.current.value.id != null"
+                          :href="userProfileUrl(s.current.value)"
+                          class="text-[28px] font-bold leading-none truncate hover:underline pointer-events-auto"
+                          title="Открыть профиль"
+                          @pointerdown.stop
+                        >{{ s.current.value.name }}</Link>
+                        <span v-else class="text-[28px] font-bold leading-none truncate">{{ s.current.value.name }}</span>
                         <span class="text-[22px] font-light leading-none shrink-0">{{ s.ageLabel(s.current.value) }}</span>
                       </div>
                       <div class="mt-1.5 space-y-0.5 text-[15px] leading-snug text-white/95">
@@ -656,14 +664,16 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <div v-if="s.current.value" class="mt-3 flex items-center justify-center gap-[6px] sm:gap-3.5 pb-[var(--sab)]">
-            <Button icon="pi pi-undo" rounded aria-label="Откатить последний свайп" :title="`Откатить последний свайп · осталось: ${s.leftLabel(s.undosLeft.value)}`" :disabled="!s.canUndo.value" :loading="s.acting.value" class="!w-11 !h-11 !p-0 !text-base !text-[#FFC629] !bg-white dark:!bg-zinc-800 !border-0 !rounded-full !shadow-[0_2px_10px_rgba(0,0,0,0.18)] dark:!shadow-black/60 disabled:!opacity-40 active:!scale-90" @click="s.undoLast()" />
-            <Button icon="pi pi-times" rounded aria-label="Пропустить" title="Пропустить" :disabled="s.acting.value" :loading="s.acting.value" class="!w-[60px] !h-[60px] sm:!w-[68px] sm:!h-[68px] !p-0 !text-2xl sm:!text-[28px] !text-[#FF4458] !bg-white dark:!bg-zinc-800 !border-0 !rounded-full !shadow-[0_2px_10px_rgba(0,0,0,0.18)] dark:!shadow-black/60 disabled:!opacity-40 active:!scale-90" @click="s.swipe('pass')" />
-            <Button icon="pi pi-star-fill" rounded aria-label="Суперлайк" :title="`Суперлайк · осталось: ${s.leftLabel(s.superlikesLeft.value)}`" :badge="s.leftLabel(s.superlikesLeft.value)" :disabled="s.acting.value" :loading="s.acting.value" class="!w-11 !h-11 !p-0 !text-base !text-[#1786FF] !bg-white dark:!bg-zinc-800 !border-0 !rounded-full !shadow-[0_2px_10px_rgba(0,0,0,0.18)] dark:!shadow-black/60 disabled:!opacity-40 active:!scale-90" @click="s.superlike()" />
-            <Button icon="pi pi-heart-fill" rounded aria-label="Лайк" title="Лайк" :disabled="s.acting.value" :loading="s.acting.value" class="!w-[60px] !h-[60px] sm:!w-[68px] sm:!h-[68px] !p-0 !text-2xl sm:!text-[30px] !text-[#21D07A] !bg-white dark:!bg-zinc-800 !border-0 !rounded-full !shadow-[0_2px_10px_rgba(0,0,0,0.18)] dark:!shadow-black/60 disabled:!opacity-40 active:!scale-90" @click="s.swipe('like')" />
-            <Button icon="pi pi-heart" rounded aria-label="Кто лайкнул тебя" title="Кто лайкнул тебя" class="!w-11 !h-11 !p-0 !text-base !text-[#FD267D] !bg-white dark:!bg-zinc-800 !border-0 !rounded-full !shadow-[0_2px_10px_rgba(0,0,0,0.18)] dark:!shadow-black/60 active:!scale-90" @click="s.goTab('admirers')" />
-            <Button icon="pi pi-send" rounded aria-label="Написать" title="Написать без мэтча" :disabled="s.creatingChat.value" :loading="s.creatingChat.value" class="!w-11 !h-11 !p-0 !text-base !text-[#9B49DF] !bg-white dark:!bg-zinc-800 !border-0 !rounded-full !shadow-[0_2px_10px_rgba(0,0,0,0.18)] dark:!shadow-black/60 disabled:!opacity-40 active:!scale-90" @click="s.writeWithoutMatch(s.current.value.id)" />
-          </div>
+          <SwipeActionsBar
+            v-if="s.current.value"
+            :acting="s.acting.value"
+            :writing="s.creatingChat.value"
+            :super-left="s.leftLabel(s.superlikesLeft.value)"
+            @pass="s.swipe('pass')"
+            @like="s.swipe('like')"
+            @superlike="s.superlike()"
+            @write="s.writeWithoutMatch(s.current.value.id)"
+          />
           </template>
 
           <Drawer
@@ -782,6 +792,16 @@ onUnmounted(() => {
               </div>
             </div>
             <div class="px-3 mt-2 pb-2">
+              <Button unstyled class="w-full !p-0" :disabled="!s.canUndo.value" @click="mobileMenu.undoSwipe(s)">
+                <span class="group flex items-center gap-3 w-full p-2.5 pr-3 rounded-2xl text-left transition active:scale-[0.98] hover:bg-stone-100 dark:hover:bg-zinc-800" :class="!s.canUndo.value ? 'opacity-40' : ''">
+                  <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-stone-100 text-base text-[#FFC629] dark:bg-zinc-800"><i class="pi pi-undo" /></span>
+                  <span class="min-w-0 flex-1">
+                    <span class="block text-sm font-bold leading-tight text-stone-900 dark:text-white">Откат свайпа</span>
+                    <span class="mt-0.5 block text-[11px] leading-tight text-stone-500 dark:text-zinc-400">Осталось: {{ s.leftLabel(s.undosLeft.value) }} · Free 1/день · PRO безлимит</span>
+                  </span>
+                  <i class="pi pi-chevron-right shrink-0 text-xs text-stone-300 transition group-hover:translate-x-0.5 dark:text-zinc-600" />
+                </span>
+              </Button>
               <Button unstyled class="w-full !p-0" @click="mobileMenu.openFilters(s)">
                 <span class="group flex items-center gap-3 w-full p-2.5 pr-3 rounded-2xl text-left transition active:scale-[0.98] hover:bg-stone-100 dark:hover:bg-zinc-800">
                   <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-stone-100 text-base text-stone-500 dark:bg-zinc-800 dark:text-zinc-300"><i class="pi pi-sliders-h" /></span>
@@ -899,7 +919,7 @@ onUnmounted(() => {
           <div>Свайпы безлимитные. Сообщения без мэтча: Free {{ s.quota.value ? `${s.quota.value.left}/${s.quota.value.limit}` : '3/3' }}, PRO — 10/мес. Взаимный лайк (мэтч) открывает чат всегда, даже при исчерпанном лимите.</div>
           <div>Избранное — свежие лайкнутые без мэтча. Лимиты: Free до 3, Pro до 5, Business до 15. Лайки сверх лимита тоже ждут мэтча — человек их видит.</div>
           <div>Лента умная: выше те, кто лайкнул тебя (особенно суперлайком), кто онлайн, с общими интересами и целью, с фото, рядом и новички.</div>
-          <div>Синяя звезда — суперлайк: Free 1/день, PRO 5/день, пак +5 докупается. Жёлтая стрелка — откат последнего свайпа: Free 1/день, PRO безлимитно. Молния — буст: 30 минут в топе чужих лент (PRO — 1 в месяц бесплатно).</div>
+          <div>Синее сердце — суперлайк: Free 1/день, PRO 5/день, пак +5 докупается. Жёлтая стрелка — откат последнего свайпа: Free 1/день, PRO безлимитно — в боковом меню (бургер сверху).</div>
           <div>Всех просвайпал(а)? Free возвращает ленту один раз кнопкой «Начать заново», а PRO — безлимитно кнопкой «Показать снова».</div>
           <div>Таб «Активные» — кто сейчас в ULove. Открывай анкету, пиши, если человек не закрыл сообщения.</div>
           <div>Кнопка ⓘ на карточке — подробная анкета: что ищет, интересы, о себе. Своя анкета — иконка-карандаш сверху.</div>

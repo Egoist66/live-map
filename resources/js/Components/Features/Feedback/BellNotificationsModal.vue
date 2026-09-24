@@ -16,6 +16,7 @@ import { useBellNotifications } from "@/composables/useBellNotifications";
 import { usePinActivity } from "@/composables/usePinActivity";
 import { useAdminReports } from "@/composables/useAdminReports";
 import { useAppUpdates } from "@/composables/useAppUpdates";
+import { useAppUpdateModal } from "@/composables/useAppUpdateModal";
 import { useSecurityImpersonations } from "@/composables/useSecurityImpersonations";
 import { useBellUloveMode, countAppUnread, uloveHeaderBadge } from "@/composables/useBellUloveMode";
 import { avatarSrcFor } from "@/composables/useAvatar";
@@ -30,6 +31,7 @@ const media = useNotificationMedia();
 const pinAct = usePinActivity();
 const admRep = useAdminReports();
 const updates = useAppUpdates();
+const newsGuide = useAppUpdateModal();
 const proc = useSecurityImpersonations();
 const bellMode = useBellUloveMode();
 const uloveOnly = bellMode.uloveOnly;
@@ -814,6 +816,7 @@ function openNews(item: any) {
                         <span v-if="n.published_at" class="text-[11px] text-stone-400 dark:text-zinc-500 shrink-0">{{ fmtDay(n.published_at) }}</span>
                       </div>
                       <div class="text-xs text-stone-500 dark:text-zinc-400 truncate">{{ (n.body || '').slice(0, 80) }}</div>
+                      <div v-if="newsGuide.isModulesGuide(n)" class="text-xs font-bold text-violet-600 dark:text-violet-300 truncate mt-0.5">📲 Настройки → Приложение → Разделы</div>
                     </div>
                     <span v-if="!n.is_read" class="w-2.5 h-2.5 bg-sky-500 rounded-full shrink-0"></span>
                     <i v-else class="pi pi-chevron-right text-stone-300 dark:text-zinc-600 text-xs shrink-0"></i>

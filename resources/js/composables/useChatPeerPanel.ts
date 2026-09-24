@@ -1,37 +1,55 @@
 import { computed, ref } from 'vue'
 import { useAppModulesStore } from '@/stores/appModules'
+import { useUloveOnly } from '@/composables/useUloveOnly'
 
 const STORAGE_KEY = 'upin.chat.peer-panel'
 
 /**
- * Читать сохранённое состояние панели (SSR-safe: на сервере — открыто).
- *
- * @returns true если панель не сворачивали
+ * Явный выбор пользователя: 'open' | 'closed'. Null — выбора не было,
+ * панель открывается/скрывается по режиму (см. uloveOnly ниже).
  */
-function readStored(): boolean {
+type PeerPanelPref = 'open' | 'closed' | null
+
+/**
+ * Читать сохранённый выбор панели (SSR-safe: на сервере — null).
+ *
+ * Отсутствие ключа означает «пользователь не трогал» — тогда default
+ * берётся из режима, а не из старого «открыто всегда».
+ *
+ * @returns выбор пользователя или null
+ */
+function readStoredPref(): PeerPanelPref {
   try {
     if (typeof window === 'undefined') {
-      return true
+      return null
     }
 
-    return window.localStorage.getItem(STORAGE_KEY) !== 'closed'
+    const raw = window.localStorage.getItem(STORAGE_KEY)
+
+    if (raw === 'open' || raw === 'closed') {
+      return raw
+    }
+
+    return null
   } catch {
-    return true
+    return null
   }
 }
 
-const open = ref(readStored())
+const explicit = ref<PeerPanelPref>(readStoredPref())
 
 /**
- * Правая Tinder-панель собеседника в чате.
+ * Правая панель собеседника в чате.
  *
- * Панель существует только при включённом модуле ULove: фото профиля,
- * бейдж мэтча/цели, интересы, кнопки «Открыть профиль» и «Заблокировать».
- * Без ulove её нет вообще — ни панели, ни кнопки-тоггла.
- * Состояние свернута/развернута переживает перезагрузку (localStorage),
- * чтобы чат мог занимать всю ширину.
+ * Панель существует при включённом модуле ULove. По умолчанию она
+ * открыта только в чистом ULove-режиме (только модуль ulove, без карты
+ * и ленты): там чат — продолжение свайпов и анкета рядом кстати.
+ * Как только включены другие разделы — по умолчанию скрыта, чтобы не
+ * съедать ширину чата; открывается тогглом в шапке.
+ * Явный выбор (открыл/закрыл сам) запоминается и переживает смену
+ * режимов и перезагрузку.
  *
- * @returns enabled (ulove включён), open, toggle, setOpen
+ * @returns enabled (ulove включён), uloveOnly (чистый ULove), open, toggle, setOpen
  * @example
  * ```ts
  * const peerPanel = useChatPeerPanel()
@@ -40,6 +58,7 @@ const open = ref(readStored())
  */
 export function useChatPeerPanel() {
   const modules = useAppModulesStore()
+  const uloveOnly = useUloveOnly()
 
   /**
    * Доступен ли раздел ULove (панель имеет смысл только с ним).
@@ -53,19 +72,31 @@ export function useChatPeerPanel() {
   })
 
   /**
-   * Переключить панель (состояние запоминается).
+   * Открыта ли панель: явный выбор пользователя, иначе default по режиму
+   * (открыто — только в чистом ULove, с другими разделами — скрыто).
+   */
+  const open = computed(() => {
+    if (explicit.value !== null) {
+      return explicit.value === 'open'
+    }
+
+    return uloveOnly.value
+  })
+
+  /**
+   * Переключить панель (выбор запоминается).
    */
   function toggle(): void {
     setOpen(!open.value)
   }
 
   /**
-   * Явно открыть/закрыть панель (состояние запоминается).
+   * Явно открыть/закрыть панель (выбор запоминается).
    *
    * @param value true — развернуть, false — свернуть
    */
   function setOpen(value: boolean): void {
-    open.value = value
+    explicit.value = value ? 'open' : 'closed'
 
     try {
       window.localStorage.setItem(STORAGE_KEY, value ? 'open' : 'closed')
@@ -73,5 +104,5 @@ export function useChatPeerPanel() {
     }
   }
 
-  return { enabled, open: computed(() => open.value), toggle, setOpen }
+  return { enabled, uloveOnly, open, toggle, setOpen }
 }

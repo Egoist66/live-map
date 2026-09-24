@@ -2,15 +2,16 @@
 import Dialog from 'primevue/dialog'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
+import { useAppUpdateModal } from '@/composables/useAppUpdateModal'
 
 defineProps<{ update: any | null; position: number; total: number }>()
 const emit = defineEmits<{ (e: 'read'): void; (e: 'later'): void; (e: 'all'): void }>()
 
-function fmtDate(iso?: string | null) {
-  if (!iso) return ''
-  try {
-    return new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
-  } catch { return '' }
+const news = useAppUpdateModal()
+
+async function openModules(): Promise<void> {
+  emit('read')
+  await news.goModules()
 }
 </script>
 <template>
@@ -20,11 +21,20 @@ function fmtDate(iso?: string | null) {
         <span class="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white grid place-items-center shrink-0"><i class="pi pi-sparkles text-sm" /></span>
         <div class="min-w-0 flex-1">
           <div class="font-black text-[17px] tracking-tight leading-tight dark:text-white">{{ update.title }}</div>
-          <div class="text-xs text-stone-500 dark:text-zinc-400 mt-0.5">{{ fmtDate(update.published_at) }}<span v-if="update.version"> · v{{ update.version }}</span></div>
+          <div class="text-xs text-stone-500 dark:text-zinc-400 mt-0.5">{{ news.fmtDate(update.published_at) }}<span v-if="update.version && !news.isModulesGuide(update)"> · v{{ update.version }}</span></div>
         </div>
         <Tag v-if="total > 1" :value="`${position + 1} / ${total}`" severity="info" class="!text-[10px]" />
       </div>
       <p class="text-sm text-stone-600 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap max-h-[45vh] overflow-y-auto rounded-2xl bg-stone-50 dark:bg-zinc-800/60 p-4">{{ update.body }}</p>
+      <Button
+        v-if="news.isModulesGuide(update)"
+        label="Открыть разделы приложения"
+        icon="pi pi-th-large"
+        size="small"
+        rounded
+        class="w-full"
+        @click="openModules()"
+      />
     </div>
     <template #footer>
       <div class="flex gap-2 justify-end flex-wrap">

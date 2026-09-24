@@ -78,6 +78,8 @@ export function useSwipes() {
   const quota = ref<SwipeQuota | null>(null)
   const loading = ref(false)
   const acting = ref(false)
+  /** На ком висит лоадер: id кандидата (null — неизвестно/лента). */
+  const actingId = ref<number | null>(null)
   const error = ref<string | null>(null)
   const showFilters = ref(false)
   const showHelp = ref(false)
@@ -900,6 +902,7 @@ export function useSwipes() {
     const card = current.value
     if (!card || acting.value || leaving.value) return
     acting.value = true
+    actingId.value = card.id
     leaving.value = true
     flyDir.value = dir
     exiting.value = { card, dir, fromX: dragX.value, fromY: dragY.value }
@@ -925,6 +928,7 @@ export function useSwipes() {
       leaving.value = false
       flyDir.value = null
       acting.value = false
+      actingId.value = null
     }
   }
 
@@ -945,6 +949,7 @@ export function useSwipes() {
       return
     }
     acting.value = true
+    actingId.value = card.id
     leaving.value = true
     flyDir.value = 'like'
     exiting.value = { card, dir: 'like', fromX: dragX.value, fromY: dragY.value }
@@ -981,6 +986,7 @@ export function useSwipes() {
       leaving.value = false
       flyDir.value = null
       acting.value = false
+      actingId.value = null
     }
   }
 
@@ -997,6 +1003,7 @@ export function useSwipes() {
     const target = lastSwiped.value
     if (!target || target.card.id == null || acting.value || leaving.value) return
     acting.value = true
+    actingId.value = target.card.id
     error.value = null
     try {
       const res = await datingApi.undo(target.card.id)
@@ -1012,6 +1019,7 @@ export function useSwipes() {
       error.value = err.response?.data?.message ?? 'Не удалось откатить свайп'
     } finally {
       acting.value = false
+      actingId.value = null
     }
   }
 
@@ -1090,6 +1098,7 @@ export function useSwipes() {
     const card = current.value
     if (!card || card.id == null || acting.value || leaving.value) return
     acting.value = true
+    actingId.value = card.id
     leaving.value = true
     flyDir.value = action
     exiting.value = { card, dir: action, fromX: dragX.value, fromY: dragY.value }
@@ -1127,6 +1136,7 @@ export function useSwipes() {
       leaving.value = false
       flyDir.value = null
       acting.value = false
+      actingId.value = null
     }
   }
 
@@ -1374,21 +1384,34 @@ export function useSwipes() {
   }
 
   /**
-   * Лайк в ответ из «Меня лайкнули».
+   * Лайк в ответ из «Меня лайкнули»: взаимность сразу светит сплэш
+   * сердец и увозит в чат с человеком (окно мэтча успевает показаться).
    * @param userId id пользователя (null у инкогнито — кнопка там скрыта)
    */
   async function swipeAdmirer(userId: number | null): Promise<void> {
     if (userId == null) return
     if (acting.value) return
     acting.value = true
+    actingId.value = userId
     error.value = null
     try {
       const res = await datingApi.act(userId, 'like', false)
       quota.value = res.quota
       rewards.applyReward(res)
       if (res.matched) {
+        const peer = admirers.value.find((a) => a.id === userId) ?? null
+        if (peer) {
+          matchedCard.value = { ...peer }
+          matchedConversationId.value = res.conversation_id
+        }
         await loadMatches()
         await loadAdmirers()
+        if (matchedCard.value && res.conversation_id) {
+          await waitFrame(shouldSkipMotion() ? 300 : 1600)
+          if (matchedCard.value && matchedConversationId.value === res.conversation_id) {
+            await openChat(userId, res.conversation_id)
+          }
+        }
       }
       cards.value = cards.value.filter((c) => c.id !== userId)
       admirers.value = admirers.value.map((a) => (a.id === userId ? { ...a, is_match: true } : a))
@@ -1398,6 +1421,7 @@ export function useSwipes() {
       error.value = err.response?.data?.message ?? 'Не удалось отправить лайк'
     } finally {
       acting.value = false
+      actingId.value = null
     }
   }
 
@@ -1480,6 +1504,7 @@ export function useSwipes() {
     ageMaxText,
     loading,
     acting,
+    actingId,
     creatingChat,
     ageGate,
     ageGateReason,

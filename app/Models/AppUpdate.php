@@ -27,13 +27,23 @@ class AppUpdate extends Model
 
     /**
      * Сколько пользователей прочитало новость (прочтения живут в inbox).
+     *
+     * Старые строки писались без верхнего update_id (только data.update.id),
+     * поэтому считаем оба формата.
+     *
+     * @return int число прочтений
      */
     public function readsCount(): int
     {
         try {
+            $id = (int) $this->id;
+
             return DatabaseNotification::where('type', 'app.published')
-                ->where('data->update_id', $this->id)
                 ->whereNotNull('read_at')
+                ->where(function ($query) use ($id) {
+                    $query->where('data->update_id', $id)
+                        ->orWhere('data->update->id', $id);
+                })
                 ->count();
         } catch (\Throwable) {
             return 0;

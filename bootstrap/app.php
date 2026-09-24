@@ -62,4 +62,22 @@ return Application::configure(basePath: dirname(__DIR__))
                 return response()->json(['message' => 'Слишком много запросов. Подождите немного и попробуйте снова.'], 429);
             }
         });
+        $exceptions->render(function (\Throwable $e, Request $request) {
+            if ($request->is('api/*') || $request->is('build/*') || $request->expectsJson()) {
+                return null;
+            }
+            $status = $e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface
+                ? $e->getStatusCode()
+                : 500;
+            if (! in_array($status, [403, 404, 419, 500, 503], true)) {
+                return null;
+            }
+            if ($status === 500 && config('app.debug')) {
+                return null;
+            }
+
+            return \Inertia\Inertia::render('Error', ['status' => $status])
+                ->toResponse($request)
+                ->setStatusCode($status);
+        });
     })->create();

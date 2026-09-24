@@ -22,6 +22,7 @@ class AppPublishedNotification extends UserNotification
         $u = $this->update;
 
         return [
+            'update_id' => $u->id,
             'activity' => null,
             'update' => [
                 'id' => $u->id,
