@@ -140,8 +140,8 @@ onUnmounted(() => {
   <Head :title="seo.title.value">
     <meta head-key="description" name="description" :content="seo.description.value" />
   </Head>
-  <div class="w-full min-w-0 bg-transparent" :class="s.activeTab.value === 'feed' ? 'swipes-feed-lock' : 'page-scroll swipes-tab-scroll scroll-neat'">
-      <div class="w-full min-w-0 mx-auto max-w-[640px] px-4 sm:px-6" :class="s.activeTab.value === 'feed' ? 'swipes-feed-inner pt-1 sm:py-6 sm:pb-[calc(2rem+var(--sab))]' : 'pt-3 pb-1 sm:py-6 sm:pb-[calc(2rem+var(--sab))]'">
+  <div class="w-full min-w-0 bg-transparent" :class="s.activeTab.value === 'feed' ? 'swipes-feed-lock' : 'page-scroll scroll-neat'">
+      <div class="w-full min-w-0 mx-auto max-w-[640px] px-4 sm:px-6" :class="s.activeTab.value === 'feed' ? 'swipes-feed-inner pt-1 sm:py-6 sm:pb-[calc(2rem+var(--sab))]' : 'pt-3 pb-6 sm:py-6 sm:pb-[calc(2rem+var(--sab))]'">
 
         <h1 class="sr-only">ULove — знакомства рядом</h1>
         <div class="flex items-center px-1 py-1 sm:py-2 shrink-0">
@@ -667,6 +667,7 @@ onUnmounted(() => {
           <SwipeActionsBar
             v-if="s.current.value"
             :acting="s.acting.value"
+            :busy="s.actingAction.value ?? ''"
             :writing="s.creatingChat.value"
             :super-left="s.leftLabel(s.superlikesLeft.value)"
             @pass="s.swipe('pass')"
@@ -694,7 +695,7 @@ onUnmounted(() => {
             <template #header>
               <div class="w-full max-w-full border-b border-stone-100 px-4 pt-[max(0.875rem,env(safe-area-inset-top))] pb-3 dark:border-zinc-800">
                 <div class="flex w-full max-w-full items-center gap-2">
-                  <span class="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-[#FD267D] to-[#FF7854] text-white"><i class="pi pi-heart-fill text-sm" /></span>
+                  <span class="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-[#FD267D] to-[#FF7854] text-white"><i class="pi pi-heart-fill text-sm leading-none" /></span>
                   <span class="text-lg font-black tracking-tight text-stone-900 dark:text-white">ULove</span>
                   <span class="ml-1 inline-flex min-w-0 items-center gap-1.5 text-xs font-semibold text-stone-500 dark:text-zinc-400"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" /><span class="truncate">{{ s.activeUsers.value.length }} онлайн</span></span>
                   <span class="flex-1" />
@@ -706,7 +707,7 @@ onUnmounted(() => {
               <div class="flex flex-col gap-0.5">
                 <Button unstyled class="ulove-nav group w-full !p-0" @click="mobileMenu.selectTab(s, 'feed')">
                   <span class="flex items-center gap-3 w-full p-2.5 pr-3 rounded-2xl text-left transition active:scale-[0.98]" :class="s.activeTab.value === 'feed' ? 'bg-rose-50 dark:bg-rose-950/40' : 'hover:bg-stone-100 dark:hover:bg-zinc-800'">
-                    <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full text-base" :class="s.activeTab.value === 'feed' ? 'bg-gradient-to-br from-[#FD267D] to-[#FF7854] text-white' : 'bg-stone-100 text-stone-500 dark:bg-zinc-800 dark:text-zinc-300'"><i class="pi pi-images" /></span>
+                    <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full text-base" :class="s.activeTab.value === 'feed' ? 'bg-gradient-to-br from-[#FD267D] to-[#FF7854] text-white' : 'bg-stone-100 text-stone-500 dark:bg-zinc-800 dark:text-zinc-300'"><i class="pi pi-images leading-none" /></span>
                     <span class="min-w-0 flex-1">
                       <span class="block text-sm font-bold leading-tight" :class="s.activeTab.value === 'feed' ? 'text-rose-600 dark:text-rose-300' : 'text-stone-900 dark:text-white'">Лента</span>
                       <span class="mt-0.5 block text-[11px] leading-tight text-stone-500 dark:text-zinc-400">Листай людей · безлимит</span>
@@ -717,7 +718,7 @@ onUnmounted(() => {
                 <Button unstyled class="ulove-nav group w-full !p-0" @click="mobileMenu.selectTab(s, 'active')">
                   <span class="flex items-center gap-3 w-full p-2.5 pr-3 rounded-2xl text-left transition active:scale-[0.98]" :class="s.activeTab.value === 'active' ? 'bg-rose-50 dark:bg-rose-950/40' : 'hover:bg-stone-100 dark:hover:bg-zinc-800'">
                     <span class="relative grid h-10 w-10 shrink-0 place-items-center rounded-full text-base" :class="s.activeTab.value === 'active' ? 'bg-gradient-to-br from-[#FD267D] to-[#FF7854] text-white' : 'bg-stone-100 text-stone-500 dark:bg-zinc-800 dark:text-zinc-300'">
-                      <i class="pi pi-bolt" />
+                      <i class="pi pi-bolt leading-none" />
                       <span v-if="s.activeUsers.value.length" class="absolute -right-1 -top-1 grid h-5 min-w-[20px] place-items-center rounded-full bg-emerald-500 px-1 text-[10px] font-black text-white ring-2 ring-white dark:ring-zinc-900">{{ s.activeUsers.value.length }}</span>
                     </span>
                     <span class="min-w-0 flex-1">
@@ -730,7 +731,7 @@ onUnmounted(() => {
                 <Button unstyled class="ulove-nav group w-full !p-0" @click="mobileMenu.selectTab(s, 'favorites')">
                   <span class="flex items-center gap-3 w-full p-2.5 pr-3 rounded-2xl text-left transition active:scale-[0.98]" :class="s.activeTab.value === 'favorites' ? 'bg-rose-50 dark:bg-rose-950/40' : 'hover:bg-stone-100 dark:hover:bg-zinc-800'">
                     <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full text-base" :class="s.activeTab.value === 'favorites' ? 'bg-gradient-to-br from-[#FD267D] to-[#FF7854] text-white' : 'bg-stone-100 text-stone-500 dark:bg-zinc-800 dark:text-zinc-300'">
-                      <i class="pi pi-star-fill" />
+                      <i class="pi pi-star-fill leading-none" />
                     </span>
                     <span class="min-w-0 flex-1">
                       <span class="block text-sm font-bold leading-tight" :class="s.activeTab.value === 'favorites' ? 'text-rose-600 dark:text-rose-300' : 'text-stone-900 dark:text-white'">Избранное</span>
@@ -742,7 +743,7 @@ onUnmounted(() => {
                 <Button unstyled class="ulove-nav group w-full !p-0" @click="mobileMenu.selectTab(s, 'admirers')">
                   <span class="flex items-center gap-3 w-full p-2.5 pr-3 rounded-2xl text-left transition active:scale-[0.98]" :class="s.activeTab.value === 'admirers' ? 'bg-rose-50 dark:bg-rose-950/40' : 'hover:bg-stone-100 dark:hover:bg-zinc-800'">
                     <span class="relative grid h-10 w-10 shrink-0 place-items-center rounded-full text-base" :class="s.activeTab.value === 'admirers' ? 'bg-gradient-to-br from-[#FD267D] to-[#FF7854] text-white' : 'bg-stone-100 text-stone-500 dark:bg-zinc-800 dark:text-zinc-300'">
-                      <i class="pi pi-heart-fill" />
+                      <i class="pi pi-heart-fill leading-none" />
                       <span v-if="s.admirersTotal.value" class="absolute -right-1 -top-1 grid h-5 min-w-[20px] place-items-center rounded-full bg-[#FD267D] px-1 text-[10px] font-black text-white ring-2 ring-white dark:ring-zinc-900">{{ s.admirersTotal.value }}</span>
                     </span>
                     <span class="min-w-0 flex-1">
@@ -754,7 +755,7 @@ onUnmounted(() => {
                 </Button>
                 <Button unstyled class="ulove-nav group w-full !p-0" @click="mobileMenu.selectTab(s, 'questionnaire')">
                   <span class="flex items-center gap-3 w-full p-2.5 pr-3 rounded-2xl text-left transition active:scale-[0.98]" :class="s.activeTab.value === 'questionnaire' ? 'bg-rose-50 dark:bg-rose-950/40' : 'hover:bg-stone-100 dark:hover:bg-zinc-800'">
-                    <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full text-base" :class="s.activeTab.value === 'questionnaire' ? 'bg-gradient-to-br from-[#FD267D] to-[#FF7854] text-white' : 'bg-stone-100 text-stone-500 dark:bg-zinc-800 dark:text-zinc-300'"><i class="pi pi-user-edit" /></span>
+                    <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full text-base" :class="s.activeTab.value === 'questionnaire' ? 'bg-gradient-to-br from-[#FD267D] to-[#FF7854] text-white' : 'bg-stone-100 text-stone-500 dark:bg-zinc-800 dark:text-zinc-300'"><i class="pi pi-user-edit leading-none" /></span>
                     <span class="min-w-0 flex-1">
                       <span class="block text-sm font-bold leading-tight" :class="s.activeTab.value === 'questionnaire' ? 'text-rose-600 dark:text-rose-300' : 'text-stone-900 dark:text-white'">Моя анкета</span>
                       <span class="mt-0.5 block text-[11px] leading-tight text-stone-500 dark:text-zinc-400">Как тебя видят в ленте</span>
@@ -764,7 +765,7 @@ onUnmounted(() => {
                 </Button>
                 <Button unstyled class="ulove-nav group w-full !p-0" @click="mobileMenu.selectTab(s, 'premium')">
                   <span class="flex items-center gap-3 w-full p-2.5 pr-3 rounded-2xl text-left transition active:scale-[0.98]" :class="s.activeTab.value === 'premium' ? 'bg-rose-50 dark:bg-rose-950/40' : 'hover:bg-stone-100 dark:hover:bg-zinc-800'">
-                    <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-base text-white"><i class="pi pi-crown" /></span>
+                    <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-base text-white"><i class="pi pi-crown leading-none" /></span>
                     <span class="min-w-0 flex-1">
                       <span class="block text-sm font-bold leading-tight text-stone-900 dark:text-white">ULove PRO</span>
                       <span class="mt-0.5 block text-[11px] leading-tight text-stone-500 dark:text-zinc-400">Инкогнито · радиус · хайды</span>

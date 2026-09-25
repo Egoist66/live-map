@@ -1,5 +1,5 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { router, usePage } from '@inertiajs/vue3'
+import { router } from '@inertiajs/vue3'
 import { route } from '@/route'
 import { useAppModulesStore } from '@/stores/appModules'
 import { useBadgeStore } from '@/stores/badges'
@@ -95,7 +95,6 @@ export function useAppLayout() {
 
     const personSections: any[] = [
       { label: 'Настройки', icon: 'pi pi-cog', accent: 'slate', active: route().current('profile.edit'), command: () => router.visit(settingsHref.value) },
-      { label: 'Сотрудничество', icon: 'pi pi-envelope', accent: 'rose', command: () => openCooperationMail() },
     ]
 
     return [
@@ -108,20 +107,6 @@ export function useAppLayout() {
     ]
   })
 
-  /**
-   * Открывает почту для сотрудничества (mailto на почту админа).
-   */
-  function openCooperationMail(): void {
-    let email = 'razormad666@gmail.com'
-    try {
-      const shared = (usePage().props as any)?.support?.email
-      if (typeof shared === 'string' && shared.includes('@')) {
-        email = shared
-      }
-    } catch {
-    }
-    window.location.href = `mailto:${email}?subject=${encodeURIComponent('Сотрудничество с UPin')}`
-  }
 
   const navVisibility = computed(() => ({
     showMap: modules.isEnabled('upin'),

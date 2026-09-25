@@ -2,7 +2,7 @@ import { computed } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import { useMotion } from '@/composables/useMotion'
 
-export type PageTransitionPreset = 'fade-slide' | 'fade-blur' | 'slide' | 'scale' | 'none'
+export type PageTransitionPreset = 'fade-slide' | 'fade-blur' | 'slide' | 'scale' | 'auth' | 'none'
 
 export interface UsePageTransitionOptions {
   preset?: PageTransitionPreset
@@ -52,6 +52,8 @@ export function usePageTransition(options: UsePageTransitionOptions = {}) {
         return 'page-slide'
       case 'scale':
         return 'page-scale'
+      case 'auth':
+        return 'page-auth'
       default:
         return 'page-fade-slide'
     }

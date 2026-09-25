@@ -29,6 +29,9 @@ Route::middleware('throttle:60,1')->group(function () {
 Route::get('/reference', [\App\Http\Controllers\ReferencePageController::class, 'index']);
 Route::get('/reference/{slug}', [\App\Http\Controllers\ReferencePageController::class, 'show']);
 
+// Публичная заявка на сотрудничество с лендинга (гость, без авторизации).
+Route::middleware(['web', 'throttle:6,1'])->post('/cooperation', [\App\Http\Controllers\CooperationController::class, 'store']);
+
 // Горячие поллеры: тикают каждые 2-4с с каждой вкладки и делят общее ведро
 // throttle:120,1 с остальным API — во время звонка сами себя душили в 429
 // (sync + signals + show + pending ≈ 90-120/мин на вкладку), сигналинг умирал

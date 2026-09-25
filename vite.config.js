@@ -145,6 +145,11 @@ export default defineConfig({
             strategies: 'generateSW',
             manifestFilename: 'manifest.webmanifest',
             includeAssets: ['offline.html', 'push-sw.js', 'pwa-192x192.png', 'pwa-512x512.png', 'maskable-512x512.png', 'apple-touch-icon.png', 'pwa-icon.svg', 'favicon.ico'],
+            // PWA-манифест UPin: имя, тёмный тёплый сплэш (#150B10 —
+            // в цвет boot-экрана app.blade.php для бесшовного старта),
+            // комбинированная иконка пин+сердце, шорткаты разделов.
+            // Файл public/manifest.webmanifest при сборке генерится
+            // отсюда же — руками его не правим.
             manifest: {
                 name: 'UPin',
                 short_name: 'UPin',
@@ -166,9 +171,27 @@ export default defineConfig({
                     { src: '/pwa-icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
                 ],
                 shortcuts: [
-                    { name: 'ULove — свайпы', url: '/swipes?source=pwa-shortcut', icons: [{ src: '/pwa-192x192.png', sizes: '192x192' }] },
-                    { name: 'Карта встреч', url: '/map?source=pwa-shortcut', icons: [{ src: '/pwa-192x192.png', sizes: '192x192' }] },
-                    { name: 'Чаты', url: '/chat?source=pwa-shortcut', icons: [{ src: '/pwa-192x192.png', sizes: '192x192' }] },
+                    {
+                        name: 'ULove — свайпы',
+                        short_name: 'ULove',
+                        description: 'Знакомства рядом: свайпы, мэтч открывает чат',
+                        url: '/swipes?source=pwa-shortcut',
+                        icons: [{ src: '/pwa-192x192.png', sizes: '192x192' }],
+                    },
+                    {
+                        name: 'Карта встреч',
+                        short_name: 'Карта',
+                        description: 'Пины рядом: позови на встречу в 2 клика',
+                        url: '/map?source=pwa-shortcut',
+                        icons: [{ src: '/pwa-192x192.png', sizes: '192x192' }],
+                    },
+                    {
+                        name: 'Чаты',
+                        short_name: 'Чаты',
+                        description: 'Сообщения и мэтчи',
+                        url: '/chat?source=pwa-shortcut',
+                        icons: [{ src: '/pwa-192x192.png', sizes: '192x192' }],
+                    },
                 ],
             },
             workbox: {

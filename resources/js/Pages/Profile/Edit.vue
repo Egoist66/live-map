@@ -47,7 +47,7 @@ const showQuestsTab = computed(() => modules.isEnabled('ulove') || modules.isEna
             <Tabs :value="s.active.value" @update:value="(v:any)=>{ if (typeof v === 'string') (s.setActive as any)(v) }" class="settings-root w-full !mt-0">
               <TabList class="!block lg:!hidden !bg-transparent !border-0 !p-0 settings-tabs" :pt="{ activeBar: { class: '!hidden' } }">
                 <Tab v-for="t in s.tabs.value" :key="t.id" :value="t.id" class="!bg-transparent !border-0 !p-0 !m-0 !min-w-0">
-                  <div :class="['w-full min-h-[62px] flex flex-col items-center justify-center gap-1 rounded-2xl border px-1 py-2 text-center transition active:scale-[0.97]', s.active.value === t.id ? '!bg-violet-600 !border-violet-600 !text-white shadow-soft' : 'bg-white dark:bg-zinc-900 text-stone-600 dark:text-zinc-300 border-stone-200 dark:border-zinc-800']">
+                  <div :class="['w-full min-h-[62px] flex flex-col items-center justify-center gap-1 rounded-2xl border px-1 py-2 text-center transition active:scale-[0.97]', s.active.value === t.id ? '!bg-[#f43f5e] !border-[#f43f5e] !text-white shadow-lg shadow-rose-500/30' : 'bg-white dark:bg-zinc-900 text-stone-600 dark:text-zinc-300 border-stone-200 dark:border-zinc-800']">
                     <i :class="[t.icon, 'text-base leading-none']" />
                     <span class="text-[11px] font-bold leading-tight">{{ t.label }}</span>
                     <span v-if="t.id === 'procedures' && s.proc.unread.value" class="text-[10px] leading-none">❗</span>

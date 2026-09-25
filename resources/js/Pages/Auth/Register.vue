@@ -35,7 +35,7 @@ function onCountryChange(v: string): void {
 <template>
   <Head title="Регистрация — ULove" />
     <div class="flex items-center gap-3">
-      <span class="w-11 h-11 rounded-2xl bg-gradient-to-br from-rose-500 via-fuchsia-500 to-orange-400 grid place-items-center text-white shadow-lg shadow-rose-500/30 shrink-0"><i class="pi pi-heart-fill" /></span>
+      <span class="w-11 h-11 rounded-2xl bg-gradient-to-br from-rose-500 via-fuchsia-500 to-orange-400 grid place-items-center text-white shadow-lg shadow-rose-500/30 shrink-0"><i class="pi pi-heart-fill leading-none" /></span>
       <div class="min-w-0">
         <h1 class="text-[22px] font-black tracking-tight text-ink-900 dark:text-white leading-tight">{{ t.registerTitle.value }}</h1>
         <p class="text-[13px] text-stone-500 dark:text-zinc-400">{{ t.registerSub.value }}</p>
@@ -145,14 +145,43 @@ function onCountryChange(v: string): void {
 .auth-input {
   border-radius: 16px;
 }
+/* Инпуты: единая высота и скругление. */
 .auth-input:deep(.p-inputtext),
-.auth-input:deep(.p-select-label),
-.auth-input:deep(.p-datepicker-input),
 .auth-input:deep(input) {
   border-radius: 16px;
+  min-height: 48px;
 }
+/* Селекты и дейтпикер: цельная пилюля — рамка и скругление только
+   на корне, внутренности прозрачные без своих радиусов, иначе
+   правый край (шеврон/календарь) выглядит обрезанным. Шеврон
+   и кнопка календаря живут внутри пилюли, высота как у инпутов. */
 .auth-input:deep(.p-select),
 .auth-input:deep(.p-datepicker) {
   border-radius: 16px;
+  overflow: clip;
+  width: 100%;
+}
+.auth-input:deep(.p-select-label),
+.auth-input:deep(.p-datepicker-input) {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  padding: 0.7rem 1rem;
+}
+.auth-input:deep(.p-select-dropdown),
+.auth-input:deep(.p-datepicker-dropdown) {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  align-self: stretch;
+  padding-right: 0.9rem;
+}
+.auth-input:deep(.p-select-dropdown-icon),
+.auth-input:deep(.p-datepicker-dropdown-icon) {
+  font-size: 0.8rem;
 }
 </style>

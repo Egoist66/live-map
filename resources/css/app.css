@@ -171,11 +171,11 @@ html.dark .p-confirmdialog, html.dark .p-confirmdialog .p-dialog { background: #
 html.dark .p-confirmdialog .p-dialog-header, html.dark .p-confirmdialog .p-dialog-content, html.dark .p-confirmdialog .p-dialog-footer { background: transparent !important; border-color: #27272a !important; color: #e4e4e7 !important; }
 html.dark .p-confirmdialog .p-dialog-title, html.dark .p-confirmdialog .p-confirmdialog-message { color: #f4f4f5 !important; }
 html.dark .p-confirmdialog .p-dialog-header-icon, html.dark .p-confirmdialog .p-dialog-close-button { color: #a1a1aa !important; }
-.p-select-option[aria-selected="true"] { background: #EEF0FF !important; color: #4338CA !important; font-weight: 600; }
-.p-select-option[aria-selected="true"] .p-select-option-check-icon { color: #4F46E5 !important; }
+.p-select-option[aria-selected="true"] { background: #FFF1F2 !important; color: #BE123C !important; font-weight: 600; }
+.p-select-option[aria-selected="true"] .p-select-option-check-icon { color: #E11D48 !important; }
 html.dark .p-select-option { color: #e4e4e7 !important; }
-html.dark .p-select-option[aria-selected="true"] { background: rgba(91,91,255,0.18) !important; color: #C7CAFF !important; }
-html.dark .p-select-option[aria-selected="true"] .p-select-option-check-icon { color: #A5AAFF !important; }
+html.dark .p-select-option[aria-selected="true"] { background: rgba(244,63,94,0.18) !important; color: #FECDD3 !important; }
+html.dark .p-select-option[aria-selected="true"] .p-select-option-check-icon { color: #FB7185 !important; }
 html.dark .p-select-option[data-p-focused="true"]:not([aria-selected="true"]) { background: #27272a !important; }
 html.dark .p-datepicker-header { background: transparent !important; border-color: #27272a !important; }
 html.dark .p-datepicker-title { color: #e4e4e7 !important; }
@@ -609,6 +609,29 @@ div#p-license-host {
   transform: scale(1.01);
 }
 
+/* Auth-переход login ↔ register: ровный кроссфейд по центру.
+   Уходящая форма выводится из потока (absolute), поэтому входящая
+   сразу занимает итоговую высоту — нет ни задвоения по вертикали,
+   ни прыжка центрирования. Только opacity + лёгкий scale, без
+   translateY: именно сдвиг вверх/вниз давал «рваный» эффект на
+   формах разной высоты. */
+.page-auth-enter-active,
+.page-auth-leave-active {
+  transition: opacity 300ms ease, transform 340ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.page-auth-enter-from {
+  opacity: 0;
+  transform: scale(0.97);
+}
+.page-auth-leave-to {
+  opacity: 0;
+  transform: scale(1.02);
+}
+.page-auth-leave-active {
+  position: absolute;
+  inset: 0;
+}
+
 .page-slide-enter-active,
 .page-slide-leave-active {
   transition: opacity 340ms ease, transform 400ms cubic-bezier(0.32, 0.72, 0, 1);
@@ -631,6 +654,8 @@ div#p-license-host {
   .page-fade-slide-leave-active,
   .page-fade-blur-enter-active,
   .page-fade-blur-leave-active,
+  .page-auth-enter-active,
+  .page-auth-leave-active,
   .page-slide-enter-active,
   .page-slide-leave-active,
   .page-scale-enter-active,

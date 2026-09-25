@@ -61,21 +61,21 @@ const hideSidebar = computed(() => isAuthPage.value)
         </div>
       </div>
     </div>
-    <div :class="isFaq ? 'flex-1 flex flex-col px-0 py-0 relative dark:bg-[#0F121F] overflow-auto min-w-0 w-full overflow-x-clip' : 'flex-1 flex flex-col items-center px-4 sm:px-6 py-6 sm:py-10 relative dark:bg-[#0F121F] min-w-0 w-full overflow-x-clip'">
+    <div :class="isFaq ? 'flex-1 flex flex-col px-0 py-0 relative dark:bg-[#0F121F] overflow-auto min-w-0 w-full overflow-x-clip' : 'flex-1 flex flex-col items-center px-4 sm:px-6 relative dark:bg-[#0F121F] min-w-0 w-full overflow-x-clip'">
       <div v-if="!isAuthPage" class="absolute inset-0 bg-gradient-to-b from-white to-surface dark:from-zinc-900 dark:to-[#0F121F]"></div>
       <!-- Фон только после гидратации: без отрицательного z-index, порядок
            в DOM + relative у контента решают наложение. Фон всегда один
            (ULove), поэтому смена login ↔ register его не трогает. -->
       <AuthBackdrop v-else-if="isClientReady" />
-      <div :class="isFaq ? 'flex w-full flex-1 flex-col min-w-0' : 'relative flex w-full flex-1 items-start sm:items-center justify-center min-w-0 py-2 sm:py-4'">
-      <PageTransition :preset="isAuthPage ? 'none' : 'fade-slide'">
+      <div :class="isFaq ? 'flex w-full flex-1 flex-col min-w-0' : 'relative flex w-full flex-1 justify-center min-w-0 overflow-y-auto py-6 sm:py-10 guest-auth-scroll'">
+      <PageTransition :preset="isAuthPage ? 'auth' : 'fade-slide'">
         <template v-if="isFaq">
           <slot />
         </template>
         <template v-else>
           <div class="auth-card-enter w-full max-w-[560px] min-w-0 mx-auto">
             <Link href="/" class="flex items-center justify-center gap-2 mb-5 sm:mb-6">
-              <span class="w-10 h-10 rounded-2xl bg-gradient-to-br from-rose-500 via-fuchsia-500 to-orange-400 grid place-items-center text-white shadow-lg shadow-rose-500/30"><i class="pi pi-heart-fill" /></span>
+              <span class="w-10 h-10 rounded-2xl bg-gradient-to-br from-rose-500 via-fuchsia-500 to-orange-400 grid place-items-center text-white shadow-lg shadow-rose-500/30"><i class="pi pi-heart-fill leading-none" /></span>
               <span class="font-black tracking-[-0.04em] text-[26px] bg-gradient-to-r from-rose-500 via-fuchsia-500 to-orange-400 dark:from-rose-400 dark:via-fuchsia-400 dark:to-orange-300 bg-clip-text text-transparent">ULove</span>
             </Link>
             <Card :class="['w-full max-w-full !bg-white/85 dark:!bg-zinc-900/80 backdrop-blur-xl !border !rounded-[20px] sm:!rounded-[24px] !shadow-float !p-0', backdrop.tokens.value.cardClass]">
@@ -106,27 +106,15 @@ const hideSidebar = computed(() => isAuthPage.value)
 </template>
 
 <style scoped>
-/* Вход карточки: ТОЛЬКО opacity + лёгкий scale, без translateY.
-   translateY между login (короткая) и register (длинная) давал
-   видимый прыжок формы; двойная анимация (PageTransition + карточка)
-   убрана — для auth-страниц PageTransition выключен (preset none),
-   играет только это появление. */
-.auth-card-enter {
-  animation: auth-card-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-@keyframes auth-card-in {
-  from {
-    opacity: 0;
-    transform: scale(0.985);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .auth-card-enter {
-    animation: none;
-  }
+/* Появление карточки отдано PageTransition (пресет auth: кроссфейд
+   + scale, уходящая форма — absolute): отдельной анимации здесь нет,
+   иначе двойное движение давало рваность. Класс auth-card-enter
+   оставлен якорем для мобильных правил в app.css (16px в полях).
+   Вертикальное центрирование — через margin auto: форма ровно
+   по центру, а на маленьких экранах с высокой формой верх
+   не обрезается (flex + overflow + m-auto вместо items-center). */
+.guest-auth-scroll .page-transition-wrapper {
+  margin-top: auto;
+  margin-bottom: auto;
 }
 </style>

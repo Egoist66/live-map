@@ -20,6 +20,7 @@ const MiniChatDock = defineAsyncComponent(() => import('@/Components/Features/Ch
 const TermsAcceptanceModal = defineAsyncComponent(() => import('@/Components/Features/Legal/TermsAcceptanceModal.vue'))
 const AppUpdateModal = defineAsyncComponent(() => import('@/Components/Features/Updates/AppUpdateModal.vue'))
 const SubscriptionRenewalDialog = defineAsyncComponent(() => import('@/Components/Features/Subscription/SubscriptionRenewalDialog.vue'))
+import { normalizeSwipeTab } from '@/composables/useSwipes'
 import { useAppLayout } from '@/composables/useAppLayout'
 import { useAppHotkeys } from '@/composables/useAppHotkeys'
 import { useScreenLock } from '@/composables/useScreenLock'
@@ -27,9 +28,29 @@ import { useScreenLockScroll } from '@/composables/useScreenLockScroll'
 import { useGlobalDialogScrollLock } from '@/composables/useGlobalDialogScrollLock'
 import { useGlobalDialogDismiss } from '@/composables/useGlobalDialogDismiss'
 import { useClientReady } from '@/composables/useClientReady'
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 
 const { badge, user, avatarSrc, dashboardHref, bell, updates, menu, menuItems, navVisibility, isAdmin, isBusinessAccount, toggleMenu, logout } = useAppLayout()
+
+/**
+ * Лента свайпов (/swipes, /swipes/tape): deck живёт в запертом
+ * скроллере без нижнего меню, как в Tinder. Контентные табы
+ * (/swipes/active, /swipes/questionnaire, ...) — обычные страницы:
+ * скроллятся родителем, нижнее меню видно.
+ */
+const isSwipesFeed = computed(() => {
+  try {
+    if (route().current('swipes')) {
+      return true
+    }
+    if (!route().current('swipes.tab')) {
+      return false
+    }
+    return normalizeSwipeTab(String((route().params as any)?.tab ?? '')) === 'feed'
+  } catch {
+    return false
+  }
+})
 const { isClientReady } = useClientReady()
 const hotkeys = useAppHotkeys()
 const screenLock = useScreenLock()
@@ -48,7 +69,7 @@ onMounted(() => { screenLock.init(); hotkeys.init() })
     <div v-if="$slots.header" class="bg-white dark:bg-zinc-900 border-b border-stone-200/60 dark:border-zinc-800">
       <div class="mx-auto max-w-[1280px] px-4 sm:px-6 py-4 sm:py-6"><slot name="header" /></div>
     </div>
-    <main :class="route().current('chat') || route().current('map') || route().current('swipes*') ? 'flex-1 pb-0 lg:pb-0 overflow-hidden overscroll-none' : 'flex-1 pb-[calc(var(--app-bottomnav)+var(--sab))] lg:pb-0'">
+    <main :class="route().current('chat') || route().current('map') || isSwipesFeed ? 'flex-1 pb-0 lg:pb-0 overflow-hidden overscroll-none' : 'flex-1 pb-[calc(var(--app-bottomnav)+var(--sab))] lg:pb-0'">
       <PageTransition><slot /></PageTransition>
     </main>
     <div v-if="!route().current('chat') && !route().current('map') && !route().current('swipes*')" class="mt-auto hidden pb-[calc(var(--app-bottomnav)+var(--sab))] lg:block lg:pb-0">

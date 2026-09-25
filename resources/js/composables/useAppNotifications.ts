@@ -779,6 +779,10 @@ function handleNotification(e: any) {
     handleReport({ report: data.report })
     return
   }
+  if (data.cooperation) {
+    handleCooperation({ cooperation: data.cooperation })
+    return
+  }
   if (data.business && String(n.type || '').startsWith('business.')) {
     handleBusinessInbox(String(n.type), data.business)
     return
@@ -865,6 +869,30 @@ function handleReport(e: any) {
     body: `${title} · ${body}`.slice(0, 90),
     avatar: avatarSrcFor(r.reporter || {}),
     link: '/settings?tab=admin',
+    createdAt: Date.now(),
+  })
+}
+/**
+ * Заявка на сотрудничество: тост администраторам.
+ *
+ * Приходит inbox-строкой cooperation.request (сокет, поллер,
+ * 20с-фолбэк — везде один id, дублей нет по построению).
+ *
+ * @param e пейлоад с ключом cooperation {company, email, message}
+ */
+function handleCooperation(e: any) {
+  if (!isAdminNow()) return
+  const c = e?.cooperation
+  if (!c?.company || !c?.email) return
+  if (isDuplicateEvent(`coop-${c.email}-${c.company}`)) return
+  push({
+    id: `coop-${Date.now()}`,
+    type: 'business',
+    icon: 'pi pi-briefcase',
+    title: `🤝 Сотрудничество: ${String(c.company).slice(0, 40)}`,
+    body: `${String(c.message || 'Хотят обсудить сотрудничество')} — ${c.email}`.slice(0, 90),
+    avatar: null,
+    link: '/admin',
     createdAt: Date.now(),
   })
 }

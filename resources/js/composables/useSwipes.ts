@@ -80,6 +80,8 @@ export function useSwipes() {
   const acting = ref(false)
   /** На ком висит лоадер: id кандидата (null — неизвестно/лента). */
   const actingId = ref<number | null>(null)
+  /** Какая кнопка крутит лоадер: у каждой своё состояние. */
+  const actingAction = ref<null | 'pass' | 'like' | 'superlike'>(null)
   const error = ref<string | null>(null)
   const showFilters = ref(false)
   const showHelp = ref(false)
@@ -188,10 +190,9 @@ export function useSwipes() {
   /**
    * Контентный таб (всё кроме ленты): списки, анкета, PRO.
    *
-   * Вся страница свайпов живёт в собственном скроллере
-   * `.swipes-tab-scroll`: лента и длинные списки листаются
-   * и на десктопе, и на мобиле независимо от скролла страницы
-   * (main для swipes* — overflow-hidden).
+   * Листаются обычным скроллом страницы в родителе (main без
+   * overflow-hidden, нижнее меню видно) — никакого boxed-скроллера.
+   * Запертый скроллер `.swipes-feed-lock` — только у ленты с колодой.
    */
   const isContentTab = computed(() => activeTab.value !== 'feed')
 
@@ -967,6 +968,7 @@ export function useSwipes() {
     if (!card || acting.value || leaving.value) return
     acting.value = true
     actingId.value = card.id
+    actingAction.value = 'pass'
     leaving.value = true
     flyDir.value = dir
     exiting.value = { card, dir, fromX: dragX.value, fromY: dragY.value }
@@ -993,6 +995,7 @@ export function useSwipes() {
       flyDir.value = null
       acting.value = false
       actingId.value = null
+      actingAction.value = null
     }
   }
 
@@ -1014,6 +1017,7 @@ export function useSwipes() {
     }
     acting.value = true
     actingId.value = card.id
+    actingAction.value = 'superlike'
     leaving.value = true
     flyDir.value = 'like'
     exiting.value = { card, dir: 'like', fromX: dragX.value, fromY: dragY.value }
@@ -1051,6 +1055,7 @@ export function useSwipes() {
       flyDir.value = null
       acting.value = false
       actingId.value = null
+      actingAction.value = null
     }
   }
 
@@ -1164,6 +1169,7 @@ export function useSwipes() {
     if (!card || card.id == null || acting.value || leaving.value) return
     acting.value = true
     actingId.value = card.id
+    actingAction.value = 'like'
     leaving.value = true
     flyDir.value = action
     exiting.value = { card, dir: action, fromX: dragX.value, fromY: dragY.value }
@@ -1202,6 +1208,7 @@ export function useSwipes() {
       flyDir.value = null
       acting.value = false
       actingId.value = null
+      actingAction.value = null
     }
   }
 
@@ -1571,6 +1578,7 @@ export function useSwipes() {
     loading,
     acting,
     actingId,
+    actingAction,
     creatingChat,
     ageGate,
     ageGateReason,

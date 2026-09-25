@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3'
-import { computed } from 'vue'
 import { useWelcome } from '@/composables/useWelcome'
 import { useWelcomeMode, type LandingTab } from '@/composables/useWelcomeMode'
 import { useWelcomeHeroSwiper } from '@/composables/useWelcomeHeroSwiper'
 import { useSupportEmail } from '@/composables/useSettingsSupport'
+import { useCooperation } from '@/composables/useCooperation'
 import AppFooter from '@/Layouts/AppFooter.vue'
 import BrandMark from '@/Components/Brand/BrandMark.vue'
+import CooperationDialog from '@/Components/Features/Cooperation/CooperationDialog.vue'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import Tag from 'primevue/tag'
@@ -17,6 +18,7 @@ const w = useWelcome()
 const landing = useWelcomeMode()
 const hero = useWelcomeHeroSwiper()
 const supportEmail = useSupportEmail()
+const coop = useCooperation()
 
 /**
  * Два таба стартовой страницы: ULove-знакомства и карта-бонус UPin.
@@ -36,8 +38,6 @@ const thumbPosition = {
   ulove: 'translate-x-0',
   upin: 'translate-x-full',
 } as const
-
-const cooperationHref = computed(() => `mailto:${supportEmail}?subject=${encodeURIComponent('Сотрудничество с UPin')}`)
 
 function switchTab(next: LandingTab): void {
   landing.setTab(next)
@@ -81,9 +81,6 @@ function switchTab(next: LandingTab): void {
           <span class="text-[15px] leading-none shrink-0">{{ opt.icon }}</span><span class="truncate">{{ opt.label }}</span>
         </button>
       </div>
-      <a :href="cooperationHref" class="inline-flex items-center gap-2 rounded-full border border-rose-200/80 dark:border-rose-400/20 bg-rose-50/80 dark:bg-rose-950/30 px-4 py-1.5 text-[12px] min-[411px]:text-[13px] font-bold text-rose-600 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition whitespace-nowrap">
-        <i class="pi pi-envelope text-xs" /> По вопросам сотрудничества — Писать нам
-      </a>
     </div>
 
     <section class="max-w-[1280px] w-full mx-auto px-4 sm:px-6 pt-4 sm:pt-10 pb-8 sm:pb-10 grid lg:grid-cols-[1.05fr_0.95fr] gap-6 sm:gap-10 items-center overflow-hidden">
@@ -289,11 +286,12 @@ function switchTab(next: LandingTab): void {
             <div class="mt-3 text-[18px] sm:text-[22px] font-black tracking-tight text-balance">По вопросам сотрудничества — Писать нам</div>
             <div class="mt-1 text-sm text-white/80 leading-relaxed">Расскажите о своей идее — ответим с почты администратора {{ supportEmail }}.</div>
           </div>
-          <a :href="cooperationHref" class="w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-2 bg-white text-ink-900 font-bold rounded-full px-7 py-3.5 hover:bg-rose-50 active:scale-[0.99] transition whitespace-nowrap"><i class="pi pi-envelope text-sm" /> Писать нам</a>
+          <button type="button" class="w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-2 bg-white text-ink-900 font-bold rounded-full px-7 py-3.5 hover:bg-rose-50 active:scale-[0.99] transition whitespace-nowrap" @click="coop.show()"><i class="pi pi-envelope text-sm" /> Писать нам</button>
         </div>
       </div>
     </section>
 
+    <CooperationDialog />
     <AppFooter class="mt-auto w-full" />
     </div>
   </div>

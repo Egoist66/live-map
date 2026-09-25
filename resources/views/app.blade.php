@@ -119,10 +119,14 @@
             z-index: 9997;
             display: grid;
             place-items: center;
+            /* Фон = background_color манифеста (#150B10): системный сплэш
+               ОС (тёмный фон + квадратная иконка) бесшовно переходит в наш
+               boot-экран — второго «появления» не видно. Поэтому здесь нет
+               entrance-анимации: карточка рисуется сразу статично. */
             background:
-              radial-gradient(90% 60% at 50% 0%, rgba(253, 38, 125, .22) 0%, rgba(253, 38, 125, 0) 60%),
-              radial-gradient(70% 50% at 85% 100%, rgba(255, 120, 84, .12) 0%, rgba(255, 120, 84, 0) 60%),
-              linear-gradient(180deg, #241019 0%, #150B10 55%, #0B0508 100%);
+              radial-gradient(90% 60% at 50% 0%, rgba(253, 38, 125, .12) 0%, rgba(253, 38, 125, 0) 60%),
+              radial-gradient(70% 50% at 85% 100%, rgba(255, 120, 84, .08) 0%, rgba(255, 120, 84, 0) 60%),
+              #150B10;
             transition: opacity .45s ease, visibility .45s ease;
           }
           #pwa-boot.done {
@@ -135,7 +139,6 @@
             align-items: center;
             text-align: center;
             padding: 24px;
-            animation: boot-in .5s cubic-bezier(.22, 1, .36, 1) both;
           }
           #pwa-boot .boot-icon {
             width: 96px;
@@ -180,10 +183,6 @@
             background: linear-gradient(90deg, #FD267D, #E936C7, #FF7854);
             box-shadow: 0 0 12px rgba(253, 38, 125, .9);
             animation: mini-load 1.1s ease-in-out infinite;
-          }
-          @keyframes boot-in {
-            from { opacity: 0; transform: scale(.96) translateY(10px); }
-            to { opacity: 1; transform: scale(1) translateY(0); }
           }
           @keyframes boot-float {
             0%, 100% { transform: translateY(0) scale(1); }
@@ -268,7 +267,7 @@
               <rect width="512" height="512" rx="128" fill="url(#boot-bg)" />
               <rect width="512" height="512" rx="128" fill="url(#boot-glow)" />
               <path d="M256 108c-70 0-122 52-122 120 0 92 112 176 112 176s112-84 112-176c0-68-52-120-102-120z" fill="#fff" />
-              <path d="M256 272c-26-16-42-32-42-50 0-14 11-24 24-24 9 0 15 4 18 10 3-6 9-10 18-10 13 0 24 10 24 24 0 18-16 34-42 50z" fill="#FD267D" />
+              <path d="M247 272c-26-16-42-32-42-50 0-14 11-24 24-24 9 0 15 4 18 10 3-6 9-10 18-10 13 0 24 10 24 24 0 18-16 34-42 50z" fill="#FD267D" />
             </svg>
             <div class="boot-name">U<span>Pin</span></div>
             <div class="boot-tag">знакомства ULove рядом</div>

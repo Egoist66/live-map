@@ -12,14 +12,16 @@
  */
 withDefaults(
   defineProps<{
-    /** Идёт свайп/суперлайк — кнопки действий disabled */
+    /** Идёт действие — все кнопки disabled, крутится только своя */
     acting?: boolean
+    /** Какая кнопка крутит лоадер: у каждой своё состояние */
+    busy?: '' | 'pass' | 'like' | 'superlike'
     /** Создаётся чат без мэтча */
     writing?: boolean
     /** Остаток суперлайков текстом */
     superLeft?: string
   }>(),
-  { acting: false, writing: false, superLeft: '' },
+  { acting: false, busy: '', writing: false, superLeft: '' },
 )
 
 defineEmits<{
@@ -43,7 +45,7 @@ const sideBtn =
       :class="sideBtn"
       @click="$emit('pass')"
     >
-      <i v-if="!acting" class="pi pi-times text-xl leading-none text-[#FF4458]" />
+      <i v-if="busy !== 'pass'" class="pi pi-times text-xl leading-none text-[#FF4458]" />
       <i v-else class="pi pi-spin pi-spinner text-lg leading-none text-[#FF4458]" />
     </button>
 
@@ -56,7 +58,7 @@ const sideBtn =
       class="relative"
       @click="$emit('superlike')"
     >
-      <i v-if="!acting" class="pi pi-heart-fill text-xl leading-none text-[#1786FF]" />
+      <i v-if="busy !== 'superlike'" class="pi pi-heart-fill text-xl leading-none text-[#1786FF]" />
       <i v-else class="pi pi-spin pi-spinner text-lg leading-none text-[#1786FF]" />
       <span
         v-if="superLeft"
@@ -72,7 +74,7 @@ const sideBtn =
       class="grid h-[72px] w-[72px] shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#FD267D] to-[#FF7854] text-white shadow-lg shadow-rose-500/40 transition active:scale-90 disabled:opacity-40"
       @click="$emit('like')"
     >
-      <i v-if="!acting" class="pi pi-heart-fill heartbeat text-3xl leading-none" />
+      <i v-if="busy !== 'like'" class="pi pi-heart-fill heartbeat text-3xl leading-none" />
       <i v-else class="pi pi-spin pi-spinner text-2xl leading-none" />
     </button>
 

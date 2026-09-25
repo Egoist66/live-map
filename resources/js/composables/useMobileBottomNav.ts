@@ -205,8 +205,10 @@ export function useMobileBottomNav() {
   }
 
   /**
-   * На свайпах ULove нижнее меню скрыто, как в Tinder:
+   * На ленте свайпов нижнее меню скрыто, как в Tinder:
    * профиль, сообщения и разделы — в верхнем баре и шторке.
+   * Контентные табы (/swipes/active, /swipes/questionnaire, ...)
+   * листаются как обычные страницы — меню там видно.
    */
   const onSwipes = computed(() => {
     const path = currentPath.value
@@ -215,7 +217,7 @@ export function useMobileBottomNav() {
       return false
     }
 
-    return path === '/swipes' || path.startsWith('/swipes/')
+    return path === '/swipes' || path === '/swipes/tape'
   })
 
   const navHidden = computed(() => keyboardOpen.value || onSwipes.value)
@@ -273,7 +275,7 @@ export function useMobileBottomNav() {
   /**
    * Синхронизирует классы на <html> для CSS-скрытия меню.
    *
-   * Клавиатура и свайпы ULove (там свой топбар, как в Tinder)
+   * Клавиатура и лента свайпов (там свой топбар, как в Tinder)
    * прячут нижнее меню через CSS-трансформ без скачков вёрстки.
    *
    * @returns void
