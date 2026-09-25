@@ -7,18 +7,17 @@ import { useBirthDateField } from '@/composables/useBirthDate'
 import { useGender } from '@/composables/useGender'
 import { useUserAge } from '@/composables/useUserAge'
 import { RESIDENCE_COUNTRIES } from '@/composables/useResidence'
-import BusinessRegisterForm from '@/Components/Features/Business/BusinessRegisterForm.vue'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import Select from 'primevue/select'
 import DatePicker from 'primevue/datepicker'
 
 /**
- * Ветка компании — по ?account=business, иначе тема
- * из запомненного таба лендинга (ULove без сайдбара).
+ * Регистрация ULove: всегда персона и всегда стиль ULove.
+ * Бизнес-ветки больше нет — по вопросам сотрудничества
+ * на стартовой странице есть CTA «Писать нам».
  */
 const t = useAuthTheme()
-const isBusiness = t.isBusiness
 
 const f = useRegisterForm()
 const goals = useSignupGoals()
@@ -31,57 +30,48 @@ function onCountryChange(v: string): void {
   const prevCode = (f.values as any).country_code
   f.setValues({ country: v, country_code: found ? found.code : prevCode } as any)
 }
-
-function backToChoice(): void {
-  window.location.href = '/register'
-}
 </script>
 
 <template>
-  <Head title="Регистрация" />
-  <template v-if="isBusiness">
-    <BusinessRegisterForm />
-    <div class="mt-4 text-center">
-      <button type="button" class="text-[13px] font-semibold text-stone-500 dark:text-zinc-400 hover:underline" @click="backToChoice">
-        Я не компания — обычная регистрация
-      </button>
-    </div>
-  </template>
-  <template v-else>
+  <Head title="Регистрация — ULove" />
     <div class="flex items-center gap-3">
-      <span v-if="t.isUlove.value" class="w-11 h-11 rounded-2xl bg-gradient-to-br from-rose-500 via-fuchsia-500 to-orange-400 grid place-items-center text-white shadow-lg shadow-rose-500/30 shrink-0"><i class="pi pi-heart-fill" /></span>
-      <span v-else class="w-11 h-11 rounded-2xl bg-gradient-to-br from-sky-500 via-blue-500 to-indigo-500 grid place-items-center text-white shadow-lg shadow-sky-500/30 shrink-0"><i class="pi pi-map-marker" /></span>
+      <span class="w-11 h-11 rounded-2xl bg-gradient-to-br from-rose-500 via-fuchsia-500 to-orange-400 grid place-items-center text-white shadow-lg shadow-rose-500/30 shrink-0"><i class="pi pi-heart-fill" /></span>
       <div class="min-w-0">
         <h1 class="text-[22px] font-black tracking-tight text-ink-900 dark:text-white leading-tight">{{ t.registerTitle.value }}</h1>
         <p class="text-[13px] text-stone-500 dark:text-zinc-400">{{ t.registerSub.value }}</p>
       </div>
     </div>
     <form class="mt-6 space-y-4" @submit.prevent="f.submit">
-      <div v-if="!f.goalPreset.locked" class="rounded-2xl border-2 border-rose-200 dark:border-rose-900 bg-gradient-to-br from-rose-50 to-orange-50 dark:from-rose-950/40 dark:to-orange-950/20 p-3.5">
+      <div class="rounded-2xl border-2 border-rose-200 dark:border-rose-900 bg-gradient-to-br from-rose-50 to-orange-50 dark:from-rose-950/40 dark:to-orange-950/20 p-3.5">
         <label class="auth-label">Зачем ты здесь? *</label>
         <Select v-model="f.signup_goal.value" :options="goals.preset.options" optionLabel="label" optionValue="value" placeholder="Выбери цель" checkmark fluid class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.signup_goal" />
         <small class="auth-err">{{ f.errors.value.signup_goal }}</small>
       </div>
-      <div v-else class="rounded-2xl border-2 border-sky-200 dark:border-sky-900 bg-gradient-to-br from-sky-50 to-indigo-50 dark:from-sky-950/40 dark:to-indigo-950/20 p-3.5 flex items-center gap-3">
-        <span class="w-10 h-10 rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-600 grid place-items-center text-white shrink-0"><i class="pi pi-map-marker" /></span>
-        <div class="text-[13px] leading-snug text-stone-600 dark:text-zinc-300"><span class="font-bold text-ink-900 dark:text-white">Ты с UPin</span> — после регистрации откроем карту: кидай пины, зови рядом</div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="min-w-0">
+          <label class="auth-label">Имя / ник</label>
+          <InputText v-model="f.name.value" v-bind="f.nameAttrs" placeholder="Роберт Дауни" autocomplete="nickname" class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.name" />
+          <small class="auth-err">{{ f.errors.value.name }}</small>
+        </div>
+        <div class="min-w-0">
+          <label class="auth-label">Email</label>
+          <InputText v-model="f.email.value" v-bind="f.emailAttrs" type="email" placeholder="you@mail.ru" autocomplete="email" class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.email" />
+          <small class="auth-err">{{ f.errors.value.email }}</small>
+        </div>
       </div>
-      <div>
-        <label class="auth-label">Имя / ник</label>
-        <InputText v-model="f.name.value" v-bind="f.nameAttrs" placeholder="Роберт Дауни" class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.name" />
-        <small class="auth-err">{{ f.errors.value.name }}</small>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="min-w-0">
+          <label class="auth-label">Пол *</label>
+          <Select v-model="f.gender.value" :options="g.options" optionLabel="label" optionValue="value" placeholder="Выбери пол" checkmark fluid class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.gender" />
+          <small class="auth-err">{{ f.errors.value.gender }}</small>
+        </div>
+        <div class="min-w-0">
+          <label class="auth-label">Город проживания</label>
+          <InputText v-model="f.home_city.value" placeholder="Минск" autocomplete="address-level2" class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.home_city" />
+          <small class="auth-err">{{ f.errors.value.home_city }}</small>
+        </div>
       </div>
-      <div>
-        <label class="auth-label">Email</label>
-        <InputText v-model="f.email.value" v-bind="f.emailAttrs" type="email" placeholder="you@mail.ru" class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.email" />
-        <small class="auth-err">{{ f.errors.value.email }}</small>
-      </div>
-      <div>
-        <label class="auth-label">Пол *</label>
-        <Select v-model="f.gender.value" :options="g.options" optionLabel="label" optionValue="value" placeholder="Выбери пол" checkmark fluid class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.gender" />
-        <small class="auth-err">{{ f.errors.value.gender }}</small>
-      </div>
-      <div class="grid grid-cols-1 min-[420px]:grid-cols-2 gap-3">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div class="min-w-0">
           <label class="auth-label">Дата рождения</label>
           <DatePicker v-model="bd.birthDateInput.value" v-bind="bd.birthDatePickerProps.value" placeholder="12.07.1997" class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.birth_date" />
@@ -89,33 +79,30 @@ function backToChoice(): void {
           <small v-if="ageLabel" class="text-stone-500 dark:text-zinc-400">{{ ageLabel }}</small>
         </div>
         <div class="min-w-0">
-          <label class="auth-label">Город проживания</label>
-          <InputText v-model="f.home_city.value" placeholder="Минск" class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.home_city" />
-          <small class="auth-err">{{ f.errors.value.home_city }}</small>
+          <label class="auth-label">Страна проживания</label>
+          <Select v-model="f.country.value" :options="[...RESIDENCE_COUNTRIES]" optionLabel="name" optionValue="name" placeholder="Беларусь" checkmark editable fluid class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.country" @update:model-value="onCountryChange" />
+          <small class="text-stone-500 dark:text-zinc-400">Пины можно создавать только в своей стране</small>
+          <small v-if="f.countryWarning.value" class="block text-amber-600 dark:text-amber-400"><i class="pi pi-exclamation-triangle mr-1" />{{ f.countryWarning.value }}</small>
+          <small class="auth-err">{{ f.errors.value.country }}</small>
         </div>
       </div>
-      <div>
-        <label class="auth-label">Страна проживания</label>
-        <Select v-model="f.country.value" :options="[...RESIDENCE_COUNTRIES]" optionLabel="name" optionValue="name" placeholder="Беларусь" checkmark editable fluid class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.country" @update:model-value="onCountryChange" />
-        <small class="text-stone-500 dark:text-zinc-400">Пины можно создавать только в своей стране</small>
-        <small v-if="f.countryWarning.value" class="block text-amber-600 dark:text-amber-400"><i class="pi pi-exclamation-triangle mr-1" />{{ f.countryWarning.value }}</small>
-        <small class="auth-err">{{ f.errors.value.country }}</small>
-      </div>
-      <div>
-        <label class="auth-label">Пароль</label>
-        <div class="relative mt-1.5">
-          <InputText v-model="f.password.value" v-bind="f.passwordAttrs" :type="f.showPass.value ? 'text' : 'password'" placeholder="••••••••" class="w-full auth-input !pr-11" :invalid="!!f.errors.value.password" />
-          <button type="button" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-white/10 grid place-items-center text-stone-500 dark:text-zinc-400 text-sm" tabindex="-1" aria-label="Показать пароль"><i :class="f.showPass.value ? 'pi pi-eye-slash' : 'pi pi-eye'" /></button>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="min-w-0">
+          <label class="auth-label">Пароль</label>
+          <div class="relative mt-1.5">
+            <InputText v-model="f.password.value" v-bind="f.passwordAttrs" :type="f.showPass.value ? 'text' : 'password'" placeholder="••••••••" autocomplete="new-password" class="w-full auth-input !pr-11" :invalid="!!f.errors.value.password" />
+            <button type="button" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-white/10 grid place-items-center text-stone-500 dark:text-zinc-400 text-sm" tabindex="-1" aria-label="Показать пароль" @click="f.showPass.value=!f.showPass.value"><i :class="f.showPass.value ? 'pi pi-eye-slash' : 'pi pi-eye'" /></button>
+          </div>
+          <small class="auth-err">{{ f.errors.value.password }}</small>
         </div>
-        <small class="auth-err">{{ f.errors.value.password }}</small>
-      </div>
-      <div>
-        <label class="auth-label">Подтверди пароль</label>
-        <div class="relative mt-1.5">
-          <InputText v-model="f.password_confirmation.value" v-bind="f.passwordConfirmationAttrs" :type="f.showPass2.value ? 'text' : 'password'" placeholder="••••••••" class="w-full auth-input !pr-11" :invalid="!!f.errors.value.password_confirmation" />
-          <button type="button" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-white/10 grid place-items-center text-stone-500 dark:text-zinc-400 text-sm" tabindex="-1" aria-label="Показать пароль"><i :class="f.showPass2.value ? 'pi pi-eye-slash' : 'pi pi-eye'" /></button>
+        <div class="min-w-0">
+          <label class="auth-label">Подтверди пароль</label>
+          <div class="relative mt-1.5">
+            <InputText v-model="f.password_confirmation.value" v-bind="f.passwordConfirmationAttrs" :type="f.showPass2.value ? 'text' : 'password'" placeholder="••••••••" autocomplete="new-password" class="w-full auth-input !pr-11" :invalid="!!f.errors.value.password_confirmation" />
+            <button type="button" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-white/10 grid place-items-center text-stone-500 dark:text-zinc-400 text-sm" tabindex="-1" aria-label="Показать пароль" @click="f.showPass2.value=!f.showPass2.value"><i :class="f.showPass2.value ? 'pi pi-eye-slash' : 'pi pi-eye'" /></button>
+          </div>
+          <small class="auth-err">{{ f.errors.value.password_confirmation }}</small>
         </div>
-        <small class="auth-err">{{ f.errors.value.password_confirmation }}</small>
       </div>
       <div class="rounded-2xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/60 p-3.5 space-y-2.5">
         <div class="flex items-center justify-between gap-2">
@@ -133,10 +120,9 @@ function backToChoice(): void {
           <button v-if="f.values.home_lat && !f.addrLoading.value" type="button" class="shrink-0 w-7 h-7 rounded-full hover:bg-stone-100 dark:hover:bg-white/10 grid place-items-center text-stone-400 dark:text-zinc-400" title="Убрать точку" @click="f.clearLocation"><i class="pi pi-times text-[11px]"></i></button>
         </div>
       </div>
-      <Button :loading="f.isSubmitting.value" type="submit" :label="t.isUlove.value ? 'Создать анкету →' : 'Создать аккаунт →'" :class="t.submitClass.value" />
+      <Button :loading="f.isSubmitting.value" type="submit" label="Создать анкету →" :class="t.submitClass.value" />
       <div class="text-sm text-center text-stone-500 dark:text-zinc-400">Уже есть? <Link :href="route('login')" class="font-semibold text-ink-900 dark:text-white hover:underline">Войти</Link></div>
     </form>
-  </template>
 </template>
 
 <style scoped>

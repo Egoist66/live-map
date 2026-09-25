@@ -128,17 +128,14 @@ function writeStorage(key: string, value: unknown): void {
 /**
  * Стор изоляции модулей: какая сторона приложения включена.
  *
- * Новый пользователь видит только выбранный на лендинге модуль
- * (ULove ИЛИ карта ИЛИ бизнес) — без лишнего шума. Остальное
- * довключается в настройках «Приложение», в бандл летит только
- * по требованию (ленивые чанки страниц).
+ * Новые пользователи получают ULove + карту-бонус. Механика
+ * запоминания таба лендинга убрана: выбор таба на стартовой
+ * странице ни на что не влияет, всегда ULove по дефолту.
+ * Остальное довключается в настройках «Приложение», в бандл
+ * летит только по требованию (ленивые чанки страниц).
  *
  * Legacy: `enabled === null` — человек пользовался всем сразу
  * (поле в базе ещё не заполнено), ничего не скрываем.
- *
- * Выбор запоминается в трёх местах: localStorage (переживает
- * разлогин), сервер `enabled_modules` (другое устройство),
- * таб лендинга (гость до регистрации).
  *
  * @example const modules = useAppModulesStore(); modules.ensureInit(authUser)
  */
@@ -223,24 +220,28 @@ export const useAppModulesStore = defineStore('appModules', () => {
   }
 
   /**
-   * Гостевая память из localStorage (таб лендинга переживает разлогин).
+   * Гостевая память: изоляция выключена.
+   *
+   * Таб лендинга больше не запоминается и не влияет на модули:
+   * гость видит всё, новичок после регистрации получает
+   * ULove + карту-бонус с сервера. Старые ключи localStorage
+   * чистим, чтобы не тянуть чужой primary из прошлого.
    */
   function loadGuestMemory(): void {
-    const storedModules = readStorage(STORAGE_MODULES)
-    const storedPrimary = asModule(readStorage(STORAGE_PRIMARY)) ?? legacyTabPrimary()
-
-    if (Array.isArray(storedModules)) {
-      enabled.value = cleanList(storedModules, storedPrimary ?? 'ulove')
-      persistLocal()
-      return
+    try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem(STORAGE_MODULES)
+        window.localStorage.removeItem(STORAGE_PRIMARY)
+        window.localStorage.removeItem(LEGACY_TAB)
+      }
+    } catch {
     }
-
-    if (storedPrimary) {
-      enabled.value = [storedPrimary]
-      persistLocal()
-      return
+    try {
+      if (typeof document !== 'undefined') {
+        document.cookie = `${COOKIE_SIDE}=ulove; Max-Age=${60 * 60 * 24 * 365}; Path=/; SameSite=Lax`
+      }
+    } catch {
     }
-
     enabled.value = null
   }
 
@@ -278,23 +279,15 @@ export const useAppModulesStore = defineStore('appModules', () => {
   }
 
   /**
-   * Запоминает выбор лендинга как набор модулей.
+   * Совместимость: запоминание таба лендинга убрано.
    *
-   * Вызывается из useWelcomeMode.setTab: таб ulove/upin/business
-   * превращается в изоляцию [модуль]. Переживает разлогин —
-   * localStorage не чистится при logout.
+   * Оставлена как no-op, чтобы старые вызовы не падали:
+   * выбор таба ни на что не влияет, всегда ULove по дефолту.
    *
-   * @param tab таб лендинга
+   * @param tab таб лендинга (игнорируется)
    */
   function rememberLandingTab(tab: string): void {
-    const module = tab === 'business' ? 'business' : asModule(tab)
-
-    if (!module) {
-      return
-    }
-
-    enabled.value = [module]
-    persistLocal()
+    return
   }
 
   /**
@@ -350,14 +343,12 @@ export const useAppModulesStore = defineStore('appModules', () => {
   }
 
   /**
-   * Пейлоад для формы регистрации: таб + модули из памяти гостя.
+   * Пейлоад для формы регистрации: всегда ULove + карта-бонус.
    *
    * @returns landing_tab и enabled_modules для POST /register
    */
   function registrationPayload(): { landing_tab: string; enabled_modules: AppModule[] } {
-    const list = enabled.value ?? [legacyTabPrimary() ?? 'ulove']
-
-    return { landing_tab: list[0], enabled_modules: list }
+    return { landing_tab: 'ulove', enabled_modules: ['ulove', 'upin'] }
   }
 
   /**
@@ -464,46 +455,22 @@ export const useAppModulesStore = defineStore('appModules', () => {
   }
 
   /**
-   * Запасной primary по default_mode/signup_goal для legacy и гостей.
+   * Запасной primary: всегда ULove.
    *
-   * @param authUser auth.user или null
-   * @returns ulove|upin
+   * @param authUser auth.user или null (игнорируется)
+   * @returns всегда ulove
    */
   function fallbackOf(authUser: any): AppModule {
-    const raw = authUser?.default_mode
-
-    if (raw === 'ulove' || raw === 'upin') {
-      return raw
-    }
-
-    if (authUser?.signup_goal === 'neighbors') {
-      return 'upin'
-    }
-
-    return legacyTabPrimary() ?? 'ulove'
+    return 'ulove'
   }
 
   /**
-   * Primary из legacy-таба лендинга (миграция старых гостей).
+   * Совместимость: таб лендинга больше не читается.
    *
-   * @returns модуль или null если таб не выбирали
+   * @returns всегда null
    */
   function legacyTabPrimary(): AppModule | null {
-    try {
-      if (typeof window === 'undefined') {
-        return null
-      }
-
-      const stored = window.localStorage.getItem(LEGACY_TAB)
-
-      if (stored === 'business') {
-        return 'business'
-      }
-
-      return asModule(stored)
-    } catch {
-      return null
-    }
+    return null
   }
 
   return {

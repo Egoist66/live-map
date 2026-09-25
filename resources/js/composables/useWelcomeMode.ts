@@ -1,25 +1,26 @@
 import { computed, ref } from 'vue'
 import { usePage } from '@inertiajs/vue3'
-import { useAppModulesStore } from '@/stores/appModules'
 
 /**
- * Вкладка лендинга: ULove-знакомства, UPin-карта или UPin Business.
+ * Вкладка стартовой страницы ULove: знакомства или карта-бонус.
+ *
+ * По ТЗ бизнес-таба больше нет (вместо него — CTA «Сотрудничество»
+ * с почтой админа), а механика запоминания выбора убрана: стартовая
+ * страница всегда открывается с ULove, переключение таба — чисто
+ * локальное состояние без localStorage и без влияния на модули.
  */
-export type LandingTab = 'ulove' | 'upin' | 'business'
-
-const STORAGE_KEY = 'welcome_landing_tab'
+export type LandingTab = 'ulove' | 'upin'
 
 const tab = ref<LandingTab>('ulove')
-let initialized = false
 
 const ULove_CONTENT = {
   badge: 'ULOVE · LIVE',
-  badgeNote: 'люди рядом · мэтч открывает чат · пины на карте',
+  badgeNote: 'люди рядом · мэтч открывает чат · карта встреч в бонус',
   titleTop: 'Встречай рядом.',
   titleAccent: 'ULove',
   titleTail: '— главное.',
   description:
-    'Свайпы людей рядом, мэтч открывает чат. Без ленты и шума. А карта с пинами — удобная фишка в помощь: позови на кофе в 2 клика, без точного адреса.',
+    'Свайпы людей рядом, мэтч открывает чат. Без ленты и шума. А карта с пинами — бонус для общения и знакомств: позови на кофе в 2 клика и найди единомышленников рядом, без точного адреса.',
   secondaryLabel: 'Как работает ULove',
   trust: 'Анонимно по желанию · Блок в 1 клик · Пины живут часы',
   stats: [
@@ -33,18 +34,18 @@ const ULove_CONTENT = {
     { icon: 'pi-comments', title: '03 · Мэтч открывает чат', text: 'Взаимность — и вы уже переписываетесь. Без мэтча — тихо.' },
   ],
   finalTitle: 'Готов к первому мэтчу?',
-  finalText: 'Создай анкету ULove за 2 минуты. А карту откроешь, когда захочется встретиться рядом.',
-  crossHint: 'Ты больше за карту и соседей? Смотри UPin →',
+  finalText: 'Создай анкету ULove за 2 минуты. А карта уже ждёт как бонус: пины, события и единомышленники рядом.',
+  crossHint: 'Интересна карта встреч? Смотри бонус ULove →',
   spotlight: {
-    tag: '🗺️ КАРТА + ПИНЫ · КАЙФ РАЙОНА',
-    title: 'Пины — пульс района. Карта удобно дополняет ULove.',
-    text: 'Вопросы, события, помощь и объявления рядом — кинь пин в 2 клика и тебя увидят соседи. Есть мэтч и не знаете где встретиться? Кинь пин «кофе тут» — встретитесь без точного адреса. Пины живут часы, а не вечно.',
+    tag: '🗺️ КАРТА-БОНУС · ВСТРЕЧИ БЕЗ АДРЕСА',
+    title: 'Карта доводит мэтч до встречи.',
+    text: 'Есть мэтч и не знаете где встретиться? Кинь пин «кофе тут» — встретитесь без точного адреса. Вопросы, события и помощь рядом — лёгкий повод написать первым и найти своих.',
     tiles: [
       { top: '☕ Настолки в кофейне', sub: 'Нас трое, нужен четвёртый · до 22:00' },
       { top: '🐕 Кто гуляет с собакой?', sub: 'Парк за домом · выхожу в 19:00' },
       { top: '🚴 Велозаезд в субботу', sub: 'Собираю компанию · старт в 10:00' },
     ],
-    chips: ['Пин-свидание в 2 клика', 'Без точного адреса', 'Вопросы и помощь рядом'],
+    chips: ['Пин-свидание в 2 клика', 'Без точного адреса', 'Единомышленники рядом'],
     ctaLabel: 'Открыть карту →',
     ctaHref: '/map',
   },
@@ -57,49 +58,46 @@ const ULove_CONTENT = {
 }
 
 const UPIN_CONTENT = {
-  badge: 'UPIN · КАРТА РЯДОМ',
-  badgeNote: 'пины рядом · события · помощь · без точного адреса',
-  titleTop: 'Всё рядом.',
-  titleAccent: 'UPin',
-  titleTail: '— карта района.',
+  badge: 'ULOVE-БОНУС · КАРТА ВСТРЕЧ',
+  badgeNote: 'бонус для общения · знакомств · единомышленников',
+  titleTop: 'Познакомились в ULove?',
+  titleAccent: 'Карта',
+  titleTail: '— где встретиться.',
   description:
-    'Вопросы, события, помощь и встречи рядом — кинь пин в 2 клика, и тебя увидят соседи. Точный адрес не показывается никогда: точка всегда размыта. Пины живут часы, а не вечно.',
-  secondaryLabel: 'Как работают пины',
-  trust: 'Соседи рядом · Анонимно по желанию · Блок в 1 клик',
+    'Карта — ещё один бонус ULove для общения и знакомств: кинь пин «кофе тут» в 2 клика и встретьтесь без точного адреса. Вопросы, события, помощь и компания рядом — лёгкий повод написать первым и найти единомышленников.',
+  secondaryLabel: 'Как карта помогает знакомиться',
+  trust: 'Бонус ULove · Без точного адреса · Блок в 1 клик',
   stats: [
-    { value: '2 клика', note: 'создать пин' },
-    { value: 'Без адреса', note: 'точка всегда размыта' },
+    { value: 'Мэтч → встреча', note: 'пин вместо адреса' },
+    { value: '2 клика', note: 'позвать рядом' },
     { value: 'Часы', note: 'пин живёт, а не висит' },
   ],
   steps: [
-    { icon: 'pi-map-marker', title: '01 · Кинь пин в 2 клика', text: 'Вопрос, событие, помощь или встреча — выбери категорию и точку.' },
-    { icon: 'pi-users', title: '02 · Соседи рядом увидят', text: 'Пин виден в радиусе. Точный адрес скрыт всегда и для всех.' },
-    { icon: 'pi-comments', title: '03 · Встретьтесь и решите', text: 'Комментарии и чат — договоритесь о встрече без лишнего шума.' },
+    { icon: 'pi-heart', title: '01 · Познакомься в ULove', text: 'Свайпы людей рядом: лайк в один тап, мэтч открывает чат.' },
+    { icon: 'pi-map-marker', title: '02 · Кинь пин-приглашение', text: '«Кофе тут», прогулка, настолки — в 2 клика, без точного адреса.' },
+    { icon: 'pi-users', title: '03 · Встретьтесь и найди своих', text: 'Комментарии и чат рядом. События и помощь — повод для новых знакомств.' },
   ],
-  finalTitle: 'Готов увидеть свой район?',
-  finalText: 'Создай аккаунт за минуту и кинь первый пин. А захочешь знакомиться — рядом всегда ULove.',
-  crossHint: 'Хочешь знакомиться? Смотри ULove →',
+  finalTitle: 'Готов звать на встречу в 2 клика?',
+  finalText: 'Создай анкету ULove за 2 минуты — а карта уже ждёт как бонус: пины, события и единомышленники рядом.',
+  crossHint: 'Сначала про знакомства? Смотри ULove →',
   spotlight: {
-    tag: '📍 КАТЕГОРИИ ПИНОВ · БЕЗ СВАЛКИ',
-    title: 'Для каждого повода — свой пин.',
-    text: 'Шесть категорий вместо одной свалки объявлений. Фильтруй карту одним тапом и видишь только нужное: хоть помощь с розеткой, хоть компанию на вечер.',
+    tag: '💘 КАРТА-КАК-БОНУС · ОБЩЕНИЕ И ВСТРЕЧИ',
+    title: 'Карта — повод написать первым.',
+    text: 'Не знаешь с чего начать разговор? Пин рядом — готовый повод: «я тоже иду на настолки», «гуляю с собакой в парке», «кто на велозаезд?». Знакомься через общее, а не через «привет».',
     tiles: [
-      { top: '❓ Вопрос', sub: 'Где рядом чинят обувь?' },
-      { top: '🎉 Событие', sub: 'Кинопоказ во дворе · пятница' },
-      { top: '🤝 Помощь', sub: 'Донести сумки до подъезда' },
-      { top: '💘 Встреча', sub: 'Кофе тут — пин для мэтча' },
-      { top: '🔧 Услуга', sub: 'Мастер рядом · сегодня' },
-      { top: '🔎 Находка', sub: 'Найден кот у парка' },
+      { top: '☕ «Кофе тут» для мэтча', sub: 'Пин-свидание без адреса · 2 клика' },
+      { top: '🎉 События рядом', sub: 'Кинопоказ во дворе · компания сама найдётся' },
+      { top: '🤝 Помощь и интересы', sub: 'Донести сумки · велозаезд · настолки' },
     ],
-    chips: ['Фильтр одним тапом', 'Живут часы', 'Комменты и чат'],
+    chips: ['Повод написать первым', 'Единомышленники', 'Без точного адреса'],
     ctaLabel: 'Открыть карту →',
     ctaHref: '/map',
   },
   privacy: {
     tag: '🔒 Адрес — только твой',
     title: 'Соседи видят пин. Не тебя.',
-    text: 'Точка пина размыта всегда и для всех — даже для друзей. Домашняя зона видна только тебе, а геолокация хранится размытой.',
-    chips: ['Размытие всегда', 'Зона только тебе', 'Блок в 1 клик'],
+    text: 'Точка пина размыта всегда и для всех — даже для друзей. Точный адрес не показывается никогда, а геолокация хранится размытой.',
+    chips: ['Размытие всегда', 'Анонимно по желанию', 'Блок в 1 клик'],
   },
 }
 
@@ -109,60 +107,15 @@ const PIN_SAMPLES = [
   { emoji: '🚴', title: 'Велозаезд в субботу', meta: 'Собираю компанию · старт в 10:00 · 1,2 км' },
 ]
 
-const BUSINESS_CONTENT = {
-  badge: 'UPIN PRO · БИЗНЕС',
-  badgeNote: 'кабинет компании · проверка по УНП · клиенты с карты',
-  titleTop: 'Клиенты рядом.',
-  titleAccent: 'UPin Pro',
-  titleTail: '— официально.',
-  description:
-    'Кабинет компании, проверка по УНП и метка на карте, которую видят все. Пины бизнеса больше и заметнее, promo-подпись завлекает. Работаем по законодательству Республики Беларусь.',
-  secondaryLabel: 'Как это работает',
-  trust: 'Проверка по УНП · Бейдж «Проверено» · Отмена в 1 клик',
-  stats: [
-    { value: '50 км', note: 'радиус видимости' },
-    { value: '×1.45', note: 'пины заметнее' },
-    { value: 'УНП', note: 'проверка РБ' },
-  ],
-  steps: [
-    { icon: 'pi-id-card', title: '01 · Регистрация по УНП', text: 'Форма, УНП из 9 цифр и юридический адрес. Реквизиты подставятся в кабинет сами.' },
-    { icon: 'pi-verified', title: '02 · Проверка и метка', text: 'После проверки компания появляется на карте у всех — особая метка со списком пинов.' },
-    { icon: 'pi-chart-line', title: '03 · Клиенты и продвижение', text: 'Заметные пины, promo-подпись, статистика просмотров. Продвижение — поштучно.' },
-  ],
-  finalTitle: 'Готовы к клиентам с карты?',
-  finalText: 'Регистрация компании за 3 минуты — дальше проверим УНП и включим метку.',
-  crossHint: 'Ты персона? Смотри ULove →',
-  spotlight: {
-    tag: '💼 ВИЗИТКА БИЗНЕСА · $9.99/МЕС',
-    title: 'Платите за клиентов, а не за тариф.',
-    text: 'Бессрочные пины, радиус 50 км, адрес, телефон, часы и бейдж «Проверено». Плюс поштучно: рекламный пин, пуш по району, купон с кнопкой «Маршрут».',
-    tiles: [
-      { top: '🏢 Метка компании', sub: 'Видны всем на карте · список пинов' },
-      { top: '📢 Promo-подпись', sub: '−20% сегодня · видят все рядом' },
-      { top: '👁 Статистика', sub: 'Просмотры, лайки, маршруты' },
-    ],
-    chips: ['Бессрочные пины', 'Бейдж «Проверено»', 'Пуш по району'],
-    ctaLabel: 'Создать кабинет →',
-    ctaHref: '/register?account=business',
-  },
-  privacy: {
-    tag: '🇧🇾 Работаем по РБ',
-    title: 'Компания под контролем.',
-    text: 'Проверка по УНП из 9 цифр и юридическому адресу. Верифицированные получают бейдж доверия и бессрочные пины.',
-    chips: ['УНП 9 цифр', 'Юрадрес', 'Проверка'],
-  },
-}
-
-const PIN_CHIPS = ['Пин в 2 клика', 'Без точного адреса', 'Вопросы и помощь рядом']
+const PIN_CHIPS = ['Пин в 2 клика', 'Без точного адреса', 'Единомышленники рядом']
 
 /**
- * Переключатель сторон лендинга: ULove или UPin.
+ * Переключатель стартовой страницы ULove: знакомства или карта-бонус.
  *
- * Стартовая вкладка — из сохранённого выбора гостя или из домашнего
- * режима авторизованного пользователя. Контент hero, шагов и CTA
- * отдаётся готовым объектом, шаблон только отображает.
+ * Всегда стартует с ULove, выбор таба живёт только в памяти вкладки:
+ * никакого localStorage, cookie и влияния на модули приложения.
  *
- * @returns активная вкладка, контент и палитра сторон, CTA под неё
+ * @returns активная вкладка, контент и палитра, CTA под неё
  * @example const landing = useWelcomeMode()
  */
 export function useWelcomeMode() {
@@ -170,23 +123,13 @@ export function useWelcomeMode() {
   const authUser = computed(() => ((page.props as any).auth as any)?.user ?? null)
   const isAuthenticated = computed(() => !!authUser.value)
 
-  if (!initialized) {
-    initialized = true
-    tab.value = readInitial(authUser.value)
-  }
-
-  try {
-    useAppModulesStore().ensureInit(authUser.value)
-  } catch {
-  }
-
   const isUlove = computed(() => tab.value === 'ulove')
-  const isBusiness = computed(() => tab.value === 'business')
-  const content = computed(() => (isUlove.value ? ULove_CONTENT : tab.value === 'upin' ? UPIN_CONTENT : BUSINESS_CONTENT))
+  const content = computed(() => (isUlove.value ? ULove_CONTENT : UPIN_CONTENT))
 
   /**
-   * Палитра активной стороны: ULove — розово-оранжевая, UPin — голубая,
-   * Business — индиго-фиолетовая. Полные строки классов, чтобы Tailwind JIT их увидел.
+   * Палитра активной стороны: ULove — розово-оранжевая,
+   * карта-бонус — тёплая персиково-розовая. Полные строки классов,
+   * чтобы Tailwind JIT их увидел.
    */
   const theme = computed(() =>
     isUlove.value
@@ -198,131 +141,71 @@ export function useWelcomeMode() {
           logo: 'bg-gradient-to-br from-rose-500 via-fuchsia-500 to-orange-400',
           logoIcon: 'pi pi-heart-fill',
         }
-      : isBusiness.value
-        ? {
-            accentText: 'bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500 bg-clip-text text-transparent',
-            ctaBtn: '!bg-gradient-to-r !from-indigo-500 !to-violet-600',
-            badge: '!bg-gradient-to-r !from-indigo-500 !to-violet-600',
-            stepIcon: 'bg-gradient-to-br from-indigo-500 to-violet-600',
-            logo: 'bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500',
-            logoIcon: 'pi pi-briefcase',
-          }
-        : {
-            accentText: 'bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500 bg-clip-text text-transparent',
-            ctaBtn: '!bg-gradient-to-r !from-sky-500 !via-blue-500 !to-indigo-500',
-            badge: '!bg-gradient-to-r !from-sky-500 !via-blue-500 !to-indigo-500',
-            stepIcon: 'bg-gradient-to-r from-sky-500 to-indigo-500',
-            logo: 'bg-gradient-to-br from-sky-500 via-blue-500 to-indigo-500',
-            logoIcon: 'pi pi-map-marker',
-          },
+      : {
+          accentText: 'bg-gradient-to-r from-rose-500 via-pink-500 to-orange-400 bg-clip-text text-transparent',
+          ctaBtn: '!bg-gradient-to-r !from-rose-500 !via-pink-500 !to-orange-400',
+          badge: '!bg-gradient-to-r !from-rose-500 !via-pink-500 !to-orange-400',
+          stepIcon: 'bg-gradient-to-r from-rose-500 to-orange-400',
+          logo: 'bg-gradient-to-br from-rose-500 via-pink-500 to-orange-400',
+          logoIcon: 'pi pi-map-marker',
+        },
   )
 
   /**
    * Подпись в шапке под активной стороной.
    */
   const headerTag = computed(() =>
-    isUlove.value ? 'ULOVE · ЗНАКОМСТВА РЯДОМ' : isBusiness.value ? 'UPIN PRO · ДЛЯ БИЗНЕСА' : 'UPIN · КАРТА РЯДОМ',
+    isUlove.value ? 'ULOVE · ЗНАКОМСТВА РЯДОМ' : 'ULOVE-БОНУС · КАРТА ВСТРЕЧ',
   )
 
   const headerTagClass = computed(() =>
     isUlove.value
       ? 'bg-gradient-to-r from-rose-500 via-fuchsia-500 to-orange-400'
-      : isBusiness.value
-        ? 'bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500'
-        : 'bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500',
+      : 'bg-gradient-to-r from-rose-500 via-pink-500 to-orange-400',
   )
 
   const primaryCta = computed(() => {
-    if (isBusiness.value) {
-      if (!isAuthenticated.value) {
-        return { href: '/register?account=business', label: 'Открыть кабинет →' }
-      }
-      const accountType = (authUser.value as { account_type?: string } | null)?.account_type
-      return accountType === 'business'
-        ? { href: '/cabinet', label: 'Открыть кабинет →' }
-        : { href: '/map', label: 'Открыть карту →' }
-    }
     if (!isAuthenticated.value) {
-      return { href: '/register', label: isUlove.value ? 'Создать анкету ULove →' : 'Создать аккаунт UPin →' }
+      return { href: '/register', label: isUlove.value ? 'Создать анкету ULove →' : 'Попробовать ULove + карту →' }
     }
     return isUlove.value ? { href: '/swipes', label: 'Открыть ULove →' } : { href: '/map', label: 'Открыть карту →' }
   })
 
   /**
-   * Мета-теги под активную сторону: тайтл и описание меняются с табом.
+   * Мета-теги под активную сторону: обе — про ULove.
    */
   const seo = computed(() =>
     isUlove.value
       ? {
           title: 'ULove — знакомства рядом | UPin',
           description:
-            'ULove — знакомства рядом: свайпы, мэтч открывает чат. Карта и пины в помощь: вопросы, события и встречи рядом без точного адреса.',
+            'ULove в UPin — знакомства рядом: свайпы, мэтч открывает чат. Карта с пинами — бонус для общения, встреч и единомышленников: позови на кофе в 2 клика без точного адреса.',
         }
-      : isBusiness.value
-        ? {
-            title: 'UPin Pro — кабинет для бизнеса | Клиенты с карты',
-            description:
-              'UPin Pro для бизнеса: кабинет компании, проверка по УНП РБ, метка на карте, заметные пины и клиенты рядом.',
-          }
-        : {
-            title: 'UPin — карта района и соседи рядом | ULove',
-            description:
-              'UPin — живая карта района: пины соседей, события, помощь и встречи рядом в 2 клика, без точного адреса. Плюс ULove — знакомства рядом.',
-          },
+      : {
+          title: 'UPin — карта встреч | Бонус ULove для знакомств',
+          description:
+            'Карта UPin — бонус ULove для общения и знакомств: пин-приглашение в 2 клика, события и помощь рядом, единомышленники без точного адреса. Начни со свайпов ULove.',
+        },
   )
 
+  /**
+   * Переключает таб только в памяти: без localStorage и без
+   * влияния на модули приложения — всегда ULove по дефолту.
+   *
+   * @param next ulove|upin
+   */
   function setTab(next: LandingTab): void {
-    tab.value = next
-    try {
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(STORAGE_KEY, next)
-      }
-    } catch {
-    }
-    try {
-      useAppModulesStore().rememberLandingTab(next)
-    } catch {
-    }
+    tab.value = next === 'upin' ? 'upin' : 'ulove'
   }
 
-  return { tab, isUlove, isBusiness, content, theme, headerTag, headerTagClass, primaryCta, seo, isAuthenticated, setTab, pinSamples: PIN_SAMPLES, pinChips: PIN_CHIPS }
+  return { tab, isUlove, content, theme, headerTag, headerTagClass, primaryCta, seo, isAuthenticated, setTab, pinSamples: PIN_SAMPLES, pinChips: PIN_CHIPS }
 }
 
 /**
- * Сохранённая вкладка лендинга без фолбэков.
+ * Совместимость: механика запоминания убрана, всегда null.
  *
- * @returns ulove|upin из localStorage или null, если не выбирали
+ * @returns всегда null — выбора больше не запоминаем
  */
 export function readLandingTab(): LandingTab | null {
-  try {
-    if (typeof window !== 'undefined') {
-      const stored = window.localStorage.getItem(STORAGE_KEY)
-      if (stored === 'ulove' || stored === 'upin' || stored === 'business') {
-        return stored
-      }
-    }
-  } catch {
-  }
   return null
-}
-
-/**
- * Начальная вкладка: сохранённый выбор, иначе домашний режим юзера.
- *
- * @param authUser авторизованный пользователь или null
- * @returns ulove|upin
- */
-function readInitial(authUser: any): LandingTab {
-  const stored = readLandingTab()
-  if (stored) {
-    return stored
-  }
-  if (authUser?.account_type === 'business') {
-    return 'business'
-  }
-  const raw = authUser?.default_mode
-  if (raw === 'upin' || raw === 'ulove') {
-    return raw
-  }
-  return authUser?.signup_goal === 'neighbors' ? 'upin' : 'ulove'
 }

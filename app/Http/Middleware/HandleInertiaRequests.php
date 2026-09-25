@@ -57,6 +57,9 @@ class HandleInertiaRequests extends Middleware
                 'ssrBypass' => (bool) $request->attributes->get('ssr_bypass', false),
                 'side' => self::guestSide($request),
             ],
+            'support' => [
+                'email' => config('seo.support_email', config('mail.from.address')),
+            ],
             // Роуты для ZiggyVue в SSR (resources/js/ssr.ts): Node-процесс
             // не видит blade-скрипт @routes, без этого route()/current() падают
             // и Inertia молча откатывается в CSR (пустой div#app).
@@ -71,32 +74,18 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * Выбранная гостем сторона приложения из cookie для SSR.
+     * Сторона приложения для SSR.
      *
-     * Сервер не видит localStorage, а auth-страницы (вход/регистрация)
-     * темизируются по запомненному табу лендинга. Без этой подсказки
-     * SSR рендерит тему по умолчанию — клиент после гидратации
-     * перекрашивает страницу (флеш чужой иконки + mismatch).
+     * Механика запоминания таба убрана по ТЗ: стартовая страница —
+     * всегда ULove, auth-формы — всегда в стиле ULove. Cookie
+     * `upin_side` больше не влияет на тему, сервер всегда отдаёт
+     * `ulove`, чтобы первый кадр был ровным и без флеша чужой темы.
      *
      * @param Request $request текущий запрос
-     * @return string|null ulove|upin|uflow|districts|business либо null
+     * @return string всегда ulove
      */
     private static function guestSide(Request $request): ?string
     {
-        $side = $request->cookie('upin_side');
-
-        if (! is_string($side)) {
-            return null;
-        }
-
-        $side = strtolower(trim($side));
-
-        $allowed = ['ulove', 'upin', 'uflow', 'districts', 'business'];
-
-        if (! in_array($side, $allowed, true)) {
-            return null;
-        }
-
-        return $side;
+        return 'ulove';
     }
 }

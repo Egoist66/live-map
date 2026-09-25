@@ -1,8 +1,17 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import { useAppFooter } from '@/composables/useAppFooter'
+import { useSupportEmail } from '@/composables/useSettingsSupport'
 
 const { footerLinks } = useAppFooter()
+const supportEmail = useSupportEmail()
+
+/**
+ * CTA сотрудничества: вместо бизнес-таба — красивая ссылка
+ * «Сотрудничество» с почтой админа под капотом (mailto).
+ */
+const cooperationHref = computed(() => `mailto:${supportEmail}?subject=${encodeURIComponent('Сотрудничество с UPin')}`)
 </script>
 
 <template>
@@ -18,6 +27,12 @@ const { footerLinks } = useAppFooter()
         >
           {{ footerLink.label }}
         </Link>
+        <a
+          :href="cooperationHref"
+          class="inline-flex items-center gap-1.5 text-xs font-bold text-rose-600 dark:text-rose-300 hover:text-rose-700 dark:hover:text-rose-200 border border-rose-200/80 dark:border-rose-400/25 bg-rose-50/70 dark:bg-rose-950/30 rounded-full px-3 py-1 transition"
+        >
+          <i class="pi pi-envelope text-[10px]" /> Сотрудничество
+        </a>
       </nav>
     </div>
   </footer>

@@ -187,9 +187,10 @@ export function useMobileBottomNav() {
   /**
    * Классы пункта навигации.
    *
-   * Активный — фирменный цвет логотипа (brand-500 #5B5BFF, в тёмной
-   * теме осветлённый #A5B4FC) плюс тонированная подложка-пилюля.
-   * Неактивный — приглушённый серый, хорошо отличимый от активного.
+   * Активный — тиндеровский rose (#FD267D, в тёмной теме rose-400
+   * #FB7185 для контраста на #0F121F) плюс тонированная пилюля
+   * rose-500/10 (светлая) / rose-500/15 (тёмная). Неактивный —
+   * приглушённый серый, хорошо отличимый от активного в обеих темах.
    *
    * @param name имя роута
    * @returns строка классов для Link пункта меню
@@ -198,7 +199,7 @@ export function useMobileBottomNav() {
    */
   function navLinkClass(name: string): string {
     if (isActive(name)) {
-      return 'text-brand-600 dark:text-[#A5B4FC] bg-brand-50 dark:bg-brand-500/20'
+      return 'text-[#FD267D] dark:text-rose-400 bg-rose-500/10 dark:bg-rose-500/15'
     }
     return 'text-stone-500 dark:text-zinc-400'
   }

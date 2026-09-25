@@ -54,12 +54,12 @@ const chatPrivacy = useChatPrivacy(toRef(props, 'privacy') as any, toRef(props, 
 .chat-tabs .p-tablist-content { padding: 0; border: 0; scrollbar-width: none; -ms-overflow-style: none; }
 .chat-tabs .p-tablist-content { padding: 0; scrollbar-width: none; -ms-overflow-style: none; }
 .chat-tabs .p-tablist-content::-webkit-scrollbar { display: none; width: 0; height: 0; }
-.chat-tabs .p-tablist-active-bar { display: block; height: 3px; border-radius: 9999px; background: #5b5bff; box-shadow: 0 1px 6px rgba(91, 91, 255, 0.5); transition: left 0.35s cubic-bezier(0.16, 1, 0.3, 1), width 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+.chat-tabs .p-tablist-active-bar { display: block; height: 3px; border-radius: 9999px; background: linear-gradient(90deg, #FD267D, #FF7854); box-shadow: 0 1px 6px rgba(253, 38, 125, 0.5); transition: left 0.35s cubic-bezier(0.16, 1, 0.3, 1), width 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
 .chat-tab { background: transparent; border: 0; box-shadow: none; color: #78716c; font-weight: 700; }
 .chat-tab:hover { background: transparent; color: #1c1917; }
-.chat-tab.p-tab-active { background: transparent; color: #5b5bff; box-shadow: none; }
-.chat-tab:focus-visible { outline: none; box-shadow: none; color: #5b5bff; }
+.chat-tab.p-tab-active { background: transparent; color: #FD267D; box-shadow: none; }
+.chat-tab:focus-visible { outline: none; box-shadow: none; color: #FD267D; }
 :global(.dark) .chat-tab { color: #a1a1aa; }
 :global(.dark) .chat-tab:hover { background: transparent; color: #ffffff; }
-:global(.dark) .chat-tab.p-tab-active { background: transparent; color: #8186ff; box-shadow: none; }
+:global(.dark) .chat-tab.p-tab-active { background: transparent; color: #FB7185; box-shadow: none; }
 </style>

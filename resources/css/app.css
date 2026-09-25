@@ -565,12 +565,12 @@ div#p-license-host {
 
 /* iOS Safari зумит вьюпорт при фокусе полей мельче 16px — на логине и
    регистрации это выглядит как дёрганье формы. На мобиле все поля
-   гостевых форм — 16px, десктоп не трогаем. */
+   auth-карточки — 16px, десктоп не трогаем. */
 @media (max-width: 640px) {
-  .guest-auth .p-inputtext,
-  .guest-auth .p-select-label,
-  .guest-auth .p-datepicker-input,
-  .guest-auth input {
+  .auth-card-enter .p-inputtext,
+  .auth-card-enter .p-select-label,
+  .auth-card-enter .p-datepicker-input,
+  .auth-card-enter input {
     font-size: 16px !important;
   }
 }

@@ -20,6 +20,7 @@ import { useChatWallpaper } from '@/composables/useChatWallpaper'
 import { useChatPeerPanelTheme, type ChatPeerTone } from '@/composables/useChatPeerPanelTheme'
 import { useEnterToSend } from '@/composables/useEnterToSend'
 import { formatVoiceTime, VOICE_MAX_SECONDS } from '@/composables/useVoiceRecorder'
+import { formatDate } from '@/utils/date'
 
 const { windowCardClass } = useChatLayout()
 const composerMenu = useChatComposerMenu()
@@ -48,6 +49,46 @@ function replyPreview(message: any): string {
   const t = String(message?.body ?? '').replace(/\s+/g, ' ').trim()
   return t.length > 80 ? `${t.slice(0, 80)}…` : t
 }
+
+/**
+ * Ключ дня сообщения для дейт-разделителей в стиле Tinder.
+ */
+function dayKey(value: any): string {
+  try {
+    const d = new Date(value)
+    if (Number.isNaN(d.getTime())) return ''
+    return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+  } catch {
+    return ''
+  }
+}
+
+/**
+ * Показывать ли пилюлю даты над сообщением: первое в списке
+ * или день отличается от предыдущего.
+ */
+function showDayDivider(list: any[], index: number): boolean {
+  if (index === 0) return true
+  return dayKey(list[index]?.created_at) !== dayKey(list[index - 1]?.created_at)
+}
+
+/**
+ * Подпись пилюли даты: Сегодня / Вчера / дата.
+ */
+function dayLabel(value: any): string {
+  try {
+    const d = new Date(value)
+    if (Number.isNaN(d.getTime())) return ''
+    const now = new Date()
+    const startOf = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime()
+    const diffDays = Math.round((startOf(now) - startOf(d)) / 86400000)
+    if (diffDays <= 0) return 'Сегодня'
+    if (diffDays === 1) return 'Вчера'
+    return formatDate(d)
+  } catch {
+    return ''
+  }
+}
 </script>
 <template>
   <div :class="[selectedId ? 'flex' : 'hidden lg:flex', windowCardClass]">
@@ -60,7 +101,7 @@ function replyPreview(message: any): string {
         <button v-if="datingEntry" @click="emit('swipesBack')" title="Назад в свайпы" class="!hidden sm:!grid w-9 h-9 place-items-center rounded-full bg-white/20 hover:bg-white/30 active:scale-95 shrink-0"><i class="pi pi-heart-fill text-sm"></i></button>
         <Link :href="headerLink.headerHref.value" class="flex items-center gap-2.5 hover:opacity-80 min-w-0 flex-1 overflow-hidden py-0.5">
           <span class="relative block shrink-0 w-10 h-10"><span v-if="activeConv?.title" class="w-10 h-10 rounded-full bg-gradient-to-br from-violet-700 to-purple-900 text-white grid place-items-center">🏘️</span><Avatar v-else :image="avatarSrcFor(activeConv?.other)" shape="circle" class="!w-10 !h-10 [&_img]:object-cover" :class="datingEntry ? 'ring-2 ring-white/70' : ''" :pt="{ image: { class: 'object-cover' } }" /><OnlineDot v-if="!activeConv?.title" :online="online" /></span>
-          <span class="min-w-0 flex-1 block"><span class="block text-[15px] lg:text-sm font-semibold truncate hover:underline leading-snug" :class="datingEntry ? 'text-white' : 'dark:text-white'">{{ activeConv?.title || activeConv?.other?.name }} <OrgBadge :is-organization="activeConv?.other?.is_organization" /></span><span v-if="typing" class="mt-0.5 block text-xs leading-none animate-pulse" :class="datingEntry ? 'text-white/90' : 'text-violet-600'">печатает...</span><span v-else-if="activeConv?.title" class="mt-0.5 block text-xs leading-none text-violet-600">🏘️ Общий чат района</span><span v-else-if="datingBadge" class="mt-0.5 text-[11px] font-bold leading-none flex items-center gap-1" :class="datingEntry ? 'text-white/90' : 'text-rose-500'"><i class="pi pi-heart-fill text-[10px]"></i>{{ datingBadge }}</span><span v-else class="mt-0.5 block text-xs leading-none" :class="datingEntry ? 'text-white/80' : (online ? 'text-emerald-600' : 'text-red-500')">{{ online ? 'в сети' : 'оффлайн' }}</span></span>
+          <span class="min-w-0 flex-1 block"><span class="block text-[16px] lg:text-[15px] font-bold truncate hover:underline leading-snug" :class="datingEntry ? 'text-white' : 'dark:text-white'">{{ activeConv?.title || activeConv?.other?.name }} <OrgBadge :is-organization="activeConv?.other?.is_organization" /></span><span v-if="typing" class="mt-0.5 block text-xs leading-none animate-pulse" :class="datingEntry ? 'text-white/90' : 'text-[#1786FF]'">печатает...</span><span v-else-if="activeConv?.title" class="mt-0.5 block text-xs leading-none text-stone-500 dark:text-zinc-400">🏘️ Общий чат района</span><span v-else-if="datingBadge" class="mt-0.5 text-[11px] font-bold leading-none flex items-center gap-1" :class="datingEntry ? 'text-white/90' : 'text-rose-500'"><i class="pi pi-heart-fill text-[10px]"></i>{{ datingBadge }}</span><span v-else class="mt-0.5 flex items-center gap-1 text-xs leading-none text-stone-500 dark:text-zinc-400"><span :class="online ? 'bg-emerald-500' : 'bg-zinc-400'" class="h-1.5 w-1.5 rounded-full" />{{ online ? 'в сети' : 'оффлайн' }}</span></span>
         </Link>
         <div class="flex items-center gap-0.5 shrink-0" :class="datingEntry ? 'text-white' : ''">
           <Button v-if="activeConv?.type === 'district' && activeConv?.can_invite" @click="emit('inviteDistrict')" icon="pi pi-user-plus" rounded text severity="secondary" :class="datingEntry ? '!text-white hover:!bg-white/20' : ''" class="!w-9 !h-9 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" aria-label="Пригласить в район" title="Пригласить в район" />
@@ -90,17 +131,23 @@ function replyPreview(message: any): string {
           </div>
         </div>
       </div>
-      <div class="relative flex-1 min-h-0 min-w-0 w-full max-w-full overflow-hidden bg-stone-50/50 dark:bg-zinc-950/30">
+      <div class="relative flex-1 min-h-0 min-w-0 w-full max-w-full overflow-hidden bg-white dark:bg-zinc-950">
         <div v-if="wallpaper.hasWallpaper.value" aria-hidden="true" class="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat" :style="(wallpaper.wallpaperLayerStyle.value as any)" />
         <div v-if="wallpaper.hasWallpaper.value" aria-hidden="true" class="pointer-events-none absolute inset-0 bg-white/60 dark:bg-black/60" />
         <div id="chat-messages" class="relative z-10 h-full overflow-auto overscroll-contain [scrollbar-width:thin] max-lg:[-ms-overflow-style:none] max-lg:[scrollbar-width:none] max-lg:[&::-webkit-scrollbar]:hidden p-3 lg:p-4 min-w-0 w-full max-w-full bg-transparent">
         <div class="min-h-full">
         <div :ref="historyTopSentinel as any" aria-hidden="true" class="h-px w-full" />
-        <div v-if="loading" class="flex justify-center py-6"><span class="w-6 h-6 border-2 border-violet-200 border-t-violet-600 rounded-full animate-spin"></span></div>
-        <div v-else-if="historyLoading" class="flex justify-center py-3"><span class="w-5 h-5 border-2 border-violet-200 border-t-violet-600 rounded-full animate-spin"></span></div>
+        <div v-if="loading" class="flex justify-center py-6"><span class="w-6 h-6 border-2 border-sky-200 dark:border-zinc-700 border-t-[#1786FF] rounded-full animate-spin"></span></div>
+        <div v-else-if="historyLoading" class="flex justify-center py-3"><span class="w-5 h-5 border-2 border-sky-200 dark:border-zinc-700 border-t-[#1786FF] rounded-full animate-spin"></span></div>
         <div v-else-if="historyHasMore && (messages || []).length" class="py-2 text-center text-[11px] text-stone-400">Потяни вверх — подгрузим старше</div>
         <div v-else-if="!(messages || []).length" class="h-full grid place-items-center text-stone-400 text-sm text-center"><div><div class="text-3xl mb-2">✉️</div><div>Пока пусто — напишите первым</div></div></div>
-        <template v-for="m in (messages || [])" :key="m?.id">
+        <div v-if="datingEntry" class="flex justify-center pt-1 pb-3">
+          <div class="max-w-[92%] rounded-full bg-rose-500/10 dark:bg-rose-500/15 border border-rose-200/70 dark:border-rose-400/20 px-4 py-2 text-center text-xs font-semibold leading-snug text-rose-600 dark:text-rose-300">💞 Это мэтч — вы понравились друг другу. Напишите первым!</div>
+        </div>
+        <template v-for="(m, mi) in (messages || [])" :key="m?.id">
+          <div v-if="showDayDivider((messages || []), mi)" class="flex justify-center pt-1 pb-2.5">
+            <span class="rounded-full bg-stone-100 dark:bg-zinc-800 px-3 py-1 text-[11px] font-semibold text-stone-500 dark:text-zinc-400">{{ dayLabel(m?.created_at) }}</span>
+          </div>
           <div v-if="m" :id="`msg-${m.id}`" class="pb-2.5">
             <div v-if="editingId === m.id" class="flex justify-end min-w-0">
                   <div class="bg-white dark:bg-zinc-800 border dark:border-zinc-700 rounded-xl shadow-lg w-full max-w-[92vw] sm:max-w-[86vw] min-w-0 p-2">
@@ -176,9 +223,9 @@ function replyPreview(message: any): string {
               <button @click="composerMenu.close(); emit('presets')" class="w-full flex items-center gap-2.5 text-left px-4 py-3 text-sm font-medium dark:text-zinc-100 hover:bg-stone-50 dark:hover:bg-zinc-700/60 active:bg-stone-100 transition"><i class="pi pi-comments text-xs text-stone-400"></i>Пресеты сообщений</button>
             </div>
           </div>
-          <Textarea :model-value="input" @update:model-value="(v:any)=>emit('update:input', v)" @input="emit('typing')" @blur="emit('stopTyping')" @keydown="(e:any)=>handleEnterToSend(e, () => emit('send'))" @keydown.escape="emit('emojiClose')" @paste="(e:any)=>emit('pasteImage', e as ClipboardEvent)" placeholder="Сообщение..." rows="1" autoResize maxlength="2000" fluid class="!rounded-2xl flex-1 min-w-0 max-h-32" enterkeyhint="enter" />
-          <Button v-if="input.trim() || attachmentName" @click="emit('send')" :loading="sending" :disabled="!input.trim() && !attachmentName" icon="pi pi-send" rounded class="!w-11 !h-11 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-label]:hidden [&_.p-button-icon]:!m-0" aria-label="Отправить" />
-          <Button v-else @click="emit('startVoice')" icon="pi pi-microphone" severity="secondary" outlined rounded class="!w-11 !h-11 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-label]:hidden [&_.p-button-icon]:!m-0" aria-label="Голосовое сообщение" />
+          <Textarea :model-value="input" @update:model-value="(v:any)=>emit('update:input', v)" @input="emit('typing')" @blur="emit('stopTyping')" @keydown="(e:any)=>handleEnterToSend(e, () => emit('send'))" @keydown.escape="emit('emojiClose')" @paste="(e:any)=>emit('pasteImage', e as ClipboardEvent)" placeholder="Сообщение..." rows="1" autoResize maxlength="2000" fluid class="!rounded-full !bg-stone-100 dark:!bg-zinc-800 !border-0 !py-3 flex-1 min-w-0 max-h-32" enterkeyhint="enter" />
+          <Button v-if="input.trim() || attachmentName" @click="emit('send')" :loading="sending" :disabled="!input.trim() && !attachmentName" icon="pi pi-send" rounded class="!w-11 !h-11 !p-0 !rounded-full !border-0 !bg-[#1786FF] !text-white hover:!bg-[#0f78e0] shrink-0 grid place-items-center [&_.p-button-label]:hidden [&_.p-button-icon]:!m-0 shadow-md shadow-sky-500/30" aria-label="Отправить" />
+          <Button v-else @click="emit('startVoice')" icon="pi pi-microphone" severity="secondary" text rounded class="!w-11 !h-11 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-label]:hidden [&_.p-button-icon]:!m-0" aria-label="Голосовое сообщение" />
         </div>
         <div v-if="composerMenu.open.value" @click="composerMenu.close()" class="fixed inset-0 z-40"></div>
       </div>

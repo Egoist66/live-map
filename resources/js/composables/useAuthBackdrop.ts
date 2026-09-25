@@ -1,15 +1,14 @@
 import { computed } from 'vue'
-import { useAuthTheme } from '@/composables/useAuthTheme'
 
 /**
  * Тема анимированного фона страниц входа и регистрации.
  */
-export type AuthBackdropTheme = 'ulove' | 'upin' | 'business'
+export type AuthBackdropTheme = 'ulove'
 
 /**
- * Паттерн декора поверх градиента: пины карты, деловой skyline, сердца.
+ * Паттерн декора поверх градиента: всегда сердца ULove.
  */
-export type AuthBackdropPattern = 'pins' | 'skyline' | 'hearts'
+export type AuthBackdropPattern = 'hearts'
 
 /**
  * Токены фона auth-страниц под текущую тему.
@@ -32,73 +31,33 @@ export interface AuthBackdropTokens {
 }
 
 /**
- * Токены тематического фона для Login/Register.
+ * Токены фона для Login/Register: всегда ULove.
  *
- * Логика выбора — здесь, отрисовка — в `AuthBackdrop.vue`
- * (Правило №1). Темы:
- * - `upin` — ночное небо карты: сетка точек, светящиеся пины и маршрут;
- * - `business` — премиальный slate + золото: skyline баров и линия роста;
- * - `ulove` — ненавязчивое розовое утро: медленно всплывающие сердца.
+ * Логика выбора убрана, отрисовка — в `AuthBackdrop.vue`
+ * (Правило №1): ненавязчивое розовое утро с медленно
+ * всплывающими сердцами, одинаковое на входе и регистрации —
+ * поэтому переход между формами ровный, без смены фона.
  *
- * @returns токены фона под текущую auth-тему
+ * @returns токены фона ULove
  * @example
  * ```ts
  * const backdrop = useAuthBackdrop()
- * // backdrop.tokens.value.pattern === 'pins'
+ * // backdrop.tokens.value.pattern === 'hearts'
  * ```
  */
 export function useAuthBackdrop() {
-  const authTheme = useAuthTheme()
+  const theme = computed<AuthBackdropTheme>(() => 'ulove')
 
-  const theme = computed<AuthBackdropTheme>(() => {
-    if (authTheme.isBusiness.value) {
-      return 'business'
-    }
-
-    if (authTheme.isUlove.value) {
-      return 'ulove'
-    }
-
-    return 'upin'
-  })
-
-  const tokens = computed<AuthBackdropTokens>(() => {
-    const current = theme.value
-
-    if (current === 'business') {
-      return {
-        theme: current,
-        skyClass: 'bg-gradient-to-b from-amber-50 via-stone-100 to-surface',
-        skyDarkClass: 'dark:from-[#14101A] dark:via-[#1B1526] dark:to-[#0F121F]',
-        blobAClass: 'bg-gradient-to-br from-amber-400/50 to-orange-500/40 dark:from-amber-500/25 dark:to-orange-600/20',
-        blobBClass: 'bg-gradient-to-tr from-violet-500/40 to-indigo-600/30 dark:from-violet-600/20 dark:to-indigo-800/20',
-        pattern: 'skyline',
-        cardClass: '!border-amber-200/70 dark:!border-amber-300/20 dark:!shadow-[0_0_70px_-18px_rgba(245,158,11,0.4)]',
-      }
-    }
-
-    if (current === 'ulove') {
-      return {
-        theme: current,
-        skyClass: 'bg-gradient-to-b from-rose-50 via-pink-50 to-surface',
-        skyDarkClass: 'dark:from-[#1D1016] dark:via-[#191019] dark:to-[#0F121F]',
-        blobAClass: 'bg-gradient-to-br from-rose-300/60 to-fuchsia-300/50 dark:from-rose-600/20 dark:to-fuchsia-700/15',
-        blobBClass: 'bg-gradient-to-tr from-orange-200/60 to-rose-200/50 dark:from-orange-500/10 dark:to-rose-600/10',
-        pattern: 'hearts',
-        cardClass: '!border-rose-200/80 dark:!border-rose-400/20 dark:!shadow-[0_0_70px_-18px_rgba(244,63,94,0.45)] shadow-[0_24px_70px_-24px_rgba(244,63,94,0.5)]',
-      }
-    }
-
-    return {
-      theme: current,
-      skyClass: 'bg-gradient-to-b from-sky-100 via-indigo-50 to-surface',
-      skyDarkClass: 'dark:from-[#0B1526] dark:via-[#101B33] dark:to-[#0F121F]',
-      blobAClass: 'bg-gradient-to-br from-sky-400/50 to-blue-500/40 dark:from-sky-500/25 dark:to-blue-700/20',
-      blobBClass: 'bg-gradient-to-tr from-indigo-400/40 to-teal-300/40 dark:from-indigo-600/20 dark:to-teal-500/15',
-      pattern: 'pins',
-      cardClass: '!border-sky-200/70 dark:!border-sky-400/20 dark:!shadow-[0_0_70px_-18px_rgba(56,189,248,0.35)]',
-    }
-  })
+  const tokens = computed<AuthBackdropTokens>(() => ({
+    theme: 'ulove' as AuthBackdropTheme,
+    skyClass: 'bg-gradient-to-b from-rose-50 via-pink-50 to-surface',
+    skyDarkClass: 'dark:from-[#1D1016] dark:via-[#191019] dark:to-[#0F121F]',
+    blobAClass: 'bg-gradient-to-br from-rose-300/60 to-fuchsia-300/50 dark:from-rose-600/20 dark:to-fuchsia-700/15',
+    blobBClass: 'bg-gradient-to-tr from-orange-200/60 to-rose-200/50 dark:from-orange-500/10 dark:to-rose-600/10',
+    pattern: 'hearts' as AuthBackdropPattern,
+    cardClass:
+      '!border-rose-200/80 dark:!border-rose-400/20 dark:!shadow-[0_0_70px_-18px_rgba(244,63,94,0.45)] shadow-[0_24px_70px_-24px_rgba(244,63,94,0.5)]',
+  }))
 
   return { theme, tokens }
 }

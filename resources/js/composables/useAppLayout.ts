@@ -1,5 +1,5 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { router } from '@inertiajs/vue3'
+import { router, usePage } from '@inertiajs/vue3'
 import { route } from '@/route'
 import { useAppModulesStore } from '@/stores/appModules'
 import { useBadgeStore } from '@/stores/badges'
@@ -73,7 +73,7 @@ export function useAppLayout() {
    * ULove, UFlow) или в мобильном нижнем меню (плюс Районы),
    * из дропдауна убрано — для всех пользователей, не только стаффа.
    * Остаются только уникальные разделы: модерация, настройки,
-   * переход в кабинет бизнеса для персоны и выход.
+   * сотрудничество (mailto на почту админа) и выход.
    */
   const menuItems = computed(() => {
     const header = { label: user.value?.name || '', sublabel: user.value?.email || '', isHeader: true }
@@ -95,11 +95,8 @@ export function useAppLayout() {
 
     const personSections: any[] = [
       { label: 'Настройки', icon: 'pi pi-cog', accent: 'slate', active: route().current('profile.edit'), command: () => router.visit(settingsHref.value) },
+      { label: 'Сотрудничество', icon: 'pi pi-envelope', accent: 'rose', command: () => openCooperationMail() },
     ]
-
-    if (modules.isEnabled('business')) {
-      personSections.push({ label: 'Кабинет бизнеса', icon: 'pi pi-briefcase', accent: 'violet', active: route().current('cabinet.*'), command: () => router.visit('/cabinet') })
-    }
 
     return [
       header,
@@ -110,6 +107,21 @@ export function useAppLayout() {
       logoutItem,
     ]
   })
+
+  /**
+   * Открывает почту для сотрудничества (mailto на почту админа).
+   */
+  function openCooperationMail(): void {
+    let email = 'razormad666@gmail.com'
+    try {
+      const shared = (usePage().props as any)?.support?.email
+      if (typeof shared === 'string' && shared.includes('@')) {
+        email = shared
+      }
+    } catch {
+    }
+    window.location.href = `mailto:${email}?subject=${encodeURIComponent('Сотрудничество с UPin')}`
+  }
 
   const navVisibility = computed(() => ({
     showMap: modules.isEnabled('upin'),

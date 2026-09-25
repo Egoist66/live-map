@@ -37,9 +37,9 @@
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-title" content="{{ $seoHead['site_name'] ?? config('seo.site_name') }}">
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-        <meta name="msapplication-TileColor" content="#0F121F">
+        <meta name="msapplication-TileColor" content="#FD267D">
         <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
-        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0F121F">
+        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#150B10">
 
         <meta property="og:site_name" content="{{ $seoHead['site_name'] ?? config('seo.site_name') }}">
         @if(!$isNativeClient)
@@ -79,7 +79,11 @@
         <script nonce="{{ $cspNonce ?? '' }}">
             (function(){ try{ var s=localStorage.getItem('theme'); var m=window.matchMedia('(prefers-color-scheme: dark)').matches; var d=s ? s==='dark' : m; if(d) document.documentElement.classList.add('dark'); document.documentElement.style.colorScheme = d?'dark':'light'; var bg=d?'#0F121F':'#ffffff'; document.documentElement.style.backgroundColor=bg; }catch(e){} })();
         </script>
-        {{-- Тонкий градиентный лоадер сверху (десктоп и PWA). Системный сплэш PWA (иконка + UPin из манифеста) рисует сам Chrome. --}}
+        {{-- Прелоадер: тонкая полоса сверху + полноэкранный boot-экран
+              в стиле Tinder (тёплая тьма, светящаяся иконка пин+сердце).
+              Системный сплэш PWA (иконка + UPin из манифеста) рисует сам
+              Chrome — цвета манифеста подобраны под этот же фон, чтобы
+              переход «системный сплэш → boot → приложение» был бесшовным. --}}
         <style nonce="{{ $cspNonce ?? '' }}">
           #mini-loader {
             position: fixed;
@@ -89,7 +93,7 @@
             height: 3px;
             z-index: 9998;
             overflow: hidden;
-            background: rgba(91, 91, 255, .12);
+            background: rgba(253, 38, 125, .14);
             transition: opacity .4s ease, visibility .4s ease;
           }
           #mini-loader.done {
@@ -101,16 +105,93 @@
             height: 100%;
             width: 35%;
             border-radius: inherit;
-            background: linear-gradient(90deg, #5B5BFF, #06B6D4, #FDA4AF);
-            box-shadow: 0 0 12px rgba(91, 91, 255, .8);
+            background: linear-gradient(90deg, #FD267D, #E936C7, #FF7854);
+            box-shadow: 0 0 12px rgba(253, 38, 125, .8);
             animation: mini-load 1.1s ease-in-out infinite;
           }
           @keyframes mini-load {
             0% { transform: translateX(-110%); }
             100% { transform: translateX(280%); }
           }
+          #pwa-boot {
+            position: fixed;
+            inset: 0;
+            z-index: 9997;
+            display: grid;
+            place-items: center;
+            background:
+              radial-gradient(90% 60% at 50% 0%, rgba(253, 38, 125, .22) 0%, rgba(253, 38, 125, 0) 60%),
+              radial-gradient(70% 50% at 85% 100%, rgba(255, 120, 84, .12) 0%, rgba(255, 120, 84, 0) 60%),
+              linear-gradient(180deg, #241019 0%, #150B10 55%, #0B0508 100%);
+            transition: opacity .45s ease, visibility .45s ease;
+          }
+          #pwa-boot.done {
+            opacity: 0;
+            visibility: hidden;
+          }
+          #pwa-boot .boot-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 24px;
+            animation: boot-in .5s cubic-bezier(.22, 1, .36, 1) both;
+          }
+          #pwa-boot .boot-icon {
+            width: 96px;
+            height: 96px;
+            border-radius: 26px;
+            box-shadow: 0 18px 60px -12px rgba(253, 38, 125, .75), 0 0 0 1px rgba(255, 255, 255, .08);
+            animation: boot-float 2.6s ease-in-out infinite;
+          }
+          #pwa-boot .boot-name {
+            margin-top: 18px;
+            color: #fff;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            font-size: 30px;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+          }
+          #pwa-boot .boot-name span {
+            font-weight: 300;
+            opacity: .75;
+          }
+          #pwa-boot .boot-tag {
+            margin-top: 6px;
+            color: rgba(255, 255, 255, .6);
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: .02em;
+          }
+          #pwa-boot .boot-bar {
+            margin-top: 26px;
+            width: 148px;
+            height: 4px;
+            border-radius: 999px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, .12);
+          }
+          #pwa-boot .boot-bar > span {
+            display: block;
+            height: 100%;
+            width: 40%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, #FD267D, #E936C7, #FF7854);
+            box-shadow: 0 0 12px rgba(253, 38, 125, .9);
+            animation: mini-load 1.1s ease-in-out infinite;
+          }
+          @keyframes boot-in {
+            from { opacity: 0; transform: scale(.96) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+          }
+          @keyframes boot-float {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-7px) scale(1.03); }
+          }
           @media (prefers-reduced-motion: reduce) {
-            #mini-loader *, #mini-loader *::before, #mini-loader *::after {
+            #mini-loader *, #mini-loader *::before, #mini-loader *::after,
+            #pwa-boot *, #pwa-boot *::before, #pwa-boot *::after {
               animation: none !important;
             }
           }
@@ -170,16 +251,49 @@
         {!! ($seoIntegrations ?? [])['body_start_scripts'] !!}
         @endif
         <div id="mini-loader" role="status" aria-label="Загрузка"><span></span></div>
+        <div id="pwa-boot" role="status" aria-label="UPin загружается">
+          <div class="boot-card">
+            <svg class="boot-icon" viewBox="0 0 512 512" aria-hidden="true">
+              <defs>
+                <linearGradient id="boot-bg" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0" stop-color="#FD267D" />
+                  <stop offset="0.55" stop-color="#E936C7" />
+                  <stop offset="1" stop-color="#FF7854" />
+                </linearGradient>
+                <radialGradient id="boot-glow" cx="0.5" cy="0.35" r="0.8">
+                  <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.35" />
+                  <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0" />
+                </radialGradient>
+              </defs>
+              <rect width="512" height="512" rx="128" fill="url(#boot-bg)" />
+              <rect width="512" height="512" rx="128" fill="url(#boot-glow)" />
+              <path d="M256 108c-70 0-122 52-122 120 0 92 112 176 112 176s112-84 112-176c0-68-52-120-102-120z" fill="#fff" />
+              <path d="M256 272c-26-16-42-32-42-50 0-14 11-24 24-24 9 0 15 4 18 10 3-6 9-10 18-10 13 0 24 10 24 24 0 18-16 34-42 50z" fill="#FD267D" />
+            </svg>
+            <div class="boot-name">U<span>Pin</span></div>
+            <div class="boot-tag">знакомства ULove рядом</div>
+            <div class="boot-bar"><span></span></div>
+          </div>
+        </div>
         <script nonce="{{ $cspNonce ?? '' }}">
             (function () {
                 var mini = document.getElementById('mini-loader');
+                var boot = document.getElementById('pwa-boot');
                 var hide = function () {
-                    if (!mini || mini.classList.contains('done')) return;
-                    mini.classList.add('done');
-                    setTimeout(function () {
-                        if (mini && mini.parentNode) mini.parentNode.removeChild(mini);
-                        mini = null;
-                    }, 500);
+                    if (mini && !mini.classList.contains('done')) {
+                        mini.classList.add('done');
+                        setTimeout(function () {
+                            if (mini && mini.parentNode) mini.parentNode.removeChild(mini);
+                            mini = null;
+                        }, 500);
+                    }
+                    if (boot && !boot.classList.contains('done')) {
+                        boot.classList.add('done');
+                        setTimeout(function () {
+                            if (boot && boot.parentNode) boot.parentNode.removeChild(boot);
+                            boot = null;
+                        }, 550);
+                    }
                 };
                 window.__upinHideSplash = hide;
                 window.addEventListener('load', function () { setTimeout(hide, 800); });

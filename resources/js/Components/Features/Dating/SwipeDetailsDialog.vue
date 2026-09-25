@@ -1,19 +1,50 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { Link } from '@inertiajs/vue3'
+import { useMounted } from '@vueuse/core'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
 import Chip from 'primevue/chip'
 import Dialog from 'primevue/dialog'
 import { useProfileUrl } from '@/composables/useProfileUrl'
+import { usePresenceState } from '@/composables/usePresence'
+import { formatRelative } from '@/utils/date'
 import type { SwipeCard } from '@/services/dating.api'
 
 const props = defineProps<{ card: SwipeCard | null }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
 
 const { userProfileUrl } = useProfileUrl()
+const { isOnline } = usePresenceState()
+const mounted = useMounted()
 
 const open = computed(() => !!props.card)
+
+/**
+ * Онлайн-статус анкеты: presence-канал + свежесть last_seen_at.
+ */
+const peerOnline = computed(() => {
+  if (!props.card || props.card.id == null) return false
+  try {
+    return isOnline(props.card.id, props.card.last_seen_at)
+  } catch {
+    return false
+  }
+})
+
+/**
+ * Подпись присутствия: «в сети» либо относительное время.
+ * Время считаем только после mount (SSR mismatch у границы минуты).
+ */
+const presenceLabel = computed(() => {
+  if (peerOnline.value) return 'в сети'
+  if (!mounted.value || !props.card?.last_seen_at) return 'оффлайн'
+  try {
+    return formatRelative(props.card.last_seen_at)
+  } catch {
+    return 'оффлайн'
+  }
+})
 
 function goalShort(card: SwipeCard): string {
   const custom = (card.custom_goal ?? '').trim()
@@ -56,6 +87,9 @@ function ageText(card: SwipeCard): string {
           <div v-else class="text-lg font-black truncate text-stone-900 dark:text-white">{{ card.name }} · {{ ageText(card) }}</div>
           <div v-if="card.city || card.distance_km != null" class="text-xs text-stone-500 dark:text-zinc-400 truncate">
             {{ [card.city, card.distance_km != null ? `${card.distance_km} км` : null].filter(Boolean).join(' · ') }}
+          </div>
+          <div class="mt-1 flex items-center gap-1.5 text-xs font-semibold" :class="peerOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-stone-400 dark:text-zinc-500'">
+            <span :class="peerOnline ? 'bg-emerald-500' : 'bg-zinc-400 dark:bg-zinc-600'" class="h-1.5 w-1.5 rounded-full" />{{ presenceLabel }}
           </div>
         </div>
       </div>

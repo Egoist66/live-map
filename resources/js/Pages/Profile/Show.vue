@@ -51,10 +51,9 @@ const showUlove = computed(
 )
 
 /**
- * Фото для Tinder-профиля: только галерея, без дублей.
- * Аватар галереей не считается — идёт отдельным фолбэком
- * обложки в `UloveProfileView`, иначе счётчик врёт («1 из 5»
- * при пустой галерее).
+ * Фото для Tinder-профиля: галерея без дублей + аватар фолбэком.
+ * Аватар из настроек зеркалится бэком в галерею главным фото,
+ * но если галерея пуста/полна — обложка берётся из avatar_url.
  */
 const ulovePhotos = computed(() => {
   const urls: string[] = []
@@ -124,6 +123,7 @@ onMounted(async () => { await design.init() })
             :gallery="gallery"
             :is-own="isOwn"
             :online="page.online.value"
+            :last-seen-text="page.lastSeenText.value"
             :can-message="page.canMessage.value"
             :can-message-reason="isBlocked ? 'Пользователь заблокирован' : null"
             @edit="isOwn ? (showDatingEdit = true) : design.onEdit()"

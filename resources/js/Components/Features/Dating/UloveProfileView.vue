@@ -15,11 +15,12 @@ const props = withDefaults(
     avatar?: string | null
     isOwn: boolean
     online?: boolean
+    lastSeenText?: string | null
     canMessage?: boolean
     canMessageReason?: string | null
     gallery?: any
   }>(),
-  { avatar: null, online: false, canMessage: false, canMessageReason: null, gallery: null },
+  { avatar: null, online: false, lastSeenText: null, canMessage: false, canMessageReason: null, gallery: null },
 )
 
 const emit = defineEmits<{ (e: 'edit'): void; (e: 'message'): void; (e: 'photos'): void; (e: 'add-photos'): void }>()
@@ -167,8 +168,9 @@ const cardPhotos = useSwipeCardPhotos(
 )
 
 /**
- * Аватар — фолбэк обложки, когда галерея пуста. В счётчик,
- * точки и слоты не входит: они строятся строго по галерее.
+ * Аватар — фолбэк обложки, когда галереи нет. Бэк зеркалит свежий
+ * аватар в галерею главным фото, но фолбэк оставляем на случай
+ * пустой или переполненной галереи.
  */
 const avatarUrl = computed(() => {
   const url = String(props.profileUser?.avatar_url ?? '')
@@ -283,8 +285,8 @@ const activePrivacyFlags = computed(() => {
 
       <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
-      <div v-if="online" class="absolute left-4 top-12 z-20 flex items-center gap-1.5 rounded-full bg-black/45 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur">
-        <span class="h-1.5 w-1.5 rounded-full bg-emerald-400" />В сети
+      <div v-if="!isOwn && (online || lastSeenText)" class="absolute left-4 top-12 z-20 flex items-center gap-1.5 rounded-full bg-black/45 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur">
+        <span :class="online ? 'bg-emerald-400' : 'bg-zinc-400'" class="h-1.5 w-1.5 rounded-full" />{{ online ? 'В сети' : lastSeenText }}
       </div>
 
       <div class="absolute inset-x-0 bottom-0 z-20 p-4 text-white">
@@ -415,6 +417,13 @@ const activePrivacyFlags = computed(() => {
           @click="emit('message')"
         />
       </div>
+      <Link
+        v-if="p.matched.value"
+        :href="p.matchedConversationId.value ? `/chat/${p.matchedConversationId.value}?from=swipes` : '/swipes'"
+        class="flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#FD267D] via-[#E936C7] to-[#FF7854] px-4 py-3 text-sm font-black text-white shadow-lg shadow-rose-500/30 active:scale-[0.99] transition"
+      >
+        <i class="pi pi-heart-fill text-sm" /> Это мэтч! Открыть чат →
+      </Link>
       <Message v-if="p.likeError.value" severity="error" :closable="false" class="!rounded-2xl !text-xs">{{ p.likeError.value }}</Message>
       <div v-if="!isOwn && !canMessage && canMessageReason" class="text-center text-xs text-stone-400 dark:text-zinc-500">{{ canMessageReason }}</div>
     </div>

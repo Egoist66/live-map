@@ -52,7 +52,7 @@ const { userProfileUrl } = useProfileUrl()
         <div class="text-xs text-stone-500 mt-1">Найдите человека через поиск выше</div>
       </div>
       <div v-for="c in conversations" :key="c.id" class="group w-full flex items-center gap-0 text-left select-none">
-        <button @click="emit('open', c.id)" :class="selectedId === c.id ? 'bg-violet-50 dark:bg-violet-500/10 shadow-[inset_3px_0_0_0_#8b5cf6]' : 'hover:bg-stone-50/70 dark:hover:bg-zinc-800/70'" class="flex-1 flex items-center gap-3 p-3.5 lg:p-3 text-left min-w-0 transition-colors">
+        <button @click="emit('open', c.id)" :class="selectedId === c.id ? 'bg-stone-100 dark:bg-zinc-800' : 'hover:bg-stone-50/70 dark:hover:bg-zinc-800/70'" class="flex-1 flex items-center gap-3 p-3.5 lg:p-3 text-left min-w-0 transition-colors">
           <span class="relative shrink-0">
             <span v-if="c.title" class="w-11 h-11 rounded-full bg-gradient-to-br from-violet-700 to-purple-900 text-white grid place-items-center text-lg shrink-0">🏘️</span>
             <Avatar v-else :image="avatarSrcFor(c.other)" shape="circle" size="large" class="!w-11 !h-11 [&_img]:object-cover" :pt="{ image: { class: 'object-cover' } }" />
@@ -61,9 +61,9 @@ const { userProfileUrl } = useProfileUrl()
           <div class="flex-1 min-w-0">
             <div class="flex justify-between items-baseline gap-2"><span class="text-[15px] lg:text-sm font-semibold dark:text-white truncate">{{ c.title || c.other?.name || 'Чат' }} <OrgBadge :is-organization="c.other?.is_organization" /></span><span v-if="c.last_message_at" class="text-[11px] text-stone-400 shrink-0">{{ formatTime(c.last_message_at) }}</span></div>
             <div v-if="c.title" class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5 text-violet-600">🏘️ Общий чат района<span class="text-stone-300">·</span><span class="truncate text-stone-500">{{ previewText(c.last_message) }}</span></div>
-            <div v-else class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5" :class="isOnline(c.other?.id, c.other?.last_seen_at) ? 'text-emerald-600' : 'text-red-500'">{{ isOnline(c.other?.id, c.other?.last_seen_at) ? 'в сети' : 'оффлайн' }}<span class="text-stone-300">·</span><span class="truncate text-stone-500">{{ previewText(c.last_message) }}</span><span v-if="(c.last_message as any)?.is_edited" class="text-[10px] text-stone-400">(изм.)</span></div>
+            <div v-else class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5"><span class="truncate text-stone-500 dark:text-zinc-400">{{ previewText(c.last_message, isOnline(c.other?.id, c.other?.last_seen_at) ? 'в сети' : 'Начни общение') }}</span><span v-if="(c.last_message as any)?.is_edited" class="text-[10px] text-stone-400">(изм.)</span></div>
           </div>
-          <span v-if="c.unread_count" class="bg-violet-600 text-white text-xs font-bold min-w-[22px] h-[22px] grid place-items-center px-1.5 rounded-full shrink-0">{{ c.unread_count > 9 ? '9+' : c.unread_count }}</span>
+          <span v-if="c.unread_count" class="bg-[#FD267D] text-white text-xs font-bold min-w-[22px] h-[22px] grid place-items-center px-1.5 rounded-full shrink-0">{{ c.unread_count > 9 ? '9+' : c.unread_count }}</span>
         </button>
         <div class="flex items-center ml-1 pr-2 shrink-0">
           <Button @click.stop="(e: Event) => rowMenu.open(e, { kind: 'chat', id: c.id, userId: c.other?.id, userName: c.other?.name })" icon="pi pi-ellipsis-h" text rounded severity="secondary" class="!w-7 !h-7 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" aria-label="Меню чата" title="Меню чата" />

@@ -665,24 +665,88 @@ export function useSwipes() {
    * Подписаться на realtime мэтчей/лайков: обновляет шапку мэтчей,
    * даже если уведомление прилетело вне страницы ULove.
    *
+   * Мэтч показываем сплэшем синхронно у обеих сторон: событие
+   * match.created летит обоим участникам (сокет и поллер несут
+   * одинаковый пейлоад user_a/user_b), поэтому пассивная сторона
+   * тоже поднимает окно мэтча, а не только обновляет списки.
+   *
    * Слушаем только канонические user:* события: сокет (useUserChannel)
    * эмитит только их, а поллер дублирует каждое событие парой
    * notify:* + user:* — подписка на обе ветки давала двойной рефетч.
    * @returns функция отписки
    */
+  /**
+   * Поднять окно мэтча из входящего события match.created.
+   *
+   * Пейлоад одинаковый у сокета и поллера: match_id, conversation_id,
+   * user_a/user_b {id, name, avatar_url}. Свою сторону определяем
+   * по auth.user.id, чужую показываем в сплэше. Уже открытый мэтч
+   * с тем же чатом не трогаем (актор выставил его из ответа act).
+   *
+   * @param payload событие match.created
+   */
+  function showMatchFromEvent(payload?: any): void {
+    const convId = Number(payload?.conversation_id ?? 0) || null
+    if (!convId) {
+      return
+    }
+    if (matchedConversationId.value === convId) {
+      return
+    }
+    let mine = 0
+    try {
+      mine = Number((usePage().props.auth as any)?.user?.id ?? 0)
+    } catch {
+      mine = 0
+    }
+    const a = payload?.user_a ?? null
+    const b = payload?.user_b ?? null
+    const other = a && b ? (Number(a.id) === mine ? b : a) : (payload?.user ?? null)
+    if (!other || Number(other?.id) <= 0) {
+      return
+    }
+    const avatar = other.avatar_url ? String(other.avatar_url) : null
+    matchedCard.value = {
+      id: Number(other.id),
+      name: String(other.name ?? 'Мэтч'),
+      is_anonymous: false,
+      age: null,
+      age_hidden: true,
+      gender: null,
+      bio: null,
+      avatar_url: avatar,
+      photos: avatar ? [avatar] : [],
+      city: null,
+      distance_km: null,
+      distance_hidden: true,
+      goal: null,
+      custom_goal: null,
+      about: null,
+      interests: [],
+      last_seen_at: null,
+      is_match: true,
+      liked_me: true,
+    }
+    matchedConversationId.value = convId
+  }
+
   function subscribeRealtime(): () => void {
     try {
       const offs: Array<() => void> = []
-      const onMatch = () => {
+      const onMatch = (payload?: any) => {
         void loadMatches()
         void loadFavorites()
+        try {
+          showMatchFromEvent(payload)
+        } catch {
+        }
       }
       const onLiked = () => {
         void loadFeed()
         void loadAdmirers()
       }
       ensureUserChannel()
-      offs.push(busOn('user:match.created', () => onMatch()))
+      offs.push(busOn('user:match.created', (payload?: any) => onMatch(payload)))
       offs.push(busOn('user:swipe.liked', () => onLiked()))
       return () => {
         offs.forEach((off) => {
@@ -885,8 +949,8 @@ export function useSwipes() {
    * Полистать дальше с оценкой «пропуск»: пишет pass на бэк и уводит карту.
    *
    * Пропущенные не возвращаются в ленту до сброса истории —
-   * ни сброс фильтров, ни перезаход их не вернут. Лайк ставится
-   * только кнопкой через `swipe('like')`.
+   * ни сброс фильтров, ни перезаход их не вернут. Жест влево —
+   * тоже пропуск; жест вправо — лайк через `swipe('like')`.
    *
    * Улёт ждём только когда анимации включены: при `motion-off`
    * keyframes убиты kill-switch за 0.01мс, а 360мс ожидания
@@ -1075,10 +1139,11 @@ export function useSwipes() {
   }
 
   /**
-   * Поставить лайк текущей карточке кнопкой с улётом за экран.
+   * Поставить лайк текущей карточке кнопкой или жестом вправо
+   * с улётом за экран и мэтч-эффектом при взаимности.
    * PRO может лайкнуть инкогнито: себя скрыть, но в уведомления попасть.
    *
-   * Свайп-жест (drag) и значение 'pass' — это пропуск через `skip()`
+   * Значение 'pass' и жест влево — это пропуск через `skip()`
    * с записью pass на бэк: анкета не вернётся до сброса истории.
    * Лайк сверх лимита избранного всё равно пишется и ждёт мэтча —
    * в избранном видны только свежие по лимиту тарифа (Free — 3).
@@ -1318,9 +1383,10 @@ export function useSwipes() {
   }
 
   /**
-   * Конец перетаскивания: резкий сдвиг = пропуск с записью pass.
-   * Влево и вправо — следующая анкета, пропущенная не вернётся
-   * до сброса истории. Лайк ставится только кнопкой.
+   * Конец перетаскивания: резкий сдвиг действует как в Tinder.
+   * Вправо (штамп LIKE) — лайк через `swipe('like')` с мэтч-эффектом,
+   * влево (штамп NOPE) — пропуск с записью pass, анкета не вернётся
+   * до сброса истории.
    *
    * @returns void
    */
@@ -1334,7 +1400,7 @@ export function useSwipes() {
       return
     }
     if (shiftX > threshold) {
-      await skip('right')
+      await swipe('like')
       return
     }
     dragX.value = 0

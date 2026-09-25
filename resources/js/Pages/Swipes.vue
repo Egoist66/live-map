@@ -605,7 +605,7 @@ onUnmounted(() => {
               <div
                 v-if="s.exiting.value"
                 class="fly-card absolute inset-0 z-20 rounded-xl overflow-hidden bg-zinc-200 dark:bg-zinc-800 shadow-soft pointer-events-none"
-                :class="s.exiting.value.dir === 'right' ? 'fly-pass' : 'fly-like'"
+                :class="s.exiting.value.dir === 'like' ? 'fly-like' : 'fly-pass'"
                 :style="{ '--from-x': `${s.exiting.value.fromX}px`, '--from-y': `${s.exiting.value.fromY}px` }"
               >
                 <AppImage
@@ -914,7 +914,7 @@ onUnmounted(() => {
 
       <Dialog :visible="s.showHelp.value" @update:visible="(v:boolean)=>{ s.showHelp.value = v }" modal header="Как работают свайпы" :style="{ width: '420px', maxWidth: '94vw', maxHeight: '92dvh' }" :pt="dialogPt">
         <div class="flex flex-col gap-3 text-sm text-stone-600 dark:text-zinc-300 pt-1">
-          <div>ULove — без географии: листай, свайпай и находи людей со всего приложения, не важно в каком они городе. Главное — что человек в UPin. Логика пинов и карты здесь не действует.</div>
+          <div>ULove — листай, свайпай и находи людей рядом и со всего приложения. Главное — что человек в ULove. А карта с пинами — бонус: мэтчнулся? Кинь пин «кофе тут» и встретьтесь без точного адреса.</div>
           <div>Фильтр «Люди рядом» — только если хочешь локально. Без него показывают всех. Free: рядом до 10 км, дальше — PRO.</div>
           <div>Свайпы безлимитные. Сообщения без мэтча: Free {{ s.quota.value ? `${s.quota.value.left}/${s.quota.value.limit}` : '3/3' }}, PRO — 10/мес. Взаимный лайк (мэтч) открывает чат всегда, даже при исчерпанном лимите.</div>
           <div>Избранное — свежие лайкнутые без мэтча. Лимиты: Free до 3, Pro до 5, Business до 15. Лайки сверх лимита тоже ждут мэтча — человек их видит.</div>
@@ -1154,21 +1154,21 @@ onUnmounted(() => {
 }
 @keyframes fly-like {
   from {
-    transform: translate(var(--from-x, 0px), var(--from-y, 0px)) rotate(-8deg);
-    opacity: 1;
-  }
-  to {
-    transform: translate(-110vw, 140px) rotate(-30deg);
-    opacity: 0;
-  }
-}
-@keyframes fly-pass {
-  from {
     transform: translate(var(--from-x, 0px), var(--from-y, 0px)) rotate(8deg);
     opacity: 1;
   }
   to {
     transform: translate(110vw, 140px) rotate(30deg);
+    opacity: 0;
+  }
+}
+@keyframes fly-pass {
+  from {
+    transform: translate(var(--from-x, 0px), var(--from-y, 0px)) rotate(-8deg);
+    opacity: 1;
+  }
+  to {
+    transform: translate(-110vw, 140px) rotate(-30deg);
     opacity: 0;
   }
 }</style>

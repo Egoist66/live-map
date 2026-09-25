@@ -15,11 +15,11 @@ function onMediaChange(event: MediaQueryListEvent): void {
 }
 
 /**
- * Стартовый режим приложения: ULove-свайпы или UPin-карта.
+ * Стартовый режим приложения: всегда ULove.
  *
- * Читает auth.user.default_mode, показывает модалку «выбери сторону»
- * только когда режим ещё не выбран (NULL у старых пользователей).
- * Режим не ограничивает доступ — обе стороны всегда открыты.
+ * Модалка «выбери сторону» отключена по ТЗ: стартовый экран всегда
+ * ULove, карта с пинами — бонус. Ручной выбор в настройках
+ * («Приложение») по-прежнему работает через choose().
  *
  * @returns состояние режима, флаги и действия выбора/перехода
  * @example const mode = useDefaultMode(); await mode.choose('upin')
@@ -45,7 +45,7 @@ export function useDefaultMode() {
 
   const landing = computed(() => (mode.value === 'upin' ? '/map' : '/swipes'))
 
-  const needsChoice = computed(() => !!user.value && !isChosen.value)
+  const needsChoice = computed(() => false)
 
   /**
    * Позиция диалога: bottom-sheet на узких экранах, центр на десктопе.
@@ -76,15 +76,7 @@ export function useDefaultMode() {
   }
 
   function maybeShow(): void {
-    try {
-      const accountType = (page.props as unknown as { auth?: { user?: { account_type?: string } | null } }).auth?.user?.account_type
-      if (accountType === 'business') {
-        return
-      }
-    } catch {}
-    if (needsChoice.value && !visible.value) {
-      visible.value = true
-    }
+    return
   }
 
   function hide(): void {

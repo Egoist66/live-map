@@ -43,6 +43,8 @@ export function useUloveProfile(profileUser: () => any) {
   const liking = ref(false)
   const liked = ref(false)
   const likeError = ref<string | null>(null)
+  const matched = ref(false)
+  const matchedConversationId = ref<number | null>(null)
 
   const user = computed(() => profileUser() ?? {})
 
@@ -141,6 +143,11 @@ export function useUloveProfile(profileUser: () => any) {
   /**
    * Лайкнуть человека из его профиля (вне колоды свайпов).
    *
+   * Ответ бэка не выбрасываем: при взаимности там matched=true
+   * и conversation_id — поднимаем локальный флаг мэтча, чтобы
+   * шаблон показал «Мэтч! Открыть чат». Получателю бэк шлёт
+   * swipe.liked / match.created сам (сокет + поллер + пуш).
+   *
    * @param userId id пользователя
    */
   async function like(userId: number | null): Promise<void> {
@@ -152,8 +159,17 @@ export function useUloveProfile(profileUser: () => any) {
     likeError.value = null
 
     try {
-      await datingApi.act(userId, 'like', false)
+      const res = await datingApi.act(userId, 'like', false)
       liked.value = true
+      try {
+        const { pokeRealtime } = await import('@/composables/useRealtimePoller')
+        pokeRealtime()
+      } catch {
+      }
+      if (res?.matched) {
+        matched.value = true
+        matchedConversationId.value = Number(res.conversation_id ?? 0) || null
+      }
     } catch (err: any) {
       likeError.value = err?.response?.data?.message ?? 'Не получилось поставить лайк'
     } finally {
@@ -176,6 +192,8 @@ export function useUloveProfile(profileUser: () => any) {
     liking,
     liked,
     likeError,
+    matched,
+    matchedConversationId,
     like,
   }
 }

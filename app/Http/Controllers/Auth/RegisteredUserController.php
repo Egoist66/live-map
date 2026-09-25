@@ -172,40 +172,32 @@ class RegisteredUserController extends Controller
     }
 
     /**
-     * Стартовый режим из цели захода и таба лендинга.
+     * Стартовый режим нового пользователя.
      *
-     * Таб лендинга приоритетнее: человек выбрал сторону до
-     * регистрации, запоминаем её как домашнюю. Иначе — по цели.
+     * По ТЗ механика запоминания таба убрана: все персоны стартуют
+     * с ULove. Карта с пинами — бонус для общения и встреч, она
+     * включается вторым модулем, а не стартовым экраном.
      *
      * @param string $signupGoal цель с формы регистрации
-     * @param mixed $landingTab таб лендинга из localStorage (ulove|upin)
-     * @return string ulove для знакомств, upin для карты
+     * @param mixed $landingTab таб лендинга (игнорируется, оставлен для совместимости)
+     * @return string всегда ulove для персон
      */
     private function defaultModeFor(string $signupGoal, mixed $landingTab): string
     {
-        $tab = is_string($landingTab) ? mb_strtolower(trim($landingTab)) : '';
-
-        if (in_array($tab, ['ulove', 'upin'], true)) {
-            return $tab;
-        }
-
-        if ($signupGoal === 'neighbors' || $signupGoal === 'business') {
-            return 'upin';
-        }
-
         return 'ulove';
     }
 
     /**
-     * Изоляция модулей для новичка: только выбранная сторона.
+     * Модули новичка: ULove + карта-бонус.
      *
-     * Остальное (карта, лента, районы) довключается в настройках
-     * «Приложение». Явный список с фронта — если прошёл валидацию.
+     * ULove — стартовый экран, UPin-карта — бонус для общения,
+     * знакомств и поиска единомышленников. Остальное (лента, районы)
+     * довключается в настройках «Приложение».
      *
      * @param string $signupGoal цель с формы регистрации
-     * @param mixed $landingTab таб лендинга (ulove|upin)
-     * @param mixed $requested явный список модулей с фронта
-     * @return string[] один модуль изоляции
+     * @param mixed $landingTab таб лендинга (игнорируется)
+     * @param mixed $requested явный список модулей с фронта (игнорируется)
+     * @return string[] всегда [ulove, upin] для персон
      */
     private function enabledModulesFor(string $signupGoal, mixed $landingTab, mixed $requested): array
     {
@@ -213,33 +205,19 @@ class RegisteredUserController extends Controller
             return ['business'];
         }
 
-        if (is_array($requested)) {
-            $allowed = User::allModules();
-            $clean = array_values(array_intersect(array_map('strval', $requested), $allowed));
-            $personClean = array_values(array_filter($clean, static fn (string $module): bool => $module !== 'business'));
-
-            if ($personClean !== []) {
-                return [$personClean[0]];
-            }
-        }
-
-        $mode = $this->defaultModeFor($signupGoal, $landingTab);
-
-        return [$mode];
+        return ['ulove', 'upin'];
     }
 
     /**
-     * Стартовый экран после регистрации по режиму.
+     * Стартовый экран после регистрации.
      *
-     * @param string $defaultMode ulove|upin
-     * @return string URL свайпов для ULove, иначе карта
+     * Всегда свайпы ULove: карта — бонус, а не стартовый экран.
+     *
+     * @param string $defaultMode режим (игнорируется)
+     * @return string URL свайпов ULove
      */
     private function landingFor(string $defaultMode): string
     {
-        if ($defaultMode === 'upin') {
-            return route('map', absolute: false);
-        }
-
         return route('swipes', absolute: false);
     }
 }

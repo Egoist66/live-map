@@ -1,8 +1,6 @@
-import { readLandingTab } from '@/composables/useWelcomeMode'
-
 /**
  * Цель захода в приложение на регистрации.
- * ULove-цели ведут в свайпы, neighbors — на карту.
+ * Все ведут в ULove; карта с пинами — бонус после регистрации.
  */
 export const SIGNUP_GOALS = [
   { label: '💘 Отношения', value: 'love' },
@@ -16,11 +14,10 @@ export const SIGNUP_GOALS = [
 export type SignupGoal = (typeof SIGNUP_GOALS)[number]['value']
 
 /**
- * Пресет цели из таба лендинга.
+ * Пресет цели: всегда полный список, по умолчанию love.
  *
- * UPin-таб = цель уже ясна: дропдаун прячем, шлём neighbors.
- * ULove-таб = дропдаун оставляем, но вариант «соседи» убираем.
- * Без таба — классика: полный список, по умолчанию love.
+ * Механика пресета из таба лендинга убрана: старт всегда ULove,
+ * карта — бонус, поэтому дропдаун не прячем и ничего не лочим.
  */
 export interface SignupPreset {
   locked: boolean
@@ -46,22 +43,12 @@ export function useSignupGoals() {
 }
 
 /**
- * Читает таб лендинга и собирает пресет для формы регистрации.
+ * Собирает пресет для формы регистрации: всегда полный список.
  *
- * @returns locked-цель и видимые опции
+ * @returns незалоченная цель love и все опции
  */
 function readPreset(): SignupPreset {
   const base = [...SIGNUP_GOALS].map((goal) => ({ ...goal }))
-  const landingTab = readLandingTab()
-
-  if (landingTab === 'upin') {
-    return { locked: true, goal: 'neighbors', options: base }
-  }
-
-  if (landingTab === 'ulove') {
-    const withoutNeighbors = base.filter((goal) => goal.value !== 'neighbors')
-    return { locked: false, goal: 'love', options: withoutNeighbors }
-  }
 
   return { locked: false, goal: 'love', options: base }
 }

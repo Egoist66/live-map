@@ -153,10 +153,15 @@ class ProfilePhotoController extends Controller
     public function destroy(Request $request, ProfilePhoto $photo)
     {
         abort_unless($request->user()->id === $photo->user_id || $request->user()->isAdmin(), 403);
+        $owner = $photo->user;
+        $isAvatar = $owner && $owner->avatar_path === $photo->path;
         Storage::disk($this->disk())->delete($photo->path);
         ImageOptimizer::deleteThumbnails($photo->path, $this->disk());
         if ($this->disk() !== 'public') Storage::disk('public')->delete($photo->path);
         $photo->delete();
+        if ($isAvatar) {
+            $owner->forceFill(['avatar_path' => null])->save();
+        }
         return response()->json(['ok' => true]);
     }
 
