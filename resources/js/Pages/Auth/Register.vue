@@ -145,24 +145,26 @@ function onCountryChange(v: string): void {
 .auth-input {
   border-radius: 16px;
 }
-/* Инпуты: единая высота и скругление. */
-.auth-input:deep(.p-inputtext),
-.auth-input:deep(input) {
+/* Инпуты: корень InputText и есть <input>, поэтому высоту
+   и скругление задаём самому корню, а не потомкам —
+   селектор `.auth-input .p-inputtext` сам себя не находит. */
+input.p-inputtext.auth-input {
   border-radius: 16px;
   min-height: 48px;
+  width: 100%;
+  padding: 0.7rem 1rem;
 }
-/* Селекты и дейтпикер: цельная пилюля — рамка и скругление только
-   на корне, внутренности прозрачные без своих радиусов, иначе
-   правый край (шеврон/календарь) выглядит обрезанным. Шеврон
-   и кнопка календаря живут внутри пилюли, высота как у инпутов. */
-.auth-input:deep(.p-select),
-.auth-input:deep(.p-datepicker) {
+/* Селекты: цельная пилюля — рамка и скругление только
+   на корне (рамка живёт на корне), внутренности прозрачные
+   без своих радиусов, иначе правый край с шевроном
+   выглядит обрезанным. Высота как у инпутов. */
+.p-select.auth-input {
   border-radius: 16px;
   overflow: clip;
   width: 100%;
+  min-height: 48px;
 }
-.auth-input:deep(.p-select-label),
-.auth-input:deep(.p-datepicker-input) {
+.auth-input:deep(.p-select-label) {
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -172,7 +174,51 @@ function onCountryChange(v: string): void {
   align-items: center;
   padding: 0.7rem 1rem;
 }
-.auth-input:deep(.p-select-dropdown),
+.auth-input:deep(.p-select-dropdown) {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  align-self: stretch;
+  padding-right: 0.9rem;
+}
+.auth-input:deep(.p-select-dropdown-icon) {
+  font-size: 0.8rem;
+}
+/* Дейтпикер: у корня своей рамки нет (рамка была на внутреннем
+   input, который мы делаем прозрачным), поэтому рисуем рамку
+   пилюли на корне сами — иначе границ вообще не видно. */
+.p-datepicker.auth-input {
+  border-radius: 16px;
+  overflow: clip;
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid #d6d3d1;
+  background: #ffffff;
+}
+:global(html.dark) .p-datepicker.auth-input {
+  border-color: #52525b;
+  background: #18181b;
+}
+.p-datepicker.auth-input:focus-within {
+  border-color: #f43f5e;
+  box-shadow: 0 0 0 1px #f43f5e;
+}
+.p-datepicker.auth-input.p-invalid {
+  border-color: #ef4444;
+}
+.auth-input:deep(.p-datepicker-input) {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  min-height: 48px;
+  flex: 1 1 auto;
+  width: 1%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  padding: 0.7rem 1rem;
+}
 .auth-input:deep(.p-datepicker-dropdown) {
   border: 0;
   background: transparent;
@@ -180,7 +226,6 @@ function onCountryChange(v: string): void {
   align-self: stretch;
   padding-right: 0.9rem;
 }
-.auth-input:deep(.p-select-dropdown-icon),
 .auth-input:deep(.p-datepicker-dropdown-icon) {
   font-size: 0.8rem;
 }

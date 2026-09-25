@@ -4,23 +4,29 @@ import { api } from '@/services/api'
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
 /**
+ * Общее состояние диалога: `Welcome.vue` (кнопка «Писать нам»)
+ * и `CooperationDialog.vue` вызывают хук независимо, поэтому
+ * состояние живёт в модуле — иначе кнопка меняет свой `open`,
+ * а диалог слушает свой и никогда не открывается.
+ */
+const open = ref(false)
+const email = ref('')
+const message = ref('')
+const error = ref<string | null>(null)
+const sending = ref(false)
+const sentCompany = ref<string | null>(null)
+
+/**
  * Диалог заявки на сотрудничество («Писать нам» на лендинге).
  *
  * Гость вводит email бизнеса (+ необязательный комментарий),
  * бэк извлекает название компании из email и уведомляет админов
  * (inbox + письмо). Вся логика здесь, компонент только рисует.
  *
- * @returns состояние диалога и действие отправки
- * @example const coop = useCooperation(); coop.open()
+ * @returns состояние диалога и действие отправки (состояние общее для всех вызовов)
+ * @example const coop = useCooperation(); coop.show()
  */
 export function useCooperation() {
-  const open = ref(false)
-  const email = ref('')
-  const message = ref('')
-  const error = ref<string | null>(null)
-  const sending = ref(false)
-  const sentCompany = ref<string | null>(null)
-
   const emailValid = computed(() => EMAIL_RE.test(email.value.trim()))
 
   const canSubmit = computed(() => emailValid.value && !sending.value && sentCompany.value === null)
