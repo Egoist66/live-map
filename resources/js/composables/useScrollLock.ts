@@ -25,12 +25,46 @@ let prevBody = ''
 let prevHtml = ''
 
 /**
+ * Имя владельца DOM-driven лока (см. `useGlobalDialogScrollLock`).
+ * Спасатель (`useScrollRescue`) вправе отобрать лок только у него:
+ * функциональные владельцы (`screen-lock`, `page-scroll-lock`, …)
+ * живут по своему состоянию, их трогать нельзя.
+ */
+export const DOM_DIALOG_LOCK_OWNER = 'global-dialogs'
+
+/**
+ * Класс блокировки скролла PrimeVue на `body`.
+ */
+export const BODY_LOCK_CLASS = 'p-overflow-hidden'
+
+/**
+ * Значения инлайнового `overflow`, которые означают «заблокировано».
+ *
+ * @param value текущее значение `overflow`
+ * @returns true — скролл заблокирован инлайном
+ */
+function isLockedOverflow(value: string): boolean {
+  const normalized = value.trim().toLowerCase()
+
+  return normalized === 'hidden' || normalized === 'clip'
+}
+
+/**
  * Проверяет, заблокирован ли сейчас скролл страницы менеджером.
  *
  * @returns true — есть хотя бы один активный владелец лока
  */
 export function isScrollLocked(): boolean {
   return owners.size > 0
+}
+
+/**
+ * Возвращает имена активных владельцев лока (для диагностики и спасателя).
+ *
+ * @returns массив имён владельцев с ненулевым счётчиком
+ */
+export function getScrollLockOwners(): string[] {
+  return Array.from(owners.keys())
 }
 
 /**
@@ -52,6 +86,26 @@ export function acquireScrollLock(owner: string): void {
   }
 
   owners.set(owner, (owners.get(owner) ?? 0) + 1)
+}
+
+/**
+ * Возвращает инлайновый `overflow`, очищенный от «отравленного» значения.
+ *
+ * Если первый захват случился, когда инлайн уже был `hidden`/`clip`
+ * (гонка со сторонним локом, недоживший рестор, восстановленный PWA-DOM),
+ * возврат prev вернул бы страницу в `overflow: hidden` навсегда —
+ * скролл пропадал до перезагрузки. Ноль владельцев означает
+ * «страница должна скроллиться», поэтому такое prev сбрасываем в `''`.
+ *
+ * @param value запомненное предыдущее значение `overflow`
+ * @returns безопасное значение для восстановления
+ */
+function sanitizeRestoredOverflow(value: string): string {
+  if (isLockedOverflow(value)) {
+    return ''
+  }
+
+  return value
 }
 
 /**
@@ -79,9 +133,55 @@ export function releaseScrollLock(owner: string): void {
   }
 
   if (owners.size === 0) {
-    document.body.style.overflow = prevBody
-    document.documentElement.style.overflow = prevHtml
+    document.body.style.overflow = sanitizeRestoredOverflow(prevBody)
+    document.documentElement.style.overflow = sanitizeRestoredOverflow(prevHtml)
   }
+}
+
+/**
+ * Принудительно сбрасывает лок одного владельца, сколько бы
+ * захватов у него ни висело. Нужен спасателю (`useScrollRescue`):
+ * DOM-driven владелец (`global-dialogs`) иногда не видит закрытие
+ * оверлея (прерванный transition, снесённый Teleport) и держит
+ * инлайн `hidden` вечно — разбирать его счётчик бесполезно.
+ *
+ * Функциональных владельцев (`screen-lock`, `page-scroll-lock`, …)
+ * вызывать с этой функцией нельзя: их состояние живёт в их хуках.
+ *
+ * @param owner имя владельца для полного сброса
+ */
+export function forceReleaseScrollOwner(owner: string): void {
+  if (typeof document === 'undefined') {
+    return
+  }
+
+  if (!owners.has(owner)) {
+    return
+  }
+
+  owners.delete(owner)
+
+  if (owners.size === 0) {
+    document.body.style.overflow = sanitizeRestoredOverflow(prevBody)
+    document.documentElement.style.overflow = sanitizeRestoredOverflow(prevHtml)
+  }
+}
+
+/**
+ * Проверяет, заблокирован ли скролл инлайновым `overflow` прямо сейчас
+ * (вне зависимости от счётчика владельцев — ловит и сторонние записи).
+ *
+ * @returns true — `body` или `html` стоят в инлайновом `hidden`/`clip`
+ */
+export function isPageScrollLockedInline(): boolean {
+  if (typeof document === 'undefined') {
+    return false
+  }
+
+  const bodyOverflow = document.body.style.overflow ?? ''
+  const htmlOverflow = document.documentElement.style.overflow ?? ''
+
+  return isLockedOverflow(bodyOverflow) || isLockedOverflow(htmlOverflow)
 }
 
 /**

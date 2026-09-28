@@ -1,5 +1,13 @@
 # Dev-лог
 
+## 2026-09-28 — Скролл больше не умирает после модалок/дропдаунов на мобиле и PWA
+- 🔧 Причина: `useGlobalDialogScrollLock` считал держателем лока любой `fixed inset-0` ребёнок `body` — декоративный `pointer-events-none` сплэш мэтча и невидимые остатки Teleport вечно держали инлайн `overflow: hidden`; а `useScrollRescue` чистил только на Inertia-навигации, поэтому залипание без перехода лечилось лишь перезагрузкой. Плюс менеджер мог запомнить отравленный prev `hidden` и вернуть страницу в лок навсегда.
+- 🔧 `useScrollLock`: санитизация prev (`hidden`/`clip` → `''` при нуле владельцев), новые `forceReleaseScrollOwner()` (полный сброс зависшего владельца), `getScrollLockOwners()`, `isPageScrollLockedInline()`, константы `DOM_DIALOG_LOCK_OWNER` / `BODY_LOCK_CLASS`.
+- 🔧 `useScrollRescue` переписан в непрерывный дозор: общий `hasVisibleLockHolder()` (видимый `.p-dialog/.p-drawer/.p-sidebar` в маске, `body > [data-lock-scroll]`, `body > div[role="dialog"]` без `aria-hidden`/`pointer-events-none`) + `isOverlayVisible()` (isConnected, display/visibility предков, реальные rects). Чистит класс PrimeVue, DOM-лок и бесхозный инлайн только когда держателей нет; осиротевшие маски сносит с grace 800мс (leave-анимацию не рвёт); функциональных владельцев (`screen-lock`, `page-scroll-lock`, …) не трогает. Триггеры: мутации DOM (дебаунс 250мс), `navigate`, `pageshow`, `focus`, возврат во вкладку, фоновый интервал 2.5с.
+- 🔧 `useGlobalDialogScrollLock`: та же проверка видимости вместо подстроки `fixed/inset-0`, шторм мутаций схлопнут через `requestAnimationFrame`, защита от захвата после unmount (`alive`-флаг).
+- Проверки: `vue-tsc --noEmit` ✅.
+- Вживую: открыть/закрыть модалки, дропдауны (Select/DatePicker), нижние шторки и вьюверы фото на мобиле/PWA — страница листается сразу после закрытия, без перезагрузки.
+
 ## 2026-09-28 — Подтверждение почты: без отдельной страницы, модалка, стафф не трогаем, без автоотправки
 - 🔧 Отдельная страница `/verify-email` удалена: роут `verification.notice`, `EmailVerificationPromptController` и `Pages/Auth/VerifyEmail.vue` выпилены; `verified`-middleware снят с `/profile` и `/admin` (неверифицированных больше не швыряет на отдельную страницу — доступны лента и избранное, гейт только на лайки/сообщения). Остались только обработчик ссылки из письма (`verify-email/{id}/{hash}` → `dashboard?verified=1`) и повторная отправка по кнопке.
 - 🔧 Вместо жёлтой полосы-баннера — красивая PrimeVue-модалка `EmailVerificationBanner` (градиент, иконка, почта, кнопка «Подтвердить почту», «Продолжить без подтверждения» откладывает до перезагрузки). Письмо уходит только по явной кнопке: автоотправка при регистрации убрана (`event(new Registered)` удалён — это и был источник лишних писем).

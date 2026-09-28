@@ -1,14 +1,20 @@
 import { onBeforeUnmount, onMounted } from 'vue'
-import { acquireScrollLock, releaseScrollLock } from '@/composables/useScrollLock'
+import { acquireScrollLock, DOM_DIALOG_LOCK_OWNER, releaseScrollLock } from '@/composables/useScrollLock'
+import { hasVisibleLockHolder } from '@/composables/useScrollRescue'
 
 /**
  * Глобальный лок скролла страницы при открытых модалках.
  *
- * Следит за DOM: любая маска PrimeVue Dialog (`.p-dialog-mask`)
- * или фулскрин-оверлей в `body` (`fixed inset-0` через Teleport)
- * блокирует скролл `body`/`html`, закрытие последней модалки —
- * возвращает как было. Счётчик не нужен: состояние выводится
- * из фактического DOM, поэтому вложенные модалки корректны.
+ * Следит за DOM: видимая маска PrimeVue Dialog/Drawer или фулскрин-оверлей
+ * блокирует скролл `body`/`html`, закрытие последнего оверлея —
+ * возвращает как было. Состояние выводится из фактического DOM,
+ * поэтому вложенные модалки корректны.
+ *
+ * Видимость держателя проверяет общий `hasVisibleLockHolder`
+ * (см. `useScrollRescue`): прежняя эвристика «любой `fixed inset-0`
+ * ребёнок `body`» держала лок из-за декоративных слоёв
+ * (`pointer-events-none` сплэш мэтча, `aria-hidden` фоны) и невидимых
+ * остатков Teleport — страница переставала листаться без видимой причины.
  *
  * Сам лок идёт через ref-counted менеджер скролла, поэтому
  * не конфликтует с вьювером фото и превью аватара: скролл
@@ -20,41 +26,11 @@ import { acquireScrollLock, releaseScrollLock } from '@/composables/useScrollLoc
  * useGlobalDialogScrollLock()
  */
 export function useGlobalDialogScrollLock() {
-  const owner = 'global-dialogs'
+  const owner = DOM_DIALOG_LOCK_OWNER
   let locked = false
+  let alive = false
   let observer: MutationObserver | null = null
-
-  /**
-   * Проверяет, есть ли открытая модалка в DOM.
-   *
-   * @returns true — маска диалога или фулскрин-оверлей на месте
-   */
-  function hasOpenModal(): boolean {
-    try {
-      const dialogMask = document.querySelector('.p-dialog-mask')
-
-      if (dialogMask) {
-        return true
-      }
-
-      const bodyNodes = Array.from(document.body.children)
-
-      const hasFixedOverlay = bodyNodes.some((node) => {
-        if (!(node instanceof HTMLElement)) {
-          return false
-        }
-
-        const cls = node.className
-        const clsText = typeof cls === 'string' ? cls : String(cls ?? '')
-
-        return clsText.includes('fixed') && clsText.includes('inset-0')
-      })
-
-      return hasFixedOverlay
-    } catch {
-      return false
-    }
-  }
+  let scheduled = false
 
   /**
    * Блокирует скролл страницы через общий менеджер.
@@ -81,10 +57,23 @@ export function useGlobalDialogScrollLock() {
   }
 
   /**
-   * Сверяет лок с фактическим DOM.
+   * Сверяет лок с фактическим DOM. После размонтирования — no-op:
+   * отложенный `requestAnimationFrame` не должен захватывать лок заново.
    */
   function sync(): void {
-    const open = hasOpenModal()
+    scheduled = false
+
+    if (!alive) {
+      return
+    }
+
+    let open = false
+
+    try {
+      open = hasVisibleLockHolder()
+    } catch {
+      open = false
+    }
 
     if (open) {
       lock()
@@ -94,22 +83,62 @@ export function useGlobalDialogScrollLock() {
     unlock()
   }
 
+  /**
+   * Схлопывает шторм мутаций в один синхрон: за открытие/закрытие
+   * оверлея прилетают десятки записей (маска, контент, классы, стили).
+   */
+  function scheduleSync(): void {
+    if (scheduled) {
+      return
+    }
+
+    scheduled = true
+
+    try {
+      if (typeof requestAnimationFrame !== 'undefined') {
+        requestAnimationFrame(() => sync())
+        return
+      }
+    } catch {
+      // No-op: ниже — синхронный фолбэк.
+    }
+
+    sync()
+  }
+
+  function onVisibility(): void {
+    try {
+      if (document.visibilityState === 'visible') {
+        scheduleSync()
+      }
+    } catch {
+      // No-op: необязательный пересчёт.
+    }
+  }
+
   onMounted(() => {
     try {
+      alive = true
       sync()
-      observer = new MutationObserver(sync)
+      observer = new MutationObserver(scheduleSync)
       observer.observe(document.body, {
         childList: true,
         subtree: true,
         attributes: true,
         attributeFilter: ['class', 'style'],
       })
+      window.addEventListener('focus', scheduleSync)
+      document.addEventListener('visibilitychange', onVisibility)
     } catch {}
   })
 
   onBeforeUnmount(() => {
+    alive = false
+
     try {
       observer?.disconnect()
+      window.removeEventListener('focus', scheduleSync)
+      document.removeEventListener('visibilitychange', onVisibility)
     } catch {}
 
     observer = null
