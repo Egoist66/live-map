@@ -3,11 +3,25 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        # VITE_* запекаются во фронтенд на этапе сборки (Dockerfile),
+        # поэтому прокидываем их как build args. Порт 8000, а не 8080,
+        # т.к. браузер ходит в Reverb через nginx-прокси /app на 80 порту.
+        VITE_REVERB_HOST: localhost
+        VITE_REVERB_PORT: "8000"
+        VITE_REVERB_SCHEME: http
+        VITE_REVERB_APP_KEY: ${REVERB_APP_KEY}
+        VITE_APP_NAME: ${APP_NAME}
     ports:
       - "8000:80"
     env_file: .env
     environment:
+      # Должны совпадать с сервисом mysql ниже (.env рассчитан на нативный MySQL,
+      # environment в compose имеет приоритет над env_file).
       DB_HOST: mysql
+      DB_DATABASE: live_map
+      DB_USERNAME: laravel
+      DB_PASSWORD: secret
       REDIS_HOST: redis
       REVERB_HOST: "127.0.0.1"
       REVERB_SERVER_HOST: "0.0.0.0"
@@ -19,26 +33,48 @@ services:
         condition: service_started
     volumes:
       - app-storage:/var/www/html/storage
-      - app-database:/var/www/html/database
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
 
   app-dev:
-    image: php:8.4-cli
+    build:
+      context: .
+      dockerfile: docker/php-dev.Dockerfile
     working_dir: /var/www/html
     profiles: ["dev"]
     volumes:
       - .:/var/www/html
-      - /var/www/html/vendor
-      - /var/www/html/node_modules
+      - dev-vendor:/var/www/html/vendor
     ports:
       - "8001:8000"
+      - "8080:8080"
     env_file: .env
     environment:
       DB_HOST: mysql
+      DB_DATABASE: live_map
+      DB_USERNAME: laravel
+      DB_PASSWORD: secret
       REDIS_HOST: redis
       REVERB_HOST: "127.0.0.1"
       REVERB_SERVER_HOST: "0.0.0.0"
       APP_URL: http://localhost:8001
-    command: bash -c "composer install && php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8000"
+      # SSR-процесс в dev-профиле не запущен, рендерим на клиенте.
+      INERTIA_SSR_ENABLED: "false"
+    # serve + reverb + queue в одном контейнере, чтобы realtime и события работали как в проде.
+    command: >
+      bash -c "
+      composer install --no-interaction --prefer-dist &&
+      php artisan migrate --force &&
+      (php artisan storage:link || true) &&
+      (php artisan reverb:start --host=0.0.0.0 --port=8080 &) &&
+      (php artisan queue:listen --tries=3 --sleep=3 &) &&
+      exec php artisan serve --host=0.0.0.0 --port=8000
+      "
     depends_on:
       mysql:
         condition: service_healthy
@@ -46,15 +82,16 @@ services:
         condition: service_started
 
   vite:
-    image: node:20
+    build:
+      context: .
+      dockerfile: docker/vite.Dockerfile
     profiles: ["dev"]
     working_dir: /var/www/html
     volumes:
       - .:/var/www/html
-      - /var/www/html/node_modules
+      - dev-node-modules:/var/www/html/node_modules
     ports:
       - "5173:5173"
-    command: sh -c "if [ -f pnpm-lock.yaml ]; then pnpm install && pnpm run dev -- --host 0.0.0.0 --port 5173; else npm install && npm run dev -- --host 0.0.0.0 --port 5173; fi"
     depends_on:
       - app-dev
 
@@ -91,7 +128,7 @@ services:
       retries: 5
 
   meilisearch:
-    image: getmeili/meilisearch:latest
+    image: getmeili/meilisearch:v1.12.3
     restart: unless-stopped
     ports:
       - "7700:7700"
@@ -106,4 +143,5 @@ volumes:
   redis:
   meilisearch:
   app-storage:
-  app-database:
+  dev-vendor:
+  dev-node-modules:

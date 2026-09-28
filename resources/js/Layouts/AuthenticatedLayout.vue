@@ -25,7 +25,6 @@ import { useAppLayout } from '@/composables/useAppLayout'
 import { useAppHotkeys } from '@/composables/useAppHotkeys'
 import { useScreenLock } from '@/composables/useScreenLock'
 import { useScreenLockScroll } from '@/composables/useScreenLockScroll'
-import { useGlobalDialogScrollLock } from '@/composables/useGlobalDialogScrollLock'
 import { useGlobalDialogDismiss } from '@/composables/useGlobalDialogDismiss'
 import { useClientReady } from '@/composables/useClientReady'
 import { computed, onMounted } from 'vue'
@@ -55,7 +54,6 @@ const { isClientReady } = useClientReady()
 const hotkeys = useAppHotkeys()
 const screenLock = useScreenLock()
 useScreenLockScroll()
-useGlobalDialogScrollLock()
 useGlobalDialogDismiss()
 onMounted(() => { screenLock.init(); hotkeys.init() })
 </script>

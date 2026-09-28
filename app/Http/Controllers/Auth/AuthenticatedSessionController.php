@@ -14,13 +14,24 @@ use Inertia\Response;
 class AuthenticatedSessionController extends Controller
 {
     /**
-     * Display the login view.
+     * Единый экран входа и регистрации.
+     *
+     * Отдельной страницы регистрации больше нет: тоггл «Вход / Регистрация»
+     * живёт на `Auth/Login`, начальный режим берётся из query `?mode=register`
+     * (см. `useAuthMode` на фронте). Ссылки на `route('register')` ведут сюда
+     * редиректом из `RegisteredUserController::create`.
+     *
+     * @param Request $request входящий запрос (читаем query `mode`)
+     * @return Response страница `Auth/Login` с режимом тоггла
      */
-    public function create(): Response
+    public function create(Request $request): Response
     {
+        $mode = $request->query('mode') === 'register' ? 'register' : 'login';
+
         return Inertia::render('Auth/Login', [
             'canResetPassword' => Route::has('password.request'),
             'status' => session('status'),
+            'mode' => $mode,
         ]);
     }
 

@@ -1,6 +1,7 @@
 import { register as registerSw } from '@/pwa/pwa.service'
 import { startPushBridges } from '@/pwa/push.service'
 import { hideSplash } from '@/composables/useSplash'
+import { startGlobalDialogScrollLock } from '@/composables/useGlobalDialogScrollLock'
 import { useIdleTask } from '@/composables/useIdleTask'
 import { useOverlaySafeArea } from '@/composables/useOverlaySafeArea'
 import { useLastRoute } from '@/composables/useLastRoute'
@@ -114,6 +115,7 @@ export function useAppBoot() {
     await safeRun(() => initTheme())
     await safeRun(() => initMotion())
     await safeRun(() => hideSplash())
+    await safeRun(() => startGlobalDialogScrollLock())
     await safeRun(() => bootNavigation(authUserId))
 
     const { runWhenIdle } = useIdleTask()

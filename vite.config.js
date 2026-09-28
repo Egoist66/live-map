@@ -30,6 +30,12 @@ export default defineConfig({
     server: {
         port: 5173,
         strictPort: true,
+        // hmr.host фиксирует localhost в hot-файле и HMR-клиенте, а сам бинд
+        // задаётся флагом --host 0.0.0.0 в docker-профиле. Без этого в hot-файл
+        // попадёт 0.0.0.0/[::] и браузер не подключится к dev-серверу.
+        hmr: {
+            host: 'localhost',
+        },
     },
     resolve: {
         // Одна копия Vue на весь бандл: без dedupe рантайм может разъехаться

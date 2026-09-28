@@ -12,17 +12,19 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Illuminate\Validation\ValidationException;
-use Inertia\Inertia;
-use Inertia\Response;
 
 class RegisteredUserController extends Controller
 {
     /**
-     * Display the registration view.
+     * Отдельной страницы регистрации нет: редиректим на единый экран
+     * входа с открытым тогглом регистрации (`Auth/Login`, `?mode=register`).
+     * POST `register` (сама регистрация) не тронут.
+     *
+     * @return RedirectResponse редирект на `login` с режимом регистрации
      */
-    public function create(): Response
+    public function create(): RedirectResponse
     {
-        return Inertia::render('Auth/Register');
+        return redirect()->route('login', ['mode' => 'register']);
     }
 
     /**

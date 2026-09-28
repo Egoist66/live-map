@@ -1,47 +1,100 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3'
-import { useLoginForm } from '@/composables/useAuthForm'
-import { useAuthTheme } from '@/composables/useAuthTheme'
-import InputText from 'primevue/inputtext'
-import Checkbox from 'primevue/checkbox'
+import { Head } from '@inertiajs/vue3'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
-defineProps<{ canResetPassword: boolean; status?: string | null }>()
-const { email, emailAttrs, password, passwordAttrs, remember, errors, showPass, submit, isSubmitting } = useLoginForm()
-const t = useAuthTheme()
+import LoginForm from '@/Components/Features/Auth/LoginForm.vue'
+import RegisterForm from '@/Components/Features/Auth/RegisterForm.vue'
+import { useAuthMode, type AuthMode } from '@/composables/useAuthMode'
+
+const props = defineProps<{ canResetPassword: boolean; status?: string | null; mode?: AuthMode }>()
+
+const { isLogin, transitionName, setMode } = useAuthMode(props.mode)
 </script>
 
 <template>
-  <Head title="Вход — ULove" />
-    <Message v-if="status" severity="success" class="mb-4 w-full">{{ status }}</Message>
-    <div class="flex items-center gap-3">
-      <span class="w-11 h-11 rounded-2xl bg-gradient-to-br from-rose-500 via-fuchsia-500 to-orange-400 grid place-items-center text-white shadow-lg shadow-rose-500/30 shrink-0"><i class="pi pi-heart-fill leading-none" /></span>
-      <div class="min-w-0">
-        <h1 class="text-[22px] font-black tracking-tight text-ink-900 dark:text-white leading-tight">{{ t.loginTitle.value }}</h1>
-        <p class="text-[13px] text-stone-500 dark:text-zinc-400">{{ t.loginSub.value }}</p>
+  <Head title="Вход и регистрация — ULove" />
+  <Message v-if="status" severity="success" class="mb-4 w-full">{{ status }}</Message>
+
+  <div role="tablist" aria-label="Вход или регистрация" class="auth-mode-toggle relative grid grid-cols-2 gap-0 rounded-full bg-stone-100 dark:bg-zinc-800 p-1">
+    <span aria-hidden="true" class="auth-mode-thumb absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] rounded-full bg-gradient-to-r from-rose-500 via-fuchsia-500 to-orange-400 shadow-lg shadow-rose-500/30 transition-transform duration-300 ease-out" :class="isLogin ? 'translate-x-0' : 'translate-x-full'" />
+    <Button
+      role="tab"
+      :aria-selected="isLogin"
+      text
+      rounded
+      label="Вход"
+      icon="pi pi-sign-in"
+      class="auth-mode-btn relative z-10 min-h-[48px] !border-0 !shadow-none"
+      :class="isLogin ? '!text-white' : '!text-stone-500 dark:!text-zinc-400'"
+      @click="setMode('login')"
+    />
+    <Button
+      role="tab"
+      :aria-selected="!isLogin"
+      text
+      rounded
+      label="Регистрация"
+      icon="pi pi-user-plus"
+      class="auth-mode-btn relative z-10 min-h-[48px] !border-0 !shadow-none"
+      :class="!isLogin ? '!text-white' : '!text-stone-500 dark:!text-zinc-400'"
+      @click="setMode('register')"
+    />
+  </div>
+
+  <div class="mt-2 min-w-0">
+    <Transition :name="transitionName" mode="out-in">
+      <div v-if="isLogin" key="login" role="tabpanel">
+        <LoginForm :can-reset-password="canResetPassword" />
       </div>
-    </div>
-    <form @submit.prevent="submit" class="mt-6 space-y-4">
-      <div>
-        <label class="text-[13px] font-semibold text-ink-900 dark:text-zinc-100">Email</label>
-        <InputText v-model="email" v-bind="emailAttrs" type="email" placeholder="you@mail.ru" autocomplete="email" class="w-full mt-1.5" :invalid="!!errors.email" />
-        <small class="text-red-500 dark:text-red-400">{{ errors.email }}</small>
+      <div v-else key="register" role="tabpanel">
+        <RegisterForm />
       </div>
-      <div>
-        <label class="text-[13px] font-semibold text-ink-900 dark:text-zinc-100">Пароль</label>
-        <div class="relative mt-1.5">
-          <InputText v-model="password" v-bind="passwordAttrs" :type="showPass ? 'text' : 'password'" placeholder="••••••••" autocomplete="current-password" class="w-full pr-11" :invalid="!!errors.password" />
-          <button type="button" @click="showPass=!showPass" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-white/10 grid place-items-center text-stone-500 dark:text-zinc-400 text-sm" tabindex="-1" aria-label="Показать пароль"><i :class="showPass ? 'pi pi-eye-slash' : 'pi pi-eye'" /></button>
-        </div>
-        <small class="text-red-500 dark:text-red-400">{{ errors.password }}</small>
-      </div>
-      <label class="flex items-center gap-2 text-sm font-medium text-ink-900 dark:text-zinc-200">
-        <Checkbox v-model="remember" :binary="true" /> Запомнить меня
-      </label>
-      <Button :loading="isSubmitting" type="submit" label="Войти →" :class="t.submitClass.value" />
-      <div class="flex justify-between items-center gap-2 text-sm pt-2">
-        <Link v-if="canResetPassword" :href="route('password.request')" class="text-stone-500 dark:text-zinc-400 hover:text-ink-900 dark:hover:text-white font-medium shrink-0">Забыли пароль?</Link>
-        <Link :href="route('register')" class="font-semibold bg-gradient-to-r from-rose-500 via-fuchsia-500 to-orange-400 hover:opacity-90 text-white rounded-full px-4 py-2 transition shrink-0">Регистрация →</Link>
-      </div>
-    </form>
+    </Transition>
+  </div>
+
+  <p class="mt-5 text-center text-[13px] leading-relaxed text-stone-500 dark:text-zinc-400">
+    <template v-if="isLogin">Нет аккаунта? <button type="button" class="font-semibold text-ink-900 dark:text-white hover:underline" @click="setMode('register')">Создай анкету</button> — это быстро 💘</template>
+    <template v-else>Уже есть аккаунт? <button type="button" class="font-semibold text-ink-900 dark:text-white hover:underline" @click="setMode('login')">Войти</button></template>
+  </p>
 </template>
+
+<style scoped>
+/* Плавная смена форм: fade + сдвиг по направлению тоггла.
+   Только opacity + transform (GPU), без blur — не фризит мобилы.
+   Длительность короче карточных переходов, форма не «плавает». */
+.auth-swap-r-enter-active,
+.auth-swap-r-leave-active,
+.auth-swap-l-enter-active,
+.auth-swap-l-leave-active {
+  transition: opacity 240ms ease-out, transform 260ms cubic-bezier(0.33, 1, 0.68, 1);
+}
+.auth-swap-r-enter-from,
+.auth-swap-l-leave-to {
+  opacity: 0;
+  transform: translateX(28px);
+}
+.auth-swap-r-leave-to,
+.auth-swap-l-enter-from {
+  opacity: 0;
+  transform: translateX(-28px);
+}
+
+/* Кнопки тоггла: текст PrimeVue Button, подложка — thumb.
+   Убираем фоновые состояния наведения, чтобы не спорили с thumb. */
+.auth-mode-btn {
+  background: transparent !important;
+}
+.auth-mode-btn:hover {
+  background: transparent !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-mode-thumb,
+  .auth-swap-r-enter-active,
+  .auth-swap-r-leave-active,
+  .auth-swap-l-enter-active,
+  .auth-swap-l-leave-active {
+    transition: none !important;
+  }
+}
+</style>
