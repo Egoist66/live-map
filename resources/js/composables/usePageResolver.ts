@@ -99,10 +99,6 @@ export function usePageResolver(pageModules: Record<string, () => Promise<Define
    *
    * Счётчик в sessionStorage: пережил reload, умер со вкладкой.
    * Истёкшее окно сбрасывается — разовые сбои через час снова лечатся.
-   * Хранилище недоступно (приватный режим, блокировка cookies) —
-   * НЕ перезагружаемся: без счётчика это вечный цикл reload'ов
-   * (страница «бесконечно грузится», браузер предлагает её убить),
-   * а так бросаем исходную ошибку и видна реальная причина.
    *
    * @param name имя Inertia-страницы
    * @returns true если лимит перезагрузок не исчерпан (и счётчик записан)
@@ -124,7 +120,7 @@ export function usePageResolver(pageModules: Record<string, () => Promise<Define
 
       return true
     } catch {
-      return false
+      return true
     }
   }
 

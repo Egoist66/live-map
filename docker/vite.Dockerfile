@@ -10,4 +10,6 @@ WORKDIR /var/www/html
 
 EXPOSE 5173
 
-CMD ["sh", "-c", "pnpm install --frozen-lockfile && exec pnpm exec vite --host 0.0.0.0 --port 5173 --strictPort"]
+# install только если node_modules пуст (volume dev-node-modules переживает рестарты),
+# store тоже на volume — повторные установки не качают tarballs заново.
+CMD ["sh", "-c", "if [ ! -f node_modules/.modules.yaml ]; then pnpm install --frozen-lockfile --store-dir /pnpm/store; fi && exec pnpm exec vite --host 0.0.0.0 --port 5173 --strictPort"]

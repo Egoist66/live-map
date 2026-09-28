@@ -3,7 +3,7 @@ FROM php:8.4-cli
 RUN apt-get update && apt-get install -y \
     nginx supervisor curl git unzip gettext-base \
     libzip-dev libpng-dev libonig-dev libxml2-dev libpq-dev libsqlite3-dev \
-    && docker-php-ext-install pdo pdo_mysql pdo_sqlite pdo_pgsql mbstring zip bcmath gd sockets \
+    && docker-php-ext-install pdo pdo_mysql pdo_sqlite pdo_pgsql mbstring zip bcmath gd sockets pcntl \
     && pecl install redis && docker-php-ext-enable redis \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
@@ -46,7 +46,9 @@ RUN composer dump-autoload --optimize \
     && chmod -R 775 storage bootstrap/cache
 
 COPY docker/nginx.conf /etc/nginx/sites-enabled/default
-COPY docker/nginx.conf.template /etc/nginx/sites-enabled/default.template
+# Шаблон держим ВНЕ sites-enabled, иначе nginx подхватит его как второй
+# server-блок и упадёт с emerg на незаменённом ${PORT}.
+COPY docker/nginx.conf.template /etc/nginx/default.template
 COPY docker/nginx-limits.conf /etc/nginx/conf.d/limits.conf
 COPY docker/php-uploads.ini /usr/local/etc/php/conf.d/uploads.ini
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf

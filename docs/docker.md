@@ -12,6 +12,12 @@
 Фронтенд собран в образе (`vite build` + SSR внутри `Dockerfile`), бэк, Reverb, очередь, шедулер и SSR работают под supervisor в одном контейнере `app`.
 
 ```powershell
+docker compose up -d
+```
+
+Повседневная команда — образ уже собран, всё поднимается за секунды. Флаг `--build` нужен **только** после изменений `Dockerfile`, `docker/`, `composer.json`/`composer.lock`, `package.json`/`pnpm-lock.yaml` или `VITE_*` в `docker-compose.yml`:
+
+```powershell
 docker compose up -d --build
 ```
 
@@ -26,8 +32,10 @@ docker compose up -d --build
 Хост-код монтируется в контейнеры, фронт пересобирается на лету через Vite.
 
 ```powershell
-docker compose --profile dev up -d --build app-dev vite
+docker compose --profile dev up -d app-dev vite
 ```
+
+Повседневная команда — зависимости (`vendor`, `node_modules`) живут в volumes `dev-vendor`/`dev-node-modules` + кэш `dev-pnpm-store`, `composer/pnpm install` при рестарте пропускаются. `--build` только после изменений `docker/php-dev.Dockerfile`, `docker/vite.Dockerfile` или compose-файла. После ручного изменения `composer.json`/`package.json`: `docker compose exec app-dev composer install` / `docker compose exec vite pnpm install`.
 
 - Сайт: **http://localhost:8001**
 - Vite HMR: `localhost:5173` — URL подхватывается из `public/hot`, в браузере ничего прописывать не надо

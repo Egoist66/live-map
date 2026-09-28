@@ -66,9 +66,10 @@ services:
       # SSR-процесс в dev-профиле не запущен, рендерим на клиенте.
       INERTIA_SSR_ENABLED: "false"
     # serve + reverb + queue в одном контейнере, чтобы realtime и события работали как в проде.
+    # composer install — только если vendor пуст (volume dev-vendor переживает рестарты).
     command: >
       bash -c "
-      composer install --no-interaction --prefer-dist &&
+      if [ ! -f vendor/autoload.php ]; then composer install --no-interaction --prefer-dist; fi &&
       php artisan migrate --force &&
       (php artisan storage:link || true) &&
       (php artisan reverb:start --host=0.0.0.0 --port=8080 &) &&
@@ -90,6 +91,7 @@ services:
     volumes:
       - .:/var/www/html
       - dev-node-modules:/var/www/html/node_modules
+      - dev-pnpm-store:/pnpm/store
     ports:
       - "5173:5173"
     depends_on:
@@ -145,3 +147,4 @@ volumes:
   app-storage:
   dev-vendor:
   dev-node-modules:
+  dev-pnpm-store:

@@ -2,7 +2,7 @@
 set -e
 export PORT=${PORT:-80}
 echo "Starting on PORT=$PORT"
-envsubst '${PORT}' < /etc/nginx/sites-enabled/default.template > /etc/nginx/sites-enabled/default
+envsubst '${PORT}' < /etc/nginx/default.template > /etc/nginx/sites-enabled/default
 cat /etc/nginx/sites-enabled/default
 
 mkdir -p storage/logs storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache database

@@ -1,27 +1,5 @@
 # Dev-лог
 
-## 2026-09-28 — Хотфикс: прод /login висел (пустой SSR + голый route())
-- 🔧 Корень: `LoginForm` звал голый глобал `route('password.request')` (достался из старого `Login.vue`). В blade он есть, а в Node-SSR его нет — рендер `Auth/Login` падал (`Cannot read properties of undefined (reading 'password.request')`), Inertia отдавала пустое тело (HTTP 200, len 0) и откатывалась в CSR с пустым `#app` — страница бесконечно грузилась. Проверено локально через SSR-сервер (`/render`): было len 0, стало 7699 символов (login) и 16944 (register).
-- 🔧 Лечение: `LoginForm` теперь импортирует SSR-safe `route` из `@/route` (конфиг из `page.props.ziggy`, как велит дока хелпера). Оба режима тоггла SSR-рендерятся (~150мс).
-- 🔧 Попутно закрыта вторая возможная петля «вечной загрузки»: `allowReload` в `usePageResolver` при недоступном `sessionStorage` (приватный режим) возвращал `true` без счётчика — это безлимитный `location.reload()`. Теперь `false`: видна реальная ошибка, а не спиннер.
-- ⚠️ Прод нужно ПЕРЕСОБРАТЬ ЦЕЛИКОМ (клиент + SSR одним `build:ssr`, как в Dockerfile) и убедиться, что `public/build` и `bootstrap/ssr/ssr.js` обновились вместе, иначе чанки/манифест разъедутся. Если висение сохранится после пересборки — нужны URL и текст красной ошибки из консоли.
-
-## 2026-09-28 — Docker починен для локального подъёма + документация по запуску
-
-- 🔧 `docker-compose.yml`: `app` получил `build.args` с `VITE_REVERB_*` (порт 8000 через nginx `/app`, иначе фронт собирался с пустым хостом/портом и WS не коннектился); `DB_DATABASE/DB_USERNAME/DB_PASSWORD` приведены к сервису `mysql` (`live_map` / `laravel` / `secret`, было расхождение с `.env` — миграции падали); убран volume `app-database`, маскировавший миграции; добавлены `restart` и healthcheck.
-- 🔧 Dev-профиль пересобран: новый `docker/php-dev.Dockerfile` (PHP 8.4 + расширения + composer — в голом `php:8.4-cli` не было composer и `pdo_mysql`), `app-dev` поднимает `serve + reverb + queue:listen`, публикует `8080`, SSR выключен; новый `docker/vite.Dockerfile` (node 20 + pnpm 9 через corepack, запуск только vite с `--host 0.0.0.0`).
-- 🔧 `vite.config.js`: `server.hmr.host = 'localhost'` — иначе в hot-файл попадал `0.0.0.0`/`[::]` и браузер не цеплялся к dev-серверу.
-- 🔧 `meilisearch` запинен на `v1.12.3` вместо `latest` (сервис пока не используется приложением, оставлен про запас).
-- 📝 `README.md` переписан под запуск через Docker; новый `docs/docker.md`: режимы prod/dev, команды, таблица сервисов/портов, приоритет env, troubleshooting.
-- Проверки: `docker compose config` ✅. Полный `build + up` с проверкой HTTP/WS/миграций — следующим шагом.
-
-## 2026-09-28 — Убран стартовый boot-экран, единый вход/регистрация, фикс скролла после модалок
-- 🔧 Boot-экран удалён: из `app.blade.php` вырезаны разметка `#pwa-boot` (логотип, надпись, линейный лоадер), её стили и JS — приложение сразу рисует контент. Тонкая полоса `#mini-loader` сверху и мост `__upinHideSplash` оставлены, доки `useSplash` обновлены.
-- 🔧 Единый роут `login`: новый хук `useAuthMode` (режим + направление анимации, query `?mode=register` через `history.replaceState`, поддержка кнопок браузера), формы вынесены в `LoginForm`/`RegisterForm` (только отображение + хуки), страница `Auth/Login` — сегмент-тоггл из PrimeVue Button со скользящим thumb и `Transition` (сдвиг по направлению, 260мс, `prefers-reduced-motion` учтён). `Pages/Auth/Register.vue` удалён; GET `register` редиректит на `login?mode=register`, `AuthenticatedSessionController::create` отдаёт проп `mode`. Мобилка: тоггл во всю ширину, кнопки 48px, шрифт полей 16px как был.
-- 🔧 Скролл после модалок: корень — осиротевший класс `p-overflow-hidden` PrimeVue (диалог размонтировался открытым / навигация / два диалога подряд), который наш `useScrollLock` не видел. `useGlobalDialogScrollLock` переписан в синглтон `startGlobalDialogScrollLock`: сверка с DOM, снос класса и инлайновых хвостов когда масок нет, пересверка на Inertia `navigate`/`finish`, покрытие Drawer-масок. Старт перенесён в `useAppBoot` — работает и на гостевых layout'ах; вызов из `AuthenticatedLayout` убран.
-- Проверки: `php -l` ✅ ×2, `route:list` ✅ (login/register на месте), `vue-tsc --noEmit` ✅.
-- Вживую: открываешь приложение — сразу контент без сплэша; `/login` и `/login?mode=register` — один экран с плавным тогглом; открыл/закрыл любую модалку (десктоп и мобила) — страница скроллится.
-
 ## 2026-09-24 — Тосты закрываются свайпом на мобилке
 - 🔧 Новый хук `useToastSwipeDismiss` (по мотивам `useMessageSwipe`): тост едет за пальцем вбок или вверх, за порогом (90px вбок / 70px вверх) улетает в сторону жеста и гасится; недотяг — пружина назад. Тап открывает как раньше, клик после свайпа подавляется (включая кнопки внутри), скролл страницы не ломается (`touch-pan-y`, вниз жест не ведём).
 - 🔧 Подключён в `GlobalNotificationToasts`: `v-on` + `toastStyle` на каждый тост, открытие через `shouldOpen`-гвард.
