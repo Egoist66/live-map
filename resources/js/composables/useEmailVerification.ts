@@ -3,13 +3,17 @@ import { usePage } from '@inertiajs/vue3'
 import { emailApi } from '@/services/email.api'
 
 /**
- * Подтверждение почты: статус, баннер, повторная отправка ссылки.
+ * Подтверждение почты: статус, модалка, отправка ссылки по кнопке.
  *
  * Без подтверждённой почты запрещены лайки в свайпах и отправка
- * сообщений — хук отдаёт флаги для баннера и гейтов кнопок.
+ * сообщений — хук отдаёт флаги для модалки и гейтов кнопок.
+ * Стаффу (админ/модератор) модалка не показывается: гейт почты
+ * на него не действует, при желании подтвердит из настроек.
+ * Письмо уходит только по явной кнопке, с кулдауном 60 секунд —
+ * случайных 429 от повторных кликов нет.
  * Компонент только отображает состояние хука.
  *
- * @returns состояние верификации и действие повторной отправки
+ * @returns состояние верификации и действие отправки ссылки
  *
  * @example
  * const emailVerification = useEmailVerification()
@@ -25,6 +29,25 @@ export function useEmailVerification() {
   const sent = ref(false)
   const error = ref<string | null>(null)
   const justVerified = ref(false)
+  const cooldownLeft = ref(0)
+  const dismissed = ref(false)
+
+  let cooldownTimer: ReturnType<typeof setInterval> | null = null
+
+  /**
+   * Стафф ли текущий пользователь (админ или модератор).
+   *
+   * @returns true когда гейт почты не действует и модалка не нужна
+   */
+  const isStaff = computed(() => {
+    const user = authUser.value
+
+    if (!user) {
+      return false
+    }
+
+    return !!user.is_admin || user.role === 'admin' || user.role === 'moderator'
+  })
 
   /**
    * Почта подтверждена: серверный статус приоритетнее,
@@ -41,17 +64,35 @@ export function useEmailVerification() {
   })
 
   /**
-   * Нужен ли баннер «Подтвердите почту».
+   * Нужна ли модалка «Подтвердите почту».
    *
-   * @returns true для залогиненных без верификации
+   * @returns true для обычных залогиненных без верификации
    */
   const needsVerification = computed(() => {
     if (!authUser.value) {
       return false
     }
 
+    if (isStaff.value) {
+      return false
+    }
+
     return !isVerified.value
   })
+
+  /**
+   * Показывать ли модалку прямо сейчас (не закрыта на «потом»).
+   *
+   * @returns true когда есть нужда и пользователь не отложил
+   */
+  const shouldShowModal = computed(() => needsVerification.value && !dismissed.value && !justVerified.value)
+
+  /**
+   * Можно ли жать «Подтвердить почту» прямо сейчас.
+   *
+   * @returns false пока идёт отправка или тикает кулдаун
+   */
+  const canResend = computed(() => !resending.value && cooldownLeft.value <= 0)
 
   /**
    * Почта текущего пользователя.
@@ -82,12 +123,42 @@ export function useEmailVerification() {
   }
 
   /**
-   * Отправить ссылку подтверждения повторно.
+   * Запустить кулдаун кнопки отправки.
+   *
+   * @param seconds длительность кулдауна
+   * @returns void
+   */
+  function startCooldown(seconds: number): void {
+    cooldownLeft.value = seconds
+
+    if (cooldownTimer) {
+      clearInterval(cooldownTimer)
+    }
+
+    cooldownTimer = setInterval(() => {
+      cooldownLeft.value -= 1
+
+      if (cooldownLeft.value <= 0) {
+        cooldownLeft.value = 0
+
+        if (cooldownTimer) {
+          clearInterval(cooldownTimer)
+          cooldownTimer = null
+        }
+      }
+    }, 1000)
+  }
+
+  /**
+   * Отправить ссылку подтверждения по явной кнопке.
+   *
+   * Ставит кулдаун 60 секунд, 429 превращает в понятный текст
+   * с оставшимися секундами вместо голой ошибки.
    *
    * @returns void
    */
   async function resend(): Promise<void> {
-    if (resending.value) {
+    if (resending.value || cooldownLeft.value > 0) {
       return
     }
 
@@ -104,12 +175,39 @@ export function useEmailVerification() {
       }
 
       sent.value = true
+      dismissed.value = false
+      startCooldown(60)
     } catch (e: unknown) {
-      const err = e as { response?: { data?: { message?: string } } }
+      const err = e as {
+        response?: {
+          status?: number
+          headers?: Record<string, string>
+          data?: { message?: string }
+        }
+      }
+      const status = err.response?.status ?? 0
+
+      if (status === 429) {
+        const retryAfter = Number(err.response?.headers?.['retry-after'] ?? 60)
+        const waitSeconds = Number.isFinite(retryAfter) && retryAfter > 0 ? Math.ceil(retryAfter) : 60
+        error.value = `Слишком часто. Подождите ${waitSeconds} сек. и попробуйте снова.`
+        startCooldown(Math.min(waitSeconds, 120))
+        return
+      }
+
       error.value = err.response?.data?.message ?? 'Не удалось отправить письмо. Попробуй позже.'
     } finally {
       resending.value = false
     }
+  }
+
+  /**
+   * Отложить модалку до следующей загрузки страницы.
+   *
+   * @returns void
+   */
+  function dismiss(): void {
+    dismissed.value = true
   }
 
   /**
@@ -150,7 +248,11 @@ export function useEmailVerification() {
 
   return {
     isVerified,
+    isStaff,
     needsVerification,
+    shouldShowModal,
+    canResend,
+    cooldownLeft,
     email,
     resending,
     sent,
@@ -158,6 +260,7 @@ export function useEmailVerification() {
     justVerified,
     refresh,
     resend,
+    dismiss,
     consumeVerifiedFlag,
   }
 }

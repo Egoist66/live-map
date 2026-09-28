@@ -791,13 +791,14 @@ class User extends Authenticatable implements MustVerifyEmail
      *
      * Без верификации запрещены лайки в свайпах и отправка сообщений:
      * доступны только просмотр ленты, избранное и чтение чатов.
-     * Админы от гейта освобождены.
+     * Стафф (админы и модераторы) от гейта освобождён: подтверждение
+     * почты для них добровольное, делается из настроек при желании.
      *
      * @return string|null текст причины либо null когда писать и лайкать можно
      */
     public function emailGateReason(): ?string
     {
-        if ($this->isAdmin()) {
+        if ($this->isModerator()) {
             return null;
         }
 

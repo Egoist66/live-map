@@ -1,5 +1,13 @@
 # Dev-лог
 
+## 2026-09-28 — Подтверждение почты: без отдельной страницы, модалка, стафф не трогаем, без автоотправки
+- 🔧 Отдельная страница `/verify-email` удалена: роут `verification.notice`, `EmailVerificationPromptController` и `Pages/Auth/VerifyEmail.vue` выпилены; `verified`-middleware снят с `/profile` и `/admin` (неверифицированных больше не швыряет на отдельную страницу — доступны лента и избранное, гейт только на лайки/сообщения). Остались только обработчик ссылки из письма (`verify-email/{id}/{hash}` → `dashboard?verified=1`) и повторная отправка по кнопке.
+- 🔧 Вместо жёлтой полосы-баннера — красивая PrimeVue-модалка `EmailVerificationBanner` (градиент, иконка, почта, кнопка «Подтвердить почту», «Продолжить без подтверждения» откладывает до перезагрузки). Письмо уходит только по явной кнопке: автоотправка при регистрации убрана (`event(new Registered)` удалён — это и был источник лишних писем).
+- 🔧 429 лечится кулдауном: хук `useEmailVerification` ставит 60 сек. после отправки, кнопку дизейблит с текстом «Ждите N сек.», 429 от бэка превращает в понятный текст с секундами из `Retry-After` вместо голой ошибки. Та же защита прикручена к плашке в `Swipes.vue`.
+- 🔧 Стафф (админ + модератор) от гейта освобождён везде: `User::emailGateReason()` теперь bypass по `isModerator()` (раньше только `isAdmin`), клиентский `canLike` в `useSwipes` тоже учитывает модератора, модалка стаффу не показывается (`isStaff` в хуке), `mustVerifyEmail` в настройках для стаффа — false. Кто хочет — подтверждает сам: в разделе «Безопасность» новая карточка `SettingsEmailCard` (статус + кнопка отправки, видна всем).
+- 🔧 Почту `razormad666@gmail.com` подтвердить кодом нельзя — на проде выполнить: `php artisan tinker` → `User::where('email','razormad666@gmail.com')->first()?->markEmailAsVerified();` (либо дождаться письма по кнопке из модалки/безопасности).
+- Проверки: `php -l` ✅ ×7, `route:list` ✅ (остались только `verification.send` + `verification.verify`), `vue-tsc --noEmit` ✅.
+
 ## 2026-09-28 — Подтверждение почты: ссылка, значок в профиле, гейты лайков/сообщений, email-напоминания
 - 🔧 Бэкенд: `User` теперь `implements MustVerifyEmail` — событие `Registered` реально шлёт ссылку (раньше контракт не был реализован и письма не уходили никогда); новые `emailGateReason()/canSwipeLike()/canWriteMessages()` в модели (админ bypass); `messageBlockReason()` возвращает причину гейта — кнопки «Написать» сами показывают «Подтвердите почту».
 - 🔧 Новый `EmailVerificationGate::assertCanLike/assertCanWrite` (403 + `email_unverified:true`): лайки/суперлайки в `DatingService::recordAction` (пас разрешён), создание диалогов (`ConversationController::store`), отправка (`MessageController::store/storeInline`, заодно `PostShareController`).

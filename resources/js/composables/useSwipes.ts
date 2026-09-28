@@ -106,6 +106,14 @@ export function useSwipes() {
   const authUser = computed(() => (page.props.auth as any)?.user)
 
   /**
+   * Стафф ли текущий пользователь (админ или модератор).
+   * Гейт почты на стафф не действует.
+   *
+   * @returns true если админ или модератор
+   */
+  const isStaff = computed(() => !!authUser.value?.is_admin || authUser.value?.role === 'admin' || authUser.value?.role === 'moderator')
+
+  /**
    * Админ ли текущий пользователь (для сброса истории свайпов).
    *
    * @returns true если админ
@@ -141,13 +149,13 @@ export function useSwipes() {
   const isEmailVerified = computed(() => !!authUser.value?.email_verified_at)
 
   /**
-   * Можно ли лайкать: только с подтверждённой почтой.
+   * Можно ли лайкать: с подтверждённой почтой либо стаффу.
    *
    * Пас и просмотр ленты/избранного доступны всем.
    *
    * @returns true если лайк не упрётся в гейт почты
    */
-  const canLike = computed(() => isEmailVerified.value)
+  const canLike = computed(() => isEmailVerified.value || isStaff.value)
 
   /**
    * Перехватить ответ гейта почты и поднять флаг баннера.

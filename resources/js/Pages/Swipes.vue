@@ -205,7 +205,7 @@ onUnmounted(() => {
 
           <div v-if="s.needsEmailVerification.value" class="mt-3 flex flex-col gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200 sm:flex-row sm:items-center">
             <span class="flex-1"><i class="pi pi-envelope mr-1" />Без подтверждённой почты лайки выключены — доступны пропуск и избранное. Проверь письмо со ссылкой.</span>
-            <Button label="Отправить заново" icon="pi pi-refresh" rounded outlined size="small" :loading="emailVerification.resending.value" class="shrink-0" @click="emailVerification.resend()" />
+            <Button :label="emailVerification.cooldownLeft.value > 0 ? `Ждите ${emailVerification.cooldownLeft.value} сек.` : 'Отправить заново'" icon="pi pi-refresh" rounded outlined size="small" :loading="emailVerification.resending.value" :disabled="!emailVerification.canResend.value" class="shrink-0" @click="emailVerification.resend()" />
           </div>
           <div v-if="emailVerification.sent.value" class="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300">
             Письмо отправлено заново — проверь inbox и спам.

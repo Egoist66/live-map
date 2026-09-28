@@ -268,10 +268,13 @@ class ProfileController extends Controller
             $identifier = null;
         }
         $initialTab = in_array($tab, $tabIds, true) && ($tab !== 'admin' || $auth->isAdmin()) ? $tab : null;
+        // Стаффу подтверждение не предлагаем: гейт почты на него не
+        // действует, при желании подтвердит из раздела «Безопасность».
+        $mustVerifyEmail = $auth instanceof MustVerifyEmail && ! $auth->isModerator();
         if ($identifier === null) {
             $profileUser = $auth;
             return Inertia::render('Profile/Edit', [
-                'mustVerifyEmail' => $auth instanceof MustVerifyEmail,
+                'mustVerifyEmail' => $mustVerifyEmail,
                 'status' => session('status'),
                 'user' => $profileUser,
                 'initialTab' => $initialTab,
@@ -287,7 +290,7 @@ class ProfileController extends Controller
             abort(404);
         }
         return Inertia::render('Profile/Edit', [
-            'mustVerifyEmail' => $auth instanceof MustVerifyEmail,
+            'mustVerifyEmail' => $mustVerifyEmail,
             'status' => session('status'),
             'user' => $profileUser,
             'initialTab' => $initialTab,

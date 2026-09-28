@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\CountryResolver;
-use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -135,8 +134,9 @@ class RegisteredUserController extends Controller
             ])->save();
         }
 
-        event(new Registered($user));
-
+        // Письмо подтверждения НЕ отправляем автоматически: пользователь
+        // сам нажимает «Подтвердить почту» в модалке и получает ссылку.
+        // Так нет ни спама, ни случайных 429 на повторной отправке.
         Auth::login($user);
 
         if ($isBusiness) {

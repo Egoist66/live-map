@@ -9,8 +9,11 @@ use Illuminate\Http\Request;
 class EmailVerificationNotificationController extends Controller
 {
     /**
-     * Send a new email verification notification.
+     * Отправить ссылку подтверждения по явной кнопке пользователя.
      *
+     * Автоматических отправок нет: письмо уходит только отсюда
+     * (модалка подтверждения, раздел «Безопасность» в настройках).
+     * Уже подтверждённым отвечает verified без отправки.
      * Для AJAX (фронтовый баннер «Отправить заново») отдаём JSON,
      * для Inertia-форм — как раньше редирект со статусом.
      */

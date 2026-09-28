@@ -16,6 +16,11 @@ class EmailVerificationController extends Controller
     /**
      * Текущий статус верификации почты пользователя.
      *
+     * Отдаём честный статус всем: модалку стаффу скрывает фронт
+     * (useEmailVerification.isStaff), а карточка в разделе
+     * «Безопасность» показывает реальное состояние и позволяет
+     * подтвердить почту вручную.
+     *
      * @param Request $request запрос
      * @return JsonResponse verified, email, verified_at
      */
@@ -34,6 +39,8 @@ class EmailVerificationController extends Controller
      * Отправить ссылку подтверждения повторно.
      *
      * Уже подтверждённым отвечает verified:true без отправки.
+     * Отправка только по явной кнопке — при регистрации письмо
+     * автоматически не уходит.
      *
      * @param Request $request запрос
      * @return JsonResponse status verification-link-sent либо verified:true
