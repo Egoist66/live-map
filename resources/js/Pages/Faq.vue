@@ -9,9 +9,9 @@ import AccordionPanel from 'primevue/accordionpanel'
 import AccordionHeader from 'primevue/accordionheader'
 import AccordionContent from 'primevue/accordioncontent'
 const seo = useSeo({
-  title: 'FAQ — Как устроен UPin | Вопросы и ответы',
-  description: 'Ответы про UPin простым языком: регистрация, знакомства ULove и мэтчи, карта встреч с пинами — бонус для общения и единомышленников, приватность 200 м, тарифы и новости приложения.',
-  keywords: ['UPin FAQ','что такое UPin','ULove','знакомства рядом','пины','приватность','тарифы'],
+  title: 'FAQ — Как устроен ULove | Вопросы и ответы',
+  description: 'Ответы про ULove простым языком: свайпы, мэтчи и чат по умолчанию, суперлайки и буст — плюс карта UPin с пинами как дополнение: приватность 18+, тарифы и новости приложения.',
+  keywords: ['ULove FAQ','что такое ULove','UPin','знакомства рядом','свайпы','мэтч','пины','приватность','тарифы'],
 })
 const { open, sections } = useFaq()
 </script>
@@ -29,10 +29,10 @@ const { open, sections } = useFaq()
               <div class="flex items-center gap-2 px-1 py-0 text-xs font-semibold"><span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> FAQ · просто о сложном</div>
             </template>
           </Card>
-          <h1 class="mt-4 text-[28px] sm:text-[42px] font-black tracking-[-0.04em] leading-[1.05] sm:leading-none dark:text-white text-balance">Как устроен <span class="bg-gradient-to-r from-brand-500 to-accent-teal bg-clip-text text-transparent">UPin</span></h1>
-          <p class="mt-3 text-stone-600 dark:text-zinc-400 max-w-[640px] mx-auto">Коротко и по-человечески: что такое пины, как работает приватность, зачем тарифы и как не пропустить важное рядом. Не нашёл ответа — напиши нам пин «Вопрос» на карте.</p>
+          <h1 class="mt-4 text-[28px] sm:text-[42px] font-black tracking-[-0.04em] leading-[1.05] sm:leading-none dark:text-white text-balance">Как устроен <span class="bg-gradient-to-r from-brand-500 to-accent-teal bg-clip-text text-transparent">ULove</span></h1>
+          <p class="mt-3 text-stone-600 dark:text-zinc-400 max-w-[640px] mx-auto">По умолчанию — знакомства: свайпы, мэтчи и чат. А карта UPin с пинами — дополнение для встреч рядом. Не нашёл ответа — напиши нам пин «Вопрос» на карте.</p>
           <div class="mt-5 flex flex-wrap justify-center gap-2">
-            <Link href="/map"><Button label="Открыть карту" class="!bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white !px-6 !py-2.5 !rounded-full !text-sm !font-semibold !border-0" /></Link>
+            <Link href="/swipes"><Button label="Открыть знакомства" class="!bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white !px-6 !py-2.5 !rounded-full !text-sm !font-semibold !border-0" /></Link>
             <a href="#faq"><Button label="Читать ниже" severity="secondary" outlined class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-700 !px-6 !py-2.5 !rounded-full !text-sm !font-semibold !text-ink-900 dark:!text-white" /></a>
           </div>
         </div>
