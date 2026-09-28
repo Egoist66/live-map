@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { Head, Link } from '@inertiajs/vue3'
 import { useRegisterForm } from '@/composables/useAuthForm'
 import { useAuthTheme } from '@/composables/useAuthTheme'
 import { useSignupGoals } from '@/composables/useSignupGoals'
@@ -13,10 +12,15 @@ import Select from 'primevue/select'
 import DatePicker from 'primevue/datepicker'
 
 /**
- * Регистрация ULove: всегда персона и всегда стиль ULove.
+ * Форма регистрации ULove: всегда персона и всегда стиль ULove.
  * Бизнес-ветки больше нет — по вопросам сотрудничества
  * на стартовой странице есть CTA «Писать нам».
+ *
+ * Живёт внутри единой страницы Auth/Login, переключение
+ * обратно на вход — через событие switch-login.
  */
+const emit = defineEmits<{ (e: 'switch-login'): void }>()
+
 const t = useAuthTheme()
 
 const f = useRegisterForm()
@@ -33,7 +37,7 @@ function onCountryChange(v: string): void {
 </script>
 
 <template>
-  <Head title="Регистрация — ULove" />
+  <div>
     <div class="flex items-center gap-3">
       <span class="w-11 h-11 rounded-2xl bg-gradient-to-br from-rose-500 via-fuchsia-500 to-orange-400 grid place-items-center text-white shadow-lg shadow-rose-500/30 shrink-0"><i class="pi pi-heart-fill leading-none" /></span>
       <div class="min-w-0">
@@ -121,8 +125,9 @@ function onCountryChange(v: string): void {
         </div>
       </div>
       <Button :loading="f.isSubmitting.value" type="submit" label="Создать анкету →" :class="t.submitClass.value" />
-      <div class="text-sm text-center text-stone-500 dark:text-zinc-400">Уже есть? <Link :href="route('login')" class="font-semibold text-ink-900 dark:text-white hover:underline">Войти</Link></div>
+      <div class="text-sm text-center text-stone-500 dark:text-zinc-400">Уже есть профиль? <button type="button" class="font-semibold text-ink-900 dark:text-white hover:underline" @click="emit('switch-login')">Войти</button></div>
     </form>
+  </div>
 </template>
 
 <style scoped>

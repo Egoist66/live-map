@@ -12,11 +12,14 @@ use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
-    Route::get('register', [RegisteredUserController::class, 'create'])
+    // Отдельной страницы регистрации нет: вход и регистрация — тогл
+    // на одной странице Auth/Login. Имя register висит
+    // на POST, чтобы route('register') и Route::has('register') работали.
+    Route::post('register', [RegisteredUserController::class, 'store'])
+        ->middleware('throttle:auth-register')
         ->name('register');
 
-    Route::post('register', [RegisteredUserController::class, 'store'])
-        ->middleware('throttle:auth-register');
+    Route::redirect('register', '/login');
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');

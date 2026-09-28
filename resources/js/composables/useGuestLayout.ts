@@ -21,7 +21,7 @@ export function useGuestLayout() {
   const isAuthPage = computed(() => {
     const componentName = String(page.component ?? '')
 
-    return componentName === 'Auth/Login' || componentName === 'Auth/Register' || componentName.startsWith('Auth/')
+    return componentName.startsWith('Auth/')
   })
 
   const shouldShowFooter = computed(() => !isAuthPage.value)

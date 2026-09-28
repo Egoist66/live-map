@@ -5,7 +5,6 @@ const STORAGE_KEY = 'upin:last-route'
 /** Префиксы служебных страниц, которые не запоминаем и не открываем. */
 const EXCLUDED_PREFIXES = [
   '/login',
-  '/register',
   '/forgot-password',
   '/reset-password',
   '/verify-email',

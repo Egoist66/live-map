@@ -36,7 +36,7 @@ export function useWelcome() {
 
   const primaryCtaHref = computed(() => {
     if (!isAuthenticated.value) {
-      return '/register'
+      return '/login'
     }
     return homeLanding.value
   })

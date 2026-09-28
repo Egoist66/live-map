@@ -15,6 +15,9 @@ class AuthenticatedSessionController extends Controller
 {
     /**
      * Display the login view.
+     *
+     * Единственная auth-страница: вход по умолчанию,
+     * регистрация — тоглом на той же странице.
      */
     public function create(): Response
     {

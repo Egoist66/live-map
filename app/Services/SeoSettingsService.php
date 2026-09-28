@@ -36,7 +36,6 @@ class SeoSettingsService
         '/privacy',
         '/offer',
         '/login',
-        '/register',
     ];
 
     /**
@@ -438,7 +437,7 @@ class SeoSettingsService
 
         $baseDisallow = [
             '/admin', '/dashboard', '/profile', '/chat', '/settings',
-            '/api/', '/*?*', '/login', '/register',
+            '/api/', '/*?*', '/login',
         ];
 
         foreach ($baseDisallow as $rule) {
@@ -487,7 +486,6 @@ class SeoSettingsService
             ['loc' => $baseUrl . '/offer', 'priority' => '0.4', 'changefreq' => 'monthly'],
             ['loc' => $baseUrl . '/map', 'priority' => '0.9', 'changefreq' => 'hourly'],
             ['loc' => $baseUrl . '/login', 'priority' => '0.3', 'changefreq' => 'monthly'],
-            ['loc' => $baseUrl . '/register', 'priority' => '0.5', 'changefreq' => 'monthly'],
         ];
 
         $filtered = array_filter($base, static function (array $row) use ($baseUrl, $excluded): bool {

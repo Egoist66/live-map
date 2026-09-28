@@ -166,7 +166,7 @@ export function useWelcomeMode() {
 
   const primaryCta = computed(() => {
     if (!isAuthenticated.value) {
-      return { href: '/register', label: isUlove.value ? 'Создать анкету ULove →' : 'Попробовать ULove + карту →' }
+      return { href: '/login', label: isUlove.value ? 'Создать анкету ULove →' : 'Попробовать ULove + карту →' }
     }
     return isUlove.value ? { href: '/swipes', label: 'Открыть ULove →' } : { href: '/map', label: 'Открыть карту →' }
   })

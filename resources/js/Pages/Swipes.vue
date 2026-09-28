@@ -163,7 +163,7 @@ onUnmounted(() => {
             <div class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Свайпы, мэтчи и чаты доступны после входа.</div>
             <div class="mt-4 flex gap-2 justify-center">
               <Link href="/login"><Button label="Войти" rounded /></Link>
-              <Link href="/register"><Button label="Регистрация" severity="secondary" rounded outlined /></Link>
+              <Link href="/login"><Button label="Регистрация" severity="secondary" rounded outlined /></Link>
             </div>
           </div>
         </template>

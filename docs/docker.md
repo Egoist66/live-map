@@ -15,11 +15,13 @@
 docker compose up -d
 ```
 
-Повседневная команда — образ уже собран, всё поднимается за секунды. Флаг `--build` нужен **только** после изменений `Dockerfile`, `docker/`, `composer.json`/`composer.lock`, `package.json`/`pnpm-lock.yaml` или `VITE_*` в `docker-compose.yml`:
+Повседневная команда — образ уже собран, всё поднимается за секунды. `down` перед этим не нужен: `up` сам пересоздаёт контейнеры, если что-то поменялось. Флаг `--build` нужен **только** после изменений `Dockerfile`, `docker/`, `composer.json`/`composer.lock`, `package.json`/`pnpm-lock.yaml` или `VITE_*` в `docker-compose.yml`:
 
 ```powershell
 docker compose up -d --build
 ```
+
+Правило простое: **код правишь в dev-профиле** (там bind-mount + Vite HMR — изменения подхватываются мгновенно без пересборок), **прод-образ пересобираешь** одной командой выше, когда дело дошло до деплоя или поменялись зависимости.
 
 - Сайт: **http://localhost:8000**
 - WebSocket Reverb доступен через nginx-прокси `http://localhost:8000/app` — фронт собран с `VITE_REVERB_PORT=8000` через `build.args`, ничего дополнительно открывать не нужно

@@ -1,5 +1,12 @@
 # Dev-лог
 
+## 2026-09-28 — Единая страница входа: тогл «Войти / Регистрация», маршрут /register убран
+
+- 🔧 Фронт: новый хук `useAuthMode` (таб login/register, по умолчанию вход, без query-параметров); форма регистрации переехала из страницы в `Components/Auth/RegisterForm.vue` («Уже есть? Войти» тоглит, а не навигирует); `Pages/Auth/Login.vue` — одна страница с сегмент-тоглом из двух PrimeVue-Button и условным рендером форм; `Pages/Auth/Register.vue` удалена.
+- 🔧 Связи: `Swipes`, `useWelcome`, `useWelcomeMode` ведут на `/login`; `useGuestLayout` упрощён; `useLastRoute` без `/register`.
+- 🔧 Бэкенд: GET `/register` удалён (вместо него редирект на `/login`), имя `register` перевешено на POST (POST /register, `route('register')`, `Route::has('register')` и обе формы — person/business — работают как раньше); `RegisteredUserController::create` удалён; из SEO убран `/register` (KNOWN_PATHS, robots, sitemap).
+- Проверки: `php -l` ✅, `route:list` ✅ (POST register + redirect, GET login), `vue-tsc --noEmit` ✅, smoke на живом serve: `/register` → 302 → `/login`, `/login` → 200 ✅.
+
 ## 2026-09-24 — Тосты закрываются свайпом на мобилке
 - 🔧 Новый хук `useToastSwipeDismiss` (по мотивам `useMessageSwipe`): тост едет за пальцем вбок или вверх, за порогом (90px вбок / 70px вверх) улетает в сторону жеста и гасится; недотяг — пружина назад. Тап открывает как раньше, клик после свайпа подавляется (включая кнопки внутри), скролл страницы не ломается (`touch-pan-y`, вниз жест не ведём).
 - 🔧 Подключён в `GlobalNotificationToasts`: `v-on` + `toastStyle` на каждый тост, открытие через `shouldOpen`-гвард.

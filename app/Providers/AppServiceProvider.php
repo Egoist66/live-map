@@ -12,7 +12,6 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
-use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -25,17 +24,24 @@ use Illuminate\Support\ServiceProvider;
  *      к другим сервисам);
  *   2) `boot()` — настройка уже зарегистрированных сервисов
  *      (события, политики доступа, rate-лимитеры, URL, Vite).
- * - В данном проекте провайдер выполняет четыре ответственности:
+ * - В данном проекте провайдер выполняет три ответственности:
  *   1) Принудительная HTTPS-схема за reverse-proxy (по заголовку
  *      `X-Forwarded-Proto`), чтобы `route()`/`asset()` генерировали
  *      корректные ссылки.
- *   2) Настройка Vite (`prefetch`), чтобы ускорить подгрузку чанков фронта.
- *   3) Регистрация Gate-политик (`Pin` → `PinPolicy`,
+ *   2) Регистрация Gate-политик (`Pin` → `PinPolicy`,
  *      `PinComment` → `CommentPolicy`) + глобальный `Gate::before`
  *      для администратора (админ проходит любую проверку).
- *   4) Регистрация именованных rate-лимитеров (`RateLimiter::for(...)`),
+ *   3) Регистрация именованных rate-лимитеров (`RateLimiter::for(...)`),
  *      которые затем используются в роутах через `throttle:<name>`
  *      для защиты auth, пинов, комментариев, чата, realtime и т.д.
+ *
+ * Глобальный prefetch Vite-чанков здесь СОЗНАТЕЛЬНО выключен:
+ * `Vite::prefetch()` добавлял `<link rel="prefetch">` на ~60 ленивых
+ * чанков при каждой загрузке — очередь запросов упиралась в rate-лимитер
+ * (локально `limit_req` в nginx, в проде — edge), чанки отвечали 429,
+ * динамический `import()` страницы падал и `usePageResolver` уводил
+ * вкладку в цикл перезагрузок (вечный спиннер + «страница не отвечает»).
+ * Подгрузка по требованию осталась через `useAppModulesSettings.preload`.
  *
  * Когда срабатывает:
  * - Один раз за жизненный цикл HTTP-запроса / Artisan-команды /
@@ -72,7 +78,6 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureUrlScheme();
-        $this->configureVitePrefetch();
         $this->registerAuthorizationPolicies();
         $this->registerRateLimiters();
         $this->shareSeoHead();
@@ -98,20 +103,6 @@ class AppServiceProvider extends ServiceProvider
         }
 
         URL::forceScheme('https');
-    }
-
-    /**
-     * Настроить предзагрузку Vite-чанков.
-     *
-     * `prefetch(concurrency: 3)` добавляет `<link rel="prefetch">`
-     * для ленивых чанков, чтобы навигация по SPA ощущалась быстрее,
-     * но не перегружала сеть (не более 3 параллельных загрузок).
-     *
-     * @return void
-     */
-    private function configureVitePrefetch(): void
-    {
-        Vite::prefetch(concurrency: 3);
     }
 
     /**
