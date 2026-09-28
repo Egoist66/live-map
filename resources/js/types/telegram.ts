@@ -37,6 +37,20 @@ export interface TelegramWebAppViewport {
   isStable: boolean
 }
 
+/**
+ * Отступы безопасной зоны от Telegram (Bot API 8.0).
+ *
+ * В полноэкранном Mini App `env(safe-area-inset-*)` в WebView равен нулю —
+ * чёлку/вырезы отдаёт только этот объект. `contentSafeAreaInset`
+ * предпочтительнее: это зона именно под контент.
+ */
+export interface TelegramSafeAreaInset {
+  top: number
+  bottom: number
+  left: number
+  right: number
+}
+
 export interface TelegramWebApp {
   initData: string
   initDataUnsafe: TelegramWebAppInitDataUnsafe
@@ -49,6 +63,10 @@ export interface TelegramWebApp {
   viewportStableHeight: number
   headerColor: string
   backgroundColor: string
+  /** Недекорированная зона всего Mini App (Bot API 8.0, может отсутствовать). */
+  safeAreaInset?: TelegramSafeAreaInset
+  /** Зона под контент (Bot API 8.0, может отсутствовать). */
+  contentSafeAreaInset?: TelegramSafeAreaInset
   ready: () => void
   expand: () => void
   close: () => void

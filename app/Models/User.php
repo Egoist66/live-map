@@ -215,8 +215,17 @@ class User extends Authenticatable implements MustVerifyEmail
     protected function avatarUrl(): Attribute
     {
         return Attribute::get(function (): ?string {
-            if (!$this->avatar_path) return null;
-            return Storage::disk(self::avatarDisk())->url($this->avatar_path);
+            if ($this->avatar_path) {
+                return Storage::disk(self::avatarDisk())->url($this->avatar_path);
+            }
+
+            $telegramPhoto = trim((string) ($this->telegram_photo_url ?? ''));
+
+            if ($telegramPhoto !== '' && str_starts_with($telegramPhoto, 'https://')) {
+                return $telegramPhoto;
+            }
+
+            return null;
         });
     }
 

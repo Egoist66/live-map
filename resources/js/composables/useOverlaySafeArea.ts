@@ -55,9 +55,30 @@ export function useOverlaySafeArea() {
   }
 
   /**
+   * Прочитать инсет Telegram из CSS-переменной (`--tg-sat/--tg-sab`).
+   *
+   * Пишет `useTelegram` из `WebApp.contentSafeAreaInset`: в полноэкранном
+   * Mini App браузерный env() — ноль, и только TG знает про чёлку/жесты.
+   *
+   * @param name имя CSS-переменной
+   * @returns инсет в пикселях (0 когда вне Telegram)
+   */
+  function readTelegramInset(name: '--tg-sat' | '--tg-sab'): number {
+    try {
+      const raw = getComputedStyle(document.documentElement).getPropertyValue(name)
+      const parsed = Number.parseFloat(raw)
+      return Number.isFinite(parsed) && parsed > 0 ? Math.round(parsed) : 0
+    } catch {
+      return 0
+    }
+  }
+
+  /**
    * Применяет замеренные инсеты как CSS-переменные на <html>.
    *
-   * Нулевой верхний замер означает «WebView не отдал env()» —
+   * Итог — `max(env(), telegram)`: в обычном браузере решает env(),
+   * в полноэкранном Mini App — инсеты Telegram (там env нулевой).
+   * Нулевой итог сверху означает «WebView не отдал env()» —
    * включаем фолбэк `.no-safe-area-top` (нулевой отступ у шапки),
    * чтобы на мобилке не было лишней полосы над хедером.
    *
@@ -66,8 +87,8 @@ export function useOverlaySafeArea() {
   function applyInsets(): void {
     rafId = 0
     const root = document.documentElement
-    const top = measureInset('top')
-    const bottom = measureInset('bottom')
+    const top = Math.max(measureInset('top'), readTelegramInset('--tg-sat'))
+    const bottom = Math.max(measureInset('bottom'), readTelegramInset('--tg-sab'))
     safeTop.value = Math.round(top)
     safeBottom.value = Math.round(bottom)
     if (top > 0) {
@@ -96,6 +117,10 @@ export function useOverlaySafeArea() {
   /**
    * Однократная инициализация контроллера.
    *
+   * Дополнительно слушает `tg:safe-area` от `useTelegram`: инсеты
+   * полноэкранного Mini App меняются без resize (поворот, свайп
+   * панели), пересчёт нужен по событию, а не по ресайзу.
+   *
    * @returns void
    */
   function initOverlaySafeArea(): void {
@@ -111,6 +136,7 @@ export function useOverlaySafeArea() {
     }
     window.addEventListener('resize', scheduleApply)
     window.addEventListener('orientationchange', scheduleApply)
+    window.addEventListener('tg:safe-area', scheduleApply)
   }
 
   return { initOverlaySafeArea, safeTop: readonly(safeTop), safeBottom: readonly(safeBottom) }

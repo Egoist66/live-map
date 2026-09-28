@@ -1,5 +1,20 @@
 # Dev-лог
 
+## 2026-09-28 — Telegram fullscreen: хедер больше не уезжает под чёлку
+- 🔧 Причина: в полноэкранном Mini App («открыть приложение» в боте) браузерный `env(safe-area-inset-*)` — ноль, чёлку/жесты знает только WebApp API. `useOverlaySafeArea` мерил только env → `--sat-real=0` + класс `.no-safe-area-top` → хедер под системными иконками. В компактной мини-панели env отдавался, поэтому там было ровно.
+- 🔧 `types/telegram.ts`: `TelegramSafeAreaInset` + опциональные `safeAreaInset/contentSafeAreaInset` (Bot API 8.0).
+- 🔧 `useTelegram`: `applyTelegramInsets()` (`contentSafeAreaInset ?? safeAreaInset` → `--tg-sat/--tg-sab` + событие `tg:safe-area`), вызывается в `applyViewport` и по `safeAreaChanged/contentSafeAreaChanged`; новые refs `tgSafeTop/tgSafeBottom`.
+- 🔧 `useOverlaySafeArea`: итог `max(env(), tg)` в `--sat-real/--sab-real`, подписка на `tg:safe-area` (инсеты полноэкранки меняются без resize).
+- Проверки: `vue-tsc --noEmit` ✅.
+- ⚠️ Снова нужен редеплой на Laravel Cloud (новый JS-билд). Вживую: открыть как приложение (fullscreen) — хедер ниже чёлки, низ меню выше жестов; повернуть/посвайпать панель — отступы пересчитываются.
+
+## 2026-09-28 — Telegram Mini App: фикс автовхода (hash-детект) + аватар из TG + редирект
+- 🔧 Причина «опять форма логина»: Telegram при запуске Mini App кладёт стартовые параметры в **hash** URL (`#tgWebAppData=...`), а не в query — `hasTelegramQuery()` смотрел только `location.search`, мост не инициализировался, скрипт не грузился, автовход не стартовал. Теперь смотрим `search + hash` (`useTelegram`: `persistTelegramMarker`, `initTelegram`, `isTelegramWebView`).
+- 🔧 Аватар: `User::avatarUrl` теперь fallback'ит на `telegram_photo_url` (только `https://`), пока пользователь не загрузил свой — в профиле/чатах/свайпах сразу картинка из Telegram. Своя загрузка перекрывает TG-фото как раньше.
+- 🔧 Редирект: `useTelegramAuth` после успешной сессии уводит с `/login` и `/` в `/swipes` (раньше оставались на форме с уже поднятой сессией).
+- Проверки: `php -l` ✅, `vue-tsc --noEmit` ✅.
+- ⚠️ Нужен редеплой на Laravel Cloud (фронт — новый JS-билд), иначе прод отдаёт старый чанк без этих правок.
+
 ## 2026-09-28 — Telegram Mini App (@U1ove_bot): мост WebView + автовход по initData
 - 🔧 Бэкенд: `config/telegram.php` (токен из `TELEGRAM_BOT_TOKEN`, username `U1ove_bot`, max_age 86400, auto_register); `TelegramInitDataValidator` (HMAC SHA256 по схеме Bot API: data-check-string → secret `WebAppData` → `hash_equals`, проверка `auth_date` от replay); миграция `users.telegram_id unique + telegram_username + telegram_photo_url + telegram_linked_at`; `TelegramAuthController::auth` (гость → найти по telegram_id / автосоздать персону `tg_{id}@telegram.local` + случайный пароль + `email_verified_at`, залогиненный → привязка с 409 на чужой id), `status/unlink`; роуты `POST /api/telegram/auth` (гость, 30/мин), `GET /api/telegram/status`, `DELETE /api/telegram/link`.
 - 🔧 Детект: `NativeClientDetector::isTelegram()` (заголовок `telegram-webapp`, кука/query `upin_client=telegram`, `tgWebApp*`-query) → `isNative=true` (SSR-bypass + noindex как у upin-mobile), `clientName=telegram-webapp`; `DetectNativeClient` шарит `is_telegram`, `HandleInertiaRequests` отдаёт `client.isTelegram + telegramBot` в Inertia.

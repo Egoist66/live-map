@@ -12,6 +12,10 @@ const colorScheme = ref<'light' | 'dark'>('light')
 const viewportHeight = ref(0)
 const platform = ref('')
 const startParam = ref('')
+/** Верхний инсет из WebApp API (чёлка в полноэкранном Mini App). */
+const tgSafeTop = ref(0)
+/** Нижний инсет из WebApp API (жесты/панель в полноэкранном Mini App). */
+const tgSafeBottom = ref(0)
 
 let initialized = false
 let scriptPromise: Promise<boolean> | null = null
@@ -36,7 +40,12 @@ function getWebApp(): TelegramWebApp | null {
 }
 
 /**
- * Проверить маркеры Telegram до загрузки скрипта (query от Bot API).
+ * Проверить маркеры Telegram до загрузки скрипта.
+ *
+ * Telegram при запуске Mini App кладёт стартовые параметры в hash
+ * (`#tgWebAppData=...&tgWebAppVersion=...`), а не в query — смотрим оба.
+ * На сервер hash не уходит, поэтому бэк детектит только по заголовку/куке,
+ * которые ставит уже инициализированный мост.
  *
  * @returns true когда URL содержит tgWebApp-параметры
  */
@@ -45,9 +54,9 @@ function hasTelegramQuery(): boolean {
     return false
   }
 
-  const search = window.location.search.toLowerCase()
+  const haystack = `${window.location.search} ${window.location.hash}`.toLowerCase()
 
-  return search.includes('tgwebappplatform') || search.includes('tgwebappdata') || search.includes('tgwebappversion')
+  return haystack.includes('tgwebappplatform') || haystack.includes('tgwebappdata') || haystack.includes('tgwebappversion')
 }
 
 /**
@@ -104,6 +113,36 @@ function applyViewport(webApp: TelegramWebApp): void {
   root.style.setProperty('--tg-viewport-stable', `${webApp.viewportStableHeight || viewportHeight.value}px`)
   root.classList.toggle('tg-dark', colorScheme.value === 'dark')
   root.dataset.tgPlatform = platform.value
+
+  applyTelegramInsets(webApp)
+}
+
+/**
+ * Перенести safe-area инсеты Telegram в CSS-переменные и уведомить слушателей.
+ *
+ * В полноэкранном Mini App браузерный `env(safe-area-inset-*)` — ноль,
+ * поэтому без этого шага хедер уезжает под чёлку, а низ — под жесты.
+ * Значения кладутся в `--tg-sat/--tg-sab`, итог (`max(env, tg)`)
+ * считает единый контроллер `useOverlaySafeArea` по событию `tg:safe-area`.
+ *
+ * @param webApp живой объект Telegram WebApp
+ */
+function applyTelegramInsets(webApp: TelegramWebApp): void {
+  const inset = webApp.contentSafeAreaInset ?? webApp.safeAreaInset ?? null
+  const top = Math.max(0, Math.round(inset?.top ?? 0))
+  const bottom = Math.max(0, Math.round(inset?.bottom ?? 0))
+
+  tgSafeTop.value = top
+  tgSafeBottom.value = bottom
+
+  try {
+    const root = document.documentElement
+    root.style.setProperty('--tg-sat', `${top}px`)
+    root.style.setProperty('--tg-sab', `${bottom}px`)
+    window.dispatchEvent(new CustomEvent('tg:safe-area', { detail: { top, bottom } }))
+  } catch {
+    // No-op: без DOM инсеты применит следующий пересчёт safe-area.
+  }
 }
 
 /**
@@ -211,6 +250,8 @@ export function useTelegram() {
     try {
       webApp.onEvent('viewportChanged', () => applyViewport(webApp))
       webApp.onEvent('themeChanged', () => applyViewport(webApp))
+      webApp.onEvent('safeAreaChanged', () => applyTelegramInsets(webApp))
+      webApp.onEvent('contentSafeAreaChanged', () => applyTelegramInsets(webApp))
     } catch {
       // No-op: подписки на события необязательны.
     }
@@ -336,6 +377,8 @@ export function useTelegram() {
     viewportHeight,
     platform,
     startParam,
+    tgSafeTop,
+    tgSafeBottom,
     initTelegram,
     telegramClientHeader,
     persistTelegramMarker,

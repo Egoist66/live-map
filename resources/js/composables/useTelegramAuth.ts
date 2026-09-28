@@ -85,6 +85,7 @@ export function useTelegramAuth() {
       status.value = 'authenticated'
 
       await reloadAuthProps()
+      redirectGuestToApp()
 
       return true
     } catch (error) {
@@ -148,6 +149,24 @@ export function useTelegramAuth() {
       })
     } catch {
       // No-op: страница и так в корректной сессии.
+    }
+  }
+
+  /**
+   * Увести с гостевых экранов внутрь приложения после автовхода.
+   *
+   * Без этого Mini App остаётся на форме логина с уже поднятой сессией.
+   * Трогаем только /login и / — читателя FAQ/контактов не дёргаем.
+   */
+  function redirectGuestToApp(): void {
+    try {
+      const path = window.location.pathname
+
+      if (path === '/login' || path === '/') {
+        router.visit('/swipes')
+      }
+    } catch {
+      // No-op: остались на текущей странице с рабочей сессией.
     }
   }
 
