@@ -2,6 +2,7 @@
 import { Link } from '@inertiajs/vue3'
 import { useLoginForm } from '@/composables/useAuthForm'
 import { useAuthTheme } from '@/composables/useAuthTheme'
+import { route } from '@/route'
 import InputText from 'primevue/inputtext'
 import Checkbox from 'primevue/checkbox'
 import Button from 'primevue/button'

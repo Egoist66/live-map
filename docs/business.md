@@ -6,8 +6,6 @@
 на визитке ($9.99/мес), рекламных пинах ($9.99/7 дней), пушах по району
 (от $14.99) и купонах ($4.99). Позже — комиссия 5–10% за бронь/заказ.
 
-Кабинет — удобный, мощный, информативный: профиль по законодательству РБ,
-дашборд (просмотры, пины, лайки), подсказки заработка, карта и промо.
 
 ## Вход: третий таб UPin Business
 
@@ -42,8 +40,7 @@ ULove / UPin / Business (`useWelcomeMode`, таб `business` со своим
 
 ### Business (расширено под РБ)
 
-Миграция `2026_09_27_000002`: `legal_form, unp, reg_number, legal_address,
-director_name, verification_status, verification_notes, verified_at, logo_path`.
+Миграция `2026_09_27_000002`: `legal_form, unp, reg_number, legal_address, director_name, verification_status, verification_notes, verified_at, logo_path`.
 
 - `legal_form`: `ooo|ip|odo|zao|self_employed|craft|other`.
 - `unp`: строго 9 цифр (`/^\d{9}$/` и на бэке, и в zod-схеме).
@@ -79,6 +76,7 @@ director_name, verification_status, verification_notes, verified_at, logo_path`.
   цель + org-флаги заявок; отказ — inbox `district.request_rejected`.
 
 Realtime (правило №10, №13):
+
 - `BusinessVerificationSubmitted` → private `user.{staffId}` (админы +
   модераторы), as `business.verification.submitted` — очередь «Бизнес»
   обновляется живьём (socket + `business:pending` в sync + inbox).
