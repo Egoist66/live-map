@@ -27,5 +27,22 @@ export function useAuthMode() {
     mode.value = 'register'
   }
 
-  return { mode, isLogin, isRegister, showLogin, showRegister }
+  return { mode, isLogin, isRegister, showLogin, showRegister, tabClass }
+}
+
+/**
+ * Классы таба сегмент-переключателя: активный залит бренд-градиентом,
+ * неактивный — прозрачный ghost. Именно заливка читается «выбранным»,
+ * поэтому вариант outlined для активного запрещён — он выглядит наоборот.
+ *
+ * @param active выбран ли таб
+ * @returns строка Tailwind-классов для PrimeVue Button
+ * @example tabClass(true)
+ */
+export function tabClass(active: boolean): string {
+  if (active) {
+    return '!bg-gradient-to-r !from-rose-500 !via-fuchsia-500 !to-orange-400 !text-white !border-0 shadow-lg shadow-rose-500/30'
+  }
+
+  return '!bg-transparent !border-0 !text-stone-500 dark:!text-zinc-400 hover:!text-ink-900 dark:hover:!text-white'
 }

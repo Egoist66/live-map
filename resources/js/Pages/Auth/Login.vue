@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { Head, Link } from '@inertiajs/vue3'
 import { useLoginForm } from '@/composables/useAuthForm'
-import { useAuthMode } from '@/composables/useAuthMode'
+import { useAuthMode, tabClass } from '@/composables/useAuthMode'
 import { useAuthTheme } from '@/composables/useAuthTheme'
 import RegisterForm from '@/Components/Auth/RegisterForm.vue'
 import InputText from 'primevue/inputtext'
@@ -27,8 +27,8 @@ const pageTitle = computed(() => (isLogin.value ? 'Вход — ULove' : 'Рег
   <Head :title="pageTitle" />
     <Message v-if="status" severity="success" class="mb-4 w-full">{{ status }}</Message>
     <div class="grid grid-cols-2 gap-1 rounded-full bg-stone-100 dark:bg-zinc-800 p-1 mb-6">
-      <Button type="button" label="Войти" :outlined="isLogin" :severity="isLogin ? undefined : 'secondary'" rounded class="!border-0" @click="showLogin" />
-      <Button type="button" label="Регистрация" :outlined="!isLogin" :severity="!isLogin ? undefined : 'secondary'" rounded class="!border-0" @click="showRegister" />
+      <Button type="button" label="Войти" rounded :class="tabClass(isLogin)" @click="showLogin" />
+      <Button type="button" label="Регистрация" rounded :class="tabClass(!isLogin)" @click="showRegister" />
     </div>
     <div v-if="isLogin">
       <div class="flex items-center gap-3">
@@ -56,9 +56,8 @@ const pageTitle = computed(() => (isLogin.value ? 'Вход — ULove' : 'Рег
           <Checkbox v-model="remember" :binary="true" /> Запомнить меня
         </label>
         <Button :loading="isSubmitting" type="submit" label="Войти →" :class="t.submitClass.value" />
-        <div class="flex justify-between items-center gap-2 text-sm pt-2">
+        <div class="flex justify-start items-center gap-2 text-sm pt-2">
           <Link v-if="canResetPassword" :href="route('password.request')" class="text-stone-500 dark:text-zinc-400 hover:text-ink-900 dark:hover:text-white font-medium shrink-0">Забыли пароль?</Link>
-          <button type="button" class="font-semibold bg-gradient-to-r from-rose-500 via-fuchsia-500 to-orange-400 hover:opacity-90 text-white rounded-full px-4 py-2 transition shrink-0" @click="showRegister">Нет аккаунта? →</button>
         </div>
       </form>
     </div>
