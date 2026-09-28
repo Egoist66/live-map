@@ -52,8 +52,12 @@ class NativeClientDetector
     /**
      * Проверить, что запрос пришел из нативной WebView-оболочки.
      *
+     * Telegram Mini App (@U1ove_bot) считаем нативом тоже:
+     * SEO там бесполезно, а быстрый CSR без хопа в Node :13714
+     * критичен внутри телеграма. Детект — через isTelegram().
+     *
      * @param Request $request текущий запрос
-     * @return bool true для upin-mobile, иначе false
+     * @return bool true для upin-mobile / Telegram, иначе false
      */
     public function isNative(Request $request): bool
     {
@@ -70,7 +74,54 @@ class NativeClientDetector
             return true;
         }
 
-        return $this->hasNativeUserAgent($request);
+        if ($this->hasNativeUserAgent($request)) {
+            return true;
+        }
+
+        return $this->isTelegram($request);
+    }
+
+    /**
+     * Проверить, что запрос пришел из Telegram Mini App.
+     *
+     * Маркер ставит фронт (useTelegram): заголовок
+     * `X-UPin-Client: telegram-webapp`, кука `upin_client=telegram`,
+     * query `?client=telegram` или tgWebApp-параметры
+     * (`tgWebAppPlatform`, `tgWebAppVersion`, `tgWebAppData`).
+     * UA у телеграма обычный — по нему не детектим.
+     *
+     * @param Request $request текущий запрос
+     * @return bool true внутри Telegram WebApp
+     */
+    public function isTelegram(Request $request): bool
+    {
+        $header = strtolower(trim((string) $request->header(self::HEADER, '')));
+
+        if ($header !== '' && str_contains($header, 'telegram')) {
+            return true;
+        }
+
+        $cookie = strtolower(trim((string) $request->cookie('upin_client', '')));
+
+        if ($cookie === 'telegram' || $cookie === 'telegram-webapp') {
+            return true;
+        }
+
+        $query = strtolower(trim((string) $request->query('client', '')));
+
+        if ($query === 'telegram' || $query === 'telegram-webapp') {
+            return true;
+        }
+
+        $hasTgQuery = $request->query('tgWebAppPlatform') !== null
+            || $request->query('tgWebAppVersion') !== null
+            || $request->query('tgWebAppData') !== null;
+
+        if ($hasTgQuery) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -84,6 +135,10 @@ class NativeClientDetector
         $header = strtolower(trim((string) $request->header(self::HEADER, '')));
         if ($header !== '') {
             return $this->normalizeClientName($header);
+        }
+
+        if ($this->isTelegram($request)) {
+            return 'telegram-webapp';
         }
 
         $userAgent = strtolower((string) $request->userAgent());
@@ -143,6 +198,7 @@ class NativeClientDetector
             || str_contains($header, 'upin-mobile')
             || str_contains($header, 'upinmobile')
             || str_contains($header, 'expo')
+            || str_contains($header, 'telegram')
             || $header === 'native';
 
         if (! $isNativeHeader) {
@@ -162,7 +218,7 @@ class NativeClientDetector
     {
         $cookie = strtolower(trim((string) $request->cookie('upin_client', '')));
 
-        return $cookie === 'native' || $cookie === 'webview';
+        return $cookie === 'native' || $cookie === 'webview' || $cookie === 'telegram' || $cookie === 'telegram-webapp';
     }
 
     /**
@@ -175,7 +231,7 @@ class NativeClientDetector
     {
         $query = strtolower(trim((string) $request->query('client', '')));
 
-        return $query === 'native' || $query === 'webview';
+        return $query === 'native' || $query === 'webview' || $query === 'telegram' || $query === 'telegram-webapp';
     }
 
     /**
@@ -219,6 +275,10 @@ class NativeClientDetector
      */
     private function normalizeClientName(string $raw): string
     {
+        if (str_contains($raw, 'telegram')) {
+            return 'telegram-webapp';
+        }
+
         $isIos = str_contains($raw, 'ios');
         if ($isIos) {
             return 'ios-webview';

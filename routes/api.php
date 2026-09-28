@@ -29,6 +29,14 @@ Route::middleware('throttle:60,1')->group(function () {
 Route::get('/reference', [\App\Http\Controllers\ReferencePageController::class, 'index']);
 Route::get('/reference/{slug}', [\App\Http\Controllers\ReferencePageController::class, 'show']);
 
+// Telegram Mini App (@U1ove_bot): вход по initData — гость (web-сессия),
+// статус/отвязка — только залогиненным.
+Route::middleware(['web', 'throttle:30,1'])->post('/telegram/auth', [\App\Http\Controllers\TelegramAuthController::class, 'auth']);
+Route::middleware(['web', 'auth:web,sanctum', 'throttle:60,1'])->group(function () {
+    Route::get('/telegram/status', [\App\Http\Controllers\TelegramAuthController::class, 'status']);
+    Route::delete('/telegram/link', [\App\Http\Controllers\TelegramAuthController::class, 'unlink']);
+});
+
 // Публичная заявка на сотрудничество с лендинга (гость, без авторизации).
 Route::middleware(['web', 'throttle:6,1'])->post('/cooperation', [\App\Http\Controllers\CooperationController::class, 'store']);
 

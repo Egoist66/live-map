@@ -94,12 +94,55 @@ export function useAppBoot() {
   }
 
   /**
+   * Подключить Telegram Mini App: мост + автовход по initData.
+   *
+   * Только внутри Telegram (isTelegramWebView): грузим
+   * telegram-web-app.js, делаем ready/expand, затем тихий
+   * authWithTelegram — гость превращается в сессию без кликов.
+   * Вне TG — мгновенный no-op, на TBT не влияет.
+   *
+   * @returns void
+   */
+  async function bootTelegram(): Promise<void> {
+    const { isTelegramWebView } = await import('@/composables/useTelegram')
+
+    if (!isTelegramWebView()) {
+      return
+    }
+
+    const { useTelegram } = await import('@/composables/useTelegram')
+    const { initTelegram, persistTelegramMarker, syncChrome } = useTelegram()
+
+    persistTelegramMarker()
+
+    const insideTelegram = await initTelegram()
+
+    if (!insideTelegram) {
+      return
+    }
+
+    const isDark = document.documentElement.classList.contains('dark')
+    syncChrome(isDark)
+
+    const { useTelegramAuth } = await import('@/composables/useTelegramAuth')
+    const { authWithTelegram } = useTelegramAuth()
+    await authWithTelegram()
+
+    const { useTelegramNavigation } = await import('@/composables/useTelegramNavigation')
+    const { initTelegramNavigation } = useTelegramNavigation()
+    initTelegramNavigation()
+  }
+
+  /**
    * Выполнить весь клиентский бут после монтирования Vue.
    *
    * Визуальное (маркер, тема, motion, сплэш, safe-area) — сразу, это
    * первый paint. Тяжёлое сетевое (echo ~70КБ, SW-регистрация + прекеш,
    * push-мосты, expo) — в idle: раньше всё это ехало до paint и вместе
    * с 8 инитами лейаута давало TBT 1100мс (Lighthouse).
+   *
+   * Telegram идёт сразу после маркеров: ready/expand должны случиться
+   * до первого paint, иначе Mini App моргает схлопнутым окном.
    *
    * @param authUserId id пользователя из initialPage (0 — гость)
    * @returns void
@@ -112,6 +155,7 @@ export function useAppBoot() {
     }
 
     await safeRun(() => persistNativeMarker())
+    await safeRun(() => bootTelegram())
     await safeRun(() => initTheme())
     await safeRun(() => initMotion())
     await safeRun(() => hideSplash())

@@ -14,6 +14,9 @@ use Symfony\Component\HttpFoundation\Response;
  * тушит `inertia.ssr.enabled` до того, как Inertia решит,
  * дергать ли Node :13714, и шарит `is_native` в blade/Inertia.
  *
+ * Telegram Mini App (@U1ove_bot) идёт тем же путём, что upin-mobile:
+ * SSR-bypass + noindex + `is_telegram` для фронта.
+ *
  * Ответ помечаем `X-UPin-SSR: bypass|active` и `X-UPin-Client`,
  * чтобы в upin-mobile было видно решение в чарльзе/logcat.
  */
@@ -38,12 +41,15 @@ class DetectNativeClient
     public function handle(Request $request, Closure $next): Response
     {
         $isNative = $this->detector->isNative($request);
+        $isTelegram = $this->detector->isTelegram($request);
         $shouldBypassSsr = $this->detector->shouldDisableSsr($request);
 
         $request->attributes->set('is_native', $isNative);
+        $request->attributes->set('is_telegram', $isTelegram);
         $request->attributes->set('ssr_bypass', $shouldBypassSsr);
 
         view()->share('isNative', $isNative);
+        view()->share('isTelegram', $isTelegram);
 
         if ($shouldBypassSsr) {
             config(['inertia.ssr.enabled' => false]);

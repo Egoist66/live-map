@@ -33,6 +33,7 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $isNative = (bool) $request->attributes->get('is_native', false);
+        $isTelegram = (bool) $request->attributes->get('is_telegram', false);
 
         $shared = [
             ...parent::share($request),
@@ -54,6 +55,8 @@ class HandleInertiaRequests extends Middleware
             },
             'client' => [
                 'isNative' => $isNative,
+                'isTelegram' => $isTelegram,
+                'telegramBot' => config('telegram.bot_username', 'U1ove_bot'),
                 'ssrBypass' => (bool) $request->attributes->get('ssr_bypass', false),
                 'side' => self::guestSide($request),
             ],
