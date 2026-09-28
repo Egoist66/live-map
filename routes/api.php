@@ -48,6 +48,16 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:polling'])->group(functi
     Route::get('/video/roulette/stats', [\App\Http\Controllers\VideoController::class, 'rouletteStats']);
 });
 
+// Подтверждение почты — ВНЕ общего ведра throttle:120,1: поллеры
+// (sync + signals + show + pending ≈ 90-120/мин на вкладку) забивали
+// общее ведро и одиночный клик «Подтвердить» умирал в 429.
+// Статус — щедро (опрос при монтировании баннера), отправка —
+// отдельное ведро email-resend (5 попыток на 5 минут на юзера).
+Route::middleware(['web', 'auth:web,sanctum'])->group(function () {
+    Route::get('/email/verification-status', [\App\Http\Controllers\EmailVerificationController::class, 'status'])->middleware('throttle:email-status');
+    Route::post('/email/verification-notification', [\App\Http\Controllers\EmailVerificationController::class, 'send'])->middleware('throttle:email-resend');
+});
+
 Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function () {
     Route::get('/pins/mine', [PinController::class, 'mine']);
     Route::get('/pins/mine/scheduled', [PinController::class, 'scheduled']);
@@ -136,9 +146,6 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::patch('/chat/privacy', [ChatUserController::class, 'privacy']);
     Route::get('/chat/auto-reply', [ChatUserController::class, 'autoReplyShow']);
     Route::patch('/chat/auto-reply', [ChatUserController::class, 'autoReplyUpdate']);
-    Route::get('/email/verification-status', [\App\Http\Controllers\EmailVerificationController::class, 'status']);
-    Route::post('/email/verification-notification', [\App\Http\Controllers\EmailVerificationController::class, 'send'])->middleware('throttle:6,1');
-
     Route::patch('/user/invisible', [\App\Http\Controllers\ProfileController::class, 'toggleInvisible']);
     Route::patch('/user/default-mode', [\App\Http\Controllers\ProfileController::class, 'updateDefaultMode'])->middleware('throttle:profile-write');
     Route::patch('/user/modules', [\App\Http\Controllers\ProfileController::class, 'updateAppModules'])->middleware('throttle:profile-write');

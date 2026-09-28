@@ -65,7 +65,7 @@ defineExpose({ verification })
         {{ verification.error.value }}
       </p>
       <Button
-        :label="verification.sent.value ? 'Отправить ещё раз' : 'Подтвердить почту'"
+        :label="verification.cooldownLeft.value > 0 ? `Ждите ${verification.cooldownLeft.value} сек.` : (verification.sent.value ? 'Отправить ещё раз' : 'Подтвердить почту')"
         icon="pi pi-send"
         rounded
         :loading="verification.resending.value"

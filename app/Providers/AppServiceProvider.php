@@ -262,6 +262,7 @@ class AppServiceProvider extends ServiceProvider
             'reports' => 10,
             'push-test' => 10,
             'profile-write' => 30,
+            'email-status' => 60,
         ];
 
         foreach ($limitsByName as $limiterName => $perMinute) {
@@ -269,5 +270,14 @@ class AppServiceProvider extends ServiceProvider
                 return Limit::perMinute($perMinute)->by($keyByUser($request));
             });
         }
+
+        // Повторная отправка письма подтверждения: отдельное ведро, чтобы
+        // общий throttle:120,1 (поллинг карты/чата) не душил одиночный клик
+        // в 429. 5 попыток на 5 минут на пользователя: первый клик проходит
+        // всегда, дабл-клик/StrictMode терпятся, спам режется. Фронт держит
+        // свой кулдаун 60 сек. и дизейблит кнопку сразу по нажатию.
+        RateLimiter::for('email-resend', function (Request $request) use ($keyByUser) {
+            return Limit::perMinutes(5, 5)->by($keyByUser($request));
+        });
     }
 }

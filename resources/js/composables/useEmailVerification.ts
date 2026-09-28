@@ -9,8 +9,12 @@ import { emailApi } from '@/services/email.api'
  * сообщений — хук отдаёт флаги для модалки и гейтов кнопок.
  * Стаффу (админ/модератор) модалка не показывается: гейт почты
  * на него не действует, при желании подтвердит из настроек.
- * Письмо уходит только по явной кнопке, с кулдауном 60 секунд —
- * случайных 429 от повторных кликов нет.
+ * Письмо уходит только по явной кнопке.
+ *
+ * Состояние общее (singleton на модуль): баннер, плашка в свайпах
+ * и карточка в настройках видят один `resending`/`cooldownLeft`.
+ * Кнопка блокируется сразу по нажатию (`resending=true` синхронно
+ * до `await`), после успеха — кулдаун 60 секунд во всех местах.
  * Компонент только отображает состояние хука.
  *
  * @returns состояние верификации и действие отправки ссылки
@@ -19,20 +23,49 @@ import { emailApi } from '@/services/email.api'
  * const emailVerification = useEmailVerification()
  * await emailVerification.refresh()
  */
+
+// Общее состояние: один клик «Подтвердить» дизейблит все кнопки сразу.
+const serverVerified = ref<boolean | null>(null)
+const serverEmail = ref<string | null>(null)
+const resending = ref(false)
+const sent = ref(false)
+const error = ref<string | null>(null)
+const justVerified = ref(false)
+const cooldownLeft = ref(0)
+const dismissed = ref(false)
+
+let cooldownTimer: ReturnType<typeof setInterval> | null = null
+
+/**
+ * Запустить кулдаун кнопки отправки.
+ *
+ * @param seconds длительность кулдауна
+ * @returns void
+ */
+function startCooldown(seconds: number): void {
+  cooldownLeft.value = seconds
+
+  if (cooldownTimer) {
+    clearInterval(cooldownTimer)
+  }
+
+  cooldownTimer = setInterval(() => {
+    cooldownLeft.value -= 1
+
+    if (cooldownLeft.value <= 0) {
+      cooldownLeft.value = 0
+
+      if (cooldownTimer) {
+        clearInterval(cooldownTimer)
+        cooldownTimer = null
+      }
+    }
+  }, 1000)
+}
+
 export function useEmailVerification() {
   const page = usePage()
   const authUser = computed(() => (page.props.auth as any)?.user ?? null)
-
-  const serverVerified = ref<boolean | null>(null)
-  const serverEmail = ref<string | null>(null)
-  const resending = ref(false)
-  const sent = ref(false)
-  const error = ref<string | null>(null)
-  const justVerified = ref(false)
-  const cooldownLeft = ref(0)
-  const dismissed = ref(false)
-
-  let cooldownTimer: ReturnType<typeof setInterval> | null = null
 
   /**
    * Стафф ли текущий пользователь (админ или модератор).
@@ -123,42 +156,20 @@ export function useEmailVerification() {
   }
 
   /**
-   * Запустить кулдаун кнопки отправки.
-   *
-   * @param seconds длительность кулдауна
-   * @returns void
-   */
-  function startCooldown(seconds: number): void {
-    cooldownLeft.value = seconds
-
-    if (cooldownTimer) {
-      clearInterval(cooldownTimer)
-    }
-
-    cooldownTimer = setInterval(() => {
-      cooldownLeft.value -= 1
-
-      if (cooldownLeft.value <= 0) {
-        cooldownLeft.value = 0
-
-        if (cooldownTimer) {
-          clearInterval(cooldownTimer)
-          cooldownTimer = null
-        }
-      }
-    }, 1000)
-  }
-
-  /**
    * Отправить ссылку подтверждения по явной кнопке.
    *
-   * Ставит кулдаун 60 секунд, 429 превращает в понятный текст
-   * с оставшимися секундами вместо голой ошибки.
+   * Сразу ставит `resending` — все кнопки (баннер, свайпы, настройки)
+   * дизейблятся до ответа. После успеха — кулдаун 60 секунд,
+   * 429 превращает в понятный текст с секундами из `Retry-After`.
    *
    * @returns void
    */
   async function resend(): Promise<void> {
     if (resending.value || cooldownLeft.value > 0) {
+      return
+    }
+
+    if (serverVerified.value === true) {
       return
     }
 
@@ -191,7 +202,7 @@ export function useEmailVerification() {
         const retryAfter = Number(err.response?.headers?.['retry-after'] ?? 60)
         const waitSeconds = Number.isFinite(retryAfter) && retryAfter > 0 ? Math.ceil(retryAfter) : 60
         error.value = `Слишком часто. Подождите ${waitSeconds} сек. и попробуйте снова.`
-        startCooldown(Math.min(waitSeconds, 120))
+        startCooldown(Math.min(waitSeconds, 300))
         return
       }
 
