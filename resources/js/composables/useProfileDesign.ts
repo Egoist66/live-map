@@ -70,6 +70,13 @@ export function useProfileDesign(props: {
   })
   const reputationText = computed(() => `${props.profileUser.reputation_score || 0}`)
   const emailText = computed(() => props.profileUser.email || '')
+
+  /**
+   * Почта подтверждена по ссылке из письма.
+   *
+   * @returns true когда email_verified_at заполнен
+   */
+  const emailVerified = computed(() => !!props.profileUser.email_verified_at)
   const bioQuote = computed(() => page.bioText.value)
 
   /** Короткое превью «О себе» для плитки общей информации. */
@@ -143,6 +150,7 @@ export function useProfileDesign(props: {
     planName,
     reputationText,
     emailText,
+    emailVerified,
     bioQuote,
     bioPreview,
     headlineText,

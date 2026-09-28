@@ -49,6 +49,13 @@ export function useDashboardDesign(propsUser?: any, propsIsOwn?: boolean) {
   const infoTiles = useProfileInfoTiles(dash.u)
   const reputationText = computed(() => `${dash.u.value.reputation_score || 0}`)
   const emailText = computed(() => dash.u.value.email || '')
+
+  /**
+   * Почта подтверждена по ссылке из письма.
+   *
+   * @returns true когда email_verified_at заполнен
+   */
+  const emailVerified = computed(() => !!dash.u.value.email_verified_at)
   const galleryPreview = computed(() => gallery.photos.value.slice(0, 8))
   const statusText = computed(() => (dash.presence.value.active ? 'онлайн' : 'оффлайн'))
   const presenceText = computed(() => (dash.presence.value.active ? 'в сети' : dash.presence.value.label))
@@ -99,6 +106,7 @@ export function useDashboardDesign(propsUser?: any, propsIsOwn?: boolean) {
     planName,
     reputationText,
     emailText,
+    emailVerified,
     galleryPreview,
     statusText,
     presenceText,

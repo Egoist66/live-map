@@ -137,6 +137,7 @@ onMounted(async () => {
           :plan-name="design.planName.value"
           :reputation-text="design.reputationText.value"
           :email-text="design.emailText.value"
+          :email-verified="design.emailVerified.value"
           :headline-text="thought.display(design.headlineText.value, '')"
           :can-edit-thought="true"
           :is-own="true"

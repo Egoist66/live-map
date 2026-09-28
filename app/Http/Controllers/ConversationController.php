@@ -138,6 +138,7 @@ class ConversationController extends Controller
     {
         $request->validate(['user_id'=>'required|exists:users,id','message'=>'nullable|string|max:2000']);
         $me=$request->user();
+        \App\Services\EmailVerificationGate::assertCanWrite($me);
         $other=User::findOrFail($request->input('user_id'));
         abort_if(!$other->isDiscoverableBy($me), 404);
         if ($reason = $me->messageBlockReason($other)) {

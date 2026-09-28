@@ -64,7 +64,7 @@ class ChatAutoReply
         }
 
         $recipient = User::whereKey($recipientIds->first())
-            ->first(['id', 'name', 'email', 'last_seen_at', 'auto_reply_enabled', 'auto_reply_text']);
+            ->first(['id', 'name', 'email', 'email_verified_at', 'last_seen_at', 'auto_reply_enabled', 'auto_reply_text']);
 
         if (! $recipient) {
             return null;
@@ -146,6 +146,10 @@ class ChatAutoReply
         $email = trim((string) ($recipient->email ?? ''));
 
         if ($email === '' || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return;
+        }
+
+        if (! $recipient->hasVerifiedEmail()) {
             return;
         }
 

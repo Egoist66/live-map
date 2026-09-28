@@ -10,14 +10,25 @@ class EmailVerificationNotificationController extends Controller
 {
     /**
      * Send a new email verification notification.
+     *
+     * Для AJAX (фронтовый баннер «Отправить заново») отдаём JSON,
+     * для Inertia-форм — как раньше редирект со статусом.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): RedirectResponse|\Illuminate\Http\JsonResponse
     {
         if ($request->user()->hasVerifiedEmail()) {
+            if ($request->wantsJson()) {
+                return response()->json(['verified' => true]);
+            }
+
             return redirect()->intended(route('dashboard', absolute: false));
         }
 
         $request->user()->sendEmailVerificationNotification();
+
+        if ($request->wantsJson()) {
+            return response()->json(['status' => 'verification-link-sent']);
+        }
 
         return back()->with('status', 'verification-link-sent');
     }

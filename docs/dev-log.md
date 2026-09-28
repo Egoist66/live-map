@@ -1,5 +1,17 @@
 # Dev-лог
 
+## 2026-09-28 — Подтверждение почты: ссылка, значок в профиле, гейты лайков/сообщений, email-напоминания
+- 🔧 Бэкенд: `User` теперь `implements MustVerifyEmail` — событие `Registered` реально шлёт ссылку (раньше контракт не был реализован и письма не уходили никогда); новые `emailGateReason()/canSwipeLike()/canWriteMessages()` в модели (админ bypass); `messageBlockReason()` возвращает причину гейта — кнопки «Написать» сами показывают «Подтвердите почту».
+- 🔧 Новый `EmailVerificationGate::assertCanLike/assertCanWrite` (403 + `email_unverified:true`): лайки/суперлайки в `DatingService::recordAction` (пас разрешён), создание диалогов (`ConversationController::store`), отправка (`MessageController::store/storeInline`, заодно `PostShareController`).
+- 🔧 Новые API: `GET /api/email/verification-status`, `POST /api/email/verification-notification` (троттлинг 6/мин); `VerifyEmailController` ведёт в нейтральный профиль (`dashboard?verified=1`, intended-URL уважается — привязки к свайпам нет, тост показывает глобальный баннер на любой странице); resend-контроллер отдаёт JSON для AJAX.
+- 🔧 Email-напоминания только на подтверждённую почту: новый `DatingEmailNotifier` (кулдауны: лайк — сутки на пару, сообщение — час на диалог, мэтч — разово пассивной стороне) + 3 Mailable (`DatingLikedMail`, `DatingMatchedMail`, `NewMessageMail`) + 3 blade-шаблона; хуки в `notifyLiked/notifyMatched/pushToRecipients`; `ChatAutoReply::pingByEmail` тоже требует верификацию. Письма — в очередь (как раньше у автоответа).
+- 🔧 Профиль отдаёт `email + email_verified_at` для своих (`ProfileController::publicShow`); рядом с почтой значок: зелёный `pi-verified` (подтверждена) / янтарный `pi-exclamation-circle` (своя, не подтверждена).
+- 🔧 Фронт: новый хук `useEmailVerification` (статус, resend, `?verified=1` → тост успеха, чистка URL) + `services/email.api.ts`; глобальный `EmailVerificationBanner` в `AuthenticatedLayout` (warn с кнопкой «Отправить заново» / success после перехода по ссылке); `useSwipes` — `canLike/ensureCanLike/handleEmailGate`, клиентский гейт лайка/суперлайка/ответного лайка + янтарная плашка в `Swipes.vue`; `useChat.sendMessage` — 403 `email_unverified` гасит оптимистичное сообщение, ставит `emailBlocked` и показывает warn-тост.
+- 🔧 Страница `/verify-email` объясняет ограничения и пользу почты; варнинг в настройках профиля (`UpdateProfileInformationForm`) ожил сам — раньше `mustVerifyEmail` всегда был false.
+- ⚠️ Нюанс ТЗ «только добавить в избранное»: избранное технически = лайки без мэтча, поэтому без почты заблокированы и лайки тоже (иначе гейт дырявый). Доступны: лента, пропуск, просмотр избранного/«лайкнули меня», чтение чатов. Если нужен отдельный механизм «закладок» без лайка — скажи, добавлю.
+- Проверки: `php -l` ✅ ×14, `route:list` ✅ (web verify + api/email), `vue-tsc --noEmit` ✅, runtime-скрипт ✅ (контракт, гейты, `canNotify`, 403-пейлоад).
+- Вживую не гонял (нет запущенного serve/очереди в этой сессии): после деплоя проверить письмо в логе (`MAIL_MAILER=log`), клик по ссылке → `/swipes?verified=1` + тост, лайк/отправка без почты → 403.
+
 ## 2026-09-28 — Единая страница входа: тогл «Войти / Регистрация», маршрут /register убран
 
 - 🔧 Фронт: новый хук `useAuthMode` (таб login/register, по умолчанию вход, без query-параметров); форма регистрации переехала из страницы в `Components/Auth/RegisterForm.vue` («Уже есть? Войти» тоглит, а не навигирует); `Pages/Auth/Login.vue` — одна страница с сегмент-тоглом из двух PrimeVue-Button и условным рендером форм; `Pages/Auth/Register.vue` удалена.

@@ -13,6 +13,7 @@ import ScreenLockOverlay from '@/Components/Features/Security/ScreenLockOverlay.
 // Тяжёлые/редкие оверлеи — асинхронно: грузятся после mount параллельно,
 // первый paint не блокируют. Тосты, скринлок и ConfirmDialog оставлены
 // статическими — они нужны мгновенно (ранние уведомления, приватность).
+const EmailVerificationBanner = defineAsyncComponent(() => import('@/Components/Features/Profile/EmailVerificationBanner.vue'))
 const BellNotificationsModal = defineAsyncComponent(() => import('@/Components/Features/Feedback/BellNotificationsModal.vue'))
 const AppHotkeysDialog = defineAsyncComponent(() => import('@/Components/Features/Feedback/AppHotkeysDialog.vue'))
 const GlobalPeopleSearchDialog = defineAsyncComponent(() => import('@/Components/Features/Search/GlobalPeopleSearchDialog.vue'))
@@ -66,6 +67,7 @@ onMounted(() => { screenLock.init(); hotkeys.init() })
     </header>
     <AppUserMenu v-model:menu-ref="menu" :user="user" :avatar-src="avatarSrc" :items="(menuItems as any)" />
     <div v-if="route().current('swipes*')" class="native-safe-top lg:hidden" aria-hidden="true" />
+    <EmailVerificationBanner />
     <div v-if="$slots.header" class="bg-white dark:bg-zinc-900 border-b border-stone-200/60 dark:border-zinc-800">
       <div class="mx-auto max-w-[1280px] px-4 sm:px-6 py-4 sm:py-6"><slot name="header" /></div>
     </div>

@@ -87,6 +87,8 @@ class ProfileController extends Controller
             $base['home_address'] = $user->home_address;
             $base['home_show_exact'] = (bool) $user->home_show_exact;
             $base['can_show_exact_home'] = $user->canShowExactHome();
+            $base['email'] = $user->email;
+            $base['email_verified_at'] = $user->email_verified_at?->toISOString();
         } elseif ($home) {
             $base['home_lat'] = $home['lat'];
             $base['home_lng'] = $home['lng'];

@@ -13,6 +13,7 @@ defineProps<{
   planName: string
   reputationText: string
   emailText: string
+  emailVerified?: boolean
   headlineText: string
   canEditThought: boolean
   isOwn: boolean
@@ -61,7 +62,21 @@ const emit = defineEmits<{
         <h1 class="truncate text-[18px] min-[411px]:text-[22px] sm:text-2xl font-extrabold tracking-tight text-ink-900 dark:text-white">
           {{ user.name }}
         </h1>
-        <p v-if="emailText" class="mt-0.5 truncate text-[12px] min-[411px]:text-[13px] text-stone-500 dark:text-zinc-400">{{ emailText }}</p>
+        <p v-if="emailText" class="mt-0.5 flex min-w-0 items-center gap-1 text-[12px] min-[411px]:text-[13px] text-stone-500 dark:text-zinc-400">
+          <span class="truncate">{{ emailText }}</span>
+          <i
+            v-if="emailVerified"
+            class="pi pi-verified shrink-0 text-[13px] text-emerald-500"
+            title="Почта подтверждена"
+            aria-label="Почта подтверждена"
+          />
+          <i
+            v-else-if="isOwn"
+            class="pi pi-exclamation-circle shrink-0 text-[13px] text-amber-500"
+            title="Почта не подтверждена — проверь письмо со ссылкой"
+            aria-label="Почта не подтверждена"
+          />
+        </p>
         <div class="mt-2 flex flex-wrap items-center gap-1 min-[411px]:gap-1.5">
           <span class="rounded-full border border-stone-200 bg-stone-100 px-2.5 min-[411px]:px-3 py-1 text-[11px] min-[411px]:text-xs font-semibold text-stone-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 max-w-full truncate">{{ levelName }}</span>
           <span class="rounded-full border border-stone-200 bg-stone-100 px-2.5 min-[411px]:px-3 py-1 text-[11px] min-[411px]:text-xs font-semibold text-stone-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 max-w-full truncate">{{ reputationText }} ★</span>

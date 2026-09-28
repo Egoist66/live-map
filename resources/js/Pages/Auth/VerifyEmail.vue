@@ -13,6 +13,12 @@ const verificationLinkSent = computed(() => props.status === 'verification-link-
 <template>
   <Head title="Подтверждение почты" />
     <Message severity="info" :closable="false" class="!rounded-2xl">Спасибо за регистрацию! Подтвердите почту, перейдя по ссылке из письма. Если не получили — отправим заново.</Message>
+    <Message severity="warn" :closable="false" class="mt-3 !rounded-2xl">
+      <div class="text-[13px] leading-snug">
+        <span class="font-bold">Без подтверждённой почты:</span> лайки в свайпах выключены (доступны только лента и избранное) и нельзя писать сообщения.
+        <span class="font-bold">С подтверждённой почтой</span> приходят email-напоминания: тебя лайкнули, новый мэтч, новое сообщение.
+      </div>
+    </Message>
     <Message v-if="verificationLinkSent" severity="success" :closable="false" class="mt-3 !rounded-2xl">Новая ссылка отправлена на указанный при регистрации email.</Message>
     <form @submit.prevent="submit" class="mt-6">
       <div class="flex items-center justify-between gap-3">

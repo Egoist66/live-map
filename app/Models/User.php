@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -26,7 +27,7 @@ use Illuminate\Support\Facades\Storage;
  * @property string|null $dating_goal Цель анкеты ULove.
  * @property string|null $thought Короткая мысль под именем в профиле (до 140 символов).
  */
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     use HasApiTokens, HasFactory, Notifiable;
 
@@ -785,10 +786,53 @@ class User extends Authenticatable
 
     public function canMessageUser(User $other): bool { return $this->messageBlockReason($other) === null; }
 
+    /**
+     * Причина ограничений из-за неподтверждённой почты.
+     *
+     * Без верификации запрещены лайки в свайпах и отправка сообщений:
+     * доступны только просмотр ленты, избранное и чтение чатов.
+     * Админы от гейта освобождены.
+     *
+     * @return string|null текст причины либо null когда писать и лайкать можно
+     */
+    public function emailGateReason(): ?string
+    {
+        if ($this->isAdmin()) {
+            return null;
+        }
+
+        if ($this->hasVerifiedEmail()) {
+            return null;
+        }
+
+        return 'Подтвердите почту — без этого нельзя лайкать и писать сообщения';
+    }
+
+    /**
+     * Может ли пользователь лайкать в свайпах.
+     *
+     * @return bool true когда почта подтверждена либо это админ
+     */
+    public function canSwipeLike(): bool
+    {
+        return $this->emailGateReason() === null;
+    }
+
+    /**
+     * Может ли пользователь отправлять сообщения.
+     *
+     * @return bool true когда почта подтверждена либо это админ
+     */
+    public function canWriteMessages(): bool
+    {
+        return $this->emailGateReason() === null;
+    }
+
     public function messageBlockReason(User $other): ?string
     {
         if ($this->id === $other->id) return 'Нельзя писать себе';
         if ($this->isAdmin()) return null;
+        if ($this->emailGateReason() !== null) return $this->emailGateReason();
         if (UserBlock::where('blocker_id', $other->id)->where('blocked_id', $this->id)->exists()) return 'Пользователь заблокировал вас';
         if (UserBlock::where('blocker_id', $this->id)->where('blocked_id', $other->id)->exists()) return 'Вы заблокировали пользователя';
         if ($other->isAdmin() && !Friendship::areFriends($this->id, $other->id)) return 'Сначала добавьте администратора в друзья';

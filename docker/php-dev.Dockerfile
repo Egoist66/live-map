@@ -15,4 +15,7 @@ WORKDIR /var/www/html
 
 EXPOSE 8000 8080
 
-CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]
+# --no-reload обязателен: без флага artisan serve режет окружение дочернего
+# php -S до $passthroughVariables и контейнерные DB_HOST/REDIS_HOST теряются
+# (см. command сервиса app-dev в docker-compose.yml).
+CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000", "--no-reload"]

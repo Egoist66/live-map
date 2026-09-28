@@ -1004,6 +1004,10 @@ class DatingService
     {
         abort_if($me->id === $otherId, 422, 'Нельзя лайкать себя');
 
+        if ($action === 'like') {
+            EmailVerificationGate::assertCanLike($me->refresh());
+        }
+
         $other = User::findOrFail($otherId);
 
         abort_if(! $other->isDiscoverableBy($me), 404);
@@ -1231,6 +1235,11 @@ class DatingService
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('swipe liked broadcast failed: '.$e->getMessage());
         }
+        try {
+            DatingEmailNotifier::liked($liker, $liked, $incognito, $superlike);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('swipe liked email failed: '.$e->getMessage());
+        }
     }
 
     /**
@@ -1252,6 +1261,11 @@ class DatingService
             PinActivityNotifier::matched($me, $other, $matchId);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('match activity failed: '.$e->getMessage());
+        }
+        try {
+            DatingEmailNotifier::matched($me, $other, $matchId);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('match email failed: '.$e->getMessage());
         }
         try {
             broadcast(new \App\Events\MatchCreated(

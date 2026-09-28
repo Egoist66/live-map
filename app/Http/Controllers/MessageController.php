@@ -42,6 +42,7 @@ class MessageController extends Controller
     public function store(Request $request, Conversation $conversation)
     {
         abort_unless($conversation->hasParticipant($request->user()->id),403);
+        \App\Services\EmailVerificationGate::assertCanWrite($request->user());
         $conversation->loadMissing('participants:id,name,message_privacy,allow_random_messages');
         $other = $conversation->participants->firstWhere('id','!=',$request->user()->id);
         if ($conversation->type !== 'district' && $other && $reason = $request->user()->messageBlockReason($other)) {
@@ -166,6 +167,7 @@ class MessageController extends Controller
      */
     public function storeInline(Request $request, Conversation $conversation, $sender, string $body, ?int $replyToId = null, ?array $attachment = null, ?int $voiceDuration = null, ?array $shared = null)
     {
+        \App\Services\EmailVerificationGate::assertCanWrite($sender instanceof User ? $sender : User::findOrFail($sender->id));
         $conversation->loadMissing('participants:id,name,message_privacy,allow_random_messages');
         $other = $conversation->participants->firstWhere('id','!=',$sender->id);
         if ($conversation->type !== 'district' && $other && $reason = $sender->messageBlockReason($other)) {
@@ -239,7 +241,7 @@ class MessageController extends Controller
                     $text = ($msg->attachment_kind === 'image' ? '📷 Фото' : '📎 Файл') . $label;
                 }
             }
-            foreach (User::whereIn('id', $ids)->select('id', 'name', 'avatar_path')->get() as $recipient) {
+            foreach (User::whereIn('id', $ids)->select('id', 'name', 'email', 'email_verified_at', 'avatar_path')->get() as $recipient) {
                 // Web Push — только если настроен VAPID (для веба), Expo — всегда (для Android).
                 // Раньше тут был ранний return при ненастроенном VAPID — он глушил и Expo.
                 try {
@@ -247,6 +249,10 @@ class MessageController extends Controller
                     if ($push->isConfigured()) $push->sendChatMessage($recipient, $senderModel ?? $recipient, $conversation->id, $text);
                 } catch (\Throwable) {}
                 try { app(\App\Services\ExpoPushService::class)->sendChatMessage($recipient, $senderModel ?? $recipient, $conversation->id, $text); } catch (\Throwable) {}
+                try {
+                    $senderForMail = $senderModel ?? $recipient;
+                    \App\Services\DatingEmailNotifier::newMessage($senderForMail, $recipient, $conversation, mb_substr($text, 0, 200));
+                } catch (\Throwable) {}
             }
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('chat webpush failed: '.$e->getMessage());

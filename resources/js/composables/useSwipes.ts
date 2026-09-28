@@ -90,6 +90,8 @@ export function useSwipes() {
   const creatingChat = ref(false)
   const ageGate = ref(false)
   const ageGateReason = ref<'missing' | 'underage'>('missing')
+  /** Бэк отклонил лайк из-за неподтверждённой почты. */
+  const needsEmailVerification = ref(false)
   const birthDate = ref<Date | null>(null)
   const verifying = ref(false)
   const resetting = ref(false)
@@ -130,6 +132,53 @@ export function useSwipes() {
    * @returns true если доступен анонимный лайк
    */
   const canIncognito = computed(() => isPro.value)
+
+  /**
+   * Почта подтверждена: лайки и суперлайки разрешены.
+   *
+   * @returns true когда email_verified_at заполнен
+   */
+  const isEmailVerified = computed(() => !!authUser.value?.email_verified_at)
+
+  /**
+   * Можно ли лайкать: только с подтверждённой почтой.
+   *
+   * Пас и просмотр ленты/избранного доступны всем.
+   *
+   * @returns true если лайк не упрётся в гейт почты
+   */
+  const canLike = computed(() => isEmailVerified.value)
+
+  /**
+   * Перехватить ответ гейта почты и поднять флаг баннера.
+   *
+   * @param e ошибка запроса
+   * @returns true если это гейт неподтверждённой почты
+   */
+  function handleEmailGate(e: unknown): boolean {
+    const err = e as { response?: { status?: number; data?: { email_unverified?: boolean; message?: string } } }
+    if (err.response?.status === 403 && err.response?.data?.email_unverified === true) {
+      needsEmailVerification.value = true
+      error.value = err.response?.data?.message ?? 'Подтверди почту, чтобы лайкать'
+      return true
+    }
+    return false
+  }
+
+  /**
+   * Клиентский гейт лайка: без подтверждённой почты
+   * сразу показываем подсказку, не дёргая бэк.
+   *
+   * @returns true если лайкать можно
+   */
+  function ensureCanLike(): boolean {
+    if (canLike.value) {
+      return true
+    }
+    needsEmailVerification.value = true
+    error.value = 'Лайки доступны после подтверждения почты. Проверь письмо со ссылкой — пока работает только избранное.'
+    return false
+  }
 
   /**
    * Название тарифа для PRO-таба.
@@ -1011,6 +1060,7 @@ export function useSwipes() {
   async function superlike(): Promise<void> {
     const card = current.value
     if (!card || card.id == null || acting.value || leaving.value) return
+    if (!ensureCanLike()) return
     if (superlikesLeft.value === 0) {
       error.value = 'Суперлайки кончились — докупи пак во вкладке PRO или дождись завтра.'
       return
@@ -1046,6 +1096,7 @@ export function useSwipes() {
       }
     } catch (e: unknown) {
       if (handleGate(e)) return
+      if (handleEmailGate(e)) return
       const err = e as { response?: { data?: { message?: string; quota?: SwipeQuota } } }
       if (err.response?.data?.quota) quota.value = err.response?.data?.quota as SwipeQuota
       error.value = err.response?.data?.message ?? 'Не удалось отправить суперлайк'
@@ -1165,6 +1216,7 @@ export function useSwipes() {
       await skip('right')
       return
     }
+    if (!ensureCanLike()) return
     const card = current.value
     if (!card || card.id == null || acting.value || leaving.value) return
     acting.value = true
@@ -1200,6 +1252,7 @@ export function useSwipes() {
       }
     } catch (e: unknown) {
       if (handleGate(e)) return
+      if (handleEmailGate(e)) return
       const err = e as { response?: { data?: { message?: string } } }
       error.value = err.response?.data?.message ?? 'Не удалось отправить свайп'
     } finally {
@@ -1464,6 +1517,7 @@ export function useSwipes() {
   async function swipeAdmirer(userId: number | null): Promise<void> {
     if (userId == null) return
     if (acting.value) return
+    if (!ensureCanLike()) return
     acting.value = true
     actingId.value = userId
     error.value = null
@@ -1490,6 +1544,7 @@ export function useSwipes() {
       admirers.value = admirers.value.map((a) => (a.id === userId ? { ...a, is_match: true } : a))
     } catch (e: unknown) {
       if (handleGate(e)) return
+      if (handleEmailGate(e)) return
       const err = e as { response?: { data?: { message?: string } } }
       error.value = err.response?.data?.message ?? 'Не удалось отправить лайк'
     } finally {
@@ -1582,6 +1637,9 @@ export function useSwipes() {
     creatingChat,
     ageGate,
     ageGateReason,
+    needsEmailVerification,
+    isEmailVerified,
+    canLike,
     birthDate,
     verifying,
     resetting,

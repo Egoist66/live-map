@@ -67,6 +67,14 @@ services:
       INERTIA_SSR_ENABLED: "false"
     # serve + reverb + queue в одном контейнере, чтобы realtime и события работали как в проде.
     # composer install — только если vendor пуст (volume dev-vendor переживает рестарты).
+    #
+    # ВАЖНО: serve запускается с --no-reload. Без флага artisan serve стартует
+    # дочерний php -S с УРЕЗАННЫМ окружением (ServeCommand::$passthroughVariables:
+    # только APP_ENV/PATH/XDEBUG/...), а DB_HOST/DB_DATABASE/REDIS_HOST и т.д.
+    # вычёркиваются — и приложение внутри падает на .env-значения (127.0.0.1),
+    # которые в контейнере недоступны. С --no-reload дочерний процесс наследует
+    # всё окружение контейнера целиком. Перезапуск при правке .env в Docker
+    # всё равно бессмысленен (конфиг едет из environment, не из файла).
     command: >
       bash -c "
       if [ ! -f vendor/autoload.php ]; then composer install --no-interaction --prefer-dist; fi &&
@@ -74,7 +82,7 @@ services:
       (php artisan storage:link || true) &&
       (php artisan reverb:start --host=0.0.0.0 --port=8080 &) &&
       (php artisan queue:listen --tries=3 --sleep=3 &) &&
-      exec php artisan serve --host=0.0.0.0 --port=8000
+      exec php artisan serve --host=0.0.0.0 --port=8000 --no-reload
       "
     depends_on:
       mysql:

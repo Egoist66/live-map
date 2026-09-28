@@ -69,6 +69,8 @@ export function useChat() {
   const searching = ref(false)
   const selectedId = ref<number | null>(null)
   const error = ref<string | null>(null)
+  /** Отправка упёрлась в неподтверждённую почту. */
+  const emailBlocked = ref(false)
   const editingId = ref<number | null>(null)
   const editingBody = ref('')
   const toast = (() => { try { return useToast() } catch { return null as any } })()
@@ -81,6 +83,21 @@ export function useChat() {
       summary: isBlockedBy ? '⛔ Пользователь заблокировал вас' : '⛔ Нельзя отправить',
       detail: isBlockedBy ? 'Вы не можете писать этому пользователю — он ограничил сообщения для вас.' : msg,
       life: 4200,
+    })
+  }
+
+  /**
+   * Тост про неподтверждённую почту при попытке писать.
+   *
+   * @param detail текст отказа с бэкенда
+   */
+  function notifyEmailBlocked(detail?: string) {
+    emailBlocked.value = true
+    toast?.add({
+      severity: 'warn',
+      summary: '📧 Подтверди почту',
+      detail: detail || 'Писать сообщения можно после подтверждения почты. Ссылка уже летит на твой email.',
+      life: 5200,
     })
   }
   let echoChannels: any[] = []
@@ -454,6 +471,11 @@ export function useChat() {
       const idx = messages.value.findIndex((m) => m?.id === tempId)
       if (idx !== -1) (messages.value[idx] as any).failed = true
       const msg = e?.response?.data?.message || ''
+      if (e?.response?.status === 403 && e?.response?.data?.email_unverified === true) {
+        if (idx !== -1) messages.value.splice(idx, 1)
+        notifyEmailBlocked(msg)
+        throw e
+      }
       if (e?.response?.status === 403 && msg.includes('заблокировал')) {
         if (idx !== -1) messages.value.splice(idx, 1)
       }
@@ -1037,7 +1059,7 @@ export function useChat() {
 
   return {
     conversations, activeConv, messages, loading, sending, refreshing, typingUsers,
-    searchQuery, searchResults, searching, selectedId, error, unreadTotal, unreadMessagesTotal,
+    searchQuery, searchResults, searching, selectedId, error, emailBlocked, unreadTotal, unreadMessagesTotal,
     editingId, editingBody, history,
     conversationsHasMore, conversationsLoadingMore,
     loadConversations, loadMoreConversations, refresh, openConversation, createConversation, sendMessage, startEdit, cancelEdit, saveEdit, deleteMessage, deleteConversation, clearAllConversations, searchUsers, notifyTyping, stopTyping, handleIncoming, handleUpdated, subscribeGlobal, resetChatRealtime,
