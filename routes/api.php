@@ -18,6 +18,19 @@ use App\Http\Controllers\VersionController;
 use App\Http\Controllers\ZoneSubscriptionController;
 use Illuminate\Support\Facades\Route;
 
+// ВРЕМЕННЫЙ debug-route для диагностики DB_HOST в dev-контейнере. Удалить после починки.
+Route::get('/__dbg_env', function () {
+    return response()->json([
+        'config_cached' => app()->configurationIsCached(),
+        'config_mysql_host' => config('database.connections.mysql.host'),
+        'env_DB_HOST' => env('DB_HOST'),
+        'server_DB_HOST' => $_SERVER['DB_HOST'] ?? null,
+        'ENV_DB_HOST' => $_ENV['DB_HOST'] ?? null,
+        'getenv_DB_HOST' => getenv('DB_HOST'),
+        'env_file' => app()->environmentFilePath(),
+    ]);
+});
+
 Route::middleware('throttle:60,1')->group(function () {
     Route::get('/version', [VersionController::class, 'show']);
     Route::get('/nbrb/convert', [NbrbController::class, 'convert']);

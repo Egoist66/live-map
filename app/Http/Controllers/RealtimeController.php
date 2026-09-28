@@ -10,6 +10,7 @@ use App\Models\Message;
 use App\Models\Pin;
 use App\Models\Report;
 use App\Models\SwipeAction;
+use App\Models\UserDatabaseNotification;
 use App\Services\MonitoringService;
 use App\Services\RealtimeMode;
 use App\Services\UserNotifier;
@@ -495,7 +496,10 @@ class RealtimeController extends Controller
             return [];
         }
 
-        $rows = DatabaseNotification::where('notifiable_id', $userId)
+        // Важно: читаем шифрующей моделью, иначе data приедет конвертом
+        // {__enc: ...} и тосты поллера будут пустыми («ваша запись»).
+        $rows = UserDatabaseNotification::where('notifiable_type', (new \App\Models\User)->getMorphClass())
+            ->where('notifiable_id', $userId)
             ->whereNull('read_at')
             ->where('updated_at', '>', $since)
             ->orderBy('updated_at')

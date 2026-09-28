@@ -560,7 +560,8 @@ function handlePinActivity(e: any) {
   if (a.kind === 'sub_level') {
     return
   }
-  const pinTitle = a.pin?.title || a.photo?.caption || 'ваша запись'
+  const pinTitle = a.pin?.title || a.photo?.caption || null
+  const pinTitleOrExcerpt = pinTitle || (a.excerpt || '').toString().slice(0, 60) || null
   const flowPostId = Number(a?.flow_post?.id || a?.flow_post_id || 0) || null
   const flowLink = flowPostId ? `/flow/post/${flowPostId}` : '/flow'
   const flowExcerpt = (a.excerpt || '').toString().slice(0, 90)
@@ -677,6 +678,50 @@ function handlePinActivity(e: any) {
     })
     return
   }
+  if (a.kind === 'rewards_weekly') {
+    const excerpt = (a.excerpt || '').toString().slice(0, 90)
+    push({
+      id: `pin-${a.id}-${Date.now()}`,
+      type: 'pin',
+      icon: 'pi pi-star',
+      title: 'Итог недели',
+      body: excerpt || 'Начислены очки активности за неделю',
+      avatar: avatarSrcFor(actor),
+      link: '/profile/edit',
+      createdAt: Date.now(),
+    })
+    return
+  }
+  if (
+    a.kind === 'district_pin' ||
+    a.kind === 'district_post' ||
+    a.kind === 'district_post_comment' ||
+    a.kind === 'district_post_reply' ||
+    a.kind === 'district_post_like'
+  ) {
+    // Районные виды обычно идут с data.district и обрабатываются в handleDistrict.
+    // Сюда попадают только старые/урезанные строки без district — ведём в ленту,
+    // а не на пустую карту, чтобы тост не «пропадал».
+    const excerpt = (a.excerpt || (a as any).pin?.title || '').toString().slice(0, 90)
+    const titles: Record<string, string> = {
+      district_pin: 'Новый пин в районе',
+      district_post: 'Новость района',
+      district_post_comment: 'Комментарий в районе',
+      district_post_reply: 'Ответ в районе',
+      district_post_like: 'Лайк в районе',
+    }
+    push({
+      id: `pin-${a.id}-${Date.now()}`,
+      type: 'pin',
+      icon: 'pi pi-home',
+      title: titles[a.kind] || 'Район',
+      body: excerpt ? `${name}: ${excerpt}` : `${name} — активность в районе`,
+      avatar: avatarSrcFor(actor),
+      link: activityLink(a),
+      createdAt: Date.now(),
+    })
+    return
+  }
   const emoji: Record<string, string> = { like: '❤️', fire: '🔥', laugh: '😂', sad: '😢', angry: '😡', useful: '👍' }
   if (a.kind === 'swipe_like') {
     const anon = a.is_incognito
@@ -718,15 +763,18 @@ function handlePinActivity(e: any) {
     })
     return
   }
+  const titleOrExcerpt = pinTitleOrExcerpt || 'новая активность'
   const body = a.kind === 'comment'
-    ? (a.excerpt ? `${name}: ${a.excerpt}` : `${name} прокомментировал «${pinTitle}»`).slice(0, 90)
+    ? (a.excerpt ? `${name}: ${a.excerpt}` : `${name} прокомментировал «${titleOrExcerpt}»`).slice(0, 90)
     : a.kind === 'photo_comment'
       ? (a.excerpt ? `${name}: ${a.excerpt}` : `${name} прокомментировал фото`).slice(0, 90)
       : a.kind === 'photo_reply'
         ? (a.excerpt ? `${name} ответил вам: ${a.excerpt}` : `${name} ответил на ваш комментарий к фото`).slice(0, 90)
         : a.kind === 'mention'
-          ? (a.excerpt ? `${name} упомянул вас: ${a.excerpt}` : `${name} упомянул вас в «${pinTitle}»`).slice(0, 90)
-          : `${name} ${emoji[a.reaction_type] || '⭐'} «${pinTitle}»`.slice(0, 90)
+          ? (a.excerpt ? `${name} упомянул вас: ${a.excerpt}` : `${name} упомянул вас в «${titleOrExcerpt}»`).slice(0, 90)
+          : a.kind === 'reaction'
+            ? (`${name} ${emoji[a.reaction_type || ''] || '❤️'} «${titleOrExcerpt}»`).slice(0, 90)
+            : (a.excerpt ? `${name}: ${a.excerpt}` : `${name} — ${titleOrExcerpt}`).slice(0, 90)
   const isCommentKind = a.kind === 'comment' || a.kind === 'photo_comment'
   const isMentionKind = a.kind === 'mention'
   const isReplyKind = a.kind === 'photo_reply'
@@ -1077,8 +1125,16 @@ async function showInitialUnreads(): Promise<void> {
   try {
     const { notificationsApi } = await import('@/services/notifications.api')
     const rows = await notificationsApi.list().catch(() => [] as any[])
+    // Только свежие (как в poll-фолбэке): старые непрочитанные недельной
+    // давности не должны всплывать как новые при каждом входе.
     const unread = (Array.isArray(rows) ? rows : [])
-      .filter((n: any) => !n?.read_at)
+      .filter((n: any) => {
+        if (!n || n?.read_at) return false
+        const raw = n?.updated_at || n?.created_at
+        const at = raw ? Date.parse(String(raw)) : NaN
+        if (!Number.isFinite(at)) return false
+        return Date.now() - at <= TOAST_FRESH_MS
+      })
       .slice(0, 3)
     for (const n of unread) {
       try {
@@ -1112,6 +1168,12 @@ export function useAppNotifications() {
       void useFileDownload().download(t.downloadUrl, name)
       remove(t.id)
 
+      return
+    }
+    // Пустая ссылка (например app.published): не уводим на корень,
+    // просто гасим тост — полный текст уже в колокольчике.
+    if (!t.link) {
+      remove(t.id)
       return
     }
     router.visit(t.link); remove(t.id)

@@ -6,7 +6,7 @@ import { api } from './api'
  */
 export interface PinActivityItem {
   id: number | string
-  kind: 'reaction' | 'comment' | 'mention' | 'photo_comment' | 'photo_reply' | 'photo_like' | 'swipe_like' | 'match' | 'sub_pin' | 'sub_photo' | 'sub_level' | 'sub_flow_post' | 'flow_like' | 'flow_comment' | 'flow_reply' | 'flow_mention' | 'flow_repost' | 'invite' | 'invite_accepted' | 'scheduled_published'
+  kind: 'reaction' | 'comment' | 'mention' | 'photo_comment' | 'photo_reply' | 'photo_like' | 'swipe_like' | 'match' | 'sub_pin' | 'sub_photo' | 'sub_level' | 'sub_flow_post' | 'flow_like' | 'flow_comment' | 'flow_reply' | 'flow_mention' | 'flow_repost' | 'invite' | 'invite_accepted' | 'scheduled_published' | 'district_pin' | 'district_post' | 'district_post_comment' | 'district_post_reply' | 'district_post_like' | 'rewards_weekly'
   owner_id?: number | null
   reaction_type?: string | null
   excerpt?: string | null

@@ -94,6 +94,10 @@ services:
       - dev-pnpm-store:/pnpm/store
     ports:
       - "5173:5173"
+    environment:
+      # Windows-хост + bind-mount не пробрасывает inotify в контейнер:
+      # без polling Vite не замечает правок и HMR молчит.
+      VITE_WATCH_POLL: "true"
     depends_on:
       - app-dev
 

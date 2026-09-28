@@ -7,6 +7,7 @@ use App\Models\PinComment;
 use App\Models\Reaction;
 use App\Services\ActivityRewards;
 use App\Services\PinActivityNotifier;
+use App\Services\UserNotifier;
 use Illuminate\Http\Request;
 
 class ReactionController extends Controller
@@ -71,6 +72,13 @@ class ReactionController extends Controller
                     $model->refresh();
                     PinActivityNotifier::counters($model);
                     $model->refresh();
+                    // Анлайк гасит висящий непрочитанный «Новая реакция», иначе
+                    // в колокольчике остаётся строка про уже снятый лайк.
+                    UserNotifier::deleteUnread(
+                        (int) $model->user_id,
+                        'pin.reaction',
+                        "pin-reaction:{$model->id}:{$request->user()->id}:{$data['type']}"
+                    );
                 }
                 return response()->json(['reacted' => false, 'type' => null, 'reactions_count' => $model->reactions_count ?? 0, 'likes_count' => $model->likes_count ?? 0]);
             }
@@ -80,6 +88,14 @@ class ReactionController extends Controller
                 if ($prev === 'like' && $data['type'] !== 'like') $model->decrement('likes_count');
                 if ($prev !== 'like' && $data['type'] === 'like') $model->increment('likes_count');
                 $model->refresh();
+                // Смена типа: гасим строку старого типа, чтобы не висели две.
+                if ($prev !== $data['type']) {
+                    UserNotifier::deleteUnread(
+                        (int) $model->user_id,
+                        'pin.reaction',
+                        "pin-reaction:{$model->id}:{$request->user()->id}:{$prev}"
+                    );
+                }
                 PinActivityNotifier::reaction($model, $request->user(), $data['type']);
                 $model->refresh();
             }

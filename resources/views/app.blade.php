@@ -79,40 +79,15 @@
         <script nonce="{{ $cspNonce ?? '' }}">
             (function(){ try{ var s=localStorage.getItem('theme'); var m=window.matchMedia('(prefers-color-scheme: dark)').matches; var d=s ? s==='dark' : m; if(d) document.documentElement.classList.add('dark'); document.documentElement.style.colorScheme = d?'dark':'light'; var bg=d?'#0F121F':'#ffffff'; document.documentElement.style.backgroundColor=bg; }catch(e){} })();
         </script>
-        {{-- Прелоадер: тонкая полоса сверху + полноэкранный boot-экран
-              в стиле Tinder (тёплая тьма, светящаяся иконка пин+сердце).
+        {{-- Прелоадер: полноэкранный boot-экран в стиле Tinder
+              (тёплая тьма, светящаяся иконка пин+сердце).
+              Верхней линейной полосы здесь нет сознательно: при переходах
+              по страницам её рисует Inertia-progress, а на полной
+              перезагрузке достаточно сплэша.
               Системный сплэш PWA (иконка + UPin из манифеста) рисует сам
               Chrome — цвета манифеста подобраны под этот же фон, чтобы
               переход «системный сплэш → boot → приложение» был бесшовным. --}}
         <style nonce="{{ $cspNonce ?? '' }}">
-          #mini-loader {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 3px;
-            z-index: 9998;
-            overflow: hidden;
-            background: rgba(253, 38, 125, .14);
-            transition: opacity .4s ease, visibility .4s ease;
-          }
-          #mini-loader.done {
-            opacity: 0;
-            visibility: hidden;
-          }
-          #mini-loader > span {
-            display: block;
-            height: 100%;
-            width: 35%;
-            border-radius: inherit;
-            background: linear-gradient(90deg, #FD267D, #E936C7, #FF7854);
-            box-shadow: 0 0 12px rgba(253, 38, 125, .8);
-            animation: mini-load 1.1s ease-in-out infinite;
-          }
-          @keyframes mini-load {
-            0% { transform: translateX(-110%); }
-            100% { transform: translateX(280%); }
-          }
           #pwa-boot {
             position: fixed;
             inset: 0;
@@ -182,14 +157,17 @@
             border-radius: inherit;
             background: linear-gradient(90deg, #FD267D, #E936C7, #FF7854);
             box-shadow: 0 0 12px rgba(253, 38, 125, .9);
-            animation: mini-load 1.1s ease-in-out infinite;
+            animation: boot-slide 1.1s ease-in-out infinite;
+          }
+          @keyframes boot-slide {
+            0% { transform: translateX(-110%); }
+            100% { transform: translateX(280%); }
           }
           @keyframes boot-float {
             0%, 100% { transform: translateY(0) scale(1); }
             50% { transform: translateY(-7px) scale(1.03); }
           }
           @media (prefers-reduced-motion: reduce) {
-            #mini-loader *, #mini-loader *::before, #mini-loader *::after,
             #pwa-boot *, #pwa-boot *::before, #pwa-boot *::after {
               animation: none !important;
             }
@@ -249,7 +227,6 @@
         @if(!$isNativeClient && !empty(($seoIntegrations ?? [])['scripts_enabled']) && !empty(($seoIntegrations ?? [])['body_start_scripts']))
         {!! ($seoIntegrations ?? [])['body_start_scripts'] !!}
         @endif
-        <div id="mini-loader" role="status" aria-label="Загрузка"><span></span></div>
         <div id="pwa-boot" role="status" aria-label="UPin загружается">
           <div class="boot-card">
             <svg class="boot-icon" viewBox="0 0 512 512" aria-hidden="true">
@@ -276,16 +253,8 @@
         </div>
         <script nonce="{{ $cspNonce ?? '' }}">
             (function () {
-                var mini = document.getElementById('mini-loader');
                 var boot = document.getElementById('pwa-boot');
                 var hide = function () {
-                    if (mini && !mini.classList.contains('done')) {
-                        mini.classList.add('done');
-                        setTimeout(function () {
-                            if (mini && mini.parentNode) mini.parentNode.removeChild(mini);
-                            mini = null;
-                        }, 500);
-                    }
                     if (boot && !boot.classList.contains('done')) {
                         boot.classList.add('done');
                         setTimeout(function () {

@@ -381,6 +381,29 @@ function describe(a: PinActivityItem): { emoji: string; text: string } {
   if (a.kind === 'comment') {
     return { emoji: '💬', text: a.excerpt ? `${name}: ${a.excerpt}` : `${name} прокомментировал пин` }
   }
+  if (a.kind === 'district_pin') {
+    const title = (a as any).excerpt || (a as any).pin?.title || 'пин'
+    return { emoji: '📍', text: `${name} — новый пин «${title}» в районе` }
+  }
+  if (a.kind === 'district_post') {
+    const excerpt = (a as unknown as { excerpt?: string }).excerpt
+    return { emoji: '📢', text: excerpt ? `${name}: ${excerpt}` : `${name} опубликовал новость района` }
+  }
+  if (a.kind === 'district_post_comment') {
+    const excerpt = (a as unknown as { excerpt?: string }).excerpt
+    return { emoji: '💬', text: excerpt ? `${name}: ${excerpt}` : `${name} прокомментировал новость района` }
+  }
+  if (a.kind === 'district_post_reply') {
+    const excerpt = (a as unknown as { excerpt?: string }).excerpt
+    return { emoji: '↩️', text: excerpt ? `${name} ответил вам: ${excerpt}` : `${name} ответил на ваш комментарий` }
+  }
+  if (a.kind === 'district_post_like') {
+    return { emoji: '❤️', text: `${name} оценил новость района` }
+  }
+  if (a.kind === 'rewards_weekly') {
+    const excerpt = (a as unknown as { excerpt?: string }).excerpt
+    return { emoji: '⭐', text: excerpt ? `Итог недели: ${excerpt}` : 'Итог недели по активности' }
+  }
   const emoji = REACTION_EMOJI[a.reaction_type || ''] || '⭐'
   return { emoji, text: `${name} отреагировал ${emoji}` }
 }
@@ -389,6 +412,36 @@ function resolveTarget(a: PinActivityItem): { url: string; pending: any } {
   const { userProfileUrl } = useProfileUrl()
   const actor = (a as unknown as { actor?: { id?: number; profile_slug?: string | null } }).actor ?? null
   const actorId = Number(actor?.id || 0) || null
+  /** District id из inbox-строки: activity-пейлоад районных видов его не несёт. */
+  function districtIdFor(activityId: number | string): number | null {
+    try {
+      const row = inboxRows.value.find((n) => String(n.id) === String(activityId))
+      const id = Number((row?.data as any)?.district?.id || 0)
+      return id > 0 ? id : null
+    } catch {
+      return null
+    }
+  }
+  if (a.kind === 'rewards_weekly') {
+    return { url: '/profile/edit', pending: null }
+  }
+  if (
+    a.kind === 'district_pin' ||
+    a.kind === 'district_post' ||
+    a.kind === 'district_post_comment' ||
+    a.kind === 'district_post_reply' ||
+    a.kind === 'district_post_like'
+  ) {
+    const districtId = districtIdFor(a.id)
+    if (districtId) {
+      return { url: `/districts/${districtId}`, pending: null }
+    }
+    const pinId = Number((a as any).pin?.id || (a as any).pin_id || 0) || null
+    if (pinId) {
+      return { url: `/map?pin=${pinId}`, pending: { type: 'pin', pinId, commentId: null } }
+    }
+    return { url: '/map', pending: null }
+  }
   if (a.kind === 'swipe_like') {
     return { url: '/swipes?tab=admirers', pending: null }
   }
@@ -499,8 +552,41 @@ export function usePinActivity() {
   const flowActivities = computed(() => eventActivities.value.filter((a) => a.kind === 'flow_like' || a.kind === 'flow_comment' || a.kind === 'flow_reply' || a.kind === 'flow_mention' || a.kind === 'flow_repost' || a.kind === 'sub_flow_post'))
   const subActivities = computed(() => eventActivities.value.filter((a) => a.kind === 'sub_photo' || a.kind === 'sub_level'))
   const photoActivities = computed(() => eventActivities.value.filter((a) => isPhotoActivity(a)))
+  /** Районные активности: пины/новости/комменты внутри районов. */
+  const districtActivities = computed(() =>
+    eventActivities.value.filter((a) =>
+      a.kind === 'district_pin' ||
+      a.kind === 'district_post' ||
+      a.kind === 'district_post_comment' ||
+      a.kind === 'district_post_reply' ||
+      a.kind === 'district_post_like',
+    ),
+  )
+  /** Прочие события без отдельной секции (награды и будущие виды): не должны пропадать. */
+  const genericEventActivities = computed(() =>
+    eventActivities.value.filter((a) =>
+      a.kind !== 'swipe_like' &&
+      a.kind !== 'match' &&
+      a.kind !== 'flow_like' &&
+      a.kind !== 'flow_comment' &&
+      a.kind !== 'flow_reply' &&
+      a.kind !== 'flow_mention' &&
+      a.kind !== 'flow_repost' &&
+      a.kind !== 'sub_flow_post' &&
+      a.kind !== 'sub_photo' &&
+      a.kind !== 'sub_level' &&
+      a.kind !== 'district_pin' &&
+      a.kind !== 'district_post' &&
+      a.kind !== 'district_post_comment' &&
+      a.kind !== 'district_post_reply' &&
+      a.kind !== 'district_post_like' &&
+      !isPhotoActivity(a),
+    ),
+  )
+  const districtUnread = computed(() => districtActivities.value.filter((a) => !a.read_at).length)
+  const genericEventUnread = computed(() => genericEventActivities.value.filter((a) => !a.read_at).length)
   const loveUnread = computed(() => loveActivities.value.filter((a) => !a.read_at).length)
   const flowUnread = computed(() => flowActivities.value.filter((a) => !a.read_at).length)
   const photoUnread = computed(() => photoActivities.value.filter((a) => !a.read_at).length)
-  return { activities, unread, loading, clearing, hasData, pinActivities, eventActivities, pinUnread, eventUnread, loveActivities, flowActivities, subActivities, photoActivities, loveUnread, flowUnread, photoUnread, otherNotifications, otherUnread, describe, refresh, markAllRead, markOne, clearAll, goPin, goNotification, resolveTarget, acceptInvite, declineInvite, invitePinId, acceptDistrictInvite, declineDistrictInvite, init, subscribe }
+  return { activities, unread, loading, clearing, hasData, pinActivities, eventActivities, pinUnread, eventUnread, loveActivities, flowActivities, subActivities, photoActivities, districtActivities, genericEventActivities, loveUnread, flowUnread, photoUnread, districtUnread, genericEventUnread, otherNotifications, otherUnread, describe, refresh, markAllRead, markOne, clearAll, goPin, goNotification, resolveTarget, acceptInvite, declineInvite, invitePinId, acceptDistrictInvite, declineDistrictInvite, init, subscribe }
 }

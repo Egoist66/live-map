@@ -23,13 +23,32 @@ export default defineConfig({
     // Dev-сервер: порт строго 5173 — без strictPort второй Vite молча
     // уезжал на 5174, а страницы продолжали ломиться на 5173 через прокси
     // и получали 504 + `Failed to fetch dynamically imported module`.
-    // host специально НЕ трогаем: с host:true Vite биндится на [::] и
-    // laravel-vite-plugin пишет в hot-файл http://[::]:5173 — браузер
-    // отвергает такой URL (ERR_ADDRESS_INVALID). Дефолтный localhost
-    // прокси Herd/Valet резолвит сам.
+    //
+    // host 0.0.0.0 обязателен в Docker: без него Vite слушает только
+    // localhost контейнера и с Windows-хоста недоступен.
+    // А чтобы laravel-vite-plugin писал в public/hot браузерный адрес
+    // (http://localhost:5173), а не http://0.0.0.0:5173 / http://[::]:5173
+    // (такие URL браузер отвергает — ERR_ADDRESS_INVALID), зафиксированы
+    // origin + hmr.host.
+    //
+    // Windows-хост + bind-mount: inotify-события о правках файлов
+    // в контейнер НЕ доходят, без polling Vite не видит изменений
+    // и HMR молчит. Polling включается через VITE_WATCH_POLL=true
+    // (сервис vite в docker-compose её уже выставляет), нативный
+    // `pnpm dev` без переменной работает как раньше, без лишней нагрузки.
     server: {
+        host: '0.0.0.0',
         port: 5173,
         strictPort: true,
+        origin: 'http://localhost:5173',
+        hmr: {
+            host: 'localhost',
+            port: 5173,
+        },
+        watch: {
+            usePolling: process.env.VITE_WATCH_POLL === 'true',
+            interval: 300,
+        },
     },
     resolve: {
         // Одна копия Vue на весь бандл: без dedupe рантайм может разъехаться

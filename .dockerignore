@@ -8,6 +8,7 @@ storage/framework/sessions/*
 storage/framework/views/*
 .env
 public/hot
+public/storage
 npm-debug.log
 .idea
 .vscode

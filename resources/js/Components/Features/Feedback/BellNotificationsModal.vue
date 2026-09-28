@@ -72,6 +72,8 @@ watch(
       return;
     }
     bell.tab.value = "events";
+    // Только подтягиваем свежие данные. Прочитанным ничего не помечаем:
+    // иначе строка пропадает из непрочитанных раньше, чем пользователь её увидел.
     await Promise.allSettled([
       pinAct.refresh(),
       admRep.refresh(),
@@ -79,7 +81,6 @@ watch(
       updates.loadHistory(),
       proc.load(),
     ]);
-    await readAllState.markBellOpened();
   }
 );
 function goProcedures() {
@@ -537,6 +538,114 @@ function openNews(item: any) {
                           loading="lazy"
                           class="w-11 h-11 rounded-xl object-cover shrink-0 border border-stone-200 dark:border-zinc-700"
                         />
+                        <span
+                          v-if="!a.read_at"
+                          class="w-2.5 h-2.5 bg-violet-500 rounded-full shrink-0"
+                        ></span>
+                        <i v-else class="pi pi-chevron-right text-stone-300 dark:text-zinc-600 text-xs shrink-0"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div v-if="!uloveOnly && pinAct.districtActivities.value.length" class="mb-3">
+                    <div
+                      class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500 px-2 py-1.5 flex items-center gap-1.5"
+                    >
+                      Районы
+                      <span
+                        v-if="pinAct.districtUnread.value"
+                        class="bg-emerald-500 text-white text-[10px] px-1.5 py-0.5 rounded-full"
+                        >{{ pinAct.districtUnread.value }}</span
+                      >
+                    </div>
+                    <div class="space-y-1">
+                      <button
+                        v-for="a in pinAct.districtActivities.value"
+                        :key="a.id"
+                        @click="bell.close(); pinAct.goPin(a)"
+                        :class="
+                          !a.read_at
+                            ? 'bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-800'
+                            : 'hover:bg-stone-50 dark:hover:bg-zinc-800 border border-transparent'
+                        "
+                        class="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition min-h-[56px]"
+                      >
+                        <span class="relative shrink-0"
+                          ><Avatar
+                            :image="avatarSrcFor(a.actor)"
+                            shape="circle"
+                            class="!w-10 !h-10 [&_img]:object-cover"
+                            :pt="{ image: { class: 'object-cover' } }" /><span
+                            class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center border-2 border-white dark:border-zinc-900 text-[10px] bg-emerald-500"
+                            >{{ pinAct.describe(a).emoji }}</span
+                          ></span
+                        >
+                        <div class="min-w-0 flex-1">
+                          <div class="flex items-center gap-1.5">
+                            <span class="text-sm font-semibold dark:text-white truncate">Район</span
+                            ><span
+                              v-if="a.created_at"
+                              class="text-[11px] text-stone-400 dark:text-zinc-500 shrink-0"
+                              >{{ fmtTime(a.created_at) }}</span
+                            >
+                          </div>
+                          <div class="text-xs text-stone-500 dark:text-zinc-400 truncate">
+                            {{ pinAct.describe(a).text }}
+                          </div>
+                        </div>
+                        <span
+                          v-if="!a.read_at"
+                          class="w-2.5 h-2.5 bg-emerald-500 rounded-full shrink-0"
+                        ></span>
+                        <i v-else class="pi pi-chevron-right text-stone-300 dark:text-zinc-600 text-xs shrink-0"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div v-if="!uloveOnly && pinAct.genericEventActivities.value.length" class="mb-3">
+                    <div
+                      class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500 px-2 py-1.5 flex items-center gap-1.5"
+                    >
+                      События
+                      <span
+                        v-if="pinAct.genericEventUnread.value"
+                        class="bg-violet-600 text-white text-[10px] px-1.5 py-0.5 rounded-full"
+                        >{{ pinAct.genericEventUnread.value }}</span
+                      >
+                    </div>
+                    <div class="space-y-1">
+                      <button
+                        v-for="a in pinAct.genericEventActivities.value"
+                        :key="a.id"
+                        @click="bell.close(); pinAct.goPin(a)"
+                        :class="
+                          !a.read_at
+                            ? 'bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-800'
+                            : 'hover:bg-stone-50 dark:hover:bg-zinc-800 border border-transparent'
+                        "
+                        class="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition min-h-[56px]"
+                      >
+                        <span class="relative shrink-0"
+                          ><Avatar
+                            :image="avatarSrcFor(a.actor)"
+                            shape="circle"
+                            class="!w-10 !h-10 [&_img]:object-cover"
+                            :pt="{ image: { class: 'object-cover' } }" /><span
+                            class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center border-2 border-white dark:border-zinc-900 text-[10px] bg-violet-600"
+                            >{{ pinAct.describe(a).emoji }}</span
+                          ></span
+                        >
+                        <div class="min-w-0 flex-1">
+                          <div class="flex items-center gap-1.5">
+                            <span class="text-sm font-semibold dark:text-white truncate">Событие</span
+                            ><span
+                              v-if="a.created_at"
+                              class="text-[11px] text-stone-400 dark:text-zinc-500 shrink-0"
+                              >{{ fmtTime(a.created_at) }}</span
+                            >
+                          </div>
+                          <div class="text-xs text-stone-500 dark:text-zinc-400 truncate">
+                            {{ pinAct.describe(a).text }}
+                          </div>
+                        </div>
                         <span
                           v-if="!a.read_at"
                           class="w-2.5 h-2.5 bg-violet-500 rounded-full shrink-0"

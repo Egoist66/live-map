@@ -1,6 +1,9 @@
 /**
- * Прелоадер: тонкая полоса сверху (`#mini-loader`) + полноэкранный
- * boot-экран (`#pwa-boot`) в стиле Tinder.
+ * Сплэш: полноэкранный boot-экран (`#pwa-boot`) в стиле Tinder.
+ *
+ * Верхней линейной полосы при полной перезагрузке нет сознательно:
+ * при переходах по страницам её рисует Inertia-progress,
+ * а на перезагрузке достаточно сплэша.
  *
  * Разметка и стили живут инлайном в `resources/views/app.blade.php`,
  * чтобы первый кадр рисовался до загрузки CSS/JS.
@@ -17,7 +20,7 @@
  * ```
  */
 
-const LOADER_ID = 'mini-loader'
+const LOADER_ID = 'pwa-boot'
 const LEGACY_SPLASH_ID = 'pwa-splash'
 const REMOVE_AFTER_MS = 500
 const PAINT_DELAY_MS = 100
