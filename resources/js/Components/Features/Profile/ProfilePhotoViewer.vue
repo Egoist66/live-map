@@ -8,10 +8,9 @@ import ProgressSpinner from 'primevue/progressspinner'
 import { Swiper, SwiperSlide } from 'swiper/vue'
 import 'swiper/css'
 import { Link } from '@inertiajs/vue3'
-import { ref } from 'vue'
 import { useMounted } from '@vueuse/core'
-import { useSwipeToClose } from '@/composables/useSwipeToClose'
 import { useBodyLock } from '@/composables/useBodyLock'
+import { usePhotoViewerDismiss } from '@/composables/usePhotoViewerDismiss'
 import { usePhotoViewer } from '@/composables/usePhotoViewer'
 import { usePhotoViewerSwiper } from '@/composables/usePhotoViewerSwiper'
 import { usePhotoViewerZoom } from '@/composables/usePhotoViewerZoom'
@@ -47,11 +46,7 @@ const photoLikers = useLikersPreview(
 const commentPlaceholder = enterPlaceholder('Добавить комментарий… Shift+Enter — новая строка', 'Добавить комментарий…')
 const mentionNav = useMentionNavigate()
 
-const viewerHeaderRef = ref<HTMLElement | null>(null)
-useSwipeToClose(viewerHeaderRef, {
-  onClose: () => props.gallery.close(),
-  enabled: () => !!props.gallery.viewerOpen?.value,
-})
+const { viewerRootRef, scrollRef, onBackdropClick } = usePhotoViewerDismiss(props.gallery)
 
 /**
  * Отправляет комментарий к фото и закрывает подсказки.
@@ -67,15 +62,17 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
   <!-- eslint-disable-next-line vue/no-multiple-template-root -->
   <template v-if="isMounted">
   <Teleport to="body">
-    <div v-if="gallery.viewerOpen.value && gallery.active.value" class="fixed inset-0 z-[2000] flex flex-col bg-white dark:bg-zinc-950 md:mx-auto md:max-w-[720px] md:border-x md:border-stone-200/70 dark:md:border-white/10" role="dialog" aria-modal="true">
-      <div ref="viewerHeaderRef" class="shrink-0 flex items-center gap-2.5 pl-1 pr-3 border-b border-stone-200/70 dark:border-white/10 viewer-fullscreen-header">
+    <div v-if="gallery.viewerOpen.value && gallery.active.value" class="fixed inset-0 z-[2000]" role="dialog" aria-modal="true">
+      <div class="absolute inset-0 hidden md:block bg-ink-900/70 dark:bg-black/80 backdrop-blur-sm" @click="onBackdropClick" />
+      <div ref="viewerRootRef" class="absolute inset-0 flex flex-col bg-white dark:bg-zinc-950 md:mx-auto md:max-w-[720px] md:border-x md:border-stone-200/70 dark:md:border-white/10">
+      <div class="shrink-0 flex items-center gap-2.5 pl-1 pr-3 border-b border-stone-200/70 dark:border-white/10 viewer-fullscreen-header">
         <Button icon="pi pi-arrow-left" rounded text class="!w-10 !h-10" @click="gallery.close()" aria-label="Назад" />
         <img v-if="avatarSrc" :src="avatarSrc" alt="" loading="lazy" draggable="false" class="block w-8 h-8 rounded-full object-cover object-center bg-stone-100 dark:bg-white/10" />
         <span v-else class="w-8 h-8 rounded-full bg-violet-100 dark:bg-white/10 grid place-items-center text-xs font-black text-violet-700 dark:text-zinc-200">{{ (userName || '?').slice(0, 1).toUpperCase() }}</span>
         <span class="font-bold text-sm truncate flex-1">{{ userName }}</span>
         <Button v-if="isOwn" icon="pi pi-trash" rounded text size="small" severity="danger" @click="viewer.confirmDelete.value = true" aria-label="Удалить фото" />
       </div>
-      <div class="flex-1 min-h-0 overflow-y-auto overscroll-contain viewer-fullscreen-scroll">
+      <div ref="scrollRef" class="flex-1 min-h-0 overflow-y-auto overscroll-contain viewer-fullscreen-scroll">
         <div class="relative bg-black">
             <Swiper class="w-full h-[44dvh] sm:h-[52dvh]" :slides-per-view="1" :space-between="0" :speed="350" :loop="false" :modules="viewerZoom.modules" :zoom="viewerZoom.options" :initial-slide="swiper.activeIndex()" @swiper="swiper.registerMobile" @slideChange="swiper.onSlideChange">
             <SwiperSlide v-for="p in gallery.photos.value" :key="p.id" class="!flex items-center justify-center bg-black">
@@ -145,6 +142,7 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
           </div>
         </div>
         <p v-else class="text-xs text-stone-400 px-1">Автор ограничил комментирование</p>
+      </div>
       </div>
     </div>
   </Teleport>

@@ -1,5 +1,6 @@
 import Echo from 'laravel-echo'
 import Pusher from 'pusher-js'
+import { getStoredTokenSync } from '@/composables/useAuthStorage'
 
 export { resetEchoSession } from '@/services/echo-session'
 
@@ -98,10 +99,11 @@ function resolveAuthEndpoint(): string {
 }
 function resolveAuthHeaders(): Record<string, string> {
   const headers: Record<string, string> = { 'X-Requested-With': 'XMLHttpRequest' }
-  try {
-    const mirrored = localStorage.getItem('upin_auth_token_mirror')
-    if (mirrored) headers['Authorization'] = `Bearer ${mirrored}`
-  } catch {}
+  const bearer = getStoredTokenSync()
+  const hasBearer = bearer !== null && bearer !== ''
+  if (hasBearer && bearer) {
+    headers['Authorization'] = `Bearer ${bearer}`
+  }
   return headers
 }
 

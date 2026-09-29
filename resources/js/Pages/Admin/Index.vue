@@ -28,6 +28,7 @@ import AdminLoginAttempts from '@/Components/Features/Admin/AdminLoginAttempts.v
 import AdminMaintenanceManager from '@/Components/Features/Admin/AdminMaintenanceManager.vue'
 import AdminReferencesManager from '@/Components/Features/Admin/AdminReferencesManager.vue'
 import AdminSeoManager from '@/Components/Features/Admin/AdminSeoManager.vue'
+import AdminTelegramUsers from '@/Components/Features/Admin/AdminTelegramUsers.vue'
 import SettingsAdminTab from '@/Components/Features/Settings/SettingsAdminTab.vue'
 import { useAdminReference } from '@/composables/useAdminReference'
 import { useAdminSeo } from '@/composables/useAdminSeo'
@@ -37,6 +38,7 @@ import { useAdminImpersonationLogs } from '@/composables/useAdminImpersonationLo
 import { useAdminLoginAttempts } from '@/composables/useAdminLoginAttempts'
 import { useAppMaintenance } from '@/composables/useAppMaintenance'
 import { useAdminAccess } from '@/composables/useAdminAccess'
+import { useAdminTelegramUsers } from '@/composables/useAdminTelegramUsers'
 import { useAdminBusiness } from '@/composables/useAdminBusiness'
 import { useAdminTabs } from '@/composables/useAdminTabs'
 import { useStaffRole } from '@/composables/useStaffRole'
@@ -57,6 +59,7 @@ const maintenance = useAppMaintenance()
 const refs = useAdminReference()
 const seo = useAdminSeo()
 const access = useAdminAccess()
+const tgUsers = useAdminTelegramUsers()
 
 /**
  * Подтянуть данные панели после открытия гейта.
@@ -70,6 +73,7 @@ function loadAll(): void {
   businessQueue.init()
   void refs.load()
   void seo.load()
+  void tgUsers.load()
   if (!staff.isAdmin.value) return
   void appUpdates.load()
   void impLogs.load()
@@ -143,6 +147,7 @@ enforceVisibleTab()
             <Tab value="business" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-briefcase text-xs" /><span class="tab-label">Бизнес</span><Badge v-if="businessQueue.pendingCount.value" :value="businessQueue.pendingCount.value > 99 ? '99+' : String(businessQueue.pendingCount.value)" severity="warn" /></span></Tab>
             <Tab value="refs" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-book text-xs" /><span class="tab-label">Справочники</span></span></Tab>
             <Tab value="seo" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-globe text-xs" /><span class="tab-label">SEO</span></span></Tab>
+            <Tab value="telegram" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-send text-xs" /><span class="tab-label">Telegram</span></span></Tab>
           </TabList>
           <TabPanels class="!p-0 !pt-4 !bg-transparent">
             <TabPanel value="stats">
@@ -189,6 +194,11 @@ enforceVisibleTab()
             <TabPanel value="seo">
               <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
                 <AdminSeoManager :mgr="seo" />
+              </div>
+            </TabPanel>
+            <TabPanel value="telegram">
+              <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
+                <AdminTelegramUsers :tg="tgUsers" />
               </div>
             </TabPanel>
           </TabPanels>

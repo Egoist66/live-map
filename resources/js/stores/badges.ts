@@ -252,18 +252,21 @@ export const useBadgeStore = defineStore('badges', () => {
    * Применяет счётчики из polling-тика одним пакетом.
    * Отбрасывает протухшие ответы: локальная правда (прочитал/сбросил)
    * всегда новее тика, запрошенного до неё — иначе счётчик "зависает".
+   * Пишет напрямую в ref без noteMutation: применение серверного тика —
+   * не локальная мутация, иначе каждый тик помечал бы себя мутацией
+   * и все следующие тики отбрасывались бы навсегда (залипший бейдж).
    * @param b badges из /api/realtime/sync
    */
   function applyPollBadges(b: any): void {
     if (!b) return
     if (Date.now() < suppressUntil) return
     if (lastMutationAt > lastRequestAt) return
-    if (b.unread_messages != null) setUnreadMessages(Number(b.unread_messages))
-    if (b.conversations_unread != null) setUnread(Number(b.conversations_unread))
-    if (b.pending_friends != null) setPending(Number(b.pending_friends))
-    if (b.pin_activity != null) setActivity(Number(b.pin_activity))
-    if (b.updates != null) setUpdates(Number(b.updates))
-    if (b.reports_pending != null) setReports(Number(b.reports_pending))
+    if (b.unread_messages != null) unreadMessages.value = Math.max(0, Number(b.unread_messages) || 0)
+    if (b.conversations_unread != null) unread.value = Math.max(0, Number(b.conversations_unread) || 0)
+    if (b.pending_friends != null) pending.value = Math.max(0, Number(b.pending_friends) || 0)
+    if (b.pin_activity != null) activity.value = Math.max(0, Number(b.pin_activity) || 0)
+    if (b.updates != null) updates.value = Math.max(0, Number(b.updates) || 0)
+    if (b.reports_pending != null) reports.value = Math.max(0, Number(b.reports_pending) || 0)
   }
 
   function refresh() { return fetch(true) }

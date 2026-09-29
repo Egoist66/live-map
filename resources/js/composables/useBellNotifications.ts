@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
 import { chatApi } from '@/services/chat.api'
+import { busOn } from '@/services/realtime-bus'
 
 const isOpen = ref(false)
 const conversations = ref<any[]>([])
@@ -8,6 +9,7 @@ const pending = ref<any[]>([])
 const unreadChats = ref(0)
 const loading = ref(false)
 const tab = ref('events')
+let dialogReadBound = false
 
 function readIsAdmin(): boolean {
   try {
@@ -37,8 +39,34 @@ function goRequests() { close(); router.visit('/chat?tab=requests') }
 function goFriends() { close(); router.visit('/chat?tab=friends') }
 
 export function useBellNotifications() {
+  ensureDialogReadSync()
   const hasData = computed(() => conversations.value.length > 0 || pending.value.length > 0)
   const unreadCount = computed(() => unreadChats.value)
   const isAdmin = computed(() => readIsAdmin())
   return { isOpen, conversations, pending, loading, tab, isAdmin, hasData, unreadCount, unreadChats, fetchAll, open, close, goChat, goRequests, goFriends }
+}
+
+/**
+ * Разово подписаться на локальное прочтение диалогов.
+ *
+ * Колокольчик держит свой срез диалогов (топ-8): диалог, прочитанный
+ * на странице /chat или в мини-окне, иначе висел бы с протухшей «1»
+ * до следующего открытия модалки.
+ */
+function ensureDialogReadSync(): void {
+  if (dialogReadBound) return
+  dialogReadBound = true
+  try {
+    busOn('chat:dialog-read', (convId: number) => {
+      const id = Number(convId)
+      if (!(id > 0)) return
+      const row = conversations.value.find((c: any) => Number(c?.id) === id)
+      if (row && Number(row?.unread_count || 0) > 0) {
+        row.unread_count = 0
+        unreadChats.value = conversations.value.filter((c: any) => Number(c.unread_count || 0) > 0).length
+      }
+    })
+  } catch {
+    dialogReadBound = false
+  }
 }

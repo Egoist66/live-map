@@ -118,6 +118,14 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::get('/notifications/unread-count', [\App\Http\Controllers\NotificationController::class, 'unreadCount']);
     Route::post('/notifications/read', [\App\Http\Controllers\NotificationController::class, 'read']);
     Route::delete('/notifications', [\App\Http\Controllers\NotificationController::class, 'clear'])->middleware('throttle:social-write');
+    Route::get('/sessions', [\App\Http\Controllers\SessionController::class, 'index']);
+    Route::delete('/sessions', [\App\Http\Controllers\SessionController::class, 'destroyOthers'])->middleware('throttle:social-write');
+    Route::delete('/sessions/{id}', [\App\Http\Controllers\SessionController::class, 'destroy'])->middleware('throttle:social-write');
+    Route::get('/devices', [\App\Http\Controllers\DeviceController::class, 'index']);
+    Route::post('/devices/{device}/trust', [\App\Http\Controllers\DeviceController::class, 'trust'])->middleware('throttle:social-write');
+    Route::post('/devices/{device}/terminate', [\App\Http\Controllers\DeviceController::class, 'terminate'])->middleware('throttle:social-write');
+    Route::post('/devices/{device}/block', [\App\Http\Controllers\DeviceController::class, 'block'])->middleware('throttle:social-write');
+    Route::post('/devices/{device}/unblock', [\App\Http\Controllers\DeviceController::class, 'unblock'])->middleware('throttle:social-write');
     Route::get('/admin/reports', [ReportController::class, 'index']);
     Route::post('/admin/reports/{report}/resolve', [ReportController::class, 'resolve']);
     Route::apiResource('zone-subscriptions', ZoneSubscriptionController::class)->only(['index','store','destroy']);
@@ -319,6 +327,7 @@ Route::middleware(['web', 'auth:web,sanctum', 'admin:moderator', 'throttle:120,1
     Route::get('/admin/monitoring/export', [\App\Http\Controllers\AdminMonitoringController::class, 'export']);
     Route::get('/admin/monitoring/online', [\App\Http\Controllers\AdminMonitoringController::class, 'online']);
     Route::get('/admin/users/search', [AdminUserController::class, 'search']);
+    Route::get('/admin/telegram-users', [\App\Http\Controllers\AdminTelegramUserController::class, 'index']);
     Route::patch('/admin/users/{user}/visibility', [AdminUserController::class, 'updateVisibility']);
     Route::delete('/admin/users/{user}', [AdminUserController::class, 'destroy']);
     Route::get('/admin/businesses', [\App\Http\Controllers\BusinessController::class, 'adminIndex']);

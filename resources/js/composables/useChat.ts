@@ -3,7 +3,7 @@ import { usePage } from '@inertiajs/vue3'
 import { useToast } from 'primevue/usetoast'
 import { chatApi, CHAT_HISTORY_PAGE_SIZE } from '@/services/chat.api'
 import { useChatHistory } from '@/composables/useChatHistory'
-import { busOn, registerPollContextProvider } from '@/services/realtime-bus'
+import { busOn, busEmit, registerPollContextProvider } from '@/services/realtime-bus'
 import { ensureUserChannel, leaveUserChannel } from '@/composables/useUserChannel'
 import { pokeRealtime, syncRealtimeNow } from '@/composables/useRealtimePoller'
 import { useRewardToast } from '@/composables/useRewardToast'
@@ -109,6 +109,8 @@ export function useChat() {
   let typingTimeout: ReturnType<typeof setTimeout> | null = null
   let typingThrottleUntil = 0
   const typingExpire = new Map<number, ReturnType<typeof setTimeout>>()
+  /** Метки локального прочтения диалогов: свежие превью поллинга с протухшим unread_count их не воскрешают (см. applyPreviews). */
+  const localReadAt = new Map<number, number>()
 
   /**
    * Короткий дедуп двойной доставки (user.* + chat.* шлют одно событие).
@@ -371,7 +373,7 @@ export function useChat() {
       const newest = newestMessage(detailMessages)
       const conv = conversations.value.find((c) => c?.id === id)
       if (conv) {
-        conv.unread_count = 0
+        noteLocalRead(id)
         if (newest) bumpConversation(newest)
       } else if (newest) {
         loadConversations()
@@ -578,14 +580,10 @@ export function useChat() {
       const n = new Set(typingUsers.value); n.delete(msg.sender_id); typingUsers.value = n
       const t = typingExpire.get(msg.sender_id); if (t) { clearTimeout(t); typingExpire.delete(msg.sender_id) }
       syncConversationPreview(msg)
+      noteLocalRead(Number(msg.conversation_id))
       if (msg.sender_id !== getUid()) {
-        const conv0 = conversations.value.find(c=>c?.id===msg.conversation_id)
-        if (conv0) (conv0 as any).unread_count = 0
         chatApi.markDelivered(msg.conversation_id).catch(()=>{})
         chatApi.markRead(msg.conversation_id).catch(()=>{})
-      } else {
-        const conv0 = conversations.value.find(c=>c?.id===msg.conversation_id)
-        if (conv0) (conv0 as any).unread_count = 0
       }
       history.notifyAppended()
       return
@@ -667,6 +665,7 @@ export function useChat() {
       busUnsubs.push(busOn('chat:previews', (previews: any[]) => applyPreviews(previews)))
       busUnsubs.push(busOn('chat:peer', (e: any) => applyPeer(Number(e?.conversationId), e?.peer)))
       busUnsubs.push(busOn('chat:open-ids', (e: any) => applyOpenIds(Number(e?.conversationId), e?.ids)))
+      busUnsubs.push(busOn('chat:dialog-read', (convId: number) => applyDialogRead(Number(convId))))
     } catch {}
   }
 
@@ -895,6 +894,47 @@ export function useChat() {
   }
 
   /**
+   * Локально погасить счётчик диалога: свой список + метка + шина.
+   *
+   * Метка держится 15с и прикрывает гонку с поллингом: превью,
+   * запрошенное до markRead, может вернуться с протухшим
+   * `unread_count: 1` и воскресить бейдж (applyPreviews такое режет).
+   * Событие `chat:dialog-read` мгновенно гасит тот же диалог
+   * в мини-доке и колокольчике — у них свои списки диалогов.
+   *
+   * @param convId id диалога
+   */
+  function noteLocalRead(convId: number): void {
+    const id = Number(convId)
+    if (!(id > 0)) return
+    const row = conversations.value.find((c) => c?.id === id) as any
+    if (row) row.unread_count = 0
+    localReadAt.set(id, Date.now())
+    if (localReadAt.size > 100) {
+      const first = localReadAt.keys().next().value as number | undefined
+      if (first !== undefined) localReadAt.delete(first)
+    }
+    try {
+      busEmit('chat:dialog-read', id)
+    } catch {
+      // No-op: свой список уже погашен выше.
+    }
+  }
+
+  /**
+   * Погасить диалог по событию `chat:dialog-read` от соседнего
+   * списка (мини-окно дока): без метки и без ре-эмита, петля исключена.
+   *
+   * @param convId id диалога
+   */
+  function applyDialogRead(convId: number): void {
+    const id = Number(convId)
+    if (!(id > 0)) return
+    const row = conversations.value.find((c) => c?.id === id) as any
+    if (row) row.unread_count = 0
+  }
+
+  /**
    * Вливает лёгкие превью из поллинга в сайдбар.
    * @param previews превью изменившихся диалогов
    */
@@ -908,7 +948,10 @@ export function useChat() {
         continue
       }
       if (preview?.last_message) applyPreview(conv as any, preview.last_message)
-      if (preview?.unread_count != null) (conv as any).unread_count = Number(preview.unread_count)
+      if (preview?.unread_count == null) continue
+      const readAt = localReadAt.get(Number(preview?.id)) ?? 0
+      if (Date.now() - readAt < 15000) continue
+      ;(conv as any).unread_count = Number(preview.unread_count)
     }
     sortConversations()
     if (unknown) loadConversations().catch(() => {})
@@ -1024,7 +1067,7 @@ export function useChat() {
       messages.value = mergeFetched(id, Array.isArray(d.messages) ? d.messages : [])
       const conv = conversations.value.find((c) => c?.id === id)
       if (conv && Number((conv as any).unread_count || 0) > 0) {
-        ;(conv as any).unread_count = 0
+        noteLocalRead(id)
         chatApi.markRead(id).catch(() => {})
       }
       await nextTick()

@@ -38,8 +38,12 @@ export type RealtimeEventMap = {
   'chat:receipts': any[]
   /** Хвост id открытого диалога: клиент вычищает локально удалённые */
   'chat:open-ids': { conversationId: number; ids: number[] }
+  /** Локальное прочтение диалога: страница чата или мини-окно уже пометили read — остальным спискам (док, колокольчик) обнулить счётчик без запросов */
+  'chat:dialog-read': number
   /** Общий фон беседы сменился (сокет conversation.wallpaper / поллинг wallpapers) */
   'chat:wallpaper': { conversation_id: number; wallpaper: unknown }
+  /** Сеансы пользователя отозваны: сторожить текущий и вылететь при его смерти */
+  'user:session.revoked': { session_ids: string[] }
   /** Единый user-канал: сырые события (user:message.sent и т.д.) */
   'user:message.sent': any
   'user:message.updated': any

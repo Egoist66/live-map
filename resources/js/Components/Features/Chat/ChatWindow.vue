@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
-import { computed, toRef, watch } from 'vue'
+import { computed, toRef } from 'vue'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
 import Textarea from 'primevue/textarea'
 import ContextMenu from 'primevue/contextmenu'
-import Message from 'primevue/message'
 import OrgBadge from '@/Components/Features/Chat/OrgBadge.vue'
 import MessageBubble from '@/Components/Features/Chat/MessageBubble.vue'
 import VoiceMessagePlayer from '@/Components/Features/Chat/VoiceMessagePlayer.vue'
@@ -18,8 +17,8 @@ import { useChatHeaderLink } from '@/composables/useChatHeaderLink'
 import { useChatComposerMenu } from '@/composables/useChatComposerMenu'
 import { useChatWallpaper } from '@/composables/useChatWallpaper'
 import { useChatPeerPanelTheme, type ChatPeerTone } from '@/composables/useChatPeerPanelTheme'
+import { useChatTelegramShare } from '@/composables/useChatTelegramShare'
 import { useEnterToSend } from '@/composables/useEnterToSend'
-import { useTelegramShare } from '@/composables/useTelegramShare'
 import { formatVoiceTime, VOICE_MAX_SECONDS } from '@/composables/useVoiceRecorder'
 import { formatDate } from '@/utils/date'
 
@@ -35,14 +34,8 @@ const swipe = useMessageSwipe({ onReply: (m: any) => emit('reply', m) })
 const { menuPt } = useDropdownMenuStyle()
 const headerLink = useChatHeaderLink(toRef(props, 'activeConv'))
 const peerTheme = useChatPeerPanelTheme(computed(() => props.peerTone ?? 'ulove'))
-const share = useTelegramShare()
-const showSharePanel = computed(() => props.selectedId != null && (props.activeConv as any)?.type === 'direct')
-
-watch(
-  () => props.activeConv,
-  (conversation) => share.applyConversation(conversation),
-  { immediate: true },
-)
+const telegramShareMenu = useChatTelegramShare(toRef(props, 'selectedId'), toRef(props, 'activeConv'))
+const share = telegramShareMenu.share
 
 function pinPreview(body: string): string {
   const t = (body || '').replace(/\s+/g, ' ').trim()
@@ -119,10 +112,25 @@ function dayLabel(value: any): string {
           <Button @click="emit('refresh')" :loading="refreshing" icon="pi pi-refresh" rounded text :severity="datingEntry ? undefined : 'secondary'" :class="datingEntry ? '!text-white hover:!bg-white/20' : ''" class="!w-9 !h-9 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" aria-label="Обновить" />
           <div class="relative">
             <button @click="emit('toggleMenu')" :class="datingEntry ? 'hover:bg-white/20' : 'hover:bg-stone-100 dark:hover:bg-zinc-800'" class="w-9 h-9 grid place-items-center rounded-full active:scale-95 text-lg leading-none">⋯</button>
-            <div v-if="showMenu" class="absolute right-0 top-10 w-52 bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl shadow-xl py-1.5 z-50 overflow-hidden text-stone-900 dark:text-zinc-100">
+            <div v-if="showMenu" class="absolute right-0 top-10 w-64 max-w-[80vw] bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl shadow-xl py-1.5 z-50 overflow-hidden text-stone-900 dark:text-zinc-100">
               <button v-if="activeConv?.type === 'district' && activeConv?.can_invite" @click="emit('menuClose'); emit('inviteDistrict')" class="w-full flex items-center gap-2.5 text-left px-4 py-3 text-sm font-medium text-violet-700 dark:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-500/10 active:bg-violet-100 transition"><i class="pi pi-user-plus text-xs"></i>Пригласить в район</button>
               <button @click="emit('menuClose'); emit('wallpaper')" class="w-full flex items-center gap-2.5 text-left px-4 py-3 text-sm font-medium dark:text-zinc-100 hover:bg-stone-50 dark:hover:bg-zinc-700/60 active:bg-stone-100 transition"><i class="pi pi-image text-xs text-stone-400"></i>Фон чата</button>
               <button @click="emit('menuClose'); emit('autoReply')" class="w-full flex items-center gap-2.5 text-left px-4 py-3 text-sm font-medium dark:text-zinc-100 hover:bg-stone-50 dark:hover:bg-zinc-700/60 active:bg-stone-100 transition"><i class="pi pi-reply text-xs text-stone-400"></i>Автоответ</button>
+              <div v-if="telegramShareMenu.canShare.value" class="border-t border-stone-100 dark:border-zinc-700/60 mt-1 pt-1">
+                <div v-if="telegramShareMenu.exchanged.value" class="px-4 py-3">
+                  <p class="flex items-center gap-2 text-sm font-semibold dark:text-zinc-100"><i class="pi pi-link text-xs text-sky-600 dark:text-sky-300"></i>Telegram обменян</p>
+                  <a :href="share.peerLink.value ?? undefined" target="_blank" rel="noopener" class="mt-1 block truncate text-sm font-bold text-sky-700 dark:text-sky-300 hover:underline">@{{ share.peerUsername.value }}</a>
+                </div>
+                <button v-else :disabled="share.loading.value" @click="telegramShareMenu.toggleShare()" class="w-full flex items-center gap-2.5 text-left px-4 py-3 text-sm font-medium dark:text-zinc-100 hover:bg-sky-50 dark:hover:bg-sky-500/10 active:bg-sky-100 transition disabled:opacity-60">
+                  <i :class="['pi text-xs text-sky-600 dark:text-sky-300', share.loading.value ? 'pi-spin pi-spinner' : 'pi-send']"></i>
+                  <span class="min-w-0 flex-1">
+                    <span class="block truncate">{{ telegramShareMenu.menuLabel.value }}</span>
+                    <span class="block truncate text-[11px] font-normal text-stone-500 dark:text-zinc-400">{{ telegramShareMenu.menuHint.value }}</span>
+                  </span>
+                </button>
+                <p v-if="share.errorCode.value === 'no_username'" class="px-4 pb-2 text-[11px] leading-snug text-amber-600 dark:text-amber-300">Нужен @username: задайте его в настройках Telegram, затем повторите.</p>
+                <p v-else-if="share.errorCode.value" class="px-4 pb-2 text-[11px] leading-snug text-red-500">{{ share.errorCode.value }}</p>
+              </div>
               <button @click="emit('menuClose'); emit('deleteChat')" class="w-full flex items-center gap-2.5 text-left px-4 py-3 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 active:bg-red-100 transition"><i class="pi pi-trash text-xs"></i>Удалить чат</button>
               <button v-if="activeConv?.other" @click="emit('menuClose'); emit('block')" class="w-full flex items-center gap-2.5 text-left px-4 py-3 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 active:bg-red-100 transition"><i class="pi pi-ban text-xs"></i>Заблокировать</button>
             </div>
@@ -131,45 +139,6 @@ function dayLabel(value: any): string {
         </div>
       </div>
       <div v-if="showMenu" @click="emit('menuClose')" class="fixed inset-0 z-20"></div>
-      <div v-if="showSharePanel" class="shrink-0 border-b dark:border-zinc-800 bg-sky-50/70 dark:bg-sky-950/30 px-2 lg:px-4 py-2 min-w-0">
-        <div v-if="share.exchanged.value" class="flex items-center gap-2 text-xs">
-          <i class="pi pi-link text-sky-600 dark:text-sky-300 shrink-0" />
-          <span class="min-w-0 flex-1 text-stone-600 dark:text-zinc-300">Вы обменялись Telegram — пишите друг другу напрямую:
-            <a :href="share.peerLink.value ?? undefined" target="_blank" rel="noopener" class="font-bold text-sky-700 dark:text-sky-300 hover:underline">@{{ share.peerUsername.value }}</a>
-          </span>
-        </div>
-        <div v-else class="flex items-center gap-2">
-          <div class="min-w-0 flex-1">
-            <p class="text-xs font-semibold dark:text-zinc-100">🔗 Обмен Telegram</p>
-            <p v-if="share.peer.value && !share.mine.value" class="text-[11px] text-sky-700 dark:text-sky-300 font-semibold">Собеседник уже поделился — нажмите, чтобы согласиться.</p>
-            <p v-else-if="share.waitingPeer.value" class="text-[11px] opacity-60 dark:text-zinc-400">Ждём, пока собеседник тоже поделится, — username увидят только оба.</p>
-            <p v-else class="text-[11px] opacity-60 dark:text-zinc-400">Собеседник увидит ваш @username, только если поделится в ответ.</p>
-          </div>
-          <Button
-            v-if="!share.mine.value"
-            :loading="share.loading.value"
-            icon="pi pi-send"
-            label="Поделиться"
-            size="small"
-            rounded
-            class="shrink-0 !text-xs"
-            @click="share.offer(Number(selectedId))"
-          />
-          <Button
-            v-else
-            :loading="share.loading.value"
-            label="Отозвать"
-            size="small"
-            rounded
-            text
-            severity="secondary"
-            class="shrink-0 !text-xs"
-            @click="share.revoke(Number(selectedId))"
-          />
-        </div>
-        <Message v-if="share.errorCode.value === 'no_username'" severity="warn" class="mt-1.5 !text-[11px] !py-1.5">Нужен @username: задайте его в настройках Telegram, затем повторите.</Message>
-        <p v-else-if="share.errorCode.value" class="mt-1 text-[11px] text-red-500">{{ share.errorCode.value }}</p>
-      </div>
       <div v-if="(pinned || []).length" class="shrink-0 border-b dark:border-zinc-800 bg-violet-50/80 dark:bg-violet-950/30 px-2 lg:px-4 py-1.5 min-w-0">
         <div class="flex items-center gap-1.5 text-[11px] font-bold text-violet-700 dark:text-violet-300 px-1 mb-1"><span>📌 Закрепы</span><span class="opacity-70">{{ (pinned || []).length }}/{{ pinLimitLabel || '∞' }}</span></div>
         <div class="flex gap-1.5 overflow-x-auto pb-0.5">

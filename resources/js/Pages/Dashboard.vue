@@ -217,7 +217,7 @@ onMounted(async () => {
         <ProfileThoughtDialog :open="thought.open.value" :draft="thought.draft.value" :saving="thought.saving.value" :error="thought.error.value" @update:draft="(v:string)=>thought.setDraft(v)" @close="thought.close()" @save="thought.save()" />
         <ChatSearchDialog :open="search.open.value" @update:open="(v:boolean)=>{ if(!v) search.closeDialog() }" :query="search.query.value" @update:query="(v:string)=>search.setQuery(v)" :results="search.results.value" :searching="search.searching.value" :creating="search.creating.value" :is-online="(id?:number,lastSeen?:string|null)=>search.isOnline(id,lastSeen)" @chat="search.startChat" @add="search.addFriend" @block="search.askBlock" />
         <ProfileGalleryDialog :gallery="gallery" :is-own="true" :plan="planOf(dash.u.value)" />
-        <Dialog :visible="showDatingEdit" @update:visible="(v:boolean)=>{ if(!v) showDatingEdit = false }" modal header="Моя анкета" :style="{ width: '480px', maxWidth: 'calc(100vw - 2rem)' }" :pt="{ root: { class: '!rounded-3xl dark:!bg-zinc-900 dark:!border-zinc-700' }, content: { class: '!max-h-[78dvh] !overflow-y-auto' } }">
+        <Dialog :visible="showDatingEdit" @update:visible="(v:boolean)=>{ if(!v) showDatingEdit = false }" modal header="Моя анкета" :style="{ width: '640px', maxWidth: 'calc(100vw - 2rem)' }" :pt="{ root: { class: '!rounded-3xl dark:!bg-zinc-900 dark:!border-zinc-700' }, content: { class: '!max-h-[78dvh] !overflow-y-auto' } }">
           <DatingQuestionnaireDialog @saved="onDatingSaved" />
         </Dialog>
         <ProfilePhotoViewer :gallery="gallery" :comments="photoComments" :is-own="true" :user-name="dash.u.value.name" :avatar-src="dash.avatarSrc.value" />

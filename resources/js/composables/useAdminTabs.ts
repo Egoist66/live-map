@@ -3,7 +3,7 @@ import { ref, watch } from 'vue'
 /**
  * ID главной вкладки админ-панели.
  */
-export type AdminTabId = 'stats' | 'manage' | 'security' | 'admin' | 'business' | 'refs' | 'seo'
+export type AdminTabId = 'stats' | 'manage' | 'security' | 'admin' | 'business' | 'refs' | 'seo' | 'telegram'
 
 /**
  * ID подвкладки SEO-центра (активна только при `tab === 'seo'`).
@@ -21,6 +21,7 @@ export const ADMIN_TABS: readonly AdminTabId[] = [
   'business',
   'refs',
   'seo',
+  'telegram',
 ]
 
 /**
@@ -138,7 +139,7 @@ function ensureSync(): void {
 /**
  * Хук вкладок админ-панели, синхронизированных с query-параметрами.
  *
- * Главный таб живёт в `?tab=stats|manage|security|admin|refs|seo`,
+ * Главный таб живёт в `?tab=stats|manage|security|admin|refs|seo|telegram`,
  * подвкладка SEO-центра — в `?seo=general|pages|integrations|scripts|crawl`.
  * Состояние общее (module-level), поэтому `Admin/Index.vue` и
  * `AdminSeoManager.vue` видят одни и те же табы, а перезагрузка

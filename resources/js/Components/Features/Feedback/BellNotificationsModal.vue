@@ -159,7 +159,7 @@ function openNews(item: any) {
             class="!w-9 !h-9"
           />
           <Button
-            v-if="pinAct.activities.value.length && !uloveOnly"
+            v-if="pinAct.activities.value.length"
             @click="askClearActivities()"
             :loading="pinAct.clearing.value"
             icon="pi pi-trash"

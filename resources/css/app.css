@@ -259,18 +259,26 @@ html, body { min-height: 100vh; min-height: 100svh; min-height: 100dvh; }
 .no-safe-area-top { --sat: 0px; }
 
 /* Мобильный Mini App: нативные кнопки клиента (закрыть слева,
-   свернуть/меню справа) парят поверх контента. Опускаем шапку
-   на --tg-chrome-top и растим константы высоты хедера, чтобы все
-   зависимые calc() (фреймы карты/чата, тосты, page-scroll) сошлись.
-   Только тач: на десктопе у Mini App отдельное окно без оверлея. */
+   свернуть/меню справа) парят поверх контента. Растим константы
+   высоты хедера, чтобы все зависимые calc() (фреймы карты/чата,
+   тосты, page-scroll) сошлись. Только тач: на десктопе у Mini App
+   отдельное окно без оверлея. */
 @media (pointer: coarse) {
   html.tg-app {
     --app-header-sm: calc(56px + var(--tg-chrome-top, 0px));
     --app-header-md: calc(64px + var(--tg-chrome-top, 0px));
   }
-  html.tg-app .native-safe-top,
-  html.tg-app.no-safe-area-top .native-safe-top {
-    padding-top: calc(var(--sat-real, 0px) + var(--tg-chrome-top, 0px));
+}
+/* Отступ шапки под чёлку и кнопки Telegram — ТОЛЬКО iOS Mini App:
+   там нативный хром парит поверх WebView. Браузер и PWA (включая
+   iPhone Safari/PWA) — без отступа: окно браузера уже учитывает
+   safe-area, лишний зазор лишь отодвигает шапку вниз. */
+@supports (-webkit-touch-callout: none) {
+  @media (pointer: coarse) {
+    html.tg-app .native-safe-top,
+    html.tg-app.no-safe-area-top .native-safe-top {
+      padding-top: calc(var(--sat-real, 0px) + var(--tg-chrome-top, 0px));
+    }
   }
 }
 
@@ -476,21 +484,11 @@ html.native-swipes .mobile-bottom-nav {
   }
 }
 
-/* Нативный верх шапки — точечно для Telegram Mini App.
+/* Нативный верх шапки: по умолчанию без отступа.
    В браузере и PWA сверху своё окно и шторка ОС: лишний зазор лишь
-   отодвигает шапку вниз, поэтому по умолчанию отступа нет.
-   В Mini App кнопки клиента парят поверх WebView — шапку опускаем
-   на инсеты Telegram (правило `html.tg-app` в блоке Mini App ниже). */
+   отодвигает шапку вниз. Отступ под чёлку/кнопки даёт только правило
+   iOS Mini App выше (`html.tg-app` в `@supports` + coarse). */
 .native-safe-top { padding-top: 0; }
-/* iPhone (Safari, PWA, WebView): чёлка/Dynamic Island реально
-   перекрывают контент — возвращаем отступ из env(). Детект только
-   по движку (-webkit-touch-callout есть лишь в iOS WebKit), Android
-   и десктоп не трогаем. Специфичность ниже `html.tg-app`, поэтому
-   в Mini App побеждает правило с --tg-chrome-top, двойного
-   отступа нет. */
-@supports (-webkit-touch-callout: none) {
-  .native-safe-top { padding-top: var(--sat-real, 0px); }
-}
 @media (min-width: 1024px) {
 .no-safe-area-top { --sat: 0px; }
 

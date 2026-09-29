@@ -17,6 +17,12 @@ class UpdateLastSeen
             $request->session()->regenerateToken();
             abort(403, 'Аккаунт заблокирован. Обратитесь к администратору.');
         }
+        if ($user && self::deviceBlocked($request, (int) $user->id)) {
+            \Illuminate\Support\Facades\Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+            abort(403, 'Это устройство заблокировано владельцем аккаунта.');
+        }
         $response = $next($request);
         if ($user && !$user->isInvisibleActive()) {
             $key = 'last_seen:'.$user->id;
@@ -26,5 +32,38 @@ class UpdateLastSeen
             }
         }
         return $response;
+    }
+
+    /**
+     * Заблокировано ли текущее устройство владельцем (кэш 60с).
+     *
+     * Бэкстоп на случай гонки: блокировка всегда сначала удаляет
+     * строку сессии, сюда доходят лишь чудом уцелевшие запросы.
+     *
+     * @param Request $request текущий запрос
+     * @param int $userId id пользователя
+     * @return bool true когда устройство в вечном бане
+     */
+    private static function deviceBlocked(Request $request, int $userId): bool
+    {
+        try {
+            $fp = \App\Services\DeviceFingerprint::fingerprintOnly($request);
+            $key = 'dev:blocked:'.$userId.':'.$fp['fingerprint'];
+
+            $blocked = Cache::remember($key, 60, function () use ($userId, $fp) {
+                try {
+                    return \App\Models\UserDevice::where('user_id', $userId)
+                        ->where('fingerprint', $fp['fingerprint'])
+                        ->where('blocked', true)
+                        ->exists();
+                } catch (\Throwable) {
+                    return false;
+                }
+            });
+
+            return (bool) $blocked;
+        } catch (\Throwable) {
+            return false;
+        }
     }
 }

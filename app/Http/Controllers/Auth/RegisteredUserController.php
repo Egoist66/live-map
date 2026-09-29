@@ -139,6 +139,8 @@ class RegisteredUserController extends Controller
         // Так нет ни спама, ни случайных 429 на повторной отправке.
         Auth::login($user);
 
+        \App\Services\LoginDeviceGuard::handleLogin($user, $request, 'register');
+
         if ($isBusiness) {
             return redirect(route('cabinet.onboarding', absolute: false));
         }

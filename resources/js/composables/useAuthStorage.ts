@@ -1,33 +1,52 @@
-const MIRROR_KEY = 'upin_auth_token_mirror';
+const LEGACY_MIRROR_KEY = 'upin_auth_token_mirror';
 
 let memoryToken: string | null = null;
 
 /**
- * Читает токен синхронно (для axios/Echo интерсепторов).
+ * Однократно удаляет legacy-зеркало токена из localStorage.
  *
- * @returns токен или null
+ * Web живёт на HttpOnly cookie (Sanctum stateful), а зеркало осталось
+ * от удалённого мобильного dual-auth и читалось любым XSS после reload.
+ * Вызов безопасен на SSR (no-op без window).
+ * Вызывать один раз при старте приложения (см. `useAppBoot`).
+ *
+ * @returns void
  */
-export function getStoredTokenSync(): string | null {
-    if (memoryToken) {
-        return memoryToken;
+export function purgeLegacyAuthMirror(): void {
+    const hasWindow = typeof window !== 'undefined';
+
+    if (!hasWindow) {
+        return;
     }
+
     try {
-        const mirrored = localStorage.getItem(MIRROR_KEY);
-        if (mirrored) {
-            memoryToken = mirrored;
-            return mirrored;
-        }
+        window.localStorage.removeItem(LEGACY_MIRROR_KEY);
     } catch {
-        // localStorage недоступен (SSR) — возвращаем null
+        // Приватный режим / заблокированное хранилище — нечего чистить.
     }
-    return null;
 }
 
 /**
- * Хранилище auth-токена (localStorage-зеркало + память).
+ * Читает токен синхронно (для axios/Echo интерсепторов).
+ *
+ * Только память: токен не переживает reload, поэтому украденный
+ * через XSS скрипт не сможет переиспользовать его позже.
+ * Web-авторизация при этом не ломается — она идёт по HttpOnly cookie
+ * через `withCredentials: true`.
+ *
+ * @returns токен из памяти или null
+ */
+export function getStoredTokenSync(): string | null {
+    return memoryToken;
+}
+
+/**
+ * Хранилище auth-токена (только память).
  *
  * Web работает на cookie (Sanctum stateful), токен используется
  * только синхронными интерсепторами axios/Echo, если задан.
+ * Persist в localStorage убран осознанно: любое JS-читаемое
+ * хранилище доступно XSS, а API полностью покрыто cookie-сессией.
  *
  * @returns методы работы с токеном
  * @example
@@ -37,30 +56,34 @@ export function getStoredTokenSync(): string | null {
 export function useAuthStorage() {
     async function saveToken(token: string): Promise<void> {
         memoryToken = token;
-        try {
-            localStorage.setItem(MIRROR_KEY, token);
-        } catch {}
+        purgeLegacyAuthMirror();
+
         try {
             window.dispatchEvent(new CustomEvent('upin:auth-changed'));
-        } catch {}
+        } catch {
+            // SSR / тесты без window — событие не шлём.
+        }
     }
 
     async function loadToken(): Promise<string | null> {
         const synced = getStoredTokenSync();
+
         if (synced) {
             return synced;
         }
+
         return null;
     }
 
     async function clearToken(): Promise<void> {
         memoryToken = null;
-        try {
-            localStorage.removeItem(MIRROR_KEY);
-        } catch {}
+        purgeLegacyAuthMirror();
+
         try {
             window.dispatchEvent(new CustomEvent('upin:auth-changed'));
-        } catch {}
+        } catch {
+            // SSR / тесты без window — событие не шлём.
+        }
     }
 
     return { saveToken, loadToken, clearToken, getStoredTokenSync };

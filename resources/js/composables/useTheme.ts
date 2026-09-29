@@ -76,14 +76,24 @@ function notifyNativeTheme(isDark: boolean, bg: string): void {
  * белый, а шапка/низ меню уже тёмные. Тёмный фон — #0F121F
  * в цвет нативного шелла upin-mobile (SafeArea/StatusBar/NavigationBar).
  *
+ * Пока жив boot-сплэш (`#pwa-boot`), фон `<html>/<body>` не трогаем:
+ * blade-скрипт держит его тёмным (#150B10), чтобы розовый логотип
+ * при opacity-фейде гас над тёмным, а не выцветал в серый над белым.
+ * Целевой фон вернёт `__upinHideSplash` в момент удаления узла.
+ *
  * @param isDark true для тёмной темы
  */
 function syncSystemChrome(isDark: boolean): void {
   const bg = isDark ? '#0F121F' : '#ffffff'
   const root = document.documentElement
-  root.style.backgroundColor = bg
-  if (document.body) {
-    document.body.style.backgroundColor = bg
+  const bootAlive = typeof document !== 'undefined' && !!document.getElementById('pwa-boot')
+
+  if (!bootAlive) {
+    root.style.backgroundColor = bg
+
+    if (document.body) {
+      document.body.style.backgroundColor = bg
+    }
   }
   const metas = document.querySelectorAll('meta[name="theme-color"]')
   metas.forEach((m) => {

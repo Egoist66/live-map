@@ -77,6 +77,7 @@ class TelegramAuthController extends Controller
             $this->refreshSnapshot($existing, $tgUser);
             Auth::login($existing, true);
             $request->session()->regenerate();
+            \App\Services\LoginDeviceGuard::handleLogin($existing, $request, 'telegram');
 
             return response()->json([
                 'user' => $existing->fresh(),
@@ -97,6 +98,7 @@ class TelegramAuthController extends Controller
         $user = $this->registerFromTelegram($tgUser, $telegramId);
         Auth::login($user, true);
         $request->session()->regenerate();
+        \App\Services\LoginDeviceGuard::handleLogin($user, $request, 'telegram');
 
         return response()->json([
             'user' => $user->fresh(),

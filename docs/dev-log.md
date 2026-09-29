@@ -1,5 +1,13 @@
 # Dev-лог
 
+## 2026-09-29 — Boot-сплэш в Telegram Mini App: скругление иконки + серый флэш/моргание
+- 🐞 Острый квадрат в TG: `.boot-icon` — корень `<svg>` с `border-radius:30px`, но без клипа — WebView Telegram (WKWebView/Android) не обрезает внутренние `<rect>` по `border-radius`, углы торчали острыми.
+- 🔧 `.boot-icon`: `display:block + overflow:hidden + clip-path: inset(0 round 30px)` (с `-webkit-` префиксом) + градиент-подложка на самом элементе (форма видна до отрисовки SVG-градиентов).
+- 🐞 Моргание/серый: найдено 3 причины. 1) Бесконечный `boot-float` (`translateY/scale`) на SVG с градиентами — repaint-flicker в урезанном GPU Mini App. 2) Скрипт темы в `<head>` проверял `getElementById('pwa-boot')`, но head парсится раньше body-разметки — `bootAlive` всегда false, фон `<html>` сразу ставился светлым. 3) `initTheme→syncSystemChrome` перекрашивал `<html>` в белый ДО `hideSplash` — при opacity-фейде розовый логотип компоситился с белым и выцветал в серый.
+- 🔧 Иконка теперь статична (shimmer-полоса осталась, ей добавлен `will-change + translateZ(0)`); head-скрипт всегда держит `#150B10`, целевой фон стэшится в `__upinThemeBg` и возвращается в момент удаления узла; `syncSystemChrome` не трогает фон `<html>/<body>`, пока жив `#pwa-boot`.
+- Проверки: `vue-tsc --noEmit` ✅.
+- ⚠️ Нужен редеплой JS-билда + blade (бэк не менялся). Вживую в Mini App: иконка скруглённая сразу, без парения/моргания, гаснет над тёмным без серого кадра.
+
 ## 2026-09-29 — Обмен Telegram-username по обоюдному согласию в личных диалогах
 - ✨ Фишка: в direct-чате панель «🔗 Обмен Telegram» — каждый жмёт «Поделиться», как только согласны оба, каждому в личку бота падает @username собеседника с кнопками «Написать в Telegram» (t.me-ссылка) и «Открыть чат» (web_app в диалог). Группу в TG бот создать не может (нет такого метода в Bot API) — приватный чат мэтча в Mini App + этот обмен и есть наш эквивалент.
 - 🔧 Бэк: миграция `telegram_share_offers` (уникальность пара/юзер, `exchanged_at`); модель `TelegramShareOffer`; сервис `TelegramUsernameShare` (offer/revoke/status, обмен в транзакции, username чистим `^[A-Za-z0-9_]{3,64}$`); тонкий `TelegramShareController` (POST/DELETE `/api/conversations/{conversation}/telegram-share`, throttle social-write); `ConversationController::show` отдаёт `telegram_share` (peer_username — только после exchanged, иначе null).

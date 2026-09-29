@@ -8,6 +8,7 @@ import { useLastRoute } from '@/composables/useLastRoute'
 import { initTheme } from '@/composables/useTheme'
 import { initMotion } from '@/composables/useMotion'
 import { persistNativeMarker } from '@/composables/useNativeClient'
+import { purgeLegacyAuthMirror } from '@/composables/useAuthStorage'
 
 /**
  * Клиентский бут приложения после `app.mount()`.
@@ -155,6 +156,7 @@ export function useAppBoot() {
     }
 
     await safeRun(() => persistNativeMarker())
+    await safeRun(() => purgeLegacyAuthMirror())
     await safeRun(() => bootTelegram())
     await safeRun(() => initTheme())
     await safeRun(() => initMotion())

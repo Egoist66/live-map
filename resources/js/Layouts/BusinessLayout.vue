@@ -16,9 +16,12 @@ import { useBellNotifications } from '@/composables/useBellNotifications'
 import { useAppNotifications } from '@/composables/useAppNotifications'
 import { useBusinessRealtime } from '@/composables/useBusinessRealtime'
 import { useGlobalDialogDismiss } from '@/composables/useGlobalDialogDismiss'
+import { useSessionWatchdog } from '@/composables/useSessionWatchdog'
+import { useNewDeviceAlert } from '@/composables/useNewDeviceAlert'
 import type { BusinessVerificationStatus } from '@/types/entities/Business'
 
 const BellNotificationsModal = defineAsyncComponent(() => import('@/Components/Features/Feedback/BellNotificationsModal.vue'))
+const NewDeviceAlertDialog = defineAsyncComponent(() => import('@/Components/Features/Security/NewDeviceAlertDialog.vue'))
 
 const page = usePage()
 const store = useBusinessStore()
@@ -29,6 +32,8 @@ const bell = useBellNotifications()
 useAppNotifications()
 useBusinessRealtime()
 useGlobalDialogDismiss()
+useSessionWatchdog()
+useNewDeviceAlert()
 const menu = ref()
 
 onMounted(() => {
@@ -111,7 +116,7 @@ function logout(): void {
             :class="[
               'px-3.5 py-2 rounded-full text-sm font-semibold transition',
               item.match(currentPath)
-                ? 'bg-[#F04D9F] text-white dark:bg-[#F04D9F] dark:text-white'
+                ? 'bg-[#F04D9F] !text-white hover:!text-white dark:bg-[#F04D9F] dark:!text-white'
                 : 'text-stone-500 dark:text-zinc-400 hover:text-ink-900 dark:hover:text-white',
             ]"
           >
@@ -161,5 +166,6 @@ function logout(): void {
     <div class="lg:hidden h-16" aria-hidden="true" />
     <GlobalNotificationToasts />
     <BellNotificationsModal />
+    <NewDeviceAlertDialog />
   </div>
 </template>

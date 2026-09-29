@@ -38,6 +38,8 @@ class AuthenticatedSessionController extends Controller
 
         $user = $request->user();
 
+        \App\Services\LoginDeviceGuard::handleLogin($user, $request, 'password');
+
         $fallback = $user->landingPath();
 
         return redirect()->intended($fallback);

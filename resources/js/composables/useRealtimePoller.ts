@@ -146,12 +146,22 @@ export function useRealtimePoller() {
 
   /**
    * Неудачный тик: 429 (throttle) — длинная пауза, сеть — ждём online.
+   * 401/419 — сеанс мёртв (завершили с другого устройства): дальше
+   * тикать гостем бессмысленно, увозим на логин.
    *
    * @param error ошибка запроса
    */
   function noteFailure(error: unknown): void {
     consecutiveErrors += 1
     const status = (error as { response?: { status?: number } })?.response?.status
+    if (status === 401 || status === 419) {
+      try {
+        if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+          window.location.assign('/login')
+        }
+      } catch {}
+      return
+    }
     if (status === 429) {
       backoffUntil = Date.now() + 10000
     } else {

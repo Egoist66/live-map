@@ -18,6 +18,7 @@ const BellNotificationsModal = defineAsyncComponent(() => import('@/Components/F
 const AppHotkeysDialog = defineAsyncComponent(() => import('@/Components/Features/Feedback/AppHotkeysDialog.vue'))
 const GlobalPeopleSearchDialog = defineAsyncComponent(() => import('@/Components/Features/Search/GlobalPeopleSearchDialog.vue'))
 const MiniChatDock = defineAsyncComponent(() => import('@/Components/Features/Chat/MiniChatDock.vue'))
+const NewDeviceAlertDialog = defineAsyncComponent(() => import('@/Components/Features/Security/NewDeviceAlertDialog.vue'))
 const TermsAcceptanceModal = defineAsyncComponent(() => import('@/Components/Features/Legal/TermsAcceptanceModal.vue'))
 const AppUpdateModal = defineAsyncComponent(() => import('@/Components/Features/Updates/AppUpdateModal.vue'))
 const SubscriptionRenewalDialog = defineAsyncComponent(() => import('@/Components/Features/Subscription/SubscriptionRenewalDialog.vue'))
@@ -29,6 +30,8 @@ import { useScreenLockScroll } from '@/composables/useScreenLockScroll'
 import { useGlobalDialogScrollLock } from '@/composables/useGlobalDialogScrollLock'
 import { useGlobalDialogDismiss } from '@/composables/useGlobalDialogDismiss'
 import { useClientReady } from '@/composables/useClientReady'
+import { useSessionWatchdog } from '@/composables/useSessionWatchdog'
+import { useNewDeviceAlert } from '@/composables/useNewDeviceAlert'
 import { computed, onMounted } from 'vue'
 
 const { badge, user, avatarSrc, dashboardHref, bell, updates, menu, menuItems, navVisibility, isAdmin, isBusinessAccount, toggleMenu, logout } = useAppLayout()
@@ -53,6 +56,8 @@ const isSwipesFeed = computed(() => {
   }
 })
 const { isClientReady } = useClientReady()
+useSessionWatchdog()
+useNewDeviceAlert()
 const hotkeys = useAppHotkeys()
 const screenLock = useScreenLock()
 useScreenLockScroll()
@@ -83,6 +88,7 @@ onMounted(() => { screenLock.init(); hotkeys.init() })
     <template v-if="isClientReady">
       <GlobalNotificationToasts />
       <BellNotificationsModal />
+      <NewDeviceAlertDialog />
       <PwaInstallBanner />
       <PwaUpdateBanner />
       <AppHotkeysDialog />

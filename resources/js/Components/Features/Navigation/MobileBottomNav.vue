@@ -81,8 +81,8 @@ const emit = defineEmits<{ (e: 'bell'): void; (e: 'menu', value: Event): void }>
         class="flex flex-col items-center justify-center gap-1 py-1.5 rounded-2xl active:scale-95 transition min-h-[52px] text-stone-500 dark:text-zinc-400"
         @click="emit('bell')"
       >
-        <span class="relative">
-          <i class="pi pi-bell text-[22px] leading-none" />
+        <span class="relative w-6 h-6 grid place-items-center">
+          <i class="pi pi-bell text-[24px] leading-none" />
           <span v-if="bellTotal" class="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold grid place-items-center leading-none border-2 border-white dark:border-[#0F121F]">{{ bellTotal > 9 ? '9+' : bellTotal }}</span>
         </span>
         <span class="text-[10px] font-bold leading-none opacity-75 truncate max-w-full px-0.5" title="Уведомления">Уведомления</span>

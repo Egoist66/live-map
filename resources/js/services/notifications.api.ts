@@ -146,6 +146,12 @@ export function describeInboxRow(row: InboxNotification): InboxText {
     const log = data.log ?? {}
     return { emoji: '🔒', title: 'Служебный вход', body: `${log.reason || 'Основание указано в журнале'}`.slice(0, 120), link: '/settings/procedures', avatar: null }
   }
+  if (row.type === 'security.new_device') {
+    const d = (data as any).new_device ?? {}
+    const label = d.device_label || 'Новое устройство'
+    const place = [d.city, d.country, d.ip].filter((x: unknown) => String(x ?? '').trim() !== '').join(' · ')
+    return { emoji: '🔐', title: 'Вход с нового устройства', body: `${label}${place ? ` · ${place}` : ''}`.slice(0, 120), link: '/settings', avatar: null }
+  }
   if (row.type === 'sos.chat_closed') {
     const s = (data as any).sos_chat_closed ?? {}
     const pinTitle = s.pin_title ? `: ${s.pin_title}` : ''

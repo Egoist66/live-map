@@ -1,7 +1,7 @@
 import { computed, reactive, ref } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
 import { chatApi, CHAT_HISTORY_PAGE_SIZE } from '@/services/chat.api'
-import { busOn } from '@/services/realtime-bus'
+import { busOn, busEmit } from '@/services/realtime-bus'
 import { ensureUserChannel } from '@/composables/useUserChannel'
 import { useBadgeStore } from '@/stores/badges'
 import { useRewardToast } from '@/composables/useRewardToast'
@@ -120,17 +120,36 @@ async function reloadConversations(): Promise<void> {
 
 /**
  * Тихо пометить диалог прочитанным: локальный счётчик + сервер + бейджи.
+ *
+ * Сразу рассылает `chat:dialog-read`: страница /chat и колокольчик
+ * держат свои списки диалогов и иначе показывали бы протухшую «1».
  * @param convId диалог
  */
 async function markReadQuiet(convId: number): Promise<void> {
   const row = conversations.value.find((c) => c.id === convId)
   if (row) row.unread_count = 0
   try {
+    busEmit('chat:dialog-read', Number(convId))
+  } catch { /* свой список уже погашен выше */ }
+  try {
     await chatApi.markRead(convId)
   } catch { /* прочтение не критично */ }
   try {
     await useBadgeStore().refresh()
   } catch { /* бейджи подтянет шина */ }
+}
+
+/**
+ * Диалог прочитали в соседнем списке (страница /chat): погасить
+ * свою строку, чтобы FAB дока не показывал протухшую «1».
+ * Без ре-эмита — петля между списками исключена.
+ * @param convId id диалога из события
+ */
+function onDialogRead(convId: number): void {
+  const id = Number(convId)
+  if (!(id > 0)) return
+  const row = conversations.value.find((c) => c.id === id)
+  if (row) row.unread_count = 0
 }
 
 /**
@@ -189,6 +208,7 @@ function subscribe(): void {
     busOn('user:message.delivered', onDelivered)
     busOn('user:message.read', onRead)
     busOn('chat:receipts', onReceipts)
+    busOn('chat:dialog-read', onDialogRead)
   } catch { /* шина недоступна — мини-чат работает вручную */ }
 }
 

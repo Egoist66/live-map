@@ -20,7 +20,7 @@ function onSaved(): void {
     @update:visible="(v:boolean)=>emit('update:open', v)"
     modal
     header="Моя анкета ULove"
-    :style="{ width: '440px', maxWidth: '94vw', maxHeight: '92dvh' }"
+    :style="{ width: '640px', maxWidth: '94vw', maxHeight: '92dvh' }"
     :pt="{ root: { class: '!rounded-3xl dark:!bg-zinc-900 dark:!border-zinc-700' }, header: { class: 'dark:!bg-zinc-900 dark:!text-white' }, content: { class: 'dark:!bg-zinc-900 dark:!text-zinc-100 !max-h-[78dvh] !overflow-y-auto' } }"
   >
     <DatingQuestionnaireForm :key="String(open)" @saved="onSaved()" />

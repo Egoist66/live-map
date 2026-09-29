@@ -159,7 +159,7 @@
             })();
         </script>
         <script nonce="{{ $cspNonce ?? '' }}">
-            (function(){ try{ var root=document.documentElement; var s=localStorage.getItem('theme'); var m=window.matchMedia('(prefers-color-scheme: dark)').matches; var d=s ? s==='dark' : m; if(d) root.classList.add('dark'); root.style.colorScheme = d?'dark':'light'; var tgBg=root.classList.contains('tg-app') ? root.style.getPropertyValue('--tg-theme-bg-color').trim() : ''; var bg=tgBg || (d?'#0F121F':'#ffffff'); window.__upinThemeBg = bg; var bootAlive = !!document.getElementById('pwa-boot'); root.style.backgroundColor = bootAlive ? '#150B10' : bg; }catch(e){} })();
+            (function(){ try{ var root=document.documentElement; var s=localStorage.getItem('theme'); var m=window.matchMedia('(prefers-color-scheme: dark)').matches; var d=s ? s==='dark' : m; if(d) root.classList.add('dark'); root.style.colorScheme = d?'dark':'light'; var tgBg=root.classList.contains('tg-app') ? root.style.getPropertyValue('--tg-theme-bg-color').trim() : ''; var bg=tgBg || (d?'#0F121F':'#ffffff'); window.__upinThemeBg = bg; /* Держим тёмный фон, пока жив #pwa-boot: проверка getElementById здесь бессмысленна (head парсится раньше body-разметки, узел ещё не существует), а светлый <html> под фейдом выцветает розовый логотип в серый. Целевой фон вернёт __upinHideSplash ровно в момент удаления узла. */ root.style.backgroundColor = '#150B10'; }catch(e){} })();
         </script>
         {{-- Прелоадер: полноэкранный boot-экран в стиле Tinder
               (тёплая тьма, светящаяся иконка пин+сердце).
@@ -198,11 +198,22 @@
             padding: 24px;
           }
           #pwa-boot .boot-icon {
+            display: block;
             width: 96px;
             height: 96px;
             border-radius: 30px;
+            /* TG WebView (WKWebView/Android) не клипает содержимое <svg>
+               по border-radius: внутренний <rect> вылезает острыми углами.
+               clip-path режет гарантированно, overflow — для остальных,
+               градиент-подложка — чтобы скруглённая форма была видна даже
+               до отрисовки SVG-градиентов. Иконка статична сознательно:
+               бесконечный float на SVG с градиентами даёт repaint-flicker
+               (моргание/серые кадры) в урезанном GPU Mini App. */
+            overflow: hidden;
+            -webkit-clip-path: inset(0 round 30px);
+            clip-path: inset(0 round 30px);
+            background: linear-gradient(135deg, #FD267D 0%, #E936C7 55%, #FF7854 100%);
             box-shadow: 0 18px 60px -12px rgba(253, 38, 125, .75), 0 0 0 1px rgba(255, 255, 255, .08);
-            animation: boot-float 2.6s ease-in-out infinite;
           }
           #pwa-boot .boot-name {
             margin-top: 18px;
@@ -239,15 +250,13 @@
             border-radius: inherit;
             background: linear-gradient(90deg, #FD267D, #E936C7, #FF7854);
             box-shadow: 0 0 12px rgba(253, 38, 125, .9);
+            will-change: transform;
+            transform: translateZ(0);
             animation: boot-slide 1.1s ease-in-out infinite;
           }
           @keyframes boot-slide {
             0% { transform: translateX(-110%); }
             100% { transform: translateX(280%); }
-          }
-          @keyframes boot-float {
-            0%, 100% { transform: translateY(0) scale(1); }
-            50% { transform: translateY(-7px) scale(1.03); }
           }
           @media (prefers-reduced-motion: reduce) {
             #pwa-boot *, #pwa-boot *::before, #pwa-boot *::after {
