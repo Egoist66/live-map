@@ -83,7 +83,7 @@ export function useProfileForm() {
     const u = user.value
     if (!u) return false
     if (u.is_admin || u.role === 'admin') return true
-    return planOf(u) === 'business'
+    return ['pro', 'business'].includes(planOf(u))
   })
 
   watch(() => (values as any).plan, (pl) => {

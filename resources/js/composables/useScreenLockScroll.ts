@@ -1,13 +1,8 @@
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useScreenLock } from '@/composables/useScreenLock'
-import { acquireScrollLock, releaseScrollLock } from '@/composables/useScrollLock'
+import { acquireScrollLock, releaseScrollLock, SCREEN_LOCK_OWNER } from '@/composables/useScrollLock'
 
 const SCROLL_KEYS = new Set(['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End'])
-
-/**
- * Владелец лока в ref-counted менеджере (см. useScrollLock).
- */
-const SCROLL_OWNER = 'screen-lock'
 
 /**
  * Скролл-лок скринлокера.
@@ -88,7 +83,7 @@ export function useScreenLockScroll() {
     }
     // overflow — только через менеджер: счётчик владельцев вернёт скролл,
     // когда закроются ВСЕ оверлеи (локер + модалки + вьюверы).
-    acquireScrollLock(SCROLL_OWNER)
+    acquireScrollLock(SCREEN_LOCK_OWNER)
     ;(document.documentElement.style as any).overscrollBehavior = 'none'
     ;(document.body.style as any).overscrollBehavior = 'none'
     document.body.style.position = 'fixed'
@@ -103,7 +98,7 @@ export function useScreenLockScroll() {
     // Свой голос в менеджере отдаём только если захватывали: чужой
     // overflow (модалка под локскрином) не трогаем.
     if (wasActive) {
-      releaseScrollLock(SCROLL_OWNER)
+      releaseScrollLock(SCREEN_LOCK_OWNER)
     }
     // Инлайн-стили — только наши (снапшот в lockBody), поэтому
     // восстанавливаем всегда, даже если active уже false: гонка
@@ -112,9 +107,13 @@ export function useScreenLockScroll() {
     ;(document.documentElement.style as any).overscrollBehavior = prev.value.htmlOverscroll
     ;(document.body.style as any).overscrollBehavior = prev.value.bodyOverscroll
     ;(document.body.style as any).touchAction = prev.value.bodyTouch
-    document.body.style.position = prev.value.bodyPosition
-    document.body.style.top = prev.value.bodyTop
-    document.body.style.width = prev.value.bodyWidth
+    // Снапшот мог захватить чужой/залипший `position:fixed` (повторный
+    // mount поверх активного лока, HMR, переживший reload DOM): возврат
+    // такого prev заморозит страницу заново — чистим как отравленный.
+    const prevStuckFixed = prev.value.bodyPosition === 'fixed'
+    document.body.style.position = prevStuckFixed ? '' : prev.value.bodyPosition
+    document.body.style.top = prevStuckFixed ? '' : prev.value.bodyTop
+    document.body.style.width = prevStuckFixed ? '' : prev.value.bodyWidth
     if (wasActive) {
       window.scrollTo(0, scrollY.value)
     }

@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redirect;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -299,6 +300,12 @@ class ProfileController extends Controller
 
     /**
      * Update the user's profile information.
+     *
+     * Смена почты сбрасывает подтверждение: до перехода по ссылке
+     * из нового письма действуют ограничения неподтверждённой почты
+     * (запрет лайков и сообщений через EmailVerificationGate).
+     * Письмо со ссылкой уходит автоматически, повторная отправка —
+     * из баннера/раздела «Безопасность».
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
@@ -324,11 +331,26 @@ class ProfileController extends Controller
         $user->default_blur_meters = max(0, min(5000, $meters));
         $user->default_location_precision = $user->default_blur_meters <= 0 ? 'exact' : 'custom';
 
-        if ($user->isDirty('email')) {
+        $emailChanged = $user->isDirty('email');
+
+        if ($emailChanged) {
             $user->email_verified_at = null;
         }
 
         $user->save();
+
+        if ($emailChanged) {
+            try {
+                $user->sendEmailVerificationNotification();
+            } catch (\Throwable $e) {
+                Log::warning('Не ушло письмо подтверждения после смены почты', [
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
+            return Redirect::route('profile.edit')->with('status', 'verification-link-sent');
+        }
 
         return Redirect::route('profile.edit');
     }

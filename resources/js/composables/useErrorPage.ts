@@ -5,7 +5,7 @@ import { router, usePage } from '@inertiajs/vue3'
  * Контент тематичной страницы ошибки по HTTP-статусу.
  */
 export interface ErrorPageContent {
-  /** Крупный код на экране */
+  /** Внутренний код (для выбора текста, на экране не показываем) */
   code: string
   /** Заголовок */
   title: string

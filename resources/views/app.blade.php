@@ -148,11 +148,16 @@
                         // свернуть/меню справа): они парят поверх WebView.
                         // Старые клиенты (WebApp 6.0) инсетов не отдают вовсе —
                         // резервируем минимум 48px, новые с честным
-                        // contentSafeAreaInset получают 0. Только тач.
+                        // contentSafeAreaInset получают 0. Только тач
+                        // И только мобильные платформы (android*/ios*):
+                        // в десктопном клиенте кнопок поверх нет.
                         var coarseTg = false;
                         try { coarseTg = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches); } catch (e2) {}
+                        var tgPlat = '';
+                        try { tgPlat = String(webApp.platform || '').toLowerCase(); } catch (e3) {}
+                        var mobileTg = tgPlat.indexOf('android') === 0 || tgPlat.indexOf('ios') === 0;
                         var topSafe = (typeof top === 'number' && isFinite(top)) ? top : 0;
-                        var chromeTop = coarseTg ? Math.max(0, 48 - topSafe) : 0;
+                        var chromeTop = (coarseTg && mobileTg) ? Math.max(0, 48 - topSafe) : 0;
                         root.style.setProperty('--tg-chrome-top', chromeTop + 'px');
                     } catch (e) {}
                 } catch (e) {}

@@ -225,10 +225,14 @@ function applyTelegramInsets(webApp: TelegramWebApp): void {
     root.style.setProperty('--tg-sat', `${top}px`)
     root.style.setProperty('--tg-sab', `${bottom}px`)
     // Живое обновление зазора под нативные кнопки клиента
-    // (см. ранний инлайн в app.blade.php): только тач-устройства,
-    // минимум 48px поверх отданного TG инсета.
+    // (см. ранний инлайн в app.blade.php): только тач-устройства
+    // на мобильных платформах Telegram (android*/ios*) —
+    // в десктопном клиенте кнопок поверх WebView нет.
+    // Минимум 48px поверх отданного TG инсета.
     const coarse = window.matchMedia?.('(pointer: coarse)').matches ?? false
-    const chromeTop = coarse ? Math.max(0, 48 - top) : 0
+    const tgPlatform = String(webApp.platform || '').toLowerCase()
+    const mobileTg = tgPlatform.startsWith('android') || tgPlatform.startsWith('ios')
+    const chromeTop = coarse && mobileTg ? Math.max(0, 48 - top) : 0
     root.style.setProperty('--tg-chrome-top', `${chromeTop}px`)
     window.dispatchEvent(new CustomEvent('tg:safe-area', { detail: { top, bottom } }))
   } catch {

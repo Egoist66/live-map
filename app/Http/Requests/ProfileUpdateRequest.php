@@ -65,8 +65,9 @@ class ProfileUpdateRequest extends FormRequest
                 if (!$user || mb_strtolower((string) $value) === mb_strtolower((string) $user->email)) return;
                 $isAdmin = (bool) ($user->is_admin || $user->role === 'admin');
                 if ($isAdmin) return;
-                if (($user->effectivePlan() ?? 'free') !== 'business') {
-                    $fail('Смена почты доступна на тарифе Business.');
+                $plan = $user->effectivePlan() ?? 'free';
+                if (! in_array($plan, ['pro', 'business'], true)) {
+                    $fail('Смена почты доступна на тарифах Pro и Business.');
                 }
             }],
             'home_lat' => ['nullable','numeric','between:-90,90'],

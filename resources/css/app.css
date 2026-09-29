@@ -269,16 +269,23 @@ html, body { min-height: 100vh; min-height: 100svh; min-height: 100dvh; }
     --app-header-md: calc(64px + var(--tg-chrome-top, 0px));
   }
 }
-/* Отступ шапки под чёлку и кнопки Telegram — ТОЛЬКО iOS Mini App:
-   там нативный хром парит поверх WebView. Браузер и PWA (включая
-   iPhone Safari/PWA) — без отступа: окно браузера уже учитывает
-   safe-area, лишний зазор лишь отодвигает шапку вниз. */
-@supports (-webkit-touch-callout: none) {
-  @media (pointer: coarse) {
-    html.tg-app .native-safe-top,
-    html.tg-app.no-safe-area-top .native-safe-top {
-      padding-top: calc(var(--sat-real, 0px) + var(--tg-chrome-top, 0px));
-    }
+/* Отступ шапки под чёлку и кнопки Telegram — мобильный Mini App
+    на ОБЕИХ платформах: нативный хром клиента (закрыть/свернуть/меню)
+    и статус-бар парят поверх WebView и в iOS, и в Android. Раньше
+    правило висело на `@supports (-webkit-touch-callout)` (только iOS)
+    и на Android шапка уезжала под системные элементы и кнопки.
+    Браузер и PWA — без отступа (селектор только `html.tg-app`),
+    десктопный Mini App — тоже ноль (там `pointer: fine`,
+    а `--tg-chrome-top` для десктопа равен 0). */
+@media (pointer: coarse) {
+  html.tg-app .native-safe-top {
+    padding-top: calc(var(--sat-real, 0px) + var(--tg-chrome-top, 0px));
+  }
+  /* Гостевой контент без липкой шапки (логин/регистрация в Mini App):
+     один хром-зазор без инсета уводил форму под чёлку в полноэкранном
+     режиме новых клиентов (там инсет честный, а хром-зазор — ноль). */
+  html.tg-app .pt-tg-chrome {
+    padding-top: calc(var(--sat, 0px) + var(--tg-chrome-top, 0px)) !important;
   }
 }
 

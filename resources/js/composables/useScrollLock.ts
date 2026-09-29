@@ -33,6 +33,15 @@ let prevHtml = ''
 export const DOM_DIALOG_LOCK_OWNER = 'global-dialogs'
 
 /**
+ * Имя функционального владельца скринлокера в менеджере.
+ * Его голос означает «локер реально закрыт и держит страницу сам»:
+ * спасатель (`useScrollRescue`) при таком голосе геометрию `body`
+ * (`position:fixed` и компанию) не трогает — она чужая.
+ * Без голоса, но с залипшим `fixed` — чистит как бесхозное.
+ */
+export const SCREEN_LOCK_OWNER = 'screen-lock'
+
+/**
  * Класс блокировки скролла PrimeVue на `body`.
  */
 export const BODY_LOCK_CLASS = 'p-overflow-hidden'

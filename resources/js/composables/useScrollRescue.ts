@@ -5,6 +5,7 @@ import {
   forceReleaseScrollOwner,
   getScrollLockOwners,
   isPageScrollLockedInline,
+  SCREEN_LOCK_OWNER,
 } from '@/composables/useScrollLock'
 
 /**
@@ -213,6 +214,53 @@ function removeOrphanMasks(): void {
 }
 
 /**
+ * Сносит залипшую геометрию скринлокера, если его голоса в менеджере
+ * уже нет: `body{position:fixed}` мимо менеджера (менеджер хранит
+ * только `overflow`), поэтому пропуск `unlockBody` — размонтирование
+ * layout на закрытом локскрине, HMR, оборванный transition — оставляет
+ * «мёртвую» страницу: скроллбар на месте, а листаться нечему, body
+ * вырван из потока. Прежняя чистка трогала только класс PrimeVue
+ * и `overflow`, это залипание не ловила — баг возвращался.
+ *
+ * Безопасно: пока локер реально закрыт, его оверлей
+ * (`[data-lock-scroll]`) — видимый держатель и сюда не доходим
+ * (ранний `return` выше); пока голос `screen-lock` в менеджере —
+ * стили его, выходим. Инлайновые `touch-action/overscroll-behavior`
+ * со значением `none` тоже ставит только локер.
+ */
+function restoreStrayBodyGeometry(): void {
+  const owners = getScrollLockOwners()
+
+  if (owners.includes(SCREEN_LOCK_OWNER)) {
+    return
+  }
+
+  const body = document.body
+  const html = document.documentElement
+
+  if (body.style.position === 'fixed') {
+    body.style.position = ''
+    body.style.top = ''
+    body.style.width = ''
+  }
+
+  const bodyStyle = body.style as CSSStyleDeclaration & { touchAction?: string; overscrollBehavior?: string }
+  const htmlStyle = html.style as CSSStyleDeclaration & { overscrollBehavior?: string }
+
+  if (bodyStyle.touchAction === 'none') {
+    bodyStyle.touchAction = ''
+  }
+
+  if (bodyStyle.overscrollBehavior === 'none') {
+    bodyStyle.overscrollBehavior = ''
+  }
+
+  if (htmlStyle.overscrollBehavior === 'none') {
+    htmlStyle.overscrollBehavior = ''
+  }
+}
+
+/**
  * Чистит залипшую блокировку скролла, если видимых держателей нет:
  * класс PrimeVue, DOM-driven лок менеджера и бесхозный инлайн `overflow`.
  * Функциональных владельцев (`screen-lock`, `page-scroll-lock`, …) не трогаем —
@@ -246,6 +294,8 @@ export function cleanupStrayScrollLocks(): void {
       document.body.style.overflow = ''
       document.documentElement.style.overflow = ''
     }
+
+    restoreStrayBodyGeometry()
   } catch {
     // No-op: спасатель необязательный, визит продолжает жить.
   }
