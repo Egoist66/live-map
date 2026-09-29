@@ -98,6 +98,50 @@ async function loadScript(): Promise<boolean> {
 }
 
 /**
+ * Перенести палитру Telegram (themeParams) в CSS-переменные документа.
+ *
+ * Mini App обязан краситься цветами текущей темы Telegram
+ * (светлая/тёмная/кастомная), а не хардкодом: клиент присылает
+ * bg_color, text_color, button_color и др. Переменные вида
+ * `--tg-theme-bg-color` уже выставлены ранним инлайн-скриптом
+ * в app.blade.php до paint — здесь обновляем их вживую
+ * (событие themeChanged) и добиваем ключи новых Bot API.
+ *
+ * @param webApp живой объект Telegram WebApp
+ */
+function applyThemeParams(webApp: TelegramWebApp): void {
+  if (typeof document === 'undefined') {
+    return
+  }
+
+  const theme = webApp.themeParams ?? {}
+  const root = document.documentElement
+
+  const entries: Array<[string, string | undefined]> = [
+    ['--tg-theme-bg-color', theme.bg_color],
+    ['--tg-theme-text-color', theme.text_color],
+    ['--tg-theme-hint-color', theme.hint_color],
+    ['--tg-theme-link-color', theme.link_color],
+    ['--tg-theme-button-color', theme.button_color],
+    ['--tg-theme-button-text-color', theme.button_text_color],
+    ['--tg-theme-secondary-bg-color', theme.secondary_bg_color],
+    ['--tg-theme-header-bg-color', theme.header_bg_color],
+    ['--tg-theme-accent-text-color', theme.accent_text_color],
+    ['--tg-theme-section-bg-color', theme.section_bg_color],
+    ['--tg-theme-section-header-text-color', theme.section_header_text_color],
+    ['--tg-theme-subtitle-text-color', theme.subtitle_text_color],
+    ['--tg-theme-destructive-text-color', theme.destructive_text_color],
+    ['--tg-theme-bottom-bar-bg-color', theme.bottom_bar_bg_color],
+  ]
+
+  for (const [name, value] of entries) {
+    if (typeof value === 'string' && value !== '') {
+      root.style.setProperty(name, value)
+    }
+  }
+}
+
+/**
  * Применить viewport и тему из WebApp в CSS-переменные документа.
  *
  * @param webApp живой объект Telegram WebApp
@@ -109,11 +153,13 @@ function applyViewport(webApp: TelegramWebApp): void {
   startParam.value = webApp.initDataUnsafe?.start_param || ''
 
   const root = document.documentElement
+  root.classList.add('tg-app')
   root.style.setProperty('--tg-viewport-height', `${viewportHeight.value}px`)
   root.style.setProperty('--tg-viewport-stable', `${webApp.viewportStableHeight || viewportHeight.value}px`)
   root.classList.toggle('tg-dark', colorScheme.value === 'dark')
   root.dataset.tgPlatform = platform.value
 
+  applyThemeParams(webApp)
   applyTelegramInsets(webApp)
 }
 
@@ -146,7 +192,11 @@ function applyTelegramInsets(webApp: TelegramWebApp): void {
 }
 
 /**
- * Покрасить шапку и фон Mini App под текущую тему сайта.
+ * Покрасить шапку и фон Mini App под текущую тему.
+ *
+ * Берём цвета из палитры Telegram (header_bg_color → bg_color),
+ * а не хардкод: в кастомных темах захардкоженный фон выбивается
+ * из нативного хрома. Фолбэк — под тему сайта как раньше.
  *
  * @param isDark true — тёмная тема сайта
  */
@@ -157,13 +207,20 @@ function syncChrome(isDark: boolean): void {
     return
   }
 
+  const theme = webApp.themeParams ?? {}
+  const header = theme.header_bg_color || theme.bg_color || (isDark ? '#150B10' : '#ffffff')
+  const bg = theme.bg_color || (isDark ? '#150B10' : '#ffffff')
+
   try {
-    const header = isDark ? '#150B10' : '#ffffff'
-    const bg = isDark ? '#150B10' : '#ffffff'
     webApp.setHeaderColor(header)
-    webApp.setBackgroundColor(bg)
   } catch {
     // No-op: старые клиенты без setHeaderColor.
+  }
+
+  try {
+    webApp.setBackgroundColor(bg)
+  } catch {
+    // No-op: старые клиенты без setBackgroundColor.
   }
 }
 
@@ -201,6 +258,9 @@ export function useTelegram() {
    *
    * Идемпотентен: повторные вызовы возвращают закэшированный результат.
    * Вне Telegram возвращает false без ошибок.
+   * Каждый шаг WebApp — в своём try: падение expand/fullscreen
+   * не должно отменять ready (иначе Telegram покажет спиннер
+   * «загрузка» поверх уже готового приложения).
    *
    * @returns true внутри Telegram Mini App
    */
@@ -220,6 +280,8 @@ export function useTelegram() {
       return false
     }
 
+    // Скрипт уже синхронно в head (app.blade.php) — здесь лишь
+    // страховка на случай блокировки CDN: динамическая догрузка.
     const loaded = await loadScript()
     const webApp = getWebApp()
 
@@ -229,9 +291,28 @@ export function useTelegram() {
 
     try {
       webApp.ready()
+    } catch {
+      // No-op: без ready клиент висит на сплэше — пробуем дальше.
+    }
+
+    try {
       webApp.expand()
     } catch {
-      // No-op: ready/expand не критичны для рендера.
+      // No-op: expand не критичен для рендера.
+    }
+
+    try {
+      webApp.disableVerticalSwipes?.()
+    } catch {
+      // No-op: Bot API < 7.1 без метода.
+    }
+
+    try {
+      if (typeof webApp.requestFullscreen === 'function' && !webApp.isFullscreen) {
+        webApp.requestFullscreen()
+      }
+    } catch {
+      // No-op: fullscreen доступен не везде.
     }
 
     isTelegram.value = true

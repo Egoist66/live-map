@@ -4,11 +4,14 @@ import { Head, Link } from '@inertiajs/vue3'
 import { useLoginForm } from '@/composables/useAuthForm'
 import { useAuthMode, tabClass } from '@/composables/useAuthMode'
 import { useAuthTheme } from '@/composables/useAuthTheme'
+import { useTelegram } from '@/composables/useTelegram'
+import { useTelegramAuth } from '@/composables/useTelegramAuth'
 import RegisterForm from '@/Components/Auth/RegisterForm.vue'
 import InputText from 'primevue/inputtext'
 import Checkbox from 'primevue/checkbox'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
+import ProgressSpinner from 'primevue/progressspinner'
 
 /**
  * Единая страница входа: тогл «Войти / Регистрация».
@@ -20,12 +23,25 @@ const { mode, isLogin, showLogin, showRegister } = useAuthMode()
 const { email, emailAttrs, password, passwordAttrs, remember, errors, showPass, submit, isSubmitting } = useLoginForm()
 const t = useAuthTheme()
 
+// Telegram Mini App: только отображение статуса автовхода,
+// вся логика — в useTelegramAuth (Правило №1).
+const { isTelegram } = useTelegram()
+const { status: tgStatus, errorMessage: tgError, retryTelegramAuth } = useTelegramAuth()
+
 const pageTitle = computed(() => (isLogin.value ? 'Вход — ULove' : 'Регистрация — ULove'))
 </script>
 
 <template>
   <Head :title="pageTitle" />
     <Message v-if="status" severity="success" class="mb-4 w-full">{{ status }}</Message>
+    <div v-if="isTelegram && tgStatus === 'loading'" class="mb-4 flex items-center gap-3 rounded-2xl bg-stone-100 dark:bg-zinc-800 px-4 py-3">
+      <ProgressSpinner style="width: 28px; height: 28px" :strokeWidth="5" aria-label="Вход через Telegram" />
+      <p class="text-[13px] font-medium text-stone-600 dark:text-zinc-300">Входим через Telegram…</p>
+    </div>
+    <Message v-if="isTelegram && tgStatus === 'error'" severity="error" class="mb-4 w-full">
+      <span class="block">{{ tgError }}</span>
+      <Button type="button" label="Попробовать снова" size="small" class="mt-2" @click="retryTelegramAuth" />
+    </Message>
     <div class="grid grid-cols-2 gap-1 rounded-full bg-stone-100 dark:bg-zinc-800 p-1 mb-6">
       <Button type="button" label="Войти" rounded :class="tabClass(isLogin)" @click="showLogin" />
       <Button type="button" label="Регистрация" rounded :class="tabClass(!isLogin)" @click="showRegister" />

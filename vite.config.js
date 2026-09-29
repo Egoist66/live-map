@@ -19,6 +19,19 @@ function fileRevision(rel) {
     }
 }
 
+/**
+ * Dev-страница и Vite живут на разных ориджинах (app-dev :8001,
+ * Vite :5173), а `<script type="module">` требует CORS. Без явного
+ * `server.cors` Vite 8 пинит `Access-Control-Allow-Origin` в значение
+ * `server.origin` (:5173) — и браузер режет `@vite/client`/`app.ts`.
+ * Разрешаем только локальное: loopback на любом порту + приватная
+ * LAN (тест с телефона через http://192.168.x.x:8001).
+ */
+const devCorsOrigins = [
+    /^http:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/,
+    /^http:\/\/(10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3})(:\d+)?$/,
+];
+
 export default defineConfig({
     // Dev-сервер: порт строго 5173 — без strictPort второй Vite молча
     // уезжал на 5174, а страницы продолжали ломиться на 5173 через прокси
@@ -41,13 +54,30 @@ export default defineConfig({
         port: 5173,
         strictPort: true,
         origin: 'http://localhost:5173',
+        // CORS под страницу :8001 — см. devCorsOrigins выше.
+        cors: {
+            origin: devCorsOrigins,
+        },
         hmr: {
             host: 'localhost',
             port: 5173,
         },
         watch: {
             usePolling: process.env.VITE_WATCH_POLL === 'true',
-            interval: 300,
+            interval: 500,
+            // Polling гоняет stat по всему дереву каждые interval мс:
+            // выкидываем тяжёлые нетронутые папки, чтобы HMR замечал
+            // правки resources/js за миллисекунды, а не пережевывал
+            // vendor/node_modules/storage. Без этого на Windows
+            // bind-mount HMR лагал и жег CPU.
+            ignored: [
+                '**/node_modules/**',
+                '**/vendor/**',
+                '**/storage/**',
+                '**/bootstrap/ssr/**',
+                '**/public/build/**',
+                '**/.git/**',
+            ],
         },
     },
     resolve: {

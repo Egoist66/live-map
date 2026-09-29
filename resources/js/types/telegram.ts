@@ -29,6 +29,14 @@ export interface TelegramWebAppThemeParams {
   button_text_color?: string
   secondary_bg_color?: string
   header_bg_color?: string
+  /** Bot API 6.1+: акцентный текст (ссылки второго уровня). */
+  accent_text_color?: string
+  /** Bot API 7.0+: фон секций (вторичные карточки). */
+  section_bg_color?: string
+  section_header_text_color?: string
+  subtitle_text_color?: string
+  destructive_text_color?: string
+  bottom_bar_bg_color?: string
 }
 
 export interface TelegramWebAppViewport {
@@ -51,6 +59,36 @@ export interface TelegramSafeAreaInset {
   right: number
 }
 
+/**
+ * Параметры нативной нижней кнопки (MainButton / SecondaryButton).
+ */
+export interface TelegramMainButtonParams {
+  text?: string
+  color?: string
+  text_color?: string
+  is_active?: boolean
+  is_visible?: boolean
+}
+
+export interface TelegramMainButton {
+  text: string
+  color: string
+  textColor: string
+  isVisible: boolean
+  isActive: boolean
+  isProgressVisible: boolean
+  setText: (text: string) => void
+  setParams: (params: TelegramMainButtonParams) => void
+  show: () => void
+  hide: () => void
+  enable: () => void
+  disable: () => void
+  showProgress: (leaveActive?: boolean) => void
+  hideProgress: () => void
+  onClick: (handler: () => void) => void
+  offClick: (handler: () => void) => void
+}
+
 export interface TelegramWebApp {
   initData: string
   initDataUnsafe: TelegramWebAppInitDataUnsafe
@@ -59,6 +97,8 @@ export interface TelegramWebApp {
   colorScheme: 'light' | 'dark'
   themeParams: TelegramWebAppThemeParams
   isExpanded: boolean
+  /** Bot API 8.0+: открыт ли полноэкранный режим. */
+  isFullscreen?: boolean
   viewportHeight: number
   viewportStableHeight: number
   headerColor: string
@@ -70,6 +110,12 @@ export interface TelegramWebApp {
   ready: () => void
   expand: () => void
   close: () => void
+  /** Bot API 8.0+: развернуть в полноэкранный режим. */
+  requestFullscreen?: () => void
+  exitFullscreen?: () => void
+  /** Bot API 7.1+: запретить свайпом схлопывать Mini App обратно. */
+  disableVerticalSwipes?: () => void
+  enableVerticalSwipes?: () => void
   setHeaderColor: (color: string) => void
   setBackgroundColor: (color: string) => void
   enableClosingConfirmation: () => void
@@ -92,18 +138,9 @@ export interface TelegramWebApp {
     onClick: (handler: () => void) => void
     offClick: (handler: () => void) => void
   }
-  MainButton: {
-    text: string
-    color: string
-    textColor: string
-    isVisible: boolean
-    isActive: boolean
-    setText: (text: string) => void
-    show: () => void
-    hide: () => void
-    onClick: (handler: () => void) => void
-    offClick: (handler: () => void) => void
-  }
+  MainButton: TelegramMainButton
+  /** Bot API 8.0+: вторая нижняя кнопка (может отсутствовать в старых клиентах). */
+  SecondaryButton?: TelegramMainButton
 }
 
 declare global {

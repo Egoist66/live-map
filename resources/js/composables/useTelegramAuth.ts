@@ -26,6 +26,60 @@ function isLoggedIn(): boolean {
 }
 
 /**
+ * Достать initData из hash URL как запасной вариант.
+ *
+ * Telegram при запуске Mini App кладёт стартовые параметры в hash
+ * (`#tgWebAppData=<initData>&tgWebAppVersion=...`). Обычно initData
+ * читается из `window.Telegram.WebApp.initData`, но если объект
+ * WebApp ещё не готов, а hash уже на месте — забираем оттуда,
+ * чтобы автовход не умирал вхолостую.
+ *
+ * @returns сырая строка initData или пусто
+ */
+function readInitDataFromHash(): string {
+  try {
+    const hash = window.location.hash || ''
+
+    if (!hash.includes('tgWebAppData')) {
+      return ''
+    }
+
+    const params = new URLSearchParams(hash.replace(/^#/, ''))
+    const raw = params.get('tgWebAppData') || ''
+
+    return raw !== '' ? decodeURIComponent(raw) : ''
+  } catch {
+    return ''
+  }
+}
+
+/**
+ * Собрать initData из всех доступных источников.
+ *
+ * Порядок: реактивный ref моста → живой WebApp → hash URL.
+ *
+ * @param refValue значение initData из useTelegram()
+ * @returns сырая строка initData или пусто
+ */
+function resolveInitData(refValue: string): string {
+  if (refValue !== '') {
+    return refValue
+  }
+
+  try {
+    const fromWebApp = window.Telegram?.WebApp?.initData || ''
+
+    if (fromWebApp !== '') {
+      return fromWebApp
+    }
+  } catch {
+    // No-op: WebApp может отсутствовать.
+  }
+
+  return readInitDataFromHash()
+}
+
+/**
  * Автовход через Telegram Mini App (@U1ove_bot).
  *
  * Только мост initData → POST /api/telegram/auth. Тема, viewport
@@ -45,9 +99,11 @@ export function useTelegramAuth() {
   /**
    * Отправить initData на бэк и поднять web-сессию.
    *
-   * Идемпотентен за визит (флаг attempted) + пропускаем залогиненных.
-   * Ошибки не кидаем наружу — Mini App обязан открыться даже если
-   * подпись не сошлась, просто как гость.
+   * Идемпотентен за визит (флаг attempted ставится только когда
+   * есть что отправлять) + пропускаем залогиненных.
+   * Пустой initData попыткой не считается — повтор возможен позже,
+   * когда WebApp догрузится. Ошибки не кидаем наружу — Mini App
+   * обязан открыться даже если подпись не сошлась, просто как гость.
    *
    * @returns true когда сессия поднята или уже была
    */
@@ -55,7 +111,6 @@ export function useTelegramAuth() {
     if (attempted || status.value === 'loading') {
       return status.value === 'authenticated' || isLoggedIn()
     }
-    attempted = true
 
     if (isLoggedIn()) {
       status.value = 'authenticated'
@@ -68,12 +123,14 @@ export function useTelegramAuth() {
     }
 
     const { initData } = useTelegram()
-    const rawInitData = initData.value || window.Telegram?.WebApp?.initData || ''
+    const rawInitData = resolveInitData(initData.value)
 
     if (rawInitData === '') {
       status.value = 'idle'
       return false
     }
+
+    attempted = true
 
     status.value = 'loading'
     errorMessage.value = ''
@@ -101,7 +158,8 @@ export function useTelegramAuth() {
    * @returns true при успешной привязке
    */
   async function linkTelegram(): Promise<boolean> {
-    const rawInitData = window.Telegram?.WebApp?.initData || ''
+    const { initData } = useTelegram()
+    const rawInitData = resolveInitData(initData.value)
 
     if (rawInitData === '') {
       errorMessage.value = 'Откройте сайт через кнопку бота в Telegram.'
@@ -185,6 +243,14 @@ export function useTelegramAuth() {
 
     const response = (error as { response?: { data?: { message?: unknown }; status?: number } }).response
 
+    if (response?.status === 419) {
+      return 'Сессия устарела — закройте и откройте Mini App заново.'
+    }
+
+    if (response?.status === 401) {
+      return 'Telegram не подтвердил вход. Откройте приложение через кнопку бота заново.'
+    }
+
     if (typeof response?.data?.message === 'string' && response.data.message !== '') {
       return response.data.message
     }
@@ -205,5 +271,18 @@ export function useTelegramAuth() {
     errorMessage.value = ''
   }
 
-  return { status, errorMessage, isNewAccount, authWithTelegram, linkTelegram, unlinkTelegram, resetAttempt }
+  /**
+   * Повторить автовход после ошибки (кнопка «Попробовать снова»).
+   *
+   * Сбрасывает флаг попытки и идёт на новый круг: к этому моменту
+   * WebApp обычно уже догрузился и initData на месте.
+   *
+   * @returns true когда сессия поднята
+   */
+  async function retryTelegramAuth(): Promise<boolean> {
+    resetAttempt()
+    return authWithTelegram()
+  }
+
+  return { status, errorMessage, isNewAccount, authWithTelegram, retryTelegramAuth, linkTelegram, unlinkTelegram, resetAttempt }
 }

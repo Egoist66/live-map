@@ -1,5 +1,36 @@
 # Dev-лог
 
+## 2026-09-29 — Dev-режим на Octane: быстрый старт и хот-релоад всего
+- 🔧 Причина тормозов: dev крутился на `artisan serve` (boot Laravel на каждый запрос, один поток), команда `docker:dev` делала `--build` при каждом запуске, а serve+reverb+queue стартовали последовательно в одном контейнере. В `composer.json` уже лежали `laravel/octane + roadrunner` — грех не использовать.
+- 🔧 `app-dev` переведён на `php artisan octane:start --server=roadrunner --watch` (`docker/dev-entrypoint.sh`, роль `DEV_ROLE=app`): приложение в памяти воркеров, правки `app/routes/config` подхватываются сами за ~1–2 сек (polling mtime — работает через Windows bind-mount). Фолбэк на `serve --no-reload`, если нет `vendor/bin/rr`.
+- 🔧 Reverb и очередь вынесены в отдельные контейнеры `reverb-dev` (`:8080`) и `queue-dev`: `app-dev` стартует за секунды, логи раздельные, рестарт сокетов не роняет страницы. Серверный broadcast — на `REVERB_HOST=reverb` по docker-сети; браузерный `VITE_REVERB_*=localhost:8080` не менялся.
+- 🔧 `docker/php-dev.ini`: opcache включён даже в dev (`validate_timestamps=1, revalidate_freq=0` — скорость без stale-кода) + `realpath_cache` против тормозов VirtioFS; `storage/framework/views|cache` и Vite pre-bundle кэш — в tmpfs, а не через bind-mount.
+- 🔧 Vite: `watch.ignored` для `node_modules/vendor/storage/ssr/build/.git`, polling-интервал 500; `vite.Dockerfile` — `pnpm install --prefer-offline` для рестарта за секунды.
+- 🔧 `package.json`: `docker:dev` — быстрый старт без `--build` + сразу логи 4 сервисов; новые `docker:dev:build` (первый запуск), `docker:dev:restart` (после правки `.env`), `docker:dev:down`, `docker:dev:fresh` (снести volumes и поднять с нуля).
+- 🔧 `docs/docker.md` переписан под новую схему: таблица dev-сервисов, что где хот-релоадится, все команды, обновлённый troubleshooting (reverb-dev/queue-dev/octane-watch).
+- Проверки: `docker compose --profile dev config` ✅, `bash -n docker/dev-entrypoint.sh` ✅, `package.json` валиден ✅. Вживую: `pnpm docker:dev:build` (первый раз) → дальше `pnpm docker:dev`; сайт `:8001`, HMR `:5173`, сокеты `:8080`.
+
+## 2026-09-29 — Скролл залипал навсегда из-за дедлока grace в спасателе
+- 🔧 Причина: в `useScrollRescue` метка `orphanSince` ставилась только в `removeOrphanMasks()`, а та вызывалась лишь ПОСЛЕ проверки `hasVisibleLockHolder()`. Проверка же видела свежую сироту (fixed-маска без диалога) «легитимной» (grace) и выходила раньше — метка не ставилась никогда, grace не истекал, сирота-перехватчик жестов жила вечно вместе с `p-overflow-hidden` и DOM-локом. Симптом 1-в-1: скроллбар на месте, а страница не листается ни на десктопе, ни на мобиле.
+- 🔧 `useScrollRescue`: новый `noteOrphanSince()` — метка ставится при первом обнаружении сироты и в проверке держателей, и в чистке; `cleanupStrayScrollLocks()` теперь сначала добивает протухших сирот и только потом проверяет держателей. Leave-анимация закрытия (800мс) не рвётся: в пределах grace маска и лок неприкосновенны.
+- 🔧 `useScrollLock`: страховка `?? ''` при захвате/проверке инлайн-`overflow` — нестроковое значение больше не роняет путь восстановления скролла.
+- Проверки: `vue-tsc --noEmit` ✅, runtime-стенд на фейковом DOM ✅ ×17 (сирота в grace держит лок → после grace маска снесена + класс/владелец/инлайн очищены; живой диалог не трогаем; stray-лок без масок чистится сразу; повторный цикл watchdog сходится).
+- Вживую: открыть/закрыть любую модалку/шторку, повторить несколько раз подряд + навигация с открытой модалкой — страница листается сразу, без перезагрузки.
+
+## 2026-09-29 — Telegram Mini App: ранний ready/expand, починка автовхода, тема из themeParams
+- 🐞 Почему было криво и не входило (4 причины разом): 1) `telegram-web-app.js` грузился динамически уже после `app.mount()` — `ready()/expand()` опаздывали, Mini App моргал схлопнутым BottomSheet; 2) в layout не было `<meta name="csrf-token">`, а кастомный `api`-клиент не слал `X-XSRF-TOKEN` → `POST /api/telegram/auth` умирал в 419; 3) продовый CSP (`script-src` без `telegram.org`) резал WebApp-скрипт — мост вообще не стартовал; 4) палитра Telegram (`themeParams`) никуда не маппилась — фон/текст были хардкодом, в тёмной/кастомной теме приложение выглядело чужеродно.
+- 🔧 `app.blade.php`: добавлен `csrf-token`; `telegram-web-app.js` — синхронно в head + ранний инлайн (nonce) до paint: `ready()` и `expand()` в отдельных try, `disableVerticalSwipes`, кука `upin_client=telegram`, `themeParams → --tg-theme-*`, viewport/safe-area vars, класс `tg-app`; скрипт темы сайта уважает TG-фон (нет белой вспышки).
+- 🔧 `SecurityHeaders`: `https://telegram.org` в `script-src` (иначе прод режет скрипт).
+- 🔧 `services/api.ts`: `withXSRFToken: true` — axios сам кладёт `X-XSRF-TOKEN` из куки (пояснение по Правилу №3 в комменте).
+- 🔧 `useTelegram`: новый `applyThemeParams()` (14 ключей палитры → CSS-переменные, живое обновление на `themeChanged`); `syncChrome` берёт `header_bg_color/bg_color` из темы TG с фолбэком; `initTelegram` — `ready/expand/disableVerticalSwipes/requestFullscreen` каждый в своём try (упавший expand больше не отменяет ready → нет вечного спиннера TG).
+- 🔧 `types/telegram.ts`: `TelegramMainButton` с `setParams/showProgress/enable/disable`, опциональные `requestFullscreen/disableVerticalSwipes/isFullscreen`, `SecondaryButton?`, новые ключи `themeParams` (accent/section/subtitle/destructive/bottom_bar).
+- 🔧 Новый `useTelegramMainButton` (Правило №1): `showMainButton(text, onClick)/hideMainButton/setMainButtonLoading/setMainButtonActive`, автосинхронизация цветов кнопки с темой TG, снятие прошлого обработчика (без двойных подписок).
+- 🔧 `useTelegramAuth`: флаг `attempted` ставится только когда есть непустой initData (раньше первый холостой заход с пустым initData навсегда блочил ретраи); `resolveInitData()` — ref моста → живой WebApp → `tgWebAppData` из hash; `retryTelegramAuth()` для кнопки повтора; понятные тексты на 419/401/409.
+- 🔧 `Login.vue`: только отображение (Правило №1) — спиннер «Входим через Telegram…» при `loading`, ошибка + «Попробовать снова» при `error`, всё строго внутри TG и на PrimeVue.
+- 🔧 `app.css`: дефолты `--tg-theme-*` (+ тёмные), `html.tg-app body` красится из темы TG, ссылки — `link_color` (кроме кнопок), утилита `.h-tg-viewport` (точная высота WebApp вместо 100dvh).
+- Проверки: `view:clear` ✅, `route:list` ✅ (3 telegram-роута), `vue-tsc --noEmit` ✅.
+- ⚠️ Нужен редеплой (новый JS-билд + blade): вживую проверить `t.me/U1ove_bot` → Mini App открывается сразу развёрнутым, автовход без формы логина, тёмная тема TG красит фон/текст/кнопки, поворот и смена темы пересчитывают vars без перезагрузки.
+
 ## 2026-09-28 — Telegram fullscreen: хедер больше не уезжает под чёлку
 - 🔧 Причина: в полноэкранном Mini App («открыть приложение» в боте) браузерный `env(safe-area-inset-*)` — ноль, чёлку/жесты знает только WebApp API. `useOverlaySafeArea` мерил только env → `--sat-real=0` + класс `.no-safe-area-top` → хедер под системными иконками. В компактной мини-панели env отдавался, поэтому там было ровно.
 - 🔧 `types/telegram.ts`: `TelegramSafeAreaInset` + опциональные `safeAreaInset/contentSafeAreaInset` (Bot API 8.0).

@@ -67,6 +67,11 @@ class SecurityHeaders
         $relaxed = $request->routeIs('cashier.*');
 
         $script = ["'self'", "'nonce-{$nonce}'"];
+        // Telegram Mini App (@U1ove_bot): telegram-web-app.js грузится
+        // синхронно в head (app.blade.php) — без этого хоста в проде
+        // (csp_enabled) скрипт режется, ready/expand не вызываются,
+        // мост не стартует и автовход по initData не работает.
+        $script[] = 'https://telegram.org';
         // Хосты счётчиков из панели SEO (Google/Yandex/Meta/VK): их внешние
         // <script src> должны проходить script-src без правки кода.
         $analyticsScripts = [

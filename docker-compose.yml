@@ -19,6 +19,7 @@ services:
       # Должны совпадать с сервисом mysql ниже (.env рассчитан на нативный MySQL,
       # environment в compose имеет приоритет над env_file).
       DB_HOST: mysql
+      DB_PORT: 3306
       DB_DATABASE: live_map
       DB_USERNAME: laravel
       DB_PASSWORD: secret
@@ -41,6 +42,13 @@ services:
       retries: 3
       start_period: 90s
 
+  # Dev-профиль: быстрый старт + hot reload всего.
+  #   Backend: Octane RoadRunner с --watch (app booted в памяти воркеров,
+  #     правки PHP подхватываются сами) — в разы быстрее artisan serve.
+  #   Frontend: Vite HMR (:5173) с polling поверх Windows bind-mount.
+  #   Realtime/очереди живут в ОТДЕЛЬНЫХ контейнерах — app-dev стартует
+  #     за пару секунд и не ждёт reverb/queue, логи не смешиваются.
+  # Запуск: pnpm docker:dev (без пересборки) / pnpm docker:dev:build (первый раз).
   app-dev:
     build:
       context: .
@@ -50,41 +58,100 @@ services:
     volumes:
       - .:/var/www/html
       - dev-vendor:/var/www/html/vendor
+    # Компилированные blade и файловый кэш — в RAM, а не через
+    # Windows bind-mount: иначе каждый view рендерится через VirtioFS.
+    tmpfs:
+      - /var/www/html/storage/framework/views
+      - /var/www/html/storage/framework/cache
     ports:
       - "8001:8000"
-      - "8080:8080"
     env_file: .env
     environment:
+      DEV_ROLE: app
       DB_HOST: mysql
+      DB_PORT: 3306
       DB_DATABASE: live_map
       DB_USERNAME: laravel
       DB_PASSWORD: secret
       REDIS_HOST: redis
-      REVERB_HOST: "127.0.0.1"
-      REVERB_SERVER_HOST: "0.0.0.0"
+      # Серверный broadcast идёт в контейнер reverb по docker-сети,
+      # а не на 127.0.0.1 (там после сплита сервисов никого нет).
+      REVERB_HOST: reverb
+      REVERB_PORT: 8080
       APP_URL: http://localhost:8001
+      OCTANE_SERVER: roadrunner
       # SSR-процесс в dev-профиле не запущен, рендерим на клиенте.
       INERTIA_SSR_ENABLED: "false"
-    # serve + reverb + queue в одном контейнере, чтобы realtime и события работали как в проде.
-    # composer install — только если vendor пуст (volume dev-vendor переживает рестарты).
-    #
-    # ВАЖНО: serve запускается с --no-reload. Без флага artisan serve стартует
-    # дочерний php -S с УРЕЗАННЫМ окружением (ServeCommand::$passthroughVariables:
-    # только APP_ENV/PATH/XDEBUG/...), а DB_HOST/DB_DATABASE/REDIS_HOST и т.д.
-    # вычёркиваются — и приложение внутри падает на .env-значения (127.0.0.1),
-    # которые в контейнере недоступны. С --no-reload дочерний процесс наследует
-    # всё окружение контейнера целиком. Перезапуск при правке .env в Docker
-    # всё равно бессмысленен (конфиг едет из environment, не из файла).
-    command: >
-      bash -c "
-      if [ ! -f vendor/autoload.php ]; then composer install --no-interaction --prefer-dist; fi &&
-      php artisan migrate --force &&
-      (php artisan storage:link || true) &&
-      (php artisan reverb:start --host=0.0.0.0 --port=8080 &) &&
-      (php artisan queue:listen --tries=3 --sleep=3 &) &&
-      exec php artisan serve --host=0.0.0.0 --port=8000 --no-reload
-      "
     depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    healthcheck:
+      # В php:cli-образе нет curl — проверяем TCP сокет самим PHP.
+      test: ["CMD-SHELL", "php -r \"exit(@fsockopen('127.0.0.1',8000)?0:1);\""]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 30s
+
+  # Reverb отдельно: правишь сокет-код — перезапускается только он,
+  # Octane-воркеры продолжают отдавать страницы без простоя.
+  reverb-dev:
+    build:
+      context: .
+      dockerfile: docker/php-dev.Dockerfile
+    working_dir: /var/www/html
+    profiles: ["dev"]
+    volumes:
+      - .:/var/www/html
+      - dev-vendor:/var/www/html/vendor
+    ports:
+      - "8080:8080"
+    env_file: .env
+    environment:
+      DEV_ROLE: reverb
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: live_map
+      DB_USERNAME: laravel
+      DB_PASSWORD: secret
+      REDIS_HOST: redis
+      REVERB_HOST: "0.0.0.0"
+      REVERB_SERVER_HOST: "0.0.0.0"
+      REVERB_PORT: 8080
+      APP_URL: http://localhost:8001
+    depends_on:
+      app-dev:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  # Очереди отдельно: queue:listen больше не конкурирует
+  # с Octane-воркерами за CPU в одном контейнере.
+  queue-dev:
+    build:
+      context: .
+      dockerfile: docker/php-dev.Dockerfile
+    working_dir: /var/www/html
+    profiles: ["dev"]
+    volumes:
+      - .:/var/www/html
+      - dev-vendor:/var/www/html/vendor
+    env_file: .env
+    environment:
+      DEV_ROLE: queue
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: live_map
+      DB_USERNAME: laravel
+      DB_PASSWORD: secret
+      REDIS_HOST: redis
+      REVERB_HOST: reverb
+      APP_URL: http://localhost:8001
+    depends_on:
+      app-dev:
+        condition: service_healthy
       mysql:
         condition: service_healthy
       redis:
@@ -100,6 +167,10 @@ services:
       - .:/var/www/html
       - dev-node-modules:/var/www/html/node_modules
       - dev-pnpm-store:/pnpm/store
+      # Vite pre-bundle кэш в RAM: повторный старт не пересканирует
+      # сотни модулей через Windows bind-mount.
+      - type: tmpfs
+        target: /var/www/html/node_modules/.vite
     ports:
       - "5173:5173"
     environment:
@@ -107,7 +178,8 @@ services:
       # без polling Vite не замечает правок и HMR молчит.
       VITE_WATCH_POLL: "true"
     depends_on:
-      - app-dev
+      app-dev:
+        condition: service_healthy
 
   mysql:
     image: mysql:8
@@ -118,7 +190,12 @@ services:
       MYSQL_PASSWORD: secret
       MYSQL_USER: laravel
     ports:
-      - "3306:3306"
+      # Хост-порт вынесен в ${MYSQL_PORT}: на Windows часто уже висит
+      # нативный MySQL на 3306. По умолчанию 3307, чтобы не конфликтовать.
+      # Сменить: MYSQL_PORT=3308 docker compose up -d
+      # Внутри docker-сети MySQL всё равно на 3306 (DB_PORT=3306 в app/app-dev),
+      # MYSQL_PORT влияет только на доступ с хоста (TablePlus, php artisan без docker).
+      - "${MYSQL_PORT:-3307}:3306"
     volumes:
       - mysql:/var/lib/mysql
     healthcheck:

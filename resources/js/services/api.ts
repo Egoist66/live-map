@@ -9,6 +9,10 @@ export const api = axios.create({
   baseURL: apiBaseUrl || undefined,
   headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' },
   withCredentials: true,
+  // Laravel отдаёт XSRF-TOKEN куку на web-роутах: axios сам положит её
+  // в X-XSRF-TOKEN. Без этого POST /api/telegram/auth умирал в 419,
+  // т.к. meta csrf-token в layout раньше отсутствовала.
+  withXSRFToken: true,
   timeout: 20000,
 })
 

@@ -44,7 +44,7 @@ export const BODY_LOCK_CLASS = 'p-overflow-hidden'
  * @returns true — скролл заблокирован инлайном
  */
 function isLockedOverflow(value: string): boolean {
-  const normalized = value.trim().toLowerCase()
+  const normalized = (value ?? '').trim().toLowerCase()
 
   return normalized === 'hidden' || normalized === 'clip'
 }
@@ -79,8 +79,8 @@ export function acquireScrollLock(owner: string): void {
   }
 
   if (owners.size === 0) {
-    prevBody = document.body.style.overflow
-    prevHtml = document.documentElement.style.overflow
+    prevBody = document.body.style.overflow ?? ''
+    prevHtml = document.documentElement.style.overflow ?? ''
     document.body.style.overflow = 'hidden'
     document.documentElement.style.overflow = 'hidden'
   }

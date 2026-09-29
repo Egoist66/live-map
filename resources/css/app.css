@@ -215,6 +215,9 @@ html.dark .bg-stone-900\/90, html.dark .bg-black\/50, html.dark .bg-black\/60 { 
   .pb-safe-or-2 { padding-bottom: calc(0.5rem + var(--sab)) !important; }
   .min-h-dvh { min-height: 100vh; min-height: 100svh; min-height: 100dvh; }
   .h-dvh-app { height: 100vh; height: 100svh; height: 100dvh; }
+  /* Высота Mini App из WebApp.viewportHeight: внутри Telegram точнее
+     100dvh (учитывает шапку/кнопки клиента), снаружи — обычный dvh. */
+  .h-tg-viewport { height: var(--tg-viewport-height, 100dvh); }
 }
 
 /* Мобильный шелл без пустых полос: фон тянется на всю высоту
@@ -455,7 +458,36 @@ html.native-swipes .mobile-bottom-nav {
 .native-safe-top { padding-top: var(--sat-real, 0px); }
 .no-safe-area-top .native-safe-top { padding-top: 0; }
 @media (min-width: 1024px) {
-  .no-safe-area-top { --sat: 0px; }
+.no-safe-area-top { --sat: 0px; }
+
+/* Telegram Mini App: палитра клиента (themeParams) вместо хардкода.
+   Значения прилетают от Telegram: ранний инлайн в app.blade.php
+   ставит их до paint, мост useTelegram обновляет на themeChanged.
+   Фолбэки — под собственные светлую/тёмную темы сайта. */
+:root {
+  --tg-theme-bg-color: #ffffff;
+  --tg-theme-text-color: #0f172a;
+  --tg-theme-hint-color: #94a3b8;
+  --tg-theme-link-color: #5b5bff;
+  --tg-theme-button-color: #5b5bff;
+  --tg-theme-button-text-color: #ffffff;
+  --tg-theme-secondary-bg-color: #f1f5f9;
+  --tg-theme-header-bg-color: #ffffff;
+}
+html.dark {
+  --tg-theme-bg-color: #0f121f;
+  --tg-theme-text-color: #f8fafc;
+  --tg-theme-hint-color: #64748b;
+  --tg-theme-secondary-bg-color: #1e2438;
+  --tg-theme-header-bg-color: #150b10;
+}
+html.tg-app body {
+  background-color: var(--tg-theme-bg-color);
+  color: var(--tg-theme-text-color);
+}
+html.tg-app a:not(.btn-primary):not(.btn-brand):not(.btn-ghost):not(.p-button) {
+  color: var(--tg-theme-link-color);
+}
   .native-safe-top,
   .no-safe-area-top .native-safe-top { padding-top: 0; }
 }

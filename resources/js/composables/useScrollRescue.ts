@@ -54,6 +54,28 @@ let observer: MutationObserver | null = null
 const orphanSince = new WeakMap<HTMLElement, number>()
 
 /**
+ * Отмечает маску как впервые замеченную сироту и возвращает метку времени.
+ *
+ * Важно вызывать и из проверки держателей, и из чистки: иначе метка
+ * никогда не ставится, grace не истекает и сирота держит лок вечно.
+ *
+ * @param mask маска PrimeVue без видимого диалога внутри
+ * @returns метка первого обнаружения (мс)
+ */
+function noteOrphanSince(mask: HTMLElement): number {
+  const existing = orphanSince.get(mask)
+
+  if (existing !== undefined) {
+    return existing
+  }
+
+  const now = Date.now()
+  orphanSince.set(mask, now)
+
+  return now
+}
+
+/**
  * Проверяет, реально ли виден элемент: в DOM, не скрыт через
  * `display`/`visibility` (включая предков до `body`) и имеет размер.
  *
@@ -123,9 +145,9 @@ export function hasVisibleLockHolder(): boolean {
       }
 
       if (!inner && isOverlayVisible(mask)) {
-        const since = orphanSince.get(mask)
+        const since = noteOrphanSince(mask)
 
-        if (since === undefined || Date.now() - since < ORPHAN_GRACE_MS) {
+        if (Date.now() - since < ORPHAN_GRACE_MS) {
           return true
         }
       }
@@ -202,10 +224,9 @@ export function cleanupStrayScrollLocks(): void {
   }
 
   try {
-    if (hasVisibleLockHolder()) {
-      return
-    }
-
+    // Сначала добиваем протухших сирот: иначе первая проверка держателей
+    // видит свежую сироту «легитимной» (grace), выходит раньше времени,
+    // метка протухания не ставится и лок держится вечно.
     removeOrphanMasks()
 
     if (hasVisibleLockHolder()) {

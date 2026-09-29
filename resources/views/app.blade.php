@@ -26,6 +26,7 @@
         @endif
         @endif
         <meta name="format-detection" content="telephone=no">
+        <meta name="csrf-token" content="{{ csrf_token() }}">
         <meta name="vapid-public-key" content="{{ config('services.webpush.vapid.public_key') }}">
         @if(!$isNativeClient)
         <link rel="canonical" href="{{ $seoHead['canonical'] ?? url()->current() }}">
@@ -76,8 +77,64 @@
         <link rel="preload" as="font" type="font/woff2" crossorigin href="https://fonts.bunny.net/figtree/files/figtree-latin-700-normal.woff2">
         <link rel="preload" as="font" type="font/woff2" crossorigin href="https://fonts.bunny.net/figtree/files/figtree-latin-800-normal.woff2">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700,800,900&family=inter:400,500,600&display=swap" rel="stylesheet">
+        {{-- Telegram Mini App (@U1ove_bot): грузим WebApp API синхронно в head,
+              чтобы window.Telegram существовал ДО первого paint. Ранний инлайн
+              ниже сразу делает ready()/expand() — иначе Mini App моргает
+              схлопнутым BottomSheet, пока Vue-мост догрузится после mount.
+              Полноценный мост (тема, viewport-подписки, автовход) живёт
+              во фронте: useTelegram / useTelegramAuth (Правило №1). --}}
+        <script src="https://telegram.org/js/telegram-web-app.js"></script>
         <script nonce="{{ $cspNonce ?? '' }}">
-            (function(){ try{ var s=localStorage.getItem('theme'); var m=window.matchMedia('(prefers-color-scheme: dark)').matches; var d=s ? s==='dark' : m; if(d) document.documentElement.classList.add('dark'); document.documentElement.style.colorScheme = d?'dark':'light'; var bg=d?'#0F121F':'#ffffff'; document.documentElement.style.backgroundColor=bg; }catch(e){} })();
+            (function () {
+                try {
+                    var haystack = (window.location.search + ' ' + window.location.hash).toLowerCase();
+                    var looksLikeTg = haystack.indexOf('tgwebappplatform') !== -1
+                        || haystack.indexOf('tgwebappdata') !== -1
+                        || haystack.indexOf('tgwebappversion') !== -1;
+                    var webApp = (window.Telegram && window.Telegram.WebApp) || null;
+                    if (!webApp && !looksLikeTg) return;
+                    // Маркер для бэка (DetectNativeClient): кука читается уже
+                    // на document-запросах, hash до сервера не долетает.
+                    try { document.cookie = 'upin_client=telegram; path=/; max-age=31536000; SameSite=Lax'; } catch (e) {}
+                    if (!webApp || typeof webApp.ready !== 'function') return;
+                    var root = document.documentElement;
+                    root.classList.add('tg-app');
+                    try { webApp.ready(); } catch (e) {}
+                    try { webApp.expand(); } catch (e) {}
+                    try { if (typeof webApp.disableVerticalSwipes === 'function') webApp.disableVerticalSwipes(); } catch (e) {}
+                    // Тема Telegram → CSS-переменные до paint, чтобы не было
+                    // белой вспышки в тёмной теме (мост useTelegram обновит их
+                    // же при themeChanged и подпишется на события).
+                    try {
+                        var tp = webApp.themeParams || {};
+                        var setVar = function (name, value) { if (value) root.style.setProperty(name, value); };
+                        setVar('--tg-theme-bg-color', tp.bg_color);
+                        setVar('--tg-theme-text-color', tp.text_color);
+                        setVar('--tg-theme-hint-color', tp.hint_color);
+                        setVar('--tg-theme-link-color', tp.link_color);
+                        setVar('--tg-theme-button-color', tp.button_color);
+                        setVar('--tg-theme-button-text-color', tp.button_text_color);
+                        setVar('--tg-theme-secondary-bg-color', tp.secondary_bg_color);
+                        setVar('--tg-theme-header-bg-color', tp.header_bg_color);
+                        setVar('--tg-theme-accent-text-color', tp.accent_text_color);
+                        setVar('--tg-theme-section-bg-color', tp.section_bg_color);
+                        var scheme = webApp.colorScheme === 'dark' ? 'dark' : 'light';
+                        root.classList.toggle('tg-dark', scheme === 'dark');
+                        var vh = webApp.viewportHeight || window.innerHeight;
+                        root.style.setProperty('--tg-viewport-height', vh + 'px');
+                        var stable = webApp.viewportStableHeight || vh;
+                        root.style.setProperty('--tg-viewport-stable', stable + 'px');
+                        var inset = webApp.contentSafeAreaInset || webApp.safeAreaInset || null;
+                        var top = Math.max(0, Math.round((inset && inset.top) || 0));
+                        var bottom = Math.max(0, Math.round((inset && inset.bottom) || 0));
+                        root.style.setProperty('--tg-sat', top + 'px');
+                        root.style.setProperty('--tg-sab', bottom + 'px');
+                    } catch (e) {}
+                } catch (e) {}
+            })();
+        </script>
+        <script nonce="{{ $cspNonce ?? '' }}">
+            (function(){ try{ var root=document.documentElement; var s=localStorage.getItem('theme'); var m=window.matchMedia('(prefers-color-scheme: dark)').matches; var d=s ? s==='dark' : m; if(d) root.classList.add('dark'); root.style.colorScheme = d?'dark':'light'; var tgBg=root.classList.contains('tg-app') ? root.style.getPropertyValue('--tg-theme-bg-color').trim() : ''; var bg=tgBg || (d?'#0F121F':'#ffffff'); root.style.backgroundColor=bg; }catch(e){} })();
         </script>
         {{-- Прелоадер: полноэкранный boot-экран в стиле Tinder
               (тёплая тьма, светящаяся иконка пин+сердце).
