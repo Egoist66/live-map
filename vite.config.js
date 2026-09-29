@@ -174,6 +174,14 @@ export default defineConfig({
     worker: {
         format: 'es',
     },
+    ssr: {
+        // Самодостаточный SSR-бандл: все npm-зависимости инлайнятся
+        // в bootstrap/ssr/ssr.js. Иначе бандл дергает bare-импорты
+        // (vue, @inertiajs/...) из node_modules, которых нет в прод-образе
+        // (мультистейдж не везёт node_modules) — SSR падает
+        // с ERR_MODULE_NOT_FOUND. На клиентский билд не влияет.
+        noExternal: true,
+    },
     plugins: [
         laravel({
             input: 'resources/js/app.ts',

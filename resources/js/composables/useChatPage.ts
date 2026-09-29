@@ -479,7 +479,9 @@ export function useChatPage(initialConversationId?: number) {
       await chat.openConversation(targetId)
       const opened = chat.activeConv.value as any
       const isSos = String(opened?.type ?? 'direct') !== 'direct'
-      tab.value = !isSos && opened?.other?.is_match ? 'ulove' : 'chats'
+      // В чистом ULove таба «Чаты» нет — остаёмся в ULove даже без мэтча
+      // (строка честно покажется без пилюли «Мэтч», см. ChatList).
+      tab.value = !isSos && (opened?.other?.is_match || uloveOnly.value) ? 'ulove' : 'chats'
       focusChatInput()
     } catch (e: any) {
       const msg = e?.response?.data?.message || 'Не удалось открыть чат'

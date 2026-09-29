@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { isTelegramWebView } from '@/composables/useTelegram'
+import { isTelegramWebView, webAppSupports } from '@/composables/useTelegram'
 
 const isVisible = ref(false)
 const label = ref('')
@@ -29,14 +29,19 @@ function getMainButton(): import('@/types/telegram').TelegramMainButton | null {
 /**
  * Покрасить MainButton под текущую палитру Telegram.
  *
+ * setParams — Bot API 6.1: на 6.0 вызов лишь спамит варнингом,
+ * поэтому версию проверяем заранее. Сама кнопка (setText/show)
+ * доступна уже с 6.0 — она не гейтится.
+ *
  * Вызывать после show/setText и на событие themeChanged,
  * иначе кнопка остаётся дефолтной синей в кастомных темах.
  */
 function syncMainButtonTheme(): void {
+  const webApp = typeof window !== 'undefined' ? window.Telegram?.WebApp : undefined
   const button = getMainButton()
-  const theme = typeof window !== 'undefined' ? window.Telegram?.WebApp?.themeParams : undefined
+  const theme = webApp?.themeParams
 
-  if (!button || !theme) {
+  if (!button || !theme || !webApp || !webAppSupports(webApp, '6.1')) {
     return
   }
 
@@ -146,10 +151,15 @@ export function useTelegramMainButton() {
       return
     }
 
-    try {
-      button.hideProgress()
-    } catch {
-      // No-op.
+    const webApp = typeof window !== 'undefined' ? window.Telegram?.WebApp : undefined
+    const supportsProgress = webApp ? webAppSupports(webApp, '6.1') : false
+
+    if (supportsProgress) {
+      try {
+        button.hideProgress()
+      } catch {
+        // No-op.
+      }
     }
 
     try {
@@ -162,12 +172,15 @@ export function useTelegramMainButton() {
   /**
    * Включить/выключить спиннер загрузки на кнопке.
    *
+   * showProgress — Bot API 6.1: на 6.0 вызов лишь спамит варнингом.
+   *
    * @param loading true — показать прогресс
    */
   function setMainButtonLoading(loading: boolean): void {
     const button = getMainButton()
+    const webApp = typeof window !== 'undefined' ? window.Telegram?.WebApp : undefined
 
-    if (!button) {
+    if (!button || !webApp || !webAppSupports(webApp, '6.1')) {
       return
     }
 
@@ -187,12 +200,15 @@ export function useTelegramMainButton() {
   /**
    * Сделать кнопку (не)активной без скрытия.
    *
+   * enable/disable — Bot API 6.1: на 6.0 вызов лишь спамит варнингом.
+   *
    * @param active true — кнопка нажимаема
    */
   function setMainButtonActive(active: boolean): void {
     const button = getMainButton()
+    const webApp = typeof window !== 'undefined' ? window.Telegram?.WebApp : undefined
 
-    if (!button) {
+    if (!button || !webApp || !webAppSupports(webApp, '6.1')) {
       return
     }
 

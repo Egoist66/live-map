@@ -218,6 +218,9 @@ html.dark .bg-stone-900\/90, html.dark .bg-black\/50, html.dark .bg-black\/60 { 
   /* Высота Mini App из WebApp.viewportHeight: внутри Telegram точнее
      100dvh (учитывает шапку/кнопки клиента), снаружи — обычный dvh. */
   .h-tg-viewport { height: var(--tg-viewport-height, 100dvh); }
+  /* Отступ под нативные кнопки Telegram (закрыть/свернуть/меню):
+     0 везде, кроме мобильного Mini App, где значение ставит useTelegram. */
+  .pt-tg-chrome { padding-top: var(--tg-chrome-top, 0px); }
 }
 
 /* Мобильный шелл без пустых полос: фон тянется на всю высоту
@@ -248,8 +251,28 @@ html, body { min-height: 100vh; min-height: 100svh; min-height: 100dvh; }
   --app-header-sm: 56px;
   --app-header-md: 64px;
   --app-bottomnav: 68px;
+  /* Зазор под нативные кнопки Telegram поверх WebView.
+     0 по умолчанию; в мобильном Mini App значение ставит useTelegram
+     (ранний инлайн в blade — до paint, мост — на событиях). */
+  --tg-chrome-top: 0px;
 }
 .no-safe-area-top { --sat: 0px; }
+
+/* Мобильный Mini App: нативные кнопки клиента (закрыть слева,
+   свернуть/меню справа) парят поверх контента. Опускаем шапку
+   на --tg-chrome-top и растим константы высоты хедера, чтобы все
+   зависимые calc() (фреймы карты/чата, тосты, page-scroll) сошлись.
+   Только тач: на десктопе у Mini App отдельное окно без оверлея. */
+@media (pointer: coarse) {
+  html.tg-app {
+    --app-header-sm: calc(56px + var(--tg-chrome-top, 0px));
+    --app-header-md: calc(64px + var(--tg-chrome-top, 0px));
+  }
+  html.tg-app .native-safe-top,
+  html.tg-app.no-safe-area-top .native-safe-top {
+    padding-top: calc(var(--sat-real, 0px) + var(--tg-chrome-top, 0px));
+  }
+}
 
 /* Полноэкранные поверхности (карта/чат): ровно место между шапкой и нижним меню. */
 .h-app-full {
@@ -333,17 +356,18 @@ html.native-keyboard-open .h-app-full {
 @media (max-width: 1023.98px) {
   @supports not (height: 100dvh) {
     .swipes-tab-scroll {
-      height: calc(100vh - var(--app-bottomnav) - var(--sab) - var(--sat)) !important;
-      max-height: calc(100vh - var(--app-bottomnav) - var(--sab) - var(--sat)) !important;
+      height: calc(100vh - var(--app-bottomnav) - var(--sab) - var(--sat) - var(--tg-chrome-top, 0px)) !important;
+      max-height: calc(100vh - var(--app-bottomnav) - var(--sab) - var(--sat) - var(--tg-chrome-top, 0px)) !important;
     }
   }
 }
 /* Мобила: скроллер ниже фиксированного меню + запас под шторку
-    жестов в конце скролла. */
+    жестов в конце скролла. В Mini App сверху ещё спейсер
+    (sat + chrome под кнопки Telegram) — вычитаем и его. */
 @media (max-width: 1023.98px) {
   .swipes-tab-scroll {
-    height: calc(100dvh - var(--app-bottomnav) - var(--sab) - var(--sat));
-    max-height: calc(100dvh - var(--app-bottomnav) - var(--sab) - var(--sat));
+    height: calc(100dvh - var(--app-bottomnav) - var(--sab) - var(--sat) - var(--tg-chrome-top, 0px));
+    max-height: calc(100dvh - var(--app-bottomnav) - var(--sab) - var(--sat) - var(--tg-chrome-top, 0px));
     padding-bottom: calc(1rem + var(--sab));
   }
 }
@@ -563,6 +587,21 @@ html.tg-app a:not(.btn-primary):not(.btn-brand):not(.btn-ghost):not(.p-button) {
 
 * { -webkit-tap-highlight-color: transparent; }
 input, textarea { caret-color: auto; }
+/* Тач: тап по кнопке/ссылке не должен выделять текст — иначе под
+   скруглённой кнопкой вспыхивает прямоугольник ::selection
+   (особенно заметно при двойных тапах в Mini App). Текст в
+   сообщениях, постах и полях ввода выделяется как раньше. */
+@media (pointer: coarse) {
+  button, a, [role="button"] {
+    -webkit-tap-highlight-color: transparent !important;
+    -webkit-touch-callout: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  button:focus:not(:focus-visible), a:focus:not(:focus-visible) {
+    outline: none !important;
+  }
+}
 .p-dialog-mask { touch-action: pan-y; }
 @media (max-width: 640px) {
   .p-dialog-mask { align-items: flex-end !important; padding: 0 !important; }

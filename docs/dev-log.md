@@ -1,5 +1,67 @@
 # Dev-лог
 
+## 2026-09-29 — Пакет мелочей: скринлок в Mini App, «Мэтч», кнопки, навигация, заглушка
+- 🐞 №7 Скринлок в TG фризил: найдено 3 дефекта. 1) Протухшая сессия (лок на часы в Mini App → 419 на verify) показывала «Неверный код» и вечный ступор без объяснений. 2) `writeLocal`/IndexedDB-throw пропускал `locked=false`. 3) `unlockBody` early-return оставлял `body{position:fixed}` при гонках.
+- 🔧 `screenlock.api.verifyScreenLock` → `{ok, unauthorized}` (401/419 отдельно от неверного кода); `useScreenLock.verify`: честная ошибка «Сессия истекла… Выйти и войти заново», `writeLocal` в try, после анлока отложенный `cleanupStrayScrollLocks()` (модалка под локскрином/оборванный transition); `useScreenLockScroll.unlockBody` — инлайн-стили восстанавливаются всегда, менеджер-релиз только за свой захват.
+- 🔧 №1 из прошлого пакета (ложный «Мэтч») — уже в проде прошлого коммита; если строка `dating_matches` реально есть — мэтч настоящий, проверить SQL из прошлого лога.
+- 🔧 №5 Шапка чата: убран `OnlineDot` с аватара (`ChatWindow`), остался один маленький индикатор с текстом «в сети/оффлайн». Импорт подтёрт (дубль `avatarSrcFor` убран).
+- 🔧 №3 Заглушка профиля: hero-аватар — `decoding sync` + свой композитный слой (async-декод в старых WebView моргает при скролле); `AppImage img` — `translateZ(0)` против репейнт-мигания.
+- 🔧 №4 Прямоугольник под круглыми кнопками: тап выделял текст (`::selection` тёмный) — квадрат за текстом внутри круглой кнопки. На тач-устройствах `button/a/[role=button]` — `user-select:none` + `touch-callout:none` + усиленный tap-highlight; тексты сообщений/постов/поля — как раньше.
+- 🔧 №6 Десктоп-навигация: активная пилюля была полупрозрачная + цветной текст → теперь плотный фирменный градиент + белый текст в обеих темах (Карта/Чат/Кабинет/ULove/UFlow; у ULove/UFlow градиент подписи гаснет в белый только в активе).
+- Проверки: `vue-tsc --noEmit` ✅.
+- ⚠️ Нужен редеплой (JS-билд). Вживую: лок→подождать→анлок (скролл/клики живы), чат-шапка с одним статусом, профиль без мигания, тапы без квадратов, активный пункт меню белый.
+
+## 2026-09-29 — Docker-образы ужаты вдвое: прод 2.05→1.32 ГБ, vite 1.6→0.32 ГБ, dev 3×1.69→1×1.02 ГБ
+- 🔧 Прод `Dockerfile` переписан в мультистейдж: `frontend` (node:20-slim + pnpm build:ssr), `vendor` (composer:2, `--no-dev --ignore-platform-reqs`), финал (php:8.4-cli + только рантайм). Из финала выкинуты полный node/npm/pnpm, devDeps из node_modules и pnpm-store; node — один бинарник из slim-образа (нужен только для Inertia SSR). Плюс `--no-install-recommends` везде.
+- 🔧 `docker/vite.Dockerfile`: `node:20` → `node:20-slim` (код и так на бинде, в образе только node + pnpm).
+- 🔧 `docker/php-dev.Dockerfile`: node + chokidar забираются из `node:20-slim`-стейджа (`nodetools`), Debian-nodejs/npm не ставятся вообще; `rm -rf /tmp/pear` после pecl; `--no-install-recommends`.
+- 🔧 `docker-compose.yml`: все три php-dev сервиса (`app/reverb/queue`) сидят на одном теге `live-map-php-dev` — одна сборка вместо трёх, слои на диске в единственном экземпляре.
+- 🔧 `vite.config.js`: `ssr.noExternal: true` — SSR-бандл самодостаточный. Без этого мультистейдж ломал SSR: бандл дёргал bare-импорты (`vue`, ...) из node_modules, которых в образе больше нет (`ERR_MODULE_NOT_FOUND`, supervisord гасил ssr в FATAL). На клиентский билд не влияет.
+- 🔧 По пути поймано и починено: vendor-стейдж падал без `--ignore-platform-reqs` (в composer-образе нет bcmath/gd/sockets); фронт-стейджу нужен `COPY --from=vendor` (ziggy-js заалиасен на `vendor/tightenco/ziggy`, иначе TS2307).
+- Проверки: `up -d --build` — все 8 контейнеров up, `:8000`→200, `:8001`→200, все 6 supervisord-процессов RUNNING включая `ssr` (`Inertia SSR server started`); образы — `app 1.32GB / php-dev 1.02GB / vite 317MB`, висячие теги удалены, `builder prune` вернул ~13.5 ГБ.
+- Дальше резать — только переездом php-базы на Alpine (~−60%, но риск совместимости rr-бинарника и сборки расширений под musl). Инфру (mysql 1.12 ГБ) не трогаем: апстрим, данные всё равно в volume.
+
+## 2026-09-29 — Чат: честный «Мэтч» + уведомления от бота в личку Telegram
+- 🐞 Ложный «Мэтч»: в чистом ULove-режиме (только модуль ulove) таба «Чаты» нет — ВСЕ direct-диалоги падали в таб ULove, а строка рисовала «Мэтч» + сердечки захардкоженно, даже без взаимного лайка. Бэкенд при этом честный: `is_match` только из реальных `DatingMatch` (мэтч создаётся лишь взаимным лайком в `DatingService::recordAction`).
+- 🔧 `ChatList.vue` (ULove-таб): кольцо/бейдж-сердечко и подпись «Мэтч» — только при `other.is_match`; иначе обычная строка с превью; фолбэк имени «Мэтч» → «Чат».
+- 🔧 `useChatPage.openTarget`: в uloveOnly остаёмся на табе ULove (таба «Чаты» там нет), иначе как раньше.
+- 🔧 Как проверить свой случай: `select * from dating_matches where user_a_id in (X,Y) and user_b_id in (X,Y)` — есть строка = мэтч реальный (свайпы были), нет = был этот фронтовой баг.
+- ✨ Уведомления от бота: новый `TelegramNotifier` (Bot API `sendMessage`, HTML, кнопка `web_app` на нужный экран: чат/ Cвайпы; на http-деве — обычная url-кнопка). События: сообщение (кулдаун 1ч на диалог), лайк (24ч на пару, инкогнито скрыто), мэтч (обоим). 403 (нет /start или блок) → `telegram_blocked_at`, остальное — в лог; исключений наружу нет.
+- 🔧 Хуки: `MessageController::pushToRecipients` (рядом с WebPush/Expo/email), `PinActivityNotifier::swipeLiked/matched`.
+- 🔧 Миграция `..._add_telegram_notify_to_users` (3 тумблера default true + `telegram_blocked_at`); `User` — fillable/casts/PHPDoc. Прогнана локально ✅.
+- 🔧 API: `status` отдаёт тумблеры + `can_notify` + `bot_username`; новый `PATCH /api/telegram/preferences` (тумблеры, `sometimes|boolean`).
+- 🔧 Фронт (Правило №1): `useTelegramNotifications` (load/save с оптимистичным откатом) + `TelegramNotifySettings.vue` в табе «Приложение» (спиннер, подсказка про /start с кнопкой `t.me`, 3 тумблера) — только PrimeVue.
+- ⚠️ Важно для прода: чтобы бот мог писать, каждый должен хоть раз нажать /start у @U1ove_bot (иначе 403 — настройки честно покажут подсказку). `php artisan migrate` на проде обязателен (новые колонки). Проверки: `php -l` ✅ ×6, live-тест `send` на фейковый chat → false без исключений + `canNotify` ✅, `vue-tsc` ✅, `route:list` ✅ (4 telegram-роута).
+- ⚠️ Нужен редеплой (бэк + JS-билд + миграция прод-БД).
+
+## 2026-09-29 — Telegram: сплэш без серого флэша + зазор под нативные кнопки клиента
+- 🐞 Сплэш: розовый квадрат при fade-out выцветал в серый — гас над уже белой подложкой (полутона дают серость), а «опять розовым» был логотип шапки после. Плюс квадрат просили круглее.
+- 🔧 `app.blade.php`: скругление `boot-icon` 26→30px, внутренний `rx` 128→150; скрипт темы держит `html` тёмным (`#150B10`) пока жив `#pwa-boot`, целевой фон стэшится в `window.__upinThemeBg` и возвращается ровно в момент удаления узла (фейд .45→.35с, удаление 550→450мс) — логотип гаснет над тёмным, серого флэша нет.
+- 🔧 `useSplash`: fallback-путь без моста делает то же (restore фона в момент удаления + тип `__upinThemeBg`).
+- 🐞 Шапка: нативные кнопки Telegram (закрыть слева, свернуть/меню справа) парят поверх WebView и перекрывали колокольчик и меню профиля; старые клиенты (6.0) инсетов не отдают вовсе.
+- 🔧 Новая переменная `--tg-chrome-top` (дефолт 0): ранний инлайн в blade ставит до paint, `useTelegram.applyTelegramInsets` обновляет вживую — только тач (`pointer: coarse`), минимум 48px поверх TG-инсета (`max(0, 48 - top)`), новые клиенты с честным `contentSafeAreaInset` получают 0.
+- 🔧 `app.css` (только `pointer: coarse` + `html.tg-app`): `.native-safe-top` → `sat + chrome`; `--app-header-sm/md` растут на chrome — все зависимые `calc()` (фреймы карты/чата, тосты, `page-scroll`) сошлись сами; `swipes-tab-scroll` вычитает chrome (там сверху спейсер); новая утилита `.pt-tg-chrome`.
+- 🔧 `GuestLayout`: `pt-tg-chrome` на контент-обёртку (FAQ и логин/регистрация — логотип ULove больше не под кнопками TG). Десктоп и обычный мобайл-веб не затронуты (var = 0).
+- Проверки: `vue-tsc --noEmit` ✅, `view:clear` ✅.
+- ⚠️ Нужен редеплой (JS-билд + blade): вживую проверить на телефоне в Mini App — шапка ниже кнопок TG, сплэш гаснет без серости, карта/чат не уехали вниз (высота фреймов), свайпы не скроллятся на лишний зазор.
+
+## 2026-09-29 — Telegram: гейтинг методов по версии клиента (тишина в консоли на 6.0)
+- 🐞 Прод-консоль была в варнингах `not supported in version 6.0`: тестовый клиент — старый WebApp 6.0, а мы без проверки дёргали методы новых Bot API (BackButton/setHeaderColor — 6.1, disableVerticalSwipes — 7.1, requestFullscreen — 8.0). Функционально это были безвредные no-op, но спам + на 6.0 реально нет BackButton/fullscreen-кастомизации.
+- 🔧 `types/telegram.ts`: опциональный `isVersionAtLeast` (родной хелпер, есть с Bot API 6.2).
+- 🔧 `useTelegram`: экспортируемый `webAppSupports(webApp, 'x.y')` — сначала родной `isVersionAtLeast`, на 6.0 его нет → ручное сравнение `version`; гейты: `disableVerticalSwipes` ('7.1'), `requestFullscreen` ('8.0'), `setHeaderColor/setBackgroundColor` в `syncChrome` ('6.1').
+- 🔧 `app.blade.php` (ранний инлайн): `disableVerticalSwipes` только при поддержке (та же логика на чистом JS, т.к. хук ещё не загружен).
+- 🔧 `useTelegramNavigation`: BackButton целиком за гейтом '6.1' (`sync` + `init` — молчаливый no-op на 6.0, внутренняя навигация остаётся).
+- 🔧 `useTelegramMainButton`: `setParams/showProgress/enable/disable` за гейтом '6.1'; базовые `setText/show/hide/onClick` (6.0) не гейтятся.
+- Проверки: `vue-tsc --noEmit` ✅.
+- ⚠️ Вживую: обновить Telegram на тестовом устройстве (WebApp 8.0) — появятся BackButton, fullscreen и кастомизация шапки; на 6.0 консоль теперь чистая, приложение работает как раньше. Нужен редеплой (новый JS-билд + blade).
+
+## 2026-09-29 — app-dev падал в `ValueError` сразу после `Server running`: в образе не было node
+- 🔧 Причина: Octane `--watch` запускает `file-watcher.cjs` через `(new ExecutableFinder)->find('node')`. В `php:8.4-cli` ноды нет → `find()` вернул null → Symfony Process упал с `ValueError: First element must contain a non-empty program name`, контейнер вышел в 1, а reverb/queue/vite не стартовали по `depends_on`. Строка про `resolving provenance` в логе сборки — безвредное предупреждение BuildKit, к падению отношения не имеет.
+- 🔧 `docker/php-dev.Dockerfile`: установлены `nodejs + npm`, глобальный `chokidar` и `ENV NODE_PATH=/usr/lib/node_modules` (резолв из `vendor/laravel/octane/bin` через bind-mount с pnpm-раскладкой ненадёжен, глобал — детерминирован).
+- 🔧 `docker/dev-entrypoint.sh`: к `octane:start` добавлен `--poll` — Windows bind-mount не пробрасывает inotify, без polling вотчер правок молча не видит.
+- 🔧 `docker/php-dev.ini`: `error_reporting = E_ALL & ~E_DEPRECATED` — старый `spiral/roadrunner-cli` сыпал десятки `Deprecated` на PHP 8.4 при каждом старте.
+- Проверки: `docker run --entrypoint node` → `v20.19.2`, `chokidar 3.6.0` резолвится ✅; `docker compose --profile dev up -d --build` — все 8 контейнеров up, `app-dev` healthy ✅, `http://localhost:8001/` → 200 ✅, в логах `RoadRunner server started`, `ValueError` больше нет.
+
 ## 2026-09-29 — Dev-режим на Octane: быстрый старт и хот-релоад всего
 - 🔧 Причина тормозов: dev крутился на `artisan serve` (boot Laravel на каждый запрос, один поток), команда `docker:dev` делала `--build` при каждом запуске, а serve+reverb+queue стартовали последовательно в одном контейнере. В `composer.json` уже лежали `laravel/octane + roadrunner` — грех не использовать.
 - 🔧 `app-dev` переведён на `php artisan octane:start --server=roadrunner --watch` (`docker/dev-entrypoint.sh`, роль `DEV_ROLE=app`): приложение в памяти воркеров, правки `app/routes/config` подхватываются сами за ~1–2 сек (polling mtime — работает через Windows bind-mount). Фолбэк на `serve --no-reload`, если нет `vendor/bin/rr`.

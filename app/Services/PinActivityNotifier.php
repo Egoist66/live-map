@@ -121,7 +121,15 @@ class PinActivityNotifier
             return null;
         }
 
-        return UserNotifier::send($liked, new DatingLikedNotification($liker, (int) $liked->id, $isIncognito, $isSuperlike));
+        $row = UserNotifier::send($liked, new DatingLikedNotification($liker, (int) $liked->id, $isIncognito, $isSuperlike));
+
+        try {
+            TelegramNotifier::liked($liker, $liked, $isIncognito, $isSuperlike);
+        } catch (\Throwable $e) {
+            Log::warning('telegram liked failed', ['error' => $e->getMessage()]);
+        }
+
+        return $row;
     }
 
     /**
@@ -131,6 +139,11 @@ class PinActivityNotifier
     {
         foreach ([[$other, $me], [$me, $other]] as [$recipient, $actor]) {
             UserNotifier::send($recipient, new DatingMatchedNotification($actor, (int) $recipient->id, $matchId));
+        }
+        try {
+            TelegramNotifier::matched($me, $other, $matchId);
+        } catch (\Throwable $e) {
+            Log::warning('telegram matched failed', ['error' => $e->getMessage()]);
         }
         try {
             UserDatabaseNotification::where('type', 'dating.liked')

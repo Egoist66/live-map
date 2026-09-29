@@ -61,6 +61,9 @@ watch(
   opacity: 0;
   filter: blur(8px);
   transition: opacity 0.45s ease, filter 0.45s ease, transform 0.3s ease;
+  /* Свой композитный слой: в старых WebView перерисовка картинки
+     при скролле даёт моргание. */
+  transform: translateZ(0);
 }
 .app-image.is-loaded img {
   opacity: 1;

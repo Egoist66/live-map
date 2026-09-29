@@ -98,18 +98,26 @@ export function useScreenLockScroll() {
   }
 
   function unlockBody() {
-    if (!active.value) return
+    const wasActive = active.value
     active.value = false
-    // Сначала отдаём свой голос в менеджере: пока висит чужой оверлей
-    // (модалка, leave-transition нашего же оверлея), overflow остаётся hidden.
-    releaseScrollLock(SCROLL_OWNER)
+    // Свой голос в менеджере отдаём только если захватывали: чужой
+    // overflow (модалка под локскрином) не трогаем.
+    if (wasActive) {
+      releaseScrollLock(SCROLL_OWNER)
+    }
+    // Инлайн-стили — только наши (снапшот в lockBody), поэтому
+    // восстанавливаем всегда, даже если active уже false: гонка
+    // монтирования/таймеров иначе оставляет body{position:fixed}
+    // навсегда — «мёртвая» страница без скролла в Mini App.
     ;(document.documentElement.style as any).overscrollBehavior = prev.value.htmlOverscroll
     ;(document.body.style as any).overscrollBehavior = prev.value.bodyOverscroll
     ;(document.body.style as any).touchAction = prev.value.bodyTouch
     document.body.style.position = prev.value.bodyPosition
     document.body.style.top = prev.value.bodyTop
     document.body.style.width = prev.value.bodyWidth
-    window.scrollTo(0, scrollY.value)
+    if (wasActive) {
+      window.scrollTo(0, scrollY.value)
+    }
   }
 
   function sync(v: boolean) {

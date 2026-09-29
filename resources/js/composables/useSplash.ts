@@ -27,6 +27,10 @@ const PAINT_DELAY_MS = 100
 
 type BladeSplashBridge = {
   __upinHideSplash?: () => void
+  /** Целевой фон <html>: blade-скрипт темы держит тёмный фон,
+      пока виден boot-сплэш (иначе розовый логотип при fade-out
+      выцветает в серый), и возвращает его при скрытии. */
+  __upinThemeBg?: string
 }
 
 /**
@@ -84,6 +88,20 @@ export function hideSplash(): void {
   el.classList.add('done')
 
   window.setTimeout(() => {
+    // Запасной путь без blade-моста: вернуть целевой фон <html>
+    // в момент удаления узла (как делает __upinHideSplash).
+    // Именно в момент удаления, а не старта фейда: розовый логотип
+    // должен гаснуть над тёмной подложкой, иначе выцветает в серый.
+    try {
+      const want = (window as unknown as BladeSplashBridge).__upinThemeBg || ''
+
+      if (want) {
+        document.documentElement.style.backgroundColor = want
+      }
+    } catch {
+      // No-op: фон некритичен для скрытия сплэша.
+    }
+
     el.remove()
     removeLegacySplash()
   }, REMOVE_AFTER_MS)

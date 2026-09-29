@@ -34,6 +34,7 @@ Route::get('/reference/{slug}', [\App\Http\Controllers\ReferencePageController::
 Route::middleware(['web', 'throttle:30,1'])->post('/telegram/auth', [\App\Http\Controllers\TelegramAuthController::class, 'auth']);
 Route::middleware(['web', 'auth:web,sanctum', 'throttle:60,1'])->group(function () {
     Route::get('/telegram/status', [\App\Http\Controllers\TelegramAuthController::class, 'status']);
+    Route::patch('/telegram/preferences', [\App\Http\Controllers\TelegramAuthController::class, 'preferences']);
     Route::delete('/telegram/link', [\App\Http\Controllers\TelegramAuthController::class, 'unlink']);
 });
 

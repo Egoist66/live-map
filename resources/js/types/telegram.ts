@@ -110,6 +110,12 @@ export interface TelegramWebApp {
   ready: () => void
   expand: () => void
   close: () => void
+  /**
+   * Проверка версии клиента (Bot API 6.2+, на 6.0 отсутствует).
+   * Сама библиотека внутри гейтит методы версией и спамит
+   * варнингами в консоль — поэтому версию проверяем ДО вызова.
+   */
+  isVersionAtLeast?: (version: string) => boolean
   /** Bot API 8.0+: развернуть в полноэкранный режим. */
   requestFullscreen?: () => void
   exitFullscreen?: () => void

@@ -14,7 +14,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['name', 'profile_slug', 'email', 'password', 'gender', 'birth_date', 'country', 'country_code', 'plan', 'latitude', 'longitude', 'role', 'account_type', 'is_admin', 'is_hidden_from_search', 'dating_enabled', 'dating_goal', 'signup_goal', 'default_mode', 'default_mode_set_at', 'enabled_modules', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_gender_pref', 'dating_hide_name', 'dating_hide_age', 'dating_hide_distance', 'dating_match_only', 'random_chats_used', 'random_chats_month', 'superlikes_day', 'superlikes_used', 'superlikes_balance', 'boosts_balance', 'boost_until', 'boost_month', 'undos_day', 'undos_used', 'avatar_path', 'home_lat', 'home_lng', 'home_city', 'home_address', 'home_visibility', 'home_show_exact', 'home_radius_km', 'bio', 'thought', 'reputation_score', 'level', 'quest_cooldown_until', 'quest_last_track', 'quest_granted_at', 'is_anonymous_default', 'default_location_precision', 'default_blur_meters', 'message_privacy', 'allow_random_messages', 'call_cooldown_enabled', 'video_calls_enabled', 'photo_comments_privacy', 'flow_comments_privacy', 'auto_reply_enabled', 'auto_reply_text', 'settings', 'last_seen_at', 'is_invisible', 'screen_lock_code', 'screen_lock_timeout', 'screen_lock_kind', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at', 'terms_accepted_at', 'terms_version', 'telegram_id', 'telegram_username', 'telegram_photo_url', 'telegram_linked_at'])]
+#[Fillable(['name', 'profile_slug', 'email', 'password', 'gender', 'birth_date', 'country', 'country_code', 'plan', 'latitude', 'longitude', 'role', 'account_type', 'is_admin', 'is_hidden_from_search', 'dating_enabled', 'dating_goal', 'signup_goal', 'default_mode', 'default_mode_set_at', 'enabled_modules', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_gender_pref', 'dating_hide_name', 'dating_hide_age', 'dating_hide_distance', 'dating_match_only', 'random_chats_used', 'random_chats_month', 'superlikes_day', 'superlikes_used', 'superlikes_balance', 'boosts_balance', 'boost_until', 'boost_month', 'undos_day', 'undos_used', 'avatar_path', 'home_lat', 'home_lng', 'home_city', 'home_address', 'home_visibility', 'home_show_exact', 'home_radius_km', 'bio', 'thought', 'reputation_score', 'level', 'quest_cooldown_until', 'quest_last_track', 'quest_granted_at', 'is_anonymous_default', 'default_location_precision', 'default_blur_meters', 'message_privacy', 'allow_random_messages', 'call_cooldown_enabled', 'video_calls_enabled', 'photo_comments_privacy', 'flow_comments_privacy', 'auto_reply_enabled', 'auto_reply_text', 'settings', 'last_seen_at', 'is_invisible', 'screen_lock_code', 'screen_lock_timeout', 'screen_lock_kind', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at', 'terms_accepted_at', 'terms_version', 'telegram_id', 'telegram_username', 'telegram_photo_url', 'telegram_linked_at', 'telegram_notify_messages', 'telegram_notify_likes', 'telegram_notify_matches', 'telegram_blocked_at'])]
 #[Hidden(['password', 'remember_token', 'screen_lock_code'])]
 /**
  * Пользователь приложения.
@@ -30,6 +30,10 @@ use Illuminate\Support\Facades\Storage;
  * @property string|null $telegram_username Username в Telegram без @.
  * @property string|null $telegram_photo_url Аватар из Telegram на момент привязки.
  * @property \Carbon\Carbon|null $telegram_linked_at Когда привязан Telegram.
+ * @property bool $telegram_notify_messages Слать в Telegram о новых сообщениях.
+ * @property bool $telegram_notify_likes Слать в Telegram о лайках анкеты.
+ * @property bool $telegram_notify_matches Слать в Telegram о взаимных мэтчах.
+ * @property \Carbon\Carbon|null $telegram_blocked_at Когда Bot API вернул 403 (нет /start или блок).
  */
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -972,6 +976,10 @@ class User extends Authenticatable implements MustVerifyEmail
             'pins_today_date' => 'date',
             'trial_ends_at' => 'datetime',
             'telegram_linked_at' => 'datetime',
+            'telegram_notify_messages' => 'boolean',
+            'telegram_notify_likes' => 'boolean',
+            'telegram_notify_matches' => 'boolean',
+            'telegram_blocked_at' => 'datetime',
             'bio' => EncryptedTextCast::class,
             'thought' => EncryptedTextCast::class,
             'dating_about' => EncryptedTextCast::class,

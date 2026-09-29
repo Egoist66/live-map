@@ -108,6 +108,10 @@ class TelegramAuthController extends Controller
     /**
      * Статус привязки для залогиненного пользователя.
      *
+     * Отдаём и тумблеры TG-уведомлений + флаг can_notify, чтобы
+     * настройки показывали честную подсказку («нажмите /start у бота»),
+     * а не молчали, когда Bot API отвечает 403.
+     *
      * @param Request $request текущий запрос
      * @return JsonResponse
      */
@@ -124,6 +128,52 @@ class TelegramAuthController extends Controller
             'telegram_id' => $user->telegram_id,
             'telegram_username' => $user->telegram_username,
             'telegram_photo_url' => $user->telegram_photo_url,
+            'notify_messages' => (bool) ($user->telegram_notify_messages ?? true),
+            'notify_likes' => (bool) ($user->telegram_notify_likes ?? true),
+            'notify_matches' => (bool) ($user->telegram_notify_matches ?? true),
+            'can_notify' => $user->telegram_id !== null && $user->telegram_blocked_at === null,
+            'bot_username' => (string) config('telegram.bot_username', 'U1ove_bot'),
+        ]);
+    }
+
+    /**
+     * Обновить тумблеры TG-уведомлений.
+     *
+     * @param Request $request текущий запрос
+     * @return JsonResponse свежие тумблеры
+     */
+    public function preferences(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (! $user) {
+            return response()->json(['message' => 'Не авторизован.'], 401);
+        }
+
+        $validated = $request->validate([
+            'notify_messages' => 'sometimes|boolean',
+            'notify_likes' => 'sometimes|boolean',
+            'notify_matches' => 'sometimes|boolean',
+        ]);
+
+        $patch = [];
+
+        foreach (['notify_messages', 'notify_likes', 'notify_matches'] as $key) {
+            if (array_key_exists($key, $validated)) {
+                $patch['telegram_'.$key] = (bool) $validated[$key];
+            }
+        }
+
+        if ($patch !== []) {
+            $user->forceFill($patch)->save();
+        }
+
+        $fresh = $user->fresh();
+
+        return response()->json([
+            'notify_messages' => (bool) ($fresh->telegram_notify_messages ?? true),
+            'notify_likes' => (bool) ($fresh->telegram_notify_likes ?? true),
+            'notify_matches' => (bool) ($fresh->telegram_notify_matches ?? true),
         ]);
     }
 

@@ -24,12 +24,21 @@ export async function clearScreenLock(): Promise<void> {
   await api.delete('/api/user/screen-lock')
 }
 
-export async function verifyScreenLock(code: string): Promise<boolean> {
+export interface ScreenLockVerifyResult {
+  /** Код принят сервером. */
+  ok: boolean
+  /** Сессия мертва (401/419): код тут ни при чём, нужен перезаход. */
+  unauthorized: boolean
+}
+
+export async function verifyScreenLock(code: string): Promise<ScreenLockVerifyResult> {
   try {
     await api.post('/api/user/screen-lock/verify', { code })
-    return true
+    return { ok: true, unauthorized: false }
   } catch (e: any) {
     if (!e?.response) throw e
-    return false
+    const status = Number(e.response?.status ?? 0)
+    if (status === 401 || status === 419) return { ok: false, unauthorized: true }
+    return { ok: false, unauthorized: false }
   }
 }

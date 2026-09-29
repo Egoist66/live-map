@@ -1,5 +1,5 @@
 import { router } from '@inertiajs/vue3'
-import { isTelegramWebView } from '@/composables/useTelegram'
+import { isTelegramWebView, webAppSupports } from '@/composables/useTelegram'
 
 let initialized = false
 let backHandler: (() => void) | null = null
@@ -36,6 +36,11 @@ export function useTelegramNavigation() {
       return
     }
 
+    // BackButton — Bot API 6.1: на 6.0 любой вызов спамит варнингом.
+    if (!webAppSupports(webApp, '6.1')) {
+      return
+    }
+
     const path = window.location.pathname
     const isRoot = path === '/' || path === '/swipes' || path === '/map'
 
@@ -61,7 +66,7 @@ export function useTelegramNavigation() {
 
     const webApp = window.Telegram?.WebApp
 
-    if (!webApp) {
+    if (!webApp || !webAppSupports(webApp, '6.1')) {
       return
     }
 

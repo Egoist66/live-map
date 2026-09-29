@@ -5,6 +5,7 @@ import { useToast } from 'primevue/usetoast'
 import { usePwaSettings } from '@/composables/usePwaSettings'
 import { usePwaInstallGuide } from '@/composables/usePwaInstallGuide'
 import PwaPushToggle from '@/Components/Features/Pwa/PwaPushToggle.vue'
+import TelegramNotifySettings from '@/Components/Features/Settings/TelegramNotifySettings.vue'
 // Гайд-диалог — только по клику, грузим лениво.
 const PwaInstallGuideDialog = defineAsyncComponent(() => import('@/Components/Features/Pwa/PwaInstallGuideDialog.vue'))
 import SettingsModulesSection from '@/Components/Features/Settings/SettingsModulesSection.vue'
@@ -55,6 +56,8 @@ async function onClearCache() {
           </p>
 
           <PwaPushToggle />
+
+          <TelegramNotifySettings />
 
           <div class="flex items-center gap-3 rounded-2xl border border-stone-200/70 dark:border-zinc-800 px-4 py-3">
             <i class="pi pi-database text-lg text-indigo-500 shrink-0" />

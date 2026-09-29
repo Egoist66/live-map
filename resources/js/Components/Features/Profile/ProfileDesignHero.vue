@@ -43,13 +43,16 @@ const emit = defineEmits<{
         >
           <!-- LCP-элемент страницы: eager + fetchpriority, иначе Lighthouse
                `lcp-discovery-insight` штрафует. aria-label уходит в alt
-               (аудит `image-alt`), размеры — против CLS. -->
+               (аудит `image-alt`), размеры — против CLS.
+               decoding sync + свой композитный слой: async-декод в старых
+               WebView перерисовывает картинку при скролле — заглушка
+               «моргает». -->
           <Avatar
             :image="avatarSrc"
             :aria-label="`Фото профиля ${user.name}`"
             shape="square"
-            :pt="{ image: { fetchpriority: 'high', loading: 'eager', decoding: 'async', width: 256, height: 256 } }"
-            class="!h-full !w-full !rounded-[22px] [&_img]:!rounded-[22px] [&_img]:object-cover"
+            :pt="{ image: { fetchpriority: 'high', loading: 'eager', decoding: 'sync', width: 256, height: 256 } }"
+            class="!h-full !w-full !rounded-[22px] [&_img]:!rounded-[22px] [&_img]:object-cover [&_img]:[transform:translateZ(0)]"
           />
           <OnlineDot
             :online="online"

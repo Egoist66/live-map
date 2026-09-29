@@ -5,7 +5,6 @@ import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
 import Textarea from 'primevue/textarea'
 import ContextMenu from 'primevue/contextmenu'
-import OnlineDot from '@/Components/Features/Feedback/OnlineDot.vue'
 import OrgBadge from '@/Components/Features/Chat/OrgBadge.vue'
 import MessageBubble from '@/Components/Features/Chat/MessageBubble.vue'
 import VoiceMessagePlayer from '@/Components/Features/Chat/VoiceMessagePlayer.vue'
@@ -100,7 +99,7 @@ function dayLabel(value: any): string {
         <button @click="emit('back')" :class="datingEntry ? 'text-white hover:bg-white/20' : 'hover:bg-black/10'" class="lg:hidden w-9 h-9 grid place-items-center rounded-full active:scale-95 shrink-0 text-xl leading-none">‹</button>
         <button v-if="datingEntry" @click="emit('swipesBack')" title="Назад в свайпы" class="!hidden sm:!grid w-9 h-9 place-items-center rounded-full bg-white/20 hover:bg-white/30 active:scale-95 shrink-0"><i class="pi pi-heart-fill text-sm"></i></button>
         <Link :href="headerLink.headerHref.value" class="flex items-center gap-2.5 hover:opacity-80 min-w-0 flex-1 overflow-hidden py-0.5">
-          <span class="relative block shrink-0 w-10 h-10"><span v-if="activeConv?.title" class="w-10 h-10 rounded-full bg-gradient-to-br from-violet-700 to-purple-900 text-white grid place-items-center">🏘️</span><Avatar v-else :image="avatarSrcFor(activeConv?.other)" shape="circle" class="!w-10 !h-10 [&_img]:object-cover" :class="datingEntry ? 'ring-2 ring-white/70' : ''" :pt="{ image: { class: 'object-cover' } }" /><OnlineDot v-if="!activeConv?.title" :online="online" /></span>
+          <span class="relative block shrink-0 w-10 h-10"><span v-if="activeConv?.title" class="w-10 h-10 rounded-full bg-gradient-to-br from-violet-700 to-purple-900 text-white grid place-items-center">🏘️</span><Avatar v-else :image="avatarSrcFor(activeConv?.other)" shape="circle" class="!w-10 !h-10 [&_img]:object-cover" :class="datingEntry ? 'ring-2 ring-white/70' : ''" :pt="{ image: { class: 'object-cover' } }" /></span>
           <span class="min-w-0 flex-1 block"><span class="block text-[16px] lg:text-[15px] font-bold truncate hover:underline leading-snug" :class="datingEntry ? 'text-white' : 'dark:text-white'">{{ activeConv?.title || activeConv?.other?.name }} <OrgBadge :is-organization="activeConv?.other?.is_organization" /></span><span v-if="typing" class="mt-0.5 block text-xs leading-none animate-pulse" :class="datingEntry ? 'text-white/90' : 'text-[#1786FF]'">печатает...</span><span v-else-if="activeConv?.title" class="mt-0.5 block text-xs leading-none text-stone-500 dark:text-zinc-400">🏘️ Общий чат района</span><span v-else-if="datingBadge" class="mt-0.5 text-[11px] font-bold leading-none flex items-center gap-1" :class="datingEntry ? 'text-white/90' : 'text-rose-500'"><i class="pi pi-heart-fill text-[10px]"></i>{{ datingBadge }}</span><span v-else class="mt-0.5 flex items-center gap-1 text-xs leading-none text-stone-500 dark:text-zinc-400"><span :class="online ? 'bg-emerald-500' : 'bg-zinc-400'" class="h-1.5 w-1.5 rounded-full" />{{ online ? 'в сети' : 'оффлайн' }}</span></span>
         </Link>
         <div class="flex items-center gap-0.5 shrink-0" :class="datingEntry ? 'text-white' : ''">

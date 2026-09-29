@@ -98,6 +98,45 @@ async function loadScript(): Promise<boolean> {
 }
 
 /**
+ * Проверить, что клиент Telegram поддерживает метод с версии.
+ *
+ * telegram-web-app.js внутри сам гейтит методы версией, но каждый
+ * вызов на старом клиенте (например, 6.0) — это варнинг в консоль
+ * («not supported in version 6.0»). Проверяем заранее: сначала
+ * родной `isVersionAtLeast` (Bot API 6.2+), на 6.0 его нет —
+ * тогда сравниваем `version` вручную.
+ *
+ * Версии методов: BackButton/setHeaderColor/setBackgroundColor — 6.1,
+ * disableVerticalSwipes — 7.1, requestFullscreen/safeArea — 8.0.
+ *
+ * @param webApp живой объект Telegram WebApp
+ * @param required минимальная версия вида '6.1'
+ * @returns true когда метод можно вызывать без варнингов
+ */
+export function webAppSupports(webApp: TelegramWebApp, required: string): boolean {
+  try {
+    if (typeof webApp.isVersionAtLeast === 'function') {
+      return webApp.isVersionAtLeast(required)
+    }
+  } catch {
+    // No-op: упадём в ручное сравнение ниже.
+  }
+
+  const parse = (version: string): [number, number] => {
+    const parts = String(version || '').split('.')
+    const major = Number(parts[0])
+    const minor = Number(parts[1])
+
+    return [Number.isFinite(major) ? major : 0, Number.isFinite(minor) ? minor : 0]
+  }
+
+  const [major, minor] = parse(webApp.version || '')
+  const [reqMajor, reqMinor] = parse(required)
+
+  return major > reqMajor || (major === reqMajor && minor >= reqMinor)
+}
+
+/**
  * Перенести палитру Telegram (themeParams) в CSS-переменные документа.
  *
  * Mini App обязан краситься цветами текущей темы Telegram
@@ -185,6 +224,12 @@ function applyTelegramInsets(webApp: TelegramWebApp): void {
     const root = document.documentElement
     root.style.setProperty('--tg-sat', `${top}px`)
     root.style.setProperty('--tg-sab', `${bottom}px`)
+    // Живое обновление зазора под нативные кнопки клиента
+    // (см. ранний инлайн в app.blade.php): только тач-устройства,
+    // минимум 48px поверх отданного TG инсета.
+    const coarse = window.matchMedia?.('(pointer: coarse)').matches ?? false
+    const chromeTop = coarse ? Math.max(0, 48 - top) : 0
+    root.style.setProperty('--tg-chrome-top', `${chromeTop}px`)
     window.dispatchEvent(new CustomEvent('tg:safe-area', { detail: { top, bottom } }))
   } catch {
     // No-op: без DOM инсеты применит следующий пересчёт safe-area.
@@ -210,6 +255,12 @@ function syncChrome(isDark: boolean): void {
   const theme = webApp.themeParams ?? {}
   const header = theme.header_bg_color || theme.bg_color || (isDark ? '#150B10' : '#ffffff')
   const bg = theme.bg_color || (isDark ? '#150B10' : '#ffffff')
+
+  // setHeaderColor/setBackgroundColor — Bot API 6.1: на 6.0 вызов
+  // лишь спамит варнингом в консоль и ничего не делает.
+  if (!webAppSupports(webApp, '6.1')) {
+    return
+  }
 
   try {
     webApp.setHeaderColor(header)
@@ -301,18 +352,24 @@ export function useTelegram() {
       // No-op: expand не критичен для рендера.
     }
 
-    try {
-      webApp.disableVerticalSwipes?.()
-    } catch {
-      // No-op: Bot API < 7.1 без метода.
+    // Версионные методы вызываем только при поддержке: на старых
+    // клиентах (6.0) каждый такой вызов — варнинг в консоль.
+    if (webAppSupports(webApp, '7.1')) {
+      try {
+        webApp.disableVerticalSwipes?.()
+      } catch {
+        // No-op.
+      }
     }
 
-    try {
-      if (typeof webApp.requestFullscreen === 'function' && !webApp.isFullscreen) {
-        webApp.requestFullscreen()
+    if (webAppSupports(webApp, '8.0')) {
+      try {
+        if (typeof webApp.requestFullscreen === 'function' && !webApp.isFullscreen) {
+          webApp.requestFullscreen()
+        }
+      } catch {
+        // No-op: fullscreen доступен не везде.
       }
-    } catch {
-      // No-op: fullscreen доступен не везде.
     }
 
     isTelegram.value = true

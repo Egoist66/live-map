@@ -1,6 +1,7 @@
 # Node + pnpm для dev-профиля (в образе node pnpm из коробки нет).
 # Запускает только vite-сервер: php-процессы живут в сервисах app-dev/reverb-dev/queue-dev.
-FROM node:20
+# Slim-база вместо полной: код монтируется биндом, в образе только node + pnpm (~250 МБ, было ~1.6 ГБ).
+FROM node:20-slim
 
 RUN corepack enable \
     && corepack prepare pnpm@9 --activate \

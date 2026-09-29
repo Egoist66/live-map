@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { useForm } from 'vee-validate'
 import { useToast } from 'primevue/usetoast'
 import { fetchScreenLock, saveScreenLock, clearScreenLock, verifyScreenLock, normalizeKind } from '@/services/screenlock.api'
+import { cleanupStrayScrollLocks } from '@/composables/useScrollRescue'
 import { kvGet, kvSet, kvDel } from '@/db/app.db'
 import { screenLockSetupSchema } from '@/validation/schemas/screenlock.schema'
 import type { LockKind } from '@/validation/schemas/screenlock.schema'
@@ -331,21 +332,39 @@ export function useScreenLock() {
     error.value = null
     try {
       try {
-        const ok = await verifyScreenLock(input)
+        const result = await verifyScreenLock(input)
         offline.value = false
-        if (ok) {
-          cachedCode = input
-          await writeLocal(input, timeoutMin.value, kind.value)
-        } else {
+        if (result.unauthorized) {
+          // Сессия умерла, пока экран был залочен (типично для Mini App,
+          // вернувшегося через часы): код ни при чём. Показываем честно
+          // и отправляем на перезаход через «Выйти» — в Telegram
+          // автовход поднимет сессию сам. Раньше тут был «Неверный
+          // код» и вечный ступор на локскрине без объяснений.
+          error.value = 'Сессия истекла. Нажмите «Выйти» ниже и войдите заново — в Telegram вход автоматический.'
+          return false
+        }
+        if (!result.ok) {
           error.value = 'Неверный код'
           return false
+        }
+        cachedCode = input
+        try {
+          await writeLocal(input, timeoutMin.value, kind.value)
+        } catch {
+          // IndexedDB недоступен (приватный режим/WebView): разблокируем
+          // всё равно, код просто не закэшируется для офлайна.
+          // Раньше throw отсюда пропускал locked=false — ступор.
         }
       } catch (e: any) {
         if (e?.response) throw e
         offline.value = true
         if (!cachedCode) {
-          const local = await readLocal()
-          cachedCode = local.code
+          try {
+            const local = await readLocal()
+            cachedCode = local.code
+          } catch {
+            cachedCode = null
+          }
         }
         if (!cachedCode || cachedCode !== input) {
           error.value = !cachedCode ? 'Нет соединения — код недоступен на этом устройстве' : 'Неверный код'
@@ -355,6 +374,18 @@ export function useScreenLock() {
       locked.value = false
       broadcastLockState()
       arm()
+      // После анлока — контрольный проход спасателя скролла: модалка,
+      // открытая под локскрином, или оборванный transition могли
+      // оставить сиротскую маску/лок («мёртвая» страница в Mini App).
+      // С задержкой: уходящий оверлей ещё виден во время фейда и
+      // легитимен, чистим после его демонтажа.
+      window.setTimeout(() => {
+        try {
+          cleanupStrayScrollLocks()
+        } catch {
+          // No-op.
+        }
+      }, 450)
       return true
     } finally {
       verifying.value = false

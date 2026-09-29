@@ -50,6 +50,10 @@ services:
   #     за пару секунд и не ждёт reverb/queue, логи не смешиваются.
   # Запуск: pnpm docker:dev (без пересборки) / pnpm docker:dev:build (первый раз).
   app-dev:
+    # Общий образ на все три php-dev сервиса: Dockerfile и контекст
+    # одинаковые, меняется только DEV_ROLE. Одна сборка вместо трёх,
+    # слои на диске в единственном экземпляре.
+    image: live-map-php-dev
     build:
       context: .
       dockerfile: docker/php-dev.Dockerfile
@@ -98,6 +102,7 @@ services:
   # Reverb отдельно: правишь сокет-код — перезапускается только он,
   # Octane-воркеры продолжают отдавать страницы без простоя.
   reverb-dev:
+    image: live-map-php-dev
     build:
       context: .
       dockerfile: docker/php-dev.Dockerfile
@@ -130,11 +135,11 @@ services:
   # Очереди отдельно: queue:listen больше не конкурирует
   # с Octane-воркерами за CPU в одном контейнере.
   queue-dev:
+    image: live-map-php-dev
     build:
       context: .
       dockerfile: docker/php-dev.Dockerfile
     working_dir: /var/www/html
-    profiles: ["dev"]
     volumes:
       - .:/var/www/html
       - dev-vendor:/var/www/html/vendor

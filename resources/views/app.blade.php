@@ -101,7 +101,22 @@
                     root.classList.add('tg-app');
                     try { webApp.ready(); } catch (e) {}
                     try { webApp.expand(); } catch (e) {}
-                    try { if (typeof webApp.disableVerticalSwipes === 'function') webApp.disableVerticalSwipes(); } catch (e) {}
+                    // disableVerticalSwipes — Bot API 7.1: на старых клиентах
+                    // (6.0) прямой вызов лишь спамит варнингом в консоль,
+                    // поэтому версию проверяем заранее (isVersionAtLeast
+                    // есть с 6.2, на 6.0 сравниваем version вручную).
+                    try {
+                        var supportsSwipes = false;
+                        if (typeof webApp.isVersionAtLeast === 'function') {
+                            supportsSwipes = webApp.isVersionAtLeast('7.1');
+                        } else {
+                            var parts = String(webApp.version || '').split('.');
+                            var maj = parseInt(parts[0], 10) || 0;
+                            var min = parseInt(parts[1], 10) || 0;
+                            supportsSwipes = maj > 7 || (maj === 7 && min >= 1);
+                        }
+                        if (supportsSwipes && typeof webApp.disableVerticalSwipes === 'function') webApp.disableVerticalSwipes();
+                    } catch (e) {}
                     // Тема Telegram → CSS-переменные до paint, чтобы не было
                     // белой вспышки в тёмной теме (мост useTelegram обновит их
                     // же при themeChanged и подпишется на события).
@@ -129,12 +144,22 @@
                         var bottom = Math.max(0, Math.round((inset && inset.bottom) || 0));
                         root.style.setProperty('--tg-sat', top + 'px');
                         root.style.setProperty('--tg-sab', bottom + 'px');
+                        // Зазор под нативные кнопки клиента (закрыть слева,
+                        // свернуть/меню справа): они парят поверх WebView.
+                        // Старые клиенты (WebApp 6.0) инсетов не отдают вовсе —
+                        // резервируем минимум 48px, новые с честным
+                        // contentSafeAreaInset получают 0. Только тач.
+                        var coarseTg = false;
+                        try { coarseTg = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches); } catch (e2) {}
+                        var topSafe = (typeof top === 'number' && isFinite(top)) ? top : 0;
+                        var chromeTop = coarseTg ? Math.max(0, 48 - topSafe) : 0;
+                        root.style.setProperty('--tg-chrome-top', chromeTop + 'px');
                     } catch (e) {}
                 } catch (e) {}
             })();
         </script>
         <script nonce="{{ $cspNonce ?? '' }}">
-            (function(){ try{ var root=document.documentElement; var s=localStorage.getItem('theme'); var m=window.matchMedia('(prefers-color-scheme: dark)').matches; var d=s ? s==='dark' : m; if(d) root.classList.add('dark'); root.style.colorScheme = d?'dark':'light'; var tgBg=root.classList.contains('tg-app') ? root.style.getPropertyValue('--tg-theme-bg-color').trim() : ''; var bg=tgBg || (d?'#0F121F':'#ffffff'); root.style.backgroundColor=bg; }catch(e){} })();
+            (function(){ try{ var root=document.documentElement; var s=localStorage.getItem('theme'); var m=window.matchMedia('(prefers-color-scheme: dark)').matches; var d=s ? s==='dark' : m; if(d) root.classList.add('dark'); root.style.colorScheme = d?'dark':'light'; var tgBg=root.classList.contains('tg-app') ? root.style.getPropertyValue('--tg-theme-bg-color').trim() : ''; var bg=tgBg || (d?'#0F121F':'#ffffff'); window.__upinThemeBg = bg; var bootAlive = !!document.getElementById('pwa-boot'); root.style.backgroundColor = bootAlive ? '#150B10' : bg; }catch(e){} })();
         </script>
         {{-- Прелоадер: полноэкранный boot-экран в стиле Tinder
               (тёплая тьма, светящаяся иконка пин+сердце).
@@ -159,7 +184,7 @@
               radial-gradient(90% 60% at 50% 0%, rgba(253, 38, 125, .12) 0%, rgba(253, 38, 125, 0) 60%),
               radial-gradient(70% 50% at 85% 100%, rgba(255, 120, 84, .08) 0%, rgba(255, 120, 84, 0) 60%),
               #150B10;
-            transition: opacity .45s ease, visibility .45s ease;
+            transition: opacity .35s ease, visibility .35s ease;
           }
           #pwa-boot.done {
             opacity: 0;
@@ -175,7 +200,7 @@
           #pwa-boot .boot-icon {
             width: 96px;
             height: 96px;
-            border-radius: 26px;
+            border-radius: 30px;
             box-shadow: 0 18px 60px -12px rgba(253, 38, 125, .75), 0 0 0 1px rgba(255, 255, 255, .08);
             animation: boot-float 2.6s ease-in-out infinite;
           }
@@ -298,8 +323,8 @@
                   <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0" />
                 </radialGradient>
               </defs>
-              <rect width="512" height="512" rx="128" fill="url(#boot-bg)" />
-              <rect width="512" height="512" rx="128" fill="url(#boot-glow)" />
+              <rect width="512" height="512" rx="150" fill="url(#boot-bg)" />
+              <rect width="512" height="512" rx="150" fill="url(#boot-glow)" />
               <path d="M256 108c-70 0-122 52-122 120 0 92 112 176 112 176s112-84 112-176c0-68-52-120-102-120z" fill="#fff" />
               <path d="M247 272c-26-16-42-32-42-50 0-14 11-24 24-24 9 0 15 4 18 10 3-6 9-10 18-10 13 0 24 10 24 24 0 18-16 34-42 50z" fill="#FD267D" />
             </svg>
@@ -315,9 +340,13 @@
                     if (boot && !boot.classList.contains('done')) {
                         boot.classList.add('done');
                         setTimeout(function () {
+                            try {
+                                var want = window.__upinThemeBg || '';
+                                if (want) document.documentElement.style.backgroundColor = want;
+                            } catch (e) {}
                             if (boot && boot.parentNode) boot.parentNode.removeChild(boot);
                             boot = null;
-                        }, 550);
+                        }, 450);
                     }
                 };
                 window.__upinHideSplash = hide;
