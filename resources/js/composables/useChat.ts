@@ -566,7 +566,13 @@ export function useChat() {
       return
     }
     if (isDuplicate(id)) return
-    const isViewing = Number(msg.conversation_id) === Number(selectedId.value) && isChatPageOpen()
+    // Прочитанным помечаем только реально открытый диалог: мало совпадения
+    // selectedId (он мог остаться от прошлого экрана) — требуем, чтобы
+    // activeConv был загружен под этот же диалог. Иначе новый месседж,
+    // прилетевший на списке чатов, тихо помечался бы прочитанным.
+    const selectedConv = Number(selectedId.value)
+    const openedConv = Number((activeConv.value as any)?.id ?? 0)
+    const isViewing = Number(msg.conversation_id) === selectedConv && selectedConv !== 0 && selectedConv === openedConv && isChatPageOpen()
     if (isViewing) {
       appendLiveMessage(msg)
       const n = new Set(typingUsers.value); n.delete(msg.sender_id); typingUsers.value = n

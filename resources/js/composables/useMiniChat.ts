@@ -87,6 +87,19 @@ function findWindow(convId: number): MiniWindow | undefined {
   return windows.value.find((w) => w.convId === convId)
 }
 
+/**
+ * Видна ли вкладка пользователю прямо сейчас.
+ *
+ * @returns true когда вкладка скрыта (фон, свёрнуто) — прочитанным не помечаем
+ */
+function isTabHidden(): boolean {
+  try {
+    return typeof document !== 'undefined' && document.hidden
+  } catch {
+    return false
+  }
+}
+
 function windowTitle(detail: { other?: { name?: string } | null; title?: string | null } | null): string {
   return detail?.other?.name || detail?.title || 'Чат'
 }
@@ -142,6 +155,9 @@ function patchPreview(convId: number, msg: Message, unreadInc: boolean): void {
 /**
  * Входящее сообщение из шины (сокет Echo или поллер).
  * Свои сообщения из другой вкладки тоже вшиваем без прочтения.
+ * Чужое помечаем прочитанным, только если окно открыто И вкладка
+ * видима: иначе сообщение, прилетевшее в фон (свёрнутый Mini App,
+ * другая вкладка), тихо гасло бы непрочитанным.
  */
 function onMessage(e: unknown): void {
   const msg = (e as { message?: Message })?.message
@@ -154,7 +170,7 @@ function onMessage(e: unknown): void {
     if (!win.messages.some((m) => m.id === msg.id)) {
       win.messages = [...win.messages, msg]
     }
-    if (!own) void markReadQuiet(convId)
+    if (!own && !isTabHidden()) void markReadQuiet(convId)
     else patchPreview(convId, msg, false)
     return
   }

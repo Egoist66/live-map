@@ -52,8 +52,19 @@ export function isRecentlySeen(lastSeenAt: string | null | undefined, thresholdM
   } catch { return false }
 }
 
+/**
+ * Пинг онлайна: продлевает last_seen_at.
+ *
+ * В фоне (свёрнутый Mini App, другая вкладка) не пингуем — иначе
+ * свёрнутый выглядит «онлайн» и дубли событий в Telegram-бота
+ * (см. User::isAway) не уходят, а человек их пропускает. Возврат
+ * на вкладку сразу шлёт пинг через visibilitychange ниже.
+ */
 function heartbeat() {
   if (isInvisible()) return
+  try {
+    if (typeof document !== 'undefined' && document.hidden) return
+  } catch { /* без DOM — пингуем как обычно */ }
   chatApi.heartbeat().catch(() => {})
 }
 

@@ -28,6 +28,27 @@ class PinActivityNotifier
         static::broadcastCounters($pin);
     }
 
+    /**
+     * Короткая подпись пина для текста TG-дубля комментария.
+     *
+     * @param Pin $pin пин
+     * @return string «пин „Заголовок“» или просто «пин»
+     */
+    private static function pinLabel(Pin $pin): string
+    {
+        $title = trim((string) ($pin->title ?? ''));
+
+        if ($title === '') {
+            return 'пин';
+        }
+
+        if (mb_strlen($title) > 60) {
+            $title = mb_substr($title, 0, 57).'...';
+        }
+
+        return 'пин «'.$title.'»';
+    }
+
     public static function reaction(Pin $pin, User $actor, string $type): void
     {
         $pin->refresh();
@@ -50,6 +71,11 @@ class PinActivityNotifier
             $owner = User::find($ownerId);
             if ($owner) {
                 UserNotifier::send($owner, new PinCommentedNotification($pin, $actor, $comment, $ownerId));
+                try {
+                    TelegramNotifier::commented($actor, $owner, self::pinLabel($pin), (string) $comment->content, "/map?pin={$pin->id}&comment={$comment->id}", (bool) ($comment->is_anonymous ?? false));
+                } catch (\Throwable $e) {
+                    Log::warning('telegram pin comment failed', ['error' => $e->getMessage()]);
+                }
             }
         }
         static::broadcastCounters($pin);
@@ -63,6 +89,11 @@ class PinActivityNotifier
             $owner = User::find((int) $ownerId);
             if ($owner) {
                 UserNotifier::send($owner, new PinMentionNotification($pin, $actor, $comment, (int) $ownerId));
+                try {
+                    TelegramNotifier::commented($actor, $owner, self::pinLabel($pin), (string) $comment->content, "/map?pin={$pin->id}&comment={$comment->id}", (bool) ($comment->is_anonymous ?? false));
+                } catch (\Throwable $e) {
+                    Log::warning('telegram pin mention failed', ['error' => $e->getMessage()]);
+                }
             }
             UserNotifier::deleteUnread((int) $ownerId, 'pin.commented', 'pin-comment:'.$comment->id);
         }
@@ -76,6 +107,11 @@ class PinActivityNotifier
         $owner = User::find($ownerId);
         if ($owner) {
             UserNotifier::send($owner, new PhotoCommentedNotification($photo, $actor, $comment, $ownerId));
+            try {
+                TelegramNotifier::commented($actor, $owner, 'фото', (string) $comment->content, "/users/{$ownerId}?photo={$photo->id}&comment={$comment->id}");
+            } catch (\Throwable $e) {
+                Log::warning('telegram photo comment failed', ['error' => $e->getMessage()]);
+            }
         }
     }
 
@@ -85,6 +121,11 @@ class PinActivityNotifier
             $owner = User::find((int) $ownerId);
             if ($owner) {
                 UserNotifier::send($owner, new PhotoMentionNotification($photo, $actor, $comment, (int) $ownerId));
+                try {
+                    TelegramNotifier::commented($actor, $owner, 'фото', (string) $comment->content, "/users/{$photo->user_id}?photo={$photo->id}&comment={$comment->id}");
+                } catch (\Throwable $e) {
+                    Log::warning('telegram photo mention failed', ['error' => $e->getMessage()]);
+                }
             }
             UserNotifier::deleteUnread((int) $ownerId, 'photo.commented', 'photo-comment:'.$comment->id);
         }
@@ -105,6 +146,11 @@ class PinActivityNotifier
             $owner = User::find((int) $ownerId);
             if ($owner) {
                 UserNotifier::send($owner, new PhotoRepliedNotification($photo, $actor, $comment, (int) $ownerId));
+                try {
+                    TelegramNotifier::commented($actor, $owner, 'фото', (string) $comment->content, "/users/{$photo->user_id}?photo={$photo->id}&comment={$comment->id}");
+                } catch (\Throwable $e) {
+                    Log::warning('telegram photo reply failed', ['error' => $e->getMessage()]);
+                }
             }
             UserNotifier::deleteUnread((int) $ownerId, 'photo.commented', 'photo-comment:'.$comment->id);
         }

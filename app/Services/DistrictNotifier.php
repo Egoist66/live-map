@@ -202,6 +202,12 @@ class DistrictNotifier
 
                 if ($postAuthor) {
                     UserNotifier::send($postAuthor, new DistrictPostCommentedNotification($district, $post, $actor, $comment, $postAuthorId));
+
+                    try {
+                        TelegramNotifier::commented($actor, $postAuthor, 'новость района', (string) $comment->content, "/districts/{$district->id}");
+                    } catch (\Throwable $e) {
+                        Log::warning('telegram district comment failed', ['error' => $e->getMessage()]);
+                    }
                 }
             }
 
@@ -219,6 +225,12 @@ class DistrictNotifier
 
                 if ($parentAuthor) {
                     UserNotifier::send($parentAuthor, new DistrictPostRepliedNotification($district, $post, $actor, $comment, $parentAuthorId));
+
+                    try {
+                        TelegramNotifier::commented($actor, $parentAuthor, 'новость района', (string) $comment->content, "/districts/{$district->id}");
+                    } catch (\Throwable $e) {
+                        Log::warning('telegram district reply failed', ['error' => $e->getMessage()]);
+                    }
                 }
             }
 

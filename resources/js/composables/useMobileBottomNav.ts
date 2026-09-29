@@ -9,6 +9,10 @@ import { route } from '@/route'
 /**
  * Состояние нижней мобильной навигации.
  *
+ * Внизу — только ядро: веб/PWA — Профиль, Чат, ULove;
+ * Telegram — Чат, ULove, уведомления и аватар профиля.
+ * Колокол в вебе живёт в топбаре. Доп.модули (Карта, UFlow,
+ * Районы) — в дропдауне профиля (см. `useAppLayout`).
  * Прячет меню при открытой клавиатуре, чтобы инпуты чата/комментариев
  * не уезжали под навигацию в WebView и мобильном браузере.
  *
@@ -78,34 +82,27 @@ export function useMobileBottomNav() {
   const bellTotal = computed(() => badge.total)
 
   /**
-   * Видимость пунктов по включённым модулям.
+   * Видимость пунктов нижней навигации.
    *
-   * Изоляция: ULove-пользователь не видит карту и ленту,
-   * UPin-пользователь — свайпы. Лишнее довключается в настройках.
+   * Внизу — только ядро: Профиль, Чат и ULove (дефолт). Остальные
+   * модули (Карта, UFlow, Районы) живут в дропдауне профиля и
+   * добавляются туда при активации модулей (см. `useAppLayout`).
+   * Бизнес-аккаунт — исключение: Кабинет, Карта и Чат.
    * Профиль и чат — всегда (общее ядро).
    */
   const modules = useAppModulesStore()
 
-  const showMap = computed(() => isBusiness.value || modules.isEnabled('upin'))
+  const showMap = computed(() => isBusiness.value)
   const showLove = computed(() => !isBusiness.value && modules.isEnabled('ulove'))
-  const showFlow = computed(() => !isBusiness.value && modules.isEnabled('uflow'))
-  const showDistricts = computed(() => {
-    if (isBusiness.value) {
-      return false
-    }
-
-    if (isStaff.value) {
-      return false
-    }
-
-    return modules.isEnabled('districts')
-  })
+  const showFlow = computed(() => false)
+  const showDistricts = computed(() => false)
 
   /**
    * Класс сетки под число видимых пунктов.
    *
-   * В Telegram вместо ссылки «Профиль» — колокол + аватар-меню
-   * (+2 пункта, профиль уезжает в дропдаун «Мой профиль»).
+   * Веб/PWA: Профиль + Чат + ULove (ядро). В Telegram вместо ссылки
+   * «Профиль» — колокол + аватар-меню (+2 пункта, профиль уезжает
+   * в дропдаун «Мой профиль»): Чат + ULove + уведомления + профиль.
    * Полные имена классов — Tailwind JIT видит их статически.
    */
   const gridClass = computed(() => {
@@ -223,10 +220,10 @@ export function useMobileBottomNav() {
   /**
    * Классы пункта навигации.
    *
-   * Активный — тиндеровский rose (#FD267D, в тёмной теме rose-400
-   * #FB7185 для контраста на #0F121F) плюс тонированная пилюля
-   * rose-500/10 (светлая) / rose-500/15 (тёмная). Неактивный —
-   * приглушённый серый, хорошо отличимый от активного в обеих темах.
+   * Активный — фирменный розовый `#F04D9F` (обе темы) плюс
+   * тонированная пилюля `#F04D9F`/10 (светлая) / `#F04D9F`/15
+   * (тёмная). Неактивный — приглушённый серый, хорошо отличимый
+   * от активного в обеих темах.
    *
    * @param name имя роута
    * @returns строка классов для Link пункта меню
@@ -235,10 +232,20 @@ export function useMobileBottomNav() {
    */
   function navLinkClass(name: string): string {
     if (isActive(name)) {
-      return 'text-[#FD267D] dark:text-rose-400 bg-rose-500/10 dark:bg-rose-500/15'
+      return 'text-[#F04D9F] dark:text-[#F04D9F] bg-[#F04D9F]/10 dark:bg-[#F04D9F]/15'
     }
     return 'text-stone-500 dark:text-zinc-400'
   }
+
+  /**
+   * Классы бизнес-пункта нижней навигации (Кабинет).
+   *
+   * Та же фирменная схема, что у обычных пунктов: активный —
+   * `#F04D9F` + тонированная пилюля, неактивный — серый.
+   * Полные литералы, чтобы Tailwind JIT увидел их статически.
+   */
+  const businessActiveClass = 'text-[#F04D9F] dark:text-[#F04D9F] bg-[#F04D9F]/10 dark:bg-[#F04D9F]/15'
+  const businessIdleClass = 'text-stone-500 dark:text-zinc-400'
 
   /**
    * На ленте свайпов нижнее меню скрыто, как в Tinder:
@@ -410,5 +417,5 @@ export function useMobileBottomNav() {
     document.documentElement.classList.remove('native-swipes')
   })
 
-  return { dashboardHref, isActive, isActivePath, navLinkClass, total, bellTotal, avatarSrc, isTelegram, showSystemItems, showProfileLink, navHidden, keyboardOpen, isBusiness, isStaff, showMap, showLove, showFlow, showDistricts, gridClass }
+  return { dashboardHref, isActive, isActivePath, navLinkClass, businessActiveClass, businessIdleClass, total, bellTotal, avatarSrc, isTelegram, showSystemItems, showProfileLink, navHidden, keyboardOpen, isBusiness, isStaff, showMap, showLove, showFlow, showDistricts, gridClass }
 }

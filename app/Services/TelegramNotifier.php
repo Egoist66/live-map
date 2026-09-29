@@ -13,7 +13,8 @@ use Illuminate\Support\Facades\Log;
  *
  * Сценарий: человек пользуется ULove через Mini App, но приложение
  * закрыто — колокольчик и web-push не дойдут, а сообщение в Telegram
- * дойдёт всегда. Бот пишет: новые сообщения, лайки анкеты, мэтчи.
+ * дойдёт всегда. Бот пишет: новые сообщения, лайки анкеты, мэтчи,
+ * комментарии (пины, фото, посты, новости районов).
  * Кнопка под текстом открывает Mini App сразу на нужном экране
  * (чат — прямо в диалог, остальное — на свой экран).
  *
@@ -40,7 +41,7 @@ class TelegramNotifier
      * Можно ли писать пользователю в Telegram.
      *
      * @param User $recipient получатель
-     * @param string $kind messages|likes|matches (тумблер в настройках)
+     * @param string $kind messages|likes|matches|comments (тумблер в настройках)
      * @return bool true когда привязан id, тумблер включён и нет 403
      */
     public static function canNotify(User $recipient, string $kind): bool
@@ -63,6 +64,7 @@ class TelegramNotifier
             'messages' => 'telegram_notify_messages',
             'likes' => 'telegram_notify_likes',
             'matches' => 'telegram_notify_matches',
+            'comments' => 'telegram_notify_comments',
             default => null,
         };
 
@@ -201,6 +203,51 @@ class TelegramNotifier
 
             self::send($recipient, $text, $path, 'Открыть чат');
         }
+    }
+
+    /**
+     * Напомнить о новом комментарии (пин, фото, пост, новость района).
+     *
+     * Без кулдауна: переписка в комментах живая, каждый пропущенный
+     * ответ — потерянный диалог. Анонимные комменты имя не палят.
+     *
+     * @param User $actor автор комментария
+     * @param User $recipient кому адресован (владелец/автор родителя/упомянутый)
+     * @param string $entityLabel что комментируют («пин „Кофе тут“», «фото», «пост»)
+     * @param string $preview текст комментария (обрежется до 200 символов)
+     * @param string $path путь в Mini App для кнопки «Смотреть»
+     * @param bool $anonymous скрыть имя автора
+     * @return void
+     */
+    public static function commented(User $actor, User $recipient, string $entityLabel, string $preview, string $path, bool $anonymous = false): void
+    {
+        $recipient = self::resolveRecipient($recipient);
+
+        if ($recipient === null) {
+            return;
+        }
+
+        if (! self::canNotify($recipient, 'comments')) {
+            return;
+        }
+
+        if (! $recipient->isAway()) {
+            return;
+        }
+
+        if ($anonymous) {
+            $authorPart = 'Аноним';
+        } else {
+            $actorName = trim((string) ($actor->name ?? ''));
+            $authorPart = $actorName !== '' ? $actorName : 'Собеседник';
+        }
+
+        $entity = trim($entityLabel) !== '' ? trim($entityLabel) : 'запись';
+
+        $text = '💬 <b>'.self::escape($authorPart).'</b> прокомментировал(а): '.self::escape($entity)
+            .' — «'.self::escape(self::preview($preview)).'»';
+
+        self::send($recipient, $text, $path, 'Смотреть');
     }
 
     /**

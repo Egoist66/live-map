@@ -111,7 +111,7 @@ function logout(): void {
             :class="[
               'px-3.5 py-2 rounded-full text-sm font-semibold transition',
               item.match(currentPath)
-                ? 'bg-ink-900 text-white dark:bg-white dark:text-ink-900'
+                ? 'bg-[#F04D9F] text-white dark:bg-[#F04D9F] dark:text-white'
                 : 'text-stone-500 dark:text-zinc-400 hover:text-ink-900 dark:hover:text-white',
             ]"
           >
@@ -147,7 +147,7 @@ function logout(): void {
           v-for="item in nav"
           :key="item.label"
           :href="item.href"
-          :class="['flex flex-col items-center gap-1 py-2.5 text-[10px] font-semibold min-w-0', item.match(currentPath) ? 'text-indigo-600 dark:text-indigo-400' : 'text-stone-400 dark:text-zinc-500']"
+          :class="['flex flex-col items-center gap-1 py-2.5 text-[10px] font-semibold min-w-0', item.match(currentPath) ? 'text-[#F04D9F] dark:text-[#F04D9F]' : 'text-stone-400 dark:text-zinc-500']"
         >
           <i :class="[item.icon, 'text-lg']" />
           <span class="truncate max-w-full">{{ item.label }}</span>

@@ -193,6 +193,17 @@ class ConversationController extends Controller
         });
     }
 
+    /**
+     * Пометить входящие сообщения диалога прочитанными.
+     *
+     * Сообщения старше cleared_at не трогаем (очищенная история) —
+     * тик бейджей считает так же. После обновления сбрасываем кэш
+     * тика, иначе следующий опрос вернёт протухшую «1».
+     *
+     * @param Request $request запрос
+     * @param Conversation $conversation диалог
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function markRead(Request $request, Conversation $conversation)
     {
         abort_unless($conversation->hasParticipant($request->user()->id),403);
@@ -203,6 +214,7 @@ class ConversationController extends Controller
             ->pluck('id');
         Message::whereIn('id',$ids)->update(['read_at'=>$now,'delivered_at'=>\DB::raw('COALESCE(delivered_at, "'.$now->toDateTimeString().'")')]);
         $conversation->participantRows()->where('user_id',$request->user()->id)->update(['last_read_at'=>$now]);
+        \Illuminate\Support\Facades\Cache::forget("realtime:badges:{$request->user()->id}");
         try{ broadcast(new \App\Events\MessageRead($conversation->id,$request->user()->id,$ids->toArray()))->toOthers(); }catch(\Throwable $e){ \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
         return response()->json(['ok'=>true]);
     }

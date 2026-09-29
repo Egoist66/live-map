@@ -903,8 +903,15 @@ class RealtimeController extends Controller
      * Тик идёт каждые ~2.5с с каждого таба — без кэша это шесть
      * тяжёлых count-запросов на пользователя. Кэш 5с: свежести хватает
      * для бейджей, а точные события (сообщения, дружба) едут отдельно.
+     * Кэш сбрасывается в markRead, иначе после прочтения тик вернёт
+     * протухшую «1».
+     *
+     * Сообщения старше cleared_at не считаем — паритет со списком
+     * диалогов и markRead. Иначе доочистные read_at=NULL дают вечную
+     * фантомную «1» после каждого прочтения.
      *
      * @param \App\Models\User $user пользователь
+     * @return array<string, int> счётчики бейджей
      */
     private function badges($user): array
     {
@@ -920,6 +927,23 @@ class RealtimeController extends Controller
                 $unreadQuery = Message::whereIn('conversation_id', $convIds)
                     ->where('sender_id', '!=', $userId)
                     ->whereNull('read_at');
+
+                $clearedMap = ConversationParticipant::where('user_id', $userId)
+                    ->whereIn('conversation_id', $convIds)
+                    ->whereNotNull('cleared_at')
+                    ->pluck('cleared_at', 'conversation_id');
+
+                foreach ($clearedMap as $clearedConvId => $clearedAt) {
+                    $cutoff = $clearedAt instanceof Carbon
+                        ? $clearedAt
+                        : Carbon::parse((string) $clearedAt);
+                    $cid = (int) $clearedConvId;
+
+                    $unreadQuery->where(function ($q) use ($cid, $cutoff) {
+                        $q->where('conversation_id', '!=', $cid);
+                        $q->orWhere('created_at', '>', $cutoff);
+                    });
+                }
 
                 $unreadMessages = (clone $unreadQuery)->count();
                 $conversationsUnread = (clone $unreadQuery)->distinct()->count('conversation_id');

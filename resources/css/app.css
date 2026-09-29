@@ -476,11 +476,21 @@ html.native-swipes .mobile-bottom-nav {
   }
 }
 
-/* Нативный верх: шапка и оверлеи карты под статус-баром/вырезом.
-   Отступы берутся из --sat (единый контроллер useOverlaySafeArea),
-   useOverlaySafeArea добавляет .no-safe-area-top, если WebView отдал env() нулём. */
-.native-safe-top { padding-top: var(--sat-real, 0px); }
-.no-safe-area-top .native-safe-top { padding-top: 0; }
+/* Нативный верх шапки — точечно для Telegram Mini App.
+   В браузере и PWA сверху своё окно и шторка ОС: лишний зазор лишь
+   отодвигает шапку вниз, поэтому по умолчанию отступа нет.
+   В Mini App кнопки клиента парят поверх WebView — шапку опускаем
+   на инсеты Telegram (правило `html.tg-app` в блоке Mini App ниже). */
+.native-safe-top { padding-top: 0; }
+/* iPhone (Safari, PWA, WebView): чёлка/Dynamic Island реально
+   перекрывают контент — возвращаем отступ из env(). Детект только
+   по движку (-webkit-touch-callout есть лишь в iOS WebKit), Android
+   и десктоп не трогаем. Специфичность ниже `html.tg-app`, поэтому
+   в Mini App побеждает правило с --tg-chrome-top, двойного
+   отступа нет. */
+@supports (-webkit-touch-callout: none) {
+  .native-safe-top { padding-top: var(--sat-real, 0px); }
+}
 @media (min-width: 1024px) {
 .no-safe-area-top { --sat: 0px; }
 
@@ -512,8 +522,6 @@ html.tg-app body {
 html.tg-app a:not(.btn-primary):not(.btn-brand):not(.btn-ghost):not(.p-button) {
   color: var(--tg-theme-link-color);
 }
-  .native-safe-top,
-  .no-safe-area-top .native-safe-top { padding-top: 0; }
 }
 .native-safe-offset-top { top: calc(var(--sat) + 8px); }
 .no-safe-area-top .native-safe-offset-top { top: 8px; }

@@ -20,6 +20,7 @@ import { usePwaPushAuto } from '@/composables/usePwaPushAuto'
 import { useIdleTask } from '@/composables/useIdleTask'
 import { useModuleRouteGuard } from '@/composables/useModuleRouteGuard'
 import { useTelegram } from '@/composables/useTelegram'
+import { useViewportBreakpoints } from '@/composables/useViewportBreakpoints'
 
 export function useAppLayout() {
   const badge = useBadgeStore()
@@ -39,6 +40,7 @@ export function useAppLayout() {
   const menu = ref()
   const modules = useAppModulesStore()
   const { isTelegram } = useTelegram()
+  const { isBelowLg } = useViewportBreakpoints()
 
   try {
     useModuleRouteGuard().init()
@@ -71,14 +73,14 @@ export function useAppLayout() {
   /**
    * Пункты дропдауна профиля без дублей навигации.
    *
-   * Всё, что уже есть в десктопном топбаре (Кабинет, Карта, Чат,
-   * ULove, UFlow) или в мобильном нижнем меню (плюс Районы),
-   * из дропдауна убрано — для всех пользователей, не только стаффа.
-   * Остаются только уникальные разделы: модерация, настройки,
-   * сотрудничество (mailto на почту админа) и выход.
-   * Исключение — Telegram Mini App: там низа нет ссылки «Профиль»,
-   * зато есть аватар-меню, куда докладываем «Мой профиль» и все
-   * включённые модули (telegramSections).
+   * Ядро (Профиль, Чат, ULove) живёт в топбаре и нижнем меню —
+   * в дропдаун не дублируется. Доп.модули (Карта, UFlow, Районы)
+   * добавляются сюда при их активации, но только на мобиле:
+   * на десктопе они уже есть в топбаре. Остаются всегда:
+   * модерация, настройки и выход.
+   * Исключение — Telegram Mini App: там в нижнем меню нет ссылки
+   * «Профиль» (вместо неё аватар с этим дропдауном), поэтому
+   * докладываем «Мой профиль».
    */
   const menuItems = computed(() => {
     const header = { label: user.value?.name || '', sublabel: user.value?.email || '', isHeader: true }
@@ -103,21 +105,32 @@ export function useAppLayout() {
     ]
 
     /**
-     * Telegram Mini App: профиль открывается из нижней навигации
-     * (аватар с дропдауном вместо ссылки «Профиль»), поэтому в меню
-     * докладываем «Мой профиль» и все включённые модули — иначе
-     * разделы, не влезшие в нижний бар, недостижимы. В обычном
-     * вебе меню как было (без дублей навигации).
+     * Telegram Mini App: в нижнем меню нет ссылки «Профиль»
+     * (вместо неё аватар с этим дропдауном), поэтому докладываем
+     * «Мой профиль». В обычном вебе профиль уже есть в нижнем
+     * меню — пусто.
      */
     const telegramSections: any[] = !isTelegram.value
       ? []
       : [
           { label: 'Мой профиль', icon: 'pi pi-user', accent: 'sky', active: route().current('dashboard'), command: () => router.visit(dashboardHref.value) },
+        ]
+
+    /**
+     * Доп.модули в дропдауне — только на мобиле (< lg).
+     *
+     * Внизу на мобиле лишь ядро (Профиль, Чат, ULove в вебе;
+     * Чат, ULove, уведомления и профиль в Telegram), поэтому
+     * включённые доп.модули добавляются сюда при их активации:
+     * Карта (UPin), UFlow, Районы. На десктопе всё это уже есть
+     * в топбаре — дропдаун остаётся без дублей навигации.
+     */
+    const showExtraModules = isBelowLg.value
+    const extraModuleSections: any[] = !showExtraModules
+      ? []
+      : [
           ...(modules.isEnabled('upin')
             ? [{ label: 'Карта', icon: 'pi pi-map-marker', accent: 'teal', active: route().current('map'), command: () => router.visit(route('map')) }]
-            : []),
-          ...(modules.isEnabled('ulove')
-            ? [{ label: 'ULove', icon: 'pi pi-heart', accent: 'violet', active: route().current('swipes'), command: () => router.visit(route('swipes')) }]
             : []),
           ...(modules.isEnabled('uflow')
             ? [{ label: 'UFlow', svg: 'flow', accent: 'slate', active: route().current('flow'), command: () => router.visit(route('flow')) }]
@@ -125,7 +138,6 @@ export function useAppLayout() {
           ...(modules.isEnabled('districts')
             ? [{ label: 'Районы', icon: 'pi pi-users', accent: 'teal', active: route().current('districts.*'), command: () => router.visit(route('districts.index')) }]
             : []),
-          { label: 'Чаты', icon: 'pi pi-comments', accent: 'sky', active: route().current('chat'), command: () => router.visit(route('chat')) },
         ]
 
     return [
@@ -133,6 +145,7 @@ export function useAppLayout() {
       { separator: true },
       ...moderation,
       ...telegramSections,
+      ...extraModuleSections,
       ...personSections,
       { separator: true },
       logoutItem,

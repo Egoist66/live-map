@@ -85,9 +85,9 @@ function switchTab(next: LandingTab): void {
 
     <section class="max-w-[1280px] w-full mx-auto px-4 sm:px-6 pt-4 sm:pt-10 pb-8 sm:pb-10 grid lg:grid-cols-[1.05fr_0.95fr] gap-6 sm:gap-10 items-center overflow-hidden">
       <div class="min-w-0">
-        <div class="inline-flex max-w-full flex-wrap items-center gap-2 bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-full pl-1.5 pr-3 py-1 shadow-soft min-w-0">
+        <div class="flex max-w-full flex-wrap items-center gap-2 bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-2xl sm:rounded-full px-3 py-2 sm:pl-1.5 sm:pr-3 sm:py-1 shadow-soft min-w-0">
           <Tag :class="['!text-white !rounded-full !px-2.5 !py-1 !text-[11px] !font-bold tracking-wide !border-0 shrink-0', landing.theme.value.badge]"><span class="w-1.5 h-1.5 bg-white rounded-full animate-pulse inline-block mr-1.5 align-middle"></span>{{ landing.content.value.badge }}</Tag>
-          <span class="text-xs font-medium text-stone-600 dark:text-zinc-400 min-w-0 break-words">{{ landing.content.value.badgeNote }}</span>
+          <span class="min-w-0 flex-1 basis-full sm:basis-auto text-xs font-medium leading-relaxed text-stone-600 dark:text-zinc-400 break-words">{{ landing.content.value.badgeNote }}</span>
         </div>
         <h1 class="mt-5 sm:mt-6 text-[30px] sm:text-[48px] lg:text-[64px] font-black tracking-[-0.04em] sm:tracking-[-0.05em] leading-[0.95] sm:leading-[0.85] dark:text-white break-words text-balance">{{ landing.content.value.titleTop }}<br /><span :class="landing.theme.value.accentText">{{ landing.content.value.titleAccent }}</span> {{ landing.content.value.titleTail }}</h1>
         <p class="mt-5 text-[15px] sm:text-[17px] leading-relaxed text-stone-600 dark:text-zinc-400 max-w-[560px]">{{ landing.content.value.description }}</p>
