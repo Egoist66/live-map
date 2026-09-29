@@ -41,7 +41,7 @@ class UserDeletionService
 
             $this->purgeActivityTraces((int) $user->id);
 
-            $user->tokens()->delete();
+            $this->purgeApiTokens($user);
 
             $user->delete();
 
@@ -132,17 +132,40 @@ class UserDeletionService
 
         $this->safeDelete('sessions', 'user_id', $userId);
 
-        DB::table('notifications')
-            ->where('notifiable_type', User::class)
-            ->where('notifiable_id', $userId)
-            ->delete();
+        try {
+            DB::table('notifications')
+                ->where('notifiable_type', User::class)
+                ->where('notifiable_id', $userId)
+                ->delete();
+        } catch (\Throwable) {
+            // Таблицы может не быть — идём дальше.
+        }
 
         $email = trim((string) ($user->email ?? ''));
 
         if ($email !== '') {
-            DB::table('password_reset_tokens')
-                ->where('email', $email)
-                ->delete();
+            try {
+                DB::table('password_reset_tokens')
+                    ->where('email', $email)
+                    ->delete();
+            } catch (\Throwable) {
+                // Таблицы может не быть — идём дальше.
+            }
+        }
+    }
+
+    /**
+     * Удалить API-токены (таблицы может не быть — Sanctum-миграция не везде накачена).
+     *
+     * @param User $user целевой пользователь
+     * @return void
+     */
+    private function purgeApiTokens(User $user): void
+    {
+        try {
+            $user->tokens()->delete();
+        } catch (\Throwable) {
+            return;
         }
     }
 
