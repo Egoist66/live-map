@@ -16,6 +16,10 @@ const loaded = ref(false)
 const saving = ref(false)
 const errorMessage = ref('')
 let loadPromise: Promise<void> | null = null
+let lastFinishedAt = 0
+let rateLimitedUntil = 0
+const STATUS_COOLDOWN_MS = 10_000
+const RATE_LIMIT_FALLBACK_MS = 30_000
 
 /**
  * Тумблеры уведомлений от бота в личку Telegram.
@@ -38,18 +42,34 @@ export function useTelegramNotifications() {
   const botLink = computed(() => `https://t.me/${botUsername.value || 'U1ove_bot'}`)
 
   /**
-   * Подтянуть статус привязки и тумблеры (идемпотентно за сессию).
+   * Подтянуть статус привязки и тумблеры.
+   *
+   * Успех кэшируется за сессию (`loaded`), повторные монтирования
+   * (переключение табов настроек) сеть не дёргают. Ошибка 429
+   * обрабатывается молча: состояние не трогаем (не врём про
+   * «не привязан»), встаём в бэкофф по `Retry-After` и даём
+   * повторить позже — раньше первый же 429 навсегда лочил
+   * `loaded = true` с `linked = false`.
+   *
+   * @param force пропустить кулдаун и бэкофф (например, юзер вернулся от бота)
    */
-  async function loadTelegramNotify(): Promise<void> {
+  async function loadTelegramNotify(force = false): Promise<void> {
     if (loaded.value || loading.value) {
       if (loadPromise) await loadPromise
       return
+    }
+
+    const now = Date.now()
+    if (!force) {
+      if (now < rateLimitedUntil) return
+      if (lastFinishedAt !== 0 && now - lastFinishedAt < STATUS_COOLDOWN_MS) return
     }
 
     loading.value = true
     errorMessage.value = ''
 
     loadPromise = (async () => {
+      const startedAt = Date.now()
       try {
         const response = await api.get('/api/telegram/status')
         const data = response.data ?? {}
@@ -63,17 +83,56 @@ export function useTelegramNotifications() {
           notify_likes: data.notify_likes ?? true,
           notify_matches: data.notify_matches ?? true,
         }
-      } catch {
+        loaded.value = true
+      } catch (requestError: unknown) {
+        if (isRateLimited(requestError)) {
+          rateLimitedUntil = startedAt + readRetryAfterMs(requestError)
+          return
+        }
         linked.value = false
         canNotify.value = false
       } finally {
         loading.value = false
-        loaded.value = true
+        lastFinishedAt = Date.now()
         loadPromise = null
       }
     })()
 
     await loadPromise
+  }
+
+  /**
+   * Проверить, что ошибка — 429 от троттлинга.
+   *
+   * @param requestError ошибка из axios
+   * @returns true когда сервер ответил 429
+   */
+  function isRateLimited(requestError: unknown): boolean {
+    if (typeof requestError !== 'object' || requestError === null) {
+      return false
+    }
+    const response = (requestError as { response?: { status?: unknown } }).response
+    return response?.status === 429
+  }
+
+  /**
+   * Прочитать `Retry-After` из 429-ответа.
+   *
+   * @param requestError ошибка из axios с 429-ответом
+   * @returns миллисекунды бэкоффа (фолбэк 30с)
+   */
+  function readRetryAfterMs(requestError: unknown): number {
+    try {
+      const headers = (requestError as { response?: { headers?: Record<string, unknown> } }).response?.headers ?? {}
+      const raw = headers['retry-after'] ?? headers['Retry-After']
+      const seconds = typeof raw === 'string' ? Number.parseInt(raw, 10) : Number(raw)
+      if (Number.isFinite(seconds) && seconds > 0 && seconds <= 300) {
+        return seconds * 1000
+      }
+    } catch {
+      // фолбэк ниже
+    }
+    return RATE_LIMIT_FALLBACK_MS
   }
 
   /**

@@ -19,6 +19,7 @@ import { useRealtimePoller, watchRealtimeMode } from '@/composables/useRealtimeP
 import { usePwaPushAuto } from '@/composables/usePwaPushAuto'
 import { useIdleTask } from '@/composables/useIdleTask'
 import { useModuleRouteGuard } from '@/composables/useModuleRouteGuard'
+import { useTelegram } from '@/composables/useTelegram'
 
 export function useAppLayout() {
   const badge = useBadgeStore()
@@ -37,6 +38,7 @@ export function useAppLayout() {
   usePwaPushAuto()
   const menu = ref()
   const modules = useAppModulesStore()
+  const { isTelegram } = useTelegram()
 
   try {
     useModuleRouteGuard().init()
@@ -74,6 +76,9 @@ export function useAppLayout() {
    * из дропдауна убрано — для всех пользователей, не только стаффа.
    * Остаются только уникальные разделы: модерация, настройки,
    * сотрудничество (mailto на почту админа) и выход.
+   * Исключение — Telegram Mini App: там низа нет ссылки «Профиль»,
+   * зато есть аватар-меню, куда докладываем «Мой профиль» и все
+   * включённые модули (telegramSections).
    */
   const menuItems = computed(() => {
     const header = { label: user.value?.name || '', sublabel: user.value?.email || '', isHeader: true }
@@ -97,10 +102,37 @@ export function useAppLayout() {
       { label: 'Настройки', icon: 'pi pi-cog', accent: 'slate', active: route().current('profile.edit'), command: () => router.visit(settingsHref.value) },
     ]
 
+    /**
+     * Telegram Mini App: профиль открывается из нижней навигации
+     * (аватар с дропдауном вместо ссылки «Профиль»), поэтому в меню
+     * докладываем «Мой профиль» и все включённые модули — иначе
+     * разделы, не влезшие в нижний бар, недостижимы. В обычном
+     * вебе меню как было (без дублей навигации).
+     */
+    const telegramSections: any[] = !isTelegram.value
+      ? []
+      : [
+          { label: 'Мой профиль', icon: 'pi pi-user', accent: 'sky', active: route().current('dashboard'), command: () => router.visit(dashboardHref.value) },
+          ...(modules.isEnabled('upin')
+            ? [{ label: 'Карта', icon: 'pi pi-map-marker', accent: 'teal', active: route().current('map'), command: () => router.visit(route('map')) }]
+            : []),
+          ...(modules.isEnabled('ulove')
+            ? [{ label: 'ULove', icon: 'pi pi-heart', accent: 'violet', active: route().current('swipes'), command: () => router.visit(route('swipes')) }]
+            : []),
+          ...(modules.isEnabled('uflow')
+            ? [{ label: 'UFlow', svg: 'flow', accent: 'slate', active: route().current('flow'), command: () => router.visit(route('flow')) }]
+            : []),
+          ...(modules.isEnabled('districts')
+            ? [{ label: 'Районы', icon: 'pi pi-users', accent: 'teal', active: route().current('districts.*'), command: () => router.visit(route('districts.index')) }]
+            : []),
+          { label: 'Чаты', icon: 'pi pi-comments', accent: 'sky', active: route().current('chat'), command: () => router.visit(route('chat')) },
+        ]
+
     return [
       header,
       { separator: true },
       ...moderation,
+      ...telegramSections,
       ...personSections,
       { separator: true },
       logoutItem,

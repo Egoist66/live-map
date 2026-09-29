@@ -77,7 +77,7 @@ onMounted(() => { screenLock.init(); hotkeys.init() })
     <div v-if="!route().current('chat') && !route().current('map') && !route().current('swipes*')" class="mt-auto hidden pb-[calc(var(--app-bottomnav)+var(--sab))] lg:block lg:pb-0">
       <AppFooter />
     </div>
-    <MobileBottomNav />
+    <MobileBottomNav @bell="bell.open()" @menu="toggleMenu" />
     <!-- Оверлеи (сырые Teleport + Transition) монтируем только после гидратации:
          иначе SSR-краш `insertBefore of null` в Teleport.process. См. useClientReady. -->
     <template v-if="isClientReady">

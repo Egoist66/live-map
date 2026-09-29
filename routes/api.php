@@ -31,11 +31,15 @@ Route::get('/reference/{slug}', [\App\Http\Controllers\ReferencePageController::
 
 // Telegram Mini App (@U1ove_bot): вход по initData — гость (web-сессия),
 // статус/отвязка — только залогиненным.
+// Статус — ВНЕ общего ведра throttle:60,1: оно общее с version/nbrb
+// и считается по IP — за NAT/на Laravel Cloud одиночный статус
+// умирал в 429. Отдельное пер-юзер ведро telegram-status (60/мин),
+// как у email-status.
 Route::middleware(['web', 'throttle:30,1'])->post('/telegram/auth', [\App\Http\Controllers\TelegramAuthController::class, 'auth']);
-Route::middleware(['web', 'auth:web,sanctum', 'throttle:60,1'])->group(function () {
-    Route::get('/telegram/status', [\App\Http\Controllers\TelegramAuthController::class, 'status']);
-    Route::patch('/telegram/preferences', [\App\Http\Controllers\TelegramAuthController::class, 'preferences']);
-    Route::delete('/telegram/link', [\App\Http\Controllers\TelegramAuthController::class, 'unlink']);
+Route::middleware(['web', 'auth:web,sanctum'])->group(function () {
+    Route::get('/telegram/status', [\App\Http\Controllers\TelegramAuthController::class, 'status'])->middleware('throttle:telegram-status');
+    Route::patch('/telegram/preferences', [\App\Http\Controllers\TelegramAuthController::class, 'preferences'])->middleware('throttle:telegram-status');
+    Route::delete('/telegram/link', [\App\Http\Controllers\TelegramAuthController::class, 'unlink'])->middleware('throttle:telegram-status');
 });
 
 // Публичная заявка на сотрудничество с лендинга (гость, без авторизации).
@@ -226,6 +230,9 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::match(['patch', 'post'], '/conversations/{conversation}/wallpaper', [ConversationController::class, 'updateWallpaper'])->middleware('throttle:social-write');
     Route::delete('/conversations', [ConversationController::class, 'clearAll'])->middleware('throttle:social-write');
     Route::delete('/conversations/{conversation}', [ConversationController::class, 'destroy'])->middleware('throttle:social-write');
+
+    Route::post('/conversations/{conversation}/telegram-share', [\App\Http\Controllers\TelegramShareController::class, 'offer'])->middleware('throttle:social-write');
+    Route::delete('/conversations/{conversation}/telegram-share', [\App\Http\Controllers\TelegramShareController::class, 'revoke'])->middleware('throttle:social-write');
 
     Route::get('/conversations/{conversation}/messages', [MessageController::class, 'index']);
     Route::post('/conversations/{conversation}/messages', [MessageController::class, 'store'])->middleware('throttle:messages-write');

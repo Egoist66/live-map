@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
+import Avatar from 'primevue/avatar'
 import { useMobileBottomNav } from '@/composables/useMobileBottomNav'
 
-const { dashboardHref, isActive, isActivePath, navLinkClass, total, navHidden, isBusiness, showMap, showLove, showFlow, showDistricts, gridClass } = useMobileBottomNav()
+const { dashboardHref, isActive, isActivePath, navLinkClass, total, bellTotal, avatarSrc, showSystemItems, showProfileLink, navHidden, isBusiness, showMap, showLove, showFlow, showDistricts, gridClass } = useMobileBottomNav()
+
+const emit = defineEmits<{ (e: 'bell'): void; (e: 'menu', value: Event): void }>()
 
 const businessActiveClass = 'text-[#FD267D] dark:text-rose-400 bg-rose-500/10 dark:bg-rose-500/15'
 const businessIdleClass = 'text-stone-500 dark:text-zinc-400'
@@ -26,7 +29,7 @@ const businessIdleClass = 'text-stone-500 dark:text-zinc-400'
         <span class="text-[10px] font-bold leading-none" :class="isActivePath('/cabinet') ? 'opacity-100' : 'opacity-75'">Кабинет</span>
       </Link>
       <Link
-        v-else
+        v-else-if="showProfileLink"
         :href="dashboardHref"
         :aria-current="isActive('dashboard') ? 'page' : undefined"
         class="flex flex-col items-center justify-center gap-1 py-1.5 rounded-2xl active:scale-95 transition min-h-[52px]"
@@ -98,6 +101,33 @@ const businessIdleClass = 'text-stone-500 dark:text-zinc-400'
         </span>
         <span class="text-[10px] font-bold leading-none" :class="isActive('chat') ? 'opacity-100' : 'opacity-75'">Чат</span>
       </Link>
+
+      <button
+        v-if="showSystemItems && !isBusiness"
+        type="button"
+        aria-label="Уведомления"
+        class="flex flex-col items-center justify-center gap-1 py-1.5 rounded-2xl active:scale-95 transition min-h-[52px] text-stone-500 dark:text-zinc-400"
+        @click="emit('bell')"
+      >
+        <span class="relative">
+          <i class="pi pi-bell text-[22px] leading-none" />
+          <span v-if="bellTotal" class="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold grid place-items-center leading-none border-2 border-white dark:border-[#0F121F]">{{ bellTotal > 9 ? '9+' : bellTotal }}</span>
+        </span>
+        <span class="text-[10px] font-bold leading-none opacity-75 truncate max-w-full px-0.5" title="Уведомления">Уведомления</span>
+      </button>
+
+      <button
+        v-if="showSystemItems && !isBusiness"
+        type="button"
+        aria-label="Меню профиля"
+        aria-haspopup="menu"
+        class="flex flex-col items-center justify-center gap-1 py-1.5 rounded-2xl active:scale-95 transition min-h-[52px]"
+        :class="navLinkClass('dashboard')"
+        @click="emit('menu', $event)"
+      >
+        <Avatar :image="avatarSrc" shape="circle" class="!w-6 !h-6" />
+        <span class="text-[10px] font-bold leading-none" :class="isActive('dashboard') ? 'opacity-100' : 'opacity-75'">Профиль</span>
+      </button>
     </div>
   </nav>
 </template>

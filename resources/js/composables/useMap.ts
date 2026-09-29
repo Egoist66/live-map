@@ -1267,7 +1267,6 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
       ch.listen('.pin.created', onCreated)
         .listen('.pin.deleted', onDeleted)
         .listen('.pin.updated', onUpdated)
-        .listen('.pin.activity', onActivity)
         .listen('.pin.counters', onActivity)
         .listen('.district.created', onDistrictChanged)
         .listen('.district.updated', onDistrictChanged)

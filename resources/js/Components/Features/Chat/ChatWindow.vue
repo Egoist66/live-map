@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
-import { computed, toRef } from 'vue'
+import { computed, toRef, watch } from 'vue'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
 import Textarea from 'primevue/textarea'
 import ContextMenu from 'primevue/contextmenu'
+import Message from 'primevue/message'
 import OrgBadge from '@/Components/Features/Chat/OrgBadge.vue'
 import MessageBubble from '@/Components/Features/Chat/MessageBubble.vue'
 import VoiceMessagePlayer from '@/Components/Features/Chat/VoiceMessagePlayer.vue'
@@ -18,6 +19,7 @@ import { useChatComposerMenu } from '@/composables/useChatComposerMenu'
 import { useChatWallpaper } from '@/composables/useChatWallpaper'
 import { useChatPeerPanelTheme, type ChatPeerTone } from '@/composables/useChatPeerPanelTheme'
 import { useEnterToSend } from '@/composables/useEnterToSend'
+import { useTelegramShare } from '@/composables/useTelegramShare'
 import { formatVoiceTime, VOICE_MAX_SECONDS } from '@/composables/useVoiceRecorder'
 import { formatDate } from '@/utils/date'
 
@@ -33,6 +35,14 @@ const swipe = useMessageSwipe({ onReply: (m: any) => emit('reply', m) })
 const { menuPt } = useDropdownMenuStyle()
 const headerLink = useChatHeaderLink(toRef(props, 'activeConv'))
 const peerTheme = useChatPeerPanelTheme(computed(() => props.peerTone ?? 'ulove'))
+const share = useTelegramShare()
+const showSharePanel = computed(() => props.selectedId != null && (props.activeConv as any)?.type === 'direct')
+
+watch(
+  () => props.activeConv,
+  (conversation) => share.applyConversation(conversation),
+  { immediate: true },
+)
 
 function pinPreview(body: string): string {
   const t = (body || '').replace(/\s+/g, ' ').trim()
@@ -121,6 +131,45 @@ function dayLabel(value: any): string {
         </div>
       </div>
       <div v-if="showMenu" @click="emit('menuClose')" class="fixed inset-0 z-20"></div>
+      <div v-if="showSharePanel" class="shrink-0 border-b dark:border-zinc-800 bg-sky-50/70 dark:bg-sky-950/30 px-2 lg:px-4 py-2 min-w-0">
+        <div v-if="share.exchanged.value" class="flex items-center gap-2 text-xs">
+          <i class="pi pi-link text-sky-600 dark:text-sky-300 shrink-0" />
+          <span class="min-w-0 flex-1 text-stone-600 dark:text-zinc-300">Вы обменялись Telegram — пишите друг другу напрямую:
+            <a :href="share.peerLink.value ?? undefined" target="_blank" rel="noopener" class="font-bold text-sky-700 dark:text-sky-300 hover:underline">@{{ share.peerUsername.value }}</a>
+          </span>
+        </div>
+        <div v-else class="flex items-center gap-2">
+          <div class="min-w-0 flex-1">
+            <p class="text-xs font-semibold dark:text-zinc-100">🔗 Обмен Telegram</p>
+            <p v-if="share.peer.value && !share.mine.value" class="text-[11px] text-sky-700 dark:text-sky-300 font-semibold">Собеседник уже поделился — нажмите, чтобы согласиться.</p>
+            <p v-else-if="share.waitingPeer.value" class="text-[11px] opacity-60 dark:text-zinc-400">Ждём, пока собеседник тоже поделится, — username увидят только оба.</p>
+            <p v-else class="text-[11px] opacity-60 dark:text-zinc-400">Собеседник увидит ваш @username, только если поделится в ответ.</p>
+          </div>
+          <Button
+            v-if="!share.mine.value"
+            :loading="share.loading.value"
+            icon="pi pi-send"
+            label="Поделиться"
+            size="small"
+            rounded
+            class="shrink-0 !text-xs"
+            @click="share.offer(Number(selectedId))"
+          />
+          <Button
+            v-else
+            :loading="share.loading.value"
+            label="Отозвать"
+            size="small"
+            rounded
+            text
+            severity="secondary"
+            class="shrink-0 !text-xs"
+            @click="share.revoke(Number(selectedId))"
+          />
+        </div>
+        <Message v-if="share.errorCode.value === 'no_username'" severity="warn" class="mt-1.5 !text-[11px] !py-1.5">Нужен @username: задайте его в настройках Telegram, затем повторите.</Message>
+        <p v-else-if="share.errorCode.value" class="mt-1 text-[11px] text-red-500">{{ share.errorCode.value }}</p>
+      </div>
       <div v-if="(pinned || []).length" class="shrink-0 border-b dark:border-zinc-800 bg-violet-50/80 dark:bg-violet-950/30 px-2 lg:px-4 py-1.5 min-w-0">
         <div class="flex items-center gap-1.5 text-[11px] font-bold text-violet-700 dark:text-violet-300 px-1 mb-1"><span>📌 Закрепы</span><span class="opacity-70">{{ (pinned || []).length }}/{{ pinLimitLabel || '∞' }}</span></div>
         <div class="flex gap-1.5 overflow-x-auto pb-0.5">

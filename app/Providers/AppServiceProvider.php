@@ -263,6 +263,7 @@ class AppServiceProvider extends ServiceProvider
             'push-test' => 10,
             'profile-write' => 30,
             'email-status' => 60,
+            'telegram-status' => 60,
         ];
 
         foreach ($limitsByName as $limiterName => $perMinute) {

@@ -131,6 +131,9 @@ class ConversationController extends Controller
             'pinned'=>$pinned,
             'pin_limit'=>$request->user()->pinnedMessagesLimit(),
             'wallpaper'=>$conversation->wallpaperPayload(),
+            'telegram_share'=>$conversation->type === 'direct'
+                ? \App\Services\TelegramUsernameShare::status($conversation, $request->user())
+                : ['mine' => false, 'peer' => false, 'exchanged' => false, 'peer_username' => null],
         ]);
     }
 

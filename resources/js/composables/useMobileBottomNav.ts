@@ -2,6 +2,8 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
 import { useBadgeStore } from '@/stores/badges'
 import { useAppModulesStore } from '@/stores/appModules'
+import { useNavigation } from '@/composables/useNavigation'
+import { useTelegram } from '@/composables/useTelegram'
 import { route } from '@/route'
 
 /**
@@ -54,6 +56,26 @@ export function useMobileBottomNav() {
 
   const dashboardHref = computed(() => route('dashboard'))
   const total = computed(() => badge.unread)
+  /**
+   * Telegram Mini App: мост поднимается асинхронно в useAppBoot,
+   * флаг реактивно догоняет — нижнее меню само доберёт пункты.
+   */
+  const { isTelegram } = useTelegram()
+  const { avatarSrc } = useNavigation()
+  /**
+   * Системные кнопки в нижнем меню — только в Telegram-окружении:
+   * колокол уведомлений и аватар с дропдауном профиля переезжают
+   * вниз (в обычном вебе остаются в топбаре как было).
+   */
+  const showSystemItems = computed(() => isTelegram.value)
+  /**
+   * Отдельная ссылка «Профиль» — только вне Telegram: внутри Mini App
+   * профиль открывается из дропдауна аватара («Мой профиль»), дубль
+   * в баре лишь крадёт слот у колокола и меню.
+   */
+  const showProfileLink = computed(() => !isTelegram.value)
+  /** Счётчик колокола — тот же, что в топбаре (badge.total). */
+  const bellTotal = computed(() => badge.total)
 
   /**
    * Видимость пунктов по включённым модулям.
@@ -82,6 +104,8 @@ export function useMobileBottomNav() {
   /**
    * Класс сетки под число видимых пунктов.
    *
+   * В Telegram вместо ссылки «Профиль» — колокол + аватар-меню
+   * (+2 пункта, профиль уезжает в дропдаун «Мой профиль»).
    * Полные имена классов — Tailwind JIT видит их статически.
    */
   const gridClass = computed(() => {
@@ -89,7 +113,11 @@ export function useMobileBottomNav() {
       return 'grid grid-cols-3 items-end px-1 pt-1.5 pb-2 min-h-[60px]'
     }
 
-    let count = 2
+    let count = 1
+
+    if (showProfileLink.value) {
+      count += 1
+    }
 
     if (showMap.value) {
       count += 1
@@ -107,12 +135,20 @@ export function useMobileBottomNav() {
       count += 1
     }
 
+    if (showSystemItems.value) {
+      count += 2
+    }
+
     if (count <= 3) {
       return 'grid grid-cols-3 items-end px-1 pt-1.5 pb-2 min-h-[60px]'
     }
 
     if (count === 4) {
       return 'grid grid-cols-4 items-end px-1 pt-1.5 pb-2 min-h-[60px]'
+    }
+
+    if (count >= 7) {
+      return 'grid grid-cols-7 items-end px-1 pt-1.5 pb-2 min-h-[60px]'
     }
 
     if (count >= 6) {
@@ -374,5 +410,5 @@ export function useMobileBottomNav() {
     document.documentElement.classList.remove('native-swipes')
   })
 
-  return { dashboardHref, isActive, isActivePath, navLinkClass, total, navHidden, keyboardOpen, isBusiness, isStaff, showMap, showLove, showFlow, showDistricts, gridClass }
+  return { dashboardHref, isActive, isActivePath, navLinkClass, total, bellTotal, avatarSrc, isTelegram, showSystemItems, showProfileLink, navHidden, keyboardOpen, isBusiness, isStaff, showMap, showLove, showFlow, showDistricts, gridClass }
 }

@@ -16,8 +16,6 @@ export type RealtimeEventMap = {
   'chat:typing': { conversationId: number; userIds: number[] }
   /** Изменившиеся превью диалогов для сайдбара */
   'chat:previews': any[]
-  /** Сообщение для тоста уведомлений */
-  'notify:message': any
   /** Изменение дружбы (формат FriendshipUpdated) */
   'notify:friendship': any
   /** Новый мэтч (формат MatchCreated) */
@@ -49,8 +47,6 @@ export type RealtimeEventMap = {
   'user:message.delivered': any
   'user:message.read': any
   'user:friendship.updated': any
-  'user:user.feed.updated': any
-  'user:pin.activity': any
   'user:pin.counters': any
   'user:match.created': any
   'user:swipe.liked': any

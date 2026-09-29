@@ -234,6 +234,7 @@ class TelegramAuthController extends Controller
             'telegram_username' => $username,
             'telegram_photo_url' => $photoUrl,
             'telegram_linked_at' => now(),
+            'telegram_blocked_at' => null,
         ])->save();
     }
 
@@ -249,10 +250,16 @@ class TelegramAuthController extends Controller
         $username = $this->cleanUsername((string) ($tgUser['username'] ?? ''));
         $photoUrl = $this->cleanPhotoUrl((string) ($tgUser['photo_url'] ?? ''));
 
-        $user->forceFill([
+        $patch = [
             'telegram_username' => $username !== '' ? $username : $user->telegram_username,
             'telegram_photo_url' => $photoUrl !== '' ? $photoUrl : $user->telegram_photo_url,
-        ])->saveQuietly();
+        ];
+
+        if ($user->telegram_blocked_at !== null) {
+            $patch['telegram_blocked_at'] = null;
+        }
+
+        $user->forceFill($patch)->saveQuietly();
     }
 
     /**

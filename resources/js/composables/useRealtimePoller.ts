@@ -250,7 +250,6 @@ export function useRealtimePoller() {
       if (id > lastMsgId) lastMsgId = id
       if (alreadySeenMessage(id)) continue
       busEmit('chat:message', msg)
-      busEmit('notify:message', msg)
       busEmit('user:message.sent', { message: msg })
     }
     const updated = Array.isArray(data?.messages_updated) ? data.messages_updated : []

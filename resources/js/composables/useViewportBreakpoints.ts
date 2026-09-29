@@ -36,6 +36,11 @@ export function useViewportBreakpoints() {
   const isXxs = computed(() => width.value <= 360)
   const isMobile = computed(() => width.value < 640)
   const isTablet = computed(() => width.value >= 640 && width.value < 1024)
+  /**
+   * Ширина ниже lg (1024): видна мобильная нижняя навигация
+   * (`lg:hidden`), десктопный топбар скрыт (`hidden lg:flex`).
+   */
+  const isBelowLg = computed(() => width.value < 1024)
 
-  return { width, isXs, isXxs, isMobile, isTablet }
+  return { width, isXs, isXxs, isMobile, isTablet, isBelowLg }
 }

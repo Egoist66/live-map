@@ -12,8 +12,6 @@ const USER_EVENTS = [
   'message.delivered',
   'message.read',
   'friendship.updated',
-  'user.feed.updated',
-  'pin.activity',
   'pin.counters',
   'match.created',
   'swipe.liked',

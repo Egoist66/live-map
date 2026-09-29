@@ -1,5 +1,38 @@
 # Dev-лог
 
+## 2026-09-29 — Обмен Telegram-username по обоюдному согласию в личных диалогах
+- ✨ Фишка: в direct-чате панель «🔗 Обмен Telegram» — каждый жмёт «Поделиться», как только согласны оба, каждому в личку бота падает @username собеседника с кнопками «Написать в Telegram» (t.me-ссылка) и «Открыть чат» (web_app в диалог). Группу в TG бот создать не может (нет такого метода в Bot API) — приватный чат мэтча в Mini App + этот обмен и есть наш эквивалент.
+- 🔧 Бэк: миграция `telegram_share_offers` (уникальность пара/юзер, `exchanged_at`); модель `TelegramShareOffer`; сервис `TelegramUsernameShare` (offer/revoke/status, обмен в транзакции, username чистим `^[A-Za-z0-9_]{3,64}$`); тонкий `TelegramShareController` (POST/DELETE `/api/conversations/{conversation}/telegram-share`, throttle social-write); `ConversationController::show` отдаёт `telegram_share` (peer_username — только после exchanged, иначе null).
+- 🔧 `TelegramNotifier::usernameExchanged` (без гейта онлайна — событие одноразовое и важное; гейт тумблера messages остаётся) + `send()` отрефакторен на общий `postMessage()` с N рядами кнопок (поведение 1-в-1).
+- 🔧 Фронт (Правило №1): `useTelegramShare` (apply/offer/revoke, JSDoc) + панель в `ChatWindow` под шапкой direct-диалога (PrimeVue Button/Message, тёмная тема, ожидание/отзыв/обмен/ошибка no_username «задайте @username в настройках TG»).
+- Проверки: `php -l` ✅ ×6, `vue-tsc --noEmit` ✅, `route:list` ✅.
+- ⚠️ Нужны редеплой и `php artisan migrate` на проде (новая таблица). Вживую: A жмёт «Поделиться» → у B «собеседник уже поделился» → B жмёт → обоим в бота падает @username; до взаимности юзернеймы нигде не светятся.
+
+## 2026-09-29 — Аудит realtime (сокеты + bus + поллер): всё сходится, вычищен мёртвый код
+- ✅ Сокеты: все 27 событий `broadcastAs` совпадают со слушателями (`useUserChannel`, `useChat`, `useMap`, `useThreadLive`, `usePinnedMessages`, `useChatWallpaper`); все события — `ShouldBroadcastNow` (без зависимости от очереди); `broadcasting/auth` на месте; приватные каналы (`user.*`, `chat.*`) с проверкой прав, `map`/`threads` публичные, presence `online` режет инвизибл.
+- ✅ Поллер: `sync()` отдаёт все ключи, что читает фронт (messages/updated/open_ids/typing/previews/friendships/matches/likes/video/thread/notifications/business/wallpapers/peer/map/receipts/badges); окно −10с + клиентский дедуп (`seenMessageIds`, `alreadyEmitted`, курсоры `after_id`/`video_after_id`); 429 → бэкофф 10с + экспонента до 30с; лимитеры `polling:300` + `realtime-sync:120` держат тик 2.5с и burst; смена режима в обе стороны (`mode` в sync + вотчер 60с в socket).
+- ✅ Жизненный цикл: `leave` только в reset-путях (смена аккаунта), переподписки без дублей (`leave` перед `listen` в карте/чате/тредах); логаут рвёт всё (`stopRealtimePoller`, `resetEchoSession`, `resetPresence`); idle-вкладка (>60с) отпускает WS-слот.
+- 🔧 Чистка мёртвого (бэк такое никогда не шлёт, фронт никто не слушает): эмит `notify:message` из поллера, `.pin.activity` на map-канале, `user:pin.activity` + `user:user.feed.updated` из шины и подписок.
+- Проверки: `vue-tsc --noEmit` ✅, `php -l` ✅, `route:list` ✅ (mode/sync/setMode + broadcasting/auth).
+- ⚠️ Нужен редеплой JS-билда (мелочь, только фронт).
+
+## 2026-09-29 — TG-уведомления надёжно при закрытом Mini App + системные кнопки вниз на мобиле в TG
+- 🐞 «То приходит, то не приходит» в диалог с ботом — найдено 3 причины. 1) Часовой кулдаун `tg:message:{conv}:{user}`: приходило только первое сообщение в час на диалог, остальные гаслись. 2) `telegram_blocked_at` вечный: один 403 (не нажат /start, временный блок) навсегда глушил уведомления даже после /start. 3) Узкий `select()` получателя без telegram/last_seen-колонок (добивался через `fresh()`, тут было ок).
+- 🔧 `TelegramNotifier`: правило «только когда Mini App закрыт» — получатель онлайн (`User::isAway`, порог 3 мин как везде) уже видит сообщение в realtime, в TG не дублируем; отошёл — сообщения шлём КАЖДОЕ (кулдаун убран), лайки — с суточным кулдауном, мэтчи — как раньше без кулдауна, но каждому только если он офлайн. Кнопки `web_app` ведут в Mini App на нужный экран (`/chat/{id}` — провал прямо в диалог, `/swipes` — лайки/мэтч без чата).
+- 🔧 Самолечение блока: `send()` при успехе снимает `telegram_blocked_at`; `TelegramAuthController::linkToUser/refreshSnapshot` снимают его при свежей привязке через initData (если блок реальный — следующий 403 пометит заново). `resolveRecipient` теперь требует и `last_seen_at` для гейта онлайна; `MessageController::pushToRecipients` сразу селектит нужные колонки (без лишнего `fresh()`).
+- 🔧 Мобилка в TG-окружении (обычный веб — без изменений): колокол (`bellTotal` = `badge.total`, тот же бейдж что в топбаре) и аватар с дропдауном переехали в `MobileBottomNav` (`showSystemItems = isTelegram`, ссылка «Профиль» уступает слот и живёт в меню как «Мой профиль»); сетка расширена до `grid-cols-7` под максимум (5 разделов + звонок + профиль). Топбар в TG-компакте (`isTelegram && isBelowLg`, новый флаг `useViewportBreakpoints`) колокол/аватар прячет; TG-десктоп и веб — как было.
+- 🔧 Дропдаун профиля в TG (`useAppLayout.telegramSections`): «Мой профиль» + все включённые модули (Карта/ULove/UFlow/Районы — по `appModules.isEnabled`, Чаты — всегда) + Настройки/выход как раньше. Модуль включил — пункт появился сам.
+- Проверки: `php -l` ✅ ×3, `vue-tsc --noEmit` ✅.
+- ⚠️ Нужен редеплой (бэк + JS-билд). Вживую: закрыть Mini App → написать сообщение → оно в диалоге с ботом с кнопкой «Открыть чат»; открыть Mini App → дубли в TG не летят; в TG на мобиле низ с колоколом и аватаром, модули в меню аватара.
+
+## 2026-09-29 — Фикс 429 telegram/status + десктоп-навигация в фирменный розовый
+- 🐞 `GET /api/telegram/status` умирал в 429: роут сидел в общем ведре `throttle:60,1` (делит бюджет с version/nbrb, ключ по IP — за NAT/на Laravel Cloud одиночный статус резался), а фронт после первого же 429 навсегда лочил `loaded = true` с `linked = false` (повтор невозможен, врал про «не привязан»).
+- 🔧 Бэк: новый именной лимитер `telegram-status` (60/мин на юзера, как у `email-status`); статус/preferences/unlink переведены на него — изолированное пер-юзер ведро.
+- 🔧 Фронт (Правило №1): `useTelegramNotifications.loadTelegramNotify(force?)` — успех кэшируется за сессию, повторные монтирования сеть не дёргают (кулдаун 10с); 429 молча (состояние не трогаем) + бэкофф по `Retry-After` (фолбэк 30с); `loaded` ставится только на успехе.
+- 🔧 Десктоп-навигация (`AppTopBar`, только `lg+`): активная пилюля — фирменный тиндеровский `#FD267D` + белый текст (`dark:bg-[#FD267D]/80` с лёгкой прозрачностью для читаемости в тёмной теме). Логика классов — в новом хуке `useDesktopTopNav` (Правило №1, JSDoc); мобилка (`MobileBottomNav`) не тронута.
+- Проверки: `php -l` ✅ ×2, `route:list` ✅ (4 telegram-роута), `vue-tsc --noEmit` ✅.
+- ⚠️ Нужен редеплой (бэк + JS-билд). Вживую: открыть таб «Приложение» в настройках — статус без 429, активный пункт меню розовый с белым текстом в обеих темах.
+
 ## 2026-09-29 — Пакет мелочей: скринлок в Mini App, «Мэтч», кнопки, навигация, заглушка
 - 🐞 №7 Скринлок в TG фризил: найдено 3 дефекта. 1) Протухшая сессия (лок на часы в Mini App → 419 на verify) показывала «Неверный код» и вечный ступор без объяснений. 2) `writeLocal`/IndexedDB-throw пропускал `locked=false`. 3) `unlockBody` early-return оставлял `body{position:fixed}` при гонках.
 - 🔧 `screenlock.api.verifyScreenLock` → `{ok, unauthorized}` (401/419 отдельно от неверного кода); `useScreenLock.verify`: честная ошибка «Сессия истекла… Выйти и войти заново», `writeLocal` в try, после анлока отложенный `cleanupStrayScrollLocks()` (модалка под локскрином/оборванный transition); `useScreenLockScroll.unlockBody` — инлайн-стили восстанавливаются всегда, менеджер-релиз только за свой захват.

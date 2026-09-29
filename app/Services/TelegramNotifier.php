@@ -14,13 +14,20 @@ use Illuminate\Support\Facades\Log;
  * Сценарий: человек пользуется ULove через Mini App, но приложение
  * закрыто — колокольчик и web-push не дойдут, а сообщение в Telegram
  * дойдёт всегда. Бот пишет: новые сообщения, лайки анкеты, мэтчи.
- * Кнопка под текстом открывает Mini App сразу на нужном экране.
+ * Кнопка под текстом открывает Mini App сразу на нужном экране
+ * (чат — прямо в диалог, остальное — на свой экран).
+ *
+ * Правило «только когда Mini App закрыт»: получатель онлайн
+ * (last_seen_at свежее 3 минут, см. User::isAway) — сообщение уже
+ * видно в realtime, в TG не дублируем. Отошёл — шлём в TG.
  *
  * Важно про Bot API: писать можно только тем, кто хоть раз нажал
  * /start у бота (иначе 403). Такой 403 помечаем в
  * `users.telegram_blocked_at` — настройки показывают подсказку
- * «нажмите Start», а не молчат. Метод никогда не кидает исключений:
- * уведомление — необязательный сайд-эффект.
+ * «нажмите Start», а не молчат. Флаг самозалечивается: успешная
+ * отправка и свежая привязка через initData его снимают, иначе
+ * один 403 навсегда глушил бы уведомления. Метод никогда не кидает
+ * исключений: уведомление — необязательный сайд-эффект.
  */
 class TelegramNotifier
 {
@@ -28,11 +35,6 @@ class TelegramNotifier
      * Кулдаун повторов о лайке одной пары, секунд (сутки, как в письмах).
      */
     public const LIKED_COOLDOWN_SECONDS = 86400;
-
-    /**
-     * Кулдаун повторов о новых сообщениях в диалоге, секунд (час, как в письмах).
-     */
-    public const MESSAGE_COOLDOWN_SECONDS = 3600;
 
     /**
      * Можно ли писать пользователю в Telegram.
@@ -74,6 +76,12 @@ class TelegramNotifier
     /**
      * Напомнить о новом сообщении в диалоге.
      *
+     * Шлём КАЖДОЕ сообщение, но только отошедшему получателю
+     * (Mini App закрыт). Онлайн-получатель видит сообщение в realtime,
+     * дубль в TG ему не нужен. Старого часового кулдауна на диалог
+     * больше нет — именно он давал «то приходит, то не приходит»:
+     * приходило только первое сообщение в час.
+     *
      * @param User $sender автор сообщения
      * @param User $recipient получатель
      * @param Conversation $conversation диалог
@@ -82,17 +90,19 @@ class TelegramNotifier
      */
     public static function chatMessage(User $sender, User $recipient, Conversation $conversation, string $preview): void
     {
+        $recipient = self::resolveRecipient($recipient);
+
+        if ($recipient === null) {
+            return;
+        }
+
         if (! self::canNotify($recipient, 'messages')) {
             return;
         }
 
-        $key = "tg:message:{$conversation->id}:{$recipient->id}";
-
-        if (Cache::has($key)) {
+        if (! $recipient->isAway()) {
             return;
         }
-
-        Cache::put($key, true, self::MESSAGE_COOLDOWN_SECONDS);
 
         $senderName = trim((string) ($sender->name ?? ''));
 
@@ -116,7 +126,17 @@ class TelegramNotifier
      */
     public static function liked(User $liker, User $liked, bool $isIncognito = false, bool $isSuperlike = false): void
     {
+        $liked = self::resolveRecipient($liked);
+
+        if ($liked === null) {
+            return;
+        }
+
         if (! self::canNotify($liked, 'likes')) {
+            return;
+        }
+
+        if (! $liked->isAway()) {
             return;
         }
 
@@ -157,7 +177,17 @@ class TelegramNotifier
         $path = $conversation ? '/chat/'.(int) $conversation->id : '/swipes';
 
         foreach ([[$other, $me], [$me, $other]] as [$recipient, $actor]) {
+            $recipient = self::resolveRecipient($recipient);
+
+            if ($recipient === null) {
+                continue;
+            }
+
             if (! self::canNotify($recipient, 'matches')) {
+                continue;
+            }
+
+            if (! $recipient->isAway()) {
                 continue;
             }
 
@@ -193,6 +223,73 @@ class TelegramNotifier
             return false;
         }
 
+        $buttons = [];
+        $button = self::button($path, $buttonLabel);
+
+        if ($button !== null) {
+            $buttons[] = [$button];
+        }
+
+        return self::postMessage($recipient, $text, $buttons);
+    }
+
+    /**
+     * Рассылка username при взаимном согласии на обмен.
+     *
+     * Одноразовое важное событие — шлём всегда, без гейта онлайна:
+     * сам username онлайн-получатель может не заметить в панели.
+     * Гейт тумблера `messages` остаётся (обмен — про общение).
+     *
+     * @param User $recipient кому шлём (получает username пира)
+     * @param string $peerUsername username собеседника без @
+     * @param string $peerName имя собеседника для текста
+     * @param int $conversationId диалог для кнопки «Открыть чат»
+     * @return bool true когда Telegram принял сообщение
+     */
+    public static function usernameExchanged(User $recipient, string $peerUsername, string $peerName, int $conversationId): bool
+    {
+        $recipient = self::resolveRecipient($recipient);
+
+        if ($recipient === null) {
+            return false;
+        }
+
+        if (! self::canNotify($recipient, 'messages')) {
+            return false;
+        }
+
+        $cleanUsername = ltrim(trim($peerUsername), '@');
+
+        if ($cleanUsername === '') {
+            return false;
+        }
+
+        $displayName = trim($peerName) !== '' ? trim($peerName) : 'Собеседник';
+        $text = '🔗 <b>'.self::escape($displayName).'</b> поделился(а) своим Telegram: @'.self::escape($cleanUsername)
+            ."\nТеперь можете писать друг другу напрямую.";
+
+        $writeButton = ['text' => 'Написать в Telegram', 'url' => 'https://t.me/'.$cleanUsername];
+        $chatButton = self::button('/chat/'.$conversationId, 'Открыть чат');
+
+        $buttons = [[$writeButton]];
+
+        if ($chatButton !== null) {
+            $buttons[] = [$chatButton];
+        }
+
+        return self::postMessage($recipient, $text, $buttons);
+    }
+
+    /**
+     * POST в Bot API с обработкой 403 и самолечением блокировки.
+     *
+     * @param User $recipient получатель с telegram_id
+     * @param string $text текст в HTML-разметке Telegram
+     * @param array<int, array<int, array<string, mixed>>> $buttons ряды inline-кнопок
+     * @return bool true когда Telegram принял сообщение
+     */
+    private static function postMessage(User $recipient, string $text, array $buttons): bool
+    {
         $chatId = (int) ($recipient->telegram_id ?? 0);
         $botToken = (string) config('telegram.bot_token', '');
 
@@ -207,10 +304,8 @@ class TelegramNotifier
             'disable_web_page_preview' => true,
         ];
 
-        $button = self::button($path, $buttonLabel);
-
-        if ($button !== null) {
-            $payload['reply_markup'] = ['inline_keyboard' => [[$button]]];
+        if ($buttons !== []) {
+            $payload['reply_markup'] = ['inline_keyboard' => $buttons];
         }
 
         try {
@@ -222,6 +317,8 @@ class TelegramNotifier
         }
 
         if ($response->successful()) {
+            self::clearBlocked($recipient);
+
             return true;
         }
 
@@ -241,14 +338,21 @@ class TelegramNotifier
      * Догрузить telegram-колонки, если модель выбрана узким select().
      *
      * Колокольчики и пуши часто таскают `select(id, name, ...)` без
-     * telegram-полей — тогда получателя перечитываем целиком.
+     * telegram-полей и last_seen_at — тогда получателя перечитываем
+     * целиком. Оба поля нужны: telegram_id для отправки, last_seen_at
+     * для гейта «только когда Mini App закрыт» (User::isAway).
      *
      * @param User $recipient возможно урезанная модель
      * @return User|null полная модель или null
      */
     private static function resolveRecipient(User $recipient): ?User
     {
-        if (array_key_exists('telegram_id', $recipient->getAttributes())) {
+        $attributes = $recipient->getAttributes();
+
+        $hasTelegram = array_key_exists('telegram_id', $attributes);
+        $hasSeen = array_key_exists('last_seen_at', $attributes);
+
+        if ($hasTelegram && $hasSeen) {
             return $recipient;
         }
 
@@ -271,6 +375,29 @@ class TelegramNotifier
             $recipient->forceFill(['telegram_blocked_at' => now()])->saveQuietly();
         } catch (\Throwable $e) {
             Log::warning('telegram mark blocked failed', ['user_id' => $recipient->id, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Снять пометку о блокировке после успешной отправки.
+     *
+     * Без этого один 403 (нет /start, временный блок) навсегда глушил
+     * бы уведомления даже после того, как пользователь нажал /start
+     * и разблокировал бота, — отсюда «раньше приходило, теперь нет».
+     *
+     * @param User $recipient получатель
+     * @return void
+     */
+    private static function clearBlocked(User $recipient): void
+    {
+        if ($recipient->telegram_blocked_at === null) {
+            return;
+        }
+
+        try {
+            $recipient->forceFill(['telegram_blocked_at' => null])->saveQuietly();
+        } catch (\Throwable $e) {
+            Log::warning('telegram clear blocked failed', ['user_id' => $recipient->id, 'error' => $e->getMessage()]);
         }
     }
 
