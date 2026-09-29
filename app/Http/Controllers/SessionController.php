@@ -19,6 +19,11 @@ class SessionController extends Controller
     /**
      * Список сеансов текущего пользователя, свежие сверху.
      *
+     * Текущий сеанс всегда первый с `is_current: true`: если его строки
+     * нет в таблице (вход по токену, WebView не сохранил куки, другой
+     * драйвер) — синтезируем её из живого запроса, иначе «я зашёл»
+     * не виден и счётчик активных врёт.
+     *
      * @param Request $request текущий запрос
      * @return \Illuminate\Http\JsonResponse
      */
@@ -52,7 +57,43 @@ class SessionController extends Controller
             ];
         });
 
-        return response()->json(['data' => $list, 'current_id' => $currentId]);
+        $hasCurrent = $list->contains(fn ($item) => $item['is_current']);
+
+        if (! $hasCurrent) {
+            $list->prepend($this->liveSession($request));
+        }
+
+        return response()->json(['data' => $list->values(), 'current_id' => $currentId]);
+    }
+
+    /**
+     * Карточка живого сеанса из текущего запроса.
+     *
+     * Без гео (fingerprintOnly — без HTTP): подпись и иконка те же,
+     * id `live` — в таблице такой строки нет, завершить нечего
+     * (кнопки у текущего и так нет, destroy отдаст 404).
+     *
+     * @param Request $request текущий запрос
+     * @return array{id:string,ip:string|null,device:string,platform:string,browser:string,label:string,is_current:true,last_activity_at:string}
+     */
+    private function liveSession(Request $request): array
+    {
+        $fp = DeviceFingerprint::fingerprintOnly($request);
+
+        return [
+            'id' => 'live',
+            'ip' => $request->ip(),
+            'device' => $fp['device'],
+            'platform' => $fp['platform'],
+            'browser' => $fp['browser'],
+            'label' => DeviceFingerprint::label([
+                'platform' => $fp['platform'],
+                'browser' => $fp['browser'],
+                'client' => $fp['client'],
+            ]),
+            'is_current' => true,
+            'last_activity_at' => now()->toISOString(),
+        ];
     }
 
     /**

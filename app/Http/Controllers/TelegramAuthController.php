@@ -133,6 +133,7 @@ class TelegramAuthController extends Controller
             'notify_messages' => (bool) ($user->telegram_notify_messages ?? true),
             'notify_likes' => (bool) ($user->telegram_notify_likes ?? true),
             'notify_matches' => (bool) ($user->telegram_notify_matches ?? true),
+            'notify_comments' => (bool) ($user->telegram_notify_comments ?? true),
             'can_notify' => $user->telegram_id !== null && $user->telegram_blocked_at === null,
             'bot_username' => (string) config('telegram.bot_username', 'U1ove_bot'),
         ]);
@@ -156,11 +157,12 @@ class TelegramAuthController extends Controller
             'notify_messages' => 'sometimes|boolean',
             'notify_likes' => 'sometimes|boolean',
             'notify_matches' => 'sometimes|boolean',
+            'notify_comments' => 'sometimes|boolean',
         ]);
 
         $patch = [];
 
-        foreach (['notify_messages', 'notify_likes', 'notify_matches'] as $key) {
+        foreach (['notify_messages', 'notify_likes', 'notify_matches', 'notify_comments'] as $key) {
             if (array_key_exists($key, $validated)) {
                 $patch['telegram_'.$key] = (bool) $validated[$key];
             }
@@ -176,6 +178,7 @@ class TelegramAuthController extends Controller
             'notify_messages' => (bool) ($fresh->telegram_notify_messages ?? true),
             'notify_likes' => (bool) ($fresh->telegram_notify_likes ?? true),
             'notify_matches' => (bool) ($fresh->telegram_notify_matches ?? true),
+            'notify_comments' => (bool) ($fresh->telegram_notify_comments ?? true),
         ]);
     }
 

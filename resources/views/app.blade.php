@@ -92,7 +92,22 @@
                         || haystack.indexOf('tgwebappdata') !== -1
                         || haystack.indexOf('tgwebappversion') !== -1;
                     var webApp = (window.Telegram && window.Telegram.WebApp) || null;
-                    if (!webApp && !looksLikeTg) return;
+                    // telegram-web-app.js определяет window.Telegram.WebApp ВСЕГДА,
+                    // даже в обычном десктопном Chrome (initData пуст, platform unknown).
+                    // Реальный Mini App доказывается только непустым initData или
+                    // tgWebApp-маркерами в URL. Без них это десктоп/PWA: SSR обязан
+                    // работать, поэтому куку не ставим, а отравленную (годовую,
+                    // от прежней версии скрипта) — чистим для самовосстановления.
+                    var hasInitData = !!(webApp && webApp.initData && String(webApp.initData).length > 0);
+                    var isRealTg = hasInitData || looksLikeTg;
+                    if (!isRealTg) {
+                        try {
+                            if (/(?:^|;\s*)upin_client=telegram(-webapp)?(?:;|$)/.test(document.cookie)) {
+                                document.cookie = 'upin_client=; path=/; max-age=0; SameSite=Lax';
+                            }
+                        } catch (e) {}
+                        return;
+                    }
                     // Маркер для бэка (DetectNativeClient): кука читается уже
                     // на document-запросах, hash до сервера не долетает.
                     try { document.cookie = 'upin_client=telegram; path=/; max-age=31536000; SameSite=Lax'; } catch (e) {}

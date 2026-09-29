@@ -1393,3 +1393,30 @@
 - 🔧 Логин ↔ регистрация прыгали + мигал скроллбар: пресет `page-auth` делал scale-кроссфейд с уходящей формой в `position: absolute; inset: 0`, но containing block у неё — весь скролл-контейнер (у обёртки нет `position: relative`), поэтому старая форма растягивалась на весь контейнер поверх новой.
 - 🔧 Теперь уходящая форма прячется мгновенно (`transition: none; opacity: 0`), новая плавно проявляется (opacity + подъём 10px, 260/320ms). Никаких оверлеев и scale — спокойная смена страницы без прыжков высоты и двойного скролла. Комментарий в `GuestLayout.vue` обновлён.
 - Проверки: CSS-only, `vue-tsc` не затрагивается.
+
+
+## 2026-09-29 — SSR для десктопа: фикс самоотравления telegram-кукой
+- Десктопный трафик получал пустой `div#app[data-page]` (CSR) + `noindex` вместо SSR-предрендера и SEO. Причина: `telegram-web-app.js` грузится синхронно в head каждой страницы и определяет `window.Telegram.WebApp` даже в обычном Chrome (initData пуст). Ранний инлайн в `app.blade.php` и `useTelegram` считали этого достаточно и ставили годовую куку `upin_client=telegram` на десктопе — бэк (`NativeClientDetector::isTelegram`) принимал браузер за натива и тушил `inertia.ssr.enabled` через `DetectNativeClient`.
+- Фикс: строгий детект `hasRealTelegramEvidence()` — только непустой `initData` или tgWebApp-маркеры в URL (search+hash). Применён в инлайне `app.blade.php`, `initTelegram/persistTelegramMarker/telegramClientHeader/isTelegramWebView` (`useTelegram.ts`). Вне TG отравленная кука удаляется (max-age=0) — десктопы самовосстанавливаются за один визит. Настоящий Mini App (initData) и upin-mobile (UA/header) по-прежнему в CSR-bypass.
+- Проверки: `vue-tsc --noEmit` OK, `vite build --ssr` OK, локальный SSR (`POST /render` Dashboard) — полный body OK, матрица `NativeClientDetector` (desktop clean → SSR, stale-cookie → bypass до самоочистки, tg-query/upin-mobile → bypass) OK.
+- После деплоя на Cloud: прод-SSR подхватит фикс сам (билд `pnpm run build:ssr` собирает свежий `bootstrap/ssr/ssr.js`); blade-фикс вступает сразу. Отдельно убедиться, что `inertia:start-ssr` запущен (Use Inertia SSR в compute), иначе десктоп всё равно получит CSR.
+
+
+## 2026-09-29 — Telegram-бот: диагностика пропусков + тумблер комментариев
+- Разбор жалобы «вход-уведомление приходит, а сообщения/лайки нет»: цепочка отправки исправна — прогнал 8 кейсов на фейке Bot API (away шлёт, online/unlinked/toggle-off/blocked давятся, лайк шлёт + 24ч кулдаун на пару, кнопки web_app корректны), прод-доставка жива (вход-алерты доходят). Молчание — это гейты: получатель онлайн (last_seen свежее 3 мин, гейт «только когда Mini App закрыт» из сегодняшних коммитов — раньше слалось всегда), повторный лайк пары в пределах суток, выключенный тумблер или 403 без /start.
+- `TelegramNotifier`: debug-лог `telegram notify skipped` с user_id/kind/reason (unlinked/blocked/toggle-off/online/cooldown) во всех ветках + `telegram notify sent` при успехе. В проде тихо, для разбора поднять LOG_LEVEL=debug. Поведение не менялось.
+- Дотянут 4-й тумблер: `notify_comments` в `TelegramAuthController::status/preferences` + `useTelegramNotifications` + строка «Комментарии» в `TelegramNotifySettings` (бэк слал комменты, а управлять ими было нечем).
+- Проверки: `php -l` OK, `vue-tsc --noEmit` OK, tg-verify 8/8 OK.
+- Как тестировать на проде: получатель — привязан через Mini App, нажал /start у бота, тумблеры в Настройках включены; закрыть ВСЁ (Telegram и сайт) и подождать 3+ мин; лайк — раз в сутки на пару, сообщения — каждое. Если не пришло — смотреть прод-лог на `telegram notify skipped/sent`.
+
+
+## 2026-09-29 — Сеансы: текущий всегда виден (синтез live)
+- Жалоба «вижу чужие входы, а своего нет»: `SessionController@index` читал только таблицу `sessions`, а строки текущего там может не быть (вход по токену, WebView не сохранил куки, чистка GC) — список врал про число активных.
+- Фикс: если среди строк нет `is_current`, первой подставляется синтетическая карточка из живого запроса (`DeviceFingerprint::fingerprintOnly` — без HTTP/гео, подпись та же, `id: live`, `last_activity: now`). Кнопок у текущего и так нет, `destroy('live')` даёт 404, счётчик «активно» теперь включает себя: свой вход + чужой = 2. Фронт не тронут — `is_current`/«это вы» уже умел.
+- Проверки: `php -l` OK, sqlite-стенд 3/3 (реальный current без дубля; пустая таблица — один live; чужие строки + live первым) OK.
+
+
+## 2026-09-29 — Кнопка «Мои сеансы» из бота ведёт прямо к сеансам
+- Жалоба: кнопка открывала просто профиль. Причина: путь был голый `/settings` (дефолтный таб «Профиль»), а сеансы живут на табе «Безопасность».
+- Фикс: путь кнопки — `/settings/security#sessions` (`ProfileController@edit` разруливает `/settings/security` в `initialTab=security`, фронт подхватывает). Плюс якорь: новый хук `useAnchorScroll` (JSDoc, Правило №1) + `<span id="sessions">` в `SettingsSessionsCard` — страница докручивается к карточке сеансов.
+- Проверки: `php -l` OK, `vue-tsc --noEmit` OK.

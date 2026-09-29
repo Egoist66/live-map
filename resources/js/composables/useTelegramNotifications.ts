@@ -5,12 +5,13 @@ export interface TelegramNotifyPrefs {
   notify_messages: boolean
   notify_likes: boolean
   notify_matches: boolean
+  notify_comments: boolean
 }
 
 const linked = ref(false)
 const canNotify = ref(false)
 const botUsername = ref('U1ove_bot')
-const prefs = ref<TelegramNotifyPrefs>({ notify_messages: true, notify_likes: true, notify_matches: true })
+const prefs = ref<TelegramNotifyPrefs>({ notify_messages: true, notify_likes: true, notify_matches: true, notify_comments: true })
 const loading = ref(false)
 const loaded = ref(false)
 const saving = ref(false)
@@ -24,7 +25,7 @@ const RATE_LIMIT_FALLBACK_MS = 30_000
 /**
  * Тумблеры уведомлений от бота в личку Telegram.
  *
- * Бот пишет о новых сообщениях, лайках и мэтчах с кнопкой,
+ * Бот пишет о новых сообщениях, лайках, мэтчах и комментариях с кнопкой,
  * открывающей Mini App на нужном экране, — ничего не пропустишь,
  * даже когда приложение закрыто. Вся логика здесь (Правило №1):
  * компонент только показывает тумблеры и дергает save.
@@ -82,6 +83,7 @@ export function useTelegramNotifications() {
           notify_messages: data.notify_messages ?? true,
           notify_likes: data.notify_likes ?? true,
           notify_matches: data.notify_matches ?? true,
+          notify_comments: data.notify_comments ?? true,
         }
         loaded.value = true
       } catch (requestError: unknown) {
@@ -154,6 +156,7 @@ export function useTelegramNotifications() {
         notify_messages: data.notify_messages ?? prefs.value.notify_messages,
         notify_likes: data.notify_likes ?? prefs.value.notify_likes,
         notify_matches: data.notify_matches ?? prefs.value.notify_matches,
+        notify_comments: data.notify_comments ?? prefs.value.notify_comments,
       }
       return true
     } catch {

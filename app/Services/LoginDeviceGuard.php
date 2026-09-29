@@ -119,7 +119,9 @@ class LoginDeviceGuard
             $fresh = $user->fresh();
 
             if ($fresh && (int) ($fresh->telegram_id ?? 0) > 0 && $fresh->telegram_blocked_at === null) {
-                TelegramNotifier::send($fresh, self::telegramText($device, $via), '/settings', 'Мои сеансы');
+                // Кнопка ведёт прямо на таб «Безопасность» к карточке сеансов:
+                // голый /settings открывает таб «Профиль», sessions не видно.
+                TelegramNotifier::send($fresh, self::telegramText($device, $via), '/settings/security#sessions', 'Мои сеансы');
             }
         } catch (\Throwable $e) {
             Log::warning('new device telegram failed', ['user_id' => $user->id, 'error' => $e->getMessage()]);

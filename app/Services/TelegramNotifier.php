@@ -53,10 +53,14 @@ class TelegramNotifier
         }
 
         if ((int) ($recipient->telegram_id ?? 0) <= 0) {
+            self::logSkip($recipient, $kind, 'unlinked');
+
             return false;
         }
 
         if ($recipient->telegram_blocked_at !== null) {
+            self::logSkip($recipient, $kind, 'blocked');
+
             return false;
         }
 
@@ -72,7 +76,13 @@ class TelegramNotifier
             return false;
         }
 
-        return (bool) ($recipient->{$column} ?? true);
+        if (! (bool) ($recipient->{$column} ?? true)) {
+            self::logSkip($recipient, $kind, 'toggle-off');
+
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -103,6 +113,8 @@ class TelegramNotifier
         }
 
         if (! $recipient->isAway()) {
+            self::logSkip($recipient, 'messages', 'online');
+
             return;
         }
 
@@ -139,12 +151,16 @@ class TelegramNotifier
         }
 
         if (! $liked->isAway()) {
+            self::logSkip($liked, 'likes', 'online');
+
             return;
         }
 
         $key = "tg:liked:{$liker->id}:{$liked->id}";
 
         if (Cache::has($key)) {
+            self::logSkip($liked, 'likes', 'cooldown');
+
             return;
         }
 
@@ -190,6 +206,8 @@ class TelegramNotifier
             }
 
             if (! $recipient->isAway()) {
+                self::logSkip($recipient, 'matches', 'online');
+
                 continue;
             }
 
@@ -232,6 +250,8 @@ class TelegramNotifier
         }
 
         if (! $recipient->isAway()) {
+            self::logSkip($recipient, 'comments', 'online');
+
             return;
         }
 
@@ -366,6 +386,12 @@ class TelegramNotifier
         if ($response->successful()) {
             self::clearBlocked($recipient);
 
+            try {
+                Log::debug('telegram notify sent', ['chat_id' => $chatId]);
+            } catch (\Throwable) {
+                // No-op: диагностика не должна мешать отправке.
+            }
+
             return true;
         }
 
@@ -407,6 +433,30 @@ class TelegramNotifier
             return $recipient->fresh();
         } catch (\Throwable) {
             return null;
+        }
+    }
+
+    /**
+     * Записать причину пропуска уведомления (диагностика «не пришло»).
+     *
+     * Уровень debug: в проде тихо, при разборе жалоб временно
+     * поднимаем LOG_LEVEL=debug и видим связку user_id/kind/reason.
+     *
+     * @param User $recipient получатель
+     * @param string $kind messages|likes|matches|comments
+     * @param string $reason unlinked|blocked|toggle-off|online|cooldown
+     * @return void
+     */
+    private static function logSkip(User $recipient, string $kind, string $reason): void
+    {
+        try {
+            Log::debug('telegram notify skipped', [
+                'user_id' => (int) ($recipient->id ?? 0),
+                'kind' => $kind,
+                'reason' => $reason,
+            ]);
+        } catch (\Throwable) {
+            // No-op: диагностика не должна мешать основному потоку.
         }
     }
 

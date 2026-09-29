@@ -6,8 +6,10 @@ import Tag from 'primevue/tag'
 import ProgressSpinner from 'primevue/progressspinner'
 import Message from 'primevue/message'
 import { useSessions } from '@/composables/useSessions'
+import { useAnchorScroll } from '@/composables/useAnchorScroll'
 
 const sessions = useSessions()
+useAnchorScroll('sessions')
 
 onMounted(() => {
   void sessions.load()
@@ -48,6 +50,7 @@ function fmtActivity(iso: string | null): string {
 <template>
   <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-6' }, content: { class: '!p-0' } }">
     <template #content>
+      <span id="sessions" class="block scroll-mt-28" aria-hidden="true" />
       <div class="flex items-center gap-2 flex-wrap">
         <div class="font-black dark:text-white">Сеансы</div>
         <Tag v-if="sessions.items.value.length" :value="`активно: ${sessions.items.value.length}`" severity="contrast" class="!text-[9px]" />

@@ -17,6 +17,7 @@ const rows = [
   { key: 'notify_messages', title: 'Новые сообщения', desc: 'Кто-то написал — бот пришлёт текст с кнопкой «Открыть чат»' },
   { key: 'notify_likes', title: 'Лайки анкеты', desc: 'Вас лайкнули в ULove (инкогнито остаётся анонимным)' },
   { key: 'notify_matches', title: 'Мэтчи', desc: 'Взаимность — бот позовёт в открытый чат' },
+  { key: 'notify_comments', title: 'Комментарии', desc: 'Ответили на ваш пин, фото, пост или новость района' },
 ] as const
 </script>
 

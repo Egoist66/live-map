@@ -21,9 +21,14 @@ let initialized = false
 let scriptPromise: Promise<boolean> | null = null
 
 /**
- * Достать WebApp-объект, если скрипт уже загружен.
+ * Достать сырой WebApp-объект, если скрипт уже загружен.
  *
- * @returns WebApp или null вне Telegram
+ * ВНИМАНИЕ: наличие объекта НЕ означает «внутри Telegram» —
+ * `telegram-web-app.js` определяет его всегда, даже в обычном десктопном
+ * Chrome (там `initData` пуст, `platform` unknown). Для ответа на вопрос
+ * «мы в Mini App?» используй `hasRealTelegramEvidence()`.
+ *
+ * @returns WebApp или null когда скрипт ещё не загружен
  */
 function getWebApp(): TelegramWebApp | null {
   if (typeof window === 'undefined') {
@@ -57,6 +62,54 @@ function hasTelegramQuery(): boolean {
   const haystack = `${window.location.search} ${window.location.hash}`.toLowerCase()
 
   return haystack.includes('tgwebappplatform') || haystack.includes('tgwebappdata') || haystack.includes('tgwebappversion')
+}
+
+/**
+ * Строгая проверка «страница реально открыта внутри Telegram Mini App».
+ *
+ * Голого `window.Telegram.WebApp` недостаточно: скрипт `telegram-web-app.js`
+ * грузится синхронно в head каждой страницы и определяет объект даже
+ * в обычном десктопном Chrome. Без строгой проверки десктоп ставил себе
+ * годовую куку `upin_client=telegram`, бэк (`NativeClientDetector`)
+ * принимал браузер за «натива» и тушил SSR — весь десктопный трафик
+ * получал пустой `div#app` (CSR) и `noindex` вместо предрендера и SEO.
+ *
+ * Доказательства Mini App: непустой `initData` (его подписывает и кладёт
+ * только настоящий клиент) либо tgWebApp-маркеры в URL (search + hash).
+ *
+ * @returns true только внутри настоящего Telegram-клиента
+ */
+function hasRealTelegramEvidence(): boolean {
+  if (hasTelegramQuery()) {
+    return true
+  }
+
+  try {
+    const initData = getWebApp()?.initData
+
+    return typeof initData === 'string' && initData.length > 0
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Удалить отравленную куку telegram-маркера (самовосстановление десктопа).
+ *
+ * Десктопные браузеры, успевшие получить `upin_client=telegram` от прежней
+ * версии скрипта, чинят себя сами при первом же визите: без маркера бэк
+ * снова отдаёт им SSR-предрендер.
+ *
+ * @returns void
+ */
+function clearStaleTelegramMarker(): void {
+  try {
+    if (/(?:^|;\s*)upin_client=telegram(-webapp)?(?:;|$)/.test(document.cookie)) {
+      document.cookie = 'upin_client=; path=/; max-age=0; SameSite=Lax'
+    }
+  } catch {
+    // No-op: кука необязательна.
+  }
 }
 
 /**
@@ -329,9 +382,11 @@ export function useTelegram() {
       return false
     }
 
-    const inTelegram = getWebApp() !== null || hasTelegramQuery()
+    const inTelegram = hasRealTelegramEvidence()
 
     if (!inTelegram) {
+      clearStaleTelegramMarker()
+
       return false
     }
 
@@ -407,7 +462,7 @@ export function useTelegram() {
    * @returns telegram-webapp внутри TG, иначе null (пусть решает useNativeClient)
    */
   function telegramClientHeader(): string | null {
-    if (isTelegram.value || getWebApp() !== null || hasTelegramQuery()) {
+    if (hasRealTelegramEvidence()) {
       return 'telegram-webapp'
     }
 
@@ -426,9 +481,11 @@ export function useTelegram() {
       return false
     }
 
-    const inTelegram = getWebApp() !== null || hasTelegramQuery()
+    const inTelegram = hasRealTelegramEvidence()
 
     if (!inTelegram) {
+      clearStaleTelegramMarker()
+
       return false
     }
 
@@ -534,16 +591,18 @@ export function useTelegram() {
 }
 
 /**
- * Проверить, что страница открыта внутри Telegram (без инициализации).
+ * Проверить, что страница открыта внутри настоящего Telegram-клиента
+ * (без инициализации моста).
  *
- * Для axios-интерцептора, где нельзя ждать initTelegram.
+ * Для axios-интерцептора, где нельзя ждать initTelegram. Строгая:
+ * голого `window.Telegram.WebApp` недостаточно (см. `hasRealTelegramEvidence`).
  *
- * @returns true при наличии WebApp или tgWebApp-query
+ * @returns true при initData или tgWebApp-маркерах в URL
  */
 export function isTelegramWebView(): boolean {
   if (typeof window === 'undefined') {
     return false
   }
 
-  return getWebApp() !== null || hasTelegramQuery()
+  return hasRealTelegramEvidence()
 }
