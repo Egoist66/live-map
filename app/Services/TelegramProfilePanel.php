@@ -76,6 +76,10 @@ class TelegramProfilePanel
         ];
 
         $keyboard[] = [
+            ['text' => '🔑 Пароль для входа с ПК', 'callback_data' => 'go_password'],
+        ];
+
+        $keyboard[] = [
             ['text' => '🔄 Обновить', 'callback_data' => 'prof_refresh'],
             TelegramMenu::openAppButton('🌐 Открыть анкету'),
         ];

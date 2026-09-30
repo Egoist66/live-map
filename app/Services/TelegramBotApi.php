@@ -163,6 +163,7 @@ class TelegramBotApi
                 ['command' => 'stats', 'description' => '📊 Уровень, репутация, тариф'],
                 ['command' => 'notify', 'description' => '🔔 Уведомления: вкл/выкл'],
                 ['command' => 'sessions', 'description' => '📱 Активные сеансы: завершить или забанить'],
+                ['command' => 'password', 'description' => '🔑 Пароль для входа с компьютера'],
                 ['command' => 'help', 'description' => '✨ Все возможности бота'],
                 ['command' => 'delete', 'description' => '💔 Удалить профиль'],
                 ['command' => 'restore', 'description' => '💚 Вернуть профиль'],

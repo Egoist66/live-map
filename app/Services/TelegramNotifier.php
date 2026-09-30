@@ -157,6 +157,10 @@ class TelegramNotifier
     /**
      * Напомнить о новом лайке анкеты.
      *
+     * Кнопка ведёт прямо в профиль лайкнувшего (`/users/{id}` — бэк сам
+     * разрулит слаг и приватность), а не в общую ленту. Инкогнито (PRO)
+     * личность не палит: имя скрыто и кнопка ведёт в ленту свайпов.
+     *
      * @param User $liker автор лайка
      * @param User $liked получатель
      * @param bool $isIncognito имя скрываем и здесь
@@ -193,17 +197,20 @@ class TelegramNotifier
 
         if ($isIncognito) {
             $text = '💞 Вашу анкету лайкнули анонимно'.($isSuperlike ? ' · суперлайк ⭐' : '');
-        } else {
-            $likerName = trim((string) ($liker->name ?? ''));
+            self::send($liked, $text, '/swipes', 'Смотреть');
 
-            if ($likerName === '') {
-                $likerName = 'Поклонник';
-            }
-
-            $text = '💞 Вас лайкнул(а): <b>'.self::escape($likerName).'</b>'.($isSuperlike ? ' · суперлайк ⭐' : '');
+            return;
         }
 
-        self::send($liked, $text, '/swipes', 'Смотреть');
+        $likerName = trim((string) ($liker->name ?? ''));
+
+        if ($likerName === '') {
+            $likerName = 'Поклонник';
+        }
+
+        $text = '💞 Вас лайкнул(а): <b>'.self::escape($likerName).'</b>'.($isSuperlike ? ' · суперлайк ⭐' : '');
+
+        self::send($liked, $text, '/users/'.$liker->profileIdentifier(), '👤 Смотреть анкету');
     }
 
     /**
@@ -578,6 +585,7 @@ class TelegramNotifier
      * только в колокольчик — в бота ничего не прилетало и владельцы
      * думали, что «лайки не приходят». Гейты те же: тумблер likes
      * + только отошедшему (isAway), дедуп по паре сутки.
+     * Кнопок две: автор (профиль лайкнувшего) и сама сущность.
      *
      * @param User $actor кто лайкнул
      * @param User $owner владелец сущности
@@ -620,7 +628,21 @@ class TelegramNotifier
 
         $text = '❤️ <b>'.self::escape($authorPart).'</b> лайкнул(а): '.self::escape($entity);
 
-        self::send($owner, $text, $path, 'Смотреть');
+        $rows = [];
+
+        $authorButton = self::button('/users/'.$actor->profileIdentifier(), '👤 Автор');
+
+        if ($authorButton !== null) {
+            $rows[] = [$authorButton];
+        }
+
+        $entityButton = self::button($path, '👀 Смотреть');
+
+        if ($entityButton !== null) {
+            $rows[] = [$entityButton];
+        }
+
+        self::dispatchMessage((int) $owner->id, $text, $rows);
     }
 
     /**

@@ -44,7 +44,7 @@ class TelegramMenu
         $admirers = TelegramInsights::admirers($fresh);
 
         $text = "👋 Привет{$hello}! Я — ваш пульт от ULove.\n"
-            .'Могу всё без открытия приложения: анкета, лайки, мэтчи, сообщения, сеансы и уведомления.';
+            .'Могу всё без открытия приложения: анкета, лайки, мэтчи, сообщения, сеансы, пароль для ПК и уведомления.';
 
         $totalLikes = (int) ($admirers['total'] ?? 0);
 
@@ -71,6 +71,9 @@ class TelegramMenu
             [
                 ['text' => '💬 Сообщения', 'callback_data' => 'go_messages'],
                 ['text' => '📋 Все команды', 'callback_data' => 'go_help'],
+            ],
+            [
+                ['text' => '🔑 Пароль для входа с ПК', 'callback_data' => 'go_password'],
             ],
             [
                 self::openAppButton('🌐 Открыть приложение'),
@@ -102,6 +105,7 @@ class TelegramMenu
         $lines[] = '📊 /stats — уровень, репутация, тариф';
         $lines[] = '🔔 /notify — какие письма слать в личку';
         $lines[] = '📱 /sessions — сеансы: завершить чужой вход, забанить устройство';
+        $lines[] = '🔑 /password — логин и новый пароль для входа с компьютера';
         $lines[] = '💔 /delete — удалить профиль (сначала подарим PRO!)';
         $lines[] = '💚 /restore — вернуть профиль в течение 14 дней';
         $lines[] = '';

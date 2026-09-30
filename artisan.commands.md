@@ -427,7 +427,7 @@
 
 | Команда | Описание |
 |---------|----------|
-| `telegram:setup-bot` | Регистрирует webhook, 14 команд (/start…/restore) и нативное меню commands у поля ввода (Mini App — инлайн-кнопками 🌐 в панелях) |
+| `telegram:setup-bot` | Регистрирует webhook, 15 команд (/start…/restore) и нативное меню commands у поля ввода (Mini App — инлайн-кнопками 🌐 в панелях) |
 
 ---
 

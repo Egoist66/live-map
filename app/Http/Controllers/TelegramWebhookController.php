@@ -10,6 +10,7 @@ use App\Services\TelegramDeletionFlow;
 use App\Services\TelegramInsights;
 use App\Services\TelegramMenu;
 use App\Services\TelegramNotifyPanel;
+use App\Services\TelegramPasswordService;
 use App\Services\TelegramProfilePanel;
 use App\Services\TelegramSessionActions;
 use App\Services\TelegramSessionsPanel;
@@ -26,6 +27,7 @@ use Illuminate\Support\Facades\Log;
  * - /likes, /matches, /messages, /stats — живые инсайты;
  * - /notify — тумблеры уведомлений;
  * - /sessions — панель сеансов (kill/ban);
+ * - /password — новый пароль для входа с компьютера (показ один раз);
  * - /delete, /restore — отложенное удаление с приманкой (PRO-неделя + 14 дней grace).
  *
  * Колбэки короче 64 байт: sess*, prof_*, go_*, ntg_*, del_*.
@@ -142,6 +144,7 @@ class TelegramWebhookController extends Controller
             '/stats' => $this->replyStats($user, $chatId),
             '/notify' => $this->replyNotify($user, $chatId),
             '/sessions' => $this->replySessions($user, $chatId),
+            '/password' => $this->replyPasswordAsk($user, $chatId),
             '/delete' => $this->replyDeleteBait($user, $chatId),
             '/restore' => $this->replyRestore($user, $chatId),
             default => $this->replyUnknown($chatId),
@@ -249,6 +252,28 @@ class TelegramWebhookController extends Controller
 
         if ($data === 'go_messages') {
             $this->editMessages($fresh, $chatId, $messageId, $callbackId);
+
+            return true;
+        }
+
+        if ($data === 'go_password') {
+            $ask = TelegramPasswordService::ask($fresh);
+            TelegramBotApi::editPanel($chatId, $messageId, $ask['text'], $ask['keyboard']);
+            TelegramBotApi::answerCallback($callbackId, 'Пароль для входа с ПК');
+
+            return true;
+        }
+
+        if ($data === 'pwd_show') {
+            $this->issuePassword($fresh, $chatId, $messageId, $callbackId);
+
+            return true;
+        }
+
+        if ($data === 'pwd_hide') {
+            $done = TelegramPasswordService::hidden();
+            TelegramBotApi::editPanel($chatId, $messageId, $done['text'], $done['keyboard']);
+            TelegramBotApi::answerCallback($callbackId, 'Пароль убран с экрана 🙈');
 
             return true;
         }
@@ -639,6 +664,93 @@ class TelegramWebhookController extends Controller
         $panel = TelegramSessionsPanel::build($user);
 
         TelegramBotApi::sendMessage($chatId, $panel['text'], $panel['keyboard']);
+    }
+
+    /**
+     * Экран-подтверждение выдачи пароля новым сообщением (/password).
+     *
+     * Сам пароль здесь не генерируем — только по тапу «Показать»
+     * (колбэк pwd_show), чтобы случайный ввод команды не сжигал текущий.
+     *
+     * @param User $user владелец
+     * @param int $chatId куда слать
+     * @return void
+     */
+    private function replyPasswordAsk(User $user, int $chatId): void
+    {
+        $ask = TelegramPasswordService::ask($user);
+
+        TelegramBotApi::sendMessage($chatId, $ask['text'], $ask['keyboard']);
+    }
+
+    /**
+     * Выпустить пароль по кнопке и прислать отдельным сообщением.
+     *
+     * Отправка — прямой вызов TelegramBotApi::sendMessage, а не очередь:
+     * открытый текст не должен оседать в хранилище jobs. Панель
+     * подтверждения правим в нейтральное состояние, чтобы повторный тап
+     * не плодил пароли (второй упрётся в кулдаун из issue()).
+     *
+     * @param User $user владелец
+     * @param int $chatId куда слать пароль
+     * @param int $messageId панель подтверждения (переправить в «отправлено»)
+     * @param string $callbackId для тоста
+     * @return void
+     */
+    private function issuePassword(User $user, int $chatId, int $messageId, string $callbackId): void
+    {
+        $left = TelegramPasswordService::cooldownLeft($user);
+
+        if ($left > 0) {
+            $wait = $this->waitLabel($left);
+            TelegramBotApi::answerCallback($callbackId, "Пауза {$wait} — пароль уже выдавался");
+
+            return;
+        }
+
+        $result = TelegramPasswordService::issue($user);
+
+        if (! ($result['ok'] ?? false)) {
+            $wait = $this->waitLabel((int) ($result['retry_after'] ?? 0));
+            TelegramBotApi::answerCallback($callbackId, "Пауза {$wait} — пароль уже выдавался");
+
+            return;
+        }
+
+        $sent = TelegramBotApi::sendMessage($chatId, $result['text'], $result['keyboard']);
+
+        if ($sent === null) {
+            TelegramPasswordService::release($user);
+            TelegramBotApi::answerCallback($callbackId, 'Не смог отправить — попробуйте ещё раз');
+
+            return;
+        }
+
+        $ask = TelegramPasswordService::ask($user->fresh() ?? $user);
+        $sentNote = "✅ Пароль отправлен следующим сообщением.\n\n".$ask['text'];
+        TelegramBotApi::editPanel($chatId, $messageId, $sentNote, $ask['keyboard']);
+        TelegramBotApi::answerCallback($callbackId, 'Пароль отправлен 🔑');
+    }
+
+    /**
+     * Человеческая подпись ожидания кулдауна («5 мин», «40 сек»).
+     *
+     * @param int $seconds сколько ждать
+     * @return string
+     */
+    private function waitLabel(int $seconds): string
+    {
+        if ($seconds <= 0) {
+            return 'ещё чуть-чуть';
+        }
+
+        if ($seconds < 60) {
+            return $seconds.' сек';
+        }
+
+        $minutes = (int) ceil($seconds / 60);
+
+        return $minutes.' мин';
     }
 
     /**
