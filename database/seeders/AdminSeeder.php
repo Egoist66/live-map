@@ -19,7 +19,7 @@ class AdminSeeder extends Seeder
                 'name' => 'Администратор UPin',
                 'password' => Hash::make($password),
                 'email_verified_at' => now(),
-                'plan' => 'business',
+                'plan' => 'premium',
                 'plan_expires_at' => now()->addYears(10),
                 'role' => 'admin',
                 'is_admin' => true,

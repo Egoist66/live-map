@@ -25,7 +25,7 @@ export function useCustomCategories() {
   const user = computed(() => page.props.auth?.user)
   const canCreate = computed(() => {
     const u = user.value
-    return !!u?.is_admin || u?.role === 'admin' || planOf(u) === 'pro' || planOf(u) === 'business'
+    return !!u?.is_admin || u?.role === 'admin' || u?.role === 'moderator' || planOf(u) === 'pro' || planOf(u) === 'premium' || planOf(u) === 'business'
   })
 
   const allCategories = computed(() => [

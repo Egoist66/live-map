@@ -1,4 +1,4 @@
-export type UserPlan = 'free' | 'pro' | 'business'
+export type UserPlan = 'free' | 'pro' | 'premium' | 'business'
 export type UserRole = 'user' | 'moderator' | 'admin'
 export type UserLevel = 'novice' | 'explorer' | 'local' | 'veteran' | string
 export type UserGender = 'male' | 'female' | 'other'

@@ -31,17 +31,17 @@ export function usePhotoViewer(gallery: GalleryLike, comments: CommentsLike) {
   const anonPromo = useAnonymousLikePromo()
 
   /**
-   * Есть ли у юзера анонимные лайки: только PRO/Business/админ.
+   * Есть ли у юзера анонимные лайки: только PRO/Premium/Business/стафф.
    * Нужно чтобы не показывать PRO-промо тем, у кого PRO уже есть.
-   * @returns true если PRO/Business/админ
+   * @returns true если PRO/Premium/Business/стафф
    */
   const canIncognito = computed(() => {
     try {
       const u = (usePage().props.auth as any)?.user
       if (!u) return false
-      if (u.is_admin || u.role === 'admin') return true
+      if (u.is_admin || u.role === 'admin' || u.role === 'moderator') return true
       const plan = u.effective_plan || u.plan || 'free'
-      return plan === 'pro' || plan === 'business'
+      return plan === 'pro' || plan === 'premium' || plan === 'business'
     } catch { return false }
   })
 

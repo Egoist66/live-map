@@ -159,6 +159,37 @@ export function useAppLayout() {
     showFlow: modules.isEnabled('uflow'),
   }))
   function toggleMenu(e: Event) { menu.value.toggle(e) }
+  /**
+   * Дропдаун профиля (PrimeVue Menu popup) живёт в лейауте и переживает
+   * навигацию Inertia: открытый дропдаун оставался висеть оверлеем
+   * поверх новой страницы и перехватывал жесты — скролл визуально
+   * «стоял», хотя скроллбар был на месте. Прячем его на каждом переходе.
+   *
+   * @returns void
+   */
+  function hideMenuOnNavigate(): void {
+    try {
+      menu.value?.hide?.()
+    } catch {
+      // No-op: меню ещё не привязано.
+    }
+  }
+  let stopMenuNavigate: (() => void) | null = null
+  onMounted(() => {
+    try {
+      stopMenuNavigate = router.on('navigate', () => hideMenuOnNavigate())
+    } catch {
+      stopMenuNavigate = null
+    }
+  })
+  onBeforeUnmount(() => {
+    try {
+      stopMenuNavigate?.()
+    } catch {
+      // No-op: слушатель уже снят.
+    }
+    stopMenuNavigate = null
+  })
   async function doLogout() {
     try { authSession.resetAll() } catch {}
     try { await useLastRoute().forgetLastRoute() } catch {}

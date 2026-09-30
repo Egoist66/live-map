@@ -146,12 +146,12 @@ class PinInviteController extends Controller
     /**
      * Остаток месячного лимита приглашений.
      *
-     * Free — 3 в месяц, pro/business/admin — безлимит.
+     * Free — 3 в месяц, pro/premium/business/admin — безлимит.
      */
     public function usage(Request $request)
     {
         $user = $request->user();
-        $unlimited = $user->isAdmin() || in_array($user->effectivePlan(), ['pro', 'business']);
+        $unlimited = $user->isModerator() || in_array($user->effectivePlan(), User::PAID_PLANS, true);
         $limit = $unlimited ? null : User::FREE_PIN_INVITES_MONTH_LIMIT;
         $used = $unlimited ? 0 : $user->pinInvitesUsedThisMonth();
         $remaining = $unlimited ? null : max(0, $limit - $used);

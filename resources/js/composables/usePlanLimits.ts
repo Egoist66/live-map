@@ -1,6 +1,19 @@
 import { computed, type Ref } from 'vue'
 
-export type Plan = 'free' | 'pro' | 'business'
+/**
+ * Тариф пользователя.
+ *
+ * free — бесплатный, pro — платный, premium — топ для стаффа
+ * (админ/модератор получают его по умолчанию), business — только
+ * для организаторов (кабинет компании, те же топ-лимиты).
+ */
+export type Plan = 'free' | 'pro' | 'premium' | 'business'
+
+/** Топ-тарифы с максимальными лимитами. */
+export const TOP_PLANS: ReadonlyArray<Plan> = ['premium', 'business']
+
+/** Платные тарифы. */
+export const PAID_PLANS: ReadonlyArray<Plan> = ['pro', 'premium', 'business']
 
 export function planOf(u: any): string {
   return u?.effective_plan ?? u?.plan ?? 'free'
@@ -9,12 +22,14 @@ export function planOf(u: any): string {
 export const HOME_RADIUS_LIMITS: Record<Plan, number> = {
   free: 10,
   pro: 15,
+  premium: 50,
   business: 50,
 }
 
 export const PIN_RADIUS_M_LIMITS: Record<Plan, number> = {
   free: 10000,
   pro: 15000,
+  premium: 50000,
   business: 50000,
 }
 
@@ -24,26 +39,26 @@ export const HOME_RADIUS_PRESETS: Array<{ v: number; minPlan: Plan }> = [
   { v: 5, minPlan: 'free' },
   { v: 10, minPlan: 'free' },
   { v: 15, minPlan: 'pro' },
-  { v: 20, minPlan: 'business' },
-  { v: 50, minPlan: 'business' },
+  { v: 20, minPlan: 'premium' },
+  { v: 50, minPlan: 'premium' },
 ]
 
 export function maxHomeRadiusKm(plan?: string | null, isAdmin?: boolean): number {
   if (isAdmin) return 500
-  if (plan === 'business') return 50
+  if (plan === 'business' || plan === 'premium') return 50
   if (plan === 'pro') return 15
   return 10
 }
 
 export function maxPinRadiusM(plan?: string | null, isAdmin?: boolean): number {
   if (isAdmin) return 500000
-  if (plan === 'business') return 50000
+  if (plan === 'business' || plan === 'premium') return 50000
   if (plan === 'pro') return 15000
   return 10000
 }
 
 export function planRank(plan?: string | null): number {
-  if (plan === 'business') return 2
+  if (plan === 'business' || plan === 'premium') return 2
   if (plan === 'pro') return 1
   return 0
 }
@@ -54,7 +69,7 @@ export function canUseHomeRadius(radiusKm: number, plan?: string | null, isAdmin
 }
 
 export function requiredPlanForRadius(radiusKm: number): Plan {
-  if (radiusKm > 15) return 'business'
+  if (radiusKm > 15) return 'premium'
   if (radiusKm > 10) return 'pro'
   return 'free'
 }

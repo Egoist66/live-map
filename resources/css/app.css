@@ -956,3 +956,43 @@ div#p-license-host {
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
 }
+
+/* Чат: композер одной высоты на всех платформах + немигающая шапка.
+   Мобильный Safari/WebView форсит полям font-size:16px (иначе зум при
+   фокусе) — при десктопном `!py-3` инпут выходил ~50px против 44px
+   кнопок и десктопа. Фикс: единый min-height 44px и компактный
+   вертикальный паддинг — однострочный инпут везде 44px, как на десктопе.
+   Кнопки композера фиксируем на 44px: глобальное правило ≤410px жмёт
+   icon-only до 36px, и инпут рядом смотрелся «толстым».
+   Шапка: sticky + backdrop-blur над скроллящимся списком в урезанном GPU
+   Telegram WebView даёт репейнт-мигание аватара при скролле — в Mini App
+   блюр выключен (глухая подложка), аватар живёт в своём композитном слое. */
+.chat-composer-input {
+  min-height: 44px !important;
+  line-height: 1.45 !important;
+}
+.chat-header-avatar,
+.chat-header-avatar img {
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+html.tg-app .chat-header {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background-color: #ffffff !important;
+}
+html.dark.tg-app .chat-header {
+  background-color: #18181b !important;
+}
+@media (max-width: 410px) {
+  [data-chat-input] .p-button {
+    width: 44px !important;
+    min-width: 44px !important;
+    max-width: 44px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    max-height: 44px !important;
+  }
+}

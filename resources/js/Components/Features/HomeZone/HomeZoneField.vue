@@ -12,6 +12,8 @@ const { maxHomeRadius, presets } = usePlanLimits(planRef)
 const radius = computed(() => Number(props.modelValue ?? 10))
 const needPlan = computed(() => requiredPlanForRadius(radius.value))
 const overLimit = computed(() => radius.value > maxHomeRadius.value)
+/** Название топ-тарифа под аудиторию: у компаний — Business, у остальных — Premium. */
+const topPlanLabel = computed(() => ((props.plan || 'free') === 'business' ? 'Business' : 'Premium'))
 
 const previewSize = computed(() => {
   const r = Math.min(Math.max(radius.value, 1), 50)
@@ -36,7 +38,7 @@ function onInput(e: Event) {
     </div>
     <p class="text-[11px] text-stone-500 dark:text-zinc-400 leading-relaxed mt-1.5">
       Вижу чужие и мои пины в радиусе {{ radius }} км от дома — тот же радиус, что у пина.
-      Общая настройка, чтобы не задавать каждый пин. Free — 10 км · Pro — 15 км · Business — 20+ км.
+      Общая настройка, чтобы не задавать каждый пин. Free — 10 км · Pro — 15 км · {{ topPlanLabel }} — 50 км.
     </p>
     <div class="grid grid-cols-4 gap-1.5 mt-2.5">
       <button

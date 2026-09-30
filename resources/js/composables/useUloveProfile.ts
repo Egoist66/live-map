@@ -106,7 +106,7 @@ export function useUloveProfile(profileUser: () => any) {
 
   const plan = computed(() => String(planOf(user.value) ?? 'free'))
 
-  const isPro = computed(() => plan.value === 'pro' || plan.value === 'business')
+  const isPro = computed(() => plan.value === 'pro' || plan.value === 'premium' || plan.value === 'business')
 
   /**
    * Факты анкеты тиндер-строкой: возраст, пол, цель, город.

@@ -232,8 +232,12 @@ export function useAdminMonitoring() {
       }
       if (updated.role_warning) {
         toast?.add({ severity: 'warn', summary: String(updated.role_warning), life: 6000 })
+      } else if (role === 'organization') {
+        toast?.add({ severity: 'success', summary: 'Роль обновлена: организация + тариф business', life: 2000 })
+      } else if (role === 'moderator' || role === 'admin') {
+        toast?.add({ severity: 'success', summary: 'Роль обновлена: стафф всегда на Premium', life: 2000 })
       } else {
-        toast?.add({ severity: 'success', summary: role === 'organization' ? 'Роль обновлена: организация + тариф business' : 'Роль обновлена', life: 2000 })
+        toast?.add({ severity: 'success', summary: 'Роль обновлена', life: 2000 })
       }
     } catch (e: any) {
       const message = e?.response?.data?.message || 'Не удалось сменить роль'

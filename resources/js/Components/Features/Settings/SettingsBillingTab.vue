@@ -24,10 +24,16 @@ const cards = computed(() => plans.planCards(showMapMetrics.value))
  */
 function planDesc(plan: string): string {
   if (showMapMetrics.value) {
-    return plan === 'free' ? '3 пина/день · 10 км · 4ч' : plan === 'pro' ? 'Безлимит · 15 км · 12ч' : 'Безлимит · 50+ км · ∞'
+    if (plan === 'free') return '3 пина/день · 10 км · 4ч'
+    if (plan === 'pro') return 'Безлимит · 15 км · 12ч'
+    if (plan === 'business') return 'Кабинет · 50+ км · ∞'
+    return 'Безлимит · 50+ км · ∞'
   }
 
-  return plan === 'free' ? 'Свайпы · 3 сообщения · мэтчи' : plan === 'pro' ? 'Инкогнито · 10 сообщений · хайды' : 'Максимум · 15 сообщений'
+  if (plan === 'free') return 'Свайпы · 3 сообщения · мэтчи'
+  if (plan === 'pro') return 'Инкогнито · 10 сообщений · хайды'
+  if (plan === 'business') return 'Кабинет · максимум · 15 сообщений'
+  return 'Максимум · сброс безлимит'
 }
 
 /**
@@ -57,7 +63,7 @@ async function choosePlan(id: PlanId): Promise<void> {
           v-for="card in cards"
           :key="card.id"
           @click="planDialog.showPlan(card.id)"
-          :class="['!rounded-3xl !cursor-pointer !transition active:scale-[0.99]', plans.currentPlan.value === card.id ? (card.id === 'pro' ? '!bg-gradient-to-br !from-violet-600 !to-indigo-600 !text-white !border-violet-600' : '!bg-ink-900 dark:!bg-white !text-white dark:!text-ink-900 !border-ink-900 dark:!border-white') : (card.id === 'pro' ? '!bg-amber-50 dark:!bg-amber-950/30 !border-amber-200 dark:!border-amber-800 !text-stone-800 dark:!text-zinc-200' : '!bg-stone-50 dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 !text-stone-800 dark:!text-zinc-200')]"
+          :class="['!rounded-3xl !cursor-pointer !transition active:scale-[0.99]', plans.currentPlan.value === card.id ? ((card.id === 'pro' || card.id === 'premium') ? '!bg-gradient-to-br !from-violet-600 !to-indigo-600 !text-white !border-violet-600' : '!bg-ink-900 dark:!bg-white !text-white dark:!text-ink-900 !border-ink-900 dark:!border-white') : ((card.id === 'pro' || card.id === 'premium') ? '!bg-amber-50 dark:!bg-amber-950/30 !border-amber-200 dark:!border-amber-800 !text-stone-800 dark:!text-zinc-200' : '!bg-stone-50 dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 !text-stone-800 dark:!text-zinc-200')]"
           :pt="{ body: { class: '!p-3' }, content: { class: '!p-0' } }"
         >
           <template #content>

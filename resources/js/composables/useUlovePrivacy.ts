@@ -89,14 +89,16 @@ export function useUlovePrivacy() {
   /** Подпись тарифа для таба. */
   const planLabel = computed(() => {
     if (plan.value === 'business') return 'Business'
+    if (plan.value === 'premium') return 'Premium'
     if (plan.value === 'pro') return 'PRO'
     return 'Free'
   })
 
-  /** Доступны ли PRO-фишки: PRO / Business / админ. */
+  /** Доступны ли PRO-фишки: PRO / Premium / Business / стафф. */
   const canPro = computed(() => {
-    if (!!authUser.value?.is_admin || authUser.value?.role === 'admin') return true
-    return plan.value === 'pro' || plan.value === 'business'
+    const u = authUser.value
+    if (!!u?.is_admin || u?.role === 'admin' || u?.role === 'moderator') return true
+    return plan.value === 'pro' || plan.value === 'premium' || plan.value === 'business'
   })
 
   /**

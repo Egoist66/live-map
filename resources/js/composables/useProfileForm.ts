@@ -82,8 +82,8 @@ export function useProfileForm() {
   const canChangeEmail = computed(() => {
     const u = user.value
     if (!u) return false
-    if (u.is_admin || u.role === 'admin') return true
-    return ['pro', 'business'].includes(planOf(u))
+    if (u.is_admin || u.role === 'admin' || u.role === 'moderator') return true
+    return ['pro', 'premium', 'business'].includes(planOf(u))
   })
 
   watch(() => (values as any).plan, (pl) => {

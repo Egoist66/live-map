@@ -70,7 +70,7 @@ export function useFlowComposer(existingId?: number | null) {
   const me = computed(() => (usePage().props.auth as { user?: { is_anonymous_default?: boolean; effective_plan?: string } }).user)
   const isPro = computed(() => {
     const plan = (me.value as { effective_plan?: string } | undefined)?.effective_plan ?? ''
-    return plan === 'pro' || plan === 'business'
+    return plan === 'pro' || plan === 'premium' || plan === 'business'
   })
   const bodyLeft = computed(() => MAX_BODY - body.value.length)
   const titleLeft = computed(() => MAX_TITLE - title.value.length)

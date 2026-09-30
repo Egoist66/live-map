@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Hash;
 class MakeAdmin extends Command
 {
     protected $signature = 'make:admin {email?} {--password=} {--name=Администратор}';
-    protected $description = 'Создать/повысить администратора (все привилегии по бизнес-логике)';
+    protected $description = 'Создать/повысить администратора (все привилегии по бизнес-логике, тариф Premium)';
 
     public function handle(): int
     {
@@ -28,7 +28,7 @@ class MakeAdmin extends Command
             $user->update([
                 'role' => 'admin',
                 'is_admin' => true,
-                'plan' => 'business',
+                'plan' => 'premium',
                 'plan_expires_at' => now()->addYears(100),
                 'level' => 'guide',
                 'reputation_score' => max($user->reputation_score, 99999),
@@ -45,7 +45,7 @@ class MakeAdmin extends Command
                 'email' => $email,
                 'password' => Hash::make($password),
                 'email_verified_at' => now(),
-                'plan' => 'business',
+                'plan' => 'premium',
                 'plan_expires_at' => now()->addYears(100),
                 'role' => 'admin',
                 'is_admin' => true,

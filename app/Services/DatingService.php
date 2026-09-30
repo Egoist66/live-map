@@ -223,7 +223,7 @@ class DatingService
     /**
      * Может ли пользователь сбросить историю сейчас.
      *
-     * Админ и PRO/Business — безлимитно, Free — один раз.
+     * Стафф (админ/модератор) и PRO/Premium/Business — безлимитно, Free — один раз.
      *
      * @param User $user
      * @return bool
@@ -538,7 +538,7 @@ class DatingService
 
         $plan = $user->effectivePlan() ?? 'free';
 
-        if ($plan === 'business') {
+        if (in_array($plan, User::TOP_PLANS, true)) {
             return self::BUSINESS_FAVORITES_LIMIT;
         }
 
@@ -593,7 +593,7 @@ class DatingService
      *
      * Лайки сверх лимита никуда не деваются: они ждут мэтча
      * (получатель их видит, мэтч срабатывает), просто в избранном
-     * показываются только свежие по лимиту (Free — 3, Pro — 5, Business — 15).
+     * показываются только свежие по лимиту (Free — 3, Pro — 5, Premium/Business — 15).
      *
      * @param User $me
      * @param int $page страница 1-based
@@ -759,7 +759,7 @@ class DatingService
      *
      * Удаляет все SwipeAction автора — лента снова покажет всех кандидатов.
      * Мэтчи и чаты не трогает, только история like/pass.
-     * Админ и PRO/Business — безлимитно, Free — один раз.
+     * Стафф (админ/модератор, у них всегда Premium) и PRO/Premium/Business — безлимитно, Free — один раз.
      *
      * @param User $me
      * @return int число удалённых записей
@@ -774,7 +774,7 @@ class DatingService
 
         if (! $unlimited && $this->hasUsedSwipeReset($fresh)) {
             throw new HttpResponseException(response()->json([
-                'message' => 'Ты уже использовал(а) одноразовый сброс. Дальше — PRO без ограничений.',
+                'message' => 'Ты уже использовал(а) одноразовый сброс. Дальше — PRO или Premium без ограничений.',
                 'quota' => $this->quotaState($fresh),
             ], 403));
         }
@@ -796,7 +796,7 @@ class DatingService
      * Откатывается только самый свежий свайп автора (фронт шлёт его user_id
      * для сверки). Лайк гасит своё уведомление; мэтч, созданный этим лайком,
      * растворяется (чат остаётся, бесплатная переписка по нему закрывается).
-     * Free — UNDO_FREE_DAILY в день, PRO/Business — безлимит.
+     * Free — UNDO_FREE_DAILY в день, PRO/Premium/Business — безлимит.
      *
      * @param User $me
      * @param int|null $userId ожидаемый id откатываемого (сверка «последний ли»)
@@ -876,7 +876,7 @@ class DatingService
     /**
      * Включить буст профиля на BOOST_MINUTES: анкета летит первой в чужих лентах.
      *
-     * PRO/Business — один бесплатный буст в календарный месяц,
+     * PRO/Premium/Business — один бесплатный буст в календарный месяц,
      * остальные — за купленные кредиты boosts_balance.
      *
      * @param User $me

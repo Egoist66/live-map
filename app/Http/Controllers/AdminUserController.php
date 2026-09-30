@@ -90,13 +90,15 @@ class AdminUserController extends Controller
      * Свою роль менять можно, но снятие admin с себя запрещено,
      * если это последний администратор в системе.
      *
-     * Выдача pro/business без явной даты ставит срок +30 дней,
+     * Выдача pro/premium/business без явной даты ставит срок +30 дней,
      * если текущий срок отсутствует или уже прошёл: иначе тариф
      * выглядел бы выданным, а лимиты считались бы по free
      * (действующий тариф — effectivePlan, не сырое поле plan).
      *
      * Роль organization автоматически выдаёт тариф business (+30 дней,
      * если срок пуст/прошёл): раз зашли в кабинет — значит оплатили.
+     * Business — только для организаторов. Стаффу (moderator/admin)
+     * выдаётся Premium: effectivePlan всё равно вернёт premium.
      * Персональному аккаунту (person без бизнес-профиля) роль выдаётся
      * только с флагом confirm_personal, иначе 422 с предупреждением.
      *
@@ -109,7 +111,7 @@ class AdminUserController extends Controller
         abort_unless($request->user()->isAdmin(), 403, 'Смена роли и тарифа — только для администраторов');
 
         $data = $request->validate([
-            'plan' => 'nullable|in:free,pro,business',
+            'plan' => 'nullable|in:free,pro,premium,business',
             'plan_expires_at' => 'nullable|date|after:now',
             'role' => 'nullable|in:user,moderator,admin,organization',
             'confirm_personal' => 'nullable|boolean',
@@ -201,7 +203,7 @@ class AdminUserController extends Controller
      * если прежний срок отсутствует или уже прошёл; будущий срок
      * сохраняем, чтобы не урезать уже оплаченное.
      *
-     * @param string $plan новый план (free|pro|business)
+     * @param string $plan новый план (free|pro|premium|business)
      * @param string|null $requested явная дата из запроса
      * @param mixed $current текущий срок из базы
      * @return \Carbon\Carbon|null

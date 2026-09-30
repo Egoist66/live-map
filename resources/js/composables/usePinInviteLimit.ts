@@ -8,7 +8,7 @@ export const FREE_PIN_INVITES_MONTH_LIMIT = 3
 /**
  * Месячный лимит приглашений в пин.
  *
- * Free — 3 в месяц, pro/business/admin — безлимит.
+ * Free — 3 в месяц, pro/premium/business/стафф — безлимит.
  *
  * @example
  * const { remainingText, refresh } = usePinInviteLimit()
@@ -19,7 +19,8 @@ export function usePinInviteLimit() {
   const user = computed(() => page.props.auth?.user)
   const plan = computed(() => planOf(user.value))
   const isAdmin = computed(() => !!user.value?.is_admin || user.value?.role === 'admin')
-  const isUnlimited = computed(() => isAdmin.value || plan.value === 'pro' || plan.value === 'business')
+  const isStaff = computed(() => isAdmin.value || user.value?.role === 'moderator')
+  const isUnlimited = computed(() => isStaff.value || plan.value === 'pro' || plan.value === 'premium' || plan.value === 'business')
 
   const used = ref(0)
   const checking = ref(false)

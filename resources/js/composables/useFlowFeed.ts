@@ -24,7 +24,7 @@ export function useFlowFeed(options?: { authorId?: number | null; postId?: numbe
   const me = computed(() => (usePage().props.auth as { user?: { id: number; effective_plan?: string } }).user)
   const isPro = computed(() => {
     const plan = (me.value as { effective_plan?: string })?.effective_plan ?? ''
-    return plan === 'pro' || plan === 'business'
+    return plan === 'pro' || plan === 'premium' || plan === 'business'
   })
 
   const tabs = computed(() => [

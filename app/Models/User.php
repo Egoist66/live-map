@@ -67,8 +67,21 @@ class User extends Authenticatable implements MustVerifyEmail
         }
     }
 
+    /**
+     * Действующий тариф с учётом срока и роли.
+     *
+     * Стафф (админ/модератор) всегда на Premium: им доступен топ-тариф
+     * по умолчанию без покупки. Business — только для организаторов
+     * (role=organization, account_type=business).
+     *
+     * @return string free|pro|premium|business
+     */
     public function effectivePlan(): string
     {
+        if ($this->isModerator()) {
+            return 'premium';
+        }
+
         if ($this->isPlanExpired()) return 'free';
         return $this->plan ?? 'free';
     }
@@ -269,6 +282,19 @@ class User extends Authenticatable implements MustVerifyEmail
     public function districtMemberships() { return $this->hasMany(DistrictMember::class); }
 
     /**
+     * Все допустимые тарифы: free — бесплатный, pro — платный,
+     * premium — топ для стаффа (админ/модератор, всегда по умолчанию),
+     * business — только для организаторов (кабинет компании).
+     */
+    public const PLANS = ['free', 'pro', 'premium', 'business'];
+
+    /** Топ-тарифы с максимальными лимитами (premium для стаффа, business для организаторов). */
+    public const TOP_PLANS = ['premium', 'business'];
+
+    /** Платные тарифы с PRO-плюшками (pro + оба топа). */
+    public const PAID_PLANS = ['pro', 'premium', 'business'];
+
+    /**
      * Все допустимые роли: user — персона, organization — компания
      * (кабинет, тариф business), moderator/admin — staff панели модерации.
      */
@@ -305,14 +331,14 @@ class User extends Authenticatable implements MustVerifyEmail
     public function canCreatePin(): bool
     {
         if ($this->isAdmin()) return true;
-        if (in_array($this->effectivePlan(), ['pro','business'])) return true;
+        if (in_array($this->effectivePlan(), self::PAID_PLANS, true)) return true;
         return $this->livePinsCount() < self::FREE_PINS_LIMIT;
     }
 
     /**
      * Лимит своих UDistrict-районов по тарифу.
      *
-     * Free — 2, Pro — 5, Business — 15, админ — безлимит (null).
+     * Free — 2, Pro — 5, Premium/Business — 15, админ — безлимит (null).
      *
      * @return int|null максимум районов, null — безлимит
      */
@@ -320,7 +346,7 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         if ($this->isAdmin()) return null;
         return match ($this->effectivePlan()) {
-            'business' => self::BUSINESS_DISTRICTS_LIMIT,
+            'business', 'premium' => self::BUSINESS_DISTRICTS_LIMIT,
             'pro' => self::PRO_DISTRICTS_LIMIT,
             default => self::FREE_DISTRICTS_LIMIT,
         };
@@ -353,21 +379,21 @@ class User extends Authenticatable implements MustVerifyEmail
     /**
      * Может ли пользователь отправить ещё одно приглашение в пин.
      *
-     * Free — 3 в месяц, pro/business/admin — безлимит.
+     * Free — 3 в месяц, pro/premium/business/admin — безлимит.
      *
      * @return bool true когда лимит не исчерпан
      */
     public function canInviteToPin(): bool
     {
         if ($this->isAdmin()) return true;
-        if (in_array($this->effectivePlan(), ['pro', 'business'])) return true;
+        if (in_array($this->effectivePlan(), self::PAID_PLANS, true)) return true;
         return $this->pinInvitesUsedThisMonth() < self::FREE_PIN_INVITES_MONTH_LIMIT;
     }
 
     public function pinTtlHours(): ?int
     {
         if ($this->isAdmin()) return null;
-        if ($this->effectivePlan() === 'business') return null;
+        if (in_array($this->effectivePlan(), self::TOP_PLANS, true)) return null;
         if ($this->effectivePlan() === 'pro') return 12;
         return 4;
     }
@@ -375,7 +401,7 @@ class User extends Authenticatable implements MustVerifyEmail
     public function pinRadius(): int
     {
         if ($this->isAdmin()) return 500000;
-        if ($this->effectivePlan() === 'business') return 50000;
+        if (in_array($this->effectivePlan(), self::TOP_PLANS, true)) return 50000;
         if ($this->effectivePlan() === 'pro') return 15000;
         return 10000;
     }
@@ -383,7 +409,7 @@ class User extends Authenticatable implements MustVerifyEmail
     public function homeRadiusLimit(): int
     {
         if ($this->isAdmin()) return 500;
-        if ($this->effectivePlan() === 'business') return 50;
+        if (in_array($this->effectivePlan(), self::TOP_PLANS, true)) return 50;
         if ($this->effectivePlan() === 'pro') return 15;
         return 10;
     }
@@ -398,7 +424,26 @@ class User extends Authenticatable implements MustVerifyEmail
         return min($wanted, $this->homeRadiusLimit());
     }
 
-    public function isPro(): bool { return $this->isAdmin() || in_array($this->effectivePlan(), ['pro','business']); }
+    /**
+     * Есть ли у пользователя платные PRO-плюшки.
+     *
+     * Стафф (админ/модератор) — всегда true: им доступен Premium
+     * по умолчанию. Остальным — по действующему тарифу
+     * pro/premium/business.
+     *
+     * @return bool true когда доступны PRO-функции
+     */
+    public function isPro(): bool { return $this->isModerator() || in_array($this->effectivePlan(), self::PAID_PLANS, true); }
+
+    /**
+     * Топ-тариф ли это (максимальные лимиты).
+     *
+     * Стафф — всегда true (Premium по умолчанию),
+     * остальные — при действующем premium/business.
+     *
+     * @return bool true для premium/business и стаффа
+     */
+    public function isPremium(): bool { return $this->isModerator() || in_array($this->effectivePlan(), self::TOP_PLANS, true); }
 
     /**
      * Стартовый режим приложения для пользователя.
@@ -651,13 +696,13 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function canUseIncognitoLike(): bool { return $this->isPro(); }
 
-    public function canUseInvisible(): bool { return $this->isAdmin() || in_array($this->effectivePlan(), ['pro','business']); }
+    public function canUseInvisible(): bool { return $this->isModerator() || in_array($this->effectivePlan(), self::PAID_PLANS, true); }
 
     public function hiddenFriendsLimit(): ?int
     {
         if ($this->isAdmin()) return null;
         return match ($this->effectivePlan()) {
-            'business' => null,
+            'business', 'premium' => null,
             'pro' => 3,
             default => 1,
         };
@@ -687,7 +732,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function isInvisibleActive(): bool { return (bool) $this->is_invisible && $this->canUseInvisible(); }
 
-    public function canShowExactHome(): bool { return $this->isAdmin() || in_array($this->effectivePlan(), ['pro', 'business']); }
+    public function canShowExactHome(): bool { return $this->isModerator() || in_array($this->effectivePlan(), self::PAID_PLANS, true); }
 
     public function effectiveHomeBlurMeters(): int
     {
@@ -729,7 +774,7 @@ class User extends Authenticatable implements MustVerifyEmail
     /**
      * Лимит фото в галерее профиля по тарифу.
      *
-     * Free даёт 5 бесплатных фото, Pro — 6, Business/админ — 15.
+     * Free даёт 5 бесплатных фото, Pro — 6, Premium/Business/админ — 15.
      *
      * @return int максимальное число фото
      */
@@ -737,7 +782,7 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         if ($this->isAdmin()) return 15;
         return match ($this->effectivePlan()) {
-            'business' => 15,
+            'business', 'premium' => 15,
             'pro' => 6,
             default => 5,
         };
@@ -787,7 +832,7 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         if ($this->isAdmin()) return null;
         return match ($this->effectivePlan()) {
-            'business' => 20,
+            'business', 'premium' => 20,
             'pro' => 6,
             default => 3,
         };

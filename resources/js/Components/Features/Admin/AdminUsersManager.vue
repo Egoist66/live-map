@@ -46,7 +46,8 @@ const sortOptions = [
 const planOptions = [
   { label: 'free', value: 'free' },
   { label: 'pro', value: 'pro' },
-  { label: 'business', value: 'business' },
+  { label: 'premium (стафф)', value: 'premium' },
+  { label: 'business (организации)', value: 'business' },
 ]
 const roleOptions = [
   { label: 'user', value: 'user' },
@@ -60,14 +61,15 @@ const roleOptions = [
  *
  * Показывает effective-план (по нему считаются лимиты), а не сырое
  * поле: тариф с прошедшим сроком действует как free.
+ * Стафф всегда effective=premium (см. User::effectivePlan).
  *
  * @param u строка пользователя из списка мониторинга
- * @returns подпись вида «Действует: Pro до 12.10.2026» или «Free»
+ * @returns подпись вида «Действует: Premium до 12.10.2026» или «Free»
  */
 function planCaption(u: any): string {
   const effective = String(u?.effective_plan ?? u?.plan ?? 'free')
-  if (effective !== 'pro' && effective !== 'business') return 'Действует: Free'
-  const label = effective === 'business' ? 'Business' : 'Pro'
+  if (effective !== 'pro' && effective !== 'premium' && effective !== 'business') return 'Действует: Free'
+  const label = effective === 'business' ? 'Business' : effective === 'premium' ? 'Premium' : 'Pro'
   if (!u?.plan_expires_at) return `Действует: ${label} · без срока`
   try {
     const date = new Date(u.plan_expires_at).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' })

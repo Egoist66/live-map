@@ -153,7 +153,7 @@ async function onDeleteSlot(slot: UlovePhotoSlot): Promise<void> {
 
 const quickTiles = computed(() => [
   { label: 'Анкета', desc: 'Цель, о себе', icon: 'pi pi-user-edit', rose: true, action: 'edit' },
-  { label: 'Тариф', desc: p.plan.value === 'free' ? 'Free' : 'PRO активен', icon: 'pi pi-crown', rose: false, href: '/settings/billing' },
+  { label: 'Тариф', desc: p.plan.value === 'free' ? 'Free' : p.plan.value === 'business' ? 'Business активен' : p.plan.value === 'premium' ? 'Premium активен' : 'PRO активен', icon: 'pi pi-crown', rose: false, href: '/settings/billing' },
   { label: 'Приватность', desc: 'Хайды, невидимка', icon: 'pi pi-lock', rose: false, href: '/settings/privacy' },
   { label: 'Приложение', desc: 'Разделы, кэш', icon: 'pi pi-mobile', rose: false, href: '/settings/app' },
 ])

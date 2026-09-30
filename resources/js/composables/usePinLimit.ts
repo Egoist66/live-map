@@ -5,7 +5,7 @@ import { isPinAlive } from '@/composables/usePinExpiry'
 import { planOf } from '@/composables/usePlanLimits'
 
 export const FREE_PINS_LIMIT = 3
-const TTL_BY_PLAN: Record<string, number | null> = { pro: 12, business: null }
+const TTL_BY_PLAN: Record<string, number | null> = { pro: 12, premium: null, business: null }
 
 export function usePinLimit() {
   const page = usePage() as any
@@ -13,10 +13,10 @@ export function usePinLimit() {
   const user = computed(() => page.props.auth?.user)
   const plan = computed(() => planOf(user.value))
   const isAdmin = computed(() => !!user.value?.is_admin || user.value?.role === 'admin')
-  const isUnlimited = computed(() => isAdmin.value || plan.value === 'pro' || plan.value === 'business')
+  const isUnlimited = computed(() => isAdmin.value || plan.value === 'pro' || plan.value === 'premium' || plan.value === 'business')
   const isFree = computed(() => !isUnlimited.value)
 
-  const ttlHours = computed(() => (isAdmin.value || plan.value === 'business' ? null : (TTL_BY_PLAN[plan.value] ?? 4)))
+  const ttlHours = computed(() => (isAdmin.value || plan.value === 'premium' || plan.value === 'business' ? null : (TTL_BY_PLAN[plan.value] ?? 4)))
   const ttlLabel = computed(() => (ttlHours.value === null ? '∞' : `${ttlHours.value} ч`))
 
   const myLiveCount = ref<number | null>(null)

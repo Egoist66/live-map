@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 
 /** Идентификатор тарифа. */
-export type PlanId = 'free' | 'pro' | 'business'
+export type PlanId = 'free' | 'pro' | 'premium' | 'business'
 
 /** Группа возможностей тарифа для модалки. */
 export interface PlanFeatureGroup {
@@ -16,6 +16,8 @@ export interface PlanDetails {
   price: string
   tagline: string
   gradient: string
+  /** Кому доступен тариф: users — всем, organizations — только кабинету компании. */
+  audience: 'users' | 'organizations'
   groups: PlanFeatureGroup[]
 }
 
@@ -32,6 +34,7 @@ export const PLAN_DETAILS: PlanDetails[] = [
     price: 'Бесплатно навсегда',
     tagline: 'Чтобы жить районом и знакомиться рядом',
     gradient: 'from-stone-700 to-stone-900',
+    audience: 'users',
     groups: [
       {
         title: '📍 Пины и карта',
@@ -67,6 +70,7 @@ export const PLAN_DETAILS: PlanDetails[] = [
     price: '$4.99 / мес',
     tagline: 'Для активных соседей и знакомств без границ',
     gradient: 'from-violet-600 to-indigo-600',
+    audience: 'users',
     groups: [
       {
         title: '📍 Пины и карта',
@@ -101,11 +105,12 @@ export const PLAN_DETAILS: PlanDetails[] = [
     ],
   },
   {
-    id: 'business',
-    name: 'Business',
-    price: '$19.99 / мес',
-    tagline: 'Всё из PRO плюс инструменты для локального дела',
+    id: 'premium',
+    name: 'Premium',
+    price: '$9.99 / мес',
+    tagline: 'Максимум для активных: всё из PRO без ограничений. Стаффу (админ/модератор) — по умолчанию',
     gradient: 'from-amber-500 to-orange-600',
+    audience: 'users',
     groups: [
       {
         title: '📍 Пины и карта',
@@ -119,6 +124,7 @@ export const PLAN_DETAILS: PlanDetails[] = [
         title: '💘 ULove',
         items: [
           'Всё из PRO: инкогнито, скрытие имени и возраста',
+          'Безлимитный сброс просмотренных свайпов',
           'Избранное — до 15 анкет',
         ],
       },
@@ -128,12 +134,58 @@ export const PLAN_DETAILS: PlanDetails[] = [
           'Режим «Невидимка» и размытие до 5 км',
           'UDistrict — до 15 своих районов',
           'Галерея — 15 фото, скрытые друзья — без лимита',
-          'Смена почты — как в PRO, плюс бизнес-профиль: название, адрес, телефон, сайт, часы работы',
+          'Смена почты — как в PRO',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'business',
+    name: 'Business',
+    price: '$19.99 / мес',
+    tagline: 'Только для организаторов: кабинет компании + всё из Premium',
+    gradient: 'from-stone-900 to-amber-700',
+    audience: 'organizations',
+    groups: [
+      {
+        title: '📍 Пины и карта',
+        items: [
+          'Всё из Premium: безлимит пинов, 50 км, пины без срока',
+          'Кабинет компании: витрина на карте',
+        ],
+      },
+      {
+        title: '💘 ULove',
+        items: [
+          'Всё из Premium: инкогнито, скрытие имени и возраста',
+          'Избранное — до 15 анкет',
+        ],
+      },
+      {
+        title: '🔒 Приватность и профиль',
+        items: [
+          'Режим «Невидимка» и размытие до 5 км',
+          'UDistrict — до 15 своих районов',
+          'Галерея — 15 фото, скрытые друзья — без лимита',
+          'Бизнес-профиль: название, адрес, телефон, сайт, часы работы',
         ],
       },
     ],
   },
 ]
+
+/**
+ * Тарифы для обычных пользователей: только Free / Pro / Premium.
+ *
+ * Business здесь нет — он живёт отдельно в кабинете компании
+ * (см. ORGANIZATION_PLAN_DETAILS) и недоступен персонам.
+ */
+export const USER_PLAN_DETAILS: PlanDetails[] = PLAN_DETAILS.filter((p) => p.audience === 'users')
+
+/**
+ * Тариф кабинета компании: только Business.
+ */
+export const ORGANIZATION_PLAN_DETAILS: PlanDetails[] = PLAN_DETAILS.filter((p) => p.audience === 'organizations')
 
 /**
  * Модалка «Что даёт тариф»: какой план показать.
@@ -157,5 +209,5 @@ export function usePlanDetails() {
     dialogPlan.value = null
   }
 
-  return { dialogPlan, showPlan, hide, plans: PLAN_DETAILS }
+  return { dialogPlan, showPlan, hide, plans: PLAN_DETAILS, userPlans: USER_PLAN_DETAILS }
 }

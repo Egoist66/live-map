@@ -65,6 +65,7 @@ export function useProfileDesign(props: {
   const planName = computed(() => {
     const plan = planOf(props.profileUser)
     if (plan === 'business') return 'Business'
+    if (plan === 'premium') return 'Premium'
     if (plan === 'pro') return 'Pro'
     return 'Free'
   })

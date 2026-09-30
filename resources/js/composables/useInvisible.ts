@@ -11,7 +11,7 @@ export function useInvisible() {
   const canUse = computed(() => {
     const u = user.value
     if (!u) return false
-    return u.is_admin || u.role === 'admin' || ['pro', 'business'].includes(planOf(u))
+    return u.is_admin || u.role === 'admin' || u.role === 'moderator' || ['pro', 'premium', 'business'].includes(planOf(u))
   })
   const loading = ref(false)
   const error = ref<string | null>(null)

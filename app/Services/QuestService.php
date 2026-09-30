@@ -157,8 +157,8 @@ class QuestService
             return ['allowed' => false, 'reason' => 'Следующие задания через месяц'];
         }
 
-        if ($user->effectivePlan() === 'business') {
-            return ['allowed' => false, 'reason' => 'У тебя уже Business — выше некуда'];
+        if (in_array($user->effectivePlan(), User::TOP_PLANS, true)) {
+            return ['allowed' => false, 'reason' => 'У тебя уже топ-тариф — выше некуда'];
         }
 
         if ($isPremium && $user->quest_granted_at === null) {

@@ -107,11 +107,26 @@ export function useSwipes() {
 
   /**
    * Стафф ли текущий пользователь (админ или модератор).
-   * Гейт почты на стафф не действует.
+   * Стафф всегда на Premium: сброс свайпов безлимитный.
    *
    * @returns true если админ или модератор
    */
   const isStaff = computed(() => !!authUser.value?.is_admin || authUser.value?.role === 'admin' || authUser.value?.role === 'moderator')
+
+  /**
+   * Топ-тариф ли это (максимум лимитов): premium/business/стафф.
+   *
+   * @returns true если включён Premium
+   */
+  const isPremium = computed(() => {
+    if (isStaff.value) {
+      return true
+    }
+
+    const plan = authUser.value?.effective_plan || authUser.value?.plan || 'free'
+
+    return plan === 'premium' || plan === 'business'
+  })
 
   /**
    * Админ ли текущий пользователь (для сброса истории свайпов).
@@ -121,18 +136,21 @@ export function useSwipes() {
   const isAdmin = computed(() => !!authUser.value?.is_admin || authUser.value?.role === 'admin')
 
   /**
-   * PRO-тариф: pro/business/админ. Даёт безлимитный сброс ленты и PRO-плюшки.
+   * PRO-тариф: pro/premium/business/стафф. Даёт безлимитный сброс ленты и PRO-плюшки.
+   *
+   * Модератор — тоже стафф: сброс безлимитный даже при plan=free,
+   * т.к. бэк считает effective_plan=premium (см. User::effectivePlan).
    *
    * @returns true если включён PRO
    */
   const isPro = computed(() => {
-    if (isAdmin.value) {
+    if (isStaff.value) {
       return true
     }
 
     const plan = authUser.value?.effective_plan || authUser.value?.plan || 'free'
 
-    return plan === 'pro' || plan === 'business'
+    return plan === 'pro' || plan === 'premium' || plan === 'business'
   })
 
   /**
@@ -191,11 +209,12 @@ export function useSwipes() {
   /**
    * Название тарифа для PRO-таба.
    *
-   * @returns Free, PRO или Business
+   * @returns Free, PRO, Premium или Business (Business — только организаторы)
    */
   const planLabel = computed(() => {
     const plan = String(authUser.value?.effective_plan || authUser.value?.plan || 'free')
     if (plan === 'business') return 'Business'
+    if (plan === 'premium') return 'Premium'
     if (plan === 'pro') return 'PRO'
     return 'Free'
   })
@@ -348,7 +367,7 @@ export function useSwipes() {
    */
   const planExpiresLabel = computed(() => {
     const plan = quota.value?.plan ?? ''
-    if (plan !== 'pro' && plan !== 'business') return ''
+    if (plan !== 'pro' && plan !== 'premium' && plan !== 'business') return ''
     const raw = quota.value?.plan_expires_at
     if (!raw) return 'без срока'
     try {
@@ -362,8 +381,8 @@ export function useSwipes() {
   /** Лимит радиуса по тарифу. Null — безлимит (PRO). */
   const radiusLimit = computed(() => quota.value?.radius_limit ?? FREE_SWIPES_RADIUS_KM)
 
-  /** Доступен ли сброс истории (админ и PRO — всегда, Free — один раз). */
-  const canResetHistory = computed(() => quota.value?.can_reset ?? false)
+  /** Доступен ли сброс истории (стафф и PRO/Premium/Business — всегда, Free — один раз). */
+  const canResetHistory = computed(() => quota.value?.can_reset ?? isStaff.value)
 
   /**
    * Подсказка кнопки сброса просмотренных по тарифу.
@@ -371,8 +390,12 @@ export function useSwipes() {
    * @returns текст для title кнопки
    */
   const resetTitle = computed(() => {
-    if (isAdmin.value) {
-      return 'Сбросить просмотренные (безлимит)'
+    if (isStaff.value) {
+      return 'Сбросить просмотренные (Premium — безлимит)'
+    }
+
+    if (isPremium.value) {
+      return 'Сбросить просмотренные (Premium — безлимит)'
     }
 
     if (isPro.value) {
@@ -383,11 +406,15 @@ export function useSwipes() {
   })
 
   /**
-   * Пояснение сброса в PRO-блоке: у PRO сброс бесконечный, у Free одноразовый.
+   * Пояснение сброса в PRO-блоке: у PRO/Premium сброс бесконечный, у Free одноразовый.
    *
    * @returns текст описания сброса
    */
   const resetDescription = computed(() => {
+    if (isStaff.value || isPremium.value) {
+      return 'Premium: сброс безлимитный — листай заново когда угодно'
+    }
+
     if (isPro.value) {
       return 'PRO: сброс безлимитный — листай заново когда угодно'
     }
@@ -1599,6 +1626,8 @@ export function useSwipes() {
     incognitoLike,
     canIncognito,
     isPro,
+    isPremium,
+    isStaff,
     resetTitle,
     resetDescription,
     planLabel,

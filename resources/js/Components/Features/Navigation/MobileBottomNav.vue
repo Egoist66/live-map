@@ -81,8 +81,8 @@ const emit = defineEmits<{ (e: 'bell'): void; (e: 'menu', value: Event): void }>
         class="flex flex-col items-center justify-center gap-1 py-1.5 rounded-2xl active:scale-95 transition min-h-[52px] text-stone-500 dark:text-zinc-400"
         @click="emit('bell')"
       >
-        <span class="relative w-6 h-6 grid place-items-center">
-          <i class="pi pi-bell text-[24px] leading-none" />
+        <span class="relative block w-6 h-6">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
           <span v-if="bellTotal" class="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold grid place-items-center leading-none border-2 border-white dark:border-[#0F121F]">{{ bellTotal > 9 ? '9+' : bellTotal }}</span>
         </span>
         <span class="text-[10px] font-bold leading-none opacity-75 truncate max-w-full px-0.5" title="Уведомления">Уведомления</span>
@@ -93,12 +93,11 @@ const emit = defineEmits<{ (e: 'bell'): void; (e: 'menu', value: Event): void }>
         type="button"
         aria-label="Меню профиля"
         aria-haspopup="menu"
-        class="flex flex-col items-center justify-center gap-1 py-1.5 rounded-2xl active:scale-95 transition min-h-[52px]"
+        class="flex flex-col items-center justify-center py-1.5 rounded-2xl active:scale-95 transition min-h-[52px]"
         :class="navLinkClass('dashboard')"
         @click="emit('menu', $event)"
       >
         <Avatar :image="avatarSrc" shape="circle" class="!w-6 !h-6" />
-        <span class="text-[10px] font-bold leading-none" :class="isActive('dashboard') ? 'opacity-100' : 'opacity-75'">Профиль</span>
       </button>
     </div>
   </nav>

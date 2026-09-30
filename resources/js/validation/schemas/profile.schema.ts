@@ -14,7 +14,7 @@ const toNumberOrNull = (v: unknown) => {
 
 const toBirthDate = (v: unknown) => toIsoBirthDate(v)
 
-const MAX_BY_PLAN: Record<string, number> = { free: 10, pro: 15, business: 50 }
+const MAX_BY_PLAN: Record<string, number> = { free: 10, pro: 15, premium: 50, business: 50 }
 
 export const updateProfileSchema = toTypedSchema(
   z
@@ -36,12 +36,12 @@ export const updateProfileSchema = toTypedSchema(
       is_anonymous_default: z.boolean().optional(),
       default_location_precision: z.enum(['blur_200', 'exact', 'district', 'custom']).optional(),
       default_blur_meters: z.number().min(0).max(5000).optional(),
-      plan: z.enum(['free', 'pro', 'business']).optional(),
+      plan: z.enum(['free', 'pro', 'premium', 'business']).optional(),
     })
     .superRefine((d, ctx) => {
       const max = MAX_BY_PLAN[d.plan || 'free'] ?? 1
       if (d.home_radius_km != null && d.home_radius_km > max) {
-        const need = max >= 50 ? 'Business' : 'Pro'
+        const need = max >= 50 ? 'Premium' : 'Pro'
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['home_radius_km'],

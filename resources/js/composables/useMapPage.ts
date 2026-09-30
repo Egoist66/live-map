@@ -128,6 +128,7 @@ export function useMapPage() {
     const isAdmin = !!((page.props.auth?.user as any)?.is_admin || (page.props.auth?.user as any)?.role === 'admin')
     if (isAdmin) return 'Своих районов — безлимит'
     if (plan === 'business') return 'Business: до 15 своих районов'
+    if (plan === 'premium') return 'Premium: до 15 своих районов'
     if (plan === 'pro') return 'Pro: до 5 своих районов'
     return 'Free: 2 своих района бесплатно'
   })
@@ -517,8 +518,8 @@ export function useMapPage() {
   const radiusOptions = computed(() => {
     const plan = userPlan.value
     const isAdmin = !!(page.props.auth?.user?.is_admin || page.props.auth?.user?.role === 'admin')
-    const isPro = isAdmin || plan === 'pro' || plan === 'business'
-    const isBiz = isAdmin || plan === 'business'
+    const isPro = isAdmin || plan === 'pro' || plan === 'premium' || plan === 'business'
+    const isBiz = isAdmin || plan === 'premium' || plan === 'business'
     return [
       { v: 500, l: '500 м' },
       { v: 1000, l: '1 км' },

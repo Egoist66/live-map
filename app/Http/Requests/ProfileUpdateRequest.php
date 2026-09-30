@@ -66,8 +66,8 @@ class ProfileUpdateRequest extends FormRequest
                 $isAdmin = (bool) ($user->is_admin || $user->role === 'admin');
                 if ($isAdmin) return;
                 $plan = $user->effectivePlan() ?? 'free';
-                if (! in_array($plan, ['pro', 'business'], true)) {
-                    $fail('Смена почты доступна на тарифах Pro и Business.');
+                if (! in_array($plan, ['pro', 'premium', 'business'], true)) {
+                    $fail('Смена почты доступна на тарифах Pro и Premium.');
                 }
             }],
             'home_lat' => ['nullable','numeric','between:-90,90'],
@@ -81,8 +81,8 @@ class ProfileUpdateRequest extends FormRequest
                 $isAdmin = (bool) ($user?->is_admin || $user?->role === 'admin');
                 if ($isAdmin) return;
                 $plan = $user?->effectivePlan() ?? 'free';
-                if (! in_array($plan, ['pro', 'business'])) {
-                    $fail('Точное местоположение дома доступно на тарифе Pro/Business.');
+                if (! in_array($plan, ['pro', 'premium', 'business'])) {
+                    $fail('Точное местоположение дома доступно на тарифе Pro или Premium.');
                 }
             }],
             'home_radius_km' => ['nullable','integer','min:1','max:500', function ($attr, $value, $fail) {
@@ -90,9 +90,9 @@ class ProfileUpdateRequest extends FormRequest
                 $isAdmin = (bool) ($this->user()?->is_admin || $this->user()?->role === 'admin');
                 if ($isAdmin) return;
                 $plan = $this->user()?->effectivePlan() ?? 'free';
-                $max = $plan === 'business' ? 50 : ($plan === 'pro' ? 15 : 10);
+                $max = in_array($plan, ['premium', 'business'], true) ? 50 : ($plan === 'pro' ? 15 : 10);
                 if ((int) $value > $max) {
-                    $need = $max >= 50 ? 'Business' : ($max >= 15 ? 'Pro' : 'Pro (Free — до 10 км)');
+                    $need = $max >= 50 ? 'Premium' : ($max >= 15 ? 'Pro' : 'Pro (Free — до 10 км)');
                     $fail("Максимум {$max} км на твоём тарифе. Нужно: {$need} — радиус = зона видимости пина.");
                 }
             }],

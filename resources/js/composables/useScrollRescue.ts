@@ -321,6 +321,36 @@ function scheduleCleanup(): void {
 }
 
 /**
+ * Мгновенная чистка скролла: сносит залипший лок синхронно.
+ *
+ * Нужна на границах навигации Inertia (старт/финиш перехода):
+ * дебаунс в 250мс оставлял окно, в котором страница уже новая,
+ * а скролл ещё в `overflow: hidden` — пользователь видел
+ * «пропавший скролл» после перехода или открытия дропдауна.
+ * Чистит только бесхозное (видимых держателей нет), поэтому
+ * безопасна для легитимно открытых оверлеев.
+ *
+ * @returns void
+ * @example rescueScrollNow()
+ */
+export function rescueScrollNow(): void {
+  if (typeof document === 'undefined') {
+    return
+  }
+
+  try {
+    if (debounceTimer !== null) {
+      clearTimeout(debounceTimer)
+      debounceTimer = null
+    }
+  } catch {
+    // No-op: таймера уже нет.
+  }
+
+  cleanupStrayScrollLocks()
+}
+
+/**
  * Спасатель скролла: PrimeVue Dialog/Drawer снимают `p-overflow-hidden`
  * только в штатном `after-leave`/`beforeUnmount`, а DOM-driven лок
  * (`global-dialogs`) — только когда видит уход маски. Прерванный
@@ -328,9 +358,9 @@ function scheduleCleanup(): void {
  * navigation с открытой модалкой оставляют страницу в вечном локе —
  * на мобиле и в PWA это «невозможно листать».
  *
- * Раньше чистка висела только на Inertia-навигации, и залипание
- * без перехода (открыл/закрыл модалку, дропдаун, шторку) лечилось
- * лишь перезагрузкой. Теперь дозор непрерывный: мутации DOM,
+ * Залипание ловилось и без перехода (открыл/закрыл модалку, дропдаун,
+ * шторку) — теперь дозор непрерывный: мутации DOM, все фазы навигации
+ * Inertia (старт/навигация/успех/финиш — мгновенно, без дебаунса),
  * возврат во вкладку/PWA, фокус окна и фоновый интервал.
  *
  * Чистим только когда видимых держателей блокировки в DOM уже нет:
@@ -346,11 +376,38 @@ export function initScrollRescue(): void {
 
   bound = true
 
-  router.on('navigate', () => {
-    scheduleCleanup()
-  })
+  try {
+    router.on('start', () => rescueScrollNow())
+  } catch {
+    // No-op: роутер ещё не готов.
+  }
+
+  try {
+    router.on('navigate', () => rescueScrollNow())
+  } catch {
+    // No-op: роутер ещё не готов.
+  }
+
+  try {
+    router.on('success', () => rescueScrollNow())
+  } catch {
+    // No-op: роутер ещё не готов.
+  }
+
+  try {
+    router.on('finish', () => rescueScrollNow())
+  } catch {
+    // No-op: роутер ещё не готов.
+  }
+
+  try {
+    router.on('error', () => scheduleCleanup())
+  } catch {
+    // No-op: роутер ещё не готов.
+  }
 
   window.addEventListener('pageshow', scheduleCleanup)
+  window.addEventListener('popstate', scheduleCleanup)
   window.addEventListener('focus', scheduleCleanup)
 
   document.addEventListener('visibilitychange', () => {

@@ -10,7 +10,7 @@ class PinSeeder extends Seeder
 {
     public function run(): void
     {
-        $user = User::first() ?? User::factory()->create(['email'=>'demo@livemap.test','plan'=>'business']);
+        $user = User::first() ?? User::factory()->create(['email'=>'demo@livemap.test','plan'=>'premium']);
         $samples = [
             ['Где купить свежий хлеб вечером?','question',53.903,27.561],
             ['Пробка на ул. Немига — объезжайте','warning',53.902,27.559],

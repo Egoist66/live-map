@@ -6,7 +6,7 @@ import { useImageCompress } from '@/composables/useImageCompress'
 /**
  * Лимиты галереи по тарифам: free — 5 бесплатных фото.
  */
-export const GALLERY_LIMITS: Record<string, number> = { free: 5, pro: 6, business: 15 }
+export const GALLERY_LIMITS: Record<string, number> = { free: 5, pro: 6, premium: 15, business: 15 }
 
 /**
  * Лимит галереи для тарифа.
@@ -17,7 +17,7 @@ export const GALLERY_LIMITS: Record<string, number> = { free: 5, pro: 6, busines
  */
 export function galleryLimitFor(plan?: string | null, isAdmin?: boolean): number {
   if (isAdmin) return 15
-  if (plan === 'business') return 15
+  if (plan === 'business' || plan === 'premium') return 15
   if (plan === 'pro') return 6
   return 5
 }

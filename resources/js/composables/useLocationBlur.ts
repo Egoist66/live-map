@@ -61,7 +61,7 @@ export function useLocationBlur() {
 
   const isPro = computed(() => {
     const u = authUser.value
-    return !!u?.is_admin || u?.role === 'admin' || ['pro', 'business'].includes(planOf(u))
+    return !!u?.is_admin || u?.role === 'admin' || u?.role === 'moderator' || ['pro', 'premium', 'business'].includes(planOf(u))
   })
   const canUse5km = computed(() => isPro.value)
 

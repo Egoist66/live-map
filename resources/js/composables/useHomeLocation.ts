@@ -11,7 +11,7 @@ export const HOME_VISIBILITY_OPTIONS: { value: HomeVisibility; label: string; ic
 
 export function canShowExactHome(plan?: string | null, isAdmin?: boolean): boolean {
   if (isAdmin) return true
-  return plan === 'pro' || plan === 'business'
+  return plan === 'pro' || plan === 'premium' || plan === 'business'
 }
 
 export function effectiveHomeBlurMeters(plan: string | null | undefined, showExact: boolean, defaultBlur: number, isAdmin = false): number {

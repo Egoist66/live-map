@@ -23,7 +23,7 @@ class DowngradeExpiredPlans extends Command
     {
         $count = 0;
         $graceCutoff = now()->subDays(SubscriptionController::GRACE_DAYS);
-        User::whereIn('plan', ['pro', 'business'])
+        User::whereIn('plan', ['pro', 'premium', 'business'])
             ->whereNotNull('plan_expires_at')
             ->where('plan_expires_at', '<', $graceCutoff)
             ->chunkById(200, function ($users) use (&$count) {

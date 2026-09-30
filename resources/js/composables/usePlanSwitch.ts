@@ -24,7 +24,9 @@ export interface PlanCardMeta {
  * Тарифы — сквозная сущность, а не настройка профиля или отдельного
  * модуля: переключение идёт через Subscription API (renew/cancel),
  * вступает сразу, страница подтягивает свежий `auth` без перезагрузки.
- * Free — откат подписки, Pro/Business — продление на 30 дней.
+ * Free — откат подписки, Pro/Premium — продление на 30 дней.
+ * Business — только для организаторов (кабинет компании).
+ * Стафф (админ/модератор) всегда на Premium по умолчанию.
  *
  * @returns текущий тариф, карточки, состояние и действие смены
  * @example const plans = usePlanSwitch()
@@ -40,34 +42,55 @@ export function usePlanSwitch() {
   const currentPlan = computed<PlanId>(() => {
     const plan = planOf(authUser.value)
 
-    return plan === 'business' ? 'business' : plan === 'pro' ? 'pro' : 'free'
+    if (plan === 'business') return 'business'
+    if (plan === 'premium') return 'premium'
+    return plan === 'pro' ? 'pro' : 'free'
+  })
+
+  /** Организатор ли это (кабинет компании): только им доступен Business. */
+  const isOrganization = computed(() => {
+    const u = authUser.value
+    return u?.role === 'organization' || (u?.account_type ?? 'person') === 'business'
+  })
+
+  /** Стафф ли это: им Premium доступен по умолчанию. */
+  const isStaff = computed(() => {
+    const u = authUser.value
+    return !!u?.is_admin || u?.role === 'admin' || u?.role === 'moderator'
   })
 
   /**
    * Карточки тарифов: подпись зависит от включённых модулей —
    * без карты (чистый ULove) вместо пинов показываем свайпы.
+   * Premium — топ для всех, Business — только организаторам.
    *
    * @param showMap включён ли модуль карты UPin
-   * @returns мета трёх тарифов для сетки выбора
+   * @returns мета тарифов для сетки выбора
    */
   function planCards(showMap: boolean): PlanCardMeta[] {
     const summaries: Record<PlanId, string> = showMap
       ? {
           free: '3 пина · 10 км · 4 ч',
           pro: 'Безлимит · 15 км · 12 ч',
-          business: 'Безлимит · 50 км · ∞',
+          premium: 'Безлимит · 50 км · ∞',
+          business: 'Кабинет · 50 км · ∞',
         }
       : {
           free: 'Свайпы · 3 сообщения · мэтчи',
           pro: 'Инкогнито · 10 сообщений · хайды',
-          business: 'Максимум · 15 сообщений',
+          premium: 'Максимум · сброс безлимит',
+          business: 'Кабинет · максимум',
         }
 
     const cards: PlanCardMeta[] = [
       { id: 'free', name: 'Free', price: 'Бесплатно', summary: summaries.free },
       { id: 'pro', name: 'Pro', price: '$4.99 / мес', summary: summaries.pro },
-      { id: 'business', name: 'Business', price: '$19.99 / мес', summary: summaries.business },
+      { id: 'premium', name: 'Premium', price: '$9.99 / мес', summary: summaries.premium },
     ]
+
+    if (isOrganization.value) {
+      cards.push({ id: 'business', name: 'Business', price: '$19.99 / мес', summary: summaries.business })
+    }
 
     return cards
   }
@@ -86,10 +109,19 @@ export function usePlanSwitch() {
   /**
    * Переключить тариф: вступает сразу через Subscription API.
    *
+   * Пользователям доступны только Free / Pro / Premium:
+   * Business им не выдаём даже при прямом вызове — он только
+   * для организаторов (бэкенд тоже отклоняет 422).
+   *
    * @param id целевой тариф
    */
   async function switchTo(id: PlanId): Promise<void> {
     if (switching.value || currentPlan.value === id) {
+      return
+    }
+
+    if (id === 'business' && !isOrganization.value) {
+      error.value = 'Тариф Business — только для организаторов (кабинет компании). Выбери Premium — это тот же максимум.'
       return
     }
 
@@ -112,5 +144,5 @@ export function usePlanSwitch() {
     }
   }
 
-  return { currentPlan, switching, error, planCards, switchTo }
+  return { currentPlan, switching, error, planCards, switchTo, isOrganization, isStaff }
 }

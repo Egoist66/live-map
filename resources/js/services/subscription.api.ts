@@ -14,7 +14,7 @@ export const subscriptionApi = {
     const { data } = await api.get('/api/subscription/status')
     return data as SubscriptionStatus
   },
-  async renew(plan: 'pro' | 'business'): Promise<SubscriptionStatus> {
+  async renew(plan: 'pro' | 'premium' | 'business'): Promise<SubscriptionStatus> {
     const { data } = await api.post('/api/subscription/renew', { plan })
     return data as SubscriptionStatus
   },

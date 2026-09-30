@@ -5,11 +5,12 @@ import { subscriptionApi, type SubscriptionStatus } from '@/services/subscriptio
 const SNOOZE_KEY = 'subscription_renew_snooze'
 
 /**
- * Окно продления подписки PRO/Business.
+ * Окно продления подписки PRO/Premium/Business.
  *
  * Показываем за 3 дня до конца срока и в грейс-период после:
  * «Продлить» сдвигает срок на месяц, «Отказаться» откатывает на free.
  * «Напомнить позже» доступно только пока срок не истёк.
+ * Business — только для организаторов, Premium — топ для остальных.
  *
  * @returns состояние подписки и действия окна
  *
@@ -40,9 +41,19 @@ export function useSubscriptionRenewal() {
     return !isSnoozed()
   })
 
-  const planName = computed(() => (status.value?.plan === 'business' ? 'Business' : 'PRO'))
+  const planName = computed(() => {
+    const plan = status.value?.plan
+    if (plan === 'business') return 'Business'
+    if (plan === 'premium') return 'Premium'
+    return 'PRO'
+  })
 
-  const priceLabel = computed(() => (status.value?.plan === 'business' ? '$19.99 / мес' : '$4.99 / мес'))
+  const priceLabel = computed(() => {
+    const plan = status.value?.plan
+    if (plan === 'business') return '$19.99 / мес'
+    if (plan === 'premium') return '$9.99 / мес'
+    return '$4.99 / мес'
+  })
 
   const expiryLabel = computed(() => {
     if (!status.value?.expires_at) return ''
@@ -84,7 +95,8 @@ export function useSubscriptionRenewal() {
    */
   async function renew(): Promise<void> {
     if (!status.value || acting.value) return
-    const plan = status.value.plan === 'business' ? 'business' : 'pro'
+    const raw = status.value.plan
+    const plan = raw === 'business' || raw === 'premium' ? raw : 'pro'
     acting.value = true
     error.value = null
     try {

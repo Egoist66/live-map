@@ -1,4 +1,5 @@
 import { onBeforeUnmount, onMounted } from 'vue'
+import { router } from '@inertiajs/vue3'
 import { acquireScrollLock, DOM_DIALOG_LOCK_OWNER, releaseScrollLock } from '@/composables/useScrollLock'
 import { hasVisibleLockHolder } from '@/composables/useScrollRescue'
 
@@ -116,6 +117,16 @@ export function useGlobalDialogScrollLock() {
     }
   }
 
+  /**
+   * Навигация Inertia со смонтированной страницей: страничная модалка
+   * размонтировалась вместе со страницей, её маска уже ушла из DOM,
+   * а наш лок (`global-dialogs`) ещё висит до следующего шторма мутаций —
+   * страница после перехода не листается. Синхронный пересчёт по событию
+   * навигации закрывает это окно: держателей уже нет — лок отдаём сразу.
+   */
+  let stopNavigate: (() => void) | null = null
+  let stopFinish: (() => void) | null = null
+
   onMounted(() => {
     try {
       alive = true
@@ -129,6 +140,8 @@ export function useGlobalDialogScrollLock() {
       })
       window.addEventListener('focus', scheduleSync)
       document.addEventListener('visibilitychange', onVisibility)
+      stopNavigate = router.on('navigate', () => sync())
+      stopFinish = router.on('finish', () => sync())
     } catch {}
   })
 
@@ -139,8 +152,12 @@ export function useGlobalDialogScrollLock() {
       observer?.disconnect()
       window.removeEventListener('focus', scheduleSync)
       document.removeEventListener('visibilitychange', onVisibility)
+      stopNavigate?.()
+      stopFinish?.()
     } catch {}
 
+    stopNavigate = null
+    stopFinish = null
     observer = null
     unlock()
   })

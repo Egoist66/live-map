@@ -5,7 +5,7 @@ import { planOf } from './usePlanLimits'
 
 export function hiddenLimitFor(plan?: string, isAdmin?: boolean): number | null {
   if (isAdmin) return null
-  if (plan === 'business') return null
+  if (plan === 'business' || plan === 'premium') return null
   if (plan === 'pro') return 3
   return 1
 }
@@ -38,7 +38,10 @@ export function useHiddenFriends() {
     return hiddenCount.value < (effectiveLimit.value ?? 0)
   })
   const limitText = computed(() => {
-    if (effectiveLimit.value === null) return isAdmin.value ? 'режим бога: без лимитов' : 'безлимит (Business)'
+    if (effectiveLimit.value === null) {
+      if (isAdmin.value) return 'режим бога: без лимитов'
+      return plan.value === 'business' ? 'безлимит (Business)' : 'безлимит (Premium)'
+    }
     return `${hiddenCount.value} / ${effectiveLimit.value}`
   })
   const visibleFriends = computed(() => {

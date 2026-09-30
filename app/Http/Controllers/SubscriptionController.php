@@ -5,12 +5,16 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 
 /**
- * Подписки PRO/Business: статус, продление на месяц, отказ.
+ * Подписки PRO/Premium/Business: статус, продление на месяц, отказ.
  *
  * Платный тариф действует PERIOD_DAYS дней. За RENEWAL_WINDOW_DAYS
  * дней до конца (и в грейс-период после) фронт показывает окно
  * продления: «Продлить» сдвигает срок на месяц вперёд,
  * «Отказаться» сразу откатывает на free.
+ *
+ * Premium — топ-тариф для стаффа (админ/модератор получают его
+ * по умолчанию через effectivePlan), Business — только для
+ * организаторов (кабинет компании).
  */
 class SubscriptionController extends Controller
 {
@@ -46,11 +50,16 @@ class SubscriptionController extends Controller
     public function renew(Request $request)
     {
         $data = $request->validate([
-            'plan' => 'required|in:pro,business',
+            'plan' => 'required|in:pro,premium,business',
         ]);
 
         $me = $request->user();
         $plan = $data['plan'];
+
+        // Business — только для организаторов: персонам его не выдаём.
+        if ($plan === 'business' && ! $me->isOrganization() && ! $me->isBusinessAccount()) {
+            return response()->json(['message' => 'Тариф Business — только для организаторов (кабинет компании).'], 422);
+        }
 
         $base = now();
         try {
@@ -95,7 +104,7 @@ class SubscriptionController extends Controller
     {
         $plan = $user->plan ?? 'free';
 
-        if ($plan !== 'pro' && $plan !== 'business') {
+        if (! in_array($plan, ['pro', 'premium', 'business'], true)) {
             return [
                 'plan' => 'free',
                 'expires_at' => null,
