@@ -90,7 +90,7 @@ class TelegramSessionsPanel
 
         $keyboard[] = [
             ['text' => '🔄 Обновить', 'callback_data' => 'sess'],
-            self::openAppButton('🌐 Приложение'),
+            TelegramMenu::openAppButton('🌐 Приложение'),
         ];
 
         if (count($aliveIds) > 0) {
@@ -101,30 +101,22 @@ class TelegramSessionsPanel
 
         return [
             'text' => implode("\n", $lines),
-            'keyboard' => $keyboard,
+            'keyboard' => TelegramMenu::withNav($keyboard),
         ];
     }
 
     /**
      * Кнопка открытия Mini App (web_app требует https, иначе url).
      *
+     * Оставлена для совместимости — новые места используют
+     * TelegramMenu::openAppButton, сюда просто проксируем.
+     *
      * @param string $label подпись кнопки
      * @return array<string, mixed>
      */
     public static function openAppButton(string $label): array
     {
-        $base = rtrim((string) config('app.url', ''), '/');
-        $url = $base !== '' ? $base.'/?tgWebApp=1' : '';
-
-        if ($url !== '' && str_starts_with($url, 'https://')) {
-            return ['text' => $label, 'web_app' => ['url' => $url]];
-        }
-
-        if ($url !== '') {
-            return ['text' => $label, 'url' => $url];
-        }
-
-        return ['text' => $label, 'callback_data' => 'sess'];
+        return TelegramMenu::openAppButton($label);
     }
 
     /**

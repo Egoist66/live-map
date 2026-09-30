@@ -121,12 +121,18 @@ class TelegramBotApi
     }
 
     /**
-     * Зарегистрировать webhook + команды + кнопку меню Mini App.
+     * Зарегистрировать webhook + команды + нативную кнопку меню.
+     *
+     * Важно: menu_button специально типа `commands`, а не `web_app`.
+     * Кнопка web_app подменяла нативный «Меню» у поля ввода — список
+     * команд пропадал и их приходилось вспоминать/печатать вручную.
+     * С `commands` инпут всегда показывает «Меню» со всеми 14 командами,
+     * а Mini App открывается инлайн-кнопками 🌐 в каждой панели + /app.
      *
      * Вызывается из команды telegram:setup-bot, не из вебхука.
      *
      * @param string $webhookUrl https-URL .../api/telegram/webhook
-     * @param string $webappUrl https-URL Mini App для кнопки меню
+     * @param string $webappUrl https-URL Mini App (оставлен для совместимости, не используется)
      * @param string $secret секрет для заголовка X-Telegram-Bot-Api-Secret-Token
      * @return array{webhook:bool,commands:bool,menu:bool} что реально встало
      */
@@ -164,11 +170,7 @@ class TelegramBotApi
         ]) !== null;
 
         $menuOk = self::post('setChatMenuButton', [
-            'menu_button' => [
-                'type' => 'web_app',
-                'text' => 'Открыть приложение',
-                'web_app' => ['url' => $webappUrl],
-            ],
+            'menu_button' => ['type' => 'commands'],
         ]) !== null;
 
         return ['webhook' => $webhookOk, 'commands' => $commandsOk, 'menu' => $menuOk];

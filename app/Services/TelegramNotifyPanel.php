@@ -49,6 +49,10 @@ class TelegramNotifyPanel
             'callback_data' => 'ntg_cmt',
         ]];
 
+        $keyboard[] = [
+            TelegramMenu::openAppButton('🌐 Приложение'),
+        ];
+
         if ($fresh->telegram_blocked_at !== null) {
             $lines[] = '';
             $lines[] = '⚠️ Я не могу вам писать: нажмите /start чтобы разблокировать.';
@@ -56,7 +60,7 @@ class TelegramNotifyPanel
 
         return [
             'text' => implode("\n", $lines),
-            'keyboard' => $keyboard,
+            'keyboard' => TelegramMenu::withNav($keyboard),
         ];
     }
 

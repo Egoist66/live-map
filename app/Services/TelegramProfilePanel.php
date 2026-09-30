@@ -77,12 +77,12 @@ class TelegramProfilePanel
 
         $keyboard[] = [
             ['text' => '🔄 Обновить', 'callback_data' => 'prof_refresh'],
-            TelegramSessionsPanel::openAppButton('🌐 Открыть анкету'),
+            TelegramMenu::openAppButton('🌐 Открыть анкету'),
         ];
 
         return [
             'text' => implode("\n", $lines),
-            'keyboard' => $keyboard,
+            'keyboard' => TelegramMenu::withNav($keyboard),
         ];
     }
 

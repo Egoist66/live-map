@@ -8,6 +8,7 @@ use App\Services\ProfileVisibilityService;
 use App\Services\TelegramBotApi;
 use App\Services\TelegramDeletionFlow;
 use App\Services\TelegramInsights;
+use App\Services\TelegramMenu;
 use App\Services\TelegramNotifyPanel;
 use App\Services\TelegramProfilePanel;
 use App\Services\TelegramSessionActions;
@@ -28,8 +29,13 @@ use Illuminate\Support\Facades\Log;
  * - /delete, /restore — отложенное удаление с приманкой (PRO-неделя + 14 дней grace).
  *
  * Колбэки короче 64 байт: sess*, prof_*, go_*, ntg_*, del_*.
+ * Навигация: go_menu — главное меню, go_help — список всех команд,
+ * остальные go_* — разделы без нового сообщения (перерисовка).
  * После каждого действия панель перерисовываем через
  * editMessageText, итог показываем тостом answerCallbackQuery.
+ * Каждый экран внизу несёт ряд [◀️ Меню, 📋 Команды], поэтому из
+ * глубины всегда есть кнопка назад, а поле ввода с командами (/…)
+ * не нужно вспоминать — оно дублируется кнопкой.
  */
 class TelegramWebhookController extends Controller
 {
@@ -184,6 +190,12 @@ class TelegramWebhookController extends Controller
             return;
         }
 
+        if (! $this->isSessionCallback($data)) {
+            TelegramBotApi::answerCallback($callbackId, 'Неизвестное действие — жмите 📋 Команды');
+
+            return;
+        }
+
         $toast = $this->runAction($user, $data);
         $panel = TelegramSessionsPanel::build($user->fresh() ?? $user);
 
@@ -204,6 +216,42 @@ class TelegramWebhookController extends Controller
     private function runPanelCallback(User $user, string $data, int $chatId, int $messageId, string $callbackId): bool
     {
         $fresh = $user->fresh() ?? $user;
+
+        if ($data === 'go_menu') {
+            $menu = TelegramMenu::main($fresh);
+            TelegramBotApi::editPanel($chatId, $messageId, $menu['text'], $menu['keyboard']);
+            TelegramBotApi::answerCallback($callbackId, 'Главное меню');
+
+            return true;
+        }
+
+        if ($data === 'go_help') {
+            $help = TelegramMenu::help();
+            TelegramBotApi::editPanel($chatId, $messageId, $help['text'], $help['keyboard']);
+            TelegramBotApi::answerCallback($callbackId, 'Все команды бота');
+
+            return true;
+        }
+
+        if ($data === 'go_sessions' || $data === 'sess') {
+            $panel = TelegramSessionsPanel::build($fresh);
+            TelegramBotApi::editPanel($chatId, $messageId, $panel['text'], $panel['keyboard']);
+            TelegramBotApi::answerCallback($callbackId, 'Активные сеансы');
+
+            return true;
+        }
+
+        if ($data === 'go_stats') {
+            $this->editStats($fresh, $chatId, $messageId, $callbackId);
+
+            return true;
+        }
+
+        if ($data === 'go_messages') {
+            $this->editMessages($fresh, $chatId, $messageId, $callbackId);
+
+            return true;
+        }
 
         if ($data === 'prof_hide') {
             $updated = ProfileVisibilityService::hide($fresh);
@@ -335,7 +383,32 @@ class TelegramWebhookController extends Controller
     }
 
     /**
+     * Это колбэк панели сеансов (а не навигации/профиля).
+     *
+     * Нужен в handleCallback: навигационные go_* обрабатывает
+     * runPanelCallback, а сюда доходят только действия сеансов
+     * (sess, skill, sban, sunban, strust, skillall и сироты xkill) —
+     * всё остальное считаем неизвестным и панель сеансов поверх не рисуем.
+     *
+     * @param string $data callback_data
+     * @return bool true когда действие относится к сеансам
+     */
+    private function isSessionCallback(string $data): bool
+    {
+        if ($data === 'sess' || $data === 'skillall') {
+            return true;
+        }
+
+        $prefix = explode(':', $data, 2)[0] ?? '';
+
+        return in_array($prefix, ['skill', 'sban', 'sunban', 'strust', 'xkill'], true);
+    }
+
+    /**
      * Приветствие /start: что умеет бот + главное меню.
+     *
+     * Текст и клавиатуру собирает TelegramMenu::main, здесь только
+     * отправка новым сообщением (для перерисовки есть go_menu).
      *
      * @param User $user привязанный пользователь
      * @param int $chatId куда отвечать
@@ -343,39 +416,9 @@ class TelegramWebhookController extends Controller
      */
     private function replyStart(User $user, int $chatId): void
     {
-        $name = trim((string) $user->name);
-        $hello = $name !== '' ? ', '.$this->esc($name) : '';
+        $menu = TelegramMenu::main($user);
 
-        $unread = TelegramInsights::unreadCount($user);
-        $admirers = TelegramInsights::admirers($user);
-
-        $text = "👋 Привет{$hello}! Я — ваш пульт от ULove.\n"
-            .'Могу всё без открытия приложения: анкета, лайки, мэтчи, сообщения, сеансы и уведомления.';
-
-        if ($unread > 0 || $admirers['total'] > 0) {
-            $text .= "\n\n";
-            $text .= "💬 Новых сообщений: <b>{$unread}</b> · 💞 Лайков: <b>{$admirers['total']}</b>";
-        }
-
-        $text .= "\n\nВыбирайте кнопку или команду из меню — я всё покажу прямо здесь.";
-
-        TelegramBotApi::sendMessage($chatId, $text, [
-            [
-                ['text' => '👤 Моя анкета', 'callback_data' => 'go_profile'],
-                ['text' => '📊 Статистика', 'callback_data' => 'prof_refresh'],
-            ],
-            [
-                ['text' => '💞 Лайки', 'callback_data' => 'go_likes'],
-                ['text' => '🎉 Мэтчи', 'callback_data' => 'go_matches'],
-            ],
-            [
-                ['text' => '🔔 Уведомления', 'callback_data' => 'go_notify'],
-                ['text' => '📱 Сеансы', 'callback_data' => 'sess'],
-            ],
-            [
-                TelegramSessionsPanel::openAppButton('🌐 Открыть приложение'),
-            ],
-        ]);
+        TelegramBotApi::sendMessage($chatId, $menu['text'], $menu['keyboard']);
     }
 
     /**
@@ -387,42 +430,25 @@ class TelegramWebhookController extends Controller
      */
     private function replyApp(User $user, int $chatId): void
     {
-        TelegramBotApi::sendMessage($chatId, '🌐 Открывайте приложение одной кнопкой:', [
-            [TelegramSessionsPanel::openAppButton('🌐 Открыть Mini App')],
-        ]);
+        TelegramBotApi::sendMessage($chatId, '🌐 Открывайте приложение одной кнопкой:', TelegramMenu::withNav([
+            [TelegramMenu::openAppButton('🌐 Открыть Mini App')],
+        ]));
     }
 
     /**
      * Справка по всем возможностям.
+     *
+     * Текст единый с экраном go_help (TelegramMenu::help), здесь —
+     * отправка новым сообщением для команды /help.
      *
      * @param int $chatId куда слать
      * @return void
      */
     private function replyHelp(int $chatId): void
     {
-        $lines = [];
-        $lines[] = '✨ <b>Что я умею</b>';
-        $lines[] = '';
-        $lines[] = '👤 /profile — анкета: тариф, счётчики, скрыть/вернуть';
-        $lines[] = '🙈 /hide — стать невидимкой (никто не видит)';
-        $lines[] = '👀 /show — вернуться в поиск и ленту';
-        $lines[] = '💞 /likes — кто лайкнул вашу анкету';
-        $lines[] = '🎉 /matches — ваши мэтчи';
-        $lines[] = '💬 /messages — непрочитанные сообщения';
-        $lines[] = '📊 /stats — уровень, репутация, тариф';
-        $lines[] = '🔔 /notify — какие письма слать в личку';
-        $lines[] = '📱 /sessions — сеансы: завершить чужой вход, забанить устройство';
-        $lines[] = '💔 /delete — удалить профиль (сначала подарим PRO!)';
-        $lines[] = '💚 /restore — вернуть профиль в течение 14 дней';
-        $lines[] = '';
-        $lines[] = 'Всё переключается кнопками прямо здесь — приложение открывать не надо.';
+        $help = TelegramMenu::help();
 
-        TelegramBotApi::sendMessage($chatId, implode("\n", $lines), [
-            [
-                ['text' => '👤 Моя анкета', 'callback_data' => 'go_profile'],
-                TelegramSessionsPanel::openAppButton('🌐 Приложение'),
-            ],
-        ]);
+        TelegramBotApi::sendMessage($chatId, $help['text'], $help['keyboard']);
     }
 
     /**
@@ -505,12 +531,12 @@ class TelegramWebhookController extends Controller
             $text .= "\n\nОткрывайте ленту и мэтчьтесь 👇";
         }
 
-        TelegramBotApi::sendMessage($chatId, $text, [
+        TelegramBotApi::sendMessage($chatId, $text, TelegramMenu::withNav([
             [
                 ['text' => '💞 Смотреть лайки', 'callback_data' => 'go_likes'],
-                TelegramSessionsPanel::openAppButton('🌐 Открыть свайпы'),
+                TelegramMenu::openAppButton('🌐 Открыть свайпы'),
             ],
-        ]);
+        ]));
     }
 
     /**
@@ -540,12 +566,12 @@ class TelegramWebhookController extends Controller
             $text .= "\nЧаты уже открыты — пишите первым!";
         }
 
-        TelegramBotApi::sendMessage($chatId, $text, [
+        TelegramBotApi::sendMessage($chatId, $text, TelegramMenu::withNav([
             [
                 ['text' => '🎉 Мои мэтчи', 'callback_data' => 'go_matches'],
-                TelegramSessionsPanel::openAppButton('🌐 Открыть чаты'),
+                TelegramMenu::openAppButton('🌐 Открыть чаты'),
             ],
-        ]);
+        ]));
     }
 
     /**
@@ -565,9 +591,9 @@ class TelegramWebhookController extends Controller
             $text = "💬 У вас <b>{$unread}</b> непрочитанных. Загляните — там вас ждут!";
         }
 
-        TelegramBotApi::sendMessage($chatId, $text, [
-            [TelegramSessionsPanel::openAppButton('🌐 Открыть чаты')],
-        ]);
+        TelegramBotApi::sendMessage($chatId, $text, TelegramMenu::withNav([
+            [TelegramMenu::openAppButton('🌐 Открыть чаты')],
+        ]));
     }
 
     /**
@@ -579,12 +605,12 @@ class TelegramWebhookController extends Controller
      */
     private function replyStats(User $user, int $chatId): void
     {
-        TelegramBotApi::sendMessage($chatId, TelegramInsights::statsText($user), [
+        TelegramBotApi::sendMessage($chatId, TelegramInsights::statsText($user), TelegramMenu::withNav([
             [
                 ['text' => '👤 Моя анкета', 'callback_data' => 'go_profile'],
-                TelegramSessionsPanel::openAppButton('🌐 Приложение'),
+                TelegramMenu::openAppButton('🌐 Приложение'),
             ],
-        ]);
+        ]));
     }
 
     /**
@@ -650,11 +676,11 @@ class TelegramWebhookController extends Controller
         $fresh = $user->fresh() ?? $user;
 
         if (! $fresh->isPendingDeletion()) {
-            TelegramBotApi::sendMessage($chatId, '💚 Удаление не запущено — ваш профиль в порядке. Так держать!', [
+            TelegramBotApi::sendMessage($chatId, '💚 Удаление не запущено — ваш профиль в порядке. Так держать!', TelegramMenu::withNav([
                 [
                     ['text' => '👤 Моя анкета', 'callback_data' => 'go_profile'],
                 ],
-            ]);
+            ]));
 
             return;
         }
@@ -673,11 +699,11 @@ class TelegramWebhookController extends Controller
      */
     private function replyUnknown(int $chatId): void
     {
-        TelegramBotApi::sendMessage($chatId, 'Не понял команду 🤔 Жмите /help — там все мои суперспособности.', [
+        TelegramBotApi::sendMessage($chatId, 'Не понял команду 🤔 Жмите /help — там все мои суперспособности.', TelegramMenu::withNav([
             [
-                ['text' => '✨ Что ты умеешь?', 'callback_data' => 'go_profile'],
+                ['text' => '📋 Все команды', 'callback_data' => 'go_help'],
             ],
-        ]);
+        ]));
     }
 
     /**
@@ -694,7 +720,7 @@ class TelegramWebhookController extends Controller
             : 'Чтобы пользоваться командами, сначала привяжите Telegram: откройте приложение через кнопку ниже — привязка произойдёт автоматически.';
 
         TelegramBotApi::sendMessage($chatId, $hint, [
-            [TelegramSessionsPanel::openAppButton('🌐 Открыть приложение')],
+            [TelegramMenu::openAppButton('🌐 Открыть приложение')],
         ]);
     }
 
@@ -725,12 +751,12 @@ class TelegramWebhookController extends Controller
             }
         }
 
-        TelegramBotApi::editPanel($chatId, $messageId, $text, [
+        TelegramBotApi::editPanel($chatId, $messageId, $text, TelegramMenu::withNav([
             [
                 ['text' => '👤 Моя анкета', 'callback_data' => 'go_profile'],
-                TelegramSessionsPanel::openAppButton('🌐 Смотреть в приложении'),
+                TelegramMenu::openAppButton('🌐 Смотреть в приложении'),
             ],
-        ]);
+        ]));
 
         TelegramBotApi::answerCallback($callbackId, 'Лайки обновлены');
     }
@@ -762,14 +788,65 @@ class TelegramWebhookController extends Controller
             }
         }
 
-        TelegramBotApi::editPanel($chatId, $messageId, $text, [
+        TelegramBotApi::editPanel($chatId, $messageId, $text, TelegramMenu::withNav([
             [
                 ['text' => '👤 Моя анкета', 'callback_data' => 'go_profile'],
-                TelegramSessionsPanel::openAppButton('🌐 Открыть чаты'),
+                TelegramMenu::openAppButton('🌐 Открыть чаты'),
+            ],
+        ]));
+
+        TelegramBotApi::answerCallback($callbackId, 'Мэтчи обновлены');
+    }
+
+    /**
+     * Перерисовать статистику по колбэку go_stats.
+     *
+     * @param User $user владелец
+     * @param int $chatId куда
+     * @param int $messageId что
+     * @param string $callbackId тост
+     * @return void
+     */
+    private function editStats(User $user, int $chatId, int $messageId, string $callbackId): void
+    {
+        $text = TelegramInsights::statsText($user);
+
+        $keyboard = TelegramMenu::withNav([
+            [
+                ['text' => '👤 Моя анкета', 'callback_data' => 'go_profile'],
+                TelegramMenu::openAppButton('🌐 Приложение'),
             ],
         ]);
 
-        TelegramBotApi::answerCallback($callbackId, 'Мэтчи обновлены');
+        TelegramBotApi::editPanel($chatId, $messageId, $text, $keyboard);
+        TelegramBotApi::answerCallback($callbackId, 'Статистика обновлена');
+    }
+
+    /**
+     * Перерисовать сообщения по колбэку go_messages.
+     *
+     * @param User $user владелец
+     * @param int $chatId куда
+     * @param int $messageId что
+     * @param string $callbackId тост
+     * @return void
+     */
+    private function editMessages(User $user, int $chatId, int $messageId, string $callbackId): void
+    {
+        $unread = TelegramInsights::unreadCount($user);
+
+        if ($unread === 0) {
+            $text = '💬 Всё прочитано — вы молодец! Новых сообщений нет.';
+        } else {
+            $text = "💬 У вас <b>{$unread}</b> непрочитанных. Загляните — там вас ждут!";
+        }
+
+        $keyboard = TelegramMenu::withNav([
+            [TelegramMenu::openAppButton('🌐 Открыть чаты')],
+        ]);
+
+        TelegramBotApi::editPanel($chatId, $messageId, $text, $keyboard);
+        TelegramBotApi::answerCallback($callbackId, 'Сообщения обновлены');
     }
 
     /**

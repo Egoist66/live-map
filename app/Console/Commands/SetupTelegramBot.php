@@ -6,14 +6,15 @@ use App\Services\TelegramBotApi;
 use Illuminate\Console\Command;
 
 /**
- * Регистрация бота в Telegram: webhook + команды + кнопка меню.
+ * Регистрация бота в Telegram: webhook + команды + нативное меню.
  *
  * Ставит:
  * - webhook на {APP_URL}/api/telegram/webhook (секрет из
  *   config telegram.webhook_secret, если задан);
  * - 14 команд-мегаменю: start/app/profile/hide/show/likes/matches/
  *   messages/stats/notify/sessions/help/delete/restore;
- * - кнопку меню Mini App (открывает приложение поверх чата).
+ * - кнопку меню типа commands (список команд у поля ввода не прячется,
+ *   Mini App открывается инлайн-кнопками 🌐 в панелях + командой /app).
  *
  * Запуск: php artisan telegram:setup-bot [--url=...] [--webapp=...]
  */
@@ -23,7 +24,7 @@ class SetupTelegramBot extends Command
         {--url= : Полный https-URL вебхука (по умолчанию APP_URL/api/telegram/webhook)}
         {--webapp= : https-URL Mini App для кнопки меню (по умолчанию APP_URL/?tgWebApp=1)}';
 
-    protected $description = 'Зарегистрировать webhook, команды и кнопку меню Telegram-бота (панель сеансов)';
+    protected $description = 'Зарегистрировать webhook, 14 команд и нативное меню commands Telegram-бота';
 
     /**
      * Выполнить регистрацию бота.
@@ -65,7 +66,7 @@ class SetupTelegramBot extends Command
         $this->table(['Шаг', 'Итог'], [
             ['setWebhook', $result['webhook'] ? 'OK' : 'FAIL'],
             ['setMyCommands (14 команд мега-меню)', $result['commands'] ? 'OK' : 'FAIL'],
-            ['setChatMenuButton (Mini App)', $result['menu'] ? 'OK' : 'FAIL'],
+            ['setChatMenuButton (commands у поля ввода)', $result['menu'] ? 'OK' : 'FAIL'],
         ]);
 
         if ($secret === '') {

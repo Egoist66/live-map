@@ -44,7 +44,7 @@ class TelegramDeletionFlow
             ],
         ];
 
-        return ['text' => $text, 'keyboard' => $keyboard];
+        return ['text' => $text, 'keyboard' => TelegramMenu::withNav($keyboard)];
     }
 
     /**
@@ -84,11 +84,11 @@ class TelegramDeletionFlow
                 ['text' => '💚 Вернуть профиль', 'callback_data' => 'del_cancel'],
             ],
             [
-                TelegramSessionsPanel::openAppButton('🌐 Открыть приложение'),
+                TelegramMenu::openAppButton('🌐 Открыть приложение'),
             ],
         ];
 
-        return ['text' => implode("\n", $lines), 'keyboard' => $keyboard];
+        return ['text' => implode("\n", $lines), 'keyboard' => TelegramMenu::withNav($keyboard)];
     }
 
     /**
@@ -104,12 +104,12 @@ class TelegramDeletionFlow
 
         $keyboard = [
             [
-                ['text' => '👤 Моя анкета', 'callback_data' => 'prof_refresh'],
-                TelegramSessionsPanel::openAppButton('🌐 В приложение'),
+                ['text' => '👤 Моя анкета', 'callback_data' => 'go_profile'],
+                TelegramMenu::openAppButton('🌐 В приложение'),
             ],
         ];
 
-        return ['text' => $text, 'keyboard' => $keyboard];
+        return ['text' => $text, 'keyboard' => TelegramMenu::withNav($keyboard)];
     }
 
     /**
