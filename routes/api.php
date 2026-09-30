@@ -36,6 +36,9 @@ Route::get('/reference/{slug}', [\App\Http\Controllers\ReferencePageController::
 // умирал в 429. Отдельное пер-юзер ведро telegram-status (60/мин),
 // как у email-status.
 Route::middleware(['web', 'throttle:30,1'])->post('/telegram/auth', [\App\Http\Controllers\TelegramAuthController::class, 'auth']);
+// Вебхук бота: апдейты message/callback_query для нативной панели сеансов.
+// Без web/auth — Telegram шлёт без кук; секрет сверяем внутри контроллера.
+Route::middleware('throttle:120,1')->post('/telegram/webhook', \App\Http\Controllers\TelegramWebhookController::class);
 Route::middleware(['web', 'auth:web,sanctum'])->group(function () {
     Route::get('/telegram/status', [\App\Http\Controllers\TelegramAuthController::class, 'status'])->middleware('throttle:telegram-status');
     Route::patch('/telegram/preferences', [\App\Http\Controllers\TelegramAuthController::class, 'preferences'])->middleware('throttle:telegram-status');
@@ -163,6 +166,7 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
 
     Route::get('/chat/me', [ChatUserController::class, 'me']);
     Route::post('/chat/heartbeat', [ChatUserController::class, 'heartbeat'])->middleware('throttle:chat-signal');
+    Route::post('/chat/offline', [ChatUserController::class, 'offline'])->middleware('throttle:chat-signal');
     Route::get('/chat/users/search', [ChatUserController::class, 'search'])->middleware('throttle:chat-search');
     Route::patch('/chat/privacy', [ChatUserController::class, 'privacy']);
     Route::get('/chat/auto-reply', [ChatUserController::class, 'autoReplyShow']);

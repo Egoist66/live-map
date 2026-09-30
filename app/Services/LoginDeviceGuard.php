@@ -119,9 +119,11 @@ class LoginDeviceGuard
             $fresh = $user->fresh();
 
             if ($fresh && (int) ($fresh->telegram_id ?? 0) > 0 && $fresh->telegram_blocked_at === null) {
-                // Кнопка ведёт прямо на таб «Безопасность» к карточке сеансов:
-                // голый /settings открывает таб «Профиль», sessions не видно.
-                TelegramNotifier::send($fresh, self::telegramText($device, $via), '/settings/security#sessions', 'Мои сеансы');
+                // Нативная панель в боте: callback «Показать сеансы» рисует
+                // kill/ban прямо в чате (не зависит от таба Mini App),
+                // web_app «Безопасность» — запасной путь в настройки.
+                // Текст подсказывает и /sessions, и путь в приложении.
+                TelegramNotifier::securityAlert($fresh, self::telegramText($device, $via));
             }
         } catch (\Throwable $e) {
             Log::warning('new device telegram failed', ['user_id' => $user->id, 'error' => $e->getMessage()]);
@@ -158,7 +160,9 @@ class LoginDeviceGuard
         };
 
         $lines[] = 'Вход '.$esc($viaLabel).'.';
-        $lines[] = 'Если это были не вы — завершите сеанс: Настройки → Безопасность → Сеансы.';
+
+        $lines[] = 'Если это были не вы — жмите «Показать сеансы» ниже или команду /sessions: любой сеанс можно завершить или забанить прямо здесь.';
+        $lines[] = 'Запасной путь: Настройки → Безопасность → Сеансы.';
 
         return implode("\n", $lines);
     }

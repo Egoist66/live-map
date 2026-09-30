@@ -74,14 +74,60 @@ function ensureHeartbeat() {
   beatTimer = setInterval(heartbeat, 60000)
 }
 
+/**
+ * Сказать бэку «Mini App закрыт» даже когда страница уже умирает.
+ *
+ * Обычный axios на pagehide не успевает (страница выгружена), а без
+ * этого last_seen_at остаётся свежим ещё ~3 минуты порога isAway —
+ * и дубли сообщений/лайков/мэтчей в Telegram-бота не уходят. Шлём
+ * fetch с keepalive + куками сессии + XSRF из куки: Laravel примет
+ * POST без 419, бэк сдвинет last_seen_at на 5 минут назад.
+ *
+ * @returns void (ошибки глотаем — страница всё равно закрывается)
+ */
+function markOfflineBeacon(): void {
+  try {
+    const xsrf = readXsrfToken()
+    const headers: Record<string, string> = {
+      'X-Requested-With': 'XMLHttpRequest',
+      Accept: 'application/json',
+    }
+    if (xsrf) headers['X-XSRF-TOKEN'] = xsrf
+    void fetch('/api/chat/offline', {
+      method: 'POST',
+      credentials: 'include',
+      keepalive: true,
+      headers,
+    }).catch(() => {})
+  } catch {
+    // No-op: beacon необязателен.
+  }
+}
+
+/**
+ * Прочитать XSRF-TOKEN из кук для keepalive-beacon.
+ *
+ * @returns расшифрованное значение куки или null
+ */
+function readXsrfToken(): string | null {
+  try {
+    const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]*)/)
+    if (!match) return null
+    return decodeURIComponent(match[1])
+  } catch {
+    return null
+  }
+}
+
 function bindGlobalListeners() {
   if (listenersBound) return
   listenersBound = true
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') { connect(); heartbeat() }
+    else markOfflineBeacon()
   })
-  window.addEventListener('beforeunload', () => disconnect())
-  window.addEventListener('pagehide', () => disconnect())
+  window.addEventListener('beforeunload', () => { markOfflineBeacon(); disconnect() })
+  window.addEventListener('pagehide', () => { markOfflineBeacon(); disconnect() })
 }
 
 function bindReconnect() {

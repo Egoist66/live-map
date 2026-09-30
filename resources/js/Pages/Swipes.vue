@@ -146,7 +146,7 @@ onUnmounted(() => {
       <div class="w-full min-w-0 mx-auto max-w-[640px] px-4 sm:px-6" :class="s.activeTab.value === 'feed' ? 'swipes-feed-inner pt-1 sm:py-6 sm:pb-[calc(2rem+var(--sab))]' : 'pt-3 pb-6 sm:py-6 sm:pb-[calc(2rem+var(--sab))]'">
 
         <h1 class="sr-only">ULove — знакомства рядом</h1>
-        <div class="flex items-center px-1 py-1 sm:py-2 shrink-0">
+        <div class="swipes-topbar flex items-center px-1 py-1 sm:py-2 shrink-0">
           <Button icon="pi pi-user" rounded text aria-label="Мой профиль" title="Мой профиль" class="!w-10 !h-10 !p-0 shrink-0 !text-stone-400 dark:!text-zinc-500 hover:!text-stone-600 dark:hover:!text-zinc-300 [&_.p-button-icon]:!text-xl" @click="mobileMenu.goProfile()" />
           <Button v-if="isAuth && s.showTabBack.value" icon="pi pi-arrow-left" rounded text aria-label="Назад к ленте" title="Назад к ленте" class="!w-10 !h-10 !p-0 shrink-0 !text-stone-400 dark:!text-zinc-500 hover:!text-stone-600 dark:hover:!text-zinc-300 [&_.p-button-icon]:!text-xl" @click="s.backToFeed()" />
           <span v-else-if="isAuth" class="w-10 shrink-0" aria-hidden="true" />
@@ -1011,6 +1011,15 @@ onUnmounted(() => {
   padding: 0;
   background: transparent;
   border: 0;
+}
+/* Telegram Mini App (мобайл): нативные кнопки клиента (закрыть слева,
+   свернуть/меню справа) парят поверх WebView — опускаем верхнюю панель
+   свайпов (профиль слева, чат/бургер справа) ниже. Только тач Mini App:
+   веб и десктоп не трогаем (там --tg-chrome-top = 0). */
+@media (pointer: coarse) {
+  html.tg-app .swipes-topbar {
+    padding-top: calc(var(--tg-chrome-top, 0px) * 0.5 + 12px);
+  }
 }
 /* Сайдбар вплотную к правому краю: убиваем десктопный зазор */
 .ulove-drawer {

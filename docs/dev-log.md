@@ -1438,3 +1438,14 @@
 - Жалоба: кнопка открывала просто профиль. Причина: путь был голый `/settings` (дефолтный таб «Профиль»), а сеансы живут на табе «Безопасность».
 - Фикс: путь кнопки — `/settings/security#sessions` (`ProfileController@edit` разруливает `/settings/security` в `initialTab=security`, фронт подхватывает). Плюс якорь: новый хук `useAnchorScroll` (JSDoc, Правило №1) + `<span id="sessions">` в `SettingsSessionsCard` — страница докручивается к карточке сеансов.
 - Проверки: `php -l` OK, `vue-tsc --noEmit` OK.
+
+
+## 2026-09-30 — Панель сеансов прямо в боте: завершить / в бан без Mini App
+- Жалоба: web_app-кнопка «Мои сеансы» не вела в раздел Безопасность (Mini App мог открыться не на том табе, хэш терялся). Решение — по-другому: нативная TG-панель в самом чате с ботом.
+- ✨ Бэк: `TelegramBotApi` (send/editPanel/answerCallback/setup, PHPDoc); `TelegramSessionsPanel::build` (до 8 устройств 🟢/⚪️/🚫 + сиротские sessions, callback_data короче 64б: sess/skill:{id}/sban:{id}/sunban:{id}/strust:{id}/skillall/xkill:{sid}); `TelegramSessionActions` (terminate/ban/unban/trust/terminateAll/killOrphan — та же механика что `DeviceController`: удаление sessions + broadcast `SessionRevoked`, владелец строго по паре device+user_id); `TelegramWebhookController` (`POST /api/telegram/webhook`, секрет `TELEGRAM_WEBHOOK_SECRET`, команды /start//sessions, перерисовка панели + тост после каждого действия, непривязанным — подсказка открыть Mini App).
+- 🔧 Алерт входа (`LoginDeviceGuard` + `TelegramNotifier::securityAlert`): вместо одной web_app-кнопки — два ряда: «📱 Показать сеансы» (callback `sess`, мгновенная панель kill/ban в чате) + «🌐 Безопасность в приложении» (fallback в Mini App); текст подсказывает и /sessions.
+- 🔧 Команда `php artisan telegram:setup-bot` (webhook + setMyCommands /start//sessions + menu-кнопка Mini App), конфиг `telegram.webhook_secret`, `.env.example` `TELEGRAM_WEBHOOK_SECRET`, `artisan.commands.md`.
+- 🐞 Попутно: `SessionController` не импортировал `SessionRevoked` (broadcast падал в fatal) — добавлен `use`.
+- Уведомления/realtime (Правило №10/13): kill/ban шлют `SessionRevoked` в личный канал — жертва вылетает мгновенно, поллер 401 — запасной путь; тост подтверждает действие в боте. Адаптация (Правило №14): нативный UI Telegram наследует тему/размер — тёмная тема и мобайл бесплатно.
+- Включение на проде: задать `TELEGRAM_WEBHOOK_SECRET`, прогнать `php artisan telegram:setup-bot` (APP_URL должен быть https).
+- Проверки: `php -l` ✅ ×8, `route:list` ✅ (`POST api/telegram/webhook`), `telegram:setup-bot --help` ✅.

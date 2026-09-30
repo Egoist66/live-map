@@ -69,6 +69,11 @@ class FlowPostNotifier
             $owner = User::find($ownerId);
             if ($owner) {
                 UserNotifier::send($owner, new FlowLikedNotification($post, $actor, $ownerId));
+                try {
+                    TelegramNotifier::entityLiked($actor, $owner, 'пост', "/flow/post/{$post->id}", "flow-like:{$post->id}:{$actor->id}");
+                } catch (\Throwable $e) {
+                    Log::warning('telegram flow like failed', ['error' => $e->getMessage()]);
+                }
             }
         } catch (\Throwable $e) {
             Log::warning('flow like notify failed', ['error' => $e->getMessage()]);

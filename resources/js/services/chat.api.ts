@@ -16,6 +16,14 @@ export const chatApi = {
     const { data } = await api.post('/api/chat/heartbeat')
     return data
   },
+  /**
+   * Beacon закрытия Mini App: сдвигает last_seen_at за порог isAway,
+   * чтобы бот сразу слал уведомления, а не через 3 минуты.
+   */
+  async offline() {
+    const { data } = await api.post('/api/chat/offline')
+    return data
+  },
   async search(q: string, page = 1, perPage = 20) {
     const { data } = await api.get('/api/chat/users/search', { params: { q, page, per_page: perPage } })
     return data as { data: any[]; current_page: number; last_page: number; has_more: boolean } | any[]

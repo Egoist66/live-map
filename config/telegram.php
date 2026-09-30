@@ -21,4 +21,10 @@ return [
 
     // Автосоздание пользователя при первом входе через Telegram.
     'auto_register' => (bool) env('TELEGRAM_AUTO_REGISTER', true),
+
+    // Секрет вебхука бота: уходит в setWebhook как secret_token,
+    // входящие апдейты сверяем по заголовку
+    // X-Telegram-Bot-Api-Secret-Token. Пусто — без проверки
+    // (только для локальной отладки).
+    'webhook_secret' => env('TELEGRAM_WEBHOOK_SECRET', ''),
 ];

@@ -101,6 +101,37 @@ class ChatUserController extends Controller
     }
 
     /**
+     * Пометить пользователя отошедшим при закрытии Mini App.
+     *
+     * Фронт шлёт сюда keepalive-beacon на pagehide/скрытие вкладки:
+     * last_seen_at сдвигаем за порог User::isAway (3 мин), чтобы
+     * TelegramNotifier сразу слал дубли в бота, а не ждал пока
+     * порог истечёт сам. UpdateLastSeen этот путь пропускает и
+     * кэш last_seen обновляем здесь же, иначе мидлварь затёрла бы
+     * метку свежим now().
+     *
+     * @param Request $request запрос от владельца сессии
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function offline(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user->isInvisibleActive()) {
+            return response()->json(['ok' => true, 'invisible' => true]);
+        }
+
+        $user->forceFill(['last_seen_at' => now()->subMinutes(5)])->saveQuietly();
+
+        try {
+            \Illuminate\Support\Facades\Cache::put('last_seen:'.$user->id, true, 120);
+        } catch (\Throwable) {
+        }
+
+        return response()->json(['ok' => true]);
+    }
+
+    /**
      * Сохранение приватности чата — только дропдаун message_privacy.
      *
      * @param Request $request запрос с message_privacy (everyone|friends|none)

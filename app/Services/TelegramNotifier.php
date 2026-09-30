@@ -340,6 +340,42 @@ class TelegramNotifier
     }
 
     /**
+     * Алерт о входе с нативной панелью сеансов в боте.
+     *
+     * Вместо одной web_app-кнопки «Мои сеансы» (вела в Mini App
+     * на /settings/security#sessions, но могла открыться не на том
+     * табе) даём два ряда: callback-кнопка «Показать сеансы» сразу
+     * рисует панель kill/ban в чате через вебхук, web_app — запасной
+     * путь в раздел Безопасность Mini App.
+     *
+     * @param User $recipient владелец аккаунта
+     * @param string $text текст алерта в HTML-разметке Telegram
+     * @return bool true когда задача принята в очередь
+     */
+    public static function securityAlert(User $recipient, string $text): bool
+    {
+        $recipient = self::resolveRecipient($recipient);
+
+        if ($recipient === null) {
+            return false;
+        }
+
+        $rows = [
+            [
+                ['text' => '📱 Показать сеансы', 'callback_data' => 'sess'],
+            ],
+        ];
+
+        $fallback = self::button('/settings/security#sessions', '🌐 Безопасность в приложении');
+
+        if ($fallback !== null) {
+            $rows[] = [$fallback];
+        }
+
+        return self::dispatchMessage((int) $recipient->id, $text, $rows);
+    }
+
+    /**
      * Рассылка username при взаимном согласии на обмен.
      *
      * Одноразовое важное событие — шлём всегда, без гейта онлайна:
@@ -455,10 +491,64 @@ class TelegramNotifier
     }
 
     /**
+     * Напомнить о лайке не-анкетной сущности (фото, пост UFlow).
+     *
+     * Лайки анкет идут через liked(), а фото/посты раньше уходили
+     * только в колокольчик — в бота ничего не прилетало и владельцы
+     * думали, что «лайки не приходят». Гейты те же: тумблер likes
+     * + только отошедшему (isAway), дедуп по паре сутки.
+     *
+     * @param User $actor кто лайкнул
+     * @param User $owner владелец сущности
+     * @param string $entityLabel что лайкнули («фото», «пост»)
+     * @param string $path путь в Mini App для кнопки «Смотреть»
+     * @param string $dedupKey уникальный ключ дедупа (сутки)
+     * @return void
+     */
+    public static function entityLiked(User $actor, User $owner, string $entityLabel, string $path, string $dedupKey): void
+    {
+        $owner = self::resolveRecipient($owner);
+
+        if ($owner === null) {
+            return;
+        }
+
+        if (! self::canNotify($owner, 'likes')) {
+            return;
+        }
+
+        if (! $owner->isAway()) {
+            self::logSkip($owner, 'likes', 'online');
+
+            return;
+        }
+
+        $key = 'tg:entityliked:'.$dedupKey;
+
+        if (Cache::has($key)) {
+            self::logSkip($owner, 'likes', 'cooldown');
+
+            return;
+        }
+
+        Cache::put($key, true, self::LIKED_COOLDOWN_SECONDS);
+
+        $actorName = trim((string) ($actor->name ?? ''));
+        $authorPart = $actorName !== '' ? $actorName : 'Поклонник';
+        $entity = trim($entityLabel) !== '' ? trim($entityLabel) : 'запись';
+
+        $text = '❤️ <b>'.self::escape($authorPart).'</b> лайкнул(а): '.self::escape($entity);
+
+        self::send($owner, $text, $path, 'Смотреть');
+    }
+
+    /**
      * Записать причину пропуска уведомления (диагностика «не пришло»).
      *
-     * Уровень debug: в проде тихо, при разборе жалоб временно
-     * поднимаем LOG_LEVEL=debug и видим связку user_id/kind/reason.
+     * Уровень info: пропуски видны в прод-логах по умолчанию, без
+     * подъёма LOG_LEVEL=debug — иначе жалобы «в бота ничего не
+     * приходит» разбирать не по чему (причины unlinked/blocked/
+     * toggle-off/online/cooldown/duplicate).
      *
      * @param User $recipient получатель
      * @param string $kind messages|likes|matches|comments
@@ -468,7 +558,7 @@ class TelegramNotifier
     private static function logSkip(User $recipient, string $kind, string $reason): void
     {
         try {
-            Log::debug('telegram notify skipped', [
+            Log::info('telegram notify skipped', [
                 'user_id' => (int) ($recipient->id ?? 0),
                 'kind' => $kind,
                 'reason' => $reason,

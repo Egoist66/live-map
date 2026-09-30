@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\SessionRevoked;
 use App\Services\DeviceFingerprint;
 use Carbon\Carbon;
 use Illuminate\Http\Request;

@@ -218,7 +218,15 @@ class PinActivityNotifier
             return null;
         }
 
-        return UserNotifier::send($owner, new PhotoLikedNotification($photo, $actor, $ownerId));
+        $notification = UserNotifier::send($owner, new PhotoLikedNotification($photo, $actor, $ownerId));
+
+        try {
+            TelegramNotifier::entityLiked($actor, $owner, 'фото', '/swipes', "photo-like:{$photo->id}:{$actor->id}");
+        } catch (\Throwable $e) {
+            Log::warning('telegram photo like failed', ['error' => $e->getMessage()]);
+        }
+
+        return $notification;
     }
 
     /**

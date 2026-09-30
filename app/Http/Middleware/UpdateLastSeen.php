@@ -24,6 +24,12 @@ class UpdateLastSeen
             abort(403, 'Это устройство заблокировано владельцем аккаунта.');
         }
         $response = $next($request);
+        // Beacon закрытия Mini App (POST /api/chat/offline) сам ставит
+        // last_seen_at в прошлое — не затираем его свежим now(), иначе
+        // Telegram-дубли снова задержатся на 3 минуты порога isAway.
+        if ($request->is('api/chat/offline')) {
+            return $response;
+        }
         if ($user && !$user->isInvisibleActive()) {
             $key = 'last_seen:'.$user->id;
             if (!Cache::has($key)) {
