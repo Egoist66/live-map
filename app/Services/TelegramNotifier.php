@@ -2,10 +2,10 @@
 
 namespace App\Services;
 
+use App\Jobs\SendTelegramMessage;
 use App\Models\Conversation;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -22,6 +22,11 @@ use Illuminate\Support\Facades\Log;
  * (last_seen_at свежее 3 минут, см. User::isAway) — сообщение уже
  * видно в realtime, в TG не дублируем. Отошёл — шлём в TG.
  *
+ * Доставка строго 1-в-1 без пауз и склейки: каждое событие сразу
+ * уходит в очередь SendTelegramMessage, воркер шлёт по одному.
+ * Если Bot API ответил 429, задача возвращается в очередь с
+ * задержкой retry_after и доезжает позже — письма не теряются.
+ *
  * Важно про Bot API: писать можно только тем, кто хоть раз нажал
  * /start у бота (иначе 403). Такой 403 помечаем в
  * `users.telegram_blocked_at` — настройки показывают подсказку
@@ -36,6 +41,14 @@ class TelegramNotifier
      * Кулдаун повторов о лайке одной пары, секунд (сутки, как в письмах).
      */
     public const LIKED_COOLDOWN_SECONDS = 86400;
+
+    /**
+     * TTL дедупа одного события, секунд (сутки).
+     *
+     * Защита от двойной постановки в очередь при ретрае запроса
+     * с клиента: одно сообщение даёт ровно один дубль в TG.
+     */
+    public const DEDUP_TTL_SECONDS = 86400;
 
     /**
      * Можно ли писать пользователю в Telegram.
@@ -88,19 +101,18 @@ class TelegramNotifier
     /**
      * Напомнить о новом сообщении в диалоге.
      *
-     * Шлём КАЖДОЕ сообщение, но только отошедшему получателю
-     * (Mini App закрыт). Онлайн-получатель видит сообщение в realtime,
-     * дубль в TG ему не нужен. Старого часового кулдауна на диалог
-     * больше нет — именно он давал «то приходит, то не приходит»:
-     * приходило только первое сообщение в час.
+     * Каждое сообщение — отдельным письмом в TG, сразу в очередь,
+     * без пауз и склейки. Только отошедшему получателю (Mini App
+     * закрыт): онлайн видит сообщение в realtime, дубль не нужен.
      *
      * @param User $sender автор сообщения
      * @param User $recipient получатель
      * @param Conversation $conversation диалог
      * @param string $preview превью текста (до 200 символов)
+     * @param int|null $messageId id сообщения для дедупа повторов
      * @return void
      */
-    public static function chatMessage(User $sender, User $recipient, Conversation $conversation, string $preview): void
+    public static function chatMessage(User $sender, User $recipient, Conversation $conversation, string $preview, ?int $messageId = null): void
     {
         $recipient = self::resolveRecipient($recipient);
 
@@ -116,6 +128,18 @@ class TelegramNotifier
             self::logSkip($recipient, 'messages', 'online');
 
             return;
+        }
+
+        if ($messageId !== null && $messageId > 0) {
+            $dedupKey = 'tg:sentmsg:'.$messageId.':'.$recipient->id;
+
+            if (Cache::has($dedupKey)) {
+                self::logSkip($recipient, 'messages', 'duplicate');
+
+                return;
+            }
+
+            Cache::put($dedupKey, true, self::DEDUP_TTL_SECONDS);
         }
 
         $senderName = trim((string) ($sender->name ?? ''));
@@ -226,8 +250,8 @@ class TelegramNotifier
     /**
      * Напомнить о новом комментарии (пин, фото, пост, новость района).
      *
-     * Без кулдауна: переписка в комментах живая, каждый пропущенный
-     * ответ — потерянный диалог. Анонимные комменты имя не палят.
+     * Каждый комментарий — отдельным письмом в TG, сразу в очередь,
+     * без пауз и склейки. Анонимные комменты имя не палят.
      *
      * @param User $actor автор комментария
      * @param User $recipient кому адресован (владелец/автор родителя/упомянутый)
@@ -235,9 +259,10 @@ class TelegramNotifier
      * @param string $preview текст комментария (обрежется до 200 символов)
      * @param string $path путь в Mini App для кнопки «Смотреть»
      * @param bool $anonymous скрыть имя автора
+     * @param int|null $commentId id комментария для дедупа повторов
      * @return void
      */
-    public static function commented(User $actor, User $recipient, string $entityLabel, string $preview, string $path, bool $anonymous = false): void
+    public static function commented(User $actor, User $recipient, string $entityLabel, string $preview, string $path, bool $anonymous = false, ?int $commentId = null): void
     {
         $recipient = self::resolveRecipient($recipient);
 
@@ -253,6 +278,18 @@ class TelegramNotifier
             self::logSkip($recipient, 'comments', 'online');
 
             return;
+        }
+
+        if ($commentId !== null && $commentId > 0) {
+            $dedupKey = 'tg:sentcomment:'.$commentId.':'.$recipient->id;
+
+            if (Cache::has($dedupKey)) {
+                self::logSkip($recipient, 'comments', 'duplicate');
+
+                return;
+            }
+
+            Cache::put($dedupKey, true, self::DEDUP_TTL_SECONDS);
         }
 
         if ($anonymous) {
@@ -271,16 +308,18 @@ class TelegramNotifier
     }
 
     /**
-     * Низкоуровневая отправка текста в личку через Bot API.
+     * Поставить текст в очередь отправки в личку через Bot API.
      *
-     * 403 (нет /start или блок) помечаем в telegram_blocked_at,
-     * остальное только логируем. Исключений наружу нет.
+     * Сам HTTP делает воркер SendTelegramMessage: 429 возвращает
+     * задачу в очередь с задержкой retry_after, 403 помечает блок.
+     * Метод никогда не кидает исключений и не ждёт Telegram —
+     * отправитель не висит на сетевых ретраях.
      *
      * @param User $recipient получатель (telegram_id обязателен)
      * @param string $text текст в HTML-разметке Telegram
      * @param string|null $path путь в Mini App для кнопки (null — без кнопки)
      * @param string|null $buttonLabel подпись кнопки
-     * @return bool true когда Telegram принял сообщение
+     * @return bool true когда задача принята в очередь
      */
     public static function send(User $recipient, string $text, ?string $path = null, ?string $buttonLabel = null): bool
     {
@@ -297,7 +336,7 @@ class TelegramNotifier
             $buttons[] = [$button];
         }
 
-        return self::postMessage($recipient, $text, $buttons);
+        return self::dispatchMessage((int) $recipient->id, $text, $buttons);
     }
 
     /**
@@ -311,7 +350,7 @@ class TelegramNotifier
      * @param string $peerUsername username собеседника без @
      * @param string $peerName имя собеседника для текста
      * @param int $conversationId диалог для кнопки «Открыть чат»
-     * @return bool true когда Telegram принял сообщение
+     * @return bool true когда задача принята в очередь
      */
     public static function usernameExchanged(User $recipient, string $peerUsername, string $peerName, int $conversationId): bool
     {
@@ -344,67 +383,46 @@ class TelegramNotifier
             $buttons[] = [$chatButton];
         }
 
-        return self::postMessage($recipient, $text, $buttons);
+        return self::dispatchMessage((int) $recipient->id, $text, $buttons);
     }
 
     /**
-     * POST в Bot API с обработкой 403 и самолечением блокировки.
+     * Поставить одно письмо в очередь Bot API.
      *
-     * @param User $recipient получатель с telegram_id
+     * Сам HTTP делает воркер SendTelegramMessage по одному письму
+     * за раз: серия уходит 1-в-1 в порядке постановки, а 429 лишь
+     * откладывает задачу на retry_after — ничего не теряется.
+     * Если очередь недоступна (диспатч кинул исключение), шлём
+     * синхронно одной попыткой, чтобы письмо не пропало.
+     *
+     * @param int $userId id получателя (users.id)
      * @param string $text текст в HTML-разметке Telegram
      * @param array<int, array<int, array<string, mixed>>> $buttons ряды inline-кнопок
-     * @return bool true когда Telegram принял сообщение
+     * @return bool true когда задача принята (очередь или прямая отправка)
      */
-    private static function postMessage(User $recipient, string $text, array $buttons): bool
+    private static function dispatchMessage(int $userId, string $text, array $buttons): bool
     {
-        $chatId = (int) ($recipient->telegram_id ?? 0);
-        $botToken = (string) config('telegram.bot_token', '');
-
-        if ($chatId <= 0 || $botToken === '') {
+        if ($userId <= 0) {
             return false;
-        }
-
-        $payload = [
-            'chat_id' => $chatId,
-            'text' => $text,
-            'parse_mode' => 'HTML',
-            'disable_web_page_preview' => true,
-        ];
-
-        if ($buttons !== []) {
-            $payload['reply_markup'] = ['inline_keyboard' => $buttons];
         }
 
         try {
-            $response = Http::timeout(8)->post("https://api.telegram.org/bot{$botToken}/sendMessage", $payload);
+            SendTelegramMessage::dispatch($userId, $text, $buttons);
+
+            return true;
         } catch (\Throwable $e) {
-            Log::warning('telegram send failed', ['chat_id' => $chatId, 'error' => $e->getMessage()]);
+            Log::warning('telegram dispatch failed', ['user_id' => $userId, 'error' => $e->getMessage()]);
+        }
+
+        try {
+            $outcome = SendTelegramMessage::attempt($userId, $text, $buttons);
+
+            return ($outcome['status'] ?? '') === 'sent';
+        } catch (\Throwable $e) {
+            Log::warning('telegram direct fallback failed', ['user_id' => $userId, 'error' => $e->getMessage()]);
 
             return false;
         }
-
-        if ($response->successful()) {
-            self::clearBlocked($recipient);
-
-            try {
-                Log::debug('telegram notify sent', ['chat_id' => $chatId]);
-            } catch (\Throwable) {
-                // No-op: диагностика не должна мешать отправке.
-            }
-
-            return true;
-        }
-
-        $status = $response->status();
-        $description = (string) ($response->json('description') ?? mb_substr((string) $response->body(), 0, 200));
-
-        if ($status === 403) {
-            self::markBlocked($recipient);
-        }
-
-        Log::warning('telegram send rejected', ['chat_id' => $chatId, 'status' => $status, 'description' => $description]);
-
-        return false;
     }
 
     /**
@@ -444,7 +462,7 @@ class TelegramNotifier
      *
      * @param User $recipient получатель
      * @param string $kind messages|likes|matches|comments
-     * @param string $reason unlinked|blocked|toggle-off|online|cooldown
+     * @param string $reason unlinked|blocked|toggle-off|online|duplicate
      * @return void
      */
     private static function logSkip(User $recipient, string $kind, string $reason): void
@@ -463,10 +481,12 @@ class TelegramNotifier
     /**
      * Пометить, что бот не может писать пользователю (нет /start или блок).
      *
+     * Публичный: дергает воркер SendTelegramMessage по итогу Bot API.
+     *
      * @param User $recipient получатель
      * @return void
      */
-    private static function markBlocked(User $recipient): void
+    public static function markBlocked(User $recipient): void
     {
         try {
             $recipient->forceFill(['telegram_blocked_at' => now()])->saveQuietly();
@@ -481,11 +501,12 @@ class TelegramNotifier
      * Без этого один 403 (нет /start, временный блок) навсегда глушил
      * бы уведомления даже после того, как пользователь нажал /start
      * и разблокировал бота, — отсюда «раньше приходило, теперь нет».
+     * Публичный: дергает воркер SendTelegramMessage по итогу Bot API.
      *
      * @param User $recipient получатель
      * @return void
      */
-    private static function clearBlocked(User $recipient): void
+    public static function clearBlocked(User $recipient): void
     {
         if ($recipient->telegram_blocked_at === null) {
             return;

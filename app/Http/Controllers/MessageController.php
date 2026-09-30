@@ -249,7 +249,7 @@ class MessageController extends Controller
                     if ($push->isConfigured()) $push->sendChatMessage($recipient, $senderModel ?? $recipient, $conversation->id, $text);
                 } catch (\Throwable) {}
                 try { app(\App\Services\ExpoPushService::class)->sendChatMessage($recipient, $senderModel ?? $recipient, $conversation->id, $text); } catch (\Throwable) {}
-                try { \App\Services\TelegramNotifier::chatMessage($senderModel ?? $recipient, $recipient, $conversation, mb_substr($text, 0, 200)); } catch (\Throwable) {}
+                try { \App\Services\TelegramNotifier::chatMessage($senderModel ?? $recipient, $recipient, $conversation, mb_substr($text, 0, 200), (int) $msg->id); } catch (\Throwable) {}
                 try {
                     $senderForMail = $senderModel ?? $recipient;
                     \App\Services\DatingEmailNotifier::newMessage($senderForMail, $recipient, $conversation, mb_substr($text, 0, 200));
