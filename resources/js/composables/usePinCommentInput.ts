@@ -1,4 +1,4 @@
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useVisualKeyboard } from '@/composables/useVisualKeyboard'
 
 type MentionsLike = {
@@ -105,6 +105,15 @@ export function usePinCommentInput(opts: {
     try { resolveInputTag(inputEl())?.blur?.() } catch {}
     try { (opts.mentions as any)?.close?.() } catch {}
   }
+
+  /**
+   * Коммент в фокусе сразу при открытии карточки пина —
+   * писать можно без клика (с повторной попыткой под анимацию).
+   */
+  onMounted(() => {
+    nextTick(() => focusInput())
+    window.setTimeout(() => focusInput(), 250)
+  })
 
   return {
     cardRef,

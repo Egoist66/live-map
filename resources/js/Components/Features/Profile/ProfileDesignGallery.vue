@@ -6,12 +6,15 @@ defineProps<{
   loading: boolean
   addSlots: number
   uploading: boolean
+  isOwn?: boolean
+  mainBusy?: boolean
 }>()
 
 const emit = defineEmits<{
   (e: 'all'): void
   (e: 'open', photo: any): void
   (e: 'add'): void
+  (e: 'make-main', photo: any): void
 }>()
 </script>
 
@@ -45,6 +48,18 @@ const emit = defineEmits<{
              + размеры держат место (CLS). -->
         <AppImage :src="photo.thumb_url || photo.url" :alt="photo.caption || 'фото'" class="h-full w-full" img-class="h-full w-full object-cover transition duration-300 group-hover:scale-[1.06]" />
         <span class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/0 opacity-0 transition duration-300 group-hover:opacity-100"></span>
+        <span v-if="photo.is_main" class="absolute left-1.5 top-1.5 rounded-full bg-violet-600 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white shadow">Главная</span>
+        <span
+          v-else-if="isOwn"
+          role="button"
+          tabindex="0"
+          title="Сделать главной"
+          aria-label="Сделать фото главной"
+          :aria-disabled="mainBusy"
+          class="absolute right-1.5 top-1.5 grid h-7 w-7 place-items-center rounded-full bg-black/55 text-white transition hover:bg-violet-600 active:scale-95"
+          @click.stop="emit('make-main', photo)"
+          @keydown.enter.stop.prevent="emit('make-main', photo)"
+        ><i :class="mainBusy ? 'pi pi-spin pi-spinner text-xs' : 'pi pi-star text-xs'"></i></span>
         <span class="pointer-events-none absolute inset-x-0 bottom-0 flex translate-y-1 items-center justify-center gap-3 pb-2 text-[11px] font-bold text-white opacity-0 transition duration-300 group-hover:translate-y-0 group-hover:opacity-100">
           <span class="flex items-center gap-1"><i :class="photo.liked ? 'pi pi-heart-fill' : 'pi pi-heart'" class="text-[11px]"></i>{{ photo.likes_count || 0 }}</span>
           <span class="flex items-center gap-1"><i class="pi pi-comment text-[11px]"></i>{{ photo.comments_count || 0 }}</span>

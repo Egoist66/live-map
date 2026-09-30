@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
@@ -12,6 +12,7 @@ import PostShareDialog from '@/Components/Features/Chat/PostShareDialog.vue'
 import { usePostShare } from '@/composables/usePostShare'
 import InfiniteSentinel from '@/Components/Ui/List/InfiniteSentinel.vue'
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
+import { useAutoFocusInput } from '@/composables/useAutoFocusInput'
 import { formatFlowDate } from '@/utils/flowDate'
 import { useProfileUrl } from '@/composables/useProfileUrl'
 import CompanyNewsBadge from '@/Components/Features/Business/CompanyNewsBadge.vue'
@@ -39,6 +40,11 @@ const thread = useDistrictNewsComments(
   props.post.id,
   (delta: number) => emit('comments-delta', props.post.id, delta),
 )
+/** Коммент в фокусе сразу при разворачивании ветки — писать можно без клика. */
+const { target: commentTarget, focus: focusComment } = useAutoFocusInput(expanded)
+watch(() => thread.replyTo.value, (next, prev) => {
+  if (next && next !== prev) focusComment()
+})
 
 const commentsOpened = computed(() => expanded.value)
 const threadHasMore = computed(() => thread.hasMore.value)
@@ -170,6 +176,7 @@ onBeforeUnmount(() => {
             <div class="flex min-w-0 items-end gap-1.5">
               <div class="min-w-0 flex-1">
                 <InputText
+                  ref="commentTarget"
                   v-model="thread.draft.value"
                   placeholder="Написать комментарий…"
                   enterkeyhint="send"

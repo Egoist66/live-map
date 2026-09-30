@@ -38,6 +38,7 @@ class ProfilePhotoController extends Controller
     {
         $photo->loadMissing('user:id,name,avatar_path');
         $myLike = $viewer ? ProfilePhotoLike::where('photo_id', $photo->id)->where('user_id', $viewer->id)->first() : null;
+        $ownerAvatarPath = $photo->user?->avatar_path;
         return [
             'id' => $photo->id,
             'user_id' => $photo->user_id,
@@ -48,9 +49,40 @@ class ProfilePhotoController extends Controller
             'comments_count' => (int) $photo->comments_count,
             'liked' => (bool) $myLike,
             'liked_incognito' => (bool) ($myLike?->is_incognito ?? false),
+            'is_main' => $photo->path !== null && $ownerAvatarPath !== null && $photo->path === $ownerAvatarPath,
             'can_comment' => $viewer ? $viewer->canCommentProfilePhoto($photo->user ?? $photo->user()->first()) : false,
             'created_at' => $photo->created_at?->toISOString(),
         ];
+    }
+
+    /**
+     * Сортирует фото: главное (совпадает с avatar_path) всегда первое,
+     * остальные — от новых к старым.
+     *
+     * @param array<int, array<string, mixed>> $serialized
+     * @return array<int, array<string, mixed>>
+     */
+    private function sortMainFirst(array $serialized): array
+    {
+        usort($serialized, static function (array $a, array $b): int {
+            $mainA = !empty($a['is_main']) ? 0 : 1;
+            $mainB = !empty($b['is_main']) ? 0 : 1;
+
+            if ($mainA !== $mainB) {
+                return $mainA <=> $mainB;
+            }
+
+            $createdA = (string) ($a['created_at'] ?? '');
+            $createdB = (string) ($b['created_at'] ?? '');
+
+            if ($createdA !== $createdB) {
+                return $createdB <=> $createdA;
+            }
+
+            return (int) ($b['id'] ?? 0) <=> (int) ($a['id'] ?? 0);
+        });
+
+        return array_values($serialized);
     }
 
     public function index(Request $request, User $user)
@@ -58,8 +90,10 @@ class ProfilePhotoController extends Controller
         $viewer = $request->user();
         if ($viewer->id !== $user->id) $this->abortIfBlocked($viewer, $user);
         $photos = $user->profilePhotos()->latest()->get();
+        $serialized = $photos->map(fn ($p) => $this->serialize($p, $viewer))->all();
+        $sorted = $this->sortMainFirst($serialized);
         return response()->json([
-            'photos' => $photos->map(fn ($p) => $this->serialize($p, $viewer))->values(),
+            'photos' => array_values($sorted),
             'limit' => $user->photoLimit(),
             'count' => $photos->count(),
             'can_add' => $viewer->id === $user->id ? $user->canAddProfilePhoto() : false,
@@ -87,7 +121,12 @@ class ProfilePhotoController extends Controller
             $photo = \Illuminate\Support\Facades\DB::transaction(function () use ($user, $path, $request) {
                 $locked = \App\Models\User::whereKey($user->id)->lockForUpdate()->first();
                 abort_unless($locked->canAddProfilePhoto(), 422, 'Лимит фото для тарифа ' . $locked->effectivePlan() . ': ' . $locked->photoLimit());
-                return $locked->profilePhotos()->create(['path' => $path, 'caption' => $request->input('caption')]);
+                $maxOrder = (int) ($locked->profilePhotos()->max('sort_order') ?? 0);
+                return $locked->profilePhotos()->create([
+                    'path' => $path,
+                    'caption' => $request->input('caption'),
+                    'sort_order' => $maxOrder + 1,
+                ]);
             });
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Storage::disk($disk)->delete($path);
@@ -287,6 +326,33 @@ class ProfilePhotoController extends Controller
         $request->validate(['photo_comments_privacy' => 'required|in:everyone,friends,none']);
         $request->user()->forceFill(['photo_comments_privacy' => $request->input('photo_comments_privacy')])->save();
         return response()->json(['photo_comments_privacy' => $request->user()->photo_comments_privacy]);
+    }
+
+    /**
+     * Сделать фото главным: аватар пользователя указывает на файл фото,
+     * фото получает минимальный sort_order и оказывается первым везде
+     * (галерея, дейтинг-карточки).
+     *
+     * @param Request $request запрос
+     * @param ProfilePhoto $photo фото из своей галереи
+     * @return \Illuminate\Http\JsonResponse фото + свежий avatar_url
+     */
+    public function makeMain(Request $request, ProfilePhoto $photo)
+    {
+        $viewer = $request->user();
+        abort_unless($viewer->id === $photo->user_id || $viewer->isAdmin(), 403);
+
+        $owner = $photo->user()->first() ?? $viewer;
+        $owner->forceFill(['avatar_path' => $photo->path])->save();
+
+        $minOrder = (int) ($owner->profilePhotos()->min('sort_order') ?? 0);
+        $photo->forceFill(['sort_order' => $minOrder - 1])->save();
+
+        $fresh = $photo->refresh();
+        $payload = $this->serialize($fresh, $viewer);
+        $payload['avatar_url'] = $owner->refresh()->avatar_url;
+
+        return response()->json($payload);
     }
 
     public static function isFriend(int $a, int $b): bool

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onUnmounted, ref } from 'vue'
+import { computed, defineAsyncComponent, onUnmounted, ref, watch } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import { useToast } from 'primevue/usetoast'
 import Avatar from 'primevue/avatar'
@@ -23,6 +23,7 @@ import FlowCommentItem from '@/Components/Features/Flow/FlowCommentItem.vue'
 import RepostIcon from '@/Components/Ui/Icons/RepostIcon.vue'
 import { useLikersPreview } from '@/composables/useLikersPreview'
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
+import { useAutoFocusInput } from '@/composables/useAutoFocusInput'
 import InfiniteSentinel from '@/Components/Ui/List/InfiniteSentinel.vue'
 import LikersDialog from '@/Components/Features/Feedback/LikersDialog.vue'
 import { formatFlowDate } from '@/utils/flowDate'
@@ -40,6 +41,11 @@ const emit = defineEmits<{
 
 const expanded = ref(false)
 const thread = useFlowComments(props.post.id)
+/** Коммент в фокусе сразу при разворачивании ветки — писать можно без клика. */
+const { target: commentTarget, focus: focusComment } = useAutoFocusInput(expanded)
+watch(() => thread.replyTo.value, (next, prev) => {
+  if (next && next !== prev) focusComment()
+})
 const reposter = useFlowRepost()
 const repostTarget = ref<FlowPost | null>(null)
 const shown = computed(() => reposter.displayOf(props.post))
@@ -298,6 +304,7 @@ async function share(): Promise<void> {
               />
               <div class="min-w-0 flex-1">
                 <InputText
+                  ref="commentTarget"
                   v-model="thread.draft.value"
                   placeholder="Написать комментарий…"
                   enterkeyhint="send"

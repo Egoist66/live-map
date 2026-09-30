@@ -5,6 +5,10 @@ import Message from 'primevue/message'
 import ProgressSpinner from 'primevue/progressspinner'
 
 defineProps<{ gallery: any; isOwn: boolean; plan?: string }>()
+
+const emit = defineEmits<{
+  (e: 'make-main', photo: any): void
+}>()
 </script>
 <template>
   <Dialog :visible="gallery.dialogOpen.value" @update:visible="(v:boolean)=>{ if(!v) gallery.closeDialog() }" modal dismissableMask :closable="true" :draggable="false" :breakpoints="{ '960px': '94vw', '640px': '100vw' }" :style="{ width: '760px' }" class="!rounded-3xl max-sm:!rounded-b-none" :pt="{ root: { class: 'max-sm:!m-0' }, mask: { class: 'max-sm:!items-end' }, content: { class: '!p-0' }, header: { class: '!py-3 !px-3 sm:!px-5' } }">
@@ -32,7 +36,18 @@ defineProps<{ gallery: any; isOwn: boolean; plan?: string }>()
             <span class="flex items-center gap-1"><i :class="p.liked ? 'pi pi-heart-fill' : 'pi pi-heart'" class="text-[11px]" />{{ p.likes_count }}</span>
             <span class="flex items-center gap-1"><i class="pi pi-comment text-[11px]" />{{ p.comments_count }}</span>
           </span>
-          <span v-if="p.liked" class="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/55 hidden sm:grid place-items-center text-white"><i class="pi pi-heart-fill text-[11px]" /></span>
+          <span v-if="p.liked && !(isOwn && !p.is_main)" class="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/55 hidden sm:grid place-items-center text-white"><i class="pi pi-heart-fill text-[11px]" /></span>
+          <span v-if="p.is_main" class="absolute left-1.5 top-1.5 rounded-full bg-violet-600 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white shadow">Главная</span>
+          <span
+            v-else-if="isOwn"
+            role="button"
+            tabindex="0"
+            title="Сделать главной"
+            aria-label="Сделать фото главной"
+            class="absolute right-1.5 top-1.5 grid h-7 w-7 place-items-center rounded-full bg-black/55 text-white transition hover:bg-violet-600 active:scale-95 sm:opacity-0 sm:group-hover:opacity-100 sm:focus:opacity-100"
+            @click.stop="emit('make-main', p)"
+            @keydown.enter.stop.prevent="emit('make-main', p)"
+          ><i class="pi pi-star text-xs" /></span>
         </button>
       </div>
     </div>

@@ -8,6 +8,7 @@ import ProgressSpinner from 'primevue/progressspinner'
 import { Swiper, SwiperSlide } from 'swiper/vue'
 import 'swiper/css'
 import { Link } from '@inertiajs/vue3'
+import { watch } from 'vue'
 import { useMounted } from '@vueuse/core'
 import { useBodyLock } from '@/composables/useBodyLock'
 import { usePhotoViewerDismiss } from '@/composables/usePhotoViewerDismiss'
@@ -19,10 +20,15 @@ import { useEnterToSend } from '@/composables/useEnterToSend'
 import { renderWithMentions } from '@/composables/useMentions'
 import { useMentionNavigate } from '@/composables/useMentionNavigate'
 import { useLikersPreview } from '@/composables/useLikersPreview'
+import { useAutoFocusInput } from '@/composables/useAutoFocusInput'
 import LikersDialog from '@/Components/Features/Feedback/LikersDialog.vue'
 import { avatarSrcFor } from '@/composables/useAvatar'
 
 const props = defineProps<{ gallery: any; comments: any; isOwn: boolean; userName?: string; avatarSrc?: string }>()
+
+const emit = defineEmits<{
+  (e: 'make-main', photo: any): void
+}>()
 
 // Teleport'ы к body создаём только после mount: во время SSR-гидратации
 // `Teleport.process` с несовпавшим контентом даёт `insertBefore of null`.
@@ -47,6 +53,14 @@ const commentPlaceholder = enterPlaceholder('Добавить комментар
 const mentionNav = useMentionNavigate()
 
 const { viewerRootRef, scrollRef, onBackdropClick } = usePhotoViewerDismiss(props.gallery)
+
+/**
+ * Коммент в фокусе сразу при открытии вьювера — писать можно без клика.
+ */
+const { target: commentTarget, focus: focusComment } = useAutoFocusInput(() => !!props.gallery.viewerOpen?.value)
+watch(() => props.comments.replyTo?.value, (next, prev) => {
+  if (next && next !== prev) focusComment()
+})
 
 /**
  * Отправляет комментарий к фото и закрывает подсказки.
@@ -83,6 +97,7 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
           </Swiper>
           <Button v-if="gallery.photos.value.length > 1" icon="pi pi-chevron-left" rounded text size="small" class="!absolute left-1.5 top-1/2 -translate-y-1/2 z-10 !bg-black/40 !text-white !border-0 !w-9 !h-9" @click="gallery.stepPhoto(-1)" aria-label="Назад" />
           <Button v-if="gallery.photos.value.length > 1" icon="pi pi-chevron-right" rounded text size="small" class="!absolute right-1.5 top-1/2 -translate-y-1/2 z-10 !bg-black/40 !text-white !border-0 !w-9 !h-9" @click="gallery.stepPhoto(1)" aria-label="Вперёд" />
+          <span v-if="gallery.active.value?.is_main" class="absolute left-2 top-2 z-10 rounded-full bg-violet-600 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white shadow">Главная</span>
         </div>
         <div class="px-4 pt-2.5 flex items-center gap-1">
           <Button :icon="gallery.active.value.liked ? 'pi pi-heart-fill' : 'pi pi-heart'" rounded text :loading="viewer.likeLoading.value" :class="['!w-10 !h-10', gallery.active.value.liked ? '!text-red-500' : '']" @click="viewer.onLike()" :aria-label="gallery.active.value.liked ? 'Убрать лайк' : 'Лайк'" v-tooltip.bottom="photoLikers.tooltip.value" @mouseenter="photoLikers.ensure()" />
@@ -91,6 +106,8 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
           <template v-if="isOwn">
             <Button icon="pi pi-pencil" rounded text class="!w-10 !h-10" @click="viewer.editing.value ? viewer.cancelEdit() : viewer.startEdit()" aria-label="Редактировать подпись" />
             <Button icon="pi pi-refresh" rounded text class="!w-10 !h-10" @click="viewer.onPickReplace" aria-label="Заменить фото" />
+            <Button v-if="!gallery.active.value.is_main" icon="pi pi-star" rounded text class="!w-10 !h-10" :loading="gallery.settingMain?.value" aria-label="Сделать главной" title="Сделать главной" @click="emit('make-main', gallery.active.value)" />
+            <span v-else class="inline-flex items-center gap-1 rounded-full bg-violet-600/10 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-violet-700 dark:text-violet-300"><i class="pi pi-star-fill text-[10px]" />Главная</span>
             <input :ref="viewer.setReplaceInput" type="file" accept="image/*" class="hidden" @change="viewer.onReplaceFile" />
           </template>
         </div>
@@ -127,7 +144,7 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
           </div>
           <div class="flex items-end gap-2">
           <span class="w-8 h-8 shrink-0 rounded-full bg-stone-200 dark:bg-white/10 grid place-items-center text-[11px] font-black text-stone-500">Вы</span>
-          <Textarea v-model="comments.draft.value" :placeholder="commentPlaceholder" rows="1" autoResize maxlength="1000" enterkeyhint="enter" class="flex-1 min-w-0 !rounded-2xl !text-sm max-h-32" @input="mentionInput.onInput()" @click="mentionInput.onInput()" @focus="mentionInput.onFocus()" @keydown="(e:any)=>handleEnterToSend(e, sendPhotoComment)" />
+          <Textarea ref="commentTarget" v-model="comments.draft.value" :placeholder="commentPlaceholder" rows="1" autoResize maxlength="1000" enterkeyhint="enter" class="flex-1 min-w-0 !rounded-2xl !text-sm max-h-32" @input="mentionInput.onInput()" @click="mentionInput.onInput()" @focus="mentionInput.onFocus()" @keydown="(e:any)=>handleEnterToSend(e, sendPhotoComment)" />
           <Button icon="pi pi-send" rounded :loading="comments.sending.value" :disabled="!comments.draft.value.trim()" class="!bg-violet-600 !border-violet-600 shrink-0" @click="sendPhotoComment" aria-label="Отправить" />
           <div v-if="mentionInput.mentions.mentionOpen.value" class="absolute left-0 right-0 bottom-[calc(100%+8px)] bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl shadow-float overflow-hidden z-30 max-h-56 overflow-y-auto">
             <div v-if="mentionInput.mentions.mentionLoading.value" class="px-4 py-3 text-xs text-stone-400">Ищем людей…</div>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
-import { computed, toRef } from 'vue'
+import { computed, toRef, watch } from 'vue'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
 import Textarea from 'primevue/textarea'
@@ -18,6 +18,7 @@ import { useChatComposerMenu } from '@/composables/useChatComposerMenu'
 import { useChatWallpaper } from '@/composables/useChatWallpaper'
 import { useChatPeerPanelTheme, type ChatPeerTone } from '@/composables/useChatPeerPanelTheme'
 import { useChatTelegramShare } from '@/composables/useChatTelegramShare'
+import { useAutoFocusInput } from '@/composables/useAutoFocusInput'
 import { useEnterToSend } from '@/composables/useEnterToSend'
 import { formatVoiceTime, VOICE_MAX_SECONDS } from '@/composables/useVoiceRecorder'
 import { formatDate } from '@/utils/date'
@@ -36,6 +37,14 @@ const headerLink = useChatHeaderLink(toRef(props, 'activeConv'))
 const peerTheme = useChatPeerPanelTheme(computed(() => props.peerTone ?? 'ulove'))
 const telegramShareMenu = useChatTelegramShare(toRef(props, 'selectedId'), toRef(props, 'activeConv'))
 const share = telegramShareMenu.share
+
+/**
+ * Композер в фокусе сразу при выборе чата — писать можно без клика.
+ */
+const { target: composerTarget, focus: focusComposer } = useAutoFocusInput(computed(() => props.selectedId != null))
+watch(() => props.replyTo, (next, prev) => {
+  if (next && next !== prev) focusComposer()
+})
 
 function pinPreview(body: string): string {
   const t = (body || '').replace(/\s+/g, ' ').trim()
@@ -240,7 +249,7 @@ function dayLabel(value: any): string {
               <button @click="composerMenu.close(); emit('presets')" class="w-full flex items-center gap-2.5 text-left px-4 py-3 text-sm font-medium dark:text-zinc-100 hover:bg-stone-50 dark:hover:bg-zinc-700/60 active:bg-stone-100 transition"><i class="pi pi-comments text-xs text-stone-400"></i>Пресеты сообщений</button>
             </div>
           </div>
-          <Textarea :model-value="input" @update:model-value="(v:any)=>emit('update:input', v)" @input="emit('typing')" @blur="emit('stopTyping')" @keydown="(e:any)=>handleEnterToSend(e, () => emit('send'))" @keydown.escape="emit('emojiClose')" @paste="(e:any)=>emit('pasteImage', e as ClipboardEvent)" placeholder="Сообщение..." rows="1" autoResize maxlength="2000" fluid class="chat-composer-input !rounded-full !bg-stone-100 dark:!bg-zinc-800 !border-0 !py-2.5 flex-1 min-w-0 max-h-32" enterkeyhint="enter" />
+          <Textarea ref="composerTarget" :model-value="input" @update:model-value="(v:any)=>emit('update:input', v)" @input="emit('typing')" @blur="emit('stopTyping')" @keydown="(e:any)=>handleEnterToSend(e, () => emit('send'))" @keydown.escape="emit('emojiClose')" @paste="(e:any)=>emit('pasteImage', e as ClipboardEvent)" placeholder="Сообщение..." rows="1" autoResize maxlength="2000" fluid class="chat-composer-input !rounded-full !bg-stone-100 dark:!bg-zinc-800 !border-0 !py-2.5 flex-1 min-w-0 max-h-32" enterkeyhint="enter" />
           <Button v-if="input.trim() || attachmentName" @click="emit('send')" :loading="sending" :disabled="!input.trim() && !attachmentName" icon="pi pi-send" rounded class="!w-11 !h-11 !p-0 !rounded-full !border-0 !bg-[#1786FF] !text-white hover:!bg-[#0f78e0] shrink-0 grid place-items-center [&_.p-button-label]:hidden [&_.p-button-icon]:!m-0 shadow-md shadow-sky-500/30" aria-label="Отправить" />
           <Button v-else @click="emit('startVoice')" icon="pi pi-microphone" severity="secondary" text rounded class="!w-11 !h-11 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-label]:hidden [&_.p-button-icon]:!m-0" aria-label="Голосовое сообщение" />
         </div>

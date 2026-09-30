@@ -1,5 +1,6 @@
 import { computed } from 'vue'
 import { router } from '@inertiajs/vue3'
+import { useToast } from 'primevue/usetoast'
 import { route } from '@/route'
 import { useProfileShowPage } from '@/composables/useProfileShowPage'
 import { useProfileGallery } from '@/composables/useProfileGallery'
@@ -123,6 +124,22 @@ export function useProfileDesign(props: {
     await gallery.upload(file)
   }
 
+  /**
+   * Делает фото главным: аватар профиля указывает на файл фото,
+   * затем подтягивает свежие avatar_url (профиль + топбар).
+   * @param photo фото из своей галереи
+   */
+  async function setMainAvatar(photo: { id: number }): Promise<void> {
+    const toast = (() => { try { return useToast() } catch { return null } })()
+    try {
+      await gallery.setMain(photo as any)
+      toast?.add({ severity: 'success', summary: 'Главное фото обновлено', life: 2000 })
+      router.reload({ only: ['profileUser', 'auth'] })
+    } catch {
+      toast?.add({ severity: 'error', summary: 'Не удалось сделать фото главным', life: 2500 })
+    }
+  }
+
   /** Открывает карту. */
   function onOpenMap(): void {
     router.visit('/map')
@@ -163,6 +180,7 @@ export function useProfileDesign(props: {
     subscription: props.subscription,
     init,
     onAddPhoto,
+    setMainAvatar,
     openPicker,
     handlePickerChange,
     onOpenMap,

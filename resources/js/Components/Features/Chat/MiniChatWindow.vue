@@ -7,11 +7,17 @@ import ProgressSpinner from 'primevue/progressspinner'
 import MessageTicks from '@/Components/Features/Feedback/MessageTicks.vue'
 import { useMiniChat, type MiniWindow } from '@/composables/useMiniChat'
 import { useMiniChatWindow } from '@/composables/useMiniChatWindow'
+import { useAutoFocusInput } from '@/composables/useAutoFocusInput'
 
 const props = defineProps<{ win: MiniWindow; myId: number }>()
 
 const mini = useMiniChat()
 const { scrollBox, isOwn, statusOf, timeOf, sendCurrent } = useMiniChatWindow(props.win, toRef(props, 'myId'))
+
+/**
+ * Поле ввода в фокусе сразу при открытии мини-чата.
+ */
+const { target: draftTarget } = useAutoFocusInput()
 </script>
 
 <template>
@@ -50,6 +56,7 @@ const { scrollBox, isOwn, statusOf, timeOf, sendCurrent } = useMiniChatWindow(pr
       <div v-if="win.error" class="px-1 pb-1 text-[11px] text-red-500">{{ win.error }}</div>
       <div class="flex items-center gap-1">
         <InputText
+          ref="draftTarget"
           v-model="win.draft"
           placeholder="Сообщение…"
           enterkeyhint="send"

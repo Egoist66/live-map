@@ -1,4 +1,6 @@
 import { computed } from 'vue'
+import { router } from '@inertiajs/vue3'
+import { useToast } from 'primevue/usetoast'
 import { useDashboardPage } from '@/composables/useDashboardPage'
 import { useProfileGallery } from '@/composables/useProfileGallery'
 import { useProfilePeople } from '@/composables/useProfilePeople'
@@ -96,6 +98,22 @@ export function useDashboardDesign(propsUser?: any, propsIsOwn?: boolean) {
     await gallery.upload(file)
   }
 
+  /**
+   * Делает фото главным: аватар профиля указывает на файл фото,
+   * затем подтягивает свежие avatar_url (свой + топбар).
+   * @param photo фото из своей галереи
+   */
+  async function setMainAvatar(photo: { id: number }): Promise<void> {
+    const toast = (() => { try { return useToast() } catch { return null } })()
+    try {
+      await gallery.setMain(photo as any)
+      toast?.add({ severity: 'success', summary: 'Главное фото обновлено', life: 2000 })
+      router.reload({ only: ['user', 'auth'] })
+    } catch {
+      toast?.add({ severity: 'error', summary: 'Не удалось сделать фото главным', life: 2500 })
+    }
+  }
+
   return {
     dash,
     gallery,
@@ -116,6 +134,7 @@ export function useDashboardDesign(propsUser?: any, propsIsOwn?: boolean) {
     infoTiles,
     init,
     onAddPhoto,
+    setMainAvatar,
     openPicker,
     handlePickerChange,
     goSwipes,

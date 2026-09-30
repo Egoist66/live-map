@@ -181,6 +181,7 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::patch('/photos/{photo}', [\App\Http\Controllers\ProfilePhotoController::class, 'update'])->middleware('throttle:social-write');
     Route::delete('/photos/{photo}', [\App\Http\Controllers\ProfilePhotoController::class, 'destroy'])->middleware('throttle:social-write');
     Route::post('/photos/{photo}/like', [\App\Http\Controllers\ProfilePhotoController::class, 'toggleLike'])->middleware('throttle:reactions');
+    Route::post('/photos/{photo}/main', [\App\Http\Controllers\ProfilePhotoController::class, 'makeMain'])->middleware('throttle:social-write');
     Route::get('/photos/{photo}/likers', [\App\Http\Controllers\ProfilePhotoController::class, 'likers']);
     Route::get('/photos/{photo}/comments', [\App\Http\Controllers\ProfilePhotoController::class, 'comments']);
     Route::post('/photos/{photo}/comments', [\App\Http\Controllers\ProfilePhotoController::class, 'storeComment'])->middleware('throttle:comments-write');

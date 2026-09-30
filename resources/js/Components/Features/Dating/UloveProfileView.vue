@@ -43,6 +43,7 @@ export interface UlovePhotoSlot {
   key: string
   url: string | null
   photoId: number | null
+  isMain?: boolean
 }
 
 /** Лимит фото ULove-профиля: не больше 5 (там же hero и счётчик). */
@@ -58,7 +59,7 @@ const ULOVE_PHOTOS_LIMIT = 5
 const galleryPhotos = computed(() => {
   const raw = (props.gallery as any)?.photos
   const list = Array.isArray(raw) ? raw : (raw?.value ?? [])
-  return (Array.isArray(list) ? list : []) as Array<{ id?: number; url?: string }>
+  return (Array.isArray(list) ? list : []) as Array<{ id?: number; url?: string; is_main?: boolean }>
 })
 
 /**
@@ -96,7 +97,7 @@ const photoSlots = computed<UlovePhotoSlot[]>(() => {
       continue
     }
 
-    slots.push({ key: `photo-${photo?.id ?? url}`, url, photoId: typeof photo?.id === 'number' ? photo.id : null })
+    slots.push({ key: `photo-${photo?.id ?? url}`, url, photoId: typeof photo?.id === 'number' ? photo.id : null, isMain: !!photo?.is_main })
   }
 
   if (slots.length < slotLimit.value) {
@@ -362,7 +363,7 @@ const activePrivacyFlags = computed(() => {
             >
               <span class="grid h-8 w-8 place-items-center rounded-full bg-stone-100 transition group-hover:scale-110 group-hover:bg-rose-500 group-hover:text-white group-hover:shadow-md group-hover:shadow-rose-500/40 dark:bg-zinc-800"><i class="pi pi-plus text-sm" /></span>
             </button>
-            <span v-if="i === 0 && slot.url" class="pointer-events-none absolute bottom-1 left-1 rounded-full bg-black/55 px-1.5 py-0.5 text-[9px] font-black text-white">ГЛАВНОЕ</span>
+            <span v-if="slot.url && (slot.isMain || i === 0)" class="pointer-events-none absolute bottom-1 left-1 rounded-full bg-black/55 px-1.5 py-0.5 text-[9px] font-black text-white">ГЛАВНОЕ</span>
             <button
               v-if="slot.url && slot.photoId != null"
               type="button"

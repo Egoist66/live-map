@@ -42,12 +42,40 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
   const remaining = computed(() => Math.max(0, limit.value - count.value))
   const isFull = computed(() => count.value >= limit.value)
 
+  /**
+   * Главное фото галереи: совпадает с аватаром профиля.
+   */
+  const mainPhoto = computed(() => photos.value.find((p) => p.is_main) ?? null)
+
+  /**
+   * Ставит главное фото первым в локальном списке (бэк уже так отдаёт,
+   * это страховка для фото, пришедших из upload/replace без сортировки).
+   */
+  function sortMainFirst(): void {
+    const mains = photos.value.filter((p) => p.is_main)
+    const rest = photos.value.filter((p) => !p.is_main)
+    if (mains.length > 0) {
+      photos.value = [...mains, ...rest]
+    }
+  }
+
+  /**
+   * Главное ли это фото (аватар профиля).
+   *
+   * @param photo фото для проверки
+   * @returns true когда фото — главное
+   */
+  function isMainPhoto(photo: GalleryPhoto | null | undefined): boolean {
+    return !!photo && !!photo.is_main
+  }
+
   async function load() {
     loading.value = true
     error.value = null
     try {
       const res = await galleryApi.list(userId())
       photos.value = res.photos
+      sortMainFirst()
       limit.value = res.limit
       canAdd.value = res.can_add
       canComment.value = res.can_comment
@@ -68,6 +96,7 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
       const created = await galleryApi.upload(small, caption)
       rewards.applyReward(created)
       photos.value.unshift(created)
+      sortMainFirst()
       await load()
       return created
     } catch (e: any) {
@@ -101,6 +130,42 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
     if (active.value?.id === photo.id) {
       active.value = null
       viewerOpen.value = false
+    }
+  }
+
+  /** Идёт ли сейчас смена главного фото (кнопка показывает спиннер). */
+  const settingMain = ref(false)
+
+  /**
+   * Сделать фото главным: аватар профиля указывает на файл фото,
+   * фото всплывает первым в галерее. Удалять ничего не нужно —
+   * лимит не страдает.
+   *
+   * @param photo фото из своей галереи
+   * @returns свежий avatar_url владельца
+   */
+  async function setMain(photo: GalleryPhoto): Promise<string | null> {
+    settingMain.value = true
+    error.value = null
+    try {
+      const updated = await galleryApi.makeMain(photo.id)
+      for (const p of photos.value) {
+        p.is_main = p.id === photo.id
+      }
+      const i = photos.value.findIndex((p) => p.id === photo.id)
+      if (i >= 0) {
+        photos.value[i] = { ...photos.value[i], ...updated, is_main: true }
+      }
+      sortMainFirst()
+      if (active.value?.id === photo.id) {
+        active.value = photos.value.find((p) => p.id === photo.id) ?? active.value
+      }
+      return updated.avatar_url ?? null
+    } catch (e: any) {
+      error.value = e?.response?.data?.message || e?.message || 'Не удалось сделать фото главным'
+      throw e
+    } finally {
+      settingMain.value = false
     }
   }
 
@@ -242,5 +307,5 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
     return MOSAIC_PATTERN[i % MOSAIC_PATTERN.length]
   }
 
-  return { photos, limit, count, remaining, isFull, canAdd, canComment, privacy, loading, uploading, error, active, viewerOpen, dialogOpen, highlightCommentId, isOwn: !!opts?.isOwn, load, upload, saveCaption, replace, remove, toggleLike, likers, likersLoading, likersTotal, likersIncognito, likersOpen, loadLikers, openLikers, closeLikers, open, stepPhoto, close, openDialog, closeDialog, syncCounts, consumePendingPhoto, mosaicClass }
+  return { photos, limit, count, remaining, isFull, canAdd, canComment, privacy, loading, uploading, error, active, viewerOpen, dialogOpen, highlightCommentId, isOwn: !!opts?.isOwn, mainPhoto, settingMain, isMainPhoto, setMain, load, upload, saveCaption, replace, remove, toggleLike, likers, likersLoading, likersTotal, likersIncognito, likersOpen, loadLikers, openLikers, closeLikers, open, stepPhoto, close, openDialog, closeDialog, syncCounts, consumePendingPhoto, mosaicClass }
 }

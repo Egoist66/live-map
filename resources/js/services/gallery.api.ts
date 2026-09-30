@@ -4,11 +4,16 @@ export interface GalleryPhoto {
   id: number
   user_id: number
   url: string
+  thumb_url?: string | null
   caption: string | null
   likes_count: number
   comments_count: number
   liked: boolean
   liked_incognito?: boolean
+  /** Главное фото: совпадает с аватаром профиля, всегда первое в списке. */
+  is_main?: boolean
+  /** Свежий avatar_url владельца после смены главного (возвращает makeMain). */
+  avatar_url?: string | null
   can_comment: boolean
   created_at?: string
 }
@@ -56,6 +61,16 @@ export const galleryApi = {
   },
   async remove(id: number): Promise<{ ok: boolean }> {
     const { data } = await api.delete<{ ok: boolean }>(`/api/photos/${id}`)
+    return data
+  },
+  /**
+   * Сделать фото главным: аватар профиля указывает на файл фото.
+   *
+   * @param id id фото из своей галереи
+   * @returns фото с флагом is_main и свежим avatar_url
+   */
+  async makeMain(id: number): Promise<GalleryPhoto> {
+    const { data } = await api.post<GalleryPhoto>(`/api/photos/${id}/main`)
     return data
   },
   async toggleLike(id: number, incognito = false): Promise<{ liked: boolean; likes_count: number; is_incognito?: boolean }> {
