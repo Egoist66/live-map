@@ -16,6 +16,9 @@ use Illuminate\Support\Facades\Log;
  * закрыто — колокольчик и web-push не дойдут, а сообщение в Telegram
  * дойдёт всегда. Бот пишет: новые сообщения, лайки анкеты, мэтчи,
  * комментарии (пины, фото, посты, новости районов).
+ * Письма о людях идут с фото автора через sendPhoto (аватар виден
+ * миниатюрой в чате) — сразу понятно, кто пишет/лайкнул.
+ * Нет фото — обычный sendMessage, инкогнито/аноним — без фото.
  * Кнопка под текстом открывает Mini App сразу на нужном экране
  * (чат — прямо в диалог, остальное — на свой экран).
  *
@@ -151,7 +154,9 @@ class TelegramNotifier
 
         $text = '💬 <b>'.self::escape($senderName).'</b>: '.self::escape(self::preview($preview));
 
-        self::send($recipient, $text, '/chat/'.(int) $conversation->id, 'Открыть чат');
+        $photo = self::actorPhotoUrl($sender);
+
+        self::sendWithPhoto($recipient, $text, $photo, '/chat/'.(int) $conversation->id, 'Открыть чат');
     }
 
     /**
@@ -210,7 +215,9 @@ class TelegramNotifier
 
         $text = '💞 Вас лайкнул(а): <b>'.self::escape($likerName).'</b>'.($isSuperlike ? ' · суперлайк ⭐' : '');
 
-        self::send($liked, $text, '/users/'.$liker->profileIdentifier(), '👤 Смотреть анкету');
+        $photo = self::actorPhotoUrl($liker);
+
+        self::sendWithPhoto($liked, $text, $photo, '/users/'.$liker->profileIdentifier(), '👤 Смотреть анкету');
     }
 
     /**
@@ -251,7 +258,9 @@ class TelegramNotifier
 
             $text = '🎉 Мэтч! У вас взаимность с <b>'.self::escape($actorName).'</b> — чат открыт, лимиты здесь не действуют.';
 
-            self::send($recipient, $text, $path, 'Открыть чат');
+            $photo = self::actorPhotoUrl($actor);
+
+            self::sendWithPhoto($recipient, $text, $photo, $path, 'Открыть чат');
         }
     }
 
@@ -312,7 +321,9 @@ class TelegramNotifier
         $text = '💬 <b>'.self::escape($authorPart).'</b> прокомментировал(а): '.self::escape($entity)
             .' — «'.self::escape(self::preview($preview)).'»';
 
-        self::send($recipient, $text, $path, 'Смотреть');
+        $photo = $anonymous ? null : self::actorPhotoUrl($actor);
+
+        self::sendWithPhoto($recipient, $text, $photo, $path, 'Смотреть');
     }
 
     /**
@@ -361,7 +372,7 @@ class TelegramNotifier
             ->where('created_at', '<=', now()->subMinute())
             ->orderByDesc('id')
             ->limit(max(1, $limit))
-            ->with(['sender:id,name', 'conversation'])
+            ->with(['sender:id,name,avatar_path,telegram_photo_url', 'conversation'])
             ->get()
             ->reverse()
             ->values();
@@ -411,6 +422,24 @@ class TelegramNotifier
      */
     public static function send(User $recipient, string $text, ?string $path = null, ?string $buttonLabel = null): bool
     {
+        return self::sendWithPhoto($recipient, $text, null, $path, $buttonLabel);
+    }
+
+    /**
+     * Поставить письмо с фото автора в очередь Bot API.
+     *
+     * Фото шлём через sendPhoto (аватар виден миниатюрой в чате),
+     * без фото — обычный sendMessage. Нет фото — не ошибка.
+     *
+     * @param User $recipient получатель
+     * @param string $text текст в HTML-разметке (для фото — подпись)
+     * @param string|null $photoUrl https-URL аватара автора
+     * @param string|null $path путь в Mini App для кнопки
+     * @param string|null $buttonLabel подпись кнопки
+     * @return bool true когда задача принята в очередь
+     */
+    public static function sendWithPhoto(User $recipient, string $text, ?string $photoUrl, ?string $path = null, ?string $buttonLabel = null): bool
+    {
         $recipient = self::resolveRecipient($recipient);
 
         if ($recipient === null) {
@@ -424,7 +453,94 @@ class TelegramNotifier
             $buttons[] = [$button];
         }
 
-        return self::dispatchMessage((int) $recipient->id, $text, $buttons);
+        $photo = self::cleanPhotoUrl($photoUrl);
+
+        return self::dispatchMessage((int) $recipient->id, $text, $buttons, $photo);
+    }
+
+    /**
+     * URL аватара автора для sendPhoto.
+     *
+     * Берём avatar_url (аватар или telegram_photo_url), но только
+     * публичный https — локальный http Telegram не скачает, тогда
+     * уйдём в текстовый sendMessage без фото.
+     *
+     * @param User|null $actor автор события
+     * @return string|null https-URL фото или null
+     */
+    private static function actorPhotoUrl(?User $actor): ?string
+    {
+        if ($actor === null) {
+            return null;
+        }
+
+        $resolved = self::resolveActor($actor);
+
+        if ($resolved === null) {
+            return null;
+        }
+
+        try {
+            $url = trim((string) ($resolved->avatar_url ?? ''));
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return self::cleanPhotoUrl($url);
+    }
+
+    /**
+     * Почистить URL фото: только публичный https до 512 символов.
+     *
+     * @param string|null $raw сырой URL
+     * @return string|null чистый URL или null
+     */
+    private static function cleanPhotoUrl(?string $raw): ?string
+    {
+        $clean = trim((string) $raw);
+
+        if ($clean === '') {
+            return null;
+        }
+
+        if (! str_starts_with($clean, 'https://')) {
+            return null;
+        }
+
+        if (mb_strlen($clean) > 512) {
+            return null;
+        }
+
+        return $clean;
+    }
+
+    /**
+     * Догрузить колонки аватара автора, если модель урезана select().
+     *
+     * avatar_url строится из avatar_path + telegram_photo_url: без них
+     * accessor вернёт null и фото потеряется, хотя оно есть.
+     *
+     * @param User $actor возможно урезанная модель автора
+     * @return User|null полная модель или null
+     */
+    private static function resolveActor(User $actor): ?User
+    {
+        $attributes = $actor->getAttributes();
+
+        $hasAvatar = array_key_exists('avatar_path', $attributes);
+        $hasTgPhoto = array_key_exists('telegram_photo_url', $attributes);
+
+        if ($hasAvatar && $hasTgPhoto) {
+            return $actor;
+        }
+
+        try {
+            $fresh = $actor->fresh(['id', 'name', 'avatar_path', 'telegram_photo_url']);
+
+            return $fresh ?? $actor;
+        } catch (\Throwable) {
+            return $actor;
+        }
     }
 
     /**
@@ -522,16 +638,19 @@ class TelegramNotifier
      * @param int $userId id получателя (users.id)
      * @param string $text текст в HTML-разметке Telegram
      * @param array<int, array<int, array<string, mixed>>> $buttons ряды inline-кнопок
+     * @param string|null $photoUrl https-URL фото для sendPhoto или null для sendMessage
      * @return bool true когда задача принята (очередь или прямая отправка)
      */
-    private static function dispatchMessage(int $userId, string $text, array $buttons): bool
+    private static function dispatchMessage(int $userId, string $text, array $buttons, ?string $photoUrl = null): bool
     {
         if ($userId <= 0) {
             return false;
         }
 
+        $photo = self::cleanPhotoUrl($photoUrl);
+
         try {
-            SendTelegramMessage::dispatch($userId, $text, $buttons);
+            SendTelegramMessage::dispatch($userId, $text, $buttons, $photo);
 
             return true;
         } catch (\Throwable $e) {
@@ -539,7 +658,7 @@ class TelegramNotifier
         }
 
         try {
-            $outcome = SendTelegramMessage::attempt($userId, $text, $buttons);
+            $outcome = SendTelegramMessage::attempt($userId, $text, $buttons, $photo);
 
             return ($outcome['status'] ?? '') === 'sent';
         } catch (\Throwable $e) {
@@ -642,7 +761,9 @@ class TelegramNotifier
             $rows[] = [$entityButton];
         }
 
-        self::dispatchMessage((int) $owner->id, $text, $rows);
+        $photo = self::actorPhotoUrl($actor);
+
+        self::dispatchMessage((int) $owner->id, $text, $rows, $photo);
     }
 
     /**

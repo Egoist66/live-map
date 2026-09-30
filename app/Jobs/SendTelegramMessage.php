@@ -39,13 +39,15 @@ class SendTelegramMessage implements ShouldQueue
 
     /**
      * @param int $userId id получателя (users.id)
-     * @param string $text текст в HTML-разметке Telegram
+     * @param string $text текст в HTML-разметке Telegram (для фото — подпись, лимит 1024)
      * @param array<int, array<int, array<string, mixed>>> $buttons ряды inline-кнопок
+     * @param string|null $photoUrl https-URL аватара автора (sendPhoto) или null (sendMessage)
      */
     public function __construct(
         public int $userId,
         public string $text,
         public array $buttons = [],
+        public ?string $photoUrl = null,
     ) {
     }
 
@@ -56,7 +58,7 @@ class SendTelegramMessage implements ShouldQueue
      */
     public function handle(): void
     {
-        $outcome = self::attempt($this->userId, $this->text, $this->buttons);
+        $outcome = self::attempt($this->userId, $this->text, $this->buttons, $this->photoUrl);
         $status = (string) ($outcome['status'] ?? 'failed');
         $retryAfter = (int) ($outcome['retry_after'] ?? 0);
 
@@ -74,9 +76,10 @@ class SendTelegramMessage implements ShouldQueue
      * @param int $userId id получателя (users.id)
      * @param string $text текст в HTML-разметке Telegram
      * @param array<int, array<int, array<string, mixed>>> $buttons ряды inline-кнопок
+     * @param string|null $photoUrl https-URL фото для sendPhoto или null для sendMessage
      * @return array{status:string, retry_after:int} status: sent|blocked|retry|failed
      */
-    public static function attempt(int $userId, string $text, array $buttons): array
+    public static function attempt(int $userId, string $text, array $buttons, ?string $photoUrl = null): array
     {
         $user = User::find($userId);
 
@@ -91,19 +94,29 @@ class SendTelegramMessage implements ShouldQueue
             return ['status' => 'failed', 'retry_after' => 0];
         }
 
+        $photo = self::cleanPhotoUrl($photoUrl);
+
+        $endpoint = $photo !== null ? 'sendPhoto' : 'sendMessage';
+
         $payload = [
             'chat_id' => $chatId,
-            'text' => $text,
             'parse_mode' => 'HTML',
-            'disable_web_page_preview' => true,
         ];
+
+        if ($photo !== null) {
+            $payload['photo'] = $photo;
+            $payload['caption'] = mb_substr($text, 0, 1000);
+        } else {
+            $payload['text'] = $text;
+            $payload['disable_web_page_preview'] = true;
+        }
 
         if ($buttons !== []) {
             $payload['reply_markup'] = ['inline_keyboard' => $buttons];
         }
 
         try {
-            $response = Http::timeout(8)->post("https://api.telegram.org/bot{$botToken}/sendMessage", $payload);
+            $response = Http::timeout(12)->post("https://api.telegram.org/bot{$botToken}/{$endpoint}", $payload);
         } catch (\Throwable $e) {
             Log::warning('telegram send failed', ['chat_id' => $chatId, 'error' => $e->getMessage()]);
 
@@ -141,8 +154,63 @@ class SendTelegramMessage implements ShouldQueue
             return ['status' => 'retry', 'retry_after' => 60];
         }
 
+        if ($photo !== null && $status === 400) {
+            Log::warning('telegram photo rejected, fallback to text', ['chat_id' => $chatId, 'description' => $description]);
+
+            $fallback = [
+                'chat_id' => $chatId,
+                'text' => $text,
+                'parse_mode' => 'HTML',
+                'disable_web_page_preview' => true,
+            ];
+
+            if ($buttons !== []) {
+                $fallback['reply_markup'] = ['inline_keyboard' => $buttons];
+            }
+
+            try {
+                $retry = Http::timeout(8)->post("https://api.telegram.org/bot{$botToken}/sendMessage", $fallback);
+            } catch (\Throwable $e) {
+                return ['status' => 'retry', 'retry_after' => 30];
+            }
+
+            if ($retry->successful()) {
+                TelegramNotifier::clearBlocked($user);
+
+                return ['status' => 'sent', 'retry_after' => 0];
+            }
+        }
+
         Log::warning('telegram send rejected', ['chat_id' => $chatId, 'status' => $status, 'description' => $description]);
 
         return ['status' => 'failed', 'retry_after' => 0];
+    }
+
+    /**
+     * Почистить URL фото для Bot API: только публичный https.
+     *
+     * Telegram качает фото своими серверами, поэтому локальный http
+     * и относительные пути отбрасываем — уйдём в обычный sendMessage.
+     *
+     * @param string|null $raw сырой URL аватара
+     * @return string|null чистый https-URL или null
+     */
+    private static function cleanPhotoUrl(?string $raw): ?string
+    {
+        $clean = trim((string) $raw);
+
+        if ($clean === '') {
+            return null;
+        }
+
+        if (! str_starts_with($clean, 'https://')) {
+            return null;
+        }
+
+        if (mb_strlen($clean) > 512) {
+            return null;
+        }
+
+        return $clean;
     }
 }

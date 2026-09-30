@@ -275,6 +275,10 @@ class TelegramAuthController extends Controller
      * Почту сразу помечаем подтверждённой: владелец TG-аккаунта доказан
      * подписью initData, гнать его за подтверждением письма — лишний friction.
      *
+     * Модули: только `ulove`. Mini App запущен из @U1ove_bot (знакомства),
+     * карта UPin и остальные разделы человек довключит сам через
+     * Настройки → Приложение → «Разделы приложения».
+     *
      * @param array<string, mixed> $tgUser объект user из initData
      * @param int $telegramId id в Telegram
      * @return User созданный пользователь
@@ -301,7 +305,7 @@ class TelegramAuthController extends Controller
             'signup_goal' => 'chat',
             'default_mode' => 'ulove',
             'default_mode_set_at' => now(),
-            'enabled_modules' => ['ulove', 'upin'],
+            'enabled_modules' => ['ulove'],
             'account_type' => 'person',
             'dating_enabled' => true,
             'telegram_id' => $telegramId,
