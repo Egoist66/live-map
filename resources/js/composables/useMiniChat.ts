@@ -3,6 +3,7 @@ import { router, usePage } from '@inertiajs/vue3'
 import { chatApi, CHAT_HISTORY_PAGE_SIZE } from '@/services/chat.api'
 import { busOn, busEmit } from '@/services/realtime-bus'
 import { ensureUserChannel } from '@/composables/useUserChannel'
+import { captureAuthUid, currentAuthUid } from '@/composables/useAuthUid'
 import { useBadgeStore } from '@/stores/badges'
 import { useRewardToast } from '@/composables/useRewardToast'
 import { avatarSrcFor } from '@/composables/useAvatar'
@@ -72,6 +73,8 @@ export function resetMiniChat(): void {
 }
 
 function getUid(): number {
+  const cached = currentAuthUid()
+  if (cached > 0) return cached
   try {
     const inertiaUid = Number((usePage().props.auth as any)?.user?.id || 0)
     if (inertiaUid) return inertiaUid
@@ -405,6 +408,7 @@ function onDeleted(e: unknown): void {
  * await mini.openWindow(convId)
  */
 export function useMiniChat() {
+  captureAuthUid()
   subscribe()
   const rewards = useRewardToast()
 

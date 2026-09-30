@@ -7,6 +7,7 @@ import { useFileDownload } from '@/composables/useFileDownload'
 import { busOn } from '@/services/realtime-bus'
 import { subjectWord } from '@/services/notifications.api'
 import { ensureUserChannel, leaveUserChannel } from '@/composables/useUserChannel'
+import { captureAuthUid, currentAuthUid } from '@/composables/useAuthUid'
 import { useProfileUrl } from '@/composables/useProfileUrl'
 
 function isLockedNow(): boolean {
@@ -71,7 +72,19 @@ export function resetAppNotifications(): void {
   toasts.value = []
 }
 
+/**
+ * Id текущего пользователя для фильтров тостов.
+ *
+ * Обработчики шины (`user:message.sent` и др.) вызываются вне
+ * setup-контекста, где `usePage()` недоступен и возвращает 0 —
+ * из-за этого свои сообщения не отфильтровывались и тостили
+ * отправителя. Поэтому сначала читаем кэш `useAuthUid`
+ * (захватывается в setup ниже через `captureAuthUid()`),
+ * и только потом — запасные источники.
+ */
 function getUid(): number {
+  const cached = currentAuthUid()
+  if (cached > 0) return cached
   try {
     const inertiaUid = Number((usePage().props.auth as any)?.user?.id || 0)
     if (inertiaUid) return inertiaUid
@@ -1157,6 +1170,7 @@ function init() {
   }
 }
 export function useAppNotifications() {
+  captureAuthUid()
   onMounted(() => init())
   onBeforeUnmount(() => {})
   /**

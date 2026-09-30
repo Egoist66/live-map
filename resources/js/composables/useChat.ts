@@ -6,6 +6,7 @@ import { useChatHistory } from '@/composables/useChatHistory'
 import { busOn, busEmit, registerPollContextProvider } from '@/services/realtime-bus'
 import { ensureUserChannel, leaveUserChannel } from '@/composables/useUserChannel'
 import { pokeRealtime, syncRealtimeNow } from '@/composables/useRealtimePoller'
+import { captureAuthUid, currentAuthUid } from '@/composables/useAuthUid'
 import { useRewardToast } from '@/composables/useRewardToast'
 import type { Conversation, ConversationDetail, Message } from '@/types/entities/Chat'
 
@@ -56,6 +57,7 @@ function voiceKindFor(file: File): 'image' | 'voice' | 'file' {
 }
 
 export function useChat() {
+  captureAuthUid()
   const rewards = useRewardToast()
   const conversations = ref<Conversation[]>([])
   const activeConv = ref<ConversationDetail | null>(null)
@@ -158,6 +160,8 @@ export function useChat() {
     return (window as any).Echo
   }
   function getUid(): number {
+    const cached = currentAuthUid()
+    if (cached > 0) return cached
     try {
       const inertiaUid = Number((usePage().props.auth as any)?.user?.id || 0)
       if (inertiaUid) return inertiaUid

@@ -1,4 +1,5 @@
 import { busEmit } from '@/services/realtime-bus'
+import { currentAuthUid } from '@/composables/useAuthUid'
 
 /**
  * Канонические события user-канала (совпадают с broadcastAs на бэке).
@@ -36,6 +37,8 @@ function getEcho(): any {
 }
 
 function getUid(): number {
+  const cached = currentAuthUid()
+  if (cached > 0) return cached
   try {
     const inertiaUid = Number((window as any)?.__inertia_page?.props?.auth?.user?.id || 0)
     if (inertiaUid) return inertiaUid

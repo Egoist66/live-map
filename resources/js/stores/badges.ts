@@ -6,8 +6,10 @@ import { notificationsApi } from '@/services/notifications.api'
 import { api } from '@/services/api'
 import { busOn } from '@/services/realtime-bus'
 import { ensureUserChannel, leaveUserChannel } from '@/composables/useUserChannel'
+import { captureAuthUid, currentAuthUid } from '@/composables/useAuthUid'
 
 export const useBadgeStore = defineStore('badges', () => {
+  captureAuthUid()
   const unread = ref(0)
   const unreadMessages = ref(0)
   const pending = ref(0)
@@ -33,6 +35,8 @@ export const useBadgeStore = defineStore('badges', () => {
   const FETCH_BLOCK_AFTER_429 = 20000
 
   function getUid(): number {
+    const cached = currentAuthUid()
+    if (cached > 0) return cached
     try {
       const inertiaUid = Number((usePage().props.auth as any)?.user?.id || 0)
       if (inertiaUid) return inertiaUid
@@ -169,6 +173,8 @@ export const useBadgeStore = defineStore('badges', () => {
   }
 
   function resolveUid(): string | number | null {
+    const cached = currentAuthUid()
+    if (cached > 0) return cached
     try {
       const inertiaUid = (usePage().props.auth as any)?.user?.id ?? null
       if (inertiaUid) return inertiaUid

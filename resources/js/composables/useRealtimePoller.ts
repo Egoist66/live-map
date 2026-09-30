@@ -1,5 +1,6 @@
 import { api } from '@/services/api'
 import { busEmit, busOn, getPollContext } from '@/services/realtime-bus'
+import { currentAuthUid } from '@/composables/useAuthUid'
 
 /** Тик живого поллинга: компромисс задержки и нагрузки (24 запроса/мин) */
 const FAST_INTERVAL = 2500
@@ -254,13 +255,20 @@ export function useRealtimePoller() {
     }
     lastTime = Number(data?.time) || Date.now()
     const messages = Array.isArray(data?.messages) ? data.messages : []
+    const selfId = currentAuthUid()
     for (const msg of messages) {
       if (msg?.id == null) continue
       const id = Number(msg.id)
       if (id > lastMsgId) lastMsgId = id
       if (alreadySeenMessage(id)) continue
       busEmit('chat:message', msg)
-      busEmit('user:message.sent', { message: msg })
+      // Свои сообщения (мультидевайс/эхо после отправки) нужны чату
+      // для синхронизации, но не тостам: user:message.sent — только чужие,
+      // как в сокет-режиме (бэк шлёт user.* всем, кроме отправителя).
+      const isOwn = selfId > 0 && Number(msg?.sender_id) === selfId
+      if (!isOwn) {
+        busEmit('user:message.sent', { message: msg })
+      }
     }
     const updated = Array.isArray(data?.messages_updated) ? data.messages_updated : []
     for (const msg of updated) {
