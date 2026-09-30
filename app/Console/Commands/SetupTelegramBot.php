@@ -11,7 +11,8 @@ use Illuminate\Console\Command;
  * Ставит:
  * - webhook на {APP_URL}/api/telegram/webhook (секрет из
  *   config telegram.webhook_secret, если задан);
- * - команды /start и /sessions (последняя открывает панель сеансов);
+ * - 14 команд-мегаменю: start/app/profile/hide/show/likes/matches/
+ *   messages/stats/notify/sessions/help/delete/restore;
  * - кнопку меню Mini App (открывает приложение поверх чата).
  *
  * Запуск: php artisan telegram:setup-bot [--url=...] [--webapp=...]
@@ -63,7 +64,7 @@ class SetupTelegramBot extends Command
 
         $this->table(['Шаг', 'Итог'], [
             ['setWebhook', $result['webhook'] ? 'OK' : 'FAIL'],
-            ['setMyCommands (/start, /sessions)', $result['commands'] ? 'OK' : 'FAIL'],
+            ['setMyCommands (14 команд мега-меню)', $result['commands'] ? 'OK' : 'FAIL'],
             ['setChatMenuButton (Mini App)', $result['menu'] ? 'OK' : 'FAIL'],
         ]);
 
@@ -79,7 +80,7 @@ class SetupTelegramBot extends Command
             return self::FAILURE;
         }
 
-        $this->info('✓ Бот настроен: /sessions покажет панель сеансов прямо в чате.');
+        $this->info('✓ Бот настроен: 14 команд, панели анкеты/уведомлений/удаления прямо в чате.');
 
         return self::SUCCESS;
     }

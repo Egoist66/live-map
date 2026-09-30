@@ -146,8 +146,20 @@ class TelegramBotApi
 
         $commandsOk = self::post('setMyCommands', [
             'commands' => [
-                ['command' => 'start', 'description' => 'Открыть приложение'],
+                ['command' => 'start', 'description' => '👋 Запуск и главное меню'],
+                ['command' => 'app', 'description' => '🌐 Открыть Mini App'],
+                ['command' => 'profile', 'description' => '👤 Моя анкета: stats + скрыть/вернуть'],
+                ['command' => 'hide', 'description' => '🙈 Скрыть анкету ото всех'],
+                ['command' => 'show', 'description' => '👀 Вернуть анкету в поиск'],
+                ['command' => 'likes', 'description' => '💞 Кто лайкнул меня'],
+                ['command' => 'matches', 'description' => '🎉 Мои мэтчи'],
+                ['command' => 'messages', 'description' => '💬 Непрочитанные сообщения'],
+                ['command' => 'stats', 'description' => '📊 Уровень, репутация, тариф'],
+                ['command' => 'notify', 'description' => '🔔 Уведомления: вкл/выкл'],
                 ['command' => 'sessions', 'description' => '📱 Активные сеансы: завершить или забанить'],
+                ['command' => 'help', 'description' => '✨ Все возможности бота'],
+                ['command' => 'delete', 'description' => '💔 Удалить профиль'],
+                ['command' => 'restore', 'description' => '💚 Вернуть профиль'],
             ],
         ]) !== null;
 

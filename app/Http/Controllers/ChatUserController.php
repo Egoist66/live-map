@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\UserBlock;
 use App\Models\Friendship;
+use App\Services\TelegramNotifier;
 use Illuminate\Http\Request;
 
 class ChatUserController extends Controller
@@ -110,6 +111,11 @@ class ChatUserController extends Controller
      * кэш last_seen обновляем здесь же, иначе мидлварь затёрла бы
      * метку свежим now().
      *
+     * Заодно досылаем пропущенное: сообщения, пришедшие пока
+     * пользователь был онлайн (скип `online` — навсегда), но так
+     * и не прочитанные, уходят в бота через flushUnread. Уже
+     * доставленные отсекаются дедупом внутри TelegramNotifier.
+     *
      * @param Request $request запрос от владельца сессии
      * @return \Illuminate\Http\JsonResponse
      */
@@ -128,7 +134,14 @@ class ChatUserController extends Controller
         } catch (\Throwable) {
         }
 
-        return response()->json(['ok' => true]);
+        $flushed = 0;
+
+        try {
+            $flushed = TelegramNotifier::flushUnread($user);
+        } catch (\Throwable) {
+        }
+
+        return response()->json(['ok' => true, 'flushed' => $flushed]);
     }
 
     /**

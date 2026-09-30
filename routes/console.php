@@ -14,3 +14,4 @@ Schedule::command('plans:downgrade-expired')->daily();
 Schedule::command('chat:prune-attachments')->daily();
 Schedule::command('video:prune-calls')->daily();
 Schedule::command('rewards:weekly-recap')->weeklyOn(1, '9:00');
+Schedule::command('users:prune-pending-deletion')->dailyAt('04:30');

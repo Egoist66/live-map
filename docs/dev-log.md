@@ -1,5 +1,19 @@
 # Dev-лог
 
+## 2026-09-30 — Telegram-бот мега-меню + скрытие анкеты + удаление с PRO-приманкой и grace 14 дней
+- ✨ Бот стал пультом от ULove: 14 команд в нативном меню (`/start /app /profile /hide /show /likes /matches /messages /stats /notify /sessions /help /delete /restore`) — всё переключается кнопками прямо в чате, приложение открывать не надо.
+- ✨ Карточка «Моя анкета» (`TelegramProfilePanel`): имя, тариф, видимость, живые счётчики лайков/мэтчей/непрочитанных + кнопки «Скрыть/Вернуть», «Лайки», «Мэтчи», «Открыть анкету».
+- ✨ Инсайты (`TelegramInsights`): /likes и /matches показывают total + топ-3 имени, /messages — unread, /stats — уровень/репутация/тариф/видимость/grace.
+- ✨ Панель уведомлений (`TelegramNotifyPanel`): 4 тумблера (сообщения/лайки/мэтчи/комменты) кнопками `ntg_*` — зеркало настроек Mini App; пишет в личку только когда Mini App закрыт (как раньше).
+- ✨ Скрытие анкеты: `profile_hidden_at + is_hidden_from_search + dating_enabled=false` — пропадает из ленты свайпов, поиска, карты и чужих профилей (`isDiscoverableBy/hiddenFromSearchFor`), чаты/друзья/фото целы. Возврат одним тапом (`/show` или кнопка).
+- ✨ Удаление с приманкой (`TelegramDeletionFlow + AccountDeletionService`): /delete → «нам будет плохо без вас + неделя PRO бесплатно» → `del_yes` прячет анкету, ставит `deletion_requested_at/scheduled_at=+14д`, дарит `plan=pro до +7д` (платные тарифы не трогаем). /restore или `del_cancel` в течение 14 дней возвращает всё одним тапом (PRO-подарок остаётся). Не вернулся — `users:prune-pending-deletion` (daily 04:30) трёт всё через `UserDeletionService` без возврата.
+- 🔧 Бэк: миграция `..._add_profile_hide_and_pending_deletion_to_users`; `User` — fillable/casts/PHPDoc + `isProfileHidden/isPendingDeletion/deletionDaysLeft`; `ProfileVisibilityService`, `AccountDeletionService` (PHPDoc); `AccountController` (`GET /api/account/status`, `POST /hide|/show|/deletion`, `DELETE /deletion`); вебхук переписан под все колбэки (`prof_*, go_*, ntg_*, del_*` + старые `sess*`), снятие `telegram_blocked_at` при живом обращении, `replyUnlinked` для всех команд.
+- 🔧 `TelegramBotApi::setup` — 14 команд с эмодзи-описаниями; `SetupTelegramBot` — обновлённые тексты; `routes/console.php` — `users:prune-pending-deletion` daily.
+- Уведомления/realtime (Правило №10/13): удаление/скрытие шлют только тосты в боте, realtime-каналы не трогаем (видимость режется на чтении через `hiddenFromSearchFor`). Адаптация (Правило №14): нативный UI Telegram наследует тему — тёмная тема и мобайл бесплатно.
+- Проверки: `php -l` ✅ ×11, `route:list` ✅ (5 account + 8 telegram), команды зарегистрированы (`--help` ✅). Миграция не прогонялась — MySQL недоступен, выполнить `php artisan migrate` на dev/prod.
+- Включение на проде: `php artisan migrate --force`, `php artisan telegram:setup-bot` (переставит 14 команд), cron schedule уже в `routes/console.php`.
+- Вживую: /start показывает меню с живыми счётчиками; /hide прячет из ленты и поиска; /delete дарит PRO и считает 14 дней; /restore возвращает всё.
+
 ## 2026-09-30 — Главное фото галереи = аватар + «Сделать главной», автофокус инпутов
 - ✨ Главное фото: в галерее первое место всегда занимает фото, совпадающее с аватаром профиля (бейдж «Главная» в превью, диалоге, вьювере и Tinder-профиле). В галерее опция «Сделать главной» (звёздочка на фото, кнопка во вьювере): аватар переставляется на файл фото без потери слота лимита.
 - 🔧 Бэк: `ProfilePhotoController::serialize` отдаёт `is_main` (path === avatar_path), `index` сортирует главное первым; новый `POST /api/photos/{photo}/main → makeMain` (только своё, ставит avatar_path + минимальный sort_order, возвращает свежий avatar_url); `store` кладёт новые фото в конец (`sort_order = max+1`), чтобы не вытеснять главное. `AvatarController::mirrorAvatarToGallery` переиспользует слот старого аватара (смена аватара при полной галерее больше не теряет фото) и всегда ставит аватар первым.

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Jobs\SendTelegramMessage;
 use App\Models\Conversation;
+use App\Models\Message;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -305,6 +306,86 @@ class TelegramNotifier
             .' — «'.self::escape(self::preview($preview)).'»';
 
         self::send($recipient, $text, $path, 'Смотреть');
+    }
+
+    /**
+     * Дослать в бота сообщения, пропущенные пока пользователь был онлайн.
+     *
+     * Скип `online` в момент отправки — навсегда: получатель был онлайн
+     * (дубль не слали), а потом закрыл Mini App не прочитав — уведомление
+     * терялось, а автоответ ещё и врал «ты уже получил уведомление».
+     * Метод вызывается из offline-beacon (POST /api/chat/offline): берёт
+     * непрочитанные (read_at NULL — то же, что считает бейдж), свежие
+     * (последние сутки), кроме самых новых (grace 60 секунд — realtime
+     * тост ещё может сработать), и шлёт каждое через chatMessage.
+     * Гейты и дедуп внутри chatMessage: уже ушедшие ранее отсеются
+     * как duplicate, прочитанные в выборку не попадут.
+     *
+     * @param User $recipient отошедший получатель
+     * @param int $limit максимум писем за один уход в оффлайн
+     * @return int сколько сообщений поставлено в обработку
+     */
+    public static function flushUnread(User $recipient, int $limit = 10): int
+    {
+        $recipient = self::resolveRecipient($recipient);
+
+        if ($recipient === null) {
+            return 0;
+        }
+
+        if (! self::canNotify($recipient, 'messages')) {
+            return 0;
+        }
+
+        if (! $recipient->isAway()) {
+            return 0;
+        }
+
+        $conversationIds = $recipient->conversations()->pluck('conversations.id');
+
+        if ($conversationIds->isEmpty()) {
+            return 0;
+        }
+
+        $messages = Message::whereIn('conversation_id', $conversationIds)
+            ->where('sender_id', '!=', $recipient->id)
+            ->whereNull('read_at')
+            ->where('created_at', '>=', now()->subDay())
+            ->where('created_at', '<=', now()->subMinute())
+            ->orderByDesc('id')
+            ->limit(max(1, $limit))
+            ->with(['sender:id,name', 'conversation'])
+            ->get()
+            ->reverse()
+            ->values();
+
+        if ($messages->isEmpty()) {
+            return 0;
+        }
+
+        $processed = 0;
+
+        foreach ($messages as $message) {
+            $sender = $message->sender;
+            $conversation = $message->conversation;
+
+            if (! $sender || ! $conversation) {
+                continue;
+            }
+
+            $preview = self::messagePreview($message);
+
+            try {
+                self::chatMessage($sender, $recipient, $conversation, $preview, (int) $message->id);
+                $processed++;
+            } catch (\Throwable $e) {
+                Log::warning('telegram flush message failed', ['message_id' => $message->id, 'error' => $e->getMessage()]);
+            }
+        }
+
+        Log::info('telegram flush unread', ['user_id' => (int) $recipient->id, 'processed' => $processed]);
+
+        return $processed;
     }
 
     /**
@@ -659,6 +740,44 @@ class TelegramNotifier
         }
 
         return $oneLine;
+    }
+
+    /**
+     * Превью сообщения для TG: текст, репост или вложение.
+     *
+     * Зеркалит логику MessageController::pushToRecipients, чтобы flush
+     * слал те же тексты, что и отправка в момент события.
+     *
+     * @param Message $message сообщение
+     * @return string превью до 200 символов
+     */
+    private static function messagePreview(Message $message): string
+    {
+        $text = trim((string) $message->body);
+
+        if ($text === '' && $message->shared_post_type) {
+            $isDistrict = $message->shared_post_type === 'district';
+            $text = $isDistrict ? '📰 Новость района' : '📝 Пост';
+        }
+
+        if ($text === '' && $message->attachment_path) {
+            $isVoice = $message->attachment_kind === 'voice';
+
+            if ($isVoice) {
+                $text = '🎤 Голосовое сообщение';
+
+                if ($message->attachment_duration) {
+                    $text .= ' ('.$message->attachment_duration.' c)';
+                }
+            } else {
+                $label = $message->attachment_name ? ' '.$message->attachment_name : '';
+                $isImage = $message->attachment_kind === 'image';
+                $prefix = $isImage ? '📷 Фото' : '📎 Файл';
+                $text = $prefix.$label;
+            }
+        }
+
+        return mb_substr($text, 0, 200);
     }
 
     /**

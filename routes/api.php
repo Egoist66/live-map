@@ -179,6 +179,12 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::patch('/user/call-cooldown', [\App\Http\Controllers\ProfileController::class, 'updateCallCooldown']);
     Route::patch('/user/video-calls', [\App\Http\Controllers\ProfileController::class, 'updateVideoCalls']);
 
+    Route::get('/account/status', [\App\Http\Controllers\AccountController::class, 'status']);
+    Route::post('/account/hide', [\App\Http\Controllers\AccountController::class, 'hide'])->middleware('throttle:social-write');
+    Route::post('/account/show', [\App\Http\Controllers\AccountController::class, 'show'])->middleware('throttle:social-write');
+    Route::post('/account/deletion', [\App\Http\Controllers\AccountController::class, 'requestDeletion'])->middleware('throttle:social-write');
+    Route::delete('/account/deletion', [\App\Http\Controllers\AccountController::class, 'cancelDeletion'])->middleware('throttle:social-write');
+
     Route::get('/users/{user}/photos', [\App\Http\Controllers\ProfilePhotoController::class, 'index']);
     Route::post('/photos', [\App\Http\Controllers\ProfilePhotoController::class, 'store'])->middleware('throttle:social-write');
     Route::post('/photos/{photo}', [\App\Http\Controllers\ProfilePhotoController::class, 'update'])->middleware('throttle:social-write');

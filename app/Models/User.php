@@ -14,7 +14,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['name', 'profile_slug', 'email', 'password', 'gender', 'birth_date', 'country', 'country_code', 'plan', 'latitude', 'longitude', 'role', 'account_type', 'is_admin', 'is_hidden_from_search', 'dating_enabled', 'dating_goal', 'signup_goal', 'default_mode', 'default_mode_set_at', 'enabled_modules', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_gender_pref', 'dating_hide_name', 'dating_hide_age', 'dating_hide_distance', 'dating_match_only', 'random_chats_used', 'random_chats_month', 'superlikes_day', 'superlikes_used', 'superlikes_balance', 'boosts_balance', 'boost_until', 'boost_month', 'undos_day', 'undos_used', 'avatar_path', 'home_lat', 'home_lng', 'home_city', 'home_address', 'home_visibility', 'home_show_exact', 'home_radius_km', 'bio', 'thought', 'reputation_score', 'level', 'quest_cooldown_until', 'quest_last_track', 'quest_granted_at', 'is_anonymous_default', 'default_location_precision', 'default_blur_meters', 'message_privacy', 'allow_random_messages', 'call_cooldown_enabled', 'video_calls_enabled', 'photo_comments_privacy', 'flow_comments_privacy', 'auto_reply_enabled', 'auto_reply_text', 'settings', 'last_seen_at', 'is_invisible', 'screen_lock_code', 'screen_lock_timeout', 'screen_lock_kind', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at', 'terms_accepted_at', 'terms_version', 'telegram_id', 'telegram_username', 'telegram_photo_url', 'telegram_linked_at', 'telegram_notify_messages', 'telegram_notify_likes', 'telegram_notify_matches', 'telegram_notify_comments', 'telegram_blocked_at'])]
+#[Fillable(['name', 'profile_slug', 'email', 'password', 'gender', 'birth_date', 'country', 'country_code', 'plan', 'latitude', 'longitude', 'role', 'account_type', 'is_admin', 'is_hidden_from_search', 'profile_hidden_at', 'deletion_requested_at', 'deletion_scheduled_at', 'deletion_pro_until', 'dating_enabled', 'dating_goal', 'signup_goal', 'default_mode', 'default_mode_set_at', 'enabled_modules', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_gender_pref', 'dating_hide_name', 'dating_hide_age', 'dating_hide_distance', 'dating_match_only', 'random_chats_used', 'random_chats_month', 'superlikes_day', 'superlikes_used', 'superlikes_balance', 'boosts_balance', 'boost_until', 'boost_month', 'undos_day', 'undos_used', 'avatar_path', 'home_lat', 'home_lng', 'home_city', 'home_address', 'home_visibility', 'home_show_exact', 'home_radius_km', 'bio', 'thought', 'reputation_score', 'level', 'quest_cooldown_until', 'quest_last_track', 'quest_granted_at', 'is_anonymous_default', 'default_location_precision', 'default_blur_meters', 'message_privacy', 'allow_random_messages', 'call_cooldown_enabled', 'video_calls_enabled', 'photo_comments_privacy', 'flow_comments_privacy', 'auto_reply_enabled', 'auto_reply_text', 'settings', 'last_seen_at', 'is_invisible', 'screen_lock_code', 'screen_lock_timeout', 'screen_lock_kind', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at', 'terms_accepted_at', 'terms_version', 'telegram_id', 'telegram_username', 'telegram_photo_url', 'telegram_linked_at', 'telegram_notify_messages', 'telegram_notify_likes', 'telegram_notify_matches', 'telegram_notify_comments', 'telegram_blocked_at'])]
 #[Hidden(['password', 'remember_token', 'screen_lock_code'])]
 /**
  * Пользователь приложения.
@@ -30,6 +30,10 @@ use Illuminate\Support\Facades\Storage;
  * @property string|null $telegram_username Username в Telegram без @.
  * @property string|null $telegram_photo_url Аватар из Telegram на момент привязки.
  * @property \Carbon\Carbon|null $telegram_linked_at Когда привязан Telegram.
+ * @property \Carbon\Carbon|null $profile_hidden_at Анкета скрыта: никто не видит, возврат одним тапом.
+ * @property \Carbon\Carbon|null $deletion_requested_at Когда пользователь запросил удаление профиля.
+ * @property \Carbon\Carbon|null $deletion_scheduled_at Когда реально удалим всё из базы (+14 дней grace).
+ * @property \Carbon\Carbon|null $deletion_pro_until До когда действует прощальная неделя PRO.
  * @property bool $telegram_notify_messages Слать в Telegram о новых сообщениях.
  * @property bool $telegram_notify_likes Слать в Telegram о лайках анкеты.
  * @property bool $telegram_notify_matches Слать в Telegram о взаимных мэтчах.
@@ -926,6 +930,8 @@ class User extends Authenticatable implements MustVerifyEmail
             return Friendship::areFriends($viewer->id, $this->id);
         }
         if ((int) $this->id === self::GHOST_USER_ID) return self::isGhostSeer($viewer);
+        if ($this->isProfileHidden()) return false;
+        if ($this->isPendingDeletion()) return false;
         return !$this->is_hidden_from_search;
     }
 
@@ -933,8 +939,55 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         if ($viewer->isAdmin()) return [];
         $ids = static::where('is_hidden_from_search', true)->where('id', '!=', $viewer->id)->pluck('id')->all();
+        $stealth = static::where('id', '!=', $viewer->id)
+            ->where(function ($q) {
+                $q->whereNotNull('profile_hidden_at')
+                    ->orWhereNotNull('deletion_requested_at');
+            })->pluck('id')->all();
+        $ids = array_merge($ids, $stealth);
         if (!self::isGhostSeer($viewer) && (int) $viewer->id !== self::GHOST_USER_ID) $ids[] = self::GHOST_USER_ID;
         return array_values(array_unique(array_map('intval', $ids)));
+    }
+
+    /**
+     * Скрыта ли анкета (режим «меня никто не видит»).
+     *
+     * @return bool true когда profile_hidden_at заполнен
+     */
+    public function isProfileHidden(): bool
+    {
+        return $this->profile_hidden_at !== null;
+    }
+
+    /**
+     * Висит ли запрос на удаление (grace-период до hard delete).
+     *
+     * @return bool true когда deletion_requested_at заполнен
+     */
+    public function isPendingDeletion(): bool
+    {
+        return $this->deletion_requested_at !== null;
+    }
+
+    /**
+     * Сколько дней осталось до необратимого удаления.
+     *
+     * @return int|null дней до deletion_scheduled_at, null когда удаления нет
+     */
+    public function deletionDaysLeft(): ?int
+    {
+        if ($this->deletion_scheduled_at === null) {
+            return null;
+        }
+
+        $now = now();
+        $target = $this->deletion_scheduled_at;
+
+        if ($target->isPast()) {
+            return 0;
+        }
+
+        return (int) $now->diffInDays($target);
     }
 
     public function unreadMessagesCount(): int
@@ -948,7 +1001,7 @@ class User extends Authenticatable implements MustVerifyEmail
     /**
      * Дефолтный текст автоответа, когда свой не задан.
      */
-    public const AUTO_REPLY_DEFAULT = '👋 Привет! Я пока не онлайн, поэтому пообщаемся чуть позже. Я уже получил уведомление о твоём сообщении и обязательно отвечу!';
+    public const AUTO_REPLY_DEFAULT = '👋 Привет! Меня сейчас нет в приложении — отвечу, как только зайду.';
 
     /**
      * Считается ли пользователь отошедшим (для автоответа).
@@ -1022,6 +1075,10 @@ class User extends Authenticatable implements MustVerifyEmail
             'pins_today_date' => 'date',
             'trial_ends_at' => 'datetime',
             'telegram_linked_at' => 'datetime',
+            'profile_hidden_at' => 'datetime',
+            'deletion_requested_at' => 'datetime',
+            'deletion_scheduled_at' => 'datetime',
+            'deletion_pro_until' => 'datetime',
             'telegram_notify_messages' => 'boolean',
             'telegram_notify_likes' => 'boolean',
             'telegram_notify_matches' => 'boolean',
