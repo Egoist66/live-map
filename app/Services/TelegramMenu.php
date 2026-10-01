@@ -43,8 +43,14 @@ class TelegramMenu
         $unread = TelegramInsights::unreadCount($fresh);
         $admirers = TelegramInsights::admirers($fresh);
 
+        $totalUsers = TelegramInsights::totalUsers();
+
         $text = "👋 Привет{$hello}! Я — ваш пульт от ULove.\n"
             .'Могу всё без открытия приложения: анкета, лайки, мэтчи, сообщения, сеансы, пароль для ПК и уведомления.';
+
+        if ($totalUsers > 0) {
+            $text .= "\n👥 Нас в приложении уже: <b>{$totalUsers}</b> — и вас ждут!";
+        }
 
         $totalLikes = (int) ($admirers['total'] ?? 0);
 
@@ -61,19 +67,32 @@ class TelegramMenu
                 ['text' => '📊 Статистика', 'callback_data' => 'go_stats'],
             ],
             [
+                ['text' => '🔥 Найти мэтч здесь', 'callback_data' => 'sw_find'],
+                ['text' => '🟢 Кто онлайн', 'callback_data' => 'go_online'],
+            ],
+            [
                 ['text' => '💞 Лайки', 'callback_data' => 'go_likes'],
+                ['text' => '⭐ Избранное', 'callback_data' => 'go_fav'],
+            ],
+            [
                 ['text' => '🎉 Мэтчи', 'callback_data' => 'go_matches'],
+                ['text' => '💬 Сообщения', 'callback_data' => 'go_messages'],
+            ],
+            [
+                ['text' => '💎 Мой тариф', 'callback_data' => 'go_plan'],
+                ['text' => '📧 Моя почта', 'callback_data' => 'go_email'],
+            ],
+            [
+                ['text' => '🔄 Сброс просмотренных', 'callback_data' => 'go_reset'],
+                ['text' => '🔀 Аккаунт', 'callback_data' => 'go_account'],
             ],
             [
                 ['text' => '🔔 Уведомления', 'callback_data' => 'go_notify'],
                 ['text' => '📱 Сеансы', 'callback_data' => 'go_sessions'],
             ],
             [
-                ['text' => '💬 Сообщения', 'callback_data' => 'go_messages'],
-                ['text' => '📋 Все команды', 'callback_data' => 'go_help'],
-            ],
-            [
                 ['text' => '🔑 Пароль для входа с ПК', 'callback_data' => 'go_password'],
+                ['text' => '📋 Все команды', 'callback_data' => 'go_help'],
             ],
             [
                 self::openAppButton('🌐 Открыть приложение'),
@@ -96,14 +115,22 @@ class TelegramMenu
         $lines = [];
         $lines[] = '✨ <b>Что я умею</b>';
         $lines[] = '';
-        $lines[] = '👤 /profile — анкета: тариф, счётчики, скрыть/вернуть';
+        $lines[] = '👤 /profile — анкета с фото: всё подробно, скрыть/вернуть';
+        $lines[] = '🔥 /find — найти мэтч здесь: свайпы кнопками прямо в чате';
+        $lines[] = '🟢 /online — кто сейчас в ULove: лайки из списка';
+        $lines[] = '⭐ /favorites — избранное по тарифу: кому можно написать';
+        $lines[] = '🔄 /reset — сброс просмотренных (Free — раз, PRO — безлимит)';
+        $lines[] = '🔀 /switch — переключиться на другой аккаунт по коду с сайта';
+        $lines[] = '👤 /account — какой аккаунт привязан к боту';
         $lines[] = '🙈 /hide — стать невидимкой (никто не видит)';
         $lines[] = '👀 /show — вернуться в поиск и ленту';
         $lines[] = '💞 /likes — кто лайкнул вашу анкету';
         $lines[] = '🎉 /matches — ваши мэтчи';
         $lines[] = '💬 /messages — непрочитанные сообщения';
         $lines[] = '📊 /stats — уровень, репутация, тариф';
-        $lines[] = '🔔 /notify — какие письма слать в личку';
+        $lines[] = '💎 /plan — мой тарифный план и выбор тарифа';
+        $lines[] = '📧 /email — моя почта для уведомлений (указать основную)';
+        $lines[] = '🔔 /notify — куда слать: бот, почта, личка (по типам)';
         $lines[] = '📱 /sessions — сеансы: завершить чужой вход, забанить устройство';
         $lines[] = '🔑 /password — логин и новый пароль для входа с компьютера';
         $lines[] = '💔 /delete — удалить профиль (сначала подарим PRO!)';

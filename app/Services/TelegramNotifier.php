@@ -42,6 +42,13 @@ use Illuminate\Support\Facades\Log;
 class TelegramNotifier
 {
     /**
+     * Фирменная пометка ULove: каждое письмо начинается с неё + контекст
+     * (кто, что, где открыть), чтобы уведомление не терялось среди
+     * других чатов и было понятно без открытия.
+     */
+    private const ULOVE_TAG = '💘 <b>ULove</b>';
+
+    /**
      * Кулдаун повторов о лайке одной пары, секунд (сутки, как в письмах).
      */
     public const LIKED_COOLDOWN_SECONDS = 86400;
@@ -59,13 +66,19 @@ class TelegramNotifier
      *
      * @param User $recipient получатель
      * @param string $kind messages|likes|matches|comments (тумблер в настройках)
-     * @return bool true когда привязан id, тумблер включён и нет 403
+     * @return bool true когда привязан id, мастер и тумблер включены, нет 403
      */
     public static function canNotify(User $recipient, string $kind): bool
     {
         $recipient = self::resolveRecipient($recipient);
 
         if ($recipient === null) {
+            return false;
+        }
+
+        if (! (bool) ($recipient->telegram_notify_enabled ?? true)) {
+            self::logSkip($recipient, $kind, 'master-off');
+
             return false;
         }
 
@@ -100,6 +113,86 @@ class TelegramNotifier
         }
 
         return true;
+    }
+
+    /**
+     * Можно ли слать короткий личный дубль в чат с ботом.
+     *
+     * Личка — тот же чат с ботом (Bot API пишет только сюда), но личным
+     * стилем: коротко, с ULove-контекстом. Тумблеры `telegram_dm_*`
+     * независимы от бот-карточек: можно включить личку, а остальное
+     * выключить (и наоборот). Мастер и 403-блок общие с ботом.
+     *
+     * @param User $recipient получатель
+     * @param string $kind messages|likes|matches|comments
+     * @return bool true когда личка включена для типа
+     */
+    public static function canDm(User $recipient, string $kind): bool
+    {
+        $recipient = self::resolveRecipient($recipient);
+
+        if ($recipient === null) {
+            return false;
+        }
+
+        if (! (bool) ($recipient->telegram_notify_enabled ?? true)) {
+            self::logSkip($recipient, $kind, 'master-off');
+
+            return false;
+        }
+
+        if ((int) ($recipient->telegram_id ?? 0) <= 0) {
+            self::logSkip($recipient, $kind, 'unlinked');
+
+            return false;
+        }
+
+        if ($recipient->telegram_blocked_at !== null) {
+            self::logSkip($recipient, $kind, 'blocked');
+
+            return false;
+        }
+
+        $column = match ($kind) {
+            'messages' => 'telegram_dm_messages',
+            'likes' => 'telegram_dm_likes',
+            'matches' => 'telegram_dm_matches',
+            'comments' => 'telegram_dm_comments',
+            default => null,
+        };
+
+        if ($column === null) {
+            return false;
+        }
+
+        if (! (bool) ($recipient->{$column} ?? false)) {
+            self::logSkip($recipient, $kind, 'dm-off');
+
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Поставить личный дубль в очередь (текст, без фото, с кнопкой).
+     *
+     * Гейт внутри: выключена личка — тихое ничего.
+     *
+     * @param User $recipient получатель
+     * @param string $kind messages|likes|matches|comments
+     * @param string $text личный текст с ULove-контекстом
+     * @param string|null $path путь в Mini App для кнопки
+     * @param string|null $buttonLabel подпись кнопки
+     * @return void
+     */
+    private static function sendDm(User $recipient, string $kind, string $text, ?string $path, ?string $buttonLabel): void
+    {
+        if (! self::canDm($recipient, $kind)) {
+            return;
+        }
+
+        self::send($recipient, $text, $path, $buttonLabel);
     }
 
     /**
@@ -152,11 +245,16 @@ class TelegramNotifier
             $senderName = 'Собеседник';
         }
 
-        $text = '💬 <b>'.self::escape($senderName).'</b>: '.self::escape(self::preview($preview));
+        $text = '💬 '.self::ULOVE_TAG.' • <b>'.self::escape($senderName).'</b>: '.self::escape(self::preview($preview));
 
         $photo = self::actorPhotoUrl($sender);
+        $path = '/chat/'.(int) $conversation->id;
 
-        self::sendWithPhoto($recipient, $text, $photo, '/chat/'.(int) $conversation->id, 'Открыть чат');
+        self::sendWithPhoto($recipient, $text, $photo, $path, 'Открыть чат');
+
+        $dmText = '💬 '.self::ULOVE_TAG.' • <b>'.self::escape($senderName).'</b> написал(а) вам: «'.self::escape(self::preview($preview)).'»';
+
+        self::sendDm($recipient, 'messages', $dmText, $path, 'Открыть чат');
     }
 
     /**
@@ -201,8 +299,12 @@ class TelegramNotifier
         Cache::put($key, true, self::LIKED_COOLDOWN_SECONDS);
 
         if ($isIncognito) {
-            $text = '💞 Вашу анкету лайкнули анонимно'.($isSuperlike ? ' · суперлайк ⭐' : '');
+            $super = $isSuperlike ? ' · суперлайк ⭐' : '';
+            $text = '💞 '.self::ULOVE_TAG.' • Вашу анкету лайкнули анонимно'.$super;
             self::send($liked, $text, '/swipes', 'Смотреть');
+
+            $dmText = '💞 '.self::ULOVE_TAG.' • У вас анонимный лайк'.$super.' — загляните в свайпы';
+            self::sendDm($liked, 'likes', $dmText, '/swipes', 'Смотреть');
 
             return;
         }
@@ -213,11 +315,18 @@ class TelegramNotifier
             $likerName = 'Поклонник';
         }
 
-        $text = '💞 Вас лайкнул(а): <b>'.self::escape($likerName).'</b>'.($isSuperlike ? ' · суперлайк ⭐' : '');
+        $super = $isSuperlike ? ' · суперлайк ⭐' : '';
+        $path = '/users/'.$liker->profileIdentifier();
+
+        $text = '💞 '.self::ULOVE_TAG.' • Вас лайкнул(а): <b>'.self::escape($likerName).'</b>'.$super;
 
         $photo = self::actorPhotoUrl($liker);
 
-        self::sendWithPhoto($liked, $text, $photo, '/users/'.$liker->profileIdentifier(), '👤 Смотреть анкету');
+        self::sendWithPhoto($liked, $text, $photo, $path, '👤 Смотреть анкету');
+
+        $dmText = '💞 '.self::ULOVE_TAG.' • <b>'.self::escape($likerName).'</b> лайкнул(а) вашу анкету'.$super;
+
+        self::sendDm($liked, 'likes', $dmText, $path, '👤 Смотреть анкету');
     }
 
     /**
@@ -256,11 +365,15 @@ class TelegramNotifier
                 $actorName = 'Собеседник';
             }
 
-            $text = '🎉 Мэтч! У вас взаимность с <b>'.self::escape($actorName).'</b> — чат открыт, лимиты здесь не действуют.';
+            $text = '🎉 '.self::ULOVE_TAG.' • Мэтч! У вас взаимность с <b>'.self::escape($actorName).'</b> — чат открыт, лимиты здесь не действуют.';
 
             $photo = self::actorPhotoUrl($actor);
 
             self::sendWithPhoto($recipient, $text, $photo, $path, 'Открыть чат');
+
+            $dmText = '🎉 '.self::ULOVE_TAG.' • Мэтч с <b>'.self::escape($actorName).'</b>! Чат открыт — напишите первым';
+
+            self::sendDm($recipient, 'matches', $dmText, $path, 'Открыть чат');
         }
     }
 
@@ -318,12 +431,16 @@ class TelegramNotifier
 
         $entity = trim($entityLabel) !== '' ? trim($entityLabel) : 'запись';
 
-        $text = '💬 <b>'.self::escape($authorPart).'</b> прокомментировал(а): '.self::escape($entity)
+        $text = '💬 '.self::ULOVE_TAG.' • <b>'.self::escape($authorPart).'</b> прокомментировал(а): '.self::escape($entity)
             .' — «'.self::escape(self::preview($preview)).'»';
 
         $photo = $anonymous ? null : self::actorPhotoUrl($actor);
 
         self::sendWithPhoto($recipient, $text, $photo, $path, 'Смотреть');
+
+        $dmText = '💭 '.self::ULOVE_TAG.' • <b>'.self::escape($authorPart).'</b> про «'.self::escape($entity).'»: «'.self::escape(self::preview($preview)).'»';
+
+        self::sendDm($recipient, 'comments', $dmText, $path, 'Смотреть');
     }
 
     /**
@@ -745,7 +862,7 @@ class TelegramNotifier
         $authorPart = $actorName !== '' ? $actorName : 'Поклонник';
         $entity = trim($entityLabel) !== '' ? trim($entityLabel) : 'запись';
 
-        $text = '❤️ <b>'.self::escape($authorPart).'</b> лайкнул(а): '.self::escape($entity);
+        $text = '❤️ '.self::ULOVE_TAG.' • <b>'.self::escape($authorPart).'</b> лайкнул(а): '.self::escape($entity);
 
         $rows = [];
 
@@ -764,6 +881,10 @@ class TelegramNotifier
         $photo = self::actorPhotoUrl($actor);
 
         self::dispatchMessage((int) $owner->id, $text, $rows, $photo);
+
+        $dmText = '❤️ '.self::ULOVE_TAG.' • <b>'.self::escape($authorPart).'</b> лайкнул(а): '.self::escape($entity);
+
+        self::sendDm($owner, 'likes', $dmText, $path, '👀 Смотреть');
     }
 
     /**

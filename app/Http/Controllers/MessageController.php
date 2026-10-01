@@ -241,7 +241,7 @@ class MessageController extends Controller
                     $text = ($msg->attachment_kind === 'image' ? '📷 Фото' : '📎 Файл') . $label;
                 }
             }
-            foreach (User::whereIn('id', $ids)->select('id', 'name', 'email', 'email_verified_at', 'avatar_path', 'telegram_id', 'telegram_notify_messages', 'telegram_blocked_at', 'last_seen_at')->get() as $recipient) {
+            foreach (User::whereIn('id', $ids)->select('id', 'name', 'email', 'email_verified_at', 'avatar_path', 'telegram_id', 'telegram_notify_messages', 'telegram_blocked_at', 'email_notify_messages', 'telegram_dm_messages', 'last_seen_at')->get() as $recipient) {
                 // Web Push — только если настроен VAPID (для веба), Expo — всегда (для Android).
                 // Раньше тут был ранний return при ненастроенном VAPID — он глушил и Expo.
                 try {

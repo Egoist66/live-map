@@ -48,7 +48,7 @@ const emit = defineEmits<{
              + размеры держат место (CLS). -->
         <AppImage :src="photo.thumb_url || photo.url" :alt="photo.caption || 'фото'" class="h-full w-full" img-class="h-full w-full object-cover transition duration-300 group-hover:scale-[1.06]" />
         <span class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/0 opacity-0 transition duration-300 group-hover:opacity-100"></span>
-        <span v-if="photo.is_main" class="absolute left-1.5 top-1.5 rounded-full bg-violet-600 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-white shadow">Главная</span>
+        <span v-if="photo.is_main" title="Главная" aria-label="Главная фотография" class="absolute left-1.5 top-1.5 grid h-7 w-7 place-items-center rounded-full bg-violet-600 text-white shadow"><i class="pi pi-star-fill text-xs" /></span>
         <span
           v-else-if="isOwn"
           role="button"

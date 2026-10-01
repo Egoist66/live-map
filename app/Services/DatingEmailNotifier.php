@@ -17,6 +17,11 @@ use Illuminate\Support\Facades\Mail;
  * Письма уходят только на подтверждённую почту: смысл верификации
  * как раз в том, чтобы было куда слать «тебя лайкнули», «новый мэтч»,
  * «новое сообщение». Антиспам — через кэш-кулдауны на пару/диалог.
+ *
+ * Канал выбирает сам человек (тумблеры `email_notify_*` в боте и Mini App,
+ * по умолчанию включены): можно оставить только бота, только почту,
+ * оба — или выключить дубли совсем (колокольчик в приложении остаётся).
+ * Комментарии на почту не шлём (такого письма нет) — только в бота/личку.
  */
 class DatingEmailNotifier
 {
@@ -34,10 +39,32 @@ class DatingEmailNotifier
      * Можно ли слать письма пользователю.
      *
      * @param User $recipient получатель письма
-     * @return bool true когда есть валидный email и он подтверждён
+     * @param string $kind messages|likes|matches (тумблер email-канала)
+     * @return bool true когда канал включён, почта валидна и подтверждена
      */
-    public static function canNotify(User $recipient): bool
+    public static function canNotify(User $recipient, string $kind = 'messages'): bool
     {
+        $recipient = self::resolveRecipient($recipient);
+
+        if ($recipient === null) {
+            return false;
+        }
+
+        $column = match ($kind) {
+            'messages' => 'email_notify_messages',
+            'likes' => 'email_notify_likes',
+            'matches' => 'email_notify_matches',
+            default => null,
+        };
+
+        if ($column === null) {
+            return false;
+        }
+
+        if (! (bool) ($recipient->{$column} ?? true)) {
+            return false;
+        }
+
         $email = trim((string) ($recipient->email ?? ''));
 
         if ($email === '') {
@@ -52,6 +79,30 @@ class DatingEmailNotifier
     }
 
     /**
+     * Догрузить получателя целиком, если пришёл урезанный select.
+     *
+     * MessageController выбирает только нужные колонки ради скорости —
+     * email-тумблера там может не быть, тогда перечитываем строкой.
+     *
+     * @param User $recipient возможно урезанная модель
+     * @return User|null полная модель или null
+     */
+    private static function resolveRecipient(User $recipient): ?User
+    {
+        $attributes = $recipient->getAttributes();
+
+        if (array_key_exists('email_notify_messages', $attributes)) {
+            return $recipient;
+        }
+
+        try {
+            return $recipient->fresh();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
      * Напомнить о новом лайке анкеты.
      *
      * @param User $liker автор лайка
@@ -62,7 +113,7 @@ class DatingEmailNotifier
      */
     public static function liked(User $liker, User $liked, bool $isIncognito = false, bool $isSuperlike = false): void
     {
-        if (! self::canNotify($liked)) {
+        if (! self::canNotify($liked, 'likes')) {
             return;
         }
 
@@ -94,7 +145,7 @@ class DatingEmailNotifier
      */
     public static function matched(User $actor, User $other, int $matchId): void
     {
-        if (! self::canNotify($other)) {
+        if (! self::canNotify($other, 'matches')) {
             return;
         }
 
@@ -116,7 +167,7 @@ class DatingEmailNotifier
      */
     public static function newMessage(User $sender, User $recipient, Conversation $conversation, string $preview): void
     {
-        if (! self::canNotify($recipient)) {
+        if (! self::canNotify($recipient, 'messages')) {
             return;
         }
 

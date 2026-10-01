@@ -14,7 +14,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['name', 'profile_slug', 'email', 'password', 'gender', 'birth_date', 'country', 'country_code', 'plan', 'latitude', 'longitude', 'role', 'account_type', 'is_admin', 'is_hidden_from_search', 'profile_hidden_at', 'deletion_requested_at', 'deletion_scheduled_at', 'deletion_pro_until', 'dating_enabled', 'dating_goal', 'signup_goal', 'default_mode', 'default_mode_set_at', 'enabled_modules', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_gender_pref', 'dating_hide_name', 'dating_hide_age', 'dating_hide_distance', 'dating_match_only', 'random_chats_used', 'random_chats_month', 'superlikes_day', 'superlikes_used', 'superlikes_balance', 'boosts_balance', 'boost_until', 'boost_month', 'undos_day', 'undos_used', 'avatar_path', 'home_lat', 'home_lng', 'home_city', 'home_address', 'home_visibility', 'home_show_exact', 'home_radius_km', 'bio', 'thought', 'reputation_score', 'level', 'quest_cooldown_until', 'quest_last_track', 'quest_granted_at', 'is_anonymous_default', 'default_location_precision', 'default_blur_meters', 'message_privacy', 'allow_random_messages', 'call_cooldown_enabled', 'video_calls_enabled', 'photo_comments_privacy', 'flow_comments_privacy', 'auto_reply_enabled', 'auto_reply_text', 'settings', 'last_seen_at', 'is_invisible', 'screen_lock_code', 'screen_lock_timeout', 'screen_lock_kind', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at', 'terms_accepted_at', 'terms_version', 'telegram_id', 'telegram_username', 'telegram_photo_url', 'telegram_linked_at', 'telegram_notify_messages', 'telegram_notify_likes', 'telegram_notify_matches', 'telegram_notify_comments', 'telegram_blocked_at'])]
+#[Fillable(['name', 'profile_slug', 'email', 'password', 'gender', 'birth_date', 'country', 'country_code', 'plan', 'latitude', 'longitude', 'role', 'account_type', 'is_admin', 'is_hidden_from_search', 'profile_hidden_at', 'deletion_requested_at', 'deletion_scheduled_at', 'deletion_pro_until', 'dating_enabled', 'dating_goal', 'signup_goal', 'default_mode', 'default_mode_set_at', 'enabled_modules', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_gender_pref', 'dating_hide_name', 'dating_hide_age', 'dating_hide_distance', 'dating_match_only', 'random_chats_used', 'random_chats_month', 'superlikes_day', 'superlikes_used', 'superlikes_balance', 'boosts_balance', 'boost_until', 'boost_month', 'undos_day', 'undos_used', 'avatar_path', 'home_lat', 'home_lng', 'home_city', 'home_address', 'home_visibility', 'home_show_exact', 'home_radius_km', 'bio', 'thought', 'reputation_score', 'level', 'quest_cooldown_until', 'quest_last_track', 'quest_granted_at', 'is_anonymous_default', 'default_location_precision', 'default_blur_meters', 'message_privacy', 'allow_random_messages', 'call_cooldown_enabled', 'video_calls_enabled', 'photo_comments_privacy', 'flow_comments_privacy', 'auto_reply_enabled', 'auto_reply_text', 'settings', 'last_seen_at', 'is_invisible', 'screen_lock_code', 'screen_lock_timeout', 'screen_lock_kind', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at', 'terms_accepted_at', 'terms_version', 'telegram_id', 'telegram_username', 'telegram_photo_url', 'telegram_linked_at', 'telegram_notify_messages', 'telegram_notify_likes', 'telegram_notify_matches', 'telegram_notify_comments', 'telegram_blocked_at', 'telegram_notify_enabled', 'email_notify_messages', 'email_notify_likes', 'email_notify_matches', 'telegram_dm_messages', 'telegram_dm_likes', 'telegram_dm_matches', 'telegram_dm_comments'])]
 #[Hidden(['password', 'remember_token', 'screen_lock_code'])]
 /**
  * Пользователь приложения.
@@ -39,6 +39,14 @@ use Illuminate\Support\Facades\Storage;
  * @property bool $telegram_notify_matches Слать в Telegram о взаимных мэтчах.
  * @property bool $telegram_notify_comments Слать в Telegram о комментариях.
  * @property \Carbon\Carbon|null $telegram_blocked_at Когда Bot API вернул 403 (нет /start или блок).
+ * @property bool $telegram_notify_enabled Мастер-тумблер Telegram-дублей (бот-карточки и личка; выкл глушит всё разом).
+ * @property bool $email_notify_messages Дублировать на почту новые сообщения.
+ * @property bool $email_notify_likes Дублировать на почту лайки анкеты.
+ * @property bool $email_notify_matches Дублировать на почту взаимные мэтчи.
+ * @property bool $telegram_dm_messages Короткие личные дубли сообщений в чат с ботом.
+ * @property bool $telegram_dm_likes Короткие личные дубли лайков в чат с ботом.
+ * @property bool $telegram_dm_matches Короткие личные дубли мэтчей в чат с ботом.
+ * @property bool $telegram_dm_comments Короткие личные дубли комментариев в чат с ботом.
  */
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -88,6 +96,25 @@ class User extends Authenticatable implements MustVerifyEmail
 
         if ($this->isPlanExpired()) return 'free';
         return $this->plan ?? 'free';
+    }
+
+    /**
+     * Техническая ли почта Telegram-регистрации (только логин, не для писем).
+     *
+     * Автосозданные через Mini App получают `tg_{id}@telegram.local` —
+     * уведомления на неё не дойдут, нужна реальная почта в опциях бота.
+     *
+     * @return bool true когда почта техническая и её стоит заменить
+     */
+    public function hasTechnicalTelegramEmail(): bool
+    {
+        $email = mb_strtolower(trim((string) ($this->email ?? '')));
+
+        if ($email === '') {
+            return true;
+        }
+
+        return str_starts_with($email, 'tg_') && str_ends_with($email, '@telegram.local');
     }
 
     protected static function booted(): void
@@ -1084,6 +1111,14 @@ class User extends Authenticatable implements MustVerifyEmail
             'telegram_notify_matches' => 'boolean',
             'telegram_notify_comments' => 'boolean',
             'telegram_blocked_at' => 'datetime',
+            'telegram_notify_enabled' => 'boolean',
+            'email_notify_messages' => 'boolean',
+            'email_notify_likes' => 'boolean',
+            'email_notify_matches' => 'boolean',
+            'telegram_dm_messages' => 'boolean',
+            'telegram_dm_likes' => 'boolean',
+            'telegram_dm_matches' => 'boolean',
+            'telegram_dm_comments' => 'boolean',
             'bio' => EncryptedTextCast::class,
             'thought' => EncryptedTextCast::class,
             'dating_about' => EncryptedTextCast::class,

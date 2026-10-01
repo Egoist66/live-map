@@ -154,8 +154,15 @@ class TelegramInsights
         $matches = self::matches($fresh);
         $unread = self::unreadCount($fresh);
 
+        $totalUsers = self::totalUsers();
+
         $lines = [];
         $lines[] = '📊 <b>Ваша статистика</b>';
+
+        if ($totalUsers > 0) {
+            $lines[] = '👥 Нас в приложении уже: <b>'.$totalUsers.'</b>';
+        }
+
         $lines[] = '';
         $lines[] = '💎 Тариф: <b>'.$planLabel.'</b>';
         $lines[] = '⭐ Уровень: <b>'.$level.'</b> · Репутация: <b>'.$reputation.'</b>';
@@ -175,6 +182,24 @@ class TelegramInsights
         }
 
         return implode("\n", $lines);
+    }
+
+    /**
+     * Сколько людей в приложении (без технического гостя).
+     *
+     * Кэшируем на 10 минут: цифра для витрины, а не realtime-счётчик.
+     *
+     * @return int
+     */
+    public static function totalUsers(): int
+    {
+        try {
+            return (int) \Illuminate\Support\Facades\Cache::remember('tg:total_users', 600, function (): int {
+                return (int) User::where('id', '!=', User::GHOST_USER_ID)->count();
+            });
+        } catch (\Throwable) {
+            return 0;
+        }
     }
 
     /**

@@ -94,6 +94,77 @@ class TelegramBotApi
     }
 
     /**
+     * Отправить фото-карточку с подписью и кнопками.
+     *
+     * Подпись режем до 1000 символов (лимит Bot API — 1024):
+     * обрезанная подпись лучше потерянного письма.
+     *
+     * @param int $chatId telegram_id получателя
+     * @param string $photoUrl абсолютный https-URL фото
+     * @param string $caption подпись в HTML-разметке
+     * @param array<int, array<int, array<string, mixed>>> $keyboard ряды inline-кнопок
+     * @return array<string, mixed>|null result sendPhoto или null при ошибке
+     */
+    public static function sendPhoto(int $chatId, string $photoUrl, string $caption, array $keyboard = []): ?array
+    {
+        $payload = [
+            'chat_id' => $chatId,
+            'photo' => $photoUrl,
+            'caption' => mb_substr($caption, 0, 1000),
+            'parse_mode' => 'HTML',
+        ];
+
+        if ($keyboard !== []) {
+            $payload['reply_markup'] = ['inline_keyboard' => $keyboard];
+        }
+
+        return self::post('sendPhoto', $payload);
+    }
+
+    /**
+     * Перерисовать подпись+клавиатуру под фото-карточкой.
+     *
+     * @param int $chatId telegram_id владельца
+     * @param int $messageId id сообщения с фото
+     * @param string $caption новая подпись в HTML-разметке
+     * @param array<int, array<int, array<string, mixed>>> $keyboard новые ряды кнопок
+     * @return bool true при успехе
+     */
+    public static function editCaption(int $chatId, int $messageId, string $caption, array $keyboard = []): bool
+    {
+        $payload = [
+            'chat_id' => $chatId,
+            'message_id' => $messageId,
+            'caption' => mb_substr($caption, 0, 1000),
+            'parse_mode' => 'HTML',
+        ];
+
+        if ($keyboard !== []) {
+            $payload['reply_markup'] = ['inline_keyboard' => $keyboard];
+        }
+
+        return self::post('editMessageCaption', $payload) !== null;
+    }
+
+    /**
+     * Удалить сообщение бота (смена типа карточки текст↔фото).
+     *
+     * editMessageText не правит фото и наоборот: старую карточку
+     * удаляем и шлём новую нужного типа следующим сообщением.
+     *
+     * @param int $chatId telegram_id владельца
+     * @param int $messageId что удалить
+     * @return bool true при успехе
+     */
+    public static function deleteMessage(int $chatId, int $messageId): bool
+    {
+        return self::post('deleteMessage', [
+            'chat_id' => $chatId,
+            'message_id' => $messageId,
+        ]) !== null;
+    }
+
+    /**
      * Ответить на нажатие inline-кнопки (тост сверху).
      *
      * @param string $callbackId id callback_query
@@ -126,7 +197,7 @@ class TelegramBotApi
      * Важно: menu_button специально типа `commands`, а не `web_app`.
      * Кнопка web_app подменяла нативный «Меню» у поля ввода — список
      * команд пропадал и их приходилось вспоминать/печатать вручную.
-     * С `commands` инпут всегда показывает «Меню» со всеми 14 командами,
+     * С `commands` инпут всегда показывает «Меню» со всеми командами,
      * а Mini App открывается инлайн-кнопками 🌐 в каждой панели + /app.
      *
      * Вызывается из команды telegram:setup-bot, не из вебхука.
@@ -154,14 +225,22 @@ class TelegramBotApi
             'commands' => [
                 ['command' => 'start', 'description' => '👋 Запуск и главное меню'],
                 ['command' => 'app', 'description' => '🌐 Открыть Mini App'],
-                ['command' => 'profile', 'description' => '👤 Моя анкета: stats + скрыть/вернуть'],
+                ['command' => 'profile', 'description' => '👤 Моя анкета с фото и подробностями'],
+                ['command' => 'find', 'description' => '🔥 Найти мэтч здесь: свайпы в чате'],
+                ['command' => 'online', 'description' => '🟢 Кто сейчас в ULove'],
+                ['command' => 'favorites', 'description' => '⭐ Избранное по тарифу'],
+                ['command' => 'reset', 'description' => '🔄 Сброс просмотренных свайпов'],
+                ['command' => 'switch', 'description' => '🔀 Переключиться на другой аккаунт'],
+                ['command' => 'account', 'description' => '👤 Какой аккаунт привязан к боту'],
                 ['command' => 'hide', 'description' => '🙈 Скрыть анкету ото всех'],
                 ['command' => 'show', 'description' => '👀 Вернуть анкету в поиск'],
                 ['command' => 'likes', 'description' => '💞 Кто лайкнул меня'],
                 ['command' => 'matches', 'description' => '🎉 Мои мэтчи'],
                 ['command' => 'messages', 'description' => '💬 Непрочитанные сообщения'],
                 ['command' => 'stats', 'description' => '📊 Уровень, репутация, тариф'],
-                ['command' => 'notify', 'description' => '🔔 Уведомления: вкл/выкл'],
+                ['command' => 'plan', 'description' => '💎 Мой тариф и выбор плана'],
+                ['command' => 'email', 'description' => '📧 Моя почта для уведомлений'],
+                ['command' => 'notify', 'description' => '🔔 Куда слать: бот, почта, личка'],
                 ['command' => 'sessions', 'description' => '📱 Активные сеансы: завершить или забанить'],
                 ['command' => 'password', 'description' => '🔑 Пароль для входа с компьютера'],
                 ['command' => 'help', 'description' => '✨ Все возможности бота'],

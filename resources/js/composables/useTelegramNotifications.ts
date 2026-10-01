@@ -2,16 +2,37 @@ import { computed, ref } from 'vue'
 import { api } from '@/services/api'
 
 export interface TelegramNotifyPrefs {
+  notify_enabled: boolean
   notify_messages: boolean
   notify_likes: boolean
   notify_matches: boolean
   notify_comments: boolean
+  email_messages: boolean
+  email_likes: boolean
+  email_matches: boolean
+  dm_messages: boolean
+  dm_likes: boolean
+  dm_matches: boolean
+  dm_comments: boolean
 }
 
 const linked = ref(false)
 const canNotify = ref(false)
 const botUsername = ref('U1ove_bot')
-const prefs = ref<TelegramNotifyPrefs>({ notify_messages: true, notify_likes: true, notify_matches: true, notify_comments: true })
+const prefs = ref<TelegramNotifyPrefs>({
+  notify_enabled: true,
+  notify_messages: true,
+  notify_likes: true,
+  notify_matches: true,
+  notify_comments: true,
+  email_messages: true,
+  email_likes: true,
+  email_matches: true,
+  dm_messages: false,
+  dm_likes: false,
+  dm_matches: false,
+  dm_comments: false,
+})
 const loading = ref(false)
 const loaded = ref(false)
 const saving = ref(false)
@@ -80,10 +101,18 @@ export function useTelegramNotifications() {
           botUsername.value = data.bot_username
         }
         prefs.value = {
+          notify_enabled: data.notify_enabled ?? true,
           notify_messages: data.notify_messages ?? true,
           notify_likes: data.notify_likes ?? true,
           notify_matches: data.notify_matches ?? true,
           notify_comments: data.notify_comments ?? true,
+          email_messages: data.email_messages ?? true,
+          email_likes: data.email_likes ?? true,
+          email_matches: data.email_matches ?? true,
+          dm_messages: data.dm_messages ?? false,
+          dm_likes: data.dm_likes ?? false,
+          dm_matches: data.dm_matches ?? false,
+          dm_comments: data.dm_comments ?? false,
         }
         loaded.value = true
       } catch (requestError: unknown) {
@@ -153,10 +182,18 @@ export function useTelegramNotifications() {
       const response = await api.patch('/api/telegram/preferences', patch)
       const data = response.data ?? {}
       prefs.value = {
+        notify_enabled: data.notify_enabled ?? prefs.value.notify_enabled,
         notify_messages: data.notify_messages ?? prefs.value.notify_messages,
         notify_likes: data.notify_likes ?? prefs.value.notify_likes,
         notify_matches: data.notify_matches ?? prefs.value.notify_matches,
         notify_comments: data.notify_comments ?? prefs.value.notify_comments,
+        email_messages: data.email_messages ?? prefs.value.email_messages,
+        email_likes: data.email_likes ?? prefs.value.email_likes,
+        email_matches: data.email_matches ?? prefs.value.email_matches,
+        dm_messages: data.dm_messages ?? prefs.value.dm_messages,
+        dm_likes: data.dm_likes ?? prefs.value.dm_likes,
+        dm_matches: data.dm_matches ?? prefs.value.dm_matches,
+        dm_comments: data.dm_comments ?? prefs.value.dm_comments,
       }
       return true
     } catch {

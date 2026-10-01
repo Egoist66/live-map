@@ -42,6 +42,8 @@ Route::middleware('throttle:120,1')->post('/telegram/webhook', \App\Http\Control
 Route::middleware(['web', 'auth:web,sanctum'])->group(function () {
     Route::get('/telegram/status', [\App\Http\Controllers\TelegramAuthController::class, 'status'])->middleware('throttle:telegram-status');
     Route::patch('/telegram/preferences', [\App\Http\Controllers\TelegramAuthController::class, 'preferences'])->middleware('throttle:telegram-status');
+    Route::patch('/telegram/email', [\App\Http\Controllers\TelegramAuthController::class, 'updateEmail'])->middleware('throttle:telegram-status');
+    Route::post('/telegram/switch-code', [\App\Http\Controllers\TelegramAuthController::class, 'switchCode'])->middleware('throttle:telegram-status');
     Route::delete('/telegram/link', [\App\Http\Controllers\TelegramAuthController::class, 'unlink'])->middleware('throttle:telegram-status');
 });
 

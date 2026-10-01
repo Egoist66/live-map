@@ -14,6 +14,7 @@ use App\Services\ImageOptimizer;
 use App\Services\Mentions;
 use App\Services\PinActivityNotifier;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class ProfilePhotoController extends Controller
@@ -341,12 +342,50 @@ class ProfilePhotoController extends Controller
     {
         $viewer = $request->user();
         abort_unless($viewer->id === $photo->user_id || $viewer->isAdmin(), 403);
+        abort_if(empty($photo->path), 422, 'У фото нет файла');
 
         $owner = $photo->user()->first() ?? $viewer;
-        $owner->forceFill(['avatar_path' => $photo->path])->save();
 
-        $minOrder = (int) ($owner->profilePhotos()->min('sort_order') ?? 0);
-        $photo->forceFill(['sort_order' => $minOrder - 1])->save();
+        DB::transaction(function () use ($owner, $photo): void {
+            $lockedOwner = User::whereKey($owner->id)->lockForUpdate()->first();
+            abort_unless($lockedOwner, 404);
+
+            $lockedPhoto = ProfilePhoto::whereKey($photo->id)->lockForUpdate()->first();
+            abort_unless($lockedPhoto, 404);
+            abort_if(empty($lockedPhoto->path), 422, 'У фото нет файла');
+
+            $minOrder = (int) ($lockedOwner->profilePhotos()->min('sort_order') ?? 0);
+
+            if ($minOrder > 0) {
+                $lockedOwner->forceFill(['avatar_path' => $lockedPhoto->path])->save();
+                $lockedPhoto->forceFill(['sort_order' => $minOrder - 1])->save();
+
+                return;
+            }
+
+            // sort_order — unsigned: min - 1 при min <= 0 давал 500
+            // (Out of range value). Перенумеровываем: главному — 0,
+            // остальным — 10, 20, 30… Работает и на unsigned, и на signed.
+            $orderedIds = $lockedOwner->profilePhotos()
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->pluck('id')
+                ->all();
+
+            $order = 10;
+
+            foreach ($orderedIds as $orderedId) {
+                if ((int) $orderedId === (int) $lockedPhoto->id) {
+                    continue;
+                }
+
+                ProfilePhoto::whereKey($orderedId)->update(['sort_order' => $order]);
+                $order += 10;
+            }
+
+            $lockedOwner->forceFill(['avatar_path' => $lockedPhoto->path])->save();
+            $lockedPhoto->forceFill(['sort_order' => 0])->save();
+        });
 
         $fresh = $photo->refresh();
         $payload = $this->serialize($fresh, $viewer);

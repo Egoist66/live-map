@@ -97,7 +97,7 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
           </Swiper>
           <Button v-if="gallery.photos.value.length > 1" icon="pi pi-chevron-left" rounded text size="small" class="!absolute left-1.5 top-1/2 -translate-y-1/2 z-10 !bg-black/40 !text-white !border-0 !w-9 !h-9" @click="gallery.stepPhoto(-1)" aria-label="Назад" />
           <Button v-if="gallery.photos.value.length > 1" icon="pi pi-chevron-right" rounded text size="small" class="!absolute right-1.5 top-1/2 -translate-y-1/2 z-10 !bg-black/40 !text-white !border-0 !w-9 !h-9" @click="gallery.stepPhoto(1)" aria-label="Вперёд" />
-          <span v-if="gallery.active.value?.is_main" class="absolute left-2 top-2 z-10 rounded-full bg-violet-600 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white shadow">Главная</span>
+          <span v-if="gallery.active.value?.is_main" title="Главная" aria-label="Главная фотография" class="absolute left-2 top-2 z-10 grid h-8 w-8 place-items-center rounded-full bg-violet-600 text-white shadow"><i class="pi pi-star-fill text-xs" /></span>
         </div>
         <div class="px-4 pt-2.5 flex items-center gap-1">
           <Button :icon="gallery.active.value.liked ? 'pi pi-heart-fill' : 'pi pi-heart'" rounded text :loading="viewer.likeLoading.value" :class="['!w-10 !h-10', gallery.active.value.liked ? '!text-red-500' : '']" @click="viewer.onLike()" :aria-label="gallery.active.value.liked ? 'Убрать лайк' : 'Лайк'" v-tooltip.bottom="photoLikers.tooltip.value" @mouseenter="photoLikers.ensure()" />
@@ -107,7 +107,7 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
             <Button icon="pi pi-pencil" rounded text class="!w-10 !h-10" @click="viewer.editing.value ? viewer.cancelEdit() : viewer.startEdit()" aria-label="Редактировать подпись" />
             <Button icon="pi pi-refresh" rounded text class="!w-10 !h-10" @click="viewer.onPickReplace" aria-label="Заменить фото" />
             <Button v-if="!gallery.active.value.is_main" icon="pi pi-star" rounded text class="!w-10 !h-10" :loading="gallery.settingMain?.value" aria-label="Сделать главной" title="Сделать главной" @click="emit('make-main', gallery.active.value)" />
-            <span v-else class="inline-flex items-center gap-1 rounded-full bg-violet-600/10 px-2.5 py-1 text-[11px] font-black uppercase tracking-wide text-violet-700 dark:text-violet-300"><i class="pi pi-star-fill text-[10px]" />Главная</span>
+            <span v-else title="Главная" aria-label="Главная фотография" class="inline-grid h-10 w-10 place-items-center rounded-full bg-violet-600/10 text-violet-700 dark:text-violet-300"><i class="pi pi-star-fill text-sm" /></span>
             <input :ref="viewer.setReplaceInput" type="file" accept="image/*" class="hidden" @change="viewer.onReplaceFile" />
           </template>
         </div>

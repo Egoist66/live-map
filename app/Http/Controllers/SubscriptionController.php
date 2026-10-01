@@ -12,6 +12,12 @@ use Illuminate\Http\Request;
  * продления: «Продлить» сдвигает срок на месяц вперёд,
  * «Отказаться» сразу откатывает на free.
  *
+ * Важно: платные тарифы нельзя просто взять кнопкой — сначала оплата
+ * (перевод на карту/счёт, шлюз в разработке). Поэтому renew() для
+ * pro/premium/business отвечает 402 payment_required с заглушкой,
+ * мгновенно переключается только откат на free. Подарочные выдачи
+ * (удаление с PRO-приманкой, админ) идут мимо контроллера и работают.
+ *
  * Premium — топ-тариф для стаффа (админ/модератор получают его
  * по умолчанию через effectivePlan), Business — только для
  * организаторов (кабинет компании).
@@ -39,10 +45,16 @@ class SubscriptionController extends Controller
     }
 
     /**
+     * Текст-заглушка оплаты платных тарифов (шлюз в разработке).
+     */
+    public const PAYMENT_NOTE = 'Оплата в разработке: тарифы PRO/Premium подключаются после оплаты переводом на карту или счёт. Напишите в поддержку — после подтверждения оплаты тариф включат вручную.';
+
+    /**
      * Продлить подписку на месяц вперёд.
      *
-     * База — будущий срок того же тарифа, иначе «сейчас»:
-     * досрочное продление не съедает оплаченные дни.
+     * Платные тарифы кнопкой не выдаются: сначала оплата, поэтому
+     * отвечаем 402 payment_required с заглушкой. Мгновенно работает
+     * только откат на free через cancel().
      *
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
@@ -61,23 +73,11 @@ class SubscriptionController extends Controller
             return response()->json(['message' => 'Тариф Business — только для организаторов (кабинет компании).'], 422);
         }
 
-        $base = now();
-        try {
-            $currentExpiry = $me->plan_expires_at ? \Carbon\Carbon::parse($me->plan_expires_at) : null;
-        } catch (\Throwable) {
-            $currentExpiry = null;
-        }
-
-        if ($me->plan === $plan && $currentExpiry && $currentExpiry->isFuture()) {
-            $base = $currentExpiry;
-        }
-
-        $me->forceFill([
+        return response()->json([
+            'message' => self::PAYMENT_NOTE,
+            'payment_required' => true,
             'plan' => $plan,
-            'plan_expires_at' => $base->copy()->addDays(self::PERIOD_DAYS),
-        ])->save();
-
-        return response()->json($this->state($me->refresh()));
+        ], 402);
     }
 
     /**

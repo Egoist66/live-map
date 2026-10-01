@@ -64,14 +64,53 @@ class AvatarController extends Controller
      * @param string|null $oldPath предыдущий avatar_path (его слот переиспользуем)
      * @return void
      */
+    /**
+     * Безопасный минимальный sort_order для главного фото.
+     *
+     * Колонка sort_order — unsigned: min - 1 при min <= 0 ронял MySQL
+     * (Out of range value). Тогда перенумеровываем чужие фото
+     * в 10, 20, 30… и возвращаем 0 для главного.
+     *
+     * @param User $user владелец галереи
+     * @param int|null $mainId id главного фото (его пропускаем при перенумерации)
+     * @return int sort_order для главного фото
+     */
+    private function safeFirstOrder(User $user, ?int $mainId = null): int
+    {
+        $minOrder = (int) ($user->profilePhotos()->min('sort_order') ?? 0);
+
+        if ($minOrder > 0) {
+            return $minOrder - 1;
+        }
+
+        $orderedIds = $user->profilePhotos()
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->pluck('id')
+            ->all();
+
+        $order = 10;
+
+        foreach ($orderedIds as $orderedId) {
+            if ($mainId !== null && (int) $orderedId === (int) $mainId) {
+                continue;
+            }
+
+            \App\Models\ProfilePhoto::whereKey($orderedId)->update(['sort_order' => $order]);
+            $order += 10;
+        }
+
+        return 0;
+    }
+
     private function mirrorAvatarToGallery(User $user, string $path, string $disk, ?string $oldPath = null): void
     {
         try {
             $existing = $user->profilePhotos()->where('path', $path)->first();
 
             if ($existing) {
-                $minOrder = (int) ($user->profilePhotos()->min('sort_order') ?? 0);
-                $existing->forceFill(['sort_order' => $minOrder - 1])->save();
+                $first = $this->safeFirstOrder($user, (int) $existing->id);
+                $existing->forceFill(['sort_order' => $first])->save();
                 return;
             }
 
@@ -85,10 +124,8 @@ class AvatarController extends Controller
                 }
             };
 
-            $firstOrder = static function () use ($user): int {
-                $minOrder = (int) ($user->profilePhotos()->min('sort_order') ?? 0);
-
-                return $minOrder - 1;
+            $firstOrder = function () use ($user): int {
+                return $this->safeFirstOrder($user);
             };
 
             if ($oldPath && $oldPath !== $path) {
@@ -103,7 +140,8 @@ class AvatarController extends Controller
                         $oldPhoto->forceFill(['thumb_path' => $thumbPath])->save();
                     }
 
-                    $oldPhoto->forceFill(['sort_order' => $firstOrder()])->save();
+                    $first = $this->safeFirstOrder($user, (int) $oldPhoto->id);
+                    $oldPhoto->forceFill(['sort_order' => $first])->save();
 
                     return;
                 }

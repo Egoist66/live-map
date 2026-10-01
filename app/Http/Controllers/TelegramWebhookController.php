@@ -4,18 +4,29 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Services\AccountDeletionService;
+use App\Services\DatingService;
 use App\Services\ProfileVisibilityService;
+use App\Services\TelegramAccountPanel;
+use App\Services\TelegramAccountSwitch;
 use App\Services\TelegramBotApi;
+use App\Services\TelegramCardSender;
 use App\Services\TelegramDeletionFlow;
+use App\Services\TelegramEmailPanel;
+use App\Services\TelegramFavoritesPanel;
 use App\Services\TelegramInsights;
 use App\Services\TelegramMenu;
 use App\Services\TelegramNotifyPanel;
+use App\Services\TelegramOnlinePanel;
 use App\Services\TelegramPasswordService;
+use App\Services\TelegramPlanPanel;
 use App\Services\TelegramProfilePanel;
+use App\Services\TelegramResetPanel;
 use App\Services\TelegramSessionActions;
 use App\Services\TelegramSessionsPanel;
+use App\Services\TelegramSwipePanel;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -24,13 +35,21 @@ use Illuminate\Support\Facades\Log;
  * Команды (см. TelegramBotApi::setup):
  * - /start, /app, /help — вход и навигация;
  * - /profile, /hide, /show — видимость анкеты;
+ * - /find — свайпы кнопками прямо в чате (лайк/пас по одной анкете);
  * - /likes, /matches, /messages, /stats — живые инсайты;
+ * - /online — кто сейчас в ULove (онлайн) с лайками из списка;
+ * - /favorites — избранное по тарифу + кому можно написать;
+ * - /reset — сброс просмотренных (Free — раз, PRO — безлимит);
+ * - /switch — переключение на другой аккаунт по коду с сайта;
+ * - /account — какой аккаунт привязан к боту;
+ * - /plan — мой тарифный план и выбор тарифа (платные — после оплаты);
+ * - /email — основная почта для уведомлений (технический tg-логин не подходит);
  * - /notify — тумблеры уведомлений;
  * - /sessions — панель сеансов (kill/ban);
  * - /password — новый пароль для входа с компьютера (показ один раз);
  * - /delete, /restore — отложенное удаление с приманкой (PRO-неделя + 14 дней grace).
  *
- * Колбэки короче 64 байт: sess*, prof_*, go_*, ntg_*, del_*.
+ * Колбэки короче 64 байт: sess*, prof_*, go_*, ntg_*, del_*, sw_*, plan_*, email_*.
  * Навигация: go_menu — главное меню, go_help — список всех команд,
  * остальные go_* — разделы без нового сообщения (перерисовка).
  * После каждого действия панель перерисовываем через
@@ -110,38 +129,57 @@ class TelegramWebhookController extends Controller
         }
 
         $rawText = trim((string) ($message['text'] ?? ''));
-        $command = mb_strtolower(explode(' ', $rawText)[0] ?? '');
-        $command = explode('@', $command)[0];
 
-        if ($command === '') {
-            return;
-        }
-
-        if ($command !== '/start' && ! str_starts_with($command, '/')) {
+        if ($rawText === '') {
             return;
         }
 
         $user = $this->findUser($fromId);
 
         if ($user === null) {
-            $this->replyUnlinked($chatId, $command);
+            $this->handleUnlinkedMessage($chatId, $fromId, $rawText);
 
             return;
         }
 
         $this->clearBlockedFlag($user);
 
+        if (! str_starts_with($rawText, '/')) {
+            $this->handlePlainText($user, $chatId, $fromId, $rawText);
+
+            return;
+        }
+
+        $parts = explode(' ', $rawText, 2);
+        $command = mb_strtolower($parts[0] ?? '');
+        $command = explode('@', $command)[0];
+        $argument = trim((string) ($parts[1] ?? ''));
+
+        if (($command === '/switch' || $command === '/account') && $argument !== '') {
+            $this->handleSwitchCode($user, $chatId, $fromId, $argument);
+
+            return;
+        }
+
         match ($command) {
             '/start' => $this->replyStart($user, $chatId),
             '/app' => $this->replyApp($user, $chatId),
             '/help' => $this->replyHelp($chatId),
             '/profile' => $this->replyProfile($user, $chatId),
+            '/find' => $this->replyFind($user, $chatId),
             '/hide' => $this->replyHide($user, $chatId),
             '/show' => $this->replyShow($user, $chatId),
             '/likes' => $this->replyLikes($user, $chatId),
             '/matches' => $this->replyMatches($user, $chatId),
             '/messages' => $this->replyMessages($user, $chatId),
             '/stats' => $this->replyStats($user, $chatId),
+            '/online' => $this->replyOnline($user, $chatId),
+            '/favorites', '/fav' => $this->replyFav($user, $chatId),
+            '/reset' => $this->replyReset($user, $chatId),
+            '/switch' => $this->replyAccount($user, $chatId, true),
+            '/account' => $this->replyAccount($user, $chatId),
+            '/plan' => $this->replyPlan($user, $chatId),
+            '/email' => $this->replyEmail($user, $chatId),
             '/notify' => $this->replyNotify($user, $chatId),
             '/sessions' => $this->replySessions($user, $chatId),
             '/password' => $this->replyPasswordAsk($user, $chatId),
@@ -280,8 +318,9 @@ class TelegramWebhookController extends Controller
 
         if ($data === 'prof_hide') {
             $updated = ProfileVisibilityService::hide($fresh);
-            $panel = TelegramProfilePanel::build($updated);
-            TelegramBotApi::editPanel($chatId, $messageId, $panel['text'], $panel['keyboard']);
+            $full = TelegramProfilePanel::full($updated);
+
+            TelegramCardSender::redraw($chatId, $messageId, $full['photoUrl'], $full['text'], $full['keyboard']);
             TelegramBotApi::answerCallback($callbackId, '🙈 Анкета скрыта — вас никто не видит');
 
             return true;
@@ -289,8 +328,9 @@ class TelegramWebhookController extends Controller
 
         if ($data === 'prof_show' || $data === 'prof_refresh') {
             $updated = ProfileVisibilityService::show($fresh);
-            $panel = TelegramProfilePanel::build($updated);
-            TelegramBotApi::editPanel($chatId, $messageId, $panel['text'], $panel['keyboard']);
+            $full = TelegramProfilePanel::full($updated);
+
+            TelegramCardSender::redraw($chatId, $messageId, $full['photoUrl'], $full['text'], $full['keyboard']);
 
             $toast = $data === 'prof_show' ? '👀 Анкета снова видна' : 'Список обновлён';
             TelegramBotApi::answerCallback($callbackId, $toast);
@@ -319,14 +359,133 @@ class TelegramWebhookController extends Controller
         }
 
         if ($data === 'go_profile') {
-            $panel = TelegramProfilePanel::build($fresh);
-            TelegramBotApi::editPanel($chatId, $messageId, $panel['text'], $panel['keyboard']);
+            $full = TelegramProfilePanel::full($fresh);
+
+            TelegramCardSender::redraw($chatId, $messageId, $full['photoUrl'], $full['text'], $full['keyboard']);
             TelegramBotApi::answerCallback($callbackId, 'Моя анкета');
 
             return true;
         }
 
-        if ($data === 'ntg_msg' || $data === 'ntg_like' || $data === 'ntg_match' || $data === 'ntg_cmt') {
+        if ($data === 'go_email') {
+            $panel = TelegramEmailPanel::build($fresh);
+            TelegramBotApi::editPanel($chatId, $messageId, $panel['text'], $panel['keyboard']);
+            TelegramBotApi::answerCallback($callbackId, 'Моя почта');
+
+            return true;
+        }
+
+        if ($data === 'email_ask') {
+            $this->rememberEmailWait((int) $fresh->telegram_id);
+            $ask = TelegramEmailPanel::ask();
+            TelegramBotApi::editPanel($chatId, $messageId, $ask['text'], $ask['keyboard']);
+            TelegramBotApi::answerCallback($callbackId, 'Жду почту следующим сообщением 📧');
+
+            return true;
+        }
+
+        if ($data === 'go_plan') {
+            $panel = TelegramPlanPanel::build($fresh);
+            TelegramBotApi::editPanel($chatId, $messageId, $panel['text'], $panel['keyboard']);
+            TelegramBotApi::answerCallback($callbackId, 'Мой тариф');
+
+            return true;
+        }
+
+        if ($data === 'go_plan_list') {
+            $panel = TelegramPlanPanel::list($fresh);
+            TelegramBotApi::editPanel($chatId, $messageId, $panel['text'], $panel['keyboard']);
+            TelegramBotApi::answerCallback($callbackId, 'Выбор тарифа');
+
+            return true;
+        }
+
+        if ($data === 'plan_free' || $data === 'plan_pro' || $data === 'plan_premium' || $data === 'plan_business') {
+            $this->choosePlan($fresh, $data, $chatId, $messageId, $callbackId);
+
+            return true;
+        }
+
+        if ($data === 'sw_find') {
+            $this->editSwipeCard($fresh, $chatId, $messageId, $callbackId);
+
+            return true;
+        }
+
+        if (str_starts_with($data, 'sw_like:') || str_starts_with($data, 'sw_pass:')) {
+            $this->handleSwipeAction($fresh, $data, $chatId, $messageId, $callbackId);
+
+            return true;
+        }
+
+        if (str_starts_with($data, 'sw_view:')) {
+            $this->showCandidate($fresh, $data, $chatId, $messageId, $callbackId);
+
+            return true;
+        }
+
+        if ($data === 'go_online' || str_starts_with($data, 'on_page:')) {
+            $page = $data === 'go_online' ? 1 : (int) substr($data, 8);
+            $panel = TelegramOnlinePanel::build($fresh, $page);
+            TelegramBotApi::editPanel($chatId, $messageId, $panel['text'], $panel['keyboard']);
+            TelegramBotApi::answerCallback($callbackId, 'Кто сейчас в ULove');
+
+            return true;
+        }
+
+        if (str_starts_with($data, 'on_like:')) {
+            $this->handleOnlineLike($fresh, $data, $chatId, $messageId, $callbackId);
+
+            return true;
+        }
+
+        if ($data === 'go_fav' || str_starts_with($data, 'fav_page:')) {
+            $page = $data === 'go_fav' ? 1 : (int) substr($data, 9);
+            $panel = TelegramFavoritesPanel::build($fresh, $page);
+            TelegramBotApi::editPanel($chatId, $messageId, $panel['text'], $panel['keyboard']);
+            TelegramBotApi::answerCallback($callbackId, 'Моё избранное');
+
+            return true;
+        }
+
+        if (str_starts_with($data, 'fav_del:')) {
+            $this->handleFavDelete($fresh, $data, $chatId, $messageId, $callbackId);
+
+            return true;
+        }
+
+        if ($data === 'go_reset') {
+            $panel = TelegramResetPanel::build($fresh);
+            TelegramBotApi::editPanel($chatId, $messageId, $panel['text'], $panel['keyboard']);
+            TelegramBotApi::answerCallback($callbackId, 'Сброс просмотренных');
+
+            return true;
+        }
+
+        if ($data === 'reset_do') {
+            $this->doReset($fresh, $chatId, $messageId, $callbackId);
+
+            return true;
+        }
+
+        if ($data === 'go_account') {
+            $panel = TelegramAccountPanel::build($fresh);
+            TelegramBotApi::editPanel($chatId, $messageId, $panel['text'], $panel['keyboard']);
+            TelegramBotApi::answerCallback($callbackId, 'Мой аккаунт');
+
+            return true;
+        }
+
+        if ($data === 'acc_ask') {
+            TelegramAccountSwitch::rememberWait((int) $fresh->telegram_id);
+            $ask = TelegramAccountPanel::ask();
+            TelegramBotApi::editPanel($chatId, $messageId, $ask['text'], $ask['keyboard']);
+            TelegramBotApi::answerCallback($callbackId, 'Жду код следующим сообщением 🔀');
+
+            return true;
+        }
+
+        if (str_starts_with($data, 'ntg_') || str_starts_with($data, 'nem_') || str_starts_with($data, 'ndm_')) {
             $this->toggleNotify($fresh, $data, $chatId, $messageId, $callbackId);
 
             return true;
@@ -485,9 +644,725 @@ class TelegramWebhookController extends Controller
      */
     private function replyProfile(User $user, int $chatId): void
     {
-        $panel = TelegramProfilePanel::build($user);
+        $full = TelegramProfilePanel::full($user);
+
+        TelegramCardSender::sendCard($chatId, $full['photoUrl'], $full['text'], $full['keyboard']);
+    }
+
+    /**
+     * Панель аккаунта новым сообщением (/account, /switch без кода).
+     *
+     * @param User $user владелец
+     * @param int $chatId куда слать
+     * @param bool $withAsk сразу ли ждать код (после /switch)
+     * @return void
+     */
+    private function replyAccount(User $user, int $chatId, bool $withAsk = false): void
+    {
+        if ($withAsk) {
+            TelegramAccountSwitch::rememberWait((int) (($user->fresh() ?? $user)->telegram_id ?? 0));
+            $ask = TelegramAccountPanel::ask();
+            TelegramBotApi::sendMessage($chatId, $ask['text'], $ask['keyboard']);
+
+            return;
+        }
+
+        $panel = TelegramAccountPanel::build($user);
 
         TelegramBotApi::sendMessage($chatId, $panel['text'], $panel['keyboard']);
+    }
+
+    /**
+     * Кто онлайн новым сообщением (/online).
+     *
+     * @param User $user владелец
+     * @param int $chatId куда слать
+     * @return void
+     */
+    private function replyOnline(User $user, int $chatId): void
+    {
+        $panel = TelegramOnlinePanel::build($user);
+
+        TelegramBotApi::sendMessage($chatId, $panel['text'], $panel['keyboard']);
+    }
+
+    /**
+     * Избранное новым сообщением (/favorites).
+     *
+     * @param User $user владелец
+     * @param int $chatId куда слать
+     * @return void
+     */
+    private function replyFav(User $user, int $chatId): void
+    {
+        $panel = TelegramFavoritesPanel::build($user);
+
+        TelegramBotApi::sendMessage($chatId, $panel['text'], $panel['keyboard']);
+    }
+
+    /**
+     * Сброс просмотренных новым сообщением (/reset).
+     *
+     * @param User $user владелец
+     * @param int $chatId куда слать
+     * @return void
+     */
+    private function replyReset(User $user, int $chatId): void
+    {
+        $panel = TelegramResetPanel::build($user);
+
+        TelegramBotApi::sendMessage($chatId, $panel['text'], $panel['keyboard']);
+    }
+
+    /**
+     * Панель почты новым сообщением (/email).
+     *
+     * @param User $user владелец
+     * @param int $chatId куда слать
+     * @return void
+     */
+    private function replyEmail(User $user, int $chatId): void
+    {
+        $panel = TelegramEmailPanel::build($user);
+
+        TelegramBotApi::sendMessage($chatId, $panel['text'], $panel['keyboard']);
+    }
+
+    /**
+     * Панель тарифа новым сообщением (/plan).
+     *
+     * @param User $user владелец
+     * @param int $chatId куда слать
+     * @return void
+     */
+    private function replyPlan(User $user, int $chatId): void
+    {
+        $panel = TelegramPlanPanel::build($user);
+
+        TelegramBotApi::sendMessage($chatId, $panel['text'], $panel['keyboard']);
+    }
+
+    /**
+     * Режим «Найти мэтч здесь» новым сообщением (/find).
+     *
+     * Сразу показываем первую анкету, чтобы не требовать лишний тап.
+     *
+     * @param User $user владелец
+     * @param int $chatId куда слать
+     * @return void
+     */
+    private function replyFind(User $user, int $chatId): void
+    {
+        $fresh = $user->fresh() ?? $user;
+
+        if (! $this->isAdultForBot($fresh)) {
+            $gate = TelegramSwipePanel::ageGate();
+            TelegramBotApi::sendMessage($chatId, $gate['text'], $gate['keyboard']);
+
+            return;
+        }
+
+        $card = TelegramSwipePanel::nextCard($fresh);
+
+        if ($card === null) {
+            $empty = TelegramSwipePanel::empty();
+            TelegramBotApi::sendMessage($chatId, $empty['text'], $empty['keyboard']);
+
+            return;
+        }
+
+        $built = TelegramSwipePanel::card($card);
+
+        TelegramCardSender::sendCard($chatId, $built['photoUrl'], $built['text'], $built['keyboard']);
+    }
+
+    /**
+     * Обычный текст без слеша: ждём только почту после кнопки «Указать почту».
+     *
+     * Иначе молчим, чтобы не спамить на каждое сообщение.
+     *
+     * @param User $user владелец
+     * @param int $chatId куда отвечать
+     * @param int $telegramId from.id для ключа ожидания
+     * @param string $text присланный текст
+     * @return void
+     */
+    /**
+     * Сообщение от непривязанного Telegram: пробуем код переключения.
+     *
+     * Иначе — подсказка привязать через Mini App.
+     *
+     * @param int $chatId куда отвечать
+     * @param int $telegramId from.id апдейта
+     * @param string $text сырой текст
+     * @return void
+     */
+    private function handleUnlinkedMessage(int $chatId, int $telegramId, string $text): void
+    {
+        $command = mb_strtolower(explode(' ', $text)[0] ?? '');
+        $command = explode('@', $command)[0];
+
+        if ($command === '/start' || $command === '/switch' || $command === '/account') {
+            $argument = trim((string) (explode(' ', $text, 2)[1] ?? ''));
+
+            if ($argument !== '') {
+                $this->linkByCode($chatId, $telegramId, $argument);
+
+                return;
+            }
+        }
+
+        if (TelegramAccountSwitch::looksLikeCode($text)) {
+            $this->linkByCode($chatId, $telegramId, $text);
+
+            return;
+        }
+
+        $this->replyUnlinked($chatId, $command === '' ? '/start' : $command);
+    }
+
+    /**
+     * Привязать непривязанный Telegram к аккаунту по коду с сайта.
+     *
+     * @param int $chatId куда отвечать
+     * @param int $telegramId from.id апдейта
+     * @param string $code 6 цифр
+     * @return void
+     */
+    private function linkByCode(int $chatId, int $telegramId, string $code): void
+    {
+        try {
+            $user = TelegramAccountSwitch::consumeCode($code, $telegramId);
+        } catch (\RuntimeException $e) {
+            TelegramBotApi::sendMessage($chatId, 'Не получилось привязать: '.$this->esc($e->getMessage()), TelegramMenu::withNav([
+                [[TelegramMenu::openAppButton('🌐 Открыть приложение')]],
+            ]));
+
+            return;
+        }
+
+        $menu = TelegramMenu::main($user->fresh() ?? $user);
+
+        TelegramBotApi::sendMessage($chatId, "✅ Готово — бот теперь работает с аккаунтом <b>".$this->esc((string) ($user->name ?? ''))."</b>.\n\n".$menu['text'], $menu['keyboard']);
+    }
+
+    private function handlePlainText(User $user, int $chatId, int $telegramId, string $text): void
+    {
+        $tgId = (int) $user->telegram_id ?: $telegramId;
+
+        if ($this->isEmailWait($tgId)) {
+            $this->saveEmailFromBot($user, $chatId, $text);
+
+            return;
+        }
+
+        if (TelegramAccountSwitch::isWait($tgId) || TelegramAccountSwitch::looksLikeCode($text)) {
+            $this->handleSwitchCode($user, $chatId, $tgId, $text);
+        }
+    }
+
+    /**
+     * Переключение аккаунта по коду из бота.
+     *
+     * @param User $user текущий привязанный пользователь
+     * @param int $chatId куда отвечать
+     * @param int $telegramId from.id апдейта
+     * @param string $code 6 цифр
+     * @return void
+     */
+    private function handleSwitchCode(User $user, int $chatId, int $telegramId, string $code): void
+    {
+        if (! TelegramAccountSwitch::looksLikeCode($code)) {
+            TelegramBotApi::sendMessage($chatId, 'Жду ровно 6 цифр из кода с сайта — цифры генерируются в Настройки → Приложение → Telegram.', TelegramMenu::withNav([
+                [['text' => '◀️ К аккаунту', 'callback_data' => 'go_account']],
+            ]));
+
+            return;
+        }
+
+        try {
+            $switched = TelegramAccountSwitch::consumeCode($code, $telegramId);
+        } catch (\RuntimeException $e) {
+            TelegramBotApi::sendMessage($chatId, 'Не получилось переключиться: '.$this->esc($e->getMessage()), TelegramMenu::withNav([
+                [['text' => '◀️ К аккаунту', 'callback_data' => 'go_account']],
+            ]));
+
+            return;
+        }
+
+        TelegramAccountSwitch::forgetWait($telegramId);
+
+        $menu = TelegramMenu::main($switched->fresh() ?? $switched);
+
+        TelegramBotApi::sendMessage($chatId, "✅ Переключил — теперь бот работает с аккаунтом <b>".$this->esc((string) ($switched->name ?? ''))."</b>.\n\n".$menu['text'], $menu['keyboard']);
+    }
+
+    /**
+     * Запомнить ожидание почты на 10 минут.
+     *
+     * @param int $telegramId telegram_id владельца
+     * @return void
+     */
+    private function rememberEmailWait(int $telegramId): void
+    {
+        if ($telegramId <= 0) {
+            return;
+        }
+
+        try {
+            Cache::put(TelegramSwipePanel::emailWaitKey($telegramId), true, 600);
+        } catch (\Throwable) {
+            return;
+        }
+    }
+
+    /**
+     * Ждём ли почту от этого telegram_id.
+     *
+     * @param int $telegramId telegram_id владельца
+     * @return bool
+     */
+    private function isEmailWait(int $telegramId): bool
+    {
+        if ($telegramId <= 0) {
+            return false;
+        }
+
+        try {
+            return (bool) Cache::get(TelegramSwipePanel::emailWaitKey($telegramId), false);
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    /**
+     * Снять ожидание почты.
+     *
+     * @param int $telegramId telegram_id владельца
+     * @return void
+     */
+    private function forgetEmailWait(int $telegramId): void
+    {
+        if ($telegramId <= 0) {
+            return;
+        }
+
+        try {
+            Cache::forget(TelegramSwipePanel::emailWaitKey($telegramId));
+        } catch (\Throwable) {
+            return;
+        }
+    }
+
+    /**
+     * Сохранить почту, присланную в бот следующим сообщением.
+     *
+     * Валидируем как в Mini App, дубликаты отклоняем, после сохранения
+     * отправляем ссылку подтверждения — без неё уведомления на почту
+     * слаться не будут.
+     *
+     * @param User $user владелец
+     * @param int $chatId куда отвечать
+     * @param string $text присланный адрес
+     * @return void
+     */
+    private function saveEmailFromBot(User $user, int $chatId, string $text): void
+    {
+        $fresh = $user->fresh() ?? $user;
+        $telegramId = (int) ($fresh->telegram_id ?? 0);
+        $candidate = mb_strtolower(trim($text));
+
+        if (! filter_var($candidate, FILTER_VALIDATE_EMAIL)) {
+            TelegramBotApi::sendMessage($chatId, 'Не похоже на почту 😕 Пришлите адрес вида name@example.com следующим сообщением.', TelegramMenu::withNav([
+                [['text' => '◀️ К почте', 'callback_data' => 'go_email']],
+            ]));
+
+            return;
+        }
+
+        $taken = User::where('email', $candidate)
+            ->where('id', '!=', $fresh->id)
+            ->exists();
+
+        if ($taken) {
+            $this->forgetEmailWait($telegramId);
+            TelegramBotApi::sendMessage($chatId, 'Эта почта уже занята другим аккаунтом. Укажите другую.', TelegramMenu::withNav([
+                [['text' => '◀️ К почте', 'callback_data' => 'go_email']],
+            ]));
+
+            return;
+        }
+
+        $fresh->forceFill([
+            'email' => $candidate,
+            'email_verified_at' => null,
+        ])->save();
+
+        $this->forgetEmailWait($telegramId);
+
+        try {
+            $fresh->sendEmailVerificationNotification();
+        } catch (\Throwable $e) {
+            Log::warning('telegram bot email verification failed', ['error' => $e->getMessage()]);
+        }
+
+        $panel = TelegramEmailPanel::build($fresh->fresh() ?? $fresh);
+        TelegramBotApi::sendMessage($chatId, "✅ Сохранил <code>".$this->esc($candidate)."</code> — письмо со ссылкой уже летит. Перейдите по ней, и уведомления начнут приходить корректно.\n\n".$panel['text'], $panel['keyboard']);
+    }
+
+    /**
+     * Выбор тарифа кнопкой в боте.
+     *
+     * Free откатываем сразу, платные — только после оплаты,
+     * поэтому показываем заглушку «Оплата в разработке».
+     *
+     * @param User $user владелец
+     * @param string $data callback_data plan_*
+     * @param int $chatId куда перерисовать
+     * @param int $messageId что перерисовать
+     * @param string $callbackId для тоста
+     * @return void
+     */
+    private function choosePlan(User $user, string $data, int $chatId, int $messageId, string $callbackId): void
+    {
+        $fresh = $user->fresh() ?? $user;
+        $plan = substr($data, 5);
+
+        if ($plan === 'free') {
+            $fresh->forceFill(['plan' => 'free', 'plan_expires_at' => null])->save();
+            $panel = TelegramPlanPanel::build($fresh->fresh() ?? $fresh);
+            TelegramBotApi::editPanel($chatId, $messageId, $panel['text'], $panel['keyboard']);
+            TelegramBotApi::answerCallback($callbackId, 'Вы на Free — бесплатно навсегда');
+
+            return;
+        }
+
+        $panel = TelegramPlanPanel::list($fresh);
+        $note = "\n\n".TelegramPlanPanel::PAYMENT_NOTE;
+        TelegramBotApi::editPanel($chatId, $messageId, $panel['text'].$note, $panel['keyboard']);
+        TelegramBotApi::answerCallback($callbackId, 'Сначала оплата — тариф после неё 💳');
+    }
+
+    /**
+     * Показать следующую анкету в режиме свайпов (перерисовка панели).
+     *
+     * @param User $user зритель
+     * @param int $chatId куда
+     * @param int $messageId что
+     * @param string $callbackId тост
+     * @return void
+     */
+    private function editSwipeCard(User $user, int $chatId, int $messageId, string $callbackId): void
+    {
+        $fresh = $user->fresh() ?? $user;
+
+        if (! $this->isAdultForBot($fresh)) {
+            $gate = TelegramSwipePanel::ageGate();
+            TelegramBotApi::editPanel($chatId, $messageId, $gate['text'], $gate['keyboard']);
+            TelegramBotApi::answerCallback($callbackId, 'Свайпы — строго 18+');
+
+            return;
+        }
+
+        $card = TelegramSwipePanel::nextCard($fresh);
+
+        if ($card === null) {
+            $empty = TelegramSwipePanel::empty();
+            TelegramBotApi::editPanel($chatId, $messageId, $empty['text'], $empty['keyboard']);
+            TelegramBotApi::answerCallback($callbackId, 'Анкеты кончились');
+
+            return;
+        }
+
+        $built = TelegramSwipePanel::card($card);
+
+        TelegramCardSender::redraw($chatId, $messageId, $built['photoUrl'], $built['text'], $built['keyboard']);
+        TelegramBotApi::answerCallback($callbackId, 'Ваша следующая анкета 💘');
+    }
+
+    /**
+     * Показать анкету целиком по кнопке «👤 Анкета целиком».
+     *
+     * @param User $user зритель
+     * @param string $data callback_data sw_view:{id}
+     * @param int $chatId куда
+     * @param int $messageId что
+     * @param string $callbackId тост
+     * @return void
+     */
+    private function showCandidate(User $user, string $data, int $chatId, int $messageId, string $callbackId): void
+    {
+        $fresh = $user->fresh() ?? $user;
+        $candidateId = (int) (explode(':', $data, 2)[1] ?? 0);
+
+        $details = TelegramSwipePanel::detailsFor($fresh, $candidateId);
+
+        if ($details === null) {
+            TelegramBotApi::answerCallback($callbackId, 'Анкета недоступна — смотрим дальше');
+            $this->editSwipeCard($fresh, $chatId, $messageId, $callbackId);
+
+            return;
+        }
+
+        TelegramCardSender::redraw($chatId, $messageId, $details['photoUrl'], $details['text'], $details['keyboard']);
+        TelegramBotApi::answerCallback($callbackId, 'Анкета целиком 👤');
+    }
+
+    /**
+     * Лайк из списка онлайна: пишем свайп и обновляем ту же страницу.
+     *
+     * @param User $user зритель
+     * @param string $data callback_data on_like:{id}
+     * @param int $chatId куда
+     * @param int $messageId что
+     * @param string $callbackId тост
+     * @return void
+     */
+    private function handleOnlineLike(User $user, string $data, int $chatId, int $messageId, string $callbackId): void
+    {
+        $fresh = $user->fresh() ?? $user;
+        $targetId = (int) (explode(':', $data, 2)[1] ?? 0);
+
+        if ($targetId <= 0) {
+            TelegramBotApi::answerCallback($callbackId, 'Анкета потерялась — обновите список');
+
+            return;
+        }
+
+        if (! $this->isAdultForBot($fresh)) {
+            $gate = TelegramSwipePanel::ageGate();
+            TelegramBotApi::editPanel($chatId, $messageId, $gate['text'], $gate['keyboard']);
+            TelegramBotApi::answerCallback($callbackId, 'Свайпы — строго 18+');
+
+            return;
+        }
+
+        try {
+            $result = app(DatingService::class)->recordAction($fresh, $targetId, 'like');
+        } catch (\Throwable $e) {
+            $message = $e instanceof \Illuminate\Http\Exceptions\HttpResponseException
+                ? (string) ($e->getResponse()->getData(true)['message'] ?? 'Не получилось')
+                : 'Не получилось — попробуйте дальше';
+
+            TelegramBotApi::answerCallback($callbackId, mb_substr($message, 0, 200));
+
+            return;
+        }
+
+        $page = self::onlinePageOf($messageId, $fresh);
+
+        if (! empty($result['matched'])) {
+            $panel = TelegramOnlinePanel::build($fresh->fresh() ?? $fresh, $page);
+            TelegramBotApi::editPanel($chatId, $messageId, "🎉 <b>Это мэтч!</b> Чат уже открыт — пишите первым!\n\n".$panel['text'], $panel['keyboard']);
+            TelegramBotApi::answerCallback($callbackId, '🎉 Мэтч! Чаты уже открыты');
+
+            return;
+        }
+
+        $panel = TelegramOnlinePanel::build($fresh->fresh() ?? $fresh, $page);
+        TelegramBotApi::editPanel($chatId, $messageId, $panel['text'], $panel['keyboard']);
+        TelegramBotApi::answerCallback($callbackId, 'Лайк отправлен 💞');
+    }
+
+    /**
+     * Убрать из избранного кнопкой в боте.
+     *
+     * @param User $user владелец
+     * @param string $data callback_data fav_del:{id}
+     * @param int $chatId куда
+     * @param int $messageId что
+     * @param string $callbackId тост
+     * @return void
+     */
+    private function handleFavDelete(User $user, string $data, int $chatId, int $messageId, string $callbackId): void
+    {
+        $fresh = $user->fresh() ?? $user;
+        $targetId = (int) (explode(':', $data, 2)[1] ?? 0);
+
+        if ($targetId <= 0) {
+            TelegramBotApi::answerCallback($callbackId, 'Уже убрано — обновите список');
+
+            return;
+        }
+
+        try {
+            app(DatingService::class)->removeFavorite($fresh, $targetId);
+        } catch (\Throwable) {
+            TelegramBotApi::answerCallback($callbackId, 'Не получилось убрать');
+
+            return;
+        }
+
+        $panel = TelegramFavoritesPanel::build($fresh->fresh() ?? $fresh, 1);
+        TelegramBotApi::editPanel($chatId, $messageId, $panel['text'], $panel['keyboard']);
+        TelegramBotApi::answerCallback($callbackId, 'Убрано из избранного');
+    }
+
+    /**
+     * Выполнить сброс просмотренных кнопкой в боте.
+     *
+     * @param User $user владелец
+     * @param int $chatId куда
+     * @param int $messageId что
+     * @param string $callbackId тост
+     * @return void
+     */
+    private function doReset(User $user, int $chatId, int $messageId, string $callbackId): void
+    {
+        $fresh = $user->fresh() ?? $user;
+
+        try {
+            $deleted = app(DatingService::class)->resetHistory($fresh);
+        } catch (\Throwable $e) {
+            $message = $e instanceof \Illuminate\Http\Exceptions\HttpResponseException
+                ? (string) ($e->getResponse()->getData(true)['message'] ?? 'Сброс недоступен')
+                : 'Сброс недоступен';
+
+            TelegramBotApi::answerCallback($callbackId, mb_substr($message, 0, 200));
+
+            return;
+        }
+
+        TelegramSwipePanel::clearSeen((int) $fresh->id);
+
+        $next = TelegramSwipePanel::nextCard($fresh->fresh() ?? $fresh);
+
+        if ($next === null) {
+            TelegramBotApi::editPanel($chatId, $messageId, "✅ История сброшена (оценок было: <b>{$deleted}</b>).\n\nНовых анкет пока нет — загляните позже.", TelegramMenu::withNav([
+                [
+                    ['text' => '💎 Мой тариф', 'callback_data' => 'go_plan'],
+                ],
+            ]));
+            TelegramBotApi::answerCallback($callbackId, 'История сброшена ✅');
+
+            return;
+        }
+
+        $built = TelegramSwipePanel::card($next);
+
+        TelegramCardSender::redraw($chatId, $messageId, $built['photoUrl'], "✅ История сброшена (оценок было: <b>{$deleted}</b>). Лента свежая:\n\n".$built['text'], $built['keyboard']);
+        TelegramBotApi::answerCallback($callbackId, 'История сброшена ✅');
+    }
+
+    /**
+     * Номер страницы онлайна для возврата после лайка.
+     *
+     * Точный номер из callback_data уже ушёл, поэтому эвристика:
+     * всегда первая страница свежего списка — честно и просто.
+     *
+     * @param int $messageId id панели (резерв под будущий кеш страниц)
+     * @param User $user зритель
+     * @return int
+     */
+    private static function onlinePageOf(int $messageId, User $user): int
+    {
+        return 1;
+    }
+
+    /**
+     * Лайк/пас кнопкой в боте + сразу следующая анкета.
+     *
+     * @param User $user зритель
+     * @param string $data callback_data sw_like:{id} | sw_pass:{id}
+     * @param int $chatId куда
+     * @param int $messageId что
+     * @param string $callbackId тост
+     * @return void
+     */
+    private function handleSwipeAction(User $user, string $data, int $chatId, int $messageId, string $callbackId): void
+    {
+        $fresh = $user->fresh() ?? $user;
+
+        $parts = explode(':', $data, 2);
+        $kind = $parts[0] ?? '';
+        $targetId = (int) ($parts[1] ?? 0);
+
+        if ($targetId <= 0) {
+            TelegramBotApi::answerCallback($callbackId, 'Анкета потерялась — жмите Дальше');
+
+            return;
+        }
+
+        if (! $this->isAdultForBot($fresh)) {
+            $gate = TelegramSwipePanel::ageGate();
+            TelegramBotApi::editPanel($chatId, $messageId, $gate['text'], $gate['keyboard']);
+            TelegramBotApi::answerCallback($callbackId, 'Свайпы — строго 18+');
+
+            return;
+        }
+
+        $action = $kind === 'sw_like' ? 'like' : 'pass';
+
+        try {
+            $dating = app(DatingService::class);
+            $result = $dating->recordAction($fresh, $targetId, $action);
+        } catch (\Throwable $e) {
+            $message = $e instanceof \Illuminate\Http\Exceptions\HttpResponseException
+                ? (string) ($e->getResponse()->getData(true)['message'] ?? 'Не получилось')
+                : 'Не получилось — попробуйте дальше';
+
+            TelegramBotApi::answerCallback($callbackId, mb_substr($message, 0, 200));
+
+            return;
+        }
+
+        if (! empty($result['matched'])) {
+            $toast = '🎉 Мэтч! Чаты уже открыты — пишите первым!';
+            $next = TelegramSwipePanel::nextCard($fresh->fresh() ?? $fresh);
+
+            if ($next === null) {
+                $text = "🎉 <b>Это мэтч!</b> Вы понравились друг другу — чат уже открыт.\n\nАнкеты пока кончились, загляните позже.";
+                TelegramBotApi::editPanel($chatId, $messageId, $text, TelegramMenu::withNav([
+                    [
+                        ['text' => '🎉 Мои мэтчи', 'callback_data' => 'go_matches'],
+                        TelegramMenu::openAppButton('🌐 Открыть чаты'),
+                    ],
+                ]));
+                TelegramBotApi::answerCallback($callbackId, $toast);
+
+                return;
+            }
+
+            $built = TelegramSwipePanel::card($next);
+            $text = "🎉 <b>Это мэтч!</b> Вы понравились друг другу — чат уже открыт.\n\nСледующая анкета:\n\n".$built['text'];
+
+            TelegramCardSender::redraw($chatId, $messageId, $built['photoUrl'], $text, $built['keyboard']);
+            TelegramBotApi::answerCallback($callbackId, $toast);
+
+            return;
+        }
+
+        $next = TelegramSwipePanel::nextCard($fresh->fresh() ?? $fresh);
+
+        if ($next === null) {
+            $empty = TelegramSwipePanel::empty();
+            TelegramBotApi::editPanel($chatId, $messageId, $empty['text'], $empty['keyboard']);
+            TelegramBotApi::answerCallback($callbackId, $action === 'like' ? 'Лайк отправлен 💞' : 'Пас — смотрим дальше');
+
+            return;
+        }
+
+        $built = TelegramSwipePanel::card($next);
+
+        TelegramCardSender::redraw($chatId, $messageId, $built['photoUrl'], $built['text'], $built['keyboard']);
+        TelegramBotApi::answerCallback($callbackId, $action === 'like' ? 'Лайк отправлен 💞' : 'Пас — смотрим дальше');
+    }
+
+    /**
+     * Можно ли показывать свайпы в боте (строго 18+).
+     *
+     * @param User $user зритель
+     * @return bool
+     */
+    private function isAdultForBot(User $user): bool
+    {
+        try {
+            app(DatingService::class)->assertAdult($user);
+
+            return true;
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     /**
@@ -962,7 +1837,10 @@ class TelegramWebhookController extends Controller
     }
 
     /**
-     * Переключить тумблер уведомлений и перерисовать панель.
+     * Переключить тумблер канала уведомлений и перерисовать панель.
+     *
+     * Каналы: ntg_* — чат бота, nem_* — почта, ndm_* — личка, ntg_all — мастер.
+     * Дефолты разные: бот/почта включены, личка выключена.
      *
      * @param User $user владелец
      * @param string $data какой тумблер
@@ -974,10 +1852,18 @@ class TelegramWebhookController extends Controller
     private function toggleNotify(User $user, string $data, int $chatId, int $messageId, string $callbackId): void
     {
         $column = match ($data) {
+            'ntg_all' => 'telegram_notify_enabled',
             'ntg_msg' => 'telegram_notify_messages',
             'ntg_like' => 'telegram_notify_likes',
             'ntg_match' => 'telegram_notify_matches',
             'ntg_cmt' => 'telegram_notify_comments',
+            'nem_msg' => 'email_notify_messages',
+            'nem_like' => 'email_notify_likes',
+            'nem_match' => 'email_notify_matches',
+            'ndm_msg' => 'telegram_dm_messages',
+            'ndm_like' => 'telegram_dm_likes',
+            'ndm_match' => 'telegram_dm_matches',
+            'ndm_cmt' => 'telegram_dm_comments',
             default => null,
         };
 
@@ -987,7 +1873,8 @@ class TelegramWebhookController extends Controller
             return;
         }
 
-        $next = ! (bool) ($user->{$column} ?? true);
+        $default = str_starts_with($column, 'telegram_dm_') ? false : true;
+        $next = ! (bool) ($user->{$column} ?? $default);
 
         $user->forceFill([$column => $next])->save();
 
@@ -995,8 +1882,15 @@ class TelegramWebhookController extends Controller
 
         TelegramBotApi::editPanel($chatId, $messageId, $panel['text'], $panel['keyboard']);
 
+        $channel = match (true) {
+            str_starts_with($data, 'nem_') => 'Почта',
+            str_starts_with($data, 'ndm_') => 'Личка',
+            $data === 'ntg_all' => 'Telegram',
+            default => 'Бот',
+        };
+
         $state = $next ? 'включены ✅' : 'выключены ❌';
-        TelegramBotApi::answerCallback($callbackId, "Уведомления {$state}");
+        TelegramBotApi::answerCallback($callbackId, "{$channel}: {$state}");
     }
 
     /**

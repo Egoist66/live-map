@@ -136,6 +136,114 @@ class TelegramAuthController extends Controller
             'notify_comments' => (bool) ($user->telegram_notify_comments ?? true),
             'can_notify' => $user->telegram_id !== null && $user->telegram_blocked_at === null,
             'bot_username' => (string) config('telegram.bot_username', 'U1ove_bot'),
+            'notify_enabled' => (bool) ($user->telegram_notify_enabled ?? true),
+            'email_messages' => (bool) ($user->email_notify_messages ?? true),
+            'email_likes' => (bool) ($user->email_notify_likes ?? true),
+            'email_matches' => (bool) ($user->email_notify_matches ?? true),
+            'dm_messages' => (bool) ($user->telegram_dm_messages ?? false),
+            'dm_likes' => (bool) ($user->telegram_dm_likes ?? false),
+            'dm_matches' => (bool) ($user->telegram_dm_matches ?? false),
+            'dm_comments' => (bool) ($user->telegram_dm_comments ?? false),
+            'email' => $user->email,
+            'email_verified' => $user->hasVerifiedEmail(),
+            'email_verified_at' => $user->email_verified_at?->toISOString(),
+            'is_technical_email' => $user->hasTechnicalTelegramEmail(),
+        ]);
+    }
+
+    /**
+     * Указать основную почту из Mini App (панель опций бота).
+     *
+     * Технический `tg_{id}@telegram.local` — только логин, письма туда
+     * не дойдут. Сохраняем реальную почту, сбрасываем подтверждение
+     * и отправляем новую ссылку — без перехода по ней уведомления
+     * на почту слаться не будут (см. DatingEmailNotifier::canNotify).
+     *
+     * @param Request $request запрос с полем `email`
+     * @return JsonResponse свежий email-статус
+     */
+    public function updateEmail(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (! $user) {
+            return response()->json(['message' => 'Не авторизован.'], 401);
+        }
+
+        $validated = $request->validate([
+            'email' => 'required|email:rfc,dns|max:255',
+        ]);
+
+        $email = mb_strtolower(trim((string) $validated['email']));
+
+        $taken = User::where('email', $email)
+            ->where('id', '!=', $user->id)
+            ->exists();
+
+        if ($taken) {
+            return response()->json(['message' => 'Эта почта уже занята другим аккаунтом.'], 422);
+        }
+
+        $fresh = $user->fresh() ?? $user;
+        $oldEmail = mb_strtolower(trim((string) ($fresh->email ?? '')));
+
+        if ($oldEmail === $email && ! $fresh->hasTechnicalTelegramEmail()) {
+            return response()->json([
+                'email' => $fresh->email,
+                'email_verified' => $fresh->hasVerifiedEmail(),
+                'email_verified_at' => $fresh->email_verified_at?->toISOString(),
+                'is_technical_email' => $fresh->hasTechnicalTelegramEmail(),
+            ]);
+        }
+
+        $fresh->forceFill([
+            'email' => $email,
+            'email_verified_at' => null,
+        ])->save();
+
+        try {
+            $fresh->sendEmailVerificationNotification();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('telegram email verification send failed', [
+                'user_id' => $fresh->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        $updated = $fresh->fresh() ?? $fresh;
+
+        return response()->json([
+            'email' => $updated->email,
+            'email_verified' => $updated->hasVerifiedEmail(),
+            'email_verified_at' => $updated->email_verified_at?->toISOString(),
+            'is_technical_email' => $updated->hasTechnicalTelegramEmail(),
+            'verification_sent' => true,
+        ]);
+    }
+
+    /**
+     * Сгенерировать код для переключения бота на этот аккаунт.
+     *
+     * Второй аккаунт (с сайта) генерирует 6 цифр здесь, затем владелец
+     * присылает их боту (/switch или кнопка «Переключиться») — привязка
+     * telegram_id переезжает сюда. Код одноразовый, живёт 10 минут.
+     *
+     * @param Request $request текущий запрос
+     * @return JsonResponse {code, expires_in}
+     */
+    public function switchCode(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (! $user) {
+            return response()->json(['message' => 'Не авторизован.'], 401);
+        }
+
+        $code = \App\Services\TelegramAccountSwitch::makeCode($user);
+
+        return response()->json([
+            'code' => $code,
+            'expires_in' => \App\Services\TelegramAccountSwitch::CODE_TTL_SECONDS,
         ]);
     }
 
@@ -154,15 +262,39 @@ class TelegramAuthController extends Controller
         }
 
         $validated = $request->validate([
+            'notify_enabled' => 'sometimes|boolean',
             'notify_messages' => 'sometimes|boolean',
             'notify_likes' => 'sometimes|boolean',
             'notify_matches' => 'sometimes|boolean',
             'notify_comments' => 'sometimes|boolean',
+            'email_messages' => 'sometimes|boolean',
+            'email_likes' => 'sometimes|boolean',
+            'email_matches' => 'sometimes|boolean',
+            'dm_messages' => 'sometimes|boolean',
+            'dm_likes' => 'sometimes|boolean',
+            'dm_matches' => 'sometimes|boolean',
+            'dm_comments' => 'sometimes|boolean',
         ]);
 
         $patch = [];
 
+        if (array_key_exists('notify_enabled', $validated)) {
+            $patch['telegram_notify_enabled'] = (bool) $validated['notify_enabled'];
+        }
+
         foreach (['notify_messages', 'notify_likes', 'notify_matches', 'notify_comments'] as $key) {
+            if (array_key_exists($key, $validated)) {
+                $patch['telegram_'.$key] = (bool) $validated[$key];
+            }
+        }
+
+        foreach (['email_messages', 'email_likes', 'email_matches'] as $key) {
+            if (array_key_exists($key, $validated)) {
+                $patch[$key] = (bool) $validated[$key];
+            }
+        }
+
+        foreach (['dm_messages', 'dm_likes', 'dm_matches', 'dm_comments'] as $key) {
             if (array_key_exists($key, $validated)) {
                 $patch['telegram_'.$key] = (bool) $validated[$key];
             }
@@ -175,10 +307,18 @@ class TelegramAuthController extends Controller
         $fresh = $user->fresh();
 
         return response()->json([
+            'notify_enabled' => (bool) ($fresh->telegram_notify_enabled ?? true),
             'notify_messages' => (bool) ($fresh->telegram_notify_messages ?? true),
             'notify_likes' => (bool) ($fresh->telegram_notify_likes ?? true),
             'notify_matches' => (bool) ($fresh->telegram_notify_matches ?? true),
             'notify_comments' => (bool) ($fresh->telegram_notify_comments ?? true),
+            'email_messages' => (bool) ($fresh->email_notify_messages ?? true),
+            'email_likes' => (bool) ($fresh->email_notify_likes ?? true),
+            'email_matches' => (bool) ($fresh->email_notify_matches ?? true),
+            'dm_messages' => (bool) ($fresh->telegram_dm_messages ?? false),
+            'dm_likes' => (bool) ($fresh->telegram_dm_likes ?? false),
+            'dm_matches' => (bool) ($fresh->telegram_dm_matches ?? false),
+            'dm_comments' => (bool) ($fresh->telegram_dm_comments ?? false),
         ]);
     }
 

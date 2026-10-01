@@ -363,7 +363,7 @@ const activePrivacyFlags = computed(() => {
             >
               <span class="grid h-8 w-8 place-items-center rounded-full bg-stone-100 transition group-hover:scale-110 group-hover:bg-rose-500 group-hover:text-white group-hover:shadow-md group-hover:shadow-rose-500/40 dark:bg-zinc-800"><i class="pi pi-plus text-sm" /></span>
             </button>
-            <span v-if="slot.url && (slot.isMain || i === 0)" class="pointer-events-none absolute bottom-1 left-1 rounded-full bg-black/55 px-1.5 py-0.5 text-[9px] font-black text-white">ГЛАВНОЕ</span>
+            <span v-if="slot.url && (slot.isMain || i === 0)" title="Главная" aria-label="Главная фотография" class="pointer-events-none absolute bottom-1 left-1 grid h-5 w-5 place-items-center rounded-full bg-black/55 text-white"><i class="pi pi-star-fill text-[9px]" /></span>
             <button
               v-if="slot.url && slot.photoId != null"
               type="button"
