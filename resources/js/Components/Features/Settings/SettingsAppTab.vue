@@ -29,7 +29,7 @@ const appTabs = useSettingsAppTabs()
 <template>
   <div class="space-y-4 min-w-0">
     <Tabs :value="appTabs.active.value" lazy @update:value="(v:any)=>{ if (typeof v === 'string') appTabs.setActive(v as any) }" class="w-full !mt-0">
-      <TabList class="app-subtabs" :pt="{ activeBar: { class: '!hidden' } }">
+      <TabList :ref="(el:any)=>appTabs.bindScroller(el)" :class="['app-subtabs', { 'can-left': appTabs.canLeft.value, 'can-right': appTabs.canRight.value }]" :pt="{ activeBar: { class: '!hidden' } }">
         <Tab v-for="t in appTabs.tabs" :key="t.id" :value="t.id" class="app-subtab">
           <span class="app-subtab-pill" :class="{ 'is-active': appTabs.active.value === t.id }" :title="t.desc">
             <i :class="[t.icon, 'text-sm leading-none']" aria-hidden="true" />
@@ -93,7 +93,15 @@ const appTabs = useSettingsAppTabs()
 /* Лента пилюль: горизонтальный скролл с momentum на таче, стрелки
    PrimeVue скрыты — жест и свайп вместо них. Цвета пилюль заданы
    явно под обе темы (html.dark), а не только dark:-утилитами:
-   так их не перебивает тема PrimeVue. */
+   так их не перебивает тема PrimeVue. ВАЖНО: фон даёт сам
+   `.p-tablist` (корень!), а не контент — сбрасываем оба, иначе
+   в тёмной теме за пилюлями белая полоса. */
+.app-subtabs,
+html.dark .app-subtabs {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
 .app-subtabs :deep(.p-tablist-content) {
   display: flex !important;
   gap: 0.5rem !important;
@@ -110,6 +118,20 @@ const appTabs = useSettingsAppTabs()
 }
 .app-subtabs :deep(.p-tablist-content::-webkit-scrollbar) {
   display: none !important;
+}
+/* Живое затухание краёв: видно куда можно мотать.
+   -webkit-префикс обязателен для iOS Safari. */
+.app-subtabs.can-left :deep(.p-tablist-content) {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 28px);
+  mask-image: linear-gradient(to right, transparent 0, #000 28px);
+}
+.app-subtabs.can-right :deep(.p-tablist-content) {
+  -webkit-mask-image: linear-gradient(to left, transparent 0, #000 28px);
+  mask-image: linear-gradient(to left, transparent 0, #000 28px);
+}
+.app-subtabs.can-left.can-right :deep(.p-tablist-content) {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
 }
 .app-subtabs :deep(.p-tablist-prev-button),
 .app-subtabs :deep(.p-tablist-next-button) {
@@ -169,17 +191,21 @@ html.dark .app-subtab-pill.is-active {
   color: #ffffff;
   box-shadow: 0 6px 20px -6px rgba(244, 63, 94, 0.65);
 }
-/* Мобила: компактнее пилюли, лента во всю ширину с запасом
-   справа, чтобы последняя не обрезалась; snap по пилюлям. */
+/* Мобила: компактнее пилюли, хвост-спейсер чтобы последняя
+   не обрезалась у края; snap по пилюлям. */
 @media (max-width: 640px) {
   .app-subtabs :deep(.p-tablist-content) {
     margin-inline: -2px;
+    padding-right: 10px !important;
     scroll-snap-type: x proximity;
   }
   .app-subtab-pill {
     min-height: 40px;
     padding: 0.45rem 0.75rem;
     font-size: 12.5px;
+  }
+  .app-subtab-pill i {
+    font-size: 13px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
