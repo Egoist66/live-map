@@ -52,7 +52,7 @@ class SavedNoteController extends Controller
     /**
      * Создать заметку.
      *
-     * @param Request $request body (до 10000 символов)
+     * @param Request $request body (до 10000 символов) + опциональный attachment
      * @param SavedNotesService $notes сервис
      * @return \Illuminate\Http\JsonResponse
      */
@@ -60,12 +60,21 @@ class SavedNoteController extends Controller
     {
         $data = $request->validate([
             'body' => 'required|string|min:1|max:10000',
+            'attachment' => 'nullable|file|max:10240',
         ]);
 
         $body = trim($data['body']);
         abort_if($body === '', 422, 'Пустую заметку сохранять нечего');
 
-        $note = $notes->create($request->user(), $body);
+        $file = $this->resolveAttachment($request);
+        try {
+            $note = $notes->create($request->user(), $body, $file);
+        } catch (\Throwable $e) {
+            if ($file) {
+                \App\Services\ChatAttachment::delete($file['path']);
+            }
+            throw $e;
+        }
         $this->notifyChanged((int) $request->user()->id, 'created');
 
         return response()->json($note->toPayload(), 201);
@@ -74,57 +83,90 @@ class SavedNoteController extends Controller
     /**
      * Обновить заметку владельца.
      *
-     * @param Request $request body
+     * @param Request $request body + опциональный attachment, remove_attachment=1 — убрать файл
      * @param SavedNote $savedNote заметка (route-model binding)
+     * @param SavedNotesService $notes сервис
      * @return \Illuminate\Http\JsonResponse
      */
-    public function update(Request $request, SavedNote $savedNote)
+    public function update(Request $request, SavedNote $savedNote, SavedNotesService $notes)
     {
         abort_unless((int) $savedNote->user_id === (int) $request->user()->id, 403);
 
         $data = $request->validate([
             'body' => 'required|string|min:1|max:10000',
+            'attachment' => 'nullable|file|max:10240',
+            'remove_attachment' => 'nullable|boolean',
         ]);
 
         $body = trim($data['body']);
         abort_if($body === '', 422, 'Пустую заметку сохранять нечего');
 
-        $savedNote->setPlainBody($body);
-        $savedNote->save();
+        $file = $this->resolveAttachment($request);
+        try {
+            $notes->updateNote($savedNote, $body, $file, (bool) ($data['remove_attachment'] ?? false));
+        } catch (\Throwable $e) {
+            if ($file) {
+                \App\Services\ChatAttachment::delete($file['path']);
+            }
+            throw $e;
+        }
         $this->notifyChanged((int) $request->user()->id, 'updated');
 
         return response()->json($savedNote->refresh()->toPayload());
     }
 
     /**
-     * Удалить заметку владельца.
+     * Удалить заметку владельца вместе с вложением.
      *
      * @param Request $request запрос
      * @param SavedNote $savedNote заметка
+     * @param SavedNotesService $notes сервис
      * @return \Illuminate\Http\JsonResponse
      */
-    public function destroy(Request $request, SavedNote $savedNote)
+    public function destroy(Request $request, SavedNote $savedNote, SavedNotesService $notes)
     {
         abort_unless((int) $savedNote->user_id === (int) $request->user()->id, 403);
 
-        $savedNote->delete();
+        $notes->deleteNote($savedNote);
         $this->notifyChanged((int) $request->user()->id, 'deleted');
 
         return response()->json(['ok' => true]);
     }
 
     /**
-     * Удалить все заметки владельца.
+     * Удалить все заметки владельца вместе с вложениями.
      *
      * @param Request $request запрос
+     * @param SavedNotesService $notes сервис
      * @return \Illuminate\Http\JsonResponse
      */
-    public function clear(Request $request)
+    public function clear(Request $request, SavedNotesService $notes)
     {
-        $deleted = SavedNote::where('user_id', $request->user()->id)->delete();
+        $deleted = $notes->clearAll($request->user());
         $this->notifyChanged((int) $request->user()->id, 'cleared');
 
         return response()->json(['ok' => true, 'deleted' => $deleted]);
+    }
+
+    /**
+     * Проверяет и сохраняет вложение из multipart-запроса.
+     *
+     * Голосовые в Избранном не поддерживаем (нет длительности
+     * и плеера заметок) — такой файл отклоняется с понятной ошибкой.
+     *
+     * @param Request $request запрос
+     * @return array|null вложение из ChatAttachment::store + kind
+     */
+    private function resolveAttachment(Request $request): ?array
+    {
+        if (! $request->hasFile('attachment')) {
+            return null;
+        }
+        $file = $request->file('attachment');
+        $kind = \App\Services\ChatAttachment::validate($file);
+        abort_if($kind === 'voice', 422, 'Голосовые в Избранном пока не поддерживаются');
+
+        return \App\Services\ChatAttachment::store($file, $kind);
     }
 
     /**

@@ -1196,7 +1196,8 @@ html.dark.tg-app .chat-header {
      home-индикатор перекрыт клавиатурой, лишний sab сжимал инпут;
    - список сообщений — momentum-скролл, инпут не схлопывается. */
 @supports (-webkit-touch-callout: none) {
-  html.native-keyboard-open [data-chat-composer-wrap] {
+  html.native-keyboard-open [data-chat-composer-wrap],
+  html.native-keyboard-open [data-notes-composer] {
     padding-bottom: 0.5rem !important;
   }
   html.native-keyboard-open .h-app-full {

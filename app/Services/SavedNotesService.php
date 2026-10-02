@@ -108,15 +108,98 @@ class SavedNotesService
      *
      * @param User $user владелец
      * @param string $body открытый текст (до 10000 символов)
+     * @param array|null $file вложение из ChatAttachment::store + kind
      * @return SavedNote созданная заметка
      */
-    public function create(User $user, string $body): SavedNote
+    public function create(User $user, string $body, ?array $file = null): SavedNote
     {
         $note = new SavedNote(['user_id' => $user->id]);
         $note->setPlainBody($body);
+        $this->fillAttachment($note, $file);
         $note->save();
 
         return $note;
+    }
+
+    /**
+     * Обновить текст и вложение заметки.
+     *
+     * Новое вложение заменяет старое (файл с диска удаляется),
+     * флаг $dropFile убирает вложение без замены.
+     *
+     * @param SavedNote $note заметка владельца
+     * @param string $body открытый текст
+     * @param array|null $file новое вложение из ChatAttachment::store + kind
+     * @param bool $dropFile убрать вложение
+     * @return SavedNote обновлённая заметка
+     */
+    public function updateNote(SavedNote $note, string $body, ?array $file = null, bool $dropFile = false): SavedNote
+    {
+        $note->setPlainBody($body);
+        if ($file !== null || $dropFile) {
+            \App\Services\ChatAttachment::delete($note->attachment_path);
+            $this->fillAttachment($note, $file);
+        }
+        $note->save();
+
+        return $note;
+    }
+
+    /**
+     * Удалить заметку вместе с файлом вложения.
+     *
+     * @param SavedNote $note заметка владельца
+     * @return void
+     */
+    public function deleteNote(SavedNote $note): void
+    {
+        \App\Services\ChatAttachment::delete($note->attachment_path);
+        $note->delete();
+    }
+
+    /**
+     * Удалить все заметки владельца вместе с файлами.
+     *
+     * @param User $user владелец
+     * @return int сколько удалено
+     */
+    public function clearAll(User $user): int
+    {
+        $notes = SavedNote::where('user_id', $user->id)->get(['id', 'attachment_path']);
+        foreach ($notes as $note) {
+            \App\Services\ChatAttachment::delete($note->attachment_path);
+        }
+
+        return SavedNote::where('user_id', $user->id)->delete();
+    }
+
+    /**
+     * Записать метаданные вложения в модель (без сохранения).
+     *
+     * @param SavedNote $note заметка
+     * @param array|null $file вложение из ChatAttachment::store + kind
+     * @return void
+     */
+    private function fillAttachment(SavedNote $note, ?array $file): void
+    {
+        if ($file === null) {
+            $note->forceFill([
+                'attachment_path' => null,
+                'attachment_name' => null,
+                'attachment_mime' => null,
+                'attachment_size' => null,
+                'attachment_kind' => null,
+            ]);
+
+            return;
+        }
+        $note->forceFill([
+            'attachment_path' => $file['path'],
+            'attachment_name' => $file['name'],
+            'attachment_mime' => $file['mime'],
+            'attachment_size' => $file['size'],
+            'attachment_kind' => $file['kind'],
+        ]);
     }
 
     /**

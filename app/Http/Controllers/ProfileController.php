@@ -263,7 +263,7 @@ class ProfileController extends Controller
             return redirect()->route('login');
         }
 
-        $tabIds = ['profile', 'billing', 'quests', 'pins', 'privacy', 'appearance', 'security', 'procedures', 'support', 'app', 'about', 'admin', 'archive'];
+        $tabIds = ['profile', 'billing', 'quests', 'pins', 'privacy', 'appearance', 'security', 'procedures', 'support', 'app', 'integrations', 'about', 'admin', 'archive'];
         if ($tab === null && $identifier !== null && in_array($identifier, $tabIds, true) && $identifier !== 'admin') {
             $tab = $identifier;
             $identifier = null;

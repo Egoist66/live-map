@@ -93,11 +93,14 @@ const emit = defineEmits<{ (e: 'bell'): void; (e: 'menu', value: Event): void }>
         type="button"
         aria-label="Меню профиля"
         aria-haspopup="menu"
-        class="flex flex-col items-center justify-center py-1.5 rounded-2xl active:scale-95 transition min-h-[52px]"
+        class="flex flex-col items-center justify-center gap-1 py-1.5 rounded-2xl active:scale-95 transition min-h-[52px]"
         :class="navLinkClass('dashboard')"
         @click="emit('menu', $event)"
       >
-        <Avatar :image="avatarSrc" shape="circle" class="!w-6 !h-6" />
+        <span class="relative block w-6 h-6">
+          <Avatar :image="avatarSrc" shape="circle" class="!w-6 !h-6 block" />
+        </span>
+        <span class="text-[10px] font-bold leading-none opacity-75 truncate max-w-full px-0.5" title="Меню">Меню</span>
       </button>
     </div>
   </nav>

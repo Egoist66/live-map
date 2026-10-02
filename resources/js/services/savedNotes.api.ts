@@ -1,12 +1,28 @@
 import { api } from './api'
 
 /**
+ * Вложение заметки «Избранного».
+ *
+ * Server-режим: url — публичная ссылка с бэка.
+ * Local-режим: blob — файл из IndexedDB, url — временный objectURL.
+ */
+export interface SavedNoteAttachment {
+  url: string | null
+  name: string | null
+  mime: string | null
+  size: number | null
+  kind: string
+  blob?: Blob | null
+}
+
+/**
  * Заметка «Избранного» (чат только для себя).
  */
 export interface SavedNote {
   id: number
   body: string
   kind: 'text' | 'link'
+  attachment?: SavedNoteAttachment | null
   created_at: string | null
   updated_at: string | null
 }
@@ -51,20 +67,46 @@ export const savedNotesApi = {
    * Создать заметку.
    *
    * @param body текст заметки (1..10000 символов)
+   * @param file опциональное вложение (картинка/документ до 10 МБ)
    */
-  async create(body: string): Promise<SavedNote> {
-    const { data } = await api.post('/api/saved-notes', { body })
+  async create(body: string, file?: File | null): Promise<SavedNote> {
+    if (!file) {
+      const { data } = await api.post('/api/saved-notes', { body })
+      return data as SavedNote
+    }
+    const form = new FormData()
+    form.append('body', body)
+    form.append('attachment', file, file.name)
+    const { data } = await api.post('/api/saved-notes', form)
     return data as SavedNote
   },
 
   /**
-   * Обновить текст заметки.
+   * Обновить текст и вложение заметки.
+   *
+   * Файл идёт multipart через POST + _method=PATCH: PHP не разбирает
+   * файлы в теле PATCH-запроса, без spoofing вложение бы терялось.
    *
    * @param id id заметки
    * @param body новый текст
+   * @param file новое вложение (заменяет старое)
+   * @param removeAttachment убрать вложение без замены
    */
-  async update(id: number, body: string): Promise<SavedNote> {
-    const { data } = await api.patch(`/api/saved-notes/${id}`, { body })
+  async update(id: number, body: string, file?: File | null, removeAttachment?: boolean): Promise<SavedNote> {
+    if (!file && !removeAttachment) {
+      const { data } = await api.patch(`/api/saved-notes/${id}`, { body })
+      return data as SavedNote
+    }
+    const form = new FormData()
+    form.append('_method', 'PATCH')
+    form.append('body', body)
+    if (file) {
+      form.append('attachment', file, file.name)
+    }
+    if (removeAttachment) {
+      form.append('remove_attachment', '1')
+    }
+    const { data } = await api.post(`/api/saved-notes/${id}`, form)
     return data as SavedNote
   },
 

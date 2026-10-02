@@ -3,7 +3,7 @@ import { usePage } from '@inertiajs/vue3'
 import { useSecurityImpersonations } from '@/composables/useSecurityImpersonations'
 import { useAppModulesStore } from '@/stores/appModules'
 
-export type SettingsTabId = 'profile'|'billing'|'quests'|'privacy'|'appearance'|'security'|'pins'|'support'|'app'|'about'|'procedures'|'admin'|'archive'
+export type SettingsTabId = 'profile'|'billing'|'quests'|'privacy'|'appearance'|'security'|'pins'|'support'|'app'|'integrations'|'about'|'procedures'|'admin'|'archive'
 
 export const SETTINGS_TABS = [
   { id: 'profile' as const, label: 'Профиль', icon: 'pi pi-user', desc: 'Фото, имя, дом' },
@@ -17,11 +17,12 @@ export const SETTINGS_TABS = [
   { id: 'procedures' as const, label: 'Процедуры', icon: 'pi pi-building-columns', desc: 'Доступы, закон' },
   { id: 'support' as const, label: 'Поддержка', icon: 'pi pi-heart', desc: 'Письмо, донат' },
   { id: 'app' as const, label: 'Приложение', icon: 'pi pi-mobile', desc: 'Установка, кэш' },
+  { id: 'integrations' as const, label: 'Интеграции', icon: 'pi pi-share-alt', desc: 'Бот, QR' },
   { id: 'about' as const, label: 'О сервисе', icon: 'pi pi-info-circle', desc: 'FAQ, контакты, документы' },
 ] as const
 
 export const SETTINGS_TAB_INDEX: Record<SettingsTabId, string> = {
-  profile: '0', billing: '1', quests: '2', pins: '3', archive: '4', privacy: '5', appearance: '6', security: '7', procedures: '8', support: '9', app: '10', about: '11', admin: '12',
+  profile: '0', billing: '1', quests: '2', pins: '3', archive: '4', privacy: '5', appearance: '6', security: '7', procedures: '8', support: '9', app: '10', integrations: '11', about: '12', admin: '13',
 }
 
 export const ADMIN_TAB = { id: 'admin' as const, label: 'Модерация', icon: 'pi pi-shield', desc: 'Скрытие, удаление' } as const

@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
-import { savedNotesApi, type SavedNote, type SavedNotesStorage } from '@/services/savedNotes.api'
+import { savedNotesApi, type SavedNote, type SavedNoteAttachment, type SavedNotesStorage } from '@/services/savedNotes.api'
 import { busOn } from '@/services/realtime-bus'
 import { ensureUserChannel } from '@/composables/useUserChannel'
+import { noteFileDel, noteFileGet, noteFilePut, noteFilesClear } from '@/db/app.db'
 
 /**
  * Ключ localStorage для локального режима (на пользователя).
@@ -30,6 +31,69 @@ function currentUid(): number {
  */
 function detectKind(body: string): 'text' | 'link' {
   return body.includes('http://') || body.includes('https://') ? 'link' : 'text'
+}
+
+/**
+ * Живые objectURL локальных вложений (revoke при замене/удалении).
+ */
+const localUrls = new Map<number, string>()
+
+/**
+ * Отозвать objectURL локального вложения.
+ *
+ * @param noteId id заметки
+ */
+function revokeLocalUrl(noteId: number): void {
+  const prev = localUrls.get(Number(noteId))
+  if (prev) {
+    try {
+      URL.revokeObjectURL(prev)
+    } catch {
+      /* noop */
+    }
+    localUrls.delete(Number(noteId))
+  }
+}
+
+/**
+ * Заметка без бинарника для localStorage (blob и url не переживут JSON).
+ *
+ * @param note заметка с живым вложением
+ * @returns копия с метой вложения без blob/url
+ */
+function toStorable(note: SavedNote): SavedNote {
+  const attachment = note.attachment
+  if (!attachment) return note
+  const { blob: _blob, url: _url, ...meta } = attachment
+  return { ...note, attachment: { ...meta, url: null } }
+}
+
+/**
+ * Подключить живые url к локальным вложениям (blob из IndexedDB).
+ *
+ * @param uid id пользователя
+ * @param notes заметки страницы
+ * @returns заметки с url вложений
+ */
+async function withLocalUrls(uid: number, notes: SavedNote[]): Promise<SavedNote[]> {
+  const out: SavedNote[] = []
+  for (const note of notes) {
+    if (!note.attachment) {
+      out.push(note)
+      continue
+    }
+    const id = Number(note.id)
+    revokeLocalUrl(id)
+    const row = await noteFileGet(uid, id)
+    if (!row) {
+      out.push({ ...note, attachment: { ...note.attachment, url: null } })
+      continue
+    }
+    const url = URL.createObjectURL(row.blob)
+    localUrls.set(id, url)
+    out.push({ ...note, attachment: { ...note.attachment, url } })
+  }
+  return out
 }
 
 /**
@@ -162,6 +226,12 @@ export const useSavedNotesStore = defineStore('savedNotes', {
      * @param mode server|local
      */
     async setStorage(mode: SavedNotesStorage): Promise<boolean> {
+      if (mode !== 'server' && mode !== 'local') {
+        return false
+      }
+      if (mode === this.storage) {
+        return true
+      }
       const prev = this.storage
       this.storage = mode
       try {
@@ -191,7 +261,7 @@ export const useSavedNotesStore = defineStore('savedNotes', {
      */
     async load(append = false): Promise<void> {
       if (this.storage === 'local') {
-        this.loadFromLocal(append)
+        await this.loadFromLocal(append)
         return
       }
       await this.loadFromServer(append)
@@ -257,9 +327,12 @@ export const useSavedNotesStore = defineStore('savedNotes', {
     /**
      * Страница из localStorage (поиск и фильтр — в памяти).
      *
+     * Поиск ловит и имена вложений. Блобы догружаются из IndexedDB,
+     * в ленту встают живые objectURL.
+     *
      * @param append приклеить к списку
      */
-    loadFromLocal(append: boolean): void {
+    async loadFromLocal(append: boolean): Promise<void> {
       const uid = currentUid()
       const all = readLocal(uid)
       const needle = this.search.trim().toLowerCase()
@@ -267,11 +340,12 @@ export const useSavedNotesStore = defineStore('savedNotes', {
         const kindOk = this.kind === 'all' || note.kind === this.kind
         if (!kindOk) return false
         if (needle === '') return true
-        return note.body.toLowerCase().includes(needle)
+        const haystack = `${note.body}\n${note.attachment?.name ?? ''}`.toLowerCase()
+        return haystack.includes(needle)
       })
       const perPage = 20
       const slice = filtered.slice(0, this.page * perPage)
-      this.notes = append ? slice : slice
+      this.notes = await withLocalUrls(uid, slice)
       this.total = filtered.length
       this.lastPage = Math.max(1, Math.ceil(filtered.length / perPage))
       this.hasMore = slice.length < filtered.length
@@ -282,12 +356,18 @@ export const useSavedNotesStore = defineStore('savedNotes', {
     /**
      * Создать заметку.
      *
+     * Пустой текст допустим только с вложением (картинка/файл сами
+     * по себе — как в чате): подписью станет имя файла.
+     *
      * @param body текст заметки
+     * @param file опциональное вложение
+     * @param fileKind image|file для локального режима
      * @returns true когда сохранено
      */
-    async create(body: string): Promise<boolean> {
-      const clean = body.trim()
-      if (clean === '') return false
+    async create(body: string, file?: File | null, fileKind?: string): Promise<boolean> {
+      const clean = body.trim().slice(0, 10000)
+      const caption = clean === '' && file ? file.name.slice(0, 200) : clean
+      if (caption === '') return false
       this.saving = true
       try {
         if (this.storage === 'local') {
@@ -295,16 +375,27 @@ export const useSavedNotesStore = defineStore('savedNotes', {
           const now = new Date().toISOString()
           const note: SavedNote = {
             id: Date.now(),
-            body: clean.slice(0, 10000),
-            kind: detectKind(clean),
+            body: caption,
+            kind: detectKind(caption),
             created_at: now,
             updated_at: now,
           }
-          writeLocal(uid, [note, ...readLocal(uid)])
+          if (file) {
+            const kind = fileKind === 'image' ? 'image' : 'file'
+            await noteFilePut(uid, note.id, file, kind)
+            note.attachment = {
+              url: null,
+              name: file.name,
+              mime: file.type || 'application/octet-stream',
+              size: file.size,
+              kind,
+            }
+          }
+          writeLocal(uid, [toStorable(note), ...readLocal(uid)])
           await this.reload()
           return true
         }
-        const created = await savedNotesApi.create(clean)
+        const created = await savedNotesApi.create(caption, file ?? null)
         this.notes = [created, ...this.notes]
         this.total += 1
         return true
@@ -317,29 +408,49 @@ export const useSavedNotesStore = defineStore('savedNotes', {
     },
 
     /**
-     * Обновить текст заметки.
+     * Обновить текст и вложение заметки.
      *
      * @param id id заметки
      * @param body новый текст
+     * @param file новое вложение (заменяет старое)
+     * @param fileKind image|file для локального режима
+     * @param removeAttachment убрать вложение без замены
      * @returns true когда сохранено
      */
-    async updateNote(id: number, body: string): Promise<boolean> {
+    async updateNote(id: number, body: string, file?: File | null, fileKind?: string, removeAttachment?: boolean): Promise<boolean> {
       const clean = body.trim()
       if (clean === '') return false
       this.saving = true
       try {
         if (this.storage === 'local') {
           const uid = currentUid()
-          const next = readLocal(uid).map((note) =>
-            Number(note.id) === Number(id)
-              ? { ...note, body: clean.slice(0, 10000), kind: detectKind(clean), updated_at: new Date().toISOString() }
-              : note,
-          )
-          writeLocal(uid, next)
+          const kind = fileKind === 'image' ? 'image' : 'file'
+          if (file) {
+            await noteFilePut(uid, Number(id), file, kind)
+          } else if (removeAttachment) {
+            await noteFileDel(uid, Number(id))
+            revokeLocalUrl(Number(id))
+          }
+          const next = readLocal(uid).map((note) => {
+            if (Number(note.id) !== Number(id)) return note
+            const base = {
+              ...note,
+              body: clean.slice(0, 10000),
+              kind: detectKind(clean),
+              updated_at: new Date().toISOString(),
+            }
+            if (file) {
+              base.attachment = { url: null, name: file.name, mime: file.type || 'application/octet-stream', size: file.size, kind }
+            } else if (removeAttachment) {
+              base.attachment = null
+            }
+            return base
+          })
+          writeLocal(uid, next.map(toStorable))
           await this.reload()
           return true
         }
-        const updated = await savedNotesApi.update(id, clean)
+        const updated = await savedNotesApi.update(id, clean, file ?? null, removeAttachment)
         this.notes = this.notes.map((note) => (Number(note.id) === Number(id) ? updated : note))
         return true
       } catch {
@@ -359,6 +470,8 @@ export const useSavedNotesStore = defineStore('savedNotes', {
       try {
         if (this.storage === 'local') {
           const uid = currentUid()
+          await noteFileDel(uid, Number(id))
+          revokeLocalUrl(Number(id))
           writeLocal(
             uid,
             readLocal(uid).filter((note) => Number(note.id) !== Number(id)),
@@ -382,7 +495,12 @@ export const useSavedNotesStore = defineStore('savedNotes', {
     async clearAll(): Promise<boolean> {
       try {
         if (this.storage === 'local') {
-          writeLocal(currentUid(), [])
+          const uid = currentUid()
+          for (const [noteId] of localUrls) {
+            revokeLocalUrl(noteId)
+          }
+          await noteFilesClear(uid)
+          writeLocal(uid, [])
           await this.reload()
           return true
         }

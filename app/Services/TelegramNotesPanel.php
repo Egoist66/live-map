@@ -165,7 +165,12 @@ class TelegramNotesPanel
             }
 
             $index++;
-            $lines[] = '<b>'.$index.'.</b> '.self::esc(self::short((string) ($note['body'] ?? '')));
+            $line = '<b>'.$index.'.</b> '.self::esc(self::short((string) ($note['body'] ?? '')));
+            $attachName = is_array($note['attachment'] ?? null) ? (string) ($note['attachment']['name'] ?? '') : '';
+            if ($attachName !== '') {
+                $line .= ' 📎 '.self::esc($attachName);
+            }
+            $lines[] = $line;
 
             $keyboard[] = [
                 ['text' => '🗑 Убрать №'.$index, 'callback_data' => 'notes_del:'.$noteId],

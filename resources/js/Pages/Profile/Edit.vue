@@ -15,6 +15,9 @@ import SettingsSecurityTab from '@/Components/Features/Settings/SettingsSecurity
 import SettingsProceduresTab from '@/Components/Features/Settings/SettingsProceduresTab.vue'
 import SettingsSupportTab from '@/Components/Features/Settings/SettingsSupportTab.vue'
 import SettingsAppTab from '@/Components/Features/Settings/SettingsAppTab.vue'
+import { defineAsyncComponent } from 'vue'
+// Интеграции — только по открытию таба: QR и бот грузятся отдельным чанком.
+const SettingsIntegrationsTab = defineAsyncComponent(() => import('@/Components/Features/Settings/SettingsIntegrationsTab.vue'))
 import SettingsAboutSection from '@/Components/Features/Settings/SettingsAboutSection.vue'
 import SettingsAdminTab from '@/Components/Features/Settings/SettingsAdminTab.vue'
 import AdminImpersonateDialog from '@/Components/Features/Admin/AdminImpersonateDialog.vue'
@@ -66,6 +69,7 @@ const showQuestsTab = computed(() => modules.isEnabled('ulove') || modules.isEna
                 <TabPanel v-if="(s.showProcedures as any).value" value="procedures" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsProceduresTab :proc="s.proc" /></TabPanel>
                 <TabPanel value="support" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsSupportTab :subject="s.support.supportSubject.value" @update:subject="(v:string)=>s.support.supportSubject.value=v" :body="s.support.supportBody.value" @update:body="(v:string)=>s.support.supportBody.value=v" :donate-sel="s.support.donateSel.value" @update:donate="s.support.setDonate" :rate="s.ex.usdRate.value" :rate-loading="s.ex.loading.value" @send="s.support.mailToSupport()" @donate="s.support.mailToDonate(s.ex)" @reload="s.ex.load" /></TabPanel>
                 <TabPanel value="app" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsAppTab /></TabPanel>
+                <TabPanel value="integrations" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsIntegrationsTab v-if="s.active.value === 'integrations'" /></TabPanel>
                 <TabPanel value="about" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsAboutSection /></TabPanel>
                 <TabPanel v-if="s.isAdmin.value" value="admin" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsAdminTab :admin="s.admin" :reports="s.reports" :imp="s.imp" /></TabPanel>
               </TabPanels>

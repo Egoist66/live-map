@@ -17,12 +17,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $user_id
  * @property string $payload шифротекст тела
  * @property string $kind text|link
+ * @property string|null $attachment_path
+ * @property string|null $attachment_name
+ * @property string|null $attachment_mime
+ * @property int|null $attachment_size
+ * @property string|null $attachment_kind image|file
  * @property \Carbon\Carbon|null $created_at
  * @property \Carbon\Carbon|null $updated_at
  */
 class SavedNote extends Model
 {
-    protected $fillable = ['user_id', 'payload', 'kind'];
+    protected $fillable = ['user_id', 'payload', 'kind', 'attachment_path', 'attachment_name', 'attachment_mime', 'attachment_size', 'attachment_kind'];
 
     /**
      * Владелец заметки.
@@ -57,9 +62,29 @@ class SavedNote extends Model
     }
 
     /**
+     * Пейлоад вложения для фронта и Telegram-бота.
+     *
+     * @return array{url:string, name:string|null, mime:string|null, size:int|null, kind:string}|null
+     */
+    public function attachmentPayload(): ?array
+    {
+        if (! $this->attachment_path) {
+            return null;
+        }
+
+        return [
+            'url' => \App\Services\ChatAttachment::url($this->attachment_path),
+            'name' => $this->attachment_name,
+            'mime' => $this->attachment_mime,
+            'size' => $this->attachment_size !== null ? (int) $this->attachment_size : null,
+            'kind' => (string) ($this->attachment_kind ?? 'file'),
+        ];
+    }
+
+    /**
      * Пейлоад для фронта и Telegram-бота.
      *
-     * @return array{id:int, body:string, kind:string, created_at:string|null, updated_at:string|null}
+     * @return array{id:int, body:string, kind:string, attachment:array<string, mixed>|null, created_at:string|null, updated_at:string|null}
      */
     public function toPayload(): array
     {
@@ -67,6 +92,7 @@ class SavedNote extends Model
             'id' => (int) $this->id,
             'body' => $this->plainBody(),
             'kind' => (string) ($this->kind ?? 'text'),
+            'attachment' => $this->attachmentPayload(),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
         ];

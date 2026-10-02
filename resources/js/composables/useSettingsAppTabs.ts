@@ -26,7 +26,7 @@ export const SETTINGS_APP_TABS: readonly SettingsAppTab[] = [
   { id: 'notify', label: 'Уведомления', icon: 'pi pi-bell', desc: 'Пуши и бот Telegram' },
   { id: 'install', label: 'Установка', icon: 'pi pi-download', desc: 'PWA и оффлайн-кэш' },
   { id: 'telegram', label: 'Telegram', icon: 'pi pi-send', desc: 'Второй аккаунт в боте' },
-  { id: 'notes', label: 'Избранное', icon: 'pi pi-star', desc: 'Где хранятся заметки' },
+  { id: 'notes', label: 'Избранное', icon: 'pi pi-star', desc: 'Чат с собой' },
   { id: 'hotkeys', label: 'Клавиши', icon: 'pi pi-keyboard', desc: 'Горячие клавиши десктопа' },
 ] as const
 

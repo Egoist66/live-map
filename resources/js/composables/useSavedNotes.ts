@@ -42,8 +42,9 @@ export function useSavedNotes() {
     setSearch: (q: string): Promise<void> => store.setSearch(q),
     setKind: (kind: 'all' | 'text' | 'link'): Promise<void> => store.setKind(kind),
     setStorage: (mode: 'server' | 'local'): Promise<boolean> => store.setStorage(mode),
-    create: (body: string): Promise<boolean> => store.create(body),
-    updateNote: (id: number, body: string): Promise<boolean> => store.updateNote(id, body),
+    create: (body: string, file?: File | null, fileKind?: string): Promise<boolean> => store.create(body, file, fileKind),
+    updateNote: (id: number, body: string, file?: File | null, fileKind?: string, removeAttachment?: boolean): Promise<boolean> =>
+      store.updateNote(id, body, file, fileKind, removeAttachment),
     removeNote: (id: number): Promise<boolean> => store.removeNote(id),
     clearAll: (): Promise<boolean> => store.clearAll(),
   }

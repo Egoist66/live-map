@@ -70,9 +70,11 @@ function ageText(card: SwipeCard): string {
     :visible="open"
     @update:visible="(v:boolean)=>{ if(!v) emit('close') }"
     modal
+    :draggable="false"
+    :block-scroll="true"
     header="Анкета"
     :style="{ width: '420px', maxWidth: '94vw', maxHeight: '92dvh' }"
-    :pt="{ root: { class: '!rounded-3xl dark:!bg-zinc-900 dark:!border-zinc-700' }, header: { class: 'dark:!bg-zinc-900 dark:!text-white' }, content: { class: 'dark:!bg-zinc-900 dark:!text-zinc-100 !max-h-[78dvh] !overflow-y-auto' } }"
+    :pt="{ root: { class: '!rounded-3xl !overflow-hidden dark:!bg-zinc-900 dark:!border-zinc-700' }, header: { class: 'dark:!bg-zinc-900 dark:!text-white' }, content: { class: 'dark:!bg-zinc-900 dark:!text-zinc-100 !max-h-[78dvh] !overflow-y-auto' } }"
   >
     <div v-if="card" class="pt-1">
       <div class="flex items-center gap-3">

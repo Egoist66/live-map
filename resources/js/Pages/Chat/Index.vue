@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, onMounted, ref, watch } from "vue";
-import { Head } from "@inertiajs/vue3";
+import { Head, router } from "@inertiajs/vue3";
 import Toast from "primevue/toast";
 import ChatSidebar from "@/Components/Features/Chat/ChatSidebar.vue";
 import ChatWindow from "@/Components/Features/Chat/ChatWindow.vue";
@@ -23,9 +23,6 @@ const ChatPresetsDialog = defineAsyncComponent(
 );
 const ChatAutoReplyDialog = defineAsyncComponent(
   () => import("@/Components/Features/Chat/ChatAutoReplyDialog.vue")
-);
-const SavedNotesDialog = defineAsyncComponent(
-  () => import("@/Components/Features/Chat/SavedNotesDialog.vue")
 );
 const DistrictInviteDialog = defineAsyncComponent(
   () => import("@/Components/Features/Map/DistrictInviteDialog.vue")
@@ -257,7 +254,13 @@ watch(
 
 const presetsOpen = ref(false);
 const autoReplyOpen = ref(false);
-const savedOpen = ref(false);
+
+/**
+ * Открыть «Избранное» — отдельный чат с собой (/notes).
+ */
+function goNotes(): void {
+  router.visit("/notes");
+}
 
 /**
  * Подставить пресет в поле ввода (через пробел к черновику).
@@ -354,7 +357,7 @@ onMounted(async () => {
         :format-time="formatTime"
         @refresh="refresh"
         @people="filters.showPeopleSearch.value = true"
-        @saved="savedOpen = true"
+        @saved="goNotes"
         @open="openConversation"
         @start-chat="startChatWith"
         @delete-chat="askDeleteChat"
@@ -492,7 +495,6 @@ onMounted(async () => {
     @update:open="(v: boolean) => autoReplyOpen = v"
     @saved="onAutoReplySaved"
   />
-  <SavedNotesDialog :open="savedOpen" @update:open="(v: boolean) => savedOpen = v" />
   <DistrictInviteDialog
     :open="districtInvite.open.value"
     @update:open="districtInvite.setOpen"
