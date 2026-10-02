@@ -11,8 +11,10 @@ import TabPanels from "primevue/tabpanels";
 import TabPanel from "primevue/tabpanel";
 import ProgressSpinner from "primevue/progressspinner";
 import { watch, computed } from "vue";
-import { router } from "@inertiajs/vue3";
+import { router, usePage } from "@inertiajs/vue3";
 import { useBellNotifications } from "@/composables/useBellNotifications";
+import MessageTicks from "@/Components/Features/Feedback/MessageTicks.vue";
+import { useChatListTicks } from "@/composables/useChatListTicks";
 import { usePinActivity } from "@/composables/usePinActivity";
 import { useAdminReports } from "@/composables/useAdminReports";
 import { useAppUpdates } from "@/composables/useAppUpdates";
@@ -26,6 +28,7 @@ import { useNotificationMedia } from "@/composables/useNotificationMedia";
 import { describeInboxRow } from "@/services/notifications.api";
 
 const bell = useBellNotifications();
+const bellTicks = useChatListTicks(() => Number((usePage().props.auth as any)?.user?.id ?? 0));
 const readAllState = useNotificationsReadAll();
 const media = useNotificationMedia();
 const pinAct = usePinActivity();
@@ -803,8 +806,9 @@ function openNews(item: any) {
                               >{{ fmtTime(c.last_message_at) }}</span
                             >
                           </div>
-                          <div class="text-xs text-stone-500 dark:text-zinc-400 truncate">
-                            {{ c.last_message?.body || "Нет сообщений" }}
+                          <div class="text-xs text-stone-500 dark:text-zinc-400 truncate flex items-center gap-1">
+                            <MessageTicks v-if="bellTicks.isOwnLast(c)" :status="bellTicks.lastMessageStatus(c) ?? 'sent'" />
+                            <span class="truncate">{{ c.last_message?.body || "Нет сообщений" }}</span>
                           </div>
                         </div>
                         <span

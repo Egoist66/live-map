@@ -6,6 +6,7 @@ use App\Models\DatingMatch;
 use App\Models\Friendship;
 use App\Models\Message;
 use App\Models\Conversation;
+use App\Models\ProfilePhoto;
 use App\Models\SwipeAction;
 use App\Models\User;
 use App\Models\UserBlock;
@@ -646,6 +647,9 @@ class DatingService
                 ->all();
         }
         $users = $ids ? User::whereIn('id', $ids)->get()->keyBy('id') : collect();
+
+        $this->attachPhotos($users->values());
+
         $likedMe = SwipeAction::where('liked_id', $me->id)->where('action', 'like')->pluck('liker_id')->map(fn ($id) => (int) $id)->flip();
 
         $cards = [];
@@ -693,6 +697,8 @@ class DatingService
         $matchedFlip = array_flip($this->matchedIds($me));
         $likerIds = $rows->pluck('liker_id')->map(fn ($id) => (int) $id)->all();
         $users = User::whereIn('id', $likerIds)->get()->keyBy('id');
+
+        $this->attachPhotos($users->values());
 
         $cards = [];
         $incognitoCount = 0;
@@ -1540,12 +1546,13 @@ class DatingService
                 'id', 'name', 'profile_slug', 'gender', 'birth_date', 'bio', 'avatar_path',
                 'home_city', 'home_lat', 'home_lng', 'last_seen_at', 'created_at', 'boost_until',
                 'dating_goal', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_hide_name', 'dating_hide_age', 'dating_hide_distance',
-                'plan', 'plan_expires_at', 'is_admin', 'role',
+                'plan', 'plan_expires_at', 'is_admin', 'role', 'is_invisible',
             ])
-            ->with(['profilePhotos' => fn ($q) => $q->orderBy('sort_order')->limit(self::SWIPE_PHOTOS_LIMIT_PRO)])
             ->orderByDesc('last_seen_at')
             ->limit($poolLimit)
             ->get();
+
+        $candidates = $this->withoutInvisible($candidates, $me);
 
         $likedMeSuper = $this->superlikeSendersMap($me);
 
@@ -1598,6 +1605,10 @@ class DatingService
         usort($scored, fn ($a, $b) => $b['score'] <=> $a['score']);
 
         $top = array_slice($scored, 0, max(1, $limit));
+
+        $topCandidates = collect($top)->map(fn ($row) => $row['candidate']);
+
+        $this->attachPhotos($topCandidates);
 
         $cards = [];
 
@@ -1829,12 +1840,15 @@ class DatingService
                 'home_city', 'home_lat', 'home_lng', 'last_seen_at',
                 'dating_goal', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_hide_name', 'dating_hide_age', 'dating_hide_distance',
                 'dating_match_only', 'message_privacy', 'allow_random_messages',
-                'plan', 'plan_expires_at', 'is_admin', 'role',
+                'plan', 'plan_expires_at', 'is_admin', 'role', 'is_invisible',
             ])
-            ->with(['profilePhotos' => fn ($q) => $q->orderBy('sort_order')->limit(self::SWIPE_PHOTOS_LIMIT_PRO)])
             ->orderByDesc('last_seen_at')
             ->forPage($page, $perPage)
             ->get();
+
+        $candidates = $this->withoutInvisible($candidates, $me);
+
+        $this->attachPhotos($candidates);
 
         $likedMeIds = SwipeAction::where('liked_id', $me->id)
             ->where('action', 'like')
@@ -1883,7 +1897,7 @@ class DatingService
         $lastPage = max(1, (int) ceil($total / $perPage));
         $page = max(1, min($page, $lastPage));
         $rows = (clone $base)
-            ->with(['userA:id,name,avatar_path,last_seen_at', 'userB:id,name,avatar_path,last_seen_at'])
+            ->with(['userA:id,name,avatar_path,last_seen_at,is_invisible,plan,role,is_admin', 'userB:id,name,avatar_path,last_seen_at,is_invisible,plan,role,is_admin'])
             ->orderByDesc('created_at')
             ->forPage($page, $perPage)
             ->get();
@@ -1894,6 +1908,9 @@ class DatingService
 
         foreach ($rows as $row) {
             $other = $row->otherUser($me->id);
+
+            $hiddenOnline = $other->isInvisibleActive() && ! $me->isAdmin();
+
             $cards[] = [
                 'match_id' => $row->id,
                 'created_at' => $row->created_at,
@@ -1902,7 +1919,7 @@ class DatingService
                     'id' => $other->id,
                     'name' => $other->name,
                     'avatar_url' => $other->avatar_url,
-                    'last_seen_at' => $other->last_seen_at?->toISOString(),
+                    'last_seen_at' => $hiddenOnline ? null : $other->last_seen_at?->toISOString(),
                 ],
             ];
         }
@@ -1944,6 +1961,76 @@ class DatingService
     }
 
     /**
+     * Убрать из выборки пользователей с активной невидимкой.
+     *
+     * Невидимка (Pro и выше) полностью скрывает онлайн: таких людей
+     * не показываем ни в ленте, ни в «кто онлайн» — кроме просмотра
+     * админом. Спящий флаг у Free-тарифа (без права на невидимку)
+     * игнорируем через isInvisibleActive.
+     *
+     * @param \Illuminate\Support\Collection<int, User> $candidates кандидаты из БД
+     * @param User $viewer кто смотрит
+     * @return \Illuminate\Support\Collection<int, User> кандидаты без невидимок
+     */
+    private function withoutInvisible($candidates, User $viewer)
+    {
+        if ($viewer->isAdmin()) {
+            return $candidates->values();
+        }
+
+        return $candidates
+            ->reject(fn (User $candidate) => $candidate->isInvisibleActive())
+            ->values();
+    }
+
+    /**
+     * Прицепить фото кандидатов пачкой: до лимита на человека.
+     *
+     * Eager-load вида with([relation => limit(N)]) режет лимит глобально
+     * по всему запросу, а не на каждого родителя: первые кандидаты
+     * забирали бы все фото, остальные оставались бы с пустыми галереями
+     * (и уходили в fallback на аватар). Поэтому грузим одним запросом
+     * все фото выборки и раскладываем по людям в PHP.
+     *
+     * @param iterable<int, User> $candidates кандидаты без фото
+     * @return void
+     */
+    private function attachPhotos(iterable $candidates): void
+    {
+        $ids = collect($candidates)
+            ->map(fn (User $candidate) => (int) $candidate->id)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($ids === []) {
+            return;
+        }
+
+        $rows = ProfilePhoto::whereIn('user_id', $ids)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get();
+
+        $grouped = [];
+
+        foreach ($rows as $photo) {
+            $uid = (int) $photo->user_id;
+
+            if (count($grouped[$uid] ?? []) >= self::SWIPE_PHOTOS_LIMIT_PRO) {
+                continue;
+            }
+
+            $grouped[$uid][] = $photo;
+        }
+
+        foreach ($candidates as $candidate) {
+            $candidate->setRelation('profilePhotos', collect($grouped[(int) $candidate->id] ?? []));
+        }
+    }
+
+    /**
      * Публичная карточка кандидата с учётом приватности.
      *
      * @param User $candidate
@@ -1960,6 +2047,8 @@ class DatingService
         $hideName = (bool) $candidate->dating_hide_name && ! $canSeeReal;
         $hideAge = (bool) $candidate->dating_hide_age && ! $canSeeReal;
         $hideDistance = (bool) ($candidate->dating_hide_distance ?? false) && ! $canSeeReal;
+
+        $hiddenOnline = $candidate->isInvisibleActive() && ! $viewer->isAdmin();
 
         $photos = $candidate->relationLoaded('profilePhotos')
             ? $candidate->profilePhotos
@@ -2003,7 +2092,7 @@ class DatingService
             'custom_goal' => $candidate->dating_custom_goal,
             'about' => $candidate->dating_about,
             'interests' => $candidate->dating_interests ?? [],
-            'last_seen_at' => $candidate->last_seen_at?->toISOString(),
+            'last_seen_at' => $hiddenOnline ? null : $candidate->last_seen_at?->toISOString(),
             'is_match' => $isMatch,
             'liked_me' => $likedMe,
             'is_superlike' => false,

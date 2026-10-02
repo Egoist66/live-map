@@ -316,11 +316,22 @@ class TelegramProfilePanel
     /**
      * В сети ли пользователь (last_seen в пределах онлайн-порога).
      *
+     * Невидимка полностью скрывает онлайн и здесь: при активной
+     * невидимке всегда оффлайн, даже для себя.
+     *
      * @param User $user проверяемый
      * @return bool
      */
     private static function isOnline(User $user): bool
     {
+        try {
+            if ($user->isInvisibleActive()) {
+                return false;
+            }
+        } catch (\Throwable) {
+            return false;
+        }
+
         if ($user->last_seen_at === null) {
             return false;
         }

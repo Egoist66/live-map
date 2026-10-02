@@ -493,6 +493,7 @@ onUnmounted(() => {
               >
                 <AppImage
                   v-if="s.next.value.photos[0]"
+                  :key="`${s.next.value.id}-${s.next.value.photos[0]}`"
                   :src="s.next.value.photos[0]"
                   alt=""
                   class="absolute inset-0"
@@ -554,7 +555,7 @@ onUnmounted(() => {
                 <AppImage
                   v-if="cardPhotos.currentPhoto.value"
                   :src="cardPhotos.currentPhoto.value"
-                  :key="`${s.current.value.id}-${cardPhotos.photoIndex.value}`"
+                  :key="`${s.current.value.id}-${cardPhotos.photoIndex.value}-${cardPhotos.currentPhoto.value}`"
                   alt=""
                   :eager="true"
                   class="absolute inset-0"
@@ -620,6 +621,7 @@ onUnmounted(() => {
               >
                 <AppImage
                   v-if="s.exiting.value.card.photos[0]"
+                  :key="`exit-${s.exiting.value.card.id}-${s.exiting.value.card.photos[0]}`"
                   :src="s.exiting.value.card.photos[0]"
                   alt=""
                   :eager="true"

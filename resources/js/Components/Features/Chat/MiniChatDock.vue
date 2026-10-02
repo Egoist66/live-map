@@ -5,6 +5,7 @@ import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import ProgressSpinner from 'primevue/progressspinner'
 import MiniChatWindow from '@/Components/Features/Chat/MiniChatWindow.vue'
+import MessageTicks from '@/Components/Features/Feedback/MessageTicks.vue'
 import { useMiniChatDock } from '@/composables/useMiniChatDock'
 
 const dock = useMiniChatDock()
@@ -63,7 +64,7 @@ const dockRef = dock.dockRef
           </div>
         </div>
 
-        <div class="min-h-0 flex-1 overflow-y-auto p-1.5">
+        <div class="min-h-0 flex-1 overflow-y-auto scroll-neat p-1.5">
           <div v-if="dock.isListLoading.value" class="grid h-full place-items-center">
             <ProgressSpinner style="width:28px;height:28px" :strokeWidth="6" />
           </div>
@@ -90,7 +91,7 @@ const dockRef = dock.dockRef
                   <span class="truncate text-[13px] font-bold text-ink-900 dark:text-white">{{ dock.displayName(conv) }}</span>
                   <span class="shrink-0 text-[10px] text-stone-400">{{ dock.timeOf(conv.last_message_at) }}</span>
                 </span>
-                <span class="mt-0.5 block truncate text-xs text-stone-500 dark:text-zinc-400">{{ dock.previewOf(conv) }}</span>
+                <span class="mt-0.5 flex items-center gap-1 truncate text-xs text-stone-500 dark:text-zinc-400"><MessageTicks v-if="dock.isOwnLast(conv)" :status="dock.lastMessageStatus(conv) ?? 'sent'" /><span class="truncate">{{ dock.previewOf(conv) }}</span></span>
               </span>
             </button>
           </template>

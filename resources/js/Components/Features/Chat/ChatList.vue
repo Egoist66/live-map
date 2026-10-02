@@ -6,8 +6,10 @@ import Button from 'primevue/button'
 import Menu from 'primevue/menu'
 import Dialog from 'primevue/dialog'
 import OnlineDot from '@/Components/Features/Feedback/OnlineDot.vue'
+import MessageTicks from '@/Components/Features/Feedback/MessageTicks.vue'
 import OrgBadge from '@/Components/Features/Chat/OrgBadge.vue'
 import { avatarSrcFor } from '@/composables/useAvatar'
+import { useChatListTicks } from '@/composables/useChatListTicks'
 import { useChatPreview } from '@/composables/useChatPreview'
 import { useChatRowMenu } from '@/composables/useChatRowMenu'
 import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
@@ -26,6 +28,8 @@ const filteredUlove = computed(() => {
 const emit = defineEmits<{ (e: 'update:filter', v: string): void; (e: 'open', id: number): void; (e: 'startChat', u: any): void; (e: 'deleteChat', id: number): void; (e: 'block', id: number, name?: string): void; (e: 'unblock', id: number): void; (e: 'removeFriend', f: any): void; (e: 'accept', id: number): void; (e: 'decline', id: number): void; (e: 'sheet', p: any): void }>()
 
 const { previewText } = useChatPreview(Number((usePage().props.auth as any)?.user?.id ?? 0))
+const currentUserId = Number((usePage().props.auth as any)?.user?.id ?? 0)
+const ticks = useChatListTicks(() => currentUserId)
 const rowMenu = useChatRowMenu({
   onDeleteChat: (id: number) => emit('deleteChat', id),
   onBlock: (id: number, name?: string) => emit('block', id, name),
@@ -37,7 +41,7 @@ const { menuPt } = useDropdownMenuStyle()
 const { userProfileUrl } = useProfileUrl()
 </script>
 <template>
-  <div class="flex-1 overflow-auto overscroll-contain [scrollbar-width:thin] max-lg:[-ms-overflow-style:none] max-lg:[scrollbar-width:none] max-lg:[&::-webkit-scrollbar]:hidden min-h-0 w-full max-w-full">
+  <div class="flex-1 overflow-auto overscroll-contain scroll-neat min-h-0 w-full max-w-full">
     <div class="p-2.5 border-b dark:border-zinc-800 bg-stone-50/50 dark:bg-zinc-900/50">
       <div class="relative w-full">
         <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-sm pointer-events-none" />
@@ -60,8 +64,8 @@ const { userProfileUrl } = useProfileUrl()
           </span>
           <div class="flex-1 min-w-0">
             <div class="flex justify-between items-baseline gap-2"><span class="text-[15px] lg:text-sm font-semibold dark:text-white truncate">{{ c.title || c.other?.name || 'Чат' }} <OrgBadge :is-organization="c.other?.is_organization" /></span><span v-if="c.last_message_at" class="text-[11px] text-stone-400 shrink-0">{{ formatTime(c.last_message_at) }}</span></div>
-            <div v-if="c.title" class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5 text-violet-600">🏘️ Общий чат района<span class="text-stone-300">·</span><span class="truncate text-stone-500">{{ previewText(c.last_message) }}</span></div>
-            <div v-else class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5"><span class="truncate text-stone-500 dark:text-zinc-400">{{ previewText(c.last_message, isOnline(c.other?.id, c.other?.last_seen_at) ? 'в сети' : 'Начни общение') }}</span><span v-if="(c.last_message as any)?.is_edited" class="text-[10px] text-stone-400">(изм.)</span></div>
+            <div v-if="c.title" class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5 text-violet-600">🏘️ Общий чат района<span class="text-stone-300">·</span><MessageTicks v-if="ticks.isOwnLast(c)" :status="ticks.lastMessageStatus(c) ?? 'sent'" /><span class="truncate text-stone-500">{{ previewText(c.last_message) }}</span></div>
+            <div v-else class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5"><MessageTicks v-if="ticks.isOwnLast(c)" :status="ticks.lastMessageStatus(c) ?? 'sent'" /><span class="truncate text-stone-500 dark:text-zinc-400">{{ previewText(c.last_message, isOnline(c.other?.id, c.other?.last_seen_at) ? 'в сети' : 'Начни общение') }}</span><span v-if="(c.last_message as any)?.is_edited" class="text-[10px] text-stone-400">(изм.)</span></div>
           </div>
           <span v-if="c.unread_count" class="bg-[#F04D9F] text-white text-xs font-bold min-w-[22px] h-[22px] grid place-items-center px-1.5 rounded-full shrink-0">{{ c.unread_count > 9 ? '9+' : c.unread_count }}</span>
         </button>
@@ -82,12 +86,11 @@ const { userProfileUrl } = useProfileUrl()
           <span class="relative shrink-0">
             <Avatar :image="avatarSrcFor(c.other)" shape="circle" size="large" :class="['!w-11 !h-11 [&_img]:object-cover', c.other?.is_match ? 'ring-2 ring-rose-300 dark:ring-rose-700' : '']" :pt="{ image: { class: 'object-cover' } }" />
             <OnlineDot :online="isOnline(c.other?.id, c.other?.last_seen_at)" />
-            <span v-if="c.other?.is_match" class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-rose-500 grid place-items-center ring-2 ring-white dark:ring-zinc-900"><i class="pi pi-heart-fill text-white text-[10px]" /></span>
           </span>
           <div class="flex-1 min-w-0">
             <div class="flex justify-between items-baseline gap-2"><span class="text-[15px] lg:text-sm font-semibold dark:text-white truncate">{{ c.other?.name || 'Чат' }}</span><span v-if="c.last_message_at" class="text-[11px] text-stone-400 shrink-0">{{ formatTime(c.last_message_at) }}</span></div>
-            <div v-if="c.other?.is_match" class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5"><span class="text-rose-500 font-bold">Мэтч</span><span class="text-stone-300">·</span><span class="truncate text-stone-500">{{ previewText(c.last_message, 'Чат открыт — напиши первым') }}</span><span v-if="(c.last_message as any)?.is_edited" class="text-[10px] text-stone-400">(изм.)</span></div>
-            <div v-else class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5"><span class="truncate text-stone-500 dark:text-zinc-400">{{ previewText(c.last_message, isOnline(c.other?.id, c.other?.last_seen_at) ? 'в сети' : 'Начни общение') }}</span><span v-if="(c.last_message as any)?.is_edited" class="text-[10px] text-stone-400">(изм.)</span></div>
+            <div v-if="c.other?.is_match" class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5"><span class="text-rose-500 font-bold">Мэтч</span><span class="text-stone-300">·</span><MessageTicks v-if="ticks.isOwnLast(c)" :status="ticks.lastMessageStatus(c) ?? 'sent'" /><span class="truncate text-stone-500">{{ previewText(c.last_message, 'Чат открыт — напиши первым') }}</span><span v-if="(c.last_message as any)?.is_edited" class="text-[10px] text-stone-400">(изм.)</span></div>
+            <div v-else class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5"><MessageTicks v-if="ticks.isOwnLast(c)" :status="ticks.lastMessageStatus(c) ?? 'sent'" /><span class="truncate text-stone-500 dark:text-zinc-400">{{ previewText(c.last_message, isOnline(c.other?.id, c.other?.last_seen_at) ? 'в сети' : 'Начни общение') }}</span><span v-if="(c.last_message as any)?.is_edited" class="text-[10px] text-stone-400">(изм.)</span></div>
           </div>
           <span v-if="c.unread_count" class="bg-[#F04D9F] text-white text-xs font-bold min-w-[22px] h-[22px] grid place-items-center px-1.5 rounded-full shrink-0">{{ c.unread_count > 9 ? '9+' : c.unread_count }}</span>
         </button>

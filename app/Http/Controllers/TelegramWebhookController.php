@@ -1839,8 +1839,8 @@ class TelegramWebhookController extends Controller
     /**
      * Переключить тумблер канала уведомлений и перерисовать панель.
      *
-     * Каналы: ntg_* — чат бота, nem_* — почта, ndm_* — личка, ntg_all — мастер.
-     * Дефолты разные: бот/почта включены, личка выключена.
+     * Каналы: ntg_* — личка (сообщения бота сюда), nem_* — почта,
+     * ntg_all — мастер лички. Дефолты: всё включено.
      *
      * @param User $user владелец
      * @param string $data какой тумблер
@@ -1851,6 +1851,16 @@ class TelegramWebhookController extends Controller
      */
     private function toggleNotify(User $user, string $data, int $chatId, int $messageId, string $callbackId): void
     {
+        if (str_starts_with($data, 'ndm_')) {
+            TelegramBotApi::answerCallback($callbackId, 'Отдельной лички больше нет — всё уже в боте');
+
+            $panel = TelegramNotifyPanel::build($user->fresh() ?? $user);
+
+            TelegramBotApi::editPanel($chatId, $messageId, $panel['text'], $panel['keyboard']);
+
+            return;
+        }
+
         $column = match ($data) {
             'ntg_all' => 'telegram_notify_enabled',
             'ntg_msg' => 'telegram_notify_messages',
@@ -1860,10 +1870,6 @@ class TelegramWebhookController extends Controller
             'nem_msg' => 'email_notify_messages',
             'nem_like' => 'email_notify_likes',
             'nem_match' => 'email_notify_matches',
-            'ndm_msg' => 'telegram_dm_messages',
-            'ndm_like' => 'telegram_dm_likes',
-            'ndm_match' => 'telegram_dm_matches',
-            'ndm_cmt' => 'telegram_dm_comments',
             default => null,
         };
 
@@ -1873,8 +1879,7 @@ class TelegramWebhookController extends Controller
             return;
         }
 
-        $default = str_starts_with($column, 'telegram_dm_') ? false : true;
-        $next = ! (bool) ($user->{$column} ?? $default);
+        $next = ! (bool) ($user->{$column} ?? true);
 
         $user->forceFill([$column => $next])->save();
 
@@ -1884,9 +1889,8 @@ class TelegramWebhookController extends Controller
 
         $channel = match (true) {
             str_starts_with($data, 'nem_') => 'Почта',
-            str_starts_with($data, 'ndm_') => 'Личка',
-            $data === 'ntg_all' => 'Telegram',
-            default => 'Бот',
+            $data === 'ntg_all' => 'Личка',
+            default => 'Личка',
         };
 
         $state = $next ? 'включены ✅' : 'выключены ❌';

@@ -140,10 +140,6 @@ class TelegramAuthController extends Controller
             'email_messages' => (bool) ($user->email_notify_messages ?? true),
             'email_likes' => (bool) ($user->email_notify_likes ?? true),
             'email_matches' => (bool) ($user->email_notify_matches ?? true),
-            'dm_messages' => (bool) ($user->telegram_dm_messages ?? false),
-            'dm_likes' => (bool) ($user->telegram_dm_likes ?? false),
-            'dm_matches' => (bool) ($user->telegram_dm_matches ?? false),
-            'dm_comments' => (bool) ($user->telegram_dm_comments ?? false),
             'email' => $user->email,
             'email_verified' => $user->hasVerifiedEmail(),
             'email_verified_at' => $user->email_verified_at?->toISOString(),
@@ -270,10 +266,6 @@ class TelegramAuthController extends Controller
             'email_messages' => 'sometimes|boolean',
             'email_likes' => 'sometimes|boolean',
             'email_matches' => 'sometimes|boolean',
-            'dm_messages' => 'sometimes|boolean',
-            'dm_likes' => 'sometimes|boolean',
-            'dm_matches' => 'sometimes|boolean',
-            'dm_comments' => 'sometimes|boolean',
         ]);
 
         $patch = [];
@@ -294,12 +286,6 @@ class TelegramAuthController extends Controller
             }
         }
 
-        foreach (['dm_messages', 'dm_likes', 'dm_matches', 'dm_comments'] as $key) {
-            if (array_key_exists($key, $validated)) {
-                $patch['telegram_'.$key] = (bool) $validated[$key];
-            }
-        }
-
         if ($patch !== []) {
             $user->forceFill($patch)->save();
         }
@@ -315,10 +301,6 @@ class TelegramAuthController extends Controller
             'email_messages' => (bool) ($fresh->email_notify_messages ?? true),
             'email_likes' => (bool) ($fresh->email_notify_likes ?? true),
             'email_matches' => (bool) ($fresh->email_notify_matches ?? true),
-            'dm_messages' => (bool) ($fresh->telegram_dm_messages ?? false),
-            'dm_likes' => (bool) ($fresh->telegram_dm_likes ?? false),
-            'dm_matches' => (bool) ($fresh->telegram_dm_matches ?? false),
-            'dm_comments' => (bool) ($fresh->telegram_dm_comments ?? false),
         ]);
     }
 

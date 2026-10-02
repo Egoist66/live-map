@@ -6,6 +6,7 @@ import Message from 'primevue/message'
 import AppImage from '@/Components/Ui/Media/AppImage.vue'
 import { useToast } from 'primevue/usetoast'
 import { useUloveProfile } from '@/composables/useUloveProfile'
+import { useUloveOnlineBadge } from '@/composables/useUloveOnlineBadge'
 import { useSwipeCardPhotos } from '@/composables/useSwipeCardPhotos'
 
 const props = withDefaults(
@@ -26,6 +27,8 @@ const props = withDefaults(
 const emit = defineEmits<{ (e: 'edit'): void; (e: 'message'): void; (e: 'photos'): void; (e: 'add-photos'): void }>()
 
 const p = useUloveProfile(() => props.profileUser)
+
+const onlineBadge = useUloveOnlineBadge(() => ({ isOwn: props.isOwn, online: props.online, lastSeenText: props.lastSeenText }))
 
 const toast = (() => {
   try {
@@ -286,8 +289,8 @@ const activePrivacyFlags = computed(() => {
 
       <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
 
-      <div v-if="!isOwn && (online || lastSeenText)" class="absolute left-4 top-12 z-20 flex items-center gap-1.5 rounded-full bg-black/45 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur">
-        <span :class="online ? 'bg-emerald-400' : 'bg-zinc-400'" class="h-1.5 w-1.5 rounded-full" />{{ online ? 'В сети' : lastSeenText }}
+      <div v-if="onlineBadge.visible.value" class="absolute left-4 top-12 z-20 flex items-center gap-1.5 rounded-full bg-black/45 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur">
+        <span :class="onlineBadge.isLive.value ? 'bg-emerald-400' : 'bg-zinc-400'" class="h-1.5 w-1.5 rounded-full" />{{ onlineBadge.text.value }}
       </div>
 
       <div class="absolute inset-x-0 bottom-0 z-20 p-4 text-white">

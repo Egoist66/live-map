@@ -4,6 +4,7 @@ import { onClickOutside } from '@vueuse/core'
 import { useMiniChat } from '@/composables/useMiniChat'
 import { useBadgeStore } from '@/stores/badges'
 import { avatarSrcFor } from '@/composables/useAvatar'
+import { resolveMessageStatus } from '@/composables/useChatMessageStatus'
 import type { Conversation } from '@/types/entities/Chat'
 
 /**
@@ -138,6 +139,36 @@ export function useMiniChatDock() {
   }
 
   /**
+   * Последнее сообщение строки отправлено мной — тик уместен.
+   * @param conv диалог из списка
+   * @returns true — последнее писал я
+   */
+  function isOwnLast(conv: Conversation): boolean {
+    const last = conv.last_message as any
+    const senderId = Number(last?.sender_id ?? 0)
+    const me = Number(mini.myId.value || 0)
+
+    if (!last || !senderId || !me) {
+      return false
+    }
+
+    return senderId === me
+  }
+
+  /**
+   * Статус своего последнего сообщения для `MessageTicks`.
+   * @param conv диалог из списка
+   * @returns статус тика или null для чужих/пустых диалогов
+   */
+  function lastMessageStatus(conv: Conversation): string | null {
+    if (!isOwnLast(conv)) {
+      return null
+    }
+
+    return resolveMessageStatus(conv.last_message, true)
+  }
+
+  /**
    * Обновить строку поиска по чатам.
    * @param next новый текст поиска
    */
@@ -184,6 +215,8 @@ export function useMiniChatDock() {
     avatarFor,
     timeOf,
     previewOf,
+    isOwnLast,
+    lastMessageStatus,
     setQuery,
     toggleList,
     closeList,

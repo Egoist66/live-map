@@ -5,17 +5,17 @@ namespace App\Services;
 use App\Models\User;
 
 /**
- * Панель «Куда слать уведомления» бота: 3 канала × типы событий.
+ * Панель «Куда слать уведомления» бота: личка × почта.
  *
- * Каналы независимы и комбинируются как угодно:
- * - 🤖 Чат бота — служебные карточки с фото и кнопками (как раньше);
+ * Два независимых канала:
+ * - 💬 Личка — сообщения от бота прямо сюда, с фото автора и кнопкой
+ *   в Mini App (сообщения, лайки, мэтчи, комментарии);
  * - 📧 Почта — дубли на основную почту (только сообщения/лайки/мэтчи,
- *   комментариев письмом нет; нужна подтверждённая почта, см. /email);
- * - 💬 Личка — короткие личные дубли в этот же чат (Bot API пишет
- *   только сюда): личный стиль с ULove-контекстом, чтобы не терялось.
- * По умолчанию включены бот и почта, личка выключена.
+ *   комментариев письмом нет; нужна подтверждённая почта, см. /email).
+ * Каждый тип выключается своим тумблером.
+ * По умолчанию личка и почта включены.
  *
- * Мастер 📩 глушит оба Telegram-канала разом (почту не трогает).
+ * Мастер 🔕 глушит личку разом (почту не трогает).
  * В приложении колокольчик звенит всегда — это не дубль, а inbox.
  */
 class TelegramNotifyPanel
@@ -32,7 +32,7 @@ class TelegramNotifyPanel
 
         $master = (bool) ($fresh->telegram_notify_enabled ?? true);
 
-        $bot = [
+        $pm = [
             'msg' => (bool) ($fresh->telegram_notify_messages ?? true),
             'like' => (bool) ($fresh->telegram_notify_likes ?? true),
             'match' => (bool) ($fresh->telegram_notify_matches ?? true),
@@ -45,39 +45,32 @@ class TelegramNotifyPanel
             'match' => (bool) ($fresh->email_notify_matches ?? true),
         ];
 
-        $dm = [
-            'msg' => (bool) ($fresh->telegram_dm_messages ?? false),
-            'like' => (bool) ($fresh->telegram_dm_likes ?? false),
-            'match' => (bool) ($fresh->telegram_dm_matches ?? false),
-            'cmt' => (bool) ($fresh->telegram_dm_comments ?? false),
-        ];
-
         $lines = [];
         $lines[] = '🔔 <b>Куда слать уведомления</b>';
-        $lines[] = 'Каждый тип — в свой канал: бот, почта, личка. Комбинируйте.';
-        $lines[] = 'Всё шлём только когда Mini App закрыт; колокольчик — всегда.';
+        $lines[] = 'Личка — сообщения бота сюда, почта — дубли на e-mail. Каждый тип отключается отдельно.';
+        $lines[] = 'Всё шлём только когда приложение закрыто (ты оффлайн 3+ минуты); колокольчик — всегда.';
 
         $keyboard = [];
 
         $keyboard[] = [[
-            'text' => ($master ? '✅' : '❌').' 📩 Telegram (бот + личка)',
+            'text' => ($master ? '✅' : '❌').' 🔕 Личка целиком',
             'callback_data' => 'ntg_all',
         ]];
 
         $keyboard[] = [[
-            'text' => self::toggleLabel('🤖💬 Сообщения', $bot['msg']),
+            'text' => self::toggleLabel('💬 Сообщения', $pm['msg']),
             'callback_data' => 'ntg_msg',
         ]];
         $keyboard[] = [[
-            'text' => self::toggleLabel('🤖💞 Лайки', $bot['like']),
+            'text' => self::toggleLabel('💞 Лайки', $pm['like']),
             'callback_data' => 'ntg_like',
         ]];
         $keyboard[] = [[
-            'text' => self::toggleLabel('🤖🎉 Мэтчи', $bot['match']),
+            'text' => self::toggleLabel('🎉 Мэтчи', $pm['match']),
             'callback_data' => 'ntg_match',
         ]];
         $keyboard[] = [[
-            'text' => self::toggleLabel('🤖💭 Комментарии', $bot['cmt']),
+            'text' => self::toggleLabel('💭 Комментарии', $pm['cmt']),
             'callback_data' => 'ntg_cmt',
         ]];
 
@@ -92,23 +85,6 @@ class TelegramNotifyPanel
         $keyboard[] = [[
             'text' => self::toggleLabel('📧🎉 Мэтчи', $mail['match']),
             'callback_data' => 'nem_match',
-        ]];
-
-        $keyboard[] = [[
-            'text' => self::toggleLabel('💬💬 Сообщения', $dm['msg']),
-            'callback_data' => 'ndm_msg',
-        ]];
-        $keyboard[] = [[
-            'text' => self::toggleLabel('💬💞 Лайки', $dm['like']),
-            'callback_data' => 'ndm_like',
-        ]];
-        $keyboard[] = [[
-            'text' => self::toggleLabel('💬🎉 Мэтчи', $dm['match']),
-            'callback_data' => 'ndm_match',
-        ]];
-        $keyboard[] = [[
-            'text' => self::toggleLabel('💬💭 Комментарии', $dm['cmt']),
-            'callback_data' => 'ndm_cmt',
         ]];
 
         $keyboard[] = [

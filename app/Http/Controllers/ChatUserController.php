@@ -102,19 +102,18 @@ class ChatUserController extends Controller
     }
 
     /**
-     * Пометить пользователя отошедшим при закрытии Mini App.
+     * Сигнал «Mini App закрыт» при выгрузке страницы.
      *
-     * Фронт шлёт сюда keepalive-beacon на pagehide/скрытие вкладки:
-     * last_seen_at сдвигаем за порог User::isAway (3 мин), чтобы
-     * TelegramNotifier сразу слал дубли в бота, а не ждал пока
-     * порог истечёт сам. UpdateLastSeen этот путь пропускает и
-     * кэш last_seen обновляем здесь же, иначе мидлварь затёрла бы
-     * метку свежим now().
+     * Единая система онлайна: last_seen_at здесь НЕ трогаем — человек
+     * остаётся онлайн ещё 3 минуты грейса (см. User::isAway) одинаково
+     * в вебе, на десктопе, в PWA и в боте. Потеря фокуса или скрытие
+     * вкладки закрытием не считается и сюда вообще не стучится.
      *
-     * Заодно досылаем пропущенное: сообщения, пришедшие пока
-     * пользователь был онлайн (скип `online` — навсегда), но так
-     * и не прочитанные, уходят в бота через flushUnread. Уже
-     * доставленные отсекаются дедупом внутри TelegramNotifier.
+     * Заодно досылаем пропущенное: непрочитанные сообщения старше минуты
+     * уходят в бота сразу (force — явный сигнал закрытия), а хвост,
+     * пришедший уже в грейс-период, подберёт отложенная задача
+     * FlushTelegramUnread через 4 минуты. Дедуп внутри TelegramNotifier
+     * отсекает уже доставленное.
      *
      * @param Request $request запрос от владельца сессии
      * @return \Illuminate\Http\JsonResponse
@@ -127,17 +126,15 @@ class ChatUserController extends Controller
             return response()->json(['ok' => true, 'invisible' => true]);
         }
 
-        $user->forceFill(['last_seen_at' => now()->subMinutes(5)])->saveQuietly();
-
-        try {
-            \Illuminate\Support\Facades\Cache::put('last_seen:'.$user->id, true, 120);
-        } catch (\Throwable) {
-        }
-
         $flushed = 0;
 
         try {
-            $flushed = TelegramNotifier::flushUnread($user);
+            $flushed = TelegramNotifier::flushUnread($user, 10, true);
+        } catch (\Throwable) {
+        }
+
+        try {
+            TelegramNotifier::scheduleFlush((int) $user->id);
         } catch (\Throwable) {
         }
 

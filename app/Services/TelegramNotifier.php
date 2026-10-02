@@ -116,86 +116,6 @@ class TelegramNotifier
     }
 
     /**
-     * Можно ли слать короткий личный дубль в чат с ботом.
-     *
-     * Личка — тот же чат с ботом (Bot API пишет только сюда), но личным
-     * стилем: коротко, с ULove-контекстом. Тумблеры `telegram_dm_*`
-     * независимы от бот-карточек: можно включить личку, а остальное
-     * выключить (и наоборот). Мастер и 403-блок общие с ботом.
-     *
-     * @param User $recipient получатель
-     * @param string $kind messages|likes|matches|comments
-     * @return bool true когда личка включена для типа
-     */
-    public static function canDm(User $recipient, string $kind): bool
-    {
-        $recipient = self::resolveRecipient($recipient);
-
-        if ($recipient === null) {
-            return false;
-        }
-
-        if (! (bool) ($recipient->telegram_notify_enabled ?? true)) {
-            self::logSkip($recipient, $kind, 'master-off');
-
-            return false;
-        }
-
-        if ((int) ($recipient->telegram_id ?? 0) <= 0) {
-            self::logSkip($recipient, $kind, 'unlinked');
-
-            return false;
-        }
-
-        if ($recipient->telegram_blocked_at !== null) {
-            self::logSkip($recipient, $kind, 'blocked');
-
-            return false;
-        }
-
-        $column = match ($kind) {
-            'messages' => 'telegram_dm_messages',
-            'likes' => 'telegram_dm_likes',
-            'matches' => 'telegram_dm_matches',
-            'comments' => 'telegram_dm_comments',
-            default => null,
-        };
-
-        if ($column === null) {
-            return false;
-        }
-
-        if (! (bool) ($recipient->{$column} ?? false)) {
-            self::logSkip($recipient, $kind, 'dm-off');
-
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * Поставить личный дубль в очередь (текст, без фото, с кнопкой).
-     *
-     * Гейт внутри: выключена личка — тихое ничего.
-     *
-     * @param User $recipient получатель
-     * @param string $kind messages|likes|matches|comments
-     * @param string $text личный текст с ULove-контекстом
-     * @param string|null $path путь в Mini App для кнопки
-     * @param string|null $buttonLabel подпись кнопки
-     * @return void
-     */
-    private static function sendDm(User $recipient, string $kind, string $text, ?string $path, ?string $buttonLabel): void
-    {
-        if (! self::canDm($recipient, $kind)) {
-            return;
-        }
-
-        self::send($recipient, $text, $path, $buttonLabel);
-    }
-
-    /**
      * Напомнить о новом сообщении в диалоге.
      *
      * Каждое сообщение — отдельным письмом в TG, сразу в очередь,
@@ -224,6 +144,11 @@ class TelegramNotifier
         if (! $recipient->isAway()) {
             self::logSkip($recipient, 'messages', 'online');
 
+            try {
+                self::scheduleFlush((int) $recipient->id);
+            } catch (\Throwable) {
+            }
+
             return;
         }
 
@@ -251,10 +176,6 @@ class TelegramNotifier
         $path = '/chat/'.(int) $conversation->id;
 
         self::sendWithPhoto($recipient, $text, $photo, $path, 'Открыть чат');
-
-        $dmText = '💬 '.self::ULOVE_TAG.' • <b>'.self::escape($senderName).'</b> написал(а) вам: «'.self::escape(self::preview($preview)).'»';
-
-        self::sendDm($recipient, 'messages', $dmText, $path, 'Открыть чат');
     }
 
     /**
@@ -303,9 +224,6 @@ class TelegramNotifier
             $text = '💞 '.self::ULOVE_TAG.' • Вашу анкету лайкнули анонимно'.$super;
             self::send($liked, $text, '/swipes', 'Смотреть');
 
-            $dmText = '💞 '.self::ULOVE_TAG.' • У вас анонимный лайк'.$super.' — загляните в свайпы';
-            self::sendDm($liked, 'likes', $dmText, '/swipes', 'Смотреть');
-
             return;
         }
 
@@ -323,10 +241,6 @@ class TelegramNotifier
         $photo = self::actorPhotoUrl($liker);
 
         self::sendWithPhoto($liked, $text, $photo, $path, '👤 Смотреть анкету');
-
-        $dmText = '💞 '.self::ULOVE_TAG.' • <b>'.self::escape($likerName).'</b> лайкнул(а) вашу анкету'.$super;
-
-        self::sendDm($liked, 'likes', $dmText, $path, '👤 Смотреть анкету');
     }
 
     /**
@@ -370,10 +284,6 @@ class TelegramNotifier
             $photo = self::actorPhotoUrl($actor);
 
             self::sendWithPhoto($recipient, $text, $photo, $path, 'Открыть чат');
-
-            $dmText = '🎉 '.self::ULOVE_TAG.' • Мэтч с <b>'.self::escape($actorName).'</b>! Чат открыт — напишите первым';
-
-            self::sendDm($recipient, 'matches', $dmText, $path, 'Открыть чат');
         }
     }
 
@@ -437,30 +347,27 @@ class TelegramNotifier
         $photo = $anonymous ? null : self::actorPhotoUrl($actor);
 
         self::sendWithPhoto($recipient, $text, $photo, $path, 'Смотреть');
-
-        $dmText = '💭 '.self::ULOVE_TAG.' • <b>'.self::escape($authorPart).'</b> про «'.self::escape($entity).'»: «'.self::escape(self::preview($preview)).'»';
-
-        self::sendDm($recipient, 'comments', $dmText, $path, 'Смотреть');
     }
 
     /**
      * Дослать в бота сообщения, пропущенные пока пользователь был онлайн.
      *
      * Скип `online` в момент отправки — навсегда: получатель был онлайн
-     * (дубль не слали), а потом закрыл Mini App не прочитав — уведомление
-     * терялось, а автоответ ещё и врал «ты уже получил уведомление».
-     * Метод вызывается из offline-beacon (POST /api/chat/offline): берёт
-     * непрочитанные (read_at NULL — то же, что считает бейдж), свежие
-     * (последние сутки), кроме самых новых (grace 60 секунд — realtime
-     * тост ещё может сработать), и шлёт каждое через chatMessage.
+     * (дубль не слали), а потом закрыл Mini App не прочитав — без досылки
+     * уведомление терялось. Метод вызывается из offline-beacon
+     * (POST /api/chat/offline) и из отложенной задачи FlushTelegramUnread:
+     * берёт непрочитанные (read_at NULL — то же, что считает бейдж),
+     * свежие (последние сутки), кроме самых новых (grace 60 секунд —
+     * realtime-тост ещё может сработать), и шлёт каждое через chatMessage.
      * Гейты и дедуп внутри chatMessage: уже ушедшие ранее отсеются
      * как duplicate, прочитанные в выборку не попадут.
      *
      * @param User $recipient отошедший получатель
      * @param int $limit максимум писем за один уход в оффлайн
+     * @param bool $force явный сигнал закрытия: гейт isAway пропускаем
      * @return int сколько сообщений поставлено в обработку
      */
-    public static function flushUnread(User $recipient, int $limit = 10): int
+    public static function flushUnread(User $recipient, int $limit = 10, bool $force = false): int
     {
         $recipient = self::resolveRecipient($recipient);
 
@@ -472,7 +379,7 @@ class TelegramNotifier
             return 0;
         }
 
-        if (! $recipient->isAway()) {
+        if (! $force && ! $recipient->isAway()) {
             return 0;
         }
 
@@ -521,6 +428,40 @@ class TelegramNotifier
         Log::info('telegram flush unread', ['user_id' => (int) $recipient->id, 'processed' => $processed]);
 
         return $processed;
+    }
+
+    /**
+     * Запланировать отложенную досылку непрочитанного после грейса онлайна.
+     *
+     * Сообщения, пришедшие в 3-минутный грейс после закрытия приложения,
+     * в момент отправки скипаются как `online` — их подберёт задача
+     * FlushTelegramUnread через 4 минуты, когда грейс уже истечёт и
+     * сработают обычные гейты. Дедуп не чаще раза в 5 минут на человека,
+     * повторные постановки безопасны: уже доставленное отсекается
+     * дедупом внутри chatMessage.
+     *
+     * @param int $userId id получателя (users.id)
+     * @return void
+     */
+    public static function scheduleFlush(int $userId): void
+    {
+        if ($userId <= 0) {
+            return;
+        }
+
+        $key = 'tg:flushscheduled:'.$userId;
+
+        try {
+            if (Cache::has($key)) {
+                return;
+            }
+
+            Cache::put($key, true, 300);
+        } catch (\Throwable) {
+            return;
+        }
+
+        \App\Jobs\FlushTelegramUnread::dispatch($userId)->delay(now()->addMinutes(4));
     }
 
     /**
@@ -881,10 +822,6 @@ class TelegramNotifier
         $photo = self::actorPhotoUrl($actor);
 
         self::dispatchMessage((int) $owner->id, $text, $rows, $photo);
-
-        $dmText = '❤️ '.self::ULOVE_TAG.' • <b>'.self::escape($authorPart).'</b> лайкнул(а): '.self::escape($entity);
-
-        self::sendDm($owner, 'likes', $dmText, $path, '👀 Смотреть');
     }
 
     /**

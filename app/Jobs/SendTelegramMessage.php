@@ -125,7 +125,7 @@ class SendTelegramMessage implements ShouldQueue
 
         if ($response->successful()) {
             TelegramNotifier::clearBlocked($user);
-            Log::info('telegram notify sent', ['user_id' => $userId, 'chat_id' => $chatId]);
+            Log::info('telegram notify sent', ['user_id' => $userId, 'chat_id' => $chatId, 'via' => $photo !== null ? 'photo' : 'text']);
 
             return ['status' => 'sent', 'retry_after' => 0];
         }
@@ -176,6 +176,7 @@ class SendTelegramMessage implements ShouldQueue
 
             if ($retry->successful()) {
                 TelegramNotifier::clearBlocked($user);
+                Log::info('telegram notify sent', ['user_id' => $userId, 'chat_id' => $chatId, 'fallback' => 'text']);
 
                 return ['status' => 'sent', 'retry_after' => 0];
             }

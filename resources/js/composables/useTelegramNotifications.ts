@@ -10,10 +10,6 @@ export interface TelegramNotifyPrefs {
   email_messages: boolean
   email_likes: boolean
   email_matches: boolean
-  dm_messages: boolean
-  dm_likes: boolean
-  dm_matches: boolean
-  dm_comments: boolean
 }
 
 const linked = ref(false)
@@ -28,10 +24,6 @@ const prefs = ref<TelegramNotifyPrefs>({
   email_messages: true,
   email_likes: true,
   email_matches: true,
-  dm_messages: false,
-  dm_likes: false,
-  dm_matches: false,
-  dm_comments: false,
 })
 const loading = ref(false)
 const loaded = ref(false)
@@ -109,10 +101,6 @@ export function useTelegramNotifications() {
           email_messages: data.email_messages ?? true,
           email_likes: data.email_likes ?? true,
           email_matches: data.email_matches ?? true,
-          dm_messages: data.dm_messages ?? false,
-          dm_likes: data.dm_likes ?? false,
-          dm_matches: data.dm_matches ?? false,
-          dm_comments: data.dm_comments ?? false,
         }
         loaded.value = true
       } catch (requestError: unknown) {
@@ -190,10 +178,6 @@ export function useTelegramNotifications() {
         email_messages: data.email_messages ?? prefs.value.email_messages,
         email_likes: data.email_likes ?? prefs.value.email_likes,
         email_matches: data.email_matches ?? prefs.value.email_matches,
-        dm_messages: data.dm_messages ?? prefs.value.dm_messages,
-        dm_likes: data.dm_likes ?? prefs.value.dm_likes,
-        dm_matches: data.dm_matches ?? prefs.value.dm_matches,
-        dm_comments: data.dm_comments ?? prefs.value.dm_comments,
       }
       return true
     } catch {

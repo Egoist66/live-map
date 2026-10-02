@@ -55,33 +55,34 @@ export function isRecentlySeen(lastSeenAt: string | null | undefined, thresholdM
 /**
  * Пинг онлайна: продлевает last_seen_at.
  *
- * В фоне (свёрнутый Mini App, другая вкладка) не пингуем — иначе
- * свёрнутый выглядит «онлайн» и дубли событий в Telegram-бота
- * (см. User::isAway) не уходят, а человек их пропускает. Возврат
- * на вкладку сразу шлёт пинг через visibilitychange ниже.
+ * Единая система онлайна для веба, десктопа, PWA и бота: источник правды —
+ * только last_seen_at с порогом 3 минуты (см. User::isAway). Пингуем и в фоне
+ * (свёрнутая вкладка, потеря фокуса): человек остаётся онлайн, пока приложение
+ * открыто. Пинг прекращается только при реальном закрытии — дальше работают
+ * 3 минуты грейса, одинаковые везде.
  */
 function heartbeat() {
   if (isInvisible()) return
-  try {
-    if (typeof document !== 'undefined' && document.hidden) return
-  } catch { /* без DOM — пингуем как обычно */ }
   chatApi.heartbeat().catch(() => {})
 }
 
 function ensureHeartbeat() {
   if (beatTimer) return
   heartbeat()
-  beatTimer = setInterval(heartbeat, 60000)
+  beatTimer = setInterval(heartbeat, 45000)
 }
 
 /**
  * Сказать бэку «Mini App закрыт» даже когда страница уже умирает.
  *
- * Обычный axios на pagehide не успевает (страница выгружена), а без
- * этого last_seen_at остаётся свежим ещё ~3 минуты порога isAway —
- * и дубли сообщений/лайков/мэтчей в Telegram-бота не уходят. Шлём
- * fetch с keepalive + куками сессии + XSRF из куки: Laravel примет
- * POST без 419, бэк сдвинет last_seen_at на 5 минут назад.
+ * Обычный axios на pagehide не успевает (страница выгружена), поэтому шлём
+ * fetch с keepalive + куками сессии + XSRF из куки: Laravel примет POST
+ * без 419. Бэк last_seen_at НЕ трогает — человек остаётся онлайн ещё
+ * 3 минуты грейса везде (веб, десктоп, PWA, бот), а пропущенные сообщения
+ * досылаются в Telegram-бота через flushUnread + отложенную задачу.
+ *
+ * Потеря фокуса / скрытие вкладки — НЕ закрытие: бикон там не шлём,
+ * heartbeat продолжает пинговать в фоне.
  *
  * @returns void (ошибки глотаем — страница всё равно закрывается)
  */
@@ -124,7 +125,6 @@ function bindGlobalListeners() {
   listenersBound = true
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') { connect(); heartbeat() }
-    else markOfflineBeacon()
   })
   window.addEventListener('beforeunload', () => { markOfflineBeacon(); disconnect() })
   window.addEventListener('pagehide', () => { markOfflineBeacon(); disconnect() })

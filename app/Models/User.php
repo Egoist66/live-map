@@ -39,14 +39,14 @@ use Illuminate\Support\Facades\Storage;
  * @property bool $telegram_notify_matches Слать в Telegram о взаимных мэтчах.
  * @property bool $telegram_notify_comments Слать в Telegram о комментариях.
  * @property \Carbon\Carbon|null $telegram_blocked_at Когда Bot API вернул 403 (нет /start или блок).
- * @property bool $telegram_notify_enabled Мастер-тумблер Telegram-дублей (бот-карточки и личка; выкл глушит всё разом).
+ * @property bool $telegram_notify_enabled Мастер-тумблер сообщений бота в личку (выкл глушит всё разом, почту не трогает).
  * @property bool $email_notify_messages Дублировать на почту новые сообщения.
  * @property bool $email_notify_likes Дублировать на почту лайки анкеты.
  * @property bool $email_notify_matches Дублировать на почту взаимные мэтчи.
- * @property bool $telegram_dm_messages Короткие личные дубли сообщений в чат с ботом.
- * @property bool $telegram_dm_likes Короткие личные дубли лайков в чат с ботом.
- * @property bool $telegram_dm_matches Короткие личные дубли мэтчей в чат с ботом.
- * @property bool $telegram_dm_comments Короткие личные дубли комментариев в чат с ботом.
+ * @property bool $telegram_dm_messages Legacy: короткие дубли «лички» (удалены 2026-10-02 — одно событие шлёт одно письмо, колонка не читается).
+ * @property bool $telegram_dm_likes Legacy: короткие дубли «лички» (удалены 2026-10-02, колонка не читается).
+ * @property bool $telegram_dm_matches Legacy: короткие дубли «лички» (удалены 2026-10-02, колонка не читается).
+ * @property bool $telegram_dm_comments Legacy: короткие дубли «лички» (удалены 2026-10-02, колонка не читается).
  */
 class User extends Authenticatable implements MustVerifyEmail
 {

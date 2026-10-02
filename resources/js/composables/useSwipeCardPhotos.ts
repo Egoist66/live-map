@@ -354,10 +354,20 @@ export function useSwipeCardPhotos(card: () => SwipeCard | null, autoplayMs = 50
   }
 
   watch(
-    () => card()?.id,
     () => {
+      const current = card()
+      const urls = (current?.photos ?? []).slice(0, 5).join('|')
+      return `${current?.id ?? 'none'}#${urls}`
+    },
+    () => {
+      neighborCache.length = 0
       reset()
+      loadToken += 1
+      disarmLoader()
+      showPhotoLoader.value = false
+      shownPhoto.value = photos.value[0] ?? null
       restartAutoplay()
+      preloadNeighbors()
     },
   )
 

@@ -23,10 +23,10 @@ class ProfilePhoto extends Model
             if ($disk === 'public') {
                 $parts = parse_url($url);
                 if (!empty($parts['path'])) {
-                    return $parts['path'] . (isset($parts['query']) ? '?' . $parts['query'] : '');
+                    $url = $parts['path'] . (isset($parts['query']) ? '?' . $parts['query'] : '');
                 }
             }
-            return $url;
+            return self::versionedUrl($url, $this->updated_at?->timestamp);
         });
     }
 
@@ -50,12 +50,38 @@ class ProfilePhoto extends Model
                 $parts = parse_url($url);
 
                 if (! empty($parts['path'])) {
-                    return $parts['path'].(isset($parts['query']) ? '?'.$parts['query'] : '');
+                    $url = $parts['path'].(isset($parts['query']) ? '?'.$parts['query'] : '');
                 }
             }
 
-            return $url;
+            return self::versionedUrl($url, $this->updated_at?->timestamp);
         });
+    }
+
+    /**
+     * Версия URL для сброса кэшей (браузер, PWA service worker).
+     *
+     * Без версии заменённое фото под тем же путём неделями отдавалось
+     * бы из кэша — отсюда «чужое» фото в карточке. Версия меняется
+     * при каждом обновлении записи фото.
+     *
+     * @param string|null $url чистый URL
+     * @param mixed $version метка версии (unix timestamp)
+     * @return string|null URL с ?v= или исходный
+     */
+    private static function versionedUrl(?string $url, mixed $version): ?string
+    {
+        if (! $url) {
+            return null;
+        }
+
+        if (! $version) {
+            return $url;
+        }
+
+        $sep = str_contains($url, '?') ? '&' : '?';
+
+        return $url.$sep.'v='.$version;
     }
 
     public function user(): BelongsTo { return $this->belongsTo(User::class); }
