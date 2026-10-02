@@ -3,13 +3,34 @@ import { adminApi } from '@/services/admin.api'
 
 let searchTimer: ReturnType<typeof setTimeout> | null = null
 
+export type LoginStateKey = 'ok' | 'warning' | 'frozen' | 'banned' | 'banned_frozen'
+
+/**
+ * Мета бейджа статуса входа для админки.
+ */
+export interface LoginStateMeta {
+  /** Ключ состояния с бэка. */
+  key: LoginStateKey
+  /** Человекочитаемая подпись. */
+  label: string
+  /** Severity для PrimeVue Tag. */
+  severity: 'success' | 'warn' | 'danger' | 'secondary' | 'info' | 'contrast'
+}
+
 /**
  * Логи входов для таба «Безопасность».
  *
  * Бейдж таба — непрочитанные фейлы: открываем таб — список
  * обновляется и счётчик гаснет, новые попытки зажигают снова.
+ * Разбан и ручной сброс через thaw() на бэке рвут цепочку фейлов
+ * success-маркером и чистят RateLimiter, поэтому после действий
+ * список перезагружается, чтобы статусы (frozen/banned) были точными.
  *
  * @returns состояние логов и действия
+ * @example
+ * const logins = useAdminLoginAttempts()
+ * await logins.openTab()
+ * await logins.resetFreeze('user@mail.com')
  */
 export function useAdminLoginAttempts() {
   const items = ref<any[]>([])
@@ -26,6 +47,7 @@ export function useAdminLoginAttempts() {
   const filter = ref<'all' | 'failed' | 'success'>('failed')
   const page = ref(1)
   const actingId = ref<number | null>(null)
+  const resettingEmail = ref<string | null>(null)
 
   async function load() {
     loading.value = true
@@ -82,6 +104,7 @@ export function useAdminLoginAttempts() {
       user.banned_at = d.banned_at ?? null
       user.banned_reason = d.banned_reason ?? null
       applyBanState(user.id, d.banned_at ?? null, d.banned_reason ?? null)
+      await load()
     } catch (e: any) {
       error.value = e?.response?.data?.message || 'Не удалось заблокировать'
       throw e
@@ -99,12 +122,90 @@ export function useAdminLoginAttempts() {
       user.banned_at = null
       user.banned_reason = null
       applyBanState(user.id, null, null)
+      await load()
     } catch (e: any) {
       error.value = e?.response?.data?.message || 'Не удалось разблокировать'
       throw e
     } finally {
       actingId.value = null
     }
+  }
+
+  /**
+   * Сбросить заморозку и счётчик фейлов по email.
+   *
+   * Для «заморожен, но не забанен»: разбанивать нечего, а вход закрыт.
+   * Бэк вставляет success-маркер и чистит троттлинг — вход открывается сразу.
+   *
+   * @param email email для разморозки
+   */
+  async function resetFreeze(email: string): Promise<void> {
+    const normalized = email.trim().toLowerCase()
+    if (!normalized) return
+    resettingEmail.value = normalized
+    error.value = null
+    try {
+      await adminApi.resetLoginAttempts(normalized)
+      await load()
+    } catch (e: any) {
+      error.value = e?.response?.data?.message || 'Не удалось сбросить заморозку'
+      throw e
+    } finally {
+      resettingEmail.value = null
+    }
+  }
+
+  /**
+   * Мета статуса входа для бейджа в списке.
+   *
+   * @param attempt строка попытки с полями login_state/is_frozen/is_banned/fails_consecutive
+   * @returns мета для Tag: подпись и severity
+   * @example
+   * loginStateOf({ login_state: 'frozen', retry_mins: 42 })
+   * // { key: 'frozen', label: 'заморожен · 42 мин', severity: 'warn' }
+   */
+  function loginStateOf(attempt: any): LoginStateMeta {
+    const key = (attempt?.login_state ?? 'ok') as LoginStateKey
+    const retryMins = Number(attempt?.retry_mins ?? 0)
+    const fails = Number(attempt?.fails_consecutive ?? 0)
+
+    if (key === 'banned_frozen') {
+      const tail = retryMins > 0 ? ` · ещё ${retryMins} мин` : ''
+      return { key, label: `забанен + заморозка${tail}`, severity: 'danger' }
+    }
+    if (key === 'banned') {
+      return { key, label: 'забанен · вход закрыт', severity: 'danger' }
+    }
+    if (key === 'frozen') {
+      const tail = retryMins > 0 ? ` · вход через ${retryMins} мин` : ''
+      return { key, label: `заморожен (${fails} фейла)${tail}`, severity: 'warn' }
+    }
+    if (key === 'warning') {
+      return { key, label: fails === 1 ? '1 фейл подряд' : `${fails} фейла подряд`, severity: 'info' }
+    }
+    return { key: 'ok', label: 'вход открыт', severity: 'success' }
+  }
+
+  /**
+   * Короткая подпись заморозки для строки.
+   *
+   * @param attempt строка попытки
+   * @returns текст вида «до 12:40 · осталось 35 мин» или null
+   */
+  function frozenCaptionOf(attempt: any): string | null {
+    if (!attempt?.is_frozen) return null
+    const parts: string[] = []
+    try {
+      if (attempt.frozen_until) {
+        const when = new Date(attempt.frozen_until).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+        parts.push(`до ${when}`)
+      }
+    } catch {
+      // молча пропускаем битую дату
+    }
+    const retryMins = Number(attempt?.retry_mins ?? 0)
+    if (retryMins > 0) parts.push(`осталось ${retryMins} мин`)
+    return parts.length ? parts.join(' · ') : 'заморожен'
   }
 
   /**
@@ -133,5 +234,5 @@ export function useAdminLoginAttempts() {
 
   watch(filter, () => void load())
 
-  return { items, meta, stats, unseenCount, loading, error, query, filter, page, actingId, load, openTab, markSeen, setQuery, setFilter, setPage, ban, unban }
+  return { items, meta, stats, unseenCount, loading, error, query, filter, page, actingId, resettingEmail, load, openTab, markSeen, setQuery, setFilter, setPage, ban, unban, resetFreeze, loginStateOf, frozenCaptionOf }
 }

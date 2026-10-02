@@ -4,9 +4,59 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules;
 
 class AdminUserController extends Controller
 {
+    /**
+     * Создать тестового пользователя с придуманными логином и паролем.
+     *
+     * Только полные админы (роут в группе `admin`). Безопасно по построению:
+     * роль/тариф/флаги из запроса не читаются вообще — всегда обычная персона
+     * (role=user, без is_admin), пароль — через Hash + Password::defaults(),
+     * почта — уникальная. Почту сразу помечаем подтверждённой, чтобы тестовый
+     * аккаунт работал без доступа к ящику (письма на test-почты не дойдут).
+     *
+     * @param Request $request запрос с name/email/password/password_confirmation
+     * @return \Illuminate\Http\JsonResponse созданный пользователь
+     */
+    public function store(Request $request)
+    {
+        abort_unless($request->user()->isAdmin(), 403, 'Создание пользователей — только для администраторов');
+
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|lowercase|email|max:255|unique:users,email',
+            'password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
+            'gender' => 'nullable|in:male,female,other',
+        ]);
+
+        $email = mb_strtolower(trim($data['email']));
+
+        $user = User::create([
+            'name' => trim($data['name']),
+            'email' => $email,
+            'password' => Hash::make($data['password']),
+            'gender' => $data['gender'] ?? 'other',
+            'signup_goal' => 'chat',
+            'default_mode' => 'ulove',
+            'default_mode_set_at' => now(),
+            'enabled_modules' => ['ulove', 'upin'],
+            'account_type' => 'person',
+            'dating_enabled' => true,
+            'role' => 'user',
+            'is_admin' => false,
+            'email_verified_at' => now(),
+        ]);
+
+        return response()->json([
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+        ], 201);
+    }
+
     public function index(Request $request)
     {
         $data = $request->validate([
@@ -325,10 +375,24 @@ class AdminUserController extends Controller
         return response()->json(['id' => $user->id, 'banned_at' => $user->banned_at?->toISOString(), 'banned_reason' => $user->banned_reason]);
     }
 
+    /**
+     * Разбанить пользователя и полностью снять защиту входа.
+     *
+     * Без сброса LoginShield разбан оставлял заморозку («попробуйте через N мин»)
+     * и следующий фейл снова вёл к автобану, поэтому здесь же вызываем thaw():
+     * рвём цепочку фейлов success-маркером и чистим RateLimiter по всем IP.
+     *
+     * @param Request $request текущий запрос
+     * @param User $user целевой пользователь
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function unban(Request $request, User $user)
     {
         $user->forceFill(['banned_at' => null, 'banned_reason' => null])->save();
-        return response()->json(['id' => $user->id, 'banned_at' => null, 'banned_reason' => null]);
+
+        \App\Services\LoginShield::thaw((string) $user->email, $user->id, 'admin:unban — разбан, счётчик фейлов и троттлинг сброшены');
+
+        return response()->json(['id' => $user->id, 'banned_at' => null, 'banned_reason' => null, 'thawed' => true]);
     }
 
     /**

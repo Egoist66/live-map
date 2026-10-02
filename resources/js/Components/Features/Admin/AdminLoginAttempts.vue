@@ -34,12 +34,18 @@ function flag(cc: string | null | undefined) {
 
 function shortUa(ua: string | null | undefined) {
   if (!ua) return '—'
+  if (/^admin:(thaw|unban|reset)/i.test(ua)) return '🛡 ' + ua.slice(0, 80)
   if (/Mobile|Android|iPhone/i.test(ua)) return '📱 ' + ua.split(')').pop()?.trim().slice(0, 60)
   if (/Windows/i.test(ua)) return '🖥 Windows · ' + (/Chrome\/[\d.]+/.exec(ua)?.[0] || /Firefox\/[\d.]+/.exec(ua)?.[0] || 'браузер')
   if (/Macintosh/i.test(ua)) return '🖥 Mac · ' + (/Chrome\/[\d.]+/.exec(ua)?.[0] || /Safari\/[\d.]+/.exec(ua)?.[0] || 'браузер')
   if (/Linux/i.test(ua)) return '🖥 Linux'
   if (/bot|crawl|spider|python|curl/i.test(ua)) return '🤖 бот: ' + ua.slice(0, 60)
   return ua.slice(0, 80)
+}
+
+function isResetting(attempts: any, email: string): boolean {
+  const cur = String(attempts.resettingEmail?.value ?? '')
+  return cur !== '' && cur === String(email ?? '').trim().toLowerCase()
 }
 </script>
 <template>
@@ -51,7 +57,7 @@ function shortUa(ua: string | null | undefined) {
         <Tag :value="`забанено: ${attempts.stats.value.banned_total}`" severity="contrast" class="!text-[9px]" />
         <Button label="обновить" link size="small" class="ml-auto !text-xs !px-1" @click="attempts.load()" />
       </div>
-      <p class="text-xs text-stone-500 dark:text-zinc-400 mt-1">3 неверных пароля — заморозка на час, 4-й неверный — вечный бан. Клик по IP или email — фильтр по нарушителю. Тег «перебор» — с одного IP долбят разные аккаунты.</p>
+      <p class="text-xs text-stone-500 dark:text-zinc-400 mt-1">3 неверных пароля — заморозка на час, 4-й неверный — вечный бан. Разбан и «Сбросить заморозку» сразу открывают вход: счётчик фейлов и троттлинг очищаются. Клик по IP или email — фильтр по нарушителю.</p>
       <IconField class="mt-3">
         <InputIcon class="pi pi-search" />
         <InputText :modelValue="attempts.query.value" @update:modelValue="(v:string|undefined)=>attempts.setQuery(v ?? '')" placeholder="Email, IP или страна..." fluid size="small" rounded />
@@ -67,8 +73,15 @@ function shortUa(ua: string | null | undefined) {
               <div class="text-[13px] font-semibold truncate dark:text-white">{{ a.user?.name || a.email }} <span class="font-normal text-stone-400">· {{ fmt(a.created_at) }}</span></div>
               <div class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">{{ a.email }} · {{ a.ip || 'IP скрыт' }} · {{ flag(a.country_code) }} {{ a.country || 'страна?' }}{{ a.city ? `, ${a.city}` : '' }}</div>
             </div>
-            <Tag v-if="a.successful" value="успех" severity="success" class="!text-[9px] shrink-0" />
+            <Tag v-if="a.successful && !String(a.user_agent || '').startsWith('admin:')" value="успех" severity="success" class="!text-[9px] shrink-0" />
+            <Tag v-else-if="String(a.user_agent || '').startsWith('admin:')" value="сброс админом" severity="info" class="!text-[9px] shrink-0" />
             <Tag v-else value="фейл" severity="danger" class="!text-[9px] shrink-0" />
+          </div>
+          <div class="mt-2 flex gap-1.5 flex-wrap items-center">
+            <Tag :value="attempts.loginStateOf(a).label" :severity="attempts.loginStateOf(a).severity" class="!text-[9px]" />
+            <span v-if="a.is_frozen && attempts.frozenCaptionOf(a)" class="text-[11px] text-amber-600 dark:text-amber-400 font-semibold">{{ attempts.frozenCaptionOf(a) }}</span>
+            <span v-else-if="!a.is_banned && (a.fails_consecutive ?? 0) === 0" class="text-[11px] text-emerald-600 dark:text-emerald-400">вход открыт · фейлов подряд: 0</span>
+            <span v-else-if="!a.is_banned && !a.is_frozen" class="text-[11px] text-stone-500 dark:text-zinc-400">фейлов подряд: {{ a.fails_consecutive ?? 0 }} · до заморозки: {{ Math.max(0, 3 - (a.fails_consecutive ?? 0)) }}</span>
           </div>
           <div v-if="!a.successful" class="mt-2 flex gap-1.5 flex-wrap items-center">
             <Tag v-if="(a.ip_fails_24h ?? 0) >= REPEAT_OFFENDER_IP_FAILS" value="рецидивист" severity="danger" class="!text-[9px]" />
@@ -88,12 +101,38 @@ function shortUa(ua: string | null | undefined) {
           </details>
           <div v-if="a.user" class="mt-2 flex gap-1.5 flex-wrap items-center">
             <Tag v-if="a.user.banned_at" value="забанен" severity="danger" class="!text-[9px]" />
-            <span v-if="a.user.banned_reason" class="text-[11px] text-stone-400 truncate">{{ a.user.banned_reason }}</span>
+            <span v-if="a.user.banned_reason" class="text-[11px] text-stone-400 truncate max-w-full">{{ a.user.banned_reason }}</span>
             <span class="flex-1" />
+            <Button
+              v-if="a.is_frozen || (a.fails_consecutive ?? 0) > 0"
+              @click="attempts.resetFreeze(a.email)"
+              :loading="isResetting(attempts, a.email)"
+              label="Сбросить заморозку"
+              size="small"
+              rounded
+              outlined
+              severity="info"
+              class="!text-xs !py-1"
+              title="Очистить счётчик фейлов и троттлинг — вход откроется сразу"
+            />
             <Button v-if="!a.user.banned_at" @click="attempts.ban(a.user)" :loading="attempts.actingId.value === a.user.id" label="Забанить" size="small" rounded outlined severity="danger" class="!text-xs !py-1" />
-            <Button v-else @click="attempts.unban(a.user)" :loading="attempts.actingId.value === a.user.id" label="Разбанить" size="small" rounded outlined severity="success" class="!text-xs !py-1" />
+            <Button v-else @click="attempts.unban(a.user)" :loading="attempts.actingId.value === a.user.id" label="Разбанить" size="small" rounded outlined severity="success" class="!text-xs !py-1" title="Разбан сразу сбрасывает заморозку и троттлинг" />
           </div>
-          <div v-else class="mt-1.5 text-[11px] text-amber-600 dark:text-amber-400">Аккаунта с таким email нет — забанить некого, IP уже в кулдауне.</div>
+          <div v-else class="mt-2 flex gap-1.5 flex-wrap items-center">
+            <span class="text-[11px] text-amber-600 dark:text-amber-400">Аккаунта с таким email нет — забанить некого.</span>
+            <span class="flex-1" />
+            <Button
+              v-if="a.is_frozen || (a.fails_consecutive ?? 0) > 0"
+              @click="attempts.resetFreeze(a.email)"
+              :loading="isResetting(attempts, a.email)"
+              label="Сбросить заморозку"
+              size="small"
+              rounded
+              outlined
+              severity="info"
+              class="!text-xs !py-1"
+            />
+          </div>
         </div>
       </div>
       <Paginator v-if="attempts.meta.value.last_page > 1" :rows="attempts.meta.value.per_page" :totalRecords="attempts.meta.value.total" :first="(attempts.page.value - 1) * attempts.meta.value.per_page" @page="(e:any)=>attempts.setPage(e.page + 1)" class="!bg-transparent !border-0 !px-0" />

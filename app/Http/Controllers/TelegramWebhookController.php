@@ -225,7 +225,8 @@ class TelegramWebhookController extends Controller
 
         $this->clearBlockedFlag($user);
 
-        $handled = $this->runPanelCallback($user, $data, $chatId, $messageId, $callbackId);
+        $from = $callback['from'] ?? null;
+        $handled = $this->runPanelCallback($user, $data, $chatId, $messageId, $callbackId, is_array($from) ? $from : []);
 
         if ($handled) {
             return;
@@ -252,9 +253,10 @@ class TelegramWebhookController extends Controller
      * @param int $chatId куда перерисовать
      * @param int $messageId что перерисовать
      * @param string $callbackId для тоста
+     * @param array<string, mixed> $from объект from колбэка (имя для пересоздания TG-аккаунта)
      * @return bool true когда колбэк наш и обработан
      */
-    private function runPanelCallback(User $user, string $data, int $chatId, int $messageId, string $callbackId): bool
+    private function runPanelCallback(User $user, string $data, int $chatId, int $messageId, string $callbackId, array $from = []): bool
     {
         $fresh = $user->fresh() ?? $user;
 
@@ -485,6 +487,20 @@ class TelegramWebhookController extends Controller
             return true;
         }
 
+        if ($data === 'acc_back') {
+            $ask = TelegramAccountPanel::askBack($fresh, (int) ($fresh->telegram_id ?? 0));
+            TelegramCardSender::redrawText($chatId, $messageId, $ask['text'], $ask['keyboard']);
+            TelegramBotApi::answerCallback($callbackId, 'Подтвердите возврат ↩️');
+
+            return true;
+        }
+
+        if ($data === 'acc_back_yes') {
+            $this->doBackToDefault($fresh, $from, $chatId, $messageId, $callbackId);
+
+            return true;
+        }
+
         if (str_starts_with($data, 'ntg_') || str_starts_with($data, 'nem_') || str_starts_with($data, 'ndm_')) {
             $this->toggleNotify($fresh, $data, $chatId, $messageId, $callbackId);
 
@@ -606,7 +622,7 @@ class TelegramWebhookController extends Controller
     }
 
     /**
-     * Кнопка входа в Mini App.
+     * Кнопки входа: Mini App внутри Telegram и сайт во внешнем браузере.
      *
      * @param User $user владелец
      * @param int $chatId куда слать
@@ -614,8 +630,9 @@ class TelegramWebhookController extends Controller
      */
     private function replyApp(User $user, int $chatId): void
     {
-        TelegramBotApi::sendMessage($chatId, '🌐 Открывайте приложение одной кнопкой:', TelegramMenu::withNav([
+        TelegramBotApi::sendMessage($chatId, '🌐 Открывайте приложение как удобно — внутри Telegram или в браузере:', TelegramMenu::withNav([
             [TelegramMenu::openAppButton('🌐 Открыть Mini App')],
+            [TelegramMenu::openBrowserButton('🌍 Открыть в браузере')],
         ]));
     }
 
@@ -895,6 +912,47 @@ class TelegramWebhookController extends Controller
         $menu = TelegramMenu::main($switched->fresh() ?? $switched);
 
         TelegramBotApi::sendMessage($chatId, "✅ Переключил — теперь бот работает с аккаунтом <b>".$this->esc((string) ($switched->name ?? ''))."</b>.\n\n".$menu['text'], $menu['keyboard']);
+    }
+
+    /**
+     * Вернуться из второго аккаунта в дефолтный Telegram-аккаунт.
+     *
+     * Перерисовывает панель главным меню нового аккаунта, при ошибке —
+     * текст причины с кнопкой назад к панели аккаунта.
+     *
+     * @param User $user текущий (второй) пользователь
+     * @param array<string, mixed> $from объект from колбэка
+     * @param int $chatId что перерисовать
+     * @param int $messageId что перерисовать
+     * @param string $callbackId для тоста
+     * @return void
+     */
+    private function doBackToDefault(User $user, array $from, int $chatId, int $messageId, string $callbackId): void
+    {
+        $fresh = $user->fresh() ?? $user;
+        $telegramId = (int) ($fresh->telegram_id ?? 0);
+
+        try {
+            $result = TelegramAccountSwitch::backToDefault($telegramId, $from);
+        } catch (\RuntimeException $e) {
+            $panel = TelegramAccountPanel::build($fresh);
+            TelegramCardSender::redrawText($chatId, $messageId, $panel['text'], $panel['keyboard']);
+            TelegramBotApi::answerCallback($callbackId, $e->getMessage(), true);
+
+            return;
+        }
+
+        $backTo = $result['user'];
+        $suffix = $result['created'] ? ' (аккаунт был удалён — создал заново)' : '';
+        $menu = TelegramMenu::main($backTo);
+
+        TelegramCardSender::redrawText(
+            $chatId,
+            $messageId,
+            "↩️ Вернулся в ваш Telegram-аккаунт <b>".$this->esc((string) ($backTo->name ?? ''))."</b>{$suffix}.\n\n".$menu['text'],
+            $menu['keyboard']
+        );
+        TelegramBotApi::answerCallback($callbackId, 'Вы снова в Telegram-аккаунте ↩️');
     }
 
     /**
@@ -1837,10 +1895,12 @@ class TelegramWebhookController extends Controller
     }
 
     /**
-     * Переключить тумблер канала уведомлений и перерисовать панель.
+     * Переключить тип уведомлений целиком и перерисовать панель.
      *
-     * Каналы: ntg_* — личка (сообщения бота сюда), nem_* — почта,
-     * ntg_all — мастер лички. Дефолты: всё включено.
+     * Панель показывает 4 уникальных типа (сообщения, лайки, мэтчи,
+     * комментарии): тап включает/глушит тип везде — бот + дубль на почту,
+     * где он есть. Старые кнопки (мастер ntg_all, почтовые nem_*, ndm_*)
+     * из уже отправленных панелей продолжают работать ради совместимости.
      *
      * @param User $user владелец
      * @param string $data какой тумблер
@@ -1861,40 +1921,47 @@ class TelegramWebhookController extends Controller
             return;
         }
 
-        $column = match ($data) {
-            'ntg_all' => 'telegram_notify_enabled',
-            'ntg_msg' => 'telegram_notify_messages',
-            'ntg_like' => 'telegram_notify_likes',
-            'ntg_match' => 'telegram_notify_matches',
-            'ntg_cmt' => 'telegram_notify_comments',
-            'nem_msg' => 'email_notify_messages',
-            'nem_like' => 'email_notify_likes',
-            'nem_match' => 'email_notify_matches',
+        $columns = match ($data) {
+            'ntg_msg' => ['telegram_notify_messages', 'email_notify_messages'],
+            'ntg_like' => ['telegram_notify_likes', 'email_notify_likes'],
+            'ntg_match' => ['telegram_notify_matches', 'email_notify_matches'],
+            'ntg_cmt' => ['telegram_notify_comments'],
+            'ntg_all' => ['telegram_notify_enabled'],
+            'nem_msg' => ['email_notify_messages'],
+            'nem_like' => ['email_notify_likes'],
+            'nem_match' => ['email_notify_matches'],
             default => null,
         };
 
-        if ($column === null) {
+        if ($columns === null) {
             TelegramBotApi::answerCallback($callbackId, 'Неизвестный тумблер');
 
             return;
         }
 
-        $next = ! (bool) ($user->{$column} ?? true);
+        $first = $columns[0];
+        $next = ! (bool) ($user->{$first} ?? true);
 
-        $user->forceFill([$column => $next])->save();
+        $patch = [];
+
+        foreach ($columns as $column) {
+            $patch[$column] = $next;
+        }
+
+        $user->forceFill($patch)->save();
 
         $panel = TelegramNotifyPanel::build($user->fresh() ?? $user);
 
         TelegramCardSender::redrawText($chatId, $messageId, $panel['text'], $panel['keyboard']);
 
-        $channel = match (true) {
+        $scope = match (true) {
             str_starts_with($data, 'nem_') => 'Почта',
             $data === 'ntg_all' => 'Личка',
-            default => 'Личка',
+            default => 'Уведомления',
         };
 
         $state = $next ? 'включены ✅' : 'выключены ❌';
-        TelegramBotApi::answerCallback($callbackId, "{$channel}: {$state}");
+        TelegramBotApi::answerCallback($callbackId, "{$scope}: {$state}");
     }
 
     /**

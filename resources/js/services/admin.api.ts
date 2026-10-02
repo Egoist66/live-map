@@ -13,6 +13,16 @@ export const adminApi = {
     const { data } = await api.delete(`/api/admin/users/${userId}`)
     return data
   },
+  /**
+   * Создать тестового пользователя (только полные админы).
+   *
+   * @param payload имя, email (логин), пароль + подтверждение, пол
+   * @returns {id, name, email} созданного пользователя
+   */
+  async createTestUser(payload: { name: string; email: string; password: string; password_confirmation: string; gender?: string }) {
+    const { data } = await api.post('/api/admin/users', payload)
+    return data
+  },
   async impersonate(userId: number, payload: { reason: string; confirmed: boolean }) {
     const { data } = await api.post(`/api/admin/users/${userId}/impersonate`, payload)
     return data
@@ -67,6 +77,16 @@ export const adminApi = {
   },
   async markLoginAttemptsSeen() {
     const { data } = await api.post('/api/admin/login-attempts/seen')
+    return data
+  },
+  /**
+   * Сбросить заморозку и счётчик фейлов по email.
+   *
+   * @param email email для разморозки
+   * @returns {ok, email, fails_consecutive, is_frozen, is_banned}
+   */
+  async resetLoginAttempts(email: string) {
+    const { data } = await api.post('/api/admin/login-attempts/reset', { email })
     return data
   },
   async banUser(userId: number, reason?: string) {

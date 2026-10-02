@@ -27,21 +27,47 @@ class AdminLoginAttemptController extends Controller
         }
         $list = $query->paginate((int) ($data['per_page'] ?? 20));
         $aggregates = $this->aggregates($list->getCollection());
-        $list->getCollection()->transform(fn ($a) => [
-            'id' => $a->id,
-            'email' => $a->email,
-            'user' => $a->user ? ['id' => $a->user->id, 'name' => $a->user->name, 'email' => $a->user->email, 'banned_at' => $a->user->banned_at?->toISOString(), 'banned_reason' => $a->user->banned_reason] : null,
-            'ip' => $a->ip,
-            'country' => $a->country,
-            'country_code' => $a->country_code,
-            'city' => $a->city,
-            'user_agent' => $a->user_agent,
-            'successful' => (bool) $a->successful,
-            'created_at' => $a->created_at?->toISOString(),
-            'ip_fails_24h' => (int) ($aggregates['ipFails'][$a->ip] ?? 0),
-            'ip_emails_24h' => (int) ($aggregates['ipEmails'][$a->ip] ?? 0),
-            'email_fails_24h' => (int) ($aggregates['emailFails'][$a->email] ?? 0),
-        ]);
+        $rows = $list->getCollection();
+        $statusMap = \App\Services\LoginShield::statusMap($rows->map(fn ($a) => (string) $a->email)->all());
+        $list->getCollection()->transform(function ($a) use ($aggregates, $statusMap) {
+            $emailKey = \App\Services\LoginShield::normalizeEmail((string) $a->email);
+            $emailStatus = $statusMap[$emailKey] ?? ['count' => 0, 'frozen_until' => null, 'is_frozen' => false, 'retry_mins' => 0];
+            $isBanned = $a->user && $a->user->banned_at !== null;
+            $isFrozen = (bool) ($emailStatus['is_frozen'] ?? false);
+            $fails = (int) ($emailStatus['count'] ?? 0);
+            $state = 'ok';
+            if ($isBanned && $isFrozen) {
+                $state = 'banned_frozen';
+            } elseif ($isBanned) {
+                $state = 'banned';
+            } elseif ($isFrozen) {
+                $state = 'frozen';
+            } elseif ($fails > 0) {
+                $state = 'warning';
+            }
+
+            return [
+                'id' => $a->id,
+                'email' => $a->email,
+                'user' => $a->user ? ['id' => $a->user->id, 'name' => $a->user->name, 'email' => $a->user->email, 'banned_at' => $a->user->banned_at?->toISOString(), 'banned_reason' => $a->user->banned_reason] : null,
+                'ip' => $a->ip,
+                'country' => $a->country,
+                'country_code' => $a->country_code,
+                'city' => $a->city,
+                'user_agent' => $a->user_agent,
+                'successful' => (bool) $a->successful,
+                'created_at' => $a->created_at?->toISOString(),
+                'ip_fails_24h' => (int) ($aggregates['ipFails'][$a->ip] ?? 0),
+                'ip_emails_24h' => (int) ($aggregates['ipEmails'][$a->ip] ?? 0),
+                'email_fails_24h' => (int) ($aggregates['emailFails'][$a->email] ?? 0),
+                'fails_consecutive' => $fails,
+                'is_frozen' => $isFrozen,
+                'frozen_until' => $emailStatus['frozen_until'] ?? null,
+                'retry_mins' => (int) ($emailStatus['retry_mins'] ?? 0),
+                'is_banned' => (bool) $isBanned,
+                'login_state' => $state,
+            ];
+        });
         $failedToday = LoginAttempt::where('successful', false)->where('created_at', '>=', now()->subDay())->count();
         $bannedTotal = \App\Models\User::whereNotNull('banned_at')->count();
         return response()->json(array_merge($list->toArray(), ['stats' => [
@@ -75,6 +101,36 @@ class AdminLoginAttemptController extends Controller
             'failed_unseen' => 0,
             'banned_total' => $bannedTotal,
         ]]);
+    }
+
+    /**
+     * Сбросить заморозку и счётчик фейлов по email без разбана.
+     *
+     * Нужен для «замороженных, но не забаненных» (3 фейла): у них нет
+     * banned_at, разбанивать нечего, а вход всё ещё закрыт на час.
+     * Рвём цепочку success-маркером и чистим RateLimiter — история сохраняется.
+     *
+     * @param Request $request запрос с полем email
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function reset(Request $request)
+    {
+        $data = $request->validate(['email' => 'required|string|max:191']);
+
+        $email = \App\Services\LoginShield::normalizeEmail($data['email']);
+        $user = \App\Models\User::where('email', $email)->first();
+
+        \App\Services\LoginShield::thaw($email, $user?->id, 'admin:reset — ручной сброс заморозки и счётчика фейлов');
+
+        $status = \App\Services\LoginShield::status($email);
+
+        return response()->json([
+            'ok' => true,
+            'email' => $email,
+            'fails_consecutive' => $status['count'],
+            'is_frozen' => $status['is_frozen'],
+            'is_banned' => (bool) ($user && $user->banned_at !== null),
+        ]);
     }
 
     /**

@@ -115,13 +115,15 @@ enforceVisibleTab()
           <template #content>
             <div class="flex flex-wrap items-center gap-3 overflow-hidden">
               <span class="w-11 h-11 rounded-2xl bg-white/10 text-white grid place-items-center shrink-0"><i class="pi pi-shield" /></span>
-              <div class="min-w-0 flex-1">
+              <div class="min-w-0 flex-1 basis-40">
                 <h1 class="text-lg sm:text-2xl font-black tracking-tight">Панель модерации</h1>
                 <p class="text-white/50 text-xs sm:text-sm">Мониторинг онлайна, статистика роста и модерация.</p>
               </div>
-              <Button label="Мой профиль" rounded outlined size="small" class="!text-white !border-white/30 hover:!bg-white hover:!text-stone-900 !text-xs !font-bold [&_.p-button-label]:hidden min-[420px]:[&_.p-button-label]:inline" @click="router.visit('/profile')" />
-              <Button icon="pi pi-refresh" rounded class="!bg-white !text-stone-900 !border-white !text-sm !font-bold [&_.p-button-label]:hidden min-[420px]:[&_.p-button-label]:inline" :loading="mon.loadingOverview.value" label="Обновить" @click="mon.refreshAll()" />
-              <Button v-if="access.unlocked.value" icon="pi pi-lock" rounded outlined size="small" aria-label="Закрыть панель" title="Закрыть панель до следующего ввода пароля" class="!text-white !border-white/30 hover:!bg-white hover:!text-stone-900 !w-8 !h-8 !p-0" @click="access.lock()" />
+              <div class="flex items-center gap-2 w-full sm:w-auto sm:ml-auto justify-end">
+                <Button label="Мой профиль" icon="pi pi-user" rounded outlined size="small" class="!text-white !border-white/30 hover:!bg-white hover:!text-stone-900 !text-xs !font-bold" @click="router.visit('/profile')" />
+                <Button icon="pi pi-refresh" rounded size="small" class="!bg-white !text-stone-900 !border-white !text-xs !font-bold" :loading="mon.loadingOverview.value" label="Обновить" @click="mon.refreshAll()" />
+                <Button v-if="access.unlocked.value" icon="pi pi-lock" rounded outlined size="small" aria-label="Закрыть панель" title="Закрыть панель до следующего ввода пароля" class="!text-white !border-white/30 hover:!bg-white hover:!text-stone-900 !w-8 !h-8 !p-0 shrink-0" @click="access.lock()" />
+              </div>
             </div>
           </template>
         </Card>
@@ -140,14 +142,14 @@ enforceVisibleTab()
 
         <Tabs v-model:value="tab" class="min-w-0 admin-tabs">
           <TabList class="!bg-transparent" :pt="{ activeBar: { class: '!bg-violet-600' } }">
-            <Tab value="stats" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-chart-bar text-xs" /><span class="tab-label">Статистика</span></span></Tab>
-            <Tab v-if="staff.isAdmin.value" value="manage" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-users text-xs" /><span class="tab-label">Управление</span></span></Tab>
-            <Tab v-if="staff.isAdmin.value" value="security" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-shield text-xs" /><span class="tab-label">Безопасность</span><Badge v-if="logins.unseenCount.value" :value="logins.unseenCount.value > 99 ? '99+' : String(logins.unseenCount.value)" severity="danger" /></span></Tab>
-            <Tab value="admin" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-cog text-xs" /><span class="tab-label">Модерация</span><Badge v-if="reports.pendingCount.value" :value="reports.pendingCount.value > 99 ? '99+' : String(reports.pendingCount.value)" severity="danger" /></span></Tab>
-            <Tab value="business" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-briefcase text-xs" /><span class="tab-label">Бизнес</span><Badge v-if="businessQueue.pendingCount.value" :value="businessQueue.pendingCount.value > 99 ? '99+' : String(businessQueue.pendingCount.value)" severity="warn" /></span></Tab>
-            <Tab value="refs" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-book text-xs" /><span class="tab-label">Справочники</span></span></Tab>
-            <Tab value="seo" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-globe text-xs" /><span class="tab-label">SEO</span></span></Tab>
-            <Tab value="telegram" class="!text-[13px] !font-bold"><span class="flex items-center gap-1.5"><i class="pi pi-send text-xs" /><span class="tab-label">Telegram</span></span></Tab>
+            <Tab value="stats" title="Статистика" class="!text-[13px] !font-bold"><span class="admin-tab-item"><i class="pi pi-chart-bar text-xs" /><span class="tab-label">Статистика</span></span></Tab>
+            <Tab v-if="staff.isAdmin.value" value="manage" title="Управление" class="!text-[13px] !font-bold"><span class="admin-tab-item"><i class="pi pi-users text-xs" /><span class="tab-label">Управление</span></span></Tab>
+            <Tab v-if="staff.isAdmin.value" value="security" title="Безопасность" class="!text-[13px] !font-bold"><span class="admin-tab-item"><i class="pi pi-shield text-xs" /><span class="tab-label">Безопасность</span><Badge v-if="logins.unseenCount.value" :value="logins.unseenCount.value > 99 ? '99+' : String(logins.unseenCount.value)" severity="danger" /></span></Tab>
+            <Tab value="admin" title="Модерация" class="!text-[13px] !font-bold"><span class="admin-tab-item"><i class="pi pi-cog text-xs" /><span class="tab-label">Модерация</span><Badge v-if="reports.pendingCount.value" :value="reports.pendingCount.value > 99 ? '99+' : String(reports.pendingCount.value)" severity="danger" /></span></Tab>
+            <Tab value="business" title="Бизнес" class="!text-[13px] !font-bold"><span class="admin-tab-item"><i class="pi pi-briefcase text-xs" /><span class="tab-label">Бизнес</span><Badge v-if="businessQueue.pendingCount.value" :value="businessQueue.pendingCount.value > 99 ? '99+' : String(businessQueue.pendingCount.value)" severity="warn" /></span></Tab>
+            <Tab value="refs" title="Справочники" class="!text-[13px] !font-bold"><span class="admin-tab-item"><i class="pi pi-book text-xs" /><span class="tab-label">Справочники</span></span></Tab>
+            <Tab value="seo" title="SEO" class="!text-[13px] !font-bold"><span class="admin-tab-item"><i class="pi pi-globe text-xs" /><span class="tab-label">SEO</span></span></Tab>
+            <Tab value="telegram" title="Telegram" class="!text-[13px] !font-bold"><span class="admin-tab-item"><i class="pi pi-send text-xs" /><span class="tab-label">Telegram</span></span></Tab>
           </TabList>
           <TabPanels class="!p-0 !pt-4 !bg-transparent">
             <TabPanel value="stats">
@@ -164,7 +166,7 @@ enforceVisibleTab()
                 <AdminUsersManager
                   :list="mon.users.value" :meta="mon.usersMeta.value" :page="mon.usersPage.value" :query="mon.usersQuery.value" :filter="mon.usersFilter.value" :sort="mon.usersSort.value" :limit="mon.usersLimit.value" :loading="mon.loadingUsers.value" :acting-id="mon.actingId.value" :admin="admin" :auth-user-id="mon.authUserId.value"
                   @update:query="(v:string)=>mon.usersQuery.value=v" @filter="(v:string)=>mon.setUsersFilter(v as any)" @sort="(v:string)=>mon.usersSort.value=v as any" @page="mon.setUsersPage"
-                  @plan="mon.setPlan" @role="mon.requestRoleChange" @impersonate="imp.ask" @ban="(u:any)=>logins.ban(u)" @unban="(u:any)=>logins.unban(u)"
+                  @plan="mon.setPlan" @role="mon.requestRoleChange" @impersonate="imp.ask" @ban="(u:any)=>logins.ban(u)" @unban="(u:any)=>logins.unban(u)" @created="mon.loadUsers()"
                 />
                 <div class="space-y-4 min-w-0">
                   <AdminUpdatesManager :mgr="appUpdates" />

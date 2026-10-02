@@ -3,7 +3,10 @@
 namespace App\Services;
 
 use App\Models\User;
+use App\Services\AppModulesWelcomeNews;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 /**
  * Переключение аккаунтов в Telegram-боте.
@@ -29,6 +32,11 @@ class TelegramAccountSwitch
      * Длина кода (нули слева значимы, храним строкой).
      */
     public const CODE_LENGTH = 6;
+
+    /**
+     * Сколько помним предыдущий аккаунт для кнопки «назад», секунд (30 дней).
+     */
+    public const PREV_TTL_SECONDS = 2592000;
 
     /**
      * Ключ кода в кеше.
@@ -154,6 +162,12 @@ class TelegramAccountSwitch
             ->where('id', '!=', $target->id)
             ->get();
 
+        $previousId = $holders->first()?->id;
+
+        if ($previousId !== null) {
+            self::rememberPrevious($telegramId, (int) $previousId);
+        }
+
         foreach ($holders as $holder) {
             $holder->forceFill([
                 'telegram_id' => null,
@@ -243,5 +257,196 @@ class TelegramAccountSwitch
     public static function looksLikeCode(string $text): bool
     {
         return preg_match('/^\d{6}$/', trim($text)) === 1;
+    }
+
+    /**
+     * Технический email дефолтного Telegram-аккаунта.
+     *
+     * Автосозданные через Mini App получают `tg_{id}@telegram.local` —
+     * это «дом» владельца Telegram, куда можно вернуться одной кнопкой
+     * после переключения на второй аккаунт по коду.
+     *
+     * @param int $telegramId from.id апдейта
+     * @return string
+     */
+    public static function defaultEmail(int $telegramId): string
+    {
+        return 'tg_'.$telegramId.'@telegram.local';
+    }
+
+    /**
+     * Это ли дефолтный Telegram-аккаунт (а не второй, включённый по коду).
+     *
+     * @param User $user проверяемый пользователь
+     * @return bool
+     */
+    public static function isDefaultAccount(User $user): bool
+    {
+        $telegramId = (int) ($user->telegram_id ?? 0);
+
+        if ($telegramId <= 0) {
+            return false;
+        }
+
+        return mb_strtolower(trim((string) $user->email)) === self::defaultEmail($telegramId);
+    }
+
+    /**
+     * Ключ предыдущего аккаунта для кнопки «назад».
+     *
+     * @param int $telegramId from.id апдейта
+     * @return string
+     */
+    public static function previousKey(int $telegramId): string
+    {
+        return 'tg:switch:prev:'.$telegramId;
+    }
+
+    /**
+     * Запомнить, с какого аккаунта ушли (для возврата одной кнопкой).
+     *
+     * @param int $telegramId from.id апдейта
+     * @param int $userId id аккаунта, который теряет привязку
+     * @return void
+     */
+    public static function rememberPrevious(int $telegramId, int $userId): void
+    {
+        if ($telegramId <= 0 || $userId <= 0) {
+            return;
+        }
+
+        try {
+            Cache::put(self::previousKey($telegramId), $userId, self::PREV_TTL_SECONDS);
+        } catch (\Throwable) {
+            return;
+        }
+    }
+
+    /**
+     * Вернуться к дефолтному Telegram-аккаунту, выйдя из второго.
+     *
+     * Безопасно: вызывает только владелец Telegram (from.id апдейта),
+     * цель — всегда его собственный автосозданный аккаунт
+     * (`tg_{id}@telegram.local`) либо аккаунт, с которого он уходил
+     * при последнем переключении. Второй аккаунт не удаляется —
+     * с него просто снимается привязка telegram_id.
+     *
+     * @param int $telegramId from.id апдейта (куда возвращаем привязку)
+     * @param array<string, mixed> $tgFrom объект from апдейта (имя для пересоздания)
+     * @return array{user:User, created:bool} аккаунт, к которому вернулись
+     *
+     * @throws \RuntimeException когда уже в дефолтном или некуда вернуться
+     */
+    public static function backToDefault(int $telegramId, array $tgFrom = []): array
+    {
+        if ($telegramId <= 0) {
+            throw new \RuntimeException('Не вижу ваш Telegram id — откройте бота заново.');
+        }
+
+        $current = User::where('telegram_id', $telegramId)->first();
+
+        if ($current !== null && self::isDefaultAccount($current)) {
+            throw new \RuntimeException('Вы уже в своём Telegram-аккаунте — возвращаться некуда.');
+        }
+
+        $target = User::where('email', self::defaultEmail($telegramId))->first();
+        $created = false;
+
+        if ($target === null) {
+            $previousId = null;
+
+            try {
+                $previousId = Cache::get(self::previousKey($telegramId));
+            } catch (\Throwable) {
+                $previousId = null;
+            }
+
+            if ($previousId !== null) {
+                $target = User::find((int) $previousId);
+            }
+
+            if ($target === null) {
+                $target = self::recreateDefault($telegramId, $tgFrom);
+                $created = true;
+            }
+        }
+
+        $currentTargetTg = (int) ($target->telegram_id ?? 0);
+
+        if ($currentTargetTg !== 0 && $currentTargetTg !== $telegramId) {
+            throw new \RuntimeException('Дефолтный аккаунт привязан к другому Telegram. Напишите в поддержку.');
+        }
+
+        $holders = User::where('telegram_id', $telegramId)
+            ->where('id', '!=', $target->id)
+            ->get();
+
+        foreach ($holders as $holder) {
+            $holder->forceFill([
+                'telegram_id' => null,
+                'telegram_username' => null,
+                'telegram_photo_url' => null,
+                'telegram_linked_at' => null,
+            ])->saveQuietly();
+        }
+
+        $target->forceFill([
+            'telegram_id' => $telegramId,
+            'telegram_linked_at' => now(),
+            'telegram_blocked_at' => null,
+        ])->save();
+
+        self::forgetWait($telegramId);
+
+        return ['user' => $target->fresh() ?? $target, 'created' => $created];
+    }
+
+    /**
+     * Пересоздать удалённый дефолтный Telegram-аккаунт.
+     *
+     * Тот же минимум, что при авторегистрации из Mini App:
+     * технический email, случайный пароль, подтверждённая почта.
+     *
+     * @param int $telegramId from.id апдейта
+     * @param array<string, mixed> $tgFrom объект from апдейта
+     * @return User созданный пользователь
+     */
+    private static function recreateDefault(int $telegramId, array $tgFrom = []): User
+    {
+        $firstName = trim((string) ($tgFrom['first_name'] ?? ''));
+        $lastName = trim((string) ($tgFrom['last_name'] ?? ''));
+        $fullName = trim($firstName.' '.$lastName);
+
+        if ($fullName === '') {
+            $fullName = 'Гость TG';
+        }
+
+        $username = ltrim(trim((string) ($tgFrom['username'] ?? '')), '@');
+
+        if ($username !== '' && ! preg_match('/^[A-Za-z0-9_]+$/', $username)) {
+            $username = '';
+        }
+
+        $user = User::create([
+            'name' => mb_substr($fullName, 0, 255),
+            'email' => self::defaultEmail($telegramId),
+            'password' => Hash::make(Str::random(40)),
+            'gender' => 'other',
+            'signup_goal' => 'chat',
+            'default_mode' => 'ulove',
+            'default_mode_set_at' => now(),
+            'enabled_modules' => ['ulove'],
+            'account_type' => 'person',
+            'dating_enabled' => true,
+            'telegram_id' => $telegramId,
+            'telegram_username' => $username !== '' ? mb_substr($username, 0, 64) : null,
+            'telegram_linked_at' => now(),
+        ]);
+
+        $user->forceFill(['email_verified_at' => now()])->saveQuietly();
+
+        AppModulesWelcomeNews::ensureDelivered($user);
+
+        return $user;
     }
 }

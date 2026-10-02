@@ -51,14 +51,28 @@ class TelegramAccountPanel
         $lines[] = '2. Сгенерируйте код (Настройки → Приложение → Telegram → «Код для бота»);';
         $lines[] = '3. Нажмите кнопку ниже и пришлите 6 цифр сюда — привязка переедет.';
 
+        $showBack = ! TelegramAccountSwitch::isDefaultAccount($fresh);
+
+        if ($showBack) {
+            $lines[] = '';
+            $lines[] = 'Вы сейчас во втором аккаунте — одной кнопкой можно выйти из него и вернуться в свой Telegram-аккаунт.';
+        }
+
         $keyboard = [
             [
                 ['text' => '🔀 Переключиться по коду', 'callback_data' => 'acc_ask'],
             ],
-            [
-                ['text' => '👤 Моя анкета', 'callback_data' => 'go_profile'],
-                TelegramMenu::openAppButton('🌐 Открыть приложение'),
-            ],
+        ];
+
+        if ($showBack) {
+            $keyboard[] = [
+                ['text' => '↩️ Вернуться в Telegram-аккаунт', 'callback_data' => 'acc_back'],
+            ];
+        }
+
+        $keyboard[] = [
+            ['text' => '👤 Моя анкета', 'callback_data' => 'go_profile'],
+            TelegramMenu::openAppButton('🌐 Открыть приложение'),
         ];
 
         return [
@@ -84,6 +98,48 @@ class TelegramAccountPanel
 
         return [
             'text' => $text,
+            'keyboard' => TelegramMenu::withNav($keyboard),
+        ];
+    }
+
+    /**
+     * Экран подтверждения возврата в Telegram-аккаунт.
+     *
+     * @param User $user текущий (второй) пользователь
+     * @param int $telegramId from.id апдейта
+     * @return array{text:string, keyboard:array<int, array<int, array<string, mixed>>>}
+     */
+    public static function askBack(User $user, int $telegramId): array
+    {
+        $fresh = $user->fresh() ?? $user;
+
+        $currentName = trim((string) ($fresh->name ?? ''));
+
+        if ($currentName === '') {
+            $currentName = 'Без имени';
+        }
+
+        $defaultEmail = TelegramAccountSwitch::defaultEmail($telegramId);
+
+        $lines = [];
+        $lines[] = '↩️ <b>Вернуться в Telegram-аккаунт?</b>';
+        $lines[] = '';
+        $lines[] = 'Сейчас бот работает с: <b>'.self::esc($currentName).'</b>';
+        $lines[] = 'Вернёмся в: <code>'.self::esc($defaultEmail).'</code>';
+        $lines[] = '';
+        $lines[] = 'Второй аккаунт не удалится — с него просто снимется привязка к этому Telegram.';
+
+        $keyboard = [
+            [
+                ['text' => '✅ Да, вернуться', 'callback_data' => 'acc_back_yes'],
+            ],
+            [
+                ['text' => '◀️ К аккаунту', 'callback_data' => 'go_account'],
+            ],
+        ];
+
+        return [
+            'text' => implode("\n", $lines),
             'keyboard' => TelegramMenu::withNav($keyboard),
         ];
     }

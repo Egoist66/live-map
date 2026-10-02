@@ -371,10 +371,12 @@ Route::middleware(['web', 'auth:web,sanctum', 'admin', 'throttle:120,1'])->group
     Route::delete('/admin/updates/{appUpdate}', [\App\Http\Controllers\AdminAppUpdateController::class, 'destroy']);
     Route::get('/admin/monitoring/users', [\App\Http\Controllers\AdminMonitoringController::class, 'users']);
     Route::get('/admin/users', [AdminUserController::class, 'index']);
+    Route::post('/admin/users', [AdminUserController::class, 'store'])->middleware('throttle:30,1');
     Route::post('/admin/users/{user}/ban', [AdminUserController::class, 'ban']);
     Route::delete('/admin/users/{user}/ban', [AdminUserController::class, 'unban']);
     Route::get('/admin/login-attempts', [\App\Http\Controllers\AdminLoginAttemptController::class, 'index']);
     Route::post('/admin/login-attempts/seen', [\App\Http\Controllers\AdminLoginAttemptController::class, 'seen']);
+    Route::post('/admin/login-attempts/reset', [\App\Http\Controllers\AdminLoginAttemptController::class, 'reset']);
     Route::get('/admin/maintenance', [\App\Http\Controllers\AdminMaintenanceController::class, 'show']);
     Route::put('/admin/maintenance', [\App\Http\Controllers\AdminMaintenanceController::class, 'update']);
     Route::post('/admin/realtime/mode', [\App\Http\Controllers\RealtimeController::class, 'setMode']);

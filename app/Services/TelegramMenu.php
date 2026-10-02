@@ -96,6 +96,7 @@ class TelegramMenu
             ],
             [
                 self::openAppButton('🌐 Открыть приложение'),
+                self::openBrowserButton('🌍 В браузере'),
             ],
         ];
 
@@ -214,6 +215,27 @@ class TelegramMenu
 
         if ($url !== '') {
             return ['text' => $label, 'url' => $url];
+        }
+
+        return ['text' => $label, 'callback_data' => 'go_menu'];
+    }
+
+    /**
+     * Кнопка открытия сайта во внешнем браузере телефона.
+     *
+     * В отличие от openAppButton (web_app — Mini App внутри Telegram),
+     * здесь обычная url-кнопка: Telegram открывает ссылку в браузере
+     * пользователя. Удобно, когда Mini App тесен или нужен десктопный вид.
+     *
+     * @param string $label подпись кнопки
+     * @return array<string, mixed>
+     */
+    public static function openBrowserButton(string $label): array
+    {
+        $base = rtrim((string) config('app.url', ''), '/');
+
+        if ($base !== '') {
+            return ['text' => $label, 'url' => $base];
         }
 
         return ['text' => $label, 'callback_data' => 'go_menu'];

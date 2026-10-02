@@ -98,6 +98,99 @@ export function useAdminUsers() {
     }
   }
 
+  /**
+   * Состояние диалога «Создать тестового»: всё одним объектом по смыслу.
+   *
+   * Пароль придумывает админ (или генерирует кнопкой) — бэкенд хэширует
+   * и проверяет стойкость (Password::defaults). Роль всегда user,
+   * повысить через этот диалог нельзя.
+   */
+  const createState = ref({
+    open: false,
+    name: '',
+    email: '',
+    password: '',
+    confirm: '',
+    gender: 'other',
+    creating: false,
+    created: null as null | { id: number; name: string; email: string },
+    error: null as string | null,
+    copied: false,
+  })
+
+  function openCreate() {
+    createState.value.open = true
+    createState.value.name = ''
+    createState.value.email = ''
+    createState.value.password = ''
+    createState.value.confirm = ''
+    createState.value.created = null
+    createState.value.error = null
+    createState.value.copied = false
+  }
+
+  function closeCreate() {
+    createState.value.open = false
+  }
+
+  /**
+   * Сгенерировать пароль 16 символов (A–Z, a–z, 0–9) через Web Crypto.
+   */
+  function generatePassword() {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
+    const bytes = new Uint32Array(16)
+    crypto.getRandomValues(bytes)
+    let out = ''
+    for (const b of bytes) out += alphabet[b % alphabet.length]
+    createState.value.password = out
+    createState.value.confirm = out
+  }
+
+  /**
+   * Скопировать выданные доступы в буфер обмена.
+   */
+  async function copyCreatedCredentials(): Promise<void> {
+    const c = createState.value.created
+    if (!c) return
+    const text = `Логин: ${c.email}\nПароль: ${createState.value.password}`
+    try {
+      await navigator.clipboard.writeText(text)
+      createState.value.copied = true
+    } catch {
+      createState.value.error = 'Не удалось скопировать — выделите текст вручную'
+    }
+  }
+
+  /**
+   * Создать тестового пользователя.
+   *
+   * @param onCreated колбэк после успеха (например, обновить список)
+   */
+  async function createTestUser(onCreated?: () => void): Promise<void> {
+    if (!isAdmin.value || createState.value.creating) return
+    createState.value.creating = true
+    createState.value.error = null
+    createState.value.copied = false
+    try {
+      const d: any = await adminApi.createTestUser({
+        name: createState.value.name.trim(),
+        email: createState.value.email.trim().toLowerCase(),
+        password: createState.value.password,
+        password_confirmation: createState.value.confirm,
+        gender: createState.value.gender,
+      })
+      createState.value.created = { id: d.id, name: d.name, email: d.email }
+      onCreated?.()
+    } catch (e: any) {
+      const bag = e?.response?.data?.errors
+      const first = bag ? Object.values(bag).flat().join(' ') : null
+      createState.value.error = (first as string) || e?.response?.data?.message || 'Не удалось создать пользователя'
+      throw e
+    } finally {
+      createState.value.creating = false
+    }
+  }
+
   function askDelete(user: any) {
     if (!staff.canManageUser(user)) return
     confirmDelete.value = user
@@ -120,5 +213,5 @@ export function useAdminUsers() {
     }
   }
 
-  return { isAdmin, isModerator, canManageUser: staff.canManageUser, isAdminAccount: staff.isAdminAccount, selfHidden, selfLoading, toggleSelf, query, results, searching, error, togglingId, deletingId, confirmDelete, askDelete, doDelete, closeConfirm: () => (confirmDelete.value = null), toggleUser, searchNow }
+  return { isAdmin, isModerator, canManageUser: staff.canManageUser, isAdminAccount: staff.isAdminAccount, selfHidden, selfLoading, toggleSelf, query, results, searching, error, togglingId, deletingId, confirmDelete, askDelete, doDelete, closeConfirm: () => (confirmDelete.value = null), toggleUser, searchNow, createState, openCreate, closeCreate, generatePassword, copyCreatedCredentials, createTestUser }
 }

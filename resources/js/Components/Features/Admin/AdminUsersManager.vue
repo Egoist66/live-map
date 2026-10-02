@@ -13,6 +13,7 @@ import ProgressSpinner from 'primevue/progressspinner'
 import { avatarSrcFor } from '@/composables/useAvatar'
 import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
 import OrgBadge from '@/Components/Features/Chat/OrgBadge.vue'
+import AdminCreateUserDialog from '@/Components/Features/Admin/AdminCreateUserDialog.vue'
 
 const { selectPt } = useDropdownMenuStyle()
 
@@ -27,6 +28,7 @@ const emit = defineEmits<{
   (e: 'impersonate', u: any): void
   (e: 'ban', u: any): void
   (e: 'unban', u: any): void
+  (e: 'created'): void
 }>()
 
 const filterOptions = [
@@ -82,7 +84,11 @@ function planCaption(u: any): string {
 <template>
   <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0' } }">
     <template #content>
-      <div class="font-black dark:text-white">Пользователи <span class="text-xs font-bold text-stone-400 dark:text-zinc-500">· {{ meta.total }}</span></div>
+      <div class="flex items-center gap-2 flex-wrap">
+        <div class="font-black dark:text-white">Пользователи <span class="text-xs font-bold text-stone-400 dark:text-zinc-500">· {{ meta.total }}</span></div>
+        <Button label="Тестовый" icon="pi pi-user-plus" size="small" rounded outlined severity="info" class="ml-auto !text-xs !py-1" title="Создать тестовый аккаунт с придуманными логином и паролем" @click="admin.openCreate()" />
+      </div>
+      <AdminCreateUserDialog :admin="admin" :onCreated="() => emit('created')" />
       <IconField class="mt-3">
         <InputIcon class="pi pi-search" />
         <InputText :modelValue="query" @update:modelValue="(v:string|undefined)=>emit('update:query', v ?? '')" placeholder="Имя или email..." fluid size="small" rounded />
