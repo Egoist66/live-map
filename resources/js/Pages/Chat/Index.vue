@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, onMounted, ref, watch } from "vue";
-import { Head, router } from "@inertiajs/vue3";
+import { Head } from "@inertiajs/vue3";
 import Toast from "primevue/toast";
 import ChatSidebar from "@/Components/Features/Chat/ChatSidebar.vue";
 import ChatWindow from "@/Components/Features/Chat/ChatWindow.vue";
@@ -23,6 +23,9 @@ const ChatPresetsDialog = defineAsyncComponent(
 );
 const ChatAutoReplyDialog = defineAsyncComponent(
   () => import("@/Components/Features/Chat/ChatAutoReplyDialog.vue")
+);
+const SavedNotesDialog = defineAsyncComponent(
+  () => import("@/Components/Features/Chat/SavedNotesDialog.vue")
 );
 const DistrictInviteDialog = defineAsyncComponent(
   () => import("@/Components/Features/Map/DistrictInviteDialog.vue")
@@ -254,12 +257,13 @@ watch(
 
 const presetsOpen = ref(false);
 const autoReplyOpen = ref(false);
+const savedNotesOpen = ref(false);
 
 /**
- * Открыть «Избранное» — отдельный чат с собой (/notes).
+ * Открыть «Избранное» — чат с собой диалогом прямо в чатах.
  */
 function goNotes(): void {
-  router.visit("/notes");
+  savedNotesOpen.value = true;
 }
 
 /**
@@ -494,6 +498,10 @@ onMounted(async () => {
     :open="autoReplyOpen"
     @update:open="(v: boolean) => autoReplyOpen = v"
     @saved="onAutoReplySaved"
+  />
+  <SavedNotesDialog
+    :open="savedNotesOpen"
+    @update:open="(v: boolean) => savedNotesOpen = v"
   />
   <DistrictInviteDialog
     :open="districtInvite.open.value"

@@ -15,7 +15,6 @@ const TelegramAccountSwitch = defineAsyncComponent(() => import('@/Components/Fe
 const SettingsModulesSection = defineAsyncComponent(() => import('@/Components/Features/Settings/SettingsModulesSection.vue'))
 const SettingsAppInstallSection = defineAsyncComponent(() => import('@/Components/Features/Settings/SettingsAppInstallSection.vue'))
 const SettingsHotkeysSection = defineAsyncComponent(() => import('@/Components/Features/Settings/SettingsHotkeysSection.vue'))
-const SavedNotesChat = defineAsyncComponent(() => import('@/Components/Features/Chat/SavedNotesChat.vue'))
 // Гайд-диалог — только по клику «Как установить», грузим лениво.
 const PwaInstallGuideDialog = defineAsyncComponent(() => import('@/Components/Features/Pwa/PwaInstallGuideDialog.vue'))
 
@@ -74,11 +73,6 @@ const appTabs = useSettingsAppTabs()
               </div>
             </template>
           </Card>
-        </TabPanel>
-        <TabPanel value="notes" class="!min-w-0">
-          <div class="h-[68dvh] min-h-[440px] max-h-[680px] min-w-0">
-            <SavedNotesChat />
-          </div>
         </TabPanel>
         <TabPanel value="hotkeys" class="!min-w-0">
           <SettingsHotkeysSection />

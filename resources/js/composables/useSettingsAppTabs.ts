@@ -4,14 +4,14 @@ import { onBeforeUnmount, ref } from 'vue'
  * Смысловые подтабы раздела «Приложение» в настройках.
  *
  * Раздел разросся в простыню (модули, пуши, установка, Telegram,
- * избранное, хоткеи) — каждая смысловая группа живёт на своей
+ * хоткеи) — каждая смысловая группа живёт на своей
  * подвкладке, компонент `SettingsAppTab` только рисует табы.
  *
  * @returns список подтабов, активный id и переключатель
  * @example
  * const { tabs, active, setActive } = useSettingsAppTabs()
  */
-export type SettingsAppTabId = 'sections' | 'notify' | 'install' | 'telegram' | 'notes' | 'hotkeys'
+export type SettingsAppTabId = 'sections' | 'notify' | 'install' | 'telegram' | 'hotkeys'
 
 /** Подвкладка раздела «Приложение»: id, подпись, иконка и подсказка. */
 export interface SettingsAppTab {
@@ -26,7 +26,6 @@ export const SETTINGS_APP_TABS: readonly SettingsAppTab[] = [
   { id: 'notify', label: 'Уведомления', icon: 'pi pi-bell', desc: 'Пуши и бот Telegram' },
   { id: 'install', label: 'Установка', icon: 'pi pi-download', desc: 'PWA и оффлайн-кэш' },
   { id: 'telegram', label: 'Telegram', icon: 'pi pi-send', desc: 'Второй аккаунт в боте' },
-  { id: 'notes', label: 'Избранное', icon: 'pi pi-star', desc: 'Чат с собой' },
   { id: 'hotkeys', label: 'Клавиши', icon: 'pi pi-keyboard', desc: 'Горячие клавиши десктопа' },
 ] as const
 

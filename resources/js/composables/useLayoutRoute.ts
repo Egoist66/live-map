@@ -89,16 +89,6 @@ export function useLayoutRoute() {
   })
 
   /**
-   * Открыто «Избранное» (`/notes`): чат с собой, фрейм без скролла
-   * страницы — как у чата.
-   */
-  const isNotesRoute = computed(() => {
-    navTick.value
-
-    return isCurrent('notes')
-  })
-
-  /**
    * Открыта карта (`/map`): фрейм без скролла страницы.
    */
   const isMapRoute = computed(() => {
@@ -144,12 +134,12 @@ export function useLayoutRoute() {
   })
 
   /**
-   * Страница-фрейм без скролла родителя: чат, избранное, карта
+   * Страница-фрейм без скролла родителя: чат, карта
    * или лента свайпов.
    */
   const isScrollLockedPage = computed(
-    () => isChatRoute.value || isNotesRoute.value || isMapRoute.value || isSwipesFeed.value,
+    () => isChatRoute.value || isMapRoute.value || isSwipesFeed.value,
   )
 
-  return { navTick, isChatRoute, isNotesRoute, isMapRoute, isSwipesRoute, isSwipesFeed, isScrollLockedPage }
+  return { navTick, isChatRoute, isMapRoute, isSwipesRoute, isSwipesFeed, isScrollLockedPage }
 }

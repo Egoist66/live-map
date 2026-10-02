@@ -3,14 +3,13 @@ import { ref } from 'vue'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
-import SelectButton from 'primevue/selectbutton'
 import Message from 'primevue/message'
 import ProgressSpinner from 'primevue/progressspinner'
 import MessageBubble from '@/Components/Features/Chat/MessageBubble.vue'
 import { useSavedNotesChat } from '@/composables/useSavedNotesChat'
 
-withDefaults(defineProps<{ showBack?: boolean }>(), { showBack: false })
-const emit = defineEmits<{ (e: 'back'): void }>()
+withDefaults(defineProps<{ showBack?: boolean; showClose?: boolean; embedded?: boolean }>(), { showBack: false, showClose: false, embedded: false })
+const emit = defineEmits<{ (e: 'back'): void; (e: 'close'): void }>()
 
 /** Скрытый file-input композера (клик по скрепке). */
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -18,7 +17,9 @@ const fileInput = ref<HTMLInputElement | null>(null)
 /**
  * Чат с собой («Избранное»): только отображение, вся логика —
  * в useSavedNotesChat (Правило №1). Пузырьки — общий MessageBubble,
- * как в диалоге с человеком.
+ * как в диалоге с человеком. В `embedded` режиме (внутри
+ * SavedNotesDialog) убирает свою рамку, в `showClose` — рисует
+ * крестик закрытия.
  */
 const chat = useSavedNotesChat()
 
@@ -29,7 +30,10 @@ const storageOptions = [
 </script>
 
 <template>
-  <div class="flex flex-col h-full min-h-0 min-w-0 bg-white dark:bg-zinc-900 rounded-none sm:rounded-3xl border-0 sm:border border-stone-200 dark:border-zinc-800 overflow-hidden">
+  <div
+    class="flex flex-col h-full min-h-0 min-w-0 bg-white dark:bg-zinc-900 overflow-hidden"
+    :class="embedded ? 'rounded-none border-0' : 'rounded-none sm:rounded-3xl border-0 sm:border border-stone-200 dark:border-zinc-800'"
+  >
     <div class="chat-header flex items-center gap-2 pl-1 pr-2 sm:px-4 py-2 border-b dark:border-zinc-800 shrink-0 bg-white/95 dark:bg-zinc-900/95 backdrop-blur sticky top-0 z-30 min-w-0 min-h-[60px]">
       <button v-if="showBack" type="button" aria-label="Назад" class="w-9 h-9 grid place-items-center rounded-full hover:bg-black/10 dark:hover:bg-white/10 active:scale-95 shrink-0 text-xl leading-none text-stone-600 dark:text-zinc-300" @click="emit('back')">‹</button>
       <span class="relative block shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white grid place-items-center text-xl">⭐</span>
@@ -40,6 +44,7 @@ const storageOptions = [
       <span class="flex items-center gap-0.5 shrink-0">
         <Button :icon="chat.showSearch.value ? 'pi pi-times' : 'pi pi-search'" rounded text severity="secondary" aria-label="Поиск по заметкам" class="!w-9 !h-9 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" @click="chat.showSearch.value = !chat.showSearch.value" />
         <Button v-if="chat.ordered.value.length > 0" icon="pi pi-trash" rounded text severity="danger" aria-label="Очистить всё" title="Очистить всё" class="!w-9 !h-9 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" @click="chat.askClearAll()" />
+        <Button v-if="showClose" icon="pi pi-times" rounded text severity="secondary" aria-label="Закрыть избранное" title="Закрыть" class="!w-9 !h-9 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" @click="emit('close')" />
       </span>
     </div>
 
@@ -48,17 +53,18 @@ const storageOptions = [
     </div>
 
     <div class="shrink-0 px-2 sm:px-4 py-2 border-b dark:border-zinc-800 flex items-center gap-2 min-w-0">
-      <SelectButton
-        :model-value="chat.state.storage.value"
-        :options="storageOptions"
-        option-label="label"
-        option-value="value"
-        :allow-empty="false"
-        :disabled="chat.state.storageLoading.value"
-        class="notes-storage-switch flex-1 min-w-0"
-        aria-label="Где хранить избранное"
-        @update:model-value="(v:any)=>chat.onStorage(v)"
-      />
+      <div class="notes-storage-switch" role="group" aria-label="Где хранить избранное">
+        <button
+          v-for="o in storageOptions"
+          :key="o.value"
+          type="button"
+          class="notes-opt"
+          :class="{ 'is-active': chat.state.storage.value === o.value }"
+          :aria-pressed="chat.state.storage.value === o.value"
+          :disabled="chat.state.storageLoading.value"
+          @click="chat.onStorage(o.value as any)"
+        >{{ o.label }}</button>
+      </div>
       <ProgressSpinner v-if="chat.state.storageLoading.value" style="width: 22px; height: 22px" :stroke-width="6" class="shrink-0" />
     </div>
 
@@ -144,33 +150,62 @@ const storageOptions = [
 html.dark .notes-chat-list::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.18);
 }
-/* Переключатель хранилища: те же явные цвета, что в секции настроек. */
-.notes-storage-switch :deep(.p-selectbutton) {
+/* Сегмент-переключатель хранилища: свои кнопки, ноль бордеров,
+   ноль розового. Светлая: активный — белая плашка с тенью.
+   Тёмная: активный — светло-серый, текст белый. */
+.notes-storage-switch {
   display: flex;
-  width: 100%;
-}
-.notes-storage-switch :deep(.p-togglebutton) {
   flex: 1 1 0;
+  min-width: 0;
+  gap: 2px;
+  padding: 3px;
+  border: 0;
+  border-radius: 9999px;
+  background: #ececea;
+}
+html.dark .notes-storage-switch {
+  background: #27272a;
+}
+.notes-opt {
+  flex: 1 1 0;
+  min-width: 0;
   min-height: 40px;
-  border-color: #e7e5e4;
-  background: #ffffff;
-  color: #57534e;
-  font-weight: 700;
+  padding: 0.45rem 0.5rem;
+  border: 0;
+  border-radius: 9999px;
+  background: transparent;
+  color: #78716c;
   font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.12s ease, opacity 0.2s ease;
 }
-.notes-storage-switch :deep(.p-togglebutton-checked) {
-  background: #f43f5e;
-  border-color: #f43f5e;
+.notes-opt:active {
+  transform: scale(0.97);
+}
+.notes-opt:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+.notes-opt.is-active {
+  background: #ffffff;
+  color: #1c1917;
+  box-shadow: 0 2px 10px -2px rgba(15, 23, 42, 0.25);
+}
+html.dark .notes-opt {
+  color: #a1a1aa;
+}
+html.dark .notes-opt.is-active {
+  background: #52525b;
   color: #ffffff;
+  box-shadow: 0 2px 12px -2px rgba(0, 0, 0, 0.6);
 }
-html.dark .notes-storage-switch :deep(.p-togglebutton) {
-  background: #18181b;
-  border-color: #3f3f46;
-  color: #d4d4d8;
-}
-html.dark .notes-storage-switch :deep(.p-togglebutton-checked) {
-  background: #f43f5e;
-  border-color: #fb7185;
-  color: #ffffff;
+.notes-opt:focus-visible {
+  outline: 2px solid #a1a1aa;
+  outline-offset: 2px;
 }
 </style>

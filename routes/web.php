@@ -33,7 +33,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/flow', [PageController::class, 'flow'])->middleware('module:uflow')->name('flow');
     Route::get('/flow/post/{post}', [PageController::class, 'flowPost'])->whereNumber('post')->middleware('module:uflow')->name('flow.post');
     Route::get('/chat/{conversation?}', [PageController::class, 'chat'])->name('chat');
-    Route::get('/notes', [PageController::class, 'notes'])->name('notes');
     Route::get('/users/{profile}', [ProfileController::class, 'publicShow'])->name('users.show');
     Route::get('/map', [PageController::class, 'map'])->middleware('module:upin')->name('map');
     Route::get('/districts', [\App\Http\Controllers\DistrictController::class, 'pageIndex'])->middleware('module:districts')->name('districts.index');

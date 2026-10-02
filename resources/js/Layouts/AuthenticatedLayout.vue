@@ -70,7 +70,7 @@ onMounted(() => { screenLock.init(); hotkeys.init() })
     <main :class="layoutRoute.isScrollLockedPage.value ? 'flex-1 pb-0 lg:pb-0 overflow-hidden overscroll-none' : 'flex-1 pb-[calc(var(--app-bottomnav)+var(--sab))] lg:pb-0'">
       <PageTransition><slot /></PageTransition>
     </main>
-    <div v-if="!layoutRoute.isChatRoute.value && !layoutRoute.isNotesRoute.value && !layoutRoute.isMapRoute.value && !layoutRoute.isSwipesRoute.value" class="mt-auto hidden pb-[calc(var(--app-bottomnav)+var(--sab))] lg:block lg:pb-0">
+    <div v-if="!layoutRoute.isChatRoute.value && !layoutRoute.isMapRoute.value && !layoutRoute.isSwipesRoute.value" class="mt-auto hidden pb-[calc(var(--app-bottomnav)+var(--sab))] lg:block lg:pb-0">
       <AppFooter />
     </div>
     <MobileBottomNav @bell="bell.open()" @menu="toggleMenu" />

@@ -175,16 +175,6 @@ class PageController extends Controller
     }
 
     /**
-     * «Избранное» — чат только для себя (заметки, файлы, картинки).
-     *
-     * @return InertiaResponse
-     */
-    public function notes(): InertiaResponse
-    {
-        return Inertia::render('Notes');
-    }
-
-    /**
      * Fallback для неизвестных URL.
      *
      * Ассетам отдаем 404 (иначе HTML вместо JS),
