@@ -21,7 +21,11 @@ use Illuminate\Support\Str;
  * Сценарии:
  * - гость + валидный initData → ищем по telegram_id,
  *   нет — автосоздаём персона (если разрешено конфигом);
- * - залогиненный + initData → привязываем telegram_id к текущему юзеру.
+ * - залогиненный + initData со своим telegram_id → освежаем снепшот;
+ * - залогиненный + initData с чужим telegram_id → сессия переключается
+ *   на владельца (переключение по коду в боте — источник правды Telegram,
+ *   старую сессию завершаем, в ответе `switched: true`);
+ * - залогиненный + свободный telegram_id → привязываем к текущему юзеру.
  */
 class TelegramAuthController extends Controller
 {
@@ -36,8 +40,14 @@ class TelegramAuthController extends Controller
      * Ставит обычную web-сессию (Auth::login), дальше Inertia
      * работает как после стандартного логина.
      *
+     * Валидный initData доказывает владение Telegram-аккаунтом
+     * (подпись HMAC по токену бота подделать из браузера нельзя),
+     * поэтому при рассинхроне Telegram-личность главнее куки:
+     * сессия молча переключается на владельца telegram_id
+     * (флаг `switched: true`), а не залипает на старом аккаунте.
+     *
      * @param Request $request запрос с полем `initData`
-     * @return JsonResponse {user, is_new} или 401 при плохой подписи
+     * @return JsonResponse {user, is_new, linked, switched} или 401 при плохой подписи
      */
     public function auth(Request $request): JsonResponse
     {
@@ -62,12 +72,40 @@ class TelegramAuthController extends Controller
         $currentUser = $request->user();
 
         if ($currentUser) {
+            if ((int) $currentUser->telegram_id === $telegramId) {
+                $this->refreshSnapshot($currentUser, $tgUser);
+
+                return response()->json([
+                    'user' => $currentUser->fresh(),
+                    'is_new' => false,
+                    'linked' => true,
+                    'switched' => false,
+                ]);
+            }
+
+            $owner = User::where('telegram_id', $telegramId)->first();
+
+            if ($owner && (int) $owner->id !== (int) $currentUser->id) {
+                $this->refreshSnapshot($owner, $tgUser);
+                Auth::login($owner, true);
+                $request->session()->regenerate();
+                \App\Services\LoginDeviceGuard::handleLogin($owner, $request, 'telegram');
+
+                return response()->json([
+                    'user' => $owner->fresh(),
+                    'is_new' => false,
+                    'linked' => true,
+                    'switched' => true,
+                ]);
+            }
+
             $this->linkToUser($currentUser, $tgUser, $telegramId);
 
             return response()->json([
                 'user' => $currentUser->fresh(),
                 'is_new' => false,
                 'linked' => true,
+                'switched' => false,
             ]);
         }
 
@@ -83,6 +121,7 @@ class TelegramAuthController extends Controller
                 'user' => $existing->fresh(),
                 'is_new' => false,
                 'linked' => true,
+                'switched' => false,
             ]);
         }
 
@@ -104,6 +143,7 @@ class TelegramAuthController extends Controller
             'user' => $user->fresh(),
             'is_new' => true,
             'linked' => true,
+            'switched' => false,
         ], 201);
     }
 
@@ -246,6 +286,11 @@ class TelegramAuthController extends Controller
     /**
      * Обновить тумблеры TG-уведомлений.
      *
+     * Тумблеры живут только у привязанных Telegram-аккаунтов
+     * (telegram_id не null — регистрация через Mini App либо
+     * переключение по коду в боте). Без привязки — 403, чтобы
+     * обычные сайт-аккаунты не получали чужие опции и не ловили 500.
+     *
      * @param Request $request текущий запрос
      * @return JsonResponse свежие тумблеры
      */
@@ -255,6 +300,12 @@ class TelegramAuthController extends Controller
 
         if (! $user) {
             return response()->json(['message' => 'Не авторизован.'], 401);
+        }
+
+        $freshUser = $user->fresh() ?? $user;
+
+        if ($freshUser->telegram_id === null) {
+            return response()->json(['message' => 'Привяжите Telegram, чтобы менять уведомления бота.'], 403);
         }
 
         $validated = $request->validate([
@@ -274,23 +325,36 @@ class TelegramAuthController extends Controller
             $patch['telegram_notify_enabled'] = (bool) $validated['notify_enabled'];
         }
 
-        foreach (['notify_messages', 'notify_likes', 'notify_matches', 'notify_comments'] as $key) {
-            if (array_key_exists($key, $validated)) {
-                $patch['telegram_'.$key] = (bool) $validated[$key];
+        $telegramMap = [
+            'notify_messages' => 'telegram_notify_messages',
+            'notify_likes' => 'telegram_notify_likes',
+            'notify_matches' => 'telegram_notify_matches',
+            'notify_comments' => 'telegram_notify_comments',
+        ];
+
+        foreach ($telegramMap as $requestKey => $column) {
+            if (array_key_exists($requestKey, $validated)) {
+                $patch[$column] = (bool) $validated[$requestKey];
             }
         }
 
-        foreach (['email_messages', 'email_likes', 'email_matches'] as $key) {
-            if (array_key_exists($key, $validated)) {
-                $patch[$key] = (bool) $validated[$key];
+        $emailMap = [
+            'email_messages' => 'email_notify_messages',
+            'email_likes' => 'email_notify_likes',
+            'email_matches' => 'email_notify_matches',
+        ];
+
+        foreach ($emailMap as $requestKey => $column) {
+            if (array_key_exists($requestKey, $validated)) {
+                $patch[$column] = (bool) $validated[$requestKey];
             }
         }
 
         if ($patch !== []) {
-            $user->forceFill($patch)->save();
+            $freshUser->forceFill($patch)->save();
         }
 
-        $fresh = $user->fresh();
+        $fresh = $freshUser->fresh() ?? $freshUser;
 
         return response()->json([
             'notify_enabled' => (bool) ($fresh->telegram_notify_enabled ?? true),

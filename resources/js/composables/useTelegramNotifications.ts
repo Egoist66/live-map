@@ -67,10 +67,31 @@ export function useTelegramNotifications() {
    *
    * @param force пропустить кулдаун и бэкофф (например, юзер вернулся от бота)
    */
+  /**
+   * Сбросить кэш статуса (смена аккаунта без перезагрузки страницы).
+   *
+   * Без сброса `loaded` залипает от прошлого юзера и тумблеры
+   * чужой привязки показываются не тому аккаунту.
+   */
+  function resetTelegramNotify(): void {
+    loaded.value = false
+    linked.value = false
+    canNotify.value = false
+    lastFinishedAt = 0
+    rateLimitedUntil = 0
+    errorMessage.value = ''
+  }
+
   async function loadTelegramNotify(force = false): Promise<void> {
-    if (loaded.value || loading.value) {
+    if (loading.value) {
       if (loadPromise) await loadPromise
       return
+    }
+    if (loaded.value && !force) {
+      return
+    }
+    if (force) {
+      rateLimitedUntil = 0
     }
 
     const now = Date.now()
@@ -161,6 +182,13 @@ export function useTelegramNotifications() {
    * @returns true когда сервер принял
    */
   async function saveTelegramNotify(patch: Partial<TelegramNotifyPrefs>): Promise<boolean> {
+    // Опции живут только у привязанных Telegram-аккаунтов (Правило №2
+    // пользователя): без привязки запрос не шлём, тумблеры недоступны.
+    if (!linked.value) {
+      errorMessage.value = 'Привяжите Telegram, чтобы менять уведомления бота.'
+      return false
+    }
+
     const previous = { ...prefs.value }
     prefs.value = { ...prefs.value, ...patch }
     saving.value = true
@@ -180,14 +208,55 @@ export function useTelegramNotifications() {
         email_matches: data.email_matches ?? prefs.value.email_matches,
       }
       return true
-    } catch {
+    } catch (saveError: unknown) {
       prefs.value = previous
-      errorMessage.value = 'Не получилось сохранить. Попробуйте ещё раз.'
+      errorMessage.value = readServerMessage(saveError)
+      // Привязку могли увести в боте на другой аккаунт (переключение
+      // по коду): статус протух — принудительно перечитаем, чтобы
+      // тумблеры не висели у отвязанного аккаунта.
+      if (readStatusCode(saveError) === 403) {
+        loaded.value = false
+        void loadTelegramNotify(true)
+      }
       return false
     } finally {
       saving.value = false
     }
   }
 
-  return { linked, canNotify, botUsername, botLink, prefs, loading, loaded, saving, errorMessage, loadTelegramNotify, saveTelegramNotify }
+  /**
+   * Достать понятный текст ошибки из ответа сервера.
+   *
+   * @param saveError ошибка из axios
+   * @returns текст для показа под тумблерами
+   */
+  function readServerMessage(saveError: unknown): string {
+    if (typeof saveError === 'object' && saveError !== null) {
+      const response = (saveError as { response?: { data?: { message?: unknown }; status?: unknown } }).response
+      const message = response?.data?.message
+      if (typeof message === 'string' && message.trim() !== '') {
+        return message
+      }
+      if (response?.status === 403) {
+        return 'Привяжите Telegram, чтобы менять уведомления бота.'
+      }
+    }
+    return 'Не получилось сохранить. Попробуйте ещё раз.'
+  }
+
+  /**
+   * Прочитать HTTP-статус ошибки.
+   *
+   * @param saveError ошибка из axios
+   * @returns статус или 0
+   */
+  function readStatusCode(saveError: unknown): number {
+    if (typeof saveError === 'object' && saveError !== null) {
+      const status = (saveError as { response?: { status?: unknown } }).response?.status
+      return typeof status === 'number' ? status : 0
+    }
+    return 0
+  }
+
+  return { linked, canNotify, botUsername, botLink, prefs, loading, loaded, saving, errorMessage, loadTelegramNotify, resetTelegramNotify, saveTelegramNotify }
 }

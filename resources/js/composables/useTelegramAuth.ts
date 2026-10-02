@@ -97,10 +97,14 @@ function resolveInitData(refValue: string): string {
  */
 export function useTelegramAuth() {
   /**
-   * Отправить initData на бэк и поднять web-сессию.
+   * Отправить initData на бэк и поднять/сверить web-сессию.
    *
    * Идемпотентен за визит (флаг attempted ставится только когда
-   * есть что отправлять) + пропускаем залогиненных.
+   * есть что отправлять). Внутри Telegram WebView сверяемся всегда,
+   * даже залогиненными: привязку могли увести в боте на другой
+   * аккаунт (переключение по коду) — тогда бэк вернёт
+   * `switched: true` и страница жёстко перезагрузится уже под новым
+   * аккаунтом, иначе Mini App залипает на старой сессии.
    * Пустой initData попыткой не считается — повтор возможен позже,
    * когда WebApp догрузится. Ошибки не кидаем наружу — Mini App
    * обязан открыться даже если подпись не сошлась, просто как гость.
@@ -112,22 +116,17 @@ export function useTelegramAuth() {
       return status.value === 'authenticated' || isLoggedIn()
     }
 
-    if (isLoggedIn()) {
-      status.value = 'authenticated'
-      return true
-    }
-
     if (!isTelegramWebView()) {
-      status.value = 'idle'
-      return false
+      status.value = isLoggedIn() ? 'authenticated' : 'idle'
+      return isLoggedIn()
     }
 
     const { initData } = useTelegram()
     const rawInitData = resolveInitData(initData.value)
 
     if (rawInitData === '') {
-      status.value = 'idle'
-      return false
+      status.value = isLoggedIn() ? 'authenticated' : 'idle'
+      return isLoggedIn()
     }
 
     attempted = true
@@ -140,6 +139,12 @@ export function useTelegramAuth() {
       const isNew = Boolean(response.data?.is_new)
       isNewAccount.value = isNew
       status.value = 'authenticated'
+
+      if (response.data?.switched === true) {
+        window.location.reload()
+
+        return true
+      }
 
       await reloadAuthProps()
       redirectGuestToApp()
