@@ -79,6 +79,13 @@ class ReactionController extends Controller
                         'pin.reaction',
                         "pin-reaction:{$model->id}:{$request->user()->id}:{$data['type']}"
                     );
+                } else {
+                    // Анлайк коммента гасит его строку, иначе висит про снятый лайк.
+                    UserNotifier::deleteUnread(
+                        (int) $model->user_id,
+                        'pin.reaction',
+                        "pin-comment-reaction:{$model->id}:{$request->user()->id}:{$data['type']}"
+                    );
                 }
                 return response()->json(['reacted' => false, 'type' => null, 'reactions_count' => $model->reactions_count ?? 0, 'likes_count' => $model->likes_count ?? 0]);
             }
@@ -98,6 +105,16 @@ class ReactionController extends Controller
                 }
                 PinActivityNotifier::reaction($model, $request->user(), $data['type']);
                 $model->refresh();
+            } else {
+                // Смена типа на комменте: гасим старую строку, шлём новую.
+                if ($prev !== $data['type']) {
+                    UserNotifier::deleteUnread(
+                        (int) $model->user_id,
+                        'pin.reaction',
+                        "pin-comment-reaction:{$model->id}:{$request->user()->id}:{$prev}"
+                    );
+                }
+                PinActivityNotifier::commentReaction($model, $request->user(), $data['type']);
             }
             return response()->json(['reacted' => true, 'type' => $data['type'], 'switched' => true, 'reactions_count' => $model->reactions_count ?? 0, 'likes_count' => $model->likes_count ?? 0]);
         }
@@ -111,6 +128,8 @@ class ReactionController extends Controller
             }
             PinActivityNotifier::reaction($model, $request->user(), $data['type']);
             $model->refresh();
+        } else {
+            PinActivityNotifier::commentReaction($model, $request->user(), $data['type']);
         }
         $response = ['reacted' => true, 'type' => $data['type'], 'reactions_count' => $model->reactions_count ?? 0, 'likes_count' => $model->likes_count ?? 0];
         $ownerId = (int) ($model->user_id ?? 0);

@@ -10,6 +10,7 @@ use App\Models\ProfilePhoto;
 use App\Models\SwipeAction;
 use App\Models\User;
 use App\Models\UserBlock;
+use App\Models\UserDatabaseNotification;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
@@ -1090,6 +1091,8 @@ class DatingService
         if ($outcome['type'] === 'like') {
             if ($outcome['isNewLike']) {
                 $this->notifyLiked($me, $other, $incognito, $superlike);
+            } else {
+                $this->rebumpLiked($me, $other, $incognito, $superlike);
             }
 
             return ['matched' => false, 'match_id' => null, 'conversation_id' => null, 'is_incognito' => $incognito, 'is_superlike' => $superlike];
@@ -1217,6 +1220,41 @@ class DatingService
             'avatar_url' => $user->avatar_url,
             'is_incognito' => false,
         ];
+    }
+
+    /**
+     * Перелайк уже лайкнутого: допинговать получателя, только если
+     * прошлое уведомление уже прочитано (нет висящего непрочитанного).
+     *
+     * Раньше повторный лайк был полностью тихим — получатель не узнавал
+     * ничего ни в приложении, ни в боте, и казалось, что «лайки не
+     * доходят». Теперь свежий лайк всегда виден: непрочитанный висит —
+     * не спамим повтором, прочитан/удалён — шлём заново как новый.
+     *
+     * @param User $liker автор лайка
+     * @param User $liked получатель
+     * @param bool $incognito
+     * @param bool $superlike
+     * @return void
+     */
+    private function rebumpLiked(User $liker, User $liked, bool $incognito = false, bool $superlike = false): void
+    {
+        try {
+            $hasUnread = UserDatabaseNotification::where('notifiable_type', $liked->getMorphClass())
+                ->where('notifiable_id', $liked->id)
+                ->where('type', 'dating.liked')
+                ->where('key', 'dating-liked:'.$liker->id)
+                ->whereNull('read_at')
+                ->exists();
+
+            if ($hasUnread) {
+                return;
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('swipe_like rebump check failed: '.$e->getMessage());
+        }
+
+        $this->notifyLiked($liker, $liked, $incognito, $superlike);
     }
 
     /**

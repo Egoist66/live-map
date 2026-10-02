@@ -23,7 +23,14 @@ export function useProfileShowPage(props: { profileUser: any; isOwn: boolean; is
   const confirm = ref<{ title: string; msg: string; action: () => Promise<void> } | null>(null)
   const isLocked = computed(() => isBlockedBy.value)
   const { isOnline: presenceOnline } = usePresenceState()
+  /**
+   * Своя анкета с активной невидимкой: вместо «в сети» показываем
+   * режим — владелец должен видеть, что его никто не видит онлайн.
+   * Бэк уже отдаёт `is_invisible` эффективным (настройка + тариф).
+   */
+  const invisibleActive = computed(() => props.isOwn && !!props.profileUser?.is_invisible)
   const online = computed(() => {
+    if (invisibleActive.value) return false
     if (!props.isOwn && props.profileUser?.is_invisible) return false
     if (presenceOnline(props.profileUser.id)) return true
     return isRecentlySeen(props.profileUser?.last_seen_at)
@@ -37,6 +44,7 @@ export function useProfileShowPage(props: { profileUser: any; isOwn: boolean; is
    */
   const mounted = useMounted()
   const lastSeenText = computed(() => {
+    if (invisibleActive.value) return '🕵️ невидимка'
     if (online.value) return 'в сети'
     if (!mounted.value) return 'оффлайн'
     const v = props.profileUser.last_seen_at
@@ -74,5 +82,5 @@ export function useProfileShowPage(props: { profileUser: any; isOwn: boolean; is
   function closeConfirm() { confirm.value = null }
   async function runConfirm() { const a = confirm.value?.action; confirm.value = null; if (a) await a() }
   function share() { shareProfile({ id: props.profileUser.id, profile_slug: props.profileUser.profile_slug, name: props.profileUser.name }) }
-  return { avatarSrc, profile, showAvatar, bioText, bioEmpty, isFriend, isPending, isBlocked, isBlockedBy, canMessage, reason, confirm, isLocked, online, sharing, lastSeenText, registeredAt, homeLabel, hasHome, levelLabel: LEVEL_LABEL, sync, onAdd, onRemove, onBlock, onUnblock, onChat, askRemove, askBlock, closeConfirm, runConfirm, share }
+  return { avatarSrc, profile, showAvatar, bioText, bioEmpty, isFriend, isPending, isBlocked, isBlockedBy, canMessage, reason, confirm, isLocked, online, invisibleActive, sharing, lastSeenText, registeredAt, homeLabel, hasHome, levelLabel: LEVEL_LABEL, sync, onAdd, onRemove, onBlock, onUnblock, onChat, askRemove, askBlock, closeConfirm, runConfirm, share }
 }

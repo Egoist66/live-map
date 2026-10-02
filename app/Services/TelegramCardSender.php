@@ -53,6 +53,39 @@ class TelegramCardSender
     }
 
     /**
+     * Перерисовать текстовую панель из любого состояния чата.
+     *
+     * Кнопка «◀️ Меню» (и вся навигация go_*) висит и под фото-карточками
+     * режима «Найти мэтч»: editMessageText по фото молча не срабатывает,
+     * и пользователь застревал в свайпах. Здесь при неудаче правки
+     * старую карточку удаляем и шлём панель новым сообщением —
+     * выход из любого экрана работает всегда.
+     *
+     * @param int $chatId куда
+     * @param int $messageId что перерисовать
+     * @param string $text новый текст в HTML-разметке
+     * @param array<int, array<int, array<string, mixed>>> $keyboard новые кнопки
+     * @return void
+     */
+    public static function redrawText(int $chatId, int $messageId, string $text, array $keyboard = []): void
+    {
+        $ok = TelegramBotApi::editPanel($chatId, $messageId, $text, $keyboard);
+
+        if ($ok) {
+            self::rememberType($chatId, $messageId, false);
+
+            return;
+        }
+
+        try {
+            TelegramBotApi::deleteMessage($chatId, $messageId);
+        } catch (\Throwable) {
+        }
+
+        self::sendCard($chatId, null, $text, $keyboard);
+    }
+
+    /**
      * Перерисовать карточку: подпись под фото или текст панели.
      *
      * @param int $chatId куда

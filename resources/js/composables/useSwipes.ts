@@ -324,6 +324,15 @@ export function useSwipes() {
 
   const current = computed(() => cards.value[index.value] ?? null)
   const next = computed(() => cards.value[index.value + 1] ?? null)
+  /**
+   * Ключ верхней карточки для полного перемонтирования при смене человека.
+   *
+   * Лайк/пас меняют `current` — без ключа Vue переиспользует DOM колоды
+   * (фото, точки-кадры, инфо), и в WebView Mini App кадр предыдущего
+   * человека мог висеть поверх нового. С ключом новый человек = новое
+   * поддерево: фото, индекс кадра и данные всегда его собственные.
+   */
+  const cardKey = computed(() => `swipe-card-${current.value?.id ?? 'none'}`)
   const hasMore = computed(() => index.value < cards.value.length)
   const seenCount = computed(() => Math.min(index.value, cards.value.length))
   const favoritesCount = computed(() => favorites.value.length)
@@ -1603,6 +1612,7 @@ export function useSwipes() {
     index,
     current,
     next,
+    cardKey,
     leaving,
     flyDir,
     exiting,

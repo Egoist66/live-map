@@ -42,7 +42,22 @@ export function useSwipeCardPhotos(card: () => SwipeCard | null, autoplayMs = 50
   })
 
   const total = computed(() => photos.value.length)
-  const currentPhoto = computed(() => photos.value[photoIndex.value] ?? null)
+  /**
+   * Текущий кадр с клампом индекса в диапазон новой карточки.
+   *
+   * Индекс сбрасывается вотчером смены карточки (асинхронно): в кадре
+   * между сменой человека и сбросом старый индекс мог указывать мимо
+   * (пусто) или в чужой кадр — кламп всегда показывает валидное фото
+   * нового человека, старое фото предыдущего не висит ни кадра.
+   */
+  const currentPhoto = computed(() => {
+    const list = photos.value
+    if (list.length === 0) {
+      return null
+    }
+    const safeIndex = Math.min(Math.max(0, photoIndex.value), list.length - 1)
+    return list[safeIndex] ?? null
+  })
   const hasPhotos = computed(() => total.value > 0)
   const hasMultiple = computed(() => total.value > 1)
 

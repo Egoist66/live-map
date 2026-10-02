@@ -33,6 +33,7 @@ watch(
     loaded.value = false
     failed.value = false
   },
+  { immediate: true },
 )
 </script>
 
@@ -41,6 +42,7 @@ watch(
     <span v-if="src && !loaded && !failed" class="app-image-shimmer" aria-hidden="true" />
     <img
       v-if="src && !failed"
+      :key="src"
       :src="src"
       :alt="alt"
       :class="imgClass"

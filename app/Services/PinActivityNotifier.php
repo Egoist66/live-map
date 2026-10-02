@@ -15,6 +15,7 @@ use App\Notifications\PhotoLikedNotification;
 use App\Notifications\PhotoMentionNotification;
 use App\Notifications\PhotoRepliedNotification;
 use App\Notifications\PinCommentedNotification;
+use App\Notifications\PinCommentReactionNotification;
 use App\Notifications\PinMentionNotification;
 use App\Notifications\PinReactionNotification;
 use App\Models\UserDatabaseNotification;
@@ -49,16 +50,87 @@ class PinActivityNotifier
         return 'пин «'.$title.'»';
     }
 
+    /**
+     * Реакция на пин: колокольчик + realtime + бот владельцу.
+     *
+     * Раньше в бота ничего не уходило — владельцы думали, что «лайки
+     * не приходят». Inbox-строка и realtime едут из UserNotifier::send,
+     * дубликатом в TG занимается entityLiked (тумблер likes + гейт isAway).
+     *
+     * @param Pin $pin пин
+     * @param User $actor кто отреагировал
+     * @param string $type тип реакции
+     * @return void
+     */
     public static function reaction(Pin $pin, User $actor, string $type): void
     {
         $pin->refresh();
+
         if ((int) $actor->id !== (int) $pin->user_id) {
             $owner = User::find($pin->user_id);
+
             if ($owner) {
                 UserNotifier::send($owner, new PinReactionNotification($pin, $actor, $type, (int) $owner->id));
+
+                try {
+                    TelegramNotifier::entityLiked(
+                        $actor,
+                        $owner,
+                        self::pinLabel($pin),
+                        "/map?pin={$pin->id}",
+                        "pin-reaction:{$pin->id}:{$actor->id}:{$type}"
+                    );
+                } catch (\Throwable $e) {
+                    Log::warning('telegram pin reaction failed', ['error' => $e->getMessage()]);
+                }
             }
         }
+
         static::broadcastCounters($pin);
+    }
+
+    /**
+     * Реакция на комментарий пина: колокольчик + realtime + бот автору коммента.
+     *
+     * Закрывает дыру «лайк коммента пропал»: раньше toggle реакций
+     * на комменты вообще никого не уведомлял. Свой лайк молчит.
+     *
+     * @param PinComment $comment комментарий
+     * @param User $actor кто отреагировал
+     * @param string $type тип реакции
+     * @return void
+     */
+    public static function commentReaction(PinComment $comment, User $actor, string $type): void
+    {
+        $pin = $comment->pin;
+
+        if (! $pin) {
+            return;
+        }
+
+        if ((int) $actor->id === (int) $comment->user_id) {
+            return;
+        }
+
+        $owner = User::find($comment->user_id);
+
+        if (! $owner) {
+            return;
+        }
+
+        UserNotifier::send($owner, new PinCommentReactionNotification($pin, $comment, $actor, $type, (int) $owner->id));
+
+        try {
+            TelegramNotifier::entityLiked(
+                $actor,
+                $owner,
+                'комментарий в '.self::pinLabel($pin),
+                "/map?pin={$pin->id}&comment={$comment->id}",
+                "comment-reaction:{$comment->id}:{$actor->id}:{$type}"
+            );
+        } catch (\Throwable $e) {
+            Log::warning('telegram comment reaction failed', ['error' => $e->getMessage()]);
+        }
     }
 
     public static function comment(Pin $pin, User $actor, PinComment $comment, array $exceptOwnerIds = []): void

@@ -512,6 +512,7 @@ onUnmounted(() => {
               </div>
 
               <div
+                :key="s.cardKey.value"
                 class="swipe-top absolute inset-0 z-10 rounded-xl overflow-hidden bg-zinc-200 dark:bg-zinc-800 shadow-soft touch-pan-y overscroll-contain cursor-grab active:cursor-grabbing"
                 :style="s.topCardStyle.value"
                 @pointerdown="s.dragStart($event.clientX, $event.clientY)"

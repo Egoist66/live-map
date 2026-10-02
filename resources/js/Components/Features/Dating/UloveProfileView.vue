@@ -28,7 +28,7 @@ const emit = defineEmits<{ (e: 'edit'): void; (e: 'message'): void; (e: 'photos'
 
 const p = useUloveProfile(() => props.profileUser)
 
-const onlineBadge = useUloveOnlineBadge(() => ({ isOwn: props.isOwn, online: props.online, lastSeenText: props.lastSeenText }))
+const onlineBadge = useUloveOnlineBadge(() => ({ isOwn: props.isOwn, online: props.online, lastSeenText: props.lastSeenText, invisible: props.isOwn && !!props.profileUser?.is_invisible }))
 
 const toast = (() => {
   try {

@@ -240,7 +240,7 @@ class TelegramWebhookController extends Controller
         $toast = $this->runAction($user, $data);
         $panel = TelegramSessionsPanel::build($user->fresh() ?? $user);
 
-        TelegramBotApi::editPanel($chatId, $messageId, $panel['text'], $panel['keyboard']);
+        TelegramCardSender::redrawText($chatId, $messageId, $panel['text'], $panel['keyboard']);
         TelegramBotApi::answerCallback($callbackId, $toast);
     }
 
@@ -260,7 +260,7 @@ class TelegramWebhookController extends Controller
 
         if ($data === 'go_menu') {
             $menu = TelegramMenu::main($fresh);
-            TelegramBotApi::editPanel($chatId, $messageId, $menu['text'], $menu['keyboard']);
+            TelegramCardSender::redrawText($chatId, $messageId, $menu['text'], $menu['keyboard']);
             TelegramBotApi::answerCallback($callbackId, 'Главное меню');
 
             return true;
@@ -268,7 +268,7 @@ class TelegramWebhookController extends Controller
 
         if ($data === 'go_help') {
             $help = TelegramMenu::help();
-            TelegramBotApi::editPanel($chatId, $messageId, $help['text'], $help['keyboard']);
+            TelegramCardSender::redrawText($chatId, $messageId, $help['text'], $help['keyboard']);
             TelegramBotApi::answerCallback($callbackId, 'Все команды бота');
 
             return true;
@@ -276,7 +276,7 @@ class TelegramWebhookController extends Controller
 
         if ($data === 'go_sessions' || $data === 'sess') {
             $panel = TelegramSessionsPanel::build($fresh);
-            TelegramBotApi::editPanel($chatId, $messageId, $panel['text'], $panel['keyboard']);
+            TelegramCardSender::redrawText($chatId, $messageId, $panel['text'], $panel['keyboard']);
             TelegramBotApi::answerCallback($callbackId, 'Активные сеансы');
 
             return true;
@@ -296,7 +296,7 @@ class TelegramWebhookController extends Controller
 
         if ($data === 'go_password') {
             $ask = TelegramPasswordService::ask($fresh);
-            TelegramBotApi::editPanel($chatId, $messageId, $ask['text'], $ask['keyboard']);
+            TelegramCardSender::redrawText($chatId, $messageId, $ask['text'], $ask['keyboard']);
             TelegramBotApi::answerCallback($callbackId, 'Пароль для входа с ПК');
 
             return true;
@@ -310,7 +310,7 @@ class TelegramWebhookController extends Controller
 
         if ($data === 'pwd_hide') {
             $done = TelegramPasswordService::hidden();
-            TelegramBotApi::editPanel($chatId, $messageId, $done['text'], $done['keyboard']);
+            TelegramCardSender::redrawText($chatId, $messageId, $done['text'], $done['keyboard']);
             TelegramBotApi::answerCallback($callbackId, 'Пароль убран с экрана 🙈');
 
             return true;
@@ -352,7 +352,7 @@ class TelegramWebhookController extends Controller
 
         if ($data === 'go_notify') {
             $panel = TelegramNotifyPanel::build($fresh);
-            TelegramBotApi::editPanel($chatId, $messageId, $panel['text'], $panel['keyboard']);
+            TelegramCardSender::redrawText($chatId, $messageId, $panel['text'], $panel['keyboard']);
             TelegramBotApi::answerCallback($callbackId, 'Настройки уведомлений');
 
             return true;
@@ -369,7 +369,7 @@ class TelegramWebhookController extends Controller
 
         if ($data === 'go_email') {
             $panel = TelegramEmailPanel::build($fresh);
-            TelegramBotApi::editPanel($chatId, $messageId, $panel['text'], $panel['keyboard']);
+            TelegramCardSender::redrawText($chatId, $messageId, $panel['text'], $panel['keyboard']);
             TelegramBotApi::answerCallback($callbackId, 'Моя почта');
 
             return true;
@@ -378,7 +378,7 @@ class TelegramWebhookController extends Controller
         if ($data === 'email_ask') {
             $this->rememberEmailWait((int) $fresh->telegram_id);
             $ask = TelegramEmailPanel::ask();
-            TelegramBotApi::editPanel($chatId, $messageId, $ask['text'], $ask['keyboard']);
+            TelegramCardSender::redrawText($chatId, $messageId, $ask['text'], $ask['keyboard']);
             TelegramBotApi::answerCallback($callbackId, 'Жду почту следующим сообщением 📧');
 
             return true;
@@ -386,7 +386,7 @@ class TelegramWebhookController extends Controller
 
         if ($data === 'go_plan') {
             $panel = TelegramPlanPanel::build($fresh);
-            TelegramBotApi::editPanel($chatId, $messageId, $panel['text'], $panel['keyboard']);
+            TelegramCardSender::redrawText($chatId, $messageId, $panel['text'], $panel['keyboard']);
             TelegramBotApi::answerCallback($callbackId, 'Мой тариф');
 
             return true;
@@ -394,7 +394,7 @@ class TelegramWebhookController extends Controller
 
         if ($data === 'go_plan_list') {
             $panel = TelegramPlanPanel::list($fresh);
-            TelegramBotApi::editPanel($chatId, $messageId, $panel['text'], $panel['keyboard']);
+            TelegramCardSender::redrawText($chatId, $messageId, $panel['text'], $panel['keyboard']);
             TelegramBotApi::answerCallback($callbackId, 'Выбор тарифа');
 
             return true;
@@ -427,7 +427,7 @@ class TelegramWebhookController extends Controller
         if ($data === 'go_online' || str_starts_with($data, 'on_page:')) {
             $page = $data === 'go_online' ? 1 : (int) substr($data, 8);
             $panel = TelegramOnlinePanel::build($fresh, $page);
-            TelegramBotApi::editPanel($chatId, $messageId, $panel['text'], $panel['keyboard']);
+            TelegramCardSender::redrawText($chatId, $messageId, $panel['text'], $panel['keyboard']);
             TelegramBotApi::answerCallback($callbackId, 'Кто сейчас в ULove');
 
             return true;
@@ -442,7 +442,7 @@ class TelegramWebhookController extends Controller
         if ($data === 'go_fav' || str_starts_with($data, 'fav_page:')) {
             $page = $data === 'go_fav' ? 1 : (int) substr($data, 9);
             $panel = TelegramFavoritesPanel::build($fresh, $page);
-            TelegramBotApi::editPanel($chatId, $messageId, $panel['text'], $panel['keyboard']);
+            TelegramCardSender::redrawText($chatId, $messageId, $panel['text'], $panel['keyboard']);
             TelegramBotApi::answerCallback($callbackId, 'Моё избранное');
 
             return true;
@@ -456,7 +456,7 @@ class TelegramWebhookController extends Controller
 
         if ($data === 'go_reset') {
             $panel = TelegramResetPanel::build($fresh);
-            TelegramBotApi::editPanel($chatId, $messageId, $panel['text'], $panel['keyboard']);
+            TelegramCardSender::redrawText($chatId, $messageId, $panel['text'], $panel['keyboard']);
             TelegramBotApi::answerCallback($callbackId, 'Сброс просмотренных');
 
             return true;
@@ -470,7 +470,7 @@ class TelegramWebhookController extends Controller
 
         if ($data === 'go_account') {
             $panel = TelegramAccountPanel::build($fresh);
-            TelegramBotApi::editPanel($chatId, $messageId, $panel['text'], $panel['keyboard']);
+            TelegramCardSender::redrawText($chatId, $messageId, $panel['text'], $panel['keyboard']);
             TelegramBotApi::answerCallback($callbackId, 'Мой аккаунт');
 
             return true;
@@ -479,7 +479,7 @@ class TelegramWebhookController extends Controller
         if ($data === 'acc_ask') {
             TelegramAccountSwitch::rememberWait((int) $fresh->telegram_id);
             $ask = TelegramAccountPanel::ask();
-            TelegramBotApi::editPanel($chatId, $messageId, $ask['text'], $ask['keyboard']);
+            TelegramCardSender::redrawText($chatId, $messageId, $ask['text'], $ask['keyboard']);
             TelegramBotApi::answerCallback($callbackId, 'Жду код следующим сообщением 🔀');
 
             return true;
@@ -493,7 +493,7 @@ class TelegramWebhookController extends Controller
 
         if ($data === 'del_ask') {
             $bait = TelegramDeletionFlow::bait($fresh);
-            TelegramBotApi::editPanel($chatId, $messageId, $bait['text'], $bait['keyboard']);
+            TelegramCardSender::redrawText($chatId, $messageId, $bait['text'], $bait['keyboard']);
             TelegramBotApi::answerCallback($callbackId, 'Подумайте ещё секунду 💔');
 
             return true;
@@ -502,7 +502,7 @@ class TelegramWebhookController extends Controller
         if ($data === 'del_yes') {
             $updated = AccountDeletionService::request($fresh);
             $done = TelegramDeletionFlow::scheduled($updated);
-            TelegramBotApi::editPanel($chatId, $messageId, $done['text'], $done['keyboard']);
+            TelegramCardSender::redrawText($chatId, $messageId, $done['text'], $done['keyboard']);
             TelegramBotApi::answerCallback($callbackId, 'Анкета скрыта, PRO включён 🎁');
 
             return true;
@@ -511,7 +511,7 @@ class TelegramWebhookController extends Controller
         if ($data === 'del_cancel') {
             $updated = AccountDeletionService::cancel($fresh);
             $done = TelegramDeletionFlow::restored();
-            TelegramBotApi::editPanel($chatId, $messageId, $done['text'], $done['keyboard']);
+            TelegramCardSender::redrawText($chatId, $messageId, $done['text'], $done['keyboard']);
             TelegramBotApi::answerCallback($callbackId, 'Ура! Вы остались 💚');
 
             return true;
@@ -1031,7 +1031,7 @@ class TelegramWebhookController extends Controller
         if ($plan === 'free') {
             $fresh->forceFill(['plan' => 'free', 'plan_expires_at' => null])->save();
             $panel = TelegramPlanPanel::build($fresh->fresh() ?? $fresh);
-            TelegramBotApi::editPanel($chatId, $messageId, $panel['text'], $panel['keyboard']);
+            TelegramCardSender::redrawText($chatId, $messageId, $panel['text'], $panel['keyboard']);
             TelegramBotApi::answerCallback($callbackId, 'Вы на Free — бесплатно навсегда');
 
             return;
@@ -1039,7 +1039,7 @@ class TelegramWebhookController extends Controller
 
         $panel = TelegramPlanPanel::list($fresh);
         $note = "\n\n".TelegramPlanPanel::PAYMENT_NOTE;
-        TelegramBotApi::editPanel($chatId, $messageId, $panel['text'].$note, $panel['keyboard']);
+        TelegramCardSender::redrawText($chatId, $messageId, $panel['text'].$note, $panel['keyboard']);
         TelegramBotApi::answerCallback($callbackId, 'Сначала оплата — тариф после неё 💳');
     }
 
@@ -1058,7 +1058,7 @@ class TelegramWebhookController extends Controller
 
         if (! $this->isAdultForBot($fresh)) {
             $gate = TelegramSwipePanel::ageGate();
-            TelegramBotApi::editPanel($chatId, $messageId, $gate['text'], $gate['keyboard']);
+            TelegramCardSender::redrawText($chatId, $messageId, $gate['text'], $gate['keyboard']);
             TelegramBotApi::answerCallback($callbackId, 'Свайпы — строго 18+');
 
             return;
@@ -1068,7 +1068,7 @@ class TelegramWebhookController extends Controller
 
         if ($card === null) {
             $empty = TelegramSwipePanel::empty();
-            TelegramBotApi::editPanel($chatId, $messageId, $empty['text'], $empty['keyboard']);
+            TelegramCardSender::redrawText($chatId, $messageId, $empty['text'], $empty['keyboard']);
             TelegramBotApi::answerCallback($callbackId, 'Анкеты кончились');
 
             return;
@@ -1131,7 +1131,7 @@ class TelegramWebhookController extends Controller
 
         if (! $this->isAdultForBot($fresh)) {
             $gate = TelegramSwipePanel::ageGate();
-            TelegramBotApi::editPanel($chatId, $messageId, $gate['text'], $gate['keyboard']);
+            TelegramCardSender::redrawText($chatId, $messageId, $gate['text'], $gate['keyboard']);
             TelegramBotApi::answerCallback($callbackId, 'Свайпы — строго 18+');
 
             return;
@@ -1153,14 +1153,14 @@ class TelegramWebhookController extends Controller
 
         if (! empty($result['matched'])) {
             $panel = TelegramOnlinePanel::build($fresh->fresh() ?? $fresh, $page);
-            TelegramBotApi::editPanel($chatId, $messageId, "🎉 <b>Это мэтч!</b> Чат уже открыт — пишите первым!\n\n".$panel['text'], $panel['keyboard']);
+            TelegramCardSender::redrawText($chatId, $messageId, "🎉 <b>Это мэтч!</b> Чат уже открыт — пишите первым!\n\n".$panel['text'], $panel['keyboard']);
             TelegramBotApi::answerCallback($callbackId, '🎉 Мэтч! Чаты уже открыты');
 
             return;
         }
 
         $panel = TelegramOnlinePanel::build($fresh->fresh() ?? $fresh, $page);
-        TelegramBotApi::editPanel($chatId, $messageId, $panel['text'], $panel['keyboard']);
+        TelegramCardSender::redrawText($chatId, $messageId, $panel['text'], $panel['keyboard']);
         TelegramBotApi::answerCallback($callbackId, 'Лайк отправлен 💞');
     }
 
@@ -1194,7 +1194,7 @@ class TelegramWebhookController extends Controller
         }
 
         $panel = TelegramFavoritesPanel::build($fresh->fresh() ?? $fresh, 1);
-        TelegramBotApi::editPanel($chatId, $messageId, $panel['text'], $panel['keyboard']);
+        TelegramCardSender::redrawText($chatId, $messageId, $panel['text'], $panel['keyboard']);
         TelegramBotApi::answerCallback($callbackId, 'Убрано из избранного');
     }
 
@@ -1228,7 +1228,7 @@ class TelegramWebhookController extends Controller
         $next = TelegramSwipePanel::nextCard($fresh->fresh() ?? $fresh);
 
         if ($next === null) {
-            TelegramBotApi::editPanel($chatId, $messageId, "✅ История сброшена (оценок было: <b>{$deleted}</b>).\n\nНовых анкет пока нет — загляните позже.", TelegramMenu::withNav([
+            TelegramCardSender::redrawText($chatId, $messageId, "✅ История сброшена (оценок было: <b>{$deleted}</b>).\n\nНовых анкет пока нет — загляните позже.", TelegramMenu::withNav([
                 [
                     ['text' => '💎 Мой тариф', 'callback_data' => 'go_plan'],
                 ],
@@ -1285,7 +1285,7 @@ class TelegramWebhookController extends Controller
 
         if (! $this->isAdultForBot($fresh)) {
             $gate = TelegramSwipePanel::ageGate();
-            TelegramBotApi::editPanel($chatId, $messageId, $gate['text'], $gate['keyboard']);
+            TelegramCardSender::redrawText($chatId, $messageId, $gate['text'], $gate['keyboard']);
             TelegramBotApi::answerCallback($callbackId, 'Свайпы — строго 18+');
 
             return;
@@ -1312,7 +1312,7 @@ class TelegramWebhookController extends Controller
 
             if ($next === null) {
                 $text = "🎉 <b>Это мэтч!</b> Вы понравились друг другу — чат уже открыт.\n\nАнкеты пока кончились, загляните позже.";
-                TelegramBotApi::editPanel($chatId, $messageId, $text, TelegramMenu::withNav([
+                TelegramCardSender::redrawText($chatId, $messageId, $text, TelegramMenu::withNav([
                     [
                         ['text' => '🎉 Мои мэтчи', 'callback_data' => 'go_matches'],
                         TelegramMenu::openAppButton('🌐 Открыть чаты'),
@@ -1336,7 +1336,7 @@ class TelegramWebhookController extends Controller
 
         if ($next === null) {
             $empty = TelegramSwipePanel::empty();
-            TelegramBotApi::editPanel($chatId, $messageId, $empty['text'], $empty['keyboard']);
+            TelegramCardSender::redrawText($chatId, $messageId, $empty['text'], $empty['keyboard']);
             TelegramBotApi::answerCallback($callbackId, $action === 'like' ? 'Лайк отправлен 💞' : 'Пас — смотрим дальше');
 
             return;
@@ -1603,7 +1603,7 @@ class TelegramWebhookController extends Controller
 
         $ask = TelegramPasswordService::ask($user->fresh() ?? $user);
         $sentNote = "✅ Пароль отправлен следующим сообщением.\n\n".$ask['text'];
-        TelegramBotApi::editPanel($chatId, $messageId, $sentNote, $ask['keyboard']);
+        TelegramCardSender::redrawText($chatId, $messageId, $sentNote, $ask['keyboard']);
         TelegramBotApi::answerCallback($callbackId, 'Пароль отправлен 🔑');
     }
 
@@ -1738,7 +1738,7 @@ class TelegramWebhookController extends Controller
             }
         }
 
-        TelegramBotApi::editPanel($chatId, $messageId, $text, TelegramMenu::withNav([
+        TelegramCardSender::redrawText($chatId, $messageId, $text, TelegramMenu::withNav([
             [
                 ['text' => '👤 Моя анкета', 'callback_data' => 'go_profile'],
                 TelegramMenu::openAppButton('🌐 Смотреть в приложении'),
@@ -1775,7 +1775,7 @@ class TelegramWebhookController extends Controller
             }
         }
 
-        TelegramBotApi::editPanel($chatId, $messageId, $text, TelegramMenu::withNav([
+        TelegramCardSender::redrawText($chatId, $messageId, $text, TelegramMenu::withNav([
             [
                 ['text' => '👤 Моя анкета', 'callback_data' => 'go_profile'],
                 TelegramMenu::openAppButton('🌐 Открыть чаты'),
@@ -1805,7 +1805,7 @@ class TelegramWebhookController extends Controller
             ],
         ]);
 
-        TelegramBotApi::editPanel($chatId, $messageId, $text, $keyboard);
+        TelegramCardSender::redrawText($chatId, $messageId, $text, $keyboard);
         TelegramBotApi::answerCallback($callbackId, 'Статистика обновлена');
     }
 
@@ -1832,7 +1832,7 @@ class TelegramWebhookController extends Controller
             [TelegramMenu::openAppButton('🌐 Открыть чаты')],
         ]);
 
-        TelegramBotApi::editPanel($chatId, $messageId, $text, $keyboard);
+        TelegramCardSender::redrawText($chatId, $messageId, $text, $keyboard);
         TelegramBotApi::answerCallback($callbackId, 'Сообщения обновлены');
     }
 
@@ -1856,7 +1856,7 @@ class TelegramWebhookController extends Controller
 
             $panel = TelegramNotifyPanel::build($user->fresh() ?? $user);
 
-            TelegramBotApi::editPanel($chatId, $messageId, $panel['text'], $panel['keyboard']);
+            TelegramCardSender::redrawText($chatId, $messageId, $panel['text'], $panel['keyboard']);
 
             return;
         }
@@ -1885,7 +1885,7 @@ class TelegramWebhookController extends Controller
 
         $panel = TelegramNotifyPanel::build($user->fresh() ?? $user);
 
-        TelegramBotApi::editPanel($chatId, $messageId, $panel['text'], $panel['keyboard']);
+        TelegramCardSender::redrawText($chatId, $messageId, $panel['text'], $panel['keyboard']);
 
         $channel = match (true) {
             str_starts_with($data, 'nem_') => 'Почта',
