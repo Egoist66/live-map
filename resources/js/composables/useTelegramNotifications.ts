@@ -2,7 +2,6 @@ import { computed, ref } from 'vue'
 import { api } from '@/services/api'
 
 export interface TelegramNotifyPrefs {
-  notify_enabled: boolean
   notify_messages: boolean
   notify_likes: boolean
   notify_matches: boolean
@@ -16,7 +15,6 @@ const linked = ref(false)
 const canNotify = ref(false)
 const botUsername = ref('U1ove_bot')
 const prefs = ref<TelegramNotifyPrefs>({
-  notify_enabled: true,
   notify_messages: true,
   notify_likes: true,
   notify_matches: true,
@@ -114,7 +112,6 @@ export function useTelegramNotifications() {
           botUsername.value = data.bot_username
         }
         prefs.value = {
-          notify_enabled: data.notify_enabled ?? true,
           notify_messages: data.notify_messages ?? true,
           notify_likes: data.notify_likes ?? true,
           notify_matches: data.notify_matches ?? true,
@@ -198,7 +195,6 @@ export function useTelegramNotifications() {
       const response = await api.patch('/api/telegram/preferences', patch)
       const data = response.data ?? {}
       prefs.value = {
-        notify_enabled: data.notify_enabled ?? prefs.value.notify_enabled,
         notify_messages: data.notify_messages ?? prefs.value.notify_messages,
         notify_likes: data.notify_likes ?? prefs.value.notify_likes,
         notify_matches: data.notify_matches ?? prefs.value.notify_matches,
