@@ -272,6 +272,16 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::delete('/chat/attachments', [\App\Http\Controllers\ChatAttachmentController::class, 'clear'])->middleware('throttle:social-write');
     Route::delete('/chat/attachments/{message}', [\App\Http\Controllers\ChatAttachmentController::class, 'destroy'])->middleware('throttle:social-write');
 
+    // «Избранное» — личные заметки, чат только для себя (gzip + AES-256-GCM в БД).
+    Route::get('/saved-notes/settings', [\App\Http\Controllers\SavedNoteController::class, 'settings']);
+    Route::patch('/saved-notes/settings', [\App\Http\Controllers\SavedNoteController::class, 'updateSettings'])->middleware('throttle:social-write');
+    Route::get('/saved-notes', [\App\Http\Controllers\SavedNoteController::class, 'index']);
+    Route::post('/saved-notes', [\App\Http\Controllers\SavedNoteController::class, 'store'])->middleware('throttle:social-write');
+    Route::patch('/saved-notes/{savedNote}', [\App\Http\Controllers\SavedNoteController::class, 'update'])->middleware('throttle:social-write');
+    Route::put('/saved-notes/{savedNote}', [\App\Http\Controllers\SavedNoteController::class, 'update'])->middleware('throttle:social-write');
+    Route::delete('/saved-notes', [\App\Http\Controllers\SavedNoteController::class, 'clear'])->middleware('throttle:social-write');
+    Route::delete('/saved-notes/{savedNote}', [\App\Http\Controllers\SavedNoteController::class, 'destroy'])->middleware('throttle:social-write');
+
     Route::post('/push-subscriptions', [PushSubscriptionController::class, 'store'])->middleware('throttle:social-write');
     Route::delete('/push-subscriptions', [PushSubscriptionController::class, 'destroy'])->middleware('throttle:social-write');
     Route::post('/push-subscriptions/test', [PushSubscriptionController::class, 'test'])->middleware('throttle:push-test');

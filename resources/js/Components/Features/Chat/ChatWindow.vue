@@ -17,6 +17,7 @@ import { useChatHeaderLink } from '@/composables/useChatHeaderLink'
 import { useChatComposerMenu } from '@/composables/useChatComposerMenu'
 import { useChatWallpaper } from '@/composables/useChatWallpaper'
 import { useChatPeerPanelTheme, type ChatPeerTone } from '@/composables/useChatPeerPanelTheme'
+import { usePinnedPreview } from '@/composables/usePinnedPreview'
 import { useChatTelegramShare } from '@/composables/useChatTelegramShare'
 import { useAutoFocusInput } from '@/composables/useAutoFocusInput'
 import { useEnterToSend } from '@/composables/useEnterToSend'
@@ -42,14 +43,10 @@ const share = telegramShareMenu.share
  * Композер в фокусе сразу при выборе чата — писать можно без клика.
  */
 const { target: composerTarget, focus: focusComposer } = useAutoFocusInput(computed(() => props.selectedId != null))
+const { pinnedPreview } = usePinnedPreview()
 watch(() => props.replyTo, (next, prev) => {
   if (next && next !== prev) focusComposer()
 })
-
-function pinPreview(body: string): string {
-  const t = (body || '').replace(/\s+/g, ' ').trim()
-  return t.length > 60 ? `${t.slice(0, 60)}…` : t
-}
 
 function replyPreview(message: any): string {
   const kind = String(message?.attachment?.kind ?? message?.type ?? '')
@@ -152,7 +149,7 @@ function dayLabel(value: any): string {
         <div class="flex items-center gap-1.5 text-[11px] font-bold text-violet-700 dark:text-violet-300 px-1 mb-1"><span>📌 Закрепы</span><span class="opacity-70">{{ (pinned || []).length }}/{{ pinLimitLabel || '∞' }}</span></div>
         <div class="flex gap-1.5 overflow-x-auto pb-0.5">
           <div v-for="p in (pinned || [])" :key="p?.id" class="shrink-0 max-w-[240px] flex items-center gap-1 bg-white dark:bg-zinc-800 border dark:border-zinc-700 rounded-full pl-3 pr-1 py-1 text-xs shadow-sm">
-            <button @click="emit('jumpToMessage', p?.id)" class="truncate text-left hover:underline min-w-0 flex-1 dark:text-zinc-100">{{ pinPreview(p?.body ?? '') }}</button>
+            <button @click="emit('jumpToMessage', p?.id)" :title="pinnedPreview(p)" class="truncate text-left hover:underline min-w-0 flex-1 dark:text-zinc-100">{{ pinnedPreview(p) }}</button>
             <button @click="emit('unpin', p?.id)" class="w-6 h-6 shrink-0 grid place-items-center rounded-full hover:bg-stone-100 dark:hover:bg-zinc-700 text-stone-400" aria-label="Открепить"><i class="pi pi-times text-[10px]"></i></button>
           </div>
         </div>
@@ -197,7 +194,7 @@ function dayLabel(value: any): string {
         </div>
       </div>
       <ContextMenu ref="cm" :model="menuModel" :pt="menuPt" />
-      <div class="relative p-2 lg:p-3 border-t dark:border-zinc-800 bg-white dark:bg-zinc-900 shrink-0 flex-none pb-[calc(0.5rem+var(--sab))] lg:pb-3 w-full max-w-full min-w-0 rounded-b-none lg:rounded-b-2xl">
+      <div data-chat-composer-wrap class="relative p-2 lg:p-3 border-t dark:border-zinc-800 bg-white dark:bg-zinc-900 shrink-0 flex-none grow-0 basis-auto pb-[calc(0.5rem+var(--sab))] lg:pb-3 w-full max-w-full min-w-0 rounded-b-none lg:rounded-b-2xl">
         <div v-if="replyTo" class="flex items-center gap-2.5 bg-violet-50 dark:bg-violet-500/10 border-l-[3px] border-violet-500 rounded-r-xl rounded-l-sm px-3 py-2 mb-2 min-w-0">
           <div class="flex-1 min-w-0">
             <div class="text-[11px] font-bold text-violet-600 dark:text-violet-300 truncate">↩ {{ isOwnMessage(replyTo) ? 'Вы' : (replyTo.sender?.name || 'Сообщение') }}</div>

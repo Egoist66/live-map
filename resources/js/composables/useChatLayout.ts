@@ -4,8 +4,10 @@ import { computed } from 'vue'
  * Классы и стили раскладки чата.
  *
  * Высота фрейма считается через CSS-класс `h-app-full` (шапка + нижнее меню
- * + safe-area). Ручной оффсет клавиатуры применяется только на вебе
- * и только не на десктопе.
+ * + safe-area). Ручной оффсет клавиатуры применяется только на вебе,
+ * только не на десктопе и никогда на iOS (там `100dvh` уже сжимается
+ * клавиатурой через `interactive-widget=resizes-content`, повторное
+ * вычитание сплющивало бы фрейм).
  *
  * @param keyboardHeight высота клавиатуры из useChatViewport
  * @param isChatKeyboardOpen true когда клавиатура открыта в поле сообщения
@@ -36,8 +38,33 @@ export function useChatLayout(
     return window.matchMedia('(min-width: 1024px)').matches
   }
 
+  /**
+   * iOS Safari / PWA / WKWebView: `interactive-widget=resizes-content`
+   * (см. app.blade.php) уже сжимает `100dvh` вместе с клавиатурой —
+   * класс `h-app-full` сам встаёт над клавиатурой. Ручной оффсет
+   * `keyboardHeight` вычитал бы клавиатуру второй раз и сплющивал
+   * фрейм: окно диалога и инпут сжимались в полоску.
+   *
+   * @returns true на iOS (iPhone/iPad/iPod + iPadOS-маскарад под Mac)
+   */
+  function isIOS(): boolean {
+    if (typeof navigator === 'undefined') {
+      return false
+    }
+    const ua = String(navigator.userAgent ?? '')
+    if (/iPad|iPhone|iPod/.test(ua)) {
+      return true
+    }
+    const platform = String((navigator as Navigator & { platform?: string }).platform ?? '')
+    const maxTouch = Number((navigator as Navigator & { maxTouchPoints?: number }).maxTouchPoints ?? 0)
+    return platform === 'MacIntel' && maxTouch > 1
+  }
+
   const frameStyle = computed(() => {
     if (isDesktopViewport()) {
+      return {}
+    }
+    if (isIOS()) {
       return {}
     }
     const open = isChatKeyboardOpen?.value ?? false

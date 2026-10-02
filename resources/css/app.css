@@ -268,9 +268,10 @@ html.dark .bg-stone-900\/90, html.dark .bg-black\/50, html.dark .bg-black\/60 { 
   /* Высота Mini App из WebApp.viewportHeight: внутри Telegram точнее
      100dvh (учитывает шапку/кнопки клиента), снаружи — обычный dvh. */
   .h-tg-viewport { height: var(--tg-viewport-height, 100dvh); }
-  /* Отступ под нативные кнопки Telegram (закрыть/свернуть/меню):
-     0 везде, кроме мобильного Mini App, где значение ставит useTelegram. */
-  .pt-tg-chrome { padding-top: var(--tg-chrome-top, 0px); }
+  /* Отступ под чёлку + нативные кнопки Telegram (закрыть/свернуть/меню):
+     sat — всегда (iOS Safari/PWA/WebView с viewport-fit=cover),
+     tg-chrome — только в мобильном Mini App (иначе 0). */
+  .pt-tg-chrome { padding-top: calc(var(--sat, 0px) + var(--tg-chrome-top, 0px)); }
 }
 
 /* Мобильный шелл без пустых полос: фон тянется на всю высоту
@@ -541,11 +542,13 @@ html.native-swipes .mobile-bottom-nav {
   }
 }
 
-/* Нативный верх шапки: по умолчанию без отступа.
-   В браузере и PWA сверху своё окно и шторка ОС: лишний зазор лишь
-   отодвигает шапку вниз. Отступ под чёлку/кнопки даёт только правило
-   iOS Mini App выше (`html.tg-app` в `@supports` + coarse). */
-.native-safe-top { padding-top: 0; }
+/* Нативный верх шапки: всегда держим чёлку/status-bar.
+   --sat = env(safe-area-inset-top): в обычном браузере без выреза = 0
+   (лишнего зазора нет), на iOS с чёлкой/Dynamic Island, в PWA
+   standalone и WebView — честные 47-59px, контент не уходит под
+   системные иконки. black-translucent в манифесте рисует контент
+   под статус-баром именно поэтому отступ обязателен везде. */
+.native-safe-top { padding-top: var(--sat, 0px); }
 @media (min-width: 1024px) {
 .no-safe-area-top { --sat: 0px; }
 
@@ -1113,5 +1116,101 @@ html.dark.tg-app .chat-header {
     height: 44px !important;
     min-height: 44px !important;
     max-height: 44px !important;
+  }
+}
+
+/* ===== iOS Safari / PWA / WKWebView: чёлка, тулбар, клавиатура =====
+   Блок в конце файла намеренно: выигрывает ничьи специфичности.
+   -webkit-touch-callout есть только в WebKit → бьёт ровно по iOS,
+   Android Chrome не трогаем. */
+
+/* Высота без прыжков: iOS Safari < 15.4 не знает dvh/svh — откат на
+   -webkit-fill-available (высота видимой области без тулбара). */
+@supports (-webkit-touch-callout: none) {
+  html, body, #app {
+    min-height: -webkit-fill-available;
+  }
+  .h-app-full,
+  .swipes-feed-lock,
+  .page-scroll,
+  .guest-auth-scroll {
+    min-height: -webkit-fill-available;
+  }
+}
+
+/* Свайпы на iOS: стабильная высота от svh (не прыгает при
+   показе/скрытии тулбара, в отличие от dvh), колода в GPU-слое,
+   свайп-карта не выделяет текст и не зовёт системное меню. */
+@supports (-webkit-touch-callout: none) {
+  @media (max-width: 639.98px) {
+    .swipes-feed-lock {
+      height: calc(100svh - var(--sat, 0px)) !important;
+      max-height: calc(100svh - var(--sat, 0px)) !important;
+    }
+    .swipes-feed-lock .swipe-deck,
+    .swipes-feed-lock .swipes-feed-skeleton {
+      min-height: calc(100svh - var(--sat, 0px) - 188px) !important;
+    }
+  }
+  .swipe-deck {
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+  }
+  .swipe-top {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    touch-action: pan-y !important;
+  }
+  .swipe-top img,
+  .swipe-deck img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    -webkit-user-drag: none;
+  }
+  /* Верхний отступ даёт спейсер .native-safe-top в AuthenticatedLayout
+     (высота = sat): топбару свой sat не нужен, иначе будет двойной зазор.
+     Здесь только страховка, чтобы кнопки не липли к спейсеру впритык. */
+  .swipes-topbar {
+    padding-top: 2px;
+  }
+}
+
+/* Гость (логин/регистрация) на iOS: форма ниже чёлки, скролл momentum,
+   низ не уходит под home-индикатор. Верх даёт .pt-tg-chrome
+   (sat + tg-chrome), здесь — низ и поведение скролла. */
+@supports (-webkit-touch-callout: none) {
+  .guest-auth-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    padding-bottom: calc(var(--sab, 0px) + 12px) !important;
+  }
+}
+
+/* Чат на iOS: клавиатура уже сжимает dvh (interactive-widget=
+   resizes-content в blade), поэтому:
+   - ручной JS-оффсет запрещён (см. useChatLayout: на iOS frameStyle
+     всегда пустой) — иначе двойное вычитание сплющивает фрейм;
+   - safe-padding низа композера при открытой клавиатуре убираем:
+     home-индикатор перекрыт клавиатурой, лишний sab сжимал инпут;
+   - список сообщений — momentum-скролл, инпут не схлопывается. */
+@supports (-webkit-touch-callout: none) {
+  html.native-keyboard-open [data-chat-composer-wrap] {
+    padding-bottom: 0.5rem !important;
+  }
+  html.native-keyboard-open .h-app-full {
+    height: calc(100dvh - var(--app-header-sm) - var(--sat, 0px)) !important;
+    max-height: calc(100dvh - var(--app-header-sm) - var(--sat, 0px)) !important;
+  }
+  #chat-messages {
+    -webkit-overflow-scrolling: touch;
+  }
+  [data-chat-input] {
+    flex-shrink: 0;
+  }
+  .chat-composer-input {
+    flex-shrink: 1;
+    min-width: 0;
   }
 }

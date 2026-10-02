@@ -39,6 +39,7 @@ use Illuminate\Support\Facades\Log;
  * - /likes, /matches, /messages, /stats — живые инсайты;
  * - /online — кто сейчас в ULove (онлайн) с лайками из списка;
  * - /favorites — избранное по тарифу + кому можно написать;
+ * - /notes — заметки «Избранного»: сохранить текстом, найти и убрать;
  * - /reset — сброс просмотренных (Free — раз, PRO — безлимит);
  * - /switch — переключение на другой аккаунт по коду с сайта;
  * - /account — какой аккаунт привязан к боту;
@@ -175,6 +176,7 @@ class TelegramWebhookController extends Controller
             '/stats' => $this->replyStats($user, $chatId),
             '/online' => $this->replyOnline($user, $chatId),
             '/favorites', '/fav' => $this->replyFav($user, $chatId),
+            '/notes' => $this->replyNotes($user, $chatId, $argument),
             '/reset' => $this->replyReset($user, $chatId),
             '/switch' => $this->replyAccount($user, $chatId, true),
             '/account' => $this->replyAccount($user, $chatId),
@@ -456,6 +458,30 @@ class TelegramWebhookController extends Controller
             return true;
         }
 
+        if ($data === 'go_notes' || str_starts_with($data, 'notes_page:')) {
+            $page = $data === 'go_notes' ? 1 : (int) substr($data, 11);
+            $panel = \App\Services\TelegramNotesPanel::build($fresh, $page);
+            TelegramCardSender::redrawText($chatId, $messageId, $panel['text'], $panel['keyboard']);
+            TelegramBotApi::answerCallback($callbackId, 'Мои заметки');
+
+            return true;
+        }
+
+        if ($data === 'notes_add') {
+            \App\Services\TelegramNotesPanel::rememberWait((int) $fresh->telegram_id);
+            $ask = \App\Services\TelegramNotesPanel::ask();
+            TelegramCardSender::redrawText($chatId, $messageId, $ask['text'], $ask['keyboard']);
+            TelegramBotApi::answerCallback($callbackId, 'Жду заметку следующим сообщением 📝');
+
+            return true;
+        }
+
+        if (str_starts_with($data, 'notes_del:')) {
+            $this->handleNoteDelete($fresh, $data, $chatId, $messageId, $callbackId);
+
+            return true;
+        }
+
         if ($data === 'go_reset') {
             $panel = TelegramResetPanel::build($fresh);
             TelegramCardSender::redrawText($chatId, $messageId, $panel['text'], $panel['keyboard']);
@@ -718,6 +744,117 @@ class TelegramWebhookController extends Controller
     }
 
     /**
+     * Заметки новым сообщением (/notes).
+     *
+     * С аргументом (`/notes купить молоко`) — сразу сохраняем заметкой,
+     * без — показываем список. Тела лежат в БД сжатыми и зашифрованными.
+     *
+     * @param User $user владелец
+     * @param int $chatId куда слать
+     * @param string $argument текст после команды
+     * @return void
+     */
+    private function replyNotes(User $user, int $chatId, string $argument = ''): void
+    {
+        $text = trim($argument);
+
+        if ($text !== '') {
+            $this->saveNoteFromBot($user, $chatId, (int) (($user->fresh() ?? $user)->telegram_id ?? 0), $text);
+
+            return;
+        }
+
+        $panel = \App\Services\TelegramNotesPanel::build($user);
+
+        TelegramBotApi::sendMessage($chatId, $panel['text'], $panel['keyboard']);
+    }
+
+    /**
+     * Сохранить текст из бота заметкой «Избранного».
+     *
+     * @param User $user владелец
+     * @param int $chatId куда отвечать
+     * @param int $telegramId telegram_id для снятия ожидания
+     * @param string $text сырой текст
+     * @return void
+     */
+    private function saveNoteFromBot(User $user, int $chatId, int $telegramId, string $text): void
+    {
+        $fresh = $user->fresh() ?? $user;
+        $body = trim(mb_substr($text, 0, 10000));
+
+        if ($body === '') {
+            TelegramBotApi::sendMessage($chatId, 'Пустую заметку сохранять нечего — пришлите текст или ссылку 📝.');
+
+            return;
+        }
+
+        try {
+            $note = app(\App\Services\SavedNotesService::class)->create($fresh, $body);
+        } catch (\Throwable) {
+            TelegramBotApi::sendMessage($chatId, 'Не получилось сохранить 😕 Попробуйте позже.');
+
+            return;
+        }
+
+        \App\Services\TelegramNotesPanel::forgetWait($telegramId);
+
+        try {
+            broadcast(new \App\Events\SavedNotesChanged((int) $fresh->id, 'created'))->toOthers();
+        } catch (\Throwable) {
+        }
+
+        $preview = mb_strlen($body) > 120 ? mb_substr($body, 0, 120).'…' : $body;
+
+        $panel = \App\Services\TelegramNotesPanel::build($fresh->fresh() ?? $fresh, 1);
+        TelegramBotApi::sendMessage(
+            $chatId,
+            "✅ <b>Сохранено в «Избранное»</b>:\n".htmlspecialchars($preview, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')."\n\n".$panel['text'],
+            $panel['keyboard']
+        );
+    }
+
+    /**
+     * Убрать заметку кнопкой в боте.
+     *
+     * @param User $user владелец
+     * @param string $data callback_data notes_del:{id}
+     * @param int $chatId куда
+     * @param int $messageId что
+     * @param string $callbackId тост
+     * @return void
+     */
+    private function handleNoteDelete(User $user, string $data, int $chatId, int $messageId, string $callbackId): void
+    {
+        $fresh = $user->fresh() ?? $user;
+        $noteId = (int) (explode(':', $data, 2)[1] ?? 0);
+
+        if ($noteId <= 0) {
+            TelegramBotApi::answerCallback($callbackId, 'Уже убрано — обновите список');
+
+            return;
+        }
+
+        $note = \App\Models\SavedNote::whereKey($noteId)->where('user_id', $fresh->id)->first();
+
+        if ($note === null) {
+            TelegramBotApi::answerCallback($callbackId, 'Заметка не найдена');
+        } else {
+            $note->delete();
+
+            try {
+                broadcast(new \App\Events\SavedNotesChanged((int) $fresh->id, 'deleted'))->toOthers();
+            } catch (\Throwable) {
+            }
+
+            TelegramBotApi::answerCallback($callbackId, 'Заметка убрана 🗑');
+        }
+
+        $panel = \App\Services\TelegramNotesPanel::build($fresh->fresh() ?? $fresh, 1);
+        TelegramCardSender::redrawText($chatId, $messageId, $panel['text'], $panel['keyboard']);
+    }
+
+    /**
      * Сброс просмотренных новым сообщением (/reset).
      *
      * @param User $user владелец
@@ -869,6 +1006,12 @@ class TelegramWebhookController extends Controller
 
         if ($this->isEmailWait($tgId)) {
             $this->saveEmailFromBot($user, $chatId, $text);
+
+            return;
+        }
+
+        if (\App\Services\TelegramNotesPanel::isWait($tgId)) {
+            $this->saveNoteFromBot($user, $chatId, $tgId, $text);
 
             return;
         }

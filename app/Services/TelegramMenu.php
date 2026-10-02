@@ -79,7 +79,10 @@ class TelegramMenu
                 ['text' => '💬 Сообщения', 'callback_data' => 'go_messages'],
             ],
             [
+                ['text' => '📝 Заметки', 'callback_data' => 'go_notes'],
                 ['text' => '💎 Мой тариф', 'callback_data' => 'go_plan'],
+            ],
+            [
                 ['text' => '📧 Моя почта', 'callback_data' => 'go_email'],
             ],
             [
@@ -128,6 +131,7 @@ class TelegramMenu
         $lines[] = '💞 /likes — кто лайкнул вашу анкету';
         $lines[] = '🎉 /matches — ваши мэтчи';
         $lines[] = '💬 /messages — непрочитанные сообщения';
+        $lines[] = '📝 /notes — заметки «Избранного»: сохранить и найти';
         $lines[] = '📊 /stats — уровень, репутация, тариф';
         $lines[] = '💎 /plan — мой тарифный план и выбор тарифа';
         $lines[] = '📧 /email — моя почта для уведомлений (указать основную)';

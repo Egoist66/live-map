@@ -237,6 +237,7 @@ class TelegramBotApi
                 ['command' => 'likes', 'description' => '💞 Кто лайкнул меня'],
                 ['command' => 'matches', 'description' => '🎉 Мои мэтчи'],
                 ['command' => 'messages', 'description' => '💬 Непрочитанные сообщения'],
+                ['command' => 'notes', 'description' => '📝 Заметки «Избранного»'],
                 ['command' => 'stats', 'description' => '📊 Уровень, репутация, тариф'],
                 ['command' => 'plan', 'description' => '💎 Мой тариф и выбор плана'],
                 ['command' => 'email', 'description' => '📧 Моя почта для уведомлений'],

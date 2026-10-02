@@ -79,6 +79,8 @@ export type RealtimeEventMap = {
   'notify:update': { updates: any[] }
   /** Тред комментариев изменился (сокет + polling несут один формат) */
   'thread:updated': { kind: string; id: number; lastId: number }
+  /** Заметки «Избранного» изменились на другом устройстве (сокет saved-notes.changed) */
+  'user:saved-notes.changed': { action: string }
   /** Смена режима realtime: socket|polling */
   'realtime:mode': string
 }

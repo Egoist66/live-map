@@ -11,7 +11,7 @@ use Illuminate\Console\Command;
  * Ставит:
  * - webhook на {APP_URL}/api/telegram/webhook (секрет из
  *   config telegram.webhook_secret, если задан);
- * - 23 команды-мегаменю: start/app/profile/find/online/favorites/reset/
+ * - 24 команды-мегаменю: start/app/profile/find/online/favorites/notes/reset/
  *   switch/account/hide/show/likes/matches/messages/stats/plan/email/
  *   notify/sessions/password/help/delete/restore;
  * - кнопку меню типа commands (список команд у поля ввода не прячется,
@@ -25,7 +25,7 @@ class SetupTelegramBot extends Command
         {--url= : Полный https-URL вебхука (по умолчанию APP_URL/api/telegram/webhook)}
         {--webapp= : https-URL Mini App для кнопки меню (по умолчанию APP_URL/?tgWebApp=1)}';
 
-    protected $description = 'Зарегистрировать webhook, 23 команды и нативное меню commands Telegram-бота';
+    protected $description = 'Зарегистрировать webhook, 24 команды и нативное меню commands Telegram-бота';
 
     /**
      * Выполнить регистрацию бота.
@@ -66,7 +66,7 @@ class SetupTelegramBot extends Command
 
         $this->table(['Шаг', 'Итог'], [
             ['setWebhook', $result['webhook'] ? 'OK' : 'FAIL'],
-            ['setMyCommands (23 команды мега-меню)', $result['commands'] ? 'OK' : 'FAIL'],
+            ['setMyCommands (24 команды мега-меню)', $result['commands'] ? 'OK' : 'FAIL'],
             ['setChatMenuButton (commands у поля ввода)', $result['menu'] ? 'OK' : 'FAIL'],
         ]);
 
@@ -82,7 +82,7 @@ class SetupTelegramBot extends Command
             return self::FAILURE;
         }
 
-        $this->info('✓ Бот настроен: 23 команды, панели анкеты/тарифа/почты/свайпов/онлайна/избранного/сброса/аккаунта/уведомлений/удаления прямо в чате.');
+        $this->info('✓ Бот настроен: 24 команды, панели анкеты/тарифа/почты/свайпов/онлайна/избранного/заметок/сброса/аккаунта/уведомлений/удаления прямо в чате.');
 
         return self::SUCCESS;
     }

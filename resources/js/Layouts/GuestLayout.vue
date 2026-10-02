@@ -61,7 +61,7 @@ const hideSidebar = computed(() => isAuthPage.value)
         </div>
       </div>
     </div>
-    <div :class="isFaq ? 'flex-1 flex flex-col px-0 py-0 relative dark:bg-[#0F121F] overflow-auto min-w-0 w-full overflow-x-clip pt-tg-chrome' : 'flex-1 flex flex-col items-center px-4 sm:px-6 relative dark:bg-[#0F121F] min-w-0 w-full overflow-x-clip pt-tg-chrome'">
+    <div :class="isFaq ? 'flex-1 flex flex-col px-0 py-0 relative dark:bg-[#0F121F] overflow-auto min-w-0 w-full overflow-x-clip pt-tg-chrome pb-[var(--sab,0px)]' : 'flex-1 flex flex-col items-center px-4 sm:px-6 relative dark:bg-[#0F121F] min-w-0 w-full overflow-x-clip pt-tg-chrome pb-[var(--sab,0px)]'">
       <div v-if="!isAuthPage" class="absolute inset-0 bg-gradient-to-b from-white to-surface dark:from-zinc-900 dark:to-[#0F121F]"></div>
       <!-- Фон только после гидратации: без отрицательного z-index, порядок
            в DOM + relative у контента решают наложение. Фон всегда один
