@@ -549,6 +549,26 @@ html.native-swipes .mobile-bottom-nav {
    системные иконки. black-translucent в манифесте рисует контент
    под статус-баром именно поэтому отступ обязателен везде. */
 .native-safe-top { padding-top: var(--sat, 0px); }
+/* Десктопный Mini App (Telegram на ПК): нативного хрома поверх WebView
+   нет (отдельное окно, кнопки клиента не парят над контентом),
+   а инсеты десктопного клиента раздувают паддинг шапки.
+   Обнуляем только на десктопе: мобильный Mini App (pointer: coarse
+   + tg-mobile) отступы под чёлку/кнопки сохраняет. */
+@media (pointer: fine) {
+  html.tg-app .native-safe-top {
+    padding-top: 0 !important;
+  }
+  html.tg-app .pt-tg-chrome {
+    padding-top: 0 !important;
+  }
+}
+html.tg-app.tg-desktop {
+  --tg-chrome-top: 0px;
+}
+html.tg-app.tg-desktop .native-safe-top,
+html.tg-app.tg-desktop .pt-tg-chrome {
+  padding-top: 0 !important;
+}
 @media (min-width: 1024px) {
 .no-safe-area-top { --sat: 0px; }
 

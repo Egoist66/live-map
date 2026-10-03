@@ -155,24 +155,34 @@
                         var stable = webApp.viewportStableHeight || vh;
                         root.style.setProperty('--tg-viewport-stable', stable + 'px');
                         var inset = webApp.contentSafeAreaInset || webApp.safeAreaInset || null;
-                        var top = Math.max(0, Math.round((inset && inset.top) || 0));
-                        var bottom = Math.max(0, Math.round((inset && inset.bottom) || 0));
-                        root.style.setProperty('--tg-sat', top + 'px');
-                        root.style.setProperty('--tg-sab', bottom + 'px');
+                        var rawTop = Math.max(0, Math.round((inset && inset.top) || 0));
+                        var rawBottom = Math.max(0, Math.round((inset && inset.bottom) || 0));
                         // Зазор под нативные кнопки клиента (закрыть слева,
                         // свернуть/меню справа): они парят поверх WebView.
                         // Старые клиенты (WebApp 6.0) инсетов не отдают вовсе —
                         // резервируем минимум 48px, новые с честным
                         // contentSafeAreaInset получают 0. Только тач
                         // И только мобильные платформы (android*/ios*):
-                        // в десктопном клиенте кнопок поверх нет.
+                        // в десктопном клиенте кнопок поверх нет, а инсеты
+                        // десктопного клиента раздували бы шапку (.native-safe-top),
+                        // поэтому на десктопе инсеты принудительно нули
+                        // + класс tg-desktop (CSS обнуляет паддинг шапки,
+                        // мобилка tg-mobile отступы сохраняет).
                         var coarseTg = false;
                         try { coarseTg = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches); } catch (e2) {}
                         var tgPlat = '';
                         try { tgPlat = String(webApp.platform || '').toLowerCase(); } catch (e3) {}
                         var mobileTg = tgPlat.indexOf('android') === 0 || tgPlat.indexOf('ios') === 0;
+                        var isDesktopTg = !mobileTg || !coarseTg;
+                        var top = isDesktopTg ? 0 : rawTop;
+                        var bottom = isDesktopTg ? 0 : rawBottom;
+                        root.style.setProperty('--tg-sat', top + 'px');
+                        root.style.setProperty('--tg-sab', bottom + 'px');
+                        root.classList.toggle('tg-desktop', isDesktopTg);
+                        root.classList.toggle('tg-mobile', !isDesktopTg);
+                        try { root.dataset.tgPlatform = webApp.platform || ''; } catch (e4) {}
                         var topSafe = (typeof top === 'number' && isFinite(top)) ? top : 0;
-                        var chromeTop = (coarseTg && mobileTg) ? Math.max(0, 48 - topSafe) : 0;
+                        var chromeTop = (!isDesktopTg) ? Math.max(0, 48 - topSafe) : 0;
                         root.style.setProperty('--tg-chrome-top', chromeTop + 'px');
                     } catch (e) {}
                 } catch (e) {}

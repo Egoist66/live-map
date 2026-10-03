@@ -267,8 +267,23 @@ function applyViewport(webApp: TelegramWebApp): void {
  */
 function applyTelegramInsets(webApp: TelegramWebApp): void {
   const inset = webApp.contentSafeAreaInset ?? webApp.safeAreaInset ?? null
-  const top = Math.max(0, Math.round(inset?.top ?? 0))
-  const bottom = Math.max(0, Math.round(inset?.bottom ?? 0))
+  const rawTop = Math.max(0, Math.round(inset?.top ?? 0))
+  const rawBottom = Math.max(0, Math.round(inset?.bottom ?? 0))
+
+  // Живое обновление зазора под нативные кнопки клиента
+  // (см. ранний инлайн в app.blade.php): только тач-устройства
+  // на мобильных платформах Telegram (android*/ios*) —
+  // в десктопном клиенте кнопок поверх WebView нет, а инсеты
+  // десктопного клиента раздували бы шапку (.native-safe-top),
+  // поэтому на десктопе инсеты принудительно нули
+  // + класс tg-desktop (CSS обнуляет паддинг шапки,
+  // мобилка tg-mobile отступы сохраняет).
+  const coarse = window.matchMedia?.('(pointer: coarse)').matches ?? false
+  const tgPlatform = String(webApp.platform || '').toLowerCase()
+  const mobileTg = tgPlatform.startsWith('android') || tgPlatform.startsWith('ios')
+  const isDesktopTg = !mobileTg || !coarse
+  const top = isDesktopTg ? 0 : rawTop
+  const bottom = isDesktopTg ? 0 : rawBottom
 
   tgSafeTop.value = top
   tgSafeBottom.value = bottom
@@ -277,15 +292,9 @@ function applyTelegramInsets(webApp: TelegramWebApp): void {
     const root = document.documentElement
     root.style.setProperty('--tg-sat', `${top}px`)
     root.style.setProperty('--tg-sab', `${bottom}px`)
-    // Живое обновление зазора под нативные кнопки клиента
-    // (см. ранний инлайн в app.blade.php): только тач-устройства
-    // на мобильных платформах Telegram (android*/ios*) —
-    // в десктопном клиенте кнопок поверх WebView нет.
-    // Минимум 48px поверх отданного TG инсета.
-    const coarse = window.matchMedia?.('(pointer: coarse)').matches ?? false
-    const tgPlatform = String(webApp.platform || '').toLowerCase()
-    const mobileTg = tgPlatform.startsWith('android') || tgPlatform.startsWith('ios')
-    const chromeTop = coarse && mobileTg ? Math.max(0, 48 - top) : 0
+    root.classList.toggle('tg-desktop', isDesktopTg)
+    root.classList.toggle('tg-mobile', !isDesktopTg)
+    const chromeTop = !isDesktopTg ? Math.max(0, 48 - top) : 0
     root.style.setProperty('--tg-chrome-top', `${chromeTop}px`)
     window.dispatchEvent(new CustomEvent('tg:safe-area', { detail: { top, bottom } }))
   } catch {
