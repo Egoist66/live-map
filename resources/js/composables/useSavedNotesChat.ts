@@ -291,7 +291,7 @@ export function useSavedNotesChat() {
   }
 
   /**
-   * Переключить режим хранения с тостом (пустые — игнор, см. фикс 422).
+   * Переключить режим хранения без тостов (пустые — игнор, см. фикс 422).
    *
    * @param mode server|local
    */
@@ -301,16 +301,7 @@ export function useSavedNotesChat() {
     const ok = await actions.setStorage(mode)
     if (!ok) {
       toast?.add({ severity: 'error', summary: 'Не сохранено', detail: 'Не получилось переключить хранилище', life: 3500 })
-      return
     }
-    toast?.add({
-      severity: 'success',
-      summary: 'Хранилище избранного',
-      detail: mode === 'local'
-        ? 'Заметки хранятся только на этом устройстве и не синхронизируются.'
-        : 'Заметки синхронизируются между устройствами (сжато и зашифровано).',
-      life: 4000,
-    })
   }
 
   /**

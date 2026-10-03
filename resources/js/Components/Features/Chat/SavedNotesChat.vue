@@ -3,69 +3,110 @@ import { ref } from 'vue'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
-import Message from 'primevue/message'
+import Popover from 'primevue/popover'
 import ProgressSpinner from 'primevue/progressspinner'
 import MessageBubble from '@/Components/Features/Chat/MessageBubble.vue'
 import { useSavedNotesChat } from '@/composables/useSavedNotesChat'
+import { useChatLayout } from '@/composables/useChatLayout'
 
-withDefaults(defineProps<{ showBack?: boolean; showClose?: boolean; embedded?: boolean }>(), { showBack: false, showClose: false, embedded: false })
-const emit = defineEmits<{ (e: 'back'): void; (e: 'close'): void }>()
+withDefaults(defineProps<{ showBack?: boolean }>(), { showBack: false })
+const emit = defineEmits<{ (e: 'back'): void }>()
 
 /** Скрытый file-input композера (клик по скрепке). */
 const fileInput = ref<HTMLInputElement | null>(null)
 
+/** Поповер настроек хранилища (шестерёнка в шапке). */
+const storagePopover = ref<InstanceType<typeof Popover> | null>(null)
+
 /**
  * Чат с собой («Избранное»): только отображение, вся логика —
- * в useSavedNotesChat (Правило №1). Пузырьки — общий MessageBubble,
- * как в диалоге с человеком. В `embedded` режиме (внутри
- * SavedNotesDialog) убирает свою рамку, в `showClose` — рисует
- * крестик закрытия.
+ * в useSavedNotesChat (Правило №1). Рисуется как обычный диалог:
+ * та же центральная колонка (`windowCardClass`), шапка, лента
+ * из MessageBubble, композер. Переключатель хранилища живёт
+ * в шестерёнке (Popover), тостов при переключении нет.
  */
 const chat = useSavedNotesChat()
+const { windowCardClass } = useChatLayout()
 
 const storageOptions = [
-  { label: '☁️ На сервере', value: 'server' },
-  { label: '📱 Локально', value: 'local' },
+  { label: 'На сервере', hint: 'Синхронизация между устройствами', icon: 'pi-cloud', value: 'server' as const },
+  { label: 'Локально', hint: 'Только это устройство, без синхронизации', icon: 'pi-mobile', value: 'local' as const },
 ]
+
+/**
+ * Открыть поповер настроек хранилища.
+ *
+ * @param event клик по шестерёнке
+ */
+function toggleStorage(event: Event): void {
+  storagePopover.value?.toggle(event)
+}
+
+/**
+ * Переключить хранилище из поповера (без тостов).
+ *
+ * @param mode server|local
+ */
+async function selectStorage(mode: 'server' | 'local'): Promise<void> {
+  if (chat.state.storageLoading.value) {
+    return
+  }
+
+  if (mode === chat.state.storage.value) {
+    storagePopover.value?.hide()
+    return
+  }
+
+  await chat.onStorage(mode)
+  storagePopover.value?.hide()
+}
 </script>
 
 <template>
-  <div
-    class="flex flex-col h-full min-h-0 min-w-0 bg-white dark:bg-zinc-900 overflow-hidden"
-    :class="embedded ? 'rounded-none border-0' : 'rounded-none sm:rounded-3xl border-0 sm:border border-stone-200 dark:border-zinc-800'"
-  >
+  <div :class="['flex', 'flex-col', 'h-full', 'min-h-0', 'min-w-0', 'w-full', 'max-w-full', 'bg-white', 'dark:bg-zinc-900', 'overflow-hidden', windowCardClass]">
     <div class="chat-header flex items-center gap-2 pl-1 pr-2 sm:px-4 py-2 border-b dark:border-zinc-800 shrink-0 bg-white/95 dark:bg-zinc-900/95 backdrop-blur sticky top-0 z-30 min-w-0 min-h-[60px]">
-      <button v-if="showBack" type="button" aria-label="Назад" class="w-9 h-9 grid place-items-center rounded-full hover:bg-black/10 dark:hover:bg-white/10 active:scale-95 shrink-0 text-xl leading-none text-stone-600 dark:text-zinc-300" @click="emit('back')">‹</button>
+      <button v-if="showBack" type="button" aria-label="Назад" class="lg:hidden w-9 h-9 grid place-items-center rounded-full hover:bg-black/10 dark:hover:bg-white/10 active:scale-95 shrink-0 text-xl leading-none text-stone-600 dark:text-zinc-300" @click="emit('back')">‹</button>
       <span class="relative block shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white grid place-items-center text-xl">⭐</span>
       <span class="min-w-0 flex-1 block">
         <span class="block text-[16px] font-bold truncate dark:text-white leading-snug">Избранное</span>
-        <span class="mt-0.5 block text-xs leading-none text-stone-500 dark:text-zinc-400">чат с собой · {{ chat.state.storage.value === 'local' ? 'только это устройство' : 'синхронизация включена' }}</span>
+        <span class="mt-0.5 block text-xs leading-none text-stone-500 dark:text-zinc-400">{{ chat.state.storage.value === 'local' ? 'только это устройство' : 'синхронизация включена' }}</span>
       </span>
       <span class="flex items-center gap-0.5 shrink-0">
         <Button :icon="chat.showSearch.value ? 'pi pi-times' : 'pi pi-search'" rounded text severity="secondary" aria-label="Поиск по заметкам" class="!w-9 !h-9 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" @click="chat.showSearch.value = !chat.showSearch.value" />
+        <Button icon="pi pi-cog" rounded text severity="secondary" aria-label="Настройки избранного" title="Настройки избранного" class="!w-9 !h-9 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" @click="toggleStorage" />
         <Button v-if="chat.ordered.value.length > 0" icon="pi pi-trash" rounded text severity="danger" aria-label="Очистить всё" title="Очистить всё" class="!w-9 !h-9 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" @click="chat.askClearAll()" />
-        <Button v-if="showClose" icon="pi pi-times" rounded text severity="secondary" aria-label="Закрыть избранное" title="Закрыть" class="!w-9 !h-9 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" @click="emit('close')" />
       </span>
     </div>
 
-    <div v-if="chat.showSearch.value" class="shrink-0 px-2 sm:px-4 py-2 border-b dark:border-zinc-800">
-      <InputText :model-value="chat.query.value" placeholder="Найти в заметках…" class="w-full !rounded-full" @update:model-value="(v:any)=>chat.setSearch(String(v ?? ''))" />
-    </div>
-
-    <div class="shrink-0 px-2 sm:px-4 py-2 border-b dark:border-zinc-800 flex items-center gap-2 min-w-0">
-      <div class="notes-storage-switch" role="group" aria-label="Где хранить избранное">
+    <Popover ref="storagePopover" :dismissable="true">
+      <div class="w-72 max-w-[80vw] p-1">
+        <div class="px-3 pt-2 pb-1 text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-zinc-500">Где хранить</div>
         <button
           v-for="o in storageOptions"
           :key="o.value"
           type="button"
-          class="notes-opt"
-          :class="{ 'is-active': chat.state.storage.value === o.value }"
-          :aria-pressed="chat.state.storage.value === o.value"
           :disabled="chat.state.storageLoading.value"
-          @click="chat.onStorage(o.value as any)"
-        >{{ o.label }}</button>
+          class="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-left transition hover:bg-stone-50 dark:hover:bg-zinc-800 active:scale-[0.99] disabled:opacity-60"
+          @click="selectStorage(o.value)"
+        >
+          <span class="w-9 h-9 shrink-0 grid place-items-center rounded-full bg-stone-100 dark:bg-zinc-800 text-stone-500 dark:text-zinc-300">
+            <i :class="['pi', o.icon, 'text-sm']" />
+          </span>
+          <span class="flex-1 min-w-0">
+            <span class="block text-sm font-bold dark:text-white leading-tight">{{ o.label }}</span>
+            <span class="block text-xs text-stone-500 dark:text-zinc-400 leading-snug truncate">{{ o.hint }}</span>
+          </span>
+          <i v-if="chat.state.storage.value === o.value" class="pi pi-check text-sm text-emerald-500 shrink-0" />
+        </button>
+        <div v-if="chat.state.storageLoading.value" class="flex items-center gap-2 px-3 py-2 text-xs text-stone-500 dark:text-zinc-400">
+          <ProgressSpinner style="width: 18px; height: 18px" :stroke-width="6" />
+          <span>Переключаем хранилище…</span>
+        </div>
       </div>
-      <ProgressSpinner v-if="chat.state.storageLoading.value" style="width: 22px; height: 22px" :stroke-width="6" class="shrink-0" />
+    </Popover>
+
+    <div v-if="chat.showSearch.value" class="shrink-0 px-2 sm:px-4 py-2 border-b dark:border-zinc-800">
+      <InputText :model-value="chat.query.value" placeholder="Найти в заметках…" class="w-full !rounded-full" @update:model-value="(v:any)=>chat.setSearch(String(v ?? ''))" />
     </div>
 
     <div :ref="(el:any)=>chat.bindList(el)" class="relative flex-1 min-h-0 overflow-auto overscroll-contain p-3 sm:p-4 notes-chat-list">
@@ -149,63 +190,5 @@ const storageOptions = [
 }
 html.dark .notes-chat-list::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.18);
-}
-/* Сегмент-переключатель хранилища: свои кнопки, ноль бордеров,
-   ноль розового. Светлая: активный — белая плашка с тенью.
-   Тёмная: активный — светло-серый, текст белый. */
-.notes-storage-switch {
-  display: flex;
-  flex: 1 1 0;
-  min-width: 0;
-  gap: 2px;
-  padding: 3px;
-  border: 0;
-  border-radius: 9999px;
-  background: #ececea;
-}
-html.dark .notes-storage-switch {
-  background: #27272a;
-}
-.notes-opt {
-  flex: 1 1 0;
-  min-width: 0;
-  min-height: 40px;
-  padding: 0.45rem 0.5rem;
-  border: 0;
-  border-radius: 9999px;
-  background: transparent;
-  color: #78716c;
-  font-size: 12.5px;
-  font-weight: 700;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease, transform 0.12s ease, opacity 0.2s ease;
-}
-.notes-opt:active {
-  transform: scale(0.97);
-}
-.notes-opt:disabled {
-  cursor: default;
-  opacity: 0.6;
-}
-.notes-opt.is-active {
-  background: #ffffff;
-  color: #1c1917;
-  box-shadow: 0 2px 10px -2px rgba(15, 23, 42, 0.25);
-}
-html.dark .notes-opt {
-  color: #a1a1aa;
-}
-html.dark .notes-opt.is-active {
-  background: #52525b;
-  color: #ffffff;
-  box-shadow: 0 2px 12px -2px rgba(0, 0, 0, 0.6);
-}
-.notes-opt:focus-visible {
-  outline: 2px solid #a1a1aa;
-  outline-offset: 2px;
 }
 </style>

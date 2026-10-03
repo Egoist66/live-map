@@ -16,7 +16,7 @@ import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
 import { useProfileUrl } from '@/composables/useProfileUrl'
 import InfiniteSentinel from '@/Components/Ui/List/InfiniteSentinel.vue'
 
-const props = withDefaults(defineProps<{ conversations: any[]; uloveConversations?: any[]; friends: any[]; pendingIn: any[]; blocked: any[]; tab: string; selectedId: number | null; filter: string; conversationsSentinel?: unknown; conversationsHasMore?: boolean; conversationsLoadingMore?: boolean; friendsSentinel?: unknown; friendsHasMore?: boolean; friendsLoadingMore?: boolean; isOnline: (id?: number, lastSeenAt?: string | null) => boolean; formatTime: (s: string) => string }>(), { conversationsHasMore: false, conversationsLoadingMore: false, friendsHasMore: false, friendsLoadingMore: false })
+const props = withDefaults(defineProps<{ conversations: any[]; uloveConversations?: any[]; friends: any[]; pendingIn: any[]; blocked: any[]; tab: string; selectedId: number | null; isSavedOpen?: boolean; filter: string; conversationsSentinel?: unknown; conversationsHasMore?: boolean; conversationsLoadingMore?: boolean; friendsSentinel?: unknown; friendsHasMore?: boolean; friendsLoadingMore?: boolean; isOnline: (id?: number, lastSeenAt?: string | null) => boolean; formatTime: (s: string) => string }>(), { conversationsHasMore: false, conversationsLoadingMore: false, friendsHasMore: false, friendsLoadingMore: false, isSavedOpen: false })
 
 /** Мэтчи ULove с учётом строки поиска. */
 const filteredUlove = computed(() => {
@@ -25,7 +25,21 @@ const filteredUlove = computed(() => {
   if (!q) return list.filter((c: any) => !!c)
   return list.filter((c: any) => c && (c.other?.name || '').toLowerCase().includes(q))
 })
-const emit = defineEmits<{ (e: 'update:filter', v: string): void; (e: 'open', id: number): void; (e: 'startChat', u: any): void; (e: 'deleteChat', id: number): void; (e: 'block', id: number, name?: string): void; (e: 'unblock', id: number): void; (e: 'removeFriend', f: any): void; (e: 'accept', id: number): void; (e: 'decline', id: number): void; (e: 'sheet', p: any): void }>()
+const emit = defineEmits<{ (e: 'update:filter', v: string): void; (e: 'saved'): void; (e: 'open', id: number): void; (e: 'startChat', u: any): void; (e: 'deleteChat', id: number): void; (e: 'block', id: number, name?: string): void; (e: 'unblock', id: number): void; (e: 'removeFriend', f: any): void; (e: 'accept', id: number): void; (e: 'decline', id: number): void; (e: 'sheet', p: any): void }>()
+
+/**
+ * Показывать ли закреп «Избранное» наверху вкладки чатов.
+ */
+const showSavedPin = computed(() => {
+  if (props.tab !== 'chats') {
+    return false
+  }
+  const q = (props.filter || '').trim().toLowerCase()
+  if (!q) {
+    return true
+  }
+  return 'избранное'.includes(q) || 'заметки'.includes(q) || 'себе'.includes(q)
+})
 
 const { previewText } = useChatPreview(Number((usePage().props.auth as any)?.user?.id ?? 0))
 const currentUserId = Number((usePage().props.auth as any)?.user?.id ?? 0)
@@ -50,7 +64,16 @@ const { userProfileUrl } = useProfileUrl()
       </div>
     </div>
     <div v-if="tab === 'chats'" class="divide-y dark:divide-zinc-800">
-      <div v-if="!conversations.length" class="p-6 sm:p-8 text-center">
+      <button v-if="showSavedPin" type="button" @click="emit('saved')" :class="isSavedOpen ? 'bg-amber-50 dark:bg-amber-500/10 shadow-[inset_3px_0_0_0_#f59e0b]' : 'hover:bg-amber-50/60 dark:hover:bg-amber-500/5'" class="w-full flex items-center gap-3 p-3.5 lg:p-3 text-left min-w-0 transition-colors">
+        <span class="relative shrink-0">
+          <span class="w-11 h-11 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white grid place-items-center text-lg shrink-0">⭐</span>
+        </span>
+        <span class="flex-1 min-w-0">
+          <span class="block text-[15px] lg:text-sm font-semibold dark:text-white truncate">Избранное</span>
+          <span class="block text-[13px] lg:text-xs truncate mt-0.5 text-stone-500 dark:text-zinc-400">Заметки, ссылки и файлы — только для себя</span>
+        </span>
+      </button>
+      <div v-if="!conversations.length && !showSavedPin" class="p-6 sm:p-8 text-center">
         <div class="w-14 h-14 rounded-2xl bg-violet-50 dark:bg-zinc-800 grid place-items-center mx-auto mb-3 text-xl">💬</div>
         <div class="text-sm font-semibold dark:text-white">Нет чатов</div>
         <div class="text-xs text-stone-500 mt-1">Найдите человека через поиск выше</div>

@@ -5,6 +5,7 @@ import Toast from "primevue/toast";
 import ChatSidebar from "@/Components/Features/Chat/ChatSidebar.vue";
 import ChatWindow from "@/Components/Features/Chat/ChatWindow.vue";
 import ChatPeerPanel from "@/Components/Features/Chat/ChatPeerPanel.vue";
+import SavedNotesChat from "@/Components/Features/Chat/SavedNotesChat.vue";
 // Диалоги открываются только по действию — грузим лениво, первым paint не блокируют.
 const ChatSearchDialog = defineAsyncComponent(
   () => import("@/Components/Features/Chat/ChatSearchDialog.vue")
@@ -24,9 +25,6 @@ const ChatPresetsDialog = defineAsyncComponent(
 const ChatAutoReplyDialog = defineAsyncComponent(
   () => import("@/Components/Features/Chat/ChatAutoReplyDialog.vue")
 );
-const SavedNotesDialog = defineAsyncComponent(
-  () => import("@/Components/Features/Chat/SavedNotesDialog.vue")
-);
 const DistrictInviteDialog = defineAsyncComponent(
   () => import("@/Components/Features/Map/DistrictInviteDialog.vue")
 );
@@ -43,6 +41,7 @@ import { useChatLayout } from "@/composables/useChatLayout";
 import { usePageScrollLock } from "@/composables/usePageScrollLock";
 import { useDistrictInvite } from "@/composables/useDistrictInvite";
 import { useChatPeerPanel } from "@/composables/useChatPeerPanel";
+import { useSavedNotesView } from "@/composables/useSavedNotesView";
 import { useToast } from "primevue/usetoast";
 
 usePageScrollLock();
@@ -257,13 +256,51 @@ watch(
 
 const presetsOpen = ref(false);
 const autoReplyOpen = ref(false);
-const savedNotesOpen = ref(false);
+const savedView = useSavedNotesView();
+const isSavedOpen = savedView.isSavedOpen;
 
 /**
- * Открыть «Избранное» — чат с собой диалогом прямо в чатах.
+ * Открыть «Избранное» как обычный чат: закрываем диалог с человеком,
+ * показываем SavedNotesChat в центральной колонке.
  */
 function goNotes(): void {
-  savedNotesOpen.value = true;
+  selectedId.value = null;
+  (activeConv as any).value = null;
+  (messages as any).value = [];
+  savedView.open();
+}
+
+/**
+ * Закрыть «Избранное» — вернуться к списку (мобила) / плейсхолдеру (десктоп).
+ */
+function closeNotes(): void {
+  savedView.close();
+}
+
+/**
+ * Открыть диалог с человеком: избранное закрывается (взаимное исключение).
+ * @param id id диалога
+ */
+async function openConversationAsChat(id: number): Promise<void> {
+  savedView.close();
+  await openConversation(id);
+}
+
+/**
+ * Назад к списку: закрывает и диалог, и избранное.
+ */
+function backToChatList(): void {
+  savedView.close();
+  backToList();
+}
+
+/**
+ * Начать чат с человеком из поиска/друзей: избранное закрывается.
+ * @param user пользователь для диалога
+ */
+async function startChatAsChat(user: any): Promise<void> {
+  savedView.close();
+  await startChatWith(user);
 }
 
 /**
@@ -315,7 +352,10 @@ function onAutoReplySaved(enabled: boolean): void {
 watch(
   () => props.conversationId,
   (id) => {
-    if (id) void openTarget(id);
+    if (id) {
+      savedView.close();
+      void openTarget(id);
+    }
   }
 );
 onMounted(async () => {
@@ -348,6 +388,7 @@ onMounted(async () => {
         :filter="filters.chatFilter.value"
         @update:filter="(v: string) => filters.chatFilter.value = v"
         :selected-id="selectedId"
+        :is-saved-open="isSavedOpen"
         :conversations-sentinel="convSentinel"
         :conversations-has-more="convHasMore"
         :conversations-loading-more="convLoadingMore"
@@ -362,8 +403,8 @@ onMounted(async () => {
         @refresh="refresh"
         @people="filters.showPeopleSearch.value = true"
         @saved="goNotes"
-        @open="openConversation"
-        @start-chat="startChatWith"
+        @open="openConversationAsChat"
+        @start-chat="startChatAsChat"
         @delete-chat="askDeleteChat"
         @clear-all-chats="askClearAllChats"
         @block="askBlock"
@@ -373,7 +414,9 @@ onMounted(async () => {
         @decline="(id: number) => friendsApi.decline(id)"
         @save-privacy="savePrivacy"
       />
+      <SavedNotesChat v-if="isSavedOpen" show-back @back="closeNotes" />
       <ChatWindow
+        v-else
         :selected-id="selectedId"
         :active-conv="activeConv"
         :messages="messages"
@@ -416,8 +459,8 @@ onMounted(async () => {
         @typing="notifyTyping"
         @stop-typing="stopTyping"
         @refresh="refresh"
-        @back="backToList"
-        @close="backToList"
+        @back="backToChatList"
+        @close="backToChatList"
 
         @toggle-menu="showChatMenu = !showChatMenu"
         @menu-close="showChatMenu = false"
@@ -478,7 +521,7 @@ onMounted(async () => {
     :searching="searching"
     :creating="creatingChat"
     :is-online="isOnline"
-    @chat="(u: any) => { startChatWith(u); filters.showPeopleSearch.value = false }"
+    @chat="(u: any) => { startChatAsChat(u); filters.showPeopleSearch.value = false }"
     @add="addFriendFromSearch"
     @block="askBlock"
   />
@@ -499,10 +542,6 @@ onMounted(async () => {
     @update:open="(v: boolean) => autoReplyOpen = v"
     @saved="onAutoReplySaved"
   />
-  <SavedNotesDialog
-    :open="savedNotesOpen"
-    @update:open="(v: boolean) => savedNotesOpen = v"
-  />
   <DistrictInviteDialog
     :open="districtInvite.open.value"
     @update:open="districtInvite.setOpen"
@@ -519,8 +558,8 @@ onMounted(async () => {
     :sheet="sheet"
     :is-own-message="isOwnMessage"
     @close="closeSheet"
-    @open-chat="openConversation"
-    @start-chat="startChatWith"
+    @open-chat="openConversationAsChat"
+    @start-chat="startChatAsChat"
     @edit="(m: any) => { closeSheet(); handleStartEdit(m) }"
     @delete-message="(id: number) => { closeSheet(); askDeleteMessage(id) }"
     @delete-chat="(id?: number) => askDeleteChat(id)"
