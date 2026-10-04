@@ -20,35 +20,43 @@ class SupportRequestMail extends Mailable
     use Queueable, SerializesModels;
 
     /**
-     * @param string $subject тема обращения
-     * @param string $message текст обращения
-     * @param string $name имя отправителя
-     * @param string $email email отправителя для ответа
+     * NB: имена свойств не должны совпадать с public $subject в базовом Mailable
+     * (PHP требует omit типа у переопределения) и с $message в blade-вьюхах писем,
+     * поэтому используем topic/body/senderName/senderEmail.
+     *
+     * @param string $topic тема обращения
+     * @param string $body текст обращения
+     * @param string $senderName имя отправителя
+     * @param string $senderEmail email отправителя для ответа
      */
     public function __construct(
-        public string $subject,
-        public string $message,
-        public string $name,
-        public string $email,
+        public string $topic,
+        public string $body,
+        public string $senderName,
+        public string $senderEmail,
     ) {}
 
     public function envelope(): Envelope
     {
+        $envelopeSubject = "🛟 Поддержка: {$this->topic} — {$this->senderName} <{$this->senderEmail}>";
+
         return new Envelope(
-            subject: "🛟 Поддержка: {$this->subject} — {$this->name} <{$this->email}>",
+            subject: $envelopeSubject,
         );
     }
 
     public function content(): Content
     {
+        $viewData = [
+            'subjectText' => $this->topic,
+            'messageText' => $this->body,
+            'senderName' => $this->senderName,
+            'senderEmail' => $this->senderEmail,
+        ];
+
         return new Content(
             view: 'emails.support-request',
-            with: [
-                'subjectText' => $this->subject,
-                'messageText' => $this->message,
-                'senderName' => $this->name,
-                'senderEmail' => $this->email,
-            ],
+            with: $viewData,
         );
     }
 }
