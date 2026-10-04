@@ -5,6 +5,7 @@ import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import ToggleSwitch from 'primevue/toggleswitch'
+import Checkbox from 'primevue/checkbox'
 import Tag from 'primevue/tag'
 import Message from 'primevue/message'
 
@@ -17,7 +18,7 @@ defineProps<{ mgr: any }>()
         <span class="w-9 h-9 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white grid place-items-center shrink-0"><i class="pi pi-megaphone text-sm" /></span>
         <div class="flex-1 min-w-0">
           <div class="font-black dark:text-white">Новости приложения</div>
-          <div class="text-xs text-stone-500 dark:text-zinc-400">Заметки разработки — увидят все пользователи в модалке.</div>
+          <div class="text-xs text-stone-500 dark:text-zinc-400">Публикация — в колокольчик всем + письмом в Telegram-бота (даже тем, кто не открыл приложение).</div>
         </div>
         <Button label="Создать" icon="pi pi-plus" size="small" rounded @click="mgr.openCreate()" />
       </div>
@@ -65,6 +66,13 @@ defineProps<{ mgr: any }>()
             </div>
             <label class="flex items-center gap-2 text-sm mt-5 cursor-pointer"><ToggleSwitch v-model="mgr.formPublish.value" /> Опубликовать сразу</label>
           </div>
+          <label class="flex items-start gap-2 text-sm cursor-pointer rounded-2xl border border-stone-200 dark:border-zinc-700 p-3">
+            <Checkbox v-model="mgr.formTelegram.value" :binary="true" inputId="appnews-tg" />
+            <span>
+              <span class="font-bold">Отправить в Telegram-бота всем</span>
+              <span class="block text-xs text-stone-500 dark:text-zinc-400 mt-0.5">Полный текст новости 📰 придёт письмом прямо в бота — открывать приложение не нужно. Отключить могут в боте: /notify → Новости.</span>
+            </span>
+          </label>
           <Message v-if="!mgr.canSave()" severity="info" :closable="false" class="!rounded-2xl !text-xs">Минимум 3 символа в заголовке и 5 в тексте.</Message>
         </div>
         <template #footer>

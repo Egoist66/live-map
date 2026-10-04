@@ -22,6 +22,7 @@ const ChatSearchDialog = defineAsyncComponent(() => import('@/Components/Feature
 import ProfileThoughtDialog from '@/Components/Features/Profile/ProfileThoughtDialog.vue'
 import ReportDialog from '@/Components/Features/Map/ReportDialog.vue'
 import { useReportDialog } from '@/composables/useReportDialog'
+import { useDatingSavedSync, patchDatingFields } from '@/composables/useDatingSavedSync'
 import { useProfileDesign } from '@/composables/useProfileDesign'
 import { useProfileLayout } from '@/composables/useProfileLayout'
 import { useProfileThought } from '@/composables/useProfileThought'
@@ -73,16 +74,29 @@ const ulovePhotos = computed(() => {
 const showDatingEdit = ref(false)
 
 /**
- * Анкета сохранена: закрыть диалог и подтянуть свежий profileUser.
+ * Анкета сохранена: мгновенно показать новые данные из события,
+ * затем свериться с сервером. Без оптимистичного патча профиль
+ * до ответа reload показывал старое и казался «необновлённым».
+ *
+ * @param saved свежие dating_* поля из формы анкеты (может отсутствовать)
  */
-function onDatingSaved(): void {
+function onDatingSaved(saved?: Record<string, any>): void {
   showDatingEdit.value = false
+
+  try {
+    patchDatingFields(props.profileUser, saved)
+  } catch {
+  }
 
   try {
     router.reload({ only: ['profileUser'] })
   } catch {
   }
 }
+
+// Свой профиль, сохранённый из другого места (свайпы, дэшборд),
+// подтягиваем без перезагрузки страницы.
+useDatingSavedSync(() => props.profileUser)
 
 const design = useProfileDesign(props)
 const { single: isSingleColumn } = useProfileLayout()

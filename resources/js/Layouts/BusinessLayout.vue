@@ -84,7 +84,6 @@ const currentPath = computed(() => {
  */
 const menuItems = computed(() => [
   { label: companyName.value, sublabel: (user.value as { email?: string } | null)?.email || '', isHeader: true },
-  { separator: true },
   { label: 'Мои пины', icon: 'pi pi-list', accent: 'teal', active: currentPath.value.startsWith('/cabinet/pins'), command: () => router.visit('/cabinet/pins') },
   { label: 'Настройки', icon: 'pi pi-cog', accent: 'slate', active: currentPath.value.startsWith('/cabinet/settings'), command: () => router.visit('/cabinet/settings') },
   { separator: true },

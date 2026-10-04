@@ -773,7 +773,7 @@ class VideoService
             $conv->update(['last_message_at' => $msg->created_at]);
             $conv->participantRows()->update(['hidden_at' => null]);
 
-            $msg->loadMissing(['sender:id,name,avatar_path', 'conversation.participantRows']);
+            $msg->loadMissing(['sender:id,name,avatar_path,telegram_photo_url', 'conversation.participantRows']);
             broadcast(new \App\Events\MessageSent($msg))->toOthers();
         } catch (\Throwable $e) {
             Log::warning('video chat history failed: '.$e->getMessage());

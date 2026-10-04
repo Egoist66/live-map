@@ -4,11 +4,14 @@ import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
+import { avatarSrcFor, getAvatarUrl } from '@/composables/useAvatar'
 
 type ShareCandidate = {
   id: number
   name: string
   avatar_url?: string | null
+  telegram_photo_url?: string | null
+  avatar_path?: string | null
   can_message?: boolean
 }
 
@@ -115,7 +118,7 @@ const s = props.sharer
           <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full border-2" :class="s.selectedIds.value.includes(u.id) ? 'border-violet-600 bg-violet-600 text-white' : 'border-stone-300 dark:border-zinc-600 text-transparent'">
             <i class="pi pi-check text-[10px]" />
           </span>
-          <Avatar :image="u.avatar_url || undefined" :icon="!u.avatar_url ? 'pi pi-user' : undefined" shape="circle" class="!h-9 !w-9 shrink-0" />
+          <Avatar :image="avatarSrcFor(u)" :icon="!getAvatarUrl(u) ? 'pi pi-user' : undefined" shape="circle" class="!h-9 !w-9 shrink-0" />
           <span class="min-w-0 flex-1">
             <span class="block truncate text-sm font-bold dark:text-white">{{ u.name }}</span>
             <span v-if="u.can_message === false" class="block text-[11px] text-red-500">нельзя написать</span>

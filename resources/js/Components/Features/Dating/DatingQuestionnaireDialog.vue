@@ -3,13 +3,15 @@ import Dialog from 'primevue/dialog'
 import DatingQuestionnaireForm from '@/Components/Features/Dating/DatingQuestionnaireForm.vue'
 
 const props = defineProps<{ open: boolean }>()
-const emit = defineEmits<{ (e: 'update:open', v: boolean): void; (e: 'saved'): void }>()
+const emit = defineEmits<{ (e: 'update:open', v: boolean): void; (e: 'saved', saved?: Record<string, any>): void }>()
 
 /**
  * Закрыть модалку после сохранения анкеты.
+ *
+ * @param saved свежие dating_* поля из формы
  */
-function onSaved(): void {
-  emit('saved')
+function onSaved(saved?: Record<string, any>): void {
+  emit('saved', saved)
   emit('update:open', false)
 }
 </script>

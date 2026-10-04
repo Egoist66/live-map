@@ -1378,7 +1378,7 @@ class DatingService
             'type' => 'system',
         ]);
 
-        $msg->load('sender:id,name,avatar_path');
+        $msg->load('sender:id,name,avatar_path,telegram_photo_url');
         $conv->update(['last_message_at' => $msg->created_at]);
 
         return $conv;
@@ -1415,7 +1415,7 @@ class DatingService
     private function broadcastMatchMessage(Message $msg): void
     {
         try {
-            $msg->loadMissing(['sender:id,name,avatar_path', 'conversation.participantRows']);
+            $msg->loadMissing(['sender:id,name,avatar_path,telegram_photo_url', 'conversation.participantRows']);
             broadcast(new \App\Events\MessageSent($msg))->toOthers();
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage());
@@ -1483,6 +1483,188 @@ class DatingService
     }
 
     /**
+     * Нормализовать список интересов для сравнения без дублей и регистра.
+     *
+     * Интересы приходят из разных мест (анкета, фильтры ленты) с разным
+     * регистром и пробелами («Кино» vs «кино »), а строгое сравнение
+     * array_intersect тогда не видит пересечений — фильтр «по интересам»
+     * и скоринг молча режут подходящих людей. Приводим всё к нижнему
+     * регистру, тримим, выкидываем пустое и дубли.
+     *
+     * @param mixed $raw сырой список (array|string|null из JSON-колонки или фильтров)
+     * @return string[] нормализованные уникальные интересы
+     */
+    private function normalizeInterests(mixed $raw): array
+    {
+        if (is_string($raw)) {
+            $raw = [$raw];
+        }
+
+        if (! is_array($raw)) {
+            return [];
+        }
+
+        $clean = [];
+
+        foreach ($raw as $tag) {
+            if (! is_string($tag) && ! is_numeric($tag)) {
+                continue;
+            }
+
+            $tag = mb_strtolower(trim((string) $tag));
+
+            if ($tag === '') {
+                continue;
+            }
+
+            $clean[] = mb_substr($tag, 0, 40);
+        }
+
+        return array_values(array_unique($clean));
+    }
+
+    /**
+     * Значимые токены тега для нечёткого сравнения интересов.
+     *
+     * «Ночные клубы» разбиваем на слова и берём длинные (>= 4 букв):
+     * короткие («и», «по», «на») — шум, они совпали бы у всех подряд.
+     *
+     * @param string $tag нормализованный тег
+     * @return string[] уникальные токены
+     */
+    private function interestTokens(string $tag): array
+    {
+        $parts = preg_split('/[\s\-_\/,;:.!?"«»()\[\]]+/u', $tag) ?: [];
+
+        $tokens = [];
+
+        foreach ($parts as $part) {
+            $part = trim((string) $part);
+
+            if (mb_strlen($part) >= 4) {
+                $tokens[] = $part;
+            }
+        }
+
+        return array_values(array_unique($tokens));
+    }
+
+    /**
+     * Похожесть двух тегов интересов от 0 до 1.
+     *
+     * 1.0 — точное совпадение («клубы» = «клубы»).
+     * 0.7 — один тег входит в другой отдельным словом («клубы»
+     * в «ночные клубы», «секс» в «секс знакомства») или есть общий
+     * значимый токен. Куски короче 4 букв и вхождения внутри слова
+     * не считаем — иначе «бар» сматчится с «барбекю»,
+     * а «спорт» с «транспортом».
+     * 0 — ничего общего.
+     *
+     * @param string $a нормализованный тег
+     * @param string $b нормализованный тег
+     * @return float 0, 0.7 или 1.0
+     */
+    private function interestsSimilarity(string $a, string $b): float
+    {
+        if ($a === '' || $b === '') {
+            return 0;
+        }
+
+        if ($a === $b) {
+            return 1.0;
+        }
+
+        $shorter = mb_strlen($a) <= mb_strlen($b) ? $a : $b;
+        $longer = $shorter === $a ? $b : $a;
+
+        if (mb_strlen($shorter) >= 4 && $this->hasWholeWord($longer, $shorter)) {
+            return 0.7;
+        }
+
+        $tokensA = $this->interestTokens($a);
+        $tokensB = $this->interestTokens($b);
+
+        foreach ($tokensA as $token) {
+            if (in_array($token, $tokensB, true)) {
+                return 0.7;
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * Есть ли фраза отдельным словом внутри тега.
+     *
+     * Границы — начало/конец строки или не-буквы: «спорт»
+     * находится в «спорт и музыка», но не в «транспорте».
+     *
+     * @param string $haystack тег, в котором ищем
+     * @param string $needle фраза, которую ищем
+     * @return bool true когда вхождение по границам слов
+     */
+    private function hasWholeWord(string $haystack, string $needle): bool
+    {
+        $pattern = '/(?<![\p{L}\p{N}_])' . preg_quote($needle, '/') . '(?![\p{L}\p{N}_])/u';
+
+        return preg_match($pattern, $haystack) === 1;
+    }
+
+    /**
+     * Сопоставить два списка интересов без переиспользования тегов.
+     *
+     * Каждый тег участвует максимум в одной паре: сначала забираем
+     * точные совпадения, потом похожие среди остатков. Поэтому
+     * «клубы, музыка» vs «клубы, ночные клубы» даст exact=1, similar=1,
+     * а не накрутит similar за один и тот же тег дважды.
+     *
+     * @param string[] $mine нормализованные интересы зрителя
+     * @param string[] $theirs нормализованные интересы кандидата
+     * @return array{exact:int, similar:int} число пар каждого типа
+     */
+    private function matchInterests(array $mine, array $theirs): array
+    {
+        $freeMine = array_values($mine);
+        $freeTheirs = array_values($theirs);
+
+        $exact = 0;
+
+        foreach ($freeMine as $i => $tagMine) {
+            $found = array_search($tagMine, $freeTheirs, true);
+
+            if ($found === false) {
+                continue;
+            }
+
+            $exact++;
+            unset($freeMine[$i]);
+            unset($freeTheirs[$found]);
+        }
+
+        $freeMine = array_values($freeMine);
+        $freeTheirs = array_values($freeTheirs);
+
+        $similar = 0;
+
+        foreach ($freeMine as $i => $tagMine) {
+            foreach ($freeTheirs as $j => $tagTheirs) {
+                $score = $this->interestsSimilarity($tagMine, $tagTheirs);
+
+                if ($score < 0.7) {
+                    continue;
+                }
+
+                $similar++;
+                unset($freeMine[$i]);
+                unset($freeTheirs[$j]);
+                break;
+            }
+        }
+
+        return ['exact' => $exact, 'similar' => $similar];
+    }
+
+    /**
      * Лента кандидатов для свайпов.
      *
      * В ленте — только совершеннолетние с указанной датой рождения:
@@ -1497,6 +1679,10 @@ class DatingService
      * онлайн, общие интересы и цель, фото и заполненность анкеты,
      * близость, новички и активный буст — плюс лёгкий джиттер,
      * чтобы выдача не была статичной.
+     * Интересы сравниваются нечётко (точное + вхождение/общий токен):
+     * «клубы» найдёт и «ночные клубы», «секс» — и «секс знакомства».
+     * Цель «по интересам» дополнительно требует пересечения
+     * со своими интересами из анкеты — подборка строится от неё.
      * Для бесконечной колоды фронт шлёт exclude_ids уже виденных,
      * бэк их исключает — дублей нет без сброса истории.
      *
@@ -1543,7 +1729,7 @@ class DatingService
             [$ageMin, $ageMax] = [$ageMax, $ageMin];
         }
 
-        $wantedInterests = $filters['interests'] ?? [];
+        $wantedInterests = $this->normalizeInterests($filters['interests'] ?? []);
 
         // PHP-фильтры (радиус, интересы) режут выборку после БД,
         // поэтому при них берём пул кандидатов шире.
@@ -1581,7 +1767,7 @@ class DatingService
 
         $candidates = $query
             ->select([
-                'id', 'name', 'profile_slug', 'gender', 'birth_date', 'bio', 'avatar_path',
+                'id', 'name', 'profile_slug', 'gender', 'birth_date', 'bio', 'avatar_path', 'telegram_photo_url',
                 'home_city', 'home_lat', 'home_lng', 'last_seen_at', 'created_at', 'boost_until',
                 'dating_goal', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_hide_name', 'dating_hide_age', 'dating_hide_distance',
                 'plan', 'plan_expires_at', 'is_admin', 'role', 'is_invisible',
@@ -1600,19 +1786,29 @@ class DatingService
             ->map(fn ($m) => $m->user_a_id === $me->id ? $m->user_b_id : $m->user_a_id)
             ->flip();
 
-        $myInterests = $me->dating_interests ?? [];
-        $myInterests = is_array($myInterests) ? $myInterests : [];
+        $myInterests = $this->normalizeInterests($me->dating_interests ?? []);
 
         $myGoal = $me->dating_goal;
+
+        $matchByMyInterests = $goal === 'interests' && ! empty($myInterests);
 
         $scored = [];
 
         foreach ($candidates as $candidate) {
+            $have = $this->normalizeInterests($candidate->dating_interests ?? []);
+
             if (! empty($wantedInterests)) {
-                $have = $candidate->dating_interests ?? [];
-                $have = is_array($have) ? $have : [];
-                $overlap = array_intersect($wantedInterests, $have);
-                if (empty($overlap)) {
+                $wanted = $this->matchInterests($wantedInterests, $have);
+
+                if ($wanted['exact'] === 0 && $wanted['similar'] === 0) {
+                    continue;
+                }
+            }
+
+            if ($matchByMyInterests) {
+                $mutual = $this->matchInterests($myInterests, $have);
+
+                if ($mutual['exact'] === 0 && $mutual['similar'] === 0) {
                     continue;
                 }
             }
@@ -1705,8 +1901,8 @@ class DatingService
      * Релевантность кандидата для зрителя: чем выше, тем раньше в ленте.
      *
      * Веса: лайкнул меня +40 (суперлайк +20 сверху), активный буст +120,
-     * онлайн <=15 мин +25 (<=1 ч +15, <=суток +8), общие интересы +6
-     * (потолок +18), совпавшая цель +10, есть фото +8, заполнено «о себе» +4,
+     * онлайн <=15 мин +25 (<=1 ч +15, <=суток +8), общие интересы точные +8
+     * (похожие +4, потолок +24), совпавшая цель +10, есть фото +8, заполнено «о себе» +4,
      * PRO +4, рядом <=5 км +10 (<=25 км +6, <=100 км +3),
      * новичок (меньше 7 дней) +12, джиттер 0..6 против статичности.
      *
@@ -1745,11 +1941,11 @@ class DatingService
             $score += 8;
         }
 
-        $have = $candidate->dating_interests ?? [];
-        $have = is_array($have) ? $have : [];
+        $have = $this->normalizeInterests($candidate->dating_interests ?? []);
 
-        $sharedCount = count(array_intersect($myInterests, $have));
-        $score += min(18, $sharedCount * 6);
+        $interestMatch = $this->matchInterests($this->normalizeInterests($myInterests), $have);
+        $interestScore = $interestMatch['exact'] * 8 + $interestMatch['similar'] * 4;
+        $score += min(24, $interestScore);
 
         if ($myGoal && $candidate->dating_goal && $candidate->dating_goal === $myGoal) {
             $score += 10;
@@ -1874,7 +2070,7 @@ class DatingService
 
         $candidates = (clone $baseQuery)
             ->select([
-                'id', 'name', 'profile_slug', 'gender', 'birth_date', 'bio', 'avatar_path',
+                'id', 'name', 'profile_slug', 'gender', 'birth_date', 'bio', 'avatar_path', 'telegram_photo_url',
                 'home_city', 'home_lat', 'home_lng', 'last_seen_at',
                 'dating_goal', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_hide_name', 'dating_hide_age', 'dating_hide_distance',
                 'dating_match_only', 'message_privacy', 'allow_random_messages',
@@ -1935,7 +2131,7 @@ class DatingService
         $lastPage = max(1, (int) ceil($total / $perPage));
         $page = max(1, min($page, $lastPage));
         $rows = (clone $base)
-            ->with(['userA:id,name,avatar_path,last_seen_at,is_invisible,plan,role,is_admin', 'userB:id,name,avatar_path,last_seen_at,is_invisible,plan,role,is_admin'])
+            ->with(['userA:id,name,avatar_path,telegram_photo_url,last_seen_at,is_invisible,plan,role,is_admin', 'userB:id,name,avatar_path,telegram_photo_url,last_seen_at,is_invisible,plan,role,is_admin'])
             ->orderByDesc('created_at')
             ->forPage($page, $perPage)
             ->get();

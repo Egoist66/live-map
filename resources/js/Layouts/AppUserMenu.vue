@@ -19,10 +19,9 @@ const chip: Record<string, string> = {
 <template>
   <Menu ref="menuRef" :model="items" popup class="!min-w-[280px] !p-0 !bg-white dark:!bg-zinc-900/95 dark:!backdrop-blur-xl !border !border-stone-200 dark:!border-white/10 !rounded-[20px] !shadow-float dark:!shadow-[0_24px_70px_-16px_rgba(0,0,0,0.8)] !overflow-hidden" :pt="menuPt">
     <template #item="{ item, props }">
-      <div v-if="(item as any).isHeader" class="relative px-4 py-4 flex gap-3 items-center overflow-hidden border-b border-stone-200 dark:border-white/5 bg-stone-50/60 dark:!bg-zinc-900">
-        <div class="absolute inset-0 dark:bg-gradient-to-br dark:from-white/[0.07] dark:via-transparent dark:to-transparent pointer-events-none"></div>
-        <Avatar :image="avatarSrc" shape="circle" size="large" class="!w-10 !h-10 relative ring-2 ring-white dark:!ring-white/20 shadow" />
-        <div class="relative min-w-0"><div class="text-sm font-bold truncate text-ink-900 dark:!text-white">{{ user?.name }}</div><div class="text-xs text-stone-500 dark:!text-zinc-400 truncate">{{ user?.email }}</div></div>
+      <div v-if="(item as any).isHeader" class="px-4 pt-4 pb-3 flex gap-3 items-center bg-transparent">
+        <Avatar :image="avatarSrc" shape="circle" size="large" class="!w-10 !h-10 ring-2 ring-white dark:!ring-white/20 shadow" />
+        <div class="min-w-0"><div class="text-sm font-bold truncate text-ink-900 dark:!text-white">{{ user?.name }}</div><div class="text-xs text-stone-500 dark:!text-zinc-400 truncate">{{ user?.email }}</div></div>
       </div>
       <a v-else-if="(item as any).separator" class="my-1.5 mx-3 border-t border-stone-200 dark:!border-white/5 block" />
       <a v-else v-bind="props.action" :class="[menuItemClass, (item as any).active ? '!bg-[#F04D9F]/10 dark:!bg-[#F04D9F]/15' : '']">

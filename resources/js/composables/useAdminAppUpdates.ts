@@ -1,6 +1,16 @@
 import { ref } from 'vue'
 import { adminUpdatesApi } from '@/services/app-updates.api'
 
+/**
+ * Хук управления новостями приложения в админке.
+ *
+ * Держит список, пагинацию и форму создания/редактирования.
+ * При публикации (is_published) бэк делает два веера: inbox всем
+ * в колокольчик и рассылку в Telegram-бота (флаг formTelegram →
+ * send_telegram, по умолчанию включён).
+ *
+ * @returns состояние формы/списка и экшены load/save/togglePublish/remove
+ */
 export function useAdminAppUpdates() {
   const items = ref<any[]>([])
   const meta = ref<any>({ current_page: 1, last_page: 1, total: 0 })
@@ -12,6 +22,7 @@ export function useAdminAppUpdates() {
   const formBody = ref('')
   const formVersion = ref('')
   const formPublish = ref(true)
+  const formTelegram = ref(true)
   const editingId = ref<number | null>(null)
   const showDialog = ref(false)
   const deletingId = ref<number | null>(null)
@@ -36,6 +47,7 @@ export function useAdminAppUpdates() {
     formBody.value = ''
     formVersion.value = ''
     formPublish.value = true
+    formTelegram.value = true
     showDialog.value = true
   }
 
@@ -45,6 +57,7 @@ export function useAdminAppUpdates() {
     formBody.value = item.body ?? ''
     formVersion.value = item.version ?? ''
     formPublish.value = !!item.is_published
+    formTelegram.value = true
     showDialog.value = true
   }
 
@@ -55,7 +68,7 @@ export function useAdminAppUpdates() {
     saving.value = true
     error.value = null
     try {
-      const payload = { title: formTitle.value.trim(), body: formBody.value.trim(), version: formVersion.value.trim() || undefined, is_published: formPublish.value }
+      const payload = { title: formTitle.value.trim(), body: formBody.value.trim(), version: formVersion.value.trim() || undefined, is_published: formPublish.value, send_telegram: formTelegram.value }
       if (editingId.value) {
         const updated: any = await adminUpdatesApi.update(editingId.value, payload)
         const i = items.value.findIndex((x) => x.id === editingId.value)
@@ -74,7 +87,7 @@ export function useAdminAppUpdates() {
 
   async function togglePublish(item: any, value: boolean) {
     try {
-      const updated: any = await adminUpdatesApi.update(item.id, { is_published: value })
+      const updated: any = await adminUpdatesApi.update(item.id, { is_published: value, send_telegram: true })
       item.is_published = updated.is_published
       item.published_at = updated.published_at
     } catch (e: any) {
@@ -94,5 +107,5 @@ export function useAdminAppUpdates() {
     }
   }
 
-  return { items, meta, loading, saving, error, formTitle, formBody, formVersion, formPublish, editingId, showDialog, deletingId, load, openCreate, openEdit, canSave, save, togglePublish, remove }
+  return { items, meta, loading, saving, error, formTitle, formBody, formVersion, formPublish, formTelegram, editingId, showDialog, deletingId, load, openCreate, openEdit, canSave, save, togglePublish, remove }
 }

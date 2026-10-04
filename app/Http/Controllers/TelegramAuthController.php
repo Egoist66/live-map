@@ -174,6 +174,7 @@ class TelegramAuthController extends Controller
             'notify_likes' => (bool) ($user->telegram_notify_likes ?? true),
             'notify_matches' => (bool) ($user->telegram_notify_matches ?? true),
             'notify_comments' => (bool) ($user->telegram_notify_comments ?? true),
+            'notify_news' => (bool) ($user->telegram_notify_news ?? true),
             'can_notify' => $user->telegram_id !== null && $user->telegram_blocked_at === null,
             'bot_username' => (string) config('telegram.bot_username', 'U1ove_bot'),
             'notify_enabled' => (bool) ($user->telegram_notify_enabled ?? true),
@@ -314,6 +315,7 @@ class TelegramAuthController extends Controller
             'notify_likes' => 'sometimes|boolean',
             'notify_matches' => 'sometimes|boolean',
             'notify_comments' => 'sometimes|boolean',
+            'notify_news' => 'sometimes|boolean',
             'email_messages' => 'sometimes|boolean',
             'email_likes' => 'sometimes|boolean',
             'email_matches' => 'sometimes|boolean',
@@ -330,6 +332,7 @@ class TelegramAuthController extends Controller
             'notify_likes' => 'telegram_notify_likes',
             'notify_matches' => 'telegram_notify_matches',
             'notify_comments' => 'telegram_notify_comments',
+            'notify_news' => 'telegram_notify_news',
         ];
 
         foreach ($telegramMap as $requestKey => $column) {
@@ -362,6 +365,7 @@ class TelegramAuthController extends Controller
             'notify_likes' => (bool) ($fresh->telegram_notify_likes ?? true),
             'notify_matches' => (bool) ($fresh->telegram_notify_matches ?? true),
             'notify_comments' => (bool) ($fresh->telegram_notify_comments ?? true),
+            'notify_news' => (bool) ($fresh->telegram_notify_news ?? true),
             'email_messages' => (bool) ($fresh->email_notify_messages ?? true),
             'email_likes' => (bool) ($fresh->email_notify_likes ?? true),
             'email_matches' => (bool) ($fresh->email_notify_matches ?? true),

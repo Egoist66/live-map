@@ -63,6 +63,8 @@ export type RealtimeEventMap = {
   'business:status': { business: any }
   /** Очередь заявок для staff: счётчик + свежие pending (polling) */
   'business:pending': { count: number; items: any[] }
+  /** Анкета ULove сохранена: свежие dating_* поля для мгновенного обновления профилей без перезагрузки */
+  'dating:questionnaire-saved': Record<string, any>
   /** Единое inbox-уведомление (таблица notifications): тосты и колокольчик */
   'user:notification.created': { notification: any }
   /** Входящий звонок (сокет VideoIncoming / поллинг freshIncoming) */

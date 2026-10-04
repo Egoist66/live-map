@@ -23,7 +23,7 @@ class FriendshipUpdated implements ShouldBroadcastNow
     public function broadcastAs(): string { return 'friendship.updated'; }
     public function broadcastWith(): array
     {
-        $this->friendship->load(['requester:id,name,avatar_path','addressee:id,name,avatar_path']);
+        $this->friendship->load(['requester:id,name,avatar_path,telegram_photo_url','addressee:id,name,avatar_path,telegram_photo_url']);
         return ['friendship'=>[
             'id'=>$this->friendship->id,
             'requester_id'=>$this->friendship->requester_id,

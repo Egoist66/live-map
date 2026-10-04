@@ -15,7 +15,9 @@ use Illuminate\Support\Facades\Log;
  * Сценарий: человек пользуется ULove через Mini App, но приложение
  * закрыто — колокольчик и web-push не дойдут, а сообщение в Telegram
  * дойдёт всегда. Бот пишет: новые сообщения, лайки анкеты, мэтчи,
- * комментарии (пины, фото, посты, новости районов).
+ * комментарии (пины, фото, посты, новости районов) и новости
+ * приложения от админов (публикации AppUpdate — всем сразу,
+ * даже онлайн: новость важно увидеть, а не только в колокольчике).
  * Письма о людях идут с фото автора через sendPhoto (аватар виден
  * миниатюрой в чате) — сразу понятно, кто пишет/лайкнул.
  * Нет фото — обычный sendMessage, инкогнито/аноним — без фото.
@@ -65,7 +67,7 @@ class TelegramNotifier
      * Можно ли писать пользователю в Telegram.
      *
      * @param User $recipient получатель
-     * @param string $kind messages|likes|matches|comments (тумблер в настройках)
+     * @param string $kind messages|likes|matches|comments|news (тумблер в настройках)
      * @return bool true когда привязан id, мастер и тумблер включены, нет 403
      */
     public static function canNotify(User $recipient, string $kind): bool
@@ -99,6 +101,7 @@ class TelegramNotifier
             'likes' => 'telegram_notify_likes',
             'matches' => 'telegram_notify_matches',
             'comments' => 'telegram_notify_comments',
+            'news' => 'telegram_notify_news',
             default => null,
         };
 
@@ -347,6 +350,296 @@ class TelegramNotifier
         $photo = $anonymous ? null : self::actorPhotoUrl($actor);
 
         self::sendWithPhoto($recipient, $text, $photo, $path, 'Смотреть');
+    }
+
+    /**
+     * Отправить одному пользователю новость приложения от админов.
+     *
+     * В отличие от сообщений/лайков гейта онлайна здесь нет: новость
+     * рассылается всем сразу, даже тем, кто сейчас в приложении, —
+     * иначе её увидят только открывшие колокольчик. Гейты остаются:
+     * мастер-тумблер, тумблер «Новости», привязка telegram_id и 403-блок.
+     * Повтор одной новости одному человеку отсекается дедупом на месяц.
+     *
+     * Новость уходит целиком прямо в бота: шапка ULove, жирный заголовок
+     * и полный текст с абзацами — открывать приложение не нужно.
+     * Длинные тексты режутся на несколько сообщений подряд (лимит
+     * Bot API — 4096 символов на сообщение), порядок сохраняет очередь.
+     *
+     * @param User $recipient получатель
+     * @param \App\Models\AppUpdate $update опубликованная новость
+     * @return bool true когда хотя бы первое письмо принято в очередь
+     */
+    public static function appNews(User $recipient, \App\Models\AppUpdate $update): bool
+    {
+        $recipient = self::resolveRecipient($recipient);
+
+        if ($recipient === null) {
+            return false;
+        }
+
+        if (! self::canNotify($recipient, 'news')) {
+            return false;
+        }
+
+        $updateId = (int) $update->id;
+
+        if ($updateId <= 0) {
+            return false;
+        }
+
+        $dedupKey = 'tg:appnews:'.$updateId.':'.$recipient->id;
+
+        if (Cache::has($dedupKey)) {
+            self::logSkip($recipient, 'news', 'duplicate');
+
+            return false;
+        }
+
+        Cache::put($dedupKey, true, 30 * self::DEDUP_TTL_SECONDS);
+
+        $parts = self::appNewsParts($update);
+
+        if ($parts === []) {
+            return false;
+        }
+
+        $sent = false;
+
+        foreach ($parts as $part) {
+            try {
+                if (self::send($recipient, $part)) {
+                    $sent = true;
+                }
+            } catch (\Throwable $e) {
+                Log::warning('telegram appnews part failed', [
+                    'user_id' => (int) $recipient->id,
+                    'update_id' => $updateId,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return $sent;
+    }
+
+    /**
+     * Разослать новость приложения всем пользователям бота.
+     *
+     * Синхронный чанк по 500: каждая отправка — лишь постановка
+     * SendTelegramMessage в очередь (сам HTTP делает воркер по одному
+     * с бэкоффом 429), поэтому тысячные аудитории запрос не вешают.
+     * Возвращает число пользователей, кому принято хотя бы первое
+     * письмо (длинная новость — это несколько сообщений подряд).
+     *
+     * @param \App\Models\AppUpdate $update опубликованная новость
+     * @return int скольким пользователям поставлено в очередь
+     */
+    public static function broadcastAppUpdate(\App\Models\AppUpdate $update): int
+    {
+        $queued = 0;
+
+        try {
+            User::whereNotNull('telegram_id')
+                ->whereNull('telegram_blocked_at')
+                ->where(function ($query) {
+                    $query->whereNull('telegram_notify_enabled');
+                    $query->orWhere('telegram_notify_enabled', true);
+                })
+                ->where(function ($query) {
+                    $query->whereNull('telegram_notify_news');
+                    $query->orWhere('telegram_notify_news', true);
+                })
+                ->orderBy('id')
+                ->chunk(500, function ($users) use ($update, &$queued) {
+                    foreach ($users as $user) {
+                        try {
+                            if (self::appNews($user, $update)) {
+                                $queued++;
+                            }
+                        } catch (\Throwable $e) {
+                            Log::warning('telegram appnews failed', [
+                                'user_id' => (int) $user->id,
+                                'update_id' => (int) $update->id,
+                                'error' => $e->getMessage(),
+                            ]);
+                        }
+                    }
+                });
+        } catch (\Throwable $e) {
+            Log::warning('telegram appnews broadcast failed', [
+                'update_id' => (int) $update->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        Log::info('telegram appnews broadcast', ['update_id' => (int) $update->id, 'queued' => $queued]);
+
+        return $queued;
+    }
+
+    /**
+     * Собрать новость целиком для Bot API (parse_mode=HTML).
+     *
+     * Первое сообщение — шапка ULove + жирный заголовок с версией
+     * + начало текста, дальше — продолжения как есть. Ничего не режем:
+     * вся новость видна прямо в боте, открывать приложение не нужно.
+     * Каждое сообщение держим до 3900 символов (запас под лимит 4096),
+     * рвём по границам абзацев, строк и слов, HTML-сущности не разрываем.
+     *
+     * @param \App\Models\AppUpdate $update новость
+     * @return array<int, string> сообщения по порядку (первое с шапкой)
+     */
+    private static function appNewsParts(\App\Models\AppUpdate $update): array
+    {
+        $title = trim((string) ($update->title ?? ''));
+
+        if ($title === '') {
+            $title = 'Новость приложения';
+        }
+
+        $version = trim((string) ($update->version ?? ''));
+        $versionPart = $version !== '' ? ' <code>v'.self::escape($version).'</code>' : '';
+
+        $rawBody = (string) ($update->body ?? '');
+        $normalized = (string) preg_replace("/\r\n?/", "\n", $rawBody);
+        $normalized = (string) preg_replace("/\n{3,}/", "\n\n", trim($normalized));
+
+        $lines = explode("\n", $normalized);
+        $escapedLines = [];
+
+        foreach ($lines as $line) {
+            $escapedLines[] = self::escape($line);
+        }
+
+        $body = trim(implode("\n", $escapedLines));
+
+        $header = '📰 '.self::ULOVE_TAG.' • Новости приложения'."\n\n";
+        $header .= '<b>'.self::escape($title).'</b>'.$versionPart."\n";
+        $header .= '────────────────';
+
+        if ($body === '') {
+            return [$header];
+        }
+
+        $limit = 3900;
+        $firstLimit = $limit - mb_strlen($header) - 2;
+
+        if ($firstLimit < 500) {
+            $firstLimit = 500;
+        }
+
+        $bodyChunks = self::chunkPlain($body, $firstLimit, $limit);
+
+        $parts = [];
+        $firstChunk = array_shift($bodyChunks);
+        $parts[] = $header."\n\n".(string) $firstChunk;
+
+        foreach ($bodyChunks as $chunk) {
+            $parts[] = '<i>(продолжение)</i>'."\n\n".$chunk;
+        }
+
+        return $parts;
+    }
+
+    /**
+     * Нарезать текст на куски с запасом под лимит Bot API.
+     *
+     * Первый кусок короче (рядом ляжет шапка новости), остальные —
+     * по полному лимиту. Рвём по последнему двойному переносу, иначе
+     * по переносу, иначе по пробелу, иначе жёстко по лимиту. Разрыв
+     * внутри HTML-сущности (&amp; и т.п.) откатываем к её началу,
+     * иначе Bot API не распарсит разметку и письмо потеряется.
+     *
+     * @param string $text экранированный текст с переносами
+     * @param int $firstLimit максимум первого куска
+     * @param int $limit максимум остальных кусков
+     * @return array<int, string> куски без пустых
+     */
+    private static function chunkPlain(string $text, int $firstLimit, int $limit): array
+    {
+        $rest = trim($text);
+
+        if ($rest === '') {
+            return [];
+        }
+
+        $chunks = [];
+        $currentLimit = $firstLimit;
+
+        while (mb_strlen($rest) > $currentLimit) {
+            $window = mb_substr($rest, 0, $currentLimit);
+            $cut = self::findChunkCut($window);
+
+            if ($cut <= 0) {
+                $cut = mb_strlen($window);
+            }
+
+            $piece = trim(mb_substr($rest, 0, $cut));
+
+            if ($piece !== '') {
+                $chunks[] = $piece;
+            }
+
+            $rest = trim(mb_substr($rest, $cut));
+            $currentLimit = $limit;
+
+            if ($rest === '') {
+                break;
+            }
+        }
+
+        if ($rest !== '') {
+            $chunks[] = $rest;
+        }
+
+        return $chunks;
+    }
+
+    /**
+     * Найти место разрыва куска внутри окна.
+     *
+     * @param string $window начало остатка длиной в лимит
+     * @return int позиция разрыва (0 когда окно пустое)
+     */
+    private static function findChunkCut(string $window): int
+    {
+        if ($window === '') {
+            return 0;
+        }
+
+        $cut = mb_strlen($window);
+
+        $paragraph = mb_strrpos($window, "\n\n");
+
+        if ($paragraph !== false && $paragraph > 0) {
+            $cut = $paragraph;
+        } else {
+            $line = mb_strrpos($window, "\n");
+
+            if ($line !== false && $line > 0) {
+                $cut = $line;
+            } else {
+                $space = mb_strrpos($window, ' ');
+
+                if ($space !== false && $space > 0) {
+                    $cut = $space;
+                }
+            }
+        }
+
+        $head = mb_substr($window, 0, $cut);
+        $ampPos = mb_strrpos($head, '&');
+
+        if ($ampPos !== false && ($cut - $ampPos) <= 8) {
+            $between = mb_substr($window, $ampPos, $cut - $ampPos);
+
+            if (mb_strpos($between, ';') === false && $ampPos > 0) {
+                $cut = $ampPos;
+            }
+        }
+
+        return $cut;
     }
 
     /**
@@ -833,7 +1126,7 @@ class TelegramNotifier
      * toggle-off/online/cooldown/duplicate).
      *
      * @param User $recipient получатель
-     * @param string $kind messages|likes|matches|comments
+     * @param string $kind messages|likes|matches|comments|news
      * @param string $reason unlinked|blocked|toggle-off|online|duplicate
      * @return void
      */

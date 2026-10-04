@@ -60,6 +60,15 @@ function goalShort(card: any): string {
   return s.goalLabel(card?.goal ?? null)
 }
 
+/**
+ * Анкета сохранена в табе «Моя анкета»: свои интересы/цель влияют
+ * на подборку (скоринг и цель «по интересам»), поэтому ленту
+ * пересчитываем сразу — без ручной перезагрузки страницы.
+ */
+function onQuestionnaireSaved(): void {
+  void s.loadFeed()
+}
+
 const dialogPt = {
   root: { class: '!rounded-3xl dark:!bg-zinc-900 dark:!border-zinc-700' },
   header: { class: 'dark:!bg-zinc-900 dark:!text-white' },
@@ -67,6 +76,24 @@ const dialogPt = {
 }
 
 const interestTags = ['музыка', 'спорт', 'кино', 'путешествия', 'игры', 'еда', 'книги', 'танцы']
+
+/**
+ * Свои интересы из анкеты — для кнопки «Как у меня» в фильтре.
+ */
+const myInterestTags = computed<string[]>(() => {
+  const raw = (page.props.auth as any)?.user?.dating_interests
+  if (!Array.isArray(raw)) return []
+  return raw.map((t) => String(t ?? '').trim().toLowerCase()).filter((t) => t !== '').slice(0, 5)
+})
+
+/**
+ * Заполнить фильтр интересов своими из анкеты.
+ * Удобно вместе с целью «По интересам»: подборка строится от анкеты.
+ */
+function fillMyInterests(): void {
+  if (!myInterestTags.value.length) return
+  s.filters.value.interests = [...myInterestTags.value]
+}
 
 const goalOptions = [
   { label: 'Любая цель', value: null },
@@ -336,7 +363,7 @@ onUnmounted(() => {
                   <div class="text-xs text-stone-500 dark:text-zinc-400">Так тебя видят в ленте ULove</div>
                 </div>
               </div>
-              <DatingQuestionnaireForm />
+              <DatingQuestionnaireForm @saved="onQuestionnaireSaved" />
             </div>
           </template>
 
@@ -882,6 +909,17 @@ onUnmounted(() => {
                 @click="s.toggleInterest(t)"
               />
             </div>
+            <div class="mt-1.5 flex flex-wrap items-center gap-2">
+              <button
+                v-if="myInterestTags.length"
+                type="button"
+                class="text-[11px] font-bold text-violet-600 dark:text-violet-300 hover:underline"
+                @click="fillMyInterests()"
+              >
+                Как у меня: {{ myInterestTags.map((t) => `#${t}`).join(' ') }}
+              </button>
+              <span class="text-[11px] text-stone-500 dark:text-zinc-400">Совпадают и похожие: «клубы» найдёт и «ночные клубы». Цель «По интересам» подбирает от твоей анкеты.</span>
+            </div>
           </div>
           <div class="rounded-2xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/60 p-3 flex flex-col gap-3">
             <div class="flex items-center gap-3">
@@ -932,7 +970,7 @@ onUnmounted(() => {
           <div>Фильтр «Люди рядом» — только если хочешь локально. Без него показывают всех. Free: рядом до 10 км, дальше — PRO.</div>
           <div>Свайпы безлимитные. Сообщения без мэтча: Free {{ s.quota.value ? `${s.quota.value.left}/${s.quota.value.limit}` : '3/3' }}, PRO — 10/мес. Взаимный лайк (мэтч) открывает чат всегда, даже при исчерпанном лимите.</div>
           <div>Избранное — свежие лайкнутые без мэтча. Лимиты: Free до 3, Pro до 5, Premium до 15. Лайки сверх лимита тоже ждут мэтча — человек их видит.</div>
-          <div>Лента умная: выше те, кто лайкнул тебя (особенно суперлайком), кто онлайн, с общими интересами и целью, с фото, рядом и новички.</div>
+          <div>Лента умная: выше те, кто лайкнул тебя (особенно суперлайком), кто онлайн, с общими или похожими интересами и целью, с фото, рядом и новички. Цель «По интересам» подбирает людей под твою анкету.</div>
           <div>Синее сердце — суперлайк: Free 1/день, PRO/Premium 5/день, пак +5 докупается. Жёлтая стрелка — откат последнего свайпа: Free 1/день, PRO/Premium безлимитно — в боковом меню (бургер сверху).</div>
           <div>Всех просвайпал(а)? Free возвращает ленту один раз кнопкой «Начать заново», а PRO/Premium — безлимитно кнопкой «Показать снова». Стафф (админ/модератор) всегда на Premium.</div>
           <div>Таб «Активные» — кто сейчас в ULove. Открывай анкету, пиши, если человек не закрыл сообщения.</div>

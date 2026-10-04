@@ -22,6 +22,7 @@ import ProfileThoughtDialog from '@/Components/Features/Profile/ProfileThoughtDi
 import { useDashboardDesign } from '@/composables/useDashboardDesign'
 import { useProfileLayout } from '@/composables/useProfileLayout'
 import { useProfileThought } from '@/composables/useProfileThought'
+import { useDatingSavedSync, patchDatingFields } from '@/composables/useDatingSavedSync'
 import { planOf } from '@/composables/usePlanLimits'
 import { computed, defineAsyncComponent, onMounted, ref } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
@@ -77,16 +78,29 @@ const ulovePhotos = computed(() => {
 const showDatingEdit = ref(false)
 
 /**
- * Анкета сохранена: закрыть диалог и обновить данные.
+ * Анкета сохранена: мгновенно показать новые данные из события,
+ * затем свериться с сервером. Без оптимистичного патча профиль
+ * до ответа reload показывал старое и казался «необновлённым».
+ *
+ * @param saved свежие dating_* поля из формы анкеты (может отсутствовать)
  */
-function onDatingSaved(): void {
+function onDatingSaved(saved?: Record<string, any>): void {
   showDatingEdit.value = false
+
+  try {
+    patchDatingFields(props.user, saved)
+  } catch {
+  }
 
   try {
     router.reload({ only: ['user'] })
   } catch {
   }
 }
+
+// Свой профиль, сохранённый из другого места (свайпы, страница профиля),
+// подтягиваем без перезагрузки страницы.
+useDatingSavedSync(() => props.user)
 
 onMounted(async () => {
   if (!design.dash.u.value) {

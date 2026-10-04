@@ -26,7 +26,7 @@ class MessageController extends Controller
         $clearedAt = $conversation->participantRows()->where('user_id', $request->user()->id)->value('cleared_at');
         $before = $request->input('before');
         $limit = max(1, min(50, (int) $request->input('limit', self::HISTORY_PAGE_SIZE)));
-        $q = $conversation->messages()->with(['sender:id,name,avatar_path', 'replyTo.sender:id,name'])->reorder()->orderByDesc('id');
+        $q = $conversation->messages()->with(['sender:id,name,avatar_path,telegram_photo_url', 'replyTo.sender:id,name'])->reorder()->orderByDesc('id');
         if ($before) $q->where('id','<',$before);
         if ($clearedAt) $q->where('created_at', '>', $clearedAt);
         $collection = $q->limit($limit + 1)->get();
@@ -194,7 +194,7 @@ class MessageController extends Controller
             'attachment_kind' => $kind,
             'attachment_duration' => $duration,
         ]);
-        $msg->load(['sender:id,name,avatar_path','replyTo.sender:id,name','conversation.participantRows']);
+        $msg->load(['sender:id,name,avatar_path,telegram_photo_url','replyTo.sender:id,name','conversation.participantRows']);
         $conversation->update(['last_message_at'=>$msg->created_at]);
         $conversation->participantRows()->whereNotNull('hidden_at')->update(['hidden_at'=>null]);
         try{ broadcast(new MessageSent($msg))->toOthers(); }catch(\Throwable $e){ \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
@@ -225,7 +225,7 @@ class MessageController extends Controller
         try {
             $ids = $conversation->participantRows()->where('user_id', '!=', $sender->id)->pluck('user_id');
             if ($ids->isEmpty()) return;
-            $senderModel = $sender instanceof User ? $sender : User::select('id', 'name', 'avatar_path')->find($sender->id);
+            $senderModel = $sender instanceof User ? $sender : User::select('id', 'name', 'avatar_path', 'telegram_photo_url')->find($sender->id);
             $text = trim((string) $msg->body);
             if ($text === '' && $msg->shared_post_type) {
                 $text = $msg->shared_post_type === 'district' ? '📰 Новость района' : '📝 Пост';
@@ -281,7 +281,7 @@ class MessageController extends Controller
         abort_unless($message->conversation->hasParticipant($request->user()->id), 403);
         $data = $request->validate(['body' => 'required|string|max:2000']);
         $message->update(['body' => $data['body'], 'edited_at' => now()]);
-        $message->load(['sender:id,name,avatar_path', 'conversation.participantRows']);
+        $message->load(['sender:id,name,avatar_path,telegram_photo_url', 'conversation.participantRows']);
         try { broadcast(new MessageUpdated($message))->toOthers(); } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
         return response()->json($message->toArrayPayload());
     }
@@ -302,7 +302,7 @@ class MessageController extends Controller
     {
         abort_unless($conversation->hasParticipant($request->user()->id),403);
         $list = $conversation->messages()
-            ->with(['sender:id,name,avatar_path', 'replyTo.sender:id,name'])
+            ->with(['sender:id,name,avatar_path,telegram_photo_url', 'replyTo.sender:id,name'])
             ->whereNotNull('pinned_at')
             ->orderBy('pinned_at')
             ->get()

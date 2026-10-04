@@ -22,7 +22,7 @@ class MessagePinned implements ShouldBroadcastNow
 
     public function broadcastWith(): array
     {
-        $this->message->load('sender:id,name,avatar_path');
+        $this->message->load('sender:id,name,avatar_path,telegram_photo_url');
         return ['message' => $this->message->toArrayPayload()];
     }
 

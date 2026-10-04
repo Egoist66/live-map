@@ -165,6 +165,7 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::post('/custom-categories', [CustomCategoryController::class, 'store'])->middleware('throttle:social-write');
     Route::delete('/custom-categories/{customCategory}', [CustomCategoryController::class, 'destroy'])->middleware('throttle:social-write');
     Route::post('/reports', [ReportController::class, 'store'])->middleware('throttle:reports');
+    Route::post('/support', [\App\Http\Controllers\SupportController::class, 'store'])->middleware('throttle:support');
 
     Route::get('/chat/me', [ChatUserController::class, 'me']);
     Route::post('/chat/heartbeat', [ChatUserController::class, 'heartbeat'])->middleware('throttle:chat-signal');

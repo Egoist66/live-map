@@ -94,7 +94,7 @@ class ChatAutoReply
             'type' => 'text',
         ]);
 
-        $reply->load(['sender:id,name,avatar_path', 'conversation.participantRows']);
+        $reply->load(['sender:id,name,avatar_path,telegram_photo_url', 'conversation.participantRows']);
 
         $conversation->update(['last_message_at' => $reply->created_at]);
 

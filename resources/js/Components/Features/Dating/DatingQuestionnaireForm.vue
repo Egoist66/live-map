@@ -10,7 +10,7 @@ import { useDatingQuestionnaire } from '@/composables/useDatingQuestionnaire'
 import { DATING_GOAL_PRESETS, DATING_INTEREST_PRESETS } from '@/validation/schemas/dating.schema'
 import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
 
-const emit = defineEmits<{ (e: 'saved'): void }>()
+const emit = defineEmits<{ (e: 'saved', saved?: Record<string, any>): void }>()
 
 const q = useDatingQuestionnaire()
 const { selectPt } = useDropdownMenuStyle()
@@ -22,7 +22,7 @@ onMounted(() => q.resetFromUser())
  */
 async function onSave(): Promise<void> {
   const ok = await q.save()
-  if (ok) emit('saved')
+  if (ok) emit('saved', q.lastSaved.value ?? undefined)
 }
 </script>
 

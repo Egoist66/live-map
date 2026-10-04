@@ -4,9 +4,11 @@ import Message from 'primevue/message'
 import ProgressSpinner from 'primevue/progressspinner'
 import ToggleSwitch from 'primevue/toggleswitch'
 import { useTelegram } from '@/composables/useTelegram'
+import { useBotQr } from '@/composables/useBotQr'
 import { useTelegramNotifications, type TelegramNotifyPrefs } from '@/composables/useTelegramNotifications'
 
 const tg = useTelegramNotifications()
+const qr = useBotQr()
 const { openLink } = useTelegram()
 
 onMounted(() => {
@@ -26,6 +28,7 @@ const botRows: NotifyRow[] = [
   { key: 'notify_likes', title: 'Лайки анкеты', desc: 'Вас лайкнули в ULove (инкогнито остаётся анонимным)' },
   { key: 'notify_matches', title: 'Мэтчи', desc: 'Взаимность — бот позовёт в открытый чат' },
   { key: 'notify_comments', title: 'Комментарии', desc: 'Ответили на ваш пин, фото, пост или новость района' },
+  { key: 'notify_news', title: 'Новости приложения', desc: 'Важное от команды ULove — приходит всем сразу, даже если приложение открыто' },
  ]
 
 const emailRows: NotifyRow[] = [
@@ -53,14 +56,55 @@ function save(key: PrefKey, value: boolean): void {
 
       <template v-else>
         <Message v-if="!tg.linked.value" severity="info" class="mt-3 !text-xs">
-          Аккаунт ещё не привязан. Откройте приложение через кнопку бота в Telegram — привязка произойдёт сама, и сюда прилетят уведомления.
+          <span class="block">Аккаунт ещё не привязан. Наведи камеру на QR — откроется бот, нажми в нём Start и вернись сюда: привязка произойдёт сама.</span>
+          <span class="mt-2 flex items-center gap-3">
+            <button
+              v-if="!qr.qrFailed.value"
+              type="button"
+              :title="`Открыть бота @${qr.botUsername.value}`"
+              class="shrink-0 rounded-xl transition active:scale-95 hover:opacity-90 focus-visible:outline-2 focus-visible:outline-sky-500"
+              @click="qr.openBot()"
+            >
+              <img
+                :src="qr.qrSrc"
+                alt="QR-код Telegram-бота — наведи камеру или нажми, чтобы открыть бота"
+                width="132"
+                height="132"
+                loading="lazy"
+                class="w-[120px] h-[120px] rounded-xl border border-stone-200 dark:border-zinc-700 bg-white object-contain cursor-pointer"
+                @error="qr.markQrFailed()"
+              />
+            </button>
+            <span class="min-w-0">
+              <span class="block font-bold text-sky-600 dark:text-sky-400">@{{ qr.botUsername.value }}</span>
+              <button type="button" class="underline font-semibold" @click="openLink(qr.botLink.value)">Открыть бота без камеры</button>
+            </span>
+          </span>
         </Message>
 
         <template v-else>
           <Message v-if="!tg.canNotify.value" severity="warn" class="mt-3 !text-xs">
-            Бот пока не может вам писать — нажмите
-            <button type="button" class="underline font-semibold" @click="openLink(tg.botLink.value)">Start у @{{ tg.botUsername.value }}</button>,
-            затем вернитесь сюда.
+            <span class="block">Бот пока не может вам писать — наведи камеру на QR или нажми на него, затем нажми Start у @{{ qr.botUsername.value }} и вернись сюда.</span>
+            <span class="mt-2 flex items-center gap-3">
+              <button
+                v-if="!qr.qrFailed.value"
+                type="button"
+                :title="`Открыть бота @${qr.botUsername.value}`"
+                class="shrink-0 rounded-xl transition active:scale-95 hover:opacity-90 focus-visible:outline-2 focus-visible:outline-sky-500"
+                @click="qr.openBot()"
+              >
+                <img
+                  :src="qr.qrSrc"
+                  alt="QR-код Telegram-бота — наведи камеру или нажми, чтобы открыть бота"
+                  width="132"
+                  height="132"
+                  loading="lazy"
+                  class="w-[120px] h-[120px] rounded-xl border border-stone-200 dark:border-zinc-700 bg-white object-contain cursor-pointer"
+                  @error="qr.markQrFailed()"
+                />
+              </button>
+              <button type="button" class="underline font-semibold" @click="openLink(qr.botLink.value)">Start у @{{ qr.botUsername.value }}</button>
+            </span>
           </Message>
 
           <p class="mt-3 text-xs font-bold uppercase tracking-wide opacity-60">💬 Бот — сообщения сюда</p>

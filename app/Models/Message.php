@@ -222,6 +222,7 @@ class Message extends Model
                 'id' => $this->sender->id,
                 'name' => $this->sender->name,
                 'avatar_path' => $this->sender->avatar_path,
+                'telegram_photo_url' => $this->sender->telegram_photo_url ?? null,
                 'avatar_url' => $this->sender->avatar_url,
             ] : null,
         ];

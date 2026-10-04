@@ -92,7 +92,6 @@ export function useAppLayout() {
     if (isBusinessAccount.value) {
       return [
         header,
-        { separator: true },
         ...moderation,
         { label: 'Настройки бизнеса', icon: 'pi pi-cog', accent: 'slate', active: route().current('cabinet.settings'), command: () => router.visit('/cabinet/settings') },
         { separator: true },
@@ -142,7 +141,6 @@ export function useAppLayout() {
 
     return [
       header,
-      { separator: true },
       ...moderation,
       ...telegramSections,
       ...extraModuleSections,

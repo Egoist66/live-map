@@ -836,7 +836,7 @@ export function useSwipes() {
         }
       }
       const onLiked = () => {
-        void loadFeed()
+        void refreshFeedSoft()
         void loadAdmirers()
       }
       ensureUserChannel()
@@ -1172,7 +1172,11 @@ export function useSwipes() {
     try {
       const res = await datingApi.undo(target.card.id)
       quota.value = res.quota
-      cards.value.splice(index.value, 0, res.card)
+      if (res.card) {
+        const returnedId = (res.card as { id?: number | null }).id ?? null
+        const alreadyThere = returnedId != null && cards.value.some((c) => c.id === returnedId)
+        if (!alreadyThere) cards.value.splice(index.value, 0, res.card)
+      }
       lastSwiped.value = null
       if (target.action !== 'pass') void loadFavorites()
       void loadAdmirers()
@@ -1306,6 +1310,30 @@ export function useSwipes() {
       acting.value = false
       actingId.value = null
       actingAction.value = null
+    }
+  }
+
+  /**
+   * Мягко подтянуть свежие анкеты без сброса колоды.
+   *
+   * Входящий лайк поднимает вес автора (+40 к скору), но жёсткий
+   * `loadFeed()` сбрасывал бы `index` в 0 и тасовал колоду под
+   * пальцем — отсюда «прыжки» и ощущение дублей. Здесь только
+   * докачиваем действительно новые карточки в хвост.
+   *
+   * @returns void
+   */
+  async function refreshFeedSoft(): Promise<void> {
+    try {
+      const seenIds = cards.value.map((c) => c.id)
+      const exclude = seenIds.filter((id): id is number => id != null).slice(-200)
+      const res = await datingApi.feed(filters.value, exclude, 20)
+      quota.value = res.quota
+      const known = new Set(cards.value.map((c) => c.id))
+      const fresh = res.cards.filter((c) => !known.has(c.id))
+      if (fresh.length > 0) cards.value = [...cards.value, ...fresh]
+    } catch {
+      return
     }
   }
 
@@ -1709,6 +1737,7 @@ export function useSwipes() {
     goalLabel,
     ageLabel,
     loadFeed,
+    refreshFeedSoft,
     loadMatches,
     loadMoreMatches,
     subscribeRealtime,

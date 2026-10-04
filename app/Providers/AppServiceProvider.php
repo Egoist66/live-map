@@ -260,6 +260,7 @@ class AppServiceProvider extends ServiceProvider
             'social-write' => 60,
             'screen-lock' => 30,
             'reports' => 10,
+            'support' => 6,
             'push-test' => 10,
             'profile-write' => 30,
             'email-status' => 60,

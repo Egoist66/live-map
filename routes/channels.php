@@ -19,5 +19,5 @@ Broadcast::channel('threads.{kind}.{id}', function () { return true; });
 
 Broadcast::channel('online', function ($user) {
     if ($user->isInvisibleActive()) return false;
-    return ['id' => $user->id, 'name' => $user->name, 'avatar_path' => $user->avatar_path];
+    return ['id' => $user->id, 'name' => $user->name, 'avatar_path' => $user->avatar_path, 'telegram_photo_url' => $user->telegram_photo_url, 'avatar_url' => $user->avatar_url];
 });

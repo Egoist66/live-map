@@ -6,6 +6,7 @@ export interface TelegramNotifyPrefs {
   notify_likes: boolean
   notify_matches: boolean
   notify_comments: boolean
+  notify_news: boolean
   email_messages: boolean
   email_likes: boolean
   email_matches: boolean
@@ -19,6 +20,7 @@ const prefs = ref<TelegramNotifyPrefs>({
   notify_likes: true,
   notify_matches: true,
   notify_comments: true,
+  notify_news: true,
   email_messages: true,
   email_likes: true,
   email_matches: true,
@@ -36,7 +38,8 @@ const RATE_LIMIT_FALLBACK_MS = 30_000
 /**
  * Тумблеры уведомлений от бота в личку Telegram.
  *
- * Бот пишет о новых сообщениях, лайках, мэтчах и комментариях с кнопкой,
+ * Бот пишет о новых сообщениях, лайках, мэтчах, комментариях и новостях
+ * приложения с кнопкой,
  * открывающей Mini App на нужном экране, — ничего не пропустишь,
  * даже когда приложение закрыто. Вся логика здесь (Правило №1):
  * компонент только показывает тумблеры и дергает save.
@@ -116,6 +119,7 @@ export function useTelegramNotifications() {
           notify_likes: data.notify_likes ?? true,
           notify_matches: data.notify_matches ?? true,
           notify_comments: data.notify_comments ?? true,
+          notify_news: data.notify_news ?? true,
           email_messages: data.email_messages ?? true,
           email_likes: data.email_likes ?? true,
           email_matches: data.email_matches ?? true,
@@ -199,6 +203,7 @@ export function useTelegramNotifications() {
         notify_likes: data.notify_likes ?? prefs.value.notify_likes,
         notify_matches: data.notify_matches ?? prefs.value.notify_matches,
         notify_comments: data.notify_comments ?? prefs.value.notify_comments,
+        notify_news: data.notify_news ?? prefs.value.notify_news,
         email_messages: data.email_messages ?? prefs.value.email_messages,
         email_likes: data.email_likes ?? prefs.value.email_likes,
         email_matches: data.email_matches ?? prefs.value.email_matches,

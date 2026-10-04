@@ -24,11 +24,11 @@ export const adminUpdatesApi = {
     const { data } = await api.get('/api/admin/updates', { params: { page } })
     return data
   },
-  async create(payload: { title: string; body: string; version?: string; is_published?: boolean }) {
+  async create(payload: { title: string; body: string; version?: string; is_published?: boolean; send_telegram?: boolean }) {
     const { data } = await api.post('/api/admin/updates', payload)
     return data
   },
-  async update(id: number, payload: { title?: string; body?: string; version?: string; is_published?: boolean }) {
+  async update(id: number, payload: { title?: string; body?: string; version?: string; is_published?: boolean; send_telegram?: boolean }) {
     const { data } = await api.patch(`/api/admin/updates/${id}`, payload)
     return data
   },

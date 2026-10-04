@@ -844,6 +844,10 @@ function handleNotification(e: any) {
     handleCooperation({ cooperation: data.cooperation })
     return
   }
+  if (data.support) {
+    handleSupport({ support: data.support })
+    return
+  }
   if (data.business && String(n.type || '').startsWith('business.')) {
     handleBusinessInbox(String(n.type), data.business)
     return
@@ -952,6 +956,31 @@ function handleCooperation(e: any) {
     icon: 'pi pi-briefcase',
     title: `🤝 Сотрудничество: ${String(c.company).slice(0, 40)}`,
     body: `${String(c.message || 'Хотят обсудить сотрудничество')} — ${c.email}`.slice(0, 90),
+    avatar: null,
+    link: '/admin',
+    createdAt: Date.now(),
+  })
+}
+
+/**
+ * Тост из inbox-строки поддержки (только админам).
+ *
+ * Приходит inbox-строкой support.request (сокет, поллер,
+ * 20с-фолбэк — везде один id, дублей нет по построению).
+ *
+ * @param e пейлоад с ключом support {subject, message, name, email}
+ */
+function handleSupport(e: any) {
+  if (!isAdminNow()) return
+  const c = e?.support
+  if (!c?.subject || !c?.email) return
+  if (isDuplicateEvent(`support-${c.email}-${c.subject}`)) return
+  push({
+    id: `support-${Date.now()}`,
+    type: 'business',
+    icon: 'pi pi-life-buoy',
+    title: `🛟 Поддержка: ${String(c.subject).slice(0, 40)}`,
+    body: `${String(c.message || 'Новое обращение')} — ${c.name || c.email}`.slice(0, 90),
     avatar: null,
     link: '/admin',
     createdAt: Date.now(),

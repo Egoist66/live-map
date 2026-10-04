@@ -1,19 +1,20 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted } from 'vue'
 import Card from 'primevue/card'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
 import { useClipboard } from '@vueuse/core'
 import { useToast } from 'primevue/usetoast'
-import { useTelegramNotifications } from '@/composables/useTelegramNotifications'
+import { useBotQr } from '@/composables/useBotQr'
 
 /**
  * Раздел «Интеграции»: Telegram-бот — QR для быстрого перехода,
  * ссылка, копирование username и список возможностей бота.
- * Имя бота и ссылка — из useTelegramNotifications (Правило №1),
- * QR-картинка лежит в `public/images/telegram-bot-qr.png`.
+ * Имя бота и ссылка — из useBotQr (Правило №1),
+ * QR-картинка лежит в `public/images/bot_qr.png`, клик по ней
+ * открывает бота (скан камерой — тоже).
  */
-const tg = useTelegramNotifications()
+const tg = useBotQr()
 const { copy } = useClipboard()
 const toast = (() => {
   try {
@@ -22,7 +23,7 @@ const toast = (() => {
     return null as any
   }
 })()
-const qrFailed = ref(false)
+const qrFailed = tg.qrFailed
 
 onMounted(() => {
   void tg.loadTelegramNotify()
@@ -50,17 +51,17 @@ async function copyBotName(): Promise<void> {
 
       <div class="mt-6 flex flex-col sm:flex-row gap-5 max-w-xl">
         <div v-if="!qrFailed" class="shrink-0 mx-auto sm:mx-0">
-          <a :href="tg.botLink.value" target="_blank" rel="noopener" title="Открыть бота в Telegram" class="block rounded-2xl transition active:scale-95 hover:opacity-90 focus-visible:outline-2 focus-visible:outline-sky-500">
+          <button type="button" :title="'Открыть бота в Telegram'" class="block rounded-2xl transition active:scale-95 hover:opacity-90 focus-visible:outline-2 focus-visible:outline-sky-500" @click="tg.openBot()">
             <img
-              src="/images/telegram-bot-qr.png"
-              alt="QR-код Telegram-бота — нажми, чтобы открыть бота"
+              :src="tg.qrSrc"
+              alt="QR-код Telegram-бота — наведи камеру или нажми, чтобы открыть бота"
               width="220"
               height="220"
               loading="lazy"
               class="w-[200px] h-[200px] sm:w-[220px] sm:h-[220px] rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white object-contain cursor-pointer"
-              @error="qrFailed = true"
+              @error="tg.markQrFailed()"
             />
-          </a>
+          </button>
           <p class="mt-2 text-center text-sm font-bold text-sky-600 dark:text-sky-400">@{{ tg.botUsername.value || 'U1ove_bot' }}</p>
         </div>
 

@@ -13,7 +13,7 @@ class UserBlockController extends Controller
     public function index(Request $request)
     {
         $blocks = UserBlock::where('blocker_id', $request->user()->id)
-            ->with('blocked:id,name,avatar_path')
+            ->with('blocked:id,name,avatar_path,telegram_photo_url')
             ->get()->map(fn($b)=>['id'=>$b->id,'blocked'=>$b->blocked,'created_at'=>$b->created_at]);
         return response()->json($blocks);
     }

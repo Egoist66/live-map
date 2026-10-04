@@ -19,7 +19,7 @@ class ConversationController extends Controller
             ->get(['conversation_id', 'cleared_at'])
             ->keyBy('conversation_id');
         $page = Conversation::whereHas('participantRows', fn($q)=>$q->where('user_id',$user->id)->whereNull('hidden_at'))
-            ->with(['participants' => fn($q)=>$q->select('users.id','users.name','users.profile_slug','users.avatar_path','users.last_seen_at','users.is_invisible','users.plan','users.role','users.is_admin','users.account_type','users.dating_goal','users.dating_interests'), 'messages'=>fn($q)=>$q->reorder()->latest('id')->limit(1), 'district:id,name,user_id'])
+            ->with(['participants' => fn($q)=>$q->select('users.id','users.name','users.profile_slug','users.avatar_path','users.telegram_photo_url','users.last_seen_at','users.is_invisible','users.plan','users.role','users.is_admin','users.account_type','users.dating_goal','users.dating_interests'), 'messages'=>fn($q)=>$q->reorder()->latest('id')->limit(1), 'district:id,name,user_id'])
             ->withCount(['messages as unread_count'=>fn($q)=>$q->where('sender_id','!=',$user->id)->whereNull('read_at')])
             ->orderByDesc('last_message_at')
             ->orderByDesc('updated_at')
@@ -63,7 +63,7 @@ class ConversationController extends Controller
                     'district_id'=>$c->district_id,
                     'title'=>$c->type === 'district' ? ($c->district?->name ?? 'Район') : null,
                     'can_invite'=>$isDistrictOwner,
-                    'other'=>$other ? ['id'=>$other->id,'name'=>$other->name,'profile_slug'=>$other->profile_slug,'avatar_path'=>$other->avatar_path,'avatar_url'=>$other->avatar_url,'last_seen_at'=>$lastSeen,'is_invisible'=>$other->isInvisibleActive(),'is_match'=>$c->type === 'direct' && isset($matchedIds[$other->id]),'dating_goal'=>$other->dating_goal,'dating_interests'=>$other->dating_interests ?? [],'account_type'=>$other->account_type ?? 'person','is_business'=>($other->account_type ?? 'person') === 'business','is_organization'=>(bool) ($otherOrg['is_organization'] ?? false),'business'=>$otherOrg] : null,
+                    'other'=>$other ? ['id'=>$other->id,'name'=>$other->name,'profile_slug'=>$other->profile_slug,'avatar_path'=>$other->avatar_path,'telegram_photo_url'=>$other->telegram_photo_url,'avatar_url'=>$other->avatar_url,'last_seen_at'=>$lastSeen,'is_invisible'=>$other->isInvisibleActive(),'is_match'=>$c->type === 'direct' && isset($matchedIds[$other->id]),'dating_goal'=>$other->dating_goal,'dating_interests'=>$other->dating_interests ?? [],'account_type'=>$other->account_type ?? 'person','is_business'=>($other->account_type ?? 'person') === 'business','is_organization'=>(bool) ($otherOrg['is_organization'] ?? false),'business'=>$otherOrg] : null,
                     'last_message'=>$last,
                     'unread_count'=>$unread,
                     'last_message_at'=>$c->last_message_at,
@@ -90,10 +90,10 @@ class ConversationController extends Controller
     {
         abort_unless($conversation->hasParticipant($request->user()->id), 403, 'Этот чат принадлежит другому аккаунту. Войдите под нужным пользователем.');
         $clearedAt = $conversation->participantRows()->where('user_id', $request->user()->id)->value('cleared_at');
-        $conversation->load(['participants:id,name,profile_slug,avatar_path,last_seen_at,is_invisible,plan,role,is_admin,account_type,dating_goal,dating_interests', 'district:id,name,user_id']);
+        $conversation->load(['participants:id,name,profile_slug,avatar_path,telegram_photo_url,last_seen_at,is_invisible,plan,role,is_admin,account_type,dating_goal,dating_interests', 'district:id,name,user_id']);
         $pageSize = MessageController::HISTORY_PAGE_SIZE;
         $rawMessages = $conversation->messages()
-            ->with(['sender:id,name,avatar_path', 'replyTo.sender:id,name'])
+            ->with(['sender:id,name,avatar_path,telegram_photo_url', 'replyTo.sender:id,name'])
             ->when($clearedAt, fn ($q) => $q->where('created_at', '>', $clearedAt))
             ->reorder()
             ->orderByDesc('id')
@@ -109,7 +109,7 @@ class ConversationController extends Controller
             try{ broadcast(new \App\Events\MessageDelivered($conversation->id,$undelivered->toArray(),$request->user()->id))->toOthers(); }catch(\Throwable $e){ \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
         }
         $messages = $rawMessages->map->toArrayPayload();
-        $pinned = $conversation->messages()->with(['sender:id,name,avatar_path', 'replyTo.sender:id,name'])->whereNotNull('pinned_at')->orderBy('pinned_at')->get()->map->toArrayPayload();
+        $pinned = $conversation->messages()->with(['sender:id,name,avatar_path,telegram_photo_url', 'replyTo.sender:id,name'])->whereNotNull('pinned_at')->orderBy('pinned_at')->get()->map->toArrayPayload();
         $other = $conversation->participants->firstWhere('id','!=',$request->user()->id);
         $lastSeen = $other && $other->isInvisibleActive() && !$request->user()->isAdmin() ? null : $other?->last_seen_at?->toISOString();
         $isMatch = $other && $conversation->type === 'direct'
@@ -124,7 +124,7 @@ class ConversationController extends Controller
             'district_id'=>$conversation->district_id,
             'title'=>$conversation->type === 'district' ? ($conversation->district?->name ?? 'Район') : null,
             'can_invite'=>$canInvite,
-            'other'=>$other ? ['id'=>$other->id,'name'=>$other->name,'profile_slug'=>$other->profile_slug,'avatar_path'=>$other->avatar_path,'avatar_url'=>$other->avatar_url,'last_seen_at'=>$lastSeen,'is_invisible'=>$other->isInvisibleActive(),'is_match'=>$isMatch,'dating_goal'=>$other->dating_goal,'dating_interests'=>$other->dating_interests ?? [],'account_type'=>$other->account_type ?? 'person','is_business'=>($other->account_type ?? 'person') === 'business','is_organization'=>(bool) ($otherOrg['is_organization'] ?? false),'business'=>$otherOrg] : null,
+            'other'=>$other ? ['id'=>$other->id,'name'=>$other->name,'profile_slug'=>$other->profile_slug,'avatar_path'=>$other->avatar_path,'telegram_photo_url'=>$other->telegram_photo_url,'avatar_url'=>$other->avatar_url,'last_seen_at'=>$lastSeen,'is_invisible'=>$other->isInvisibleActive(),'is_match'=>$isMatch,'dating_goal'=>$other->dating_goal,'dating_interests'=>$other->dating_interests ?? [],'account_type'=>$other->account_type ?? 'person','is_business'=>($other->account_type ?? 'person') === 'business','is_organization'=>(bool) ($otherOrg['is_organization'] ?? false),'business'=>$otherOrg] : null,
             'participants'=>$conversation->participants->map(fn($p)=> array_merge($p->toArray(), ['avatar_url'=>$p->avatar_url])),
             'messages'=>$messages,
             'messages_has_more'=>$hasMoreMessages,
@@ -179,7 +179,7 @@ class ConversationController extends Controller
             ]);
             if ($request->filled('message')) {
                 $msg=Message::create(['conversation_id'=>$conv->id,'sender_id'=>$me->id,'body'=>$request->input('message')]);
-                $msg->load('sender:id,name,avatar_path');
+                $msg->load('sender:id,name,avatar_path,telegram_photo_url');
                 $conv->update(['last_message_at'=>$msg->created_at]);
                 try{ broadcast(new \App\Events\MessageSent($msg->load('conversation.participantRows')))->toOthers(); }catch(\Throwable $e){ \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
                 try {
@@ -188,7 +188,7 @@ class ConversationController extends Controller
                     try { app(\App\Services\ExpoPushService::class)->sendChatMessage($other, $me, $conv->id, (string) $request->input('message')); } catch (\Throwable) {}
                 } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('chat webpush failed: '.$e->getMessage()); }
             }
-            $conv->load('participants:id,name,avatar_path');
+            $conv->load('participants:id,name,avatar_path,telegram_photo_url');
             return response()->json(['id'=>$conv->id,'existing'=>false,'conversation'=>$conv],201);
         });
     }

@@ -3,6 +3,7 @@ import { usePage } from '@inertiajs/vue3'
 import { datingApi } from '@/services/dating.api'
 import { datingQuestionnaireSchema } from '@/validation/schemas/dating.schema'
 import { isUnchangedPayload } from '@/composables/useUnchangedGuard'
+import { emitDatingSaved } from '@/composables/useDatingSavedSync'
 
 /**
  * Анкета ULove: создание и редактирование «о себе».
@@ -28,6 +29,8 @@ export function useDatingQuestionnaire() {
   const saving = ref(false)
   const errors = ref<Record<string, string>>({})
   const serverError = ref<string | null>(null)
+  /** Последний сохранённый payload — форма пробрасывает его в emit('saved'). */
+  const lastSaved = ref<Record<string, any> | null>(null)
 
   function resetFromUser(): void {
     const u = authUser.value
@@ -117,6 +120,13 @@ export function useDatingQuestionnaire() {
       ['dating_enabled', 'dating_goal', 'dating_custom_goal', 'dating_about', 'dating_interests'],
     )
     if (unchanged) {
+      lastSaved.value = {
+        dating_enabled: enabled.value,
+        dating_goal: goal.value,
+        dating_custom_goal: parsed.data.dating_custom_goal,
+        dating_about: parsed.data.dating_about,
+        dating_interests: parsed.data.dating_interests ?? [],
+      }
       return true
     }
     saving.value = true
@@ -130,6 +140,8 @@ export function useDatingQuestionnaire() {
       })
       const u = authUser.value
       if (u && saved) Object.assign(u, saved)
+      lastSaved.value = saved ?? null
+      emitDatingSaved(saved)
       return true
     } catch (e: any) {
       serverError.value = e?.response?.data?.message ?? 'Не удалось сохранить анкету'
@@ -149,6 +161,7 @@ export function useDatingQuestionnaire() {
     saving,
     errors,
     serverError,
+    lastSaved,
     goalShort,
     aboutLeft,
     customLeft,

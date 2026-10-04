@@ -2040,8 +2040,8 @@ class TelegramWebhookController extends Controller
     /**
      * Переключить тип уведомлений целиком и перерисовать панель.
      *
-     * Панель показывает 4 уникальных типа (сообщения, лайки, мэтчи,
-     * комментарии): тап включает/глушит тип везде — бот + дубль на почту,
+     * Панель показывает 5 уникальных типов (сообщения, лайки, мэтчи,
+     * комментарии, новости приложения): тап включает/глушит тип везде — бот + дубль на почту,
      * где он есть. Старые кнопки (мастер ntg_all, почтовые nem_*, ndm_*)
      * из уже отправленных панелей продолжают работать ради совместимости.
      *
@@ -2069,6 +2069,7 @@ class TelegramWebhookController extends Controller
             'ntg_like' => ['telegram_notify_likes', 'email_notify_likes'],
             'ntg_match' => ['telegram_notify_matches', 'email_notify_matches'],
             'ntg_cmt' => ['telegram_notify_comments'],
+            'ntg_news' => ['telegram_notify_news'],
             'ntg_all' => ['telegram_notify_enabled'],
             'nem_msg' => ['email_notify_messages'],
             'nem_like' => ['email_notify_likes'],

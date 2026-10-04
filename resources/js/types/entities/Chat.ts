@@ -1,4 +1,4 @@
-export interface ChatUserBrief { id:number; name:string; avatar_path:string|null; avatar_url?:string|null; can_message?:boolean; message_privacy?:string; }
+export interface ChatUserBrief { id:number; name:string; avatar_path:string|null; telegram_photo_url?:string|null; avatar_url?:string|null; can_message?:boolean; message_privacy?:string; }
 export interface MessageReply { id:number; body:string; sender_id:number; sender_name?:string|null; kind?:string|null; duration?:number|null }
 /**
  * Пересланный пост в сообщении: живое превью + диплинк.
