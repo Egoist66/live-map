@@ -55,9 +55,7 @@ const peerAvatar = computed(() => getAvatarUrl(props.peer))
 <template>
   <aside class="hidden min-h-0 w-[280px] shrink-0 flex-col overflow-y-auto rounded-2xl border border-stone-200 bg-white p-5 xl:flex dark:border-zinc-800 dark:bg-zinc-900">
     <div class="flex flex-col items-center text-center">
-      <span :class="['block rounded-full p-1', isMatch ? theme.ring : 'bg-stone-200 dark:bg-zinc-700']">
-        <Avatar :image="avatarSrcFor(peer)" :label="!peerAvatar ? initial : undefined" shape="circle" class="!h-24 !w-24 !text-3xl" />
-      </span>
+      <Avatar :image="avatarSrcFor(peer)" :label="!peerAvatar ? initial : undefined" shape="circle" class="!h-24 !w-24 !text-3xl" />
       <div class="mt-3 max-w-full truncate text-xl font-bold text-stone-900 dark:text-white">{{ peer?.name ?? 'Собеседник' }}</div>
       <span v-if="badge" :class="['mt-1.5 inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-black text-white', theme.badge]">💞 {{ badge }}</span>
       <span v-else-if="isMatch" :class="['mt-1.5 inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-black', theme.match]">♥ Мэтч</span>

@@ -427,7 +427,6 @@ onMounted(async () => {
         :online="isOnline(activeConv?.other?.id, (activeConv?.other as any)?.last_seen_at)"
         :dating-entry="!isBusiness && datingTheme.isDatingEntry.value"
         :dating-badge="isBusiness ? null : datingTheme.badge.value"
-        @swipes-back="datingTheme.backToSwipes()"
         :peer-panel-available="peerPanelAvailable"
         :peer-panel-open="peerPanel.open.value"
         :peer-tone="peerTone"
