@@ -11,6 +11,92 @@ const isNewAccount = ref(false)
 let attempted = false
 
 /**
+ * Сколько раз повторяем автовход при 429 сверх первой попытки.
+ *
+ * Лимитер на бэке теперь пер-юзер (telegram-auth), так что 429 —
+ * редкость (флуд с общего CGNAT-IP). Двух тихих ретраев хватает,
+ * а бут при этом не висит: каждая пауза ужата капом ниже.
+ */
+const AUTH_MAX_RATE_LIMIT_RETRIES = 2
+
+/** Потолок одной паузы между ретраями (мс), чтобы не держать сплэш. */
+const AUTH_RETRY_WAIT_CAP_MS = 5000
+
+/**
+ * Проверить, что ошибка — 429 от rate-лимитера.
+ *
+ * @param error ошибка запроса
+ * @returns true когда бэк попросил притормозить
+ */
+function isRateLimited(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) {
+    return false
+  }
+
+  const response = (error as { response?: { status?: number } }).response
+
+  return response?.status === 429
+}
+
+/**
+ * Достать Retry-After из 429-ответа.
+ *
+ * Laravel кладёт секунды в заголовок Retry-After (наш рендер
+ * в bootstrap/app.php пробрасывает заголовки лимитера как есть).
+ *
+ * @param error ошибка запроса
+ * @returns миллисекунды ожидания или 0 когда заголовка нет
+ */
+function readRetryAfterMs(error: unknown): number {
+  try {
+    const headers = (error as { response?: { headers?: Record<string, unknown> } }).response?.headers ?? {}
+    const raw = headers['retry-after'] ?? headers['Retry-After']
+    const seconds = Number(raw)
+
+    if (!Number.isFinite(seconds) || seconds <= 0) {
+      return 0
+    }
+
+    return seconds * 1000
+  } catch {
+    return 0
+  }
+}
+
+/**
+ * Посчитать паузу перед следующим ретраем.
+ *
+ * Уважаем Retry-After от бэка, без него — экспонента 1с → 2с.
+ * Всё ужато капом, чтобы автовход не держал сплэш вечно.
+ *
+ * @param attempt номер попытки с нуля
+ * @param error ошибка 429
+ * @returns миллисекунды паузы
+ */
+function retryDelayMs(attempt: number, error: unknown): number {
+  const fromHeader = readRetryAfterMs(error)
+
+  if (fromHeader > 0) {
+    return Math.min(fromHeader, AUTH_RETRY_WAIT_CAP_MS)
+  }
+
+  const backoff = 1000 * 2 ** attempt
+
+  return Math.min(backoff, AUTH_RETRY_WAIT_CAP_MS)
+}
+
+/**
+ * Подождать N мс между ретраями.
+ *
+ * @param ms миллисекунды паузы
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms)
+  })
+}
+
+/**
  * Проверить, что текущий визит уже залогинен (Inertia props).
  *
  * @returns true когда auth.user присутствует
@@ -109,6 +195,11 @@ export function useTelegramAuth() {
    * когда WebApp догрузится. Ошибки не кидаем наружу — Mini App
    * обязан открыться даже если подпись не сошлась, просто как гость.
    *
+   * 429 переживаем тихо: до трёх попыток с паузой по Retry-After
+   * (иначе экспонента), дальше — честная ошибка с кнопкой
+   * «Попробовать снова». Остальные ошибки ретраим только вручную,
+   * чтобы не долбить бэк и не держать сплэш.
+   *
    * @returns true когда сессия поднята или уже была
    */
   async function authWithTelegram(): Promise<boolean> {
@@ -134,27 +225,42 @@ export function useTelegramAuth() {
     status.value = 'loading'
     errorMessage.value = ''
 
-    try {
-      const response = await api.post('/api/telegram/auth', { initData: rawInitData })
-      const isNew = Boolean(response.data?.is_new)
-      isNewAccount.value = isNew
-      status.value = 'authenticated'
+    let lastError: unknown = null
 
-      if (response.data?.switched === true) {
-        window.location.reload()
+    for (let attempt = 0; attempt <= AUTH_MAX_RATE_LIMIT_RETRIES; attempt++) {
+      try {
+        const response = await api.post('/api/telegram/auth', { initData: rawInitData })
+        const isNew = Boolean(response.data?.is_new)
+        isNewAccount.value = isNew
+        status.value = 'authenticated'
+
+        if (response.data?.switched === true) {
+          window.location.reload()
+
+          return true
+        }
+
+        await reloadAuthProps()
+        redirectGuestToApp()
 
         return true
+      } catch (error) {
+        lastError = error
+
+        const canRetry = isRateLimited(error) && attempt < AUTH_MAX_RATE_LIMIT_RETRIES
+
+        if (!canRetry) {
+          break
+        }
+
+        await sleep(retryDelayMs(attempt, error))
       }
-
-      await reloadAuthProps()
-      redirectGuestToApp()
-
-      return true
-    } catch (error) {
-      status.value = 'error'
-      errorMessage.value = extractMessage(error)
-      return false
     }
+
+    status.value = 'error'
+    errorMessage.value = extractMessage(lastError)
+
+    return false
   }
 
   /**
@@ -250,6 +356,10 @@ export function useTelegramAuth() {
 
     if (response?.status === 419) {
       return 'Сессия устарела — закройте и откройте Mini App заново.'
+    }
+
+    if (response?.status === 429) {
+      return 'Слишком много попыток входа. Подождите немного и нажмите «Попробовать снова».'
     }
 
     if (response?.status === 401) {

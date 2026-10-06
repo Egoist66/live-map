@@ -155,10 +155,14 @@ async function loadScript(): Promise<boolean> {
 /**
  * Десктопный ли это клиент Telegram (окно/панель на ПК, а не телефон).
  *
- * Платформы Bot API: 'android'/'android_x'/'ios' — мобила;
- * 'tdesktop'/'macos'/'windows'/'linux'/'web'/'weba'/'webk'/'unknown' +
- * точный поинтер (mouse) — десктоп. Мобилу дополнительно подтверждает
- * coarse-pointer: на ПК с тачскрином платформа всё равно десктопная.
+ * Платформы Bot API: 'android'/'android_x'/'ios' — мобильная ОС;
+ * 'tdesktop'/'macos'/'windows'/'linux'/'web'/'weba'/'webk'/'unigram' — десктоп.
+ * Отдельно: 'unknown'/пусто (старый клиент не сообщил платформу) —
+ * решаем по вводу и ширине: тач + узкий экран = телефон, иначе десктоп.
+ * Без этого телефон с unknown-платформой получал десктопный режим
+ * (без expand — схлопнутый полуэкран), а десктоп с тачскрином —
+ * мобильный (expand уводил WebView в немасштабируемое окно справа,
+ * которое «не двигается и не закрыть»).
  *
  * Десктопный Mini App живёт в узкой боковой панели справа (Windows/macOS):
  * там нет жестов и полноэкранного режима — requestFullscreen/expand
@@ -171,16 +175,41 @@ async function loadScript(): Promise<boolean> {
 export function isDesktopTelegramPlatform(webApp: TelegramWebApp): boolean {
   const rawPlatform = String(webApp?.platform || '').toLowerCase()
 
-  const mobilePrefix = rawPlatform.startsWith('android') || rawPlatform.startsWith('ios')
+  const isMobileOs = rawPlatform.startsWith('android') || rawPlatform.startsWith('ios')
 
-  if (!mobilePrefix) {
-    return true
+  if (isMobileOs) {
+    return !hasCoarsePointer()
   }
 
+  return !isNarrowTouchScreen()
+}
+
+/**
+ * Есть ли у устройства грубый указатель (тачскрин).
+ *
+ * @returns true когда primary-ввод — тач
+ */
+function hasCoarsePointer(): boolean {
+  try {
+    return window.matchMedia?.('(pointer: coarse)').matches ?? false
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Узкий тач-экран: телефон в браузере или в неизвестном клиенте.
+ *
+ * Десктоп с тачскрином (моноблок/ноутбук) сюда не попадает —
+ * там широкий экран, режим остаётся десктопным.
+ *
+ * @returns true когда тач + ширина телефона
+ */
+function isNarrowTouchScreen(): boolean {
   try {
     const coarse = window.matchMedia?.('(pointer: coarse)').matches ?? false
 
-    return !coarse
+    return coarse && window.innerWidth < 768
   } catch {
     return false
   }
@@ -314,10 +343,9 @@ function applyTelegramInsets(webApp: TelegramWebApp): void {
   // поэтому на десктопе инсеты принудительно нули
   // + класс tg-desktop (CSS обнуляет паддинг шапки,
   // мобилка tg-mobile отступы сохраняет).
-  const coarse = window.matchMedia?.('(pointer: coarse)').matches ?? false
-  const tgPlatform = String(webApp.platform || '').toLowerCase()
-  const mobileTg = tgPlatform.startsWith('android') || tgPlatform.startsWith('ios')
-  const isDesktopTg = !mobileTg || !coarse
+  // Десктоп/мобила — единый предикат isDesktopTelegramPlatform
+  // (платформа + тач + ширина), без дублирования эвристик.
+  const isDesktopTg = isDesktopTelegramPlatform(webApp)
   const top = isDesktopTg ? 0 : rawTop
   const bottom = isDesktopTg ? 0 : rawBottom
 

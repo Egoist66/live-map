@@ -79,7 +79,9 @@
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700,800,900&family=inter:400,500,600&display=swap" rel="stylesheet">
         {{-- Telegram Mini App (@U1ove_bot): грузим WebApp API синхронно в head,
               чтобы window.Telegram существовал ДО первого paint. Ранний инлайн
-              ниже сразу делает ready()/expand() — иначе Mini App моргает
+              ниже сразу делает ready() (expand — только на мобиле, иначе
+              десктопный клиент уводит WebView в немасштабируемое окно
+              справа «не двигается, не закрыть»), иначе Mini App моргает
               схлопнутым BottomSheet, пока Vue-мост догрузится после mount.
               Полноценный мост (тема, viewport-подписки, автовход) живёт
               во фронте: useTelegram / useTelegramAuth (Правило №1). --}}
@@ -118,12 +120,21 @@
                     // Десктопный Mini App (боковая панель Windows/macOS):
                     // expand здесь уводит WebView в немасштабируемое окно
                     // справа («не двигается, не закрыть») — только ready.
-                    // Платформа заранее неизвестна: expand откладываем до
-                    // platform+pointer проверки ниже, мобиле — как было.
+                    // Единый предикат с useTelegram.isDesktopTelegramPlatform:
+                    // мобильная ОС без тача = десктоп (эмулятор с мышью),
+                    // unknown/пустая платформа или web-клиент = десктоп,
+                    // кроме узкого тач-экрана (телефон в браузере).
                     var __tgPlatEarly = '';
                     try { __tgPlatEarly = String(webApp.platform || '').toLowerCase(); } catch (e5) {}
-                    var __tgMobileEarly = __tgPlatEarly.indexOf('android') === 0 || __tgPlatEarly.indexOf('ios') === 0;
-                    if (__tgMobileEarly) {
+                    var __tgMobileOsEarly = __tgPlatEarly.indexOf('android') === 0 || __tgPlatEarly.indexOf('ios') === 0;
+                    var __tgCoarseEarly = false;
+                    try { __tgCoarseEarly = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches); } catch (e6) {}
+                    var __tgNarrowEarly = false;
+                    try { __tgNarrowEarly = window.innerWidth < 768; } catch (e7) {}
+                    var __tgIsDesktopEarly = __tgMobileOsEarly
+                        ? !__tgCoarseEarly
+                        : !(__tgCoarseEarly && __tgNarrowEarly);
+                    if (!__tgIsDesktopEarly) {
                         try { webApp.expand(); } catch (e) {}
                     }
                     // disableVerticalSwipes — Bot API 7.1: на старых клиентах
@@ -141,7 +152,7 @@
                             var min = parseInt(parts[1], 10) || 0;
                             supportsSwipes = maj > 7 || (maj === 7 && min >= 1);
                         }
-                        if (__tgMobileEarly && supportsSwipes && typeof webApp.disableVerticalSwipes === 'function') webApp.disableVerticalSwipes();
+                        if (!__tgIsDesktopEarly && supportsSwipes && typeof webApp.disableVerticalSwipes === 'function') webApp.disableVerticalSwipes();
                     } catch (e) {}
                     // Тема Telegram → CSS-переменные до paint, чтобы не было
                     // белой вспышки в тёмной теме (мост useTelegram обновит их
@@ -172,19 +183,14 @@
                         // свернуть/меню справа): они парят поверх WebView.
                         // Старые клиенты (WebApp 6.0) инсетов не отдают вовсе —
                         // резервируем минимум 48px, новые с честным
-                        // contentSafeAreaInset получают 0. Только тач
-                        // И только мобильные платформы (android*/ios*):
-                        // в десктопном клиенте кнопок поверх нет, а инсеты
+                        // contentSafeAreaInset получают 0. Только узкий тач
+                        // (телефон): в десктопном клиенте кнопок поверх нет, а инсеты
                         // десктопного клиента раздували бы шапку (.native-safe-top),
                         // поэтому на десктопе инсеты принудительно нули
                         // + класс tg-desktop (CSS обнуляет паддинг шапки,
                         // мобилка tg-mobile отступы сохраняет).
-                        var coarseTg = false;
-                        try { coarseTg = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches); } catch (e2) {}
-                        var tgPlat = '';
-                        try { tgPlat = String(webApp.platform || '').toLowerCase(); } catch (e3) {}
-                        var mobileTg = tgPlat.indexOf('android') === 0 || tgPlat.indexOf('ios') === 0;
-                        var isDesktopTg = !mobileTg || !coarseTg;
+                        // Тот же предикат, что для expand выше (без дубля эвристик).
+                        var isDesktopTg = (typeof __tgIsDesktopEarly === 'boolean') ? __tgIsDesktopEarly : true;
                         var top = isDesktopTg ? 0 : rawTop;
                         var bottom = isDesktopTg ? 0 : rawBottom;
                         root.style.setProperty('--tg-sat', top + 'px');

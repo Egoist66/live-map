@@ -234,6 +234,82 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('auth-confirm', function (Request $request) use ($keyByUser) {
             return Limit::perMinute(10)->by($keyByUser($request));
         });
+
+        // Вход через Telegram Mini App: общий IP-лимит здесь нельзя —
+        // мобильные операторы прячут сотни абонентов за один CGNAT-IP
+        // и общее ведро 30/мин душило легитимных юзеров в 429 «порой».
+        // Два ведра разом (блокирует любое из них):
+        // - пер-юзер по telegram_id из initData (30/мин хватает
+        //   и на автовход, и на ручные ретраи);
+        // - пер-IP страховка от флуда/сканеров (300/мин).
+        RateLimiter::for('telegram-auth', function (Request $request) {
+            $ipLimit = Limit::perMinute(300)->by('telegram-auth-ip:'.$request->ip());
+
+            $telegramId = $this->extractTelegramId($request);
+
+            if ($telegramId <= 0) {
+                return $ipLimit;
+            }
+
+            $userLimit = Limit::perMinute(30)->by('telegram-auth-tg:'.$telegramId);
+
+            return [$userLimit, $ipLimit];
+        });
+    }
+
+    /**
+     * Достать telegram_id из initData без проверки подписи.
+     *
+     * Нужен только как ключ rate-лимитера: настоящий владелец
+     * доказывается позже HMAC-подписью в TelegramInitDataValidator.
+     * Подделать чужой id здесь бессмысленно — подпись не сойдётся
+     * и будет 401, а чужое ведро лишь тратит лимит атакующего.
+     *
+     * @param Request $request запрос с полем `initData`
+     * @return int telegram_id или 0 когда разобрать не вышло
+     */
+    private function extractTelegramId(Request $request): int
+    {
+        $initData = (string) $request->input('initData', '');
+
+        if ($initData === '') {
+            return 0;
+        }
+
+        $rawUser = '';
+
+        $chunks = explode('&', $initData);
+
+        foreach ($chunks as $chunk) {
+            $pos = strpos($chunk, '=');
+
+            if ($pos === false) {
+                continue;
+            }
+
+            $key = urldecode(substr($chunk, 0, $pos));
+
+            if ($key === 'user') {
+                $rawUser = urldecode(substr($chunk, $pos + 1));
+                break;
+            }
+        }
+
+        if ($rawUser === '') {
+            return 0;
+        }
+
+        try {
+            $decoded = json_decode($rawUser, true, 4, JSON_THROW_ON_ERROR);
+        } catch (\Throwable) {
+            return 0;
+        }
+
+        if (! is_array($decoded)) {
+            return 0;
+        }
+
+        return (int) ($decoded['id'] ?? 0);
     }
 
     /**

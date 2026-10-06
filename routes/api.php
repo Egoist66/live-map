@@ -35,7 +35,11 @@ Route::get('/reference/{slug}', [\App\Http\Controllers\ReferencePageController::
 // и считается по IP — за NAT/на Laravel Cloud одиночный статус
 // умирал в 429. Отдельное пер-юзер ведро telegram-status (60/мин),
 // как у email-status.
-Route::middleware(['web', 'throttle:30,1'])->post('/telegram/auth', [\App\Http\Controllers\TelegramAuthController::class, 'auth']);
+// Автовход — тоже НЕ по IP: мобильные операторы прячут сотни абонентов
+// за один CGNAT-IP и общее ведро душило легитимных юзеров в 429 «порой».
+// Именной лимитер telegram-auth: 30/мин на telegram_id из initData
+// + 300/мин страховка на IP от флуда (см. AppServiceProvider).
+Route::middleware(['web', 'throttle:telegram-auth'])->post('/telegram/auth', [\App\Http\Controllers\TelegramAuthController::class, 'auth']);
 // Вебхук бота: апдейты message/callback_query для нативной панели сеансов.
 // Без web/auth — Telegram шлёт без кук; секрет сверяем внутри контроллера.
 Route::middleware('throttle:120,1')->post('/telegram/webhook', \App\Http\Controllers\TelegramWebhookController::class);

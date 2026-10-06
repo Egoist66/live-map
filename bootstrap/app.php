@@ -59,7 +59,9 @@ return Application::configure(basePath: dirname(__DIR__))
         );
         $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException $e, Request $request) {
             if ($request->is('api/*') || $request->expectsJson()) {
-                return response()->json(['message' => 'Слишком много запросов. Подождите немного и попробуйте снова.'], 429);
+                // Заголовки лимитера (Retry-After, X-RateLimit-*) отдаём как есть:
+                // фронт useTelegramAuth спит ровно столько перед ретраем.
+                return response()->json(['message' => 'Слишком много запросов. Подождите немного и попробуйте снова.'], 429, $e->getHeaders());
             }
         });
         $exceptions->render(function (\Throwable $e, Request $request) {

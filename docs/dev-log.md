@@ -1,5 +1,13 @@
 # Dev-лог
 
+## 2026-10-06 — 🐞 429 на telegram/auth + дожим «кривого окна» Desktop
+- 🐞 429 «порой» на `POST /api/telegram/auth`: роут висел на общем `throttle:30,1` по IP — мобильные операторы прячут сотни абонентов за один CGNAT-IP, общее ведро на всех и душило легитимных юзеров.
+- 🔧 Бэк: именной лимитер `telegram-auth` (`AppServiceProvider::registerAuthRateLimiters` + `extractTelegramId` без проверки подписи — только ключ ведра, владелец доказывается позже HMAC): 30/мин на telegram_id из initData + 300/мин страховка на IP от флуда; роут переведён на `throttle:telegram-auth`; 429-рендер в `bootstrap/app.php` пробрасывает заголовки лимитера (Retry-After) как есть.
+- 🔧 Фронт (`useTelegramAuth`, Правило №1): 429 переживаем тихо — до 2 ретраев с паузой по Retry-After (иначе экспонента 1с→2с, кап 5с, сплэш не висит); дальше — честная ошибка «подождите и попробуйте снова» (кнопка `retryTelegramAuth` как была).
+- 🔧 Desktop-окно «справа, не закрыть»: единый предикат `isDesktopTelegramPlatform` — unknown/пустая платформа теперь решается по тачу+ширине (телефон с unknown больше не получает десктопный режим без expand, десктоп с тачскрином — мобильный с expand); `applyTelegramInsets` переведён на тот же предикат вместо дубля эвристик; ранний инлайн `app.blade.php` зеркалит ту же формулу (`__tgIsDesktopEarly`) для expand/disableVerticalSwipes/инсетов.
+- Проверки: `php -l` ✅ ×3, `pnpm exec vue-tsc --noEmit` ✅, лимитер прогнан бут-скриптом (valid initData → 2 ведра `telegram-auth-tg:777 30/мин + ip 300/мин`, пусто/мусор → только IP), `route:list` ✅.
+- ⚠️ Вживую: редеплой (бэк + JS-билд + blade); проверить вход через @U1ove_bot с мобильного оператора и Mini App в Telegram Desktop (Windows).
+
 ## 2026-10-06 — 🖥️ Большие десктопы + Telegram Desktop без «кривого окна»
 - ✨ Большие экраны: контейнеры `1280 → xl:1400 / 2xl:1600` (`AppTopBar`, `AppFooter`, `AuthenticatedLayout`, `BusinessLayout`, `Welcome`, `Admin`, `Profile/Edit`, `Chat` + сайдбар `360 → xl:400 / 2xl:440`, `Dashboard/Profile` → `xl:1280 / 2xl:1440`, `Districts` → `xl:1200 / 2xl:1320`, `Flow` → `lg:760 / xl:820`, `Faq/Reference` → `xl:1020`); новый брейкпоинт `3xl:1920px` в `tailwind.config.js`.
 - ✨ Свайпы на десктопе стали крупнее: контейнер `640 → lg:880 / xl:980 / 2xl:1060`, карточка `420 → lg:500 / xl:540 / 2xl:580`, высота `62dvh/540 → lg:68dvh/640 → xl:70dvh/720 → 2xl:780` + крупнее имя/возраст на `1536px+` (`Swipes.vue`).
