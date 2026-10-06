@@ -102,7 +102,7 @@ function logout(): void {
 <template>
   <div class="flex min-h-screen min-h-dvh flex-col bg-surface dark:bg-[#0F121F] overflow-x-clip">
     <header class="native-safe-top sticky top-0 z-50 glass border-b border-stone-200/70 dark:border-zinc-800 backdrop-blur">
-      <div class="mx-auto max-w-[1280px] px-4 sm:px-6 h-16 flex items-center gap-3">
+      <div class="mx-auto max-w-[1280px] xl:max-w-[1400px] 2xl:max-w-[1600px] px-4 sm:px-6 h-16 flex items-center gap-3">
         <Link href="/cabinet" class="min-w-0 shrink-0" aria-label="Кабинет">
           <ApplicationLogo pro />
         </Link>
@@ -136,7 +136,7 @@ function logout(): void {
     </header>
     <AppUserMenu v-model:menu-ref="menu" :user="menuUser" :avatar-src="avatarSrc" :items="menuItems" />
 
-    <div class="mx-auto max-w-[1280px] w-full min-w-0 px-4 sm:px-6 py-4 sm:py-6 flex-1">
+    <div class="mx-auto max-w-[1280px] xl:max-w-[1400px] 2xl:max-w-[1600px] w-full min-w-0 px-4 sm:px-6 py-4 sm:py-6 flex-1">
       <slot />
     </div>
 

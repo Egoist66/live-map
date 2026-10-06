@@ -115,11 +115,22 @@
                     var root = document.documentElement;
                     root.classList.add('tg-app');
                     try { webApp.ready(); } catch (e) {}
-                    try { webApp.expand(); } catch (e) {}
+                    // Десктопный Mini App (боковая панель Windows/macOS):
+                    // expand здесь уводит WebView в немасштабируемое окно
+                    // справа («не двигается, не закрыть») — только ready.
+                    // Платформа заранее неизвестна: expand откладываем до
+                    // platform+pointer проверки ниже, мобиле — как было.
+                    var __tgPlatEarly = '';
+                    try { __tgPlatEarly = String(webApp.platform || '').toLowerCase(); } catch (e5) {}
+                    var __tgMobileEarly = __tgPlatEarly.indexOf('android') === 0 || __tgPlatEarly.indexOf('ios') === 0;
+                    if (__tgMobileEarly) {
+                        try { webApp.expand(); } catch (e) {}
+                    }
                     // disableVerticalSwipes — Bot API 7.1: на старых клиентах
                     // (6.0) прямой вызов лишь спамит варнингом в консоль,
                     // поэтому версию проверяем заранее (isVersionAtLeast
                     // есть с 6.2, на 6.0 сравниваем version вручную).
+                    // На десктопе вертикальных свайпов нет — не трогаем.
                     try {
                         var supportsSwipes = false;
                         if (typeof webApp.isVersionAtLeast === 'function') {
@@ -130,7 +141,7 @@
                             var min = parseInt(parts[1], 10) || 0;
                             supportsSwipes = maj > 7 || (maj === 7 && min >= 1);
                         }
-                        if (supportsSwipes && typeof webApp.disableVerticalSwipes === 'function') webApp.disableVerticalSwipes();
+                        if (__tgMobileEarly && supportsSwipes && typeof webApp.disableVerticalSwipes === 'function') webApp.disableVerticalSwipes();
                     } catch (e) {}
                     // Тема Telegram → CSS-переменные до paint, чтобы не было
                     // белой вспышки в тёмной теме (мост useTelegram обновит их

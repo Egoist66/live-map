@@ -32,7 +32,7 @@ function letterOf(name: string): string {
   <Head title="Районы" />
   <Toast />
     <div class="bg-surface dark:bg-[#0F121F]">
-      <div class="mx-auto max-w-[1000px] px-3 py-3 sm:px-6 sm:py-6">
+      <div class="mx-auto max-w-[1000px] px-3 py-3 sm:px-6 sm:py-6 xl:max-w-[1200px] 2xl:max-w-[1320px]">
         <div class="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_300px]">
           <div class="grid min-w-0 gap-3">
             <div class="rounded-3xl border border-stone-200/70 bg-white p-4 sm:p-5 dark:border-zinc-800 dark:bg-zinc-900">

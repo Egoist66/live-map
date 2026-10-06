@@ -170,7 +170,7 @@ onUnmounted(() => {
     <meta head-key="description" name="description" :content="seo.description.value" />
   </Head>
   <div class="w-full min-w-0 bg-transparent" :class="s.activeTab.value === 'feed' ? 'swipes-feed-lock' : 'page-scroll scroll-neat'">
-      <div class="w-full min-w-0 mx-auto max-w-[640px] px-4 sm:px-6" :class="s.activeTab.value === 'feed' ? 'swipes-feed-inner pt-1 sm:py-6 sm:pb-[calc(2rem+var(--sab))]' : 'pt-3 pb-6 sm:py-6 sm:pb-[calc(2rem+var(--sab))]'">
+      <div class="w-full min-w-0 mx-auto max-w-[640px] px-4 sm:px-6 lg:max-w-[880px] lg:px-8 xl:max-w-[980px] 2xl:max-w-[1060px]" :class="s.activeTab.value === 'feed' ? 'swipes-feed-inner pt-1 sm:py-6 sm:pb-[calc(2rem+var(--sab))]' : 'pt-3 pb-6 sm:py-6 sm:pb-[calc(2rem+var(--sab))]'">
 
         <h1 class="sr-only">ULove — знакомства рядом</h1>
         <div class="swipes-topbar flex items-center px-1 py-1 sm:py-2 shrink-0">
@@ -506,13 +506,13 @@ onUnmounted(() => {
           </template>
 
           <template v-else>
-          <div class="swipes-feed mt-1 sm:mt-4 relative select-none overscroll-none sm:max-w-[420px] sm:mx-auto sm:w-full">
-            <div v-if="s.loading.value" class="swipes-feed-skeleton rounded-xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 grid place-items-center sm:h-[62dvh] sm:min-h-[400px] sm:max-h-[540px]">
+          <div class="swipes-feed mt-1 sm:mt-4 relative select-none overscroll-none sm:max-w-[420px] sm:mx-auto sm:w-full lg:max-w-[500px] xl:max-w-[540px] 2xl:max-w-[580px]">
+            <div v-if="s.loading.value" class="swipes-feed-skeleton rounded-xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 grid place-items-center sm:h-[62dvh] sm:min-h-[400px] sm:max-h-[540px] lg:h-[68dvh] lg:max-h-[640px] xl:h-[70dvh] xl:max-h-[720px] 2xl:max-h-[780px]">
               <i class="pi pi-spin pi-spinner text-2xl text-stone-400 dark:text-zinc-500" />
             </div>
 
             <div v-else-if="s.current.value" class="swipes-card-wrap">
-              <div class="swipe-deck relative overscroll-none sm:h-[62dvh] sm:min-h-[400px] sm:max-h-[540px]">
+              <div class="swipe-deck relative overscroll-none sm:h-[62dvh] sm:min-h-[400px] sm:max-h-[540px] lg:h-[68dvh] lg:max-h-[640px] xl:h-[70dvh] xl:max-h-[720px] 2xl:max-h-[780px]">
               <div
                 v-if="s.next.value"
                 class="absolute inset-0 z-0 rounded-xl overflow-hidden bg-zinc-200 dark:bg-zinc-800 shadow-soft pointer-events-none"
@@ -1231,6 +1231,24 @@ onUnmounted(() => {
   to {
     transform: translate(-110vw, 140px) rotate(-30deg);
     opacity: 0;
+  }
+}
+/* Большие десктопы: карточка выше и читаемее, улёт дальше.
+   Контейнер и высота заданы Tailwind (lg/xl/2xl), здесь —
+   типографика и запас под крупные экраны. */
+@media (min-width: 1280px) {
+  .swipe-deck,
+  .swipes-feed-skeleton {
+    border-radius: 20px;
+  }
+}
+@media (min-width: 1536px) {
+  .swipe-top .text-\[28px\] {
+    font-size: 32px !important;
+    line-height: 1 !important;
+  }
+  .swipe-top .text-\[22px\] {
+    font-size: 24px !important;
   }
 }</style>
 

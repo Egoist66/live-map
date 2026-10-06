@@ -116,7 +116,7 @@ onMounted(async () => { await design.init() })
   <Head :title="profileUser.name" />
   <Toast />
     <div class="page-scroll bg-surface dark:bg-[#0F121F]">
-      <div class="max-w-[1040px] lg:max-w-[1120px] mx-auto px-3 sm:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4">
+      <div class="max-w-[1040px] lg:max-w-[1120px] xl:max-w-[1280px] 2xl:max-w-[1440px] mx-auto px-3 sm:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4">
         <div v-if="page.isLocked.value" class="rounded-[24px] border border-stone-200 bg-white shadow-soft p-6 flex flex-col items-center text-center gap-3 dark:border-zinc-800 dark:bg-zinc-900">
           <button type="button" class="h-16 w-16 overflow-hidden rounded-[22px] bg-stone-100 dark:bg-zinc-800" @click="page.showAvatar.value = true">
             <Avatar :image="page.avatarSrc.value" shape="square" class="!h-full !w-full [&_img]:object-cover" />

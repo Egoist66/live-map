@@ -110,7 +110,7 @@ enforceVisibleTab()
   <Head title="Панель модерации" />
   <Toast />
     <div class="page-scroll bg-surface dark:bg-[#0F121F]">
-      <div class="max-w-[1280px] mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4">
+      <div class="max-w-[1280px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4">
         <Card class="!bg-stone-900 dark:!bg-zinc-900 !text-white !border-0 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-6' }, content: { class: '!p-0' } }">
           <template #content>
             <div class="flex flex-wrap items-center gap-3 overflow-hidden">

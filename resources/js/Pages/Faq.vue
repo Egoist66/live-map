@@ -22,7 +22,7 @@ const { open, sections } = useFaq()
     <component :is="'script'" type="application/ld+json" v-html="JSON.stringify({ '@context':'https://schema.org','@type':'FAQPage', mainEntity: sections.map(s=>({ '@type':'Question', name:s.q, acceptedAnswer:{ '@type':'Answer', text:s.a }})) })"></component>
   </Head>
   <div class="page-scroll bg-surface dark:bg-[#0F121F]">
-      <div class="max-w-[900px] mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-[calc(2rem+var(--sab))]">
+      <div class="max-w-[900px] xl:max-w-[1020px] mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-[calc(2rem+var(--sab))]">
         <div class="text-center">
           <Card class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-700 !rounded-full !shadow-soft !inline-flex">
             <template #content>

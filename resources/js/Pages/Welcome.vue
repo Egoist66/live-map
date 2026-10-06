@@ -53,7 +53,7 @@ function switchTab(next: LandingTab): void {
   <div class="min-h-screen flex flex-col bg-surface dark:bg-[#0F121F] text-ink-900 dark:text-zinc-100 antialiased selection:bg-rose-500 selection:text-white overflow-x-hidden">
     <div class="flex flex-col min-h-screen">
     <header class="native-safe-top sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/70 backdrop-blur border-b border-stone-200/60 dark:border-zinc-800">
-      <div class="max-w-[1280px] mx-auto px-2 min-[411px]:px-4 sm:px-6 h-14 min-[411px]:h-[64px] flex items-center justify-between gap-2 min-w-0">
+      <div class="max-w-[1280px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-2 min-[411px]:px-4 sm:px-6 h-14 min-[411px]:h-[64px] flex items-center justify-between gap-2 min-w-0">
         <Link href="/" class="flex items-center gap-2 min-w-0 shrink-0">
           <span class="w-8 h-8 min-[411px]:w-9 min-[411px]:h-9 rounded-[10px] min-[411px]:rounded-xl overflow-hidden shadow-soft shrink-0 grid place-items-center"><BrandMark class="h-full w-full" /></span>
           <span class="font-black tracking-[-0.03em] text-[17px] min-[411px]:text-[19px] whitespace-nowrap text-ink-900 dark:text-white">U<span class="font-light text-ink-600 dark:text-zinc-400">Pin</span></span>
@@ -66,7 +66,7 @@ function switchTab(next: LandingTab): void {
       </div>
     </header>
 
-    <div class="max-w-[1280px] mx-auto px-4 sm:px-6 pt-4 sm:pt-6 flex flex-col items-center gap-2.5">
+    <div class="max-w-[1280px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 pt-4 sm:pt-6 flex flex-col items-center gap-2.5">
       <div class="relative grid grid-cols-2 w-full max-w-[420px] rounded-full bg-white/70 dark:bg-zinc-900/70 backdrop-blur border border-stone-200/80 dark:border-zinc-700/60 p-1 shadow-soft">
         <span
           :class="['absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] rounded-full shadow-md transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]', thumbGradient[landing.tab.value], thumbPosition[landing.tab.value]]"
@@ -83,7 +83,7 @@ function switchTab(next: LandingTab): void {
       </div>
     </div>
 
-    <section class="max-w-[1280px] w-full mx-auto px-4 sm:px-6 pt-4 sm:pt-10 pb-8 sm:pb-10 grid lg:grid-cols-[1.05fr_0.95fr] gap-6 sm:gap-10 items-center overflow-hidden">
+    <section class="max-w-[1280px] xl:max-w-[1400px] 2xl:max-w-[1600px] w-full mx-auto px-4 sm:px-6 pt-4 sm:pt-10 pb-8 sm:pb-10 grid lg:grid-cols-[1.05fr_0.95fr] gap-6 sm:gap-10 items-center overflow-hidden">
       <div class="min-w-0">
         <div class="flex max-w-full flex-wrap items-center gap-2 bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-2xl sm:rounded-full px-3 py-2 sm:pl-1.5 sm:pr-3 sm:py-1 shadow-soft min-w-0">
           <Tag :class="['!text-white !rounded-full !px-2.5 !py-1 !text-[11px] !font-bold tracking-wide !border-0 shrink-0', landing.theme.value.badge]"><span class="w-1.5 h-1.5 bg-white rounded-full animate-pulse inline-block mr-1.5 align-middle"></span>{{ landing.content.value.badge }}</Tag>
@@ -232,7 +232,7 @@ function switchTab(next: LandingTab): void {
       </div>
     </section>
 
-    <section id="how" class="max-w-[1280px] mx-auto px-4 sm:px-6 py-4 sm:py-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 scroll-mt-20">
+    <section id="how" class="max-w-[1280px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 py-4 sm:py-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 scroll-mt-20">
       <Card v-for="step in landing.content.value.steps" :key="step.title" class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[20px] !shadow-soft card-hover group cursor-default">
         <template #content>
           <div :class="['w-11 h-11 rounded-xl text-white grid place-items-center font-bold text-sm card-icon', landing.theme.value.stepIcon]"><i :class="`pi ${step.icon}`" /></div>
@@ -241,7 +241,7 @@ function switchTab(next: LandingTab): void {
       </Card>
     </section>
 
-    <section class="max-w-[1280px] mx-auto px-4 sm:px-6 py-4 sm:py-6 grid lg:grid-cols-5 gap-3 sm:gap-4">
+    <section class="max-w-[1280px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 py-4 sm:py-6 grid lg:grid-cols-5 gap-3 sm:gap-4">
       <div class="lg:col-span-3 bg-ink-900 dark:bg-zinc-900 dark:border dark:border-zinc-800 text-white rounded-[20px] sm:rounded-[24px] p-5 sm:p-8 relative overflow-hidden">
         <div class="absolute -right-20 -top-20 w-80 h-80 bg-gradient-to-br from-rose-500 to-orange-400 rounded-full blur-[60px] opacity-25"></div>
       <div class="relative w-full max-w-[680px] mx-auto">
@@ -265,7 +265,7 @@ function switchTab(next: LandingTab): void {
       </Card>
     </section>
 
-    <section class="max-w-[1280px] mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-[calc(1.5rem+var(--sab))]">
+    <section class="max-w-[1280px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-[calc(1.5rem+var(--sab))]">
       <Card class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[24px] !shadow-soft card-hover">
         <template #content>
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -276,7 +276,7 @@ function switchTab(next: LandingTab): void {
       </Card>
     </section>
 
-    <section class="max-w-[1280px] mx-auto px-4 sm:px-6 pb-6 sm:pb-8">
+    <section class="max-w-[1280px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 pb-6 sm:pb-8">
       <div class="relative overflow-hidden rounded-[20px] sm:rounded-[24px] bg-gradient-to-br from-rose-500 via-fuchsia-500 to-orange-400 p-5 sm:p-8 text-white shadow-float">
         <div class="absolute -right-16 -top-16 w-64 h-64 bg-white/15 rounded-full blur-[50px] pointer-events-none"></div>
         <div class="absolute -left-10 -bottom-16 w-52 h-52 bg-black/10 rounded-full blur-[40px] pointer-events-none"></div>

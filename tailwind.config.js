@@ -12,6 +12,9 @@ export default {
     ],
     theme: {
         extend: {
+            screens: {
+                '3xl': '1920px',
+            },
             fontFamily: {
                 sans: ['Figtree', 'Inter', ...defaultTheme.fontFamily.sans],
                 display: ['Figtree', ...defaultTheme.fontFamily.sans],

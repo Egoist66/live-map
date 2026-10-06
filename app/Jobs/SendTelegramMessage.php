@@ -90,7 +90,15 @@ class SendTelegramMessage implements ShouldQueue
         $chatId = (int) ($user->telegram_id ?? 0);
         $botToken = (string) config('telegram.bot_token', '');
 
-        if ($chatId <= 0 || $botToken === '') {
+        if ($chatId <= 0) {
+            Log::warning('telegram send skipped: unlinked', ['user_id' => $userId]);
+
+            return ['status' => 'failed', 'retry_after' => 0];
+        }
+
+        if ($botToken === '') {
+            Log::warning('telegram send skipped: no bot token', ['user_id' => $userId]);
+
             return ['status' => 'failed', 'retry_after' => 0];
         }
 

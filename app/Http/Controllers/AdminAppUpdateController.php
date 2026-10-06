@@ -142,7 +142,12 @@ class AdminAppUpdateController extends Controller
                 return false;
             }
 
-            BroadcastAppUpdateTelegram::dispatch((int) $update->id);
+            BroadcastAppUpdateTelegram::dispatch((int) $update->id)->afterCommit();
+
+            \Illuminate\Support\Facades\Log::info('app update telegram queued', [
+                'id' => $update->id,
+                'queue' => (string) config('queue.default', 'database'),
+            ]);
 
             return true;
         } catch (\Throwable $e) {

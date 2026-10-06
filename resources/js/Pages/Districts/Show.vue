@@ -50,7 +50,7 @@ onMounted(async () => {
   <Head :title="page.district.value?.name ?? 'Район'" />
   <Toast />
     <div class="bg-surface dark:bg-[#0F121F]">
-      <div class="mx-auto max-w-[1000px] px-3 py-3 sm:px-6 sm:py-6">
+      <div class="mx-auto max-w-[1000px] px-3 py-3 sm:px-6 sm:py-6 xl:max-w-[1200px] 2xl:max-w-[1320px]">
         <div class="mb-3 flex items-center gap-2 text-[13px] font-semibold text-stone-500 dark:text-zinc-400">
           <Link href="/districts" class="hover:text-blue-600 hover:underline dark:hover:text-blue-400">Районы</Link>
           <i class="pi pi-chevron-right text-[10px]" />

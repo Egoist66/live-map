@@ -1235,3 +1235,55 @@ html.dark.tg-app .chat-header {
     min-width: 0;
   }
 }
+
+/* ===== Большие десктопы (xl/2xl/3xl): воздух и крупные поверхности =====
+   Блок в конце намеренно: выигрывает ничьи специфичности.
+   Контейнеры расширены в шаблонах (xl:1400 / 2xl:1600), здесь —
+   поведение: больше зазоры, крупнее сетки, свайп-карта выше. */
+@media (min-width: 1280px) {
+  .page-scroll {
+    scroll-padding-top: 12px;
+  }
+}
+@media (min-width: 1536px) {
+  :root {
+    --app-header-md: 72px;
+  }
+  .h-app-full,
+  .map-desktop-frame {
+    max-width: 1760px;
+    margin-inline: auto;
+  }
+}
+@media (min-width: 1920px) {
+  body {
+    font-size: 15.5px;
+  }
+}
+
+/* ===== Telegram Desktop Mini App (tdesktop/macos/windows) =====
+   Клиент открывает Mini App в узкой боковой панели/окне справа:
+   ширина ~360-420px, окно немодальное, нативных кнопок поверх нет.
+   Правила: контент по центру, диалоги в пределах панели,
+   отдельная кнопка закрытия внутри шапки (класс ставит мост). */
+html.tg-app.tg-desktop body {
+  overscroll-behavior-y: none;
+}
+html.tg-app.tg-desktop .overlay-safe .p-dialog {
+  max-width: min(560px, calc(100vw - 2rem)) !important;
+  margin-inline: auto !important;
+}
+html.tg-app.tg-desktop .overlay-safe .p-drawer {
+  max-width: min(420px, 100vw) !important;
+}
+html.tg-app.tg-desktop .p-toast {
+  max-width: min(400px, calc(100vw - 2rem)) !important;
+}
+/* Узкая десктопная панель ведёт себя как мобилка:
+   свайп-лента без вложенного десктопного скролла, на всю высоту. */
+@media (min-width: 1024px) {
+  html.tg-app.tg-desktop .swipes-feed-lock {
+    height: calc(100dvh - var(--sat, 0px)) !important;
+    max-height: calc(100dvh - var(--sat, 0px)) !important;
+  }
+}

@@ -65,7 +65,7 @@ onMounted(() => { screenLock.init(); hotkeys.init() })
     <div v-if="layoutRoute.isSwipesRoute.value" class="native-safe-top lg:hidden w-full shrink-0" aria-hidden="true" />
     <EmailVerificationBanner />
     <div v-if="$slots.header" class="bg-white dark:bg-zinc-900 border-b border-stone-200/60 dark:border-zinc-800">
-      <div class="mx-auto max-w-[1280px] px-4 sm:px-6 py-4 sm:py-6"><slot name="header" /></div>
+      <div class="mx-auto max-w-[1280px] xl:max-w-[1400px] 2xl:max-w-[1600px] px-4 sm:px-6 py-4 sm:py-6"><slot name="header" /></div>
     </div>
     <main :class="layoutRoute.isScrollLockedPage.value ? 'flex-1 pb-0 lg:pb-0 overflow-hidden overscroll-none' : 'flex-1 pb-[calc(var(--app-bottomnav)+var(--sab))] lg:pb-0'">
       <PageTransition><slot /></PageTransition>

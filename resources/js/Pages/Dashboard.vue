@@ -115,7 +115,7 @@ onMounted(async () => {
   <Head :title="dash.seo.title.value"><meta head-key="robots" name="robots" content="noindex, nofollow" /></Head>
   <Toast />
     <div v-if="dash.u.value" class="page-scroll bg-surface dark:bg-[#0F121F]">
-      <div class="max-w-[1040px] lg:max-w-[1120px] mx-auto px-3 sm:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4">
+      <div class="max-w-[1040px] lg:max-w-[1120px] xl:max-w-[1280px] 2xl:max-w-[1440px] mx-auto px-3 sm:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4">
         <UloveProfileView
           v-if="showUlove"
           :profile-user="dash.u.value"

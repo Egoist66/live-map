@@ -439,6 +439,14 @@ class TelegramNotifier
     {
         $queued = 0;
 
+        $botToken = (string) config('telegram.bot_token', '');
+
+        if ($botToken === '') {
+            Log::warning('telegram appnews broadcast skipped: no bot token', ['update_id' => (int) $update->id]);
+
+            return 0;
+        }
+
         try {
             User::whereNotNull('telegram_id')
                 ->whereNull('telegram_blocked_at')

@@ -15,16 +15,22 @@ const emit = defineEmits<{ (e: 'bell'): void; (e: 'menu', ev: Event): void; (e: 
 
 const { isXxs, isBelowLg } = useViewportBreakpoints()
 const { topNavPillClass, topNavBrandPillClass } = useDesktopTopNav()
-const { isTelegram } = useTelegram()
+const { isTelegram, isDesktopTelegram, closeMiniApp } = useTelegram()
 /**
  * В Telegram на мобиле колокол и аватар живут в нижней навигации
  * (MobileBottomNav): в топбаре их прячем, чтобы не дублировать.
  * Обычный веб и десктопный TG — как было.
  */
-const hideSystemButtons = computed(() => isTelegram.value && isBelowLg.value)
+const hideSystemButtons = computed(() => isTelegram.value && isBelowLg.value && !isDesktopTelegram.value)
+/**
+ * Десктопный Mini App (Windows/macOS, боковая панель справа):
+ * у окна клиента нет видимого крестика поверх WebView —
+ * показываем свою кнопку «Закрыть» (WebApp.close).
+ */
+const showTgClose = computed(() => isTelegram.value && isDesktopTelegram.value)
 </script>
 <template>
-  <div class="mx-auto flex h-14 w-full min-w-0 max-w-[1280px] items-center gap-1 px-2 min-[411px]:h-16 min-[411px]:gap-2 min-[411px]:px-3 sm:px-6">
+  <div class="mx-auto flex h-14 w-full min-w-0 max-w-[1280px] items-center gap-1 px-2 min-[411px]:h-16 min-[411px]:gap-2 min-[411px]:px-3 sm:px-6 xl:max-w-[1400px] 2xl:max-w-[1600px]">
     <Link :href="dashboardHref" class="min-w-0 shrink-0 rounded-xl active:scale-95 transition" aria-label="На главную">
       <ApplicationLogo :compact="isXxs" />
     </Link>
@@ -40,6 +46,9 @@ const hideSystemButtons = computed(() => isTelegram.value && isBelowLg.value)
     <span class="min-w-0 flex-1" />
 
     <div class="flex shrink-0 items-center gap-1 min-[411px]:gap-1.5 sm:gap-2">
+      <button v-if="showTgClose" type="button" title="Закрыть Mini App" aria-label="Закрыть Mini App" class="topbar-round-btn grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow-soft hover:bg-stone-50 dark:hover:bg-zinc-700 transition active:scale-95 min-[411px]:h-10 min-[411px]:w-10" @click="closeMiniApp()">
+        <i class="pi pi-times text-stone-600 dark:text-zinc-300"></i>
+      </button>
       <button v-if="lockEnabled" @click="emit('lock')" title="Заблокировать" aria-label="Заблокировать" class="topbar-round-btn grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow-soft hover:bg-stone-50 dark:hover:bg-zinc-700 transition active:scale-95 min-[411px]:h-10 min-[411px]:w-10">
         <i class="pi pi-lock text-stone-600 dark:text-zinc-300"></i>
       </button>

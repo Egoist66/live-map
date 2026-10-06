@@ -43,7 +43,7 @@ const showQuestsTab = computed(() => modules.isEnabled('ulove') || modules.isEna
   <Head title="Настройки" />
   <Toast />
     <div class="page-scroll bg-surface dark:bg-[#0F121F] overflow-x-hidden">
-      <div class="max-w-[1280px] mx-auto px-3 sm:px-6 py-4 sm:py-6 overflow-hidden">
+      <div class="max-w-[1280px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-3 sm:px-6 py-4 sm:py-6 overflow-hidden">
         <div class="grid lg:grid-cols-[300px_1fr] gap-4 sm:gap-6 items-start content-start w-full lg:items-start">
           <SettingsSidebar :menu-model="s.menuModel.value" :plan="planOf(s.u.value)" :pins-today="s.u.value.pins_today_count || 0" :pins-limit="planOf(s.u.value) === 'free' ? '3' : '∞'" :zone-count="s.zoneCount.value" :proc-unread="s.proc.unread.value" @billing="s.active.value = 'billing'" />
           <div class="space-y-4 min-w-0 w-full max-w-full lg:min-h-[600px] self-start">

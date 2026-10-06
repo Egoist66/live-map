@@ -5,6 +5,8 @@ const SCRIPT_URL = 'https://telegram.org/js/telegram-web-app.js'
 const TG_COOKIE = 'upin_client=telegram; path=/; max-age=31536000; SameSite=Lax'
 
 const isTelegram = ref(false)
+/** Десктопный клиент Telegram (tdesktop/macos/windows/linux/web на ПК). */
+const isDesktopTelegram = ref(false)
 const isReady = ref(false)
 const initData = ref('')
 const telegramUser = ref<TelegramWebAppUser | null>(null)
@@ -151,6 +153,40 @@ async function loadScript(): Promise<boolean> {
 }
 
 /**
+ * Десктопный ли это клиент Telegram (окно/панель на ПК, а не телефон).
+ *
+ * Платформы Bot API: 'android'/'android_x'/'ios' — мобила;
+ * 'tdesktop'/'macos'/'windows'/'linux'/'web'/'weba'/'webk'/'unknown' +
+ * точный поинтер (mouse) — десктоп. Мобилу дополнительно подтверждает
+ * coarse-pointer: на ПК с тачскрином платформа всё равно десктопная.
+ *
+ * Десктопный Mini App живёт в узкой боковой панели справа (Windows/macOS):
+ * там нет жестов и полноэкранного режима — requestFullscreen/expand
+ * уводят окно в немасштабируемое состояние «справа и не закрыть»,
+ * поэтому их вызываем только на мобиле.
+ *
+ * @param webApp живой объект Telegram WebApp
+ * @returns true когда Mini App открыт в Telegram Desktop
+ */
+export function isDesktopTelegramPlatform(webApp: TelegramWebApp): boolean {
+  const rawPlatform = String(webApp?.platform || '').toLowerCase()
+
+  const mobilePrefix = rawPlatform.startsWith('android') || rawPlatform.startsWith('ios')
+
+  if (!mobilePrefix) {
+    return true
+  }
+
+  try {
+    const coarse = window.matchMedia?.('(pointer: coarse)').matches ?? false
+
+    return !coarse
+  } catch {
+    return false
+  }
+}
+
+/**
  * Проверить, что клиент Telegram поддерживает метод с версии.
  *
  * telegram-web-app.js внутри сам гейтит методы версией, но каждый
@@ -287,6 +323,7 @@ function applyTelegramInsets(webApp: TelegramWebApp): void {
 
   tgSafeTop.value = top
   tgSafeBottom.value = bottom
+  isDesktopTelegram.value = isDesktopTg
 
   try {
     const root = document.documentElement
@@ -414,15 +451,25 @@ export function useTelegram() {
       // No-op: без ready клиент висит на сплэше — пробуем дальше.
     }
 
-    try {
-      webApp.expand()
-    } catch {
-      // No-op: expand не критичен для рендера.
+    const desktopTg = isDesktopTelegramPlatform(webApp)
+    isDesktopTelegram.value = desktopTg
+
+    // Десктопный клиент (Windows/macOS): только ready, без expand/fullscreen.
+    // expand/requestFullscreen в боковой панели десктопа уводят WebView
+    // в немасштабируемое окно справа («не двигается, не закрыть»).
+    // На мобиле — как было: expand + запрет схлопывания + fullscreen.
+    if (!desktopTg) {
+      try {
+        webApp.expand()
+      } catch {
+        // No-op: expand не критичен для рендера.
+      }
     }
 
     // Версионные методы вызываем только при поддержке: на старых
     // клиентах (6.0) каждый такой вызов — варнинг в консоль.
-    if (webAppSupports(webApp, '7.1')) {
+    // На десктопе вертикальных свайпов нет — не трогаем.
+    if (!desktopTg && webAppSupports(webApp, '7.1')) {
       try {
         webApp.disableVerticalSwipes?.()
       } catch {
@@ -430,7 +477,7 @@ export function useTelegram() {
       }
     }
 
-    if (webAppSupports(webApp, '8.0')) {
+    if (!desktopTg && webAppSupports(webApp, '8.0')) {
       try {
         if (typeof webApp.requestFullscreen === 'function' && !webApp.isFullscreen) {
           webApp.requestFullscreen()
@@ -499,6 +546,16 @@ export function useTelegram() {
     }
 
     isTelegram.value = true
+
+    try {
+      const earlyWebApp = getWebApp()
+
+      if (earlyWebApp) {
+        isDesktopTelegram.value = isDesktopTelegramPlatform(earlyWebApp)
+      }
+    } catch {
+      // No-op.
+    }
 
     try {
       document.cookie = TG_COOKIE
@@ -577,6 +634,7 @@ export function useTelegram() {
 
   return {
     isTelegram,
+    isDesktopTelegram,
     isReady,
     initData,
     telegramUser,
