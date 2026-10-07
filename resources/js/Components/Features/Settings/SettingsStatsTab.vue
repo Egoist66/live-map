@@ -128,18 +128,6 @@ function audienceMax(): number {
               severity="warn"
               class="!text-xs !font-bold"
             />
-            <Button
-              icon="pi pi-download"
-              label="CSV"
-              size="small"
-              outlined
-              severity="secondary"
-              :loading="stats.state.value.exporting"
-              :disabled="stats.loading.value || !stats.summary.value"
-              title="CSV-выгрузка — та же, что в боте по /export"
-              aria-label="Выгрузить статистику в CSV"
-              @click="stats.exportCsv()"
-            />
           </div>
         </div>
 
@@ -168,16 +156,12 @@ function audienceMax(): number {
             <p class="mt-1 text-xl font-black dark:text-white">{{ stats.summary.value.views.week }}</p>
             <p class="text-xs text-stone-500 mt-0.5">за неделю · {{ stats.summary.value.views.month }} за месяц</p>
           </div>
-          <div class="rounded-2xl border border-stone-200/70 dark:border-zinc-800 px-4 py-3">
+          <div class="rounded-2xl border border-stone-200/70 dark:border-zinc-800 px-4 py-3" title="Взаимные лайки в ULove — чат с человеком уже открыт">
             <p class="text-[11px] font-bold uppercase tracking-widest text-stone-400">Мэтчи</p>
             <p class="mt-1 text-xl font-black dark:text-white">{{ stats.summary.value.matches_total }}</p>
-            <p class="text-xs text-stone-500 mt-0.5">непрочитанных — {{ stats.summary.value.unread }}</p>
+            <p class="text-xs text-stone-500 mt-0.5">взаимных лайков · непрочитанных сообщений — {{ stats.summary.value.unread }}</p>
           </div>
         </div>
-
-        <Message severity="info" class="!mt-4 !text-xs" :closable="false">
-          Та же статистика — в Telegram-боте: /stats текстом, /export файлом CSV.
-        </Message>
       </template>
     </Card>
 

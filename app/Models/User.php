@@ -1030,11 +1030,26 @@ class User extends Authenticatable implements MustVerifyEmail
         return (int) $now->diffInDays($target);
     }
 
+    /**
+     * Сколько непрочитанных сообщений в видимых диалогах.
+     *
+     * Зеркалит логику списка чатов (ConversationController::index):
+     * скрытые диалоги (hidden_at) не считаем, в очищенных
+     * (cleared_at) — только сообщения после очистки. Иначе
+     * статистика и бейджи показывали «фантомы», которых нет в чатах.
+     *
+     * @return int число непрочитанных
+     */
     public function unreadMessagesCount(): int
     {
-        return Message::whereIn('conversation_id', $this->conversations()->pluck('conversations.id'))
-            ->where('sender_id','!=',$this->id)
-            ->whereNull('read_at')
+        return Message::join('conversation_participants as cp', function ($join) {
+            $join->on('cp.conversation_id', '=', 'messages.conversation_id')
+                ->where('cp.user_id', $this->id)
+                ->whereNull('cp.hidden_at');
+        })
+            ->where('messages.sender_id', '!=', $this->id)
+            ->whereNull('messages.read_at')
+            ->where(fn ($q) => $q->whereNull('cp.cleared_at')->orWhereColumn('messages.created_at', '>', 'cp.cleared_at'))
             ->count();
     }
 

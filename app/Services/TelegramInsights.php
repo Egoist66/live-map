@@ -182,8 +182,8 @@ class TelegramInsights
         $lines[] = '⏱ В приложении: сегодня <b>'.self::minutesLabel((int) $time['today_min']).'</b>, неделя <b>'.$timeLabel.'</b>, месяц <b>'.self::minutesLabel((int) $time['month_min']).'</b>';
         $lines[] = '💞 Лайков: неделя <b>'.$likes['week'].'</b> · месяц <b>'.$likes['month'].'</b> · всего <b>'.$likes['total'].'</b>';
         $lines[] = '👀 Просмотров профиля: неделя <b>'.$views['week'].'</b> · месяц <b>'.$views['month'].'</b> · всего <b>'.$views['total'].'</b>';
-        $lines[] = '🎉 Мэтчей: <b>'.(int) $stats['matches_total'].'</b>';
-        $lines[] = '💬 Непрочитанных: <b>'.(int) $stats['unread'].'</b>';
+        $lines[] = '🎉 Мэтчей (взаимные лайки): <b>'.(int) $stats['matches_total'].'</b>';
+        $lines[] = '💬 Непрочитанных сообщений: <b>'.(int) $stats['unread'].'</b>';
 
         $audience = $stats['audience'];
 
