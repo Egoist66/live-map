@@ -26,7 +26,7 @@ class MessageController extends Controller
         $clearedAt = $conversation->participantRows()->where('user_id', $request->user()->id)->value('cleared_at');
         $before = $request->input('before');
         $limit = max(1, min(50, (int) $request->input('limit', self::HISTORY_PAGE_SIZE)));
-        $q = $conversation->messages()->with(['sender:id,name,avatar_path,telegram_photo_url', 'replyTo.sender:id,name'])->reorder()->orderByDesc('id');
+        $q = $conversation->messages()->with(['sender:id,name,avatar_path,telegram_photo_url', 'forwardedFrom:id,name,avatar_path,telegram_photo_url', 'replyTo.sender:id,name'])->reorder()->orderByDesc('id');
         if ($before) $q->where('id','<',$before);
         if ($clearedAt) $q->where('created_at', '>', $clearedAt);
         $collection = $q->limit($limit + 1)->get();
@@ -164,8 +164,9 @@ class MessageController extends Controller
      * @param array|null $attachment вложение
      * @param int|null $voiceDuration длительность голосового
      * @param array|null $shared ['type' => flow|district, 'id' => int]
+     * @param int|null $forwardedFromId автор оригинала для подписи «Переслано от ...»
      */
-    public function storeInline(Request $request, Conversation $conversation, $sender, string $body, ?int $replyToId = null, ?array $attachment = null, ?int $voiceDuration = null, ?array $shared = null)
+    public function storeInline(Request $request, Conversation $conversation, $sender, string $body, ?int $replyToId = null, ?array $attachment = null, ?int $voiceDuration = null, ?array $shared = null, ?int $forwardedFromId = null)
     {
         \App\Services\EmailVerificationGate::assertCanWrite($sender instanceof User ? $sender : User::findOrFail($sender->id));
         $conversation->loadMissing('participants:id,name,message_privacy,allow_random_messages');
@@ -179,12 +180,13 @@ class MessageController extends Controller
         $kind = $attachment['kind'] ?? null;
         $type = $shared ? 'post' : ($kind === 'image' ? 'image' : ($kind === 'voice' ? 'voice' : ($kind === 'file' ? 'file' : 'text')));
         $duration = $kind === 'voice' && $voiceDuration ? max(1, min(60, $voiceDuration)) : null;
-        $msg = Message::create([
+        $attributes = [
             'conversation_id' => $conversation->id,
             'reply_to_id' => $replyToId,
             'shared_post_type' => $shared['type'] ?? null,
             'shared_post_id' => $shared['id'] ?? null,
             'sender_id' => $sender->id,
+            'forwarded_from_id' => $forwardedFromId,
             'body' => $body,
             'type' => $type,
             'attachment_path' => $attachment['path'] ?? null,
@@ -193,8 +195,14 @@ class MessageController extends Controller
             'attachment_size' => $attachment['size'] ?? null,
             'attachment_kind' => $kind,
             'attachment_duration' => $duration,
-        ]);
-        $msg->load(['sender:id,name,avatar_path,telegram_photo_url','replyTo.sender:id,name','conversation.participantRows']);
+        ];
+
+        if (! \Illuminate\Support\Facades\Schema::hasColumn('messages', 'forwarded_from_id')) {
+            unset($attributes['forwarded_from_id']);
+        }
+
+        $msg = Message::create($attributes);
+        $msg->load(['sender:id,name,avatar_path,telegram_photo_url', 'forwardedFrom:id,name,avatar_path,telegram_photo_url', 'replyTo.sender:id,name', 'conversation.participantRows']);
         $conversation->update(['last_message_at'=>$msg->created_at]);
         $conversation->participantRows()->whereNotNull('hidden_at')->update(['hidden_at'=>null]);
         try{ broadcast(new MessageSent($msg))->toOthers(); }catch(\Throwable $e){ \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
@@ -368,7 +376,7 @@ class MessageController extends Controller
         \App\Services\EmailVerificationGate::assertCanWrite($me);
 
         $sources = Message::whereIn('id', $data['message_ids'])
-            ->with('conversation')
+            ->with(['conversation', 'sender:id,name'])
             ->orderBy('id')
             ->get()
             ->filter(function ($m) use ($me) {
@@ -410,6 +418,10 @@ class MessageController extends Controller
     /**
      * Скопировать одно сообщение в диалог получателя.
      *
+     * Подпись «Переслано от ...» хранит живую связь на автора
+     * оригинала: если оригинал сам переслан, тянем цепочку к корню,
+     * чтобы не плодить «переслано от переславшего».
+     *
      * @param Request $request исходный запрос (для storeInline)
      * @param Conversation $conv диалог-получатель
      * @param User $me пересылающий (станет автором копии)
@@ -430,6 +442,8 @@ class MessageController extends Controller
             $shared = ['type' => $source->shared_post_type, 'id' => (int) $source->shared_post_id];
         }
 
+        $forwardedFromId = (int) ($source->forwarded_from_id ?? $source->sender_id) ?: null;
+
         try {
             $response = app(MessageController::class)->storeInline(
                 $request,
@@ -439,7 +453,8 @@ class MessageController extends Controller
                 null,
                 $attachment,
                 $source->attachment_duration,
-                $shared
+                $shared,
+                $forwardedFromId
             );
         } catch (\Throwable) {
             return null;
@@ -487,7 +502,7 @@ class MessageController extends Controller
     {
         abort_unless($conversation->hasParticipant($request->user()->id),403);
         $list = $conversation->messages()
-            ->with(['sender:id,name,avatar_path,telegram_photo_url', 'replyTo.sender:id,name'])
+            ->with(['sender:id,name,avatar_path,telegram_photo_url', 'forwardedFrom:id,name,avatar_path,telegram_photo_url', 'replyTo.sender:id,name'])
             ->whereNotNull('pinned_at')
             ->orderBy('pinned_at')
             ->get()

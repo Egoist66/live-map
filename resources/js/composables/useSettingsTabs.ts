@@ -2,6 +2,7 @@ import { ref, computed, watch } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import { useSecurityImpersonations } from '@/composables/useSecurityImpersonations'
 import { useAppModulesStore } from '@/stores/appModules'
+import { SETTINGS_APP_TAB_PARAM, getActiveAppTab, writeAppTabToUrl } from '@/composables/useSettingsAppTabs'
 
 export type SettingsTabId = 'profile'|'billing'|'quests'|'privacy'|'appearance'|'security'|'pins'|'support'|'app'|'integrations'|'about'|'procedures'|'admin'|'archive'
 
@@ -92,7 +93,13 @@ export function useSettingsTabs() {
       rest.push(id)
       url.pathname = '/settings' + (rest.length ? `/${rest.join('/')}` : '')
       url.searchParams.delete('tab')
+      if (id !== 'app') {
+        url.searchParams.delete(SETTINGS_APP_TAB_PARAM)
+      }
       window.history.replaceState({}, '', url.toString())
+      if (id === 'app') {
+        writeAppTabToUrl(getActiveAppTab())
+      }
     } catch {}
   })
 

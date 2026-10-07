@@ -30,7 +30,7 @@ class MessageUpdated implements ShouldBroadcastNow
 
     public function broadcastWith(): array
     {
-        $this->message->loadMissing(['sender:id,name,avatar_path,telegram_photo_url', 'replyTo.sender:id,name']);
+        $this->message->loadMissing(['sender:id,name,avatar_path,telegram_photo_url', 'forwardedFrom:id,name,avatar_path,telegram_photo_url', 'replyTo.sender:id,name']);
         return ['message' => $this->message->toArrayPayload()];
     }
 

@@ -146,6 +146,8 @@ const {
   canDeleteSelection,
   forwardOpen,
   forwarding,
+  forwardingTargetId,
+  forwardSources,
   toggleSelectMessage,
   cancelSelection,
   openForward,
@@ -554,8 +556,10 @@ onMounted(async () => {
     :current-id="selectedId"
     :count="selection.count.value"
     :sending="forwarding"
+    :target-id="forwardingTargetId"
+    :sources="(forwardSources as any)"
     @close="forwardOpen = false"
-    @pick="(id: number) => forwardSelection(id)"
+    @pick="(id: number | 'saved') => forwardSelection(id)"
   />
   <ChatWallpaperDialog
     :open="wallpaperOpen"

@@ -2,15 +2,21 @@ import { computed, ref } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { chatApi } from '@/services/chat.api'
 import { useFileDownload } from '@/composables/useFileDownload'
+import { getAvatarUrl } from '@/composables/useAvatar'
 import type { Conversation } from '@/types/entities/Chat'
 
 /**
  * Пункт селекта чата для выгрузки.
+ *
+ * Аватар — готовый URL собеседника (null — показать инициалы),
+ * у районных чатов вместо аватара рисуется домик-тайл (isDistrict).
  */
 export interface ChatExportOption {
   id: number
   label: string
   sub: string | null
+  avatar: string | null
+  isDistrict: boolean
 }
 
 const PAGE_SIZE = 50
@@ -117,7 +123,17 @@ export function useChatExport() {
         page += 1
       }
 
-      options.value = all.map((row) => ({ id: row.id, label: labelFor(row), sub: subFor(row) }))
+      options.value = all.map((row) => {
+        const isDistrict = row.type === 'district'
+
+        return {
+          id: row.id,
+          label: labelFor(row),
+          sub: subFor(row),
+          avatar: isDistrict ? null : getAvatarUrl(row.other),
+          isDistrict,
+        }
+      })
       loaded.value = true
     } catch {
       toast?.add({ severity: 'error', summary: 'Не загрузилось', detail: 'Не удалось получить список чатов', life: 4000 })

@@ -380,10 +380,22 @@ function audienceMax(): number {
             @focus="chatExport.load()"
             @show="chatExport.load()"
           >
+            <template #value>
+              <span v-if="chatExport.selected.value" class="flex items-center gap-2.5 min-w-0">
+                <span v-if="chatExport.selected.value.isDistrict" class="w-6 h-6 rounded-full bg-gradient-to-br from-violet-700 to-purple-900 text-white grid place-items-center text-xs shrink-0">🏘️</span>
+                <Avatar v-else :image="chatExport.selected.value.avatar ?? undefined" :label="chatExport.selected.value.label.slice(0, 1)" shape="circle" class="!w-6 !h-6 shrink-0 [&_img]:object-cover" />
+                <span class="truncate text-sm">{{ chatExport.selected.value.label }}</span>
+              </span>
+              <span v-else class="text-stone-400 text-sm">Выберите чат…</span>
+            </template>
             <template #option="{ option }">
-              <span class="block min-w-0">
-                <span class="block text-sm font-semibold truncate">{{ option.label }}</span>
-                <span v-if="option.sub" class="block text-xs text-stone-500 truncate">{{ option.sub }}</span>
+              <span class="flex items-center gap-2.5 min-w-0">
+                <span v-if="option.isDistrict" class="w-8 h-8 rounded-full bg-gradient-to-br from-violet-700 to-purple-900 text-white grid place-items-center text-sm shrink-0">🏘️</span>
+                <Avatar v-else :image="option.avatar ?? undefined" :label="option.label.slice(0, 1)" shape="circle" class="!w-8 !h-8 shrink-0 [&_img]:object-cover" />
+                <span class="block min-w-0 flex-1">
+                  <span class="block text-sm font-semibold truncate">{{ option.label }}</span>
+                  <span v-if="option.sub" class="block text-xs text-stone-500 truncate">{{ option.sub }}</span>
+                </span>
               </span>
             </template>
           </Select>

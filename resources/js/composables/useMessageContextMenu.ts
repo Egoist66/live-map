@@ -46,12 +46,15 @@ export function useMessageContextMenu(opts: { isOwn: (m: any) => boolean; onEdit
   let startPageY = 0
 
   /**
-   * Часы из ISO-строки для подписи «прочитано».
+   * Дата и время из ISO-строки для подписи «прочитано».
+   *
+   * Сегодня — «Сегодня, 14:32», вчера — «Вчера, 14:32»,
+   * старше — «12 мая 2026, 14:32».
    *
    * @param iso дата из read_at/delivered_at
-   * @returns «14:32» или пусто
+   * @returns подпись с датой или пусто
    */
-  function clockOf(iso: unknown): string {
+  function dateTimeOf(iso: unknown): string {
     try {
       const date = new Date(String(iso ?? ''))
 
@@ -59,7 +62,21 @@ export function useMessageContextMenu(opts: { isOwn: (m: any) => boolean; onEdit
         return ''
       }
 
-      return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+      const clock = date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+      const startOf = (x: Date): number => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime()
+      const diffDays = Math.round((startOf(new Date()) - startOf(date)) / 86400000)
+
+      if (diffDays <= 0) {
+        return `Сегодня, ${clock}`
+      }
+
+      if (diffDays === 1) {
+        return `Вчера, ${clock}`
+      }
+
+      const day = date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })
+
+      return `${day}, ${clock}`
     } catch {
       return ''
     }
@@ -70,6 +87,7 @@ export function useMessageContextMenu(opts: { isOwn: (m: any) => boolean; onEdit
    *
    * Прочитано — по read_at, иначе доставлено — по delivered_at,
    * иначе просто «Отправлено». Чужим сообщениям не показываем.
+   * Дату показываем всегда, не только время.
    *
    * @param m сообщение
    * @returns пункт меню или null
@@ -83,16 +101,16 @@ export function useMessageContextMenu(opts: { isOwn: (m: any) => boolean; onEdit
       return { label: 'Отправляется…', icon: 'pi pi-clock' }
     }
 
-    const readClock = clockOf(m?.read_at)
+    const readAt = dateTimeOf(m?.read_at)
 
-    if (readClock !== '') {
-      return { label: `Прочитано в ${readClock}`, icon: 'pi pi-eye' }
+    if (readAt !== '') {
+      return { label: `Прочитано ${readAt}`, icon: 'pi pi-eye' }
     }
 
-    const deliveredClock = clockOf(m?.delivered_at)
+    const deliveredAt = dateTimeOf(m?.delivered_at)
 
-    if (deliveredClock !== '') {
-      return { label: `Доставлено в ${deliveredClock}`, icon: 'pi pi-check' }
+    if (deliveredAt !== '') {
+      return { label: `Доставлено ${deliveredAt}`, icon: 'pi pi-check' }
     }
 
     if (m?.id == null) {

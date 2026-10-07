@@ -144,7 +144,7 @@ class RealtimeController extends Controller
         }
 
         $query = Message::whereIn('conversation_id', $convIds)
-            ->with(['sender:id,name,avatar_path', 'replyTo.sender:id,name'])
+            ->with(['sender:id,name,avatar_path', 'forwardedFrom:id,name,avatar_path,telegram_photo_url', 'replyTo.sender:id,name'])
             ->orderBy('id')
             ->limit(50);
 
@@ -179,7 +179,7 @@ class RealtimeController extends Controller
         $rows = Message::whereIn('conversation_id', $convIds)
             ->where(fn ($query) => $query->where('edited_at', '>', $since)->orWhere('pinned_at', '>', $since))
             ->whereNotIn('id', $excludeIds ?: [0])
-            ->with(['sender:id,name,avatar_path', 'replyTo.sender:id,name'])
+            ->with(['sender:id,name,avatar_path', 'forwardedFrom:id,name,avatar_path,telegram_photo_url', 'replyTo.sender:id,name'])
             ->orderBy('updated_at')
             ->limit(20)
             ->get();

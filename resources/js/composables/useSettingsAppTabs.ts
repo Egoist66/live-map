@@ -1,4 +1,12 @@
-import { onBeforeUnmount, ref } from 'vue'
+import { onBeforeUnmount, ref, watch } from 'vue'
+
+/**
+ * Query-параметр активного подтаба: `/settings/app?apptab=stats`.
+ *
+ * Дефолтный `sections` в URL не пишем — чистый `/settings/app`.
+ * Перезагрузка и кнопки браузера восстанавливают подтаб из URL.
+ */
+export const SETTINGS_APP_TAB_PARAM = 'apptab'
 
 /**
  * Смысловые подтабы раздела «Приложение» в настройках.
@@ -30,9 +38,91 @@ export const SETTINGS_APP_TABS: readonly SettingsAppTab[] = [
   { id: 'hotkeys', label: 'Клавиши', icon: 'pi pi-keyboard', desc: 'Горячие клавиши десктопа' },
 ] as const
 
+/**
+ * Подтаб валиден, если есть в списке подвкладок раздела.
+ *
+ * @param value сырое значение из URL
+ */
+function isAppTabId(value: unknown): value is SettingsAppTabId {
+  return typeof value === 'string' && SETTINGS_APP_TABS.some((t) => t.id === value)
+}
+
+/**
+ * Активный подтаб из URL (`?apptab=stats`), null — параметр пуст/битый.
+ */
+function readAppTabFromUrl(): SettingsAppTabId | null {
+  try {
+    const raw = new URLSearchParams(window.location.search).get(SETTINGS_APP_TAB_PARAM)
+    return isAppTabId(raw) ? raw : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Страница раздела «Приложение» сейчас открыта (`/settings/app`).
+ */
+function isAppSettingsPage(): boolean {
+  try {
+    const parts = new URL(window.location.href).pathname.split('/').filter(Boolean)
+    return parts[0] === 'settings' && parts[parts.length - 1] === 'app'
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Записать текущий подтаб в URL без перезагрузки.
+ *
+ * Вызывать при входе на `/settings/app` извне хука (смена главного
+ * таба): кладёт `?apptab=` из живого состояния, дефолт стирает.
+ *
+ * @param id подтаб для записи
+ */
+export function writeAppTabToUrl(id: SettingsAppTabId): void {
+  try {
+    if (!isAppSettingsPage()) {
+      return
+    }
+
+    const url = new URL(window.location.href)
+
+    if (id === 'sections') {
+      url.searchParams.delete(SETTINGS_APP_TAB_PARAM)
+    } else {
+      url.searchParams.set(SETTINGS_APP_TAB_PARAM, id)
+    }
+
+    window.history.replaceState({}, '', url.toString())
+  } catch {
+    /* noop */
+  }
+}
+
+/**
+ * Общее состояние подтаба: переживает перемонтирование панели
+ * (переключение главных табов не сбрасывает выбранный подтаб),
+ * источником правды после перезагрузки остаётся `?apptab=` в URL.
+ */
+const sharedActive = ref<SettingsAppTabId>('sections')
+let sharedInit = false
+
+/**
+ * Текущий подтаб раздела «Приложение» (для синхронизации из других хуков).
+ */
+export function getActiveAppTab(): SettingsAppTabId {
+  return sharedActive.value
+}
+
 export function useSettingsAppTabs() {
   const tabs = SETTINGS_APP_TABS
-  const active = ref<SettingsAppTabId>('sections')
+
+  if (!sharedInit) {
+    sharedActive.value = readAppTabFromUrl() ?? 'sections'
+    sharedInit = true
+  }
+
+  const active = sharedActive
 
   /**
    * Скроллер ленты пилюль (`.p-tablist-content` внутри TabList).
@@ -45,12 +135,20 @@ export function useSettingsAppTabs() {
   /**
    * Переключить подвкладку раздела «Приложение».
    *
+   * Активность дублируется в `?apptab=`, чтобы перезагрузка
+   * и навигация не сбрасывали выбранный подтаб.
+   *
    * @param id id подвкладки из SETTINGS_APP_TABS
    */
   function setActive(id: SettingsAppTabId): void {
     active.value = id
+    writeAppTabToUrl(id)
     scrollActiveIntoView()
   }
+
+  watch(active, (id) => {
+    writeAppTabToUrl(id)
+  })
 
   /**
    * Обновить флаги затухания краёв по текущей прокрутке.

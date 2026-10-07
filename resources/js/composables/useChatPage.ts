@@ -15,6 +15,7 @@ import { useChatAttachment } from '@/composables/useChatAttachment'
 import { useChatLocation } from '@/composables/useChatLocation'
 import { useVoiceRecorder } from '@/composables/useVoiceRecorder'
 import { useAppModulesStore } from '@/stores/appModules'
+import { useSavedNotesStore } from '@/stores/savedNotes'
 import { chatApi } from '@/services/chat.api'
 import { datingApi } from '@/services/dating.api'
 
@@ -114,6 +115,7 @@ export function useChatPage(initialConversationId?: number) {
   const selection = useMessageSelection()
   const forwardOpen = ref(false)
   const forwarding = ref(false)
+  const forwardingTargetId = ref<number | 'saved' | null>(null)
 
   /**
    * Можно ли выбрать сообщение: обычные, уже доставленные на сервер.
@@ -163,6 +165,7 @@ export function useChatPage(initialConversationId?: number) {
   function cancelSelection(): void {
     selection.clear()
     forwardOpen.value = false
+    forwardingTargetId.value = null
   }
 
   /**
@@ -230,20 +233,168 @@ export function useChatPage(initialConversationId?: number) {
       return
     }
 
+    forwardingTargetId.value = null
     forwardOpen.value = true
   }
 
   /**
-   * Переслать выбранные в диалог.
-   *
-   * @param targetId id диалога-получателя
+   * Полные объекты выбранных сообщений для превью авторов в диалоге.
    */
-  async function forwardSelection(targetId: number): Promise<void> {
+  const forwardSources = computed(() => {
+    const wanted = new Set([...selection.ids.value].map(Number))
+    const found: any[] = []
+
+    for (const m of (chat.messages.value as any[])) {
+      if (wanted.has(Number(m?.id))) {
+        found.push(m)
+      }
+    }
+
+    return found
+  })
+
+  /**
+   * Текст заметки из пересланного сообщения: чужое подписываем автором.
+   *
+   * Без текста подставляем понятную подпись по виду вложения,
+   * чтобы голосовое или файл не сохранялись пустыми.
+   *
+   * @param m сообщение из ленты
+   */
+  function forwardNoteBody(m: any): string {
+    const body = String(m?.body ?? '').trim()
+    const author = String(m?.sender?.name ?? '').trim()
+    const mine = isOwnMessage(m)
+    const kind = String(m?.attachment?.kind ?? m?.type ?? '')
+    let snippet = body
+
+    if (snippet === '') {
+      if (kind === 'voice' || kind === 'audio') {
+        const secs = Number(m?.attachment?.duration ?? 0)
+        snippet = secs > 0 ? `🎤 Голосовое (${secs} c)` : '🎤 Голосовое'
+      } else if (String(m?.attachment?.name ?? '') !== '') {
+        snippet = String(m?.attachment?.name)
+      } else {
+        snippet = '(вложение)'
+      }
+    }
+
+    if (mine || author === '') {
+      return snippet
+    }
+
+    return `Переслано от ${author}:\n${snippet}`
+  }
+
+  /**
+   * Скачать вложение сообщения как File для сохранения в Избранное.
+   *
+   * @param m сообщение из ленты
+   * @returns файл или null (голосовые и ошибки — null)
+   */
+  async function forwardNoteFile(m: any): Promise<File | null> {
+    const url = String(m?.attachment?.url ?? '')
+
+    if (url === '') {
+      return null
+    }
+
+    const kind = String(m?.attachment?.kind ?? '')
+
+    if (kind === 'voice') {
+      return null
+    }
+
+    try {
+      const res = await fetch(url)
+
+      if (!res.ok) {
+        return null
+      }
+
+      const blob = await res.blob()
+      const name = String(m?.attachment?.name ?? `file-${m?.id ?? Date.now()}`)
+
+      return new File([blob], name, { type: blob.type || String(m?.attachment?.mime ?? 'application/octet-stream') })
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * Переслать выбранные в Избранное: каждое сообщение — отдельной заметкой.
+   */
+  async function forwardToSaved(): Promise<void> {
+    if (!selection.active.value || forwarding.value) {
+      return
+    }
+
+    const sources = [...forwardSources.value]
+
+    if (!sources.length) {
+      return
+    }
+
+    forwarding.value = true
+    forwardingTargetId.value = 'saved'
+
+    const notes = useSavedNotesStore()
+    let saved = 0
+    let failed = 0
+
+    for (const m of sources) {
+      const body = forwardNoteBody(m)
+      const file = await forwardNoteFile(m)
+      const kind = file && /\.(jpg|jpeg|png|webp|gif)$/i.test(file.name) ? 'image' : 'file'
+      const text = body === '' && file ? file.name : body
+
+      if (text === '') {
+        failed += 1
+        continue
+      }
+
+      const ok = await notes.create(text, file, kind)
+
+      if (ok) {
+        saved += 1
+      } else {
+        failed += 1
+      }
+    }
+
+    forwarding.value = false
+    forwardingTargetId.value = null
+
+    if (saved > 0) {
+      forwardOpen.value = false
+      selection.clear()
+      toast?.add({ severity: 'success', summary: 'В Избранном', detail: saved === 1 ? 'Сообщение сохранено в Избранное' : `Сохранено в Избранное: ${saved}`, life: 3000 })
+    }
+
+    if (failed > 0 && saved === 0) {
+      toast?.add({ severity: 'error', summary: 'Не получилось', detail: 'Не удалось сохранить в Избранное', life: 4000 })
+    } else if (failed > 0) {
+      toast?.add({ severity: 'warn', summary: 'Частично', detail: `Не сохранилось: ${failed}`, life: 4000 })
+    }
+  }
+
+  /**
+   * Переслать выбранные в диалог или в Избранное.
+   *
+   * @param targetId id диалога-получателя или 'saved' для Избранного
+   */
+  async function forwardSelection(targetId: number | 'saved'): Promise<void> {
+    if (targetId === 'saved') {
+      await forwardToSaved()
+      return
+    }
+
     if (!selection.active.value || forwarding.value) {
       return
     }
 
     forwarding.value = true
+    forwardingTargetId.value = Number(targetId)
 
     try {
       const res = await chatApi.forwardMessages([...selection.ids.value], [Number(targetId)])
@@ -270,6 +421,7 @@ export function useChatPage(initialConversationId?: number) {
       toast?.add({ severity: 'error', summary: 'Не получилось', detail, life: 4000 })
     } finally {
       forwarding.value = false
+      forwardingTargetId.value = null
     }
   }
 
@@ -753,6 +905,6 @@ export function useChatPage(initialConversationId?: number) {
     handleSend, handlePickFile, handlePasteImage, handleShareLocation, handleStartVoice, handleStopVoice, handleCancelVoice, handleSendVoice, locating: chatLocation.locating, attachment, formatTime, onPickEmoji, onPickEmojiForEdit, handleStartEdit, startChatWith, addFriendFromSearch, savePrivacy, doConfirm, closeSheet, backToList,
     askBlock, askDeleteChat, askClearAllChats, askDeleteMessage, askDeleteSelection, askRemoveFriend, askUnblock, toggleChatPin,
     init, openTarget, reply, handleStartReply, jumpToMessage,
-    selection, canDeleteSelection, forwardOpen, forwarding, startSelectMessage, toggleSelectMessage, cancelSelection, openForward, forwardSelection, deleteSelection,
+    selection, canDeleteSelection, forwardOpen, forwarding, forwardingTargetId, forwardSources, startSelectMessage, toggleSelectMessage, cancelSelection, openForward, forwardSelection, forwardToSaved, deleteSelection,
   }
 }

@@ -104,7 +104,7 @@ class ConversationController extends Controller
         $conversation->load(['participants:id,name,profile_slug,avatar_path,telegram_photo_url,last_seen_at,is_invisible,plan,role,is_admin,account_type,dating_goal,dating_interests', 'district:id,name,user_id']);
         $pageSize = MessageController::HISTORY_PAGE_SIZE;
         $rawMessages = $conversation->messages()
-            ->with(['sender:id,name,avatar_path,telegram_photo_url', 'replyTo.sender:id,name'])
+            ->with(['sender:id,name,avatar_path,telegram_photo_url', 'forwardedFrom:id,name,avatar_path,telegram_photo_url', 'replyTo.sender:id,name'])
             ->when($clearedAt, fn ($q) => $q->where('created_at', '>', $clearedAt))
             ->reorder()
             ->orderByDesc('id')
@@ -120,7 +120,7 @@ class ConversationController extends Controller
             try{ broadcast(new \App\Events\MessageDelivered($conversation->id,$undelivered->toArray(),$request->user()->id))->toOthers(); }catch(\Throwable $e){ \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
         }
         $messages = $rawMessages->map->toArrayPayload();
-        $pinned = $conversation->messages()->with(['sender:id,name,avatar_path,telegram_photo_url', 'replyTo.sender:id,name'])->whereNotNull('pinned_at')->orderBy('pinned_at')->get()->map->toArrayPayload();
+        $pinned = $conversation->messages()->with(['sender:id,name,avatar_path,telegram_photo_url', 'forwardedFrom:id,name,avatar_path,telegram_photo_url', 'replyTo.sender:id,name'])->whereNotNull('pinned_at')->orderBy('pinned_at')->get()->map->toArrayPayload();
         $other = $conversation->participants->firstWhere('id','!=',$request->user()->id);
         $lastSeen = $other && $other->isInvisibleActive() && !$request->user()->isAdmin() ? null : $other?->last_seen_at?->toISOString();
         $isMatch = $other && $conversation->type === 'direct'

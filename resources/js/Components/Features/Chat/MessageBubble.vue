@@ -1,15 +1,55 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import Avatar from 'primevue/avatar'
 import Image from 'primevue/image'
 import MessageTicks from '@/Components/Features/Feedback/MessageTicks.vue'
 import VoiceMessagePlayer from '@/Components/Features/Chat/VoiceMessagePlayer.vue'
 import SharedPostCard from '@/Components/Features/Chat/SharedPostCard.vue'
 import { renderWithMentions } from '@/composables/useMentions'
 import { useMentionNavigate } from '@/composables/useMentionNavigate'
+import { avatarSrcFor } from '@/composables/useAvatar'
+import { formatDateTime } from '@/utils/date'
 
 const props = defineProps<{ message: any; own: boolean; status: string; time: string; pinned?: boolean }>()
 const emit = defineEmits<{ (e: 'edit', m: any): void; (e: 'delete', id: number): void; (e: 'pin', m: any): void; (e: 'reply', m: any): void; (e: 'jump', id: number): void }>()
 const mentionNav = useMentionNavigate()
+
+/**
+ * Автор оригинала для подписи «Переслано от ...» с мелкой аватаркой.
+ * Показываем только чужих авторов: своя пересылка себе пояснений не требует.
+ */
+const forwardedFrom = computed(() => {
+  const from = (props.message as any)?.forwarded_from ?? null
+
+  if (!from || Number(from?.id) <= 0) {
+    return null
+  }
+
+  if (Number(from?.id) === Number((props.message as any)?.sender_id)) {
+    return null
+  }
+
+  return from
+})
+
+/**
+ * Тултип статуса доставки с датой: «Прочитано 12 мая 2026, 14:32».
+ */
+const deliveryTitle = computed(() => {
+  const readAt = String((props.message as any)?.read_at ?? '')
+
+  if (readAt !== '') {
+    return `Прочитано ${formatDateTime(readAt)}`
+  }
+
+  const deliveredAt = String((props.message as any)?.delivered_at ?? '')
+
+  if (deliveredAt !== '') {
+    return `Доставлено ${formatDateTime(deliveredAt)}`
+  }
+
+  return ''
+})
 
 const quote = computed(() => (props.message as any)?.reply_to ?? null)
 const quoteSnippet = computed(() => {
@@ -55,6 +95,10 @@ const attachmentSize = computed(() => {
       <div class="relative min-w-0 flex-1 select-none">
         <div :class="['rounded-[22px] px-3.5 py-2.5 lg:px-4 lg:py-2 text-[15px] lg:text-sm leading-[1.45] shadow-sm transition-all duration-300', own ? 'bg-[#1786FF] text-white rounded-br-[6px]' : 'bg-[#F0F2F4] dark:bg-zinc-800 text-stone-900 dark:text-white rounded-bl-[6px]', (message as any).pending ? 'opacity-60 scale-[0.98]' : 'opacity-100 scale-100', (message as any).failed ? '!bg-red-500' : '', (message as any).justSent ? 'ring-2 ring-[#1786FF]/40' : '']">
           <div v-if="(message as any).is_pinned || pinned" class="text-[11px] lg:text-[10px] font-bold mb-1 opacity-80">📌 Закреплено</div>
+          <div v-if="forwardedFrom" class="flex items-center gap-1.5 mb-1.5 min-w-0">
+            <Avatar :image="avatarSrcFor(forwardedFrom)" shape="circle" class="!w-5 !h-5 shrink-0 [&_img]:object-cover" />
+            <span :class="own ? 'text-white/90' : 'text-[#1786FF] dark:text-sky-400'" class="text-[11px] lg:text-[10px] font-bold truncate">Переслано от {{ forwardedFrom.name || 'пользователя' }}</span>
+          </div>
           <button v-if="quote" type="button" @click="emit('jump', quote.id)" :class="own ? 'border-white/50 bg-black/10 hover:bg-black/15' : 'border-[#1786FF] bg-black/[0.04] dark:bg-white/10 hover:bg-black/[0.07] dark:hover:bg-white/15'" class="w-full text-left border-l-[3px] rounded-r-lg rounded-l-sm px-2.5 py-1.5 mb-1.5 transition active:scale-[0.98] min-w-0">
             <span :class="own ? 'text-white/90' : 'text-[#1786FF] dark:text-sky-400'" class="block text-[11px] lg:text-[10px] font-bold truncate">{{ quote.sender_name || 'Сообщение' }}</span>
             <span :class="own ? 'text-white/80' : 'text-stone-500 dark:text-zinc-400'" class="block text-xs lg:text-[11px] truncate">{{ quoteSnippet || '…' }}</span>
@@ -81,9 +125,12 @@ const attachmentSize = computed(() => {
           <div v-if="message.body" class="whitespace-pre-wrap break-words overflow-wrap-anywhere [overflow-wrap:anywhere] min-w-0 msg-body" v-html="renderWithMentions(message.body || '')" @click="mentionNav.onRichClick"></div>
           <div v-else-if="attachment?.url && !isVoice" class="text-xs opacity-70 truncate">{{ attachment.name || 'Файл' }}</div>
           <div :class="own ? 'text-white/80' : 'text-stone-400 dark:text-zinc-500'" class="text-[11px] lg:text-[10px] mt-1 text-right flex items-center justify-end gap-1.5">
-            <span>{{ time }}</span>
+            <span :title="deliveryTitle || undefined">{{ time }}</span>
             <span v-if="(message as any).is_edited" class="opacity-70">· изм.</span>
-            <MessageTicks v-if="own" :status="status" />
+            <span v-if="own && deliveryTitle" :title="deliveryTitle" class="inline-flex">
+              <MessageTicks :status="status" />
+            </span>
+            <MessageTicks v-else-if="own" :status="status" />
           </div>
         </div>
       </div>

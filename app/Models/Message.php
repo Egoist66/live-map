@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $shared_post_type flow|district — тип пересланного поста
  * @property int|null $shared_post_id id пересланного поста
  * @property int $sender_id
+ * @property int|null $forwarded_from_id автор оригинала для пересланных копий
  * @property string $body
  * @property string $type
  * @property string|null $attachment_path
@@ -28,7 +29,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class Message extends Model
 {
-    protected $fillable = ['conversation_id','reply_to_id','shared_post_type','shared_post_id','sender_id','body','type','read_at','delivered_at','edited_at','pinned_at','pinned_by','attachment_path','attachment_name','attachment_mime','attachment_size','attachment_kind','attachment_duration'];
+    protected $fillable = ['conversation_id','reply_to_id','shared_post_type','shared_post_id','sender_id','forwarded_from_id','body','type','read_at','delivered_at','edited_at','pinned_at','pinned_by','attachment_path','attachment_name','attachment_mime','attachment_size','attachment_kind','attachment_duration'];
     protected $casts = [
         'body' => \App\Casts\MessageBodyCast::class,
         'read_at' => 'datetime',
@@ -44,6 +45,11 @@ class Message extends Model
      * Сообщение, на которое дан ответ.
      */
     public function replyTo(): BelongsTo { return $this->belongsTo(Message::class,'reply_to_id'); }
+
+    /**
+     * Автор оригинала для пересланной копии.
+     */
+    public function forwardedFrom(): BelongsTo { return $this->belongsTo(User::class, 'forwarded_from_id'); }
 
     public function statusFor(?int $viewerId = null): string
     {
@@ -197,6 +203,37 @@ class Message extends Model
         ];
     }
 
+    /**
+     * Автор оригинала для подписи «Переслано от ...».
+     *
+     * Живая связь: имя/аватар берутся из текущего профиля,
+     * поэтому переименование не ломает старые копии.
+     *
+     * @return array{id:int,name:string|null,avatar_path:string|null,telegram_photo_url:string|null,avatar_url:string|null}|null
+     */
+    public function forwardedFromPayload(): ?array
+    {
+        if (! \Illuminate\Support\Facades\Schema::hasColumn('messages', 'forwarded_from_id')) {
+            return null;
+        }
+
+        $user = $this->relationLoaded('forwardedFrom')
+            ? $this->forwardedFrom
+            : $this->forwardedFrom()->first(['id', 'name', 'avatar_path', 'telegram_photo_url']);
+
+        if (! $user) {
+            return null;
+        }
+
+        return [
+            'id' => (int) $user->id,
+            'name' => $user->name,
+            'avatar_path' => $user->avatar_path,
+            'telegram_photo_url' => $user->telegram_photo_url ?? null,
+            'avatar_url' => $user->avatar_url,
+        ];
+    }
+
     public function toArrayPayload(): array
     {
         return [
@@ -206,6 +243,8 @@ class Message extends Model
             'reply_to' => $this->reply_to_id ? $this->replyToPayload() : null,
             'shared_post' => $this->sharedPostPayload(),
             'sender_id' => $this->sender_id,
+            'forwarded_from_id' => $this->getAttribute('forwarded_from_id'),
+            'forwarded_from' => $this->getAttribute('forwarded_from_id') ? $this->forwardedFromPayload() : null,
             'body' => $this->body,
             'type' => $this->type,
             'attachment' => $this->attachmentPayload(),
