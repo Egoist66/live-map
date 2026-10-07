@@ -763,6 +763,19 @@ function handlePinActivity(e: any) {
     })
     return
   }
+  if (a.kind === 'profile_visit') {
+    push({
+      id: `pin-${a.id}-${Date.now()}`,
+      type: 'match',
+      icon: 'pi pi-eye',
+      title: '👀 Гость в профиле',
+      body: `${name} заходил(а) в ваш профиль`.slice(0, 90),
+      avatar: avatarSrcFor(actor),
+      link: activityLink(a),
+      createdAt: Date.now(),
+    })
+    return
+  }
   if (a.kind === 'photo_like') {
     push({
       id: `pin-${a.id}-${Date.now()}`,

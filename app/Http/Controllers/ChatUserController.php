@@ -98,7 +98,9 @@ class ChatUserController extends Controller
         if ($request->user()->isInvisibleActive()) {
             return response()->json(['ok' => true, 'invisible' => true]);
         }
-        $request->user()->forceFill(['last_seen_at' => now()])->saveQuietly();
+        $me = $request->user();
+        \App\Services\ProfileStatsService::accumulateHeartbeat($me);
+        $me->fresh()->forceFill(['last_seen_at' => now()])->saveQuietly();
         return response()->json(['ok' => true]);
     }
 

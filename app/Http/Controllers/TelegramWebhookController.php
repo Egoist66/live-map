@@ -36,7 +36,7 @@ use Illuminate\Support\Facades\Log;
  * - /start, /app, /help — вход и навигация;
  * - /profile, /hide, /show — видимость анкеты;
  * - /find — свайпы кнопками прямо в чате (лайк/пас по одной анкете);
- * - /likes, /matches, /messages, /stats — живые инсайты;
+ * - /likes, /matches, /messages, /stats, /export — живые инсайты;
  * - /online — кто сейчас в ULove (онлайн) с лайками из списка;
  * - /favorites — избранное по тарифу + кому можно написать;
  * - /notes — заметки «Избранного»: сохранить текстом, найти и убрать;
@@ -174,6 +174,7 @@ class TelegramWebhookController extends Controller
             '/matches' => $this->replyMatches($user, $chatId),
             '/messages' => $this->replyMessages($user, $chatId),
             '/stats' => $this->replyStats($user, $chatId),
+            '/export' => $this->replyExport($user, $chatId),
             '/online' => $this->replyOnline($user, $chatId),
             '/favorites', '/fav' => $this->replyFav($user, $chatId),
             '/notes' => $this->replyNotes($user, $chatId, $argument),
@@ -288,6 +289,12 @@ class TelegramWebhookController extends Controller
 
         if ($data === 'go_stats') {
             $this->editStats($fresh, $chatId, $messageId, $callbackId);
+
+            return true;
+        }
+
+        if ($data === 'stats_export') {
+            $this->sendStatsExport($fresh, $chatId, $callbackId);
 
             return true;
         }
@@ -1698,7 +1705,7 @@ class TelegramWebhookController extends Controller
     }
 
     /**
-     * Статистика аккаунта.
+     * Статистика аккаунта по тарифу + кнопка выгрузки.
      *
      * @param User $user владелец
      * @param int $chatId куда слать
@@ -1708,10 +1715,62 @@ class TelegramWebhookController extends Controller
     {
         TelegramBotApi::sendMessage($chatId, TelegramInsights::statsText($user), TelegramMenu::withNav([
             [
+                ['text' => '📥 Выгрузить CSV', 'callback_data' => 'stats_export'],
                 ['text' => '👤 Моя анкета', 'callback_data' => 'go_profile'],
+            ],
+            [
                 TelegramMenu::openAppButton('🌐 Приложение'),
             ],
         ]));
+    }
+
+    /**
+     * Выгрузка статистики CSV в бот — состав по тарифу.
+     *
+     * Тот же ProfileStatsService::exportCsv, что и в приложении
+     * (Настройки → Приложение → Статистика): Free — база,
+     * Pro — плюс аудитория, Premium — плюс гости.
+     *
+     * @param User $user владелец
+     * @param int $chatId куда слать файл
+     * @return void
+     */
+    private function replyExport(User $user, int $chatId): void
+    {
+        $fresh = $user->fresh() ?? $user;
+        $csv = \App\Services\ProfileStatsService::exportCsv($fresh);
+        $plan = (string) ($fresh->effectivePlan() ?? 'free');
+        $filename = 'profile-stats-'.now()->format('Y-m-d').'.csv';
+        $caption = '📥 Ваша статистика ('.\App\Services\TelegramInsights::planLabel($plan).') — откройте в Excel.';
+
+        $sent = TelegramBotApi::sendDocument($chatId, $filename, $csv, $caption);
+
+        if (! $sent) {
+            TelegramBotApi::sendMessage($chatId, 'Не получилось отправить файл 😕 Попробуйте позже или выгрузите из приложения: Настройки → Приложение → Статистика.', TelegramMenu::withNav([
+                [TelegramMenu::openAppButton('🌐 Открыть статистику')],
+            ]));
+        }
+    }
+
+    /**
+     * Выгрузка CSV по кнопке под панелью статистики.
+     *
+     * @param User $user владелец
+     * @param int $chatId куда слать файл
+     * @param string $callbackId для тоста
+     * @return void
+     */
+    private function sendStatsExport(User $user, int $chatId, string $callbackId): void
+    {
+        $fresh = $user->fresh() ?? $user;
+        $csv = \App\Services\ProfileStatsService::exportCsv($fresh);
+        $plan = (string) ($fresh->effectivePlan() ?? 'free');
+        $filename = 'profile-stats-'.now()->format('Y-m-d').'.csv';
+        $caption = '📥 Ваша статистика ('.\App\Services\TelegramInsights::planLabel($plan).') — откройте в Excel.';
+
+        $sent = TelegramBotApi::sendDocument($chatId, $filename, $csv, $caption);
+
+        TelegramBotApi::answerCallback($callbackId, $sent ? 'CSV уже летит 📥' : 'Не вышло — попробуйте позже');
     }
 
     /**
@@ -2001,7 +2060,10 @@ class TelegramWebhookController extends Controller
 
         $keyboard = TelegramMenu::withNav([
             [
+                ['text' => '📥 Выгрузить CSV', 'callback_data' => 'stats_export'],
                 ['text' => '👤 Моя анкета', 'callback_data' => 'go_profile'],
+            ],
+            [
                 TelegramMenu::openAppButton('🌐 Приложение'),
             ],
         ]);
@@ -2040,8 +2102,8 @@ class TelegramWebhookController extends Controller
     /**
      * Переключить тип уведомлений целиком и перерисовать панель.
      *
-     * Панель показывает 5 уникальных типов (сообщения, лайки, мэтчи,
-     * комментарии, новости приложения): тап включает/глушит тип везде — бот + дубль на почту,
+     * Панель показывает 6 уникальных типов (сообщения, лайки, мэтчи,
+     * комментарии, гости профиля, новости приложения): тап включает/глушит тип везде — бот + дубль на почту,
      * где он есть. Старые кнопки (мастер ntg_all, почтовые nem_*, ndm_*)
      * из уже отправленных панелей продолжают работать ради совместимости.
      *
@@ -2069,6 +2131,7 @@ class TelegramWebhookController extends Controller
             'ntg_like' => ['telegram_notify_likes', 'email_notify_likes'],
             'ntg_match' => ['telegram_notify_matches', 'email_notify_matches'],
             'ntg_cmt' => ['telegram_notify_comments'],
+            'ntg_visit' => ['notify_profile_visitors'],
             'ntg_news' => ['telegram_notify_news'],
             'ntg_all' => ['telegram_notify_enabled'],
             'nem_msg' => ['email_notify_messages'],

@@ -192,6 +192,60 @@ class TelegramBotApi
     }
 
     /**
+     * Отправить CSV-выгрузку документом.
+     *
+     * Multipart через attach: контент не светим в логах,
+     * только имя файла и chat_id.
+     *
+     * @param int $chatId telegram_id получателя
+     * @param string $filename имя файла (profile-stats-2026-11-08.csv)
+     * @param string $content содержимое CSV (UTF-8 с BOM)
+     * @param string $caption подпись под файлом (HTML)
+     * @return bool true при успехе
+     */
+    public static function sendDocument(int $chatId, string $filename, string $content, string $caption = ''): bool
+    {
+        $base = self::baseUrl();
+
+        if ($base === null || $chatId <= 0) {
+            return false;
+        }
+
+        try {
+            $response = Http::timeout(15)->attach(
+                'document',
+                $content,
+                $filename,
+                ['Content-Type' => 'text/csv; charset=UTF-8']
+            )->post("{$base}/sendDocument", [
+                'chat_id' => $chatId,
+                'caption' => mb_substr($caption, 0, 1000),
+                'parse_mode' => 'HTML',
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('telegram bot api network failed', [
+                'method' => 'sendDocument',
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+
+        if (! $response->successful()) {
+            Log::warning('telegram bot api rejected', [
+                'method' => 'sendDocument',
+                'status' => $response->status(),
+            ]);
+
+            return false;
+        }
+
+        $decoded = $response->json();
+
+        return is_array($decoded) && ($decoded['ok'] ?? false) === true;
+    }
+
+    /**
      * Зарегистрировать webhook + команды + нативную кнопку меню.
      *
      * Важно: menu_button специально типа `commands`, а не `web_app`.
@@ -238,7 +292,8 @@ class TelegramBotApi
                 ['command' => 'matches', 'description' => '🎉 Мои мэтчи'],
                 ['command' => 'messages', 'description' => '💬 Непрочитанные сообщения'],
                 ['command' => 'notes', 'description' => '📝 Заметки «Избранного»'],
-                ['command' => 'stats', 'description' => '📊 Уровень, репутация, тариф'],
+                ['command' => 'stats', 'description' => '📊 Статистика профиля по тарифу'],
+                ['command' => 'export', 'description' => '📥 Выгрузка статистики в CSV'],
                 ['command' => 'plan', 'description' => '💎 Мой тариф и выбор плана'],
                 ['command' => 'email', 'description' => '📧 Моя почта для уведомлений'],
                 ['command' => 'notify', 'description' => '🔔 Куда слать: бот, почта, личка'],

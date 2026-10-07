@@ -48,6 +48,9 @@ class ProfileController extends Controller
         $isOwn = $auth && $auth->id === $user->id;
         if (!$isOwn && $auth && !$user->isDiscoverableBy($auth)) abort(404);
         if (!$isOwn && !$auth && ($user->is_hidden_from_search || (int) $user->id === \App\Models\User::GHOST_USER_ID)) abort(404);
+        if (!$isOwn) {
+            \App\Services\ProfileStatsService::recordView($auth, (int) $user->id);
+        }
         $canMessage = $auth ? $auth->canMessageUser($user) : false;
         $reason = $auth ? $auth->messageBlockReason($user) : null;
         $friendship = null;

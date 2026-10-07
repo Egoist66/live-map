@@ -247,6 +247,80 @@ class TelegramNotifier
     }
 
     /**
+     * Напомнить о госте профиля (PRO и выше + тумблер в приватности).
+     *
+     * Тот же сценарий, что у лайков: только отошедшему (Mini App
+     * закрыт 3+ минуты), один гость — одно письмо в сутки
+     * (кулдаун 24 часа). Кнопка ведёт в анкету гостя.
+     *
+     * @param User $visitor кто зашёл
+     * @param User $owner чью страницу открыли
+     * @return void
+     */
+    public static function profileVisited(User $visitor, User $owner): void
+    {
+        $owner = self::resolveRecipient($owner);
+
+        if ($owner === null) {
+            return;
+        }
+
+        if (! (bool) ($owner->notify_profile_visitors ?? true)) {
+            self::logSkip($owner, 'visitors', 'toggle-off');
+
+            return;
+        }
+
+        if (! (bool) ($owner->telegram_notify_enabled ?? true)) {
+            self::logSkip($owner, 'visitors', 'master-off');
+
+            return;
+        }
+
+        if ((int) ($owner->telegram_id ?? 0) <= 0) {
+            self::logSkip($owner, 'visitors', 'unlinked');
+
+            return;
+        }
+
+        if ($owner->telegram_blocked_at !== null) {
+            self::logSkip($owner, 'visitors', 'blocked');
+
+            return;
+        }
+
+        if (! $owner->isAway()) {
+            self::logSkip($owner, 'visitors', 'online');
+
+            return;
+        }
+
+        $key = "tg:visited:{$visitor->id}:{$owner->id}";
+
+        if (Cache::has($key)) {
+            self::logSkip($owner, 'visitors', 'cooldown');
+
+            return;
+        }
+
+        Cache::put($key, true, self::LIKED_COOLDOWN_SECONDS);
+
+        $visitorName = trim((string) ($visitor->name ?? ''));
+
+        if ($visitorName === '') {
+            $visitorName = 'Гость';
+        }
+
+        $path = '/users/'.$visitor->profileIdentifier();
+
+        $text = '👀 '.self::ULOVE_TAG.' • Ваш профиль смотрел(а): <b>'.self::escape($visitorName).'</b>';
+
+        $photo = self::actorPhotoUrl($visitor);
+
+        self::sendWithPhoto($owner, $text, $photo, $path, '👤 Смотреть анкету');
+    }
+
+    /**
      * Напомнить обоим участникам о взаимном мэтче.
      *
      * @param User $me автор свайпа, закрывшего мэтч

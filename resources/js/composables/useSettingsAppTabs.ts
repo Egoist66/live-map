@@ -11,7 +11,7 @@ import { onBeforeUnmount, ref } from 'vue'
  * @example
  * const { tabs, active, setActive } = useSettingsAppTabs()
  */
-export type SettingsAppTabId = 'sections' | 'notify' | 'install' | 'telegram' | 'hotkeys'
+export type SettingsAppTabId = 'sections' | 'notify' | 'stats' | 'install' | 'telegram' | 'hotkeys'
 
 /** Подвкладка раздела «Приложение»: id, подпись, иконка и подсказка. */
 export interface SettingsAppTab {
@@ -24,6 +24,7 @@ export interface SettingsAppTab {
 export const SETTINGS_APP_TABS: readonly SettingsAppTab[] = [
   { id: 'sections', label: 'Разделы', icon: 'pi pi-th-large', desc: 'Какие разделы видны в меню' },
   { id: 'notify', label: 'Уведомления', icon: 'pi pi-bell', desc: 'Пуши и бот Telegram' },
+  { id: 'stats', label: 'Статистика', icon: 'pi pi-chart-bar', desc: 'Лайки, гости, время' },
   { id: 'install', label: 'Установка', icon: 'pi pi-download', desc: 'PWA и оффлайн-кэш' },
   { id: 'telegram', label: 'Telegram', icon: 'pi pi-send', desc: 'Второй аккаунт в боте' },
   { id: 'hotkeys', label: 'Клавиши', icon: 'pi pi-keyboard', desc: 'Горячие клавиши десктопа' },

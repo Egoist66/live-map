@@ -12,6 +12,7 @@ import SettingsHiddenFriends from './SettingsHiddenFriends.vue'
 import HomeZoneField from '@/Components/Features/HomeZone/HomeZoneField.vue'
 import { planOf } from '@/composables/usePlanLimits'
 import { useUlovePrivacy } from '@/composables/useUlovePrivacy'
+import { useProfileVisitorsNotify } from '@/composables/useProfileVisitorsNotify'
 import { useAppModulesStore } from '@/stores/appModules'
 defineProps<{ user: any; invisible: any; hidden?: any; blur: any; photoPrivacy?: any; flowPrivacy?: any; homeRadius?: any }>()
 const emit = defineEmits<{ (e: 'profile'): void }>()
@@ -29,6 +30,7 @@ const privacyTabOptions = [
   { label: '💘 ULove', value: 'ulove' },
 ] as const
 const ulove = useUlovePrivacy()
+const visitors = useProfileVisitorsNotify()
 </script>
 <template>
   <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }">
@@ -144,7 +146,22 @@ const ulove = useUlovePrivacy()
             </div>
             <ToggleSwitch :model-value="ulove.flags.value[feature.key]" :disabled="ulove.isLocked(feature.key) || ulove.saving.value" class="shrink-0" @update:model-value="(next:boolean)=>ulove.toggle(feature.key, next)" />
           </div>
-          <div v-if="ulove.saving.value" class="text-xs text-stone-400">Сохраняем…</div>
+          <div class="flex items-center gap-3 rounded-3xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4">
+            <span class="w-10 h-10 rounded-2xl grid place-items-center shrink-0 bg-amber-500/15 text-amber-600 dark:text-amber-300"><i class="pi pi-eye" /></span>
+            <div class="min-w-0 flex-1">
+              <div class="text-sm font-black text-stone-900 dark:text-white">Кто заходил в мой профиль <span class="text-amber-500">PRO</span></div>
+              <div class="text-[11px] text-stone-500 dark:text-zinc-400">{{ visitors.statusText.value }}</div>
+            </div>
+            <ToggleSwitch :model-value="visitors.state.value.enabled" :disabled="!visitors.canUse.value || visitors.state.value.saving" class="shrink-0" @update:model-value="(next:boolean)=>visitors.save(next)" />
+          </div>
+          <div class="rounded-3xl border-2 border-amber-200 dark:border-amber-900 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/20 p-4">
+            <div class="text-sm font-semibold dark:text-white">👑 На Premium — то же самое, но возможностей больше</div>
+            <p class="text-xs text-stone-500 mt-1 leading-relaxed">Уведомления о гостях работают и там, а сверху: конкретные гости с анкетами и кнопкой «Написать», разбор аудитории и выгрузка статистики в CSV. Детали — в тарифе.</p>
+            <Link href="/settings/billing"><Button label="Детали в тарифе" icon="pi pi-crown" rounded size="small" class="mt-3 !bg-white !text-orange-600 !border-0" /></Link>
+          </div>
+          <div v-if="ulove.saving.value || visitors.state.value.saving" class="text-xs text-stone-400">Сохраняем…</div>
+          <Message v-if="!visitors.canUse.value" severity="warn" :closable="false" class="!rounded-2xl !text-xs">Уведомления о гостях — только на PRO и выше. Сейчас у тебя {{ planOf(user) }}.</Message>
+          <Message v-if="visitors.state.value.error" severity="error" :closable="false" class="!rounded-2xl !text-xs">{{ visitors.state.value.error }}</Message>
           <Message v-if="!ulove.canPro.value" severity="warn" :closable="false" class="!rounded-2xl !text-xs">Скрытие имени и возраста — только на PRO/Business. Сейчас у тебя {{ planOf(user) }}.</Message>
           <Message v-if="ulove.error.value" severity="error" :closable="false" class="!rounded-2xl !text-xs">{{ ulove.error.value }}</Message>
         </div>

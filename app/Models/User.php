@@ -14,7 +14,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['name', 'profile_slug', 'email', 'password', 'gender', 'birth_date', 'country', 'country_code', 'plan', 'latitude', 'longitude', 'role', 'account_type', 'is_admin', 'is_hidden_from_search', 'profile_hidden_at', 'deletion_requested_at', 'deletion_scheduled_at', 'deletion_pro_until', 'dating_enabled', 'dating_goal', 'signup_goal', 'default_mode', 'default_mode_set_at', 'enabled_modules', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_gender_pref', 'dating_hide_name', 'dating_hide_age', 'dating_hide_distance', 'dating_match_only', 'random_chats_used', 'random_chats_month', 'superlikes_day', 'superlikes_used', 'superlikes_balance', 'boosts_balance', 'boost_until', 'boost_month', 'undos_day', 'undos_used', 'avatar_path', 'home_lat', 'home_lng', 'home_city', 'home_address', 'home_visibility', 'home_show_exact', 'home_radius_km', 'bio', 'thought', 'reputation_score', 'level', 'quest_cooldown_until', 'quest_last_track', 'quest_granted_at', 'is_anonymous_default', 'default_location_precision', 'default_blur_meters', 'message_privacy', 'allow_random_messages', 'call_cooldown_enabled', 'video_calls_enabled', 'photo_comments_privacy', 'flow_comments_privacy', 'auto_reply_enabled', 'auto_reply_text', 'settings', 'last_seen_at', 'is_invisible', 'screen_lock_code', 'screen_lock_timeout', 'screen_lock_kind', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at', 'terms_accepted_at', 'terms_version', 'telegram_id', 'telegram_username', 'telegram_photo_url', 'telegram_linked_at', 'telegram_notify_messages', 'telegram_notify_likes', 'telegram_notify_matches', 'telegram_notify_comments', 'telegram_notify_news', 'telegram_blocked_at', 'telegram_notify_enabled', 'email_notify_messages', 'email_notify_likes', 'email_notify_matches', 'telegram_dm_messages', 'telegram_dm_likes', 'telegram_dm_matches', 'telegram_dm_comments'])]
+#[Fillable(['name', 'profile_slug', 'email', 'password', 'gender', 'birth_date', 'country', 'country_code', 'plan', 'latitude', 'longitude', 'role', 'account_type', 'is_admin', 'is_hidden_from_search', 'profile_hidden_at', 'deletion_requested_at', 'deletion_scheduled_at', 'deletion_pro_until', 'dating_enabled', 'dating_goal', 'signup_goal', 'default_mode', 'default_mode_set_at', 'enabled_modules', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_gender_pref', 'dating_hide_name', 'dating_hide_age', 'dating_hide_distance', 'dating_match_only', 'random_chats_used', 'random_chats_month', 'superlikes_day', 'superlikes_used', 'superlikes_balance', 'boosts_balance', 'boost_until', 'boost_month', 'undos_day', 'undos_used', 'avatar_path', 'home_lat', 'home_lng', 'home_city', 'home_address', 'home_visibility', 'home_show_exact', 'home_radius_km', 'bio', 'thought', 'reputation_score', 'level', 'quest_cooldown_until', 'quest_last_track', 'quest_granted_at', 'is_anonymous_default', 'default_location_precision', 'default_blur_meters', 'message_privacy', 'allow_random_messages', 'call_cooldown_enabled', 'video_calls_enabled', 'photo_comments_privacy', 'flow_comments_privacy', 'auto_reply_enabled', 'auto_reply_text', 'settings', 'last_seen_at', 'is_invisible', 'screen_lock_code', 'screen_lock_timeout', 'screen_lock_kind', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at', 'terms_accepted_at', 'terms_version', 'telegram_id', 'telegram_username', 'telegram_photo_url', 'telegram_linked_at', 'telegram_notify_messages', 'telegram_notify_likes', 'telegram_notify_matches', 'telegram_notify_comments', 'telegram_notify_news', 'telegram_blocked_at', 'telegram_notify_enabled', 'email_notify_messages', 'email_notify_likes', 'email_notify_matches', 'telegram_dm_messages', 'telegram_dm_likes', 'telegram_dm_matches', 'telegram_dm_comments', 'notify_profile_visitors'])]
 #[Hidden(['password', 'remember_token', 'screen_lock_code'])]
 /**
  * Пользователь приложения.
@@ -48,6 +48,7 @@ use Illuminate\Support\Facades\Storage;
  * @property bool $telegram_dm_likes Legacy: короткие дубли «лички» (удалены 2026-10-02, колонка не читается).
  * @property bool $telegram_dm_matches Legacy: короткие дубли «лички» (удалены 2026-10-02, колонка не читается).
  * @property bool $telegram_dm_comments Legacy: короткие дубли «лички» (удалены 2026-10-02, колонка не читается).
+ * @property bool $notify_profile_visitors Уведомлять о гостях профиля (колокольчик + бот). Работает только на PRO и выше.
  */
 class User extends Authenticatable implements MustVerifyEmail
 {
@@ -728,6 +729,17 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function canUseIncognitoLike(): bool { return $this->isPro(); }
 
+    /**
+     * Доступны ли уведомления о гостях профиля.
+     *
+     * Тот же гейт, что у PRO-приватности: платный тариф
+     * (pro/premium/business) либо стафф. Сам тумблер —
+     * notify_profile_visitors в приватности ULove.
+     *
+     * @return bool true когда тариф позволяет слать уведомления о гостях
+     */
+    public function canUseVisitorNotifications(): bool { return $this->isPro(); }
+
     public function canUseInvisible(): bool { return $this->isModerator() || in_array($this->effectivePlan(), self::PAID_PLANS, true); }
 
     public function hiddenFriendsLimit(): ?int
@@ -1121,6 +1133,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'telegram_dm_likes' => 'boolean',
             'telegram_dm_matches' => 'boolean',
             'telegram_dm_comments' => 'boolean',
+            'notify_profile_visitors' => 'boolean',
             'bio' => EncryptedTextCast::class,
             'thought' => EncryptedTextCast::class,
             'dating_about' => EncryptedTextCast::class,

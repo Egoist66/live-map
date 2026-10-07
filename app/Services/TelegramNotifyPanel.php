@@ -5,13 +5,15 @@ namespace App\Services;
 use App\Models\User;
 
 /**
- * Панель уведомлений бота: конечный список из 5 типов.
+ * Панель уведомлений бота: конечный список из 6 типов.
  *
  * Каждый тумблер — целый тип целиком (бот + дубль на почту, где он есть):
- * сообщения, лайки, мэтчи, комментарии, новости приложения. Без мастеров
- * и без дублей «то же самое по второму разу». Комментарии и новости
- * письмом не шлём — у них только бот. Для почты нужна подтверждённая
- * основная почта (см. /email), техническая `tg_*@telegram.local` не подойдёт.
+ * сообщения, лайки, мэтчи, комментарии, гости профиля, новости приложения.
+ * Без мастеров и без дублей «то же самое по второму разу». Комментарии,
+ * гости и новости письмом не шлём — у них только бот. Для почты нужна
+ * подтверждённая основная почта (см. /email), техническая
+ * `tg_*@telegram.local` не подойдёт. Гости профиля срабатывают только
+ * на PRO и выше (там же тумблер в приватности ULove).
  *
  * В приложении колокольчик звенит всегда — это не дубль, а inbox.
  */
@@ -80,6 +82,7 @@ class TelegramNotifyPanel
         $botMatches = (bool) ($user->telegram_notify_matches ?? true);
         $botComments = (bool) ($user->telegram_notify_comments ?? true);
         $botNews = (bool) ($user->telegram_notify_news ?? true);
+        $visitors = (bool) ($user->notify_profile_visitors ?? true);
 
         $mailMessages = (bool) ($user->email_notify_messages ?? true);
         $mailLikes = (bool) ($user->email_notify_likes ?? true);
@@ -90,6 +93,7 @@ class TelegramNotifyPanel
             ['label' => '💞 Лайки', 'callback' => 'ntg_like', 'enabled' => $botLikes && $mailLikes],
             ['label' => '🎉 Мэтчи', 'callback' => 'ntg_match', 'enabled' => $botMatches && $mailMatches],
             ['label' => '💭 Комментарии', 'callback' => 'ntg_cmt', 'enabled' => $botComments],
+            ['label' => '👀 Гости профиля (PRO)', 'callback' => 'ntg_visit', 'enabled' => $visitors],
             ['label' => '📰 Новости приложения', 'callback' => 'ntg_news', 'enabled' => $botNews],
         ];
     }

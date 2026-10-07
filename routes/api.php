@@ -193,6 +193,10 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::delete('/account/deletion', [\App\Http\Controllers\AccountController::class, 'cancelDeletion'])->middleware('throttle:social-write');
 
     Route::get('/users/{user}/photos', [\App\Http\Controllers\ProfilePhotoController::class, 'index']);
+    Route::post('/users/{user}/view', [\App\Http\Controllers\ProfileStatsController::class, 'trackView'])->middleware('throttle:social-write');
+    Route::get('/profile-stats', [\App\Http\Controllers\ProfileStatsController::class, 'index']);
+    Route::get('/profile-stats/export', [\App\Http\Controllers\ProfileStatsController::class, 'export']);
+    Route::patch('/profile-stats/preferences', [\App\Http\Controllers\ProfileStatsController::class, 'updatePreferences']);
     Route::post('/photos', [\App\Http\Controllers\ProfilePhotoController::class, 'store'])->middleware('throttle:social-write');
     Route::post('/photos/{photo}', [\App\Http\Controllers\ProfilePhotoController::class, 'update'])->middleware('throttle:social-write');
     Route::patch('/photos/{photo}', [\App\Http\Controllers\ProfilePhotoController::class, 'update'])->middleware('throttle:social-write');

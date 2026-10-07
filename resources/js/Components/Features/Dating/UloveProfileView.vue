@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
@@ -7,6 +7,7 @@ import AppImage from '@/Components/Ui/Media/AppImage.vue'
 import { useToast } from 'primevue/usetoast'
 import { useUloveProfile } from '@/composables/useUloveProfile'
 import { useUloveOnlineBadge } from '@/composables/useUloveOnlineBadge'
+import { useProfileVisibility } from '@/composables/useProfileVisibility'
 import { useSwipeCardPhotos } from '@/composables/useSwipeCardPhotos'
 
 const props = withDefaults(
@@ -29,6 +30,24 @@ const emit = defineEmits<{ (e: 'edit'): void; (e: 'message'): void; (e: 'photos'
 const p = useUloveProfile(() => props.profileUser)
 
 const onlineBadge = useUloveOnlineBadge(() => ({ isOwn: props.isOwn, online: props.online, lastSeenText: props.lastSeenText, invisible: props.isOwn && !!props.profileUser?.is_invisible }))
+
+/** Глаз «скрыть/показать»: временное скрытие профиля без удаления аккаунта. */
+const visibility = useProfileVisibility()
+
+onMounted(() => {
+  if (props.isOwn) {
+    void visibility.load()
+  }
+})
+
+/** Подпись значка тарифа: Free / PRO / Premium / Business. */
+const planLabel = computed(() => {
+  const plan = String(p.plan.value ?? 'free')
+  if (plan === 'business') return 'Business'
+  if (plan === 'premium') return 'Premium'
+  if (plan === 'pro') return 'PRO'
+  return 'Free'
+})
 
 const toast = (() => {
   try {
@@ -308,6 +327,11 @@ const activePrivacyFlags = computed(() => {
         <div class="mt-0.5 text-[13px] text-amber-700 dark:text-amber-300">Тебя никто не видит в свайпах. Включи показ в анкете.</div>
         <Button label="Редактировать анкету" size="small" rounded class="mt-2.5 !border-0 !bg-gradient-to-r !from-[#FD267D] !to-[#FF7854] !text-white" @click="emit('edit')" />
       </div>
+      <div v-if="isOwn && visibility.hidden.value" class="rounded-2xl border border-violet-300 bg-violet-50 p-3.5 text-sm dark:border-violet-800 dark:bg-violet-950/40">
+        <div class="font-bold text-violet-800 dark:text-violet-200">🙈 Профиль скрыт из публичного доступа</div>
+        <div class="mt-0.5 text-[13px] text-violet-700 dark:text-violet-300">Тебя никто не видит: ни страница, ни анкета в ленте. Аккаунт цел — удалять ничего не нужно, вернёшь одним тапом.</div>
+        <Button label="Вернуть в поиск" icon="pi pi-eye" size="small" rounded :loading="visibility.toggling.value" class="mt-2.5 !border-0 !bg-violet-600 !text-white" @click="visibility.toggle()" />
+      </div>
 
       <div class="rounded-2xl bg-white p-4 shadow-soft dark:bg-zinc-900">
         <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
@@ -320,8 +344,23 @@ const activePrivacyFlags = computed(() => {
             <i :class="fact.icon + ' shrink-0 text-xs text-rose-500'" />
             <span class="truncate">{{ fact.text }}</span>
           </span>
-          <span class="ml-auto inline-flex shrink-0 items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-stone-400 dark:bg-zinc-800 dark:text-zinc-500" title="Тариф">
-            <i class="pi pi-crown text-[10px]" />{{ p.isPro.value ? 'PRO' : 'Free' }}
+          <span class="ml-auto inline-flex shrink-0 items-center gap-1.5">
+            <span class="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-stone-400 dark:bg-zinc-800 dark:text-zinc-500" title="Тариф">
+              <i class="pi pi-crown text-[10px]" />{{ planLabel }}
+            </span>
+            <Button
+              v-if="isOwn"
+              :icon="visibility.eyeIcon.value"
+              text
+              rounded
+              size="small"
+              :loading="visibility.toggling.value"
+              :title="visibility.eyeTitle.value"
+              :aria-label="visibility.eyeTitle.value"
+              :severity="visibility.hidden.value ? 'danger' : 'secondary'"
+              class="!w-7 !h-7 !p-0"
+              @click="visibility.toggle()"
+            />
           </span>
         </div>
         <p v-if="p.about.value" class="mt-3 border-l-2 border-rose-400 pl-3 text-[15px] leading-relaxed text-stone-800 dark:text-zinc-100">{{ p.about.value }}</p>

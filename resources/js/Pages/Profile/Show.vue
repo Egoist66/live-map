@@ -26,6 +26,7 @@ import { useDatingSavedSync, patchDatingFields } from '@/composables/useDatingSa
 import { useProfileDesign } from '@/composables/useProfileDesign'
 import { useProfileLayout } from '@/composables/useProfileLayout'
 import { useProfileThought } from '@/composables/useProfileThought'
+import { useProfileStats } from '@/composables/useProfileStats'
 import { planOf } from '@/composables/usePlanLimits'
 import { computed, defineAsyncComponent, onMounted, ref } from 'vue'
 import { useMounted } from '@vueuse/core'
@@ -110,6 +111,15 @@ const handlePickerChange = design.handlePickerChange
 const isMounted = useMounted()
 
 onMounted(async () => { await design.init() })
+
+/** Чужой профиль открыли — пишем просмотр для Premium-статистики. */
+const profileStats = useProfileStats()
+
+onMounted(() => {
+  if (!props.isOwn && Number.isFinite(Number(props.profileUser?.id))) {
+    void profileStats.trackView(Number(props.profileUser.id))
+  }
+})
 </script>
 
 <template>
