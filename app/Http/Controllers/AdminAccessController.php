@@ -6,6 +6,7 @@ use App\Mail\AdminAccessCodeMail;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 /**
@@ -88,11 +89,37 @@ class AdminAccessController extends Controller
         ], self::CODE_TTL_SECONDS);
 
         try {
+            $mailer = (string) config('mail.default', 'log');
+
+            Log::info('admin access code sending', [
+                'mailer' => $mailer,
+                'to' => $me->email,
+            ]);
+
             Mail::to($me->email)->send(new AdminAccessCodeMail($code, (int) (self::CODE_TTL_SECONDS / 60)));
         } catch (\Throwable $e) {
+            Cache::forget($this->codeKey($me->id));
+
+            $mailer = (string) config('mail.default', 'unknown');
+
+            Log::warning('admin access code mail failed', [
+                'mailer' => $mailer,
+                'to' => $me->email,
+                'exception' => get_class($e),
+                'error' => $e->getMessage(),
+            ]);
+
             report($e);
 
-            return response()->json(['message' => 'Почтовый сервер не отвечает (SMTP недоступен с этого хоста). Проверь фаервол/антивирус или другую сеть и нажми «Отправить заново».'], 500);
+            $isSmtp = $mailer === 'smtp';
+            $hint = $isSmtp
+                ? 'На хостинге (Laravel Cloud) исходящий SMTP обычно заблокирован — переключи MAIL_MAILER на API-драйвер (resend) и нажми «Отправить заново».'
+                : 'Почтовый сервис временно недоступен — подожди минуту и нажми «Отправить заново».';
+
+            return response()->json([
+                'message' => "Не удалось отправить код: {$hint}",
+                'retryable' => true,
+            ], 500);
         }
 
         Cache::put($this->cooldownKey($me->id), true, self::CODE_RESEND_SECONDS);
