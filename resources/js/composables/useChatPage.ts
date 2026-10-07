@@ -7,6 +7,7 @@ import { useBlocks } from '@/composables/useBlocks'
 import { useEmojiPicker } from '@/composables/useEmojiPicker'
 import { useLongPress } from '@/composables/useLongPress'
 import { useMessageReply } from '@/composables/useMessageReply'
+import { useMessageSelection } from '@/composables/useMessageSelection'
 import { usePinnedMessages } from '@/composables/usePinnedMessages'
 import { useChatBadges } from '@/composables/useChatBadges'
 import { useChatNavigation } from '@/composables/useChatNavigation'
@@ -93,7 +94,7 @@ export function useChatPage(initialConversationId?: number) {
   const showPrivacy = ref(false)
   const privacy = ref({ message_privacy: 'everyone', dating_match_only: false })
   const creatingChat = ref(false)
-  const confirm = ref<{ type: 'block' | 'deleteChat' | 'clearAllChats' | 'deleteMessage' | 'removeFriend' | 'unblock', payload: any, title: string, msg: string, icon: string, confirmLabel: string, severity: 'danger' | 'primary' } | null>(null)
+  const confirm = ref<{ type: 'block' | 'deleteChat' | 'clearAllChats' | 'deleteMessage' | 'deleteMessages' | 'removeFriend' | 'unblock', payload: any, title: string, msg: string, icon: string, confirmLabel: string, severity: 'danger' | 'primary' } | null>(null)
   const confirmVisible = computed({ get: () => !!confirm.value, set: (v) => { if (!v) confirm.value = null } })
   const toast = (() => { try { return useToast() } catch { return null as any } })()
   const pageProps = usePage().props as any
@@ -110,10 +111,222 @@ export function useChatPage(initialConversationId?: number) {
     else pins.reset()
   })
 
+  const selection = useMessageSelection()
+  const forwardOpen = ref(false)
+  const forwarding = ref(false)
+
+  /**
+   * Можно ли выбрать сообщение: обычные, уже доставленные на сервер.
+   *
+   * Системные плашки и pending-черновики в выбор не берём.
+   *
+   * @param m сообщение
+   */
+  function isSelectableMessage(m: any): boolean {
+    if (!m || m.id == null || (m as any).pending) {
+      return false
+    }
+
+    return String(m.type ?? 'text') !== 'system'
+  }
+
+  /**
+   * Начать выбор с сообщения (пункт «Выделить» в меню).
+   *
+   * @param m сообщение
+   */
+  function startSelectMessage(m: any): void {
+    if (!isSelectableMessage(m)) {
+      return
+    }
+
+    reply.cancelReply()
+    selection.start(m.id)
+  }
+
+  /**
+   * Клик по сообщению в режиме выбора или с ctrl/cmd.
+   *
+   * @param m сообщение
+   */
+  function toggleSelectMessage(m: any): void {
+    if (!isSelectableMessage(m)) {
+      return
+    }
+
+    selection.toggle(m.id)
+  }
+
+  /**
+   * Отменить выбор и закрыть диалог пересылки.
+   */
+  function cancelSelection(): void {
+    selection.clear()
+    forwardOpen.value = false
+  }
+
+  /**
+   * Выбрать все сообщения текущего диалога (ctrl/cmd+A в режиме выбора).
+   */
+  function selectAllMessages(): void {
+    for (const m of (chat.messages.value as any[])) {
+      if (isSelectableMessage(m) && !selection.isSelected(m?.id)) {
+        selection.toggle(m.id)
+      }
+    }
+  }
+
+  /**
+   * Все выбранные — мои: удаление доступно целиком.
+   */
+  const canDeleteSelection = computed(() => {
+    if (!selection.active.value) {
+      return false
+    }
+
+    return selection.ids.value.every((id) => {
+      const found = (chat.messages.value as any[]).find((m) => Number(m?.id) === Number(id))
+
+      if (!found) {
+        return false
+      }
+
+      return isOwnMessage(found)
+    })
+  })
+
+  /**
+   * Подтверждение удаления выбранных сообщений.
+   */
+  function askDeleteSelection(): void {
+    if (!selection.active.value) {
+      return
+    }
+
+    const ownCount = selection.ids.value.filter((id) => {
+      const found = (chat.messages.value as any[]).find((m) => Number(m?.id) === Number(id))
+
+      return found && isOwnMessage(found)
+    }).length
+
+    confirm.value = {
+      type: 'deleteMessages',
+      payload: [...selection.ids.value],
+      title: `Удалить ${selection.count.value}?`,
+      msg: ownCount === selection.count.value
+        ? 'Сообщения удалятся у всех участников. Это нельзя отменить.'
+        : `Удалятся только ваши (${ownCount} из ${selection.count.value}): чужие сообщения удалить нельзя.`,
+      icon: '🗑️',
+      confirmLabel: 'Удалить',
+      severity: 'danger',
+    }
+  }
+
+  /**
+   * Открыть диалог пересылки выбранных.
+   */
+  function openForward(): void {
+    if (!selection.active.value) {
+      return
+    }
+
+    forwardOpen.value = true
+  }
+
+  /**
+   * Переслать выбранные в диалог.
+   *
+   * @param targetId id диалога-получателя
+   */
+  async function forwardSelection(targetId: number): Promise<void> {
+    if (!selection.active.value || forwarding.value) {
+      return
+    }
+
+    forwarding.value = true
+
+    try {
+      const res = await chatApi.forwardMessages([...selection.ids.value], [Number(targetId)])
+      const created = res?.results?.[0]?.messages ?? []
+
+      for (const msg of created) {
+        const exists = (chat.messages.value as any[]).some((m) => Number(m?.id) === Number((msg as any)?.id))
+
+        if (exists) {
+          continue
+        }
+
+        if (Number(chat.selectedId.value) === Number(targetId)) {
+          ;(chat.messages.value as any[]).push({ ...(msg as any), justSent: true })
+        }
+      }
+
+      forwardOpen.value = false
+      selection.clear()
+      void chat.loadConversations().catch(() => {})
+      toast?.add({ severity: 'success', summary: 'Переслано', detail: created.length === 1 ? 'Сообщение улетело в диалог' : `Сообщений: ${created.length}`, life: 3000 })
+    } catch (e: any) {
+      const detail = e?.response?.data?.message || 'Не удалось переслать'
+      toast?.add({ severity: 'error', summary: 'Не получилось', detail, life: 4000 })
+    } finally {
+      forwarding.value = false
+    }
+  }
+
+  /**
+   * Удалить выбранные одним запросом (после confirm).
+   *
+   * @param ids id сообщений
+   */
+  async function deleteSelection(ids: number[]): Promise<void> {
+    const backup = [...chat.messages.value]
+    const gone = new Set(ids.map(Number))
+    chat.messages.value = (chat.messages.value as any[]).filter((m) => !gone.has(Number(m?.id)))
+
+    try {
+      await chatApi.bulkDeleteMessages(ids)
+      selection.clear()
+      void chat.loadConversations().catch(() => {})
+    } catch (e: any) {
+      chat.messages.value = backup
+      const detail = e?.response?.data?.message || 'Не удалось удалить'
+      toast?.add({ severity: 'error', summary: 'Не получилось', detail, life: 4000 })
+      throw e
+    }
+  }
+
   async function togglePin(m: any) {
     const ok = await pins.toggle(m)
     if (!ok && pins.error.value) {
       toast?.add({ severity: 'warn', summary: 'Не удалось закрепить', detail: pins.error.value, life: 4000 })
+    }
+  }
+
+  /**
+   * Закрепить/открепить диалог из списка чатов (пункт ⋯).
+   *
+   * Строку двигаем только после ответа сервера: лимит тарифа
+   * (Free — 3 закрепа) проверяется на бэке, 403 показываем варнингом.
+   *
+   * @param id id диалога
+   * @param isPinned закреплён ли сейчас (true — открепляем)
+   */
+  async function toggleChatPin(id: number, isPinned: boolean): Promise<void> {
+    try {
+      if (isPinned) {
+        await chatApi.unpinConversation(id)
+        chat.setConversationPinned(id, false)
+        return
+      }
+
+      const res = await chatApi.pinConversation(id)
+      chat.setConversationPinned(id, true, res?.pinned_at ?? null)
+    } catch (e: any) {
+      const limited = Number(e?.response?.status) === 403
+      const detail = e?.response?.data?.message || 'Не удалось изменить закреп'
+      const summary = limited ? 'Лимит закрепов' : 'Не получилось'
+      const severity = limited ? 'warn' : 'error'
+      toast?.add({ severity, summary, detail, life: 4500 })
     }
   }
 
@@ -360,7 +573,7 @@ export function useChatPage(initialConversationId?: number) {
   }
 
   function askBlock(userId: number, name?: string) {
-    confirm.value = { type: 'block', payload: userId, title: 'Заблокировать?', msg: `Заблокировать ${name ?? 'пользователя'}? Чат и дружба будут удалены, сообщения скрыты.`, icon: '⛔', confirmLabel: 'Заблокировать', severity: 'danger' }
+    confirm.value = { type: 'block', payload: userId, title: 'Заблокировать?', msg: `Заблокировать ${name ?? 'пользователя'}? Переписка сохранится, но он не сможет писать вам. Дружба будет удалена.`, icon: '⛔', confirmLabel: 'Заблокировать', severity: 'danger' }
   }
   function askDeleteChat(id?: number) {
     const cid = id ?? chat.selectedId.value
@@ -386,18 +599,17 @@ export function useChatPage(initialConversationId?: number) {
     confirm.value = null
     sheet.value = null
     if (type === 'block') {
-      const conv = chat.conversations.value.find(c => c?.other?.id === payload)
-      const friendEntry = friendsApi.friends.value.find(f => Number(f?.other?.id) === Number(payload))
-      if (friendEntry) friendsApi.friends.value = friendsApi.friends.value.filter(f => f?.id !== friendEntry.id)
-      if (conv) chat.conversations.value = chat.conversations.value.filter(c => c?.id !== conv.id)
-      if (conv && chat.selectedId.value === conv.id) { chat.selectedId.value = null; chat.activeConv.value = null; chat.messages.value = [] }
+      // Блок не удаляет чат и историю: только запрет переписки.
+      // Раньше тут вызывался deleteConversation (hidden_at + cleared_at),
+      // из-за чего после разблокировки диалог пропадал вместе с сообщениями.
       try {
         await blocksApi.block(payload)
-        if (conv) { try { await chatApi.deleteConversation(conv.id) } catch {} }
       } catch (e) { await Promise.all([friendsApi.load(), blocksApi.load(), chat.loadConversations()]); throw e }
       friendsApi.load(); chat.loadConversations()
     } else if (type === 'deleteChat') {
       await chat.deleteConversation(payload)
+    } else if (type === 'deleteMessages') {
+      await deleteSelection(Array.isArray(payload) ? payload : [])
     } else if (type === 'clearAllChats') {
       await chat.clearAllConversations()
     } else if (type === 'deleteMessage') {
@@ -405,17 +617,31 @@ export function useChatPage(initialConversationId?: number) {
     } else if (type === 'removeFriend') {
       await friendsApi.remove(payload.id)
     } else if (type === 'unblock') {
+      // Бэк при разблокировке снимает hidden_at/cleared_at — подтягиваем список,
+      // чтобы диалог с историей сразу вернулся в чаты.
       await blocksApi.unblock(payload)
+      await chat.loadConversations()
     }
   }
 
   function closeSheet() { sheet.value = null }
 
-  watch(() => chat.selectedId.value, (id) => { reply.cancelReply(); voice.cancel(); voice.discardPreview(); if (id) focusChatInput() })
+  watch(() => chat.selectedId.value, (id) => { reply.cancelReply(); voice.cancel(); voice.discardPreview(); cancelSelection(); if (id) focusChatInput() })
 
   function backToList() { nav.backToList(emoji.close, chat.cancelEdit, showChatMenu) }
 
   function onKeydown(e: KeyboardEvent) {
+    if (selection.active.value) {
+      if (e.key === 'Escape') {
+        cancelSelection()
+        return
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'a') {
+        e.preventDefault()
+        selectAllMessages()
+        return
+      }
+    }
     if (e.key === 'Escape' && chat.selectedId.value) {
       if (emoji.open.value) { emoji.close(); return }
       if (chat.editingId.value !== null) { chat.cancelEdit(); return }
@@ -525,7 +751,8 @@ export function useChatPage(initialConversationId?: number) {
     chat, friendsApi, blocksApi, emoji, badgeSync, pins, togglePin, uloveConversations, uloveUnread, isBusiness, uloveOnly,
     input, inputRef, editInputRef, tab, showChatMenu, sheet, showPrivacy, privacy, creatingChat, confirm, confirmVisible, isOwnMessage, bindSheet, voice,
     handleSend, handlePickFile, handlePasteImage, handleShareLocation, handleStartVoice, handleStopVoice, handleCancelVoice, handleSendVoice, locating: chatLocation.locating, attachment, formatTime, onPickEmoji, onPickEmojiForEdit, handleStartEdit, startChatWith, addFriendFromSearch, savePrivacy, doConfirm, closeSheet, backToList,
-    askBlock, askDeleteChat, askClearAllChats, askDeleteMessage, askRemoveFriend, askUnblock,
+    askBlock, askDeleteChat, askClearAllChats, askDeleteMessage, askDeleteSelection, askRemoveFriend, askUnblock, toggleChatPin,
     init, openTarget, reply, handleStartReply, jumpToMessage,
+    selection, canDeleteSelection, forwardOpen, forwarding, startSelectMessage, toggleSelectMessage, cancelSelection, openForward, forwardSelection, deleteSelection,
   }
 }

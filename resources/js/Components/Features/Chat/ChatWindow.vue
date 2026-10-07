@@ -29,9 +29,9 @@ const composerMenu = useChatComposerMenu()
 const wallpaper = useChatWallpaper()
 const { handleEnterToSend } = useEnterToSend()
 
-const props = defineProps<{ selectedId: number | null; activeConv: any; messages: any[]; loading: boolean; sending: boolean; refreshing: boolean; typing: boolean; online: boolean; input: string; emojiOpen: boolean; emojiGroups: any[]; editingId: number | null; editingBody: string; showMenu: boolean; keyboardStyle: any; locating?: boolean; peerPanelAvailable?: boolean; peerPanelOpen?: boolean; peerTone?: ChatPeerTone; isOwnMessage: (m: any) => boolean; messageStatus: (m: any) => string; formatTime: (s: string) => string; pinned?: any[]; pinLimitLabel?: string; flashId?: number | null; datingEntry?: boolean; datingBadge?: string | null; replyTo?: any | null; attachmentName?: string | null; attachmentSize?: number | null; previewUrl?: string | null; attachError?: string | null; attaching?: boolean; voiceRecording?: boolean; voiceDuration?: number; voiceLevel?: number; voiceError?: string | null; voicePreviewUrl?: string | null; voicePreviewDuration?: number; hasVoicePreview?: boolean; historyTopSentinel?: (el: unknown) => void | { value: unknown }; historyHasMore?: boolean; historyLoading?: boolean }>()
-const emit = defineEmits<{ (e: 'update:input', v: string): void; (e: 'update:editingBody', v: string): void; (e: 'send'): void; (e: 'share-location'): void; (e: 'presets'): void; (e: 'autoReply'): void; (e: 'typing'): void; (e: 'stopTyping'): void; (e: 'refresh'): void; (e: 'back'): void; (e: 'close'): void; (e: 'toggleMenu'): void; (e: 'menuClose'): void; (e: 'wallpaper'): void; (e: 'togglePeer'): void; (e: 'deleteChat'): void; (e: 'block'): void; (e: 'toggleEmoji'): void; (e: 'emojiClose'): void; (e: 'pickEmoji', v: string): void; (e: 'pickEmojiEdit', v: string): void; (e: 'startEdit', m: any): void; (e: 'saveEdit'): void; (e: 'cancelEdit'): void; (e: 'deleteMessage', id: number): void; (e: 'togglePin', m: any): void; (e: 'unpin', id: number): void; (e: 'jumpToMessage', id: number): void; (e: 'reply', m: any): void; (e: 'cancelReply'): void; (e: 'pickFile', f: File | null): void; (e: 'removeFile'): void; (e: 'pasteImage', ev: ClipboardEvent): void; (e: 'startVoice'): void; (e: 'stopVoice'): void; (e: 'cancelVoice'): void; (e: 'sendVoice'): void; (e: 'discardVoice'): void; (e: 'inviteDistrict'): void }>()
-const { cm, menuModel, bindMessage } = useMessageContextMenu({ isOwn: (m: any) => props.isOwnMessage(m), onEdit: (m: any) => emit('startEdit', m), onDelete: (id: number) => emit('deleteMessage', id), onPin: (m: any) => emit('togglePin', m), onReply: (m: any) => emit('reply', m) })
+const props = defineProps<{ selectedId: number | null; activeConv: any; messages: any[]; loading: boolean; sending: boolean; refreshing: boolean; typing: boolean; online: boolean; input: string; emojiOpen: boolean; emojiGroups: any[]; editingId: number | null; editingBody: string; showMenu: boolean; keyboardStyle: any; locating?: boolean; peerPanelAvailable?: boolean; peerPanelOpen?: boolean; peerTone?: ChatPeerTone; isOwnMessage: (m: any) => boolean; messageStatus: (m: any) => string; formatTime: (s: string) => string; pinned?: any[]; pinLimitLabel?: string; flashId?: number | null; datingEntry?: boolean; datingBadge?: string | null; replyTo?: any | null; attachmentName?: string | null; attachmentSize?: number | null; previewUrl?: string | null; attachError?: string | null; attaching?: boolean; voiceRecording?: boolean; voiceDuration?: number; voiceLevel?: number; voiceError?: string | null; voicePreviewUrl?: string | null; voicePreviewDuration?: number; hasVoicePreview?: boolean; historyTopSentinel?: (el: unknown) => void | { value: unknown }; historyHasMore?: boolean; historyLoading?: boolean; selectionActive?: boolean; selectionCount?: number; canDeleteSelection?: boolean; isMessageSelected?: (id: number) => boolean }>()
+const emit = defineEmits<{ (e: 'update:input', v: string): void; (e: 'update:editingBody', v: string): void; (e: 'send'): void; (e: 'share-location'): void; (e: 'presets'): void; (e: 'autoReply'): void; (e: 'typing'): void; (e: 'stopTyping'): void; (e: 'refresh'): void; (e: 'back'): void; (e: 'close'): void; (e: 'toggleMenu'): void; (e: 'menuClose'): void; (e: 'wallpaper'): void; (e: 'togglePeer'): void; (e: 'deleteChat'): void; (e: 'block'): void; (e: 'toggleChatPin', id: number, isPinned: boolean): void; (e: 'toggleEmoji'): void; (e: 'emojiClose'): void; (e: 'pickEmoji', v: string): void; (e: 'pickEmojiEdit', v: string): void; (e: 'startEdit', m: any): void; (e: 'saveEdit'): void; (e: 'cancelEdit'): void; (e: 'deleteMessage', id: number): void; (e: 'togglePin', m: any): void; (e: 'unpin', id: number): void; (e: 'jumpToMessage', id: number): void; (e: 'reply', m: any): void; (e: 'cancelReply'): void; (e: 'toggleSelect', m: any): void; (e: 'selectionForward'): void; (e: 'selectionDelete'): void; (e: 'selectionCancel'): void; (e: 'pickFile', f: File | null): void; (e: 'removeFile'): void; (e: 'pasteImage', ev: ClipboardEvent): void; (e: 'startVoice'): void; (e: 'stopVoice'): void; (e: 'cancelVoice'): void; (e: 'sendVoice'): void; (e: 'discardVoice'): void; (e: 'inviteDistrict'): void }>()
+const { cm, menuModel, bindMessage } = useMessageContextMenu({ isOwn: (m: any) => props.isOwnMessage(m), onEdit: (m: any) => emit('startEdit', m), onDelete: (id: number) => emit('deleteMessage', id), onPin: (m: any) => emit('togglePin', m), onReply: (m: any) => emit('reply', m), onSelect: (m: any) => emit('toggleSelect', m) })
 const swipe = useMessageSwipe({ onReply: (m: any) => emit('reply', m) })
 const { menuPt } = useDropdownMenuStyle()
 const headerLink = useChatHeaderLink(toRef(props, 'activeConv'))
@@ -83,6 +83,50 @@ function showDayDivider(list: any[], index: number): boolean {
 /**
  * Подпись пилюли даты: Сегодня / Вчера / дата.
  */
+function messageSelected(m: any): boolean {
+  try {
+    return !!props.isMessageSelected?.(Number(m?.id))
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Клик по сообщению: с ctrl/cmd — в выбор, в режиме выбора — переключить.
+ *
+ * Клики по ссылкам и кнопкам внутри пузырька (цитата, вложения,
+ * плеер) оставляем как есть даже в режиме выбора.
+ *
+ * @param e событие клика
+ * @param m сообщение
+ */
+function onMessageClick(e: MouseEvent, m: any): void {
+  const multi = !!(e.ctrlKey || (e as any).metaKey)
+
+  if (!multi && !props.selectionActive) {
+    return
+  }
+
+  if (!m || m.id == null || (m as any).pending) {
+    return
+  }
+
+  if (String(m.type ?? 'text') === 'system') {
+    return
+  }
+
+  const target = e.target as HTMLElement | null
+
+  if (props.selectionActive && target?.closest('a,button')) {
+    return
+  }
+
+  emit('toggleSelect', m)
+}
+
+/**
+ * Подпись пилюли даты: Сегодня / Вчера / дата.
+ */
 function dayLabel(value: any): string {
   try {
     const d = new Date(value)
@@ -121,6 +165,7 @@ function dayLabel(value: any): string {
               <button v-if="activeConv?.type === 'district' && activeConv?.can_invite" @click="emit('menuClose'); emit('inviteDistrict')" class="w-full flex items-center gap-2.5 text-left px-4 py-3 text-sm font-medium text-violet-700 dark:text-violet-300 hover:bg-violet-50 dark:hover:bg-violet-500/10 active:bg-violet-100 transition"><i class="pi pi-user-plus text-xs"></i>Пригласить в район</button>
               <button @click="emit('menuClose'); emit('wallpaper')" class="w-full flex items-center gap-2.5 text-left px-4 py-3 text-sm font-medium dark:text-zinc-100 hover:bg-stone-50 dark:hover:bg-zinc-700/60 active:bg-stone-100 transition"><i class="pi pi-image text-xs text-stone-400"></i>Фон чата</button>
               <button @click="emit('menuClose'); emit('autoReply')" class="w-full flex items-center gap-2.5 text-left px-4 py-3 text-sm font-medium dark:text-zinc-100 hover:bg-stone-50 dark:hover:bg-zinc-700/60 active:bg-stone-100 transition"><i class="pi pi-reply text-xs text-stone-400"></i>Автоответ</button>
+              <button @click="emit('menuClose'); emit('toggleChatPin', Number(activeConv?.id), !!activeConv?.is_pinned)" class="w-full flex items-center gap-2.5 text-left px-4 py-3 text-sm font-medium dark:text-zinc-100 hover:bg-stone-50 dark:hover:bg-zinc-700/60 active:bg-stone-100 transition"><i class="pi pi-thumbtack text-xs text-violet-500"></i>{{ activeConv?.is_pinned ? 'Открепить чат' : 'Закрепить чат' }}</button>
               <div v-if="telegramShareMenu.canShare.value" class="border-t border-stone-100 dark:border-zinc-700/60 mt-1 pt-1">
                 <div v-if="telegramShareMenu.exchanged.value" class="px-4 py-3">
                   <p class="flex items-center gap-2 text-sm font-semibold dark:text-zinc-100"><i class="pi pi-link text-xs text-sky-600 dark:text-sky-300"></i>Telegram обменян</p>
@@ -170,7 +215,8 @@ function dayLabel(value: any): string {
           <div v-if="showDayDivider((messages || []), mi)" class="flex justify-center pt-1 pb-2.5">
             <span class="rounded-full bg-stone-100 dark:bg-zinc-800 px-3 py-1 text-[11px] font-semibold text-stone-500 dark:text-zinc-400">{{ dayLabel(m?.created_at) }}</span>
           </div>
-          <div v-if="m" :id="`msg-${m.id}`" class="pb-2.5">
+          <div v-if="m" :id="`msg-${m.id}`" class="pb-2.5" :class="selectionActive ? 'relative pl-9' : ''">
+            <button v-if="selectionActive" type="button" @click.stop="emit('toggleSelect', m)" :aria-label="messageSelected(m) ? 'Убрать из выбора' : 'Выбрать сообщение'" :class="messageSelected(m) ? 'bg-[#1786FF] border-[#1786FF] text-white' : 'border-stone-300 dark:border-zinc-600 text-transparent'" class="absolute left-0 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full border-2 grid place-items-center transition active:scale-90 shrink-0"><i class="pi pi-check text-[11px]"></i></button>
             <div v-if="editingId === m.id" class="flex justify-end min-w-0">
                   <div class="bg-white dark:bg-zinc-800 border dark:border-zinc-700 rounded-xl shadow-lg w-full max-w-[92vw] sm:max-w-[86vw] min-w-0 p-2">
                     <Textarea :model-value="editingBody" @update:model-value="(v:any)=>emit('update:editingBody', v)" @keydown="(e:any)=>handleEnterToSend(e, () => emit('saveEdit'))" @keydown.escape="emit('cancelEdit')" rows="2" autoResize maxlength="2000" class="w-full !rounded-xl text-sm" placeholder="Сообщение..." />
@@ -183,7 +229,7 @@ function dayLabel(value: any): string {
                     </div>
                   </div>
                 </div>
-                <div v-else v-on="swipe.merge(swipe.bindSwipe(m), bindMessage(m))" :style="swipe.swipeStyle(m)" :class="['relative rounded-2xl transition-shadow duration-500 scroll-mt-2 touch-pan-y', flashId === m.id ? 'ring-2 ring-violet-500 shadow-lg' : '', (swipe.offsets.value[m.id] ?? 0) ? '' : 'transition-transform duration-200']">
+                <div v-else v-on="swipe.merge(swipe.bindSwipe(m), bindMessage(m))" @click="(e: MouseEvent) => onMessageClick(e, m)" :style="swipe.swipeStyle(m)" :class="['relative rounded-2xl transition-shadow duration-500 scroll-mt-2 touch-pan-y', flashId === m.id ? 'ring-2 ring-violet-500 shadow-lg' : '', messageSelected(m) ? 'ring-2 ring-[#1786FF]/70 bg-[#1786FF]/5' : '', (swipe.offsets.value[m.id] ?? 0) ? '' : 'transition-transform duration-200']">
                   <div v-if="swipe.hintId.value === m.id" class="absolute top-1/2 -translate-y-1/2 z-10 w-8 h-8 grid place-items-center rounded-full bg-violet-600 text-white shadow-lg pointer-events-none" :class="isOwnMessage(m) ? 'left-1' : 'right-1'"><i class="pi pi-reply text-sm"></i></div>
                   <MessageBubble :message="m" :own="isOwnMessage(m)" :status="messageStatus(m)" :time="formatTime(m.created_at)" @edit="(mm:any)=>emit('startEdit', mm)" @delete="(id:number)=>emit('deleteMessage', id)" @pin="(mm:any)=>emit('togglePin', mm)" @reply="(mm:any)=>emit('reply', mm)" @jump="(id:number)=>emit('jumpToMessage', id)" />
                 </div>
@@ -193,6 +239,12 @@ function dayLabel(value: any): string {
         </div>
       </div>
       <ContextMenu ref="cm" :model="menuModel" :pt="menuPt" />
+      <div v-if="selectionActive" class="relative z-10 flex items-center gap-1.5 px-2 lg:px-3 py-2 border-t dark:border-zinc-800 bg-stone-50 dark:bg-zinc-900 shrink-0">
+        <Button @click="emit('selectionCancel')" icon="pi pi-times" text rounded severity="secondary" class="!w-9 !h-9 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" aria-label="Отменить выбор" title="Отменить выбор (Esc)" />
+        <span class="text-sm font-bold dark:text-white min-w-0 flex-1 truncate">{{ selectionCount || 0 }} выбрано</span>
+        <Button @click="emit('selectionForward')" icon="pi pi-forward" :label="(selectionCount || 0) > 1 ? 'Переслать' : undefined" text rounded class="!rounded-full shrink-0" aria-label="Переслать выбранные" title="Переслать" />
+        <Button v-if="canDeleteSelection" @click="emit('selectionDelete')" icon="pi pi-trash" :label="(selectionCount || 0) > 1 ? 'Удалить' : undefined" text rounded severity="danger" class="!rounded-full shrink-0" aria-label="Удалить выбранные" title="Удалить" />
+      </div>
       <div data-chat-composer-wrap class="relative p-2 lg:p-3 border-t dark:border-zinc-800 bg-white dark:bg-zinc-900 shrink-0 flex-none grow-0 basis-auto pb-[calc(0.5rem+var(--sab))] lg:pb-3 w-full max-w-full min-w-0 rounded-b-none lg:rounded-b-2xl">
         <div v-if="replyTo" class="flex items-center gap-2.5 bg-violet-50 dark:bg-violet-500/10 border-l-[3px] border-violet-500 rounded-r-xl rounded-l-sm px-3 py-2 mb-2 min-w-0">
           <div class="flex-1 min-w-0">

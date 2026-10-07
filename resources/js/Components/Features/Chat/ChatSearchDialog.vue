@@ -70,7 +70,7 @@ function goDistrict(id: number): void {
           <div class="text-xs text-stone-500 dark:text-zinc-400 mb-3">Найди человека по имени чтобы начать чат — отдельный глобальный поиск</div>
           <div class="relative w-full">
             <i class="pi pi-search absolute left-3.5 top-1/2 -translate-y-1/2 text-violet-500 text-sm pointer-events-none z-[1]" />
-            <InputText :model-value="query" @update:model-value="emit('update:query', String($event ?? ''))" placeholder="Имя, например Петр..." :autofocus="isDesktop" enterkeyhint="search" fluid class="!rounded-full !pl-10 !pr-10 !py-2.5 !text-base lg:!text-sm !border-stone-200 dark:!border-zinc-700 focus:!border-violet-500 focus:!ring-2 focus:!ring-violet-500/30" />
+            <InputText :model-value="query" @update:model-value="emit('update:query', String($event ?? ''))" placeholder="Имя, например Петр..." :autofocus="isDesktop" enterkeyhint="search" fluid class="!rounded-full !pl-10 !pr-10 !py-2.5 !text-base lg:!text-sm !border-stone-200 dark:!border-zinc-700 input-search-violet" />
             <i v-if="searching" class="pi pi-spin pi-spinner absolute right-3.5 top-1/2 -translate-y-1/2 text-violet-400 text-sm pointer-events-none" />
           </div>
           <div v-if="results.length" class="mt-3 max-h-[60dvh] sm:max-h-[52vh] overflow-auto divide-y divide-stone-100 dark:divide-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl bg-white dark:bg-zinc-900 shadow-sm">
@@ -96,7 +96,7 @@ function goDistrict(id: number): void {
           <div class="text-xs text-stone-500 dark:text-zinc-400 mb-3">Найди район, вступи и знакомься внутри — пины и чат открыты жителям</div>
           <div class="relative w-full">
             <i class="pi pi-search absolute left-3.5 top-1/2 -translate-y-1/2 text-violet-500 text-sm pointer-events-none z-[1]" />
-            <InputText :model-value="districts.districtQuery.value" @update:model-value="districts.setQuery(String($event ?? ''))" placeholder="Название района..." enterkeyhint="search" fluid class="!rounded-full !pl-10 !pr-10 !py-2.5 !text-base lg:!text-sm !border-stone-200 dark:!border-zinc-700 focus:!border-violet-500 focus:!ring-2 focus:!ring-violet-500/30" />
+            <InputText :model-value="districts.districtQuery.value" @update:model-value="districts.setQuery(String($event ?? ''))" placeholder="Название района..." enterkeyhint="search" fluid class="!rounded-full !pl-10 !pr-10 !py-2.5 !text-base lg:!text-sm !border-stone-200 dark:!border-zinc-700 input-search-violet" />
             <i v-if="districts.districtSearching.value" class="pi pi-spin pi-spinner absolute right-3.5 top-1/2 -translate-y-1/2 text-violet-400 text-sm pointer-events-none" />
           </div>
           <div v-if="districts.districtResults.value.length" class="mt-3 max-h-[60dvh] sm:max-h-[52vh] overflow-auto divide-y divide-stone-100 dark:divide-zinc-800 border rounded-2xl bg-white dark:bg-zinc-900 dark:border-zinc-700 shadow-sm">
@@ -115,7 +115,7 @@ function goDistrict(id: number): void {
           <div class="text-xs text-stone-500 dark:text-zinc-400 mb-3">Найди компанию по названию или бренду — откроем её профиль</div>
           <div class="relative w-full">
             <i class="pi pi-search absolute left-3.5 top-1/2 -translate-y-1/2 text-violet-500 text-sm pointer-events-none z-[1]" />
-            <InputText :model-value="orgs.orgQuery.value" @update:model-value="orgs.setQuery(String($event ?? ''))" placeholder="Название или бренд…" enterkeyhint="search" fluid class="!rounded-full !pl-10 !pr-10 !py-2.5 !text-base lg:!text-sm !border-stone-200 dark:!border-zinc-700 focus:!border-violet-500 focus:!ring-2 focus:!ring-violet-500/30" />
+            <InputText :model-value="orgs.orgQuery.value" @update:model-value="orgs.setQuery(String($event ?? ''))" placeholder="Название или бренд…" enterkeyhint="search" fluid class="!rounded-full !pl-10 !pr-10 !py-2.5 !text-base lg:!text-sm !border-stone-200 dark:!border-zinc-700 input-search-violet" />
             <i v-if="orgs.orgSearching.value" class="pi pi-spin pi-spinner absolute right-3.5 top-1/2 -translate-y-1/2 text-violet-400 text-sm pointer-events-none" />
           </div>
           <div v-if="orgs.orgResults.value.length" class="mt-3 max-h-[60dvh] sm:max-h-[52vh] overflow-auto divide-y divide-stone-100 dark:divide-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl bg-white dark:bg-zinc-900 shadow-sm">

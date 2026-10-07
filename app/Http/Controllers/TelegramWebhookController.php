@@ -175,6 +175,7 @@ class TelegramWebhookController extends Controller
             '/messages' => $this->replyMessages($user, $chatId),
             '/stats' => $this->replyStats($user, $chatId),
             '/export' => $this->replyExport($user, $chatId),
+            '/chatexport' => $this->replyChatExport($user, $chatId),
             '/online' => $this->replyOnline($user, $chatId),
             '/favorites', '/fav' => $this->replyFav($user, $chatId),
             '/notes' => $this->replyNotes($user, $chatId, $argument),
@@ -295,6 +296,20 @@ class TelegramWebhookController extends Controller
 
         if ($data === 'stats_export') {
             $this->sendStatsExport($fresh, $chatId, $callbackId);
+
+            return true;
+        }
+
+        if ($data === 'go_chatexport') {
+            $panel = $this->chatExportPanel($fresh);
+            TelegramCardSender::redrawText($chatId, $messageId, $panel['text'], $panel['keyboard']);
+            TelegramBotApi::answerCallback($callbackId, 'Выберите переписку');
+
+            return true;
+        }
+
+        if (str_starts_with($data, 'chatdl_')) {
+            $this->sendChatExport($fresh, $chatId, $callbackId, (int) substr($data, strlen('chatdl_')));
 
             return true;
         }
@@ -1719,6 +1734,7 @@ class TelegramWebhookController extends Controller
                 ['text' => '👤 Моя анкета', 'callback_data' => 'go_profile'],
             ],
             [
+                ['text' => '💬 Выгрузить переписку', 'callback_data' => 'go_chatexport'],
                 TelegramMenu::openAppButton('🌐 Приложение'),
             ],
         ]));
@@ -1771,6 +1787,100 @@ class TelegramWebhookController extends Controller
         $sent = TelegramBotApi::sendDocument($chatId, $filename, $csv, $caption);
 
         TelegramBotApi::answerCallback($callbackId, $sent ? 'CSV уже летит 📥' : 'Не вышло — попробуйте позже');
+    }
+
+    /**
+     * Панель выбора переписки для выгрузки в HTML.
+     *
+     * @param User $user владелец
+     * @return array{text:string, keyboard:array}
+     */
+    private function chatExportPanel(User $user): array
+    {
+        $chats = \App\Services\ChatExportService::recentFor($user);
+
+        if (empty($chats)) {
+            return [
+                'text' => "💬 <b>Выгрузка переписок</b>\n\nЧатов пока нет — найдите человека в приложении и напишите первым.",
+                'keyboard' => TelegramMenu::withNav([
+                    [TelegramMenu::openAppButton('🌐 Открыть чаты')],
+                ]),
+            ];
+        }
+
+        $rows = [];
+
+        foreach ($chats as $chat) {
+            $label = mb_substr((string) $chat['label'], 0, 40);
+            $rows[] = [['text' => '💬 '.$label, 'callback_data' => 'chatdl_'.(int) $chat['id']]];
+        }
+
+        return [
+            'text' => "💬 <b>Выгрузка переписок</b>\n\nВыберите диалог — пришлю аккуратный HTML: текст, время, ответы и вложения. Последние ".count($chats)." диалогов.",
+            'keyboard' => TelegramMenu::withNav($rows),
+        ];
+    }
+
+    /**
+     * Список переписок для выгрузки командой /chatexport.
+     *
+     * @param User $user владелец
+     * @param int $chatId куда слать
+     * @return void
+     */
+    private function replyChatExport(User $user, int $chatId): void
+    {
+        $panel = $this->chatExportPanel($user);
+
+        TelegramBotApi::sendMessage($chatId, $panel['text'], $panel['keyboard']);
+    }
+
+    /**
+     * Выгрузить выбранную переписку HTML-файлом в бот.
+     *
+     * Тот же ChatExportService, что и в приложении (Настройки →
+     * Приложение → Статистика): только своя видимая история.
+     *
+     * @param User $user владелец
+     * @param int $chatId куда слать файл
+     * @param string $callbackId для тоста
+     * @param int $conversationId какой диалог
+     * @return void
+     */
+    private function sendChatExport(User $user, int $chatId, string $callbackId, int $conversationId): void
+    {
+        $fresh = $user->fresh() ?? $user;
+
+        $conversation = \App\Models\Conversation::find($conversationId);
+
+        if (! $conversation || ! $conversation->hasParticipant($fresh->id)) {
+            TelegramBotApi::answerCallback($callbackId, 'Чат не найден');
+
+            return;
+        }
+
+        $clearedAt = $conversation->participantRows()->where('user_id', $fresh->id)->value('cleared_at');
+        $limit = \App\Services\ChatExportService::MAX_MESSAGES;
+
+        $messages = $conversation->messages()
+            ->with(['sender:id,name', 'replyTo.sender:id,name'])
+            ->when($clearedAt, fn ($q) => $q->where('created_at', '>', $clearedAt))
+            ->reorder()
+            ->orderByDesc('id')
+            ->limit($limit)
+            ->get()
+            ->reverse()
+            ->values();
+
+        $conversation->load(['participants:id,name', 'district:id,name']);
+
+        $service = app(\App\Services\ChatExportService::class);
+        $html = $service->buildHtml($conversation, $fresh, $messages);
+        $filename = $service->filename($conversation);
+
+        $sent = TelegramBotApi::sendDocument($chatId, $filename, $html, '💬 Переписка — откройте HTML в браузере.');
+
+        TelegramBotApi::answerCallback($callbackId, $sent ? 'Переписка уже летит 💬' : 'Не вышло — попробуйте позже');
     }
 
     /**

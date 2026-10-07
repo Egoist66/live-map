@@ -18,29 +18,56 @@ export function useProfileForm() {
   const user = computed(() => (page.props.auth as any).user)
   const toast = (() => { try { return useToast() } catch { return null as any } })()
 
-  const { defineField, handleSubmit, errors, values, setValues, setErrors, isSubmitting } = useForm({
+  /**
+   * Значения формы из пользователя: единый маппинг для старта,
+   * фоновой синхронизации и сброса baseline после сохранения.
+   *
+   * @param u пользователь из пропсов
+   */
+  function mapUserToValues(u: any): Record<string, unknown> {
+    return {
+      name: u?.name,
+      gender: u?.gender || null,
+      birth_date: u?.birth_date ? String(u.birth_date).slice(0, 10) : null,
+      country: u?.country || null,
+      country_code: u?.country_code || null,
+      email: u?.email,
+      home_lat: u?.home_lat || null,
+      home_lng: u?.home_lng || null,
+      home_city: u?.home_city || null,
+      home_address: u?.home_address || null,
+      home_visibility: u?.home_visibility || 'everyone',
+      home_show_exact: !!u?.home_show_exact,
+      home_radius_km: u?.home_radius_km || 10,
+      bio: u?.bio || null,
+      is_anonymous_default: !!u?.is_anonymous_default,
+      plan: planOf(u),
+    }
+  }
+
+  const { defineField, handleSubmit, errors, values, setValues, setErrors, isSubmitting, meta, resetForm } = useForm({
     validationSchema: updateProfileSchema,
-    initialValues: {
-      name: user.value.name,
-      gender: user.value.gender || null,
-      birth_date: user.value.birth_date ? String(user.value.birth_date).slice(0, 10) : null,
-      country: user.value.country || null,
-      country_code: user.value.country_code || null,
-      email: user.value.email,
-      home_lat: user.value.home_lat || null,
-      home_lng: user.value.home_lng || null,
-      home_city: user.value.home_city || null,
-      home_address: user.value.home_address || null,
-      home_visibility: user.value.home_visibility || 'everyone',
-      home_show_exact: !!user.value.home_show_exact,
-      home_radius_km: user.value.home_radius_km || 10,
-      bio: user.value.bio || null,
-      is_anonymous_default: !!user.value.is_anonymous_default,
-      plan: planOf(user.value),
-    } as any,
+    initialValues: mapUserToValues(user.value) as any,
   })
 
-  watch(user, (u) => setValues({ name: u.name, gender: u.gender || null, birth_date: u.birth_date ? String(u.birth_date).slice(0, 10) : null, country: u.country || null, country_code: u.country_code || null, email: u.email, home_lat: u.home_lat || null, home_lng: u.home_lng || null, home_city: u.home_city || null, home_address: u.home_address || null, home_visibility: u.home_visibility || 'everyone', home_show_exact: !!u.home_show_exact, home_radius_km: u.home_radius_km || 10, bio: u.bio || null, is_anonymous_default: !!u.is_anonymous_default, plan: planOf(u) } as any))
+  /**
+   * Фоновая синхронизация формы со свежими пропсами.
+   *
+   * Не затираем несохранённые правки: пока форма dirty или идёт отправка
+   * (загрузка аватара тоже обновляет auth через reload) — чужие обновления
+   * ждут. Иначе набранный текст молча заменялся серверным.
+   */
+  watch(user, (u) => {
+    if (isSubmitting.value) {
+      return
+    }
+
+    if (meta.value.dirty) {
+      return
+    }
+
+    setValues(mapUserToValues(u) as any)
+  })
 
   const [name, nameAttrs] = defineField('name')
   const [gender] = defineField('gender')
@@ -142,7 +169,15 @@ export function useProfileForm() {
     }
     router.patch(route('profile.update'), payload, {
       preserveScroll: true,
-      onSuccess: () => toast?.add({ severity: 'success', summary: 'Профиль сохранён', life: 2000 }),
+      onSuccess: (responsePage: any) => {
+        const fresh = (responsePage?.props?.auth as any)?.user ?? user.value
+        // Новый baseline: форма чистая относительно свежих данных,
+        // следующие фоновые обновления снова синхронизируются.
+        try {
+          resetForm({ values: mapUserToValues(fresh) as any })
+        } catch {}
+        toast?.add({ severity: 'success', summary: 'Профиль сохранён', life: 2000 })
+      },
       onError: (e: any) => {
         try { setErrors(e) } catch {}
         toast?.add({ severity: 'error', summary: 'Ошибка', detail: Object.values(e || {}).flat().join(', ') || 'Не удалось сохранить', life: 3000 })

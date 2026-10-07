@@ -7,6 +7,7 @@ import ApplicationLogo from '@/Components/Brand/ApplicationLogo.vue'
 import AppUserMenu from '@/Layouts/AppUserMenu.vue'
 import Avatar from 'primevue/avatar'
 import GlobalNotificationToasts from '@/Components/Features/Feedback/GlobalNotificationToasts.vue'
+import NetworkStatusToast from '@/Components/Features/Feedback/NetworkStatusToast.vue'
 import BusinessVerificationBadge from '@/Components/Features/Business/BusinessVerificationBadge.vue'
 import { useBusinessStore } from '@/stores/business'
 import { useNavigation } from '@/composables/useNavigation'
@@ -164,6 +165,7 @@ function logout(): void {
     </div>
     <div class="lg:hidden h-16" aria-hidden="true" />
     <GlobalNotificationToasts />
+    <NetworkStatusToast />
     <BellNotificationsModal />
     <NewDeviceAlertDialog />
   </div>

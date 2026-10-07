@@ -882,6 +882,63 @@ class User extends Authenticatable implements MustVerifyEmail
         };
     }
 
+    /**
+     * Лимит закрепов диалогов: как в Telegram, закреплённое всегда сверху.
+     *
+     * Free даёт 3 закрепа, Pro/Premium/Business и админ — без лимита.
+     *
+     * @return int|null максимум закрепов либо null когда безлимит
+     */
+    public function pinnedChatsLimit(): ?int
+    {
+        if ($this->isAdmin()) return null;
+
+        return match ($this->effectivePlan()) {
+            'business', 'premium', 'pro' => null,
+            default => 3,
+        };
+    }
+
+    /**
+     * Сколько диалогов пользователь держит в закрепах.
+     *
+     * Скрытые (удалённые у себя) не считаем — их нет в списке.
+     *
+     * @return int число закрепов
+     */
+    public function pinnedChatsCount(): int
+    {
+        return \App\Models\ConversationParticipant::where('user_id', $this->id)
+            ->whereNull('hidden_at')
+            ->whereNotNull('pinned_at')
+            ->count();
+    }
+
+    /**
+     * Можно ли закрепить ещё один диалог с учётом тарифа.
+     *
+     * @param int|null $exceptConversationId диалог не считать (уже закреплён)
+     * @return bool true когда слот свободен или тариф безлимитный
+     */
+    public function canPinChat(?int $exceptConversationId = null): bool
+    {
+        $limit = $this->pinnedChatsLimit();
+
+        if ($limit === null) {
+            return true;
+        }
+
+        $query = \App\Models\ConversationParticipant::where('user_id', $this->id)
+            ->whereNull('hidden_at')
+            ->whereNotNull('pinned_at');
+
+        if ($exceptConversationId !== null) {
+            $query->where('conversation_id', '!=', $exceptConversationId);
+        }
+
+        return $query->count() < $limit;
+    }
+
     public function canDeletePin(Pin $pin): bool { return $this->isAdmin() || $pin->user_id === $this->id; }
 
     public function canManageBusiness(?Business $business = null): bool

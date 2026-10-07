@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue'
 
 export type ChatRowTarget =
-  | { kind: 'chat'; id: number; userId?: number; userName?: string }
+  | { kind: 'chat'; id: number; userId?: number; userName?: string; isPinned?: boolean }
   | { kind: 'friend'; friendship: any; other?: any; userId?: number; userName?: string }
 
 /**
@@ -10,6 +10,7 @@ export type ChatRowTarget =
  * @returns состояние меню и модель пунктов PrimeVue Menu
  */
 export function useChatRowMenu(actions: {
+  onTogglePin: (id: number, isPinned: boolean) => void
   onDeleteChat: (id: number) => void
   onBlock: (id: number, name?: string) => void
   onRemoveFriend: (f: any) => void
@@ -65,7 +66,9 @@ export function useChatRowMenu(actions: {
     const t = target.value
     if (!t) return []
     if (t.kind === 'chat') {
+      const pinned = !!t.isPinned
       const items: any[] = [
+        { label: pinned ? 'Открепить чат' : 'Закрепить чат', icon: 'pi pi-thumbtack', command: () => run(() => actions.onTogglePin(t.id, pinned)) },
         { label: 'Удалить чат', icon: 'pi pi-trash', danger: true, class: 'danger-item !text-red-600', command: () => run(() => actions.onDeleteChat(t.id)) },
       ]
       if (t.userId) {

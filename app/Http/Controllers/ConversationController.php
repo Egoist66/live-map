@@ -16,11 +16,19 @@ class ConversationController extends Controller
         $perPage = max(1, min(50, (int) $request->input('per_page', 20)));
         $myRows = \App\Models\ConversationParticipant::where('user_id', $user->id)
             ->whereNull('hidden_at')
-            ->get(['conversation_id', 'cleared_at'])
+            ->get(['conversation_id', 'cleared_at', 'pinned_at'])
             ->keyBy('conversation_id');
+        $myPin = \App\Models\ConversationParticipant::select('pinned_at')
+            ->whereColumn('conversation_participants.conversation_id', 'conversations.id')
+            ->where('conversation_participants.user_id', $user->id)
+            ->limit(1);
         $page = Conversation::whereHas('participantRows', fn($q)=>$q->where('user_id',$user->id)->whereNull('hidden_at'))
             ->with(['participants' => fn($q)=>$q->select('users.id','users.name','users.profile_slug','users.avatar_path','users.telegram_photo_url','users.last_seen_at','users.is_invisible','users.plan','users.role','users.is_admin','users.account_type','users.dating_goal','users.dating_interests'), 'messages'=>fn($q)=>$q->reorder()->latest('id')->limit(1), 'district:id,name,user_id'])
             ->withCount(['messages as unread_count'=>fn($q)=>$q->where('sender_id','!=',$user->id)->whereNull('read_at')])
+            ->select('conversations.*')
+            ->selectSub($myPin, 'my_pinned_at')
+            ->orderByRaw('CASE WHEN my_pinned_at IS NULL THEN 1 ELSE 0 END')
+            ->orderByDesc('my_pinned_at')
             ->orderByDesc('last_message_at')
             ->orderByDesc('updated_at')
             ->paginate($perPage);
@@ -56,6 +64,7 @@ class ConversationController extends Controller
                 }
                 $isDistrictOwner = $c->type === 'district' && $c->district && ((int) $c->district->user_id === (int) $user->id || $user->isAdmin());
                 $otherOrg = $other ? ($orgMap[(int) $other->id] ?? null) : null;
+                $pinnedAt = $myRows->get($c->id)?->pinned_at;
                 return [
                     'id'=>$c->id,
                     'type'=>$c->type,
@@ -63,6 +72,8 @@ class ConversationController extends Controller
                     'district_id'=>$c->district_id,
                     'title'=>$c->type === 'district' ? ($c->district?->name ?? 'Район') : null,
                     'can_invite'=>$isDistrictOwner,
+                    'is_pinned'=>$pinnedAt !== null,
+                    'pinned_at'=>$pinnedAt?->toISOString(),
                     'other'=>$other ? ['id'=>$other->id,'name'=>$other->name,'profile_slug'=>$other->profile_slug,'avatar_path'=>$other->avatar_path,'telegram_photo_url'=>$other->telegram_photo_url,'avatar_url'=>$other->avatar_url,'last_seen_at'=>$lastSeen,'is_invisible'=>$other->isInvisibleActive(),'is_match'=>$c->type === 'direct' && isset($matchedIds[$other->id]),'dating_goal'=>$other->dating_goal,'dating_interests'=>$other->dating_interests ?? [],'account_type'=>$other->account_type ?? 'person','is_business'=>($other->account_type ?? 'person') === 'business','is_organization'=>(bool) ($otherOrg['is_organization'] ?? false),'business'=>$otherOrg] : null,
                     'last_message'=>$last,
                     'unread_count'=>$unread,
@@ -117,6 +128,7 @@ class ConversationController extends Controller
             : false;
         $canInvite = $conversation->type === 'district' && $conversation->district && ((int) $conversation->district->user_id === (int) $request->user()->id || $request->user()->isAdmin());
         $otherOrg = $other ? ($this->organizationMap([(int) $other->id])[(int) $other->id] ?? null) : null;
+        $myPinnedAt = $conversation->participantRows()->where('user_id', $request->user()->id)->value('pinned_at');
         return response()->json([
             'id'=>$conversation->id,
             'type'=>$conversation->type,
@@ -124,6 +136,7 @@ class ConversationController extends Controller
             'district_id'=>$conversation->district_id,
             'title'=>$conversation->type === 'district' ? ($conversation->district?->name ?? 'Район') : null,
             'can_invite'=>$canInvite,
+            'is_pinned'=>$myPinnedAt !== null,
             'other'=>$other ? ['id'=>$other->id,'name'=>$other->name,'profile_slug'=>$other->profile_slug,'avatar_path'=>$other->avatar_path,'telegram_photo_url'=>$other->telegram_photo_url,'avatar_url'=>$other->avatar_url,'last_seen_at'=>$lastSeen,'is_invisible'=>$other->isInvisibleActive(),'is_match'=>$isMatch,'dating_goal'=>$other->dating_goal,'dating_interests'=>$other->dating_interests ?? [],'account_type'=>$other->account_type ?? 'person','is_business'=>($other->account_type ?? 'person') === 'business','is_organization'=>(bool) ($otherOrg['is_organization'] ?? false),'business'=>$otherOrg] : null,
             'participants'=>$conversation->participants->map(fn($p)=> array_merge($p->toArray(), ['avatar_url'=>$p->avatar_url])),
             'messages'=>$messages,
@@ -298,11 +311,110 @@ class ConversationController extends Controller
         return response()->json(['wallpaper' => $conversation->wallpaperPayload()]);
     }
 
+    /**
+     * Выгрузить переписку standalone-HTML файлом.
+     *
+     * Только свои видимые сообщения (после cleared_at), последние
+     * N по лимиту сервиса — старые архивы в файл не тянутся.
+     *
+     * @param Request $request запрос
+     * @param Conversation $conversation диалог
+     * @return \Symfony\Component\HttpFoundation\StreamedResponse
+     */
+    public function exportHtml(Request $request, Conversation $conversation)
+    {
+        abort_unless($conversation->hasParticipant($request->user()->id), 403);
+
+        $me = $request->user();
+        $clearedAt = $conversation->participantRows()->where('user_id', $me->id)->value('cleared_at');
+
+        $limit = \App\Services\ChatExportService::MAX_MESSAGES;
+
+        $total = $conversation->messages()
+            ->when($clearedAt, fn ($q) => $q->where('created_at', '>', $clearedAt))
+            ->count();
+
+        $messages = $conversation->messages()
+            ->with(['sender:id,name', 'replyTo.sender:id,name'])
+            ->when($clearedAt, fn ($q) => $q->where('created_at', '>', $clearedAt))
+            ->reorder()
+            ->orderByDesc('id')
+            ->limit($limit)
+            ->get()
+            ->reverse()
+            ->values();
+
+        $conversation->load(['participants:id,name', 'district:id,name']);
+
+        $service = app(\App\Services\ChatExportService::class);
+        $html = $service->buildHtml($conversation, $me, $messages);
+        $filename = $service->filename($conversation);
+
+        if ($total > $messages->count()) {
+            \Illuminate\Support\Facades\Log::info('chat export truncated', [
+                'conversation_id' => $conversation->id,
+                'user_id' => $me->id,
+                'total' => $total,
+            ]);
+        }
+
+        return response()->streamDownload(function () use ($html) {
+            echo $html;
+        }, $filename, ['Content-Type' => 'text/html; charset=utf-8']);
+    }
+
     public function destroy(Request $request, Conversation $conversation)
     {
         abort_unless($conversation->hasParticipant($request->user()->id),403);
         $conversation->participantRows()->where('user_id',$request->user()->id)->update(['hidden_at'=>now(),'cleared_at'=>now()]);
         return response()->json(['ok'=>true]);
+    }
+
+    /**
+     * Закрепить диалог у себя: как в Telegram, висит всегда сверху.
+     *
+     * Закреп личный (поле своей строки участника), у собеседника
+     * ничего не меняется. Free — до 3 закрепов, платные — безлимит.
+     *
+     * @param Request $request запрос
+     * @param Conversation $conversation диалог
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function pin(Request $request, Conversation $conversation)
+    {
+        abort_unless($conversation->hasParticipant($request->user()->id), 403);
+
+        $me = $request->user();
+        $row = $conversation->participantRows()->where('user_id', $me->id)->first();
+        abort_unless($row, 403);
+
+        if ($row->pinned_at !== null) {
+            return response()->json(['ok' => true, 'is_pinned' => true, 'pinned_at' => $row->pinned_at->toISOString()]);
+        }
+
+        abort_unless($me->canPinChat($conversation->id), 403, 'На бесплатном тарифе — до 3 закрепов. PRO и выше — без лимита.');
+
+        $row->update(['pinned_at' => now(), 'hidden_at' => null]);
+
+        return response()->json(['ok' => true, 'is_pinned' => true, 'pinned_at' => $row->fresh()->pinned_at->toISOString()]);
+    }
+
+    /**
+     * Открепить диалог у себя: возвращается в общий порядок по времени.
+     *
+     * @param Request $request запрос
+     * @param Conversation $conversation диалог
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function unpin(Request $request, Conversation $conversation)
+    {
+        abort_unless($conversation->hasParticipant($request->user()->id), 403);
+
+        $conversation->participantRows()
+            ->where('user_id', $request->user()->id)
+            ->update(['pinned_at' => null]);
+
+        return response()->json(['ok' => true, 'is_pinned' => false, 'pinned_at' => null]);
     }
 
     /**

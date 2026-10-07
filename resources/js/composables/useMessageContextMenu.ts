@@ -9,7 +9,7 @@ type DeleteCallback = (id: number) => void
  * @param opts колбэки владельца и действий
  * @returns привязки для пузырька и модель меню PrimeVue
  */
-export function useMessageContextMenu(opts: { isOwn: (m: any) => boolean; onEdit: MsgCallback; onDelete: DeleteCallback; onPin?: MsgCallback; onCopy?: MsgCallback; onReply?: MsgCallback; isPinned?: (m: any) => boolean }) {
+export function useMessageContextMenu(opts: { isOwn: (m: any) => boolean; onEdit: MsgCallback; onDelete: DeleteCallback; onPin?: MsgCallback; onCopy?: MsgCallback; onReply?: MsgCallback; onSelect?: MsgCallback; isPinned?: (m: any) => boolean }) {
   const cm = ref<any>(null)
   const current = ref<any>(null)
   const toast = (() => { try { return useToast() } catch { return null as any } })()
@@ -45,6 +45,63 @@ export function useMessageContextMenu(opts: { isOwn: (m: any) => boolean; onEdit
   let startPageX = 0
   let startPageY = 0
 
+  /**
+   * Часы из ISO-строки для подписи «прочитано».
+   *
+   * @param iso дата из read_at/delivered_at
+   * @returns «14:32» или пусто
+   */
+  function clockOf(iso: unknown): string {
+    try {
+      const date = new Date(String(iso ?? ''))
+
+      if (Number.isNaN(date.getTime())) {
+        return ''
+      }
+
+      return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+    } catch {
+      return ''
+    }
+  }
+
+  /**
+   * Пункт-статус прочтения своего сообщения (внизу меню, некликабельный).
+   *
+   * Прочитано — по read_at, иначе доставлено — по delivered_at,
+   * иначе просто «Отправлено». Чужим сообщениям не показываем.
+   *
+   * @param m сообщение
+   * @returns пункт меню или null
+   */
+  function readStatusItem(m: any): { label: string; icon: string } | null {
+    if (!opts.isOwn(m)) {
+      return null
+    }
+
+    if ((m as any).pending) {
+      return { label: 'Отправляется…', icon: 'pi pi-clock' }
+    }
+
+    const readClock = clockOf(m?.read_at)
+
+    if (readClock !== '') {
+      return { label: `Прочитано в ${readClock}`, icon: 'pi pi-eye' }
+    }
+
+    const deliveredClock = clockOf(m?.delivered_at)
+
+    if (deliveredClock !== '') {
+      return { label: `Доставлено в ${deliveredClock}`, icon: 'pi pi-check' }
+    }
+
+    if (m?.id == null) {
+      return null
+    }
+
+    return { label: 'Отправлено', icon: 'pi pi-clock' }
+  }
+
   const menuModel = computed(() => {
     if (!current.value) return []
     const m = current.value
@@ -62,6 +119,10 @@ export function useMessageContextMenu(opts: { isOwn: (m: any) => boolean; onEdit
       if (items.length) items.push({ separator: true })
       items.push({ label: pinned ? 'Открепить' : 'Закрепить', icon: 'pi pi-thumbtack', command: () => opts.onPin!(m) })
     }
+    if (opts.onSelect) {
+      if (items.length) items.push({ separator: true })
+      items.push({ label: 'Выделить', icon: 'pi pi-check-square', command: () => opts.onSelect!(m) })
+    }
     if (!opts.isOwn(m)) return items
     if (items.length) items.push({ separator: true })
     items.push(
@@ -69,6 +130,11 @@ export function useMessageContextMenu(opts: { isOwn: (m: any) => boolean; onEdit
       { separator: true },
       { label: 'Удалить', icon: 'pi pi-trash', class: 'danger-item !text-red-600', command: () => opts.onDelete(m?.id) },
     )
+    const seen = readStatusItem(m)
+    if (seen) {
+      items.push({ separator: true })
+      items.push({ ...seen, disabled: true, class: 'pointer-events-none opacity-70' })
+    }
     return items
   })
 

@@ -6,6 +6,7 @@ import MobileBottomNav from '@/Components/Features/Navigation/MobileBottomNav.vu
 import AppFooter from '@/Layouts/AppFooter.vue'
 import PageTransition from '@/Components/Features/Feedback/PageTransition.vue'
 import GlobalNotificationToasts from '@/Components/Features/Feedback/GlobalNotificationToasts.vue'
+import NetworkStatusToast from '@/Components/Features/Feedback/NetworkStatusToast.vue'
 import PwaInstallBanner from '@/Components/Features/Pwa/PwaInstallBanner.vue'
 import PwaUpdateBanner from '@/Components/Features/Pwa/PwaUpdateBanner.vue'
 import ConfirmDialog from 'primevue/confirmdialog'
@@ -78,13 +79,14 @@ onMounted(() => { screenLock.init(); hotkeys.init() })
          иначе SSR-краш `insertBefore of null` в Teleport.process. См. useClientReady. -->
     <template v-if="isClientReady">
       <GlobalNotificationToasts />
+      <NetworkStatusToast />
       <BellNotificationsModal />
       <NewDeviceAlertDialog />
       <PwaInstallBanner />
       <PwaUpdateBanner />
       <AppHotkeysDialog />
       <GlobalPeopleSearchDialog />
-      <MiniChatDock v-if="!layoutRoute.isSwipesRoute.value" />
+      <MiniChatDock v-if="!layoutRoute.isChatRoute.value" />
       <ScreenLockOverlay />
       <TermsAcceptanceModal />
       <SubscriptionRenewalDialog />

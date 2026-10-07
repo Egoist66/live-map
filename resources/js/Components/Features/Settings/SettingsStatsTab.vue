@@ -10,15 +10,19 @@ import Skeleton from 'primevue/skeleton'
 import Message from 'primevue/message'
 import DataTable from 'primevue/datatable'
 import Column from 'primevue/column'
+import Select from 'primevue/select'
 import { useProfileStats } from '@/composables/useProfileStats'
+import { useChatExport } from '@/composables/useChatExport'
 import { chatApi } from '@/services/chat.api'
 
 /**
  * Вкладка «Приложение → Статистика»: только отображение.
- * Вся логика (загрузка, выгрузка, гейт по тарифу) — в useProfileStats.
+ * Вся логика (загрузка, выгрузка, гейт по тарифу) — в useProfileStats,
+ * выгрузка переписок — в useChatExport.
  * Выгрузка CSV живёт в Telegram-боте (/export), здесь — живые таблицы.
  */
 const stats = useProfileStats()
+const chatExport = useChatExport()
 const chatLoadingId = ref<number | null>(null)
 
 onMounted(() => {
@@ -350,6 +354,48 @@ function audienceMax(): number {
         <Message v-else-if="!stats.loading.value" severity="warn" class="mt-4 !text-sm">
           Конкретных гостей с анкетами видно на тарифе Premium: кто заходит, что у него в профиле и кнопка «Написать».
         </Message>
+      </template>
+    </Card>
+
+    <Card
+      class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft"
+      :pt="{ body: { class: '!p-4 sm:!p-6' }, content: { class: '!p-0' } }"
+    >
+      <template #content>
+        <h3 class="font-black tracking-tight text-lg dark:text-white">Выгрузка переписки</h3>
+        <p class="text-sm text-stone-500 mt-1">Сохраните любой диалог в аккуратный HTML: текст, время, ответы и вложения — как обычная сохранённая переписка. Файл открывается без интернета.</p>
+
+        <div class="mt-4 flex flex-col sm:flex-row gap-2">
+          <Select
+            v-model="chatExport.selectedId.value"
+            :options="chatExport.options.value"
+            optionLabel="label"
+            optionValue="id"
+            placeholder="Выберите чат…"
+            filter
+            filterPlaceholder="Имя собеседника…"
+            :loading="chatExport.loading.value"
+            emptyMessage="Чатов пока нет"
+            class="flex-1 !rounded-2xl"
+            @focus="chatExport.load()"
+            @show="chatExport.load()"
+          >
+            <template #option="{ option }">
+              <span class="block min-w-0">
+                <span class="block text-sm font-semibold truncate">{{ option.label }}</span>
+                <span v-if="option.sub" class="block text-xs text-stone-500 truncate">{{ option.sub }}</span>
+              </span>
+            </template>
+          </Select>
+          <Button
+            label="Скачать HTML"
+            icon="pi pi-download"
+            class="!rounded-2xl shrink-0"
+            :loading="chatExport.exporting.value"
+            :disabled="!chatExport.canExport.value"
+            @click="chatExport.exportSelected()"
+          />
+        </div>
       </template>
     </Card>
   </div>

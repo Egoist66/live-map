@@ -298,6 +298,191 @@ class MessageController extends Controller
         return response()->json(['ok'=>true]);
     }
 
+    /**
+     * Удалить несколько своих сообщений одним запросом (мультиселект).
+     *
+     * Чужие пропускаем молча (фронт и так не даёт их выбрать для
+     * удаления): bulk — это удобство, а не обход прав destroy.
+     *
+     * @param Request $request запрос с ids[]
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function bulkDestroy(Request $request)
+    {
+        $data = $request->validate([
+            'ids' => 'required|array|min:1|max:50',
+            'ids.*' => 'integer',
+        ]);
+
+        $me = $request->user();
+        $isAdmin = $me->isAdmin();
+
+        $messages = Message::whereIn('id', $data['ids'])->get();
+        $deleted = [];
+
+        foreach ($messages as $message) {
+            $own = (int) $message->sender_id === (int) $me->id;
+
+            if (! $own && ! $isAdmin) {
+                continue;
+            }
+
+            $cid = $message->conversation_id;
+            $mid = $message->id;
+            $path = $message->attachment_path;
+            $message->delete();
+            ChatAttachment::delete($path);
+            $deleted[] = $mid;
+
+            try {
+                broadcast(new \App\Events\MessageDeleted($mid, $cid))->toOthers();
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage());
+            }
+        }
+
+        return response()->json(['ok' => true, 'deleted' => $deleted]);
+    }
+
+    /**
+     * Переслать сообщения в свои диалоги (как в Telegram).
+     *
+     * Источник — любой видимый мне диалог (чужие сообщения можно),
+     * системные не пересылаем. Вложения копируем файлом, чтобы удаление
+     * оригинала не ломало пересланную копию. Каждое новое сообщение идёт
+     * обычным трактом storeInline: сокет, пуши, автоответ.
+     *
+     * @param Request $request запрос с message_ids[] и conversation_ids[]
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function forward(Request $request)
+    {
+        $data = $request->validate([
+            'message_ids' => 'required|array|min:1|max:20',
+            'message_ids.*' => 'integer',
+            'conversation_ids' => 'required|array|min:1|max:5',
+            'conversation_ids.*' => 'integer',
+        ]);
+
+        $me = $request->user();
+        \App\Services\EmailVerificationGate::assertCanWrite($me);
+
+        $sources = Message::whereIn('id', $data['message_ids'])
+            ->with('conversation')
+            ->orderBy('id')
+            ->get()
+            ->filter(function ($m) use ($me) {
+                if (($m->type ?? '') === 'system') {
+                    return false;
+                }
+
+                return $m->conversation && $m->conversation->hasParticipant($me->id);
+            })
+            ->values();
+
+        abort_if($sources->isEmpty(), 422, 'Нечего пересылать');
+
+        $results = [];
+
+        foreach ($data['conversation_ids'] as $cid) {
+            $conv = Conversation::find($cid);
+
+            if (! $conv || ! $conv->hasParticipant($me->id)) {
+                continue;
+            }
+
+            $created = [];
+
+            foreach ($sources as $source) {
+                $payload = $this->forwardOne($request, $conv, $me, $source);
+
+                if ($payload !== null) {
+                    $created[] = $payload;
+                }
+            }
+
+            $results[] = ['conversation_id' => $conv->id, 'messages' => $created];
+        }
+
+        return response()->json(['ok' => true, 'results' => $results], 201);
+    }
+
+    /**
+     * Скопировать одно сообщение в диалог получателя.
+     *
+     * @param Request $request исходный запрос (для storeInline)
+     * @param Conversation $conv диалог-получатель
+     * @param User $me пересылающий (станет автором копии)
+     * @param Message $source оригинал
+     * @return array|null пейлоад нового сообщения
+     */
+    private function forwardOne(Request $request, Conversation $conv, User $me, Message $source): ?array
+    {
+        try {
+            $attachment = $this->copyAttachmentForForward($source);
+        } catch (\Throwable) {
+            $attachment = null;
+        }
+
+        $shared = null;
+
+        if ($source->shared_post_type && $source->shared_post_id) {
+            $shared = ['type' => $source->shared_post_type, 'id' => (int) $source->shared_post_id];
+        }
+
+        try {
+            $response = app(MessageController::class)->storeInline(
+                $request,
+                $conv,
+                $me,
+                (string) ($source->body ?? ''),
+                null,
+                $attachment,
+                $source->attachment_duration,
+                $shared
+            );
+        } catch (\Throwable) {
+            return null;
+        }
+
+        $created = $response->getData(true);
+
+        return is_array($created) ? $created : null;
+    }
+
+    /**
+     * Скопировать файл вложения для пересылки.
+     *
+     * @param Message $source оригинал с attachment_path
+     * @return array|null массив для storeInline или null
+     */
+    private function copyAttachmentForForward(Message $source): ?array
+    {
+        $path = (string) ($source->attachment_path ?? '');
+
+        if ($path === '') {
+            return null;
+        }
+
+        $disk = ChatAttachment::disk();
+        $storage = \Illuminate\Support\Facades\Storage::disk($disk);
+
+        if (! $storage->exists($path)) {
+            return null;
+        }
+
+        $copyPath = 'chat-attachments/forward-'.uniqid('', true).'-'.basename($path);
+        $storage->copy($path, $copyPath);
+
+        return [
+            'path' => $copyPath,
+            'name' => $source->attachment_name,
+            'mime' => $source->attachment_mime,
+            'size' => (int) $storage->size($copyPath),
+            'kind' => $source->attachment_kind,
+        ];
+    }
+
     public function pinned(Request $request, Conversation $conversation)
     {
         abort_unless($conversation->hasParticipant($request->user()->id),403);

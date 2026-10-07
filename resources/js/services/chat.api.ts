@@ -138,6 +138,29 @@ export const chatApi = {
     return data
   },
   /**
+   * Закрепить диалог у себя: висит всегда сверху (как в Telegram).
+   * @param id id диалога
+   */
+  async pinConversation(id: number) {
+    const { data } = await api.post(`/api/conversations/${id}/pin`)
+    return data as { ok: boolean; is_pinned: boolean; pinned_at: string | null }
+  },
+  /**
+   * Открепить диалог: вернётся в общий порядок по времени.
+   * @param id id диалога
+   */
+  async unpinConversation(id: number) {
+    const { data } = await api.delete(`/api/conversations/${id}/pin`)
+    return data as { ok: boolean; is_pinned: boolean; pinned_at: string | null }
+  },
+  /**
+   * Прямой URL выгрузки переписки в HTML (скачивание через useFileDownload).
+   * @param id id диалога
+   */
+  exportConversationHtmlUrl(id: number) {
+    return `/api/conversations/${id}/export`
+  },
+  /**
    * Убрать все диалоги из своего списка навсегда.
    */
   async clearConversations() {
@@ -200,6 +223,23 @@ export const chatApi = {
   },
   async deleteMessage(messageId: number) {
     const { data } = await api.delete(`/api/messages/${messageId}`)
+    return data
+  },
+  /**
+   * Удалить несколько своих сообщений одним запросом (мультиселект).
+   * @param ids id сообщений
+   */
+  async bulkDeleteMessages(ids: number[]) {
+    const { data } = await api.post<{ ok: boolean; deleted: number[] }>('/api/messages/bulk-delete', { ids })
+    return data
+  },
+  /**
+   * Переслать сообщения в свои диалоги (как в Telegram).
+   * @param messageIds что пересылаем
+   * @param conversationIds куда пересылаем
+   */
+  async forwardMessages(messageIds: number[], conversationIds: number[]) {
+    const { data } = await api.post<{ ok: boolean; results: { conversation_id: number; messages: Message[] }[] }>('/api/messages/forward', { message_ids: messageIds, conversation_ids: conversationIds })
     return data
   },
   async markDelivered(convId: number) {

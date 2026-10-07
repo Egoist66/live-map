@@ -28,6 +28,9 @@ const ChatAutoReplyDialog = defineAsyncComponent(
 const DistrictInviteDialog = defineAsyncComponent(
   () => import("@/Components/Features/Map/DistrictInviteDialog.vue")
 );
+const MessageForwardDialog = defineAsyncComponent(
+  () => import("@/Components/Features/Chat/MessageForwardDialog.vue")
+);
 import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
 import { useChatOnline } from "@/composables/useChatOnline";
 import { useChatPage } from "@/composables/useChatPage";
@@ -135,8 +138,18 @@ const {
   askDeleteChat,
   askClearAllChats,
   askDeleteMessage,
+  askDeleteSelection,
   askRemoveFriend,
   askUnblock,
+  toggleChatPin,
+  selection,
+  canDeleteSelection,
+  forwardOpen,
+  forwarding,
+  toggleSelectMessage,
+  cancelSelection,
+  openForward,
+  forwardSelection,
 } = useChatPage(props.conversationId);
 const {
   conversations,
@@ -405,6 +418,7 @@ onMounted(async () => {
         @saved="goNotes"
         @open="openConversationAsChat"
         @start-chat="startChatAsChat"
+        @toggle-chat-pin="toggleChatPin"
         @delete-chat="askDeleteChat"
         @clear-all-chats="askClearAllChats"
         @block="askBlock"
@@ -463,6 +477,7 @@ onMounted(async () => {
 
         @toggle-menu="showChatMenu = !showChatMenu"
         @menu-close="showChatMenu = false"
+        @toggle-chat-pin="toggleChatPin"
         @wallpaper="wallpaperOpen = true"
         @presets="presetsOpen = true"
         @auto-reply="autoReplyOpen = true"
@@ -476,6 +491,14 @@ onMounted(async () => {
         @save-edit="saveEdit"
         @cancel-edit="cancelEdit"
         @delete-message="askDeleteMessage"
+        :selection-active="selection.active.value"
+        :selection-count="selection.count.value"
+        :can-delete-selection="canDeleteSelection"
+        :is-message-selected="(id: number) => selection.isSelected(id)"
+        @toggle-select="toggleSelectMessage"
+        @selection-forward="openForward"
+        @selection-delete="askDeleteSelection"
+        @selection-cancel="cancelSelection"
         :pinned="pins.pinned.value"
         :pin-limit-label="pins.limitLabel()"
         :flash-id="pins.flashId.value"
@@ -525,6 +548,15 @@ onMounted(async () => {
     @block="askBlock"
   />
   <ChatConfirmDialog :confirm="confirm" @close="closeConfirm" @ok="doConfirm" />
+  <MessageForwardDialog
+    :open="forwardOpen"
+    :conversations="(chat.conversations.value as any[])"
+    :current-id="selectedId"
+    :count="selection.count.value"
+    :sending="forwarding"
+    @close="forwardOpen = false"
+    @pick="(id: number) => forwardSelection(id)"
+  />
   <ChatWallpaperDialog
     :open="wallpaperOpen"
     :conversation-id="selectedId"
@@ -562,6 +594,7 @@ onMounted(async () => {
     @edit="(m: any) => { closeSheet(); handleStartEdit(m) }"
     @delete-message="(id: number) => { closeSheet(); askDeleteMessage(id) }"
     @delete-chat="(id?: number) => askDeleteChat(id)"
+    @toggle-chat-pin="(id: number, pinned: boolean) => { closeSheet(); toggleChatPin(id, pinned) }"
     @block="askBlock"
     @unblock="askUnblock"
     @remove-friend="askRemoveFriend"

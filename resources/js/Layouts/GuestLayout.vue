@@ -8,6 +8,7 @@ import AuthBackdrop from '@/Components/Features/Auth/AuthBackdrop.vue'
 import { useAuthBackdrop } from '@/composables/useAuthBackdrop'
 import PwaInstallBanner from '@/Components/Features/Pwa/PwaInstallBanner.vue'
 import PwaUpdateBanner from '@/Components/Features/Pwa/PwaUpdateBanner.vue'
+import NetworkStatusToast from '@/Components/Features/Feedback/NetworkStatusToast.vue'
 import { computed } from 'vue'
 import { useGuestLayout } from '@/composables/useGuestLayout'
 import { useClientReady } from '@/composables/useClientReady'
@@ -99,6 +100,7 @@ const hideSidebar = computed(() => isAuthPage.value)
            чего сервер не видел — enter-transition во время гидратации даёт
            `insertBefore of null`. См. useClientReady. -->
       <template v-if="isClientReady">
+        <NetworkStatusToast />
         <PwaInstallBanner />
         <PwaUpdateBanner />
       </template>

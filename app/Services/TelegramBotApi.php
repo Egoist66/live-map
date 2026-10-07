@@ -294,6 +294,7 @@ class TelegramBotApi
                 ['command' => 'notes', 'description' => '📝 Заметки «Избранного»'],
                 ['command' => 'stats', 'description' => '📊 Статистика профиля по тарифу'],
                 ['command' => 'export', 'description' => '📥 Выгрузка статистики в CSV'],
+                ['command' => 'chatexport', 'description' => '💬 Выгрузка переписки в HTML'],
                 ['command' => 'plan', 'description' => '💎 Мой тариф и выбор плана'],
                 ['command' => 'email', 'description' => '📧 Моя почта для уведомлений'],
                 ['command' => 'notify', 'description' => '🔔 Куда слать: бот, почта, личка'],

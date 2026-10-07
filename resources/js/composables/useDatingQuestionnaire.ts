@@ -1,5 +1,5 @@
 import { computed, ref } from 'vue'
-import { usePage } from '@inertiajs/vue3'
+import { router, usePage } from '@inertiajs/vue3'
 import { datingApi } from '@/services/dating.api'
 import { datingQuestionnaireSchema } from '@/validation/schemas/dating.schema'
 import { isUnchangedPayload } from '@/composables/useUnchangedGuard'
@@ -138,10 +138,18 @@ export function useDatingQuestionnaire() {
         dating_about: parsed.data.dating_about,
         dating_interests: parsed.data.dating_interests ?? [],
       })
+      // Оптимистично — мгновенно для всех читателей auth.user,
+      // затем сверяемся с сервером: прямая мутация пропсов хрупка
+      // (часть экранов держит свои копии), reload доводит свежий
+      // auth.user всем подписчикам без перезагрузки страницы.
       const u = authUser.value
       if (u && saved) Object.assign(u, saved)
       lastSaved.value = saved ?? null
       emitDatingSaved(saved)
+      try {
+        await router.reload({ only: ['auth'] })
+      } catch {}
+      resetFromUser()
       return true
     } catch (e: any) {
       serverError.value = e?.response?.data?.message ?? 'Не удалось сохранить анкету'

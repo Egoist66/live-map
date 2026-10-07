@@ -260,6 +260,9 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::match(['patch', 'post'], '/conversations/{conversation}/wallpaper', [ConversationController::class, 'updateWallpaper'])->middleware('throttle:social-write');
     Route::delete('/conversations', [ConversationController::class, 'clearAll'])->middleware('throttle:social-write');
     Route::delete('/conversations/{conversation}', [ConversationController::class, 'destroy'])->middleware('throttle:social-write');
+    Route::post('/conversations/{conversation}/pin', [ConversationController::class, 'pin'])->middleware('throttle:pin-toggle');
+    Route::delete('/conversations/{conversation}/pin', [ConversationController::class, 'unpin'])->middleware('throttle:pin-toggle');
+    Route::get('/conversations/{conversation}/export', [ConversationController::class, 'exportHtml']);
 
     Route::post('/conversations/{conversation}/telegram-share', [\App\Http\Controllers\TelegramShareController::class, 'offer'])->middleware('throttle:social-write');
     Route::delete('/conversations/{conversation}/telegram-share', [\App\Http\Controllers\TelegramShareController::class, 'revoke'])->middleware('throttle:social-write');
@@ -271,6 +274,8 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
 
     Route::patch('/messages/{message}', [MessageController::class, 'update']);
     Route::delete('/messages/{message}', [MessageController::class, 'destroy']);
+    Route::post('/messages/bulk-delete', [MessageController::class, 'bulkDestroy'])->middleware('throttle:social-write');
+    Route::post('/messages/forward', [MessageController::class, 'forward'])->middleware('throttle:messages-write');
     Route::get('/conversations/{conversation}/pinned', [MessageController::class, 'pinned']);
     Route::post('/messages/{message}/pin', [MessageController::class, 'pin'])->middleware('throttle:pin-toggle');
     Route::delete('/messages/{message}/pin', [MessageController::class, 'unpin'])->middleware('throttle:pin-toggle');

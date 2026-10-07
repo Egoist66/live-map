@@ -58,7 +58,7 @@ const dockRef = dock.dockRef
             <InputText
               :model-value="dock.searchQuery.value"
               placeholder="Поиск по чатам…"
-              class="w-full !rounded-full !bg-stone-100 !pl-9 !text-sm dark:!bg-zinc-800"
+              class="input-search-violet w-full !rounded-full !bg-stone-100 !pl-9 !text-sm dark:!bg-zinc-800"
               @update:model-value="(v: string | undefined) => dock.setQuery(v ?? '')"
             />
           </div>

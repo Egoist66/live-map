@@ -188,8 +188,53 @@ export function useChat() {
     if (!Array.isArray(data)) return []
     return (data as Conversation[]).filter((c) => c != null && Number((c as any)?.id) > 0)
   }
+  /**
+   * Время диалога для сортировки в миллисекундах.
+   * @param c строка диалога
+   */
+  function conversationTime(c: any): number {
+    const raw = c?.last_message_at || c?.updated_at || 0
+    return new Date(raw).getTime()
+  }
+  /**
+   * Сортировка сайдбара: закрепы всегда сверху (свежий закреп выше),
+   * дальше — по времени последнего сообщения (как в Telegram).
+   */
   function sortConversations() {
-    conversations.value = [...conversations.value].sort((a:any,b:any)=> new Date(b.last_message_at||b.updated_at||0).getTime() - new Date(a.last_message_at||a.updated_at||0).getTime())
+    const pinnedFirst = (a: any, b: any): number => {
+      const aPinned = !!a?.is_pinned
+      const bPinned = !!b?.is_pinned
+      if (aPinned !== bPinned) return aPinned ? -1 : 1
+      if (aPinned && bPinned) {
+        const aPin = new Date(a?.pinned_at || 0).getTime()
+        const bPin = new Date(b?.pinned_at || 0).getTime()
+        if (aPin !== bPin) return bPin - aPin
+      }
+      return conversationTime(b) - conversationTime(a)
+    }
+    conversations.value = [...conversations.value].sort(pinnedFirst)
+  }
+  /**
+   * Локально отметить закреп диалога и пересортировать сайдбар.
+   *
+   * Вызывается после успешного pin/unpin на бэке — ждём сервер,
+   * чтобы не врать про лимит тарифа (403 остаётся на сервере).
+   *
+   * @param id id диалога
+   * @param pinned закреплён ли теперь
+   * @param pinnedAt метка закрепа с сервера
+   */
+  function setConversationPinned(id: number, pinned: boolean, pinnedAt?: string | null): void {
+    const conv = conversations.value.find((c) => Number(c?.id) === Number(id)) as any
+    if (conv) {
+      conv.is_pinned = pinned
+      conv.pinned_at = pinned ? (pinnedAt ?? new Date().toISOString()) : null
+    }
+    const opened = activeConv.value as any
+    if (opened && Number(opened.id) === Number(id)) {
+      opened.is_pinned = pinned
+    }
+    sortConversations()
   }
   /**
    * Новейшее сообщение списка по id (страховка от порядка с сервера).
@@ -217,7 +262,9 @@ export function useChat() {
       return
     }
     applyPreview(conversations.value[idx] as any, msg)
-    conversations.value = [conversations.value[idx], ...conversations.value.filter((c) => c?.id !== msg.conversation_id)]
+    // Полная пересортировка вместо ручного подъёма наверх:
+    // закреплённые диалоги обязаны оставаться выше свежих обычных.
+    sortConversations()
   }
   /**
    * Кладет свежее сообщение в превью диалога.
@@ -1115,6 +1162,6 @@ export function useChat() {
     searchQuery, searchResults, searching, selectedId, error, emailBlocked, unreadTotal, unreadMessagesTotal,
     editingId, editingBody, history,
     conversationsHasMore, conversationsLoadingMore,
-    loadConversations, loadMoreConversations, refresh, openConversation, createConversation, sendMessage, startEdit, cancelEdit, saveEdit, deleteMessage, deleteConversation, clearAllConversations, searchUsers, notifyTyping, stopTyping, handleIncoming, handleUpdated, subscribeGlobal, resetChatRealtime,
+    loadConversations, loadMoreConversations, refresh, openConversation, createConversation, sendMessage, startEdit, cancelEdit, saveEdit, deleteMessage, deleteConversation, clearAllConversations, setConversationPinned, searchUsers, notifyTyping, stopTyping, handleIncoming, handleUpdated, subscribeGlobal, resetChatRealtime,
   }
 }

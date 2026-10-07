@@ -25,7 +25,7 @@ const filteredUlove = computed(() => {
   if (!q) return list.filter((c: any) => !!c)
   return list.filter((c: any) => c && (c.other?.name || '').toLowerCase().includes(q))
 })
-const emit = defineEmits<{ (e: 'update:filter', v: string): void; (e: 'saved'): void; (e: 'open', id: number): void; (e: 'startChat', u: any): void; (e: 'deleteChat', id: number): void; (e: 'block', id: number, name?: string): void; (e: 'unblock', id: number): void; (e: 'removeFriend', f: any): void; (e: 'accept', id: number): void; (e: 'decline', id: number): void; (e: 'sheet', p: any): void }>()
+const emit = defineEmits<{ (e: 'update:filter', v: string): void; (e: 'saved'): void; (e: 'open', id: number): void; (e: 'startChat', u: any): void; (e: 'toggleChatPin', id: number, isPinned: boolean): void; (e: 'deleteChat', id: number): void; (e: 'block', id: number, name?: string): void; (e: 'unblock', id: number): void; (e: 'removeFriend', f: any): void; (e: 'accept', id: number): void; (e: 'decline', id: number): void; (e: 'sheet', p: any): void }>()
 
 /**
  * Показывать ли закреп «Избранное» наверху вкладки чатов.
@@ -45,6 +45,7 @@ const { previewText } = useChatPreview(Number((usePage().props.auth as any)?.use
 const currentUserId = Number((usePage().props.auth as any)?.user?.id ?? 0)
 const ticks = useChatListTicks(() => currentUserId)
 const rowMenu = useChatRowMenu({
+  onTogglePin: (id: number, isPinned: boolean) => emit('toggleChatPin', id, isPinned),
   onDeleteChat: (id: number) => emit('deleteChat', id),
   onBlock: (id: number, name?: string) => emit('block', id, name),
   onRemoveFriend: (f: any) => emit('removeFriend', f),
@@ -79,21 +80,21 @@ const { userProfileUrl } = useProfileUrl()
         <div class="text-xs text-stone-500 mt-1">Найдите человека через поиск выше</div>
       </div>
       <div v-for="c in conversations" :key="c.id" class="group w-full flex items-center gap-0 text-left select-none">
-        <button @click="emit('open', c.id)" :class="selectedId === c.id ? 'bg-stone-100 dark:bg-zinc-800' : 'hover:bg-stone-50/70 dark:hover:bg-zinc-800/70'" class="flex-1 flex items-center gap-3 p-3.5 lg:p-3 text-left min-w-0 transition-colors">
+        <button @click="emit('open', c.id)" :class="selectedId === c.id ? 'bg-stone-100 dark:bg-zinc-800' : c.is_pinned ? 'bg-violet-50/60 dark:bg-violet-500/5 hover:bg-violet-50 dark:hover:bg-violet-500/10' : 'hover:bg-stone-50/70 dark:hover:bg-zinc-800/70'" class="flex-1 flex items-center gap-3 p-3.5 lg:p-3 text-left min-w-0 transition-colors">
           <span class="relative shrink-0">
             <span v-if="c.title" class="w-11 h-11 rounded-full bg-gradient-to-br from-violet-700 to-purple-900 text-white grid place-items-center text-lg shrink-0">🏘️</span>
             <Avatar v-else :image="avatarSrcFor(c.other)" shape="circle" size="large" class="!w-11 !h-11 [&_img]:object-cover" :pt="{ image: { class: 'object-cover' } }" />
             <OnlineDot v-if="!c.title" :online="isOnline(c.other?.id, c.other?.last_seen_at)" />
           </span>
           <div class="flex-1 min-w-0">
-            <div class="flex justify-between items-baseline gap-2"><span class="text-[15px] lg:text-sm font-semibold dark:text-white truncate">{{ c.title || c.other?.name || 'Чат' }} <OrgBadge :is-organization="c.other?.is_organization" /></span><span v-if="c.last_message_at" class="text-[11px] text-stone-400 shrink-0">{{ formatTime(c.last_message_at) }}</span></div>
+            <div class="flex justify-between items-baseline gap-2"><span class="text-[15px] lg:text-sm font-semibold dark:text-white truncate">{{ c.title || c.other?.name || 'Чат' }} <OrgBadge :is-organization="c.other?.is_organization" /></span><span class="flex items-center gap-1.5 shrink-0"><i v-if="c.is_pinned" class="pi pi-thumbtack text-[11px] text-violet-500" title="Закреплён" /><span v-if="c.last_message_at" class="text-[11px] text-stone-400">{{ formatTime(c.last_message_at) }}</span></span></div>
             <div v-if="c.title" class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5 text-violet-600">🏘️ Общий чат района<span class="text-stone-300">·</span><MessageTicks v-if="ticks.isOwnLast(c)" :status="ticks.lastMessageStatus(c) ?? 'sent'" /><span class="truncate text-stone-500">{{ previewText(c.last_message) }}</span></div>
             <div v-else class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5"><MessageTicks v-if="ticks.isOwnLast(c)" :status="ticks.lastMessageStatus(c) ?? 'sent'" /><span class="truncate text-stone-500 dark:text-zinc-400">{{ previewText(c.last_message, isOnline(c.other?.id, c.other?.last_seen_at) ? 'в сети' : 'Начни общение') }}</span><span v-if="(c.last_message as any)?.is_edited" class="text-[10px] text-stone-400">(изм.)</span></div>
           </div>
           <span v-if="c.unread_count" class="bg-[#F04D9F] text-white text-xs font-bold min-w-[22px] h-[22px] grid place-items-center px-1.5 rounded-full shrink-0">{{ c.unread_count > 9 ? '9+' : c.unread_count }}</span>
         </button>
         <div class="flex items-center ml-1 pr-2 shrink-0">
-          <Button @click.stop="(e: Event) => rowMenu.open(e, { kind: 'chat', id: c.id, userId: c.other?.id, userName: c.other?.name })" icon="pi pi-ellipsis-h" text rounded severity="secondary" class="!w-7 !h-7 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" aria-label="Меню чата" title="Меню чата" />
+          <Button @click.stop="(e: Event) => rowMenu.open(e, { kind: 'chat', id: c.id, userId: c.other?.id, userName: c.other?.name, isPinned: !!c.is_pinned })" icon="pi pi-ellipsis-h" text rounded severity="secondary" class="!w-7 !h-7 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" aria-label="Меню чата" title="Меню чата" />
         </div>
       </div>
       <InfiniteSentinel :sentinel="conversationsSentinel as any" :has-more="!!conversationsHasMore" :loading="!!conversationsLoadingMore" end-text="Это все чаты" />
@@ -111,14 +112,14 @@ const { userProfileUrl } = useProfileUrl()
             <OnlineDot :online="isOnline(c.other?.id, c.other?.last_seen_at)" />
           </span>
           <div class="flex-1 min-w-0">
-            <div class="flex justify-between items-baseline gap-2"><span class="text-[15px] lg:text-sm font-semibold dark:text-white truncate">{{ c.other?.name || 'Чат' }}</span><span v-if="c.last_message_at" class="text-[11px] text-stone-400 shrink-0">{{ formatTime(c.last_message_at) }}</span></div>
+            <div class="flex justify-between items-baseline gap-2"><span class="text-[15px] lg:text-sm font-semibold dark:text-white truncate">{{ c.other?.name || 'Чат' }}</span><span class="flex items-center gap-1.5 shrink-0"><i v-if="c.is_pinned" class="pi pi-thumbtack text-[11px] text-rose-400" title="Закреплён" /><span v-if="c.last_message_at" class="text-[11px] text-stone-400">{{ formatTime(c.last_message_at) }}</span></span></div>
             <div v-if="c.other?.is_match" class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5"><span class="text-rose-500 font-bold">Мэтч</span><span class="text-stone-300">·</span><MessageTicks v-if="ticks.isOwnLast(c)" :status="ticks.lastMessageStatus(c) ?? 'sent'" /><span class="truncate text-stone-500">{{ previewText(c.last_message, 'Чат открыт — напиши первым') }}</span><span v-if="(c.last_message as any)?.is_edited" class="text-[10px] text-stone-400">(изм.)</span></div>
             <div v-else class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5"><MessageTicks v-if="ticks.isOwnLast(c)" :status="ticks.lastMessageStatus(c) ?? 'sent'" /><span class="truncate text-stone-500 dark:text-zinc-400">{{ previewText(c.last_message, isOnline(c.other?.id, c.other?.last_seen_at) ? 'в сети' : 'Начни общение') }}</span><span v-if="(c.last_message as any)?.is_edited" class="text-[10px] text-stone-400">(изм.)</span></div>
           </div>
           <span v-if="c.unread_count" class="bg-[#F04D9F] text-white text-xs font-bold min-w-[22px] h-[22px] grid place-items-center px-1.5 rounded-full shrink-0">{{ c.unread_count > 9 ? '9+' : c.unread_count }}</span>
         </button>
         <div class="flex items-center ml-1 pr-2 shrink-0">
-          <Button @click.stop="(e: Event) => rowMenu.open(e, { kind: 'chat', id: c.id, userId: c.other?.id, userName: c.other?.name })" icon="pi pi-ellipsis-h" text rounded severity="secondary" class="!w-7 !h-7 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" aria-label="Меню чата" title="Меню чата" />
+          <Button @click.stop="(e: Event) => rowMenu.open(e, { kind: 'chat', id: c.id, userId: c.other?.id, userName: c.other?.name, isPinned: !!c.is_pinned })" icon="pi pi-ellipsis-h" text rounded severity="secondary" class="!w-7 !h-7 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" aria-label="Меню чата" title="Меню чата" />
         </div>
       </div>
     </div>
