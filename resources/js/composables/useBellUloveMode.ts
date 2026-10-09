@@ -14,9 +14,12 @@ export function isAppNotification(row: InboxNotification): boolean {
 /**
  * Режим колокольчика для чистого ULove (только ulove без upin/uflow).
  *
- * В uloveOnly модалка показывает только уведомления самого приложения,
- * новости от разработчиков и ULove (мэтчи/лайки). Никаких пинов, UFlow,
- * фото, подписок, друзей/заявок и районов.
+ * В uloveOnly модалка прячет только модульные разделы (пины, UFlow,
+ * районы): их строки бэк не создаёт и не считает при выключенных
+ * модулях. Базовый слой (ULove, фото, подписки, прочие события,
+ * заявки в друзья, жалобы, сообщения, безопасность, новости)
+ * показывается всегда — иначе бейдж топбара и модалка расходятся
+ * («висит 1, а внутри пусто»).
  *
  * Realtime-шина не трогается — фильтрация только отображения,
  * сокеты и поллер продолжают привозить всё как раньше.
@@ -67,23 +70,38 @@ export function countAppUnread(rows: InboxNotification[]): number {
 }
 
 /**
- * ULove-бейдж шапки модалки: мэтчи/лайки + сообщения + безопасность + app + новости.
+ * ULove-бейдж шапки модалки: базовый слой без пинов/UFlow/районов.
  *
- * Без пинов, UFlow, фото, подписок, заявок и районов.
+ * Модульные разделы (пины, UFlow, районы) бэк не создаёт и не считает
+ * при выключенных модулях, а базовый слой (ULove, фото, подписки,
+ * прочие события, заявки, жалобы, сообщения, безопасность, новости)
+ * виден всегда — иначе в топбаре висит «1», а в модалке пусто.
  */
 export function uloveHeaderBadge(parts: {
   loveUnread: number
   chatUnread: number
   securityUnread: number
-  appUnread: number
   newsUnread: number
+  appUnread?: number
+  photoUnread?: number
+  subUnread?: number
+  genericUnread?: number
+  otherUnread?: number
+  pending?: number
+  reportsUnread?: number
 }): number {
   const total =
     parts.loveUnread +
     parts.chatUnread +
     parts.securityUnread +
-    parts.appUnread +
-    parts.newsUnread
+    parts.newsUnread +
+    (parts.appUnread ?? 0) +
+    (parts.photoUnread ?? 0) +
+    (parts.subUnread ?? 0) +
+    (parts.genericUnread ?? 0) +
+    (parts.otherUnread ?? 0) +
+    (parts.pending ?? 0) +
+    (parts.reportsUnread ?? 0)
 
   return total > 0 ? total : 0
 }

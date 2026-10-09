@@ -80,6 +80,12 @@ class AppUpdateController extends Controller
                 ->orWhere('data->update->id', $updateId);
         })->update(['read_at' => now()]);
 
+        \Illuminate\Support\Facades\Cache::forget("realtime:badges:{$request->user()->id}");
+
+        if (\App\Services\AppModulesWelcomeNews::isGuideUpdate($appUpdate)) {
+            \App\Services\AppModulesWelcomeNews::dismissFor($request->user());
+        }
+
         return response()->json(['ok' => true]);
     }
 
@@ -88,6 +94,9 @@ class AppUpdateController extends Controller
         $marked = $this->baseQuery($request)
             ->whereNull('read_at')
             ->update(['read_at' => now()]);
+
+        \Illuminate\Support\Facades\Cache::forget("realtime:badges:{$request->user()->id}");
+        \App\Services\AppModulesWelcomeNews::dismissFor($request->user());
 
         return response()->json(['ok' => true, 'count' => $marked]);
     }

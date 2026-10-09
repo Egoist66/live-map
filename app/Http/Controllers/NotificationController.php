@@ -3,14 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Models\UserDatabaseNotification;
+use App\Services\AppModulesWelcomeNews;
 use App\Services\NotificationModuleGate;
 use App\Services\UserNotifier;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Единый inbox уведомлений (таблица notifications).
  *
  * Таб «Пины» — category=pin, таб «События» — category=event.
+ * Новости приложения (app.published) здесь не отдаются и не считаются:
+ * у них свой источник — /api/updates (колокольчик показывает их
+ * табом «Новости»). Без этого одна новость давала бы сразу «2»
+ * в бейдже и дублировалась в двух секциях модалки.
  * Строки выключенных разделов скрыты гейтом модулей: лента
  * и счётчики показывают только текущий набор пользователя.
  * Прочтение и удаление — только свои строки.
@@ -28,6 +34,7 @@ class NotificationController extends Controller
         ]);
         $query = UserDatabaseNotification::where('notifiable_type', $request->user()->getMorphClass())
             ->where('notifiable_id', $request->user()->id)
+            ->where('type', '!=', 'app.published')
             ->latest('updated_at');
         $query = NotificationModuleGate::applyAllowedScope($query, $request->user());
         if (! empty($data['category'])) {
@@ -46,6 +53,7 @@ class NotificationController extends Controller
     {
         $base = UserDatabaseNotification::where('notifiable_type', $request->user()->getMorphClass())
             ->where('notifiable_id', $request->user()->id)
+            ->where('type', '!=', 'app.published')
             ->whereNull('read_at');
         $base = NotificationModuleGate::applyAllowedScope($base, $request->user());
         $pins = (clone $base)->where('category', 'pin')->count();
@@ -85,6 +93,14 @@ class NotificationController extends Controller
         }
         $marked = $query->update(['read_at' => now()]);
 
+        Cache::forget("realtime:badges:{$request->user()->id}");
+
+        if ($data['all'] ?? false) {
+            AppModulesWelcomeNews::dismissFor($request->user());
+        } elseif (! empty($data['ids'])) {
+            AppModulesWelcomeNews::dismissIfGuideRead($request->user(), $data['ids']);
+        }
+
         return response()->json(['ok' => true, 'marked' => $marked]);
     }
 
@@ -101,7 +117,15 @@ class NotificationController extends Controller
         if (! empty($data['category'])) {
             $query->where('category', $data['category']);
         }
+        $hadGuide = ($data['category'] ?? null) !== 'pin'
+            && AppModulesWelcomeNews::hasGuideRow($request->user());
         $deleted = $query->delete();
+
+        Cache::forget("realtime:badges:{$request->user()->id}");
+
+        if ($hadGuide) {
+            AppModulesWelcomeNews::dismissFor($request->user());
+        }
 
         return response()->json(['ok' => true, 'deleted' => $deleted]);
     }

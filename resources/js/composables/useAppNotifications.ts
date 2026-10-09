@@ -884,6 +884,10 @@ function handleNotification(e: any) {
     handleBusinessInbox(String(n.type), data.business)
     return
   }
+  if (data.new_device) {
+    handleNewDevice({ device: data.new_device })
+    return
+  }
   if (data.log) {
     handleImpersonation({ log: data.log })
     return
@@ -942,6 +946,31 @@ function handleImpersonation(e: any) {
     body: `${log.reason || 'Основание указано в журнале'}`.slice(0, 90),
     avatar: null,
     link: '/settings/procedures',
+    createdAt: Date.now(),
+  })
+}
+/**
+ * Тост входа с нового устройства (inbox-строка security.new_device).
+ *
+ * Отдельного сокет-события у типа нет — едет только inbox-строкой,
+ * поэтому без этой ветки по сокету и поллеру был лишь бейдж без тоста.
+ *
+ * @param e пейлоад с ключом device {device_label, city, country, ip}
+ */
+function handleNewDevice(e: any) {
+  const d = e?.device
+  if (!d?.device_id) return
+  if (isDuplicateEvent(`new-device-${d.device_id}`)) return
+  const place = [d.city, d.country, d.ip].filter((x: unknown) => String(x ?? '').trim() !== '').join(' · ')
+  const label = String(d.device_label || 'Новое устройство')
+  push({
+    id: `new-device-${d.device_id}-${Date.now()}`,
+    type: 'security',
+    icon: 'pi pi-key',
+    title: 'Вход с нового устройства',
+    body: `${label}${place ? ` · ${place}` : ''}`.slice(0, 90),
+    avatar: null,
+    link: '/settings',
     createdAt: Date.now(),
   })
 }

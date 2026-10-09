@@ -62,6 +62,10 @@ function onNotification(e: any) {
   const row = e?.notification as InboxNotification | undefined
   if (!row?.id) return
   if (row.read_at) return
+  // Новости приложения — вотчина таба «Новости» (useAppUpdates):
+  // в общей ленте они давали бы дубль и мусорную строку
+  // «Кто-то отреагировал», а в бейдже — задвоение с updates.
+  if (String(row.type ?? '').startsWith('app.')) return
   // Чужой раздел в ленту не кладём: только свой набор модулей.
   try {
     if (!useNotificationModules().allows(row.type)) return
@@ -604,9 +608,10 @@ export function usePinActivity() {
     ),
   )
   const districtUnread = computed(() => districtActivities.value.filter((a) => !a.read_at).length)
+  const subUnread = computed(() => subActivities.value.filter((a) => !a.read_at).length)
   const genericEventUnread = computed(() => genericEventActivities.value.filter((a) => !a.read_at).length)
   const loveUnread = computed(() => loveActivities.value.filter((a) => !a.read_at).length)
   const flowUnread = computed(() => flowActivities.value.filter((a) => !a.read_at).length)
   const photoUnread = computed(() => photoActivities.value.filter((a) => !a.read_at).length)
-  return { activities, unread, loading, clearing, hasData, pinActivities, eventActivities, pinUnread, eventUnread, loveActivities, flowActivities, subActivities, photoActivities, districtActivities, genericEventActivities, loveUnread, flowUnread, photoUnread, districtUnread, genericEventUnread, otherNotifications, otherUnread, describe, refresh, markAllRead, markOne, clearAll, goPin, goNotification, resolveTarget, acceptInvite, declineInvite, invitePinId, acceptDistrictInvite, declineDistrictInvite, init, subscribe }
+  return { activities, unread, loading, clearing, hasData, pinActivities, eventActivities, pinUnread, eventUnread, loveActivities, flowActivities, subActivities, photoActivities, districtActivities, genericEventActivities, loveUnread, flowUnread, photoUnread, subUnread, districtUnread, genericEventUnread, otherNotifications, otherUnread, describe, refresh, markAllRead, markOne, clearAll, goPin, goNotification, resolveTarget, acceptInvite, declineInvite, invitePinId, acceptDistrictInvite, declineDistrictInvite, init, subscribe }
 }

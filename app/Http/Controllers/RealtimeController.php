@@ -12,9 +12,9 @@ use App\Models\Report;
 use App\Models\SwipeAction;
 use App\Models\UserDatabaseNotification;
 use App\Services\MonitoringService;
+use App\Services\NotificationModuleGate;
 use App\Services\RealtimeMode;
 use App\Services\UserNotifier;
-use Illuminate\Notifications\DatabaseNotification;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -104,7 +104,7 @@ class RealtimeController extends Controller
             'video_incoming' => app(\App\Services\VideoService::class)->freshIncoming($user->id, $window),
             'video_signals' => app(\App\Services\VideoService::class)->freshSignals($user->id, $window, (int) ($data['video_after_id'] ?? 0)),
             'thread_updates' => $this->freshThreads($data['watch_threads'] ?? null),
-            'notifications' => $this->freshNotifications($user->id, $window),
+            'notifications' => $this->freshNotifications($user, $window),
             'business' => $this->freshBusiness($user, $window),
             'business_pending' => $this->freshBusinessPending($user, $window),
             'wallpapers' => $this->freshWallpapers($convIds, $window),
@@ -486,23 +486,29 @@ class RealtimeController extends Controller
      * Отдаём только непрочитанные: прочитанные уже лежат в ленте
      * колокольчика и тост по ним не нужен (иначе тост всплывал бы
      * по клику на колокольчик / после «прочитать всё»).
+     * Гейт модулей — как в ленте: строки выключенных разделов
+     * не едут ни тостом, ни бейджем, иначе в колокольчике висит
+     * «1», а открывать нечего.
      *
-     * @param int $userId пользователь
+     * @param \App\Models\User $user получатель
      * @param Carbon|null $since момент прошлого тика
      */
-    private function freshNotifications(int $userId, ?Carbon $since): array
+    private function freshNotifications($user, ?Carbon $since): array
     {
         if (! $since) {
             return [];
         }
 
+        $query = UserDatabaseNotification::where('notifiable_type', $user->getMorphClass())
+            ->where('notifiable_id', $user->getKey())
+            ->whereNull('read_at')
+            ->where('updated_at', '>', $since);
+
+        $query = NotificationModuleGate::applyAllowedScope($query, $user);
+
         // Важно: читаем шифрующей моделью, иначе data приедет конвертом
         // {__enc: ...} и тосты поллера будут пустыми («ваша запись»).
-        $rows = UserDatabaseNotification::where('notifiable_type', (new \App\Models\User)->getMorphClass())
-            ->where('notifiable_id', $userId)
-            ->whereNull('read_at')
-            ->where('updated_at', '>', $since)
-            ->orderBy('updated_at')
+        $rows = $query->orderBy('updated_at')
             ->limit(20)
             ->get();
 
@@ -910,6 +916,12 @@ class RealtimeController extends Controller
      * диалогов и markRead. Иначе доочистные read_at=NULL дают вечную
      * фантомную «1» после каждого прочтения.
      *
+     * Inbox считаем тем же гейтом, что ленту и unread-count: строки
+     * выключенных разделов в бейдж не попадают, иначе в колокольчике
+     * висит «1», а открывать нечего. Новости app.published считаем
+     * отдельно от остального inbox (фронт складывает оба) — без
+     * этого одна новость давала бы сразу «2».
+     *
      * @param \App\Models\User $user пользователь
      * @return array<string, int> счётчики бейджей
      */
@@ -917,8 +929,9 @@ class RealtimeController extends Controller
     {
         $userId = (int) $user->id;
         $isAdmin = $user->isAdmin();
+        $morph = $user->getMorphClass();
 
-        return Cache::remember("realtime:badges:{$userId}", 5, function () use ($userId, $isAdmin) {
+        return Cache::remember("realtime:badges:{$userId}", 5, function () use ($user, $userId, $isAdmin, $morph) {
             $convIds = $this->myConversationIds($userId);
 
             $unreadMessages = 0;
@@ -953,13 +966,17 @@ class RealtimeController extends Controller
                 ->where('addressee_id', $userId)
                 ->count();
 
-            $inboxUnread = DatabaseNotification::where('notifiable_id', $userId)
-                ->whereNull('read_at')
-                ->count();
-            $updates = DatabaseNotification::where('notifiable_id', $userId)
-                ->where('type', 'app.published')
-                ->whereNull('read_at')
-                ->count();
+            $inboxBase = UserDatabaseNotification::where('notifiable_type', $morph)
+                ->where('notifiable_id', $userId)
+                ->whereNull('read_at');
+
+            $inboxBase = NotificationModuleGate::applyAllowedScope($inboxBase, $user);
+
+            $inboxQuery = clone $inboxBase;
+
+            $inboxUnread = (clone $inboxQuery)->where('type', '!=', 'app.published')->count();
+
+            $updates = (clone $inboxQuery)->where('type', 'app.published')->count();
 
             $badges = [
                 'unread_messages' => $unreadMessages,

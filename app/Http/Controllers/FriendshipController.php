@@ -155,6 +155,7 @@ class FriendshipController extends Controller
         abort_unless($friendship->addressee_id===$request->user()->id,403);
         abort_unless($friendship->status==='pending',422);
         $friendship->update(['status'=>'accepted']);
+        self::dismissRequestInbox($request->user(), $friendship->id);
         try{ broadcast(new FriendshipUpdated($friendship->load(['requester','addressee'])))->toOthers(); }catch(\Throwable $e){ \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
         $requester = User::find($friendship->requester_id);
         if ($requester) {
@@ -181,6 +182,7 @@ class FriendshipController extends Controller
         abort_unless($friendship->addressee_id===$request->user()->id,403);
         abort_unless($friendship->status==='pending',422);
         $friendship->update(['status'=>'declined']);
+        self::dismissRequestInbox($request->user(), $friendship->id);
         try{ broadcast(new FriendshipUpdated($friendship))->toOthers(); }catch(\Throwable $e){ \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
         return response()->json($friendship);
     }
@@ -219,6 +221,36 @@ class FriendshipController extends Controller
             'can_message'=> $me->canMessageUser($user),
             'can_message_reason'=> $me->messageBlockReason($user),
         ]);
+    }
+
+    /**
+     * Гасит inbox-строку заявки, чтобы после решения в колокольчике
+     * не висела вечная «1» (заявка ушла из pending, а строка — нет).
+     *
+     * @param \App\Models\User $owner получатель заявки
+     * @param int $friendshipId id заявки
+     */
+    private static function dismissRequestInbox($owner, int $friendshipId): void
+    {
+        try {
+            \Illuminate\Support\Facades\DB::table('notifications')
+                ->where('notifiable_type', $owner->getMorphClass())
+                ->where('notifiable_id', $owner->getKey())
+                ->where('type', 'friend.requested')
+                ->where('key', 'friend-request:'.$friendshipId)
+                ->whereNull('read_at')
+                ->update(['read_at' => now()]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('friend inbox dismiss failed', [
+                'friendship_id' => $friendshipId,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        try {
+            \Illuminate\Support\Facades\Cache::forget("realtime:badges:{$owner->getKey()}");
+        } catch (\Throwable) {
+        }
     }
 
     /**

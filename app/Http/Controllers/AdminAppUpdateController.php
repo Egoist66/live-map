@@ -51,6 +51,9 @@ class AdminAppUpdateController extends Controller
             'published_at' => $published ? now() : null,
             'created_by' => $request->user()->id,
         ]);
+        if ($published && ($data['version'] ?? null) === \App\Services\AppModulesWelcomeNews::VERSION) {
+            \App\Services\AppModulesWelcomeNews::unretire();
+        }
         $telegramQueued = false;
         if ($published) {
             self::fanOut($update);
@@ -86,6 +89,9 @@ class AdminAppUpdateController extends Controller
         $appUpdate = $appUpdate->fresh();
         $telegramQueued = false;
         if ($appUpdate && (bool) $appUpdate->is_published && ! $wasPublished) {
+            if (\App\Services\AppModulesWelcomeNews::isGuideUpdate($appUpdate)) {
+                \App\Services\AppModulesWelcomeNews::unretire();
+            }
             self::fanOut($appUpdate);
             $telegramQueued = self::fanOutTelegram($appUpdate, $request);
         }
@@ -96,7 +102,11 @@ class AdminAppUpdateController extends Controller
 
     public function destroy(AppUpdate $appUpdate)
     {
+        $isGuide = \App\Services\AppModulesWelcomeNews::isGuideUpdate($appUpdate);
         $appUpdate->delete();
+        if ($isGuide) {
+            \App\Services\AppModulesWelcomeNews::retire();
+        }
         return response()->json(['ok' => true]);
     }
 

@@ -18,8 +18,13 @@ export interface InboxNotification {
   data: {
     activity?: PinActivityItem | null
     friendship?: any
+    district?: any
     report?: any
     log?: any
+    new_device?: { device_id?: number; device_label?: string; city?: string | null; country?: string | null; ip?: string | null } | null
+    business?: { id?: number; name?: string; verification_status?: string; verification_notes?: string | null; unp?: string | null } | null
+    cooperation?: { company?: string; email?: string; message?: string | null } | null
+    support?: { subject?: string; message?: string; name?: string; email?: string } | null
     sos_chat_closed?: { conversation_id?: number; reason?: string; reason_label?: string; pin_title?: string | null } | null
     update?: { id: number; title?: string; body?: string; version?: string; published_at?: string | null } | null
   }
@@ -151,6 +156,33 @@ export function describeInboxRow(row: InboxNotification): InboxText {
     const label = d.device_label || 'Новое устройство'
     const place = [d.city, d.country, d.ip].filter((x: unknown) => String(x ?? '').trim() !== '').join(' · ')
     return { emoji: '🔐', title: 'Вход с нового устройства', body: `${label}${place ? ` · ${place}` : ''}`.slice(0, 120), link: '/settings', avatar: null }
+  }
+  if (row.type === 'business.submitted') {
+    const b = data.business ?? {}
+    const name = String(b.name || 'Компания').slice(0, 60)
+    return { emoji: '💼', title: 'Новая заявка бизнеса', body: `${name} — проверка по УНП${b.unp ? ` ${b.unp}` : ''}`.slice(0, 120), link: '/admin?tab=business', avatar: null }
+  }
+  if (row.type === 'business.verified') {
+    const b = data.business ?? {}
+    const name = String(b.name || 'Компания').slice(0, 60)
+    return { emoji: '✅', title: 'Компания проверена', body: `${name} — бейдж «Проверено» включён`.slice(0, 120), link: '/cabinet', avatar: null }
+  }
+  if (row.type === 'business.rejected') {
+    const b = data.business ?? {}
+    const reason = String(b.verification_notes || '').slice(0, 80)
+    return { emoji: '❌', title: 'Проверка отклонена', body: (reason || `${b.name || 'Бизнес'} — исправьте реквизиты и отправьте снова`).slice(0, 120), link: '/cabinet/onboarding', avatar: null }
+  }
+  if (row.type === 'cooperation.request') {
+    const c = data.cooperation ?? {}
+    const company = String(c.company || '').slice(0, 60)
+    const message = String(c.message || 'Хотят обсудить сотрудничество').slice(0, 60)
+    return { emoji: '🤝', title: `Сотрудничество: ${company}`, body: `${message} — ${c.email || ''}`.slice(0, 120), link: '/admin', avatar: null }
+  }
+  if (row.type === 'support.request') {
+    const s = data.support ?? {}
+    const subject = String(s.subject || 'Обращение').slice(0, 60)
+    const message = String(s.message || 'Новое обращение').slice(0, 60)
+    return { emoji: '🛟', title: `Поддержка: ${subject}`, body: `${message} — ${s.name || s.email || ''}`.slice(0, 120), link: '/admin', avatar: null }
   }
   if (row.type === 'sos.chat_closed') {
     const s = (data as any).sos_chat_closed ?? {}

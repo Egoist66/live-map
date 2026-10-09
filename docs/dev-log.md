@@ -1746,3 +1746,12 @@
 - Жалоба: в панели уведомлений дублировались пункты — «Личка целиком» + те же типы по второму разу в почтовых строках.
 - 🔧 `TelegramNotifyPanel::build` теперь рисует конечный список из 4 тумблеров (`types()`): 💬 Сообщения, 💞 Лайки, 🎉 Мэтчи, 💭 Комментарии — каждый включает/глушит тип целиком (бот + дубль на почту, у комментариев почты нет). `toggleNotify` в вебхуке переключает обе колонки разом; старые кнопки из уже отправленных панелей (мастер `ntg_all`, почтовые `nem_*`, `ndm_*`) продолжают работать ради совместимости. Настройки Mini App (`TelegramNotifySettings`) пока со старым раскладом — зеркалить туда же по желанию.
 - Проверки: `php -l` ✅ ×2.
+
+## 2026-10-09 - bell phantom badge fix + welcome guide single-shot
+- RealtimeController: freshNotifications + badges now use NotificationModuleGate (parity with inbox list); badges split pin_activity (excl. app.published) vs updates; added missing notifiable_type filter.
+- NotificationController: inbox list/unreadCount exclude app.published (owned by /api/updates news tab); read/clear invalidate realtime:badges cache.
+- Friendship accept/decline marks friend.requested inbox row read (no more stuck badge).
+- AppUpdateController markRead/markAllRead invalidate badge cache + persist guide dismissal.
+- AppModulesWelcomeNews: single delivery via settings guides_dismissed flag; no auto-recreate after admin unpublish/delete (retired flag); AdminAppUpdateController honors it.
+- Frontend: toast for security.new_device; bell texts for business/cooperation/support; app.* owned by news tab only; uloveOnly modal shows base layer; security inbox listener for polling mode.
+- Verified: php -l x6 clean, vue-tsc --noEmit clean.

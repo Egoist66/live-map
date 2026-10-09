@@ -36,6 +36,24 @@ function onStarted(e: any) {
   try { useBadgeStore().incSecurity() } catch {}
 }
 
+/**
+ * Inbox-дубль служебного входа (polling-режим и сокет).
+ *
+ * Сокет шлёт и прямое событие user:impersonation.started, и inbox-строку
+ * user:notification.created; поллер — только inbox-строку. Дедуп по id
+ * не даёт задвоения счётчика: кто первый вставил строку, тот и +1.
+ *
+ * @param e событие user:notification.created
+ */
+function onInboxNotification(e: any) {
+  const n = e?.notification
+  if (!n?.id || n.type !== 'security.impersonation') return
+  if (n.read_at) return
+  const log = n.data?.log
+  if (!log?.id) return
+  onStarted({ log })
+}
+
 function subscribe() {
   try {
     const uid = getUid()
@@ -44,6 +62,7 @@ function subscribe() {
     if (busBound) return
     busBound = true
     busOn('user:impersonation.started', onStarted)
+    busOn('user:notification.created', onInboxNotification)
   } catch {}
 }
 
