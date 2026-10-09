@@ -80,7 +80,37 @@ Route::middleware(['web', 'auth:web,sanctum'])->group(function () {
     Route::post('/email/verification-notification', [\App\Http\Controllers\EmailVerificationController::class, 'send'])->middleware('throttle:email-resend');
 });
 
-Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function () {
+// Лёгкие статусные точки (бейджи/история/поллинг вкладок): ВНЕ общего ведра.
+// Делили throttle:120,1 с картой/чатом и падали в 429 пачкой по 4-6
+// параллельных запросов (badges fetch + focus-рефетч + 2-3 вкладки).
+// Отдельное пер-юзер ведро throttle:status-read (600/мин): легитимный
+// поллинг проходит, ранэвэй-луп упирается в 10 rps. Писательные лимитеры
+// и гостевые остаются жёсткими — DDoS-защита не страдает.
+Route::middleware(['web', 'auth:web,sanctum', 'throttle:status-read'])->group(function () {
+    Route::get('/notifications', [\App\Http\Controllers\NotificationController::class, 'index']);
+    Route::get('/notifications/unread-count', [\App\Http\Controllers\NotificationController::class, 'unreadCount']);
+    Route::post('/notifications/read', [\App\Http\Controllers\NotificationController::class, 'read']);
+    Route::get('/security/impersonations', [\App\Http\Controllers\AdminImpersonationController::class, 'myHistory']);
+    Route::post('/security/impersonations/read', [\App\Http\Controllers\AdminImpersonationController::class, 'markSeen']);
+    Route::get('/updates', [\App\Http\Controllers\AppUpdateController::class, 'index']);
+    Route::get('/updates/unread', [\App\Http\Controllers\AppUpdateController::class, 'unread']);
+    Route::post('/updates/{appUpdate}/read', [\App\Http\Controllers\AppUpdateController::class, 'markRead']);
+    Route::post('/updates/read-all', [\App\Http\Controllers\AppUpdateController::class, 'markAllRead']);
+    Route::get('/conversations', [ConversationController::class, 'index']);
+    Route::get('/chat/me', [ChatUserController::class, 'me']);
+    Route::get('/friendships', [FriendshipController::class, 'index']);
+    Route::get('/friendships/status/{user}', [FriendshipController::class, 'status']);
+    Route::get('/account/status', [\App\Http\Controllers\AccountController::class, 'status']);
+    Route::get('/subscription/status', [\App\Http\Controllers\SubscriptionController::class, 'status']);
+    Route::get('/swipes/quota', [SwipeController::class, 'quota']);
+});
+
+// Остальное API: общее ведро поднято 120 → 300/мин на юзера. Причина та же:
+// две вкладки (карта + чат + бейджи) выбирали 120 суммарно и резали даже
+// одиночные клики. 300/мин = 5 rps на юзера — ранэвэй-луп всё равно виден,
+// писательные именные лимитеры (social-write 60, messages 60 и т.д.)
+// поверх остаются и режут спам/флуд как раньше.
+Route::middleware(['web', 'auth:web,sanctum', 'throttle:300,1'])->group(function () {
     Route::get('/pins/mine', [PinController::class, 'mine']);
     Route::get('/pins/mine/scheduled', [PinController::class, 'scheduled']);
     Route::get('/pins/mine/archived', [PinController::class, 'archived']);
@@ -123,9 +153,6 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::patch('/flow-comments/{comment}', [\App\Http\Controllers\FlowPostCommentController::class, 'update']);
     Route::put('/flow-comments/{comment}', [\App\Http\Controllers\FlowPostCommentController::class, 'update']);
     Route::delete('/flow-comments/{comment}', [\App\Http\Controllers\FlowPostCommentController::class, 'destroy'])->middleware('throttle:social-write');
-    Route::get('/notifications', [\App\Http\Controllers\NotificationController::class, 'index']);
-    Route::get('/notifications/unread-count', [\App\Http\Controllers\NotificationController::class, 'unreadCount']);
-    Route::post('/notifications/read', [\App\Http\Controllers\NotificationController::class, 'read']);
     Route::delete('/notifications', [\App\Http\Controllers\NotificationController::class, 'clear'])->middleware('throttle:social-write');
     Route::get('/sessions', [\App\Http\Controllers\SessionController::class, 'index']);
     Route::delete('/sessions', [\App\Http\Controllers\SessionController::class, 'destroyOthers'])->middleware('throttle:social-write');
@@ -171,7 +198,6 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::post('/reports', [ReportController::class, 'store'])->middleware('throttle:reports');
     Route::post('/support', [\App\Http\Controllers\SupportController::class, 'store'])->middleware('throttle:support');
 
-    Route::get('/chat/me', [ChatUserController::class, 'me']);
     Route::post('/chat/heartbeat', [ChatUserController::class, 'heartbeat'])->middleware('throttle:chat-signal');
     Route::post('/chat/offline', [ChatUserController::class, 'offline'])->middleware('throttle:chat-signal');
     Route::get('/chat/users/search', [ChatUserController::class, 'search'])->middleware('throttle:chat-search');
@@ -186,7 +212,6 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::patch('/user/call-cooldown', [\App\Http\Controllers\ProfileController::class, 'updateCallCooldown']);
     Route::patch('/user/video-calls', [\App\Http\Controllers\ProfileController::class, 'updateVideoCalls']);
 
-    Route::get('/account/status', [\App\Http\Controllers\AccountController::class, 'status']);
     Route::post('/account/hide', [\App\Http\Controllers\AccountController::class, 'hide'])->middleware('throttle:social-write');
     Route::post('/account/show', [\App\Http\Controllers\AccountController::class, 'show'])->middleware('throttle:social-write');
     Route::post('/account/deletion', [\App\Http\Controllers\AccountController::class, 'requestDeletion'])->middleware('throttle:social-write');
@@ -213,11 +238,10 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::delete('/user/screen-lock', [\App\Http\Controllers\ScreenLockController::class, 'destroy']);
     Route::post('/user/screen-lock/verify', [\App\Http\Controllers\ScreenLockController::class, 'verify'])->middleware('throttle:screen-lock');
 
-    Route::get('/friendships', [FriendshipController::class, 'index']);    Route::post('/friendships', [FriendshipController::class, 'store'])->middleware('throttle:social-write');
+    Route::post('/friendships', [FriendshipController::class, 'store'])->middleware('throttle:social-write');
     Route::post('/friendships/{friendship}/accept', [FriendshipController::class, 'accept'])->middleware('throttle:social-write');
     Route::post('/friendships/{friendship}/decline', [FriendshipController::class, 'decline'])->middleware('throttle:social-write');
     Route::delete('/friendships/{friendship}', [FriendshipController::class, 'destroy'])->middleware('throttle:social-write');
-    Route::get('/friendships/status/{user}', [FriendshipController::class, 'status']);
     Route::get('/swipes/feed', [SwipeController::class, 'feed']);
     Route::post('/swipes/action', [SwipeController::class, 'act'])->middleware('throttle:social-write');
     Route::get('/swipes/matches', [SwipeController::class, 'matches']);
@@ -229,7 +253,6 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::post('/swipes/undo', [SwipeController::class, 'undo'])->middleware('throttle:social-write');
     Route::post('/swipes/boost', [SwipeController::class, 'boost'])->middleware('throttle:social-write');
     Route::post('/swipes/extras/purchase', [SwipeController::class, 'purchase'])->middleware('throttle:social-write');
-    Route::get('/swipes/quota', [SwipeController::class, 'quota']);
     Route::patch('/swipes/settings', [SwipeController::class, 'settings'])->middleware('throttle:profile-write');
     Route::post('/swipes/verify-age', [SwipeController::class, 'verifyAge'])->middleware('throttle:profile-write');
     Route::get('/dating/reviews', [\App\Http\Controllers\DatingReviewController::class, 'index']);
@@ -255,7 +278,6 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::post('/users/{user}/subscription', [\App\Http\Controllers\UserSubscriptionController::class, 'store'])->middleware('throttle:social-write');
     Route::delete('/users/{user}/subscription', [\App\Http\Controllers\UserSubscriptionController::class, 'destroy'])->middleware('throttle:social-write');
 
-    Route::get('/conversations', [ConversationController::class, 'index']);
     Route::post('/conversations', [ConversationController::class, 'store'])->middleware('throttle:social-write');
     Route::get('/conversations/{conversation}', [ConversationController::class, 'show']);
     Route::post('/conversations/{conversation}/read', [ConversationController::class, 'markRead'])->middleware('throttle:chat-signal');
@@ -308,19 +330,11 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::post('/expo-push-tokens/test', [\App\Http\Controllers\ExpoPushTokenController::class, 'test'])->middleware('throttle:push-test');
 
     Route::post('/admin/impersonation/stop', [\App\Http\Controllers\AdminImpersonationController::class, 'stop']);
-    Route::get('/security/impersonations', [\App\Http\Controllers\AdminImpersonationController::class, 'myHistory']);
-    Route::post('/security/impersonations/read', [\App\Http\Controllers\AdminImpersonationController::class, 'markSeen']);
-
-    Route::get('/updates', [\App\Http\Controllers\AppUpdateController::class, 'index']);
-    Route::get('/updates/unread', [\App\Http\Controllers\AppUpdateController::class, 'unread']);
-    Route::post('/updates/{appUpdate}/read', [\App\Http\Controllers\AppUpdateController::class, 'markRead']);
-    Route::post('/updates/read-all', [\App\Http\Controllers\AppUpdateController::class, 'markAllRead']);
 
     Route::get('/quests', [\App\Http\Controllers\QuestController::class, 'index']);
     Route::post('/quests/refresh', [\App\Http\Controllers\QuestController::class, 'refresh'])->middleware('throttle:social-write');
     Route::post('/quests/claim', [\App\Http\Controllers\QuestController::class, 'claim'])->middleware('throttle:social-write');
 
-    Route::get('/subscription/status', [\App\Http\Controllers\SubscriptionController::class, 'status']);
     Route::post('/subscription/renew', [\App\Http\Controllers\SubscriptionController::class, 'renew'])->middleware('throttle:social-write');
     Route::post('/subscription/cancel', [\App\Http\Controllers\SubscriptionController::class, 'cancel'])->middleware('throttle:social-write');
 
@@ -357,7 +371,7 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
 // Админ проходит тоже: canModerate() включает админов.
 // Действия по отношению к админам модератору запрещены
 // внутри контроллеров (AdminUserController).
-Route::middleware(['web', 'auth:web,sanctum', 'admin:moderator', 'throttle:120,1'])->group(function () {
+Route::middleware(['web', 'auth:web,sanctum', 'admin:moderator', 'throttle:300,1'])->group(function () {
     Route::get('/admin/access/status', [\App\Http\Controllers\AdminAccessController::class, 'status']);
     Route::post('/admin/access/code', [\App\Http\Controllers\AdminAccessController::class, 'code'])->middleware('throttle:30,1,admin-access-code');
     Route::post('/admin/access/verify', [\App\Http\Controllers\AdminAccessController::class, 'verify'])->middleware('throttle:30,1,admin-access-verify');
@@ -391,7 +405,7 @@ Route::middleware(['web', 'auth:web,sanctum', 'admin:moderator', 'throttle:120,1
 // баны, вход в чужой аккаунт, обновления, maintenance, realtime.
 // Верификация бизнеса — в группе модераторов выше (admin:moderator),
 // чтобы заявки видели и обрабатывали и модераторы, и админы.
-Route::middleware(['web', 'auth:web,sanctum', 'admin', 'throttle:120,1'])->group(function () {
+Route::middleware(['web', 'auth:web,sanctum', 'admin', 'throttle:300,1'])->group(function () {
     Route::get('/admin/updates', [\App\Http\Controllers\AdminAppUpdateController::class, 'index']);
     Route::post('/admin/updates', [\App\Http\Controllers\AdminAppUpdateController::class, 'store']);
     Route::patch('/admin/updates/{appUpdate}', [\App\Http\Controllers\AdminAppUpdateController::class, 'update']);
