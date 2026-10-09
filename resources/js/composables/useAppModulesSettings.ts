@@ -38,13 +38,17 @@ export interface ModuleRow {
   enabled: boolean
   /** стартовый ли экран */
   isPrimary: boolean
+  /** заблокирован ли тумблер (ULove — базовый раздел, выключить нельзя) */
+  locked: boolean
 }
 
 /**
  * Логика секции «Разделы приложения» (настройки → Приложение).
  *
  * Компонент только отображает строки и дёргает toggle/makePrimary.
- * Последний включённый раздел выключить нельзя — стор игнорирует.
+ * ULove — базовый раздел: его тумблер заблокирован, выключить его
+ * нельзя ни с фронта, ни с бэка. Последний из остальных включённых
+ * разделов выключить нельзя — стор игнорирует.
  *
  * @returns строки разделов, флаги и действия
  * @example const m = useAppModulesSettings()
@@ -73,11 +77,12 @@ export function useAppModulesSettings() {
       home: MODULE_HOME[id],
       enabled: store.isEnabled(id),
       isPrimary: store.primary === id && store.isEnabled(id),
+      locked: id === 'ulove',
     })),
   )
 
-  /** Только ULove доступен глобально: остальные разделы ещё не выпущены патчем. */
-  const onlyUlove = computed(() => rows.value.length <= 1)
+  /** Доступен ли хоть один дополнительный раздел кроме базового ULove. */
+  const hasExtras = computed(() => rows.value.length > 1)
 
   const legacy = computed(() => !store.isIsolated)
 
@@ -118,7 +123,7 @@ export function useAppModulesSettings() {
   }
 
   /**
-   * Переключает раздел (не даёт выключить последний).
+   * Переключает раздел (ULove заблокирован, последний из остальных — тоже).
    *
    * Включение догружает чанк модуля — функциональность доступна
    * сразу. Выключение перезагружает приложение начисто: только
@@ -131,7 +136,7 @@ export function useAppModulesSettings() {
       return
     }
 
-    if (!store.isGloballyEnabled(id)) {
+    if (id === 'ulove' || !store.isGloballyEnabled(id)) {
       return
     }
 
@@ -178,5 +183,5 @@ export function useAppModulesSettings() {
     }
   }
 
-  return { rows, onlyUlove, legacy, saving, error, busy, toggle, makePrimary }
+  return { rows, hasExtras, legacy, saving, error, busy, toggle, makePrimary }
 }

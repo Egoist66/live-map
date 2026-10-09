@@ -734,6 +734,8 @@ class User extends Authenticatable implements MustVerifyEmail
      * в default_mode для совместимости (ulove|upin), бизнес
      * стартует с кабинета через landingPath. Глобально выключенные
      * разделы отбрасываются: включить их раньше админа нельзя.
+     * ULove — базовый раздел персоны: у не-бизнеса он принудительно
+     * первый, снять его нельзя.
      *
      * @param string[] $modules непустой список из allModules()
      * @return void
@@ -748,6 +750,12 @@ class User extends Authenticatable implements MustVerifyEmail
             $clean = array_values(array_intersect($clean, $global));
         } catch (\Throwable) {
             // No-op: без настроек глобальный фильтр не применяем.
+        }
+
+        $isBusiness = ($this->account_type ?? null) === 'business';
+
+        if (! $isBusiness && ! in_array('ulove', $clean, true)) {
+            array_unshift($clean, 'ulove');
         }
 
         abort_if($clean === [], 422, 'Выбери хотя бы один раздел');

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Services\AppModulesWelcomeNews;
+use App\Services\AppSettings;
 use App\Services\TelegramInitDataValidator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -495,7 +496,7 @@ class TelegramAuthController extends Controller
             'signup_goal' => 'chat',
             'default_mode' => 'ulove',
             'default_mode_set_at' => now(),
-            'enabled_modules' => ['ulove'],
+            'enabled_modules' => AppSettings::globalModules(),
             'account_type' => 'person',
             'dating_enabled' => true,
             'telegram_id' => $telegramId,

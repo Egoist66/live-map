@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\AppSettings;
 use App\Services\CountryResolver;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -180,16 +181,17 @@ class RegisteredUserController extends Controller
     }
 
     /**
-     * Модули новичка: только ULove.
+     * Модули новичка: ULove + всё глобально включённое.
      *
-     * Остальные разделы выдаются отдельными патчами: админ включает
-     * их глобально, после чего пользователь видит тумблеры в настройках.
-     * Так клиент не тянет чанки карты/ленты/районов зря.
+     * Выпущенные разделы новичок получает сразу активированными:
+     * тумблеры в настройках «Приложение» уже включены. Стартовый
+     * экран при этом всегда ULove (первый в глобальном наборе).
+     * Так клиент не тянет чанки выключенных разделов зря.
      *
      * @param string $signupGoal цель с формы регистрации
      * @param mixed $landingTab таб лендинга (игнорируется)
      * @param mixed $requested явный список модулей с фронта (игнорируется)
-     * @return string[] всегда [ulove] для персон
+     * @return string[] [ulove, ...выпущенное] для персон
      */
     private function enabledModulesFor(string $signupGoal, mixed $landingTab, mixed $requested): array
     {
@@ -197,7 +199,7 @@ class RegisteredUserController extends Controller
             return ['business'];
         }
 
-        return ['ulove'];
+        return AppSettings::globalModules();
     }
 
     /**

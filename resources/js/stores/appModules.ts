@@ -227,7 +227,7 @@ export const useAppModulesStore = defineStore('appModules', () => {
    * Инициализация из серверного пользователя + глобального гейта.
    *
    * Глобальный набор читается из `page.props.globalModules` при каждом
-   * вызове: админ мог включить раздел отдельным патчем без перезагрузки.
+   * вызове: админ мог включить раздел без перезагрузки страницы.
    * Приоритет персонального набора: сервер `enabled_modules` → legacy.
    * Гость — только ULove в памяти, без localStorage.
    *
@@ -434,24 +434,32 @@ export const useAppModulesStore = defineStore('appModules', () => {
   }
 
   /**
-   * Пейлоад для формы регистрации: только ULove.
+   * Пейлоад для формы регистрации: ULove + всё глобально включённое.
    *
-   * Остальные разделы выдаются отдельными патчами через админку.
+   * Бэк всё равно собирает список сам из глобального набора,
+   * но фронт шлёт честный текущий набор вместо захардкоженного.
+   * ULove принудительно первый: applyGlobal так чистит любой вход.
    *
    * @returns landing_tab и enabled_modules для POST /register
    */
   function registrationPayload(): { landing_tab: string; enabled_modules: AppModule[] } {
-    return { landing_tab: 'ulove', enabled_modules: ['ulove'] }
+    const modules = globalEnabled.value.length > 0 ? [...globalEnabled.value] : (['ulove'] as AppModule[])
+
+    return { landing_tab: 'ulove', enabled_modules: modules }
   }
 
   /**
    * Сохраняет набор: локально сразу, на сервер — для авторизованных.
    *
+   * ULove — базовый раздел: принудительно первый в списке, снять
+   * его нельзя (бэк делает то же самое для не-бизнеса).
+   *
    * @param next новый список модулей
    */
   async function save(next: AppModule[]): Promise<void> {
     const visibleNext = next.filter((item) => isGloballyEnabled(item))
-    const safeNext = visibleNext.length > 0 ? visibleNext : (['ulove'] as AppModule[])
+    const withBase = visibleNext.includes('ulove') ? visibleNext : (['ulove', ...visibleNext] as AppModule[])
+    const safeNext = withBase.length > 0 ? withBase : (['ulove'] as AppModule[])
 
     enabled.value = safeNext
     persistLocal()

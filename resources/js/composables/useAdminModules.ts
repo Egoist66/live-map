@@ -23,9 +23,9 @@ export interface AdminModuleRow {
 /**
  * Глобальные модули приложения (админка → Модули).
  *
- * Админ включает разделы глобально отдельными патчами. Только после
- * этого пользователи видят тумблеры этих разделов в настройках
- * «Приложение» и могут включать у себя. ULove включён всегда.
+ * Админ включает разделы глобально: они сразу активируются
+ * у пользователей с явным списком модулей (legacy-аккаунты видят
+ * всё новое сами). ULove включён всегда.
  * Чанки выключенных разделов клиент не грузит — меньше нагрузка.
  *
  * @returns строки модулей, флаги и действия
@@ -37,6 +37,7 @@ export function useAdminModules() {
   const loading = ref(false)
   const saving = ref<string | null>(null)
   const error = ref<string | null>(null)
+  const notice = ref<string | null>(null)
   const loaded = ref(false)
 
   const rows = computed<AdminModuleRow[]>(() =>
@@ -81,6 +82,9 @@ export function useAdminModules() {
   /**
    * Переключить модуль глобально (кроме locked ULove).
    *
+   * Включение сразу активирует раздел у пользователей: бэк
+   * возвращает число затронутых аккаунтов для подтверждения.
+   *
    * @param id модуль-переключатель
    */
   async function toggle(id: AppModule): Promise<void> {
@@ -89,19 +93,34 @@ export function useAdminModules() {
     }
 
     const current = [...store.globalEnabled]
-    const next = current.includes(id)
-      ? current.filter((item) => item !== id)
-      : [...current, id]
+    const enabling = !current.includes(id)
+    const next = enabling
+      ? current.filter((item) => ALL_MODULES.includes(item))
+      : current.filter((item) => item !== id)
+
+    const orderedNext = enabling
+      ? [...ALL_MODULES.filter((item) => next.includes(item) || item === id)]
+      : next
 
     saving.value = id
     error.value = null
+    notice.value = null
 
     try {
-      const response = await axios.put('/api/admin/modules', { modules: next })
+      const response = await axios.put('/api/admin/modules', { modules: orderedNext })
       const fresh = response.data?.global_modules
 
       if (Array.isArray(fresh)) {
         store.applyGlobal(fresh)
+      }
+
+      if (enabling) {
+        const activated = response.data?.activated_users
+        const count = typeof activated === 'number' ? activated : 0
+        const label = MODULE_META[id].label
+        notice.value = count > 0
+          ? `${label} включён и активирован у пользователей: ${count}.`
+          : `${label} включён глобально.`
       }
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } }
@@ -111,5 +130,5 @@ export function useAdminModules() {
     }
   }
 
-  return { rows, loading, saving, error, loaded, load, toggle }
+  return { rows, loading, saving, error, notice, loaded, load, toggle }
 }

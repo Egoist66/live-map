@@ -28,7 +28,7 @@ const preview = computed(() => previewFor(store.globalEnabled))
       <span class="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 grid place-items-center text-white"><i class="pi pi-th-large" /></span>
       <div class="min-w-0 flex-1">
         <div class="text-base font-black text-stone-900 dark:text-white">Модули приложения · глобально</div>
-        <div class="text-xs text-stone-500 dark:text-zinc-400">По умолчанию только ULove. Включайте остальные отдельными патчами — после этого пользователи увидят их тумблеры в настройках.</div>
+        <div class="text-xs text-stone-500 dark:text-zinc-400">По умолчанию только ULove. Включите нужный раздел — пользователи увидят его тумблер в настройках.</div>
       </div>
       <Button icon="pi pi-refresh" rounded outlined size="small" aria-label="Обновить" :loading="mgr.loading.value" @click="mgr.load()" />
     </div>
@@ -65,7 +65,8 @@ const preview = computed(() => previewFor(store.globalEnabled))
       <p class="mt-1.5 text-[11px] text-stone-500 dark:text-zinc-400 leading-relaxed">Лендинг, SEO, FAQ и бренд собираются из этого набора автоматически — руками ничего дописывать не нужно.</p>
     </div>
 
-    <p class="mt-2 text-xs text-stone-500 dark:text-zinc-400 leading-relaxed">Выключенный глобально раздел скрыт везде: меню, настройки пользователей, прямые URL и чанки. Пользовательские тумблеры появятся только после глобального включения.</p>
+    <p class="mt-2 text-xs text-stone-500 dark:text-zinc-400 leading-relaxed">Включение раздела глобально сразу активирует его у пользователей — тумблер в их настройках уже включён. Выключенный глобально раздел скрыт везде: меню, настройки пользователей, прямые URL и чанки.</p>
+    <Message v-if="mgr.notice.value" severity="success" :closable="false" class="mt-2">{{ mgr.notice.value }}</Message>
     <Message v-if="mgr.error.value" severity="error" :closable="false" class="mt-2">{{ mgr.error.value }}</Message>
   </div>
 </template>

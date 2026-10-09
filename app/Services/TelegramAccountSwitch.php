@@ -435,7 +435,7 @@ class TelegramAccountSwitch
             'signup_goal' => 'chat',
             'default_mode' => 'ulove',
             'default_mode_set_at' => now(),
-            'enabled_modules' => ['ulove'],
+            'enabled_modules' => AppSettings::globalModules(),
             'account_type' => 'person',
             'dating_enabled' => true,
             'telegram_id' => $telegramId,

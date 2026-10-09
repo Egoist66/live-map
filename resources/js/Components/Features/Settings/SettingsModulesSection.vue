@@ -12,15 +12,11 @@ const m = useAppModulesSettings()
       <i class="pi pi-th-large text-lg text-fuchsia-500 shrink-0" />
       <div class="flex-1 text-sm min-w-0">
         <p class="font-semibold dark:text-white">Разделы приложения</p>
-        <p class="text-xs opacity-60">Что видно в меню из выпущенных разделов. Новые разделы появляются здесь после включения администратором.</p>
+        <p class="text-xs opacity-60">Что видно в меню. ULove — базовый раздел, он включён всегда.</p>
       </div>
     </div>
 
-    <div v-if="m.onlyUlove.value" class="mt-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 px-3 py-2 text-xs text-rose-700 dark:text-rose-200">
-      Сейчас доступен только ULove. Остальные разделы выйдут отдельными обновлениями — тумблеры появятся здесь автоматически.
-    </div>
-
-    <div v-if="m.legacy.value" class="mt-3 rounded-xl bg-stone-100 dark:bg-zinc-800 px-3 py-2 text-xs text-stone-600 dark:text-zinc-300">
+    <div v-if="m.legacy.value && m.hasExtras.value" class="mt-3 rounded-xl bg-stone-100 dark:bg-zinc-800 px-3 py-2 text-xs text-stone-600 dark:text-zinc-300">
       Включено всё, как раньше. Выключи лишнее — останешься в своём разделе без шума.
     </div>
 
@@ -32,8 +28,8 @@ const m = useAppModulesSettings()
       >
         <i :class="[row.icon, 'text-base text-stone-500 dark:text-zinc-400 shrink-0']" />
         <div class="flex-1 text-sm min-w-0">
-          <p class="font-semibold dark:text-white">{{ row.label }}</p>
-          <p class="text-xs opacity-60 truncate">{{ row.desc }}</p>
+          <p class="font-semibold dark:text-white">{{ row.label }}<span v-if="row.locked" class="ml-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-300">всегда вкл</span></p>
+          <p class="text-xs opacity-60 truncate">{{ row.locked ? 'Базовый раздел: знакомства, мэтчи, чаты' : row.desc }}</p>
         </div>
         <i v-if="m.busy.value[row.id]" class="pi pi-spin pi-spinner text-sm text-stone-400 dark:text-zinc-500 shrink-0" />
         <button
@@ -50,7 +46,7 @@ const m = useAppModulesSettings()
         </button>
         <ToggleSwitch
           :model-value="row.enabled"
-          :disabled="m.busy.value[row.id]"
+          :disabled="row.locked || m.busy.value[row.id]"
           class="shrink-0"
           :aria-label="row.label"
           @update:model-value="m.toggle(row.id)"

@@ -391,7 +391,9 @@ class ProfileController extends Controller
      * Смена набора включённых модулей (изоляция ULove/UPin/UFlow/районы/бизнес).
      *
      * Первый модуль списка — primary (стартовый экран). Пустой список
-     * запрещён: хотя бы один раздел всегда включён.
+     * запрещён: хотя бы один раздел всегда включён. ULove — базовый
+     * раздел персоны: у не-бизнеса он принудительно первый, снять
+     * его через API нельзя.
      *
      * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\JsonResponse
@@ -408,6 +410,12 @@ class ProfileController extends Controller
 
         $global = \App\Services\AppSettings::globalModules();
         $modules = array_values(array_intersect($modules, $global));
+
+        $isBusiness = ($user->account_type ?? null) === 'business';
+
+        if (! $isBusiness && ! in_array('ulove', $modules, true)) {
+            array_unshift($modules, 'ulove');
+        }
 
         abort_if($modules === [], 422, 'Выбери хотя бы один раздел');
 
