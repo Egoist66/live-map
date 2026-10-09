@@ -231,7 +231,11 @@ class ProfileController extends Controller
         }
 
         if ($identifier === null && $auth->isBusinessAccount()) {
-            return redirect()->route('cabinet.index');
+            if ($auth->hasModule('business')) {
+                return redirect()->route('cabinet.index');
+            }
+
+            return redirect($auth->landingPath());
         }
         if ($identifier === null) {
             $profileUser = $auth;

@@ -70,7 +70,18 @@ server {
         add_header Cache-Control "public";
         add_header X-Content-Type-Options "nosniff" always;
     }
-    location ~* ^/(favicon\.ico|manifest\.webmanifest|sw\.js|workbox-[^/]+\.js|push-sw\.js|pwa-[^/]+\.png|apple-touch-icon\.png|pwa-icon\.svg|og-cover\.jpg)$ {
+    # Скрипты service worker — БЕЗ кэша: браузер проверяет обновления
+    # /sw.js при каждой навигации через HTTP-кэш. Закэшированный SW
+    # (даже на час) задерживает раскатку фиксов всем установленным PWA.
+    # no-cache = всегда ревалидация, 304 при неизменном файле.
+    location ~* ^/(sw\.js|workbox-[^/]+\.js|push-sw\.js)$ {
+        root /var/www/html/public;
+        access_log off;
+        expires -1;
+        add_header Cache-Control "no-cache";
+        add_header X-Content-Type-Options "nosniff" always;
+    }
+    location ~* ^/(favicon\.ico|manifest\.webmanifest|pwa-[^/]+\.png|apple-touch-icon\.png|pwa-icon\.svg|og-cover\.jpg)$ {
         root /var/www/html/public;
         access_log off;
         expires 7d;

@@ -32,6 +32,11 @@ const STORAGE_MODULES = 'upin.app.modules'
 const STORAGE_PRIMARY = 'upin.app.primary'
 const LEGACY_TAB = 'welcome_landing_tab'
 /**
+ * Ядро без гарда модулей: безопасный дом для бизнеса без кабинета.
+ * Совпадает с `User::landingPath()` на бэке (там `route('chat')`).
+ */
+const CHAT_HOME = '/chat'
+/**
  * Cookie выбранной стороны для SSR: сервер не видит localStorage,
  * а без подсказки рендерит тему по умолчанию — отсюда флеш чужой
  * темы и mismatch гидратации на входе/регистрации.
@@ -149,7 +154,19 @@ export const useAppModulesStore = defineStore('appModules', () => {
 
   const isIsolated = computed(() => enabled.value !== null)
 
-  const primary = computed<AppModule>(() => enabled.value?.[0] ?? 'ulove')
+  /**
+   * Стартовый модуль: первый ГЛОБАЛЬНО включённый в списке.
+   *
+   * Старые списки могут указывать на выключенный админом раздел —
+   * такой primary вёл гард и сервер по кругу (редирект на закрытый
+   * раздел и обратно). Фолбэк — всегда доступный ULove.
+   */
+  const primary = computed<AppModule>(() => {
+    const list = enabled.value ?? [...ALL_MODULES]
+    const visible = list.filter((item) => isGloballyEnabled(item))
+
+    return visible[0] ?? 'ulove'
+  })
 
   const home = computed(() => MODULE_HOME[primary.value])
 
@@ -209,15 +226,21 @@ export const useAppModulesStore = defineStore('appModules', () => {
   /**
    * Домашний экран пользователя по модулям.
    *
-   * Бизнес-аккаунт без модуля бизнеса стартует с primary,
-   * персона — всегда с primary. Совпадает с landingPath() на бэке.
+   * Бизнес-аккаунт без доступного модуля бизнеса едет в чаты ядра
+   * (как `landingPath()` на бэке), а не на свайпы: сервер всё равно
+   * развернул бы его оттуда. Персона — всегда на свой доступный
+   * primary. Совпадает с landingPath() на бэке, петель нет.
    *
    * @param accountType account_type пользователя
    * @returns путь стартового экрана
    */
   function homeFor(accountType?: string | null): string {
-    if (accountType === 'business' && isEnabled('business')) {
-      return MODULE_HOME.business
+    if (accountType === 'business') {
+      if (isEnabled('business')) {
+        return MODULE_HOME.business
+      }
+
+      return CHAT_HOME
     }
 
     return MODULE_HOME[primary.value]

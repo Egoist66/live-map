@@ -1,4 +1,6 @@
 import { router } from '@inertiajs/vue3'
+import { useAppModulesStore } from '@/stores/appModules'
+import { moduleOfPathname } from '@/composables/useModuleRouteGuard'
 
 const STORAGE_KEY = 'upin:last-route'
 
@@ -101,6 +103,31 @@ export function useLastRoute() {
   }
 
   /**
+   * Можно ли возвращать пользователя на сохранённый путь.
+   *
+   * Ядро (чат, профиль, настройки) — всегда: оно не за гардом модулей.
+   * Раздел — только когда модуль включён, иначе это лишний круг
+   * через серверный редирект на стартовый экран.
+   *
+   * @param path сохранённый путь
+   * @returns true если возврат безопасен
+   */
+  function isAllowedTarget(path: string): boolean {
+    try {
+      const clean = path.split('?')[0].split('#')[0]
+      const module = moduleOfPathname(clean)
+
+      if (!module) {
+        return true
+      }
+
+      return useAppModulesStore().isEnabled(module)
+    } catch {
+      return true
+    }
+  }
+
+  /**
    * Подписывает запоминание и возвращает на последний экран при холодном старте.
    *
    * Холодный старт = открыт `/` авторизованным (страховка: штатно сервер
@@ -133,6 +160,9 @@ export function useLastRoute() {
     }
     const stored = await readStored()
     const target = stored && String(stored.uid) === String(numericUid) ? stored.path : '/profile'
+    if (!isAllowedTarget(target)) {
+      return
+    }
     try {
       router.visit(target, { replace: true })
     } catch {}

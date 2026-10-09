@@ -293,8 +293,21 @@ export default defineConfig({
                         return { manifest: deduped, warnings: [] };
                     },
                 ],
-                navigateFallback: '/offline.html',
-                navigateFallbackDenylist: [/^\/api/, /^\/broadcasting/, /^\/reverb/, /^\/admin/, /^\/build\//],
+                // navigateFallback ОТКЛЮЧЁН (null, а не строка): Workbox
+                // регистрирует его NavigationRoute ПЕРЕД runtimeCaching
+                // (см. sw-template.ts), а createHandlerBoundToURL подменяет
+                // ЛЮБУЮ навигацию precached-ответом БЕЗ похода в сеть.
+                // Итог прошлого значения '/offline.html': все клиенты
+                // с установленным SW видели «Вы оффлайн» при живом
+                // интернете (лечилось только жёсткой перезагрузкой
+                // в обход SW). Дефолт vite-plugin-pwa — 'index.html',
+                // его тоже гасим: такого файла в прекеше нет, SW падал
+                // бы с non-precached-url. Навигации обслуживает
+                // NetworkFirst `pwa-pages` ниже: онлайн — свежий HTML,
+                // офлайн — закэшированная страница. offline.html остаётся
+                // в прекеше для пробы isOfflineReady(), но навигации
+                // больше не перехватывает.
+                navigateFallback: null,
                 cleanupOutdatedCaches: true,
                 clientsClaim: true,
                 skipWaiting: true,

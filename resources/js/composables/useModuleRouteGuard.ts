@@ -6,10 +6,13 @@ let listening = false
 /**
  * Префикс пути → модуль раздела.
  *
+ * Вынесена для переиспользования в `useLastRoute` (не восстанавливать
+ * путь в выключенный раздел). Ядро (чат, профиль, настройки) — null.
+ *
  * @param pathname путь без query
  * @returns модуль или null для общего ядра (чат, профиль, настройки)
  */
-function moduleOf(pathname: string): AppModule | null {
+export function moduleOfPathname(pathname: string): AppModule | null {
   if (pathname === '/swipes' || pathname.startsWith('/swipes/')) {
     return 'ulove'
   }
@@ -63,7 +66,7 @@ export function useModuleRouteGuard() {
           return
         }
 
-        const module = moduleOf(pathname)
+        const module = moduleOfPathname(pathname)
 
         if (!module) {
           return

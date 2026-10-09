@@ -588,46 +588,52 @@ class User extends Authenticatable implements MustVerifyEmail
     /**
      * URL стартового экрана по режиму.
      *
-     * Бизнес-аккаунты всегда стартуют с кабинета /business,
-     * остальные — по default_mode (UPin → /map, иначе /swipes).
+     * Петлебезопасный: возвращает только маршрут, который пользователь
+     * реально может открыть (глобально включён и доступен ему), иначе
+     * гард `module:` отправлял бы обратно сюда же — браузер рвал
+     * навигацию `ERR_TOO_MANY_REDIRECTS`, а PWA показывал «Вы оффлайн»
+     * при живом интернете. Бизнес без доступного кабинета едет в чаты
+     * (`/chat` не за гардом), персона — всегда в доступный ей раздел.
      *
-     * @return string путь кабинета бизнеса либо карты/свайпов
+     * @return string путь стартового экрана
      */
     public function landingPath(): string
     {
-        $enabled = $this->enabledModules();
+        $global = ['ulove'];
 
         try {
             $global = \App\Services\AppSettings::globalModules();
-
-            if (is_array($enabled)) {
-                $enabled = array_values(array_intersect($enabled, $global));
-
-                if ($enabled === []) {
-                    $enabled = ['ulove'];
-                }
-            }
         } catch (\Throwable) {
-            // No-op: без настроек оставляем персональный набор как есть.
+            // No-op: без настроек считаем включённым только ULove.
         }
 
         if ($this->isBusinessAccount()) {
-            if ($enabled !== null && ! in_array('business', $enabled, true)) {
-                return $this->modulePath($enabled[0] ?? 'ulove');
+            if ($this->hasModule('business')) {
+                return route('cabinet.index', absolute: false);
             }
 
-            return route('cabinet.index', absolute: false);
+            return route('chat', absolute: false);
         }
 
-        if ($enabled !== null) {
-            return $this->modulePath($enabled[0] ?? $this->defaultMode());
+        $enabled = $this->enabledModules();
+
+        if (is_array($enabled)) {
+            $effective = array_values(array_intersect($enabled, $global));
+
+            if ($effective !== []) {
+                return $this->modulePath($effective[0]);
+            }
+
+            return route('swipes', absolute: false);
         }
 
-        if ($this->defaultMode() === 'upin') {
-            return route('map', absolute: false);
+        $mode = $this->defaultMode();
+
+        if (! in_array($mode, $global, true)) {
+            $mode = 'ulove';
         }
 
-        return route('swipes', absolute: false);
+        return $this->modulePath($mode);
     }
 
     /**
@@ -703,13 +709,21 @@ class User extends Authenticatable implements MustVerifyEmail
      *
      * Глобально выключенный раздел (админка) недоступен никому,
      * кроме ULove — он включён всегда. Legacy (NULL) видит только
-     * глобально включённые разделы.
+     * глобально включённые разделы. ULove для персоны — базовый
+     * раздел, выключить его нельзя (стор и API тоже форсируют его
+     * первым): персона имеет его всегда, даже со старым списком
+     * без ulove — иначе гард и landingPath гоняли бы друг в друга
+     * по кругу до ERR_TOO_MANY_REDIRECTS.
      *
      * @param string $module ulove|upin|uflow|districts|business
      * @return bool
      */
     public function hasModule(string $module): bool
     {
+        if ($module === 'ulove' && ! $this->isBusinessAccount()) {
+            return true;
+        }
+
         if ($module !== 'ulove') {
             try {
                 if (! \App\Services\AppSettings::isModuleGloballyEnabled($module)) {
