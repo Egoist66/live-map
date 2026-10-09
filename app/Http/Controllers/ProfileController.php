@@ -405,10 +405,17 @@ class ProfileController extends Controller
 
         $user = $request->user();
         $modules = array_values(array_unique(array_map('strval', $data['modules'])));
+
+        $global = \App\Services\AppSettings::globalModules();
+        $modules = array_values(array_intersect($modules, $global));
+
+        abort_if($modules === [], 422, 'Выбери хотя бы один раздел');
+
         $user->setEnabledModules($modules);
 
         return response()->json([
             'modules' => $user->enabledModules(),
+            'global_modules' => $global,
             'default_mode' => $user->default_mode,
             'landing' => $user->landingPath(),
         ]);

@@ -63,6 +63,13 @@ class HandleInertiaRequests extends Middleware
             'support' => [
                 'email' => config('seo.support_email', config('mail.from.address')),
             ],
+            'globalModules' => function () {
+                try {
+                    return \App\Services\AppSettings::globalModules();
+                } catch (\Throwable) {
+                    return ['ulove'];
+                }
+            },
             // Роуты для ZiggyVue в SSR (resources/js/ssr.ts): Node-процесс
             // не видит blade-скрипт @routes, без этого route()/current() падают
             // и Inertia молча откатывается в CSR (пустой div#app).

@@ -13,11 +13,10 @@ export function useLoginForm() {
   const showPass = ref(false)
   const { defineField, handleSubmit, errors, values, isSubmitting, setErrors } = useForm({
     validationSchema: loginSchema,
-    initialValues: { email: '', password: '', remember: false } as any,
+    initialValues: { email: '', password: '' } as any,
   })
   const [email, emailAttrs] = defineField('email')
   const [password, passwordAttrs] = defineField('password')
-  const [remember] = defineField('remember')
 
   const submit = handleSubmit(async (vals: any) => {
     router.post(route('login'), vals, {
@@ -25,7 +24,7 @@ export function useLoginForm() {
     })
   })
 
-  return { email, emailAttrs, password, passwordAttrs, remember, errors, values, showPass, submit, isSubmitting }
+  return { email, emailAttrs, password, passwordAttrs, errors, values, showPass, submit, isSubmitting }
 }
 
 /**

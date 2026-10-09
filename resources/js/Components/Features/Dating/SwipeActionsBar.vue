@@ -33,10 +33,13 @@ defineEmits<{
 
 const sideBtn =
   'w-14 h-14 grid place-items-center rounded-full bg-white dark:bg-zinc-800 shadow-[0_2px_10px_rgba(0,0,0,0.18)] dark:shadow-black/60 transition active:scale-90 disabled:opacity-40 shrink-0'
+
+const superBtn =
+  'w-14 h-14 grid place-items-center rounded-full text-white shadow-[0_4px_18px_rgba(23,134,255,0.5)] dark:shadow-[0_4px_18px_rgba(23,134,255,0.45)] transition active:scale-90 disabled:opacity-40 shrink-0 bg-gradient-to-br from-[#1786FF] via-[#1f9dff] to-[#00C6FF] ring-2 ring-[#1786FF]/30 dark:ring-[#7cc4ff]/30'
 </script>
 
 <template>
-  <div class="mt-2 flex shrink-0 items-center justify-center gap-3 px-4 pt-1 pb-[max(12px,var(--sab))]">
+  <div class="swipe-actions mt-2 flex shrink-0 items-center justify-center gap-3 px-4 pt-1 pb-[max(12px,var(--sab))]">
     <button
       type="button"
       :disabled="acting"
@@ -54,15 +57,16 @@ const sideBtn =
       :disabled="acting"
       aria-label="Суперлайк"
       :title="`Суперлайк · осталось: ${superLeft}`"
-      :class="sideBtn"
-      class="relative"
+      :class="superBtn"
+      class="superlike-btn relative overflow-visible"
       @click="$emit('superlike')"
     >
-      <i v-if="busy !== 'superlike'" class="pi pi-heart-fill text-xl leading-none text-[#1786FF]" />
-      <i v-else class="pi pi-spin pi-spinner text-lg leading-none text-[#1786FF]" />
+      <span class="superlike-pulse" aria-hidden="true" />
+      <i v-if="busy !== 'superlike'" class="pi pi-star-fill relative text-xl leading-none text-white drop-shadow-[0_1px_4px_rgba(0,40,90,0.5)]" />
+      <i v-else class="pi pi-spin pi-spinner relative text-lg leading-none text-white" />
       <span
         v-if="superLeft"
-        class="absolute -top-1 -right-1 grid h-5 min-w-[20px] place-items-center rounded-full bg-[#1786FF] px-1 text-[10px] font-black text-white ring-2 ring-white dark:ring-zinc-900"
+        class="absolute -top-1.5 -right-1.5 grid h-5 min-w-[20px] place-items-center rounded-full bg-white px-1 text-[10px] font-black text-[#1786FF] ring-2 ring-[#1786FF] dark:ring-[#7cc4ff] shadow"
       >{{ superLeft }}</span>
     </button>
 
@@ -102,5 +106,32 @@ const sideBtn =
   15% { transform: scale(1.18); }
   30% { transform: scale(1); }
   45% { transform: scale(1.12); }
+}
+/* Суперлайк — главный акцент панели: синий градиент + дышащее кольцо.
+   Пульс чисто декоративный, клики и центровка не страдают. */
+.superlike-btn {
+  position: relative;
+  isolation: isolate;
+}
+.superlike-pulse {
+  position: absolute;
+  inset: -3px;
+  border-radius: 9999px;
+  border: 2px solid rgba(23, 134, 255, 0.55);
+  animation: superlike-pulse 2.2s ease-out infinite;
+  pointer-events: none;
+}
+.superlike-btn:active .superlike-pulse {
+  animation: none;
+  opacity: 0;
+}
+@keyframes superlike-pulse {
+  0% { transform: scale(0.92); opacity: 0.9; }
+  70% { transform: scale(1.12); opacity: 0; }
+  100% { transform: scale(1.12); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .superlike-pulse { animation: none; opacity: 0; }
+  .heartbeat { animation: none; }
 }
 </style>

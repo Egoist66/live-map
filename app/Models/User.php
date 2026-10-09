@@ -595,9 +595,23 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         $enabled = $this->enabledModules();
 
+        try {
+            $global = \App\Services\AppSettings::globalModules();
+
+            if (is_array($enabled)) {
+                $enabled = array_values(array_intersect($enabled, $global));
+
+                if ($enabled === []) {
+                    $enabled = ['ulove'];
+                }
+            }
+        } catch (\Throwable) {
+            // No-op: без настроек оставляем персональный набор как есть.
+        }
+
         if ($this->isBusinessAccount()) {
             if ($enabled !== null && ! in_array('business', $enabled, true)) {
-                return $this->modulePath($enabled[0] ?? 'upin');
+                return $this->modulePath($enabled[0] ?? 'ulove');
             }
 
             return route('cabinet.index', absolute: false);
@@ -683,13 +697,27 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * Включён ли модуль с учётом legacy-режима.
+     * Включён ли модуль с учётом legacy-режима и глобального гейта.
+     *
+     * Глобально выключенный раздел (админка) недоступен никому,
+     * кроме ULove — он включён всегда. Legacy (NULL) видит только
+     * глобально включённые разделы.
      *
      * @param string $module ulove|upin|uflow|districts|business
      * @return bool
      */
     public function hasModule(string $module): bool
     {
+        if ($module !== 'ulove') {
+            try {
+                if (! \App\Services\AppSettings::isModuleGloballyEnabled($module)) {
+                    return false;
+                }
+            } catch (\Throwable) {
+                // No-op: при недоступности настроек гейт не блокируем.
+            }
+        }
+
         $enabled = $this->enabledModules();
 
         if ($enabled === null) {
@@ -704,7 +732,8 @@ class User extends Authenticatable implements MustVerifyEmail
      *
      * Первый модуль списка становится primary: он же пишется
      * в default_mode для совместимости (ulove|upin), бизнес
-     * стартует с кабинета через landingPath.
+     * стартует с кабинета через landingPath. Глобально выключенные
+     * разделы отбрасываются: включить их раньше админа нельзя.
      *
      * @param string[] $modules непустой список из allModules()
      * @return void
@@ -713,6 +742,13 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         $allowed = self::allModules();
         $clean = array_values(array_intersect(array_map('strval', $modules), $allowed));
+
+        try {
+            $global = \App\Services\AppSettings::globalModules();
+            $clean = array_values(array_intersect($clean, $global));
+        } catch (\Throwable) {
+            // No-op: без настроек глобальный фильтр не применяем.
+        }
 
         abort_if($clean === [], 422, 'Выбери хотя бы один раздел');
 

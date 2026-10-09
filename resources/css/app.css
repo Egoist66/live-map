@@ -294,7 +294,7 @@ html, body { min-height: 100vh; min-height: 100svh; min-height: 100dvh; }
 /* Старые WebView без dvh: откат ключевых фреймов на vh,
    иначе calc(100dvh-…) разваливается и даёт пустые полосы. */
 @supports not (height: 100dvh) {
-  .swipe-deck { height: calc(100vh - 180px - var(--sab) - var(--sat)) !important; }
+  .swipe-deck { height: auto !important; max-height: calc(100vh - 216px - var(--sab) - var(--sat)) !important; }
   .page-scroll { min-height: calc(100vh - var(--app-header-sm) - var(--sat)) !important; }
   .h-app-full {
     height: calc(100vh - var(--app-header-sm) - var(--sat) - var(--app-bottomnav) - var(--sab)) !important;
@@ -1180,7 +1180,14 @@ html.dark.tg-app .chat-header {
     }
     .swipes-feed-lock .swipe-deck,
     .swipes-feed-lock .swipes-feed-skeleton {
-      min-height: calc(100svh - var(--sat, 0px) - 188px) !important;
+      min-height: 0 !important;
+      max-height: calc(100svh - var(--sat, 0px) - 216px) !important;
+    }
+  }
+  @media (max-width: 639.98px) and (max-height: 700px) {
+    .swipes-feed-lock .swipe-deck,
+    .swipes-feed-lock .swipes-feed-skeleton {
+      max-height: calc(100svh - var(--sat, 0px) - 228px) !important;
     }
   }
   .swipe-deck {
@@ -1206,6 +1213,26 @@ html.dark.tg-app .chat-header {
   .swipes-topbar {
     padding-top: 2px;
   }
+}
+
+/* Свайпы: flex-цепочка от main до колоды, иначе PageTransition-обёртка
+   (обычный блочный div) разрывает flex и лок высоты 100dvh вылезает
+   за страницу — на айфонах появлялся скролл самой страницы и кнопки
+   уезжали вниз. main становится flex-колонкой, обёртка тянется. */
+main:has(.swipes-feed-lock) {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+main:has(.swipes-feed-lock) .page-transition-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+main:has(.swipes-feed-lock) .swipes-feed-lock {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 /* Гость (логин/регистрация) на iOS: форма ниже чёлки, скролл momentum,

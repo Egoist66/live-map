@@ -18,9 +18,19 @@ let echoStarted = false
 
 /**
  * Инициализирует realtime-соединение. На сервере (SSR) — no-op.
+ *
+ * Повторный вызов после смены аккаунта без перезагрузки (Inertia-логин)
+ * не создаёт второй Echo, а переподключает существующий: иначе новый
+ * аккаунт оставался без сокетов до жёсткого рефреша.
  */
 export function initEcho(): void {
-  if (typeof window === 'undefined' || echoStarted) return
+  if (typeof window === 'undefined') return
+  if (echoStarted) {
+    try {
+      ;(window as any).Echo?.connect?.()
+    } catch {}
+    return
+  }
   echoStarted = true
 
   // @ts-ignore

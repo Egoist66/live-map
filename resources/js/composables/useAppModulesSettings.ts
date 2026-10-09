@@ -54,12 +54,18 @@ export function useAppModulesSettings() {
   const store = useAppModulesStore()
 
   try {
+    const globalRaw = (page.props as unknown as { globalModules?: unknown }).globalModules
+
+    if (globalRaw !== undefined) {
+      store.applyGlobal(globalRaw)
+    }
+
     store.ensureInit((page.props as any)?.auth?.user ?? null)
   } catch {
   }
 
   const rows = computed<ModuleRow[]>(() =>
-    ALL_MODULES.map((id) => ({
+    ALL_MODULES.filter((id) => store.isGloballyEnabled(id)).map((id) => ({
       id,
       label: MODULE_META[id].label,
       icon: MODULE_META[id].icon,
@@ -69,6 +75,9 @@ export function useAppModulesSettings() {
       isPrimary: store.primary === id && store.isEnabled(id),
     })),
   )
+
+  /** Только ULove доступен глобально: остальные разделы ещё не выпущены патчем. */
+  const onlyUlove = computed(() => rows.value.length <= 1)
 
   const legacy = computed(() => !store.isIsolated)
 
@@ -122,6 +131,10 @@ export function useAppModulesSettings() {
       return
     }
 
+    if (!store.isGloballyEnabled(id)) {
+      return
+    }
+
     const wasEnabled = store.isEnabled(id)
     busy.value[id] = true
 
@@ -155,11 +168,15 @@ export function useAppModulesSettings() {
    * @param id модуль-стартовый
    */
   async function makePrimary(id: AppModule): Promise<void> {
+    if (!store.isGloballyEnabled(id)) {
+      return
+    }
+
     try {
       await store.setPrimary(id)
     } catch {
     }
   }
 
-  return { rows, legacy, saving, error, busy, toggle, makePrimary }
+  return { rows, onlyUlove, legacy, saving, error, busy, toggle, makePrimary }
 }

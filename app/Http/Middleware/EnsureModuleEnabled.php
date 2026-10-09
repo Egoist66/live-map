@@ -11,10 +11,11 @@ class EnsureModuleEnabled
     /**
      * Изоляция модулей на уровне роутов.
      *
-     * Гости и legacy-аккаунты (enabled_modules = NULL) проходят всегда.
-     * Админы и модераторы — на общих основаниях: разделы точно так же
-     * включаются и выключаются в настройках «Приложение», без хардкода.
-     * Остальным без включённого модуля — редирект на их стартовый экран.
+     * Сначала глобальный гейт администратора: выключенный глобально
+     * раздел недоступен никому (кроме ULove, он всегда включён) —
+     * редирект на стартовый экран. Дальше — персональный набор:
+     * гости и legacy-аккаунты (enabled_modules = NULL) проходят всегда.
+     * Админы и модераторы — на общих основаниях, без хардкода.
      *
      * @param \Illuminate\Http\Request $request
      * @param \Closure $next
@@ -27,6 +28,10 @@ class EnsureModuleEnabled
 
         if (! $user) {
             return $next($request);
+        }
+
+        if ($module !== 'ulove' && ! \App\Services\AppSettings::isModuleGloballyEnabled($module)) {
+            return redirect($user->landingPath());
         }
 
         if ($user->enabledModules() === null) {

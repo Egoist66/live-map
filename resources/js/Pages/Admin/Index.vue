@@ -26,6 +26,7 @@ import AdminImpersonateDialog from '@/Components/Features/Admin/AdminImpersonate
 import AdminImpersonationLogs from '@/Components/Features/Admin/AdminImpersonationLogs.vue'
 import AdminLoginAttempts from '@/Components/Features/Admin/AdminLoginAttempts.vue'
 import AdminMaintenanceManager from '@/Components/Features/Admin/AdminMaintenanceManager.vue'
+import AdminModulesManager from '@/Components/Features/Admin/AdminModulesManager.vue'
 import AdminReferencesManager from '@/Components/Features/Admin/AdminReferencesManager.vue'
 import AdminSeoManager from '@/Components/Features/Admin/AdminSeoManager.vue'
 import AdminTelegramUsers from '@/Components/Features/Admin/AdminTelegramUsers.vue'
@@ -147,6 +148,7 @@ enforceVisibleTab()
             <Tab v-if="staff.isAdmin.value" value="security" title="Безопасность" class="!text-[13px] !font-bold"><span class="admin-tab-item"><i class="pi pi-shield text-xs" /><span class="tab-label">Безопасность</span><Badge v-if="logins.unseenCount.value" :value="logins.unseenCount.value > 99 ? '99+' : String(logins.unseenCount.value)" severity="danger" /></span></Tab>
             <Tab value="admin" title="Модерация" class="!text-[13px] !font-bold"><span class="admin-tab-item"><i class="pi pi-cog text-xs" /><span class="tab-label">Модерация</span><Badge v-if="reports.pendingCount.value" :value="reports.pendingCount.value > 99 ? '99+' : String(reports.pendingCount.value)" severity="danger" /></span></Tab>
             <Tab value="business" title="Бизнес" class="!text-[13px] !font-bold"><span class="admin-tab-item"><i class="pi pi-briefcase text-xs" /><span class="tab-label">Бизнес</span><Badge v-if="businessQueue.pendingCount.value" :value="businessQueue.pendingCount.value > 99 ? '99+' : String(businessQueue.pendingCount.value)" severity="warn" /></span></Tab>
+            <Tab v-if="staff.isAdmin.value" value="modules" title="Модули" class="!text-[13px] !font-bold"><span class="admin-tab-item"><i class="pi pi-th-large text-xs" /><span class="tab-label">Модули</span></span></Tab>
             <Tab value="refs" title="Справочники" class="!text-[13px] !font-bold"><span class="admin-tab-item"><i class="pi pi-book text-xs" /><span class="tab-label">Справочники</span></span></Tab>
             <Tab value="seo" title="SEO" class="!text-[13px] !font-bold"><span class="admin-tab-item"><i class="pi pi-globe text-xs" /><span class="tab-label">SEO</span></span></Tab>
             <Tab value="telegram" title="Telegram" class="!text-[13px] !font-bold"><span class="admin-tab-item"><i class="pi pi-send text-xs" /><span class="tab-label">Telegram</span></span></Tab>
@@ -186,6 +188,11 @@ enforceVisibleTab()
             <TabPanel value="business">
               <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
                 <AdminBusinessManager :queue="businessQueue" />
+              </div>
+            </TabPanel>
+            <TabPanel v-if="staff.isAdmin.value" value="modules">
+              <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
+                <AdminModulesManager />
               </div>
             </TabPanel>
             <TabPanel value="refs">

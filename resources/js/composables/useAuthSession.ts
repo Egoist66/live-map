@@ -77,7 +77,35 @@ export function useAuthSession() {
     const isLoggedInAsOther = isAccountChanged && uid !== null
     if (isLoggedInAsOther) {
       void reloadScreenLockForNewAccount()
+      void reconnectRealtimeForNewAccount()
     }
+  }
+
+  /**
+   * Переподключить realtime после Inertia-логина без перезагрузки.
+   *
+   * Лейаут персистентный: mount не повторяется, поэтому bootRealtime
+   * и initRealtime из useAppLayout заново не бегут. Без этого новый
+   * аккаунт сидел бы без сокетов/user-канала/поллера до рефреша.
+   * Динамические импорты — чтобы лёгкий модуль не тащил echo в главный чанк.
+   */
+  async function reconnectRealtimeForNewAccount(): Promise<void> {
+    try {
+      const echo = await import('@/echo')
+      echo.initEcho()
+    } catch {}
+    try {
+      const { ensureUserChannel } = await import('@/composables/useUserChannel')
+      ensureUserChannel()
+    } catch {}
+    try {
+      const [{ useRealtimeMode }, { useRealtimePoller }] = await Promise.all([
+        import('@/composables/useRealtimeMode'),
+        import('@/composables/useRealtimePoller'),
+      ])
+      const current = await useRealtimeMode().init()
+      useRealtimePoller().ensure(current)
+    } catch {}
   }
 
   /**

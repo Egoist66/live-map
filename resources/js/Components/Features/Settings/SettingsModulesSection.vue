@@ -12,8 +12,12 @@ const m = useAppModulesSettings()
       <i class="pi pi-th-large text-lg text-fuchsia-500 shrink-0" />
       <div class="flex-1 text-sm min-w-0">
         <p class="font-semibold dark:text-white">Разделы приложения</p>
-        <p class="text-xs opacity-60">Что видно в меню: ULove, карта, лента, районы, бизнес. Выключенные разделы скрыты и подгрузятся только при включении.</p>
+        <p class="text-xs opacity-60">Что видно в меню из выпущенных разделов. Новые разделы появляются здесь после включения администратором.</p>
       </div>
+    </div>
+
+    <div v-if="m.onlyUlove.value" class="mt-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 px-3 py-2 text-xs text-rose-700 dark:text-rose-200">
+      Сейчас доступен только ULove. Остальные разделы выйдут отдельными обновлениями — тумблеры появятся здесь автоматически.
     </div>
 
     <div v-if="m.legacy.value" class="mt-3 rounded-xl bg-stone-100 dark:bg-zinc-800 px-3 py-2 text-xs text-stone-600 dark:text-zinc-300">

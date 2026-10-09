@@ -403,6 +403,8 @@ Route::middleware(['web', 'auth:web,sanctum', 'admin', 'throttle:120,1'])->group
     Route::post('/admin/login-attempts/reset', [\App\Http\Controllers\AdminLoginAttemptController::class, 'reset']);
     Route::get('/admin/maintenance', [\App\Http\Controllers\AdminMaintenanceController::class, 'show']);
     Route::put('/admin/maintenance', [\App\Http\Controllers\AdminMaintenanceController::class, 'update']);
+    Route::get('/admin/modules', [\App\Http\Controllers\AdminModulesController::class, 'show']);
+    Route::put('/admin/modules', [\App\Http\Controllers\AdminModulesController::class, 'update']);
     Route::post('/admin/realtime/mode', [\App\Http\Controllers\RealtimeController::class, 'setMode']);
     Route::patch('/admin/users/{user}', [AdminUserController::class, 'update']);
     Route::post('/admin/users/{user}/impersonate', [\App\Http\Controllers\AdminImpersonationController::class, 'impersonate']);

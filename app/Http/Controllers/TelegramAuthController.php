@@ -87,7 +87,7 @@ class TelegramAuthController extends Controller
 
             if ($owner && (int) $owner->id !== (int) $currentUser->id) {
                 $this->refreshSnapshot($owner, $tgUser);
-                Auth::login($owner, true);
+                Auth::login($owner);
                 $request->session()->regenerate();
                 \App\Services\LoginDeviceGuard::handleLogin($owner, $request, 'telegram');
 
@@ -113,7 +113,7 @@ class TelegramAuthController extends Controller
 
         if ($existing) {
             $this->refreshSnapshot($existing, $tgUser);
-            Auth::login($existing, true);
+            Auth::login($existing);
             $request->session()->regenerate();
             \App\Services\LoginDeviceGuard::handleLogin($existing, $request, 'telegram');
 
@@ -135,7 +135,7 @@ class TelegramAuthController extends Controller
         }
 
         $user = $this->registerFromTelegram($tgUser, $telegramId);
-        Auth::login($user, true);
+        Auth::login($user);
         $request->session()->regenerate();
         \App\Services\LoginDeviceGuard::handleLogin($user, $request, 'telegram');
 

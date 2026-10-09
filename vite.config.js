@@ -293,7 +293,8 @@ export default defineConfig({
                         return { manifest: deduped, warnings: [] };
                     },
                 ],
-                navigateFallback: null,
+                navigateFallback: '/offline.html',
+                navigateFallbackDenylist: [/^\/api/, /^\/broadcasting/, /^\/reverb/, /^\/admin/, /^\/build\//],
                 cleanupOutdatedCaches: true,
                 clientsClaim: true,
                 skipWaiting: true,

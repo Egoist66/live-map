@@ -106,6 +106,7 @@ export function useRealtimePoller() {
   async function tickFast(): Promise<void> {
     clearFast()
     if (!fastRunning) return
+    if (typeof document === 'undefined' || typeof window === 'undefined') return
     const now = Date.now()
     const online = typeof navigator === 'undefined' || navigator.onLine !== false
     if (!document.hidden && !ticking && online && now >= backoffUntil) {
@@ -479,6 +480,7 @@ export function useRealtimePoller() {
    * бэкофф: пользователь активен — пробуем сразу, как переподключение сокета.
    */
   async function syncNow(): Promise<void> {
+    if (typeof document === 'undefined') return
     if (!fastRunning || ticking || document.hidden) return
     clearFast()
     ticking = true
@@ -496,6 +498,7 @@ export function useRealtimePoller() {
    * Всплеск отзывчивости после исходящего действия.
    */
   function poke(): void {
+    if (typeof document === 'undefined') return
     if (!fastRunning) return
     burstUntil = Date.now() + BURST_WINDOW
     void syncNow()

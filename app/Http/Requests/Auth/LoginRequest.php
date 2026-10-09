@@ -46,7 +46,8 @@ class LoginRequest extends FormRequest
         $user = \App\Models\User::where('email', $email)->first();
         \App\Services\LoginShield::check($email, $user);
 
-        if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
+        // Долгая сессия (2 недели) выдаётся всем сразу, без «запомнить меня».
+        if (! Auth::attempt($this->only('email', 'password'))) {
             RateLimiter::hit($this->throttleKey());
 
             $res = \App\Services\LoginShield::recordFail($email, $this->ip(), (string) $this->userAgent(), $user);

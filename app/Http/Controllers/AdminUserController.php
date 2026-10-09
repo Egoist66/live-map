@@ -42,7 +42,7 @@ class AdminUserController extends Controller
             'signup_goal' => 'chat',
             'default_mode' => 'ulove',
             'default_mode_set_at' => now(),
-            'enabled_modules' => ['ulove', 'upin'],
+            'enabled_modules' => ['ulove'],
             'account_type' => 'person',
             'dating_enabled' => true,
             'role' => 'user',

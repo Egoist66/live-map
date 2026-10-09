@@ -1,5 +1,5 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { router } from '@inertiajs/vue3'
+import { router, usePage } from '@inertiajs/vue3'
 import { route } from '@/route'
 import { useAppModulesStore } from '@/stores/appModules'
 import { useBadgeStore } from '@/stores/badges'
@@ -47,6 +47,13 @@ export function useAppLayout() {
   } catch {
   }
   try {
+    const page = usePage()
+    const initialGlobal = (page.props as unknown as { globalModules?: unknown }).globalModules
+
+    if (initialGlobal !== undefined) {
+      modules.applyGlobal(initialGlobal)
+    }
+
     modules.ensureInit(user.value)
   } catch {
   }
@@ -56,6 +63,24 @@ export function useAppLayout() {
     } catch {
     }
   })
+  try {
+    const page = usePage()
+
+    watch(
+      () => (page.props as unknown as { globalModules?: unknown }).globalModules,
+      (next) => {
+        if (next !== undefined) {
+          try {
+            modules.applyGlobal(next)
+          } catch {
+            // No-op: стор сам держит дефолт ULove.
+          }
+        }
+      },
+      { immediate: true },
+    )
+  } catch {
+  }
   const isAdmin = computed(() => !!user.value?.is_admin || user.value?.role === 'admin')
   const isModerator = computed(() => isAdmin.value || user.value?.role === 'moderator')
   /**

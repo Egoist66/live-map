@@ -141,6 +141,8 @@ function writeStorage(key: string, value: unknown): void {
  */
 export const useAppModulesStore = defineStore('appModules', () => {
   const enabled = ref<AppModule[] | null>(null)
+  /** Глобально включённые админом разделы. По умолчанию только ULove. */
+  const globalEnabled = ref<AppModule[]>(['ulove'])
   const saving = ref(false)
   const error = ref<string | null>(null)
   const ready = ref(false)
@@ -152,16 +154,51 @@ export const useAppModulesStore = defineStore('appModules', () => {
   const home = computed(() => MODULE_HOME[primary.value])
 
   /**
-   * Включён ли модуль с учётом legacy-режима.
+   * Применяет глобальный набор с сервера (Inertia `globalModules`).
    *
-   * Админы и модераторы — на общих основаниях: разделы включаются
-   * и выключаются в настройках как у всех, без хардкода.
-   * Legacy (`enabled === null`) видит всё.
+   * ULove принудительно первый: выключить его нельзя даже админу.
+   *
+   * @param raw сырой список с сервера
+   */
+  function applyGlobal(raw: unknown): void {
+    const clean = cleanList(raw, 'ulove')
+
+    if (!clean.includes('ulove')) {
+      clean.unshift('ulove')
+    }
+
+    globalEnabled.value = clean
+  }
+
+  /**
+   * Включён ли модуль глобально администратором.
+   *
+   * @param module модуль для проверки
+   * @returns true если раздел разрешён глобально (ulove — всегда)
+   */
+  function isGloballyEnabled(module: AppModule): boolean {
+    if (module === 'ulove') {
+      return true
+    }
+
+    return globalEnabled.value.includes(module)
+  }
+
+  /**
+   * Включён ли модуль с учётом legacy-режима и глобального гейта.
+   *
+   * Глобально выключенный раздел скрыт везде: навигация, настройки,
+   * чанки не грузятся. Legacy (`enabled === null`) видит только
+   * глобально включённые разделы.
    *
    * @param module модуль для проверки
    * @returns true если виден в навигации
    */
   function isEnabled(module: AppModule): boolean {
+    if (!isGloballyEnabled(module)) {
+      return false
+    }
+
     if (enabled.value === null) {
       return true
     }
@@ -187,14 +224,18 @@ export const useAppModulesStore = defineStore('appModules', () => {
   }
 
   /**
-   * Инициализация из серверного пользователя + localStorage.
+   * Инициализация из серверного пользователя + глобального гейта.
    *
-   * Приоритет: сервер `enabled_modules` → localStorage гостя →
-   * `default_mode`/`signup_goal` → ulove. Повторные вызовы дешёвые.
+   * Глобальный набор читается из `page.props.globalModules` при каждом
+   * вызове: админ мог включить раздел отдельным патчем без перезагрузки.
+   * Приоритет персонального набора: сервер `enabled_modules` → legacy.
+   * Гость — только ULove в памяти, без localStorage.
    *
    * @param authUser auth.user со страницы (null для гостя)
    */
   function ensureInit(authUser: any): void {
+    syncGlobalFromPage()
+
     if (ready.value) {
       syncUserRef(authUser)
       return
@@ -217,6 +258,41 @@ export const useAppModulesStore = defineStore('appModules', () => {
     }
 
     loadGuestMemory()
+  }
+
+  /**
+   * Подтягивает глобальный набор из пропсов Inertia без перезагрузки.
+   *
+   * Вызывается из ensureInit/syncUserRef: вложений в localStorage нет,
+   * источник правды — сервер (`HandleInertiaRequests::share`).
+   */
+  function syncGlobalFromPage(): void {
+    try {
+      const w = window as unknown as { __inertia_page?: { props?: { globalModules?: unknown } } }
+      const raw = w.__inertia_page?.props?.globalModules
+
+      if (raw !== undefined) {
+        applyGlobal(raw)
+        return
+      }
+    } catch {
+      // No-op: фолбэк ниже.
+    }
+
+    try {
+      const doc = document?.querySelector?.('#app')?.getAttribute?.('data-page')
+
+      if (doc) {
+        const parsed = JSON.parse(doc) as { props?: { globalModules?: unknown } }
+        const raw = parsed?.props?.globalModules
+
+        if (raw !== undefined) {
+          applyGlobal(raw)
+        }
+      }
+    } catch {
+      // No-op: остаётся дефолт ['ulove'].
+    }
   }
 
   /**
@@ -255,6 +331,8 @@ export const useAppModulesStore = defineStore('appModules', () => {
    * @param authUser свежий auth.user
    */
   function syncUserRef(authUser: any): void {
+    syncGlobalFromPage()
+
     if (!authUser) {
       loadGuestMemory()
       return
@@ -299,8 +377,12 @@ export const useAppModulesStore = defineStore('appModules', () => {
    * @param module новый primary
    */
   async function setPrimary(module: AppModule): Promise<void> {
-    const base = enabled.value === null ? [...ALL_MODULES] : [...enabled.value]
-    const rest = base.filter((item) => item !== module)
+    if (!isGloballyEnabled(module)) {
+      return
+    }
+
+    const visibleBase = (enabled.value === null ? [...ALL_MODULES] : [...enabled.value]).filter((item) => isGloballyEnabled(item))
+    const rest = visibleBase.filter((item) => item !== module)
 
     await save([module, ...rest])
   }
@@ -315,8 +397,12 @@ export const useAppModulesStore = defineStore('appModules', () => {
    * @param module новый primary (ulove|upin)
    */
   function adoptPrimaryLocal(module: AppModule): void {
-    const base = enabled.value === null ? [...ALL_MODULES] : [...enabled.value]
-    const rest = base.filter((item) => item !== module)
+    if (!isGloballyEnabled(module)) {
+      return
+    }
+
+    const visibleBase = (enabled.value === null ? [...ALL_MODULES] : [...enabled.value]).filter((item) => isGloballyEnabled(item))
+    const rest = visibleBase.filter((item) => item !== module)
 
     enabled.value = [module, ...rest]
     persistLocal()
@@ -328,7 +414,12 @@ export const useAppModulesStore = defineStore('appModules', () => {
    * @param module модуль-переключатель
    */
   async function toggle(module: AppModule): Promise<void> {
-    const base = enabled.value === null ? [...ALL_MODULES] : [...enabled.value]
+    if (module === 'ulove' || !isGloballyEnabled(module)) {
+      return
+    }
+
+    const visibleBase = (enabled.value === null ? [...ALL_MODULES] : [...enabled.value]).filter((item) => isGloballyEnabled(item))
+    const base = visibleBase.length > 0 ? visibleBase : ['ulove' as AppModule]
 
     if (base.includes(module)) {
       if (base.length <= 1) {
@@ -343,12 +434,14 @@ export const useAppModulesStore = defineStore('appModules', () => {
   }
 
   /**
-   * Пейлоад для формы регистрации: всегда ULove + карта-бонус.
+   * Пейлоад для формы регистрации: только ULove.
+   *
+   * Остальные разделы выдаются отдельными патчами через админку.
    *
    * @returns landing_tab и enabled_modules для POST /register
    */
   function registrationPayload(): { landing_tab: string; enabled_modules: AppModule[] } {
-    return { landing_tab: 'ulove', enabled_modules: ['ulove', 'upin'] }
+    return { landing_tab: 'ulove', enabled_modules: ['ulove'] }
   }
 
   /**
@@ -357,7 +450,10 @@ export const useAppModulesStore = defineStore('appModules', () => {
    * @param next новый список модулей
    */
   async function save(next: AppModule[]): Promise<void> {
-    enabled.value = next
+    const visibleNext = next.filter((item) => isGloballyEnabled(item))
+    const safeNext = visibleNext.length > 0 ? visibleNext : (['ulove'] as AppModule[])
+
+    enabled.value = safeNext
     persistLocal()
 
     try {
@@ -375,15 +471,21 @@ export const useAppModulesStore = defineStore('appModules', () => {
     error.value = null
 
     try {
-      const response = await axios.patch('/api/user/modules', { modules: next })
+      const response = await axios.patch('/api/user/modules', { modules: safeNext })
+      const freshGlobal = response.data?.global_modules
+
+      if (Array.isArray(freshGlobal)) {
+        applyGlobal(freshGlobal)
+      }
+
       const fresh = response.data?.modules
 
       if (Array.isArray(fresh)) {
-        enabled.value = cleanList(fresh, next[0])
+        enabled.value = cleanList(fresh, safeNext[0])
         persistLocal()
       }
 
-      syncPageUser(next)
+      syncPageUser(safeNext)
     } catch (err: any) {
       error.value = err?.response?.data?.message ?? 'Не получилось сохранить разделы'
       throw err
@@ -475,12 +577,15 @@ export const useAppModulesStore = defineStore('appModules', () => {
 
   return {
     enabled,
+    globalEnabled,
     saving,
     error,
     ready,
     isIsolated,
     primary,
     home,
+    applyGlobal,
+    isGloballyEnabled,
     isEnabled,
     homeFor,
     ensureInit,

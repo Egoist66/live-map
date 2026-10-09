@@ -180,16 +180,16 @@ class RegisteredUserController extends Controller
     }
 
     /**
-     * Модули новичка: ULove + карта-бонус.
+     * Модули новичка: только ULove.
      *
-     * ULove — стартовый экран, UPin-карта — бонус для общения,
-     * знакомств и поиска единомышленников. Остальное (лента, районы)
-     * довключается в настройках «Приложение».
+     * Остальные разделы выдаются отдельными патчами: админ включает
+     * их глобально, после чего пользователь видит тумблеры в настройках.
+     * Так клиент не тянет чанки карты/ленты/районов зря.
      *
      * @param string $signupGoal цель с формы регистрации
      * @param mixed $landingTab таб лендинга (игнорируется)
      * @param mixed $requested явный список модулей с фронта (игнорируется)
-     * @return string[] всегда [ulove, upin] для персон
+     * @return string[] всегда [ulove] для персон
      */
     private function enabledModulesFor(string $signupGoal, mixed $landingTab, mixed $requested): array
     {
@@ -197,7 +197,7 @@ class RegisteredUserController extends Controller
             return ['business'];
         }
 
-        return ['ulove', 'upin'];
+        return ['ulove'];
     }
 
     /**

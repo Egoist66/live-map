@@ -4,12 +4,15 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import DatingQuestionnaireForm from '@/Components/Features/Dating/DatingQuestionnaireForm.vue'
 import SwipeDetailsDialog from '@/Components/Features/Dating/SwipeDetailsDialog.vue'
 import SwipeActionsBar from '@/Components/Features/Dating/SwipeActionsBar.vue'
+import SuperlikeSplash from '@/Components/Features/Dating/SuperlikeSplash.vue'
 import MatchSplash from '@/Components/Features/Dating/MatchSplash.vue'
 import AppImage from '@/Components/Ui/Media/AppImage.vue'
 import { useSwipes } from '@/composables/useSwipes'
 import InfiniteSentinel from '@/Components/Ui/List/InfiniteSentinel.vue'
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 import { useSwipeCardPhotos } from '@/composables/useSwipeCardPhotos'
+import { useModuleContent } from '@/composables/useModuleContent'
+import { useSuperlikeSplash } from '@/composables/useSuperlikeSplash'
 import { useSwipeStamps } from '@/composables/useSwipeStamps'
 import { useSwipesMobileMenu } from '@/composables/useSwipesMobileMenu'
 import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
@@ -26,10 +29,17 @@ import InputText from 'primevue/inputtext'
 import ToggleSwitch from 'primevue/toggleswitch'
 import DatePicker from 'primevue/datepicker'
 
+const moduleContent = useModuleContent()
+const withMap = moduleContent.isPubliclyOn('upin')
+
 const seo = useSeo({
   title: 'ULove — свайпы и знакомства',
-  description: 'ULove — дейтинг с картой: листай людей рядом, мэтч открывает чат. Free: 3 сообщения, PRO: 10. Строго 18+.',
-  keywords: ['ULove', 'UPin', 'знакомства', 'свайпы', 'мэтч', 'дейтинг'],
+  description: withMap
+    ? 'ULove — дейтинг с картой: листай людей рядом, мэтч открывает чат. Free: 3 сообщения, PRO: 10. Строго 18+.'
+    : 'ULove — знакомства рядом: листай людей, мэтч открывает чат. Free: 3 сообщения, PRO: 10. Строго 18+.',
+  keywords: withMap
+    ? ['ULove', 'UPin', 'знакомства', 'свайпы', 'мэтч', 'дейтинг']
+    : ['ULove', 'знакомства', 'свайпы', 'мэтч', 'дейтинг'],
 })
 
 const page = usePage()
@@ -44,6 +54,16 @@ const { selectPt } = useDropdownMenuStyle()
 const { userProfileUrl } = useProfileUrl()
 
 const detailsCard = ref<any | null>(null)
+const superSplash = useSuperlikeSplash()
+
+/**
+ * Суперлайк с синим сплешем: вспышка стартует сразу для вау-эффекта,
+ * сам запрос уходит параллельно в хуке свайпов.
+ */
+function onSuperlike(): void {
+  superSplash.fire()
+  void s.superlike()
+}
 const activeHasMore = computed(() => s.activeHasMore.value)
 const activeLoadingMore = computed(() => s.loadingMoreLists.value)
 const { sentinel: activeSentinel } = useInfiniteScroll({ hasMore: activeHasMore, loading: activeLoadingMore, onLoadMore: () => s.loadMoreActive() })
@@ -712,9 +732,10 @@ onUnmounted(() => {
             :super-left="s.leftLabel(s.superlikesLeft.value)"
             @pass="s.swipe('pass')"
             @like="s.swipe('like')"
-            @superlike="s.superlike()"
+            @superlike="onSuperlike()"
             @write="s.writeWithoutMatch(s.current.value.id)"
           />
+          <SuperlikeSplash :active="superSplash.active.value" :burst-key="superSplash.burstKey.value" />
           </template>
 
           <Drawer
@@ -966,7 +987,8 @@ onUnmounted(() => {
 
       <Dialog :visible="s.showHelp.value" @update:visible="(v:boolean)=>{ s.showHelp.value = v }" modal header="Как работают свайпы" :style="{ width: '420px', maxWidth: '94vw', maxHeight: '92dvh' }" :pt="dialogPt">
         <div class="flex flex-col gap-3 text-sm text-stone-600 dark:text-zinc-300 pt-1">
-          <div>ULove — листай, свайпай и находи людей рядом и со всего приложения. Главное — что человек в ULove. А карта с пинами — бонус: мэтчнулся? Кинь пин «кофе тут» и встретьтесь без точного адреса.</div>
+          <div>ULove — листай, свайпай и находи людей рядом. Главное — что человек в ULove: мэтч открывает чат, дальше договаривайтесь сами.</div>
+          <div v-if="moduleContent.isPubliclyOn('upin')">А карта с пинами — бонус: мэтчнулся? Кинь пин «кофе тут» и встретьтесь без точного адреса.</div>
           <div>Фильтр «Люди рядом» — только если хочешь локально. Без него показывают всех. Free: рядом до 10 км, дальше — PRO.</div>
           <div>Свайпы безлимитные. Сообщения без мэтча: Free {{ s.quota.value ? `${s.quota.value.left}/${s.quota.value.limit}` : '3/3' }}, PRO — 10/мес. Взаимный лайк (мэтч) открывает чат всегда, даже при исчерпанном лимите.</div>
           <div>Избранное — свежие лайкнутые без мэтча. Лимиты: Free до 3, Pro до 5, Premium до 15. Лайки сверх лимита тоже ждут мэтча — человек их видит.</div>
@@ -1004,7 +1026,7 @@ onUnmounted(() => {
           </template>
           <template v-else>
             <div class="mt-4 rounded-2xl border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 px-4 py-3 text-sm text-amber-700 dark:text-amber-300 text-center">По указанной дате рождения тебе ещё нет 18. Свайпы откроются автоматически, остальное приложение доступно уже сейчас.</div>
-            <Link href="/map" class="mt-4 block"><Button label="Перейти на карту" icon="pi pi-map" rounded outlined class="w-full" /></Link>
+            <Link :href="moduleContent.isPubliclyOn('upin') ? '/map' : '/profile'" class="mt-4 block"><Button :label="moduleContent.isPubliclyOn('upin') ? 'Перейти на карту' : 'Перейти в профиль'" :icon="moduleContent.isPubliclyOn('upin') ? 'pi pi-map' : 'pi pi-user'" rounded outlined class="w-full" /></Link>
           </template>
         </div>
       </Dialog>
@@ -1084,9 +1106,11 @@ onUnmounted(() => {
     overscroll-behavior: none;
   }
 }
-/* Экран ленты на мобиле — как страница без вложенного скролла:
-   ровно высота между сейф-зоной сверху и нижним меню, скролла нет,
-   верх + карточка + кнопки всегда видны целиком. */
+/* Экран ленты на мобиле — один экран без скролла страницы:
+   верхняя панель + карточка + кнопки всегда видны целиком.
+   Карточка намеренно чуть ниже (резерв 216px вместо 188px),
+   чтобы на айфонах с чёлкой и home-индикатором кнопки
+   не уходили за первый экран. */
 .swipes-feed-lock {
   height: calc(100dvh - var(--sat));
   max-height: calc(100dvh - var(--sat));
@@ -1118,12 +1142,18 @@ onUnmounted(() => {
 .swipe-deck,
 .swipes-feed-skeleton {
   flex: 1 1 auto;
+  min-height: 0;
+}
+.swipe-actions {
+  flex-shrink: 0;
+}
+.swipes-topbar {
+  flex-shrink: 0;
 }
 /* Телефоны (портрет): никакого вложенного скролла — верхняя панель,
-   карточка и кнопки ровно на один экран. min-height у колоды —
-   страховка от схлопывания: высота лока минус верхняя панель,
-   отступы и панель кнопок (~172px). Во flex-раскладке колода всё
-   равно растянется на остаток, в блочной — встанет на этот размер. */
+   карточка и кнопки ровно на один экран без листания страницы.
+   Резерв 216px = топбар (~52) + отступы (~16) + панель кнопок
+   (~96 с safe-area) + дыхание (~12) + запас под home-индикатор. */
 @media (max-width: 639.98px) {
   .swipes-feed-lock {
     /* Нижнего меню на свайпах нет: native-swipes прячет его как в Tinder,
@@ -1140,6 +1170,7 @@ onUnmounted(() => {
     flex: 1 1 auto;
     min-height: 0;
     height: 100%;
+    padding-bottom: calc(6px + var(--sab));
   }
   .swipes-feed-lock .swipes-feed {
     flex: 1 1 auto;
@@ -1154,7 +1185,16 @@ onUnmounted(() => {
   .swipes-feed-lock .swipes-feed-skeleton {
     flex: 1 1 auto;
     height: auto;
-    min-height: calc(100dvh - var(--sat) - 188px);
+    min-height: 0;
+    max-height: calc(100dvh - var(--sat) - 216px);
+  }
+}
+/* Короткие айфоны (SE / mini, высота < 700px): карточке ещё чуть
+   меньше места, кнопкам — гарантированный приоритет. */
+@media (max-width: 639.98px) and (max-height: 700px) {
+  .swipes-feed-lock .swipe-deck,
+  .swipes-feed-lock .swipes-feed-skeleton {
+    max-height: calc(100dvh - var(--sat) - 228px);
   }
 }
 /* Планшеты / ландшафт / узкий десктоп: лок остаётся скроллируемым

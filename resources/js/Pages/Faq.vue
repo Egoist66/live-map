@@ -1,17 +1,31 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3'
+import { computed } from 'vue'
 import { useSeo } from '@/composables/useSeo'
 import { useFaq } from '@/composables/useFaq'
+import { useModuleContent } from '@/composables/useModuleContent'
 import Card from 'primevue/card'
 import Button from 'primevue/button'
 import Accordion from 'primevue/accordion'
 import AccordionPanel from 'primevue/accordionpanel'
 import AccordionHeader from 'primevue/accordionheader'
 import AccordionContent from 'primevue/accordioncontent'
+
+const content = useModuleContent()
+
+/**
+ * Выпущена ли карта: подзаголовок, SEO и CTA подстраиваются сами.
+ */
+const hasMap = computed(() => content.isPubliclyOn('upin'))
+
 const seo = useSeo({
   title: 'FAQ — Как устроен ULove | Вопросы и ответы',
-  description: 'Ответы про ULove простым языком: свайпы, мэтчи и чат по умолчанию, суперлайки и буст — плюс карта UPin с пинами как дополнение: приватность 18+, тарифы и новости приложения.',
-  keywords: ['ULove FAQ','что такое ULove','UPin','знакомства рядом','свайпы','мэтч','пины','приватность','тарифы'],
+  description: hasMap.value
+    ? 'Ответы про ULove простым языком: свайпы, мэтчи и чат, суперлайки и буст — плюс карта с пинами как дополнение: приватность 18+, тарифы и новости приложения.'
+    : 'Ответы про ULove простым языком: свайпы, мэтчи и чат, суперлайки и буст, приватность 18+, тарифы и новости приложения.',
+  keywords: hasMap.value
+    ? ['ULove FAQ','что такое ULove','знакомства рядом','свайпы','мэтч','пины','приватность','тарифы']
+    : ['ULove FAQ','что такое ULove','знакомства рядом','свайпы','мэтч','приватность','тарифы'],
 })
 const { open, sections } = useFaq()
 </script>
@@ -30,7 +44,7 @@ const { open, sections } = useFaq()
             </template>
           </Card>
           <h1 class="mt-4 text-[28px] sm:text-[42px] font-black tracking-[-0.04em] leading-[1.05] sm:leading-none dark:text-white text-balance">Как устроен <span class="bg-gradient-to-r from-brand-500 to-accent-teal bg-clip-text text-transparent">ULove</span></h1>
-          <p class="mt-3 text-stone-600 dark:text-zinc-400 max-w-[640px] mx-auto">По умолчанию — знакомства: свайпы, мэтчи и чат. А карта UPin с пинами — дополнение для встреч рядом. Не нашёл ответа — напиши нам пин «Вопрос» на карте.</p>
+          <p class="mt-3 text-stone-600 dark:text-zinc-400 max-w-[640px] mx-auto">{{ hasMap ? 'Знакомства рядом: свайпы, мэтчи и чат — плюс карта с пинами для встреч. Не нашёл ответа — напиши нам, разберём.' : 'Знакомства рядом: свайпы, мэтчи и чат. Не нашёл ответа — напиши нам, разберём.' }}</p>
           <div class="mt-5 flex flex-wrap justify-center gap-2">
             <Link href="/swipes"><Button label="Открыть знакомства" class="!bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white !px-6 !py-2.5 !rounded-full !text-sm !font-semibold !border-0" /></Link>
             <a href="#faq"><Button label="Читать ниже" severity="secondary" outlined class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-700 !px-6 !py-2.5 !rounded-full !text-sm !font-semibold !text-ink-900 dark:!text-white" /></a>
@@ -59,8 +73,8 @@ const { open, sections } = useFaq()
         </div>
 
         <div class="mt-6 bg-ink-900 dark:bg-zinc-900 dark:border dark:border-zinc-800 text-white rounded-[20px] sm:rounded-[24px] p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div class="min-w-0"><div class="font-black">Остались вопросы?</div><div class="text-sm text-white/60">Создай пин «Вопрос» — соседи ответят за минуты.</div></div>
-          <Link href="/map" class="w-full sm:w-auto shrink-0"><Button label="Создать вопрос" class="w-full sm:w-auto !bg-white !text-ink-900 !px-6 !py-2.5 !rounded-full !font-bold !border-0" /></Link>
+          <div class="min-w-0"><div class="font-black">Остались вопросы?</div><div class="text-sm text-white/60">{{ hasMap ? 'Создай пин «Вопрос» — люди рядом ответят за минуты.' : 'Напиши нам через контакты — ответим и поможем.' }}</div></div>
+          <Link :href="hasMap ? '/map' : '/contacts'" class="w-full sm:w-auto shrink-0"><Button :label="hasMap ? 'Создать вопрос' : 'Написать нам'" class="w-full sm:w-auto !bg-white !text-ink-900 !px-6 !py-2.5 !rounded-full !font-bold !border-0" /></Link>
         </div>
       </div>
     </div>
