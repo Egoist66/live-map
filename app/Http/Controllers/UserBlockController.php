@@ -32,6 +32,14 @@ class UserBlockController extends Controller
                 $q->where('requester_id',$me->id)->where('addressee_id',$uid)
                   ->orWhere(fn($x)=>$x->where('requester_id',$uid)->where('addressee_id',$me->id));
             })->delete();
+            try {
+                $target=User::find($uid);
+
+                if ($target) {
+                    \App\Services\TrustScoreService::penalizeBlock($target);
+                }
+            } catch (\Throwable) {
+            }
             return response()->json($b,201);
         });
     }

@@ -14,6 +14,9 @@ import { ageLabel, calcAge } from '@/composables/useUserAge'
 import { useSwipeTabs } from '@/composables/useSwipeTabs'
 import { usePhotoPicker } from '@/composables/usePhotoPicker'
 import { useAppModulesStore } from '@/stores/appModules'
+import { useActivitySystem } from '@/composables/useActivitySystem'
+
+const activity = useActivitySystem()
 
 // Лениво: ProfileFlowPosts тянет стор/композер/карточки UFlow (чанк mod-uflow).
 // Static import качал бы ленту даже ulove-only пользователям, открывшим профиль.
@@ -129,7 +132,7 @@ const statCls = 'flex-1 min-w-0 flex flex-col items-center sm:block sm:text-left
         <div class="min-w-0 flex-1 sm:pb-1">
           <div class="flex items-center gap-2 min-w-0 flex-wrap">
             <h1 class="text-xl sm:text-[26px] font-black tracking-tight truncate text-ink-900 dark:text-white">{{ user.name }}</h1>
-            <Tag :value="levelName" rounded class="!text-[10px] sm:!text-[11px] !font-bold !bg-blue-600 !text-white !border-0 shrink-0" />
+            <Tag v-if="activity.isReleased.value" :value="levelName" rounded class="!text-[10px] sm:!text-[11px] !font-bold !bg-blue-600 !text-white !border-0 shrink-0" />
           </div>
           <p class="text-[13px] sm:text-sm mt-1 truncate" :class="online ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-stone-500 dark:text-zinc-400'">
             {{ online ? 'в сети' : lastSeen }}
@@ -244,8 +247,8 @@ const statCls = 'flex-1 min-w-0 flex flex-col items-center sm:block sm:text-left
         <div v-if="ageText" class="flex justify-between gap-3 py-3 border-b border-stone-100 dark:border-zinc-800"><span class="text-stone-500 dark:text-zinc-400">Возраст</span><span class="font-semibold text-ink-900 dark:text-white">{{ ageText }}</span></div>
         <div v-if="user.country" class="flex justify-between gap-3 py-3 border-b border-stone-100 dark:border-zinc-800"><span class="text-stone-500 dark:text-zinc-400 flex items-center gap-2"><i class="pi pi-flag"></i>Страна</span><span class="font-semibold text-ink-900 dark:text-white text-right">{{ user.country }}</span></div>
         <div class="flex justify-between gap-3 py-3 border-b border-stone-100 dark:border-zinc-800"><span class="text-stone-500 dark:text-zinc-400 flex items-center gap-2"><i class="pi pi-map-marker"></i>Город</span><span class="font-semibold text-ink-900 dark:text-white text-right">{{ user.home_city || 'Не указан' }}</span></div>
-        <div class="flex justify-between gap-3 py-3 border-b border-stone-100 dark:border-zinc-800"><span class="text-stone-500 dark:text-zinc-400">Уровень</span><span class="font-semibold text-ink-900 dark:text-white">{{ levelName }}</span></div>
-        <div class="flex justify-between gap-3 py-3 border-b border-stone-100 dark:border-zinc-800"><span class="text-stone-500 dark:text-zinc-400">Репутация</span><span class="font-semibold text-ink-900 dark:text-white">{{ user.reputation_score || 0 }} ★</span></div>
+        <div v-if="activity.isReleased.value" class="flex justify-between gap-3 py-3 border-b border-stone-100 dark:border-zinc-800"><span class="text-stone-500 dark:text-zinc-400">Уровень</span><span class="font-semibold text-ink-900 dark:text-white">{{ levelName }}</span></div>
+        <div v-if="activity.isReleased.value" class="flex justify-between gap-3 py-3 border-b border-stone-100 dark:border-zinc-800"><span class="text-stone-500 dark:text-zinc-400">Репутация</span><span class="font-semibold text-ink-900 dark:text-white">{{ user.reputation_score || 0 }} ★</span></div>
         <div class="flex justify-between gap-3 py-3"><span class="text-stone-500 dark:text-zinc-400">На карте с</span><span class="font-semibold text-ink-900 dark:text-white">{{ registeredAt }}</span></div>
       </div>
       <div class="pt-2 pb-1">

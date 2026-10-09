@@ -2,6 +2,7 @@ import { ref, computed, watch } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import { useSecurityImpersonations } from '@/composables/useSecurityImpersonations'
 import { useAppModulesStore } from '@/stores/appModules'
+import { useActivitySystem } from '@/composables/useActivitySystem'
 import { SETTINGS_APP_TAB_PARAM, getActiveAppTab, writeAppTabToUrl } from '@/composables/useSettingsAppTabs'
 
 export type SettingsTabId = 'profile'|'billing'|'quests'|'privacy'|'appearance'|'security'|'pins'|'support'|'app'|'integrations'|'about'|'procedures'|'admin'|'archive'
@@ -32,6 +33,7 @@ export function useSettingsTabs() {
   const page = usePage()
   const isAdmin = computed(() => !!((page.props.auth as any)?.user?.is_admin) || (page.props.auth as any)?.user?.role === 'admin')
   const modules = useAppModulesStore()
+  const activity = useActivitySystem()
 
   try {
     modules.ensureInit((page.props as any)?.auth?.user ?? null)
@@ -40,7 +42,9 @@ export function useSettingsTabs() {
 
   /**
    * Таб виден при включённом модуле: пины — только с картой,
-   * задания — со свайпами или картой, остальное — системное.
+   * задания — со свайпами или картой, но лишь когда выпущена
+   * система активности (допразделы, не чистый ULove),
+   * остальное — системное.
    */
   const isTabVisible = (id: string): boolean => {
     if (id === 'pins') {
@@ -48,6 +52,10 @@ export function useSettingsTabs() {
     }
 
     if (id === 'quests') {
+      if (!activity.isReleased.value) {
+        return false
+      }
+
       return modules.isEnabled('ulove') || modules.isEnabled('upin')
     }
 

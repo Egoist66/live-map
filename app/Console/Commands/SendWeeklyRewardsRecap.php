@@ -15,6 +15,8 @@ use Illuminate\Console\Command;
  * Каждому, кто заработал очки за прошлую неделю, кладёт уведомление
  * в колокольчик (realtime + push через UserNotifier): сколько
  * нафармил, текущий ранг и титул. Тихони без очков спама не получают.
+ * Пока дефолт — чистый ULove без допразделов, итог не рассылаем:
+ * система очков скрыта до релиза карты/ленты.
  */
 class SendWeeklyRewardsRecap extends Command
 {
@@ -24,6 +26,12 @@ class SendWeeklyRewardsRecap extends Command
 
     public function handle(): int
     {
+        if (! \App\Services\AppSettings::isActivityReleased()) {
+            $this->info('Weekly recap skipped: activity system hidden until extra modules release.');
+
+            return self::SUCCESS;
+        }
+
         $week = ActivityRewards::lastWeekKey();
         $notified = 0;
 

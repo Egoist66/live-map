@@ -7,6 +7,9 @@ import Message from 'primevue/message'
 import OnlineDot from '@/Components/Features/Feedback/OnlineDot.vue'
 import ProfileMoreMenu from '@/Components/Features/Profile/ProfileMoreMenu.vue'
 import UserSubscribeButton from '@/Components/Features/Profile/UserSubscribeButton.vue'
+import { useActivitySystem } from '@/composables/useActivitySystem'
+
+const activity = useActivitySystem()
 
 defineProps<{ user: any; avatarSrc: string; online: boolean; lastSeen: string; levelName: string; isOwn: boolean; isLocked: boolean; canMessage: boolean; isBlocked: boolean; isFriend: boolean; isPending: boolean; loading: boolean; sharing: boolean; subscription?: { subscribed: boolean; notify_pin: boolean; notify_photo: boolean; notify_level: boolean; notify_post?: boolean } }>()
 const emit = defineEmits<{ (e: 'avatar'): void; (e: 'chat'): void; (e: 'add'): void; (e: 'remove'): void; (e: 'block'): void; (e: 'unblock'): void; (e: 'share'): void; (e: 'friends'): void; (e: 'search'): void; (e: 'gallery'): void }>()
@@ -30,7 +33,7 @@ const emit = defineEmits<{ (e: 'avatar'): void; (e: 'chat'): void; (e: 'add'): v
           </span>
           <div class="min-w-0 flex-1">
             <h1 class="text-lg sm:text-xl font-black tracking-tight truncate flex items-center gap-2">{{ user.name }}</h1>
-            <p class="text-[13px] sm:text-sm flex flex-wrap items-center gap-x-1.5 gap-y-0.5 min-w-0" :class="online ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'"><span class="whitespace-nowrap">{{ online ? 'в сети' : lastSeen }}</span><span aria-hidden="true" class="text-stone-300 dark:text-zinc-600 shrink-0">·</span><span class="whitespace-nowrap">{{ levelName }} · {{ user.reputation_score || 0 }} ★</span></p>
+            <p class="text-[13px] sm:text-sm flex flex-wrap items-center gap-x-1.5 gap-y-0.5 min-w-0" :class="online ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'"><span class="whitespace-nowrap">{{ online ? 'в сети' : lastSeen }}</span><template v-if="activity.isReleased.value"><span aria-hidden="true" class="text-stone-300 dark:text-zinc-600 shrink-0">·</span><span class="whitespace-nowrap">{{ levelName }} · {{ user.reputation_score || 0 }} ★</span></template></p>
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
             <Button @click="emit('gallery')" rounded text class="!w-10 !h-10 !p-0 !rounded-full" icon="pi pi-images" aria-label="Галерея" title="Галерея" />

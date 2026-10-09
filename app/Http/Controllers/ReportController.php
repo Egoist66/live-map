@@ -33,6 +33,17 @@ class ReportController extends Controller
         }
         $data['reporter_id'] = $request->user()->id;
         $report = Report::create($data);
+        if ($data['target_type'] === 'user') {
+            try {
+                $target = User::find((int) $data['target_id']);
+
+                if ($target) {
+                    \App\Services\TrustScoreService::penalizeReport($target);
+                }
+            } catch (\Throwable $e) {
+                Log::warning('trust penalize failed', ['report' => $report->id, 'error' => $e->getMessage()]);
+            }
+        }
         if (Report::where('target_type', $data['target_type'])->where('target_id', $data['target_id'])->where('status', 'pending')->count() >= 3) {
             if ($data['target_type'] === 'pin') {
                 $target = \App\Models\Pin::where('id', $data['target_id'])->first();
@@ -80,6 +91,9 @@ class ReportController extends Controller
     /**
      * Принять или отклонить жалобу.
      *
+     * Отклонённая жалоба на пользователя возвращает ему −1 репутации:
+     * зря обвинили — скор чиним обратно.
+     *
      * Доступен модераторам и админам.
      *
      * @param Request $request запрос с новым статусом
@@ -95,6 +109,19 @@ class ReportController extends Controller
             'moderator_id' => $request->user()->id,
             'resolved_at' => now(),
         ]);
+
+        if ($data['status'] === 'dismissed' && $report->target_type === 'user') {
+            try {
+                $target = User::find((int) $report->target_id);
+
+                if ($target) {
+                    \App\Services\TrustScoreService::restoreReport($target);
+                }
+            } catch (\Throwable $e) {
+                Log::warning('trust restore failed', ['report' => $report->id, 'error' => $e->getMessage()]);
+            }
+        }
+
         return response()->json($report);
     }
 

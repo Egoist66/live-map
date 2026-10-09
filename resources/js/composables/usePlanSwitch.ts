@@ -77,14 +77,14 @@ export function usePlanSwitch() {
         }
       : {
           free: 'Свайпы · 3 сообщения · мэтчи',
-          pro: 'Инкогнито · 10 сообщений · хайды',
-          premium: 'Максимум · сброс безлимит',
+          pro: 'Инкогнито · 10 сообщений · хайды · репутация 10',
+          premium: 'Максимум · сброс безлимит · репутация 10',
           business: 'Кабинет · максимум',
         }
 
     const cards: PlanCardMeta[] = [
       { id: 'free', name: 'Free', price: 'Бесплатно', summary: summaries.free },
-      { id: 'pro', name: 'Pro', price: '$4.99 / мес', summary: summaries.pro },
+      { id: 'pro', name: 'Pro', price: '$5.99 / мес', summary: summaries.pro },
       { id: 'premium', name: 'Premium', price: '$9.99 / мес', summary: summaries.premium },
     ]
 

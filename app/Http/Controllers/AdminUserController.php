@@ -206,6 +206,14 @@ class AdminUserController extends Controller
             $user->plan_expires_at = $this->resolvePlanExpiry('business', $data['plan_expires_at'] ?? null, $user->plan_expires_at);
         }
         $user->save();
+
+        if (in_array($user->plan ?? 'free', ['pro', 'premium'], true)) {
+            try {
+                \App\Services\TrustScoreService::restoreOnPaidPlan($user);
+            } catch (\Throwable) {
+            }
+        }
+
         return response()->json(['id' => $user->id, 'plan' => $user->plan, 'effective_plan' => $user->effectivePlan(), 'plan_expires_at' => $user->plan_expires_at?->toISOString(), 'role' => $user->role, 'is_admin' => $user->isAdmin(), 'account_type' => $user->account_type ?? 'person', 'role_warning' => $roleWarning]);
     }
 

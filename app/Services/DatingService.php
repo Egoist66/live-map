@@ -951,15 +951,17 @@ class DatingService
     /**
      * Купить разовый экстра-товар ULove.
      *
-     * СТАБ ОПЛАТЫ: сейчас начисляет сразу, как SubscriptionController::renew
-     * выдаёт тариф без списания. Сюда подключается платёжный шлюз
-     * (счёт → webhook → начисление); сигнатура и ответ уже под него.
+     * Паки и бусты — отдельная покупка: платёжного шлюза пока нет,
+     * поэтому обычным пользователям отвечаем 402 payment_required
+     * (как SubscriptionController::renew), ничего не начисляя.
+     * Стаффу (админ/модератор) начисляем сразу — для тестов.
+     * Дневные лимиты этим не тронуты: Free — 1/день, PRO — 5/день.
      *
      * @param User $me
      * @param string $item superlike_pack|boost
      * @return array{item:string,granted:int,extras:array}
      *
-     * @throws HttpResponseException 422 при неизвестном товаре
+     * @throws HttpResponseException 422 при неизвестном товаре, 402 когда нужна оплата
      */
     public function purchaseExtras(User $me, string $item): array
     {
@@ -970,6 +972,15 @@ class DatingService
         }
 
         $fresh = $me->refresh();
+
+        if (! $fresh->isModerator()) {
+            throw new HttpResponseException(response()->json([
+                'message' => 'Пак +5 и бусты — отдельная покупка. Оплата в разработке: напиши в поддержку — после подтверждения оплаты товар начислят вручную.',
+                'payment_required' => true,
+                'item' => $item,
+                'quota' => $this->quotaState($fresh),
+            ], 402));
+        }
 
         if ($item === 'superlike_pack') {
             $granted = self::SUPERLIKE_PACK_SIZE;

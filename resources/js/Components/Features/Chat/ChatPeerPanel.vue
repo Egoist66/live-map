@@ -16,7 +16,7 @@ const props = withDefaults(
   { badge: null, profileUrl: null, variant: 'ulove' },
 )
 
-const emit = defineEmits<{ (e: 'block'): void }>()
+const emit = defineEmits<{ (e: 'block'): void; (e: 'report'): void }>()
 
 const theme = useChatPeerPanelTheme(toRef(props, 'variant'))
 
@@ -73,6 +73,7 @@ const peerAvatar = computed(() => getAvatarUrl(props.peer))
       <Link v-if="profileUrl" :href="profileUrl" class="block">
         <Button label="Открыть профиль" icon="pi pi-user" rounded :class="['w-full !border-0 !text-white', theme.cta]" />
       </Link>
+      <Button label="Пожаловаться" icon="pi pi-flag" rounded outlined severity="warn" size="small" class="w-full" @click="emit('report')" />
       <Button label="Заблокировать" icon="pi pi-ban" rounded outlined severity="danger" size="small" class="w-full" @click="emit('block')" />
     </div>
   </aside>

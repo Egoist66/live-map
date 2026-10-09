@@ -83,13 +83,22 @@ function cancelEdit(): void {
 }
 
 const bodyLeft = computed(() => 280 - draft.value.trim().length)
-const canSave = computed(() => picked.value >= 1 && picked.value <= 5 && draft.value.trim().length <= 280 && !reviews.saving.value)
+
+/** Звёзды заморожены: правится только текст, оценка шлётся пустой. */
+const starsLocked = computed(() => reviews.starsLocked.value)
+
+const canSave = computed(
+  () =>
+    draft.value.trim().length <= 280 &&
+    !reviews.saving.value &&
+    (starsLocked.value || (picked.value >= 1 && picked.value <= 5)),
+)
 
 async function onSave(): Promise<void> {
   const text = draft.value.trim()
 
   try {
-    await reviews.save(picked.value, text === '' ? null : text)
+    await reviews.save(starsLocked.value ? null : picked.value, text === '' ? null : text)
     editing.value = false
     draft.value = ''
     toast?.add({ severity: 'success', summary: 'Отзыв сохранён', detail: 'Спасибо за оценку', life: 2500 })
@@ -175,7 +184,7 @@ function reviewDate(iso: string | null): string {
         <div v-if="!editing && reviews.myReview.value" class="flex items-center gap-2">
           <span class="flex-1 text-xs text-stone-500 dark:text-zinc-400 min-w-0">Твоя оценка: <b class="text-amber-500">{{ reviews.myReview.value.rating }} ★</b><span v-if="reviews.myReview.value.body"> — «{{ reviews.myReview.value.body.slice(0, 60) }}»</span></span>
           <Button label="Изменить" text size="small" class="!px-2 !text-xs shrink-0" @click="startEdit()" />
-          <Button icon="pi pi-trash" text severity="danger" size="small" class="!w-8 !h-8 !p-0 shrink-0" aria-label="Удалить отзыв" title="Удалить отзыв" :loading="reviews.saving.value" @click="onDelete()" />
+          <Button v-if="reviews.isAdmin.value" icon="pi pi-trash" text severity="danger" size="small" class="!w-8 !h-8 !p-0 shrink-0" aria-label="Удалить отзыв" title="Удалить отзыв" :loading="reviews.saving.value" @click="onDelete()" />
         </div>
 
         <div v-else-if="!editing" class="flex items-center gap-2">
@@ -184,7 +193,13 @@ function reviewDate(iso: string | null): string {
         </div>
 
         <div v-else>
-          <div class="flex items-center gap-1" role="radiogroup" aria-label="Оценка">
+          <div v-if="starsLocked" class="flex items-center gap-1" aria-label="Оценка поставлена">
+            <span class="inline-flex items-center gap-0.5 text-amber-400" aria-hidden="true">
+              <i v-for="i in 5" :key="i" :class="['text-xl', i <= (reviews.myReview.value?.rating ?? 0) ? 'pi pi-star-fill' : 'pi pi-star']" />
+            </span>
+            <span class="ml-1 text-xs font-bold text-stone-500 dark:text-zinc-400">{{ reviews.myReview.value?.rating }} из 5 · звёзды уже поставлены</span>
+          </div>
+          <div v-else class="flex items-center gap-1" role="radiogroup" aria-label="Оценка">
             <button
               v-for="i in 5"
               :key="i"

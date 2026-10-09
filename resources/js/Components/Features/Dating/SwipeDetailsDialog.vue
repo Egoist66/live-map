@@ -8,6 +8,7 @@ import Chip from 'primevue/chip'
 import Dialog from 'primevue/dialog'
 import { useProfileUrl } from '@/composables/useProfileUrl'
 import { usePresenceState } from '@/composables/usePresence'
+import { useViewportBreakpoints } from '@/composables/useViewportBreakpoints'
 import { formatRelative } from '@/utils/date'
 import DatingFriendButton from '@/Components/Features/Dating/DatingFriendButton.vue'
 import DatingReviewsSection from '@/Components/Features/Dating/DatingReviewsSection.vue'
@@ -18,6 +19,7 @@ const emit = defineEmits<{ (e: 'close'): void }>()
 
 const { userProfileUrl } = useProfileUrl()
 const { isOnline } = usePresenceState()
+const { isMobile } = useViewportBreakpoints()
 const mounted = useMounted()
 
 const open = computed(() => !!props.card)
@@ -74,9 +76,11 @@ function ageText(card: SwipeCard): string {
     modal
     :draggable="false"
     :block-scroll="true"
+    :position="isMobile ? 'bottom' : 'center'"
+    :breakpoints="{ '640px': '100vw' }"
     header="Анкета"
     :style="{ width: '420px', maxWidth: '94vw', maxHeight: '92dvh' }"
-    :pt="{ root: { class: '!rounded-3xl !overflow-hidden dark:!bg-zinc-900 dark:!border-zinc-700' }, header: { class: 'dark:!bg-zinc-900 dark:!text-white' }, content: { class: 'dark:!bg-zinc-900 dark:!text-zinc-100 !max-h-[78dvh] !overflow-y-auto' } }"
+    :pt="{ root: { class: 'swipe-details-sheet !rounded-3xl !overflow-hidden dark:!bg-zinc-900 dark:!border-zinc-700' }, header: { class: 'dark:!bg-zinc-900 dark:!text-white' }, content: { class: 'dark:!bg-zinc-900 dark:!text-zinc-100 !max-h-[78dvh] !overflow-y-auto overscroll-contain' } }"
   >
     <div v-if="card" class="pt-1">
       <div class="flex items-center gap-3">
@@ -136,3 +140,15 @@ function ageText(card: SwipeCard): string {
     </div>
   </Dialog>
 </template>
+
+<style scoped>
+/* Мобила: шторка снизу на всю ширину — интересы, о себе и отзывы
+   читаются как лист, safe-area под home-индикатором учтена. */
+@media (max-width: 639.98px) {
+  .swipe-details-sheet {
+    margin: 0 0 env(safe-area-inset-bottom, 0px) !important;
+    border-radius: 28px 28px 0 0 !important;
+    max-height: 92dvh;
+  }
+}
+</style>

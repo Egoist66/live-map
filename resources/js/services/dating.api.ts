@@ -207,12 +207,13 @@ export const datingApi = {
     }
   },
   /**
-   * Оставить или обновить свой отзыв (1–5 звёзд, текст до 280).
+   * Оставить отзыв или поправить текст своего (1–5 звёзд, текст до 280).
+   * Звёзды ставятся один раз: при правке текста слать rating не нужно.
    * @param userId о ком отзыв
-   * @param rating звёзды
+   * @param rating звёзды или null (только текст)
    * @param body текст или null
    */
-  async saveReview(userId: number, rating: number, body: string | null) {
+  async saveReview(userId: number, rating: number | null, body: string | null) {
     const { data } = await api.post('/api/dating/reviews', { user_id: userId, rating, body })
     return data as { review: DatingReviewItem; summary: DatingRatingSummary }
   },

@@ -183,7 +183,7 @@ const quickTiles = computed(() => [
   { label: 'Анкета', desc: 'Цель, о себе', icon: 'pi pi-user-edit', rose: true, action: 'edit' },
   { label: 'Тариф', desc: p.plan.value === 'free' ? 'Free' : p.plan.value === 'business' ? 'Business активен' : p.plan.value === 'premium' ? 'Premium активен' : 'PRO активен', icon: 'pi pi-crown', rose: false, href: '/settings/billing' },
   { label: 'Приватность', desc: 'Хайды, невидимка', icon: 'pi pi-lock', rose: false, href: '/settings/privacy' },
-  { label: 'Приложение', desc: 'Разделы, кэш', icon: 'pi pi-mobile', rose: false, href: '/settings/app' },
+  { label: 'Приложение', icon: 'pi pi-mobile', rose: false, href: '/settings/app' },
 ])
 
 const cardPhotos = useSwipeCardPhotos(
@@ -439,11 +439,11 @@ const activePrivacyFlags = computed(() => {
             @click="emit('edit')"
           >
             <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/20"><i :class="[tile.icon, 'text-sm']" /></span>
-            <span class="min-w-0"><span class="block truncate text-sm font-black">{{ tile.label }}</span><span class="block truncate text-[11px] text-white/80">{{ tile.desc }}</span></span>
+            <span class="min-w-0"><span class="block truncate text-sm font-black">{{ tile.label }}</span><span v-if="'desc' in tile && tile.desc" class="block truncate text-[11px] text-white/80">{{ tile.desc }}</span></span>
           </button>
           <Link v-else :href="tile.href" class="flex items-center gap-2.5 rounded-2xl border border-stone-200 bg-white p-3 text-left shadow-soft active:scale-[0.98] transition dark:border-zinc-800 dark:bg-zinc-900">
             <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-stone-100 text-stone-500 dark:bg-zinc-800 dark:text-zinc-300"><i :class="[tile.icon, 'text-sm']" /></span>
-            <span class="min-w-0"><span class="block truncate text-sm font-black text-stone-900 dark:text-white">{{ tile.label }}</span><span class="block truncate text-[11px] text-stone-500 dark:text-zinc-400">{{ tile.desc }}</span></span>
+            <span class="min-w-0"><span class="block truncate text-sm font-black text-stone-900 dark:text-white">{{ tile.label }}</span><span v-if="'desc' in tile && tile.desc" class="block truncate text-[11px] text-stone-500 dark:text-zinc-400">{{ tile.desc }}</span></span>
           </Link>
         </template>
       </div>

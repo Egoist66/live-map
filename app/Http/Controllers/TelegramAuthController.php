@@ -87,6 +87,10 @@ class TelegramAuthController extends Controller
             $owner = User::where('telegram_id', $telegramId)->first();
 
             if ($owner && (int) $owner->id !== (int) $currentUser->id) {
+                if ($owner->banned_at) {
+                    return response()->json(['message' => 'Аккаунт заблокирован. Обратитесь к администратору.', 'banned' => true], 403);
+                }
+
                 $this->refreshSnapshot($owner, $tgUser);
                 Auth::login($owner);
                 $request->session()->regenerate();
@@ -113,6 +117,10 @@ class TelegramAuthController extends Controller
         $existing = User::where('telegram_id', $telegramId)->first();
 
         if ($existing) {
+            if ($existing->banned_at) {
+                return response()->json(['message' => 'Аккаунт заблокирован. Обратитесь к администратору.', 'banned' => true], 403);
+            }
+
             $this->refreshSnapshot($existing, $tgUser);
             Auth::login($existing);
             $request->session()->regenerate();

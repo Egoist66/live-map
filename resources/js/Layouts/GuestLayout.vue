@@ -74,10 +74,9 @@ const hideSidebar = computed(() => isAuthPage.value)
           <slot />
         </template>
         <template v-else>
-          <div class="auth-card-enter w-full max-w-[560px] min-w-0 mx-auto">
-            <Link href="/" class="flex items-center justify-center gap-2 mb-5 sm:mb-6">
-              <span class="w-10 h-10 rounded-2xl bg-gradient-to-br from-rose-500 via-fuchsia-500 to-orange-400 grid place-items-center text-white shadow-lg shadow-rose-500/30"><i class="pi pi-heart-fill leading-none" /></span>
-              <span class="font-black tracking-[-0.04em] text-[26px] bg-gradient-to-r from-rose-500 via-fuchsia-500 to-orange-400 dark:from-rose-400 dark:via-fuchsia-400 dark:to-orange-300 bg-clip-text text-transparent">ULove</span>
+          <div class="auth-card-enter w-full max-w-[640px] min-w-0 mx-auto">
+            <Link href="/" class="flex items-center justify-center mb-5 sm:mb-6">
+              <span class="font-black tracking-[-0.04em] text-[34px] leading-none bg-gradient-to-r from-rose-500 via-fuchsia-500 to-orange-400 dark:from-rose-400 dark:via-fuchsia-400 dark:to-orange-300 bg-clip-text text-transparent">ULove</span>
             </Link>
             <Card :class="['w-full max-w-full !bg-white/85 dark:!bg-zinc-900/80 backdrop-blur-xl !border !rounded-[20px] sm:!rounded-[24px] !shadow-float !p-0', backdrop.tokens.value.cardClass]">
               <template #content>

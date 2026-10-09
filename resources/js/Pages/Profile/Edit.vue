@@ -26,6 +26,7 @@ import Toast from 'primevue/toast'
 import { computed } from 'vue'
 import { planOf } from '@/composables/usePlanLimits'
 import { useAppModulesStore } from '@/stores/appModules'
+import { useActivitySystem } from '@/composables/useActivitySystem'
 import Tabs from 'primevue/tabs'
 import TabList from 'primevue/tablist'
 import Tab from 'primevue/tab'
@@ -36,8 +37,9 @@ const props = defineProps<{ mustVerifyEmail: boolean; status?: string | null; us
 const s = useSettingsPage(props)
 const { setTheme } = useTheme()
 const modules = useAppModulesStore()
+const activity = useActivitySystem()
 const showPinsTab = computed(() => modules.isEnabled('upin'))
-const showQuestsTab = computed(() => modules.isEnabled('ulove') || modules.isEnabled('upin'))
+const showQuestsTab = computed(() => activity.isReleased.value && (modules.isEnabled('ulove') || modules.isEnabled('upin')))
 </script>
 <template>
   <Head title="Настройки" />

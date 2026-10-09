@@ -75,6 +75,13 @@ class AccountDeletionService
 
         $user->forceFill($patch)->save();
 
+        if (! $isPaid) {
+            try {
+                \App\Services\TrustScoreService::restoreOnPaidPlan($user);
+            } catch (\Throwable) {
+            }
+        }
+
         return $user->fresh() ?? $user;
     }
 

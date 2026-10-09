@@ -14,7 +14,10 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
  *
  * Оставить отзыв может только взаимодействовавший: мэтч или
  * direct-диалог (писал сам, писали ему, уже общаются). Один автор —
- * один отзыв: повторная отправка обновляет оценку и текст.
+ * один отзыв. Звёзды ставятся раз и навсегда: повторная отправка
+ * меняет только текст, новую оценку примет только админ.
+ * Удаление своего отзыва обычным пользователям запрещено —
+ * иначе заморозку звёзд обходили бы через удалить/поставить заново.
  * Скрытие рейтинга — привилегия PRO и выше (dating_hide_rating):
  * скрыт — сводка и список не отдаются никому, кроме владельца.
  */
@@ -197,17 +200,44 @@ class DatingReviewService
     }
 
     /**
-     * Создать или обновить свой отзыв.
+     * Создать отзыв или поправить текст своего.
+     *
+     * Звёзды заморожены: у кого отзыв уже есть, тот меняет только
+     * текст — чужую оценку поверх примут лишь от админа. Без оценки
+     * и без старого отзыва — 422. Правка только текста (rating null)
+     * разрешена всем, у кого есть отзыв.
      *
      * @param User $author кто оценивает
      * @param User $target кого оценивают
-     * @param int $rating звёзды 1–5
+     * @param int|null $rating звёзды 1–5 (null — только текст)
      * @param string|null $body текст
      * @return DatingReview
      */
-    public function upsert(User $author, User $target, int $rating, ?string $body): DatingReview
+    public function upsert(User $author, User $target, ?int $rating, ?string $body): DatingReview
     {
         abort_if(! $this->canReview($author, $target), 422, 'Отзыв можно оставить только после общения: мэтч или переписка');
+
+        $existing = DatingReview::where('author_id', $author->id)
+            ->where('target_id', $target->id)
+            ->first();
+
+        if ($existing !== null && ! $author->isAdmin()) {
+            $locked = (int) $existing->rating;
+
+            if ($rating !== null && $rating !== $locked) {
+                abort(422, 'Звёзды уже поставлены — можно изменить только текст отзыва');
+            }
+
+            $rating = $locked;
+        }
+
+        if ($rating === null) {
+            if ($existing !== null) {
+                $rating = (int) $existing->rating;
+            } else {
+                abort(422, 'Поставьте оценку от 1 до 5');
+            }
+        }
 
         $clean = $body !== null ? trim((string) $body) : null;
 
@@ -226,7 +256,8 @@ class DatingReviewService
     }
 
     /**
-     * Удалить свой отзыв.
+     * Удалить свой отзыв. Обычным пользователям запрещено:
+     * иначе заморозку звёзд обходили бы удалением и новой оценкой.
      *
      * @param User $author владелец отзыва
      * @param User $target о ком был отзыв
@@ -234,6 +265,8 @@ class DatingReviewService
      */
     public function deleteOwn(User $author, User $target): bool
     {
+        abort_if(! $author->isAdmin(), 403, 'Удалить отзыв нельзя — звёзды ставятся раз и навсегда');
+
         return (bool) DatingReview::where('author_id', $author->id)
             ->where('target_id', $target->id)
             ->delete();

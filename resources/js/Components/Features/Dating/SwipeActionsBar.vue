@@ -1,7 +1,9 @@
 <script setup lang="ts">
 /**
- * Нижняя панель действий свайпов в стиле Tinder: четыре ровные круглые
- * кнопки строго по центру под колодой.
+ * Флоат-панель действий свайпов в стиле Tinder: пас, суперлайк,
+ * лайк и написать висят поверх низа карточки — абсолютный оверлей строго
+ * по центру, карточка под ними выше. Обёртка клики пропускает
+ * (pointer-events-none), сами кнопки кликабельны.
  *
  * Пропустить (красный крест), суперлайк (синее сердце + остаток),
  * лайк (большое градиентное сердце по центру), написать (фиолетовый
@@ -32,14 +34,14 @@ defineEmits<{
 }>()
 
 const sideBtn =
-  'w-14 h-14 grid place-items-center rounded-full bg-white dark:bg-zinc-800 shadow-[0_2px_10px_rgba(0,0,0,0.18)] dark:shadow-black/60 transition active:scale-90 disabled:opacity-40 shrink-0'
+  'pointer-events-auto w-14 h-14 grid place-items-center rounded-full bg-white dark:bg-zinc-800 shadow-[0_2px_10px_rgba(0,0,0,0.18)] dark:shadow-black/60 transition active:scale-90 disabled:opacity-40 shrink-0 touch-manipulation'
 
 const superBtn =
-  'w-14 h-14 grid place-items-center rounded-full text-white shadow-[0_4px_18px_rgba(23,134,255,0.5)] dark:shadow-[0_4px_18px_rgba(23,134,255,0.45)] transition active:scale-90 disabled:opacity-40 shrink-0 bg-gradient-to-br from-[#1786FF] via-[#1f9dff] to-[#00C6FF] ring-2 ring-[#1786FF]/30 dark:ring-[#7cc4ff]/30'
+  'pointer-events-auto w-14 h-14 grid place-items-center rounded-full text-white shadow-[0_4px_18px_rgba(23,134,255,0.5)] dark:shadow-[0_4px_18px_rgba(23,134,255,0.45)] transition active:scale-90 disabled:opacity-40 shrink-0 bg-gradient-to-br from-[#1786FF] via-[#1f9dff] to-[#00C6FF] ring-2 ring-[#1786FF]/30 dark:ring-[#7cc4ff]/30 touch-manipulation'
 </script>
 
 <template>
-  <div class="swipe-actions mt-2 flex shrink-0 items-center justify-center gap-3 px-4 pt-1 pb-[max(12px,var(--sab))]">
+  <div class="swipe-actions pointer-events-none absolute inset-x-0 bottom-3 z-20 flex items-center justify-center gap-3 px-4 select-none sm:bottom-4">
     <button
       type="button"
       :disabled="acting"
@@ -75,7 +77,7 @@ const superBtn =
       :disabled="acting"
       aria-label="Лайк"
       title="Лайк"
-      class="grid h-[72px] w-[72px] shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#FD267D] to-[#FF7854] text-white shadow-lg shadow-rose-500/40 transition active:scale-90 disabled:opacity-40"
+      class="pointer-events-auto grid h-[72px] w-[72px] shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#FD267D] to-[#FF7854] text-white shadow-lg shadow-rose-500/40 transition active:scale-90 disabled:opacity-40 touch-manipulation"
       @click="$emit('like')"
     >
       <i v-if="busy !== 'like'" class="pi pi-heart-fill heartbeat text-3xl leading-none" />

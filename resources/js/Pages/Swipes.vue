@@ -322,15 +322,15 @@ onUnmounted(() => {
               <div
                 v-for="f in s.favorites.value"
                 :key="f.id ?? f.name"
-                class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3"
+                class="flex flex-wrap items-center gap-2 sm:gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3"
               >
-                <Link :href="userProfileUrl(f)" class="shrink-0"><Avatar :image="f.avatar_url ?? undefined" :label="!f.avatar_url ? (f.name ?? '?').slice(0, 1) : undefined" shape="circle" class="!w-12 !h-12" /></Link>
-                <Link :href="userProfileUrl(f)" class="min-w-0 flex-1">
+                <Link :href="userProfileUrl(f)" class="shrink-0"><Avatar :image="f.avatar_url ?? undefined" :label="!f.avatar_url ? (f.name ?? '?').slice(0, 1) : undefined" shape="circle" class="!w-10 !h-10 sm:!w-12 sm:!h-12" /></Link>
+                <Link :href="userProfileUrl(f)" class="min-w-0 flex-1 basis-32">
                   <div class="text-sm font-bold truncate text-stone-900 dark:text-white">{{ f.name }}<span class="font-semibold text-stone-500 dark:text-zinc-400"> · {{ s.ageLabel(f) }}</span></div>
                   <div v-if="f.city" class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">{{ f.city }}</div>
                 </Link>
-                <Button icon="pi pi-send" rounded size="small" aria-label="Написать" title="Написать" :loading="s.creatingChat.value" class="!w-10 !h-10 !p-0 shrink-0" @click="s.writeWithoutMatch(f.id)" />
-                <Button icon="pi pi-times" rounded size="small" severity="secondary" outlined aria-label="Убрать" title="Убрать из избранного" class="!w-10 !h-10 !p-0 shrink-0" @click="s.removeFavorite(f.id)" />
+                <Button icon="pi pi-send" rounded size="small" aria-label="Написать" title="Написать" :loading="s.creatingChat.value" class="!w-9 !h-9 sm:!w-10 sm:!h-10 !p-0 shrink-0" @click="s.writeWithoutMatch(f.id)" />
+                <Button icon="pi pi-times" rounded size="small" severity="secondary" outlined aria-label="Убрать" title="Убрать из избранного" class="!w-9 !h-9 sm:!w-10 sm:!h-10 !p-0 shrink-0" @click="s.removeFavorite(f.id)" />
               </div>
               <div class="text-center text-[11px] text-stone-400 dark:text-zinc-500">Занято {{ s.favoritesCount.value }} из {{ s.favoritesLimit.value }} · Free: до 3 · Pro: до 5</div>
             </div>
@@ -351,20 +351,20 @@ onUnmounted(() => {
               <div
                 v-for="f in s.admirers.value"
                 :key="s.admirerKey(f)"
-                class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3"
+                class="flex flex-wrap items-center gap-2 sm:gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3"
               >
                 <component :is="f.is_incognito ? 'span' : Link" :href="f.is_incognito ? undefined : userProfileUrl(f)" class="shrink-0">
-                  <Avatar :image="(!f.is_incognito && f.avatar_url) ? f.avatar_url : undefined" :label="f.is_incognito ? '🕵️' : (!f.avatar_url ? (f.name ?? '?').slice(0, 1) : undefined)" shape="circle" class="!w-12 !h-12" />
+                  <Avatar :image="(!f.is_incognito && f.avatar_url) ? f.avatar_url : undefined" :label="f.is_incognito ? '🕵️' : (!f.avatar_url ? (f.name ?? '?').slice(0, 1) : undefined)" shape="circle" class="!w-10 !h-10 sm:!w-12 sm:!h-12" />
                 </component>
-                <component :is="f.is_incognito ? 'span' : Link" :href="f.is_incognito ? undefined : userProfileUrl(f)" class="min-w-0 flex-1">
+                <component :is="f.is_incognito ? 'span' : Link" :href="f.is_incognito ? undefined : userProfileUrl(f)" class="min-w-0 flex-1 basis-32">
                   <div class="text-sm font-bold truncate text-stone-900 dark:text-white">{{ f.is_incognito ? 'Тайный поклонник' : f.name }}<span v-if="!f.is_incognito" class="font-semibold text-stone-500 dark:text-zinc-400"> · {{ s.ageLabel(f) }}</span></div>
-                  <div v-if="f.is_incognito" class="text-[11px] text-violet-500 font-bold">Скрыл себя · PRO · лайкни в ответ — откроется при мэтче</div>
+                  <div v-if="f.is_incognito" class="text-[11px] text-violet-500 font-bold leading-snug">Скрыл себя · PRO · лайкни в ответ — откроется при мэтче</div>
                   <div v-else-if="f.city" class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">{{ f.city }}</div>
                 </component>
-                <Chip v-if="f.is_superlike" label="Суперлайк" icon="pi pi-star-fill" class="!rounded-full !text-[10px] !bg-[#1786FF] !text-white !border-0" />
-                <Chip v-if="f.liked_me || f.is_match" label="Взаимно" icon="pi pi-heart-fill" class="!rounded-full !text-[10px]" />
-                <Button v-if="!f.is_incognito" icon="pi pi-heart-fill" rounded size="small" aria-label="Лайк в ответ" title="Лайк в ответ" :loading="s.acting.value && s.actingId.value === f.id" class="!w-10 !h-10 !p-0 shrink-0" @click="s.swipeAdmirer(f.id)" />
-                <Button v-if="!f.is_incognito" icon="pi pi-send" rounded size="small" severity="secondary" outlined aria-label="Написать" title="Написать" :loading="s.creatingChat.value" class="!w-10 !h-10 !p-0 shrink-0" @click="s.writeWithoutMatch(f.id)" />
+                <Chip v-if="f.is_superlike" label="Суперлайк" icon="pi pi-star-fill" class="!rounded-full !text-[10px] !bg-[#1786FF] !text-white !border-0 shrink-0" />
+                <Chip v-if="f.liked_me || f.is_match" label="Взаимно" icon="pi pi-heart-fill" class="!rounded-full !text-[10px] shrink-0" />
+                <Button v-if="!f.is_incognito" icon="pi pi-heart-fill" rounded size="small" aria-label="Лайк в ответ" title="Лайк в ответ" :loading="s.acting.value && s.actingId.value === f.id" class="!w-9 !h-9 sm:!w-10 sm:!h-10 !p-0 shrink-0" @click="s.swipeAdmirer(f.id)" />
+                <Button v-if="!f.is_incognito" icon="pi pi-send" rounded size="small" severity="secondary" outlined aria-label="Написать" title="Написать" :loading="s.creatingChat.value" class="!w-9 !h-9 sm:!w-10 sm:!h-10 !p-0 shrink-0" @click="s.writeWithoutMatch(f.id)" />
               </div>
             </div>
             <div v-else class="mt-4 rounded-[24px] border border-dashed border-stone-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-6 sm:p-8 text-center">
@@ -390,13 +390,13 @@ onUnmounted(() => {
 
           <template v-else-if="s.activeTab.value === 'premium'">
             <div class="mt-4 rounded-[24px] bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500 p-4 sm:p-6 text-white shadow-soft">
-              <div class="flex items-center gap-2.5">
-                <span class="w-10 h-10 rounded-2xl bg-white/20 grid place-items-center"><i class="pi pi-crown" /></span>
-                <div class="min-w-0 flex-1">
+              <div class="flex flex-wrap items-center gap-2.5">
+                <span class="w-10 h-10 rounded-2xl bg-white/20 grid place-items-center shrink-0"><i class="pi pi-crown" /></span>
+                <div class="min-w-0 flex-1 basis-40">
                   <div class="text-base font-black">ULove PRO</div>
-                  <div class="text-xs text-white/80">Твой тариф: {{ s.planLabel.value }}<span v-if="s.planExpiresLabel.value"> · {{ s.planExpiresLabel.value }}</span></div>
+                  <div class="text-xs text-white/80 leading-snug break-words">Твой тариф: {{ s.planLabel.value }}<span v-if="s.planExpiresLabel.value"> · {{ s.planExpiresLabel.value }}</span></div>
                 </div>
-                <Chip :label="s.quotaLabel.value" icon="pi pi-send" class="!rounded-full !bg-white/20 !text-white !border-0 text-xs" />
+                <Chip :label="s.quotaLabel.value" icon="pi pi-send" class="!rounded-full !bg-white/20 !text-white !border-0 text-xs shrink-0 max-w-full" />
               </div>
               <div class="mt-3 text-[13px] text-white/90">Все платные плюшки свайпов — в одном месте: включай, проверяй статус, оформляй тариф.</div>
               <div class="mt-3">
@@ -503,15 +503,15 @@ onUnmounted(() => {
                 <Button label="Пак +5" icon="pi pi-plus" rounded outlined size="small" :loading="s.buyingExtras.value" @click="s.purchaseExtras('superlike_pack')" />
               </div>
 
-              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
+              <div class="flex flex-wrap items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
                 <span class="w-10 h-10 rounded-2xl bg-amber-500/15 text-amber-500 grid place-items-center shrink-0"><i class="pi pi-bolt" /></span>
-                <div class="min-w-0 flex-1">
-                  <div class="text-sm font-black text-stone-900 dark:text-white">{{ s.boostActive.value ? `Буст активен ${s.boostUntilLabel.value}` : 'Буст профиля · 30 мин в топе' }}</div>
-                  <div class="text-[11px] text-stone-500 dark:text-zinc-400">{{ s.boostActive.value ? 'Твоя анкета летит первой в чужих лентах' : `Куплено: ${s.extras.value.boosts_balance} · PRO — 1 в месяц бесплатно` }}</div>
+                <div class="min-w-0 flex-1 basis-44">
+                  <div class="text-sm font-black text-stone-900 dark:text-white leading-snug">{{ s.boostActive.value ? `Буст активен ${s.boostUntilLabel.value}` : 'Буст профиля · 30 мин в топе' }}</div>
+                  <div class="text-[11px] text-stone-500 dark:text-zinc-400 leading-snug break-words">{{ s.boostActive.value ? 'Твоя анкета летит первой в чужих лентах' : `Куплено: ${s.extras.value.boosts_balance} · PRO — 1 в месяц бесплатно` }}</div>
                 </div>
-                <div class="flex gap-1.5 shrink-0">
-                  <Button v-if="!s.boostActive.value" label="Включить" icon="pi pi-bolt" rounded size="small" :loading="s.buyingExtras.value" @click="s.activateBoost()" />
-                  <Button label="+1" icon="pi pi-plus" rounded outlined size="small" :loading="s.buyingExtras.value" @click="s.purchaseExtras('boost')" />
+                <div class="flex gap-1.5 shrink-0 w-full sm:w-auto">
+                  <Button v-if="!s.boostActive.value" label="Включить" icon="pi pi-bolt" rounded size="small" class="flex-1 sm:flex-none" :loading="s.buyingExtras.value" @click="s.activateBoost()" />
+                  <Button label="+1" icon="pi pi-plus" rounded outlined size="small" class="flex-1 sm:flex-none" :loading="s.buyingExtras.value" @click="s.purchaseExtras('boost')" />
                 </div>
               </div>
 
@@ -527,7 +527,7 @@ onUnmounted(() => {
           </template>
 
           <template v-else>
-          <div class="swipes-feed mt-1 sm:mt-4 relative select-none overscroll-none sm:max-w-[420px] sm:mx-auto sm:w-full lg:max-w-[500px] xl:max-w-[540px] 2xl:max-w-[580px]">
+          <div class="swipes-feed relative mt-1 sm:mt-4 select-none overscroll-none sm:max-w-[420px] sm:mx-auto sm:w-full lg:max-w-[500px] xl:max-w-[540px] 2xl:max-w-[580px]">
             <div v-if="s.loading.value" class="swipes-feed-skeleton rounded-xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 grid place-items-center sm:h-[62dvh] sm:min-h-[400px] sm:max-h-[540px] lg:h-[68dvh] lg:max-h-[640px] xl:h-[70dvh] xl:max-h-[720px] 2xl:max-h-[780px]">
               <i class="pi pi-spin pi-spinner text-2xl text-stone-400 dark:text-zinc-500" />
             </div>
@@ -551,7 +551,7 @@ onUnmounted(() => {
                   <span class="text-white text-7xl font-black">{{ (s.next.value.name ?? '?').slice(0, 1) }}</span>
                 </div>
                 <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
-                <div class="absolute bottom-0 inset-x-0 p-4 sm:p-5 text-white">
+                <div class="absolute bottom-0 inset-x-0 px-4 pt-4 pb-28 text-white sm:px-5 sm:pt-5">
                   <div class="flex items-baseline gap-2">
                     <span class="text-[24px] font-black leading-none">{{ s.next.value.name }}</span>
                     <span class="text-lg font-bold opacity-90">{{ s.ageLabel(s.next.value) }}</span>
@@ -627,7 +627,7 @@ onUnmounted(() => {
                   <span v-if="s.current.value.is_boosted" class="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2.5 py-1 text-[11px] font-black text-white shadow"><i class="pi pi-bolt text-[10px]" />В топе</span>
                 </div>
 
-                <div class="absolute bottom-0 inset-x-0 p-4 text-white pointer-events-none">
+                <div class="absolute bottom-0 inset-x-0 px-4 pt-4 pb-28 text-white pointer-events-none">
                   <div class="flex items-end gap-2">
                     <div class="min-w-0 flex-1">
                       <div class="flex items-baseline gap-2">
@@ -684,7 +684,7 @@ onUnmounted(() => {
                   <span class="text-white text-7xl font-black">{{ (s.exiting.value.card.name ?? '?').slice(0, 1) }}</span>
                 </div>
                 <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
-                <div class="absolute bottom-0 inset-x-0 p-4 sm:p-5 text-white">
+                <div class="absolute bottom-0 inset-x-0 px-4 pt-4 pb-28 text-white sm:px-5 sm:pt-5">
                   <div class="flex items-baseline gap-2">
                     <span class="text-[24px] sm:text-[26px] font-black leading-none">{{ s.exiting.value.card.name }}</span>
                     <span class="text-lg sm:text-xl font-bold opacity-90">{{ s.ageLabel(s.exiting.value.card) }}</span>
@@ -1111,10 +1111,9 @@ onUnmounted(() => {
   }
 }
 /* Экран ленты на мобиле — один экран без скролла страницы:
-   верхняя панель + карточка + кнопки всегда видны целиком.
-   Карточка намеренно чуть ниже (резерв 216px вместо 188px),
-   чтобы на айфонах с чёлкой и home-индикатором кнопки
-   не уходили за первый экран. */
+   верхняя панель + карточка всегда видны целиком. Кнопки —
+   флоат-оверлей поверх низа карточки (как в Tinder), места
+   в потоке не занимают: колода забирает всю оставшуюся высоту. */
 .swipes-feed-lock {
   height: calc(100dvh - var(--sat));
   max-height: calc(100dvh - var(--sat));
@@ -1148,16 +1147,19 @@ onUnmounted(() => {
   flex: 1 1 auto;
   min-height: 0;
 }
+/* Флоат-панель кнопок: абсолютный оверлей поверх низа карточки
+   (позиция и z-index — классами самого SwipeActionsBar), из потока
+   исключена и на высоту колоды не влияет. */
 .swipe-actions {
   flex-shrink: 0;
 }
 .swipes-topbar {
   flex-shrink: 0;
 }
-/* Телефоны (портрет): никакого вложенного скролла — верхняя панель,
-   карточка и кнопки ровно на один экран без листания страницы.
-   Резерв 216px = топбар (~52) + отступы (~16) + панель кнопок
-   (~96 с safe-area) + дыхание (~12) + запас под home-индикатор. */
+/* Телефоны (портрет): никакого вложенного скролла — верхняя панель
+   и карточка ровно на один экран без листания страницы. Кнопки висят
+   оверлеем поверх низа карточки, поэтому колоде отдан весь остаток
+   высоты без резервов и max-height: чем выше экран, тем выше карточка. */
 @media (max-width: 639.98px) {
   .swipes-feed-lock {
     /* Нижнего меню на свайпах нет: native-swipes прячет его как в Tinder,
@@ -1190,15 +1192,6 @@ onUnmounted(() => {
     flex: 1 1 auto;
     height: auto;
     min-height: 0;
-    max-height: calc(100dvh - var(--sat) - 216px);
-  }
-}
-/* Короткие айфоны (SE / mini, высота < 700px): карточке ещё чуть
-   меньше места, кнопкам — гарантированный приоритет. */
-@media (max-width: 639.98px) and (max-height: 700px) {
-  .swipes-feed-lock .swipe-deck,
-  .swipes-feed-lock .swipes-feed-skeleton {
-    max-height: calc(100dvh - var(--sat) - 228px);
   }
 }
 /* Планшеты / ландшафт / узкий десктоп: лок остаётся скроллируемым
@@ -1213,10 +1206,6 @@ onUnmounted(() => {
     .swipes-feed-lock {
       height: calc(100vh - var(--sat));
       max-height: calc(100vh - var(--sat));
-    }
-    .swipes-feed-lock .swipe-deck,
-    .swipes-feed-lock .swipes-feed-skeleton {
-      min-height: calc(100vh - var(--sat) - 188px);
     }
   }
 }

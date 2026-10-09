@@ -6,6 +6,9 @@ import Tag from 'primevue/tag'
 import { computed } from 'vue'
 import { useGender } from '@/composables/useGender'
 import { ageLabel, calcAge } from '@/composables/useUserAge'
+import { useActivitySystem } from '@/composables/useActivitySystem'
+
+const activity = useActivitySystem()
 
 const props = defineProps<{ user: any; bioEmpty: boolean; bioText: string; levelName: string; registeredAt: string }>()
 const g = useGender()
@@ -33,8 +36,8 @@ const residenceText = computed(() => [props.user?.country, props.user?.home_city
         <div class="flex justify-between py-2.5 border-b border-stone-100"><span class="text-stone-500">Пол</span><Tag :value="g.getLabel(user.gender)" class="!bg-stone-100 !text-stone-900 !border-0 !font-semibold" /></div>
         <div v-if="ageText" class="flex justify-between py-2.5 border-b border-stone-100"><span class="text-stone-500">Возраст</span><Tag :value="ageText" class="!bg-stone-100 !text-stone-900 !border-0 !font-semibold" /></div>
         <div v-if="residenceText" class="flex justify-between py-2.5 border-b border-stone-100"><span class="text-stone-500">Проживание</span><Tag :value="residenceText" class="!bg-stone-100 !text-stone-900 !border-0 !font-semibold" /></div>
-        <div class="flex justify-between py-2.5 border-b border-stone-100"><span class="text-stone-500">Уровень</span><Tag :value="levelName" class="!bg-stone-900 !text-white !border-0 !font-semibold !rounded-full" /></div>
-        <div class="flex justify-between py-2.5 border-b border-stone-100"><span class="text-stone-500">Репутация</span><span class="font-semibold">{{ user.reputation_score || 0 }}</span></div>
+        <div v-if="activity.isReleased.value" class="flex justify-between py-2.5 border-b border-stone-100"><span class="text-stone-500">Уровень</span><Tag :value="levelName" class="!bg-stone-900 !text-white !border-0 !font-semibold !rounded-full" /></div>
+        <div v-if="activity.isReleased.value" class="flex justify-between py-2.5 border-b border-stone-100"><span class="text-stone-500">Репутация</span><span class="font-semibold">{{ user.reputation_score || 0 }}</span></div>
         <div class="flex justify-between py-2.5"><span class="text-stone-500">Дата регистрации</span><span class="font-semibold">{{ registeredAt }}</span></div>
       </div>
       <div class="mt-6"><Link href="/map" class="flex w-full min-w-0"><Button label="На карту →" rounded class="w-full !bg-stone-900 dark:!bg-white dark:!text-ink-900 !text-white [&_.p-button-label]:whitespace-nowrap" /></Link></div>

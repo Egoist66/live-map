@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useRegisterForm } from '@/composables/useAuthForm'
 import { useAuthTheme } from '@/composables/useAuthTheme'
-import { useSignupGoals } from '@/composables/useSignupGoals'
+import { useRegisterVisibility } from '@/composables/useRegisterVisibility'
 import { useBirthDateField } from '@/composables/useBirthDate'
 import { useGender } from '@/composables/useGender'
 import { useUserAge } from '@/composables/useUserAge'
@@ -24,7 +24,7 @@ const emit = defineEmits<{ (e: 'switch-login'): void }>()
 const t = useAuthTheme()
 
 const f = useRegisterForm()
-const goals = useSignupGoals()
+const reg = useRegisterVisibility()
 const bd = useBirthDateField(f.birth_date as any)
 const g = useGender()
 const { label: ageLabel } = useUserAge(() => (f.values as any).birth_date)
@@ -38,17 +38,15 @@ function onCountryChange(v: string): void {
 
 <template>
   <div>
-    <div class="flex items-center gap-3">
+    <div class="flex flex-col items-center text-center gap-2">
       <span class="w-11 h-11 rounded-2xl bg-gradient-to-br from-rose-500 via-fuchsia-500 to-orange-400 grid place-items-center text-white shadow-lg shadow-rose-500/30 shrink-0"><i class="pi pi-heart-fill leading-none" /></span>
-      <div class="min-w-0">
-        <h1 class="text-[22px] font-black tracking-tight text-ink-900 dark:text-white leading-tight">{{ t.registerTitle.value }}</h1>
-        <p class="text-[13px] text-stone-500 dark:text-zinc-400">{{ t.registerSub.value }}</p>
-      </div>
+      <h1 class="text-[22px] font-black tracking-tight text-ink-900 dark:text-white leading-tight">{{ t.registerTitle.value }}</h1>
+      <p class="text-[13px] text-stone-500 dark:text-zinc-400 flex items-center justify-center gap-1.5"><i class="pi pi-heart-fill text-rose-500 text-[12px] leading-none" />{{ t.registerSub.value }}</p>
     </div>
     <form class="mt-6 space-y-4" @submit.prevent="f.submit">
       <div class="rounded-2xl border-2 border-rose-200 dark:border-rose-900 bg-gradient-to-br from-rose-50 to-orange-50 dark:from-rose-950/40 dark:to-orange-950/20 p-3.5">
         <label class="auth-label">Зачем ты здесь? *</label>
-        <Select v-model="f.signup_goal.value" :options="goals.preset.options" optionLabel="label" optionValue="value" placeholder="Выбери цель" checkmark fluid class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.signup_goal" />
+        <Select v-model="f.signup_goal.value" :options="reg.goalOptions.value" optionLabel="label" optionValue="value" placeholder="Выбери цель" checkmark fluid class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.signup_goal" />
         <small class="auth-err">{{ f.errors.value.signup_goal }}</small>
       </div>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -85,7 +83,7 @@ function onCountryChange(v: string): void {
         <div class="min-w-0">
           <label class="auth-label">Страна проживания</label>
           <Select v-model="f.country.value" :options="[...RESIDENCE_COUNTRIES]" optionLabel="name" optionValue="name" placeholder="Беларусь" checkmark editable fluid class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.country" @update:model-value="onCountryChange" />
-          <small class="text-stone-500 dark:text-zinc-400">Пины можно создавать только в своей стране</small>
+          <small v-if="reg.isMapEnabled.value" class="text-stone-500 dark:text-zinc-400">Пины можно создавать только в своей стране</small>
           <small v-if="f.countryWarning.value" class="block text-amber-600 dark:text-amber-400"><i class="pi pi-exclamation-triangle mr-1" />{{ f.countryWarning.value }}</small>
           <small class="auth-err">{{ f.errors.value.country }}</small>
         </div>
@@ -110,16 +108,16 @@ function onCountryChange(v: string): void {
       </div>
       <div class="rounded-2xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/60 p-3.5 space-y-2.5">
         <div class="flex items-center justify-between gap-2">
-          <span class="text-[13px] font-semibold text-ink-900 dark:text-zinc-100">Моё место на карте</span>
+          <span class="text-[13px] font-semibold text-ink-900 dark:text-zinc-100">{{ reg.locationTitle.value }}</span>
           <span class="text-[11px] font-bold text-stone-500 dark:text-zinc-400">необязательно</span>
         </div>
-        <p class="text-[11px] leading-relaxed text-stone-500 dark:text-zinc-400">Нажми — карта и твоя точка настроится сразу. Пропустишь — откроем страну и город из профиля, а точную точку покажешь позже кнопкой геолокации на карте.</p>
+        <p class="text-[11px] leading-relaxed text-stone-500 dark:text-zinc-400">{{ reg.locationHint.value }}</p>
         <Button type="button" :loading="f.locating.value" severity="secondary" outlined rounded class="w-full" :label="f.values.home_lat ? 'Обновить моё место' : 'Определить моё место'" icon="pi pi-map-marker" @click="f.detectLocation" />
         <div v-if="f.values.home_address || f.addrLoading.value" class="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2.5 flex items-center gap-2">
           <span class="w-7 h-7 rounded-full bg-ink-900 dark:bg-white text-white dark:text-ink-900 grid place-items-center shrink-0 text-[11px]">◉</span>
           <div class="min-w-0 flex-1">
-            <div class="text-xs font-semibold truncate dark:text-zinc-100">{{ f.addrLoading.value ? 'Определяем район…' : f.values.home_address }}</div>
-            <div v-if="f.values.home_lat" class="text-[11px] text-stone-400 dark:text-zinc-400 font-mono">{{ f.values.home_lat }}, {{ f.values.home_lng }}</div>
+            <div class="text-xs font-semibold truncate dark:text-zinc-100">{{ f.addrLoading.value ? reg.addressLoadingText.value : f.values.home_address }}</div>
+            <div v-if="f.values.home_lat && reg.isMapEnabled.value" class="text-[11px] text-stone-400 dark:text-zinc-400 font-mono">{{ f.values.home_lat }}, {{ f.values.home_lng }}</div>
           </div>
           <button v-if="f.values.home_lat && !f.addrLoading.value" type="button" class="shrink-0 w-7 h-7 rounded-full hover:bg-stone-100 dark:hover:bg-white/10 grid place-items-center text-stone-400 dark:text-zinc-400" title="Убрать точку" @click="f.clearLocation"><i class="pi pi-times text-[11px]"></i></button>
         </div>

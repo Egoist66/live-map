@@ -15,7 +15,14 @@ class UpdateLastSeen
             \Illuminate\Support\Facades\Auth::guard('web')->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
-            abort(403, 'Аккаунт заблокирован. Обратитесь к администратору.');
+
+            if ($request->expectsJson() && ! $request->header('X-Inertia')) {
+                abort(403, 'Аккаунт заблокирован. Обратитесь к администратору.');
+            }
+
+            // Никакой страницы «Сюда нельзя»: режем на этапе входа —
+            // форма покажет модалку «Доступ запрещён» по ?banned=1.
+            return redirect('/login?banned=1');
         }
         if ($user && self::deviceBlocked($request, (int) $user->id)) {
             \Illuminate\Support\Facades\Auth::guard('web')->logout();

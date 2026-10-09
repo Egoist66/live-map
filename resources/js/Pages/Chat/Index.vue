@@ -31,7 +31,11 @@ const DistrictInviteDialog = defineAsyncComponent(
 const MessageForwardDialog = defineAsyncComponent(
   () => import("@/Components/Features/Chat/MessageForwardDialog.vue")
 );
+const ReportDialog = defineAsyncComponent(
+  () => import("@/Components/Features/Map/ReportDialog.vue")
+);
 import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
+import { useReportDialog } from "@/composables/useReportDialog";
 import { useChatOnline } from "@/composables/useChatOnline";
 import { useChatPage } from "@/composables/useChatPage";
 import { useChatFilters } from "@/composables/useChatFilters";
@@ -56,6 +60,7 @@ const toast = (() => {
   }
 })();
 const districtInvite = useDistrictInvite();
+const reportDialog = useReportDialog();
 
 /**
  * Открыть приглашение в район из чата (только владелец).
@@ -485,6 +490,7 @@ onMounted(async () => {
         @auto-reply="autoReplyOpen = true"
         @delete-chat="() => askDeleteChat()"
         @block="activeConv?.other && askBlock(activeConv.other.id, activeConv.other.name)"
+        @report="activeConv?.other && reportDialog.openReport('user', activeConv.other.id, activeConv.other.name ?? '')"
         @toggle-emoji="toggleEmoji"
         @emoji-close="emoji.close()"
         @pick-emoji="onPickEmoji"
@@ -533,6 +539,7 @@ onMounted(async () => {
         :profile-url="peerProfileUrl"
         :variant="peerTone"
         @block="activeConv?.other && askBlock(activeConv.other.id, activeConv.other.name)"
+        @report="activeConv?.other && reportDialog.openReport('user', activeConv.other.id, activeConv.other.name ?? '')"
       />
     </div>
   </div>
@@ -600,10 +607,12 @@ onMounted(async () => {
     @delete-chat="(id?: number) => askDeleteChat(id)"
     @toggle-chat-pin="(id: number, pinned: boolean) => { closeSheet(); toggleChatPin(id, pinned) }"
     @block="askBlock"
+    @report="(id: number, name?: string) => { closeSheet(); reportDialog.openReport('user', id, name ?? '') }"
     @unblock="askUnblock"
     @remove-friend="askRemoveFriend"
     @accept="(id: number) => { closeSheet(); friendsApi.accept(id) }"
     @decline="(id: number) => { friendsApi.decline(id); closeSheet() }"
     @add="(id: number) => { closeSheet(); friendsApi.add(id) }"
   />
+  <ReportDialog :dialog="reportDialog" />
 </template>

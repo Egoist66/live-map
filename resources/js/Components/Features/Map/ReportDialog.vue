@@ -47,7 +47,7 @@ const { selectPt } = useDropdownMenuStyle()
         <div class="text-[11px] text-stone-400 text-right mt-0.5">{{ dialog.description.value.length }}/1000</div>
       </div>
       <Message severity="info" :closable="false" class="!rounded-2xl !text-xs">
-        Жалоба уйдёт модераторам. После 3 жалоб пин автоматически скрывается до проверки.
+        {{ dialog.targetType.value === 'user' ? 'Жалоба уйдёт модераторам и снизит репутацию человека.' : 'Жалоба уйдёт модераторам. После 3 жалоб пин автоматически скрывается до проверки.' }}
       </Message>
     </div>
     <template #footer>

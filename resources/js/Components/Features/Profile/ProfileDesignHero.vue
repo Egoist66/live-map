@@ -3,6 +3,9 @@ import { Link } from '@inertiajs/vue3'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
 import OnlineDot from '@/Components/Features/Feedback/OnlineDot.vue'
+import { useActivitySystem } from '@/composables/useActivitySystem'
+
+const activity = useActivitySystem()
 
 defineProps<{
   user: any
@@ -81,8 +84,8 @@ const emit = defineEmits<{
           />
         </p>
         <div class="mt-2 flex flex-wrap items-center gap-1 min-[411px]:gap-1.5">
-          <span class="rounded-full border border-stone-200 bg-stone-100 px-2.5 min-[411px]:px-3 py-1 text-[11px] min-[411px]:text-xs font-semibold text-stone-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 max-w-full truncate">{{ levelName }}</span>
-          <span class="rounded-full border border-stone-200 bg-stone-100 px-2.5 min-[411px]:px-3 py-1 text-[11px] min-[411px]:text-xs font-semibold text-stone-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 max-w-full truncate">{{ reputationText }} ★</span>
+          <span v-if="activity.isReleased.value" class="rounded-full border border-stone-200 bg-stone-100 px-2.5 min-[411px]:px-3 py-1 text-[11px] min-[411px]:text-xs font-semibold text-stone-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 max-w-full truncate">{{ levelName }}</span>
+          <span v-if="activity.isReleased.value" class="rounded-full border border-stone-200 bg-stone-100 px-2.5 min-[411px]:px-3 py-1 text-[11px] min-[411px]:text-xs font-semibold text-stone-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 max-w-full truncate">{{ reputationText }} ★</span>
           <span class="rounded-full border border-stone-200 bg-stone-100 px-2.5 min-[411px]:px-3 py-1 text-[11px] min-[411px]:text-xs font-semibold text-stone-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 max-w-full truncate">{{ planName }}</span>
         </div>
         <p class="mt-1.5 text-xs font-semibold" :class="online ? 'text-emerald-600 dark:text-emerald-400' : 'text-stone-500 dark:text-zinc-400'">{{ presenceText }}</p>

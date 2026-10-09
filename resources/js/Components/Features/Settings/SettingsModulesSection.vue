@@ -8,19 +8,11 @@ const m = useAppModulesSettings()
 
 <template>
   <div class="rounded-2xl border border-stone-200/70 dark:border-zinc-800 px-4 py-3">
-    <div class="flex items-center gap-3">
-      <i class="pi pi-th-large text-lg text-fuchsia-500 shrink-0" />
-      <div class="flex-1 text-sm min-w-0">
-        <p class="font-semibold dark:text-white">Разделы приложения</p>
-        <p class="text-xs opacity-60">Что видно в меню. ULove — базовый раздел, он включён всегда.</p>
-      </div>
+    <div v-if="m.legacy.value && m.hasExtras.value" class="rounded-xl bg-stone-100 dark:bg-zinc-800 px-3 py-2 text-xs text-stone-600 dark:text-zinc-300">
+      Включено всё. Выключи лишнее.
     </div>
 
-    <div v-if="m.legacy.value && m.hasExtras.value" class="mt-3 rounded-xl bg-stone-100 dark:bg-zinc-800 px-3 py-2 text-xs text-stone-600 dark:text-zinc-300">
-      Включено всё, как раньше. Выключи лишнее — останешься в своём разделе без шума.
-    </div>
-
-    <div class="mt-3 space-y-2">
+    <div class="space-y-2">
       <div
         v-for="row in m.rows.value"
         :key="row.id"
@@ -29,7 +21,7 @@ const m = useAppModulesSettings()
         <i :class="[row.icon, 'text-base text-stone-500 dark:text-zinc-400 shrink-0']" />
         <div class="flex-1 text-sm min-w-0">
           <p class="font-semibold dark:text-white">{{ row.label }}<span v-if="row.locked" class="ml-1.5 text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-300">всегда вкл</span></p>
-          <p class="text-xs opacity-60 truncate">{{ row.locked ? 'Базовый раздел: знакомства, мэтчи, чаты' : row.desc }}</p>
+          <p class="text-xs opacity-60 truncate">{{ row.desc }}</p>
         </div>
         <i v-if="m.busy.value[row.id]" class="pi pi-spin pi-spinner text-sm text-stone-400 dark:text-zinc-500 shrink-0" />
         <button
@@ -54,7 +46,7 @@ const m = useAppModulesSettings()
       </div>
     </div>
 
-    <p class="text-xs text-stone-500 dark:text-zinc-400 mt-2 leading-relaxed">★ — раздел после входа. Включение докачивает его сразу, выключение перезагружает приложение начисто.</p>
+    <p class="text-xs text-stone-500 dark:text-zinc-400 mt-2">★ — старт после входа.</p>
     <Message v-if="m.error.value" severity="error" :closable="false" class="mt-2">{{ m.error.value }}</Message>
   </div>
 </template>

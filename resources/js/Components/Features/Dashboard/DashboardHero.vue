@@ -6,8 +6,10 @@ import Button from 'primevue/button'
 import { computed } from 'vue'
 import { planOf } from '@/composables/usePlanLimits'
 import { useUserRole } from '@/composables/useUserRole'
+import { useActivitySystem } from '@/composables/useActivitySystem'
 
 const { roleTag } = useUserRole()
+const activity = useActivitySystem()
 
 const props = defineProps<{ user: any; avatarSrc: string; levelLabel: any; levelColor: any; planLabel: any; planColor: any; sharing: boolean }>()
 
@@ -30,8 +32,8 @@ const emit = defineEmits<{ (e: 'avatar'): void; (e: 'map'): void; (e: 'chat'): v
             </div>
             <p class="text-white/60 text-sm mt-2 truncate break-all">{{ user.email }}</p>
             <p class="text-white/40 text-xs mt-1.5 flex flex-wrap items-center gap-2">
-              <Tag :value="levelLabel[user.level] || user.level || 'Новичок'" class="!rounded-full !text-xs !font-bold !border" :class="levelColor[user.level || 'novice']" />
-              <span class="opacity-80 shrink-0">· {{ user.reputation_score || 0 }} ★</span>
+              <Tag v-if="activity.isReleased.value" :value="levelLabel[user.level] || user.level || 'Новичок'" class="!rounded-full !text-xs !font-bold !border" :class="levelColor[user.level || 'novice']" />
+              <span v-if="activity.isReleased.value" class="opacity-80 shrink-0">· {{ user.reputation_score || 0 }} ★</span>
               <Tag :value="planLabel[planOf(user)] || planOf(user)" class="!rounded-full !text-xs !font-bold !border" :class="planColor[planOf(user) || 'free']" />
             </p>
             <div class="mt-4 flex flex-wrap gap-2 max-sm:gap-1.5">

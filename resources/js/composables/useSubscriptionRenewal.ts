@@ -52,7 +52,7 @@ export function useSubscriptionRenewal() {
     const plan = status.value?.plan
     if (plan === 'business') return '$19.99 / мес'
     if (plan === 'premium') return '$9.99 / мес'
-    return '$4.99 / мес'
+    return '$5.99 / мес'
   })
 
   const expiryLabel = computed(() => {

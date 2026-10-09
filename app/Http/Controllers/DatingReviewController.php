@@ -60,7 +60,11 @@ class DatingReviewController extends Controller
     }
 
     /**
-     * Создать или обновить свой отзыв.
+     * Создать отзыв или поправить текст своего.
+     *
+     * Звёзды ставятся один раз: у кого отзыв уже есть, тот меняет
+     * только текст (rating можно не слать), новую оценку поверх
+     * примут лишь от админа. Удаление — тоже только админам.
      *
      * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\JsonResponse
@@ -69,7 +73,7 @@ class DatingReviewController extends Controller
     {
         $data = $request->validate([
             'user_id' => ['required', 'integer', 'exists:users,id'],
-            'rating' => ['required', 'integer', 'min:1', 'max:5'],
+            'rating' => ['nullable', 'integer', 'min:1', 'max:5'],
             'body' => ['nullable', 'string', 'max:'.DatingReviewService::BODY_LIMIT],
         ]);
 
@@ -78,9 +82,16 @@ class DatingReviewController extends Controller
 
         app(DatingService::class)->assertAdult($me);
 
-        $review = $this->reviews->upsert($me, $target, (int) $data['rating'], $data['body'] ?? null);
+        $review = $this->reviews->upsert($me, $target, isset($data['rating']) ? (int) $data['rating'] : null, $data['body'] ?? null);
 
         if ($review->wasRecentlyCreated) {
+            if ((int) $review->rating <= 2) {
+                try {
+                    \App\Services\TrustScoreService::penalizeBadReview($target);
+                } catch (\Throwable) {
+                }
+            }
+
             try {
                 \App\Services\UserNotifier::send($target, new \App\Notifications\DatingReviewedNotification($me, (int) $target->id, $review));
             } catch (\Throwable) {
@@ -108,7 +119,8 @@ class DatingReviewController extends Controller
     }
 
     /**
-     * Удалить свой отзыв.
+     * Удалить свой отзыв. Только админам: иначе заморозку звёзд
+     * обходили бы удалением и новой оценкой.
      *
      * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\JsonResponse

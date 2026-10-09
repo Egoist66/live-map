@@ -219,6 +219,11 @@ class QuestService
 
         $fresh = $user->fresh();
 
+        try {
+            \App\Services\TrustScoreService::restoreOnPaidPlan($fresh);
+        } catch (\Throwable) {
+        }
+
         return [
             'ok' => true,
             'track' => $track,

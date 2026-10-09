@@ -42,8 +42,7 @@ const appTabs = useSettingsAppTabs()
           <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-6' }, content: { class: '!p-0' } }">
             <template #content>
               <h3 class="font-black tracking-tight text-lg dark:text-white">Разделы приложения</h3>
-              <p class="text-sm text-stone-500 mt-1">Что видно в меню и какой раздел стартовый.</p>
-              <div class="mt-5 max-w-xl">
+              <div class="mt-4 max-w-xl">
                 <SettingsModulesSection />
               </div>
             </template>

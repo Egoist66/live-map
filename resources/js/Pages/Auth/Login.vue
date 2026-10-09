@@ -4,11 +4,13 @@ import { Head, Link } from '@inertiajs/vue3'
 import { useLoginForm } from '@/composables/useAuthForm'
 import { useAuthMode, tabClass } from '@/composables/useAuthMode'
 import { useAuthTheme } from '@/composables/useAuthTheme'
+import { useBannedNotice } from '@/composables/useBannedNotice'
 import { useTelegram } from '@/composables/useTelegram'
 import { useTelegramAuth } from '@/composables/useTelegramAuth'
 import RegisterForm from '@/Components/Auth/RegisterForm.vue'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
+import Dialog from 'primevue/dialog'
 import Message from 'primevue/message'
 import ProgressSpinner from 'primevue/progressspinner'
 
@@ -26,6 +28,8 @@ const t = useAuthTheme()
 // вся логика — в useTelegramAuth (Правило №1).
 const { isTelegram } = useTelegram()
 const { status: tgStatus, errorMessage: tgError, retryTelegramAuth } = useTelegramAuth()
+
+const banned = useBannedNotice(() => [errors.value.email, tgError.value])
 
 const pageTitle = computed(() => (isLogin.value ? 'Вход — ULove' : 'Регистрация — ULove'))
 </script>
@@ -74,4 +78,15 @@ const pageTitle = computed(() => (isLogin.value ? 'Вход — ULove' : 'Рег
       </form>
     </div>
     <RegisterForm v-else :key="mode" @switch-login="showLogin" />
+    <Dialog :visible="banned.bannedVisible.value" @update:visible="(v:boolean)=>{ if(!v) banned.closeBanned() }" modal :draggable="false" header="Доступ запрещён" :style="{ width: '380px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-3xl dark:!bg-zinc-900 dark:!border-zinc-700' }, header: { class: 'dark:!bg-zinc-900 dark:!text-white' }, content: { class: 'dark:!bg-zinc-900 dark:!text-zinc-100' } }">
+      <div class="text-center py-2">
+        <div class="mx-auto w-14 h-14 rounded-2xl bg-red-500/10 text-red-500 grid place-items-center"><i class="pi pi-ban text-xl" /></div>
+        <div class="mt-3 text-lg font-black text-stone-900 dark:text-white">Аккаунт заблокирован</div>
+        <p class="mt-1 text-sm text-stone-500 dark:text-zinc-400">Вход закрыт. Если кажется, что это ошибка — напиши нам.</p>
+        <div class="mt-4 flex gap-2 justify-center flex-wrap">
+          <Button label="Понятно" severity="secondary" rounded outlined @click="banned.closeBanned()" />
+          <Link href="/contacts"><Button label="Написать нам" icon="pi pi-send" rounded class="!bg-gradient-to-r !from-rose-500 !to-orange-400 !border-0 !text-white" /></Link>
+        </div>
+      </div>
+    </Dialog>
 </template>
