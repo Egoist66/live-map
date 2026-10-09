@@ -67,7 +67,7 @@ class TelegramNotifier
      * Можно ли писать пользователю в Telegram.
      *
      * @param User $recipient получатель
-     * @param string $kind messages|likes|matches|comments|news (тумблер в настройках)
+     * @param string $kind messages|likes|matches|comments|news|invites|reviews (тумблер в настройках)
      * @return bool true когда привязан id, мастер и тумблер включены, нет 403
      */
     public static function canNotify(User $recipient, string $kind): bool
@@ -102,6 +102,8 @@ class TelegramNotifier
             'matches' => 'telegram_notify_matches',
             'comments' => 'telegram_notify_comments',
             'news' => 'telegram_notify_news',
+            'invites' => 'telegram_notify_invites',
+            'reviews' => 'telegram_notify_reviews',
             default => null,
         };
 
@@ -1200,6 +1202,61 @@ class TelegramNotifier
     }
 
     /**
+     * Короткий дубль inbox-события без своего метода (инвайты, заявки,
+     * вердикты, закрытие SOS-чата).
+     *
+     * Гейты те же, что у остальных писем: мастер-тумблер, привязка,
+     * 403-блок, тумблер $kind, только отошедшему (isAway), дедуп
+     * события сутки. Плюс модульный гейт, когда у типа есть раздел:
+     * без него получателю не шлём (см. NotificationModuleGate).
+     *
+     * @param User $recipient получатель
+     * @param string $kind invites|messages|news|reviews (тумблер в настройках)
+     * @param string $text готовый текст в HTML-разметке (с эмодзи и ULove)
+     * @param string|null $path путь в Mini App для кнопки
+     * @param string|null $buttonLabel подпись кнопки
+     * @param string $dedupKey уникальный ключ дедупа события
+     * @param string|null $moduleType тип inbox-строки для модульного гейта (null — базовое)
+     * @return void
+     */
+    public static function eventPing(User $recipient, string $kind, string $text, ?string $path, ?string $buttonLabel, string $dedupKey, ?string $moduleType = null): void
+    {
+        $recipient = self::resolveRecipient($recipient);
+
+        if ($recipient === null) {
+            return;
+        }
+
+        if (! self::canNotify($recipient, $kind)) {
+            return;
+        }
+
+        if ($moduleType !== null && ! NotificationModuleGate::allows($recipient, $moduleType)) {
+            self::logSkip($recipient, $kind, 'module-off');
+
+            return;
+        }
+
+        if (! $recipient->isAway()) {
+            self::logSkip($recipient, $kind, 'online');
+
+            return;
+        }
+
+        $key = 'tg:event:'.$dedupKey;
+
+        if (Cache::has($key)) {
+            self::logSkip($recipient, $kind, 'duplicate');
+
+            return;
+        }
+
+        Cache::put($key, true, self::DEDUP_TTL_SECONDS);
+
+        self::send($recipient, $text, $path, $buttonLabel);
+    }
+
+    /**
      * Записать причину пропуска уведомления (диагностика «не пришло»).
      *
      * Уровень info: пропуски видны в прод-логах по умолчанию, без
@@ -1208,7 +1265,7 @@ class TelegramNotifier
      * toggle-off/online/cooldown/duplicate).
      *
      * @param User $recipient получатель
-     * @param string $kind messages|likes|matches|comments|news
+     * @param string $kind messages|likes|matches|comments|news|invites|reviews
      * @param string $reason unlinked|blocked|toggle-off|online|duplicate
      * @return void
      */

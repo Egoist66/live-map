@@ -159,6 +159,19 @@ class FriendshipController extends Controller
         $requester = User::find($friendship->requester_id);
         if ($requester) {
             \App\Services\UserNotifier::send($requester, new \App\Notifications\FriendAcceptedNotification($friendship));
+            try {
+                $me = $request->user();
+                $meName = trim((string) ($me->name ?? ''));
+                \App\Services\TelegramNotifier::eventPing(
+                    $requester,
+                    'invites',
+                    '🎉 💘 <b>ULove</b> • <b>'.e($meName !== '' ? $meName : 'Собеседник').'</b> принял(а) заявку в друзья',
+                    '/users/'.$me->profileIdentifier(),
+                    'Смотреть анкету',
+                    'friend-accepted:'.(int) $friendship->id,
+                    null
+                );
+            } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('friend accepted tg failed: '.$e->getMessage()); }
         }
         return response()->json($friendship);
     }
@@ -217,6 +230,19 @@ class FriendshipController extends Controller
             $addressee = User::find($friendship->addressee_id);
             if ($addressee) {
                 \App\Services\UserNotifier::send($addressee, new \App\Notifications\FriendRequestedNotification($friendship));
+            }
+            $requester = User::find($friendship->requester_id);
+            if ($addressee && $requester) {
+                $requesterName = trim((string) ($requester->name ?? ''));
+                \App\Services\TelegramNotifier::eventPing(
+                    $addressee,
+                    'invites',
+                    '🤝 💘 <b>ULove</b> • <b>'.e($requesterName !== '' ? $requesterName : 'Собеседник').'</b> хочет дружить',
+                    '/users/'.$requester->profileIdentifier(),
+                    'Смотреть анкету',
+                    'friend-requested:'.(int) $friendship->id,
+                    null
+                );
             }
         } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('friend notify failed: '.$e->getMessage()); }
     }

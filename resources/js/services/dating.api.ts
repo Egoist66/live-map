@@ -30,6 +30,28 @@ export interface SwipeCard {
   is_superlike?: boolean
   /** У кандидата активен буст — летит первым в лентах. */
   is_boosted?: boolean
+  /** Средний рейтинг отзывов; null — нет отзывов или рейтинг скрыт. */
+  rating_avg?: number | null
+  /** Число отзывов (0 у скрытого и без отзывов). */
+  rating_count?: number
+  /** Рейтинг скрыт владельцем (PRO+) — звёзды не показываем. */
+  rating_hidden?: boolean
+}
+
+/** Один отзыв о пользователе знакомств. */
+export interface DatingReviewItem {
+  id: number
+  rating: number
+  body: string | null
+  created_at: string | null
+  author: { id: number; name: string; avatar_url: string | null; profile_slug: string | null } | null
+}
+
+/** Сводка рейтинга: среднее, число, скрыт ли. */
+export interface DatingRatingSummary {
+  avg: number | null
+  count: number
+  hidden: boolean
 }
 
 /** Фильтры ленты знакомств. */
@@ -168,5 +190,38 @@ export const datingApi = {
   async resetHistory() {
     const { data } = await api.post('/api/swipes/reset-history')
     return data as { ok: boolean; deleted: number; quota?: SwipeQuota }
+  },
+  /**
+   * Отзывы о человеке: сводка, право оценить, мой отзыв и список.
+   * @param userId о ком отзывы
+   * @param page страница списка
+   */
+  async reviews(userId: number, page = 1) {
+    const { data } = await api.get('/api/dating/reviews', { params: { user_id: userId, page } })
+    return data as {
+      summary: DatingRatingSummary
+      can_review: boolean
+      my_review: DatingReviewItem | null
+      reviews: DatingReviewItem[]
+      meta: { current_page: number; last_page: number; has_more: boolean; total: number }
+    }
+  },
+  /**
+   * Оставить или обновить свой отзыв (1–5 звёзд, текст до 280).
+   * @param userId о ком отзыв
+   * @param rating звёзды
+   * @param body текст или null
+   */
+  async saveReview(userId: number, rating: number, body: string | null) {
+    const { data } = await api.post('/api/dating/reviews', { user_id: userId, rating, body })
+    return data as { review: DatingReviewItem; summary: DatingRatingSummary }
+  },
+  /**
+   * Удалить свой отзыв.
+   * @param userId о ком был отзыв
+   */
+  async deleteReview(userId: number) {
+    const { data } = await api.delete('/api/dating/reviews', { params: { user_id: userId } })
+    return data as { ok: boolean; deleted: boolean }
   },
 }

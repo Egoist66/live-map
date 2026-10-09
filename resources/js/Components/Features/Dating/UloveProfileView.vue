@@ -9,6 +9,9 @@ import { useUloveProfile } from '@/composables/useUloveProfile'
 import { useUloveOnlineBadge } from '@/composables/useUloveOnlineBadge'
 import { useProfileVisibility } from '@/composables/useProfileVisibility'
 import { useSwipeCardPhotos } from '@/composables/useSwipeCardPhotos'
+import DatingRatingStars from '@/Components/Features/Dating/DatingRatingStars.vue'
+import DatingFriendButton from '@/Components/Features/Dating/DatingFriendButton.vue'
+import DatingReviewsSection from '@/Components/Features/Dating/DatingReviewsSection.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -21,8 +24,10 @@ const props = withDefaults(
     canMessage?: boolean
     canMessageReason?: string | null
     gallery?: any
+    /** Сводка рейтинга с бэка (профиль и лента отдают готовую) */
+    rating?: { avg: number | null; count: number; hidden: boolean } | null
   }>(),
-  { avatar: null, online: false, lastSeenText: null, canMessage: false, canMessageReason: null, gallery: null },
+  { avatar: null, online: false, lastSeenText: null, canMessage: false, canMessageReason: null, gallery: null, rating: null },
 )
 
 const emit = defineEmits<{ (e: 'edit'): void; (e: 'message'): void; (e: 'photos'): void; (e: 'add-photos'): void }>()
@@ -318,6 +323,9 @@ const activePrivacyFlags = computed(() => {
           <span v-if="p.age.value" class="shrink-0 text-[22px] font-light leading-none">{{ p.age.value }}</span>
         </div>
         <div v-if="p.goal.value" class="mt-1.5 truncate text-[15px] text-white/95">💘 {{ p.goal.value }}</div>
+        <div v-if="rating && !rating.hidden && (rating.count ?? 0) > 0" class="mt-1.5 flex items-center">
+          <DatingRatingStars :avg="rating.avg" :count="rating.count" size="sm" />
+        </div>
       </div>
     </div>
     </div>
@@ -458,6 +466,18 @@ const activePrivacyFlags = computed(() => {
           :title="canMessageReason ?? undefined"
           class="flex-1 !py-3"
           @click="emit('message')"
+        />
+      </div>
+      <div v-if="!isOwn && profileUser?.id != null" class="flex">
+        <DatingFriendButton :user-id="Number(profileUser.id)" class="flex-1 [&>button]:w-full" />
+      </div>
+      <div v-if="profileUser?.id != null" class="rounded-2xl bg-white p-4 shadow-soft dark:bg-zinc-900">
+        <DatingReviewsSection
+          :user-id="Number(profileUser.id)"
+          :seed-avg="rating?.avg ?? null"
+          :seed-count="rating?.count ?? 0"
+          :seed-hidden="rating?.hidden ?? false"
+          :is-own="isOwn"
         />
       </div>
       <Link

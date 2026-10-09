@@ -37,7 +37,9 @@ export function useUloveOnly() {
       !isBusiness.value &&
       modules.isEnabled('ulove') &&
       !modules.isEnabled('upin') &&
-      !modules.isEnabled('uflow'),
+      !modules.isEnabled('uflow') &&
+      !modules.isEnabled('districts') &&
+      !modules.isEnabled('business'),
   )
 
   return uloveOnly

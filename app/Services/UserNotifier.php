@@ -22,9 +22,21 @@ class UserNotifier
 {
     /**
      * Отправить уведомление пользователю (идемпотентно).
+     *
+     * Модульный гейт: типы чужих разделов (пины, лента, районы)
+     * получателю без этого раздела не создаются вообще —
+     * ни строки, ни realtime, ни пуша. См. NotificationModuleGate.
      */
     public static function send(User $user, UserNotification $notification): ?DatabaseNotification
     {
+        try {
+            if (! NotificationModuleGate::allows($user, $notification->type())) {
+                return null;
+            }
+        } catch (\Throwable) {
+            return null;
+        }
+
         try {
             $type = $notification->type();
             $key = $notification->dedupeKey();

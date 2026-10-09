@@ -18,6 +18,7 @@ use App\Notifications\DistrictRequestRejectedNotification;
 use App\Services\ContentModeration;
 use App\Services\DistrictService;
 use App\Services\ImageOptimizer;
+use App\Services\TelegramNotifier;
 use App\Services\UserNotifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -402,6 +403,19 @@ class DistrictController extends Controller
         $owner = $district->owner;
         if ($owner) {
             UserNotifier::send($owner, new DistrictJoinRequestedNotification($district, $user, $message));
+            try {
+                $userName = trim((string) ($user->name ?? ''));
+                TelegramNotifier::eventPing(
+                    $owner,
+                    'invites',
+                    '📩 💘 <b>ULove</b> • <b>'.e($userName !== '' ? $userName : 'Собеседник').'</b> просится в район «'.e(mb_substr((string) $district->name, 0, 60)).'»',
+                    '/districts/'.(int) $district->id,
+                    'Заявки района',
+                    'district-join:'.(int) $district->id.':'.(int) $user->id,
+                    'district.join_requested'
+                );
+            } catch (\Throwable) {
+            }
         }
         $district->load('owner:id,name,avatar_path');
         broadcast(new DistrictUpdated($district))->toOthers();
@@ -457,6 +471,19 @@ class DistrictController extends Controller
         }
 
         UserNotifier::send($invitee, new DistrictInvitedNotification($district->fresh(), $inviter));
+        try {
+            $inviterName = trim((string) ($inviter->name ?? ''));
+            TelegramNotifier::eventPing(
+                $invitee,
+                'invites',
+                '🏘️ 💘 <b>ULove</b> • <b>'.e($inviterName !== '' ? $inviterName : 'Собеседник').'</b> приглашает в район «'.e(mb_substr((string) $district->name, 0, 60)).'»',
+                '/districts/'.(int) $district->id,
+                'Смотреть район',
+                'district-invite:'.(int) $district->id.':'.$inviteeId,
+                'district.invited'
+            );
+        } catch (\Throwable) {
+        }
 
         $district->load('owner:id,name,avatar_path');
         broadcast(new DistrictUpdated($district))->toOthers();
@@ -491,6 +518,19 @@ class DistrictController extends Controller
         $owner = $district->owner;
         if ($owner && (int) $owner->id !== (int) $user->id) {
             UserNotifier::send($owner, new DistrictInviteAcceptedNotification($district->fresh(), $user));
+            try {
+                $userName = trim((string) ($user->name ?? ''));
+                TelegramNotifier::eventPing(
+                    $owner,
+                    'invites',
+                    '✅ 💘 <b>ULove</b> • <b>'.e($userName !== '' ? $userName : 'Новый житель').'</b> вступил(а) в район «'.e(mb_substr((string) $district->name, 0, 60)).'»',
+                    '/districts/'.(int) $district->id,
+                    'Открыть район',
+                    'district-accepted:'.(int) $district->id.':'.(int) $user->id,
+                    'district.invite_accepted'
+                );
+            } catch (\Throwable) {
+            }
         }
 
         $district->load('owner:id,name,avatar_path');
@@ -609,6 +649,18 @@ class DistrictController extends Controller
 
         try {
             UserNotifier::send($user, new DistrictRequestRejectedNotification($district->fresh()));
+        } catch (\Throwable) {
+        }
+        try {
+            TelegramNotifier::eventPing(
+                $user,
+                'invites',
+                '❌ 💘 <b>ULove</b> • Заявка в район «'.e(mb_substr((string) $district->name, 0, 60)).'» отклонена — можно написать владельцу',
+                '/districts/'.(int) $district->id,
+                'Смотреть район',
+                'district-rejected:'.(int) $district->id.':'.(int) $user->id,
+                'district.request_rejected'
+            );
         } catch (\Throwable) {
         }
 

@@ -312,6 +312,7 @@ class SwipeController extends Controller
             'dating_hide_name' => 'sometimes|boolean',
             'dating_hide_age' => 'sometimes|boolean',
             'dating_hide_distance' => 'sometimes|boolean',
+            'dating_hide_rating' => 'sometimes|boolean',
             'dating_match_only' => 'sometimes|boolean',
         ]);
 
@@ -338,7 +339,7 @@ class SwipeController extends Controller
             ...($data['dating_interests'] ?? [])
         );
 
-        $hideKeys = ['dating_hide_name', 'dating_hide_age', 'dating_hide_distance'];
+        $hideKeys = ['dating_hide_name', 'dating_hide_age', 'dating_hide_distance', 'dating_hide_rating'];
 
         $enablingHide = false;
 
@@ -349,9 +350,9 @@ class SwipeController extends Controller
             }
         }
 
-        if ($enablingHide && ! $me->isPro()) {
+        if ($enablingHide && ! $me->canHideRating()) {
             return response()->json([
-                'message' => 'Скрытие имени и возраста — PRO-функция. Заполните профиль и оформите PRO.',
+                'message' => 'Скрытие имени, возраста и рейтинга — PRO-функция. Заполните профиль и оформите PRO.',
             ], 402);
         }
 
@@ -367,6 +368,7 @@ class SwipeController extends Controller
             'dating_hide_name',
             'dating_hide_age',
             'dating_hide_distance',
+            'dating_hide_rating',
             'dating_match_only',
         ]));
     }

@@ -653,6 +653,8 @@ class DatingService
 
         $likedMe = SwipeAction::where('liked_id', $me->id)->where('action', 'like')->pluck('liker_id')->map(fn ($id) => (int) $id)->flip();
 
+        $ratings = app(DatingReviewService::class)->summariesFor($ids, $me);
+
         $cards = [];
 
         foreach ($ids as $id) {
@@ -662,7 +664,7 @@ class DatingService
                 continue;
             }
 
-            $cards[] = $this->cardFor($candidate, $me, $this->distanceKm($me, $candidate), false, isset($likedMe[$id]));
+            $cards[] = $this->cardFor($candidate, $me, $this->distanceKm($me, $candidate), false, isset($likedMe[$id]), $ratings[$id] ?? null);
         }
 
         return [
@@ -701,6 +703,8 @@ class DatingService
 
         $this->attachPhotos($users->values());
 
+        $ratings = app(DatingReviewService::class)->summariesFor($likerIds, $me);
+
         $cards = [];
         $incognitoCount = 0;
 
@@ -715,7 +719,7 @@ class DatingService
                 $incognitoCount++;
             }
             $distance = $this->distanceKm($me, $candidate);
-            $card = $this->cardFor($candidate, $me, $distance, $isMatch, true);
+            $card = $this->cardFor($candidate, $me, $distance, $isMatch, true, $ratings[(int) $candidate->id] ?? null);
             $card['is_incognito'] = $isIncognito;
             $card['is_superlike'] = (bool) ($row->is_superlike ?? false);
             $card['created_at'] = $row->created_at?->toISOString();
@@ -735,6 +739,9 @@ class DatingService
                 $card['custom_goal'] = null;
                 $card['interests'] = [];
                 $card['last_seen_at'] = null;
+                $card['rating_avg'] = null;
+                $card['rating_count'] = 0;
+                $card['rating_hidden'] = true;
             }
             $cards[] = $card;
         }
@@ -1844,6 +1851,9 @@ class DatingService
 
         $this->attachPhotos($topCandidates);
 
+        $topIds = $topCandidates->map(fn ($candidate) => (int) $candidate->id)->all();
+        $ratings = app(DatingReviewService::class)->summariesFor($topIds, $me);
+
         $cards = [];
 
         foreach ($top as $row) {
@@ -1851,7 +1861,7 @@ class DatingService
 
             $likedMe = isset($likedMeSuper[$candidate->id]);
 
-            $card = $this->cardFor($candidate, $me, $row['distance'], $row['isMatch'], $likedMe);
+            $card = $this->cardFor($candidate, $me, $row['distance'], $row['isMatch'], $likedMe, $ratings[(int) $candidate->id] ?? null);
 
             $card['is_superlike'] = $likedMe && ($likedMeSuper[$candidate->id] ?? false);
             $card['is_boosted'] = $this->isBoostActive($candidate);
@@ -2092,12 +2102,15 @@ class DatingService
         $matchedIds = $this->matchedIds($me);
         $matchedFlip = array_flip($matchedIds);
 
+        $onlineIds = $candidates->map(fn ($candidate) => (int) $candidate->id)->all();
+        $ratings = app(DatingReviewService::class)->summariesFor($onlineIds, $me);
+
         $result = [];
 
         foreach ($candidates as $candidate) {
             $distance = $this->distanceKm($me, $candidate);
             $isMatch = isset($matchedFlip[$candidate->id]);
-            $card = $this->cardFor($candidate, $me, $distance, $isMatch, isset($likedMeIds[$candidate->id]));
+            $card = $this->cardFor($candidate, $me, $distance, $isMatch, isset($likedMeIds[$candidate->id]), $ratings[(int) $candidate->id] ?? null);
 
             $card['is_online'] = true;
             $card['can_message'] = $me->canMessageUser($candidate);
@@ -2272,9 +2285,10 @@ class DatingService
      * @param float|null $distanceKm
      * @param bool $isMatch
      * @param bool $likedMe
+     * @param array{avg:float|null,count:int,hidden:bool}|null $rating готовая сводка (null — посчитать тут)
      * @return array<string,mixed>
      */
-    public function cardFor(User $candidate, User $viewer, ?float $distanceKm, bool $isMatch, bool $likedMe): array
+    public function cardFor(User $candidate, User $viewer, ?float $distanceKm, bool $isMatch, bool $likedMe, ?array $rating = null): array
     {
         $canSeeReal = $viewer->id === $candidate->id || $viewer->isAdmin() || $isMatch;
 
@@ -2306,6 +2320,8 @@ class DatingService
 
         $photoUrls = array_values(array_slice($photoUrls, 0, $photosLimit));
 
+        $rating ??= app(DatingReviewService::class)->summary($candidate, $viewer);
+
         return [
             'id' => $candidate->id,
             'name' => $hideName ? 'Аноним' : $candidate->name,
@@ -2331,6 +2347,9 @@ class DatingService
             'liked_me' => $likedMe,
             'is_superlike' => false,
             'is_boosted' => false,
+            'rating_avg' => $rating['avg'] ?? null,
+            'rating_count' => (int) ($rating['count'] ?? 0),
+            'rating_hidden' => (bool) ($rating['hidden'] ?? false),
         ];
     }
 

@@ -3,7 +3,7 @@ import { usePage } from '@inertiajs/vue3'
 import { datingApi } from '@/services/dating.api'
 
 /** Ключи приватности ULove, хранящиеся на бэке. */
-export type UlovePrivacyKey = 'dating_match_only' | 'dating_hide_name' | 'dating_hide_age' | 'dating_hide_distance'
+export type UlovePrivacyKey = 'dating_match_only' | 'dating_hide_name' | 'dating_hide_age' | 'dating_hide_distance' | 'dating_hide_rating'
 
 /** Значения переключателей приватности ULove. */
 export interface UlovePrivacyFlags {
@@ -11,6 +11,7 @@ export interface UlovePrivacyFlags {
   dating_hide_name: boolean
   dating_hide_age: boolean
   dating_hide_distance: boolean
+  dating_hide_rating: boolean
 }
 
 /** Платная фишка ULove для отображения в табе. */
@@ -43,6 +44,7 @@ export function useUlovePrivacy() {
     dating_hide_name: !!authUser.value?.dating_hide_name,
     dating_hide_age: !!authUser.value?.dating_hide_age,
     dating_hide_distance: !!authUser.value?.dating_hide_distance,
+    dating_hide_rating: !!authUser.value?.dating_hide_rating,
   })
 
   const saving = ref(false)
@@ -79,6 +81,14 @@ export function useUlovePrivacy() {
       plan: 'PRO',
       icon: 'pi pi-send',
       iconClass: 'bg-sky-500/15 text-sky-600 dark:text-sky-300',
+      needsPro: true,
+    },
+    {
+      key: 'dating_hide_rating',
+      title: 'Скрыть рейтинг отзывов',
+      plan: 'PRO',
+      icon: 'pi pi-star',
+      iconClass: 'bg-amber-500/15 text-amber-600 dark:text-amber-300',
       needsPro: true,
     },
   ]
@@ -125,6 +135,9 @@ export function useUlovePrivacy() {
     }
     if (key === 'dating_hide_age') {
       return flags.value.dating_hide_age ? 'Возраст скрыт' : 'Все видят твой возраст'
+    }
+    if (key === 'dating_hide_rating') {
+      return flags.value.dating_hide_rating ? 'Рейтинг и отзывы скрыты' : 'Все видят твой рейтинг'
     }
     return flags.value.dating_hide_distance ? 'Расстояние скрыто · виден только город' : 'Все видят расстояние до тебя'
   }

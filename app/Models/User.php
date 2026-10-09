@@ -14,7 +14,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['name', 'profile_slug', 'email', 'password', 'gender', 'birth_date', 'country', 'country_code', 'plan', 'latitude', 'longitude', 'role', 'account_type', 'is_admin', 'is_hidden_from_search', 'profile_hidden_at', 'deletion_requested_at', 'deletion_scheduled_at', 'deletion_pro_until', 'dating_enabled', 'dating_goal', 'signup_goal', 'default_mode', 'default_mode_set_at', 'enabled_modules', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_gender_pref', 'dating_hide_name', 'dating_hide_age', 'dating_hide_distance', 'dating_match_only', 'random_chats_used', 'random_chats_month', 'superlikes_day', 'superlikes_used', 'superlikes_balance', 'boosts_balance', 'boost_until', 'boost_month', 'undos_day', 'undos_used', 'avatar_path', 'home_lat', 'home_lng', 'home_city', 'home_address', 'home_visibility', 'home_show_exact', 'home_radius_km', 'bio', 'thought', 'reputation_score', 'level', 'quest_cooldown_until', 'quest_last_track', 'quest_granted_at', 'is_anonymous_default', 'default_location_precision', 'default_blur_meters', 'message_privacy', 'allow_random_messages', 'call_cooldown_enabled', 'video_calls_enabled', 'photo_comments_privacy', 'flow_comments_privacy', 'auto_reply_enabled', 'auto_reply_text', 'settings', 'last_seen_at', 'is_invisible', 'screen_lock_code', 'screen_lock_timeout', 'screen_lock_kind', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at', 'terms_accepted_at', 'terms_version', 'telegram_id', 'telegram_username', 'telegram_photo_url', 'telegram_linked_at', 'telegram_notify_messages', 'telegram_notify_likes', 'telegram_notify_matches', 'telegram_notify_comments', 'telegram_notify_news', 'telegram_blocked_at', 'telegram_notify_enabled', 'email_notify_messages', 'email_notify_likes', 'email_notify_matches', 'telegram_dm_messages', 'telegram_dm_likes', 'telegram_dm_matches', 'telegram_dm_comments', 'notify_profile_visitors'])]
+#[Fillable(['name', 'profile_slug', 'email', 'password', 'gender', 'birth_date', 'country', 'country_code', 'plan', 'latitude', 'longitude', 'role', 'account_type', 'is_admin', 'is_hidden_from_search', 'profile_hidden_at', 'deletion_requested_at', 'deletion_scheduled_at', 'deletion_pro_until', 'dating_enabled', 'dating_goal', 'signup_goal', 'default_mode', 'default_mode_set_at', 'enabled_modules', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_gender_pref', 'dating_hide_name', 'dating_hide_age', 'dating_hide_distance', 'dating_match_only', 'dating_hide_rating', 'random_chats_used', 'random_chats_month', 'superlikes_day', 'superlikes_used', 'superlikes_balance', 'boosts_balance', 'boost_until', 'boost_month', 'undos_day', 'undos_used', 'avatar_path', 'home_lat', 'home_lng', 'home_city', 'home_address', 'home_visibility', 'home_show_exact', 'home_radius_km', 'bio', 'thought', 'reputation_score', 'level', 'quest_cooldown_until', 'quest_last_track', 'quest_granted_at', 'is_anonymous_default', 'default_location_precision', 'default_blur_meters', 'message_privacy', 'allow_random_messages', 'call_cooldown_enabled', 'video_calls_enabled', 'photo_comments_privacy', 'flow_comments_privacy', 'auto_reply_enabled', 'auto_reply_text', 'settings', 'last_seen_at', 'is_invisible', 'screen_lock_code', 'screen_lock_timeout', 'screen_lock_kind', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at', 'terms_accepted_at', 'terms_version', 'telegram_id', 'telegram_username', 'telegram_photo_url', 'telegram_linked_at', 'telegram_notify_messages', 'telegram_notify_likes', 'telegram_notify_matches', 'telegram_notify_comments', 'telegram_notify_news', 'telegram_notify_invites', 'telegram_notify_reviews', 'telegram_blocked_at', 'telegram_notify_enabled', 'email_notify_messages', 'email_notify_likes', 'email_notify_matches', 'telegram_dm_messages', 'telegram_dm_likes', 'telegram_dm_matches', 'telegram_dm_comments', 'notify_profile_visitors'])]
 #[Hidden(['password', 'remember_token', 'screen_lock_code'])]
 /**
  * Пользователь приложения.
@@ -39,6 +39,8 @@ use Illuminate\Support\Facades\Storage;
  * @property bool $telegram_notify_matches Слать в Telegram о взаимных мэтчах.
  * @property bool $telegram_notify_comments Слать в Telegram о комментариях.
  * @property bool $telegram_notify_news Слать в Telegram новости приложения (публикации админов).
+ * @property bool $telegram_notify_invites Слать в Telegram приглашения и заявки (пины, районы, друзья).
+ * @property bool $telegram_notify_reviews Слать в Telegram новые отзывы о тебе в ULove.
  * @property \Carbon\Carbon|null $telegram_blocked_at Когда Bot API вернул 403 (нет /start или блок).
  * @property bool $telegram_notify_enabled Мастер-тумблер сообщений бота в личку (выкл глушит всё разом, почту не трогает).
  * @property bool $email_notify_messages Дублировать на почту новые сообщения.
@@ -784,6 +786,17 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function canUseVisitorNotifications(): bool { return $this->isPro(); }
 
+    /**
+     * Можно ли скрывать свой рейтинг знакомств.
+     *
+     * Тот же гейт, что у PRO-приватности: платный тариф
+     * (pro/premium/business) либо стафф. Сам тумблер —
+     * dating_hide_rating в приватности ULove.
+     *
+     * @return bool true когда тариф позволяет скрыть рейтинг
+     */
+    public function canHideRating(): bool { return $this->isPro(); }
+
     public function canUseInvisible(): bool { return $this->isModerator() || in_array($this->effectivePlan(), self::PAID_PLANS, true); }
 
     public function hiddenFriendsLimit(): ?int
@@ -1211,6 +1224,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'dating_hide_age' => 'boolean',
             'dating_hide_distance' => 'boolean',
             'dating_match_only' => 'boolean',
+            'dating_hide_rating' => 'boolean',
             'superlikes_day' => 'date',
             'boost_until' => 'datetime',
             'is_anonymous_default' => 'boolean',
@@ -1240,6 +1254,8 @@ class User extends Authenticatable implements MustVerifyEmail
             'telegram_notify_matches' => 'boolean',
             'telegram_notify_comments' => 'boolean',
             'telegram_notify_news' => 'boolean',
+            'telegram_notify_invites' => 'boolean',
+            'telegram_notify_reviews' => 'boolean',
             'telegram_blocked_at' => 'datetime',
             'telegram_notify_enabled' => 'boolean',
             'email_notify_messages' => 'boolean',

@@ -9,6 +9,7 @@ import { subjectWord } from '@/services/notifications.api'
 import { ensureUserChannel, leaveUserChannel } from '@/composables/useUserChannel'
 import { captureAuthUid, currentAuthUid } from '@/composables/useAuthUid'
 import { useProfileUrl } from '@/composables/useProfileUrl'
+import { useNotificationModules } from '@/composables/useNotificationModules'
 
 function isLockedNow(): boolean {
   try { return useScreenLock().locked.value } catch { return false }
@@ -232,7 +233,7 @@ function swPushToastKind(link: string): { type: AppToast['type']; icon: string }
 function handleSwPush(event: Event): void {
   const detail = (event as CustomEvent<ForegroundPush>).detail
   if (!detail) return
-  const title = String(detail.title || 'UPin').slice(0, 120)
+  const title = String(detail.title || 'ULove').slice(0, 120)
   const body = String(detail.body || 'Новое уведомление').slice(0, 140)
   const link = String(detail.url || '/map')
   const tag = String(detail.tag || 'upin-push')
@@ -763,6 +764,20 @@ function handlePinActivity(e: any) {
     })
     return
   }
+  if (a.kind === 'review') {
+    const stars = Number((a as unknown as { rating?: number }).rating || 0) || 0
+    push({
+      id: `pin-${a.id}-${Date.now()}`,
+      type: 'match',
+      icon: 'pi pi-star-fill',
+      title: '⭐ Новый отзыв',
+      body: (stars > 0 ? `${name} оценил(а) тебя на ${stars} из 5` : `${name} оставил(а) отзыв о тебе`).slice(0, 90),
+      avatar: avatarSrcFor(actor),
+      link: '/profile',
+      createdAt: Date.now(),
+    })
+    return
+  }
   if (a.kind === 'profile_visit') {
     push({
       id: `pin-${a.id}-${Date.now()}`,
@@ -827,6 +842,10 @@ function handleNotification(e: any) {
   // Прочитанные строки тост не дают: они уже в ленте колокольчика.
   // Иначе тост всплывал бы по открытию колокольчика / после read-all.
   if (n.read_at) return
+  // Чужой раздел: тост только своего набора модулей (чат и ULove — всегда).
+  try {
+    if (!useNotificationModules().allows(n.type)) return
+  } catch {}
   if (isDuplicateEvent(`notif-${n.id}`)) return
   const data = n.data ?? {}
   if (data.sos_chat_closed) {

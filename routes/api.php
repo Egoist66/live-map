@@ -232,6 +232,9 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:120,1'])->group(function
     Route::get('/swipes/quota', [SwipeController::class, 'quota']);
     Route::patch('/swipes/settings', [SwipeController::class, 'settings'])->middleware('throttle:profile-write');
     Route::post('/swipes/verify-age', [SwipeController::class, 'verifyAge'])->middleware('throttle:profile-write');
+    Route::get('/dating/reviews', [\App\Http\Controllers\DatingReviewController::class, 'index']);
+    Route::post('/dating/reviews', [\App\Http\Controllers\DatingReviewController::class, 'store'])->middleware('throttle:social-write');
+    Route::delete('/dating/reviews', [\App\Http\Controllers\DatingReviewController::class, 'destroy'])->middleware('throttle:social-write');
     Route::post('/video/match/call', [\App\Http\Controllers\VideoController::class, 'callMatch'])->middleware('throttle:social-write');
     Route::post('/video/{call}/accept', [\App\Http\Controllers\VideoController::class, 'accept'])->middleware('throttle:social-write');
     Route::post('/video/{call}/decline', [\App\Http\Controllers\VideoController::class, 'decline'])->middleware('throttle:social-write');

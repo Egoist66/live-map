@@ -3,8 +3,16 @@ import { computed } from 'vue'
 import { Link, usePage } from '@inertiajs/vue3'
 import Card from 'primevue/card'
 import { useAppFooter } from '@/composables/useAppFooter'
+import { useModuleContent } from '@/composables/useModuleContent'
 
 const { footerLinks } = useAppFooter()
+
+/**
+ * Бренд и подпись — из движка модулей, как в подвале сайта:
+ * один ULove — «ULove · Знакомства рядом», после выпуска разделов
+ * тексты подтянутся сами, руками ничего править не нужно.
+ */
+const content = useModuleContent()
 
 /**
  * Версия приложения из серверных props (без опроса).
@@ -30,7 +38,7 @@ const icons: Record<string, string> = {
   <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }">
     <template #content>
       <h3 class="font-black tracking-tight text-lg dark:text-white">О сервисе</h3>
-      <p class="text-sm text-stone-500 mt-1">UPin — спокойная карта рядом: пины, знакомства ULove и лента UFlow. Справка, связь и документы — ниже.</p>
+      <p class="text-sm text-stone-500 mt-1">{{ content.multiModule.value ? 'Знакомства и встречи рядом: все включённые разделы — в меню. Справка, связь и документы — ниже.' : 'ULove — знакомства рядом: свайпы, мэтчи и чат. Справка, связь и документы — ниже.' }}</p>
       <nav aria-label="О сервисе" class="mt-5 flex flex-col gap-1.5">
         <Link
           v-for="footerLink in footerLinks"
@@ -43,7 +51,7 @@ const icons: Record<string, string> = {
           <i class="pi pi-angle-right shrink-0 text-xs text-stone-300 transition group-hover:translate-x-0.5 dark:text-zinc-600" />
         </Link>
       </nav>
-      <p class="mt-5 text-xs text-stone-400 dark:text-zinc-500">© UPin · Пилотный район<span v-if="appVersion"> · v{{ appVersion }}</span></p>
+      <p class="mt-5 text-xs text-stone-400 dark:text-zinc-500">© {{ content.brand.value.head }}{{ content.brand.value.tail }} · {{ content.multiModule.value ? 'Знакомства и встречи рядом' : 'Знакомства рядом' }}<span v-if="appVersion"> · v{{ appVersion }}</span></p>
     </template>
   </Card>
 </template>

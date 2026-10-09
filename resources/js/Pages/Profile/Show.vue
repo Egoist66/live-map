@@ -35,7 +35,7 @@ import { useAppModulesStore } from '@/stores/appModules'
 
 const DatingQuestionnaireDialog = defineAsyncComponent(() => import('@/Components/Features/Dating/DatingQuestionnaireForm.vue'))
 
-const props = defineProps<{ profileUser: any; isOwn: boolean; friendship: any; isFriend: boolean; isPending: boolean; isBlocked?: boolean; isBlockedBy?: boolean; canMessage: boolean; canMessageReason: string | null; subscription?: { subscribed: boolean; notify_pin: boolean; notify_photo: boolean; notify_level: boolean; notify_post?: boolean } }>()
+const props = defineProps<{ profileUser: any; isOwn: boolean; friendship: any; isFriend: boolean; isPending: boolean; isBlocked?: boolean; isBlockedBy?: boolean; canMessage: boolean; canMessageReason: string | null; rating?: { avg: number | null; count: number; hidden: boolean } | null; subscription?: { subscribed: boolean; notify_pin: boolean; notify_photo: boolean; notify_level: boolean; notify_post?: boolean } }>()
 
 const modules = useAppModulesStore()
 
@@ -150,6 +150,7 @@ onMounted(() => {
             :last-seen-text="page.lastSeenText.value"
             :can-message="page.canMessage.value"
             :can-message-reason="isBlocked ? 'Пользователь заблокирован' : null"
+            :rating="rating ?? null"
             @edit="isOwn ? (showDatingEdit = true) : design.onEdit()"
             @message="page.onChat()"
             @photos="gallery.openDialog()"

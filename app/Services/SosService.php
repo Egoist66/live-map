@@ -366,6 +366,21 @@ class SosService
                 } catch (\Throwable $e) {
                     \Illuminate\Support\Facades\Log::warning('sos closed notify failed: '.$e->getMessage());
                 }
+
+                try {
+                    $reasonText = $reason === 'expired' ? 'истёк' : ($reason === 'deleted' ? 'удалён' : 'закрыт');
+                    TelegramNotifier::eventPing(
+                        $user,
+                        'messages',
+                        '🆘 💘 <b>ULove</b> • SOS-чат «'.e(mb_substr((string) $pinTitle, 0, 60)).'» '.$reasonText.'. Архив переписки — во вложениях чата',
+                        '/chat/'.(int) $conversation->id,
+                        'Открыть чат',
+                        'sos-closed:'.(int) $conversation->id.':'.(int) $user->getKey(),
+                        'sos.chat_closed'
+                    );
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('sos closed tg failed: '.$e->getMessage());
+                }
             }
 
             return (int) $conversation->id;

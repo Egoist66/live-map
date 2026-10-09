@@ -78,6 +78,7 @@ class ProfileController extends Controller
             $base['dating_hide_name'] = (bool) $user->dating_hide_name;
             $base['dating_hide_age'] = (bool) $user->dating_hide_age;
             $base['dating_hide_distance'] = (bool) $user->dating_hide_distance;
+            $base['dating_hide_rating'] = (bool) $user->dating_hide_rating;
             $base['dating_match_only'] = (bool) $user->dating_match_only;
         }
         $base['age'] = $user->age;
@@ -160,6 +161,7 @@ class ProfileController extends Controller
             'isBlockedBy' => $isBlockedBy,
             'canMessage' => $canMessage,
             'canMessageReason' => $reason,
+            'rating' => app(\App\Services\DatingReviewService::class)->summary($user, $auth),
             'subscription' => $subscription ? [
                 'subscribed' => true,
                 'notify_pin' => (bool) $subscription->notify_pin,
@@ -393,7 +395,8 @@ class ProfileController extends Controller
      * Первый модуль списка — primary (стартовый экран). Пустой список
      * запрещён: хотя бы один раздел всегда включён. ULove — базовый
      * раздел персоны: у не-бизнеса он принудительно первый, снять
-     * его через API нельзя.
+     * его через API нельзя. Непрочитанные уведомления выключенных
+     * разделов гаснут: бейджи и лента показывают текущий набор.
      *
      * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\JsonResponse
@@ -419,7 +422,15 @@ class ProfileController extends Controller
 
         abort_if($modules === [], 422, 'Выбери хотя бы один раздел');
 
+        $previous = $user->enabledModules() ?? $global;
+
         $user->setEnabledModules($modules);
+
+        $removed = array_values(array_diff($previous, $modules));
+
+        if ($removed !== []) {
+            \App\Services\NotificationModuleGate::markDisabledRead($user, $removed);
+        }
 
         return response()->json([
             'modules' => $user->enabledModules(),

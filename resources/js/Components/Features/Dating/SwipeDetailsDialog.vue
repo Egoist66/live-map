@@ -9,6 +9,8 @@ import Dialog from 'primevue/dialog'
 import { useProfileUrl } from '@/composables/useProfileUrl'
 import { usePresenceState } from '@/composables/usePresence'
 import { formatRelative } from '@/utils/date'
+import DatingFriendButton from '@/Components/Features/Dating/DatingFriendButton.vue'
+import DatingReviewsSection from '@/Components/Features/Dating/DatingReviewsSection.vue'
 import type { SwipeCard } from '@/services/dating.api'
 
 const props = defineProps<{ card: SwipeCard | null }>()
@@ -100,6 +102,10 @@ function ageText(card: SwipeCard): string {
         <Chip :label="goalShort(card)" icon="pi pi-heart-fill" class="!rounded-full !bg-rose-500 !text-white !border-0 text-xs" />
       </div>
 
+      <div v-if="card.id != null" class="mt-3">
+        <DatingFriendButton :user-id="card.id" />
+      </div>
+
       <div v-if="card.about" class="mt-3">
         <div class="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500">О себе</div>
         <p class="mt-1 text-sm leading-relaxed text-stone-700 dark:text-zinc-200 whitespace-pre-wrap break-words">{{ card.about }}</p>
@@ -117,6 +123,14 @@ function ageText(card: SwipeCard): string {
         <div class="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500">Из профиля</div>
         <p class="mt-1 text-sm text-stone-600 dark:text-zinc-300 line-clamp-4">{{ card.bio }}</p>
       </div>
+
+      <DatingReviewsSection
+        v-if="card.id != null"
+        :user-id="card.id"
+        :seed-avg="card.rating_avg ?? null"
+        :seed-count="card.rating_count ?? 0"
+        :seed-hidden="card.rating_hidden ?? false"
+      />
 
       <Button label="Закрыть" rounded outlined severity="secondary" class="w-full mt-5" @click="emit('close')" />
     </div>

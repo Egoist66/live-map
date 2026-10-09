@@ -30,7 +30,7 @@ import Button from 'primevue/button'
 import Checkbox from 'primevue/checkbox'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
-const seo = useSeo({ title: 'Карта — UPin', description: 'Живая карта UPin: пины рядом и бонус для встреч ULove — кинь пин в 2 клика, найди единомышленников. Без точного адреса.', noindex: true })
+const seo = useSeo({ title: 'Карта — UPin', description: 'Карта встреч: пины рядом — кинь пин в 2 клика, найди единомышленников. Без точного адреса.', noindex: true })
 const { store, categories, customCats, selectedCategory, filteredPins, pinDetails, pinCreate, pinEdit, mapApi, showCreate, pinAddress, loadingPinAddress, myStreet, loadingStreet, radiusOptions, radiusLabel, homeZone, homeZoneVisible, toggleHomeZone, closeCreate, deleteSelectedPin, saveEdit, deleteCustomCategory, init, destroy, showLiveInfo, showMyPins, myPins, handleMineClick, flyToPin, setLiveInfo, setMyPins, geoNotice, dismissGeoNotice, locateMe, districts, paint, pendingGeometry, createError, districtLimitText, brushPx, startDistrictPaint, finishDistrictPaint, saveDistrict, flyToDistrict, openDistrictChat, deleteDistrict, openDistrictInvite, sendDistrictInvite, districtInvite, openPinFromDistrict, onOverlayStrokeEnd, saveSelectedDistrict, setShowCreate } = useMapPage() as any
 const pinCommentsHasMore = computed(() => !!((pinDetails as any)?.commentsHasMore?.value))
 const pinCommentsLoadingMore = computed(() => !!((pinDetails as any)?.commentsLoadingMore?.value))

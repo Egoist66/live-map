@@ -86,7 +86,7 @@ export function useChatPage(initialConversationId?: number) {
       tab.value = 'chats'
     }
 
-    if (uloveOnly.value && next !== 'ulove' && next !== 'blocked') {
+    if (uloveOnly.value && !['ulove', 'blocked', 'friends', 'requests'].includes(next)) {
       tab.value = 'ulove'
     }
   })
@@ -832,7 +832,13 @@ export function useChatPage(initialConversationId?: number) {
 
   function resolveInitialTab() {
     if (uloveOnly.value) {
-      tab.value = 'ulove'
+      try {
+        const t = new URLSearchParams(window.location.search).get('tab')
+        if (t && ['ulove', 'friends', 'requests', 'blocked'].includes(t)) tab.value = t as any
+        else tab.value = 'ulove'
+      } catch {
+        tab.value = 'ulove'
+      }
       return
     }
 

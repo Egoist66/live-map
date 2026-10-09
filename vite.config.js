@@ -211,7 +211,7 @@ export default defineConfig({
                 name: 'UPin',
                 short_name: 'UPin',
                 id: '/?source=pwa',
-                description: 'UPin — живая карта и знакомства ULove рядом: пины, чаты, события и встречи.',
+                description: 'ULove — знакомства рядом: свайпы, мэтчи и чат.',
                 start_url: '/?source=pwa',
                 scope: '/',
                 display: 'standalone',
@@ -309,9 +309,14 @@ export default defineConfig({
                             !url.pathname.startsWith('/admin'),
                         handler: 'NetworkFirst',
                         method: 'GET',
+                        // Навигация уходит в офлайн-фолбэк только после этого
+                        // таймаута: 3с роняли страницу при холодном воркере
+                        // после деплоя и на медленной мобильной сети, хотя
+                        // интернет был. 10с — компромисс: живой, но
+                        // притормаживающий сервер ждём, мёртвый — не вешаем.
                         options: {
                             cacheName: 'pwa-pages',
-                            networkTimeoutSeconds: 3,
+                            networkTimeoutSeconds: 10,
                             expiration: { maxEntries: 20, maxAgeSeconds: 86400 },
                             cacheableResponse: { statuses: [0, 200] },
                         },

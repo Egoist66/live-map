@@ -9,6 +9,7 @@ import { useAppUpdates } from '@/composables/useAppUpdates'
 import { busOn } from '@/services/realtime-bus'
 import { ensureUserChannel, leaveUserChannel } from '@/composables/useUserChannel'
 import { useProfileUrl } from '@/composables/useProfileUrl'
+import { useNotificationModules } from '@/composables/useNotificationModules'
 
 const activities = ref<PinActivityItem[]>([])
 const inboxRows = ref<InboxNotification[]>([])
@@ -61,6 +62,10 @@ function onNotification(e: any) {
   const row = e?.notification as InboxNotification | undefined
   if (!row?.id) return
   if (row.read_at) return
+  // Чужой раздел в ленту не кладём: только свой набор модулей.
+  try {
+    if (!useNotificationModules().allows(row.type)) return
+  } catch {}
   try {
     if (!inboxRows.value.some((x) => x.id === row.id)) inboxRows.value = [row, ...inboxRows.value].slice(0, 30)
     onActivity({ activity: toActivityItem(row) })
@@ -319,6 +324,14 @@ function describe(a: PinActivityItem): { emoji: string; text: string } {
   if (a.kind === 'match') {
     return { emoji: '💞', text: `${name} — у вас мэтч в ULove!` }
   }
+  if (a.kind === 'review') {
+    const stars = Number(a.rating || 0) || 0
+    const excerpt = (a as unknown as { excerpt?: string }).excerpt
+    if (excerpt) {
+      return { emoji: '⭐', text: stars > 0 ? `${name} (${stars}/5): ${excerpt}` : `${name}: ${excerpt}` }
+    }
+    return { emoji: '⭐', text: stars > 0 ? `${name} оценил(а) тебя на ${stars} из 5` : `${name} оставил(а) отзыв о тебе` }
+  }
   if (a.kind === 'profile_visit') {
     return { emoji: '👀', text: `${name} заходил(а) в ваш профиль` }
   }
@@ -451,6 +464,9 @@ function resolveTarget(a: PinActivityItem): { url: string; pending: any } {
   if (a.kind === 'match') {
     return { url: '/swipes', pending: null }
   }
+  if (a.kind === 'review') {
+    return { url: '/profile', pending: null }
+  }
   const flowPostId = Number((a as unknown as { flow_post?: { id?: number }; flow_post_id?: number }).flow_post?.id || (a as unknown as { flow_post_id?: number }).flow_post_id || 0) || null
   if (flowPostId) {
     return { url: `/flow/post/${flowPostId}`, pending: { type: 'flow', postId: flowPostId } }
@@ -551,7 +567,7 @@ export function usePinActivity() {
   const eventActivities = computed(() => splitActivities(activities.value).events)
   const pinUnread = computed(() => pinUnreadCount.value)
   const eventUnread = computed(() => eventUnreadCount.value)
-  const loveActivities = computed(() => eventActivities.value.filter((a) => a.kind === 'swipe_like' || a.kind === 'match' || a.kind === 'profile_visit'))
+  const loveActivities = computed(() => eventActivities.value.filter((a) => a.kind === 'swipe_like' || a.kind === 'match' || a.kind === 'profile_visit' || a.kind === 'review'))
   const flowActivities = computed(() => eventActivities.value.filter((a) => a.kind === 'flow_like' || a.kind === 'flow_comment' || a.kind === 'flow_reply' || a.kind === 'flow_mention' || a.kind === 'flow_repost' || a.kind === 'sub_flow_post'))
   const subActivities = computed(() => eventActivities.value.filter((a) => a.kind === 'sub_photo' || a.kind === 'sub_level'))
   const photoActivities = computed(() => eventActivities.value.filter((a) => isPhotoActivity(a)))
@@ -570,6 +586,7 @@ export function usePinActivity() {
     eventActivities.value.filter((a) =>
       a.kind !== 'swipe_like' &&
       a.kind !== 'match' &&
+      a.kind !== 'review' &&
       a.kind !== 'flow_like' &&
       a.kind !== 'flow_comment' &&
       a.kind !== 'flow_reply' &&

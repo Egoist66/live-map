@@ -359,6 +359,19 @@ class BusinessService
                     $owner,
                     new BusinessVerifiedNotification($business)
                 );
+                try {
+                    \App\Services\TelegramNotifier::eventPing(
+                        $owner,
+                        'news',
+                        '✅ 💘 <b>ULove</b> • Компания проверена — бейдж «Проверено» включён',
+                        '/cabinet',
+                        'Открыть кабинет',
+                        'biz-verified:'.(int) $business->id,
+                        null
+                    );
+                } catch (\Throwable $e) {
+                    \Log::warning('business.verified tg failed', ['id' => $business->id]);
+                }
             }
         } catch (\Throwable $e) {
             \Log::warning('business.verified notify failed', ['id' => $business->id]);
@@ -381,6 +394,21 @@ class BusinessService
                     $owner,
                     new BusinessRejectedNotification($business)
                 );
+                try {
+                    $reason = trim((string) ($business->verification_notes ?? ''));
+                    $reasonPart = $reason !== '' ? ' — '.e(mb_substr($reason, 0, 80)) : '';
+                    \App\Services\TelegramNotifier::eventPing(
+                        $owner,
+                        'news',
+                        '❌ 💘 <b>ULove</b> • Проверка компании отклонена'.$reasonPart,
+                        '/cabinet/onboarding',
+                        'Исправить и отправить',
+                        'biz-rejected:'.(int) $business->id,
+                        null
+                    );
+                } catch (\Throwable $e) {
+                    \Log::warning('business.rejected tg failed', ['id' => $business->id]);
+                }
             }
         } catch (\Throwable $e) {
             \Log::warning('business.rejected notify failed', ['id' => $business->id]);

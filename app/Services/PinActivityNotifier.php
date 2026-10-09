@@ -72,16 +72,18 @@ class PinActivityNotifier
             if ($owner) {
                 UserNotifier::send($owner, new PinReactionNotification($pin, $actor, $type, (int) $owner->id));
 
-                try {
-                    TelegramNotifier::entityLiked(
-                        $actor,
-                        $owner,
-                        self::pinLabel($pin),
-                        "/map?pin={$pin->id}",
-                        "pin-reaction:{$pin->id}:{$actor->id}:{$type}"
-                    );
-                } catch (\Throwable $e) {
-                    Log::warning('telegram pin reaction failed', ['error' => $e->getMessage()]);
+                if (NotificationModuleGate::allows($owner, 'pin.reaction')) {
+                    try {
+                        TelegramNotifier::entityLiked(
+                            $actor,
+                            $owner,
+                            self::pinLabel($pin),
+                            "/map?pin={$pin->id}",
+                            "pin-reaction:{$pin->id}:{$actor->id}:{$type}"
+                        );
+                    } catch (\Throwable $e) {
+                        Log::warning('telegram pin reaction failed', ['error' => $e->getMessage()]);
+                    }
                 }
             }
         }
@@ -120,16 +122,18 @@ class PinActivityNotifier
 
         UserNotifier::send($owner, new PinCommentReactionNotification($pin, $comment, $actor, $type, (int) $owner->id));
 
-        try {
-            TelegramNotifier::entityLiked(
-                $actor,
-                $owner,
-                'комментарий в '.self::pinLabel($pin),
-                "/map?pin={$pin->id}&comment={$comment->id}",
-                "comment-reaction:{$comment->id}:{$actor->id}:{$type}"
-            );
-        } catch (\Throwable $e) {
-            Log::warning('telegram comment reaction failed', ['error' => $e->getMessage()]);
+        if (NotificationModuleGate::allows($owner, 'pin.reaction')) {
+            try {
+                TelegramNotifier::entityLiked(
+                    $actor,
+                    $owner,
+                    'комментарий в '.self::pinLabel($pin),
+                    "/map?pin={$pin->id}&comment={$comment->id}",
+                    "comment-reaction:{$comment->id}:{$actor->id}:{$type}"
+                );
+            } catch (\Throwable $e) {
+                Log::warning('telegram comment reaction failed', ['error' => $e->getMessage()]);
+            }
         }
     }
 
@@ -143,10 +147,12 @@ class PinActivityNotifier
             $owner = User::find($ownerId);
             if ($owner) {
                 UserNotifier::send($owner, new PinCommentedNotification($pin, $actor, $comment, $ownerId));
-                try {
-                    TelegramNotifier::commented($actor, $owner, self::pinLabel($pin), (string) $comment->content, "/map?pin={$pin->id}&comment={$comment->id}", (bool) ($comment->is_anonymous ?? false));
-                } catch (\Throwable $e) {
-                    Log::warning('telegram pin comment failed', ['error' => $e->getMessage()]);
+                if (NotificationModuleGate::allows($owner, 'pin.commented')) {
+                    try {
+                        TelegramNotifier::commented($actor, $owner, self::pinLabel($pin), (string) $comment->content, "/map?pin={$pin->id}&comment={$comment->id}", (bool) ($comment->is_anonymous ?? false));
+                    } catch (\Throwable $e) {
+                        Log::warning('telegram pin comment failed', ['error' => $e->getMessage()]);
+                    }
                 }
             }
         }
@@ -161,10 +167,13 @@ class PinActivityNotifier
             $owner = User::find((int) $ownerId);
             if ($owner) {
                 UserNotifier::send($owner, new PinMentionNotification($pin, $actor, $comment, (int) $ownerId));
-                try {
-                    TelegramNotifier::commented($actor, $owner, self::pinLabel($pin), (string) $comment->content, "/map?pin={$pin->id}&comment={$comment->id}", (bool) ($comment->is_anonymous ?? false));
-                } catch (\Throwable $e) {
-                    Log::warning('telegram pin mention failed', ['error' => $e->getMessage()]);
+
+                if (NotificationModuleGate::allows($owner, 'pin.mention')) {
+                    try {
+                        TelegramNotifier::commented($actor, $owner, self::pinLabel($pin), (string) $comment->content, "/map?pin={$pin->id}&comment={$comment->id}", (bool) ($comment->is_anonymous ?? false));
+                    } catch (\Throwable $e) {
+                        Log::warning('telegram pin mention failed', ['error' => $e->getMessage()]);
+                    }
                 }
             }
             UserNotifier::deleteUnread((int) $ownerId, 'pin.commented', 'pin-comment:'.$comment->id);

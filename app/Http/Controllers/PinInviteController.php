@@ -7,6 +7,7 @@ use App\Models\PinInvite;
 use App\Models\User;
 use App\Notifications\PinInviteAcceptedNotification;
 use App\Notifications\PinInvitedNotification;
+use App\Services\TelegramNotifier;
 use App\Services\UserNotifier;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\DatabaseNotification;
@@ -53,6 +54,22 @@ class PinInviteController extends Controller
             UserNotifier::send($invitee, new PinInvitedNotification($pin, $user, $inviteeId, (int) $invite->id));
         } catch (\Throwable) {
         }
+        try {
+            $pinTitle = trim((string) ($pin->title ?? ''));
+            $titlePart = $pinTitle !== '' ? ' «'.e(mb_substr($pinTitle, 0, 60)).'»' : '';
+            $inviterName = trim((string) ($user->name ?? ''));
+            TelegramNotifier::eventPing(
+                $invitee,
+                'invites',
+                '🎫 💘 <b>ULove</b> • <b>'.e($inviterName !== '' ? $inviterName : 'Собеседник').'</b> зовёт в пин'.$titlePart.' — виден вне зоны и страны',
+                '/map?pin='.(int) $pin->id,
+                'Смотреть пин',
+                'pin-invite:'.(int) $invite->id.':'.$inviteeId,
+                'pin.invited'
+            );
+        } catch (\Throwable) {
+        }
+
         return response()->json($invite, 201);
     }
 
@@ -75,6 +92,21 @@ class PinInviteController extends Controller
         if ($owner && (int) $owner->id !== (int) $user->id) {
             try {
                 UserNotifier::send($owner, new PinInviteAcceptedNotification($pin, $user, (int) $owner->id));
+            } catch (\Throwable) {
+            }
+            try {
+                $pinTitle = trim((string) ($pin->title ?? ''));
+                $titlePart = $pinTitle !== '' ? ' «'.e(mb_substr($pinTitle, 0, 60)).'»' : '';
+                $userName = trim((string) ($user->name ?? ''));
+                TelegramNotifier::eventPing(
+                    $owner,
+                    'invites',
+                    '✅ 💘 <b>ULove</b> • <b>'.e($userName !== '' ? $userName : 'Собеседник').'</b> принял(а) приглашение в пин'.$titlePart,
+                    '/map?pin='.(int) $pin->id,
+                    'Открыть пин',
+                    'pin-invite-accepted:'.(int) $pin->id.':'.(int) $user->id,
+                    'pin.invite_accepted'
+                );
             } catch (\Throwable) {
             }
         }

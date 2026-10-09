@@ -3,6 +3,7 @@ import { Head, Link, usePage } from '@inertiajs/vue3'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import DatingQuestionnaireForm from '@/Components/Features/Dating/DatingQuestionnaireForm.vue'
 import SwipeDetailsDialog from '@/Components/Features/Dating/SwipeDetailsDialog.vue'
+import DatingRatingStars from '@/Components/Features/Dating/DatingRatingStars.vue'
 import SwipeActionsBar from '@/Components/Features/Dating/SwipeActionsBar.vue'
 import SuperlikeSplash from '@/Components/Features/Dating/SuperlikeSplash.vue'
 import MatchSplash from '@/Components/Features/Dating/MatchSplash.vue'
@@ -642,6 +643,9 @@ onUnmounted(() => {
                       </div>
                       <div class="mt-1.5 space-y-0.5 text-[15px] leading-snug text-white/95">
                         <div class="truncate">💘 {{ goalShort(s.current.value) }}</div>
+                        <div v-if="!s.current.value.rating_hidden && (s.current.value.rating_count ?? 0) > 0" class="flex items-center">
+                          <DatingRatingStars :avg="s.current.value.rating_avg ?? null" :count="s.current.value.rating_count ?? 0" size="sm" />
+                        </div>
                         <div v-if="s.current.value.city || s.current.value.distance_km != null" class="truncate">📍 {{ [s.current.value.city, s.current.value.distance_km != null ? `${s.current.value.distance_km} км` : null].filter(Boolean).join(' · ') }}</div>
                       </div>
                     </div>

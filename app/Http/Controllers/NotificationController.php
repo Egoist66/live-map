@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\UserDatabaseNotification;
+use App\Services\NotificationModuleGate;
 use App\Services\UserNotifier;
 use Illuminate\Http\Request;
 
@@ -10,6 +11,8 @@ use Illuminate\Http\Request;
  * Единый inbox уведомлений (таблица notifications).
  *
  * Таб «Пины» — category=pin, таб «События» — category=event.
+ * Строки выключенных разделов скрыты гейтом модулей: лента
+ * и счётчики показывают только текущий набор пользователя.
  * Прочтение и удаление — только свои строки.
  */
 class NotificationController extends Controller
@@ -26,6 +29,7 @@ class NotificationController extends Controller
         $query = UserDatabaseNotification::where('notifiable_type', $request->user()->getMorphClass())
             ->where('notifiable_id', $request->user()->id)
             ->latest('updated_at');
+        $query = NotificationModuleGate::applyAllowedScope($query, $request->user());
         if (! empty($data['category'])) {
             $query->where('category', $data['category']);
         }
@@ -43,6 +47,7 @@ class NotificationController extends Controller
         $base = UserDatabaseNotification::where('notifiable_type', $request->user()->getMorphClass())
             ->where('notifiable_id', $request->user()->id)
             ->whereNull('read_at');
+        $base = NotificationModuleGate::applyAllowedScope($base, $request->user());
         $pins = (clone $base)->where('category', 'pin')->count();
         $events = (clone $base)->where('category', 'event')->count();
 

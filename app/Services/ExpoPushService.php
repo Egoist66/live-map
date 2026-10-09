@@ -40,7 +40,7 @@ class ExpoPushService
         }
 
         return $this->send($tokens, [
-            'title' => (string) ($webPayload['title'] ?? 'UPin'),
+            'title' => (string) ($webPayload['title'] ?? 'ULove'),
             'body' => (string) ($webPayload['body'] ?? ''),
             'url' => (string) ($webPayload['url'] ?? '/'),
         ], $channelId, (int) $user->id);
@@ -85,7 +85,7 @@ class ExpoPushService
         foreach (array_chunk($tokens, 100) as $chunk) {
             $messages = array_map(fn ($to) => [
                 'to' => $to,
-                'title' => (string) ($webPayload['title'] ?? 'UPin'),
+                'title' => (string) ($webPayload['title'] ?? 'ULove'),
                 'body' => (string) ($webPayload['body'] ?? ''),
                 'badge' => $badge,
                 'sound' => 'default',

@@ -124,7 +124,7 @@ export function usePush() {
     try {
       await sendTestPush()
     } catch {
-      await showLocal('UPin', { body: 'Тестовое уведомление работает' })
+      await showLocal('ULove', { body: 'Тестовое уведомление работает' })
     }
   }
 

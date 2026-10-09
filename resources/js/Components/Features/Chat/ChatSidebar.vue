@@ -31,8 +31,8 @@ const chatPrivacy = useChatPrivacy(toRef(props, 'privacy') as any, toRef(props, 
         <TabList class="!flex-nowrap !overflow-x-auto overscroll-x-contain scrollbar-none snap-x [&_.p-tablist-tab-list]:flex [&_.p-tablist-tab-list]:!justify-between [&_.p-tablist-content]:!border-0">
           <Tab v-if="!uloveOnly" value="chats" class="chat-tab !text-xs !py-2 !px-1 !whitespace-nowrap snap-start shrink-0">Чаты <Badge v-if="unreadTotal" :value="unreadTotal > 9 ? '9+' : String(unreadTotal)" severity="danger" class="ml-1 !text-[10px]" /></Tab>
           <Tab v-if="!isBusiness" value="ulove" class="chat-tab !text-xs !py-2 !px-1 !whitespace-nowrap snap-start shrink-0">💞 ULove <Badge v-if="uloveUnread" :value="uloveUnread > 9 ? '9+' : String(uloveUnread)" severity="danger" class="ml-1 !text-[10px]" /></Tab>
-          <Tab v-if="!uloveOnly" value="friends" class="chat-tab !text-xs !py-2 !px-1 !whitespace-nowrap snap-start shrink-0">Друзья</Tab>
-          <Tab v-if="!uloveOnly" value="requests" class="chat-tab !text-xs !py-2 !px-1 !whitespace-nowrap snap-start shrink-0">Заявки <Badge v-if="pendingCount" :value="String(pendingCount)" severity="warn" class="ml-1 !text-[10px]" /></Tab>
+          <Tab value="friends" class="chat-tab !text-xs !py-2 !px-1 !whitespace-nowrap snap-start shrink-0">Друзья</Tab>
+          <Tab value="requests" class="chat-tab !text-xs !py-2 !px-1 !whitespace-nowrap snap-start shrink-0">Заявки <Badge v-if="pendingCount" :value="String(pendingCount)" severity="warn" class="ml-1 !text-[10px]" /></Tab>
           <Tab value="blocked" class="chat-tab !text-xs !py-2 !px-1 !whitespace-nowrap snap-start shrink-0">Блок <Badge v-if="blockedCount" :value="String(blockedCount)" severity="secondary" class="ml-1 !text-[10px]" /></Tab>
         </TabList>
       </Tabs>

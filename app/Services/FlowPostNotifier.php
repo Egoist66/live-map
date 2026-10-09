@@ -69,10 +69,12 @@ class FlowPostNotifier
             $owner = User::find($ownerId);
             if ($owner) {
                 UserNotifier::send($owner, new FlowLikedNotification($post, $actor, $ownerId));
-                try {
-                    TelegramNotifier::entityLiked($actor, $owner, 'пост', "/flow/post/{$post->id}", "flow-like:{$post->id}:{$actor->id}");
-                } catch (\Throwable $e) {
-                    Log::warning('telegram flow like failed', ['error' => $e->getMessage()]);
+                if (NotificationModuleGate::allows($owner, 'flow.liked')) {
+                    try {
+                        TelegramNotifier::entityLiked($actor, $owner, 'пост', "/flow/post/{$post->id}", "flow-like:{$post->id}:{$actor->id}");
+                    } catch (\Throwable $e) {
+                        Log::warning('telegram flow like failed', ['error' => $e->getMessage()]);
+                    }
                 }
             }
         } catch (\Throwable $e) {
@@ -109,10 +111,12 @@ class FlowPostNotifier
                 $owner = User::find($ownerId);
                 if ($owner) {
                     UserNotifier::send($owner, new FlowCommentedNotification($post, $actor, $comment, $ownerId));
-                    try {
-                        TelegramNotifier::commented($actor, $owner, 'пост', (string) $comment->content, "/flow/post/{$post->id}");
-                    } catch (\Throwable $e) {
-                        Log::warning('telegram flow comment failed', ['error' => $e->getMessage()]);
+                    if (NotificationModuleGate::allows($owner, 'flow.commented')) {
+                        try {
+                            TelegramNotifier::commented($actor, $owner, 'пост', (string) $comment->content, "/flow/post/{$post->id}");
+                        } catch (\Throwable $e) {
+                            Log::warning('telegram flow comment failed', ['error' => $e->getMessage()]);
+                        }
                     }
                 }
             }
@@ -131,10 +135,12 @@ class FlowPostNotifier
                 $parentAuthor = User::find($parentAuthorId);
                 if ($parentAuthor) {
                     UserNotifier::send($parentAuthor, new FlowRepliedNotification($post, $actor, $comment, $parentAuthorId));
-                    try {
-                        TelegramNotifier::commented($actor, $parentAuthor, 'пост', (string) $comment->content, "/flow/post/{$post->id}");
-                    } catch (\Throwable $e) {
-                        Log::warning('telegram flow reply failed', ['error' => $e->getMessage()]);
+                    if (NotificationModuleGate::allows($parentAuthor, 'flow.replied')) {
+                        try {
+                            TelegramNotifier::commented($actor, $parentAuthor, 'пост', (string) $comment->content, "/flow/post/{$post->id}");
+                        } catch (\Throwable $e) {
+                            Log::warning('telegram flow reply failed', ['error' => $e->getMessage()]);
+                        }
                     }
                 }
             }
@@ -163,10 +169,12 @@ class FlowPostNotifier
                 $mentioned = User::find((int) $ownerId);
                 if ($mentioned) {
                     UserNotifier::send($mentioned, new FlowMentionNotification($post, $actor, $comment, (int) $ownerId));
-                    try {
-                        TelegramNotifier::commented($actor, $mentioned, 'пост', (string) $comment->content, "/flow/post/{$post->id}");
-                    } catch (\Throwable $e) {
-                        Log::warning('telegram flow mention failed', ['error' => $e->getMessage()]);
+                    if (NotificationModuleGate::allows($mentioned, 'flow.mentioned')) {
+                        try {
+                            TelegramNotifier::commented($actor, $mentioned, 'пост', (string) $comment->content, "/flow/post/{$post->id}");
+                        } catch (\Throwable $e) {
+                            Log::warning('telegram flow mention failed', ['error' => $e->getMessage()]);
+                        }
                     }
                 }
             }
