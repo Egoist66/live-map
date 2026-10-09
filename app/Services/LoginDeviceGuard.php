@@ -100,6 +100,31 @@ class LoginDeviceGuard
     }
 
     /**
+     * Забанено ли устройство, с которого входит пользователь.
+     *
+     * Вызывается сразу после успешного Auth::attempt, до выдачи
+     * сессии: забаненный отпечаток не пускаем даже на шаг дальше.
+     * Проверяем напрямую по строке устройств, без кэша.
+     *
+     * @param User $user входящий пользователь
+     * @param Request $request запрос входа
+     * @return bool true когда вход запрещён владельцем
+     */
+    public static function isBlocked(User $user, Request $request): bool
+    {
+        try {
+            $fp = DeviceFingerprint::fingerprintOnly($request);
+
+            return UserDevice::where('user_id', $user->id)
+                ->where('fingerprint', $fp['fingerprint'])
+                ->where('blocked', true)
+                ->exists();
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    /**
      * Разослать алерт о новом устройстве: inbox + Telegram-дубль.
      *
      * @param User $user владелец аккаунта

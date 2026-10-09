@@ -742,6 +742,7 @@ class DatingService
                 $card['rating_avg'] = null;
                 $card['rating_count'] = 0;
                 $card['rating_hidden'] = true;
+                $card['trust_score'] = null;
             }
             $cards[] = $card;
         }
@@ -2291,6 +2292,9 @@ class DatingService
     /**
      * Публичная карточка кандидата с учётом приватности.
      *
+     * Отдаёт рейтинг (avg/count/hidden) и репутацию trust_score 1–10,
+     * чтобы лента могла честно предупредить о низкой репутации.
+     *
      * @param User $candidate
      * @param User $viewer
      * @param float|null $distanceKm
@@ -2361,6 +2365,7 @@ class DatingService
             'rating_avg' => $rating['avg'] ?? null,
             'rating_count' => (int) ($rating['count'] ?? 0),
             'rating_hidden' => (bool) ($rating['hidden'] ?? false),
+            'trust_score' => TrustScoreService::scoreOf($candidate),
         ];
     }
 

@@ -36,6 +36,8 @@ export interface SwipeCard {
   rating_count?: number
   /** Рейтинг скрыт владельцем (PRO+) — звёзды не показываем. */
   rating_hidden?: boolean
+  /** Репутация 1–10; null у «Тайного поклонника». */
+  trust_score?: number | null
 }
 
 /** Один отзыв о пользователе знакомств. */

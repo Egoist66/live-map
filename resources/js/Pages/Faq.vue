@@ -43,7 +43,7 @@ const { open, sections } = useFaq()
               <div class="flex items-center gap-2 px-1 py-0 text-xs font-semibold"><span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> FAQ · просто о сложном</div>
             </template>
           </Card>
-          <h1 class="mt-4 text-[28px] sm:text-[42px] font-black tracking-[-0.04em] leading-[1.05] sm:leading-none dark:text-white text-balance">Как устроен <span class="bg-gradient-to-r from-brand-500 to-accent-teal bg-clip-text text-transparent">ULove</span></h1>
+          <h1 class="mt-4 text-[28px] sm:text-[42px] font-black tracking-[-0.04em] leading-[1.05] sm:leading-none dark:text-white text-balance">Как устроен <span class="bg-gradient-to-r from-[#FD267D] to-[#FF7854] bg-clip-text text-transparent">ULove</span></h1>
           <p class="mt-3 text-stone-600 dark:text-zinc-400 max-w-[640px] mx-auto">{{ hasMap ? 'Знакомства рядом: свайпы, мэтчи и чат — плюс карта с пинами для встреч. Не нашёл ответа — напиши нам, разберём.' : 'Знакомства рядом: свайпы, мэтчи и чат. Не нашёл ответа — напиши нам, разберём.' }}</p>
           <div class="mt-5 flex flex-wrap justify-center gap-2">
             <Link href="/swipes"><Button label="Открыть знакомства" class="!bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white !px-6 !py-2.5 !rounded-full !text-sm !font-semibold !border-0" /></Link>
@@ -53,7 +53,7 @@ const { open, sections } = useFaq()
 
         <div id="faq" class="mt-8">
           <Accordion v-model:value="open" class="!flex !flex-col !gap-3">
-            <AccordionPanel v-for="s in sections" :key="s.id" :value="s.id" class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[20px] !shadow-soft overflow-hidden card-hover !mb-0">
+            <AccordionPanel v-for="s in sections" :key="s.id" :value="s.id" :id="`faq-${s.id}`" class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[20px] !shadow-soft overflow-hidden card-hover !mb-0 !scroll-mt-24">
               <AccordionHeader class="!p-0 !bg-transparent !border-0">
                 <div class="w-full flex items-center gap-4 p-5 text-left">
                   <span class="w-10 h-10 rounded-xl bg-ink-900 dark:bg-zinc-800 text-white grid place-items-center text-sm card-icon shrink-0">{{ s.icon }}</span>

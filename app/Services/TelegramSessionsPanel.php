@@ -158,6 +158,11 @@ class TelegramSessionsPanel
     /**
      * Кнопки под устройством: завершить/бан или разбан + «это я».
      *
+     * «Завершить» показываем всегда (а не только при живой строке):
+     * маппинг session_id может протухнуть, а чужак всё равно сидеть
+     * в аккаунте через непривязанную сессию — terminate добьёт
+     * сиротские строки сам и честно скажет, что закрыл.
+     *
      * @param UserDevice $device устройство
      * @param array<int, string> $aliveIds живые session_id
      * @return array<int, array<int, array<int, array<string, mixed>>>>
@@ -165,8 +170,6 @@ class TelegramSessionsPanel
     private static function deviceButtons(UserDevice $device, array $aliveIds): array
     {
         $deviceId = (int) $device->id;
-        $sessionId = (string) ($device->session_id ?? '');
-        $hasSession = $sessionId !== '' && in_array($sessionId, $aliveIds, true);
 
         if ((bool) $device->blocked) {
             return [[[
@@ -175,14 +178,10 @@ class TelegramSessionsPanel
             ]]];
         }
 
-        $row = [];
-
-        if ($hasSession) {
-            $row[] = [
-                'text' => '❌ Завершить',
-                'callback_data' => "skill:{$deviceId}",
-            ];
-        }
+        $row = [[
+            'text' => '❌ Завершить',
+            'callback_data' => "skill:{$deviceId}",
+        ]];
 
         $row[] = [
             'text' => '🚫 В бан',

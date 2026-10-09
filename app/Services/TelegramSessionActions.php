@@ -2,24 +2,29 @@
 
 namespace App\Services;
 
-use App\Events\SessionRevoked;
 use App\Models\User;
 use App\Models\UserDevice;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Действия панели сеансов в боте: завершить / забанить / разбанить.
  *
- * Та же механика, что у DeviceController в Mini App (удаление строки
- * sessions + broadcast SessionRevoked в личный канал — жертва вылетает
- * мгновенно по realtime, запасной путь — 401 поллера), но точка входа
- * — callback_query бота, а не web-сессия. Поэтому владельца ищем строго
- * по паре (device_id + user_id): чужой девайс по id не дёрнуть.
+ * Сам килл — через DeviceSessionRevoker (та же механика, что у
+ * DeviceController в Mini App: удаление строк sessions + broadcast
+ * SessionRevoked в личный канал — жертва вылетает мгновенно,
+ * запасной путь — 401 поллера), здесь только точка входа —
+ * callback_query бота, а не web-сессия. Поэтому владельца ищем
+ * строго по паре (device_id + user_id): чужой девайс не дёрнуть.
  */
 class TelegramSessionActions
 {
     /**
      * Завершить сеанс устройства без блокировки.
+     *
+     * Бьём не только привязанную строку, но и сиротские сессии
+     * владельца, когда привязанной уже нет: чужак мог остаться
+     * в аккаунте через сессию без устройства — terminate добивает
+     * их сам. Всё убитое летит в SessionRevoked — жертва вылетает
+     * из приложения мгновенно, запасной путь — 401 поллера.
      *
      * @param User $user владелец (найден по telegram_id из апдейта)
      * @param int $deviceId id устройства из callback_data
@@ -33,17 +38,25 @@ class TelegramSessionActions
             return ['ok' => false, 'message' => 'Устройство не найдено'];
         }
 
-        $revoked = self::killSession($device);
+        $killed = DeviceSessionRevoker::revokeDeviceSessions($user, $device);
 
-        if (! $revoked) {
-            return ['ok' => true, 'message' => 'Сеанс уже закрыт'];
+        if ($killed === []) {
+            return ['ok' => true, 'message' => 'Сеанс уже закрыт: '.$device->label()];
         }
 
-        return ['ok' => true, 'message' => 'Сеанс завершён: '.$device->label()];
+        if (count($killed) === 1) {
+            return ['ok' => true, 'message' => 'Сеанс завершён: '.$device->label()];
+        }
+
+        return ['ok' => true, 'message' => 'Сеанс завершён: '.$device->label().' (закрыто: '.count($killed).')'];
     }
 
     /**
-     * Забанить устройство навсегда + завершить его сеанс.
+     * Забанить устройство навсегда + мгновенно завершить его сеанс.
+     *
+     * Тот же килл, что у «Завершить», плюс вечный запрет входа:
+     * middleware режет любой запрос с этого отпечатка (403),
+     * а форма входа не пустит заново. Разбан — кнопкой ниже.
      *
      * @param User $user владелец
      * @param int $deviceId id устройства
@@ -58,9 +71,10 @@ class TelegramSessionActions
         }
 
         $device->forceFill(['blocked' => true, 'trusted' => false])->saveQuietly();
-        self::killSession($device);
+        DeviceSessionRevoker::forgetBlockedCache((int) $user->id, (string) ($device->fingerprint ?? ''));
+        DeviceSessionRevoker::revokeDeviceSessions($user, $device);
 
-        return ['ok' => true, 'message' => 'Забанено: '.$device->label()];
+        return ['ok' => true, 'message' => 'Забанено: '.$device->label().'. Войти с него больше нельзя'];
     }
 
     /**
@@ -79,6 +93,7 @@ class TelegramSessionActions
         }
 
         $device->forceFill(['blocked' => false])->saveQuietly();
+        DeviceSessionRevoker::forgetBlockedCache((int) $user->id, (string) ($device->fingerprint ?? ''));
 
         return ['ok' => true, 'message' => 'Разблокировано: '.$device->label()];
     }
@@ -208,37 +223,5 @@ class TelegramSessionActions
         return UserDevice::where('id', $deviceId)
             ->where('user_id', (int) $user->id)
             ->first();
-    }
-
-    /**
-     * Удалить web-сессию устройства и пнуть её по realtime.
-     *
-     * @param UserDevice $device устройство
-     * @return bool true когда строка реально удалена
-     */
-    private static function killSession(UserDevice $device): bool
-    {
-        $sessionId = (string) ($device->session_id ?? '');
-
-        if ($sessionId === '') {
-            return false;
-        }
-
-        $deleted = DB::table('sessions')
-            ->where('id', $sessionId)
-            ->where('user_id', (int) $device->user_id)
-            ->delete();
-
-        if ($deleted === 0) {
-            return false;
-        }
-
-        try {
-            broadcast(new SessionRevoked((int) $device->user_id, [$sessionId]));
-        } catch (\Throwable) {
-            // No-op: строка уже удалена, поллер добьёт 401.
-        }
-
-        return true;
     }
 }

@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Events\SessionRevoked;
 use App\Models\UserDevice;
+use App\Services\DeviceSessionRevoker;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -13,8 +13,9 @@ use Illuminate\Support\Facades\DB;
  * заблокировать навсегда (таб «Безопасность» → «Сеансы»).
  *
  * Завершение и блокировка сразу удаляют web-сеанс устройства
- * и шлют SessionRevoked в личный канал — жертва вылетает мгновенно,
- * а не на следующем запросе.
+ * (при промахе — добивают сиротские) и шлют SessionRevoked
+ * в личный канал — жертва вылетает мгновенно, а не на
+ * следующем запросе. Та же механика, что в боте.
  */
 class DeviceController extends Controller
 {
@@ -96,9 +97,9 @@ class DeviceController extends Controller
     public function terminate(Request $request, int $device)
     {
         $row = $this->owned($request, $device);
-        $revoked = $this->killSession($row);
+        $killed = DeviceSessionRevoker::revokeDeviceSessions($request->user(), $row);
 
-        return response()->json(['ok' => true, 'revoked' => $revoked]);
+        return response()->json(['ok' => true, 'revoked' => $killed !== []]);
     }
 
     /**
@@ -112,9 +113,10 @@ class DeviceController extends Controller
     {
         $row = $this->owned($request, $device);
         $row->forceFill(['blocked' => true, 'trusted' => false])->saveQuietly();
-        $revoked = $this->killSession($row);
+        DeviceSessionRevoker::forgetBlockedCache((int) $row->user_id, (string) ($row->fingerprint ?? ''));
+        $killed = DeviceSessionRevoker::revokeDeviceSessions($request->user(), $row);
 
-        return response()->json(['ok' => true, 'revoked' => $revoked]);
+        return response()->json(['ok' => true, 'revoked' => $killed !== []]);
     }
 
     /**
@@ -129,40 +131,9 @@ class DeviceController extends Controller
     {
         $row = $this->owned($request, $device);
         $row->forceFill(['blocked' => false])->saveQuietly();
+        DeviceSessionRevoker::forgetBlockedCache((int) $row->user_id, (string) ($row->fingerprint ?? ''));
 
         return response()->json(['ok' => true]);
-    }
-
-    /**
-     * Удалить web-сеанс устройства и пнуть его по realtime.
-     *
-     * @param UserDevice $row устройство
-     * @return bool true когда строка сессии реально удалена
-     */
-    private function killSession(UserDevice $row): bool
-    {
-        $sessionId = (string) ($row->session_id ?? '');
-
-        if ($sessionId === '') {
-            return false;
-        }
-
-        $deleted = DB::table('sessions')
-            ->where('id', $sessionId)
-            ->where('user_id', $row->user_id)
-            ->delete();
-
-        if ($deleted > 0) {
-            try {
-                broadcast(new SessionRevoked((int) $row->user_id, [$sessionId]));
-            } catch (\Throwable) {
-                // No-op: строка уже удалена, поллер добьёт 401.
-            }
-
-            return true;
-        }
-
-        return false;
     }
 
     /**

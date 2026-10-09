@@ -1,15 +1,21 @@
 <script setup lang="ts">
+import Button from 'primevue/button'
 import Card from 'primevue/card'
 import Tag from 'primevue/tag'
 import UpdateProfileInformationForm from '@/Pages/Profile/Partials/UpdateProfileInformationForm.vue'
 import DatingRatingStars from '@/Components/Features/Dating/DatingRatingStars.vue'
-import { useMyRating } from '@/composables/useMyRating'
-import { useMyTrust } from '@/composables/useMyTrust'
+import ReputationDetailsDialog from '@/Components/Features/Settings/ReputationDetailsDialog.vue'
+import { useReputationDetails } from '@/composables/useReputationDetails'
 
 defineProps<{ mustVerifyEmail: boolean; status?: string | null; bioEmpty: boolean; bioText: string }>()
 
-const rating = useMyRating()
-const trust = useMyTrust()
+/**
+ * Единый источник данных про звёзды и репутацию: и карточкам,
+ * и диалогу сведений — один хук, без двойных запросов.
+ */
+const reputationDetails = useReputationDetails()
+const rating = reputationDetails.rating
+const trust = reputationDetails.trust
 </script>
 <template>
   <div class="space-y-4">
@@ -40,13 +46,15 @@ const trust = useMyTrust()
         </div>
         <div v-else-if="trust.score.value != null" class="mt-3 flex items-center gap-3">
           <span class="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-xl font-black text-white shadow">{{ trust.score.value }}</span>
-          <div class="min-w-0">
+          <div class="min-w-0 flex-1">
             <div class="text-sm font-black text-stone-900 dark:text-white">{{ trust.score.value }} из 10 · {{ trust.label.value }}</div>
             <div class="text-xs text-stone-500 dark:text-zinc-400">{{ trust.hint.value }}</div>
           </div>
         </div>
+        <Button label="Сведения о репутации" icon="pi pi-shield" rounded outlined severity="secondary" size="small" class="mt-3 w-full sm:w-auto" @click="reputationDetails.open()" />
       </template>
     </Card>
+    <ReputationDetailsDialog :details="reputationDetails" />
     <Card v-if="!bioEmpty" class="!bg-white dark:!bg-zinc-900 !border-stone-200 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }">
       <template #content>
         <h4 class="text-sm font-black flex items-center gap-2">Превью «О себе» <Tag value="как видят другие" class="!text-xs !font-normal !bg-stone-100 !text-stone-500 !border-0" /></h4>

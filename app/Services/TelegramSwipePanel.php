@@ -87,7 +87,8 @@ class TelegramSwipePanel
      * Собрать текст, фото и клавиатуру карточки анкеты.
      *
      * Инфа полная, как в приложении: имя, возраст, пол, город,
-     * дистанция, цель, «о себе», интересы, онлайн-статус. Фото —
+     * дистанция, цель, «о себе», интересы, онлайн-статус, звёзды
+     * рейтинга и предупреждение о низкой репутации. Фото —
      * отдельным полем (отправка через TelegramCardSender: sendPhoto
      * либо текст, когда https-фото нет).
      *
@@ -167,6 +168,19 @@ class TelegramSwipePanel
         if ($statusLine !== '') {
             $lines[] = '';
             $lines[] = $statusLine;
+        }
+
+        $ratingLine = self::ratingLine($card);
+
+        if ($ratingLine !== '') {
+            $lines[] = $ratingLine;
+        }
+
+        $trustWarning = self::trustWarning($card);
+
+        if ($trustWarning !== '') {
+            $lines[] = '';
+            $lines[] = $trustWarning;
         }
 
         if (! empty($card['liked_me'])) {
@@ -301,6 +315,106 @@ class TelegramSwipePanel
         }
 
         return TelegramPhoto::absolutize((string) ($card['avatar_url'] ?? ''));
+    }
+
+    /**
+     * Строка рейтинга кандидата: звёзды и число отзывов.
+     *
+     * Скрытый (PRO+) и пустой рейтинг не показываем — как в Mini App.
+     *
+     * @param array<string, mixed> $card карточка из DatingService
+     * @return string пусто когда показать нечего
+     */
+    private static function ratingLine(array $card): string
+    {
+        if (! empty($card['rating_hidden'])) {
+            return '';
+        }
+
+        $count = (int) ($card['rating_count'] ?? 0);
+        $avg = $card['rating_avg'] ?? null;
+
+        if ($count <= 0 || ! is_numeric($avg)) {
+            return '';
+        }
+
+        return '⭐ '.round((float) $avg, 1).' ('.$count.' '.self::plural($count, 'отзыв', 'отзыва', 'отзывов').')';
+    }
+
+    /**
+     * Предупреждение о низкой репутации: как жёлтый баннер в свайпах.
+     *
+     * Показываем при трасте 1–4 или звёздах ниже 3 — с числами,
+     * чтобы было понятно, с кем имеешь дело. Детали — в FAQ.
+     *
+     * @param array<string, mixed> $card карточка из DatingService
+     * @return string пусто когда всё в порядке
+     */
+    private static function trustWarning(array $card): string
+    {
+        $trustRaw = $card['trust_score'] ?? null;
+        $trust = is_numeric($trustRaw) ? max(1, min(10, (int) round((float) $trustRaw))) : null;
+
+        $count = (int) ($card['rating_count'] ?? 0);
+        $avg = $card['rating_avg'] ?? null;
+        $lowRating = empty($card['rating_hidden']) && $count > 0 && is_numeric($avg) && (float) $avg < 3;
+
+        if (($trust === null || $trust > 4) && ! $lowRating) {
+            return '';
+        }
+
+        $parts = [];
+
+        if ($trust !== null) {
+            $label = '';
+
+            try {
+                $label = (string) (TrustScoreService::zoneFor($trust)['label'] ?? '');
+            } catch (\Throwable) {
+                $label = '';
+            }
+
+            $parts[] = 'репутация '.$trust.' из 10'.($label !== '' ? ' · '.$label : '');
+        }
+
+        $ratingLine = self::ratingLine($card);
+
+        if ($ratingLine !== '') {
+            $parts[] = $ratingLine;
+        }
+
+        $numbers = $parts !== [] ? ' — '.implode(' · ', $parts) : '';
+
+        return '⚠️ <b>Осторожно: низкая репутация</b>'.$numbers."\nУ профиля много жалоб, блокировок или плохих отзывов. Детали — в FAQ: отзывы и репутация.";
+    }
+
+    /**
+     * Форма множественного числа для счётчиков.
+     *
+     * @param int $count число
+     * @param string $one 1 отзыв
+     * @param string $few 2 отзыва
+     * @param string $many 5 отзывов
+     * @return string подходящая форма
+     */
+    private static function plural(int $count, string $one, string $few, string $many): string
+    {
+        $mod100 = abs($count) % 100;
+        $mod10 = $mod100 % 10;
+
+        if ($mod100 > 10 && $mod100 < 20) {
+            return $many;
+        }
+
+        if ($mod10 > 1 && $mod10 < 5) {
+            return $few;
+        }
+
+        if ($mod10 === 1) {
+            return $one;
+        }
+
+        return $many;
     }
 
     /**

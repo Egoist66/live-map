@@ -1,12 +1,14 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, toRef } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import { useMounted } from '@vueuse/core'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
 import Chip from 'primevue/chip'
 import Dialog from 'primevue/dialog'
+import Message from 'primevue/message'
 import { useProfileUrl } from '@/composables/useProfileUrl'
+import { useSwipeTrustWarning } from '@/composables/useSwipeTrustWarning'
 import { usePresenceState } from '@/composables/usePresence'
 import { useViewportBreakpoints } from '@/composables/useViewportBreakpoints'
 import { formatRelative } from '@/utils/date'
@@ -23,6 +25,8 @@ const { isMobile } = useViewportBreakpoints()
 const mounted = useMounted()
 
 const open = computed(() => !!props.card)
+const cardRef = toRef(props, 'card')
+const trustWarn = useSwipeTrustWarning(cardRef)
 
 /**
  * Онлайн-статус анкеты: presence-канал + свежесть last_seen_at.
@@ -105,6 +109,21 @@ function ageText(card: SwipeCard): string {
       <div class="mt-3">
         <Chip :label="goalShort(card)" icon="pi pi-heart-fill" class="!rounded-full !bg-rose-500 !text-white !border-0 text-xs" />
       </div>
+
+      <Message v-if="trustWarn.show.value" severity="warn" :closable="false" class="!rounded-2xl !mt-3 !text-xs">
+        <div class="flex items-start gap-2">
+          <i class="pi pi-exclamation-triangle !text-amber-500 mt-0.5 shrink-0" aria-hidden="true" />
+          <div class="min-w-0">
+            <div class="font-black text-amber-700 dark:text-amber-300">Осторожно: низкая репутация</div>
+            <div class="mt-0.5 font-semibold text-amber-700 dark:text-amber-300">{{ trustWarn.numbersLine.value }}</div>
+            <div class="mt-1 leading-snug text-stone-600 dark:text-zinc-300">У этого профиля много жалоб, блокировок или плохих отзывов. Подумай перед лайком и встречей.</div>
+            <Link :href="trustWarn.faqHref" class="mt-1.5 inline-flex items-center gap-1 font-bold text-amber-700 dark:text-amber-300 hover:underline">
+              <span>Что это значит — раздел FAQ</span>
+              <i class="pi pi-arrow-right text-[10px]" aria-hidden="true" />
+            </Link>
+          </div>
+        </div>
+      </Message>
 
       <div v-if="card.id != null" class="mt-3">
         <DatingFriendButton :user-id="card.id" />

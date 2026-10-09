@@ -62,6 +62,12 @@ class TelegramProfilePanel
         $lines[] = '';
         $lines[] = '💞 Лайков: <b>'.$admirers['total'].'</b> · 🎉 Мэтчей: <b>'.$matches['total'].'</b> · 💬 Новых: <b>'.$unread.'</b>';
 
+        $trustLine = self::trustLine($fresh);
+
+        if ($trustLine !== '') {
+            $lines[] = $trustLine;
+        }
+
         $email = trim((string) ($fresh->email ?? ''));
 
         if ($email !== '') {
@@ -211,6 +217,12 @@ class TelegramProfilePanel
         $lines[] = '';
         $lines[] = '⭐ Уровень <b>'.$level.'</b> · Репутация <b>'.$reputation.'</b> · 💎 '.$planLabel;
 
+        $trustLine = self::trustLine($fresh);
+
+        if ($trustLine !== '') {
+            $lines[] = $trustLine;
+        }
+
         if ($fresh->isPendingDeletion()) {
             $days = $fresh->deletionDaysLeft() ?? 0;
             $lines[] = '⏳ Удаляется через <b>'.$days.' дн.</b>';
@@ -278,6 +290,53 @@ class TelegramProfilePanel
             'photoUrl' => TelegramPhoto::bestFor($fresh),
             'keyboard' => TelegramMenu::withNav($keyboard),
         ];
+    }
+
+    /**
+     * Строка доверия анкеты: звёзды отзывов и репутация 1–10.
+     *
+     * Те же числа, что в приложении (Настройки → Профиль):
+     * средний балл и счётчик — из DatingReviewService, скор
+     * и зону — из TrustScoreService. Бот не должен падать,
+     * поэтому всё в try/catch — нет данных, нет строки.
+     *
+     * @param User $user владелец
+     * @return string пусто когда данных нет
+     */
+    private static function trustLine(User $user): string
+    {
+        try {
+            $summary = app(DatingReviewService::class)->summary($user, $user);
+        } catch (\Throwable) {
+            $summary = null;
+        }
+
+        try {
+            $state = TrustScoreService::state($user);
+        } catch (\Throwable) {
+            $state = null;
+        }
+
+        $parts = [];
+
+        if (is_array($summary) && (int) ($summary['count'] ?? 0) > 0 && $summary['avg'] !== null) {
+            $count = (int) $summary['count'];
+            $avg = round((float) $summary['avg'], 1);
+            $hidden = ! empty($summary['hidden']) ? ' (скрыт, PRO)' : '';
+            $parts[] = '⭐ <b>'.$avg.'</b> ('.$count.')'.$hidden;
+        }
+
+        if (is_array($state) && isset($state['score'])) {
+            $score = (int) $state['score'];
+            $label = trim((string) ($state['label'] ?? ''));
+            $parts[] = '🛡 <b>'.$score.'/10</b>'.($label !== '' ? ' · '.$label : '');
+        }
+
+        if ($parts === []) {
+            return '';
+        }
+
+        return implode(' · ', $parts);
     }
 
     /**

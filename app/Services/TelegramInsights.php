@@ -178,6 +178,13 @@ class TelegramInsights
         $lines[] = '';
         $lines[] = '💎 Тариф: <b>'.$planLabel.'</b>';
         $lines[] = '⭐ Уровень: <b>'.$level.'</b> · Репутация: <b>'.$reputation.'</b>';
+
+        $trustLine = self::trustLine($fresh);
+
+        if ($trustLine !== '') {
+            $lines[] = $trustLine;
+        }
+
         $lines[] = '';
         $lines[] = '⏱ В приложении: сегодня <b>'.self::minutesLabel((int) $time['today_min']).'</b>, неделя <b>'.$timeLabel.'</b>, месяц <b>'.self::minutesLabel((int) $time['month_min']).'</b>';
         $lines[] = '💞 Лайков: неделя <b>'.$likes['week'].'</b> · месяц <b>'.$likes['month'].'</b> · всего <b>'.$likes['total'].'</b>';
@@ -312,11 +319,61 @@ class TelegramInsights
         $lines[] = '';
         $lines[] = '💎 Тариф: <b>'.$planLabel.'</b>';
         $lines[] = '⭐ Уровень: <b>'.$level.'</b> · Репутация: <b>'.$reputation.'</b>';
+
+        $trustLine = self::trustLine($fresh);
+
+        if ($trustLine !== '') {
+            $lines[] = $trustLine;
+        }
+
         $lines[] = '💞 Лайков анкеты: <b>'.$admirers['total'].'</b>';
         $lines[] = '🎉 Мэтчей: <b>'.$matches['total'].'</b>';
         $lines[] = '💬 Непрочитанных: <b>'.$unread.'</b>';
 
         return implode("\n", $lines);
+    }
+
+    /**
+     * Строка доверия: звёзды отзывов и репутация 1–10.
+     *
+     * Те же числа, что в приложении: средний балл — из
+     * DatingReviewService, скор и зону — из TrustScoreService.
+     * Всё в try/catch: бот не должен падать из-за статистики.
+     *
+     * @param User $user владелец
+     * @return string пусто когда данных нет
+     */
+    public static function trustLine(User $user): string
+    {
+        try {
+            $summary = app(DatingReviewService::class)->summary($user, $user);
+        } catch (\Throwable) {
+            $summary = null;
+        }
+
+        try {
+            $state = TrustScoreService::state($user);
+        } catch (\Throwable) {
+            $state = null;
+        }
+
+        $parts = [];
+
+        if (is_array($summary) && (int) ($summary['count'] ?? 0) > 0 && $summary['avg'] !== null) {
+            $parts[] = '⭐ Оценки: <b>'.round((float) $summary['avg'], 1).'</b> ('.(int) $summary['count'].')';
+        }
+
+        if (is_array($state) && isset($state['score'])) {
+            $score = (int) $state['score'];
+            $label = trim((string) ($state['label'] ?? ''));
+            $parts[] = '🛡 Доверие: <b>'.$score.'/10</b>'.($label !== '' ? ' · '.$label : '');
+        }
+
+        if ($parts === []) {
+            return '';
+        }
+
+        return implode(' · ', $parts);
     }
 
     /**

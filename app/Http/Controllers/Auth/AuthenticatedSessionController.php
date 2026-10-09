@@ -38,6 +38,18 @@ class AuthenticatedSessionController extends Controller
 
         $user = $request->user();
 
+        // Устройство в бане у владельца — вход запрещён: гасим только
+        // что выданную сессию и отдаём понятную ошибку на форме.
+        if (\App\Services\LoginDeviceGuard::isBlocked($user, $request)) {
+            Auth::guard('web')->logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'email' => 'Это устройство заблокировано владельцем аккаунта. Попросите владельца разблокировать его в боте или в Настройки → Безопасность.',
+            ]);
+        }
+
         \App\Services\LoginDeviceGuard::handleLogin($user, $request, 'password');
 
         $fallback = $user->landingPath();
