@@ -7,8 +7,9 @@ import { useAiEnabled } from '@/composables/useAiEnabled'
 /**
  * AI-генерация черновика дейтинг-анкеты по промпту (Premium и выше).
  *
- * Видимость — через общий `useAiEnabled` (флаг админки `ai.enabled`
- * + staff-обход), как у всех ИИ-фич: свой велосипед для флага не нужен.
+ * Видимость — СТРОГО по флагу админки `ai.enabled` (без staff-обхода):
+ * пока тумблер выключен, блок «AI-анкета» не видит никто, включая staff.
+ * Как у всех ИИ-фич: свой велосипед для флага не нужен.
  * Пользователь описывает желаемую анкету своими словами, бэкенд
  * модерирует промпт, генерирует черновик через OpenRouter и модерирует
  * результат. Черновик возвращается в форму — человек правит поля
@@ -24,16 +25,16 @@ export function useQuestionnaireAi() {
   const generating = ref(false)
   const error = ref<string | null>(null)
 
-  const { canSeeAi } = useAiEnabled()
+  const { isAiEnabled } = useAiEnabled()
 
   /** Алиас под старым именем: форма читает `ai.aiVisible`. */
-  const aiVisible = canSeeAi
+  const aiVisible = isAiEnabled
 
   const authUser = computed(
     () => (usePage().props.auth as { user?: { effective_plan?: string; plan?: string } | null } | undefined)?.user ?? null,
   )
 
-  /** Генерация доступна Premium и выше при включённом ИИ (staff тоже проходит гейт на бэке). */
+  /** Генерация доступна Premium и выше только при включённом тумблере ИИ. */
   const canUse = computed(() => {
     if (!aiVisible.value) return false
     const plan = planOf(authUser.value)

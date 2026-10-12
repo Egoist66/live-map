@@ -39,7 +39,7 @@ onMounted(() => {
       />
     </div>
 
-    <p class="mt-2 text-xs text-stone-500 dark:text-zinc-400 leading-relaxed">Staff видит ИИ всегда — можешь тестировать при выключенном тумблере, пользователи ничего не заметят.</p>
+    <p class="mt-2 text-xs text-stone-500 dark:text-zinc-400 leading-relaxed">Пока тумблер выключен — блок «AI-анкета» скрыт у всех, включая staff. Гид и разбор профиля staff видит всегда для тестов.</p>
     <Message v-if="ai.notice.value" severity="success" :closable="false" class="mt-2">{{ ai.notice.value }}</Message>
     <Message v-if="ai.error.value" severity="error" :closable="false" class="mt-2">{{ ai.error.value }}</Message>
   </div>
