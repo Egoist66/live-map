@@ -1755,3 +1755,33 @@
 - AppModulesWelcomeNews: single delivery via settings guides_dismissed flag; no auto-recreate after admin unpublish/delete (retired flag); AdminAppUpdateController honors it.
 - Frontend: toast for security.new_device; bell texts for business/cooperation/support; app.* owned by news tab only; uloveOnly modal shows base layer; security inbox listener for polling mode.
 - Verified: php -l x6 clean, vue-tsc --noEmit clean.
+
+## 2026-10-12 — AI-модерация публичного контента: блок + блюр, чаты исключены
+- Бэкенд: `ContentModeration` — двухслойная схема (regex sync + AI async). Добавлены `normalizeForCheck` (ё→е, латиница→кириллица, leet), `checkObfuscated` (мат с разделителями: п-и-з-д-а) и `hasMaskedSwear` (маска буквы: х*й, п*зда, б*дь, с*ка), `flagsFor`/`mask` для сериализаторов. Создание токсичного по-прежнему блочится 422 (`assertClean`).
+- `ModeratePublicContentJob`: AI-доанализ через `AiTextService::moderate` после создания (flow/pin/district посты и комменты), при токсичности — Report(abuse) + лог. Диспатч из 5 контроллеров; `MessageController::store` помечен комментарием — чаты намеренно не модерируются (личное дело участников).
+- Сериализаторы отдают `moderation {is_toxic, category, label, blur}`: `FlowPostController` (+оригинал репоста), `FlowPostCommentController`, `DistrictPostController`, `DistrictPostCommentController`, `Pin::toPublicArray`, `PinCommentController` (index/store).
+- Фронт: `useContentModeration` (локальный regex-зеркало + `checkViaAi` с кэшем + `assertPublishable`), `ModeratedContent.vue` (PrimeVue Tag/Button, Tailwind, blur 8px, тёмная тема + мобильная адаптация). Интеграция: `FlowPostCard`, `FlowCommentItem`, `DistrictNewsCard` (посты + ветки), `PinDetailsCard` (body + комменты). Guard перед отправкой: `useFlowComments`, `useFlowComposer`, `useDistrictNewsComments`, `usePinDetails`.
+- Типы: `ModerationFlags` в `types/flow`, `DistrictPost`, `Comment(PinComment)`.
+- Проверки: `php -l` ✅ ×10, `vue-tsc --noEmit` ✅, ручной прогон `ContentModeration::check` (мат/х*й/п-и-з-д-а → true, обычный текст и «хвойный» → false).
+
+## 2026-10-12 — Модерация не действует на админов и модераторов
+- Бэкенд: `ContentModeration::assertClean` пропускает `canModerate()` (админ + модератор) — публикация без 422; `ModeratePublicContentJob` выходит раньше AI-проверки и не заводит Report на контент персонала.
+- Фронт: `isStaffViewer()` в `useContentModeration` (зеркало `canModerate` через `usePage().props.auth`); `moderationOf` отдаёт clean → `ModeratedContent` без блюра, `assertPublishable` возвращает null → отправка без AI-проверки и тостов, `runAiCheck` не жжёт квоту OpenRouter.
+- Проверки: `php -l` ✅ ×2, `vue-tsc --noEmit` ✅.
+
+## 2026-10-12 — Модерация отзывов, бизнеса и профиля (дыра «Хуйло тупое»)
+- Причина: фильтр мат ловил (`check('Хуйло тупое') → true`), но `DatingReviewController/Service` вообще не вызывал модерацию — дыра в покрытии, а не в словаре.
+- Бэкенд: `DatingReviewService::upsert` — `assertClean(body)` (422) + AI-job `dating_review` (Report abuse на автора при завуалированной токсичности) + `moderation`-флаги в `serialize`; `BusinessService::updateProfile` — `assertClean(name, brand, description, services)`; `ProfileController::update/updateThought` — `assertClean(bio, thought)`. Staff-bypass везде автоматический. Анкета свайпов уже была покрыта (`SwipeController`).
+- Не трогаем сознательно: чаты/личка, приватные заметки, жалобы и обращения в поддержку (цитата нарушения в тексте жалобы — легитимна, аудитория только staff).
+- Фронт: `DatingReviewItem.moderation`, блюр тел отзывов в `DatingReviewsSection` (`ModeratedContent`), guard в `useDatingReviews.save` (ошибка падает в существующий тост «Не сохранилось»).
+- Проверки: `php -l` ✅ ×5, `vue-tsc --noEmit` ✅.
+
+## 2026-10-12 — Кнопка AI-гида в профиле на мобилке
+- Рядом с глазом скрытия профиля в `UloveProfileView` (тариф + глаз, только своё) — текстовая круглая кнопка `pi-sparkles` `!w-7 !h-7` в фиолетовом акценте (сначала стояла в `ProfileDesignHero` — убрано по ревью, место у глаза).
+- Открывает глобальную `AiGuideDialog` через общий `useAiGuideLauncher().openGuide()` (эмит `ai` в `Show.vue`); модалка уже адаптирована под мобилку (`mobile-sheet`, брейкпоинт 96vw).
+- Проверки: `vue-tsc --noEmit` ✅.
+
+## 2026-10-12 — AI-генерация анкеты по промпту (Premium)
+- Бэкенд: `QuestionnaireDraftAgent` (structured output: goal/custom_goal/about/interests) + `AiTextService::draftQuestionnaire` (промпт ≤500, модерация промпта через `moderate` → 422, лимит 10/час, `assertClean` результата); `AiQuestionnaireDraftRequest`; `AiAssistantController::draftQuestionnaire` с гейтом `TOP_PLANS` (402); роут `POST /api/ai/questionnaire-draft` (лимитер `ai-profile`).
+- Фронт: `aiApi.draftQuestionnaire` + тип `QuestionnaireDraft`; `useQuestionnaireAi` (`canUse` по `planOf`); Premium-блок вверху `DatingQuestionnaireForm` (промпт + «Создать анкету», черновик подставляется в поля и правится, интересы через `addInterest`); остальным — апсейл на `/settings/billing`.
+- Проверки: `php -l` ✅ ×4, роут в `route:list` ✅, `vue-tsc --noEmit` ✅.

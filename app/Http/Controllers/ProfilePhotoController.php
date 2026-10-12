@@ -143,6 +143,11 @@ class ProfilePhotoController extends Controller
         } catch (\Throwable) {
         }
         $fresh = $photo->refresh();
+        // Первое фото в пустой галерее сразу становится аватаром:
+        // иначе у людей с фото везде серая заглушка (чат, шапка, пины).
+        if (!$user->refresh()->avatar_path) {
+            $user->forceFill(['avatar_path' => $path])->save();
+        }
         try {
             \App\Services\UserSubscriptionNotifier::photoCreated($fresh);
         } catch (\Throwable) {
@@ -200,7 +205,10 @@ class ProfilePhotoController extends Controller
         if ($this->disk() !== 'public') Storage::disk('public')->delete($photo->path);
         $photo->delete();
         if ($isAvatar) {
-            $owner->forceFill(['avatar_path' => null])->save();
+            // Удаляли аватар: продвигаем следующее главное фото,
+            // чтобы не оставаться с заглушкой при живой галерее.
+            $nextMain = $owner->profilePhotos()->orderBy('sort_order')->orderBy('id')->first();
+            $owner->forceFill(['avatar_path' => $nextMain?->path])->save();
         }
         return response()->json(['ok' => true]);
     }

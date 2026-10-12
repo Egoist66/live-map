@@ -23,6 +23,9 @@ return new class extends Migration
             $table->id();
             $table->foreignId('photo_id')->constrained('profile_photos')->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            // Дублирует 2026_09_10_000003: та миграция датирована раньше
+            // создания таблицы, поэтому на свежих базах шла до неё и падала.
+            $table->boolean('is_incognito')->default(false);
             $table->timestamps();
             $table->unique(['photo_id', 'user_id']);
             $table->index('user_id');

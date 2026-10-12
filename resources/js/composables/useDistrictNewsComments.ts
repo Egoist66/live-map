@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import { useToast } from 'primevue/usetoast'
 import { districtPostCommentsApi } from '@/services/district-posts.api'
+import { useContentModeration } from '@/composables/useContentModeration'
 import { useRewardToast } from '@/composables/useRewardToast'
 import { bindThreadLive } from '@/composables/useThreadLive'
 import type { DistrictPostComment } from '@/types/entities/DistrictPost'
@@ -125,6 +126,12 @@ export function useDistrictNewsComments(
   async function send(): Promise<boolean> {
     const text = draft.value.trim()
     if (!text || sending.value) {
+      return false
+    }
+    const moderator = useContentModeration()
+    const blockReason = await moderator.assertPublishable(text)
+    if (blockReason) {
+      toast?.add({ severity: 'warn', summary: 'Модерация', detail: blockReason, life: 3500 })
       return false
     }
     sending.value = true

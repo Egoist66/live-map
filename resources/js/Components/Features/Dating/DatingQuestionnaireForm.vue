@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
+import { Link } from '@inertiajs/vue3'
 import Button from 'primevue/button'
 import Select from 'primevue/select'
 import InputText from 'primevue/inputtext'
@@ -7,13 +8,18 @@ import Textarea from 'primevue/textarea'
 import Chip from 'primevue/chip'
 import ToggleSwitch from 'primevue/toggleswitch'
 import { useDatingQuestionnaire } from '@/composables/useDatingQuestionnaire'
+import { useQuestionnaireAi } from '@/composables/useQuestionnaireAi'
 import { DATING_GOAL_PRESETS, DATING_INTEREST_PRESETS } from '@/validation/schemas/dating.schema'
 import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
 
 const emit = defineEmits<{ (e: 'saved', saved?: Record<string, any>): void }>()
 
 const q = useDatingQuestionnaire()
+const ai = useQuestionnaireAi()
 const { selectPt } = useDropdownMenuStyle()
+
+/** Черновик подставлен: просим проверить перед сохранением. */
+const draftApplied = ref(false)
 
 onMounted(() => q.resetFromUser())
 
@@ -24,6 +30,21 @@ async function onSave(): Promise<void> {
   const ok = await q.save()
   if (ok) emit('saved', q.lastSaved.value ?? undefined)
 }
+
+/**
+ * Сгенерировать черновик по промпту и подставить в поля (можно править).
+ */
+async function onGenerate(): Promise<void> {
+  draftApplied.value = false
+  const draft = await ai.generate()
+  if (!draft) return
+  if (draft.goal) q.goal.value = draft.goal
+  if (draft.custom_goal) q.customGoal.value = draft.custom_goal
+  if (draft.about) q.about.value = draft.about
+  q.interests.value = []
+  for (const tag of draft.interests ?? []) q.addInterest(tag)
+  draftApplied.value = true
+}
 </script>
 
 <!--
@@ -32,6 +53,51 @@ async function onSave(): Promise<void> {
 -->
 <template>
   <div class="flex flex-col gap-4 min-w-0">
+    <div v-if="ai.canUse.value" class="rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-fuchsia-50 p-3 dark:border-violet-500/30 dark:from-violet-500/10 dark:to-fuchsia-500/10">
+      <div class="flex items-center gap-2">
+        <span class="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-sm text-white"><i class="pi pi-sparkles" /></span>
+        <div class="min-w-0 flex-1">
+          <div class="text-[13px] font-black text-stone-800 dark:text-zinc-100">AI-анкета · Premium</div>
+          <div class="truncate text-[11px] text-stone-500 dark:text-zinc-400">Опиши себя парой фраз — ИИ заполнит поля</div>
+        </div>
+      </div>
+      <Textarea
+        v-model="ai.prompt.value"
+        rows="2"
+        maxlength="500"
+        autoResize
+        placeholder="Например: люблю походы и кино, ищу девушку для серьёзных отношений..."
+        class="w-full mt-2 !rounded-xl !text-sm dark:!border-zinc-700"
+      />
+      <div class="mt-2 flex items-center gap-2">
+        <span class="flex-1 text-[11px] text-stone-400 dark:text-zinc-500">Осталось {{ ai.promptLeft.value }}</span>
+        <Button
+          label="Создать анкету"
+          icon="pi pi-sparkles"
+          size="small"
+          rounded
+          :loading="ai.generating.value"
+          :disabled="ai.prompt.value.trim().length < 3"
+          class="!border-0 !bg-gradient-to-r !from-violet-500 !to-fuchsia-500 !text-white disabled:!opacity-50"
+          @click="onGenerate()"
+        />
+      </div>
+      <div v-if="ai.error.value" class="mt-1.5 text-xs text-rose-600 dark:text-rose-300">{{ ai.error.value }}</div>
+      <div v-if="draftApplied" class="mt-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-300">Черновик подставлен — проверь, подправь и нажми «Сохранить анкету».</div>
+    </div>
+    <Link
+      v-else
+      href="/settings/billing"
+      class="flex items-center gap-2.5 rounded-2xl border border-dashed border-violet-300 bg-violet-50/50 px-3 py-2.5 transition hover:bg-violet-50 dark:border-violet-500/30 dark:bg-violet-500/5 dark:hover:bg-violet-500/10"
+    >
+      <span class="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-sm text-white"><i class="pi pi-crown" /></span>
+      <span class="min-w-0 flex-1">
+        <span class="block text-[13px] font-black text-stone-800 dark:text-zinc-100">AI-анкета · Premium</span>
+        <span class="block truncate text-[11px] text-stone-500 dark:text-zinc-400">ИИ напишет анкету по твоему описанию</span>
+      </span>
+      <i class="pi pi-angle-right shrink-0 text-xs text-stone-400" />
+    </Link>
+
     <div class="flex items-center gap-3">
       <ToggleSwitch v-model="q.enabled.value" input-id="dating-enabled" class="shrink-0" />
       <label for="dating-enabled" class="text-sm font-semibold text-stone-700 dark:text-zinc-200">Показывать меня в ленте</label>

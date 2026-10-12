@@ -15,6 +15,7 @@ import PhotoLightbox from '@/Components/Features/Media/PhotoLightbox.vue'
 const FlowMediaCarousel = defineAsyncComponent(() => import('@/Components/Features/Flow/FlowMediaCarousel.vue'))
 import FlowPollCard from '@/Components/Features/Flow/FlowPollCard.vue'
 import FlowRichText from '@/Components/Features/Flow/FlowRichText.vue'
+import ModeratedContent from '@/Components/Features/Moderation/ModeratedContent.vue'
 import CompanyNewsBadge from '@/Components/Features/Business/CompanyNewsBadge.vue'
 import FlowRepostDialog from '@/Components/Features/Flow/FlowRepostDialog.vue'
 import PostShareDialog from '@/Components/Features/Chat/PostShareDialog.vue'
@@ -176,11 +177,13 @@ async function share(): Promise<void> {
         </div>
 
         <h3 v-if="shown.title" class="mt-3 text-[17px] font-black leading-snug tracking-tight text-ink-900 dark:text-white break-words">{{ shown.title }}</h3>
-        <p v-if="!isQuote" class="mt-1.5 text-[15px] leading-relaxed text-ink-900 dark:text-zinc-100" :class="!shown.title && 'mt-3'">
-          <FlowRichText :text="shown.body || 'Оригинал удалён'" @tag="emit('tag', $event)" />
-        </p>
-        <div v-if="isQuote && post.repost_comment" class="mt-1.5 rounded-2xl rounded-tl-md bg-violet-50 dark:bg-violet-500/10 px-3 py-2 text-[14px] italic leading-relaxed text-stone-600 dark:text-zinc-300 break-words">
-          «{{ post.repost_comment }}»
+        <div v-if="!isQuote" class="mt-1.5">
+          <ModeratedContent :text="shown.body || 'Оригинал удалён'" :moderation="(props.post as any).moderation" :check-ai="true">
+            <FlowRichText :text="shown.body || 'Оригинал удалён'" @tag="emit('tag', $event)" />
+          </ModeratedContent>
+        </div>
+        <div v-if="isQuote && post.repost_comment" class="mt-1.5">
+          <ModeratedContent :text="post.repost_comment" :moderation="(post as any).moderation" :check-ai="true" />
         </div>
         <FlowMediaCarousel
           v-if="post.media?.length"

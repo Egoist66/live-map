@@ -5,6 +5,7 @@ import { useFlowStore } from '@/stores/flow'
 import { useRewardToast } from '@/composables/useRewardToast'
 import { flowApi } from '@/services/flow.api'
 import { downscaleImage } from '@/composables/useImageDownscale'
+import { useContentModeration } from '@/composables/useContentModeration'
 import { isSameText } from '@/composables/useUnchangedGuard'
 import type { FlowPost, FlowMedia } from '@/types/flow'
 
@@ -295,6 +296,12 @@ export function useFlowComposer(existingId?: number | null) {
     const text = body.value.trim()
     const head = title.value.trim()
     if (!text || saving.value) return false
+    const moderator = useContentModeration()
+    const blockReason = await moderator.assertPublishable(`${head} ${text}`)
+    if (blockReason) {
+      toast?.add({ severity: 'warn', summary: 'Модерация', detail: blockReason, life: 3500 })
+      return false
+    }
     if (pollEnabled.value && pollFilled.value.length < 2) {
       toast?.add({ severity: 'warn', summary: 'Опрос', detail: 'Нужно минимум 2 варианта ответа', life: 2500 })
       return false

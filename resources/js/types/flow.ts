@@ -14,6 +14,7 @@ export type FlowRepostOrigin = {
   id: number
   title: string | null
   body: string
+  moderation?: ModerationFlags | null
   image_url: string | null
   author: FlowAuthor
 }
@@ -53,11 +54,20 @@ export type FlowCompany = {
   owner_profile: string | null
 }
 
+/** Флаги модерации публичного контента (бэкенд ContentModeration::flagsFor). */
+export type ModerationFlags = {
+  is_toxic: boolean
+  category: string | null
+  label: string | null
+  blur: boolean
+}
+
 /** Пост ленты. */
 export type FlowPost = {
   id: number
   title: string | null
   body: string
+  moderation?: ModerationFlags | null
   company: FlowCompany | null
   image_url: string | null
   media: FlowMedia[]
@@ -86,6 +96,7 @@ export type FlowComment = {
   post_id: number
   parent_id: number | null
   content: string
+  moderation?: ModerationFlags | null
   is_anonymous: boolean
   can_edit: boolean
   can_delete: boolean

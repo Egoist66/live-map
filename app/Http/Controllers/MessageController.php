@@ -41,6 +41,9 @@ class MessageController extends Controller
 
     public function store(Request $request, Conversation $conversation)
     {
+        // Намеренно без ContentModeration/AI: личная переписка — дело участников.
+        // Публичный контент (посты, комменты, пины) модерируется и блюрится,
+        // чаты — только жалобы, блокировки и privacy-настройки.
         abort_unless($conversation->hasParticipant($request->user()->id),403);
         \App\Services\EmailVerificationGate::assertCanWrite($request->user());
         $conversation->loadMissing('participants:id,name,message_privacy,allow_random_messages');

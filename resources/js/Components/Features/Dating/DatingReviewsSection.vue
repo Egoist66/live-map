@@ -8,6 +8,7 @@ import Textarea from 'primevue/textarea'
 import { useToast } from 'primevue/usetoast'
 import { useDatingReviews } from '@/composables/useDatingReviews'
 import { useProfileUrl } from '@/composables/useProfileUrl'
+import ModeratedContent from '@/Components/Features/Moderation/ModeratedContent.vue'
 import DatingRatingStars from '@/Components/Features/Dating/DatingRatingStars.vue'
 
 const props = withDefaults(
@@ -166,7 +167,9 @@ function reviewDate(iso: string | null): string {
             </span>
             <span class="text-[11px] text-stone-400 dark:text-zinc-500 shrink-0">{{ reviewDate(item.created_at) }}</span>
           </div>
-          <p v-if="item.body" class="mt-1.5 text-[13px] leading-snug text-stone-600 dark:text-zinc-300 whitespace-pre-wrap break-words">{{ item.body }}</p>
+          <div v-if="item.body" class="mt-1.5 text-[13px] leading-snug text-stone-600 dark:text-zinc-300">
+            <ModeratedContent :text="item.body" :moderation="item.moderation" :check-ai="true" />
+          </div>
         </div>
 
         <Button

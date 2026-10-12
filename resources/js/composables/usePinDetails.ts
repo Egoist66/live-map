@@ -12,6 +12,7 @@ import { pinsApi } from '@/services/pins.api'
 import { formatTime } from '@/utils/date'
 import { useToast } from 'primevue/usetoast'
 import { useForm } from 'vee-validate'
+import { useContentModeration } from '@/composables/useContentModeration'
 import { createCommentSchema } from '@/validation/schemas/comment.schema'
 import type { Pin, BoostType } from '@/types/entities/Pin'
 import type { PinComment } from '@/types/entities/Comment'
@@ -262,6 +263,12 @@ export function usePinDetails() {
 
   const sendComment = handleCommentSubmit(async (vals: any) => {
     if (!selectedPin.value) return
+    const moderator = useContentModeration()
+    const blockReason = await moderator.assertPublishable(String(vals.content || ''))
+    if (blockReason) {
+      toast?.add({ severity: 'warn', summary: 'Модерация', detail: blockReason, life: 3500 })
+      return
+    }
     const parentId = replyTo.value?.id ?? null
     await (createCommentMutation as any).mutateAsync({ pinId: selectedPin.value.id, content: vals.content, parent_id: parentId })
     resetCommentForm()

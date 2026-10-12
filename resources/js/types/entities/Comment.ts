@@ -6,6 +6,7 @@ export interface PinComment {
   user_id: number
   parent_id: number | null
   content: string
+  moderation?: import('@/types/flow').ModerationFlags | null
   is_anonymous: boolean
   user: UserBrief | null
   replies?: PinComment[]

@@ -45,6 +45,7 @@ export interface DatingReviewItem {
   id: number
   rating: number
   body: string | null
+  moderation?: import('@/types/flow').ModerationFlags | null
   created_at: string | null
   author: { id: number; name: string; avatar_url: string | null; profile_slug: string | null } | null
 }

@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
+import ModeratedContent from '@/Components/Features/Moderation/ModeratedContent.vue'
 import { formatFlowDate } from '@/utils/flowDate'
 import type { FlowComment } from '@/types/flow'
 
@@ -33,7 +34,7 @@ const authorName = () => props.comment.author?.name || 'Аноним'
     <div class="min-w-0 flex-1">
       <div class="min-w-0 rounded-2xl bg-stone-100 dark:bg-zinc-800 px-3 py-2">
         <div class="truncate text-[13px] font-bold leading-tight text-ink-900 dark:text-white">{{ authorName() }}</div>
-        <div class="mt-0.5 whitespace-pre-line break-words text-[14px] leading-[1.5] text-stone-700 dark:text-zinc-200 [overflow-wrap:anywhere]">{{ comment.content }}</div>
+        <ModeratedContent :text="comment.content" :moderation="(comment as any).moderation" :check-ai="true" />
       </div>
       <div class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-0.5 px-1 pt-1 text-xs text-stone-400">
         <span class="shrink-0">{{ formatFlowDate(comment.created_at) }}</span>

@@ -22,6 +22,7 @@ const ChatSearchDialog = defineAsyncComponent(() => import('@/Components/Feature
 import ProfileThoughtDialog from '@/Components/Features/Profile/ProfileThoughtDialog.vue'
 import ReportDialog from '@/Components/Features/Map/ReportDialog.vue'
 import { useReportDialog } from '@/composables/useReportDialog'
+import { useAiGuideLauncher } from '@/composables/useAiGuideLauncher'
 import { useDatingSavedSync, patchDatingFields } from '@/composables/useDatingSavedSync'
 import { useProfileDesign } from '@/composables/useProfileDesign'
 import { useProfileLayout } from '@/composables/useProfileLayout'
@@ -103,6 +104,7 @@ const design = useProfileDesign(props)
 const { single: isSingleColumn } = useProfileLayout()
 const { page, gallery, people, search, photoComments } = design
 const reportDialog = useReportDialog()
+const { openGuide } = useAiGuideLauncher()
 const thought = useProfileThought(() => props.profileUser.thought)
 const pickerInput = design.pickerInput
 const handlePickerChange = design.handlePickerChange
@@ -155,6 +157,7 @@ onMounted(() => {
             @message="page.onChat()"
             @photos="gallery.openDialog()"
             @add-photos="design.openPicker()"
+            @ai="openGuide()"
           />
           <template v-else>
           <ProfileDesignHero

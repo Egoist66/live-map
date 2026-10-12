@@ -43,6 +43,7 @@ class DistrictPostCommentController extends Controller
             'post_id' => $comment->post_id,
             'parent_id' => $comment->parent_id,
             'content' => $comment->content,
+            'moderation' => ContentModeration::flagsFor($comment->content),
             'can_edit' => $isAuthor,
             'can_delete' => $isAuthor || $isPostAuthor || ($viewer && $viewer->isAdmin()),
             'created_at' => $comment->created_at?->toISOString(),
@@ -153,6 +154,10 @@ class DistrictPostCommentController extends Controller
         $post->increment('comments_count');
         broadcast(new DistrictUpdated($district))->toOthers();
 
+        try {
+            \App\Jobs\ModeratePublicContentJob::dispatch('district_comment', (int) $comment->id, (int) $viewer->id, (string) $data['content']);
+        } catch (\Throwable) {
+        }
         DistrictNotifier::postCommented($post->refresh(), $viewer, $comment->refresh());
         \App\Events\CommentThreadUpdated::touch('district', (int) $post->id);
 

@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import { datingApi, type DatingRatingSummary, type DatingReviewItem } from '@/services/dating.api'
+import { useContentModeration } from '@/composables/useContentModeration'
 
 /**
  * Отзывы о пользователе знакомств: сводка, список, форма оценки.
@@ -126,6 +127,15 @@ export function useDatingReviews(targetId: () => number | null) {
 
     if (!id || saving.value) {
       return
+    }
+
+    if (body !== null && body.trim() !== '') {
+      const blockReason = await useContentModeration().assertPublishable(body)
+
+      if (blockReason) {
+        error.value = blockReason
+        throw new Error(blockReason)
+      }
     }
 
     saving.value = true

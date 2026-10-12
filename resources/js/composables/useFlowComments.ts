@@ -3,6 +3,7 @@ import { useToast } from 'primevue/usetoast'
 import { useFlowStore } from '@/stores/flow'
 import { useRewardToast } from '@/composables/useRewardToast'
 import { flowApi } from '@/services/flow.api'
+import { useContentModeration } from '@/composables/useContentModeration'
 import { bindThreadLive } from '@/composables/useThreadLive'
 import type { FlowComment, FlowCommentsSort } from '@/types/flow'
 
@@ -185,6 +186,12 @@ export function useFlowComments(postId: number) {
   async function send(): Promise<boolean> {
     const text = draft.value.trim()
     if (!text || sending.value) return false
+    const moderator = useContentModeration()
+    const blockReason = await moderator.assertPublishable(text)
+    if (blockReason) {
+      toast?.add({ severity: 'warn', summary: 'Модерация', detail: blockReason, life: 3500 })
+      return false
+    }
     sending.value = true
     try {
       const created = await flowApi.comment(postId, {

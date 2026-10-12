@@ -349,6 +349,10 @@ class AppServiceProvider extends ServiceProvider
             'profile-write' => 30,
             'email-status' => 60,
             'telegram-status' => 60,
+            // AI-ассистент (OpenRouter): гид и модерация — щедро в минуту,
+            // тяжёлый разбор профиля — часовым ведром ниже.
+            'ai-guide' => 30,
+            'ai-moderate' => 60,
         ];
 
         foreach ($limitsByName as $limiterName => $perMinute) {
@@ -364,6 +368,12 @@ class AppServiceProvider extends ServiceProvider
         // свой кулдаун 60 сек. и дизейблит кнопку сразу по нажатию.
         RateLimiter::for('email-resend', function (Request $request) use ($keyByUser) {
             return Limit::perMinutes(5, 5)->by($keyByUser($request));
+        });
+
+        // Разбор дейтинг-профиля: тяжёлый structured output на бесплатной модели
+        // (50 RPD без топ-апа на организацию). 30/час на юзера + 10/час в сервисе.
+        RateLimiter::for('ai-profile', function (Request $request) use ($keyByUser) {
+            return Limit::perHour(30)->by($keyByUser($request));
         });
     }
 }

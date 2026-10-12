@@ -66,6 +66,13 @@ class BusinessService
 
         $allowed = $this->filterProfileData($data);
 
+        ContentModeration::assertClean(
+            $allowed['name'] ?? null,
+            $allowed['brand'] ?? null,
+            $allowed['description'] ?? null,
+            $allowed['services'] ?? null
+        );
+
         $business->fill($allowed);
 
         if ($business->isDirty() && $business->verification_status === 'verified') {

@@ -30,7 +30,7 @@ const props = withDefaults(
   { avatar: null, online: false, lastSeenText: null, canMessage: false, canMessageReason: null, gallery: null, rating: null },
 )
 
-const emit = defineEmits<{ (e: 'edit'): void; (e: 'message'): void; (e: 'photos'): void; (e: 'add-photos'): void }>()
+const emit = defineEmits<{ (e: 'edit'): void; (e: 'message'): void; (e: 'photos'): void; (e: 'add-photos'): void; (e: 'ai'): void }>()
 
 const p = useUloveProfile(() => props.profileUser)
 
@@ -356,6 +356,17 @@ const activePrivacyFlags = computed(() => {
             <span class="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-stone-400 dark:bg-zinc-800 dark:text-zinc-500" title="Тариф">
               <i class="pi pi-crown text-[10px]" />{{ planLabel }}
             </span>
+            <Button
+              v-if="isOwn"
+              icon="pi pi-sparkles"
+              text
+              rounded
+              size="small"
+              title="Спросить AI-гида"
+              aria-label="Спросить AI-гида"
+              class="!w-7 !h-7 !p-0 !text-violet-500 hover:!bg-violet-500/10 dark:!text-violet-300 lg:!hidden"
+              @click="emit('ai')"
+            />
             <Button
               v-if="isOwn"
               :icon="visibility.eyeIcon.value"

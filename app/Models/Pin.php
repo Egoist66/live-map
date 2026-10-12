@@ -201,6 +201,7 @@ class Pin extends Model
             'title' => $this->title,
             'body' => $this->body,
             'promo' => $this->promo ?? null,
+            'moderation' => \App\Services\ContentModeration::flagsFor($this->title, $this->body, $this->promo ?? null),
             'is_business' => $isBusiness,
             'company' => $this->getAttribute('company'),
             'category' => $this->category,

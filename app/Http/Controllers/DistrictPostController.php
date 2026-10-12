@@ -71,6 +71,7 @@ class DistrictPostController extends Controller
             'district_id' => $post->district_id,
             'title' => $post->title,
             'body' => $post->body,
+            'moderation' => ContentModeration::flagsFor($post->title, $post->body),
             'company' => $company,
             'image_url' => $post->image_url,
             'likes_count' => (int) $post->likes_count,
@@ -183,6 +184,11 @@ class DistrictPostController extends Controller
         ]);
 
         broadcast(new DistrictUpdated($district))->toOthers();
+
+        try {
+            \App\Jobs\ModeratePublicContentJob::dispatch('district_post', (int) $post->id, (int) $user->id, trim((string) ($data['title'] ?? '').' '.(string) $data['body']));
+        } catch (\Throwable) {
+        }
 
         try {
             DistrictNotifier::postPublished($post->refresh());

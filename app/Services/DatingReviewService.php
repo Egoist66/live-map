@@ -249,10 +249,19 @@ class DatingReviewService
             $clean = mb_substr($clean, 0, self::BODY_LIMIT);
         }
 
-        return DatingReview::updateOrCreate(
+        ContentModeration::assertClean($clean);
+
+        $review = DatingReview::updateOrCreate(
             ['author_id' => $author->id, 'target_id' => $target->id],
             ['rating' => $rating, 'body' => $clean]
         );
+
+        try {
+            \App\Jobs\ModeratePublicContentJob::dispatch('dating_review', (int) $review->id, (int) $author->id, (string) ($clean ?? ''));
+        } catch (\Throwable) {
+        }
+
+        return $review;
     }
 
     /**
@@ -286,6 +295,7 @@ class DatingReviewService
             'id' => (int) $review->id,
             'rating' => (int) $review->rating,
             'body' => $review->body,
+            'moderation' => ContentModeration::flagsFor($review->body),
             'created_at' => $review->created_at?->toISOString(),
             'author' => $author ? [
                 'id' => (int) $author->id,

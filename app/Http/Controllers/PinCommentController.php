@@ -27,6 +27,15 @@ class PinCommentController extends Controller
             $c->replies->each(fn ($r) => $r->is_anonymous ? $r->setRelation('user', null) : null);
             return $c;
         });
+        $comments->getCollection()->transform(function ($c) {
+            $arr = $c->toArray();
+            $arr['moderation'] = ContentModeration::flagsFor($c->content);
+            foreach (($arr['replies'] ?? []) as $i => $reply) {
+                $replyModel = $c->replies[$i] ?? null;
+                $arr['replies'][$i]['moderation'] = ContentModeration::flagsFor($replyModel?->content ?? $reply['content'] ?? null);
+            }
+            return $arr;
+        });
         return $comments;
     }
 
@@ -53,12 +62,17 @@ class PinCommentController extends Controller
         ]);
         $pin->increment('comments_count');
         $mentionedIds = Mentions::extractIds($data['content'], $request->user()->id);
+        try {
+            \App\Jobs\ModeratePublicContentJob::dispatch('pin_comment', (int) $comment->id, (int) $request->user()->id, (string) $data['content']);
+        } catch (\Throwable) {
+        }
         PinActivityNotifier::comment($pin, $request->user(), $comment, $mentionedIds);
         PinActivityNotifier::mentions($pin, $request->user(), $comment, $mentionedIds);
         \App\Events\CommentThreadUpdated::touch('pin', (int) $pin->id);
         if ($comment->is_anonymous) $comment->setRelation('user', null);
         else $comment->load('user:id,name,avatar_path');
         $payload = $comment->toArray();
+        $payload['moderation'] = ContentModeration::flagsFor($comment->content);
         $reward = ActivityRewards::award($request->user(), 'pin_comment', 'pin', $pin->id);
 
         if ($reward !== null) {

@@ -65,6 +65,7 @@ class FlowPostCommentController extends Controller
             'post_id' => $comment->post_id,
             'parent_id' => $comment->parent_id,
             'content' => $comment->content,
+            'moderation' => ContentModeration::flagsFor($comment->content),
             'is_anonymous' => (bool) $comment->is_anonymous,
             'can_edit' => $isOwn,
             'can_delete' => $isOwn || ($viewer && $viewer->isAdmin()),
@@ -203,6 +204,10 @@ class FlowPostCommentController extends Controller
         $post->increment('comments_count');
 
         $mentionedIds = Mentions::extractIds($data['content'], $viewer->id);
+        try {
+            \App\Jobs\ModeratePublicContentJob::dispatch('flow_comment', (int) $comment->id, (int) $viewer->id, (string) $data['content']);
+        } catch (\Throwable) {
+        }
         FlowPostNotifier::commented($post->refresh(), $viewer, $comment->refresh());
         FlowPostNotifier::mentions($post, $viewer, $comment, $mentionedIds);
         \App\Events\CommentThreadUpdated::touch('flow', (int) $post->id);

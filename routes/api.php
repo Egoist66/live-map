@@ -198,6 +198,18 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:300,1'])->group(function
     Route::post('/reports', [ReportController::class, 'store'])->middleware('throttle:reports');
     Route::post('/support', [\App\Http\Controllers\SupportController::class, 'store'])->middleware('throttle:support');
 
+    // Текстовый AI-ассистент (OpenRouter, Laravel AI SDK): модерация, гид, разбор профиля.
+    // Именные лимитеры — в AppServiceProvider, часовой лимит профиля — в AiTextService.
+    Route::post('/ai/moderate', [\App\Http\Controllers\AiAssistantController::class, 'moderate'])->middleware('throttle:ai-moderate');
+    Route::post('/ai/ask', [\App\Http\Controllers\AiAssistantController::class, 'ask'])->middleware('throttle:ai-guide');
+    Route::post('/ai/ask/stream', [\App\Http\Controllers\AiAssistantController::class, 'askStream'])->middleware('throttle:ai-guide');
+    Route::post('/ai/profile-analysis', [\App\Http\Controllers\AiAssistantController::class, 'analyze'])->middleware('throttle:ai-profile');
+    Route::post('/ai/questionnaire-draft', [\App\Http\Controllers\AiAssistantController::class, 'draftQuestionnaire'])->middleware('throttle:ai-profile');
+    Route::get('/ai/conversations', [\App\Http\Controllers\AiAssistantController::class, 'index'])->middleware('throttle:ai-guide');
+    Route::get('/ai/conversations/{id}', [\App\Http\Controllers\AiAssistantController::class, 'history'])->middleware('throttle:ai-guide');
+    Route::get('/ai/quick-commands', [\App\Http\Controllers\AiAssistantController::class, 'quickCommands'])->middleware('throttle:ai-guide');
+    Route::post('/ai/feedback', [\App\Http\Controllers\AiAssistantController::class, 'feedback'])->middleware('throttle:ai-guide');
+
     Route::post('/chat/heartbeat', [ChatUserController::class, 'heartbeat'])->middleware('throttle:chat-signal');
     Route::post('/chat/offline', [ChatUserController::class, 'offline'])->middleware('throttle:chat-signal');
     Route::get('/chat/users/search', [ChatUserController::class, 'search'])->middleware('throttle:chat-search');

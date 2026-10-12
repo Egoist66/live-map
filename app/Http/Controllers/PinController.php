@@ -310,6 +310,10 @@ class PinController extends Controller
         });
 
         $pin->load('user:id,name,avatar_path,level');
+        try {
+            \App\Jobs\ModeratePublicContentJob::dispatch('pin', (int) $pin->id, (int) $user->id, trim((string) ($pin->title ?? '').' '.(string) ($pin->body ?? '').' '.(string) ($pin->promo ?? '')));
+        } catch (\Throwable) {
+        }
         if (Pin::isSosCategory($pin->category ?? null)) {
             \App\Services\SosService::callFor($pin);
         }

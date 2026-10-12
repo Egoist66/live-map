@@ -54,6 +54,14 @@ export default defineConfig({
         port: 5173,
         strictPort: true,
         origin: 'http://localhost:5173',
+        // Herd/Valet-автоопределение laravel-vite-plugin молча включает
+        // HTTPS (сертификат live-map.test) — тогда сервер говорит по TLS,
+        // а в public/hot пишется http://localhost:5173 из origin выше.
+        // Браузер ходит по http на TLS-порт и получает ERR_EMPTY_RESPONSE
+        // (curl: Empty reply from server). Фиксируем plain HTTP для
+        // `pnpm dev` + artisan serve. Кому нужен Herd-https — убрать строку
+        // и зайти через https://live-map.test.
+        https: false,
         // CORS под страницу :8001 — см. devCorsOrigins выше.
         cors: {
             origin: devCorsOrigins,

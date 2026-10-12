@@ -128,6 +128,7 @@ class FlowPostController extends Controller
             'id' => $post->id,
             'title' => $post->title,
             'body' => $post->body,
+            'moderation' => ContentModeration::flagsFor($post->title, $post->body, $post->repost_comment),
             'company' => $company,
             'image_url' => $firstPhotoUrl ?? $post->image_url,
             'media' => $media,
@@ -222,6 +223,7 @@ class FlowPostController extends Controller
             'id' => $original->id,
             'title' => $original->title,
             'body' => $original->body,
+            'moderation' => ContentModeration::flagsFor($original->title, $original->body),
             'image_url' => $originalPhoto?->url ?? $original->image_url,
             'author' => $authorPayload,
             'company' => $originalCompany,
@@ -447,6 +449,11 @@ class FlowPostController extends Controller
         $this->storeMedia($post, $images, $hasVideo ? $request->file('video') : null);
         $this->storePoll($post, $pollOptions, isset($data['poll']['closes_in_hours']) ? (int) $data['poll']['closes_in_hours'] : null);
         FlowHashtags::sync($post);
+
+        try {
+            \App\Jobs\ModeratePublicContentJob::dispatch('flow_post', (int) $post->id, (int) $user->id, trim((string) ($data['title'] ?? '').' '.(string) $data['body']));
+        } catch (\Throwable) {
+        }
 
         try {
             FlowPostNotifier::postCreated($post->refresh());

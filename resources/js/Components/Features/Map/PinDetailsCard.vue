@@ -25,6 +25,7 @@ import { useProfileUrl } from '@/composables/useProfileUrl'
 import { usePinCompanyPhotos } from '@/composables/usePinCompanyPhotos'
 import Galleria from 'primevue/galleria'
 import PinInviteButton from '@/Components/Features/Map/PinInviteButton.vue'
+import ModeratedContent from '@/Components/Features/Moderation/ModeratedContent.vue'
 
 const props = withDefaults(defineProps<{ pin: any; comments: any[]; highlightCommentId?: number | null; commentText: string; creatingComment: boolean; editingCommentId: number | null; editingContent: string; savingComment: boolean; deletingCommentId?: number | null; reacting: boolean; reporting: boolean; pinEdit: any; categories: any[]; deleting: boolean; authId: number; isAdmin?: boolean; replyTo: any; mentions: any; commentsSentinel?: unknown; commentsHasMore?: boolean; commentsLoadingMore?: boolean }>(), { commentsHasMore: false, commentsLoadingMore: false })
 const emit = defineEmits<{ (e: 'close'): void; (e: 'delete'): void; (e: 'react', k: string): void; (e: 'report'): void; (e: 'sendComment'): void; (e: 'update:comment', v: string): void; (e: 'update:editContent', v: string): void; (e: 'startEditComment', c: any): void; (e: 'cancelEditComment'): void; (e: 'saveEditComment'): void; (e: 'deleteComment', c: any): void; (e: 'saveEdit'): void; (e: 'reply', root: any, target: any): void; (e: 'cancelReply'): void; (e: 'sosChat', conversationId: number): void; (e: 'sosClosed'): void }>()
@@ -169,7 +170,9 @@ function canDeleteComment(c: any): boolean {
         </Dialog>
       </div>
       <SosPinActions v-if="!pinEdit.editing.value && isSosPin" :pin-id="Number(pin.id)" :is-owner="!!pin.is_owner" :auth-id="Number(authId)" class="mt-3" @chat="(id:number)=>emit('sosChat', id)" @closed="emit('sosClosed')" />
-      <p v-if="!pinEdit.editing.value && pin.body" class="text-sm text-stone-600 dark:text-zinc-300 mt-2 leading-relaxed break-words overflow-wrap-anywhere comment-body" v-html="renderWithMentions(pin.body || '')" @click="mentionNav.onRichClick"></p>
+      <ModeratedContent v-if="!pinEdit.editing.value && pin.body" :text="String(pin.body || '')" :moderation="(pin as any).moderation" :check-ai="true">
+        <p class="text-sm text-stone-600 dark:text-zinc-300 mt-2 leading-relaxed break-words overflow-wrap-anywhere comment-body" v-html="renderWithMentions(pin.body || '')" @click="mentionNav.onRichClick"></p>
+      </ModeratedContent>
       <div v-if="!pinEdit.editing.value && (pin as any).promo" class="mt-2 text-[13px] font-bold leading-snug bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-xl px-3 py-2 shadow-glow">📢 {{ (pin as any).promo }}</div>
       <div v-if="!pinEdit.editing.value && companyGallery.photos.value.length" class="mt-2 -mx-1">
         <Galleria
@@ -227,7 +230,9 @@ function canDeleteComment(c: any): boolean {
           <span class="text-stone-400 dark:text-zinc-400 font-normal shrink-0">{{ formatTime(root.created_at) }}</span>
           <span v-if="(root.replies_count ?? (root.replies || []).length) > 0" class="ml-auto text-[10px] text-stone-400 dark:text-zinc-500 shrink-0">💬 {{ root.replies_count ?? (root.replies || []).length }}</span>
         </div>
-        <div v-if="editingCommentId !== root.id || composer.useModalComposer.value" class="text-sm text-stone-700 dark:text-zinc-200 mt-1.5 break-words comment-body" v-html="renderWithMentions(root.content)" @click="mentionNav.onRichClick"></div>
+        <ModeratedContent v-if="editingCommentId !== root.id || composer.useModalComposer.value" :text="String(root.content || '')" :moderation="(root as any).moderation" :check-ai="true">
+          <div class="text-sm text-stone-700 dark:text-zinc-200 mt-1.5 break-words comment-body" v-html="renderWithMentions(root.content)" @click="mentionNav.onRichClick"></div>
+        </ModeratedContent>
         <div v-else-if="!composer.useModalComposer.value" class="mt-2"><Textarea :model-value="editingContent" @update:model-value="(v:any)=>emit('update:editContent', v)" @keydown="(e:any)=>handleEnterToSend(e, () => emit('saveEditComment'))" rows="2" autoResize maxlength="1000" class="w-full !rounded-xl" placeholder="Shift+Enter — новая строка" /><div class="flex gap-2 mt-2"><Button label="Сохранить" size="small" rounded :loading="savingComment" @click="emit('saveEditComment')" /><Button label="Отмена" size="small" severity="secondary" outlined rounded @click="emit('cancelEditComment')" /></div></div>
         <div v-if="editingCommentId !== root.id || composer.useModalComposer.value" class="mt-2 flex gap-1 items-center">
           <Button label="Ответить" size="small" text @click="onReply(root)" />
@@ -241,7 +246,9 @@ function canDeleteComment(c: any): boolean {
               <span class="truncate">{{ authorName(r) }}</span>
               <span class="text-stone-400 dark:text-zinc-400 font-normal shrink-0">{{ formatTime(r.created_at) }}</span>
             </div>
-            <div v-if="editingCommentId !== r.id || composer.useModalComposer.value" class="text-[13px] text-stone-700 dark:text-zinc-200 mt-1 break-words comment-body" v-html="renderWithMentions(r.content)" @click="mentionNav.onRichClick"></div>
+            <ModeratedContent v-if="editingCommentId !== r.id || composer.useModalComposer.value" :text="String(r.content || '')" :moderation="(r as any).moderation" :check-ai="true">
+              <div class="text-[13px] text-stone-700 dark:text-zinc-200 mt-1 break-words comment-body" v-html="renderWithMentions(r.content)" @click="mentionNav.onRichClick"></div>
+            </ModeratedContent>
             <div v-else-if="!composer.useModalComposer.value" class="mt-2"><Textarea :model-value="editingContent" @update:model-value="(v:any)=>emit('update:editContent', v)" @keydown="(e:any)=>handleEnterToSend(e, () => emit('saveEditComment'))" rows="2" autoResize maxlength="1000" class="w-full !rounded-xl" placeholder="Shift+Enter — новая строка" /><div class="flex gap-2 mt-2"><Button label="Сохранить" size="small" rounded :loading="savingComment" @click="emit('saveEditComment')" /><Button label="Отмена" size="small" severity="secondary" outlined rounded @click="emit('cancelEditComment')" /></div></div>
             <div v-if="editingCommentId !== r.id || composer.useModalComposer.value" class="mt-1.5 flex gap-1 items-center">
               <Button label="Ответить" size="small" text @click="onReply(root, r)" />

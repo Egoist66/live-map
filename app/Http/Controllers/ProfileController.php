@@ -328,6 +328,7 @@ class ProfileController extends Controller
             );
         }
         $user->fill($request->safe()->except(['plan', 'plan_expires_at']));
+        \App\Services\ContentModeration::assertClean($user->bio ?? null, $user->thought ?? null);
         if ($user->country_code) $user->country_code = mb_strtolower(trim((string) $user->country_code));
         if ($user->country) $user->country = trim(preg_replace('/\s+/', ' ', (string) $user->country));
 
@@ -461,6 +462,7 @@ class ProfileController extends Controller
         $thought = is_string($raw) ? trim((string) preg_replace('/\s+/u', ' ', strip_tags($raw))) : null;
         if ($thought === '') $thought = null;
         if ($thought !== null) $thought = mb_substr($thought, 0, 140);
+        \App\Services\ContentModeration::assertClean($thought);
         $user = $request->user();
         $user->thought = $thought;
         $user->save();

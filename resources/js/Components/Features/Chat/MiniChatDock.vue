@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import Avatar from 'primevue/avatar'
-import Badge from 'primevue/badge'
 import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import ProgressSpinner from 'primevue/progressspinner'
@@ -105,23 +104,6 @@ const dockRef = dock.dockRef
           <i class="pi pi-comments text-sm" />
           Открыть все чаты
         </button>
-      </div>
-
-      <div class="relative">
-        <Button
-          icon="pi pi-comments"
-          rounded
-          aria-label="Быстрые сообщения"
-          title="Быстрые сообщения"
-          class="!h-14 !w-14 !bg-violet-600 !border-violet-600 shadow-soft hover:!bg-violet-700"
-          @click="dock.toggleList()"
-        />
-        <Badge
-          v-if="dock.unreadLabel.value"
-          :value="dock.unreadLabel.value"
-          severity="danger"
-          class="absolute -right-1 -top-1 !min-w-6 !rounded-full"
-        />
       </div>
     </div>
   </div>

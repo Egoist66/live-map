@@ -19,7 +19,7 @@ import DatePicker from 'primevue/datepicker'
 import Dialog from 'primevue/dialog'
 import Slider from 'primevue/slider'
 import Message from 'primevue/message'
-import Avatar from 'primevue/avatar'
+import UserAvatar from '@/Components/Ui/UserAvatar.vue'
 defineProps<{ mustVerifyEmail: boolean; status?: string | null }>()
 const f = useProfileForm()
 const bd = useBirthDateField(f.birth_date as any)
@@ -41,8 +41,8 @@ const showMapFields = computed(() => modules.isEnabled('upin'))
       <template #content>
         <div class="flex flex-col sm:flex-row items-start gap-5">
           <div class="relative shrink-0">
-            <button @click="a.showPreview.value=true" class="group relative w-20 h-20 rounded-3xl overflow-hidden border border-stone-200 dark:border-zinc-700 bg-stone-100 focus:outline-none focus:ring-2 focus:ring-brand-500/30">
-              <Avatar :image="a.avatarSrc.value" shape="square" class="!w-full !h-full [&_img]:object-cover" />
+            <button @click="a.showPreview.value=true" :aria-label="f.user.value.name ? `Открыть фото профиля — ${f.user.value.name}` : 'Открыть фото профиля'" class="group relative w-20 h-20 rounded-3xl overflow-hidden border border-stone-200 dark:border-zinc-700 bg-stone-100 focus:outline-none focus:ring-2 focus:ring-brand-500/30">
+              <UserAvatar :src="a.avatarSrc.value" :alt="f.user.value.name || 'Фото профиля'" shape="square" />
               <span class="absolute inset-0 bg-black/0 group-hover:bg-black/25 grid place-items-center opacity-0 group-hover:opacity-100 transition text-white text-[10px] font-bold">🔍 превью</span>
             </button>
             <span v-if="a.avatarOk.value" class="absolute -bottom-1 -right-1 bg-emerald-500 text-white text-[11px] px-1.5 py-0.5 rounded-full">✓</span>

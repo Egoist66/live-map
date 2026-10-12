@@ -19,10 +19,12 @@ const BellNotificationsModal = defineAsyncComponent(() => import('@/Components/F
 const AppHotkeysDialog = defineAsyncComponent(() => import('@/Components/Features/Feedback/AppHotkeysDialog.vue'))
 const GlobalPeopleSearchDialog = defineAsyncComponent(() => import('@/Components/Features/Search/GlobalPeopleSearchDialog.vue'))
 const MiniChatDock = defineAsyncComponent(() => import('@/Components/Features/Chat/MiniChatDock.vue'))
+const FloatingWidgets = defineAsyncComponent(() => import('@/Components/Features/Widgets/FloatingWidgets.vue'))
 const NewDeviceAlertDialog = defineAsyncComponent(() => import('@/Components/Features/Security/NewDeviceAlertDialog.vue'))
 const TermsAcceptanceModal = defineAsyncComponent(() => import('@/Components/Features/Legal/TermsAcceptanceModal.vue'))
 const AppUpdateModal = defineAsyncComponent(() => import('@/Components/Features/Updates/AppUpdateModal.vue'))
 const SubscriptionRenewalDialog = defineAsyncComponent(() => import('@/Components/Features/Subscription/SubscriptionRenewalDialog.vue'))
+const AiGuideDialog = defineAsyncComponent(() => import('@/Components/Features/AiAssistant/AiGuideDialog.vue'))
 import { useLayoutRoute } from '@/composables/useLayoutRoute'
 import { useAppLayout } from '@/composables/useAppLayout'
 import { useAppHotkeys } from '@/composables/useAppHotkeys'
@@ -75,6 +77,9 @@ onMounted(() => { screenLock.init(); hotkeys.init() })
       <AppFooter />
     </div>
     <MobileBottomNav @bell="bell.open()" @menu="toggleMenu" />
+    <!-- Единая панель виджетов (мини-чат + AI): один лаунчер вместо
+         россыпи FAB по углам, на мобиле — над нижней навигацией. -->
+    <FloatingWidgets />
     <!-- Оверлеи (сырые Teleport + Transition) монтируем только после гидратации:
          иначе SSR-краш `insertBefore of null` в Teleport.process. См. useClientReady. -->
     <template v-if="isClientReady">
@@ -85,6 +90,7 @@ onMounted(() => { screenLock.init(); hotkeys.init() })
       <PwaInstallBanner />
       <PwaUpdateBanner />
       <AppHotkeysDialog />
+      <AiGuideDialog />
       <GlobalPeopleSearchDialog />
       <MiniChatDock v-if="!layoutRoute.isChatRoute.value" />
       <ScreenLockOverlay />

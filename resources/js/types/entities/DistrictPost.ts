@@ -8,6 +8,16 @@ export interface DistrictPostAuthor {
 }
 
 /**
+ * Флаги модерации публичного контента (бэкенд ContentModeration::flagsFor).
+ */
+export interface ModerationFlags {
+  is_toxic: boolean
+  category: string | null
+  label: string | null
+  blur: boolean
+}
+
+/**
  * Новость района из API.
  */
 export interface DistrictPost {
@@ -15,6 +25,7 @@ export interface DistrictPost {
   district_id: number
   title: string | null
   body: string
+  moderation?: ModerationFlags | null
   company: import('@/types/flow').FlowCompany | null
   image_url: string | null
   likes_count: number
@@ -35,6 +46,7 @@ export interface DistrictPostComment {
   post_id: number
   parent_id: number | null
   content: string
+  moderation?: ModerationFlags | null
   can_edit: boolean
   can_delete: boolean
   created_at?: string | null
