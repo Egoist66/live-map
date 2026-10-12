@@ -1,6 +1,7 @@
 import { computed, ref, watch, type Ref } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import { useAnonymousLikePromo } from '@/composables/useAnonymousLikePromo'
+import { useContentModeration } from '@/composables/useContentModeration'
 
 interface PhotoLike {
   id: number
@@ -24,6 +25,7 @@ interface CommentsLike {
 export function usePhotoViewer(gallery: GalleryLike, comments: CommentsLike) {
   const editing = ref(false)
   const captionDraft = ref('')
+  const captionError = ref<string | null>(null)
   const replaceInput = ref<HTMLInputElement | null>(null)
   const confirmDelete = ref(false)
   const likeLoading = ref(false)
@@ -84,6 +86,12 @@ export function usePhotoViewer(gallery: GalleryLike, comments: CommentsLike) {
   async function onSaveCaption() {
     const p = gallery.active.value
     if (!p) return
+    const blockReason = useContentModeration().assertPublishable(captionDraft.value || '')
+    if (blockReason) {
+      captionError.value = blockReason
+      return
+    }
+    captionError.value = null
     saveLoading.value = true
     try {
       await gallery.saveCaption(p, captionDraft.value || null)
@@ -95,11 +103,13 @@ export function usePhotoViewer(gallery: GalleryLike, comments: CommentsLike) {
 
   function startEdit() {
     captionDraft.value = gallery.active.value?.caption || ''
+    captionError.value = null
     editing.value = true
   }
 
   function cancelEdit() {
     editing.value = false
+    captionError.value = null
     captionDraft.value = gallery.active.value?.caption || ''
   }
 
@@ -129,6 +139,7 @@ export function usePhotoViewer(gallery: GalleryLike, comments: CommentsLike) {
   return {
     editing,
     captionDraft,
+    captionError,
     replaceInput,
     setReplaceInput,
     confirmDelete,

@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import { galleryCommentsApi, type GalleryComment } from '@/services/gallery.api'
 import { bindThreadLive } from '@/composables/useThreadLive'
+import { useContentModeration } from '@/composables/useContentModeration'
 
 /**
  * Адресат ответа в комментариях фото: тредов нет (API плоский),
@@ -97,6 +98,11 @@ export function useProfilePhotoComments(getPhotoId: () => number | null, onCount
     const id = getPhotoId()
     const text = draft.value.trim()
     if (!id || !text) return false
+    const blockReason = useContentModeration().assertPublishable(text)
+    if (blockReason) {
+      error.value = blockReason
+      return false
+    }
     sending.value = true
     error.value = null
     try {

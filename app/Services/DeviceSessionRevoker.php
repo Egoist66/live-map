@@ -12,16 +12,25 @@ use Illuminate\Support\Facades\DB;
  * Мгновенное убийство web-сессий устройства.
  *
  * Единая механика для Mini App (DeviceController) и Telegram-бота
- * (TelegramSessionActions): гасим привязанную строку sessions,
- * а когда её уже нет — добиваем сиротские сессии владельца
- * (чужак мог остаться в аккаунте через сессию без устройства).
+ * (TelegramSessionActions): гасим привязанную строку sessions
+ * и всегда добиваем сиротские сессии владельца (чужак мог остаться
+ * в аккаунте через сессию без устройства — один отпечаток делят
+ * все одинаковые браузеры, а session_id хранит только последний
+ * вход, поэтому убивать только привязанную строку нельзя).
  * Всё убитое летит в SessionRevoked одним broadcast — жертва
  * вылетает из приложения сразу, запасной путь — 401 поллера.
  */
 class DeviceSessionRevoker
 {
     /**
-     * Убить сессии устройства: привязанную + добивка сирот при промахе.
+     * Убить сессии устройства: привязанную + все сиротские владельца.
+     *
+     * Сирот добиваем всегда, а не только при промахе: маппинг
+     * session_id хранит лишь последний вход с отпечатка (один
+     * отпечаток делят все одинаковые браузеры), чужак почти
+     * наверняка сидит через непривязанную сессию — иначе килл
+     * бьёт по последнему вошедшему (часто по самой жертве),
+     * а intruder остаётся в аккаунте.
      *
      * @param User $user владелец
      * @param UserDevice $device устройство
@@ -43,13 +52,12 @@ class DeviceSessionRevoker
             }
         }
 
-        if ($killed === []) {
-            $orphans = self::orphanSessionIds($user);
+        $orphans = self::orphanSessionIds($user);
+        $freshOrphans = array_values(array_diff($orphans, $killed));
 
-            if ($orphans !== []) {
-                DB::table('sessions')->whereIn('id', $orphans)->delete();
-                $killed = $orphans;
-            }
+        if ($freshOrphans !== []) {
+            DB::table('sessions')->whereIn('id', $freshOrphans)->delete();
+            $killed = array_merge($killed, $freshOrphans);
         }
 
         $killed = array_values(array_unique($killed));

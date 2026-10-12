@@ -198,9 +198,9 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:300,1'])->group(function
     Route::post('/reports', [ReportController::class, 'store'])->middleware('throttle:reports');
     Route::post('/support', [\App\Http\Controllers\SupportController::class, 'store'])->middleware('throttle:support');
 
-    // Текстовый AI-ассистент (OpenRouter, Laravel AI SDK): модерация, гид, разбор профиля.
+    // Текстовый AI-ассистент (OpenRouter, Laravel AI SDK): гид, разбор профиля.
+    // Модерация — локальная (ContentModeration + Blasp), отдельного роута нет.
     // Именные лимитеры — в AppServiceProvider, часовой лимит профиля — в AiTextService.
-    Route::post('/ai/moderate', [\App\Http\Controllers\AiAssistantController::class, 'moderate'])->middleware('throttle:ai-moderate');
     Route::post('/ai/ask', [\App\Http\Controllers\AiAssistantController::class, 'ask'])->middleware('throttle:ai-guide');
     Route::post('/ai/ask/stream', [\App\Http\Controllers\AiAssistantController::class, 'askStream'])->middleware('throttle:ai-guide');
     Route::post('/ai/profile-analysis', [\App\Http\Controllers\AiAssistantController::class, 'analyze'])->middleware('throttle:ai-profile');
@@ -435,6 +435,8 @@ Route::middleware(['web', 'auth:web,sanctum', 'admin', 'throttle:300,1'])->group
     Route::put('/admin/maintenance', [\App\Http\Controllers\AdminMaintenanceController::class, 'update']);
     Route::get('/admin/modules', [\App\Http\Controllers\AdminModulesController::class, 'show']);
     Route::put('/admin/modules', [\App\Http\Controllers\AdminModulesController::class, 'update']);
+    Route::get('/admin/ai', [\App\Http\Controllers\AdminAiController::class, 'show']);
+    Route::put('/admin/ai', [\App\Http\Controllers\AdminAiController::class, 'update']);
     Route::post('/admin/realtime/mode', [\App\Http\Controllers\RealtimeController::class, 'setMode']);
     Route::patch('/admin/users/{user}', [AdminUserController::class, 'update']);
     Route::post('/admin/users/{user}/impersonate', [\App\Http\Controllers\AdminImpersonationController::class, 'impersonate']);

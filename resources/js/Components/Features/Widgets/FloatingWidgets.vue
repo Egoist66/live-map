@@ -2,18 +2,30 @@
 import Badge from 'primevue/badge'
 import Button from 'primevue/button'
 import { useFloatingWidgets } from '@/composables/useFloatingWidgets'
+import { useAiEnabled } from '@/composables/useAiEnabled'
 
 // Мобила: только розовая палочка сразу в AI-модалку.
 // Десктоп: розовый виджет-панель (сообщения + UPin AI).
+// ИИ-часть скрыта, пока админ не включил тумблер (staff видит всегда).
 const w = useFloatingWidgets()
+const ai = useAiEnabled()
 </script>
 <template>
   <Button
+    v-if="ai.canSeeAi.value"
     icon="pi pi-sparkles"
     rounded
     aria-label="AI-ассистент"
     class="lg:!hidden !fixed !z-40 !h-14 !w-14 !border-0 !bg-rose-500 !text-xl !text-white !shadow-lg right-4 bottom-[calc(var(--app-bottomnav)+var(--sab)+1rem)]"
     @click="w.openAssistant()"
+  />
+  <Button
+    v-else
+    icon="pi pi-comments"
+    rounded
+    aria-label="Сообщения"
+    class="lg:!hidden !fixed !z-40 !h-14 !w-14 !border-0 !bg-rose-500 !text-xl !text-white !shadow-lg right-4 bottom-[calc(var(--app-bottomnav)+var(--sab)+1rem)]"
+    @click="w.openMessages()"
   />
   <div class="fixed bottom-5 right-5 z-40 hidden flex-col items-end gap-2 lg:flex">
     <Transition name="widget-pop">
@@ -45,6 +57,7 @@ const w = useFloatingWidgets()
           <i class="pi pi-angle-right shrink-0 text-xs text-stone-400"></i>
         </button>
         <button
+          v-if="ai.canSeeAi.value"
           type="button"
           role="menuitem"
           class="flex w-full items-center gap-3 rounded-2xl px-2.5 py-2.5 text-left transition-colors hover:bg-stone-100 dark:hover:bg-zinc-800"

@@ -142,7 +142,6 @@ return [
                     'default' => env('OPENROUTER_TEXT_MODEL', 'nvidia/nemotron-3.5-lightning:free'),
                     'cheapest' => env('OPENROUTER_CHEAP_MODEL', 'nvidia/nemotron-3.5-lightning:free'),
                     'smartest' => env('OPENROUTER_SMART_MODEL', 'nvidia/nemotron-3.5-lightning:free'),
-                    'safety' => env('OPENROUTER_SAFETY_MODEL', 'nvidia/nemotron-3.5-lightning:free'),
                 ],
             ],
         ],

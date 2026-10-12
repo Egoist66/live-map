@@ -94,6 +94,7 @@ export interface GalleryComment {
   content: string
   created_at?: string
   user?: { id: number; name: string; avatar_path?: string | null } | null
+  moderation?: import('@/composables/useContentModeration').ModerationFlags | null
 }
 
 export const galleryCommentsApi = {

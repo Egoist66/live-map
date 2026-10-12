@@ -2,10 +2,13 @@ import { computed, ref } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import { aiApi, type QuestionnaireDraft } from '@/services/ai.api'
 import { planOf } from '@/composables/usePlanLimits'
+import { useAiEnabled } from '@/composables/useAiEnabled'
 
 /**
  * AI-генерация черновика дейтинг-анкеты по промпту (Premium и выше).
  *
+ * Видимость — через общий `useAiEnabled` (флаг админки `ai.enabled`
+ * + staff-обход), как у всех ИИ-фич: свой велосипед для флага не нужен.
  * Пользователь описывает желаемую анкету своими словами, бэкенд
  * модерирует промпт, генерирует черновик через OpenRouter и модерирует
  * результат. Черновик возвращается в форму — человек правит поля
@@ -21,10 +24,18 @@ export function useQuestionnaireAi() {
   const generating = ref(false)
   const error = ref<string | null>(null)
 
-  const authUser = computed(() => (usePage().props.auth as { user?: { effective_plan?: string; plan?: string } | null } | undefined)?.user ?? null)
+  const { canSeeAi } = useAiEnabled()
 
-  /** Генерация доступна Premium и выше (staff тоже проходит гейт на бэке). */
+  /** Алиас под старым именем: форма читает `ai.aiVisible`. */
+  const aiVisible = canSeeAi
+
+  const authUser = computed(
+    () => (usePage().props.auth as { user?: { effective_plan?: string; plan?: string } | null } | undefined)?.user ?? null,
+  )
+
+  /** Генерация доступна Premium и выше при включённом ИИ (staff тоже проходит гейт на бэке). */
   const canUse = computed(() => {
+    if (!aiVisible.value) return false
     const plan = planOf(authUser.value)
     return plan === 'premium' || plan === 'business'
   })
@@ -57,5 +68,5 @@ export function useQuestionnaireAi() {
     }
   }
 
-  return { prompt, generating, error, canUse, promptLeft, generate }
+  return { prompt, generating, error, canUse, aiVisible, promptLeft, generate }
 }

@@ -38,6 +38,8 @@ export interface SwipeCard {
   rating_hidden?: boolean
   /** Репутация 1–10; null у «Тайного поклонника». */
   trust_score?: number | null
+  /** Флаги модерации анкеты (бэкенд ContentModeration::flagsFor). */
+  moderation?: import('@/types/flow').ModerationFlags | null
 }
 
 /** Один отзыв о пользователе знакомств. */

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import Button from 'primevue/button'
 import Select from 'primevue/select'
@@ -9,6 +9,7 @@ import Chip from 'primevue/chip'
 import ToggleSwitch from 'primevue/toggleswitch'
 import { useDatingQuestionnaire } from '@/composables/useDatingQuestionnaire'
 import { useQuestionnaireAi } from '@/composables/useQuestionnaireAi'
+import { useQuestionnaireTemplates } from '@/composables/useQuestionnaireTemplates'
 import { DATING_GOAL_PRESETS, DATING_INTEREST_PRESETS } from '@/validation/schemas/dating.schema'
 import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
 
@@ -16,10 +17,17 @@ const emit = defineEmits<{ (e: 'saved', saved?: Record<string, any>): void }>()
 
 const q = useDatingQuestionnaire()
 const ai = useQuestionnaireAi()
+const tpl = useQuestionnaireTemplates()
 const { selectPt } = useDropdownMenuStyle()
 
 /** Черновик подставлен: просим проверить перед сохранением. */
 const draftApplied = ref(false)
+
+/** Подсказка выбранного шаблона под дропдауном. */
+const templateDesc = computed(() => {
+  const found = tpl.templates.find((item) => item.id === tpl.selectedId.value)
+  return found?.desc ?? ''
+})
 
 onMounted(() => q.resetFromUser())
 
@@ -32,10 +40,21 @@ async function onSave(): Promise<void> {
 }
 
 /**
+ * Выбрать шаблон из дропдауна: подставить в поля, сбросить AI-хинт.
+ *
+ * @param id id шаблона из Select
+ */
+function onTemplateSelect(id: string | null): void {
+  draftApplied.value = false
+  tpl.selectAndApply(q, id)
+}
+
+/**
  * Сгенерировать черновик по промпту и подставить в поля (можно править).
  */
 async function onGenerate(): Promise<void> {
   draftApplied.value = false
+  tpl.applied.value = false
   const draft = await ai.generate()
   if (!draft) return
   if (draft.goal) q.goal.value = draft.goal
@@ -53,6 +72,37 @@ async function onGenerate(): Promise<void> {
 -->
 <template>
   <div class="flex flex-col gap-4 min-w-0">
+    <div class="rounded-2xl border border-rose-200 bg-gradient-to-br from-rose-50 to-orange-50 p-3 dark:border-rose-500/30 dark:from-rose-500/10 dark:to-orange-500/10">
+      <div class="flex items-center gap-2">
+        <span class="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-rose-500 to-orange-400 text-sm text-white"><i class="pi pi-bolt" /></span>
+        <div class="min-w-0 flex-1">
+          <div class="text-[13px] font-black text-stone-800 dark:text-zinc-100">Готовый шаблон · заполни за секунду</div>
+          <div class="truncate text-[11px] text-stone-500 dark:text-zinc-400">Выбери — поля подставятся, останется подправить</div>
+        </div>
+      </div>
+      <Select
+        :model-value="tpl.selectedId.value"
+        :options="[...tpl.templates]"
+        option-label="label"
+        option-value="id"
+        placeholder="Выбери шаблон анкеты..."
+        class="w-full mt-2 dark:!border-zinc-700"
+        :pt="selectPt"
+        @update:model-value="onTemplateSelect"
+      >
+        <template #option="{ option }">
+          <div class="flex items-center gap-2 min-w-0">
+            <i :class="[option.icon, 'text-xs text-rose-500 shrink-0']" />
+            <span class="min-w-0">
+              <span class="block truncate text-sm font-bold">{{ option.label }}</span>
+              <span class="block truncate text-[11px] opacity-60">{{ option.desc }}</span>
+            </span>
+          </div>
+        </template>
+      </Select>
+      <div v-if="templateDesc" class="mt-1.5 text-[11px] text-stone-500 dark:text-zinc-400">{{ templateDesc }}</div>
+      <div v-if="tpl.applied.value" class="mt-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-300">Шаблон подставлен — подправь под себя и нажми «Сохранить анкету».</div>
+    </div>
     <div v-if="ai.canUse.value" class="rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-fuchsia-50 p-3 dark:border-violet-500/30 dark:from-violet-500/10 dark:to-fuchsia-500/10">
       <div class="flex items-center gap-2">
         <span class="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-sm text-white"><i class="pi pi-sparkles" /></span>
@@ -86,7 +136,7 @@ async function onGenerate(): Promise<void> {
       <div v-if="draftApplied" class="mt-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-300">Черновик подставлен — проверь, подправь и нажми «Сохранить анкету».</div>
     </div>
     <Link
-      v-else
+      v-else-if="ai.aiVisible.value"
       href="/settings/billing"
       class="flex items-center gap-2.5 rounded-2xl border border-dashed border-violet-300 bg-violet-50/50 px-3 py-2.5 transition hover:bg-violet-50 dark:border-violet-500/30 dark:bg-violet-500/5 dark:hover:bg-violet-500/10"
     >

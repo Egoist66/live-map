@@ -4,37 +4,25 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Ai\AiAskRequest;
 use App\Http\Requests\Ai\AiFeedbackRequest;
-use App\Http\Requests\Ai\AiModerateTextRequest;
 use App\Http\Requests\Ai\AiProfileAnalysisRequest;
 use App\Http\Requests\Ai\AiQuestionnaireDraftRequest;
 use App\Models\User;
+use App\Services\AppSettings;
 use App\Services\AiTextService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Laravel\Ai\Responses\StreamableAgentResponse;
 
 /**
- * Текстовый AI-ассистент: модерация, гид по приложению, разбор профиля.
+ * Текстовый AI-ассистент: гид по приложению, разбор профиля.
+ *
+ * Модерации здесь нет: она полностью локальная (ContentModeration
+ * на библиотеке Blasp) и токены не тратит.
  *
  * Контроллер тонкий: валидация — в FormRequest, логика — в AiTextService.
  */
 class AiAssistantController extends Controller
 {
-    /**
-     * Проверить текст на токсичность (regex + OpenRouter при нужде).
-     *
-     * @param  AiModerateTextRequest  $request  валидированный текст
-     * @param  AiTextService  $ai  текстовый AI-слой
-     * @return JsonResponse вердикт модерации
-     */
-    public function moderate(AiModerateTextRequest $request, AiTextService $ai): JsonResponse
-    {
-        $validated = $request->validated();
-        $verdict = $ai->moderate($validated['text']);
-
-        return response()->json(['data' => $verdict]);
-    }
-
     /**
      * Ответить на вопрос о приложении (JSON, с историей диалога).
      *
@@ -44,6 +32,7 @@ class AiAssistantController extends Controller
      */
     public function ask(AiAskRequest $request, AiTextService $ai): JsonResponse
     {
+        self::ensureAiAvailable($request->user());
         $validated = $request->validated();
         $user = $request->user();
 
@@ -61,6 +50,7 @@ class AiAssistantController extends Controller
      */
     public function askStream(AiAskRequest $request, AiTextService $ai): StreamableAgentResponse
     {
+        self::ensureAiAvailable($request->user());
         $validated = $request->validated();
         $user = $request->user();
 
@@ -76,6 +66,7 @@ class AiAssistantController extends Controller
      */
     public function analyze(AiProfileAnalysisRequest $request, AiTextService $ai): JsonResponse
     {
+        self::ensureAiAvailable($request->user());
         $analysis = $ai->analyzeProfile($request->user());
 
         return response()->json(['data' => $analysis]);
@@ -94,6 +85,7 @@ class AiAssistantController extends Controller
     public function draftQuestionnaire(AiQuestionnaireDraftRequest $request, AiTextService $ai): JsonResponse
     {
         $user = $request->user();
+        self::ensureAiAvailable($user);
 
         abort_unless(
             in_array($user->effectivePlan(), User::TOP_PLANS, true),
@@ -116,6 +108,7 @@ class AiAssistantController extends Controller
      */
     public function index(Request $request, AiTextService $ai): JsonResponse
     {
+        self::ensureAiAvailable($request->user());
         $limit = (int) $request->integer('limit', 20);
         $conversations = $ai->listConversations($request->user(), $limit);
 
@@ -132,6 +125,7 @@ class AiAssistantController extends Controller
      */
     public function history(string $id, Request $request, AiTextService $ai): JsonResponse
     {
+        self::ensureAiAvailable($request->user());
         $limit = (int) $request->integer('limit', 50);
         $messages = $ai->conversationMessages($request->user(), $id, $limit);
 
@@ -147,6 +141,7 @@ class AiAssistantController extends Controller
      */
     public function quickCommands(Request $request, AiTextService $ai): JsonResponse
     {
+        self::ensureAiAvailable($request->user());
         $limit = (int) $request->integer('limit', 12);
         $commands = $ai->quickCommands($request->user(), $limit);
 
@@ -162,6 +157,7 @@ class AiAssistantController extends Controller
      */
     public function feedback(AiFeedbackRequest $request, AiTextService $ai): JsonResponse
     {
+        self::ensureAiAvailable($request->user());
         $validated = $request->validated();
         $result = $ai->rateAnswer(
             $request->user(),
@@ -171,5 +167,23 @@ class AiAssistantController extends Controller
         );
 
         return response()->json(['data' => $result], 201);
+    }
+
+    /**
+     * Гейт видимости ИИ: пока админ не включил — только staff.
+     *
+     * @param User|null $user текущий пользователь
+     * @return void
+     */
+    private static function ensureAiAvailable(?User $user): void
+    {
+        if (AppSettings::isAiEnabled()) {
+            return;
+        }
+
+        $isStaff = $user !== null
+            && ((bool) $user->is_admin || in_array($user->role, ['admin', 'moderator'], true));
+
+        abort_unless($isStaff, 403, 'ИИ-функции временно отключены.');
     }
 }

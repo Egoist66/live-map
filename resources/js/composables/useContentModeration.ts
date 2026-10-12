@@ -1,14 +1,13 @@
-import { computed, ref, shallowRef } from 'vue'
+import { computed } from 'vue'
 import { usePage } from '@inertiajs/vue3'
-import { aiApi, type AiSafetyVerdict } from '@/services/ai.api'
 
 /**
  * Клиентская модерация публичного контента (посты, комментарии, пины, районы).
  *
- * Слой 1 — мгновенный локальный regex (зеркало бэкенда ContentModeration):
- * мат и обфускация ("п-и-з-д-а", "х*й", латиница) блюрятся без запросов.
- * Слой 2 — AI-вердикт через POST /api/ai/moderate для завуалированной
- * токсичности (оскорбления без мата, угрозы, спам).
+ * Полностью локальная, без ИИ и сети: мгновенный regex — зеркало бэкенда
+ * (ContentModeration на библиотеке Blasp + config/languages/russian.php).
+ * Мат и обфускация ("п-и-з-д-а", "х*й", латиница) блюрятся и блочат
+ * отправку сразу, токены не тратятся.
  *
  * Чаты намеренно исключены: личная переписка не проверяется и не блюрится.
  *
@@ -17,7 +16,6 @@ import { aiApi, type AiSafetyVerdict } from '@/services/ai.api'
  * const state = mod.moderationOf(post.title, post.body, post.moderation)
  * if (state.blur) showBlur = true
  */
-
 export interface ModerationFlags {
   is_toxic: boolean
   category: string | null
@@ -53,10 +51,6 @@ const LABELS: Record<string, string> = {
   crime: 'Мошенничество',
   none: 'Без нарушений',
 }
-
-/** Кэш AI-вердиктов по хэшу текста, чтобы не жечь квоту OpenRouter. */
-const aiCache = new Map<string, AiSafetyVerdict>()
-const aiInflight = new Map<string, Promise<AiSafetyVerdict>>()
 
 /**
  * Нормализовать текст как на бэкенде: ё→е, латиница→кириллица, leet-символы.
@@ -155,16 +149,10 @@ export function maskProfanity(text: string): string {
 }
 
 /**
- * Хук модерации: объединяет серверные флаги, локальный regex и AI.
+ * Хук модерации: серверные флаги + локальный regex, синхронно и без сети.
  * @returns состояние и методы проверки
  */
 export function useContentModeration() {
-  const aiChecking = ref(false)
-  const lastVerdict = shallowRef<AiSafetyVerdict | null>(null)
-  const lastError = ref<string | null>(null)
-
-  const isToxic = computed(() => lastVerdict.value?.is_toxic === true)
-
   /**
    * Итоговые флаги: серверные (если есть) ИЛИ локальные.
    * Персонал видит всё без блюра.
@@ -185,67 +173,19 @@ export function useContentModeration() {
   }
 
   /**
-   * AI-проверка текста с кэшем (для завуалированной токсичности без мата).
-   * Fail-open: при ошибке сети возвращает clean.
-   * @param text текст до 2000 символов
-   * @returns вердикт AI
-   */
-  async function checkViaAi(text: string): Promise<AiSafetyVerdict> {
-    const clean = (text || '').trim().slice(0, 2000)
-    if (!clean) return { is_toxic: false, category: null, confidence: null, reason: null, source: 'empty' }
-    const local = checkLocal(clean)
-    if (local.blur) {
-      const verdict: AiSafetyVerdict = { is_toxic: true, category: local.category, confidence: 'high', reason: local.label, source: 'regex' }
-      lastVerdict.value = verdict
-      return verdict
-    }
-    const key = `ai:${clean.length}:${hashText(clean)}`
-    const cached = aiCache.get(key)
-    if (cached) {
-      lastVerdict.value = cached
-      return cached
-    }
-    const inflight = aiInflight.get(key)
-    if (inflight) return inflight
-    aiChecking.value = true
-    lastError.value = null
-    const task = (async (): Promise<AiSafetyVerdict> => {
-      try {
-        const verdict = await aiApi.moderateText(clean)
-        aiCache.set(key, verdict)
-        lastVerdict.value = verdict
-        return verdict
-      } catch (e) {
-        lastError.value = e instanceof Error ? e.message : 'AI недоступен'
-        const fallback: AiSafetyVerdict = { is_toxic: false, category: null, confidence: null, reason: null, source: 'fallback' }
-        lastVerdict.value = fallback
-        return fallback
-      } finally {
-        aiInflight.delete(key)
-        aiChecking.value = false
-      }
-    })()
-    aiInflight.set(key, task)
-    return task
-  }
-
-  /**
-   * Проверка перед публикацией: локальный мат блочит сразу,
-   * иначе спрашиваем AI и блочим при is_toxic.
-   * Персонал публикует без проверок.
+   * Проверка перед публикацией: локальный мат блочит сразу.
+   * Синхронно: сети нет, токены не тратятся. Персонал публикует без проверок.
    * @param text текст поста/комментария
    * @returns null если можно публиковать, иначе текст ошибки
    */
-  async function assertPublishable(text: string): Promise<string | null> {
+  function assertPublishable(text: string): string | null {
     if (isStaffViewer()) return null
     const local = checkLocal(text)
     if (local.blur) return local.label || 'Мат и нецензурная лексика запрещены правилами сервиса.'
-    const verdict = await checkViaAi(text)
-    if (verdict.is_toxic) return verdict.reason || 'Текст не прошёл AI-модерацию.'
     return null
   }
 
-  return { aiChecking, lastVerdict, lastError, isToxic, moderationOf, checkViaAi, assertPublishable }
+  return { moderationOf, assertPublishable }
 }
 
 /**
@@ -264,11 +204,4 @@ export function isStaffViewer(): boolean {
   } catch {
     return false
   }
-}
-function hashText(text: string): string {
-  let h = 0
-  for (let i = 0; i < text.length; i++) {
-    h = (h * 31 + text.charCodeAt(i)) | 0
-  }
-  return String(h)
 }

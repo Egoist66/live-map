@@ -2357,6 +2357,12 @@ class DatingService
             'custom_goal' => $candidate->dating_custom_goal,
             'about' => $candidate->dating_about,
             'interests' => $candidate->dating_interests ?? [],
+            'moderation' => \App\Services\ContentModeration::flagsFor(
+                $candidate->bio ?? null,
+                $candidate->dating_about ?? null,
+                $candidate->dating_custom_goal ?? null,
+                ...(is_array($candidate->dating_interests) ? $candidate->dating_interests : [])
+            ),
             'last_seen_at' => $hiddenOnline ? null : $candidate->last_seen_at?->toISOString(),
             'is_match' => $isMatch,
             'liked_me' => $likedMe,

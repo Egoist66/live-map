@@ -297,7 +297,7 @@ export function useFlowComposer(existingId?: number | null) {
     const head = title.value.trim()
     if (!text || saving.value) return false
     const moderator = useContentModeration()
-    const blockReason = await moderator.assertPublishable(`${head} ${text}`)
+    const blockReason = moderator.assertPublishable(`${head} ${text}`)
     if (blockReason) {
       toast?.add({ severity: 'warn', summary: 'Модерация', detail: blockReason, life: 3500 })
       return false

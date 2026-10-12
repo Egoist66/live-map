@@ -1,5 +1,6 @@
 import { shallowRef } from 'vue'
 import { router } from '@inertiajs/vue3'
+import { useAiEnabled } from '@/composables/useAiEnabled'
 import { useAiGuideLauncher } from '@/composables/useAiGuideLauncher'
 import { useMiniChatDock } from '@/composables/useMiniChatDock'
 
@@ -55,9 +56,15 @@ export function useFloatingWidgets() {
 
   /**
    * Открыть AI-гида и спрятать панель.
+   * Молча игнорируется, если ИИ выключен для зрителя.
    */
   function openAssistant(): void {
     closePanel()
+    try {
+      if (!useAiEnabled().canSeeAi.value) return
+    } catch {
+      // SSR без Inertia-пропсов — открываем как раньше.
+    }
     openGuide()
   }
 

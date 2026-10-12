@@ -5,30 +5,27 @@ namespace App\Services;
 use App\Ai\Agents\AppGuideAgent;
 use App\Ai\Agents\ProfileCoachAgent;
 use App\Ai\Agents\QuestionnaireDraftAgent;
-use App\Ai\Agents\TextSafetyAgent;
 use App\Models\AiGuideFeedback;
 use App\Models\ReferencePage;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Laravel\Ai\Models\Conversation as AiConversation;
 use Laravel\Ai\Responses\StreamableAgentResponse;
 use Throwable;
 
 /**
- * Текстовый AI-слой приложения: модерация, гид и разбор профиля.
+ * Текстовый AI-слой приложения: гид и разбор профиля.
  *
  * Все вызовы идут через официальный Laravel AI SDK на бесплатный OpenRouter
  * (доступен из РБ/СНГ, free-модели без карты).
- * Модерация работает в два слоя: мгновенный regex (ContentModeration)
- * и AI-вердикт для спорных текстов с суточным кэшем по хэшу.
+ * Модерация здесь больше НЕ живёт: она полностью локальная
+ * (ContentModeration на библиотеке Blasp, ноль токенов) — см. moderate().
  */
 class AiTextService
 {
     /**
-     * Сколько символов текста уходит в AI (защита квоты).
+     * Сколько символов текста уходит в проверку (защита от тяжёлых текстов).
      */
     public const MAX_TEXT_LENGTH = 2000;
 
@@ -38,14 +35,31 @@ class AiTextService
     public const MAX_QUESTION_LENGTH = 1000;
 
     /**
-     * TTL кэша AI-вердиктов модерации в секундах.
+     * Проверить текст локально: Blasp + словари тем, ноль токенов.
+     *
+     * Метод оставлен с той же сигнатурой, чтобы не переписывать
+     * контроллеры и джобы: внутри больше нет обращений к ИИ,
+     * кэша вердиктов и TextSafetyAgent (удалён).
+     *
+     * @param  string  $text  проверяемый текст
+     * @return array{is_toxic: bool, category: string|null, confidence: string|null, reason: string|null, source: string}
      */
-    public const SAFETY_CACHE_TTL = 86400;
+    public function moderate(string $text): array
+    {
+        $cleanText = mb_substr(trim($text), 0, self::MAX_TEXT_LENGTH);
 
-    /**
-     * Таймаут модерации: маленькая модель отвечает за секунды.
-     */
-    public const SAFETY_TIMEOUT = 20;
+        if ($cleanText === '') {
+            return $this->cleanVerdict('empty');
+        }
+
+        $hit = ContentModeration::check($cleanText);
+
+        if ($hit === null) {
+            return $this->cleanVerdict('local');
+        }
+
+        return $this->toxicVerdict($hit['topic'], $hit['message'], 'local');
+    }
 
     /**
      * Таймаут ответа гида.
@@ -76,49 +90,6 @@ class AiTextService
      * Цели анкеты, которые умеет ставить генератор.
      */
     public const QUESTIONNAIRE_GOALS = ['love', 'flirt', 'friendship', 'chat', 'interests'];
-
-    /**
-     * Проверить текст: regex-слой, затем AI-вердикт с кэшем.
-     *
-     * Никогда не бросает исключение: при недоступности AI
-     * возвращает fail-open вердикт (regex уже отработал выше).
-     *
-     * @param  string  $text  проверяемый текст
-     * @return array{is_toxic: bool, category: string|null, confidence: string|null, reason: string|null, source: string}
-     */
-    public function moderate(string $text): array
-    {
-        $cleanText = mb_substr(trim($text), 0, self::MAX_TEXT_LENGTH);
-
-        if ($cleanText === '') {
-            return $this->cleanVerdict('empty');
-        }
-
-        $regexHit = ContentModeration::check($cleanText);
-
-        if ($regexHit !== null) {
-            return $this->toxicVerdict($regexHit['topic'], $regexHit['message'], 'regex');
-        }
-
-        $cacheKey = $this->safetyCacheKey($cleanText);
-        $cached = Cache::get($cacheKey);
-
-        if (is_array($cached)) {
-            return $cached;
-        }
-
-        try {
-            $verdict = $this->askSafetyAgent($cleanText);
-        } catch (Throwable $error) {
-            Log::warning('ai safety check failed: '.$error->getMessage());
-
-            return $this->cleanVerdict('fallback');
-        }
-
-        Cache::put($cacheKey, $verdict, self::SAFETY_CACHE_TTL);
-
-        return $verdict;
-    }
 
     /**
      * Ответить на вопрос о приложении с продолжением диалога.
@@ -194,13 +165,15 @@ class AiTextService
 
         abort_if($cleanPrompt === '', 422, 'Опишите, какую анкету хотите.');
 
-        $verdict = $this->moderate($cleanPrompt);
+        if (! $user->canModerate()) {
+            $verdict = $this->moderate($cleanPrompt);
 
-        abort_if(
-            $verdict['is_toxic'] ?? false,
-            422,
-            (string) ($verdict['reason'] ?? 'Промпт не прошёл модерацию.')
-        );
+            abort_if(
+                $verdict['is_toxic'] ?? false,
+                422,
+                (string) ($verdict['reason'] ?? 'Промпт не прошёл модерацию.')
+            );
+        }
 
         $result = RateLimiter::attempt(
             $this->questionnaireLimitKey($user),
@@ -264,34 +237,6 @@ class AiTextService
             'custom_goal' => $customGoal,
             'about' => $about,
             'interests' => $lowered,
-        ];
-    }
-
-    /**
-     * Спросить агента-модератора и привести ответ к вердикту.
-     *
-     * @param  string  $text  уже очищенный текст
-     * @return array{is_toxic: bool, category: string|null, confidence: string|null, reason: string|null, source: string}
-     */
-    private function askSafetyAgent(string $text): array
-    {
-        $prompt = 'Оцени текст: '.$text;
-        $providers = $this->failoverProviders('ai.providers.openrouter.models.text.safety');
-
-        $response = (new TextSafetyAgent)->prompt(
-            $prompt,
-            provider: $providers,
-            timeout: self::SAFETY_TIMEOUT,
-        );
-
-        $verdict = $response->toArray();
-
-        return [
-            'is_toxic' => (bool) ($verdict['is_toxic'] ?? false),
-            'category' => isset($verdict['category']) ? (string) $verdict['category'] : null,
-            'confidence' => isset($verdict['confidence']) ? (string) $verdict['confidence'] : null,
-            'reason' => isset($verdict['reason']) ? (string) $verdict['reason'] : null,
-            'source' => 'ai',
         ];
     }
 
@@ -620,17 +565,6 @@ class AiTextService
     }
 
     /**
-     * Ключ кэша вердикта по хэшу текста.
-     *
-     * @param  string  $text  очищенный текст
-     * @return string ключ кэша
-     */
-    private function safetyCacheKey(string $text): string
-    {
-        return 'ai:safety:'.sha1($text);
-    }
-
-    /**
      * Ключ часового лимита генераций анкеты.
      *
      * @param  User  $user  владелец лимита
@@ -644,7 +578,7 @@ class AiTextService
     /**
      * Вердикт «чисто».
      *
-     * @param  string  $source  empty|fallback|ai
+     * @param  string  $source  empty|local
      * @return array{is_toxic: bool, category: null, confidence: null, reason: null, source: string}
      */
     private function cleanVerdict(string $source): array
@@ -663,7 +597,7 @@ class AiTextService
      *
      * @param  string  $category  категория нарушения
      * @param  string|null  $reason  обоснование
-     * @param  string  $source  regex|ai
+     * @param  string  $source  local
      * @return array{is_toxic: bool, category: string, confidence: string|null, reason: string|null, source: string}
      */
     private function toxicVerdict(string $category, ?string $reason, string $source): array
@@ -671,7 +605,7 @@ class AiTextService
         return [
             'is_toxic' => true,
             'category' => $category,
-            'confidence' => $source === 'regex' ? 'high' : null,
+            'confidence' => $source === 'local' ? 'high' : null,
             'reason' => $reason,
             'source' => $source,
         ];

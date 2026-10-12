@@ -74,6 +74,13 @@ class ProfileController extends Controller
         }
         $home = $user->publicHomeFor($auth);
         $base = $user->only(['id','profile_slug','name','gender','birth_date','country','country_code','avatar_path','level','reputation_score','created_at','home_city','home_visibility','home_radius_km','bio','thought','last_seen_at','is_invisible','photo_comments_privacy','dating_enabled','dating_goal','dating_custom_goal','dating_about','dating_interests']);
+        $base['moderation'] = \App\Services\ContentModeration::flagsFor(
+            $user->bio ?? null,
+            $user->thought ?? null,
+            $user->dating_about ?? null,
+            $user->dating_custom_goal ?? null,
+            ...(is_array($user->dating_interests) ? $user->dating_interests : [])
+        );
         if ($isOwn) {
             $base['dating_hide_name'] = (bool) $user->dating_hide_name;
             $base['dating_hide_age'] = (bool) $user->dating_hide_age;

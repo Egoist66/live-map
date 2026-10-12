@@ -2,14 +2,14 @@
 import { computed, ref, watch } from 'vue'
 import Button from 'primevue/button'
 import Tag from 'primevue/tag'
-import { useContentModeration, isStaffViewer, type ModerationFlags } from '@/composables/useContentModeration'
+import { useContentModeration, type ModerationFlags } from '@/composables/useContentModeration'
 
 /**
  * Блюр-обёртка токсичного публичного контента.
  *
  * Показывает текст заблюренным с причиной и кнопкой «Показать».
- * AI-доанализ включается лениво (checkAi) — только для текстов,
- * которые локальный regex не зафлаговал, чтобы не жечь квоту.
+ * Проверка полностью локальная (серверные флаги + regex-зеркало Blasp):
+ * сети нет, токены не тратятся.
  * В чатах не используется: личная переписка не модерируется.
  *
  * @example
@@ -18,51 +18,24 @@ import { useContentModeration, isStaffViewer, type ModerationFlags } from '@/com
 const props = withDefaults(defineProps<{
   text: string
   moderation?: ModerationFlags | null
-  checkAi?: boolean
   compact?: boolean
-}>(), { moderation: null, checkAi: false, compact: false })
+}>(), { moderation: null, compact: false })
 
 const mod = useContentModeration()
 const revealed = ref(false)
-const aiVerdict = ref<{ is_toxic: boolean; reason: string | null } | null>(null)
-const aiLoading = ref(false)
-let aiDone = false
 
 const baseFlags = computed<ModerationFlags>(() => mod.moderationOf(props.text, props.moderation))
 
 const effectiveBlur = computed(() => {
   if (revealed.value) return false
-  if (baseFlags.value.blur) return true
-  if (aiVerdict.value?.is_toxic) return true
-  return false
+  return baseFlags.value.blur
 })
 
-const reasonLabel = computed(() => {
-  if (aiVerdict.value?.is_toxic) return aiVerdict.value.reason || 'AI-модерация'
-  return baseFlags.value.label || 'Нарушение правил'
-})
-
-async function runAiCheck(): Promise<void> {
-  if (!props.checkAi || aiDone || baseFlags.value.blur) return
-  if (isStaffViewer()) return
-  const text = (props.text || '').trim()
-  if (text.length < 8) return
-  aiDone = true
-  aiLoading.value = true
-  try {
-    const verdict = await mod.checkViaAi(text)
-    aiVerdict.value = { is_toxic: verdict.is_toxic, reason: verdict.reason }
-  } finally {
-    aiLoading.value = false
-  }
-}
+const reasonLabel = computed(() => baseFlags.value.label || 'Нарушение правил')
 
 watch(() => props.text, () => {
   revealed.value = false
-  aiVerdict.value = null
-  aiDone = false
-  void runAiCheck()
-}, { immediate: true })
+}, { immediate: false })
 
 function toggle(): void {
   revealed.value = !revealed.value
@@ -87,7 +60,6 @@ function toggle(): void {
           size="small"
           rounded
           outlined
-          :loading="aiLoading"
           class="!text-xs"
           @click="toggle"
         />
@@ -95,7 +67,7 @@ function toggle(): void {
     </div>
     <div v-else class="min-w-0">
       <div class="whitespace-pre-line break-words text-[15px] leading-relaxed [overflow-wrap:anywhere]"><slot>{{ text }}</slot></div>
-      <div v-if="(baseFlags.blur || aiVerdict?.is_toxic) && revealed" class="mt-1.5 flex items-center gap-2">
+      <div v-if="baseFlags.blur && revealed" class="mt-1.5 flex items-center gap-2">
         <Tag severity="warn" class="!text-[10px]">{{ reasonLabel }}</Tag>
         <Button label="Скрыть" link size="small" class="!p-0 !text-xs" @click="toggle" />
       </div>

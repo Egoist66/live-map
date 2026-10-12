@@ -1,17 +1,6 @@
 import { api } from './api'
 
 /**
- * Вердикт текстовой модерации от `POST /api/ai/moderate`.
- */
-export interface AiSafetyVerdict {
-  is_toxic: boolean
-  category: string | null
-  confidence: string | null
-  reason: string | null
-  source: 'regex' | 'ai' | 'fallback' | 'empty'
-}
-
-/**
  * Ответ гида по приложению от `POST /api/ai/ask`.
  */
 export interface AiGuideAnswer {
@@ -76,16 +65,6 @@ interface AiEnvelope<T> {
 }
 
 export const aiApi = {
-  /**
-   * Проверить текст на токсичность (regex + OpenRouter при нужде).
-   * @param text текст до 2000 символов
-   * @returns вердикт модерации
-   */
-  async moderateText(text: string): Promise<AiSafetyVerdict> {
-    const { data } = await api.post<AiEnvelope<AiSafetyVerdict>>('/api/ai/moderate', { text })
-    return data.data
-  },
-
   /**
    * Спросить гида о приложении, продолжая диалог.
    * @param question вопрос до 1000 символов

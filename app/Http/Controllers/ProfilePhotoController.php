@@ -287,6 +287,12 @@ class ProfilePhotoController extends Controller
         $viewer = $request->user();
         if ($viewer->id !== $photo->user_id) $this->abortIfBlocked($viewer, $photo->user);
         $list = $photo->comments()->with('user:id,name,avatar_path')->oldest()->paginate(30);
+        $list->through(static function ($comment) {
+            $comment->setAttribute('moderation', ContentModeration::flagsFor($comment->content));
+
+            return $comment;
+        });
+
         return response()->json($list);
     }
 
@@ -315,6 +321,13 @@ class ProfilePhotoController extends Controller
         }
         \App\Events\CommentThreadUpdated::touch('photo', (int) $photo->id);
         $comment->load('user:id,name,avatar_path');
+        $comment->setAttribute('moderation', ContentModeration::flagsFor($comment->content));
+
+        try {
+            \App\Jobs\ModeratePublicContentJob::dispatch('photo_comment', (int) $comment->id, (int) $viewer->id, (string) $data['content']);
+        } catch (\Throwable) {
+        }
+
         return response()->json($comment, 201);
     }
 

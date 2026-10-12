@@ -129,7 +129,7 @@ export function useDistrictNewsComments(
       return false
     }
     const moderator = useContentModeration()
-    const blockReason = await moderator.assertPublishable(text)
+    const blockReason = moderator.assertPublishable(text)
     if (blockReason) {
       toast?.add({ severity: 'warn', summary: 'Модерация', detail: blockReason, life: 3500 })
       return false

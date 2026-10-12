@@ -3,7 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Report;
-use App\Services\AiTextService;
+use App\Models\User;
 use App\Services\ContentModeration;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -13,16 +13,18 @@ use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
 /**
- * AI-доанализ публичного контента вторым слоем (после regex).
+ * Локальная проверка публичного контента вторым проходом (без ИИ и токенов).
  *
- * Regex уже заблокировал явный мат на создании (422). Эта задача ловит
- * завуалированную токсичность (оскорбления, угрозы, спам без мата) и:
+ * Синхронный слой (ContentModeration::assertClean) уже заблокировал явный
+ * мат на создании (422). Эта задача — страховка на случай обхода синхронного
+ * слоя (гонки, прямые вставки, новый сленг): перепроверяет текст тем же
+ * локальным движком (Blasp + словари тем) и при срабатывании:
  * - создаёт жалобу Report для админов;
  * - пишет лог для realtime-мониторинга.
  *
- * Удаление/блюр уже опубликованного решает фронт по флагам `moderation`
- * и вердикту POST /api/ai/moderate. Задача никогда не трогает чаты:
- * MessageController/ConversationController не диспатчат её намеренно.
+ * Удаление/блюр уже опубликованного решает фронт по флагам `moderation`.
+ * Задача никогда не трогает чаты: MessageController/ConversationController
+ * не диспатчат её намеренно.
  */
 class ModeratePublicContentJob implements ShouldQueue
 {
@@ -32,51 +34,46 @@ class ModeratePublicContentJob implements ShouldQueue
     use SerializesModels;
 
     /**
-     * @param string $kind flow_post|flow_comment|pin|pin_comment|district_post|district_comment|dating_review|business_ad|photo_caption
-     * @param int $entityId id сущности
-     * @param int $authorId id автора
-     * @param string $text склеенный текст для анализа (до 2000 символов)
+     * @param  string  $kind  flow_post|flow_comment|pin|pin_comment|district_post|district_comment|dating_review|business_ad|photo_caption
+     * @param  int  $entityId  id сущности
+     * @param  int  $authorId  id автора
+     * @param  string  $text  склеенный текст для анализа (до 2000 символов)
      */
     public function __construct(
         public string $kind,
         public int $entityId,
         public int $authorId,
         public string $text,
-    ) {
-    }
+    ) {}
 
     /**
-     * Выполнить AI-проверку и завести Report при токсичности.
-     *
-     * @return void
+     * Выполнить локальную проверку и завести Report при срабатывании.
      */
     public function handle(): void
     {
-        $text = mb_substr(trim($this->text), 0, AiTextService::MAX_TEXT_LENGTH);
+        $text = mb_substr(trim($this->text), 0, 2000);
 
-        if ($text === '') return;
-
-        try {
-            $author = \App\Models\User::whereKey($this->authorId)->first(['id', 'role', 'is_admin']);
-
-            if ($author && $author->canModerate()) return;
-        } catch (\Throwable) {
-        }
-
-        if (ContentModeration::check($text) !== null) return;
-
-        try {
-            $verdict = app(AiTextService::class)->moderate($text);
-        } catch (\Throwable $error) {
-            Log::warning('moderate job failed: '.$error->getMessage());
-
+        if ($text === '') {
             return;
         }
 
-        if (! ($verdict['is_toxic'] ?? false)) return;
+        try {
+            $author = User::whereKey($this->authorId)->first(['id', 'role', 'is_admin']);
 
-        $category = (string) ($verdict['category'] ?? 'ai');
-        $reason = (string) ($verdict['reason'] ?? 'AI-модерация: токсичный контент');
+            if ($author && $author->canModerate()) {
+                return;
+            }
+        } catch (\Throwable) {
+        }
+
+        $hit = ContentModeration::check($text);
+
+        if ($hit === null) {
+            return;
+        }
+
+        $category = (string) $hit['topic'];
+        $reason = (string) $hit['message'];
 
         try {
             $isUserReport = $this->kind === 'dating_review';
@@ -93,7 +90,7 @@ class ModeratePublicContentJob implements ShouldQueue
             Log::warning('moderate job report failed: '.$error->getMessage());
         }
 
-        Log::warning('ai moderation flagged public content', [
+        Log::warning('local moderation flagged public content', [
             'kind' => $this->kind,
             'id' => $this->entityId,
             'category' => $category,

@@ -187,7 +187,7 @@ export function useFlowComments(postId: number) {
     const text = draft.value.trim()
     if (!text || sending.value) return false
     const moderator = useContentModeration()
-    const blockReason = await moderator.assertPublishable(text)
+    const blockReason = moderator.assertPublishable(text)
     if (blockReason) {
       toast?.add({ severity: 'warn', summary: 'Модерация', detail: blockReason, life: 3500 })
       return false

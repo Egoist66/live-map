@@ -121,6 +121,35 @@ class AppSettings
         return $next;
     }
 
+    /**
+     * Включён ли весь ИИ-функционал глобально.
+     *
+     * Дефолт — выключен: пользователи ничего ИИшного не видят,
+     * пока администратор явно не включит тумблер в админке.
+     * Staff (админ/модератор) видит ИИ и при выключенном флаге,
+     * чтобы тестировать без палева для пользователей.
+     *
+     * @return bool
+     */
+    public static function isAiEnabled(): bool
+    {
+        return self::get('ai.enabled', '0') === '1';
+    }
+
+    /**
+     * Сохраняет глобальный тумблер ИИ (только из админки).
+     *
+     * @param bool $enabled включить или выключить
+     * @return bool итоговое состояние
+     */
+    public static function setAiEnabled(bool $enabled): bool
+    {
+        $next = $enabled ? '1' : '0';
+        self::set('ai.enabled', $next);
+
+        return $next === '1';
+    }
+
     public static function maintenancePage(): array
     {
         return [

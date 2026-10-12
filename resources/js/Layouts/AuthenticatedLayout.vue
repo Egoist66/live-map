@@ -33,6 +33,7 @@ import { useScreenLockScroll } from '@/composables/useScreenLockScroll'
 import { useGlobalDialogScrollLock } from '@/composables/useGlobalDialogScrollLock'
 import { useGlobalDialogDismiss } from '@/composables/useGlobalDialogDismiss'
 import { useClientReady } from '@/composables/useClientReady'
+import { useAiEnabled } from '@/composables/useAiEnabled'
 import { useSessionWatchdog } from '@/composables/useSessionWatchdog'
 import { useNewDeviceAlert } from '@/composables/useNewDeviceAlert'
 import { onMounted } from 'vue'
@@ -50,6 +51,7 @@ const { badge, user, avatarSrc, dashboardHref, bell, updates, menu, menuItems, n
  */
 const layoutRoute = useLayoutRoute()
 const { isClientReady } = useClientReady()
+const aiFlag = useAiEnabled()
 useSessionWatchdog()
 useNewDeviceAlert()
 const hotkeys = useAppHotkeys()
@@ -90,7 +92,7 @@ onMounted(() => { screenLock.init(); hotkeys.init() })
       <PwaInstallBanner />
       <PwaUpdateBanner />
       <AppHotkeysDialog />
-      <AiGuideDialog />
+      <AiGuideDialog v-if="aiFlag.canSeeAi.value" />
       <GlobalPeopleSearchDialog />
       <MiniChatDock v-if="!layoutRoute.isChatRoute.value" />
       <ScreenLockOverlay />

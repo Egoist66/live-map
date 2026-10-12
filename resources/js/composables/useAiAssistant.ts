@@ -3,19 +3,21 @@ import { storeToRefs } from 'pinia'
 import { useAiAssistantStore } from '@/stores/aiAssistant'
 
 /**
- * Хук AI-ассистента для компонентов: гид, модерация, разбор профиля.
+ * Хук AI-ассистента для компонентов: гид и разбор профиля.
  *
+ * Модерации здесь нет: она полностью локальная
+ * (useContentModeration, ноль токенов).
  * Вся логика живёт в Pinia-сторе, хук лишь отдаёт реактивное
  * состояние и экшены в удобной для шаблона форме.
  *
- * @returns состояние гида/модерации/профиля и экшены
+ * @returns состояние гида/профиля и экшены
  * @example
  * const { guideMessages, guideLoading, sendQuestion } = useAiAssistant()
  * await sendQuestion('Как работают свайпы?')
  */
 export function useAiAssistant() {
   const store = useAiAssistantStore()
-  const { guide, moderation, profile, ratings, commands } = storeToRefs(store)
+  const { guide, profile, ratings, commands } = storeToRefs(store)
 
   const guideMessages = computed(() => guide.value.messages)
   const guideLoading = computed(() => guide.value.loading)
@@ -27,10 +29,6 @@ export function useAiAssistant() {
     const id = guide.value.conversationId
     return id ? (ratings.value[id] ?? null) : null
   })
-
-  const safetyVerdict = computed(() => moderation.value.verdict)
-  const safetyChecking = computed(() => moderation.value.checking)
-  const isLastTextToxic = computed(() => moderation.value.verdict?.is_toxic === true)
 
   const profileAnalysis = computed(() => profile.value.analysis)
   const profileLoading = computed(() => profile.value.loading)
@@ -68,14 +66,6 @@ export function useAiAssistant() {
   }
 
   /**
-   * Проверить текст на токсичность.
-   * @param text проверяемый текст
-   */
-  async function checkText(text: string): Promise<void> {
-    await store.checkText(text)
-  }
-
-  /**
    * Разобрать свой дейтинг-профиль.
    */
   async function analyzeProfile(): Promise<void> {
@@ -97,9 +87,6 @@ export function useAiAssistant() {
     guideConversationId,
     hasGuideHistory,
     lastAnswerRating,
-    safetyVerdict,
-    safetyChecking,
-    isLastTextToxic,
     profileAnalysis,
     profileLoading,
     profileError,
@@ -108,7 +95,6 @@ export function useAiAssistant() {
     restoreGuide,
     rateAnswer,
     loadQuickCommands,
-    checkText,
     analyzeProfile,
     resetGuide,
   }

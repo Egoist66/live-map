@@ -178,12 +178,12 @@ async function share(): Promise<void> {
 
         <h3 v-if="shown.title" class="mt-3 text-[17px] font-black leading-snug tracking-tight text-ink-900 dark:text-white break-words">{{ shown.title }}</h3>
         <div v-if="!isQuote" class="mt-1.5">
-          <ModeratedContent :text="shown.body || 'Оригинал удалён'" :moderation="(props.post as any).moderation" :check-ai="true">
+          <ModeratedContent :text="shown.body || 'Оригинал удалён'" :moderation="(props.post as any).moderation">
             <FlowRichText :text="shown.body || 'Оригинал удалён'" @tag="emit('tag', $event)" />
           </ModeratedContent>
         </div>
         <div v-if="isQuote && post.repost_comment" class="mt-1.5">
-          <ModeratedContent :text="post.repost_comment" :moderation="(post as any).moderation" :check-ai="true" />
+          <ModeratedContent :text="post.repost_comment" :moderation="(post as any).moderation" />
         </div>
         <FlowMediaCarousel
           v-if="post.media?.length"

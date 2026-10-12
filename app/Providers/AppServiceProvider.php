@@ -349,10 +349,10 @@ class AppServiceProvider extends ServiceProvider
             'profile-write' => 30,
             'email-status' => 60,
             'telegram-status' => 60,
-            // AI-ассистент (OpenRouter): гид и модерация — щедро в минуту,
+            // AI-ассистент (OpenRouter): гид — щедро в минуту,
             // тяжёлый разбор профиля — часовым ведром ниже.
+            // Модерация локальная (Blasp) — лимитер ai-moderate удалён.
             'ai-guide' => 30,
-            'ai-moderate' => 60,
         ];
 
         foreach ($limitsByName as $limiterName => $perMinute) {

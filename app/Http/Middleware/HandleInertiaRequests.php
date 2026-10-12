@@ -70,6 +70,13 @@ class HandleInertiaRequests extends Middleware
                     return ['ulove'];
                 }
             },
+            'aiEnabled' => function () {
+                try {
+                    return \App\Services\AppSettings::isAiEnabled();
+                } catch (\Throwable) {
+                    return false;
+                }
+            },
             // Роуты для ZiggyVue в SSR (resources/js/ssr.ts): Node-процесс
             // не видит blade-скрипт @routes, без этого route()/current() падают
             // и Inertia молча откатывается в CSR (пустой div#app).

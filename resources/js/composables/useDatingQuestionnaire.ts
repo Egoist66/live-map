@@ -4,6 +4,7 @@ import { datingApi } from '@/services/dating.api'
 import { datingQuestionnaireSchema } from '@/validation/schemas/dating.schema'
 import { isUnchangedPayload } from '@/composables/useUnchangedGuard'
 import { emitDatingSaved } from '@/composables/useDatingSavedSync'
+import { useContentModeration } from '@/composables/useContentModeration'
 
 /**
  * Анкета ULove: создание и редактирование «о себе».
@@ -99,6 +100,15 @@ export function useDatingQuestionnaire() {
         if (!flat[key]) flat[key] = i.message
       })
       errors.value = flat
+      return false
+    }
+    const blockReason = useContentModeration().assertPublishable(
+      [parsed.data.dating_custom_goal, parsed.data.dating_about, ...(parsed.data.dating_interests ?? [])]
+        .filter((t): t is string => typeof t === 'string' && t.trim() !== '')
+        .join(' '),
+    )
+    if (blockReason) {
+      serverError.value = blockReason
       return false
     }
     const origin = authUser.value ?? {}

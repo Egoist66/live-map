@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\User;
 use App\Models\UserDevice;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Действия панели сеансов в боте: завершить / забанить / разбанить.
@@ -20,10 +21,13 @@ class TelegramSessionActions
     /**
      * Завершить сеанс устройства без блокировки.
      *
-     * Бьём не только привязанную строку, но и сиротские сессии
-     * владельца, когда привязанной уже нет: чужак мог остаться
-     * в аккаунте через сессию без устройства — terminate добивает
-     * их сам. Всё убитое летит в SessionRevoked — жертва вылетает
+     * Бьём привязанную строку и все сиротские сессии владельца
+     * (чужак почти наверняка сидит через непривязанную: один
+     * отпечаток делят все одинаковые браузеры, а session_id
+     * хранит лишь последний вход). Строку устройства удаляем —
+     * иначе она вечно висит в панели со stale session_id и
+     * «завершить» выглядит как «ничего не происходит». Всё
+     * убитое летит в SessionRevoked — жертва вылетает
      * из приложения мгновенно, запасной путь — 401 поллера.
      *
      * @param User $user владелец (найден по telegram_id из апдейта)
@@ -38,17 +42,19 @@ class TelegramSessionActions
             return ['ok' => false, 'message' => 'Устройство не найдено'];
         }
 
+        $label = $device->label();
         $killed = DeviceSessionRevoker::revokeDeviceSessions($user, $device);
+        $device->delete();
 
         if ($killed === []) {
-            return ['ok' => true, 'message' => 'Сеанс уже закрыт: '.$device->label()];
+            return ['ok' => true, 'message' => 'Сеансов уже не было, устройство убрано: '.$label];
         }
 
         if (count($killed) === 1) {
-            return ['ok' => true, 'message' => 'Сеанс завершён: '.$device->label()];
+            return ['ok' => true, 'message' => 'Сеанс завершён, устройство убрано: '.$label];
         }
 
-        return ['ok' => true, 'message' => 'Сеанс завершён: '.$device->label().' (закрыто: '.count($killed).')'];
+        return ['ok' => true, 'message' => 'Сеанс завершён: '.$label.' (закрыто: '.count($killed).')'];
     }
 
     /**
@@ -123,6 +129,8 @@ class TelegramSessionActions
      *
      * В боте нет понятия «текущий» (вне web-сессии), поэтому гасим все:
      * сам Telegram-чат при этом не страдает — это только web-сессии.
+     * Маппинги session_id у устройств обнуляем — все они stale,
+     * иначе панель вечно показывала бы «живые» кнопки по мёртвым id.
      *
      * @param User $user владелец
      * @return array{ok:bool, message:string, closed:int}
@@ -164,6 +172,8 @@ class TelegramSessionActions
         }
 
         DB::table('sessions')->whereIn('id', $all)->delete();
+
+        UserDevice::where('user_id', $userId)->update(['session_id' => null]);
 
         try {
             broadcast(new SessionRevoked($userId, $all));

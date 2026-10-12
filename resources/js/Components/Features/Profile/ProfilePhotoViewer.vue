@@ -22,6 +22,7 @@ import { useMentionNavigate } from '@/composables/useMentionNavigate'
 import { useLikersPreview } from '@/composables/useLikersPreview'
 import { useAutoFocusInput } from '@/composables/useAutoFocusInput'
 import LikersDialog from '@/Components/Features/Feedback/LikersDialog.vue'
+import ModeratedContent from '@/Components/Features/Moderation/ModeratedContent.vue'
 import { avatarSrcFor } from '@/composables/useAvatar'
 
 const props = defineProps<{ gallery: any; comments: any; isOwn: boolean; userName?: string; avatarSrc?: string }>()
@@ -114,12 +115,15 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
         <button type="button" class="px-4 text-sm font-black text-left hover:opacity-70" @click="photoLikers.open()" v-tooltip.bottom="photoLikers.tooltip.value" @mouseenter="photoLikers.ensure()">{{ gallery.active.value.likes_count }} отметок «Нравится»</button>
         <LikersDialog :visible="photoLikers.opened.value" @update:visible="(v:boolean)=>{ v ? photoLikers.open() : photoLikers.close() }" title="Лайки" :likers="photoLikers.likers.value" :loading="photoLikers.loading.value" :total="photoLikers.total.value" :base-z-index="3000" />
         <div class="px-4 mt-1.5">
-          <div v-if="!viewer.editing.value && gallery.active.value.caption" class="text-sm break-words dark:text-zinc-100"><span class="font-bold mr-1">{{ userName }}</span>{{ gallery.active.value.caption }}</div>
+          <ModeratedContent v-if="!viewer.editing.value && gallery.active.value.caption" :text="String(gallery.active.value.caption || '')" :moderation="(gallery.active.value as any)?.moderation ?? null">
+            <div class="text-sm break-words dark:text-zinc-100"><span class="font-bold mr-1">{{ userName }}</span>{{ gallery.active.value.caption }}</div>
+          </ModeratedContent>
           <div v-if="viewer.editing.value" class="flex gap-2">
             <InputText v-model="viewer.captionDraft.value" placeholder="Подпись…" maxlength="500" class="flex-1 min-w-0 !rounded-xl !text-sm" />
             <Button icon="pi pi-check" rounded size="small" :loading="viewer.saveLoading.value" class="!bg-violet-600 !border-violet-600 shrink-0" @click="viewer.onSaveCaption" aria-label="Сохранить" />
             <Button icon="pi pi-times" rounded text size="small" class="shrink-0" @click="viewer.cancelEdit" aria-label="Отмена" />
           </div>
+          <Message v-if="viewer.captionError.value" severity="warn" :closable="false" class="!rounded-2xl !text-xs mt-2">{{ viewer.captionError.value }}</Message>
         </div>
         <div class="px-4 mt-2 pb-4 space-y-3">
           <div v-if="comments.loading.value" class="grid place-items-center py-6"><ProgressSpinner class="!w-7 !h-7" /></div>
@@ -127,7 +131,9 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
           <div v-for="c in comments.comments.value" :key="c.id" :id="`photo-comment-${c.id}`" :class="['flex gap-2.5 items-start rounded-xl px-2 py-1 -mx-2', Number(gallery.highlightCommentId?.value) === Number(c.id) ? 'bg-violet-50 dark:bg-violet-950/40 ring-1 ring-violet-500/40' : '']">
             <span class="w-7 h-7 shrink-0 rounded-full bg-stone-200 dark:bg-white/10 grid place-items-center text-[11px] font-black text-stone-600 dark:text-zinc-200">{{ (c.user?.name || '?').slice(0, 1).toUpperCase() }}</span>
             <div class="min-w-0 flex-1">
-              <div class="text-sm break-words dark:text-zinc-100"><span class="font-bold mr-1">{{ c.user?.name || 'Пользователь' }}</span><span class="comment-body" v-html="renderWithMentions(c.content || '')" @click="mentionNav.onRichClick"></span></div>
+              <ModeratedContent :text="String(c.content || '')" :moderation="(c as any)?.moderation ?? null">
+                <div class="text-sm break-words dark:text-zinc-100"><span class="font-bold mr-1">{{ c.user?.name || 'Пользователь' }}</span><span class="comment-body" v-html="renderWithMentions(c.content || '')" @click="mentionNav.onRichClick"></span></div>
+              </ModeratedContent>
               <button v-if="canComment()" type="button" class="mt-0.5 px-1 py-1 -ml-1 text-[11px] font-semibold text-stone-400 hover:text-violet-600 active:text-violet-600 dark:text-zinc-500" @click="comments.setReply({ id: c.id, name: c.user?.name || 'Пользователь' })">Ответить</button>
             </div>
             <Button v-if="isOwn" icon="pi pi-times" text rounded size="small" class="!w-8 !h-8 shrink-0" @click="comments.remove(c.id)" aria-label="Удалить комментарий" />

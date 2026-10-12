@@ -1,5 +1,13 @@
 # Dev-лог
 
+## 2026-10-12 — 🐞 «Завершить сеанс» в боте реально завершает: килл сирот + строка пропадает + вылет мгновенный
+- 🐞 Симптом: кнопка «❌ Завершить» в /sessions ничего не делала — устройство оставалось в списке, чужак под аккаунтом не вылетал (работал только «В бан»). Причины: (1) килл гасил только привязанную строку sessions, а сирот добивал лишь при промахе — чужак сидит через непривязанную сессию (один отпечаток делят все одинаковые браузеры, session_id хранит только последний вход), при попадании он выживал, а при stale-маппинге удар шёл по последнему вошедшему — часто по самой жертве; (2) строка устройства не удалялась — панель перерисовывала то же устройство со stale session_id; (3) в `TelegramSessionActions` не было `use DB` — кнопки «Завершить все» и сиротские `xkill` падали в fatal (вебхук глушил в 200 без тоста и перерисовки); (4) сторож считал синтетический `live` живым сеансом и не выкидывал по сокету.
+- 💀 `DeviceSessionRevoker::revokeDeviceSessions`: всегда гасит привязанную строку + все сиротские сессии владельца одним broadcast `SessionRevoked` (чужие user_id не трогаем).
+- 📱 `TelegramSessionActions::terminate` и `DeviceController::terminate`: после килла удаляют строку устройства — устройство пропадает из панели/списка, повторный «Завершить» не нужен. `terminateAll`: добавлен пропущенный `use DB` + обнуление stale `session_id` у всех устройств. Тосты честные («устройство убрано», «Сеансов уже не было»).
+- 👀 `useSessionWatchdog`: синтетический `live` живым не считается — по `session.revoked` жертва с убитой строкой вылетает на `/login` сразу, без ожидания 401 поллера.
+- Проверки: `php -l` ✅ ×3, `vue-tsc --noEmit` ✅, живой прогон на MySQL ✅ 17/17 (килл привязанной + добивка сирот при попадании, чужие сессии и соседнее устройство живы, terminate удаляет строку, terminateAll/killOrphan без фатала, повторный killOrphan — «Сеанс уже закрыт», чужая сирота не трогается).
+- ⚠️ Вживую: редеплой бэк + фронт; проверить в боте /sessions на чужом входе — «Завершить» убирает устройство и выкидывает чужака, «Завершить все» и «Закрыть IP» отвечают тостом.
+
 ## 2026-10-09 — 🛡 Кнопка «Сведения о репутации» в профиле
 - 🆕 Новый `useReputationDetails`: единый источник данных (скор/зона из `useMyTrust`, звёзды из `useMyRating`), шкала 1–10, факторы балла, ссылка `/faq#faq-reputation`, подсказка про обжалование, состояние диалога (JSDoc, Правило №2).
 - 🆕 Новый `ReputationDetailsDialog` (только PrimeVue: Dialog/Message/Button/Tag): скор-бейдж, звёзды, шкала доверия с подсветкой «вы здесь», что влияет на балл, синее info про бесплатное обжалование, ссылка в FAQ. Мобила — шторка снизу на всю ширину с safe-area (как в свайпах), тёмная тема — везде `dark:`-варианты.
@@ -1785,3 +1793,21 @@
 - Бэкенд: `QuestionnaireDraftAgent` (structured output: goal/custom_goal/about/interests) + `AiTextService::draftQuestionnaire` (промпт ≤500, модерация промпта через `moderate` → 422, лимит 10/час, `assertClean` результата); `AiQuestionnaireDraftRequest`; `AiAssistantController::draftQuestionnaire` с гейтом `TOP_PLANS` (402); роут `POST /api/ai/questionnaire-draft` (лимитер `ai-profile`).
 - Фронт: `aiApi.draftQuestionnaire` + тип `QuestionnaireDraft`; `useQuestionnaireAi` (`canUse` по `planOf`); Premium-блок вверху `DatingQuestionnaireForm` (промпт + «Создать анкету», черновик подставляется в поля и правится, интересы через `addInterest`); остальным — апсейл на `/settings/billing`.
 - Проверки: `php -l` ✅ ×4, роут в `route:list` ✅, `vue-tsc --noEmit` ✅.
+
+## 2026-10-12 — Модерация без ИИ: Blasp + русский пак, ноль токенов
+- Бэкенд: `composer require blaspsoft/blasp` (v4.0.1, Laravel 8–13) + `config/languages/russian.php` (184 слова, severity, кириллический leet, false positives: мандарин/Херсон) — в апстриме русского нет, поэтому свой пак. `ContentModeration` переписан на Blasp: темы как раньше, мат через `Blasp::in('russian','english')` + адаптеры (транслит-варианты suka/blyad/shlyuha/xyu, цифровые вставки ху0й, граничный фильтр кириллицы). Новое: `App\Rules\NoProfanity`, `App\Services\FloodGuard` (дубликаты 10 мин, пауза 10 сек, капс, ссылки), пример `StoreCommentRequest` (блокировка) + `ContentModeration::mask` (режим ***). ИИ удалён из модерации: `AiTextService::moderate` — локальный (сигнатура та же), `TextSafetyAgent` и `AiModerateTextRequest` удалены, роут `POST /api/ai/moderate` и лимитер `ai-moderate` убраны, `ModeratePublicContentJob` — локальный второй проход с Report. Гид/разбор профиля на ИИ остались.
+- Фронт: `useContentModeration` — только локальный regex, `assertPublishable` синхронный (без сети); `ModeratedContent` без `check-ai`; из `ai.api`/`aiAssistant`-стора/`useAiAssistant` вычищена модерация; 5 гардов и 5 шаблонов обновлены.
+- Проверки: smoke 43/43 ✅ (мат/х*й/п-и-з-д-а/ху0й/бл@дь/транслит → dirty; мандарин/Херсон/хлеб → clean; темы war/президент/героин/казино → dirty), `php -l` ✅ ×12, `route:list` ✅ (ai/moderate пропал), `vue-tsc --noEmit` ✅, Pint по новым файлам ✅.
+
+## 2026-10-12 — Модерация: комменты фото, подписи, анкеты в лентах
+- Бэкенд: комменты фото отдают `moderation` (`ProfilePhotoController::comments` через `through()`, `storeComment` в ответе) + `ModeratePublicContentJob('photo_comment')` с Report; `ProfileController::show` отдаёт `moderation` (bio/thought/about/custom_goal/interests); `DatingService` отдаёт `moderation` в карточках свайпов.
+- Фронт: гард `assertPublishable` в `useProfilePhotoComments.send()` (ошибка в существующий Message), в `usePhotoViewer.onSaveCaption` (новый `captionError` + warn под редактором), в `useDatingQuestionnaire.save()` (в существующий serverError); блюр `ModeratedContent` для комментов и подписи в `ProfilePhotoViewer`, для about/bio в `SwipeDetailsDialog`, для about в `UloveProfileView`; типы `GalleryComment.moderation`, `SwipeCard.moderation`.
+- Проверки: `php -l` ✅ ×3, `vue-tsc --noEmit` ✅.
+
+## 2026-10-12 — Политика исключений модерации: личка, заметки, стафф
+- Не модерируются только: личные чаты (`MessageController`/`ConversationController` — намеренно без проверок), заметки (`SavedNoteController` — личное шифрованное, проверок нет) и стафф (`canModerate`: `assertClean`, `NoProfanity`, `FloodGuard`, фронт-гарды и `ModeratePublicContentJob` пропускают; `draftQuestionnaire` больше не режет промпт персонала).
+- Проверки: `php -l` ✅ ×3, verify-скрипт ✅.
+
+## 2026-10-12 — Генератор анкеты за общим флагом ИИ
+- Фронт: `useQuestionnaireAi` больше не дублирует проверку видимости — берет `canSeeAi` из общего `useAiEnabled` (флаг админки `ai.enabled` + staff-обход), публичное API хука (`aiVisible`, `canUse`) не менялось, форма не тронута. Матрица показа блока «AI-анкета»: тумблер выкл + обычный юзер — только шаблоны; тумблер вкл + Premium/Business — генератор; тумблер вкл + ниже Premium — апсейл на биллинг; стафф — видит всегда (тест без палева). Бэк-гейт уже совпадает: `ensureAiAvailable` + `TOP_PLANS` (402).
+- Проверки: `vue-tsc --noEmit` ✅.

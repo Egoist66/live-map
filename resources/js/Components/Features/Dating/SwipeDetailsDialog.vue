@@ -14,6 +14,7 @@ import { useViewportBreakpoints } from '@/composables/useViewportBreakpoints'
 import { formatRelative } from '@/utils/date'
 import DatingFriendButton from '@/Components/Features/Dating/DatingFriendButton.vue'
 import DatingReviewsSection from '@/Components/Features/Dating/DatingReviewsSection.vue'
+import ModeratedContent from '@/Components/Features/Moderation/ModeratedContent.vue'
 import type { SwipeCard } from '@/services/dating.api'
 
 const props = defineProps<{ card: SwipeCard | null }>()
@@ -131,7 +132,9 @@ function ageText(card: SwipeCard): string {
 
       <div v-if="card.about" class="mt-3">
         <div class="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500">О себе</div>
-        <p class="mt-1 text-sm leading-relaxed text-stone-700 dark:text-zinc-200 whitespace-pre-wrap break-words">{{ card.about }}</p>
+        <ModeratedContent :text="String(card.about || '')" :moderation="(card as any)?.moderation ?? null">
+          <p class="mt-1 text-sm leading-relaxed text-stone-700 dark:text-zinc-200 whitespace-pre-wrap break-words">{{ card.about }}</p>
+        </ModeratedContent>
       </div>
       <div v-else class="mt-3 text-sm text-stone-400 dark:text-zinc-500">Человек пока не рассказал о себе.</div>
 
@@ -144,7 +147,9 @@ function ageText(card: SwipeCard): string {
 
       <div v-if="card.bio" class="mt-3">
         <div class="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500">Из профиля</div>
-        <p class="mt-1 text-sm text-stone-600 dark:text-zinc-300 line-clamp-4">{{ card.bio }}</p>
+        <ModeratedContent :text="String(card.bio || '')" :moderation="(card as any)?.moderation ?? null">
+          <p class="mt-1 text-sm text-stone-600 dark:text-zinc-300 line-clamp-4">{{ card.bio }}</p>
+        </ModeratedContent>
       </div>
 
       <DatingReviewsSection

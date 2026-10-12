@@ -12,8 +12,9 @@ use Illuminate\Support\Facades\DB;
  * Доверенные устройства пользователя: подтвердить, завершить сеанс,
  * заблокировать навсегда (таб «Безопасность» → «Сеансы»).
  *
- * Завершение и блокировка сразу удаляют web-сеанс устройства
- * (при промахе — добивают сиротские) и шлют SessionRevoked
+ * Завершение удаляет web-сеансы устройства (привязанный +
+ * все сиротские владельца — чужак сидит через непривязанную)
+ * вместе со строкой устройства и шлёт SessionRevoked
  * в личный канал — жертва вылетает мгновенно, а не на
  * следующем запросе. Та же механика, что в боте.
  */
@@ -90,6 +91,11 @@ class DeviceController extends Controller
     /**
      * Завершить сеанс устройства без блокировки.
      *
+     * Строку устройства удаляем — та же механика, что у кнопки
+     * «Завершить» в боте: иначе она вечно висит в списке
+     * со stale session_id. Сессии (привязанная + сиротские)
+     * гасит DeviceSessionRevoker.
+     *
      * @param Request $request текущий запрос
      * @param int $device id устройства
      * @return \Illuminate\Http\JsonResponse
@@ -98,6 +104,7 @@ class DeviceController extends Controller
     {
         $row = $this->owned($request, $device);
         $killed = DeviceSessionRevoker::revokeDeviceSessions($request->user(), $row);
+        $row->delete();
 
         return response()->json(['ok' => true, 'revoked' => $killed !== []]);
     }

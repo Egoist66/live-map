@@ -108,7 +108,7 @@ onBeforeUnmount(() => {
 
         <h3 v-if="post.title" class="mt-3 break-words text-[17px] font-black leading-snug tracking-tight text-ink-900 dark:text-white">{{ post.title }}</h3>
         <div class="mt-1.5" :class="!post.title && 'mt-3'">
-          <ModeratedContent :text="post.body" :moderation="post.moderation" :check-ai="true" />
+          <ModeratedContent :text="post.body" :moderation="post.moderation" />
         </div>
         <div v-if="post.image_url" class="mt-3 overflow-hidden rounded-2xl border border-stone-200 dark:border-zinc-800">
           <button type="button" class="block w-full cursor-zoom-in" aria-label="Открыть фото на весь экран" @click="lightbox.openSingle(post.image_url, post.title || 'Фото новости')">
@@ -143,7 +143,7 @@ onBeforeUnmount(() => {
               <div class="min-w-0 flex-1">
                 <div class="min-w-0 rounded-2xl bg-stone-100 px-3 py-2 dark:bg-zinc-800">
                   <div class="truncate text-[13px] font-bold leading-tight text-ink-900 dark:text-white">{{ c.author.name }}</div>
-                  <ModeratedContent :text="c.content" :moderation="c.moderation" :check-ai="true" />
+                  <ModeratedContent :text="c.content" :moderation="c.moderation" />
                 </div>
                 <div class="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-0.5 px-1 pt-1 text-xs text-stone-400">
                   <span class="shrink-0">{{ formatFlowDate(c.created_at) }}</span>
@@ -157,7 +157,7 @@ onBeforeUnmount(() => {
                     <div class="min-w-0 flex-1">
                       <div class="min-w-0 rounded-xl bg-stone-100 px-2.5 py-1.5 dark:bg-zinc-800">
                         <div class="truncate text-xs font-bold leading-tight text-ink-900 dark:text-white">{{ r.author.name }}</div>
-                        <ModeratedContent :text="r.content" :moderation="r.moderation" :check-ai="true" />
+                        <ModeratedContent :text="r.content" :moderation="r.moderation" />
                       </div>
                       <div class="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 px-1 pt-0.5 text-[11px] text-stone-400">
                         <span class="shrink-0">{{ formatFlowDate(r.created_at) }}</span>

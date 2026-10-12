@@ -264,7 +264,7 @@ export function usePinDetails() {
   const sendComment = handleCommentSubmit(async (vals: any) => {
     if (!selectedPin.value) return
     const moderator = useContentModeration()
-    const blockReason = await moderator.assertPublishable(String(vals.content || ''))
+    const blockReason = moderator.assertPublishable(String(vals.content || ''))
     if (blockReason) {
       toast?.add({ severity: 'warn', summary: 'Модерация', detail: blockReason, life: 3500 })
       return

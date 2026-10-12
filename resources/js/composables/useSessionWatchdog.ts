@@ -36,11 +36,15 @@ export function useSessionWatchdog(): void {
 
 /**
  * Сверить свой сеанс со списком живых.
+ *
+ * Синтетический `live` (бэк подсовывает его, когда строки текущего
+ * сеанса нет в таблице) живым не считаем: раз строки нет — сеанс
+ * уже завершили с другого устройства, пора вылетать.
  */
 async function verifySession(): Promise<void> {
   try {
     const res = await sessionsApi.list()
-    const alive = res.data.some((s) => s.is_current)
+    const alive = res.data.some((s) => s.is_current && s.id !== 'live')
     if (!alive) {
       forceLogout()
     }

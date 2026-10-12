@@ -170,7 +170,7 @@ function canDeleteComment(c: any): boolean {
         </Dialog>
       </div>
       <SosPinActions v-if="!pinEdit.editing.value && isSosPin" :pin-id="Number(pin.id)" :is-owner="!!pin.is_owner" :auth-id="Number(authId)" class="mt-3" @chat="(id:number)=>emit('sosChat', id)" @closed="emit('sosClosed')" />
-      <ModeratedContent v-if="!pinEdit.editing.value && pin.body" :text="String(pin.body || '')" :moderation="(pin as any).moderation" :check-ai="true">
+      <ModeratedContent v-if="!pinEdit.editing.value && pin.body" :text="String(pin.body || '')" :moderation="(pin as any).moderation">
         <p class="text-sm text-stone-600 dark:text-zinc-300 mt-2 leading-relaxed break-words overflow-wrap-anywhere comment-body" v-html="renderWithMentions(pin.body || '')" @click="mentionNav.onRichClick"></p>
       </ModeratedContent>
       <div v-if="!pinEdit.editing.value && (pin as any).promo" class="mt-2 text-[13px] font-bold leading-snug bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-xl px-3 py-2 shadow-glow">📢 {{ (pin as any).promo }}</div>
@@ -230,7 +230,7 @@ function canDeleteComment(c: any): boolean {
           <span class="text-stone-400 dark:text-zinc-400 font-normal shrink-0">{{ formatTime(root.created_at) }}</span>
           <span v-if="(root.replies_count ?? (root.replies || []).length) > 0" class="ml-auto text-[10px] text-stone-400 dark:text-zinc-500 shrink-0">💬 {{ root.replies_count ?? (root.replies || []).length }}</span>
         </div>
-        <ModeratedContent v-if="editingCommentId !== root.id || composer.useModalComposer.value" :text="String(root.content || '')" :moderation="(root as any).moderation" :check-ai="true">
+        <ModeratedContent v-if="editingCommentId !== root.id || composer.useModalComposer.value" :text="String(root.content || '')" :moderation="(root as any).moderation">
           <div class="text-sm text-stone-700 dark:text-zinc-200 mt-1.5 break-words comment-body" v-html="renderWithMentions(root.content)" @click="mentionNav.onRichClick"></div>
         </ModeratedContent>
         <div v-else-if="!composer.useModalComposer.value" class="mt-2"><Textarea :model-value="editingContent" @update:model-value="(v:any)=>emit('update:editContent', v)" @keydown="(e:any)=>handleEnterToSend(e, () => emit('saveEditComment'))" rows="2" autoResize maxlength="1000" class="w-full !rounded-xl" placeholder="Shift+Enter — новая строка" /><div class="flex gap-2 mt-2"><Button label="Сохранить" size="small" rounded :loading="savingComment" @click="emit('saveEditComment')" /><Button label="Отмена" size="small" severity="secondary" outlined rounded @click="emit('cancelEditComment')" /></div></div>
@@ -246,7 +246,7 @@ function canDeleteComment(c: any): boolean {
               <span class="truncate">{{ authorName(r) }}</span>
               <span class="text-stone-400 dark:text-zinc-400 font-normal shrink-0">{{ formatTime(r.created_at) }}</span>
             </div>
-            <ModeratedContent v-if="editingCommentId !== r.id || composer.useModalComposer.value" :text="String(r.content || '')" :moderation="(r as any).moderation" :check-ai="true">
+            <ModeratedContent v-if="editingCommentId !== r.id || composer.useModalComposer.value" :text="String(r.content || '')" :moderation="(r as any).moderation">
               <div class="text-[13px] text-stone-700 dark:text-zinc-200 mt-1 break-words comment-body" v-html="renderWithMentions(r.content)" @click="mentionNav.onRichClick"></div>
             </ModeratedContent>
             <div v-else-if="!composer.useModalComposer.value" class="mt-2"><Textarea :model-value="editingContent" @update:model-value="(v:any)=>emit('update:editContent', v)" @keydown="(e:any)=>handleEnterToSend(e, () => emit('saveEditComment'))" rows="2" autoResize maxlength="1000" class="w-full !rounded-xl" placeholder="Shift+Enter — новая строка" /><div class="flex gap-2 mt-2"><Button label="Сохранить" size="small" rounded :loading="savingComment" @click="emit('saveEditComment')" /><Button label="Отмена" size="small" severity="secondary" outlined rounded @click="emit('cancelEditComment')" /></div></div>

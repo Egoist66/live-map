@@ -130,7 +130,7 @@ export function useDatingReviews(targetId: () => number | null) {
     }
 
     if (body !== null && body.trim() !== '') {
-      const blockReason = await useContentModeration().assertPublishable(body)
+      const blockReason = useContentModeration().assertPublishable(body)
 
       if (blockReason) {
         error.value = blockReason

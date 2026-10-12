@@ -8,10 +8,12 @@ import { useToast } from 'primevue/usetoast'
 import { useUloveProfile } from '@/composables/useUloveProfile'
 import { useUloveOnlineBadge } from '@/composables/useUloveOnlineBadge'
 import { useProfileVisibility } from '@/composables/useProfileVisibility'
+import { useAiEnabled } from '@/composables/useAiEnabled'
 import { useSwipeCardPhotos } from '@/composables/useSwipeCardPhotos'
 import DatingRatingStars from '@/Components/Features/Dating/DatingRatingStars.vue'
 import DatingFriendButton from '@/Components/Features/Dating/DatingFriendButton.vue'
 import DatingReviewsSection from '@/Components/Features/Dating/DatingReviewsSection.vue'
+import ModeratedContent from '@/Components/Features/Moderation/ModeratedContent.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -38,6 +40,9 @@ const onlineBadge = useUloveOnlineBadge(() => ({ isOwn: props.isOwn, online: pro
 
 /** Глаз «скрыть/показать»: временное скрытие профиля без удаления аккаунта. */
 const visibility = useProfileVisibility()
+
+/** Кнопка AI-гида видна только при включённом ИИ (staff — всегда). */
+const aiFlag = useAiEnabled()
 
 onMounted(() => {
   if (props.isOwn) {
@@ -357,7 +362,7 @@ const activePrivacyFlags = computed(() => {
               <i class="pi pi-crown text-[10px]" />{{ planLabel }}
             </span>
             <Button
-              v-if="isOwn"
+              v-if="isOwn && aiFlag.canSeeAi.value"
               icon="pi pi-sparkles"
               text
               rounded
@@ -382,7 +387,9 @@ const activePrivacyFlags = computed(() => {
             />
           </span>
         </div>
-        <p v-if="p.about.value" class="mt-3 border-l-2 border-rose-400 pl-3 text-[15px] leading-relaxed text-stone-800 dark:text-zinc-100">{{ p.about.value }}</p>
+        <ModeratedContent v-if="p.about.value" :text="String(p.about.value || '')" :moderation="(props.profileUser as any)?.moderation ?? null">
+          <p class="mt-3 border-l-2 border-rose-400 pl-3 text-[15px] leading-relaxed text-stone-800 dark:text-zinc-100">{{ p.about.value }}</p>
+        </ModeratedContent>
         <p v-else class="mt-3 text-sm text-stone-400 dark:text-zinc-500">{{ isOwn ? 'Расскажи о себе — заполни анкету' : 'Человек пока ничего не написал о себе' }}</p>
         <div v-if="p.interests.value.length" class="mt-3 flex flex-wrap gap-1.5">
           <span v-for="tag in p.interests.value" :key="tag" class="rounded-full border border-stone-200 px-2.5 py-1 text-xs font-semibold text-stone-600 dark:border-zinc-700 dark:text-zinc-300">{{ tag }}</span>

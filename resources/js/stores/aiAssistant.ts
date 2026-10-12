@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { aiApi, type AiGuideAnswer, type AiProfileAnalysis, type AiQuickCommand, type AiSafetyVerdict } from '@/services/ai.api'
+import { aiApi, type AiGuideAnswer, type AiProfileAnalysis, type AiQuickCommand } from '@/services/ai.api'
 
 /**
  * Сообщение диалога с гидом.
@@ -23,7 +23,10 @@ const GUIDE_RATINGS_KEY = 'ai.guide.ratings'
 const GUIDE_CACHE_LIMIT = 60
 
 /**
- * Pinia-стор текстового AI-ассистента: гид, модерация, разбор профиля.
+ * Pinia-стор текстового AI-ассистента: гид и разбор профиля.
+ *
+ * Модерации здесь нет: она полностью локальная
+ * (useContentModeration, ноль токенов).
  *
  * Состояние сгруппировано объектами по смыслу (гид / модерация / профиль),
  * вся асинхронность — через async/await, ошибки складываются в поля error.
@@ -37,11 +40,6 @@ export const useAiAssistantStore = defineStore('aiAssistant', () => {
     loading: false,
     restoring: false,
     error: null,
-  })
-
-  const moderation = ref<{ verdict: AiSafetyVerdict | null; checking: boolean }>({
-    verdict: null,
-    checking: false,
   })
 
   const profile = ref<{ analysis: AiProfileAnalysis | null; loading: boolean; error: string | null; checkedAt: string | null }>({
@@ -130,25 +128,6 @@ export const useAiAssistantStore = defineStore('aiAssistant', () => {
   }
 
   /**
-   * Проверить текст на токсичность.
-   * @param text проверяемый текст
-   */
-  async function checkText(text: string): Promise<AiSafetyVerdict | null> {
-    if (moderation.value.checking) return null
-    moderation.value.checking = true
-    try {
-      const verdict = await aiApi.moderateText(text)
-      moderation.value.verdict = verdict
-      return verdict
-    } catch {
-      moderation.value.verdict = null
-      return null
-    } finally {
-      moderation.value.checking = false
-    }
-  }
-
-  /**
    * Разобрать свой дейтинг-профиль.
    */
   async function analyzeMyProfile(): Promise<AiProfileAnalysis | null> {
@@ -206,7 +185,7 @@ export const useAiAssistantStore = defineStore('aiAssistant', () => {
     } catch {}
   }
 
-  return { guide, moderation, profile, ratings, commands, askQuestion, restoreGuide, rateLastAnswer, loadQuickCommands, checkText, analyzeMyProfile, resetGuide }
+  return { guide, profile, ratings, commands, askQuestion, restoreGuide, rateLastAnswer, loadQuickCommands, analyzeMyProfile, resetGuide }
 })
 
 /**
