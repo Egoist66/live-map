@@ -1,7 +1,8 @@
-import { shallowRef } from 'vue'
+import { computed, shallowRef } from 'vue'
 import { router } from '@inertiajs/vue3'
 import { useAiEnabled } from '@/composables/useAiEnabled'
 import { useAiGuideLauncher } from '@/composables/useAiGuideLauncher'
+import { useLayoutRoute } from '@/composables/useLayoutRoute'
 import { useMiniChatDock } from '@/composables/useMiniChatDock'
 
 /**
@@ -15,13 +16,23 @@ const isPanelOpen = shallowRef(false)
 /**
  * Хук панели плавающих виджетов для layout.
  *
- * @returns флаг панели, бейдж непрочитанных и экшены
+ * Виджеты (сообщения + AI) показываются везде, кроме роута чатов:
+ * на `/chat` места для FAB нет — там уже открыт полный мессенджер.
+ * ИИ-часть дополнительно gated флагом админки через `useAiEnabled`.
+ *
+ * @returns флаг панели, видимость на текущем роуте, бейдж непрочитанных и экшены
  * @example
- * const { isPanelOpen, togglePanel } = useFloatingWidgets()
+ * const { isPanelOpen, isVisible, togglePanel } = useFloatingWidgets()
  */
 export function useFloatingWidgets() {
   const dock = useMiniChatDock()
   const { openGuide } = useAiGuideLauncher()
+  const layoutRoute = useLayoutRoute()
+
+  /**
+   * Виджеты видны везде, кроме страницы чатов.
+   */
+  const isVisible = computed(() => !layoutRoute.isChatRoute.value)
 
   /**
    * Переключить панель виджетов.
@@ -68,5 +79,5 @@ export function useFloatingWidgets() {
     openGuide()
   }
 
-  return { isPanelOpen, unreadLabel: dock.unreadLabel, isListOpen: dock.isListOpen, togglePanel, closePanel, openMessages, openAssistant }
+  return { isPanelOpen, isVisible, unreadLabel: dock.unreadLabel, isListOpen: dock.isListOpen, togglePanel, closePanel, openMessages, openAssistant }
 }

@@ -18,7 +18,7 @@ import InfiniteSentinel from '@/Components/Ui/List/InfiniteSentinel.vue'
 
 const props = withDefaults(defineProps<{ conversations: any[]; uloveConversations?: any[]; friends: any[]; pendingIn: any[]; blocked: any[]; tab: string; selectedId: number | null; isSavedOpen?: boolean; filter: string; conversationsSentinel?: unknown; conversationsHasMore?: boolean; conversationsLoadingMore?: boolean; friendsSentinel?: unknown; friendsHasMore?: boolean; friendsLoadingMore?: boolean; isOnline: (id?: number, lastSeenAt?: string | null) => boolean; formatTime: (s: string) => string }>(), { conversationsHasMore: false, conversationsLoadingMore: false, friendsHasMore: false, friendsLoadingMore: false, isSavedOpen: false })
 
-/** Мэтчи ULove с учётом строки поиска. */
+/** Direct-диалоги с учётом строки поиска. */
 const filteredUlove = computed(() => {
   const q = (props.filter || '').trim().toLowerCase()
   const list = props.uloveConversations || []
@@ -102,8 +102,8 @@ const { userProfileUrl } = useProfileUrl()
     <div v-if="tab === 'ulove'" class="divide-y dark:divide-zinc-800">
       <div v-if="!filteredUlove.length" class="p-6 sm:p-8 text-center">
         <div class="w-14 h-14 rounded-2xl bg-rose-500/10 text-rose-500 grid place-items-center mx-auto mb-3 text-xl">💞</div>
-        <div class="text-sm font-semibold dark:text-white">Пока нет мэтчей</div>
-        <div class="text-xs text-stone-500 mt-1">Лайкай в ULove — взаимность появится здесь</div>
+        <div class="text-sm font-semibold dark:text-white">Пока нет диалогов</div>
+        <div class="text-xs text-stone-500 mt-1">Начни общение — новые переписки появятся здесь</div>
       </div>
       <div v-for="c in filteredUlove" :key="c.id" class="group w-full flex items-center gap-0 text-left select-none">
         <button @click="emit('open', c.id)" :class="selectedId === c.id ? 'bg-rose-50 dark:bg-rose-500/10 shadow-[inset_3px_0_0_0_#f43f5e]' : 'hover:bg-rose-50/70 dark:hover:bg-rose-950/20'" class="flex-1 flex items-center gap-3 p-3.5 lg:p-3 text-left min-w-0 transition-colors">

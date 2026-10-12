@@ -7,10 +7,12 @@ import { useAiEnabled } from '@/composables/useAiEnabled'
 // Мобила: только розовая палочка сразу в AI-модалку.
 // Десктоп: розовый виджет-панель (сообщения + UPin AI).
 // ИИ-часть скрыта, пока админ не включил тумблер (staff видит всегда).
+// На роуте чатов виджеты не показываем вообще — там уже полный мессенджер.
 const w = useFloatingWidgets()
 const ai = useAiEnabled()
 </script>
 <template>
+  <template v-if="w.isVisible.value">
   <Button
     v-if="ai.canSeeAi.value"
     icon="pi pi-sparkles"
@@ -91,6 +93,7 @@ const ai = useAiEnabled()
       />
     </div>
   </div>
+  </template>
 </template>
 <style scoped>
 .widget-pop-enter-active { transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1); transform-origin: bottom right; }
