@@ -170,20 +170,17 @@ class AiAssistantController extends Controller
     }
 
     /**
-     * Гейт видимости ИИ: пока админ не включил — только staff.
+     * Гейт видимости ИИ: строго по тумблеру админки.
+     *
+     * Пока администратор не включил ИИ — 403 для всех, включая staff.
+     * Все ИИ-виджеты на фронте gated тем же флагом, поэтому
+     * выключенный тумблер означает полное отсутствие ИИ в UI.
      *
      * @param User|null $user текущий пользователь
      * @return void
      */
     private static function ensureAiAvailable(?User $user): void
     {
-        if (AppSettings::isAiEnabled()) {
-            return;
-        }
-
-        $isStaff = $user !== null
-            && ((bool) $user->is_admin || in_array($user->role, ['admin', 'moderator'], true));
-
-        abort_unless($isStaff, 403, 'ИИ-функции временно отключены.');
+        abort_unless(AppSettings::isAiEnabled(), 403, 'ИИ-функции временно отключены.');
     }
 }

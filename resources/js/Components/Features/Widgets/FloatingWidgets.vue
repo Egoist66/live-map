@@ -4,9 +4,9 @@ import Button from 'primevue/button'
 import { useFloatingWidgets } from '@/composables/useFloatingWidgets'
 import { useAiEnabled } from '@/composables/useAiEnabled'
 
-// Мобила: только розовая палочка сразу в AI-модалку.
+// Мобила: розовый FAB — сообщения, либо сразу AI-модалка когда ИИ включён.
 // Десктоп: розовый виджет-панель (сообщения + UPin AI).
-// ИИ-часть скрыта, пока админ не включил тумблер (staff видит всегда).
+// ИИ-часть строго по тумблеру админки: выключен — не видит никто, включая staff.
 // На роуте чатов виджеты не показываем вообще — там уже полный мессенджер.
 const w = useFloatingWidgets()
 const ai = useAiEnabled()

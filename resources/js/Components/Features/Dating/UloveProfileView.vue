@@ -41,7 +41,7 @@ const onlineBadge = useUloveOnlineBadge(() => ({ isOwn: props.isOwn, online: pro
 /** Глаз «скрыть/показать»: временное скрытие профиля без удаления аккаунта. */
 const visibility = useProfileVisibility()
 
-/** Кнопка AI-гида видна только при включённом ИИ (staff — всегда). */
+/** Кнопка AI-гида видна только при включённом тумблере ИИ в админке (строго, включая staff). */
 const aiFlag = useAiEnabled()
 
 onMounted(() => {
