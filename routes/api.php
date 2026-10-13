@@ -452,4 +452,5 @@ Route::middleware(['web', 'auth:web,sanctum', 'admin', 'throttle:300,1'])->group
     Route::patch('/admin/payments/items/{item}', [\App\Http\Controllers\AdminPaymentsController::class, 'update']);
     Route::delete('/admin/payments/items/{item}', [\App\Http\Controllers\AdminPaymentsController::class, 'destroy']);
     Route::put('/admin/payments/plan-prices', [\App\Http\Controllers\AdminPaymentsController::class, 'savePlanPrices']);
+    Route::put('/admin/payments/plan-meta', [\App\Http\Controllers\AdminPaymentsController::class, 'savePlanMeta']);
 });

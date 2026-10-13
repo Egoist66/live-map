@@ -40,7 +40,6 @@ function counterClass(ok: boolean) {
       <div class="flex items-center gap-2">
         <span class="w-9 h-9 rounded-2xl bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white grid place-items-center shrink-0"><i class="pi pi-globe text-sm" /></span>
         <div class="flex-1 min-w-0">
-          <div class="font-black dark:text-white">SEO-центр</div>
           <div class="text-xs text-stone-500 dark:text-zinc-400">Мета, страницы, счётчики Google/Яндекс и скрипты — без правки кода.</div>
         </div>
         <Tag v-if="mgr.savedAt.value" :value="`сохранено ${mgr.savedAt.value}`" severity="success" class="!text-[9px]" />

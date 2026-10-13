@@ -31,7 +31,6 @@ function fmt(dt: string | null): string {
   <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0' } }">
     <template #content>
       <div class="flex items-center gap-2 flex-wrap">
-        <div class="font-black dark:text-white">Пользователи из Telegram</div>
         <Tag :value="`всего: ${tg.total.value}`" severity="info" class="!text-[9px]" />
         <Button label="обновить" link size="small" class="ml-auto !text-xs !px-1" @click="tg.load()" />
       </div>

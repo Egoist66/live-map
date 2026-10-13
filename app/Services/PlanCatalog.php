@@ -40,7 +40,8 @@ class PlanCatalog
     ];
 
     /**
-     * Все планы каталога с ценами и аудиторией.
+     * Все планы каталога: по умолчанию из config/plans.php,
+     * сверху — правки из админки (названия и описания).
      *
      * @return array<string, array{name:string,audience:string,tagline:string,prices:array<string,float|string|null>}>
      */
@@ -49,10 +50,63 @@ class PlanCatalog
         $configured = config('plans.plans');
 
         if (! is_array($configured) || $configured === []) {
-            return self::defaults();
+            $configured = self::defaults();
+        }
+
+        $meta = self::metaOverrides();
+
+        foreach ($meta as $planId => $fields) {
+            if (! isset($configured[$planId])) {
+                continue;
+            }
+
+            if (isset($fields['name']) && is_string($fields['name']) && $fields['name'] !== '') {
+                $configured[$planId]['name'] = $fields['name'];
+            }
+
+            if (isset($fields['tagline']) && is_string($fields['tagline'])) {
+                $configured[$planId]['tagline'] = $fields['tagline'];
+            }
         }
 
         return $configured;
+    }
+
+    /**
+     * Правки названий и описаний тарифов из админки (ключ {plan} → поля).
+     *
+     * @return array<string, array{name?:string,tagline?:string}>
+     */
+    public static function metaOverrides(): array
+    {
+        try {
+            return Cache::remember('payments:plan_meta', 600, static function (): array {
+                if (! Schema::hasTable('payment_items')) {
+                    return [];
+                }
+
+                $rows = \App\Models\PaymentItem::where('kind', 'plan_meta')->get(['key', 'payload']);
+                $out = [];
+
+                foreach ($rows as $row) {
+                    $planId = preg_replace('/\.meta$/', '', (string) $row->key);
+
+                    if ($planId === '') {
+                        continue;
+                    }
+
+                    $payload = is_array($row->payload) ? $row->payload : [];
+                    $out[$planId] = [
+                        'name' => $payload['name'] ?? null,
+                        'tagline' => $payload['tagline'] ?? null,
+                    ];
+                }
+
+                return $out;
+            });
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     /**
@@ -189,13 +243,54 @@ class PlanCatalog
     }
 
     /**
-     * Сбросить кэш оверрайдов цен (после сохранения в админке).
+     * Сбросить кэш цен и описаний (после сохранения в админке).
      */
     public static function bustPriceCache(): void
     {
         try {
             Cache::forget('payments:plan_prices');
+            Cache::forget('payments:plan_meta');
         } catch (\Throwable) {
+        }
+    }
+
+    /**
+     * Возможности тарифа («что входит»): список из админки.
+     *
+     * @param string $plan free|pro|premium|business
+     * @return list<array{key:string,name:string,description:string|null}>
+     */
+    public static function featuresForPlan(string $plan): array
+    {
+        try {
+            if (! Schema::hasTable('payment_items')) {
+                return [];
+            }
+
+            return \App\Models\PaymentItem::where('kind', 'feature')
+                ->where('is_active', true)
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->get()
+                ->filter(static function ($item) use ($plan): bool {
+                    $payload = is_array($item->payload) ? $item->payload : [];
+
+                    if (($payload['plan'] ?? null) === $plan) {
+                        return true;
+                    }
+
+                    $plans = $payload['plans'] ?? null;
+
+                    return is_array($plans) && in_array($plan, $plans, true);
+                })
+                ->map(static fn ($item): array => [
+                    'key' => (string) $item->key,
+                    'name' => (string) $item->name,
+                    'description' => $item->description,
+                ])
+                ->all();
+        } catch (\Throwable) {
+            return [];
         }
     }
 
@@ -284,9 +379,13 @@ class PlanCatalog
     /**
      * Публичный каталог для фронта и бота: только нужная аудитории часть.
      *
+     * Всё динамическое: названия и описания — из админки поверх конфига,
+     * цены — итоговые (админка поверх конфига), возможности — списки
+     * «что входит» из админки. Фронт ничего не придумывает сам.
+     *
      * @param bool $isOrganization кабинет компании ли
      * @param string|null $plan тариф зрителя (цены витрины под него)
-     * @return array{plans:list<array{id:string,name:string,price:string,tagline:string}>,items:list<array<string,mixed>>,period_days:int}
+     * @return array{plans:list<array{id:string,name:string,price:string,tagline:string,prices:array<string,float|null>,features:list<array{key:string,name:string,description:string|null}}>>,items:list<array<string,mixed>>,period_days:int}
      */
     public static function forAudience(bool $isOrganization, ?string $plan = null): array
     {
@@ -307,6 +406,13 @@ class PlanCatalog
                 'name' => (string) ($all[$id]['name'] ?? $id),
                 'price' => self::priceLabel($id),
                 'tagline' => (string) ($all[$id]['tagline'] ?? ''),
+                'prices' => [
+                    'monthly' => self::monthlyPrice($id),
+                    'regional_monthly' => self::monthlyPrice($id, true),
+                    'yearly' => self::periodPrice($id, 'yearly'),
+                    'weekly' => self::periodPrice($id, 'weekly'),
+                ],
+                'features' => self::featuresForPlan($id),
             ];
         }
 

@@ -193,18 +193,29 @@ export function useAdminUsers() {
 
   function askDelete(user: any) {
     if (!staff.canManageUser(user)) return
+    error.value = null
     confirmDelete.value = user
   }
 
-  async function doDelete() {
+  /**
+   * Удалить пользователя из подтверждения.
+   *
+   * Строка пропадает из списков сразу (не висит до перезагрузки):
+   * поиск чистится здесь, а главный список — через колбэк onDeleted.
+   *
+   * @param onDeleted колбэк с id удалённого (например, выкинуть строку из таблицы)
+   */
+  async function doDelete(onDeleted?: (id: number) => void) {
     const user = confirmDelete.value
     if (!user || !staff.canManageUser(user)) return
+    const userId = Number(user.id)
     deletingId.value = user.id
     error.value = null
     try {
       await adminApi.deleteUser(user.id)
-      results.value = results.value.filter((u) => Number(u.id) !== Number(user.id))
+      results.value = results.value.filter((u) => Number(u.id) !== userId)
       confirmDelete.value = null
+      onDeleted?.(userId)
     } catch (e: any) {
       error.value = e?.response?.data?.message || 'Не удалось удалить'
       throw e

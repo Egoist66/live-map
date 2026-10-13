@@ -1,4 +1,5 @@
 import { ref, watch } from 'vue'
+import { router } from '@inertiajs/vue3'
 
 /**
  * ID главной вкладки админ-панели.
@@ -119,7 +120,55 @@ function syncToUrl(): void {
 }
 
 /**
- * Однократно подписаться на изменения табов и кнопку назад/вперёд.
+ * Этот URL — страница консоли?
+ */
+function isAdminPath(): boolean {
+  if (typeof window === 'undefined') {
+    return false
+  }
+
+  try {
+    return new URL(window.location.href).pathname.startsWith('/admin')
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Подхватить раздел из адресной строки при каждом переходе.
+ *
+ * Inertia не пересоздаёт страницу при переходе /admin?tab=a → /admin?tab=b,
+ * поэтому одноразового чтения URL мало: диплинки (уведомления, колокольчик)
+ * меняли адрес, а раздел оставался старым. На /admin с валидным ?tab=
+ * переключаемся, на голом /admin — дописываем текущий раздел в адрес,
+ * чтобы ссылка всегда вела туда же (обновить/поделиться — то же место).
+ */
+function handleNavigate(): void {
+  if (!isAdminPath()) {
+    return
+  }
+
+  const params = new URLSearchParams(window.location.search)
+  const rawTab = params.get('tab')
+
+  if (isAdminTab(rawTab)) {
+    if (tab.value !== rawTab) {
+      tab.value = rawTab
+    }
+
+    const rawSeo = params.get('seo')
+    const nextSeo = isSeoSection(rawSeo) ? rawSeo : DEFAULT_SEO_SECTION
+
+    if (seoSection.value !== nextSeo) {
+      seoSection.value = nextSeo
+    }
+  }
+
+  syncToUrl()
+}
+
+/**
+ * Однократно подписаться на изменения табов, переходы и кнопку назад/вперёд.
  */
 function ensureSync(): void {
   if (initialized) {
@@ -136,17 +185,25 @@ function ensureSync(): void {
 
   if (typeof window !== 'undefined') {
     window.addEventListener('popstate', readFromUrl)
+
+    try {
+      router.on('navigate', handleNavigate)
+    } catch {
+      // SSR: роутера нет.
+    }
   }
 }
 
 /**
  * Хук вкладок админ-панели, синхронизированных с query-параметрами.
  *
- * Главный таб живёт в `?tab=stats|manage|security|admin|refs|seo|telegram`,
+ * Главный таб живёт в `?tab=stats|manage|security|admin|business|modules|payments|ai|refs|seo|telegram`,
  * подвкладка SEO-центра — в `?seo=general|pages|integrations|scripts|crawl`.
  * Состояние общее (module-level), поэтому `Admin/Index.vue` и
- * `AdminSeoManager.vue` видят одни и те же табы, а перезагрузка
- * страницы открывает то место, где был пользователь.
+ * `AdminSeoManager.vue` видят одни и те же табы, а перезагрузка,
+ * кнопка назад/вперёд и диплинк открывают то место, где был пользователь.
+ * Каждый переход по /admin перечитывает адрес (диплинки в SPA работают),
+ * голый /admin дописывает текущий раздел — ссылка всегда ведёт туда же.
  *
  * @returns Текущие табы и сеттеры с валидацией.
  * @example

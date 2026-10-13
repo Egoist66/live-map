@@ -57,7 +57,7 @@ function legalFormLabel(legalForm: string): string {
   <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0' } }">
     <template #content>
       <div class="flex items-center gap-2 flex-wrap">
-        <div class="font-black dark:text-white">Бизнес-заявки <span class="text-xs font-bold text-stone-400 dark:text-zinc-500">· {{ queue.total.value }}</span></div>
+        <span class="text-xs font-bold text-stone-400 dark:text-zinc-500">Всего: {{ queue.total.value }}</span>
         <Tag v-if="queue.pendingCount.value > 0" :value="`на проверке: ${queue.pendingCount.value}`" severity="warn" class="!text-[10px] ml-auto" />
         <Button icon="pi pi-refresh" rounded text size="small" :loading="queue.loading.value" aria-label="Обновить очередь" @click="queue.load()" />
       </div>

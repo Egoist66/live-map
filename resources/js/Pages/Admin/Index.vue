@@ -107,6 +107,20 @@ function enforceVisibleTab(): void {
 }
 
 /**
+ * Подтвердить удаление пользователя: строка исчезает из таблицы сразу.
+ *
+ * Ошибка уже лежит в admin.error и показывается в диалоге,
+ * поэтому здесь её глушим — диалог остаётся открытым.
+ */
+async function confirmUserDelete(): Promise<void> {
+  try {
+    await admin.doDelete((id: number) => mon.dropUser(id))
+  } catch {
+    // No-op: текст ошибки виден в диалоге.
+  }
+}
+
+/**
  * Уйти на витрину (кнопка «На сайт» в админ-баре).
  */
 function goHome(): void {
@@ -244,7 +258,7 @@ enforceVisibleTab()
               </div>
             </section>
 
-            <section v-else-if="tab === 'payments' && staff.isAdmin.value" aria-label="Payments">
+            <section v-else-if="tab === 'payments' && staff.isAdmin.value" aria-label="Тарифы">
               <div class="min-w-0 max-w-[960px]">
                 <AdminPaymentsManager />
               </div>
@@ -382,9 +396,10 @@ enforceVisibleTab()
     </Dialog>
     <Dialog :visible="!!admin.confirmDelete.value" modal header="Удалить аккаунт?" :style="{ width: '400px', maxWidth: '94vw' }" @update:visible="(v:boolean)=>{ if(!v) admin.closeConfirm() }">
       <p class="text-sm text-stone-600 dark:text-zinc-300">Удалить <b>{{ admin.confirmDelete.value?.name }}</b> ({{ admin.confirmDelete.value?.email }})? Это нельзя отменить.</p>
+      <Message v-if="admin.error.value" severity="error" :closable="false" class="!mt-3 !rounded-2xl !text-xs">{{ admin.error.value }}</Message>
       <template #footer>
         <Button label="Отмена" text @click="admin.closeConfirm()" />
-        <Button label="Удалить" severity="danger" :loading="admin.deletingId.value !== null" @click="admin.doDelete()" />
+        <Button label="Удалить" severity="danger" :loading="admin.deletingId.value !== null" @click="confirmUserDelete()" />
       </template>
     </Dialog>
   </div>

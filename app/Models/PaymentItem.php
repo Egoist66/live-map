@@ -56,7 +56,7 @@ class PaymentItem extends Model
      */
     public static function kinds(): array
     {
-        return ['plan_price', 'credit_pack', 'feature', 'ad'];
+        return ['plan_price', 'plan_meta', 'credit_pack', 'feature', 'ad'];
     }
 
     /**

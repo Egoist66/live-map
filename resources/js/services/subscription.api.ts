@@ -9,12 +9,21 @@ export interface SubscriptionStatus {
   needs_renewal: boolean
 }
 
-/** Карточка тарифа из каталога: цены — из config/plans.php на бэке. */
+/** Возможность тарифа («что входит») — список ведётся в админке. */
+export interface PlanCatalogFeature {
+  key: string
+  name: string
+  description: string | null
+}
+
+/** Карточка тарифа из каталога: всё динамическое с бэкенда. */
 export interface PlanCatalogCard {
   id: string
   name: string
   price: string
   tagline: string
+  prices: Record<'monthly' | 'regional_monthly' | 'yearly' | 'weekly', number | null>
+  features: PlanCatalogFeature[]
 }
 
 /** Позиция витрины из каталога (кредиты, фишки, реклама). */

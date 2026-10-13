@@ -16,7 +16,19 @@ import { avatarSrcFor } from '@/composables/useAvatar'
 import { useRealtimeMode } from '@/composables/useRealtimeMode'
 import { useStaffRole } from '@/composables/useStaffRole'
 
-defineProps<{ admin: any; reports: any; imp?: any }>()
+const props = defineProps<{ admin: any; reports: any; imp?: any }>()
+
+/**
+ * Подтвердить удаление: ошибка уже лежит в admin.error и показывается
+ * в диалоге, поэтому здесь её глушим — диалог остаётся открытым.
+ */
+async function confirmUserDelete(): Promise<void> {
+  try {
+    await props.admin.doDelete()
+  } catch {
+    // No-op: текст ошибки виден в диалоге.
+  }
+}
 
 const staff = useStaffRole()
 const realtime = useRealtimeMode()
@@ -32,8 +44,7 @@ const reportFilters = [
 <template>
   <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-6' }, content: { class: '!p-0' } }">
     <template #content>
-      <h3 class="font-black tracking-tight text-lg dark:text-white">Модерация</h3>
-      <p class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Жалобы, скрытие профилей и удаление аккаунтов.</p>
+      <p class="text-sm text-stone-500 dark:text-zinc-400">Жалобы, скрытие профилей и удаление аккаунтов.</p>
       <div class="mt-5 space-y-4 max-w-xl">
         <Card v-if="staff.isAdmin.value" class="!border-amber-200 dark:!border-amber-950 !rounded-3xl !shadow-none !bg-white dark:!bg-zinc-900" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
           <template #content>
@@ -119,7 +130,7 @@ const reportFilters = [
                 <div class="flex gap-1.5 shrink-0 items-center">
                   <Button @click="admin.toggleUser(u)" :loading="admin.togglingId.value === u.id" :disabled="!admin.canManageUser(u)" :label="u.is_hidden_from_search ? 'Показать' : 'Скрыть'" size="small" rounded :outlined="!u.is_hidden_from_search" class="!text-xs" :severity="u.is_hidden_from_search ? 'success' : 'secondary'" />
                   <Button v-if="imp && staff.isAdmin.value" @click="imp.ask(u)" :disabled="!!u.is_admin" icon="pi pi-sign-in" size="small" rounded outlined severity="warn" title="Войти в аккаунт" />
-                  <Button @click="admin.askDelete(u)" :disabled="!admin.canManageUser(u)" icon="pi pi-trash" size="small" rounded outlined severity="danger" title="Удалить вообще" />
+                  <Button @click="admin.askDelete(u)" :disabled="!admin.canManageUser(u)" :loading="admin.deletingId.value === u.id" icon="pi pi-trash" size="small" rounded outlined severity="danger" title="Удалить вообще" />
                 </div>
               </div>
             </div>
@@ -129,9 +140,10 @@ const reportFilters = [
       </div>
       <Dialog :visible="!!admin.confirmDelete.value" @update:visible="(v:boolean)=>{ if(!v) admin.closeConfirm() }" modal header="Удалить аккаунт?" :style="{ width: '400px', maxWidth: '94vw' }">
         <p class="text-sm text-stone-600 dark:text-zinc-300">Удалить <b>{{ admin.confirmDelete.value?.name }}</b> ({{ admin.confirmDelete.value?.email }}) вообще? Это нельзя отменить.</p>
+        <Message v-if="admin.error.value" severity="error" :closable="false" class="!mt-3 !rounded-2xl !text-xs">{{ admin.error.value }}</Message>
         <template #footer>
           <Button label="Отмена" text @click="admin.closeConfirm()" />
-          <Button label="Удалить" severity="danger" :loading="admin.deletingId.value !== null" @click="admin.doDelete()" />
+          <Button label="Удалить" severity="danger" :loading="admin.deletingId.value !== null" @click="confirmUserDelete()" />
         </template>
       </Dialog>
     </template>

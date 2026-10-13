@@ -171,6 +171,21 @@ export function useAdminMonitoring() {
     void loadUsers()
   }
 
+  /**
+   * Мгновенно выкинуть удалённого из таблицы и подтянуть точные данные.
+   *
+   * Строка исчезает сразу (не висит до перезагрузки), счётчик уменьшается,
+   * а фоновая перезагрузка добирает страницу и точный total.
+   *
+   * @param userId id удалённого пользователя
+   */
+  function dropUser(userId: number) {
+    users.value = users.value.filter((u) => Number(u?.id) !== Number(userId))
+    const total = Number(usersMeta.value?.total ?? 0)
+    usersMeta.value = { ...usersMeta.value, total: Math.max(0, total - 1) }
+    void loadUsers()
+  }
+
   function refreshAll() {
     void loadOverview()
     void loadChart()
@@ -347,7 +362,7 @@ export function useAdminMonitoring() {
     online, onlineMeta, onlinePage, onlineLimit, onlineQuery, loadingOnline,
     users, usersMeta, usersPage, usersLimit, usersQuery, usersFilter, usersSort, loadingUsers,
     actingId, onlinePct, maxChart, authUserId, pendingSelfRole, pendingOrganizationRole,
-    loadOverview, loadChart, exportExcel, loadOnline, loadUsers, refreshAll,
+    loadOverview, loadChart, exportExcel, loadOnline, loadUsers, refreshAll, dropUser,
     setOnlineLimit, setOnlinePage, setUsersPage, setUsersFilter, setPlan, setRole,
     requestRoleChange, confirmSelfRoleChange, cancelSelfRoleChange,
     confirmOrganizationRoleChange, cancelOrganizationRoleChange, isPersonalAccount, isSelf,

@@ -27,7 +27,6 @@ const preview = computed(() => previewFor(store.globalEnabled))
     <div class="flex items-center gap-2.5">
       <span class="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 grid place-items-center text-white"><i class="pi pi-th-large" /></span>
       <div class="min-w-0 flex-1">
-        <div class="text-base font-black text-stone-900 dark:text-white">Модули приложения · глобально</div>
         <div class="text-xs text-stone-500 dark:text-zinc-400">По умолчанию только ULove. Включите нужный раздел — пользователи увидят его тумблер в настройках.</div>
       </div>
       <Button icon="pi pi-refresh" rounded outlined size="small" aria-label="Обновить" :loading="mgr.loading.value" @click="mgr.load()" />

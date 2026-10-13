@@ -2,8 +2,9 @@ import { shallowRef } from 'vue'
 import { subscriptionApi, type PlansCatalog } from '@/services/subscription.api'
 
 /**
- * Запасные подписи цен, если каталог с бэка недоступен.
- * Совпадают с config/plans.php — при смене цен править оба места.
+ * Запасные подписи на случай, если бэкенд недоступен (только офлайн-страховка).
+ * При нормальной работе цены всегда приходят с бэкенда — он собирает их
+ * из настроек по умолчанию плюс правки из админки.
  */
 const FALLBACK_PRICES: Record<string, string> = {
   free: 'Бесплатно',
@@ -29,11 +30,11 @@ async function ensureLoaded(): Promise<void> {
 void ensureLoaded()
 
 /**
- * Каталог тарифов с бэка (цены — из config/plans.php).
+ * Каталог тарифов с бэкенда (динамический: настройки + правки из админки).
  *
- * Фронт не хардкодит цены: подпись берётся из каталога своей аудитории
- * (персоны — free/pro/premium, организации — free/business), при недоступности
- * API — запасные значения. Загрузка одна на приложение (модульный синглтон).
+ * Фронт не придумывает цены и списки «что входит» сам: всё берётся из каталога
+ * своей аудитории, при недоступности API — запасные значения. Загрузка одна
+ * на приложение (модульный синглтон).
  *
  * @returns каталог, позиции витрины и подпись цены тарифа
  * @example const { priceFor } = usePlansCatalog(); priceFor('pro') // '$3.99 / мес'
@@ -49,6 +50,14 @@ export function usePlansCatalog() {
   }
 
   /**
+   * Возможности тарифа («что входит») с бэкенда.
+   * @param id идентификатор тарифа
+   */
+  function featuresFor(id: string): { key: string; name: string; description: string | null }[] {
+    return catalog.value?.plans.find((p) => p.id === id)?.features ?? []
+  }
+
+  /**
    * Принудительно обновить каталог (например, после смены региона цен).
    */
   async function refresh(): Promise<void> {
@@ -57,5 +66,5 @@ export function usePlansCatalog() {
     await ensureLoaded()
   }
 
-  return { catalog, priceFor, refresh }
+  return { catalog, priceFor, featuresFor, refresh }
 }

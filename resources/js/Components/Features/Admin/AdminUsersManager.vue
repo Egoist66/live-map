@@ -109,7 +109,7 @@ function planCaption(u: any): string {
   <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0' } }">
     <template #content>
       <div class="flex items-center gap-2 flex-wrap">
-        <div class="font-black dark:text-white">Пользователи <span class="text-xs font-bold text-stone-400 dark:text-zinc-500">· {{ meta.total }}</span></div>
+        <span class="text-xs font-bold text-stone-400 dark:text-zinc-500">Всего: {{ meta.total }}</span>
         <Button label="Тестовый" icon="pi pi-user-plus" size="small" rounded outlined severity="info" class="ml-auto !text-xs !py-1" title="Создать тестовый аккаунт с придуманными логином и паролем" @click="admin.openCreate()" />
       </div>
       <AdminCreateUserDialog :admin="admin" :onCreated="() => emit('created')" />
@@ -153,7 +153,7 @@ function planCaption(u: any): string {
               <Button v-if="!u.banned_at" @click="emit('ban', u)" :disabled="!!u.is_admin" icon="pi pi-ban" size="small" rounded outlined severity="danger" class="!h-8 !w-8 !p-0" title="Забанить" />
               <Button v-else @click="emit('unban', u)" icon="pi pi-check" size="small" rounded outlined severity="success" class="!h-8 !w-8 !p-0" title="Разбанить" />
               <Button @click="emit('impersonate', u)" :disabled="!!u.is_admin" icon="pi pi-sign-in" size="small" rounded outlined severity="warn" class="!h-8 !w-8 !p-0" title="Войти в аккаунт" />
-              <Button @click="admin.askDelete(u)" :disabled="u.is_admin" icon="pi pi-trash" size="small" rounded outlined severity="danger" class="!h-8 !w-8 !p-0" title="Удалить аккаунт" />
+              <Button @click="admin.askDelete(u)" :disabled="u.is_admin" :loading="admin.deletingId.value === u.id" icon="pi pi-trash" size="small" rounded outlined severity="danger" class="!h-8 !w-8 !p-0" title="Удалить аккаунт" />
             </div>
           </div>
           <div class="mt-1.5 flex gap-1.5">

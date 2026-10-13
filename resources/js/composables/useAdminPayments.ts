@@ -21,11 +21,13 @@ export interface PaymentItemRow {
 }
 
 /**
- * Цена плана по периодам (эффективная: конфиг + оверрайды).
+ * Цена плана по периодам (итоговая: действует везде сразу).
  */
 export interface PlanPriceRow {
   id: string
   name: string
+  tagline: string
+  audience: string
   prices: Record<'monthly' | 'regional_monthly' | 'yearly' | 'weekly', number | null>
 }
 
@@ -50,8 +52,12 @@ export interface PaymentItemDraft {
   price: number | null
   period: string
   is_active: boolean
-  /** Цены под тарифы (пусто = базовая цена). */
-  pricesByPlan: Record<'free' | 'pro' | 'premium', number | null>
+  /** К какому тарифу относится возможность (для вида «Фишка»). */
+  plan: string
+  /** Своя цена под каждый тариф (пусто = общая цена). */
+  pricesByPlan: Record<'free' | 'pro' | 'premium' | 'business', number | null>
+  /** Показать ли блок «разные цены по тарифам» (только вид диалога). */
+  showPricesByPlan: boolean
   /** Прочие данные позиции (кредиты и т.д.) — храним непрозрачно. */
   payload: Record<string, unknown>
 }
@@ -59,23 +65,92 @@ export interface PaymentItemDraft {
 /** Пустой черновик для кнопки «Добавить». */
 export const EMPTY_ITEM_DRAFT: PaymentItemDraft = {
   key: '',
-  module: 'ulove',
-  kind: 'feature',
+  module: 'general',
+  kind: 'credit_pack',
   name: '',
   description: '',
   price: null,
   period: 'once',
-  is_active: false,
-  pricesByPlan: { free: null, pro: null, premium: null },
+  is_active: true,
+  plan: 'pro',
+  pricesByPlan: { free: null, pro: null, premium: null, business: null },
+  showPricesByPlan: false,
   payload: {},
+}
+
+/**
+ * Превратить название в технический ключ (латиница).
+ * Кириллица переводится в латиницу, всё остальное выкидывается.
+ * @param name название товара или возможности
+ * @example slugifyKey('Буст анкеты · 1 час') // 'bust_ankety_1_chas'
+ */
+export function slugifyKey(name: string): string {
+  const map: Record<string, string> = {
+    а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'yo', ж: 'zh', з: 'z',
+    и: 'i', й: 'y', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r',
+    с: 's', т: 't', у: 'u', ф: 'f', х: 'h', ц: 'ts', ч: 'ch', ш: 'sh', щ: 'sch',
+    ъ: '', ы: 'y', ь: '', э: 'e', ю: 'yu', я: 'ya',
+  }
+
+  const slug = name
+    .toLowerCase()
+    .split('')
+    .map((ch) => map[ch] ?? ch)
+    .join('')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 40)
+
+  return slug === '' ? 'item' : slug
 }
 
 /** Подписи видов позиций. */
 export const PAYMENT_KIND_LABELS: Record<string, string> = {
   plan_price: 'Цена тарифа',
   credit_pack: 'Пакет кредитов',
-  feature: 'Фишка',
+  feature: 'Возможность тарифа',
   ad: 'Реклама',
+}
+
+/** Пояснения видов позиций человеческим языком. */
+export const PAYMENT_KIND_HINTS: Record<string, string> = {
+  credit_pack: 'Пакет внутренней валюты: люди тратят кредиты на мелочи.',
+  feature: 'Строка внутри карточки тарифа — уже включена в тариф, отдельно не продаётся.',
+  ad: 'Платное продвижение для компаний: пин, рассылка, купон.',
+}
+
+/** Пояснения разделов человеческим языком. */
+export const PAYMENT_MODULE_HINTS: Record<string, string> = {
+  general: 'Видят все, без привязки к разделу.',
+  ulove: 'Показывается в знакомствах.',
+  upin: 'Показывается на карте.',
+  uflow: 'Показывается в ленте.',
+  districts: 'Показывается в районах.',
+  business: 'Показывается у компаний.',
+}
+
+/** Подписи периодов оплаты человеческим языком. */
+export const PAYMENT_PERIOD_HINTS: Record<string, string> = {
+  once: 'Купил один раз — и всё.',
+  week: 'Оплата каждую неделю.',
+  month: 'Оплата каждый месяц.',
+  year: 'Оплата сразу за год.',
+}
+
+/** Подписи аудитории тарифа (человеческим языком). */
+export const PLAN_AUDIENCE_LABELS: Record<string, string> = {
+  users: 'Для всех',
+  organizations: 'Для компаний',
+}
+
+/**
+ * Короткая подпись месячной цены тарифа для шапки карточки.
+ * @param plan тариф с ценами
+ */
+export function planMonthlyLabel(plan: PlanPriceRow): string {
+  const value = plan.prices.monthly
+  if (value === null || value === undefined) return 'Бесплатно'
+  return `$${Number(value)} / мес`
 }
 
 /** Подписи модулей. */
@@ -113,11 +188,11 @@ export function priceLabelOf(row: { price: number | null; period: string | null 
 }
 
 /**
- * Админка «Payments»: цены тарифов и витрина позиций.
+ * Раздел «Тарифы, цены и оплаты»: цены тарифов, их возможности и витрина.
  *
- * Цены планов правятся блоком и сразу влияют на всё приложение
- * (PlanCatalog → каталог фронта и бот, без редеплоя). Позиции —
- * CRUD будущей витрины кредитов/фишек/рекламы по модулям.
+ * Цены меняются здесь и сразу видны везде: в приложении, в боте, на витрине.
+ * Возможности тарифа — это список «что входит»: раскрывается по клику
+ * на карточку тарифа, каждую строку можно поправить или удалить.
  *
  * @returns состояние, списки и действия
  * @example const pay = useAdminPayments(); await pay.load()
@@ -133,18 +208,73 @@ export function useAdminPayments() {
     gateways: [] as PaymentGatewayStatus[],
     gatewayNote: '',
     dialogOpen: false,
+    helpOpen: false,
     editingId: null as number | null,
-    draft: { ...EMPTY_ITEM_DRAFT } as PaymentItemDraft,
+    draft: { ...EMPTY_ITEM_DRAFT, pricesByPlan: { ...EMPTY_ITEM_DRAFT.pricesByPlan } } as PaymentItemDraft,
   })
 
   const items = reactive({ list: [] as PaymentItemRow[] })
 
   const moduleFilter = reactive({ value: 'all' })
 
+  /** Какие карточки тарифов раскрыты (видны возможности внутри). */
+  const expanded = reactive({ plans: [] as string[] })
+
+  /** Витрина без служебных строк и без возможностей тарифов. */
+  const showcaseItems = computed(() => items.list.filter((row) => row.kind !== 'feature'))
+
   const visibleItems = computed(() => {
-    if (moduleFilter.value === 'all') return items.list
-    return items.list.filter((row) => row.module === moduleFilter.value)
+    const base = showcaseItems.value
+    if (moduleFilter.value === 'all') return base
+    return base.filter((row) => row.module === moduleFilter.value)
   })
+
+  /**
+   * К какому тарифу привязана строка (возможность тарифа).
+   * @param row строка витрины
+   */
+  function planOf(row: PaymentItemRow): string | null {
+    const payload = (row.payload ?? {}) as Record<string, unknown>
+    const single = payload.plan
+    if (typeof single === 'string' && single !== '') return single
+    const many = payload.plans
+    if (Array.isArray(many) && typeof many[0] === 'string') return many[0] as string
+    return null
+  }
+
+  /** Возможности, сгруппированные по тарифу. */
+  const featuresByPlan = computed(() => {
+    const grouped: Record<string, PaymentItemRow[]> = { free: [], pro: [], premium: [], business: [] }
+    for (const row of items.list) {
+      if (row.kind !== 'feature') continue
+      const plan = planOf(row)
+      if (plan && grouped[plan]) grouped[plan].push(row)
+    }
+    return grouped
+  })
+
+  /**
+   * Сколько возможностей у тарифа.
+   * @param planId идентификатор тарифа
+   */
+  function featureCount(planId: string): number {
+    return featuresByPlan.value[planId]?.length ?? 0
+  }
+
+  /**
+   * Раскрыта ли карточка тарифа.
+   * @param planId идентификатор тарифа
+   */
+  function isExpanded(planId: string): boolean {
+    return expanded.plans.includes(planId)
+  }
+
+  /** Показать или скрыть возможности внутри карточки тарифа. */
+  function togglePlan(planId: string): void {
+    const at = expanded.plans.indexOf(planId)
+    if (at >= 0) expanded.plans.splice(at, 1)
+    else expanded.plans.push(planId)
+  }
 
   function readError(err: unknown, fallback: string): string {
     const e = err as { response?: { data?: { message?: string } } }
@@ -152,7 +282,7 @@ export function useAdminPayments() {
   }
 
   /**
-   * Загрузить сводку цен и всю витрину.
+   * Загрузить цены, возможности и витрину.
    */
   async function load(): Promise<void> {
     if (state.loading) return
@@ -165,12 +295,22 @@ export function useAdminPayments() {
         axios.get('/api/admin/payments/items'),
       ])
 
-      state.plans = overview.data?.plans ?? []
+      const rawPlans = overview.data?.plans ?? []
+      state.plans = rawPlans.map(
+        (plan: Record<string, unknown>): PlanPriceRow => ({
+          id: String(plan.id ?? ''),
+          name: String(plan.name ?? plan.id ?? ''),
+          tagline: String(plan.tagline ?? ''),
+          audience: String(plan.audience ?? 'users'),
+          prices: (plan.prices ?? { monthly: null, regional_monthly: null, yearly: null, weekly: null }) as PlanPriceRow['prices'],
+        }),
+      )
       state.gateways = overview.data?.gateways ?? []
       state.gatewayNote = overview.data?.gateway_note ?? ''
-      items.list = list.data?.items ?? []
+      const rows = (list.data?.items ?? []) as PaymentItemRow[]
+      items.list = rows.filter((row) => row.kind !== 'plan_price')
     } catch (err: unknown) {
-      state.error = readError(err, 'Не удалось загрузить Payments')
+      state.error = readError(err, 'Не удалось загрузить тарифы')
     } finally {
       state.loading = false
     }
@@ -200,12 +340,66 @@ export function useAdminPayments() {
   }
 
   /**
+   * Сохранить названия и описания тарифов (видны везде сразу).
+   */
+  async function savePlanMeta(): Promise<void> {
+    if (state.savingPrices) return
+    state.savingPrices = true
+    state.error = null
+    state.notice = null
+
+    try {
+      const meta = state.plans.map((plan) => ({ plan: plan.id, name: plan.name, tagline: plan.tagline }))
+      await axios.put('/api/admin/payments/plan-meta', { meta })
+      state.notice = 'Названия и описания сохранены — везде уже новые.'
+      await load()
+    } catch (err: unknown) {
+      state.error = readError(err, 'Не удалось сохранить описания')
+    } finally {
+      state.savingPrices = false
+    }
+  }
+
+  /**
    * Открыть диалог добавления позиции.
    */
   function openCreate(): void {
     state.editingId = null
-    state.draft = { ...EMPTY_ITEM_DRAFT }
+    state.draft = { ...EMPTY_ITEM_DRAFT, pricesByPlan: { ...EMPTY_ITEM_DRAFT.pricesByPlan }, payload: {} }
     state.dialogOpen = true
+  }
+
+  /**
+   * Открыть диалог добавления возможности внутрь тарифа.
+   * @param planId идентификатор тарифа
+   */
+  function openCreateForPlan(planId: string): void {
+    state.editingId = null
+    state.draft = {
+      ...EMPTY_ITEM_DRAFT,
+      pricesByPlan: { ...EMPTY_ITEM_DRAFT.pricesByPlan },
+      payload: {},
+      key: `feat_${planId}_${Date.now().toString(36)}`,
+      kind: 'feature',
+      is_active: true,
+      plan: planId,
+    }
+    state.dialogOpen = true
+    if (!expanded.plans.includes(planId)) expanded.plans.push(planId)
+  }
+
+  /**
+   * Подобрать свободный технический ключ по названию.
+   * @param name название товара или возможности
+   */
+  function uniqueKey(name: string): string {
+    const taken = new Set(items.list.map((row) => row.key))
+    const base = slugifyKey(name)
+    if (!taken.has(base)) return base
+
+    let counter = 2
+    while (taken.has(`${base}_${counter}`)) counter += 1
+    return `${base}_${counter}`
   }
 
   /**
@@ -214,6 +408,7 @@ export function useAdminPayments() {
    */
   function openEdit(row: PaymentItemRow): void {
     const byPlan = (row.payload?.prices_by_plan ?? {}) as Record<string, number | null>
+    const hasOwnPrices = (['free', 'pro', 'premium', 'business'] as const).some((id) => byPlan[id] != null)
 
     state.editingId = row.id
     state.draft = {
@@ -225,11 +420,14 @@ export function useAdminPayments() {
       price: row.price,
       period: row.period ?? 'once',
       is_active: row.is_active,
+      plan: planOf(row) ?? 'pro',
       pricesByPlan: {
         free: byPlan.free ?? null,
         pro: byPlan.pro ?? null,
         premium: byPlan.premium ?? null,
+        business: byPlan.business ?? null,
       },
+      showPricesByPlan: hasOwnPrices,
       payload: { ...(row.payload ?? {}) },
     }
     state.dialogOpen = true
@@ -237,6 +435,9 @@ export function useAdminPayments() {
 
   /**
    * Сохранить черновик (создание или правка).
+   *
+   * Технический ключ при создании подбирается сам по названию —
+   * в диалоге его нет и спрашивать его не нужно.
    */
   async function saveDraft(): Promise<void> {
     if (state.acting) return
@@ -245,16 +446,23 @@ export function useAdminPayments() {
     state.notice = null
 
     try {
+      const isFeature = state.draft.kind === 'feature'
       const nextPayload: Record<string, unknown> = { ...state.draft.payload }
-      nextPayload.prices_by_plan = { ...state.draft.pricesByPlan }
+      nextPayload.prices_by_plan = isFeature ? {} : { ...state.draft.pricesByPlan }
+      if (isFeature) {
+        nextPayload.plan = state.draft.plan
+        delete nextPayload.plans
+      }
+
+      const key = state.editingId === null ? uniqueKey(state.draft.name) : state.draft.key
 
       const payload = {
-        key: state.draft.key,
+        key,
         module: state.draft.module,
         kind: state.draft.kind,
         name: state.draft.name,
         description: state.draft.description || null,
-        price: state.draft.price,
+        price: isFeature ? null : state.draft.price,
         period: state.draft.period,
         is_active: state.draft.is_active,
         payload: nextPayload,
@@ -263,16 +471,16 @@ export function useAdminPayments() {
 
       if (state.editingId === null) {
         await axios.post('/api/admin/payments/items', payload)
-        state.notice = 'Позиция добавлена в витрину.'
+        state.notice = isFeature ? 'Возможность добавлена в тариф.' : 'Товар добавлен в витрину.'
       } else {
         await axios.patch(`/api/admin/payments/items/${state.editingId}`, payload)
-        state.notice = 'Позиция обновлена.'
+        state.notice = 'Сохранено — везде уже новое.'
       }
 
       state.dialogOpen = false
       await load()
     } catch (err: unknown) {
-      state.error = readError(err, 'Не удалось сохранить позицию')
+      state.error = readError(err, 'Не удалось сохранить. Проверьте название и цену.')
     } finally {
       state.acting = false
     }
@@ -337,7 +545,7 @@ export function useAdminPayments() {
       const url = window.URL.createObjectURL(new Blob([response.data]))
       const link = document.createElement('a')
       link.href = url
-      link.download = `payments-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')}.xlsx`
+      link.download = `tarify-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-')}.xlsx`
       document.body.appendChild(link)
       link.click()
       link.remove()
@@ -353,10 +561,19 @@ export function useAdminPayments() {
     state,
     items,
     moduleFilter,
+    expanded,
     visibleItems,
+    showcaseItems,
+    featuresByPlan,
+    featureCount,
+    isExpanded,
+    togglePlan,
+    planOf,
     load,
     savePrices,
+    savePlanMeta,
     openCreate,
+    openCreateForPlan,
     openEdit,
     saveDraft,
     toggleActive,

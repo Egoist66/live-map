@@ -56,13 +56,13 @@ const DISTRICTS: AppModule[] = ['districts']
 const BUSINESS: AppModule[] = ['business']
 
 /**
- * Тарифы приложения: полное описание каждого плана.
+ * Тарифы приложения: запасное описание каждого плана (офлайн-страховка).
  *
- * Источник правды для модалки «Что даёт тариф» в профиле.
- * Данные сверены с FAQ: ULove, приватность, карта — только когда
- * модуль включён (см. showPlan: группы и строки фильтруются).
- * Цены в PLAN_DETAILS — запасные (совпадают с config/plans.php);
- * живые подписи подтягиваются из каталога бэка в showPlan().
+ * Основной источник правды — бэкенд: каталог отдаёт названия, цены и списки
+ * «что входит», которые ведутся в админке (раздел тарифов). Этот файл нужен
+ * лишь пока бэкенд недоступен или список в админке ещё пуст: как только
+ * в админке появляются возможности тарифа, модалка показывает их первыми,
+ * а эти строки остаются запасными внизу.
  */
 export const PLAN_DETAILS: PlanDetails[] = [
   {
@@ -284,11 +284,15 @@ function isVisible(
  */
 export function usePlanDetails() {
   const dialogPlan = ref<PlanDetails | null>(null)
-  const { priceFor } = usePlansCatalog()
+  const { catalog, priceFor, featuresFor } = usePlansCatalog()
   const modules = useAppModulesStore()
 
   /**
    * Открыть модалку с описанием тарифа.
+   *
+   * Названия, цены и списки «что входит» подтягиваются с бэкенда
+   * (админка поверх настроек по умолчанию). Запасные строки из этого
+   * файла показываются, только если в админке для тарифа пока пусто.
    * @param id идентификатор тарифа
    */
   function showPlan(id: PlanId): void {
@@ -299,7 +303,16 @@ export function usePlanDetails() {
       return
     }
 
-    const groups = found.groups
+    const liveFeatures = featuresFor(found.id)
+    const liveGroup: PlanFeatureGroup | null =
+      liveFeatures.length > 0
+        ? {
+            title: '✨ Что входит',
+            items: liveFeatures.map((f) => t(f.description ? `${f.name} — ${f.description}` : f.name)),
+          }
+        : null
+
+    const fallbackGroups = found.groups
       .filter((group) => isVisible(group.modules, (m) => modules.isEnabled(m)))
       .map((group) => ({
         ...group,
@@ -307,7 +320,16 @@ export function usePlanDetails() {
       }))
       .filter((group) => group.items.length > 0)
 
-    dialogPlan.value = { ...found, groups, price: priceFor(found.id) || found.price }
+    const groups = liveGroup !== null ? [liveGroup, ...fallbackGroups] : fallbackGroups
+    const livePlan = catalog.value?.plans.find((p) => p.id === found.id)
+
+    dialogPlan.value = {
+      ...found,
+      name: livePlan?.name || found.name,
+      tagline: livePlan?.tagline || found.tagline,
+      groups,
+      price: priceFor(found.id) || found.price,
+    }
   }
 
   /** Закрыть модалку. */

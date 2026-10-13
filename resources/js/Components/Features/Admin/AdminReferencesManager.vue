@@ -54,7 +54,6 @@ function onFilePicked(mgr: any, event: Event) {
       <div class="flex items-center gap-2">
         <span class="w-9 h-9 rounded-2xl bg-gradient-to-br from-teal-600 to-emerald-600 text-white grid place-items-center shrink-0"><i class="pi pi-book text-sm" /></span>
         <div class="flex-1 min-w-0">
-          <div class="font-black dark:text-white">Справочные данные</div>
           <div class="text-xs text-stone-500 dark:text-zinc-400">Контакты, политика и оферта — видны всем в футере.</div>
         </div>
         <Button label="Создать" icon="pi pi-plus" size="small" rounded @click="mgr.openCreate(activeSlug)" />
