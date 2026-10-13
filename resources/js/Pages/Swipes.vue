@@ -5,6 +5,7 @@ import DatingQuestionnaireForm from '@/Components/Features/Dating/DatingQuestion
 import SwipeDetailsDialog from '@/Components/Features/Dating/SwipeDetailsDialog.vue'
 import DatingRatingStars from '@/Components/Features/Dating/DatingRatingStars.vue'
 import SwipeActionsBar from '@/Components/Features/Dating/SwipeActionsBar.vue'
+import SwipeCardSkeleton from '@/Components/Features/Dating/SwipeCardSkeleton.vue'
 import SuperlikeSplash from '@/Components/Features/Dating/SuperlikeSplash.vue'
 import MatchSplash from '@/Components/Features/Dating/MatchSplash.vue'
 import AppImage from '@/Components/Ui/Media/AppImage.vue'
@@ -29,6 +30,7 @@ import Chip from 'primevue/chip'
 import InputText from 'primevue/inputtext'
 import ToggleSwitch from 'primevue/toggleswitch'
 import DatePicker from 'primevue/datepicker'
+import Skeleton from 'primevue/skeleton'
 
 const moduleContent = useModuleContent()
 const withMap = moduleContent.isPubliclyOn('upin')
@@ -228,7 +230,17 @@ onUnmounted(() => {
             <Button v-if="s.canResetHistory.value" icon="pi pi-trash" severity="warn" rounded outlined size="small" aria-label="Сбросить просмотренные" :title="s.resetTitle.value" :loading="s.resetting.value" @click="s.resetHistory()" />
           </div>
 
-          <div v-if="s.matches.value.length" class="mt-3 hidden sm:block">
+          <div v-if="!s.matchesReady.value" class="mt-3 hidden sm:block" role="status" aria-label="Загружаем мэтчи">
+            <Skeleton width="9rem" height="0.7rem" border-radius="6px" class="mb-2" />
+            <div class="flex gap-3 overflow-hidden pb-2 pt-1" aria-hidden="true">
+              <div v-for="i in 5" :key="i" class="flex w-16 shrink-0 flex-col items-center gap-1">
+                <Skeleton shape="circle" size="3.5rem" />
+                <Skeleton width="3rem" height="0.65rem" border-radius="6px" />
+              </div>
+            </div>
+          </div>
+
+          <div v-else-if="s.matches.value.length" class="mt-3 hidden sm:block">
             <div class="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500 mb-2">Мэтчи · чат открыт</div>
             <div class="matches-strip flex gap-3 overflow-x-auto pb-2 pt-1 -mx-1 px-1">
               <button
@@ -527,9 +539,7 @@ onUnmounted(() => {
 
           <template v-else>
           <div class="swipes-feed relative mt-1 sm:mt-2 select-none overscroll-none sm:max-w-[380px] sm:mx-auto sm:w-full lg:max-w-[440px] xl:max-w-[480px] 2xl:max-w-[520px]">
-            <div v-if="s.loading.value || !s.feedReady.value" class="swipes-feed-skeleton rounded-xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 grid place-items-center sm:h-[60dvh] sm:min-h-[380px] sm:max-h-[520px] lg:h-[62dvh] lg:max-h-[600px] xl:h-[66dvh] xl:max-h-[680px] 2xl:max-h-[740px]">
-              <i class="pi pi-spin pi-spinner text-2xl text-stone-400 dark:text-zinc-500" />
-            </div>
+            <SwipeCardSkeleton v-if="s.loading.value || !s.feedReady.value" />
 
             <div v-else-if="s.current.value" class="swipes-card-wrap">
               <div class="swipe-deck relative overscroll-none sm:h-[60dvh] sm:min-h-[380px] sm:max-h-[520px] lg:h-[62dvh] lg:max-h-[600px] xl:h-[66dvh] xl:max-h-[680px] 2xl:max-h-[740px]">
@@ -1237,6 +1247,7 @@ html.tg-app .swipes-feed-lock {
   will-change: transform, opacity;
   user-select: none;
   -webkit-user-select: none;
+  touch-action: pan-y;
 }
 .swipe-top img {
   pointer-events: none;
@@ -1269,21 +1280,21 @@ html.tg-app .swipes-feed-lock {
 }
 @keyframes fly-like {
   from {
-    transform: translate(var(--from-x, 0px), var(--from-y, 0px)) rotate(8deg);
+    transform: translate(var(--from-x, 0px), 0px) rotate(8deg);
     opacity: 1;
   }
   to {
-    transform: translate(110vw, 140px) rotate(30deg);
+    transform: translate(110vw, 0px) rotate(30deg);
     opacity: 0;
   }
 }
 @keyframes fly-pass {
   from {
-    transform: translate(var(--from-x, 0px), var(--from-y, 0px)) rotate(-8deg);
+    transform: translate(var(--from-x, 0px), 0px) rotate(-8deg);
     opacity: 1;
   }
   to {
-    transform: translate(-110vw, 140px) rotate(-30deg);
+    transform: translate(-110vw, 0px) rotate(-30deg);
     opacity: 0;
   }
 }

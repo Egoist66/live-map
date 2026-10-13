@@ -345,7 +345,13 @@ export default defineConfig({
                         options: {
                             cacheName: 'pwa-pages',
                             networkTimeoutSeconds: 10,
-                            expiration: { maxEntries: 20, maxAgeSeconds: 86400 },
+                            // Час, а не сутки: закэшированный HTML ссылается
+                            // на хэшированные чанки конкретного билда — после
+                            // деплоя старые чанки удалены и страница из кэша
+                            // грузит entry в 404 (белый экран до ручной
+                            // перезагрузки). Час держит офлайн-читалку живой,
+                            // но не даёт протухнуть на целый день.
+                            expiration: { maxEntries: 20, maxAgeSeconds: 3600 },
                             cacheableResponse: { statuses: [0, 200] },
                         },
                     },

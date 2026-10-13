@@ -16,17 +16,27 @@ const { pageKey, transitionName, blurActiveElement } = usePageTransition({ prese
 </script>
 
 <template>
-  <!-- Без mode="out-in": out-in держит старое дерево в leave-лимбо, где
-       vee-validate/PrimeVue-эффекты патчат уже разобранные Teleport/Portal
-       (`insertBefore of null`), а брошенное исключение гасит саму анимацию.
-       Одновременный кроссфейд безопасен и реально виден между экранами.
-       Структура намеренно ОДНА при вкл/выкл анимациях (без v-if по motion):
-       переключение ветки после монтирования (флаг из localStorage) посреди
-       асинхронной гидратации (async-компоненты в дереве) даёт mismatch.
-       OFF гасится именем `page-instant` + CSS kill-switch — мгновенно. -->
-  <Transition :name="transitionName" :appear="appear" @before-leave="blurActiveElement">
-    <div :key="pageKey" class="page-transition-wrapper">
-      <slot />
-    </div>
-  </Transition>
+  <!-- Grid-стек вместо потока: входящее и уходящее дерево лежат в одной
+       ячейке друг ПОД другом (кроссфейд), а не друг ЗА другом. Без этого
+       на входе в высокие страницы (свайпы = 100dvh-лок) новый экран
+       сначала рисовался под старым за фолдом, а после unmount старого
+       прыгал наверх — топбар «дёргался снизу вверх». Высота стека =
+       max(старое, новое), скролл не скачет. -->
+  <div class="page-transition-stack">
+    <Transition :name="transitionName" :appear="appear" @before-leave="blurActiveElement">
+      <div :key="pageKey" class="page-transition-wrapper page-transition-cell">
+        <slot />
+      </div>
+    </Transition>
+  </div>
 </template>
+
+<style scoped>
+.page-transition-stack {
+  display: grid;
+}
+.page-transition-cell {
+  grid-area: 1 / 1;
+  min-width: 0;
+}
+</style>

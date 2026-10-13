@@ -5,6 +5,7 @@ import AppUserMenu from '@/Layouts/AppUserMenu.vue'
 import MobileBottomNav from '@/Components/Features/Navigation/MobileBottomNav.vue'
 import AppFooter from '@/Layouts/AppFooter.vue'
 import PageTransition from '@/Components/Features/Feedback/PageTransition.vue'
+import RouteErrorBoundary from '@/Components/Features/Feedback/RouteErrorBoundary.vue'
 import GlobalNotificationToasts from '@/Components/Features/Feedback/GlobalNotificationToasts.vue'
 import NetworkStatusToast from '@/Components/Features/Feedback/NetworkStatusToast.vue'
 import PwaInstallBanner from '@/Components/Features/Pwa/PwaInstallBanner.vue'
@@ -79,13 +80,18 @@ onMounted(() => { screenLock.init(); hotkeys.init() })
       <div class="mx-auto max-w-[1280px] xl:max-w-[1400px] 2xl:max-w-[1600px] px-4 sm:px-6 py-4 sm:py-6"><slot name="header" /></div>
     </div>
     <main :class="layoutRoute.isAdminRoute.value ? 'flex-1 pb-0' : (layoutRoute.isScrollLockedPage.value ? 'flex-1 pb-0 lg:pb-0 overflow-hidden overscroll-none' : 'flex-1 pb-[calc(var(--app-bottomnav)+var(--sab))] lg:pb-0')">
-      <!-- Консоль — без PageTransition: кроссфейд держит старое и новое дерево
-           друг под другом ~350мс, и шапка админки это время видна внизу страницы,
-           а потом прыгает наверх. WP-режиму анимация не нужна — мгновенно. -->
-      <div v-if="layoutRoute.isAdminRoute.value" class="min-w-0 w-full">
-        <slot />
-      </div>
-      <PageTransition v-else><slot /></PageTransition>
+      <!-- Граница ошибок роута: краш страницы показывает панель
+           восстановления вместо белого экрана и не отравляет корневой
+           инстанс — «назад» продолжает работать. См. useRouteErrorBoundary. -->
+      <RouteErrorBoundary>
+        <!-- Консоль — без PageTransition: кроссфейд держит старое и новое дерево
+             друг под другом ~350мс, и шапка админки это время видна внизу страницы,
+             а потом прыгает наверх. WP-режиму анимация не нужна — мгновенно. -->
+        <div v-if="layoutRoute.isAdminRoute.value" class="min-w-0 w-full">
+          <slot />
+        </div>
+        <PageTransition v-else><slot /></PageTransition>
+      </RouteErrorBoundary>
     </main>
     <div v-if="!layoutRoute.isChatRoute.value && !layoutRoute.isMapRoute.value && !layoutRoute.isSwipesRoute.value && !layoutRoute.isAdminRoute.value" class="mt-auto hidden pb-[calc(var(--app-bottomnav)+var(--sab))] lg:block lg:pb-0">
       <AppFooter />

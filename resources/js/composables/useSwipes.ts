@@ -34,6 +34,14 @@ export function useSwipes() {
   const cards = ref<SwipeCard[]>([])
   const index = ref(0)
   const matches = ref<Array<{ match_id: number; conversation_id: number | null; user: { id: number; name: string; avatar_url: string | null } }>>([])
+  /**
+   * Стрип мэтчей хоть раз договорился с бэком.
+   *
+   * Мэтчи грузятся параллельно с лентой: без гейта стрип вспыхивает
+   * поверх уже отрисованной колоды и толкает её вниз, затем колода
+   * прыгает обратно. Гейт держит скелетон той же высоты.
+   */
+  const matchesReady = ref(false)
   const favorites = ref<SwipeCard[]>([])
   const favoritesLimit = ref(3)
   const favoritesLoading = ref(false)
@@ -499,9 +507,11 @@ export function useSwipes() {
   })
 
   /**
-   * Стиль верхней карты колоды: только драг.
+   * Стиль верхней карты колоды: только горизонтальный драг.
    *
-   * Улёт играет отдельный оверлей exiting, чтобы следующая карта стояла спокойно.
+   * Вертикаль запрещена: карточка ходит только влево/вправо,
+   * вверх/вниз не тянется. Улёт играет отдельный оверлей exiting,
+   * чтобы следующая карта стояла спокойно.
    *
    * @returns css-стиль transform/transition/opacity
    */
@@ -513,9 +523,10 @@ export function useSwipes() {
         opacity: '0',
       }
     }
-    const rotate = dragX.value / 16
+    const horizontalShift = dragX.value
+    const rotate = horizontalShift / 16
     return {
-      transform: `translate(${dragX.value}px, ${dragY.value}px) rotate(${rotate}deg)`,
+      transform: `translate(${horizontalShift}px, 0px) rotate(${rotate}deg)`,
       transition: dragging.value ? 'none' : 'transform .28s cubic-bezier(.2,.7,.25,1.2)',
       opacity: '1',
     }
@@ -856,6 +867,8 @@ export function useSwipes() {
     } catch (e: unknown) {
       if (handleGate(e)) return
       matches.value = []
+    } finally {
+      matchesReady.value = true
     }
   }
 
@@ -1055,7 +1068,7 @@ export function useSwipes() {
     actingAction.value = 'pass'
     leaving.value = true
     flyDir.value = dir
-    exiting.value = { card, dir, fromX: dragX.value, fromY: dragY.value }
+    exiting.value = { card, dir, fromX: dragX.value, fromY: 0 }
     dragging.value = false
     dragX.value = 0
     dragY.value = 0
@@ -1105,7 +1118,7 @@ export function useSwipes() {
     actingAction.value = 'superlike'
     leaving.value = true
     flyDir.value = 'like'
-    exiting.value = { card, dir: 'like', fromX: dragX.value, fromY: dragY.value }
+    exiting.value = { card, dir: 'like', fromX: dragX.value, fromY: 0 }
     dragging.value = false
     dragX.value = 0
     dragY.value = 0
@@ -1265,7 +1278,7 @@ export function useSwipes() {
     actingAction.value = 'like'
     leaving.value = true
     flyDir.value = action
-    exiting.value = { card, dir: action, fromX: dragX.value, fromY: dragY.value }
+    exiting.value = { card, dir: action, fromX: dragX.value, fromY: 0 }
     dragging.value = false
     dragX.value = 0
     dragY.value = 0
@@ -1479,32 +1492,40 @@ export function useSwipes() {
   }
 
   /**
-   * Начало перетаскивания карточки.
+   * Начало перетаскивания карточки: только горизонталь.
+   *
+   * Вертикаль игнорируется — карточка не ходит вверх/вниз,
+   * тянется строго влево/вправо. clientY принят для совместимости
+   * вызовов, но не используется.
    *
    * @param clientX координата X
-   * @param clientY координата Y
+   * @param _clientY координата Y (игнорируется)
    * @returns void
    */
-  function dragStart(clientX: number, clientY = 0): void {
+  function dragStart(clientX: number, _clientY = 0): void {
     if (acting.value || leaving.value) return
     dragging.value = true
     dragStartX.value = clientX
-    dragStartY.value = clientY
+    dragStartY.value = 0
+    dragY.value = 0
   }
 
   /**
-   * Движение перетаскивания.
+   * Движение перетаскивания: только влево/вправо.
+   *
+   * Вертикальное смещение отбрасывается — dragY всегда 0,
+   * карточка не уезжает вверх/вниз.
    *
    * @param clientX координата X
-   * @param clientY координата Y
+   * @param _clientY координата Y (игнорируется)
    * @returns void
    */
-  function dragMove(clientX: number, clientY = 0): void {
+  function dragMove(clientX: number, _clientY = 0): void {
     if (!dragging.value || leaving.value) return
     const nextX = clientX - dragStartX.value
-    const nextY = clientY - dragStartY.value
-    dragX.value = Math.max(-260, Math.min(260, nextX))
-    dragY.value = Math.max(-120, Math.min(120, nextY))
+    const clampedX = Math.max(-260, Math.min(260, nextX))
+    dragX.value = clampedX
+    dragY.value = 0
   }
 
   /**
@@ -1641,6 +1662,7 @@ export function useSwipes() {
     seenCount,
     matches,
     matchesHasMore,
+    matchesReady,
     favorites,
     favoritesLimit,
     favoritesCount,

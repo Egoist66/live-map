@@ -188,6 +188,29 @@ function handleNavigate(): void {
 }
 
 /**
+ * Нужна ли первичная запись табов в адресную строку.
+ *
+ * Только когда в URL нет валидного `?tab=`: голый `/admin` дописываем
+ * запомненным разделом, чтобы ссылка вела туда же. Валидный URL
+ * не трогаем вовсе — лишних `replaceState` посреди коммита Inertia нет.
+ *
+ * @returns true если URL голый или с мусором в `?tab=`
+ */
+function needsUrlSync(): boolean {
+  if (typeof window === 'undefined') {
+    return false
+  }
+
+  if (!isAdminPath()) {
+    return false
+  }
+
+  const params = new URLSearchParams(window.location.search)
+
+  return !isAdminTab(params.get('tab'))
+}
+
+/**
  * Однократно подписаться на изменения табов, переходы и кнопку назад/вперёд.
  */
 function ensureSync(): void {
@@ -198,7 +221,12 @@ function ensureSync(): void {
   initialized = true
 
   readFromUrl()
-  syncToUrl()
+
+  if (needsUrlSync()) {
+    // Микрозадача, а не синхронно: ensureSync бежит в setup страницы,
+    // посреди коммита Inertia — историю правим после него, а не внутри.
+    queueMicrotask(() => syncToUrl())
+  }
 
   watch(tab, syncToUrl)
   watch(seoSection, syncToUrl)

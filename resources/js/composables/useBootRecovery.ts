@@ -49,6 +49,22 @@ const CHUNK_ERROR_PATTERNS = [
 ]
 
 /**
+ * Сигнатуры краха гидратации/рендера после перехода.
+ *
+ * SSR-разметка и клиентский JS разных деплоев (или битый Teleport
+ * после кроссфейда страниц) дают не варнинг, а исключение в mount:
+ * страница белеет до ручной перезагрузки, а отравленный инстанс
+ * белит и все следующие переходы («назад» тоже белое).
+ */
+const HYDRATION_ERROR_PATTERNS = [
+  /insertbefore of null/i,
+  /hydration .* mismatch/i,
+  /mismatch.*hydration/i,
+  /cannot read properties of null \(reading 'insertbefore'\)/i,
+  /teleport.*mismatch/i,
+]
+
+/**
  * Это ошибка протухшего чанка, а не прикладной баг.
  *
  * @param value ошибка, сообщение или стек
@@ -66,6 +82,39 @@ export function isChunkLoadError(value: unknown): boolean {
   }
 
   return false
+}
+
+/**
+ * Это крах гидратации/рендера окружения, а не прикладной баг.
+ *
+ * @param value ошибка, сообщение или стек
+ * @returns true если похоже на рассинхрон SSR/клиента или Teleport
+ */
+export function isHydrationError(value: unknown): boolean {
+  const text = typeof value === 'string'
+    ? value
+    : value instanceof Error
+      ? `${value.message}\n${value.stack ?? ''}`
+      : ''
+
+  if (!text) {
+    return false
+  }
+
+  return HYDRATION_ERROR_PATTERNS.some((pattern) => pattern.test(text))
+}
+
+/**
+ * Ошибка лечится перезагрузкой на свежий билд, а не дебагом.
+ *
+ * Протухший чанк и рассинхрон гидратации — обе про деплой/кэш,
+ * обе дают белый экран до ручной перезагрузки.
+ *
+ * @param value ошибка, сообщение или стек
+ * @returns true если самоперезагрузка имеет смысл
+ */
+export function isRecoverableRenderError(value: unknown): boolean {
+  return isChunkLoadError(value) || isHydrationError(value)
 }
 
 /**
@@ -199,7 +248,7 @@ export function useBootRecovery() {
     const previousHandler = app.config.errorHandler
 
     app.config.errorHandler = (error, instance, info) => {
-      if (isChunkLoadError(error)) {
+      if (isRecoverableRenderError(error)) {
         recoverWithReload()
 
         return

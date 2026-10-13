@@ -4,20 +4,20 @@ import { buildCacheBustedUrl, consumeRecoveryReload } from '@/composables/useBoo
 import type { DefineComponent } from 'vue'
 
 /**
- * Резолвер Inertia-страниц с одной повторной попыткой и жёстким fallback.
+ * Резолвер Inertia-страниц с повторами и жёстким fallback.
  *
  * Зачем: динамический import страницы может упасть — в dev холодный
  * transform тяжёлой страницы не укладывается в таймаут прокси (504,
  * `Failed to fetch dynamically imported module`), на проде после деплоя
  * можно приехать в stale-чанк. Без обработки визит умирает с uncaught
- * promise и мёртвым экраном. Повтор обычно подбирает уже прогретый
- * модуль; если нет — перезагрузка на свежий манифест.
+ * promise и мёртвым экраном. Повторы с бэкоффом обычно подбирают уже
+ * прогретый модуль; если нет — перезагрузка на свежий манифест.
  *
  * Бюджет перезагрузок общий со сторожем blade и глобальным хендлером
  * (`consumeRecoveryReload` из `useBootRecovery`): максимум 2 за 5 минут
- * на всё, вторая — с `?v=` мимо SW/HTTP-кэшей (иначе reload отдаёт тот же
+ * на всё, всегда с `?v=` мимо SW/HTTP-кэшей (иначе reload отдаёт тот же
  * протухший HTML и визит умирает в цикле). Дальше — исходная ошибка
- * (видно реальную причину) и фолбэк-панель сторожа.
+ * (видно реальную причину) и панель границы ошибок роута.
  *
  * Вынесен из `app.ts` по Правилу №1 (логика — в хуках).
  *
@@ -32,8 +32,11 @@ import type { DefineComponent } from 'vue'
  * @returns резолвер страницы для `createInertiaApp({ resolve })`
  */
 export function usePageResolver(pageModules: Record<string, () => Promise<DefineComponent>>) {
-  /** Пауза перед повтором, чтобы Vite в dev успел прогреть transform. */
-  const RETRY_DELAY_MS = 800
+  /**
+   * Паузы перед повторами: первая — прогреть transform в dev,
+   * вторая — пережить короткий рестарт/гонку rolling-деплоя.
+   */
+  const RETRY_DELAYS_MS = [800, 2000]
 
   /**
    * Загрузить модуль страницы и назначить персистентный лейаут.
@@ -53,66 +56,77 @@ export function usePageResolver(pageModules: Record<string, () => Promise<Define
   /**
    * Пауза перед повтором загрузки чанка.
    *
+   * @param ms сколько ждать
    * @returns void
    */
-  async function waitForRetry(): Promise<void> {
-    await new Promise((done) => setTimeout(done, RETRY_DELAY_MS))
+  async function waitForRetry(ms: number): Promise<void> {
+    await new Promise((done) => setTimeout(done, ms))
   }
 
   /**
-   * Резолвер для Inertia: грузит страницу, при сбое — одна повторная
-   * попытка, при повторном сбое на клиенте — перезагрузка из общего
-   * бюджета (`useBootRecovery`, максимум 2 за 5 минут на всё).
-   * На SSR (`window` нет) — просто проброс ошибки, перезагружаться
-   * там некуда и нечем.
+   * Резолвер для Inertia: грузит страницу, при сбое — два повторных
+   * захода с бэкоффом, при итоговом сбое на клиенте — перезагрузка
+   * сразу на свежий билд из общего бюджета (`useBootRecovery`,
+   * максимум 2 за 5 минут на всё). На SSR (`window` нет) — просто
+   * проброс ошибки, перезагружаться там некуда и нечем.
+   *
+   * Перезагрузка всегда с `?v=` мимо кэшей, а не мягкая: мягкая может
+   * вернуть тот же протухший HTML из SW/HTTP-кэша и визит умрёт в цикле.
+   * Параметр чистит `stripRefreshParam` в `useBuildVersion` после бута.
    *
    * Бюджет исчерпан — бросаем исходную ошибку (видно реальную причину,
-   * а не вечный спиннер), фолбэк покажет сторож blade.
+   * а не вечный спиннер), фолбэк покажет граница ошибок роута.
    *
    * @param name имя Inertia-страницы
    * @returns модуль страницы
    * @throws исходная ошибка загрузки
    */
   async function resolvePage(name: string) {
-    try {
-      const fresh = await loadPage(name)
+    let firstError: unknown = null
 
-      return fresh
-    } catch (firstError) {
-      await waitForRetry()
-
+    for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt += 1) {
       try {
-        const retried = await loadPage(name)
+        const fresh = await loadPage(name)
 
-        return retried
-      } catch {
-        const isClient = typeof window !== 'undefined'
-
-        if (isClient) {
-          reloadToFreshBuild()
+        return fresh
+      } catch (error) {
+        if (firstError === null) {
+          firstError = error
         }
 
-        throw firstError
+        const delay = RETRY_DELAYS_MS[attempt]
+
+        if (delay !== undefined) {
+          await waitForRetry(delay)
+        }
       }
     }
+
+    const isClient = typeof window !== 'undefined'
+
+    if (isClient) {
+      reloadToFreshBuild()
+    }
+
+    throw firstError
   }
 
   /**
    * Перезагрузиться на свежий билд из общего бюджета.
    *
-   * Первая попытка мягкая, вторая — с `?v=` мимо кэшей
-   * (`stripRefreshParam` в `useBuildVersion` чистит параметр после бута).
+   * Всегда с `?v=` мимо SW/HTTP-кэшей: мягкий reload отдаёт тот же
+   * протухший HTML и визит умирает в цикле.
    * Бюджет исчерпан — ничего не делаем: ошибку выше увидит глобальный
-   * хендлер, фолбэк покажет сторож blade.
+   * хендлер и граница ошибок роута.
    */
   function reloadToFreshBuild(): void {
     const mode = consumeRecoveryReload()
 
-    if (mode === 'bust') {
-      window.location.replace(buildCacheBustedUrl())
-    } else if (mode === 'reload') {
-      window.location.reload()
+    if (mode === null) {
+      return
     }
+
+    window.location.replace(buildCacheBustedUrl())
   }
 
   return { resolvePage }

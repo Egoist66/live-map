@@ -1192,6 +1192,11 @@ main:has(.swipes-feed-lock) {
   flex-direction: column;
   min-height: 0;
 }
+main:has(.swipes-feed-lock) .page-transition-stack {
+  display: grid;
+  flex: 1 1 auto;
+  min-height: 0;
+}
 main:has(.swipes-feed-lock) .page-transition-wrapper {
   display: flex;
   flex-direction: column;
