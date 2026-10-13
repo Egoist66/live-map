@@ -134,6 +134,16 @@ export function useLayoutRoute() {
   })
 
   /**
+   * Открыта консоль администратора (`/admin`): полноэкранный WP-режим —
+   * без шапки приложения, нижней навигации, футера и плавающих виджетов.
+   */
+  const isAdminRoute = computed(() => {
+    navTick.value
+
+    return isCurrent('admin')
+  })
+
+  /**
    * Страница-фрейм без скролла родителя: чат, карта
    * или лента свайпов.
    */
@@ -141,5 +151,5 @@ export function useLayoutRoute() {
     () => isChatRoute.value || isMapRoute.value || isSwipesFeed.value,
   )
 
-  return { navTick, isChatRoute, isMapRoute, isSwipesRoute, isSwipesFeed, isScrollLockedPage }
+  return { navTick, isChatRoute, isMapRoute, isSwipesRoute, isSwipesFeed, isAdminRoute, isScrollLockedPage }
 }

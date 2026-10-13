@@ -55,7 +55,7 @@ function ago(iso?: string | null) {
       </IconField>
       <div v-if="loading" class="py-8 grid place-items-center"><ProgressSpinner style="width:24px;height:24px" :strokeWidth="6" /></div>
       <div v-else-if="!list.length" class="py-8 text-center text-sm text-stone-400 dark:text-zinc-500">Никого нет в онлайне</div>
-      <div v-else class="mt-3 divide-y divide-stone-100 dark:divide-zinc-800">
+      <div v-else class="admin-list-scroll mt-3 divide-y divide-stone-100 pr-1 dark:divide-zinc-800">
         <div v-for="u in rows" :key="u.id" class="flex items-center gap-2.5 py-2.5">
           <div class="relative shrink-0">
             <Avatar :image="avatarSrcFor(u)" shape="circle" class="!w-9 !h-9 [&_img]:object-cover" />

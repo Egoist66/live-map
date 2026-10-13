@@ -39,7 +39,7 @@ function fmt(dt: string | null) {
       <SelectButton :modelValue="logs.filter.value" @update:modelValue="(v:string)=>logs.setFilter(v as any)" :options="filterOptions" optionLabel="label" optionValue="value" :allowEmpty="false" size="small" class="mt-2.5 flex-wrap max-w-full" />
       <div v-if="logs.loading.value" class="py-8 grid place-items-center"><ProgressSpinner style="width:24px;height:24px" :strokeWidth="6" /></div>
       <div v-else-if="!logs.items.value.length" class="py-8 text-center text-sm text-stone-400 dark:text-zinc-500">Входов пока нет</div>
-      <div v-else class="mt-3 space-y-2">
+      <div v-else class="admin-list-scroll mt-3 space-y-2 pr-1">
         <div v-for="l in logs.items.value" :key="l.id" class="rounded-2xl border border-stone-200 dark:border-zinc-700 p-3">
           <div class="flex items-center gap-2 min-w-0">
             <i class="pi pi-eye text-red-500 text-sm shrink-0" />

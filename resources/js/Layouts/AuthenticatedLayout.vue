@@ -63,7 +63,7 @@ onMounted(() => { screenLock.init(); hotkeys.init() })
 </script>
 <template>
   <div class="flex min-h-screen min-h-dvh flex-col bg-surface dark:bg-[#0F121F] overflow-x-clip">
-    <header v-if="!layoutRoute.isSwipesRoute.value" class="native-safe-top sticky top-0 z-50 glass border-b border-stone-200/70 dark:border-zinc-800 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-zinc-900/70">
+    <header v-if="!layoutRoute.isSwipesRoute.value && !layoutRoute.isAdminRoute.value" class="native-safe-top sticky top-0 z-50 glass border-b border-stone-200/70 dark:border-zinc-800 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-zinc-900/70">
       <AppTopBar :user="user" :avatar-src="avatarSrc" :dashboard-href="dashboardHref" :badge-total="badge.total" :lock-enabled="screenLock.enabled.value" :is-business="isBusinessAccount" :show-map="navVisibility.showMap" :show-love="navVisibility.showLove" :show-flow="navVisibility.showFlow" @bell="bell.open()" @menu="toggleMenu" @lock="screenLock.lockNow()" />
     </header>
     <AppUserMenu v-model:menu-ref="menu" :user="user" :avatar-src="avatarSrc" :items="(menuItems as any)" />
@@ -72,16 +72,17 @@ onMounted(() => { screenLock.init(); hotkeys.init() })
     <div v-if="$slots.header" class="bg-white dark:bg-zinc-900 border-b border-stone-200/60 dark:border-zinc-800">
       <div class="mx-auto max-w-[1280px] xl:max-w-[1400px] 2xl:max-w-[1600px] px-4 sm:px-6 py-4 sm:py-6"><slot name="header" /></div>
     </div>
-    <main :class="layoutRoute.isScrollLockedPage.value ? 'flex-1 pb-0 lg:pb-0 overflow-hidden overscroll-none' : 'flex-1 pb-[calc(var(--app-bottomnav)+var(--sab))] lg:pb-0'">
+    <main :class="layoutRoute.isAdminRoute.value ? 'flex-1 pb-0' : (layoutRoute.isScrollLockedPage.value ? 'flex-1 pb-0 lg:pb-0 overflow-hidden overscroll-none' : 'flex-1 pb-[calc(var(--app-bottomnav)+var(--sab))] lg:pb-0')">
       <PageTransition><slot /></PageTransition>
     </main>
-    <div v-if="!layoutRoute.isChatRoute.value && !layoutRoute.isMapRoute.value && !layoutRoute.isSwipesRoute.value" class="mt-auto hidden pb-[calc(var(--app-bottomnav)+var(--sab))] lg:block lg:pb-0">
+    <div v-if="!layoutRoute.isChatRoute.value && !layoutRoute.isMapRoute.value && !layoutRoute.isSwipesRoute.value && !layoutRoute.isAdminRoute.value" class="mt-auto hidden pb-[calc(var(--app-bottomnav)+var(--sab))] lg:block lg:pb-0">
       <AppFooter />
     </div>
-    <MobileBottomNav @bell="bell.open()" @menu="toggleMenu" />
-    <!-- Единая панель виджетов (мини-чат + AI): только десктоп (lg+),
-         на мобиле (браузер/PWA/Telegram) скрыта — там полный мессенджер. -->
-    <FloatingWidgets />
+    <MobileBottomNav v-if="!layoutRoute.isAdminRoute.value" @bell="bell.open()" @menu="toggleMenu" />
+    <!-- Единая панель виджетов (мини-чат + AI): один лаунчер вместо
+         россыпи FAB по углам, на мобиле — над нижней навигацией,
+         в админке скрыта полностью (там своя консоль). -->
+    <FloatingWidgets v-if="!layoutRoute.isAdminRoute.value" />
     <!-- Оверлеи (сырые Teleport + Transition) монтируем только после гидратации:
          иначе SSR-краш `insertBefore of null` в Teleport.process. См. useClientReady. -->
     <template v-if="isClientReady">
@@ -94,7 +95,7 @@ onMounted(() => { screenLock.init(); hotkeys.init() })
       <AppHotkeysDialog />
       <AiGuideDialog v-if="aiFlag.canSeeAi.value" />
       <GlobalPeopleSearchDialog />
-      <MiniChatDock v-if="!layoutRoute.isChatRoute.value" />
+      <MiniChatDock v-if="!layoutRoute.isChatRoute.value && !layoutRoute.isAdminRoute.value" />
       <ScreenLockOverlay />
       <TermsAcceptanceModal />
       <SubscriptionRenewalDialog />

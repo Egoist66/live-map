@@ -65,7 +65,7 @@ function isResetting(attempts: any, email: string): boolean {
       <SelectButton :modelValue="attempts.filter.value" @update:modelValue="(v:string)=>attempts.setFilter(v as any)" :options="filterOptions" optionLabel="label" optionValue="value" :allowEmpty="false" size="small" class="mt-2.5 flex-wrap max-w-full" />
       <div v-if="attempts.loading.value" class="py-8 grid place-items-center"><ProgressSpinner style="width:24px;height:24px" :strokeWidth="6" /></div>
       <div v-else-if="!attempts.items.value.length" class="py-8 text-center text-sm text-stone-400 dark:text-zinc-500">Попыток пока нет — всё чисто</div>
-      <div v-else class="mt-3 space-y-2">
+      <div v-else class="admin-list-scroll mt-3 space-y-2 pr-1">
         <div v-for="a in attempts.items.value" :key="a.id" class="rounded-2xl border border-stone-200 dark:border-zinc-700 p-3" :class="!a.successful && (a.ip_fails_24h ?? 0) >= REPEAT_OFFENDER_IP_FAILS ? '!border-red-300 dark:!border-red-800' : ''">
           <div class="flex items-center gap-2 min-w-0">
             <i :class="a.successful ? 'pi pi-check-circle text-emerald-500' : 'pi pi-times-circle text-red-500'" class="text-sm shrink-0" />

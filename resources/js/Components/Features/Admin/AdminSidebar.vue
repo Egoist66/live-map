@@ -33,19 +33,19 @@ const emit = defineEmits<{
 
 <template>
   <aside
-    class="wp-adminmenu flex min-h-0 flex-1 flex-col bg-[#1d2327] text-[#eee]"
+    class="wp-adminmenu flex h-full min-h-0 flex-col bg-[#1d2327] text-[#eee]"
     :class="collapsed ? 'w-[76px]' : 'w-full'"
     aria-label="Меню админки"
   >
     <nav class="min-h-0 flex-1 overflow-y-auto overscroll-contain py-2" aria-label="Разделы админки">
-      <template v-for="group in groups" :key="group.title">
+      <template v-for="group in groups" :key="group.title || 'top'">
         <p
-          v-if="!collapsed"
+          v-if="!collapsed && group.title"
           class="wp-menu-separator mb-1 mt-3 px-4 text-[11px] font-bold uppercase tracking-widest text-[#a7aaad] first:mt-1"
         >
           {{ group.title }}
         </p>
-        <div v-else class="mx-3 my-2 border-t border-white/10" role="separator" aria-hidden="true" />
+        <div v-else-if="collapsed && group.title" class="mx-3 my-2 border-t border-white/10" role="separator" aria-hidden="true" />
         <ul class="space-y-0.5" :class="collapsed ? 'px-2' : 'px-2'">
           <li v-for="item in group.items" :key="item.id">
             <button

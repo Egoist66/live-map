@@ -162,9 +162,9 @@ enforceVisibleTab()
     </template>
 
     <template v-else>
-      <div class="mx-auto flex w-full max-w-[1600px] items-stretch lg:gap-5 lg:px-4 lg:py-5">
+      <div class="flex w-full items-stretch">
         <div
-          class="sticky top-14 hidden h-[calc(100dvh-5.75rem)] shrink-0 overflow-hidden rounded-2xl shadow-soft lg:block"
+          class="sticky top-14 hidden h-[calc(100dvh-3.5rem)] shrink-0 lg:block"
           :class="layout.state.collapsed ? 'lg:w-[76px]' : 'lg:w-[264px]'"
         >
           <AdminSidebar
@@ -177,8 +177,8 @@ enforceVisibleTab()
           />
         </div>
 
-        <main class="min-w-0 flex-1 px-3 py-4 pb-[calc(var(--app-bottomnav)+var(--sab)+1rem)] sm:px-4 lg:px-1 lg:py-1" aria-label="Содержимое админки">
-          <div class="wrap min-w-0">
+        <main class="min-w-0 flex-1 bg-[#f0f0f5] pb-10 dark:bg-[#0F121F]" aria-label="Содержимое админки">
+          <div class="mx-auto w-full max-w-[1280px] px-3 py-4 sm:px-5 sm:py-5">
             <div class="mb-4 flex flex-wrap items-end gap-x-3 gap-y-1">
               <h1 class="wp-heading-inline text-xl font-black tracking-tight sm:text-2xl dark:text-white">
                 {{ layout.pageHeading.value.title }}
@@ -207,21 +207,20 @@ enforceVisibleTab()
             </section>
 
             <section v-else-if="tab === 'manage' && staff.isAdmin.value" aria-label="Пользователи">
-              <div class="grid min-w-0 grid-cols-1 items-start gap-4 xl:grid-cols-2">
+              <div class="min-w-0 max-w-[960px]">
                 <AdminUsersManager
                   :list="mon.users.value" :meta="mon.usersMeta.value" :page="mon.usersPage.value" :query="mon.usersQuery.value" :filter="mon.usersFilter.value" :sort="mon.usersSort.value" :limit="mon.usersLimit.value" :loading="mon.loadingUsers.value" :acting-id="mon.actingId.value" :admin="admin" :auth-user-id="mon.authUserId.value"
-                  @update:query="(v:string)=>mon.usersQuery.value=v" @filter="(v:string)=>mon.setUsersFilter(v as any)" @sort="(v:string)=>mon.usersSort.value=v as any" @page="mon.setUsersPage"
+                  @update:query="(v:string)=>mon.usersQuery.value=v" @filter="(v:string)=>mon.setUsersFilter(v as any)" @sort="(v:string)=>mon.usersSort.value=v as any" @limit="(v:number)=>mon.usersLimit.value=v" @page="mon.setUsersPage"
                   @plan="mon.setPlan" @role="mon.requestRoleChange" @impersonate="imp.ask" @ban="(u:any)=>logins.ban(u)" @unban="(u:any)=>logins.unban(u)" @created="mon.loadUsers()"
                 />
-                <div class="min-w-0 space-y-4">
-                  <AdminUpdatesManager :mgr="appUpdates" />
-                  <AdminMaintenanceManager :mgr="maintenance" />
-                </div>
               </div>
             </section>
 
             <section v-else-if="tab === 'security' && staff.isAdmin.value" aria-label="Безопасность">
               <div class="grid min-w-0 grid-cols-1 items-start gap-4 xl:grid-cols-2">
+                <div class="min-w-0 xl:col-span-2">
+                  <AdminMaintenanceManager :mgr="maintenance" />
+                </div>
                 <AdminLoginAttempts :attempts="logins" />
                 <AdminImpersonationLogs :logs="impLogs" />
               </div>
@@ -240,6 +239,7 @@ enforceVisibleTab()
             <section v-else-if="tab === 'modules' && staff.isAdmin.value" aria-label="Модули">
               <div class="grid min-w-0 grid-cols-1 items-start gap-4 xl:grid-cols-2">
                 <AdminModulesManager />
+                <AdminUpdatesManager :mgr="appUpdates" />
               </div>
             </section>
 

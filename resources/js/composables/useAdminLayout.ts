@@ -136,9 +136,9 @@ export function useAdminLayout(badges: Ref<AdminLayoutBadges> | ComputedRef<Admi
       {
         id: 'stats',
         label: 'Консоль',
-        hint: 'At a Glance · онлайн и рост',
+        hint: 'Онлайн, рост и активность',
         icon: 'pi pi-th-large',
-        group: 'Главная',
+        group: '',
         adminOnly: false,
       },
       {
@@ -198,7 +198,7 @@ export function useAdminLayout(badges: Ref<AdminLayoutBadges> | ComputedRef<Admi
       {
         id: 'modules',
         label: 'Модули',
-        hint: 'фичи приложения',
+        hint: 'фичи и новости релизов',
         icon: 'pi pi-box',
         group: 'Настройки',
         adminOnly: true,
@@ -261,7 +261,7 @@ export function useAdminLayout(badges: Ref<AdminLayoutBadges> | ComputedRef<Admi
     const current = activeItem.value
 
     if (!current) {
-      return { title: 'Консоль', hint: 'At a Glance · онлайн и рост' }
+      return { title: 'Консоль', hint: 'Онлайн, рост и активность' }
     }
 
     return { title: current.label, hint: current.hint }
