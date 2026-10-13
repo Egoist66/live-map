@@ -423,6 +423,9 @@ Route::middleware(['web', 'auth:web,sanctum', 'admin', 'throttle:300,1'])->group
     Route::post('/admin/updates', [\App\Http\Controllers\AdminAppUpdateController::class, 'store']);
     Route::patch('/admin/updates/{appUpdate}', [\App\Http\Controllers\AdminAppUpdateController::class, 'update']);
     Route::delete('/admin/updates/{appUpdate}', [\App\Http\Controllers\AdminAppUpdateController::class, 'destroy']);
+    Route::get('/admin/bot-broadcasts', [\App\Http\Controllers\AdminBotBroadcastController::class, 'index']);
+    Route::get('/admin/bot-broadcasts/{botBroadcast}', [\App\Http\Controllers\AdminBotBroadcastController::class, 'show']);
+    Route::delete('/admin/bot-broadcasts/{botBroadcast}', [\App\Http\Controllers\AdminBotBroadcastController::class, 'destroy']);
     Route::get('/admin/monitoring/users', [\App\Http\Controllers\AdminMonitoringController::class, 'users']);
     Route::get('/admin/users', [AdminUserController::class, 'index']);
     Route::post('/admin/users', [AdminUserController::class, 'store'])->middleware('throttle:30,1');

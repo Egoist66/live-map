@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\User;
 use App\Services\TelegramBotApi;
 use Illuminate\Console\Command;
 
@@ -11,8 +12,10 @@ use Illuminate\Console\Command;
  * Ставит:
  * - webhook на {APP_URL}/api/telegram/webhook (секрет из
  *   config telegram.webhook_secret, если задан);
- * - 25 команд-мегаменю: start/app/profile/find/online/favorites/notes/reset/
- *   switch/account/hide/show/likes/matches/messages/stats/export/plan/email/
+ * - 26 команд всем + 27-я /publish только админам (персональный
+ *   scope type=chat каждому привязанному админу; обычные пользователи
+ *   /publish в меню не видят): start/app/profile/find/online/favorites/notes/publish/news/reset/
+ *   switch/account/hide/show/likes/matches/messages/stats/export/chatexport/plan/email/
  *   notify/sessions/password/help/delete/restore;
  * - кнопку меню типа commands (список команд у поля ввода не прячется,
  *   Mini App открывается инлайн-кнопками 🌐 в панелях + командой /app).
@@ -25,7 +28,7 @@ class SetupTelegramBot extends Command
         {--url= : Полный https-URL вебхука (по умолчанию APP_URL/api/telegram/webhook)}
         {--webapp= : https-URL Mini App для кнопки меню (по умолчанию APP_URL/?tgWebApp=1)}';
 
-    protected $description = 'Зарегистрировать webhook, 25 команд и нативное меню commands Telegram-бота';
+    protected $description = 'Зарегистрировать webhook, 26 команд всем + /publish админам и нативное меню commands Telegram-бота';
 
     /**
      * Выполнить регистрацию бота.
@@ -62,11 +65,19 @@ class SetupTelegramBot extends Command
         $this->info("Webhook: {$webhookUrl}");
         $this->info("Mini App: {$webappUrl}");
 
-        $result = TelegramBotApi::setup($webhookUrl, $webappUrl, $secret);
+        $adminChatIds = self::adminChatIds();
+
+        if ($adminChatIds === []) {
+            $this->warn('Привязанных админов с telegram_id нет — scope с /publish ставить некому (только дефолтные 26 команд).');
+        }
+
+        $result = TelegramBotApi::setup($webhookUrl, $webappUrl, $secret, $adminChatIds);
+        $scopes = $result['admin_scopes'] ?? ['ok' => 0, 'total' => 0];
 
         $this->table(['Шаг', 'Итог'], [
             ['setWebhook', $result['webhook'] ? 'OK' : 'FAIL'],
-            ['setMyCommands (25 команд мега-меню)', $result['commands'] ? 'OK' : 'FAIL'],
+            ['setMyCommands (26 команд всем)', $result['commands'] ? 'OK' : 'FAIL'],
+            ['setMyCommands scope /publish ('.$scopes['ok'].'/'.$scopes['total'].' админов)', $scopes['ok'] === $scopes['total'] ? 'OK' : 'FAIL'],
             ['setChatMenuButton (commands у поля ввода)', $result['menu'] ? 'OK' : 'FAIL'],
         ]);
 
@@ -74,7 +85,7 @@ class SetupTelegramBot extends Command
             $this->warn('TELEGRAM_WEBHOOK_SECRET пуст — вебхук без проверки секрета (только для локалки).');
         }
 
-        $ok = $result['webhook'] && $result['commands'] && $result['menu'];
+        $ok = $result['webhook'] && $result['commands'] && $result['menu'] && $scopes['ok'] === $scopes['total'];
 
         if (! $ok) {
             $this->error('Что-то не встало — смотрите лог telegram bot api.');
@@ -82,8 +93,42 @@ class SetupTelegramBot extends Command
             return self::FAILURE;
         }
 
-        $this->info('✓ Бот настроен: 25 команд, панели анкеты/тарифа/почты/свайпов/онлайна/избранного/заметок/сброса/аккаунта/уведомлений/удаления/статистики прямо в чате.');
+        $this->info('✓ Бот настроен: 26 команд всем + /publish только админам, панели анкеты/тарифа/почты/свайпов/онлайна/избранного/заметок/публикаций/новостей/сброса/аккаунта/уведомлений/удаления/статистики прямо в чате.');
 
         return self::SUCCESS;
+    }
+
+    /**
+     * telegram_id привязанных админов для scope с /publish.
+     *
+     * Базы может не быть под рукой (первый деплой) — тогда пусто,
+     * команда честно предупредит, а не упадёт.
+     *
+     * @return array<int, int>
+     */
+    private static function adminChatIds(): array
+    {
+        try {
+            $ids = User::whereNotNull('telegram_id')
+                ->where(function ($query) {
+                    $query->where('is_admin', true)->orWhere('role', 'admin');
+                })
+                ->pluck('telegram_id')
+                ->all();
+        } catch (\Throwable) {
+            return [];
+        }
+
+        $clean = [];
+
+        foreach ($ids as $id) {
+            $chatId = (int) $id;
+
+            if ($chatId > 0) {
+                $clean[] = $chatId;
+            }
+        }
+
+        return array_values(array_unique($clean));
     }
 }

@@ -31,6 +31,7 @@ import AdminAiManager from '@/Components/Features/Admin/AdminAiManager.vue'
 import AdminReferencesManager from '@/Components/Features/Admin/AdminReferencesManager.vue'
 import AdminSeoManager from '@/Components/Features/Admin/AdminSeoManager.vue'
 import AdminTelegramUsers from '@/Components/Features/Admin/AdminTelegramUsers.vue'
+import AdminBotBroadcasts from '@/Components/Features/Admin/AdminBotBroadcasts.vue'
 import SettingsAdminTab from '@/Components/Features/Settings/SettingsAdminTab.vue'
 import { useAdminReference } from '@/composables/useAdminReference'
 import { useAdminSeo } from '@/composables/useAdminSeo'
@@ -41,6 +42,7 @@ import { useAdminLoginAttempts } from '@/composables/useAdminLoginAttempts'
 import { useAppMaintenance } from '@/composables/useAppMaintenance'
 import { useAdminAccess } from '@/composables/useAdminAccess'
 import { useAdminTelegramUsers } from '@/composables/useAdminTelegramUsers'
+import { useAdminBotBroadcasts } from '@/composables/useAdminBotBroadcasts'
 import { useAdminBusiness } from '@/composables/useAdminBusiness'
 import { useAdminTabs } from '@/composables/useAdminTabs'
 import { useStaffRole } from '@/composables/useStaffRole'
@@ -62,6 +64,7 @@ const refs = useAdminReference()
 const seo = useAdminSeo()
 const access = useAdminAccess()
 const tgUsers = useAdminTelegramUsers()
+const botBroadcasts = useAdminBotBroadcasts()
 
 /**
  * Подтянуть данные панели после открытия гейта.
@@ -77,6 +80,7 @@ function loadAll(): void {
   void seo.load()
   void tgUsers.load()
   if (!staff.isAdmin.value) return
+  void botBroadcasts.load()
   void appUpdates.load()
   void impLogs.load()
   void logins.load()
@@ -215,6 +219,7 @@ enforceVisibleTab()
             <TabPanel value="telegram">
               <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
                 <AdminTelegramUsers :tg="tgUsers" />
+                <AdminBotBroadcasts v-if="staff.isAdmin.value" :bb="botBroadcasts" />
               </div>
             </TabPanel>
           </TabPanels>

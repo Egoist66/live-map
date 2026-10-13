@@ -80,6 +80,9 @@ class TelegramMenu
             ],
             [
                 ['text' => '📝 Заметки', 'callback_data' => 'go_notes'],
+                ['text' => '📰 Новости', 'callback_data' => 'go_news'],
+            ],
+            [
                 ['text' => '💎 Мой тариф', 'callback_data' => 'go_plan'],
             ],
             [
@@ -111,10 +114,13 @@ class TelegramMenu
      *
      * Тот же текст, что отвечает на /help, но с навигацией для
      * перерисовки (колбэк go_help правит сообщение, а не шлёт новое).
+     * Строка /publish показывается только админам — обычным
+     * пользователям создавать публикации не положено.
      *
+     * @param User|null $user зритель (null — общий список без /publish)
      * @return array{text:string, keyboard:array<int, array<int, array<string, mixed>>>}
      */
-    public static function help(): array
+    public static function help(?User $user = null): array
     {
         $lines = [];
         $lines[] = '✨ <b>Что я умею</b>';
@@ -132,6 +138,11 @@ class TelegramMenu
         $lines[] = '🎉 /matches — ваши мэтчи';
         $lines[] = '💬 /messages — непрочитанные сообщения';
         $lines[] = '📝 /notes — заметки «Избранного»: сохранить и найти';
+        $lines[] = '📰 /news — последние новости и опросы ULove';
+
+        if ($user !== null && $user->isAdmin()) {
+            $lines[] = '📣 /publish — новая статья/опрос всем (только админы)';
+        }
         $lines[] = '📊 /stats — статистика профиля по тарифу + гости';
         $lines[] = '📥 /export — выгрузка статистики в CSV по тарифу';
         $lines[] = '💬 /chatexport — выгрузка переписки в аккуратный HTML';

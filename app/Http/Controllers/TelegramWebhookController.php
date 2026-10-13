@@ -40,6 +40,8 @@ use Illuminate\Support\Facades\Log;
  * - /online — кто сейчас в ULove (онлайн) с лайками из списка;
  * - /favorites — избранное по тарифу + кому можно написать;
  * - /notes — заметки «Избранного»: сохранить текстом, найти и убрать;
+ * - /publish — только админам: статья/опрос всем пользователям бота;
+ * - /news — лента последних публикаций (кто пропустил рассылку);
  * - /reset — сброс просмотренных (Free — раз, PRO — безлимит);
  * - /switch — переключение на другой аккаунт по коду с сайта;
  * - /account — какой аккаунт привязан к боту;
@@ -99,6 +101,14 @@ class TelegramWebhookController extends Controller
      */
     private function dispatch(array $update): void
     {
+        $pollAnswer = $update['poll_answer'] ?? null;
+
+        if (is_array($pollAnswer)) {
+            $this->handlePollAnswer($pollAnswer);
+
+            return;
+        }
+
         $callback = $update['callback_query'] ?? null;
 
         if (is_array($callback)) {
@@ -132,6 +142,8 @@ class TelegramWebhookController extends Controller
         $rawText = trim((string) ($message['text'] ?? ''));
 
         if ($rawText === '') {
+            $this->handlePhotoMessage($message, $chatId, $fromId);
+
             return;
         }
 
@@ -165,7 +177,7 @@ class TelegramWebhookController extends Controller
         match ($command) {
             '/start' => $this->replyStart($user, $chatId),
             '/app' => $this->replyApp($user, $chatId),
-            '/help' => $this->replyHelp($chatId),
+            '/help' => $this->replyHelp($user, $chatId),
             '/profile' => $this->replyProfile($user, $chatId),
             '/find' => $this->replyFind($user, $chatId),
             '/hide' => $this->replyHide($user, $chatId),
@@ -179,6 +191,8 @@ class TelegramWebhookController extends Controller
             '/online' => $this->replyOnline($user, $chatId),
             '/favorites', '/fav' => $this->replyFav($user, $chatId),
             '/notes' => $this->replyNotes($user, $chatId, $argument),
+            '/publish' => $this->replyPublish($user, $chatId),
+            '/news' => $this->replyNews($user, $chatId),
             '/reset' => $this->replyReset($user, $chatId),
             '/switch' => $this->replyAccount($user, $chatId, true),
             '/account' => $this->replyAccount($user, $chatId),
@@ -250,6 +264,37 @@ class TelegramWebhookController extends Controller
     }
 
     /**
+     * Голос в опросе рассылки (апдейт poll_answer).
+     *
+     * Отвечать нечего (тоста тут нет) — только засчитываем голос
+     * в статистику рассылки через BotBroadcastService.
+     *
+     * @param array<string, mixed> $answer объект poll_answer Bot API
+     * @return void
+     */
+    private function handlePollAnswer(array $answer): void
+    {
+        $pollId = (string) ($answer['poll_id'] ?? '');
+        $voter = $answer['user'] ?? null;
+        $voterId = is_array($voter) ? (int) ($voter['id'] ?? 0) : 0;
+
+        $rawOptionIds = $answer['option_ids'] ?? [];
+        $optionIds = [];
+
+        if (is_array($rawOptionIds)) {
+            foreach ($rawOptionIds as $optionId) {
+                $optionIds[] = (int) $optionId;
+            }
+        }
+
+        if ($pollId === '' || $voterId <= 0) {
+            return;
+        }
+
+        \App\Services\BotBroadcastService::recordVote($pollId, $voterId, $optionIds);
+    }
+
+    /**
      * Колбэки панелей бота (профиль, уведомления, удаление, инсайты).
      *
      * @param User $user владелец
@@ -273,7 +318,7 @@ class TelegramWebhookController extends Controller
         }
 
         if ($data === 'go_help') {
-            $help = TelegramMenu::help();
+            $help = TelegramMenu::help($fresh);
             TelegramCardSender::redrawText($chatId, $messageId, $help['text'], $help['keyboard']);
             TelegramBotApi::answerCallback($callbackId, 'Все команды бота');
 
@@ -504,6 +549,46 @@ class TelegramWebhookController extends Controller
             return true;
         }
 
+        if ($data === 'go_news') {
+            $feed = \App\Services\TelegramNewsPanel::feed($fresh);
+            TelegramCardSender::redrawText($chatId, $messageId, $feed['text'], $feed['keyboard']);
+            TelegramBotApi::answerCallback($callbackId, 'Последние новости 📰');
+
+            return true;
+        }
+
+        if (str_starts_with($data, 'pub_type:')) {
+            $this->startPublishDraft($fresh, $data, $chatId, $messageId, $callbackId);
+
+            return true;
+        }
+
+        if ($data === 'pub_skip_photo') {
+            $this->skipPublishPhoto($fresh, $chatId, $messageId, $callbackId);
+
+            return true;
+        }
+
+        if (str_starts_with($data, 'pub_multi:')) {
+            $this->setPublishMultiple($fresh, $data, $chatId, $messageId, $callbackId);
+
+            return true;
+        }
+
+        if ($data === 'pub_send') {
+            $this->sendPublish($fresh, $chatId, $messageId, $callbackId);
+
+            return true;
+        }
+
+        if ($data === 'pub_cancel') {
+            \App\Services\TelegramPublishPanel::clearDraft((int) $fresh->telegram_id);
+            TelegramCardSender::redrawText($chatId, $messageId, 'Публикация отменена — черновик выброшен. Вернётесь — начнём заново через /publish.', TelegramMenu::withNav([]));
+            TelegramBotApi::answerCallback($callbackId, 'Отменено');
+
+            return true;
+        }
+
         if ($data === 'go_reset') {
             $panel = TelegramResetPanel::build($fresh);
             TelegramCardSender::redrawText($chatId, $messageId, $panel['text'], $panel['keyboard']);
@@ -688,14 +773,16 @@ class TelegramWebhookController extends Controller
      * Справка по всем возможностям.
      *
      * Текст единый с экраном go_help (TelegramMenu::help), здесь —
-     * отправка новым сообщением для команды /help.
+     * отправка новым сообщением для команды /help. Админам в списке
+     * виден и /publish, обычным — нет.
      *
+     * @param User $user владелец
      * @param int $chatId куда слать
      * @return void
      */
-    private function replyHelp(int $chatId): void
+    private function replyHelp(User $user, int $chatId): void
     {
-        $help = TelegramMenu::help();
+        $help = TelegramMenu::help($user);
 
         TelegramBotApi::sendMessage($chatId, $help['text'], $help['keyboard']);
     }
@@ -877,6 +964,456 @@ class TelegramWebhookController extends Controller
     }
 
     /**
+     * Старт мастера публикации (/publish, только админы).
+     *
+     * @param User $user отправитель
+     * @param int $chatId куда слать
+     * @return void
+     */
+    private function replyPublish(User $user, int $chatId): void
+    {
+        $fresh = $user->fresh() ?? $user;
+
+        if (! $fresh->isAdmin()) {
+            $denied = \App\Services\TelegramPublishPanel::forbidden();
+            TelegramBotApi::sendMessage($chatId, $denied['text'], $denied['keyboard']);
+
+            return;
+        }
+
+        \App\Services\TelegramPublishPanel::clearDraft((int) $fresh->telegram_id);
+
+        $start = \App\Services\TelegramPublishPanel::start();
+        TelegramBotApi::sendMessage($chatId, $start['text'], $start['keyboard']);
+    }
+
+    /**
+     * Лента публикаций (/news): кто пропустил рассылку — видит здесь.
+     *
+     * @param User $user зритель
+     * @param int $chatId куда слать
+     * @return void
+     */
+    private function replyNews(User $user, int $chatId): void
+    {
+        $feed = \App\Services\TelegramNewsPanel::feed($user->fresh() ?? $user);
+
+        TelegramBotApi::sendMessage($chatId, $feed['text'], $feed['keyboard']);
+    }
+
+    /**
+     * Шаг мастера публикации обычным текстом.
+     *
+     * Возвращаем true, когда черновик активен и текст потреблён шагом
+     * (даже если это напоминание) — дальше по цепочке не идём.
+     *
+     * @param User $user отправитель
+     * @param int $chatId куда отвечать
+     * @param int $telegramId from.id для ключа черновика
+     * @param string $text присланный текст
+     * @return bool true когда текст обработан шагом мастера
+     */
+    private function handlePublishText(User $user, int $chatId, int $telegramId, string $text): bool
+    {
+        $fresh = $user->fresh() ?? $user;
+
+        if (! $fresh->isAdmin()) {
+            return false;
+        }
+
+        $draft = \App\Services\TelegramPublishPanel::getDraft($telegramId);
+
+        if ($draft === null) {
+            return false;
+        }
+
+        $step = (string) ($draft['step'] ?? '');
+
+        if ($step === 'title') {
+            $this->publishStepTitle($chatId, $telegramId, $draft, $text);
+
+            return true;
+        }
+
+        if ($step === 'body') {
+            $this->publishStepBody($chatId, $telegramId, $draft, $text);
+
+            return true;
+        }
+
+        if ($step === 'question') {
+            $this->publishStepQuestion($chatId, $telegramId, $draft, $text);
+
+            return true;
+        }
+
+        if ($step === 'options') {
+            $this->publishStepOptions($chatId, $telegramId, $draft, $text);
+
+            return true;
+        }
+
+        if ($step === 'photo') {
+            TelegramBotApi::sendMessage($chatId, 'Жду фото-обложку следующим сообщением — или жмите «⏭ Пропустить», выйдет текстовая статья.');
+
+            return true;
+        }
+
+        if ($step === 'multiple' || $step === 'preview') {
+            TelegramBotApi::sendMessage($chatId, 'Выбирайте кнопками под сообщением выше 👆 Текст сейчас не нужен.');
+
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Шаг «заголовок статьи».
+     *
+     * @param int $chatId куда отвечать
+     * @param int $telegramId чей черновик
+     * @param array<string, mixed> $draft черновик
+     * @param string $text присланный текст
+     * @return void
+     */
+    private function publishStepTitle(int $chatId, int $telegramId, array $draft, string $text): void
+    {
+        $title = trim(mb_substr($text, 0, 200));
+
+        if ($title === '') {
+            TelegramBotApi::sendMessage($chatId, 'Заголовок пустой 😕 Пришлите его текстом — до 200 символов.');
+
+            return;
+        }
+
+        $draft['title'] = $title;
+        $draft['step'] = 'body';
+        \App\Services\TelegramPublishPanel::saveDraft($telegramId, $draft);
+
+        $ask = \App\Services\TelegramPublishPanel::askBody($title);
+        TelegramBotApi::sendMessage($chatId, $ask['text'], $ask['keyboard']);
+    }
+
+    /**
+     * Шаг «текст статьи».
+     *
+     * @param int $chatId куда отвечать
+     * @param int $telegramId чей черновик
+     * @param array<string, mixed> $draft черновик
+     * @param string $text присланный текст
+     * @return void
+     */
+    private function publishStepBody(int $chatId, int $telegramId, array $draft, string $text): void
+    {
+        $body = trim(mb_substr($text, 0, \App\Services\TelegramPublishPanel::BODY_LIMIT));
+
+        if ($body === '') {
+            TelegramBotApi::sendMessage($chatId, 'Текст пустой 😕 Пришлите статью следующим сообщением.');
+
+            return;
+        }
+
+        $draft['body'] = $body;
+        $draft['step'] = 'photo';
+        \App\Services\TelegramPublishPanel::saveDraft($telegramId, $draft);
+
+        $ask = \App\Services\TelegramPublishPanel::askPhoto();
+        TelegramBotApi::sendMessage($chatId, $ask['text'], $ask['keyboard']);
+    }
+
+    /**
+     * Шаг «вопрос опроса».
+     *
+     * @param int $chatId куда отвечать
+     * @param int $telegramId чей черновик
+     * @param array<string, mixed> $draft черновик
+     * @param string $text присланный текст
+     * @return void
+     */
+    private function publishStepQuestion(int $chatId, int $telegramId, array $draft, string $text): void
+    {
+        $question = trim(mb_substr($text, 0, 300));
+
+        if ($question === '') {
+            TelegramBotApi::sendMessage($chatId, 'Вопрос пустой 😕 Пришлите его текстом — до 300 символов.');
+
+            return;
+        }
+
+        $draft['question'] = $question;
+        $draft['step'] = 'options';
+        \App\Services\TelegramPublishPanel::saveDraft($telegramId, $draft);
+
+        $ask = \App\Services\TelegramPublishPanel::askOptions($question);
+        TelegramBotApi::sendMessage($chatId, $ask['text'], $ask['keyboard']);
+    }
+
+    /**
+     * Шаг «варианты опроса» (по одному на строку).
+     *
+     * @param int $chatId куда отвечать
+     * @param int $telegramId чей черновик
+     * @param array<string, mixed> $draft черновик
+     * @param string $text присланный текст
+     * @return void
+     */
+    private function publishStepOptions(int $chatId, int $telegramId, array $draft, string $text): void
+    {
+        $options = \App\Services\TelegramPublishPanel::parseOptions($text);
+
+        if (count($options) < 2) {
+            TelegramBotApi::sendMessage($chatId, 'Нужно минимум 2 варианта 😕 Пришлите их одним сообщением — по одному на строку.');
+
+            return;
+        }
+
+        if (count($options) > 10) {
+            TelegramBotApi::sendMessage($chatId, 'Вариантов максимум 10 😕 Уберите лишние и пришлите список заново.');
+
+            return;
+        }
+
+        $draft['options'] = $options;
+        $draft['step'] = 'multiple';
+        \App\Services\TelegramPublishPanel::saveDraft($telegramId, $draft);
+
+        $ask = \App\Services\TelegramPublishPanel::askMultiple();
+        TelegramBotApi::sendMessage($chatId, $ask['text'], $ask['keyboard']);
+    }
+
+    /**
+     * Фото без текста: обложка статьи на шаге photo.
+     *
+     * В остальных случаях молчим — фото вне мастера боту не нужны.
+     *
+     * @param array<string, mixed> $message объект message Bot API
+     * @param int $chatId куда отвечать
+     * @param int $fromId from.id отправителя
+     * @return void
+     */
+    private function handlePhotoMessage(array $message, int $chatId, int $fromId): void
+    {
+        $photos = $message['photo'] ?? null;
+
+        if (! is_array($photos) || $photos === []) {
+            return;
+        }
+
+        $user = $this->findUser($fromId);
+
+        if ($user === null || ! $user->isAdmin()) {
+            return;
+        }
+
+        $telegramId = (int) $user->telegram_id ?: $fromId;
+        $draft = \App\Services\TelegramPublishPanel::getDraft($telegramId);
+
+        if ($draft === null || (string) ($draft['step'] ?? '') !== 'photo') {
+            return;
+        }
+
+        $bestFileId = null;
+        $bestSize = -1;
+
+        foreach ($photos as $size) {
+            if (! is_array($size)) {
+                continue;
+            }
+
+            $fileId = (string) ($size['file_id'] ?? '');
+
+            if ($fileId === '') {
+                continue;
+            }
+
+            $fileSize = (int) ($size['file_size'] ?? 0);
+
+            if ($fileSize >= $bestSize) {
+                $bestSize = $fileSize;
+                $bestFileId = $fileId;
+            }
+        }
+
+        if ($bestFileId === null) {
+            return;
+        }
+
+        $this->clearBlockedFlag($user);
+
+        $draft['photo_file_id'] = $bestFileId;
+        $draft['step'] = 'preview';
+        \App\Services\TelegramPublishPanel::saveDraft($telegramId, $draft);
+
+        TelegramBotApi::sendPhoto($chatId, $bestFileId, '🖼 Обложка прикреплена — так она выглядит.');
+
+        $preview = \App\Services\TelegramPublishPanel::preview($draft);
+        TelegramBotApi::sendMessage($chatId, $preview['text'], $preview['keyboard']);
+    }
+
+    /**
+     * Выбор типа публикации кнопкой (статья/опрос).
+     *
+     * @param User $user админ
+     * @param string $data callback_data pub_type:*
+     * @param int $chatId куда перерисовать
+     * @param int $messageId что перерисовать
+     * @param string $callbackId для тоста
+     * @return void
+     */
+    private function startPublishDraft(User $user, string $data, int $chatId, int $messageId, string $callbackId): void
+    {
+        $fresh = $user->fresh() ?? $user;
+
+        if (! $fresh->isAdmin()) {
+            TelegramBotApi::answerCallback($callbackId, 'Публикации — только для команды ULove', true);
+
+            return;
+        }
+
+        $type = substr($data, strlen('pub_type:'));
+
+        if ($type !== 'article' && $type !== 'poll') {
+            TelegramBotApi::answerCallback($callbackId, 'Неизвестный тип — начните с /publish');
+
+            return;
+        }
+
+        $telegramId = (int) $fresh->telegram_id;
+        $draft = ['type' => $type, 'step' => $type === 'poll' ? 'question' : 'title'];
+        \App\Services\TelegramPublishPanel::saveDraft($telegramId, $draft);
+
+        $ask = $type === 'poll'
+            ? \App\Services\TelegramPublishPanel::askQuestion()
+            : \App\Services\TelegramPublishPanel::askTitle();
+
+        TelegramCardSender::redrawText($chatId, $messageId, $ask['text'], $ask['keyboard']);
+        TelegramBotApi::answerCallback($callbackId, $type === 'poll' ? 'Опрос: жду вопрос 📊' : 'Статья: жду заголовок 📝');
+    }
+
+    /**
+     * Пропуск обложки кнопкой → сразу превью.
+     *
+     * @param User $user админ
+     * @param int $chatId куда перерисовать
+     * @param int $messageId что перерисовать
+     * @param string $callbackId для тоста
+     * @return void
+     */
+    private function skipPublishPhoto(User $user, int $chatId, int $messageId, string $callbackId): void
+    {
+        $fresh = $user->fresh() ?? $user;
+
+        if (! $fresh->isAdmin()) {
+            TelegramBotApi::answerCallback($callbackId, 'Публикации — только для команды ULove', true);
+
+            return;
+        }
+
+        $draft = \App\Services\TelegramPublishPanel::getDraft((int) $fresh->telegram_id);
+
+        if ($draft === null || (string) ($draft['step'] ?? '') !== 'photo') {
+            TelegramBotApi::answerCallback($callbackId, 'Черновик устарел — начните с /publish');
+
+            return;
+        }
+
+        $draft['photo_file_id'] = null;
+        $draft['step'] = 'preview';
+        \App\Services\TelegramPublishPanel::saveDraft((int) $fresh->telegram_id, $draft);
+
+        $preview = \App\Services\TelegramPublishPanel::preview($draft);
+        TelegramCardSender::redrawText($chatId, $messageId, $preview['text'], $preview['keyboard']);
+        TelegramBotApi::answerCallback($callbackId, 'Текстовая статья — смотрим превью 👀');
+    }
+
+    /**
+     * Выбор множественности опроса кнопкой → превью.
+     *
+     * @param User $user админ
+     * @param string $data callback_data pub_multi:*
+     * @param int $chatId куда перерисовать
+     * @param int $messageId что перерисовать
+     * @param string $callbackId для тоста
+     * @return void
+     */
+    private function setPublishMultiple(User $user, string $data, int $chatId, int $messageId, string $callbackId): void
+    {
+        $fresh = $user->fresh() ?? $user;
+
+        if (! $fresh->isAdmin()) {
+            TelegramBotApi::answerCallback($callbackId, 'Публикации — только для команды ULove', true);
+
+            return;
+        }
+
+        $draft = \App\Services\TelegramPublishPanel::getDraft((int) $fresh->telegram_id);
+
+        if ($draft === null || (string) ($draft['step'] ?? '') !== 'multiple') {
+            TelegramBotApi::answerCallback($callbackId, 'Черновик устарел — начните с /publish');
+
+            return;
+        }
+
+        $draft['multiple'] = substr($data, strlen('pub_multi:')) === '1';
+        $draft['step'] = 'preview';
+        \App\Services\TelegramPublishPanel::saveDraft((int) $fresh->telegram_id, $draft);
+
+        $preview = \App\Services\TelegramPublishPanel::preview($draft);
+        TelegramCardSender::redrawText($chatId, $messageId, $preview['text'], $preview['keyboard']);
+        TelegramBotApi::answerCallback($callbackId, 'Опрос готов — смотрим превью 👀');
+    }
+
+    /**
+     * Запуск рассылки кнопкой «Разослать всем».
+     *
+     * @param User $user админ
+     * @param int $chatId куда перерисовать
+     * @param int $messageId что перерисовать
+     * @param string $callbackId для тоста
+     * @return void
+     */
+    private function sendPublish(User $user, int $chatId, int $messageId, string $callbackId): void
+    {
+        $fresh = $user->fresh() ?? $user;
+
+        if (! $fresh->isAdmin()) {
+            TelegramBotApi::answerCallback($callbackId, 'Публикации — только для команды ULove', true);
+
+            return;
+        }
+
+        $telegramId = (int) $fresh->telegram_id;
+        $draft = \App\Services\TelegramPublishPanel::getDraft($telegramId);
+
+        if ($draft === null || (string) ($draft['step'] ?? '') !== 'preview') {
+            TelegramBotApi::answerCallback($callbackId, 'Черновик устарел — начните с /publish');
+
+            return;
+        }
+
+        try {
+            $broadcast = \App\Services\BotBroadcastService::createFromDraft($draft, $fresh);
+        } catch (\RuntimeException $e) {
+            TelegramBotApi::answerCallback($callbackId, $e->getMessage(), true);
+
+            return;
+        }
+
+        \App\Services\BotBroadcastService::publish($broadcast);
+        \App\Services\TelegramPublishPanel::clearDraft($telegramId);
+
+        $kind = $broadcast->isPoll() ? 'Опрос' : 'Статья';
+
+        TelegramCardSender::redrawText($chatId, $messageId, "🚀 <b>{$kind} запущен!</b>\nБот уже разносит копии каждому в его чат с ботом — это займёт несколько минут. Итоги (доставка, голоса) — в админке.", TelegramMenu::withNav([
+            [
+                ['text' => '📰 К новостям', 'callback_data' => 'go_news'],
+            ],
+        ]));
+        TelegramBotApi::answerCallback($callbackId, 'Рассылка запущена 🚀');
+    }
+
+    /**
      * Сброс просмотренных новым сообщением (/reset).
      *
      * @param User $user владелец
@@ -1035,6 +1572,10 @@ class TelegramWebhookController extends Controller
         if (\App\Services\TelegramNotesPanel::isWait($tgId)) {
             $this->saveNoteFromBot($user, $chatId, $tgId, $text);
 
+            return;
+        }
+
+        if ($this->handlePublishText($user, $chatId, $tgId, $text)) {
             return;
         }
 

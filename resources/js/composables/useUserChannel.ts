@@ -26,6 +26,7 @@ const USER_EVENTS = [
   'business.verified',
   'business.rejected',
   'business.verification.submitted',
+  'bot-broadcast.finished',
 ] as const
 
 let channel: any = null

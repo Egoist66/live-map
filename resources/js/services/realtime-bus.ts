@@ -83,6 +83,8 @@ export type RealtimeEventMap = {
   'thread:updated': { kind: string; id: number; lastId: number }
   /** Заметки «Избранного» изменились на другом устройстве (сокет saved-notes.changed) */
   'user:saved-notes.changed': { action: string }
+  /** Рассылка в боте завершена: живая статистика автору (сокет bot-broadcast.finished) */
+  'user:bot-broadcast.finished': { broadcast: any }
   /** Смена режима realtime: socket|polling */
   'realtime:mode': string
 }
