@@ -68,14 +68,6 @@ const emit = defineEmits<{
       <span class="flex-1" />
 
       <Button
-        label="На сайт"
-        icon="pi pi-external-link"
-        text
-        size="small"
-        class="!hidden !text-[#eee] hover:!bg-[#2c3338] hover:!text-white md:!inline-flex !text-[13px]"
-        @click="emit('home')"
-      />
-      <Button
         icon="pi pi-refresh"
         :loading="refreshLoading"
         text
