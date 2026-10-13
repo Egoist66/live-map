@@ -162,9 +162,9 @@ enforceVisibleTab()
     </template>
 
     <template v-else>
-      <div class="flex w-full items-stretch">
+      <div class="w-full">
         <div
-          class="sticky top-14 hidden h-[calc(100dvh-3.5rem)] shrink-0 lg:block"
+          class="fixed bottom-0 left-0 top-14 z-30 hidden w-[264px] transition-[width] duration-200 lg:block"
           :class="layout.state.collapsed ? 'lg:w-[76px]' : 'lg:w-[264px]'"
         >
           <AdminSidebar
@@ -177,7 +177,7 @@ enforceVisibleTab()
           />
         </div>
 
-        <main class="min-w-0 flex-1 bg-[#f0f0f5] pb-10 dark:bg-[#0F121F]" aria-label="Содержимое админки">
+        <main class="min-w-0 bg-[#f0f0f5] pb-10 transition-[margin] duration-200 dark:bg-[#0F121F]" :class="layout.state.collapsed ? 'lg:ml-[76px]' : 'lg:ml-[264px]'" aria-label="Содержимое админки">
           <div class="mx-auto w-full max-w-[1280px] px-3 py-4 sm:px-5 sm:py-5">
             <div class="mb-4 flex flex-wrap items-end gap-x-3 gap-y-1">
               <h1 class="wp-heading-inline text-xl font-black tracking-tight sm:text-2xl dark:text-white">
@@ -306,7 +306,7 @@ enforceVisibleTab()
       </Drawer>
     </template>
 
-    <Dialog :visible="!access.unlocked.value && !access.checking.value" modal :closable="false" :draggable="false" header="Консоль закрыта" :style="{ width: '400px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-[24px] overflow-hidden' }, header: { class: '!p-5 !pb-0 !border-0 dark:!bg-zinc-900 dark:!text-white' }, content: { class: '!px-5 !py-4 dark:!bg-zinc-900' }, footer: { class: '!px-5 !pb-5 !pt-1 !border-0 dark:!bg-zinc-900' } }">
+    <Dialog :visible="!access.unlocked.value && !access.checking.value" modal :closable="false" :draggable="false" header="Консоль закрыта" :style="{ width: '400px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none overflow-hidden' }, header: { class: '!p-5 !pb-0 !border-0 dark:!bg-zinc-900 dark:!text-white' }, content: { class: '!px-5 !py-4 dark:!bg-zinc-900' }, footer: { class: '!px-5 !pb-5 !pt-1 !border-0 dark:!bg-zinc-900' } }">
       <div class="flex items-center gap-3">
         <span class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#1d2327] text-white"><i class="pi pi-envelope" /></span>
         <p class="text-sm text-stone-600 dark:text-zinc-300">{{ access.step.value === 'code' ? 'Код отправлен на почту — введи 6 цифр. Действует 10 минут.' : 'Введи свою почту — пришлём туда одноразовый код.' }}</p>
@@ -365,7 +365,7 @@ enforceVisibleTab()
         <Button label="Снять права" severity="danger" :loading="mon.actingId.value !== null" @click="mon.confirmSelfRoleChange()" />
       </template>
     </Dialog>
-    <Dialog :visible="!!mon.pendingOrganizationRole.value" modal header="Выдать роль «организация»?" :style="{ width: '440px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-[24px] overflow-hidden' }, header: { class: '!p-5 !pb-0 !border-0 dark:!bg-zinc-900 dark:!text-white' }, content: { class: '!px-5 !py-4 dark:!bg-zinc-900' }, footer: { class: '!px-5 !pb-5 !pt-1 !border-0 dark:!bg-zinc-900' } }" @update:visible="(v:boolean)=>{ if(!v) mon.cancelOrganizationRoleChange() }">
+    <Dialog :visible="!!mon.pendingOrganizationRole.value" modal header="Выдать роль «организация»?" :style="{ width: '440px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none overflow-hidden' }, header: { class: '!p-5 !pb-0 !border-0 dark:!bg-zinc-900 dark:!text-white' }, content: { class: '!px-5 !py-4 dark:!bg-zinc-900' }, footer: { class: '!px-5 !pb-5 !pt-1 !border-0 dark:!bg-zinc-900' } }" @update:visible="(v:boolean)=>{ if(!v) mon.cancelOrganizationRoleChange() }">
       <Message severity="warn" :closable="false" class="!rounded-2xl !text-xs">Данный аккаунт персональный и не связан с предпринимательской деятельностью.</Message>
       <p class="mt-3 text-sm text-stone-600 dark:text-zinc-300">Выдать <b>{{ mon.pendingOrganizationRole.value?.user?.name }}</b> ({{ mon.pendingOrganizationRole.value?.user?.email }}) роль «организация»? Вместе с ролью автоматически включится тариф <b>business</b> — как у всех, кто зашёл в кабинет компании.</p>
       <template #footer>

@@ -48,7 +48,7 @@ defineProps<{ mgr: any }>()
         </div>
       </div>
 
-      <Dialog v-model:visible="mgr.showDialog.value" modal header="Новость приложения" :style="{ width: '520px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-[24px] overflow-hidden' } }">
+      <Dialog v-model:visible="mgr.showDialog.value" modal header="Новость приложения" :style="{ width: '520px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none overflow-hidden' } }">
         <div class="space-y-3">
           <div>
             <label class="text-xs font-bold text-stone-500 dark:text-zinc-400">Заголовок</label>

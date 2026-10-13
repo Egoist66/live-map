@@ -45,6 +45,13 @@ class ConversationController extends Controller
             ->values()
             ->all();
         $orgMap = $this->organizationMap($otherIds);
+
+        try {
+            $avatarUsers = $convs->flatMap(fn ($c) => $c->participants->all())->all();
+            \App\Services\UserAvatarService::attachGalleryFallback($avatarUsers);
+        } catch (\Throwable) {
+        }
+
         $convs = $convs
             ->map(function($c) use ($user, $myRows, $matchedIds, $orgMap){
                 $other = $c->participants->firstWhere('id','!=',$user->id);
@@ -113,6 +120,21 @@ class ConversationController extends Controller
         $hasMoreMessages = $rawMessages->count() > $pageSize;
         $rawMessages = $rawMessages->take($pageSize)->reverse()
             ->values();
+        $pinnedModels = $conversation->messages()->with(['sender:id,name,avatar_path,telegram_photo_url', 'forwardedFrom:id,name,avatar_path,telegram_photo_url', 'replyTo.sender:id,name'])->whereNotNull('pinned_at')->orderBy('pinned_at')->get();
+        try {
+            $avatarUsers = $conversation->participants->all();
+            $avatarMessages = $rawMessages->merge($pinnedModels)->all();
+            foreach ($avatarMessages as $avatarMessage) {
+                if ($avatarMessage->sender) {
+                    $avatarUsers[] = $avatarMessage->sender;
+                }
+                if ($avatarMessage->forwardedFrom) {
+                    $avatarUsers[] = $avatarMessage->forwardedFrom;
+                }
+            }
+            \App\Services\UserAvatarService::attachGalleryFallback($avatarUsers);
+        } catch (\Throwable) {
+        }
         $undelivered = $rawMessages->where('sender_id','!=',$request->user()->id)->whereNull('delivered_at')->pluck('id');
         if($undelivered->isNotEmpty()){
             Message::whereIn('id',$undelivered)->update(['delivered_at'=>now()]);
@@ -120,7 +142,7 @@ class ConversationController extends Controller
             try{ broadcast(new \App\Events\MessageDelivered($conversation->id,$undelivered->toArray(),$request->user()->id))->toOthers(); }catch(\Throwable $e){ \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
         }
         $messages = $rawMessages->map->toArrayPayload();
-        $pinned = $conversation->messages()->with(['sender:id,name,avatar_path,telegram_photo_url', 'forwardedFrom:id,name,avatar_path,telegram_photo_url', 'replyTo.sender:id,name'])->whereNotNull('pinned_at')->orderBy('pinned_at')->get()->map->toArrayPayload();
+        $pinned = $pinnedModels->map->toArrayPayload();
         $other = $conversation->participants->firstWhere('id','!=',$request->user()->id);
         $lastSeen = $other && $other->isInvisibleActive() && !$request->user()->isAdmin() ? null : $other?->last_seen_at?->toISOString();
         $isMatch = $other && $conversation->type === 'direct'
@@ -202,6 +224,10 @@ class ConversationController extends Controller
                 } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('chat webpush failed: '.$e->getMessage()); }
             }
             $conv->load('participants:id,name,avatar_path,telegram_photo_url');
+            try {
+                \App\Services\UserAvatarService::attachGalleryFallback($conv->participants->all());
+            } catch (\Throwable) {
+            }
             return response()->json(['id'=>$conv->id,'existing'=>false,'conversation'=>$conv],201);
         });
     }

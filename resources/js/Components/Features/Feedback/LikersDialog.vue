@@ -24,7 +24,7 @@ function initialOf(name: string): string {
     :closable="false"
     :base-z-index="baseZIndex ?? 0"
     :style="{ width: '360px', maxWidth: 'calc(100vw - 2rem)' }"
-    :pt="{ root: { class: '!rounded-[24px] !border-stone-200 dark:!border-zinc-800 overflow-hidden' }, header: { class: '!p-0 !border-0' }, content: { class: '!p-0 !bg-white dark:!bg-zinc-900' } }"
+    :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none !border-stone-200 dark:!border-zinc-800 overflow-hidden' }, header: { class: '!p-0 !border-0' }, content: { class: '!p-0 !bg-white dark:!bg-zinc-900' } }"
   >
     <template #header>
       <div class="w-full flex items-center gap-2 px-5 pt-5 pb-3">

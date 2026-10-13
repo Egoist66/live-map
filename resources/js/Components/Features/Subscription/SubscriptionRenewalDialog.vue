@@ -11,7 +11,7 @@ const confirmDecline = ref(false)
 onMounted(() => void renewal.check())
 </script>
 <template>
-  <Dialog :visible="renewal.visible.value" modal :closable="false" :draggable="false" header="Подписка заканчивается" :style="{ width: '420px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-[24px] !border-stone-200 dark:!border-zinc-700 overflow-hidden' }, header: { class: '!p-5 !pb-0 !border-0 dark:!bg-zinc-900' }, content: { class: '!px-5 !py-4 dark:!bg-zinc-900' }, footer: { class: '!px-5 !pb-5 !pt-1 !border-0 dark:!bg-zinc-900' } }">
+  <Dialog :visible="renewal.visible.value" modal :closable="false" :draggable="false" header="Подписка заканчивается" :style="{ width: '420px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none !border-stone-200 dark:!border-zinc-700 overflow-hidden' }, header: { class: '!p-5 !pb-0 !border-0 dark:!bg-zinc-900' }, content: { class: '!px-5 !py-4 dark:!bg-zinc-900' }, footer: { class: '!px-5 !pb-5 max-sm:!pb-[calc(1.25rem+var(--sab))] !pt-1 !border-0 dark:!bg-zinc-900' } }">
     <div class="flex items-center gap-3">
       <span class="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-white grid place-items-center shrink-0"><i class="pi pi-crown" /></span>
       <div class="min-w-0">

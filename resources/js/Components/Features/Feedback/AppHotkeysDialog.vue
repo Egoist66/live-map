@@ -6,7 +6,7 @@ import { useAppHotkeys } from '@/composables/useAppHotkeys'
 const hotkeys = useAppHotkeys()
 </script>
 <template>
-  <Dialog :visible="hotkeys.showHelp.value" @update:visible="(v:boolean)=>hotkeys.setHelp(v)" modal header="Горячие клавиши" :style="{ width: '440px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-[24px]' } }">
+  <Dialog :visible="hotkeys.showHelp.value" @update:visible="(v:boolean)=>hotkeys.setHelp(v)" modal header="Горячие клавиши" :style="{ width: '440px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none' } }">
     <div class="space-y-4">
       <div v-for="group in hotkeys.groups.value" :key="group.id">
         <div class="text-xs font-bold uppercase tracking-widest text-stone-400 dark:text-zinc-500">{{ group.label }}</div>

@@ -78,7 +78,7 @@ const pageTitle = computed(() => (isLogin.value ? 'Вход — ULove' : 'Рег
       </form>
     </div>
     <RegisterForm v-else :key="mode" @switch-login="showLogin" />
-    <Dialog :visible="banned.bannedVisible.value" @update:visible="(v:boolean)=>{ if(!v) banned.closeBanned() }" modal :draggable="false" header="Доступ запрещён" :style="{ width: '380px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-3xl dark:!bg-zinc-900 dark:!border-zinc-700' }, header: { class: 'dark:!bg-zinc-900 dark:!text-white' }, content: { class: 'dark:!bg-zinc-900 dark:!text-zinc-100' } }">
+    <Dialog :visible="banned.bannedVisible.value" @update:visible="(v:boolean)=>{ if(!v) banned.closeBanned() }" modal :draggable="false" header="Доступ запрещён" :style="{ width: '380px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-3xl max-sm:!rounded-b-none dark:!bg-zinc-900 dark:!border-zinc-700' }, header: { class: 'dark:!bg-zinc-900 dark:!text-white' }, content: { class: 'dark:!bg-zinc-900 dark:!text-zinc-100' } }">
       <div class="text-center py-2">
         <div class="mx-auto w-14 h-14 rounded-2xl bg-red-500/10 text-red-500 grid place-items-center"><i class="pi pi-ban text-xl" /></div>
         <div class="mt-3 text-lg font-black text-stone-900 dark:text-white">Аккаунт заблокирован</div>

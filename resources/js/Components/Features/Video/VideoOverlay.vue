@@ -36,7 +36,7 @@ watch(
 )
 
 const roomPt = {
-  root: { class: '!rounded-3xl !border-0 !bg-white dark:!bg-zinc-950 overflow-hidden' },
+  root: { class: '!rounded-3xl max-sm:!rounded-b-none !border-0 !bg-white dark:!bg-zinc-950 overflow-hidden' },
   header: { class: '!bg-white dark:!bg-zinc-950 !border-0 !pb-1' },
   content: { class: '!p-0 !bg-white dark:!bg-zinc-950 !max-h-[88dvh] !overflow-y-auto' },
 }

@@ -14,7 +14,7 @@ defineProps<{ ads: any }>()
     :draggable="false"
     header="Разместить в районах?"
     :style="{ width: '440px', maxWidth: 'calc(100vw - 1.5rem)' }"
-    :pt="{ root: { class: '!rounded-3xl !bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-700 overflow-hidden' }, header: { class: '!py-3 !px-4' }, title: { class: '!font-black !text-[16px] dark:!text-white' }, content: { class: '!px-4 !pb-2 dark:!bg-zinc-900' }, footer: { class: '!px-4 !py-3 dark:!bg-zinc-900' } }"
+    :pt="{ root: { class: '!rounded-3xl max-sm:!rounded-b-none !bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-700 overflow-hidden' }, header: { class: '!py-3 !px-4' }, title: { class: '!font-black !text-[16px] dark:!text-white' }, content: { class: '!px-4 !pb-2 dark:!bg-zinc-900' }, footer: { class: '!px-4 !py-3 dark:!bg-zinc-900' } }"
   >
     <p class="text-[13px] text-stone-500 dark:text-zinc-400">
       «{{ ads.placeAd.value?.title }}» увидят жители выбранных районов как новость компании.

@@ -17,7 +17,7 @@ const { selectPt } = useDropdownMenuStyle()
     modal
     header="Пожаловаться"
     :style="{ width: '420px', maxWidth: '94vw' }"
-    :pt="{ root: { class: '!rounded-[24px]' } }"
+    :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none' } }"
   >
     <div class="space-y-3">
       <p v-if="dialog.targetTitle.value" class="text-sm text-stone-600 dark:text-zinc-300 truncate">

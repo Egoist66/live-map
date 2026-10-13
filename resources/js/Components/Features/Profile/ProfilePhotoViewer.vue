@@ -182,7 +182,7 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
     </Dialog>
   </Teleport>
   <Teleport to="body">
-    <Dialog :visible="viewer.anonPromoVisible.value" @update:visible="(v:boolean)=>{ if (!v) viewer.closeAnonPromo() }" modal :draggable="false" :base-z-index="3000" class="!rounded-3xl" :style="{ width: '380px', maxWidth: 'calc(100vw - 2rem)' }" :pt="{ root: { class: '!rounded-3xl !border-0' }, content: { class: '!p-0' }, header: { class: '!hidden' } }">
+    <Dialog :visible="viewer.anonPromoVisible.value" @update:visible="(v:boolean)=>{ if (!v) viewer.closeAnonPromo() }" modal :draggable="false" :base-z-index="3000" class="!rounded-3xl" :style="{ width: '380px', maxWidth: 'calc(100vw - 2rem)' }" :pt="{ root: { class: '!rounded-3xl max-sm:!rounded-b-none !border-0' }, content: { class: '!p-0' }, header: { class: '!hidden' } }">
       <div class="bg-gradient-to-br from-violet-600 via-fuchsia-600 to-indigo-600 p-6 text-white text-center">
         <div class="w-16 h-16 mx-auto rounded-3xl bg-white/20 grid place-items-center text-3xl">🕵️</div>
         <div class="mt-3 text-xl font-black">Анонимные лайки</div>

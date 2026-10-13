@@ -16,7 +16,7 @@ const emit = defineEmits<{ (e: 'cancel'): void; (e: 'confirm'): void }>()
     :draggable="false"
     header="Обложка компании"
     :style="{ width: '560px', maxWidth: 'calc(100vw - 1.5rem)' }"
-    :pt="{ root: { class: '!rounded-3xl !bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-700 overflow-hidden' }, header: { class: '!py-3 !px-4' }, title: { class: '!font-black !text-[16px]' }, content: { class: '!px-4 !pb-2 !overflow-y-auto !overscroll-contain' }, footer: { class: '!px-4 !py-3' } }"
+    :pt="{ root: { class: '!rounded-3xl max-sm:!rounded-b-none !bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-700 overflow-hidden' }, header: { class: '!py-3 !px-4' }, title: { class: '!font-black !text-[16px]' }, content: { class: '!px-4 !pb-2 !overflow-y-auto !overscroll-contain' }, footer: { class: '!px-4 !py-3' } }"
   >
     <div
       :ref="(el:any)=>crop.setFrameEl(el)"

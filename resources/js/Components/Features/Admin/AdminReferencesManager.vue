@@ -120,7 +120,7 @@ function onFilePicked(mgr: any, event: Event) {
         modal
         :header="dialogTitles[mgr.formSlug.value] ?? 'Справочная страница'"
         :style="{ width: '720px', maxWidth: '96vw' }"
-        :pt="{ root: { class: '!rounded-[24px] !border-stone-200 dark:!border-zinc-700 !bg-white dark:!bg-zinc-900' }, header: { class: '!bg-white dark:!bg-zinc-900 !text-ink-900 dark:!text-white !border-b !border-stone-200 dark:!border-zinc-800' }, content: { class: '!bg-white dark:!bg-zinc-900 !text-stone-700 dark:!text-zinc-200 !px-4 sm:!px-5' }, footer: { class: '!bg-white dark:!bg-zinc-900 !border-t !border-stone-200 dark:!border-zinc-800' } }"
+        :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none !border-stone-200 dark:!border-zinc-700 !bg-white dark:!bg-zinc-900' }, header: { class: '!bg-white dark:!bg-zinc-900 !text-ink-900 dark:!text-white !border-b !border-stone-200 dark:!border-zinc-800' }, content: { class: '!bg-white dark:!bg-zinc-900 !text-stone-700 dark:!text-zinc-200 !px-4 sm:!px-5' }, footer: { class: '!bg-white dark:!bg-zinc-900 !border-t !border-stone-200 dark:!border-zinc-800' } }"
       >
         <form class="space-y-3 py-1" @submit.prevent="mgr.save()">
           <div>

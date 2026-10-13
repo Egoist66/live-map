@@ -37,7 +37,7 @@ function sendNow(text: string): void {
     dismissable-mask
     header="Пресеты сообщений"
     class="w-[min(560px,94vw)]"
-    :pt="{ root: { class: '!rounded-3xl' } }"
+    :pt="{ root: { class: '!rounded-3xl max-sm:!rounded-b-none' } }"
     @hide="presets.reset()"
   >
     <div class="flex flex-col gap-3 min-w-0">

@@ -85,7 +85,7 @@ function ageText(card: SwipeCard): string {
     :breakpoints="{ '640px': '100vw' }"
     header="Анкета"
     :style="{ width: '420px', maxWidth: '94vw', maxHeight: '92dvh' }"
-    :pt="{ root: { class: 'swipe-details-sheet !rounded-3xl !overflow-hidden dark:!bg-zinc-900 dark:!border-zinc-700' }, header: { class: 'dark:!bg-zinc-900 dark:!text-white' }, content: { class: 'dark:!bg-zinc-900 dark:!text-zinc-100 !max-h-[78dvh] !overflow-y-auto overscroll-contain' } }"
+    :pt="{ root: { class: 'swipe-details-sheet !rounded-3xl max-sm:!rounded-b-none !overflow-hidden dark:!bg-zinc-900 dark:!border-zinc-700' }, header: { class: 'dark:!bg-zinc-900 dark:!text-white' }, content: { class: 'dark:!bg-zinc-900 dark:!text-zinc-100 !max-h-[78dvh] !overflow-y-auto overscroll-contain' } }"
   >
     <div v-if="card" class="pt-1">
       <div class="flex items-center gap-3">

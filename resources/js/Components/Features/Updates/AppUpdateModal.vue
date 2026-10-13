@@ -15,7 +15,7 @@ async function openModules(): Promise<void> {
 }
 </script>
 <template>
-  <Dialog :visible="!!update" modal :closable="false" header="Что нового" :style="{ width: '480px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-[24px] overflow-hidden' } }">
+  <Dialog :visible="!!update" modal :closable="false" header="Что нового" :style="{ width: '480px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none overflow-hidden' } }">
     <div v-if="update" class="space-y-3">
       <div class="flex items-center gap-2 flex-wrap">
         <span class="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white grid place-items-center shrink-0"><i class="pi pi-sparkles text-sm" /></span>

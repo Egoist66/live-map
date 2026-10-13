@@ -39,7 +39,7 @@ async function confirm(): Promise<void> {
 </script>
 
 <template>
-  <Dialog :visible="visible" modal :closable="false" :draggable="false" :style="{ width: '560px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-[24px] !border-stone-200 dark:!border-zinc-700 overflow-hidden' }, header: { class: '!p-5 !pb-0 !border-0' }, content: { class: '!px-5 !pb-4 !pt-3' }, footer: { class: '!px-5 !pb-5 !pt-1 !border-0' } }">
+  <Dialog :visible="visible" modal :closable="false" :draggable="false" :style="{ width: '560px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none !border-stone-200 dark:!border-zinc-700 dark:!bg-zinc-900 overflow-hidden' }, header: { class: '!p-5 !pb-0 !border-0 dark:!bg-zinc-900' }, content: { class: '!px-5 !pb-4 !pt-3 !max-h-[70dvh] !overflow-y-auto dark:!bg-zinc-900' }, footer: { class: '!px-5 !pb-5 max-sm:!pb-[calc(1.25rem+var(--sab))] !pt-1 !border-0 dark:!bg-zinc-900' } }">
     <template #header>
       <div class="flex items-center gap-3">
         <span class="w-11 h-11 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white grid place-items-center shrink-0"><i class="pi pi-file-check"></i></span>

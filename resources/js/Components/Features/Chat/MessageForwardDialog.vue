@@ -82,7 +82,7 @@ const sourceAuthors = computed(() => {
     header="Переслать"
     :draggable="false"
     :style="{ width: '400px', maxWidth: 'calc(100vw - 2rem)' }"
-    :pt="{ root: { class: '!rounded-3xl' }, header: { class: '!py-3 !px-4' }, content: { class: '!px-2 !pb-2 !pt-0' } }"
+    :pt="{ root: { class: '!rounded-3xl max-sm:!rounded-b-none' }, header: { class: '!py-3 !px-4' }, content: { class: '!px-2 !pb-2 !pt-0' } }"
   >
     <p class="px-3 pb-2 text-xs text-stone-500 dark:text-zinc-400 flex items-center gap-2">
       <span>Выбрано: {{ count }} · куда переслать?</span>

@@ -36,7 +36,7 @@ const counter = computed(() => `${clean.value.length}/500`)
     modal
     :header="`Заявка в «${districtName}»`"
     :style="{ width: '440px', maxWidth: '94vw' }"
-    :pt="{ root: { class: '!rounded-[24px] overflow-hidden' } }"
+    :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none overflow-hidden' } }"
   >
     <div class="space-y-3">
       <Message v-if="isBusiness" severity="info" :closable="false" class="!rounded-2xl !text-xs">

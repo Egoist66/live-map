@@ -17,7 +17,7 @@ const ring = useRingtone()
 const visible = ref(false)
 
 const dialogPt = {
-  root: { class: '!rounded-3xl !border-0 !bg-white dark:!bg-zinc-900 overflow-hidden' },
+  root: { class: '!rounded-3xl max-sm:!rounded-b-none !border-0 !bg-white dark:!bg-zinc-900 overflow-hidden' },
   header: { class: '!hidden' },
   content: { class: '!p-0 !bg-white dark:!bg-zinc-900' },
 }

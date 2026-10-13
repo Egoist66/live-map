@@ -23,7 +23,7 @@ function badgeStatus(): BusinessVerificationStatus {
     position="center"
     :style="{ width: '560px', maxWidth: 'calc(100vw - 2rem)' }"
     :pt="{
-      root: { class: '!border-0 overflow-hidden !bg-white dark:!bg-zinc-900 shadow-2xl !rounded-[28px]' },
+      root: { class: '!border-0 overflow-hidden !bg-white dark:!bg-zinc-900 shadow-2xl !rounded-[28px] max-sm:!rounded-b-none' },
       content: { class: '!p-0 !bg-white dark:!bg-zinc-900' },
     }"
     @hide="markers.closeCompany()"

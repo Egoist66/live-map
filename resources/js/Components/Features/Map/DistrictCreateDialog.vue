@@ -42,7 +42,7 @@ function submit(): void {
 }
 </script>
 <template>
-  <Dialog :visible="open" modal dismissableMask :style="{ width: '560px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-[24px] !border-stone-200 dark:!border-white/10 overflow-hidden !bg-white dark:!bg-zinc-900' }, header: { class: '!p-0 !border-0 !bg-white dark:!bg-zinc-900' }, content: { class: '!px-5 !py-0 sm:!px-6 !bg-white dark:!bg-zinc-900 !max-h-[70dvh] !overflow-y-auto' }, footer: { class: '!p-5 sm:!px-6 !pt-2 !border-0 !bg-white dark:!bg-zinc-900' } }" @update:visible="(v:boolean)=>emit('update:open', v)">
+  <Dialog :visible="open" modal dismissableMask :style="{ width: '560px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none !border-stone-200 dark:!border-white/10 overflow-hidden !bg-white dark:!bg-zinc-900' }, header: { class: '!p-0 !border-0 !bg-white dark:!bg-zinc-900' }, content: { class: '!px-5 !py-0 sm:!px-6 !bg-white dark:!bg-zinc-900 !max-h-[70dvh] !overflow-y-auto' }, footer: { class: '!p-5 sm:!px-6 !pt-2 !border-0 !bg-white dark:!bg-zinc-900' } }" @update:visible="(v:boolean)=>emit('update:open', v)">
     <template #header>
       <div class="w-full">
         <div class="relative h-[118px] sm:h-[132px] overflow-hidden bg-gradient-to-br from-violet-700 via-purple-800 to-indigo-950 dark:from-violet-800 dark:via-purple-950 dark:to-black">

@@ -153,7 +153,7 @@ function canDeleteComment(c: any): boolean {
           <Button label="Сохранить" rounded class="flex-1 !bg-stone-900 dark:!bg-white dark:!text-ink-900 !border-stone-900 dark:!border-white" :loading="pinEdit.updating.value" @click="emit('saveEdit')" />
           <Button label="Отмена" severity="secondary" outlined rounded class="flex-1" @click="pinEdit.cancel()" />
         </div>
-        <Dialog :visible="pinEdit.sos.showSosWarning.value" @update:visible="(v:boolean)=>{ if (!v) pinEdit.sos.cancelSos() }" modal :closable="false" :draggable="false" header="SOS" :style="{ width: '420px', maxWidth: 'calc(100vw - 2rem)' }" :pt="{ root: { class: '!rounded-3xl !border-red-200 dark:!border-red-900' } }">
+        <Dialog :visible="pinEdit.sos.showSosWarning.value" @update:visible="(v:boolean)=>{ if (!v) pinEdit.sos.cancelSos() }" modal :closable="false" :draggable="false" header="SOS" :style="{ width: '420px', maxWidth: 'calc(100vw - 2rem)' }" :pt="{ root: { class: '!rounded-3xl max-sm:!rounded-b-none !border-red-200 dark:!border-red-900' } }">
           <div class="flex items-start gap-3">
             <span class="w-11 h-11 rounded-2xl bg-red-500/15 text-red-500 grid place-items-center text-xl shrink-0">🆘</span>
             <div>

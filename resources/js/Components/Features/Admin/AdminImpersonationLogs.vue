@@ -36,7 +36,7 @@ function fmt(dt: string | null) {
         <InputIcon class="pi pi-search" />
         <InputText :modelValue="logs.query.value" @update:modelValue="(v:string|undefined)=>logs.setQuery(v ?? '')" placeholder="Имя, email или основание..." fluid size="small" rounded />
       </IconField>
-      <SelectButton :modelValue="logs.filter.value" @update:modelValue="(v:string)=>logs.setFilter(v as any)" :options="filterOptions" optionLabel="label" optionValue="value" :allowEmpty="false" size="small" class="mt-2.5 flex-wrap max-w-full" />
+      <SelectButton :modelValue="logs.filter.value" @update:modelValue="(v:string)=>logs.setFilter(v as any)" :options="filterOptions" optionLabel="label" optionValue="value" :allowEmpty="false" size="small" class="mt-2.5 flex-wrap max-w-full admin-filter-pills" />
       <div v-if="logs.loading.value" class="py-8 grid place-items-center"><ProgressSpinner style="width:24px;height:24px" :strokeWidth="6" /></div>
       <div v-else-if="!logs.items.value.length" class="py-8 text-center text-sm text-stone-400 dark:text-zinc-500">Входов пока нет</div>
       <div v-else class="admin-list-scroll mt-3 space-y-2 pr-1">

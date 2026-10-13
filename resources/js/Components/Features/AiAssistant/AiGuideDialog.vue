@@ -55,7 +55,7 @@ watch(isGuideOpen, async (open) => {
     :style="{ width: '620px', maxWidth: '96vw' }"
     :breakpoints="{ '640px': '96vw' }"
     :pt="{
-      root: { class: '!rounded-[24px] !border-stone-200 dark:!border-white/10 !bg-white dark:!bg-zinc-900 overflow-hidden mobile-sheet' },
+      root: { class: '!rounded-[24px] max-sm:!rounded-b-none !border-stone-200 dark:!border-white/10 !bg-white dark:!bg-zinc-900 overflow-hidden mobile-sheet' },
       header: { class: '!p-4 sm:!p-5 !pb-0 !border-0' },
       content: { class: '!px-4 !pb-4 sm:!px-5 sm:!pb-5 !pt-2' },
     }"

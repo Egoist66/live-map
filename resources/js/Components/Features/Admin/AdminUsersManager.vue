@@ -118,7 +118,7 @@ function planCaption(u: any): string {
         <InputText :modelValue="query" @update:modelValue="(v:string|undefined)=>emit('update:query', v ?? '')" placeholder="Имя или email..." fluid size="small" rounded />
       </IconField>
       <div class="mt-2.5 flex gap-1.5 flex-wrap items-center">
-        <SelectButton :modelValue="filter" @update:modelValue="(v:string)=>emit('filter', v)" :options="filterOptions" optionLabel="label" optionValue="value" :allowEmpty="false" size="small" class="flex-wrap max-w-full" />
+        <SelectButton :modelValue="filter" @update:modelValue="(v:string)=>emit('filter', v)" :options="filterOptions" optionLabel="label" optionValue="value" :allowEmpty="false" size="small" class="flex-wrap max-w-full admin-filter-pills" />
         <span class="ml-auto flex items-center gap-1.5">
           <Select :modelValue="sort" @update:modelValue="(v:string)=>emit('sort', v)" :options="sortOptions" optionLabel="label" optionValue="value" size="small" appendTo="body" scrollHeight="16rem" :pt="selectPt" title="Сортировка" />
           <Select :modelValue="limit" @update:modelValue="(v:number)=>emit('limit', v)" :options="perPageOptions" optionLabel="label" optionValue="value" size="small" appendTo="body" :pt="selectPt" title="Строк на странице" />

@@ -8,7 +8,7 @@ import Message from 'primevue/message'
 defineProps<{ imp: any }>()
 </script>
 <template>
-  <Dialog :visible="imp.open.value" @update:visible="(v:boolean)=>{ if(!v) imp.close() }" modal header="Войти в аккаунт пользователя?" :style="{ width: '520px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-[24px] overflow-hidden' } }">
+  <Dialog :visible="imp.open.value" @update:visible="(v:boolean)=>{ if(!v) imp.close() }" modal header="Войти в аккаунт пользователя?" :style="{ width: '520px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none overflow-hidden' } }">
     <div class="space-y-3">
       <div class="rounded-2xl border border-red-200 dark:border-red-950 bg-red-50 dark:bg-red-950/30 p-3 text-[13px] leading-relaxed text-stone-700 dark:text-zinc-200">
         <div class="font-bold text-red-700 dark:text-red-300 flex items-center gap-1.5"><i class="pi pi-exclamation-triangle text-sm" /> Внимание: это доступ к личным данным</div>

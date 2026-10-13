@@ -28,7 +28,7 @@ const emit = defineEmits<{
     dismissableMask
     header="Пригласить в район"
     :style="{ width: '440px', maxWidth: '94vw' }"
-    :pt="{ root: { class: '!rounded-[24px] !border-stone-200 dark:!border-white/10 overflow-hidden' }, content: { class: '!p-5 !pt-2' }, header: { class: '!p-5 !pb-0 !border-0' } }"
+    :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none !border-stone-200 dark:!border-white/10 overflow-hidden' }, content: { class: '!p-5 !pt-2' }, header: { class: '!p-5 !pb-0 !border-0' } }"
     @update:visible="(v:boolean)=>emit('update:open', v)"
   >
     <div class="text-xs text-stone-500 dark:text-zinc-400 mb-3">

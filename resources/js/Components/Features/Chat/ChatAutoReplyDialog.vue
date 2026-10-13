@@ -63,7 +63,7 @@ function useDefault(): void {
     dismissable-mask
     header="Автоответ"
     class="w-[min(480px,94vw)]"
-    :pt="{ root: { class: '!rounded-3xl' } }"
+    :pt="{ root: { class: '!rounded-3xl max-sm:!rounded-b-none' } }"
   >
     <div class="flex flex-col gap-3 min-w-0">
       <div v-if="autoReply.loading.value" class="flex justify-center py-6">

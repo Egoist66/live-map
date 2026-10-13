@@ -25,11 +25,21 @@ export interface AdminBotBroadcast {
 }
 
 /**
- * Голоса по одному варианту опроса.
+ * Голоса по одному варианту опроса + кто голосовал.
  */
 export interface AdminBotBroadcastBreakdown {
   option: string
   votes: number
+  /** Имена (первые N свежих, см. бэкенд VOTERS_PER_OPTION). */
+  voters: string[]
+}
+
+/**
+ * Получатель копии рассылки из деталки.
+ */
+export interface AdminBotBroadcastRecipient {
+  name: string
+  voted: boolean
 }
 
 /**
@@ -37,6 +47,10 @@ export interface AdminBotBroadcastBreakdown {
  */
 export interface AdminBotBroadcastDetail extends AdminBotBroadcast {
   breakdown: AdminBotBroadcastBreakdown[]
+  /** Последние 20 получателей: кто получил и кто проголосовал. */
+  recipients: AdminBotBroadcastRecipient[]
+  /** Всего получателей (копий) у рассылки. */
+  recipients_total: number
 }
 
 /**

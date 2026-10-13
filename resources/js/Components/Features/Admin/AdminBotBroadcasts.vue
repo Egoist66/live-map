@@ -80,11 +80,25 @@ function pct(votes: number, total: number): number {
 }
 
 /**
+ * Строка имён по варианту: первые N + «…и ещё K».
+ *
+ * @param opt вариант из breakdown (voters может не быть у старого кэша)
+ * @returns «Иван, Мария …и ещё 12» или пусто
+ */
+function votersLabel(opt: { votes: number; voters?: string[] }): string {
+  const shown = Array.isArray(opt.voters) ? opt.voters : []
+  const hidden = Math.max(0, (opt.votes ?? 0) - shown.length)
+  const names = shown.join(', ')
+
+  if (!names) return ''
+  return hidden > 0 ? `${names} …и ещё ${hidden}` : names
+}
+
+/**
  * Открыть карточку рассылки.
  *
  * @param id id рассылки
- */
-function open(id: number): void {
+ */function open(id: number): void {
   confirmRemove.value = false
   void props.bb.openDetail(id)
 }
@@ -134,7 +148,7 @@ function askRemove(id: number): void {
       <Paginator v-if="bb.state.lastPage > 1" :rows="bb.state.perPage" :totalRecords="bb.state.total" :first="(bb.state.page - 1) * bb.state.perPage" @page="(e:any)=>bb.setPage(e.page + 1)" class="!bg-transparent !border-0 !px-0" />
       <Message v-if="bb.state.error" severity="error" :closable="false" class="!mt-3 !rounded-2xl !text-xs">{{ bb.state.error }}</Message>
 
-      <Dialog v-model:visible="bb.state.dialogOpen" modal dismissableMask :draggable="false" class="w-[calc(100vw-2rem)] sm:!w-[28rem]" :pt="{ root: { class: '!rounded-3xl !border-stone-200 dark:!border-zinc-700' } }">
+      <Dialog v-model:visible="bb.state.dialogOpen" modal dismissableMask :draggable="false" class="w-[calc(100vw-2rem)] sm:!w-[28rem]" :pt="{ root: { class: '!rounded-3xl max-sm:!rounded-b-none overflow-hidden !border-stone-200 dark:!border-zinc-700' } }">
         <template #header>
           <div class="font-black text-sm dark:text-white pr-6">{{ bb.state.selected?.type === 'poll' ? '📊 Опрос' : '📝 Статья' }}</div>
         </template>
@@ -157,7 +171,21 @@ function askRemove(id: number): void {
               <div class="mt-1 h-1.5 rounded-full bg-stone-200 dark:bg-zinc-700 overflow-hidden">
                 <div class="h-full rounded-full bg-violet-500" :style="{ width: pct(opt.votes, bb.state.selected.votes_count) + '%' }" />
               </div>
+              <details v-if="votersLabel(opt)" class="mt-1.5 text-[11px] text-stone-500 dark:text-zinc-400">
+                <summary class="cursor-pointer select-none hover:text-stone-700 dark:hover:text-zinc-200">Кто голосовал</summary>
+                <div class="admin-list-scroll !max-h-28 mt-1 rounded-lg bg-white px-2 py-1.5 leading-relaxed dark:bg-zinc-900">{{ votersLabel(opt) }}</div>
+              </details>
             </div>
+          </div>
+          <div v-if="(bb.state.selected.recipients || []).length" class="mt-3">
+            <div class="text-xs font-bold dark:text-white">Получатели <span class="font-semibold text-stone-400 dark:text-zinc-500">· всего {{ bb.state.selected.recipients_total }} (последние {{ bb.state.selected.recipients.length }})</span></div>
+            <ul class="admin-list-scroll !max-h-48 mt-1.5 space-y-1 pr-1">
+              <li v-for="(r, i) in bb.state.selected.recipients" :key="i" class="flex items-center gap-2 rounded-xl bg-stone-100 px-2.5 py-1.5 text-[12px] dark:bg-zinc-800">
+                <span class="min-w-0 flex-1 truncate dark:text-white">{{ r.name }}</span>
+                <Tag v-if="r.voted" value="голосовал" severity="success" class="!text-[9px] shrink-0" />
+                <Tag v-else value="получил" severity="secondary" class="!text-[9px] shrink-0" />
+              </li>
+            </ul>
           </div>
           <div class="mt-4 flex justify-end">
             <Button :label="confirmRemove ? 'точно удалить?' : 'удалить'" severity="danger" :outlined="!confirmRemove" size="small" @click="bb.state.selected && askRemove(bb.state.selected.id)" />

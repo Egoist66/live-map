@@ -62,7 +62,7 @@ function isResetting(attempts: any, email: string): boolean {
         <InputIcon class="pi pi-search" />
         <InputText :modelValue="attempts.query.value" @update:modelValue="(v:string|undefined)=>attempts.setQuery(v ?? '')" placeholder="Email, IP или страна..." fluid size="small" rounded />
       </IconField>
-      <SelectButton :modelValue="attempts.filter.value" @update:modelValue="(v:string)=>attempts.setFilter(v as any)" :options="filterOptions" optionLabel="label" optionValue="value" :allowEmpty="false" size="small" class="mt-2.5 flex-wrap max-w-full" />
+      <SelectButton :modelValue="attempts.filter.value" @update:modelValue="(v:string)=>attempts.setFilter(v as any)" :options="filterOptions" optionLabel="label" optionValue="value" :allowEmpty="false" size="small" class="mt-2.5 flex-wrap max-w-full admin-filter-pills" />
       <div v-if="attempts.loading.value" class="py-8 grid place-items-center"><ProgressSpinner style="width:24px;height:24px" :strokeWidth="6" /></div>
       <div v-else-if="!attempts.items.value.length" class="py-8 text-center text-sm text-stone-400 dark:text-zinc-500">Попыток пока нет — всё чисто</div>
       <div v-else class="admin-list-scroll mt-3 space-y-2 pr-1">

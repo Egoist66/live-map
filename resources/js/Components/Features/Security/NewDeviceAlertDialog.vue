@@ -45,7 +45,7 @@ function clientLabel(client: string): string {
     :draggable="false"
     :closable="true"
     :style="{ width: '420px', maxWidth: '94vw' }"
-    :pt="{ root: { class: '!rounded-[24px] overflow-hidden dark:!bg-zinc-900 dark:!border-zinc-700' }, header: { class: '!p-5 !pb-0 !border-0 dark:!bg-zinc-900 dark:!text-white' }, content: { class: '!px-5 !py-4 dark:!bg-zinc-900' }, footer: { class: '!px-5 !pb-5 !pt-1 !border-0 dark:!bg-zinc-900' } }"
+    :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none overflow-hidden dark:!bg-zinc-900 dark:!border-zinc-700' }, header: { class: '!p-5 !pb-0 !border-0 dark:!bg-zinc-900 dark:!text-white' }, content: { class: '!px-5 !py-4 dark:!bg-zinc-900' }, footer: { class: '!px-5 !pb-5 !pt-1 !border-0 dark:!bg-zinc-900' } }"
   >
     <template #header>
       <div class="flex items-center gap-3">

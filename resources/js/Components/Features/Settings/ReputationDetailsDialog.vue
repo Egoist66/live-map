@@ -33,7 +33,7 @@ function onVisibleChange(visible: boolean): void {
     :breakpoints="{ '640px': '100vw' }"
     header="Сведения о репутации"
     :style="{ width: '440px', maxWidth: '94vw', maxHeight: '92dvh' }"
-    :pt="{ root: { class: 'reputation-sheet !rounded-3xl !overflow-hidden dark:!bg-zinc-900 dark:!border-zinc-700' }, header: { class: 'dark:!bg-zinc-900 dark:!text-white' }, content: { class: 'dark:!bg-zinc-900 dark:!text-zinc-100 !max-h-[78dvh] !overflow-y-auto overscroll-contain' } }"
+    :pt="{ root: { class: 'reputation-sheet !rounded-3xl max-sm:!rounded-b-none !overflow-hidden dark:!bg-zinc-900 dark:!border-zinc-700' }, header: { class: 'dark:!bg-zinc-900 dark:!text-white' }, content: { class: 'dark:!bg-zinc-900 dark:!text-zinc-100 !max-h-[78dvh] !overflow-y-auto overscroll-contain' } }"
   >
     <section aria-label="Сведения о репутации" class="pt-1">
       <div v-if="details.trust.loading.value" class="flex items-center gap-2 text-xs text-stone-400 dark:text-zinc-500">

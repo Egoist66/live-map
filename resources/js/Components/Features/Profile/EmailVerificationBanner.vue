@@ -32,7 +32,7 @@ defineExpose({ verification })
     :closable="false"
     :style="{ width: '430px', maxWidth: 'calc(100vw - 2rem)' }"
     :pt="{
-      root: { class: '!rounded-[28px] !border-0 overflow-hidden !bg-white dark:!bg-zinc-900 shadow-2xl' },
+      root: { class: '!rounded-[28px] max-sm:!rounded-b-none !border-0 overflow-hidden !bg-white dark:!bg-zinc-900 shadow-2xl' },
       header: { class: '!hidden' },
       content: { class: '!p-0' },
     }"

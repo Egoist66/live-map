@@ -87,7 +87,7 @@ defineExpose({ focusInput })
     :draggable="false"
     :closable="false"
     :style="{ width: '400px', maxWidth: 'calc(100vw - 2rem)' }"
-    :pt="{ root: { class: '!rounded-[24px] !border-stone-200 dark:!border-zinc-700 overflow-visible', style: liftStyle }, content: { class: '!p-0 !bg-white dark:!bg-zinc-900 overflow-visible' } }"
+    :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none !border-stone-200 dark:!border-zinc-700 overflow-visible', style: liftStyle }, content: { class: '!p-0 !bg-white dark:!bg-zinc-900 overflow-visible' } }"
   >
     <div class="px-5 pt-5 pb-4">
       <div class="text-[15px] font-black dark:text-white leading-tight">{{ title }}</div>

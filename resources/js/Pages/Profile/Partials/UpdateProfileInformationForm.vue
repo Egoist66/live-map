@@ -147,7 +147,7 @@ const showMapFields = computed(() => modules.isEnabled('upin'))
       </div>
     </form>
     <AvatarPreview :src="a.avatarSrc.value" :name="f.user.value.name" :open="a.showPreview.value" @close="a.showPreview.value=false" />
-    <Dialog :visible="a.crop.showCropper.value" @update:visible="(v:boolean)=>{ if(!v) a.cancelCrop() }" modal dismissableMask :draggable="false" header="Позиционируй фото" :style="{ width: '440px', maxWidth: 'calc(100vw - 1.5rem)' }" :pt="{ root: { class: '!rounded-3xl avatar-crop' }, header: { class: '!py-3 !px-4 !rounded-t-3xl' }, content: { class: '!px-4 !pb-2 !overflow-y-auto !overscroll-contain' }, footer: { class: '!px-4 !py-3 !rounded-b-3xl' } }">
+    <Dialog :visible="a.crop.showCropper.value" @update:visible="(v:boolean)=>{ if(!v) a.cancelCrop() }" modal dismissableMask :draggable="false" header="Позиционируй фото" :style="{ width: '440px', maxWidth: 'calc(100vw - 1.5rem)' }" :pt="{ root: { class: '!rounded-3xl max-sm:!rounded-b-none avatar-crop' }, header: { class: '!py-3 !px-4 !rounded-t-3xl' }, content: { class: '!px-4 !pb-2 !overflow-y-auto !overscroll-contain' }, footer: { class: '!px-4 !py-3 !rounded-b-3xl' } }">
       <div
         :ref="(el:any)=>a.crop.setFrameEl(el)"
         class="relative w-[min(100%,44dvh)] mx-auto aspect-square overflow-hidden bg-stone-100 dark:bg-zinc-800 select-none touch-none"

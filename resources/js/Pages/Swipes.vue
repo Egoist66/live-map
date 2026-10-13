@@ -91,7 +91,7 @@ function onQuestionnaireSaved(): void {
 }
 
 const dialogPt = {
-  root: { class: '!rounded-3xl dark:!bg-zinc-900 dark:!border-zinc-700' },
+  root: { class: '!rounded-3xl max-sm:!rounded-b-none dark:!bg-zinc-900 dark:!border-zinc-700' },
   header: { class: 'dark:!bg-zinc-900 dark:!text-white' },
   content: { class: 'dark:!bg-zinc-900 dark:!text-zinc-100 !max-h-[78dvh] !overflow-y-auto' },
 }

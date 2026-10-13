@@ -19,7 +19,7 @@ defineExpose({ show: coop.show, close: coop.close })
     header="Сотрудничество"
     :style="{ width: '420px', maxWidth: '94vw', maxHeight: '92dvh' }"
     :pt="{
-      root: { class: '!rounded-3xl !border-0 !bg-white dark:!bg-zinc-900 shadow-2xl overflow-hidden' },
+      root: { class: '!rounded-3xl max-sm:!rounded-b-none !border-0 !bg-white dark:!bg-zinc-900 shadow-2xl overflow-hidden' },
       header: { class: '!px-5 !pt-5 !pb-0 !border-0 !bg-transparent' },
       title: { class: '!font-black !text-[19px] !tracking-tight dark:!text-white' },
       content: { class: '!px-5 !py-4 !bg-transparent' },

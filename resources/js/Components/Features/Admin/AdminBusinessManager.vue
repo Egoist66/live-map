@@ -66,7 +66,7 @@ function legalFormLabel(legalForm: string): string {
         <InputText :modelValue="queue.query.value" @update:modelValue="(v:string|undefined)=>queue.setQuery(v ?? '')" placeholder="Название, УНП, email владельца..." fluid size="small" rounded />
       </IconField>
       <div class="mt-2.5">
-        <SelectButton :modelValue="queue.status.value" @update:modelValue="(v:string)=>queue.setStatus(v as any)" :options="statusOptions" optionLabel="label" optionValue="value" :allowEmpty="false" size="small" class="flex-wrap max-w-full" />
+        <SelectButton :modelValue="queue.status.value" @update:modelValue="(v:string)=>queue.setStatus(v as any)" :options="statusOptions" optionLabel="label" optionValue="value" :allowEmpty="false" size="small" class="flex-wrap max-w-full admin-filter-pills" />
       </div>
       <div v-if="queue.loading.value" class="py-8 grid place-items-center"><ProgressSpinner style="width:24px;height:24px" :strokeWidth="6" /></div>
       <div v-else-if="!queue.items.value.length" class="py-8 text-center text-sm text-stone-400 dark:text-zinc-500">

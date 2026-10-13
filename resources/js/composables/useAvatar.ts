@@ -6,6 +6,9 @@
  * 2. `telegram_photo_url` / `photo_url` — прямое фото из Telegram, если бэк
  *    отдал его отдельным полем (например, обрезанный select без аксессора);
  * 3. `avatar_path` — локальный/S3 путь загруженного аватара (`/storage/...`).
+ * 4. Первое фото галереи (`fallback_avatar_url` / `first_photo_url` / `photos` /
+ *    `profile_photos`) — когда аватара нет, а галерея жива: вместо
+ *    заглушки-человечка показываем реальное фото из профиля.
  *
  * Покрывает оба сценария регистрации: обычная (загрузил аватарку) и вход
  * через Telegram (фото подтянулось в `telegram_photo_url`). Если фото нет
@@ -65,6 +68,17 @@ export function getAvatarUrl(user: any): string | null {
     return `/storage/${avatarPath.replace(/^\/+/, '')}`
   }
 
+  const galleryUrl =
+    pickUrl(user.fallback_avatar_url) ??
+    pickUrl(user.first_photo_url) ??
+    firstListUrl(user.photos) ??
+    firstListUrl(user.profile_photos) ??
+    firstListUrl(user.profilePhotos)
+
+  if (galleryUrl) {
+    return galleryUrl
+  }
+
   return null
 }
 
@@ -107,4 +121,41 @@ function pickUrl(value: unknown): string | null {
   }
 
   return url
+}
+
+/**
+ * Первый непустой URL из списка фото галереи.
+ *
+ * Элементы — строки-URL или объекты ({url, thumb_url, src}).
+ *
+ * @param list сырой список фото из payload пользователя
+ * @returns первый найденный URL или null
+ */
+function firstListUrl(list: unknown): string | null {
+  if (!Array.isArray(list)) {
+    return null
+  }
+
+  for (const item of list) {
+    if (typeof item === 'string') {
+      const url = pickUrl(item)
+
+      if (url) {
+        return url
+      }
+
+      continue
+    }
+
+    if (item && typeof item === 'object') {
+      const record = item as Record<string, unknown>
+      const url = pickUrl(record.url) ?? pickUrl(record.thumb_url) ?? pickUrl(record.src)
+
+      if (url) {
+        return url
+      }
+    }
+  }
+
+  return null
 }

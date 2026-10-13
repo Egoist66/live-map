@@ -42,7 +42,7 @@ const iconOff = 'bg-white dark:bg-white/10 shadow-sm border border-stone-200/60 
     </template>
   </Card>
 
-  <Dialog v-model:visible="dlg.open.value" modal dismissableMask :style="{ width: '480px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-[24px] !border-stone-200 dark:!border-white/10 overflow-hidden' }, header: { class: '!p-5 !pb-0 !border-0' }, content: { class: '!p-5' }, footer: { class: '!p-5 !pt-0 !border-0' } }">
+  <Dialog v-model:visible="dlg.open.value" modal dismissableMask :style="{ width: '480px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none !border-stone-200 dark:!border-white/10 overflow-hidden' }, header: { class: '!p-5 !pb-0 !border-0' }, content: { class: '!p-5' }, footer: { class: '!p-5 !pt-0 !border-0' } }">
     <template #header>
       <div class="flex items-center gap-3">
         <span class="w-11 h-11 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white grid place-items-center shadow-glow shrink-0"><i class="pi pi-sliders-h"></i></span>

@@ -20,7 +20,7 @@ const emit = defineEmits<{ (e: 'close'): void; (e: 'choose', id: PlanId): void }
     :draggable="false"
     :style="{ width: '560px', maxWidth: '94vw' }"
     :pt="{
-      root: { class: 'plan-dialog !rounded-[28px] !border-0 overflow-hidden !bg-white dark:!bg-zinc-900' },
+      root: { class: 'plan-dialog !rounded-[28px] max-sm:!rounded-b-none !border-0 overflow-hidden !bg-white dark:!bg-zinc-900' },
       header: { class: '!p-0 !m-0 !border-0' },
       headerActions: { class: '!hidden' },
       closeButton: { class: '!hidden' },

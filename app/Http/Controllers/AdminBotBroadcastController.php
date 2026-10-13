@@ -16,6 +16,15 @@ use App\Models\BotBroadcastMessage;
 class AdminBotBroadcastController extends Controller
 {
     /**
+     * Сколько имён показываем в карточке на один вариант опроса.
+     */
+    private const VOTERS_PER_OPTION = 30;
+
+    /**
+     * Сколько свежих бюллетеней сканируем ради имён (счётчики точные отдельно).
+     */
+    private const VOTER_SCAN_LIMIT = 1000;
+    /**
      * Список рассылок (сначала свежие) с итогами.
      *
      * @return \Illuminate\Http\JsonResponse пагинация + serialize() строки
@@ -123,13 +132,16 @@ class AdminBotBroadcastController extends Controller
     }
 
     /**
-     * Голоса по вариантам опроса.
+     * Голоса по вариантам опроса + кто за что голосовал.
      *
-     * Для статей — пустой список. При множественном выборе один
-     * человек засчитывается в каждый выбранный вариант.
+     * Счётчики точные (считаются по всем бюллетеням), а имена —
+     * выборка: не тянем тысячи строк в карточку. При множественном
+     * выборе один человек попадает в каждый выбранный вариант.
+     *
+     * Для статей — пустой список.
      *
      * @param BotBroadcast $broadcast опрос
-     * @return array<int, array{option:string, votes:int}>
+     * @return array<int, array{option:string, votes:int, voters:array<int, string>}>
      */
     private static function breakdown(BotBroadcast $broadcast): array
     {
@@ -137,7 +149,7 @@ class AdminBotBroadcastController extends Controller
         $rows = [];
 
         foreach ($options as $option) {
-            $rows[] = ['option' => $option, 'votes' => 0];
+            $rows[] = ['option' => $option, 'votes' => 0, 'voters' => []];
         }
 
         if ($rows === []) {
@@ -158,6 +170,35 @@ class AdminBotBroadcastController extends Controller
 
                 if (isset($rows[$index])) {
                     $rows[$index]['votes']++;
+                }
+            }
+        }
+
+        $nameBallots = BotBroadcastMessage::where('broadcast_id', $broadcast->id)
+            ->whereNotNull('voted_option_ids')
+            ->with('user:id,name')
+            ->latest()
+            ->limit(self::VOTER_SCAN_LIMIT)
+            ->get();
+
+        foreach ($nameBallots as $copy) {
+            $voted = $copy->voted_option_ids;
+
+            if (! is_array($voted)) {
+                continue;
+            }
+
+            $name = (string) ($copy->user->name ?? '—');
+
+            foreach ($voted as $optionId) {
+                $index = (int) $optionId;
+
+                if (! isset($rows[$index])) {
+                    continue;
+                }
+
+                if (count($rows[$index]['voters']) < self::VOTERS_PER_OPTION) {
+                    $rows[$index]['voters'][] = $name;
                 }
             }
         }

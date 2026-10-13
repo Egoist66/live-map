@@ -4,6 +4,7 @@ import { Head } from "@inertiajs/vue3";
 import Toast from "primevue/toast";
 import ChatSidebar from "@/Components/Features/Chat/ChatSidebar.vue";
 import ChatWindow from "@/Components/Features/Chat/ChatWindow.vue";
+import ChatPeerPanel from "@/Components/Features/Chat/ChatPeerPanel.vue";
 import SavedNotesChat from "@/Components/Features/Chat/SavedNotesChat.vue";
 // Диалоги открываются только по действию — грузим лениво, первым paint не блокируют.
 const ChatSearchDialog = defineAsyncComponent(
@@ -46,6 +47,7 @@ import { useChatWallpaper } from "@/composables/useChatWallpaper";
 import { useChatLayout } from "@/composables/useChatLayout";
 import { usePageScrollLock } from "@/composables/usePageScrollLock";
 import { useDistrictInvite } from "@/composables/useDistrictInvite";
+import { useChatPeerPanel } from "@/composables/useChatPeerPanel";
 import { useSavedNotesView } from "@/composables/useSavedNotesView";
 import { useToast } from "primevue/usetoast";
 
@@ -226,6 +228,30 @@ function closeConfirm() {
   confirm.value = null;
 }
 const datingTheme = useChatDatingTheme(chat.activeConv, chat.selectedId);
+
+/**
+ * Собеседник открытого диалога для правой панели профиля.
+ */
+const peer = computed(() => (activeConv.value as any)?.other ?? null);
+const peerProfileUrl = computed(() => {
+  const slug = (peer.value as any)?.profile_slug;
+  return slug ? `/users/${slug}` : null;
+});
+const peerPanel = useChatPeerPanel();
+/**
+ * Панель видна только при включённом ULove (не бизнес). По умолчанию
+ * открыта лишь в чистом ULove-режиме — с другими разделами скрыта,
+ * пока не попросит тоггл в шапке (выбор запоминается в хуке).
+ */
+const peerPanelAvailable = computed(
+  () => peerPanel.enabled.value && !isBusiness.value && !!selectedId.value && !!peer.value
+);
+const showPeerPanel = computed(() => peerPanelAvailable.value && peerPanel.open.value);
+/**
+ * Тема панели и её тоггла: дефолтный Tinder-стиль — только когда
+ * в приложении остался один ULove, иначе — стиль карты UPin.
+ */
+const peerTone = computed(() => (uloveOnly.value ? 'ulove' : 'upin'));
 
 const wallpaper = useChatWallpaper();
 const wallpaperOpen = ref(false);
@@ -422,6 +448,10 @@ onMounted(async () => {
         :online="isOnline(activeConv?.other?.id, (activeConv?.other as any)?.last_seen_at)"
         :dating-entry="!isBusiness && datingTheme.isDatingEntry.value"
         :dating-badge="isBusiness ? null : datingTheme.badge.value"
+        :peer-panel-available="peerPanelAvailable"
+        :peer-panel-open="peerPanel.open.value"
+        :peer-tone="peerTone"
+        @toggle-peer="peerPanel.toggle()"
         :input="input"
         @update:input="(v: string) => input = v"
         :emoji-open="emojiOpen"
@@ -501,6 +531,15 @@ onMounted(async () => {
         :history-top-sentinel="setHistoryTop"
         :history-has-more="chat.history.hasMore.value"
         :history-loading="chat.history.loadingOlder.value"
+      />
+      <ChatPeerPanel
+        v-if="showPeerPanel"
+        :peer="peer"
+        :badge="datingTheme.badge.value"
+        :profile-url="peerProfileUrl"
+        :variant="peerTone"
+        @block="activeConv?.other && askBlock(activeConv.other.id, activeConv.other.name)"
+        @report="activeConv?.other && reportDialog.openReport('user', activeConv.other.id, activeConv.other.name ?? '')"
       />
     </div>
   </div>

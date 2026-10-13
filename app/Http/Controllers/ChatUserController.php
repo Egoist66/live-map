@@ -26,6 +26,11 @@ class ChatUserController extends Controller
             ->paginate($perPage);
         $users = $page->getCollection();
         $ids = $users->pluck('id')->all();
+
+        try {
+            \App\Services\UserAvatarService::attachGalleryFallback($users->all());
+        } catch (\Throwable) {
+        }
         $orgBusinesses = [];
         try {
             $orgBusinesses = \App\Models\Business::whereIn('user_id', $ids ?: [0])

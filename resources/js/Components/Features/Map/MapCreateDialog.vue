@@ -115,7 +115,7 @@ async function createCustomAndSelect() {
         <Button :loading="pinCreate.creating.value" :disabled="!pinCreate.title.value?.trim() || pinCreate.limitExceeded.value" type="submit" rounded class="flex-[1.4] !bg-gradient-to-r !from-violet-600 !to-indigo-600 !border-0 !text-white !shadow-glow" :label="pinCreate.limitExceeded.value ? 'Лимит исчерпан' : (pinCreate.creating.value ? 'Сохраняем…' : (pinCreate.isScheduled.value ? `Запланировать → ${pinCreate.scheduleLabel.value}` : 'Создать пин →'))" />
       </div>
     </form>
-    <Dialog :visible="pinCreate.sos.showSosWarning.value" @update:visible="(v:boolean)=>{ if (!v) pinCreate.sos.cancelSos() }" modal :closable="false" :draggable="false" header="SOS" :style="{ width: '420px', maxWidth: 'calc(100vw - 2rem)' }" :pt="{ root: { class: '!rounded-3xl !border-red-200 dark:!border-red-900' } }">
+    <Dialog :visible="pinCreate.sos.showSosWarning.value" @update:visible="(v:boolean)=>{ if (!v) pinCreate.sos.cancelSos() }" modal :closable="false" :draggable="false" header="SOS" :style="{ width: '420px', maxWidth: 'calc(100vw - 2rem)' }" :pt="{ root: { class: '!rounded-3xl max-sm:!rounded-b-none !border-red-200 dark:!border-red-900' } }">
       <div class="flex items-start gap-3">
         <span class="w-11 h-11 rounded-2xl bg-red-500/15 text-red-500 grid place-items-center text-xl shrink-0">🆘</span>
         <div>

@@ -282,7 +282,7 @@ function counterClass(ok: boolean) {
     </template>
   </Card>
 
-  <Dialog :visible="mgr.showPageDialog.value" @update:visible="(v:boolean)=>{ if(!v) mgr.closePageDialog() }" modal :header="mgr.isNewPage.value ? 'Новая страница' : 'Редактировать страницу'" :style="{ width: '520px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-[24px] overflow-hidden' } }">
+  <Dialog :visible="mgr.showPageDialog.value" @update:visible="(v:boolean)=>{ if(!v) mgr.closePageDialog() }" modal :header="mgr.isNewPage.value ? 'Новая страница' : 'Редактировать страницу'" :style="{ width: '520px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none overflow-hidden' } }">
     <div v-if="mgr.editingPage.value" class="space-y-3">
       <div>
         <label :class="labelClass">Путь</label>
