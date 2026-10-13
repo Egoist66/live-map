@@ -4,8 +4,8 @@ import Button from 'primevue/button'
 import { useFloatingWidgets } from '@/composables/useFloatingWidgets'
 import { useAiEnabled } from '@/composables/useAiEnabled'
 
-// Мобила: розовый FAB — сообщения, либо сразу AI-модалка когда ИИ включён.
 // Десктоп: розовый виджет-панель (сообщения + UPin AI).
+// На мобиле виджет скрыт — не нужен в правом нижнем углу.
 // ИИ-часть строго по тумблеру админки: выключен — не видит никто, включая staff.
 // На роуте чатов виджеты не показываем вообще — там уже полный мессенджер.
 const w = useFloatingWidgets()
@@ -13,22 +13,6 @@ const ai = useAiEnabled()
 </script>
 <template>
   <template v-if="w.isVisible.value">
-  <Button
-    v-if="ai.canSeeAi.value"
-    icon="pi pi-sparkles"
-    rounded
-    aria-label="AI-ассистент"
-    class="lg:!hidden !fixed !z-40 !h-14 !w-14 !border-0 !bg-rose-500 !text-xl !text-white !shadow-lg right-4 bottom-[calc(var(--app-bottomnav)+var(--sab)+1rem)]"
-    @click="w.openAssistant()"
-  />
-  <Button
-    v-else
-    icon="pi pi-comments"
-    rounded
-    aria-label="Сообщения"
-    class="lg:!hidden !fixed !z-40 !h-14 !w-14 !border-0 !bg-rose-500 !text-xl !text-white !shadow-lg right-4 bottom-[calc(var(--app-bottomnav)+var(--sab)+1rem)]"
-    @click="w.openMessages()"
-  />
   <div class="fixed bottom-5 right-5 z-40 hidden flex-col items-end gap-2 lg:flex">
     <Transition name="widget-pop">
       <div

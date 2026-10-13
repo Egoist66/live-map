@@ -70,6 +70,9 @@ class TelegramBotApi
     /**
      * Перерисовать текст+клавиатуру уже отправленной панели.
      *
+     * Перерисовка тем же содержимым — не ошибка: Bot API отвечает 400
+     * «message is not modified», считаем успехом и не шумим в лог.
+     *
      * @param int $chatId telegram_id владельца
      * @param int $messageId id сообщения с панелью
      * @param string $text новый текст в HTML-разметке
@@ -90,7 +93,7 @@ class TelegramBotApi
             $payload['reply_markup'] = ['inline_keyboard' => $keyboard];
         }
 
-        return self::post('editMessageText', $payload) !== null;
+        return self::post('editMessageText', $payload, true) !== null;
     }
 
     /**
@@ -124,6 +127,9 @@ class TelegramBotApi
     /**
      * Перерисовать подпись+клавиатуру под фото-карточкой.
      *
+     * Тот же толерантный режим, что у editPanel: «message is not
+     * modified» — успех, а не повод для warning в логе.
+     *
      * @param int $chatId telegram_id владельца
      * @param int $messageId id сообщения с фото
      * @param string $caption новая подпись в HTML-разметке
@@ -143,7 +149,7 @@ class TelegramBotApi
             $payload['reply_markup'] = ['inline_keyboard' => $keyboard];
         }
 
-        return self::post('editMessageCaption', $payload) !== null;
+        return self::post('editMessageCaption', $payload, true) !== null;
     }
 
     /**
@@ -726,6 +732,22 @@ class TelegramBotApi
     }
 
     /**
+     * Это ответ «сообщение не изменилось» (а не настоящая ошибка).
+     *
+     * @param int $status HTTP-статус ответа
+     * @param string $body сырое тело ответа
+     * @return bool
+     */
+    private static function isNotModified(int $status, string $body): bool
+    {
+        if ($status !== 400) {
+            return false;
+        }
+
+        return str_contains($body, 'message is not modified');
+    }
+
+    /**
      * Экранировать текст под parse_mode=HTML.
      *
      * @param string $text сырой текст
@@ -739,11 +761,15 @@ class TelegramBotApi
     /**
      * Один POST в Bot API без исключений наружу.
      *
+     * Флаг tolerateNotModified — для перерисовок: 400 «message is not
+     * modified» означает «уже так», считаем успехом без warning в логе.
+     *
      * @param string $method метод Bot API
      * @param array<string, mixed> $payload тело запроса
+     * @param bool $tolerateNotModified считать «не изменено» успехом
      * @return array<string, mixed>|null result при ok=true, иначе null
      */
-    private static function post(string $method, array $payload): ?array
+    private static function post(string $method, array $payload, bool $tolerateNotModified = false): ?array
     {
         $base = self::baseUrl();
 
@@ -763,6 +789,10 @@ class TelegramBotApi
         }
 
         if (! $response->successful()) {
+            if ($tolerateNotModified && self::isNotModified($response->status(), (string) $response->body())) {
+                return [];
+            }
+
             Log::warning('telegram bot api rejected', [
                 'method' => $method,
                 'status' => $response->status(),

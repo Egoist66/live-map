@@ -1,5 +1,4 @@
 import { computed, shallowRef } from 'vue'
-import { router } from '@inertiajs/vue3'
 import { useAiEnabled } from '@/composables/useAiEnabled'
 import { useAiGuideLauncher } from '@/composables/useAiGuideLauncher'
 import { useLayoutRoute } from '@/composables/useLayoutRoute'
@@ -50,20 +49,12 @@ export function useFloatingWidgets() {
   }
 
   /**
-   * Открыть сообщения: на десктопе — всплывающий список дока,
-   * на мобиле — полная страница чатов.
+   * Открыть сообщения: десктопный всплывающий список дока.
+   * Мобильного FAB больше нет — на мобиле виджет скрыт.
    */
   async function openMessages(): Promise<void> {
     closePanel()
-
-    const isDesktop = typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches
-
-    if (isDesktop) {
-      await dock.toggleList()
-      return
-    }
-
-    router.visit('/chat')
+    await dock.toggleList()
   }
 
   /**

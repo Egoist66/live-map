@@ -41,6 +41,8 @@ class AdminBotBroadcastController extends Controller
 
         $data = self::serialize($botBroadcast);
         $data['breakdown'] = self::breakdown($botBroadcast);
+        $data['recipients'] = self::recipients($botBroadcast);
+        $data['recipients_total'] = BotBroadcastMessage::where('broadcast_id', $botBroadcast->id)->count();
 
         return response()->json($data);
     }
@@ -90,6 +92,34 @@ class AdminBotBroadcastController extends Controller
             'published_at' => $broadcast->published_at?->toISOString(),
             'created_at' => $broadcast->created_at?->toISOString(),
         ];
+    }
+
+    /**
+     * Последние получатели: кому дошло + кто проголосовал.
+     *
+     * @param BotBroadcast $broadcast рассылка
+     * @return array<int, array{name:string, voted:bool}>
+     */
+    private static function recipients(BotBroadcast $broadcast): array
+    {
+        $copies = BotBroadcastMessage::where('broadcast_id', $broadcast->id)
+            ->with('user:id,name')
+            ->latest()
+            ->limit(20)
+            ->get();
+
+        $rows = [];
+
+        foreach ($copies as $copy) {
+            $voted = $copy->voted_option_ids;
+
+            $rows[] = [
+                'name' => (string) ($copy->user->name ?? '—'),
+                'voted' => is_array($voted) && $voted !== [],
+            ];
+        }
+
+        return $rows;
     }
 
     /**

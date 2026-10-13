@@ -383,9 +383,13 @@ class BotBroadcastService
             $cleanIds[] = (int) $optionId;
         }
 
-        $copy->forceFill(['voted_option_ids' => array_values($cleanIds)])->saveQuietly();
+        $cleanIds = array_values($cleanIds);
+        $previous = $copy->voted_option_ids;
+        $hadVote = is_array($previous) && $previous !== [];
 
-        if ($cleanIds !== []) {
+        $copy->forceFill(['voted_option_ids' => $cleanIds])->saveQuietly();
+
+        if ($cleanIds !== [] && ! $hadVote) {
             BotBroadcast::whereKey($copy->broadcast_id)->increment('votes_count');
         }
 

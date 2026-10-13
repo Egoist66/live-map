@@ -79,8 +79,8 @@ onMounted(() => { screenLock.init(); hotkeys.init() })
       <AppFooter />
     </div>
     <MobileBottomNav @bell="bell.open()" @menu="toggleMenu" />
-    <!-- Единая панель виджетов (мини-чат + AI): один лаунчер вместо
-         россыпи FAB по углам, на мобиле — над нижней навигацией. -->
+    <!-- Единая панель виджетов (мини-чат + AI): только десктоп (lg+),
+         на мобиле (браузер/PWA/Telegram) скрыта — там полный мессенджер. -->
     <FloatingWidgets />
     <!-- Оверлеи (сырые Teleport + Transition) монтируем только после гидратации:
          иначе SSR-краш `insertBefore of null` в Teleport.process. См. useClientReady. -->

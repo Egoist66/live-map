@@ -6,6 +6,8 @@ use App\Events\NotificationCreated;
 use App\Models\User;
 use App\Models\UserDatabaseNotification;
 use App\Notifications\UserNotification;
+use Illuminate\Database\QueryException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -47,22 +49,10 @@ class UserNotifier
                 ? DatabaseNotification::class
                 : UserDatabaseNotification::class;
             if ($key !== null) {
-                $existing = $model::where('notifiable_type', $user->getMorphClass())
-                    ->where('notifiable_id', $user->getKey())
-                    ->where('type', $type)
-                    ->where('key', $key)
-                    ->whereNull('read_at')
-                    ->latest('updated_at')
-                    ->first();
-                if ($existing) {
-                    $existing->forceFill([
-                        'data' => $notification->payload((string) $existing->id),
-                        'category' => $notification->category(),
-                    ])->save();
-                    $existing->touch();
-                    static::dispatch($user, $existing->fresh(), $notification);
+                $existing = self::findRow($user, $model, $type, $key, true);
 
-                    return $existing->fresh();
+                if ($existing) {
+                    return self::refreshRow($user, $existing, $notification);
                 }
             }
             $id = (string) Str::uuid();
@@ -82,10 +72,133 @@ class UserNotifier
 
             return $row;
         } catch (\Throwable $e) {
+            $recovered = self::recoverDuplicate($user, $notification, $e);
+
+            if ($recovered !== null) {
+                return $recovered;
+            }
+
             Log::warning('notification send failed', ['type' => $notification->type(), 'error' => $e->getMessage()]);
 
             return null;
         }
+    }
+
+    /**
+     * Найти строку по type+key получателя.
+     *
+     * @param User $user получатель
+     * @param string $model класс строки уведомлений
+     * @param string $type тип уведомления
+     * @param string $key ключ дедупа
+     * @param bool $onlyUnread true — только непрочитанные
+     * @return DatabaseNotification|null
+     */
+    private static function findRow(User $user, string $model, string $type, string $key, bool $onlyUnread): ?DatabaseNotification
+    {
+        $query = $model::where('notifiable_type', $user->getMorphClass())
+            ->where('notifiable_id', $user->getKey())
+            ->where('type', $type)
+            ->where('key', $key);
+
+        if ($onlyUnread) {
+            $query->whereNull('read_at');
+        }
+
+        return $query->latest('updated_at')->first();
+    }
+
+    /**
+     * Обновить строку свежим пейлоадом и поднять наверх.
+     *
+     * Прочитанную строку воскрешаем (read_at=null): раз событие
+     * пришло заново — человеку снова есть что прочитать.
+     *
+     * @param User $user получатель
+     * @param DatabaseNotification $row строка
+     * @param UserNotification $notification событие
+     * @return DatabaseNotification свежая строка
+     */
+    private static function refreshRow(User $user, DatabaseNotification $row, UserNotification $notification): DatabaseNotification
+    {
+        $row->forceFill([
+            'data' => $notification->payload((string) $row->id),
+            'category' => $notification->category(),
+            'read_at' => null,
+        ])->save();
+        $row->touch();
+
+        $fresh = $row->fresh() ?? $row;
+
+        static::dispatch($user, $fresh, $notification);
+
+        return $fresh;
+    }
+
+    /**
+     * Подобрать строку после коллизии уникального ключа.
+     *
+     * Гонка «проверка-затем-вставка» (даблклик, сокет+ретрай) или
+     * повтор события по прочитанной строке: вставка упала с 1062,
+     * а чужая транзакция строку уже положила. Находим её и обновляем
+     * как обычный повтор — вместо warning и потери уведомления.
+     *
+     * @param User $user получатель
+     * @param UserNotification $notification событие
+     * @param \Throwable $e ошибка вставки
+     * @return DatabaseNotification|null null когда это не коллизия ключа
+     */
+    private static function recoverDuplicate(User $user, UserNotification $notification, \Throwable $e): ?DatabaseNotification
+    {
+        if (! self::isDuplicateKey($e)) {
+            return null;
+        }
+
+        $type = $notification->type();
+        $key = $notification->dedupeKey();
+
+        if ($key === null) {
+            return null;
+        }
+
+        $model = str_starts_with($type, 'app.')
+            ? DatabaseNotification::class
+            : UserDatabaseNotification::class;
+
+        try {
+            $existing = self::findRow($user, $model, $type, $key, false);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        if ($existing === null) {
+            return null;
+        }
+
+        try {
+            return self::refreshRow($user, $existing, $notification);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Это коллизия уникального ключа (а не другая ошибка БД).
+     *
+     * @param \Throwable $e ошибка
+     * @return bool
+     */
+    private static function isDuplicateKey(\Throwable $e): bool
+    {
+        if ($e instanceof UniqueConstraintViolationException) {
+            return true;
+        }
+
+        if ($e instanceof QueryException && (int) $e->getCode() === 23000) {
+            return true;
+        }
+
+        return str_contains($e->getMessage(), 'Duplicate entry');
     }
 
     /**

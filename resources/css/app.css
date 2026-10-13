@@ -947,93 +947,6 @@ div#p-license-host {
 .bg-violet-600 a.rich-link { color: #fff; }
 .bg-violet-600 a.rich-link:hover { color: #ede9fe; }
 
-/* Admin tabs: desktop — horizontal scroll, mobile — сетка-пилюли со всеми подписями */
-.admin-tabs .p-tablist-tab-list { display: flex; flex-wrap: nowrap; overflow-x: auto; max-width: 100%; scrollbar-width: none; }
-.admin-tabs .p-tablist-tab-list::-webkit-scrollbar { display: none; }
-.admin-tabs .p-tab { flex-shrink: 0; position: relative; }
-.admin-tabs .admin-tab-item { display: inline-flex; align-items: center; gap: 0.375rem; min-width: 0; }
-
-/* Admin tabs: readable text + hover in light/dark (override PrimeVue defaults) */
-.admin-tabs .p-tab { color: #57534e; border-radius: 12px; }
-.admin-tabs .p-tab:hover { background: rgba(0, 0, 0, 0.04); color: #1c1917; }
-.admin-tabs .p-tab.p-tab-active { color: #1c1917; background: rgba(0, 0, 0, 0.05); }
-.dark .admin-tabs .p-tab { color: #ffffff; }
-.dark .admin-tabs .p-tab:hover { background: rgba(255, 255, 255, 0.06) !important; color: #ffffff !important; }
-.dark .admin-tabs .p-tab.p-tab-active { color: #ffffff; background: rgba(255, 255, 255, 0.10) !important; }
-.dark .admin-tabs .p-tab.p-tab-active:hover { background: rgba(255, 255, 255, 0.12) !important; color: #ffffff !important; }
-
-/* Admin filters: SelectButton переносится, а не уезжает за экран */
-.admin-tabs .p-selectbutton { flex-wrap: wrap; max-width: 100%; }
-.admin-tabs .p-selectbutton .p-togglebutton { flex-shrink: 0; }
-
-@media (max-width: 640px) {
-  .admin-tabs .p-tablist-tab-list {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 6px;
-    overflow: visible;
-    padding: 2px;
-  }
-  .admin-tabs .p-tablist-active-bar { display: none !important; }
-  .admin-tabs .p-tab {
-    min-width: 0;
-    width: 100%;
-    min-height: 54px;
-    padding: 7px 2px 6px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    background: rgba(255, 255, 255, 0.7);
-  }
-  .dark .admin-tabs .p-tab {
-    border-color: rgba(255, 255, 255, 0.10);
-    background: rgba(255, 255, 255, 0.04);
-  }
-  .admin-tabs .p-tab.p-tab-active {
-    background: #1c1917 !important;
-    border-color: #1c1917 !important;
-    color: #fff !important;
-  }
-  .dark .admin-tabs .p-tab.p-tab-active {
-    background: #fff !important;
-    border-color: #fff !important;
-    color: #1c1917 !important;
-  }
-  .admin-tabs .admin-tab-item {
-    flex-direction: column;
-    gap: 2px;
-    max-width: 100%;
-  }
-  .admin-tabs .admin-tab-item > i { font-size: 0.85rem; line-height: 1; }
-  .admin-tabs .p-tab .tab-label {
-    display: block;
-    font-size: 10px;
-    line-height: 1.15;
-    font-weight: 800;
-    max-width: 100%;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .admin-tabs .p-tab .p-badge {
-    position: absolute;
-    top: 3px;
-    right: 3px;
-    font-size: 9px;
-    min-width: 17px;
-    height: 17px;
-    line-height: 17px;
-    padding: 0 4px;
-  }
-}
-@media (max-width: 380px) {
-  .admin-tabs .p-tablist-tab-list { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
-  .admin-tabs .p-tab { min-height: 50px; }
-  .admin-tabs .p-tab .tab-label { font-size: 9px; }
-}
-
 /* Paginators wrap on narrow screens */
 .p-paginator { flex-wrap: wrap; row-gap: 0.25rem; }
 
@@ -1324,4 +1237,20 @@ html.tg-app.tg-desktop .p-toast {
     height: calc(100dvh - var(--sat, 0px)) !important;
     max-height: calc(100dvh - var(--sat, 0px)) !important;
   }
+}
+
+/* ===== Плавающий виджет чата: только десктоп =====
+   Розовый FAB справа снизу на мобиле запрещён везде: браузер, PWA,
+   Telegram Mini App (мобила и узкая десктоп-панель).
+   Селектор целит positioning-класс старого мобильного FAB
+   (`bottom-[calc(var(--app-bottomnav)+var(--sab)+1rem)]`): в актуальной
+   вёрстке его нет вообще, так что правило — страховка от закэшированного
+   старого JS-бандла (PWA service worker / Telegram WebView). */
+@media (max-width: 1023.98px) {
+  .bottom-\[calc\(var\(--app-bottomnav\)\+var\(--sab\)\+1rem\)\] {
+    display: none !important;
+  }
+}
+html.tg-app .bottom-\[calc\(var\(--app-bottomnav\)\+var\(--sab\)\+1rem\)\] {
+  display: none !important;
 }
