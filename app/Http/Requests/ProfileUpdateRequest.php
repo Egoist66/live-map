@@ -60,16 +60,7 @@ class ProfileUpdateRequest extends FormRequest
             'birth_date' => ['nullable','date','before:today','after:1900-01-01'],
             'country' => ['nullable','string','max:120'],
             'country_code' => ['nullable','string','max:8'],
-            'email' => ['required','string','lowercase','email','max:255', Rule::unique(User::class)->ignore($this->user()->id), function ($attr, $value, $fail) {
-                $user = $this->user();
-                if (!$user || mb_strtolower((string) $value) === mb_strtolower((string) $user->email)) return;
-                $isAdmin = (bool) ($user->is_admin || $user->role === 'admin');
-                if ($isAdmin) return;
-                $plan = $user->effectivePlan() ?? 'free';
-                if (! in_array($plan, ['pro', 'premium', 'business'], true)) {
-                    $fail('Смена почты доступна на тарифах Pro и Premium.');
-                }
-            }],
+            'email' => ['required','string','lowercase','email','max:255', Rule::unique(User::class)->ignore($this->user()->id)],
             'home_lat' => ['nullable','numeric','between:-90,90'],
             'home_lng' => ['nullable','numeric','between:-180,180'],
             'home_city' => ['nullable','string','max:120'],

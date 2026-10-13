@@ -1801,6 +1801,17 @@ class TelegramWebhookController extends Controller
             return;
         }
 
+        if ($plan === 'business') {
+            $isOrganization = (string) ($fresh->role ?? '') === 'organization'
+                || (string) ($fresh->account_type ?? 'person') === 'business';
+
+            if (! $isOrganization) {
+                TelegramBotApi::answerCallback($callbackId, 'Business — только для организаций. Вам — Premium 💎');
+
+                return;
+            }
+        }
+
         $panel = TelegramPlanPanel::list($fresh);
         $note = "\n\n".TelegramPlanPanel::PAYMENT_NOTE;
         TelegramCardSender::redrawText($chatId, $messageId, $panel['text'].$note, $panel['keyboard']);

@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
 import { subscriptionApi } from '@/services/subscription.api'
 import { planOf } from '@/composables/usePlanLimits'
+import { usePlansCatalog } from '@/composables/usePlansCatalog'
 import type { PlanId } from '@/composables/usePlanDetails'
 
 /**
@@ -34,6 +35,7 @@ export interface PlanCardMeta {
 export function usePlanSwitch() {
   const page = usePage()
   const authUser = computed(() => (page.props.auth as any)?.user)
+  const { priceFor } = usePlansCatalog()
 
   const switching = ref<PlanId | null>(null)
   const error = ref<string | null>(null)
@@ -62,7 +64,9 @@ export function usePlanSwitch() {
   /**
    * Карточки тарифов: подпись зависит от включённых модулей —
    * без карты (чистый ULove) вместо пинов показываем свайпы.
-   * Premium — топ для всех, Business — только организаторам.
+   * Premium — топ для персон, Business — только организациям
+   * (карточка добавляется лишь при role=organization / business-аккаунте).
+   * Цены — из каталога бэка (config/plans.php), не хардкод.
    *
    * @param showMap включён ли модуль карты UPin
    * @returns мета тарифов для сетки выбора
@@ -77,19 +81,19 @@ export function usePlanSwitch() {
         }
       : {
           free: 'Свайпы · 3 сообщения · мэтчи',
-          pro: 'Инкогнито · 10 сообщений · хайды · репутация 10',
+          pro: 'Инкогнито · 20 сообщений · хайды · репутация 10',
           premium: 'Максимум · сброс безлимит · репутация 10',
           business: 'Кабинет · максимум',
         }
 
     const cards: PlanCardMeta[] = [
-      { id: 'free', name: 'Free', price: 'Бесплатно', summary: summaries.free },
-      { id: 'pro', name: 'Pro', price: '$5.99 / мес', summary: summaries.pro },
-      { id: 'premium', name: 'Premium', price: '$9.99 / мес', summary: summaries.premium },
+      { id: 'free', name: 'Free', price: priceFor('free'), summary: summaries.free },
+      { id: 'pro', name: 'Pro', price: priceFor('pro'), summary: summaries.pro },
+      { id: 'premium', name: 'Premium', price: priceFor('premium'), summary: summaries.premium },
     ]
 
     if (isOrganization.value) {
-      cards.push({ id: 'business', name: 'Business', price: '$19.99 / мес', summary: summaries.business })
+      cards.push({ id: 'business', name: 'Business', price: priceFor('business'), summary: summaries.business })
     }
 
     return cards

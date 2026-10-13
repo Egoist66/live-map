@@ -45,7 +45,7 @@ export function useStaffRole() {
 
   const allowedTabs = computed<readonly AdminTabId[]>(() => {
     if (isAdmin.value) {
-      return ['stats', 'manage', 'security', 'admin', 'business', 'modules', 'ai', 'refs', 'seo', 'telegram']
+      return ['stats', 'manage', 'security', 'admin', 'business', 'modules', 'ai', 'refs', 'seo', 'telegram', 'payments']
     }
 
     return MODERATOR_TABS

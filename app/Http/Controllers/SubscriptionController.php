@@ -2,10 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\PlanCatalog;
 use Illuminate\Http\Request;
 
 /**
- * Подписки PRO/Premium/Business: статус, продление на месяц, отказ.
+ * Подписки PRO/Premium/Business: статус, каталог, продление на месяц, отказ.
+ *
+ * Аудитории разделены строго (см. config/plans.php и PlanCatalog):
+ * персоны — только free/pro/premium, организации (кабинет компании) —
+ * только business. Цены лежат в конфиге, фронт и бот забирают их через
+ * catalog() и PlanCatalog::priceLabel(), а не хардкодят.
  *
  * Платный тариф действует PERIOD_DAYS дней. За RENEWAL_WINDOW_DAYS
  * дней до конца (и в грейс-период после) фронт показывает окно
@@ -18,9 +24,8 @@ use Illuminate\Http\Request;
  * мгновенно переключается только откат на free. Подарочные выдачи
  * (удаление с PRO-приманкой, админ) идут мимо контроллера и работают.
  *
- * Premium — топ-тариф для стаффа (админ/модератор получают его
- * по умолчанию через effectivePlan), Business — только для
- * организаторов (кабинет компании).
+ * Premium — топ-тариф для персон и стаффа (админ/модератор получают его
+ * по умолчанию через effectivePlan), Business — только для организаций.
  */
 class SubscriptionController extends Controller
 {
@@ -42,6 +47,23 @@ class SubscriptionController extends Controller
     public function status(Request $request)
     {
         return response()->json($this->state($request->user()));
+    }
+
+    /**
+     * Публичный каталог тарифов для фронта и бота.
+     *
+     * Отдаёт только планы своей аудитории: персонам — free/pro/premium,
+     * организациям — free/business. Цены — из config/plans.php.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function catalog(Request $request)
+    {
+        $me = $request->user();
+        $isOrganization = $me->isOrganization() || $me->isBusinessAccount();
+
+        return response()->json(PlanCatalog::forAudience($isOrganization, $me->effectivePlan()));
     }
 
     /**
@@ -67,10 +89,16 @@ class SubscriptionController extends Controller
 
         $me = $request->user();
         $plan = $data['plan'];
+        $isOrganization = $me->isOrganization() || $me->isBusinessAccount();
 
-        // Business — только для организаторов: персонам его не выдаём.
-        if ($plan === 'business' && ! $me->isOrganization() && ! $me->isBusinessAccount()) {
-            return response()->json(['message' => 'Тариф Business — только для организаторов (кабинет компании).'], 422);
+        // Business — только для организаций: персонам его не выдаём.
+        if ($plan === 'business' && ! $isOrganization) {
+            return response()->json(['message' => 'Тариф Business — только для организаций (кабинет компании). Персонам доступен максимум Premium.'], 422);
+        }
+
+        // Организации живут на business: персональные pro/premium им не выдаём.
+        if (($plan === 'pro' || $plan === 'premium') && $isOrganization) {
+            return response()->json(['message' => 'Кабинет компании работает на тарифе Business.'], 422);
         }
 
         return response()->json([

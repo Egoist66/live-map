@@ -1395,7 +1395,7 @@ export function useSwipes() {
   }
 
   /**
-   * Написать без мэтча (тратит квоту free 3 / pro 10).
+    * Написать без мэтча (тратит квоту free 3 / pro 20).
    *
    * @param userId id собеседника (null у инкогнито — кнопка там скрыта)
    * @returns void

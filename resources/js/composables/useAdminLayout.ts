@@ -204,6 +204,14 @@ export function useAdminLayout(badges: Ref<AdminLayoutBadges> | ComputedRef<Admi
         adminOnly: true,
       },
       {
+        id: 'payments',
+        label: 'Payments',
+        hint: 'тарифы, цены, оплаты',
+        icon: 'pi pi-credit-card',
+        group: 'Настройки',
+        adminOnly: true,
+      },
+      {
         id: 'ai',
         label: 'ИИ',
         hint: 'ассистент и лимиты',

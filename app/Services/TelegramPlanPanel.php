@@ -104,12 +104,12 @@ class TelegramPlanPanel
         $lines = [];
         $lines[] = '💎 <b>Выбор тарифного плана</b>';
         $lines[] = '';
-        $lines[] = '• Free — бесплатно навсегда (свайпы, мэтчи, 3 сообщения/мес, 3 закрепа чатов).';
-        $lines[] = '• PRO — $5.99/мес: инкогнито, хайды, безлимит радиуса, 10 сообщений/мес, закрепы чатов без лимита, репутация сразу 10.';
-        $lines[] = '• Premium — $9.99/мес: максимум из PRO + безлимитный сброс, избранное до 15, репутация сразу 10.';
+        $lines[] = '• Free — бесплатно навсегда (свайпы, мэтчи, 3 сообщения/мес).';
+        $lines[] = '• PRO — '.PlanCatalog::priceLabel('pro').': инкогнито, хайды, безлимит радиуса, 20 сообщений/мес, репутация сразу 10.';
+        $lines[] = '• Premium — '.PlanCatalog::priceLabel('premium').': максимум из PRO + безлимитный сброс, избранное до 15, репутация сразу 10.';
 
         if ($isOrganization) {
-            $lines[] = '• Business — $19.99/мес: только для организаторов, кабинет компании.';
+            $lines[] = '• Business — '.PlanCatalog::priceLabel('business').': только для организаций, кабинет компании.';
         }
 
         $lines[] = '';
@@ -120,13 +120,13 @@ class TelegramPlanPanel
             ['text' => self::chooseLabel('Free', $current === 'free'), 'callback_data' => 'plan_free'],
         ];
         $keyboard[] = [
-            ['text' => self::chooseLabel('PRO · $5.99', $current === 'pro'), 'callback_data' => 'plan_pro'],
-            ['text' => self::chooseLabel('Premium · $9.99', $current === 'premium'), 'callback_data' => 'plan_premium'],
+            ['text' => self::chooseLabel('PRO · '.PlanCatalog::priceLabel('pro'), $current === 'pro'), 'callback_data' => 'plan_pro'],
+            ['text' => self::chooseLabel('Premium · '.PlanCatalog::priceLabel('premium'), $current === 'premium'), 'callback_data' => 'plan_premium'],
         ];
 
         if ($isOrganization) {
             $keyboard[] = [
-                ['text' => self::chooseLabel('Business · $19.99', $current === 'business'), 'callback_data' => 'plan_business'],
+                ['text' => self::chooseLabel('Business · '.PlanCatalog::priceLabel('business'), $current === 'business'), 'callback_data' => 'plan_business'],
             ];
         }
 

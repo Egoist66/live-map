@@ -31,7 +31,7 @@ function planDesc(plan: string): string {
   }
 
   if (plan === 'free') return 'Свайпы · 3 сообщения · мэтчи'
-  if (plan === 'pro') return 'Инкогнито · 10 сообщений · хайды'
+  if (plan === 'pro') return 'Инкогнито · 20 сообщений · хайды'
   if (plan === 'business') return 'Кабинет · максимум · 15 сообщений'
   return 'Максимум · сброс безлимит'
 }

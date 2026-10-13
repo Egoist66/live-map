@@ -88,8 +88,10 @@ class User extends Authenticatable implements MustVerifyEmail
      * Действующий тариф с учётом срока и роли.
      *
      * Стафф (админ/модератор) всегда на Premium: им доступен топ-тариф
-     * по умолчанию без покупки. Business — только для организаторов
-     * (role=organization, account_type=business).
+     * по умолчанию без покупки. Business — только для организаций
+     * (role=organization или account_type=business): у персоны с планом
+     * business в базе возвращаем premium — топ-лимиты сохраняются,
+     * а кабинет компании не открывается (см. canManageBusiness).
      *
      * @return string free|pro|premium|business
      */
@@ -100,7 +102,14 @@ class User extends Authenticatable implements MustVerifyEmail
         }
 
         if ($this->isPlanExpired()) return 'free';
-        return $this->plan ?? 'free';
+
+        $plan = $this->plan ?? 'free';
+
+        if ($plan === 'business' && ! $this->isOrganization() && ! $this->isBusinessAccount()) {
+            return 'premium';
+        }
+
+        return $plan;
     }
 
     /**
@@ -323,6 +332,19 @@ class User extends Authenticatable implements MustVerifyEmail
      * business — только для организаторов (кабинет компании).
      */
     public const PLANS = ['free', 'pro', 'premium', 'business'];
+
+    /**
+     * Планы обычных пользователей: business персонам недоступен.
+     *
+     * Зеркало config/plans.php (person_plans), держим рядом с кодом,
+     * чтобы гейты работали даже без загруженного конфига.
+     */
+    public const PERSON_PLANS = ['free', 'pro', 'premium'];
+
+    /**
+     * Планы кабинета компании (зеркало config/plans.php organization_plans).
+     */
+    public const ORGANIZATION_PLANS = ['business'];
 
     /** Топ-тарифы с максимальными лимитами (premium для стаффа, business для организаторов). */
     public const TOP_PLANS = ['premium', 'business'];
@@ -890,7 +912,7 @@ class User extends Authenticatable implements MustVerifyEmail
     /**
      * Лимит фото в галерее профиля по тарифу.
      *
-     * Free даёт 5 бесплатных фото, Pro — 6, Premium/Business/админ — 15.
+     * Free даёт 5 бесплатных фото, Pro — 10, Premium/Business/админ — 15.
      *
      * @return int максимальное число фото
      */
@@ -899,7 +921,7 @@ class User extends Authenticatable implements MustVerifyEmail
         if ($this->isAdmin()) return 15;
         return match ($this->effectivePlan()) {
             'business', 'premium' => 15,
-            'pro' => 6,
+            'pro' => 10,
             default => 5,
         };
     }
@@ -955,20 +977,14 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * Лимит закрепов диалогов: как в Telegram, закреплённое всегда сверху.
+     * Лимит закрепов диалогов: закрепы — базовая гигиена чатов,
+     * доступны всем без ограничений на любом тарифе.
      *
-     * Free даёт 3 закрепа, Pro/Premium/Business и админ — без лимита.
-     *
-     * @return int|null максимум закрепов либо null когда безлимит
+     * @return int|null null — безлимит для всех
      */
     public function pinnedChatsLimit(): ?int
     {
-        if ($this->isAdmin()) return null;
-
-        return match ($this->effectivePlan()) {
-            'business', 'premium', 'pro' => null,
-            default => 3,
-        };
+        return null;
     }
 
     /**

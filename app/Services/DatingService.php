@@ -24,11 +24,11 @@ class DatingService
 {
     public const FREE_RANDOM_LIMIT = 3;
 
-    public const PRO_RANDOM_LIMIT = 10;
+    public const PRO_RANDOM_LIMIT = 20;
 
     public const FREE_FAVORITES_LIMIT = 3;
 
-    public const PRO_FAVORITES_LIMIT = 5;
+    public const PRO_FAVORITES_LIMIT = 10;
 
     public const BUSINESS_FAVORITES_LIMIT = 15;
 
@@ -595,7 +595,7 @@ class DatingService
      *
      * Лайки сверх лимита никуда не деваются: они ждут мэтча
      * (получатель их видит, мэтч срабатывает), просто в избранном
-     * показываются только свежие по лимиту (Free — 3, Pro — 5, Premium/Business — 15).
+     * показываются только свежие по лимиту (Free — 3, Pro — 10, Premium/Business — 15).
      *
      * @param User $me
      * @param int $page страница 1-based

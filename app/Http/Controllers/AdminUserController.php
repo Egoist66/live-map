@@ -205,6 +205,18 @@ class AdminUserController extends Controller
             $user->plan = 'business';
             $user->plan_expires_at = $this->resolvePlanExpiry('business', $data['plan_expires_at'] ?? null, $user->plan_expires_at);
         }
+
+        $wantsBusiness = ($user->plan ?? 'free') === 'business';
+        $resolvesToOrganization = ($user->role ?? '') === 'organization'
+            || ($user->account_type ?? 'person') === 'business'
+            || $user->isModerator();
+
+        abort_if(
+            $wantsBusiness && ! $resolvesToOrganization,
+            422,
+            'Тариф business — только для организаций (роль organization или account_type=business). Персоне выдайте premium.'
+        );
+
         $user->save();
 
         if (in_array($user->plan ?? 'free', ['pro', 'premium'], true)) {

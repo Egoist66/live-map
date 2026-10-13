@@ -22,6 +22,7 @@ import AdminImpersonationLogs from '@/Components/Features/Admin/AdminImpersonati
 import AdminLoginAttempts from '@/Components/Features/Admin/AdminLoginAttempts.vue'
 import AdminMaintenanceManager from '@/Components/Features/Admin/AdminMaintenanceManager.vue'
 import AdminModulesManager from '@/Components/Features/Admin/AdminModulesManager.vue'
+import AdminPaymentsManager from '@/Components/Features/Admin/AdminPaymentsManager.vue'
 import AdminAiManager from '@/Components/Features/Admin/AdminAiManager.vue'
 import AdminReferencesManager from '@/Components/Features/Admin/AdminReferencesManager.vue'
 import AdminSeoManager from '@/Components/Features/Admin/AdminSeoManager.vue'
@@ -240,6 +241,12 @@ enforceVisibleTab()
               <div class="grid min-w-0 grid-cols-1 items-start gap-4 xl:grid-cols-2">
                 <AdminModulesManager />
                 <AdminUpdatesManager :mgr="appUpdates" />
+              </div>
+            </section>
+
+            <section v-else-if="tab === 'payments' && staff.isAdmin.value" aria-label="Payments">
+              <div class="min-w-0 max-w-[960px]">
+                <AdminPaymentsManager />
               </div>
             </section>
 

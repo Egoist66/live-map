@@ -43,9 +43,9 @@ const emit = defineEmits<{ (e: 'close'): void; (e: 'choose', id: PlanId): void }
       <div v-for="group in plan.groups" :key="group.title">
         <div class="text-sm font-black text-stone-900 dark:text-white">{{ group.title }}</div>
         <ul class="mt-2 space-y-1.5">
-          <li v-for="item in group.items" :key="item" class="flex items-start gap-2 text-sm text-stone-600 dark:text-zinc-300 leading-relaxed">
+          <li v-for="item in group.items" :key="item.text" class="flex items-start gap-2 text-sm text-stone-600 dark:text-zinc-300 leading-relaxed">
             <i class="pi pi-check text-emerald-500 text-xs mt-1 shrink-0" />
-            <span>{{ item }}</span>
+            <span>{{ item.text }}</span>
           </li>
         </ul>
       </div>

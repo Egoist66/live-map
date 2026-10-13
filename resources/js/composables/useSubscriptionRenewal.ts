@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import { router } from '@inertiajs/vue3'
 import { subscriptionApi, type SubscriptionStatus } from '@/services/subscription.api'
+import { usePlansCatalog } from '@/composables/usePlansCatalog'
 
 const SNOOZE_KEY = 'subscription_renew_snooze'
 
@@ -23,6 +24,7 @@ export function useSubscriptionRenewal() {
   const loading = ref(false)
   const acting = ref(false)
   const error = ref<string | null>(null)
+  const { priceFor } = usePlansCatalog()
 
   /**
    * Отложено ли окно на сегодня (только для неистёкших).
@@ -49,10 +51,8 @@ export function useSubscriptionRenewal() {
   })
 
   const priceLabel = computed(() => {
-    const plan = status.value?.plan
-    if (plan === 'business') return '$19.99 / мес'
-    if (plan === 'premium') return '$9.99 / мес'
-    return '$5.99 / мес'
+    const plan = status.value?.plan ?? 'pro'
+    return priceFor(plan === 'business' || plan === 'premium' ? plan : 'pro')
   })
 
   const expiryLabel = computed(() => {

@@ -102,6 +102,7 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:status-read'])->group(fu
     Route::get('/friendships/status/{user}', [FriendshipController::class, 'status']);
     Route::get('/account/status', [\App\Http\Controllers\AccountController::class, 'status']);
     Route::get('/subscription/status', [\App\Http\Controllers\SubscriptionController::class, 'status']);
+    Route::get('/subscription/plans', [\App\Http\Controllers\SubscriptionController::class, 'catalog']);
     Route::get('/swipes/quota', [SwipeController::class, 'quota']);
 });
 
@@ -444,4 +445,11 @@ Route::middleware(['web', 'auth:web,sanctum', 'admin', 'throttle:300,1'])->group
     Route::patch('/admin/users/{user}', [AdminUserController::class, 'update']);
     Route::post('/admin/users/{user}/impersonate', [\App\Http\Controllers\AdminImpersonationController::class, 'impersonate']);
     Route::get('/admin/impersonations', [\App\Http\Controllers\AdminImpersonationController::class, 'index']);
+    Route::get('/admin/payments/overview', [\App\Http\Controllers\AdminPaymentsController::class, 'overview']);
+    Route::get('/admin/payments/export', [\App\Http\Controllers\AdminPaymentsController::class, 'export']);
+    Route::get('/admin/payments/items', [\App\Http\Controllers\AdminPaymentsController::class, 'items']);
+    Route::post('/admin/payments/items', [\App\Http\Controllers\AdminPaymentsController::class, 'store']);
+    Route::patch('/admin/payments/items/{item}', [\App\Http\Controllers\AdminPaymentsController::class, 'update']);
+    Route::delete('/admin/payments/items/{item}', [\App\Http\Controllers\AdminPaymentsController::class, 'destroy']);
+    Route::put('/admin/payments/plan-prices', [\App\Http\Controllers\AdminPaymentsController::class, 'savePlanPrices']);
 });
