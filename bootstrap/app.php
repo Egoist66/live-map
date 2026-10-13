@@ -24,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
             \App\Http\Middleware\UpdateLastSeen::class,
             \App\Http\Middleware\SecurityHeaders::class,
+            \App\Http\Middleware\PreventStaleDocuments::class,
         ]);
 
         // Gzip текстовых ответов (JSON/Inertia/HTML): жмёт поллинг карты и чата.

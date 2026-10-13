@@ -1,5 +1,6 @@
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers'
 import { applyPersistentLayout } from '@/composables/usePersistentLayout'
+import { buildCacheBustedUrl, consumeRecoveryReload } from '@/composables/useBootRecovery'
 import type { DefineComponent } from 'vue'
 
 /**
@@ -10,7 +11,13 @@ import type { DefineComponent } from 'vue'
  * `Failed to fetch dynamically imported module`), на проде после деплоя
  * можно приехать в stale-чанк. Без обработки визит умирает с uncaught
  * promise и мёртвым экраном. Повтор обычно подбирает уже прогретый
- * модуль; если нет — полная перезагрузка подтягивает свежий манифест.
+ * модуль; если нет — перезагрузка на свежий манифест.
+ *
+ * Бюджет перезагрузок общий со сторожем blade и глобальным хендлером
+ * (`consumeRecoveryReload` из `useBootRecovery`): максимум 2 за 5 минут
+ * на всё, вторая — с `?v=` мимо SW/HTTP-кэшей (иначе reload отдаёт тот же
+ * протухший HTML и визит умирает в цикле). Дальше — исходная ошибка
+ * (видно реальную причину) и фолбэк-панель сторожа.
  *
  * Вынесен из `app.ts` по Правилу №1 (логика — в хуках).
  *
@@ -27,10 +34,6 @@ import type { DefineComponent } from 'vue'
 export function usePageResolver(pageModules: Record<string, () => Promise<DefineComponent>>) {
   /** Пауза перед повтором, чтобы Vite в dev успел прогреть transform. */
   const RETRY_DELAY_MS = 800
-  /** Максимум жёстких перезагрузок страницы за окно — дальше петля, стоим. */
-  const MAX_RELOADS = 2
-  /** Окно счётчика перезагрузок. */
-  const RELOAD_WINDOW_MS = 5 * 60 * 1000
 
   /**
    * Загрузить модуль страницы и назначить персистентный лейаут.
@@ -58,13 +61,13 @@ export function usePageResolver(pageModules: Record<string, () => Promise<Define
 
   /**
    * Резолвер для Inertia: грузит страницу, при сбое — одна повторная
-   * попытка, при повторном сбое на клиенте — жёсткая перезагрузка
-   * на свежий манифест. На SSR (`window` нет) — просто проброс ошибки,
-   * перезагружаться там некуда и нечем.
+   * попытка, при повторном сбое на клиенте — перезагрузка из общего
+   * бюджета (`useBootRecovery`, максимум 2 за 5 минут на всё).
+   * На SSR (`window` нет) — просто проброс ошибки, перезагружаться
+   * там некуда и нечем.
    *
-   * Петля от бесконечных перезагрузок закрыта счётчиком: больше
-   * MAX_RELOADS за RELOAD_WINDOW_MS — не перезагружаемся, а бросаем
-   * исходную ошибку (видно реальную причину, а не вечный спиннер).
+   * Бюджет исчерпан — бросаем исходную ошибку (видно реальную причину,
+   * а не вечный спиннер), фолбэк покажет сторож blade.
    *
    * @param name имя Inertia-страницы
    * @returns модуль страницы
@@ -85,8 +88,8 @@ export function usePageResolver(pageModules: Record<string, () => Promise<Define
       } catch {
         const isClient = typeof window !== 'undefined'
 
-        if (isClient && allowReload(name)) {
-          window.location.reload()
+        if (isClient) {
+          reloadToFreshBuild()
         }
 
         throw firstError
@@ -95,36 +98,20 @@ export function usePageResolver(pageModules: Record<string, () => Promise<Define
   }
 
   /**
-   * Можно ли сейчас жёстко перезагрузиться под эту страницу.
+   * Перезагрузиться на свежий билд из общего бюджета.
    *
-   * Счётчик в sessionStorage: пережил reload, умер со вкладкой.
-   * Истёкшее окно сбрасывается — разовые сбои через час снова лечатся.
-   * Хранилище недоступно (приватный режим, блокировка cookies) —
-   * НЕ перезагружаемся: без счётчика это вечный цикл reload'ов
-   * (вкладка «бесконечно грузится», браузер предлагает её убить),
-   * а так бросаем исходную ошибку и видна реальная причина.
-   *
-   * @param name имя Inertia-страницы
-   * @returns true если лимит перезагрузок не исчерпан (и счётчик записан)
+   * Первая попытка мягкая, вторая — с `?v=` мимо кэшей
+   * (`stripRefreshParam` в `useBuildVersion` чистит параметр после бута).
+   * Бюджет исчерпан — ничего не делаем: ошибку выше увидит глобальный
+   * хендлер, фолбэк покажет сторож blade.
    */
-  function allowReload(name: string): boolean {
-    try {
-      const key = `upin:page-reload:${name}`
-      const raw = sessionStorage.getItem(key)
-      const now = Date.now()
-      const parsed = raw ? (JSON.parse(raw) as { count?: number; firstAt?: number }) : null
-      const fresh = parsed && now - (parsed.firstAt ?? 0) < RELOAD_WINDOW_MS
-      const count = fresh ? Number(parsed?.count ?? 0) : 0
+  function reloadToFreshBuild(): void {
+    const mode = consumeRecoveryReload()
 
-      if (count >= MAX_RELOADS) {
-        return false
-      }
-
-      sessionStorage.setItem(key, JSON.stringify({ count: count + 1, firstAt: fresh ? parsed?.firstAt : now }))
-
-      return true
-    } catch {
-      return false
+    if (mode === 'bust') {
+      window.location.replace(buildCacheBustedUrl())
+    } else if (mode === 'reload') {
+      window.location.reload()
     }
   }
 

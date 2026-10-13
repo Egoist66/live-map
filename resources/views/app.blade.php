@@ -208,6 +208,123 @@
         <script nonce="{{ $cspNonce ?? '' }}">
             (function(){ try{ var root=document.documentElement; var s=localStorage.getItem('theme'); var m=window.matchMedia('(prefers-color-scheme: dark)').matches; var isTg=root.classList.contains('tg-app'); var tgDark=root.classList.contains('tg-dark'); var d=isTg ? tgDark : (s ? s==='dark' : m); if(d) root.classList.add('dark'); else root.classList.remove('dark'); root.style.colorScheme = d?'dark':'light'; var tgBg=root.classList.contains('tg-app') ? root.style.getPropertyValue('--tg-theme-bg-color').trim() : ''; var bg=tgBg || (d?'#0F121F':'#ffffff'); window.__upinThemeBg = bg; /* Держим тёмный фон, пока жив #pwa-boot: проверка getElementById здесь бессмысленна (head парсится раньше body-разметки, узел ещё не существует), а светлый <html> под фейдом выцветает розовый логотип в серый. Целевой фон вернёт __upinHideSplash ровно в момент удаления узла. */ root.style.backgroundColor = '#150B10'; }catch(e){} })();
         </script>
+        {{-- Сторож загрузки entry: после деплоя HTML может ссылаться на уже
+              удалённый `/build/assets/app-*.js` (протухший SW/HTTP-кэш, гонка
+              rolling-деплоя) — тогда модуль не грузится вообще и страница
+              навсегда остаётся белой (`#pwa-boot` гаснет по таймеру, `#app`
+              пуст). app.ts ставит `__upinBooted = true` сразу после mount;
+              если флага нет — лечимся сами: пара перезагрузок (вторая с
+              `?v=` мимо кэшей), затем фолбэк-панель с кнопкой «Обновить»
+              (чистка SW-кэшей + жёсткий переход). Счётчик общий с
+              `useBootRecovery`/`usePageResolver` (`upin:boot-reloads`):
+              максимум 2 самоперезагрузки за 5 минут — петель нет. --}}
+        <script nonce="{{ $cspNonce ?? '' }}">
+            (function () {
+                try {
+                    window.__upinBooted = false;
+                    var KEY = 'upin:boot-reloads';
+                    var MAX = 2;
+                    var WINDOW_MS = 5 * 60 * 1000;
+                    var BOOT_WAIT_MS = 9000;
+
+                    var readGuard = function () {
+                        try {
+                            var raw = window.sessionStorage.getItem(KEY);
+                            if (!raw) return { count: 0, firstAt: 0 };
+                            var parsed = JSON.parse(raw);
+                            return { count: Number(parsed.count) || 0, firstAt: Number(parsed.firstAt) || 0 };
+                        } catch (e) { return { count: 0, firstAt: 0 }; }
+                    };
+
+                    var bustUrl = function () {
+                        try {
+                            var url = new URL(window.location.href);
+                            url.searchParams.set('v', String(Date.now()));
+                            return url.toString();
+                        } catch (e) { return window.location.href; }
+                    };
+
+                    var heal = function () {
+                        if (window.__upinBooted) return;
+                        var now = Date.now();
+                        var guard = readGuard();
+                        var fresh = guard.firstAt && now - guard.firstAt < WINDOW_MS;
+                        var count = fresh ? guard.count : 0;
+                        if (count >= MAX) {
+                            showFallback();
+                            return;
+                        }
+                        try {
+                            window.sessionStorage.setItem(KEY, JSON.stringify({ count: count + 1, firstAt: fresh ? guard.firstAt : now }));
+                        } catch (e) {}
+                        if (count === 0) {
+                            window.location.reload();
+                        } else {
+                            window.location.replace(bustUrl());
+                        }
+                    };
+
+                    var showFallback = function () {
+                        try {
+                            if (window.__upinBooted || document.getElementById('upin-boot-fallback')) return;
+                            var box = document.createElement('div');
+                            box.id = 'upin-boot-fallback';
+                            box.setAttribute('role', 'alert');
+                            var title = document.createElement('div');
+                            title.className = 'upin-boot-fallback-title';
+                            title.textContent = 'Не удалось загрузить приложение';
+                            var text = document.createElement('p');
+                            text.className = 'upin-boot-fallback-text';
+                            text.textContent = 'Похоже, вышла новая версия, а страница осталась старой. Обновим — это быстро.';
+                            var btn = document.createElement('button');
+                            btn.type = 'button';
+                            btn.className = 'upin-boot-fallback-btn';
+                            btn.textContent = 'Обновить';
+                            btn.addEventListener('click', function () {
+                                try {
+                                    if ('caches' in window) {
+                                        window.caches.keys().then(function (keys) {
+                                            keys.forEach(function (k) { window.caches.delete(k); });
+                                        }).catch(function () {});
+                                    }
+                                } catch (e) {}
+                                try {
+                                    if (navigator.serviceWorker) {
+                                        navigator.serviceWorker.getRegistrations().then(function (regs) {
+                                            regs.forEach(function (r) { try { r.unregister(); } catch (e2) {} });
+                                        }).catch(function () {});
+                                    }
+                                } catch (e) {}
+                                window.setTimeout(function () { window.location.replace(bustUrl()); }, 350);
+                            });
+                            box.appendChild(title);
+                            box.appendChild(text);
+                            box.appendChild(btn);
+                            document.body.appendChild(box);
+                        } catch (e) {}
+                    };
+
+                    window.addEventListener('error', function (e) {
+                        try {
+                            var t = e && e.target;
+                            var src = (t && (t.src || t.href)) || '';
+                            if (typeof src === 'string' && src.indexOf('/build/assets/') !== -1) heal();
+                        } catch (err) {}
+                    }, true);
+
+                    var armed = false;
+                    var arm = function (ms) {
+                        window.setTimeout(function () {
+                            try { if (!window.__upinBooted) heal(); } catch (e) {}
+                        }, ms);
+                    };
+                    window.addEventListener('load', function () {
+                        if (!armed) { armed = true; arm(BOOT_WAIT_MS); }
+                    });
+                    arm(BOOT_WAIT_MS + 12000);
+                } catch (e) {}
+            })();
+        </script>
         {{-- Прелоадер: полноэкранный boot-экран в стиле Tinder
               (тёплая тьма, светящаяся иконка пин+сердце).
               Верхней линейной полосы здесь нет сознательно: при переходах
@@ -309,6 +426,46 @@
             #pwa-boot *, #pwa-boot *::before, #pwa-boot *::after {
               animation: none !important;
             }
+          }
+          /* Фолбэк сторожа загрузки (см. скрипт выше): рисуется только когда
+             entry не загрузился и перезагрузки исчерпаны. Стили инлайном,
+             т.к. CSS приложения к этому моменту может отсутствовать. */
+          #upin-boot-fallback {
+            position: fixed;
+            inset: 0;
+            z-index: 9998;
+            display: grid;
+            place-items: center;
+            padding: 24px;
+            background: #150B10;
+            text-align: center;
+          }
+          #upin-boot-fallback .upin-boot-fallback-title {
+            color: #fff;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+          }
+          #upin-boot-fallback .upin-boot-fallback-text {
+            margin: 10px auto 0;
+            max-width: 320px;
+            color: rgba(255, 255, 255, .65);
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+          }
+          #upin-boot-fallback .upin-boot-fallback-btn {
+            margin-top: 22px;
+            border: 0;
+            border-radius: 999px;
+            padding: 13px 34px;
+            background: linear-gradient(90deg, #FD267D, #E936C7, #FF7854);
+            color: #fff;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
           }
         </style>
         @if(!$isNativeClient)

@@ -14,23 +14,10 @@ import { useAdminReports } from '@/composables/useAdminReports'
 import AdminStatsCards from '@/Components/Features/Admin/AdminStatsCards.vue'
 import AdminActivityChart from '@/Components/Features/Admin/AdminActivityChart.vue'
 import AdminOnlineList from '@/Components/Features/Admin/AdminOnlineList.vue'
-import AdminUsersManager from '@/Components/Features/Admin/AdminUsersManager.vue'
-import AdminBusinessManager from '@/Components/Features/Admin/AdminBusinessManager.vue'
-import AdminUpdatesManager from '@/Components/Features/Admin/AdminUpdatesManager.vue'
 import AdminImpersonateDialog from '@/Components/Features/Admin/AdminImpersonateDialog.vue'
-import AdminImpersonationLogs from '@/Components/Features/Admin/AdminImpersonationLogs.vue'
-import AdminLoginAttempts from '@/Components/Features/Admin/AdminLoginAttempts.vue'
-import AdminMaintenanceManager from '@/Components/Features/Admin/AdminMaintenanceManager.vue'
-import AdminModulesManager from '@/Components/Features/Admin/AdminModulesManager.vue'
-import AdminPaymentsManager from '@/Components/Features/Admin/AdminPaymentsManager.vue'
-import AdminAiManager from '@/Components/Features/Admin/AdminAiManager.vue'
-import AdminReferencesManager from '@/Components/Features/Admin/AdminReferencesManager.vue'
-import AdminSeoManager from '@/Components/Features/Admin/AdminSeoManager.vue'
-import AdminTelegramUsers from '@/Components/Features/Admin/AdminTelegramUsers.vue'
-import AdminBotBroadcasts from '@/Components/Features/Admin/AdminBotBroadcasts.vue'
 import AdminSidebar from '@/Components/Features/Admin/AdminSidebar.vue'
 import AdminTopbar from '@/Components/Features/Admin/AdminTopbar.vue'
-import SettingsAdminTab from '@/Components/Features/Settings/SettingsAdminTab.vue'
+import { useAdminSections } from '@/composables/useAdminSections'
 import { useAdminReference } from '@/composables/useAdminReference'
 import { useAdminSeo } from '@/composables/useAdminSeo'
 import { useAdminAppUpdates } from '@/composables/useAdminAppUpdates'
@@ -64,6 +51,27 @@ const seo = useAdminSeo()
 const access = useAdminAccess()
 const tgUsers = useAdminTelegramUsers()
 const botBroadcasts = useAdminBotBroadcasts()
+
+/**
+ * Тяжёлые табы — ленивыми чанками: упавший чанк гасит только свою секцию
+ * (скелет → плашка с «Повторить»), а не всю консоль белым экраном.
+ */
+const {
+  users: AdminUsersSection,
+  business: AdminBusinessSection,
+  updates: AdminUpdatesSection,
+  impersonateLogs: AdminImpersonateLogsSection,
+  loginAttempts: AdminLoginAttemptsSection,
+  maintenance: AdminMaintenanceSection,
+  modules: AdminModulesSection,
+  payments: AdminPaymentsSection,
+  ai: AdminAiSection,
+  references: AdminReferencesSection,
+  seo: AdminSeoSection,
+  telegramUsers: AdminTelegramUsersSection,
+  botBroadcasts: AdminBotBroadcastsSection,
+  adminTab: SettingsAdminTabSection,
+} = useAdminSections()
 
 /**
  * Счётчики для бейджей бокового меню (жалобы, бизнес, алерты).
@@ -223,7 +231,7 @@ enforceVisibleTab()
 
             <section v-else-if="tab === 'manage' && staff.isAdmin.value" aria-label="Пользователи">
               <div class="min-w-0 max-w-[960px]">
-                <AdminUsersManager
+                <AdminUsersSection
                   :list="mon.users.value" :meta="mon.usersMeta.value" :page="mon.usersPage.value" :query="mon.usersQuery.value" :filter="mon.usersFilter.value" :sort="mon.usersSort.value" :limit="mon.usersLimit.value" :loading="mon.loadingUsers.value" :acting-id="mon.actingId.value" :admin="admin" :auth-user-id="mon.authUserId.value"
                   @update:query="(v:string)=>mon.usersQuery.value=v" @filter="(v:string)=>mon.setUsersFilter(v as any)" @sort="(v:string)=>mon.usersSort.value=v as any" @limit="(v:number)=>mon.usersLimit.value=v" @page="mon.setUsersPage"
                   @plan="mon.setPlan" @role="mon.requestRoleChange" @impersonate="imp.ask" @ban="(u:any)=>logins.ban(u)" @unban="(u:any)=>logins.unban(u)" @created="mon.loadUsers()"
@@ -234,58 +242,58 @@ enforceVisibleTab()
             <section v-else-if="tab === 'security' && staff.isAdmin.value" aria-label="Безопасность">
               <div class="grid min-w-0 grid-cols-1 items-start gap-4 xl:grid-cols-2">
                 <div class="min-w-0 xl:col-span-2">
-                  <AdminMaintenanceManager :mgr="maintenance" />
+                  <AdminMaintenanceSection :mgr="maintenance" />
                 </div>
-                <AdminLoginAttempts :attempts="logins" />
-                <AdminImpersonationLogs :logs="impLogs" />
+                <AdminLoginAttemptsSection :attempts="logins" />
+                <AdminImpersonateLogsSection :logs="impLogs" />
               </div>
             </section>
 
             <section v-else-if="tab === 'admin'" aria-label="Модерация">
-              <SettingsAdminTab :admin="admin" :reports="reports" :imp="imp" />
+              <SettingsAdminTabSection :admin="admin" :reports="reports" :imp="imp" />
             </section>
 
             <section v-else-if="tab === 'business'" aria-label="Бизнес">
               <div class="grid min-w-0 grid-cols-1 items-start gap-4 xl:grid-cols-2">
-                <AdminBusinessManager :queue="businessQueue" />
+                <AdminBusinessSection :queue="businessQueue" />
               </div>
             </section>
 
             <section v-else-if="tab === 'modules' && staff.isAdmin.value" aria-label="Модули">
               <div class="grid min-w-0 grid-cols-1 items-start gap-4 xl:grid-cols-2">
-                <AdminModulesManager />
-                <AdminUpdatesManager :mgr="appUpdates" />
+                <AdminModulesSection />
+                <AdminUpdatesSection :mgr="appUpdates" />
               </div>
             </section>
 
             <section v-else-if="tab === 'payments' && staff.isAdmin.value" aria-label="Тарифы">
               <div class="min-w-0 max-w-[960px]">
-                <AdminPaymentsManager />
+                <AdminPaymentsSection />
               </div>
             </section>
 
             <section v-else-if="tab === 'ai' && staff.isAdmin.value" aria-label="ИИ">
               <div class="grid min-w-0 grid-cols-1 items-start gap-4 xl:grid-cols-2">
-                <AdminAiManager />
+                <AdminAiSection />
               </div>
             </section>
 
             <section v-else-if="tab === 'refs'" aria-label="Справочники">
               <div class="grid min-w-0 grid-cols-1 items-start gap-4 xl:grid-cols-2">
-                <AdminReferencesManager :mgr="refs" />
+                <AdminReferencesSection :mgr="refs" />
               </div>
             </section>
 
             <section v-else-if="tab === 'seo'" aria-label="SEO">
               <div class="grid min-w-0 grid-cols-1 items-start gap-4 xl:grid-cols-2">
-                <AdminSeoManager :mgr="seo" />
+                <AdminSeoSection :mgr="seo" />
               </div>
             </section>
 
             <section v-else-if="tab === 'telegram'" aria-label="Telegram">
               <div class="min-w-0 grid grid-cols-1 items-start gap-4 xl:grid-cols-2">
-                <AdminTelegramUsers :tg="tgUsers" />
-                <AdminBotBroadcasts v-if="staff.isAdmin.value" :bb="botBroadcasts" />
+                <AdminTelegramUsersSection :tg="tgUsers" />
+                <AdminBotBroadcastsSection v-if="staff.isAdmin.value" :bb="botBroadcasts" />
               </div>
             </section>
 
