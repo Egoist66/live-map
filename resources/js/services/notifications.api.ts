@@ -145,7 +145,7 @@ export function describeInboxRow(row: InboxNotification): InboxText {
     const title = r.target_title || `${r.target_type ?? ''} #${r.target_id ?? ''}`
     const from = r.reporter?.name ? r.reporter.name : subjectWord(r.reporter) === 'Организация' ? 'организации' : 'пользователя'
     const body = (r.description ? `${r.description} — ` : '') + `от ${from}`
-    return { emoji: '🚩', title: `Жалоба: ${r.reason_label || r.reason || ''}`, body: `${title} · ${body}`.slice(0, 120), link: '/settings?tab=admin', avatar: r.reporter?.avatar_url ?? null }
+    return { emoji: '🚩', title: `Жалоба: ${r.reason_label || r.reason || ''}`, body: `${title} · ${body}`.slice(0, 120), link: '/settings/admin', avatar: r.reporter?.avatar_url ?? null }
   }
   if (row.type === 'security.impersonation') {
     const log = data.log ?? {}
@@ -160,7 +160,7 @@ export function describeInboxRow(row: InboxNotification): InboxText {
   if (row.type === 'business.submitted') {
     const b = data.business ?? {}
     const name = String(b.name || 'Компания').slice(0, 60)
-    return { emoji: '💼', title: 'Новая заявка бизнеса', body: `${name} — проверка по УНП${b.unp ? ` ${b.unp}` : ''}`.slice(0, 120), link: '/admin?tab=business', avatar: null }
+    return { emoji: '💼', title: 'Новая заявка бизнеса', body: `${name} — проверка по УНП${b.unp ? ` ${b.unp}` : ''}`.slice(0, 120), link: '/admin/business', avatar: null }
   }
   if (row.type === 'business.verified') {
     const b = data.business ?? {}

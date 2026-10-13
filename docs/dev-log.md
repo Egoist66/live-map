@@ -1,5 +1,23 @@
 # Dev-лог
 
+## 2026-10-13 — 🔧 Раздел поддержки скрыт от админов и модераторов
+- 🔧 Стафф сам обрабатывает обращения — таб «Поддержка» больше не показывается админам и модераторам в настройках (`showSupport` в `useSettingsTabs` через `useStaffRole().isModerator`, панель в `Edit.vue` за `v-if`, прямой URL `/settings/support` откатывается на профиль валидацией таба).
+- Проверки: `vue-tsc --noEmit` ✅.
+- ⚠️ Вживую: редеплой фронта; зайти в настройки админом/модератором — таба поддержки нет, у обычных пользователей на месте.
+
+## 2026-10-13 — 🔧 Убраны БНБ-конвертер и донат: в поддержке только обращение
+- 🔧 Фронт: таб «Поддержка» — только карточка «Обратиться в поддержку», блок «Поддержать проект» и `NbrbCalculator` вырезаны. Удалены мёртвые файлы: `NbrbCalculator.vue`, `useNbrb`, `useDonate`, `useSupportExchange`; из `useSupportForm` убраны `donateSel/setDonate/mailToDonate`, из `useSettingsPage` — `ex` и догрузка курса; тексты подчищены (таб — «Обращение», в дашборде без «задонать»).
+- 🔧 Бэк: удалены `NbrbController` и роуты `/api/nbrb/*`, из `CacheApiResponses` убран public-путь `nbrb`, из CSP (`SecurityHeaders`) — `api.nbrb.by`. `/api/support` не тронут.
+- Проверки: `php -l` ✅ ×3, `route:list` (nbrb — пусто, support на месте) ✅, `vue-tsc --noEmit` ✅.
+- ⚠️ Вживую: редеплой бэка + фронта; таб поддержки — одна форма обращения.
+
+## 2026-10-13 — 🔧 Админка на path-параметрах + панель модерации в новой вкладке
+- 🔧 Роутинг разделов переведён с query на путь: `/admin/stats`, `/admin/business`, `/admin/seo/scripts` (роут `/admin/{tab?}/{seo?}`, `PageController::admin` отдаёт `initialTab/initialSeoSection` — прямая ссылка сразу рисует нужный раздел, редиректов нет). Хук `useAdminTabs` переписан: читает сегменты пути, голый `/admin` дописывает текущий раздел, старые `?tab=`/`?seo=` (закладки, отправленные пуши) понимаются и канонизируются в path-вид без перезагрузки.
+- 🔧 Клик по «Панели модерации» (дропдаун профиля и кнопка в профиле) открывает консоль в отдельной вкладке браузера (`openAdminPanel` в `useAdminTabs`, текущая страница нетронута; при блокировке попапов — переход в той же вкладке).
+- 🔧 Все ссылки обновлены: `goReports` → `/admin/admin` и `/settings/admin`, тосты/инбокс (`report.created` → `/settings/admin`, `business.submitted` → `/admin/business`), пуши (`BusinessSubmittedNotification`, `ReportCreatedNotification`).
+- Проверки: `php -l` ✅ ×4, `vue-tsc --noEmit` ✅.
+- ⚠️ Вживую: редеплой бэка + фронта; открыть `/admin/business` прямой ссылкой — сразу раздел бизнеса; клик по панели модерации — новая вкладка.
+
 ## 2026-10-13 — 🐞 Модалки PRO/Premium крашились: `s.map is not a function`
 - 🐞 Симптом: клик по PRO/Premium в настройках профиля ронял модалку (`showPlan`, `s.map is not a function`), Free открывался. Причина: `PlanCatalog::featuresForPlan` — `filter()` сохраняет ключи коллекции, без `values()` `json_encode` отдаёт объект вместо массива. Free шёл первыми 14 строками (ключи подряд — везло), у PRO/Premium ключи с дырами — фронт падал на `.map`. Вылезло после расширения сида до 52 фишек.
 - 🔧 Фикс: `->values()` перед `->all()` в `featuresForPlan` (ключи всегда подряд); плюс страховка во фронте — `featuresFor` отдаёт пусто вместо не-массива, модалка не падает никогда.
@@ -1640,7 +1658,8 @@
 - Проверка: vue-tsc --noEmit — ок.
 
 ## 2026-09-23 — Даблтап-зум фото и закрытие модалок свайпом/кликом мимо
-- Зум постов (PhotoLightbox/usePhotoZoom): даблтап больше не съедается eset() — ireDoubleTap() возвращает флаг и пропускает сброс/свайп; зум целится в точку тапа; даблклик мыши переехал внутрь хука с подавлением синтетического dblclick после тач-даблтапа (раньше второй тоггл тут же отменял зум); свайп вниз — закрыть (onSwipeDown), клик мимо фото — закрыть (клик после drag-свайпа игнорим через consumeDragged()). @dblclick из шаблона убран.
+- Зум постов (PhotoLightbox/usePhotoZoom): даблтап больше не съедается 
+eset() — ireDoubleTap() возвращает флаг и пропускает сброс/свайп; зум целится в точку тапа; даблклик мыши переехал внутрь хука с подавлением синтетического dblclick после тач-даблтапа (раньше второй тоггл тут же отменял зум); свайп вниз — закрыть (onSwipeDown), клик мимо фото — закрыть (клик после drag-свайпа игнорим через consumeDragged()). @dblclick из шаблона убран.
 - Зум галереи (UGallery/ProfilePhotoViewer): корень — в usePhotoViewerZoom не было enabled: true, модуль Swiper Zoom молча не работал (ни pinch, ни даблтап); включено. Убран 	ouch-action: pan-y с .swiper-zoom-container (отдавал вертикаль браузеру через pointercancel и убивал pinch), добавлен .swiper-slide-zoomed { touch-action: none } как в официальном swiper/css/zoom. В usePhotoViewerSwiper — 	oggleZoom()/zoomOutAll() (зум гасится перед сменой слайда).
 - Закрытие модалок: новый useGlobalDialogDismiss (MutationObserver на .p-dialog-mask, подключён в Authenticated/Guest/Business layouts) — клик мимо диалога закрывает через крестик там, где нет dismissableMask; свайп вниз за шапку закрывает (с живой тянучкой, порог 90px); диалоги без крестика (closable=false: термы, SOS, age-gate) пропускаются. Новый useSwipeToClose на @vueuse/useSwipe — свайп вниз с тянучкой для кастомных оверлеев: подключён к шапке ProfilePhotoViewer и карточке AvatarPreview (у него клик мимо уже был). Стили ручки .dlg-swipe-handle (только pointer: coarse) и .dlg-dragging в pp.css.
 - Проверки: ue-tsc --noEmit — ок.
@@ -2004,3 +2023,14 @@
 - 🐞 Ссылка на профиль в шапке диалога тянулась на всю ширину плашки (аватар + имя + статус одним `Link flex-1`). Теперь внешний `Link` заменён `div`, кликабелен только текст имени (`Link block w-fit max-w-full truncate`) — для лички ведёт в профиль, для района — на страницу района.
 - 🔧 Виджет чата справа внизу убран полностью, включая десктоп: из `AuthenticatedLayout` выведены `FloatingWidgets` (розовый FAB) и `MiniChatDock` (всплывающие мини-окна). Файлы компонентов/хуков оставлены на месте, просто не монтируются; AI-гид доступен из профиля (`UloveProfileView` → `openGuide`), `AiGuideDialog` в лейауте остался.
 - Проверки: `vue-tsc --noEmit` ✅.
+
+## 2026-10-13 — PageSpeed лендинга: диета entry, WebP hero, lazy-чанки
+
+- Фикс: `usePersistentLayout` статически импортировал оба лейаута — весь `AuthenticatedLayout` (chat.api/notifications.api, user-канал, vee-validate) ехал в entry и прелоадился `Link`-заголовками каждому визиту, включая гостей лендинга без лейаута. Лейауты переведены на `defineAsyncComponent` (стабильная обёртка, SSR-совместим): entry 17 → 8–9 чанков.
+- Фикс: PrimeVue больше не собирается в монолит 1.1МБ raw — `vendorChunk()` возвращает `undefined` для primevue/`@primeuix`/`@primevue`, Rolldown режет по использованию (лендинг тянет только свои Button/Card/Tag/Badge/Avatar). Дублирующиеся `manualChunks` в `rollupOptions`/`rolldownOptions` объединены в одну функцию.
+- Замер по манифесту (gzip): entry 418К → 254К (−164К), Welcome 436К → 284К (−152К). `check-bundle-isolation` зелёный.
+- Фото: hero JPG 800px → WebP 560px под контейнер (`public/landing/hero-*-560.webp`, q78): 280КБ → 95КБ. `useWelcomeHeroSwiper` отдаёт `photoWebp` + реальные width/height, `Welcome.vue` рисует `<picture>` (WebP + JPG-фолбэк), первый слайд `fetchpriority=high` + preload LCP в `<Head>`.
+- `CooperationDialog` — ленивый (`defineAsyncComponent`), нижефолдовые секции лендинга — `[content-visibility:auto]` с `contain-intrinsic-size` (без прыжка скролла).
+- `useAppBoot`: 8 визуальных шагов бута идут параллельно (`Promise.allSettled`), `bootTelegram` не импортирует чанк без TG-маркеров в URL/куке, `bootExpoPush` пропускается гостям.
+- Кэш: `CacheStaticAssets` покрывает и `/landing/*` (месяц, без хэша в имени), в `public/.htaccess` — MIME WebP + месячный кэш hero-фото для Apache-хостингов (SW и `/build/*` не трогаем: их кэшируют middleware/edge Cloud).
+- Проверки: `vue-tsc --noEmit` ✅, `pnpm run build` (client + SSR) ✅, изоляция бандла ✅. После деплоя на Cloud перепроверить PageSpeed (LCP/TBT/CLS) — `Link`-прелоады ужмутся сами из нового манифеста.

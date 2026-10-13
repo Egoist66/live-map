@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { defineAsyncComponent } from 'vue'
 import { Head, Link } from '@inertiajs/vue3'
 import { useWelcome } from '@/composables/useWelcome'
 import { useWelcomeMode } from '@/composables/useWelcomeMode'
@@ -7,13 +8,21 @@ import { useSupportEmail } from '@/composables/useSettingsSupport'
 import { useCooperation } from '@/composables/useCooperation'
 import AppFooter from '@/Layouts/AppFooter.vue'
 import BrandMark from '@/Components/Brand/BrandMark.vue'
-import CooperationDialog from '@/Components/Features/Cooperation/CooperationDialog.vue'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import Tag from 'primevue/tag'
 import Badge from 'primevue/badge'
 import Avatar from 'primevue/avatar'
 import type { LandingTabId } from '@/composables/useModuleContent'
+
+/**
+ * Диалог сотрудничества — ниже фолда, открывается по клику.
+ * Ленивый: Dialog/InputText/Textarea едут отдельным чанком,
+ * а не в первом визите лендинга (LCP/TBT).
+ */
+const CooperationDialog = defineAsyncComponent(
+  () => import('@/Components/Features/Cooperation/CooperationDialog.vue'),
+)
 
 const w = useWelcome()
 const landing = useWelcomeMode()
@@ -36,6 +45,7 @@ function switchTab(next: LandingTabId): void {
     <meta head-key="description" name="description" :content="landing.seo.value.description" />
     <meta head-key="og:title" property="og:title" :content="landing.seo.value.title" />
     <meta head-key="og:description" property="og:description" :content="landing.seo.value.description" />
+    <link head-key="hero-lcp" rel="preload" as="image" href="/landing/hero-anya-560.webp" fetchpriority="high" />
   </Head>
   <div class="min-h-screen flex flex-col bg-surface dark:bg-[#0F121F] text-ink-900 dark:text-zinc-100 antialiased selection:bg-rose-500 selection:text-white overflow-x-hidden">
     <div class="flex flex-col min-h-screen">
@@ -114,18 +124,25 @@ function switchTab(next: LandingTabId): void {
                      чипы интересов. Кнопок действий НА карточке
                      в продукте нет — они под колодой. -->
                 <!-- Все фото грузим сразу: ленивая подгрузка давала пустой
-                     слайд при клике по точке — второй визуальный баг. -->
-                <img
-                  :src="profile.photo"
-                  class="absolute inset-0 w-full h-full object-cover"
-                  :alt="`Анкета ULove — ${profile.name}`"
-                  loading="eager"
-                  :fetchpriority="slideIndex === 0 ? 'high' : 'auto'"
-                  decoding="async"
-                  width="600"
-                  height="800"
-                  @error="hero.onPhotoError(profile)"
-                />
+                     слайд при клике по точке — второй визуальный баг.
+                     WebP (`photoWebp`, 560px под контейнер) — в 2–3 раза
+                     легче JPG: PageSpeed насчитал 134КБ перевеса.
+                     Первый слайд — LCP: `fetchpriority=high` + preload
+                     в `<Head>` выше; остальные — обычный приоритет. -->
+                <picture class="absolute inset-0">
+                  <source :srcset="profile.photoWebp" type="image/webp" />
+                  <img
+                    :src="profile.photo"
+                    class="absolute inset-0 w-full h-full object-cover"
+                    :alt="`Анкета ULove — ${profile.name}`"
+                    loading="eager"
+                    :fetchpriority="slideIndex === 0 ? 'high' : 'auto'"
+                    decoding="async"
+                    :width="profile.photoWidth"
+                    :height="profile.photoHeight"
+                    @error="hero.onPhotoError(profile)"
+                  />
+                </picture>
                 <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent"></div>
                 <div class="absolute bottom-0 inset-x-0 p-4 text-white">
                   <div class="flex items-end gap-2">
@@ -218,7 +235,7 @@ function switchTab(next: LandingTabId): void {
       </div>
     </section>
 
-    <section id="how" class="max-w-[1280px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 py-4 sm:py-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 scroll-mt-20">
+    <section id="how" class="max-w-[1280px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 py-4 sm:py-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 scroll-mt-20 [content-visibility:auto] [contain-intrinsic-size:auto_480px]">
       <Card v-for="step in landing.content.value.steps" :key="step.title" class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[20px] !shadow-soft card-hover group cursor-default">
         <template #content>
           <div :class="['w-11 h-11 rounded-xl text-white grid place-items-center font-bold text-sm card-icon', landing.theme.value.stepIcon]"><i :class="`pi ${step.icon}`" /></div>
@@ -227,7 +244,7 @@ function switchTab(next: LandingTabId): void {
       </Card>
     </section>
 
-    <section class="max-w-[1280px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 py-4 sm:py-6 grid lg:grid-cols-5 gap-3 sm:gap-4">
+    <section class="max-w-[1280px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 py-4 sm:py-6 grid lg:grid-cols-5 gap-3 sm:gap-4 [content-visibility:auto] [contain-intrinsic-size:auto_560px]">
       <div class="lg:col-span-3 bg-ink-900 dark:bg-zinc-900 dark:border dark:border-zinc-800 text-white rounded-[20px] sm:rounded-[24px] p-5 sm:p-8 relative overflow-hidden">
         <div class="absolute -right-20 -top-20 w-80 h-80 bg-gradient-to-br from-rose-500 to-orange-400 rounded-full blur-[60px] opacity-25"></div>
       <div class="relative w-full max-w-[680px] mx-auto">
@@ -251,7 +268,7 @@ function switchTab(next: LandingTabId): void {
       </Card>
     </section>
 
-    <section class="max-w-[1280px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-[calc(1.5rem+var(--sab))]">
+    <section class="max-w-[1280px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-[calc(1.5rem+var(--sab))] [content-visibility:auto] [contain-intrinsic-size:auto_220px]">
       <Card class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[24px] !shadow-soft card-hover">
         <template #content>
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -262,7 +279,7 @@ function switchTab(next: LandingTabId): void {
       </Card>
     </section>
 
-    <section class="max-w-[1280px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 pb-6 sm:pb-8">
+    <section class="max-w-[1280px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 pb-6 sm:pb-8 [content-visibility:auto] [contain-intrinsic-size:auto_240px]">
       <div class="relative overflow-hidden rounded-[20px] sm:rounded-[24px] bg-gradient-to-br from-rose-500 via-fuchsia-500 to-orange-400 p-5 sm:p-8 text-white shadow-float">
         <div class="absolute -right-16 -top-16 w-64 h-64 bg-white/15 rounded-full blur-[50px] pointer-events-none"></div>
         <div class="absolute -left-10 -bottom-16 w-52 h-52 bg-black/10 rounded-full blur-[40px] pointer-events-none"></div>

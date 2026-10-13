@@ -1,5 +1,5 @@
 import { ref, watch } from 'vue'
-import { router } from '@inertiajs/vue3'
+import { router, usePage } from '@inertiajs/vue3'
 import { replaceUrlPreservingState } from '@/composables/useHistoryState'
 
 /**
@@ -13,7 +13,7 @@ export type AdminTabId = 'stats' | 'manage' | 'security' | 'admin' | 'business' 
 export type AdminSeoSection = 'general' | 'pages' | 'integrations' | 'scripts' | 'crawl'
 
 /**
- * Допустимые значения `?tab=` в URL админ-панели.
+ * Допустимые разделы консоли в URL (`/admin/stats`, `/admin/business`…).
  */
 export const ADMIN_TABS: readonly AdminTabId[] = [
   'stats',
@@ -30,7 +30,7 @@ export const ADMIN_TABS: readonly AdminTabId[] = [
 ]
 
 /**
- * Допустимые значения `?seo=` в URL админ-панели.
+ * Допустимые подразделы SEO-центра (`/admin/seo/scripts`…).
  */
 export const ADMIN_SEO_SECTIONS: readonly AdminSeoSection[] = [
   'general',
@@ -77,66 +77,41 @@ function isSeoSection(value: unknown): value is AdminSeoSection {
 }
 
 /**
- * Прочитать `?tab=` и `?seo=` из адресной строки.
+ * Канонический путь раздела консоли.
  *
- * Невалидные значения откатываются к дефолтам,
- * отсутствующие — тоже (перезагрузка всегда открывает валидное место).
- * Вне `/admin` (кнопка назад на профиль, popstate) — ничего не трогаем:
- * иначе возврат из консоли молча сбрасывал бы запомненный раздел.
+ * @param next Раздел консоли.
+ * @param nextSeo Подраздел SEO-центра (только для `seo`).
+ * @returns Путь вида `/admin/stats` или `/admin/seo/scripts`.
  */
-function readFromUrl(): void {
-  if (typeof window === 'undefined') {
-    return
+export function adminSectionUrl(next: AdminTabId, nextSeo: AdminSeoSection = DEFAULT_SEO_SECTION): string {
+  if (next === 'seo') {
+    return `/admin/seo/${nextSeo}`
   }
 
-  if (!isAdminPath()) {
-    return
-  }
-
-  const params = new URLSearchParams(window.location.search)
-
-  const rawTab = params.get('tab')
-  tab.value = isAdminTab(rawTab) ? rawTab : DEFAULT_TAB
-
-  const rawSeo = params.get('seo')
-  seoSection.value = isSeoSection(rawSeo) ? rawSeo : DEFAULT_SEO_SECTION
+  return `/admin/${next}`
 }
 
 /**
- * Записать текущие табы в адресную строку без перезагрузки.
+ * Открыть консоль в отдельной вкладке браузера.
  *
- * `seo` храним только когда открыт таб `seo`,
- * чтобы URL вида `?tab=stats&seo=scripts` не смущал.
+ * Вызывается по клику на «Панель модерации» (меню, профиль): текущая
+ * страница остаётся нетронутой. Если всплывающие окна заблокированы —
+ * уходим в раздел в текущей вкладке, чтобы клик не был мёртвым.
  *
- * Важно для Inertia: состояние истории (`history.state`) сохраняем как есть.
- * Inertia хранит в нём данные страницы для кнопки назад/вперёд — прежний
- * `replaceState({}, ...)` затирал его пустым объектом, и возврат назад
- * (админка ↔ профиль) давал пустой экран до ручной перезагрузки.
+ * @param next Раздел консоли (по умолчанию статистика).
+ * @param nextSeo Подраздел SEO-центра.
  */
-function syncToUrl(): void {
+export function openAdminPanel(next: AdminTabId = DEFAULT_TAB, nextSeo: AdminSeoSection = DEFAULT_SEO_SECTION): void {
   if (typeof window === 'undefined') {
     return
   }
 
-  if (!isAdminPath()) {
-    return
+  const target = adminSectionUrl(next, nextSeo)
+  const opened = window.open(target, '_blank', 'noopener,noreferrer')
+
+  if (!opened) {
+    router.visit(target)
   }
-
-  const url = new URL(window.location.href)
-
-  url.searchParams.set('tab', tab.value)
-
-  if (tab.value === 'seo') {
-    url.searchParams.set('seo', seoSection.value)
-  } else {
-    url.searchParams.delete('seo')
-  }
-
-  if (url.toString() === window.location.href) {
-    return
-  }
-
-  replaceUrlPreservingState(url.toString())
 }
 
 /**
@@ -155,46 +130,157 @@ function isAdminPath(): boolean {
 }
 
 /**
+ * Разобрать сегменты пути консоли.
+ *
+ * @returns Таб и SEO-секция из пути (`null` — сегмент пуст или мусор).
+ */
+function parseAdminPath(): { pathTab: AdminTabId | null; pathSeo: AdminSeoSection | null } {
+  try {
+    const segments = new URL(window.location.href).pathname.split('/').filter(Boolean)
+
+    if (segments[0] !== 'admin') {
+      return { pathTab: null, pathSeo: null }
+    }
+
+    const rawTab = segments[1] ?? null
+    const rawSeo = segments[2] ?? null
+
+    return {
+      pathTab: isAdminTab(rawTab) ? rawTab : null,
+      pathSeo: isSeoSection(rawSeo) ? rawSeo : null,
+    }
+  } catch {
+    return { pathTab: null, pathSeo: null }
+  }
+}
+
+/**
+ * Начальные пропсы сервера для SSR.
+ *
+ * На сервере `window` нет — первый рендер берёт раздел из пропсов
+ * (`initialTab`/`initialSeoSection` из `PageController::admin`), чтобы
+ * прямая ссылка `/admin/business` сразу рисовала нужный раздел.
+ */
+function readInitialProps(): void {
+  try {
+    const props = usePage().props as unknown as { initialTab?: unknown; initialSeoSection?: unknown }
+
+    if (isAdminTab(props.initialTab)) {
+      tab.value = props.initialTab
+    }
+
+    if (isSeoSection(props.initialSeoSection)) {
+      seoSection.value = props.initialSeoSection
+    }
+  } catch {
+    // No-op: вне setup-контекста пропсов нет.
+  }
+}
+
+/**
+ * Прочитать раздел из адресной строки.
+ *
+ * Источник правды — path (`/admin/business`, `/admin/seo/scripts`).
+ * Старые `?tab=`/`?seo=` (закладки, уже отправленные пуши) понимаем как
+ * запасной вариант, когда в пути раздела нет, — `syncToUrl` тут же
+ * канонизирует адрес в path-вид. Голый `/admin` не трогает запомненный
+ * раздел: ссылка дописывается им позже в `syncToUrl`.
+ * Вне `/admin` (кнопка назад на профиль, popstate) — ничего не трогаем:
+ * иначе возврат из консоли молча сбрасывал бы запомненный раздел.
+ */
+function readFromUrl(): void {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  if (!isAdminPath()) {
+    return
+  }
+
+  const { pathTab, pathSeo } = parseAdminPath()
+
+  if (pathTab) {
+    tab.value = pathTab
+    seoSection.value = pathTab === 'seo' ? (pathSeo ?? DEFAULT_SEO_SECTION) : seoSection.value
+    return
+  }
+
+  const params = new URLSearchParams(window.location.search)
+  const legacyTab = params.get('tab')
+  const legacySeo = params.get('seo')
+
+  if (isAdminTab(legacyTab)) {
+    tab.value = legacyTab
+  }
+
+  if (tab.value === 'seo' && isSeoSection(legacySeo)) {
+    seoSection.value = legacySeo
+    return
+  }
+
+  if (tab.value === 'seo' && pathSeo) {
+    seoSection.value = pathSeo
+  }
+}
+
+/**
+ * Записать текущий раздел в адресную строку без перезагрузки.
+ *
+ * Путь всегда канонический (`/admin/stats`, `/admin/seo/scripts`),
+ * остатки `?tab=`/`?seo=` вычищаем. Остальные query-параметры не трогаем.
+ *
+ * Важно для Inertia: состояние истории (`history.state`) сохраняем как есть.
+ * Inertia хранит в нём данные страницы для кнопки назад/вперёд — прежний
+ * `replaceState({}, ...)` затирал его пустым объектом, и возврат назад
+ * (админка ↔ профиль) давал пустой экран до ручной перезагрузки.
+ */
+function syncToUrl(): void {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  if (!isAdminPath()) {
+    return
+  }
+
+  const url = new URL(window.location.href)
+  url.pathname = adminSectionUrl(tab.value, seoSection.value)
+  url.searchParams.delete('tab')
+  url.searchParams.delete('seo')
+
+  if (url.toString() === window.location.href) {
+    return
+  }
+
+  replaceUrlPreservingState(url.toString())
+}
+
+/**
  * Подхватить раздел из адресной строки при каждом переходе.
  *
- * Inertia не пересоздаёт страницу при переходе /admin?tab=a → /admin?tab=b,
- * поэтому одноразового чтения URL мало: диплинки (уведомления, колокольчик)
- * меняли адрес, а раздел оставался старым. На /admin с валидным ?tab=
- * переключаемся, на голом /admin — дописываем текущий раздел в адрес,
- * чтобы ссылка всегда вела туда же (обновить/поделиться — то же место).
+ * Inertia не пересоздаёт страницу при переходах внутри `/admin`,
+ * поэтому одноразового чтения URL мало: диплинки (уведомления,
+ * колокольчик) меняли адрес, а раздел оставался старым. Каждый переход
+ * по `/admin` перечитывает адрес, голый `/admin` дописывает текущий
+ * раздел — ссылка всегда ведёт туда же (обновить/поделиться — то же место).
  */
 function handleNavigate(): void {
   if (!isAdminPath()) {
     return
   }
 
-  const params = new URLSearchParams(window.location.search)
-  const rawTab = params.get('tab')
-
-  if (isAdminTab(rawTab)) {
-    if (tab.value !== rawTab) {
-      tab.value = rawTab
-    }
-
-    const rawSeo = params.get('seo')
-    const nextSeo = isSeoSection(rawSeo) ? rawSeo : DEFAULT_SEO_SECTION
-
-    if (seoSection.value !== nextSeo) {
-      seoSection.value = nextSeo
-    }
-  }
-
+  readFromUrl()
   syncToUrl()
 }
 
 /**
- * Нужна ли первичная запись табов в адресную строку.
+ * Нужна ли первичная запись раздела в адресную строку.
  *
- * Только когда в URL нет валидного `?tab=`: голый `/admin` дописываем
- * запомненным разделом, чтобы ссылка вела туда же. Валидный URL
- * не трогаем вовсе — лишних `replaceState` посреди коммита Inertia нет.
+ * Голый `/admin`, мусор в сегментах или остатки `?tab=` — дописываем
+ * канонический путь запомненным разделом. Чистый path-URL не трогаем
+ * вовсе — лишних `replaceState` посреди коммита Inertia нет.
  *
- * @returns true если URL голый или с мусором в `?tab=`
+ * @returns true если адрес не канонический
  */
 function needsUrlSync(): boolean {
   if (typeof window === 'undefined') {
@@ -205,9 +291,14 @@ function needsUrlSync(): boolean {
     return false
   }
 
-  const params = new URLSearchParams(window.location.search)
+  const url = new URL(window.location.href)
+  const canonicalPath = adminSectionUrl(tab.value, seoSection.value)
 
-  return !isAdminTab(params.get('tab'))
+  if (url.pathname !== canonicalPath) {
+    return true
+  }
+
+  return url.searchParams.has('tab') || url.searchParams.has('seo')
 }
 
 /**
@@ -220,6 +311,12 @@ function ensureSync(): void {
 
   initialized = true
 
+  if (typeof window === 'undefined') {
+    readInitialProps()
+    return
+  }
+
+  readInitialProps()
   readFromUrl()
 
   if (needsUrlSync()) {
@@ -231,25 +328,23 @@ function ensureSync(): void {
   watch(tab, syncToUrl)
   watch(seoSection, syncToUrl)
 
-  if (typeof window !== 'undefined') {
-    window.addEventListener('popstate', readFromUrl)
+  window.addEventListener('popstate', handleNavigate)
 
-    try {
-      router.on('navigate', handleNavigate)
-    } catch {
-      // SSR: роутера нет.
-    }
+  try {
+    router.on('navigate', handleNavigate)
+  } catch {
+    // SSR: роутера нет.
   }
 }
 
 /**
- * Хук вкладок админ-панели, синхронизированных с query-параметрами.
+ * Хук вкладок админ-панели, синхронизированных с path-параметрами.
  *
- * Главный таб живёт в `?tab=stats|manage|security|admin|business|modules|payments|ai|refs|seo|telegram`,
- * подвкладка SEO-центра — в `?seo=general|pages|integrations|scripts|crawl`.
+ * Главный таб живёт в пути (`/admin/stats`, `/admin/business`),
+ * подвкладка SEO-центра — вторым сегментом (`/admin/seo/scripts`).
  * Состояние общее (module-level), поэтому `Admin/Index.vue` и
  * `AdminSeoManager.vue` видят одни и те же табы, а перезагрузка,
- * кнопка назад/вперёд и диплинк открывают то место, где был пользователь.
+ * кнопка назад/вперёд и прямая ссылка открывают то место, куда ведут.
  * Каждый переход по /admin перечитывает адрес (диплинки в SPA работают),
  * голый /admin дописывает текущий раздел — ссылка всегда ведёт туда же.
  *

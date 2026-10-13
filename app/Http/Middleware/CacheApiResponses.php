@@ -15,7 +15,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  * - каждому `GET /api/*` с кодом 200 ставит ETag по хэшу тела и отвечает
  *   `304 Not Modified` на `If-None-Match` — повторный поллинг с тем же
  *   состоянием стоит 0 байт тела;
- * - публичным справочникам (`version`, `nbrb/*`, `reference*`) ставит
+ * - публичным справочникам (`version`, `reference*`) ставит
  *   `Cache-Control: public, max-age=300` — их кэширует CDN/браузер;
  * - персонализированные ответы (`pins`, `chat`, …) публичным кэшем не
  *   помечает — только ETag, stale-данных быть не может: 304 отдаётся
@@ -96,7 +96,7 @@ class CacheApiResponses
      * Публичный ли путь (можно кэшировать на CDN).
      *
      * @param Request $request текущий запрос
-     * @return bool true для version/nbrb/reference
+     * @return bool true для version/reference
      */
     private function isPublicPath(Request $request): bool
     {
@@ -108,7 +108,6 @@ class CacheApiResponses
         $relative = substr($path, strlen('api/'));
 
         return $relative === 'version'
-            || str_starts_with($relative, 'nbrb')
             || str_starts_with($relative, 'reference');
     }
 }

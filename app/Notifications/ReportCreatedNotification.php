@@ -34,7 +34,7 @@ class ReportCreatedNotification extends UserNotification
         return [
             'title' => "Жалоба #{$this->report->id}: {$reason}",
             'body' => ($title ? "«{$title}»" : "{$this->report->target_type} #{$this->report->target_id}").($this->report->description ? " — {$this->report->description}" : ''),
-            'url' => '/settings?tab=admin',
+            'url' => '/settings/admin',
             'tag' => 'report-'.$this->report->id,
             'avatar' => null,
         ];

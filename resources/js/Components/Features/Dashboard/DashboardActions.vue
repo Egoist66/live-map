@@ -23,7 +23,7 @@ const emit = defineEmits<{ (e: 'map'): void; (e: 'settings'): void; (e: 'faq'): 
     <Card v-if="isOwn" class="!bg-gradient-to-br !from-amber-50 !to-orange-50 !border-amber-200 !rounded-3xl" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0' } }">
       <template #content>
         <div class="text-sm font-black">Нужна помощь?</div>
-        <p class="text-xs text-stone-600 mt-1">Напиши в поддержку или задонать проекту — всё в настройках.</p>
+        <p class="text-xs text-stone-600 mt-1">Напиши в поддержку — всё в настройках.</p>
         <Button label="Перейти в настройки →" rounded size="small" class="!bg-stone-900 !text-white !border-stone-900 !text-xs !font-bold mt-3" @click="emit('settings')" />
       </template>
     </Card>

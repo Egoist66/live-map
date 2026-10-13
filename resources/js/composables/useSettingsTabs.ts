@@ -2,6 +2,7 @@ import { ref, computed, watch } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import { replaceUrlPreservingState } from '@/composables/useHistoryState'
 import { useSecurityImpersonations } from '@/composables/useSecurityImpersonations'
+import { useStaffRole } from '@/composables/useStaffRole'
 import { useAppModulesStore } from '@/stores/appModules'
 import { useActivitySystem } from '@/composables/useActivitySystem'
 import { SETTINGS_APP_TAB_PARAM, getActiveAppTab, writeAppTabToUrl } from '@/composables/useSettingsAppTabs'
@@ -18,7 +19,7 @@ export const SETTINGS_TABS = [
   { id: 'appearance' as const, label: 'Внешний вид', icon: 'pi pi-palette', desc: 'Тема, карта' },
   { id: 'security' as const, label: 'Безопасность', icon: 'pi pi-shield', desc: 'Пароль, удаление' },
   { id: 'procedures' as const, label: 'Процедуры', icon: 'pi pi-building-columns', desc: 'Доступы, закон' },
-  { id: 'support' as const, label: 'Поддержка', icon: 'pi pi-heart', desc: 'Письмо, донат' },
+  { id: 'support' as const, label: 'Поддержка', icon: 'pi pi-heart', desc: 'Обращение' },
   { id: 'app' as const, label: 'Приложение', icon: 'pi pi-mobile', desc: 'Установка, кэш' },
   { id: 'integrations' as const, label: 'Интеграции', icon: 'pi pi-share-alt', desc: 'Бот, QR' },
   { id: 'about' as const, label: 'О сервисе', icon: 'pi pi-info-circle', desc: 'FAQ, контакты, документы' },
@@ -45,8 +46,12 @@ export function useSettingsTabs() {
    * Таб виден при включённом модуле: пины — только с картой,
    * задания — со свайпами или картой, но лишь когда выпущена
    * система активности (допразделы, не чистый ULove),
+   * поддержка — только обычным пользователям (стафф сам ею занимается),
    * остальное — системное.
    */
+  const staff = useStaffRole()
+  const showSupport = computed(() => !staff.isModerator.value)
+
   const isTabVisible = (id: string): boolean => {
     if (id === 'pins') {
       return modules.isEnabled('upin')
@@ -58,6 +63,10 @@ export function useSettingsTabs() {
       }
 
       return modules.isEnabled('ulove') || modules.isEnabled('upin')
+    }
+
+    if (id === 'support') {
+      return showSupport.value
     }
 
     return true
@@ -123,5 +132,5 @@ export function useSettingsTabs() {
     }))
   )
 
-  return { active, tabs, tabIndex, activeIndex, menuModel, setActive, isAdmin, showProcedures }
+  return { active, tabs, tabIndex, activeIndex, menuModel, setActive, isAdmin, showProcedures, showSupport }
 }

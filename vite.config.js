@@ -20,6 +20,53 @@ function fileRevision(rel) {
 }
 
 /**
+ * Разложить node_modules по стабильным вендор-чанкам.
+ *
+ * Группируем ТОЛЬКО вендоров: стабильные крупные либы лежат в своих
+ * чанках (прекеш PWA на них опирается).
+ *
+ * Свой код (resources/js) НЕ трогаем специально: Rolldown сам режет его
+ * на мелкие чанки по графу импортов, и это и есть изоляция модулей —
+ * ulove-страница тянет только dating/api и свайп-хуки, карта —
+ * pins/districts/api, ядро — только общее.
+ *
+ * (Раньше тут были mod-* правила по подстрокам путей — они стаскивали
+ * общий код в чанки разделов, и entry грузил чужие модули всем.
+ * Больше так не делаем.)
+ *
+ * @param id путь модуля
+ * @returns имя чанка или undefined (дефолтная нарезка Rolldown)
+ */
+function vendorChunk(id) {
+    if (!id.includes('node_modules')) {
+        return undefined;
+    }
+
+    if (id.includes('maplibre-gl')) return 'maplibre';
+    // PrimeVue НЕ группируем в один чанк сознательно: монолит
+    // `primevue-*.js` весил 1.1МБ raw (233КБ gzip) и прелоадился целиком
+    // даже на лендинге, где нужны Button/Card/Tag/Badge/Avatar
+    // (Lighthouse: «неиспользуемый JS» 292КБ, TBT от парсинга).
+    // `undefined` отдаёт нарезку Rolldown: страница тянет только свои
+    // компоненты + общие internals отдельными shared-чанками.
+    // PWA-безопасно: ленивые чанки покрыты runtime-кэшем `pwa-build`
+    // (CacheFirst), прекеш их не ждёт.
+    if (id.includes('primevue') || id.includes('@primeuix') || id.includes('@primevue')) {
+        return undefined;
+    }
+    if (id.includes('pusher-js') || id.includes('laravel-echo')) return 'realtime';
+    if (id.includes('vee-validate') || id.includes('zod')) return 'form';
+    // Swiper импортируется ТОЛЬКО из async-компонентов
+    // (карусели/вьюверы через defineAsyncComponent), поэтому
+    // живёт в отдельном ленивом чанке, а не в общем vendor.
+    // Если где-то появится статический импорт swiper —
+    // чанк станет eager для всех, следи за билдом.
+    if (id.includes('swiper')) return 'swiper';
+
+    return 'vendor';
+}
+
+/**
  * Dev-страница и Vite живут на разных ориджинах (app-dev :8001,
  * Vite :5173), а `<script type="module">` требует CORS. Без явного
  * `server.cors` Vite 8 пинит `Access-Control-Allow-Origin` в значение
@@ -108,74 +155,16 @@ export default defineConfig({
         modulePreload: { polyfill: false },
         rollupOptions: {
             output: {
-                manualChunks(id) {
-                    // Группируем ТОЛЬКО вендоров: стабильные крупные либы
-                    // лежат в своих чанках (прекеш PWA на них опирается).
-                    //
-                    // Свой код (resources/js) НЕ трогаем специально: Rolldown
-                    // сам режет его на мелкие чанки по графу импортов, и это
-                    // и есть изоляция модулей — ulove-страница тянет только
-                    // dating/api и свайп-хуки, карта — pins/districts/api,
-                    // ядро — только общее. Проверено манифестом сборки:
-                    // entry тянет ~15 мелких shared-чанков без кода разделов.
-                    // (Раньше тут были mod-* правила по подстрокам путей —
-                    // они стаскивали общий код в чанки разделов, и entry
-                    // грузил чужие модули всем. Больше так не делаем.)
-                    //
-                    // Правила включения/выключения разделов от этого не
-                    // зависят: включение догружает страницу раздела
-                    // (useAppModulesSettings.preload -> import Pages/...),
-                    // выключение чистит кэши pwa-build/pages/api + reload.
-                    if (id.includes('node_modules')) {
-                        if (id.includes('maplibre-gl')) return 'maplibre';
-                        if (id.includes('primevue') || id.includes('@primeuix')) return 'primevue';
-                        if (id.includes('pusher-js') || id.includes('laravel-echo')) return 'realtime';
-                        if (id.includes('vee-validate') || id.includes('zod')) return 'form';
-                        // Swiper импортируется ТОЛЬКО из async-компонентов
-                        // (карусели/вьюверы через defineAsyncComponent), поэтому
-                        // живёт в отдельном ленивом чанке, а не в общем vendor.
-                        // Если где-то появится статический импорт swiper —
-                        // чанк станет eager для всех, следи за билдом.
-                        if (id.includes('swiper')) return 'swiper';
-                        return 'vendor';
-                    }
-                },
+                // Логика нарезки — в `vendorChunk()` выше (единая для
+                // rollup/rolldown, чтобы чанки не разъезжались).
+                manualChunks: vendorChunk,
             },
         },
         rolldownOptions: {
             output: {
-                manualChunks(id) {
-                    // Группируем ТОЛЬКО вендоров: стабильные крупные либы
-                    // лежат в своих чанках (прекеш PWA на них опирается).
-                    //
-                    // Свой код (resources/js) НЕ трогаем специально: Rolldown
-                    // сам режет его на мелкие чанки по графу импортов, и это
-                    // и есть изоляция модулей — ulove-страница тянет только
-                    // dating/api и свайп-хуки, карта — pins/districts/api,
-                    // ядро — только общее. Проверено манифестом сборки:
-                    // entry тянет ~15 мелких shared-чанков без кода разделов.
-                    // (Раньше тут были mod-* правила по подстрокам путей —
-                    // они стаскивали общий код в чанки разделов, и entry
-                    // грузил чужие модули всем. Больше так не делаем.)
-                    //
-                    // Правила включения/выключения разделов от этого не
-                    // зависят: включение догружает страницу раздела
-                    // (useAppModulesSettings.preload -> import Pages/...),
-                    // выключение чистит кэши pwa-build/pages/api + reload.
-                    if (id.includes('node_modules')) {
-                        if (id.includes('maplibre-gl')) return 'maplibre';
-                        if (id.includes('primevue') || id.includes('@primeuix')) return 'primevue';
-                        if (id.includes('pusher-js') || id.includes('laravel-echo')) return 'realtime';
-                        if (id.includes('vee-validate') || id.includes('zod')) return 'form';
-                        // Swiper импортируется ТОЛЬКО из async-компонентов
-                        // (карусели/вьюверы через defineAsyncComponent), поэтому
-                        // живёт в отдельном ленивом чанке, а не в общем vendor.
-                        // Если где-то появится статический импорт swiper —
-                        // чанк станет eager для всех, следи за билдом.
-                        if (id.includes('swiper')) return 'swiper';
-                        return 'vendor';
-                    }
-                },
+                // Логика нарезки — в `vendorChunk()` выше (единая для
+                // rollup/rolldown, чтобы чанки не разъезжались).
+                manualChunks: vendorChunk,
             },
         },
     },

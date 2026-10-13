@@ -1,6 +1,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
 import { route } from '@/route'
+import { openAdminPanel } from '@/composables/useAdminTabs'
 import { useBadgeStore } from '@/stores/badges'
 import { useSeo } from '@/composables/useSeo'
 import { useProfileShare } from '@/composables/useProfileShare'
@@ -51,7 +52,14 @@ export function useDashboardPage(propsUser?: any | (() => any), propsIsOwn?: boo
   function goMap() { router.visit('/map') }
   function goChat() { router.visit('/chat') }
   function goSettings() { router.visit(settingsHref.value) }
-  function goAdmin() { router.visit(route('admin')) }
+  /**
+   * Открыть панель модерации в отдельной вкладке браузера.
+   *
+   * Текущий профиль остаётся нетронутым — консоль живёт своей жизнью.
+   */
+  function goAdmin(): void {
+    openAdminPanel()
+  }
   function goFaq() { router.visit('/faq') }
   function share() { shareProfile({ id: u.value.id, profile_slug: u.value.profile_slug, name: u.value.name }) }
   const levelName = computed(() => LEVEL_LABEL[u.value?.level] || u.value?.level || 'Новичок')

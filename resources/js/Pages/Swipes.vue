@@ -7,6 +7,7 @@ import DatingRatingStars from '@/Components/Features/Dating/DatingRatingStars.vu
 import SwipeActionsBar from '@/Components/Features/Dating/SwipeActionsBar.vue'
 import SwipeCardSkeleton from '@/Components/Features/Dating/SwipeCardSkeleton.vue'
 import SuperlikeSplash from '@/Components/Features/Dating/SuperlikeSplash.vue'
+import BoostSplash from '@/Components/Features/Dating/BoostSplash.vue'
 import MatchSplash from '@/Components/Features/Dating/MatchSplash.vue'
 import AppImage from '@/Components/Ui/Media/AppImage.vue'
 import { useSwipes } from '@/composables/useSwipes'
@@ -15,6 +16,7 @@ import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 import { useSwipeCardPhotos } from '@/composables/useSwipeCardPhotos'
 import { useModuleContent } from '@/composables/useModuleContent'
 import { useSuperlikeSplash } from '@/composables/useSuperlikeSplash'
+import { useBoostSplash } from '@/composables/useBoostSplash'
 import { useSwipeStamps } from '@/composables/useSwipeStamps'
 import { useSwipesMobileMenu } from '@/composables/useSwipesMobileMenu'
 import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
@@ -58,6 +60,7 @@ const { userProfileUrl } = useProfileUrl()
 
 const detailsCard = ref<any | null>(null)
 const superSplash = useSuperlikeSplash()
+const boostSplash = useBoostSplash()
 
 /**
  * Суперлайк с синим сплешем: вспышка стартует сразу для вау-эффекта,
@@ -66,6 +69,20 @@ const superSplash = useSuperlikeSplash()
 function onSuperlike(): void {
   superSplash.fire()
   void s.superlike()
+}
+
+/**
+ * Буст из иконки в топбаре: янтарный сплеш стартует сразу
+ * для вау-эффекта, запрос уходит параллельно в хуке свайпов.
+ * Активный буст — ведём в PRO-таб к статусу вместо покупки.
+ */
+function onBoostClick(): void {
+  if (s.boostActive.value) {
+    s.goTab('premium')
+    return
+  }
+  boostSplash.fire()
+  void s.activateBoost()
 }
 const activeHasMore = computed(() => s.activeHasMore.value)
 const activeLoadingMore = computed(() => s.loadingMoreLists.value)
@@ -200,9 +217,23 @@ onUnmounted(() => {
           <Button v-if="isAuth && s.showTabBack.value" icon="pi pi-arrow-left" rounded text aria-label="Назад к ленте" title="Назад к ленте" class="!w-10 !h-10 !p-0 shrink-0 !text-stone-400 dark:!text-zinc-500 hover:!text-stone-600 dark:hover:!text-zinc-300 [&_.p-button-icon]:!text-xl" @click="s.backToFeed()" />
           <span v-else-if="isAuth" class="w-10 shrink-0" aria-hidden="true" />
           <span class="flex-1" />
-          <button type="button" class="grid place-items-center w-11 h-11 rounded-full active:scale-90 transition" aria-label="ULove — к ленте" title="К ленте" @click="isAuth && s.goTab('feed')">
-            <span class="w-9 h-9 rounded-[10px] bg-gradient-to-br from-[#FD267D] to-[#FF7854] grid place-items-center text-white shadow-md shadow-rose-500/40"><i class="pi pi-heart-fill text-lg" /></span>
-          </button>
+          <div class="flex items-center shrink-0">
+            <button type="button" class="grid place-items-center w-11 h-11 rounded-full active:scale-90 transition" aria-label="ULove — к ленте" title="К ленте" @click="isAuth && s.goTab('feed')">
+              <span class="w-9 h-9 rounded-[10px] bg-gradient-to-br from-[#FD267D] to-[#FF7854] grid place-items-center text-white shadow-md shadow-rose-500/40"><i class="pi pi-heart-fill text-lg" /></span>
+            </button>
+            <button
+              v-if="isAuth"
+              type="button"
+              :aria-label="s.boostActive.value ? `Буст активен ${s.boostUntilLabel.value} — тебя видят первым` : 'Включить буст — 30 мин в топе'"
+              :title="s.boostActive.value ? `Буст активен ${s.boostUntilLabel.value} — тебя видят первым` : 'Включить буст — 30 мин в топе'"
+              class="relative grid place-items-center w-7 h-7 -ml-1.5 -mt-4 rounded-full transition active:scale-90"
+              :class="s.boostActive.value ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-md shadow-orange-500/40 boost-icon-glow' : 'bg-stone-100 dark:bg-zinc-800 text-stone-400 dark:text-zinc-500 hover:!text-amber-500'"
+              @click="onBoostClick()"
+            >
+              <i class="pi pi-bolt text-[13px]" />
+              <span v-if="s.boostActive.value" class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-white dark:ring-zinc-900" />
+            </button>
+          </div>
           <span class="flex-1" />
           <Link v-if="isAuth" href="/chat"><Button icon="pi pi-comments" rounded text aria-label="Сообщения" title="Сообщения" class="!w-10 !h-10 !p-0 shrink-0 !text-stone-400 dark:!text-zinc-500 hover:!text-stone-600 dark:hover:!text-zinc-300 [&_.p-button-icon]:!text-xl" /></Link>
           <Button v-if="isAuth" icon="pi pi-bars" rounded text aria-label="Меню ULove" title="Лента · Онлайн · Избранное · Лайки · Анкета · PRO" class="!w-10 !h-10 !p-0 shrink-0 !text-stone-400 dark:!text-zinc-500 hover:!text-stone-600 dark:hover:!text-zinc-300 [&_.p-button-icon]:!text-xl" @click="mobileMenu.open()" />
@@ -268,10 +299,6 @@ onUnmounted(() => {
           </div>
           <div v-if="emailVerification.sent.value" class="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300">
             Письмо отправлено заново — проверь inbox и спам.
-          </div>
-
-          <div v-if="s.boostActive.value" class="mt-3 flex items-center gap-2 rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 px-4 py-2.5 text-[13px] font-black text-white shadow-soft">
-            <i class="pi pi-bolt" /><span>Буст активен {{ s.boostUntilLabel.value }} — тебя видят первым</span>
           </div>
 
           <template v-if="s.activeTab.value === 'active'">
@@ -521,7 +548,7 @@ onUnmounted(() => {
                   <div class="text-[11px] text-stone-500 dark:text-zinc-400 leading-snug break-words">{{ s.boostActive.value ? 'Твоя анкета летит первой в чужих лентах' : `Куплено: ${s.extras.value.boosts_balance} · PRO — 1 в месяц бесплатно` }}</div>
                 </div>
                 <div class="flex gap-1.5 shrink-0 w-full sm:w-auto">
-                  <Button v-if="!s.boostActive.value" label="Включить" icon="pi pi-bolt" rounded size="small" class="flex-1 sm:flex-none" :loading="s.buyingExtras.value" @click="s.activateBoost()" />
+                  <Button v-if="!s.boostActive.value" label="Включить" icon="pi pi-bolt" rounded size="small" class="flex-1 sm:flex-none" :loading="s.buyingExtras.value" @click="onBoostClick()" />
                   <Button label="+1" icon="pi pi-plus" rounded outlined size="small" class="flex-1 sm:flex-none" :loading="s.buyingExtras.value" @click="s.purchaseExtras('boost')" />
                 </div>
               </div>
@@ -751,6 +778,7 @@ onUnmounted(() => {
             @write="s.writeWithoutMatch(s.current.value.id)"
           />
           <SuperlikeSplash :active="superSplash.active.value" :burst-key="superSplash.burstKey.value" />
+          <BoostSplash :active="boostSplash.active.value" :burst-key="boostSplash.burstKey.value" />
           </template>
 
           <Drawer
@@ -1049,6 +1077,13 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+.boost-icon-glow {
+  animation: boost-icon-pulse 1.8s ease-in-out infinite;
+}
+@keyframes boost-icon-pulse {
+  0%, 100% { box-shadow: 0 4px 12px -2px rgba(249, 115, 22, 0.55), 0 0 0 0 rgba(249, 115, 22, 0.5); }
+  50% { box-shadow: 0 4px 12px -2px rgba(249, 115, 22, 0.55), 0 0 0 6px rgba(249, 115, 22, 0); }
+}
 .ulove-drawer :deep(.p-drawer-header) {
   padding: 0;
 }

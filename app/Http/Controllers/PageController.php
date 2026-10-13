@@ -59,13 +59,34 @@ class PageController extends Controller
     }
 
     /**
-     * Админка.
+     * Админка (консоль модерации).
      *
+     * Раздел живёт в path-параметрах: `/admin/stats`, `/admin/business`,
+     * подраздел SEO-центра — вторым сегментом (`/admin/seo/scripts`).
+     * Голый `/admin` отдаёт дефолт — клиент сам дописывает текущий
+     * раздел в адресную строку. Невалидные сегменты отдаём как null —
+     * фронт откатывается к дефолтам, никаких редиректов.
+     *
+     * @param string|null $tab раздел консоли
+     * @param string|null $seo подраздел SEO-центра
      * @return InertiaResponse
      */
-    public function admin(): InertiaResponse
+    public function admin(?string $tab = null, ?string $seo = null): InertiaResponse
     {
-        return Inertia::render('Admin/Index');
+        $tabs = ['stats', 'manage', 'security', 'admin', 'business', 'modules', 'ai', 'refs', 'seo', 'telegram', 'payments'];
+        $sections = ['general', 'pages', 'integrations', 'scripts', 'crawl'];
+
+        $initialTab = in_array($tab, $tabs, true) ? $tab : null;
+
+        $initialSeo = null;
+        if ($initialTab === 'seo' && in_array($seo, $sections, true)) {
+            $initialSeo = $seo;
+        }
+
+        return Inertia::render('Admin/Index', [
+            'initialTab' => $initialTab,
+            'initialSeoSection' => $initialSeo,
+        ]);
     }
 
     /**

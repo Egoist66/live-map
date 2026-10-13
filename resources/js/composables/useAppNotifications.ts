@@ -994,7 +994,7 @@ function handleReport(e: any) {
     title: `Жалоба: ${r.reason_label || r.reason}`,
     body: `${title} · ${body}`.slice(0, 90),
     avatar: avatarSrcFor(r.reporter || {}),
-    link: '/settings?tab=admin',
+    link: '/settings/admin',
     createdAt: Date.now(),
   })
 }
@@ -1167,7 +1167,7 @@ function handleBusinessSubmitted(e: { business?: { id?: number; name?: string; u
     title: 'Новая заявка бизнеса',
     body: `${business.name ?? 'Компания'} — проверка по УНП${business.unp ? ` ${business.unp}` : ''}`.slice(0, 90),
     avatar: null,
-    link: '/admin?tab=business',
+    link: '/admin/business',
     createdAt: Date.now(),
   })
 }

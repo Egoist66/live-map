@@ -42,7 +42,7 @@ class BusinessSubmittedNotification extends UserNotification
         return [
             'title' => 'Новая заявка бизнеса',
             'body' => ($this->business->name ?? 'Компания') . ' — проверка по УНП',
-            'url' => '/admin?tab=business',
+            'url' => '/admin/business',
             'tag' => 'business-sub-' . $this->business->id,
             'avatar' => null,
         ];

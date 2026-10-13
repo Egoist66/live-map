@@ -12,7 +12,15 @@ export interface WelcomeHeroProfile {
   name: string
   age: number
   photo: string
+  /** WebP-версия под контейнер (~560px): в 2–3 раза легче JPG (LCP). */
+  photoWebp: string
+  /** Ширина WebP для width/height (убирает CLS). */
+  photoWidth: number
+  /** Высота WebP для width/height (убирает CLS). */
+  photoHeight: number
   fallbackPhoto?: string
+  /** WebP запасного фото. */
+  fallbackPhotoWebp?: string
   goal: string
   city: string
   distance: string
@@ -33,12 +41,21 @@ export function useWelcomeHeroSwiper() {
   // Фото лендинга — локальные (`public/landing/`): внешние CDN (pravatar,
   // unsplash) давали лишний DNS/TLS-хендшейк, нулевой кэш-контроль и риск
   // «битых лиц» при недоступности чужих хостов. Файлы скачаны 1:1.
+  //
+  // WebP-двойники (`*-560.webp`, 560px по широкой стороне, q78) — под
+  // контейнер hero-карточки (max ~535px): PageSpeed ругался, что 800px JPG
+  // больше контейнера, и насчитал 134КБ перевеса на трёх фото. JPG остаётся
+  // фолбэком в `<picture>` для древних WebView.
   const profiles = ref<WelcomeHeroProfile[]>([
     {
       name: 'Аня',
       age: 24,
       photo: '/landing/hero-anya.jpg',
+      photoWebp: '/landing/hero-anya-560.webp',
+      photoWidth: 560,
+      photoHeight: 560,
       fallbackPhoto: '/landing/hero-anya-fallback.jpg',
+      fallbackPhotoWebp: '/landing/hero-anya-fallback-560.webp',
       goal: 'Серьёзные отношения',
       city: 'Минск',
       distance: '1,2 км',
@@ -48,6 +65,9 @@ export function useWelcomeHeroSwiper() {
       name: 'Макс',
       age: 27,
       photo: '/landing/hero-maks.jpg',
+      photoWebp: '/landing/hero-maks-560.webp',
+      photoWidth: 560,
+      photoHeight: 448,
       goal: 'Активный отдых',
       city: 'Минск',
       distance: '800 м',
@@ -57,6 +77,9 @@ export function useWelcomeHeroSwiper() {
       name: 'Дима',
       age: 26,
       photo: '/landing/hero-dima.jpg',
+      photoWebp: '/landing/hero-dima-560.webp',
+      photoWidth: 560,
+      photoHeight: 448,
       goal: 'Дружба и общение',
       city: 'Минск',
       distance: '2,1 км',
@@ -66,6 +89,9 @@ export function useWelcomeHeroSwiper() {
       name: 'София',
       age: 23,
       photo: '/landing/hero-sofia.jpg',
+      photoWebp: '/landing/hero-sofia-560.webp',
+      photoWidth: 560,
+      photoHeight: 448,
       goal: 'Отношения',
       city: 'Минск',
       distance: '1,8 км',
@@ -190,11 +216,24 @@ export function useWelcomeHeroSwiper() {
 
   /**
    * Подменяет фото на запасное, если основное не загрузилось.
+   *
+   * `<picture>` сам откатывается с WebP на JPG, сюда доходит только
+   * двойной провал — меняем сразу пару (webp + jpg фолбэка).
+   *
    * @param profile профиль, чьё фото не загрузилось
    */
   function onPhotoError(profile: WelcomeHeroProfile): void {
-    if (profile.fallbackPhoto && profile.photo !== profile.fallbackPhoto) {
-      profile.photo = profile.fallbackPhoto
+    const hasFallback = profile.fallbackPhoto !== undefined
+    const isAlreadyFallback = profile.photo === profile.fallbackPhoto
+
+    if (!hasFallback || isAlreadyFallback) {
+      return
+    }
+
+    profile.photo = profile.fallbackPhoto as string
+
+    if (profile.fallbackPhotoWebp) {
+      profile.photoWebp = profile.fallbackPhotoWebp
     }
   }
 

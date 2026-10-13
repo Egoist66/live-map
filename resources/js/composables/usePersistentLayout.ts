@@ -1,6 +1,27 @@
-import { h, type VNode } from 'vue'
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
-import GuestLayout from '@/Layouts/GuestLayout.vue'
+import { defineAsyncComponent, h, type VNode } from 'vue'
+
+/**
+ * Оболочки страниц: грузятся лениво, а не статикой.
+ *
+ * Раньше оба лейаута импортировались статически — и весь
+ * `AuthenticatedLayout` (бейджи → chat.api/notifications.api,
+ * user-канал, vee-validate через useScreenLock) плюс `GuestLayout`
+ * вшивались в entry-чанк и прелоадились `Link`-заголовками
+ * (`AddLinkHeadersForPreloadedAssets`) КАЖДОМУ визиту, включая гостей
+ * лендинга, у которого вообще нет лейаута (`LAYOUTLESS_PAGES`).
+ * Это давало ~18 modulepreload на первом визите и душило LCP/TBT.
+ *
+ * `defineAsyncComponent` вызывается один раз на модуль: обёртка стабильна
+ * (персистентность лейаута между визитами сохраняется), SSR-совместима,
+ * а реальные чанки догружаются только со страницей, которой нужны.
+ */
+const AuthenticatedLayout = defineAsyncComponent(
+  () => import('@/Layouts/AuthenticatedLayout.vue'),
+)
+
+const GuestLayout = defineAsyncComponent(
+  () => import('@/Layouts/GuestLayout.vue'),
+)
 
 /**
  * Страницы без лейаута (полностью свои обёртки).

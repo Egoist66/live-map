@@ -109,9 +109,9 @@ function goReports() {
   try {
     const u = (usePage().props.auth as any)?.user
     const fullAdmin = !!u?.is_admin || u?.role === 'admin'
-    router.visit(fullAdmin ? '/settings?tab=admin' : '/admin?tab=admin')
+    router.visit(fullAdmin ? '/settings/admin' : '/admin/admin')
   } catch {
-    router.visit('/admin?tab=admin')
+    router.visit('/admin/admin')
   }
 }
 

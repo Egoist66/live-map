@@ -9,6 +9,7 @@ import { useAppNotifications } from '@/composables/useAppNotifications'
 import { useBellNotifications } from '@/composables/useBellNotifications'
 import { usePinActivity } from '@/composables/usePinActivity'
 import { useAdminReports } from '@/composables/useAdminReports'
+import { openAdminPanel } from '@/composables/useAdminTabs'
 import { useAppUpdates } from '@/composables/useAppUpdates'
 import { useBuildVersion } from '@/composables/useBuildVersion'
 import { useSecurityImpersonations } from '@/composables/useSecurityImpersonations'
@@ -110,7 +111,7 @@ export function useAppLayout() {
   const menuItems = computed(() => {
     const header = { label: user.value?.name || '', sublabel: user.value?.email || '', isHeader: true }
     const moderation = isModerator.value
-      ? [{ label: 'Панель модерации', icon: 'pi pi-shield', accent: 'amber', active: route().current('admin'), command: () => router.visit(route('admin')) }]
+      ? [{ label: 'Панель модерации', icon: 'pi pi-shield', accent: 'amber', active: route().current('admin'), command: () => openAdminPanel() }]
       : []
     const logoutItem = { label: 'Выйти', icon: 'pi pi-sign-out', accent: 'red', danger: true, command: () => doLogout() }
 

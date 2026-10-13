@@ -11,6 +11,39 @@ import { persistNativeMarker } from '@/composables/useNativeClient'
 import { purgeLegacyAuthMirror } from '@/composables/useAuthStorage'
 
 /**
+ * Быстрый синхронный предикат «похоже на Telegram Mini App».
+ *
+ * Проверяет только URL-маркеры и куку прошлого TG-визита — без
+ * динамических импортов, поэтому дешёвый для 95%+ нетелеграмного
+ * трафика: чанк `useTelegram` вообще не грузится в первом визите.
+ * Точную проверку (`initData`) делает `bootTelegram` после импорта.
+ *
+ * @returns true если визит может быть из Telegram
+ */
+function looksLikeTelegram(): boolean {
+  try {
+    if (typeof window === 'undefined') {
+      return false
+    }
+
+    const haystack = (window.location.search + ' ' + window.location.hash).toLowerCase()
+
+    const hasUrlMarkers =
+      haystack.includes('tgwebappplatform') ||
+      haystack.includes('tgwebappdata') ||
+      haystack.includes('tgwebappversion')
+
+    if (hasUrlMarkers) {
+      return true
+    }
+
+    return /(?:^|;\s*)upin_client=telegram(-webapp)?(?:;|$)/.test(document.cookie)
+  } catch {
+    return false
+  }
+}
+
+/**
  * Клиентский бут приложения после `app.mount()`.
  *
  * Вся DOM/Realtime/PWA-логика из `setup()` в `app.ts` живёт здесь
@@ -73,9 +106,18 @@ export function useAppBoot() {
   /**
    * Подключить нативный Expo-push мост (только клиент, тихо).
    *
+   * Гостям мост не нужен: токен привязывается к пользователю
+   * (`/api/expo-push-tokens` требует auth) — пропускаем импорт,
+   * чтобы лендинг не тянул лишний чанк в первом визите.
+   *
+   * @param authUserId id пользователя из initialPage (0 — гость)
    * @returns void
    */
-  async function bootExpoPush(): Promise<void> {
+  async function bootExpoPush(authUserId: number): Promise<void> {
+    if (authUserId <= 0) {
+      return
+    }
+
     const expoPush = await import('@/native/expo-push')
     expoPush.initExpoPushBinding()
   }
@@ -102,9 +144,19 @@ export function useAppBoot() {
    * authWithTelegram — гость превращается в сессию без кликов.
    * Вне TG — мгновенный no-op, на TBT не влияет.
    *
+   * Быстрый предикат по URL-маркерам — ДО первого динамического
+   * импорта: 95%+ трафика (браузеры, PWA) не тянут чанк
+   * `useTelegram` в первом визите вообще. Маркер `upin_client`
+   * в куке означает прошлый визит из TG — тогда проверяем
+   * полноценно (кука могла протухнуть, см. ранний инлайн в blade).
+   *
    * @returns void
    */
   async function bootTelegram(): Promise<void> {
+    if (!looksLikeTelegram()) {
+      return
+    }
+
     const { isTelegramWebView } = await import('@/composables/useTelegram')
 
     if (!isTelegramWebView()) {
@@ -145,6 +197,11 @@ export function useAppBoot() {
    * Telegram идёт сразу после маркеров: ready/expand должны случиться
    * до первого paint, иначе Mini App моргает схлопнутым окном.
    *
+   * Визуальные шаги независимы (пишут в разные места: классы, storage,
+   * сплэш, safe-area) — идут параллельно одним `allSettled`, а не
+   * восемью последовательными `await`: цепочка суммировала их латентность
+   * в TBT первого визита.
+   *
    * @param authUserId id пользователя из initialPage (0 — гость)
    * @returns void
    */
@@ -155,14 +212,16 @@ export function useAppBoot() {
       return
     }
 
-    await safeRun(() => persistNativeMarker())
-    await safeRun(() => purgeLegacyAuthMirror())
-    await safeRun(() => bootTelegram())
-    await safeRun(() => initTheme())
-    await safeRun(() => initMotion())
-    await safeRun(() => hideSplash())
-    await safeRun(() => initScrollRescue())
-    await safeRun(() => bootNavigation(authUserId))
+    await Promise.allSettled([
+      safeRun(() => persistNativeMarker()),
+      safeRun(() => purgeLegacyAuthMirror()),
+      safeRun(() => bootTelegram()),
+      safeRun(() => initTheme()),
+      safeRun(() => initMotion()),
+      safeRun(() => hideSplash()),
+      safeRun(() => initScrollRescue()),
+      safeRun(() => bootNavigation(authUserId)),
+    ])
 
     const { runWhenIdle } = useIdleTask()
 
@@ -172,7 +231,7 @@ export function useAppBoot() {
           bootRealtime(authUserId),
           registerSw(),
           startPushBridges(),
-          bootExpoPush(),
+          bootExpoPush(authUserId),
         ])
       }),
     )

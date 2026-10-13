@@ -23,3 +23,25 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
+
+# MIME для WebP (нужен древним Apache без mime-модуля).
+<IfModule mod_mime.c>
+    AddType image/webp .webp
+</IfModule>
+
+# Кэш фото лендинга (Lighthouse `cache-insight`): зеркалит
+# App\Http\Middleware\CacheStaticAssets для хостингов на Apache.
+# Хэшированный Vite-билд (`/build/*`) и service worker здесь НЕ трогаем:
+# immutable для всего `.js` залипил бы `sw.js` на год и сломал обновления
+# PWA — их кэширует middleware (когда статику отдаёт PHP) и edge Cloud.
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/webp "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/png "access plus 1 month"
+</IfModule>
+<IfModule mod_headers.c>
+    <FilesMatch "^hero-.*\.(jpg|webp)$">
+        Header set Cache-Control "public, max-age=2592000"
+    </FilesMatch>
+</IfModule>

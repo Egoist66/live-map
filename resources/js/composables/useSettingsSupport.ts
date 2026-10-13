@@ -25,26 +25,20 @@ export function useSupportEmail(): string {
  * админа/модераторов и дублирует inbox-уведомлением. Никаких
  * mailto-ссылок: всё уходит прямо из интерфейса.
  *
- * @param user computed-аккаунт для подписи (имя/email подставит бэк)
  * @returns поля формы, статусы и методы отправки
  *
  * @example
  * ```ts
- * const support = useSupportForm(u)
+ * const support = useSupportForm()
  * await support.sendSupport()
  * ```
  */
-export function useSupportForm(user: any) {
+export function useSupportForm() {
   const supportSubject = ref('')
   const supportBody = ref('')
-  const donateSel = ref(5)
   const sending = ref(false)
   const sent = ref(false)
   const sendError = ref<string | null>(null)
-
-  function setDonate(usd: number) {
-    donateSel.value = usd
-  }
 
   /**
    * Отправить обращение в поддержку через бэкенд (SMTP админам).
@@ -87,14 +81,7 @@ export function useSupportForm(user: any) {
       sending.value = false
     }
   }
-  function mailToDonate(ex: { usdRate: any }) {
-    const usd = donateSel.value
-    const byn = ex.usdRate.value ? (usd * ex.usdRate.value).toFixed(2) + ' BYN' : `${usd}$`
-    const subj = encodeURIComponent(`Донат UPin — $${usd} (~${byn})`)
-    const body = encodeURIComponent(`Привет! Хочу задонатить $${usd} (~${byn}) разработчику UPin.\n\nПользователь: ${user.value.name} <${user.value.email}>\nТариф: ${user.value.plan || 'free'}\n\nСообщение:\n`)
-    window.location.href = `mailto:${useSupportEmail()}?subject=${subj}&body=${body}`
-  }
-  return { supportSubject, supportBody, donateSel, sending, sent, sendError, setDonate, sendSupport, mailToDonate }
+  return { supportSubject, supportBody, sending, sent, sendError, sendSupport }
 }
 
 export function useSettingsBioPreview(user: any) {

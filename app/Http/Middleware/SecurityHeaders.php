@@ -89,7 +89,6 @@ class SecurityHeaders
             'https:',
             'wss:',
             'https://nominatim.openstreetmap.org',
-            'https://api.nbrb.by',
             'https://tile.openstreetmap.org',
             'https://*.tile.openstreetmap.org',
             'https://basemaps.cartocdn.com',
