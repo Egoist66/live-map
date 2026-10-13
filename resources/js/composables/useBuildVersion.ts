@@ -1,6 +1,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
 import { api } from '@/services/api'
+import { replaceUrlPreservingState } from '@/composables/useHistoryState'
 import { hardRefreshToLatest } from '@/pwa/cache.service'
 
 /**
@@ -216,7 +217,7 @@ function stripRefreshParam(): void {
     const url = new URL(window.location.href)
     if (url.searchParams.has('v')) {
       url.searchParams.delete('v')
-      window.history.replaceState({}, '', url.toString())
+      replaceUrlPreservingState(url.toString())
     }
   } catch {}
 }

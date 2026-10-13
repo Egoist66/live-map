@@ -8,39 +8,18 @@ import { pokeRealtime } from '@/composables/useRealtimePoller'
 import { shouldSkipMotion } from '@/composables/useMotion'
 import { useRewardToast } from '@/composables/useRewardToast'
 import type { ActiveCard, SwipeCard, SwipeExtras, SwipeFilters, SwipeQuota } from '@/services/dating.api'
+import { normalizeSwipeTab, swipeTabPath } from '@/utils/swipe-tabs'
+import type { SwipeTab } from '@/utils/swipe-tabs'
+
+// Реэкспорт таб-хелперов: внешние модули (useSwipesMobileMenu — типы,
+// useLayoutRoute — нормализация в ядре) продолжают импортировать их отсюда,
+// а реализация живёт в `@/utils/swipe-tabs` без дейтинг-зависимостей,
+// чтобы ядро не тянуло dating.api в entry-замыкание (см. гейт изоляции).
+export { normalizeSwipeTab, swipeTabPath } from '@/utils/swipe-tabs'
+export type { SwipeTab } from '@/utils/swipe-tabs'
 
 /** Лимит радиуса «рядом» для Free, км. PRO — безлимит. */
 export const FREE_SWIPES_RADIUS_KM = 10
-
-/** Табы свайпов с отдельными роутами. */
-const SWIPE_TABS = ['feed', 'active', 'favorites', 'admirers', 'questionnaire', 'premium'] as const
-
-/** Таб свайпов. */
-export type SwipeTab = (typeof SWIPE_TABS)[number]
-
-/**
- * Привести сырое значение к табу свайпов.
- *
- * Алиас tape ведёт на ленту.
- *
- * @param raw значение из роута или query
- * @returns таб свайпов, по умолчанию лента
- */
-export function normalizeSwipeTab(raw: unknown): SwipeTab {
-  const tab = String(raw ?? '')
-  if (tab === 'tape') return 'feed'
-  return (SWIPE_TABS as readonly string[]).includes(tab) ? (tab as SwipeTab) : 'feed'
-}
-
-/**
- * Путь таба свайпов для навигации с историей назад.
- *
- * @param tab таб свайпов
- * @returns путь вида /swipes/active
- */
-export function swipeTabPath(tab: SwipeTab): string {
-  return tab === 'feed' ? '/swipes/tape' : `/swipes/${tab}`
-}
 
 /**
  * Дейтинг-лента: свайпы, мэтчи, активные, фильтры, квоты, приватность.
@@ -77,6 +56,15 @@ export function useSwipes() {
   const matchesPage = ref(1)
   const quota = ref<SwipeQuota | null>(null)
   const loading = ref(false)
+  /**
+   * Лента хоть раз договорила с бэком (успех или ошибка).
+   *
+   * До этого момента пустое состояние «всех просвайпал» показывать
+   * нельзя: на первом кадре (и в SSR) `loading=false`, карт нет —
+   * панель вспыхивает раньше данных, затем мигает «панель → скелетон
+   * → панель» и визуально подпрыгивает. Гейт держит скелетон.
+   */
+  const feedReady = ref(false)
   const acting = ref(false)
   /** На ком висит лоадер: id кандидата (null — неизвестно/лента). */
   const actingId = ref<number | null>(null)
@@ -355,10 +343,12 @@ export function useSwipes() {
    *
    * Колода хранит просмотренные (индекс в конце), поэтому пустого
    * массива недостаточно — проверяем и положение индекса.
+   * Требует `feedReady`: до первой договорённости с бэком данных
+   * нет и пустая панель запрещена (иначе вспыхивает раньше времени).
    *
    * @returns true когда всех просвайпали
    */
-  const feedExhausted = computed(() => !loading.value && !error.value && !current.value && (cards.value.length === 0 || index.value >= cards.value.length))
+  const feedExhausted = computed(() => feedReady.value && !loading.value && !error.value && !current.value && (cards.value.length === 0 || index.value >= cards.value.length))
 
   const quotaLabel = computed(() => {
     if (!quota.value) return ''
@@ -708,6 +698,7 @@ export function useSwipes() {
       applyFeedError(e, 'Не удалось загрузить ленту')
     } finally {
       loading.value = false
+      feedReady.value = true
     }
   }
 
@@ -1683,6 +1674,7 @@ export function useSwipes() {
     loadMoreActive,
     hasActiveFilters,
     feedExhausted,
+    feedReady,
     loadFavorites,
     loadMoreFavorites,
     loadingMoreLists,

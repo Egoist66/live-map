@@ -161,7 +161,9 @@ enforceVisibleTab()
 <template>
   <Head title="Консоль — ULove Admin" />
   <Toast />
-  <div class="min-h-screen bg-[#f0f0f5] text-stone-900 dark:bg-[#0F121F] dark:text-zinc-100">
+  <!-- Отступ под fixed-шапку: ровно её высота (h-14 + safe-area).
+       Без него контент прячется под AdminTopbar. -->
+  <div class="min-h-screen bg-[#f0f0f5] pt-[calc(3.5rem+var(--sat,0px))] text-stone-900 dark:bg-[#0F121F] dark:text-zinc-100">
     <AdminTopbar
       :refresh-loading="mon.loadingOverview.value"
       @menu="layout.openDrawer()"

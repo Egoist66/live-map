@@ -28,18 +28,6 @@ class PlanCatalog
     ];
 
     /**
-     * Дефолтные региональные цены BY/RU (зеркало config/plans.php).
-     *
-     * @var array<string, float|null>
-     */
-    private const DEFAULT_REGIONAL = [
-        'free' => null,
-        'pro' => 1.99,
-        'premium' => 4.99,
-        'business' => 19.99,
-    ];
-
-    /**
      * Все планы каталога: по умолчанию из config/plans.php,
      * сверху — правки из админки (названия и описания).
      *
@@ -164,22 +152,23 @@ class PlanCatalog
     /**
      * Месячная цена плана в USD (null — бесплатно).
      *
-     * Сначала смотрим оверрайд из админки «Payments» (payment_items),
-     * потом config/plans.php. Кэш сбрасывается при сохранении цен.
+     * Цена одна для всех стран. Сначала смотрим оверрайд из админки
+     * «Тарифы» (payment_items), потом config/plans.php. Кэш сбрасывается
+     * при сохранении цен.
      *
      * @param string $plan
-     * @param bool $regional региональная цена BY/RU
      */
-    public static function monthlyPrice(string $plan, bool $regional = false): ?float
+    public static function monthlyPrice(string $plan): ?float
     {
-        $override = self::priceOverrides()[$plan.'.'.($regional ? 'regional_monthly' : 'monthly')] ?? null;
+        $overrides = self::priceOverrides();
+        $key = $plan.'.monthly';
 
-        if ($override !== null) {
-            return $override;
+        if (array_key_exists($key, $overrides) && $overrides[$key] !== null) {
+            return $overrides[$key];
         }
 
         $plans = self::plans();
-        $raw = $plans[$plan]['prices'][$regional ? 'regional_monthly' : 'monthly'] ?? null;
+        $raw = $plans[$plan]['prices']['monthly'] ?? null;
 
         if ($raw === null) {
             return null;
@@ -360,12 +349,11 @@ class PlanCatalog
      * Короткая подпись цены для кнопок и писем.
      *
      * @param string $plan
-     * @param bool $regional региональная цена BY/RU
      * @return string «Бесплатно» либо «$3.99 / мес»
      */
-    public static function priceLabel(string $plan, bool $regional = false): string
+    public static function priceLabel(string $plan): string
     {
-        $price = self::monthlyPrice($plan, $regional);
+        $price = self::monthlyPrice($plan);
 
         if ($price === null) {
             return 'Бесплатно';
@@ -408,7 +396,6 @@ class PlanCatalog
                 'tagline' => (string) ($all[$id]['tagline'] ?? ''),
                 'prices' => [
                     'monthly' => self::monthlyPrice($id),
-                    'regional_monthly' => self::monthlyPrice($id, true),
                     'yearly' => self::periodPrice($id, 'yearly'),
                     'weekly' => self::periodPrice($id, 'weekly'),
                 ],
@@ -461,7 +448,6 @@ class PlanCatalog
                 'tagline' => $taglines[$id],
                 'prices' => [
                     'monthly' => self::DEFAULT_MONTHLY[$id] ?? null,
-                    'regional_monthly' => self::DEFAULT_REGIONAL[$id] ?? null,
                     'currency' => 'USD',
                 ],
             ];

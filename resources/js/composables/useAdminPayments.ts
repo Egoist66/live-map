@@ -28,7 +28,7 @@ export interface PlanPriceRow {
   name: string
   tagline: string
   audience: string
-  prices: Record<'monthly' | 'regional_monthly' | 'yearly' | 'weekly', number | null>
+  prices: Record<'monthly' | 'yearly' | 'weekly', number | null>
 }
 
 /**
@@ -137,6 +137,18 @@ export const PAYMENT_PERIOD_HINTS: Record<string, string> = {
   year: 'Оплата сразу за год.',
 }
 
+/**
+ * Итог загрузки Excel с бэкенда (зеркало TariffsImport::importFromArrays).
+ */
+export interface TariffsImportResult {
+  plans_updated: number
+  features_saved: number
+  items_saved: number
+  deleted: number
+  errors: string[]
+  warnings: string[]
+}
+
 /** Подписи аудитории тарифа (человеческим языком). */
 export const PLAN_AUDIENCE_LABELS: Record<string, string> = {
   users: 'Для всех',
@@ -202,6 +214,7 @@ export function useAdminPayments() {
     loading: false,
     savingPrices: false,
     acting: false,
+    importing: false,
     error: null as string | null,
     notice: null as string | null,
     plans: [] as PlanPriceRow[],
@@ -209,6 +222,10 @@ export function useAdminPayments() {
     gatewayNote: '',
     dialogOpen: false,
     helpOpen: false,
+    importOpen: false,
+    replaceOnImport: false,
+    importResult: null as TariffsImportResult | null,
+    importFileName: '' as string,
     editingId: null as number | null,
     draft: { ...EMPTY_ITEM_DRAFT, pricesByPlan: { ...EMPTY_ITEM_DRAFT.pricesByPlan } } as PaymentItemDraft,
   })
@@ -302,7 +319,7 @@ export function useAdminPayments() {
           name: String(plan.name ?? plan.id ?? ''),
           tagline: String(plan.tagline ?? ''),
           audience: String(plan.audience ?? 'users'),
-          prices: (plan.prices ?? { monthly: null, regional_monthly: null, yearly: null, weekly: null }) as PlanPriceRow['prices'],
+          prices: (plan.prices ?? { monthly: null, yearly: null, weekly: null }) as PlanPriceRow['prices'],
         }),
       )
       state.gateways = overview.data?.gateways ?? []
@@ -317,6 +334,25 @@ export function useAdminPayments() {
   }
 
   /**
+   * Отправить названия и описания тарифов на сервер (без перезагрузки).
+   */
+  async function persistPlanMeta(): Promise<void> {
+    const meta = state.plans.map((plan) => ({ plan: plan.id, name: plan.name, tagline: plan.tagline }))
+    await axios.put('/api/admin/payments/plan-meta', { meta })
+  }
+
+  /**
+   * Отправить цены тарифов на сервер (без перезагрузки).
+   */
+  async function persistPrices(): Promise<void> {
+    const prices = state.plans.flatMap((plan) =>
+      Object.entries(plan.prices).map(([period, price]) => ({ plan: plan.id, period, price })),
+    )
+
+    await axios.put('/api/admin/payments/plan-prices', { prices })
+  }
+
+  /**
    * Сохранить цены тарифов (оверрайды конфига).
    */
   async function savePrices(): Promise<void> {
@@ -326,12 +362,9 @@ export function useAdminPayments() {
     state.notice = null
 
     try {
-      const prices = state.plans.flatMap((plan) =>
-        Object.entries(plan.prices).map(([period, price]) => ({ plan: plan.id, period, price })),
-      )
-
-      await axios.put('/api/admin/payments/plan-prices', { prices })
+      await persistPrices()
       state.notice = 'Цены сохранены — приложение и бот уже показывают новые.'
+      await load()
     } catch (err: unknown) {
       state.error = readError(err, 'Не удалось сохранить цены')
     } finally {
@@ -349,12 +382,38 @@ export function useAdminPayments() {
     state.notice = null
 
     try {
-      const meta = state.plans.map((plan) => ({ plan: plan.id, name: plan.name, tagline: plan.tagline }))
-      await axios.put('/api/admin/payments/plan-meta', { meta })
+      await persistPlanMeta()
       state.notice = 'Названия и описания сохранены — везде уже новые.'
       await load()
     } catch (err: unknown) {
       state.error = readError(err, 'Не удалось сохранить описания')
+    } finally {
+      state.savingPrices = false
+    }
+  }
+
+  /**
+   * Сохранить всё по тарифам одним проходом: названия, описания и цены.
+   *
+   * Раньше кнопка «Сохранить всё» звала savePlanMeta + savePrices по
+   * очереди, а savePlanMeta в середине делал load() — свежие цены из
+   * инпутов затирались серверными, и второй запрос сохранял старье:
+   * запросы уходили, а цены не менялись. Теперь оба PUT идут подряд
+   * и только потом одна перезагрузка с сервера.
+   */
+  async function saveAll(): Promise<void> {
+    if (state.savingPrices) return
+    state.savingPrices = true
+    state.error = null
+    state.notice = null
+
+    try {
+      await persistPlanMeta()
+      await persistPrices()
+      state.notice = 'Всё сохранено — приложение и бот уже показывают новые цены и описания.'
+      await load()
+    } catch (err: unknown) {
+      state.error = readError(err, 'Не удалось сохранить тарифы')
     } finally {
       state.savingPrices = false
     }
@@ -557,6 +616,69 @@ export function useAdminPayments() {
     }
   }
 
+  /**
+   * Открыть диалог загрузки Excel (сброс прошлого результата).
+   */
+  function openImport(): void {
+    state.importOpen = true
+    state.importResult = null
+    state.importFileName = ''
+    state.error = null
+  }
+
+  /**
+   * Принять файл из PrimeVue FileUpload (@select) и сразу загрузить.
+   *
+   * @param event событие выбора файлов ({ files: File[] })
+   */
+  async function handleImportPicked(event: { files?: File[] }): Promise<void> {
+    const picked = event.files?.[0]
+    if (!picked) return
+    await importFile(picked)
+  }
+
+  /**
+   * Загрузить Excel на бэкенд и обновить раздел.
+   *
+   * Без галочки «очистить» строки обновляются по ключам, новое добавляется.
+   * С галочкой — всё удаляется и загружается только из файла, поэтому
+   * после полной очистки всё восстанавливается один в один.
+   *
+   * @param file выбранный .xlsx/.xls/.csv
+   */
+  async function importFile(file: File): Promise<void> {
+    if (state.importing) return
+    state.importing = true
+    state.error = null
+    state.notice = null
+    state.importResult = null
+    state.importFileName = file.name
+
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      form.append('replace', state.replaceOnImport ? '1' : '0')
+
+      const { data } = await axios.post('/api/admin/payments/import', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+
+      state.importResult = (data?.imported ?? null) as TariffsImportResult | null
+      state.notice = String(data?.message ?? 'Excel загружен.')
+
+      const hasIssues =
+        (state.importResult?.errors?.length ?? 0) > 0 || (state.importResult?.warnings?.length ?? 0) > 0
+
+      if (!hasIssues) state.importOpen = false
+
+      await load()
+    } catch (err: unknown) {
+      state.error = readError(err, 'Не удалось загрузить Excel. Проверьте, что это файл из кнопки «Скачать».')
+    } finally {
+      state.importing = false
+    }
+  }
+
   return {
     state,
     items,
@@ -572,6 +694,7 @@ export function useAdminPayments() {
     load,
     savePrices,
     savePlanMeta,
+    saveAll,
     openCreate,
     openCreateForPlan,
     openEdit,
@@ -579,5 +702,8 @@ export function useAdminPayments() {
     toggleActive,
     removeItem,
     exportFile,
+    openImport,
+    handleImportPicked,
+    importFile,
   }
 }

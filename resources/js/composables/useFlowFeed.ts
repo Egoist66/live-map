@@ -2,6 +2,7 @@ import { computed, ref } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import { useFlowStore } from '@/stores/flow'
 import { useRewardToast } from '@/composables/useRewardToast'
+import { replaceUrlPreservingState } from '@/composables/useHistoryState'
 import { flowApi } from '@/services/flow.api'
 import type { FlowFilter } from '@/types/flow'
 
@@ -80,7 +81,7 @@ export function useFlowFeed(options?: { authorId?: number | null; postId?: numbe
       const url = new URL(window.location.href)
       if (tag) url.searchParams.set('tag', tag)
       else url.searchParams.delete('tag')
-      window.history.replaceState({}, '', url.toString())
+      replaceUrlPreservingState(url.toString())
     } catch { /* URL не критичен */ }
     await store.load({ filter: store.filter, authorId: options?.authorId ?? null, search: '', tag })
   }
@@ -93,7 +94,7 @@ export function useFlowFeed(options?: { authorId?: number | null; postId?: numbe
       const url = new URL(window.location.href)
       url.searchParams.delete('author')
       url.searchParams.delete('tag')
-      window.history.replaceState({}, '', url.toString())
+      replaceUrlPreservingState(url.toString())
     } catch {}
     await store.load({ filter: 'all', authorId: null, search: '', tag: null })
   }

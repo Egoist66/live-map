@@ -1,7 +1,9 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { router } from '@inertiajs/vue3'
 import { route } from '@/route'
-import { normalizeSwipeTab } from '@/composables/useSwipes'
+// Тонкий импорт из utils, а не из useSwipes: полный хук тянет dating.api
+// и chat.api в entry-замыкание первого визита (ловит check-bundle-isolation).
+import { normalizeSwipeTab } from '@/utils/swipe-tabs'
 
 /**
  * Реактивный маршрут для персистентного лейаута.

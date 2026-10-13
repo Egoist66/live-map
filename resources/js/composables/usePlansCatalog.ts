@@ -58,7 +58,7 @@ export function usePlansCatalog() {
   }
 
   /**
-   * Принудительно обновить каталог (например, после смены региона цен).
+   * Принудительно обновить каталог (например, после правок цен в админке).
    */
   async function refresh(): Promise<void> {
     loadStarted = false

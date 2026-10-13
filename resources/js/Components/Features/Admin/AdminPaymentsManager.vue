@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import Button from 'primevue/button'
+import Checkbox from 'primevue/checkbox'
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
 import Dialog from 'primevue/dialog'
+import FileUpload from 'primevue/fileupload'
 import InputText from 'primevue/inputtext'
 import InputNumber from 'primevue/inputnumber'
 import Message from 'primevue/message'
@@ -66,8 +68,7 @@ const kindChoices = Object.entries(PAYMENT_KIND_LABELS)
 const periodChoices = Object.entries(PAYMENT_PERIOD_LABELS).map(([value, label]) => ({ value, label }))
 
 const priceColumns = [
-  { key: 'monthly', label: 'Месяц, весь мир', hint: 'Карта, Apple и Google Pay' },
-  { key: 'regional_monthly', label: 'Месяц, Россия и Беларусь', hint: 'МИР, СБП и ЕРИП' },
+  { key: 'monthly', label: 'В месяц', hint: 'Одна цена для всех стран' },
   { key: 'yearly', label: 'Сразу на год', hint: 'Выгодно на 12 месяцев' },
   { key: 'weekly', label: 'На неделю', hint: 'Для быстрого решения' },
 ] as const
@@ -76,9 +77,7 @@ const priceColumns = [
  * Сохранить всё по тарифам: названия, описания и цены.
  */
 async function saveAllPlans(): Promise<void> {
-  await pay.savePlanMeta()
-  if (pay.state.error !== null) return
-  await pay.savePrices()
+  await pay.saveAll()
 }
 
 /**
@@ -121,8 +120,20 @@ function kindSeverity(kind: string): string {
             severity="success"
             size="small"
             aria-label="Скачать таблицу"
+            v-tooltip.bottom="'Скачать Excel: тарифы, фишки и витрина'"
             :loading="pay.state.acting"
             @click="pay.exportFile()"
+          />
+          <Button
+            icon="pi pi-upload"
+            rounded
+            outlined
+            severity="info"
+            size="small"
+            aria-label="Загрузить таблицу"
+            v-tooltip.bottom="'Загрузить Excel обратно'"
+            :disabled="pay.state.importing"
+            @click="pay.openImport()"
           />
         </div>
       </div>
@@ -148,8 +159,8 @@ function kindSeverity(kind: string): string {
     <section class="rounded-3xl border border-stone-200 bg-white p-4 shadow-soft sm:p-6 dark:border-zinc-800 dark:bg-zinc-900">
       <div class="flex flex-wrap items-center gap-2">
         <p class="min-w-0 flex-1 basis-48 text-xs leading-relaxed text-stone-500 dark:text-zinc-400">
-          Нажмите на тариф, чтобы увидеть, что в него входит. Пустая цена — значит бесплатно.
-          «Весь мир» — оплата картой, Apple и Google Pay; «Россия и Беларусь» — МИР, СБП и ЕРИП, цена обычно ниже.
+          Нажмите на тариф, чтобы увидеть, что в него входит. Пустое поле — вернётся стандартная цена из настроек.
+          Цена одна для всех стран, оплата — картой, Apple и Google Pay.
         </p>
         <div class="flex shrink-0 items-center gap-1.5">
           <Button
@@ -205,7 +216,7 @@ function kindSeverity(kind: string): string {
               </label>
             </div>
             <!-- Цены -->
-            <div class="mt-2.5 grid grid-cols-2 gap-2 lg:grid-cols-4">
+            <div class="mt-2.5 grid grid-cols-2 gap-2 lg:grid-cols-3">
               <label v-for="col in priceColumns" :key="col.key" class="block">
                 <span class="mb-1 block text-[11px] font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500">{{ col.label }}</span>
                 <InputNumber
@@ -387,15 +398,82 @@ function kindSeverity(kind: string): string {
       :pt="{ root: { class: '!rounded-[28px] !border-0 overflow-hidden' } }"
     >
       <ol class="list-decimal space-y-2.5 pl-5 text-sm leading-relaxed text-stone-600 dark:text-zinc-300">
-        <li><b class="text-stone-900 dark:text-white">Цены.</b> Впишите новую цену и нажмите «Сохранить всё». Сотрите цену — станет бесплатно. Месяцев два: «весь мир» (карта, Apple и Google Pay) и «Россия и Беларусь» (МИР, СБП — обычно дешевле). Всё обновится в приложении и в боте само.</li>
+        <li><b class="text-stone-900 dark:text-white">Цены.</b> Впишите новую цену и нажмите «Сохранить всё». Сотрите цену — вернётся стандартная из настроек. Цена одна для всех стран. Всё обновится в приложении и в боте само.</li>
         <li><b class="text-stone-900 dark:text-white">Названия и описания.</b> Меняются прямо в карточке тарифа и тоже сохраняются кнопкой «Сохранить всё».</li>
         <li><b class="text-stone-900 dark:text-white">Что входит в тариф.</b> Нажмите на тариф — раскроется список возможностей. Кнопка «Добавить» — новая строка, карандаш — изменить, корзина — убрать.</li>
         <li><b class="text-stone-900 dark:text-white">Витрина ниже.</b> Разовые товары: кредиты и реклама. Переключатель «В продаже» показывает или прячет товар у людей.</li>
+        <li><b class="text-stone-900 dark:text-white">Excel.</b> Зелёная кнопка скачивает всё в цветной файл с подсказками и списками, синяя — загружает обратно. Удалили всё? Загрузите файл с галочкой «Очистить» — тарифы, цены, фишки и товары восстановятся.</li>
         <li><b class="text-stone-900 dark:text-white">Оплата.</b> Пока деньги принимают вручную через поддержку. Когда подключится оплата картой, эти же цены заработают автоматически.</li>
       </ol>
       <template #footer>
         <div class="flex justify-end">
           <Button label="Понятно" rounded autofocus @click="pay.state.helpOpen = false" />
+        </div>
+      </template>
+    </Dialog>
+
+    <!-- Диалог загрузки Excel -->
+    <Dialog
+      v-model:visible="pay.state.importOpen"
+      modal
+      dismissableMask
+      :draggable="false"
+      header="Загрузить Excel обратно"
+      :style="{ width: '520px', maxWidth: '94vw' }"
+      :pt="{ root: { class: '!rounded-[28px] !border-0 overflow-hidden' } }"
+    >
+      <div class="space-y-3">
+        <p class="text-sm leading-relaxed text-stone-600 dark:text-zinc-300">
+          Выберите файл, скачанный кнопкой «Скачать». Строки обновятся по серым «Ключам», новое добавится.
+          Если всё удаляли — поставьте галочку ниже, и файл восстановит тарифы, цены, фишки и товары.
+        </p>
+        <FileUpload
+          mode="basic"
+          accept=".xlsx,.xls,.csv"
+          :auto="false"
+          choose-label="Выбрать файл"
+          :disabled="pay.state.importing"
+          @select="pay.handleImportPicked($event)"
+        />
+        <p v-if="pay.state.importFileName" class="text-xs text-stone-500 dark:text-zinc-400">
+          Файл: {{ pay.state.importFileName }}
+        </p>
+        <label class="flex cursor-pointer items-start gap-2 rounded-2xl border border-stone-200 px-3 py-2.5 dark:border-zinc-700">
+          <Checkbox v-model="pay.state.replaceOnImport" binary />
+          <span>
+            <span class="block text-sm font-bold text-stone-800 dark:text-zinc-100">Очистить всё перед загрузкой</span>
+            <span class="block text-xs leading-relaxed text-stone-500 dark:text-zinc-400">
+              Удалить тарифы, фишки и товары, затем загрузить только из файла. Нужно для полного восстановления.
+            </span>
+          </span>
+        </label>
+        <Message v-if="pay.state.importResult" severity="success" :closable="false">
+          Тарифы: {{ pay.state.importResult.plans_updated }}, фишки: {{ pay.state.importResult.features_saved }},
+          товары: {{ pay.state.importResult.items_saved
+          }}<span v-if="pay.state.importResult.deleted > 0">, очищено: {{ pay.state.importResult.deleted }}</span>.
+        </Message>
+        <Message
+          v-if="pay.state.importResult && pay.state.importResult.warnings.length > 0"
+          severity="warn"
+          :closable="false"
+        >
+          <ul class="list-disc pl-4">
+            <li v-for="(warn, i) in pay.state.importResult.warnings.slice(0, 5)" :key="i">{{ warn }}</li>
+          </ul>
+        </Message>
+        <Message
+          v-if="pay.state.importResult && pay.state.importResult.errors.length > 0"
+          severity="error"
+          :closable="false"
+        >
+          <ul class="list-disc pl-4">
+            <li v-for="(err, i) in pay.state.importResult.errors.slice(0, 8)" :key="i">{{ err }}</li>
+          </ul>
+        </Message>
+      </div>
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <Button label="Закрыть" text rounded @click="pay.state.importOpen = false" />
         </div>
       </template>
     </Dialog>

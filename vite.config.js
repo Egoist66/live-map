@@ -260,17 +260,24 @@ export default defineConfig({
                 ],
             },
             workbox: {
-                // Прекеш — ТОЛЬКО шелл (первый визит по 3G): entry + общие
-                // вендоры + офлайн. Раньше тут было `**/*.{js,css,html,woff2}` —
+                // Прекеш — ТОЛЬКО шелл (первый визит по 3G): entry + общий
+                // vendor + офлайн. Раньше тут было `**/*.{js,css,html,woff2}` —
                 // SW на первом визите качал ВЕСЬ билд (~130 чанков, ~2.5МБ:
                 // все страницы, диалоги, maplibre), забивал канал и ронял
                 // LCP/TTI. Ленивые чанки — через runtime-кэш `/build/` ниже.
+                //
+                // primevue/form/realtime/maplibre/swiper в прекеше НЕТ
+                // сознательно: primevue едет вместе с entry через modulepreload
+                // (двойная закачка в install только душила бы канал), а form
+                // (vee-validate+zod ~150КБ), realtime (echo+pusher) и maplibre
+                // нужны не всем (гости/не-карта) — их первый визит не должен
+                // оплачивать. Догрузка — CacheFirst `pwa-build` ниже, повторный
+                // визит идёт из кэша без сети. Сжатие на проде (Laravel Cloud)
+                // делает edge (Cloudflare): .gz/.br рядом с чанками для него
+                // не нужны, service worker кэширует уже распакованные ответы.
                 globPatterns: [
                     'assets/app-*.{js,css}',
                     'assets/vendor-*.js',
-                    'assets/primevue-*.js',
-                    'assets/form-*.js',
-                    'assets/realtime-*.js',
                     'assets/rolldown-runtime-*.js',
                     'assets/api-*.js',
                     'offline.html',

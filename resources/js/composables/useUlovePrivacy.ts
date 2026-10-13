@@ -1,6 +1,5 @@
 import { computed, ref } from 'vue'
 import { usePage } from '@inertiajs/vue3'
-import { datingApi } from '@/services/dating.api'
 
 /** Ключи приватности ULove, хранящиеся на бэке. */
 export type UlovePrivacyKey = 'dating_match_only' | 'dating_hide_name' | 'dating_hide_age' | 'dating_hide_distance' | 'dating_hide_rating'
@@ -148,6 +147,11 @@ export function useUlovePrivacy() {
    * PRO-фишки без тарифа не трогает, при ошибке
    * возвращает переключатель в прежнее положение.
    *
+   * dating.api грузится лениво (`await import`): хук allowlisted в ядре
+   * (см. CORE_ALLOWLIST в check-bundle-isolation.mjs), а статический импорт
+   * тянул бы все `/api/swipes/*` строки в entry-замыкание первого визита.
+   * Сохранение и так асинхронное — поведение не меняется.
+   *
    * @param key ключ фишки
    * @param next новое значение
    */
@@ -160,6 +164,7 @@ export function useUlovePrivacy() {
     error.value = null
     saving.value = true
     try {
+      const { datingApi } = await import('@/services/dating.api')
       await datingApi.updateSettings({ ...flags.value })
     } catch (e: unknown) {
       flags.value[key] = prev

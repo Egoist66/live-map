@@ -2,10 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\TariffsExport;
+use App\Imports\TariffsImport;
 use App\Models\PaymentItem;
 use App\Services\PlanCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
  * Админка «Payments»: витрина цен и точка подключения оплат.
@@ -39,7 +43,6 @@ class AdminPaymentsController extends Controller
                 'audience' => $catalog[$plan]['audience'] ?? 'users',
                 'prices' => [
                     'monthly' => PlanCatalog::monthlyPrice($plan),
-                    'regional_monthly' => PlanCatalog::monthlyPrice($plan, true),
                     'yearly' => PlanCatalog::periodPrice($plan, 'yearly'),
                     'weekly' => PlanCatalog::periodPrice($plan, 'weekly'),
                 ],
@@ -50,8 +53,7 @@ class AdminPaymentsController extends Controller
             'plans' => $plans,
             'features_by_plan' => $this->featuresByPlan(),
             'gateways' => [
-                ['id' => 'stripe', 'label' => 'Карты мира, Apple Pay и Google Pay', 'status' => 'not_connected'],
-                ['id' => 'local', 'label' => 'МИР, СБП и ЕРИП (Россия и Беларусь)', 'status' => 'not_connected'],
+                ['id' => 'stripe', 'label' => 'Карты, Apple Pay и Google Pay', 'status' => 'not_connected'],
             ],
             'gateway_note' => 'Пока оплата принимается вручную: человек пишет в поддержку после перевода, администратор включает тариф кнопкой. Автоматическая оплата картой появится позже — блоки выше просто показывают, что она ещё не подключена.',
             'items_total' => PaymentItem::whereNotIn('kind', ['plan_price', 'plan_meta'])->count(),
@@ -188,7 +190,7 @@ class AdminPaymentsController extends Controller
         $data = $request->validate([
             'prices' => ['required', 'array', 'min:1'],
             'prices.*.plan' => ['required', 'string', 'in:free,pro,premium,business'],
-            'prices.*.period' => ['required', 'string', 'in:monthly,regional_monthly,yearly,weekly'],
+            'prices.*.period' => ['required', 'string', 'in:monthly,yearly,weekly'],
             'prices.*.price' => ['nullable', 'numeric', 'min:0', 'max:9999'],
         ]);
 
@@ -267,379 +269,85 @@ class AdminPaymentsController extends Controller
     }
 
     /**
-     * Выгрузка всего ценообразования в Excel для тех, кто занимается ценами.
+     * Выгрузка всего ценообразования в Excel через maatwebsite/excel.
      *
-     * Лист «Тарифы»: название, кому подходит, описание и все четыре цены
-     * (итоговые — как видят люди) + помечено, меняли ли цену вручную.
-     * Лист «Что входит»: какая возможность в какой тариф входит и видна ли.
-     * Лист «Витрина»: разовые товары с ценами и ценами под каждый тариф.
-     * Везде только человеческие слова, шапка закреплена, фильтры включены.
+     * Четыре листа: «Как пользоваться» (инструкция + легенда + ссылки),
+     * «Тарифы» (цены и описания с цветом по тарифу и живыми итогами),
+     * «Что входит» (фишки: да — зелёным, нет — красным, списки из коробки),
+     * «Витрина» (товары с ценами под тарифы). Файл — он же шаблон для
+     * обратной загрузки: серые «Ключи» позволяют импорту обновить строки,
+     * а не задвоить их.
      *
-     * @return \Symfony\Component\HttpFoundation\StreamedResponse
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
      */
-    public function export()
+    public function export(): BinaryFileResponse
     {
-        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
-        $spreadsheet->getProperties()
-            ->setCreator('ULove')
-            ->setTitle('Тарифы и витрина');
-
-        $this->fillPlansSheet($spreadsheet);
-        $this->fillFeaturesSheet($spreadsheet);
-        $this->fillShowcaseSheet($spreadsheet);
-
-        $spreadsheet->setActiveSheetIndex(0);
         $fileName = 'tarify-'.now()->format('Y-m-d_H-i').'.xlsx';
 
-        return response()->streamDownload(function () use ($spreadsheet) {
-            (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet))->save('php://output');
-        }, $fileName, ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']);
+        return Excel::download(new TariffsExport(), $fileName);
     }
 
     /**
-     * Лист «Тарифы»: все тарифы с итоговыми ценами и пометкой ручных правок.
+     * Загрузка тарифов из Excel обратно в базу.
      *
-     * @param \PhpOffice\PhpSpreadsheet\Spreadsheet $book книга Excel
-     */
-    private function fillPlansSheet(\PhpOffice\PhpSpreadsheet\Spreadsheet $book): void
-    {
-        $sheet = $book->getActiveSheet();
-        $sheet->setTitle('Тарифы');
-
-        $headers = [
-            'Тариф',
-            'Для кого',
-            'Описание',
-            'Месяц, весь мир',
-            'Месяц, Россия и Беларусь',
-            'Год',
-            'Неделя',
-            'Цены',
-        ];
-        $this->writeHeader($sheet, $headers);
-
-        $catalog = PlanCatalog::plans();
-        $priceOverrides = PlanCatalog::priceOverrides();
-        $metaOverrides = PlanCatalog::metaOverrides();
-
-        $row = 2;
-        foreach (['free', 'pro', 'premium', 'business'] as $plan) {
-            $info = $catalog[$plan] ?? [];
-
-            $sheet->setCellValue("A$row", (string) ($info['name'] ?? $plan));
-            $sheet->setCellValue("B$row", $this->audienceLabel((string) ($info['audience'] ?? 'users')));
-            $sheet->setCellValue("C$row", (string) ($info['tagline'] ?? ''));
-
-            $this->writePlanPrice($sheet, "D$row", PlanCatalog::monthlyPrice($plan), true);
-            $this->writePlanPrice($sheet, "E$row", PlanCatalog::monthlyPrice($plan, true), true);
-            $this->writePlanPrice($sheet, "F$row", PlanCatalog::periodPrice($plan, 'yearly'), false);
-            $this->writePlanPrice($sheet, "G$row", PlanCatalog::periodPrice($plan, 'weekly'), false);
-
-            $sheet->setCellValue("H$row", $this->planSource($plan, $priceOverrides, $metaOverrides));
-
-            $row++;
-        }
-
-        $this->finishSheet($sheet, 'A', 'H', $row, ['D', 'E', 'F', 'G']);
-    }
-
-    /**
-     * Лист «Что входит»: какая возможность в каком тарифе и видна ли она.
+     * Листы ищутся по заголовкам (порядок и названия вкладок не важны),
+     * человеческие слова понимаются наравне с кодами: «Знакомства» = ulove,
+     * «Пакет кредитов» = credit_pack, «Один раз» = once, «да» = видно.
+     * Без галочки «очистить» — строки обновляются по ключам, новое
+     * добавляется. С галочкой — всё удаляется и загружается только из
+     * файла: так восстанавливаются тарифы, цены, фишки, описания и товары
+     * даже после полной очистки.
      *
-     * @param \PhpOffice\PhpSpreadsheet\Spreadsheet $book книга Excel
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
      */
-    private function fillFeaturesSheet(\PhpOffice\PhpSpreadsheet\Spreadsheet $book): void
+    public function import(Request $request): JsonResponse
     {
-        $sheet = $book->createSheet();
-        $sheet->setTitle('Что входит');
-
-        $this->writeHeader($sheet, ['Тариф', 'Возможность', 'Пояснение', 'Показывается']);
-
-        $catalog = PlanCatalog::plans();
-
-        $features = PaymentItem::where('kind', 'feature')
-            ->orderBy('sort_order')
-            ->orderBy('id')
-            ->get();
-
-        $byPlan = ['free' => [], 'pro' => [], 'premium' => [], 'business' => []];
-        foreach ($features as $feature) {
-            $payload = is_array($feature->payload) ? $feature->payload : [];
-            $linked = [];
-
-            if (isset($payload['plan']) && is_string($payload['plan'])) {
-                $linked[] = $payload['plan'];
-            }
-
-            if (isset($payload['plans']) && is_array($payload['plans'])) {
-                foreach ($payload['plans'] as $planId) {
-                    if (is_string($planId)) {
-                        $linked[] = $planId;
-                    }
-                }
-            }
-
-            foreach (array_unique($linked) as $planId) {
-                if (array_key_exists($planId, $byPlan)) {
-                    $byPlan[$planId][] = $feature;
-                }
-            }
-        }
-
-        $row = 2;
-        foreach (['free', 'pro', 'premium', 'business'] as $plan) {
-            $planName = (string) ($catalog[$plan]['name'] ?? $plan);
-
-            if ($byPlan[$plan] === []) {
-                $sheet->setCellValue("A$row", $planName);
-                $sheet->setCellValue("B$row", 'Пока пусто');
-                $sheet->setCellValue("C$row", 'Добавьте через карточку тарифа');
-                $sheet->setCellValue("D$row", '—');
-                $row++;
-                continue;
-            }
-
-            foreach ($byPlan[$plan] as $feature) {
-                $sheet->setCellValue("A$row", $planName);
-                $sheet->setCellValue("B$row", (string) $feature->name);
-                $sheet->setCellValue("C$row", (string) ($feature->description ?? ''));
-                $sheet->setCellValue("D$row", $feature->is_active ? 'да' : 'нет');
-                $row++;
-            }
-        }
-
-        $this->finishSheet($sheet, 'A', 'D', $row, []);
-    }
-
-    /**
-     * Лист «Витрина»: разовые товары с ценами под каждый тариф.
-     *
-     * @param \PhpOffice\PhpSpreadsheet\Spreadsheet $book книга Excel
-     */
-    private function fillShowcaseSheet(\PhpOffice\PhpSpreadsheet\Spreadsheet $book): void
-    {
-        $sheet = $book->createSheet();
-        $sheet->setTitle('Витрина');
-
-        $catalog = PlanCatalog::plans();
-        $planName = static fn (string $id): string => (string) ($catalog[$id]['name'] ?? $id);
-
-        $this->writeHeader($sheet, [
-            'Товар',
-            'Пояснение',
-            'Где показывается',
-            'Что это',
-            'Цена',
-            'Как часто платят',
-            'Для '.$planName('free'),
-            'Для '.$planName('pro'),
-            'Для '.$planName('premium'),
-            'Для '.$planName('business'),
-            'В продаже',
+        $data = $request->validate([
+            'file' => ['required', 'file', 'mimes:xlsx,xls,csv', 'max:10240'],
+            'replace' => ['nullable', 'boolean'],
         ]);
 
-        $items = PaymentItem::whereNotIn('kind', ['plan_price', 'plan_meta', 'feature'])
-            ->orderBy('sort_order')
-            ->orderBy('id')
-            ->get();
+        $path = $data['file']->getRealPath();
 
-        $row = 2;
-        foreach ($items as $item) {
-            $payload = is_array($item->payload) ? $item->payload : [];
-            $ownPrices = is_array($payload['prices_by_plan'] ?? null) ? $payload['prices_by_plan'] : [];
-
-            $sheet->setCellValue("A$row", (string) $item->name);
-            $sheet->setCellValue("B$row", (string) ($item->description ?? ''));
-            $sheet->setCellValue("C$row", $this->moduleLabel((string) $item->module));
-            $sheet->setCellValue("D$row", $this->kindLabel((string) $item->kind));
-
-            $this->writeMoney($sheet, "E$row", $item->price === null ? null : (float) $item->price, 'Бесплатно');
-            $sheet->setCellValue("F$row", $this->periodLabel($item->period));
-
-            $col = 'G';
-            foreach (['free', 'pro', 'premium', 'business'] as $planId) {
-                $own = $ownPrices[$planId] ?? null;
-                $this->writeMoney($sheet, $col.$row, $own === null ? null : (float) $own, 'Как всем');
-                $col++;
-            }
-
-            $sheet->setCellValue("K$row", $item->is_active ? 'да' : 'нет');
-            $row++;
+        if ($path === false) {
+            return response()->json(['message' => 'Не удалось прочитать файл.'], 422);
         }
 
-        $this->finishSheet($sheet, 'A', 'K', $row, ['E', 'G', 'H', 'I', 'J']);
-    }
+        $result = (new TariffsImport())->importFile($path, (bool) ($data['replace'] ?? false));
 
-    /**
-     * Шапка листа: тёмная строка-заголовок.
-     *
-     * @param \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet лист
-     * @param list<string> $headers подписи колонок
-     */
-    private function writeHeader(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet, array $headers): void
-    {
-        foreach ($headers as $index => $title) {
-            $cell = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($index + 1).'1';
-            $sheet->setCellValue($cell, $title);
-        }
+        $message = $this->importSummary($result);
 
-        $last = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex(count($headers));
-        $sheet->getStyle("A1:{$last}1")->applyFromArray([
-            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
-            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '0F172A']],
+        return response()->json([
+            'imported' => $result,
+            'message' => $message,
         ]);
     }
 
     /**
-     * Оформить лист: ширина колонок, закреплённая шапка, фильтры, формат денег.
+     * Человеческий итог импорта для тоста в админке.
      *
-     * @param \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet лист
-     * @param string $first первая колонка (напр. 'A')
-     * @param string $last последняя колонка (напр. 'H')
-     * @param int $nextRow номер первой пустой строки
-     * @param list<string> $moneyColumns колонки с деньгами
+     * @param array{plans_updated:int,features_saved:int,items_saved:int,deleted:int,errors:list<string>,warnings:list<string>} $result итог загрузки
      */
-    private function finishSheet(
-        \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet,
-        string $first,
-        string $last,
-        int $nextRow,
-        array $moneyColumns
-    ): void {
-        foreach (range($first, $last) as $column) {
-            $sheet->getColumnDimension($column)->setAutoSize(true);
-        }
-
-        $sheet->freezePane('A2');
-        $sheet->setAutoFilter("{$first}1:{$last}".($nextRow - 1));
-
-        if ($nextRow <= 2) {
-            return;
-        }
-
-        foreach ($moneyColumns as $column) {
-            $sheet->getStyle("{$column}2:{$column}".($nextRow - 1))
-                ->getNumberFormat()
-                ->setFormatCode('"$"#,##0.00');
-        }
-    }
-
-    /**
-     * Цена тарифа в ячейку: пустой месяц = бесплатно, пустой год/неделя = нет.
-     *
-     * @param \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet лист
-     * @param string $cell адрес ячейки
-     * @param float|null $value цена
-     * @param bool $isMonthly месячная ли цена (там пусто = бесплатно)
-     */
-    private function writePlanPrice(
-        \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet,
-        string $cell,
-        ?float $value,
-        bool $isMonthly
-    ): void {
-        if ($value === null) {
-            $sheet->setCellValue($cell, $isMonthly ? 'Бесплатно' : 'Нет');
-            return;
-        }
-
-        $sheet->setCellValue($cell, $value);
-    }
-
-    /**
-     * Деньги в ячейку: число либо понятное слово вместо пустоты.
-     *
-     * @param \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet лист
-     * @param string $cell адрес ячейки
-     * @param float|null $value цена
-     * @param string $empty что написать вместо пустоты
-     */
-    private function writeMoney(
-        \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet,
-        string $cell,
-        ?float $value,
-        string $empty
-    ): void {
-        if ($value === null) {
-            $sheet->setCellValue($cell, $empty);
-            return;
-        }
-
-        $sheet->setCellValue($cell, $value);
-    }
-
-    /**
-     * Откуда цена тарифа: меняли ли её вручную в админке.
-     *
-     * @param string $plan тариф
-     * @param array<string, float|null> $priceOverrides правки цен
-     * @param array<string, array{name?:string,tagline?:string}> $metaOverrides правки описаний
-     */
-    private function planSource(string $plan, array $priceOverrides, array $metaOverrides): string
+    private function importSummary(array $result): string
     {
-        foreach (['monthly', 'regional_monthly', 'yearly', 'weekly'] as $period) {
-            $key = $plan.'.'.$period;
+        $parts = [];
 
-            if (array_key_exists($key, $priceOverrides) && $priceOverrides[$key] !== null) {
-                return 'Изменены вручную';
-            }
+        if ($result['deleted'] > 0) {
+            $parts[] = "очищено {$result['deleted']}";
         }
 
-        if (array_key_exists($plan, $metaOverrides)) {
-            return 'Изменены вручную';
+        $parts[] = "тарифы: {$result['plans_updated']}";
+        $parts[] = "фишки: {$result['features_saved']}";
+        $parts[] = "товары: {$result['items_saved']}";
+
+        $summary = 'Готово — '.implode(', ', $parts).'.';
+
+        if ($result['errors'] !== []) {
+            $summary .= ' Ошибок: '.count($result['errors']).' (первые — в ответе).';
         }
 
-        return 'Стандартные';
-    }
-
-    /**
-     * Кому подходит тариф, человеческим языком.
-     */
-    private function audienceLabel(string $audience): string
-    {
-        return $audience === 'organizations' ? 'Для компаний' : 'Для всех';
-    }
-
-    /**
-     * Где показывается товар, человеческим языком.
-     */
-    private function moduleLabel(string $module): string
-    {
-        return match ($module) {
-            'ulove' => 'Знакомства',
-            'upin' => 'Карта',
-            'uflow' => 'Лента',
-            'districts' => 'Районы',
-            'business' => 'Компании',
-            default => 'Везде',
-        };
-    }
-
-    /**
-     * Что за товар, человеческим языком.
-     */
-    private function kindLabel(string $kind): string
-    {
-        return match ($kind) {
-            'credit_pack' => 'Пакет кредитов',
-            'ad' => 'Реклама',
-            default => 'Товар',
-        };
-    }
-
-    /**
-     * Как часто платят, человеческим языком.
-     *
-     * @param string|null $period once|week|month|year
-     */
-    private function periodLabel(?string $period): string
-    {
-        return match ($period) {
-            'week' => 'Каждую неделю',
-            'month' => 'Каждый месяц',
-            'year' => 'Сразу за год',
-            default => 'Один раз',
-        };
+        return $summary;
     }
 
     /**
@@ -676,7 +384,7 @@ class AdminPaymentsController extends Controller
     /**
      * Длинный период конфига в короткий период витрины.
      *
-     * @param string $period monthly|regional_monthly|yearly|weekly
+     * @param string $period monthly|yearly|weekly
      * @return string
      */
     private function shortPeriod(string $period): string

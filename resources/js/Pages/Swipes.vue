@@ -528,7 +528,7 @@ onUnmounted(() => {
 
           <template v-else>
           <div class="swipes-feed relative mt-1 sm:mt-4 select-none overscroll-none sm:max-w-[420px] sm:mx-auto sm:w-full lg:max-w-[500px] xl:max-w-[540px] 2xl:max-w-[580px]">
-            <div v-if="s.loading.value" class="swipes-feed-skeleton rounded-xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 grid place-items-center sm:h-[62dvh] sm:min-h-[400px] sm:max-h-[540px] lg:h-[68dvh] lg:max-h-[640px] xl:h-[70dvh] xl:max-h-[720px] 2xl:max-h-[780px]">
+            <div v-if="s.loading.value || !s.feedReady.value" class="swipes-feed-skeleton rounded-xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 grid place-items-center sm:h-[62dvh] sm:min-h-[400px] sm:max-h-[540px] lg:h-[68dvh] lg:max-h-[640px] xl:h-[70dvh] xl:max-h-[720px] 2xl:max-h-[780px]">
               <i class="pi pi-spin pi-spinner text-2xl text-stone-400 dark:text-zinc-500" />
             </div>
 

@@ -447,6 +447,7 @@ Route::middleware(['web', 'auth:web,sanctum', 'admin', 'throttle:300,1'])->group
     Route::get('/admin/impersonations', [\App\Http\Controllers\AdminImpersonationController::class, 'index']);
     Route::get('/admin/payments/overview', [\App\Http\Controllers\AdminPaymentsController::class, 'overview']);
     Route::get('/admin/payments/export', [\App\Http\Controllers\AdminPaymentsController::class, 'export']);
+    Route::post('/admin/payments/import', [\App\Http\Controllers\AdminPaymentsController::class, 'import']);
     Route::get('/admin/payments/items', [\App\Http\Controllers\AdminPaymentsController::class, 'items']);
     Route::post('/admin/payments/items', [\App\Http\Controllers\AdminPaymentsController::class, 'store']);
     Route::patch('/admin/payments/items/{item}', [\App\Http\Controllers\AdminPaymentsController::class, 'update']);

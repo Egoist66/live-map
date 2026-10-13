@@ -1,4 +1,5 @@
 import { onBeforeUnmount, ref, watch } from 'vue'
+import { replaceUrlPreservingState } from '@/composables/useHistoryState'
 
 /**
  * Query-параметр активного подтаба: `/settings/app?apptab=stats`.
@@ -77,6 +78,9 @@ function isAppSettingsPage(): boolean {
  * Вызывать при входе на `/settings/app` извне хука (смена главного
  * таба): кладёт `?apptab=` из живого состояния, дефолт стирает.
  *
+ * Состояние истории сохраняем как есть: Inertia держит в нём данные
+ * страницы для кнопок назад/вперёд, голый `{}` давал белый экран.
+ *
  * @param id подтаб для записи
  */
 export function writeAppTabToUrl(id: SettingsAppTabId): void {
@@ -93,7 +97,7 @@ export function writeAppTabToUrl(id: SettingsAppTabId): void {
       url.searchParams.set(SETTINGS_APP_TAB_PARAM, id)
     }
 
-    window.history.replaceState({}, '', url.toString())
+    replaceUrlPreservingState(url.toString())
   } catch {
     /* noop */
   }

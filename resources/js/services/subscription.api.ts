@@ -22,7 +22,7 @@ export interface PlanCatalogCard {
   name: string
   price: string
   tagline: string
-  prices: Record<'monthly' | 'regional_monthly' | 'yearly' | 'weekly', number | null>
+  prices: Record<'monthly' | 'yearly' | 'weekly', number | null>
   features: PlanCatalogFeature[]
 }
 

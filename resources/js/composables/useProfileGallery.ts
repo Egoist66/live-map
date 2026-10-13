@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
 import { galleryApi, type GalleryPhoto } from '@/services/gallery.api'
+import { replaceUrlPreservingState } from '@/composables/useHistoryState'
 import { useRewardToast } from '@/composables/useRewardToast'
 import { useImageCompress } from '@/composables/useImageCompress'
 
@@ -296,7 +297,7 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
       if (url.searchParams.has('photo') || url.searchParams.has('comment')) {
         url.searchParams.delete('photo')
         url.searchParams.delete('comment')
-        window.history.replaceState({}, '', url.toString())
+        replaceUrlPreservingState(url.toString())
       }
     } catch {}
   }

@@ -8,6 +8,7 @@
         {{-- Нативу (upin-mobile WebView) SEO-разметка не нужна: режем вес head и шлем noindex,
              чтобы ?client=native случайно не попал в индекс. --}}
         @php($isNativeClient = $isNative ?? false)
+        @php($isTelegramClient = $isTelegram ?? false)
         @php($seoRobots = $seoHead['robots'] ?? config('seo.robots'))
         <meta name="robots" content="{{ $isNativeClient ? 'noindex, nofollow' : $seoRobots }}">
         <meta name="author" content="{{ $seoHead['author'] ?? config('seo.author') }}">
@@ -76,18 +77,29 @@
         <link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
         <link rel="preload" as="font" type="font/woff2" crossorigin href="https://fonts.bunny.net/figtree/files/figtree-latin-700-normal.woff2">
         <link rel="preload" as="font" type="font/woff2" crossorigin href="https://fonts.bunny.net/figtree/files/figtree-latin-800-normal.woff2">
-        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700,800,900&family=inter:400,500,600&display=swap" rel="stylesheet">
-        {{-- Telegram Mini App (@U1ove_bot): грузим WebApp API синхронно в head,
-              чтобы window.Telegram существовал ДО первого paint. Ранний инлайн
-              ниже сразу делает ready() (expand — только на мобиле, иначе
-              десктопный клиент уводит WebView в немасштабируемое окно
-              справа «не двигается, не закрыть»), иначе Mini App моргает
-              схлопнутым BottomSheet, пока Vue-мост догрузится после mount.
-              Полноценный мост (тема, viewport-подписки, автовход) живёт
-              во фронте: useTelegram / useTelegramAuth (Правило №1). --}}
+        {{-- Figtree без 900: font-black синтезируется из 800 без видимой разницы,
+              зато минус один woff2 на первом визите. Inter — только используемые веса. --}}
+        <link href="https://fonts.bunny.net/css?family=figtree:400,500,600,700,800&family=inter:400,500,600&display=swap" rel="stylesheet">
+        {{-- Telegram Mini App (@U1ove_bot): WebApp API нужен ДО первого paint
+              (ранний инлайн ниже сразу делает ready(), иначе Mini App моргает
+              схлопнутым BottomSheet, пока Vue-мост догрузится после mount;
+              expand — только на мобиле, иначе десктопный клиент уводит
+              WebView в немасштабируемое окно справа).
+              Сервер уже опознал Telegram ($isTelegram: кука/query/header
+              с прошлого визита) — грузим синхронно, как раньше. Всем остальным
+              (браузеры, upin-mobile, PWA — 95%+ трафика) — `defer`: парсер
+              не блокируется, а ready/expand/тема догоняют `load`-слушателем
+              ниже (функция `__upinTgEarlyInit` вызывается дважды: при парсе
+              и по загрузке библиотеки, идемпотентно). Полноценный мост (тема,
+              viewport-подписки, автовход) живёт во фронте:
+              useTelegram / useTelegramAuth (Правило №1). --}}
+        @if($isTelegramClient)
         <script src="https://telegram.org/js/telegram-web-app.js"></script>
+        @else
+        <script id="tg-webapp-js" defer src="https://telegram.org/js/telegram-web-app.js"></script>
+        @endif
         <script nonce="{{ $cspNonce ?? '' }}">
-            (function () {
+            window.__upinTgEarlyInit = function () {
                 try {
                     var haystack = (window.location.search + ' ' + window.location.hash).toLowerCase();
                     var looksLikeTg = haystack.indexOf('tgwebappplatform') !== -1
@@ -203,7 +215,24 @@
                         root.style.setProperty('--tg-chrome-top', chromeTop + 'px');
                     } catch (e) {}
                 } catch (e) {}
-            })();
+            };
+            try { window.__upinTgEarlyInit(); } catch (e) {}
+            // Догон для defer-загрузки (не-TG ветка тега выше): при парсе
+            // библиотеки ещё нет и init вышел раньше времени — повторяем
+            // по `load` скрипта. Инлайн-`onload` в разметке запрещён нашим
+            // CSP (script-src без unsafe-inline), поэтому слушатель вешаем
+            // отсюда (nonce-скрипт). В sync-ветке элемента #tg-webapp-js нет —
+            // тихо пропускаем. Повтор идемпотентен: ready/expand/кука/классы
+            // выставляются теми же значениями.
+            try {
+                var tgScript = document.getElementById('tg-webapp-js');
+                if (tgScript && !tgScript.dataset.tgBound) {
+                    tgScript.dataset.tgBound = '1';
+                    tgScript.addEventListener('load', function () {
+                        try { window.__upinTgEarlyInit(); } catch (err) {}
+                    });
+                }
+            } catch (e) {}
         </script>
         <script nonce="{{ $cspNonce ?? '' }}">
             (function(){ try{ var root=document.documentElement; var s=localStorage.getItem('theme'); var m=window.matchMedia('(prefers-color-scheme: dark)').matches; var isTg=root.classList.contains('tg-app'); var tgDark=root.classList.contains('tg-dark'); var d=isTg ? tgDark : (s ? s==='dark' : m); if(d) root.classList.add('dark'); else root.classList.remove('dark'); root.style.colorScheme = d?'dark':'light'; var tgBg=root.classList.contains('tg-app') ? root.style.getPropertyValue('--tg-theme-bg-color').trim() : ''; var bg=tgBg || (d?'#0F121F':'#ffffff'); window.__upinThemeBg = bg; /* Держим тёмный фон, пока жив #pwa-boot: проверка getElementById здесь бессмысленна (head парсится раньше body-разметки, узел ещё не существует), а светлый <html> под фейдом выцветает розовый логотип в серый. Целевой фон вернёт __upinHideSplash ровно в момент удаления узла. */ root.style.backgroundColor = '#150B10'; }catch(e){} })();

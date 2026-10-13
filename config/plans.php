@@ -10,8 +10,7 @@
  * - Смена цены — правка этого файла, код и тексты подтягивают её сами:
  *   бэк через App\Services\PlanCatalog, фронт через GET /api/subscription/plans.
  *
- * Цены в USD. regional — мягкая цена для BY/RU (местный эквайринг);
- * когда шлюз научится определять регион сам — фронт пришлёт ?region=by|ru.
+ * Цены в USD. Цена одна для всех стран: PRO — $3.99/мес по умолчанию.
  */
 return [
 
@@ -37,7 +36,7 @@ return [
     | Планы
     |--------------------------------------------------------------------------
     |
-    | prices: monthly — мир, regional_monthly — BY/RU, yearly — мир (год),
+    | prices: monthly — цена в месяц для всех стран, yearly — сразу на год,
     | weekly — импульсная неделя PRO (показывать только в момент азарта,
     | в настройках не светить). null — бесплатно / периода нет.
     |
@@ -57,7 +56,6 @@ return [
             'tagline' => 'Чтобы жить районом и знакомиться рядом',
             'prices' => [
                 'monthly' => null,
-                'regional_monthly' => null,
                 'yearly' => null,
                 'weekly' => null,
                 'currency' => 'USD',
@@ -88,7 +86,6 @@ return [
             'tagline' => 'Для активных знакомств: тебя видят, тебе отвечают',
             'prices' => [
                 'monthly' => 3.99,
-                'regional_monthly' => 1.99,
                 'yearly' => 29.99,
                 'weekly' => 0.99,
                 'currency' => 'USD',
@@ -119,7 +116,6 @@ return [
             'tagline' => 'Максимум для знакомств: всё из PRO без ограничений',
             'prices' => [
                 'monthly' => 7.99,
-                'regional_monthly' => 4.99,
                 'yearly' => 59.99,
                 'weekly' => null,
                 'currency' => 'USD',
@@ -150,7 +146,6 @@ return [
             'tagline' => 'Только для организаций: кабинет компании',
             'prices' => [
                 'monthly' => 19.99,
-                'regional_monthly' => 19.99,
                 'yearly' => null,
                 'weekly' => null,
                 'currency' => 'USD',

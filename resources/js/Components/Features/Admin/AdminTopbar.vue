@@ -30,7 +30,11 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <header class="wp-adminbar native-safe-top sticky top-0 z-40 bg-[#1d2327] text-[#eee]" aria-label="Верхняя панель админки">
+  <!-- fixed, а не sticky: модалки ставят html/body в overflow:hidden,
+       и sticky-шапка перестаёт липнуть — улетает вверх вместе со скроллом.
+       fixed от скролл-контейнера не зависит: шапка стоит всегда.
+       Отступ под неё даёт hero-паддинг страницы (см. Admin/Index.vue). -->
+  <header class="wp-adminbar native-safe-top fixed inset-x-0 top-0 z-40 bg-[#1d2327] text-[#eee]" aria-label="Верхняя панель админки">
     <div class="mx-auto flex h-14 max-w-[1600px] items-center gap-1.5 px-2 sm:gap-2 sm:px-4">
       <Button
         icon="pi pi-bars"

@@ -1,5 +1,6 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
+import { replaceUrlPreservingState } from '@/composables/useHistoryState'
 import { usePins } from '@/composables/usePins'
 import { useMap } from '@/composables/useMap'
 import { usePinDetails } from '@/composables/usePinDetails'
@@ -745,7 +746,7 @@ export function useMapPage() {
       requested = url.searchParams.get('create') === '1'
       if (requested) {
         url.searchParams.delete('create')
-        window.history.replaceState({}, '', url.toString())
+        replaceUrlPreservingState(url.toString())
       }
     } catch {
       requested = false
@@ -908,7 +909,7 @@ export function useMapPage() {
       districtId = Number(url.searchParams.get('district') || 0)
       if (districtId > 0) {
         url.searchParams.delete('district')
-        window.history.replaceState({}, '', url.toString())
+        replaceUrlPreservingState(url.toString())
       }
     } catch {
       districtId = 0
@@ -939,7 +940,7 @@ export function useMapPage() {
       if (url.searchParams.has('pin') || url.searchParams.has('comment')) {
         url.searchParams.delete('pin')
         url.searchParams.delete('comment')
-        window.history.replaceState({}, '', url.toString())
+        replaceUrlPreservingState(url.toString())
       }
     } catch {}
   }

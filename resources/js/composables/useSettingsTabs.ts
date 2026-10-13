@@ -1,5 +1,6 @@
 import { ref, computed, watch } from 'vue'
 import { usePage } from '@inertiajs/vue3'
+import { replaceUrlPreservingState } from '@/composables/useHistoryState'
 import { useSecurityImpersonations } from '@/composables/useSecurityImpersonations'
 import { useAppModulesStore } from '@/stores/appModules'
 import { useActivitySystem } from '@/composables/useActivitySystem'
@@ -104,7 +105,7 @@ export function useSettingsTabs() {
       if (id !== 'app') {
         url.searchParams.delete(SETTINGS_APP_TAB_PARAM)
       }
-      window.history.replaceState({}, '', url.toString())
+      replaceUrlPreservingState(url.toString())
       if (id === 'app') {
         writeAppTabToUrl(getActiveAppTab())
       }

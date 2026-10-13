@@ -1,6 +1,7 @@
 import { computed } from 'vue'
 import type { Ref } from 'vue'
 import { router } from '@inertiajs/vue3'
+import { replaceUrlPreservingState } from '@/composables/useHistoryState'
 
 /**
  * ULove-тема шапки чата.
@@ -62,7 +63,7 @@ export function useChatDatingTheme(activeConv: Ref<any>, selectedId: Ref<number 
     } catch { return }
     try {
       if (new URLSearchParams(window.location.search).get('from') === 'swipes') {
-        window.history.replaceState({}, '', window.location.pathname)
+        replaceUrlPreservingState(window.location.pathname)
       }
     } catch { return }
   }

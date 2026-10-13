@@ -36,11 +36,42 @@ export function setupPrimeVue(app: App) {
   app.use(ConfirmationService)
   app.directive('tooltip', Tooltip)
   if (typeof document !== 'undefined') {
+    const licenseSelector = '.p-license-host, .p-license-message, [data-p-license]'
     const hide = () => {
-      document.querySelectorAll('.p-license-host, .p-license-message, [data-p-license]').forEach((el) => ((el as HTMLElement).style.display = 'none'))
+      document.querySelectorAll(licenseSelector).forEach((el) => ((el as HTMLElement).style.display = 'none'))
     }
     hide()
-    const obs = new MutationObserver(hide)
+    // Дешёвый сторож вместо скана всего документа на каждую мутацию:
+    // полный querySelectorAll — только если среди добавленных узлов реально
+    // есть лицензионный бейдж, вызовы коалесцируются через rAF. Поведение
+    // то же (бейдж прячется в том же кадре), стоимость в чатах/лентах
+    // с потоком мутаций — около нуля. SSR-безопасно: только в браузере.
+    let hideScheduled = false
+    const scheduleHide = () => {
+      if (hideScheduled) return
+      hideScheduled = true
+      const run = () => {
+        hideScheduled = false
+        hide()
+      }
+      if (typeof requestAnimationFrame !== 'undefined') requestAnimationFrame(run)
+      else setTimeout(run, 0)
+    }
+    const hasLicenseNode = (node: Node): boolean => {
+      if (!(node instanceof HTMLElement)) return false
+      if (node.matches(licenseSelector)) return true
+      return node.querySelector(licenseSelector) !== null
+    }
+    const obs = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        for (const node of mutation.addedNodes) {
+          if (hasLicenseNode(node)) {
+            scheduleHide()
+            return
+          }
+        }
+      }
+    })
     obs.observe(document.documentElement, { childList: true, subtree: true })
   }
 }

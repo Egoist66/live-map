@@ -1,10 +1,11 @@
 import { watch, onMounted, onBeforeUnmount } from 'vue'
 import type { Ref } from 'vue'
+import { pushUrlPreservingState } from '@/composables/useHistoryState'
 
 export function useChatNavigation(selectedId: Ref<number | null>, openConversation: (id: number) => Promise<void>) {
   function syncUrl(id: number | null) {
     const path = id ? `/chat/${id}` : '/chat'
-    if (window.location.pathname !== path) window.history.pushState({}, '', path)
+    if (window.location.pathname !== path) pushUrlPreservingState(path)
   }
 
   watch(selectedId, syncUrl)

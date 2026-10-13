@@ -1,5 +1,6 @@
 import { ref, watch } from 'vue'
 import { router } from '@inertiajs/vue3'
+import { replaceUrlPreservingState } from '@/composables/useHistoryState'
 
 /**
  * ID главной вкладки админ-панели.
@@ -80,9 +81,15 @@ function isSeoSection(value: unknown): value is AdminSeoSection {
  *
  * Невалидные значения откатываются к дефолтам,
  * отсутствующие — тоже (перезагрузка всегда открывает валидное место).
+ * Вне `/admin` (кнопка назад на профиль, popstate) — ничего не трогаем:
+ * иначе возврат из консоли молча сбрасывал бы запомненный раздел.
  */
 function readFromUrl(): void {
   if (typeof window === 'undefined') {
+    return
+  }
+
+  if (!isAdminPath()) {
     return
   }
 
@@ -129,7 +136,7 @@ function syncToUrl(): void {
     return
   }
 
-  window.history.replaceState(window.history.state, '', url.toString())
+  replaceUrlPreservingState(url.toString())
 }
 
 /**

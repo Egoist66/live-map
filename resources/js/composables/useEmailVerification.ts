@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import { emailApi } from '@/services/email.api'
+import { replaceUrlPreservingState } from '@/composables/useHistoryState'
 
 /**
  * Подтверждение почты: статус, модалка, отправка ссылки по кнопке.
@@ -249,7 +250,7 @@ export function useEmailVerification() {
     try {
       const url = new URL(window.location.href)
       url.searchParams.delete('verified')
-      window.history.replaceState(null, '', url.toString())
+      replaceUrlPreservingState(url.toString())
     } catch {
       return true
     }
