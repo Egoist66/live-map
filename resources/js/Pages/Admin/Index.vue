@@ -283,9 +283,20 @@ enforceVisibleTab()
             </section>
 
             <section v-else-if="tab === 'telegram'" aria-label="Telegram">
-              <div class="grid min-w-0 grid-cols-1 items-start gap-4 xl:grid-cols-2">
+              <div class="min-w-0 grid grid-cols-1 items-start gap-4 xl:grid-cols-2">
                 <AdminTelegramUsers :tg="tgUsers" />
                 <AdminBotBroadcasts v-if="staff.isAdmin.value" :bb="botBroadcasts" />
+              </div>
+            </section>
+
+            <section v-else aria-label="Консоль">
+              <AdminStatsCards :overview="mon.overview.value" :pct="mon.onlinePct.value" :loading="mon.loadingOverview.value" />
+              <div class="mt-4 grid min-w-0 grid-cols-1 items-start gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+                <AdminActivityChart :points="mon.points.value" :max="mon.maxChart.value" :days="mon.chartDays.value" :loading="mon.loadingChart.value" :summary="mon.summary.value" :exporting="mon.exporting.value" @days="(v:number)=>mon.chartDays.value=v" @export="mon.exportExcel()" />
+                <AdminOnlineList
+                  :list="mon.online.value" :meta="mon.onlineMeta.value" :page="mon.onlinePage.value" :limit="mon.onlineLimit.value" :query="mon.onlineQuery.value" :loading="mon.loadingOnline.value"
+                  @update:query="(v:string)=>mon.onlineQuery.value=v" @limit="(v:number)=>mon.setOnlineLimit(v as any)" @page="mon.setOnlinePage"
+                />
               </div>
             </section>
           </div>

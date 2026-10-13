@@ -62,7 +62,8 @@ const BUSINESS: AppModule[] = ['business']
  * «что входит», которые ведутся в админке (раздел тарифов). Этот файл нужен
  * лишь пока бэкенд недоступен или список в админке ещё пуст: как только
  * в админке появляются возможности тарифа, модалка показывает их первыми,
- * а эти строки остаются запасными внизу.
+ * а запасные строки, уже покрытые живыми, скрываются (без дублей).
+ * Стартовый набор админки — зеркало этих строк 1:1 (см. PaymentItemSeeder).
  */
 export const PLAN_DETAILS: PlanDetails[] = [
   {
@@ -292,7 +293,8 @@ export function usePlanDetails() {
    *
    * Названия, цены и списки «что входит» подтягиваются с бэкенда
    * (админка поверх настроек по умолчанию). Запасные строки из этого
-   * файла показываются, только если в админке для тарифа пока пусто.
+   * файла показываются, только если в админке для тарифа пока пусто;
+   * покрытые живыми строками запасные — скрываются, чтобы не двоить.
    * @param id идентификатор тарифа
    */
   function showPlan(id: PlanId): void {
@@ -312,11 +314,15 @@ export function usePlanDetails() {
           }
         : null
 
+    const liveNames = new Set(liveFeatures.map((f) => f.name.trim().toLowerCase()))
+
     const fallbackGroups = found.groups
       .filter((group) => isVisible(group.modules, (m) => modules.isEnabled(m)))
       .map((group) => ({
         ...group,
-        items: group.items.filter((item) => isVisible(item.modules, (m) => modules.isEnabled(m))),
+        items: group.items.filter(
+          (item) => isVisible(item.modules, (m) => modules.isEnabled(m)) && !liveNames.has(item.text.trim().toLowerCase()),
+        ),
       }))
       .filter((group) => group.items.length > 0)
 

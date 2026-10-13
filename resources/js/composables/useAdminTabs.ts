@@ -100,9 +100,18 @@ function readFromUrl(): void {
  *
  * `seo` храним только когда открыт таб `seo`,
  * чтобы URL вида `?tab=stats&seo=scripts` не смущал.
+ *
+ * Важно для Inertia: состояние истории (`history.state`) сохраняем как есть.
+ * Inertia хранит в нём данные страницы для кнопки назад/вперёд — прежний
+ * `replaceState({}, ...)` затирал его пустым объектом, и возврат назад
+ * (админка ↔ профиль) давал пустой экран до ручной перезагрузки.
  */
 function syncToUrl(): void {
   if (typeof window === 'undefined') {
+    return
+  }
+
+  if (!isAdminPath()) {
     return
   }
 
@@ -116,7 +125,11 @@ function syncToUrl(): void {
     url.searchParams.delete('seo')
   }
 
-  window.history.replaceState({}, '', url.toString())
+  if (url.toString() === window.location.href) {
+    return
+  }
+
+  window.history.replaceState(window.history.state, '', url.toString())
 }
 
 /**

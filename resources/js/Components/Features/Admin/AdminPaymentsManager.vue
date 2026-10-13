@@ -153,14 +153,6 @@ function kindSeverity(kind: string): string {
         </p>
         <div class="flex shrink-0 items-center gap-1.5">
           <Button
-            icon="pi pi-info-circle"
-            rounded
-            outlined
-            size="small"
-            aria-label="Как работать с тарифами"
-            @click="pay.state.helpOpen = true"
-          />
-          <Button
             label="Сохранить всё"
             icon="pi pi-check"
             rounded
