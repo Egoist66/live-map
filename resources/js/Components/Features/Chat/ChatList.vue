@@ -70,13 +70,13 @@ const { userProfileUrl } = useProfileUrl()
           <span class="w-11 h-11 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white grid place-items-center text-lg shrink-0">⭐</span>
         </span>
         <span class="flex-1 min-w-0">
-          <span class="block text-[15px] lg:text-sm font-semibold dark:text-white truncate">Избранное</span>
+          <span class="block text-[15px] lg:text-sm font-semibold text-stone-900 dark:text-white truncate">Избранное</span>
           <span class="block text-[13px] lg:text-xs truncate mt-0.5 text-stone-500 dark:text-zinc-400">Заметки, ссылки и файлы — только для себя</span>
         </span>
       </button>
       <div v-if="!conversations.length && !showSavedPin" class="p-6 sm:p-8 text-center">
         <div class="w-14 h-14 rounded-2xl bg-violet-50 dark:bg-zinc-800 grid place-items-center mx-auto mb-3 text-xl">💬</div>
-        <div class="text-sm font-semibold dark:text-white">Нет чатов</div>
+        <div class="text-sm font-semibold text-stone-900 dark:text-white">Нет чатов</div>
         <div class="text-xs text-stone-500 mt-1">Найдите человека через поиск выше</div>
       </div>
       <div v-for="c in conversations" :key="c.id" class="group w-full flex items-center gap-0 text-left select-none">
@@ -87,8 +87,8 @@ const { userProfileUrl } = useProfileUrl()
             <OnlineDot v-if="!c.title" :online="isOnline(c.other?.id, c.other?.last_seen_at)" />
           </span>
           <div class="flex-1 min-w-0">
-            <div class="flex justify-between items-baseline gap-2"><span class="text-[15px] lg:text-sm font-semibold dark:text-white truncate">{{ c.title || c.other?.name || 'Чат' }} <OrgBadge :is-organization="c.other?.is_organization" /></span><span class="flex items-center gap-1.5 shrink-0"><i v-if="c.is_pinned" class="pi pi-thumbtack text-[11px] text-violet-500" title="Закреплён" /><span v-if="c.last_message_at" class="text-[11px] text-stone-400">{{ formatTime(c.last_message_at) }}</span></span></div>
-            <div v-if="c.title" class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5 text-violet-600">🏘️ Общий чат района<span class="text-stone-300">·</span><MessageTicks v-if="ticks.isOwnLast(c)" :status="ticks.lastMessageStatus(c) ?? 'sent'" /><span class="truncate text-stone-500">{{ previewText(c.last_message) }}</span></div>
+            <div class="flex justify-between items-baseline gap-2"><span class="text-[15px] lg:text-sm font-semibold text-stone-900 dark:text-white truncate">{{ c.title || c.other?.name || 'Чат' }} <OrgBadge :is-organization="c.other?.is_organization" /></span><span class="flex items-center gap-1.5 shrink-0"><i v-if="c.is_pinned" class="pi pi-thumbtack text-[11px] text-violet-500" title="Закреплён" /><span v-if="c.last_message_at" class="text-[11px] text-stone-400">{{ formatTime(c.last_message_at) }}</span></span></div>
+            <div v-if="c.title" class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5 text-violet-600">🏘️ Общий чат района<span class="text-stone-300">·</span><MessageTicks v-if="ticks.isOwnLast(c)" :status="ticks.lastMessageStatus(c) ?? 'sent'" /><span class="truncate text-stone-500 dark:text-zinc-400">{{ previewText(c.last_message) }}</span></div>
             <div v-else class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5"><MessageTicks v-if="ticks.isOwnLast(c)" :status="ticks.lastMessageStatus(c) ?? 'sent'" /><span class="truncate text-stone-500 dark:text-zinc-400">{{ previewText(c.last_message, isOnline(c.other?.id, c.other?.last_seen_at) ? 'в сети' : 'Начни общение') }}</span><span v-if="(c.last_message as any)?.is_edited" class="text-[10px] text-stone-400">(изм.)</span></div>
           </div>
           <span v-if="c.unread_count" class="bg-[#F04D9F] text-white text-xs font-bold min-w-[22px] h-[22px] grid place-items-center px-1.5 rounded-full shrink-0">{{ c.unread_count > 9 ? '9+' : c.unread_count }}</span>
@@ -102,7 +102,7 @@ const { userProfileUrl } = useProfileUrl()
     <div v-if="tab === 'ulove'" class="divide-y dark:divide-zinc-800">
       <div v-if="!filteredUlove.length" class="p-6 sm:p-8 text-center">
         <div class="w-14 h-14 rounded-2xl bg-rose-500/10 text-rose-500 grid place-items-center mx-auto mb-3 text-xl">💞</div>
-        <div class="text-sm font-semibold dark:text-white">Пока нет диалогов</div>
+        <div class="text-sm font-semibold text-stone-900 dark:text-white">Пока нет диалогов</div>
         <div class="text-xs text-stone-500 mt-1">Начни общение — новые переписки появятся здесь</div>
       </div>
       <div v-for="c in filteredUlove" :key="c.id" class="group w-full flex items-center gap-0 text-left select-none">
@@ -112,8 +112,8 @@ const { userProfileUrl } = useProfileUrl()
             <OnlineDot :online="isOnline(c.other?.id, c.other?.last_seen_at)" />
           </span>
           <div class="flex-1 min-w-0">
-            <div class="flex justify-between items-baseline gap-2"><span class="text-[15px] lg:text-sm font-semibold dark:text-white truncate">{{ c.other?.name || 'Чат' }}</span><span class="flex items-center gap-1.5 shrink-0"><i v-if="c.is_pinned" class="pi pi-thumbtack text-[11px] text-rose-400" title="Закреплён" /><span v-if="c.last_message_at" class="text-[11px] text-stone-400">{{ formatTime(c.last_message_at) }}</span></span></div>
-            <div v-if="c.other?.is_match" class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5"><span class="text-rose-500 font-bold">Мэтч</span><span class="text-stone-300">·</span><MessageTicks v-if="ticks.isOwnLast(c)" :status="ticks.lastMessageStatus(c) ?? 'sent'" /><span class="truncate text-stone-500">{{ previewText(c.last_message, 'Чат открыт — напиши первым') }}</span><span v-if="(c.last_message as any)?.is_edited" class="text-[10px] text-stone-400">(изм.)</span></div>
+            <div class="flex justify-between items-baseline gap-2"><span class="text-[15px] lg:text-sm font-semibold text-stone-900 dark:text-white truncate">{{ c.other?.name || 'Чат' }}</span><span class="flex items-center gap-1.5 shrink-0"><i v-if="c.is_pinned" class="pi pi-thumbtack text-[11px] text-rose-400" title="Закреплён" /><span v-if="c.last_message_at" class="text-[11px] text-stone-400">{{ formatTime(c.last_message_at) }}</span></span></div>
+            <div v-if="c.other?.is_match" class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5"><span class="text-rose-500 font-bold">Мэтч</span><span class="text-stone-300">·</span><MessageTicks v-if="ticks.isOwnLast(c)" :status="ticks.lastMessageStatus(c) ?? 'sent'" /><span class="truncate text-stone-500 dark:text-zinc-400">{{ previewText(c.last_message, 'Чат открыт — напиши первым') }}</span><span v-if="(c.last_message as any)?.is_edited" class="text-[10px] text-stone-400">(изм.)</span></div>
             <div v-else class="text-[13px] lg:text-xs truncate flex items-center gap-1 mt-0.5"><MessageTicks v-if="ticks.isOwnLast(c)" :status="ticks.lastMessageStatus(c) ?? 'sent'" /><span class="truncate text-stone-500 dark:text-zinc-400">{{ previewText(c.last_message, isOnline(c.other?.id, c.other?.last_seen_at) ? 'в сети' : 'Начни общение') }}</span><span v-if="(c.last_message as any)?.is_edited" class="text-[10px] text-stone-400">(изм.)</span></div>
           </div>
           <span v-if="c.unread_count" class="bg-[#F04D9F] text-white text-xs font-bold min-w-[22px] h-[22px] grid place-items-center px-1.5 rounded-full shrink-0">{{ c.unread_count > 9 ? '9+' : c.unread_count }}</span>
@@ -128,7 +128,7 @@ const { userProfileUrl } = useProfileUrl()
       <div v-for="f in friends" :key="f.id" class="flex items-center justify-between p-3.5 lg:p-3 select-none active:bg-stone-50 group">
         <Link :href="userProfileUrl(f.other)" class="flex items-center gap-3 hover:opacity-80 min-w-0">
           <span class="relative shrink-0"><Avatar :image="avatarSrcFor(f.other)" shape="circle" class="[&_img]:object-cover" :pt="{ image: { class: 'object-cover' } }" /><OnlineDot :online="isOnline(f.other?.id, (f.other as any)?.last_seen_at)" /></span>
-          <span class="text-[15px] lg:text-sm font-medium dark:text-white truncate hover:underline">{{ f.other?.name }}</span>
+          <span class="text-[15px] lg:text-sm font-medium text-stone-900 dark:text-white truncate hover:underline">{{ f.other?.name }}</span>
         </Link>
         <div class="flex gap-1 shrink-0 items-center">
           <button @click="emit('startChat', f.other)" class="text-xs px-3 py-1.5 rounded-full bg-stone-900 dark:bg-white dark:text-zinc-900 text-white font-semibold">Чат</button>
@@ -142,7 +142,7 @@ const { userProfileUrl } = useProfileUrl()
       <div v-for="r in pendingIn" :key="r.id" class="flex items-center justify-between p-3.5 lg:p-3 gap-2 select-none">
         <Link :href="userProfileUrl(r.requester)" class="flex items-center gap-3 hover:opacity-80 min-w-0">
           <span class="relative shrink-0"><Avatar :image="avatarSrcFor(r.requester)" shape="circle" class="[&_img]:object-cover" :pt="{ image: { class: 'object-cover' } }" /><OnlineDot :online="isOnline(r.requester?.id, (r.requester as any)?.last_seen_at)" /></span>
-          <span class="text-[15px] lg:text-sm dark:text-white truncate hover:underline">{{ r.requester?.name }}</span>
+          <span class="text-[15px] lg:text-sm text-stone-900 dark:text-white truncate hover:underline">{{ r.requester?.name }}</span>
         </Link>
         <div class="flex gap-1.5 shrink-0">
           <button @click="emit('accept', r.id)" class="text-xs px-3.5 py-2 rounded-full bg-green-600 text-white font-semibold active:scale-95">Принять</button>
@@ -153,14 +153,14 @@ const { userProfileUrl } = useProfileUrl()
     <div v-if="tab === 'blocked'" class="divide-y dark:divide-zinc-800">
       <div v-if="!blocked.length" class="p-6 text-center text-sm text-stone-500">Нет заблокированных</div>
       <div v-for="b in blocked" :key="b.id" class="flex items-center justify-between p-3.5 lg:p-3">
-        <div class="flex items-center gap-3 min-w-0"><Avatar :image="avatarSrcFor(b.blocked)" shape="circle" class="[&_img]:object-cover" :pt="{ image: { class: 'object-cover' } }" /><span class="text-[15px] lg:text-sm dark:text-white truncate">{{ b.blocked?.name }}</span></div>
+        <div class="flex items-center gap-3 min-w-0"><Avatar :image="avatarSrcFor(b.blocked)" shape="circle" class="[&_img]:object-cover" :pt="{ image: { class: 'object-cover' } }" /><span class="text-[15px] lg:text-sm text-stone-900 dark:text-white truncate">{{ b.blocked?.name }}</span></div>
         <button v-if="b.blocked?.id" @click="emit('unblock', b.blocked.id)" class="text-xs px-3.5 py-2 rounded-full border bg-white dark:bg-zinc-800 shrink-0">Разблокировать</button>
       </div>
     </div>
     <Menu ref="menuAnchor" :model="(rowMenu.menuModel.value as any)" :popup="true" :pt="menuPt" />
     <Dialog v-model:visible="rowMenu.sheetOpen.value" position="bottom" :draggable="false" :modal="true" :dismissable-mask="true" :show-header="false" :pt="{ root: { class: '!rounded-t-[24px] !rounded-b-none !border-0 !m-0 !max-h-[80dvh] w-full sm:!max-w-[360px]' }, content: { class: '!p-2 !pb-[calc(0.5rem+var(--sab))]' } }">
       <div class="px-2 pb-2 space-y-1">
-        <div v-if="rowMenu.target.value?.userName" class="px-4 py-2 text-[15px] font-bold truncate dark:text-white">{{ rowMenu.target.value.userName }}</div>
+        <div v-if="rowMenu.target.value?.userName" class="px-4 py-2 text-[15px] font-bold truncate text-stone-900 dark:text-white">{{ rowMenu.target.value.userName }}</div>
         <button v-for="(it, i) in rowMenu.menuModel.value" :key="i" type="button" class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-stone-50 dark:hover:bg-white/5 text-[15px] font-medium text-left dark:text-zinc-100" :class="(it as any).danger ? '!text-red-600' : ''" @click="(it as any).command?.()"><i :class="(it as any).icon"></i>{{ (it as any).label }}</button>
         <button type="button" class="w-full px-4 py-3.5 rounded-2xl bg-stone-100 dark:bg-white/10 dark:text-zinc-100 text-[15px] font-medium mt-1" @click="rowMenu.close()">Отмена</button>
       </div>

@@ -117,7 +117,7 @@ const sourceAuthors = computed(() => {
           <span class="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white grid place-items-center text-lg">⭐</span>
         </span>
         <span class="flex-1 min-w-0">
-          <span class="flex items-center gap-1.5 text-sm font-semibold dark:text-white truncate">Избранное</span>
+          <span class="flex items-center gap-1.5 text-sm font-semibold text-stone-900 dark:text-white truncate">Избранное</span>
           <span class="block text-[11px] text-stone-400">Себе · сохранится как заметка</span>
         </span>
         <ProgressSpinner v-if="sending && targetId === 'saved'" style="width: 20px; height: 20px" :stroke-width="6" aria-label="Сохраняем в избранное" class="shrink-0" />
@@ -136,7 +136,7 @@ const sourceAuthors = computed(() => {
           <Avatar v-else :image="avatarSrcFor(c?.other)" shape="circle" class="!w-10 !h-10 [&_img]:object-cover" />
         </span>
         <span class="flex-1 min-w-0">
-          <span class="flex items-center gap-1.5 text-sm font-semibold dark:text-white truncate">
+          <span class="flex items-center gap-1.5 text-sm font-semibold text-stone-900 dark:text-white truncate">
             {{ rowLabel(c) }}
             <i v-if="c?.is_pinned" class="pi pi-thumbtack text-[10px] text-violet-500 shrink-0"></i>
           </span>

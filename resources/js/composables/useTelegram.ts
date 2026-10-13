@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
 import type { TelegramWebApp, TelegramWebAppUser } from '@/types/telegram'
+import { syncThemeWithTelegram } from '@/composables/useTheme'
 
 const SCRIPT_URL = 'https://telegram.org/js/telegram-web-app.js'
 const TG_COOKIE = 'upin_client=telegram; path=/; max-age=31536000; SameSite=Lax'
@@ -21,6 +22,8 @@ const tgSafeBottom = ref(0)
 
 let initialized = false
 let scriptPromise: Promise<boolean> | null = null
+/** Последняя схема, которой уже подчинили тему сайта (защита ручного выбора). */
+let lastSyncedScheme: 'light' | 'dark' | null = null
 
 /**
  * Достать сырой WebApp-объект, если скрипт уже загружен.
@@ -315,6 +318,11 @@ function applyViewport(webApp: TelegramWebApp): void {
   root.style.setProperty('--tg-viewport-stable', `${webApp.viewportStableHeight || viewportHeight.value}px`)
   root.classList.toggle('tg-dark', colorScheme.value === 'dark')
   root.dataset.tgPlatform = platform.value
+
+  if (lastSyncedScheme !== colorScheme.value) {
+    lastSyncedScheme = colorScheme.value
+    syncThemeWithTelegram(colorScheme.value)
+  }
 
   applyThemeParams(webApp)
   applyTelegramInsets(webApp)

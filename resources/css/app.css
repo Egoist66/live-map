@@ -608,7 +608,13 @@ html.tg-app body {
   background-color: var(--tg-theme-bg-color);
   color: var(--tg-theme-text-color);
 }
-html.tg-app a:not(.btn-primary):not(.btn-brand):not(.btn-ghost):not(.p-button) {
+/* Ссылки цвета клиента — только внутри контента сообщений и комментариев
+   (там лежат rich-link/mention). Навигация, шапка чата и списки людей
+   красятся Tailwind-классами как в браузере: раньше широкое правило
+   перебивало их (неактивные пункты меню и имя в шапке становились
+   голубыми вместо серого/тёмного). */
+html.tg-app .msg-body a:not(.btn-primary):not(.btn-brand):not(.btn-ghost):not(.p-button),
+html.tg-app .comment-body a:not(.btn-primary):not(.btn-brand):not(.btn-ghost):not(.p-button) {
   color: var(--tg-theme-link-color);
 }
 }

@@ -806,7 +806,7 @@ function openNews(item: any) {
                         ></span>
                         <div class="min-w-0 flex-1">
                           <div class="flex items-center gap-1.5">
-                            <span class="text-sm font-semibold dark:text-white truncate">{{
+                            <span class="text-sm font-semibold text-stone-900 dark:text-white truncate">{{
                               c.other?.name || "Чат"
                             }}</span
                             ><span

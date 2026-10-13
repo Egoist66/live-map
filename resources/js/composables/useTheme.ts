@@ -48,6 +48,33 @@ function apply() {
 }
 
 /**
+ * Подчинить тему сайта цветовой схеме Telegram-клиента.
+ *
+ * Внутри Mini App нативный хром (шапка, фон) красится палитрой
+ * themeParams клиента, а компоненты — классом `dark` сайта. Если их
+ * не синхронизировать (клиент светлый, сайт тёмный), получается
+ * белый текст на белом фоне: имена в списке чатов не читаются.
+ * Поэтому в TG решает клиент: светлый — 'light', тёмный — 'dark'.
+ * Вотчер выше сам положит значение в localStorage и перекрасит
+ * документ, настройки «Внешний вид» тоже подхватят его реактивно.
+ *
+ * @param scheme схема Telegram-клиента ('light' | 'dark')
+ */
+export function syncThemeWithTelegram(scheme: 'light' | 'dark'): void {
+  if (theme.value === scheme) {
+    return
+  }
+
+  theme.value = scheme
+
+  try {
+    localStorage.setItem('theme', scheme)
+  } catch {
+    // No-op: вотчер выше всё равно попробует сохранить.
+  }
+}
+
+/**
  * Сообщает нативному WebView-хосту текущую тему (RN-мост).
  *
  * @param isDark true для тёмной темы

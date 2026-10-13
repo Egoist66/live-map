@@ -21,7 +21,7 @@ const chatPrivacy = useChatPrivacy(toRef(props, 'privacy') as any, toRef(props, 
   <div :class="[(selectedId || isSavedOpen) ? 'hidden lg:flex' : 'flex', sidebarCardClass]">
     <div class="p-3 border-b dark:border-zinc-800 shrink-0 w-full max-w-full min-w-0">
       <div class="flex items-center gap-2 mb-3">
-        <h2 class="text-[15px] font-bold dark:text-white tracking-tight">{{ uloveOnly ? '💞 ULove' : 'UConnect' }}</h2>
+        <h2 class="text-[15px] font-bold text-stone-900 dark:text-white tracking-tight">{{ uloveOnly ? '💞 ULove' : 'UConnect' }}</h2>
         <Button v-if="!uloveOnly" @click="emit('people')" icon="pi pi-users" rounded severity="secondary" outlined class="!w-8 !h-8 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" aria-label="Поиск людей" />
         <Button @click="emit('saved')" icon="pi pi-star" rounded severity="secondary" :outlined="!isSavedOpen" :class="['!w-8 !h-8 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden', isSavedOpen ? '!bg-amber-400 !border-amber-400 !text-white' : '']" aria-label="Избранное — заметки только для себя" title="⭐ Избранное — заметки только для себя" />
         <Button @click="emit('refresh')" :loading="refreshing" icon="pi pi-refresh" rounded severity="secondary" text class="!w-8 !h-8 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" aria-label="Обновить" />
@@ -40,7 +40,7 @@ const chatPrivacy = useChatPrivacy(toRef(props, 'privacy') as any, toRef(props, 
     <ChatList :conversations="conversations" :ulove-conversations="uloveConversations ?? []" :friends="friends" :pending-in="pendingIn" :blocked="blocked" :tab="tab" :selected-id="selectedId" :is-saved-open="isSavedOpen" :filter="filter" :conversations-sentinel="conversationsSentinel" :conversations-has-more="conversationsHasMore" :conversations-loading-more="conversationsLoadingMore" :friends-sentinel="friendsSentinel" :friends-has-more="friendsHasMore" :friends-loading-more="friendsLoadingMore" :is-online="isOnline" :format-time="formatTime" @update:filter="(v:string)=>emit('update:filter', v)" @saved="emit('saved')" @open="(id:number)=>emit('open', id)" @start-chat="(u:any)=>emit('startChat', u)" @toggle-chat-pin="(id:number,pinned:boolean)=>emit('toggleChatPin', id, pinned)" @delete-chat="(id:number)=>emit('deleteChat', id)" @block="(id:number,n?:string)=>emit('block', id, n)" @unblock="(id:number)=>emit('unblock', id)" @remove-friend="(f:any)=>emit('removeFriend', f)" @accept="(id:number)=>emit('accept', id)" @decline="(id:number)=>emit('decline', id)" />
     <div class="shrink-0 flex-none border-t dark:border-zinc-800 bg-stone-50 dark:bg-zinc-800/50 rounded-b-none lg:rounded-b-2xl overflow-hidden">
       <button @click="emit('update:showPrivacy', !showPrivacy)" class="w-full flex items-center justify-between px-3 py-3 lg:py-2.5 text-left active:bg-stone-100 dark:active:bg-zinc-800 lg:cursor-default">
-        <span class="text-xs font-bold flex items-center gap-1.5 dark:text-white">Приватность</span>
+        <span class="text-xs font-bold flex items-center gap-1.5 text-stone-900 dark:text-white">Приватность</span>
         <span class="lg:hidden text-stone-400 text-xs">{{ showPrivacy ? '▲' : '▼' }}</span>
         <span class="hidden lg:block text-[11px] text-stone-500">{{ chatPrivacy.shortLabel.value }}</span>
       </button>
