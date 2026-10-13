@@ -35,7 +35,7 @@ export interface PlanCardMeta {
 export function usePlanSwitch() {
   const page = usePage()
   const authUser = computed(() => (page.props.auth as any)?.user)
-  const { priceFor } = usePlansCatalog()
+  const { priceFor, catalog } = usePlansCatalog()
 
   const switching = ref<PlanId | null>(null)
   const error = ref<string | null>(null)
@@ -62,11 +62,22 @@ export function usePlanSwitch() {
   })
 
   /**
+   * Живое название тарифа из каталога (админка поверх конфига).
+   *
+   * @param id идентификатор тарифа
+   * @param fallback запасное название
+   * @returns название тарифа
+   */
+  function planName(id: PlanId, fallback: string): string {
+    return catalog.value?.plans.find((plan) => plan.id === id)?.name || fallback
+  }
+
+  /**
    * Карточки тарифов: подпись зависит от включённых модулей —
    * без карты (чистый ULove) вместо пинов показываем свайпы.
    * Premium — топ для персон, Business — только организациям
    * (карточка добавляется лишь при role=organization / business-аккаунте).
-   * Цены — из каталога бэка (config/plans.php), не хардкод.
+   * Названия и цены — из каталога бэка (config/plans.php), не хардкод.
    *
    * @param showMap включён ли модуль карты UPin
    * @returns мета тарифов для сетки выбора
@@ -87,13 +98,13 @@ export function usePlanSwitch() {
         }
 
     const cards: PlanCardMeta[] = [
-      { id: 'free', name: 'Free', price: priceFor('free'), summary: summaries.free },
-      { id: 'pro', name: 'Pro', price: priceFor('pro'), summary: summaries.pro },
-      { id: 'premium', name: 'Premium', price: priceFor('premium'), summary: summaries.premium },
+      { id: 'free', name: planName('free', 'Free'), price: priceFor('free'), summary: summaries.free },
+      { id: 'pro', name: planName('pro', 'Pro'), price: priceFor('pro'), summary: summaries.pro },
+      { id: 'premium', name: planName('premium', 'Premium'), price: priceFor('premium'), summary: summaries.premium },
     ]
 
     if (isOrganization.value) {
-      cards.push({ id: 'business', name: 'Business', price: priceFor('business'), summary: summaries.business })
+      cards.push({ id: 'business', name: planName('business', 'Business'), price: priceFor('business'), summary: summaries.business })
     }
 
     return cards

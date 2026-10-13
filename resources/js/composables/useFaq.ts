@@ -1,5 +1,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useModuleContent } from '@/composables/useModuleContent'
+import { usePlansCatalog } from '@/composables/usePlansCatalog'
+import type { PlansCatalog } from '@/services/subscription.api'
 
 export interface FaqSection {
   id: string
@@ -27,8 +29,15 @@ export interface FaqSection {
 export function useFaq() {
   const open = ref<string | null>('what')
   const content = useModuleContent()
+  const plans = usePlansCatalog()
 
-  const sections = computed<FaqSection[]>(() => [...BASE_SECTIONS, ...content.faqExtras()])
+  const sections = computed<FaqSection[]>(() => {
+    const base = BASE_SECTIONS.map((section) =>
+      section.id === 'plans' ? { ...section, a: plansAnswer(plans.catalog.value) } : section,
+    )
+
+    return [...base, ...content.faqExtras()]
+  })
 
   onMounted(() => {
     let hash = ''
@@ -61,6 +70,64 @@ export function useFaq() {
   })
 
   return { open, sections }
+}
+
+/**
+ * Имя тарифа из живого каталога (админка поверх конфига).
+ *
+ * @param catalog каталог с бэкенда или null до загрузки
+ * @param id идентификатор тарифа
+ * @param fallback запасное имя (совпадает с конфигом)
+ * @returns имя тарифа
+ */
+function faqPlanName(catalog: PlansCatalog | null, id: string, fallback: string): string {
+  return catalog?.plans.find((plan) => plan.id === id)?.name || fallback
+}
+
+/**
+ * Короткая подпись месячной цены тарифа для FAQ.
+ *
+ * @param catalog каталог с бэкенда или null до загрузки
+ * @param id идентификатор тарифа
+ * @param fallback запасная цена (совпадает с конфигом)
+ * @returns цена вида `$3.99`
+ */
+function faqPlanPrice(catalog: PlansCatalog | null, id: string, fallback: string): string {
+  const monthly = catalog?.plans.find((plan) => plan.id === id)?.prices.monthly
+
+  if (monthly === null || monthly === undefined) {
+    return fallback
+  }
+
+  return `$${monthly}`
+}
+
+/**
+ * Ответ «Тарифы»: имена и цены — всегда живые из каталога бэкенда.
+ *
+ * Лимиты в тексте — из кода (DatingService), их админка не правит,
+ * поэтому проза статична, а имена/цены подставляются. Без каталога
+ * (SSR, офлайн) — те же запасные значения, что в конфиге.
+ *
+ * @param catalog каталог с бэкенда или null до загрузки
+ * @returns текст ответа секции `plans`
+ */
+function plansAnswer(catalog: PlansCatalog | null): string {
+  const freeName = faqPlanName(catalog, 'free', 'Free')
+  const proName = faqPlanName(catalog, 'pro', 'Pro')
+  const proPrice = faqPlanPrice(catalog, 'pro', '$3.99')
+  const premiumName = faqPlanName(catalog, 'premium', 'Premium')
+  const premiumPrice = faqPlanPrice(catalog, 'premium', '$7.99')
+  const businessName = faqPlanName(catalog, 'business', 'Business')
+  const businessPrice = faqPlanPrice(catalog, 'business', '$19.99')
+
+  const freeLine = `${freeName} — бесплатно навсегда: безлимитные свайпы ULove, 1 суперлайк в день, 1 откат в день, 1 сброс истории, 3 сообщения без мэтча в месяц, 5 фото в галерее, 1 скрытый друг. Смена почты и закрепы чатов — тоже бесплатно всем.`
+  const proLine = `${proName} (${proPrice}) — для активных знакомств: 5 суперлайков в день, безлимитные откаты и сбросы истории, 20 сообщений без мэтча, 10 фото, до 3 скрытых друзей, невидимка, скрытие имени и возраста, инкогнито-лайки («Тайный поклонник»), репутация сразу 10 из 10.`
+  const premiumLine = `${premiumName} (${premiumPrice}) — максимум для людей: всё из Pro без ограничений + гости профиля с анкетами и кнопкой «Написать», выгрузка статистики в CSV.`
+  const businessLine = `${businessName} (${businessPrice}) — только для организаций (кабинет компании). Обычным пользователям он недоступен — максимум для людей это Premium.`
+  const tail = 'Новые разделы, когда появятся, получат свои лимиты — опишем их здесь же.\n\nТариф может быть срочным: срок виден в настройках на вкладке тарифа. После окончания план сам возвращается на Free.'
+
+  return [freeLine, proLine, premiumLine, businessLine, tail].join('\n\n')
 }
 
 /**
@@ -149,7 +216,7 @@ const BASE_SECTIONS: FaqSection[] = [
       title: 'Тарифы',
       icon: '💳',
       q: 'Чем отличаются Free, Pro и Premium?',
-      a: 'Free — бесплатно навсегда: безлимитные свайпы ULove, 1 суперлайк в день, 1 откат в день, 1 сброс истории, 3 сообщения без мэтча в месяц, 5 фото в галерее, 1 скрытый друг. Смена почты и закрепы чатов — тоже бесплатно всем.\n\nPro ($3.99) — для активных знакомств: 5 суперлайков в день, безлимитные откаты и сбросы истории, 20 сообщений без мэтча, 10 фото, до 3 скрытых друзей, невидимка, скрытие имени и возраста, инкогнито-лайки («Тайный поклонник»), репутация сразу 10 из 10.\n\nPremium ($7.99) — максимум для людей: всё из Pro без ограничений + гости профиля с анкетами и кнопкой «Написать», выгрузка статистики в CSV.\n\nBusiness ($19.99) — только для организаций (кабинет компании). Обычным пользователям он недоступен — максимум для людей это Premium.\n\nНовые разделы, когда появятся, получат свои лимиты — опишем их здесь же.\n\nТариф может быть срочным: срок виден в настройках на вкладке тарифа. После окончания план сам возвращается на Free.',
+      a: plansAnswer(null),
     },
     {
       id: 'account',

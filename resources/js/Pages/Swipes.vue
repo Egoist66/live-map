@@ -166,11 +166,10 @@ onMounted(async () => {
     const stopRealtime = s.subscribeRealtime()
     ;(window as any).__swipesRealtimeStop?.()
     ;(window as any).__swipesRealtimeStop = stopRealtime
-    await s.loadFeed()
-    await s.loadMatches()
-    await s.loadFavorites()
-    await s.loadAdmirers()
-    await s.loadActive()
+    // Разом, а не водопадом: панель и стрип мэтчей прилетают в одном кадре
+    // (иначе стрип позже толкает панель вниз), вход в целом быстрее.
+    // Каждый загрузчик глотает свои ошибки сам — allSettled не уронит соседей.
+    await Promise.allSettled([s.loadFeed(), s.loadMatches(), s.loadFavorites(), s.loadAdmirers(), s.loadActive()])
   }
 })
 
@@ -191,7 +190,7 @@ onUnmounted(() => {
     <meta head-key="description" name="description" :content="seo.description.value" />
   </Head>
   <div class="w-full min-w-0 bg-transparent" :class="s.activeTab.value === 'feed' ? 'swipes-feed-lock' : 'page-scroll scroll-neat'">
-      <div class="w-full min-w-0 mx-auto max-w-[640px] px-4 sm:px-6 lg:max-w-[880px] lg:px-8 xl:max-w-[980px] 2xl:max-w-[1060px]" :class="s.activeTab.value === 'feed' ? 'swipes-feed-inner pt-1 sm:py-6 sm:pb-[calc(2rem+var(--sab))]' : 'pt-3 pb-6 sm:py-6 sm:pb-[calc(2rem+var(--sab))]'">
+      <div class="w-full min-w-0 mx-auto max-w-[600px] px-4 sm:px-6 lg:max-w-[760px] lg:px-8 xl:max-w-[840px] 2xl:max-w-[900px]" :class="s.activeTab.value === 'feed' ? 'swipes-feed-inner pt-1 sm:pt-3 sm:pb-[calc(1rem+var(--sab))]' : 'pt-3 pb-6 sm:py-6 sm:pb-[calc(2rem+var(--sab))]'">
 
         <h1 class="sr-only">ULove — знакомства рядом</h1>
         <div class="swipes-topbar flex items-center px-1 py-1 sm:py-2 shrink-0">
@@ -219,7 +218,7 @@ onUnmounted(() => {
         </template>
 
         <template v-else>
-          <div class="mt-2 sm:mt-4 hidden sm:flex items-center gap-2">
+          <div class="mt-2 hidden sm:flex items-center gap-2">
             <Chip :label="s.quotaLabel.value" icon="pi pi-send" class="!rounded-full" />
             <Chip v-if="s.isQuotaEmpty.value" label="Лимит исчерпан — мэтчи пишут бесплатно" icon="pi pi-heart-fill" class="!rounded-full !bg-rose-100 !text-rose-700 dark:!bg-rose-950 dark:!text-rose-300 dark:!border dark:!border-rose-900" />
             <span class="flex-1" />
@@ -229,9 +228,9 @@ onUnmounted(() => {
             <Button v-if="s.canResetHistory.value" icon="pi pi-trash" severity="warn" rounded outlined size="small" aria-label="Сбросить просмотренные" :title="s.resetTitle.value" :loading="s.resetting.value" @click="s.resetHistory()" />
           </div>
 
-          <div v-if="s.matches.value.length" class="mt-4 hidden sm:block">
+          <div v-if="s.matches.value.length" class="mt-3 hidden sm:block">
             <div class="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500 mb-2">Мэтчи · чат открыт</div>
-            <div class="flex gap-3 overflow-x-auto pb-2 pt-1 -mx-1 px-1">
+            <div class="matches-strip flex gap-3 overflow-x-auto pb-2 pt-1 -mx-1 px-1">
               <button
                 v-for="m in s.matches.value"
                 :key="m.match_id"
@@ -527,13 +526,13 @@ onUnmounted(() => {
           </template>
 
           <template v-else>
-          <div class="swipes-feed relative mt-1 sm:mt-4 select-none overscroll-none sm:max-w-[420px] sm:mx-auto sm:w-full lg:max-w-[500px] xl:max-w-[540px] 2xl:max-w-[580px]">
-            <div v-if="s.loading.value || !s.feedReady.value" class="swipes-feed-skeleton rounded-xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 grid place-items-center sm:h-[62dvh] sm:min-h-[400px] sm:max-h-[540px] lg:h-[68dvh] lg:max-h-[640px] xl:h-[70dvh] xl:max-h-[720px] 2xl:max-h-[780px]">
+          <div class="swipes-feed relative mt-1 sm:mt-2 select-none overscroll-none sm:max-w-[380px] sm:mx-auto sm:w-full lg:max-w-[440px] xl:max-w-[480px] 2xl:max-w-[520px]">
+            <div v-if="s.loading.value || !s.feedReady.value" class="swipes-feed-skeleton rounded-xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 grid place-items-center sm:h-[60dvh] sm:min-h-[380px] sm:max-h-[520px] lg:h-[62dvh] lg:max-h-[600px] xl:h-[66dvh] xl:max-h-[680px] 2xl:max-h-[740px]">
               <i class="pi pi-spin pi-spinner text-2xl text-stone-400 dark:text-zinc-500" />
             </div>
 
             <div v-else-if="s.current.value" class="swipes-card-wrap">
-              <div class="swipe-deck relative overscroll-none sm:h-[62dvh] sm:min-h-[400px] sm:max-h-[540px] lg:h-[68dvh] lg:max-h-[640px] xl:h-[70dvh] xl:max-h-[720px] 2xl:max-h-[780px]">
+              <div class="swipe-deck relative overscroll-none sm:h-[60dvh] sm:min-h-[380px] sm:max-h-[520px] lg:h-[62dvh] lg:max-h-[600px] xl:h-[66dvh] xl:max-h-[680px] 2xl:max-h-[740px]">
               <div
                 v-if="s.next.value"
                 class="absolute inset-0 z-0 rounded-xl overflow-hidden bg-zinc-200 dark:bg-zinc-800 shadow-soft pointer-events-none"
@@ -694,7 +693,8 @@ onUnmounted(() => {
             </div>
             </div>
 
-            <div v-else class="rounded-xl bg-white dark:bg-zinc-900 p-6 sm:p-8 text-center shadow-soft">
+            <div v-else class="rounded-xl bg-white dark:bg-zinc-900 p-6 sm:p-8 text-center shadow-soft sm:grid sm:place-items-center sm:overflow-y-auto sm:h-[60dvh] sm:min-h-[380px] sm:max-h-[520px] lg:h-[62dvh] lg:max-h-[600px] xl:h-[66dvh] xl:max-h-[680px] 2xl:max-h-[740px]">
+              <div class="min-w-0">
               <div class="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-[#FD267D] to-[#FF7854] text-white grid place-items-center shadow-lg shadow-rose-500/30"><i class="pi pi-heart-fill text-2xl" /></div>
               <template v-if="s.feedExhausted.value && !s.hasActiveFilters.value">
                 <template v-if="s.isPro.value">
@@ -725,6 +725,7 @@ onUnmounted(() => {
                   <Button label="Обновить" rounded size="small" @click="s.loadFeed()" />
                 </div>
               </template>
+              </div>
             </div>
           </div>
 
@@ -1156,6 +1157,17 @@ onUnmounted(() => {
 .swipes-topbar {
   flex-shrink: 0;
 }
+/* Стрип мэтчей: хоть сто человек — листается внутри (тач, колесо, трекпад),
+   полоса прокрутки спрятана (как в Tinder). scroll-padding по краям,
+   чтобы крайние аватары не липли впритык. */
+.matches-strip {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  scroll-padding-inline: 4px;
+}
+.matches-strip::-webkit-scrollbar {
+  display: none;
+}
 /* Телефоны (портрет): никакого вложенного скролла — верхняя панель
    и карточка ровно на один экран без листания страницы. Кнопки висят
    оверлеем поверх низа карточки, поэтому колоде отдан весь остаток
@@ -1193,6 +1205,15 @@ onUnmounted(() => {
     height: auto;
     min-height: 0;
   }
+}
+/* Mini App (Telegram) и WebView: высота ленты от СТАБИЛЬНОГО вьюпорта,
+   а не от прыгающего 100dvh. Expand, клавиатура и свайп панели меняют
+   dvh на ходу — колода и панель прыгали вместе с ним. Переменную ставит
+   ранний инлайн в blade и обновляет мост; вне TG — фолбэк 100dvh,
+   вёрстка как раньше. Специфичность выше локальных правил — бьёт и svh. */
+html.tg-app .swipes-feed-lock {
+  height: calc(var(--tg-viewport-stable, 100dvh) - var(--sat));
+  max-height: calc(var(--tg-viewport-stable, 100dvh) - var(--sat));
 }
 /* Планшеты / ландшафт / узкий десктоп: лок остаётся скроллируемым
    (базовые правила выше), колода — фиксированной десктопной высоты

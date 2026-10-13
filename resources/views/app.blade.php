@@ -351,6 +351,16 @@
                         if (!armed) { armed = true; arm(BOOT_WAIT_MS); }
                     });
                     arm(BOOT_WAIT_MS + 12000);
+                    // Возврат «назад» может достать из bfcache мёртвый слепок
+                    // (entry когда-то упал с 404): скрипты при этом не
+                    // переисполняются и таймеры выше не срабатывают — страница
+                    // остаётся белой навсегда. Живой слепок (флаг взведён
+                    // app.ts после mount) не трогаем.
+                    window.addEventListener('pageshow', function (e) {
+                        try {
+                            if (e && e.persisted && !window.__upinBooted) heal();
+                        } catch (err) {}
+                    });
                 } catch (e) {}
             })();
         </script>

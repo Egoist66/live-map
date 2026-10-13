@@ -51,10 +51,14 @@ export function usePlansCatalog() {
 
   /**
    * Возможности тарифа («что входит») с бэкенда.
+   *
+   * Страховка от не-массива: кривой `features` (объект вместо списка)
+   * ронял модалку тарифа на `.map` — отдаём пусто, модалка жива.
    * @param id идентификатор тарифа
    */
   function featuresFor(id: string): { key: string; name: string; description: string | null }[] {
-    return catalog.value?.plans.find((p) => p.id === id)?.features ?? []
+    const list = catalog.value?.plans.find((p) => p.id === id)?.features
+    return Array.isArray(list) ? list : []
   }
 
   /**

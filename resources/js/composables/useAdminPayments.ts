@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { computed, reactive } from 'vue'
 import { useAppConfirm } from '@/composables/useAppConfirm'
+import { usePlansCatalog } from '@/composables/usePlansCatalog'
 
 /**
  * Строка витрины Payments (зеркало App\Models\PaymentItem).
@@ -299,6 +300,19 @@ export function useAdminPayments() {
   }
 
   /**
+   * Подтянуть живой каталог цен после правок: без этого та же вкладка
+   * (тарифы, модалка плана, биллинг) показывает старье до перезагрузки.
+   * Остальные пользователи и так получат свежее со следующей загрузки.
+   */
+  async function refreshLiveCatalog(): Promise<void> {
+    try {
+      await usePlansCatalog().refresh()
+    } catch {
+      // No-op: каталог подтянется сам при следующем открытии.
+    }
+  }
+
+  /**
    * Загрузить цены, возможности и витрину.
    */
   async function load(): Promise<void> {
@@ -365,6 +379,7 @@ export function useAdminPayments() {
       await persistPrices()
       state.notice = 'Цены сохранены — приложение и бот уже показывают новые.'
       await load()
+      await refreshLiveCatalog()
     } catch (err: unknown) {
       state.error = readError(err, 'Не удалось сохранить цены')
     } finally {
@@ -385,6 +400,7 @@ export function useAdminPayments() {
       await persistPlanMeta()
       state.notice = 'Названия и описания сохранены — везде уже новые.'
       await load()
+      await refreshLiveCatalog()
     } catch (err: unknown) {
       state.error = readError(err, 'Не удалось сохранить описания')
     } finally {
@@ -412,6 +428,7 @@ export function useAdminPayments() {
       await persistPrices()
       state.notice = 'Всё сохранено — приложение и бот уже показывают новые цены и описания.'
       await load()
+      await refreshLiveCatalog()
     } catch (err: unknown) {
       state.error = readError(err, 'Не удалось сохранить тарифы')
     } finally {
@@ -538,6 +555,7 @@ export function useAdminPayments() {
 
       state.dialogOpen = false
       await load()
+      await refreshLiveCatalog()
     } catch (err: unknown) {
       state.error = readError(err, 'Не удалось сохранить. Проверьте название и цену.')
     } finally {
@@ -557,6 +575,7 @@ export function useAdminPayments() {
     try {
       await axios.patch(`/api/admin/payments/items/${row.id}`, { ...row, is_active: !row.is_active })
       await load()
+      await refreshLiveCatalog()
     } catch (err: unknown) {
       state.error = readError(err, 'Не удалось переключить позицию')
     } finally {
@@ -584,6 +603,7 @@ export function useAdminPayments() {
       await axios.delete(`/api/admin/payments/items/${row.id}`)
       state.notice = 'Позиция удалена.'
       await load()
+      await refreshLiveCatalog()
     } catch (err: unknown) {
       state.error = readError(err, 'Не удалось удалить позицию')
     } finally {
@@ -672,6 +692,7 @@ export function useAdminPayments() {
       if (!hasIssues) state.importOpen = false
 
       await load()
+      await refreshLiveCatalog()
     } catch (err: unknown) {
       state.error = readError(err, 'Не удалось загрузить Excel. Проверьте, что это файл из кнопки «Скачать».')
     } finally {

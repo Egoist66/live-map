@@ -50,14 +50,18 @@ onMounted(() => {
   }
 })
 
-/** Подпись значка тарифа: Free / PRO / Premium / Business. */
+/** Подпись значка тарифа: Free / PRO / Premium. Business — не тариф знакомств,
+    в dating-поверхностях (лента, анкеты) не показывается вообще. */
 const planLabel = computed(() => {
   const plan = String(p.plan.value ?? 'free')
-  if (plan === 'business') return 'Business'
+  if (plan === 'business') return ''
   if (plan === 'premium') return 'Premium'
   if (plan === 'pro') return 'PRO'
   return 'Free'
 })
+
+/** Business-план — не тариф знакомств: значок тарифа прячем. */
+const showPlanBadge = computed(() => planLabel.value !== '')
 
 const toast = (() => {
   try {
@@ -358,7 +362,7 @@ const activePrivacyFlags = computed(() => {
             <span class="truncate">{{ fact.text }}</span>
           </span>
           <span class="ml-auto inline-flex shrink-0 items-center gap-1.5">
-            <span class="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-stone-400 dark:bg-zinc-800 dark:text-zinc-500" title="Тариф">
+            <span v-if="showPlanBadge" class="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-stone-400 dark:bg-zinc-800 dark:text-zinc-500" title="Тариф">
               <i class="pi pi-crown text-[10px]" />{{ planLabel }}
             </span>
             <Button

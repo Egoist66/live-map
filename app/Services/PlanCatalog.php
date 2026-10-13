@@ -277,6 +277,10 @@ class PlanCatalog
                     'name' => (string) $item->name,
                     'description' => $item->description,
                 ])
+                // filter() оставляет дыры в ключах — без values() json_encode
+                // отдаст объект вместо массива и фронт упадёт на .map
+                // (Free шёл первым и везло, PRO/Premium крашились).
+                ->values()
                 ->all();
         } catch (\Throwable) {
             return [];
