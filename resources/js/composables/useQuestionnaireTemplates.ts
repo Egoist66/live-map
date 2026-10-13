@@ -168,5 +168,14 @@ export function useQuestionnaireTemplates() {
     }
   }
 
-  return { templates, selectedId, applied, applyTemplate, selectAndApply }
+  /**
+   * Сбросить выбор дропдауна после сохранения: следующий визит
+   * начинается с чистой формы, а не со старым «подставлен».
+   */
+  function resetSelection(): void {
+    selectedId.value = null
+    applied.value = false
+  }
+
+  return { templates, selectedId, applied, applyTemplate, selectAndApply, resetSelection }
 }

@@ -20,14 +20,14 @@ const PLAN_LABEL: Record<string, string> = { free: 'Free', pro: 'Pro', business:
  * Держит всю логику вне компонента: страница показывает только тёмные
  * карточки через ProfileDesign*.vue.
  *
- * @param propsUser пользователь из пропсов страницы или auth
+ * @param propsUser пользователь из пропсов страницы, auth или геттер на него
  * @param propsIsOwn флаг владения профилем
  * @returns данные для карточек, диалоги и обработчики
  * @example
- * const design = useDashboardDesign(props.user, props.isOwn)
+ * const design = useDashboardDesign(() => props.user, props.isOwn)
  * await design.init()
  */
-export function useDashboardDesign(propsUser?: any, propsIsOwn?: boolean) {
+export function useDashboardDesign(propsUser?: any | (() => any), propsIsOwn?: boolean) {
   const dash = useDashboardPage(propsUser, propsIsOwn)
   const gallery = useProfileGallery(() => dash.u.value.id, { isOwn: true })
   const people = useProfilePeople()

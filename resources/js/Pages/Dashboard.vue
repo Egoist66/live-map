@@ -33,7 +33,7 @@ const DatingQuestionnaireDialog = defineAsyncComponent(() => import('@/Component
 
 const props = defineProps<{ user: any; isOwn?: boolean }>()
 
-const design = useDashboardDesign(props.user, props.isOwn)
+const design = useDashboardDesign(() => props.user, props.isOwn)
 const { single: isSingleColumn } = useProfileLayout()
 const { dash, gallery, people, search, photoComments } = design
 const thought = useProfileThought(() => dash.u.value.thought)
@@ -93,7 +93,7 @@ function onDatingSaved(saved?: Record<string, any>): void {
   }
 
   try {
-    router.reload({ only: ['user'] })
+    router.reload({ only: ['user', 'auth'] })
   } catch {
   }
 }

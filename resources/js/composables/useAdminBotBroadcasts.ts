@@ -9,6 +9,11 @@ export interface AdminBotBroadcast {
   id: number
   type: 'article' | 'poll'
   title: string
+  body: string
+  has_photo: boolean
+  poll_question: string
+  poll_options: string[]
+  poll_multiple: boolean
   status: string
   sent_count: number
   failed_count: number

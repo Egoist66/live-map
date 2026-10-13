@@ -91,7 +91,7 @@ function onDatingSaved(saved?: Record<string, any>): void {
   }
 
   try {
-    router.reload({ only: ['profileUser'] })
+    router.reload({ only: ['profileUser', 'auth'] })
   } catch {
   }
 }

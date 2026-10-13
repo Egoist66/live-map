@@ -59,9 +59,13 @@ class BroadcastBotBroadcastTelegram implements ShouldQueue
             return;
         }
 
-        BotBroadcastService::broadcast($broadcast);
+        $delivered = BotBroadcastService::broadcast($broadcast);
 
         $broadcast->forceFill(['status' => 'sent'])->save();
+
+        if ($delivered === 0) {
+            Log::warning('telegram broadcast delivered nobody', ['broadcast_id' => $broadcast->id]);
+        }
 
         try {
             broadcast(new \App\Events\BotBroadcastFinished($broadcast->fresh() ?? $broadcast));

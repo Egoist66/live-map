@@ -140,11 +140,14 @@ function askRemove(id: number): void {
         </template>
         <div v-if="bb.state.detailLoading" class="py-8 grid place-items-center"><ProgressSpinner style="width:24px;height:24px" :strokeWidth="6" /></div>
         <div v-else-if="bb.state.selected">
-          <div class="text-sm font-bold dark:text-white">{{ bb.state.selected.title }}</div>
+          <div class="text-sm font-bold dark:text-white">{{ bb.state.selected.type === 'poll' ? bb.state.selected.poll_question : bb.state.selected.title }}</div>
           <div class="mt-2 flex items-center gap-2 flex-wrap">
             <Tag :value="statusLabel(bb.state.selected.status)" :severity="statusSeverity(bb.state.selected.status)" class="!text-[9px]" />
             <span class="text-[11px] text-stone-500 dark:text-zinc-400">✅ {{ bb.state.selected.sent_count }}<span v-if="bb.state.selected.failed_count"> · ❌ {{ bb.state.selected.failed_count }}</span><span v-if="bb.state.selected.type === 'poll'"> · 🗳 {{ bb.state.selected.votes_count }}</span></span>
+            <Tag v-if="bb.state.selected.type === 'article' && bb.state.selected.has_photo" value="🖼 с обложкой" severity="info" class="!text-[9px]" />
+            <Tag v-if="bb.state.selected.type === 'poll' && bb.state.selected.poll_multiple" value="✌️ несколько вариантов" severity="info" class="!text-[9px]" />
           </div>
+          <div v-if="bb.state.selected.type === 'article' && bb.state.selected.body" class="mt-3 max-h-64 overflow-auto rounded-xl bg-stone-100 dark:bg-zinc-800 px-3 py-2 text-[12px] whitespace-pre-wrap dark:text-zinc-100">{{ bb.state.selected.body }}</div>
           <div v-if="bb.state.selected.type === 'poll'" class="mt-3 space-y-2">
             <div v-for="(opt, i) in (bb.state.selected.breakdown || [])" :key="i" class="rounded-xl bg-stone-100 dark:bg-zinc-800 px-3 py-2">
               <div class="flex items-center gap-2 text-[12px]">

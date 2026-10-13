@@ -70,10 +70,17 @@ class AdminBotBroadcastController extends Controller
      */
     private static function serialize(BotBroadcast $broadcast): array
     {
+        $photoUrl = (string) ($broadcast->photo_url ?? '');
+
         return [
             'id' => (int) $broadcast->id,
             'type' => (string) $broadcast->type,
             'title' => (string) $broadcast->title,
+            'body' => (string) ($broadcast->body ?? ''),
+            'has_photo' => $photoUrl !== '',
+            'poll_question' => (string) ($broadcast->poll_question ?? $broadcast->title),
+            'poll_options' => $broadcast->pollOptions(),
+            'poll_multiple' => (bool) $broadcast->poll_multiple,
             'status' => (string) $broadcast->status,
             'sent_count' => (int) $broadcast->sent_count,
             'failed_count' => (int) $broadcast->failed_count,

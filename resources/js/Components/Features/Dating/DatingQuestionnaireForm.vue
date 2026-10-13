@@ -36,7 +36,10 @@ onMounted(() => q.resetFromUser())
  */
 async function onSave(): Promise<void> {
   const ok = await q.save()
-  if (ok) emit('saved', q.lastSaved.value ?? undefined)
+  if (!ok) return
+  draftApplied.value = false
+  tpl.resetSelection()
+  emit('saved', q.lastSaved.value ?? undefined)
 }
 
 /**

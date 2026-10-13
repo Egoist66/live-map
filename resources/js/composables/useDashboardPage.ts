@@ -12,13 +12,26 @@ const LEVEL_COLOR: Record<string, string> = { novice: '!bg-stone-100 !text-stone
 const PLAN_LABEL: Record<string, string> = { free: 'Free', pro: 'Pro', premium: 'Premium', business: 'Business' }
 const PLAN_COLOR: Record<string, string> = { free: '!bg-stone-100 !text-stone-700 !border-stone-200', pro: '!bg-gradient-to-br !from-violet-600 !to-indigo-600 !text-white !border-transparent', premium: '!bg-gradient-to-br !from-amber-500 !to-orange-600 !text-white !border-transparent', business: '!bg-ink-900 !text-white !border-ink-900' }
 
-export function useDashboardPage(propsUser?: any, propsIsOwn?: boolean) {
+/**
+ * Состояние страницы Dashboard (свой профиль).
+ *
+ * Принимает пользователя геттером, а не значением: Inertia при
+ * `router.reload({ only: ['user'] })` заменяет объект пропса новым,
+ * захваченное значение навсегда осталось бы старым и анкета после
+ * сохранения (в т.ч. из готового шаблона) требовала бы F5.
+ *
+ * @param propsUser пользователь из пропсов или геттер на него
+ * @param propsIsOwn флаг владения профилем
+ */
+export function useDashboardPage(propsUser?: any | (() => any), propsIsOwn?: boolean) {
   const seo = useSeo({ title: 'Профиль', description: 'Профиль UPin', noindex: true })
   const page = usePage()
-  const auth = (page.props.auth as any).user
-  const u = computed(() => propsUser || auth)
+  const authUser = computed(() => (page.props.auth as any)?.user ?? null)
+  const propsSnapshot = computed(() => (typeof propsUser === 'function' ? propsUser() : propsUser) ?? null)
+  const u = computed(() => propsSnapshot.value || authUser.value)
+  const auth = authUser
   const isGuest = computed(() => !u.value)
-  const isOwn = computed(() => propsIsOwn ?? (u.value != null && auth != null && u.value.id === auth.id))
+  const isOwn = computed(() => propsIsOwn ?? (u.value != null && authUser.value != null && u.value.id === authUser.value.id))
   const showAvatar = ref(false)
   const avatarSrc = computed(() => avatarSrcFor(u.value))
   const bioText = computed(() => (u.value?.bio || '').trim())
@@ -29,7 +42,7 @@ export function useDashboardPage(propsUser?: any, propsIsOwn?: boolean) {
   const badges = useBadgeStore()
   const { shareProfile, sharing } = useProfileShare()
   const invisible = useInvisible()
-  const isAdmin = computed(() => !!auth?.is_admin || auth?.role === 'admin')
+  const isAdmin = computed(() => !!authUser.value?.is_admin || authUser.value?.role === 'admin')
   const presence = computed(() => (invisible.isInvisible.value
     ? { active: false, label: 'скрыт · невидимка' }
     : { active: true, label: 'в сети' }))
