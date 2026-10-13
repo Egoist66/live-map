@@ -68,8 +68,8 @@ const hideSidebar = computed(() => isAuthPage.value)
            в DOM + relative у контента решают наложение. Фон всегда один
            (ULove), поэтому смена login ↔ register его не трогает. -->
       <AuthBackdrop v-else-if="isClientReady" />
-      <div :class="isFaq ? 'flex w-full flex-1 flex-col min-w-0' : 'relative flex w-full flex-1 justify-center min-w-0 overflow-y-auto py-6 sm:py-10 guest-auth-scroll'">
-      <PageTransition :preset="isAuthPage ? 'auth' : 'fade-slide'">
+      <div :class="isFaq ? 'flex w-full flex-1 flex-col min-w-0' : 'relative flex w-full flex-1 justify-center min-w-0 overflow-x-clip pt-6 sm:pt-10 pb-16 sm:pb-24 guest-auth-scroll'">
+      <PageTransition :preset="isAuthPage ? 'auth' : 'fade-slide'" class="w-full min-w-0">
         <template v-if="isFaq">
           <slot />
         </template>
@@ -114,7 +114,10 @@ const hideSidebar = computed(() => isAuthPage.value)
    оставлен якорем для мобильных правил в app.css (16px в полях).
    Вертикальное центрирование — через margin auto: форма ровно
    по центру, а на маленьких экранах с высокой формой верх
-   не обрезается (flex + overflow + m-auto вместо items-center). */
+   не обрезается (flex + m-auto вместо items-center).
+   Скролл — общий, оконный: внутреннего overflow-y-auto нет, иначе
+   на Windows виден классический скроллбар-гutter справа и режется
+   нижняя тень-свечение карточки (ей оставлен pb-16/24). */
 .guest-auth-scroll .page-transition-wrapper {
   margin-top: auto;
   margin-bottom: auto;

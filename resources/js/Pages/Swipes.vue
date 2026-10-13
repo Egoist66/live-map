@@ -218,21 +218,21 @@ onUnmounted(() => {
           <span v-else-if="isAuth" class="w-10 shrink-0" aria-hidden="true" />
           <span class="flex-1" />
           <div class="flex items-center shrink-0">
-            <button type="button" class="grid place-items-center w-11 h-11 rounded-full active:scale-90 transition" aria-label="ULove — к ленте" title="К ленте" @click="isAuth && s.goTab('feed')">
-              <span class="w-9 h-9 rounded-[10px] bg-gradient-to-br from-[#FD267D] to-[#FF7854] grid place-items-center text-white shadow-md shadow-rose-500/40"><i class="pi pi-heart-fill text-lg" /></span>
-            </button>
             <button
               v-if="isAuth"
               type="button"
               :aria-label="s.boostActive.value ? `Буст активен ${s.boostUntilLabel.value} — тебя видят первым` : 'Включить буст — 30 мин в топе'"
               :title="s.boostActive.value ? `Буст активен ${s.boostUntilLabel.value} — тебя видят первым` : 'Включить буст — 30 мин в топе'"
-              class="relative grid place-items-center w-7 h-7 -ml-1.5 -mt-4 rounded-full transition active:scale-90"
-              :class="s.boostActive.value ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-md shadow-orange-500/40 boost-icon-glow' : 'bg-stone-100 dark:bg-zinc-800 text-stone-400 dark:text-zinc-500 hover:!text-amber-500'"
+              class="relative grid place-items-center w-11 h-11 rounded-full active:scale-90 transition"
               @click="onBoostClick()"
             >
-              <i class="pi pi-bolt text-[13px]" />
-              <span v-if="s.boostActive.value" class="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-white dark:ring-zinc-900" />
+              <span
+                class="w-9 h-9 rounded-[10px] grid place-items-center transition"
+                :class="s.boostActive.value ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-md shadow-orange-500/40 boost-icon-glow' : 'bg-stone-100 dark:bg-zinc-800 text-stone-400 dark:text-zinc-500 hover:!text-amber-500'"
+              ><i class="pi pi-bolt text-lg" /></span>
+              <span v-if="s.boostActive.value" class="absolute top-0.5 right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-white dark:ring-zinc-900" />
             </button>
+            <span v-else class="w-11 h-11 shrink-0" aria-hidden="true" />
           </div>
           <span class="flex-1" />
           <Link v-if="isAuth" href="/chat"><Button icon="pi pi-comments" rounded text aria-label="Сообщения" title="Сообщения" class="!w-10 !h-10 !p-0 shrink-0 !text-stone-400 dark:!text-zinc-500 hover:!text-stone-600 dark:hover:!text-zinc-300 [&_.p-button-icon]:!text-xl" /></Link>

@@ -92,25 +92,35 @@ export function adminSectionUrl(next: AdminTabId, nextSeo: AdminSeoSection = DEF
 }
 
 /**
- * Открыть консоль в отдельной вкладке браузера.
+ * Открыть консоль в отдельной вкладке браузера (чистый target=_blank).
  *
  * Вызывается по клику на «Панель модерации» (меню, профиль): текущая
- * страница остаётся нетронутой. Если всплывающие окна заблокированы —
- * уходим в раздел в текущей вкладке, чтобы клик не был мёртвым.
+ * вкладка всегда остаётся там, где нажали, — перехода в ней нет.
+ * Открываем кликом по временной ссылке, а не `window.open`: якорь
+ * с target=_blank блокировщики попапов не режут, фолбэка
+ * `router.visit` больше нет — мёртвый клик лучше увода со страницы.
  *
  * @param next Раздел консоли (по умолчанию статистика).
  * @param nextSeo Подраздел SEO-центра.
  */
 export function openAdminPanel(next: AdminTabId = DEFAULT_TAB, nextSeo: AdminSeoSection = DEFAULT_SEO_SECTION): void {
-  if (typeof window === 'undefined') {
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
     return
   }
 
   const target = adminSectionUrl(next, nextSeo)
-  const opened = window.open(target, '_blank', 'noopener,noreferrer')
 
-  if (!opened) {
-    router.visit(target)
+  try {
+    const anchor = document.createElement('a')
+    anchor.href = target
+    anchor.target = '_blank'
+    anchor.rel = 'noopener noreferrer'
+    anchor.style.display = 'none'
+    document.body.appendChild(anchor)
+    anchor.click()
+    document.body.removeChild(anchor)
+  } catch {
+    // No-op: первая вкладка остаётся там, где нажали.
   }
 }
 

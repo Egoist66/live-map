@@ -121,7 +121,7 @@ class DatingService
      */
     public function limitFor(User $user): int
     {
-        if ($user->isAdmin()) {
+        if ($user->isModerator()) {
             return PHP_INT_MAX;
         }
 
@@ -154,7 +154,7 @@ class DatingService
      */
     public function quotaLeft(User $user): int
     {
-        if ($user->isAdmin()) {
+        if ($user->isModerator()) {
             return PHP_INT_MAX;
         }
 
@@ -247,7 +247,7 @@ class DatingService
      */
     public function superlikeAllowance(User $user): int
     {
-        if ($user->isAdmin()) {
+        if ($user->isModerator()) {
             return PHP_INT_MAX;
         }
 
@@ -284,7 +284,7 @@ class DatingService
      */
     public function superlikesLeft(User $user): int
     {
-        if ($user->isAdmin()) {
+        if ($user->isModerator()) {
             return -1;
         }
 
@@ -305,7 +305,7 @@ class DatingService
      */
     public function consumeSuperlike(User $user): void
     {
-        if ($user->isAdmin()) {
+        if ($user->isModerator()) {
             return;
         }
 
@@ -448,7 +448,7 @@ class DatingService
             'extras' => $this->extrasState($user),
         ];
 
-        if ($user->isAdmin()) {
+        if ($user->isModerator()) {
             return array_merge([
                 'limit' => -1,
                 'used' => 0,
@@ -891,6 +891,7 @@ class DatingService
     /**
      * Включить буст профиля на BOOST_MINUTES: анкета летит первой в чужих лентах.
      *
+     * Стафф (админ/модератор) — безлимитно, без списаний и месячных окон.
      * PRO/Premium/Business — один бесплатный буст в календарный месяц,
      * остальные — за купленные кредиты boosts_balance.
      *
@@ -908,6 +909,10 @@ class DatingService
                 'message' => 'Буст уже активен — дождись конца.',
                 'quota' => $this->quotaState($fresh),
             ], 409));
+        }
+
+        if ($fresh->isModerator()) {
+            return $this->startBoost($fresh);
         }
 
         if ($fresh->isPro()) {

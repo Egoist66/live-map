@@ -567,6 +567,11 @@ html.native-swipes .mobile-bottom-nav {
    `stable` держит место всегда: модалки больше не трясут вёрстку.
    На тач-устройствах с оверлейным скроллом — no-op. */
 html { scrollbar-gutter: stable; }
+/* Гостевая auth-зона (вход/регистрация): стабильный желоб не нужен —
+   модалок там почти нет, а вечно зарезервированная полоса справа
+   выглядит как баг «страница не на всю ширину». Возвращаем auto:
+   скроллбар появляется, только когда контент реально не влезает. */
+html:has(.guest-auth-scroll) { scrollbar-gutter: auto; }
 /* Десктопный Mini App (Telegram на ПК): нативного хрома поверх WebView
    нет (отдельное окно, кнопки клиента не парят над контентом),
    а инсеты десктопного клиента раздувают паддинг шапки.
@@ -1208,14 +1213,15 @@ main:has(.swipes-feed-lock) .swipes-feed-lock {
   min-height: 0;
 }
 
-/* Гость (логин/регистрация) на iOS: форма ниже чёлки, скролл momentum,
-   низ не уходит под home-индикатор. Верх даёт .pt-tg-chrome
-   (sat + tg-chrome), здесь — низ и поведение скролла. */
+/* Гость (логин/регистрация) на iOS: форма ниже чёлки, низ не уходит
+   под home-индикатор. Скролл теперь общий, оконный (внутреннего
+   overflow-y-auto нет), поэтому momentum/overscroll здесь — no-op,
+   а низ держит pb-16/24 из разметки (место под тень-свечение карточки).
+   Отдельный padding-bottom с !important убран: он пережимал бы тень. */
 @supports (-webkit-touch-callout: none) {
   .guest-auth-scroll {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-y: contain;
-    padding-bottom: calc(var(--sab, 0px) + 12px) !important;
   }
 }
 

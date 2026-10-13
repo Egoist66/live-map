@@ -110,6 +110,14 @@ export function useSwipes() {
   const isStaff = computed(() => !!authUser.value?.is_admin || authUser.value?.role === 'admin' || authUser.value?.role === 'moderator')
 
   /**
+   * Стафф по умолчанию со всеми тумблерами ВКЛ: инкогнито-лайк
+   * включён сразу, захочет — выключит вручную.
+   */
+  if (isStaff.value) {
+    incognitoLike.value = true
+  }
+
+  /**
    * Топ-тариф ли это (максимум лимитов): premium/business/стафф.
    *
    * @returns true если включён Premium
@@ -302,11 +310,17 @@ export function useSwipes() {
     interests: [],
   })
 
+  /**
+   * Приватность дейтинга: стаффу все тумблеры по умолчанию ВКЛ
+   * (захочет — выключит вручную), остальным — как в профиле.
+   */
+  const staffPrivacyOn = isStaff.value
+
   const privacy = ref({
-    dating_match_only: !!authUser.value?.dating_match_only,
-    dating_hide_name: !!authUser.value?.dating_hide_name,
-    dating_hide_age: !!authUser.value?.dating_hide_age,
-    dating_hide_distance: !!authUser.value?.dating_hide_distance,
+    dating_match_only: staffPrivacyOn || !!authUser.value?.dating_match_only,
+    dating_hide_name: staffPrivacyOn || !!authUser.value?.dating_hide_name,
+    dating_hide_age: staffPrivacyOn || !!authUser.value?.dating_hide_age,
+    dating_hide_distance: staffPrivacyOn || !!authUser.value?.dating_hide_distance,
   })
 
   const dragX = ref(0)
@@ -1435,6 +1449,45 @@ export function useSwipes() {
       savingPrivacy.value = false
     }
   }
+
+  let staffPrivacySynced = false
+
+  /**
+   * Один раз зафиксировать стаффу дефолтные ВКЛ-тумблеры в базе.
+   *
+   * Без этого UI показывал бы ВКЛ, а база хранила бы ВЫКЛ —
+   * и чужие ленты видели бы стаффа открытым. Повторов нет:
+   * флаг `staffPrivacySynced` держит один выстрел на инстанс.
+   *
+   * @returns void
+   */
+  async function syncStaffPrivacyDefaults(): Promise<void> {
+    if (!isStaff.value || staffPrivacySynced) {
+      return
+    }
+
+    staffPrivacySynced = true
+
+    const raw = authUser.value ?? {}
+    const needsSync = !raw.dating_match_only || !raw.dating_hide_name || !raw.dating_hide_age || !raw.dating_hide_distance
+
+    if (!needsSync) {
+      return
+    }
+
+    privacy.value = {
+      dating_match_only: true,
+      dating_hide_name: true,
+      dating_hide_age: true,
+      dating_hide_distance: true,
+    }
+
+    await savePrivacy()
+  }
+
+  onMounted(() => {
+    void syncStaffPrivacyDefaults()
+  })
 
   /**
    * Попросить PRO для платной плюшки.
