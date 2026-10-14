@@ -27,6 +27,7 @@ let ticking = false
 let burstUntil = 0
 let lastMsgId = 0
 let lastVideoSignalId = 0
+let lastGalleryVersion = 0
 let lastTime = 0
 let consecutiveErrors = 0
 let backoffUntil = 0
@@ -289,6 +290,18 @@ export function useRealtimePoller() {
     }
     const previews = Array.isArray(data?.previews) ? data.previews : []
     if (previews.length) busEmit('chat:previews', previews)
+    const removedConvs = Array.isArray((data as any)?.conversations_removed) ? (data as any).conversations_removed : []
+    const removedIds = removedConvs.map((id: unknown) => Number(id)).filter((id: number) => id > 0)
+    if (removedIds.length) busEmit('user:conversation.removed', { ids: removedIds })
+    const galleryVersion = Number((data as any)?.gallery_version ?? 0)
+    if (galleryVersion > 0 && selfId > 0) {
+      if (lastGalleryVersion === 0) {
+        lastGalleryVersion = galleryVersion
+      } else if (galleryVersion > lastGalleryVersion) {
+        lastGalleryVersion = galleryVersion
+        busEmit('user:gallery.changed', { user_id: selfId, version: galleryVersion })
+      }
+    }
     const friendships = Array.isArray(data?.friendships) ? data.friendships : []
     friendships.forEach((e: any) => {
       const f = e?.friendship
@@ -466,6 +479,7 @@ export function useRealtimePoller() {
     lastActivitySync = 0
     lastMsgId = 0
     lastVideoSignalId = 0
+    lastGalleryVersion = 0
     lastTime = 0
     lastBusinessStatus = null
     seenBusinessPendingIds.clear()

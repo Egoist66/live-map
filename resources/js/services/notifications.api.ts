@@ -24,7 +24,8 @@ export interface InboxNotification {
     new_device?: { device_id?: number; device_label?: string; city?: string | null; country?: string | null; ip?: string | null } | null
     business?: { id?: number; name?: string; verification_status?: string; verification_notes?: string | null; unp?: string | null } | null
     cooperation?: { company?: string; email?: string; message?: string | null } | null
-    support?: { subject?: string; message?: string; name?: string; email?: string } | null
+    support?: { ticket_id?: number; subject?: string; message?: string; name?: string; email?: string } | null
+    support_answer?: { ticket_id?: number; subject?: string; reply?: string } | null
     sos_chat_closed?: { conversation_id?: number; reason?: string; reason_label?: string; pin_title?: string | null } | null
     update?: { id: number; title?: string; body?: string; version?: string; published_at?: string | null } | null
   }
@@ -182,7 +183,13 @@ export function describeInboxRow(row: InboxNotification): InboxText {
     const s = data.support ?? {}
     const subject = String(s.subject || 'Обращение').slice(0, 60)
     const message = String(s.message || 'Новое обращение').slice(0, 60)
-    return { emoji: '🛟', title: `Поддержка: ${subject}`, body: `${message} — ${s.name || s.email || ''}`.slice(0, 120), link: '/admin', avatar: null }
+    return { emoji: '🛟', title: `Поддержка: ${subject}`, body: `${message} — ${s.name || s.email || ''}`.slice(0, 120), link: '/admin/support', avatar: null }
+  }
+  if (row.type === 'support.answered') {
+    const s = data.support_answer ?? {}
+    const subject = String(s.subject || 'обращение').slice(0, 60)
+    const reply = String(s.reply || 'Вам ответили').slice(0, 80)
+    return { emoji: '💬', title: `Поддержка ответила: ${subject}`, body: reply.slice(0, 120), link: '/settings/support', avatar: null }
   }
   if (row.type === 'sos.chat_closed') {
     const s = (data as any).sos_chat_closed ?? {}

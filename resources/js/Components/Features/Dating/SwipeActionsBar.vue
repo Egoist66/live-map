@@ -11,8 +11,11 @@
  * Сырые кнопки вместо PrimeVue Button: фиксированная коробка
  * `grid place-items-center` держит иконку строго по центру, бейдж
  * и спиннер — абсолютные и на центровку не влияют.
+ * `compact` — тесный TG-режим: панель выше и меньше, карточке больше места.
  */
-withDefaults(
+import { computed } from 'vue'
+
+const props = withDefaults(
   defineProps<{
     /** Идёт действие — все кнопки disabled, крутится только своя */
     acting?: boolean
@@ -22,8 +25,10 @@ withDefaults(
     writing?: boolean
     /** Остаток суперлайков текстом */
     superLeft?: string
+    /** Компактный TG-режим: панель выше, кнопки меньше */
+    compact?: boolean
   }>(),
-  { acting: false, busy: '', writing: false, superLeft: '' },
+  { acting: false, busy: '', writing: false, superLeft: '', compact: false },
 )
 
 defineEmits<{
@@ -34,20 +39,30 @@ defineEmits<{
 }>()
 
 const sideBtn =
-  'swipe-side-btn pointer-events-auto w-14 h-14 grid place-items-center rounded-full bg-white dark:bg-zinc-800 shadow-[0_2px_10px_rgba(0,0,0,0.18)] dark:shadow-black/60 transition active:scale-90 disabled:opacity-40 shrink-0 touch-manipulation'
+  'swipe-side-btn pointer-events-auto grid place-items-center rounded-full bg-white dark:bg-zinc-800 shadow-[0_2px_10px_rgba(0,0,0,0.18)] dark:shadow-black/60 transition active:scale-90 disabled:opacity-40 shrink-0 touch-manipulation'
 
 const superBtn =
-  'swipe-super-btn pointer-events-auto w-14 h-14 grid place-items-center rounded-full text-white shadow-[0_4px_18px_rgba(23,134,255,0.5)] dark:shadow-[0_4px_18px_rgba(23,134,255,0.45)] transition active:scale-90 disabled:opacity-40 shrink-0 bg-gradient-to-br from-[#1786FF] via-[#1f9dff] to-[#00C6FF] ring-2 ring-[#1786FF]/30 dark:ring-[#7cc4ff]/30 touch-manipulation'
+  'swipe-super-btn pointer-events-auto grid place-items-center rounded-full text-white shadow-[0_4px_18px_rgba(23,134,255,0.5)] dark:shadow-[0_4px_18px_rgba(23,134,255,0.45)] transition active:scale-90 disabled:opacity-40 shrink-0 bg-gradient-to-br from-[#1786FF] via-[#1f9dff] to-[#00C6FF] ring-2 ring-[#1786FF]/30 dark:ring-[#7cc4ff]/30 touch-manipulation'
+
+const likeBtn =
+  'swipe-like-btn pointer-events-auto grid shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#FD267D] to-[#FF7854] text-white shadow-lg shadow-rose-500/40 transition active:scale-90 disabled:opacity-40 touch-manipulation'
+
+/** Размер боковых кнопок: обычные 56px, в TG — 52px. */
+const sideSize = computed(() => (props.compact ? 'w-[52px] h-[52px]' : 'w-14 h-14'))
+/** Размер центрального лайка: обычный 72px, в TG — 64px. */
+const likeSize = computed(() => (props.compact ? 'w-16 h-16' : 'w-[72px] h-[72px]'))
+/** Позиция панели: в TG выше (20px) и теснее, иначе 12px. */
+const barPos = computed(() => (props.compact ? 'bottom-5 gap-2.5 px-3' : 'bottom-3 gap-3 px-4'))
 </script>
 
 <template>
-  <div class="swipe-actions pointer-events-none absolute inset-x-0 bottom-3 z-20 flex items-center justify-center gap-3 px-4 select-none sm:bottom-4">
+  <div class="swipe-actions pointer-events-none absolute inset-x-0 z-20 flex items-center justify-center select-none sm:bottom-4" :class="barPos">
     <button
       type="button"
       :disabled="acting"
       aria-label="Пропустить"
       title="Пропустить"
-      :class="sideBtn"
+      :class="[sideBtn, sideSize]"
       @click="$emit('pass')"
     >
       <i v-if="busy !== 'pass'" class="pi pi-times text-xl leading-none text-[#FF4458]" />
@@ -59,7 +74,7 @@ const superBtn =
       :disabled="acting"
       aria-label="Суперлайк"
       :title="`Суперлайк · осталось: ${superLeft}`"
-      :class="superBtn"
+      :class="[superBtn, sideSize]"
       class="superlike-btn relative overflow-visible"
       @click="$emit('superlike')"
     >
@@ -77,7 +92,7 @@ const superBtn =
       :disabled="acting"
       aria-label="Лайк"
       title="Лайк"
-      class="swipe-like-btn pointer-events-auto grid h-[72px] w-[72px] shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#FD267D] to-[#FF7854] text-white shadow-lg shadow-rose-500/40 transition active:scale-90 disabled:opacity-40 touch-manipulation"
+      :class="[likeBtn, likeSize]"
       @click="$emit('like')"
     >
       <i v-if="busy !== 'like'" class="pi pi-heart-fill heartbeat text-3xl leading-none" />
@@ -89,7 +104,7 @@ const superBtn =
       :disabled="writing"
       aria-label="Написать"
       title="Написать без мэтча"
-      :class="sideBtn"
+      :class="[sideBtn, sideSize]"
       @click="$emit('write')"
     >
       <i v-if="!writing" class="pi pi-send text-xl leading-none text-[#9B49DF]" />
@@ -136,23 +151,5 @@ const superBtn =
   .superlike-pulse { animation: none; opacity: 0; }
   .heartbeat { animation: none; }
 }
-/* Telegram Mini App на телефоне: панель висела на самом краю карточки
-   и уходила под низ вместе с ней. Поднимаем выше, кнопки чуть компактнее —
-   карточка аккуратнее, ничего не клиппится. Только мобайл Mini App. */
-@media (pointer: coarse) and (max-width: 639.98px) {
-  html.tg-app.tg-mobile .swipe-actions {
-    bottom: 16px;
-    gap: 10px;
-    padding-inline: 12px;
-  }
-  html.tg-app.tg-mobile .swipe-side-btn,
-  html.tg-app.tg-mobile .swipe-super-btn {
-    width: 52px;
-    height: 52px;
-  }
-  html.tg-app.tg-mobile .swipe-like-btn {
-    width: 64px;
-    height: 64px;
-  }
-}
+
 </style>

@@ -54,6 +54,7 @@ export function useAdminSections(): Record<string, Component> {
     seo: section(() => import('@/Components/Features/Admin/AdminSeoManager.vue')),
     telegramUsers: section(() => import('@/Components/Features/Admin/AdminTelegramUsers.vue')),
     botBroadcasts: section(() => import('@/Components/Features/Admin/AdminBotBroadcasts.vue')),
+    support: section(() => import('@/Components/Features/Admin/AdminSupportManager.vue')),
     adminTab: section(() => import('@/Components/Features/Settings/SettingsAdminTab.vue')),
   }
 }

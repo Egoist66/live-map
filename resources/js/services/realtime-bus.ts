@@ -87,6 +87,10 @@ export type RealtimeEventMap = {
   'user:bot-broadcast.finished': { broadcast: any }
   /** Смена режима realtime: socket|polling */
   'realtime:mode': string
+  /** Галерея владельца изменилась (сокет gallery.changed / polling gallery_version / локальная мутация) */
+  'user:gallery.changed': { user_id?: number; ownerId?: number; version: number }
+  /** Диалоги убраны у себя с другого устройства/вкладки (сокет conversation.removed / polling conversations_removed) */
+  'user:conversation.removed': { ids: number[] }
 }
 
 export type PollContext = {

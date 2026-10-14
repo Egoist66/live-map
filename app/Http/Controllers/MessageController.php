@@ -20,12 +20,29 @@ class MessageController extends Controller
      */
     public const HISTORY_PAGE_SIZE = 15;
 
+    /**
+     * История диалога: страница назад (`before`) или дельта вперёд (`after`).
+     *
+     * `before` — классическая подгрузка вверх для infinite scroll.
+     * `after` — дельта-синк открытого диалога для offline-кеша: всё новее
+     * известного клиенту id, oldest-first, без флага has_more.
+     *
+     * @param Request $request запрос с before|after|limit
+     * @param Conversation $conversation диалог
+     */
     public function index(Request $request, Conversation $conversation)
     {
         abort_unless($conversation->hasParticipant($request->user()->id),403);
         $clearedAt = $conversation->participantRows()->where('user_id', $request->user()->id)->value('cleared_at');
         $before = $request->input('before');
+        $after = (int) $request->input('after', 0);
         $limit = max(1, min(50, (int) $request->input('limit', self::HISTORY_PAGE_SIZE)));
+        if ($after > 0) {
+            $messages = $conversation->messages()->with(['sender:id,name,avatar_path,telegram_photo_url', 'forwardedFrom:id,name,avatar_path,telegram_photo_url', 'replyTo.sender:id,name'])->where('id', '>', $after)->reorder()->orderBy('id')->limit($limit);
+            if ($clearedAt) $messages->where('created_at', '>', $clearedAt);
+            $rows = $messages->get()->map->toArrayPayload();
+            return response()->json(['data' => $rows, 'has_more' => false]);
+        }
         $q = $conversation->messages()->with(['sender:id,name,avatar_path,telegram_photo_url', 'forwardedFrom:id,name,avatar_path,telegram_photo_url', 'replyTo.sender:id,name'])->reorder()->orderByDesc('id');
         if ($before) $q->where('id','<',$before);
         if ($clearedAt) $q->where('created_at', '>', $clearedAt);

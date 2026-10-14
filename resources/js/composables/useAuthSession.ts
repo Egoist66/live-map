@@ -5,11 +5,16 @@ import { resetAppNotifications } from '@/composables/useAppNotifications'
 import { resetPresence } from '@/composables/usePresence'
 import { resetPinActivity } from '@/composables/usePinActivity'
 import { resetAdminReports } from '@/composables/useAdminReports'
+import { resetAdminSupport } from '@/composables/useAdminSupport'
 import { resetSecurityImpersonations } from '@/composables/useSecurityImpersonations'
 import { resetScreenLockSession, useScreenLock } from '@/composables/useScreenLock'
 import { useBadgeStore } from '@/stores/badges'
+import { useOfflineCacheStore } from '@/stores/offlineCache'
 import { resetEchoSession } from '@/services/echo-session'
 import { stopRealtimePoller } from '@/composables/useRealtimePoller'
+import { clearChatCache } from '@/composables/useChatCache'
+import { clearGalleryCache } from '@/composables/useGalleryCache'
+import { clearImageCache } from '@/composables/useImageBlobCache'
 
 const trackedUid = ref<number | null>(null)
 let watching = false
@@ -33,9 +38,19 @@ function currentAuthUid(): number | null {
  * @returns текущий uid аккаунта
  */
 export function useAuthSession() {
-  function resetAll(): void {
+  function resetAll(prevUid?: number | null): void {
     try {
       resetChatSession()
+    } catch {}
+    try {
+      if (prevUid != null && prevUid > 0) {
+        void clearChatCache(prevUid)
+        void clearGalleryCache(prevUid)
+      }
+      void clearImageCache()
+    } catch {}
+    try {
+      useOfflineCacheStore().reset()
     } catch {}
     try {
       resetAppNotifications()
@@ -48,6 +63,9 @@ export function useAuthSession() {
     } catch {}
     try {
       resetAdminReports()
+    } catch {}
+    try {
+      resetAdminSupport()
     } catch {}
     try {
       resetSecurityImpersonations()
@@ -71,7 +89,7 @@ export function useAuthSession() {
     const prevUid = trackedUid.value
     const isAccountChanged = prevUid !== null && uid !== prevUid
     if (isAccountChanged) {
-      resetAll()
+      resetAll(prevUid)
     }
     trackedUid.value = uid
     const isLoggedInAsOther = isAccountChanged && uid !== null

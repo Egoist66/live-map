@@ -9,6 +9,7 @@ import { computed } from 'vue'
 import { RESIDENCE_COUNTRIES } from '@/composables/useResidence'
 import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
 import { useAppModulesStore } from '@/stores/appModules'
+import { useUloveOnly } from '@/composables/useUloveOnly'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import Button from 'primevue/button'
@@ -28,6 +29,13 @@ const g = useGender()
 const { selectPt } = useDropdownMenuStyle()
 const modules = useAppModulesStore()
 const showMapFields = computed(() => modules.isEnabled('upin'))
+/**
+ * Чистый ULove-режим: «О себе» живёт только в анкете свайпов,
+ * поле профиля прячем — два источника «о себе» конфликтовали
+ * при сохранении. С экстра-модулями (карта, UFlow и далее) поле
+ * снова в силе: bio идёт в «Общую информацию» приоритетом.
+ */
+const uloveOnly = useUloveOnly()
 </script>
 <template>
   <section>
@@ -128,7 +136,7 @@ const showMapFields = computed(() => modules.isEnabled('upin'))
           </div>
         </template>
       </Card>
-      <div>
+      <div v-if="!uloveOnly">
         <label class="text-sm font-semibold dark:text-white">О себе</label>
         <p class="text-xs text-zinc-500 mb-2">Расскажи о себе — видно всем в профиле в разделе «Общая информация».</p>
         <Textarea v-model="f.bio.value" rows="5" autoResize maxlength="10000" placeholder="Напиши пару строк о себе — интересы, чем занимаешься..." class="w-full mt-1 !rounded-3xl !bg-white dark:!bg-zinc-900" />

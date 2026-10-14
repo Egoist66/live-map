@@ -7,7 +7,7 @@ import type { AdminTabId } from '@/composables/useAdminTabs'
  *
  * Управление и Безопасность — только для админов.
  */
-export const MODERATOR_TABS: readonly AdminTabId[] = ['stats', 'admin', 'business', 'refs', 'seo', 'telegram']
+export const MODERATOR_TABS: readonly AdminTabId[] = ['stats', 'admin', 'business', 'support', 'refs', 'seo', 'telegram']
 
 /**
  * Минимальная форма пользователя для проверки «свой/чужой админ».
@@ -20,10 +20,10 @@ export interface StaffTarget {
 /**
  * Роли staff-пользователей панели модерации.
  *
- * Любой админ — это и модератор (может всё), а модератор —
- * не админ: видит только Статистику, Модерацию, Бизнес, Справочники,
- * SEO и Telegram, а по отношению к админам не может вообще ничего
- * (ни скрыть, ни удалить — бэкенд тоже запрещает).
+   * Любой админ — это и модератор (может всё), а модератор —
+   * не админ: видит только Статистику, Модерацию, Бизнес, Обращения,
+   * Справочники, SEO и Telegram, а по отношению к админам не может
+   * вообще ничего (ни скрыть, ни удалить — бэкенд тоже запрещает).
  *
  * @returns Флаги ролей, список доступных табов и проверки целей.
  * @example
@@ -45,7 +45,7 @@ export function useStaffRole() {
 
   const allowedTabs = computed<readonly AdminTabId[]>(() => {
     if (isAdmin.value) {
-      return ['stats', 'manage', 'security', 'admin', 'business', 'modules', 'ai', 'refs', 'seo', 'telegram', 'payments']
+      return ['stats', 'manage', 'security', 'admin', 'business', 'support', 'modules', 'ai', 'refs', 'seo', 'telegram', 'payments']
     }
 
     return MODERATOR_TABS

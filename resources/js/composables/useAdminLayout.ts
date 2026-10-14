@@ -43,6 +43,8 @@ export interface AdminLayoutBadges {
   reports: number
   /** Заявки бизнеса в ожидании (таб «Бизнес»). */
   business: number
+  /** Новые обращения в поддержку (таб «Обращения»). */
+  support: number
   /** Непросмотренные алерты безопасности (таб «Безопасность»). */
   security: number
 }
@@ -93,7 +95,7 @@ function formatBadge(value: number): string | undefined {
  * @param badges Реактивные счётчики для бейджей меню.
  * @returns Состояние, группы меню, активный пункт, заголовок и экшены.
  * @example
- * const badges = computed(() => ({ reports: 3, business: 0, security: 1 }))
+ * const badges = computed(() => ({ reports: 3, business: 0, support: 1, security: 1 }))
  * const layout = useAdminLayout(badges)
  * // layout.navGroups.value → [{ title: 'Контент', items: [...] }]
  * // layout.selectTab('admin')
@@ -130,6 +132,7 @@ export function useAdminLayout(badges: Ref<AdminLayoutBadges> | ComputedRef<Admi
     const counts = badges.value
     const reportsBadge = formatBadge(counts.reports)
     const businessBadge = formatBadge(counts.business)
+    const supportBadge = formatBadge(counts.support)
     const securityBadge = formatBadge(counts.security)
 
     return [
@@ -175,6 +178,16 @@ export function useAdminLayout(badges: Ref<AdminLayoutBadges> | ComputedRef<Admi
         group: 'Контент',
         badge: businessBadge,
         badgeSeverity: 'warn',
+        adminOnly: false,
+      },
+      {
+        id: 'support',
+        label: 'Обращения',
+        hint: 'вопросы пользователей',
+        icon: 'pi pi-inbox',
+        group: 'Контент',
+        badge: supportBadge,
+        badgeSeverity: 'danger',
         adminOnly: false,
       },
       {

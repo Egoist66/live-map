@@ -28,17 +28,23 @@ class SupportRequestMail extends Mailable
      * @param string $body текст обращения
      * @param string $senderName имя отправителя
      * @param string $senderEmail email отправителя для ответа
+     * @param int $ticketId номер тикета в базе (0 — тестовое письмо без номера)
      */
     public function __construct(
         public string $topic,
         public string $body,
         public string $senderName,
         public string $senderEmail,
+        public int $ticketId = 0,
     ) {}
 
     public function envelope(): Envelope
     {
         $envelopeSubject = "🛟 Поддержка: {$this->topic} — {$this->senderName} <{$this->senderEmail}>";
+
+        if ($this->ticketId > 0) {
+            $envelopeSubject .= " (обращение #{$this->ticketId})";
+        }
 
         return new Envelope(
             subject: $envelopeSubject,
@@ -52,6 +58,7 @@ class SupportRequestMail extends Mailable
             'messageText' => $this->body,
             'senderName' => $this->senderName,
             'senderEmail' => $this->senderEmail,
+            'ticketId' => $this->ticketId,
         ];
 
         return new Content(

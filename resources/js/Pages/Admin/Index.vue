@@ -29,6 +29,7 @@ import { useAdminAccess } from '@/composables/useAdminAccess'
 import { useAdminTelegramUsers } from '@/composables/useAdminTelegramUsers'
 import { useAdminBotBroadcasts } from '@/composables/useAdminBotBroadcasts'
 import { useAdminBusiness } from '@/composables/useAdminBusiness'
+import { useAdminSupport } from '@/composables/useAdminSupport'
 import { closePopupOrVisit, useAdminTabs } from '@/composables/useAdminTabs'
 import { useAdminLayout } from '@/composables/useAdminLayout'
 import { useStaffRole } from '@/composables/useStaffRole'
@@ -41,6 +42,7 @@ const mon = useAdminMonitoring()
 const admin = useAdminUsers()
 const reports = useAdminReports()
 const businessQueue = useAdminBusiness()
+const supportQueue = useAdminSupport()
 const appUpdates = useAdminAppUpdates()
 const imp = useAdminImpersonate()
 const impLogs = useAdminImpersonationLogs()
@@ -70,15 +72,17 @@ const {
   seo: AdminSeoSection,
   telegramUsers: AdminTelegramUsersSection,
   botBroadcasts: AdminBotBroadcastsSection,
+  support: AdminSupportSection,
   adminTab: SettingsAdminTabSection,
 } = useAdminSections()
 
 /**
- * Счётчики для бейджей бокового меню (жалобы, бизнес, алерты).
+ * Счётчики для бейджей бокового меню (жалобы, бизнес, обращения, алерты).
  */
 const layoutBadges = computed(() => ({
   reports: reports.pendingCount.value ?? 0,
   business: businessQueue.pendingCount.value ?? 0,
+  support: supportQueue.newCount.value ?? 0,
   security: logins.unseenCount.value ?? 0,
 }))
 
@@ -94,6 +98,7 @@ const layout = useAdminLayout(layoutBadges)
 function loadAll(): void {
   reports.init()
   businessQueue.init()
+  supportQueue.init()
   void refs.load()
   void seo.load()
   void tgUsers.load()
@@ -265,6 +270,10 @@ enforceVisibleTab()
               <div class="grid min-w-0 grid-cols-1 items-start gap-4 xl:grid-cols-2">
                 <AdminBusinessSection :queue="businessQueue" />
               </div>
+            </section>
+
+            <section v-else-if="tab === 'support'" aria-label="Обращения">
+              <AdminSupportSection />
             </section>
 
             <section v-else-if="tab === 'modules' && staff.isAdmin.value" aria-label="Модули">

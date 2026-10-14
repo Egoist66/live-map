@@ -22,14 +22,117 @@ export interface NoteFileRow {
   blob: Blob
 }
 
+/**
+ * Закешированный диалог из сайдбара чата.
+ *
+ * key — `${uid}:${conversationId}`: кеш строго per-аккаунт, чтобы
+ * после смены юзера без перезагрузки не светить чужие диалоги.
+ * value — сырой payload диалога с сервера (как от chatApi).
+ */
+export interface CachedConversationRow {
+  key: string
+  uid: number
+  convId: number
+  updatedAt: number
+  value: string
+}
+
+/**
+ * Закешированное сообщение открытого диалога.
+ *
+ * key — `${uid}:${messageId}` (id глобально уникальны, но изоляция
+ * по uid обязательна — приватность). convId — для выборки хвоста
+ * диалога одним запросом.
+ */
+export interface CachedMessageRow {
+  key: string
+  uid: number
+  convId: number
+  id: number
+  createdAt: number
+  value: string
+}
+
+/**
+ * Закешированный список галереи пользователя.
+ *
+ * key — `${viewerUid}:${ownerId}`: свою галерею кешируем отдельно
+ * от чужих просмотренных. value — сырой GalleryIndex с сервера.
+ */
+export interface CachedGalleryRow {
+  key: string
+  uid: number
+  ownerId: number
+  updatedAt: number
+  value: string
+}
+
+/**
+ * Закешированный снапшот шапки профиля (аватар, имя, счётчики).
+ *
+ * key — `${viewerUid}:${ownerId}`. value — минимальный набор полей,
+ * нужный для мгновенного рендера шапки до ответа сервера.
+ */
+export interface CachedProfileRow {
+  key: string
+  uid: number
+  ownerId: number
+  updatedAt: number
+  value: string
+}
+
+/**
+ * Закешированный бинарник картинки (аватар, thumb галереи).
+ *
+ * hash — djb2-хеш нормализованного URL (без ?v= версии).
+ * Храним только маленькие (аватар/превью ≤250 КБ): большие оригиналы
+ * остаются на HTTP-кеше браузера, иначе упираемся в квоту Safari.
+ */
+export interface CachedImageRow {
+  hash: string
+  url: string
+  mime: string
+  size: number
+  lastUsed: number
+  blob: Blob
+}
+
+/**
+ * Курсор дельта-синхронизации скоупа.
+ *
+ * key — `${uid}:${scope}` (scope: conversations|messages:{convId}|gallery:{ownerId}).
+ * cursor — server_time последнего успешного синка (ms).
+ */
+export interface SyncMetaRow {
+  key: string
+  uid: number
+  cursor: number
+}
+
 class AppDb extends Dexie {
   kv!: Table<KvRow, string>
   noteFiles!: Table<NoteFileRow, string>
+  chatConversations!: Table<CachedConversationRow, string>
+  chatMessages!: Table<CachedMessageRow, string>
+  galleries!: Table<CachedGalleryRow, string>
+  profileHeaders!: Table<CachedProfileRow, string>
+  imageBlobs!: Table<CachedImageRow, string>
+  syncMeta!: Table<SyncMetaRow, string>
 
   constructor() {
     super('upin')
     this.version(1).stores({ kv: 'key' })
     this.version(2).stores({ kv: 'key', noteFiles: 'key, uid' })
+    this.version(3).stores({
+      kv: 'key',
+      noteFiles: 'key, uid',
+      chatConversations: 'key, uid, convId',
+      chatMessages: 'key, uid, convId, id',
+      galleries: 'key, uid, ownerId',
+      profileHeaders: 'key, uid, ownerId',
+      imageBlobs: 'hash, lastUsed',
+      syncMeta: 'key, uid',
+    })
   }
 }
 

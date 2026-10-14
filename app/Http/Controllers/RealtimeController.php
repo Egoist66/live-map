@@ -95,6 +95,8 @@ class RealtimeController extends Controller
             'time' => now()->valueOf(),
             'messages' => $messages,
             'messages_updated' => $this->updatedMessages($convIds, $window, $freshIds),
+            'conversations_removed' => $this->removedConversations($user->id, $window),
+            'gallery_version' => $this->galleryVersion($user->id),
             'open_ids' => $openId ? $this->openConversationIds($openId) : [],
             'typing' => $openId ? $this->typingUsers($openId, $user->id) : [],
             'previews' => $previews,
@@ -208,6 +210,56 @@ class RealtimeController extends Controller
                 'wallpaper' => $conv->wallpaperPayload(),
             ])
             ->all();
+    }
+
+    /**
+     * Диалоги, убранные у себя с прошлого тика (другое устройство/вкладка).
+     *
+     * Удаление у нас — это hidden_at в своей строке участника, поэтому
+     * changedPreviews его не видит. Клиент выкидывает id из списка
+     * и из offline-кеша точечно, без полного рефетча.
+     *
+     * @param int $userId пользователь
+     * @param Carbon|null $since момент прошлого тика
+     * @return int[]
+     */
+    private function removedConversations(int $userId, ?Carbon $since): array
+    {
+        if (! $since) {
+            return [];
+        }
+
+        return ConversationParticipant::where('user_id', $userId)
+            ->whereNotNull('hidden_at')
+            ->where('hidden_at', '>', $since)
+            ->pluck('conversation_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
+    /**
+     * Версия галереи владельца для инвалидации offline-кеша.
+     *
+     * max(updated_at) своих фото в ms: выросла — кеш галереи протух
+     * (загрузка с другого устройства), клиент ревалидирует список.
+     * Сокет-дубль — событие `gallery.changed` в user-канале.
+     *
+     * @param int $userId владелец галереи
+     * @return int 0 когда фото нет
+     */
+    private function galleryVersion(int $userId): int
+    {
+        try {
+            $max = \App\Models\ProfilePhoto::where('user_id', $userId)->max('updated_at');
+
+            if (! $max) {
+                return 0;
+            }
+
+            return Carbon::parse((string) $max)->valueOf();
+        } catch (\Throwable) {
+            return 0;
+        }
     }
 
     /**

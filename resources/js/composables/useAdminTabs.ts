@@ -6,7 +6,7 @@ import { isAdminBlockedClient } from '@/composables/useAdminClientGate'
 /**
  * ID главной вкладки админ-панели.
  */
-export type AdminTabId = 'stats' | 'manage' | 'security' | 'admin' | 'business' | 'modules' | 'ai' | 'refs' | 'seo' | 'telegram' | 'payments'
+export type AdminTabId = 'stats' | 'manage' | 'security' | 'admin' | 'business' | 'support' | 'modules' | 'ai' | 'refs' | 'seo' | 'telegram' | 'payments'
 
 /**
  * ID подвкладки SEO-центра (активна только при `tab === 'seo'`).
@@ -22,6 +22,7 @@ export const ADMIN_TABS: readonly AdminTabId[] = [
   'security',
   'admin',
   'business',
+  'support',
   'modules',
   'ai',
   'refs',

@@ -48,6 +48,58 @@ class DatingService
     public const BOOST_MINUTES = 30;
 
     /**
+     * Базовый вес активного буста в скоринге ленты.
+     */
+    public const BOOST_BASE_SCORE = 120;
+
+    /**
+     * Бонус свежести: только что включённый буст чуть выше,
+     * но без голодания остальных (см. boostFreshnessBonus).
+     */
+    public const BOOST_FRESH_MINUTES = 5;
+
+    public const BOOST_FRESH_BONUS = 30;
+
+    public const BOOST_WARM_MINUTES = 10;
+
+    public const BOOST_WARM_BONUS = 15;
+
+    /**
+     * Бонус недокрута: кого реже показывали, тот выше (см. boostExposureBonus).
+     */
+    public const BOOST_EXPOSURE_HIGH = 20;
+
+    public const BOOST_EXPOSURE_MID = 12;
+
+    public const BOOST_EXPOSURE_LOW = 6;
+
+    /**
+     * Окно персональной ротации, секунд: каждые N секунд «первый»
+     * у каждого смотрящего пересчитывается (см. boostRotationJitter).
+     */
+    public const BOOST_ROTATION_BUCKET_SECONDS = 180;
+
+    /**
+     * Максимальный персональный джиттер буста: разводит одновременные
+     * бусты по разным зрителям, чтобы каждый побывал первым.
+     */
+    public const BOOST_ROTATION_JITTER_MAX = 12;
+
+    /**
+     * Сколько бустов максимум упирается в одну выдачу ленты.
+     * Остальные бусты разойдутся по другим зрителям и следующим страницам.
+     */
+    public const BOOST_MAX_PER_FEED = 8;
+
+    /**
+     * Чередование ленты: столько бустов подряд, затем столько органики.
+     * Органика не закапывается даже при сотнях активных бустов.
+     */
+    public const BOOST_INTERLEAVE_BOOSTED = 2;
+
+    public const BOOST_INTERLEAVE_ORGANIC = 3;
+
+    /**
      * Откатов последнего свайпа в день для Free. PRO/Business — безлимит.
      */
     public const UNDO_FREE_DAILY = 1;
@@ -942,14 +994,29 @@ class DatingService
     /**
      * Старт буста: проставить boost_until на BOOST_MINUTES вперёд.
      *
+     * Сбрасывает счётчик показов и фиксирует время старта —
+     * они нужны честной ротации (свежесть + недокрут).
+     *
      * @param User $me
      * @return array{boost_until:string}
      */
     private function startBoost(User $me): array
     {
-        $until = Carbon::now()->addMinutes(self::BOOST_MINUTES);
+        $now = Carbon::now();
 
-        $me->forceFill(['boost_until' => $until])->saveQuietly();
+        $until = (clone $now)->addMinutes(self::BOOST_MINUTES);
+
+        $fill = ['boost_until' => $until];
+
+        if (Schema::hasColumn('users', 'boost_started_at')) {
+            $fill['boost_started_at'] = $now;
+        }
+
+        if (Schema::hasColumn('users', 'boost_impressions')) {
+            $fill['boost_impressions'] = 0;
+        }
+
+        $me->forceFill($fill)->saveQuietly();
 
         return ['boost_until' => $until->toISOString()];
     }
@@ -1703,6 +1770,10 @@ class DatingService
      * онлайн, общие интересы и цель, фото и заполненность анкеты,
      * близость, новички и активный буст — плюс лёгкий джиттер,
      * чтобы выдача не была статичной.
+     * Бусты идут пачками впереди (2 буста / 3 органики, не больше
+     * BOOST_MAX_PER_FEED за выдачу), внутри буст-блока — честная ротация:
+     * у каждого зрителя свой «первый», порядок тасуется каждые
+     * BOOST_ROTATION_BUCKET_SECONDS секунд, недокрученные выше.
      * Интересы сравниваются нечётко (точное + вхождение/общий токен):
      * «клубы» найдёт и «ночные клубы», «секс» — и «секс знакомства».
      * Цель «по интересам» дополнительно требует пересечения
@@ -1789,13 +1860,23 @@ class DatingService
             $query->where('birth_date', '<=', $adultThreshold);
         }
 
+        $selectColumns = [
+            'id', 'name', 'profile_slug', 'gender', 'birth_date', 'bio', 'avatar_path', 'telegram_photo_url',
+            'home_city', 'home_lat', 'home_lng', 'last_seen_at', 'created_at', 'boost_until',
+            'dating_goal', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_hide_name', 'dating_hide_age', 'dating_hide_distance',
+            'plan', 'plan_expires_at', 'is_admin', 'role', 'is_invisible',
+        ];
+
+        if (Schema::hasColumn('users', 'boost_started_at')) {
+            $selectColumns[] = 'boost_started_at';
+        }
+
+        if (Schema::hasColumn('users', 'boost_impressions')) {
+            $selectColumns[] = 'boost_impressions';
+        }
+
         $candidates = $query
-            ->select([
-                'id', 'name', 'profile_slug', 'gender', 'birth_date', 'bio', 'avatar_path', 'telegram_photo_url',
-                'home_city', 'home_lat', 'home_lng', 'last_seen_at', 'created_at', 'boost_until',
-                'dating_goal', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_hide_name', 'dating_hide_age', 'dating_hide_distance',
-                'plan', 'plan_expires_at', 'is_admin', 'role', 'is_invisible',
-            ])
+            ->select($selectColumns)
             ->orderByDesc('last_seen_at')
             ->limit($poolLimit)
             ->get();
@@ -1850,7 +1931,7 @@ class DatingService
 
             $isMatch = isset($matchedIds[$candidate->id]);
 
-            $score = $this->scoreCandidate($candidate, $distance, $likedMeSuper, $myInterests, $myGoal);
+            $score = $this->scoreCandidate($candidate, $distance, $likedMeSuper, $myInterests, $myGoal, (int) $me->id);
 
             $scored[] = [
                 'candidate' => $candidate,
@@ -1860,9 +1941,9 @@ class DatingService
             ];
         }
 
-        usort($scored, fn ($a, $b) => $b['score'] <=> $a['score']);
+        $top = $this->orderFeedWithBoostRotation($scored, (int) $me->id, max(1, $limit));
 
-        $top = array_slice($scored, 0, max(1, $limit));
+        $this->countBoostImpressions($top);
 
         $topCandidates = collect($top)->map(fn ($row) => $row['candidate']);
 
@@ -1927,7 +2008,9 @@ class DatingService
     /**
      * Релевантность кандидата для зрителя: чем выше, тем раньше в ленте.
      *
-     * Веса: лайкнул меня +40 (суперлайк +20 сверху), активный буст +120,
+     * Веса: лайкнул меня +40 (суперлайк +20 сверху), активный буст — база
+     * BOOST_BASE_SCORE + бонус свежести + бонус недокрута + персональный
+     * джиттер ротации (у каждого зрителя свой «первый», см. orderFeedWithBoostRotation),
      * онлайн <=15 мин +25 (<=1 ч +15, <=суток +8), общие интересы точные +8
      * (похожие +4, потолок +24), совпавшая цель +10, есть фото +8, заполнено «о себе» +4,
      * PRO +4, рядом <=5 км +10 (<=25 км +6, <=100 км +3),
@@ -1938,9 +2021,10 @@ class DatingService
      * @param array<int,bool> $likedMeSuper кто лайкнул (и супер ли)
      * @param string[] $myInterests интересы зрителя
      * @param string|null $myGoal цель зрителя
+     * @param int $viewerId id смотрящего — сид персональной ротации бустов
      * @return int итоговый вес
      */
-    private function scoreCandidate(User $candidate, ?float $distance, array $likedMeSuper, array $myInterests, ?string $myGoal): int
+    private function scoreCandidate(User $candidate, ?float $distance, array $likedMeSuper, array $myInterests, ?string $myGoal, int $viewerId = 0): int
     {
         $score = 0;
 
@@ -1955,7 +2039,10 @@ class DatingService
         }
 
         if ($this->isBoostActive($candidate)) {
-            $score += 120;
+            $score += self::BOOST_BASE_SCORE;
+            $score += $this->boostFreshnessBonus($candidate);
+            $score += $this->boostExposureBonus($candidate);
+            $score += $this->boostRotationJitter((int) $candidate->id, $viewerId);
         }
 
         $seenMinutes = $this->seenMinutesAgo($candidate);
@@ -2009,6 +2096,301 @@ class DatingService
         $score += mt_rand(0, 6);
 
         return $score;
+    }
+
+    /**
+     * Бонус свежести буста: только что включённый чуть выше в борьбе
+     * за первое место, но база 120 у всех — голодания поздних нет.
+     *
+     * @param User $candidate
+     * @return int
+     */
+    private function boostFreshnessBonus(User $candidate): int
+    {
+        $started = $this->boostStartedAt($candidate);
+
+        if (! $started) {
+            return 0;
+        }
+
+        try {
+            $minutes = $started->diffInMinutes(Carbon::now());
+        } catch (\Throwable) {
+            return 0;
+        }
+
+        if ($minutes <= self::BOOST_FRESH_MINUTES) {
+            return self::BOOST_FRESH_BONUS;
+        }
+
+        if ($minutes <= self::BOOST_WARM_MINUTES) {
+            return self::BOOST_WARM_BONUS;
+        }
+
+        return 0;
+    }
+
+    /**
+     * Бонус недокрута: кого реже показывали в чужих лентах, тот выше.
+     * Главный механизм честности при десятках и сотнях одновременных бустов.
+     *
+     * @param User $candidate
+     * @return int
+     */
+    private function boostExposureBonus(User $candidate): int
+    {
+        $shown = (int) ($candidate->boost_impressions ?? 0);
+
+        if ($shown < 10) {
+            return self::BOOST_EXPOSURE_HIGH;
+        }
+
+        if ($shown < 30) {
+            return self::BOOST_EXPOSURE_MID;
+        }
+
+        if ($shown < 80) {
+            return self::BOOST_EXPOSURE_LOW;
+        }
+
+        return 0;
+    }
+
+    /**
+     * Персональный джиттер ротации: детерминированный бросок 0..MAX
+     * от пары (зритель, кандидат) и текущего временного бакета.
+     *
+     * Один и тот же зритель видит стабильный порядок внутри бакета,
+     * разные зрители — разный порядок, каждые N секунд всё перетасовывается.
+     * Поэтому «первый» у каждого свой и каждый буст побывает первым.
+     *
+     * @param int $candidateId
+     * @param int $viewerId
+     * @return int
+     */
+    private function boostRotationJitter(int $candidateId, int $viewerId): int
+    {
+        if ($viewerId <= 0 || $candidateId <= 0) {
+            return 0;
+        }
+
+        $bucket = (int) floor(time() / self::BOOST_ROTATION_BUCKET_SECONDS);
+
+        $hash = crc32($viewerId . ':' . $bucket . ':' . $candidateId);
+
+        return abs((int) $hash) % (self::BOOST_ROTATION_JITTER_MAX + 1);
+    }
+
+    /**
+     * Время старта текущего буста. На старых строках boost_started_at пуст —
+     * выводим из boost_until минус длительность буста.
+     *
+     * @param User $candidate
+     * @return Carbon|null
+     */
+    private function boostStartedAt(User $candidate): ?Carbon
+    {
+        try {
+            if ($candidate->boost_started_at) {
+                return Carbon::parse($candidate->boost_started_at);
+            }
+
+            if ($candidate->boost_until) {
+                return Carbon::parse($candidate->boost_until)->subMinutes(self::BOOST_MINUTES);
+            }
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return null;
+    }
+
+    /**
+     * Финальная сборка ленты: бусты идут пачками впереди (2 буста / 3 органики),
+     * внутри буст-блока — честный порядок с персональной ротацией.
+     *
+     * Зачем не глобальная сортировка по скору: при сотнях бустов все они
+     * были бы сплошной стеной наверху и закопали органику, а «первый»
+     * достался бы одному. Здесь бустов в выдаче не больше BOOST_MAX_PER_FEED,
+     * а первый у каждого зрителя свой (сдвиг порядка по hash зрителя и бакета).
+     *
+     * @param array<int,array{candidate:User,distance:float|null,isMatch:bool,score:int}> $scored
+     * @param int $viewerId
+     * @param int $limit
+     * @return array<int,array{candidate:User,distance:float|null,isMatch:bool,score:int}>
+     */
+    private function orderFeedWithBoostRotation(array $scored, int $viewerId, int $limit): array
+    {
+        $boosted = [];
+
+        $organic = [];
+
+        foreach ($scored as $row) {
+            if ($this->isBoostActive($row['candidate'])) {
+                $boosted[] = $row;
+            } else {
+                $organic[] = $row;
+            }
+        }
+
+        usort($organic, fn ($a, $b) => $b['score'] <=> $a['score']);
+
+        if (empty($boosted)) {
+            return array_slice($organic, 0, $limit);
+        }
+
+        usort($boosted, function ($a, $b) {
+            if ($a['score'] !== $b['score']) {
+                return $b['score'] <=> $a['score'];
+            }
+
+            $shownA = (int) ($a['candidate']->boost_impressions ?? 0);
+
+            $shownB = (int) ($b['candidate']->boost_impressions ?? 0);
+
+            if ($shownA !== $shownB) {
+                return $shownA <=> $shownB;
+            }
+
+            $startedA = $this->boostStartedAt($a['candidate']);
+
+            $startedB = $this->boostStartedAt($b['candidate']);
+
+            if ($startedA && $startedB) {
+                return $startedA <=> $startedB;
+            }
+
+            return (int) $a['candidate']->id <=> (int) $b['candidate']->id;
+        });
+
+        $rotated = $this->rotateBoostBlock($boosted, $viewerId);
+
+        $slots = count($rotated);
+
+        $slots = min($slots, self::BOOST_MAX_PER_FEED, $limit);
+
+        $rotated = array_slice($rotated, 0, $slots);
+
+        return $this->interleaveBoosted($rotated, $organic, $limit);
+    }
+
+    /**
+     * Сдвиг буст-блока под зрителя: каждый видит свой порядок,
+     * стабильный внутри временного бакета.
+     *
+     * @param array<int,array{candidate:User,distance:float|null,isMatch:bool,score:int}> $boosted
+     * @param int $viewerId
+     * @return array<int,array{candidate:User,distance:float|null,isMatch:bool,score:int}>
+     */
+    private function rotateBoostBlock(array $boosted, int $viewerId): array
+    {
+        $count = count($boosted);
+
+        if ($count < 2 || $viewerId <= 0) {
+            return $boosted;
+        }
+
+        $bucket = (int) floor(time() / self::BOOST_ROTATION_BUCKET_SECONDS);
+
+        $offset = abs((int) crc32('boost:' . $viewerId . ':' . $bucket)) % $count;
+
+        if ($offset === 0) {
+            return $boosted;
+        }
+
+        $head = array_slice($boosted, $offset);
+
+        $tail = array_slice($boosted, 0, $offset);
+
+        return array_merge($head, $tail);
+    }
+
+    /**
+     * Чередование пачек: N бустов, затем M органики, пока не наберётся лимит.
+     *
+     * @param array<int,array{candidate:User,distance:float|null,isMatch:bool,score:int}> $boosted
+     * @param array<int,array{candidate:User,distance:float|null,isMatch:bool,score:int}> $organic
+     * @param int $limit
+     * @return array<int,array{candidate:User,distance:float|null,isMatch:bool,score:int}>
+     */
+    private function interleaveBoosted(array $boosted, array $organic, int $limit): array
+    {
+        $feed = [];
+
+        $boostIndex = 0;
+
+        $organicIndex = 0;
+
+        $boostedCount = count($boosted);
+
+        $organicCount = count($organic);
+
+        while (count($feed) < $limit) {
+            $placed = false;
+
+            for ($k = 0; $k < self::BOOST_INTERLEAVE_BOOSTED; $k++) {
+                if ($boostIndex >= $boostedCount || count($feed) >= $limit) {
+                    break;
+                }
+
+                $feed[] = $boosted[$boostIndex];
+
+                $boostIndex++;
+
+                $placed = true;
+            }
+
+            for ($k = 0; $k < self::BOOST_INTERLEAVE_ORGANIC; $k++) {
+                if ($organicIndex >= $organicCount || count($feed) >= $limit) {
+                    break;
+                }
+
+                $feed[] = $organic[$organicIndex];
+
+                $organicIndex++;
+
+                $placed = true;
+            }
+
+            if (! $placed) {
+                break;
+            }
+        }
+
+        return $feed;
+    }
+
+    /**
+     * Учесть показы бустов в этой выдаче для будущих недокрутов.
+     * Молча пропускает старые базы без колонки и любые сбои —
+     * учёт показов не должен ронять ленту.
+     *
+     * @param array<int,array{candidate:User,distance:float|null,isMatch:bool,score:int}> $rows
+     * @return void
+     */
+    private function countBoostImpressions(array $rows): void
+    {
+        if (! Schema::hasColumn('users', 'boost_impressions')) {
+            return;
+        }
+
+        $shownIds = [];
+
+        foreach ($rows as $row) {
+            if ($this->isBoostActive($row['candidate'])) {
+                $shownIds[] = (int) $row['candidate']->id;
+            }
+        }
+
+        if (empty($shownIds)) {
+            return;
+        }
+
+        try {
+            User::whereIn('id', $shownIds)->increment('boost_impressions');
+        } catch (\Throwable) {
+            return;
+        }
     }
 
     /**

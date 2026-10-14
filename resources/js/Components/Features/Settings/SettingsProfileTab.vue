@@ -6,6 +6,7 @@ import UpdateProfileInformationForm from '@/Pages/Profile/Partials/UpdateProfile
 import DatingRatingStars from '@/Components/Features/Dating/DatingRatingStars.vue'
 import ReputationDetailsDialog from '@/Components/Features/Settings/ReputationDetailsDialog.vue'
 import { useReputationDetails } from '@/composables/useReputationDetails'
+import { useUloveOnly } from '@/composables/useUloveOnly'
 
 defineProps<{ mustVerifyEmail: boolean; status?: string | null; bioEmpty: boolean; bioText: string }>()
 
@@ -16,6 +17,8 @@ defineProps<{ mustVerifyEmail: boolean; status?: string | null; bioEmpty: boolea
 const reputationDetails = useReputationDetails()
 const rating = reputationDetails.rating
 const trust = reputationDetails.trust
+/** Чистый ULove: bio нигде не показывается — и превью прячем вместе с полем. */
+const uloveOnly = useUloveOnly()
 </script>
 <template>
   <div class="space-y-4">
@@ -55,7 +58,7 @@ const trust = reputationDetails.trust
       </template>
     </Card>
     <ReputationDetailsDialog :details="reputationDetails" />
-    <Card v-if="!bioEmpty" class="!bg-white dark:!bg-zinc-900 !border-stone-200 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }">
+    <Card v-if="!bioEmpty && !uloveOnly" class="!bg-white dark:!bg-zinc-900 !border-stone-200 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }">
       <template #content>
         <h4 class="text-sm font-black flex items-center gap-2">Превью «О себе» <Tag value="как видят другие" class="!text-xs !font-normal !bg-stone-100 !text-stone-500 !border-0" /></h4>
         <div class="mt-3 bg-stone-50 border rounded-3xl p-4 text-sm leading-relaxed whitespace-pre-wrap break-words text-stone-700">{{ bioText }}</div>

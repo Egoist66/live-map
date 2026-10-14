@@ -11,12 +11,14 @@ namespace App\Notifications;
 class SupportRequestNotification extends UserNotification
 {
     /**
+     * @param int $ticketId номер тикета в базе
      * @param string $subject тема обращения
      * @param string $message текст обращения
      * @param string $name имя отправителя
      * @param string $email email отправителя
      */
     public function __construct(
+        private int $ticketId,
         private string $subject,
         private string $message,
         private string $name,
@@ -27,13 +29,14 @@ class SupportRequestNotification extends UserNotification
 
     public function category(): string { return 'event'; }
 
-    public function dedupeKey(): ?string { return null; }
+    public function dedupeKey(): ?string { return 'ticket:'.$this->ticketId; }
 
     public function payload(string $id): array
     {
         return [
             'activity' => null,
             'support' => [
+                'ticket_id' => $this->ticketId,
                 'subject' => $this->subject,
                 'message' => $this->message,
                 'name' => $this->name,
@@ -50,8 +53,8 @@ class SupportRequestNotification extends UserNotification
         return [
             'title' => "Поддержка: {$this->subject}",
             'body' => trim("«{$preview}» — {$this->name} ({$this->email})"),
-            'url' => '/admin',
-            'tag' => 'support-'.md5($this->email.$this->subject.$this->message),
+            'url' => '/admin/support',
+            'tag' => 'support-'.$this->ticketId,
             'avatar' => null,
         ];
     }

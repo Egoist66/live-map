@@ -105,6 +105,22 @@ export const chatApi = {
     return []
   },
   /**
+   * Дельта-синк списка диалогов для offline-кеша.
+   *
+   * @param sinceMs курсор прошлого синка (server_time, ms)
+   * @returns изменившиеся диалоги + id удалённых у себя + свежий server_time
+   */
+  async syncConversations(sinceMs: number): Promise<{ data: Conversation[]; removed_ids: number[]; server_time: number }> {
+    const { data } = await api.get('/api/conversations/sync', { params: { since: sinceMs || undefined } })
+    return {
+      data: Array.isArray((data as { data?: unknown })?.data) ? (data as { data: Conversation[] }).data : [],
+      removed_ids: Array.isArray((data as { removed_ids?: unknown })?.removed_ids)
+        ? (data as { removed_ids: number[] }).removed_ids.map((id) => Number(id)).filter((id) => id > 0)
+        : [],
+      server_time: Number((data as { server_time?: number })?.server_time ?? 0),
+    }
+  },
+  /**
    * Одна страница диалогов с метой для infinite scroll.
    *
    * @param page страница
@@ -189,6 +205,18 @@ export const chatApi = {
       data: Array.isArray((data as { data?: unknown })?.data) ? (data as { data: Message[] }).data : [],
       has_more: !!(data as { has_more?: boolean })?.has_more,
     }
+  },
+  /**
+   * Дельта-синк открытого диалога: всё новее известного id.
+   *
+   * @param convId id диалога
+   * @param afterId последний известный id
+   */
+  async messagesAfter(convId: number, afterId: number): Promise<Message[]> {
+    const { data } = await api.get(`/api/conversations/${convId}/messages`, { params: { after: afterId, limit: 50 } })
+    if (Array.isArray(data)) return data
+    if (Array.isArray((data as { data?: unknown })?.data)) return (data as { data: Message[] }).data
+    return []
   },
   async sendMessage(convId: number, body: string, replyToId?: number | null, attachment?: File | null, voiceDuration?: number | null) {
     if (!attachment) {

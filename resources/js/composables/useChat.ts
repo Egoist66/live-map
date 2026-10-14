@@ -3,6 +3,24 @@ import { usePage } from '@inertiajs/vue3'
 import { useToast } from 'primevue/usetoast'
 import { chatApi, CHAT_HISTORY_PAGE_SIZE } from '@/services/chat.api'
 import { useChatHistory } from '@/composables/useChatHistory'
+import {
+  clearCachedConversations,
+  deleteCachedMessage,
+  getSyncCursor,
+  loadCachedConversations,
+  loadCachedMessages,
+  markCachedConversationRead,
+  patchCachedConversation,
+  patchCachedMessage,
+  pruneDeletedByServerIds,
+  removeCachedConversation,
+  saveConversations,
+  saveMessages,
+  setSyncCursor,
+  upsertCachedMessage,
+} from '@/composables/useChatCache'
+import { prefetchImageUrls } from '@/composables/useImageBlobCache'
+import { getAvatarUrl } from '@/composables/useAvatar'
 import { busOn, busEmit, registerPollContextProvider } from '@/services/realtime-bus'
 import { ensureUserChannel, leaveUserChannel } from '@/composables/useUserChannel'
 import { pokeRealtime, syncRealtimeNow } from '@/composables/useRealtimePoller'
@@ -235,6 +253,10 @@ export function useChat() {
       opened.is_pinned = pinned
     }
     sortConversations()
+    const cacheUid = getUid()
+    if (cacheUid > 0 && conv) {
+      void patchCachedConversation(cacheUid, id, { is_pinned: pinned, pinned_at: (conv as any)?.pinned_at ?? null })
+    }
   }
   /**
    * Новейшее сообщение списка по id (страховка от порядка с сервера).
@@ -278,6 +300,14 @@ export function useChat() {
   }
   function syncConversationPreview(msg: any) {
     bumpConversation(msg)
+    const uid = getUid()
+    if (!(uid > 0) || !msg || msg.conversation_id == null) {
+      return
+    }
+    const conv = conversations.value.find((c) => Number(c?.id) === Number(msg.conversation_id))
+    if (conv) {
+      void saveConversations(uid, [conv])
+    }
   }
   /**
    * Сливает свежий список диалогов с локальным, не откатывая превью.
@@ -304,6 +334,16 @@ export function useChat() {
   }
   async function loadConversations() {
     const w = window as any
+    const uid = getUid()
+    if (uid > 0 && conversations.value.length === 0) {
+      try {
+        const cached = await loadCachedConversations(uid)
+        if (cached && cached.length > 0) {
+          conversations.value = normalizeConversations(cached)
+          sortConversations()
+        }
+      } catch {}
+    }
     if (loadConversationsInflight) return loadConversationsInflight.then(d => { conversations.value = mergeConversationPreviews(normalizeConversations(d)); return conversations.value })
     if (w.__conversationsInflight) return w.__conversationsInflight.then((d: Conversation[]) => { conversations.value = mergeConversationPreviews(normalizeConversations(d)); return conversations.value })
     loadConversationsInflight = chatApi.conversations() as Promise<Conversation[]>
@@ -311,6 +351,11 @@ export function useChat() {
     try {
       const data = await loadConversationsInflight
       conversations.value = mergeConversationPreviews(normalizeConversations(data))
+      if (uid > 0) {
+        void saveConversations(uid, data)
+        void warmAvatarCache(data)
+        void setSyncCursor(uid, 'conversations', Date.now())
+      }
       // Первая страница; hasMore узнаем лениво при скролле сайдбара
       conversationsPage.value = 1
       try {
@@ -320,6 +365,77 @@ export function useChat() {
       } catch { conversationsHasMore.value = false }
       return conversations.value
     } finally { loadConversationsInflight = null; w.__conversationsInflight = null }
+  }
+
+  /**
+   * Греет бинарный кеш аватаров сайдбара (фон, без блокировки).
+   *
+   * @param list диалоги с сервера
+   */
+  function warmAvatarCache(list: unknown): void {
+    if (!Array.isArray(list)) {
+      return
+    }
+    const urls: string[] = []
+    for (const conv of list as any[]) {
+      const url = getAvatarUrl(conv?.other)
+      if (url) {
+        urls.push(url)
+      }
+      if (urls.length >= 24) {
+        break
+      }
+    }
+    if (urls.length > 0) {
+      void prefetchImageUrls(urls)
+    }
+  }
+
+  /**
+   * Дешёвый дельта-синк сайдбара по курсору (фокус/возврат из фона).
+   *
+   * Первый раз курсора нет — делаем полный loadConversations.
+   * Дальше тянем только изменившееся + точечно выкидываем удалённые.
+   */
+  async function syncConversationsDelta(): Promise<void> {
+    const uid = getUid()
+    if (!(uid > 0)) {
+      await loadConversations()
+      return
+    }
+    const cursor = await getSyncCursor(uid, 'conversations')
+    if (!(cursor > 0)) {
+      await loadConversations()
+      return
+    }
+    let delta: { data: Conversation[]; removed_ids: number[]; server_time: number } | null = null
+    try {
+      delta = await chatApi.syncConversations(cursor)
+    } catch {
+      await loadConversations()
+      return
+    }
+    if (!delta) {
+      return
+    }
+    for (const id of delta.removed_ids) {
+      conversations.value = conversations.value.filter((c) => Number(c?.id) !== Number(id))
+      void removeCachedConversation(uid, Number(id))
+    }
+    if (delta.data.length > 0) {
+      const fresh = normalizeConversations(delta.data)
+      const known = new Map(conversations.value.map((c) => [Number(c?.id), c]))
+      for (const conv of fresh) {
+        known.set(Number(conv.id), conv)
+      }
+      conversations.value = mergeConversationPreviews([...known.values()])
+      sortConversations()
+      void saveConversations(uid, fresh)
+      void warmAvatarCache(fresh)
+    }
+    if (delta.server_time > 0) {
+      await setSyncCursor(uid, 'conversations', delta.server_time)
+    }
   }
 
   /**
@@ -340,6 +456,12 @@ export function useChat() {
       conversationsPage.value = res.current_page ?? next
       conversationsLastPage.value = res.last_page ?? conversationsPage.value
       conversationsHasMore.value = !!res.has_more
+      if (fresh.length > 0) {
+        const cacheUid = getUid()
+        if (cacheUid > 0) {
+          void saveConversations(cacheUid, fresh)
+        }
+      }
       return fresh.length > 0
     } catch { return false } finally { conversationsLoadingMore.value = false }
   }
@@ -415,12 +537,24 @@ export function useChat() {
     typingExpire.forEach((t) => clearTimeout(t))
     typingExpire.clear()
     loading.value = true
+    const cacheUid = getUid()
+    if (cacheUid > 0 && messages.value.length <= 1) {
+      try {
+        const cachedMessages = await loadCachedMessages(cacheUid, id)
+        if (cachedMessages && cachedMessages.length > 0 && selectedId.value === id) {
+          messages.value = mergeFetched(id, cachedMessages as Message[])
+        }
+      } catch {}
+    }
     try {
       const d = await chatApi.getConversation(id)
       if (selectedId.value !== id) return
       activeConv.value = d
       const detailMessages = Array.isArray(d.messages) ? d.messages : []
       messages.value = mergeFetched(id, detailMessages)
+      if (cacheUid > 0) {
+        void saveMessages(cacheUid, id, messages.value)
+      }
       const newest = newestMessage(detailMessages)
       const conv = conversations.value.find((c) => c?.id === id)
       if (conv) {
@@ -518,6 +652,7 @@ export function useChat() {
         history.notifyAppended()
       }
       syncConversationPreview(msg)
+      void upsertCachedMessage(uid, msg)
       try { pokeRealtime() } catch {}
       setTimeout(() => { const m = messages.value.find((x) => x?.id === msg.id) as any; if (m) m.justSent = false }, 600)
     } catch (e: any) {
@@ -557,6 +692,13 @@ export function useChat() {
       if (i !== -1) messages.value[i] = updated
       const conv = conversations.value.find((c) => c?.id === updated.conversation_id)
       if (conv && (conv as any).last_message?.id === id) { (conv as any).last_message = updated; sortConversations() }
+      const cacheUid = getUid()
+      if (cacheUid > 0) {
+        void upsertCachedMessage(cacheUid, updated)
+        if (conv) {
+          void saveConversations(cacheUid, [conv])
+        }
+      }
       cancelEdit()
     } catch (e) {
       if (idx !== -1) (messages.value[idx] as any).pending = false
@@ -567,6 +709,10 @@ export function useChat() {
   async function deleteMessage(id: number) {
     const backup = [...messages.value]
     messages.value = messages.value.filter((m) => m?.id !== id)
+    const cacheUid = getUid()
+    if (cacheUid > 0) {
+      void deleteCachedMessage(cacheUid, id)
+    }
     try {
       await chatApi.deleteMessage(id)
       const conv = conversations.value.find((c) => (c as any).last_message?.id === id)
@@ -581,6 +727,10 @@ export function useChat() {
     const backupMsgs = [...messages.value]
     conversations.value = conversations.value.filter((c) => c?.id !== id)
     if (wasSelected) { selectedId.value = null; activeConv.value = null; messages.value = [] }
+    const cacheUid = getUid()
+    if (cacheUid > 0) {
+      void removeCachedConversation(cacheUid, id)
+    }
     try { await chatApi.deleteConversation(id) } catch (e) { conversations.value = backup; if (wasSelected) { activeConv.value = backupActive; messages.value = backupMsgs; selectedId.value = id }; throw e }
   }
 
@@ -596,6 +746,10 @@ export function useChat() {
     selectedId.value = null
     activeConv.value = null
     messages.value = []
+    const cacheUid = getUid()
+    if (cacheUid > 0) {
+      void clearCachedConversations(cacheUid)
+    }
     try {
       await chatApi.clearConversations()
     } catch (e) {
@@ -610,6 +764,10 @@ export function useChat() {
   function handleIncoming(msg: Message) {
     if (!alive) return
     if (!msg || (msg as any)?.id == null) return
+    const cacheUid = getUid()
+    if (cacheUid > 0) {
+      void upsertCachedMessage(cacheUid, msg)
+    }
     const id = Number((msg as any).id)
     const alreadyShown = messages.value.some((m) => Number(m?.id) === id)
     if (alreadyShown) {
@@ -675,10 +833,14 @@ export function useChat() {
   function handleDelivered(e: any) {
     const ids: number[] = e?.message_ids || []
     const at = e?.delivered_at
+    const cacheUid = getUid()
     ids.forEach(id => {
       const idx = messages.value.findIndex((m:any)=> m?.id===id)
       if(idx!==-1){ (messages.value[idx] as any).delivered_at = at; (messages.value[idx] as any).status = 'delivered' }
       conversations.value.forEach(c=>{ if((c?.last_message as any)?.id===id){ (c.last_message as any).delivered_at = at; (c.last_message as any).status='delivered' } })
+      if (cacheUid > 0) {
+        void patchCachedMessage(cacheUid, id, { delivered_at: at, status: 'delivered' })
+      }
     })
     if(ids.length===0 && e?.conversation_id){
       messages.value.forEach((m:any)=>{ if(m?.conversation_id===e.conversation_id && m?.sender_id===getUid() && !m?.delivered_at && !m?.read_at){ m.delivered_at = at; m.status='delivered' }})
@@ -688,11 +850,15 @@ export function useChat() {
   function handleRead(e: any) {
     const ids: number[] = e?.message_ids || []
     const at = e?.read_at
+    const cacheUid = getUid()
     if(ids.length){
       ids.forEach(id=>{
         const idx = messages.value.findIndex((m:any)=> m?.id===id)
         if(idx!==-1){ (messages.value[idx] as any).read_at = at; (messages.value[idx] as any).delivered_at = (messages.value[idx] as any).delivered_at || at; (messages.value[idx] as any).status='read' }
         conversations.value.forEach(c=>{ if((c?.last_message as any)?.id===id){ (c.last_message as any).read_at = at; (c.last_message as any).delivered_at = (c.last_message as any).delivered_at || at; (c.last_message as any).status='read' } })
+        if (cacheUid > 0) {
+          void patchCachedMessage(cacheUid, id, { read_at: at, status: 'read' })
+        }
       })
     } else {
       messages.value.forEach((m:any)=>{ if(m?.conversation_id===e?.conversation_id && m?.sender_id===getUid() && !m?.read_at){ m.read_at = at; m.delivered_at = m.delivered_at || at; m.status='read' }})
@@ -753,7 +919,38 @@ export function useChat() {
       busUnsubs.push(busOn('user:message.read', (e: any) => handleRead(e)))
       busUnsubs.push(busOn('user:notification.created', (e: any) => handleSosClosed(e)))
       busUnsubs.push(busOn('chat:receipts', (list: any[]) => applyReceipts(list)))
+      busUnsubs.push(busOn('user:conversation.removed', (e: any) => applyConversationsRemoved(e)))
     } catch { globalSubscribed = false }
+  }
+
+  /**
+   * Убрать диалоги, удалённые у себя с другого устройства/вкладки.
+   *
+   * Прилетает из polling-тика (conversations_removed): сокетам такое
+   * событие не нужно — свои удаления видны сразу локально. Кеш чистим
+   * точечно, открытый диалог закрываем без запросов.
+   *
+   * @param e событие {ids: number[]}
+   */
+  function applyConversationsRemoved(e: any): void {
+    const rawIds: unknown[] = Array.isArray(e?.ids) ? e.ids : []
+    const ids: number[] = rawIds.map((id) => Number(id)).filter((id) => id > 0)
+    if (ids.length === 0) {
+      return
+    }
+    const gone = new Set(ids)
+    conversations.value = conversations.value.filter((c) => !gone.has(Number(c?.id)))
+    const cacheUid = getUid()
+    for (const id of gone) {
+      if (cacheUid > 0) {
+        void removeCachedConversation(cacheUid, id)
+      }
+      if (Number(selectedId.value) === id) {
+        selectedId.value = null
+        activeConv.value = null
+        messages.value = []
+      }
+    }
   }
 
   /**
@@ -762,6 +959,7 @@ export function useChat() {
    */
   function applyReceipts(list: any[]): void {
     if (!Array.isArray(list) || !list.length) return
+    const cacheUid = getUid()
     for (const r of list) {
       if (r?.id == null) continue
       const idx = messages.value.findIndex((m: any) => m?.id === Number(r.id))
@@ -771,6 +969,19 @@ export function useChat() {
         if (r.read_at) {
           current.read_at = r.read_at
           current.delivered_at = current.delivered_at || r.read_at
+        }
+      }
+      if (cacheUid > 0) {
+        const patch: Record<string, unknown> = {}
+        if (r.delivered_at) patch.delivered_at = r.delivered_at
+        if (r.read_at) {
+          patch.read_at = r.read_at
+          patch.status = 'read'
+        } else if (r.delivered_at) {
+          patch.status = 'delivered'
+        }
+        if (Object.keys(patch).length > 0) {
+          void patchCachedMessage(cacheUid, Number(r.id), patch)
         }
       }
       conversations.value.forEach((c: any) => {
@@ -812,6 +1023,13 @@ export function useChat() {
     if (idx !== -1) messages.value[idx] = msg
     const conv = conversations.value.find((c) => c?.id === msg.conversation_id)
     if (conv && (conv as any)?.last_message?.id === msg.id) { (conv as any).last_message = msg; sortConversations() }
+    const cacheUid = getUid()
+    if (cacheUid > 0) {
+      void upsertCachedMessage(cacheUid, msg)
+      if (conv) {
+        void saveConversations(cacheUid, [conv])
+      }
+    }
   }
 
   function handleDeleted(payload: any) {
@@ -824,6 +1042,10 @@ export function useChat() {
       if (first !== undefined) deletedIds.delete(first)
     }
     messages.value = messages.value.filter((m) => m?.id !== mid)
+    const cacheUid = getUid()
+    if (cacheUid > 0) {
+      void deleteCachedMessage(cacheUid, mid)
+    }
     const conv = conversations.value.find((c) => (c as any)?.last_message?.id === mid)
     if (conv) loadConversations()
   }
@@ -965,6 +1187,10 @@ export function useChat() {
       const first = localReadAt.keys().next().value as number | undefined
       if (first !== undefined) localReadAt.delete(first)
     }
+    const cacheUid = getUid()
+    if (cacheUid > 0) {
+      void markCachedConversationRead(cacheUid, id)
+    }
     try {
       busEmit('chat:dialog-read', id)
     } catch {
@@ -983,6 +1209,10 @@ export function useChat() {
     if (!(id > 0)) return
     const row = conversations.value.find((c) => c?.id === id) as any
     if (row) row.unread_count = 0
+    const cacheUid = getUid()
+    if (cacheUid > 0) {
+      void markCachedConversationRead(cacheUid, id)
+    }
   }
 
   /**
@@ -1005,6 +1235,10 @@ export function useChat() {
       ;(conv as any).unread_count = Number(preview.unread_count)
     }
     sortConversations()
+    const cacheUid = getUid()
+    if (cacheUid > 0) {
+      void saveConversations(cacheUid, conversations.value)
+    }
     if (unknown) loadConversations().catch(() => {})
   }
 
@@ -1036,6 +1270,10 @@ export function useChat() {
     const gone = new Set(missing)
     missing.forEach((id) => deletedIds.add(id))
     messages.value = messages.value.filter((m: any) => !gone.has(Number(m?.id)))
+    const cacheUid = getUid()
+    if (cacheUid > 0) {
+      void pruneDeletedByServerIds(cacheUid, Number(conversationId), ids)
+    }
     const conv = conversations.value.find((c) => c?.id === Number(conversationId)) as any
     if (conv?.last_message && gone.has(Number((conv.last_message as any)?.id))) loadConversations().catch(() => {})
   }
@@ -1107,15 +1345,51 @@ export function useChat() {
   /**
    * Догружает открытый диалог после возврата из фона: сайдбар уже свежий,
    * а messages могли отстать (сокет молчал или вкладка была скрыта).
+   *
+   * Сначала дешёвая дельта (`after=maxId`), полный getConversation —
+   * только когда дельта недоступна (пустой диалог) или упала.
    */
   async function resyncOpenConversation(): Promise<void> {
     if (!alive || !selectedId.value || document.hidden) return
     const id = selectedId.value
+    const uid = getUid()
+    const knownIds = messages.value.map((m) => Number(m?.id)).filter((mid) => mid > 0)
+    const maxId = knownIds.length > 0 ? Math.max(...knownIds) : 0
+    if (uid > 0 && maxId > 0) {
+      try {
+        const delta = await chatApi.messagesAfter(id, maxId)
+        if (!alive || selectedId.value !== id) return
+        if (delta.length > 0) {
+          const known = new Set(messages.value.map((m) => Number(m?.id)))
+          const fresh = delta.filter((m) => !known.has(Number(m?.id)))
+          if (fresh.length > 0) {
+            const merged = [...messages.value, ...fresh] as Message[]
+            merged.sort((a: any, b: any) => Number(a.id) - Number(b.id))
+            messages.value = merged
+            for (const msg of fresh) {
+              void upsertCachedMessage(uid, msg)
+            }
+            const newest = newestMessage(messages.value)
+            if (newest) syncConversationPreview(newest)
+            history.notifyAppended()
+          }
+        }
+        const conv = conversations.value.find((c) => c?.id === id)
+        if (conv && Number((conv as any).unread_count || 0) > 0) {
+          noteLocalRead(id)
+          chatApi.markRead(id).catch(() => {})
+        }
+        return
+      } catch {}
+    }
     try {
       const d = await chatApi.getConversation(id)
       if (!alive || selectedId.value !== id) return
       activeConv.value = d
       messages.value = mergeFetched(id, Array.isArray(d.messages) ? d.messages : [])
+      if (uid > 0) {
+        void saveMessages(uid, id, messages.value)
+      }
       const conv = conversations.value.find((c) => c?.id === id)
       if (conv && Number((conv as any).unread_count || 0) > 0) {
         noteLocalRead(id)
@@ -1128,7 +1402,7 @@ export function useChat() {
 
   async function handleFocusResync(): Promise<void> {
     try {
-      await loadConversations()
+      await syncConversationsDelta()
     } catch {}
     await resyncOpenConversation()
     try {

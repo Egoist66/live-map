@@ -5,6 +5,10 @@ import { currentAuthUid } from '@/composables/useAuthUid'
  * Канонические события user-канала (совпадают с broadcastAs на бэке).
  * Безымянные варианты ('PinCreated' и т.п.) никогда не прилетают —
  * broadcastAs всегда переопределяет имя, поэтому слушаем только dotted.
+ *
+ * Потребители слушают шину в user:*-формате напрямую — так инвалидация
+ * offline-кеша одинаково едет и по сокетам, и из polling-тика (поллер
+ * зеркалит свои данные в те же user:*-ключи, см. useRealtimePoller).
  */
 const USER_EVENTS = [
   'message.sent',
@@ -23,6 +27,8 @@ const USER_EVENTS = [
   'notification.created',
   'saved-notes.changed',
   'session.revoked',
+  'gallery.changed',
+  'conversation.removed',
   'business.verified',
   'business.rejected',
   'business.verification.submitted',

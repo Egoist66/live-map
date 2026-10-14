@@ -15,7 +15,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard/{identifier?}', [PageController::class, 'dashboardRedirect'])->where('identifier', '.*');
     Route::get('/admin/{tab?}/{seo?}', [PageController::class, 'admin'])
         ->where([
-            'tab' => 'stats|manage|security|admin|business|modules|ai|refs|seo|telegram|payments',
+            'tab' => 'stats|manage|security|admin|business|support|modules|ai|refs|seo|telegram|payments',
             'seo' => 'general|pages|integrations|scripts|crawl',
         ])
         ->middleware('admin:moderator')

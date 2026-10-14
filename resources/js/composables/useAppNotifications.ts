@@ -880,6 +880,10 @@ function handleNotification(e: any) {
     handleSupport({ support: data.support })
     return
   }
+  if (data.support_answer) {
+    handleSupportAnswer({ support_answer: data.support_answer })
+    return
+  }
   if (data.business && String(n.type || '').startsWith('business.')) {
     handleBusinessInbox(String(n.type), data.business)
     return
@@ -1043,7 +1047,32 @@ function handleSupport(e: any) {
     title: `🛟 Поддержка: ${String(c.subject).slice(0, 40)}`,
     body: `${String(c.message || 'Новое обращение')} — ${c.name || c.email}`.slice(0, 90),
     avatar: null,
-    link: '/admin',
+    link: '/admin/support',
+    createdAt: Date.now(),
+  })
+}
+
+/**
+ * Тост из inbox-строки ответа поддержки (автору обращения).
+ *
+ * Приходит строкой support.answered (сокет, поллер — везде один id,
+ * дублей нет по построению). Админам не показываем: это не их событие.
+ *
+ * @param e пейлоад с ключом support_answer {ticket_id, subject, reply}
+ */
+function handleSupportAnswer(e: any) {
+  if (isAdminNow()) return
+  const c = e?.support_answer
+  if (!c?.subject || !c?.reply) return
+  if (isDuplicateEvent(`support-answer-${c.ticket_id ?? c.subject}`)) return
+  push({
+    id: `support-answer-${Date.now()}`,
+    type: 'business',
+    icon: 'pi pi-comments',
+    title: `💬 Поддержка ответила: ${String(c.subject).slice(0, 40)}`,
+    body: String(c.reply).slice(0, 90),
+    avatar: null,
+    link: '/settings/support',
     createdAt: Date.now(),
   })
 }

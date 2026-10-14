@@ -591,6 +591,7 @@ export function usePinActivity() {
       a.kind !== 'swipe_like' &&
       a.kind !== 'match' &&
       a.kind !== 'review' &&
+      a.kind !== 'profile_visit' &&
       a.kind !== 'flow_like' &&
       a.kind !== 'flow_comment' &&
       a.kind !== 'flow_reply' &&

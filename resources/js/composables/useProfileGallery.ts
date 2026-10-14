@@ -1,8 +1,18 @@
-import { computed, ref } from 'vue'
-import { galleryApi, type GalleryPhoto } from '@/services/gallery.api'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { galleryApi, type GalleryIndex, type GalleryPhoto } from '@/services/gallery.api'
 import { replaceUrlPreservingState } from '@/composables/useHistoryState'
 import { useRewardToast } from '@/composables/useRewardToast'
 import { useImageCompress } from '@/composables/useImageCompress'
+import { busEmit, busOn } from '@/services/realtime-bus'
+import { currentAuthUid } from '@/composables/useAuthUid'
+import { ensureUserChannel } from '@/composables/useUserChannel'
+import {
+  loadCachedGallery,
+  patchCachedPhoto,
+  removeCachedPhoto,
+  saveGallery,
+} from '@/composables/useGalleryCache'
+import { invalidateImageUrl, prefetchImageUrls } from '@/composables/useImageBlobCache'
 
 /**
  * Лимиты галереи по тарифам: free — 5 бесплатных фото.
@@ -42,6 +52,81 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
   const count = computed(() => photos.value.length)
   const remaining = computed(() => Math.max(0, limit.value - count.value))
   const isFull = computed(() => count.value >= limit.value)
+  let galleryBusOff: (() => void) | null = null
+  let lastGalleryVersion = 0
+
+  /**
+   * Применить индекс галереи к состоянию (кеш и сеть идут сюда же).
+   *
+   * @param res ответ galleryApi.list или кеш
+   */
+  function applyGalleryIndex(res: GalleryIndex): void {
+    photos.value = res.photos
+    sortMainFirst()
+    limit.value = res.limit
+    canAdd.value = res.can_add
+    canComment.value = res.can_comment
+    privacy.value = res.photo_comments_privacy
+    if (active.value) active.value = photos.value.find((p) => p.id === active.value?.id) ?? null
+  }
+
+  /**
+   * Прогреть бинарный кеш thumbs сетки (фон, без блокировки).
+   *
+   * @param list фото галереи
+   */
+  function warmGalleryCache(list: GalleryPhoto[]): void {
+    const urls: string[] = []
+    for (const photo of list) {
+      const url = photo?.thumb_url || photo?.url
+      if (url) {
+        urls.push(url)
+      }
+      if (urls.length >= 15) {
+        break
+      }
+    }
+    if (urls.length > 0) {
+      void prefetchImageUrls(urls)
+    }
+  }
+
+  /**
+   * Оповестить шину об изменении галереи (своя мутация).
+   *
+   * Формат user:* — тот же, что приходит с сокета `gallery.changed`
+   * и из polling-тика: другие хуки на этом устройстве обновляются
+   * без различия транспорта. Версия фиксируется до эмита, чтобы
+   * собственная подписка (ниже) не устраивала повторный load после
+   * только что выполненной мутации.
+   */
+  function notifyGalleryChanged(): void {
+    const version = Date.now()
+    lastGalleryVersion = version
+    try {
+      busEmit('user:gallery.changed', { user_id: currentAuthUid(), ownerId: userId(), version })
+    } catch {}
+  }
+
+  /**
+   * Ревалидация по событию шины: сокет в socket-режиме, polling-тик
+   * в polling-режиме, своя мутация с соседнего хука. Источник не важен —
+   * ключ один, поэтому инвалидация работает при выключенном поллинге.
+   *
+   * @param e событие {user_id|ownerId, version}
+   */
+  function handleGalleryChanged(e: { user_id?: number; ownerId?: number; version: number }): void {
+    const owner = Number((e as any)?.ownerId ?? (e as any)?.user_id ?? 0)
+    if (!(owner > 0) || owner !== Number(userId())) {
+      return
+    }
+    const version = Number((e as any)?.version ?? 0)
+    if (version > 0 && version <= lastGalleryVersion) {
+      return
+    }
+    lastGalleryVersion = version
+    void load()
+  }
 
   /**
    * Главное фото галереи: совпадает с аватаром профиля.
@@ -73,15 +158,23 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
   async function load() {
     loading.value = true
     error.value = null
+    const viewerUid = currentAuthUid()
+    const ownerId = userId()
+    if (viewerUid > 0 && ownerId > 0 && photos.value.length === 0) {
+      try {
+        const cached = await loadCachedGallery(viewerUid, ownerId)
+        if (cached && Array.isArray(cached.photos) && cached.photos.length > 0) {
+          applyGalleryIndex(cached)
+        }
+      } catch {}
+    }
     try {
-      const res = await galleryApi.list(userId())
-      photos.value = res.photos
-      sortMainFirst()
-      limit.value = res.limit
-      canAdd.value = res.can_add
-      canComment.value = res.can_comment
-      privacy.value = res.photo_comments_privacy
-      if (active.value) active.value = photos.value.find((p) => p.id === active.value?.id) ?? null
+      const res = await galleryApi.list(ownerId)
+      applyGalleryIndex(res)
+      if (viewerUid > 0 && ownerId > 0) {
+        void saveGallery(viewerUid, ownerId, res)
+        warmGalleryCache(res.photos)
+      }
     } catch (e: any) {
       error.value = e?.response?.data?.message || 'Не удалось загрузить галерею'
     } finally {
@@ -99,6 +192,7 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
       photos.value.unshift(created)
       sortMainFirst()
       await load()
+      notifyGalleryChanged()
       return created
     } catch (e: any) {
       error.value = e?.message || e?.response?.data?.message || 'Не удалось загрузить фото (макс 10 МБ)'
@@ -113,6 +207,11 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
     const i = photos.value.findIndex((p) => p.id === photo.id)
     if (i >= 0) photos.value[i] = updated
     if (active.value?.id === photo.id) active.value = updated
+    const viewerUid = currentAuthUid()
+    if (viewerUid > 0) {
+      void patchCachedPhoto(viewerUid, userId(), updated)
+    }
+    notifyGalleryChanged()
     return updated
   }
 
@@ -122,6 +221,15 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
     const i = photos.value.findIndex((p) => p.id === photo.id)
     if (i >= 0) photos.value[i] = updated
     if (active.value?.id === photo.id) active.value = updated
+    const viewerUid = currentAuthUid()
+    if (viewerUid > 0) {
+      void patchCachedPhoto(viewerUid, userId(), updated)
+    }
+    void invalidateImageUrl(photo.url)
+    if (photo.thumb_url) {
+      void invalidateImageUrl(photo.thumb_url)
+    }
+    notifyGalleryChanged()
     return updated
   }
 
@@ -132,6 +240,15 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
       active.value = null
       viewerOpen.value = false
     }
+    const viewerUid = currentAuthUid()
+    if (viewerUid > 0) {
+      void removeCachedPhoto(viewerUid, userId(), photo.id)
+    }
+    void invalidateImageUrl(photo.url)
+    if (photo.thumb_url) {
+      void invalidateImageUrl(photo.thumb_url)
+    }
+    notifyGalleryChanged()
   }
 
   /** Идёт ли сейчас смена главного фото (кнопка показывает спиннер). */
@@ -161,6 +278,11 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
       if (active.value?.id === photo.id) {
         active.value = photos.value.find((p) => p.id === photo.id) ?? active.value
       }
+      const viewerUid = currentAuthUid()
+      if (viewerUid > 0) {
+        void patchCachedPhoto(viewerUid, userId(), { ...updated, is_main: true })
+      }
+      notifyGalleryChanged()
       return updated.avatar_url ?? null
     } catch (e: any) {
       error.value = e?.response?.data?.message || e?.message || 'Не удалось сделать фото главным'
@@ -181,6 +303,10 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
     const i = photos.value.findIndex((p) => p.id === photo.id)
     if (i >= 0) apply(photos.value[i])
     if (active.value?.id === photo.id) apply(active.value)
+    const viewerUid = currentAuthUid()
+    if (viewerUid > 0 && i >= 0) {
+      void patchCachedPhoto(viewerUid, userId(), photos.value[i])
+    }
     if (activeLikersPhotoId.value === photo.id && res.liked) void loadLikers(photo.id)
     if (activeLikersPhotoId.value === photo.id && !res.liked) likers.value = likers.value.filter((l) => l.user_id !== null || !l.is_incognito)
     return res
@@ -307,6 +433,22 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
   function mosaicClass(i: number): string {
     return MOSAIC_PATTERN[i % MOSAIC_PATTERN.length]
   }
+
+  onMounted(() => {
+    try {
+      galleryBusOff = busOn('user:gallery.changed', handleGalleryChanged)
+    } catch {}
+    try {
+      ensureUserChannel()
+    } catch {}
+  })
+
+  onBeforeUnmount(() => {
+    try {
+      galleryBusOff?.()
+    } catch {}
+    galleryBusOff = null
+  })
 
   return { photos, limit, count, remaining, isFull, canAdd, canComment, privacy, loading, uploading, error, active, viewerOpen, dialogOpen, highlightCommentId, isOwn: !!opts?.isOwn, mainPhoto, settingMain, isMainPhoto, setMain, load, upload, saveCaption, replace, remove, toggleLike, likers, likersLoading, likersTotal, likersIncognito, likersOpen, loadLikers, openLikers, closeLikers, open, stepPhoto, close, openDialog, closeDialog, syncCounts, consumePendingPhoto, mosaicClass }
 }

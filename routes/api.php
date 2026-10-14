@@ -92,6 +92,7 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:status-read'])->group(fu
     Route::post('/updates/{appUpdate}/read', [\App\Http\Controllers\AppUpdateController::class, 'markRead']);
     Route::post('/updates/read-all', [\App\Http\Controllers\AppUpdateController::class, 'markAllRead']);
     Route::get('/conversations', [ConversationController::class, 'index']);
+    Route::get('/conversations/sync', [ConversationController::class, 'sync']);
     Route::get('/chat/me', [ChatUserController::class, 'me']);
     Route::get('/friendships', [FriendshipController::class, 'index']);
     Route::get('/friendships/status/{user}', [FriendshipController::class, 'status']);
@@ -160,6 +161,9 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:300,1'])->group(function
     Route::post('/devices/{device}/unblock', [\App\Http\Controllers\DeviceController::class, 'unblock'])->middleware('throttle:social-write');
     Route::get('/admin/reports', [ReportController::class, 'index']);
     Route::post('/admin/reports/{report}/resolve', [ReportController::class, 'resolve']);
+    Route::get('/admin/support', [\App\Http\Controllers\SupportController::class, 'adminIndex']);
+    Route::post('/admin/support/{ticket}/reply', [\App\Http\Controllers\SupportController::class, 'reply']);
+    Route::post('/admin/support/{ticket}/reject', [\App\Http\Controllers\SupportController::class, 'reject']);
     Route::apiResource('zone-subscriptions', ZoneSubscriptionController::class)->only(['index','store','destroy']);
     Route::get('/districts', [\App\Http\Controllers\DistrictController::class, 'index']);
     Route::post('/districts', [\App\Http\Controllers\DistrictController::class, 'store'])->middleware('throttle:social-write');

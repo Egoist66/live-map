@@ -76,15 +76,8 @@ export function useUloveProfile(profileUser: () => any) {
     return GOAL_LABELS[String(user.value.dating_goal ?? '')] ?? null
   })
 
-  const about = computed(() => {
-    const dating = String(user.value.dating_about ?? '').trim()
-
-    if (dating) {
-      return dating
-    }
-
-    return String(user.value.bio ?? '').trim() || null
-  })
+  /** «О себе» строго из анкеты: bio профиля в дейтинг не подмешиваем. */
+  const about = computed(() => String(user.value.dating_about ?? '').trim() || null)
 
   const interests = computed<string[]>(() => {
     const raw = user.value.dating_interests

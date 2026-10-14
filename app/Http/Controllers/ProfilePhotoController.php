@@ -53,7 +53,25 @@ class ProfilePhotoController extends Controller
             'is_main' => $photo->path !== null && $ownerAvatarPath !== null && $photo->path === $ownerAvatarPath,
             'can_comment' => $viewer ? $viewer->canCommentProfilePhoto($photo->user ?? $photo->user()->first()) : false,
             'created_at' => $photo->created_at?->toISOString(),
+            'updated_at' => $photo->updated_at?->toISOString(),
         ];
+    }
+
+    /**
+     * Сообщить владельцу на другие устройства: галерея изменилась.
+     *
+     * Offline-кеш (IndexedDB) на сокете `gallery.changed` и polling-версии
+     * тика точечно пересчитывает кеш вместо полного рефетча.
+     *
+     * @param int $userId владелец галереи
+     */
+    private function touchGallery(int $userId): void
+    {
+        try {
+            broadcast(new \App\Events\GalleryChanged($userId, now()->valueOf()))->toOthers();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage());
+        }
     }
 
     /**
@@ -159,6 +177,8 @@ class ProfilePhotoController extends Controller
             $payload['reward'] = $reward;
         }
 
+        $this->touchGallery((int) $user->id);
+
         return response()->json($payload, 201);
     }
 
@@ -192,6 +212,7 @@ class ProfilePhotoController extends Controller
             }
         }
         if ($data) $photo->update($data);
+        $this->touchGallery((int) $photo->user_id);
         return response()->json($this->serialize($photo->refresh(), $request->user()));
     }
 
@@ -210,6 +231,7 @@ class ProfilePhotoController extends Controller
             $nextMain = $owner->profilePhotos()->orderBy('sort_order')->orderBy('id')->first();
             $owner->forceFill(['avatar_path' => $nextMain?->path])->save();
         }
+        $this->touchGallery((int) $photo->user_id);
         return response()->json(['ok' => true]);
     }
 
@@ -411,6 +433,8 @@ class ProfilePhotoController extends Controller
         $fresh = $photo->refresh();
         $payload = $this->serialize($fresh, $viewer);
         $payload['avatar_url'] = $owner->refresh()->avatar_url;
+
+        $this->touchGallery((int) $owner->id);
 
         return response()->json($payload);
     }

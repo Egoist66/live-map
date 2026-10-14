@@ -19,6 +19,7 @@ import { useSuperlikeSplash } from '@/composables/useSuperlikeSplash'
 import { useBoostSplash } from '@/composables/useBoostSplash'
 import { useSwipeStamps } from '@/composables/useSwipeStamps'
 import { useSwipesMobileMenu } from '@/composables/useSwipesMobileMenu'
+import { useTgMobile } from '@/composables/useTgMobile'
 import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
 import { useEmailVerification } from '@/composables/useEmailVerification'
 import { useProfileUrl } from '@/composables/useProfileUrl'
@@ -55,6 +56,27 @@ const emailVerification = useEmailVerification()
 const cardPhotos = useSwipeCardPhotos(() => s.current.value)
 const stamps = useSwipeStamps(s.dragX)
 const mobileMenu = useSwipesMobileMenu()
+const { isTgMobile } = useTgMobile()
+
+/** Высота ленты в мобильном TG: стабильный вьюпорт минус верхние зазоры. */
+const TG_LOCK_HEIGHT = 'calc(var(--tg-viewport-stable, 100dvh) - var(--sat, 0px) - var(--tg-chrome-top, 0px))'
+/**
+ * Кап колоды в мобильном TG: минус топбар и отступы (~100px).
+ * Карточка принудительно короче — кнопки свайпов всегда в кадре.
+ */
+const TG_DECK_MAX = 'calc(var(--tg-viewport-stable, 100dvh) - var(--sat, 0px) - var(--tg-chrome-top, 0px) - var(--sab, 0px) - 100px)'
+
+/** Точная высота лока только в TG: в браузере правят CSS-классы. */
+const tgLockStyle = computed(() => {
+  if (!isTgMobile.value) return undefined
+  return { height: TG_LOCK_HEIGHT, maxHeight: TG_LOCK_HEIGHT }
+})
+
+/** Укороченная колода только в TG: в браузере высота идёт от flex. */
+const tgDeckStyle = computed(() => {
+  if (!isTgMobile.value) return undefined
+  return { maxHeight: TG_DECK_MAX }
+})
 const { selectPt } = useDropdownMenuStyle()
 const { userProfileUrl } = useProfileUrl()
 
@@ -208,15 +230,15 @@ onUnmounted(() => {
   <Head :title="seo.title.value">
     <meta head-key="description" name="description" :content="seo.description.value" />
   </Head>
-  <div class="w-full min-w-0 bg-transparent" :class="s.activeTab.value === 'feed' ? 'swipes-feed-lock' : 'page-scroll scroll-neat'">
+  <div class="w-full min-w-0 bg-transparent" :class="s.activeTab.value === 'feed' ? 'swipes-feed-lock' : 'page-scroll scroll-neat'" :style="s.activeTab.value === 'feed' ? tgLockStyle : undefined">
       <div class="w-full min-w-0 mx-auto max-w-[600px] px-4 sm:px-6 lg:max-w-[760px] lg:px-8 xl:max-w-[840px] 2xl:max-w-[900px]" :class="s.activeTab.value === 'feed' ? 'swipes-feed-inner pt-1 sm:pt-3 sm:pb-[calc(1rem+var(--sab))]' : 'pt-3 pb-6 sm:py-6 sm:pb-[calc(2rem+var(--sab))]'">
 
         <h1 class="sr-only">ULove — знакомства рядом</h1>
-        <div class="swipes-topbar flex items-center px-1 py-1 sm:py-2 shrink-0">
+        <div class="swipes-topbar flex items-center px-1 py-1 sm:py-2 shrink-0" :class="{ 'tg-compact': isTgMobile }">
           <Button icon="pi pi-user" rounded text aria-label="Мой профиль" title="Мой профиль" class="!w-10 !h-10 !p-0 shrink-0 !text-stone-400 dark:!text-zinc-500 hover:!text-stone-600 dark:hover:!text-zinc-300 [&_.p-button-icon]:!text-xl" @click="mobileMenu.goProfile()" />
           <Button v-if="isAuth && s.showTabBack.value" icon="pi pi-arrow-left" rounded text aria-label="Назад к ленте" title="Назад к ленте" class="!w-10 !h-10 !p-0 shrink-0 !text-stone-400 dark:!text-zinc-500 hover:!text-stone-600 dark:hover:!text-zinc-300 [&_.p-button-icon]:!text-xl" @click="s.backToFeed()" />
-          <span v-else-if="isAuth" class="w-10 shrink-0" aria-hidden="true" />
-          <span class="swipes-topbar-gap flex-1" aria-hidden="true" />
+          <span v-else-if="isAuth" v-show="!isTgMobile" class="w-10 shrink-0" aria-hidden="true" />
+          <span v-show="!isTgMobile" class="swipes-topbar-gap flex-1" aria-hidden="true" />
           <div class="swipes-topbar-boost flex items-center shrink-0">
             <button
               v-if="isAuth"
@@ -224,17 +246,18 @@ onUnmounted(() => {
               :aria-label="s.boostActive.value ? `Буст активен ${s.boostUntilLabel.value} — тебя видят первым` : 'Включить буст — 30 мин в топе'"
               :title="s.boostActive.value ? `Буст активен ${s.boostUntilLabel.value} — тебя видят первым` : 'Включить буст — 30 мин в топе'"
               class="relative grid place-items-center w-11 h-11 rounded-full active:scale-90 transition"
+              :class="{ 'boost-hint': !s.boostActive.value }"
               @click="onBoostClick()"
             >
               <span
-                class="swipes-topbar-boost-icon w-9 h-9 rounded-[10px] grid place-items-center transition"
+                class="swipes-topbar-boost-icon relative w-9 h-9 rounded-[10px] grid place-items-center transition"
                 :class="s.boostActive.value ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-md shadow-orange-500/40 boost-icon-glow' : 'bg-stone-100 dark:bg-zinc-800 text-stone-400 dark:text-zinc-500 hover:!text-amber-500'"
               ><i class="pi pi-bolt text-lg" /></span>
               <span v-if="s.boostActive.value" class="absolute top-0.5 right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-white dark:ring-zinc-900" />
             </button>
             <span v-else class="w-11 h-11 shrink-0" aria-hidden="true" />
           </div>
-          <span class="swipes-topbar-gap flex-1" aria-hidden="true" />
+          <span v-show="!isTgMobile" class="swipes-topbar-gap flex-1" aria-hidden="true" />
           <Link v-if="isAuth" href="/chat"><Button icon="pi pi-comments" rounded text aria-label="Сообщения" title="Сообщения" class="!w-10 !h-10 !p-0 shrink-0 !text-stone-400 dark:!text-zinc-500 hover:!text-stone-600 dark:hover:!text-zinc-300 [&_.p-button-icon]:!text-xl" /></Link>
           <Button v-if="isAuth" icon="pi pi-bars" rounded text aria-label="Меню ULove" title="Лента · Онлайн · Избранное · Лайки · Анкета · PRO" class="!w-10 !h-10 !p-0 shrink-0 !text-stone-400 dark:!text-zinc-500 hover:!text-stone-600 dark:hover:!text-zinc-300 [&_.p-button-icon]:!text-xl" @click="mobileMenu.open()" />
         </div>
@@ -569,7 +592,7 @@ onUnmounted(() => {
             <SwipeCardSkeleton v-if="s.loading.value || !s.feedReady.value" />
 
             <div v-else-if="s.current.value" class="swipes-card-wrap">
-              <div class="swipe-deck relative overscroll-none sm:h-[60dvh] sm:min-h-[380px] sm:max-h-[520px] lg:h-[62dvh] lg:max-h-[600px] xl:h-[66dvh] xl:max-h-[680px] 2xl:max-h-[740px]">
+              <div class="swipe-deck relative overscroll-none sm:h-[60dvh] sm:min-h-[380px] sm:max-h-[520px] lg:h-[62dvh] lg:max-h-[600px] xl:h-[66dvh] xl:max-h-[680px] 2xl:max-h-[740px]" :style="tgDeckStyle">
               <div
                 v-if="s.next.value"
                 class="absolute inset-0 z-0 rounded-xl overflow-hidden bg-zinc-200 dark:bg-zinc-800 shadow-soft pointer-events-none"
@@ -768,6 +791,7 @@ onUnmounted(() => {
 
           <SwipeActionsBar
             v-if="s.current.value"
+            :compact="isTgMobile"
             :acting="s.acting.value"
             :busy="s.actingAction.value ?? ''"
             :writing="s.creatingChat.value"
@@ -1077,6 +1101,33 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
+/* Подсказка нажать буст: блик бежит по кругу бордера, пока буст выключен.
+   Кольцо — ::before с коническим градиентом позади иконки (у неё сплошной
+   фон и relative, центр перекрыт — видна только бегущая дуга по краю).
+   Вращается весь круглый слой: градиент асимметричный, дуга идёт по кругу.
+   Обычный rotate — работает везде без @property. */
+.boost-hint::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: conic-gradient(
+    from 0deg,
+    rgba(245, 158, 11, 0) 0%,
+    rgba(245, 158, 11, 0.12) 55%,
+    #f59e0b 80%,
+    #fde68a 88%,
+    rgba(245, 158, 11, 0) 96%
+  );
+  animation: boost-ring-spin 2.6s linear infinite;
+  pointer-events: none;
+}
+@keyframes boost-ring-spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .boost-hint::before { animation: none; }
+}
 .boost-icon-glow {
   animation: boost-icon-pulse 1.8s ease-in-out infinite;
 }
@@ -1351,39 +1402,26 @@ html.tg-app .swipes-feed-lock {
     font-size: 24px !important;
   }
 }
-/* Telegram Mini App на телефоне: нативный хром клиента (закрыть/свернуть/меню
-   поверх WebView) плюс кнопка буста в топбаре съедали верх — карточка
-   и кнопки свайпов уходили под низ экрана. Лок вычитает хром-зазор
-   (спейсер native-safe-top над лентой его уже занял), топбар становится
-   компактным кластером по центру: профиль, буст, чат и бургер рядом. */
-@media (pointer: coarse) and (max-width: 639.98px) {
-  html.tg-app.tg-mobile .swipes-feed-lock {
-    height: calc(var(--tg-viewport-stable, 100dvh) - var(--sat, 0px) - var(--tg-chrome-top, 0px));
-    max-height: calc(var(--tg-viewport-stable, 100dvh) - var(--sat, 0px) - var(--tg-chrome-top, 0px));
-  }
-  html.tg-app.tg-mobile .swipes-feed-inner {
-    padding-bottom: calc(4px + var(--sab, 0px));
-  }
-  html.tg-app.tg-mobile .swipes-topbar {
-    justify-content: center;
-    gap: 2px;
-    padding-top: 4px;
-    padding-bottom: 2px;
-  }
-  html.tg-app.tg-mobile .swipes-topbar-gap {
-    display: none;
-  }
-  html.tg-app.tg-mobile .swipes-topbar .p-button {
-    width: 36px !important;
-    height: 36px !important;
-  }
-  html.tg-app.tg-mobile .swipes-topbar-boost > button {
-    width: 40px;
-    height: 40px;
-  }
-  html.tg-app.tg-mobile .swipes-topbar-boost-icon {
-    width: 32px !important;
-    height: 32px !important;
-  }
+/* Компактный топбар мобильного TG (класс ставит шаблон по useTgMobile,
+   высота/кап колоды — инлайн-стилями): кластер по центру — профиль,
+   буст, чат и бургер рядом. Селекторы с элементом бьют глобальный
+   coarse-отступ топбара без !important-войн. */
+div.swipes-topbar.tg-compact {
+  justify-content: center;
+  gap: 2px;
+  padding-top: 4px;
+  padding-bottom: 2px;
+}
+div.swipes-topbar.tg-compact .p-button {
+  width: 36px !important;
+  height: 36px !important;
+}
+div.swipes-topbar.tg-compact .swipes-topbar-boost > button {
+  width: 40px;
+  height: 40px;
+}
+div.swipes-topbar.tg-compact .swipes-topbar-boost-icon {
+  width: 32px !important;
+  height: 32px !important;
 }</style>
 

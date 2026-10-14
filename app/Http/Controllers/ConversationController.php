@@ -53,42 +53,8 @@ class ConversationController extends Controller
         }
 
         $convs = $convs
-            ->map(function($c) use ($user, $myRows, $matchedIds, $orgMap){
-                $other = $c->participants->firstWhere('id','!=',$user->id);
-                $lastSeen = $other && $other->isInvisibleActive() && !$user->isAdmin() ? null : $other?->last_seen_at?->toISOString();
-                $clearedAt = $myRows->get($c->id)?->cleared_at;
-                $last = $c->messages->first()?->toArrayPayload();
-                if ($last && $clearedAt && $c->messages->first()->created_at <= $clearedAt) {
-                    $last = null;
-                }
-                $unread = $c->unread_count;
-                if ($clearedAt) {
-                    $unread = Message::where('conversation_id', $c->id)
-                        ->where('sender_id', '!=', $user->id)
-                        ->whereNull('read_at')
-                        ->where('created_at', '>', $clearedAt)
-                        ->count();
-                }
-                $isDistrictOwner = $c->type === 'district' && $c->district && ((int) $c->district->user_id === (int) $user->id || $user->isAdmin());
-                $otherOrg = $other ? ($orgMap[(int) $other->id] ?? null) : null;
-                $pinnedAt = $myRows->get($c->id)?->pinned_at;
-                return [
-                    'id'=>$c->id,
-                    'type'=>$c->type,
-                    'pin_id'=>$c->pin_id,
-                    'district_id'=>$c->district_id,
-                    'title'=>$c->type === 'district' ? ($c->district?->name ?? 'Район') : null,
-                    'can_invite'=>$isDistrictOwner,
-                    'is_pinned'=>$pinnedAt !== null,
-                    'pinned_at'=>$pinnedAt?->toISOString(),
-                    'other'=>$other ? ['id'=>$other->id,'name'=>$other->name,'profile_slug'=>$other->profile_slug,'avatar_path'=>$other->avatar_path,'telegram_photo_url'=>$other->telegram_photo_url,'avatar_url'=>$other->avatar_url,'last_seen_at'=>$lastSeen,'is_invisible'=>$other->isInvisibleActive(),'is_match'=>$c->type === 'direct' && isset($matchedIds[$other->id]),'dating_goal'=>$other->dating_goal,'dating_interests'=>$other->dating_interests ?? [],'account_type'=>$other->account_type ?? 'person','is_business'=>($other->account_type ?? 'person') === 'business','is_organization'=>(bool) ($otherOrg['is_organization'] ?? false),'business'=>$otherOrg] : null,
-                    'last_message'=>$last,
-                    'unread_count'=>$unread,
-                    'last_message_at'=>$c->last_message_at,
-                    'updated_at'=>$c->updated_at,
-                    'wallpaper'=>$c->wallpaperPayload(),
-                ];
-            })->values();
+            ->map(fn ($c) => $this->serializeRow($c, $user, $myRows, $matchedIds, $orgMap))
+            ->values();
         // Backward-compatible: plain array when one page, paginated envelope otherwise.
         // Frontend usePaginatedList handles both shapes.
         if ($page->lastPage() <= 1) {
@@ -102,6 +68,141 @@ class ConversationController extends Controller
             'total' => $page->total(),
             'has_more' => $page->hasMorePages(),
         ]);
+    }
+
+    /**
+     * Дельта-синк списка диалогов для offline-кеша (IndexedDB).
+     *
+     * Клиент рисует кеш мгновенно и зовёт sync с курсором прошлого синка:
+     * в ответ только изменившиеся диалоги + id удалённых у себя
+     * (hidden_at с другого устройства). Без курсора — полный первый синк.
+     *
+     * @param Request $request запрос с ?since=ms
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function sync(Request $request)
+    {
+        $user = $request->user();
+        $data = $request->validate(['since' => 'nullable|integer|min:0']);
+        $window = empty($data['since'])
+            ? null
+            : \Carbon\Carbon::createFromTimestampMs((int) $data['since'])->subSeconds(10);
+
+        $myRows = \App\Models\ConversationParticipant::where('user_id', $user->id)
+            ->whereNull('hidden_at')
+            ->get(['conversation_id', 'cleared_at', 'pinned_at'])
+            ->keyBy('conversation_id');
+        $myPin = \App\Models\ConversationParticipant::select('pinned_at')
+            ->whereColumn('conversation_participants.conversation_id', 'conversations.id')
+            ->where('conversation_participants.user_id', $user->id)
+            ->limit(1);
+
+        $query = Conversation::whereHas('participantRows', fn($q)=>$q->where('user_id',$user->id)->whereNull('hidden_at'))
+            ->with(['participants' => fn($q)=>$q->select('users.id','users.name','users.profile_slug','users.avatar_path','users.telegram_photo_url','users.last_seen_at','users.is_invisible','users.plan','users.role','users.is_admin','users.account_type','users.dating_goal','users.dating_interests'), 'messages'=>fn($q)=>$q->reorder()->latest('id')->limit(1), 'district:id,name,user_id'])
+            ->withCount(['messages as unread_count'=>fn($q)=>$q->where('sender_id','!=',$user->id)->whereNull('read_at')])
+            ->select('conversations.*')
+            ->selectSub($myPin, 'my_pinned_at');
+
+        if ($window) {
+            $query->where(fn ($q) => $q->where('last_message_at', '>', $window)->orWhere('updated_at', '>', $window));
+        }
+
+        $convs = $query
+            ->orderByDesc('last_message_at')
+            ->orderByDesc('updated_at')
+            ->limit(100)
+            ->get();
+
+        $matchedIds = \App\Models\DatingMatch::where('user_a_id', $user->id)
+            ->orWhere('user_b_id', $user->id)
+            ->get()
+            ->map(fn($m) => $m->user_a_id === $user->id ? $m->user_b_id : $m->user_a_id)
+            ->flip();
+        $otherIds = $convs
+            ->map(fn($c) => $c->participants->firstWhere('id', '!=', $user->id)?->id)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+        $orgMap = $this->organizationMap($otherIds);
+
+        try {
+            $avatarUsers = $convs->flatMap(fn ($c) => $c->participants->all())->all();
+            \App\Services\UserAvatarService::attachGalleryFallback($avatarUsers);
+        } catch (\Throwable) {
+        }
+
+        $rows = $convs
+            ->map(fn ($c) => $this->serializeRow($c, $user, $myRows, $matchedIds, $orgMap))
+            ->values();
+
+        $removedIds = $window
+            ? \App\Models\ConversationParticipant::where('user_id', $user->id)
+                ->whereNotNull('hidden_at')
+                ->where('hidden_at', '>', $window)
+                ->pluck('conversation_id')
+                ->map(fn ($id) => (int) $id)
+                ->all()
+            : [];
+
+        return response()->json([
+            'data' => $rows,
+            'removed_ids' => array_values($removedIds),
+            'server_time' => now()->valueOf(),
+        ]);
+    }
+
+    /**
+     * Одна строка сайдбара: общий сериализатор index и sync.
+     *
+     * @param Conversation $c диалог с подгруженными связями
+     * @param \App\Models\User $user смотрящий
+     * @param \Illuminate\Support\Collection $myRows мои строки участников по conversation_id
+     * @param \Illuminate\Support\Collection $matchedIds flip id мэтчей
+     * @param array<int, array|null> $orgMap организации собеседников
+     * @return array<string, mixed>
+     */
+    private function serializeRow($c, $user, $myRows, $matchedIds, $orgMap): array
+    {
+        $other = $c->participants->firstWhere('id', '!=', $user->id);
+        $lastSeen = $other && $other->isInvisibleActive() && ! $user->isAdmin() ? null : $other?->last_seen_at?->toISOString();
+        $clearedAt = $myRows->get($c->id)?->cleared_at;
+        $last = $c->messages->first()?->toArrayPayload();
+
+        if ($last && $clearedAt && $c->messages->first()->created_at <= $clearedAt) {
+            $last = null;
+        }
+
+        $unread = $c->unread_count;
+
+        if ($clearedAt) {
+            $unread = Message::where('conversation_id', $c->id)
+                ->where('sender_id', '!=', $user->id)
+                ->whereNull('read_at')
+                ->where('created_at', '>', $clearedAt)
+                ->count();
+        }
+
+        $isDistrictOwner = $c->type === 'district' && $c->district && ((int) $c->district->user_id === (int) $user->id || $user->isAdmin());
+        $otherOrg = $other ? ($orgMap[(int) $other->id] ?? null) : null;
+        $pinnedAt = $myRows->get($c->id)?->pinned_at;
+
+        return [
+            'id' => $c->id,
+            'type' => $c->type,
+            'pin_id' => $c->pin_id,
+            'district_id' => $c->district_id,
+            'title' => $c->type === 'district' ? ($c->district?->name ?? 'Район') : null,
+            'can_invite' => $isDistrictOwner,
+            'is_pinned' => $pinnedAt !== null,
+            'pinned_at' => $pinnedAt?->toISOString(),
+            'other' => $other ? ['id' => $other->id, 'name' => $other->name, 'profile_slug' => $other->profile_slug, 'avatar_path' => $other->avatar_path, 'telegram_photo_url' => $other->telegram_photo_url, 'avatar_url' => $other->avatar_url, 'last_seen_at' => $lastSeen, 'is_invisible' => $other->isInvisibleActive(), 'is_match' => $c->type === 'direct' && isset($matchedIds[$other->id]), 'dating_goal' => $other->dating_goal, 'dating_interests' => $other->dating_interests ?? [], 'account_type' => $other->account_type ?? 'person', 'is_business' => ($other->account_type ?? 'person') === 'business', 'is_organization' => (bool) ($otherOrg['is_organization'] ?? false), 'business' => $otherOrg] : null,
+            'last_message' => $last,
+            'unread_count' => $unread,
+            'last_message_at' => $c->last_message_at,
+            'updated_at' => $c->updated_at,
+            'wallpaper' => $c->wallpaperPayload(),
+        ];
     }
 
     public function show(Request $request, Conversation $conversation)
@@ -393,6 +494,11 @@ class ConversationController extends Controller
     {
         abort_unless($conversation->hasParticipant($request->user()->id),403);
         $conversation->participantRows()->where('user_id',$request->user()->id)->update(['hidden_at'=>now(),'cleared_at'=>now()]);
+        try {
+            broadcast(new \App\Events\ConversationRemoved((int) $request->user()->id, [(int) $conversation->id]))->toOthers();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage());
+        }
         return response()->json(['ok'=>true]);
     }
 
@@ -449,9 +555,21 @@ class ConversationController extends Controller
     public function clearAll(Request $request)
     {
         $now = now();
+        $ids = \App\Models\ConversationParticipant::where('user_id',$request->user()->id)
+            ->whereNull('hidden_at')
+            ->pluck('conversation_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
         $cleared = \App\Models\ConversationParticipant::where('user_id',$request->user()->id)
             ->whereNull('hidden_at')
             ->update(['hidden_at'=>$now,'cleared_at'=>$now]);
+        if (! empty($ids)) {
+            try {
+                broadcast(new \App\Events\ConversationRemoved((int) $request->user()->id, $ids))->toOthers();
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage());
+            }
+        }
         return response()->json(['ok'=>true,'cleared'=>$cleared]);
     }
 
