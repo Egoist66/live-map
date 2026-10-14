@@ -51,12 +51,24 @@ const likeBtn =
 const sideSize = computed(() => (props.compact ? 'w-[52px] h-[52px]' : 'w-14 h-14'))
 /** Размер центрального лайка: обычный 72px, в TG — 64px. */
 const likeSize = computed(() => (props.compact ? 'w-16 h-16' : 'w-[72px] h-[72px]'))
-/** Позиция панели: в TG выше (20px) и теснее, иначе 12px. */
-const barPos = computed(() => (props.compact ? 'bottom-5 gap-2.5 px-3' : 'bottom-3 gap-3 px-4'))
+/**
+ * Позиция панели: в TG низ задаёт barStyle (48px + safe-area, выше жестов),
+ * иначе 12px. Bottom-класс здесь только для десктопа, чтобы инлайн-стиль
+ * компакт-режима не перебивался Tailwind-классом.
+ */
+const barPos = computed(() => (props.compact ? 'gap-2.5 px-3' : 'bottom-3 gap-3 px-4'))
+/**
+ * Низ панели в TG Mini App: 48px + нижняя сейф-зона (--sab уже включает
+ * Telegram-инсет через useOverlaySafeArea). Карточка уже хорошей высоты,
+ * кнопки просто висят выше поверх неё, а не уходят под край экрана.
+ */
+const barStyle = computed(() =>
+  props.compact ? { bottom: 'calc(3rem + var(--sab, 0px))' } : undefined,
+)
 </script>
 
 <template>
-  <div class="swipe-actions pointer-events-none absolute inset-x-0 z-20 flex items-center justify-center select-none sm:bottom-4" :class="barPos">
+  <div class="swipe-actions pointer-events-none absolute inset-x-0 z-20 flex items-center justify-center select-none sm:bottom-4" :class="barPos" :style="barStyle">
     <button
       type="button"
       :disabled="acting"

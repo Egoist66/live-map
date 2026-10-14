@@ -610,7 +610,7 @@ onUnmounted(() => {
                   <span class="text-white text-7xl font-black">{{ (s.next.value.name ?? '?').slice(0, 1) }}</span>
                 </div>
                 <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
-                <div class="absolute bottom-0 inset-x-0 px-4 pt-4 pb-28 text-white sm:px-5 sm:pt-5">
+                <div class="swipe-card-info absolute bottom-0 inset-x-0 px-4 pt-4 pb-28 text-white sm:px-5 sm:pt-5">
                   <div class="flex items-baseline gap-2">
                     <span class="text-[24px] font-black leading-none">{{ s.next.value.name }}</span>
                     <span class="text-lg font-bold opacity-90">{{ s.ageLabel(s.next.value) }}</span>
@@ -686,7 +686,7 @@ onUnmounted(() => {
                   <span v-if="s.current.value.is_boosted" class="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2.5 py-1 text-[11px] font-black text-white shadow"><i class="pi pi-bolt text-[10px]" />В топе</span>
                 </div>
 
-                <div class="absolute bottom-0 inset-x-0 px-4 pt-4 pb-28 text-white pointer-events-none">
+                <div class="swipe-card-info absolute bottom-0 inset-x-0 px-4 pt-4 pb-28 text-white pointer-events-none">
                   <div class="flex items-end gap-2">
                     <div class="min-w-0 flex-1">
                       <div class="flex items-baseline gap-2">
@@ -743,7 +743,7 @@ onUnmounted(() => {
                   <span class="text-white text-7xl font-black">{{ (s.exiting.value.card.name ?? '?').slice(0, 1) }}</span>
                 </div>
                 <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
-                <div class="absolute bottom-0 inset-x-0 px-4 pt-4 pb-28 text-white sm:px-5 sm:pt-5">
+                <div class="swipe-card-info absolute bottom-0 inset-x-0 px-4 pt-4 pb-28 text-white sm:px-5 sm:pt-5">
                   <div class="flex items-baseline gap-2">
                     <span class="text-[24px] sm:text-[26px] font-black leading-none">{{ s.exiting.value.card.name }}</span>
                     <span class="text-lg sm:text-xl font-bold opacity-90">{{ s.ageLabel(s.exiting.value.card) }}</span>
@@ -1221,9 +1221,19 @@ onUnmounted(() => {
   scrollbar-width: thin;
 }
 .swipes-feed-inner {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-height: 100%;
+}
+/* TG Mini App: кнопки висят поверх карточки выше (48px + сейф-зона),
+   страховка поверх инлайн-стиля compact-режима — бьёт и sm:bottom-4.
+   Текст карточки поднят тем же запасом, чтобы кнопки его не перекрывали. */
+html.tg-app.tg-mobile .swipe-actions {
+  bottom: calc(3rem + var(--sab, 0px)) !important;
+}
+html.tg-app.tg-mobile .swipe-card-info {
+  padding-bottom: calc(8.5rem + var(--sab, 0px)) !important;
 }
 .swipes-feed {
   display: flex;
