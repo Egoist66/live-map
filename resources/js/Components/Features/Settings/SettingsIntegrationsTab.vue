@@ -60,6 +60,7 @@ async function copyBotName(): Promise<void> {
               loading="lazy"
               class="w-[200px] h-[200px] sm:w-[220px] sm:h-[220px] rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white object-contain cursor-pointer"
               @error="tg.markQrFailed()"
+              @load="tg.markQrLoaded()"
             />
           </button>
           <p class="mt-2 text-center text-sm font-bold text-sky-600 dark:text-sky-400">@{{ tg.botUsername.value || 'U1ove_bot' }}</p>

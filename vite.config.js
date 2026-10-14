@@ -198,7 +198,10 @@ export default defineConfig({
             injectRegister: false,
             strategies: 'generateSW',
             manifestFilename: 'manifest.webmanifest',
-            includeAssets: ['offline.html', 'push-sw.js', 'pwa-192x192.png', 'pwa-512x512.png', 'maskable-512x512.png', 'apple-touch-icon.png', 'pwa-icon.svg', 'favicon.ico'],
+            // images/bot_qr.png — QR Telegram-бота из настроек: лежит в прекеше
+            // с контент-ревизией, поэтому замена файла приезжает клиентам
+            // с новым SW, а не залипает в runtime-кэше pwa-images на 7 дней.
+            includeAssets: ['offline.html', 'push-sw.js', 'pwa-192x192.png', 'pwa-512x512.png', 'maskable-512x512.png', 'apple-touch-icon.png', 'pwa-icon.svg', 'favicon.ico', 'images/bot_qr.png'],
             // PWA-манифест UPin: имя, тёмный сплэш (#0B101B —
             // в цвет boot-экрана app.blade.php для бесшовного старта),
             // комбинированная иконка пин+сердце, шорткаты разделов.
@@ -284,11 +287,15 @@ export default defineConfig({
                         });
                         const seenUrls = new Set();
                         const deduped = normalized.filter((entry) => {
+                            // Подпапка public (images/bot_qr.png) раздаётся с корня:
+                            // кривой вариант /build/images/... — в мусор, иначе
+                            // прекеш попытается скачать 404 и завалит install SW.
+                            if (entry.url !== '/images/bot_qr.png' && entry.url.endsWith('images/bot_qr.png')) return false;
                             const alreadySeen = seenUrls.has(entry.url);
                             seenUrls.add(entry.url);
                             return !alreadySeen;
                         });
-                        for (const f of ['offline.html', 'pwa-192x192.png', 'pwa-512x512.png', 'maskable-512x512.png', 'apple-touch-icon.png', 'pwa-icon.svg', 'favicon.ico']) {
+                        for (const f of ['offline.html', 'pwa-192x192.png', 'pwa-512x512.png', 'maskable-512x512.png', 'apple-touch-icon.png', 'pwa-icon.svg', 'favicon.ico', 'images/bot_qr.png']) {
                             const alreadyListed = deduped.some((m) => m.url === `/${f}`);
                             if (alreadyListed) continue;
                             const revision = fileRevision(f);

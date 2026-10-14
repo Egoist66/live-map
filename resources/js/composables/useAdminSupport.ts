@@ -197,6 +197,8 @@ async function sendReply(): Promise<boolean> {
       selectedId.value = tickets.value.length > 0 ? Number(tickets.value[0].id) : null
       const next = selectedId.value !== null ? tickets.value.find((t) => Number(t.id) === Number(selectedId.value)) : null
       replyText.value = next?.admin_reply || ''
+    } else {
+      replyText.value = ''
     }
     toast?.add({ severity: 'success', summary: 'Ответ отправлен', life: 2500 })
     if ((updated as any)?.inbox_only || (updated as any)?.mailed === false) {
@@ -232,6 +234,8 @@ async function rejectSelected(): Promise<boolean> {
       selectedId.value = tickets.value.length > 0 ? Number(tickets.value[0].id) : null
       const next = selectedId.value !== null ? tickets.value.find((t) => Number(t.id) === Number(selectedId.value)) : null
       replyText.value = next?.admin_reply || ''
+    } else {
+      replyText.value = ''
     }
     toast?.add({ severity: 'info', summary: 'Обращение отклонено', life: 2500 })
     if ((updated as any)?.inbox_only) {

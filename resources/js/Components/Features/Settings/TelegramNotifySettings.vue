@@ -75,6 +75,7 @@ function save(key: PrefKey, value: boolean): void {
                 loading="lazy"
                 class="w-[120px] h-[120px] rounded-xl border border-stone-200 dark:border-zinc-700 bg-white object-contain cursor-pointer"
                 @error="qr.markQrFailed()"
+                @load="qr.markQrLoaded()"
               />
             </button>
             <span class="min-w-0">
@@ -103,6 +104,7 @@ function save(key: PrefKey, value: boolean): void {
                   loading="lazy"
                   class="w-[120px] h-[120px] rounded-xl border border-stone-200 dark:border-zinc-700 bg-white object-contain cursor-pointer"
                   @error="qr.markQrFailed()"
+                  @load="qr.markQrLoaded()"
                 />
               </button>
               <button type="button" class="underline font-semibold" @click="openLink(qr.botLink.value)">Start у @{{ qr.botUsername.value }}</button>

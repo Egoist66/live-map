@@ -54,5 +54,17 @@ export function useBotQr() {
     qrFailed.value = true
   }
 
-  return { qrSrc, botLink, botUsername, qrFailed, openBot, markQrFailed, loadTelegramNotify: tg.loadTelegramNotify }
+  /**
+   * Сбросить флаг битого QR (обработчик `@load` у `<img>`).
+   *
+   * Флаг общий на всё приложение и раньше залипал навсегда после
+   * первой же ошибки: файл восстановили, а все экраны до перезагрузки
+   * показывали текстовую заглушку. Успешная загрузка в любом месте
+   * теперь сама гасит флаг везде.
+   */
+  function markQrLoaded(): void {
+    qrFailed.value = false
+  }
+
+  return { qrSrc, botLink, botUsername, qrFailed, openBot, markQrFailed, markQrLoaded, loadTelegramNotify: tg.loadTelegramNotify }
 }

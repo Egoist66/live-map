@@ -261,45 +261,45 @@ html.dark .divide-stone-200 > :not([hidden]) ~ :not([hidden]), html.dark .divide
 html.dark .ring-stone-200, html.dark .ring-gray-200 { --tw-ring-color: rgb(63 63 70) !important; }
 html.dark .bg-stone-900\/90, html.dark .bg-black\/50, html.dark .bg-black\/60 { background-color: rgba(0,0,0,0.6) !important; }
 
-/* Энергосбережение (AMOLED true black): тумблер в «Внешнем виде»
-   ставит класс amoled на <html>, здесь тёмно-серые поверхности уходят
-   в чёрный. Акценты (розовый, кнопки, бейджи, градиенты) не трогаем —
-   гаснут только фоны. Приподнятое (чужие пузыри, пилюли) — #0c0c0e,
-   чтобы не сливаться с базой #000. Бордеры оставляем: на чёрном
-   они и рисуют структуру. */
-html.dark.amoled { background-color: #000000; }
-html.dark.amoled body { background-color: #000000; }
-html.dark.amoled .dark\:bg-\[\#0F121F\],
-html.dark.amoled .dark\:\!bg-\[\#0F121F\],
-html.dark.amoled .dark\:bg-surface,
-html.dark.amoled .dark\:\!bg-surface { background-color: #000000 !important; }
-html.dark.amoled .dark\:bg-zinc-900,
-html.dark.amoled .dark\:\!bg-zinc-900 { background-color: #000000 !important; }
-html.dark.amoled .dark\:bg-zinc-800,
-html.dark.amoled .dark\:\!bg-zinc-800 { background-color: #0c0c0e !important; }
-html.dark.amoled .dark\:bg-\[\#0F121F\]\/95,
-html.dark.amoled .dark\:bg-zinc-900\/90,
-html.dark.amoled .dark\:bg-zinc-900\/95 { background-color: rgba(0,0,0,0.95) !important; }
-html.dark.amoled .bg-white, html.dark.amoled .\!bg-white,
-html.dark.amoled .bg-stone-50, html.dark.amoled .\!bg-stone-50,
-html.dark.amoled .bg-stone-100, html.dark.amoled .\!bg-stone-100,
-html.dark.amoled .bg-zinc-100, html.dark.amoled .\!bg-zinc-100,
-html.dark.amoled .bg-gray-50, html.dark.amoled .\!bg-gray-50,
-html.dark.amoled .bg-gray-100, html.dark.amoled .\!bg-gray-100,
-html.dark.amoled .bg-slate-50, html.dark.amoled .bg-slate-100 { background-color: #000000 !important; }
-html.dark.amoled .bg-stone-200, html.dark.amoled .\!bg-stone-200,
-html.dark.amoled .bg-zinc-200 { background-color: #0c0c0e !important; }
-html.dark.amoled .p-card, html.dark.amoled .p-dialog, html.dark.amoled .p-drawer,
-html.dark.amoled .p-popover-content, html.dark.amoled .p-menu, html.dark.amoled .p-tieredmenu,
-html.dark.amoled .p-contextmenu, html.dark.amoled .p-accordionpanel,
-html.dark.amoled .p-select-overlay, html.dark.amoled .p-datepicker-panel, html.dark.amoled .p-popover,
-html.dark.amoled .p-confirmdialog, html.dark.amoled .p-confirmdialog .p-dialog { background: #000000 !important; }
-html.dark.amoled input, html.dark.amoled textarea, html.dark.amoled select,
-html.dark.amoled .p-inputtext, html.dark.amoled .p-textarea { background-color: #000000 !important; }
-html.dark.amoled .mobile-bottom-nav { background-color: rgba(0,0,0,0.97) !important; }
-html.dark.amoled .mobile-bottom-nav::before,
-html.dark.amoled .mobile-bottom-nav::after { background: #000000; }
-html.dark.amoled .maplibregl-ctrl-group { background: #000000 !important; }
+/* Энергосбережение (чёрный фон true black): тумблер в «Внешнем виде»
+   ставит класс amoled на <html> независимо от темы — тёмный режим
+   при этом форсится в useTheme, чёрный экран включается сразу.
+   Акценты (розовый, кнопки, бейджи, градиенты) не трогаем —
+   гаснут только фоны. Приподнятое — #0c0c0e, чтобы не сливаться
+   с базой #000. Бордеры оставляем: на чёрном они рисуют структуру. */
+html.amoled { background-color: #000000; }
+html.amoled body { background-color: #000000; }
+html.amoled .dark\:bg-\[\#0F121F\],
+html.amoled .dark\:\!bg-\[\#0F121F\],
+html.amoled .dark\:bg-surface,
+html.amoled .dark\:\!bg-surface { background-color: #000000 !important; }
+html.amoled .dark\:bg-zinc-900,
+html.amoled .dark\:\!bg-zinc-900 { background-color: #000000 !important; }
+html.amoled .dark\:bg-zinc-800,
+html.amoled .dark\:\!bg-zinc-800 { background-color: #0c0c0e !important; }
+html.amoled .dark\:bg-\[\#0F121F\]\/95,
+html.amoled .dark\:bg-zinc-900\/90,
+html.amoled .dark\:bg-zinc-900\/95 { background-color: rgba(0,0,0,0.95) !important; }
+html.amoled .bg-white, html.amoled .\!bg-white,
+html.amoled .bg-stone-50, html.amoled .\!bg-stone-50,
+html.amoled .bg-stone-100, html.amoled .\!bg-stone-100,
+html.amoled .bg-zinc-100, html.amoled .\!bg-zinc-100,
+html.amoled .bg-gray-50, html.amoled .\!bg-gray-50,
+html.amoled .bg-gray-100, html.amoled .\!bg-gray-100,
+html.amoled .bg-slate-50, html.amoled .bg-slate-100 { background-color: #000000 !important; }
+html.amoled .bg-stone-200, html.amoled .\!bg-stone-200,
+html.amoled .bg-zinc-200 { background-color: #0c0c0e !important; }
+html.amoled .p-card, html.amoled .p-dialog, html.amoled .p-drawer,
+html.amoled .p-popover-content, html.amoled .p-menu, html.amoled .p-tieredmenu,
+html.amoled .p-contextmenu, html.amoled .p-accordionpanel,
+html.amoled .p-select-overlay, html.amoled .p-datepicker-panel, html.amoled .p-popover,
+html.amoled .p-confirmdialog, html.amoled .p-confirmdialog .p-dialog { background: #000000 !important; }
+html.amoled input, html.amoled textarea, html.amoled select,
+html.amoled .p-inputtext, html.amoled .p-textarea { background-color: #000000 !important; }
+html.amoled .mobile-bottom-nav { background-color: rgba(0,0,0,0.97) !important; }
+html.amoled .mobile-bottom-nav::before,
+html.amoled .mobile-bottom-nav::after { background: #000000; }
+html.amoled .maplibregl-ctrl-group { background: #000000 !important; }
 
 @media (max-width: 640px) {
   input, textarea, select {

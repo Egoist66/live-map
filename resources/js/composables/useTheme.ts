@@ -10,10 +10,11 @@ import { ref, watch, computed, onMounted } from 'vue'
 const theme = ref<'light' | 'dark' | 'system'>('system')
 const systemDark = ref(false)
 /**
- * Энергосбережение (AMOLED): в тёмной теме красит поверхности
- * в true black вместо тёмно-серого. Отдельный флаг, а не 4-я тема —
- * работает и с 'dark', и с 'system'. На `<html>` отражается классом
- * `amoled`, сами цвета — CSS-блоком `html.dark.amoled` в app.css.
+ * Энергосбережение (чёрный фон): красит поверхности в true black
+ * вместо тёмно-серого. Работает независимо от выбранной темы —
+ * при включении сразу даёт чёрный экран (форсит тёмный режим).
+ * Отдельный флаг, а не 4-я тема. На `<html>` отражается классом
+ * `amoled`, сами цвета — CSS-блоком `html.amoled` в app.css.
  */
 const amoled = ref(false)
 let mql: MediaQueryList | null = null
@@ -49,21 +50,22 @@ function syncFromBrowser(): void {
  * @param isDark true для тёмной темы
  */
 function apply() {
-  const isDark = theme.value === 'dark' || (theme.value === 'system' && systemDark.value)
+  const baseDark = theme.value === 'dark' || (theme.value === 'system' && systemDark.value)
+  const effectiveDark = baseDark || amoled.value
   if (typeof document !== 'undefined') {
-    document.documentElement.classList.toggle('dark', isDark)
+    document.documentElement.classList.toggle('dark', effectiveDark)
     document.documentElement.classList.toggle('amoled', amoled.value)
-    document.documentElement.style.colorScheme = isDark ? 'dark' : 'light'
-    syncSystemChrome(isDark)
+    document.documentElement.style.colorScheme = effectiveDark ? 'dark' : 'light'
+    syncSystemChrome(effectiveDark)
   }
 }
 
 /**
  * Включает/выключает класс энергосбережения на документе.
  *
- * Класс висит независимо от текущей темы (сами цвета gated
- * селектором `html.dark.amoled`), поэтому переключение светлая↔тёмная
- * ничего не ломает и не требует пересчёта.
+ * Класс висит независимо от текущей темы (цвета gated селектором
+ * `html.amoled`), тёмный режим при этом форсится в `apply()`,
+ * поэтому чёрный экран включается сразу, без отдельной тёмной темы.
  */
 function applyAmoledClass(): void {
   if (typeof document === 'undefined') return
@@ -136,7 +138,7 @@ function notifyNativeTheme(isDark: boolean, bg: string): void {
  * @param isDark true для тёмной темы
  */
 function syncSystemChrome(isDark: boolean): void {
-  const bg = !isDark ? '#ffffff' : amoled.value ? '#000000' : '#0F121F'
+  const bg = amoled.value ? '#000000' : isDark ? '#0F121F' : '#ffffff'
   const root = document.documentElement
   const bootAlive = typeof document !== 'undefined' && !!document.getElementById('pwa-boot')
 
@@ -174,7 +176,9 @@ watch(amoled, (v) => {
   apply()
 })
 
-const isDark = computed(() => theme.value === 'dark' || (theme.value === 'system' && systemDark.value))
+const isDark = computed(
+  () => theme.value === 'dark' || (theme.value === 'system' && systemDark.value) || amoled.value,
+)
 
 /**
  * Глобальная синхронизация темы после гидрации (только клиент).
@@ -199,11 +203,17 @@ export function useTheme() {
     } catch {}
   }
   function setTheme(v: 'light'|'dark'|'system'){ theme.value = v }
-  function toggle() { theme.value = isDark.value ? 'light' : 'dark' }
+  function toggle() {
+    const baseDark = theme.value === 'dark' || (theme.value === 'system' && systemDark.value)
+    theme.value = baseDark ? 'light' : 'dark'
+  }
   /**
-   * Переключатель энергосбережения (AMOLED true black).
+   * Переключатель энергосбережения (чёрный фон true black).
    *
-   * @param v true — чёрные поверхности в тёмной теме
+   * Включение сразу даёт чёрный экран независимо от темы:
+   * тёмный режим форсится через `isDark`/`apply()`.
+   *
+   * @param v true — чёрный фон
    */
   function setAmoled(v: boolean){ amoled.value = !!v }
   return { theme, isDark, setTheme, toggle, systemDark, amoled, setAmoled }
