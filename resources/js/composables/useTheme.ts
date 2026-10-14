@@ -127,8 +127,14 @@ function notifyNativeTheme(isDark: boolean, bg: string): void {
  *
  * Статус-бар сверху и панель жестов снизу за документом берутся
  * из `theme-color` и фона `<html>`: без синхронизации там остаётся
- * белый, а шапка/низ меню уже тёмные. Тёмный фон — #0F121F
- * в цвет нативного шелла upin-mobile (SafeArea/StatusBar/NavigationBar).
+ * чужой цвет (бренд из SEO или системный), а шапка/низ меню уже
+ * в цвете темы. Тёмный фон — #0F121F в цвет нижней навигации
+ * и фона документа, светлый — #ffffff.
+ *
+ * Красим ВСЕ `meta[name="theme-color"]`, включая варианты с `media`:
+ * иначе при наличии media-мет браузер берёт системную схему ОС,
+ * а не выбранную в приложении тему, и полосы под навигацией
+ * расходятся с баром при принудительной светлой/тёмной теме.
  *
  * Пока жив boot-сплэш (`#pwa-boot`), фон `<html>/<body>` не трогаем:
  * blade-скрипт держит его тёмным (#0B101B), чтобы розовый логотип
@@ -151,10 +157,7 @@ function syncSystemChrome(isDark: boolean): void {
   }
   const metas = document.querySelectorAll('meta[name="theme-color"]')
   metas.forEach((m) => {
-    const media = m.getAttribute('media')
-    if (!media) {
-      m.setAttribute('content', bg)
-    }
+    m.setAttribute('content', bg)
   })
   notifyNativeTheme(isDark, bg)
 }

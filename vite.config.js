@@ -202,8 +202,10 @@ export default defineConfig({
             // с контент-ревизией, поэтому замена файла приезжает клиентам
             // с новым SW, а не залипает в runtime-кэше pwa-images на 7 дней.
             includeAssets: ['offline.html', 'push-sw.js', 'pwa-192x192.png', 'pwa-512x512.png', 'maskable-512x512.png', 'apple-touch-icon.png', 'pwa-icon.svg', 'favicon.ico', 'images/bot_qr.png'],
-            // PWA-манифест UPin: имя, тёмный сплэш (#0B101B —
+            // PWA-манифест UPin: имя, тёмный сплэш (background_color #0B101B —
             // в цвет boot-экрана app.blade.php для бесшовного старта),
+            // theme_color — в цвет тёмной навигации/документа (#0F121F),
+            // чтобы системные полосы в PWA не вспыхивали чужим цветом.
             // комбинированная иконка пин+сердце, шорткаты разделов.
             // Файл public/manifest.webmanifest при сборке генерится
             // отсюда же — руками его не правим.
@@ -217,7 +219,7 @@ export default defineConfig({
                 display: 'standalone',
                 orientation: 'any',
                 background_color: '#0B101B',
-                theme_color: '#0B101B',
+                theme_color: '#0F121F',
                 lang: 'ru-RU',
                 dir: 'ltr',
                 categories: ['social', 'navigation', 'lifestyle'],

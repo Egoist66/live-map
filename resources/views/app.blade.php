@@ -4,7 +4,12 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content, viewport-fit=cover">
         <meta name="color-scheme" content="light dark">
-        <meta name="theme-color" content="{{ $seoHead['theme_color'] ?? config('seo.theme_color', '#0F172A') }}">
+        {{-- Динамический theme-color: значение ставит ранний скрипт темы ниже
+              (до paint) и useTheme.syncSystemChrome при переключении.
+              НЕ красим сюда бренд-цвет из SEO (#FD267D): иначе системные
+              полосы (статус-бар, жесты) в PWA вспыхивают бордовым вместо
+              цвета навигации. Дефолт — светлая навигация (#ffffff). --}}
+        <meta name="theme-color" content="#ffffff">
         {{-- Нативу (upin-mobile WebView) SEO-разметка не нужна: режем вес head и шлем noindex,
              чтобы ?client=native случайно не попал в индекс. --}}
         @php($isNativeClient = $isNative ?? false)
@@ -41,7 +46,7 @@
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
         <meta name="msapplication-TileColor" content="#FD267D">
         <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
-        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0B101B">
+        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0F121F">
 
         <meta property="og:site_name" content="{{ $seoHead['site_name'] ?? config('seo.site_name') }}">
         @if(!$isNativeClient)
@@ -235,7 +240,7 @@
             } catch (e) {}
         </script>
         <script nonce="{{ $cspNonce ?? '' }}">
-            (function(){ try{ var root=document.documentElement; var s=null, a=false; try{ s=localStorage.getItem('theme'); a=localStorage.getItem('amoled')==='1'; }catch(e){} var m=window.matchMedia('(prefers-color-scheme: dark)').matches; var isTg=root.classList.contains('tg-app'); var tgDark=root.classList.contains('tg-dark'); var d=isTg ? tgDark : (s ? s==='dark' : m); d=d||a; if(d) root.classList.add('dark'); else root.classList.remove('dark'); if(a) root.classList.add('amoled'); root.style.colorScheme = d?'dark':'light'; var tgBg=root.classList.contains('tg-app') ? root.style.getPropertyValue('--tg-theme-bg-color').trim() : ''; var bg=tgBg || (a?'#000000':(d?'#0F121F':'#ffffff')); window.__upinThemeBg = bg; /* Держим тёмный фон, пока жив #pwa-boot: проверка getElementById здесь бессмысленна (head парсится раньше body-разметки, узел ещё не существует), а светлый <html> под фейдом выцветает розовый логотип в серый. Целевой фон вернёт __upinHideSplash ровно в момент удаления узла. Энергосбережение (amoled) даёт чёрный экран сразу, независимо от темы. */ root.style.backgroundColor = a ? '#000000' : '#0B101B'; }catch(e){} })();
+            (function(){ try{ var root=document.documentElement; var s=null, a=false; try{ s=localStorage.getItem('theme'); a=localStorage.getItem('amoled')==='1'; }catch(e){} var m=window.matchMedia('(prefers-color-scheme: dark)').matches; var isTg=root.classList.contains('tg-app'); var tgDark=root.classList.contains('tg-dark'); var d=isTg ? tgDark : (s ? s==='dark' : m); d=d||a; if(d) root.classList.add('dark'); else root.classList.remove('dark'); if(a) root.classList.add('amoled'); root.style.colorScheme = d?'dark':'light'; var tgBg=root.classList.contains('tg-app') ? root.style.getPropertyValue('--tg-theme-bg-color').trim() : ''; var bg=tgBg || (a?'#000000':(d?'#0F121F':'#ffffff')); window.__upinThemeBg = bg; try{var tc=document.querySelector('meta[name="theme-color"]:not([media])');if(tc)tc.setAttribute('content',bg);}catch(e){} /* Держим тёмный фон, пока жив #pwa-boot: проверка getElementById здесь бессмысленна (head парсится раньше body-разметки, узел ещё не существует), а светлый <html> под фейдом выцветает розовый логотип в серый. Целевой фон вернёт __upinHideSplash ровно в момент удаления узла. Энергосбережение (amoled) даёт чёрный экран сразу, независимо от темы. */ root.style.backgroundColor = a ? '#000000' : '#0B101B'; }catch(e){} })();
         </script>
         {{-- Сторож загрузки entry: после деплоя HTML может ссылаться на уже
               удалённый `/build/assets/app-*.js` (протухший SW/HTTP-кэш, гонка

@@ -494,9 +494,11 @@ html.native-keyboard-open .h-app-full {
   background-color: rgba(255,255,255,0.95);
 }
 /* Тёмная тема: глухая подложка у меню и запас под ним — системная
-   полоса жестов красится в тот же цвет, белого стыка нет. */
+   полоса жестов красится в тот же цвет, белого стыка нет.
+   Цвет — ровно #0F121F в цвет бара (dark:bg-[#0F121F]) и фона
+   документа, иначе под навигацией видна чужая полоса. */
 html.dark .mobile-bottom-nav {
-  background-color: rgba(11, 15, 27, 0.97) !important;
+  background-color: rgba(15, 18, 31, 0.97) !important;
 }
 /* Системная полоса под навигацией (home-индикатор): заливаем ГЛУХИМ
    цветом навигации, а не inherit (он полупрозрачный — сквозь него
@@ -515,7 +517,7 @@ html.dark .mobile-bottom-nav {
   pointer-events: none;
 }
 html.dark .mobile-bottom-nav::before {
-  background: #0b101b;
+  background: #0f121f;
 }
 .mobile-bottom-nav::after {
   content: '';
@@ -529,7 +531,7 @@ html.dark .mobile-bottom-nav::before {
   pointer-events: none;
 }
 html.dark .mobile-bottom-nav::after {
-  background: #0b101b;
+  background: #0f121f;
 }
 /* Подложка документа в цвет темы — резиновый скролл за краями
    не вспыхивает чужим фоном ни в светлой, ни в тёмной теме. */
