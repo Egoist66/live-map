@@ -40,12 +40,12 @@ const { target: draftTarget } = useAutoFocusInput()
         <div v-if="!win.messages.length" class="grid h-full place-items-center text-xs text-stone-400">Пока пусто — напиши первым</div>
         <div v-for="m in win.messages" :key="m.id" :class="['mb-1.5 flex', isOwn(m.sender_id) ? 'justify-end' : 'justify-start']">
           <div
-            :class="['max-w-[85%] rounded-2xl px-2.5 py-1.5 text-[13px] leading-snug break-words [overflow-wrap:anywhere]', isOwn(m.sender_id) ? 'rounded-br-md bg-violet-600 text-white' : 'rounded-bl-md bg-stone-100 dark:bg-zinc-800 text-stone-800 dark:text-zinc-100']"
+            :class="['max-w-[85%] rounded-2xl px-2.5 py-1.5 text-[13px] leading-snug break-words [overflow-wrap:anywhere]', isOwn(m.sender_id) ? 'rounded-br-md bg-pink-200 dark:bg-pink-950 text-pink-950 dark:text-pink-100' : 'rounded-bl-md bg-stone-100 dark:bg-zinc-800 text-stone-800 dark:text-zinc-100']"
           >
             <div>{{ m.body || '📎 Вложение — смотри в чате' }}</div>
-            <div :class="['mt-0.5 flex items-center justify-end gap-1 text-[10px]', isOwn(m.sender_id) ? 'text-white/70' : 'text-stone-400']">
+            <div :class="['mt-0.5 flex items-center justify-end gap-1 text-[10px]', isOwn(m.sender_id) ? 'text-pink-950/60 dark:text-pink-100/60' : 'text-stone-400']">
               <span>{{ timeOf(m.created_at) }}</span>
-              <MessageTicks v-if="isOwn(m.sender_id)" :status="statusOf(m)" />
+              <MessageTicks v-if="isOwn(m.sender_id)" :status="statusOf(m)" is-own />
             </div>
           </div>
         </div>

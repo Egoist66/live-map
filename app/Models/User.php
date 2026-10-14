@@ -279,7 +279,22 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return Attribute::get(function (): ?string {
             if ($this->avatar_path) {
-                return Storage::disk(self::avatarDisk())->url($this->avatar_path);
+                $url = Storage::disk(self::avatarDisk())->url($this->avatar_path);
+                // Версия для сброса кешей (браузер, SW, IndexedDB-бlobs):
+                // без ?v= заменённый под тем же путём аватар неделями
+                // отдавался бы старым (жалобы «сменил фото — вижу старое»).
+                // updated_at трогается любым апдейтом профиля — один лишний
+                // refetch blob при смене имени приемлем, зато фото всегда свежее.
+                try {
+                    $version = $this->updated_at?->timestamp;
+                } catch (\Throwable) {
+                    $version = null;
+                }
+                if ($version) {
+                    $url .= (str_contains($url, '?') ? '&' : '?').'v='.$version;
+                }
+
+                return $url;
             }
 
             $telegramPhoto = trim((string) ($this->telegram_photo_url ?? ''));

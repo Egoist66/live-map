@@ -3,6 +3,7 @@ import { usePage, router } from '@inertiajs/vue3'
 import { route } from '@/route'
 import { useToast } from 'primevue/usetoast'
 import { avatarSrcFor } from '@/composables/useAvatar'
+import { invalidateImageUrl } from '@/composables/useImageBlobCache'
 import { useAvatarCropper } from '@/composables/useAvatarCropper'
 import { MAX_PHOTO_INPUT_BYTES } from '@/utils/image'
 import { useImageCompress } from '@/composables/useImageCompress'
@@ -79,6 +80,8 @@ export function useAvatarUpload() {
   async function uploadAvatar() {
     if (!avatarFile.value) return
     uploading.value = true
+    // Старый URL для точечной инвалидации blob-кеша после успеха.
+    const oldAvatar = avatarSrcFor(user.value)
     try {
       const small = await compressImageFast(avatarFile.value, 800, 0.84, 2 * 1024 * 1024)
       const fd = new FormData()
@@ -91,6 +94,11 @@ export function useAvatarUpload() {
           revokePreview()
           crop.reset()
           avatarOk.value = true
+          // Старый blob больше не валиден: новый avatar_url придёт с новым ?v=,
+          // но старую запись чистим сразу, чтобы не висела мёртвым грузом.
+          if (oldAvatar && !oldAvatar.startsWith('data:')) {
+            void invalidateImageUrl(oldAvatar)
+          }
           router.reload({ only: ['auth'] })
           toast?.add({ severity: 'success', summary: 'Аватар обновлён', life: 2000 })
           setTimeout(() => (avatarOk.value = false), 2500)

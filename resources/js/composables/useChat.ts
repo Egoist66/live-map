@@ -7,9 +7,12 @@ import {
   clearCachedConversations,
   deleteCachedMessage,
   getSyncCursor,
+  loadCachedConversation,
   loadCachedConversations,
   loadCachedMessages,
+  loadCachedMessagesBefore,
   markCachedConversationRead,
+  maxCachedMessageId,
   patchCachedConversation,
   patchCachedMessage,
   pruneDeletedByServerIds,
@@ -156,11 +159,42 @@ export function useChat() {
   const conversationsHasMore = ref(false)
   const conversationsLoadingMore = ref(false)
   const history = useChatHistory(messages, {
-    loadPage: (beforeId: number) => chatApi.messagesPage(selectedId.value!, beforeId, CHAT_HISTORY_PAGE_SIZE),
+    loadPage: (beforeId: number) => loadHistoryPage(beforeId),
     getKey: () => selectedId.value,
   }, {
     isSuspended: () => loading.value,
   })
+
+  /**
+   * Страница истории кеш-first: сначала IndexedDB, сеть — только при промахе.
+   *
+   * Раньше любой скролл вверх бил в API, даже когда сотни сообщений уже
+   * лежали в кеше — отсюда «вечная подгрузка» после повторного открытия.
+   * Теперь HTTP уходит лишь за тем, чего в кеше нет.
+   *
+   * @param beforeId грузить старше этого id
+   * @returns сообщения oldest-first + has_more
+   */
+  async function loadHistoryPage(beforeId: number): Promise<{ data: Message[]; has_more: boolean }> {
+    const convId = selectedId.value
+    const cacheUid = getUid()
+    if (convId && cacheUid > 0) {
+      try {
+        const hit = await loadCachedMessagesBefore(cacheUid, convId, beforeId, CHAT_HISTORY_PAGE_SIZE)
+        if (hit && hit.rows.length > 0) {
+          return { data: hit.rows as Message[], has_more: hit.hasMore }
+        }
+        if (hit && !hit.hasMore) {
+          return { data: [], has_more: false }
+        }
+      } catch {}
+    }
+    const fresh = await chatApi.messagesPage(convId!, beforeId, CHAT_HISTORY_PAGE_SIZE)
+    if (cacheUid > 0 && convId && fresh.data.length > 0) {
+      void saveMessages(cacheUid, convId, fresh.data)
+    }
+    return fresh
+  }
 
   /**
    * Начальный флаг hasMore из ответа диалога: точный messages_has_more
@@ -346,24 +380,35 @@ export function useChat() {
     }
     if (loadConversationsInflight) return loadConversationsInflight.then(d => { conversations.value = mergeConversationPreviews(normalizeConversations(d)); return conversations.value })
     if (w.__conversationsInflight) return w.__conversationsInflight.then((d: Conversation[]) => { conversations.value = mergeConversationPreviews(normalizeConversations(d)); return conversations.value })
-    loadConversationsInflight = chatApi.conversations() as Promise<Conversation[]>
-    w.__conversationsInflight = loadConversationsInflight
-    try {
-      const data = await loadConversationsInflight
-      conversations.value = mergeConversationPreviews(normalizeConversations(data))
+    // Кеш-first: если есть курсор прошлого синка — тянем дешёвую дельту
+    // вместо полного списка. Полный список — только первый раз / без курсора.
+    const cursor = uid > 0 ? await getSyncCursor(uid, 'conversations').catch(() => 0) : 0
+    if (uid > 0 && cursor > 0 && conversations.value.length > 0) {
+      try {
+        await syncConversationsDelta()
+      } catch {}
+      return conversations.value
+    }
+    loadConversationsInflight = (async (): Promise<Conversation[]> => {
+      const data = await chatApi.conversations() as Conversation[]
+      const rows = normalizeConversations(data)
+      conversations.value = mergeConversationPreviews(rows)
       if (uid > 0) {
         void saveConversations(uid, data)
         void warmAvatarCache(data)
         void setSyncCursor(uid, 'conversations', Date.now())
       }
-      // Первая страница; hasMore узнаем лениво при скролле сайдбара
+      // hasMore без второго запроса: если первая страница полная (20) —
+      // за следующей сходим лениво при скролле сайдбара, иначе точно конец.
       conversationsPage.value = 1
-      try {
-        const meta = await chatApi.conversationsPage(1, 20)
-        conversationsLastPage.value = meta.last_page ?? 1
-        conversationsHasMore.value = !!meta.has_more
-      } catch { conversationsHasMore.value = false }
+      conversationsLastPage.value = 1
+      conversationsHasMore.value = rows.length >= 20
       return conversations.value
+    })()
+    w.__conversationsInflight = loadConversationsInflight
+    try {
+      const data = await loadConversationsInflight
+      return data
     } finally { loadConversationsInflight = null; w.__conversationsInflight = null }
   }
 
@@ -519,15 +564,24 @@ export function useChat() {
       if (!hasUnread && (lastId === 0 || hasLast)) return
     }
     selectedId.value = id
-    const cached = conversations.value.find((c) => c?.id === id) as any
-    const cachedType = String(cached?.type ?? 'direct')
+    const cacheUid = getUid()
+    // Мгновенный рендер из кеша: шапка из сайдбара/IDB + хвост сообщений.
+    // Лоадер — только при полном промахе кеша, иначе никакого спиннера
+    // и никаких «весь диалог опять подгружался».
+    let cachedHeader: any = conversations.value.find((c) => c?.id === id) as any
+    if (!cachedHeader && cacheUid > 0) {
+      try {
+        cachedHeader = await loadCachedConversation(cacheUid, id)
+      } catch {}
+    }
+    const cachedType = String(cachedHeader?.type ?? 'direct')
     const isCachedDistrict = cachedType === 'district'
-    if (cached && (cached?.other || isCachedDistrict)) {
-      const districtId = Number(cached?.district_id ?? 0)
-      const districtTitle = cached?.title ?? null
-      const inviteRight = cached?.can_invite ?? false
-      activeConv.value = { id, type: cachedType, district_id: districtId, title: districtTitle, can_invite: inviteRight, other: cached.other ?? null, participants: [], wallpaper: (cached as any)?.wallpaper ?? null } as any
-      if (cached.last_message) messages.value = [cached.last_message as any]
+    if (cachedHeader && (cachedHeader?.other || isCachedDistrict)) {
+      const districtId = Number(cachedHeader?.district_id ?? 0)
+      const districtTitle = cachedHeader?.title ?? null
+      const inviteRight = cachedHeader?.can_invite ?? false
+      activeConv.value = { id, type: cachedType, district_id: districtId, title: districtTitle, can_invite: inviteRight, other: cachedHeader.other ?? null, participants: [], wallpaper: (cachedHeader as any)?.wallpaper ?? null } as any
+      if (cachedHeader.last_message) messages.value = [cachedHeader.last_message as any]
       else messages.value = []
     } else {
       activeConv.value = null
@@ -536,16 +590,29 @@ export function useChat() {
     typingUsers.value = new Set()
     typingExpire.forEach((t) => clearTimeout(t))
     typingExpire.clear()
-    loading.value = true
-    const cacheUid = getUid()
-    if (cacheUid > 0 && messages.value.length <= 1) {
+    let cacheHit = false
+    if (cacheUid > 0) {
       try {
-        const cachedMessages = await loadCachedMessages(cacheUid, id)
+        const cachedMessages = await loadCachedMessages(cacheUid, id, 100)
         if (cachedMessages && cachedMessages.length > 0 && selectedId.value === id) {
           messages.value = mergeFetched(id, cachedMessages as Message[])
+          cacheHit = true
         }
       } catch {}
     }
+    if (cacheHit) {
+      // Кеш есть: рисуем сразу, сети в DevTools не будет, если нечего догонять.
+      loading.value = false
+      await nextTick()
+      // hasMore эвристикой: хвост полный (100) — старше наверняка есть,
+      // короткий — уточнит фоновая дельта. Точное значение придёт с сервера.
+      history.reset(messages.value.length >= 100)
+      subscribeChat(id)
+      void revalidateOpenConversation(id, cacheUid)
+      return
+    }
+    // Промах кеша: единственный случай с центральным лоадером и полным запросом.
+    loading.value = true
     try {
       const d = await chatApi.getConversation(id)
       if (selectedId.value !== id) return
@@ -572,6 +639,78 @@ export function useChat() {
       if (selectedId.value === id) { selectedId.value = null; activeConv.value = null; messages.value = []; loading.value = false }
       throw e
     } finally { if (selectedId.value === id) loading.value = false }
+  }
+
+  /**
+   * Тихая точечная ревалидация открытого диалога после мгновенного рендера.
+   *
+   * Тянет только новое (`after=maxId`), полный getConversation — лишь когда
+   * кеш пуст или дельта упала. Правки/удаления/пины чужих прилетают сюда же
+   * через realtime-шину (handleUpdated/handleDeleted), отдельный опрос не нужен.
+   *
+   * @param id id диалога
+   * @param cacheUid id текущего пользователя для кеша
+   */
+  async function revalidateOpenConversation(id: number, cacheUid: number): Promise<void> {
+    if (selectedId.value !== id) {
+      return
+    }
+    if (cacheUid > 0) {
+      const maxId = await maxCachedMessageId(cacheUid, id).catch(() => 0)
+      if (maxId > 0) {
+        try {
+          const delta = await chatApi.messagesAfter(id, maxId)
+          if (selectedId.value !== id) {
+            return
+          }
+          if (delta.length > 0) {
+            const known = new Set(messages.value.map((m) => Number(m?.id)))
+            const fresh = delta.filter((m) => !known.has(Number(m?.id)))
+            if (fresh.length > 0) {
+              const merged = [...messages.value, ...fresh] as Message[]
+              merged.sort((a: any, b: any) => Number(a.id) - Number(b.id))
+              messages.value = merged
+              for (const msg of fresh) {
+                void upsertCachedMessage(cacheUid, msg)
+              }
+              const newest = newestMessage(messages.value)
+              if (newest) syncConversationPreview(newest)
+              history.notifyAppended()
+            }
+          }
+          const conv = conversations.value.find((c) => c?.id === id)
+          if (conv && Number((conv as any).unread_count || 0) > 0) {
+            noteLocalRead(id)
+            chatApi.markRead(id).catch(() => {})
+          } else {
+            chatApi.markRead(id).catch(() => {})
+          }
+          return
+        } catch {}
+      }
+    }
+    // Дельта недоступна — один тихий полный синк без лоадера.
+    try {
+      const d = await chatApi.getConversation(id)
+      if (selectedId.value !== id) {
+        return
+      }
+      activeConv.value = d
+      const detailMessages = Array.isArray(d.messages) ? d.messages : []
+      messages.value = mergeFetched(id, detailMessages)
+      if (cacheUid > 0) {
+        void saveMessages(cacheUid, id, messages.value)
+      }
+      const newest = newestMessage(detailMessages)
+      const conv = conversations.value.find((c) => c?.id === id)
+      if (conv) {
+        noteLocalRead(id)
+        if (newest) bumpConversation(newest)
+      }
+      chatApi.markRead(id).catch(() => {})
+      await nextTick()
+      history.reset(initialHasMore(d))
+    } catch {}
   }
 
   async function createConversation(userId: number, initialMessage?: string) {

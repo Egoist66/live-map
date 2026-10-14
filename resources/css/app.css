@@ -458,6 +458,25 @@ html.native-keyboard-open .h-app-full {
 html.dark .mobile-bottom-nav {
   background-color: rgba(11, 15, 27, 0.97) !important;
 }
+/* Системная полоса под навигацией (home-индикатор): заливаем ГЛУХИМ
+   цветом навигации, а не inherit (он полупрозрачный — сквозь него
+   просвечивал контент страницы и полоса выглядела «пустым местом»).
+   ::before — safe-зона внутри меню, ::after — запас ниже вьюпорта
+   под rubber-band. Светлая — белая, тёмная — в цвет бара. */
+.mobile-bottom-nav::before {
+  content: '';
+  display: block;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--sab);
+  background: #ffffff;
+  pointer-events: none;
+}
+html.dark .mobile-bottom-nav::before {
+  background: #0b0f1b;
+}
 .mobile-bottom-nav::after {
   content: '';
   display: block;
@@ -466,8 +485,19 @@ html.dark .mobile-bottom-nav {
   right: 0;
   top: 100%;
   height: calc(var(--sab) + 100px);
-  background: inherit;
+  background: #ffffff;
   pointer-events: none;
+}
+html.dark .mobile-bottom-nav::after {
+  background: #0b0f1b;
+}
+/* Подложка документа в цвет темы — резиновый скролл за краями
+   не вспыхивает чужим фоном ни в светлой, ни в тёмной теме. */
+html {
+  background-color: #ffffff;
+}
+html.dark {
+  background-color: #0f121f;
 }
 html.native-keyboard-open .mobile-bottom-nav {
   transform: translateY(110%);
@@ -957,11 +987,17 @@ div#p-license-host {
 .dark .p-toast-message .p-toast-icon-close { color: inherit !important; opacity: 0.7; }
 .dark .p-toast-message .p-toast-icon-close:hover { opacity: 1; background: rgba(255, 255, 255, 0.12) !important; }
 
-/* Rich text links (chat messages, comments) */
-.msg-body a.rich-link, .comment-body a.rich-link { color: #7c3aed; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; overflow-wrap: anywhere; }
-.msg-body a.rich-link:hover, .comment-body a.rich-link:hover { color: #6d28d9; }
-.dark .msg-body a.rich-link, .dark .comment-body a.rich-link { color: #a78bfa; }
-.dark .msg-body a.rich-link:hover, .dark .comment-body a.rich-link:hover { color: #c4b5fd; }
+/* Rich text links (chat messages, comments): насыщенный синий вместо
+   фиолетового — читается и на светлом, и на тёмном фоне. Свои сообщения
+   живут на нежно-розовом пузыре — там ссылки малиновые. */
+.msg-body a.rich-link, .comment-body a.rich-link { color: #1d4ed8; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; overflow-wrap: anywhere; }
+.msg-body a.rich-link:hover, .comment-body a.rich-link:hover { color: #1e40af; }
+.dark .msg-body a.rich-link, .dark .comment-body a.rich-link { color: #60a5fa; }
+.dark .msg-body a.rich-link:hover, .dark .comment-body a.rich-link:hover { color: #93c5fd; }
+.msg-body.msg-own a.rich-link, .dark .msg-body.msg-own a.rich-link { color: #be123c; }
+.msg-body.msg-own a.rich-link:hover, .dark .msg-body.msg-own a.rich-link:hover { color: #9f1239; }
+.dark .msg-body.msg-own a.rich-link { color: #f9a8d4; }
+.dark .msg-body.msg-own a.rich-link:hover { color: #fbcfe8; }
 .bg-violet-600 a.rich-link { color: #fff; }
 .bg-violet-600 a.rich-link:hover { color: #ede9fe; }
 

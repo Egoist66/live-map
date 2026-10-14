@@ -169,7 +169,7 @@ function openNews(item: any) {
             severity="success"
             aria-label="Прочитать все уведомления"
             v-tooltip.bottom="'Прочитать все'"
-            class="!w-9 !h-9"
+            class="!w-9 !h-9 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden"
           />
           <Button
             v-if="pinAct.activities.value.length || bell.conversations.value.length"
@@ -181,7 +181,7 @@ function openNews(item: any) {
             severity="danger"
             aria-label="Очистить панель"
             v-tooltip.bottom="'Очистить панель'"
-            class="!w-9 !h-9"
+            class="!w-9 !h-9 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden"
           />
           <Badge
             v-if="uloveOnly ? uloveBadge : (bell.unreadCount.value + bell.pending.value.length + pinAct.unread.value + admRep.pendingCount.value + updates.unreadCount.value + proc.unread.value)"

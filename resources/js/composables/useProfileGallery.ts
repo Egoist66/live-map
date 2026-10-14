@@ -156,30 +156,76 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
   }
 
   async function load() {
-    loading.value = true
-    error.value = null
     const viewerUid = currentAuthUid()
     const ownerId = userId()
+    let cacheHit = false
     if (viewerUid > 0 && ownerId > 0 && photos.value.length === 0) {
       try {
         const cached = await loadCachedGallery(viewerUid, ownerId)
         if (cached && Array.isArray(cached.photos) && cached.photos.length > 0) {
           applyGalleryIndex(cached)
+          cacheHit = true
         }
       } catch {}
     }
+    // Кеш есть — рисуем мгновенно без лоадера, сеть идёт тихим фоном.
+    // Лоадер только при полном промахе, иначе «галерея мигает» при каждом открытии.
+    loading.value = !cacheHit
+    error.value = null
     try {
       const res = await galleryApi.list(ownerId)
+      // Точечная проверка: identical id-set + cover — пропускаем лишние
+      // перерисовки и перезапись кеша, HTTP при этом уже случился,
+      // но UI не дёргается.
+      if (cacheHit && isSameGallery(photos.value, res.photos)) {
+        applyGalleryIndex(res)
+        return
+      }
       applyGalleryIndex(res)
       if (viewerUid > 0 && ownerId > 0) {
         void saveGallery(viewerUid, ownerId, res)
         warmGalleryCache(res.photos)
       }
     } catch (e: any) {
-      error.value = e?.response?.data?.message || 'Не удалось загрузить галерею'
+      // Офлайн с кешем — не ошибка, а штатный режим: показываем кеш молча.
+      if (!cacheHit) {
+        error.value = e?.response?.data?.message || 'Не удалось загрузить галерею'
+      }
     } finally {
       loading.value = false
     }
+  }
+
+  /**
+   * Совпадает ли набор фото (id + cover + счётчики лайков).
+   *
+   * @param current текущие фото на экране
+   * @param fresh свежие фото с сервера
+   * @returns true когда перерисовка не нужна
+   */
+  function isSameGallery(current: GalleryPhoto[], fresh: GalleryPhoto[]): boolean {
+    if (current.length !== fresh.length) {
+      return false
+    }
+    for (let index = 0; index < fresh.length; index += 1) {
+      const oldPhoto = current[index]
+      const newPhoto = fresh[index]
+      if (Number(oldPhoto?.id) !== Number(newPhoto?.id)) {
+        return false
+      }
+      if (Boolean(oldPhoto?.is_main) !== Boolean(newPhoto?.is_main)) {
+        return false
+      }
+      if (Number(oldPhoto?.likes_count ?? 0) !== Number(newPhoto?.likes_count ?? 0)) {
+        return false
+      }
+      const oldUrl = oldPhoto?.thumb_url || oldPhoto?.url
+      const newUrl = newPhoto?.thumb_url || newPhoto?.url
+      if (oldUrl !== newUrl) {
+        return false
+      }
+    }
+    return true
   }
 
   async function upload(file: File, caption?: string | null) {

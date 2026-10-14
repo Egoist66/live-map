@@ -11,7 +11,7 @@ const isFailed = computed(() => props.status === 'failed')
   <span class="inline-flex items-center shrink-0" :title="status">
     <span v-if="isSending" class="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin opacity-60"></span>
     <span v-else-if="isFailed" class="text-[11px] text-red-400">✕</span>
-    <span v-else-if="isRead" class="text-[11px] font-bold text-sky-400 leading-none">✓✓</span>
+    <span v-else-if="isRead" class="text-[11px] font-bold leading-none" :class="isOwn ? 'text-rose-500 dark:text-pink-300' : 'text-sky-400'">✓✓</span>
     <span v-else-if="isDelivered" class="text-[11px] font-bold opacity-60 leading-none">✓✓</span>
     <span v-else-if="isSent" class="text-[11px] font-bold opacity-60 leading-none">✓</span>
   </span>

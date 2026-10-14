@@ -201,7 +201,7 @@ function dayLabel(value: any): string {
       </div>
       <div class="relative flex-1 min-h-0 min-w-0 w-full max-w-full overflow-hidden bg-white dark:bg-zinc-950">
         <div v-if="wallpaper.hasWallpaper.value" aria-hidden="true" class="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat" :style="(wallpaper.wallpaperLayerStyle.value as any)" />
-        <div v-if="wallpaper.hasWallpaper.value" aria-hidden="true" class="pointer-events-none absolute inset-0 bg-white/60 dark:bg-black/60" />
+        <div v-if="wallpaper.hasWallpaper.value" aria-hidden="true" class="pointer-events-none absolute inset-0 bg-black/25 dark:bg-black/60" />
         <div id="chat-messages" class="relative z-10 h-full overflow-auto overscroll-contain [scrollbar-width:thin] max-lg:[-ms-overflow-style:none] max-lg:[scrollbar-width:none] max-lg:[&::-webkit-scrollbar]:hidden p-3 lg:p-4 min-w-0 w-full max-w-full bg-transparent">
         <div class="min-h-full">
         <div :ref="historyTopSentinel as any" aria-hidden="true" class="h-px w-full" />

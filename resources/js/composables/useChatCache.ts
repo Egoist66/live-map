@@ -34,6 +34,10 @@ function syncKey(uid: number, scope: string): string {
 /**
  * Прочитать кешированные диалоги.
  *
+ * Сортировка — по времени последнего сообщения (свежие сверху),
+ * закрепы всплывут уже в useChat.sortConversations. Без сортировки
+ * IndexedDB отдаёт в порядке ключей — сайдбар прыгал после перезагрузки.
+ *
  * @param uid id текущего пользователя
  * @returns список диалогов или null при пустом кеше
  */
@@ -52,7 +56,42 @@ export async function loadCachedConversations(uid: number): Promise<any[] | null
         list.push(JSON.parse(row.value))
       } catch {}
     }
+    list.sort((a, b) => {
+      const pinnedDiff = Number(b?.is_pinned ?? false) - Number(a?.is_pinned ?? false)
+      if (pinnedDiff !== 0) {
+        return pinnedDiff
+      }
+      const timeA = new Date(a?.last_message_at || a?.updated_at || 0).getTime() || 0
+      const timeB = new Date(b?.last_message_at || b?.updated_at || 0).getTime() || 0
+      return timeB - timeA
+    })
     return list
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Прочитать один кешированный диалог (мгновенная шапка без сети).
+ *
+ * @param uid id текущего пользователя
+ * @param convId id диалога
+ * @returns диалог или null при промахе
+ */
+export async function loadCachedConversation(uid: number, convId: number): Promise<any | null> {
+  if (!(uid > 0) || !(convId > 0)) {
+    return null
+  }
+  try {
+    const row = await appDb.chatConversations.get(conversationKey(uid, convId))
+    if (!row) {
+      return null
+    }
+    try {
+      return JSON.parse(row.value)
+    } catch {
+      return null
+    }
   } catch {
     return null
   }
@@ -165,12 +204,16 @@ export async function clearCachedConversations(uid: number): Promise<void> {
 /**
  * Прочитать кешированный хвост диалога (последние N).
  *
+ * Лимит по умолчанию 100: открытие после длинной прокрутки показывает
+ * сразу весь последний экран + запас вверх, а не жалкие 60, после
+ * которых раньше срабатывал полный рефетч с лоадером.
+ *
  * @param uid id текущего пользователя
  * @param convId id диалога
  * @param limit сколько последних вернуть
  * @returns сообщения от старых к новым или null
  */
-export async function loadCachedMessages(uid: number, convId: number, limit = 60): Promise<any[] | null> {
+export async function loadCachedMessages(uid: number, convId: number, limit = 100): Promise<any[] | null> {
   if (!(uid > 0) || !(convId > 0)) {
     return null
   }
@@ -189,6 +232,84 @@ export async function loadCachedMessages(uid: number, convId: number, limit = 60
     return list
   } catch {
     return null
+  }
+}
+
+/**
+ * Прочитать страницу истории старше beforeId строго из кеша (без сети).
+ *
+ * Используется догрузкой вверх: пока в IndexedDB есть старые сообщения —
+ * HTTP не ходим вообще. Возвращает oldest-first + флаг, есть ли ещё старше.
+ *
+ * @param uid id текущего пользователя
+ * @param convId id диалога
+ * @param beforeId грузить старше этого id
+ * @param limit размер страницы
+ * @returns {rows, hasMore} или null при промахе кеша
+ */
+export async function loadCachedMessagesBefore(
+  uid: number,
+  convId: number,
+  beforeId: number,
+  limit = 15,
+): Promise<{ rows: any[]; hasMore: boolean } | null> {
+  const before = Number(beforeId)
+  const pageSize = Math.max(1, Number(limit) || 15)
+  if (!(uid > 0) || !(convId > 0) || !(before > 0)) {
+    return null
+  }
+  try {
+    const older = await appDb.chatMessages
+      .where('convId')
+      .equals(convId)
+      .filter((row) => row.uid === uid && row.id < before)
+      .sortBy('id')
+    if (older.length === 0) {
+      return null
+    }
+    const page = older.slice(-pageSize)
+    const list: any[] = []
+    for (const row of page) {
+      try {
+        list.push(JSON.parse(row.value))
+      } catch {}
+    }
+    if (list.length === 0) {
+      return null
+    }
+    const hasMore = older.length > page.length
+    return { rows: list, hasMore }
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Максимальный закешированный id диалога (курсор дельта-синка).
+ *
+ * @param uid id текущего пользователя
+ * @param convId id диалога
+ * @returns max id или 0 когда кеш пуст
+ */
+export async function maxCachedMessageId(uid: number, convId: number): Promise<number> {
+  if (!(uid > 0) || !(convId > 0)) {
+    return 0
+  }
+  try {
+    const rows = await appDb.chatMessages
+      .where('convId')
+      .equals(convId)
+      .filter((row) => row.uid === uid)
+      .toArray()
+    let max = 0
+    for (const row of rows) {
+      if (row.id > max) {
+        max = row.id
+      }
+    }
+    return max
+  } catch {
+    return 0
   }
 }
 
