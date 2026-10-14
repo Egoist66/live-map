@@ -6,6 +6,7 @@ import { useStaffRole } from '@/composables/useStaffRole'
 import { useAppModulesStore } from '@/stores/appModules'
 import { useActivitySystem } from '@/composables/useActivitySystem'
 import { SETTINGS_APP_TAB_PARAM, getActiveAppTab, writeAppTabToUrl } from '@/composables/useSettingsAppTabs'
+import { useAdminClientGate } from '@/composables/useAdminClientGate'
 
 export type SettingsTabId = 'profile'|'billing'|'quests'|'privacy'|'appearance'|'security'|'pins'|'support'|'app'|'integrations'|'about'|'procedures'|'admin'|'archive'
 
@@ -34,6 +35,9 @@ export const ADMIN_TAB = { id: 'admin' as const, label: 'Модерация', ic
 export function useSettingsTabs() {
   const page = usePage()
   const isAdmin = computed(() => !!((page.props.auth as any)?.user?.is_admin) || (page.props.auth as any)?.user?.role === 'admin')
+  /** Модерация в настройках — только браузер: в Telegram/WebView таб скрыт. */
+  const { isAdminBlocked } = useAdminClientGate()
+  const showAdminTab = computed(() => isAdmin.value && !isAdminBlocked.value)
   const modules = useAppModulesStore()
   const activity = useActivitySystem()
 
@@ -76,7 +80,7 @@ export function useSettingsTabs() {
   try {
     const all = [...SETTINGS_TABS, ADMIN_TAB]
     const valid = (t: unknown): t is SettingsTabId =>
-      typeof t === 'string' && (all as any[]).some((x) => x.id === t) && (t !== 'admin' || isAdmin.value) && isTabVisible(t)
+      typeof t === 'string' && (all as any[]).some((x) => x.id === t) && (t !== 'admin' || showAdminTab.value) && isTabVisible(t)
     const fromRoute = (page.props as any)?.initialTab
     const fromQuery = new URLSearchParams(window.location.search).get('tab')
     if (valid(fromRoute)) active.value = fromRoute
@@ -86,7 +90,7 @@ export function useSettingsTabs() {
   const showProcedures = computed(() => proc.items.value.length > 0 || proc.unread.value > 0 || active.value === 'procedures')
   const tabs = computed(() => {
     const base = SETTINGS_TABS.filter((t) => (t.id !== 'procedures' || showProcedures.value) && isTabVisible(t.id))
-    return isAdmin.value ? [...base, ADMIN_TAB] : [...base]
+    return showAdminTab.value ? [...base, ADMIN_TAB] : [...base]
   })
 
   watch(tabs, (visible) => {
@@ -132,5 +136,5 @@ export function useSettingsTabs() {
     }))
   )
 
-  return { active, tabs, tabIndex, activeIndex, menuModel, setActive, isAdmin, showProcedures, showSupport }
+  return { active, tabs, tabIndex, activeIndex, menuModel, setActive, isAdmin, showAdminTab, showProcedures, showSupport }
 }

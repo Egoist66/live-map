@@ -1,6 +1,7 @@
 import { ref, watch } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
 import { replaceUrlPreservingState } from '@/composables/useHistoryState'
+import { isAdminBlockedClient } from '@/composables/useAdminClientGate'
 
 /**
  * ID главной вкладки админ-панели.
@@ -42,6 +43,25 @@ export const ADMIN_SEO_SECTIONS: readonly AdminSeoSection[] = [
 
 const DEFAULT_TAB: AdminTabId = 'stats'
 const DEFAULT_SEO_SECTION: AdminSeoSection = 'general'
+
+/**
+ * Query-маркер «консоль открыта попапом из другой вкладки».
+ *
+ * `openAdminPanel` дописывает `?popup=1` к URL новой вкладки, консоль при
+ * старте съедает его (`consumePopupMarker`) — в закладки и диплинки он
+ * не утекает, канонические `/admin/*` остаются чистыми.
+ */
+const POPUP_PARAM = 'popup'
+
+/**
+ * Вкладка открыта попапом (маркер из URL уже съеден).
+ *
+ * Только для таких вкладок кнопки выхода («Профиль», «На сайт») пробуют
+ * `window.close()` вместо навигации — возврат в исходную вкладку.
+ * Прямой заход на `/admin` (без маркера) закрывать нельзя: убьём
+ * единственную вкладку юзера вместо перехода.
+ */
+let openedAsPopup = false
 
 const tab = ref<AdminTabId>(DEFAULT_TAB)
 const seoSection = ref<AdminSeoSection>(DEFAULT_SEO_SECTION)
@@ -92,13 +112,19 @@ export function adminSectionUrl(next: AdminTabId, nextSeo: AdminSeoSection = DEF
 }
 
 /**
- * Открыть консоль в отдельной вкладке браузера (чистый target=_blank).
+ * Открыть консоль в отдельной вкладке браузера.
  *
  * Вызывается по клику на «Панель модерации» (меню, профиль): текущая
  * вкладка всегда остаётся там, где нажали, — перехода в ней нет.
- * Открываем кликом по временной ссылке, а не `window.open`: якорь
- * с target=_blank блокировщики попапов не режут, фолбэка
- * `router.visit` больше нет — мёртвый клик лучше увода со страницы.
+ * К URL дописываем маркер `?popup=1`: по нему кнопки выхода в консоли
+ * (`closePopupOrVisit`) поймут, что вкладку надо закрыть, а не
+ * навигировать внутри неё.
+ * Открываем через `window.open` из жеста клика (блокировщики не режут),
+ * фолбэк — временная ссылка с target=_blank. `window.open` важен:
+ * только скриптом открытую вкладку браузер даёт закрыть через
+ * `window.close()` — якорные вкладки закрытию не поддаются.
+ * В Telegram и мобильной WebView — молча ничего не делаем: модерация
+ * там запрещена (бэк тоже режет 403), кнопки в этих клиентах скрыты.
  *
  * @param next Раздел консоли (по умолчанию статистика).
  * @param nextSeo Подраздел SEO-центра.
@@ -108,7 +134,21 @@ export function openAdminPanel(next: AdminTabId = DEFAULT_TAB, nextSeo: AdminSeo
     return
   }
 
-  const target = adminSectionUrl(next, nextSeo)
+  if (isAdminBlockedClient()) {
+    return
+  }
+
+  const target = `${adminSectionUrl(next, nextSeo)}?${POPUP_PARAM}=1`
+
+  try {
+    const opened = window.open(target, '_blank')
+
+    if (opened) {
+      return
+    }
+  } catch {
+    // Ниже фолбэк якорем.
+  }
 
   try {
     const anchor = document.createElement('a')
@@ -122,6 +162,86 @@ export function openAdminPanel(next: AdminTabId = DEFAULT_TAB, nextSeo: AdminSeo
   } catch {
     // No-op: первая вкладка остаётся там, где нажали.
   }
+}
+
+/**
+ * Съесть маркер попапа из адресной строки.
+ *
+ * Ставит флаг `openedAsPopup` и тут же вычищает `?popup=1` из URL
+ * (через `replaceUrlPreservingState`, состояние Inertia не трогаем),
+ * чтобы маркер не утек в закладки, «поделиться» и канонические ссылки.
+ */
+function consumePopupMarker(): void {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  let url: URL
+
+  try {
+    url = new URL(window.location.href)
+  } catch {
+    return
+  }
+
+  if (url.searchParams.get(POPUP_PARAM) !== '1') {
+    return
+  }
+
+  openedAsPopup = true
+  url.searchParams.delete(POPUP_PARAM)
+
+  if (url.toString() !== window.location.href) {
+    replaceUrlPreservingState(url.toString())
+  }
+}
+
+/**
+ * Покинуть консоль-попап: закрыть вкладку и вернуться в исходную.
+ *
+ * Для вкладки, открытой через `openAdminPanel` (маркер `?popup=1`),
+ * пробуем `window.close()` — браузер сам вернёт фокус в ту вкладку,
+ * откуда открывали. Прямой заход на `/admin` и неудавшееся закрытие
+ * (блок браузера, WebView, Telegram) — обычная навигация `router.visit`.
+ * Проверка `window.closed` с задержкой: успешное закрытие убивает
+ * страницу и таймер не стреляет, заблокированное — ведёт фолбэком.
+ *
+ * @param path Куда вести, если закрыться не вышло (`/profile`, `/`).
+ */
+export function closePopupOrVisit(path: string): void {
+  if (typeof window === 'undefined') {
+    router.visit(path)
+    return
+  }
+
+  if (!openedAsPopup) {
+    router.visit(path)
+    return
+  }
+
+  openedAsPopup = false
+
+  try {
+    window.close()
+  } catch {
+    // Фолбэк ниже по таймеру.
+  }
+
+  window.setTimeout(() => {
+    let closed = false
+
+    try {
+      closed = window.closed
+    } catch {
+      closed = false
+    }
+
+    if (closed) {
+      return
+    }
+
+    router.visit(path)
+  }, 250)
 }
 
 /**
@@ -193,8 +313,9 @@ function readInitialProps(): void {
  * Источник правды — path (`/admin/business`, `/admin/seo/scripts`).
  * Старые `?tab=`/`?seo=` (закладки, уже отправленные пуши) понимаем как
  * запасной вариант, когда в пути раздела нет, — `syncToUrl` тут же
- * канонизирует адрес в path-вид. Голый `/admin` не трогает запомненный
- * раздел: ссылка дописывается им позже в `syncToUrl`.
+ * канонизирует адрес в path-вид. Голый `/admin` сервер редиректит
+ * на `/admin/stats`, но если он всё же встретился — запомненный раздел
+ * не трогаем, ссылка дописывается им позже в `syncToUrl`.
  * Вне `/admin` (кнопка назад на профиль, popstate) — ничего не трогаем:
  * иначе возврат из консоли молча сбрасывал бы запомненный раздел.
  */
@@ -271,8 +392,9 @@ function syncToUrl(): void {
  * Inertia не пересоздаёт страницу при переходах внутри `/admin`,
  * поэтому одноразового чтения URL мало: диплинки (уведомления,
  * колокольчик) меняли адрес, а раздел оставался старым. Каждый переход
- * по `/admin` перечитывает адрес, голый `/admin` дописывает текущий
- * раздел — ссылка всегда ведёт туда же (обновить/поделиться — то же место).
+ * по `/admin` перечитывает адрес (голый `/admin` сервер уже увёл
+ * на `/admin/stats`, фолбэк дописал бы текущий раздел) — ссылка всегда
+ * ведёт туда же (обновить/поделиться — то же место).
  */
 function handleNavigate(): void {
   if (!isAdminPath()) {
@@ -280,15 +402,18 @@ function handleNavigate(): void {
   }
 
   readFromUrl()
+  consumePopupMarker()
   syncToUrl()
 }
 
 /**
  * Нужна ли первичная запись раздела в адресную строку.
  *
- * Голый `/admin`, мусор в сегментах или остатки `?tab=` — дописываем
- * канонический путь запомненным разделом. Чистый path-URL не трогаем
- * вовсе — лишних `replaceState` посреди коммита Inertia нет.
+ * Голый `/admin` (сервер редиректит на `/admin/stats`, это страховка),
+ * остатки `?tab=` или неканонический путь — дописываем канонический
+ * путь запомненным разделом. Мусор в сегментах сервер режет 404.
+ * Чистый path-URL не трогаем вовсе — лишних `replaceState`
+ * посреди коммита Inertia нет.
  *
  * @returns true если адрес не канонический
  */
@@ -328,6 +453,7 @@ function ensureSync(): void {
 
   readInitialProps()
   readFromUrl()
+  consumePopupMarker()
 
   if (needsUrlSync()) {
     // Микрозадача, а не синхронно: ensureSync бежит в setup страницы,

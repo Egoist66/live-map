@@ -20,7 +20,9 @@ import { defineAsyncComponent } from 'vue'
 const SettingsIntegrationsTab = defineAsyncComponent(() => import('@/Components/Features/Settings/SettingsIntegrationsTab.vue'))
 import SettingsAboutSection from '@/Components/Features/Settings/SettingsAboutSection.vue'
 import SettingsAdminTab from '@/Components/Features/Settings/SettingsAdminTab.vue'
-import AdminImpersonateDialog from '@/Components/Features/Admin/AdminImpersonateDialog.vue'
+// Диалог входа в чужой аккаунт — только по открытию из таба модерации:
+// админский UI не едет в чанк настроек, в Telegram/WebView таб скрыт.
+const AdminImpersonateDialog = defineAsyncComponent(() => import('@/Components/Features/Admin/AdminImpersonateDialog.vue'))
 import AvatarPreview from '@/Components/Features/Media/AvatarPreview.vue'
 import Toast from 'primevue/toast'
 import { computed } from 'vue'
@@ -73,14 +75,14 @@ const showQuestsTab = computed(() => activity.isReleased.value && (modules.isEna
                 <TabPanel value="app" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsAppTab /></TabPanel>
                 <TabPanel value="integrations" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsIntegrationsTab v-if="s.active.value === 'integrations'" /></TabPanel>
                 <TabPanel value="about" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsAboutSection /></TabPanel>
-                <TabPanel v-if="s.isAdmin.value" value="admin" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsAdminTab :admin="s.admin" :reports="s.reports" :imp="s.imp" /></TabPanel>
+                <TabPanel v-if="s.showAdminTab.value" value="admin" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsAdminTab :admin="s.admin" :reports="s.reports" :imp="s.imp" /></TabPanel>
               </TabPanels>
             </Tabs>
           </div>
         </div>
       </div>
       <AvatarPreview :src="s.avatarSrc.value" :name="s.u.value.name" :open="s.showAvatar.value" @close="s.showAvatar.value = false" />
-      <AdminImpersonateDialog :imp="s.imp" />
+      <AdminImpersonateDialog v-if="s.showAdminTab.value" :imp="s.imp" />
     </div>
 </template>
 <style scoped>

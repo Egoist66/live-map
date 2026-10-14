@@ -61,30 +61,41 @@ class PageController extends Controller
     /**
      * Админка (консоль модерации).
      *
-     * Раздел живёт в path-параметрах: `/admin/stats`, `/admin/business`,
-     * подраздел SEO-центра — вторым сегментом (`/admin/seo/scripts`).
-     * Голый `/admin` отдаёт дефолт — клиент сам дописывает текущий
-     * раздел в адресную строку. Невалидные сегменты отдаём как null —
-     * фронт откатывается к дефолтам, никаких редиректов.
+     * Канон: дефолт — `/admin/stats`, раздел — `/admin/business`,
+     * подраздел SEO-центра — вторым сегментом (`/admin/seo/scripts`,
+     * `general` — дефолтная подсекция с собственными табами).
+     * Голый `/admin` редиректим на `/admin/stats`: дефолт решает
+     * сервер, а не дописывание адреса на клиенте. Мусор в сегментах
+     * (мимо where-списков роута) — 404: null-пропсов больше нет,
+     * фронт всегда стартует с конкретного раздела.
      *
      * @param string|null $tab раздел консоли
      * @param string|null $seo подраздел SEO-центра
-     * @return InertiaResponse
+     * @return InertiaResponse|RedirectResponse страница консоли или редирект на дефолт
      */
-    public function admin(?string $tab = null, ?string $seo = null): InertiaResponse
+    public function admin(?string $tab = null, ?string $seo = null): InertiaResponse|RedirectResponse
     {
+        if ($tab === null) {
+            return redirect()->route('admin', ['tab' => 'stats']);
+        }
+
         $tabs = ['stats', 'manage', 'security', 'admin', 'business', 'modules', 'ai', 'refs', 'seo', 'telegram', 'payments'];
+        abort_unless(in_array($tab, $tabs, true), 404);
+
         $sections = ['general', 'pages', 'integrations', 'scripts', 'crawl'];
 
-        $initialTab = in_array($tab, $tabs, true) ? $tab : null;
+        $initialSeo = 'general';
 
-        $initialSeo = null;
-        if ($initialTab === 'seo' && in_array($seo, $sections, true)) {
-            $initialSeo = $seo;
+        if ($tab === 'seo') {
+            $section = $seo ?? 'general';
+            abort_unless(in_array($section, $sections, true), 404);
+            $initialSeo = $section;
+        } elseif ($seo !== null) {
+            abort(404);
         }
 
         return Inertia::render('Admin/Index', [
-            'initialTab' => $initialTab,
+            'initialTab' => $tab,
             'initialSeoSection' => $initialSeo,
         ]);
     }

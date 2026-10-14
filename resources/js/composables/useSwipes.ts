@@ -110,11 +110,44 @@ export function useSwipes() {
   const isStaff = computed(() => !!authUser.value?.is_admin || authUser.value?.role === 'admin' || authUser.value?.role === 'moderator')
 
   /**
-   * Стафф по умолчанию со всеми тумблерами ВКЛ: инкогнито-лайк
-   * включён сразу, захочет — выключит вручную.
+   * Ключ localStorage для инкогнито-лайка конкретного юзера.
+   *
+   * @param userId id текущего пользователя
+   * @returns ключ хранилища
    */
-  if (isStaff.value) {
-    incognitoLike.value = true
+  function incognitoStorageKey(userId: number | string): string {
+    return `ulove:incognito:${userId}`
+  }
+
+  /**
+   * Прочитать сохранённый инкогнито-лайк из localStorage.
+   *
+   * @param userId id текущего пользователя
+   * @returns true/false если выбор уже сохранялся, иначе null
+   */
+  function readStoredIncognito(userId: number | string): boolean | null {
+    try {
+      const raw = localStorage.getItem(incognitoStorageKey(userId))
+      if (raw === '1') return true
+      if (raw === '0') return false
+      return null
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * Инкогнито-лайк: дефолт ВКЛ только при первом визите стаффа,
+   * дальше — сохранённый выбор юзера (ВЫКЛ обязан переживать перезагрузку).
+   */
+  {
+    const userId = (authUser.value as { id?: number } | undefined)?.id
+    const stored = userId != null ? readStoredIncognito(userId) : null
+    if (stored !== null) {
+      incognitoLike.value = stored
+    } else if (isStaff.value) {
+      incognitoLike.value = true
+    }
   }
 
   /**
@@ -311,16 +344,17 @@ export function useSwipes() {
   })
 
   /**
-   * Приватность дейтинга: стаффу все тумблеры по умолчанию ВКЛ
-   * (захочет — выключит вручную), остальным — как в профиле.
+   * Приватность дейтинга: строго как в профиле (база — источник правды).
+   *
+   * Дефолт ВКЛ для стаффа выдаётся один раз на бэке при создании
+   * админа (см. MakeAdmin/AdminSeeder), а не форсится тут через `||`:
+   * иначе явное ВЫКЛ сбрасывалось бы в ВКЛ после каждой перезагрузки.
    */
-  const staffPrivacyOn = isStaff.value
-
   const privacy = ref({
-    dating_match_only: staffPrivacyOn || !!authUser.value?.dating_match_only,
-    dating_hide_name: staffPrivacyOn || !!authUser.value?.dating_hide_name,
-    dating_hide_age: staffPrivacyOn || !!authUser.value?.dating_hide_age,
-    dating_hide_distance: staffPrivacyOn || !!authUser.value?.dating_hide_distance,
+    dating_match_only: !!authUser.value?.dating_match_only,
+    dating_hide_name: !!authUser.value?.dating_hide_name,
+    dating_hide_age: !!authUser.value?.dating_hide_age,
+    dating_hide_distance: !!authUser.value?.dating_hide_distance,
   })
 
   const dragX = ref(0)
@@ -1450,44 +1484,12 @@ export function useSwipes() {
     }
   }
 
-  let staffPrivacySynced = false
-
   /**
-   * Один раз зафиксировать стаффу дефолтные ВКЛ-тумблеры в базе.
-   *
-   * Без этого UI показывал бы ВКЛ, а база хранила бы ВЫКЛ —
-   * и чужие ленты видели бы стаффа открытым. Повторов нет:
-   * флаг `staffPrivacySynced` держит один выстрел на инстанс.
-   *
-   * @returns void
+   * Автосинк дефолтов стаффа удалён намеренно: он перезаписывал
+   * явное ВЫКЛ обратно в ВКЛ на каждом маунте (баг «тумблеры
+   * возвращаются после перезагрузки»). База — источник правды,
+   * дефолт ВКЛ выдаётся только новым админам на бэке.
    */
-  async function syncStaffPrivacyDefaults(): Promise<void> {
-    if (!isStaff.value || staffPrivacySynced) {
-      return
-    }
-
-    staffPrivacySynced = true
-
-    const raw = authUser.value ?? {}
-    const needsSync = !raw.dating_match_only || !raw.dating_hide_name || !raw.dating_hide_age || !raw.dating_hide_distance
-
-    if (!needsSync) {
-      return
-    }
-
-    privacy.value = {
-      dating_match_only: true,
-      dating_hide_name: true,
-      dating_hide_age: true,
-      dating_hide_distance: true,
-    }
-
-    await savePrivacy()
-  }
-
-  onMounted(() => {
-    void syncStaffPrivacyDefaults()
-  })
 
   /**
    * Попросить PRO для платной плюшки.
@@ -1510,6 +1512,7 @@ export function useSwipes() {
    * Включить/выключить инкогнито-лайк с проверкой тарифа.
    *
    * Без PRO показывает окно с просьбой оформить подписку.
+   * Выбор сразу пишется в localStorage, чтобы ВЫКЛ переживал перезагрузку.
    *
    * @param next новое значение
    */
@@ -1519,6 +1522,14 @@ export function useSwipes() {
       return
     }
     incognitoLike.value = next
+    const userId = (authUser.value as { id?: number } | undefined)?.id
+    if (userId != null) {
+      try {
+        localStorage.setItem(incognitoStorageKey(userId), next ? '1' : '0')
+      } catch {
+        // private mode — молча игнорируем, состояние останется до перезагрузки
+      }
+    }
   }
 
   /**

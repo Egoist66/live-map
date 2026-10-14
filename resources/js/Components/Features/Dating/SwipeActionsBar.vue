@@ -34,10 +34,10 @@ defineEmits<{
 }>()
 
 const sideBtn =
-  'pointer-events-auto w-14 h-14 grid place-items-center rounded-full bg-white dark:bg-zinc-800 shadow-[0_2px_10px_rgba(0,0,0,0.18)] dark:shadow-black/60 transition active:scale-90 disabled:opacity-40 shrink-0 touch-manipulation'
+  'swipe-side-btn pointer-events-auto w-14 h-14 grid place-items-center rounded-full bg-white dark:bg-zinc-800 shadow-[0_2px_10px_rgba(0,0,0,0.18)] dark:shadow-black/60 transition active:scale-90 disabled:opacity-40 shrink-0 touch-manipulation'
 
 const superBtn =
-  'pointer-events-auto w-14 h-14 grid place-items-center rounded-full text-white shadow-[0_4px_18px_rgba(23,134,255,0.5)] dark:shadow-[0_4px_18px_rgba(23,134,255,0.45)] transition active:scale-90 disabled:opacity-40 shrink-0 bg-gradient-to-br from-[#1786FF] via-[#1f9dff] to-[#00C6FF] ring-2 ring-[#1786FF]/30 dark:ring-[#7cc4ff]/30 touch-manipulation'
+  'swipe-super-btn pointer-events-auto w-14 h-14 grid place-items-center rounded-full text-white shadow-[0_4px_18px_rgba(23,134,255,0.5)] dark:shadow-[0_4px_18px_rgba(23,134,255,0.45)] transition active:scale-90 disabled:opacity-40 shrink-0 bg-gradient-to-br from-[#1786FF] via-[#1f9dff] to-[#00C6FF] ring-2 ring-[#1786FF]/30 dark:ring-[#7cc4ff]/30 touch-manipulation'
 </script>
 
 <template>
@@ -77,7 +77,7 @@ const superBtn =
       :disabled="acting"
       aria-label="Лайк"
       title="Лайк"
-      class="pointer-events-auto grid h-[72px] w-[72px] shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#FD267D] to-[#FF7854] text-white shadow-lg shadow-rose-500/40 transition active:scale-90 disabled:opacity-40 touch-manipulation"
+      class="swipe-like-btn pointer-events-auto grid h-[72px] w-[72px] shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#FD267D] to-[#FF7854] text-white shadow-lg shadow-rose-500/40 transition active:scale-90 disabled:opacity-40 touch-manipulation"
       @click="$emit('like')"
     >
       <i v-if="busy !== 'like'" class="pi pi-heart-fill heartbeat text-3xl leading-none" />
@@ -135,5 +135,24 @@ const superBtn =
 @media (prefers-reduced-motion: reduce) {
   .superlike-pulse { animation: none; opacity: 0; }
   .heartbeat { animation: none; }
+}
+/* Telegram Mini App на телефоне: панель висела на самом краю карточки
+   и уходила под низ вместе с ней. Поднимаем выше, кнопки чуть компактнее —
+   карточка аккуратнее, ничего не клиппится. Только мобайл Mini App. */
+@media (pointer: coarse) and (max-width: 639.98px) {
+  html.tg-app.tg-mobile .swipe-actions {
+    bottom: 16px;
+    gap: 10px;
+    padding-inline: 12px;
+  }
+  html.tg-app.tg-mobile .swipe-side-btn,
+  html.tg-app.tg-mobile .swipe-super-btn {
+    width: 52px;
+    height: 52px;
+  }
+  html.tg-app.tg-mobile .swipe-like-btn {
+    width: 64px;
+    height: 64px;
+  }
 }
 </style>

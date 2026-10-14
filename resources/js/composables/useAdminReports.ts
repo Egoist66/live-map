@@ -5,6 +5,7 @@ import { adminApi } from '@/services/admin.api'
 import { useBadgeStore } from '@/stores/badges'
 import { busOn } from '@/services/realtime-bus'
 import { ensureUserChannel, leaveUserChannel } from '@/composables/useUserChannel'
+import { isAdminBlockedClient } from '@/composables/useAdminClientGate'
 
 export type ReportFilter = 'pending' | 'resolved' | 'dismissed' | 'all'
 
@@ -106,6 +107,7 @@ function setFilter(f: ReportFilter) {
 }
 
 function goReports() {
+  if (isAdminBlockedClient()) return
   try {
     const u = (usePage().props.auth as any)?.user
     const fullAdmin = !!u?.is_admin || u?.role === 'admin'

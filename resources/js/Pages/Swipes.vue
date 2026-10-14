@@ -216,8 +216,8 @@ onUnmounted(() => {
           <Button icon="pi pi-user" rounded text aria-label="Мой профиль" title="Мой профиль" class="!w-10 !h-10 !p-0 shrink-0 !text-stone-400 dark:!text-zinc-500 hover:!text-stone-600 dark:hover:!text-zinc-300 [&_.p-button-icon]:!text-xl" @click="mobileMenu.goProfile()" />
           <Button v-if="isAuth && s.showTabBack.value" icon="pi pi-arrow-left" rounded text aria-label="Назад к ленте" title="Назад к ленте" class="!w-10 !h-10 !p-0 shrink-0 !text-stone-400 dark:!text-zinc-500 hover:!text-stone-600 dark:hover:!text-zinc-300 [&_.p-button-icon]:!text-xl" @click="s.backToFeed()" />
           <span v-else-if="isAuth" class="w-10 shrink-0" aria-hidden="true" />
-          <span class="flex-1" />
-          <div class="flex items-center shrink-0">
+          <span class="swipes-topbar-gap flex-1" aria-hidden="true" />
+          <div class="swipes-topbar-boost flex items-center shrink-0">
             <button
               v-if="isAuth"
               type="button"
@@ -227,14 +227,14 @@ onUnmounted(() => {
               @click="onBoostClick()"
             >
               <span
-                class="w-9 h-9 rounded-[10px] grid place-items-center transition"
+                class="swipes-topbar-boost-icon w-9 h-9 rounded-[10px] grid place-items-center transition"
                 :class="s.boostActive.value ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-md shadow-orange-500/40 boost-icon-glow' : 'bg-stone-100 dark:bg-zinc-800 text-stone-400 dark:text-zinc-500 hover:!text-amber-500'"
               ><i class="pi pi-bolt text-lg" /></span>
               <span v-if="s.boostActive.value" class="absolute top-0.5 right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-white dark:ring-zinc-900" />
             </button>
             <span v-else class="w-11 h-11 shrink-0" aria-hidden="true" />
           </div>
-          <span class="flex-1" />
+          <span class="swipes-topbar-gap flex-1" aria-hidden="true" />
           <Link v-if="isAuth" href="/chat"><Button icon="pi pi-comments" rounded text aria-label="Сообщения" title="Сообщения" class="!w-10 !h-10 !p-0 shrink-0 !text-stone-400 dark:!text-zinc-500 hover:!text-stone-600 dark:hover:!text-zinc-300 [&_.p-button-icon]:!text-xl" /></Link>
           <Button v-if="isAuth" icon="pi pi-bars" rounded text aria-label="Меню ULove" title="Лента · Онлайн · Избранное · Лайки · Анкета · PRO" class="!w-10 !h-10 !p-0 shrink-0 !text-stone-400 dark:!text-zinc-500 hover:!text-stone-600 dark:hover:!text-zinc-300 [&_.p-button-icon]:!text-xl" @click="mobileMenu.open()" />
         </div>
@@ -1349,6 +1349,41 @@ html.tg-app .swipes-feed-lock {
   }
   .swipe-top .text-\[22px\] {
     font-size: 24px !important;
+  }
+}
+/* Telegram Mini App на телефоне: нативный хром клиента (закрыть/свернуть/меню
+   поверх WebView) плюс кнопка буста в топбаре съедали верх — карточка
+   и кнопки свайпов уходили под низ экрана. Лок вычитает хром-зазор
+   (спейсер native-safe-top над лентой его уже занял), топбар становится
+   компактным кластером по центру: профиль, буст, чат и бургер рядом. */
+@media (pointer: coarse) and (max-width: 639.98px) {
+  html.tg-app.tg-mobile .swipes-feed-lock {
+    height: calc(var(--tg-viewport-stable, 100dvh) - var(--sat, 0px) - var(--tg-chrome-top, 0px));
+    max-height: calc(var(--tg-viewport-stable, 100dvh) - var(--sat, 0px) - var(--tg-chrome-top, 0px));
+  }
+  html.tg-app.tg-mobile .swipes-feed-inner {
+    padding-bottom: calc(4px + var(--sab, 0px));
+  }
+  html.tg-app.tg-mobile .swipes-topbar {
+    justify-content: center;
+    gap: 2px;
+    padding-top: 4px;
+    padding-bottom: 2px;
+  }
+  html.tg-app.tg-mobile .swipes-topbar-gap {
+    display: none;
+  }
+  html.tg-app.tg-mobile .swipes-topbar .p-button {
+    width: 36px !important;
+    height: 36px !important;
+  }
+  html.tg-app.tg-mobile .swipes-topbar-boost > button {
+    width: 40px;
+    height: 40px;
+  }
+  html.tg-app.tg-mobile .swipes-topbar-boost-icon {
+    width: 32px !important;
+    height: 32px !important;
   }
 }</style>
 

@@ -57,6 +57,13 @@ class MakeAdmin extends Command
                 'latitude' => 55.7558,
                 'longitude' => 37.6173,
                 'is_invisible' => true,
+                // Дефолт ULove-фишек для нового админа — ВКЛ (Premium).
+                // Существующих юзеров при повышении не трогаем: их явное ВЫКЛ обязано сохраняться.
+                'dating_match_only' => true,
+                'dating_hide_name' => true,
+                'dating_hide_age' => true,
+                'dating_hide_distance' => true,
+                'dating_hide_rating' => true,
             ]);
             $this->info("✓ Админ создан: {$email} (ID: {$user->id})");
         }

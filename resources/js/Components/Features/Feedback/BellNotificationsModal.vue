@@ -25,6 +25,7 @@ import { avatarSrcFor } from "@/composables/useAvatar";
 import { useAppConfirm } from "@/composables/useAppConfirm";
 import { useNotificationsReadAll } from "@/composables/useNotificationsReadAll";
 import { useNotificationMedia } from "@/composables/useNotificationMedia";
+import { isAdminBlockedClient } from "@/composables/useAdminClientGate";
 import { describeInboxRow } from "@/services/notifications.api";
 
 const bell = useBellNotifications();
@@ -71,11 +72,11 @@ const uloveHasData = computed(
 const { confirmDelete } = useAppConfirm();
 async function askClearActivities() {
   const ok = await confirmDelete(
-    "Все уведомления будут удалены из базы навсегда. Это нельзя отменить.",
-    "Очистить уведомления?"
+    "Уведомления удалятся из базы навсегда. Сообщения пометятся прочитанными и скроются из панели — сами чаты сохранятся.",
+    "Очистить панель?"
   ).catch(() => false);
   if (!ok) return;
-  await pinAct.clearAll();
+  await Promise.allSettled([pinAct.clearAll(), bell.clearMessages()]);
 }
 watch(
   () => bell.isOpen.value,
@@ -88,7 +89,7 @@ watch(
     // иначе строка пропадает из непрочитанных раньше, чем пользователь её увидел.
     await Promise.allSettled([
       pinAct.refresh(),
-      admRep.refresh(),
+      isAdminBlockedClient() ? Promise.resolve() : admRep.refresh(),
       updates.loadUnread(),
       updates.loadHistory(),
       proc.load(),
@@ -171,15 +172,15 @@ function openNews(item: any) {
             class="!w-9 !h-9"
           />
           <Button
-            v-if="pinAct.activities.value.length"
+            v-if="pinAct.activities.value.length || bell.conversations.value.length"
             @click="askClearActivities()"
             :loading="pinAct.clearing.value"
             icon="pi pi-trash"
             text
             rounded
             severity="danger"
-            aria-label="Очистить уведомления"
-            v-tooltip.bottom="'Очистить уведомления'"
+            aria-label="Очистить панель"
+            v-tooltip.bottom="'Очистить панель'"
             class="!w-9 !h-9"
           />
           <Badge

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3'
+import { Head } from '@inertiajs/vue3'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import Dialog from 'primevue/dialog'
@@ -29,7 +29,7 @@ import { useAdminAccess } from '@/composables/useAdminAccess'
 import { useAdminTelegramUsers } from '@/composables/useAdminTelegramUsers'
 import { useAdminBotBroadcasts } from '@/composables/useAdminBotBroadcasts'
 import { useAdminBusiness } from '@/composables/useAdminBusiness'
-import { useAdminTabs } from '@/composables/useAdminTabs'
+import { closePopupOrVisit, useAdminTabs } from '@/composables/useAdminTabs'
 import { useAdminLayout } from '@/composables/useAdminLayout'
 import { useStaffRole } from '@/composables/useStaffRole'
 import { computed, onMounted, watch } from 'vue'
@@ -130,16 +130,22 @@ async function confirmUserDelete(): Promise<void> {
 
 /**
  * Уйти на витрину (кнопка «На сайт» в админ-баре).
+ *
+ * Вкладка-попап (открыта через «Панель модерации») закрывается
+ * с возвратом в исходную вкладку, прямой заход — навигация.
  */
 function goHome(): void {
-  router.visit('/')
+  closePopupOrVisit('/')
 }
 
 /**
  * Открыть свой профиль из админ-бара.
+ *
+ * Вкладка-попап закрывается с возвратом в исходную вкладку,
+ * где открывали панель, — профиль там уже открыт.
  */
 function goProfile(): void {
-  router.visit('/profile')
+  closePopupOrVisit('/profile')
 }
 
 onMounted(() => void access.check())

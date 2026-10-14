@@ -7,6 +7,7 @@ import { api } from '@/services/api'
 import { busOn } from '@/services/realtime-bus'
 import { ensureUserChannel, leaveUserChannel } from '@/composables/useUserChannel'
 import { captureAuthUid, currentAuthUid } from '@/composables/useAuthUid'
+import { isAdminBlockedClient } from '@/composables/useAdminClientGate'
 
 export const useBadgeStore = defineStore('badges', () => {
   captureAuthUid()
@@ -86,9 +87,12 @@ export const useBadgeStore = defineStore('badges', () => {
    *
    * Админ — тоже модератор, поэтому бейдж pending-жалоб
    * показываем всей staff-команде, а не только админам.
+   * В Telegram/WebView — нет: модерация там запрещена,
+   * лишний запрос в `/api/admin/*` не шлём.
    */
   function readCanModerate(): boolean {
     try {
+      if (isAdminBlockedClient()) return false
       const u = (usePage().props.auth as any)?.user
       return !!u?.is_admin || u?.role === 'admin' || u?.role === 'moderator'
     } catch { return false }

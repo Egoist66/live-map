@@ -13,7 +13,13 @@ Route::get('/', [PageController::class, 'welcome']);
 Route::middleware(['auth'])->group(function () {
     Route::get('/profile/{identifier?}', [ProfileController::class, 'dashboard'])->name('dashboard');
     Route::get('/dashboard/{identifier?}', [PageController::class, 'dashboardRedirect'])->where('identifier', '.*');
-    Route::get('/admin/{tab?}/{seo?}', [PageController::class, 'admin'])->where(['tab' => '[a-z]+', 'seo' => '[a-z]+'])->middleware('admin:moderator')->name('admin');
+    Route::get('/admin/{tab?}/{seo?}', [PageController::class, 'admin'])
+        ->where([
+            'tab' => 'stats|manage|security|admin|business|modules|ai|refs|seo|telegram|payments',
+            'seo' => 'general|pages|integrations|scripts|crawl',
+        ])
+        ->middleware('admin:moderator')
+        ->name('admin');
 });
 
 Route::get('/faq', [PageController::class, 'faq'])->name('faq');

@@ -2,6 +2,7 @@ import { computed, onMounted, ref } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
 import { route } from '@/route'
 import { openAdminPanel } from '@/composables/useAdminTabs'
+import { useAdminClientGate } from '@/composables/useAdminClientGate'
 import { useBadgeStore } from '@/stores/badges'
 import { useSeo } from '@/composables/useSeo'
 import { useProfileShare } from '@/composables/useProfileShare'
@@ -44,6 +45,9 @@ export function useDashboardPage(propsUser?: any | (() => any), propsIsOwn?: boo
   const { shareProfile, sharing } = useProfileShare()
   const invisible = useInvisible()
   const isAdmin = computed(() => !!authUser.value?.is_admin || authUser.value?.role === 'admin')
+  const { isAdminBlocked } = useAdminClientGate()
+  /** Кнопка «Панель модерации»: staff и только браузер (не Telegram/WebView). */
+  const showAdminPanelLink = computed(() => isAdmin.value && !isAdminBlocked.value)
   const presence = computed(() => (invisible.isInvisible.value
     ? { active: false, label: 'скрыт · невидимка' }
     : { active: true, label: 'в сети' }))
@@ -56,8 +60,10 @@ export function useDashboardPage(propsUser?: any | (() => any), propsIsOwn?: boo
    * Открыть панель модерации в отдельной вкладке браузера.
    *
    * Текущий профиль остаётся нетронутым — консоль живёт своей жизнью.
+   * В Telegram/WebView — no-op (кнопка там скрыта, бэк режет 403).
    */
   function goAdmin(): void {
+    if (isAdminBlocked.value) return
     openAdminPanel()
   }
   function goFaq() { router.visit('/faq') }
@@ -96,5 +102,5 @@ export function useDashboardPage(propsUser?: any | (() => any), propsIsOwn?: boo
 
     if (isOwn.value) badges.init()
   })
-  return { seo, auth, u, isGuest, isOwn, isAdmin, showAvatar, avatarSrc, bioText, bioEmpty, settingsHref, sharing, presence, ensureAuth, levelLabel: LEVEL_LABEL, levelColor: LEVEL_COLOR, planLabel: PLAN_LABEL, planColor: PLAN_COLOR, levelName, registeredAt, openAvatar, closeAvatar, goMap, goChat, goSettings, goAdmin, goFaq, share }
+  return { seo, auth, u, isGuest, isOwn, isAdmin, showAdminPanelLink, showAvatar, avatarSrc, bioText, bioEmpty, settingsHref, sharing, presence, ensureAuth, levelLabel: LEVEL_LABEL, levelColor: LEVEL_COLOR, planLabel: PLAN_LABEL, planColor: PLAN_COLOR, levelName, registeredAt, openAvatar, closeAvatar, goMap, goChat, goSettings, goAdmin, goFaq, share }
 }

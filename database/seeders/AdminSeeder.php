@@ -41,6 +41,18 @@ class AdminSeeder extends Seeder
             ]
         );
 
+        // Дефолт ULove-фишек — ВКЛ, но только для свежесозданного админа.
+        // Повторный сид не должен затирать явное ВЫКЛ существующего админа.
+        if ($admin->wasRecentlyCreated) {
+            $admin->update([
+                'dating_match_only' => true,
+                'dating_hide_name' => true,
+                'dating_hide_age' => true,
+                'dating_hide_distance' => true,
+                'dating_hide_rating' => true,
+            ]);
+        }
+
         $this->command->info("✓ Админ создан: {$admin->email} (ID: {$admin->id}, role: {$admin->role}, plan: {$admin->plan})");
         $this->command->info("  Пароль: {$password}");
         $this->command->warn("  Смените пароль после первого входа или задайте ADMIN_EMAIL/ADMIN_PASSWORD в .env");

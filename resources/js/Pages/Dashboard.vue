@@ -131,7 +131,7 @@ onMounted(async () => {
         />
         <template v-else>
         <button
-          v-if="dash.isAdmin.value && dash.isOwn.value"
+          v-if="dash.showAdminPanelLink.value && dash.isOwn.value"
           type="button"
           class="flex items-center gap-1.5 text-[11px] font-bold text-stone-500 transition hover:text-ink-900 dark:text-zinc-500 dark:hover:text-zinc-200"
           @click="dash.goAdmin"

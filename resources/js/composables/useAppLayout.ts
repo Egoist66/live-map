@@ -10,6 +10,7 @@ import { useBellNotifications } from '@/composables/useBellNotifications'
 import { usePinActivity } from '@/composables/usePinActivity'
 import { useAdminReports } from '@/composables/useAdminReports'
 import { openAdminPanel } from '@/composables/useAdminTabs'
+import { useAdminClientGate } from '@/composables/useAdminClientGate'
 import { useAppUpdates } from '@/composables/useAppUpdates'
 import { useBuildVersion } from '@/composables/useBuildVersion'
 import { useSecurityImpersonations } from '@/composables/useSecurityImpersonations'
@@ -41,6 +42,7 @@ export function useAppLayout() {
   const menu = ref()
   const modules = useAppModulesStore()
   const { isTelegram } = useTelegram()
+  const { isAdminBlocked } = useAdminClientGate()
   const { isBelowLg } = useViewportBreakpoints()
 
   try {
@@ -110,7 +112,7 @@ export function useAppLayout() {
    */
   const menuItems = computed(() => {
     const header = { label: user.value?.name || '', sublabel: user.value?.email || '', isHeader: true }
-    const moderation = isModerator.value
+    const moderation = isModerator.value && !isAdminBlocked.value
       ? [{ label: 'Панель модерации', icon: 'pi pi-shield', accent: 'amber', active: route().current('admin'), command: () => openAdminPanel() }]
       : []
     const logoutItem = { label: 'Выйти', icon: 'pi pi-sign-out', accent: 'red', danger: true, command: () => doLogout() }
@@ -247,17 +249,20 @@ export function useAppLayout() {
   const { runWhenIdle } = useIdleTask()
   onMounted(() => {
     void runWhenIdle(async () => {
-      await Promise.allSettled([
+      const jobs = [
         badge.init(),
         presence.connect(),
         appNotes.init(),
         pinActivity.init(),
-        adminReports.init(),
         updates.init(),
         proc.init(),
         buildVersion.init(),
         initRealtime(),
-      ])
+      ]
+      if (!isAdminBlocked.value) {
+        jobs.push(adminReports.init())
+      }
+      await Promise.allSettled(jobs)
     })
   })
   onBeforeUnmount(() => presence.disconnect())
