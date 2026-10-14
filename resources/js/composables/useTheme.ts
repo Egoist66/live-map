@@ -9,6 +9,13 @@ import { ref, watch, computed, onMounted } from 'vue'
  */
 const theme = ref<'light' | 'dark' | 'system'>('system')
 const systemDark = ref(false)
+/**
+ * Энергосбережение (AMOLED): в тёмной теме красит поверхности
+ * в true black вместо тёмно-серого. Отдельный флаг, а не 4-я тема —
+ * работает и с 'dark', и с 'system'. На `<html>` отражается классом
+ * `amoled`, сами цвета — CSS-блоком `html.dark.amoled` в app.css.
+ */
+const amoled = ref(false)
 let mql: MediaQueryList | null = null
 let synced = false
 
@@ -21,6 +28,9 @@ function syncFromBrowser(): void {
   try {
     const stored = localStorage.getItem('theme')
     if (stored === 'light' || stored === 'dark' || stored === 'system') theme.value = stored
+  } catch {}
+  try {
+    amoled.value = localStorage.getItem('amoled') === '1'
   } catch {}
   try {
     mql = window.matchMedia('(prefers-color-scheme: dark)')
@@ -42,9 +52,24 @@ function apply() {
   const isDark = theme.value === 'dark' || (theme.value === 'system' && systemDark.value)
   if (typeof document !== 'undefined') {
     document.documentElement.classList.toggle('dark', isDark)
+    document.documentElement.classList.toggle('amoled', amoled.value)
     document.documentElement.style.colorScheme = isDark ? 'dark' : 'light'
     syncSystemChrome(isDark)
   }
+}
+
+/**
+ * Включает/выключает класс энергосбережения на документе.
+ *
+ * Класс висит независимо от текущей темы (сами цвета gated
+ * селектором `html.dark.amoled`), поэтому переключение светлая↔тёмная
+ * ничего не ломает и не требует пересчёта.
+ */
+function applyAmoledClass(): void {
+  if (typeof document === 'undefined') return
+  try {
+    document.documentElement.classList.toggle('amoled', amoled.value)
+  } catch {}
 }
 
 /**
@@ -104,14 +129,14 @@ function notifyNativeTheme(isDark: boolean, bg: string): void {
  * в цвет нативного шелла upin-mobile (SafeArea/StatusBar/NavigationBar).
  *
  * Пока жив boot-сплэш (`#pwa-boot`), фон `<html>/<body>` не трогаем:
- * blade-скрипт держит его тёмным (#150B10), чтобы розовый логотип
+ * blade-скрипт держит его тёмным (#0B101B), чтобы розовый логотип
  * при opacity-фейде гас над тёмным, а не выцветал в серый над белым.
  * Целевой фон вернёт `__upinHideSplash` в момент удаления узла.
  *
  * @param isDark true для тёмной темы
  */
 function syncSystemChrome(isDark: boolean): void {
-  const bg = isDark ? '#0F121F' : '#ffffff'
+  const bg = !isDark ? '#ffffff' : amoled.value ? '#000000' : '#0F121F'
   const root = document.documentElement
   const bootAlive = typeof document !== 'undefined' && !!document.getElementById('pwa-boot')
 
@@ -137,6 +162,15 @@ watch(theme, (v) => {
   try {
     localStorage.setItem('theme', v)
   } catch {}
+  apply()
+})
+
+watch(amoled, (v) => {
+  if (typeof window === 'undefined') return
+  try {
+    localStorage.setItem('amoled', v ? '1' : '0')
+  } catch {}
+  applyAmoledClass()
   apply()
 })
 
@@ -166,5 +200,11 @@ export function useTheme() {
   }
   function setTheme(v: 'light'|'dark'|'system'){ theme.value = v }
   function toggle() { theme.value = isDark.value ? 'light' : 'dark' }
-  return { theme, isDark, setTheme, toggle, systemDark }
+  /**
+   * Переключатель энергосбережения (AMOLED true black).
+   *
+   * @param v true — чёрные поверхности в тёмной теме
+   */
+  function setAmoled(v: boolean){ amoled.value = !!v }
+  return { theme, isDark, setTheme, toggle, systemDark, amoled, setAmoled }
 }

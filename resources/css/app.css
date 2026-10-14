@@ -261,6 +261,46 @@ html.dark .divide-stone-200 > :not([hidden]) ~ :not([hidden]), html.dark .divide
 html.dark .ring-stone-200, html.dark .ring-gray-200 { --tw-ring-color: rgb(63 63 70) !important; }
 html.dark .bg-stone-900\/90, html.dark .bg-black\/50, html.dark .bg-black\/60 { background-color: rgba(0,0,0,0.6) !important; }
 
+/* Энергосбережение (AMOLED true black): тумблер в «Внешнем виде»
+   ставит класс amoled на <html>, здесь тёмно-серые поверхности уходят
+   в чёрный. Акценты (розовый, кнопки, бейджи, градиенты) не трогаем —
+   гаснут только фоны. Приподнятое (чужие пузыри, пилюли) — #0c0c0e,
+   чтобы не сливаться с базой #000. Бордеры оставляем: на чёрном
+   они и рисуют структуру. */
+html.dark.amoled { background-color: #000000; }
+html.dark.amoled body { background-color: #000000; }
+html.dark.amoled .dark\:bg-\[\#0F121F\],
+html.dark.amoled .dark\:\!bg-\[\#0F121F\],
+html.dark.amoled .dark\:bg-surface,
+html.dark.amoled .dark\:\!bg-surface { background-color: #000000 !important; }
+html.dark.amoled .dark\:bg-zinc-900,
+html.dark.amoled .dark\:\!bg-zinc-900 { background-color: #000000 !important; }
+html.dark.amoled .dark\:bg-zinc-800,
+html.dark.amoled .dark\:\!bg-zinc-800 { background-color: #0c0c0e !important; }
+html.dark.amoled .dark\:bg-\[\#0F121F\]\/95,
+html.dark.amoled .dark\:bg-zinc-900\/90,
+html.dark.amoled .dark\:bg-zinc-900\/95 { background-color: rgba(0,0,0,0.95) !important; }
+html.dark.amoled .bg-white, html.dark.amoled .\!bg-white,
+html.dark.amoled .bg-stone-50, html.dark.amoled .\!bg-stone-50,
+html.dark.amoled .bg-stone-100, html.dark.amoled .\!bg-stone-100,
+html.dark.amoled .bg-zinc-100, html.dark.amoled .\!bg-zinc-100,
+html.dark.amoled .bg-gray-50, html.dark.amoled .\!bg-gray-50,
+html.dark.amoled .bg-gray-100, html.dark.amoled .\!bg-gray-100,
+html.dark.amoled .bg-slate-50, html.dark.amoled .bg-slate-100 { background-color: #000000 !important; }
+html.dark.amoled .bg-stone-200, html.dark.amoled .\!bg-stone-200,
+html.dark.amoled .bg-zinc-200 { background-color: #0c0c0e !important; }
+html.dark.amoled .p-card, html.dark.amoled .p-dialog, html.dark.amoled .p-drawer,
+html.dark.amoled .p-popover-content, html.dark.amoled .p-menu, html.dark.amoled .p-tieredmenu,
+html.dark.amoled .p-contextmenu, html.dark.amoled .p-accordionpanel,
+html.dark.amoled .p-select-overlay, html.dark.amoled .p-datepicker-panel, html.dark.amoled .p-popover,
+html.dark.amoled .p-confirmdialog, html.dark.amoled .p-confirmdialog .p-dialog { background: #000000 !important; }
+html.dark.amoled input, html.dark.amoled textarea, html.dark.amoled select,
+html.dark.amoled .p-inputtext, html.dark.amoled .p-textarea { background-color: #000000 !important; }
+html.dark.amoled .mobile-bottom-nav { background-color: rgba(0,0,0,0.97) !important; }
+html.dark.amoled .mobile-bottom-nav::before,
+html.dark.amoled .mobile-bottom-nav::after { background: #000000; }
+html.dark.amoled .maplibregl-ctrl-group { background: #000000 !important; }
+
 @media (max-width: 640px) {
   input, textarea, select {
     font-size: 16px !important;
@@ -475,7 +515,7 @@ html.dark .mobile-bottom-nav {
   pointer-events: none;
 }
 html.dark .mobile-bottom-nav::before {
-  background: #0b0f1b;
+  background: #0b101b;
 }
 .mobile-bottom-nav::after {
   content: '';
@@ -489,7 +529,7 @@ html.dark .mobile-bottom-nav::before {
   pointer-events: none;
 }
 html.dark .mobile-bottom-nav::after {
-  background: #0b0f1b;
+  background: #0b101b;
 }
 /* Подложка документа в цвет темы — резиновый скролл за краями
    не вспыхивает чужим фоном ни в светлой, ни в тёмной теме. */

@@ -199,7 +199,7 @@ export default defineConfig({
             strategies: 'generateSW',
             manifestFilename: 'manifest.webmanifest',
             includeAssets: ['offline.html', 'push-sw.js', 'pwa-192x192.png', 'pwa-512x512.png', 'maskable-512x512.png', 'apple-touch-icon.png', 'pwa-icon.svg', 'favicon.ico'],
-            // PWA-манифест UPin: имя, тёмный тёплый сплэш (#150B10 —
+            // PWA-манифест UPin: имя, тёмный сплэш (#0B101B —
             // в цвет boot-экрана app.blade.php для бесшовного старта),
             // комбинированная иконка пин+сердце, шорткаты разделов.
             // Файл public/manifest.webmanifest при сборке генерится
@@ -213,8 +213,8 @@ export default defineConfig({
                 scope: '/',
                 display: 'standalone',
                 orientation: 'any',
-                background_color: '#150B10',
-                theme_color: '#150B10',
+                background_color: '#0B101B',
+                theme_color: '#0B101B',
                 lang: 'ru-RU',
                 dir: 'ltr',
                 categories: ['social', 'navigation', 'lifestyle'],

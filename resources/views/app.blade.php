@@ -41,7 +41,7 @@
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
         <meta name="msapplication-TileColor" content="#FD267D">
         <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
-        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#150B10">
+        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0B101B">
 
         <meta property="og:site_name" content="{{ $seoHead['site_name'] ?? config('seo.site_name') }}">
         @if(!$isNativeClient)
@@ -235,7 +235,7 @@
             } catch (e) {}
         </script>
         <script nonce="{{ $cspNonce ?? '' }}">
-            (function(){ try{ var root=document.documentElement; var s=localStorage.getItem('theme'); var m=window.matchMedia('(prefers-color-scheme: dark)').matches; var isTg=root.classList.contains('tg-app'); var tgDark=root.classList.contains('tg-dark'); var d=isTg ? tgDark : (s ? s==='dark' : m); if(d) root.classList.add('dark'); else root.classList.remove('dark'); root.style.colorScheme = d?'dark':'light'; var tgBg=root.classList.contains('tg-app') ? root.style.getPropertyValue('--tg-theme-bg-color').trim() : ''; var bg=tgBg || (d?'#0F121F':'#ffffff'); window.__upinThemeBg = bg; /* Держим тёмный фон, пока жив #pwa-boot: проверка getElementById здесь бессмысленна (head парсится раньше body-разметки, узел ещё не существует), а светлый <html> под фейдом выцветает розовый логотип в серый. Целевой фон вернёт __upinHideSplash ровно в момент удаления узла. */ root.style.backgroundColor = '#150B10'; }catch(e){} })();
+            (function(){ try{ var root=document.documentElement; var s=localStorage.getItem('theme'); var m=window.matchMedia('(prefers-color-scheme: dark)').matches; var isTg=root.classList.contains('tg-app'); var tgDark=root.classList.contains('tg-dark'); var d=isTg ? tgDark : (s ? s==='dark' : m); if(d) root.classList.add('dark'); else root.classList.remove('dark'); try{ if(localStorage.getItem('amoled')==='1') root.classList.add('amoled'); }catch(e){} root.style.colorScheme = d?'dark':'light'; var tgBg=root.classList.contains('tg-app') ? root.style.getPropertyValue('--tg-theme-bg-color').trim() : ''; var bg=tgBg || (d?'#0F121F':'#ffffff'); window.__upinThemeBg = bg; /* Держим тёмный фон, пока жив #pwa-boot: проверка getElementById здесь бессмысленна (head парсится раньше body-разметки, узел ещё не существует), а светлый <html> под фейдом выцветает розовый логотип в серый. Целевой фон вернёт __upinHideSplash ровно в момент удаления узла. */ root.style.backgroundColor = (function(){ try{ return (localStorage.getItem('amoled')==='1' && root.classList.contains('dark')) ? '#000000' : '#0B101B'; }catch(e){ return '#0B101B'; } })(); }catch(e){} })();
         </script>
         {{-- Сторож загрузки entry: после деплоя HTML может ссылаться на уже
               удалённый `/build/assets/app-*.js` (протухший SW/HTTP-кэш, гонка
@@ -379,19 +379,29 @@
             z-index: 9997;
             display: grid;
             place-items: center;
-            /* Фон = background_color манифеста (#150B10): системный сплэш
+            /* Фон = background_color манифеста (#0B101B): системный сплэш
                ОС (тёмный фон + квадратная иконка) бесшовно переходит в наш
                boot-экран — второго «появления» не видно. Поэтому здесь нет
                entrance-анимации: карточка рисуется сразу статично. */
             background:
               radial-gradient(90% 60% at 50% 0%, rgba(253, 38, 125, .12) 0%, rgba(253, 38, 125, 0) 60%),
               radial-gradient(70% 50% at 85% 100%, rgba(255, 120, 84, .08) 0%, rgba(255, 120, 84, 0) 60%),
-              #150B10;
+              #0B101B;
             transition: opacity .35s ease, visibility .35s ease;
           }
           #pwa-boot.done {
             opacity: 0;
             visibility: hidden;
+          }
+          /* Энергосбережение: boot-экран тоже чёрный, без navy-вспышки. */
+          html.amoled #pwa-boot {
+            background:
+              radial-gradient(90% 60% at 50% 0%, rgba(253, 38, 125, .12) 0%, rgba(253, 38, 125, 0) 60%),
+              radial-gradient(70% 50% at 85% 100%, rgba(255, 120, 84, .08) 0%, rgba(255, 120, 84, 0) 60%),
+              #000000;
+          }
+          html.amoled #upin-boot-fallback {
+            background: #000000;
           }
           #pwa-boot .boot-card {
             display: flex;
@@ -476,7 +486,7 @@
             display: grid;
             place-items: center;
             padding: 24px;
-            background: #150B10;
+            background: #0B101B;
             text-align: center;
           }
           #upin-boot-fallback .upin-boot-fallback-title {

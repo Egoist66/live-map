@@ -8,7 +8,7 @@ import { useUloveOnly } from '@/composables/useUloveOnly'
 
 defineProps<{ theme?: any }>()
 const emit = defineEmits<{ (e: 'theme', v: any): void }>()
-const { options, active, hint, select } = useAppearanceTheme()
+const { options, active, hint, select, amoledOn, amoledHint } = useAppearanceTheme()
 const { animationsEnabled } = useMotion()
 const { columns, columnOptions, columnsHint, selectColumns } = useProfileLayout()
 const uloveOnly = useUloveOnly()
@@ -46,6 +46,15 @@ function onSelect(v: any) {
           <i :class="[o.icon, 'text-[13px]']" />
           <span>{{ o.label }}</span>
         </button>
+      </div>
+      <div class="mt-4 pt-4 border-t border-stone-200/70 dark:border-zinc-800">
+        <div class="flex items-center justify-between gap-3">
+          <div class="min-w-0">
+            <h3 class="font-bold tracking-tight text-[15px] dark:text-white leading-tight">Энергосбережение</h3>
+            <p class="text-xs text-stone-500 mt-0.5 truncate">{{ amoledHint }}</p>
+          </div>
+          <ToggleSwitch v-model="amoledOn" input-id="appearance-amoled" class="shrink-0" />
+        </div>
       </div>
       <div class="mt-4 pt-4 border-t border-stone-200/70 dark:border-zinc-800">
         <div class="flex items-center justify-between gap-3">
