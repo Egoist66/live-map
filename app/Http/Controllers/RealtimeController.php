@@ -643,7 +643,11 @@ class RealtimeController extends Controller
     }
 
     /**
-     * Свежее состояние собеседника открытого диалога («в сети»).
+     * Свежее состояние собеседника открытого диалога («в сети» + профиль).
+     *
+     * Кроме last_seen отдаём имя, аватар, мэтч и цель: шапка открытого
+     * диалога и строка сайдбара иначе протухают до полного рефетча
+     * (переименование, смена аватара, мэтч в существующем диалоге).
      *
      * @param \App\Models\User $user смотрящий
      * @param int $conversationId диалог
@@ -651,7 +655,7 @@ class RealtimeController extends Controller
     private function peerState($user, int $conversationId): ?array
     {
         $conv = Conversation::whereKey($conversationId)
-            ->with('participants:id,name,avatar_path,last_seen_at,is_invisible')
+            ->with('participants:id,name,avatar_path,telegram_photo_url,last_seen_at,is_invisible,dating_goal')
             ->first();
 
         if (! $conv) {
@@ -667,11 +671,19 @@ class RealtimeController extends Controller
         $hidden = $other->isInvisibleActive() && ! $user->isAdmin();
         $lastSeen = $hidden ? null : $other->last_seen_at;
 
+        $isMatch = DatingMatch::where(fn ($q) => $q->where('user_a_id', $user->id)->orWhere('user_b_id', $user->id))
+            ->where(fn ($q) => $q->where('user_a_id', $other->id)->orWhere('user_b_id', $other->id))
+            ->exists();
+
         return [
             'conversation_id' => $conv->id,
             'id' => $other->id,
+            'name' => (string) $other->name,
+            'avatar_url' => $other->avatar_url,
             'last_seen_at' => $lastSeen?->toISOString(),
             'is_online' => $hidden ? false : MonitoringService::isOnline($other->last_seen_at),
+            'is_match' => $conv->type === 'direct' && $isMatch,
+            'dating_goal' => $other->dating_goal,
         ];
     }
     /**

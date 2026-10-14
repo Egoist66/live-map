@@ -354,6 +354,10 @@ class ConversationController extends Controller
             ->pluck('id');
         Message::whereIn('id',$ids)->update(['read_at'=>$now,'delivered_at'=>\DB::raw('COALESCE(delivered_at, "'.$now->toDateTimeString().'")')]);
         $conversation->participantRows()->where('user_id',$request->user()->id)->update(['last_read_at'=>$now]);
+        // Квитанции не меняют last_message_at: трогаем диалог, чтобы
+        // дельта-синк списка подхватил свежие read_at/delivered_at в превью —
+        // иначе тики отправителя протухают до полного рефетча.
+        $conversation->touch();
         \Illuminate\Support\Facades\Cache::forget("realtime:badges:{$request->user()->id}");
         try{ broadcast(new \App\Events\MessageRead($conversation->id,$request->user()->id,$ids->toArray()))->toOthers(); }catch(\Throwable $e){ \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
         return response()->json(['ok'=>true]);
@@ -368,6 +372,7 @@ class ConversationController extends Controller
             ->pluck('id');
         if($ids->isNotEmpty()){
             Message::whereIn('id',$ids)->update(['delivered_at'=>now()]);
+            $conversation->touch();
             try{ broadcast(new \App\Events\MessageDelivered($conversation->id,$ids->toArray(),$request->user()->id))->toOthers(); }catch(\Throwable $e){ \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
         }
         return response()->json(['ok'=>true,'delivered_ids'=>$ids]);
@@ -528,6 +533,10 @@ class ConversationController extends Controller
 
         $row->update(['pinned_at' => now(), 'hidden_at' => null]);
 
+        // Закреп живёт в строке участника, а не диалога: трогаем диалог,
+        // чтобы дельта-синк списка подхватил строку на других устройствах.
+        $conversation->touch();
+
         return response()->json(['ok' => true, 'is_pinned' => true, 'pinned_at' => $row->fresh()->pinned_at->toISOString()]);
     }
 
@@ -545,6 +554,8 @@ class ConversationController extends Controller
         $conversation->participantRows()
             ->where('user_id', $request->user()->id)
             ->update(['pinned_at' => null]);
+
+        $conversation->touch();
 
         return response()->json(['ok' => true, 'is_pinned' => false, 'pinned_at' => null]);
     }

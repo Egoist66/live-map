@@ -6,6 +6,7 @@ import { useChatHistory } from '@/composables/useChatHistory'
 import {
   clearCachedConversations,
   deleteCachedMessage,
+  ensureChatCacheSync,
   getSyncCursor,
   loadCachedConversation,
   loadCachedConversations,
@@ -846,17 +847,48 @@ export function useChat() {
   }
 
   async function deleteMessage(id: number) {
+    const doomedId = Number(id)
     const backup = [...messages.value]
+    const doomed = messages.value.find((m) => Number(m?.id) === doomedId) as any
+    const doomedConvId = Number(doomed?.conversation_id ?? 0)
     messages.value = messages.value.filter((m) => m?.id !== id)
+    // Чтобы слияние дельты не вернуло удалённое превью обратно.
+    deletedIds.add(doomedId)
+    const staleConv = conversations.value.find((c) => Number((c as any)?.last_message?.id) === doomedId) as any
+    const previewBackup = staleConv ? staleConv.last_message : null
+    if (staleConv) {
+      // Мгновенно откатываем превью на предыдущее сообщение треда:
+      // серверный тач подтянет точное значение дельтой следом.
+      const rest = messages.value.filter((m: any) => Number(m?.conversation_id) === Number(staleConv.id))
+      const prev = newestMessage(rest)
+      staleConv.last_message = prev ?? null
+      if (prev) {
+        staleConv.last_message_at = prev.created_at
+      }
+      sortConversations()
+    }
     const cacheUid = getUid()
     if (cacheUid > 0) {
-      void deleteCachedMessage(cacheUid, id)
+      void deleteCachedMessage(cacheUid, doomedId)
+      if (staleConv) {
+        void saveConversations(cacheUid, [staleConv])
+      }
     }
     try {
-      await chatApi.deleteMessage(id)
-      const conv = conversations.value.find((c) => (c as any).last_message?.id === id)
-      if (conv) loadConversations()
-    } catch (e) { messages.value = backup; throw e }
+      await chatApi.deleteMessage(doomedId)
+      // Бэк трогает диалог при удалении — дельта его точно подхватит.
+      await loadConversations().catch(() => {})
+      if (doomedConvId > 0 && cacheUid > 0) {
+        void saveMessages(cacheUid, doomedConvId, messages.value.filter((m: any) => Number(m?.conversation_id) === doomedConvId))
+      }
+    } catch (e) {
+      messages.value = backup
+      if (staleConv) {
+        staleConv.last_message = previewBackup
+        sortConversations()
+      }
+      throw e
+    }
   }
 
   async function deleteConversation(id: number) {
@@ -936,7 +968,20 @@ export function useChat() {
       history.notifyAppended()
       return
     }
-    if (msg.sender_id === getUid()) { syncConversationPreview(msg); return }
+    if (msg.sender_id === getUid()) {
+      // Своё с другого устройства/вкладки: превью мало — открытый тред
+      // тоже должен получить сообщение сразу, а не ждать дельту.
+      const openedId = Number((activeConv.value as any)?.id ?? 0)
+
+      if (Number(msg.conversation_id) === Number(selectedId.value) && openedId === Number(msg.conversation_id)) {
+        appendLiveMessage(msg)
+        history.notifyAppended()
+      }
+
+      syncConversationPreview(msg)
+
+      return
+    }
     if (Number(msg.conversation_id) === Number(selectedId.value)) {
       appendLiveMessage(msg)
       history.notifyAppended()
@@ -973,35 +1018,72 @@ export function useChat() {
     const ids: number[] = e?.message_ids || []
     const at = e?.delivered_at
     const cacheUid = getUid()
+    const touchedConvIds = new Set<number>()
     ids.forEach(id => {
       const idx = messages.value.findIndex((m:any)=> m?.id===id)
       if(idx!==-1){ (messages.value[idx] as any).delivered_at = at; (messages.value[idx] as any).status = 'delivered' }
-      conversations.value.forEach(c=>{ if((c?.last_message as any)?.id===id){ (c.last_message as any).delivered_at = at; (c.last_message as any).status='delivered' } })
+      conversations.value.forEach(c=>{ if((c?.last_message as any)?.id===id){ (c.last_message as any).delivered_at = at; (c.last_message as any).status='delivered'; touchedConvIds.add(Number(c?.id)) } })
       if (cacheUid > 0) {
         void patchCachedMessage(cacheUid, id, { delivered_at: at, status: 'delivered' })
       }
     })
     if(ids.length===0 && e?.conversation_id){
-      messages.value.forEach((m:any)=>{ if(m?.conversation_id===e.conversation_id && m?.sender_id===getUid() && !m?.delivered_at && !m?.read_at){ m.delivered_at = at; m.status='delivered' }})
+      const convId = Number(e.conversation_id)
+      messages.value.forEach((m:any)=>{ if(m?.conversation_id===convId && m?.sender_id===getUid() && !m?.delivered_at && !m?.read_at){ m.delivered_at = at; m.status='delivered' }})
+      const row = conversations.value.find((c) => Number(c?.id) === convId) as any
+      if (row?.last_message && (row.last_message as any)?.sender_id === getUid()) {
+        (row.last_message as any).delivered_at = (row.last_message as any).delivered_at || at
+        touchedConvIds.add(convId)
+      }
     }
+    persistReceiptPreviews(touchedConvIds)
   }
 
   function handleRead(e: any) {
     const ids: number[] = e?.message_ids || []
     const at = e?.read_at
     const cacheUid = getUid()
+    const touchedConvIds = new Set<number>()
     if(ids.length){
       ids.forEach(id=>{
         const idx = messages.value.findIndex((m:any)=> m?.id===id)
         if(idx!==-1){ (messages.value[idx] as any).read_at = at; (messages.value[idx] as any).delivered_at = (messages.value[idx] as any).delivered_at || at; (messages.value[idx] as any).status='read' }
-        conversations.value.forEach(c=>{ if((c?.last_message as any)?.id===id){ (c.last_message as any).read_at = at; (c.last_message as any).delivered_at = (c.last_message as any).delivered_at || at; (c.last_message as any).status='read' } })
+        conversations.value.forEach(c=>{ if((c?.last_message as any)?.id===id){ (c.last_message as any).read_at = at; (c.last_message as any).delivered_at = (c.last_message as any).delivered_at || at; (c.last_message as any).status='read'; touchedConvIds.add(Number(c?.id)) } })
         if (cacheUid > 0) {
           void patchCachedMessage(cacheUid, id, { read_at: at, status: 'read' })
         }
       })
     } else {
-      messages.value.forEach((m:any)=>{ if(m?.conversation_id===e?.conversation_id && m?.sender_id===getUid() && !m?.read_at){ m.read_at = at; m.delivered_at = m.delivered_at || at; m.status='read' }})
-      conversations.value.forEach(c=>{ if(c?.id===e?.conversation_id && c?.last_message && (c.last_message as any)?.sender_id===getUid() && !(c.last_message as any)?.read_at){ (c.last_message as any).read_at = at; (c.last_message as any).delivered_at = (c.last_message as any).delivered_at || at; (c.last_message as any).status='read' } })
+      const convId = Number(e?.conversation_id ?? 0)
+      messages.value.forEach((m:any)=>{ if(m?.conversation_id===convId && m?.sender_id===getUid() && !m?.read_at){ m.read_at = at; m.delivered_at = m.delivered_at || at; m.status='read' }})
+      conversations.value.forEach(c=>{ if(c?.id===convId && c?.last_message && (c.last_message as any)?.sender_id===getUid() && !(c.last_message as any)?.read_at){ (c.last_message as any).read_at = at; (c.last_message as any).delivered_at = (c.last_message as any).delivered_at || at; (c.last_message as any).status='read'; touchedConvIds.add(convId) } })
+    }
+    persistReceiptPreviews(touchedConvIds)
+  }
+
+  /**
+   * Сохраняет задетые квитанциями превью диалогов в IDB.
+   *
+   * Без этого закешированная копия last_message хранит старые тики и
+   * следующее монтирование рисует одну птичку до полного рефетча.
+   *
+   * @param convIds id диалогов с обновлённым last_message
+   */
+  function persistReceiptPreviews(convIds: Set<number>): void {
+    if (convIds.size === 0) {
+      return
+    }
+
+    const cacheUid = getUid()
+
+    if (!(cacheUid > 0)) {
+      return
+    }
+
+    const rows = conversations.value.filter((c) => convIds.has(Number(c?.id)))
+
+    if (rows.length > 0) {
+      void saveConversations(cacheUid, rows)
     }
   }
 
@@ -1026,20 +1108,132 @@ export function useChat() {
   }
 
   /**
-   * Освежает «в сети» собеседника из поллинга.
+   * Освежает собеседника из поллинга: «в сети», имя, аватар, мэтч.
+   *
+   * Шапка открытого диалога и строка сайдбара иначе протухают до полного
+   * рефетча (переименование, смена аватара, новый мэтч). Патч точечный,
+   * кеш строки обновляем следом — без него IDB воскресит старое.
+   *
    * @param conversationId диалог
    * @param peer состояние собеседника
    */
   function applyPeer(conversationId: number, peer: any): void {
     if (!peer || Number(conversationId) !== Number(selectedId.value)) return
-    if (activeConv.value?.other && Number((activeConv.value.other as any)?.id) === Number(peer.id)) {
-      (activeConv.value.other as any).last_seen_at = peer.last_seen_at ?? null
+    const peerId = Number(peer?.id ?? 0)
+    if (!(peerId > 0)) return
+    const openedPeer = activeConv.value?.other as any
+    if (openedPeer && Number(openedPeer?.id) === peerId) {
+      patchPeer(openedPeer, peer)
     }
     const conv = conversations.value.find((c) => c?.id === Number(conversationId)) as any
-    if (conv?.other && Number(conv.other?.id) === Number(peer.id)) {
-      conv.other.last_seen_at = peer.last_seen_at ?? null
+    if (conv?.other && Number(conv.other?.id) === peerId) {
+      patchPeer(conv.other, peer)
+      const cacheUid = getUid()
+      if (cacheUid > 0) {
+        void patchCachedConversation(cacheUid, Number(conversationId), { other: conv.other })
+      }
     }
   }
+
+  /**
+   * Точечно вливает свежие поля собеседника в закешированный объект.
+   *
+   * Пустые значения сервера не затирают локальные: поллер шлёт только
+   * известные ему поля, avatar_url может отсутствовать в старых тиках.
+   *
+   * @param target объект other в памяти
+   * @param peer свежий срез с сервера
+   */
+  function patchPeer(target: any, peer: any): void {
+    if (!target || !peer) return
+    const nextName = String(peer?.name ?? '').trim()
+    if (nextName !== '') {
+      target.name = nextName
+    }
+    if (peer?.last_seen_at !== undefined) {
+      target.last_seen_at = peer.last_seen_at ?? null
+    }
+    if (typeof peer?.avatar_url === 'string' && peer.avatar_url !== '') {
+      target.avatar_url = peer.avatar_url
+    }
+    if (peer?.is_match !== undefined) {
+      target.is_match = !!peer.is_match
+    }
+    if (peer?.dating_goal !== undefined) {
+      target.dating_goal = peer.dating_goal ?? null
+    }
+  }
+  /**
+   * Мэтч из realtime: мгновенно поднимает флаг is_match у собеседника,
+   * чтобы стиль чата (ULove-шапка, таб «Мэтчи», пилюля «Мэтч») обновился
+   * без перезагрузки. Затем тихо догружает свежий список с сервера —
+   * там же подтянется новый диалог, если его ещё не было в сайдбаре.
+   *
+   * Пейлоад одинаковый у сокета и поллера: match_id, conversation_id,
+   * user_a/user_b {id, name, avatar_url}.
+   *
+   * @param payload событие user:match.created
+   */
+  function handleMatchCreated(payload: any): void {
+    const convId = Number(payload?.conversation_id ?? 0)
+
+    const userA = payload?.user_a ?? null
+
+    const userB = payload?.user_b ?? null
+
+    const me = Number(getUid() ?? 0)
+
+    const otherId = userA && userB
+      ? (Number(userA.id) === me ? Number(userB.id) : Number(userA.id))
+      : Number(payload?.user?.id ?? 0)
+
+    if (otherId > 0) {
+      const list = conversations.value as any[]
+
+      const cacheUid = Number(getUid() ?? 0)
+
+      for (const conv of list) {
+        const peer = conv?.other as any
+
+        if (peer && Number(peer.id) === otherId) {
+          peer.is_match = true
+
+          if (cacheUid > 0 && Number(conv?.id) > 0) {
+            void patchCachedConversation(cacheUid, Number(conv.id), { other: peer })
+          }
+        }
+      }
+    }
+
+    if (convId > 0) {
+      const byConv = conversations.value.find((c) => Number(c?.id) === convId) as any
+
+      if (byConv?.other) {
+        byConv.other.is_match = true
+
+        const cacheUid = Number(getUid() ?? 0)
+
+        if (cacheUid > 0) {
+          void patchCachedConversation(cacheUid, convId, { other: byConv.other })
+        }
+      }
+    }
+
+    const opened = activeConv.value as any
+
+    const openedPeer = opened?.other as any
+
+    const openedMatchesOther = openedPeer && otherId > 0 && Number(openedPeer.id) === otherId
+
+    const openedMatchesConv = opened && convId > 0 && Number(opened.id) === convId
+
+    if (openedPeer && (openedMatchesOther || openedMatchesConv)) {
+      openedPeer.is_match = true
+    }
+
+    void loadConversations().catch(() => {})
+  }
+
   function subscribeGlobal() {
     if (globalSubscribed) return
     try {
@@ -1050,10 +1244,12 @@ export function useChat() {
       globalUid = uid
       trackedUserChannels.add(Number(uid))
       ensureUserChannel()
+      ensureChatCacheSync()
       busUnsubs.push(busOn('user:message.sent', (e: any) => handleIncoming(e.message as Message)))
       busUnsubs.push(busOn('user:message.updated', (e: any) => handleUpdated(e.message as Message)))
       busUnsubs.push(busOn('user:message.deleted', (e: any) => handleDeleted(e)))
       busUnsubs.push(busOn('user:friendship.updated', () => loadConversations()))
+      busUnsubs.push(busOn('user:match.created', (e: any) => handleMatchCreated(e)))
       busUnsubs.push(busOn('user:message.delivered', (e: any) => handleDelivered(e)))
       busUnsubs.push(busOn('user:message.read', (e: any) => handleRead(e)))
       busUnsubs.push(busOn('user:notification.created', (e: any) => handleSosClosed(e)))
@@ -1099,6 +1295,7 @@ export function useChat() {
   function applyReceipts(list: any[]): void {
     if (!Array.isArray(list) || !list.length) return
     const cacheUid = getUid()
+    const touchedConvIds = new Set<number>()
     for (const r of list) {
       if (r?.id == null) continue
       const idx = messages.value.findIndex((m: any) => m?.id === Number(r.id))
@@ -1130,9 +1327,11 @@ export function useChat() {
             (c.last_message as any).read_at = r.read_at
             ;(c.last_message as any).delivered_at = (c.last_message as any).delivered_at || r.read_at
           }
+          touchedConvIds.add(Number(c?.id))
         }
       })
     }
+    persistReceiptPreviews(touchedConvIds)
   }
 
   /**
@@ -1201,6 +1400,12 @@ export function useChat() {
     const s = e?.notification?.data?.sos_chat_closed
     if (!s?.conversation_id) return
     const cid = Number(s.conversation_id)
+    const cacheUid = getUid()
+    if (cacheUid > 0 && cid > 0) {
+      // Иначе кеш воскресит удалённый диалог при следующем монтировании:
+      // дельта-синк его уже не отдаёт (нет строки участника).
+      void removeCachedConversation(cacheUid, cid)
+    }
     if (!cid || !conversations.value.some((c) => Number(c?.id) === cid)) {
       if (Number(selectedId.value) === cid) {
         selectedId.value = null

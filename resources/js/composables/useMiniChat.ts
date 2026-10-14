@@ -3,6 +3,16 @@ import { router, usePage } from '@inertiajs/vue3'
 import { chatApi, CHAT_HISTORY_PAGE_SIZE } from '@/services/chat.api'
 import { busOn, busEmit } from '@/services/realtime-bus'
 import { ensureUserChannel } from '@/composables/useUserChannel'
+import {
+  ensureChatCacheSync,
+  loadCachedMessages,
+  markCachedConversationRead,
+  patchCachedConversation,
+  saveConversations,
+  saveMessages,
+  upsertCachedMessage,
+} from '@/composables/useChatCache'
+import { pokeRealtime } from '@/composables/useRealtimePoller'
 import { captureAuthUid, currentAuthUid } from '@/composables/useAuthUid'
 import { useBadgeStore } from '@/stores/badges'
 import { useRewardToast } from '@/composables/useRewardToast'
@@ -131,6 +141,12 @@ async function reloadConversations(): Promise<void> {
 async function markReadQuiet(convId: number): Promise<void> {
   const row = conversations.value.find((c) => c.id === convId)
   if (row) row.unread_count = 0
+  const uid = getUid()
+  if (uid > 0) {
+    // Страница /chat может быть не смонтирована — её applyDialogRead тогда
+    // не отработает, и IDB воскресит бейдж при следующем открытии.
+    void markCachedConversationRead(uid, Number(convId))
+  }
   try {
     busEmit('chat:dialog-read', Number(convId))
   } catch { /* свой список уже погашен выше */ }
@@ -202,6 +218,7 @@ function onMessage(e: unknown): void {
 function subscribe(): void {
   try {
     ensureUserChannel()
+    ensureChatCacheSync()
     if (busBound) return
     busBound = true
     busOn('user:message.sent', onMessage)
@@ -212,7 +229,119 @@ function subscribe(): void {
     busOn('user:message.read', onRead)
     busOn('chat:receipts', onReceipts)
     busOn('chat:dialog-read', onDialogRead)
+    busOn('user:match.created', onMatch)
+    busOn('user:friendship.updated', () => void reloadConversations())
+    busOn('user:conversation.removed', onConversationsRemoved)
+    busOn('chat:previews', onPreviews)
+    busOn('chat:open-ids', onOpenIds)
   } catch { /* шина недоступна — мини-чат работает вручную */ }
+}
+
+/**
+ * Мэтч из realtime: мгновенно поднимает is_match у собеседника в доке,
+ * чтобы стиль (пилюля «Мэтч», ULove-вид) обновился без перезагрузки.
+ * Страница /chat может быть не смонтирована — патчим и её IDB-кеш.
+ *
+ * @param e событие user:match.created
+ */
+function onMatch(e: unknown): void {
+  const payload = e as { conversation_id?: number; user_a?: { id?: number } | null; user_b?: { id?: number } | null; user?: { id?: number } | null } | null
+  const convId = Number(payload?.conversation_id ?? 0)
+  const userA = payload?.user_a ?? null
+  const userB = payload?.user_b ?? null
+  const me = getUid()
+  const otherId = userA && userB
+    ? (Number(userA.id) === me ? Number(userB.id) : Number(userA.id))
+    : Number(payload?.user?.id ?? 0)
+  const uid = getUid()
+  for (const conv of conversations.value) {
+    const peer = (conv as { other?: { id?: number; is_match?: boolean } | null }).other
+    if (!peer) continue
+    const hitsOther = otherId > 0 && Number(peer.id) === otherId
+    const hitsConv = convId > 0 && Number(conv.id) === convId
+    if (!hitsOther && !hitsConv) continue
+    peer.is_match = true
+    if (uid > 0 && Number(conv.id) > 0) {
+      void patchCachedConversation(uid, Number(conv.id), { other: peer })
+    }
+  }
+}
+
+/**
+ * Диалоги убраны у себя (другое устройство/вкладка, очистка всего):
+ * выкидываем строки дока и закрываем их окна без запросов.
+ *
+ * @param e событие user:conversation.removed {ids}
+ */
+function onConversationsRemoved(e: unknown): void {
+  const raw = (e as { ids?: unknown })?.ids
+  if (!Array.isArray(raw) || raw.length === 0) return
+  const gone = new Set(raw.map((id) => Number(id)).filter((id) => id > 0))
+  if (gone.size === 0) return
+  conversations.value = conversations.value.filter((c) => !gone.has(Number(c?.id)))
+  windows.value = windows.value.filter((w) => !gone.has(Number(w?.convId)))
+}
+
+/**
+ * Лёгкие превью из поллинга: свежее последнее + честный unread_count.
+ * Открытое окно не воскрешаем бейджем — там уже прочитано.
+ *
+ * @param previews превью изменившихся диалогов
+ */
+function onPreviews(previews: unknown): void {
+  if (!Array.isArray(previews) || previews.length === 0) return
+  let unknown = false
+  for (const preview of previews as Array<{ id?: number; last_message?: Message | null; last_message_at?: string; unread_count?: number }>) {
+    const id = Number(preview?.id ?? 0)
+    if (!(id > 0)) continue
+    const row = conversations.value.find((c) => Number(c?.id) === id)
+    if (!row) {
+      unknown = true
+      continue
+    }
+    if (preview?.last_message) {
+      row.last_message = preview.last_message
+      row.last_message_at = preview.last_message_at ?? preview.last_message.created_at
+    }
+    if (preview?.unread_count != null) {
+      const winOpen = findWindow(id) !== undefined
+      row.unread_count = winOpen && !isTabHidden() ? 0 : Number(preview.unread_count)
+    }
+  }
+  conversations.value = [...conversations.value].sort((a, b) => {
+    const timeA = new Date(a?.last_message_at || 0).getTime() || 0
+    const timeB = new Date(b?.last_message_at || 0).getTime() || 0
+    return timeB - timeA
+  })
+  if (unknown) void reloadConversations()
+}
+
+/**
+ * Хвост id открытого диалога: вычищает жёстко удалённые из мини-окна.
+ * Старые (старше среза) и optimistic не трогаем.
+ *
+ * @param e событие chat:open-ids {conversationId, ids}
+ */
+function onOpenIds(e: unknown): void {
+  const payload = e as { conversationId?: number; ids?: unknown } | null
+  const conversationId = Number(payload?.conversationId ?? 0)
+  if (!(conversationId > 0) || !Array.isArray(payload?.ids) || (payload?.ids as unknown[]).length === 0) return
+  const win = findWindow(conversationId)
+  if (!win) return
+  const serverIds = new Set((payload?.ids as unknown[]).map((id) => Number(id)).filter((id) => id > 0))
+  let minServer = Number.POSITIVE_INFINITY
+  serverIds.forEach((id) => {
+    if (id < minServer) minServer = id
+  })
+  const before = win.messages.length
+  win.messages = win.messages.filter((m) => {
+    const id = Number(m?.id)
+    if (!(id > 0) || id < minServer || serverIds.has(id)) return true
+    return false
+  })
+  if (win.messages.length !== before) {
+    win.messages = [...win.messages]
+  }
 }
 
 /**
@@ -485,21 +614,51 @@ export function useMiniChat() {
       error: null,
     })
     windows.value = [...windows.value.slice(-(MAX_WINDOWS - 1)), win]
+    // Кеш-first: мгновенный рендер хвоста из IDB (общий со страницей /chat),
+    // сеть — тихой ревалидацией следом. Без кеша — как раньше, с лоадером.
+    const cacheUid = getUid()
+    let cacheHit = false
+    if (cacheUid > 0) {
+      try {
+        const row = conversations.value.find((c) => Number(c?.id) === Number(convId))
+        if (row) {
+          win.title = (row.other?.name || row.title || 'Чат') as string
+          win.avatar = avatarSrcFor(row.other)
+        }
+        const cached = await loadCachedMessages(cacheUid, convId, 100)
+        if (cached && cached.length > 0 && findWindow(convId) === win) {
+          win.messages = cached as Message[]
+          win.hasMore = cached.length >= 100
+          win.loading = false
+          cacheHit = true
+        }
+      } catch { /* промах кеша — идём в сеть с лоадером */ }
+    }
     try {
       const detail = await chatApi.getConversation(convId).catch(() => null)
+      if (findWindow(convId) !== win) return
       if (!detail) {
-        win.error = 'Не открылось — попробуй из раздела Чаты'
+        if (!cacheHit) {
+          win.error = 'Не открылось — попробуй из раздела Чаты'
+        }
         return
       }
       win.title = windowTitle(detail)
       win.avatar = avatarSrcFor(detail.other)
       const historyMessages = Array.isArray(detail.messages) ? detail.messages : []
-      win.messages = historyMessages
+      const serverIds = new Set(historyMessages.map((m) => Number(m?.id)))
+      const localNewer = win.messages.filter((m) => Number(m?.id) > 0 && !serverIds.has(Number(m?.id)))
+      win.messages = localNewer.length > 0
+        ? [...historyMessages, ...localNewer].sort((a, b) => Number(a?.id) - Number(b?.id))
+        : historyMessages
       const serverHasMore = (detail as { messages_has_more?: unknown }).messages_has_more
       if (typeof serverHasMore === 'boolean') {
         win.hasMore = serverHasMore
       } else {
         win.hasMore = historyMessages.length >= CHAT_HISTORY_PAGE_SIZE
+      }
+      if (cacheUid > 0 && win.messages.length > 0) {
+        void saveMessages(cacheUid, convId, win.messages)
       }
       await markReadQuiet(convId)
     } finally {
@@ -552,6 +711,19 @@ export function useMiniChat() {
       win.messages = [...win.messages, msg]
       win.draft = ''
       patchPreview(convId, msg, false)
+      const uid = getUid()
+      if (uid > 0) {
+        // Док делит IDB-кеш со страницей /chat: превью и сообщение должны
+        // быть там сразу, а не ждать дельту (страница может не быть открыта).
+        void upsertCachedMessage(uid, msg)
+        const row = conversations.value.find((c) => Number(c?.id) === Number(convId))
+        if (row) {
+          void saveConversations(uid, [row])
+        }
+      }
+      try {
+        pokeRealtime()
+      } catch { /* поллер подхватит следующим тиком */ }
       return true
     } catch {
       win.error = 'Не отправилось'

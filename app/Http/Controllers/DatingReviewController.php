@@ -119,6 +119,60 @@ class DatingReviewController extends Controller
     }
 
     /**
+     * Кто меня оценил: сводка, раскладка по звёздам и список авторов.
+     *
+     * Смотрят только себя: список чужих и так виден в index. Полные
+     * авторы — привилегия Premium (админы и модераторы проходят через
+     * isPremium): остальным отдаём locked + обезличенную раскладку
+     * для красивого апсейла в модалке.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function raters(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:20'],
+        ]);
+
+        $me = $request->user();
+        $bundle = $this->reviews->ratersFor($me, (int) ($data['per_page'] ?? 10));
+
+        /** @var \Illuminate\Contracts\Pagination\LengthAwarePaginator $page */
+        $page = $bundle['page'];
+
+        if (! $me->isPremium()) {
+            return response()->json([
+                'locked' => true,
+                'summary' => $bundle['summary'],
+                'distribution' => $bundle['distribution'],
+                'raters' => [],
+                'meta' => [
+                    'current_page' => $page->currentPage(),
+                    'last_page' => $page->lastPage(),
+                    'has_more' => $page->hasMorePages(),
+                    'total' => $page->total(),
+                ],
+            ]);
+        }
+
+        $items = collect($page->items())->map(fn ($row) => $this->reviews->serialize($row))->all();
+
+        return response()->json([
+            'locked' => false,
+            'summary' => $bundle['summary'],
+            'distribution' => $bundle['distribution'],
+            'raters' => $items,
+            'meta' => [
+                'current_page' => $page->currentPage(),
+                'last_page' => $page->lastPage(),
+                'has_more' => $page->hasMorePages(),
+                'total' => $page->total(),
+            ],
+        ]);
+    }
+
+    /**
      * Удалить свой отзыв. Только админам: иначе заморозку звёзд
      * обходили бы удалением и новой оценкой.
      *

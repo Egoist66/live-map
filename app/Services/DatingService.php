@@ -1161,6 +1161,13 @@ class DatingService
 
             if (! $conversation) {
                 $conversation = $this->matchConversationTx($me, $other);
+            } elseif ($isNewMatch) {
+                // Диалог уже был (общались до мэтча): трогаем updated_at,
+                // чтобы дельта-синк списка (/api/conversations/sync) и превью
+                // поллинга подхватили строку — иначе is_match в сайдбаре
+                // протухает до полного рефетча. Порядок не меняем:
+                // last_message_at не трогаем.
+                $conversation->touch();
             }
 
             return [

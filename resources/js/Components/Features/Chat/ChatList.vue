@@ -125,7 +125,7 @@ const { userProfileUrl } = useProfileUrl()
     </div>
     <div v-if="tab === 'friends'" class="divide-y dark:divide-zinc-800">
       <div v-if="!friends.length" class="p-6 text-center text-sm text-stone-500">Нет друзей</div>
-      <div v-for="f in friends" :key="f.id" class="flex items-center justify-between p-3.5 lg:p-3 select-none active:bg-stone-50 group">
+      <div v-for="f in friends" :key="f.id" class="flex items-center justify-between p-3.5 lg:p-3 select-none group">
         <Link :href="userProfileUrl(f.other)" class="flex items-center gap-3 hover:opacity-80 min-w-0">
           <span class="relative shrink-0"><Avatar :image="avatarSrcFor(f.other)" shape="circle" class="[&_img]:object-cover" :pt="{ image: { class: 'object-cover' } }" /><OnlineDot :online="isOnline(f.other?.id, (f.other as any)?.last_seen_at)" /></span>
           <span class="text-[15px] lg:text-sm font-medium text-stone-900 dark:text-white truncate hover:underline">{{ f.other?.name }}</span>

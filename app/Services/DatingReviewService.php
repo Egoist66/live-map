@@ -282,6 +282,42 @@ class DatingReviewService
     }
 
     /**
+     * Кто оценил владельца: сводка, раскладка по звёздам, постраничный список.
+     *
+     * Вызывается только для себя (target = me): чужие списки смотрятся
+     * обычным index. Автор подтягивается мини-профилем для ссылки.
+     *
+     * @param User $target владелец рейтинга (всегда сам смотрящий)
+     * @param int $perPage размер страницы
+     * @return array{summary:array,distribution:array<int,int>,page:LengthAwarePaginator}
+     */
+    public function ratersFor(User $target, int $perPage = 10): array
+    {
+        $rows = DatingReview::where('target_id', $target->id)
+            ->selectRaw('rating, COUNT(*) as count')
+            ->groupBy('rating')
+            ->pluck('count', 'rating')
+            ->all();
+
+        $distribution = [];
+
+        for ($stars = 1; $stars <= 5; $stars++) {
+            $distribution[$stars] = (int) ($rows[$stars] ?? 0);
+        }
+
+        $page = DatingReview::where('target_id', $target->id)
+            ->with(['author:id,name,avatar_path,profile_slug'])
+            ->latest('id')
+            ->paginate($perPage);
+
+        return [
+            'summary' => $this->summary($target, $target),
+            'distribution' => $distribution,
+            'page' => $page,
+        ];
+    }
+
+    /**
      * Сериализация одного отзыва для фронта.
      *
      * @param DatingReview $review отзыв с подгруженным автором

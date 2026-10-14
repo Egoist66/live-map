@@ -59,6 +59,17 @@ export interface DatingRatingSummary {
   hidden: boolean
 }
 
+/** Кто меня оценил: сводка, раскладка по звёздам, список авторов. */
+export interface MyRatersResponse {
+  /** true — нет Premium: список пуст, имена скрыты */
+  locked: boolean
+  summary: DatingRatingSummary
+  /** число отзывов по звёздам 1–5 (обезличено, видно всем) */
+  distribution: Record<number, number>
+  raters: DatingReviewItem[]
+  meta: { current_page: number; last_page: number; has_more: boolean; total: number }
+}
+
 /** Фильтры ленты знакомств. */
 export interface SwipeFilters {
   goal: string | null
@@ -229,5 +240,14 @@ export const datingApi = {
   async deleteReview(userId: number) {
     const { data } = await api.delete('/api/dating/reviews', { params: { user_id: userId } })
     return data as { ok: boolean; deleted: boolean }
+  },
+  /**
+   * Кто меня оценил: сводка, раскладка по звёздам и авторы отзывов.
+   * Без Premium — locked:true и пустой список (имена скрыты).
+   * @param page страница списка
+   */
+  async myRaters(page = 1) {
+    const { data } = await api.get('/api/dating/my-raters', { params: { page } })
+    return data as MyRatersResponse
   },
 }

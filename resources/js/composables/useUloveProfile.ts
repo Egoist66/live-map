@@ -162,6 +162,42 @@ export function useUloveProfile(profileUser: () => any) {
       if (res?.matched) {
         matched.value = true
         matchedConversationId.value = Number(res.conversation_id ?? 0) || null
+
+        const matchConvId = Number(res.conversation_id ?? 0) || 0
+
+        try {
+          const { busEmit } = await import('@/services/realtime-bus')
+
+          busEmit('user:match.created' as any, {
+            match_id: Number((res as any)?.match_id ?? 0) || 0,
+            conversation_id: matchConvId,
+            user: { id: Number(userId) },
+          })
+        } catch {
+        }
+
+        if (matchConvId > 0) {
+          try {
+            const { loadCachedConversation, patchCachedConversation } = await import('@/composables/useChatCache')
+
+            const rawUid = (window as any)?.userId ?? 0
+
+            const cacheUid = Number(rawUid ?? 0)
+
+            if (cacheUid > 0) {
+              const cached = await loadCachedConversation(cacheUid, matchConvId)
+
+              const cachedOther = (cached as any)?.other ?? null
+
+              if (cachedOther) {
+                cachedOther.is_match = true
+
+                await patchCachedConversation(cacheUid, matchConvId, { other: cachedOther })
+              }
+            }
+          } catch {
+          }
+        }
       }
     } catch (err: any) {
       likeError.value = err?.response?.data?.message ?? 'Не получилось поставить лайк'

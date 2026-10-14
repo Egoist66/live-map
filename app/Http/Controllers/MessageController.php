@@ -314,6 +314,32 @@ class MessageController extends Controller
         return response()->json($message->toArrayPayload());
     }
 
+    /**
+     * Пересчитать превью диалога после удаления сообщений.
+     *
+     * last_message_at ставим на время нового последнего сообщения (или null,
+     * когда диалог пуст): дельта-синк списка и превью поллинга фильтруют
+     * по last_message_at/updated_at и только так замечают удаление.
+     * touch() отдельно двигает updated_at для выборки по окну.
+     *
+     * @param int $conversationId диалог
+     * @return void
+     */
+    private function refreshConversationPreview(int $conversationId): void
+    {
+        try {
+            $last = Message::where('conversation_id', $conversationId)->latest('id')->first();
+
+            Conversation::whereKey($conversationId)->update([
+                'last_message_at' => $last?->created_at,
+            ]);
+
+            Conversation::whereKey($conversationId)->first()?->touch();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('chat preview refresh failed: '.$e->getMessage());
+        }
+    }
+
     public function destroy(Request $request, Message $message)
     {
         abort_unless($message->sender_id===$request->user()->id || $request->user()->isAdmin(),403);
@@ -322,6 +348,10 @@ class MessageController extends Controller
         $path = $message->attachment_path;
         $message->delete();
         ChatAttachment::delete($path);
+        // Пересчитываем превью диалога: иначе дельта-синк списка и превью
+        // поллинга (фильтр по last_message_at) не заметят удаление и
+        // сайдбар/кеш продолжат показывать удалённое сообщение.
+        $this->refreshConversationPreview($cid);
         try { broadcast(new \App\Events\MessageDeleted($mid, $cid))->toOthers(); } catch (\Throwable $e) { \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
         return response()->json(['ok'=>true]);
     }
@@ -347,6 +377,7 @@ class MessageController extends Controller
 
         $messages = Message::whereIn('id', $data['ids'])->get();
         $deleted = [];
+        $touchedConvs = [];
 
         foreach ($messages as $message) {
             $own = (int) $message->sender_id === (int) $me->id;
@@ -361,12 +392,17 @@ class MessageController extends Controller
             $message->delete();
             ChatAttachment::delete($path);
             $deleted[] = $mid;
+            $touchedConvs[$cid] = true;
 
             try {
                 broadcast(new \App\Events\MessageDeleted($mid, $cid))->toOthers();
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage());
             }
+        }
+
+        foreach (array_keys($touchedConvs) as $cid) {
+            $this->refreshConversationPreview((int) $cid);
         }
 
         return response()->json(['ok' => true, 'deleted' => $deleted]);

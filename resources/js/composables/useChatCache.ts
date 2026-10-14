@@ -1,4 +1,8 @@
 import { appDb } from '@/db/app.db'
+import { busOn } from '@/services/realtime-bus'
+import { currentAuthUid } from '@/composables/useAuthUid'
+
+let cacheSyncBound = false
 
 /**
  * Offline-кеш чата в IndexedDB (stale-while-revalidate).
@@ -549,5 +553,376 @@ export async function clearChatCache(uid: number): Promise<void> {
   } catch {}
   try {
     await appDb.syncMeta.where('uid').equals(uid).delete()
+  } catch {}
+}
+
+/**
+ * Центральная инвалидация IDB-кеша от realtime-шины.
+ *
+ * Подписки живут на уровне модуля (один раз на вкладку) и работают даже
+ * когда /chat и док не смонтированы: правка/удаление/прочтение/мэтч,
+ * прилетевшие в фоне, сразу правят кеш — следующее открытие рисует
+ * свежее, а не воскрешает стейл. Запись идемпотентна, дубли
+ * сокет+поллинг безопасны. unread_count не трогаем: им владеет
+ * дельта-синк списка (свежий withCount с сервера).
+ *
+ * @example
+ * ensureChatCacheSync()
+ */
+export function ensureChatCacheSync(): void {
+  if (cacheSyncBound) {
+    return
+  }
+
+  cacheSyncBound = true
+
+  try {
+    busOn('chat:message', (msg: any) => void onCacheMessage(msg))
+    busOn('user:message.updated', (e: any) => void onCacheMessage(e?.message))
+    busOn('user:message.deleted', (e: any) => void onCacheDeleted(e))
+    busOn('chat:dialog-read', (convId: number) => {
+      const uid = currentAuthUid()
+
+      if (uid > 0 && Number(convId) > 0) {
+        void markCachedConversationRead(uid, Number(convId))
+      }
+    })
+    busOn('user:conversation.removed', (e: any) => {
+      const uid = currentAuthUid()
+
+      if (!(uid > 0)) {
+        return
+      }
+
+      const raw: unknown = Array.isArray(e?.ids) ? e.ids : []
+
+      for (const id of raw as unknown[]) {
+        const convId = Number(id)
+
+        if (convId > 0) {
+          void removeCachedConversation(uid, convId)
+        }
+      }
+    })
+    busOn('user:match.created', (e: any) => void onCacheMatch(e))
+    busOn('chat:receipts', (list: any) => void onCacheReceipts(list))
+    busOn('user:message.delivered', (e: any) => {
+      const ids = Array.isArray(e?.message_ids) ? e.message_ids : []
+      const at = e?.delivered_at ?? null
+
+      if (ids.length === 0 || !at) {
+        return
+      }
+
+      void onCacheReceipts(ids.map((id: unknown) => ({ id: Number(id), delivered_at: at })))
+    })
+    busOn('user:message.read', (e: any) => {
+      const ids = Array.isArray(e?.message_ids) ? e.message_ids : []
+      const at = e?.read_at ?? null
+
+      if (ids.length === 0 || !at) {
+        return
+      }
+
+      void onCacheReceipts(ids.map((id: unknown) => ({ id: Number(id), read_at: at })))
+    })
+  } catch {
+    cacheSyncBound = false
+  }
+}
+
+/**
+ * Вшивает сообщение в кеш: upsert тела + свежее превью диалога.
+ *
+ * @param msg сообщение (toArrayPayload)
+ */
+async function onCacheMessage(msg: any): Promise<void> {
+  const uid = currentAuthUid()
+
+  if (!(uid > 0)) {
+    return
+  }
+
+  const id = Number(msg?.id ?? 0)
+  const convId = Number(msg?.conversation_id ?? 0)
+
+  if (!(id > 0) || !(convId > 0)) {
+    return
+  }
+
+  await upsertCachedMessage(uid, msg)
+
+  try {
+    const row = await appDb.chatConversations.get(conversationKey(uid, convId))
+
+    if (!row) {
+      return
+    }
+
+    let current: any = null
+
+    try {
+      current = JSON.parse(row.value)
+    } catch {
+      return
+    }
+
+    const prevLastId = Number(current?.last_message?.id ?? 0)
+
+    if (prevLastId > id) {
+      return
+    }
+
+    current.last_message = msg
+    current.last_message_at = msg?.created_at ?? current.last_message_at
+
+    await appDb.chatConversations.put({
+      key: row.key,
+      uid,
+      convId,
+      updatedAt: Date.now(),
+      value: JSON.stringify(current),
+    })
+  } catch {}
+}
+
+/**
+ * Удаление из кеша: вычищает тело и откатывает превью на предыдущее.
+ *
+ * @param e событие user:message.deleted {message_id|id, conversation_id?}
+ */
+async function onCacheDeleted(e: any): Promise<void> {
+  const uid = currentAuthUid()
+
+  if (!(uid > 0)) {
+    return
+  }
+
+  const mid = Number(e?.message_id ?? e?.id ?? 0)
+
+  if (!(mid > 0)) {
+    return
+  }
+
+  await deleteCachedMessage(uid, mid)
+
+  try {
+    const rows = await appDb.chatConversations.where('uid').equals(uid).toArray()
+
+    for (const row of rows) {
+      let current: any = null
+
+      try {
+        current = JSON.parse(row.value)
+      } catch {
+        continue
+      }
+
+      if (Number(current?.last_message?.id ?? 0) !== mid) {
+        continue
+      }
+
+      const tail = await appDb.chatMessages
+        .where('convId')
+        .equals(Number(row.convId))
+        .filter((r) => r.uid === uid && r.id !== mid)
+        .sortBy('id')
+
+      const prevRaw = tail.length > 0 ? tail[tail.length - 1]?.value : null
+      let prev: any = null
+
+      if (typeof prevRaw === 'string') {
+        try {
+          prev = JSON.parse(prevRaw)
+        } catch {
+          prev = null
+        }
+      }
+
+      current.last_message = prev
+      current.last_message_at = prev?.created_at ?? current.last_message_at
+
+      await appDb.chatConversations.put({
+        key: row.key,
+        uid,
+        convId: Number(row.convId),
+        updatedAt: Date.now(),
+        value: JSON.stringify(current),
+      })
+    }
+  } catch {}
+}
+
+/**
+ * Квитанции доставки/прочтения в кеш: патчит тела и копии last_message.
+ *
+ * Без этого IDB хранит старые тики и следующее монтирование рисует одну
+ * птичку, хотя сервер уже отдал read_at (лечилось только ручным рефрешем).
+ *
+ * @param list квитанции {id, delivered_at?, read_at?}
+ */
+async function onCacheReceipts(list: any): Promise<void> {
+  const uid = currentAuthUid()
+
+  if (!(uid > 0) || !Array.isArray(list) || list.length === 0) {
+    return
+  }
+
+  const touched = new Map<number, { delivered_at?: string; read_at?: string }>()
+
+  for (const r of list as Array<{ id?: number; delivered_at?: string; read_at?: string }>) {
+    const id = Number(r?.id ?? 0)
+
+    if (!(id > 0)) {
+      continue
+    }
+
+    const patch: Record<string, unknown> = {}
+
+    if (r?.delivered_at) {
+      patch.delivered_at = r.delivered_at
+      patch.status = 'delivered'
+    }
+
+    if (r?.read_at) {
+      patch.read_at = r.read_at
+
+      if (!patch.delivered_at) {
+        patch.delivered_at = r.read_at
+      }
+
+      patch.status = 'read'
+    }
+
+    if (Object.keys(patch).length === 0) {
+      continue
+    }
+
+    await patchCachedMessage(uid, id, patch)
+    touched.set(id, { delivered_at: r?.delivered_at, read_at: r?.read_at })
+  }
+
+  if (touched.size === 0) {
+    return
+  }
+
+  try {
+    const rows = await appDb.chatConversations.where('uid').equals(uid).toArray()
+
+    for (const row of rows) {
+      let current: any = null
+
+      try {
+        current = JSON.parse(row.value)
+      } catch {
+        continue
+      }
+
+      const lastId = Number(current?.last_message?.id ?? 0)
+      const receipt = touched.get(lastId)
+
+      if (!receipt) {
+        continue
+      }
+
+      if (receipt.delivered_at) {
+        current.last_message.delivered_at = receipt.delivered_at
+        current.last_message.status = 'delivered'
+      }
+
+      if (receipt.read_at) {
+        current.last_message.read_at = receipt.read_at
+        current.last_message.delivered_at = current.last_message.delivered_at || receipt.read_at
+        current.last_message.status = 'read'
+      }
+
+      await appDb.chatConversations.put({
+        key: row.key,
+        uid,
+        convId: Number(row.convId),
+        updatedAt: Date.now(),
+        value: JSON.stringify(current),
+      })
+    }
+  } catch {}
+}
+
+/**
+ * Мэтч из realtime: поднимает is_match в закешированных строках.
+ *
+ * @param e событие user:match.created
+ */
+async function onCacheMatch(e: any): Promise<void> {
+  const uid = currentAuthUid()
+
+  if (!(uid > 0)) {
+    return
+  }
+
+  const convId = Number(e?.conversation_id ?? 0)
+  const userA = e?.user_a ?? null
+  const userB = e?.user_b ?? null
+  const otherId = userA && userB
+    ? (Number(userA.id) === uid ? Number(userB.id) : Number(userA.id))
+    : Number(e?.user?.id ?? 0)
+
+  if (!(otherId > 0) && !(convId > 0)) {
+    return
+  }
+
+  try {
+    if (convId > 0) {
+      const row = await appDb.chatConversations.get(conversationKey(uid, convId))
+
+      if (row) {
+        try {
+          const current = JSON.parse(row.value)
+
+          if (current?.other) {
+            current.other.is_match = true
+
+            await appDb.chatConversations.put({
+              key: row.key,
+              uid,
+              convId,
+              updatedAt: Date.now(),
+              value: JSON.stringify(current),
+            })
+          }
+        } catch {}
+      }
+    }
+
+    if (otherId > 0) {
+      const rows = await appDb.chatConversations.where('uid').equals(uid).toArray()
+
+      for (const row of rows) {
+        if (Number(row.convId) === convId) {
+          continue
+        }
+
+        let current: any = null
+
+        try {
+          current = JSON.parse(row.value)
+        } catch {
+          continue
+        }
+
+        if (!current?.other || Number(current.other?.id) !== otherId) {
+          continue
+        }
+
+        current.other.is_match = true
+
+        await appDb.chatConversations.put({
+          key: row.key,
+          uid,
+          convId: Number(row.convId),
+          updatedAt: Date.now(),
+          value: JSON.stringify(current),
+        })
+      }
+    }
   } catch {}
 }
