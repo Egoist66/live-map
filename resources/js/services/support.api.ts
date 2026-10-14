@@ -16,8 +16,14 @@ export interface SupportTicket {
   replied_at: string | null
   created_at?: string
   updated_at?: string
-  user?: { id: number; name: string; avatar_path?: string | null; profile_slug?: string | null } | null
+  user?: { id: number; name: string; avatar_path?: string | null; profile_slug?: string | null; email_verified_at?: string | null } | null
   replier?: { id: number; name: string } | null
+  /** Бэк отдаёт после reply/reject: ушло ли письмо (false = только inbox). */
+  mailed?: boolean
+  /** Подтверждена ли почта автора на момент ответа. */
+  email_verified?: boolean
+  /** true когда ответ ушёл только в личку приложения. */
+  inbox_only?: boolean
 }
 
 /**

@@ -11,6 +11,17 @@ use Illuminate\Support\Facades\Mail;
 
 class ReportController extends Controller
 {
+    /**
+     * Создать жалобу на пин, комментарий или пользователя.
+     *
+     * Почта автора должна быть подтверждена, иначе ответ модерации
+     * придёт только в личку приложения (inbox): жалобу всё равно
+     * принимаем, но в ответе отдаём `email_verified: false`,
+     * чтобы фронт честно предупредил человека.
+     *
+     * @param Request $request цель + причина + описание
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -58,7 +69,12 @@ class ReportController extends Controller
             }
         }
         static::notifyAdmins($report);
-        return response()->json($report, 201);
+        $emailVerified = $request->user()->hasVerifiedEmail();
+
+        return response()->json(array_merge($report->toArray(), [
+            'email_verified' => $emailVerified,
+            'inbox_only' => ! $emailVerified,
+        ]), 201);
     }
 
     /**

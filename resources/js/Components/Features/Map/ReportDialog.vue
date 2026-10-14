@@ -19,8 +19,8 @@ const { selectPt } = useDropdownMenuStyle()
     :style="{ width: '420px', maxWidth: '94vw' }"
     :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none' } }"
   >
-    <div class="space-y-3">
-      <p v-if="dialog.targetTitle.value" class="text-sm text-stone-600 dark:text-zinc-300 truncate">
+    <div class="min-w-0 space-y-3">
+      <p v-if="dialog.targetTitle.value" class="min-w-0 truncate break-words text-sm text-stone-600 dark:text-zinc-300">
         «{{ dialog.targetTitle.value }}»
       </p>
       <div>
@@ -30,7 +30,7 @@ const { selectPt } = useDropdownMenuStyle()
           :options="[...REPORT_REASONS]"
           option-label="l"
           option-value="v"
-          class="w-full mt-1"
+          class="mt-1 w-full"
           :pt="selectPt"
         />
       </div>
@@ -42,10 +42,13 @@ const { selectPt } = useDropdownMenuStyle()
           maxlength="1000"
           auto-resize
           placeholder="Опиши нарушение подробно — это ускорит проверку…"
-          class="w-full mt-1 !rounded-2xl"
+          class="mt-1 w-full !rounded-2xl"
         />
-        <div class="text-[11px] text-stone-400 text-right mt-0.5">{{ dialog.description.value.length }}/1000</div>
+        <div class="mt-0.5 text-right text-[11px] tabular-nums text-stone-400">{{ dialog.description.value.length }}/1000</div>
       </div>
+      <Message v-if="dialog.emailVerified && dialog.emailVerified.value === false" severity="warn" :closable="false" class="!rounded-2xl !text-xs">
+        Почта не подтверждена — итог проверки придёт только в приложение (колокольчик 🔔). Подтверди почту в профиле, чтобы получать письма.
+      </Message>
       <Message severity="info" :closable="false" class="!rounded-2xl !text-xs">
         {{ dialog.targetType.value === 'user' ? 'Жалоба уйдёт модераторам и снизит репутацию человека.' : 'Жалоба уйдёт модераторам. После 3 жалоб пин автоматически скрывается до проверки.' }}
       </Message>

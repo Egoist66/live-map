@@ -25,6 +25,11 @@ export function useSupportEmail(): string {
  * админа/модераторов и дублирует inbox-уведомлением. Никаких
  * mailto-ссылок: всё уходит прямо из интерфейса.
  *
+ * Почта автора должна быть подтверждена: без подтверждения ответ
+ * поддержки придёт только в личку приложения (колокольчик), а не
+ * письмом. Флаг `emailVerified` читаем из shared-пропсов Inertia,
+ * `inboxOnly` выставляет бэк в ответе на отправку.
+ *
  * @returns поля формы, статусы и методы отправки
  *
  * @example
@@ -34,11 +39,18 @@ export function useSupportEmail(): string {
  * ```
  */
 export function useSupportForm() {
+  const page = usePage()
   const supportSubject = ref('')
   const supportBody = ref('')
   const sending = ref(false)
   const sent = ref(false)
   const sendError = ref<string | null>(null)
+  const inboxOnly = ref(false)
+
+  /**
+   * Подтверждена ли почта текущего пользователя.
+   */
+  const emailVerified = computed(() => !!((page.props.auth as any)?.user?.email_verified_at))
 
   /**
    * Отправить обращение в поддержку через бэкенд (SMTP админам).
@@ -49,6 +61,7 @@ export function useSupportForm() {
     if (sending.value) return false
     sendError.value = null
     sent.value = false
+    inboxOnly.value = false
 
     const subject = supportSubject.value.trim()
     const message = supportBody.value.trim()
@@ -66,10 +79,11 @@ export function useSupportForm() {
     sending.value = true
 
     try {
-      await api.post('/api/support', { subject, message })
+      const { data } = await api.post('/api/support', { subject, message })
       supportSubject.value = ''
       supportBody.value = ''
       sent.value = true
+      inboxOnly.value = !!(data as any)?.inbox_only || !emailVerified.value
       return true
     } catch (e: any) {
       const status = e?.response?.status
@@ -81,7 +95,7 @@ export function useSupportForm() {
       sending.value = false
     }
   }
-  return { supportSubject, supportBody, sending, sent, sendError, sendSupport }
+  return { supportSubject, supportBody, sending, sent, sendError, inboxOnly, emailVerified, sendSupport }
 }
 
 export function useSettingsBioPreview(user: any) {

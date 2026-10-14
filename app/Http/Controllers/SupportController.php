@@ -44,6 +44,14 @@ class SupportController extends Controller
         $name = (string) ($me->name ?? 'Пользователь');
         $email = (string) ($me->email ?? '');
 
+        if ($subject === '' || mb_strlen($subject) < 3) {
+            return response()->json(['message' => 'Укажи тему чуть подробнее (минимум 3 символа).'], 422);
+        }
+
+        if ($message === '' || mb_strlen($message) < 10) {
+            return response()->json(['message' => 'Опиши проблему чуть подробнее (минимум 10 символов).'], 422);
+        }
+
         $dupe = SupportTicket::where('user_id', $me->id)
             ->where('subject', $subject)
             ->where('message', $message)
@@ -65,7 +73,14 @@ class SupportController extends Controller
 
         static::notifyAdmins($ticket);
 
-        return response()->json(['ok' => true, 'ticket_id' => $ticket->id], 201);
+        $emailVerified = $me->hasVerifiedEmail();
+
+        return response()->json([
+            'ok' => true,
+            'ticket_id' => $ticket->id,
+            'email_verified' => $emailVerified,
+            'inbox_only' => ! $emailVerified,
+        ], 201);
     }
 
     /**
@@ -81,7 +96,7 @@ class SupportController extends Controller
         abort_unless($request->user()->canModerate(), 403);
 
         $status = (string) $request->query('status', SupportTicket::STATUS_NEW);
-        $query = SupportTicket::with(['user:id,name,avatar_path,profile_slug', 'replier:id,name'])->latest();
+        $query = SupportTicket::with(['user:id,name,avatar_path,profile_slug,email_verified_at', 'replier:id,name'])->latest();
 
         if (in_array($status, SupportTicket::STATUSES, true)) {
             $query->where('status', $status);
@@ -98,8 +113,12 @@ class SupportController extends Controller
     /**
      * Ответить на обращение: письмо пользователю + inbox + статус.
      *
-     * Письмо уходит строго на email из тикета, одно, без копий.
+     * Письмо уходит строго на email из тикета и только когда почта
+     * автора подтверждена (hasVerifiedEmail). Без подтверждения —
+     * только inbox в приложение (колокольчик + realtime + push),
+     * чтобы ответ не потерялся и не улетел на чужой/битый ящик.
      * Повторный ответ на закрытый тикет переоткрывает его как отвеченный.
+     * Пустой ответ (только пробелы) запрещён — 422.
      *
      * Доступен модераторам и админам.
      *
@@ -117,18 +136,32 @@ class SupportController extends Controller
 
         $answer = trim($data['message']);
 
-        try {
-            Mail::to($ticket->email)->send(new SupportReplyMail(
-                $ticket->id,
-                $ticket->subject,
-                $answer,
-                $ticket->name,
-                $ticket->message,
-            ));
-        } catch (\Throwable $e) {
-            Log::warning('support reply mail failed', ['ticket' => $ticket->id, 'error' => $e->getMessage()]);
+        if ($answer === '' || mb_strlen($answer) < 2) {
+            return response()->json(['message' => 'Ответ не может быть пустым (минимум 2 символа).'], 422);
+        }
 
-            return response()->json(['message' => 'Не получилось отправить письмо'], 502);
+        $author = $ticket->user()->first() ?? User::where('email', $ticket->email)->first();
+        $emailVerified = $author ? $author->hasVerifiedEmail() : true;
+        $mailed = false;
+
+        if ($emailVerified) {
+            try {
+                Mail::to($ticket->email)->send(new SupportReplyMail(
+                    $ticket->id,
+                    $ticket->subject,
+                    $answer,
+                    $ticket->name,
+                    $ticket->message,
+                ));
+
+                $mailed = true;
+            } catch (\Throwable $e) {
+                Log::warning('support reply mail failed', ['ticket' => $ticket->id, 'error' => $e->getMessage()]);
+
+                return response()->json(['message' => 'Не получилось отправить письмо'], 502);
+            }
+        } else {
+            Log::info('support reply mail skipped (unverified)', ['ticket' => $ticket->id]);
         }
 
         $ticket->update([
@@ -137,8 +170,6 @@ class SupportController extends Controller
             'replied_by' => $request->user()->id,
             'replied_at' => now(),
         ]);
-
-        $author = $ticket->user()->first() ?? User::where('email', $ticket->email)->first();
 
         if ($author) {
             try {
@@ -152,14 +183,23 @@ class SupportController extends Controller
             }
         }
 
-        return response()->json($ticket->refresh()->load(['user:id,name,avatar_path,profile_slug', 'replier:id,name']));
+        $fresh = $ticket->refresh()->load(['user:id,name,avatar_path,profile_slug', 'replier:id,name']);
+
+        return response()->json(array_merge($fresh->toArray(), [
+            'mailed' => $mailed,
+            'email_verified' => $emailVerified,
+            'inbox_only' => ! $mailed,
+        ]));
     }
 
     /**
      * Отклонить обращение без ответа или с короткой причиной.
      *
-     * Причина (если есть) уходит пользователю тем же письмом-ответом,
-     * пустое отклонение писем не шлёт — только закрывает тикет.
+     * Причина (если есть) уходит письмом только на подтверждённую
+     * почту автора; без подтверждения — только inbox в приложение.
+     * Пустое отклонение писем не шлёт — только закрывает тикет,
+     * но inbox-строку всё равно создаёт, чтобы человек увидел итог
+     * в колокольчике (realtime + push через UserNotifier).
      *
      * Доступен модераторам и админам.
      *
@@ -176,20 +216,29 @@ class SupportController extends Controller
         ]);
 
         $reason = trim((string) ($data['reason'] ?? ''));
+        $author = $ticket->user()->first() ?? User::where('email', $ticket->email)->first();
+        $emailVerified = $author ? $author->hasVerifiedEmail() : true;
+        $mailed = false;
 
         if ($reason !== '') {
-            try {
-                Mail::to($ticket->email)->send(new SupportReplyMail(
-                    $ticket->id,
-                    $ticket->subject,
-                    $reason,
-                    $ticket->name,
-                    $ticket->message,
-                ));
-            } catch (\Throwable $e) {
-                Log::warning('support reject mail failed', ['ticket' => $ticket->id, 'error' => $e->getMessage()]);
+            if ($emailVerified) {
+                try {
+                    Mail::to($ticket->email)->send(new SupportReplyMail(
+                        $ticket->id,
+                        $ticket->subject,
+                        $reason,
+                        $ticket->name,
+                        $ticket->message,
+                    ));
 
-                return response()->json(['message' => 'Не получилось отправить письмо'], 502);
+                    $mailed = true;
+                } catch (\Throwable $e) {
+                    Log::warning('support reject mail failed', ['ticket' => $ticket->id, 'error' => $e->getMessage()]);
+
+                    return response()->json(['message' => 'Не получилось отправить письмо'], 502);
+                }
+            } else {
+                Log::info('support reject mail skipped (unverified)', ['ticket' => $ticket->id]);
             }
         }
 
@@ -200,7 +249,25 @@ class SupportController extends Controller
             'replied_at' => now(),
         ]);
 
-        return response()->json($ticket->refresh()->load(['user:id,name,avatar_path,profile_slug', 'replier:id,name']));
+        if ($author) {
+            try {
+                \App\Services\UserNotifier::send($author, new \App\Notifications\SupportAnsweredNotification(
+                    $ticket->id,
+                    $ticket->subject,
+                    $reason !== '' ? $reason : 'Обращение отклонено модерацией.',
+                ));
+            } catch (\Throwable $e) {
+                Log::warning('support reject notify failed', ['ticket' => $ticket->id, 'error' => $e->getMessage()]);
+            }
+        }
+
+        $fresh = $ticket->refresh()->load(['user:id,name,avatar_path,profile_slug', 'replier:id,name']);
+
+        return response()->json(array_merge($fresh->toArray(), [
+            'mailed' => $mailed,
+            'email_verified' => $emailVerified,
+            'inbox_only' => $reason !== '' && ! $mailed,
+        ]));
     }
 
     /**

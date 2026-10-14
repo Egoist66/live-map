@@ -17,6 +17,7 @@ const page = ref(1)
 const lastPage = ref(1)
 const selectedId = ref<number | null>(null)
 const replyText = ref('')
+const replyError = ref<string | null>(null)
 const error = ref<string | null>(null)
 let busBound = false
 let inited = false
@@ -119,6 +120,7 @@ function setFilter(next: SupportFilter) {
   filter.value = next
   page.value = 1
   selectedId.value = null
+  replyError.value = null
   void refresh()
 }
 
@@ -127,6 +129,7 @@ function setPage(next: number) {
   if (clamped === page.value) return
   page.value = clamped
   selectedId.value = null
+  replyError.value = null
   void refresh()
 }
 
@@ -134,18 +137,56 @@ function select(id: number) {
   selectedId.value = id
   const ticket = tickets.value.find((t) => Number(t.id) === Number(id))
   replyText.value = ticket?.admin_reply || ''
+  replyError.value = null
 }
 
 /**
- * Ответить на выбранный тикет: письмо пользователю, статус answered.
+ * Подтверждена ли почта автора тикета.
+ *
+ * Нет user в базе (удалённый аккаунт) — считаем подтверждённой,
+ * письмо уйдёт на email из тикета как раньше.
+ *
+ * @param ticket тикет
+ * @returns true когда можно слать письмо, иначе только inbox
+ */
+export function isTicketEmailVerified(ticket: SupportTicket | null | undefined): boolean {
+  if (!ticket) return false
+  const user = ticket.user
+  if (!user || user.id === undefined) return true
+  return !!user.email_verified_at
+}
+
+/**
+ * Пустой ли текст ответа (пробелы не считаются).
+ *
+ * @returns текст ошибки или null когда можно отправлять
+ */
+function validateReply(): string | null {
+  const message = replyText.value.trim()
+  if (message.length === 0) return 'Ответ не может быть пустым — напиши текст.'
+  if (message.length < 2) return 'Ответ слишком короткий (минимум 2 символа).'
+  if (message.length > 2000) return 'Ответ слишком длинный (максимум 2000 символов).'
+  return null
+}
+
+/**
+ * Ответить на выбранный тикет: письмо (только на подтверждённую
+ * почту) + всегда inbox в приложение, статус answered.
  */
 async function sendReply(): Promise<boolean> {
   const id = selectedId.value
-  const message = replyText.value.trim()
-  if (id === null || message.length < 2 || sending.value) return false
+  if (id === null || sending.value) return false
+  const validation = validateReply()
+  if (validation) {
+    replyError.value = validation
+    toast?.add({ severity: 'warn', summary: validation, life: 3000 })
+    return false
+  }
+  replyError.value = null
   sending.value = true
   try {
     const prev = tickets.value.find((t) => Number(t.id) === Number(id))
+    const message = replyText.value.trim()
     const updated = await supportApi.replyTicket(id, message)
     tickets.value = tickets.value.map((t) => (Number(t.id) === Number(id) ? { ...t, ...updated } : t))
     if (prev?.status === 'new') {
@@ -158,6 +199,9 @@ async function sendReply(): Promise<boolean> {
       replyText.value = next?.admin_reply || ''
     }
     toast?.add({ severity: 'success', summary: 'Ответ отправлен', life: 2500 })
+    if ((updated as any)?.inbox_only || (updated as any)?.mailed === false) {
+      toast?.add({ severity: 'info', summary: 'Почта не подтверждена — ответ ушёл только в приложение', life: 4000 })
+    }
     return true
   } catch (e: any) {
     toast?.add({ severity: 'error', summary: e?.response?.data?.message || 'Не получилось отправить', life: 3500 })
@@ -190,6 +234,9 @@ async function rejectSelected(): Promise<boolean> {
       replyText.value = next?.admin_reply || ''
     }
     toast?.add({ severity: 'info', summary: 'Обращение отклонено', life: 2500 })
+    if ((updated as any)?.inbox_only) {
+      toast?.add({ severity: 'info', summary: 'Почта не подтверждена — причина ушла только в приложение', life: 4000 })
+    }
     return true
   } catch (e: any) {
     toast?.add({ severity: 'error', summary: e?.response?.data?.message || 'Не получилось отклонить', life: 3500 })
@@ -229,6 +276,7 @@ export function resetAdminSupport(): void {
   error.value = null
   selectedId.value = null
   replyText.value = ''
+  replyError.value = null
   page.value = 1
 }
 
@@ -248,6 +296,10 @@ export function useAdminSupport() {
   const hasData = computed(() => tickets.value.length > 0)
   const selected = computed(() => tickets.value.find((t) => Number(t.id) === Number(selectedId.value)) ?? null)
   const hasMore = computed(() => page.value < lastPage.value)
+  /** Можно ли жать «Ответить» (непустой текст, не идёт отправка). */
+  const canSendReply = computed(() => !sending.value && replyText.value.trim().length >= 2)
+  /** Подтверждена ли почта у выбранного тикета. */
+  const selectedEmailVerified = computed(() => isTicketEmailVerified(selected.value))
   return {
     tickets,
     newCount,
@@ -260,6 +312,9 @@ export function useAdminSupport() {
     selectedId,
     selected,
     replyText,
+    replyError,
+    canSendReply,
+    selectedEmailVerified,
     error,
     hasData,
     avatarSrcFor,
