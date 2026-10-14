@@ -163,6 +163,21 @@ class AppModulesWelcomeNews
      */
     public static function dismissFor(User $user): void
     {
+        self::dismissVersionFor($user, self::VERSION);
+    }
+
+    /**
+     * Запомнить отказ от конкретной версии гида навсегда.
+     *
+     * markRead зовёт с версией из inbox-пейлоада: старую версию
+     * (v1 после бампа на v2) тоже надо гасить, иначе её непрочитанная
+     * строка останется вечной — отметить прочитанной её больше нечем.
+     *
+     * @param User $user пользователь
+     * @param string $version версия гида (modules-guide-*)
+     */
+    public static function dismissVersionFor(User $user, string $version): void
+    {
         try {
             $settings = $user->settings ?? [];
 
@@ -176,11 +191,11 @@ class AppModulesWelcomeNews
                 $dismissed = [];
             }
 
-            if (in_array(self::VERSION, $dismissed, true)) {
+            if (in_array($version, $dismissed, true)) {
                 return;
             }
 
-            $dismissed[] = self::VERSION;
+            $dismissed[] = $version;
             $settings['guides_dismissed'] = array_values($dismissed);
             $user->settings = $settings;
             $user->save();
