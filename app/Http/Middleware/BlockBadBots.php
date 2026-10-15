@@ -127,7 +127,9 @@ class BlockBadBots
     }
 
     /**
-     * Пути вне фильтра: health, статика, WebSocket, сами ассеты.
+     * Пути вне фильтра: health, статика, WebSocket, сами ассеты,
+     * серверные вебхуки (Telegram/Stripe шлют без браузерного UA —
+     * их подлинность проверяем секретом/подписью внутри контроллера).
      *
      * @param Request $request текущий запрос
      * @return bool true — пропустить без проверок
@@ -141,6 +143,8 @@ class BlockBadBots
             '/build/',
             '/landing/',
             '/app',
+            '/api/telegram/webhook',
+            '/stripe/',
         ];
 
         foreach ($exemptPrefixes as $prefix) {
