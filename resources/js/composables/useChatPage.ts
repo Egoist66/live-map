@@ -526,6 +526,11 @@ export function useChatPage(initialConversationId?: number) {
       if (sendingFile && !attachment.file.value) {
         attachment.file.value = sendingFile
       }
+      // Неподтверждённая почта уже показана тостом ниже (useChat.notifyEmailBlocked):
+      // второй тост «Нельзя отправить» рядом — это и есть дубль из репорта.
+      if (status === 403 && e?.response?.data?.email_unverified === true) {
+        return
+      }
       if (status === 403 && msg.includes('заблокировал')) notifyBlockedBy(msg)
       else if (status === 403) toast?.add({ severity: 'warn', summary: 'Нельзя отправить', detail: msg || 'Сообщение не доставлено', life: 3500 })
       else {
@@ -642,6 +647,10 @@ export function useChatPage(initialConversationId?: number) {
       await chat.sendMessage('', quoted, done.file, done.duration)
       reply.cancelReply()
     } catch (e: any) {
+      // email_unverified уже показан тостом в useChat — дубль не нужен.
+      if (e?.response?.status === 403 && e?.response?.data?.email_unverified === true) {
+        return
+      }
       const msg = e?.response?.data?.message || e?.response?.data?.errors?.attachment?.[0] || 'Не удалось отправить голосовое'
       toast?.add({ severity: 'error', summary: 'Не отправлено', detail: msg, life: 3500 })
     }

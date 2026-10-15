@@ -4,6 +4,7 @@ import Button from 'primevue/button'
 import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import Message from 'primevue/message'
+import TurnstileWidget from '@/Components/Security/TurnstileWidget.vue'
 import { useCooperation } from '@/composables/useCooperation'
 
 const coop = useCooperation()
@@ -55,6 +56,8 @@ defineExpose({ show: coop.show, close: coop.close })
           />
         </div>
         <Message v-if="coop.error.value" severity="error" :closable="false" class="!rounded-2xl !text-xs">{{ coop.error.value }}</Message>
+        <input v-model="coop.trap.value.value" :name="coop.trap.fieldName" type="text" :class="coop.trap.hiddenClass" tabindex="-1" autocomplete="off" aria-hidden="true" />
+        <TurnstileWidget v-model:token="coop.captchaToken.value" />
         <Button
           type="submit"
           label="Отправить заявку →"

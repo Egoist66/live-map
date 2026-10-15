@@ -5,12 +5,17 @@ import { registerSchema } from '@/validation/schemas/register.schema'
 import { reverseGeocodeRaw } from '@/services/geo.api'
 import { useCountryMismatch } from '@/composables/useCountryMismatch'
 import { useSignupGoals } from '@/composables/useSignupGoals'
+import { useHoneypot } from '@/composables/useTurnstile'
 import { useToast } from 'primevue/usetoast'
 import { router } from '@inertiajs/vue3'
 import { route } from '@/route'
 
 export function useLoginForm() {
   const showPass = ref(false)
+  // Токен Turnstile (прогрессивная капча: бэк требует после 2 фейлов)
+  // и honeypot-значение — уходят вне vee-validate схемы, полями запроса.
+  const captchaToken = ref('')
+  const trap = useHoneypot()
   const { defineField, handleSubmit, errors, values, isSubmitting, setErrors } = useForm({
     validationSchema: loginSchema,
     initialValues: { email: '', password: '' } as any,
@@ -19,12 +24,16 @@ export function useLoginForm() {
   const [password, passwordAttrs] = defineField('password')
 
   const submit = handleSubmit(async (vals: any) => {
-    router.post(route('login'), vals, {
-      onError: (errs: Record<string, string>) => setErrors(errs),
-    })
+    router.post(
+      route('login'),
+      { ...vals, captcha_token: captchaToken.value || undefined, website: trap.value.value || undefined },
+      {
+        onError: (errs: Record<string, string>) => setErrors(errs),
+      },
+    )
   })
 
-  return { email, emailAttrs, password, passwordAttrs, errors, values, showPass, submit, isSubmitting }
+  return { email, emailAttrs, password, passwordAttrs, errors, values, showPass, submit, isSubmitting, captchaToken, trap }
 }
 
 /**
@@ -76,6 +85,10 @@ export function useRegisterForm() {
   const [home_lng] = defineField('home_lng')
   const [home_radius_km] = defineField('home_radius_km')
   const [home_address] = defineField('home_address')
+
+  // Капча обязательна на регистрации (бэк: ValidTurnstile) + honeypot.
+  const captchaToken = ref('')
+  const trap = useHoneypot()
 
   const toast = (() => {
     try {
@@ -143,7 +156,13 @@ export function useRegisterForm() {
   }
 
   const submit = handleSubmit(async (vals: any) => {
-    const payload = { ...vals, home_radius_km: 5, account_type: 'person' }
+    const payload = {
+      ...vals,
+      home_radius_km: 5,
+      account_type: 'person',
+      captcha_token: captchaToken.value,
+      website: trap.value.value || undefined,
+    }
     if (goalPreset.locked) {
       payload.signup_goal = goalPreset.goal
     }
@@ -197,6 +216,8 @@ export function useRegisterForm() {
     isSubmitting,
     setValues,
     goalPreset,
+    captchaToken,
+    trap,
     countryWarning: residenceCheck.countryWarning,
     checkingCountry: residenceCheck.checkingCountry,
   }

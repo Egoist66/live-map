@@ -30,17 +30,40 @@ class LoginRequest extends FormRequest
         return [
             'email' => ['required', 'string', 'email'],
             'password' => ['required', 'string'],
+            'website' => ['nullable', 'string', 'max:255'],
+            'captcha_token' => ['nullable', 'string', 'max:2048'],
         ];
     }
 
     /**
      * Attempt to authenticate the request's credentials.
      *
+     * Антибот-слой (поверх throttle и LoginShield):
+     * - honeypot `website` заполнен → сразу generic-ошибка (100% бот);
+     * - 2+ фейла подряд по email и капча настроена → токен обязателен
+     *   (прогрессивный челлендж: первый вход без трения, брутфорс — с капчей);
+     * - токен прислали при любом числе фейлов → проверяем (fail-closed).
+     *
      * @throws ValidationException
      */
     public function authenticate(): void
     {
         $this->ensureIsNotRateLimited();
+
+        if (\App\Services\TurnstileService::honeypotFilled($this->input('website'))) {
+            \Illuminate\Support\Facades\Log::warning('bot blocked', [
+                'reason' => 'honeypot',
+                'ip' => $this->ip(),
+                'path' => 'login',
+                'ua' => mb_substr((string) $this->userAgent(), 0, 256),
+            ]);
+
+            throw ValidationException::withMessages([
+                'email' => trans('auth.failed'),
+            ]);
+        }
+
+        $this->ensureCaptchaWhenChallenged();
 
         $email = \App\Services\LoginShield::normalizeEmail($this->input('email'));
         $user = \App\Models\User::where('email', $email)->first();
@@ -92,6 +115,43 @@ class LoginRequest extends FormRequest
                 'minutes' => ceil($seconds / 60),
             ]),
         ]);
+    }
+
+    /**
+     * Прогрессивная капча: после 2 фейлов подряд требовать токен.
+     *
+     * Порог 2 (а не 3 как заморозка LoginShield): бот уже на втором
+     * круге упирается в виджет, человеку виджет показывается лишь
+     * при повторной ошибке в пароле. Без настроенных ключей — пропуск.
+     *
+     * @throws ValidationException
+     */
+    public function ensureCaptchaWhenChallenged(): void
+    {
+        if (! \App\Services\TurnstileService::isEnabled()) {
+            return;
+        }
+
+        $email = \App\Services\LoginShield::normalizeEmail($this->input('email'));
+        $fails = \App\Services\LoginShield::consecutiveFails($email)['count'] ?? 0;
+
+        $token = $this->input('captcha_token');
+        $hasToken = is_string($token) && trim($token) !== '';
+
+        if ($fails < 2 && ! $hasToken) {
+            return;
+        }
+
+        $ok = \App\Services\TurnstileService::verify(
+            is_string($token) ? $token : null,
+            $this->ip()
+        );
+
+        if (! $ok) {
+            throw ValidationException::withMessages([
+                'captcha_token' => 'Подтвердите, что вы не робот, и попробуйте снова.',
+            ]);
+        }
     }
 
     /**

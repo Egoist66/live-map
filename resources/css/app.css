@@ -1398,3 +1398,17 @@ html.tg-app.tg-desktop .p-toast {
 html.tg-app .bottom-\[calc\(var\(--app-bottomnav\)\+var\(--sab\)\+1rem\)\] {
   display: none !important;
 }
+
+/* ===== Honeypot-ловушка (антибот, пара к TurnstileService) =====
+   Поле `website` обязано быть в DOM (боты его заполняют), но невидимо
+   человеку: убрано за экран, без display:none (его часть ботов чует).
+   Табуляция и автозаполнение отключены атрибутами в разметке. */
+.bot-trap-field {
+  position: absolute !important;
+  left: -9999px !important;
+  top: 0 !important;
+  width: 1px !important;
+  height: 1px !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}

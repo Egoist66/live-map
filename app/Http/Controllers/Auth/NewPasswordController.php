@@ -34,10 +34,25 @@ class NewPasswordController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        if (\App\Services\TurnstileService::honeypotFilled($request->input('website'))) {
+            \Illuminate\Support\Facades\Log::warning('bot blocked', [
+                'reason' => 'honeypot',
+                'ip' => $request->ip(),
+                'path' => 'reset-password',
+                'ua' => mb_substr((string) $request->userAgent(), 0, 256),
+            ]);
+
+            throw ValidationException::withMessages([
+                'email' => 'Подозрительная активность. Попробуйте позже.',
+            ]);
+        }
+
         $request->validate([
             'token' => 'required',
             'email' => 'required|email',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'website' => 'nullable|string|max:255',
+            'captcha_token' => ['required', new \App\Rules\ValidTurnstile($request)],
         ]);
 
         // Here we will attempt to reset the user's password. If it is successful we

@@ -8,6 +8,7 @@ import { useBannedNotice } from '@/composables/useBannedNotice'
 import { useTelegram } from '@/composables/useTelegram'
 import { useTelegramAuth } from '@/composables/useTelegramAuth'
 import RegisterForm from '@/Components/Auth/RegisterForm.vue'
+import TurnstileWidget from '@/Components/Security/TurnstileWidget.vue'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
@@ -21,7 +22,7 @@ import ProgressSpinner from 'primevue/progressspinner'
 const props = defineProps<{ canResetPassword: boolean; status?: string | null }>()
 
 const { mode, isLogin, showLogin, showRegister } = useAuthMode()
-const { email, emailAttrs, password, passwordAttrs, errors, showPass, submit, isSubmitting } = useLoginForm()
+const { email, emailAttrs, password, passwordAttrs, errors, showPass, submit, isSubmitting, captchaToken, trap } = useLoginForm()
 const t = useAuthTheme()
 
 // Telegram Mini App: только отображение статуса автовхода,
@@ -71,6 +72,9 @@ const pageTitle = computed(() => (isLogin.value ? 'Вход — ULove' : 'Рег
           </div>
           <small class="text-red-500 dark:text-red-400">{{ errors.password }}</small>
         </div>
+        <input v-model="trap.value.value" :name="trap.fieldName" type="text" :class="trap.hiddenClass" tabindex="-1" autocomplete="off" aria-hidden="true" />
+        <TurnstileWidget v-model:token="captchaToken" />
+        <small v-if="errors.captcha_token" class="text-red-500 dark:text-red-400">{{ errors.captcha_token }}</small>
         <Button :loading="isSubmitting" type="submit" label="Войти →" :class="t.submitClass.value" />
         <div class="flex justify-start items-center gap-2 text-sm pt-2">
           <Link v-if="canResetPassword" :href="route('password.request')" class="text-stone-500 dark:text-zinc-400 hover:text-ink-900 dark:hover:text-white font-medium shrink-0">Забыли пароль?</Link>

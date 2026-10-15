@@ -65,6 +65,13 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:polling'])->group(functi
     Route::get('/video/roulette/stats', [\App\Http\Controllers\VideoController::class, 'rouletteStats']);
 });
 
+// Веб-анкета онбординга Mini App: открыта гейтом EnsureOnboardingComplete,
+// добивает профиль (имя, пол, 18+, цель, город) и снимает флаг onboarding_only.
+Route::middleware(['web', 'auth:web,sanctum'])->group(function () {
+    Route::get('/onboarding/status', [\App\Http\Controllers\OnboardingController::class, 'status'])->middleware('throttle:status-read');
+    Route::post('/onboarding/complete', [\App\Http\Controllers\OnboardingController::class, 'complete'])->middleware('throttle:social-write');
+});
+
 // Подтверждение почты — ВНЕ общего ведра throttle:120,1: поллеры
 // (sync + signals + show + pending ≈ 90-120/мин на вкладку) забивали
 // общее ведро и одиночный клик «Подтвердить» умирал в 429.

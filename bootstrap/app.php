@@ -27,6 +27,20 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\PreventStaleDocuments::class,
         ]);
 
+        // Жёсткий гейт анкеты Mini App: сессия с флагом onboarding_only
+        // (ставит только Telegram-вход) взаперти, пока профиль неполон.
+        // Открыты лишь сама анкета, вход/выход и почта. В конце web-группы:
+        // сессия уже стартовала и auth()->user() резолвится.
+        $middleware->web(append: [
+            \App\Http\Middleware\EnsureOnboardingComplete::class,
+        ]);
+
+        // Антибот-фильтр уровня приложения: режет сканеры (.env/wp-admin/*.php),
+        // писательные запросы без UA и UA эксплойт-китов — до роутера и
+        // тяжёлых middleware. Поверх работают nginx limit_req (edge) и
+        // Laravel throttle (частота) + Turnstile (капча на гостевых POST).
+        $middleware->append(\App\Http\Middleware\BlockBadBots::class);
+
         // Gzip текстовых ответов (JSON/Inertia/HTML): жмёт поллинг карты и чата.
         // Бинарное, стримы и редиректы middleware пропускает сам.
         $middleware->append(\App\Http\Middleware\CompressResponse::class);

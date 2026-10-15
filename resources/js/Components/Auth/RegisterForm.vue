@@ -6,6 +6,8 @@ import { useBirthDateField } from '@/composables/useBirthDate'
 import { useGender } from '@/composables/useGender'
 import { useUserAge } from '@/composables/useUserAge'
 import { RESIDENCE_COUNTRIES } from '@/composables/useResidence'
+import TurnstileWidget from '@/Components/Security/TurnstileWidget.vue'
+import { useBotQr } from '@/composables/useBotQr'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import Select from 'primevue/select'
@@ -22,6 +24,13 @@ import DatePicker from 'primevue/datepicker'
 const emit = defineEmits<{ (e: 'switch-login'): void }>()
 
 const t = useAuthTheme()
+
+/**
+ * Вход через Telegram-бота внизу формы: тап открывает бота,
+ * /start ведёт в Mini App, аккаунт создаётся сам (авторегистрация
+ * по initData) — почту бот попросит позже, уже внутри.
+ */
+const bot = useBotQr()
 
 const f = useRegisterForm()
 const reg = useRegisterVisibility()
@@ -122,7 +131,28 @@ function onCountryChange(v: string): void {
           <button v-if="f.values.home_lat && !f.addrLoading.value" type="button" class="shrink-0 w-7 h-7 rounded-full hover:bg-stone-100 dark:hover:bg-white/10 grid place-items-center text-stone-400 dark:text-zinc-400" title="Убрать точку" @click="f.clearLocation"><i class="pi pi-times text-[11px]"></i></button>
         </div>
       </div>
+      <input v-model="f.trap.value.value" :name="f.trap.fieldName" type="text" :class="f.trap.hiddenClass" tabindex="-1" autocomplete="off" aria-hidden="true" />
+      <TurnstileWidget v-model:token="f.captchaToken.value" />
+      <small v-if="f.errors.value.captcha_token" class="auth-err text-center">{{ f.errors.value.captcha_token }}</small>
       <Button :loading="f.isSubmitting.value" type="submit" label="Создать анкету →" :class="t.submitClass.value" />
+      <div class="flex items-center gap-3 pt-1" aria-hidden="true">
+        <span class="h-px flex-1 bg-stone-200 dark:bg-zinc-700" />
+        <span class="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-zinc-500">или</span>
+        <span class="h-px flex-1 bg-stone-200 dark:bg-zinc-700" />
+      </div>
+      <button
+        type="button"
+        class="w-full inline-flex items-center justify-center gap-2.5 rounded-full border-2 border-sky-200 dark:border-sky-900 bg-sky-50 dark:bg-sky-950/40 px-6 py-3 text-sm font-bold text-sky-700 dark:text-sky-300 transition hover:bg-sky-100 dark:hover:bg-sky-900/40 hover:border-sky-300 active:scale-[0.99]"
+        :title="`Открыть бота @${bot.botUsername.value}`"
+        @click="bot.openBot()"
+      >
+        <i class="pi pi-telegram text-lg leading-none" />
+        <span>Зайти через Telegram-бота</span>
+      </button>
+      <p class="text-center text-xs leading-relaxed text-stone-500 dark:text-zinc-400">
+        Нажми — откроется бот <b class="font-bold">@{{ bot.botUsername.value }}</b>: жми Start,
+        анкета создастся сама за пару секунд.
+      </p>
       <div class="text-sm text-center text-stone-500 dark:text-zinc-400">Уже есть профиль? <button type="button" class="font-semibold text-ink-900 dark:text-white hover:underline" @click="emit('switch-login')">Войти</button></div>
     </form>
   </div>

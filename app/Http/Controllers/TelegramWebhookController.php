@@ -16,6 +16,7 @@ use App\Services\TelegramFavoritesPanel;
 use App\Services\TelegramInsights;
 use App\Services\TelegramMenu;
 use App\Services\TelegramNotifyPanel;
+use App\Services\TelegramOnboarding;
 use App\Services\TelegramOnlinePanel;
 use App\Services\TelegramPasswordService;
 use App\Services\TelegramPlanPanel;
@@ -35,7 +36,8 @@ use Illuminate\Support\Facades\Log;
  * Команды (см. TelegramBotApi::setup):
  * - /start, /app, /help — вход и навигация;
  * - /profile, /hide, /show — видимость анкеты;
- * - /find — свайпы кнопками прямо в чате (лайк/пас по одной анкете);
+ * - /find — свайпы кнопками прямо в чате (лайк/пас по одной анкете,
+ *   сначала анкета-онбординг: имя, пол, 18+, цель, город);
  * - /likes, /matches, /messages, /stats, /export — живые инсайты;
  * - /online — кто сейчас в ULove (онлайн) с лайками из списка;
  * - /favorites — избранное по тарифу + кому можно написать;
@@ -477,6 +479,12 @@ class TelegramWebhookController extends Controller
             return true;
         }
 
+        if (str_starts_with($data, 'ob_')) {
+            $this->handleOnboardingCallback($fresh, $data, $chatId, $messageId, $callbackId);
+
+            return true;
+        }
+
         if ($data === 'sw_find') {
             $this->editSwipeCard($fresh, $chatId, $messageId, $callbackId);
 
@@ -491,6 +499,12 @@ class TelegramWebhookController extends Controller
 
         if (str_starts_with($data, 'sw_view:')) {
             $this->showCandidate($fresh, $data, $chatId, $messageId, $callbackId);
+
+            return true;
+        }
+
+        if (str_starts_with($data, 'sw_back:')) {
+            $this->backToCard($fresh, $data, $chatId, $messageId, $callbackId);
 
             return true;
         }
@@ -1456,6 +1470,114 @@ class TelegramWebhookController extends Controller
     }
 
     /**
+     * Гейт анкеты-онбординга для колбэков свайпов.
+     *
+     * Без заполненной анкеты (имя, пол, 18+, цель) мэтчи закрыты:
+     * показываем текущий шаг онбординга вместо карточки.
+     *
+     * @param User $user зритель (уже fresh)
+     * @param int $chatId куда
+     * @param int $messageId что перерисовать
+     * @param string $callbackId тост
+     * @return bool true — заблокировано, карточку не показываем
+     */
+    private function guardOnboarding(User $user, int $chatId, int $messageId, string $callbackId): bool
+    {
+        if (TelegramOnboarding::isComplete($user)) {
+            return false;
+        }
+
+        $panel = TelegramOnboarding::startFor($user);
+
+        TelegramOnboarding::setPanelMessage((int) $user->id, $messageId);
+        TelegramCardSender::redrawText($chatId, $messageId, $panel['text'], $panel['keyboard']);
+        TelegramBotApi::answerCallback($callbackId, 'Сначала заполни анкету 📝');
+
+        return true;
+    }
+
+    /**
+     * Кнопки онбординга (ob_*): шаги, пропуск города, отмена.
+     *
+     * @param User $user владелец
+     * @param string $data callback_data ob_*
+     * @param int $chatId куда
+     * @param int $messageId что
+     * @param string $callbackId тост
+     * @return void
+     */
+    private function handleOnboardingCallback(User $user, string $data, int $chatId, int $messageId, string $callbackId): void
+    {
+        $fresh = $user->fresh() ?? $user;
+
+        $result = TelegramOnboarding::handleCallback($fresh, $data);
+
+        if ($result === null) {
+            TelegramBotApi::answerCallback($callbackId, 'Неизвестное действие');
+
+            return;
+        }
+
+        if ($result['cancelled']) {
+            $menu = TelegramMenu::main($fresh->fresh() ?? $fresh);
+            TelegramCardSender::redrawText($chatId, $messageId, $menu['text'], $menu['keyboard']);
+            TelegramBotApi::answerCallback($callbackId, (string) $result['toast']);
+
+            return;
+        }
+
+        $panel = $result['panel'];
+
+        TelegramOnboarding::setPanelMessage((int) $fresh->id, $messageId);
+        TelegramCardSender::redrawText($chatId, $messageId, (string) $panel['text'], $panel['keyboard']);
+        TelegramBotApi::answerCallback($callbackId, mb_substr((string) $result['toast'], 0, 200));
+    }
+
+    /**
+     * Текстовый ответ на шаг онбординга.
+     *
+     * Панель перерисовываем ту же (id хранится в состоянии), новую не спамим.
+     * Тоста у обычных сообщений нет — ошибку валидации вшиваем в текст панели.
+     *
+     * @param User $user владелец
+     * @param int $chatId куда
+     * @param string $text присланный текст
+     * @return void
+     */
+    private function answerOnboardingText(User $user, int $chatId, string $text): void
+    {
+        $fresh = $user->fresh() ?? $user;
+
+        $result = TelegramOnboarding::handleText($fresh, $text);
+
+        if ($result['cancelled']) {
+            return;
+        }
+
+        $panel = $result['panel'];
+        $panelText = (string) $panel['text'];
+
+        if (! $result['moved']) {
+            $panelText = '⚠️ '.(string) $result['toast']."\n\n".$panelText;
+        }
+
+        $state = TelegramOnboarding::loadState((int) $fresh->id);
+        $panelId = (int) ($state['message_id'] ?? 0);
+
+        if ($panelId > 0) {
+            TelegramCardSender::redrawText($chatId, $panelId, $panelText, $panel['keyboard']);
+
+            return;
+        }
+
+        $sent = TelegramBotApi::sendMessage($chatId, $panelText, $panel['keyboard']);
+
+        if (is_array($sent)) {
+            TelegramOnboarding::setPanelMessage((int) $fresh->id, (int) ($sent['message_id'] ?? 0));
+        }
+    }
+
+    /**
      * Режим «Найти мэтч здесь» новым сообщением (/find).
      *
      * Сразу показываем первую анкету, чтобы не требовать лишний тап.
@@ -1467,6 +1589,17 @@ class TelegramWebhookController extends Controller
     private function replyFind(User $user, int $chatId): void
     {
         $fresh = $user->fresh() ?? $user;
+
+        if (! TelegramOnboarding::isComplete($fresh)) {
+            $panel = TelegramOnboarding::startFor($fresh);
+            $sent = TelegramBotApi::sendMessage($chatId, $panel['text'], $panel['keyboard']);
+
+            if (is_array($sent)) {
+                TelegramOnboarding::setPanelMessage((int) $fresh->id, (int) ($sent['message_id'] ?? 0));
+            }
+
+            return;
+        }
 
         if (! $this->isAdultForBot($fresh)) {
             $gate = TelegramSwipePanel::ageGate();
@@ -1565,6 +1698,14 @@ class TelegramWebhookController extends Controller
 
         if ($this->isEmailWait($tgId)) {
             $this->saveEmailFromBot($user, $chatId, $text);
+
+            return;
+        }
+
+        // Середина анкеты-онбординга: текст — это ответ на шаг.
+        // Проверяем раньше заметок/публикации, чтобы шаги не терялись.
+        if (TelegramOnboarding::loadState((int) $user->id) !== null) {
+            $this->answerOnboardingText($user, $chatId, $text);
 
             return;
         }
@@ -1831,6 +1972,10 @@ class TelegramWebhookController extends Controller
     {
         $fresh = $user->fresh() ?? $user;
 
+        if ($this->guardOnboarding($fresh, $chatId, $messageId, $callbackId)) {
+            return;
+        }
+
         if (! $this->isAdultForBot($fresh)) {
             $gate = TelegramSwipePanel::ageGate();
             TelegramCardSender::redrawText($chatId, $messageId, $gate['text'], $gate['keyboard']);
@@ -1868,6 +2013,11 @@ class TelegramWebhookController extends Controller
     private function showCandidate(User $user, string $data, int $chatId, int $messageId, string $callbackId): void
     {
         $fresh = $user->fresh() ?? $user;
+
+        if ($this->guardOnboarding($fresh, $chatId, $messageId, $callbackId)) {
+            return;
+        }
+
         $candidateId = (int) (explode(':', $data, 2)[1] ?? 0);
 
         $details = TelegramSwipePanel::detailsFor($fresh, $candidateId);
@@ -1881,6 +2031,42 @@ class TelegramWebhookController extends Controller
 
         TelegramCardSender::redraw($chatId, $messageId, $details['photoUrl'], $details['text'], $details['keyboard']);
         TelegramBotApi::answerCallback($callbackId, 'Анкета целиком 👤');
+    }
+
+    /**
+     * Вернуться из полной анкеты к её короткой карточке («◀️ Назад к анкете»).
+     *
+     * Человек снова видит ❤️/👎 и может оценить, не теряя кандидата.
+     * Карточка протухла (скрыли/удалили/сборка упала) — едем к следующей
+     * анкете, как раньше делала кнопка «Дальше», которой больше нет.
+     *
+     * @param User $user зритель
+     * @param string $data callback_data sw_back:{id}
+     * @param int $chatId куда
+     * @param int $messageId что
+     * @param string $callbackId тост
+     * @return void
+     */
+    private function backToCard(User $user, string $data, int $chatId, int $messageId, string $callbackId): void
+    {
+        $fresh = $user->fresh() ?? $user;
+
+        if ($this->guardOnboarding($fresh, $chatId, $messageId, $callbackId)) {
+            return;
+        }
+
+        $candidateId = (int) (explode(':', $data, 2)[1] ?? 0);
+
+        $short = TelegramSwipePanel::shortCardFor($fresh, $candidateId);
+
+        if ($short === null) {
+            $this->editSwipeCard($fresh, $chatId, $messageId, $callbackId);
+
+            return;
+        }
+
+        TelegramCardSender::redraw($chatId, $messageId, $short['photoUrl'], $short['text'], $short['keyboard']);
+        TelegramBotApi::answerCallback($callbackId, 'Снова к анкете 👤');
     }
 
     /**
@@ -2048,12 +2234,16 @@ class TelegramWebhookController extends Controller
     {
         $fresh = $user->fresh() ?? $user;
 
+        if ($this->guardOnboarding($fresh, $chatId, $messageId, $callbackId)) {
+            return;
+        }
+
         $parts = explode(':', $data, 2);
         $kind = $parts[0] ?? '';
         $targetId = (int) ($parts[1] ?? 0);
 
         if ($targetId <= 0) {
-            TelegramBotApi::answerCallback($callbackId, 'Анкета потерялась — жмите Дальше');
+            TelegramBotApi::answerCallback($callbackId, 'Анкета потерялась — нажмите /find');
 
             return;
         }
@@ -2072,9 +2262,24 @@ class TelegramWebhookController extends Controller
             $dating = app(DatingService::class);
             $result = $dating->recordAction($fresh, $targetId, $action);
         } catch (\Throwable $e) {
+            // Пас по протухшей карточке (цель уже скрыта/удалена: 403/404):
+            // запись невозможна и кнопка визуально «не работает» — вместо
+            // тупика просто едем дальше, пас по несуществующей анкете
+            // и так ничего не значит. Лайк при ошибке НЕ скипаем: намерение
+            // не записано, карточка остаётся — иначе лайк тихо потеряется.
+            if ($action === 'pass' && $e instanceof \Illuminate\Http\Exceptions\HttpResponseException) {
+                $failedStatus = $e->getResponse()->getStatusCode();
+
+                if (in_array($failedStatus, [403, 404, 410], true)) {
+                    $this->editSwipeCard($fresh, $chatId, $messageId, $callbackId);
+
+                    return;
+                }
+            }
+
             $message = $e instanceof \Illuminate\Http\Exceptions\HttpResponseException
                 ? (string) ($e->getResponse()->getData(true)['message'] ?? 'Не получилось')
-                : 'Не получилось — попробуйте дальше';
+                : 'Не получилось — попробуйте ещё раз';
 
             TelegramBotApi::answerCallback($callbackId, mb_substr($message, 0, 200));
 

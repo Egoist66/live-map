@@ -16,8 +16,7 @@ export const api = axios.create({
   timeout: 20000,
 })
 
-api.interceptors.request.use((c) => {
-  const token = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content
+api.interceptors.request.use((c) => {  const token = document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content
   if (token && c.headers) c.headers['X-CSRF-TOKEN'] = token
   const bearer = getStoredTokenSync()
   if (bearer && c.headers && !c.headers['Authorization']) c.headers['Authorization'] = `Bearer ${bearer}`
@@ -31,3 +30,30 @@ api.interceptors.request.use((c) => {
   } catch {}
   return c
 })
+
+/**
+ * Глобальный редирект взаперти-сессий на анкету.
+ *
+ * Гейт EnsureOnboardingComplete режет API 403 с флагом
+ * `onboarding_required`: любой такой ответ уводит на /onboarding
+ * полной перезагрузкой (свежие пропсы + чистая сессия формы).
+ * Сама страница анкеты бьёт только в открытые ручки — флага там
+ * не бывает, зацикливания нет (проверяем путь).
+ */
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    try {
+      const status = (error as any)?.response?.status
+      const flagged = (error as any)?.response?.data?.onboarding_required === true
+
+      if (status === 403 && flagged && !window.location.pathname.startsWith('/onboarding')) {
+        window.location.assign('/onboarding')
+      }
+    } catch {
+      // No-op: редирект не удался — отдаём ошибку вызывающему.
+    }
+
+    return Promise.reject(error)
+  },
+)

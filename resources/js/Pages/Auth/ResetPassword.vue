@@ -2,14 +2,22 @@
 import { Head, useForm } from '@inertiajs/vue3'
 import { route } from '@/route'
 import { ref } from 'vue'
+import { useHoneypot } from '@/composables/useTurnstile'
+import TurnstileWidget from '@/Components/Security/TurnstileWidget.vue'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
 const props = defineProps<{ email: string; token: string }>()
-const form = useForm({ token: props.token, email: props.email, password: '', password_confirmation: '' })
+const form = useForm({ token: props.token, email: props.email, password: '', password_confirmation: '', captcha_token: '', website: '' as string | undefined })
+const captchaToken = ref('')
+const trap = useHoneypot()
 const show1 = ref(false)
 const show2 = ref(false)
-const submit = () => { form.post(route('password.store'), { onFinish: () => form.reset('password', 'password_confirmation') }) }
+const submit = () => {
+  form.captcha_token = captchaToken.value
+  form.website = trap.value.value || undefined
+  form.post(route('password.store'), { onFinish: () => form.reset('password', 'password_confirmation') })
+}
 </script>
 <template>
   <Head title="Новый пароль" />
@@ -35,6 +43,9 @@ const submit = () => { form.post(route('password.store'), { onFinish: () => form
         </div>
         <Message v-if="form.errors.password_confirmation" severity="error" :closable="false" class="mt-1 !rounded-xl !py-1 !text-xs">{{ form.errors.password_confirmation }}</Message>
       </div>
+      <input v-model="trap.value.value" :name="trap.fieldName" type="text" :class="trap.hiddenClass" tabindex="-1" autocomplete="off" aria-hidden="true" />
+      <TurnstileWidget v-model:token="captchaToken" />
+      <Message v-if="form.errors.captcha_token" severity="error" :closable="false" class="mt-1 !rounded-xl !py-1 !text-xs">{{ form.errors.captcha_token }}</Message>
       <Button type="submit" :loading="form.processing" label="Сохранить пароль" class="w-full !bg-ink-900 dark:!bg-[#FAFAFA] !border-ink-900 dark:!border-[#FAFAFA] !text-white dark:!text-[#0F172A] !rounded-full !py-3.5 !font-bold [&_.p-button-label]:!text-white dark:[&_.p-button-label]:!text-[#0F172A]" />
     </form>
 </template>

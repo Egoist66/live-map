@@ -11,6 +11,9 @@ Route::get('/sitemap.xml', [SeoController::class, 'sitemap']);
 Route::get('/', [PageController::class, 'welcome']);
 
 Route::middleware(['auth'])->group(function () {
+    // Анкета-онбординг Mini App: открыта гейтом, сюда же он редиректит
+    // взаперти-сессии. Форма добивает профиль и снимает флаг.
+    Route::get('/onboarding', [PageController::class, 'onboarding'])->name('onboarding');
     Route::get('/profile/{identifier?}', [ProfileController::class, 'dashboard'])->name('dashboard');
     Route::get('/dashboard/{identifier?}', [PageController::class, 'dashboardRedirect'])->where('identifier', '.*');
     Route::get('/admin/{tab?}/{seo?}', [PageController::class, 'admin'])

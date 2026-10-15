@@ -29,8 +29,23 @@ class PasswordResetLinkController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        // Honeypot с фейковым успехом: бот думает, что письмо ушло,
+        // реальная рассылка не запускается, пользователя не перечисляем.
+        if (\App\Services\TurnstileService::honeypotFilled($request->input('website'))) {
+            \Illuminate\Support\Facades\Log::warning('bot blocked', [
+                'reason' => 'honeypot',
+                'ip' => $request->ip(),
+                'path' => 'forgot-password',
+                'ua' => mb_substr((string) $request->userAgent(), 0, 256),
+            ]);
+
+            return back()->with('status', __('passwords.sent'));
+        }
+
         $request->validate([
             'email' => 'required|email',
+            'website' => 'nullable|string|max:255',
+            'captcha_token' => ['required', new \App\Rules\ValidTurnstile($request)],
         ]);
 
         // We will send the password reset link to this user. Once we have attempted

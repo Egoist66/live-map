@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onMounted, ref, watch } from "vue";
-import { Head } from "@inertiajs/vue3";
+import { computed, defineAsyncComponent, onMounted, onUnmounted, ref, watch } from "vue";
+import { Head, Link } from "@inertiajs/vue3";
 import Toast from "primevue/toast";
+import Dialog from "primevue/dialog";
+import Button from "primevue/button";
 import ChatSidebar from "@/Components/Features/Chat/ChatSidebar.vue";
 import ChatWindow from "@/Components/Features/Chat/ChatWindow.vue";
 import ChatPeerPanel from "@/Components/Features/Chat/ChatPeerPanel.vue";
@@ -35,6 +37,7 @@ const ReportDialog = defineAsyncComponent(
   () => import("@/Components/Features/Map/ReportDialog.vue")
 );
 import { useInfiniteScroll } from "@/composables/useInfiniteScroll";
+import { useEmailVerification } from "@/composables/useEmailVerification";
 import { useReportDialog } from "@/composables/useReportDialog";
 import { useChatOnline } from "@/composables/useChatOnline";
 import { useChatPage } from "@/composables/useChatPage";
@@ -61,6 +64,14 @@ const toast = (() => {
 })();
 const districtInvite = useDistrictInvite();
 const reportDialog = useReportDialog();
+
+/**
+ * Жёсткий гейт чатов по почте: без подтверждения раздел закрыт
+ * неснимаемой модалкой (кнопки «продолжить без подтверждения» нет).
+ * Глобальная откладываемая модалка баннера на это время молчит
+ * (hardBlock), иначе два диалога стеклятся.
+ */
+const emailGate = useEmailVerification();
 
 /**
  * Открыть приглашение в район из чата (только владелец).
@@ -349,6 +360,10 @@ async function sendPreset(text: string): Promise<void> {
     await chat.sendMessage(clean, quoted);
     reply.cancelReply();
   } catch (e: any) {
+    // email_unverified уже показан тостом в useChat — дубль не нужен.
+    if (e?.response?.status === 403 && e?.response?.data?.email_unverified === true) {
+      return;
+    }
     const msg = e?.response?.data?.message || "Не удалось отправить пресет";
     toast?.add({ severity: "error", summary: "Не отправлено", detail: msg, life: 3500 });
   }
@@ -379,10 +394,20 @@ watch(
   }
 );
 onMounted(async () => {
+  emailGate.setHardBlock(true);
+  emailGate.consumeVerifiedFlag();
   await init();
   if (!isBusiness.value) {
     datingTheme.checkEntry();
   }
+  // Статус мог измениться в другой вкладке — подтягиваем свежий,
+  // иначе неснимаемая модалка висит и после подтверждения.
+  if (emailGate.needsVerification.value) {
+    void emailGate.refresh();
+  }
+});
+onUnmounted(() => {
+  emailGate.setHardBlock(false);
 });
 </script>
 <template>
@@ -615,4 +640,60 @@ onMounted(async () => {
     @add="(id: number) => { closeSheet(); friendsApi.add(id) }"
   />
   <ReportDialog :dialog="reportDialog" />
+  <Dialog
+    :visible="emailGate.needsVerification.value"
+    modal
+    :draggable="false"
+    :closable="false"
+    :style="{ width: '430px', maxWidth: 'calc(100vw - 2rem)' }"
+    :pt="{
+      root: { class: '!rounded-[28px] max-sm:!rounded-b-none !border-0 overflow-hidden !bg-white dark:!bg-zinc-900 shadow-2xl' },
+      header: { class: '!hidden' },
+      content: { class: '!p-0' },
+    }"
+  >
+    <div class="relative overflow-hidden px-6 pb-6 pt-8 text-center">
+      <div class="pointer-events-none absolute -top-16 left-1/2 h-44 w-72 -translate-x-1/2 rounded-full bg-gradient-to-br from-violet-500/30 via-fuchsia-500/20 to-rose-500/20 blur-2xl" aria-hidden="true" />
+      <div class="relative mx-auto grid h-16 w-16 place-items-center rounded-3xl bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-600/30">
+        <i class="pi pi-lock text-2xl" />
+      </div>
+      <h3 class="relative mt-4 text-xl font-black tracking-tight text-stone-900 dark:text-white">
+        Чаты — после подтверждения почты
+      </h3>
+      <p v-if="emailGate.email.value" class="relative mt-1 truncate text-sm font-bold text-violet-600 dark:text-violet-300">
+        {{ emailGate.email.value }}
+      </p>
+      <p class="relative mt-2 text-sm leading-relaxed text-stone-500 dark:text-zinc-400">
+        Нажмите кнопку — пришлём ссылку для подтверждения.
+        Читать и писать сообщения можно только с подтверждённой почтой.
+      </p>
+      <p v-if="emailGate.sent.value" class="relative mt-3 text-[13px] font-bold text-emerald-600 dark:text-emerald-300">
+        Письмо отправлено — проверьте inbox и спам, затем перейдите по ссылке.
+      </p>
+      <p v-if="emailGate.error.value" class="relative mt-3 text-[13px] font-bold text-rose-600 dark:text-rose-300">
+        {{ emailGate.error.value }}
+      </p>
+      <Button
+        :label="emailGate.cooldownLeft.value > 0 ? `Ждите ${emailGate.cooldownLeft.value} сек.` : (emailGate.sent.value ? 'Отправить ещё раз' : 'Подтвердить почту')"
+        icon="pi pi-send"
+        rounded
+        :loading="emailGate.resending.value"
+        :disabled="!emailGate.canResend.value"
+        class="!mt-5 !w-full !bg-gradient-to-r !from-violet-600 !to-fuchsia-600 !border-0 !py-3 !font-bold shadow-lg shadow-violet-600/30 active:scale-[0.99]"
+        @click="emailGate.resend()"
+      />
+      <div class="relative mt-3 flex items-center justify-center gap-4 text-[13px] font-medium">
+        <button
+          type="button"
+          class="text-stone-400 dark:text-zinc-500 underline underline-offset-2 hover:text-stone-600 dark:hover:text-zinc-300"
+          @click="emailGate.refresh()"
+        >
+          Я подтвердил — обновить
+        </button>
+        <Link href="/settings/security" class="text-violet-600 dark:text-violet-300 underline underline-offset-2 hover:opacity-80">
+          Сменить почту
+        </Link>
+      </div>
+    </div>
+  </Dialog>
 </template>

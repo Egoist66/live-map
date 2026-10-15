@@ -13,6 +13,14 @@ server {
 
     server_tokens off;
 
+    # Probe-пути сканеров (WordPress/PHP/bэкдоры/.git): такого в приложении
+    # нет — рвём соединение (444) до PHP, лимитеров и логов приложения.
+    # Легитимный трафик эти пути не запрашивает никогда.
+    location ~* (\.php$|\.asp$|\.aspx$|\.jsp$|\.cgi$|wp-admin|wp-login|wp-content|xmlrpc\.php|phpmyadmin|\.env$|/\.git/|actuator|_ignition|/console/|php\.ini$) {
+        access_log off;
+        return 444;
+    }
+
     # Базовые заголовки безопасности для всех ответов (динамика и статика).
     # CSP и HSTS ставит Laravel (нужны per-request nonce и проверка HTTPS).
     add_header X-Content-Type-Options "nosniff" always;
@@ -23,6 +31,8 @@ server {
 
     location ~ ^/(login|register|forgot-password|reset-password|email/verification-notification|confirm-password) {
         limit_req zone=auth burst=10 nodelay;
+        if ($bad_bot_ua = 1) { return 403; }
+        if ($bad_bot_write = 1) { return 403; }
         proxy_http_version 1.1;
         proxy_set_header Host $http_host;
         proxy_set_header Scheme $scheme;
@@ -33,6 +43,8 @@ server {
 
     location ~ ^/api/ {
         limit_req zone=api burst=60 nodelay;
+        if ($bad_bot_ua = 1) { return 403; }
+        if ($bad_bot_write = 1) { return 403; }
         proxy_http_version 1.1;
         proxy_set_header Host $http_host;
         proxy_set_header Scheme $scheme;

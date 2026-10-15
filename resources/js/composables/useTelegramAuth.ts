@@ -241,6 +241,15 @@ export function useTelegramAuth() {
         }
 
         await reloadAuthProps()
+
+        // Анкета не заполнена — гейт бэка всё равно уведёт на /onboarding:
+        // едем туда сразу, а не в свайпы.
+        if (response.data?.onboarding_required === true) {
+          router.visit('/onboarding')
+
+          return true
+        }
+
         redirectGuestToApp()
 
         return true

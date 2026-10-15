@@ -26,6 +26,21 @@ class RegisteredUserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
+        // Honeypot: поле `website` скрыто CSS — человек его не заполняет.
+        // Бота режем generic-ошибкой без подсказок, что именно сработало.
+        if (\App\Services\TurnstileService::honeypotFilled($request->input('website'))) {
+            \Illuminate\Support\Facades\Log::warning('bot blocked', [
+                'reason' => 'honeypot',
+                'ip' => $request->ip(),
+                'path' => 'register',
+                'ua' => mb_substr((string) $request->userAgent(), 0, 256),
+            ]);
+
+            throw ValidationException::withMessages([
+                'email' => 'Подозрительная активность. Попробуйте позже.',
+            ]);
+        }
+
         $accountType = $request->string('account_type')->toString();
 
         if (! in_array($accountType, ['person', 'business'], true)) {
@@ -48,6 +63,8 @@ class RegisteredUserController extends Controller
             'home_address' => 'nullable|string|max:255',
             'signup_goal' => 'required|in:love,flirt,friendship,chat,interests,neighbors,business',
             'account_type' => 'nullable|in:person,business',
+            'website' => 'nullable|string|max:255',
+            'captcha_token' => ['required', new \App\Rules\ValidTurnstile($request)],
             'landing_tab' => 'nullable|in:ulove,upin,business',
             'enabled_modules' => 'nullable|array',
             'enabled_modules.*' => 'nullable|string|in:ulove,upin,uflow,districts,business',

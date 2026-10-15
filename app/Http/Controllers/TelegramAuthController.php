@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Services\AppModulesWelcomeNews;
 use App\Services\AppSettings;
 use App\Services\TelegramInitDataValidator;
+use App\Services\TelegramOnboarding;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -34,6 +35,34 @@ class TelegramAuthController extends Controller
      * @param TelegramInitDataValidator $validator проверка подписи initData
      */
     public function __construct(private readonly TelegramInitDataValidator $validator) {}
+
+    /**
+     * Гейт анкеты-онбординга для Mini App сессии.
+     *
+     * Без заполненной анкеты (имя, пол, 18+, цель) дальше анкеты не пускаем:
+     * ставим флаг `onboarding_only` (снимается завершением веб-анкеты),
+     * стаффу флаг не ставим — ему Mini App нужен для работы.
+     * Вызывать на каждом успешном входе (включая уже залогиненных):
+     * анкету могли добить в браузере — флаг тогда обязан погаснуть.
+     *
+     * @param Request $request запрос (для сессии)
+     * @param User $user вошедший
+     * @return array{onboarding_required:bool} кусок JSON-ответа
+     */
+    private function onboardingFlag(Request $request, User $user): array
+    {
+        $fresh = $user->fresh() ?? $user;
+
+        $needed = ! $fresh->canModerate() && ! TelegramOnboarding::isComplete($fresh);
+
+        if ($needed) {
+            $request->session()->put('onboarding_only', true);
+        } else {
+            $request->session()->forget('onboarding_only');
+        }
+
+        return ['onboarding_required' => $needed];
+    }
 
     /**
      * Войти или зарегистрироваться по Telegram initData.
@@ -76,12 +105,12 @@ class TelegramAuthController extends Controller
             if ((int) $currentUser->telegram_id === $telegramId) {
                 $this->refreshSnapshot($currentUser, $tgUser);
 
-                return response()->json([
+                return response()->json(array_merge([
                     'user' => $currentUser->fresh(),
                     'is_new' => false,
                     'linked' => true,
                     'switched' => false,
-                ]);
+                ], $this->onboardingFlag($request, $currentUser)));
             }
 
             $owner = User::where('telegram_id', $telegramId)->first();
@@ -96,22 +125,22 @@ class TelegramAuthController extends Controller
                 $request->session()->regenerate();
                 \App\Services\LoginDeviceGuard::handleLogin($owner, $request, 'telegram');
 
-                return response()->json([
+                return response()->json(array_merge([
                     'user' => $owner->fresh(),
                     'is_new' => false,
                     'linked' => true,
                     'switched' => true,
-                ]);
+                ], $this->onboardingFlag($request, $owner)));
             }
 
             $this->linkToUser($currentUser, $tgUser, $telegramId);
 
-            return response()->json([
+            return response()->json(array_merge([
                 'user' => $currentUser->fresh(),
                 'is_new' => false,
                 'linked' => true,
                 'switched' => false,
-            ]);
+            ], $this->onboardingFlag($request, $currentUser)));
         }
 
         $existing = User::where('telegram_id', $telegramId)->first();
@@ -126,12 +155,12 @@ class TelegramAuthController extends Controller
             $request->session()->regenerate();
             \App\Services\LoginDeviceGuard::handleLogin($existing, $request, 'telegram');
 
-            return response()->json([
+            return response()->json(array_merge([
                 'user' => $existing->fresh(),
                 'is_new' => false,
                 'linked' => true,
                 'switched' => false,
-            ]);
+            ], $this->onboardingFlag($request, $existing)));
         }
 
         $autoRegister = (bool) config('telegram.auto_register', true);
@@ -148,12 +177,12 @@ class TelegramAuthController extends Controller
         $request->session()->regenerate();
         \App\Services\LoginDeviceGuard::handleLogin($user, $request, 'telegram');
 
-        return response()->json([
+        return response()->json(array_merge([
             'user' => $user->fresh(),
             'is_new' => true,
             'linked' => true,
             'switched' => false,
-        ], 201);
+        ], $this->onboardingFlag($request, $user)), 201);
     }
 
     /**

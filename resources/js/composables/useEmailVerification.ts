@@ -34,6 +34,12 @@ const error = ref<string | null>(null)
 const justVerified = ref(false)
 const cooldownLeft = ref(0)
 const dismissed = ref(false)
+/**
+ * Жёсткая блокировка раздела (чат): страница показывает свою
+ * неснимаемую модалку, глобальная при этом молчит — иначе два
+ * диалога стеклятся друг над другом.
+ */
+const hardBlock = ref(false)
 
 let cooldownTimer: ReturnType<typeof setInterval> | null = null
 
@@ -117,9 +123,25 @@ export function useEmailVerification() {
   /**
    * Показывать ли модалку прямо сейчас (не закрыта на «потом»).
    *
+   * Молчит при жёсткой блокировке раздела: там своя неснимаемая
+   * модалка, два диалога сразу не показываем.
+   *
    * @returns true когда есть нужда и пользователь не отложил
    */
-  const shouldShowModal = computed(() => needsVerification.value && !dismissed.value && !justVerified.value)
+  const shouldShowModal = computed(() => needsVerification.value && !dismissed.value && !justVerified.value && !hardBlock.value)
+
+  /**
+   * Включить/выключить жёсткую блокировку раздела.
+   *
+   * Чат включает на маунте и гасит на размонтировании: пока раздел
+   * заблокирован, глобальная откладываемая модалка не показывается.
+   *
+   * @param value true — раздел заблокирован своей модалкой
+   * @returns void
+   */
+  function setHardBlock(value: boolean): void {
+    hardBlock.value = value
+  }
 
   /**
    * Можно ли жать «Подтвердить почту» прямо сейчас.
@@ -263,6 +285,8 @@ export function useEmailVerification() {
     isStaff,
     needsVerification,
     shouldShowModal,
+    hardBlock,
+    setHardBlock,
     canResend,
     cooldownLeft,
     email,

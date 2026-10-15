@@ -1,13 +1,22 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3'
 import { route } from '@/route'
+import { ref } from 'vue'
+import { useHoneypot } from '@/composables/useTurnstile'
+import TurnstileWidget from '@/Components/Security/TurnstileWidget.vue'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
 import Card from 'primevue/card'
 const props = defineProps<{ status?: string | null }>()
-const form = useForm({ email: '' })
-const submit = () => { form.post(route('password.email')) }
+const form = useForm({ email: '', captcha_token: '', website: '' as string | undefined })
+const captchaToken = ref('')
+const trap = useHoneypot()
+const submit = () => {
+  form.captcha_token = captchaToken.value
+  form.website = trap.value.value || undefined
+  form.post(route('password.email'))
+}
 </script>
 <template>
   <Head title="Восстановление пароля" />
@@ -19,6 +28,9 @@ const submit = () => { form.post(route('password.email')) }
         <InputText v-model="form.email" type="email" placeholder="you@mail.ru" class="w-full mt-1.5 !rounded-2xl" :invalid="!!form.errors.email" required autofocus autocomplete="username" />
         <Message v-if="form.errors.email" severity="error" :closable="false" class="mt-1 !rounded-xl !py-1 !text-xs">{{ form.errors.email }}</Message>
       </div>
+      <input v-model="trap.value.value" :name="trap.fieldName" type="text" :class="trap.hiddenClass" tabindex="-1" autocomplete="off" aria-hidden="true" />
+      <TurnstileWidget v-model:token="captchaToken" />
+      <Message v-if="form.errors.captcha_token" severity="error" :closable="false" class="mt-1 !rounded-xl !py-1 !text-xs">{{ form.errors.captcha_token }}</Message>
       <Button type="submit" :loading="form.processing" label="Отправить ссылку" class="w-full !bg-ink-900 dark:!bg-[#FAFAFA] !border-ink-900 dark:!border-[#FAFAFA] !text-white dark:!text-[#0F172A] !rounded-full !py-3.5 !font-bold [&_.p-button-label]:!text-white dark:[&_.p-button-label]:!text-[#0F172A]" />
     </form>
 </template>

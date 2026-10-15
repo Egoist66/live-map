@@ -41,6 +41,20 @@ class PageController extends Controller
     }
 
     /**
+     * Анкета-онбординг для Mini App сессий с флагом onboarding_only.
+     *
+     * Тот же набор, что в боте и регистрации: имя, пол, 18+, цель, город.
+     * Страница открыта гейтом EnsureOnboardingComplete, форму шлёт
+     * на /api/onboarding/complete — после успеха флаг снимается.
+     *
+     * @return InertiaResponse
+     */
+    public function onboarding(): InertiaResponse
+    {
+        return Inertia::render('Onboarding/Index');
+    }
+
+    /**
      * Редирект со старого /dashboard на /profile.
      *
      * @param string|null $identifier

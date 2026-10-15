@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue'
 import { api } from '@/services/api'
+import { useHoneypot } from '@/composables/useTurnstile'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
@@ -15,6 +16,9 @@ const message = ref('')
 const error = ref<string | null>(null)
 const sending = ref(false)
 const sentCompany = ref<string | null>(null)
+// Капча + honeypot: гостевой POST без auth — главная мишень спам-ботов.
+const captchaToken = ref('')
+const trap = useHoneypot()
 
 /**
  * Диалог заявки на сотрудничество («Писать нам» на лендинге).
@@ -38,6 +42,7 @@ export function useCooperation() {
     error.value = null
     sending.value = false
     sentCompany.value = null
+    captchaToken.value = ''
     open.value = true
   }
 
@@ -70,18 +75,23 @@ export function useCooperation() {
       const { data } = await api.post('/api/cooperation', {
         email: cleanEmail,
         message: message.value.trim() || undefined,
+        captcha_token: captchaToken.value || undefined,
+        website: trap.value.value || undefined,
       })
       sentCompany.value = String(data?.company ?? '').trim() || 'Ваша компания'
     } catch (err: any) {
       const status = err?.response?.status
+      const captchaError = err?.response?.data?.errors?.captcha_token?.[0]
       error.value =
-        status === 429
-          ? 'Слишком много попыток — попробуй через минуту'
-          : (err?.response?.data?.message ?? 'Не получилось отправить. Попробуй ещё раз');
+        typeof captchaError === 'string'
+          ? captchaError
+          : status === 429
+            ? 'Слишком много попыток — попробуй через минуту'
+            : (err?.response?.data?.message ?? 'Не получилось отправить. Попробуй ещё раз');
     } finally {
       sending.value = false
     }
   }
 
-  return { open, email, message, error, sending, sentCompany, emailValid, canSubmit, show, close, submit }
+  return { open, email, message, error, sending, sentCompany, emailValid, canSubmit, show, close, submit, captchaToken, trap }
 }

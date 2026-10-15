@@ -63,6 +63,16 @@ class HandleInertiaRequests extends Middleware
             'support' => [
                 'email' => config('seo.support_email', config('mail.from.address')),
             ],
+            'captcha' => function () {
+                try {
+                    return [
+                        'enabled' => \App\Services\TurnstileService::isEnabled(),
+                        'siteKey' => \App\Services\TurnstileService::siteKey(),
+                    ];
+                } catch (\Throwable) {
+                    return ['enabled' => false, 'siteKey' => ''];
+                }
+            },
             'globalModules' => function () {
                 try {
                     return \App\Services\AppSettings::globalModules();

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Mail\CooperationRequestMail;
 use App\Models\User;
+use App\Services\TurnstileService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -58,9 +59,29 @@ class CooperationController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        $rawWebsite = $request->input('website');
+
+        // Honeypot с фейковым 201: бот видит «успех» и не адаптируется,
+        // админы не получают спам, письмо не уходит.
+        if (TurnstileService::honeypotFilled($rawWebsite)) {
+            Log::warning('bot blocked', [
+                'reason' => 'honeypot',
+                'ip' => $request->ip(),
+                'path' => 'cooperation',
+                'ua' => mb_substr((string) $request->userAgent(), 0, 256),
+            ]);
+
+            $email = mb_strtolower(trim((string) $request->input('email', 'bot@example.com')));
+            $company = self::companyNameFromEmail($email);
+
+            return response()->json(['ok' => true, 'company' => $company], 201);
+        }
+
         $data = $request->validate([
             'email' => 'required|email:rfc|max:255',
             'message' => 'nullable|string|max:1000',
+            'website' => 'nullable|string|max:255',
+            'captcha_token' => ['required', new \App\Rules\ValidTurnstile($request)],
         ]);
 
         $email = mb_strtolower(trim($data['email']));

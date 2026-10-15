@@ -74,6 +74,10 @@ class SecurityHeaders
         $script[] = 'https://telegram.org';
         // Хосты счётчиков из панели SEO (Google/Yandex/Meta/VK): их внешние
         // <script src> должны проходить script-src без правки кода.
+        // Cloudflare Turnstile (капча на гостевых формах): скрипт виджета
+        // и его challenge-iframe обязаны проходить CSP, иначе виджет
+        // не рендерится и регистрация/восстановление встают.
+        $turnstileHost = 'https://challenges.cloudflare.com';
         $analyticsScripts = [
             'https://www.googletagmanager.com',
             'https://www.google-analytics.com',
@@ -116,6 +120,9 @@ class SecurityHeaders
             'https://mc.yandex.ru',
         ];
         $frame = ["'self'"];
+        $script[] = $turnstileHost;
+        $connect[] = $turnstileHost;
+        $frame[] = $turnstileHost;
 
         foreach ($analyticsScripts as $analyticsHost) {
             $script[] = $analyticsHost;

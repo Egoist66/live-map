@@ -9,9 +9,11 @@ use Illuminate\Support\Facades\Cache;
  * Свайпы прямо в Telegram-боте («Найти мэтч здесь»).
  *
  * Механика как в Mini App, только интерфейс — чат: бот показывает
- * по одной анкете текстом + кнопки «❤️ / 👎 / ➡️». Лайк/пас пишет
- * через DatingService::recordAction, при взаимности приходит мэтч.
- * Возраст 18+ обязателен — без birth_date просим подтвердить в приложении.
+ * по одной анкете текстом + кнопки «❤️ / 👎» и «👤 Анкета целиком».
+ * Кнопки «дальше» нет сознательно: следующий кандидат приезжает сам
+ * после лайка/паса. Лайк/пас пишет через DatingService::recordAction,
+ * при взаимности приходит мэтч. Возраст 18+ обязателен — дату рождения
+ * спрашиваем в онбординге бота (TelegramOnboarding) до первого /find.
  */
 class TelegramSwipePanel
 {
@@ -194,7 +196,6 @@ class TelegramSwipePanel
             ],
             [
                 ['text' => '👤 Анкета целиком', 'callback_data' => 'sw_view:'.$cardId],
-                ['text' => '➡️ Дальше', 'callback_data' => 'sw_find'],
             ],
             [
                 TelegramMenu::openAppButton('🌐 Открыть свайпы'),
@@ -209,10 +210,142 @@ class TelegramSwipePanel
     }
 
     /**
+     * Полный текст анкеты для кнопки «Анкета целиком».
+     *
+     * В отличие от короткой карточки ленты здесь ничего не режем:
+     * полное «о себе», все интересы, подпись профиля. Лимиты только
+     * технические: подпись под фото — до 950 символов (лимит Bot API
+     * 1024), текстовое сообщение — до 3500 (лимит 4096 с запасом
+     * под разметку). Режем аккуратно по словам с многоточием.
+     *
+     * @param array<string, mixed> $card карточка из DatingService
+     * @param bool $hasPhoto уйдёт ли текст подписью под фото
+     * @return string готовый HTML-текст
+     */
+    private static function fullCardText(array $card, bool $hasPhoto): string
+    {
+        $name = trim((string) ($card['name'] ?? 'Без имени'));
+        $age = $card['age'] ?? null;
+
+        $title = $name;
+
+        if ($age !== null) {
+            $title .= ', '.$age;
+        }
+
+        $lines = [];
+        $lines[] = '👤 <b>'.self::esc($title).'</b>';
+
+        $meta = [];
+
+        $genderLabel = self::genderLabel((string) ($card['gender'] ?? ''));
+
+        if ($genderLabel !== '') {
+            $meta[] = $genderLabel;
+        }
+
+        $city = trim((string) ($card['city'] ?? ''));
+
+        if ($city !== '') {
+            $meta[] = self::esc($city);
+        }
+
+        $distance = $card['distance_km'] ?? null;
+
+        if (is_numeric($distance)) {
+            $meta[] = self::esc((string) $distance).' км';
+        }
+
+        $goalLabel = self::goalLabel((string) ($card['goal'] ?? ''));
+
+        if ($goalLabel !== '') {
+            $meta[] = 'цель: '.self::esc($goalLabel);
+        }
+
+        if ($meta !== []) {
+            $lines[] = implode(' · ', $meta);
+        }
+
+        $customGoal = trim((string) ($card['custom_goal'] ?? ''));
+
+        if ($customGoal !== '') {
+            $lines[] = '';
+            $lines[] = '💭 '.self::esc($customGoal);
+        }
+
+        $bio = trim((string) ($card['bio'] ?? ''));
+
+        if ($bio !== '') {
+            $lines[] = '';
+            $lines[] = '📝 '.self::esc($bio);
+        }
+
+        $about = trim((string) ($card['about'] ?? ''));
+
+        if ($about !== '') {
+            $lines[] = '';
+            $lines[] = '💬 '.self::esc($about);
+        }
+
+        $interests = $card['interests'] ?? [];
+
+        if (is_array($interests) && $interests !== []) {
+            $tags = array_values(array_filter(array_map('strval', $interests)));
+            $escaped = array_map(fn (string $tag): string => self::esc($tag), $tags);
+            $lines[] = '';
+            $lines[] = '🏷 '.implode(', ', $escaped);
+        }
+
+        $statusLine = self::statusLine($card);
+
+        if ($statusLine !== '') {
+            $lines[] = '';
+            $lines[] = $statusLine;
+        }
+
+        $ratingLine = self::ratingLine($card);
+
+        if ($ratingLine !== '') {
+            $lines[] = $ratingLine;
+        }
+
+        $trustWarning = self::trustWarning($card);
+
+        if ($trustWarning !== '') {
+            $lines[] = '';
+            $lines[] = $trustWarning;
+        }
+
+        if (! empty($card['liked_me'])) {
+            $lines[] = '';
+            $lines[] = '💞 Этот человек уже лайкнул вас — взаимность даст мэтч!';
+        }
+
+        $text = implode("\n", $lines);
+        $limit = $hasPhoto ? 950 : 3500;
+
+        if (mb_strlen($text) <= $limit) {
+            return $text;
+        }
+
+        $cut = mb_substr($text, 0, $limit - 1);
+        $lastBreak = mb_strrpos($cut, "\n");
+
+        if ($lastBreak !== false && $lastBreak > (int) ($limit * 0.5)) {
+            $cut = mb_substr($cut, 0, $lastBreak);
+        }
+
+        return rtrim($cut).'…';
+    }
+
+    /**
      * Полная анкета кандидата для кнопки «Анкета целиком».
      *
      * Приватность соблюдаем как в ленте: скрытое имя/возраст/дистанция
      * не раскрываем, чужую/недоступную анкету не показываем (null).
+     * Сборку карточки оборачиваем в try/catch с запасным коротким
+     * текстом: лучше показать имя + кнопку приложения, чем ронять
+     * колбэк в «Анкета недоступна» на ровном месте.
      *
      * @param User $viewer кто смотрит
      * @param int $candidateId чью анкету открыть
@@ -220,14 +353,107 @@ class TelegramSwipePanel
      */
     public static function detailsFor(User $viewer, int $candidateId): ?array
     {
-        if ($candidateId <= 0) {
+        $keyboard = [
+            [
+                ['text' => '❤️ Нравится', 'callback_data' => 'sw_like:'.$candidateId],
+                ['text' => '👎 Пас', 'callback_data' => 'sw_pass:'.$candidateId],
+            ],
+            [
+                ['text' => '◀️ Назад к анкете', 'callback_data' => 'sw_back:'.$candidateId],
+            ],
+        ];
+
+        $loaded = self::loadCandidateCard($viewer->fresh() ?? $viewer, $candidateId);
+
+        if ($loaded['status'] === 'denied') {
             return null;
+        }
+
+        $raw = $loaded['card'];
+
+        if ($raw === null) {
+            $candidate = $loaded['candidate'];
+            $fallbackName = trim((string) ($candidate?->name ?? ''));
+
+            if ($fallbackName === '') {
+                return null;
+            }
+
+            return [
+                'text' => '👤 <b>'.self::esc($fallbackName).'</b>'."\n\nПолный текст анкеты не загрузился — откройте её в приложении.",
+                'photoUrl' => $candidate !== null
+                    ? TelegramPhoto::absolutize((string) ($candidate->avatar_url ?? ''))
+                    : null,
+                'keyboard' => TelegramMenu::withNav($keyboard),
+            ];
+        }
+
+        $photoUrl = self::cardPhoto($raw);
+
+        return [
+            'text' => self::fullCardText($raw, $photoUrl !== null),
+            'photoUrl' => $photoUrl,
+            'keyboard' => TelegramMenu::withNav($keyboard),
+        ];
+    }
+
+    /**
+     * Короткая карточка кандидата для кнопки «◀️ Назад к анкете».
+     *
+     * Возвращает к оценке: те же ❤️/👎 и «Анкета целиком».
+     * Приватность та же, что у полной анкеты; любая проблема
+     * сборки — null, контроллер едет к следующей анкете.
+     *
+     * @param User $viewer кто смотрит
+     * @param int $candidateId чья карточка
+     * @return array{text:string, photoUrl:string|null, keyboard:array<int, array<int, array<string, mixed>>>}|null
+     */
+    public static function shortCardFor(User $viewer, int $candidateId): ?array
+    {
+        $loaded = self::loadCandidateCard($viewer->fresh() ?? $viewer, $candidateId);
+
+        if ($loaded['status'] === 'denied') {
+            return null;
+        }
+
+        $raw = $loaded['card'];
+
+        if ($raw === null) {
+            return null;
+        }
+
+        $built = self::card($raw);
+
+        return [
+            'text' => $built['text'],
+            'photoUrl' => $built['photoUrl'],
+            'keyboard' => $built['keyboard'],
+        ];
+    }
+
+    /**
+     * Загрузить сырую карточку кандидата с проверкой приватности.
+     *
+     * Единая точка для полной анкеты и кнопки «Назад»: denied —
+     * чужое/скрытое/заблокировавшее (показывать нельзя), card=null —
+     * приватность ок, но сборка упала (можно показать запасной текст).
+     *
+     * @param User $viewer кто смотрит
+     * @param int $candidateId чья анкета
+     * @return array{status:string, card:array<string, mixed>|null, candidate:User|null}
+     */
+    private static function loadCandidateCard(User $viewer, int $candidateId): array
+    {
+        $denied = ['status' => 'denied', 'card' => null, 'candidate' => null];
+
+        if ($candidateId <= 0) {
+            return $denied;
         }
 
         $candidate = User::find($candidateId);
 
         if ($candidate === null) {
-            return null;
+            return $denied;
         }
 
         $fresh = $viewer->fresh() ?? $viewer;
@@ -235,11 +461,11 @@ class TelegramSwipePanel
         try {
             $allowed = $candidate->isDiscoverableBy($fresh);
         } catch (\Throwable) {
-            return null;
+            return $denied;
         }
 
         if (! $allowed) {
-            return null;
+            return $denied;
         }
 
         try {
@@ -251,46 +477,46 @@ class TelegramSwipePanel
         }
 
         if ($blocked) {
-            return null;
+            return $denied;
         }
 
+        try {
+            $card = self::buildCandidateCard($fresh, $candidate, $candidateId);
+        } catch (\Throwable) {
+            return ['status' => 'ok', 'card' => null, 'candidate' => $candidate];
+        }
+
+        return ['status' => 'ok', 'card' => $card, 'candidate' => $candidate];
+    }
+
+    /**
+     * Собрать полную карточку кандидата (мэтч/лайк-флаги + текст без купюр).
+     *
+     * @param User $viewer кто смотрит
+     * @param User $candidate чья анкета
+     * @param int $candidateId id для клавиатуры
+     * @return array{text:string, photoUrl:string|null}
+     *
+     * @throws \Throwable когда не собрались рейтинг/свайп-флаги
+     */
+    private static function buildCandidateCard(User $viewer, User $candidate, int $candidateId): array
+    {
         $dating = app(DatingService::class);
 
-        try {
-            $isMatch = $dating->isMatched((int) $fresh->id, $candidateId);
-        } catch (\Throwable) {
-            $isMatch = false;
-        }
+        $isMatch = $dating->isMatched((int) $viewer->id, $candidateId);
 
-        $likedMe = false;
+        $likedMe = \App\Models\SwipeAction::where('liker_id', $candidateId)
+            ->where('liked_id', $viewer->id)
+            ->where('action', 'like')
+            ->exists();
 
-        try {
-            $likedMe = \App\Models\SwipeAction::where('liker_id', $candidateId)
-                ->where('liked_id', $fresh->id)
-                ->where('action', 'like')
-                ->exists();
-        } catch (\Throwable) {
-            $likedMe = false;
-        }
+        $card = $dating->cardFor($candidate, $viewer, null, $isMatch, $likedMe);
 
-        $card = $dating->cardFor($candidate, $fresh, null, $isMatch, $likedMe);
-        $built = self::card($card);
-
-        $keyboard = [
-            [
-                ['text' => '❤️ Нравится', 'callback_data' => 'sw_like:'.$candidateId],
-                ['text' => '👎 Пас', 'callback_data' => 'sw_pass:'.$candidateId],
-            ],
-            [
-                ['text' => '➡️ Дальше', 'callback_data' => 'sw_find'],
-                TelegramMenu::openAppButton('🌐 Открыть в приложении'),
-            ],
-        ];
+        $photoUrl = self::cardPhoto($card);
 
         return [
-            'text' => $built['text'],
-            'photoUrl' => $built['photoUrl'],
-            'keyboard' => TelegramMenu::withNav($keyboard),
+            'text' => self::fullCardText($card, $photoUrl !== null),
+            'photoUrl' => $photoUrl,
         ];
     }
 
@@ -485,7 +711,7 @@ class TelegramSwipePanel
      */
     public static function intro(): array
     {
-        $text = "🔥 <b>Найти мэтч здесь</b>\n\nПоказываю анкеты по одной прямо в чате — как свайпы в приложении, только кнопками:\n❤️ — лайк, 👎 — пас, ➡️ — дальше без оценки.\n\nПри взаимности сразу напишу о мэтче.";
+        $text = "🔥 <b>Найти мэтч здесь</b>\n\nПоказываю анкеты по одной прямо в чате — как свайпы в приложении, только кнопками:\n❤️ — лайк, 👎 — пас, 👤 — анкета целиком.\n\nСледующая анкета приезжает сама после оценки. При взаимности сразу напишу о мэтче.";
 
         $keyboard = [
             [
