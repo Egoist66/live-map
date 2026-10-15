@@ -153,6 +153,43 @@ class TelegramBotApi
     }
 
     /**
+     * Заменить фото+подпись+клавиатуру у фото-карточки на месте.
+     *
+     * editMessageCaption меняет только текст — старое фото остаётся
+     * висеть (так залипал чужой аватар в свайпах), поэтому смена
+     * кандидата идёт через editMessageMedia: фото, подпись (лимит
+     * Bot API — 1024, режем до 1000) и кнопки меняются одним вызовом.
+     * Тот же толерантный режим, что у editPanel: «message is not
+     * modified» — успех, а не повод для warning в логе.
+     *
+     * @param int $chatId telegram_id владельца
+     * @param int $messageId id сообщения с фото
+     * @param string $photoUrl абсолютный https-URL нового фото
+     * @param string $caption новая подпись в HTML-разметке
+     * @param array<int, array<int, array<string, mixed>>> $keyboard новые ряды кнопок
+     * @return bool true при успехе
+     */
+    public static function editMedia(int $chatId, int $messageId, string $photoUrl, string $caption, array $keyboard = []): bool
+    {
+        $payload = [
+            'chat_id' => $chatId,
+            'message_id' => $messageId,
+            'media' => [
+                'type' => 'photo',
+                'media' => $photoUrl,
+                'caption' => mb_substr($caption, 0, 1000),
+                'parse_mode' => 'HTML',
+            ],
+        ];
+
+        if ($keyboard !== []) {
+            $payload['reply_markup'] = ['inline_keyboard' => $keyboard];
+        }
+
+        return self::post('editMessageMedia', $payload, true) !== null;
+    }
+
+    /**
      * Удалить сообщение бота (смена типа карточки текст↔фото).
      *
      * editMessageText не правит фото и наоборот: старую карточку

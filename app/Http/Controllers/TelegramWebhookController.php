@@ -1472,8 +1472,10 @@ class TelegramWebhookController extends Controller
     /**
      * Гейт анкеты-онбординга для колбэков свайпов.
      *
-     * Без заполненной анкеты (имя, пол, 18+, цель) мэтчи закрыты:
-     * показываем текущий шаг онбординга вместо карточки.
+     * Требуем добивку только с новых аккаунтов (isRequired):
+     * созданные до введения гейта освобождены grandfather-датой.
+     * Просмотр чужой анкеты (sw_view/sw_back) сюда не входит —
+     * это чтение, гейтуется только лента/оценки.
      *
      * @param User $user зритель (уже fresh)
      * @param int $chatId куда
@@ -1483,7 +1485,7 @@ class TelegramWebhookController extends Controller
      */
     private function guardOnboarding(User $user, int $chatId, int $messageId, string $callbackId): bool
     {
-        if (TelegramOnboarding::isComplete($user)) {
+        if (! TelegramOnboarding::isRequired($user)) {
             return false;
         }
 
@@ -1590,7 +1592,7 @@ class TelegramWebhookController extends Controller
     {
         $fresh = $user->fresh() ?? $user;
 
-        if (! TelegramOnboarding::isComplete($fresh)) {
+        if (TelegramOnboarding::isRequired($fresh)) {
             $panel = TelegramOnboarding::startFor($fresh);
             $sent = TelegramBotApi::sendMessage($chatId, $panel['text'], $panel['keyboard']);
 
@@ -2003,6 +2005,10 @@ class TelegramWebhookController extends Controller
     /**
      * Показать анкету целиком по кнопке «👤 Анкета целиком».
      *
+     * Чтение чужой анкеты гейтом онбординга не закрываем: своя
+     * незаполненность не должна прятать чужой профиль, оценки
+     * (❤️/👎) при этом всё равно упираются в guardOnboarding.
+     *
      * @param User $user зритель
      * @param string $data callback_data sw_view:{id}
      * @param int $chatId куда
@@ -2013,10 +2019,6 @@ class TelegramWebhookController extends Controller
     private function showCandidate(User $user, string $data, int $chatId, int $messageId, string $callbackId): void
     {
         $fresh = $user->fresh() ?? $user;
-
-        if ($this->guardOnboarding($fresh, $chatId, $messageId, $callbackId)) {
-            return;
-        }
 
         $candidateId = (int) (explode(':', $data, 2)[1] ?? 0);
 
@@ -2034,11 +2036,12 @@ class TelegramWebhookController extends Controller
     }
 
     /**
-     * Вернуться из полной анкеты к её короткой карточке («◀️ Назад к анкете»).
+     * Вернуться из полной анкеты в свайпы к тому же человеку («◀️ В свайпы»).
      *
-     * Человек снова видит ❤️/👎 и может оценить, не теряя кандидата.
-     * Карточка протухла (скрыли/удалили/сборка упала) — едем к следующей
-     * анкете, как раньше делала кнопка «Дальше», которой больше нет.
+     * Человек снова видит короткую карточку с ❤️/👎 и может оценить,
+     * не теряя кандидата. Карточка протухла (скрыли/удалили/сборка
+     * упала) — едем к следующей анкете, как раньше делала кнопка
+     * «Дальше», которой больше нет.
      *
      * @param User $user зритель
      * @param string $data callback_data sw_back:{id}
@@ -2050,10 +2053,6 @@ class TelegramWebhookController extends Controller
     private function backToCard(User $user, string $data, int $chatId, int $messageId, string $callbackId): void
     {
         $fresh = $user->fresh() ?? $user;
-
-        if ($this->guardOnboarding($fresh, $chatId, $messageId, $callbackId)) {
-            return;
-        }
 
         $candidateId = (int) (explode(':', $data, 2)[1] ?? 0);
 

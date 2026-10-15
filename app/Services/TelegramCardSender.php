@@ -5,10 +5,12 @@ namespace App\Services;
 /**
  * Отправка карточек бота с фото или без.
  *
- * Текстовую панель правим через editMessageText, подпись под фото —
- * через editMessageCaption: это разные методы Bot API, тип текущего
- * сообщения запоминаем в кеше при отправке (photo:{chat}:{message}=1).
- * Промахнулись типом — не роняем чат, а шлём карточку новым сообщением.
+ * Текстовую панель правим через editMessageText, фото-карточку —
+ * через editMessageMedia (меняет само фото + подпись одним вызовом;
+ * editMessageCaption трогает только текст и оставлял висеть старый
+ * снимок). Тип текущего сообщения запоминаем в кеше при отправке
+ * (photo:{chat}:{message}=1). Промахнулись типом — не роняем чат,
+ * а шлём карточку новым сообщением.
  */
 class TelegramCardSender
 {
@@ -86,7 +88,11 @@ class TelegramCardSender
     }
 
     /**
-     * Перерисовать карточку: подпись под фото или текст панели.
+     * Перерисовать карточку: фото+подпись или текст панели.
+     *
+     * Фото в фото меняем через editMessageMedia на месте (иначе
+     * кандидат новый, а снимок старый). Не вышло — удаляем и шлём
+     * карточку новым сообщением.
      *
      * @param int $chatId куда
      * @param int $messageId что
@@ -100,9 +106,9 @@ class TelegramCardSender
         $wasPhoto = self::wasPhoto($chatId, $messageId);
 
         if ($photoUrl !== null && $wasPhoto) {
-            $ok = TelegramBotApi::editCaption($chatId, $messageId, $text, $keyboard);
+            $replaced = TelegramBotApi::editMedia($chatId, $messageId, $photoUrl, $text, $keyboard);
 
-            if ($ok) {
+            if ($replaced) {
                 return;
             }
         }

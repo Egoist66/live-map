@@ -12,9 +12,12 @@ use Symfony\Component\HttpFoundation\Response;
  *
  * Флаг `onboarding_only` ставит только Telegram-вход (Mini App):
  * браузерный логин его никогда не получает, поэтому обычные юзеры
- * (включая пол `other`) гейтом не задеваются. Пока флаг стоит и анкета
- * неполна — закрыто всё, кроме самой анкеты, входа/выхода и почты:
- * ни почитать, ни полайкать, ни подёргать API мимо формы нельзя.
+ * (включая пол `other`) гейтом не задеваются. Требование — только для
+ * новых аккаунтов (TelegramOnboarding::isRequired, grandfather-дата
+ * `telegram.onboarding_required_since`): старые освобождены.
+ * Пока флаг стоит и анкета обязана — закрыто всё, кроме самой анкеты,
+ * входа/выхода и почты: ни почитать, ни полайкать, ни подёргать API
+ * мимо формы нельзя.
  * Стафф (админы/модераторы) освобождён — им Mini App нужен для работы.
  *
  * Страницы уводим редиректом на `/onboarding`, API/JSON получают
@@ -109,7 +112,7 @@ class EnsureOnboardingComplete
 
             $fresh = $user->fresh() ?? $user;
 
-            if (TelegramOnboarding::isComplete($fresh)) {
+            if (! TelegramOnboarding::isRequired($fresh)) {
                 $request->session()->forget('onboarding_only');
 
                 return false;

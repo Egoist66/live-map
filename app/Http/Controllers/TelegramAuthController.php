@@ -39,8 +39,9 @@ class TelegramAuthController extends Controller
     /**
      * Гейт анкеты-онбординга для Mini App сессии.
      *
-     * Без заполненной анкеты (имя, пол, 18+, цель) дальше анкеты не пускаем:
-     * ставим флаг `onboarding_only` (снимается завершением веб-анкеты),
+     * Требуем добивку только с новых аккаунтов (TelegramOnboarding::isRequired):
+     * созданные до введения гейта освобождены grandfather-датой
+     * `telegram.onboarding_required_since`. Снимается завершением веб-анкеты,
      * стаффу флаг не ставим — ему Mini App нужен для работы.
      * Вызывать на каждом успешном входе (включая уже залогиненных):
      * анкету могли добить в браузере — флаг тогда обязан погаснуть.
@@ -53,7 +54,7 @@ class TelegramAuthController extends Controller
     {
         $fresh = $user->fresh() ?? $user;
 
-        $needed = ! $fresh->canModerate() && ! TelegramOnboarding::isComplete($fresh);
+        $needed = TelegramOnboarding::isRequired($fresh);
 
         if ($needed) {
             $request->session()->put('onboarding_only', true);

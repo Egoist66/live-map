@@ -27,4 +27,9 @@ return [
     // X-Telegram-Bot-Api-Secret-Token. Пусто — без проверки
     // (только для локальной отладки).
     'webhook_secret' => env('TELEGRAM_WEBHOOK_SECRET', ''),
+
+    // Grandfather-дата обязательной анкеты: аккаунты, созданные раньше,
+    // от гейта онбординга освобождены (зарегались до нововведения),
+    // требование действует только для новых. Формат: Y-m-d H:i:s.
+    'onboarding_required_since' => env('ONBOARDING_REQUIRED_SINCE', '2026-10-15 00:00:00'),
 ];

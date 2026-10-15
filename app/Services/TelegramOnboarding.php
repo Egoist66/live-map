@@ -10,8 +10,12 @@ use Illuminate\Support\Facades\Cache;
  *
  * Та же анкета, что в браузерной регистрации (имя, пол, дата рождения,
  * цель, город), только пошагово в чате: текст + inline-кнопки.
- * Пока анкета не заполнена — мэтчи закрыты (/find и все sw_*-колбэки
- * упираются в текущий шаг), Mini App-кнопка выдаётся на финише.
+ * Требование — только для новых аккаунтов (см. isRequired):
+ * созданные до grandfather-даты `telegram.onboarding_required_since`
+ * от гейта освобождены. У новых без заполненной анкеты мэтчи закрыты
+ * (/find и sw_like/sw_pass упираются в текущий шаг), а чтение чужой
+ * анкеты (sw_view/sw_back) открыто всем. Mini App-кнопка выдаётся
+ * на финише.
  *
  * Состояние шага живёт в кеше (`tg:onboarding:{userId}`), ответы копятся
  * в `data` и пишутся в пользователя только на финише — недозаполненная
@@ -87,6 +91,74 @@ class TelegramOnboarding
         }
 
         return true;
+    }
+
+    /**
+     * Обязана ли анкета для этого пользователя (гейт онбординга).
+     *
+     * Полная анкета (isComplete) — идеал для мэтчей, но требовать её
+     * со всех подряд нельзя: аккаунты, созданные до введения гейта,
+     * освобождены (grandfather по `telegram.onboarding_required_since`),
+     * требование действует только для новых. Свежие авторегистрации
+     * Mini App (техническая почта `tg_*@telegram.local`, имя-заглушка)
+     * обязаны всегда — иначе это обход grandfather-даты.
+     * Стафф освобождён — ему Mini App нужен для работы.
+     *
+     * @param User $user проверяемый
+     * @return bool true — гейтовать (флаг/шаги онбординга), false — пускать
+     */
+    public static function isRequired(User $user): bool
+    {
+        try {
+            if ($user->canModerate()) {
+                return false;
+            }
+        } catch (\Throwable) {
+            return false;
+        }
+
+        if (self::isComplete($user)) {
+            return false;
+        }
+
+        try {
+            if ($user->hasTechnicalTelegramEmail()) {
+                return true;
+            }
+        } catch (\Throwable) {
+        }
+
+        $name = trim((string) ($user->name ?? ''));
+
+        if ($name === '' || $name === self::GUEST_NAME) {
+            return true;
+        }
+
+        $cutoffRaw = (string) config('telegram.onboarding_required_since', '');
+
+        if ($cutoffRaw === '') {
+            return true;
+        }
+
+        try {
+            $cutoff = \Carbon\Carbon::parse($cutoffRaw);
+        } catch (\Throwable) {
+            return true;
+        }
+
+        try {
+            $created = $user->created_at !== null
+                ? \Carbon\Carbon::parse($user->created_at)
+                : null;
+        } catch (\Throwable) {
+            $created = null;
+        }
+
+        if ($created === null) {
+            return true;
+        }
+
+        return $created->greaterThanOrEqualTo($cutoff);
     }
 
     /**
