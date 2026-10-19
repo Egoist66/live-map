@@ -6,8 +6,6 @@ import Message from 'primevue/message'
 import AppImage from '@/Components/Ui/Media/AppImage.vue'
 import { useToast } from 'primevue/usetoast'
 import { useUloveProfile } from '@/composables/useUloveProfile'
-import { useMyRaters } from '@/composables/useMyRaters'
-import RatersModal from '@/Components/Features/Dating/RatersModal.vue'
 import { useUloveOnlineBadge } from '@/composables/useUloveOnlineBadge'
 import { useProfileVisibility } from '@/composables/useProfileVisibility'
 import { useAiEnabled } from '@/composables/useAiEnabled'
@@ -37,7 +35,6 @@ const props = withDefaults(
 const emit = defineEmits<{ (e: 'edit'): void; (e: 'message'): void; (e: 'photos'): void; (e: 'add-photos'): void; (e: 'ai'): void }>()
 
 const p = useUloveProfile(() => props.profileUser)
-const myRaters = useMyRaters()
 
 const onlineBadge = useUloveOnlineBadge(() => ({ isOwn: props.isOwn, online: props.online, lastSeenText: props.lastSeenText, invisible: props.isOwn && !!props.profileUser?.is_invisible }))
 
@@ -504,21 +501,7 @@ const activePrivacyFlags = computed(() => {
           :seed-hidden="rating?.hidden ?? false"
           :is-own="isOwn"
         />
-        <button
-          v-if="isOwn"
-          type="button"
-          class="mt-3 flex w-full items-center gap-2.5 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 p-3 text-left shadow-soft active:scale-[0.98] transition dark:border-amber-500/30 dark:from-amber-500/10 dark:to-orange-500/10"
-          @click="myRaters.open()"
-        >
-          <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-white"><i class="pi pi-star-fill text-sm" /></span>
-          <span class="min-w-0 flex-1">
-            <span class="block truncate text-sm font-black text-stone-900 dark:text-white">Кто меня оценил</span>
-            <span class="block truncate text-[11px] text-stone-500 dark:text-zinc-400">{{ (rating?.count ?? 0) > 0 ? `оценок: ${rating?.count}` : 'имена и отзывы — для Premium' }}</span>
-          </span>
-          <i class="pi pi-angle-right shrink-0 text-xs text-stone-400" />
-        </button>
       </div>
-      <RatersModal v-if="isOwn" />
       <Link
         v-if="p.matched.value"
         :href="p.matchedConversationId.value ? `/chat/${p.matchedConversationId.value}?from=swipes` : '/swipes'"

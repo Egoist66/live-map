@@ -6,6 +6,9 @@ import { useContentModeration } from '@/composables/useContentModeration'
 /**
  * Отзывы о пользователе знакомств: сводка, список, форма оценки.
  *
+ * Секция свёрнута по умолчанию: список грузится только при первом
+ * раскрытии (ленивая загрузка) — заходим в профиль, не дёргая API
+ * зря. Сводка приходит с карточки (seed) и видна даже свёрнутой.
  * Один инстанс — один человек: сводка и право оценить грузятся
  * вместе со списком, отправка обновляет сводку из ответа без
  * перезагрузки. Звёзды ставятся один раз: у кого отзыв уже есть,
@@ -14,7 +17,7 @@ import { useContentModeration } from '@/composables/useContentModeration'
  *
  * @param targetId id человека, о котором отзывы
  * @returns состояние отзывов и действия
- * @example const reviews = useDatingReviews(() => card.id); await reviews.load()
+ * @example const reviews = useDatingReviews(() => card.id); reviews.toggle()
  */
 export function useDatingReviews(targetId: () => number | null) {
   const summary = ref<DatingRatingSummary>({ avg: null, count: 0, hidden: false })
@@ -28,6 +31,10 @@ export function useDatingReviews(targetId: () => number | null) {
   const loadingMore = ref(false)
   const saving = ref(false)
   const error = ref<string | null>(null)
+  /** Секция развёрнута: список виден только в раскрытом виде. */
+  const expanded = ref(false)
+  /** Первая загрузка уже прошла: повторно не дёргаем API. */
+  const loaded = ref(false)
 
   const hasMore = computed(() => page.value < lastPage.value)
   const visible = computed(() => !summary.value.hidden)
@@ -47,6 +54,51 @@ export function useDatingReviews(targetId: () => number | null) {
 
   /** Звёзды уже поставлены и я не админ: правится только текст. */
   const starsLocked = computed(() => myReview.value !== null && !isAdmin.value)
+
+  /**
+   * Развернуть секцию и при первом раскрытии загрузить отзывы.
+   */
+  async function expand(): Promise<void> {
+    expanded.value = true
+
+    if (!loaded.value && !loading.value) {
+      await load()
+    }
+  }
+
+  /**
+   * Свернуть секцию: данные остаются в памяти.
+   */
+  function collapse(): void {
+    expanded.value = false
+  }
+
+  /**
+   * Переключить свёрнутость секции.
+   */
+  function toggle(): void {
+    if (expanded.value) {
+      collapse()
+    } else {
+      void expand()
+    }
+  }
+
+  /**
+   * Сбросить состояние под нового человека: секция снова свёрнута.
+   */
+  function reset(): void {
+    summary.value = { avg: null, count: 0, hidden: false }
+    canReview.value = false
+    myReview.value = null
+    items.value = []
+    page.value = 1
+    lastPage.value = 1
+    total.value = 0
+    error.value = null
+    expanded.value = false
+    loaded.value = false
+  }
 
   /**
    * Загрузить первую страницу отзывов и сводку.
@@ -70,6 +122,7 @@ export function useDatingReviews(targetId: () => number | null) {
       page.value = data.meta.current_page
       lastPage.value = data.meta.last_page
       total.value = data.meta.total
+      loaded.value = true
     } catch (e: unknown) {
       const err = e as { response?: { status?: number; data?: { message?: string } } }
 
@@ -146,6 +199,7 @@ export function useDatingReviews(targetId: () => number | null) {
       myReview.value = data.review
       summary.value = data.summary
       total.value = data.summary.count
+      loaded.value = true
 
       const index = items.value.findIndex((item) => item.id === data.review.id)
 
@@ -211,8 +265,14 @@ export function useDatingReviews(targetId: () => number | null) {
     count,
     isAdmin,
     starsLocked,
+    expanded,
+    loaded,
     load,
     loadMore,
+    expand,
+    collapse,
+    toggle,
+    reset,
     save,
     remove,
   }

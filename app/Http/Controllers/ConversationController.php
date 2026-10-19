@@ -246,11 +246,17 @@ class ConversationController extends Controller
             \App\Services\UserAvatarService::attachGalleryFallback($avatarUsers);
         } catch (\Throwable) {
         }
-        $undelivered = $rawMessages->where('sender_id','!=',$request->user()->id)->whereNull('delivered_at')->pluck('id');
-        if($undelivered->isNotEmpty()){
-            Message::whereIn('id',$undelivered)->update(['delivered_at'=>now()]);
-            $rawMessages->each(function($m) use ($undelivered){ if($undelivered->contains($m->id)) $m->delivered_at = now(); });
-            try{ broadcast(new \App\Events\MessageDelivered($conversation->id,$undelivered->toArray(),$request->user()->id))->toOthers(); }catch(\Throwable $e){ \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
+        // Невидимка не подтверждает доставку: двойная серая галочка
+        // выдала бы отправителю, что получатель в приложении. Пока
+        // сообщение не прочитано — у отправителя одна галочка.
+        // Прочтение (markRead) показывает синие галочки как обычно.
+        if (! $request->user()->isInvisibleActive()) {
+            $undelivered = $rawMessages->where('sender_id','!=',$request->user()->id)->whereNull('delivered_at')->pluck('id');
+            if($undelivered->isNotEmpty()){
+                Message::whereIn('id',$undelivered)->update(['delivered_at'=>now()]);
+                $rawMessages->each(function($m) use ($undelivered){ if($undelivered->contains($m->id)) $m->delivered_at = now(); });
+                try{ broadcast(new \App\Events\MessageDelivered($conversation->id,$undelivered->toArray(),$request->user()->id))->toOthers(); }catch(\Throwable $e){ \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage()); }
+            }
         }
         $messages = $rawMessages->map->toArrayPayload();
         $pinned = $pinnedModels->map->toArrayPayload();
@@ -373,9 +379,23 @@ class ConversationController extends Controller
         return response()->json(['ok'=>true]);
     }
 
+    /**
+     * Подтвердить доставку входящих сообщений диалога.
+     *
+     * Невидимка квитанцию не шлёт: одиночная галочка у отправителя
+     * не должна выдавать, что получатель в приложении. Прочитанные
+     * сообщения по-прежнему дают синие галочки (см. markRead).
+     *
+     * @param Request $request запрос
+     * @param Conversation $conversation диалог
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function markDelivered(Request $request, Conversation $conversation)
     {
         abort_unless($conversation->hasParticipant($request->user()->id),403);
+        if ($request->user()->isInvisibleActive()) {
+            return response()->json(['ok'=>true,'delivered_ids'=>[]]);
+        }
         $clearedAt = $conversation->participantRows()->where('user_id', $request->user()->id)->value('cleared_at');
         $ids = Message::where('conversation_id',$conversation->id)->where('sender_id','!=',$request->user()->id)->whereNull('delivered_at')
             ->when($clearedAt, fn($q) => $q->where('created_at', '>', $clearedAt))
