@@ -6,12 +6,11 @@ import TabList from 'primevue/tablist'
 import Tab from 'primevue/tab'
 import TabPanels from 'primevue/tabpanels'
 import TabPanel from 'primevue/tabpanel'
-import Avatar from 'primevue/avatar'
 import InputText from 'primevue/inputtext'
 import OnlineDot from '@/Components/Features/Feedback/OnlineDot.vue'
 import OrgBadge from '@/Components/Features/Chat/OrgBadge.vue'
 import DistrictSearchList from '@/Components/Features/Districts/DistrictSearchList.vue'
-import { avatarSrcFor } from '@/composables/useAvatar'
+import UserAvatar from '@/Components/Ui/Media/UserAvatar.vue'
 import { useChatSearchList } from '@/composables/useChatSearchUser'
 import { useGlobalDistrictSearch } from '@/composables/useGlobalDistrictSearch'
 import { useOrganizationSearch } from '@/composables/useOrganizationSearch'
@@ -76,7 +75,7 @@ function goDistrict(id: number): void {
           <div v-if="results.length" class="mt-3 max-h-[60dvh] sm:max-h-[52vh] overflow-auto divide-y divide-stone-100 dark:divide-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl bg-white dark:bg-zinc-900 shadow-sm">
             <div v-for="u in results" :key="u.id" class="flex items-center justify-between p-3 select-none">
               <Link :href="userProfileUrl(u)" class="flex items-center gap-2.5 min-w-0">
-                <span class="relative shrink-0"><Avatar :image="avatarSrcFor(u)" shape="circle" size="normal" class="!w-9 !h-9 [&_img]:object-cover" /><OnlineDot :online="isOnline(u.id, u.last_seen_at)" size="w-3 h-3" /></span>
+                <span class="relative shrink-0"><UserAvatar :user="u" shape="circle" size="normal" class="!w-9 !h-9 [&_img]:object-cover" /><OnlineDot :online="isOnline(u.id, u.last_seen_at)" size="w-3 h-3" /></span>
                 <div class="min-w-0"><div class="text-sm font-medium truncate text-stone-900 dark:text-white">{{ u.name }} <OrgBadge :is-organization="u.is_organization" /></div></div>
               </Link>
               <div class="flex gap-1.5 shrink-0 ml-2 items-center">

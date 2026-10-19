@@ -31,7 +31,7 @@ function isAlpha(): boolean {
       </div>
       <div class="mt-5 max-w-xl">
         <div v-if="f.lock.enabled.value" class="space-y-4">
-          <Message severity="success" :closable="false" class="!rounded-2xl !text-xs">Включён ({{ f.lock.kind.value === 'alpha8' ? 'пароль · 8 символов' : 'PIN · 4 цифры' }}) · автоблок через {{ f.lock.timeoutMin.value }} мин{{ f.lock.offline.value ? ' · оффлайн-режим' : '' }}</Message>
+          <Message severity="success" :closable="false" class="!rounded-2xl !text-xs">Включён ({{ f.lock.kind.value === 'alpha8' ? 'пароль · 8 символов' : 'PIN · 4 цифры' }}) · автоблок через {{ f.lock.timeoutMin.value }} мин · хранится на этом устройстве</Message>
           <div>
             <label class="text-sm font-medium dark:text-white">Блокировать через</label>
             <Select

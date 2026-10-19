@@ -100,10 +100,19 @@ class TelegramMenu
                 ['text' => '🔑 Пароль для входа с ПК', 'callback_data' => 'go_password'],
                 ['text' => '📋 Все команды', 'callback_data' => 'go_help'],
             ],
-            [
-                self::openAppButton('🌐 Открыть приложение'),
-                self::openBrowserButton('🌍 В браузере'),
-            ],
+        ];
+
+        // «Сброс скринлокера» — только когда локер реально включён: иначе
+        // пункт путает (сбрасывать нечего) и раскрывает лишнее в меню.
+        if ((bool) ($fresh->is_sl_active ?? false)) {
+            $keyboard[] = [
+                ['text' => '🔓 Сброс скринлокера', 'callback_data' => 'go_screenlock'],
+            ];
+        }
+
+        $keyboard[] = [
+            self::openAppButton('🌐 Открыть приложение'),
+            self::openBrowserButton('🌍 В браузере'),
         ];
 
         return ['text' => $text, 'keyboard' => $keyboard];
@@ -151,6 +160,7 @@ class TelegramMenu
         $lines[] = '🔔 /notify — куда слать: бот, почта, личка (по типам)';
         $lines[] = '📱 /sessions — сеансы: завершить чужой вход, забанить устройство';
         $lines[] = '🔑 /password — логин и новый пароль для входа с компьютера';
+        $lines[] = '🔓 /screenlock — сбросить забытый код скринлокера';
         $lines[] = '💔 /delete — удалить профиль (сначала подарим PRO!)';
         $lines[] = '💚 /restore — вернуть профиль в течение 14 дней';
         $lines[] = '';

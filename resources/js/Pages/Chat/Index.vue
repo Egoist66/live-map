@@ -190,6 +190,12 @@ const {
   cancelEdit,
   notifyTyping,
   stopTyping,
+  loadMoreConversations,
+} = chat;
+const {
+  directHasMore,
+  directLoadingMore,
+  loadMoreDirectConversations,
 } = chat;
 const setHistoryTop = (el: unknown): void => {
   try {
@@ -213,10 +219,7 @@ const convLoadingMore = computed(
 const { sentinel: convSentinel } = useInfiniteScroll({
   hasMore: convHasMore,
   loading: convLoadingMore,
-  onLoadMore: () =>
-    ((chat as unknown) as {
-      loadMoreConversations: () => Promise<boolean>;
-    }).loadMoreConversations(),
+  onLoadMore: () => loadMoreConversations(),
 });
 const friendsHasMore = computed(() => friendsApi.hasMore.value);
 const friendsLoadingMore = computed(() => friendsApi.loadingMore.value);
@@ -437,6 +440,9 @@ onUnmounted(() => {
         :conversations-sentinel="convSentinel"
         :conversations-has-more="convHasMore"
         :conversations-loading-more="convLoadingMore"
+        :direct-has-more="directHasMore"
+        :direct-loading-more="directLoadingMore"
+        :direct-load-more="loadMoreDirectConversations"
         :friends-sentinel="friendsSentinel"
         :friends-has-more="friendsHasMore"
         :friends-loading-more="friendsLoadingMore"

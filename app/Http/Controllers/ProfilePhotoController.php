@@ -58,19 +58,35 @@ class ProfilePhotoController extends Controller
     }
 
     /**
-     * Сообщить владельцу на другие устройства: галерея изменилась.
+     * Сообщить об изменении галереи: своим устройствам и чужим кешам.
      *
      * Offline-кеш (IndexedDB) на сокете `gallery.changed` и polling-версии
-     * тика точечно пересчитывает кеш вместо полного рефетча.
+     * тика точечно пересчитывает кеш вместо полного рефетча. Когда правка
+     * затронула аватар/фото, дополнительно рассылаем `profile.updated`
+     * аудитории владельца (друзья, мэтчи, собеседники) — иначе у них
+     * закешированный `avatar_url` собеседника остаётся старым.
      *
      * @param int $userId владелец галереи
+     * @param bool $profileChanged затронул ли апдейт аватар/фото (fan-out чужим)
      */
-    private function touchGallery(int $userId): void
+    private function touchGallery(int $userId, bool $profileChanged = false): void
     {
+        $version = now()->valueOf();
+
         try {
-            broadcast(new \App\Events\GalleryChanged($userId, now()->valueOf()))->toOthers();
+            broadcast(new \App\Events\GalleryChanged($userId, $version))->toOthers();
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('reverb broadcast failed: '.$e->getMessage());
+        }
+
+        if (! $profileChanged) {
+            return;
+        }
+
+        try {
+            app(\App\Services\ProfileFanout::class)->notifyAvatarChanged($userId, $version, $version);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('profile fanout failed: '.$e->getMessage());
         }
     }
 
@@ -177,7 +193,7 @@ class ProfilePhotoController extends Controller
             $payload['reward'] = $reward;
         }
 
-        $this->touchGallery((int) $user->id);
+        $this->touchGallery((int) $user->id, true);
 
         return response()->json($payload, 201);
     }
@@ -212,7 +228,7 @@ class ProfilePhotoController extends Controller
             }
         }
         if ($data) $photo->update($data);
-        $this->touchGallery((int) $photo->user_id);
+        $this->touchGallery((int) $photo->user_id, $request->hasFile('photo'));
         return response()->json($this->serialize($photo->refresh(), $request->user()));
     }
 
@@ -231,7 +247,7 @@ class ProfilePhotoController extends Controller
             $nextMain = $owner->profilePhotos()->orderBy('sort_order')->orderBy('id')->first();
             $owner->forceFill(['avatar_path' => $nextMain?->path])->save();
         }
-        $this->touchGallery((int) $photo->user_id);
+        $this->touchGallery((int) $photo->user_id, true);
         return response()->json(['ok' => true]);
     }
 
@@ -434,7 +450,7 @@ class ProfilePhotoController extends Controller
         $payload = $this->serialize($fresh, $viewer);
         $payload['avatar_url'] = $owner->refresh()->avatar_url;
 
-        $this->touchGallery((int) $owner->id);
+        $this->touchGallery((int) $owner->id, true);
 
         return response()->json($payload);
     }

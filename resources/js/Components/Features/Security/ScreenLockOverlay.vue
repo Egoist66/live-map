@@ -4,7 +4,11 @@ import { router, usePage } from '@inertiajs/vue3'
 import { route } from '@/route'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
+import Dialog from 'primevue/dialog'
+import InputOtp from 'primevue/inputotp'
+import Message from 'primevue/message'
 import { useScreenLock } from '@/composables/useScreenLock'
+import { useScreenLockReset } from '@/composables/useScreenLockReset'
 import { avatarSrcFor } from '@/composables/useAvatar'
 
 const lock = useScreenLock()
@@ -15,7 +19,14 @@ const avatarSrc = computed(() => avatarSrcFor(user.value))
 const input = ref('')
 const shakeKey = ref(0)
 const showPass = ref(false)
+const leaving = ref(false)
+const resetOpen = ref(false)
 const textInput = ref<any>(null)
+
+const reset = useScreenLockReset(async (resetAt) => {
+  await lock.resetByRemote(resetAt)
+  resetOpen.value = false
+})
 
 const need = computed(() => (lock.kind.value === 'alpha8' ? 8 : 4))
 const dots = computed(() => Array.from({ length: Math.max(input.value.length, 0) }))
@@ -56,7 +67,16 @@ function onKey(e: KeyboardEvent) {
   else if (e.key === 'Enter') void submit()
 }
 
-function logout() {
+function openReset() {
+  reset.backToChoice()
+  resetOpen.value = true
+}
+
+async function logout() {
+  if (leaving.value) return
+  leaving.value = true
+  // Выход не должен стирать настройку устройства: локер переживает
+  // logout/login тем же аккаунтом, а чужой таймер гасит useAuthSession.
   router.post(route('logout'))
 }
 
@@ -69,11 +89,13 @@ watch(() => lock.locked.value, (v) => {
     if (lock.kind.value === 'alpha8') setTimeout(() => { try { textInput.value?.focus() } catch {} }, 350)
   } else {
     window.removeEventListener('keydown', onKey)
+    resetOpen.value = false
   }
 }, { immediate: true })
 
 onBeforeUnmount(() => {
   if (typeof window !== 'undefined') window.removeEventListener('keydown', onKey)
+  reset.dispose()
 })
 </script>
 <template>
@@ -96,7 +118,7 @@ onBeforeUnmount(() => {
               <span v-if="!dots.length" class="text-xs text-stone-400">••••</span>
             </div>
             <p v-if="lock.error.value" class="mt-2 text-xs font-semibold text-red-500">{{ lock.error.value }}</p>
-            <p v-else-if="lock.offline.value" class="mt-2 text-[11px] text-amber-500">Оффлайн — проверка по локальному коду</p>
+            <p v-else class="mt-2 text-[11px] text-stone-400">Код проверяется на этом устройстве</p>
             <div v-if="lock.kind.value !== 'alpha8'" class="mt-5 grid grid-cols-3 gap-2.5">
               <button v-for="n in 9" :key="n" type="button" @click="press(String(n))" class="h-14 rounded-2xl bg-stone-100 dark:bg-zinc-800 text-xl font-bold dark:text-white hover:bg-stone-200 dark:hover:bg-zinc-700 active:scale-95 transition">
                 {{ n }}
@@ -108,9 +130,89 @@ onBeforeUnmount(() => {
               </button>
             </div>
             <Button @click="submit" :loading="lock.verifying.value" :disabled="input.length < need" label="Разблокировать" rounded class="w-full mt-5 !bg-gradient-to-r !from-violet-600 !to-indigo-600 !border-0 !text-white !shadow-glow" />
-            <button type="button" @click="logout" class="mt-3 text-xs text-stone-400 hover:text-stone-600 dark:hover:text-zinc-200 transition">Забыл код? Выйти из аккаунта</button>
+            <button type="button" @click="openReset" class="mt-3 text-xs text-stone-400 hover:text-stone-600 dark:hover:text-zinc-200 transition">Забыл код? Сбросить</button>
           </div>
         </div>
+
+        <Dialog
+          v-model:visible="resetOpen"
+          modal
+          :draggable="false"
+          :closable="!reset.sending.value && !reset.verifying.value"
+          header="Сброс скринлокера"
+          :style="{ width: '400px', maxWidth: '94vw' }"
+          :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none overflow-hidden' }, header: { class: '!p-5 !pb-0 !border-0 dark:!bg-zinc-900 dark:!text-white' }, content: { class: '!px-5 !py-4 dark:!bg-zinc-900' }, footer: { class: '!px-5 !pb-5 !pt-1 !border-0 dark:!bg-zinc-900' } }"
+        >
+          <div class="flex items-start gap-3">
+            <span class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300"><i class="pi pi-unlock" /></span>
+            <p class="text-sm text-stone-600 dark:text-zinc-300">
+              {{ reset.step.value === 'code' ? 'Введи 6-значный код из письма — код блокировки на этом устройстве будет стёрт.' : 'Подтверди, что аккаунт твой: пришлём код на почту или сбросим через Telegram-бота.' }}
+            </p>
+          </div>
+
+          <template v-if="reset.step.value === 'choice'">
+            <div class="mt-4 space-y-2">
+              <Button
+                v-if="reset.canUseEmail.value"
+                label="Получить код на почту"
+                icon="pi pi-envelope"
+                rounded
+                class="w-full !bg-gradient-to-r !from-violet-600 !to-indigo-600 !border-0 !text-white"
+                :loading="reset.sending.value"
+                @click="reset.requestCode()"
+              />
+              <a
+                v-if="reset.isTelegramLinked.value"
+                :href="reset.botLink.value"
+                target="_blank"
+                rel="noopener"
+                class="flex items-center justify-center gap-2 w-full min-h-[42px] rounded-full border border-sky-200 dark:border-sky-500/30 text-sm font-semibold text-sky-600 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-500/10 transition"
+              >
+                <i class="pi pi-send" />
+                Сбросить через @{{ reset.botUsername.value }}
+              </a>
+              <p v-else-if="!reset.canUseEmail.value" class="text-[11px] text-stone-400 text-center">Нет рабочей почты и Telegram не привязан — привяжи Telegram в настройках.</p>
+              <p v-else class="text-[11px] text-stone-400 text-center">Telegram не привязан — используй почту.</p>
+            </div>
+            <Message v-if="reset.error.value" severity="error" :closable="false" class="!mt-3 !rounded-2xl !text-xs">{{ reset.error.value }}</Message>
+          </template>
+
+          <template v-else>
+            <div class="mt-3 text-xs text-stone-500 dark:text-zinc-400">Код отправлен на <b class="dark:text-zinc-200">{{ user?.email }}</b>. Действует 10 минут.</div>
+            <div class="mt-3 flex justify-center">
+              <InputOtp v-model="reset.code.value" :length="6" integerOnly />
+            </div>
+            <p v-if="reset.info.value" class="mt-2 text-center text-[11px] text-emerald-600 dark:text-emerald-400">{{ reset.info.value }}</p>
+            <Message v-if="reset.error.value" severity="error" :closable="false" class="!mt-3 !rounded-2xl !text-xs">{{ reset.error.value }}</Message>
+            <div class="mt-2 flex flex-wrap justify-center gap-2">
+              <Button
+                :label="reset.cooldown.value > 0 ? `Отправить снова (${reset.cooldown.value}с)` : 'Отправить снова'"
+                link
+                size="small"
+                class="!text-xs"
+                :disabled="reset.cooldown.value > 0 || reset.sending.value"
+                @click="reset.requestCode()"
+              />
+              <Button label="Назад" link size="small" class="!text-xs" @click="reset.backToChoice()" />
+            </div>
+          </template>
+
+          <template #footer>
+            <div class="flex flex-col gap-2 w-full">
+              <Button
+                v-if="reset.step.value === 'code'"
+                label="Сбросить код"
+                icon="pi pi-check"
+                rounded
+                class="w-full"
+                :loading="reset.verifying.value"
+                :disabled="!reset.canSubmit.value"
+                @click="reset.verifyCode()"
+              />
+              <button type="button" class="text-xs text-stone-400 hover:text-stone-600 dark:hover:text-zinc-200 transition" @click="logout">Выйти из аккаунта</button>
+            </div>
+          </template>
+        </Dialog>
       </div>
     </Transition>
   </Teleport>

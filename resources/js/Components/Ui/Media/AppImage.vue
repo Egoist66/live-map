@@ -1,9 +1,15 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useCachedImageSrc } from '@/composables/useImageBlobCache'
 
 /**
  * Картинка с красивой загрузкой: шиммер-скелетон (светлая/тёмная тема),
  * плавное проявление blur-up и заглушка при ошибке.
+ *
+ * Источник резолвится через бинарный IDB-кеш (`useCachedImageSrc`): хит
+ * отдаётся objectURL'ом за миллисекунды без единого HTTP — картинки не
+ * ждут сеть после перезагрузки/офлайн. Промах не блокирует: параллельно
+ * возвращается исходный URL и blob тихо докачивается в фон.
  *
  * Корень pointer-events-none — безопасен внутри drag-колод и кнопок.
  * Класс родителя (позиция/размер) падает на корень автоматически.
@@ -20,15 +26,20 @@ const props = withDefaults(
     imgStyle?: Record<string, string>
     /** Грузить сразу, а не лениво. */
     eager?: boolean
+    /** Отключить IDB-кеш (внешние CDN, data: и т.п.). */
+    cached?: boolean
   }>(),
-  { src: null, alt: '', imgClass: '', imgStyle: undefined, eager: false },
+  { src: null, alt: '', imgClass: '', imgStyle: undefined, eager: false, cached: true },
 )
+
+const { src: cachedSrc } = useCachedImageSrc(() => props.src ?? '', props.src ?? '')
+const displaySrc = computed(() => (props.cached ? cachedSrc.value : (props.src ?? '')))
 
 const loaded = ref(false)
 const failed = ref(false)
 
 watch(
-  () => props.src,
+  displaySrc,
   () => {
     loaded.value = false
     failed.value = false
@@ -39,11 +50,11 @@ watch(
 
 <template>
   <span class="app-image pointer-events-none block" :class="{ 'is-loaded': loaded }">
-    <span v-if="src && !loaded && !failed" class="app-image-shimmer" aria-hidden="true" />
+    <span v-if="displaySrc && !loaded && !failed" class="app-image-shimmer" aria-hidden="true" />
     <img
-      v-if="src && !failed"
-      :key="src"
-      :src="src"
+      v-if="displaySrc && !failed"
+      :key="displaySrc"
+      :src="displaySrc"
       :alt="alt"
       :class="imgClass"
       :style="imgStyle"
@@ -52,7 +63,7 @@ watch(
       @load="loaded = true"
       @error="failed = true"
     />
-    <span v-if="src && failed" class="app-image-fallback" role="img" :aria-label="alt || 'Картинка не загрузилась'">
+    <span v-if="displaySrc && failed" class="app-image-fallback" role="img" :aria-label="alt || 'Картинка не загрузилась'">
       <i class="pi pi-image" />
     </span>
   </span>

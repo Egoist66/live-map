@@ -342,13 +342,15 @@ class AppServiceProvider extends ServiceProvider
             'reactions' => 120,
             'chat-search' => 30,
             'social-write' => 60,
-            'screen-lock' => 30,
             'reports' => 10,
             'support' => 6,
             'push-test' => 10,
             'profile-write' => 30,
             'email-status' => 60,
             'telegram-status' => 60,
+            // Сброс скринлокера: код на почту — редкое действие, но
+            // письма дорогие и их нельзя спамить. 10/мин на юзера.
+            'screen-lock-reset' => 10,
             // AI-ассистент (OpenRouter): гид — щедро в минуту,
             // тяжёлый разбор профиля — часовым ведром ниже.
             // Модерация локальная (Blasp) — лимитер ai-moderate удалён.

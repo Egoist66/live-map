@@ -46,6 +46,15 @@ Route::middleware(['web', 'auth:web,sanctum'])->group(function () {
     Route::delete('/telegram/link', [\App\Http\Controllers\TelegramAuthController::class, 'unlink'])->middleware('throttle:telegram-status');
 });
 
+// Скринлокер: код живёт на устройстве, серверу нужен только флаг активности
+// (для меню бота) и сброс забытого кода через почту. Отдельное ведро, чтобы
+// письма не спамились и не делили общий лимит с поллингом.
+Route::middleware(['web', 'auth:web,sanctum'])->group(function () {
+    Route::post('/screen-lock/active', [\App\Http\Controllers\ScreenLockController::class, 'active'])->middleware('throttle:screen-lock-reset');
+    Route::post('/screen-lock/code', [\App\Http\Controllers\ScreenLockController::class, 'code'])->middleware('throttle:screen-lock-reset');
+    Route::post('/screen-lock/verify', [\App\Http\Controllers\ScreenLockController::class, 'verify'])->middleware('throttle:screen-lock-reset');
+});
+
 // Публичная заявка на сотрудничество с лендинга (гость, без авторизации).
 Route::middleware(['web', 'throttle:6,1'])->post('/cooperation', [\App\Http\Controllers\CooperationController::class, 'store']);
 
@@ -251,11 +260,6 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:300,1'])->group(function
     Route::get('/photos/{photo}/comments', [\App\Http\Controllers\ProfilePhotoController::class, 'comments']);
     Route::post('/photos/{photo}/comments', [\App\Http\Controllers\ProfilePhotoController::class, 'storeComment'])->middleware('throttle:comments-write');
     Route::delete('/photo-comments/{comment}', [\App\Http\Controllers\ProfilePhotoController::class, 'destroyComment']);
-
-    Route::get('/user/screen-lock', [\App\Http\Controllers\ScreenLockController::class, 'show']);
-    Route::put('/user/screen-lock', [\App\Http\Controllers\ScreenLockController::class, 'update']);
-    Route::delete('/user/screen-lock', [\App\Http\Controllers\ScreenLockController::class, 'destroy']);
-    Route::post('/user/screen-lock/verify', [\App\Http\Controllers\ScreenLockController::class, 'verify'])->middleware('throttle:screen-lock');
 
     Route::post('/friendships', [FriendshipController::class, 'store'])->middleware('throttle:social-write');
     Route::post('/friendships/{friendship}/accept', [FriendshipController::class, 'accept'])->middleware('throttle:social-write');

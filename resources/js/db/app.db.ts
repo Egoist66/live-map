@@ -109,6 +109,22 @@ export interface SyncMetaRow {
   cursor: number
 }
 
+/**
+ * Локальная настройка скринлокера пользователя.
+ *
+ * Персональный код блокировки — приватная настройка устройства, а не
+ * данные аккаунта: на бэкенд не уходит и хранится под ключом uid, чтобы
+ * после смены пользователя без перезагрузки не включался чужой локер.
+ * codeHash === null означает «выключено»; сам PIN/пароль не хранится.
+ */
+export interface ScreenLockRow {
+  uid: number
+  codeHash: string | null
+  timeout: number
+  kind: string
+  updatedAt: number
+}
+
 class AppDb extends Dexie {
   kv!: Table<KvRow, string>
   noteFiles!: Table<NoteFileRow, string>
@@ -118,6 +134,7 @@ class AppDb extends Dexie {
   profileHeaders!: Table<CachedProfileRow, string>
   imageBlobs!: Table<CachedImageRow, string>
   syncMeta!: Table<SyncMetaRow, string>
+  screenLock!: Table<ScreenLockRow, number>
 
   constructor() {
     super('upin')
@@ -132,6 +149,17 @@ class AppDb extends Dexie {
       profileHeaders: 'key, uid, ownerId',
       imageBlobs: 'hash, lastUsed',
       syncMeta: 'key, uid',
+    })
+    this.version(4).stores({
+      kv: 'key',
+      noteFiles: 'key, uid',
+      chatConversations: 'key, uid, convId',
+      chatMessages: 'key, uid, convId, id',
+      galleries: 'key, uid, ownerId',
+      profileHeaders: 'key, uid, ownerId',
+      imageBlobs: 'hash, lastUsed',
+      syncMeta: 'key, uid',
+      screenLock: 'uid',
     })
   }
 }

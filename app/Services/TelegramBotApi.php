@@ -495,8 +495,8 @@ class TelegramBotApi
      * а Mini App открывается инлайн-кнопками 🌐 в каждой панели + /app.
      *
      * Создание публикаций — только для админов: дефолтный scope несёт
-     * 26 команд без /publish, а каждый админ-чат получает персональный
-     * scope (type=chat) с 27-й командой /publish. Обычный пользователь
+     * 28 команд без /publish, а каждый админ-чат получает персональный
+     * scope (type=chat) с 29-й командой /publish. Обычный пользователь
      * /publish даже не видит в меню; набранная вручную всё равно
      * упрётся в isAdmin-гейт вебхука.
      *
@@ -553,7 +553,7 @@ class TelegramBotApi
     }
 
     /**
-     * Команды для всех: 26 штук, без админского /publish.
+     * Команды для всех: 28 штук, без админского /publish.
      *
      * @return array<int, array{command:string, description:string}>
      */
@@ -584,6 +584,7 @@ class TelegramBotApi
             ['command' => 'notify', 'description' => '🔔 Куда слать: бот, почта, личка'],
             ['command' => 'sessions', 'description' => '📱 Активные сеансы: завершить или забанить'],
             ['command' => 'password', 'description' => '🔑 Пароль для входа с компьютера'],
+            ['command' => 'screenlock', 'description' => '🔓 Сбросить код скринлокера'],
             ['command' => 'help', 'description' => '✨ Все возможности бота'],
             ['command' => 'delete', 'description' => '💔 Удалить профиль'],
             ['command' => 'restore', 'description' => '💚 Вернуть профиль'],

@@ -159,6 +159,11 @@ export function useChat() {
   const conversationsLastPage = ref(1)
   const conversationsHasMore = ref(false)
   const conversationsLoadingMore = ref(false)
+  /** Постраничная выдача вкладки Direct: своя нумерация и режим (direct/matched). */
+  const directPage = ref(0)
+  const directHasMore = ref(true)
+  const directLoadingMore = ref(false)
+  const directMode = ref<'direct' | 'matched' | null>(null)
   const history = useChatHistory(messages, {
     loadPage: (beforeId: number) => loadHistoryPage(beforeId),
     getKey: () => selectedId.value,
@@ -404,6 +409,9 @@ export function useChat() {
       conversationsPage.value = 1
       conversationsLastPage.value = 1
       conversationsHasMore.value = rows.length >= 20
+      // Полный рефетч заменяет список первой страницей: постраничный
+      // указатель Direct сбрасываем, иначе следующие страницы пропустятся.
+      resetDirectConversations()
       return conversations.value
     })()
     w.__conversationsInflight = loadConversationsInflight
@@ -510,6 +518,58 @@ export function useChat() {
       }
       return fresh.length > 0
     } catch { return false } finally { conversationsLoadingMore.value = false }
+  }
+
+  /**
+   * Догрузить страницу вкладки Direct (личные диалоги / только мэтчи).
+   *
+   * Список общий с сайдбаром: новые строки дописываются в `conversations`,
+   * а вкладка сама фильтрует direct/мэтчи. Страница запрашивается с
+   * серверным фильтром, чтобы не выкачивать обычные чаты ради одного мэтча.
+   *
+   * @param onlyMatched true — только мэтчи (ULove), false — все личные
+   * @returns были ли добавлены новые строки
+   */
+  async function loadMoreDirectConversations(onlyMatched = false): Promise<boolean> {
+    if (directLoadingMore.value) return false
+    const mode: 'direct' | 'matched' = onlyMatched ? 'matched' : 'direct'
+    if (directMode.value !== mode) {
+      directMode.value = mode
+      directPage.value = 0
+      directHasMore.value = true
+    }
+    if (!directHasMore.value) return false
+    directLoadingMore.value = true
+    try {
+      const next = directPage.value + 1
+      const res = await chatApi.conversationsPage(next, 20, {
+        onlyDirect: !onlyMatched,
+        onlyMatched,
+      })
+      const rows = normalizeConversations(res.data)
+      const known = new Set(conversations.value.map((c) => Number(c?.id)))
+      const fresh = rows.filter((c) => !known.has(Number(c?.id)))
+      conversations.value = mergeConversationPreviews([...conversations.value, ...fresh])
+      directPage.value = res.current_page ?? next
+      directHasMore.value = !!res.has_more
+      if (fresh.length > 0) {
+        const cacheUid = getUid()
+        if (cacheUid > 0) {
+          void saveConversations(cacheUid, fresh)
+        }
+      }
+      return fresh.length > 0
+    } catch { return false } finally { directLoadingMore.value = false }
+  }
+
+  /**
+   * Сбросить постраничное состояние Direct (смена вкладки/аккаунта).
+   */
+  function resetDirectConversations(): void {
+    directPage.value = 0
+    directHasMore.value = true
+    directLoadingMore.value = false
+    directMode.value = null
   }
 
   async function refresh() {
@@ -1153,8 +1213,14 @@ export function useChat() {
     if (peer?.last_seen_at !== undefined) {
       target.last_seen_at = peer.last_seen_at ?? null
     }
-    if (typeof peer?.avatar_url === 'string' && peer.avatar_url !== '') {
-      target.avatar_url = peer.avatar_url
+    if (peer && Object.prototype.hasOwnProperty.call(peer, 'avatar_url')) {
+      const avatar = peer.avatar_url
+      if (typeof avatar === 'string' && avatar !== '') {
+        target.avatar_url = avatar
+      } else if (avatar === null || avatar === '') {
+        // Аватар убран: чистим, чтобы подтянулось фото галереи/заглушка.
+        target.avatar_url = null
+      }
     }
     if (peer?.is_match !== undefined) {
       target.is_match = !!peer.is_match
@@ -1255,6 +1321,7 @@ export function useChat() {
       busUnsubs.push(busOn('user:notification.created', (e: any) => handleSosClosed(e)))
       busUnsubs.push(busOn('chat:receipts', (list: any[]) => applyReceipts(list)))
       busUnsubs.push(busOn('user:conversation.removed', (e: any) => applyConversationsRemoved(e)))
+      busUnsubs.push(busOn('user:profile.updated', (e: any) => applyProfileUpdated(e)))
     } catch { globalSubscribed = false }
   }
 
@@ -1285,6 +1352,56 @@ export function useChat() {
         activeConv.value = null
         messages.value = []
       }
+    }
+  }
+
+  /**
+   * Профиль собеседника изменился (socket/polling): мгновенно патчит его
+   * имя/аватар в списке диалогов и в открытой шапке.
+   *
+   * Строку IDB правит useChatCache (модульная подписка): даже если чат
+   * не смонтирован, следующее открытие покажет свежее. Здесь — только
+   * реактивная память, чтобы UI обновился без перезагрузки.
+   *
+   * @param e событие {user_id, name?, avatar_url?}
+   */
+  function applyProfileUpdated(e: any): void {
+    const ownerId = Number(e?.user_id ?? 0)
+
+    if (!(ownerId > 0)) {
+      return
+    }
+
+    const peerPatch: Record<string, unknown> = { id: ownerId }
+
+    if (typeof e?.name === 'string' && e.name.trim() !== '') {
+      peerPatch.name = e.name.trim()
+    }
+
+    if (Object.prototype.hasOwnProperty.call(e ?? {}, 'avatar_url')) {
+      peerPatch.avatar_url = e.avatar_url
+    }
+
+    const cacheUid = getUid()
+
+    for (const conv of conversations.value as any[]) {
+      const other = conv?.other as any
+
+      if (!other || Number(other.id) !== ownerId) {
+        continue
+      }
+
+      patchPeer(other, peerPatch)
+
+      if (cacheUid > 0 && Number(conv?.id) > 0) {
+        void patchCachedConversation(cacheUid, Number(conv.id), { other })
+      }
+    }
+
+    const openedPeer = activeConv.value?.other as any
+
+    if (openedPeer && Number(openedPeer.id) === ownerId) {
+      patchPeer(openedPeer, peerPatch)
     }
   }
 
@@ -1780,6 +1897,7 @@ export function useChat() {
     searchQuery, searchResults, searching, selectedId, error, emailBlocked, unreadTotal, unreadMessagesTotal,
     editingId, editingBody, history,
     conversationsHasMore, conversationsLoadingMore,
-    loadConversations, loadMoreConversations, refresh, openConversation, createConversation, sendMessage, startEdit, cancelEdit, saveEdit, deleteMessage, deleteConversation, clearAllConversations, setConversationPinned, searchUsers, notifyTyping, stopTyping, handleIncoming, handleUpdated, subscribeGlobal, resetChatRealtime,
+    directHasMore, directLoadingMore,
+    loadConversations, loadMoreConversations, loadMoreDirectConversations, resetDirectConversations, refresh, openConversation, createConversation, sendMessage, startEdit, cancelEdit, saveEdit, deleteMessage, deleteConversation, clearAllConversations, setConversationPinned, searchUsers, notifyTyping, stopTyping, handleIncoming, handleUpdated, subscribeGlobal, resetChatRealtime,
   }
 }

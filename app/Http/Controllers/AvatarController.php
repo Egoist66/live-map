@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\GalleryChanged;
 use App\Models\User;
 use App\Services\ImageOptimizer;
+use App\Services\ProfileFanout;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
@@ -40,6 +43,8 @@ class AvatarController extends Controller
 
         $this->mirrorAvatarToGallery($user->refresh(), $path, $disk, $oldPath);
 
+        $this->broadcastAvatarChanged((int) $user->id);
+
         if ($oldPath && $oldPath !== $path && ! $user->profilePhotos()->where('path', $oldPath)->exists()) {
             Storage::disk($disk)->delete($oldPath);
             if ($disk !== 'public') {
@@ -48,6 +53,29 @@ class AvatarController extends Controller
         }
 
         return back()->with('status', 'avatar-updated');
+    }
+
+    /**
+     * Разнести смену аватара: своим устройствам (gallery.changed) и чужим
+     * кешам (profile.updated) — иначе у собеседников остаётся старый URL.
+     *
+     * @param int $userId владелец аватара
+     */
+    private function broadcastAvatarChanged(int $userId): void
+    {
+        $version = now()->valueOf();
+
+        try {
+            broadcast(new GalleryChanged($userId, $version))->toOthers();
+        } catch (\Throwable $e) {
+            Log::warning('reverb broadcast failed: '.$e->getMessage());
+        }
+
+        try {
+            app(ProfileFanout::class)->notifyAvatarChanged($userId, $version, $version);
+        } catch (\Throwable $e) {
+            Log::warning('profile fanout failed: '.$e->getMessage());
+        }
     }
 
     /**

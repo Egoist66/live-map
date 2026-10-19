@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Services\AccountDeletionService;
 use App\Services\DatingService;
 use App\Services\ProfileVisibilityService;
+use App\Services\ScreenLockResetService;
 use App\Services\TelegramAccountPanel;
 use App\Services\TelegramAccountSwitch;
 use App\Services\TelegramBotApi;
@@ -24,6 +25,7 @@ use App\Services\TelegramProfilePanel;
 use App\Services\TelegramResetPanel;
 use App\Services\TelegramSessionActions;
 use App\Services\TelegramSessionsPanel;
+use App\Services\TelegramScreenLockPanel;
 use App\Services\TelegramSwipePanel;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -203,6 +205,7 @@ class TelegramWebhookController extends Controller
             '/notify' => $this->replyNotify($user, $chatId),
             '/sessions' => $this->replySessions($user, $chatId),
             '/password' => $this->replyPasswordAsk($user, $chatId),
+            '/screenlock' => $this->replyScreenLock($user, $chatId),
             '/delete' => $this->replyDeleteBait($user, $chatId),
             '/restore' => $this->replyRestore($user, $chatId),
             default => $this->replyUnknown($chatId),
@@ -371,6 +374,30 @@ class TelegramWebhookController extends Controller
             $ask = TelegramPasswordService::ask($fresh);
             TelegramCardSender::redrawText($chatId, $messageId, $ask['text'], $ask['keyboard']);
             TelegramBotApi::answerCallback($callbackId, 'Пароль для входа с ПК');
+
+            return true;
+        }
+
+        if ($data === 'go_screenlock') {
+            $panel = TelegramScreenLockPanel::build($fresh);
+            TelegramCardSender::redrawText($chatId, $messageId, $panel['text'], $panel['keyboard']);
+            TelegramBotApi::answerCallback($callbackId, 'Сброс скринлокера');
+
+            return true;
+        }
+
+        if ($data === 'sl_reset') {
+            $mark = ScreenLockResetService::reset($fresh);
+
+            if ($mark <= 0) {
+                TelegramBotApi::answerCallback($callbackId, 'Не удалось сбросить — попробуй позже', true);
+
+                return true;
+            }
+
+            $panel = TelegramScreenLockPanel::done($fresh);
+            TelegramCardSender::redrawText($chatId, $messageId, $panel['text'], $panel['keyboard']);
+            TelegramBotApi::answerCallback($callbackId, 'Скринлокер сброшен 🔓');
 
             return true;
         }
@@ -2682,6 +2709,20 @@ class TelegramWebhookController extends Controller
         $ask = TelegramPasswordService::ask($user);
 
         TelegramBotApi::sendMessage($chatId, $ask['text'], $ask['keyboard']);
+    }
+
+    /**
+     * Показать панель сброса скринлокера (/screenlock).
+     *
+     * @param User $user владелец
+     * @param int $chatId куда отправить
+     * @return void
+     */
+    private function replyScreenLock(User $user, int $chatId): void
+    {
+        $panel = TelegramScreenLockPanel::build($user);
+
+        TelegramBotApi::sendMessage($chatId, $panel['text'], $panel['keyboard']);
     }
 
     /**

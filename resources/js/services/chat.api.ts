@@ -139,9 +139,21 @@ export const chatApi = {
    *
    * @param page страница
    * @param perPage размер
+   * @param opts `onlyDirect` — только личные, `onlyMatched` — только мэтчи
    */
-  async conversationsPage(page = 1, perPage = 20): Promise<{ data: Conversation[]; has_more: boolean; current_page: number; last_page: number }> {
-    const { data } = await api.get('/api/conversations', { params: { page, per_page: perPage } })
+  async conversationsPage(
+    page = 1,
+    perPage = 20,
+    opts: { onlyDirect?: boolean; onlyMatched?: boolean } = {},
+  ): Promise<{ data: Conversation[]; has_more: boolean; current_page: number; last_page: number }> {
+    const params: Record<string, unknown> = { page, per_page: perPage }
+    if (opts.onlyDirect) {
+      params.only_direct = 1
+    }
+    if (opts.onlyMatched) {
+      params.only_matched = 1
+    }
+    const { data } = await api.get('/api/conversations', { params })
     if (Array.isArray(data)) return { data, has_more: false, current_page: 1, last_page: 1 }
     const rows = Array.isArray((data as { data?: unknown })?.data) ? (data as { data: Conversation[] }).data : []
     return {

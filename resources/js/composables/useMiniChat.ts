@@ -230,6 +230,7 @@ function subscribe(): void {
     busOn('chat:receipts', onReceipts)
     busOn('chat:dialog-read', onDialogRead)
     busOn('user:match.created', onMatch)
+    busOn('user:profile.updated', onProfileUpdated)
     busOn('user:friendship.updated', () => void reloadConversations())
     busOn('user:conversation.removed', onConversationsRemoved)
     busOn('chat:previews', onPreviews)
@@ -263,6 +264,39 @@ function onMatch(e: unknown): void {
     peer.is_match = true
     if (uid > 0 && Number(conv.id) > 0) {
       void patchCachedConversation(uid, Number(conv.id), { other: peer })
+    }
+  }
+}
+
+/**
+ * Профиль собеседника изменился: патчит имя/аватар в списке дока и в
+ * открытых мини-окнах, чтобы ничего не протухало без перезагрузки.
+ * IDB-строку правит отдельная подписка useChatCache.
+ *
+ * @param e событие user:profile.updated {user_id, name?, avatar_url?}
+ */
+function onProfileUpdated(e: unknown): void {
+  const payload = e as { user_id?: number; name?: string; avatar_url?: string | null } | null
+  const ownerId = Number(payload?.user_id ?? 0)
+  if (!(ownerId > 0)) return
+  const uid = getUid()
+  const hasAvatar = Object.prototype.hasOwnProperty.call(e ?? {}, 'avatar_url')
+  for (const conv of conversations.value) {
+    const peer = (conv as { other?: { id?: number; name?: string; avatar_url?: string | null } | null }).other
+    if (!peer || Number(peer.id) !== ownerId) continue
+    if (typeof payload?.name === 'string' && payload.name.trim() !== '') {
+      peer.name = payload.name.trim()
+    }
+    if (hasAvatar) {
+      peer.avatar_url = typeof payload?.avatar_url === 'string' && payload.avatar_url !== '' ? payload.avatar_url : null
+    }
+    if (uid > 0 && Number(conv.id) > 0) {
+      void patchCachedConversation(uid, Number(conv.id), { other: peer })
+    }
+    const win = findWindow(Number(conv.id))
+    if (win) {
+      win.title = (peer.name || win.title) as string
+      win.avatar = avatarSrcFor(peer)
     }
   }
 }

@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import Avatar from 'primevue/avatar'
 import Image from 'primevue/image'
 import MessageTicks from '@/Components/Features/Feedback/MessageTicks.vue'
 import VoiceMessagePlayer from '@/Components/Features/Chat/VoiceMessagePlayer.vue'
 import SharedPostCard from '@/Components/Features/Chat/SharedPostCard.vue'
 import { renderWithMentions } from '@/composables/useMentions'
 import { useMentionNavigate } from '@/composables/useMentionNavigate'
-import { avatarSrcFor } from '@/composables/useAvatar'
+import UserAvatar from '@/Components/Ui/Media/UserAvatar.vue'
 import { formatDateTime } from '@/utils/date'
 
 const props = defineProps<{ message: any; own: boolean; status: string; time: string; pinned?: boolean }>()
@@ -96,7 +95,7 @@ const attachmentSize = computed(() => {
         <div :class="['rounded-[22px] px-3.5 py-2.5 lg:px-4 lg:py-2 text-[15px] lg:text-sm leading-[1.45] shadow-sm transition-all duration-300', own ? 'bg-pink-200 dark:bg-pink-950 text-pink-950 dark:text-pink-100 rounded-br-[6px]' : 'bg-[#F0F2F4] dark:bg-zinc-800 text-stone-900 dark:text-white rounded-bl-[6px]', (message as any).pending ? 'opacity-60 scale-[0.98]' : 'opacity-100 scale-100', (message as any).failed ? '!bg-red-500 !text-white' : '', (message as any).justSent ? 'ring-2 ring-pink-400/60 dark:ring-pink-400/40' : '']">
           <div v-if="(message as any).is_pinned || pinned" class="text-[11px] lg:text-[10px] font-bold mb-1 opacity-80">📌 Закреплено</div>
           <div v-if="forwardedFrom" class="flex items-center gap-1.5 mb-1.5 min-w-0">
-            <Avatar :image="avatarSrcFor(forwardedFrom)" shape="circle" class="!w-5 !h-5 shrink-0 [&_img]:object-cover" />
+            <UserAvatar :user="forwardedFrom" shape="circle" class="!w-5 !h-5 shrink-0 [&_img]:object-cover" />
             <span :class="own ? 'text-rose-700 dark:text-pink-200' : 'text-[#1786FF] dark:text-sky-400'" class="text-[11px] lg:text-[10px] font-bold truncate">Переслано от {{ forwardedFrom.name || 'пользователя' }}</span>
           </div>
           <button v-if="quote" type="button" @click="emit('jump', quote.id)" :class="own ? 'border-rose-400/70 bg-rose-950/[0.06] hover:bg-rose-950/10 dark:border-pink-400/40 dark:bg-black/20 dark:hover:bg-black/30' : 'border-[#1786FF] bg-black/[0.04] dark:bg-white/10 hover:bg-black/[0.07] dark:hover:bg-white/15'" class="w-full text-left border-l-[3px] rounded-r-lg rounded-l-sm px-2.5 py-1.5 mb-1.5 transition active:scale-[0.98] min-w-0">

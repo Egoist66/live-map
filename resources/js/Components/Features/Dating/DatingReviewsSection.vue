@@ -70,7 +70,7 @@ const headerText = computed(() => {
     return `${reviews.average.value.toFixed(1)} из 5 · оценок: ${reviews.count.value}`
   }
 
-  return 'Пока без оценок'
+  return ''
 })
 
 const toast = (() => {
@@ -176,7 +176,7 @@ function reviewDate(iso: string | null): string {
       </span>
       <span class="min-w-0 flex-1">
         <span class="block text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500">Отзывы · рейтинг</span>
-        <span class="mt-0.5 block truncate text-sm font-black text-stone-800 dark:text-white">{{ headerText }}</span>
+        <span v-if="headerText" class="mt-0.5 block truncate text-sm font-black text-stone-800 dark:text-white">{{ headerText }}</span>
       </span>
       <i
         :class="['pi shrink-0 text-xs text-stone-400 dark:text-zinc-500 transition-transform', reviews.expanded.value ? 'pi-chevron-up' : 'pi-chevron-down']"

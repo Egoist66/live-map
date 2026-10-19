@@ -8,6 +8,16 @@ export const CODE_KINDS = [
 
 export type LockKind = 'pin4' | 'alpha8'
 
+/**
+ * Привести произвольное значение к допустимому типу блокировки.
+ *
+ * @param value сырое значение из хранилища
+ * @returns 'pin4' или 'alpha8'
+ */
+export function normalizeLockKind(value: unknown): LockKind {
+  return value === 'alpha8' ? 'alpha8' : 'pin4'
+}
+
 function codeMessage(kind: string): string {
   return kind === 'alpha8' ? 'Пароль — ровно 8 символов: латиница и цифры' : 'PIN — ровно 4 цифры'
 }

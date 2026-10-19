@@ -1,44 +1,72 @@
-import { api } from '@/services/api'
+import { api } from './api'
 
-export interface ScreenLockState {
-  enabled: boolean
-  timeout: number
-  kind: 'pin4' | 'alpha8'
-}
+/**
+ * API скринлокера: флаг активности и сброс забытого кода.
+ *
+ * Сам код блокировки на сервер не уходит — он живёт в IndexedDB. Серверу
+ * нужен только факт «локер включён» (чтобы показать сброс в боте) и
+ * подтверждённый запрос на стирание локального кода.
+ */
+export const screenLockApi = {
+  /**
+   * Сообщить серверу, включён ли скринлокер на этом устройстве.
+   *
+   * @param active включён ли локер
+   * @returns true, если сервер принял значение
+   */
+  async reportActive(active: boolean): Promise<boolean> {
+    try {
+      const { data } = await api.post('/api/screen-lock/active', { active })
+      return data?.ok === true
+    } catch {
+      return false
+    }
+  },
 
-export function normalizeKind(v: unknown): 'pin4' | 'alpha8' {
-  return v === 'alpha8' ? 'alpha8' : 'pin4'
-}
+  /**
+   * Запросить 6-значный код сброса на почту аккаунта.
+   *
+   * @returns серверный ответ с флагом успеха и паузой до повтора
+   */
+  async requestCode(): Promise<{ ok: boolean; message: string; retry_after: number }> {
+    try {
+      const { data } = await api.post('/api/screen-lock/code')
+      return {
+        ok: data?.ok === true,
+        message: String(data?.message ?? ''),
+        retry_after: Number(data?.retry_after ?? 0),
+      }
+    } catch (error: any) {
+      const payload = error?.response?.data
+      return {
+        ok: false,
+        message: String(payload?.message ?? 'Не удалось отправить код'),
+        retry_after: Number(payload?.retry_after ?? 0),
+      }
+    }
+  },
 
-export async function fetchScreenLock(): Promise<ScreenLockState> {
-  const { data } = await api.get('/api/user/screen-lock')
-  return { enabled: !!data.enabled, timeout: Number(data.timeout ?? 5), kind: normalizeKind(data.kind) }
-}
-
-export async function saveScreenLock(code: string, timeout: number, kind: 'pin4' | 'alpha8'): Promise<ScreenLockState> {
-  const { data } = await api.put('/api/user/screen-lock', { code, timeout, kind })
-  return { enabled: !!data.enabled, timeout: Number(data.timeout ?? timeout), kind: normalizeKind(data.kind ?? kind) }
-}
-
-export async function clearScreenLock(): Promise<void> {
-  await api.delete('/api/user/screen-lock')
-}
-
-export interface ScreenLockVerifyResult {
-  /** Код принят сервером. */
-  ok: boolean
-  /** Сессия мертва (401/419): код тут ни при чём, нужен перезаход. */
-  unauthorized: boolean
-}
-
-export async function verifyScreenLock(code: string): Promise<ScreenLockVerifyResult> {
-  try {
-    await api.post('/api/user/screen-lock/verify', { code })
-    return { ok: true, unauthorized: false }
-  } catch (e: any) {
-    if (!e?.response) throw e
-    const status = Number(e.response?.status ?? 0)
-    if (status === 401 || status === 419) return { ok: false, unauthorized: true }
-    return { ok: false, unauthorized: false }
-  }
+  /**
+   * Проверить код из письма и сбросить код блокировки.
+   *
+   * @param code 6-значный код из письма
+   * @returns серверный ответ с флагом успеха и меткой сброса
+   */
+  async verifyCode(code: string): Promise<{ ok: boolean; message: string; reset_at: number }> {
+    try {
+      const { data } = await api.post('/api/screen-lock/verify', { code })
+      return {
+        ok: data?.ok === true,
+        message: String(data?.message ?? ''),
+        reset_at: Number(data?.reset_at ?? 0),
+      }
+    } catch (error: any) {
+      const payload = error?.response?.data
+      return {
+        ok: false,
+        message: String(payload?.message ?? 'Неверный код'),
+        reset_at: Number(payload?.reset_at ?? 0),
+      }
+    }
+  },
 }

@@ -2,59 +2,73 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\ScreenLockResetService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+/**
+ * Тонкий контроллер скринлокера: флаг активности и сброс забытого кода.
+ *
+ * Код блокировки по-прежнему не покидает устройство. Сервер хранит лишь
+ * `is_sl_active` (для меню Telegram-бота) и метку сброса, а вся логика
+ * кодов, лимитов и рассылки живёт в ScreenLockResetService.
+ */
 class ScreenLockController extends Controller
 {
-    public function show(Request $request)
-    {
-        $u = $request->user();
-
-        return response()->json([
-            'enabled' => $u->screen_lock_code !== null,
-            'timeout' => (int) ($u->screen_lock_timeout ?? 5),
-            'kind' => $u->screen_lock_kind === 'alpha8' ? 'alpha8' : 'pin4',
-        ]);
-    }
-
-    public function update(Request $request)
+    /**
+     * Сообщить, включён ли скринлокер на этом устройстве.
+     *
+     * @param Request $request запрос с полем `active`
+     * @return JsonResponse
+     */
+    public function active(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'kind' => ['required', 'string', 'in:pin4,alpha8'],
-            'code' => ['required', 'string', function ($attr, $val, $fail) use ($request) {
-                $kind = $request->input('kind');
-                $ok = $kind === 'alpha8'
-                    ? (bool) preg_match('/^[A-Za-z0-9]{8}$/', (string) $val)
-                    : (bool) preg_match('/^\d{4}$/', (string) $val);
-                if (!$ok) {
-                    $fail($kind === 'alpha8' ? 'Пароль — ровно 8 символов: латиница и цифры.' : 'PIN — ровно 4 цифры.');
-                }
-            }],
-            'timeout' => ['required', 'integer', 'in:1,5,10'],
+            'active' => 'required|boolean',
         ]);
-        $request->user()->forceFill([
-            'screen_lock_code' => $data['code'],
-            'screen_lock_timeout' => (int) $data['timeout'],
-            'screen_lock_kind' => $data['kind'],
-        ])->save();
 
-        return response()->json(['enabled' => true, 'timeout' => (int) $data['timeout'], 'kind' => $data['kind']]);
-    }
-
-    public function destroy(Request $request)
-    {
-        $request->user()->forceFill(['screen_lock_code' => null])->save();
-
-        return response()->json(['enabled' => false]);
-    }
-
-    public function verify(Request $request)
-    {
-        $data = $request->validate(['code' => ['required', 'string', 'max:32']]);
-        $stored = (string) ($request->user()->screen_lock_code ?? '');
-        abort_if($stored === '', 404, 'Код не установлен');
-        abort_unless(hash_equals($stored, (string) $data['code']), 422, 'Неверный код');
+        ScreenLockResetService::setActive($request->user(), (bool) $data['active']);
 
         return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Отправить код сброса на почту аккаунта.
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function code(Request $request): JsonResponse
+    {
+        $result = ScreenLockResetService::issueCode($request->user());
+
+        $status = $result['ok'] ? 200 : ($result['retry_after'] > 0 ? 429 : 422);
+
+        return response()->json([
+            'ok' => $result['ok'],
+            'message' => $result['message'],
+            'retry_after' => $result['retry_after'],
+        ], $status);
+    }
+
+    /**
+     * Проверить код из письма и сбросить локер.
+     *
+     * @param Request $request запрос с полем `code`
+     * @return JsonResponse
+     */
+    public function verify(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'code' => 'required|digits:6',
+        ]);
+
+        $result = ScreenLockResetService::verifyCode($request->user(), (string) $data['code']);
+
+        return response()->json([
+            'ok' => $result['ok'],
+            'message' => $result['message'],
+            'reset_at' => $result['reset_at'],
+        ], $result['ok'] ? 200 : 422);
     }
 }

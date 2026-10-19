@@ -97,6 +97,7 @@ class RealtimeController extends Controller
             'messages_updated' => $this->updatedMessages($convIds, $window, $freshIds),
             'conversations_removed' => $this->removedConversations($user->id, $window),
             'gallery_version' => $this->galleryVersion($user->id),
+            'profiles' => app(\App\Services\ProfileFanout::class)->changedProfiles($user->id, $window),
             'open_ids' => $openId ? $this->openConversationIds($openId) : [],
             'typing' => $openId ? $this->typingUsers($openId, $user->id) : [],
             'previews' => $previews,
@@ -114,6 +115,10 @@ class RealtimeController extends Controller
             'map' => $this->mapChanges($user->id, $data, $window),
             'receipts' => $this->freshReceipts($user->id, $window),
             'badges' => $this->badges($user),
+            // Метка сброса скринлокера: polling-fallback, если сокет-событие
+            // screen-lock.reset не дошло. Устройство сравнивает её со своей
+            // локальной записью и стирает код, когда метка новее.
+            'screen_lock_reset_at' => $user->screen_lock_reset_at?->valueOf() ?? 0,
         ]);
     }
 

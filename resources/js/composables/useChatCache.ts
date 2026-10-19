@@ -1,6 +1,8 @@
 import { appDb } from '@/db/app.db'
 import { busOn } from '@/services/realtime-bus'
 import { currentAuthUid } from '@/composables/useAuthUid'
+import { invalidateCachedGallery, invalidateCachedProfile } from '@/composables/useGalleryCache'
+import { invalidateImageUrl, prefetchImageUrls } from '@/composables/useImageBlobCache'
 
 let cacheSyncBound = false
 
@@ -605,6 +607,7 @@ export function ensureChatCacheSync(): void {
       }
     })
     busOn('user:match.created', (e: any) => void onCacheMatch(e))
+    busOn('user:profile.updated', (e: any) => void onCacheProfileUpdated(e))
     busOn('chat:receipts', (list: any) => void onCacheReceipts(list))
     busOn('user:message.delivered', (e: any) => {
       const ids = Array.isArray(e?.message_ids) ? e.message_ids : []
@@ -925,4 +928,94 @@ async function onCacheMatch(e: any): Promise<void> {
       }
     }
   } catch {}
+}
+
+/**
+ * Профиль чужого пользователя изменился (socket `profile.updated` /
+ * polling `profiles`): патчит собеседника во всех закешированных строках
+ * и сносит протухшие чужие галерею/шапку профиля.
+ *
+ * Без этого закешированный `avatar_url` собеседника оставался старым
+ * до нового сообщения — «сменил фото, а у друга в чате старая аватарка».
+ * Запись идемпотентна: дубли сокет+поллинг безопасны.
+ *
+ * @param e событие {user_id, name?, avatar_url?, version?, gallery_version?}
+ */
+async function onCacheProfileUpdated(e: any): Promise<void> {
+  const uid = currentAuthUid()
+
+  if (!(uid > 0)) {
+    return
+  }
+
+  const ownerId = Number(e?.user_id ?? 0)
+
+  if (!(ownerId > 0) || ownerId === uid) {
+    return
+  }
+
+  const nextName = typeof e?.name === 'string' && e.name.trim() !== '' ? e.name.trim() : null
+  const hasAvatar = Object.prototype.hasOwnProperty.call(e ?? {}, 'avatar_url')
+  const nextAvatar = typeof e?.avatar_url === 'string' && e.avatar_url !== '' ? e.avatar_url : null
+
+  try {
+    const rows = await appDb.chatConversations.where('uid').equals(uid).toArray()
+
+    for (const row of rows) {
+      let current: any = null
+
+      try {
+        current = JSON.parse(row.value)
+      } catch {
+        continue
+      }
+
+      const other = current?.other
+
+      if (!other || Number(other?.id) !== ownerId) {
+        continue
+      }
+
+      let changed = false
+
+      if (nextName && other.name !== nextName) {
+        other.name = nextName
+        changed = true
+      }
+
+      if (hasAvatar && other.avatar_url !== nextAvatar) {
+        const oldUrl = typeof other.avatar_url === 'string' ? other.avatar_url : ''
+
+        if (oldUrl) {
+          void invalidateImageUrl(oldUrl)
+        }
+
+        other.avatar_url = nextAvatar
+        changed = true
+      }
+
+      if (!changed) {
+        continue
+      }
+
+      current.other = other
+
+      await appDb.chatConversations.put({
+        key: row.key,
+        uid,
+        convId: Number(row.convId),
+        updatedAt: Date.now(),
+        value: JSON.stringify(current),
+      })
+    }
+  } catch {}
+
+  // Чужая галерея и шапка профиля тоже протухли: следующее открытие
+  // должно подтянуть свежее, а не показать удалённое/старое фото.
+  void invalidateCachedGallery(uid, ownerId)
+  void invalidateCachedProfile(uid, ownerId)
+
+  if (nextAvatar) {
+    void prefetchImageUrls([nextAvatar])
+  }
 }

@@ -10,11 +10,22 @@ use Illuminate\Support\Facades\DB;
 
 class ConversationController extends Controller
 {
+    /**
+     * Список диалогов с постраничной выдачей.
+     *
+     * `only_direct` — только личные диалоги (вкладка Direct),
+     * `only_matched` — только личные диалоги с взаимным мэтчем (ULove).
+     *
+     * @param Request $request page/per_page + фильтры вкладок
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function index(Request $request)
     {
         $user = $request->user();
         $perPage = max(1, min(50, (int) $request->input('per_page', 20)));
         $onlyUnread = $request->boolean('only_unread');
+        $onlyDirect = $request->boolean('only_direct');
+        $onlyMatched = $request->boolean('only_matched');
         $myRows = \App\Models\ConversationParticipant::where('user_id', $user->id)
             ->whereNull('hidden_at')
             ->get(['conversation_id', 'cleared_at', 'pinned_at'])
@@ -28,6 +39,28 @@ class ConversationController extends Controller
             ->withCount(['messages as unread_count'=>fn($q)=>$q->where('sender_id','!=',$user->id)->whereNull('read_at')])
             ->select('conversations.*')
             ->selectSub($myPin, 'my_pinned_at');
+
+        if ($onlyDirect || $onlyMatched) {
+            $query->where('conversations.type', 'direct');
+        }
+
+        if ($onlyMatched) {
+            $matchedPeerIds = \App\Models\DatingMatch::where('user_a_id', $user->id)
+                ->pluck('user_b_id')
+                ->merge(
+                    \App\Models\DatingMatch::where('user_b_id', $user->id)->pluck('user_a_id')
+                )
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values()
+                ->all();
+
+            if (empty($matchedPeerIds)) {
+                $query->whereRaw('1 = 0');
+            } else {
+                $query->whereHas('participantRows', fn ($q) => $q->whereIn('user_id', $matchedPeerIds));
+            }
+        }
 
         // Панель колокольчика показывает только входящие: фильтр по непрочитанным
         // снимает и «мои отправленные», и уводит за пределы топ-страницы —

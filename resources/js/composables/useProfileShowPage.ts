@@ -1,15 +1,31 @@
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useMounted } from '@vueuse/core'
 import { usePresenceState, isRecentlySeen } from '@/composables/usePresence'
 import { useUserProfile } from '@/composables/useUserProfile'
 import { useProfileShare } from '@/composables/useProfileShare'
 import { formatRelative } from '@/utils/date'
 import { avatarSrcFor } from '@/composables/useAvatar'
+import { useCachedImageSrc } from '@/composables/useImageBlobCache'
+import { busOn } from '@/services/realtime-bus'
+import { currentAuthUid } from '@/composables/useAuthUid'
+import { loadCachedProfile, saveProfileSnapshot } from '@/composables/useGalleryCache'
 
 const LEVEL_LABEL: Record<string, string> = { novice: 'Новичок', explorer: 'Исследователь', active: 'Активист', local: 'Свой в городе', veteran: 'Ветеран', legend: 'Легенда', guide: 'Гид' }
 
 export function useProfileShowPage(props: { profileUser: any; isOwn: boolean; isFriend: boolean; isPending: boolean; isBlocked?: boolean; isBlockedBy?: boolean; canMessage: boolean; canMessageReason: string | null }) {
-  const avatarSrc = computed(() => avatarSrcFor(props.profileUser))
+  /**
+   * Точечные правки шапки из realtime (`user:profile.updated`): имя/аватар
+   * просматриваемого пользователя обновляются без перезагрузки. Пустые
+   * поля props не затираем — оверрайд ложится поверх.
+   */
+  const headerOverride = ref<Record<string, unknown>>({})
+  const mergedUser = computed(() => ({ ...props.profileUser, ...headerOverride.value }))
+  // placeholder = исходный URL на момент setup: SSR и первая клиентская
+  // отрисовка совпадают (гидрация без mismatch), дальше заменяется blob'ом.
+  const { src: avatarSrc } = useCachedImageSrc(
+    () => avatarSrcFor(mergedUser.value),
+    avatarSrcFor(mergedUser.value),
+  )
   const profile = useUserProfile(props.profileUser.id)
   const showAvatar = ref(false)
   const bioText = computed(() => (props.profileUser.bio || '').trim())
@@ -82,5 +98,60 @@ export function useProfileShowPage(props: { profileUser: any; isOwn: boolean; is
   function closeConfirm() { confirm.value = null }
   async function runConfirm() { const a = confirm.value?.action; confirm.value = null; if (a) await a() }
   function share() { shareProfile({ id: props.profileUser.id, profile_slug: props.profileUser.profile_slug, name: props.profileUser.name }) }
+
+  let profileBusOff: (() => void) | null = null
+
+  /**
+   * Кеш шапки профиля: сначала отдаём снапшот из IndexedDB (мгновенный
+   * рендер до гидрации/ответа), затем сохраняем актуальный. Плюс подписка
+   * на realtime-правки профиля — аватар/имя просматриваемого не протухают.
+   */
+  onMounted(() => {
+    const ownerId = Number(props.profileUser?.id ?? 0)
+    const uid = currentAuthUid()
+    if (!(ownerId > 0) || !(uid > 0)) return
+    void (async () => {
+      try {
+        const cached = await loadCachedProfile(uid, ownerId)
+        if (cached) {
+          for (const key of ['name', 'avatar_url', 'profile_slug', 'last_seen_at']) {
+            const fresh = (props.profileUser as any)?.[key]
+            const remembered = (cached as any)?.[key]
+            if ((fresh == null || fresh === '') && remembered != null && remembered !== '') {
+              headerOverride.value[key] = remembered
+            }
+          }
+        }
+      } catch {}
+      void saveProfileSnapshot(uid, ownerId, {
+        id: ownerId,
+        name: props.profileUser?.name ?? null,
+        avatar_url: props.profileUser?.avatar_url ?? null,
+        profile_slug: props.profileUser?.profile_slug ?? null,
+        last_seen_at: props.profileUser?.last_seen_at ?? null,
+      })
+    })()
+    try {
+      profileBusOff = busOn('user:profile.updated', (e: any) => {
+        const changedId = Number(e?.user_id ?? 0)
+        if (!(changedId > 0) || changedId !== ownerId) return
+        if (typeof e?.name === 'string' && e.name.trim() !== '') {
+          headerOverride.value.name = e.name.trim()
+        }
+        if (Object.prototype.hasOwnProperty.call(e ?? {}, 'avatar_url')) {
+          headerOverride.value.avatar_url = e.avatar_url ?? null
+        }
+        void saveProfileSnapshot(uid, ownerId, { id: ownerId, ...headerOverride.value })
+      })
+    } catch {}
+  })
+
+  onBeforeUnmount(() => {
+    try {
+      profileBusOff?.()
+    } catch {}
+    profileBusOff = null
+  })
+
   return { avatarSrc, profile, showAvatar, bioText, bioEmpty, isFriend, isPending, isBlocked, isBlockedBy, canMessage, reason, confirm, isLocked, online, invisibleActive, sharing, lastSeenText, registeredAt, homeLabel, hasHome, levelLabel: LEVEL_LABEL, sync, onAdd, onRemove, onBlock, onUnblock, onChat, askRemove, askBlock, closeConfirm, runConfirm, share }
 }

@@ -1,130 +1,151 @@
 import { computed, ref } from 'vue'
+import { usePage } from '@inertiajs/vue3'
 import { useForm } from 'vee-validate'
 import { useToast } from 'primevue/usetoast'
-import { fetchScreenLock, saveScreenLock, clearScreenLock, verifyScreenLock, normalizeKind } from '@/services/screenlock.api'
 import { cleanupStrayScrollLocks } from '@/composables/useScrollRescue'
-import { kvGet, kvSet, kvDel } from '@/db/app.db'
-import { screenLockSetupSchema } from '@/validation/schemas/screenlock.schema'
+import { captureAuthUid, currentAuthUid } from '@/composables/useAuthUid'
+import { deleteScreenLock, hashLockCode, matchLockCode, readScreenLock, writeScreenLock } from '@/db/screenlock.db'
+import { screenLockApi } from '@/services/screenlock.api'
+import { busOn } from '@/services/realtime-bus'
+import { screenLockSetupSchema, normalizeLockKind } from '@/validation/schemas/screenlock.schema'
 import type { LockKind } from '@/validation/schemas/screenlock.schema'
 
-const CODE_KEY = 'screenlock:code'
-const TIMEOUT_KEY = 'screenlock:timeout'
-const KIND_KEY = 'screenlock:kind'
-const LS_MIRROR = 'screenlock:state'
-const LS_SERVER = 'screenlock:server-enabled'
-
-function readMirror(): { enabled: boolean; timeout: number; kind: LockKind } {
-  try {
-    const raw = localStorage.getItem(LS_MIRROR)
-    if (!raw) return { enabled: false, timeout: 5, kind: 'pin4' }
-    const p = JSON.parse(raw)
-    return {
-      enabled: !!p.enabled,
-      timeout: Number(p.timeout) || 5,
-      kind: normalizeKind(p.kind),
-    }
-  } catch {
-    return { enabled: false, timeout: 5, kind: 'pin4' }
-  }
-}
-
-function writeMirror(enabledVal: boolean, timeout: number, kindVal: LockKind) {
-  try {
-    localStorage.setItem(LS_MIRROR, JSON.stringify({ enabled: enabledVal, timeout, kind: kindVal }))
-  } catch {}
-}
-
-/**
- * Последнее известное состояние локера: истина сервера при онлайне,
- * намерение юзера при офлайн-сохранении. Лечит баг: запрос упал
- * (419/500/офлайн на старте), а протухший код в IndexedDB включал
- * локер, хотя в БД пароль уже null.
- *
- * @returns true/false — последнее состояние, null — неизвестно
- */
-function readServerEnabled(): boolean | null {
-  try {
-    const raw = localStorage.getItem(LS_SERVER)
-    if (raw === '1') return true
-    if (raw === '0') return false
-    return null
-  } catch {
-    return null
-  }
-}
-
-/**
- * Запомнить последнее известное состояние локера.
- *
- * @param value true — включён, false — выключен
- */
-function writeServerEnabled(value: boolean): void {
-  try {
-    localStorage.setItem(LS_SERVER, value ? '1' : '0')
-  } catch {}
-}
-
-function clearServerEnabled(): void {
-  try {
-    localStorage.removeItem(LS_SERVER)
-  } catch {}
-}
-
-export function sanitizeLockCode(v: unknown, kind: string): string {
-  const s = String(v ?? '')
-  if (kind === 'alpha8') return s.replace(/[^A-Za-z0-9]/g, '').slice(0, 8)
-  return s.replace(/\D/g, '').slice(0, 4)
-}
+const DEFAULT_TIMEOUT = 5
+const DEFAULT_KIND: LockKind = 'pin4'
+const SEEN_RESET_KEY = 'screenlock:seen-reset'
 
 /**
  * Детерминированный старт для SSR: сервер и первая гидрация всегда
- * видят выключенный локер (enabled=false, pin4, 5 мин). Зеркало из
- * localStorage подтягивается в init() после монтирования, поэтому
- * кнопка замка в шапке не даёт mismatch. Модульный уровень никогда
- * не читает localStorage: в Node его нет, а на клиенте чтение при
- * импорте расходилось бы с серверным HTML.
+ * видят выключенный локер. Настройки из IndexedDB подтягиваются в
+ * init() после монтирования, поэтому кнопка замка в шапке не даёт
+ * mismatch. Модульный уровень никогда не читает хранилища: в Node их
+ * нет, а на клиенте чтение при импорте расходилось бы с серверным HTML.
  */
-const DEFAULT_MIRROR: { enabled: boolean; timeout: number; kind: LockKind } = {
-  enabled: false,
-  timeout: 5,
-  kind: 'pin4',
-}
-const enabled = ref(DEFAULT_MIRROR.enabled)
-const timeoutMin = ref(DEFAULT_MIRROR.timeout)
-const kind = ref<LockKind>(DEFAULT_MIRROR.kind)
+const enabled = ref(false)
+const timeoutMin = ref(DEFAULT_TIMEOUT)
+const kind = ref<LockKind>(DEFAULT_KIND)
 const locked = ref(false)
 const loading = ref(false)
 const saving = ref(false)
 const verifying = ref(false)
 const error = ref<string | null>(null)
 const initialized = ref(false)
-const offline = ref(false)
 
-let cachedCode: string | null = null
+/** Хеш кода блокировки текущего пользователя (сам код не храним). */
+let cachedHash: string | null = null
+let cachedUid = 0
 let lastPoke = 0
 let timer: ReturnType<typeof setTimeout> | null = null
 let bound = false
+let resetListenerBound = false
+
+/**
+ * Ключ localStorage с последней применённой меткой сброса.
+ *
+ * Метка нужна, чтобы один и тот же серверный сброс не стирал локер
+ * повторно после каждого входа и не затирал код, который пользователь
+ * уже успел задать заново.
+ *
+ * @param uid id пользователя
+ * @returns ключ хранилища
+ */
+function seenResetKey(uid: number): string {
+  return `${SEEN_RESET_KEY}:${uid}`
+}
+
+/**
+ * Прочитать последнюю применённую метку сброса.
+ *
+ * @param uid id пользователя
+ * @returns миллисекунды метки (0 — сбросов ещё не было)
+ */
+function readSeenReset(uid: number): number {
+  try {
+    return Number(localStorage.getItem(seenResetKey(uid)) || 0) || 0
+  } catch {
+    return 0
+  }
+}
+
+/**
+ * Запомнить применённую метку сброса.
+ *
+ * @param uid id пользователя
+ * @param resetAt миллисекунды метки
+ */
+function writeSeenReset(uid: number, resetAt: number): void {
+  try {
+    localStorage.setItem(seenResetKey(uid), String(resetAt))
+  } catch {}
+}
+
+/**
+ * Id текущего пользователя с запасными источниками.
+ *
+ * Хук зовут и в setup, и из обработчиков событий: `usePage` вне setup
+ * может быть недоступен, поэтому падаем на кэш `useAuthUid`, meta-тег
+ * и `window.userId` — как это делает стор бейджей.
+ *
+ * @returns id пользователя (0 — гость/неизвестно)
+ */
+function resolveUid(): number {
+  // Сначала живая Inertia-страница: при смене аккаунта без перезагрузки
+  // кэш useAuthUid обновляется только в router.on('success') и на момент
+  // перечитывания ещё может указывать на прежнего пользователя.
+  try {
+    const inertiaUid = Number((usePage().props.auth as any)?.user?.id || 0)
+    if (inertiaUid > 0) return inertiaUid
+  } catch {}
+
+  const cached = currentAuthUid()
+  if (cached > 0) return cached
+
+  try {
+    const meta = document.querySelector('meta[name="user-id"]')?.getAttribute('content')
+    if (meta) return Number(meta) || 0
+  } catch {}
+
+  try {
+    return Number((window as any).userId || 0)
+  } catch {
+    return 0
+  }
+}
+
+/**
+ * Применить настройку пользователя к реактивному состоянию.
+ *
+ * @param row прочитанная строка или null
+ */
+function applyRow(row: Awaited<ReturnType<typeof readScreenLock>>): void {
+  cachedHash = row?.codeHash ?? null
+  enabled.value = !!cachedHash
+  timeoutMin.value = row?.timeout ?? DEFAULT_TIMEOUT
+  kind.value = normalizeLockKind(row?.kind)
+}
 
 /**
  * Глобальный сброс скринлока при смене аккаунта / выходе.
  *
  * Чинит баг: вышел из A (локер включён), зашёл в B (локер выключен) —
- * через 5 минут прилетал чужой таймер и лочил экран B.
- * Причина — модульный синглтон хранил enabled/timeout/cachedCode юзера A,
- * а useAuthSession его не сбрасывал.
+ * через 5 минут прилетал чужой таймер и лочил экран B. Причина —
+ * модульный синглтон хранил enabled/timeout/cachedHash юзера A.
+ *
+ * Настройки в хранилище НЕ удаляются: локер — личная настройка
+ * устройства и должен пережить выход/вход тем же аккаунтом.
  */
 export function resetScreenLockSession(): void {
   disarm()
   locked.value = false
   enabled.value = false
-  cachedCode = null
+  cachedHash = null
+  cachedUid = 0
+  timeoutMin.value = DEFAULT_TIMEOUT
+  kind.value = DEFAULT_KIND
   initialized.value = false
   lastPoke = 0
   error.value = null
-  clearServerEnabled()
-  writeMirror(false, timeoutMin.value, kind.value)
   broadcastLockState()
-  void kvDel(CODE_KEY).catch(() => {})
 }
 
 function disarm() {
@@ -140,6 +161,82 @@ function broadcastLockState() {
       try { (reg.active as any)?.postMessage(msg) } catch {}
     }).catch(() => {})
   } catch {}
+}
+
+/**
+ * Сообщить серверу флаг активности (для пункта «Сброс скринлокера» в боте).
+ *
+ * Сеть здесь не критична: локер работает и без неё, а ошибку глотаем,
+ * чтобы сохранение кода не падало из-за offline.
+ *
+ * @param active включён ли локер
+ */
+async function reportActive(active: boolean): Promise<void> {
+  try {
+    await screenLockApi.reportActive(active)
+  } catch {}
+}
+
+/**
+ * Метка сброса из Inertia-пропсов (auth.user.screen_lock_reset_at).
+ *
+ * Нужна на старте: если сброс сделали через бота, пока приложение было
+ * закрыто, сокет-событие уже не придёт — сверяемся с сервером напрямую.
+ *
+ * @returns миллисекунды метки (0 — сбросов не было)
+ */
+function serverResetMark(): number {
+  try {
+    const raw = (usePage().props.auth as any)?.user?.screen_lock_reset_at
+    if (!raw) return 0
+    const parsed = typeof raw === 'number' ? raw : Date.parse(String(raw))
+    return Number.isFinite(parsed) ? parsed : 0
+  } catch {
+    return 0
+  }
+}
+
+/**
+ * Применить серверный сброс: стереть локальный код, если метка новее записи.
+ *
+ * @param uid чей локер сбрасываем
+ * @param resetAt метка сброса в миллисекундах
+ */
+async function applyRemoteReset(uid: number, resetAt: number): Promise<void> {
+  if (!uid || resetAt <= 0) return
+
+  const seen = readSeenReset(uid)
+  if (resetAt <= seen) return
+
+  writeSeenReset(uid, resetAt)
+
+  const row = await readScreenLock(uid)
+  // Локальная запись новее метки — код задали уже после сброса, не трогаем.
+  if (!row || row.updatedAt >= resetAt) return
+
+  await deleteScreenLock(uid)
+
+  if (uid !== cachedUid && uid !== resolveUid()) return
+
+  cachedHash = null
+  enabled.value = false
+  locked.value = false
+  broadcastLockState()
+  disarm()
+}
+
+/**
+ * Подписаться на realtime-сброс скринлокера (сокет и polling-эмит).
+ */
+function bindResetListener(): void {
+  if (resetListenerBound || typeof window === 'undefined') return
+  resetListenerBound = true
+
+  busOn('user:screen-lock.reset', (payload) => {
+    const uid = cachedUid || resolveUid()
+    const resetAt = Number((payload as any)?.reset_at ?? 0)
+    void applyRemoteReset(uid, resetAt)
+  })
 }
 
 function arm() {
@@ -178,115 +275,103 @@ function bind() {
   })
 }
 
-async function readLocal(): Promise<{ code: string | null; timeout: number; kind: LockKind }> {
-  const [code, t, k] = await Promise.all([kvGet(CODE_KEY), kvGet(TIMEOUT_KEY), kvGet(KIND_KEY)])
-  return { code, timeout: Number(t ?? 5) || 5, kind: normalizeKind(k) }
+/**
+ * Сохранить настройку текущего пользователя в IndexedDB.
+ *
+ * @param codeHash хеш кода блокировки (null — выключить)
+ * @param timeout автоблокировка в минутах
+ * @param nextKind тип кода
+ * @returns true, если запись удалась
+ */
+async function persist(codeHash: string | null, timeout: number, nextKind: LockKind): Promise<boolean> {
+  const uid = cachedUid || resolveUid()
+  if (!uid) {
+    error.value = 'Не удалось определить пользователя'
+    return false
+  }
+
+  cachedUid = uid
+  await writeScreenLock(uid, {
+    uid,
+    codeHash,
+    timeout,
+    kind: nextKind,
+    updatedAt: Date.now(),
+  })
+  return true
 }
 
-async function writeLocal(code: string | null, timeout: number, kind: LockKind): Promise<void> {
-  writeMirror(!!code, timeout, kind)
-  if (code) await kvSet(CODE_KEY, code)
-  else await kvDel(CODE_KEY)
-  await kvSet(TIMEOUT_KEY, String(timeout))
-  await kvSet(KIND_KEY, kind)
+/**
+ * Оставить в коде только допустимые символы и обрезать до нужной длины.
+ *
+ * @param value сырой ввод пользователя
+ * @param kind тип блокировки
+ * @returns очищенный код
+ */
+export function sanitizeLockCode(value: unknown, kind: string): string {
+  const text = String(value ?? '')
+  if (kind === 'alpha8') return text.replace(/[^A-Za-z0-9]/g, '').slice(0, 8)
+  return text.replace(/\D/g, '').slice(0, 4)
 }
 
 export function useScreenLock() {
+  captureAuthUid()
   const isActive = computed(() => enabled.value)
   const isLocked = computed(() => enabled.value && locked.value)
 
   async function init() {
     bind()
+    bindResetListener()
     if (initialized.value) {
       arm()
       return
     }
-    // Быстрый путь без сети: зеркало из localStorage применяется после
-    // монтирования, а не при импорте модуля — первый рендер клиента
-    // совпадает с SSR (mismatch в шапке исключён), актуальные значения
-    // всё равно придут из load() ниже.
-    if (typeof window !== 'undefined') {
-      const mirror = readMirror()
-      enabled.value = mirror.enabled
-      timeoutMin.value = mirror.timeout
-      kind.value = mirror.kind
-    }
     await load()
   }
 
+  /**
+   * Прочитать настройку текущего пользователя из локального хранилища.
+   *
+   * Код блокировки живёт только на устройстве, но факт активности
+   * сообщается серверу: без него бот не покажет «Сброс скринлокера».
+   */
   async function load() {
     loading.value = true
     error.value = null
     try {
-      const fetchedState = await fetchScreenLock()
-      offline.value = false
-      enabled.value = fetchedState.enabled
-      timeoutMin.value = fetchedState.timeout
-      kind.value = fetchedState.kind
-      writeServerEnabled(fetchedState.enabled)
-      const localState = await readLocal()
-      const hasServerCode = fetchedState.enabled
-      cachedCode = hasServerCode ? localState.code : null
-      if (hasServerCode) {
-        await kvSet(TIMEOUT_KEY, String(fetchedState.timeout))
-        await kvSet(KIND_KEY, fetchedState.kind)
-      } else {
-        await kvDel(CODE_KEY)
-        await kvSet(TIMEOUT_KEY, String(fetchedState.timeout))
-        await kvSet(KIND_KEY, fetchedState.kind)
-      }
-    } catch (e: any) {
-      offline.value = true
-      const local = await readLocal()
-      if (e?.response?.status === 401) {
-        cachedCode = null
-        enabled.value = false
-        clearServerEnabled()
-        await kvDel(CODE_KEY)
-      } else if (readServerEnabled() === false) {
-        cachedCode = null
-        enabled.value = false
-        await kvDel(CODE_KEY)
-      } else {
-        cachedCode = local.code
-        enabled.value = !!local.code
-      }
-      timeoutMin.value = local.timeout
-      kind.value = local.kind
+      const uid = resolveUid()
+      cachedUid = uid
+      const row = uid ? await readScreenLock(uid) : null
+      applyRow(row)
+      if (uid) await applyRemoteReset(uid, serverResetMark())
+      // Отправляем только true: устройство без локера не должно затирать
+      // флаг, выставленный другим устройством того же аккаунта.
+      if (cachedHash) void reportActive(true)
     } finally {
       loading.value = false
       initialized.value = true
     }
     locked.value = false
-    writeMirror(enabled.value, timeoutMin.value, kind.value)
     broadcastLockState()
     arm()
   }
 
   async function save(code: string, timeout: number, nextKind?: LockKind) {
-    const k = nextKind ?? kind.value
+    const nextKindValue = normalizeLockKind(nextKind ?? kind.value)
     saving.value = true
     error.value = null
     try {
-      await writeLocal(code, timeout, k)
-      try {
-        const s = await saveScreenLock(code, timeout, k)
-        offline.value = false
-        enabled.value = s.enabled
-        timeoutMin.value = s.timeout
-        kind.value = s.kind
-      } catch (e: any) {
-        if (e?.response) throw e
-        offline.value = true
-        writeServerEnabled(true)
-        enabled.value = true
-        timeoutMin.value = timeout
-        kind.value = k
-      }
-      cachedCode = code
+      const codeHash = await hashLockCode(code)
+      const saved = await persist(codeHash, timeout, nextKindValue)
+      if (!saved) return
+      cachedHash = codeHash
+      enabled.value = true
+      timeoutMin.value = timeout
+      kind.value = nextKindValue
       locked.value = false
       broadcastLockState()
       arm()
+      void reportActive(true)
     } catch {
       error.value = 'Не удалось сохранить код'
     } finally {
@@ -295,82 +380,64 @@ export function useScreenLock() {
   }
 
   async function changeTimeout(timeout: number) {
-    if (!cachedCode) {
+    if (!cachedHash) {
       error.value = 'Введи код, чтобы сменить таймаут'
       return
     }
-    await save(cachedCode, timeout, kind.value)
+    saving.value = true
+    error.value = null
+    try {
+      const saved = await persist(cachedHash, timeout, kind.value)
+      if (!saved) return
+      timeoutMin.value = timeout
+      arm()
+    } catch {
+      error.value = 'Не удалось сохранить таймаут'
+    } finally {
+      saving.value = false
+    }
   }
 
   async function remove() {
     saving.value = true
     error.value = null
     try {
-      try {
-        await clearScreenLock()
-        offline.value = false
-      } catch (e: any) {
-        if (e?.response) throw e
-        offline.value = true
-      }
-      writeServerEnabled(false)
-      await writeLocal(null, timeoutMin.value, kind.value)
+      const saved = await persist(null, timeoutMin.value, kind.value)
+      if (!saved) return
+      cachedHash = null
+      enabled.value = false
+      locked.value = false
+      broadcastLockState()
+      disarm()
+      void reportActive(false)
     } catch {
       error.value = 'Не удалось выключить'
     } finally {
       saving.value = false
     }
-    cachedCode = null
-    enabled.value = false
-    locked.value = false
-    broadcastLockState()
-    disarm()
   }
 
   async function verify(input: string): Promise<boolean> {
     verifying.value = true
     error.value = null
     try {
-      try {
-        const result = await verifyScreenLock(input)
-        offline.value = false
-        if (result.unauthorized) {
-          // Сессия умерла, пока экран был залочен (типично для Mini App,
-          // вернувшегося через часы): код ни при чём. Показываем честно
-          // и отправляем на перезаход через «Выйти» — в Telegram
-          // автовход поднимет сессию сам. Раньше тут был «Неверный
-          // код» и вечный ступор на локскрине без объяснений.
-          error.value = 'Сессия истекла. Нажмите «Выйти» ниже и войдите заново — в Telegram вход автоматический.'
-          return false
-        }
-        if (!result.ok) {
-          error.value = 'Неверный код'
-          return false
-        }
-        cachedCode = input
-        try {
-          await writeLocal(input, timeoutMin.value, kind.value)
-        } catch {
-          // IndexedDB недоступен (приватный режим/WebView): разблокируем
-          // всё равно, код просто не закэшируется для офлайна.
-          // Раньше throw отсюда пропускал locked=false — ступор.
-        }
-      } catch (e: any) {
-        if (e?.response) throw e
-        offline.value = true
-        if (!cachedCode) {
-          try {
-            const local = await readLocal()
-            cachedCode = local.code
-          } catch {
-            cachedCode = null
-          }
-        }
-        if (!cachedCode || cachedCode !== input) {
-          error.value = !cachedCode ? 'Нет соединения — код недоступен на этом устройстве' : 'Неверный код'
-          return false
-        }
+      if (!cachedHash) {
+        const uid = cachedUid || resolveUid()
+        const row = uid ? await readScreenLock(uid) : null
+        cachedHash = row?.codeHash ?? null
       }
+
+      if (!cachedHash) {
+        error.value = 'Код не найден на этом устройстве'
+        return false
+      }
+
+      const matches = await matchLockCode(cachedHash, input)
+      if (!matches) {
+        error.value = 'Неверный код'
+        return false
+      }
+
       locked.value = false
       broadcastLockState()
       arm()
@@ -398,6 +465,44 @@ export function useScreenLock() {
     broadcastLockState()
     disarm()
   }
+
+  /**
+   * Полностью удалить настройку текущего пользователя.
+   *
+   * Используется при удалении аккаунта на этом устройстве: обычный
+   * выход настройку не трогает.
+   *
+   * @param uid чей id чистить (по умолчанию — текущего пользователя)
+   */
+  async function forget(uid?: number): Promise<void> {
+    const targetUid = uid ?? cachedUid ?? resolveUid()
+    if (targetUid) await deleteScreenLock(targetUid)
+    cachedHash = null
+    enabled.value = false
+    locked.value = false
+    broadcastLockState()
+    disarm()
+  }
+
+  /**
+   * Сбросить локальный код после подтверждённого серверного сброса.
+   *
+   * Метку запоминаем, чтобы тот же сброс не пришёл повторно из polling
+   * и не стёр код, который пользователь уже задал заново.
+   *
+   * @param resetAt метка сброса в миллисекундах
+   */
+  async function resetByRemote(resetAt: number): Promise<void> {
+    const uid = cachedUid || resolveUid()
+    if (uid && resetAt > 0) writeSeenReset(uid, resetAt)
+    if (uid) await deleteScreenLock(uid)
+    cachedHash = null
+    enabled.value = false
+    locked.value = false
+    broadcastLockState()
+    disarm()
+  }
+
   return {
     enabled: isActive,
     timeoutMin,
@@ -407,7 +512,6 @@ export function useScreenLock() {
     saving,
     verifying,
     error,
-    offline,
     initialized,
     init,
     load,
@@ -417,6 +521,8 @@ export function useScreenLock() {
     verify,
     lockNow,
     poke,
+    forget,
+    resetByRemote,
   }
 }
 

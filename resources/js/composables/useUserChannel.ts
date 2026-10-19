@@ -28,11 +28,13 @@ const USER_EVENTS = [
   'saved-notes.changed',
   'session.revoked',
   'gallery.changed',
+  'profile.updated',
   'conversation.removed',
   'business.verified',
   'business.rejected',
   'business.verification.submitted',
   'bot-broadcast.finished',
+  'screen-lock.reset',
 ] as const
 
 let channel: any = null

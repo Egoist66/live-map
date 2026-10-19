@@ -223,3 +223,37 @@ export async function clearGalleryCache(uid: number): Promise<void> {
     await appDb.profileHeaders.where('uid').equals(uid).delete()
   } catch {}
 }
+
+/**
+ * Снести кеш галереи конкретного владельца (чужие изменения).
+ *
+ * Нужен realtime-инвалидации: когда у просматриваемого пользователя
+ * меняется фото, закешированная галерея гарантированно протухла, и
+ * следующее открытие не должно показать старое.
+ *
+ * @param uid id смотрящего (владелец кеша)
+ * @param ownerId id владельца галереи
+ */
+export async function invalidateCachedGallery(uid: number, ownerId: number): Promise<void> {
+  if (!(uid > 0) || !(ownerId > 0)) {
+    return
+  }
+  try {
+    await appDb.galleries.delete(galleryKey(uid, ownerId))
+  } catch {}
+}
+
+/**
+ * Снести кеш шапки профиля конкретного владельца (смена аватара/имени).
+ *
+ * @param uid id смотрящего
+ * @param ownerId id владельца профиля
+ */
+export async function invalidateCachedProfile(uid: number, ownerId: number): Promise<void> {
+  if (!(uid > 0) || !(ownerId > 0)) {
+    return
+  }
+  try {
+    await appDb.profileHeaders.delete(profileKey(uid, ownerId))
+  } catch {}
+}

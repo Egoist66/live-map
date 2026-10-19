@@ -53,6 +53,7 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
   const remaining = computed(() => Math.max(0, limit.value - count.value))
   const isFull = computed(() => count.value >= limit.value)
   let galleryBusOff: (() => void) | null = null
+  let profileBusOff: (() => void) | null = null
   let lastGalleryVersion = 0
 
   /**
@@ -125,6 +126,32 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
       return
     }
     lastGalleryVersion = version
+    void load()
+  }
+
+  /**
+   * Чужой профиль изменился (socket/polling `profile.updated`): у
+   * просматриваемого пользователя поменялось фото — закешированная
+   * галерея протухла. Чистим кеш и перечитываем, чтобы не показать
+   * удалённое/старое фото.
+   *
+   * @param e событие {user_id, name?, avatar_url?, gallery_version?}
+   */
+  function handleProfileUpdated(e: { user_id?: number; gallery_version?: number }): void {
+    const owner = Number((e as any)?.user_id ?? 0)
+    if (!(owner > 0) || owner === Number(currentAuthUid())) {
+      return
+    }
+    if (owner !== Number(userId())) {
+      return
+    }
+    const version = Number((e as any)?.gallery_version ?? 0)
+    if (version > 0 && version <= lastGalleryVersion) {
+      return
+    }
+    if (version > 0) {
+      lastGalleryVersion = version
+    }
     void load()
   }
 
@@ -485,6 +512,9 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
       galleryBusOff = busOn('user:gallery.changed', handleGalleryChanged)
     } catch {}
     try {
+      profileBusOff = busOn('user:profile.updated', handleProfileUpdated)
+    } catch {}
+    try {
       ensureUserChannel()
     } catch {}
   })
@@ -494,6 +524,10 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
       galleryBusOff?.()
     } catch {}
     galleryBusOff = null
+    try {
+      profileBusOff?.()
+    } catch {}
+    profileBusOff = null
   })
 
   return { photos, limit, count, remaining, isFull, canAdd, canComment, privacy, loading, uploading, error, active, viewerOpen, dialogOpen, highlightCommentId, isOwn: !!opts?.isOwn, mainPhoto, settingMain, isMainPhoto, setMain, load, upload, saveCaption, replace, remove, toggleLike, likers, likersLoading, likersTotal, likersIncognito, likersOpen, loadLikers, openLikers, closeLikers, open, stepPhoto, close, openDialog, closeDialog, syncCounts, consumePendingPhoto, mosaicClass }

@@ -85,10 +85,14 @@ export type RealtimeEventMap = {
   'user:saved-notes.changed': { action: string }
   /** Рассылка в боте завершена: живая статистика автору (сокет bot-broadcast.finished) */
   'user:bot-broadcast.finished': { broadcast: any }
+  /** Скринлокер сброшен на сервере (сокет screen-lock.reset / polling screen_lock_reset_at) */
+  'user:screen-lock.reset': { reset_at: number }
   /** Смена режима realtime: socket|polling */
   'realtime:mode': string
   /** Галерея владельца изменилась (сокет gallery.changed / polling gallery_version / локальная мутация) */
   'user:gallery.changed': { user_id?: number; ownerId?: number; version: number }
+  /** Профиль чужого пользователя изменился: имя/аватар (сокет profile.updated / polling profiles). Патчим собеседника в кешах, инвалидируем чужую галерею/шапку */
+  'user:profile.updated': { user_id: number; name?: string; avatar_url?: string | null; version?: number; gallery_version?: number }
   /** Диалоги убраны у себя с другого устройства/вкладки (сокет conversation.removed / polling conversations_removed) */
   'user:conversation.removed': { ids: number[] }
 }

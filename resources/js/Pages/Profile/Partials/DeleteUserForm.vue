@@ -1,17 +1,31 @@
 <script setup lang="ts">
 import { nextTick, ref } from 'vue'
-import { useForm } from '@inertiajs/vue3'
+import { useForm, usePage } from '@inertiajs/vue3'
 import { route } from '@/route'
 import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
 import InputText from 'primevue/inputtext'
 import Message from 'primevue/message'
+import { useScreenLock } from '@/composables/useScreenLock'
+const screenLock = useScreenLock()
+const page = usePage()
 const confirming = ref(false)
 const passwordInput = ref<any>(null)
 const show = ref(false)
 const form = useForm({ password: '' })
 const confirm = () => { confirming.value = true; nextTick(() => passwordInput.value?.$el?.focus?.()) }
-const del = () => form.delete(route('profile.destroy'), { preserveScroll: true, onSuccess: () => close(), onError: () => passwordInput.value?.$el?.focus?.(), onFinish: () => form.reset() })
+const del = () => {
+  const uid = Number((page.props.auth as any)?.user?.id || 0)
+  form.delete(route('profile.destroy'), {
+    preserveScroll: true,
+    onSuccess: () => {
+      void screenLock.forget(uid || undefined)
+      close()
+    },
+    onError: () => passwordInput.value?.$el?.focus?.(),
+    onFinish: () => form.reset(),
+  })
+}
 const close = () => { confirming.value = false; form.clearErrors(); form.reset() }
 </script>
 <template>

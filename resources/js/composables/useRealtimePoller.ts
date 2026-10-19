@@ -28,6 +28,8 @@ let burstUntil = 0
 let lastMsgId = 0
 let lastVideoSignalId = 0
 let lastGalleryVersion = 0
+/** Последняя метка сброса скринлокера, чтобы polling не эмитил её каждый тик. */
+let lastScreenLockResetAt = 0
 let lastTime = 0
 let consecutiveErrors = 0
 let backoffUntil = 0
@@ -39,6 +41,8 @@ const seenBusinessPendingIds = new Set<number>()
 const emittedKeys = new Set<string>()
 const seenMessageIds = new Set<number>()
 const seenVideoSignalIds = new Set<number>()
+/** Последняя версия профиля контакта (updated_at ms) для дедупа нахлёста окон */
+const lastProfileVersions = new Map<number, number>()
 
 /**
  * Дедуп тостов при нахлёсте окон тиков (событие может прийти дважды).
@@ -302,6 +306,37 @@ export function useRealtimePoller() {
         busEmit('user:gallery.changed', { user_id: selfId, version: galleryVersion })
       }
     }
+    const screenLockResetAt = Number((data as any)?.screen_lock_reset_at ?? 0)
+    if (screenLockResetAt > 0 && selfId > 0 && screenLockResetAt > lastScreenLockResetAt) {
+      // Сравнение с локальной записью делает потребитель (useScreenLock):
+      // старый сброс не стирает код, заданный уже после него.
+      lastScreenLockResetAt = screenLockResetAt
+      busEmit('user:screen-lock.reset', { reset_at: screenLockResetAt })
+    }
+    const profiles = Array.isArray((data as any)?.profiles) ? (data as any).profiles : []
+    for (const profile of profiles) {
+      const profileUserId = Number(profile?.user_id ?? 0)
+      if (!(profileUserId > 0)) continue
+      const profileVersion = Number(profile?.version ?? 0)
+      const knownVersion = lastProfileVersions.get(profileUserId) ?? 0
+      // Окно тика идёт с запасом 10с: один апдейт вернётся в нескольких
+      // тиках. Версия (updated_at) отсекает повторы — патчим ровно раз.
+      if (profileVersion > 0 && profileVersion <= knownVersion) continue
+      if (profileVersion > 0) {
+        lastProfileVersions.set(profileUserId, profileVersion)
+        if (lastProfileVersions.size > SEEN_CAP) {
+          const firstKey = lastProfileVersions.keys().next().value as number | undefined
+          if (firstKey !== undefined) lastProfileVersions.delete(firstKey)
+        }
+      }
+      busEmit('user:profile.updated', {
+        user_id: profileUserId,
+        name: typeof profile?.name === 'string' ? profile.name : undefined,
+        avatar_url: profile?.avatar_url === undefined ? undefined : profile.avatar_url,
+        version: profileVersion,
+        gallery_version: Number(profile?.gallery_version ?? 0),
+      })
+    }
     const friendships = Array.isArray(data?.friendships) ? data.friendships : []
     friendships.forEach((e: any) => {
       const f = e?.friendship
@@ -480,12 +515,14 @@ export function useRealtimePoller() {
     lastMsgId = 0
     lastVideoSignalId = 0
     lastGalleryVersion = 0
+    lastScreenLockResetAt = 0
     lastTime = 0
     lastBusinessStatus = null
     seenBusinessPendingIds.clear()
     emittedKeys.clear()
     seenMessageIds.clear()
     seenVideoSignalIds.clear()
+    lastProfileVersions.clear()
   }
 
   /**

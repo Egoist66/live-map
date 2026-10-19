@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import Dialog from 'primevue/dialog'
-import Avatar from 'primevue/avatar'
 import ProgressSpinner from 'primevue/progressspinner'
-import { avatarSrcFor } from '@/composables/useAvatar'
+import UserAvatar from '@/Components/Ui/Media/UserAvatar.vue'
 
 const props = defineProps<{
   open: boolean
@@ -93,10 +92,10 @@ const sourceAuthors = computed(() => {
     </p>
     <div v-if="(sources ?? []).length" class="mx-1 mb-2 flex items-center gap-2 rounded-2xl bg-stone-50 dark:bg-white/5 px-3 py-2 min-w-0">
       <span class="flex -space-x-1.5 shrink-0">
-        <Avatar
+        <UserAvatar
           v-for="a in (sources ?? []).slice(0, 3)"
           :key="String(a?.sender_id ?? a?.id)"
-          :image="avatarSrcFor(a?.sender ?? a?.forwarded_from ?? { name: a?.sender_name })"
+          :user="a?.sender ?? a?.forwarded_from ?? { name: a?.sender_name }"
           shape="circle"
           class="!w-6 !h-6 ring-2 ring-white dark:ring-zinc-900 [&_img]:object-cover"
         />
@@ -133,7 +132,7 @@ const sourceAuthors = computed(() => {
       >
         <span class="relative shrink-0">
           <span v-if="c?.title" class="w-10 h-10 rounded-full bg-gradient-to-br from-violet-700 to-purple-900 text-white grid place-items-center">🏘️</span>
-          <Avatar v-else :image="avatarSrcFor(c?.other)" shape="circle" class="!w-10 !h-10 [&_img]:object-cover" />
+          <UserAvatar v-else :user="c?.other" shape="circle" class="!w-10 !h-10 [&_img]:object-cover" />
         </span>
         <span class="flex-1 min-w-0">
           <span class="flex items-center gap-1.5 text-sm font-semibold text-stone-900 dark:text-white truncate">

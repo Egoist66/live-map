@@ -10,7 +10,7 @@
 
 ## 1. User — `users` (`App\Models\User`)
 
-**Зачем:** центр всего. Владеет пинами, фото, бизнесами, дружбой, чатами, пушами. Хранит тариф, гео, приватность, невидимку, репутацию, баны, screen-lock.
+**Зачем:** центр всего. Владеет пинами, фото, бизнесами, дружбой, чатами, пушами. Хранит тариф, гео, приватность, невидимку, репутацию, баны.
 
 **Поля:**
 - База: `name, email UNIQUE, birth_date NULL (+age accessor), password(hashed,hidden), email_verified_at`
@@ -21,7 +21,7 @@
 - Чат: `message_privacy(everyone|friends|none), allow_random_messages, is_anonymous_default`
 - Фото: `photo_comments_privacy(everyone|friends|none)`
 - Блюр: `default_blur_meters(0|300|1000|5000, 5000 только pro/business/admin, остальным кламп до 1000), default_location_precision`
-- Screen-lock: `screen_lock_code(hidden!), screen_lock_timeout(1|5|10), screen_lock_kind(pin4|alpha8)`
+- Screen-lock: код только на клиенте (IndexedDB per-user). На бэке только `is_sl_active` (флаг для меню бота) и `screen_lock_reset_at` (метка сброса) — `2026_11_15_000005_add_screen_lock_state_to_users`; старые колонки сносятся `2026_11_15_000004_drop_screen_lock_from_users`.
 - Онлайн: `last_seen_at, is_invisible`, `settings json`
 
 **Лимиты (`User.php:145-257`):** `pinRadius/pinTtlHours/canCreatePin/livePinsCount` (см. Pin), `photoLimit free5/pro10/business-admin15`, `pinnedMessagesLimit free3/pro6/business20/admin∞`, `hiddenFriendsLimit free1/pro3/business-admin∞`, `canUseInvisible() pro/business/admin`, `canCommentProfilePhoto(target)`.
@@ -124,10 +124,10 @@
 6. `Message`: `GET /{id}/messages?before=` (limit 30), `POST` (`throttle:messages-write`, снимает `hidden_at` у всех, broadcast `MessageSent` в `chat.{id}+user.{other}` + push), `POST /typing {is_typing}` (`throttle:chat-signal`), `PATCH` (свой текст + `edited_at`, broadcast `MessageUpdated`), `DELETE` (автор/admin, broadcast `MessageDeleted`).
 7. Закрепы: `GET /{id}/pinned → {pinned[],pin_limit}`, `POST /messages/{message}/pin` + `DELETE .../unpin` (`throttle:pin-toggle` 60/мин, лимит `pinnedMessagesLimit`), broadcast `MessagePinned (private chat.{cid}, as message.pinned {message})` и на pin, и на unpin.
 
-## 14. ChatUser + ScreenLock + NBRB + SEO
+## 14. ChatUser + NBRB + SEO
 
 - `GET /chat/me {id,name,avatar,privacy,unread_count,last_seen,is_invisible,can_use_invisible}`; `GET /chat/users/search?q≥2` (`throttle:chat-search` 30/мин, исключает блоки + `is_hidden_from_search`, `{can_message,reason,is_friend,is_pending}`); `PATCH /chat/privacy {message_privacy,allow_random_messages}`.
-- ScreenLock: `GET /user/screen-lock {enabled,timeout,kind}`, `PUT {kind:pin4|alpha8, code:^\\d{4}$|^[A-Za-z0-9]{8}$, timeout:1|5|10}` (plaintext в `screen_lock_code`), `DELETE`, `POST /user/screen-lock/verify {code}` (`throttle:screen-lock`, 404 если нет, 422 если неверно, `hash_equals`).
+- ScreenLock: код не покидает устройство (IndexedDB, fallback localStorage; хеш PBKDF2-SHA-256, 120k итераций, случайная соль). Сервер хранит только `is_sl_active` и `screen_lock_reset_at`. API (`ScreenLockController` + `ScreenLockResetService`, `throttle:screen-lock-reset` 10/мин): `POST /screen-lock/active {active}` — last-write-wins флаг для бота; `POST /screen-lock/code` — 6-значный код на почту (Cache+Hash, TTL 600с, кулдаун 60с, 5 попыток); `POST /screen-lock/verify {code}` — проверка и сброс: `is_sl_active=false`, метка `screen_lock_reset_at=now`, broadcast `screen-lock.reset` на `user.{id}`. Устройство стирает локальный код, если метка новее записи (`updatedAt`); polling-fallback — `screen_lock_reset_at` в `RealtimeController::sync`. В боте: `/screenlock`, пункт «🔓 Сброс скринлокера» в главном меню только при `is_sl_active`, колбэки `go_screenlock`/`sl_reset` (`TelegramScreenLockPanel`).
 - NBRB (без auth, `throttle:60,1`, прокси `api.nbrb.by/exrates` + `Cache::remember`): `GET /nbrb/currencies/{curId?} (?all, 24ч)`, `GET /nbrb/rates/{code?} (?ondate,periodicity0|1,parammode0|1|2; 6ч/30д)`, `GET /nbrb/dynamics/{curId} (?startdate,enddate ≤365д, 12ч)`, `GET /nbrb/convert (?amount,from USD|код,ondate → {byn}, 6ч/30д)`. Даун → 502, нет → 404 `{message}`.
  - SEO (web): `GET /robots.txt` и `GET /sitemap.xml` строятся через `SeoSettingsService` (настройки из админки → SEO, хранение `app_settings seo.*`, дефолты из `config/seo.php`).
  - SEO-центр (админ, `AdminSeoController`): `GET /admin/seo` (всё одним запросом), `PUT /admin/seo/global|integrations|pages|robots|sitemap`. Blade `app` получает `$seoHead/$seoIntegrations` (композер в `AppServiceProvider`), Inertia шарит `seo` для SPA (`useSeo` подхватывает переопределения страниц).
@@ -179,7 +179,7 @@
 
 ## 19. Throttle (`AppServiceProvider:36-54`, by user, auth by ip)
 
-`auth-login10, auth-register5, auth-forgot3, auth-reset6, auth-confirm10; pins-write20, pins-index120, comments-write60, messages-write60, pin-toggle60, chat-signal120 (heartbeat/read/delivered/typing), reactions120, chat-search30, social-write60 (категории/фото/дружба/блоки/диалоги/пуши), screen-lock30, reports10, push-test10, profile-write30 (web PATCH/DELETE /profile, POST avatar)`. Группы: api auth `throttle:120,1`, nbrb `60,1`.
+`auth-login10, auth-register5, auth-forgot3, auth-reset6, auth-confirm10; pins-write20, pins-index120, comments-write60, messages-write60, pin-toggle60, chat-signal120 (heartbeat/read/delivered/typing), reactions120, chat-search30, social-write60 (категории/фото/дружба/блоки/диалоги/пуши), reports10, push-test10, profile-write30 (web PATCH/DELETE /profile, POST avatar)`. Группы: api auth `throttle:120,1`, nbrb `60,1`.
 
 ## 20. ER-схема
 

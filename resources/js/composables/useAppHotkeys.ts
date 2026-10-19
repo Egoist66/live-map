@@ -3,6 +3,7 @@ import { router } from '@inertiajs/vue3'
 import { route } from '@/route'
 import { useBellNotifications } from '@/composables/useBellNotifications'
 import { useAppModulesStore } from '@/stores/appModules'
+import { useStaffRole } from '@/composables/useStaffRole'
 
 /**
  * Горячие клавиши десктопа: навигация, действия, поиск.
@@ -41,6 +42,12 @@ export interface AppHotkeyGroup {
   label: string
   items: AppHotkeyDef[]
 }
+
+/**
+ * Глобальный поиск людей: доступен всегда, кроме чистого ULove —
+ * там его видит только staff (админ/модератор).
+ */
+const GLOBAL_PEOPLE_SEARCH_HOTKEY: AppHotkeyDef = { id: 'global-people-search', keys: ['Ctrl+K'], title: 'Люди', desc: 'Глобальный поиск по людям' }
 
 /**
  * Горячие клавиши чистого ULove-режима: только знакомства.
@@ -109,7 +116,7 @@ export const APP_HOTKEY_GROUPS: AppHotkeyGroup[] = [
     id: 'search',
     label: 'Поиск',
     items: [
-      { id: 'global-people-search', keys: ['Ctrl+K'], title: 'Люди', desc: 'Глобальный поиск по людям' },
+      GLOBAL_PEOPLE_SEARCH_HOTKEY,
       { id: 'focus-search', keys: ['/'], title: 'Поиск', desc: 'Фокус на поиск на текущей странице' },
       { id: 'show-help', keys: ['?'], title: 'Помощь', desc: 'Показать все горячие клавиши' },
     ],
@@ -211,6 +218,7 @@ function isMapRoute(): boolean {
 
 export function useAppHotkeys() {
   const bell = useBellNotifications()
+  const { isModerator } = useStaffRole()
   const isDesktop = computed(() => {
     if (!ready.value) return false
     return isDesktopKeyboard()
@@ -229,14 +237,48 @@ export function useAppHotkeys() {
     }
   })
 
-  const groups = computed(() => (uloveMode.value ? ULOVE_HOTKEY_GROUPS : APP_HOTKEY_GROUPS))
+  /**
+   * Набор подсказок под текущий режим. В чистом ULove глобальный
+   * поиск людей показываем только staff.
+   */
+  const groups = computed(() => {
+    if (!uloveMode.value) {
+      return APP_HOTKEY_GROUPS
+    }
+
+    if (!isModerator.value) {
+      return ULOVE_HOTKEY_GROUPS
+    }
+
+    return ULOVE_HOTKEY_GROUPS.map((group) =>
+      group.id === 'search'
+        ? { ...group, items: [GLOBAL_PEOPLE_SEARCH_HOTKEY, ...group.items] }
+        : group,
+    )
+  })
+
+  /**
+   * Глобальный поиск людей в чистом ULove разрешён только staff.
+   * @returns true если действие заблокировано режимом
+   */
+  function isUloveBlocked(id: AppHotkeyId): boolean {
+    if (!uloveMode.value) {
+      return false
+    }
+
+    if (isModerator.value && id === 'global-people-search') {
+      return false
+    }
+
+    return ['go-map', 'go-flow', 'new-pin', 'focus-search', 'global-people-search'].includes(id)
+  }
 
   /**
    * Выполнить действие горячей клавиши.
    * @param id идентификатор действия
    */
   async function runHotkey(id: AppHotkeyId): Promise<void> {
-    if (uloveMode.value && (id === 'go-map' || id === 'go-flow' || id === 'new-pin' || id === 'focus-search' || id === 'global-people-search')) {
+    if (isUloveBlocked(id)) {
       return
     }
 
@@ -348,7 +390,7 @@ export function useAppHotkeys() {
     const code = (e as any).code ?? ''
 
     if (withCtrl && (key.toLowerCase() === 'k' || code === 'KeyK')) {
-      if (uloveMode.value) {
+      if (isUloveBlocked('global-people-search')) {
         return
       }
       e.preventDefault()
