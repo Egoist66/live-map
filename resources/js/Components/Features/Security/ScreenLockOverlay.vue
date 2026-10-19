@@ -144,7 +144,7 @@ onBeforeUnmount(() => {
           :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none overflow-hidden' }, header: { class: '!p-5 !pb-0 !border-0 dark:!bg-zinc-900 dark:!text-white' }, content: { class: '!px-5 !py-4 dark:!bg-zinc-900' }, footer: { class: '!px-5 !pb-5 !pt-1 !border-0 dark:!bg-zinc-900' } }"
         >
           <div class="flex items-start gap-3">
-            <span class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300"><i class="pi pi-unlock" /></span>
+            <span class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-pink-100 text-pink-600 dark:bg-pink-500/15 dark:text-pink-300"><i class="pi pi-unlock" /></span>
             <p class="text-sm text-stone-600 dark:text-zinc-300">
               {{ reset.step.value === 'code' ? 'Введи 6-значный код из письма — код блокировки на этом устройстве будет стёрт.' : 'Подтверди, что аккаунт твой: пришлём код на почту или сбросим через Telegram-бота.' }}
             </p>
@@ -157,7 +157,7 @@ onBeforeUnmount(() => {
                 label="Получить код на почту"
                 icon="pi pi-envelope"
                 rounded
-                class="w-full !bg-gradient-to-r !from-violet-600 !to-indigo-600 !border-0 !text-white"
+                class="w-full !bg-gradient-to-r !from-rose-500 !via-pink-500 !to-orange-400 !border-0 !text-white !shadow-lg !shadow-pink-500/25 active:!scale-[0.98] transition"
                 :loading="reset.sending.value"
                 @click="reset.requestCode()"
               />
@@ -166,7 +166,7 @@ onBeforeUnmount(() => {
                 :href="reset.botLink.value"
                 target="_blank"
                 rel="noopener"
-                class="flex items-center justify-center gap-2 w-full min-h-[42px] rounded-full border border-sky-200 dark:border-sky-500/30 text-sm font-semibold text-sky-600 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-500/10 transition"
+                class="flex items-center justify-center gap-2 w-full min-h-[42px] rounded-full border border-pink-200 dark:border-pink-500/30 text-sm font-semibold text-pink-600 dark:text-pink-300 hover:bg-pink-50 dark:hover:bg-pink-500/10 active:scale-[0.98] transition"
               >
                 <i class="pi pi-send" />
                 Сбросить через @{{ reset.botUsername.value }}
@@ -180,20 +180,20 @@ onBeforeUnmount(() => {
           <template v-else>
             <div class="mt-3 text-xs text-stone-500 dark:text-zinc-400">Код отправлен на <b class="dark:text-zinc-200">{{ user?.email }}</b>. Действует 10 минут.</div>
             <div class="mt-3 flex justify-center">
-              <InputOtp v-model="reset.code.value" :length="6" integerOnly />
+              <InputOtp v-model="reset.code.value" :length="6" integerOnly class="otp-pink" />
             </div>
-            <p v-if="reset.info.value" class="mt-2 text-center text-[11px] text-emerald-600 dark:text-emerald-400">{{ reset.info.value }}</p>
+            <p v-if="reset.info.value" class="mt-2 text-center text-[11px] font-semibold text-pink-600 dark:text-pink-300">{{ reset.info.value }}</p>
             <Message v-if="reset.error.value" severity="error" :closable="false" class="!mt-3 !rounded-2xl !text-xs">{{ reset.error.value }}</Message>
             <div class="mt-2 flex flex-wrap justify-center gap-2">
               <Button
                 :label="reset.cooldown.value > 0 ? `Отправить снова (${reset.cooldown.value}с)` : 'Отправить снова'"
                 link
                 size="small"
-                class="!text-xs"
+                class="!text-pink-600 dark:!text-pink-300 !font-semibold"
                 :disabled="reset.cooldown.value > 0 || reset.sending.value"
                 @click="reset.requestCode()"
               />
-              <Button label="Назад" link size="small" class="!text-xs" @click="reset.backToChoice()" />
+              <Button label="Назад" link size="small" class="!text-pink-600 dark:!text-pink-300 !font-semibold" @click="reset.backToChoice()" />
             </div>
           </template>
 
@@ -204,12 +204,12 @@ onBeforeUnmount(() => {
                 label="Сбросить код"
                 icon="pi pi-check"
                 rounded
-                class="w-full"
+                class="w-full !bg-gradient-to-r !from-rose-500 !via-pink-500 !to-orange-400 !border-0 !text-white !shadow-lg !shadow-pink-500/25 active:!scale-[0.98] transition"
                 :loading="reset.verifying.value"
                 :disabled="!reset.canSubmit.value"
                 @click="reset.verifyCode()"
               />
-              <button type="button" class="text-xs text-stone-400 hover:text-stone-600 dark:hover:text-zinc-200 transition" @click="logout">Выйти из аккаунта</button>
+              <button type="button" class="text-xs text-stone-400 hover:text-pink-600 dark:hover:text-pink-300 transition" @click="logout">Выйти из аккаунта</button>
             </div>
           </template>
         </Dialog>
@@ -227,5 +227,29 @@ onBeforeUnmount(() => {
   40% { transform: translateX(9px) }
   60% { transform: translateX(-6px) }
   80% { transform: translateX(4px) }
+}
+
+/* OTP в диалоге сброса — в фирменном розовом: дефолтная тема PrimeVue
+   красит фокус первичным (фиолетовым) цветом, а вся модалка розовая.
+   Dialog телепортируется в body, поэтому правила через :deep от
+   не-телепортируемого scoped-компонента доехать до него должны: slot-контент
+   этого компонента хранит data-v атрибуты даже за пределами приложения. */
+.otp-pink :deep(.p-inputotp-input) {
+  border-radius: 12px;
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.otp-pink :deep(.p-inputotp-input:enabled:focus) {
+  border-color: #ec4899 !important;
+  box-shadow: 0 0 0 2px rgb(236 72 153 / 0.2) !important;
+  outline: none !important;
+}
+/* Уточнение радиуса под скруглённую модалку и тач-тарабельность:
+   сегменты не сжирают палец, между ними хватает воздуха. */
+@media (max-width: 640px) {
+  .otp-pink :deep(.p-inputotp-input) {
+    width: 2.6rem !important;
+    height: 3rem !important;
+    font-size: 1.15rem !important;
+  }
 }
 </style>

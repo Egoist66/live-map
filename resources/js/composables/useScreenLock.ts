@@ -13,6 +13,7 @@ import type { LockKind } from '@/validation/schemas/screenlock.schema'
 const DEFAULT_TIMEOUT = 5
 const DEFAULT_KIND: LockKind = 'pin4'
 const SEEN_RESET_KEY = 'screenlock:seen-reset'
+const LOCK_FLAG_KEY = 'screenlock:locked'
 
 /**
  * Детерминированный старт для SSR: сервер и первая гидрация всегда
@@ -80,6 +81,65 @@ function writeSeenReset(uid: number, resetAt: number): void {
 }
 
 /**
+ * Запомнить факт «экран залочен» в sessionStorage конкретной вкладки.
+ *
+ * Перезагрузка страницы не должна снимать блокировку — иначе локер
+ * теряет смысл: залоченный экран «лечится» обычным F5. Храним uid,
+ * чтобы флаг чужого аккаунта не взвёл локер после смены пользователя.
+ *
+ * @param uid id пользователя
+ */
+function writeLockFlag(uid: number): void {
+  try {
+    sessionStorage.setItem(LOCK_FLAG_KEY, String(uid))
+  } catch {}
+}
+
+/**
+ * Был ли экран залочен перед выгрузкой страницы.
+ *
+ * sessionStorage переживает reload, но не закрытие вкладки: после
+ * переоткрытия приложения лок не воскресает сам — только по таймеру
+ * автоблокировки, как и раньше.
+ *
+ * @param uid id пользователя
+ * @returns true — флаг залоченного экрана для этого пользователя активен
+ */
+function readLockFlag(uid: number): boolean {
+  if (uid <= 0) return false
+  try {
+    return sessionStorage.getItem(LOCK_FLAG_KEY) === String(uid)
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Сбросить флаг залоченного экрана (после анлока).
+ */
+function clearLockFlag(): void {
+  try {
+    sessionStorage.removeItem(LOCK_FLAG_KEY)
+  } catch {}
+}
+
+/**
+ * Единая точка смены состояния блокировки: сама запись состояния
+ * и синхронный флаг в sessionStorage, переживаемый перезагрузкой.
+ *
+ * @param nexttrue — экран залочен, false — разблокирован
+ */
+function setLocked(next: boolean): void {
+  locked.value = next
+  const uid = cachedUid || resolveUid()
+  if (next && uid > 0) {
+    writeLockFlag(uid)
+  } else {
+    clearLockFlag()
+  }
+}
+
+/**
  * Id текущего пользователя с запасными источниками.
  *
  * Хук зовут и в setup, и из обработчиков событий: `usePage` вне setup
@@ -136,7 +196,7 @@ function applyRow(row: Awaited<ReturnType<typeof readScreenLock>>): void {
  */
 export function resetScreenLockSession(): void {
   disarm()
-  locked.value = false
+  setLocked(false)
   enabled.value = false
   cachedHash = null
   cachedUid = 0
@@ -220,7 +280,7 @@ async function applyRemoteReset(uid: number, resetAt: number): Promise<void> {
 
   cachedHash = null
   enabled.value = false
-  locked.value = false
+  setLocked(false)
   broadcastLockState()
   disarm()
 }
@@ -243,7 +303,7 @@ function arm() {
   disarm()
   if (!enabled.value || locked.value) return
   timer = setTimeout(() => {
-    locked.value = true
+    setLocked(true)
     broadcastLockState()
     disarm()
   }, Math.max(1, timeoutMin.value) * 60_000)
@@ -341,17 +401,20 @@ export function useScreenLock() {
     try {
       const uid = resolveUid()
       cachedUid = uid
+      const wasLocked = readLockFlag(uid)
       const row = uid ? await readScreenLock(uid) : null
       applyRow(row)
       if (uid) await applyRemoteReset(uid, serverResetMark())
       // Отправляем только true: устройство без локера не должно затирать
       // флаг, выставленный другим устройством того же аккаунта.
       if (cachedHash) void reportActive(true)
+      // Перезагрузка страницы лок не снимает: если экран был залочен перед
+      // выгрузкой, возвращаем блокировку сразу после загрузки настройки.
+      setLocked(wasLocked && enabled.value)
     } finally {
       loading.value = false
       initialized.value = true
     }
-    locked.value = false
     broadcastLockState()
     arm()
   }
@@ -368,7 +431,7 @@ export function useScreenLock() {
       enabled.value = true
       timeoutMin.value = timeout
       kind.value = nextKindValue
-      locked.value = false
+      setLocked(false)
       broadcastLockState()
       arm()
       void reportActive(true)
@@ -406,7 +469,7 @@ export function useScreenLock() {
       if (!saved) return
       cachedHash = null
       enabled.value = false
-      locked.value = false
+      setLocked(false)
       broadcastLockState()
       disarm()
       void reportActive(false)
@@ -438,7 +501,7 @@ export function useScreenLock() {
         return false
       }
 
-      locked.value = false
+      setLocked(false)
       broadcastLockState()
       arm()
       // После анлока — контрольный проход спасателя скролла: модалка,
@@ -461,7 +524,7 @@ export function useScreenLock() {
 
   function lockNow() {
     if (!enabled.value) return
-    locked.value = true
+    setLocked(true)
     broadcastLockState()
     disarm()
   }
@@ -479,7 +542,7 @@ export function useScreenLock() {
     if (targetUid) await deleteScreenLock(targetUid)
     cachedHash = null
     enabled.value = false
-    locked.value = false
+    setLocked(false)
     broadcastLockState()
     disarm()
   }
@@ -498,7 +561,7 @@ export function useScreenLock() {
     if (uid) await deleteScreenLock(uid)
     cachedHash = null
     enabled.value = false
-    locked.value = false
+    setLocked(false)
     broadcastLockState()
     disarm()
   }

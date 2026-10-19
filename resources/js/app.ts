@@ -1,5 +1,9 @@
+// Свой primeicons без vendor-@font-face (font-display: block): иконочные
+// классы здесь, а сам шрифт объявлен в app.css с swap. vendor-импорт
+// убрали — иначе его font-face жил в соседнем чанке и в гонке порядков
+// CSS мог перебить наш swap, оставив иконки невидимыми до загрузки.
+import '../css/primeicons.css'
 import '../css/app.css'
-import 'primeicons/primeicons.css'
 import './bootstrap'
 import { createSSRApp, DefineComponent, h } from 'vue'
 import { createInertiaApp } from '@inertiajs/vue3'
