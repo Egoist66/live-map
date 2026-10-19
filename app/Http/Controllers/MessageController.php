@@ -269,7 +269,7 @@ class MessageController extends Controller
                     $text = ($msg->attachment_kind === 'image' ? '📷 Фото' : '📎 Файл') . $label;
                 }
             }
-            foreach (User::whereIn('id', $ids)->select('id', 'name', 'email', 'email_verified_at', 'avatar_path', 'telegram_id', 'telegram_notify_messages', 'telegram_blocked_at', 'email_notify_messages', 'last_seen_at')->get() as $recipient) {
+            foreach (User::whereIn('id', $ids)->select('id', 'name', 'email', 'email_verified_at', 'avatar_path', 'telegram_id', 'telegram_notify_enabled', 'telegram_notify_messages', 'telegram_blocked_at', 'email_notify_messages', 'last_seen_at')->get() as $recipient) {
                 // Web Push — только если настроен VAPID (для веба), Expo — всегда (для Android).
                 // Раньше тут был ранний return при ненастроенном VAPID — он глушил и Expo.
                 try {
@@ -277,7 +277,20 @@ class MessageController extends Controller
                     if ($push->isConfigured()) $push->sendChatMessage($recipient, $senderModel ?? $recipient, $conversation->id, $text);
                 } catch (\Throwable) {}
                 try { app(\App\Services\ExpoPushService::class)->sendChatMessage($recipient, $senderModel ?? $recipient, $conversation->id, $text); } catch (\Throwable) {}
-                try { \App\Services\TelegramNotifier::chatMessage($senderModel ?? $recipient, $recipient, $conversation, mb_substr($text, 0, 200), (int) $msg->id); } catch (\Throwable) {}
+                try {
+                    \App\Services\TelegramNotifier::chatMessage(
+                        $senderModel ?? $recipient,
+                        $recipient,
+                        $conversation,
+                        mb_substr($text, 0, 200),
+                        (int) $msg->id
+                    );
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::warning('chat telegram notify failed: '.$e->getMessage(), [
+                        'message_id' => (int) $msg->id,
+                        'user_id' => (int) $recipient->id,
+                    ]);
+                }
                 try {
                     $senderForMail = $senderModel ?? $recipient;
                     \App\Services\DatingEmailNotifier::newMessage($senderForMail, $recipient, $conversation, mb_substr($text, 0, 200));

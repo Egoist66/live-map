@@ -11,12 +11,15 @@ import Tag from 'primevue/tag'
 import Paginator from 'primevue/paginator'
 import ProgressSpinner from 'primevue/progressspinner'
 import { computed } from 'vue'
+import { Link } from '@inertiajs/vue3'
 import { avatarSrcFor } from '@/composables/useAvatar'
 import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
+import { useProfileUrl } from '@/composables/useProfileUrl'
 import OrgBadge from '@/Components/Features/Chat/OrgBadge.vue'
 import AdminCreateUserDialog from '@/Components/Features/Admin/AdminCreateUserDialog.vue'
 
 const { selectPt } = useDropdownMenuStyle()
+const { userProfileUrl } = useProfileUrl()
 
 const props = defineProps<{ list: any[]; meta: any; page: number; query: string; filter: string; sort: string; limit: number; loading: boolean; actingId: number | null; admin: any; authUserId?: number | null }>()
 const emit = defineEmits<{
@@ -139,7 +142,7 @@ function planCaption(u: any): string {
             </div>
             <div class="min-w-0 flex-1">
               <div class="flex min-w-0 items-center gap-1.5">
-                <span class="truncate text-[13px] font-semibold dark:text-white">{{ u.name }}</span>
+                <Link :href="userProfileUrl(u)" class="min-w-0 truncate text-[13px] font-semibold text-stone-900 underline-offset-2 hover:text-violet-600 hover:underline dark:text-white dark:hover:text-violet-400">{{ u.name }}</Link>
                 <OrgBadge :is-organization="u.is_organization" />
                 <Tag v-if="authUserId && Number(u.id) === Number(authUserId)" value="это вы" severity="warn" class="!text-[9px] shrink-0" />
                 <Tag v-if="u.role === 'organization' || u.is_organization" value="орг" severity="info" class="!text-[9px] shrink-0" />

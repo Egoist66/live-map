@@ -69,7 +69,7 @@ class AdminUserController extends Controller
             $query->where(fn ($w) => $w->where('name', 'like', "%$q%")->orWhere('email', 'like', "%$q%"));
         }
         $threshold = now()->subMinutes(\App\Services\MonitoringService::ONLINE_MINUTES);
-        $users = $query->select('id', 'name', 'email', 'avatar_path', 'role', 'is_admin', 'is_hidden_from_search', 'plan', 'plan_expires_at', 'last_seen_at', 'is_invisible', 'created_at', 'banned_at', 'banned_reason', 'account_type')
+        $users = $query->select('id', 'name', 'profile_slug', 'email', 'avatar_path', 'role', 'is_admin', 'is_hidden_from_search', 'plan', 'plan_expires_at', 'last_seen_at', 'is_invisible', 'created_at', 'banned_at', 'banned_reason', 'account_type')
             ->paginate((int) ($data['per_page'] ?? 20));
         $rows = $users->getCollection();
         $businessMap = [];
@@ -107,6 +107,7 @@ class AdminUserController extends Controller
             return [
                 'id' => $u->id,
                 'name' => $u->name,
+                'profile_slug' => $u->profile_slug,
                 'email' => $u->email,
                 'avatar_path' => $u->avatar_path,
                 'avatar_url' => $u->avatar_url,
@@ -319,7 +320,7 @@ class AdminUserController extends Controller
         if (! $request->user()->isAdmin()) {
             $users->where('is_admin', false)->where('role', '!=', 'admin');
         }
-        $rows = $users->select('id', 'name', 'email', 'avatar_path', 'role', 'is_admin', 'is_hidden_from_search', 'plan', 'plan_expires_at', 'account_type')
+        $rows = $users->select('id', 'name', 'profile_slug', 'email', 'avatar_path', 'role', 'is_admin', 'is_hidden_from_search', 'plan', 'plan_expires_at', 'account_type')
             ->limit(20)->get();
         $businessMap = [];
         try {
@@ -338,6 +339,7 @@ class AdminUserController extends Controller
                 return [
                     'id' => $u->id,
                     'name' => $u->name,
+                    'profile_slug' => $u->profile_slug,
                     'email' => $u->email,
                     'avatar_path' => $u->avatar_path,
                     'avatar_url' => $u->avatar_url,

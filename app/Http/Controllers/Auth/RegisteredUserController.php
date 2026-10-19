@@ -136,6 +136,8 @@ class RegisteredUserController extends Controller
 
         $user = User::create($userPayload);
 
+        \App\Services\AdminNotifier::newUserRegistered($user, 'web');
+
         \App\Services\AppModulesWelcomeNews::ensureDelivered($user);
 
         if ($isBusiness) {

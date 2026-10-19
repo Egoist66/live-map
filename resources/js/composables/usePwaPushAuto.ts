@@ -2,6 +2,7 @@ import { onMounted } from 'vue'
 import { getSubscription, isSupported, permissionState, requestPermission, subscribe, subscriptionPayload } from '@/pwa/push.service'
 import { isStandalone } from '@/pwa/pwa.service'
 import { savePushSubscription } from '@/pwa/pwa.api'
+import { currentAuthUid } from '@/composables/useAuthUid'
 
 /**
  * Автоподписка Web Push в установленном PWA.
@@ -20,6 +21,10 @@ import { savePushSubscription } from '@/pwa/pwa.api'
 const ASKED_KEY = 'upin:pwa-push-asked'
 
 function currentUid(): number {
+  const cached = currentAuthUid()
+  if (cached > 0) {
+    return cached
+  }
   try {
     const inertiaUid = Number((window as unknown as { __inertia_page?: { props?: { auth?: { user?: { id?: number } } } } })?.__inertia_page?.props?.auth?.user?.id || 0)
     if (inertiaUid) {

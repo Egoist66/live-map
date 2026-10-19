@@ -3,6 +3,7 @@ import { router, usePage } from '@inertiajs/vue3'
 import { chatApi } from '@/services/chat.api'
 import { busOn } from '@/services/realtime-bus'
 import { useBadgeStore } from '@/stores/badges'
+import { currentAuthUid } from '@/composables/useAuthUid'
 
 const isOpen = ref(false)
 const conversations = ref<any[]>([])
@@ -13,16 +14,29 @@ const tab = ref('events')
 let dialogReadBound = false
 
 /**
- * Ключ localStorage со скрытыми из панели диалогами.
+ * Базовый ключ localStorage со скрытыми из панели диалогами.
  *
  * Мусорка панели не удаляет чаты — только прячет их строки:
  * запоминаем `{convId: last_message_at}` на момент очистки.
  * Диалог с более свежим сообщением показывается снова.
+ *
+ * Ключ персональный (`:<uid>`): без этого скрытия вкладки A
+ * прятали бы диалоги вкладки B после смены аккаунта на том же устройстве.
  */
 const DISMISSED_KEY = 'bell:dismissed-convs:v1'
 
 /** Потолок записей скрытия: дальше старые сбрасываем (диалоги просто вернутся в панель). */
 const DISMISSED_LIMIT = 500
+
+/**
+ * Ключ хранилища для текущего пользователя.
+ *
+ * @returns ключ localStorage с учётом uid
+ */
+function dismissedKey(): string {
+  const uid = currentAuthUid()
+  return uid > 0 ? `${DISMISSED_KEY}:${uid}` : DISMISSED_KEY
+}
 
 /**
  * Прочитать карту скрытий из localStorage.
@@ -31,7 +45,7 @@ const DISMISSED_LIMIT = 500
  */
 function readDismissed(): Record<string, string> {
   try {
-    const raw = localStorage.getItem(DISMISSED_KEY)
+    const raw = localStorage.getItem(dismissedKey())
     if (!raw) return {}
     const parsed: unknown = JSON.parse(raw)
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
@@ -50,7 +64,7 @@ function readDismissed(): Record<string, string> {
  */
 function writeDismissed(dismissed: Record<string, string>): void {
   try {
-    localStorage.setItem(DISMISSED_KEY, JSON.stringify(dismissed))
+    localStorage.setItem(dismissedKey(), JSON.stringify(dismissed))
   } catch {
     // Приватный режим: скроем только до следующего открытия панели.
   }
@@ -88,15 +102,16 @@ function readIsAdmin(): boolean {
 async function fetchAll() {
   loading.value = true
   try {
-    const w = window as any
-    const convsPromise = w.__conversationsInflight ? w.__conversationsInflight : chatApi.conversations().catch(() => [] as any[])
     const [convs, fr] = await Promise.all([
-      convsPromise,
+      chatApi.conversations(1, 50, { onlyUnread: true }).catch(() => [] as any[]),
       chatApi.friendships().catch(() => ({ pending_in: [] } as any)),
     ])
-    unreadChats.value = (convs as any[]).filter((c: any) => Number(c.unread_count || 0) > 0).length
     const dismissed = readDismissed()
-    conversations.value = (convs as any[]).filter((c: any) => !isDismissed(c, dismissed)).slice(0, 8)
+    const unreadRows = (convs as any[]).filter(
+      (c: any) => Number(c?.unread_count || 0) > 0 && !isDismissed(c, dismissed),
+    )
+    unreadChats.value = unreadRows.length
+    conversations.value = unreadRows
     pending.value = (fr.pending_in || []).slice(0, 8)
   } finally { loading.value = false }
 }
@@ -182,4 +197,19 @@ function ensureDialogReadSync(): void {
   } catch {
     dialogReadBound = false
   }
+}
+
+/**
+ * Сбросить срез колокольчика при смене аккаунта/выходе.
+ *
+ * Список и счётчик — модульные: без сброса новый аккаунт видел бы
+ * «фантомную» «1» от прошлого пользователя до первого открытия панели.
+ */
+export function resetBellNotifications(): void {
+  isOpen.value = false
+  conversations.value = []
+  pending.value = []
+  unreadChats.value = 0
+  loading.value = false
+  tab.value = 'events'
 }

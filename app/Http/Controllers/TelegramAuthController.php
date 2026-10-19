@@ -174,6 +174,9 @@ class TelegramAuthController extends Controller
         }
 
         $user = $this->registerFromTelegram($tgUser, $telegramId);
+
+        \App\Services\AdminNotifier::newUserRegistered($user, 'telegram');
+
         Auth::login($user);
         $request->session()->regenerate();
         \App\Services\LoginDeviceGuard::handleLogin($user, $request, 'telegram');

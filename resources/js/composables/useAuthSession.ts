@@ -4,6 +4,8 @@ import { resetChatSession } from '@/composables/useChat'
 import { resetAppNotifications } from '@/composables/useAppNotifications'
 import { resetPresence } from '@/composables/usePresence'
 import { resetPinActivity } from '@/composables/usePinActivity'
+import { resetMiniChat } from '@/composables/useMiniChat'
+import { resetBellNotifications } from '@/composables/useBellNotifications'
 import { resetAdminReports } from '@/composables/useAdminReports'
 import { resetAdminSupport } from '@/composables/useAdminSupport'
 import { resetSecurityImpersonations } from '@/composables/useSecurityImpersonations'
@@ -62,6 +64,12 @@ export function useAuthSession() {
       resetPinActivity()
     } catch {}
     try {
+      resetMiniChat()
+    } catch {}
+    try {
+      resetBellNotifications()
+    } catch {}
+    try {
       resetAdminReports()
     } catch {}
     try {
@@ -96,7 +104,30 @@ export function useAuthSession() {
     if (isLoggedInAsOther) {
       void reloadScreenLockForNewAccount()
       void reconnectRealtimeForNewAccount()
+      void rebindPushForNewAccount()
     }
+  }
+
+  /**
+   * Перепривязать пуш-токены устройства к новому аккаунту.
+   *
+   * Мобилка инжектит один Expo-токен на устройство, веб — один
+   * push-endpoint: без перепривязки они остаются за прежним юзером,
+   * и его уведомления приходят на устройство с другим аккаунтом
+   * («пишу себе — уведомление мне»).
+   *
+   * @returns void
+   */
+  async function rebindPushForNewAccount(): Promise<void> {
+    try {
+      const expoPush = await import('@/native/expo-push')
+      expoPush.resetExpoPushBinding()
+      expoPush.initExpoPushBinding()
+    } catch {}
+    try {
+      const { ensurePwaPushSubscription } = await import('@/composables/usePwaPushAuto')
+      await ensurePwaPushSubscription()
+    } catch {}
   }
 
   /**

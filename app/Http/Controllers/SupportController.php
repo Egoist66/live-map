@@ -281,26 +281,7 @@ class SupportController extends Controller
      */
     public static function adminEmails(): array
     {
-        $emails = User::where('is_admin', true)->orWhere('role', 'admin')->pluck('email')->all();
-        $fallback = config('mail.admin_address') ?? config('seo.support_email') ?? config('mail.from.address');
-
-        if ($fallback) {
-            $emails[] = $fallback;
-        }
-
-        $clean = [];
-
-        foreach ($emails as $email) {
-            $normalized = mb_strtolower(trim((string) $email));
-
-            if ($normalized === '' || ! filter_var($normalized, FILTER_VALIDATE_EMAIL)) {
-                continue;
-            }
-
-            $clean[$normalized] = $normalized;
-        }
-
-        return array_values($clean);
+        return \App\Services\AdminNotifier::emails();
     }
 
     /**

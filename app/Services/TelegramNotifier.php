@@ -1062,19 +1062,19 @@ class TelegramNotifier
     }
 
     /**
-     * Поставить одно письмо в очередь Bot API.
+     * Отправить уведомление в личку через Bot API — сразу, без воркера.
      *
-     * Сам HTTP делает воркер SendTelegramMessage по одному письму
-     * за раз: серия уходит 1-в-1 в порядке постановки, а 429 лишь
-     * откладывает задачу на retry_after — ничего не теряется.
-     * Если очередь недоступна (диспатч кинул исключение), шлём
-     * синхронно одной попыткой, чтобы письмо не пропало.
+     * На проде очередь `database` без внешнего воркера не разгребается,
+     * поэтому шлём синхронно прямо в текущем процессе (веб/крон): один
+     * HTTP-вызов на событие. В очередь задача уходит ТОЛЬКО если Bot API
+     * попросил повтор (429/5xx/сеть) — тогда письмо подберёт воркер, если
+     * он есть; без воркера задача просто лежит в `jobs` и никому не мешает.
      *
      * @param int $userId id получателя (users.id)
      * @param string $text текст в HTML-разметке Telegram
      * @param array<int, array<int, array<string, mixed>>> $buttons ряды inline-кнопок
      * @param string|null $photoUrl https-URL фото для sendPhoto или null для sendMessage
-     * @return bool true когда задача принята (очередь или прямая отправка)
+     * @return bool true когда Bot API принял письмо (или помечен блок — повтор бессмыслен)
      */
     private static function dispatchMessage(int $userId, string $text, array $buttons, ?string $photoUrl = null): bool
     {
@@ -1085,22 +1085,36 @@ class TelegramNotifier
         $photo = self::cleanPhotoUrl($photoUrl);
 
         try {
-            SendTelegramMessage::dispatch($userId, $text, $buttons, $photo);
-
-            return true;
-        } catch (\Throwable $e) {
-            Log::warning('telegram dispatch failed', ['user_id' => $userId, 'error' => $e->getMessage()]);
-        }
-
-        try {
             $outcome = SendTelegramMessage::attempt($userId, $text, $buttons, $photo);
-
-            return ($outcome['status'] ?? '') === 'sent';
         } catch (\Throwable $e) {
-            Log::warning('telegram direct fallback failed', ['user_id' => $userId, 'error' => $e->getMessage()]);
+            Log::warning('telegram direct send failed', ['user_id' => $userId, 'error' => $e->getMessage()]);
 
             return false;
         }
+
+        $status = (string) ($outcome['status'] ?? 'failed');
+
+        if ($status === 'sent') {
+            return true;
+        }
+
+        if ($status === 'blocked') {
+            return false;
+        }
+
+        try {
+            SendTelegramMessage::dispatch($userId, $text, $buttons, $photo);
+
+            Log::info('telegram notify requeued', [
+                'user_id' => $userId,
+                'status' => $status,
+                'queue' => (string) config('queue.default', 'database'),
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('telegram requeue failed', ['user_id' => $userId, 'error' => $e->getMessage()]);
+        }
+
+        return false;
     }
 
     /**

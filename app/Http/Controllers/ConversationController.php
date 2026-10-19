@@ -14,6 +14,7 @@ class ConversationController extends Controller
     {
         $user = $request->user();
         $perPage = max(1, min(50, (int) $request->input('per_page', 20)));
+        $onlyUnread = $request->boolean('only_unread');
         $myRows = \App\Models\ConversationParticipant::where('user_id', $user->id)
             ->whereNull('hidden_at')
             ->get(['conversation_id', 'cleared_at', 'pinned_at'])
@@ -22,11 +23,20 @@ class ConversationController extends Controller
             ->whereColumn('conversation_participants.conversation_id', 'conversations.id')
             ->where('conversation_participants.user_id', $user->id)
             ->limit(1);
-        $page = Conversation::whereHas('participantRows', fn($q)=>$q->where('user_id',$user->id)->whereNull('hidden_at'))
+        $query = Conversation::whereHas('participantRows', fn($q)=>$q->where('user_id',$user->id)->whereNull('hidden_at'))
             ->with(['participants' => fn($q)=>$q->select('users.id','users.name','users.profile_slug','users.avatar_path','users.telegram_photo_url','users.last_seen_at','users.is_invisible','users.plan','users.role','users.is_admin','users.account_type','users.dating_goal','users.dating_interests'), 'messages'=>fn($q)=>$q->reorder()->latest('id')->limit(1), 'district:id,name,user_id'])
             ->withCount(['messages as unread_count'=>fn($q)=>$q->where('sender_id','!=',$user->id)->whereNull('read_at')])
             ->select('conversations.*')
-            ->selectSub($myPin, 'my_pinned_at')
+            ->selectSub($myPin, 'my_pinned_at');
+
+        // Панель колокольчика показывает только входящие: фильтр по непрочитанным
+        // снимает и «мои отправленные», и уводит за пределы топ-страницы —
+        // иначе «прочитать всё» гасит лишь видимые строки и бейдж зависает.
+        if ($onlyUnread) {
+            $query->whereIn('conversations.id', $this->unreadConversationIds((int) $user->id));
+        }
+
+        $page = $query
             ->orderByRaw('CASE WHEN my_pinned_at IS NULL THEN 1 ELSE 0 END')
             ->orderByDesc('my_pinned_at')
             ->orderByDesc('last_message_at')
@@ -582,6 +592,34 @@ class ConversationController extends Controller
             }
         }
         return response()->json(['ok'=>true,'cleared'=>$cleared]);
+    }
+
+    /**
+     * id диалогов с непрочитанными входящими сообщениями.
+     *
+     * Гейт тот же, что у бейджей и markRead: сообщения до `cleared_at`
+     * не считаем — иначе панель показывала бы «фантомные» непрочитанные,
+     * которые невозможно погасить и бейдж висел бы «1».
+     *
+     * @param int $userId смотрящий пользователь
+     * @return \Illuminate\Support\Collection<int, int> id диалогов
+     */
+    private function unreadConversationIds(int $userId)
+    {
+        return Message::query()
+            ->join('conversation_participants as cp', function ($join) use ($userId) {
+                $join->on('cp.conversation_id', '=', 'messages.conversation_id')
+                    ->where('cp.user_id', '=', $userId)
+                    ->whereNull('cp.hidden_at');
+            })
+            ->where('messages.sender_id', '!=', $userId)
+            ->whereNull('messages.read_at')
+            ->where(function ($q) {
+                $q->whereNull('cp.cleared_at')
+                    ->orWhereColumn('messages.created_at', '>', 'cp.cleared_at');
+            })
+            ->distinct()
+            ->pluck('messages.conversation_id');
     }
 
     /**

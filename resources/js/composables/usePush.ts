@@ -1,6 +1,7 @@
 import { onMounted, ref } from 'vue'
 import { getSubscription, isSupported, permissionState, showLocal, subscribe, subscriptionPayload, unsubscribe } from '@/pwa/push.service'
 import { removePushSubscription, savePushSubscription, sendTestPush } from '@/pwa/pwa.api'
+import { currentAuthUid } from '@/composables/useAuthUid'
 import type { PushPermission } from '@/pwa/types'
 
 const permission = ref<PushPermission>('default')
@@ -38,6 +39,8 @@ async function refresh(): Promise<void> {
 
 function currentUid(): number {
   try {
+    const cached = currentAuthUid()
+    if (cached > 0) return cached
     const inertiaUid = Number((window as any)?.__inertia_page?.props?.auth?.user?.id || 0)
     if (inertiaUid) return inertiaUid
     const meta = document.querySelector('meta[name="user-id"]')?.getAttribute('content')

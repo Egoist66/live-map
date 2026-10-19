@@ -98,8 +98,22 @@ export const chatApi = {
     return data
   },
 
-  async conversations(page = 1, perPage = 20) {
-    const { data } = await api.get<Conversation[] | { data: Conversation[]; has_more: boolean; current_page: number; last_page: number }>('/api/conversations', { params: { page, per_page: perPage } })
+  /**
+   * Список диалогов.
+   *
+   * @param page страница
+   * @param perPage размер страницы
+   * @param opts `onlyUnread` — вернуть только диалоги с непрочитанными
+   *   входящими (панель колокольчика: без своих отправленных и без обрезки
+   *   топ-страницей, иначе «прочитать всё» не гасит бейдж)
+   * @returns строки диалогов
+   */
+  async conversations(page = 1, perPage = 20, opts: { onlyUnread?: boolean } = {}) {
+    const params: Record<string, unknown> = { page, per_page: perPage }
+    if (opts.onlyUnread) {
+      params.only_unread = 1
+    }
+    const { data } = await api.get<Conversation[] | { data: Conversation[]; has_more: boolean; current_page: number; last_page: number }>('/api/conversations', { params })
     if (Array.isArray(data)) return data
     if (Array.isArray((data as { data?: unknown })?.data)) return (data as { data: Conversation[] }).data
     return []

@@ -1,5 +1,41 @@
 # Dev-лог
 
+## 2026-10-19 — 📨 Telegram-уведомления без воркера: синхронная отправка из чата
+- 🐞 Симптом: через бота напрямую (Bot API) сообщение доходит, а из чатов приложения — нет. Причина: `TelegramNotifier::dispatchMessage` ставил `SendTelegramMessage` в очередь `QUEUE_CONNECTION=database`, а на проде нет воркера — задачи копились в `jobs` и никогда не отправлялись. Код этой части не менялся с 30.09, так что регресс не в коммитах, а в отсутствии разгребающего процесса.
+- 🔧 Фикс: `dispatchMessage` теперь шлёт синхронно (`SendTelegramMessage::attempt`) прямо в текущем процессе — один HTTP в Bot API на событие, воркер не нужен. В очередь задача уходит ТОЛЬКО при `retry` (429/5xx/сеть) — если воркер есть, он доберёт; если нет, задача просто лежит в `jobs` без вреда. Статусы `sent`/`blocked` возвращаются как раньше.
+- ℹ️ Гейт онлайна оставлен как задумано: пока получатель в приложении (`isAway()` = `last_seen_at` < 3 мин), уведомление в ТГ не шлётся — для проверки получатель должен быть офлайн 3+ мин.
+- Проверки: `php -l app/Services/TelegramNotifier.php` ✅.
+- ⚠️ Вживую: редеплой бэка; получатель офлайн 3+ мин → из чата приходит `💬 ULove • …`; в логах `telegram notify sent` (а не `queued`).
+
+## 2026-10-19 — 🔗 Админка: ник в «Пользователях» — ссылка на профиль + письмо о новом юзере
+- 🔧 Ник в табе `/admin/manage` («Пользователи») теперь ссылка на профиль: в `AdminUsersManager.vue` имя обёрнуто в Inertia `<Link>` через `userProfileUrl(u)` (как в чате/уведомлениях, слаг → `/users/{slug}`, id как безопасный фолбэк). Бэк `AdminUserController::index`/`search` отдают `profile_slug` в select и в пейлоад — иначе ссылка вела бы на id-редирект.
+- 🔧 Письмо админам о регистрации: новый mailable `NewUserRegisteredMail` + шаблон `emails.new-user-registered` (имя, email, тип аккаунта, цель захода, источник, Telegram-username); рассылка — `AdminNotifier::newUserRegistered()` на веб-регистрации (`RegisteredUserController::store`) и автосоздании из Telegram (`TelegramAuthController`). Ошибки SMTP глотаются с warning-логом — почта не ломает регистрацию.
+- 🔧 `AdminNotifier::emails()` — единый источник админов (нормализация + fallback `mail.admin_address`/`seo.support_email`/`from.address`); `SupportController::adminEmails()` делегирует туда (без дублей логики).
+- Проверки: `php -l` ✅ ×6, `vue-tsc --noEmit` ✅.
+- ⚠️ Вживую: редеплой бэка + фронта; новый юзер (сайт/Telegram) → письмо на админ-ящики; в «Пользователях» тап по нику → профиль.
+
+## 2026-10-19 — 🐞 Смена аккаунта: сброс мини-чата/колокольчика и перепривязка Expo-пуша
+- 🐞 Симптом: вышел из аккаунта A, зашёл как B на Android (upin-mobile) — на дока и колокольчике висит «1» от A; пуш-уведомление о сообщении, отправленном B→A, приходит на устройство B «как будто пишут мне». Причина: состояние модулей `useMiniChat`/`useBellNotifications` (списки диалогов + счётчики) синглтонное и не сбрасывалось при смене аккаунта; Expo-токен устройства не перепривязывался к новому юзеру, оставаясь за A.
+- 🔧 `useAuthSession::resetAll`: добавлены `resetMiniChat()` и `resetBellNotifications()` — док и колокольчик больше не показывают чужую «1».
+- 🔧 Новый `resetBellNotifications()` (`useBellNotifications`) + персональный ключ скрытий `bell:dismissed-convs:v1:<uid>` (у A и B свои, иначе скрытые в A диалоги прятались бы в B).
+- 🔧 `useAuthSession`: `rebindExpoPushForNewAccount()` при смене uid — `resetExpoPushBinding()` + `initExpoPushBinding()`, токен переносится на новый аккаунт (`/api/expo-push-tokens` `updateOrCreate`), старый юзер перестаёт пушить на это устройство.
+- Проверки: `vue-tsc --noEmit` ✅.
+- ⚠️ Вживую: редеплой фронта; A→B на Android → док/колокольчик чистые; B пишет A → пуш приходит только на устройства A.
+
+## 2026-10-19 — 🐞 Колокольчик: только входящие сообщения + «прочитать всё» гасит бейдж
+- 🐞 Симптом 1: в табе «События» висели строки диалогов с моими же отправленными сообщениями — панель рендерила `bell.conversations` со всеми свежими диалогами, независимо от направления. Симптом 2: бейдж «1» зависал после «прочитать всё» — панель держала только топ-страницу диалогов (первая страница + топ-8), а бейдж на сервере считает непрочитанные по всем диалогам, поэтому непрочитанный диалог за пределами топа невозможно было погасить.
+- 🔧 Бэк (`ConversationController::index`): новый параметр `only_unread=1` — отдаёт только диалоги с непрочитанными входящими; гейт `cleared_at` тот же, что у бейджей и `markRead` (новый приватный `unreadConversationIds`), иначе «фантомные» непрочитанные вечно держали бейдж.
+- 🔧 Фронт: `chatApi.conversations(page, perPage, { onlyUnread })`; `useBellNotifications::fetchAll` запрашивает только непрочитанные (`only_unread`, до 50) и больше не переиспользует `__conversationsInflight` (полный список первой страницы) и не режет до топ-8. `useNotificationsReadAll::markAllChatsRead` теперь видит все непрочитанные и гасит бейдж до нуля; свои отправленные в панель не попадают по построению.
+- Проверки: `php -l` ✅, `vue-tsc --noEmit` ✅.
+- ⚠️ Вживую: редеплой бэка + фронта; написать с одного аккаунта другому → в колокольчике только входящее; «прочитать всё» → бейдж чатов гаснет.
+
+## 2026-10-19 — Диагностика TG-уведомлений чата: `telegram:chat-debug` + видимость очереди
+- Новая команда `telegram:chat-debug {user} [--probe]`: показывает привязку (`telegram_id`), 403-блок, мастер-тумблер и тумблер «Сообщения», гейт онлайна (`isAway`), очередь и висящие задачи `SendTelegramMessage`/`FlushTelegramUnread`. Аргумент — `users.id`, `telegram_id`, `@username`, профиль или email. `--probe` шлёт одно письмо напрямую, мимо очереди и гейта онлайна.
+- `MessageController::pushToRecipients`: молчаливый `catch` вокруг `TelegramNotifier::chatMessage` заменён warning-логом с `message_id`/`user_id`; в select получателей добавлен `telegram_notify_enabled` — раньше при узком select мастер-тумблер не читался и не глушил чат-уведомления.
+- `TelegramNotifier::dispatchMessage`: info-лог `telegram notify queued` (`user_id`, `queue`, `photo`) — видно, что задача ушла в очередь (или что очередь не настроена).
+- Проверки: `php -l` ✅ ×3, `telegram:chat-debug` и `telegram:news-debug` видны в `artisan list` ✅.
+- ⚠️ Вживую: проверить воркер/Managed queue в Laravel Cloud (без воркера задачи тихо висят в `jobs`); для теста получатель должен быть офлайн 3+ минуты; разбор — `php artisan telegram:chat-debug @username --probe`.
+
 ## 2026-10-15 — 🔒 Жёсткий гейт Mini App: сначала анкета, потом вход
 - 🔧 Бэк: флаг сессии `onboarding_only` ставит только Telegram-вход (`TelegramAuthController::onboardingFlag` на всех 5 успешных путях, включая уже залогиненных — добили в браузере → флаг гаснет; стафф флаг не получает). Новый `EnsureOnboardingComplete` в конце web-группы: флаг + неполная анкета + не стафф → страницы редиректят на `/onboarding`, API — 403 `onboarding_required`. Открыты лишь анкета (`/onboarding`, `/api/onboarding/*`), вход/выход, почта, версия. Браузерный логин флаг не ставит — обычные юзеры (включая пол `other`) гейтом не задеваются.
 - 🔧 `OnboardingController`: `GET status` (complete/missing/draft) + `POST complete` (имя 2+, пол male/female, дата + 18+, цель, город; снимает флаг и чистит бот-состояние). `TelegramOnboarding::missingFields()` — единый источник неполноты для веба.
