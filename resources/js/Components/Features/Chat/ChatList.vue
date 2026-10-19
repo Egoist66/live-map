@@ -121,7 +121,7 @@ const { userProfileUrl } = useProfileUrl()
         scroll-height="100%"
         lazy
         class="absolute inset-0 w-full"
-        :pt="{ content: { class: 'pb-14' } }"
+        :pt="{ content: { class: 'w-full pb-14' } }"
         @scroll="onDirectScroll"
         @lazy-load="onDirectLazyLoad"
       >
@@ -151,10 +151,9 @@ const { userProfileUrl } = useProfileUrl()
         <div class="text-xs text-stone-500 mt-1">Начни общение — новые переписки появятся здесь</div>
         <Button v-if="canLoadMoreDirect" label="Показать ещё" icon="pi pi-arrow-down" size="small" rounded outlined class="!mt-4" @click="loadMoreDirect" />
       </div>
-      <div v-if="directItems.length && (directLoadingMore || canLoadMoreDirect || !directHasMore)" class="absolute bottom-0 inset-x-0 z-10 flex justify-center py-2.5 border-t border-stone-100 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm">
+      <div v-if="directItems.length && (directLoadingMore || canLoadMoreDirect)" class="absolute bottom-0 inset-x-0 z-10 flex justify-center py-2.5 border-t border-stone-100 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm">
         <ProgressSpinner v-if="directLoadingMore" :style="{ width: '24px', height: '24px' }" :stroke-width="5" aria-label="Загрузка" />
         <Button v-else-if="canLoadMoreDirect" label="Показать ещё" icon="pi pi-arrow-down" size="small" rounded outlined @click="loadMoreDirect" />
-        <span v-else class="text-xs text-stone-400 dark:text-zinc-500">Это все диалоги</span>
       </div>
     </div>
     <div v-if="tab === 'friends'" class="flex-1 min-h-0 overflow-auto overscroll-contain scroll-neat divide-y dark:divide-zinc-800">
