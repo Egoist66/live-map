@@ -1,4 +1,5 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useToast } from 'primevue/usetoast'
 import { galleryApi, type GalleryIndex, type GalleryPhoto } from '@/services/gallery.api'
 import { replaceUrlPreservingState } from '@/composables/useHistoryState'
 import { useRewardToast } from '@/composables/useRewardToast'
@@ -36,6 +37,7 @@ export function galleryLimitFor(plan?: string | null, isAdmin?: boolean): number
 export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean }) {
   const rewards = useRewardToast()
   const { compressImageFast } = useImageCompress()
+  const toast = (() => { try { return useToast() } catch { return null as any } })()
   const photos = ref<GalleryPhoto[]>([])
   const limit = ref(5)
   const canAdd = ref(false)
@@ -255,6 +257,20 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
     return true
   }
 
+  /**
+   * Сообщение для тоста из ответа сервера: у 422-модерации в data.message
+   * лежит понятный текст (например «Неприемлемый контент…»).
+   *
+   * @param e ошибка axios
+   * @param fallback текст по умолчанию
+   * @returns текст ошибки
+   */
+  function serverMessage(e: unknown, fallback: string): string {
+    const err = e as { response?: { data?: { message?: string } }; message?: string }
+
+    return err?.response?.data?.message || err?.message || fallback
+  }
+
   async function upload(file: File, caption?: string | null) {
     uploading.value = true
     error.value = null
@@ -268,7 +284,10 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
       notifyGalleryChanged()
       return created
     } catch (e: any) {
-      error.value = e?.message || e?.response?.data?.message || 'Не удалось загрузить фото (макс 10 МБ)'
+      const message = serverMessage(e, 'Не удалось загрузить фото (макс 10 МБ)')
+
+      error.value = message
+      toast?.add({ severity: 'error', summary: message, life: 4000 })
       throw e
     } finally {
       uploading.value = false
@@ -290,20 +309,28 @@ export function useProfileGallery(userId: () => number, opts?: { isOwn?: boolean
 
   async function replace(photo: GalleryPhoto, file: File) {
     const small = await compressImageFast(file)
-    const updated = await galleryApi.replace(photo.id, small)
-    const i = photos.value.findIndex((p) => p.id === photo.id)
-    if (i >= 0) photos.value[i] = updated
-    if (active.value?.id === photo.id) active.value = updated
-    const viewerUid = currentAuthUid()
-    if (viewerUid > 0) {
-      void patchCachedPhoto(viewerUid, userId(), updated)
+    try {
+      const updated = await galleryApi.replace(photo.id, small)
+      const i = photos.value.findIndex((p) => p.id === photo.id)
+      if (i >= 0) photos.value[i] = updated
+      if (active.value?.id === photo.id) active.value = updated
+      const viewerUid = currentAuthUid()
+      if (viewerUid > 0) {
+        void patchCachedPhoto(viewerUid, userId(), updated)
+      }
+      void invalidateImageUrl(photo.url)
+      if (photo.thumb_url) {
+        void invalidateImageUrl(photo.thumb_url)
+      }
+      notifyGalleryChanged()
+      return updated
+    } catch (e: any) {
+      const message = serverMessage(e, 'Не удалось заменить фото')
+
+      error.value = message
+      toast?.add({ severity: 'error', summary: message, life: 4000 })
+      throw e
     }
-    void invalidateImageUrl(photo.url)
-    if (photo.thumb_url) {
-      void invalidateImageUrl(photo.thumb_url)
-    }
-    notifyGalleryChanged()
-    return updated
   }
 
   async function remove(photo: GalleryPhoto) {

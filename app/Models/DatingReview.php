@@ -80,6 +80,8 @@ class DatingReview extends Model
     {
         return [
             'id' => (int) $this->id,
+            'author_id' => (int) $this->author_id,
+            'target_id' => (int) $this->target_id,
             'status' => (string) $this->status,
             'rating' => (int) $this->rating,
             'excerpt' => $this->body ? mb_substr($this->body, 0, 120) : null,

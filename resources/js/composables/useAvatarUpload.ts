@@ -77,6 +77,25 @@ export function useAvatarUpload() {
     previewUrl.value = null
   }
 
+  /**
+   * Достаёт человеческое сообщение из мешка ошибок Inertia:
+   * значения бывают строками и массивами строк.
+   *
+   * @param errors мешок ошибок от router.post onError
+   * @returns первый текст ошибки либо пустая строка
+   */
+  function firstErrorMessage(errors: Record<string, unknown> | undefined): string {
+    for (const value of Object.values(errors ?? {})) {
+      const text = Array.isArray(value) ? String(value[0] ?? '') : String(value ?? '')
+
+      if (text.trim() !== '') {
+        return text
+      }
+    }
+
+    return ''
+  }
+
   async function uploadAvatar() {
     if (!avatarFile.value) return
     uploading.value = true
@@ -103,8 +122,14 @@ export function useAvatarUpload() {
           toast?.add({ severity: 'success', summary: 'Аватар обновлён', life: 2000 })
           setTimeout(() => (avatarOk.value = false), 2500)
         },
-        onError: () => {
-          toast?.add({ severity: 'error', summary: 'Не удалось загрузить аватар', life: 2500 })
+        onError: (errors: Record<string, unknown> | undefined) => {
+          const serverMessage = firstErrorMessage(errors)
+
+          toast?.add({
+            severity: 'error',
+            summary: serverMessage || 'Не удалось загрузить аватар',
+            life: 4000,
+          })
         },
         onFinish: () => (uploading.value = false),
       })

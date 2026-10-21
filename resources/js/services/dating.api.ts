@@ -48,6 +48,10 @@ export type DatingReviewStatus = 'pending' | 'approved' | 'rejected'
 /** Один отзыв о пользователе знакомств. */
 export interface DatingReviewItem {
   id: number
+  /** кто оценил (в realtime-пейлоаде — для фильтра по автору) */
+  author_id?: number
+  /** кого оценили */
+  target_id?: number
   rating: number
   body: string | null
   /** pending — отзыв ждёт решения модератора в админке */
@@ -222,6 +226,8 @@ export const datingApi = {
     return data as {
       summary: DatingRatingSummary
       can_review: boolean
+      /** Почему нельзя оценить (hint для UI) или null. */
+      can_review_reason?: string | null
       my_review: DatingReviewItem | null
       reviews: DatingReviewItem[]
       meta: { current_page: number; last_page: number; has_more: boolean; total: number }

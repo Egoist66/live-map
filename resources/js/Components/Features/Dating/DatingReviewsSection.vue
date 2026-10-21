@@ -246,10 +246,18 @@ function reviewDate(iso: string | null): string {
           />
         </div>
 
+        <div v-if="!reviews.canReview.value && reviews.canReviewReason.value" class="mt-3 rounded-2xl bg-stone-50 dark:bg-zinc-800/60 border border-stone-200/70 dark:border-zinc-800 px-3 py-2.5">
+          <p class="flex items-start gap-1.5 text-xs text-stone-500 dark:text-zinc-400">
+            <i class="pi pi-info-circle mt-0.5 shrink-0" aria-hidden="true" />
+            <span>{{ reviews.canReviewReason.value }}</span>
+          </p>
+        </div>
+
         <div v-if="reviews.canReview.value" class="mt-3 rounded-2xl bg-stone-50 dark:bg-zinc-800/60 border border-stone-200/70 dark:border-zinc-800 px-3 py-2.5">
           <div v-if="!editing && reviews.myReview.value" class="flex items-center gap-2">
             <span class="flex-1 text-xs text-stone-500 dark:text-zinc-400 min-w-0">Твоя оценка: <b class="text-amber-500">{{ reviews.myReview.value.rating }} ★</b><span v-if="reviews.myReview.value.body"> — «{{ reviews.myReview.value.body.slice(0, 60) }}»</span></span>
             <Tag v-if="reviews.myReviewOnModeration.value" value="на модерации" severity="warn" class="!text-[9px] shrink-0" />
+            <Tag v-else-if="reviews.myReviewRejected.value" value="отклонён" severity="danger" class="!text-[9px] shrink-0" />
             <Button label="Изменить" text size="small" class="!px-2 !text-xs shrink-0" @click="startEdit()" />
             <Button v-if="reviews.isAdmin.value" icon="pi pi-trash" text severity="danger" size="small" class="!w-8 !h-8 !p-0 shrink-0" aria-label="Удалить отзыв" title="Удалить отзыв" :loading="reviews.saving.value" @click="onDelete()" />
           </div>

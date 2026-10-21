@@ -6,15 +6,18 @@ use App\Models\DatingReview;
 use App\Models\User;
 use App\Services\DatingReviewService;
 use App\Services\DatingService;
+use App\Services\FloodGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
  * Отзывы о пользователях знакомств: звёзды и короткие тексты.
  *
- * Читать могут все прошедшие age-gate свайпов; писать — только
- * взаимодействовавшие (мэтч или direct-диалог). Скрытый PRO-рейтинг
- * видят только владелец и админы.
+ * Читать могут все прошедшие age-gate свайпов; писать — только тем,
+ * с кем была настоящая переписка (гейт в DatingReviewService).
+ * Флуд и дубли текста режет FloodGuard с контекстом 'review'.
+ * Скрытый платный рейтинг (dating_hide_rating) видят только
+ * владелец и персонал, а новый отзыв таким людям не оставить.
  */
 class DatingReviewController extends Controller
 {
@@ -48,6 +51,7 @@ class DatingReviewController extends Controller
         return response()->json([
             'summary' => $this->reviews->summary($target, $me),
             'can_review' => $this->reviews->canReview($me, $target),
+            'can_review_reason' => $this->reviews->reviewBlockReason($me, $target),
             'my_review' => $mine ? $this->reviews->serialize($mine->loadMissing('author')) : null,
             'reviews' => $items,
             'meta' => [
@@ -63,12 +67,12 @@ class DatingReviewController extends Controller
      * Создать отзыв или поправить текст своего.
      *
      * Отзыв всегда с текстом: минимум 50 символов — голые оценки
-     * не публикуются. Каждый отзыв сначала уходит в модерацию:
-     * уведомление получателю, тг-пинг и штраф траста за 1–2 звезды
-     * отправляются при одобрении (DatingReviewService::approve),
-     * а не при отправке. Звёзды ставятся один раз: у кого отзыв
-     * уже есть, тот меняет только текст, новую оценку поверх
-     * примут лишь от админа. Удаление — тоже только админам.
+     * не публикуются. Перед сохранением FloodGuard.Context 'review'
+     * отбивает флуд: дубли текста, темп, КАПС и спам ссылками
+     * (персонал проходит насквозь). Стратификация модерации —
+     * в DatingReviewService::upsert (персонал/трастовые сразу,
+     * низкие оценки — ручная очередь с realtime-пингом персонала).
+     * Уведомления и штрафы траста срабатывают на одобрении.
      *
      * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\JsonResponse
@@ -86,7 +90,13 @@ class DatingReviewController extends Controller
 
         app(DatingService::class)->assertAdult($me);
 
+        $floodGuard = app(FloodGuard::class);
+
+        $floodGuard->assertNotFlooding($me, $data['body'], 'review');
+
         $review = $this->reviews->upsert($me, $target, isset($data['rating']) ? (int) $data['rating'] : null, $data['body']);
+
+        $floodGuard->remember($me, $data['body'], 'review');
 
         return response()->json([
             'review' => $this->reviews->serialize($review->load('author')),
@@ -149,8 +159,8 @@ class DatingReviewController extends Controller
     }
 
     /**
-     * Удалить свой отзыв. Только админам: иначе заморозку звёзд
-     * обходили бы удалением и новой оценкой.
+     * Удалить свой отзыв. Персоналу (админы и модераторы): иначе
+     * заморозку звёзд обходили бы удалением и новой оценкой.
      *
      * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\JsonResponse

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Rules\NoProfanity;
 use App\Services\TelegramOnboarding;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -55,7 +56,7 @@ class OnboardingController extends Controller
         $user = $request->user();
 
         $data = $request->validate([
-            'name' => 'required|string|min:2|max:255',
+            'name' => ['required', 'string', 'min:2', 'max:255', new NoProfanity()],
             'gender' => 'required|in:male,female',
             'birth_date' => 'required|date|before:today|after:1900-01-01',
             'dating_goal' => 'required|in:love,flirt,friendship,chat,interests',

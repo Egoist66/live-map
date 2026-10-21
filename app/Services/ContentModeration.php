@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Blaspsoft\Blasp\Facades\Blasp;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Модерация публичного контента — полностью локальная, без ИИ и токенов.
@@ -83,6 +84,22 @@ class ContentModeration
     private const BLASP_LANGUAGES = ['russian', 'english'];
 
     /**
+     * Сильные матерные корни: совпадение в начале слова засчитывается
+     * даже без словарной формы (хуйло, хуила, хуйня — производные форм,
+     * которых нет в словаре). Коры без «шва» на коротком суффиксе:
+     *
+     * - «манда»/«суч(к)»/«ганд» не включены: они в начале невинных слов
+     *   (мандарин, сучок, Ганди) и ловятся только точным словарём;
+     * - «хер» не включён: «херувим» под удар не должен попадать.
+     *
+     * Допустимый хвост после корня — до 4 букв (типичные суффиксы:
+     * -ло, -ня, -ил-, -ов-, -ство).
+     *
+     * @var list<string>
+     */
+    private const HARD_ROOTS = ['хуй', 'хуе', 'хуев', 'хуи', 'хуя', 'еб', 'пизд', 'бляд', 'шлюх'];
+
+    /**
      * Кэш известных матерных слов (для граничного фильтра кириллицы).
      *
      * @var array<string, true>|null
@@ -124,6 +141,9 @@ class ContentModeration
      * по определению доверенный.
      *
      * @param  string|null  ...$texts  проверяемые поля
+     *
+     * @throws ValidationException 422 — поле content в errors, сообщение
+     *     по найденной теме (отлично читается и тостом, и формой Inertia)
      */
     public static function assertClean(?string ...$texts): void
     {
@@ -137,7 +157,9 @@ class ContentModeration
         $hit = self::check(...$texts);
 
         if ($hit) {
-            abort(422, $hit['message']);
+            throw ValidationException::withMessages([
+                'content' => $hit['message'],
+            ]);
         }
     }
 
@@ -341,8 +363,12 @@ class ContentModeration
      * находится внутри «мандарина», а «хер» — внутри «Херсона».
      * Правило: совпадение с не-буквами внутри (м*дак, п-и-з-д-а, ху0й,
      * бл@дь) — всегда настоящее, в невинных словах масок не бывает.
-     * Чисто буквенное совпадение — настоящее, только если слово целиком
-     * является известным матом из языковых пакетов.
+     * Чисто буквенное совпадение — настоящее, если:
+     * - слово целиком — известный мат из языковых пакетов (сучка);
+     * - слово начинается с сильного корня из HARD_ROOTS и хвост до
+     *   4 букв — это словарные производные формы (хуйло, хуила,
+     *   хуйня), которых нет в словаре, а весь остальной словарь так
+     *   расширять нельзя (мандарин, Херсон);
      *
      * @param  string  $text  проверяемый текст (тот же, что ушёл в Blasp)
      * @param  string  $matchedText  фрагмент совпадения из Blasp
@@ -361,11 +387,39 @@ class ContentModeration
         $core = mb_strtolower((string) preg_replace('/[^\p{L}]/u', '', $matchedText));
         $full = mb_strtolower(self::fullWordAt($text, $position, $length));
 
+        // ё и е — одно и то же для детекта (хуёво ≡ хуево).
+        $core = str_replace('ё', 'е', $core);
+        $full = str_replace('ё', 'е', $full);
+
         if ($full === $core) {
             return true;
         }
 
-        return isset(self::profanityWords()[$full]);
+        if (isset(self::profanityWords()[$full])) {
+            return true;
+        }
+
+        return self::isDerivedProfanity($full, $core);
+    }
+
+    /**
+     * Производная форма мата: слово начинается с сильного корня
+     * (хуй-ло, хуи-ла, хуй-ство) и хвост — короткий суффикс до 4 букв.
+     *
+     * Точное начало слова обязательно: «нахуй», «выхуй» корнем «хуй»
+     * не считаем — они либо в словаре, либо не наш случай.
+     *
+     * @param  string  $full  полное буквенное слово вокруг совпадения
+     * @param  string  $core  совпавший фрагмент из Blasp (без маскировки)
+     * @return bool true когда слово — производный мат
+     */
+    private static function isDerivedProfanity(string $full, string $core): bool
+    {
+        $isHardRoot = in_array($core, self::HARD_ROOTS, true);
+        $startsWithRoot = str_starts_with($full, $core);
+        $tailLength = mb_strlen($full) - mb_strlen($core);
+
+        return $isHardRoot && $startsWithRoot && $tailLength <= 4 && $tailLength > 0;
     }
 
     /**

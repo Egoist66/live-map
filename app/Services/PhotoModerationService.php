@@ -5,6 +5,7 @@ namespace App\Services;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Модерация фотографий профиля через Sightengine (dashboard.sightengine.com).
@@ -40,6 +41,9 @@ class PhotoModerationService
      */
     private const MODELS = 'nudity-2.1,gore-2.0,weapon,recreational_drug,face-attributes';
 
+    /** Сообщение об отказе: единое для аватара и галереи (тост/ошибка формы). */
+    private const REJECT_MESSAGE = 'Неприемлемый контент — загрузка запрещена.';
+
     /**
      * Проверить фото и отклонить загрузку при запрещённом контенте (422).
      *
@@ -49,7 +53,8 @@ class PhotoModerationService
      *
      * @param UploadedFile $file загруженный файл изображения
      * @return void
-     * @throws \Illuminate\Http\Exceptions\HttpResponseException 422 при запрете
+     * @throws ValidationException 422 при запрете — поля photo/avatar в errors,
+     *     сообщение «Неприемлемый контент — загрузка запрещена.» (тост на фронте)
      */
     public static function assertAllowed(UploadedFile $file): void
     {
@@ -67,7 +72,19 @@ class PhotoModerationService
             return;
         }
 
-        abort(422, 'Фото отклонено модерацией: '.$verdict['reasons'][0]);
+        throw ValidationException::withMessages([
+            'photo' => self::REJECT_MESSAGE,
+        ]);
+    }
+
+    /**
+     * Сообщение модерации для стенда/логов и ошибок форм.
+     *
+     * @return string текст единого отказа
+     */
+    public static function rejectMessage(): string
+    {
+        return self::REJECT_MESSAGE;
     }
 
     /**

@@ -1,7 +1,8 @@
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import { datingApi, type DatingRatingSummary, type DatingReviewItem, type DatingReviewStatus } from '@/services/dating.api'
 import { useContentModeration } from '@/composables/useContentModeration'
+import { busOn } from '@/services/realtime-bus'
 
 /**
  * Отзывы о пользователе знакомств: сводка, список, форма оценки.
@@ -14,10 +15,15 @@ import { useContentModeration } from '@/composables/useContentModeration'
  * перезагрузки. Звёзды ставятся один раз: у кого отзыв уже есть,
  * тот меняет только текст — новую оценку поверх примут лишь
  * от админа. Отзыв всегда с текстом: минимум BODY_MIN символов,
- * иначе бэк вернёт 422. Каждый отзыв проходит модерацию: пока
- * статус pending, он не виден ни в списке, ни в сводке — автору
- * показываем «на модерации». Компоненты только отображают и зовут
- * методы.
+ * иначе бэк вернёт 422. Пока статус pending, отзыв не виден ни в
+ * списке, ни в сводке — автору показываем «на модерации». Низкие
+ * оценки идут в ручную очередь, 4–5★ от трастовых публикуются
+ * сразу — вердикт долетает автору realtime-событием review.moderated
+ * (сокет + polling-зеркало) и здесь обновляет статус без
+ * перезагрузки. Право оценить (can_review) — гейт на бэке:
+ * только после осмысленной переписки; причина запрета приходит
+ * в can_review_reason и показывается подсказкой вместо формы.
+ * Компоненты только отображают и зовут методы.
  */
 
 /** Минимум текста отзыва, символов: должен совпадать с бэкендом. */
@@ -34,6 +40,8 @@ export const REVIEW_BODY_MAX = 280
 export function useDatingReviews(targetId: () => number | null) {
   const summary = ref<DatingRatingSummary>({ avg: null, count: 0, hidden: false })
   const canReview = ref(false)
+  /** Почему бэк запретил оценивать: подсказка вместо формы. */
+  const canReviewReason = ref<string | null>(null)
   const myReview = ref<DatingReviewItem | null>(null)
   const items = ref<DatingReviewItem[]>([])
   const page = ref(1)
@@ -106,6 +114,7 @@ export function useDatingReviews(targetId: () => number | null) {
   function reset(): void {
     summary.value = { avg: null, count: 0, hidden: false }
     canReview.value = false
+    canReviewReason.value = null
     myReview.value = null
     items.value = []
     page.value = 1
@@ -133,6 +142,7 @@ export function useDatingReviews(targetId: () => number | null) {
       const data = await datingApi.reviews(id, 1)
       summary.value = data.summary
       canReview.value = data.can_review
+      canReviewReason.value = data.can_review_reason ?? null
       myReview.value = data.my_review
       items.value = Array.isArray(data.reviews) ? data.reviews : []
       page.value = data.meta.current_page
@@ -278,9 +288,89 @@ export function useDatingReviews(targetId: () => number | null) {
     }
   }
 
+  /** Мой отзыв отклонён: показываем «отклонён» вместо «на модерации». */
+  const myReviewRejected = computed(() => myReview.value?.status === 'rejected')
+
+  /** Подписка realtime-вердикта уже оформлена: повторно не вешаем. */
+  let busBound = false
+  /** Функция отписки от realtime-вердикта. */
+  let busUnbind: (() => void) | null = null
+
+  /**
+   * Realtime-вердикт моего отзыва: review.moderated от модератора.
+   *
+   * Событие приходит через notification.created (сокет и polling-
+   * зеркало эмитят одно и то же — дедуп по статусу: если статус уже
+   * тот же, перезагрузку не делаем). Чужие отзывы и другие люди
+   * игнорируются.
+   *
+   * @param event событие шины: { notification: { type, data: { review } } }
+   */
+  function handleModerationVerdict(event: { notification?: { type?: string; data?: { review?: DatingReviewItem } } }): void {
+    const notification = event?.notification
+
+    if (notification?.type !== 'review.moderated') {
+      return
+    }
+
+    const review = notification.data?.review
+
+    if (!review) {
+      return
+    }
+
+    const currentId = targetId()
+    const meId = Number(
+      (usePage().props as unknown as { auth?: { user?: { id?: number } | null } }).auth?.user?.id ?? NaN,
+    )
+
+    if (
+      currentId === null
+      || Number(review.target_id) !== Number(currentId)
+      || Number(review.author_id) !== meId
+    ) {
+      return
+    }
+
+    const previousStatus: DatingReviewStatus | null = myReview.value?.status ?? null
+
+    if (previousStatus === review.status) {
+      return
+    }
+
+    myReview.value = review
+
+    // Сводка и список могли измениться (появился/исчез мой отзыв) —
+    // тихо перечитываем состояние с бэка.
+    void load()
+  }
+
+  /**
+   * Подписаться на realtime-вердикты (idempotent).
+   */
+  function bindRealtime(): void {
+    if (busBound) {
+      return
+    }
+
+    busBound = true
+    busUnbind = busOn('user:notification.created', handleModerationVerdict)
+  }
+
+  onMounted(() => {
+    bindRealtime()
+  })
+
+  onBeforeUnmount(() => {
+    busUnbind?.()
+    busUnbind = null
+    busBound = false
+  })
+
   return {
     summary,
     canReview,
+    canReviewReason,
     myReview,
     items,
     total,
@@ -296,6 +386,7 @@ export function useDatingReviews(targetId: () => number | null) {
     starsLocked,
     myReviewStatus,
     myReviewOnModeration,
+    myReviewRejected,
     expanded,
     loaded,
     load,
