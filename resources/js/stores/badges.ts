@@ -16,6 +16,9 @@ export const useBadgeStore = defineStore('badges', () => {
   const pending = ref(0)
   const activity = ref(0)
   const reports = ref(0)
+
+  /** Отзывы ULove, ждущие решения модератора. */
+  const reviews = ref(0)
   const updates = ref(0)
   const security = ref(0)
   const loading = ref(false)
@@ -234,6 +237,11 @@ export const useBadgeStore = defineStore('badges', () => {
   function incReports() { noteMutation(); reports.value += 1 }
   function decReports() { noteMutation(); reports.value = Math.max(0, reports.value - 1) }
 
+  /** Отзывы ULove, ждущие решения модератора. */
+  function setReviews(v: number) { noteMutation(); reviews.value = Math.max(0, v) }
+  function incReviews() { noteMutation(); reviews.value += 1 }
+  function decReviews() { noteMutation(); reviews.value = Math.max(0, reviews.value - 1) }
+
   /**
    * Перезагрузка по возврату во вкладку, но не чаще интервала fetch.
    */
@@ -295,10 +303,11 @@ export const useBadgeStore = defineStore('badges', () => {
     pending.value = 0
     activity.value = 0
     reports.value = 0
+    reviews.value = 0
     updates.value = 0
     security.value = 0
     seenMsgIds.clear()
   }
 
-  return { unread, unreadMessages, pending, activity, reports, updates, security, total, loading, init, fetch, refresh, reset, subscribe, setUnread, setUnreadMessages, setPending, setActivity, setReports, setUpdates, setSecurity, incSecurity, decUnread, incUnread, incPending, decPending, incActivity, decActivity, incReports, decReports }
+  return { unread, unreadMessages, pending, activity, reports, reviews, updates, security, total, loading, init, fetch, refresh, reset, subscribe, setUnread, setUnreadMessages, setPending, setActivity, setReports, setUpdates, setSecurity, incSecurity, decUnread, incUnread, incPending, decPending, incActivity, decActivity, incReports, decReports, setReviews, incReviews, decReviews }
 })

@@ -50,7 +50,7 @@ class RegisteredUserController extends Controller
         $isBusiness = $accountType === 'business';
 
         $rules = [
-            'name' => 'required|string|max:255',
+            'name' => ['required', 'string', 'max:255', new \App\Rules\NoProfanity()],
             'email' => 'required|string|lowercase|email|max:255|unique:'.User::class,
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'birth_date' => 'nullable|date|before:today|after:1900-01-01',

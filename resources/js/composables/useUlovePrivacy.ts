@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 
 /** Ключи приватности ULove, хранящиеся на бэке. */
@@ -45,6 +45,44 @@ export function useUlovePrivacy() {
     dating_hide_distance: !!authUser.value?.dating_hide_distance,
     dating_hide_rating: !!authUser.value?.dating_hide_rating,
   })
+
+  /**
+   * Проверить и разлочить stale props: обновить локальные зеркала
+   * auth-пользователя во всех местах снапшотов Inertia.
+   *
+   * Inertia кэширует props в history-записи: возврат «назад/вперёд»
+   * может подставить старый снимок auth.user, тогда тумблеры
+   * визуально откатываются наначто, что давно сохранено на бэке.
+   * Пишем сразу в текущую страницу и в оба зеркала (паттерн
+   * useInvisible), а `watch` пересинхронизирует при смене props.
+   */
+  function mirrorToAuth(next: UlovePrivacyFlags): void {
+    try {
+      if (authUser.value) {
+        authUser.value.dating_match_only = next.dating_match_only
+        authUser.value.dating_hide_name = next.dating_hide_name
+        authUser.value.dating_hide_age = next.dating_hide_age
+        authUser.value.dating_hide_distance = next.dating_hide_distance
+        authUser.value.dating_hide_rating = next.dating_hide_rating
+      }
+      const w = window as any
+      if (w.__inertia_page?.props?.auth?.user) Object.assign(w.__inertia_page.props.auth.user, next)
+      if ((document as any).__page_auth_user) Object.assign((document as any).__page_auth_user, next)
+    } catch {}
+  }
+
+  /**
+   * Пересобрать флаги из auth-пользователя (best-effort):
+   * вызывается при смене props и после сохранения.
+   */
+  function syncFromAuth(src: Partial<UlovePrivacyFlags> | null | undefined): void {
+    if (!src) return
+    flags.value.dating_match_only = !!src.dating_match_only
+    flags.value.dating_hide_name = !!src.dating_hide_name
+    flags.value.dating_hide_age = !!src.dating_hide_age
+    flags.value.dating_hide_distance = !!src.dating_hide_distance
+    flags.value.dating_hide_rating = !!src.dating_hide_rating
+  }
 
   const saving = ref(false)
   const error = ref<string | null>(null)
@@ -165,7 +203,11 @@ export function useUlovePrivacy() {
     saving.value = true
     try {
       const { datingApi } = await import('@/services/dating.api')
-      await datingApi.updateSettings({ ...flags.value })
+      const saved = await datingApi.updateSettings({ ...flags.value })
+      // Истина — бэк: пересобираем флаги и свежие зеркала auth.user,
+      // иначе после навигации тумблеры откатывались на старый снимок.
+      syncFromAuth(saved as Partial<UlovePrivacyFlags>)
+      mirrorToAuth(flags.value)
     } catch (e: unknown) {
       flags.value[key] = prev
       const err = e as { response?: { data?: { message?: string } } }
@@ -174,6 +216,14 @@ export function useUlovePrivacy() {
       saving.value = false
     }
   }
+
+  // Свежие props (навигация, сохранение другой карточки) — подтягиваем,
+  // пока идёт своё сохранение, не мешаем откату при ошибке.
+  watch(authUser, (u) => {
+    if (!saving.value) {
+      syncFromAuth(u as Partial<UlovePrivacyFlags> | null | undefined)
+    }
+  })
 
   return { flags, features, planLabel, canPro, saving, error, isLocked, statusFor, toggle }
 }

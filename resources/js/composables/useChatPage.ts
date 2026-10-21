@@ -830,12 +830,29 @@ export function useChatPage(initialConversationId?: number) {
     })
   }
 
+  /**
+   * Какой диалог открыть при монтировании страницы чата.
+   *
+   * Внутри приложения `/chat/{id}` пишется сырым pushState
+   * (useChatNavigation.syncUrl), поэтому запись истории может нести
+   * props.conversationId = null, а Inertia на «Назад/Вперёд»
+   * ремантирует Chat/Index именно с этим устаревшим пропсом.
+   * URL при этом верный — парсим его как источник истины, чтобы
+   * диалог восстанавливался после ухода в профиль и возврата.
+   *
+   * @returns id диалога или null (в список чатов)
+   */
   function resolveInitialId(): number | null {
     if (initialConversationId) return Number(initialConversationId)
     try {
-      const q = new URLSearchParams(window.location.search).get('c')
-      if (q && Number(q)) return Number(q)
-    } catch {}
+      const query = new URLSearchParams(window.location.search)
+      const queryId = query.get('c')
+      if (queryId && Number(queryId)) return Number(queryId)
+      const pathMatch = window.location.pathname.match(/\/chat\/(\d+)/)
+      if (pathMatch) return Number(pathMatch[1])
+    } catch {
+      // SSR/нестандартное окружение — просто список чатов.
+    }
     return null
   }
 

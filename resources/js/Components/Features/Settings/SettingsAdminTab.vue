@@ -16,7 +16,7 @@ import { avatarSrcFor } from '@/composables/useAvatar'
 import { useRealtimeMode } from '@/composables/useRealtimeMode'
 import { useStaffRole } from '@/composables/useStaffRole'
 
-const props = defineProps<{ admin: any; reports: any; imp?: any }>()
+const props = defineProps<{ admin: any; reports: any; imp?: any; reviewMods?: any }>()
 
 /**
  * Подтвердить удаление: ошибка уже лежит в admin.error и показывается
@@ -40,6 +40,45 @@ const reportFilters = [
   { label: 'Отклонённые', value: 'dismissed' },
   { label: 'Все', value: 'all' },
 ]
+
+const reviewFilters = [
+  { label: 'Ждут', value: 'pending' },
+  { label: 'Одобренные', value: 'approved' },
+  { label: 'Отклонённые', value: 'rejected' },
+  { label: 'Все', value: 'all' },
+]
+
+/**
+ * Звёздная строка карточки отзыва: «4 ★».
+ */
+function starsLabel(rating: number): string {
+  const stars = Math.min(5, Math.max(1, Math.round(Number(rating) || 0)))
+  return `${stars} ★`
+}
+
+/**
+ * Подписи вердикта в карточке отзыва.
+ */
+function reviewStatusLabel(status: string): string {
+  const labels: Record<string, string> = {
+    pending: 'ждёт',
+    approved: 'одобрен',
+    rejected: 'отклонён',
+  }
+  return labels[status] ?? status
+}
+
+/**
+ * Цвета Tag вердикта: pending — warn, одобрен — зелёный.
+ */
+function reviewStatusSeverity(status: string): 'secondary' | 'success' | 'warn' {
+  const severities: Record<string, 'secondary' | 'success' | 'warn'> = {
+    pending: 'warn',
+    approved: 'success',
+    rejected: 'secondary',
+  }
+  return severities[status] ?? 'secondary'
+}
 </script>
 <template>
   <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-6' }, content: { class: '!p-0' } }">
@@ -93,6 +132,44 @@ const reportFilters = [
             </div>
             <div v-else class="mt-3 text-center py-4 text-sm text-stone-500 dark:text-zinc-400">Жалоб нет 🎉</div>
             <Message v-if="reports.error.value" severity="error" :closable="false" class="!mt-3 !rounded-2xl !text-xs">{{ reports.error.value }}</Message>
+          </template>
+        </Card>
+        <Card v-if="props.reviewMods" class="!border-amber-200 dark:!border-amber-950 !rounded-3xl !shadow-none !bg-white dark:!bg-zinc-900" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
+          <template #content>
+            <div class="flex items-center gap-2">
+              <span class="w-8 h-8 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-white grid place-items-center shrink-0"><i class="pi pi-star text-xs"></i></span>
+              <div class="text-sm font-semibold dark:text-white">Отзывы ULove · модерация</div>
+              <Tag v-if="props.reviewMods.pendingCount.value" :value="String(props.reviewMods.pendingCount.value)" severity="danger" class="!text-[10px]" />
+              <Button label="обновить" link size="small" class="ml-auto !text-xs !px-1" @click="props.reviewMods.refresh()" />
+            </div>
+            <p class="mt-1 text-xs text-stone-500 dark:text-zinc-400">Одобренный отзыв появится в профиле получателя и в карточках свайпов. Отклонённый — получит уведомление.</p>
+            <SelectButton :modelValue="props.reviewMods.filter.value" @update:modelValue="(v:any)=>props.reviewMods.setFilter(v)" :options="reviewFilters" optionLabel="label" optionValue="value" :allowEmpty="false" size="small" class="mt-3 flex-wrap max-w-full" />
+            <div v-if="props.reviewMods.loading.value" class="py-6 grid place-items-center">
+              <ProgressSpinner style="width:22px;height:22px" :strokeWidth="6" />
+            </div>
+            <div v-else-if="props.reviewMods.reviews.value.length" class="mt-3 space-y-2">
+              <div v-for="r in props.reviewMods.reviews.value" :key="r.id" class="rounded-2xl border border-stone-200 dark:border-zinc-700 p-3">
+                <div class="flex items-center gap-2 min-w-0">
+                  <Avatar :image="avatarSrcFor(r.author)" shape="circle" class="!w-8 !h-8 shrink-0 [&_img]:object-cover" />
+                  <div class="min-w-0 flex-1">
+                    <div class="text-[13px] font-semibold truncate dark:text-white">
+                      {{ r.author?.name || 'Пользователь' }} → {{ r.target?.name || '#' + r.target?.id || '?' }} · <b class="text-amber-500">{{ starsLabel(r.rating) }}</b>
+                    </div>
+                    <div class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">
+                      <span>{{ r.created_at ? new Date(r.created_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }) : '' }}</span>
+                    </div>
+                  </div>
+                  <Tag :value="reviewStatusLabel(r.status)" :severity="reviewStatusSeverity(r.status)" class="!text-[9px] shrink-0" />
+                </div>
+                <p v-if="r.body" class="mt-2 text-[13px] text-stone-600 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap">{{ r.body }}</p>
+                <div v-if="r.status === 'pending'" class="mt-2 flex gap-1.5">
+                  <Button @click="props.reviewMods.resolve(r.id, 'approved')" :loading="props.reviewMods.actingId.value === r.id" icon="pi pi-check" label="Одобрить" size="small" rounded severity="success" class="!text-xs" />
+                  <Button @click="props.reviewMods.resolve(r.id, 'rejected')" :loading="props.reviewMods.actingId.value === r.id" icon="pi pi-times" label="Отклонить" size="small" rounded outlined severity="danger" class="!text-xs" />
+                </div>
+              </div>
+            </div>
+            <div v-else class="mt-3 text-center py-4 text-sm text-stone-500 dark:text-zinc-400">Отзывов нет 🎉</div>
+            <Message v-if="props.reviewMods.error.value" severity="error" :closable="false" class="!mt-3 !rounded-2xl !text-xs">{{ props.reviewMods.error.value }}</Message>
           </template>
         </Card>
         <Card class="!border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-none !bg-white dark:!bg-zinc-900" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">

@@ -78,14 +78,26 @@ class ModeratePublicContentJob implements ShouldQueue
         try {
             $isUserReport = $this->kind === 'dating_review';
 
-            Report::create([
-                'reporter_id' => $this->authorId,
-                'target_type' => $isUserReport ? 'user' : 'comment',
-                'target_id' => $isUserReport ? $this->authorId : $this->entityId,
-                'reason' => 'abuse',
-                'description' => 'auto-moderation '.$this->kind.'#'.$this->entityId.' '.$category.': '.mb_substr($reason, 0, 200),
-                'status' => 'pending',
-            ]);
+            if ($isUserReport) {
+                // Отзывы и так проходят ручную модерацию в админке:
+                // вторичный проход снял текст с флагами — отзыв
+                // отклоняем сразу, жалобу на автора не заводим.
+                \App\Models\DatingReview::whereKey($this->entityId)
+                    ->where('status', 'pending')
+                    ->update([
+                        'status' => 'rejected',
+                        'moderated_at' => now(),
+                    ]);
+            } else {
+                Report::create([
+                    'reporter_id' => $this->authorId,
+                    'target_type' => 'comment',
+                    'target_id' => $this->entityId,
+                    'reason' => 'abuse',
+                    'description' => 'auto-moderation '.$this->kind.'#'.$this->entityId.' '.$category.': '.mb_substr($reason, 0, 200),
+                    'status' => 'pending',
+                ]);
+            }
         } catch (\Throwable $error) {
             Log::warning('moderate job report failed: '.$error->getMessage());
         }

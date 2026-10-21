@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Services\AppModulesWelcomeNews;
 use App\Services\AppSettings;
+use App\Services\PhotoModerationService;
 use App\Services\TelegramInitDataValidator;
 use App\Services\TelegramOnboarding;
 use Illuminate\Http\JsonResponse;
@@ -477,7 +478,7 @@ class TelegramAuthController extends Controller
         $user->forceFill([
             'telegram_id' => $telegramId,
             'telegram_username' => $username,
-            'telegram_photo_url' => $photoUrl,
+            'telegram_photo_url' => $this->vetTelegramPhotoUrl($photoUrl, $user->telegram_photo_url),
             'telegram_linked_at' => now(),
             'telegram_blocked_at' => null,
         ])->save();
@@ -497,7 +498,7 @@ class TelegramAuthController extends Controller
 
         $patch = [
             'telegram_username' => $username !== '' ? $username : $user->telegram_username,
-            'telegram_photo_url' => $photoUrl !== '' ? $photoUrl : $user->telegram_photo_url,
+            'telegram_photo_url' => $this->vetTelegramPhotoUrl($photoUrl, $user->telegram_photo_url),
         ];
 
         if ($user->telegram_blocked_at !== null) {
@@ -550,7 +551,7 @@ class TelegramAuthController extends Controller
             'dating_enabled' => true,
             'telegram_id' => $telegramId,
             'telegram_username' => $username !== '' ? $username : null,
-            'telegram_photo_url' => $photoUrl !== '' ? $photoUrl : null,
+            'telegram_photo_url' => $this->vetTelegramPhotoUrl($photoUrl, null),
             'telegram_linked_at' => now(),
         ]);
 
@@ -562,7 +563,39 @@ class TelegramAuthController extends Controller
     }
 
     /**
-     * Почистить username: без @, только допустимые символы.
+     * Пропустить фото Telegram через Sightengine-модерацию.
+     *
+     * Аватар из Telegram — единственный путь, где картинка попадает
+     * в профиль без нашей загрузки, поэтому она проверяется по URL.
+     * Логика: пустой URL — без изменений (NULL сохраняет «нет фото»),
+     * тот же URL, что уже стоит в базе, не перепроверяем (экономим
+     * операции API), незнакомый URL проверяем и при запрете глушим.
+     * Сбой API не валит вход: fail-open вернёт «разрешено».
+     *
+     * @param string $photoUrl URL из initData (уже очищен cleanPhotoUrl)
+     * @param string|null $currentUrl текущий telegram_photo_url в базе
+     * @return string|null безопасный URL либо null (нет фото / запрещённое фото)
+     */
+    private function vetTelegramPhotoUrl(string $photoUrl, ?string $currentUrl): ?string
+    {
+        $isNoPhoto = $photoUrl === '';
+        $isAlreadyVouched = (string) $currentUrl === $photoUrl;
+
+        if ($isNoPhoto || $isAlreadyVouched) {
+            return $currentUrl;
+        }
+
+        $verdict = PhotoModerationService::checkUrl($photoUrl);
+
+        if (! $verdict['allowed']) {
+            return null;
+        }
+
+        return $photoUrl;
+    }
+
+    /**
+     * Почистить username: без @, только допустимые символом.
      *
      * @param string $raw сырой username из initData
      * @return string

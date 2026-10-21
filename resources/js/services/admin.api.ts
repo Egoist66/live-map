@@ -49,6 +49,28 @@ export const adminApi = {
     const { data } = await api.post(`/api/admin/reports/${id}/resolve`, { status })
     return data
   },
+  /**
+   * Очередь модерации отзывов ULove.
+   *
+   * @param status фильтр: pending | approved | rejected | all
+   * @param perPage размер страницы
+   * @returns {reviews, pending_count, meta}
+   */
+  async datingReviews(status = 'pending', perPage = 15) {
+    const { data } = await api.get('/api/admin/dating-reviews', { params: { status, per_page: perPage } })
+    return data
+  },
+  /**
+   * Вердикт по отзыву: одобрить или отклонить.
+   *
+   * @param id id отзыва
+   * @param status approved — публикуем, rejected — отклоняем
+   * @returns {review}
+   */
+  async resolveDatingReview(id: number, status: 'approved' | 'rejected') {
+    const { data } = await api.post(`/api/admin/dating-reviews/${id}/resolve`, { status })
+    return data
+  },
   async overview() {
     const { data } = await api.get('/api/admin/monitoring/overview')
     return data

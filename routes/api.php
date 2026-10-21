@@ -177,6 +177,8 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:300,1'])->group(function
     Route::post('/devices/{device}/unblock', [\App\Http\Controllers\DeviceController::class, 'unblock'])->middleware('throttle:social-write');
     Route::get('/admin/reports', [ReportController::class, 'index']);
     Route::post('/admin/reports/{report}/resolve', [ReportController::class, 'resolve']);
+    Route::get('/admin/dating-reviews', [\App\Http\Controllers\AdminDatingReviewController::class, 'index']);
+    Route::post('/admin/dating-reviews/{review}/resolve', [\App\Http\Controllers\AdminDatingReviewController::class, 'resolve']);
     Route::get('/admin/support', [\App\Http\Controllers\SupportController::class, 'adminIndex']);
     Route::post('/admin/support/{ticket}/reply', [\App\Http\Controllers\SupportController::class, 'reply']);
     Route::post('/admin/support/{ticket}/reject', [\App\Http\Controllers\SupportController::class, 'reject']);

@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import { profileStatsApi } from '@/services/profileStats.api'
 import { planOf } from '@/composables/usePlanLimits'
@@ -72,9 +72,10 @@ export function useProfileVisitorsNotify() {
       state.value.enabled = data.notify_profile_visitors
       try {
         if (authUser.value) authUser.value.notify_profile_visitors = state.value.enabled
-      } catch {
-        /* noop */
-      }
+        const w = window as any
+        if (w.__inertia_page?.props?.auth?.user) w.__inertia_page.props.auth.user.notify_profile_visitors = state.value.enabled
+        if ((document as any).__page_auth_user) (document as any).__page_auth_user.notify_profile_visitors = state.value.enabled
+      } catch {}
     } catch {
       state.value.enabled = prev
       state.value.error = 'Не удалось сохранить — попробуй ещё раз'
@@ -82,6 +83,17 @@ export function useProfileVisitorsNotify() {
       state.value.saving = false
     }
   }
+
+  /**
+   * Stale props: при навигации по history-кэшу Inertia может
+   * вернуть старый auth.user — пересинхронизируем, не мешая
+   * откату в момент своего сохранения.
+   */
+  watch(authUser, (u) => {
+    if (!state.value.saving) {
+      state.value.enabled = !!(u?.notify_profile_visitors ?? true)
+    }
+  })
 
   return { state, plan, planLabel, canUse, statusText, save }
 }

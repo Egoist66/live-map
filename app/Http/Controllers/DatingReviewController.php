@@ -62,8 +62,12 @@ class DatingReviewController extends Controller
     /**
      * Создать отзыв или поправить текст своего.
      *
-     * Звёзды ставятся один раз: у кого отзыв уже есть, тот меняет
-     * только текст (rating можно не слать), новую оценку поверх
+     * Отзыв всегда с текстом: минимум 50 символов — голые оценки
+     * не публикуются. Каждый отзыв сначала уходит в модерацию:
+     * уведомление получателю, тг-пинг и штраф траста за 1–2 звезды
+     * отправляются при одобрении (DatingReviewService::approve),
+     * а не при отправке. Звёзды ставятся один раз: у кого отзыв
+     * уже есть, тот меняет только текст, новую оценку поверх
      * примут лишь от админа. Удаление — тоже только админам.
      *
      * @param \Illuminate\Http\Request $request
@@ -74,7 +78,7 @@ class DatingReviewController extends Controller
         $data = $request->validate([
             'user_id' => ['required', 'integer', 'exists:users,id'],
             'rating' => ['nullable', 'integer', 'min:1', 'max:5'],
-            'body' => ['nullable', 'string', 'max:'.DatingReviewService::BODY_LIMIT],
+            'body' => ['required', 'string', 'min:'.DatingReviewService::BODY_MIN, 'max:'.DatingReviewService::BODY_LIMIT],
         ]);
 
         $me = $request->user();
@@ -82,35 +86,7 @@ class DatingReviewController extends Controller
 
         app(DatingService::class)->assertAdult($me);
 
-        $review = $this->reviews->upsert($me, $target, isset($data['rating']) ? (int) $data['rating'] : null, $data['body'] ?? null);
-
-        if ($review->wasRecentlyCreated) {
-            if ((int) $review->rating <= 2) {
-                try {
-                    \App\Services\TrustScoreService::penalizeBadReview($target);
-                } catch (\Throwable) {
-                }
-            }
-
-            try {
-                \App\Services\UserNotifier::send($target, new \App\Notifications\DatingReviewedNotification($me, (int) $target->id, $review));
-            } catch (\Throwable) {
-            }
-
-            try {
-                $authorName = trim((string) ($me->name ?? ''));
-                \App\Services\TelegramNotifier::eventPing(
-                    $target,
-                    'reviews',
-                    '⭐ 💘 <b>ULove</b> • <b>'.e($authorName !== '' ? $authorName : 'Собеседник').'</b> оценил(а) тебя на '.(int) $review->rating.' из 5',
-                    '/profile',
-                    'Смотреть отзыв',
-                    'dating-review:'.(int) $review->id,
-                    null
-                );
-            } catch (\Throwable) {
-            }
-        }
+        $review = $this->reviews->upsert($me, $target, isset($data['rating']) ? (int) $data['rating'] : null, $data['body']);
 
         return response()->json([
             'review' => $this->reviews->serialize($review->load('author')),

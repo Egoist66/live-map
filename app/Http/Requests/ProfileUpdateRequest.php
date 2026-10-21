@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\User;
+use App\Rules\NoProfanity;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -48,6 +49,42 @@ class ProfileUpdateRequest extends FormRequest
     }
 
     /**
+     * Лимит смены имени: один раз бесплатно, безлимит на Premium.
+     *
+     * Стафф (админ/модератор) и топ-тарифы не лимитируем —
+     * смена считается только при реальном изменении значения.
+     * Ошибка ложится на поле name и видна под инпутом.
+     *
+     * @param mixed $value новое имя из запроса
+     * @param \Closure $fail callback ошибки валидации
+     * @return void
+     */
+    private function assertNameChangeAllowed(mixed $value, \Closure $fail): void
+    {
+        if (! is_string($value)) {
+            return;
+        }
+
+        $user = $this->user();
+
+        if (! $user instanceof User) {
+            return;
+        }
+
+        $nextName = trim($value);
+
+        if ($nextName === trim((string) $user->name)) {
+            return;
+        }
+
+        if ($user->canChangeName()) {
+            return;
+        }
+
+        $fail('Смена имени уже использована (1 раз бесплатно). Безлимит — на тарифе Premium.');
+    }
+
+    /**
      * Get the validation rules that apply to the request.
      *
      * @return array<string, ValidationRule|array<mixed>|string>
@@ -55,7 +92,9 @@ class ProfileUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255', new NoProfanity(), function ($attr, $value, $fail) {
+                $this->assertNameChangeAllowed($value, $fail);
+            }],
             'gender' => ['nullable','in:male,female,other'],
             'birth_date' => ['nullable','date','before:today','after:1900-01-01'],
             'country' => ['nullable','string','max:120'],

@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue'
 import { usePage } from '@inertiajs/vue3'
-import { datingApi, type DatingRatingSummary, type DatingReviewItem } from '@/services/dating.api'
+import { datingApi, type DatingRatingSummary, type DatingReviewItem, type DatingReviewStatus } from '@/services/dating.api'
 import { useContentModeration } from '@/composables/useContentModeration'
 
 /**
@@ -13,8 +13,20 @@ import { useContentModeration } from '@/composables/useContentModeration'
  * вместе со списком, отправка обновляет сводку из ответа без
  * перезагрузки. Звёзды ставятся один раз: у кого отзыв уже есть,
  * тот меняет только текст — новую оценку поверх примут лишь
- * от админа. Компоненты только отображают и зовут методы.
- *
+ * от админа. Отзыв всегда с текстом: минимум BODY_MIN символов,
+ * иначе бэк вернёт 422. Каждый отзыв проходит модерацию: пока
+ * статус pending, он не виден ни в списке, ни в сводке — автору
+ * показываем «на модерации». Компоненты только отображают и зовут
+ * методы.
+ */
+
+/** Минимум текста отзыва, символов: должен совпадать с бэкендом. */
+export const REVIEW_BODY_MIN = 50
+
+/** Максимум текста отзыва, символов: должен совпадать с бэкендом. */
+export const REVIEW_BODY_MAX = 280
+
+/**
  * @param targetId id человека, о котором отзывы
  * @returns состояние отзывов и действия
  * @example const reviews = useDatingReviews(() => card.id); reviews.toggle()
@@ -54,6 +66,10 @@ export function useDatingReviews(targetId: () => number | null) {
 
   /** Звёзды уже поставлены и я не админ: правится только текст. */
   const starsLocked = computed(() => myReview.value !== null && !isAdmin.value)
+
+  /** Мой отзыв ещё на модерации: показываем «на модерации» вместо публикации. */
+  const myReviewStatus = computed<DatingReviewStatus | null>(() => myReview.value?.status ?? null)
+  const myReviewOnModeration = computed(() => myReview.value?.status === 'pending')
 
   /**
    * Развернуть секцию и при первом раскрытии загрузить отзывы.
@@ -168,12 +184,15 @@ export function useDatingReviews(targetId: () => number | null) {
   /**
    * Оставить отзыв или поправить текст своего.
    *
+   * Текст обязателен: минимум REVIEW_BODY_MIN символов — голые
+   * оценки не публикуем, бэк всё равно вернёт 422. Модерацию
+   * пропускаем фронтово тоже только по модерируемым словам.
    * Звёзды заморожены: при starsLocked слать rating не нужно —
    * бэк всё равно оставит старую оценку, а чужую поверх
    * примет лишь от админа.
    *
    * @param rating звёзды 1–5 или null (только текст)
-   * @param body текст или null
+   * @param body текст от REVIEW_BODY_MIN до REVIEW_BODY_MAX символов
    */
   async function save(rating: number | null, body: string | null): Promise<void> {
     const id = targetId()
@@ -182,31 +201,41 @@ export function useDatingReviews(targetId: () => number | null) {
       return
     }
 
-    if (body !== null && body.trim() !== '') {
-      const blockReason = useContentModeration().assertPublishable(body)
+    const text = (body ?? '').trim()
 
-      if (blockReason) {
-        error.value = blockReason
-        throw new Error(blockReason)
-      }
+    if (text.length < REVIEW_BODY_MIN) {
+      const shortfall = `Напиши подробнее: минимум ${REVIEW_BODY_MIN} символов (сейчас ${text.length})`
+      error.value = shortfall
+      throw new Error(shortfall)
+    }
+
+    const blockReason = useContentModeration().assertPublishable(text)
+
+    if (blockReason) {
+      error.value = blockReason
+      throw new Error(blockReason)
     }
 
     saving.value = true
     error.value = null
 
     try {
-      const data = await datingApi.saveReview(id, rating, body)
+      const data = await datingApi.saveReview(id, rating, text)
       myReview.value = data.review
       summary.value = data.summary
       total.value = data.summary.count
       loaded.value = true
 
-      const index = items.value.findIndex((item) => item.id === data.review.id)
+      // На модерации отзыв нигде не виден: в список не добавляем —
+      // после одобрения подтянется перезагрузкой списка.
+      if (data.review.status !== 'pending') {
+        const index = items.value.findIndex((item) => item.id === data.review.id)
 
-      if (index === -1) {
-        items.value.unshift(data.review)
-      } else {
-        items.value[index] = data.review
+        if (index === -1) {
+          items.value.unshift(data.review)
+        } else {
+          items.value[index] = data.review
+        }
       }
     } catch (e: unknown) {
       const err = e as { response?: { data?: { message?: string } } }
@@ -265,6 +294,8 @@ export function useDatingReviews(targetId: () => number | null) {
     count,
     isAdmin,
     starsLocked,
+    myReviewStatus,
+    myReviewOnModeration,
     expanded,
     loaded,
     load,

@@ -336,6 +336,12 @@ class ProfileController extends Controller
         }
         $user->fill($request->safe()->except(['plan', 'plan_expires_at']));
         \App\Services\ContentModeration::assertClean($user->bio ?? null, $user->thought ?? null);
+
+        if ($user->isDirty('name')) {
+            $user->name_changes_used = (int) $user->name_changes_used + 1;
+            $user->name_changed_at = now();
+        }
+
         if ($user->country_code) $user->country_code = mb_strtolower(trim((string) $user->country_code));
         if ($user->country) $user->country = trim(preg_replace('/\s+/', ' ', (string) $user->country));
 

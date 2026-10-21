@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Events\GalleryChanged;
 use App\Models\User;
 use App\Services\ImageOptimizer;
+use App\Services\PhotoModerationService;
 use App\Services\ProfileFanout;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -27,6 +28,8 @@ class AvatarController extends Controller
     public function store(Request $request)
     {
         $request->validate(['avatar' => 'required|image|max:10240']);
+
+        PhotoModerationService::assertAllowed($request->file('avatar'));
 
         $user = $request->user();
         $disk = User::avatarDisk();

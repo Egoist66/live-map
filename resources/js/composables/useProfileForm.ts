@@ -113,6 +113,37 @@ export function useProfileForm() {
     return ['pro', 'premium', 'business'].includes(planOf(u))
   })
 
+  /**
+   * Смена имени: 1 раз бесплатно, безлимит — Premium/Business/стафф.
+   *
+   * can_change_name / name_changes_left — appended-атрибуты модели
+   * User на бэке: они приходят во всех payload'ах пользователя.
+   */
+  const canChangeName = computed(() => {
+    const u = user.value
+    if (!u) return true
+    return u.can_change_name !== false
+  })
+
+  /** null — безлимит (Premium/Business/стафф), иначе сколько бесплатных смен осталось. */
+  const nameChangesLeft = computed<number | null>(() => {
+    const u = user.value
+    return u ? ((u.name_changes_left ?? 1) as number | null) : null
+  })
+
+  /** Подсказка про смену имени: безлимит / осталась одна / исчерпано. */
+  const nameChangeHint = computed(() => {
+    if (!canChangeName.value) {
+      return 'Смена имени исчерпана (1 раз бесплатно) — безлимит только на Premium'
+    }
+    if (nameChangesLeft.value === null) {
+      return 'Безлимитна смена имени на твоём тарифе'
+    }
+    return nameChangesLeft.value > 0
+      ? `Осталась ${nameChangesLeft.value} бесплатная смена имени · безлимит — на Premium`
+      : 'Осталась бесплатная смена имени'
+  })
+
   watch(() => (values as any).plan, (pl) => {
     const m = maxHomeRadiusKm(pl || 'free')
     const cur = Number((values as any).home_radius_km ?? 1)
@@ -190,5 +221,5 @@ export function useProfileForm() {
   const countryWarning = computed(() => (isAdmin.value ? null : residenceCheck.countryWarning.value))
   const checkingCountry = computed(() => (isAdmin.value ? false : residenceCheck.checkingCountry.value))
 
-  return { user, name, nameAttrs, gender, birth_date, age: age.age, ageLabel: age.label, country, country_code, email, emailAttrs, canChangeEmail, home_lat, homeLatAttrs, home_lng, homeLngAttrs, home_city, home_address, home_visibility, home_show_exact, home_radius_km, bio, is_anonymous_default, plan, errors, values, setValues, setErrors, submit, isSubmitting, useMyLocation, maxRadius, homeLocation, countryWarning, checkingCountry }
+  return { user, name, nameAttrs, gender, birth_date, age: age.age, ageLabel: age.label, country, country_code, email, emailAttrs, canChangeEmail, canChangeName, nameChangesLeft, nameChangeHint, home_lat, homeLatAttrs, home_lng, homeLngAttrs, home_city, home_address, home_visibility, home_show_exact, home_radius_km, bio, is_anonymous_default, plan, errors, values, setValues, setErrors, submit, isSubmitting, useMyLocation, maxRadius, homeLocation, countryWarning, checkingCountry }
 }

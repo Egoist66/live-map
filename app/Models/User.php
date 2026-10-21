@@ -14,7 +14,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['name', 'profile_slug', 'email', 'password', 'gender', 'birth_date', 'country', 'country_code', 'plan', 'latitude', 'longitude', 'role', 'account_type', 'is_admin', 'is_hidden_from_search', 'profile_hidden_at', 'deletion_requested_at', 'deletion_scheduled_at', 'deletion_pro_until', 'dating_enabled', 'dating_goal', 'signup_goal', 'default_mode', 'default_mode_set_at', 'enabled_modules', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_gender_pref', 'dating_hide_name', 'dating_hide_age', 'dating_hide_distance', 'dating_match_only', 'dating_hide_rating', 'random_chats_used', 'random_chats_month', 'superlikes_day', 'superlikes_used', 'superlikes_balance', 'boosts_balance', 'boost_until', 'boost_started_at', 'boost_impressions', 'boost_month', 'undos_day', 'undos_used', 'avatar_path', 'home_lat', 'home_lng', 'home_city', 'home_address', 'home_visibility', 'home_show_exact', 'home_radius_km', 'bio', 'thought', 'reputation_score', 'level', 'trust_score', 'quest_cooldown_until', 'quest_last_track', 'quest_granted_at', 'is_anonymous_default', 'default_location_precision', 'default_blur_meters', 'message_privacy', 'allow_random_messages', 'call_cooldown_enabled', 'video_calls_enabled', 'photo_comments_privacy', 'flow_comments_privacy', 'auto_reply_enabled', 'auto_reply_text', 'settings', 'last_seen_at', 'is_invisible', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at', 'terms_accepted_at', 'terms_version', 'telegram_id', 'telegram_username', 'telegram_photo_url', 'telegram_linked_at', 'telegram_notify_messages', 'telegram_notify_likes', 'telegram_notify_matches', 'telegram_notify_comments', 'telegram_notify_news', 'telegram_notify_invites', 'telegram_notify_reviews', 'telegram_blocked_at', 'telegram_notify_enabled', 'is_sl_active', 'screen_lock_reset_at', 'email_notify_messages', 'email_notify_likes', 'email_notify_matches', 'telegram_dm_messages', 'telegram_dm_likes', 'telegram_dm_matches', 'telegram_dm_comments', 'notify_profile_visitors'])]
+#[Fillable(['name', 'name_changes_used', 'name_changed_at', 'profile_slug', 'email', 'password', 'gender', 'birth_date', 'country', 'country_code', 'plan', 'latitude', 'longitude', 'role', 'account_type', 'is_admin', 'is_hidden_from_search', 'profile_hidden_at', 'deletion_requested_at', 'deletion_scheduled_at', 'deletion_pro_until', 'dating_enabled', 'dating_goal', 'signup_goal', 'default_mode', 'default_mode_set_at', 'enabled_modules', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_gender_pref', 'dating_hide_name', 'dating_hide_age', 'dating_hide_distance', 'dating_match_only', 'dating_hide_rating', 'random_chats_used', 'random_chats_month', 'superlikes_day', 'superlikes_used', 'superlikes_balance', 'boosts_balance', 'boost_until', 'boost_started_at', 'boost_impressions', 'boost_month', 'undos_day', 'undos_used', 'avatar_path', 'home_lat', 'home_lng', 'home_city', 'home_address', 'home_visibility', 'home_show_exact', 'home_radius_km', 'bio', 'thought', 'reputation_score', 'level', 'trust_score', 'quest_cooldown_until', 'quest_last_track', 'quest_granted_at', 'is_anonymous_default', 'default_location_precision', 'default_blur_meters', 'message_privacy', 'allow_random_messages', 'call_cooldown_enabled', 'video_calls_enabled', 'photo_comments_privacy', 'flow_comments_privacy', 'auto_reply_enabled', 'auto_reply_text', 'settings', 'last_seen_at', 'is_invisible', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at', 'terms_accepted_at', 'terms_version', 'telegram_id', 'telegram_username', 'telegram_photo_url', 'telegram_linked_at', 'telegram_notify_messages', 'telegram_notify_likes', 'telegram_notify_matches', 'telegram_notify_comments', 'telegram_notify_news', 'telegram_notify_invites', 'telegram_notify_reviews', 'telegram_blocked_at', 'telegram_notify_enabled', 'is_sl_active', 'screen_lock_reset_at', 'email_notify_messages', 'email_notify_likes', 'email_notify_matches', 'telegram_dm_messages', 'telegram_dm_likes', 'telegram_dm_matches', 'telegram_dm_comments', 'notify_profile_visitors'])]
 #[Hidden(['password', 'remember_token'])]
 /**
  * Пользователь приложения.
@@ -54,12 +54,14 @@ use Illuminate\Support\Facades\Storage;
  * @property bool $telegram_dm_comments Legacy: короткие дубли «лички» (удалены 2026-10-02, колонка не читается).
  * @property bool $notify_profile_visitors Уведомлять о гостях профиля (колокольчик + бот). Работает только на PRO и выше.
  * @property int $trust_score Репутация 1–10: жалобы, блоки и низкие оценки роняют, PRO/Premium возвращает 10.
+ * @property int $name_changes_used Сколько раз человек сменил имя (бесплатная — одна; Premium/Business/стафф — безлимит).
+ * @property \Carbon\Carbon|null $name_changed_at Когда имя меняли в последний раз.
  */
 class User extends Authenticatable implements MustVerifyEmail
 {
     use HasApiTokens, HasFactory, Notifiable;
 
-    protected $appends = ['avatar_url', 'age', 'effective_plan'];
+    protected $appends = ['avatar_url', 'age', 'effective_plan', 'can_change_name', 'name_changes_left'];
 
     /**
      * Дефолты модели: автоответ «меня нет онлайн» включён по умолчанию.
@@ -73,6 +75,22 @@ class User extends Authenticatable implements MustVerifyEmail
     public function getEffectivePlanAttribute(): string
     {
         return $this->effectivePlan();
+    }
+
+    /**
+     * Доступно ли имя к смене.
+     */
+    public function getCanChangeNameAttribute(): bool
+    {
+        return $this->canChangeName();
+    }
+
+    /**
+     * Осталось бесплатных смен имени (null — безлимит: Premium/Business/стафф).
+     */
+    public function getNameChangesLeftAttribute(): ?int
+    {
+        return $this->nameChangesLeft();
     }
 
     public function isPlanExpired(): bool
@@ -369,6 +387,9 @@ class User extends Authenticatable implements MustVerifyEmail
     /** Платные тарифы с PRO-плюшками (pro + оба топа). */
     public const PAID_PLANS = ['pro', 'premium', 'business'];
 
+    /** Бесплатных смен имени (никнейма): Premium/Business/стафф — безлимит. */
+    public const FREE_NAME_CHANGES = 1;
+
     /**
      * Все допустимые роли: user — персона, organization — компания
      * (кабинет, тариф business), moderator/admin — staff панели модерации.
@@ -519,6 +540,39 @@ class User extends Authenticatable implements MustVerifyEmail
      * @return bool true для premium/business и стаффа
      */
     public function isPremium(): bool { return $this->isModerator() || in_array($this->effectivePlan(), self::TOP_PLANS, true); }
+
+    /**
+     * Смена имени доступна.
+     *
+     * Один раз бесплатно (Free/Pro). На Premium и Business —
+     * безлимит, персонал (админ/модератор) тоже безлимит.
+     *
+     * @return bool true когда имя ещё можно сменить
+     */
+    public function canChangeName(): bool
+    {
+        if ($this->isPremium()) {
+            return true;
+        }
+
+        return (int) $this->name_changes_used < self::FREE_NAME_CHANGES;
+    }
+
+    /**
+     * Осталось бесплатных смен имени.
+     *
+     * null — безлимит (Premium/Business/стафф), иначе 0..1.
+     *
+     * @return int|null
+     */
+    public function nameChangesLeft(): ?int
+    {
+        if ($this->isPremium()) {
+            return null;
+        }
+
+        return max(0, self::FREE_NAME_CHANGES - (int) $this->name_changes_used);
+    }
 
     /**
      * Стартовый режим приложения для пользователя.
@@ -1319,6 +1373,8 @@ class User extends Authenticatable implements MustVerifyEmail
             'telegram_dm_comments' => 'boolean',
             'notify_profile_visitors' => 'boolean',
             'trust_score' => 'integer',
+            'name_changes_used' => 'integer',
+            'name_changed_at' => 'datetime',
             'bio' => EncryptedTextCast::class,
             'thought' => EncryptedTextCast::class,
             'dating_about' => EncryptedTextCast::class,

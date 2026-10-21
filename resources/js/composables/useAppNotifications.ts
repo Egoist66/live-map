@@ -872,6 +872,10 @@ function handleNotification(e: any) {
     handleReport({ report: data.report })
     return
   }
+  if (data.review && String(n.type || '').startsWith('review.')) {
+    handleReviewInbox(String(n.type), data.review)
+    return
+  }
   if (data.cooperation) {
     handleCooperation({ cooperation: data.cooperation })
     return
@@ -983,6 +987,69 @@ function isAdminNow(): boolean {
     const u = (usePage().props.auth as any)?.user
     return !!u?.is_admin || u?.role === 'admin' || u?.role === 'moderator'
   } catch { return false }
+}
+
+/**
+ * Тост из inbox-строки отзывов ULove: единый вход для сокета,
+ * поллера и ручногоDidAppear уведомления.
+ *
+ * Два типа строки:
+ * - review.created — персоналу: новый отзыв ждёт решения;
+ * - review.moderated — автору отзыва: одобрен/отклонён.
+ *
+ * @param type тип inbox-строки
+ * @param review пейлоад отзыва (id, status, rating, author_name, target_name)
+ */
+function handleReviewInbox(type: string, review: any) {
+  if (!review?.id) return
+  if (type === 'review.created') {
+    handleReviewPending({ review })
+    return
+  }
+  if (type === 'review.moderated') {
+    handleReviewVerdict({ review })
+  }
+}
+
+/**
+ * Персоналу: новый отзыв в очереди модерации ULove.
+ */
+function handleReviewPending(e: any) {
+  if (!isAdminNow()) return
+  const r = e?.review
+  if (isDuplicateEvent(`review-pending-${r.id}-${r.status}`)) return
+  push({
+    id: `review-pending-${r.id}-${Date.now()}`,
+    type: 'report',
+    icon: 'pi pi-star',
+    title: `⭐ Отзыв #${r.id} ждёт модерации`,
+    body: `${r.author_name || 'Пользователь'} → ${r.target_name || '?'} · ${r.rating ?? '?'} ★`.slice(0, 90),
+    avatar: null,
+    link: '/admin/admin',
+    createdAt: Date.now(),
+  })
+}
+
+/**
+ * Автору отзыва: вердикт модерации (одобрен / отклонён).
+ *
+ * Гейта админ-режима нет — строка и так летит только автору,
+ * стафф-автор тоже должен увидеть решение по своему отзыву.
+ */
+function handleReviewVerdict(e: any) {
+  const r = e?.review
+  if (isDuplicateEvent(`review-verdict-${r.id}-${r.status}`)) return
+  const approved = r?.status === 'approved'
+  push({
+    id: `review-verdict-${r.id}-${Date.now()}`,
+    type: 'match',
+    icon: approved ? 'pi pi-star-fill' : 'pi pi-star',
+    title: approved ? '⭐ Твой отзыв одобрен' : '⭐ Твой отзыв отклонён',
+    body: approved ? `Оценка ${r.rating ?? '?'} из 5 уже видна в профиле получателя` : 'Отзыв не прошёл модерацию — он опубликован не будет'.slice(0, 90),
+    avatar: null,
+    link: '/profile',
+    createdAt: Date.now(),
+  })
 }
 function handleReport(e: any) {
   if (!adminMode || !e?.report?.id) return

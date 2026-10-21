@@ -4,9 +4,10 @@ import { Link } from '@inertiajs/vue3'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
 import Message from 'primevue/message'
+import Tag from 'primevue/tag'
 import Textarea from 'primevue/textarea'
 import { useToast } from 'primevue/usetoast'
-import { useDatingReviews } from '@/composables/useDatingReviews'
+import { useDatingReviews, REVIEW_BODY_MIN, REVIEW_BODY_MAX } from '@/composables/useDatingReviews'
 import { useMyRaters } from '@/composables/useMyRaters'
 import { useProfileUrl } from '@/composables/useProfileUrl'
 import ModeratedContent from '@/Components/Features/Moderation/ModeratedContent.vue'
@@ -112,14 +113,23 @@ function cancelEdit(): void {
   draft.value = ''
 }
 
-const bodyLeft = computed(() => 280 - draft.value.trim().length)
+const bodyLength = computed(() => draft.value.trim().length)
+const bodyLeft = computed(() => REVIEW_BODY_MAX - bodyLength.value)
+
+/** Сколько символов ещё не хватает до минимума: 0 — уже хватает. */
+const bodyToMin = computed(() => Math.max(0, REVIEW_BODY_MIN - bodyLength.value))
 
 /** Звёзды заморожены: правится только текст, оценка шлётся пустой. */
 const starsLocked = computed(() => reviews.starsLocked.value)
 
+/**
+ * Отзыв всегда с текстом от 50 до 280 символов и выбранной
+ * (или уже замороженной) оценкой — иначе бэк вернёт 422.
+ */
 const canSave = computed(
   () =>
-    draft.value.trim().length <= 280 &&
+    bodyToMin.value === 0 &&
+    bodyLength.value <= REVIEW_BODY_MAX &&
     !reviews.saving.value &&
     (starsLocked.value || (picked.value >= 1 && picked.value <= 5)),
 )
@@ -131,7 +141,12 @@ async function onSave(): Promise<void> {
     await reviews.save(starsLocked.value ? null : picked.value, text === '' ? null : text)
     editing.value = false
     draft.value = ''
-    toast?.add({ severity: 'success', summary: 'Отзыв сохранён', detail: 'Спасибо за оценку', life: 2500 })
+
+    if (reviews.myReviewOnModeration.value) {
+      toast?.add({ severity: 'secondary', summary: 'Отзыв отправлен на модерацию', detail: 'Опубликуем в профиле после проверки', life: 3500 })
+    } else {
+      toast?.add({ severity: 'success', summary: 'Отзыв сохранён', detail: 'Спасибо за оценку', life: 2500 })
+    }
   } catch {
     toast?.add({ severity: 'error', summary: 'Не сохранилось', detail: reviews.error.value ?? 'Попробуй ещё раз', life: 3000 })
   }
@@ -234,6 +249,7 @@ function reviewDate(iso: string | null): string {
         <div v-if="reviews.canReview.value" class="mt-3 rounded-2xl bg-stone-50 dark:bg-zinc-800/60 border border-stone-200/70 dark:border-zinc-800 px-3 py-2.5">
           <div v-if="!editing && reviews.myReview.value" class="flex items-center gap-2">
             <span class="flex-1 text-xs text-stone-500 dark:text-zinc-400 min-w-0">Твоя оценка: <b class="text-amber-500">{{ reviews.myReview.value.rating }} ★</b><span v-if="reviews.myReview.value.body"> — «{{ reviews.myReview.value.body.slice(0, 60) }}»</span></span>
+            <Tag v-if="reviews.myReviewOnModeration.value" value="на модерации" severity="warn" class="!text-[9px] shrink-0" />
             <Button label="Изменить" text size="small" class="!px-2 !text-xs shrink-0" @click="startEdit()" />
             <Button v-if="reviews.isAdmin.value" icon="pi pi-trash" text severity="danger" size="small" class="!w-8 !h-8 !p-0 shrink-0" aria-label="Удалить отзыв" title="Удалить отзыв" :loading="reviews.saving.value" @click="onDelete()" />
           </div>
@@ -267,13 +283,15 @@ function reviewDate(iso: string | null): string {
             </div>
             <Textarea
               v-model="draft"
-              rows="2"
-              maxlength="280"
-              placeholder="Пара слов о человеке (необязательно)"
+              rows="3"
+              :maxlength="REVIEW_BODY_MAX"
+              placeholder="Обязательный комментарий от 50 символов: за что такая оценка"
               class="w-full mt-2 !rounded-xl !text-sm"
             />
             <div class="mt-1.5 flex items-center gap-2">
-              <span class="flex-1 text-[11px] text-stone-400 dark:text-zinc-500">Осталось {{ bodyLeft }}</span>
+              <span :class="['flex-1 text-[11px]', bodyToMin > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-stone-400 dark:text-zinc-500']">
+                {{ bodyToMin > 0 ? `Ещё ${bodyToMin} символов до минимума` : `Осталось ${bodyLeft}` }}
+              </span>
               <Button label="Отмена" text size="small" class="!text-xs" @click="cancelEdit()" />
               <Button label="Сохранить" size="small" rounded :disabled="!canSave" :loading="reviews.saving.value" class="!border-0 !bg-gradient-to-r !from-[#FD267D] !to-[#FF7854] !text-white disabled:!opacity-50" @click="onSave()" />
             </div>

@@ -12,6 +12,7 @@ use App\Services\ActivityRewards;
 use App\Services\ContentModeration;
 use App\Services\ImageOptimizer;
 use App\Services\Mentions;
+use App\Services\PhotoModerationService;
 use App\Services\PinActivityNotifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -145,6 +146,7 @@ class ProfilePhotoController extends Controller
         ]);
         $user = $request->user();
         if ($request->filled('caption')) ContentModeration::assertClean($request->input('caption'));
+        PhotoModerationService::assertAllowed($request->file('photo'));
         $disk = $this->disk();
         $path = ImageOptimizer::storeOptimized(
             $request->file('photo'),
@@ -209,6 +211,7 @@ class ProfilePhotoController extends Controller
         $data = [];
         if ($request->has('caption')) $data['caption'] = $request->input('caption') ?: null;
         if ($request->hasFile('photo')) {
+            PhotoModerationService::assertAllowed($request->file('photo'));
             Storage::disk($this->disk())->delete($photo->path);
             ImageOptimizer::deleteThumbnails($photo->path, $this->disk());
             $data['path'] = ImageOptimizer::storeOptimized(

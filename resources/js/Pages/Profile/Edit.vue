@@ -75,7 +75,7 @@ const showQuestsTab = computed(() => activity.isReleased.value && (modules.isEna
                 <TabPanel value="app" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsAppTab /></TabPanel>
                 <TabPanel value="integrations" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsIntegrationsTab v-if="s.active.value === 'integrations'" /></TabPanel>
                 <TabPanel value="about" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsAboutSection /></TabPanel>
-                <TabPanel v-if="s.showAdminTab.value" value="admin" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsAdminTab :admin="s.admin" :reports="s.reports" :imp="s.imp" /></TabPanel>
+                <TabPanel v-if="s.showAdminTab.value" value="admin" class="!min-w-0 !max-w-full !overflow-hidden"><SettingsAdminTab :admin="s.admin" :reports="s.reports" :review-mods="s.reviewMods" :imp="s.imp" /></TabPanel>
               </TabPanels>
             </Tabs>
           </div>

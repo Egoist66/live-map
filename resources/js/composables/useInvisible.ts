@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import axios from 'axios'
 import { setPresenceInvisible } from '@/composables/usePresence'
@@ -15,6 +15,17 @@ export function useInvisible() {
   })
   const loading = ref(false)
   const error = ref<string | null>(null)
+
+  /**
+   * Stale props: Inertia из history-кэша может принести старый
+   * auth.user (тумблер «откатился» визуально, хотя на бэке всё
+   * включено). Пока идёт своё сохранение, не пересинхронизируем.
+   */
+  watch(user, (u) => {
+    if (!loading.value) {
+      isInvisible.value = !!u?.is_invisible
+    }
+  })
 
   async function toggle(value: boolean) {
     if (!canUse.value) {

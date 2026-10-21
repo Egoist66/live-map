@@ -10,6 +10,7 @@ import { useHiddenFriends } from '@/composables/useHiddenFriends'
 import { useScreenLock } from '@/composables/useScreenLock'
 import { useAdminUsers } from '@/composables/useAdminUsers'
 import { useAdminReports } from '@/composables/useAdminReports'
+import { useAdminReviews } from '@/composables/useAdminReviews'
 import { useAdminImpersonate } from '@/composables/useAdminImpersonate'
 import { useSecurityImpersonations } from '@/composables/useSecurityImpersonations'
 import { useLocationBlur } from '@/composables/useLocationBlur'
@@ -32,6 +33,7 @@ export function useSettingsPage(props: { user: any }) {
   const hidden = useHiddenFriends()
   const admin = useAdminUsers()
   const reports = useAdminReports()
+  const reviewMods = useAdminReviews()
   const imp = useAdminImpersonate()
   const proc = useSecurityImpersonations(active)
   const blur = useLocationBlur()
@@ -41,7 +43,7 @@ export function useSettingsPage(props: { user: any }) {
   const flowPrivacy = useFlowCommentsPrivacy(() => String((u.value as any)?.flow_comments_privacy || 'everyone'))
   watch(u, (v) => flowPrivacy.sync(String((v as any)?.flow_comments_privacy || 'everyone')))
   const screenLock = useScreenLock()
-  watch(active, (v) => { if (v === 'pins') pins.refetch(); if (v === 'billing') loadZoneCount(); if (v === 'privacy') hidden.load(); if (v === 'admin') reports.refresh(); if (v === 'procedures') { proc.load() } })
+   watch(active, (v) => { if (v === 'pins') pins.refetch(); if (v === 'billing') loadZoneCount(); if (v === 'privacy') hidden.load(); if (v === 'admin') { reports.refresh(); reviewMods.refresh(); } if (v === 'procedures') { proc.load() } })
   onMounted(() => { loadZoneCount(); hidden.load(); proc.init() })
-  return { u, theme, active, tabs, activeIndex, menuModel, setActive, isAdmin, showAdminTab, showProcedures, showSupport, zoneCount, showAvatar, support, bioPreviewText, bioPreviewEmpty, avatarSrc, invisible, hidden, admin, reports, imp, proc, blur, homeRadius, photoPrivacy, flowPrivacy, screenLock, ...pins }
+  return { u, theme, active, tabs, activeIndex, menuModel, setActive, isAdmin, showAdminTab, showProcedures, showSupport, zoneCount, showAvatar, support, bioPreviewText, bioPreviewEmpty, avatarSrc, invisible, hidden, admin, reports, reviewMods, imp, proc, blur, homeRadius, photoPrivacy, flowPrivacy, screenLock, ...pins }
 }

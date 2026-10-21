@@ -42,11 +42,16 @@ export interface SwipeCard {
   moderation?: import('@/types/flow').ModerationFlags | null
 }
 
+/** Статус модерации отзыва: до одобрения он нигде не виден. */
+export type DatingReviewStatus = 'pending' | 'approved' | 'rejected'
+
 /** Один отзыв о пользователе знакомств. */
 export interface DatingReviewItem {
   id: number
   rating: number
   body: string | null
+  /** pending — отзыв ждёт решения модератора в админке */
+  status?: DatingReviewStatus
   moderation?: import('@/types/flow').ModerationFlags | null
   created_at: string | null
   author: { id: number; name: string; avatar_url: string | null; profile_slug: string | null } | null

@@ -11,6 +11,7 @@ import InputOtp from 'primevue/inputotp'
 import { useAdminMonitoring } from '@/composables/useAdminMonitoring'
 import { useAdminUsers } from '@/composables/useAdminUsers'
 import { useAdminReports } from '@/composables/useAdminReports'
+import { useAdminReviews } from '@/composables/useAdminReviews'
 import AdminStatsCards from '@/Components/Features/Admin/AdminStatsCards.vue'
 import AdminActivityChart from '@/Components/Features/Admin/AdminActivityChart.vue'
 import AdminOnlineList from '@/Components/Features/Admin/AdminOnlineList.vue'
@@ -41,6 +42,7 @@ const { tab, setTab } = useAdminTabs()
 const mon = useAdminMonitoring()
 const admin = useAdminUsers()
 const reports = useAdminReports()
+const reviewMods = useAdminReviews()
 const businessQueue = useAdminBusiness()
 const supportQueue = useAdminSupport()
 const appUpdates = useAdminAppUpdates()
@@ -97,6 +99,7 @@ const layout = useAdminLayout(layoutBadges)
  */
 function loadAll(): void {
   reports.init()
+  reviewMods.init()
   businessQueue.init()
   supportQueue.init()
   void refs.load()
@@ -263,7 +266,7 @@ enforceVisibleTab()
             </section>
 
             <section v-else-if="tab === 'admin'" aria-label="Модерация">
-              <SettingsAdminTabSection :admin="admin" :reports="reports" :imp="imp" />
+              <SettingsAdminTabSection :admin="admin" :reports="reports" :review-mods="reviewMods" :imp="imp" />
             </section>
 
             <section v-else-if="tab === 'business'" aria-label="Бизнес">
