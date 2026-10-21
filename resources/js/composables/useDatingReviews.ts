@@ -61,16 +61,19 @@ export function useDatingReviews(targetId: () => number | null) {
   const average = computed(() => summary.value.avg)
   const count = computed(() => summary.value.count)
 
-  /** Я админ: мне можно менять звёзды и удалять свой отзыв. */
+  /** Я персонал (админ/модератор): могу менять звёзды, удалять свой и чужие отзывы. */
   const isAdmin = computed(() => {
     try {
       const user = (usePage().props as unknown as { auth?: { user?: { is_admin?: boolean; role?: string } | null } }).auth?.user
 
-      return !!user?.is_admin || user?.role === 'admin'
+      return !!user?.is_admin || user?.role === 'admin' || user?.role === 'moderator'
     } catch {
       return false
     }
   })
+
+  /** Синоним isAdmin: на бэке это один гейт canModerate(). */
+  const isStaff = isAdmin
 
   /** Звёзды уже поставлены и я не админ: правится только текст. */
   const starsLocked = computed(() => myReview.value !== null && !isAdmin.value)
@@ -288,6 +291,56 @@ export function useDatingReviews(targetId: () => number | null) {
     }
   }
 
+  /**
+   * Удалить чужой отзыв по id: только персонал и всегда с объяснением.
+   *
+   * Причину валидирует бэк (5–500 символов), поэтому гоняем её и здесь:
+   * пустое объяснение — фейл запроса, а объяснение всё равно нужно
+   * показать в подтверждении. После успеха убираем карточку из списка,
+   * пересчитываем счётчик и сводку без перезагрузки.
+   *
+   * @param reviewId id удаляемого отзыва
+   * @param reason объяснение для автора (5–500 символов)
+   * @throws Error с текстом ошибки бэкенда — тост покажет компонент
+   */
+  async function removeForeign(reviewId: number, reason: string): Promise<void> {
+    const text = reason.trim()
+
+    if (text.length < 5 || text.length > 500) {
+      const badReason = 'Напиши объяснение автору: от 5 до 500 символов'
+      error.value = badReason
+      throw new Error(badReason)
+    }
+
+    if (removingId.value !== null) {
+      return
+    }
+
+    removingId.value = reviewId
+    error.value = null
+
+    try {
+      await datingApi.deleteReviewById(reviewId, text)
+
+      items.value = items.value.filter((item) => item.id !== reviewId)
+      total.value = Math.max(0, total.value - 1)
+      summary.value = { ...summary.value, count: total.value }
+
+      if (total.value === 0) {
+        summary.value = { ...summary.value, avg: null }
+      }
+    } catch (e: unknown) {
+      const err = e as { response?: { data?: { message?: string } } }
+      error.value = err.response?.data?.message ?? 'Не получилось удалить отзыв'
+      throw e
+    } finally {
+      removingId.value = null
+    }
+  }
+
+  /** Id отзыва, который сейчас удаляет персонал: спиннер на кнопке. */
+  const removingId = ref<number | null>(null)
+
   /** Мой отзыв отклонён: показываем «отклонён» вместо «на модерации». */
   const myReviewRejected = computed(() => myReview.value?.status === 'rejected')
 
@@ -297,23 +350,26 @@ export function useDatingReviews(targetId: () => number | null) {
   let busUnbind: (() => void) | null = null
 
   /**
-   * Realtime-вердикт моего отзыва: review.moderated от модератора.
+   * Realtime-вердикт по моему отзыву: review.moderated / review.deleted.
    *
-   * Событие приходит через notification.created (сокет и polling-
-   * зеркало эмитят одно и то же — дедуп по статусу: если статус уже
-   * тот же, перезагрузку не делаем). Чужие отзывы и другие люди
+   * review.moderated — одобрен/отклонён модератором; review.deleted —
+   * персонал удалил мой отзыв (мой слот освобождается). Событие
+   * приходит через notification.created (сокет и polling-зеркало
+   * эмитят одно и то же — дедуп по статусу/наличию: если состояние
+   * уже то же, перезагрузку не делаем). Чужие отзывы и другие люди
    * игнорируются.
    *
-   * @param event событие шины: { notification: { type, data: { review } } }
+   * @param event событие шины: { notification: { type, data: { review, reason? } } }
    */
   function handleModerationVerdict(event: { notification?: { type?: string; data?: { review?: DatingReviewItem } } }): void {
     const notification = event?.notification
+    const type = notification?.type
 
-    if (notification?.type !== 'review.moderated') {
+    if (type !== 'review.moderated' && type !== 'review.deleted') {
       return
     }
 
-    const review = notification.data?.review
+    const review = notification?.data?.review
 
     if (!review) {
       return
@@ -329,6 +385,20 @@ export function useDatingReviews(targetId: () => number | null) {
       || Number(review.target_id) !== Number(currentId)
       || Number(review.author_id) !== meId
     ) {
+      return
+    }
+
+    if (type === 'review.deleted') {
+      const alreadyGone = myReview.value === null
+
+      myReview.value = null
+
+      if (alreadyGone) {
+        return
+      }
+
+      void load()
+
       return
     }
 
@@ -383,6 +453,7 @@ export function useDatingReviews(targetId: () => number | null) {
     average,
     count,
     isAdmin,
+    isStaff,
     starsLocked,
     myReviewStatus,
     myReviewOnModeration,
@@ -397,5 +468,7 @@ export function useDatingReviews(targetId: () => number | null) {
     reset,
     save,
     remove,
+    removeForeign,
+    removingId,
   }
 }

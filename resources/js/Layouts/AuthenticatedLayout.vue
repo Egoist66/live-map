@@ -22,6 +22,7 @@ const GlobalPeopleSearchDialog = defineAsyncComponent(() => import('@/Components
 const MiniChatDock = defineAsyncComponent(() => import('@/Components/Features/Chat/MiniChatDock.vue'))
 const FloatingWidgets = defineAsyncComponent(() => import('@/Components/Features/Widgets/FloatingWidgets.vue'))
 const NewDeviceAlertDialog = defineAsyncComponent(() => import('@/Components/Features/Security/NewDeviceAlertDialog.vue'))
+const ReviewDeletedAlertDialog = defineAsyncComponent(() => import('@/Components/Features/Dating/ReviewDeletedAlertDialog.vue'))
 const TermsAcceptanceModal = defineAsyncComponent(() => import('@/Components/Features/Legal/TermsAcceptanceModal.vue'))
 const AppUpdateModal = defineAsyncComponent(() => import('@/Components/Features/Updates/AppUpdateModal.vue'))
 const SubscriptionRenewalDialog = defineAsyncComponent(() => import('@/Components/Features/Subscription/SubscriptionRenewalDialog.vue'))
@@ -38,6 +39,7 @@ import { useAiEnabled } from '@/composables/useAiEnabled'
 import { useTermsAcceptance } from '@/composables/useTermsAcceptance'
 import { useSessionWatchdog } from '@/composables/useSessionWatchdog'
 import { useNewDeviceAlert } from '@/composables/useNewDeviceAlert'
+import { useReviewDeletedAlert } from '@/composables/useReviewDeletedAlert'
 import { onMounted } from 'vue'
 
 const { badge, user, avatarSrc, dashboardHref, bell, updates, menu, menuItems, navVisibility, isAdmin, isModerator, isBusinessAccount, toggleMenu, logout } = useAppLayout()
@@ -63,6 +65,7 @@ const aiFlag = useAiEnabled()
 const { needsAcceptance } = useTermsAcceptance()
 useSessionWatchdog()
 useNewDeviceAlert()
+useReviewDeletedAlert()
 const hotkeys = useAppHotkeys()
 const screenLock = useScreenLock()
 useScreenLockScroll()
@@ -110,6 +113,7 @@ onMounted(() => { screenLock.init(); hotkeys.init() })
       <NetworkStatusToast />
       <BellNotificationsModal />
       <NewDeviceAlertDialog />
+      <ReviewDeletedAlertDialog />
       <PwaInstallBanner />
       <PwaUpdateBanner />
       <AppHotkeysDialog />

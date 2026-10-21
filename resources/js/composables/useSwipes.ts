@@ -318,7 +318,8 @@ export function useSwipes() {
   }
 
   /**
-   * Пол по умолчанию для фильтра «кого показать»: сохранённый выбор,
+   * Пол по умолчанию для фильтра «кого показать»: сохранённый выбор
+   * (включая «Все» — он тоже валидный сохранённый выбор),
    * иначе противоположный своему (мужчина листает девушек и наоборот).
    * Сброс фильтров возвращается именно к нему, история свайпов
    * при этом не трогается.
@@ -327,21 +328,96 @@ export function useSwipes() {
    */
   function defaultGender(): string {
     const saved = authUser.value?.dating_gender_pref
-    if (saved === 'male' || saved === 'female') return saved
+    if (saved === 'male' || saved === 'female' || saved === 'all') return saved
     const own = authUser.value?.gender
     if (own === 'male') return 'female'
     if (own === 'female') return 'male'
     return 'all'
   }
 
-  const filters = ref<SwipeFilters>({
-    goal: null,
-    gender: defaultGender(),
-    age_min: null,
-    age_max: null,
-    radius_km: null,
-    interests: [],
-  })
+  /**
+   * Санитайзер сохранённых фильтров ленты.
+   *
+   * localStorage — недоверенный источник: значение должно пройти
+   * проверку типов и диапазонов, иначе лента может получить мусор
+   * (уведомление 422 с бэка). Возвращает null, если данных нет
+   * или они битые — тогда считается дефолт.
+   *
+   * @param raw распарсенный JSON из хранилища
+   * @returns валидные фильтры либо null
+   */
+  function sanitizeSavedFilters(raw: unknown): SwipeFilters | null {
+    if (!raw || typeof raw !== 'object') return null
+    const candidate = raw as Record<string, unknown>
+    const validGoals = ['love', 'flirt', 'friendship', 'chat', 'interests']
+    const validGenders = ['male', 'female', 'all']
+    const goal = typeof candidate.goal === 'string' && validGoals.includes(candidate.goal) ? candidate.goal : null
+    const gender =
+      typeof candidate.gender === 'string' && validGenders.includes(candidate.gender)
+        ? candidate.gender
+        : 'all'
+    const isAge = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 18 && v <= 99
+    const ageMin = isAge(candidate.age_min) ? candidate.age_min : null
+    const ageMax = isAge(candidate.age_max) ? candidate.age_max : null
+    const radius = typeof candidate.radius_km === 'number' && Number.isFinite(candidate.radius_km) && candidate.radius_km > 0 ? candidate.radius_km : null
+    const interests = Array.isArray(candidate.interests)
+      ? candidate.interests.filter((t): t is string => typeof t === 'string' && t.trim() !== '').slice(0, 10)
+      : []
+    return { goal, gender, age_min: ageMin, age_max: ageMax, radius_km: radius, interests }
+  }
+
+  /**
+   * Загрузить сохранённые фильтры ленты пользователя.
+   *
+   * @param uid id пользователя, null — без ключа (гость)
+   * @returns сохранённые фильтры либо null
+   */
+  function loadSavedFilters(uid: number | undefined | null): SwipeFilters | null {
+    if (typeof window === 'undefined') return null
+    try {
+      const raw = window.localStorage.getItem(`ulove:swipe-filters:${uid ?? 'anon'}`)
+      if (!raw) return null
+      return sanitizeSavedFilters(JSON.parse(raw))
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * Запомнить фильтры ленты пользователя, чтобы выбор «Все/Парни»
+   * переживал перезагрузку и переходы между табами.
+   *
+   * @param uid id пользователя, null — без ключа (гость)
+   * @param value текущие фильтры
+   * @returns void
+   */
+  function persistFilters(uid: number | undefined | null, value: SwipeFilters): void {
+    if (typeof window === 'undefined') return
+    try {
+      window.localStorage.setItem(`ulove:swipe-filters:${uid ?? 'anon'}`, JSON.stringify(value))
+    } catch {
+      // Хранилище недоступно (приватный режим/переполнение) — не критично.
+    }
+  }
+
+  const savedFilters = loadSavedFilters(authUser.value?.id)
+  const filters = ref<SwipeFilters>(
+    savedFilters ?? {
+      goal: null,
+      gender: defaultGender(),
+      age_min: null,
+      age_max: null,
+      radius_km: null,
+      interests: [],
+    },
+  )
+
+  // Автосохранение при любом изменении фильтров (модалка, сброс, переключение).
+  watch(
+    filters,
+    (value) => persistFilters(authUser.value?.id, value),
+    { deep: true },
+  )
 
   /**
    * Приватность дейтинга: строго как в профиле (база — источник правды).

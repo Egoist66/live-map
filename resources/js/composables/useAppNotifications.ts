@@ -873,7 +873,7 @@ function handleNotification(e: any) {
     return
   }
   if (data.review && String(n.type || '').startsWith('review.')) {
-    handleReviewInbox(String(n.type), data.review)
+    handleReviewInbox(String(n.type), data.review, (data as { reason?: string | null }).reason)
     return
   }
   if (data.cooperation) {
@@ -993,14 +993,18 @@ function isAdminNow(): boolean {
  * Тост из inbox-строки отзывов ULove: единый вход для сокета,
  * поллера и ручногоDidAppear уведомления.
  *
- * Два типа строки:
+ * Три типа строки:
  * - review.created — персоналу: новый отзыв ждёт решения;
- * - review.moderated — автору отзыва: одобрен/отклонён.
+ * - review.moderated — автору отзыва: одобрен/отклонён;
+ * - review.deleted — автору отзыва: удалён модератором с
+ *   объяснением (нижестоящая модалка с причиной открывается
+ *   в useReviewDeletedAlert по тому же событию).
  *
  * @param type тип inbox-строки
  * @param review пейлоад отзыва (id, status, rating, author_name, target_name)
+ * @param reason объяснение модератора (только для review.deleted)
  */
-function handleReviewInbox(type: string, review: any) {
+function handleReviewInbox(type: string, review: any, reason?: string | null) {
   if (!review?.id) return
   if (type === 'review.created') {
     handleReviewPending({ review })
@@ -1008,6 +1012,10 @@ function handleReviewInbox(type: string, review: any) {
   }
   if (type === 'review.moderated') {
     handleReviewVerdict({ review })
+    return
+  }
+  if (type === 'review.deleted') {
+    handleReviewDeleted({ review, reason })
   }
 }
 
@@ -1046,6 +1054,28 @@ function handleReviewVerdict(e: any) {
     icon: approved ? 'pi pi-star-fill' : 'pi pi-star',
     title: approved ? '⭐ Твой отзыв одобрен' : '⭐ Твой отзыв отклонён',
     body: approved ? `Оценка ${r.rating ?? '?'} из 5 уже видна в профиле получателя` : 'Отзыв не прошёл модерацию — он опубликован не будет'.slice(0, 90),
+    avatar: null,
+    link: '/profile',
+    createdAt: Date.now(),
+  })
+}
+
+/**
+ * Автору отзыва: модератор удалил твой отзыв — тост с причиной.
+ *
+ * Полноценное объяснение открывает модалка useReviewDeletedAlert
+ * по тому же событию; тост — дублирующий вход в колокольчике.
+ */
+function handleReviewDeleted(e: any) {
+  const r = e?.review
+  if (isDuplicateEvent(`review-deleted-${r.id}`)) return
+  const reason = String(e?.reason || 'Объяснение от модерации').slice(0, 90)
+  push({
+    id: `review-deleted-${r.id}-${Date.now()}`,
+    type: 'match',
+    icon: 'pi pi-star',
+    title: '⭐ Твой отзыв удалён',
+    body: `Модератор удалил отзыв: ${reason}`,
     avatar: null,
     link: '/profile',
     createdAt: Date.now(),

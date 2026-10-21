@@ -178,4 +178,35 @@ class DatingReviewController extends Controller
 
         return response()->json(['ok' => true, 'deleted' => $deleted]);
     }
+
+    /**
+     * Удалить ЧУЖОЙ отзыв по id. Только персонал (админы и модераторы).
+     *
+     * Объяснение обязательно: автору уходит уведомление review.deleted
+     * (сокет + polling-зеркало + колокольчик) с текстом причины и
+     * письмо на подтверждённую почту. Пустое «удалено» не допустимо —
+     * оно воспринимается как произвол.
+     *
+     * @param \Illuminate\Http\Request $request запрос с полем reason
+     * @param \App\Models\DatingReview $review удаляемый отзыв (route-binding)
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function destroyById(Request $request, DatingReview $review): JsonResponse
+    {
+        $me = $request->user();
+
+        abort_unless($me->canModerate(), 403, 'Удалять чужие отзывы может только персонал');
+
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'min:5', 'max:500'],
+        ]);
+
+        $deleted = $this->reviews->deleteByModerator($review, $me, trim((string) $data['reason']));
+
+        if (! $deleted) {
+            return response()->json(['message' => 'Отзыв уже удалён'], 404);
+        }
+
+        return response()->json(['ok' => true]);
+    }
 }

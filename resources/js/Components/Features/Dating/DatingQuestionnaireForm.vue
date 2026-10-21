@@ -219,6 +219,6 @@ async function onGenerate(): Promise<void> {
     <div class="text-[11px] text-stone-400 dark:text-zinc-500">Свои тексты проверяются: политика, 18+, мат и т.д. запрещены.</div>
     <div v-if="q.serverError.value" class="text-sm text-rose-600 dark:text-rose-300">{{ q.serverError.value }}</div>
 
-    <Button label="Сохранить анкету" icon="pi pi-check" rounded class="w-full" :loading="q.saving.value" @click="onSave()" />
+    <Button label="Сохранить анкету" icon="pi pi-check" rounded class="w-full !border-0 !bg-[#F6627B] !text-white shadow-lg shadow-rose-500/30 hover:!bg-[#e2556c] active:!bg-[#d84b61]" :loading="q.saving.value" @click="onSave()" />
   </div>
 </template>

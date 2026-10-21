@@ -253,6 +253,17 @@ export const datingApi = {
     return data as { ok: boolean; deleted: boolean }
   },
   /**
+   * Удалить чужой отзыв: только персонал (админ/модератор) и всегда
+   * с обязательным объяснением — оно уходит автору уведомлением и
+   * письмом на почту.
+   * @param reviewId id удаляемого отзыва
+   * @param reason объяснение от модератора (5–500 символов)
+   */
+  async deleteReviewById(reviewId: number, reason: string) {
+    const { data } = await api.delete(`/api/dating/reviews/${reviewId}`, { data: { reason } })
+    return data as { ok: boolean }
+  },
+  /**
    * Кто меня оценил: сводка, раскладка по звёздам и авторы отзывов.
    * Без Premium — locked:true и пустой список (имена скрыты).
    * @param page страница списка

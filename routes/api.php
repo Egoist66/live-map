@@ -283,6 +283,7 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:300,1'])->group(function
     Route::get('/dating/reviews', [\App\Http\Controllers\DatingReviewController::class, 'index']);
     Route::post('/dating/reviews', [\App\Http\Controllers\DatingReviewController::class, 'store'])->middleware('throttle:social-write');
     Route::delete('/dating/reviews', [\App\Http\Controllers\DatingReviewController::class, 'destroy'])->middleware('throttle:social-write');
+    Route::delete('/dating/reviews/{review}', [\App\Http\Controllers\DatingReviewController::class, 'destroyById'])->middleware('throttle:social-write');
     Route::get('/dating/my-raters', [\App\Http\Controllers\DatingReviewController::class, 'raters']);
     Route::get('/trust/me', [\App\Http\Controllers\TrustController::class, 'me']);
     Route::post('/video/match/call', [\App\Http\Controllers\VideoController::class, 'callMatch'])->middleware('throttle:social-write');

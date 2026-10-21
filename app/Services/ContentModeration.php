@@ -202,7 +202,7 @@ class ContentModeration
         }
 
         try {
-            $cleaned = Blasp::in(...self::BLASP_LANGUAGES)->check($text)->clean();
+            $cleaned = self::maskedThroughCache($text);
         } catch (\Throwable) {
             return $text;
         }
@@ -218,9 +218,32 @@ class ContentModeration
         try {
             $canonical = self::canonicalize(mb_strtolower(trim($text)), 'phonA');
 
-            return Blasp::in(...self::BLASP_LANGUAGES)->check($canonical)->clean();
+            return self::maskedThroughCache($canonical);
         } catch (\Throwable) {
             return $text;
+        }
+    }
+
+    /**
+     * Прогнать текст через Blasp clean() со стойкостью к сбою кеша.
+     *
+     * Первый заход — как обычно (с результат-кешем); при броске из-за
+     * недоступного хранилища кеша повторяем без кеша: маскировка мата
+     * в превью не должна молча превращаться в показ нецензурщины.
+     *
+     * @param  string  $text  проверяемый/маскируемый текст
+     * @return string cleaned-текст Blasp
+     */
+    private static function maskedThroughCache(string $text): string
+    {
+        try {
+            return Blasp::in(...self::BLASP_LANGUAGES)->check($text)->clean();
+        } catch (\Throwable $error) {
+            Log::warning('blasp mask failed, retry without cache: '.$error->getMessage());
+
+            config(['blasp.cache.enabled' => false]);
+
+            return Blasp::in(...self::BLASP_LANGUAGES)->check($text)->clean();
         }
     }
 
@@ -323,6 +346,9 @@ class ContentModeration
      *
      * Fail-open: при недоступности библиотеки возвращаем null и пишем
      * в лог — лучше пропустить, чем уронить публикацию всего сайта.
+     * Перед этим есть второй заход: если упал кеш Blasp (умерший
+     * redis/база кеша), повторяем без кеша — мат-фильтр не должен
+     * молча отключаться из-за хранилища результат-кеша.
      *
      * @param  string  $text  текст для проверки (оригинал или канонизированный)
      * @return array{word: string}|null найденное слово
@@ -336,9 +362,16 @@ class ContentModeration
         try {
             $result = Blasp::in(...self::BLASP_LANGUAGES)->check($text);
         } catch (\Throwable $error) {
-            Log::warning('blasp check failed: '.$error->getMessage());
+            Log::warning('blasp check failed, retry without cache: '.$error->getMessage());
 
-            return null;
+            try {
+                config(['blasp.cache.enabled' => false]);
+                $result = Blasp::in(...self::BLASP_LANGUAGES)->check($text);
+            } catch (\Throwable $retryError) {
+                Log::warning('blasp check failed: '.$retryError->getMessage());
+
+                return null;
+            }
         }
 
         if (! $result->isOffensive()) {

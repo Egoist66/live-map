@@ -1552,7 +1552,7 @@ class DatingService
     {
         $saved = $me->dating_gender_pref;
 
-        if (in_array($saved, ['male', 'female'], true)) {
+        if ($saved === 'male' || $saved === 'female' || $saved === 'all') {
             return $saved;
         }
 

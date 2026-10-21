@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { Link } from '@inertiajs/vue3'
+import { Link, usePage } from '@inertiajs/vue3'
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
+import Dialog from 'primevue/dialog'
 import Message from 'primevue/message'
 import Tag from 'primevue/tag'
 import Textarea from 'primevue/textarea'
@@ -10,6 +11,7 @@ import { useToast } from 'primevue/usetoast'
 import { useDatingReviews, REVIEW_BODY_MIN, REVIEW_BODY_MAX } from '@/composables/useDatingReviews'
 import { useMyRaters } from '@/composables/useMyRaters'
 import { useProfileUrl } from '@/composables/useProfileUrl'
+import type { DatingReviewItem } from '@/services/dating.api'
 import ModeratedContent from '@/Components/Features/Moderation/ModeratedContent.vue'
 import DatingRatingStars from '@/Components/Features/Dating/DatingRatingStars.vue'
 import RatersModal from '@/Components/Features/Dating/RatersModal.vue'
@@ -83,6 +85,57 @@ const toast = (() => {
 })()
 
 const { userProfileUrl } = useProfileUrl()
+
+/** Id текущего пользователя: персоналу чужой отзыв тоже чужой — кнопка удаления. */
+const meId = computed(() =>
+  Number(
+    (usePage().props as unknown as { auth?: { user?: { id?: number } | null } }).auth?.user?.id ?? 0,
+  ),
+)
+
+/** Модалка удаления чужого отзыва: карточка, причина для автора, busy. */
+const deleteTarget = ref<DatingReviewItem | null>(null)
+const deleteReason = ref('')
+
+const deleteReasonLength = computed(() => deleteReason.value.trim().length)
+
+/** Объяснение обязательно: бэк требует 5–500 символов — валидируем до запроса. */
+const canConfirmDelete = computed(
+  () => deleteReasonLength.value >= 5 && deleteReasonLength.value <= 500 && reviews.removingId.value === null,
+)
+
+/**
+ * Открыть модалку удаления чужого отзыва: подставляем пустую причину.
+ *
+ * @param item карточка отзыва из списка
+ */
+function askDelete(item: DatingReviewItem): void {
+  deleteTarget.value = item
+  deleteReason.value = ''
+}
+
+/** Закрыть модалку без удаления. */
+function cancelDelete(): void {
+  deleteTarget.value = null
+  deleteReason.value = ''
+}
+
+/** Подтверждение: удаляем чужой отзыв, автор получит объяснение и письмо. */
+async function confirmDelete(): Promise<void> {
+  const target = deleteTarget.value
+
+  if (!target || !canConfirmDelete.value) {
+    return
+  }
+
+  try {
+    await reviews.removeForeign(target.id, deleteReason.value.trim())
+    cancelDelete()
+    toast?.add({ severity: 'success', summary: 'Отзыв удалён', detail: 'Автор получил объяснение уведомлением и на почту', life: 3500 })
+  } catch {
+    toast?.add({ severity: 'error', summary: 'Не удалилось', detail: reviews.error.value ?? 'Попробуй ещё раз', life: 3000 })
+  }
+}
 
 /** Выбранные звёзды формы: стартуем с моей оценки. */
 const picked = ref(0)
@@ -228,6 +281,18 @@ function reviewDate(iso: string | null): string {
               <span class="inline-flex items-center gap-0.5 text-amber-400 shrink-0" aria-hidden="true">
                 <i v-for="i in 5" :key="i" :class="['text-[10px]', i <= item.rating ? 'pi pi-star-fill' : 'pi pi-star']" />
               </span>
+              <Button
+                v-if="reviews.isStaff.value && item.author && item.author.id !== meId"
+                icon="pi pi-trash"
+                text
+                severity="danger"
+                size="small"
+                class="!w-7 !h-7 !p-0 shrink-0"
+                aria-label="Удалить отзыв модератором"
+                title="Удалить отзыв (с объяснением автору)"
+                :loading="reviews.removingId.value === item.id"
+                @click="askDelete(item)"
+              />
               <span class="text-[11px] text-stone-400 dark:text-zinc-500 shrink-0">{{ reviewDate(item.created_at) }}</span>
             </div>
             <div v-if="item.body" class="mt-1.5 text-[13px] leading-snug text-stone-600 dark:text-zinc-300">
@@ -326,4 +391,51 @@ function reviewDate(iso: string | null): string {
   </div>
 
   <RatersModal v-if="isOwn" />
+
+  <Dialog
+    :visible="deleteTarget !== null"
+    modal
+    header="Удалить чужой отзыв?"
+    :style="{ width: '440px', maxWidth: '94vw' }"
+    :pt="{
+      root: { class: '!rounded-[24px] !border-stone-200 dark:!border-white/10 !bg-white dark:!bg-zinc-900 overflow-hidden' },
+      header: { class: '!px-5 !pt-5 !pb-0 !font-black !text-[17px] !tracking-tight !text-stone-900 dark:!text-white' },
+      content: { class: '!px-5 !py-4 !text-sm !text-stone-600 dark:!text-zinc-300' },
+      footer: { class: '!px-5 !pb-5 !pt-0 !flex !gap-2' },
+    }"
+    @update:visible="(value: boolean) => { if (!value) cancelDelete() }"
+  >
+    <p class="mt-0 text-sm leading-relaxed">
+      Отзыв
+      <template v-if="deleteTarget?.author?.name"> от <b class="text-stone-800 dark:text-zinc-100">{{ deleteTarget.author.name }}</b></template>
+      на {{ deleteTarget?.rating }} ★ будет удалён безвозвратно, а автор получит твоё объяснение уведомлением и письмом на почту.
+    </p>
+
+    <Textarea
+      v-model="deleteReason"
+      rows="3"
+      auto-resize
+      :maxlength="500"
+      placeholder="Обязательно: объясни автору, что не так с отзывом (от 5 символов)"
+      aria-label="Объяснение автору отзыва"
+      class="w-full mt-3 !rounded-xl !text-sm"
+    />
+    <span :class="['mt-1 block text-[11px]', deleteReasonLength < 5 ? 'text-amber-600 dark:text-amber-400' : 'text-stone-400 dark:text-zinc-500']">
+      {{ deleteReasonLength < 5 ? `Ещё ${5 - deleteReasonLength} символа до минимума` : `Символов: ${deleteReasonLength}/500` }}
+    </span>
+
+    <template #footer>
+      <Button label="Отмена" text size="small" class="!rounded-full" @click="cancelDelete()" />
+      <Button
+        label="Удалить отзыв"
+        size="small"
+        rounded
+        severity="danger"
+        :disabled="!canConfirmDelete"
+        :loading="reviews.removingId.value !== null"
+        class="!border-0 disabled:!opacity-50"
+        @click="confirmDelete()"
+      />
+    </template>
+  </Dialog>
 </template>
