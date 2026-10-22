@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
 import ApplicationLogo from '@/Components/Brand/ApplicationLogo.vue'
-import SwipesIcon from '@/Components/Brand/SwipesIcon.vue'
 import Avatar from 'primevue/avatar'
 import { computed } from 'vue'
 import { useViewportBreakpoints } from '@/composables/useViewportBreakpoints'
@@ -43,9 +42,8 @@ const showTgClose = computed(() => isTelegram.value && isDesktopTelegram.value)
         v-if="!isBusiness && showLove"
         :href="route('swipes')"
         title="ULove"
-        :class="['px-4 py-1.5 rounded-full text-[13px] font-semibold transition inline-flex items-center gap-1.5', topNavPillClass(route().current('swipes'))]"
+        :class="['px-4 py-1.5 rounded-full text-[13px] font-semibold transition inline-flex items-center', topNavPillClass(route().current('swipes'))]"
       >
-        <SwipesIcon :size="18" :active="!!route().current('swipes')" class="shrink-0" />
         <span
           :class="[
             'text-[13px] font-black tracking-tight leading-none',
