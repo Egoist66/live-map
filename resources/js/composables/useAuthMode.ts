@@ -42,11 +42,15 @@ export function useAuthMode() {
  * @example tabClass(true)
  */
 export function tabClass(active: boolean): string {
-  const base = 'w-full !rounded-full !border-0 !text-sm !font-semibold !py-3 sm:!py-3.5 transition-all duration-200'
+  // `!bg-transparent` живёт в базе, а не только в неактивном варианте:
+  // иначе при переключении у бывшего активного таба transition-all
+  // анимировал background-color от тёмного primary PrimeVue к прозрачному
+  // и на светлой теме на мгновение мигал чёрный прямоугольник.
+  const base = 'w-full !rounded-full !border-0 !bg-transparent !text-sm !font-semibold !py-3 sm:!py-3.5 transition-all duration-200'
 
   if (active) {
     return `${base} !bg-gradient-to-r !from-rose-500 !via-fuchsia-500 !to-orange-400 !text-white shadow-lg shadow-rose-500/30`
   }
 
-  return `${base} !bg-transparent !text-stone-500 dark:!text-zinc-400 hover:!bg-white/70 dark:hover:!bg-white/10 hover:!text-ink-900 dark:hover:!text-white`
+  return `${base} !text-stone-500 dark:!text-zinc-400 hover:!bg-white/70 dark:hover:!bg-white/10 hover:!text-ink-900 dark:hover:!text-white`
 }

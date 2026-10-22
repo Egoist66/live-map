@@ -8,10 +8,12 @@ import { usePage } from '@inertiajs/vue3'
  * auth-флоу (`Auth/*`: вход, регистрация, восстановление пароля)
  * футер и левый сайдбар скрыты на всех устройствах — только
  * центрированная карточка на тематическом фоне `AuthBackdrop`.
+ * На FAQ левый промо-сайдбар тоже не нужен: страница читается
+ * на всю ширину, без отвлекающей колонки.
  *
  * @returns флаги гостевого лейаута
  * @example
- * const { isFaq, isAuthPage, shouldShowFooter } = useGuestLayout()
+ * const { isFaq, isAuthPage, shouldShowFooter, showSidebar } = useGuestLayout()
  */
 export function useGuestLayout() {
   const page = usePage()
@@ -26,5 +28,8 @@ export function useGuestLayout() {
 
   const shouldShowFooter = computed(() => !isAuthPage.value)
 
-  return { isFaq, isAuthPage, shouldShowFooter }
+  /** Левый промо-сайдбар: только не на auth-страницах и не в FAQ. */
+  const showSidebar = computed(() => !isAuthPage.value && !isFaq.value)
+
+  return { isFaq, isAuthPage, shouldShowFooter, showSidebar }
 }

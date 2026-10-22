@@ -9,27 +9,20 @@ import { useAuthBackdrop } from '@/composables/useAuthBackdrop'
 import PwaInstallBanner from '@/Components/Features/Pwa/PwaInstallBanner.vue'
 import PwaUpdateBanner from '@/Components/Features/Pwa/PwaUpdateBanner.vue'
 import NetworkStatusToast from '@/Components/Features/Feedback/NetworkStatusToast.vue'
-import { computed } from 'vue'
 import { useGuestLayout } from '@/composables/useGuestLayout'
 import { useClientReady } from '@/composables/useClientReady'
 import { useGlobalDialogDismiss } from '@/composables/useGlobalDialogDismiss'
 
 useGlobalDialogDismiss()
 
-const { isFaq, isAuthPage, shouldShowFooter } = useGuestLayout()
+const { isFaq, isAuthPage, shouldShowFooter, showSidebar } = useGuestLayout()
 const { isClientReady } = useClientReady()
 const backdrop = useAuthBackdrop()
-
-/**
- * Вход и регистрация — всегда в стиле ULove: центрированная
- * стеклянная карточка на фоне с сердцами, без левого сайдбара.
- */
-const hideSidebar = computed(() => isAuthPage.value)
 </script>
 
 <template>
   <div class="min-h-screen min-h-dvh flex w-full overflow-x-clip bg-surface dark:bg-[#0F121F]">
-    <div v-if="!hideSidebar" class="hidden lg:flex w-[360px] xl:w-[400px] shrink-0 bg-ink-900 text-white relative overflow-hidden">
+    <div v-if="showSidebar" class="hidden lg:flex w-[360px] xl:w-[400px] shrink-0 bg-ink-900 text-white relative overflow-hidden">
       <div class="absolute inset-0">
         <div class="absolute inset-0 opacity-[0.04]" style="background-image: radial-gradient(circle at 1px 1px, white 1px, transparent 0); background-size: 24px 24px"></div>
         <div class="absolute -top-24 -right-24 w-[520px] h-[520px] bg-gradient-to-br from-brand-500 via-violet-600 to-accent-teal rounded-full blur-[90px] opacity-25"></div>
