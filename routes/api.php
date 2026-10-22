@@ -421,6 +421,12 @@ Route::middleware(['web', 'auth:web,sanctum', 'admin:moderator', 'throttle:300,1
     Route::put('/admin/seo/pages', [\App\Http\Controllers\AdminSeoController::class, 'updatePages']);
     Route::put('/admin/seo/robots', [\App\Http\Controllers\AdminSeoController::class, 'updateRobots']);
     Route::put('/admin/seo/sitemap', [\App\Http\Controllers\AdminSeoController::class, 'updateSitemap']);
+    Route::middleware('admin:admin')->group(function () {
+        Route::get('/admin/branding', [\App\Http\Controllers\AdminBrandingController::class, 'show']);
+        Route::post('/admin/branding/icon', [\App\Http\Controllers\AdminBrandingController::class, 'uploadAppIcon']);
+        Route::post('/admin/branding/favicon', [\App\Http\Controllers\AdminBrandingController::class, 'uploadFavicon']);
+        Route::delete('/admin/branding/{kind}', [\App\Http\Controllers\AdminBrandingController::class, 'destroy'])->whereIn('kind', ['app_icon', 'favicon']);
+    });
     Route::get('/admin/reference', [\App\Http\Controllers\AdminReferencePageController::class, 'index']);
     Route::post('/admin/reference', [\App\Http\Controllers\AdminReferencePageController::class, 'store']);
     Route::patch('/admin/reference/{referencePage}', [\App\Http\Controllers\AdminReferencePageController::class, 'update']);

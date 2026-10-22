@@ -92,7 +92,6 @@ function onCountryChange(v: string): void {
         <div class="min-w-0">
           <label class="auth-label">Страна проживания</label>
           <Select v-model="f.country.value" :options="[...RESIDENCE_COUNTRIES]" optionLabel="name" optionValue="name" placeholder="Беларусь" checkmark editable fluid class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.country" @update:model-value="onCountryChange" />
-          <small v-if="reg.isMapEnabled.value" class="text-stone-500 dark:text-zinc-400">Пины можно создавать только в своей стране</small>
           <small v-if="f.countryWarning.value" class="block text-amber-600 dark:text-amber-400"><i class="pi pi-exclamation-triangle mr-1" />{{ f.countryWarning.value }}</small>
           <small class="auth-err">{{ f.errors.value.country }}</small>
         </div>
@@ -126,7 +125,6 @@ function onCountryChange(v: string): void {
           <span class="w-7 h-7 rounded-full bg-ink-900 dark:bg-white text-white dark:text-ink-900 grid place-items-center shrink-0 text-[11px]">◉</span>
           <div class="min-w-0 flex-1">
             <div class="text-xs font-semibold truncate dark:text-zinc-100">{{ f.addrLoading.value ? reg.addressLoadingText.value : f.values.home_address }}</div>
-            <div v-if="f.values.home_lat && reg.isMapEnabled.value" class="text-[11px] text-stone-400 dark:text-zinc-400 font-mono">{{ f.values.home_lat }}, {{ f.values.home_lng }}</div>
           </div>
           <button v-if="f.values.home_lat && !f.addrLoading.value" type="button" class="shrink-0 w-7 h-7 rounded-full hover:bg-stone-100 dark:hover:bg-white/10 grid place-items-center text-stone-400 dark:text-zinc-400" title="Убрать точку" @click="f.clearLocation"><i class="pi pi-times text-[11px]"></i></button>
         </div>

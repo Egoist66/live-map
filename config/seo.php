@@ -1,12 +1,12 @@
 <?php
 
 return [
-    'site_name' => env('APP_NAME', 'UPin'),
-    'title_suffix' => ' — UPin',
+    'site_name' => env('APP_NAME', 'ULove'),
+    'title_suffix' => ' — ULove',
     'default_title' => 'ULove — знакомства рядом',
     'default_description' => 'ULove — знакомства рядом: свайпы, мэтч открывает чат. Листай людей рядом, лайкай в один тап, переписывайся только по взаимности. Строго 18+.',
     'keywords' => ['ULove', 'знакомства рядом', 'свайпы', 'мэтч', 'дейтинг'],
-    'author' => 'UPin',
+    'author' => 'ULove',
     'support_email' => env('MAIL_FROM_ADDRESS', 'support@ulove.app'),
     'locale' => 'ru_RU',
     'og_type' => 'website',

@@ -11,5 +11,5 @@ Disallow: /login
 Disallow: /register
 Crawl-delay: 1
 
-Sitemap: https://upin.laravel.cloud/sitemap.xml
-Host: https://upin.laravel.cloud
+Sitemap: https://ulove.laravel.cloud/sitemap.xml
+Host: https://ulove.laravel.cloud

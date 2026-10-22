@@ -79,7 +79,7 @@ export function usePlanSwitch() {
    * (карточка добавляется лишь при role=organization / business-аккаунте).
    * Названия и цены — из каталога бэка (config/plans.php), не хардкод.
    *
-   * @param showMap включён ли модуль карты UPin
+   * @param showMap включён ли модуль карты ULove
    * @returns мета тарифов для сетки выбора
    */
   function planCards(showMap: boolean): PlanCardMeta[] {

@@ -48,7 +48,7 @@ type SharedSeoGlobal = {
  * @param input захардкоженные мета страницы (фолбэк, если админка пуста)
  * @returns title/description/canonical/robots/head для `<Head>`.
  * @example
- * const seo = useSeo({ title: 'FAQ — UPin', description: '…' })
+ * const seo = useSeo({ title: 'FAQ — ULove', description: '…' })
  */
 export function useSeo(input: SeoInput) {
   const sharedPage = computed<SharedSeoPage | null>(() => {

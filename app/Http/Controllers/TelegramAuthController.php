@@ -517,7 +517,7 @@ class TelegramAuthController extends Controller
      * подписью initData, гнать его за подтверждением письма — лишний friction.
      *
      * Модули: только `ulove`. Mini App запущен из @U1ove_bot (знакомства),
-     * карта UPin и остальные разделы человек довключит сам через
+     * карта ULove и остальные разделы человек довключит сам через
      * Настройки → Приложение → «Разделы приложения».
      *
      * @param array<string, mixed> $tgUser объект user из initData

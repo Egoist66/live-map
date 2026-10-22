@@ -38,7 +38,7 @@
         <link rel="canonical" href="{{ $seoHead['canonical'] ?? url()->current() }}">
         @endif
 
-        <link rel="manifest" href="/manifest.webmanifest">
+        <link rel="manifest" href="/site.webmanifest?v={{ $branding['version'] ?? '2' }}">
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="application-name" content="{{ $seoHead['site_name'] ?? config('seo.site_name') }}">
         <meta name="apple-mobile-web-app-capable" content="yes">
@@ -68,9 +68,15 @@
         @endif
         @endif
         <title inertia>{{ $seoHead['title'] ?? config('seo.default_title') }}</title>
-        <link rel="icon" href="/favicon.ico" sizes="any">
-        <link rel="icon" href="/pwa-icon.svg" type="image/svg+xml">
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+        <link rel="icon" href="{{ $branding['favicon']['url'] ?? '/favicon.ico?v=2' }}" sizes="any">
+        @if(!($branding['favicon']['is_custom'] ?? false))
+        <link rel="icon" href="/pwa-icon.svg?v=2" type="image/svg+xml">
+        @endif
+        @if($branding['app_icon']['is_custom'] ?? false)
+        <link rel="apple-touch-icon" href="{{ $branding['app_icon']['url'] }}">
+        @else
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2">
+        @endif
         {{-- `crossorigin` обязателен для preconnect шрифтов, иначе браузер
               открывает второе соединение (предупреждение Lighthouse
               `network-dependency-tree-insight`). Прелоад 700/800 — это
@@ -240,7 +246,7 @@
             } catch (e) {}
         </script>
         <script nonce="{{ $cspNonce ?? '' }}">
-            (function(){ try{ var root=document.documentElement; var s=null, a=false; try{ s=localStorage.getItem('theme'); a=localStorage.getItem('amoled')==='1'; }catch(e){} var m=window.matchMedia('(prefers-color-scheme: dark)').matches; var isTg=root.classList.contains('tg-app'); var tgDark=root.classList.contains('tg-dark'); var d=isTg ? tgDark : (s ? s==='dark' : m); d=d||a; if(d) root.classList.add('dark'); else root.classList.remove('dark'); if(a) root.classList.add('amoled'); root.style.colorScheme = d?'dark':'light'; var tgBg=root.classList.contains('tg-app') ? root.style.getPropertyValue('--tg-theme-bg-color').trim() : ''; var bg=tgBg || (a?'#000000':(d?'#0F121F':'#ffffff')); window.__upinThemeBg = bg; try{var tc=document.querySelector('meta[name="theme-color"]:not([media])');if(tc)tc.setAttribute('content',bg);}catch(e){} /* Держим тёмный фон, пока жив #pwa-boot: проверка getElementById здесь бессмысленна (head парсится раньше body-разметки, узел ещё не существует), а светлый <html> под фейдом выцветает розовый логотип в серый. Целевой фон вернёт __upinHideSplash ровно в момент удаления узла. Энергосбережение (amoled) даёт чёрный экран сразу, независимо от темы. */ root.style.backgroundColor = a ? '#000000' : '#0B101B'; }catch(e){} })();
+            (function(){ try{ var root=document.documentElement; var s=null, a=false; try{ s=localStorage.getItem('theme'); a=localStorage.getItem('amoled')==='1'; }catch(e){} var m=window.matchMedia('(prefers-color-scheme: dark)').matches; var isTg=root.classList.contains('tg-app'); var tgDark=root.classList.contains('tg-dark'); var d=isTg ? tgDark : (s ? s==='dark' : m); d=d||a; if(d) root.classList.add('dark'); else root.classList.remove('dark'); if(a) root.classList.add('amoled'); root.style.colorScheme = d?'dark':'light'; var tgBg=root.classList.contains('tg-app') ? root.style.getPropertyValue('--tg-theme-bg-color').trim() : ''; var bg=tgBg || (a?'#000000':(d?'#0F121F':'#ffffff')); window.__upinThemeBg = bg;             try{var tc=document.querySelector('meta[name="theme-color"]:not([media])');if(tc)tc.setAttribute('content',bg);}catch(e){} /* Фон сплэша — ровный розовый бренда (#FD267D) с первого кадра: системный сплэш PWA по манифесту имеет тот же цвет, поэтому переход «системный сплэш → boot → приложение» бесшовный. Целевой фон вернёт __upinHideSplash в момент удаления узла. */ root.style.backgroundColor = '#FD267D'; }catch(e){} })();
         </script>
         {{-- Сторож загрузки entry: после деплоя HTML может ссылаться на уже
               удалённый `/build/assets/app-*.js` (протухший SW/HTTP-кэш, гонка
@@ -369,12 +375,14 @@
                 } catch (e) {}
             })();
         </script>
-        {{-- Прелоадер: полноэкранный boot-экран в стиле Tinder
-              (тёплая тьма, светящаяся иконка пин+сердце).
+        {{-- Прелоадер: полноэкранный boot-экран ULove — ровный розовый
+              фон (#FD267D, тот же цвет в background_color манифеста),
+              плоский знак с полной детализацией (инлайн-SVG без
+              градиентов и фильтров), wordmark «ULove» и полоса загрузки.
               Верхней линейной полосы здесь нет сознательно: при переходах
               по страницам её рисует Inertia-progress, а на полной
               перезагрузке достаточно сплэша.
-              Системный сплэш PWA (иконка + UPin из манифеста) рисует сам
+              Системный сплэш PWA (иконка + имя из манифеста) рисует сам
               Chrome — цвета манифеста подобраны под этот же фон, чтобы
               переход «системный сплэш → boot → приложение» был бесшовным. --}}
         <style nonce="{{ $cspNonce ?? '' }}">
@@ -384,29 +392,19 @@
             z-index: 9997;
             display: grid;
             place-items: center;
-            /* Фон = background_color манифеста (#0B101B): системный сплэш
-               ОС (тёмный фон + квадратная иконка) бесшовно переходит в наш
-               boot-экран — второго «появления» не видно. Поэтому здесь нет
-               entrance-анимации: карточка рисуется сразу статично. */
-            background:
-              radial-gradient(90% 60% at 50% 0%, rgba(253, 38, 125, .12) 0%, rgba(253, 38, 125, 0) 60%),
-              radial-gradient(70% 50% at 85% 100%, rgba(255, 120, 84, .08) 0%, rgba(255, 120, 84, 0) 60%),
-              #0B101B;
+            /* Фон = background_color манифеста (#FD267D): системный сплэш
+               ОС (розовый фон + квадратная иконка) бесшовно переходит в наш
+               boot-экран — второго «появления» не видно. */
+            background: #FD267D;
             transition: opacity .35s ease, visibility .35s ease;
           }
           #pwa-boot.done {
             opacity: 0;
             visibility: hidden;
           }
-          /* Энергосбережение: boot-экран тоже чёрный, без navy-вспышки. */
+          /* Энергосбережение (amoled): приглушённый плоский розовый. */
           html.amoled #pwa-boot {
-            background:
-              radial-gradient(90% 60% at 50% 0%, rgba(253, 38, 125, .12) 0%, rgba(253, 38, 125, 0) 60%),
-              radial-gradient(70% 50% at 85% 100%, rgba(255, 120, 84, .08) 0%, rgba(255, 120, 84, 0) 60%),
-              #000000;
-          }
-          html.amoled #upin-boot-fallback {
-            background: #000000;
+            background: #B5134F;
           }
           #pwa-boot .boot-card {
             display: flex;
@@ -415,39 +413,25 @@
             text-align: center;
             padding: 24px;
           }
-          #pwa-boot .boot-icon {
+          #pwa-boot .boot-fruit {
             display: block;
-            width: 96px;
-            height: 96px;
-            border-radius: 30px;
-            /* TG WebView (WKWebView/Android) не клипает содержимое <svg>
-               по border-radius: внутренний <rect> вылезает острыми углами.
-               clip-path режет гарантированно, overflow — для остальных,
-               градиент-подложка — чтобы скруглённая форма была видна даже
-               до отрисовки SVG-градиентов. Иконка статична сознательно:
-               бесконечный float на SVG с градиентами даёт repaint-flicker
-               (моргание/серые кадры) в урезанном GPU Mini App. */
-            overflow: hidden;
-            -webkit-clip-path: inset(0 round 30px);
-            clip-path: inset(0 round 30px);
-            background: linear-gradient(135deg, #FD267D 0%, #E936C7 55%, #FF7854 100%);
-            box-shadow: 0 18px 60px -12px rgba(253, 38, 125, .75), 0 0 0 1px rgba(255, 255, 255, .08);
+            width: 150px;
+            height: 150px;
+            object-fit: contain;
+            border-radius: 28px;
           }
-          #pwa-boot .boot-name {
+          #pwa-boot .boot-wordmark {
             margin-top: 18px;
             color: #fff;
-            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-            font-size: 30px;
+            font-family: 'Figtree', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            font-size: 32px;
             font-weight: 800;
-            letter-spacing: -0.03em;
-          }
-          #pwa-boot .boot-name span {
-            font-weight: 300;
-            opacity: .75;
+            letter-spacing: -.02em;
+            line-height: 1;
           }
           #pwa-boot .boot-tag {
-            margin-top: 6px;
-            color: rgba(255, 255, 255, .6);
+            margin-top: 8px;
+            color: rgba(255, 255, 255, .7);
             font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
             font-size: 13px;
             font-weight: 500;
@@ -459,15 +443,15 @@
             height: 4px;
             border-radius: 999px;
             overflow: hidden;
-            background: rgba(255, 255, 255, .12);
+            background: rgba(255, 255, 255, .25);
           }
           #pwa-boot .boot-bar > span {
             display: block;
             height: 100%;
             width: 40%;
             border-radius: inherit;
-            background: linear-gradient(90deg, #FD267D, #E936C7, #FF7854);
-            box-shadow: 0 0 12px rgba(253, 38, 125, .9);
+            background: #FFFFFF;
+            box-shadow: 0 0 10px rgba(255, 255, 255, .8);
             will-change: transform;
             transform: translateZ(0);
             animation: boot-slide 1.1s ease-in-out infinite;
@@ -491,7 +475,7 @@
             display: grid;
             place-items: center;
             padding: 24px;
-            background: #0B101B;
+            background: #B5134F;
             text-align: center;
           }
           #upin-boot-fallback .upin-boot-fallback-title {
@@ -514,8 +498,8 @@
             border: 0;
             border-radius: 999px;
             padding: 13px 34px;
-            background: linear-gradient(90deg, #FD267D, #E936C7, #FF7854);
-            color: #fff;
+            background: #FFFFFF;
+            color: #C9196B;
             font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
             font-size: 15px;
             font-weight: 700;
@@ -544,7 +528,7 @@
             "@@type": "Organization",
             "name": "{{ $seoHead['site_name'] ?? config('seo.site_name') }}",
             "url": "{{ config('app.url') }}",
-            "logo": "{{ url('/favicon.ico') }}"
+            "logo": "{{ url($branding['app_icon']['url'] ?? '/pwa-192x192.png?v=2') }}"
         }
         </script>
         @endif
@@ -576,27 +560,37 @@
         @if(!$isNativeClient && !empty(($seoIntegrations ?? [])['scripts_enabled']) && !empty(($seoIntegrations ?? [])['body_start_scripts']))
         {!! ($seoIntegrations ?? [])['body_start_scripts'] !!}
         @endif
-        <div id="pwa-boot" role="status" aria-label="UPin загружается">
+        <div id="pwa-boot" role="status" aria-label="Приложение загружается">
           <div class="boot-card">
-            <svg class="boot-icon" viewBox="0 0 512 512" aria-hidden="true">
-              <defs>
-                <linearGradient id="boot-bg" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0" stop-color="#FD267D" />
-                  <stop offset="0.55" stop-color="#E936C7" />
-                  <stop offset="1" stop-color="#FF7854" />
-                </linearGradient>
-                <radialGradient id="boot-glow" cx="0.5" cy="0.35" r="0.8">
-                  <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.35" />
-                  <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0" />
-                </radialGradient>
-              </defs>
-              <rect width="512" height="512" rx="150" fill="url(#boot-bg)" />
-              <rect width="512" height="512" rx="150" fill="url(#boot-glow)" />
-              <path d="M256 108c-70 0-122 52-122 120 0 92 112 176 112 176s112-84 112-176c0-68-52-120-102-120z" fill="#fff" />
-              <path d="M247 272c-26-16-42-32-42-50 0-14 11-24 24-24 9 0 15 4 18 10 3-6 9-10 18-10 13 0 24 10 24 24 0 18-16 34-42 50z" fill="#FD267D" />
+            {{-- Кастомная иконка из админки или знак бренда по умолчанию:
+                 SVG рисуется с первого кадра без сети. --}}
+            @if($branding['app_icon']['is_custom'] ?? false)
+            <img class="boot-fruit" src="{{ $branding['app_icon']['url'] }}" alt="" aria-hidden="true" decoding="async">
+            @else
+            <svg class="boot-fruit" viewBox="0 0 512 512" aria-hidden="true" focusable="false">
+              <ellipse cx="262" cy="444" rx="118" ry="24" fill="#B5134F" opacity=".3"/>
+              <path d="M256 138 C176 132 106 196 108 286 C110 380 182 436 260 434 C342 432 404 372 404 284 C404 196 336 134 256 138 Z" fill="#FFA1C6"/>
+              <path d="M312 150 C400 200 406 330 328 392 C384 322 386 214 312 150 Z" fill="#F77FB0"/>
+              <ellipse cx="190" cy="208" rx="58" ry="40" fill="#FFDCEA"/>
+              <circle cx="168" cy="186" r="16" fill="#FFFFFF" opacity=".85"/>
+              <path d="M300 152 C320 208 318 258 296 312" fill="none" stroke="#C41A6B" stroke-width="14" stroke-linecap="round"/>
+              <g fill="#B5134F" opacity=".18">
+                <circle cx="182" cy="302" r="4"/>
+                <circle cx="204" cy="332" r="3.5"/>
+                <circle cx="232" cy="354" r="3"/>
+                <circle cx="150" cy="322" r="3"/>
+                <circle cx="322" cy="238" r="3.5"/>
+                <circle cx="342" cy="262" r="3"/>
+              </g>
+              <ellipse cx="254" cy="142" rx="26" ry="11" fill="#C41A6B"/>
+              <path d="M252 140 C248 110 262 92 254 70" fill="none" stroke="#8E0C46" stroke-width="13" stroke-linecap="round"/>
+              <path d="M249 138 C247 112 259 94 253 74" fill="none" stroke="#D66B94" stroke-width="3" stroke-linecap="round" opacity=".8"/>
+              <path d="M260 92 C314 34 398 30 444 74 C408 114 324 124 260 92 Z" fill="#E02472"/>
+              <path d="M266 90 C324 66 386 62 438 74" fill="none" stroke="#FFD2E2" stroke-width="4.5" stroke-linecap="round" opacity=".8"/>
             </svg>
-            <div class="boot-name">U<span>Pin</span></div>
-            <div class="boot-tag">знакомства ULove рядом</div>
+            @endif
+            <div class="boot-wordmark">ULove</div>
+            <div class="boot-tag">знакомства рядом</div>
             <div class="boot-bar"><span></span></div>
           </div>
         </div>
@@ -605,12 +599,20 @@
                 var boot = document.getElementById('pwa-boot');
                 var hide = function () {
                     if (boot && !boot.classList.contains('done')) {
+                        try {
+                            /* Скроллбар красится цветом <html>: вернуть фоновый
+                               цвет темы в тот же кадр, что и старт затухания —
+                               иначе до конца fade он остаётся розовым. */
+                            var want = window.__upinThemeBg;
+                            if (!want) {
+                                var isDark = document.documentElement.classList.contains('dark');
+                                var isA = document.documentElement.classList.contains('amoled');
+                                want = isA ? '#000000' : (isDark ? '#0F121F' : '#ffffff');
+                            }
+                            document.documentElement.style.backgroundColor = want;
+                        } catch (e) {}
                         boot.classList.add('done');
                         setTimeout(function () {
-                            try {
-                                var want = window.__upinThemeBg || '';
-                                if (want) document.documentElement.style.backgroundColor = want;
-                            } catch (e) {}
                             if (boot && boot.parentNode) boot.parentNode.removeChild(boot);
                             boot = null;
                         }, 450);

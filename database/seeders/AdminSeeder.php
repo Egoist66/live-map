@@ -16,7 +16,7 @@ class AdminSeeder extends Seeder
         $admin = User::updateOrCreate(
             ['email' => $email],
             [
-                'name' => 'Администратор UPin',
+                'name' => 'Администратор ULove',
                 'password' => Hash::make($password),
                 'email_verified_at' => now(),
                 'plan' => 'premium',

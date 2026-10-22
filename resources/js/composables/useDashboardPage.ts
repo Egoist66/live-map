@@ -26,7 +26,7 @@ const PLAN_COLOR: Record<string, string> = { free: '!bg-stone-100 !text-stone-70
  * @param propsIsOwn флаг владения профилем
  */
 export function useDashboardPage(propsUser?: any | (() => any), propsIsOwn?: boolean) {
-  const seo = useSeo({ title: 'Профиль', description: 'Профиль UPin', noindex: true })
+  const seo = useSeo({ title: 'Профиль', description: 'Профиль ULove', noindex: true })
   const page = usePage()
   const authUser = computed(() => (page.props.auth as any)?.user ?? null)
   const propsSnapshot = computed(() => (typeof propsUser === 'function' ? propsUser() : propsUser) ?? null)

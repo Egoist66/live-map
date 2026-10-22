@@ -21,7 +21,7 @@ defineOptions({
 
 const props = defineProps<{ initialDashboard?: BusinessDashboard | null }>()
 
-useSeo({ title: 'Настройки бизнеса — UPin', description: 'Тариф, уведомления и приложение компании.', noindex: true })
+useSeo({ title: 'Настройки бизнеса — ULove', description: 'Тариф, уведомления и приложение компании.', noindex: true })
 
 const settings = useBusinessSettings()
 

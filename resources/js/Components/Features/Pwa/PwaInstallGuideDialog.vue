@@ -34,7 +34,7 @@ function onVisibleChange(nextVisible: boolean): void {
       :closable="false"
       class="mb-3"
     >
-      Ты сейчас не в Safari, а кнопка «На экран “Домой”» есть только там. Сначала открой UPin в Safari.
+      Ты сейчас не в Safari, а кнопка «На экран “Домой”» есть только там. Сначала открой ULove в Safari.
     </Message>
 
     <div class="space-y-2.5">
@@ -57,7 +57,7 @@ function onVisibleChange(nextVisible: boolean): void {
     </div>
 
     <p v-if="guide.isIos.value" class="mt-3 text-xs text-stone-500 dark:text-zinc-400">
-      После добавления запускай UPin с экрана «Домой» — откроется на весь экран без адресной строки, как приложение.
+      После добавления запускай ULove с экрана «Домой» — откроется на весь экран без адресной строки, как приложение.
     </p>
 
     <template #footer>

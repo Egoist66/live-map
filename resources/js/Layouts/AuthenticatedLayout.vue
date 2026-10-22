@@ -76,7 +76,7 @@ onMounted(() => { screenLock.init(); hotkeys.init() })
 <template>
   <div class="flex min-h-screen min-h-dvh flex-col bg-surface dark:bg-[#0F121F] overflow-x-clip">
     <header v-if="!layoutRoute.isSwipesRoute.value && !layoutRoute.isAdminRoute.value" class="native-safe-top sticky top-0 z-50 glass border-b border-stone-200/70 dark:border-zinc-800 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-zinc-900/70">
-      <AppTopBar :user="user" :avatar-src="avatarSrc" :dashboard-href="dashboardHref" :badge-total="badge.total" :lock-enabled="screenLock.enabled.value" :is-business="isBusinessAccount" :show-map="navVisibility.showMap" :show-love="navVisibility.showLove" :show-flow="navVisibility.showFlow" :can-search-people="isModerator" @bell="bell.open()" @menu="toggleMenu" @lock="screenLock.lockNow()" @search="openGlobalPeopleSearch()" />
+      <AppTopBar :user="user" :avatar-src="avatarSrc" :dashboard-href="dashboardHref" :badge-total="badge.total" :lock-enabled="screenLock.enabled.value" :is-business="isBusinessAccount" :show-love="navVisibility.showLove" :show-flow="navVisibility.showFlow" :can-search-people="isModerator" @bell="bell.open()" @menu="toggleMenu" @lock="screenLock.lockNow()" @search="openGlobalPeopleSearch()" />
     </header>
     <AppUserMenu v-model:menu-ref="menu" :user="user" :avatar-src="avatarSrc" :items="(menuItems as any)" />
     <div v-if="layoutRoute.isSwipesRoute.value" class="native-safe-top lg:hidden w-full shrink-0" aria-hidden="true" />

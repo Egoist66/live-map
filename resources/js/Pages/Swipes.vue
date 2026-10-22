@@ -14,7 +14,6 @@ import { useSwipes } from '@/composables/useSwipes'
 import InfiniteSentinel from '@/Components/Ui/List/InfiniteSentinel.vue'
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 import { useSwipeCardPhotos } from '@/composables/useSwipeCardPhotos'
-import { useModuleContent } from '@/composables/useModuleContent'
 import { useSuperlikeSplash } from '@/composables/useSuperlikeSplash'
 import { useBoostSplash } from '@/composables/useBoostSplash'
 import { useSwipeStamps } from '@/composables/useSwipeStamps'
@@ -35,17 +34,10 @@ import ToggleSwitch from 'primevue/toggleswitch'
 import DatePicker from 'primevue/datepicker'
 import Skeleton from 'primevue/skeleton'
 
-const moduleContent = useModuleContent()
-const withMap = moduleContent.isPubliclyOn('upin')
-
 const seo = useSeo({
   title: 'ULove — свайпы и знакомства',
-  description: withMap
-    ? 'ULove — дейтинг с картой: листай людей рядом, мэтч открывает чат. Free: 3 сообщения, PRO: 10. Строго 18+.'
-    : 'ULove — знакомства рядом: листай людей, мэтч открывает чат. Free: 3 сообщения, PRO: 10. Строго 18+.',
-  keywords: withMap
-    ? ['ULove', 'UPin', 'знакомства', 'свайпы', 'мэтч', 'дейтинг']
-    : ['ULove', 'знакомства', 'свайпы', 'мэтч', 'дейтинг'],
+  description: 'ULove — знакомства рядом: листай людей, мэтч открывает чат. Free: 3 сообщения, PRO: 10. Строго 18+.',
+  keywords: ['ULove', 'знакомства', 'свайпы', 'мэтч', 'дейтинг'],
 })
 
 const page = usePage()
@@ -1055,7 +1047,6 @@ onUnmounted(() => {
       <Dialog :visible="s.showHelp.value" @update:visible="(v:boolean)=>{ s.showHelp.value = v }" modal header="Как работают свайпы" :style="{ width: '420px', maxWidth: '94vw', maxHeight: '92dvh' }" :pt="dialogPt">
         <div class="flex flex-col gap-3 text-sm text-stone-600 dark:text-zinc-300 pt-1">
           <div>ULove — листай, свайпай и находи людей рядом. Главное — что человек в ULove: мэтч открывает чат, дальше договаривайтесь сами.</div>
-          <div v-if="moduleContent.isPubliclyOn('upin')">А карта с пинами — бонус: мэтчнулся? Кинь пин «кофе тут» и встретьтесь без точного адреса.</div>
           <div>Фильтр «Люди рядом» — только если хочешь локально. Без него показывают всех. Free: рядом до 10 км, дальше — PRO.</div>
           <div>Свайпы безлимитные. Сообщения без мэтча: Free {{ s.quota.value ? `${s.quota.value.left}/${s.quota.value.limit}` : '3/3' }}, PRO — 10/мес. Взаимный лайк (мэтч) открывает чат всегда, даже при исчерпанном лимите.</div>
           <div>Избранное — свежие лайкнутые без мэтча. Лимиты: Free до 3, Pro до 10, Premium до 15. Лайки сверх лимита тоже ждут мэтча — человек их видит.</div>
@@ -1093,7 +1084,7 @@ onUnmounted(() => {
           </template>
           <template v-else>
             <div class="mt-4 rounded-2xl border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/40 px-4 py-3 text-sm text-amber-700 dark:text-amber-300 text-center">По указанной дате рождения тебе ещё нет 18. Свайпы откроются автоматически, остальное приложение доступно уже сейчас.</div>
-            <Link :href="moduleContent.isPubliclyOn('upin') ? '/map' : '/profile'" class="mt-4 block"><Button :label="moduleContent.isPubliclyOn('upin') ? 'Перейти на карту' : 'Перейти в профиль'" :icon="moduleContent.isPubliclyOn('upin') ? 'pi pi-map' : 'pi pi-user'" rounded outlined class="w-full" /></Link>
+            <Link href="/profile" class="mt-4 block"><Button label="Перейти в профиль" icon="pi pi-user" rounded outlined class="w-full" /></Link>
           </template>
         </div>
       </Dialog>

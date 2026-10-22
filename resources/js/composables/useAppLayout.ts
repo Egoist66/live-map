@@ -88,7 +88,7 @@ export function useAppLayout() {
   const isModerator = computed(() => isAdmin.value || user.value?.role === 'moderator')
   /**
    * Бизнес-аккаунт: в дропдауне только бизнес-разделы
-   * (кабинет, карта, чаты, настройки бизнеса) — никаких
+   * (кабинет, чаты, настройки бизнеса) — никаких
    * свайпов, ULove и UFlow.
    */
   const isBusinessAccount = computed(() => {
@@ -102,8 +102,8 @@ export function useAppLayout() {
    * Пункты дропдауна профиля без дублей навигации.
    *
    * Ядро (Профиль, Чат, ULove) живёт в топбаре и нижнем меню —
-   * в дропдаун не дублируется. Доп.модули (Карта, UFlow, Районы)
-   * добавляются сюда при их активации, но только на мобиле:
+   * в дропдаун не дублируется. Доп.модуль UFlow
+   * добавляется сюда при активации, но только на мобиле:
    * на десктопе они уже есть в топбаре. Остаются всегда:
    * модерация, настройки и выход.
    * Исключение — Telegram Mini App: там в нижнем меню нет ссылки
@@ -148,22 +148,15 @@ export function useAppLayout() {
      *
      * Внизу на мобиле лишь ядро (Профиль, Чат, ULove в вебе;
      * Чат, ULove, уведомления и профиль в Telegram), поэтому
-     * включённые доп.модули добавляются сюда при их активации:
-     * Карта (UPin), UFlow, Районы. На десктопе всё это уже есть
-     * в топбаре — дропдаун остаётся без дублей навигации.
+     * включённый UFlow добавляется сюда. На десктопе он уже
+     * есть в топбаре — дропдаун остаётся без дублей навигации.
      */
     const showExtraModules = isBelowLg.value
     const extraModuleSections: any[] = !showExtraModules
       ? []
       : [
-          ...(modules.isEnabled('upin')
-            ? [{ label: 'Карта', icon: 'pi pi-map-marker', accent: 'teal', active: route().current('map'), command: () => router.visit(route('map')) }]
-            : []),
           ...(modules.isEnabled('uflow')
             ? [{ label: 'UFlow', svg: 'flow', accent: 'slate', active: route().current('flow'), command: () => router.visit(route('flow')) }]
-            : []),
-          ...(modules.isEnabled('districts')
-            ? [{ label: 'Районы', icon: 'pi pi-users', accent: 'teal', active: route().current('districts.*'), command: () => router.visit(route('districts.index')) }]
             : []),
         ]
 
@@ -180,7 +173,6 @@ export function useAppLayout() {
 
 
   const navVisibility = computed(() => ({
-    showMap: modules.isEnabled('upin'),
     showLove: modules.isEnabled('ulove'),
     showFlow: modules.isEnabled('uflow'),
   }))

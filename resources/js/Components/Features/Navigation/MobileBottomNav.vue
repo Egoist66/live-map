@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
 import Avatar from 'primevue/avatar'
+import SwipesIcon from '@/Components/Brand/SwipesIcon.vue'
 import { useMobileBottomNav } from '@/composables/useMobileBottomNav'
 
-const { dashboardHref, isActive, isActivePath, navLinkClass, businessActiveClass, businessIdleClass, total, bellTotal, avatarSrc, showSystemItems, showProfileLink, navHidden, isBusiness, showMap, showLove, gridClass } = useMobileBottomNav()
+const { dashboardHref, isActive, isActivePath, navLinkClass, businessActiveClass, businessIdleClass, total, bellTotal, avatarSrc, showSystemItems, showProfileLink, navHidden, isBusiness, showLove, gridClass } = useMobileBottomNav()
 
 const emit = defineEmits<{ (e: 'bell'): void; (e: 'menu', value: Event): void }>()
 </script>
@@ -37,17 +38,6 @@ const emit = defineEmits<{ (e: 'bell'): void; (e: 'menu', value: Event): void }>
       </Link>
 
       <Link
-        v-if="showMap"
-        :href="route('map')"
-        :aria-current="isActive('map') ? 'page' : undefined"
-        class="flex flex-col items-center justify-center gap-1 py-1.5 rounded-2xl active:scale-95 transition min-h-[52px]"
-        :class="navLinkClass('map')"
-      >
-        <svg class="w-6 h-6" :fill="isActive('map') ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
-        <span class="text-[10px] font-bold leading-none" :class="isActive('map') ? 'opacity-100' : 'opacity-75'">Карта</span>
-      </Link>
-
-      <Link
         :href="route('chat')"
         :aria-current="isActive('chat') ? 'page' : undefined"
         class="flex flex-col items-center justify-center gap-1 py-1.5 rounded-2xl active:scale-95 transition relative min-h-[52px]"
@@ -67,10 +57,10 @@ const emit = defineEmits<{ (e: 'bell'): void; (e: 'menu', value: Event): void }>
         class="flex flex-col items-center justify-center gap-1 py-1.5 rounded-2xl active:scale-95 transition min-h-[52px]"
         :class="navLinkClass('swipes')"
       >
-        <svg class="w-6 h-6" :fill="isActive('swipes') ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        <SwipesIcon :size="24" :active="isActive('swipes')" />
         <span
-          class="text-[10px] font-black leading-none"
-          :class="isActive('swipes') ? 'text-[#F04D9F] dark:text-[#F04D9F] opacity-100' : 'opacity-75'"
+          class="inline-block text-[10px] font-black leading-none bg-gradient-to-r from-[#FD267D] via-[#F04D9F] to-[#FF8A5B] bg-clip-text text-transparent"
+          :class="isActive('swipes') ? 'opacity-100' : 'opacity-75'"
         >ULove</span>
       </Link>
 

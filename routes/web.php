@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\BrandingController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SeoController;
@@ -7,6 +8,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/robots.txt', [SeoController::class, 'robots']);
 Route::get('/sitemap.xml', [SeoController::class, 'sitemap']);
+Route::get('/site.webmanifest', [BrandingController::class, 'manifest'])->name('branding.manifest');
+Route::get('/branding/icon', [BrandingController::class, 'icon'])->name('branding.icon');
 
 Route::get('/', [PageController::class, 'welcome']);
 
@@ -18,7 +21,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard/{identifier?}', [PageController::class, 'dashboardRedirect'])->where('identifier', '.*');
     Route::get('/admin/{tab?}/{seo?}', [PageController::class, 'admin'])
         ->where([
-            'tab' => 'stats|manage|security|admin|business|support|modules|ai|refs|seo|telegram|payments',
+            'tab' => 'stats|manage|security|admin|business|support|modules|ai|refs|seo|telegram|payments|branding',
             'seo' => 'general|pages|integrations|scripts|crawl',
         ])
         ->middleware('admin:moderator')

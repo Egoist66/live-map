@@ -16,7 +16,7 @@ defineOptions({
   layout: (createElement: typeof h, child: unknown) => createElement(BusinessLayout, () => child),
 })
 
-useSeo({ title: 'Регистрация компании — UPin', description: 'Онбординг бизнеса по законодательству РБ.', noindex: true })
+useSeo({ title: 'Регистрация компании — ULove', description: 'Онбординг бизнеса по законодательству РБ.', noindex: true })
 
 const ob = useBusinessOnboarding()
 const stepItems = [{ label: 'Компания' }, { label: 'Реквизиты РБ' }, { label: 'Точка и контакты' }]

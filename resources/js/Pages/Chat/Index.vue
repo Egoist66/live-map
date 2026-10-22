@@ -263,7 +263,7 @@ const peerPanelAvailable = computed(
 const showPeerPanel = computed(() => peerPanelAvailable.value && peerPanel.open.value);
 /**
  * Тема панели и её тоггла: дефолтный Tinder-стиль — только когда
- * в приложении остался один ULove, иначе — стиль карты UPin.
+ * в приложении остался один ULove, иначе — стиль карты ULove.
  */
 const peerTone = computed(() => (uloveOnly.value ? 'ulove' : 'upin'));
 

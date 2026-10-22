@@ -93,7 +93,7 @@ class PageController extends Controller
             return redirect()->route('admin', ['tab' => 'stats']);
         }
 
-        $tabs = ['stats', 'manage', 'security', 'admin', 'business', 'support', 'modules', 'ai', 'refs', 'seo', 'telegram', 'payments'];
+        $tabs = ['stats', 'manage', 'security', 'admin', 'business', 'support', 'modules', 'ai', 'refs', 'seo', 'telegram', 'payments', 'branding'];
         abort_unless(in_array($tab, $tabs, true), 404);
 
         $sections = ['general', 'pages', 'integrations', 'scripts', 'crawl'];

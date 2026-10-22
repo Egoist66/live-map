@@ -27,7 +27,7 @@ export function useQuests() {
   })
 
   const trackMeta = computed(() => ({
-    pins: { label: 'Пины · UPin', icon: 'pi pi-map-marker', hint: 'Для организаторов встреч' },
+    pins: { label: 'Пины · ULove', icon: 'pi pi-map-marker', hint: 'Для организаторов встреч' },
     swipes: { label: 'Свайпы · ULove', icon: 'pi pi-heart-fill', hint: 'Для знакомств' },
   }))
 

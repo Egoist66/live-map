@@ -26,8 +26,8 @@ export function useProfileShare() {
   async function shareProfile(user: { id: number | string; profile_slug?: string | null; name?: string }) {
     sharing.value = true
     const url = getUrl(user)
-    const title = user.name ? `Профиль ${user.name} — UPin` : 'Профиль — UPin'
-    const text = user.name ? `Посмотри профиль ${user.name} на UPin` : 'Посмотри профиль на UPin'
+    const title = user.name ? `Профиль ${user.name} — ULove` : 'Профиль — ULove'
+    const text = user.name ? `Посмотри профиль ${user.name} на ULove` : 'Посмотри профиль на ULove'
     try {
       if (navigator.share) {
         await navigator.share({ title, text, url })

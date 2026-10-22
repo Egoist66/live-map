@@ -1,26 +1,17 @@
 import { computed } from 'vue'
 import { usePage } from '@inertiajs/vue3'
 import { useSeo } from '@/composables/useSeo'
-import { useModuleContent } from '@/composables/useModuleContent'
 
 /**
- * Лендинг на движке модулей: SEO собирается из выпущенных разделов.
- * Отдаёт SEO, состояние гостя и готовые CTA-ссылки для шаблона.
+ * Лендинг ULove: статичное SEO про знакомства и CTA-ссылки для шаблона.
  * @returns seo, флаги авторизации и ссылки primary/secondary CTA
  * @example const w = useWelcome()
  */
 export function useWelcome() {
-  const content = useModuleContent()
-  const withMap = content.isPubliclyOn('upin')
-
   const seo = useSeo({
-    title: withMap ? 'ULove — знакомства рядом | UPin' : 'ULove — знакомства рядом',
-    description: withMap
-      ? 'ULove в UPin — знакомства рядом: свайпы, мэтч открывает чат. Карта с пинами — бонус для общения, встреч и единомышленников: позови на кофе в 2 клика без точного адреса.'
-      : 'ULove — знакомства рядом: свайпы, мэтч открывает чат. Листай людей рядом, лайкай в один тап, переписывайся только по взаимности. Строго 18+.',
-    keywords: withMap
-      ? ['ULove', 'UPin', 'знакомства рядом', 'свайпы', 'мэтч', 'карта свиданий', 'пины']
-      : ['ULove', 'знакомства рядом', 'свайпы', 'мэтч', 'дейтинг'],
+    title: 'ULove — знакомства рядом',
+    description: 'ULove — знакомства рядом: свайпы, мэтч открывает чат. Листай людей рядом, лайкай в один тап, переписывайся только по взаимности. Строго 18+.',
+    keywords: ['ULove', 'знакомства рядом', 'свайпы', 'мэтч', 'дейтинг'],
   })
 
   const page = usePage()

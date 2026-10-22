@@ -60,11 +60,10 @@ const menuUser = computed(() => {
 })
 
 /**
- * В навигации только рабочие разделы: карта, чаты, реквизиты.
+ * В навигации только рабочие разделы: чаты и реквизиты.
  * Кабинет — по логотипу, настройки — из дропдауна компании.
  */
 const nav = [
-  { label: 'Карта', href: '/map', icon: 'pi pi-map-marker', match: (p: string) => p.startsWith('/map') },
   { label: 'Чаты', href: '/chat', icon: 'pi pi-comments', match: (p: string) => p.startsWith('/chat') },
   { label: 'Реквизиты', href: '/cabinet/onboarding', icon: 'pi pi-id-card', match: (p: string) => p.startsWith('/cabinet/onboarding') },
 ]
@@ -80,12 +79,11 @@ const currentPath = computed(() => {
 /**
  * Дропдаун компании без дублей навигации.
  *
- * Кабинет — по логотипу, Карта/Чаты/Реквизиты уже есть в десктопном
+ * Кабинет — по логотипу, Чаты/Реквизиты уже есть в десктопном
  * и мобильном меню — в дропдауне остаются только уникальные разделы.
  */
 const menuItems = computed(() => [
   { label: companyName.value, sublabel: (user.value as { email?: string } | null)?.email || '', isHeader: true },
-  { label: 'Мои пины', icon: 'pi pi-list', accent: 'teal', active: currentPath.value.startsWith('/cabinet/pins'), command: () => router.visit('/cabinet/pins') },
   { label: 'Настройки', icon: 'pi pi-cog', accent: 'slate', active: currentPath.value.startsWith('/cabinet/settings'), command: () => router.visit('/cabinet/settings') },
   { separator: true },
   { label: 'Выйти', icon: 'pi pi-sign-out', accent: 'red', danger: true, command: () => logout() },
@@ -146,7 +144,7 @@ function logout(): void {
       :aria-hidden="navHidden ? 'true' : undefined"
       class="mobile-bottom-nav pb-[var(--sab)] lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-[#0F121F]/95 backdrop-blur-xl border-t border-stone-200 dark:border-white/10"
     >
-      <div class="grid grid-cols-3">
+      <div class="grid grid-cols-2">
         <Link
           v-for="item in nav"
           :key="item.label"

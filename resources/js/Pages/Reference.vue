@@ -9,9 +9,9 @@ import Button from 'primevue/button'
 const props = defineProps<{ slug: string }>()
 
 const seo = useSeo({
-  title: 'Справочная информация UPin',
-  description: 'Контакты, политика конфиденциальности и публичная оферта UPin.',
-  keywords: ['UPin', 'контакты', 'политика конфиденциальности', 'оферта'],
+  title: 'Справочная информация ULove',
+  description: 'Контакты, политика конфиденциальности и публичная оферта ULove.',
+  keywords: ['ULove', 'контакты', 'политика конфиденциальности', 'оферта'],
 })
 
 const { page: refPage, loading, notFound, fallbackTitle, load } = usePublicReference(props.slug)

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
 import ApplicationLogo from '@/Components/Brand/ApplicationLogo.vue'
+import SwipesIcon from '@/Components/Brand/SwipesIcon.vue'
 import Avatar from 'primevue/avatar'
 import { computed } from 'vue'
 import { useViewportBreakpoints } from '@/composables/useViewportBreakpoints'
@@ -8,12 +9,12 @@ import { useDesktopTopNav } from '@/composables/useDesktopTopNav'
 import { useTelegram } from '@/composables/useTelegram'
 
 withDefaults(
-  defineProps<{ user: any; avatarSrc: string; dashboardHref: string; badgeTotal: number; lockEnabled?: boolean; isBusiness?: boolean; showMap?: boolean; showLove?: boolean; showFlow?: boolean; canSearchPeople?: boolean }>(),
-  { isBusiness: false, showMap: true, showLove: true, showFlow: true, canSearchPeople: false },
+  defineProps<{ user: any; avatarSrc: string; dashboardHref: string; badgeTotal: number; lockEnabled?: boolean; isBusiness?: boolean; showLove?: boolean; showFlow?: boolean; canSearchPeople?: boolean }>(),
+  { isBusiness: false, showLove: true, showFlow: true, canSearchPeople: false },
 )
 const emit = defineEmits<{ (e: 'bell'): void; (e: 'menu', ev: Event): void; (e: 'lock'): void; (e: 'search'): void }>()
 
-const { isXxs, isBelowLg } = useViewportBreakpoints()
+const { isBelowLg } = useViewportBreakpoints()
 const { topNavPillClass, topNavBrandPillClass } = useDesktopTopNav()
 const { isTelegram, isDesktopTelegram, closeMiniApp } = useTelegram()
 /**
@@ -32,14 +33,28 @@ const showTgClose = computed(() => isTelegram.value && isDesktopTelegram.value)
 <template>
   <div class="mx-auto flex h-14 w-full min-w-0 max-w-[1280px] items-center gap-1 px-2 min-[411px]:h-16 min-[411px]:gap-2 min-[411px]:px-3 sm:px-6 xl:max-w-[1400px] 2xl:max-w-[1600px]">
     <Link :href="dashboardHref" class="min-w-0 shrink-0 rounded-xl active:scale-95 transition" aria-label="На главную">
-      <ApplicationLogo :compact="isXxs" />
+      <ApplicationLogo />
     </Link>
 
     <nav aria-label="Основная навигация" class="hidden lg:flex items-center gap-1 bg-stone-100/80 dark:bg-zinc-800 p-1 rounded-full border border-stone-200/60 dark:border-zinc-700 shrink-0">
       <Link v-if="isBusiness" href="/cabinet" :class="['px-4 py-1.5 rounded-full text-[13px] font-semibold transition', topNavPillClass(route().current('cabinet.*'))]">Кабинет</Link>
-      <Link v-if="showMap" :href="route('map')" :class="['px-4 py-1.5 rounded-full text-[13px] font-semibold transition', topNavPillClass(route().current('map'))]">Карта</Link>
       <Link :href="route('chat')" :class="['px-4 py-1.5 rounded-full text-[13px] font-semibold transition relative', topNavPillClass(route().current('chat'))]">Чат</Link>
-      <Link v-if="!isBusiness && showLove" :href="route('swipes')" title="ULove" :class="['px-4 py-1.5 rounded-full transition inline-flex items-center', topNavBrandPillClass(route().current('swipes'))]"><span :class="['text-[13px] font-black tracking-tight leading-none', route().current('swipes') ? '!text-white' : 'bg-gradient-to-r from-rose-500 via-fuchsia-500 to-orange-400 dark:from-rose-400 dark:via-fuchsia-400 dark:to-orange-300 bg-clip-text text-transparent']">ULove</span></Link>
+      <Link
+        v-if="!isBusiness && showLove"
+        :href="route('swipes')"
+        title="ULove"
+        :class="['px-4 py-1.5 rounded-full text-[13px] font-semibold transition inline-flex items-center gap-1.5', topNavPillClass(route().current('swipes'))]"
+      >
+        <SwipesIcon :size="18" :active="!!route().current('swipes')" class="shrink-0" />
+        <span
+          :class="[
+            'text-[13px] font-black tracking-tight leading-none',
+            route().current('swipes')
+              ? '!text-white'
+              : 'bg-gradient-to-r from-[#FD267D] via-[#F04D9F] to-[#FF8A5B] bg-clip-text text-transparent',
+          ]"
+        >ULove</span>
+      </Link>
       <Link v-if="!isBusiness && showFlow" :href="route('flow')" title="UFlow" :class="['px-4 py-1.5 rounded-full transition inline-flex items-center', topNavBrandPillClass(route().current('flow'))]"><span :class="['text-[13px] font-black tracking-tight leading-none', route().current('flow') ? '!text-white' : 'bg-gradient-to-r from-sky-500 via-blue-600 to-fuchsia-500 dark:from-sky-400 dark:via-blue-400 dark:to-fuchsia-400 bg-clip-text text-transparent']">UFlow</span></Link>
     </nav>
 
@@ -60,7 +75,6 @@ const showTgClose = computed(() => isTelegram.value && isDesktopTelegram.value)
         <span v-if="badgeTotal" class="absolute -top-1 -right-1 grid h-[18px] min-w-[18px] place-items-center rounded-full border-2 border-white dark:border-zinc-900 bg-red-500 px-1 text-[10px] font-bold text-white">{{ badgeTotal > 9 ? '9+' : badgeTotal }}</span>
         <span v-if="badgeTotal" class="absolute -top-1 -right-1 h-[18px] min-w-[18px] rounded-full bg-red-500 animate-ping opacity-30"></span>
       </button>
-      <Link v-if="showMap && !route().current('map')" href="/map" class="hidden sm:inline-flex items-center gap-2 bg-ink-900 dark:bg-white dark:text-ink-900 text-white rounded-full px-5 py-2 text-sm font-semibold hover:bg-ink-800 dark:hover:bg-zinc-200 transition whitespace-nowrap">+ Создать пин</Link>
       <button v-if="!hideSystemButtons" @click="emit('menu', $event)" aria-label="Меню профиля" class="grid h-10 w-10 !min-h-[40px] shrink-0 place-items-center overflow-hidden rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow-soft hover:bg-stone-50 dark:hover:bg-zinc-700 transition active:scale-95 outline-none focus-visible:ring-2 focus-visible:ring-brand-500/60 sm:flex sm:h-11 sm:w-auto sm:items-center sm:gap-2 sm:px-3">
         <Avatar :image="avatarSrc" shape="circle" size="normal" class="!w-8 !h-8" />
         <span class="text-sm font-semibold text-ink-900 dark:text-white max-w-[120px] truncate hidden sm:inline">{{ user?.name }}</span>

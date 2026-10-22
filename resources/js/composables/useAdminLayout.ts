@@ -240,6 +240,14 @@ export function useAdminLayout(badges: Ref<AdminLayoutBadges> | ComputedRef<Admi
         group: 'Настройки',
         adminOnly: false,
       },
+      {
+        id: 'branding',
+        label: 'Брендинг',
+        hint: 'логотип и favicon',
+        icon: 'pi pi-image',
+        group: 'Настройки',
+        adminOnly: true,
+      },
     ]
   })
 

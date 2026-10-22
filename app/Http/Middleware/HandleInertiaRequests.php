@@ -87,6 +87,13 @@ class HandleInertiaRequests extends Middleware
                     return false;
                 }
             },
+            'branding' => function () {
+                try {
+                    return \App\Services\BrandingService::state();
+                } catch (\Throwable) {
+                    return \App\Services\BrandingService::defaults();
+                }
+            },
             // Роуты для ZiggyVue в SSR (resources/js/ssr.ts): Node-процесс
             // не видит blade-скрипт @routes, без этого route()/current() падают
             // и Inertia молча откатывается в CSR (пустой div#app).

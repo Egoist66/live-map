@@ -14,7 +14,7 @@ defineOptions({
   layout: (createElement: typeof h, child: unknown) => createElement(BusinessLayout, () => child),
 })
 
-useSeo({ title: 'Пины компании — UPin Pro', description: 'Все пины компании со статистикой.', noindex: true })
+useSeo({ title: 'Пины компании — ULove Pro', description: 'Все пины компании со статистикой.', noindex: true })
 
 const list = useBusinessPins()
 const gate = useBusinessPinGate()

@@ -38,27 +38,27 @@ const hideSidebar = computed(() => isAuthPage.value)
       <div class="relative p-8 xl:p-9 flex flex-col w-full">
         <Link href="/" class="flex items-center gap-2.5 shrink-0">
           <span class="w-9 h-9 rounded-xl overflow-hidden shadow-soft shrink-0 grid place-items-center"><BrandMark class="h-full w-full" /></span>
-          <span class="font-black tracking-[-0.03em] text-xl">U<span class="font-light opacity-80">Pin</span></span>
+          <span class="font-black tracking-[-0.03em] text-xl">U<span class="font-light opacity-80">Love</span></span>
         </Link>
         <div class="mt-8">
           <div class="inline-flex items-center gap-2 bg-white/10 backdrop-blur border border-white/15 rounded-full px-3 py-1.5 text-xs font-medium">
-            <span class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]"></span> live • обновление 30 сек
+            <span class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]"></span> live • новые анкеты
           </div>
-          <h2 class="mt-5 text-[36px] xl:text-[40px] font-black leading-[0.9] tracking-[-0.04em]">Твое окно<br /><span class="bg-gradient-to-r from-[#FFFFFF] via-violet-200 to-teal-200 bg-clip-text text-transparent">во двор</span></h2>
-          <p class="text-white/60 mt-3 leading-relaxed text-[14px]">Спокойная карта без шума. Только то, что рядом — прямо сейчас.</p>
+          <h2 class="mt-5 text-[36px] xl:text-[40px] font-black leading-[0.9] tracking-[-0.04em]">Знакомства<br /><span class="bg-gradient-to-r from-[#FFFFFF] via-rose-200 to-orange-200 bg-clip-text text-transparent">рядом с тобой</span></h2>
+          <p class="text-white/60 mt-3 leading-relaxed text-[14px]">Свайпай людей рядом, лайкай в один тап и переписывайся только по взаимности.</p>
           <div class="mt-6 grid grid-cols-1 gap-3">
             <div class="bg-white/[0.07] backdrop-blur border border-white/10 rounded-2xl p-3.5 flex items-center gap-3">
-              <div class="w-9 h-9 rounded-xl bg-white text-ink-900 grid place-items-center text-sm shrink-0">🗺️</div>
-              <div class="min-w-0"><div class="text-sm font-semibold truncate">847 пинов рядом</div><div class="text-xs text-white/50 truncate">Вопросы · События · Помощь</div></div>
+              <div class="w-9 h-9 rounded-xl bg-white text-ink-900 grid place-items-center text-sm shrink-0">💘</div>
+              <div class="min-w-0"><div class="text-sm font-semibold truncate">Мэтч открывает чат</div><div class="text-xs text-white/50 truncate">Без мэтча — никаких сообщений</div></div>
             </div>
             <div class="bg-white/[0.07] backdrop-blur border border-white/10 rounded-2xl p-3.5 flex items-center gap-3">
-              <div class="w-9 h-9 rounded-xl bg-amber-400 text-ink-900 grid place-items-center text-sm shrink-0">◐</div>
-              <div class="min-w-0"><div class="text-sm font-semibold truncate">Размытие 200 м</div><div class="text-xs text-white/50 truncate">Ты — пин, не точка</div></div>
+              <div class="w-9 h-9 rounded-xl bg-amber-400 text-ink-900 grid place-items-center text-sm shrink-0">🛡️</div>
+              <div class="min-w-0"><div class="text-sm font-semibold truncate">Приватность под контролем</div><div class="text-xs text-white/50 truncate">Анонимно по желанию · блок в 1 клик</div></div>
             </div>
           </div>
         </div>
         <div class="mt-auto pt-8 flex items-center justify-between text-xs text-white/40">
-          <span>© UPin · Пилотный район</span><span>PWA · ставится как приложение</span>
+          <span>© ULove · 18+</span><span>PWA · ставится как приложение</span>
         </div>
       </div>
     </div>

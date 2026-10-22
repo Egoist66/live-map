@@ -65,7 +65,7 @@ const uloveOnly = useUloveOnly()
               </label>
               <Button @click="a.uploadAvatar" :disabled="!a.avatarFile.value || a.uploading.value" :loading="a.uploading.value" label="Загрузить" rounded class="!bg-ink-900 !border-ink-900 dark:!bg-white dark:!border-white dark:!text-ink-900 shrink-0" />
             </div>
-            <Message v-if="a.avatarOk.value" severity="success" :closable="false" class="mt-1.5 !rounded-2xl !py-2">✓ Фото обновлено — видно в шапке и на пинах</Message>
+            <Message v-if="a.avatarOk.value" severity="success" :closable="false" class="mt-1.5 !rounded-2xl !py-2">✓ Фото обновлено — видно в шапке и профиле</Message>
           </div>
         </div>
       </template>

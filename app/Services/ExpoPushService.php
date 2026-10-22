@@ -138,7 +138,7 @@ class ExpoPushService
         if (str_starts_with($url, 'http')) {
             return $url;
         }
-        $base = rtrim((string) config('app.url', 'https://upin.laravel.cloud'), '/');
+        $base = rtrim((string) config('app.url', 'https://ulove.laravel.cloud'), '/');
 
         return $base.'/'.ltrim($url, '/');
     }

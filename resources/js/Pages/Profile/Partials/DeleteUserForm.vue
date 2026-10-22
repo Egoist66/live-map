@@ -32,7 +32,7 @@ const close = () => { confirming.value = false; form.clearErrors(); form.reset()
   <section>
     <header>
       <h2 class="font-bold text-red-600">Удаление аккаунта</h2>
-      <p class="text-sm text-zinc-500 mt-1">Аккаунт и все пины/комменты будут удалены безвозвратно. Сохрани нужное заранее.</p>
+      <p class="text-sm text-zinc-500 mt-1">Аккаунт, анкета, фото и переписки будут удалены безвозвратно. Сохрани нужное заранее.</p>
     </header>
     <Button @click="confirm" label="Удалить аккаунт" severity="danger" rounded class="mt-4 !rounded-full" />
     <Dialog :visible="confirming" @update:visible="(v:boolean)=>{ if(!v) close() }" modal :closable="true" :draggable="false" header="Точно удалить?" :style="{ width:'420px', maxWidth:'calc(100vw - 2rem)' }" :pt="{ root:{ class:'!rounded-3xl max-sm:!rounded-b-none dark:!bg-zinc-900 dark:!border-zinc-700' }, header:{ class:'dark:!bg-zinc-900 dark:!text-white' }, content:{ class:'dark:!bg-zinc-900 dark:!text-white' } }">

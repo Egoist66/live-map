@@ -20,7 +20,7 @@ const { canInstall, visible, hint, install, dismiss } = usePwaInstallBanner()
         <div class="rounded-2xl bg-white dark:bg-[#151B2E] text-ink-900 dark:text-white border border-stone-200/70 dark:border-white/10 shadow-xl dark:shadow-black/50 px-4 py-3 flex items-center gap-3">
           <img src="/pwa-192x192.png" alt="" class="w-10 h-10 rounded-xl shrink-0 bg-stone-100 dark:bg-white/10" />
           <p class="text-sm flex-1 min-w-0">
-            <span class="font-semibold">Установить UPin</span>
+            <span class="font-semibold">Установить ULove</span>
             <span class="block text-xs text-stone-500 dark:text-zinc-400">{{ hint }}</span>
           </p>
           <button class="text-xs font-semibold px-3 py-2 rounded-xl bg-ink-900 dark:bg-[#FAFAFA] text-white dark:text-[#0F172A] hover:opacity-90 active:scale-95 shrink-0" @click="install">

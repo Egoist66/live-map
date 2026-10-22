@@ -44,7 +44,7 @@ class PushSubscriptionController extends Controller
     public function test(Request $request, WebPushService $push)
     {
         $sent = $push->sendToUser($request->user(), [
-            'title' => 'UPin',
+            'title' => 'ULove',
             'body' => 'Системные уведомления включены',
             'url' => '/chat',
             'tag' => 'upin-test',

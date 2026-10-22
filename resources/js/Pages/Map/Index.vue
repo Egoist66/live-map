@@ -16,7 +16,6 @@ import PinDetailsCard from '@/Components/Features/Map/PinDetailsCard.vue'
 import ReportDialog from '@/Components/Features/Map/ReportDialog.vue'
 import MapInfoDialogs from '@/Components/Features/Map/MapInfoDialogs.vue'
 import BusinessMapModal from '@/Components/Features/Business/BusinessMapModal.vue'
-import DefaultModeHint from '@/Components/Features/Mode/DefaultModeHint.vue'
 import { useSeo } from '@/composables/useSeo'
 import { useMapPage } from '@/composables/useMapPage'
 import { useSosMode } from '@/composables/useSosMode'
@@ -30,7 +29,7 @@ import Button from 'primevue/button'
 import Checkbox from 'primevue/checkbox'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
-const seo = useSeo({ title: 'Карта — UPin', description: 'Карта встреч: пины рядом — кинь пин в 2 клика, найди единомышленников. Без точного адреса.', noindex: true })
+const seo = useSeo({ title: 'Карта — ULove', description: 'Карта встреч: пины рядом — кинь пин в 2 клика, найди единомышленников. Без точного адреса.', noindex: true })
 const { store, categories, customCats, selectedCategory, filteredPins, pinDetails, pinCreate, pinEdit, mapApi, showCreate, pinAddress, loadingPinAddress, myStreet, loadingStreet, radiusOptions, radiusLabel, homeZone, homeZoneVisible, toggleHomeZone, closeCreate, deleteSelectedPin, saveEdit, deleteCustomCategory, init, destroy, showLiveInfo, showMyPins, myPins, handleMineClick, flyToPin, setLiveInfo, setMyPins, geoNotice, dismissGeoNotice, locateMe, districts, paint, pendingGeometry, createError, districtLimitText, brushPx, startDistrictPaint, finishDistrictPaint, saveDistrict, flyToDistrict, openDistrictChat, deleteDistrict, openDistrictInvite, sendDistrictInvite, districtInvite, openPinFromDistrict, onOverlayStrokeEnd, saveSelectedDistrict, setShowCreate } = useMapPage() as any
 const pinCommentsHasMore = computed(() => !!((pinDetails as any)?.commentsHasMore?.value))
 const pinCommentsLoadingMore = computed(() => !!((pinDetails as any)?.commentsLoadingMore?.value))
@@ -121,7 +120,6 @@ onUnmounted(() => {
       <div class="absolute left-2 right-2 sm:left-4 sm:right-auto sm:max-w-[420px] flex flex-col gap-2 sm:gap-2.5 z-10 pointer-events-none native-safe-offset-top max-sm:!top-2">
         <MapTopBar :count="(filteredPins as any)?.value?.length ?? store.pins.length" :loading="store.loading" :refreshing="mapRefresh.refreshing.value" :categories="categories" :selected-category="selectedCategory" :can-draw-district="(districts as any).canCreate?.value ?? true" @update:category="(v:any)=>selectedCategory=v" @info="showLiveInfo = true" @mine="handleMineClick" @refresh="refreshMap" @districts="startDistrictPaint" />
         <SosModeBanner v-if="sosMode.isSosMode.value" @chat="goSosChat" @close="onSosClosed" />
-        <DefaultModeHint place="map" />
         <Transition name="fade">
           <div v-if="geoNotice" class="pointer-events-auto bg-white/95 dark:bg-zinc-900/95 backdrop-blur border border-amber-200 dark:border-amber-900/60 rounded-2xl px-3.5 py-3 shadow flex items-start gap-2.5 w-fit max-w-[min(92vw,380px)]">
             <span class="w-8 h-8 rounded-full bg-amber-500/15 dark:bg-amber-400/15 grid place-items-center text-sm shrink-0"><i class="pi pi-map-marker text-amber-600 dark:text-amber-400"></i></span>

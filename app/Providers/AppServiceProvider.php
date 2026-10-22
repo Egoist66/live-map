@@ -130,6 +130,7 @@ class AppServiceProvider extends ServiceProvider
 
                 $head = \App\Services\SeoSettingsService::forHead($currentRequest->url(), $currentPath);
                 $integrations = \App\Services\SeoSettingsService::integrations();
+                $branding = \App\Services\BrandingService::state();
             } catch (\Throwable) {
                 $head = [
                     'site_name' => config('seo.site_name'),
@@ -142,17 +143,19 @@ class AppServiceProvider extends ServiceProvider
                     'twitter_card' => config('seo.twitter_card', 'summary_large_image'),
                     'twitter_site' => config('seo.twitter_site'),
                     'theme_color' => config('seo.theme_color', '#0F172A'),
-                    'og_image' => config('seo.image', '/og-cover.jpg'),
+                    'og_image' => config('seo.image', '/og-cover.jpg?v=2'),
                     'og_title' => config('seo.default_title'),
                     'og_description' => config('seo.default_description'),
                     'canonical' => url()->current(),
                     'robots' => config('seo.robots'),
                 ];
                 $integrations = ['scripts_enabled' => false];
+                $branding = \App\Services\BrandingService::defaults();
             }
 
             $view->with('seoHead', $head);
             $view->with('seoIntegrations', $integrations);
+            $view->with('branding', $branding);
         });
     }
 

@@ -45,7 +45,7 @@ class AppGuideAgent implements Agent, Conversational, HasTools
         $modules = $this->allowedModules();
         $modulesText = $modules === [] ? 'только базовые функции' : implode(', ', $modules);
 
-        return 'Ты — дружелюбный гид приложения UPin/ULove. '
+        return 'Ты — дружелюбный гид приложения ULove. '
             ."Пользователю доступны только эти разделы: {$modulesText}. "
             .'Про другие разделы не рассказывай: если спросят — скажи, что раздел пока недоступен '
             .'и появится позже, без подробностей и сроков. '

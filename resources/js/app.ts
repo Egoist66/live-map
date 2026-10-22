@@ -12,7 +12,7 @@ import { useAppBoot } from './composables/useAppBoot'
 import { usePageResolver } from './composables/usePageResolver'
 import { useBootRecovery } from './composables/useBootRecovery'
 
-const appName = import.meta.env.VITE_APP_NAME || 'UPin'
+const appName = import.meta.env.VITE_APP_NAME || 'ULove'
 
 const pageModules = import.meta.glob<DefineComponent>('./Pages/**/*.vue')
 const { resolvePage } = usePageResolver(pageModules)

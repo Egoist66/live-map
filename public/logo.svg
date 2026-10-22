@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 180" role="img" aria-label="ULove">
+  <!-- Полный логотип ULove: плоский абрикос + wordmark.
+        Горизонтальный локаап для заголовков/промо-материалов. -->
+  <g transform="translate(24 10) scale(0.36)">
+    <ellipse cx="262" cy="442" rx="118" ry="24" fill="#B5134F" opacity=".3"/>
+    <path d="M260 92 C314 34 398 30 444 74 C408 114 324 124 260 92 Z" fill="#E02472"/>
+    <path d="M266 90 C324 66 386 62 438 74" fill="none" stroke="#FFD2E2" stroke-width="5" stroke-linecap="round" opacity=".8"/>
+    <path d="M252 140 C248 110 262 92 254 70" fill="none" stroke="#8E0C46" stroke-width="14" stroke-linecap="round"/>
+    <ellipse cx="254" cy="142" rx="26" ry="11" fill="#C41A6B"/>
+    <path d="M256 138 C176 132 106 196 108 286 C110 380 182 436 260 434 C342 432 404 372 404 284 C404 196 336 134 256 138 Z" fill="#FFA1C6"/>
+    <path d="M312 150 C400 200 406 330 328 392 C384 322 386 214 312 150 Z" fill="#F77FB0"/>
+    <ellipse cx="190" cy="208" rx="58" ry="40" fill="#FFDCEA"/>
+    <circle cx="168" cy="186" r="16" fill="#FFFFFF" opacity=".85"/>
+    <path d="M300 152 C320 208 318 258 296 312" fill="none" stroke="#C41A6B" stroke-width="15" stroke-linecap="round"/>
+    <g fill="#B5134F" opacity=".18">
+      <circle cx="182" cy="302" r="4"/>
+      <circle cx="204" cy="332" r="3.5"/>
+      <circle cx="232" cy="354" r="3"/>
+      <circle cx="150" cy="322" r="3"/>
+      <circle cx="322" cy="238" r="3.5"/>
+    </g>
+  </g>
+  <text x="196" y="122" fill="#FD267D" font-family="Figtree, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif" font-size="92" font-weight="800" letter-spacing="-4">ULove</text>
+</svg>

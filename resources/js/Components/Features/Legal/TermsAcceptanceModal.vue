@@ -44,7 +44,7 @@ async function confirm(): Promise<void> {
       <div class="flex items-center gap-3">
         <span class="w-11 h-11 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white grid place-items-center shrink-0"><i class="pi pi-file-check"></i></span>
         <div class="min-w-0">
-          <div class="font-black text-[17px] tracking-tight dark:text-white">Добро пожаловать в UPin!</div>
+          <div class="font-black text-[17px] tracking-tight dark:text-white">Добро пожаловать в ULove!</div>
           <div class="text-xs text-stone-500 dark:text-zinc-400">Прочитай и прими публичную оферту</div>
         </div>
       </div>

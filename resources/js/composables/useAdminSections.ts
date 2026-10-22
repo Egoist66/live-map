@@ -52,6 +52,7 @@ export function useAdminSections(): Record<string, Component> {
     ai: section(() => import('@/Components/Features/Admin/AdminAiManager.vue')),
     references: section(() => import('@/Components/Features/Admin/AdminReferencesManager.vue')),
     seo: section(() => import('@/Components/Features/Admin/AdminSeoManager.vue')),
+    branding: section(() => import('@/Components/Features/Admin/AdminBrandingManager.vue')),
     telegramUsers: section(() => import('@/Components/Features/Admin/AdminTelegramUsers.vue')),
     botBroadcasts: section(() => import('@/Components/Features/Admin/AdminBotBroadcasts.vue')),
     support: section(() => import('@/Components/Features/Admin/AdminSupportManager.vue')),

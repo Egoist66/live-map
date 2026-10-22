@@ -105,7 +105,7 @@ onBeforeUnmount(() => {
         <div class="min-h-full grid place-items-center p-4">
           <div :key="shakeKey" :class="['w-full max-w-[340px] rounded-[28px] bg-white dark:bg-zinc-900 border border-white/10 shadow-2xl px-6 py-8 text-center', shakeKey && 'lock-shake']">
             <Avatar :image="avatarSrc" shape="circle" size="xlarge" class="!w-20 !h-20 mx-auto shadow-soft" />
-            <div class="mt-4 font-black text-lg tracking-tight dark:text-white truncate">{{ user?.name || 'UPin' }}</div>
+            <div class="mt-4 font-black text-lg tracking-tight dark:text-white truncate">{{ user?.name || 'ULove' }}</div>
             <p class="text-xs text-stone-500 dark:text-zinc-400 mt-1">{{ lock.kind.value === 'alpha8' ? 'Введи пароль · 8 символов' : 'Введи PIN · 4 цифры' }}</p>
             <div v-if="lock.kind.value === 'alpha8'" class="mt-5 relative">
               <input ref="textInput" v-model="input" @input="cleanInput" @keydown.enter.prevent="submit" :type="showPass ? 'text' : 'password'" maxlength="8" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="••••••••" class="w-full min-h-[52px] px-4 pr-12 rounded-2xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800 text-center text-lg font-black tracking-[0.3em] outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition dark:text-white" />

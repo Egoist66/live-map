@@ -3,7 +3,7 @@
 <head><meta charset="utf-8"></head>
 <body style="font-family: Arial, sans-serif; color: #1c1917; line-height: 1.5;">
   <h2 style="margin: 0 0 8px;">⭐ Твой отзыв ULove удалён модератором</h2>
-  <p style="margin: 0 0 16px; color: #78716c;">UPin · {{ now()->format('d.m.Y H:i') }}</p>
+  <p style="margin: 0 0 16px; color: #78716c;">ULove · {{ now()->format('d.m.Y H:i') }}</p>
   <p style="margin: 0 0 12px;">Здравствуйте, {{ $author->name }}!</p>
   <p style="margin: 0 0 12px;">Модерация удалила твой отзыв <b>#{{ $reviewId }}</b> — оценка <b>{{ $rating }} из 5</b>@if($excerpt) «{{ $excerpt }}»@endif. Рейтинг получателя пересчитан, сам отзыв больше нигде не виден.</p>
   <p style="margin: 0 0 12px;">Объяснение модератора:</p>

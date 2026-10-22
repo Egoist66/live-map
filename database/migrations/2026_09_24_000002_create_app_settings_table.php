@@ -17,7 +17,7 @@ return new class extends Migration
         DB::table('app_settings')->upsert([
             ['key' => 'maintenance.enabled', 'value' => '0', 'created_at' => now(), 'updated_at' => now()],
             ['key' => 'maintenance.title', 'value' => 'Технические работы', 'created_at' => now(), 'updated_at' => now()],
-            ['key' => 'maintenance.message', 'value' => 'Мы обновляем UPin, чтобы он стал ещё лучше. Загляните чуть позже — обычно это занимает не больше часа.', 'created_at' => now(), 'updated_at' => now()],
+            ['key' => 'maintenance.message', 'value' => 'Мы обновляем ULove, чтобы он стал ещё лучше. Загляните чуть позже — обычно это занимает не больше часа.', 'created_at' => now(), 'updated_at' => now()],
         ], ['key'], ['value', 'updated_at']);
     }
 

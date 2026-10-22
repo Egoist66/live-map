@@ -24,7 +24,7 @@ defineOptions({
 
 const props = defineProps<{ initialDashboard?: BusinessDashboard | null }>()
 
-useSeo({ title: 'Кабинет бизнеса — UPin', description: 'Просмотры, пины и заработок компании на карте.', noindex: true })
+useSeo({ title: 'Кабинет бизнеса — ULove', description: 'Просмотры, пины и заработок компании на карте.', noindex: true })
 
 const dash = useBusinessDashboard()
 const gate = useBusinessPinGate()

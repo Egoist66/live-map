@@ -1,5 +1,20 @@
 # Dev-лог
 
+## 2026-10-22 — Отзывы: исправлен 500 при загрузке
+- 🐞 Причина: `DatingReviewService::hasMeaningfulExchange()` агрегировал сообщения через связь `messages()` с дефолтным `ORDER BY created_at`; MySQL с `ONLY_FULL_GROUP_BY` падал на запросе `GROUP BY sender_id`.
+- 🔧 Добавлен `reorder()` перед `selectRaw/groupBy` — сортировка снята, подсчёт сторон работает; проверено на неподтверждённом пользователе: `GET /api/dating/reviews` вернул 200.
+- 🔒 Заодно скрытый рейтинг теперь действительно блокирует новый отзыв (`reviewBlockReason` возвращает причину), а просмотр скрытого рейтинга разрешён модераторам, как и описано в правилах.
+
+## 2026-10-22 — ULove: ребрендинг и очистка карты из публичных экранов
+- 🎯 Продукт переведён на ULove как dating-first: лендинг, SEO, FAQ, свайпы, регистрация и гостевой layout больше не предлагают карту, пины и районы.
+- 🧭 Из навигации убраны карта и «Создать пин»: верхнее меню, мобильный таб-бар, кабинет бизнеса и профильное меню. UFlow остался отдельным модулем, карта — выключенный legacy-модуль.
+- 🧹 Удалены неиспользуемые map-компоненты Dashboard (`DashboardActions`, `DashboardHero`, `DashboardInfo`) и UI первого выбора режима; профильные подсказки очищены от «пинов».
+- 📱 PWA: из shortcuts убран раздел карты, манифест пересобран — остались «Свайпы» и «Чаты». `robots.txt` и fallback ExpoPush ведут на `https://ulove.laravel.cloud`.
+- 🏷️ `APP_NAME` теперь `ULove`; админский аплоад иконки/favicon сохранён, динамические manifest/icon/OG работают через брендинг.
+- 🗄️ Миграция `2026_10_22_000002_rebrand_app_settings_to_ulove` чистит старые `Apricot`/`UPin` в `app_settings`: глобальное SEO, keywords, author и текст техработ. Вторая миграция `2026_10_22_000003_rebrand_managed_content_to_ulove` обновляет `reference_pages` (FAQ, оферта) и `app_updates`; legacy-страница карты получила нейтральный заголовок. Публичные SVG переименованы в `ulove-mark.svg`/`ulove-swipes.svg`; в динамическом манифесте больше нет шортката карты.
+- 📦 Expo-приложение переименовано в `ULove Mobile`, домены обновлены, технические идентификаторы (`upin-mobile`, scheme `upin`, bundle/package, UA, storage keys) сохранены.
+- ✅ Проверки: `pnpm exec vue-tsc --noEmit`, `pnpm build`, мобильный `tsc --noEmit` — без ошибок. MySQL недоступен, поэтому review-500 и миграции остаются заблокированы.
+
 ## 2026-10-19 — 🚀 Fonts: primeicons на font-display: swap (Lighthouse FCP)
 - 🐞 PageSpeed Insights: «Используемые шрифты, ожидаемая экономия 70 мс» — vendored `primeicons.css` объявлял шрифт иконок с `font-display: block`, иконки были невидимы до загрузки woff2.
 - 🔍 Ограничение: перебить `@font-face` вручную ненадёжно — vendor-CSS попадает в отдельный чанк (`_vendor-*.css`, из-за `manualChunks: vendorChunk` в vite.config) и инжектится рантаймом после статического `<link>` app.css; гонка порядков вместо честного каскада.

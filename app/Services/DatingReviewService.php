@@ -115,7 +115,7 @@ class DatingReviewService
         }
 
         if ((bool) ($target->dating_hide_rating ?? false) && ! $author->canModerate()) {
-            return null;
+            return 'Рейтинг скрыт владельцем';
         }
 
         if ($author->canModerate()) {
@@ -151,6 +151,8 @@ class DatingReviewService
      * Считаем по таблице messages: общий итог и вклад каждой стороны.
      * Голый мэтч и «диалог» из пары строк увода от оценки не спасают —
      * отзыв становится возможен только после реальной переписки.
+     * `reorder()` снимает дефолтную сортировку связи: с GROUP BY
+     * MySQL в ONLY_FULL_GROUP_BY иначе падает на `created_at`.
      *
      * @param Conversation $dialog direct-диалог пары
      * @return bool true когда обмен достаточен для оценки
@@ -158,6 +160,7 @@ class DatingReviewService
     private function hasMeaningfulExchange(Conversation $dialog): bool
     {
         $countsBySender = $dialog->messages()
+            ->reorder()
             ->selectRaw('sender_id, COUNT(*) as messages_count')
             ->groupBy('sender_id')
             ->pluck('messages_count', 'sender_id');
@@ -291,7 +294,7 @@ class DatingReviewService
         $hidden = (bool) ($target->dating_hide_rating ?? false);
         $isSelf = $viewer !== null && (int) $viewer->id === (int) $target->id;
 
-        abort_if($hidden && ! $isSelf && ! ($viewer?->isAdmin() ?? false), 403, 'Рейтинг скрыт владельцем');
+        abort_if($hidden && ! $isSelf && ! ($viewer?->canModerate() ?? false), 403, 'Рейтинг скрыт владельцем');
 
         return DatingReview::where('target_id', $target->id)
             ->where('status', DatingReview::STATUS_APPROVED)

@@ -47,7 +47,7 @@ class ExpoPushTokenController extends Controller
     {
         $tokensCount = ExpoPushToken::where('user_id', $request->user()->id)->count();
         $sent = $expo->sendToUser($request->user(), [
-            'title' => 'UPin',
+            'title' => 'ULove',
             'body' => 'Системные уведомления включены',
             'url' => '/chat',
         ], 'upin-messages');

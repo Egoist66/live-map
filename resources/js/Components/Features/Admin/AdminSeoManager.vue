@@ -74,16 +74,16 @@ function counterClass(ok: boolean) {
 
         <div>
           <label :class="labelClass">Название сайта</label>
-          <InputText v-model="mgr.global.value.site_name" placeholder="UPin" maxlength="120" :class="inputClass" />
+          <InputText v-model="mgr.global.value.site_name" placeholder="ULove" maxlength="120" :class="inputClass" />
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label :class="labelClass">Суффикс заголовков</label>
-            <InputText v-model="mgr.global.value.title_suffix" placeholder=" — UPin" maxlength="60" :class="inputClass" />
+            <InputText v-model="mgr.global.value.title_suffix" placeholder=" — ULove" maxlength="60" :class="inputClass" />
           </div>
           <div>
             <label :class="labelClass">Автор</label>
-            <InputText v-model="mgr.global.value.author" placeholder="UPin" maxlength="120" :class="inputClass" />
+            <InputText v-model="mgr.global.value.author" placeholder="ULove" maxlength="120" :class="inputClass" />
           </div>
         </div>
         <div>
@@ -91,7 +91,7 @@ function counterClass(ok: boolean) {
             <label :class="labelClass">Заголовок по умолчанию (title)</label>
             <span class="text-[11px] font-bold" :class="counterClass(mgr.titleOk.value)">{{ mgr.titleLength.value }} / 60</span>
           </div>
-          <InputText v-model="mgr.global.value.default_title" placeholder="UPin — …" maxlength="200" :class="inputClass" />
+          <InputText v-model="mgr.global.value.default_title" placeholder="ULove — …" maxlength="200" :class="inputClass" />
           <div v-if="!mgr.titleOk.value" class="text-[11px] text-amber-600 dark:text-amber-400 mt-1">Идеал — 30–60 символов, минимум 10 и максимум 70.</div>
         </div>
         <div>

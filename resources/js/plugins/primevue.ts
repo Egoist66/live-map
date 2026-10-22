@@ -1,4 +1,4 @@
-import PrimeVue from 'primevue/config'
+﻿import PrimeVue from 'primevue/config'
 import Aura from '@primeuix/themes/aura'
 import { definePreset } from '@primeuix/themes'
 import ToastService from 'primevue/toastservice'
@@ -6,7 +6,7 @@ import ConfirmationService from 'primevue/confirmationservice'
 import Tooltip from 'primevue/tooltip'
 import type { App } from 'vue'
 
-const UPin = definePreset(Aura as any, {
+const UlovePreset = definePreset(Aura as any, {
   semantic: {
     primary: {
       50: '#EEF0FF', 100: '#E0E3FF', 200: '#C7CAFF', 300: '#A5AAFF', 400: '#8186FF', 500: '#5B5BFF', 600: '#4F46E5', 700: '#4338CA', 800: '#3730A3', 900: '#312E81', 950: '#1E1B4B',
@@ -28,8 +28,8 @@ const UPin = definePreset(Aura as any, {
 
 export function setupPrimeVue(app: App) {
   app.use(PrimeVue, {
-    theme: { preset: UPin, options: { darkModeSelector: '.dark', cssLayer: false } },
-    ripple: true,
+    theme: { preset: UlovePreset, options: { darkModeSelector: '.dark', cssLayer: false } },
+    ripple: false,
     zIndex: { modal: 1100, overlay: 1000, menu: 1000, tooltip: 1100 },
   } as any)
   app.use(ToastService)
@@ -41,11 +41,11 @@ export function setupPrimeVue(app: App) {
       document.querySelectorAll(licenseSelector).forEach((el) => ((el as HTMLElement).style.display = 'none'))
     }
     hide()
-    // Дешёвый сторож вместо скана всего документа на каждую мутацию:
-    // полный querySelectorAll — только если среди добавленных узлов реально
-    // есть лицензионный бейдж, вызовы коалесцируются через rAF. Поведение
-    // то же (бейдж прячется в том же кадре), стоимость в чатах/лентах
-    // с потоком мутаций — около нуля. SSR-безопасно: только в браузере.
+    // Ð”ÐµÑˆÑ‘Ð²Ñ‹Ð¹ ÑÑ‚Ð¾Ñ€Ð¾Ð¶ Ð²Ð¼ÐµÑÑ‚Ð¾ ÑÐºÐ°Ð½Ð° Ð²ÑÐµÐ³Ð¾ Ð´Ð¾ÐºÑƒÐ¼ÐµÐ½Ñ‚Ð° Ð½Ð° ÐºÐ°Ð¶Ð´ÑƒÑŽ Ð¼ÑƒÑ‚Ð°Ñ†Ð¸ÑŽ:
+    // Ð¿Ð¾Ð»Ð½Ñ‹Ð¹ querySelectorAll â€” Ñ‚Ð¾Ð»ÑŒÐºÐ¾ ÐµÑÐ»Ð¸ ÑÑ€ÐµÐ´Ð¸ Ð´Ð¾Ð±Ð°Ð²Ð»ÐµÐ½Ð½Ñ‹Ñ… ÑƒÐ·Ð»Ð¾Ð² Ñ€ÐµÐ°Ð»ÑŒÐ½Ð¾
+    // ÐµÑÑ‚ÑŒ Ð»Ð¸Ñ†ÐµÐ½Ð·Ð¸Ð¾Ð½Ð½Ñ‹Ð¹ Ð±ÐµÐ¹Ð´Ð¶, Ð²Ñ‹Ð·Ð¾Ð²Ñ‹ ÐºÐ¾Ð°Ð»ÐµÑÑ†Ð¸Ñ€ÑƒÑŽÑ‚ÑÑ Ñ‡ÐµÑ€ÐµÐ· rAF. ÐŸÐ¾Ð²ÐµÐ´ÐµÐ½Ð¸Ðµ
+    // Ñ‚Ð¾ Ð¶Ðµ (Ð±ÐµÐ¹Ð´Ð¶ Ð¿Ñ€ÑÑ‡ÐµÑ‚ÑÑ Ð² Ñ‚Ð¾Ð¼ Ð¶Ðµ ÐºÐ°Ð´Ñ€Ðµ), ÑÑ‚Ð¾Ð¸Ð¼Ð¾ÑÑ‚ÑŒ Ð² Ñ‡Ð°Ñ‚Ð°Ñ…/Ð»ÐµÐ½Ñ‚Ð°Ñ…
+    // Ñ Ð¿Ð¾Ñ‚Ð¾ÐºÐ¾Ð¼ Ð¼ÑƒÑ‚Ð°Ñ†Ð¸Ð¹ â€” Ð¾ÐºÐ¾Ð»Ð¾ Ð½ÑƒÐ»Ñ. SSR-Ð±ÐµÐ·Ð¾Ð¿Ð°ÑÐ½Ð¾: Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð² Ð±Ñ€Ð°ÑƒÐ·ÐµÑ€Ðµ.
     let hideScheduled = false
     const scheduleHide = () => {
       if (hideScheduled) return

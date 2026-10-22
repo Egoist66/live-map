@@ -92,8 +92,8 @@ class MailHealthCommand extends Command
         }
 
         try {
-            Mail::raw('Проверка почты UPin: если видишь это письмо — драйвер настроен.', static function ($m) use ($sendTo): void {
-                $m->to($sendTo)->subject('UPin mail:health — тест');
+            Mail::raw('Проверка почты ULove: если видишь это письмо — драйвер настроен.', static function ($m) use ($sendTo): void {
+                $m->to($sendTo)->subject('ULove mail:health — тест');
             });
         } catch (\Throwable $e) {
             $this->error('Тестовое письмо не ушло: '.get_class($e).': '.$e->getMessage());

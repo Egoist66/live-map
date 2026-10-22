@@ -21,6 +21,7 @@ import AdminTopbar from '@/Components/Features/Admin/AdminTopbar.vue'
 import { useAdminSections } from '@/composables/useAdminSections'
 import { useAdminReference } from '@/composables/useAdminReference'
 import { useAdminSeo } from '@/composables/useAdminSeo'
+import { useAdminBranding } from '@/composables/useAdminBranding'
 import { useAdminAppUpdates } from '@/composables/useAdminAppUpdates'
 import { useAdminImpersonate } from '@/composables/useAdminImpersonate'
 import { useAdminImpersonationLogs } from '@/composables/useAdminImpersonationLogs'
@@ -52,6 +53,7 @@ const logins = useAdminLoginAttempts()
 const maintenance = useAppMaintenance()
 const refs = useAdminReference()
 const seo = useAdminSeo()
+const branding = useAdminBranding()
 const access = useAdminAccess()
 const tgUsers = useAdminTelegramUsers()
 const botBroadcasts = useAdminBotBroadcasts()
@@ -72,6 +74,7 @@ const {
   ai: AdminAiSection,
   references: AdminReferencesSection,
   seo: AdminSeoSection,
+  branding: AdminBrandingSection,
   telegramUsers: AdminTelegramUsersSection,
   botBroadcasts: AdminBotBroadcastsSection,
   support: AdminSupportSection,
@@ -104,6 +107,7 @@ function loadAll(): void {
   supportQueue.init()
   void refs.load()
   void seo.load()
+  void branding.load()
   void tgUsers.load()
   if (!staff.isAdmin.value) return
   void botBroadcasts.load()
@@ -307,6 +311,12 @@ enforceVisibleTab()
             <section v-else-if="tab === 'seo'" aria-label="SEO">
               <div class="grid min-w-0 grid-cols-1 items-start gap-4 xl:grid-cols-2">
                 <AdminSeoSection :mgr="seo" />
+              </div>
+            </section>
+
+            <section v-else-if="tab === 'branding' && staff.isAdmin.value" aria-label="Брендинг">
+              <div class="min-w-0 max-w-[960px]">
+                <AdminBrandingSection :mgr="branding" />
               </div>
             </section>
 

@@ -100,7 +100,6 @@ function switchTab(next: LandingTabId): void {
         <div class="mt-4 flex items-center gap-2 text-xs text-stone-500 dark:text-zinc-500">
           <span class="w-7 h-7 rounded-full bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-700 grid place-items-center">✓</span> {{ landing.content.value.trust }}
         </div>
-        <button v-if="landing.showTabs.value" type="button" :class="['mt-4 text-[13px] font-bold hover:opacity-80', landing.theme.value.accentText]" @click="switchTab(landing.isUlove.value ? 'upin' : 'ulove')">{{ landing.content.value.crossHint }}</button>
       </div>
 
       <div class="relative w-full max-w-[560px] min-w-0 justify-self-center lg:justify-self-end">
@@ -201,36 +200,9 @@ function switchTab(next: LandingTabId): void {
           </template>
         </Card>
 
-        <Card v-else-if="landing.tab.value === 'upin'" class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[28px] !shadow-float !p-3">
-          <template #content>
-            <div class="rounded-[18px] overflow-hidden relative bg-gradient-to-br from-teal-600 via-indigo-700 to-[#0F121F] border border-stone-200 dark:border-zinc-700 p-4 sm:p-5 min-h-[240px] sm:min-h-[260px]">
-              <div class="absolute inset-0 opacity-20 pointer-events-none" style="background-image: radial-gradient(circle at 20% 30%, rgba(255,255,255,.5) 0 2px, transparent 2px), radial-gradient(circle at 70% 20%, rgba(255,255,255,.4) 0 2px, transparent 2px), radial-gradient(circle at 85% 65%, rgba(255,255,255,.4) 0 2px, transparent 2px), radial-gradient(circle at 40% 75%, rgba(255,255,255,.35) 0 2px, transparent 2px); background-size: 90px 90px;"></div>
-              <div class="absolute top-[22%] left-[16%] pointer-events-none"><span class="block w-9 h-9 rounded-full bg-white shadow-lg grid place-items-center text-base">☕</span></div>
-              <div class="absolute top-[55%] left-[68%] pointer-events-none"><span class="block w-9 h-9 rounded-full bg-white shadow-lg grid place-items-center text-base">🐕</span></div>
-              <div class="absolute top-[38%] left-[46%] pointer-events-none"><span class="block w-11 h-11 rounded-full bg-gradient-to-r from-sky-500 to-indigo-500 shadow-lg shadow-sky-500/40 grid place-items-center text-lg ring-4 ring-white/40">📍</span></div>
-              <div class="relative flex flex-wrap items-center justify-between gap-2">
-                <Badge value="📍 Рядом сейчас" class="!bg-white/90 !text-ink-900 !rounded-full !px-3 !py-1.5 !text-xs !font-bold !border-0 max-w-full" />
-                <Badge value="без точного адреса" class="!bg-black/50 !text-white !rounded-full !px-3 !py-1.5 !text-xs !font-bold !border !border-white/20 max-w-full" />
-              </div>
-              <div class="relative mt-[26%] sm:mt-[24%] space-y-2">
-                <div v-for="pin in landing.pinSamples" :key="pin.title" class="bg-white/95 dark:bg-zinc-900/95 backdrop-blur rounded-2xl px-3.5 py-2.5 flex items-center gap-3 shadow min-w-0">
-                  <span class="w-9 h-9 rounded-xl bg-stone-100 dark:bg-zinc-800 grid place-items-center text-base shrink-0">{{ pin.emoji }}</span>
-                  <div class="min-w-0 flex-1"><div class="text-[13px] font-bold truncate dark:text-white">{{ pin.title }}</div><div class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">{{ pin.meta }}</div></div>
-                </div>
-              </div>
-            </div>
-            <div class="flex items-center justify-between px-1 pt-3 flex-wrap gap-2">
-              <div class="flex gap-1.5 flex-wrap">
-                <Tag v-for="chip in landing.pinChips" :key="chip" class="!bg-stone-100 dark:!bg-zinc-800 !text-ink-900 dark:!text-white !rounded-full !px-2.5 !py-1 !text-[11px] !font-semibold !border-0">{{ chip }}</Tag>
-              </div>
-              <span class="text-xs font-black bg-gradient-to-r from-rose-500 to-orange-400 bg-clip-text text-transparent">ULOVE-БОНУС</span>
-            </div>
-          </template>
-        </Card>
-
         <div class="absolute -bottom-5 -left-4 bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-2xl p-4 shadow-float hidden sm:flex gap-3 items-center max-w-[320px]">
           <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-rose-500 to-orange-400 grid place-items-center text-white shrink-0"><i class="pi pi-heart-fill text-lg" /></div>
-          <div><div class="text-xs font-bold">{{ landing.isUlove.value ? 'Мэтч открывает чат' : 'Карта — бонус ULove' }}</div><div class="text-xs text-stone-500 dark:text-zinc-400 leading-snug">{{ landing.isUlove.value ? 'Взаимный лайк — и вы уже переписываетесь. Без спама.' : 'Мэтч? Кинь пин «кофе тут» — встретитесь без адреса.' }}</div></div>
+          <div><div class="text-xs font-bold">Мэтч открывает чат</div><div class="text-xs text-stone-500 dark:text-zinc-400 leading-snug">Взаимный лайк — и вы уже переписываетесь. Без спама.</div></div>
         </div>
       </div>
     </section>

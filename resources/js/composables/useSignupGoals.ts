@@ -1,6 +1,6 @@
 /**
  * Цель захода в приложение на регистрации.
- * Все ведут в ULove; карта с пинами — бонус после регистрации.
+ * Все ведут в ULove и подбирают людей под знакомства.
  */
 export const SIGNUP_GOALS = [
   { label: '💘 Отношения', value: 'love' },
@@ -8,7 +8,6 @@ export const SIGNUP_GOALS = [
   { label: '🤝 Дружба', value: 'friendship' },
   { label: '💬 Общение', value: 'chat' },
   { label: '🎯 По интересам', value: 'interests' },
-  { label: '📍 Соседи и карта', value: 'neighbors' },
 ] as const
 
 export type SignupGoal = (typeof SIGNUP_GOALS)[number]['value']
@@ -16,8 +15,7 @@ export type SignupGoal = (typeof SIGNUP_GOALS)[number]['value']
 /**
  * Пресет цели: всегда полный список, по умолчанию love.
  *
- * Механика пресета из таба лендинга убрана: старт всегда ULove,
- * карта — бонус, поэтому дропдаун не прячем и ничего не лочим.
+ * Старт всегда ULove, поэтому дропдаун не прячем и ничего не лочим.
  */
 export interface SignupPreset {
   locked: boolean
@@ -34,7 +32,7 @@ export function useSignupGoals() {
   const options = [...SIGNUP_GOALS]
 
   const isLoveGoal = (goal: string | null | undefined): boolean => {
-    return goal !== 'neighbors' && goal != null && goal !== ''
+    return goal != null && goal !== ''
   }
 
   const preset = readPreset()

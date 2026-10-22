@@ -2,7 +2,7 @@ import { computed, type Ref } from 'vue'
 
 /**
  * Тема правой панели собеседника: дефолтный Tinder-стиль ULove
- * или стиль карты UPin.
+ * или стиль карты ULove.
  */
 export type ChatPeerTone = 'ulove' | 'upin'
 

@@ -84,15 +84,13 @@ export function useMobileBottomNav() {
   /**
    * Видимость пунктов нижней навигации.
    *
-   * Внизу — только ядро: Профиль, Чат и ULove (дефолт). Остальные
-   * модули (Карта, UFlow, Районы) живут в дропдауне профиля и
-   * добавляются туда при активации модулей (см. `useAppLayout`).
-   * Бизнес-аккаунт — исключение: Кабинет, Карта и Чат.
-   * Профиль и чат — всегда (общее ядро).
+   * Внизу — только ядро: Профиль, Чат и ULove (дефолт). UFlow
+   * живёт в дропдауне профиля и добавляется туда при активации
+   * модуля (см. `useAppLayout`). Бизнес-аккаунт — исключение:
+   * Кабинет и Чат. Профиль и чат — всегда (общее ядро).
    */
   const modules = useAppModulesStore()
 
-  const showMap = computed(() => isBusiness.value)
   const showLove = computed(() => !isBusiness.value && modules.isEnabled('ulove'))
   const showFlow = computed(() => false)
   const showDistricts = computed(() => false)
@@ -107,16 +105,12 @@ export function useMobileBottomNav() {
    */
   const gridClass = computed(() => {
     if (isBusiness.value) {
-      return 'grid grid-cols-3 items-end px-1 pt-1.5 pb-2 min-h-[60px]'
+      return 'grid grid-cols-2 items-end px-1 pt-1.5 pb-2 min-h-[60px]'
     }
 
     let count = 1
 
     if (showProfileLink.value) {
-      count += 1
-    }
-
-    if (showMap.value) {
       count += 1
     }
 
@@ -417,5 +411,5 @@ export function useMobileBottomNav() {
     document.documentElement.classList.remove('native-swipes')
   })
 
-  return { dashboardHref, isActive, isActivePath, navLinkClass, businessActiveClass, businessIdleClass, total, bellTotal, avatarSrc, isTelegram, showSystemItems, showProfileLink, navHidden, keyboardOpen, isBusiness, isStaff, showMap, showLove, showFlow, showDistricts, gridClass }
+  return { dashboardHref, isActive, isActivePath, navLinkClass, businessActiveClass, businessIdleClass, total, bellTotal, avatarSrc, isTelegram, showSystemItems, showProfileLink, navHidden, keyboardOpen, isBusiness, isStaff, showLove, showFlow, showDistricts, gridClass }
 }

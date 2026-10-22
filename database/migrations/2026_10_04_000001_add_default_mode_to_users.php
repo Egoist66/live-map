@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Стартовый режим приложения: ULove-свайпы или UPin-карта.
+     * Стартовый режим приложения: ULove-свайпы или ULove-карта.
      * NULL у старых пользователей = показать модалку «выбери сторону».
      */
     public function up(): void

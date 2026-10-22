@@ -66,7 +66,7 @@ watch(isGuideOpen, async (open) => {
           <i class="pi pi-sparkles"></i>
         </span>
         <span class="min-w-0 flex-1">
-          <span class="block truncate text-[15px] font-black tracking-tight dark:text-white">UPin AI</span>
+          <span class="block truncate text-[15px] font-black tracking-tight dark:text-white">ULove AI</span>
           <span class="mt-0.5 flex items-center gap-1.5 text-xs text-stone-500 dark:text-zinc-400">
             <span class="relative flex h-2 w-2">
               <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60"></span>
@@ -100,7 +100,7 @@ watch(isGuideOpen, async (open) => {
           <span class="grid h-16 w-16 place-items-center rounded-[22px] bg-rose-500 text-2xl text-white shadow-glow">
             <i class="pi pi-sparkles"></i>
           </span>
-          <p class="mt-4 text-[15px] font-black tracking-tight dark:text-white">Привет! Я гид по UPin</p>
+          <p class="mt-4 text-[15px] font-black tracking-tight dark:text-white">Привет! Я гид по ULove</p>
           <p class="mt-1 max-w-[280px] text-[13px] leading-relaxed text-stone-500 dark:text-zinc-400">
             Спроси про свайпы, пины, ленту, районы — или жми подсказку ниже
           </p>

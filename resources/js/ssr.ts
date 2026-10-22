@@ -5,7 +5,7 @@ import createServer from '@inertiajs/vue3/server'
 import { registerAppCore } from './plugins/app-core'
 import { usePageResolver } from './composables/usePageResolver'
 
-const appName = import.meta.env.VITE_APP_NAME || 'UPin'
+const appName = import.meta.env.VITE_APP_NAME || 'ULove'
 
 const pageModules = import.meta.glob<DefineComponent>('./Pages/**/*.vue')
 const { resolvePage } = usePageResolver(pageModules)

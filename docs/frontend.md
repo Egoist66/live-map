@@ -2,7 +2,7 @@
 
 Это живой путеводитель по папке `resources/js`. Читается сверху вниз: сначала идея, потом детали.
 
-**Что за проект:** UPin — карта пинов + чат + профиль. Стек: Vue 3 + Inertia v2 (бэкенд отдает страницы, фронт их рисует без перезагрузки), Pinia (общее состояние), Pinia Colada (кэш запросов), PrimeVue (готовые кнопки/диалоги), MapLibre (карта), Echo+Reverb (живые обновления), VitePWA (установка как приложение + пуши).
+**Что за проект:** ULove — дейтинг: свайпы, мэтчи, чат и профиль. Стек: Vue 3 + Inertia v2 (бэкенд отдает страницы, фронт их рисует без перезагрузки), Pinia (общее состояние), Pinia Colada (кэш запросов), PrimeVue (готовые кнопки/диалоги), Echo+Reverb (живые обновления), VitePWA (установка как приложение + пуши). MapLibre остаётся только для legacy-модуля карты и не является частью бренда.
 
 **Главное правило проекта (AGENTS.md):** компонент только рисует, вся логика — в хуке `useXxx.ts` из `composables/`. То есть:
 
@@ -15,7 +15,7 @@ const { pins, createPin } = usePins()
 
 Никаких `axios`, `watch`, `Echo` прямо в `.vue` — все это прячем в хук, чтобы можно было переиспользовать и тестировать.
 
-**Как течет данные:** Страница `Pages/...` вызывает фасад `useMapPage` / `useChatPage` / `useSettingsPage`. Фасад собирает мелкие хуки + `stores` + `services/*.api.ts`. Сервис стучится в Laravel `/api/*`, а живые обновления прилетают по Echo-каналам `map` (все пины), `chat.{id}` (сообщения), `user.{id}` (тосты/бейджи), `online` (кто в сети).
+**Как течет данные:** Страница `Pages/...` вызывает фасад `useSwipes` / `useChatPage` / `useSettingsPage`. Фасад собирает мелкие хуки + `stores` + `services/*.api.ts`. Сервис стучится в Laravel `/api/*`, а живые обновления прилетают по Echo-каналам `chat.{id}` (сообщения), `user.{id}` (тосты/бейджи), `online` (кто в сети).
 
 ---
 
@@ -23,7 +23,7 @@ const { pins, createPin } = usePins()
 
 - `app.ts` — вход. Подключает css, иконки, axios-настройки, Echo, Pinia, Inertia, PrimeVue, PWA-сервис и монтирует приложение. Ничего не экспортирует, просто запускает.
 - `bootstrap.ts` — настраивает глобальный `axios`: `X-Requested-With`, куки, CSRF. Зачем: чтобы все запросы к Laravel ходили авторизованно.
-- `echo.ts` — подключается к Reverb через `pusher-js`, кладет в `window.Echo`. Зачем: карта и чат обновляются без перезагрузки. Нужны `VITE_REVERB_*` в `.env`.
+- `echo.ts` — подключается к Reverb через `pusher-js`, кладет в `window.Echo`. Зачем: мэтчи, уведомления и чат обновляются без перезагрузки. Нужны `VITE_REVERB_*` в `.env`.
 - `ssr.ts` — то же что `app.ts`, но для серверного рендера (`vite build --ssr`).
 - Плюс конфиги: `vite.config.js` — делит бандл на куски (maplibre/primevue/realtime отдельно, чтобы грузилось быстро), включает PWA и кэширование тайлов/картинок/API. `tailwind.config.js` — цвета `brand/ink/accent`, тени, шрифты. `package.json` — `npm run dev` (сайт+reverb+vite), `npm run build` (проверка типов + сборка + копирование service-worker).
 - Локальный офлайн-кэш данных: `db/app.db.ts` — IndexedDB (настройки и кэш данных, per-user), читается раньше сети.
@@ -131,7 +131,7 @@ const { pins, createPin } = usePins()
 - Новые типы живут рядом с кодом: `GalleryPhoto/GalleryComment` (`services/gallery.api.ts`), `PinActivityItem` (`services/pinActivity.api.ts`), `ScreenLockRow` (`db/app.db.ts`), `MentionUser` (`composables/useMentions.ts`), `NbrbCurrency/NbrbRate/NbrbConvertResult` (`composables/useNbrb.ts`), `ImpersonationEntry` (`composables/useSecurityImpersonations.ts`), `CustomCategoryDef` (`composables/useCustomCategories.ts`). Расширения старых: `Pin` — `scheduled/archived, publish_at/is_scheduled, real_*/blur_*, gender_audience, priority`; `User` — `role/is_admin/is_moderator/plan`.
 - `utils/date.ts` — «5 мин назад», дата/время по-русски (date-fns+ru). `utils/geo.ts` — расстояние haversine, попадание в квадрат. `utils/birthDate.ts`, `utils/validation.ts` — возраст и хелперы форм.
  - `validation/schemas/*` — правила на zod: пин (заголовок ≤100, текст ≤1000, радиус 500–500000), коммент (1–1000), профиль (bio ≤10000, запятая в координатах превращается в точку), пароль (мин. 8 + совпадение), screenlock (pin4/alpha8), справочники `reference.schema.ts` (contacts: обязательные реквизиты ООО + ИНН 10/12, ОГРН 13/15, email; privacy/offer: текст от 50 + версия/дата; кнопка активна только при `meta.valid`). Одна схема — и для подсказок в форме, и для блокировки кнопки.
-- `plugins/primevue.ts` — тема UPin на базе Aura: фирменный indigo, темная тема, глобальные Toast/Confirm/Tooltip.
+- `plugins/primevue.ts` — тема ULove на базе Aura: фирменный indigo, темная тема, глобальные Toast/Confirm/Tooltip.
 - `pwa/*` — чтобы работало как приложение: `pwa.service` (жизнь service-worker: регистрация, проверка обновлений, установка, онлайн/офлайн), `push.service` (подписка WebPush по vapid-ключу, разрешения браузера), `pwa.api` (сохранить/удалить подписку на бэке, тестовый пуш), `cache.service` (сколько занято, очистить кэш тайлов, проверка «готов к офлайну»), `pwa.config` (путь `/sw.js`, иконки). Настройки кэша из интерфейса — `usePwaSettings` в `SettingsAppTab`.
 
 ## 7. Шпаргалка «где что искать»
@@ -173,7 +173,7 @@ const { pins, createPin } = usePins()
 
 PWA = сайт, который устанавливается как приложение, работает без сети и шлет пуши при закрытой вкладке. Сборка — `vite-plugin-pwa (generateSW)`, код — папка `pwa/`.
 
-**Сборка (`vite.config.js`):** генерирует `/sw.js` (фоновый помощник браузера) + `manifest.webmanifest` (имя UPin, иконки 192/512/maskable, `display:standalone`, ярлыки Карта/Чаты). В SW зашиты предкэш `js/css/html/woff2 + offline.html/иконки` и `importScripts: ['/push-sw.js']` — наш обработчик пушей.
+**Сборка (`vite.config.js`):** генерирует `/sw.js` (фоновый помощник браузера) + `manifest.webmanifest` (имя ULove, иконки 192/512/maskable, `display:standalone`, ярлыки Свайпы/Чаты). В SW зашиты предкэш `js/css/html/woff2 + offline.html/иконки` и `importScripts: ['/push-sw.js']` — наш обработчик пушей.
 
 **Что кэшируется (`runtimeCaching`):** `pwa-pages` (страницы, NetworkFirst 3с, 20 шт/сутки), `pwa-fonts` (шрифты, CacheFirst год), `pwa-map-tiles` (тайлы OSM, CacheFirst 300 шт/месяц — карта в офлайне), `pwa-images` (картинки, StaleWhileRevalidate неделя), `pwa-api` (`/api/pins|conversations` GET, NetworkFirst 4с, 5 мин).
 

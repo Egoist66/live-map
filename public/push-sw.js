@@ -1,5 +1,5 @@
 /**
- * UPin push-воркер: подключается к сгенерированному sw.js через importScripts.
+ * ULove push-воркер: подключается к сгенерированному sw.js через importScripts.
  *
  * Маршрутизация пуша:
  * - окно в фокусе — realtime-шина (Echo) уже показала in-app тост,
@@ -64,7 +64,7 @@ self.addEventListener('push', (event) => {
   if (screenLocked) return
   const data = parsePushData(event)
   if (!data) return
-  const title = data.title || 'UPin'
+  const title = data.title || 'ULove'
   const options = buildOptions(data)
   event.waitUntil(
     (async () => {

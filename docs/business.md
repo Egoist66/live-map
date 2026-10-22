@@ -9,13 +9,13 @@
 Кабинет — удобный, мощный, информативный: профиль по законодательству РБ,
 дашборд (просмотры, пины, лайки), подсказки заработка, карта и промо.
 
-## Вход: третий таб UPin Business
+## Вход: третий таб ULove Business
 
 Никаких модалок и запоминаний: на общем лендинге три таба —
-ULove / UPin / Business (`useWelcomeMode`, таб `business` со своим
+ULove / Business (`useWelcomeMode`, таб `business` со своим
 контентом, палитрой, CTA и SEO; выбор таба живёт в `welcome_landing_tab`).
 
-1. Таб Business — лендинг UPin Pro: hero с превью метки компании,
+1. Таб Business — лендинг ULove Pro: hero с превью метки компании,
    шаги, тарифная панель. CTA ведут с `?account=business`:
    регистрация → `/register?account=business`, вход → `/login?account=business`.
 2. Регистрация разделена только по query-параметру:
@@ -101,7 +101,7 @@ Realtime (правило №10, №13):
   быстрый двойной пульс `bizRing`, индиго-свечение и постоянный тултип
   (promo или заголовок); promo-поле в `MapCreateDialog`/`PinDetailsCard`
   только для бизнеса.
-- Логотип — «UPin Pro» (`ApplicationLogo`, `Welcome`, `GuestLayout`).
+- Логотип — «ULove Pro» (`ApplicationLogo`, `Welcome`, `GuestLayout`).
 - Хуки (правило №1, №11):
   - `useAccountTypeChoice` — гейт персона/компания (localStorage + API).
   - `useBusinessProfile` — форма кабинета (vee-validate + zod).

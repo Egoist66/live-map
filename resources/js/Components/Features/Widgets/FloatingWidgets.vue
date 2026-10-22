@@ -4,7 +4,7 @@ import Button from 'primevue/button'
 import { useFloatingWidgets } from '@/composables/useFloatingWidgets'
 import { useAiEnabled } from '@/composables/useAiEnabled'
 
-// Десктоп: розовый виджет-панель (сообщения + UPin AI).
+// Десктоп: розовый виджет-панель (сообщения + ULove AI).
 // На мобиле виджет скрыт — не нужен в правом нижнем углу.
 // ИИ-часть строго по тумблеру админки: выключен — не видит никто, включая staff.
 // На роуте чатов виджеты не показываем вообще — там уже полный мессенджер.
@@ -53,7 +53,7 @@ const ai = useAiEnabled()
             AI
           </span>
           <span class="min-w-0 flex-1">
-            <span class="block truncate text-sm font-black dark:text-white">UPin AI</span>
+            <span class="block truncate text-sm font-black dark:text-white">ULove AI</span>
             <span class="block truncate text-xs text-stone-500 dark:text-zinc-400">гид по приложению</span>
           </span>
           <i class="pi pi-angle-right shrink-0 text-xs text-stone-400"></i>

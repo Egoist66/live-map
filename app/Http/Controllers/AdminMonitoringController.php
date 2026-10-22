@@ -30,7 +30,7 @@ class AdminMonitoringController extends Controller
 
         $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
         $spreadsheet->getProperties()
-            ->setCreator('UPin Admin')
+            ->setCreator('ULove Admin')
             ->setTitle("Мониторинг за $days дней");
 
         $headerStyle = [

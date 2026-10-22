@@ -90,7 +90,7 @@ export function usePwaInstallGuide() {
   /** Заголовок диалога под платформу. */
   const title = computed(() => {
     if (isIos.value) return 'Установка на iPhone'
-    return 'Как установить UPin'
+    return 'Как установить ULove'
   })
 
   /** Подзаголовок: сразу честно говорим, что на iPhone кнопки «Установить» нет. */
@@ -193,7 +193,7 @@ function buildIosSafariSteps(): InstallStep[] {
   const confirmStep: InstallStep = {
     icon: 'pi pi-check',
     title: 'Нажми «Добавить»',
-    text: 'UPin появится как приложение и откроется без адресной строки',
+    text: 'ULove появится как приложение и откроется без адресной строки',
   }
   return [shareStep, homeStep, confirmStep]
 }
@@ -227,7 +227,7 @@ function buildAndroidSteps(): InstallStep[] {
   const installStep: InstallStep = {
     icon: 'pi pi-download',
     title: '«Установить приложение»',
-    text: 'Нажми пункт установки UPin',
+    text: 'Нажми пункт установки ULove',
   }
   const confirmStep: InstallStep = {
     icon: 'pi pi-check',
@@ -251,12 +251,12 @@ function buildDesktopSteps(): InstallStep[] {
   const menuStep: InstallStep = {
     icon: 'pi pi-ellipsis-v',
     title: 'Или меню ⋮',
-    text: 'Меню браузера → «Установить UPin»',
+    text: 'Меню браузера → «Установить ULove»',
   }
   const confirmStep: InstallStep = {
     icon: 'pi pi-check',
     title: 'Подтверди «Установить»',
-    text: 'UPin откроется в отдельном окне как приложение',
+    text: 'ULove откроется в отдельном окне как приложение',
   }
   return [addressStep, menuStep, confirmStep]
 }

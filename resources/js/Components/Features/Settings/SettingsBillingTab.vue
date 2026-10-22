@@ -20,7 +20,7 @@ const planDialog = usePlanDetails()
 const cards = computed(() => plans.planCards(showMapMetrics.value))
 
 /**
- * Подпись плана без упоминаний карты, когда модуль UPin выключен.
+ * Подпись плана без упоминаний карты, когда модуль ULove выключен.
  */
 function planDesc(plan: string): string {
   if (showMapMetrics.value) {

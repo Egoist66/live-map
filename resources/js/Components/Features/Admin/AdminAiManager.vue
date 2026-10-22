@@ -38,7 +38,7 @@ onMounted(() => {
       />
     </div>
 
-    <p class="mt-2 text-xs text-stone-500 dark:text-zinc-400 leading-relaxed">Пока тумблер выключен — все ИИ-виджеты скрыты у всех, включая staff: UPin AI в панели, волшебная кнопка в профиле и диалог гида. Включили — видят все.</p>
+    <p class="mt-2 text-xs text-stone-500 dark:text-zinc-400 leading-relaxed">Пока тумблер выключен — все ИИ-виджеты скрыты у всех, включая staff: ULove AI в панели, волшебная кнопка в профиле и диалог гида. Включили — видят все.</p>
     <Message v-if="ai.notice.value" severity="success" :closable="false" class="mt-2">{{ ai.notice.value }}</Message>
     <Message v-if="ai.error.value" severity="error" :closable="false" class="mt-2">{{ ai.error.value }}</Message>
   </div>
