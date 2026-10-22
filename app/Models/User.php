@@ -14,7 +14,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Support\Facades\Storage;
 
-#[Fillable(['name', 'name_changes_used', 'name_changed_at', 'profile_slug', 'email', 'password', 'gender', 'birth_date', 'country', 'country_code', 'plan', 'latitude', 'longitude', 'role', 'account_type', 'is_admin', 'is_hidden_from_search', 'profile_hidden_at', 'deletion_requested_at', 'deletion_scheduled_at', 'deletion_pro_until', 'dating_enabled', 'dating_goal', 'signup_goal', 'default_mode', 'default_mode_set_at', 'enabled_modules', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_gender_pref', 'dating_hide_name', 'dating_hide_age', 'dating_hide_distance', 'dating_match_only', 'dating_hide_rating', 'random_chats_used', 'random_chats_month', 'superlikes_day', 'superlikes_used', 'superlikes_balance', 'boosts_balance', 'boost_until', 'boost_started_at', 'boost_impressions', 'boost_month', 'undos_day', 'undos_used', 'avatar_path', 'home_lat', 'home_lng', 'home_city', 'home_address', 'home_visibility', 'home_show_exact', 'home_radius_km', 'bio', 'thought', 'reputation_score', 'level', 'trust_score', 'quest_cooldown_until', 'quest_last_track', 'quest_granted_at', 'is_anonymous_default', 'default_location_precision', 'default_blur_meters', 'message_privacy', 'allow_random_messages', 'call_cooldown_enabled', 'video_calls_enabled', 'photo_comments_privacy', 'flow_comments_privacy', 'auto_reply_enabled', 'auto_reply_text', 'settings', 'last_seen_at', 'is_invisible', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at', 'terms_accepted_at', 'terms_version', 'telegram_id', 'telegram_username', 'telegram_photo_url', 'telegram_linked_at', 'telegram_notify_messages', 'telegram_notify_likes', 'telegram_notify_matches', 'telegram_notify_comments', 'telegram_notify_news', 'telegram_notify_invites', 'telegram_notify_reviews', 'telegram_blocked_at', 'telegram_notify_enabled', 'is_sl_active', 'screen_lock_reset_at', 'email_notify_messages', 'email_notify_likes', 'email_notify_matches', 'telegram_dm_messages', 'telegram_dm_likes', 'telegram_dm_matches', 'telegram_dm_comments', 'notify_profile_visitors'])]
+#[Fillable(['name', 'name_changes_used', 'name_changed_at', 'profile_slug', 'email', 'email_changes_used', 'email_changed_at', 'email_changes_window_started_at', 'password', 'gender', 'birth_date', 'country', 'country_code', 'plan', 'latitude', 'longitude', 'role', 'account_type', 'is_admin', 'is_hidden_from_search', 'profile_hidden_at', 'deletion_requested_at', 'deletion_scheduled_at', 'deletion_pro_until', 'dating_enabled', 'dating_goal', 'signup_goal', 'default_mode', 'default_mode_set_at', 'enabled_modules', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_gender_pref', 'dating_hide_name', 'dating_hide_age', 'dating_hide_distance', 'dating_match_only', 'dating_hide_rating', 'random_chats_used', 'random_chats_month', 'superlikes_day', 'superlikes_used', 'superlikes_balance', 'boosts_balance', 'boost_until', 'boost_started_at', 'boost_impressions', 'boost_month', 'undos_day', 'undos_used', 'avatar_path', 'home_lat', 'home_lng', 'home_city', 'home_address', 'home_visibility', 'home_show_exact', 'home_radius_km', 'bio', 'thought', 'reputation_score', 'level', 'trust_score', 'quest_cooldown_until', 'quest_last_track', 'quest_granted_at', 'is_anonymous_default', 'default_location_precision', 'default_blur_meters', 'message_privacy', 'allow_random_messages', 'call_cooldown_enabled', 'video_calls_enabled', 'photo_comments_privacy', 'flow_comments_privacy', 'auto_reply_enabled', 'auto_reply_text', 'settings', 'last_seen_at', 'is_invisible', 'plan_expires_at', 'pins_today_count', 'pins_today_date', 'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at', 'terms_accepted_at', 'terms_version', 'telegram_id', 'telegram_username', 'telegram_photo_url', 'telegram_linked_at', 'telegram_notify_messages', 'telegram_notify_likes', 'telegram_notify_matches', 'telegram_notify_comments', 'telegram_notify_news', 'telegram_notify_invites', 'telegram_notify_reviews', 'telegram_blocked_at', 'telegram_notify_enabled', 'is_sl_active', 'screen_lock_reset_at', 'email_notify_messages', 'email_notify_likes', 'email_notify_matches', 'telegram_dm_messages', 'telegram_dm_likes', 'telegram_dm_matches', 'telegram_dm_comments', 'notify_profile_visitors'])]
 #[Hidden(['password', 'remember_token'])]
 /**
  * Пользователь приложения.
@@ -56,12 +56,15 @@ use Illuminate\Support\Facades\Storage;
  * @property int $trust_score Репутация 1–10: жалобы, блоки и низкие оценки роняют, PRO/Premium возвращает 10.
  * @property int $name_changes_used Сколько раз человек сменил имя (бесплатная — одна; Premium/Business/стафф — безлимит).
  * @property \Carbon\Carbon|null $name_changed_at Когда имя меняли в последний раз.
+ * @property int $email_changes_used Сколько раз человек сменил почту (Free — за всю жизнь, Premium/Business — в текущем окне).
+ * @property \Carbon\Carbon|null $email_changed_at Когда почту меняли в последний раз.
+ * @property \Carbon\Carbon|null $email_changes_window_started_at Старт текущего месячного окна лимита смен почты (у Free — null).
  */
 class User extends Authenticatable implements MustVerifyEmail
 {
     use HasApiTokens, HasFactory, Notifiable;
 
-    protected $appends = ['avatar_url', 'age', 'effective_plan', 'can_change_name', 'name_changes_left'];
+    protected $appends = ['avatar_url', 'age', 'effective_plan', 'can_change_name', 'name_changes_left', 'can_change_email', 'email_changes_left'];
 
     /**
      * Дефолты модели: автоответ «меня нет онлайн» включён по умолчанию.
@@ -91,6 +94,22 @@ class User extends Authenticatable implements MustVerifyEmail
     public function getNameChangesLeftAttribute(): ?int
     {
         return $this->nameChangesLeft();
+    }
+
+    /**
+     * Доступна ли почта к смене.
+     */
+    public function getCanChangeEmailAttribute(): bool
+    {
+        return $this->canChangeEmail();
+    }
+
+    /**
+     * Осталось смен почты (null — безлимит у персонала).
+     */
+    public function getEmailChangesLeftAttribute(): ?int
+    {
+        return $this->emailChangesLeft();
     }
 
     public function isPlanExpired(): bool
@@ -390,6 +409,12 @@ class User extends Authenticatable implements MustVerifyEmail
     /** Бесплатных смен имени (никнейма): Premium/Business/стафф — безлимит. */
     public const FREE_NAME_CHANGES = 1;
 
+    /** Бесплатных смен почты (email) всего: счётчик вне окон. */
+    public const FREE_EMAIL_CHANGES = 1;
+
+    /** Смен почты в месяц на Premium/Business. */
+    public const PREMIUM_EMAIL_CHANGES_PER_MONTH = 3;
+
     /**
      * Все допустимые роли: user — персона, organization — компания
      * (кабинет, тариф business), moderator/admin — staff панели модерации.
@@ -572,6 +597,134 @@ class User extends Authenticatable implements MustVerifyEmail
         }
 
         return max(0, self::FREE_NAME_CHANGES - (int) $this->name_changes_used);
+    }
+
+    /**
+     * Сколько смен почты уже сделано в текущем месячном окне.
+     *
+     * Окно считаем от email_changes_window_started_at: если оно не
+     * начато или старе (больше месяца назад) — окно свежее, счёт 0.
+     * У Free окно не используется: их счётчик живёт всю жизнь.
+     *
+     * @return int использованных смен в окне
+     */
+    private function emailChangesUsedInWindow(): int
+    {
+        $windowStartedAt = $this->email_changes_window_started_at;
+
+        if ($windowStartedAt === null) {
+            return 0;
+        }
+
+        try {
+            $windowIsActive = \Carbon\Carbon::parse($windowStartedAt)->gt(now()->subMonth());
+        } catch (\Throwable) {
+            $windowIsActive = false;
+        }
+
+        return $windowIsActive ? (int) $this->email_changes_used : 0;
+    }
+
+    /**
+     * Можно ли сейчас сменить почту (email).
+     *
+     * Стафф — безлимит. Premium/Business — три смены в месяц
+     * (скользящее окно от первой смены в нём). Free — одна смена
+     * за всю жизнь; исчерпанные после Premium лимиты тоже честно
+     * полны (счётчик единый в email_changes_used).
+     *
+     * @return bool true когда лимит смен почты не исчерпан
+     */
+    public function canChangeEmail(): bool
+    {
+        if ($this->isModerator()) {
+            return true;
+        }
+
+        if ($this->isPremium()) {
+            return $this->emailChangesUsedInWindow() < self::PREMIUM_EMAIL_CHANGES_PER_MONTH;
+        }
+
+        return (int) $this->email_changes_used < self::FREE_EMAIL_CHANGES;
+    }
+
+    /**
+     * Осталось смен почты: null — безлимит (персонал), иначе 0..N.
+     *
+     * @return int|null
+     */
+    public function emailChangesLeft(): ?int
+    {
+        if ($this->isModerator()) {
+            return null;
+        }
+
+        if ($this->isPremium()) {
+            return max(0, self::PREMIUM_EMAIL_CHANGES_PER_MONTH - $this->emailChangesUsedInWindow());
+        }
+
+        return max(0, self::FREE_EMAIL_CHANGES - (int) $this->email_changes_used);
+    }
+
+    /**
+     * Когда разблокируется следующая смена почты.
+     *
+     * Premium: конец текущего месячного окна, если лимит исчерпан.
+     * Free: смены не возвращаются — всегда null.
+     *
+     * @return \Carbon\Carbon|null момент нового окна
+     */
+    public function emailChangeResetsAt(): ?\Carbon\Carbon
+    {
+        if (! $this->isPremium()) {
+            return null;
+        }
+
+        $windowStartedAt = $this->email_changes_window_started_at;
+
+        if ($windowStartedAt === null) {
+            return null;
+        }
+
+        try {
+            $windowEndsAt = \Carbon\Carbon::parse($windowStartedAt)->addMonth();
+        } catch (\Throwable) {
+            return null;
+        }
+
+        return $windowEndsAt->isFuture() ? $windowEndsAt : null;
+    }
+
+    /**
+     * Списать одну смену почты: вызывать только после canChangeEmail().
+     *
+     * У Premium работает календарная логика: если окно не начато
+     * или истекло — начинаем новое с нулевого счётчика. Персоналу
+     * счёт не ведём (безлимит). Модель не сохраняется — save() делает
+     * вызывающий код вместе с новой почтой.
+     *
+     * @return void
+     */
+    public function consumeEmailChange(): void
+    {
+        if ($this->isModerator()) {
+            return;
+        }
+
+        if ($this->isPremium()) {
+            $windowStartedAt = $this->email_changes_window_started_at;
+
+            $isWindowActive = $windowStartedAt !== null
+                && \Carbon\Carbon::parse($windowStartedAt)->gt(now()->subMonth());
+
+            if (! $isWindowActive) {
+                $this->email_changes_used = 0;
+                $this->email_changes_window_started_at = now();
+            }
+        }
+
+        $this->email_changes_used = (int) $this->email_changes_used + 1;
+        $this->email_changed_at = now();
     }
 
     /**
@@ -1375,6 +1528,9 @@ class User extends Authenticatable implements MustVerifyEmail
             'trust_score' => 'integer',
             'name_changes_used' => 'integer',
             'name_changed_at' => 'datetime',
+            'email_changes_used' => 'integer',
+            'email_changed_at' => 'datetime',
+            'email_changes_window_started_at' => 'datetime',
             'bio' => EncryptedTextCast::class,
             'thought' => EncryptedTextCast::class,
             'dating_about' => EncryptedTextCast::class,

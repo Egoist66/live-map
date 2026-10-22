@@ -79,7 +79,13 @@ const uloveOnly = useUloveOnly()
           <p v-else class="text-[11px] text-amber-600 dark:text-amber-400 mt-1">Смена имени уже использована (1 раз бесплатно) — безлимит только на тарифе Premium</p>
           <Message v-if="f.errors.value.name" severity="error" :closable="false" class="mt-1 !rounded-xl !py-1 !text-xs">{{ f.errors.value.name }}</Message>
         </div>
-        <div><label class="text-sm font-medium dark:text-white">Email</label><InputText v-model="f.email.value" v-bind="f.emailAttrs" type="email" :disabled="!f.canChangeEmail.value" title="Смена почты доступна на тарифах Pro и Premium" class="w-full mt-1 !rounded-2xl" :invalid="!!f.errors.value.email" /><p v-if="!f.canChangeEmail.value" class="text-[11px] text-stone-400 mt-1">Смена почты — только на тарифах Pro и Premium</p><p v-else class="text-[11px] text-stone-400 mt-1">После смены придёт письмо — подтверди новую почту, иначе лайки и сообщения будут недоступны</p><Message v-if="f.errors.value.email" severity="error" :closable="false" class="mt-1 !rounded-xl !py-1 !text-xs">{{ f.errors.value.email }}</Message></div>
+        <div>
+          <label class="text-sm font-medium dark:text-white">Email</label>
+          <InputText v-model="f.email.value" v-bind="f.emailAttrs" type="email" :disabled="!f.canChangeEmail.value" title="Смена почты: 1 раз бесплатно, безлимит — на Premium" class="w-full mt-1 !rounded-2xl" :invalid="!!f.errors.value.email" />
+          <p v-if="!f.canChangeEmail.value" class="text-[11px] text-amber-600 dark:text-amber-400 mt-1">{{ f.emailChangeHint.value }}</p>
+          <p v-else class="text-[11px] text-stone-400 mt-1">{{ f.emailChangeHint.value }} · после смены придёт письмо — подтверди новую почту, иначе лайки и сообщения будут недоступны</p>
+          <Message v-if="f.errors.value.email" severity="error" :closable="false" class="mt-1 !rounded-xl !py-1 !text-xs">{{ f.errors.value.email }}</Message>
+        </div>
       </div>
       <div>
         <label class="text-sm font-medium dark:text-white">Пол</label>

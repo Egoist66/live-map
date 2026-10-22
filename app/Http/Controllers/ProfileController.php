@@ -321,7 +321,8 @@ class ProfileController extends Controller
      * из нового письма действуют ограничения неподтверждённой почты
      * (запрет лайков и сообщений через EmailVerificationGate).
      * Письмо со ссылкой уходит автоматически, повторная отправка —
-     * из баннера/раздела «Безопасность».
+     * из баннера/раздела «Безопасность». Лимиты смен: Free — одна
+     * за всю жизнь, Premium/Business — три в месяц (User::canChangeEmail).
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
@@ -342,6 +343,18 @@ class ProfileController extends Controller
             $user->name_changed_at = now();
         }
 
+        $emailChanged = $user->isDirty('email');
+
+        if ($emailChanged && ! $user->canChangeEmail()) {
+            $resetsAt = $user->emailChangeResetsAt();
+
+            $limitMessage = $resetsAt !== null
+                ? 'Лимит смен почты исчерпан (3 раза в месяц) — следующая смена с '.$resetsAt->format('d.m.Y')
+                : 'Лимит смен почты исчерпан (1 раз бесплатно) — безлимит только на тарифе Premium';
+
+            throw \Illuminate\Validation\ValidationException::withMessages(['email' => $limitMessage]);
+        }
+
         if ($user->country_code) $user->country_code = mb_strtolower(trim((string) $user->country_code));
         if ($user->country) $user->country = trim(preg_replace('/\s+/', ' ', (string) $user->country));
 
@@ -354,9 +367,8 @@ class ProfileController extends Controller
         $user->default_blur_meters = max(0, min(5000, $meters));
         $user->default_location_precision = $user->default_blur_meters <= 0 ? 'exact' : 'custom';
 
-        $emailChanged = $user->isDirty('email');
-
         if ($emailChanged) {
+            $user->consumeEmailChange();
             $user->email_verified_at = null;
         }
 

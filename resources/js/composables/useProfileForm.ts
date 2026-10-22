@@ -106,11 +106,40 @@ export function useProfileForm() {
 
   const maxRadius = computed(() => maxHomeRadiusKm((values as any).plan || planOf(user.value)))
 
+  /**
+   * Смена почты: Free — одна смена за всю жизнь, Premium/Business —
+   * три в месяц, персоналу — безлимит.
+   *
+   * can_change_email / email_changes_left — appended-атрибуты модели
+   * User на бэке: quota ведётся сервером, фронт только показывает.
+   */
   const canChangeEmail = computed(() => {
     const u = user.value
     if (!u) return false
     if (u.is_admin || u.role === 'admin' || u.role === 'moderator') return true
-    return ['pro', 'premium', 'business'].includes(planOf(u))
+    return u.can_change_email !== false
+  })
+
+  /** null — безлимит (персонал), иначе сколько смен почты осталось до окна. */
+  const emailChangesLeft = computed<number | null>(() => {
+    const u = user.value
+    if (!u) return null
+    if (u.is_admin || u.role === 'admin' || u.role === 'moderator') return null
+    return (u.email_changes_left ?? null) as number | null
+  })
+
+  /** Подсказка про смену почты под полем Email. */
+  const emailChangeHint = computed(() => {
+    if (!canChangeEmail.value) {
+      return 'Смена почты исчерпана (1 раз бесплатно) — безлимит только на тарифе Premium'
+    }
+    if (emailChangesLeft.value === null) {
+      return 'Безлимитная смена почты на твоём тарифе'
+    }
+    if (emailChangesLeft.value === 0) {
+      return 'Лимит смен почты исчерпан — следующая смена в новом периоде'
+    }
+    return `Осталось смен почты: ${emailChangesLeft.value}`
   })
 
   /**
@@ -221,5 +250,5 @@ export function useProfileForm() {
   const countryWarning = computed(() => (isAdmin.value ? null : residenceCheck.countryWarning.value))
   const checkingCountry = computed(() => (isAdmin.value ? false : residenceCheck.checkingCountry.value))
 
-  return { user, name, nameAttrs, gender, birth_date, age: age.age, ageLabel: age.label, country, country_code, email, emailAttrs, canChangeEmail, canChangeName, nameChangesLeft, nameChangeHint, home_lat, homeLatAttrs, home_lng, homeLngAttrs, home_city, home_address, home_visibility, home_show_exact, home_radius_km, bio, is_anonymous_default, plan, errors, values, setValues, setErrors, submit, isSubmitting, useMyLocation, maxRadius, homeLocation, countryWarning, checkingCountry }
+  return { user, name, nameAttrs, gender, birth_date, age: age.age, ageLabel: age.label, country, country_code, email, emailAttrs, canChangeEmail, emailChangesLeft, emailChangeHint, canChangeName, nameChangesLeft, nameChangeHint, home_lat, homeLatAttrs, home_lng, homeLngAttrs, home_city, home_address, home_visibility, home_show_exact, home_radius_km, bio, is_anonymous_default, plan, errors, values, setValues, setErrors, submit, isSubmitting, useMyLocation, maxRadius, homeLocation, countryWarning, checkingCountry }
 }

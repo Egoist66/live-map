@@ -140,6 +140,7 @@ services:
       context: .
       dockerfile: docker/php-dev.Dockerfile
     working_dir: /var/www/html
+    profiles: ["dev"]
     volumes:
       - .:/var/www/html
       - dev-vendor:/var/www/html/vendor

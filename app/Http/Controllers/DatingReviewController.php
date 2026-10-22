@@ -28,6 +28,10 @@ class DatingReviewController extends Controller
     /**
      * Сводка + список отзывов + мой отзыв + право оценить.
      *
+     * Сбор silently не проглатываем: любой Throwable логируем с
+     * контекстом (viewer, target) под тегом dating_reviews_index_error
+     * и бросаем дальше — стандартный рендер вернёт JSON-500 на api/*.
+     *
      * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\JsonResponse
      */
@@ -41,26 +45,39 @@ class DatingReviewController extends Controller
         $me = $request->user();
         $target = User::findOrFail((int) $data['user_id']);
 
-        $mine = DatingReview::where('author_id', $me->id)
-            ->where('target_id', $target->id)
-            ->first();
+        try {
+            $mine = DatingReview::where('author_id', $me->id)
+                ->where('target_id', $target->id)
+                ->first();
 
-        $page = $this->reviews->listFor($target, $me, (int) ($data['per_page'] ?? 10));
-        $items = collect($page->items())->map(fn ($row) => $this->reviews->serialize($row))->all();
+            $page = $this->reviews->listFor($target, $me, (int) ($data['per_page'] ?? 10));
+            $items = collect($page->items())->map(fn ($row) => $this->reviews->serialize($row))->all();
 
-        return response()->json([
-            'summary' => $this->reviews->summary($target, $me),
-            'can_review' => $this->reviews->canReview($me, $target),
-            'can_review_reason' => $this->reviews->reviewBlockReason($me, $target),
-            'my_review' => $mine ? $this->reviews->serialize($mine->loadMissing('author')) : null,
-            'reviews' => $items,
-            'meta' => [
-                'current_page' => $page->currentPage(),
-                'last_page' => $page->lastPage(),
-                'has_more' => $page->hasMorePages(),
-                'total' => $page->total(),
-            ],
-        ]);
+            return response()->json([
+                'summary' => $this->reviews->summary($target, $me),
+                'can_review' => $this->reviews->canReview($me, $target),
+                'can_review_reason' => $this->reviews->reviewBlockReason($me, $target),
+                'my_review' => $mine ? $this->reviews->serialize($mine->loadMissing('author')) : null,
+                'reviews' => $items,
+                'meta' => [
+                    'current_page' => $page->currentPage(),
+                    'last_page' => $page->lastPage(),
+                    'has_more' => $page->hasMorePages(),
+                    'total' => $page->total(),
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('dating_reviews_index_error: сбой сборки отзывов', [
+                'viewer_id' => (int) $me->id,
+                'target_id' => (int) $target->id,
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
+                'file_line' => $e->getFile().':'.$e->getLine(),
+                'trace_head' => collect($e->getTrace())->take(6)->all(),
+            ]);
+
+            throw $e;
+        }
     }
 
     /**
