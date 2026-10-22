@@ -46,19 +46,12 @@ const pageTitle = computed(() => (isLogin.value ? 'Вход — ULove' : 'Рег
       <span class="block">{{ tgError }}</span>
       <Button type="button" label="Попробовать снова" size="small" class="mt-2" @click="retryTelegramAuth" />
     </Message>
-    <div class="grid grid-cols-2 gap-1 rounded-full bg-stone-100 dark:bg-zinc-800 p-1 mb-6">
-      <Button type="button" label="Войти" rounded :class="tabClass(isLogin)" @click="showLogin" />
-      <Button type="button" label="Регистрация" rounded :class="tabClass(!isLogin)" @click="showRegister" />
+    <div class="auth-toggle grid w-full grid-cols-2 gap-1.5 rounded-full bg-stone-100 dark:bg-zinc-800 p-1.5 mb-6">
+      <Button type="button" label="Войти" rounded :aria-pressed="isLogin" :class="tabClass(isLogin)" @click="showLogin" />
+      <Button type="button" label="Регистрация" rounded :aria-pressed="!isLogin" :class="tabClass(!isLogin)" @click="showRegister" />
     </div>
     <div v-if="isLogin">
-      <div class="flex items-center gap-3">
-        <span class="w-11 h-11 rounded-2xl bg-gradient-to-br from-rose-500 via-fuchsia-500 to-orange-400 grid place-items-center text-white shadow-lg shadow-rose-500/30 shrink-0"><i class="pi pi-heart-fill leading-none" /></span>
-        <div class="min-w-0">
-          <h1 class="text-[22px] font-black tracking-tight text-ink-900 dark:text-white leading-tight">{{ t.loginTitle.value }}</h1>
-          <p class="text-[13px] text-stone-500 dark:text-zinc-400">{{ t.loginSub.value }}</p>
-        </div>
-      </div>
-      <form @submit.prevent="submit" class="mt-6 space-y-4">
+      <form @submit.prevent="submit" class="space-y-4">
         <div>
           <label class="text-[13px] font-semibold text-ink-900 dark:text-zinc-100">Email</label>
           <InputText v-model="email" v-bind="emailAttrs" type="email" placeholder="you@mail.ru" autocomplete="email" class="w-full mt-1.5" :invalid="!!errors.email" />
@@ -94,3 +87,17 @@ const pageTitle = computed(() => (isLogin.value ? 'Вход — ULove' : 'Рег
       </div>
     </Dialog>
 </template>
+
+<style scoped>
+/* Тогл «Войти / Регистрация»: убираем дефолтное белое кольцо фокуса
+   PrimeVue (на тёмной теме оно вспыхивало при переключении) и
+   подменяем его мягким фирменным розовым — аккуратно и доступно. */
+.auth-toggle :deep(.p-button) {
+  --p-button-focus-ring-color: rgba(244, 63, 94, 0.5);
+  --p-button-focus-ring-width: 2px;
+  --p-button-focus-ring-offset: 2px;
+}
+.auth-toggle :deep(.p-button:focus:not(:focus-visible)) {
+  outline: none;
+}
+</style>

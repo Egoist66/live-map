@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { useAuthBackdrop } from '@/composables/useAuthBackdrop'
 
+/**
+ * Анимированный фон страниц входа и регистрации.
+ *
+ * Механика в `useAuthBackdrop` (Правило №1): раскладка сердечек,
+ * тона и градиенты приходят оттуда, а компонент только рисует.
+ * Слой всегда за контентом и не перехватывает тачи
+ * (`pointer-events-none`).
+ */
 const backdrop = useAuthBackdrop()
 const tokens = backdrop.tokens
 </script>
@@ -13,12 +21,15 @@ const tokens = backdrop.tokens
     <div class="auth-blob-b absolute bottom-[-10rem] left-[-9rem] h-[30rem] w-[30rem] rounded-full blur-[110px]" :class="tokens.blobBClass" />
 
     <template v-if="tokens.pattern === 'hearts'">
-      <i class="auth-float pi pi-heart-fill absolute left-[12%] top-[24%] hidden text-2xl text-rose-400/40 dark:text-rose-400/20 sm:block [animation-duration:9s]" />
-      <i class="auth-float pi pi-heart-fill absolute right-[13%] top-[20%] text-xl text-fuchsia-400/40 dark:text-fuchsia-400/20 [animation-duration:11s] [animation-delay:1.5s]" />
-      <i class="auth-float pi pi-heart-fill absolute bottom-[26%] left-[16%] hidden text-lg text-orange-300/50 dark:text-orange-300/20 md:block [animation-duration:10s] [animation-delay:3s]" />
-      <i class="auth-float pi pi-heart-fill absolute bottom-[30%] right-[17%] hidden text-3xl text-rose-300/30 dark:text-rose-300/15 lg:block [animation-duration:12s] [animation-delay:0.8s]" />
-      <i class="auth-float pi pi-heart-fill absolute left-[46%] top-[12%] hidden text-lg text-pink-300/40 dark:text-pink-300/15 md:block [animation-duration:10s] [animation-delay:2.2s]" />
-      <i class="auth-float pi pi-heart-fill absolute bottom-[12%] left-[42%] hidden text-xl text-fuchsia-300/30 dark:text-fuchsia-300/15 lg:block [animation-duration:13s] [animation-delay:4s]" />
+      <i class="auth-heartbeat pi pi-heart-fill absolute left-1/2 top-1/2 select-none text-rose-500/[0.06] dark:text-rose-400/[0.09]" />
+
+      <i
+        v-for="heart in backdrop.hearts"
+        :key="heart.id"
+        class="auth-heart pi pi-heart-fill"
+        :class="heart.toneClass"
+        :style="heart.style"
+      />
     </template>
 
     <div class="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/[0.05] dark:to-black/40" />
@@ -45,16 +56,25 @@ const tokens = backdrop.tokens
   animation: auth-drift-b 28s ease-in-out infinite alternate;
   will-change: transform;
 }
-.auth-ring {
-  animation: auth-ring 3.2s ease-out infinite;
-}
-.auth-bar {
-  animation: auth-bar-grow 5s ease-in-out infinite alternate;
-  transform-origin: bottom;
-}
-.auth-float {
-  animation: auth-float-up 10s ease-in-out infinite;
+/* Медленно всплывающие сердечки: стартуют из-за нижней кромки,
+   качаются в стороны и растворяются у верха. Позиция, размер и
+   тайминги приходят из композабла через CSS-переменные. */
+.auth-heart {
+  position: absolute;
+  bottom: -5rem;
+  line-height: 1;
+  animation-name: auth-heart-rise;
+  animation-timing-function: cubic-bezier(0.37, 0, 0.63, 1);
+  animation-iteration-count: infinite;
   will-change: transform, opacity;
+}
+/* Большое полупрозрачное сердце за карточкой: мягко «бьётся»,
+   давая Tinder-настроение, но не мешает чтению формы. */
+.auth-heartbeat {
+  font-size: clamp(190px, 44vmin, 480px);
+  transform: translate(-50%, -50%);
+  animation: auth-heartbeat 3.6s ease-in-out infinite;
+  will-change: transform;
 }
 @keyframes auth-drift-a {
   from {
@@ -72,44 +92,47 @@ const tokens = backdrop.tokens
     transform: translate(60px, -40px) scale(1);
   }
 }
-@keyframes auth-ring {
+@keyframes auth-heart-rise {
   0% {
-    transform: scale(1);
-    opacity: 0.9;
+    transform: translate3d(0, 0, 0) rotate(-12deg) scale(0.55);
+    opacity: 0;
+  }
+  10% {
+    opacity: var(--auth-heart-opacity, 0.5);
+  }
+  55% {
+    transform: translate3d(var(--auth-heart-sway, 18px), -48vh, 0) rotate(10deg) scale(1);
+    opacity: var(--auth-heart-opacity, 0.5);
   }
   100% {
-    transform: scale(1.65);
+    transform: translate3d(calc(var(--auth-heart-sway, 18px) * -0.7), -94vh, 0) rotate(-8deg) scale(0.85);
     opacity: 0;
   }
 }
-@keyframes auth-bar-grow {
-  from {
-    transform: scaleY(0.86);
-  }
-  to {
-    transform: scaleY(1);
-  }
-}
-@keyframes auth-float-up {
-  0% {
-    transform: translateY(26px);
-    opacity: 0;
-  }
-  20% {
-    opacity: 1;
-  }
+@keyframes auth-heartbeat {
+  0%,
   100% {
-    transform: translateY(-110px);
-    opacity: 0;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  14% {
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+  28% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  42% {
+    transform: translate(-50%, -50%) scale(1.06);
+  }
+  56% {
+    transform: translate(-50%, -50%) scale(1);
   }
 }
 @media (prefers-reduced-motion: reduce) {
   .auth-backdrop-enter,
   .auth-blob-a,
   .auth-blob-b,
-  .auth-ring,
-  .auth-bar,
-  .auth-float {
+  .auth-heart,
+  .auth-heartbeat {
     animation: none;
   }
 }

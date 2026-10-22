@@ -68,6 +68,9 @@ const hideSidebar = computed(() => isAuthPage.value)
            в DOM + relative у контента решают наложение. Фон всегда один
            (ULove), поэтому смена login ↔ register его не трогает. -->
       <AuthBackdrop v-else-if="isClientReady" />
+      <!-- Системная зона внизу (PWA/жестовая полоса): не должна быть
+           розовой от auth-фона — красим в цвет нижней навигации. -->
+      <div v-if="isAuthPage" aria-hidden="true" class="pointer-events-none fixed inset-x-0 bottom-0 h-[var(--sab,0px)] bg-white dark:bg-[#0F121F]" />
       <div :class="isFaq ? 'flex w-full flex-1 flex-col min-w-0' : 'relative flex w-full flex-1 justify-center min-w-0 overflow-x-clip pt-6 sm:pt-10 pb-16 sm:pb-24 guest-auth-scroll'">
       <PageTransition :preset="isAuthPage ? 'auth' : 'fade-slide'" class="w-full min-w-0">
         <template v-if="isFaq">

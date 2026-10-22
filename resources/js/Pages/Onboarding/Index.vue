@@ -35,9 +35,6 @@ const f = useOnboardingForm()
         <div class="flex flex-col items-center text-center">
           <span class="grid h-14 w-14 place-items-center rounded-3xl bg-gradient-to-br from-rose-500 via-fuchsia-500 to-orange-400 text-white shadow-lg shadow-rose-500/30"><i class="pi pi-user-edit text-2xl leading-none" /></span>
           <h1 class="mt-4 text-[24px] font-black tracking-tight text-ink-900 dark:text-white">Почти готово! 📝</h1>
-          <p class="mt-1.5 max-w-[400px] text-[13px] leading-relaxed text-stone-500 dark:text-zinc-400">
-            Заполни анкету как в браузере — без неё свайпы, мэтчи и Mini App закрыты. Это один раз и за минуту.
-          </p>
         </div>
 
         <div v-if="f.loading.value" class="mt-8 flex items-center justify-center gap-3 py-8">
