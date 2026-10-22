@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import { useForm } from 'vee-validate'
 import { loginSchema } from '@/validation/schemas/login.schema'
 import { registerSchema } from '@/validation/schemas/register.schema'
@@ -51,7 +51,7 @@ export function useRegisterForm() {
   const goals = useSignupGoals()
   const goalPreset = goals.preset
 
-  const { defineField, handleSubmit, errors, values, isSubmitting, setValues, setErrors } = useForm({
+  const { defineField, handleSubmit, errors, values, isSubmitting, setValues, setErrors, validateField } = useForm({
     validationSchema: registerSchema,
     initialValues: {
       name: '',
@@ -70,6 +70,116 @@ export function useRegisterForm() {
       signup_goal: goalPreset.goal,
     } as any,
   })
+
+  /**
+   * Шаги регистрации: короткие экраны без длинного полотна полей.
+   * `fields` — что валидируем перед переходом на следующий шаг.
+   */
+  const steps = [
+    {
+      id: 'about',
+      title: 'О тебе',
+      hint: 'Цель знакомств, имя и дата рождения.',
+      fields: ['signup_goal', 'name', 'gender', 'birth_date'],
+    },
+    {
+      id: 'location',
+      title: 'Где ты',
+      hint: 'Город и точка на карте — покажем людей рядом.',
+      fields: ['country', 'home_city', 'home_lat', 'home_lng'],
+    },
+    {
+      id: 'account',
+      title: 'Аккаунт',
+      hint: 'Почта и пароль для входа в ULove.',
+      fields: ['email', 'password', 'password_confirmation'],
+    },
+  ] as const
+
+  const stepIndex = ref(0)
+  const totalSteps = steps.length
+  const currentStep = computed(() => steps[stepIndex.value])
+  const stepNumber = computed(() => stepIndex.value + 1)
+  const isFirstStep = computed(() => stepIndex.value === 0)
+  const isLastStep = computed(() => stepIndex.value === totalSteps - 1)
+  const progress = computed(() => Math.round((stepNumber.value / totalSteps) * 100))
+
+  /**
+   * Валидирует только поля текущего шага.
+   *
+   * @returns true, если шаг можно закрыть
+   */
+  async function validateCurrentStep(): Promise<boolean> {
+    const checks = currentStep.value.fields.map((field) => validateField(field))
+    const results = await Promise.all(checks)
+    return results.every((result) => result.valid)
+  }
+
+  /**
+   * Поднимает форму к началу: на мобиле следующий шаг не должен
+   * открываться «где-то ниже» после скролла к кнопке «Дальше».
+   */
+  function scrollToFormTop(): void {
+    if (typeof window === 'undefined') return
+    void nextTick(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    })
+  }
+
+  /**
+   * Переключает шаг с ограничением диапазона.
+   *
+   * @param index индекс шага
+   */
+  function goToStep(index: number): void {
+    const clamped = Math.min(Math.max(index, 0), totalSteps - 1)
+    if (clamped === stepIndex.value) return
+    stepIndex.value = clamped
+    scrollToFormTop()
+  }
+
+  /**
+   * Проверяет текущий шаг и переводит на следующий.
+   */
+  async function nextStep(): Promise<void> {
+    if (isLastStep.value) return
+    const valid = await validateCurrentStep()
+    if (!valid) return
+    goToStep(stepIndex.value + 1)
+  }
+
+  /**
+   * Возвращает на предыдущий шаг без валидации.
+   */
+  function goBack(): void {
+    goToStep(stepIndex.value - 1)
+  }
+
+  /**
+   * Находит шаг, к которому относится ошибка сервера.
+   *
+   * @param stepErrors ошибки от бэка
+   * @returns индекс шага или null
+   */
+  function stepIndexOfError(stepErrors: Record<string, string>): number | null {
+    const foundIndex = steps.findIndex((step) =>
+      step.fields.some((field) => !!stepErrors[field]),
+    )
+    if (foundIndex !== -1) return foundIndex
+    if (stepErrors.captcha_token) return totalSteps - 1
+    return null
+  }
+
+  /**
+   * Показывает ошибки сервера и открывает нужный шаг.
+   *
+   * @param stepErrors ошибки от бэка
+   */
+  function showErrors(stepErrors: Record<string, string>): void {
+    setErrors(stepErrors)
+    const errorStep = stepIndexOfError(stepErrors)
+    if (errorStep !== null) goToStep(errorStep)
+  }
 
   const [name, nameAttrs] = defineField('name')
   const [email, emailAttrs] = defineField('email')
@@ -176,14 +286,26 @@ export function useRegisterForm() {
     const residenceOk = await residenceCheck.recheckCountry()
     if (!residenceOk) {
       const msg = residenceCheck.countryWarning.value || 'Страна не совпадает с геолокацией'
-      setErrors({ country: msg })
+      showErrors({ country: msg })
       toast?.add({ severity: 'error', summary: 'Сохранение запрещено', detail: msg, life: 4000 })
       return
     }
     router.post(route('register'), payload, {
-      onError: (errs: Record<string, string>) => setErrors(errs),
+      onError: (errs: Record<string, string>) => showErrors(errs),
     })
   })
+
+  /**
+   * Enter/кнопка формы: на последнем шаге отправляет анкету,
+   * на остальных — проверяет поля и листает дальше.
+   */
+  async function onSubmit(): Promise<void> {
+    if (!isLastStep.value) {
+      await nextStep()
+      return
+    }
+    await submit()
+  }
 
   return {
     name,
@@ -213,6 +335,15 @@ export function useRegisterForm() {
     detectLocation,
     clearLocation,
     submit,
+    onSubmit,
+    currentStep,
+    stepNumber,
+    totalSteps,
+    isFirstStep,
+    isLastStep,
+    progress,
+    nextStep,
+    goBack,
     isSubmitting,
     setValues,
     goalPreset,

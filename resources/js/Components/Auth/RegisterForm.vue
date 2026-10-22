@@ -10,6 +10,7 @@ import TurnstileWidget from '@/Components/Security/TurnstileWidget.vue'
 import { useBotQr } from '@/composables/useBotQr'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
+import ProgressBar from 'primevue/progressbar'
 import Select from 'primevue/select'
 import DatePicker from 'primevue/datepicker'
 
@@ -50,108 +51,126 @@ function onCountryChange(v: string): void {
     <div class="flex flex-col items-center text-center gap-2">
       <span class="w-11 h-11 rounded-2xl bg-gradient-to-br from-rose-500 via-fuchsia-500 to-orange-400 grid place-items-center text-white shadow-lg shadow-rose-500/30 shrink-0"><i class="pi pi-heart-fill leading-none" /></span>
       <h1 class="text-[22px] font-black tracking-tight text-ink-900 dark:text-white leading-tight">{{ t.registerTitle.value }}</h1>
-      <p class="text-[13px] text-stone-500 dark:text-zinc-400 flex items-center justify-center gap-1.5"><i class="pi pi-heart-fill text-rose-500 text-[12px] leading-none" />{{ t.registerSub.value }}</p>
     </div>
-    <form class="mt-6 space-y-4" @submit.prevent="f.submit">
-      <div class="rounded-2xl border-2 border-rose-200 dark:border-rose-900 bg-gradient-to-br from-rose-50 to-orange-50 dark:from-rose-950/40 dark:to-orange-950/20 p-3.5">
-        <label class="auth-label">Зачем ты здесь? *</label>
-        <Select v-model="f.signup_goal.value" :options="reg.goalOptions.value" optionLabel="label" optionValue="value" placeholder="Выбери цель" checkmark fluid class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.signup_goal" />
-        <small class="auth-err">{{ f.errors.value.signup_goal }}</small>
+
+    <div class="mt-5">
+      <div class="flex items-center justify-between gap-3">
+        <span aria-live="polite" class="text-[11px] font-bold uppercase tracking-[0.12em] text-stone-400 dark:text-zinc-500">Шаг {{ f.stepNumber.value }} из {{ f.totalSteps }}</span>
+        <span class="text-[12px] font-semibold text-rose-500">{{ f.currentStep.value.title }}</span>
       </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div class="min-w-0">
-          <label class="auth-label">Имя / ник</label>
-          <InputText v-model="f.name.value" v-bind="f.nameAttrs" placeholder="Роберт Дауни" autocomplete="nickname" class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.name" />
-          <small class="auth-err">{{ f.errors.value.name }}</small>
+      <ProgressBar :value="f.progress.value" :show-value="false" class="reg-progress mt-2 !h-1.5" />
+      <p class="mt-2 text-[12px] leading-relaxed text-stone-500 dark:text-zinc-400">{{ f.currentStep.value.hint }}</p>
+    </div>
+
+    <form class="mt-4" @submit.prevent="f.onSubmit">
+      <Transition name="reg-step" mode="out-in">
+        <div :key="f.currentStep.value.id" class="space-y-4">
+          <template v-if="f.currentStep.value.id === 'about'">
+            <div class="rounded-2xl border-2 border-rose-200 dark:border-rose-900 bg-gradient-to-br from-rose-50 to-orange-50 dark:from-rose-950/40 dark:to-orange-950/20 p-3.5">
+              <label class="auth-label">Зачем ты здесь? *</label>
+              <Select v-model="f.signup_goal.value" :options="reg.goalOptions.value" optionLabel="label" optionValue="value" placeholder="Выбери цель" checkmark fluid class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.signup_goal" />
+              <small class="auth-err">{{ f.errors.value.signup_goal }}</small>
+            </div>
+            <div class="min-w-0">
+              <label class="auth-label">Имя / ник</label>
+              <InputText v-model="f.name.value" v-bind="f.nameAttrs" placeholder="Роберт Дауни" autocomplete="nickname" class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.name" />
+              <small class="auth-err">{{ f.errors.value.name }}</small>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="min-w-0">
+                <label class="auth-label">Пол *</label>
+                <Select v-model="f.gender.value" :options="g.options" optionLabel="label" optionValue="value" placeholder="Выбери пол" checkmark fluid class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.gender" />
+                <small class="auth-err">{{ f.errors.value.gender }}</small>
+              </div>
+              <div class="min-w-0">
+                <label class="auth-label">Дата рождения</label>
+                <DatePicker v-model="bd.birthDateInput.value" v-bind="bd.birthDatePickerProps.value" placeholder="12.07.1997" class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.birth_date" />
+                <small class="auth-err">{{ f.errors.value.birth_date }}</small>
+                <small v-if="ageLabel" class="text-stone-500 dark:text-zinc-400">{{ ageLabel }}</small>
+              </div>
+            </div>
+          </template>
+
+          <template v-else-if="f.currentStep.value.id === 'location'">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="min-w-0">
+                <label class="auth-label">Страна проживания</label>
+                <Select v-model="f.country.value" :options="[...RESIDENCE_COUNTRIES]" optionLabel="name" optionValue="name" placeholder="Беларусь" checkmark editable fluid class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.country" @update:model-value="onCountryChange" />
+                <small v-if="f.countryWarning.value" class="block text-amber-600 dark:text-amber-400"><i class="pi pi-exclamation-triangle mr-1" />{{ f.countryWarning.value }}</small>
+                <small class="auth-err">{{ f.errors.value.country }}</small>
+              </div>
+              <div class="min-w-0">
+                <label class="auth-label">Город проживания</label>
+                <InputText v-model="f.home_city.value" placeholder="Минск" autocomplete="address-level2" class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.home_city" />
+                <small class="auth-err">{{ f.errors.value.home_city }}</small>
+              </div>
+            </div>
+            <div class="rounded-2xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/60 p-3.5 space-y-2.5">
+              <div class="flex items-center justify-between gap-2">
+                <span class="text-[13px] font-semibold text-ink-900 dark:text-zinc-100">{{ reg.locationTitle.value }}</span>
+                <span class="text-[11px] font-bold text-stone-500 dark:text-zinc-400">необязательно</span>
+              </div>
+              <p class="text-[11px] leading-relaxed text-stone-500 dark:text-zinc-400">{{ reg.locationHint.value }}</p>
+              <Button type="button" :loading="f.locating.value" severity="secondary" outlined rounded class="w-full" :label="f.values.home_lat ? 'Обновить моё место' : 'Определить моё место'" icon="pi pi-map-marker" @click="f.detectLocation" />
+              <div v-if="f.values.home_address || f.addrLoading.value" class="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2.5 flex items-center gap-2">
+                <span class="w-7 h-7 rounded-full bg-ink-900 dark:bg-white text-white dark:text-ink-900 grid place-items-center shrink-0 text-[11px]">◉</span>
+                <div class="min-w-0 flex-1">
+                  <div class="text-xs font-semibold truncate dark:text-zinc-100">{{ f.addrLoading.value ? reg.addressLoadingText.value : f.values.home_address }}</div>
+                </div>
+                <button v-if="f.values.home_lat && !f.addrLoading.value" type="button" class="shrink-0 w-7 h-7 rounded-full hover:bg-stone-100 dark:hover:bg-white/10 grid place-items-center text-stone-400 dark:text-zinc-400" title="Убрать точку" @click="f.clearLocation"><i class="pi pi-times text-[11px]"></i></button>
+              </div>
+            </div>
+          </template>
+
+          <template v-else>
+            <div class="min-w-0">
+              <label class="auth-label">Email</label>
+              <InputText v-model="f.email.value" v-bind="f.emailAttrs" type="email" placeholder="you@mail.ru" autocomplete="email" class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.email" />
+              <small class="auth-err">{{ f.errors.value.email }}</small>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="min-w-0">
+                <label class="auth-label">Пароль</label>
+                <div class="relative mt-1.5">
+                  <InputText v-model="f.password.value" v-bind="f.passwordAttrs" :type="f.showPass.value ? 'text' : 'password'" placeholder="••••••••" autocomplete="new-password" class="w-full auth-input !pr-11" :invalid="!!f.errors.value.password" />
+                  <button type="button" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-white/10 grid place-items-center text-stone-500 dark:text-zinc-400 text-sm" tabindex="-1" aria-label="Показать пароль" @click="f.showPass.value=!f.showPass.value"><i :class="f.showPass.value ? 'pi pi-eye-slash' : 'pi pi-eye'" /></button>
+                </div>
+                <small class="auth-err">{{ f.errors.value.password }}</small>
+              </div>
+              <div class="min-w-0">
+                <label class="auth-label">Подтверди пароль</label>
+                <div class="relative mt-1.5">
+                  <InputText v-model="f.password_confirmation.value" v-bind="f.passwordConfirmationAttrs" :type="f.showPass2.value ? 'text' : 'password'" placeholder="••••••••" autocomplete="new-password" class="w-full auth-input !pr-11" :invalid="!!f.errors.value.password_confirmation" />
+                  <button type="button" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-white/10 grid place-items-center text-stone-500 dark:text-zinc-400 text-sm" tabindex="-1" aria-label="Показать пароль" @click="f.showPass2.value=!f.showPass2.value"><i :class="f.showPass2.value ? 'pi pi-eye-slash' : 'pi pi-eye'" /></button>
+                </div>
+                <small class="auth-err">{{ f.errors.value.password_confirmation }}</small>
+              </div>
+            </div>
+            <input v-model="f.trap.value.value" :name="f.trap.fieldName" type="text" :class="f.trap.hiddenClass" tabindex="-1" autocomplete="off" aria-hidden="true" />
+            <TurnstileWidget v-model:token="f.captchaToken.value" />
+            <small v-if="f.errors.value.captcha_token" class="auth-err text-center">{{ f.errors.value.captcha_token }}</small>
+          </template>
         </div>
-        <div class="min-w-0">
-          <label class="auth-label">Email</label>
-          <InputText v-model="f.email.value" v-bind="f.emailAttrs" type="email" placeholder="you@mail.ru" autocomplete="email" class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.email" />
-          <small class="auth-err">{{ f.errors.value.email }}</small>
-        </div>
+      </Transition>
+
+      <div class="mt-5 flex gap-2.5">
+        <Button v-if="!f.isFirstStep.value" type="button" label="Назад" icon="pi pi-arrow-left" severity="secondary" outlined rounded class="!w-auto shrink-0 !px-4 !py-3 !font-semibold" @click="f.goBack" />
+        <Button v-if="!f.isLastStep.value" type="button" label="Дальше" icon="pi pi-arrow-right" icon-pos="right" :class="['flex-1', t.submitClass.value]" @click="f.nextStep" />
+        <Button v-else :loading="f.isSubmitting.value" type="submit" label="Создать анкету →" :class="['flex-1', t.submitClass.value]" />
       </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div class="min-w-0">
-          <label class="auth-label">Пол *</label>
-          <Select v-model="f.gender.value" :options="g.options" optionLabel="label" optionValue="value" placeholder="Выбери пол" checkmark fluid class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.gender" />
-          <small class="auth-err">{{ f.errors.value.gender }}</small>
-        </div>
-        <div class="min-w-0">
-          <label class="auth-label">Город проживания</label>
-          <InputText v-model="f.home_city.value" placeholder="Минск" autocomplete="address-level2" class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.home_city" />
-          <small class="auth-err">{{ f.errors.value.home_city }}</small>
-        </div>
+
+      <div class="mt-4 flex flex-col items-center gap-2 text-center">
+        <button
+          type="button"
+          class="inline-flex items-center gap-1.5 text-[12px] font-semibold text-sky-700 transition hover:underline dark:text-sky-300"
+          :title="`Открыть бота @${bot.botUsername.value}`"
+          @click="bot.openBot()"
+        >
+          <i class="pi pi-telegram text-sm leading-none" />
+          <span>Зайти через Telegram-бота</span>
+        </button>
+        <div class="text-[13px] text-stone-500 dark:text-zinc-400">Уже есть профиль? <button type="button" class="font-semibold text-ink-900 dark:text-white hover:underline" @click="emit('switch-login')">Войти</button></div>
       </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div class="min-w-0">
-          <label class="auth-label">Дата рождения</label>
-          <DatePicker v-model="bd.birthDateInput.value" v-bind="bd.birthDatePickerProps.value" placeholder="12.07.1997" class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.birth_date" />
-          <small class="auth-err">{{ f.errors.value.birth_date }}</small>
-          <small v-if="ageLabel" class="text-stone-500 dark:text-zinc-400">{{ ageLabel }}</small>
-        </div>
-        <div class="min-w-0">
-          <label class="auth-label">Страна проживания</label>
-          <Select v-model="f.country.value" :options="[...RESIDENCE_COUNTRIES]" optionLabel="name" optionValue="name" placeholder="Беларусь" checkmark editable fluid class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.country" @update:model-value="onCountryChange" />
-          <small v-if="f.countryWarning.value" class="block text-amber-600 dark:text-amber-400"><i class="pi pi-exclamation-triangle mr-1" />{{ f.countryWarning.value }}</small>
-          <small class="auth-err">{{ f.errors.value.country }}</small>
-        </div>
-      </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div class="min-w-0">
-          <label class="auth-label">Пароль</label>
-          <div class="relative mt-1.5">
-            <InputText v-model="f.password.value" v-bind="f.passwordAttrs" :type="f.showPass.value ? 'text' : 'password'" placeholder="••••••••" autocomplete="new-password" class="w-full auth-input !pr-11" :invalid="!!f.errors.value.password" />
-            <button type="button" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-white/10 grid place-items-center text-stone-500 dark:text-zinc-400 text-sm" tabindex="-1" aria-label="Показать пароль" @click="f.showPass.value=!f.showPass.value"><i :class="f.showPass.value ? 'pi pi-eye-slash' : 'pi pi-eye'" /></button>
-          </div>
-          <small class="auth-err">{{ f.errors.value.password }}</small>
-        </div>
-        <div class="min-w-0">
-          <label class="auth-label">Подтверди пароль</label>
-          <div class="relative mt-1.5">
-            <InputText v-model="f.password_confirmation.value" v-bind="f.passwordConfirmationAttrs" :type="f.showPass2.value ? 'text' : 'password'" placeholder="••••••••" autocomplete="new-password" class="w-full auth-input !pr-11" :invalid="!!f.errors.value.password_confirmation" />
-            <button type="button" class="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-white/10 grid place-items-center text-stone-500 dark:text-zinc-400 text-sm" tabindex="-1" aria-label="Показать пароль" @click="f.showPass2.value=!f.showPass2.value"><i :class="f.showPass2.value ? 'pi pi-eye-slash' : 'pi pi-eye'" /></button>
-          </div>
-          <small class="auth-err">{{ f.errors.value.password_confirmation }}</small>
-        </div>
-      </div>
-      <div class="rounded-2xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/60 p-3.5 space-y-2.5">
-        <div class="flex items-center justify-between gap-2">
-          <span class="text-[13px] font-semibold text-ink-900 dark:text-zinc-100">{{ reg.locationTitle.value }}</span>
-          <span class="text-[11px] font-bold text-stone-500 dark:text-zinc-400">необязательно</span>
-        </div>
-        <p class="text-[11px] leading-relaxed text-stone-500 dark:text-zinc-400">{{ reg.locationHint.value }}</p>
-        <Button type="button" :loading="f.locating.value" severity="secondary" outlined rounded class="w-full" :label="f.values.home_lat ? 'Обновить моё место' : 'Определить моё место'" icon="pi pi-map-marker" @click="f.detectLocation" />
-        <div v-if="f.values.home_address || f.addrLoading.value" class="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2.5 flex items-center gap-2">
-          <span class="w-7 h-7 rounded-full bg-ink-900 dark:bg-white text-white dark:text-ink-900 grid place-items-center shrink-0 text-[11px]">◉</span>
-          <div class="min-w-0 flex-1">
-            <div class="text-xs font-semibold truncate dark:text-zinc-100">{{ f.addrLoading.value ? reg.addressLoadingText.value : f.values.home_address }}</div>
-          </div>
-          <button v-if="f.values.home_lat && !f.addrLoading.value" type="button" class="shrink-0 w-7 h-7 rounded-full hover:bg-stone-100 dark:hover:bg-white/10 grid place-items-center text-stone-400 dark:text-zinc-400" title="Убрать точку" @click="f.clearLocation"><i class="pi pi-times text-[11px]"></i></button>
-        </div>
-      </div>
-      <input v-model="f.trap.value.value" :name="f.trap.fieldName" type="text" :class="f.trap.hiddenClass" tabindex="-1" autocomplete="off" aria-hidden="true" />
-      <TurnstileWidget v-model:token="f.captchaToken.value" />
-      <small v-if="f.errors.value.captcha_token" class="auth-err text-center">{{ f.errors.value.captcha_token }}</small>
-      <Button :loading="f.isSubmitting.value" type="submit" label="Создать анкету →" :class="t.submitClass.value" />
-      <div class="flex items-center gap-3 pt-1" aria-hidden="true">
-        <span class="h-px flex-1 bg-stone-200 dark:bg-zinc-700" />
-        <span class="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-zinc-500">или</span>
-        <span class="h-px flex-1 bg-stone-200 dark:bg-zinc-700" />
-      </div>
-      <button
-        type="button"
-        class="w-full inline-flex items-center justify-center gap-2.5 rounded-full border-2 border-sky-200 dark:border-sky-900 bg-sky-50 dark:bg-sky-950/40 px-6 py-3 text-sm font-bold text-sky-700 dark:text-sky-300 transition hover:bg-sky-100 dark:hover:bg-sky-900/40 hover:border-sky-300 active:scale-[0.99]"
-        :title="`Открыть бота @${bot.botUsername.value}`"
-        @click="bot.openBot()"
-      >
-        <i class="pi pi-telegram text-lg leading-none" />
-        <span>Зайти через Telegram-бота</span>
-      </button>
-      <p class="text-center text-xs leading-relaxed text-stone-500 dark:text-zinc-400">
-        Нажми — откроется бот <b class="font-bold">@{{ bot.botUsername.value }}</b>: жми Start,
-        анкета создастся сама за пару секунд.
-      </p>
-      <div class="text-sm text-center text-stone-500 dark:text-zinc-400">Уже есть профиль? <button type="button" class="font-semibold text-ink-900 dark:text-white hover:underline" @click="emit('switch-login')">Войти</button></div>
     </form>
   </div>
 </template>
@@ -259,5 +278,35 @@ input.p-inputtext.auth-input {
 }
 .auth-input:deep(.p-datepicker-dropdown-icon) {
   font-size: 0.8rem;
+}
+.reg-progress {
+  border-radius: 999px;
+  overflow: hidden;
+  background: #f4f4f5;
+}
+.reg-progress :deep(.p-progressbar-value) {
+  border-radius: 999px;
+  background: linear-gradient(90deg, #f43f5e, #fb923c);
+}
+:global(html.dark) .reg-progress {
+  background: #3f3f46;
+}
+.reg-step-enter-active,
+.reg-step-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.reg-step-enter-from {
+  opacity: 0;
+  transform: translateX(12px);
+}
+.reg-step-leave-to {
+  opacity: 0;
+  transform: translateX(-12px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .reg-step-enter-active,
+  .reg-step-leave-active {
+    transition: none;
+  }
 }
 </style>

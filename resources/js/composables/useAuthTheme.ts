@@ -41,8 +41,6 @@ export function useAuthTheme() {
 
   const registerTitle = computed(() => 'Создай анкету')
 
-  const registerSub = computed(() => 'Свайпы людей рядом — мэтч открывает чат')
-
   return {
     theme,
     isUlove,
@@ -52,6 +50,5 @@ export function useAuthTheme() {
     loginTitle,
     loginSub,
     registerTitle,
-    registerSub,
   }
 }

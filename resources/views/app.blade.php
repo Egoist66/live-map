@@ -18,7 +18,8 @@
         <meta name="robots" content="{{ $isNativeClient ? 'noindex, nofollow' : $seoRobots }}">
         <meta name="author" content="{{ $seoHead['author'] ?? config('seo.author') }}">
         @if(!$isNativeClient)
-        <meta name="description" content="{{ $seoHead['description'] ?? config('seo.default_description') }}">
+        {{-- description отдаёт Inertia `<Head>` страницы (head-key) — дубль здесь
+              на SSR давал два `<meta name="description">` в head. --}}
         <meta name="keywords" content="{{ $seoHead['keywords'] ?? implode(', ', config('seo.keywords', [])) }}">
         @php($seoInt = $seoIntegrations ?? [])
         @if(!empty($seoInt['google_site_verification']))

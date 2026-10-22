@@ -43,8 +43,6 @@ function switchTab(next: LandingTabId): void {
 <template>
   <Head :title="landing.seo.value.title">
     <meta head-key="description" name="description" :content="landing.seo.value.description" />
-    <meta head-key="og:title" property="og:title" :content="landing.seo.value.title" />
-    <meta head-key="og:description" property="og:description" :content="landing.seo.value.description" />
     <link head-key="hero-lcp" rel="preload" as="image" href="/landing/hero-anya-560.webp" fetchpriority="high" />
   </Head>
   <div class="min-h-screen flex flex-col bg-surface dark:bg-[#0F121F] text-ink-900 dark:text-zinc-100 antialiased selection:bg-rose-500 selection:text-white overflow-x-hidden">
