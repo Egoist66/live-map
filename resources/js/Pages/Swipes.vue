@@ -10,7 +10,7 @@ import SuperlikeSplash from '@/Components/Features/Dating/SuperlikeSplash.vue'
 import BoostSplash from '@/Components/Features/Dating/BoostSplash.vue'
 import MatchSplash from '@/Components/Features/Dating/MatchSplash.vue'
 import AppImage from '@/Components/Ui/Media/AppImage.vue'
-import { useSwipes } from '@/composables/useSwipes'
+import { FREE_SWIPES_RADIUS_KM, useSwipes } from '@/composables/useSwipes'
 import InfiniteSentinel from '@/Components/Ui/List/InfiniteSentinel.vue'
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 import { useSwipeCardPhotos } from '@/composables/useSwipeCardPhotos'
@@ -30,9 +30,11 @@ import Select from 'primevue/select'
 import Avatar from 'primevue/avatar'
 import Chip from 'primevue/chip'
 import InputText from 'primevue/inputtext'
+import Message from 'primevue/message'
 import ToggleSwitch from 'primevue/toggleswitch'
 import DatePicker from 'primevue/datepicker'
 import Skeleton from 'primevue/skeleton'
+import Toast from 'primevue/toast'
 
 const seo = useSeo({
   title: 'ULove — свайпы и знакомства',
@@ -131,24 +133,6 @@ const dialogPt = {
 
 const interestTags = ['музыка', 'спорт', 'кино', 'путешествия', 'игры', 'еда', 'книги', 'танцы']
 
-/**
- * Свои интересы из анкеты — для кнопки «Как у меня» в фильтре.
- */
-const myInterestTags = computed<string[]>(() => {
-  const raw = (page.props.auth as any)?.user?.dating_interests
-  if (!Array.isArray(raw)) return []
-  return raw.map((t) => String(t ?? '').trim().toLowerCase()).filter((t) => t !== '').slice(0, 5)
-})
-
-/**
- * Заполнить фильтр интересов своими из анкеты.
- * Удобно вместе с целью «По интересам»: подборка строится от анкеты.
- */
-function fillMyInterests(): void {
-  if (!myInterestTags.value.length) return
-  s.filters.value.interests = [...myInterestTags.value]
-}
-
 const goalOptions = [
   { label: 'Любая цель', value: null },
   { label: 'Отношения', value: 'love' },
@@ -164,13 +148,18 @@ const genderOptions = [
   { label: 'Парни', value: 'male' },
 ]
 
-const radiusOptions = [
-  { label: 'Все люди (без ограничений)', value: null },
-  { label: 'Рядом: до 10 км', value: 10 },
-  { label: 'Рядом: до 25 км · PRO', value: 25 },
-  { label: 'Рядом: до 50 км · PRO', value: 50 },
-  { label: 'Рядом: до 100 км · PRO', value: 100 },
-]
+/**
+ * Варианты близости в ленте: все люди или точка в радиусе 15 км.
+ * «Недалеко» недоступно без координат — тогда по умолчанию все люди.
+ */
+const radiusOptions = computed(() => [
+  { label: 'Все люди', value: null },
+  {
+    label: `Люди недалеко · до ${FREE_SWIPES_RADIUS_KM} км`,
+    value: FREE_SWIPES_RADIUS_KM,
+    disabled: !s.hasHomeLocation.value,
+  },
+])
 
 /**
  * Свайп с клавиатуры (ULove-режим, ←/→): листает только ленту
@@ -470,8 +459,8 @@ onUnmounted(() => {
               <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
                 <span class="w-10 h-10 rounded-2xl bg-teal-500/15 text-teal-600 dark:text-teal-300 grid place-items-center shrink-0"><i class="pi pi-map-marker" /></span>
                 <div class="min-w-0 flex-1">
-                  <div class="text-sm font-black text-stone-900 dark:text-white">Люди рядом <span class="text-amber-500">PRO</span></div>
-                  <div class="text-[11px] text-stone-500 dark:text-zinc-400">Сейчас: {{ s.filters.value.radius_km ? `до ${s.filters.value.radius_km} км` : 'все люди' }} · Free — до 10 км</div>
+                  <div class="text-sm font-black text-stone-900 dark:text-white">Люди рядом</div>
+                  <div class="text-[11px] text-stone-500 dark:text-zinc-400">Сейчас: {{ s.filters.value.radius_km ? `до ${FREE_SWIPES_RADIUS_KM} км` : 'все люди' }}<template v-if="!s.hasHomeLocation.value"> · точка не задана</template></div>
                 </div>
                 <Button label="Фильтры" icon="pi pi-sliders-h" rounded outlined size="small" @click="s.showFilters.value = true" />
               </div>
@@ -963,8 +952,16 @@ onUnmounted(() => {
             <div class="min-w-0">
               <label class="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500">Люди рядом</label>
               <Select v-model="s.filters.value.radius_km" :options="radiusOptions" option-label="label" option-value="value" placeholder="Все люди" class="w-full mt-1 dark:!border-zinc-700" :pt="selectPt" />
-              <div class="mt-1 text-[11px] text-stone-500 dark:text-zinc-400">Без фильтра — все люди в системе. Free: рядом до 10 км, дальше — PRO.</div>
-              <div v-if="s.isRadiusPro(s.filters.value.radius_km)" class="mt-1 text-[11px] font-bold text-amber-600 dark:text-amber-400">Выбранный радиус — PRO. Оформи PRO, чтобы листать дальше.</div>
+              <div v-if="s.hasHomeLocation.value" class="mt-1 text-[11px] text-stone-500 dark:text-zinc-400">
+                «Люди недалеко» — до {{ FREE_SWIPES_RADIUS_KM }} км от точки, которую вы определили в профиле.
+              </div>
+              <div v-else class="mt-1 flex items-start gap-1.5 rounded-xl bg-amber-50 px-2.5 py-2 text-[11px] text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+                <i class="pi pi-info-circle mt-0.5 shrink-0" aria-hidden="true" />
+                <span>
+                  Чтобы включить «Люди недалеко», определите локацию в профиле.
+                  <Link href="/settings" class="font-bold underline">Определить</Link>
+                </span>
+              </div>
             </div>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -989,17 +986,9 @@ onUnmounted(() => {
                 @click="s.toggleInterest(t)"
               />
             </div>
-            <div class="mt-1.5 flex flex-wrap items-center gap-2">
-              <button
-                v-if="myInterestTags.length"
-                type="button"
-                class="text-[11px] font-bold text-violet-600 dark:text-violet-300 hover:underline"
-                @click="fillMyInterests()"
-              >
-                Как у меня: {{ myInterestTags.map((t) => `#${t}`).join(' ') }}
-              </button>
-              <span class="text-[11px] text-stone-500 dark:text-zinc-400">Совпадают и похожие: «клубы» найдёт и «ночные клубы». Цель «По интересам» подбирает от твоей анкеты.</span>
-            </div>
+            <Message v-if="s.filterModerationWarning.value" severity="warn" :closable="false" class="mt-2 !rounded-xl !text-[11px]">
+              {{ s.filterModerationWarning.value }}
+            </Message>
           </div>
           <div class="rounded-2xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/60 p-3 flex flex-col gap-3">
             <div class="flex items-center gap-3">
@@ -1047,7 +1036,7 @@ onUnmounted(() => {
       <Dialog :visible="s.showHelp.value" @update:visible="(v:boolean)=>{ s.showHelp.value = v }" modal header="Как работают свайпы" :style="{ width: '420px', maxWidth: '94vw', maxHeight: '92dvh' }" :pt="dialogPt">
         <div class="flex flex-col gap-3 text-sm text-stone-600 dark:text-zinc-300 pt-1">
           <div>ULove — листай, свайпай и находи людей рядом. Главное — что человек в ULove: мэтч открывает чат, дальше договаривайтесь сами.</div>
-          <div>Фильтр «Люди рядом» — только если хочешь локально. Без него показывают всех. Free: рядом до 10 км, дальше — PRO.</div>
+          <div>«Люди недалеко» — до {{ FREE_SWIPES_RADIUS_KM }} км от точки в профиле. Без определённой точки показываем всех людей.</div>
           <div>Свайпы безлимитные. Сообщения без мэтча: Free {{ s.quota.value ? `${s.quota.value.left}/${s.quota.value.limit}` : '3/3' }}, PRO — 10/мес. Взаимный лайк (мэтч) открывает чат всегда, даже при исчерпанном лимите.</div>
           <div>Избранное — свежие лайкнутые без мэтча. Лимиты: Free до 3, Pro до 10, Premium до 15. Лайки сверх лимита тоже ждут мэтча — человек их видит.</div>
           <div>Лента умная: выше те, кто лайкнул тебя (особенно суперлайком), кто онлайн, с общими или похожими интересами и целью, с фото, рядом и новички. Цель «По интересам» подбирает людей под твою анкету.</div>
@@ -1089,6 +1078,7 @@ onUnmounted(() => {
         </div>
       </Dialog>
     </div>
+  <Toast />
 </template>
 
 <style scoped>

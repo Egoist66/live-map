@@ -178,6 +178,18 @@ export const datingApi = {
     const { data } = await api.patch('/api/swipes/settings', patch)
     return data
   },
+  /**
+   * Импортировать анкету из JSON-файла, скачанного ранее.
+   *
+   * @param file JSON-файл анкеты ULove
+   * @returns сохранённые поля анкеты
+   */
+  async importSettings(file: File) {
+    const form = new FormData()
+    form.append('file', file)
+    const { data } = await api.post('/api/swipes/settings/import', form)
+    return data as Record<string, unknown>
+  },
   async verifyAge(birth_date: string) {
     const { data } = await api.post('/api/swipes/verify-age', { birth_date })
     return data as { ok: boolean; age: number }

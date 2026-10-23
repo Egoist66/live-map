@@ -151,16 +151,32 @@ const uloveOnly = useUloveOnly()
             Нужна для дистанции в свайпах. Если не определить, возьмём координаты по городу и стране выше.
             <template v-if="showMapFields"> Радиус зоны и точность — в разделе «Приватность».</template>
           </p>
-          <p v-if="f.home_lat.value && f.home_lng.value" class="mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-            <i class="pi pi-check-circle" aria-hidden="true" /> Точка задана
-          </p>
-          <p v-else class="mt-2 inline-flex items-center gap-1.5 text-[11px] text-stone-400 dark:text-zinc-500">
-            <i class="pi pi-info-circle" aria-hidden="true" /> Точка не задана — используем город и страну
-          </p>
-          <div class="grid sm:grid-cols-2 gap-3 mt-3">
-            <div><label class="text-xs font-medium dark:text-white">Широта</label><InputText readonly v-model="f.home_lat.value" v-bind="f.homeLatAttrs" placeholder="55.75" class="w-full mt-1 !rounded-2xl" :invalid="!!f.errors.value.home_lat" /><Message v-if="f.errors.value.home_lat" severity="error" :closable="false" class="mt-1 !text-xs">{{ f.errors.value.home_lat }}</Message></div>
-            <div><label class="text-xs font-medium dark:text-white">Долгота</label><InputText readonly v-model="f.home_lng.value" v-bind="f.homeLngAttrs" placeholder="37.61" class="w-full mt-1 !rounded-2xl" :invalid="!!f.errors.value.home_lng" /><Message v-if="f.errors.value.home_lng" severity="error" :closable="false" class="mt-1 !text-xs">{{ f.errors.value.home_lng }}</Message></div>
+          <div class="mt-3 flex items-center gap-3 rounded-2xl border border-stone-200 bg-white px-3 py-2.5 dark:border-zinc-700 dark:bg-zinc-900">
+            <span
+              class="grid h-9 w-9 shrink-0 place-items-center rounded-xl"
+              :class="f.hasHomePoint.value
+                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                : 'bg-stone-100 text-stone-400 dark:bg-zinc-800 dark:text-zinc-500'"
+            >
+              <i class="pi pi-map-marker" aria-hidden="true" />
+            </span>
+            <div class="min-w-0">
+              <div class="truncate text-sm font-semibold text-stone-900 dark:text-white">{{ f.homeLocationLabel.value }}</div>
+              <div class="text-[11px] text-stone-500 dark:text-zinc-400">
+                {{ f.hasHomePoint.value
+                  ? 'От этой точки считаем расстояние в свайпах и «Люди недалеко».'
+                  : 'Определите точку — и в свайпах включится «Люди недалеко».' }}
+              </div>
+            </div>
           </div>
+          <Message
+            v-if="f.errors.value.home_lat || f.errors.value.home_lng"
+            severity="error"
+            :closable="false"
+            class="mt-2 !rounded-xl !py-1 !text-xs"
+          >
+            {{ f.errors.value.home_lat || f.errors.value.home_lng }}
+          </Message>
         </template>
       </Card>
       <div v-if="!uloveOnly">

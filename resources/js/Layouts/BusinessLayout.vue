@@ -142,7 +142,7 @@ function logout(): void {
     <nav
       aria-label="Мобильная навигация бизнеса"
       :aria-hidden="navHidden ? 'true' : undefined"
-      class="mobile-bottom-nav pb-[var(--sab)] lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-[#0F121F]/95 backdrop-blur-xl border-t border-stone-200 dark:border-white/10"
+      class="mobile-bottom-nav pb-[var(--sab)] lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white dark:bg-[#0F121F] border-t border-stone-200 dark:border-white/10"
     >
       <div class="grid grid-cols-2">
         <Link

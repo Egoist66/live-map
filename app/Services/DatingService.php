@@ -120,7 +120,7 @@ class DatingService
     /**
      * Лимит радиуса ленты для Free. PRO/Business/Admin — безлимит.
      */
-    public const FREE_SWIPE_RADIUS_KM = 10;
+    public const FREE_SWIPE_RADIUS_KM = 15;
 
     public const GOALS = ['love', 'flirt', 'friendship', 'chat', 'interests'];
 
@@ -218,7 +218,7 @@ class DatingService
     /**
      * Лимит радиуса ленты по тарифу. Null — безлимит.
      *
-     * Free видит фильтр «рядом» только до 10 км,
+     * Free видит фильтр «рядом» до 15 км,
      * PRO/Business/Admin — любой радиус и всю страну.
      *
      * @param User $user
@@ -1769,7 +1769,9 @@ class DatingService
      * возраст неизвестен — в свайпах не показываем (строго 18+).
      * По умолчанию — без geo-ограничений: видны все люди в системе,
      * независимо от расстояния. Фильтр «рядом» (radius_km) опционален
-     * и упирается в тариф: Free — до 10 км, PRO — безлимит.
+     * и упирается в тариф: Free — до 15 км, PRO — безлимит.
+     * Если у зрителя нет определённой точки (home_lat/home_lng),
+     * радиус игнорируется — показываем всех людей, а не пустую ленту.
      * Пол по умолчанию — сохранённый выбор, иначе противоположный
      * своему (мужчина листает девушек и наоборот).
      * Порядок — умный скоринг релевантности (scoreCandidate),
@@ -1801,6 +1803,15 @@ class DatingService
         }
 
         $radiusKm = isset($filters['radius_km']) ? (int) $filters['radius_km'] : null;
+
+        $hasHomePoint = $me->home_lat !== null && $me->home_lng !== null;
+
+        // Без точки отсчёта радиус не имеет смысла: distanceKm() вернёт
+        // null у всех, PHP-фильтр вырежет весь пул. Показываем всех.
+        if ($radiusKm !== null && $radiusKm > 0 && ! $hasHomePoint) {
+            $radiusKm = null;
+        }
+
         $this->assertRadiusAllowed($me, $radiusKm);
 
         $actedIds = SwipeAction::where('liker_id', $me->id)->pluck('liked_id')->all();

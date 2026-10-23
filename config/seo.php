@@ -12,7 +12,7 @@ return [
     'og_type' => 'website',
     'twitter_card' => 'summary_large_image',
     'theme_color' => '#FD267D',
-    'image' => '/og-cover.jpg',
+    'image' => '/og-cover.jpg?v=3',
     'twitter_site' => null,
     'robots' => env('APP_ENV') === 'production' ? 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1' : 'noindex, nofollow',
 ];

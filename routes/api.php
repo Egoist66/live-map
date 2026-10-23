@@ -279,6 +279,8 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:300,1'])->group(function
     Route::post('/swipes/boost', [SwipeController::class, 'boost'])->middleware('throttle:social-write');
     Route::post('/swipes/extras/purchase', [SwipeController::class, 'purchase'])->middleware('throttle:social-write');
     Route::patch('/swipes/settings', [SwipeController::class, 'settings'])->middleware('throttle:profile-write');
+    Route::get('/swipes/settings/export', [SwipeController::class, 'exportSettings'])->middleware('throttle:profile-write');
+    Route::post('/swipes/settings/import', [SwipeController::class, 'importSettings'])->middleware('throttle:profile-write');
     Route::post('/swipes/verify-age', [SwipeController::class, 'verifyAge'])->middleware('throttle:profile-write');
     Route::get('/dating/reviews', [\App\Http\Controllers\DatingReviewController::class, 'index']);
     Route::post('/dating/reviews', [\App\Http\Controllers\DatingReviewController::class, 'store'])->middleware('throttle:social-write');

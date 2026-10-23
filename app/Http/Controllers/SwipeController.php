@@ -4,15 +4,20 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Services\ActivityRewards;
+use App\Services\DatingQuestionnaireService;
 use App\Services\DatingService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Дейтинг-лента: свайпы, мэтчи, фильтры, настройки приватности.
  */
 class SwipeController extends Controller
 {
-    public function __construct(private DatingService $dating) {}
+    public function __construct(
+        private DatingService $dating,
+        private DatingQuestionnaireService $questionnaire,
+    ) {}
 
     /**
      * Лента кандидатов.
@@ -316,28 +321,8 @@ class SwipeController extends Controller
             'dating_match_only' => 'sometimes|boolean',
         ]);
 
-        $customGoal = isset($data['dating_custom_goal']) ? trim((string) $data['dating_custom_goal']) : null;
-        $data['dating_custom_goal'] = $customGoal !== '' ? $customGoal : null;
-        $about = isset($data['dating_about']) ? trim((string) $data['dating_about']) : null;
-        $data['dating_about'] = $about !== '' ? $about : null;
-        $interests = $data['dating_interests'] ?? null;
-        if (is_array($interests)) {
-            $cleaned = [];
-            foreach ($interests as $interest) {
-                $tag = mb_strtolower(trim((string) $interest));
-                if ($tag === '' || in_array($tag, $cleaned, true)) {
-                    continue;
-                }
-                $cleaned[] = mb_substr($tag, 0, 40);
-            }
-            $data['dating_interests'] = array_values(array_slice($cleaned, 0, 10));
-        }
-
-        \App\Services\ContentModeration::assertClean(
-            $data['dating_about'] ?? null,
-            $data['dating_custom_goal'] ?? null,
-            ...($data['dating_interests'] ?? [])
-        );
+        $data = $this->questionnaire->normalize($data);
+        $this->questionnaire->assertClean($data);
 
         $hideKeys = ['dating_hide_name', 'dating_hide_age', 'dating_hide_distance', 'dating_hide_rating'];
 
@@ -370,6 +355,61 @@ class SwipeController extends Controller
             'dating_hide_distance',
             'dating_hide_rating',
             'dating_match_only',
+        ]));
+    }
+
+    /**
+     * Скачать анкету ULove переносимым JSON-файлом.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function exportSettings(Request $request)
+    {
+        $me = $request->user();
+        $this->dating->assertAdult($me);
+
+        $filename = 'ulove-anketa-'.now()->format('Y-m-d').'.json';
+
+        return response()->json($this->questionnaire->export($me), 200, [
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ]);
+    }
+
+    /**
+     * Импортировать анкету из JSON-файла, скачанного ранее.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     *
+     * @throws ValidationException 422 — битый файл или запрещённый контент
+     */
+    public function importSettings(Request $request)
+    {
+        $me = $request->user();
+        $this->dating->assertAdult($me);
+
+        $request->validate([
+            'file' => ['required', 'file', 'max:64'],
+        ]);
+
+        $contents = $request->file('file')->get();
+
+        if ($contents === false) {
+            throw ValidationException::withMessages([
+                'file' => 'Не удалось прочитать файл анкеты.',
+            ]);
+        }
+
+        $data = $this->questionnaire->parseImport($contents);
+        $this->questionnaire->apply($me, $data);
+
+        return response()->json($me->refresh()->only([
+            'dating_enabled',
+            'dating_goal',
+            'dating_custom_goal',
+            'dating_about',
+            'dating_interests',
         ]));
     }
 

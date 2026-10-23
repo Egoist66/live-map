@@ -329,10 +329,60 @@ export function useProfileForm() {
     })
   })
 
+  /**
+   * Задана ли точка для расчёта расстояний.
+   *
+   * Координаты могут прийти строкой (decimal-каст Laravel), поэтому
+   * проверяем через Number. Пустая строка и null — точки нет.
+   *
+   * @returns true если home_lat и home_lng валидны
+   */
+  const hasHomePoint = computed<boolean>(() => {
+    const lat = (values as any).home_lat
+    const lng = (values as any).home_lng
+
+    if (lat == null || lat === '' || lng == null || lng === '') {
+      return false
+    }
+
+    return Number.isFinite(Number(lat)) && Number.isFinite(Number(lng))
+  })
+
+  /**
+   * Человеческая подпись локации вместо широты и долготы.
+   *
+   * Показываем «Город, Страна», затем сохранённый адрес из
+   * reverse-geocode, и только в крайнем случае — нейтральную
+   * подпись. Координаты пользователю не интересны.
+   *
+   * @returns читаемая локация для карточки в профиле
+   */
+  const homeLocationLabel = computed<string>(() => {
+    const city = String((values as any).home_city ?? '').trim()
+    const country = String((values as any).country ?? '').trim()
+    const address = String((values as any).home_address ?? '').trim()
+
+    const parts = [city, country].filter((part) => part !== '')
+
+    if (parts.length > 0) {
+      return parts.join(', ')
+    }
+
+    // Иногда reverse-geocode падает и в адрес пишутся сырые координаты —
+    // пользователю их показывать нельзя.
+    const looksLikeCoordinates = /^-?\d+(?:[.,]\d+)?\s*,\s*-?\d+(?:[.,]\d+)?$/.test(address)
+
+    if (address !== '' && !looksLikeCoordinates) {
+      return address
+    }
+
+    return hasHomePoint.value ? 'Точка на карте' : 'Не определена'
+  })
+
   const age = useUserAge(() => (values as any).birth_date)
   const isAdmin = computed(() => !!user.value?.is_admin || user.value?.role === 'admin')
   const countryWarning = computed(() => (isAdmin.value ? null : residenceCheck.countryWarning.value))
   const checkingCountry = computed(() => (isAdmin.value ? false : residenceCheck.checkingCountry.value))
 
-  return { user, name, nameAttrs, gender, birth_date, age: age.age, ageLabel: age.label, country, country_code, email, emailAttrs, canChangeEmail, emailChangesLeft, emailChangeHint, canChangeName, nameChangesLeft, nameChangeHint, home_lat, homeLatAttrs, home_lng, homeLngAttrs, home_city, home_address, home_visibility, home_show_exact, home_radius_km, bio, is_anonymous_default, plan, errors, values, setValues, setErrors, submit, isSubmitting, useMyLocation, homeLocating: geolocation.loading, clearMyLocation, setCountry, maxRadius, homeLocation, countryWarning, checkingCountry }
+  return { user, name, nameAttrs, gender, birth_date, age: age.age, ageLabel: age.label, country, country_code, email, emailAttrs, canChangeEmail, emailChangesLeft, emailChangeHint, canChangeName, nameChangesLeft, nameChangeHint, home_lat, homeLatAttrs, home_lng, homeLngAttrs, home_city, home_address, home_visibility, home_show_exact, home_radius_km, bio, is_anonymous_default, plan, errors, values, setValues, setErrors, submit, isSubmitting, useMyLocation, homeLocating: geolocation.loading, clearMyLocation, setCountry, maxRadius, homeLocation, hasHomePoint, homeLocationLabel, countryWarning, checkingCountry }
 }

@@ -48,7 +48,7 @@ export function useAdminSeo() {
     twitter_card: 'summary_large_image',
     twitter_site: '',
     theme_color: '#0F172A',
-    og_image: '/og-cover.jpg',
+    og_image: '/og-cover.jpg?v=3',
     robots_default: '',
   })
 

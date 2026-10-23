@@ -123,6 +123,51 @@ function notifyNativeTheme(isDark: boolean, bg: string): void {
 }
 
 /**
+ * Синхронизирует тему с манифестом PWA и cookie.
+ *
+ * `theme_color` манифеста красит системную панель навигации Android
+ * под нижним меню и не умеет читать CSS-тему. Поэтому при каждом
+ * переключении темы пишем `ulove_theme` в cookie (её прочитает
+ * `/site.webmanifest` при следующем запуске установленного PWA)
+ * и обновляем `href` тега manifest — Chrome перечитывает манифест
+ * и подтягивает актуальный цвет хрома без переустановки приложения.
+ *
+ * @returns void
+ */
+function syncManifestTheme(): void {
+  if (typeof document === 'undefined') {
+    return
+  }
+
+  const theme = amoled.value ? 'amoled' : isDark.value ? 'dark' : 'light'
+
+  try {
+    document.cookie = `ulove_theme=${theme}; path=/; max-age=31536000; SameSite=Lax`
+  } catch {
+    // No-op: без cookie манифест отдаст светлую тему по умолчанию.
+  }
+
+  try {
+    const link = document.querySelector<HTMLLinkElement>('link[rel="manifest"]')
+
+    if (!link) {
+      return
+    }
+
+    const url = new URL(link.href, window.location.origin)
+
+    if (url.searchParams.get('theme') === theme) {
+      return
+    }
+
+    url.searchParams.set('theme', theme)
+    link.href = url.toString()
+  } catch {
+    // No-op: кривой href не должен ломать применение темы.
+  }
+}
+
+/**
  * Красит системные зоны WebView/браузера в цвет темы.
  *
  * Статус-бар сверху и панель жестов снизу за документом берутся
@@ -147,6 +192,8 @@ function syncSystemChrome(isDark: boolean): void {
   const bg = amoled.value ? '#000000' : isDark ? '#0F121F' : '#ffffff'
   const root = document.documentElement
   const bootAlive = typeof document !== 'undefined' && !!document.getElementById('pwa-boot')
+
+  syncManifestTheme()
 
   if (!bootAlive) {
     root.style.backgroundColor = bg

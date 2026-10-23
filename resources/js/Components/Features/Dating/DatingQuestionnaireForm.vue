@@ -7,6 +7,10 @@ import InputText from 'primevue/inputtext'
 import Textarea from 'primevue/textarea'
 import Chip from 'primevue/chip'
 import ToggleSwitch from 'primevue/toggleswitch'
+import FileUpload from 'primevue/fileupload'
+import Message from 'primevue/message'
+import type { FileUploadSelectEvent } from 'primevue/fileupload'
+import { useToast } from 'primevue/usetoast'
 import { useDatingQuestionnaire } from '@/composables/useDatingQuestionnaire'
 import { useQuestionnaireAi } from '@/composables/useQuestionnaireAi'
 import { useQuestionnaireTemplates } from '@/composables/useQuestionnaireTemplates'
@@ -19,6 +23,18 @@ const q = useDatingQuestionnaire()
 const ai = useQuestionnaireAi()
 const tpl = useQuestionnaireTemplates()
 const { selectPt } = useDropdownMenuStyle()
+
+/** Toast может быть не смонтирован на странице — не роняем форму. */
+const toast = (() => {
+  try {
+    return useToast()
+  } catch {
+    return null
+  }
+})()
+
+/** Ключ FileUpload: после импорта сбрасывает выбранный файл. */
+const importKey = ref(0)
 
 /** Черновик подставлен: просим проверить перед сохранением. */
 const draftApplied = ref(false)
@@ -66,6 +82,56 @@ async function onGenerate(): Promise<void> {
   q.interests.value = []
   for (const tag of draft.interests ?? []) q.addInterest(tag)
   draftApplied.value = true
+}
+
+/**
+ * Скачать анкету JSON-файлом и показать результат.
+ */
+async function onExport(): Promise<void> {
+  const ok = await q.exportQuestionnaire()
+
+  if (ok) {
+    toast?.add({ severity: 'success', summary: 'Анкета скачана', detail: 'JSON-файл сохранён на устройство.', life: 3000 })
+    return
+  }
+
+  toast?.add({
+    severity: 'error',
+    summary: 'Не удалось скачать анкету',
+    detail: q.transferError.value ?? undefined,
+    life: 4500,
+  })
+}
+
+/**
+ * Импортировать выбранный JSON-файл и обновить анкету.
+ *
+ * @param event событие выбора файла PrimeVue FileUpload
+ */
+async function onImportSelect(event: FileUploadSelectEvent): Promise<void> {
+  const file = event.files?.[0]
+
+  if (!file) {
+    return
+  }
+
+  const ok = await q.importQuestionnaire(file)
+  importKey.value += 1
+
+  if (!ok) {
+    toast?.add({
+      severity: 'error',
+      summary: 'Импорт не удался',
+      detail: q.transferError.value ?? undefined,
+      life: 5000,
+    })
+    return
+  }
+
+  draftApplied.value = false
+  tpl.resetSelection()
+  toast?.add({ severity: 'success', summary: 'Анкета загружена', detail: 'Поля обновлены из файла.', life: 3500 })
+  emit('saved', q.lastSaved.value ?? undefined)
 }
 </script>
 
@@ -214,11 +280,54 @@ async function onGenerate(): Promise<void> {
         />
       </div>
       <div v-if="q.errors.value.dating_interests" class="mt-1 text-xs text-rose-600">{{ q.errors.value.dating_interests }}</div>
+      <Message v-if="q.moderationWarning.value" severity="warn" :closable="false" class="mt-2 !rounded-xl !text-xs">
+        {{ q.moderationWarning.value }}
+      </Message>
     </div>
 
     <div class="text-[11px] text-stone-400 dark:text-zinc-500">Свои тексты проверяются: политика, 18+, мат и т.д. запрещены.</div>
     <div v-if="q.serverError.value" class="text-sm text-rose-600 dark:text-rose-300">{{ q.serverError.value }}</div>
 
     <Button label="Сохранить анкету" icon="pi pi-check" rounded class="w-full !border-0 !bg-[#F6627B] !text-white shadow-lg shadow-rose-500/30 hover:!bg-[#e2556c] active:!bg-[#d84b61]" :loading="q.saving.value" @click="onSave()" />
+
+    <div class="rounded-2xl border border-dashed border-stone-300 bg-stone-50/60 p-3 dark:border-zinc-700 dark:bg-zinc-800/40">
+      <div class="flex items-start gap-2.5">
+        <span class="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-white text-stone-500 shadow-sm dark:bg-zinc-900 dark:text-zinc-300">
+          <i class="pi pi-box text-sm" />
+        </span>
+        <div class="min-w-0 flex-1">
+          <div class="text-[13px] font-black text-stone-800 dark:text-zinc-100">Перенос анкеты</div>
+          <div class="text-[11px] leading-relaxed text-stone-500 dark:text-zinc-400">
+            Скачайте JSON и загрузите его на другом устройстве. Импорт заменит текущую анкету.
+          </div>
+        </div>
+      </div>
+      <div class="mt-2.5 flex flex-wrap items-center gap-2">
+        <Button
+          label="Скачать"
+          icon="pi pi-download"
+          size="small"
+          rounded
+          outlined
+          severity="secondary"
+          :loading="q.exporting.value"
+          :disabled="q.importing.value"
+          @click="onExport()"
+        />
+        <FileUpload
+          :key="importKey"
+          mode="basic"
+          accept=".json,application/json"
+          :auto="false"
+          choose-label="Загрузить"
+          :disabled="q.importing.value || q.exporting.value"
+          @select="onImportSelect"
+        />
+      </div>
+      <div v-if="q.importing.value" class="mt-1.5 text-[11px] text-stone-500 dark:text-zinc-400">Загружаем анкету...</div>
+      <Message v-if="q.transferError.value" severity="error" :closable="false" class="mt-2 !rounded-xl !text-xs">
+        {{ q.transferError.value }}
+      </Message>
+    </div>
   </div>
 </template>

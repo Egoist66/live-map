@@ -143,7 +143,7 @@ class AppServiceProvider extends ServiceProvider
                     'twitter_card' => config('seo.twitter_card', 'summary_large_image'),
                     'twitter_site' => config('seo.twitter_site'),
                     'theme_color' => config('seo.theme_color', '#0F172A'),
-                    'og_image' => config('seo.image', '/og-cover.jpg?v=2'),
+                    'og_image' => config('seo.image', '/og-cover.jpg?v=3'),
                     'og_title' => config('seo.default_title'),
                     'og_description' => config('seo.default_description'),
                     'canonical' => url()->current(),

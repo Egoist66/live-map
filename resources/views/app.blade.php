@@ -39,7 +39,28 @@
         <link rel="canonical" href="{{ $seoHead['canonical'] ?? url()->current() }}">
         @endif
 
-        <link rel="manifest" href="/site.webmanifest?v={{ $branding['version'] ?? '2' }}">
+        {{-- Cookie темы ДО тега manifest: браузер запрашивает манифест
+              сразу при парсинге ссылки, а `theme_color` манифеста красит
+              системную панель под нижним меню. Без cookie она остаётся
+              брендово-розовой из старого манифеста. --}}
+        <script nonce="{{ $cspNonce ?? '' }}">
+            (function () {
+                try {
+                    var stored = null;
+                    var amoled = false;
+                    try {
+                        stored = localStorage.getItem('theme');
+                        amoled = localStorage.getItem('amoled') === '1';
+                    } catch (e) {}
+                    var osDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    var isDark = (stored ? stored === 'dark' : osDark) || amoled;
+                    var theme = amoled ? 'amoled' : (isDark ? 'dark' : 'light');
+                    document.cookie = 'ulove_theme=' + theme + '; path=/; max-age=31536000; SameSite=Lax';
+                } catch (e) {}
+            })();
+        </script>
+        @php($manifestTheme = in_array(request()->cookie('ulove_theme'), ['light', 'dark', 'amoled'], true) ? request()->cookie('ulove_theme') : 'light')
+        <link rel="manifest" href="/site.webmanifest?v={{ $branding['version'] ?? '2' }}&theme={{ $manifestTheme }}">
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="application-name" content="{{ $seoHead['site_name'] ?? config('seo.site_name') }}">
         <meta name="apple-mobile-web-app-capable" content="yes">
@@ -247,7 +268,7 @@
             } catch (e) {}
         </script>
         <script nonce="{{ $cspNonce ?? '' }}">
-            (function(){ try{ var root=document.documentElement; var s=null, a=false; try{ s=localStorage.getItem('theme'); a=localStorage.getItem('amoled')==='1'; }catch(e){} var m=window.matchMedia('(prefers-color-scheme: dark)').matches; var isTg=root.classList.contains('tg-app'); var tgDark=root.classList.contains('tg-dark'); var d=isTg ? tgDark : (s ? s==='dark' : m); d=d||a; if(d) root.classList.add('dark'); else root.classList.remove('dark'); if(a) root.classList.add('amoled'); root.style.colorScheme = d?'dark':'light'; var tgBg=root.classList.contains('tg-app') ? root.style.getPropertyValue('--tg-theme-bg-color').trim() : ''; var bg=tgBg || (a?'#000000':(d?'#0F121F':'#ffffff')); window.__upinThemeBg = bg;             try{var tc=document.querySelector('meta[name="theme-color"]:not([media])');if(tc)tc.setAttribute('content',bg);}catch(e){} /* Розовый сплэш рисует только #pwa-boot, а <html> сразу получает фон темы. Иначе на PWA-устройствах розовый оставался полосой под нижней навигацией и в safe-area после скрытия сплэша. */ root.style.backgroundColor = bg; }catch(e){} })();
+            (function(){ try{ var root=document.documentElement; var s=null, a=false; try{ s=localStorage.getItem('theme'); a=localStorage.getItem('amoled')==='1'; }catch(e){} var m=window.matchMedia('(prefers-color-scheme: dark)').matches; var isTg=root.classList.contains('tg-app'); var tgDark=root.classList.contains('tg-dark'); var d=isTg ? tgDark : (s ? s==='dark' : m); d=d||a; if(d) root.classList.add('dark'); else root.classList.remove('dark'); if(a) root.classList.add('amoled'); root.style.colorScheme = d?'dark':'light'; var tgBg=root.classList.contains('tg-app') ? root.style.getPropertyValue('--tg-theme-bg-color').trim() : ''; var bg=tgBg || (a?'#000000':(d?'#0F121F':'#ffffff')); window.__upinThemeBg = bg;             try{var tc=document.querySelector('meta[name="theme-color"]:not([media])');if(tc)tc.setAttribute('content',bg);}catch(e){} /* Розовый сплэш рисует только #pwa-boot, а <html> сразу получает фон темы. Иначе на PWA-устройствах розовый оставался полосой под нижней навигацией и в safe-area после скрытия сплэша. */ root.style.backgroundColor = bg; var manifestTheme=a?'amoled':(d?'dark':'light'); try{ document.cookie='ulove_theme='+manifestTheme+'; path=/; max-age=31536000; SameSite=Lax'; }catch(e){} try{ var manifestLink=document.querySelector('link[rel="manifest"]'); if(manifestLink){ var manifestUrl=new URL(manifestLink.getAttribute('href')||'/site.webmanifest', window.location.origin); manifestUrl.searchParams.set('theme', manifestTheme); manifestLink.setAttribute('href', manifestUrl.toString()); } }catch(e){} }catch(e){} })();
         </script>
         {{-- Сторож загрузки entry: после деплоя HTML может ссылаться на уже
               удалённый `/build/assets/app-*.js` (протухший SW/HTTP-кэш, гонка

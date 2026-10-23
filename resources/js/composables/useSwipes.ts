@@ -6,6 +6,7 @@ import { busOn } from '@/services/realtime-bus'
 import { ensureUserChannel } from '@/composables/useUserChannel'
 import { pokeRealtime } from '@/composables/useRealtimePoller'
 import { shouldSkipMotion } from '@/composables/useMotion'
+import { checkLocal } from '@/composables/useContentModeration'
 import { useRewardToast } from '@/composables/useRewardToast'
 import type { ActiveCard, SwipeCard, SwipeExtras, SwipeFilters, SwipeQuota } from '@/services/dating.api'
 import { normalizeSwipeTab, swipeTabPath } from '@/utils/swipe-tabs'
@@ -18,8 +19,13 @@ import type { SwipeTab } from '@/utils/swipe-tabs'
 export { normalizeSwipeTab, swipeTabPath } from '@/utils/swipe-tabs'
 export type { SwipeTab } from '@/utils/swipe-tabs'
 
-/** Лимит радиуса «рядом» для Free, км. PRO — безлимит. */
-export const FREE_SWIPES_RADIUS_KM = 10
+/**
+ * Радиус фильтра «Люди недалеко», км.
+ *
+ * Единственный вариант близости в ленте: до 15 км от точки,
+ * которую человек определил в профиле. Доступен всем тарифам.
+ */
+export const FREE_SWIPES_RADIUS_KM = 15
 
 /**
  * Дейтинг-лента: свайпы, мэтчи, активные, фильтры, квоты, приватность.
@@ -100,6 +106,26 @@ export function useSwipes() {
 
   const page = usePage()
   const authUser = computed(() => (page.props.auth as any)?.user)
+
+  /**
+   * Есть ли у человека определённая точка для расстояний.
+   *
+   * `home_lat`/`home_lng` приходят строкой из decimal-каста Laravel,
+   * поэтому проверяем через Number, а не только на null. Без точки
+   * фильтр «Люди недалеко» недоступен — лента показывает всех людей.
+   *
+   * @returns true если координаты заданы и валидны
+   */
+  const hasHomeLocation = computed<boolean>(() => {
+    const lat = authUser.value?.home_lat
+    const lng = authUser.value?.home_lng
+
+    if (lat == null || lat === '' || lng == null || lng === '') {
+      return false
+    }
+
+    return Number.isFinite(Number(lat)) && Number.isFinite(Number(lng))
+  })
 
   /**
    * Стафф ли текущий пользователь (админ или модератор).
@@ -359,7 +385,16 @@ export function useSwipes() {
     const isAge = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && v >= 18 && v <= 99
     const ageMin = isAge(candidate.age_min) ? candidate.age_min : null
     const ageMax = isAge(candidate.age_max) ? candidate.age_max : null
-    const radius = typeof candidate.radius_km === 'number' && Number.isFinite(candidate.radius_km) && candidate.radius_km > 0 ? candidate.radius_km : null
+    // Старые сохранения знали радиусы 10/25/50/100 — в новой модели
+    // близость одна (15 км), поэтому любое положительное значение
+    // нормализуем к ней, а не тащим PRO-радиус в ленту.
+    const savedRadius = candidate.radius_km
+    const isSavedRadiusValid =
+      typeof savedRadius === 'number' &&
+      Number.isFinite(savedRadius) &&
+      savedRadius > 0
+
+    const radius = isSavedRadiusValid ? FREE_SWIPES_RADIUS_KM : null
     const interests = Array.isArray(candidate.interests)
       ? candidate.interests.filter((t): t is string => typeof t === 'string' && t.trim() !== '').slice(0, 10)
       : []
@@ -400,17 +435,64 @@ export function useSwipes() {
     }
   }
 
+  /** Предупреждение, если сохранённые интересы фильтра не прошли модерацию. */
+  const filterModerationWarning = ref<string | null>(null)
+
   const savedFilters = loadSavedFilters(authUser.value?.id)
-  const filters = ref<SwipeFilters>(
-    savedFilters ?? {
-      goal: null,
-      gender: defaultGender(),
-      age_min: null,
-      age_max: null,
-      radius_km: null,
-      interests: [],
-    },
-  )
+
+  if (savedFilters) {
+    const savedInterests = Array.isArray(savedFilters.interests) ? savedFilters.interests : []
+    const cleanInterests = savedInterests.filter((tag) => !checkLocal(tag).is_toxic)
+
+    if (cleanInterests.length !== savedInterests.length) {
+      filterModerationWarning.value = 'Некоторые интересы скрыты модерацией.'
+    }
+
+    savedFilters.interests = cleanInterests
+  }
+
+  const initialFilters: SwipeFilters = savedFilters ?? {
+    goal: null,
+    gender: defaultGender(),
+    age_min: null,
+    age_max: null,
+    radius_km: null,
+    interests: [],
+  }
+
+  // Без точки в профиле «недалеко» посчитать не от чего — стартуем
+  // со всех людей, как требует фильтр, а не с пустой лентой.
+  if (initialFilters.radius_km != null && !hasHomeLocation.value) {
+    initialFilters.radius_km = null
+  }
+
+  const filters = ref<SwipeFilters>(initialFilters)
+
+  /**
+   * Фильтры, которые реально уходят на бэк.
+   *
+   * Радиус снимается, если точка не определена: иначе PHP-фильтр
+   * отбросил бы всех кандидатов без расстояния и лента опустела.
+   *
+   * @returns копия фильтров без недоступного радиуса
+   */
+  const effectiveFilters = computed<SwipeFilters>(() => {
+    const current = filters.value
+
+    if (current.radius_km == null || hasHomeLocation.value) {
+      return current
+    }
+
+    return { ...current, radius_km: null }
+  })
+
+  // Точку могли стереть в профиле — снимаем «недалеко» сразу,
+  // чтобы фильтр не остался выбранным, но не работал.
+  watch(hasHomeLocation, (available) => {
+    if (!available && filters.value.radius_km != null) {
+      filters.value.radius_km = null
+    }
+  })
 
   // Автосохранение при любом изменении фильтров (модалка, сброс, переключение).
   watch(
@@ -466,7 +548,7 @@ export function useSwipes() {
    * @returns true если хоть один фильтр задан
    */
   const hasActiveFilters = computed(() => {
-    const f = filters.value
+    const f = effectiveFilters.value
     return !!(f.goal || (f.gender && f.gender !== defaultGender()) || f.age_min || f.age_max || f.radius_km || (f.interests && f.interests.length))
   })
 
@@ -819,7 +901,7 @@ export function useSwipes() {
     loading.value = true
     error.value = null
     try {
-      const res = await datingApi.feed(filters.value)
+      const res = await datingApi.feed(effectiveFilters.value)
       cards.value = res.cards
       quota.value = res.quota
       index.value = 0
@@ -1156,6 +1238,7 @@ export function useSwipes() {
    * @returns void
    */
   async function resetFilters(): Promise<void> {
+    filterModerationWarning.value = null
     filters.value = {
       goal: null,
       gender: defaultGender(),
@@ -1457,7 +1540,7 @@ export function useSwipes() {
     try {
       const seenIds = cards.value.map((c) => c.id)
       const exclude = seenIds.filter((id): id is number => id != null).slice(-200)
-      const res = await datingApi.feed(filters.value, exclude, 20)
+      const res = await datingApi.feed(effectiveFilters.value, exclude, 20)
       quota.value = res.quota
       const known = new Set(cards.value.map((c) => c.id))
       const fresh = res.cards.filter((c) => !known.has(c.id))
@@ -1477,7 +1560,7 @@ export function useSwipes() {
     try {
       const seenIds = cards.value.map((c) => c.id)
       const exclude = seenIds.filter((id): id is number => id != null).slice(-200)
-      const res = await datingApi.feed(filters.value, exclude, 20)
+      const res = await datingApi.feed(effectiveFilters.value, exclude, 20)
       quota.value = res.quota
       const known = new Set(cards.value.map((c) => c.id))
       const fresh = res.cards.filter((c) => !known.has(c.id))
@@ -1700,6 +1783,15 @@ export function useSwipes() {
    * @returns void
    */
   function toggleInterest(tag: string): void {
+    const hit = checkLocal(tag)
+
+    if (hit.is_toxic) {
+      filterModerationWarning.value = 'Этот интерес не прошёл модерацию.'
+      return
+    }
+
+    filterModerationWarning.value = null
+
     const list = filters.value.interests
     const at = list.indexOf(tag)
     if (at >= 0) {
@@ -1857,7 +1949,9 @@ export function useSwipes() {
     radiusLimit,
     canResetHistory,
     isRadiusPro,
+    hasHomeLocation,
     filters,
+    filterModerationWarning,
     privacy,
     ageMinText,
     ageMaxText,

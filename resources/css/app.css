@@ -313,9 +313,12 @@ html.amoled .p-select-overlay, html.amoled .p-datepicker-panel, html.amoled .p-p
 html.amoled .p-confirmdialog, html.amoled .p-confirmdialog .p-dialog { background: #000000 !important; }
 html.amoled input, html.amoled textarea, html.amoled select,
 html.amoled .p-inputtext, html.amoled .p-textarea { background-color: #000000 !important; }
-html.amoled .mobile-bottom-nav { background-color: rgba(0,0,0,0.97) !important; }
-html.amoled .mobile-bottom-nav::before,
-html.amoled .mobile-bottom-nav::after { background: #000000; }
+/* AMOLED всегда идёт вместе с dark, поэтому селектор должен быть
+   специфичнее html.dark .mobile-bottom-nav — иначе тёмный #0F121F
+   перекрывает black и системная полоса не совпадает с манифестом. */
+html.dark.amoled .mobile-bottom-nav { background-color: #000000 !important; }
+html.dark.amoled .mobile-bottom-nav::before,
+html.dark.amoled .mobile-bottom-nav::after { background: #000000 !important; }
 html.amoled .maplibregl-ctrl-group { background: #000000 !important; }
 
 @media (max-width: 640px) {
@@ -508,14 +511,16 @@ html.native-keyboard-open .h-app-full {
 /* Нижнее меню прячется при открытой клавиатуре (класс ставит useMobileBottomNav). */
 .mobile-bottom-nav {
   transition: transform 0.22s ease, opacity 0.22s ease;
-  background-color: rgba(255,255,255,0.95);
+  background-color: #ffffff;
 }
 /* Тёмная тема: глухая подложка у меню и запас под ним — системная
    полоса жестов красится в тот же цвет, белого стыка нет.
    Цвет — ровно #0F121F в цвет бара (dark:bg-[#0F121F]) и фона
-   документа, иначе под навигацией видна чужая полоса. */
+   документа, иначе под навигацией видна чужая полоса.
+   Плашка непрозрачная: сквозь полупрозрачную на розовом фоне
+   страницы просвечивал брендовый оттенок и низ выглядел «розовым». */
 html.dark .mobile-bottom-nav {
-  background-color: rgba(15, 18, 31, 0.97) !important;
+  background-color: #0f121f !important;
 }
 /* Системная полоса под навигацией (home-индикатор): заливаем ГЛУХИМ
    цветом навигации, а не inherit (он полупрозрачный — сквозь него
