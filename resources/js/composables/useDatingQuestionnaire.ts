@@ -286,7 +286,7 @@ export function useDatingQuestionnaire() {
     moderationWarning.value = null
 
     if (!file.name.toLowerCase().endsWith('.json')) {
-      transferError.value = 'Выберите JSON-файл анкеты ULove.'
+      transferError.value = 'Выберите файл анкеты ULove.'
       return false
     }
 

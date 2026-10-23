@@ -91,7 +91,7 @@ async function onExport(): Promise<void> {
   const ok = await q.exportQuestionnaire()
 
   if (ok) {
-    toast?.add({ severity: 'success', summary: 'Анкета скачана', detail: 'JSON-файл сохранён на устройство.', life: 3000 })
+    toast?.add({ severity: 'success', summary: 'Анкета скачана', detail: 'Файл анкеты сохранён на устройство.', life: 3000 })
     return
   }
 
@@ -298,7 +298,7 @@ async function onImportSelect(event: FileUploadSelectEvent): Promise<void> {
         <div class="min-w-0 flex-1">
           <div class="text-[13px] font-black text-stone-800 dark:text-zinc-100">Перенос анкеты</div>
           <div class="text-[11px] leading-relaxed text-stone-500 dark:text-zinc-400">
-            Скачайте JSON и загрузите его на другом устройстве. Импорт заменит текущую анкету.
+            Скачайте анкету и загрузите её в другом аккаунте. Импорт заменит текущую анкету.
           </div>
         </div>
       </div>
@@ -320,6 +320,12 @@ async function onImportSelect(event: FileUploadSelectEvent): Promise<void> {
           accept=".json,application/json"
           :auto="false"
           choose-label="Загрузить"
+          choose-icon="pi pi-upload"
+          :choose-button-props="{
+            size: 'small',
+            rounded: true,
+            class: '!border-0 !bg-[#F6627B] !text-white shadow-sm shadow-rose-500/30 hover:!bg-[#e2556c] active:!bg-[#d84b61]'
+          }"
           :disabled="q.importing.value || q.exporting.value"
           @select="onImportSelect"
         />
