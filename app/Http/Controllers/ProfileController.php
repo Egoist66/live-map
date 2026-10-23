@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
 use App\Services\CountryResolver;
+use App\Services\HomeLocationService;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -335,8 +336,20 @@ class ProfileController extends Controller
                 $request->input('home_lng', $user->home_lng),
             );
         }
+        $previousLat = $user->home_lat;
+        $previousLng = $user->home_lng;
+
         $user->fill($request->safe()->except(['plan', 'plan_expires_at']));
         \App\Services\ContentModeration::assertClean($user->bio ?? null, $user->thought ?? null);
+
+        $locationTextChanged = $user->isDirty(['home_city', 'country', 'country_code']);
+        $coordsUnchanged = (string) $request->input('home_lat') === (string) $previousLat
+            && (string) $request->input('home_lng') === (string) $previousLng;
+
+        if ($locationTextChanged && $coordsUnchanged) {
+            $user->home_lat = null;
+            $user->home_lng = null;
+        }
 
         if ($user->isDirty('name')) {
             $user->name_changes_used = (int) $user->name_changes_used + 1;
@@ -373,6 +386,8 @@ class ProfileController extends Controller
         }
 
         $user->save();
+
+        app(HomeLocationService::class)->ensureCoordinates($user);
 
         if ($emailChanged) {
             try {

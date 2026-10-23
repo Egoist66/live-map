@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
 import Avatar from 'primevue/avatar'
-import SwipesIcon from '@/Components/Brand/SwipesIcon.vue'
 import { useMobileBottomNav } from '@/composables/useMobileBottomNav'
 
 const { dashboardHref, isActive, isActivePath, navLinkClass, businessActiveClass, businessIdleClass, total, bellTotal, avatarSrc, showSystemItems, showProfileLink, navHidden, isBusiness, showLove, gridClass } = useMobileBottomNav()
@@ -57,11 +56,8 @@ const emit = defineEmits<{ (e: 'bell'): void; (e: 'menu', value: Event): void }>
         class="flex flex-col items-center justify-center gap-1 py-1.5 rounded-2xl active:scale-95 transition min-h-[52px]"
         :class="navLinkClass('swipes')"
       >
-        <SwipesIcon :size="24" :active="isActive('swipes')" />
-        <span
-          class="inline-block text-[10px] font-black leading-none bg-gradient-to-r from-[#FD267D] via-[#F04D9F] to-[#FF8A5B] bg-clip-text text-transparent"
-          :class="isActive('swipes') ? 'opacity-100' : 'opacity-75'"
-        >ULove</span>
+        <svg class="w-6 h-6" :fill="isActive('swipes') ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+        <span class="text-[10px] font-bold leading-none" :class="isActive('swipes') ? 'opacity-100' : 'opacity-75'">ULove</span>
       </Link>
 
       <button

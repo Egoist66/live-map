@@ -1795,6 +1795,11 @@ class DatingService
      */
     public function feed(User $me, array $filters = [], int $limit = 20): array
     {
+        if ($me->home_lat === null || $me->home_lng === null) {
+            app(HomeLocationService::class)->ensureCoordinates($me);
+            $me->refresh();
+        }
+
         $radiusKm = isset($filters['radius_km']) ? (int) $filters['radius_km'] : null;
         $this->assertRadiusAllowed($me, $radiusKm);
 

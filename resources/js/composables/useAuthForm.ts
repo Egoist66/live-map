@@ -2,7 +2,7 @@ import { computed, nextTick, ref } from 'vue'
 import { useForm } from 'vee-validate'
 import { loginSchema } from '@/validation/schemas/login.schema'
 import { registerSchema } from '@/validation/schemas/register.schema'
-import { reverseGeocodeRaw } from '@/services/geo.api'
+import { forwardGeocodePlace, reverseGeocodeRaw } from '@/services/geo.api'
 import { useCountryMismatch } from '@/composables/useCountryMismatch'
 import { useSignupGoals } from '@/composables/useSignupGoals'
 import { useHoneypot } from '@/composables/useTurnstile'
@@ -276,6 +276,23 @@ export function useRegisterForm() {
     if (goalPreset.locked) {
       payload.signup_goal = goalPreset.goal
     }
+
+    if (payload.home_lat == null || payload.home_lng == null) {
+      const placeQuery = [payload.home_city, payload.country]
+        .map((part) => String(part ?? '').trim())
+        .filter(Boolean)
+        .join(', ')
+
+      if (placeQuery !== '') {
+        const coords = await forwardGeocodePlace(placeQuery)
+
+        if (coords) {
+          payload.home_lat = coords.lat
+          payload.home_lng = coords.lng
+        }
+      }
+    }
+
     try {
       const { useAppModulesStore } = await import('@/stores/appModules')
       const remembered = useAppModulesStore().registrationPayload()

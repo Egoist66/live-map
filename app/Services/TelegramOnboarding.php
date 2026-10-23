@@ -674,6 +674,8 @@ class TelegramOnboarding
         } catch (\Throwable) {
         }
 
+        app(HomeLocationService::class)->ensureCoordinates($fresh);
+
         self::clearState((int) $fresh->id);
 
         $text = "✅ <b>Анкета готова!</b>\n\nТеперь доступны поиск мэтчей здесь и Mini App — выбирай, где удобнее.";

@@ -101,6 +101,7 @@ onMounted(() => { screenLock.init(); hotkeys.init() })
     <div v-if="!layoutRoute.isChatRoute.value && !layoutRoute.isMapRoute.value && !layoutRoute.isSwipesRoute.value && !layoutRoute.isAdminRoute.value" class="mt-auto hidden pb-[calc(var(--app-bottomnav)+var(--sab))] lg:block lg:pb-0">
       <AppFooter />
     </div>
+    <div aria-hidden="true" class="pointer-events-none fixed inset-x-0 bottom-0 z-30 h-[var(--sab)] bg-white dark:bg-[#0F121F] lg:hidden" />
     <MobileBottomNav v-if="!layoutRoute.isAdminRoute.value" @bell="bell.open()" @menu="toggleMenu" />
     <!-- Единая панель виджетов (мини-чат + AI): один лаунчер вместо
          россыпи FAB по углам, на мобиле — над нижней навигацией,

@@ -52,11 +52,12 @@ class DatingReviewController extends Controller
 
             $page = $this->reviews->listFor($target, $me, (int) ($data['per_page'] ?? 10));
             $items = collect($page->items())->map(fn ($row) => $this->reviews->serialize($row))->all();
+            $reviewBlockReason = $this->reviews->reviewBlockReason($me, $target);
 
             return response()->json([
                 'summary' => $this->reviews->summary($target, $me),
-                'can_review' => $this->reviews->canReview($me, $target),
-                'can_review_reason' => $this->reviews->reviewBlockReason($me, $target),
+                'can_review' => $reviewBlockReason === null,
+                'can_review_reason' => $reviewBlockReason,
                 'my_review' => $mine ? $this->reviews->serialize($mine->loadMissing('author')) : null,
                 'reviews' => $items,
                 'meta' => [

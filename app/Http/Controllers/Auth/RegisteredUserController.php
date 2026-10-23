@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\AppSettings;
 use App\Services\CountryResolver;
+use App\Services\HomeLocationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -135,6 +136,8 @@ class RegisteredUserController extends Controller
         }
 
         $user = User::create($userPayload);
+
+        app(HomeLocationService::class)->ensureCoordinates($user);
 
         \App\Services\AdminNotifier::newUserRegistered($user, 'web');
 

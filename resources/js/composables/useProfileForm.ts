@@ -7,10 +7,11 @@ import { useToast } from 'primevue/usetoast'
 import { maxHomeRadiusKm } from './usePlanLimits'
 import { useHomeLocation } from './useHomeLocation'
 import { useUserAge } from './useUserAge'
-import { normalizeCountryCode } from './useResidence'
+import { RESIDENCE_COUNTRIES, normalizeCountryCode } from './useResidence'
 import { planOf } from './usePlanLimits'
 import { useCountryMismatch } from './useCountryMismatch'
-import { reverseGeocode } from '@/services/geo.api'
+import { useGeolocation } from './useGeolocation'
+import { reverseGeocodeRaw } from '@/services/geo.api'
 import { isUnchangedPayload } from './useUnchangedGuard'
 
 export function useProfileForm() {
@@ -93,15 +94,98 @@ export function useProfileForm() {
     setCoords: (lat, lng, address) => setValues({ home_lat: lat, home_lng: lng, home_address: address || (values as any).home_address } as any),
   })
 
-  function useMyLocation() {
-    if (!navigator.geolocation) return
-    navigator.geolocation.getCurrentPosition(async (pos) => {
-      const lat = Number(pos.coords.latitude.toFixed(7))
-      const lng = Number(pos.coords.longitude.toFixed(7))
-      let address = ''
-      try { address = await reverseGeocode(lat, lng) } catch { address = '' }
-      setValues({ home_lat: lat, home_lng: lng, home_address: address || (values as any).home_address } as any)
-    })
+  const geolocation = useGeolocation()
+
+  /**
+   * Подставить домашнюю точку по геолокации браузера.
+   *
+   * Координаты нужны свайпам для дистанции. Заодно обновляем город
+   * и страну из reverse-geocode: если человек переехал, профиль не
+   * останется со старым городом при новой точке.
+   *
+   * @returns Promise<void>
+   */
+  async function useMyLocation(): Promise<void> {
+    const position = await geolocation.requestGeolocation()
+
+    if (!position) {
+      toast?.add({
+        severity: 'warn',
+        summary: 'Без геопозиции',
+        detail: 'Можно указать город и страну вручную — дистанция посчитается по ним',
+        life: 4000,
+      })
+
+      return
+    }
+
+    const lat = Number(position.lat.toFixed(7))
+    const lng = Number(position.lng.toFixed(7))
+
+    let address = ''
+    let city: string | null = null
+    let country: string | null = null
+    let countryCode: string | null = null
+
+    try {
+      const geo = await reverseGeocodeRaw(lat, lng, 14)
+      const rawAddress = (geo.raw as unknown as { address?: Record<string, string> }).address ?? {}
+
+      address = geo.address
+      city = rawAddress.city || rawAddress.town || rawAddress.village || null
+      country = rawAddress.country || null
+      countryCode = rawAddress.country_code ? String(rawAddress.country_code).toLowerCase() : null
+    } catch {
+      address = `${lat}, ${lng}`
+    }
+
+    const current = values as Record<string, any>
+
+    setValues({
+      home_lat: lat,
+      home_lng: lng,
+      home_address: address || current.home_address,
+      home_city: city || current.home_city,
+      country: country || current.country,
+      country_code: countryCode || current.country_code,
+    } as any)
+  }
+
+  /**
+   * Убрать точную домашнюю точку, оставив город и страну.
+   *
+   * @returns void
+   */
+  function clearMyLocation(): void {
+    setValues({ home_lat: null, home_lng: null, home_address: null } as any)
+  }
+
+  /**
+   * Выбрать страну проживания и сбросить старые координаты.
+   *
+   * Старая точка относится к прежней стране — после смены её нельзя
+   * отправлять, иначе бэкенд отклонит сохранение как несовпадение.
+   * Координаты заново подставит геолокация или геокодер по городу.
+   *
+   * @param countryName название страны из списка
+   * @returns void
+   */
+  function setCountry(countryName: string): void {
+    const current = values as Record<string, any>
+
+    if (current.country === countryName) {
+      return
+    }
+
+    const found = RESIDENCE_COUNTRIES.find((country) => country.name === countryName)
+
+    setValues({
+      country: countryName,
+      country_code: found ? found.code : current.country_code,
+      home_lat: null,
+      home_lng: null,
+      home_address: null,
+    } as any)
   }
 
   const maxRadius = computed(() => maxHomeRadiusKm((values as any).plan || planOf(user.value)))
@@ -250,5 +334,5 @@ export function useProfileForm() {
   const countryWarning = computed(() => (isAdmin.value ? null : residenceCheck.countryWarning.value))
   const checkingCountry = computed(() => (isAdmin.value ? false : residenceCheck.checkingCountry.value))
 
-  return { user, name, nameAttrs, gender, birth_date, age: age.age, ageLabel: age.label, country, country_code, email, emailAttrs, canChangeEmail, emailChangesLeft, emailChangeHint, canChangeName, nameChangesLeft, nameChangeHint, home_lat, homeLatAttrs, home_lng, homeLngAttrs, home_city, home_address, home_visibility, home_show_exact, home_radius_km, bio, is_anonymous_default, plan, errors, values, setValues, setErrors, submit, isSubmitting, useMyLocation, maxRadius, homeLocation, countryWarning, checkingCountry }
+  return { user, name, nameAttrs, gender, birth_date, age: age.age, ageLabel: age.label, country, country_code, email, emailAttrs, canChangeEmail, emailChangesLeft, emailChangeHint, canChangeName, nameChangesLeft, nameChangeHint, home_lat, homeLatAttrs, home_lng, homeLngAttrs, home_city, home_address, home_visibility, home_show_exact, home_radius_km, bio, is_anonymous_default, plan, errors, values, setValues, setErrors, submit, isSubmitting, useMyLocation, homeLocating: geolocation.loading, clearMyLocation, setCountry, maxRadius, homeLocation, countryWarning, checkingCountry }
 }

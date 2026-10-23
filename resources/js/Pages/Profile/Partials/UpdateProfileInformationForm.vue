@@ -42,7 +42,7 @@ const uloveOnly = useUloveOnly()
     <header>
       <div class="min-w-0">
         <h2 class="font-bold dark:text-white">Данные аккаунта</h2>
-        <p class="text-sm text-zinc-500 mt-1">{{ showMapFields ? 'Аватар, Контакты и домашняя точка. Радиус зоны — в разделе «Приватность».' : 'Аватар, контакты и данные для анкеты.' }}</p>
+        <p class="text-sm text-zinc-500 mt-1">Аватар, контакты и локация для свайпов. Точный адрес никому не показывается.</p>
       </div>
     </header>
     <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft mt-6" :pt="{ body:{ class:'!p-4' }, content:{ class:'!p-0' } }">
@@ -127,7 +127,7 @@ const uloveOnly = useUloveOnly()
         </div>
         <div>
           <label class="text-sm font-medium dark:text-white">Страна проживания</label>
-          <Select v-model="f.country.value" :options="[...RESIDENCE_COUNTRIES]" optionLabel="name" optionValue="name" placeholder="Беларусь" checkmark editable fluid class="w-full mt-1 !rounded-xl" :pt="selectPt" @update:model-value="(v:string)=>{ const c=[...RESIDENCE_COUNTRIES].find(x=>x.name===v); f.setValues({ country: v, country_code: c ? c.code : (f.values as any).country_code } as any) }" />
+          <Select v-model="f.country.value" :options="[...RESIDENCE_COUNTRIES]" optionLabel="name" optionValue="name" placeholder="Беларусь" checkmark editable fluid class="w-full mt-1 !rounded-xl" :pt="selectPt" @update:model-value="f.setCountry" />
           <p v-if="showMapFields" class="text-[11px] text-stone-400 mt-1">Пины — только в своей стране</p>
           <small v-if="f.countryWarning.value" class="text-amber-600 dark:text-amber-400">⚠️ {{ f.countryWarning.value }}</small>
           <Message v-if="f.errors.value.country" severity="error" :closable="false" class="mt-1 !rounded-xl !py-1 !text-xs">{{ f.errors.value.country }}</Message>
@@ -138,10 +138,25 @@ const uloveOnly = useUloveOnly()
           <Message v-if="f.errors.value.home_city" severity="error" :closable="false" class="mt-1 !rounded-xl !py-1 !text-xs">{{ f.errors.value.home_city }}</Message>
         </div>
       </div>
-      <Card v-if="showMapFields" class="!bg-zinc-50 dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 !rounded-3xl !shadow-none" :pt="{ body:{ class:'!p-4' }, content:{ class:'!p-0' } }">
+      <Card class="!bg-zinc-50 dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 !rounded-3xl !shadow-none" :pt="{ body:{ class:'!p-4' }, content:{ class:'!p-0' } }">
         <template #content>
-          <div class="flex items-center justify-between"><h4 class="text-sm font-bold dark:text-white">Домашняя точка</h4><Button @click="f.useMyLocation" label="Моя геопозиция" size="small" rounded class="!bg-black dark:!bg-white !border-black dark:!border-white !text-white dark:!text-black" /></div>
-          <p class="text-[11px] text-stone-500 mt-1">Радиус зоны настраивается в разделе «Приватность».</p>
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h4 class="text-sm font-bold dark:text-white">{{ showMapFields ? 'Домашняя точка' : 'Локация для свайпов' }}</h4>
+            <div class="flex items-center gap-1.5">
+              <Button v-if="f.home_lat.value || f.home_lng.value" @click="f.clearMyLocation" label="Сбросить" size="small" text severity="secondary" />
+              <Button @click="f.useMyLocation" label="Определить" icon="pi pi-map-marker" size="small" rounded :loading="f.homeLocating.value" class="!bg-black dark:!bg-white !border-black dark:!border-white !text-white dark:!text-black" />
+            </div>
+          </div>
+          <p class="text-[11px] text-stone-500 mt-1">
+            Нужна для дистанции в свайпах. Если не определить, возьмём координаты по городу и стране выше.
+            <template v-if="showMapFields"> Радиус зоны и точность — в разделе «Приватность».</template>
+          </p>
+          <p v-if="f.home_lat.value && f.home_lng.value" class="mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+            <i class="pi pi-check-circle" aria-hidden="true" /> Точка задана
+          </p>
+          <p v-else class="mt-2 inline-flex items-center gap-1.5 text-[11px] text-stone-400 dark:text-zinc-500">
+            <i class="pi pi-info-circle" aria-hidden="true" /> Точка не задана — используем город и страну
+          </p>
           <div class="grid sm:grid-cols-2 gap-3 mt-3">
             <div><label class="text-xs font-medium dark:text-white">Широта</label><InputText readonly v-model="f.home_lat.value" v-bind="f.homeLatAttrs" placeholder="55.75" class="w-full mt-1 !rounded-2xl" :invalid="!!f.errors.value.home_lat" /><Message v-if="f.errors.value.home_lat" severity="error" :closable="false" class="mt-1 !text-xs">{{ f.errors.value.home_lat }}</Message></div>
             <div><label class="text-xs font-medium dark:text-white">Долгота</label><InputText readonly v-model="f.home_lng.value" v-bind="f.homeLngAttrs" placeholder="37.61" class="w-full mt-1 !rounded-2xl" :invalid="!!f.errors.value.home_lng" /><Message v-if="f.errors.value.home_lng" severity="error" :closable="false" class="mt-1 !text-xs">{{ f.errors.value.home_lng }}</Message></div>
