@@ -12,6 +12,27 @@ const unreadChats = ref(0)
 const loading = ref(false)
 const tab = ref('events')
 let dialogReadBound = false
+let liveChatsBound = false
+/** Дедап двойной доставки сообщения: сокет (user.*) и поллер (bus) несут одно и то же. */
+const seenIncomingIds = new Map<number, number>()
+
+/**
+ * Свежая ли доставка сообщения (в пределах дедап-окна).
+ *
+ * @param id id сообщения
+ * @returns true если это дубль в окне 5с
+ */
+function isDuplicateIncoming(id: number): boolean {
+  const now = Date.now()
+  const prev = seenIncomingIds.get(id)
+  if (prev !== undefined && now - prev < 5000) return true
+  seenIncomingIds.set(id, now)
+  if (seenIncomingIds.size > 300) {
+    const first = seenIncomingIds.keys().next().value as number | undefined
+    if (first !== undefined) seenIncomingIds.delete(first)
+  }
+  return false
+}
 
 /**
  * Базовый ключ localStorage со скрытыми из панели диалогами.
@@ -122,6 +143,59 @@ function goRequests() { close(); router.visit('/chat?tab=requests') }
 function goFriends() { close(); router.visit('/chat?tab=friends') }
 
 /**
+ * Пересчитать счётчик непрочитанных чатов по активным строкам.
+ */
+function recountUnreadChats(): void {
+  unreadChats.value = conversations.value.filter((c: any) => Number(c?.unread_count || 0) > 0).length
+}
+
+/**
+ * Входящее сообщение при открытой модалке: строка диалога живо
+ * появляется/обновляется в разделе «Сообщения», как в инсте.
+ *
+ * Сокет и поллер несут один и тот же user:message.sent — дедап
+ * по id сообщения не даёт нарастить счётчик дважды. Прочтение здесь
+ * НИКАК не вызываем: новая строка обязана дождаться пользователя.
+ *
+ * @param e событие user:message.sent {message}
+ */
+function onIncomingMessage(e: any): void {
+  const msg = e?.message
+  if (!msg?.id || !isOpen.value) return
+  if (isDuplicateIncoming(Number(msg.id))) return
+  const uid = currentAuthUid()
+  if (uid > 0 && Number(msg.sender_id) === uid) return
+  const convId = Number(msg.conversation_id)
+  if (!(convId > 0)) return
+  const dismissed = readDismissed()
+  const row = conversations.value.find((c: any) => Number(c?.id) === convId)
+  if (row) {
+    row.last_message = msg
+    row.last_message_at = msg.created_at
+    // Скрытие проверяем по уже обновлённому last_message_at: новое
+    // сообщение позже метки мусорки — строка снова видима, счётчик растёт.
+    const hiddenByTrash = isDismissed(row, dismissed)
+    if (!hiddenByTrash) {
+      row.unread_count = Number(row.unread_count || 0) + 1
+    }
+    conversations.value = [row, ...conversations.value.filter((c) => c !== row)]
+  } else {
+    // Диалог не в топ-50 непрочитанных: собираем строку из самого
+    // сообщения — имени и аватара отправителя достаточно для превью,
+    // полный сериализованный ряд догрузит fetchAll при следующем открытии.
+    conversations.value = [{
+      id: convId,
+      type: 'direct',
+      other: msg.sender ?? null,
+      last_message: msg,
+      last_message_at: msg.created_at,
+      unread_count: 1,
+    }, ...conversations.value].slice(0, 50)
+  }
+  recountUnreadChats()
+}
+
+/**
  * Скрыть сообщения из панели колокольчика (кнопка-мусорка).
  *
  * Сами чаты и сообщения НЕ удаляются — строки пропадают только
@@ -168,6 +242,7 @@ async function clearMessages(): Promise<void> {
 
 export function useBellNotifications() {
   ensureDialogReadSync()
+  ensureLiveChats()
   const hasData = computed(() => conversations.value.length > 0 || pending.value.length > 0)
   const unreadCount = computed(() => unreadChats.value)
   const isAdmin = computed(() => readIsAdmin())
@@ -175,11 +250,27 @@ export function useBellNotifications() {
 }
 
 /**
+ * Разово подписаться на входящие сообщения для открытой модалки.
+ *
+ * Оба транспорта realtime дают user:message.sent (сокет user.{id} и
+ * зеркалящий тик поллера), поэтому панель «Сообщения» оживает и в
+ * WS-режиме, и в polling — без ветвлений и дублей (дедап по id выше).
+ */
+function ensureLiveChats(): void {
+  if (liveChatsBound) return
+  liveChatsBound = true
+  try {
+    busOn('user:message.sent', onIncomingMessage)
+  } catch {
+    liveChatsBound = false
+  }
+}
+
+/**
  * Разово подписаться на локальное прочтение диалогов.
  *
- * Колокольчик держит свой срез диалогов (топ-8): диалог, прочитанный
- * на странице /chat или в мини-окне, иначе висел бы с протухшей «1»
- * до следующего открытия модалки.
+ * Колокольчик показывает только непрочитанные: прочитанный диалог
+ * сразу исчезает из раздела «Сообщения», как лента в инсте.
  */
 function ensureDialogReadSync(): void {
   if (dialogReadBound) return
@@ -188,11 +279,9 @@ function ensureDialogReadSync(): void {
     busOn('chat:dialog-read', (convId: number) => {
       const id = Number(convId)
       if (!(id > 0)) return
-      const row = conversations.value.find((c: any) => Number(c?.id) === id)
-      if (row && Number(row?.unread_count || 0) > 0) {
-        row.unread_count = 0
-        unreadChats.value = conversations.value.filter((c: any) => Number(c.unread_count || 0) > 0).length
-      }
+      const before = conversations.value.length
+      conversations.value = conversations.value.filter((c: any) => Number(c?.id) !== id)
+      if (conversations.value.length !== before) unreadChats.value = Math.max(0, unreadChats.value - 1)
     })
   } catch {
     dialogReadBound = false

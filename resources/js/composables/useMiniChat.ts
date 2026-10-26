@@ -113,6 +113,25 @@ function isTabHidden(): boolean {
   }
 }
 
+/**
+ * Пользователь реально смотрит на страницу приложения: вкладка видима
+ * и на ней фокус (не переключился на другую программу/дисплей).
+ *
+ * Мини-окно читает входящее только при активном просмотре — иначе
+ * окно, оставленное открытым, продолжало бы тихо читать каждое
+ * сообщение и оно никогда не доходило до колокольчика.
+ *
+ * @returns true когда доку можно честно пометить прочитанное
+ */
+function isDockVisible(): boolean {
+  if (isTabHidden()) return false
+  try {
+    return typeof document === 'undefined' ? false : document.hasFocus()
+  } catch {
+    return true
+  }
+}
+
 function windowTitle(detail: { other?: { name?: string } | null; title?: string | null } | null): string {
   return detail?.other?.name || detail?.title || 'Чат'
 }
@@ -208,7 +227,7 @@ function onMessage(e: unknown): void {
     if (!win.messages.some((m) => m.id === msg.id)) {
       win.messages = [...win.messages, msg]
     }
-    if (!own && !isTabHidden()) void markReadQuiet(convId)
+    if (!own && isDockVisible()) void markReadQuiet(convId)
     else patchPreview(convId, msg, false)
     return
   }
@@ -339,7 +358,7 @@ function onPreviews(previews: unknown): void {
     }
     if (preview?.unread_count != null) {
       const winOpen = findWindow(id) !== undefined
-      row.unread_count = winOpen && !isTabHidden() ? 0 : Number(preview.unread_count)
+      row.unread_count = winOpen && isDockVisible() ? 0 : Number(preview.unread_count)
     }
   }
   conversations.value = [...conversations.value].sort((a, b) => {

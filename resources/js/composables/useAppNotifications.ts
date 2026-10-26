@@ -43,6 +43,12 @@ export type AppToast = {
   districtId?: number | null
   /** Id строки inbox (uuid) для гашения счётчика после accept/decline. */
   activityId?: string | number | null
+  /**
+   * Сколько сообщений диалога слито в этот тост (как в инсте):
+   * 1 — обычный тост, больше — подряд-сообщения одного чата
+   * обновляют существующий тост, а не плодят новый.
+   */
+  count?: number
 }
 
 const toasts = ref<AppToast[]>([])
@@ -272,16 +278,29 @@ function handleMessage(e: any) {
   if (isChatRoute() && Number(msg.conversation_id) === currentConversationId()) return
   const sender = msg.sender || {}
   const name = sender.name || 'Кто-то'
-  const body = (msg.body || '').slice(0, 90)
+  const body = (msg.body || 'Новое сообщение').slice(0, 90)
+  const link = `/chat/${msg.conversation_id}`
+  // Как в инсте: подряд-сообщения одного диалога обновляют существующий
+  // тост (+1 счётчик, свежий текст), а не появляются новым под окном.
+  const existing = toasts.value.find((t) => t.type === 'message' && t.link === link)
+  if (existing) {
+    const nextCount = Number(existing.count ?? 1) + 1
+    const nextTitle = `${name} · ${nextCount} сообщ.`.slice(0, 60)
+    const grouped: AppToast = { ...existing, id: existing.id, count: nextCount, title: nextTitle, body }
+    remove(existing.id)
+    push(grouped)
+    return
+  }
   push({
     id: `msg-${msg.id}-${Date.now()}`,
     type: 'message',
     icon: 'pi pi-comments',
     title: name,
-    body: body || 'Новое сообщение',
+    body,
     avatar: avatarSrcFor(sender),
-    link: `/chat/${msg.conversation_id}`,
+    link,
     createdAt: Date.now(),
+    count: 1,
   })
 }
 /**

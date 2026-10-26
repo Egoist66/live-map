@@ -236,6 +236,26 @@ export function useChat() {
       return !!ziggyRoute().current('chat')
     } catch { return true }
   }
+  /**
+   * Можно ли сейчас реально пометить диалог прочитанным.
+   *
+   * Прочтение честное, как в-instagram/ВК: пользователь видит страницу
+   * чата, вкладка не в фоне и открыт именно этот диалог. Без гейта
+   * любое событие (вернулись из фона, дельтя-синк кеша) читало бы
+   * сообщения даже там, куда пользователь не успел заглянуть, — и
+   * строка исчезала из колокольчика ещё до появления тоста.
+   *
+   * @param convId id диалога
+   * @returns true когда markRead не выдаёт ложное прочтение
+   */
+  function canMarkReadNow(convId: number): boolean {
+    if (typeof document !== 'undefined' && document.hidden) return false
+    if (!isChatPageOpen()) return false
+    const selected = Number(selectedId.value)
+    if (!selected || selected !== Number(convId)) return false
+    const opened = Number((activeConv.value as any)?.id ?? 0)
+    return opened === selected
+  }
   function currentChannel(): any {
     const echo = getEcho()
     if (!echo || !selectedId.value) return null
@@ -691,7 +711,11 @@ export function useChat() {
       } else if (newest) {
         loadConversations()
       }
-      try { await chatApi.markRead(id) } catch {}
+      // Прочтение только при реальном просмотре: вкладка в фоне не съедает
+      // непрочитанные — они дождутся пользователя в колокольчике.
+      if (canMarkReadNow(id)) {
+        try { await chatApi.markRead(id) } catch {}
+      }
       subscribeChat(id)
       try { syncRealtimeNow() } catch {}
       await nextTick()
@@ -740,10 +764,11 @@ export function useChat() {
             }
           }
           const conv = conversations.value.find((c) => c?.id === id)
-          if (conv && Number((conv as any).unread_count || 0) > 0) {
+          // Читаем только непочатое и только при реальном просмотре:
+          // без гейта ревалидация читала бы диалог на фоне (скрытая
+          // вкладка, чужая страница) и молча гасила колокольчик.
+          if (conv && Number((conv as any).unread_count || 0) > 0 && canMarkReadNow(id)) {
             noteLocalRead(id)
-            chatApi.markRead(id).catch(() => {})
-          } else {
             chatApi.markRead(id).catch(() => {})
           }
           return
@@ -765,10 +790,12 @@ export function useChat() {
       const newest = newestMessage(detailMessages)
       const conv = conversations.value.find((c) => c?.id === id)
       if (conv) {
-        noteLocalRead(id)
+        if (canMarkReadNow(id)) noteLocalRead(id)
         if (newest) bumpConversation(newest)
       }
-      chatApi.markRead(id).catch(() => {})
+      if (conv && Number((conv as any).unread_count || 0) > 0 && canMarkReadNow(id)) {
+        chatApi.markRead(id).catch(() => {})
+      }
       await nextTick()
       history.reset(initialHasMore(d))
     } catch {}
