@@ -31,10 +31,11 @@ export function useAuthMode() {
 }
 
 /**
- * Классы таба сегмент-переключателя: активный залит сплошным
- * брендовым #FF4267 (без градиента), неактивный — прозрачный ghost
- * с мягким ховером. Именно заливка читается «выбранным», поэтому
- * вариант outlined для активного запрещён — он выглядит наоборот.
+ * Классы таба сегмент-переключателя: ОБА таба залиты сплошным
+ * брендовым #FF4267 (как кнопка «Дальше» и сабмит форм) — одинаково
+ * на светлой и тёмной теме. Активный таб отличается только мягким
+ * свечением и полной насыщенностью, неактивный — приглушён и бледнеет
+ * на ховере (вариант outlined/ghost для табов запрещён по ТЗ).
  * Таб широкий и высокий: сегменты не сжимаются, текст не липнет
  * к краям.
  *
@@ -43,15 +44,12 @@ export function useAuthMode() {
  * @example tabClass(true)
  */
 export function tabClass(active: boolean): string {
-  // `!bg-transparent` живёт в базе, а не только в неактивном варианте:
-  // иначе при переключении у бывшего активного таба transition-all
-  // анимировал background-color от тёмного primary PrimeVue к прозрачному
-  // и на светлой теме на мгновение мигал чёрный прямоугольник.
-  const base = 'w-full !rounded-full !border-0 !bg-transparent !text-sm !font-semibold !py-3 sm:!py-3.5 transition-all duration-200'
+  const base =
+    'w-full !rounded-full !border-0 !bg-[#FF4267] !text-white !text-sm !font-semibold !py-3 sm:!py-3.5 shadow-lg shadow-[#FF4267]/30 transition-all duration-200'
 
   if (active) {
-    return `${base} !bg-[#FF4267] !text-white shadow-lg shadow-[#FF4267]/30`
+    return base
   }
 
-  return `${base} !text-stone-500 dark:!text-zinc-400 hover:!bg-white/70 dark:hover:!bg-white/10 hover:!text-ink-900 dark:hover:!text-white`
+  return `${base} opacity-65 hover:opacity-90 active:opacity-100`
 }
