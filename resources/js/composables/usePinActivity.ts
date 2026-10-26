@@ -66,6 +66,11 @@ function onNotification(e: any) {
   // в общей ленте они давали бы дубль и мусорную строку
   // «Кто-то отреагировал», а в бейдже — задвоение с updates.
   if (String(row.type ?? '').startsWith('app.')) return
+  // Заявки в друзья не кладём в ленту: их владелец — секция «Заявки»
+  // (useBellNotifications.pending) и бейдж pending_friends. Раньше строка
+  // попадала одновременно в «События», «Уведомления» и «Заявки» — три рендера
+  // на одно действие. Принятая заявка (friend.accepted) остаётся в «Уведомлениях».
+  if (String(row.type ?? '') === 'friend.requested') return
   // Чужой раздел в ленту не кладём: только свой набор модулей.
   try {
     if (!useNotificationModules().allows(row.type)) return
@@ -307,11 +312,16 @@ export function isPhotoActivity(a: PinActivityItem): boolean {
 
 /**
  * Короткая группировка ленты для вкладок «Пины» / «События».
+ *
+ * Строки без activity-пейлоада (дружба, жалобы, безопасность) не имеют
+ * kind и не попадают ни в одну секцию событий — иначе они рендерились
+ * в «Событиях» мимо своего раздела с фолбэк-текстом «отреагировал ⭐».
  */
 export function splitActivities(list: PinActivityItem[]): { pins: PinActivityItem[]; events: PinActivityItem[] } {
   const pins: PinActivityItem[] = []
   const events: PinActivityItem[] = []
   for (const a of list) {
+    if (!a.kind) continue
     if (isPinActivity(a)) pins.push(a)
     else events.push(a)
   }
@@ -536,10 +546,15 @@ export function resetPinActivity(): void {
 /**
  * Строки inbox без activity-тела (дружба, жалобы, безопасность, новости) —
  * отдельная секция «Уведомления» в табе «События».
+ *
+ * friend.requested исключён: заявка рендерится только в секции «Заявки»
+ * (useBellNotifications.pending) — здесь она дублировалась «Farid хочет дружить».
  */
 export function usePinActivity() {
   const hasData = computed(() => activities.value.length > 0)
-  const otherNotifications = computed(() => inboxRows.value.filter((n) => !n.data?.activity))
+  const otherNotifications = computed(
+    () => inboxRows.value.filter((n) => !n.data?.activity && String(n.type ?? '') !== 'friend.requested'),
+  )
   const otherUnread = computed(() => otherNotifications.value.filter((n) => !n.read_at).length)
 
   /**

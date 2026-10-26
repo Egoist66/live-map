@@ -738,13 +738,16 @@ function handlePinActivity(e: any) {
   }
   const emoji: Record<string, string> = { like: '❤️', fire: '🔥', laugh: '😂', sad: '😢', angry: '😡', useful: '👍' }
   if (a.kind === 'swipe_like') {
+    // Единый copy с колокольчиком (usePinActivity.describe) и пушем бэка:
+    // одна и та же фраза «лайкнул вас в ULove», без «отреагировал на анкету».
     const anon = a.is_incognito
+    const isSuperlike = Boolean((a as unknown as { is_superlike?: boolean }).is_superlike)
     push({
       id: `pin-${a.id}-${Date.now()}`,
       type: 'match',
       icon: 'pi pi-heart-fill',
-      title: anon ? '💘 Тайный поклонник' : '💘 Тебя лайкнули в ULove',
-      body: anon ? 'Тайный поклонник отреагировал на твою анкету' : `${name} отреагировал на твою анкету`.slice(0, 90),
+      title: isSuperlike ? '⭐ Вам отправили суперлайк!' : anon ? '💘 Тайный поклонник' : '💘 Тебя лайкнули',
+      body: anon ? 'Тайный поклонник лайкнул вас в ULove' : `${name} лайкнул вас в ULove`.slice(0, 90),
       avatar: anon ? null : avatarSrcFor(actor),
       link: '/swipes?tab=admirers',
       createdAt: Date.now(),

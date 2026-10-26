@@ -1043,7 +1043,12 @@ class RealtimeController extends Controller
 
             $inboxQuery = clone $inboxBase;
 
-            $inboxUnread = (clone $inboxQuery)->where('type', '!=', 'app.published')->count();
+            // friend.requested не считаем: владелец — pending_friends выше,
+            // иначе одна заявка удваивается в бейдже колокольчика.
+            $inboxUnread = (clone $inboxQuery)
+                ->where('type', '!=', 'app.published')
+                ->where('type', '!=', 'friend.requested')
+                ->count();
 
             $updates = (clone $inboxQuery)->where('type', 'app.published')->count();
 

@@ -37,14 +37,16 @@ class DatingLikedNotification extends UserNotification
 
     public function pushPayload(): ?array
     {
-        $title = $this->superlike ? '⭐ Тебе отправили суперлайк!' : '💘 Тебя лайкнули в ULove';
+        // Единый copy с колокольчиком (usePinActivity.describe):
+        // один объект — один текст, без «отреагировал на анкету».
+        $title = $this->superlike ? '⭐ Вам отправили суперлайк!' : '💘 Вас лайкнули в ULove';
 
         $body = $this->incognito
-            ? 'Тайный поклонник отреагировал на твою анкету'
-            : ($this->liker->name.' отреагировал на твою анкету');
+            ? 'Тайный поклонник лайкнул вас в ULove'
+            : $this->liker->name.' лайкнул вас в ULove';
 
         if ($this->superlike && ! $this->incognito) {
-            $body = $this->liker->name.' выделил(а) тебя суперлайком!';
+            $body = $this->liker->name.' выделил(а) вас суперлайком!';
         }
 
         return [

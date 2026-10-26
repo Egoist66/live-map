@@ -48,12 +48,18 @@ class NotificationController extends Controller
 
     /**
      * Счётчики непрочитанных: всего и по табам.
+     *
+     * Заявки в друзья (friend.requested) не считаем: их владелец —
+     * бейдж pending_friends (секция «Заявки» из friendships API).
+     * Иначе одна заявка даёт «2» — раз в pin_activity/events,
+     * раз в pending Friends.
      */
     public function unreadCount(Request $request)
     {
         $base = UserDatabaseNotification::where('notifiable_type', $request->user()->getMorphClass())
             ->where('notifiable_id', $request->user()->id)
             ->where('type', '!=', 'app.published')
+            ->where('type', '!=', 'friend.requested')
             ->whereNull('read_at');
         $base = NotificationModuleGate::applyAllowedScope($base, $request->user());
         $pins = (clone $base)->where('category', 'pin')->count();
