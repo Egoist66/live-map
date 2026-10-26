@@ -27,12 +27,12 @@ export function useAuthTheme() {
   const isBusiness = computed(() => false)
 
   /**
-   * Класс сабмит-кнопки формы: фирменный ULove-градиент,
-   * крупная высота и лёгкий отклик на нажатие.
+   * Класс сабмит-кнопки формы: сплошной брендовый #FF4267 (без
+   * градиента), крупная высота и лёгкий отклик на нажатие.
    */
   const submitClass = computed(
     () =>
-      'w-full !bg-gradient-to-r !from-rose-500 !via-fuchsia-500 !to-orange-400 !border-0 !text-white !rounded-full !py-3.5 !text-[15px] !font-bold shadow-lg shadow-rose-500/30 transition hover:brightness-105 active:scale-[0.99]',
+      'w-full !bg-[#FF4267] !border-0 !text-white !rounded-full !py-3.5 !text-[15px] !font-bold shadow-lg shadow-[#FF4267]/30 transition hover:brightness-105 active:scale-[0.99]',
   )
 
   const loginTitle = computed(() => 'С возвращением 💘')

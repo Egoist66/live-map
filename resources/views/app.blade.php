@@ -268,7 +268,9 @@
             } catch (e) {}
         </script>
         <script nonce="{{ $cspNonce ?? '' }}">
-            (function(){ try{ var root=document.documentElement; var s=null, a=false; try{ s=localStorage.getItem('theme'); a=localStorage.getItem('amoled')==='1'; }catch(e){} var m=window.matchMedia('(prefers-color-scheme: dark)').matches; var isTg=root.classList.contains('tg-app'); var tgDark=root.classList.contains('tg-dark'); var d=isTg ? tgDark : (s ? s==='dark' : m); d=d||a; if(d) root.classList.add('dark'); else root.classList.remove('dark'); if(a) root.classList.add('amoled'); root.style.colorScheme = d?'dark':'light'; var tgBg=root.classList.contains('tg-app') ? root.style.getPropertyValue('--tg-theme-bg-color').trim() : ''; var bg=tgBg || (a?'#000000':(d?'#0F121F':'#ffffff')); window.__upinThemeBg = bg;             try{var tc=document.querySelector('meta[name="theme-color"]:not([media])');if(tc)tc.setAttribute('content',bg);}catch(e){} /* Розовый сплэш рисует только #pwa-boot, а <html> сразу получает фон темы. Иначе на PWA-устройствах розовый оставался полосой под нижней навигацией и в safe-area после скрытия сплэша. */ root.style.backgroundColor = bg; var manifestTheme=a?'amoled':(d?'dark':'light'); try{ document.cookie='ulove_theme='+manifestTheme+'; path=/; max-age=31536000; SameSite=Lax'; }catch(e){} try{ var manifestLink=document.querySelector('link[rel="manifest"]'); if(manifestLink){ var manifestUrl=new URL(manifestLink.getAttribute('href')||'/site.webmanifest', window.location.origin); manifestUrl.searchParams.set('theme', manifestTheme); manifestLink.setAttribute('href', manifestUrl.toString()); } }catch(e){} }catch(e){} })();
+            (function(){ try{ var root=document.documentElement; var s=null, a=false; try{ s=localStorage.getItem('theme'); a=localStorage.getItem('amoled')==='1'; }catch(e){} var m=window.matchMedia('(prefers-color-scheme: dark)').matches; var isTg=root.classList.contains('tg-app'); var tgDark=root.classList.contains('tg-dark'); var d=isTg ? tgDark : (s ? s==='dark' : m); d=d||a; if(d) root.classList.add('dark'); else root.classList.remove('dark'); if(a) root.classList.add('amoled'); root.style.colorScheme = d?'dark':'light'; var tgBg=root.classList.contains('tg-app') ? root.style.getPropertyValue('--tg-theme-bg-color').trim() : ''; var bg=tgBg || (a?'#000000':(d?'#0F121F':'#ffffff')); window.__upinThemeBg = bg;             try{var tc=document.querySelector('meta[name="theme-color"]:not([media])');if(tc)tc.setAttribute('content',bg);}catch(e){} /* Boot-сплэш сразу красится в цвет темы, а <html> получает тот же фон.
+   Иначе на PWA-устройствах чужой цвет оставался полосой под нижней
+   навигацией и в safe-area после скрытия сплэша. */ root.style.backgroundColor = bg; var manifestTheme=a?'amoled':(d?'dark':'light'); try{ document.cookie='ulove_theme='+manifestTheme+'; path=/; max-age=31536000; SameSite=Lax'; }catch(e){} try{ var manifestLink=document.querySelector('link[rel="manifest"]'); if(manifestLink){ var manifestUrl=new URL(manifestLink.getAttribute('href')||'/site.webmanifest', window.location.origin); manifestUrl.searchParams.set('theme', manifestTheme); manifestLink.setAttribute('href', manifestUrl.toString()); } }catch(e){} }catch(e){} })();
         </script>
         {{-- Сторож загрузки entry: после деплоя HTML может ссылаться на уже
               удалённый `/build/assets/app-*.js` (протухший SW/HTTP-кэш, гонка
@@ -397,16 +399,17 @@
                 } catch (e) {}
             })();
         </script>
-        {{-- Прелоадер: полноэкранный boot-экран ULove — ровный розовый
-              фон (#FD267D, тот же цвет в background_color манифеста),
-              плоский знак с полной детализацией (инлайн-SVG без
-              градиентов и фильтров), wordmark «ULove» и полоса загрузки.
+        {{-- Прелоадер: полноэкранный boot-экран ULove. Фон = цвет темы
+              (тот же, что в background_color/theme_color манифеста):
+              системный сплэш PWA (иконка + имя) и окно под ним Chrome
+              красит этим цветом, поэтому boot обязан совпадать, иначе
+              на стыке «системный сплэш → boot» вспыхивает чужой цвет,
+              а в edge-to-edge розовый оставался полосой под нижней
+              навигацией. Акцент (знак, wordmark, прогресс) — брендовый
+              розовый, поэтому сплэш остаётся узнаваемым в обеих темах.
               Верхней линейной полосы здесь нет сознательно: при переходах
               по страницам её рисует Inertia-progress, а на полной
-              перезагрузке достаточно сплэша.
-              Системный сплэш PWA (иконка + имя из манифеста) рисует сам
-              Chrome — цвета манифеста подобраны под этот же фон, чтобы
-              переход «системный сплэш → boot → приложение» был бесшовным. --}}
+              перезагрузке достаточно сплэша. --}}
         <style nonce="{{ $cspNonce ?? '' }}">
           #pwa-boot {
             position: fixed;
@@ -414,20 +417,25 @@
             z-index: 9997;
             display: grid;
             place-items: center;
-            /* Фон = background_color манифеста (#FD267D): системный сплэш
-               ОС (розовый фон + квадратная иконка) бесшовно переходит в наш
-               boot-экран — второго «появления» не видно. */
-            background: #FD267D;
+            /* Светлая тема: белый фон = фон нижней навигации и манифеста. */
+            background: #FFFFFF;
             transition: opacity .35s ease, visibility .35s ease;
           }
           #pwa-boot.done {
             opacity: 0;
             visibility: hidden;
           }
-          /* Энергосбережение (amoled): приглушённый плоский розовый. */
-          html.amoled #pwa-boot {
-            background: #B5134F;
+          /* Пока жив boot-сплэш, скролл документа скрыт: контент под
+             сплэшем не виден и справа не мигает пустая полоса под
+             скроллбар (выглядело как «сплэш не на всю ширину»).
+             Снимается само при удалении #pwa-boot из DOM. */
+          html:has(#pwa-boot) {
+            overflow: hidden;
           }
+          /* Тёмная тема / энергосбережение: фон нижней навигации (#0F121F),
+             AMOLED — true black, тот же цвет, что у манифеста и <html>. */
+          html.dark #pwa-boot { background: #0F121F; }
+          html.amoled #pwa-boot { background: #000000; }
           #pwa-boot .boot-card {
             display: flex;
             flex-direction: column;
@@ -444,39 +452,51 @@
           }
           #pwa-boot .boot-wordmark {
             margin-top: 18px;
-            color: #fff;
+            /* Светлая тема: розовый на белом, тёмная/AMOLED — белый на тёмном. */
+            color: #FD267D;
             font-family: 'Figtree', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
             font-size: 32px;
             font-weight: 800;
             letter-spacing: -.02em;
             line-height: 1;
           }
+          html.dark #pwa-boot .boot-wordmark,
+          html.amoled #pwa-boot .boot-wordmark { color: #FFFFFF; }
           #pwa-boot .boot-tag {
             margin-top: 8px;
-            color: rgba(255, 255, 255, .7);
+            color: rgba(15, 18, 31, .55);
             font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
             font-size: 13px;
             font-weight: 500;
             letter-spacing: .02em;
           }
+          html.dark #pwa-boot .boot-tag,
+          html.amoled #pwa-boot .boot-tag { color: rgba(255, 255, 255, .7); }
           #pwa-boot .boot-bar {
             margin-top: 26px;
             width: 148px;
             height: 4px;
             border-radius: 999px;
             overflow: hidden;
-            background: rgba(255, 255, 255, .25);
+            background: rgba(15, 18, 31, .12);
           }
+          html.dark #pwa-boot .boot-bar,
+          html.amoled #pwa-boot .boot-bar { background: rgba(255, 255, 255, .25); }
           #pwa-boot .boot-bar > span {
             display: block;
             height: 100%;
             width: 40%;
             border-radius: inherit;
-            background: #FFFFFF;
-            box-shadow: 0 0 10px rgba(255, 255, 255, .8);
+            background: #FD267D;
+            box-shadow: 0 0 10px rgba(253, 38, 125, .6);
             will-change: transform;
             transform: translateZ(0);
             animation: boot-slide 1.1s ease-in-out infinite;
+          }
+          html.dark #pwa-boot .boot-bar > span,
+          html.amoled #pwa-boot .boot-bar > span {
+            background: #FFFFFF;
+            box-shadow: 0 0 10px rgba(255, 255, 255, .8);
           }
           @keyframes boot-slide {
             0% { transform: translateX(-110%); }

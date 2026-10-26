@@ -85,13 +85,13 @@ async function onGenerate(): Promise<void> {
 }
 
 /**
- * Скачать анкету JSON-файлом и показать результат.
+ * Скачать анкету файлом и показать результат.
  */
 async function onExport(): Promise<void> {
   const ok = await q.exportQuestionnaire()
 
   if (ok) {
-    toast?.add({ severity: 'success', summary: 'Анкета скачана', detail: 'Файл анкеты сохранён на устройство.', life: 3000 })
+    toast?.add({ severity: 'success', summary: 'Анкета скачана', detail: 'Файл анкеты сохранён в аккаунт.', life: 3000 })
     return
   }
 
@@ -104,7 +104,7 @@ async function onExport(): Promise<void> {
 }
 
 /**
- * Импортировать выбранный JSON-файл и обновить анкету.
+ * Импортировать выбранный файл анкеты и обновить её поля.
  *
  * @param event событие выбора файла PrimeVue FileUpload
  */
@@ -308,8 +308,7 @@ async function onImportSelect(event: FileUploadSelectEvent): Promise<void> {
           icon="pi pi-download"
           size="small"
           rounded
-          outlined
-          severity="secondary"
+          class="!border-0 !bg-[#F6627B] !text-white shadow-sm shadow-rose-500/30 hover:!bg-[#e2556c] active:!bg-[#d84b61]"
           :loading="q.exporting.value"
           :disabled="q.importing.value"
           @click="onExport()"

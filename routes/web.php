@@ -9,6 +9,11 @@ use Illuminate\Support\Facades\Route;
 Route::get('/robots.txt', [SeoController::class, 'robots']);
 Route::get('/sitemap.xml', [SeoController::class, 'sitemap']);
 Route::get('/site.webmanifest', [BrandingController::class, 'manifest'])->name('branding.manifest');
+// Легаси-URL манифеста: его хранят PWA-установки до 22.10 (Chrome
+// перечитывает манифест по URL, зафиксированному при установке).
+// Отдаём тот же theme-aware контроллер, чтобы у старых установок
+// фон окна за системной полосой жестов совпадал с цветом навигации.
+Route::get('/manifest.webmanifest', [BrandingController::class, 'manifest'])->name('branding.manifest.legacy');
 Route::get('/branding/icon', [BrandingController::class, 'icon'])->name('branding.icon');
 
 Route::get('/', [PageController::class, 'welcome']);

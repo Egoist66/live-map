@@ -197,61 +197,22 @@ export default defineConfig({
             registerType: 'prompt',
             injectRegister: false,
             strategies: 'generateSW',
-            manifestFilename: 'manifest.webmanifest',
             // images/bot_qr.png — QR Telegram-бота из настроек: лежит в прекеше
             // с контент-ревизией, поэтому замена файла приезжает клиентам
             // с новым SW, а не залипает в runtime-кэше pwa-images на 7 дней.
             includeAssets: ['offline.html', 'push-sw.js', 'pwa-192x192.png', 'pwa-512x512.png', 'maskable-512x512.png', 'apple-touch-icon.png', 'pwa-icon.svg', 'ulove-swipes.svg', 'favicon.ico', 'images/bot_qr.png'],
-            // PWA-манифест ULove: имя, розовый сплэш (background_color
-            // #FD267D — в цвет boot-экрана app.blade.php для бесшовного
-            // старта), theme_color — в цвет тёмной навигации/документа
-            // (#0F121F), чтобы системные полосы в PWA не вспыхивали
-            // чужим цветом. Логотип — розовый абрикос, шорткаты разделов.
-            // Файл public/manifest.webmanifest при сборке генерится
-            // отсюда же — руками его не правим.
-            manifest: {
-                name: 'ULove',
-                short_name: 'ULove',
-                id: '/?source=pwa',
-                description: 'ULove — знакомства рядом: свайпы, мэтчи и чат.',
-                start_url: '/?source=pwa',
-                scope: '/',
-                display: 'standalone',
-                orientation: 'any',
-                background_color: '#FD267D',
-                theme_color: '#0F121F',
-                lang: 'ru-RU',
-                dir: 'ltr',
-                categories: ['social', 'navigation', 'lifestyle'],
-                icons: [
-                    { src: '/pwa-192x192.png?v=2', sizes: '192x192', type: 'image/png', purpose: 'any' },
-                    { src: '/pwa-512x512.png?v=2', sizes: '512x512', type: 'image/png', purpose: 'any' },
-                    { src: '/maskable-512x512.png?v=2', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-                    { src: '/pwa-icon.svg?v=2', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
-                ],
-                shortcuts: [
-                    {
-                        name: 'Свайпы',
-                        short_name: 'Свайпы',
-                        description: 'Знакомства рядом: свайпы, мэтч открывает чат',
-                        url: '/swipes?source=pwa-shortcut',
-                        // Иконка шортката — та же стопка карточек, что и в
-                        // десктопной навигации (SwipesIcon): SVG масштабируется
-                        // под любой слот ОС, PNG-фолбэк на 192 не нужен.
-                        icons: [
-                            { src: '/ulove-swipes.svg', sizes: 'any', type: 'image/svg+xml' },
-                            { src: '/pwa-192x192.png?v=2', sizes: '192x192', type: 'image/png' },
-                        ],
-                    },
-                    {
-                        name: 'Чаты',
-                        short_name: 'Чаты',
-                        description: 'Сообщения и мэтчи',
-                        url: '/chat?source=pwa-shortcut',
-                        icons: [{ src: '/pwa-192x192.png?v=2', sizes: '192x192' }],
-                    },
-                ],
-            },
+            // МАНИФЕСТ НЕ ГЕНЕРИМ (manifest: false) и не прекешим:
+            // единственный манифест приложения — динамический
+            // `/site.webmanifest` (BrandingController), где theme_color и
+            // background_color = цвет нижней навигации ТЕКУЩЕЙ темы
+            // (light → #FFFFFF, dark → #0F121F, amoled → #000000).
+            // Статический манифест был розовым (#FD267D): в standalone
+            // PWA именно background_color красит фон окна за системной
+            // полосой жестов под нижним меню — отсюда розовый зазор
+            // в обеих темах. Прекеш больше не перехватывает манифест,
+            // а легаси-URL `/manifest.webmanifest` (его хранят установки
+            // до 22.10) отдаёт тот же theme-aware контроллер (см. routes/web.php).
+            manifest: false,
             workbox: {
                 // Прекеш — ТОЛЬКО шелл (первый визит по 3G): entry + общий
                 // vendor + офлайн. Раньше тут было `**/*.{js,css,html,woff2}` —
@@ -277,13 +238,12 @@ export default defineConfig({
                 ],
                 manifestTransforms: [
                     (entries) => {
+                        // Манифест в прекеше больше нет (manifest: false):
+                        // всё, что не с корня — чанки билда, добавляем /build/.
                         const normalized = entries.map((entry) => {
-                            const isRootManifest = entry.url === 'manifest.webmanifest';
-                            const normalizedUrl = isRootManifest
-                                ? '/manifest.webmanifest'
-                                : entry.url.startsWith('/')
-                                    ? entry.url
-                                    : `/build/${entry.url}`;
+                            const normalizedUrl = entry.url.startsWith('/')
+                                ? entry.url
+                                : `/build/${entry.url}`;
                             return { ...entry, url: normalizedUrl };
                         });
                         const seenUrls = new Set();

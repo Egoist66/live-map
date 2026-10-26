@@ -31,11 +31,12 @@ export function useAuthMode() {
 }
 
 /**
- * Классы таба сегмент-переключателя: активный залит бренд-градиентом,
- * неактивный — прозрачный ghost с мягким ховером. Именно заливка
- * читается «выбранным», поэтому вариант outlined для активного
- * запрещён — он выглядит наоборот. Таб широкий и высокий: сегменты
- * не сжимаются, текст не липнет к краям.
+ * Классы таба сегмент-переключателя: активный залит сплошным
+ * брендовым #FF4267 (без градиента), неактивный — прозрачный ghost
+ * с мягким ховером. Именно заливка читается «выбранным», поэтому
+ * вариант outlined для активного запрещён — он выглядит наоборот.
+ * Таб широкий и высокий: сегменты не сжимаются, текст не липнет
+ * к краям.
  *
  * @param active выбран ли таб
  * @returns строка Tailwind-классов для PrimeVue Button
@@ -49,7 +50,7 @@ export function tabClass(active: boolean): string {
   const base = 'w-full !rounded-full !border-0 !bg-transparent !text-sm !font-semibold !py-3 sm:!py-3.5 transition-all duration-200'
 
   if (active) {
-    return `${base} !bg-gradient-to-r !from-rose-500 !via-fuchsia-500 !to-orange-400 !text-white shadow-lg shadow-rose-500/30`
+    return `${base} !bg-[#FF4267] !text-white shadow-lg shadow-[#FF4267]/30`
   }
 
   return `${base} !text-stone-500 dark:!text-zinc-400 hover:!bg-white/70 dark:hover:!bg-white/10 hover:!text-ink-900 dark:hover:!text-white`

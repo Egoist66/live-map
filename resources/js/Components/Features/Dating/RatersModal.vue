@@ -35,6 +35,7 @@ function raterDate(iso: string | null): string {
     modal
     :draggable="false"
     :closable="false"
+    :dismissable-mask="true"
     header="Кто меня оценил"
     :style="{ width: '400px', maxWidth: 'calc(100vw - 2rem)' }"
     :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none !border-stone-200 dark:!border-zinc-800 overflow-hidden' }, header: { class: '!p-0 !border-0' }, content: { class: '!p-0 !bg-white dark:!bg-zinc-900' } }"

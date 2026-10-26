@@ -49,14 +49,14 @@ function onCountryChange(v: string): void {
 <template>
   <div>
     <div class="flex flex-col items-center text-center gap-2">
-      <span class="w-11 h-11 rounded-2xl bg-gradient-to-br from-rose-500 via-fuchsia-500 to-orange-400 grid place-items-center text-white shadow-lg shadow-rose-500/30 shrink-0"><i class="pi pi-heart-fill leading-none" /></span>
+      <span class="w-11 h-11 rounded-2xl bg-[#FF4267] grid place-items-center text-white shadow-lg shadow-[#FF4267]/30 shrink-0"><i class="pi pi-heart-fill leading-none" /></span>
       <h1 class="text-[22px] font-black tracking-tight text-ink-900 dark:text-white leading-tight">{{ t.registerTitle.value }}</h1>
     </div>
 
     <div class="mt-5">
       <div class="flex items-center justify-between gap-3">
         <span aria-live="polite" class="text-[11px] font-bold uppercase tracking-[0.12em] text-stone-400 dark:text-zinc-500">Шаг {{ f.stepNumber.value }} из {{ f.totalSteps }}</span>
-        <span class="text-[12px] font-semibold text-rose-500">{{ f.currentStep.value.title }}</span>
+        <span class="text-[12px] font-semibold text-[#FF4267]">{{ f.currentStep.value.title }}</span>
       </div>
       <ProgressBar :value="f.progress.value" :show-value="false" class="reg-progress mt-2 !h-1.5" />
       <p class="mt-2 text-[12px] leading-relaxed text-stone-500 dark:text-zinc-400">{{ f.currentStep.value.hint }}</p>
@@ -66,7 +66,7 @@ function onCountryChange(v: string): void {
       <Transition name="reg-step" mode="out-in">
         <div :key="f.currentStep.value.id" class="space-y-4">
           <template v-if="f.currentStep.value.id === 'about'">
-            <div class="rounded-2xl border-2 border-rose-200 dark:border-rose-900 bg-gradient-to-br from-rose-50 to-orange-50 dark:from-rose-950/40 dark:to-orange-950/20 p-3.5">
+            <div class="rounded-2xl border-2 border-[#FF4267]/25 bg-[#FF4267]/5 dark:border-[#FF4267]/25 dark:bg-[#FF4267]/10 p-3.5">
               <label class="auth-label">Зачем ты здесь? *</label>
               <Select v-model="f.signup_goal.value" :options="reg.goalOptions.value" optionLabel="label" optionValue="value" placeholder="Выбери цель" checkmark fluid class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.signup_goal" />
               <small class="auth-err">{{ f.errors.value.signup_goal }}</small>
@@ -250,8 +250,8 @@ input.p-inputtext.auth-input {
   background: #18181b;
 }
 .p-datepicker.auth-input:focus-within {
-  border-color: #f43f5e;
-  box-shadow: 0 0 0 1px #f43f5e;
+  border-color: #FF4267;
+  box-shadow: 0 0 0 1px #FF4267;
 }
 .p-datepicker.auth-input.p-invalid {
   border-color: #ef4444;
@@ -286,7 +286,7 @@ input.p-inputtext.auth-input {
 }
 .reg-progress :deep(.p-progressbar-value) {
   border-radius: 999px;
-  background: linear-gradient(90deg, #f43f5e, #fb923c);
+  background: #FF4267;
 }
 :global(html.dark) .reg-progress {
   background: #3f3f46;

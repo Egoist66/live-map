@@ -3,7 +3,9 @@ import { join } from 'path'
 
 const buildDir = 'public/build'
 const root = 'public'
-const files = ['sw.js', 'manifest.webmanifest']
+// manifest.webmanifest больше не генерится (manifest: false в vite.config.js):
+// единственный манифест — динамический /site.webmanifest и легаси-роут.
+const files = ['sw.js']
 
 for (const f of files) {
   const src = join(buildDir, f)

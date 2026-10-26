@@ -82,7 +82,7 @@ const pageTitle = computed(() => (isLogin.value ? 'Вход — ULove' : 'Рег
         <p class="mt-1 text-sm text-stone-500 dark:text-zinc-400">Вход закрыт. Если кажется, что это ошибка — напиши нам.</p>
         <div class="mt-4 flex gap-2 justify-center flex-wrap">
           <Button label="Понятно" severity="secondary" rounded outlined @click="banned.closeBanned()" />
-          <Link href="/contacts"><Button label="Написать нам" icon="pi pi-send" rounded class="!bg-gradient-to-r !from-rose-500 !to-orange-400 !border-0 !text-white" /></Link>
+          <Link href="/contacts"><Button label="Написать нам" icon="pi pi-send" rounded class="!bg-[#FF4267] !border-0 !text-white" /></Link>
         </div>
       </div>
     </Dialog>
@@ -91,9 +91,9 @@ const pageTitle = computed(() => (isLogin.value ? 'Вход — ULove' : 'Рег
 <style scoped>
 /* Тогл «Войти / Регистрация»: убираем дефолтное белое кольцо фокуса
    PrimeVue (на тёмной теме оно вспыхивало при переключении) и
-   подменяем его мягким фирменным розовым — аккуратно и доступно. */
+   подменяем его мягким фирменным #FF4267 — аккуратно и доступно. */
 .auth-toggle :deep(.p-button) {
-  --p-button-focus-ring-color: rgba(244, 63, 94, 0.5);
+  --p-button-focus-ring-color: rgba(255, 66, 103, 0.5);
   --p-button-focus-ring-width: 2px;
   --p-button-focus-ring-offset: 2px;
 }

@@ -21,10 +21,14 @@ class BrandingController extends Controller
     /**
      * Манифест PWA с актуальной иконкой, SEO-названием и цветом системного хрома.
      *
-     * `theme_color` манифеста красит системную панель навигации Android
-     * (жестовая полоса под нашим нижним меню), поэтому он обязан совпадать
-     * с фоном нижней навигации: белый в светлой теме, #0F121F в тёмной
-     * и чёрный в AMOLED. Тему передаёт blade-скрипт/`useTheme` query-парой
+     * `theme_color` и `background_color` манифеста красят системные зоны
+     * вокруг контента в установленном PWA: `theme_color` — панель навигации
+     * Android (жестовая полоса под нашим нижним меню), `background_color` —
+     * фон окна приложения до первой отрисовки и зону за системными барами
+     * в режиме edge-to-edge. Оба обязаны совпадать с фоном нижней
+     * навигации: белый в светлой теме, #0F121F в тёмной и чёрный в AMOLED,
+     * иначе под нижним меню остаётся чужая полоса (раньше там был розовый
+     * брендовый фон окна). Тему передаёт blade-скрипт/`useTheme` query-парой
      * `theme` + cookie `ulove_theme` — за один запрос манифест статичен,
      * а значит не может сам подстроиться под тему.
      *
@@ -62,7 +66,7 @@ class BrandingController extends Controller
             'description' => $seo['default_description'] ?: config('seo.default_description'),
             'start_url' => '/?source=pwa',
             'display' => 'standalone',
-            'background_color' => '#FD267D',
+            'background_color' => $themeColor,
             'theme_color' => $themeColor,
             'lang' => 'ru-RU',
             'scope' => '/',
@@ -102,11 +106,13 @@ class BrandingController extends Controller
     }
 
     /**
-     * Цвет системной панели навигации под нижним меню.
+     * Цвет системных зон PWA (панель навигации Android + фон окна).
      *
      * Приоритет: query-параметр `theme` (его ставит blade-скрипт до первой
      * отрисовки), затем cookie `ulove_theme` (её обновляет `useTheme`),
-     * затем светлая тема. Неизвестные значения игнорируются.
+     * затем светлая тема. Неизвестные значения игнорируются. Одно значение
+     * уходит и в `theme_color`, и в `background_color` — оба должны быть
+     * цветом нижней навигации текущей темы.
      *
      * @param Request $request запрос манифеста
      * @return string hex-цвет фона нижней навигации
