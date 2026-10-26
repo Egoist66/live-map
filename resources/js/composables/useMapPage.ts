@@ -56,9 +56,10 @@ export function useMapPage() {
   /**
    * Бизнес-маркеры: только при включённом модуле бизнеса.
    *
-   * useBusinessMarkers живёт в чанке mod-business (бизнес-стор):
-   * статический импорт тянул бы весь бизнес-код на карту даже
-   * upin-only пользователям. Поэтому грузим лениво по требованию.
+   * useBusinessMarkers — map-слой (maplibre, fetch по moveend) живёт
+   * в ленивом чанке: статический импорт тянул бы весь бизнес-код на
+   * карту даже upin-only пользователям. Состояние модалки компании
+   * при этом хранится в stores/businessMarkers (главный чанк).
    */
   let bizMarkers: { attach: (map: unknown, hooks: unknown) => void; detach: () => void } | null = null
 

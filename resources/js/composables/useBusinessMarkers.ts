@@ -1,15 +1,8 @@
-import { ref } from 'vue'
 import * as maplibregl from 'maplibre-gl'
 import { businessApi } from '@/services/business.api'
+import { useBusinessMarkersStore } from '@/stores/businessMarkers'
 import type { BusinessMapItem } from '@/types/entities/Business'
 import type { Pin } from '@/types/entities/Pin'
-
-const companies = ref<BusinessMapItem[]>([])
-const modalVisible = ref(false)
-const opened = ref<BusinessMapItem | null>(null)
-const companyPins = ref<Pin[]>([])
-const pinsLoading = ref(false)
-const pinsError = ref<string | null>(null)
 
 let map: any = null
 let markers: any[] = []
@@ -138,7 +131,8 @@ function buildMarker(company: BusinessMapItem): any {
     try {
       event.stopPropagation()
     } catch {}
-    void openCompany(company.id)
+    const businessMarkersStore = useBusinessMarkersStore()
+    void businessMarkersStore.openCompany(company.id)
   })
 
   return wrap
@@ -148,9 +142,10 @@ function renderMarkers(): void {
   if (!map) {
     return
   }
+  const businessMarkersStore = useBusinessMarkersStore()
   ensureStyle()
   clearMarkers()
-  companies.value.forEach((company) => {
+  businessMarkersStore.companies.forEach((company) => {
     const lat = Number(company.lat)
     const lng = Number(company.lng)
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
@@ -162,6 +157,24 @@ function renderMarkers(): void {
       markers.push(marker)
     } catch {}
   })
+}
+
+/**
+ * Долететь к пину компании: карта взлетает к точке и карточка открывается.
+ *
+ * @param pin пин из списка компании
+ */
+function jumpToPin(pin: Pin): void {
+  try {
+    const lat = Number((pin as unknown as { latitude?: number }).latitude)
+    const lng = Number((pin as unknown as { longitude?: number }).longitude)
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      map?.flyTo?.({ center: [lng, lat], zoom: Math.max(Number(map?.getZoom?.() ?? 13), 14), duration: 800 })
+    }
+  } catch {}
+  try {
+    openPinCb?.(pin)
+  } catch {}
 }
 
 async function fetchForView(force = false): Promise<void> {
@@ -195,9 +208,10 @@ async function fetchForView(force = false): Promise<void> {
   if (!center) {
     return
   }
+  const businessMarkersStore = useBusinessMarkersStore()
   inflight = true
   try {
-    companies.value = await businessApi.mapBusinesses(center.lat, center.lng, radiusKm)
+    businessMarkersStore.companies = await businessApi.mapBusinesses(center.lat, center.lng, radiusKm)
     lastFetch = Date.now()
     renderMarkers()
   } catch {} finally {
@@ -210,62 +224,26 @@ function scheduleFetch(): void {
 }
 
 /**
- * Открыть модалку компании: шапка + список её пинов.
- * @param id id бизнеса
- */
-async function openCompany(id: number): Promise<void> {
-  const company = companies.value.find((item) => Number(item.id) === Number(id)) ?? null
-  if (!company) {
-    return
-  }
-  opened.value = company
-  companyPins.value = []
-  pinsError.value = null
-  modalVisible.value = true
-  pinsLoading.value = true
-  try {
-    companyPins.value = await businessApi.companyPins(company.id)
-  } catch (error: unknown) {
-    const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message
-    pinsError.value = message ?? 'Не удалось загрузить пины компании'
-  } finally {
-    pinsLoading.value = false
-  }
-}
-
-function closeCompany(): void {
-  modalVisible.value = false
-  opened.value = null
-  companyPins.value = []
-  pinsError.value = null
-}
-
-/**
- * Перейти к пину компании: закрыть модалку, долететь и открыть карточку.
- * @param pin пин из списка компании
- */
-function openCompanyPin(pin: Pin): void {
-  modalVisible.value = false
-  try {
-    const lat = Number((pin as unknown as { latitude?: number }).latitude)
-    const lng = Number((pin as unknown as { longitude?: number }).longitude)
-    if (Number.isFinite(lat) && Number.isFinite(lng)) {
-      map?.flyTo?.({ center: [lng, lat], zoom: Math.max(Number(map?.getZoom?.() ?? 13), 14), duration: 800 })
-    }
-  } catch {}
-  try {
-    openPinCb?.(pin)
-  } catch {}
-}
-
-/**
  * Привязать слой компаний к карте (как UDistrict-слой).
+ *
+ * mod-business lazily loaded chunk: map-слой и maplibre живут тут,
+ * state/action модалки (opened, companyPins, openCompanyPin) — в
+ * stores/businessMarkers, чтобы модалка не импортировала этот модуль.
  *
  * @param mapApi объект карты из useMap (map/getBounds/flyTo)
  * @param callbacks открытие пина в карточке
  * @example bizMarkers.attach(mapApi, { openPin: (pin) => pinDetails.openPinById(pin.id) })
  */
 export function useBusinessMarkers() {
+  const businessMarkersStore = useBusinessMarkersStore()
+
+  /**
+   * Клик по пину компании на карте: флай-ту и открытие карточки.
+   */
+  function jumpToPinOf(pin: Pin): void {
+    jumpToPin(pin)
+  }
+
   function attach(api: { map?: unknown }, callbacks: { openPin: (pin: Pin) => void }): void {
     map = (api as { map?: unknown }).map ?? null
     openPinCb = callbacks.openPin
@@ -281,6 +259,7 @@ export function useBusinessMarkers() {
         map.on?.('zoomend', moveHandler)
       } catch {}
     }
+    businessMarkersStore.registerPinJumpHooks({ jumpToPin: jumpToPinOf })
     void fetchForView(true)
   }
 
@@ -295,22 +274,13 @@ export function useBusinessMarkers() {
     map = null
     openPinCb = null
     clearMarkers()
-    companies.value = []
-    closeCompany()
+    businessMarkersStore.reset()
+    businessMarkersStore.registerPinJumpHooks(null)
   }
 
   return {
-    companies,
-    modalVisible,
-    opened,
-    companyPins,
-    pinsLoading,
-    pinsError,
     attach,
     detach,
     refresh: () => fetchForView(true),
-    openCompany,
-    closeCompany,
-    openCompanyPin,
   }
 }

@@ -1,4 +1,3 @@
-import { onMounted } from 'vue'
 import { getSubscription, isSupported, permissionState, requestPermission, subscribe, subscriptionPayload } from '@/pwa/push.service'
 import { isStandalone } from '@/pwa/pwa.service'
 import { savePushSubscription } from '@/pwa/pwa.api'
@@ -13,10 +12,9 @@ import { currentAuthUid } from '@/composables/useAuthUid'
  * оформляет подписку само при запуске: тихо, если разрешение уже дано,
  * и с однократным системным запросом, если ещё не спрашивали.
  *
- * @example
- * ```ts
- * usePwaPushAuto()
- * ```
+ * Модуль живёт вне главного чанка: импортируется лениво из
+ * useAppLayout (после монтирования layout) и из useAuthSession
+ * (перепривязка подписки при смене аккаунта).
  */
 const ASKED_KEY = 'upin:pwa-push-asked'
 
@@ -84,17 +82,4 @@ export async function ensurePwaPushSubscription(): Promise<void> {
     const created = await subscribe()
     await savePushSubscription(subscriptionPayload(created)).catch(() => {})
   } catch {}
-}
-
-/**
- * Хук автоподписки: запускает проверку один раз при монтировании layout.
- *
- * @returns метод ручного перезапуска проверки
- */
-export function usePwaPushAuto() {
-  onMounted(() => {
-    void ensurePwaPushSubscription()
-  })
-
-  return { ensurePwaPushSubscription }
 }

@@ -18,7 +18,6 @@ import { useAuthSession } from '@/composables/useAuthSession'
 import { useLastRoute } from '@/composables/useLastRoute'
 import { useRealtimeMode } from '@/composables/useRealtimeMode'
 import { useRealtimePoller, watchRealtimeMode } from '@/composables/useRealtimePoller'
-import { usePwaPushAuto } from '@/composables/usePwaPushAuto'
 import { useIdleTask } from '@/composables/useIdleTask'
 import { useModuleRouteGuard } from '@/composables/useModuleRouteGuard'
 import { useTelegram } from '@/composables/useTelegram'
@@ -38,7 +37,7 @@ export function useAppLayout() {
   const authSession = useAuthSession()
   const realtimeMode = useRealtimeMode()
   const realtimePoller = useRealtimePoller()
-  usePwaPushAuto()
+  initPwaPushAutoOnMount()
   const menu = ref()
   const modules = useAppModulesStore()
   const { isTelegram } = useTelegram()
@@ -86,6 +85,30 @@ export function useAppLayout() {
   }
   const isAdmin = computed(() => !!user.value?.is_admin || user.value?.role === 'admin')
   const isModerator = computed(() => isAdmin.value || user.value?.role === 'moderator')
+
+  /**
+   * Автоподписка Web Push внутри установленного PWA.
+   *
+   * Модуль usePwaPushAuto держим вне главного чанка: тянем его
+   * динамически после монтирования layout, чтобы статический
+   * импорт не делал ленивую загрузку из useAuthSession бесполезной.
+   */
+  function initPwaPushAutoOnMount(): void {
+    onMounted(() => {
+      void setupPwaPushAuto()
+    })
+  }
+
+  /**
+   * Ленивый импорт модуля пуша и разовая проверка подписки.
+   */
+  async function setupPwaPushAuto(): Promise<void> {
+    try {
+      const pwaPushAuto = await import('@/composables/usePwaPushAuto')
+      await pwaPushAuto.ensurePwaPushSubscription()
+    } catch {}
+  }
+
   /**
    * Бизнес-аккаунт: в дропдауне только бизнес-разделы
    * (кабинет, чаты, настройки бизнеса) — никаких

@@ -220,6 +220,12 @@ export default defineConfig({
                 // все страницы, диалоги, maplibre), забивал канал и ронял
                 // LCP/TTI. Ленивые чанки — через runtime-кэш `/build/` ниже.
                 //
+                // offline.html в globPatterns НЕ ЯВЛЯЕТСЯ: он лежит в
+                // public/ (globDirectory — public/build) и glob по нему
+                // не находит, а Workbox ругается на пустой globPattern.
+                // В прекеш его добавляет manifestTransforms ниже
+                // (url: /offline.html + ревизия fileRevision).
+                //
                 // primevue/form/realtime/maplibre/swiper в прекеше НЕТ
                 // сознательно: primevue едет вместе с entry через modulepreload
                 // (двойная закачка в install только душила бы канал), а form
@@ -234,7 +240,6 @@ export default defineConfig({
                     'assets/vendor-*.js',
                     'assets/rolldown-runtime-*.js',
                     'assets/api-*.js',
-                    'offline.html',
                 ],
                 manifestTransforms: [
                     (entries) => {
