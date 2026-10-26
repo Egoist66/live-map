@@ -1,7 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { usePage } from '@inertiajs/vue3'
-import { chatApi } from '@/services/chat.api'
 import { notificationsApi } from '@/services/notifications.api'
 import { api } from '@/services/api'
 import { busOn } from '@/services/realtime-bus'
@@ -132,7 +131,6 @@ export const useBadgeStore = defineStore('badges', () => {
     lastFetchAt = now
     try {
       const w = window as any
-      const convsPromise = w.__conversationsInflight ? w.__conversationsInflight : chatApi.conversations().catch(() => [] as any[])
       const repPromise = readCanModerate()
         ? api.get('/api/admin/reports', { params: { status: 'pending', per_page: 1 } }).then((r) => Number(r.data?.pending_count ?? 0)).catch(() => 0)
         : Promise.resolve(0)
@@ -140,13 +138,17 @@ export const useBadgeStore = defineStore('badges', () => {
         ? Promise.resolve(0)
         : api.get('/api/updates/unread').then((r) => Number(r.data?.count ?? 0)).catch(() => 0)
       const results = await Promise.allSettled([
-        convsPromise,
-        chatApi.friendships().catch(() => ({ pending_in: [] } as any)),
+        // Счётчики чатов/дружбы берём с серверной правды (/realtime/badges,
+        // кэш 5с): раньше непрочитанные считались по первой странице списка
+        // диалогов — диалог с непрочитанным за пределами топ-20 давал
+        // фантомную «1», а заход в чат показывал «пусто».
+        api.get('/api/realtime/badges').then((r) => r.data).catch(() => null),
         notificationsApi.unreadCount().then((r) => r.total).catch(() => 0),
         repPromise,
         updPromise,
         api.get('/api/security/impersonations').then((r) => Number(r.data?.unread ?? 0)).catch(() => 0),
-      ])
+      ]
+      )
       const valueOf = (index: number, fallback: unknown) => {
         const settled = results[index]
         if (settled.status !== 'fulfilled') {
@@ -154,21 +156,22 @@ export const useBadgeStore = defineStore('badges', () => {
         }
         return settled.value
       }
-      const convs = valueOf(0, [])
-      const fr = valueOf(1, { pending_in: [] })
-      const ac = valueOf(2, 0)
-      const rep = valueOf(3, 0)
-      const upd = valueOf(4, 0)
-      const sec = valueOf(5, 0)
+      const counters = valueOf(0, null) as Record<string, unknown> | null
+      const ac = valueOf(1, 0)
+      const rep = valueOf(2, 0)
+      const upd = valueOf(3, 0)
+      const sec = valueOf(4, 0)
       const throttled = results.some(
         (r) => r.status === 'rejected' && Number((r.reason as any)?.response?.status) === 429,
       )
       if (throttled) {
         fetchBlockedUntil = Date.now() + FETCH_BLOCK_AFTER_429
       }
-      unread.value = (convs as any[]).filter((c: any) => Number(c?.unread_count || 0) > 0).length
-      unreadMessages.value = (convs as any[]).reduce((s: number, c: any) => s + (Number(c?.unread_count) || 0), 0)
-      pending.value = (fr.pending_in?.length || 0)
+      if (counters) {
+        unread.value = Math.max(0, Number((counters as any).conversations_unread ?? 0) || 0)
+        unreadMessages.value = Math.max(0, Number((counters as any).unread_messages ?? 0) || 0)
+        pending.value = Math.max(0, Number((counters as any).pending_friends ?? 0) || 0)
+      }
       activity.value = Number(ac) || 0
       reports.value = Number(rep) || 0
       updates.value = Number(upd) || 0
@@ -264,6 +267,16 @@ export const useBadgeStore = defineStore('badges', () => {
     } catch {}
     loading.value = false
     window.addEventListener('focus', onWindowFocus)
+    // Медленный сторож: в WS-режиме тика sync нет и счётчик обновлялся
+    // только событиями — прочтение телефона/второй вкладки оставляло
+    // фантомную «1» до следующего события. Раз в минуту сверяемся с
+    // серверной правдой (кэш бэка 5с, FETCH_MIN_INTERVAL делает лишние дешевле).
+    setInterval(() => {
+      try {
+        if (typeof document === 'undefined' || document.hidden) return
+        void fetch()
+      } catch {}
+    }, 60000)
   }
 
   /**

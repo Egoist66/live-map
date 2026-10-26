@@ -1,7 +1,12 @@
 import { ref, computed, onMounted } from 'vue'
 import { chatApi } from '@/services/chat.api'
+import { busOn } from '@/services/realtime-bus'
 
 const onlineIds = ref<Set<number>>(new Set())
+/** Свежий last_seen у собеседников со среза поллинга (presence-канал в polling-режиме мёртв). */
+const seenPresenceAt = new Map<number, number>()
+/** TTL записи seeing-среза: совпадает с порогом онлайн (User::isAway — 3 минуты). */
+const PRESENCE_SEEN_TTL_MS = 180000
 let channel: any = null
 let started = false
 let retryTimer: ReturnType<typeof setTimeout> | null = null
@@ -9,6 +14,7 @@ let retryAttempts = 0
 const MAX_RETRY_ATTEMPTS = 10
 let beatTimer: ReturnType<typeof setInterval> | null = null
 let listenersBound = false
+let pollingBound = false
 
 function getEcho(): any {
   return (window as any).Echo
@@ -123,11 +129,57 @@ function readXsrfToken(): string | null {
 function bindGlobalListeners() {
   if (listenersBound) return
   listenersBound = true
+  bindPollingPresence()
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') { connect(); heartbeat() }
   })
   window.addEventListener('beforeunload', () => { markOfflineBeacon(); disconnect() })
   window.addEventListener('pagehide', () => { markOfflineBeacon(); disconnect() })
+}
+
+/**
+ * Разовая подписка на online-срез поллинга (`user:presence.seen`).
+ *
+ * В polling-режиме presence-канал Echo недоступен, поэтому состав
+ * «кто онлайн» собирает сервер: свежий last_seen у участников моих
+ * диалогов. Мерджим в seen-карту с TTL — как в ВК: активный горит
+ * зелёным без ожидания нового сообщения, молчал 3 минуты — офлайн.
+ */
+function bindPollingPresence(): void {
+  if (pollingBound) return
+  pollingBound = true
+  try {
+    busOn('user:presence.seen', (e: { user_ids?: number[] } | null) => {
+      const ids = Array.isArray(e?.user_ids) ? e.user_ids : []
+      if (ids.length === 0) return
+      const now = Date.now()
+      for (const raw of ids) {
+        const id = Number(raw)
+        if (!(id > 0)) continue
+        seenPresenceAt.set(id, now)
+      }
+      // Прореживаем протухшие записи, чтобы карта не росла без предела.
+      if (seenPresenceAt.size > 500) {
+        for (const [id, at] of seenPresenceAt) {
+          if (now - at > PRESENCE_SEEN_TTL_MS) seenPresenceAt.delete(id)
+        }
+      }
+    })
+  } catch {
+    pollingBound = false
+  }
+}
+
+/**
+ * Онлайн по seen-срезу: запись свежая и не тлела дольше порога.
+ *
+ * @param id id пользователя
+ * @returns true когда срез поллинга видел его недавно
+ */
+function isSeenOnline(id: number): boolean {
+  const at = seenPresenceAt.get(id)
+  if (at === undefined) return false
+  return Date.now() - at < PRESENCE_SEEN_TTL_MS
 }
 
 function bindReconnect() {
@@ -223,12 +275,14 @@ export function resetPresence() {
   channel = null
   started = false
   onlineIds.value = new Set()
+  seenPresenceAt.clear()
   selfInvisible.value = false
 }
 
 export function isOnlineWithFallback(id: number | string | null | undefined, lastSeenAt?: string | null): boolean {
   if (id == null) return false
-  if (onlineIds.value.has(Number(id))) return true
+  const nid = Number(id)
+  if (onlineIds.value.has(nid) || isSeenOnline(nid)) return true
   return isRecentlySeen(lastSeenAt)
 }
 
@@ -237,7 +291,8 @@ export function usePresence() {
 
   const isOnline = (id: number | string | null | undefined, lastSeenAt?: string | null) => {
     if (id == null) return false
-    if (onlineIds.value.has(Number(id))) return true
+    const nid = Number(id)
+    if (onlineIds.value.has(nid) || isSeenOnline(nid)) return true
     return isRecentlySeen(lastSeenAt)
   }
 
@@ -255,7 +310,8 @@ export function usePresenceState() {
     onlineIds: computed(() => onlineIds.value),
     isOnline: (id: number | string | null | undefined, lastSeenAt?: string | null) => {
       if (id == null) return false
-      if (onlineIds.value.has(Number(id))) return true
+      const nid = Number(id)
+      if (onlineIds.value.has(nid) || isSeenOnline(nid)) return true
       return isRecentlySeen(lastSeenAt)
     },
     connect,

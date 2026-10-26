@@ -65,8 +65,10 @@ Route::middleware(['web', 'throttle:6,1'])->post('/cooperation', [\App\Http\Cont
 // на юзера), именные лимитеры (realtime-sync, video-signal) поверх остаются.
 // Порядок важен: ice-servers — до /video/{call}, иначе {call} съест путь.
 Route::middleware(['web', 'auth:web,sanctum', 'throttle:polling'])->group(function () {
-    Route::get('/realtime/mode', [\App\Http\Controllers\RealtimeController::class, 'mode']);
-    Route::get('/realtime/sync', [\App\Http\Controllers\RealtimeController::class, 'sync'])->middleware('throttle:realtime-sync');
+Route::get('/realtime/mode', [\App\Http\Controllers\RealtimeController::class, 'mode']);
+Route::get('/realtime/sync', [\App\Http\Controllers\RealtimeController::class, 'sync'])->middleware('throttle:realtime-sync');
+// Бейджи одним запросом — источник правды в обоих режимах (в WS-режиме тика sync нет).
+Route::get('/realtime/badges', [\App\Http\Controllers\RealtimeController::class, 'badgeCounters'])->middleware('throttle:realtime-sync');
     Route::get('/video/ice-servers', [\App\Http\Controllers\VideoController::class, 'iceServers']);
     Route::get('/video/{call}/signals', [\App\Http\Controllers\VideoController::class, 'signals'])->middleware('throttle:video-signal');
     Route::get('/video/{call}', [\App\Http\Controllers\VideoController::class, 'show']);

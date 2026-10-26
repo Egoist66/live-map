@@ -294,6 +294,14 @@ export function useRealtimePoller() {
     }
     const previews = Array.isArray(data?.previews) ? data.previews : []
     if (previews.length) busEmit('chat:previews', previews)
+    // Онлайн-срез (-presence) участников диалогов: в polling-режиме
+    // Echo presence-канал мёртв, и без среза собеседник горел «офлайн»,
+    // пока не напишет (только его сообщение обновляло last_seen локально).
+    const presenceIds = Array.isArray((data as any)?.presence) ? (data as any).presence : []
+    if (presenceIds.length) {
+      const onlineUserIds = presenceIds.map((id: unknown) => Number(id)).filter((id: number) => id > 0)
+      if (onlineUserIds.length) busEmit('user:presence.seen', { user_ids: onlineUserIds })
+    }
     const removedConvs = Array.isArray((data as any)?.conversations_removed) ? (data as any).conversations_removed : []
     const removedIds = removedConvs.map((id: unknown) => Number(id)).filter((id: number) => id > 0)
     if (removedIds.length) busEmit('user:conversation.removed', { ids: removedIds })

@@ -48,6 +48,22 @@ class RealtimeController extends Controller
     }
 
     /**
+     * Счётчики бейджей одним запросом (источник правды для фронта).
+     *
+     * В WS-режиме у клиента нет тика /realtime/sync, и раньше он считал
+     * непрочитанные по первой странице списка диалогов: диалог с непрочитанным
+     * за пределами топ-20 давал фантомную «1», а заход в чат показывал «пусто».
+     * Закешированный badges() отдан самостоятельным эндпоинтом, чтобы
+     * бейджи работали одинаково в обоих режимах.
+     *
+     * @param Request $request запрос
+     */
+    public function badgeCounters(Request $request)
+    {
+        return response()->json($this->badges($request->user()));
+    }
+
+    /**
      * Один тик поллинга: всё изменившееся с момента since.
      */
     public function sync(Request $request)
@@ -101,6 +117,11 @@ class RealtimeController extends Controller
             'open_ids' => $openId ? $this->openConversationIds($openId) : [],
             'typing' => $openId ? $this->typingUsers($openId, $user->id) : [],
             'previews' => $previews,
+            // Онлайн-срез участников моих диалогов: в polling-режиме нет
+            // presence-канала Echo, и онлайн целиком определялся stale
+            // last_seen_at локальных строк (красный «офлайн» у активного
+            // собеседника до его следующего сообщения).
+            'presence' => $this->freshPresence($user->id),
             'friendships' => $this->freshFriendships($user->id, $window),
             'matches' => $this->freshMatches($user->id, $window),
             'swipe_likes' => $this->freshSwipeLikes($user->id, $window),
@@ -344,6 +365,44 @@ class RealtimeController extends Controller
         }
 
         return $typing;
+    }
+
+    /**
+     * Онлайн-срез участников диалогов пользователя (для polling-режима).
+     *
+     * Тот же критерий онлайн, что у всего приложения: last_seen_at свежее
+     * трёх минут (User::isAway). Невидимок скрываем — как presence-канал
+     * Echo (участие в канале они не показывают). Кэш 5с: срез нужен
+     * каждый тик, а собирать участников одним JOIN-ом — заметная выборка.
+     *
+     * @param int $userId смотрящий пользователь
+     * @return int[] id онлайн-участников, максимум 300
+     */
+    private function freshPresence(int $userId): array
+    {
+        $ids = Cache::remember(
+            "realtime:presence:{$userId}",
+            5,
+            function () use ($userId): array {
+                $cutoff = now()->subMinutes(3);
+
+                return ConversationParticipant::join('users', 'users.id', '=', 'conversation_participants.user_id')
+                    ->whereIn('conversation_participants.conversation_id', $this->myConversationIds($userId))
+                    ->where('conversation_participants.user_id', '!=', $userId)
+                    ->whereNull('conversation_participants.hidden_at')
+                    ->where('users.is_invisible', '=', false)
+                    ->where('users.last_seen_at', '>=', $cutoff)
+                    ->distinct()
+                    ->orderBy('conversation_participants.user_id')
+                    ->limit(300)
+                    ->pluck('conversation_participants.user_id')
+                    ->map(fn ($id) => (int) $id)
+                    ->values()
+                    ->all();
+            },
+        );
+
+        return is_array($ids) ? $ids : [];
     }
 
     /**

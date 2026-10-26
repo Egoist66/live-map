@@ -95,6 +95,8 @@ export type RealtimeEventMap = {
   'user:profile.updated': { user_id: number; name?: string; avatar_url?: string | null; version?: number; gallery_version?: number }
   /** Диалоги убраны у себя с другого устройства/вкладки (сокет conversation.removed / polling conversations_removed) */
   'user:conversation.removed': { ids: number[] }
+  /** Онлайн-срез участников диалогов из поллинга (presence-канал в polling-режиме мёртв): мерджить в seen-карту usePresence */
+  'user:presence.seen': { user_ids: number[] }
 }
 
 export type PollContext = {
