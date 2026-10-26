@@ -71,8 +71,11 @@ const backdrop = useAuthBackdrop()
         </template>
         <template v-else>
           <div class="auth-card-enter w-full max-w-[640px] min-w-0 mx-auto">
-            <Link href="/" class="flex items-center justify-center mb-5 sm:mb-6">
+            <Link href="/" class="flex flex-col items-center justify-center gap-2.5 mb-5 sm:mb-6">
               <span class="font-black tracking-[-0.04em] text-[34px] leading-none text-[#FF4267]">ULove</span>
+              <span class="w-10 h-10 rounded-xl overflow-hidden shadow-float shrink-0">
+                <BrandMark class="h-full w-full" />
+              </span>
             </Link>
             <Card :class="['w-full max-w-full !bg-white/85 dark:!bg-zinc-900/80 backdrop-blur-xl !border !rounded-[20px] sm:!rounded-[24px] !shadow-float !p-0', backdrop.tokens.value.cardClass]">
               <template #content>
@@ -81,7 +84,6 @@ const backdrop = useAuthBackdrop()
                 </div>
               </template>
             </Card>
-            <div class="text-xs text-stone-500 dark:text-zinc-400 mt-4 text-center max-w-full px-2 text-balance">Мэтч открывает чат · Анонимно по желанию · Блок в 1 клик</div>
           </div>
           </template>
         </PageTransition>

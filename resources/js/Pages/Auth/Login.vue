@@ -46,9 +46,9 @@ const pageTitle = computed(() => (isLogin.value ? 'Вход — ULove' : 'Рег
       <span class="block">{{ tgError }}</span>
       <Button type="button" label="Попробовать снова" size="small" class="mt-2" @click="retryTelegramAuth" />
     </Message>
-    <div class="auth-toggle grid w-full grid-cols-2 gap-1.5 rounded-full bg-stone-100 dark:bg-zinc-800 p-1.5 mb-6">
-      <Button type="button" label="Войти" rounded :aria-pressed="isLogin" :class="tabClass(isLogin)" @click="showLogin" />
-      <Button type="button" label="Регистрация" rounded :aria-pressed="!isLogin" :class="tabClass(!isLogin)" @click="showRegister" />
+    <div class="auth-toggle grid w-full grid-cols-2 gap-0 mb-6" role="tablist">
+      <Button type="button" label="Войти" role="tab" :aria-selected="isLogin" :aria-pressed="isLogin" :class="tabClass(isLogin)" @click="showLogin" />
+      <Button type="button" label="Регистрация" role="tab" :aria-selected="!isLogin" :aria-pressed="!isLogin" :class="tabClass(!isLogin)" @click="showRegister" />
     </div>
     <div v-if="isLogin">
       <form @submit.prevent="submit" class="space-y-4">
