@@ -11,7 +11,7 @@ import { RESIDENCE_COUNTRIES, normalizeCountryCode } from './useResidence'
 import { planOf } from './usePlanLimits'
 import { useCountryMismatch } from './useCountryMismatch'
 import { useGeolocation } from './useGeolocation'
-import { reverseGeocodeRaw } from '@/services/geo.api'
+import { reverseGeocodeHome } from '@/services/geo.api'
 import { isUnchangedPayload } from './useUnchangedGuard'
 
 export function useProfileForm() {
@@ -99,9 +99,11 @@ export function useProfileForm() {
   /**
    * Подставить домашнюю точку по геолокации браузера.
    *
-   * Координаты нужны свайпам для дистанции. Заодно обновляем город
-   * и страну из reverse-geocode: если человек переехал, профиль не
-   * останется со старым городом при новой точке.
+   * Берём точный адрес (zoom 18): город + улица с домом, а если улицы
+   * в OSM нет — район. Координаты нужны свайпам для дистанции, адрес —
+   * чтобы человек видел, что точка попала в его двор, а не «в центр
+   * города». Заодно обновляем город и страну из reverse-geocode: если
+   * человек переехал, профиль не останется со старым городом.
    *
    * @returns Promise<void>
    */
@@ -128,13 +130,12 @@ export function useProfileForm() {
     let countryCode: string | null = null
 
     try {
-      const geo = await reverseGeocodeRaw(lat, lng, 14)
-      const rawAddress = (geo.raw as unknown as { address?: Record<string, string> }).address ?? {}
+      const place = await reverseGeocodeHome(lat, lng)
 
-      address = geo.address
-      city = rawAddress.city || rawAddress.town || rawAddress.village || null
-      country = rawAddress.country || null
-      countryCode = rawAddress.country_code ? String(rawAddress.country_code).toLowerCase() : null
+      address = place.address
+      city = place.city
+      country = place.country
+      countryCode = place.country_code
     } catch {
       address = `${lat}, ${lng}`
     }
@@ -149,6 +150,15 @@ export function useProfileForm() {
       country: country || current.country,
       country_code: countryCode || current.country_code,
     } as any)
+
+    toast?.add({
+      severity: 'success',
+      summary: 'Точка определена',
+      detail: address === `${lat}, ${lng}`
+        ? 'Адрес не нашёлся — расстояние всё равно будет считаться по координатам'
+        : `Город и улица (или район): ${address}`,
+      life: 4000,
+    })
   }
 
   /**
@@ -349,31 +359,24 @@ export function useProfileForm() {
   })
 
   /**
-   * Человеческая подпись локации вместо широты и долготы.
+   * Человеческая подпись локации для карточки в профиле.
    *
-   * Показываем «Город, Страна», затем сохранённый адрес из
-   * reverse-geocode, и только в крайнем случае — нейтральную
-   * подпись. Координаты пользователю не интересны.
+   * В профиле показываем только город — улица/район хранится в
+   * home_address и используется для дистанций свайпов, не для
+   * отображения. Координаты и сырой адрес пользователю не интересны.
    *
-   * @returns читаемая локация для карточки в профиле
+   * @returns подпись карточки: город, либо нейтральный вариант
    */
   const homeLocationLabel = computed<string>(() => {
     const city = String((values as any).home_city ?? '').trim()
     const country = String((values as any).country ?? '').trim()
-    const address = String((values as any).home_address ?? '').trim()
 
-    const parts = [city, country].filter((part) => part !== '')
-
-    if (parts.length > 0) {
-      return parts.join(', ')
+    if (city !== '') {
+      return city
     }
 
-    // Иногда reverse-geocode падает и в адрес пишутся сырые координаты —
-    // пользователю их показывать нельзя.
-    const looksLikeCoordinates = /^-?\d+(?:[.,]\d+)?\s*,\s*-?\d+(?:[.,]\d+)?$/.test(address)
-
-    if (address !== '' && !looksLikeCoordinates) {
-      return address
+    if (country !== '') {
+      return country
     }
 
     return hasHomePoint.value ? 'Точка на карте' : 'Не определена'

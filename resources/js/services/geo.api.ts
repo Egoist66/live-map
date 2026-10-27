@@ -1,6 +1,28 @@
 import type { NominatimReverseResponse } from '@/types/entities/Geo'
 import { kvGet, kvSet } from '@/db/app.db'
 
+/**
+ * Структурированный результат reverse-geocoding домашней точки.
+ *
+ * Нужен профилю и регистрации: из одной Nominatim-запроса собираем
+ * и человекочитаемый адрес, и отдельные части — чтобы UI показывал
+ * «город + улица (или район)», а хранилище получало аккуратные поля.
+ */
+export interface HomeReverse {
+  /** Полная адресная строка без номера дома: улица/район + город, например «улица Ленина · Минск». */
+  address: string
+  /** Город (city / town / village / municipality) либо null. */
+  city: string | null
+  /** Район внутри города (suburb / city_district / neighbourhood / quarter) либо null. */
+  district: string | null
+  /** Улица (road), либо null — у малых населённых пунктов улицы нет. Номер дома не включается. */
+  street: string | null
+  /** Название страны либо null. */
+  country: string | null
+  /** ISO-код страны в нижнем регистре (например, 'by') либо null. */
+  country_code: string | null
+}
+
 /** TTL кэша геокодинга: адреса меняются редко, Nominatim строг к лимитам (1 req/s). */
 const GEO_TTL_MS = 30 * 24 * 60 * 60 * 1000
 
@@ -99,6 +121,57 @@ export async function reverseGeocodeRaw(lat: number, lng: number, zoom = 14): Pr
     const road = a.road || a.suburb || ''
     const display = [road, city].filter(Boolean).join(' · ') || d.display_name?.split(',').slice(0, 2).join(', ') || `${lat}, ${lng}`
     return { address: display, raw: d }
+  })
+  await writeCache(key, value)
+  return value
+}
+
+/**
+ * Точный reverse-geocoding домашней точки: zoom 18 даёт улицу.
+ *
+ * Адрес хранится без номера дома — точность до улицы (или района,
+ * если улицы в OSM нет) достаточна для дистанций свайпов, а точный
+ * дом привлекает лишнее внимание. Отдельные части возвращаем
+ * структурно, чтобы формы подставляли city/country, а адрес
+ * сохраняли одной строкой.
+ *
+ * @param lat широта точки
+ * @param lng долгота точки
+ * @returns адрес вместе с разобранными частями
+ */
+export async function reverseGeocodeHome(lat: number, lng: number): Promise<HomeReverse> {
+  const key = revKey(lat, lng, 18, 'home')
+  const cached = await readCache<HomeReverse>(key)
+  if (cached !== null) {
+    return cached
+  }
+  const value = await deduped(key, async () => {
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&accept-language=ru`, {
+      headers: { Accept: 'application/json' },
+    })
+    if (!r.ok) throw new Error('Geocode failed')
+    const d = (await r.json()) as NominatimReverseResponse
+    const a: any = d.address || {}
+
+    const road = a.road || a.pedestrian || a.footway || a.street || a.path || a.cycleway || null
+    // Номер дома не берём: точность «улица» достаточна для дистанций свайпов.
+    const street = road ? String(road) : null
+    const district = a.suburb || a.city_district || a.neighbourhood || a.quarter || null
+    const city = a.city || a.town || a.village || a.municipality || null
+
+    const displayParts = [street, district, city].filter((part): part is string => !!part)
+    const address = displayParts.join(' · ')
+      || d.display_name?.split(',').slice(0, 3).join(', ').trim()
+      || `${lat}, ${lng}`
+
+    return {
+      address,
+      city: city ? String(city) : null,
+      district: district ? String(district) : null,
+      street,
+      country: a.country ? String(a.country) : null,
+      country_code: a.country_code ? String(a.country_code).toLowerCase() : null,
+    }
   })
   await writeCache(key, value)
   return value

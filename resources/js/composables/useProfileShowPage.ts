@@ -70,13 +70,20 @@ export function useProfileShowPage(props: { profileUser: any; isOwn: boolean; is
   const registeredAt = computed(() => {
     try { return new Date(props.profileUser.created_at).toLocaleDateString('ru-RU') } catch { return '' }
   })
+  /**
+   * Подпись домашней точки в инфо-блоке профиля.
+   *
+   * Показываем только город: улица/район — служебная точность для
+   * дистанций свайпов, чужой точный адрес в профиле показывать не
+   * стоит. Сохранена прежняя логика блюра и фолбэка по координатам.
+   */
   const homeLabel = computed(() => {
     const u = props.profileUser
     if (!u) return ''
     if (u.home_lat == null || u.home_lng == null) return ''
-    const parts = [u.home_address, u.home_city].filter(Boolean)
-    if (parts.length) return parts.join(' · ') + (u.home_is_blurred ? ` (~${u.home_blur_label || 'скрыто'})` : '')
-    if (u.home_city) return u.home_city
+    if (u.home_city) {
+      return u.home_is_blurred ? `${u.home_city} (~${u.home_blur_label || 'скрыто'})` : u.home_city
+    }
     return `${Number(u.home_lat).toFixed(4)}, ${Number(u.home_lng).toFixed(4)}`
   })
   const hasHome = computed(() => !!homeLabel.value)

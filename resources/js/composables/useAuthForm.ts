@@ -2,7 +2,7 @@ import { computed, nextTick, ref } from 'vue'
 import { useForm } from 'vee-validate'
 import { loginSchema } from '@/validation/schemas/login.schema'
 import { registerSchema } from '@/validation/schemas/register.schema'
-import { forwardGeocodePlace, reverseGeocodeRaw } from '@/services/geo.api'
+import { forwardGeocodePlace, reverseGeocodeHome } from '@/services/geo.api'
 import { useCountryMismatch } from '@/composables/useCountryMismatch'
 import { useSignupGoals } from '@/composables/useSignupGoals'
 import { useHoneypot } from '@/composables/useTurnstile'
@@ -228,18 +228,15 @@ export function useRegisterForm() {
       setValues({ home_lat: lat, home_lng: lng } as any)
       addrLoading.value = true
       try {
-        const geo = await reverseGeocodeRaw(lat, lng, 14)
-        const rawAddr: any = (geo.raw as any)?.address || {}
-        const city = rawAddr.city || rawAddr.town || rawAddr.village
+        const geo = await reverseGeocodeHome(lat, lng)
         const prevCity = (values as any).home_city || null
         const prevCountry = (values as any).country || null
         const prevCode = (values as any).country_code || null
-        const code = rawAddr.country_code ? String(rawAddr.country_code).toLowerCase() : null
         setValues({
           home_address: geo.address,
-          home_city: city || prevCity,
-          country: rawAddr.country || prevCountry,
-          country_code: code || prevCode,
+          home_city: geo.city || prevCity,
+          country: geo.country || prevCountry,
+          country_code: geo.country_code || prevCode,
         } as any)
       } catch {
         setValues({ home_address: `${lat}, ${lng}` } as any)

@@ -12,6 +12,7 @@ export interface NominatimAddress {
   municipality?: string
   county?: string
   suburb?: string
+  city_district?: string
   neighbourhood?: string
   quarter?: string
   state?: string
