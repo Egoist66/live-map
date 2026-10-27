@@ -15,15 +15,42 @@ function readLastPos(): { lat: number; lng: number } | null {
 /**
  * Понятная причина отказа по коду GeolocationPositionError.
  *
+ * Код 1 (PERMISSION_DENIED) — site-level запрет домена в браузере,
+ * даже если в системе геолокация включена: Chrome после клика
+ * «Блокировать» больше не показывает prompt, юзер должен перевернуть
+ * разрешение в значке слева от адреса. Отдельно ловим незащищённый
+ * origin — там geolocation запрещён API всегда.
+ *
  * @param err ошибка браузерного geolocation API
  * @returns текст для тоста/карточки
  */
 function describeError(err: unknown): string {
+  if (typeof window !== 'undefined' && !window.isSecureContext) {
+    return 'Геолокация работает только по https или localhost — сейчас открыт незащищённый адрес'
+  }
+
   const code = (err as GeolocationPositionError | null | undefined)?.code
-  if (code === 1) return 'Геолокация отклонена в настройках браузера'
-  if (code === 2) return 'Позиция недоступна — сеть не слышна'
+
+  if (code === 1) {
+    return 'Браузер запретил доступ к местоположению для сайта. Нажми значок замка слева от адреса → «Разрешить геопозицию» и обнови страницу'
+  }
+
+  if (code === 2) return 'Позиция недоступна — не слышна сеть и GPS'
   if (code === 3) return 'Ожидание позиции истекло'
-  return 'Не удалось определить позицию'
+
+  return `Не удалось определить позицию (код ${(err as { code?: number } | null | undefined)?.code ?? 0})`
+}
+
+/** Диагностика в консоль: видно код, сообщение и origin из DevTools. */
+function logGeolocationFailure(err: unknown): void {
+  if (typeof console === 'undefined') return
+
+  console.warn('[geolocation] отказ', {
+    code: (err as GeolocationPositionError | null | undefined)?.code ?? 0,
+    message: (err as { message?: string } | null | undefined)?.message ?? 'без сообщения',
+    origin: typeof window !== 'undefined' ? window.location.origin : null,
+    secureContext: typeof window !== 'undefined' ? window.isSecureContext : null,
+  })
 }
 
 /**
@@ -69,6 +96,8 @@ export function useGeolocation() {
       try {
         position = await singleAttempt({ enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 })
       } catch (err) {
+        logGeolocationFailure(err)
+
         if ((err as GeolocationPositionError)?.code === 1) {
           error.value = describeError(err)
           return null
@@ -78,6 +107,7 @@ export function useGeolocation() {
         try {
           position = await singleAttempt({ enableHighAccuracy: false, timeout: 8000, maximumAge: 5 * 60000 })
         } catch (fallbackErr) {
+          logGeolocationFailure(fallbackErr)
           const cached = readLastPos()
 
           if (cached) {
