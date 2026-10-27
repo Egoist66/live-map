@@ -105,44 +105,44 @@ export interface ModuleFaqSection {
 
 const ULOVE_LANDING: LandingContent = {
   badge: 'ULOVE · LIVE',
-  badgeNote: 'люди рядом · мэтч открывает чат',
-  titleTop: 'Встречай рядом.',
-  titleAccent: 'ULove',
-  titleTail: '— главное.',
+  badgeNote: 'живые анкеты рядом · мэтч открывает чат',
+  titleTop: 'Люди рядом.',
+  titleAccent: 'Мэтч',
+  titleTail: '— и вы в чате.',
   description:
-    'Свайпы людей рядом, мэтч открывает чат. Без ленты и шума: листай анкеты, ставь лайк в один тап и переписывайся только по взаимности.',
-  secondaryLabel: 'Как работает ULove',
-  trust: 'Анонимно по желанию · Блок в 1 клик · Строго 18+',
+    'Листай анкеты рядом, лайкай в один тап и переписывайся только по взаимности. Без ленты и лишнего шума.',
+  secondaryLabel: 'Как это работает',
+  trust: 'Анонимно по желанию · Блок в 1 клик · 18+',
   stats: [
-    { value: 'Мэтч → чат', note: 'пишут только взаимно' },
+    { value: 'Мэтч = чат', note: 'только по взаимности' },
     { value: 'Рядом', note: 'фильтр по расстоянию' },
-    { value: 'Безлимит', note: 'свайпы без конца' },
+    { value: 'Безлимит', note: 'листай без ограничений' },
   ],
   steps: [
-    { icon: 'pi-user-edit', title: '01 · Создай анкету', text: 'Фото, цель, интересы. Видно только в ULove.' },
-    { icon: 'pi-heart', title: '02 · Листай рядом', text: 'Свайпы с фильтром по расстоянию. Лайк — в один тап.' },
-    { icon: 'pi-comments', title: '03 · Мэтч открывает чат', text: 'Взаимность — и вы уже переписываетесь. Без мэтча — тихо.' },
+    { icon: 'pi-user-edit', title: '01 · Создай анкету', text: 'Фото, цель и интересы. Займёт пару минут.' },
+    { icon: 'pi-heart', title: '02 · Листай рядом', text: 'Смотри анкеты поблизости и ставь лайк в один тап.' },
+    { icon: 'pi-comments', title: '03 · Мэтч открывает чат', text: 'Совпали лайки — и вы уже в чате. Без мэтча сообщений нет.' },
   ],
   finalTitle: 'Готов к первому мэтчу?',
-  finalText: 'Создай анкету ULove за 2 минуты и листай людей рядом.',
+  finalText: 'Создай анкету за 2 минуты и начни знакомиться рядом.',
   crossHint: 'Листай ULove →',
   spotlight: {
-    tag: '💘 ЗНАКОМСТВА БЕЗ ШУМА',
+    tag: '💘 БЕЗ ШУМА И СПАМА',
     title: 'Мэтч открывает чат.',
-    text: 'Никаких случайных сообщений: пишут только взаимно. Суперлайк выделит тебя, избранное сохранит понравившихся, а фильтры оставят только подходящих.',
+    text: 'Сообщения приходят только от тех, с кем совпала симпатия. Суперлайк выделит тебя, избранное сохранит понравившихся, а фильтры покажут подходящих.',
     tiles: [
-      { top: '⭐ Суперлайк', sub: 'Тебя увидят первым' },
-      { top: '💞 Мэтчи', sub: 'Чат без лимитов' },
+      { top: '⭐ Суперлайк', sub: 'Тебя заметят первым' },
+      { top: '💞 Мэтчи', sub: 'Переписка без лимитов' },
       { top: '🎯 Фильтры', sub: 'Цель · возраст · рядом' },
     ],
-    chips: ['Мэтч → чат', 'Без спама', 'Люди рядом'],
+    chips: ['Только взаимно', 'Без спама', 'Люди рядом'],
     ctaLabel: 'Открыть ULove →',
     ctaHref: '/swipes',
   },
   privacy: {
     tag: '🔒 Приватность по умолчанию',
-    title: 'Спокойно знакомиться. Без слежки.',
-    text: 'Сообщения только по взаимности, блок в один клик, невидимость имени и возраста — на PRO.',
+    title: 'Знакомься спокойно. Без слежки.',
+    text: 'Сообщения только по взаимности, блок в один клик. На PRO можно скрыть имя и возраст.',
     chips: ['Только взаимно', 'Блок в 1 клик'],
   },
 }
@@ -166,11 +166,11 @@ export const LANDING_TAB_OPTIONS: ReadonlyArray<{ label: string; icon: string; v
  */
 export const LANDING_THEMES: Record<LandingTabId, LandingTheme> = {
   ulove: {
-    accentText: 'bg-gradient-to-r from-rose-500 via-fuchsia-500 to-orange-400 bg-clip-text text-transparent',
-    ctaBtn: '!bg-gradient-to-r !from-rose-500 !via-fuchsia-500 !to-orange-400',
-    badge: '!bg-gradient-to-r !from-rose-500 !via-fuchsia-500 !to-orange-400',
-    stepIcon: 'bg-gradient-to-r from-rose-500 to-orange-400',
-    logo: 'bg-gradient-to-br from-rose-500 via-fuchsia-500 to-orange-400',
+    accentText: 'bg-gradient-to-r from-rose-500 via-pink-500 to-fuchsia-500 bg-clip-text text-transparent',
+    ctaBtn: '!bg-gradient-to-r !from-rose-500 !via-pink-500 !to-fuchsia-500',
+    badge: '!bg-gradient-to-r !from-rose-500 !via-pink-500 !to-fuchsia-500',
+    stepIcon: 'bg-gradient-to-r from-rose-500 to-pink-500',
+    logo: 'bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500',
     logoIcon: 'pi pi-heart-fill',
   },
 }
@@ -180,9 +180,9 @@ export const LANDING_THEMES: Record<LandingTabId, LandingTheme> = {
  */
 export const LANDING_SEO: Record<LandingTabId, LandingSeo> = {
   ulove: {
-    title: 'ULove — знакомства рядом',
+    title: 'ULove — люди рядом, мэтч открывает чат',
     description:
-      'ULove — знакомства рядом: свайпы, мэтч открывает чат. Листай людей рядом, лайкай в один тап, переписывайся только по взаимности. Строго 18+.',
+      'ULove — знакомства рядом: листай анкеты, лайкай в один тап и переписывайся только по взаимности. Без ленты и лишнего шума. 18+.',
   },
 }
 
@@ -190,7 +190,7 @@ export const LANDING_SEO: Record<LandingTabId, LandingSeo> = {
  * Подписи в шапке лендинга по табам.
  */
 export const LANDING_HEADER_TAGS: Record<LandingTabId, string> = {
-  ulove: 'ULOVE · ЗНАКОМСТВА РЯДОМ',
+  ulove: 'ЗНАКОМСТВА РЯДОМ',
 }
 
 /**

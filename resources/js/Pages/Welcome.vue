@@ -7,7 +7,6 @@ import { useWelcomeHeroSwiper } from '@/composables/useWelcomeHeroSwiper'
 import { useSupportEmail } from '@/composables/useSettingsSupport'
 import { useCooperation } from '@/composables/useCooperation'
 import AppFooter from '@/Layouts/AppFooter.vue'
-import BrandMark from '@/Components/Brand/BrandMark.vue'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import Tag from 'primevue/tag'
@@ -50,12 +49,19 @@ function switchTab(next: LandingTabId): void {
     <header class="native-safe-top sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/70 backdrop-blur border-b border-stone-200/60 dark:border-zinc-800">
       <div class="max-w-[1280px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-2 min-[411px]:px-4 sm:px-6 h-14 min-[411px]:h-[64px] flex items-center justify-between gap-2 min-w-0">
         <Link href="/" class="flex items-center gap-2 min-w-0 shrink-0">
-          <span class="w-8 h-8 min-[411px]:w-9 min-[411px]:h-9 rounded-[10px] min-[411px]:rounded-xl overflow-hidden shadow-soft shrink-0 grid place-items-center"><BrandMark class="h-full w-full" /></span>
-          <span class="font-black tracking-[-0.03em] text-[17px] min-[411px]:text-[19px] whitespace-nowrap text-ink-900 dark:text-white">{{ landing.brand.value.head }}<span class="font-light text-ink-600 dark:text-zinc-400">{{ landing.brand.value.tail }}</span></span>
+          <img
+            src="/logo.svg"
+            alt="ULove"
+            width="620"
+            height="180"
+            class="h-9 w-auto max-w-[160px] object-contain shrink-0"
+            loading="eager"
+            decoding="async"
+          />
           <span :class="['hidden sm:inline ml-2 text-xs font-black tracking-wide bg-clip-text text-transparent border-l border-stone-200 dark:border-zinc-700 pl-3', landing.headerTagClass.value]">{{ landing.headerTag.value }}</span>
         </Link>
         <nav class="flex items-center gap-1 min-[411px]:gap-2 shrink-0">
-          <Link :href="w.profileCtaHref.value"><Button :label="w.profileCtaLabel.value" class="!bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white !px-4 min-[411px]:!px-6 !py-2 min-[411px]:!py-2.5 !rounded-full !text-[13px] min-[411px]:!text-sm !font-semibold hover:!bg-ink-800 dark:hover:!bg-zinc-100 !border-0 shadow-soft whitespace-nowrap" /></Link>
+          <Link :href="w.profileCtaHref.value"><Button :label="w.profileCtaLabel.value" class="!bg-[#FF456C] hover:!bg-[#E63A5E] dark:!bg-[#FF456C] dark:hover:!bg-[#E63A5E] !text-white !px-4 min-[411px]:!px-6 !py-2 min-[411px]:!py-2.5 !rounded-full !text-[13px] min-[411px]:!text-sm !font-semibold !border-0 shadow-soft whitespace-nowrap" /></Link>
         </nav>
       </div>
     </header>
@@ -171,7 +177,7 @@ function switchTab(next: LandingTabId): void {
             <div class="flex items-center justify-center gap-3 px-4 pt-3" aria-hidden="true">
               <span class="w-12 h-12 grid place-items-center rounded-full bg-white dark:bg-zinc-800 shadow-[0_2px_10px_rgba(0,0,0,0.18)] shrink-0"><i class="pi pi-times text-lg leading-none text-[#FF4458]" /></span>
               <span class="w-12 h-12 grid place-items-center rounded-full bg-white dark:bg-zinc-800 shadow-[0_2px_10px_rgba(0,0,0,0.18)] shrink-0"><i class="pi pi-heart-fill text-lg leading-none text-[#1786FF]" /></span>
-              <span class="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#FD267D] to-[#FF7854] text-white shadow-lg shadow-rose-500/40"><i class="pi pi-heart-fill text-2xl leading-none" /></span>
+              <span class="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#FD267D] to-[#FF456C] text-white shadow-lg shadow-rose-500/40"><i class="pi pi-heart-fill text-2xl leading-none" /></span>
               <span class="w-12 h-12 grid place-items-center rounded-full bg-white dark:bg-zinc-800 shadow-[0_2px_10px_rgba(0,0,0,0.18)] shrink-0"><i class="pi pi-send text-lg leading-none text-[#9B49DF]" /></span>
             </div>
             <div class="flex justify-center items-center pt-3">
@@ -183,7 +189,7 @@ function switchTab(next: LandingTabId): void {
                 class="w-8 h-8 grid place-items-center shrink-0"
                 @click="hero.goTo(dotIndex)"
               >
-                <span :class="['block h-2 rounded-full transition-[width,background-color] duration-300', dotIndex === hero.activeIndex.value ? 'w-6 bg-gradient-to-r from-rose-500 to-orange-400' : 'w-2 bg-stone-300 dark:bg-zinc-600']" />
+                <span :class="['block h-2 rounded-full transition-[width,background-color] duration-300', dotIndex === hero.activeIndex.value ? 'w-6 bg-gradient-to-r from-rose-500 to-pink-500' : 'w-2 bg-stone-300 dark:bg-zinc-600']" />
               </button>
             </div>
             <div class="flex items-center justify-between px-1 pt-3">
@@ -191,16 +197,16 @@ function switchTab(next: LandingTabId): void {
                 <Avatar image="/landing/face-1.jpg" aria-label="Пользователь ULove" shape="circle" size="normal" />
                 <Avatar image="/landing/face-2.jpg" aria-label="Пользователь ULove" shape="circle" size="normal" class="-ml-4" />
                 <Avatar image="/landing/face-3.jpg" aria-label="Пользователь ULove" shape="circle" size="normal" class="-ml-4" />
-                <span class="text-xs font-medium text-stone-500 dark:text-zinc-500 ml-1">уже листают рядом</span>
+                <span class="text-xs font-medium text-stone-500 dark:text-zinc-500 ml-1">уже знакомятся рядом</span>
               </div>
-              <span class="text-xs font-black bg-gradient-to-r from-rose-500 via-fuchsia-500 to-orange-400 bg-clip-text text-transparent">ULOVE</span>
+              <span class="text-xs font-black bg-gradient-to-r from-rose-500 via-pink-500 to-fuchsia-500 bg-clip-text text-transparent">ULOVE</span>
             </div>
           </template>
         </Card>
 
         <div class="absolute -bottom-5 -left-4 bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-2xl p-4 shadow-float hidden sm:flex gap-3 items-center max-w-[320px]">
-          <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-rose-500 to-orange-400 grid place-items-center text-white shrink-0"><i class="pi pi-heart-fill text-lg" /></div>
-          <div><div class="text-xs font-bold">Мэтч открывает чат</div><div class="text-xs text-stone-500 dark:text-zinc-400 leading-snug">Взаимный лайк — и вы уже переписываетесь. Без спама.</div></div>
+          <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-rose-500 to-pink-500 grid place-items-center text-white shrink-0"><i class="pi pi-heart-fill text-lg" /></div>
+          <div><div class="text-xs font-bold">Мэтч открывает чат</div><div class="text-xs text-stone-500 dark:text-zinc-400 leading-snug">Взаимный лайк — и вы уже в чате. Без спама.</div></div>
         </div>
       </div>
     </section>
@@ -216,7 +222,7 @@ function switchTab(next: LandingTabId): void {
 
     <section class="max-w-[1280px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 py-4 sm:py-6 grid lg:grid-cols-5 gap-3 sm:gap-4 [content-visibility:auto] [contain-intrinsic-size:auto_560px]">
       <div class="lg:col-span-3 bg-ink-900 dark:bg-zinc-900 dark:border dark:border-zinc-800 text-white rounded-[20px] sm:rounded-[24px] p-5 sm:p-8 relative overflow-hidden">
-        <div class="absolute -right-20 -top-20 w-80 h-80 bg-gradient-to-br from-rose-500 to-orange-400 rounded-full blur-[60px] opacity-25"></div>
+        <div class="absolute -right-20 -top-20 w-80 h-80 bg-gradient-to-br from-rose-500 to-pink-500 rounded-full blur-[60px] opacity-25"></div>
       <div class="relative w-full max-w-[680px] mx-auto">
           <Tag class="!bg-white/10 !border !border-white/15 !rounded-full !px-3 !py-1 !text-xs !font-medium !text-white">{{ landing.content.value.spotlight.tag }}</Tag>
           <h3 class="mt-4 text-2xl font-black tracking-tight">{{ landing.content.value.spotlight.title }}</h3>
@@ -230,7 +236,7 @@ function switchTab(next: LandingTabId): void {
       </div>
       <Card class="lg:col-span-2 !bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[24px] !shadow-soft card-hover overflow-hidden">
         <template #content>
-          <Tag class="!bg-white/10 !rounded-full !px-3 !py-1 !text-xs !font-medium !text-white !bg-gradient-to-r !from-rose-500 !to-orange-400 !border-0">{{ landing.content.value.privacy.tag }}</Tag>
+          <Tag class="!bg-white/10 !rounded-full !px-3 !py-1 !text-xs !font-medium !text-white !bg-gradient-to-r !from-rose-500 !to-pink-500 !border-0">{{ landing.content.value.privacy.tag }}</Tag>
           <h3 class="mt-4 text-xl font-black tracking-tight">{{ landing.content.value.privacy.title }}</h3>
           <p class="text-sm text-stone-600 dark:text-zinc-400 mt-2 leading-relaxed">{{ landing.content.value.privacy.text }}</p>
           <div class="mt-4 flex flex-wrap gap-2 text-xs font-medium"><Tag v-for="chip in landing.content.value.privacy.chips" :key="chip" class="!bg-stone-100 dark:!bg-zinc-800 !text-ink-900 dark:!text-white !px-3 !py-1.5 !rounded-full !border-0">{{ chip }}</Tag></div>
@@ -250,7 +256,7 @@ function switchTab(next: LandingTabId): void {
     </section>
 
     <section class="max-w-[1280px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 pb-6 sm:pb-8 [content-visibility:auto] [contain-intrinsic-size:auto_240px]">
-      <div class="relative overflow-hidden rounded-[20px] sm:rounded-[24px] bg-gradient-to-br from-rose-500 via-fuchsia-500 to-orange-400 p-5 sm:p-8 text-white shadow-float">
+      <div class="relative overflow-hidden rounded-[20px] sm:rounded-[24px] bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 p-5 sm:p-8 text-white shadow-float">
         <div class="absolute -right-16 -top-16 w-64 h-64 bg-white/15 rounded-full blur-[50px] pointer-events-none"></div>
         <div class="absolute -left-10 -bottom-16 w-52 h-52 bg-black/10 rounded-full blur-[40px] pointer-events-none"></div>
         <div class="relative flex flex-col sm:flex-row sm:items-center justify-between gap-4">

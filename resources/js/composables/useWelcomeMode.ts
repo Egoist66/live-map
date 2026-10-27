@@ -24,7 +24,7 @@ export type LandingTab = LandingTabId
 const tab = ref<LandingTabId>('ulove')
 
 const THUMB_GRADIENT: Record<LandingTabId, string> = {
-  ulove: 'bg-gradient-to-r from-rose-400 via-fuchsia-400 to-orange-300',
+  ulove: 'bg-gradient-to-r from-rose-400 via-pink-400 to-fuchsia-400',
 }
 
 const THUMB_POSITION: Record<LandingTabId, string> = {
@@ -86,7 +86,7 @@ export function useWelcomeMode() {
   const theme = computed(() => LANDING_THEMES[tab.value])
   const headerTag = computed(() => LANDING_HEADER_TAGS[tab.value])
 
-  const headerTagClass = 'bg-gradient-to-r from-rose-500 via-fuchsia-500 to-orange-400'
+  const headerTagClass = 'bg-gradient-to-r from-rose-500 via-pink-500 to-fuchsia-500'
 
   const primaryCta = computed(() => {
     if (!isAuthenticated.value) {
