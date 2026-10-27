@@ -1885,7 +1885,7 @@ class DatingService
 
         $selectColumns = [
             'id', 'name', 'profile_slug', 'gender', 'birth_date', 'bio', 'avatar_path', 'telegram_photo_url',
-            'home_city', 'home_lat', 'home_lng', 'last_seen_at', 'created_at', 'boost_until',
+            'home_city', 'home_lat', 'home_lng', 'country', 'last_seen_at', 'created_at', 'boost_until',
             'dating_goal', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_hide_name', 'dating_hide_age', 'dating_hide_distance',
             'plan', 'plan_expires_at', 'is_admin', 'role', 'is_invisible',
         ];
@@ -2503,7 +2503,7 @@ class DatingService
         $candidates = (clone $baseQuery)
             ->select([
                 'id', 'name', 'profile_slug', 'gender', 'birth_date', 'bio', 'avatar_path', 'telegram_photo_url',
-                'home_city', 'home_lat', 'home_lng', 'last_seen_at',
+                'home_city', 'home_lat', 'home_lng', 'country', 'last_seen_at',
                 'dating_goal', 'dating_custom_goal', 'dating_about', 'dating_interests', 'dating_hide_name', 'dating_hide_age', 'dating_hide_distance',
                 'dating_match_only', 'message_privacy', 'allow_random_messages',
                 'plan', 'plan_expires_at', 'is_admin', 'role', 'is_invisible',
@@ -2761,6 +2761,7 @@ class DatingService
             'photos_limit' => $photosLimit,
             'is_pro' => $isProCandidate,
             'city' => $candidate->home_city,
+            'country' => $candidate->country,
             'distance_km' => $hideDistance || $distanceKm === null ? null : round($distanceKm, 1),
             'distance_hidden' => $hideDistance,
             'goal' => $candidate->dating_goal,

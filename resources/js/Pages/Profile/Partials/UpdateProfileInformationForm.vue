@@ -151,23 +151,32 @@ const uloveOnly = useUloveOnly()
             Нужна для дистанции в свайпах. Если не определить, возьмём координаты по городу и стране выше.
             <template v-if="showMapFields"> Радиус зоны и точность — в разделе «Приватность».</template>
           </p>
-          <div class="mt-3 flex items-center gap-3 rounded-2xl border border-stone-200 bg-white px-3 py-2.5 dark:border-zinc-700 dark:bg-zinc-900">
-            <span
-              class="grid h-9 w-9 shrink-0 place-items-center rounded-xl"
-              :class="f.hasHomePoint.value
-                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                : 'bg-stone-100 text-stone-400 dark:bg-zinc-800 dark:text-zinc-500'"
-            >
-              <i class="pi pi-map-marker" aria-hidden="true" />
-            </span>
-            <div class="min-w-0">
-              <div class="truncate text-sm font-semibold text-stone-900 dark:text-white">{{ f.homeLocationLabel.value }}</div>
-              <div class="text-[11px] text-stone-500 dark:text-zinc-400">
-                {{ f.hasHomePoint.value
-                  ? 'От неё считается расстояние в свайпах и «Люди недалеко».'
-                  : 'Локация из регистрации (страна, город). Нажми «Определить» — и дистанция станет точной.' }}
+          <div class="mt-3 rounded-2xl border border-stone-200 bg-white p-3 dark:border-zinc-700 dark:bg-zinc-900">
+            <div class="flex items-center gap-3">
+              <span
+                class="grid h-9 w-9 shrink-0 place-items-center rounded-xl"
+                :class="f.hasHomePoint.value
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                  : 'bg-stone-100 text-stone-400 dark:bg-zinc-800 dark:text-zinc-500'"
+              >
+                <i class="pi pi-map-marker" aria-hidden="true" />
+              </span>
+              <div class="min-w-0">
+                <div class="truncate text-sm font-semibold text-stone-900 dark:text-white">{{ f.homeLocationLabel.value }}</div>
+                <div class="text-[11px] text-stone-500 dark:text-zinc-400">
+                  {{ f.hasHomePoint.value
+                    ? 'От неё считается расстояние в свайпах и «Люди недалеко».'
+                    : 'Локация из анкеты (страна, город). Нажми «Определить» — и дистанция станет точной.' }}
+                </div>
               </div>
             </div>
+            <dl class="mt-3 grid gap-1.5 border-t border-stone-100 pt-3 dark:border-zinc-800">
+              <div v-for="part in f.homeLocationParts.value" :key="part.key" class="flex items-start gap-2 text-xs">
+                <i :class="part.icon + ' mt-0.5 text-[11px] text-stone-400 dark:text-zinc-500'" aria-hidden="true" />
+                <dt class="w-24 shrink-0 text-stone-400 dark:text-zinc-500">{{ part.label }}</dt>
+                <dd class="min-w-0 flex-1 break-words font-medium text-stone-700 dark:text-zinc-200">{{ part.value }}</dd>
+              </div>
+            </dl>
           </div>
           <Message
             v-if="f.errors.value.home_lat || f.errors.value.home_lng"

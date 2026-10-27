@@ -17,6 +17,8 @@ export interface SwipeCard {
   photos_limit?: number
   is_pro?: boolean
   city: string | null
+  /** Страна из анкеты — резервная подпись, если город не указан. */
+  country?: string | null
   distance_km: number | null
   distance_hidden: boolean
   goal: string | null
@@ -122,6 +124,16 @@ export interface ActiveCard extends SwipeCard {
   can_message_reason: string | null
 }
 
+/** Локация зрителя свайпов: страна, город, район/улица без номера дома. */
+export interface SwipeLocation {
+  lat: number
+  lng: number
+  city: string | null
+  address: string | null
+  country: string | null
+  country_code: string | null
+}
+
 /** Пагинированный ответ списков свайпов. */
 export interface SwipePage<T> {
   current_page: number
@@ -173,6 +185,23 @@ export const datingApi = {
   async quota() {
     const { data } = await api.get('/api/swipes/quota')
     return data as SwipeQuota
+  },
+  /**
+   * Сохранить локацию профиля для «Людей рядом» и дистанций в свайпах.
+   *
+   * @param payload координаты и части адреса без номера дома
+   * @returns сохранённая локация профиля
+   */
+  async updateLocation(payload: {
+    lat: number
+    lng: number
+    city: string | null
+    address: string | null
+    country: string | null
+    country_code: string | null
+  }) {
+    const { data } = await api.post('/api/user/location', payload)
+    return data as SwipeLocation
   },
   async updateSettings(patch: Record<string, unknown>) {
     const { data } = await api.patch('/api/swipes/settings', patch)

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Rules\NoProfanity;
+use App\Services\HomeLocationService;
 use App\Services\TelegramOnboarding;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -88,6 +89,10 @@ class OnboardingController extends Controller
         }
 
         $fresh->forceFill($patch)->save();
+
+        // Город из анкеты — резервная точка для свайпов: без геолокации
+        // дистанции и «Люди рядом» считаются по центру города.
+        app(HomeLocationService::class)->ensureCoordinates($fresh);
 
         $request->session()->forget('onboarding_only');
         TelegramOnboarding::clearState((int) $fresh->id);

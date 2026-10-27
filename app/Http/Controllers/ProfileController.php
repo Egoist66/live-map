@@ -486,6 +486,85 @@ class ProfileController extends Controller
     }
 
     /**
+     * Сохранить локацию из геолокации браузера (AJAX).
+     *
+     * Профиль и фильтр «Люди рядом» в свайпах используют одну точку:
+     * страна, город, район и улица без номера дома. Координаты нужны
+     * для дистанций и радиуса, город/адрес — чтобы человек видел, что
+     * точка попала в его район, а не в центр страны. Страну определяем
+     * по координатам, если клиент её не прислал.
+     *
+     * @param Request $request lat, lng и необязательные части адреса
+     * @return JsonResponse сохранённая локация профиля
+     */
+    public function updateLocation(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'lat' => ['required', 'numeric', 'between:-90,90'],
+            'lng' => ['required', 'numeric', 'between:-180,180'],
+            'city' => ['nullable', 'string', 'max:255'],
+            'address' => ['nullable', 'string', 'max:1000'],
+            'country' => ['nullable', 'string', 'max:255'],
+            'country_code' => ['nullable', 'string', 'max:8'],
+        ]);
+
+        $user = $request->user();
+        $lat = round((float) $data['lat'], 7);
+        $lng = round((float) $data['lng'], 7);
+
+        $country = $this->cleanPlacePart($data['country'] ?? null, 120);
+        $countryCode = CountryResolver::normalizeCode($data['country_code'] ?? null);
+
+        if ($country === null && $countryCode === null) {
+            $detected = CountryResolver::fromCoords($lat, $lng);
+
+            if ($detected !== null) {
+                $country = $this->cleanPlacePart($detected['country'] ?? null, 120);
+                $countryCode = CountryResolver::normalizeCode($detected['country_code'] ?? null);
+            }
+        }
+
+        $city = $this->cleanPlacePart($data['city'] ?? null, 120);
+        $address = $this->cleanPlacePart($data['address'] ?? null, 255);
+
+        $user->forceFill([
+            'home_lat' => $lat,
+            'home_lng' => $lng,
+            'home_city' => $city ?? $user->home_city,
+            'home_address' => $address ?? $user->home_address,
+            'country' => $country ?? $user->country,
+            'country_code' => $countryCode ?? $user->country_code,
+        ])->save();
+
+        return response()->json([
+            'home_lat' => $lat,
+            'home_lng' => $lng,
+            'home_city' => $user->home_city,
+            'home_address' => $user->home_address,
+            'country' => $user->country,
+            'country_code' => $user->country_code,
+        ]);
+    }
+
+    /**
+     * Очистить часть адреса от лишних пробелов и обрезать до лимита.
+     *
+     * @param mixed $value сырое значение из запроса
+     * @param int $limit максимальная длина строки
+     * @return string|null нормализованная часть адреса либо null
+     */
+    private function cleanPlacePart(mixed $value, int $limit): ?string
+    {
+        $text = trim((string) preg_replace('/\s+/u', ' ', (string) $value));
+
+        if ($text === '') {
+            return null;
+        }
+
+        return mb_substr($text, 0, $limit);
+    }
+
+    /**
      * Быстрое обновление короткой мысли профиля (строка под именем).
      *
      * Для AJAX возвращает обновлённую запись, для Inertia — redirect back.

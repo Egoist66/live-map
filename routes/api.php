@@ -240,6 +240,7 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:300,1'])->group(function
     Route::patch('/user/default-mode', [\App\Http\Controllers\ProfileController::class, 'updateDefaultMode'])->middleware('throttle:profile-write');
     Route::patch('/user/modules', [\App\Http\Controllers\ProfileController::class, 'updateAppModules'])->middleware('throttle:profile-write');
     Route::patch('/user/photo-comments-privacy', [\App\Http\Controllers\ProfilePhotoController::class, 'updatePrivacy']);
+    Route::post('/user/location', [\App\Http\Controllers\ProfileController::class, 'updateLocation'])->middleware('throttle:profile-write');
     Route::patch('/user/flow-comments-privacy', [\App\Http\Controllers\ProfileController::class, 'updateFlowCommentsPrivacy']);
     Route::patch('/user/call-cooldown', [\App\Http\Controllers\ProfileController::class, 'updateCallCooldown']);
     Route::patch('/user/video-calls', [\App\Http\Controllers\ProfileController::class, 'updateVideoCalls']);

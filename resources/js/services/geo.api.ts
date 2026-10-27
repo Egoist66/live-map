@@ -160,8 +160,18 @@ export async function reverseGeocodeHome(lat: number, lng: number): Promise<Home
     const city = a.city || a.town || a.village || a.municipality || null
 
     const displayParts = [street, district, city].filter((part): part is string => !!part)
+
+    // fallback по display_name тоже без номера дома: он там идёт
+    // отдельным сегментом и не должен попадать в профиль.
+    const houseNumber = String(a.house_number ?? '').trim()
+    const fallbackParts = String(d.display_name ?? '')
+      .split(',')
+      .map((part) => part.trim())
+      .filter((part) => part !== '' && part !== houseNumber)
+      .slice(0, 3)
+
     const address = displayParts.join(' · ')
-      || d.display_name?.split(',').slice(0, 3).join(', ').trim()
+      || fallbackParts.join(', ')
       || `${lat}, ${lng}`
 
     return {

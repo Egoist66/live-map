@@ -8,7 +8,8 @@ import { pokeRealtime } from '@/composables/useRealtimePoller'
 import { shouldSkipMotion } from '@/composables/useMotion'
 import { checkLocal } from '@/composables/useContentModeration'
 import { useRewardToast } from '@/composables/useRewardToast'
-import type { ActiveCard, SwipeCard, SwipeExtras, SwipeFilters, SwipeQuota } from '@/services/dating.api'
+import { useNearbyLocation } from '@/composables/useNearbyLocation'
+import type { ActiveCard, SwipeCard, SwipeExtras, SwipeFilters, SwipeLocation, SwipeQuota } from '@/services/dating.api'
 import { normalizeSwipeTab, swipeTabPath } from '@/utils/swipe-tabs'
 import type { SwipeTab } from '@/utils/swipe-tabs'
 
@@ -37,6 +38,7 @@ export const FREE_SWIPES_RADIUS_KM = 15
  */
 export function useSwipes() {
   const rewards = useRewardToast()
+  const nearby = useNearbyLocation()
   const cards = ref<SwipeCard[]>([])
   const index = ref(0)
   const matches = ref<Array<{ match_id: number; conversation_id: number | null; user: { id: number; name: string; avatar_url: string | null } }>>([])
@@ -108,6 +110,15 @@ export function useSwipes() {
   const authUser = computed(() => (page.props.auth as any)?.user)
 
   /**
+   * Точка, определённая прямо в свайпах для фильтра «Люди рядом».
+   *
+   * После сохранения auth-пропсы не обновляются до перезагрузки,
+   * поэтому свежие координаты держим локально: иначе фильтр остался
+   * бы «недоступен» до F5, хотя бэк уже видит расстояние.
+   */
+  const nearbyLocation = ref<SwipeLocation | null>(null)
+
+  /**
    * Есть ли у человека определённая точка для расстояний.
    *
    * `home_lat`/`home_lng` приходят строкой из decimal-каста Laravel,
@@ -117,14 +128,36 @@ export function useSwipes() {
    * @returns true если координаты заданы и валидны
    */
   const hasHomeLocation = computed<boolean>(() => {
-    const lat = authUser.value?.home_lat
-    const lng = authUser.value?.home_lng
+    const lat = nearbyLocation.value?.lat ?? authUser.value?.home_lat
+    const lng = nearbyLocation.value?.lng ?? authUser.value?.home_lng
 
     if (lat == null || lat === '' || lng == null || lng === '') {
       return false
     }
 
     return Number.isFinite(Number(lat)) && Number.isFinite(Number(lng))
+  })
+
+  /**
+   * Подпись точки зрителя: город из профиля или только что
+   * определённой локации. Показывается рядом с фильтром близости.
+   *
+   * @returns название города, страны либо пустая строка
+   */
+  const viewerLocationLabel = computed<string>(() => {
+    const local = nearbyLocation.value
+    const city = String(local?.city ?? authUser.value?.home_city ?? '').trim()
+    const country = String(local?.country ?? authUser.value?.country ?? '').trim()
+
+    if (city !== '') {
+      return city
+    }
+
+    if (country !== '') {
+      return country
+    }
+
+    return hasHomeLocation.value ? 'Локация определена' : ''
   })
 
   /**
@@ -484,6 +517,55 @@ export function useSwipes() {
     }
 
     return { ...current, radius_km: null }
+  })
+
+  /** Текущий запрос локации: не дублируем геолокацию из watcher и кнопки. */
+  let nearbyRequest: Promise<SwipeLocation | null> | null = null
+
+  /**
+   * Гарантировать точку для «Людей рядом».
+   *
+   * Параллельные вызовы (выбор в фильтре + «Показать») ждут один и тот
+   * же запрос, иначе второй вызов решил бы, что локацию не дали,
+   * и сбросил бы только что выбранный радиус.
+   *
+   * @returns true если координаты есть или их удалось определить
+   */
+  async function ensureNearbyLocation(): Promise<boolean> {
+    if (hasHomeLocation.value) {
+      return true
+    }
+
+    if (nearbyRequest === null) {
+      nearbyRequest = nearby.locateAndSave()
+        .then((saved) => {
+          if (saved !== null) {
+            nearbyLocation.value = saved
+          }
+
+          return saved
+        })
+        .finally(() => {
+          nearbyRequest = null
+        })
+    }
+
+    const saved = await nearbyRequest
+    return saved !== null
+  }
+
+  // Выбрали «Люди недалеко» без точки — сразу просим геолокацию,
+  // чтобы к моменту «Показать» радиус уже было от чего считать.
+  watch(() => filters.value.radius_km, async (radius) => {
+    if (radius == null || hasHomeLocation.value) {
+      return
+    }
+
+    const located = await ensureNearbyLocation()
+
+    if (!located && filters.value.radius_km != null) {
+      filters.value.radius_km = null
+    }
   })
 
   // Точку могли стереть в профиле — снимаем «недалеко» сразу,
@@ -1219,9 +1301,25 @@ export function useSwipes() {
   /**
    * Применить фильтры и перезагрузить ленту.
    *
+   * Включили «Люди недалеко» без точки в профиле — сначала автоматически
+   * определяем локацию (город/район/улица без дома) и сохраняем её.
+   * Только после этого грузим ленту: иначе бэк проигнорирует радиус,
+   * потому что считать дистанцию не от чего.
+   *
    * @returns void
    */
   async function applyFilters(): Promise<void> {
+    const wantsNearby = filters.value.radius_km != null
+    const needsLocation = wantsNearby && !hasHomeLocation.value
+
+    if (needsLocation) {
+      const located = await ensureNearbyLocation()
+
+      if (!located) {
+        filters.value.radius_km = null
+      }
+    }
+
     showFilters.value = false
     await loadFeed()
   }
@@ -1950,6 +2048,8 @@ export function useSwipes() {
     canResetHistory,
     isRadiusPro,
     hasHomeLocation,
+    viewerLocationLabel,
+    nearbyLocating: nearby.locating,
     filters,
     filterModerationWarning,
     privacy,

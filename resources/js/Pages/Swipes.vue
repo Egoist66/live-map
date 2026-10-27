@@ -11,6 +11,7 @@ import BoostSplash from '@/Components/Features/Dating/BoostSplash.vue'
 import MatchSplash from '@/Components/Features/Dating/MatchSplash.vue'
 import AppImage from '@/Components/Ui/Media/AppImage.vue'
 import { FREE_SWIPES_RADIUS_KM, useSwipes } from '@/composables/useSwipes'
+import { formatPlace } from '@/utils/place'
 import InfiniteSentinel from '@/Components/Ui/List/InfiniteSentinel.vue'
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 import { useSwipeCardPhotos } from '@/composables/useSwipeCardPhotos'
@@ -150,16 +151,16 @@ const genderOptions = [
 
 /**
  * Варианты близости в ленте: все люди или точка в радиусе 15 км.
- * «Недалеко» недоступно без координат — тогда по умолчанию все люди.
+ * Если локации ещё нет, при применении фильтра определим её
+ * автоматически (город, район, улица — без номера дома).
  */
-const radiusOptions = computed(() => [
+const radiusOptions = [
   { label: 'Все люди', value: null },
   {
     label: `Люди недалеко · до ${FREE_SWIPES_RADIUS_KM} км`,
     value: FREE_SWIPES_RADIUS_KM,
-    disabled: !s.hasHomeLocation.value,
   },
-])
+]
 
 /**
  * Свайп с клавиатуры (ULove-режим, ←/→): листает только ленту
@@ -323,7 +324,7 @@ onUnmounted(() => {
                   </Link>
                   <Link :href="userProfileUrl(u)" class="mt-2 min-w-0 w-full">
                     <div class="text-sm font-bold truncate text-stone-900 dark:text-white">{{ u.name }} · {{ s.ageLabel(u) }}</div>
-                    <div v-if="u.city" class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">{{ u.city }}</div>
+                    <div v-if="formatPlace(u.city, u.country)" class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">{{ formatPlace(u.city, u.country) }}</div>
                     <div v-if="u.distance_km != null" class="text-[11px] text-stone-500 dark:text-zinc-400">{{ u.distance_km }} км</div>
                   </Link>
                   <Button
@@ -369,7 +370,7 @@ onUnmounted(() => {
                 <Link :href="userProfileUrl(f)" class="shrink-0"><Avatar :image="f.avatar_url ?? undefined" :label="!f.avatar_url ? (f.name ?? '?').slice(0, 1) : undefined" shape="circle" class="!w-10 !h-10 sm:!w-12 sm:!h-12" /></Link>
                 <Link :href="userProfileUrl(f)" class="min-w-0 flex-1 basis-32">
                   <div class="text-sm font-bold truncate text-stone-900 dark:text-white">{{ f.name }}<span class="font-semibold text-stone-500 dark:text-zinc-400"> · {{ s.ageLabel(f) }}</span></div>
-                  <div v-if="f.city" class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">{{ f.city }}</div>
+                  <div v-if="formatPlace(f.city, f.country)" class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">{{ formatPlace(f.city, f.country) }}</div>
                 </Link>
                 <Button icon="pi pi-send" rounded size="small" aria-label="Написать" title="Написать" :loading="s.creatingChat.value" class="!w-9 !h-9 sm:!w-10 sm:!h-10 !p-0 shrink-0" @click="s.writeWithoutMatch(f.id)" />
                 <Button icon="pi pi-times" rounded size="small" severity="secondary" outlined aria-label="Убрать" title="Убрать из избранного" class="!w-9 !h-9 sm:!w-10 sm:!h-10 !p-0 shrink-0" @click="s.removeFavorite(f.id)" />
@@ -401,7 +402,7 @@ onUnmounted(() => {
                 <component :is="f.is_incognito ? 'span' : Link" :href="f.is_incognito ? undefined : userProfileUrl(f)" class="min-w-0 flex-1 basis-32">
                   <div class="text-sm font-bold truncate text-stone-900 dark:text-white">{{ f.is_incognito ? 'Тайный поклонник' : f.name }}<span v-if="!f.is_incognito" class="font-semibold text-stone-500 dark:text-zinc-400"> · {{ s.ageLabel(f) }}</span></div>
                   <div v-if="f.is_incognito" class="text-[11px] text-violet-500 font-bold leading-snug">Скрыл себя · PRO · лайкни в ответ — откроется при мэтче</div>
-                  <div v-else-if="f.city" class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">{{ f.city }}</div>
+                  <div v-else-if="formatPlace(f.city, f.country)" class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">{{ formatPlace(f.city, f.country) }}</div>
                 </component>
                 <Chip v-if="f.is_superlike" label="Суперлайк" icon="pi pi-star-fill" class="!rounded-full !text-[10px] !bg-[#1786FF] !text-white !border-0 shrink-0" />
                 <Chip v-if="f.liked_me || f.is_match" label="Взаимно" icon="pi pi-heart-fill" class="!rounded-full !text-[10px] shrink-0" />
@@ -460,7 +461,7 @@ onUnmounted(() => {
                 <span class="w-10 h-10 rounded-2xl bg-teal-500/15 text-teal-600 dark:text-teal-300 grid place-items-center shrink-0"><i class="pi pi-map-marker" /></span>
                 <div class="min-w-0 flex-1">
                   <div class="text-sm font-black text-stone-900 dark:text-white">Люди рядом</div>
-                  <div class="text-[11px] text-stone-500 dark:text-zinc-400">Сейчас: {{ s.filters.value.radius_km ? `до ${FREE_SWIPES_RADIUS_KM} км` : 'все люди' }}<template v-if="!s.hasHomeLocation.value"> · точка не задана</template></div>
+                  <div class="text-[11px] text-stone-500 dark:text-zinc-400">Сейчас: {{ s.filters.value.radius_km ? `до ${FREE_SWIPES_RADIUS_KM} км` : 'все люди' }}<template v-if="s.hasHomeLocation.value && s.viewerLocationLabel.value"> · {{ s.viewerLocationLabel.value }}</template><template v-else-if="!s.hasHomeLocation.value"> · точка не задана</template></div>
                 </div>
                 <Button label="Фильтры" icon="pi pi-sliders-h" rounded outlined size="small" @click="s.showFilters.value = true" />
               </div>
@@ -686,7 +687,7 @@ onUnmounted(() => {
                         <div v-if="!s.current.value.rating_hidden && (s.current.value.rating_count ?? 0) > 0" class="flex items-center">
                           <DatingRatingStars :avg="s.current.value.rating_avg ?? null" :count="s.current.value.rating_count ?? 0" size="sm" />
                         </div>
-                        <div v-if="s.current.value.city || s.current.value.distance_km != null" class="truncate">📍 {{ [s.current.value.city, s.current.value.distance_km != null ? `${s.current.value.distance_km} км` : null].filter(Boolean).join(' · ') }}</div>
+                        <div v-if="formatPlace(s.current.value.city, s.current.value.country) || s.current.value.distance_km != null" class="truncate">📍 {{ [formatPlace(s.current.value.city, s.current.value.country), s.current.value.distance_km != null ? `${s.current.value.distance_km} км` : null].filter(Boolean).join(' · ') }}</div>
                       </div>
                     </div>
                     <Button
@@ -953,14 +954,17 @@ onUnmounted(() => {
               <label class="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500">Люди рядом</label>
               <Select v-model="s.filters.value.radius_km" :options="radiusOptions" option-label="label" option-value="value" placeholder="Все люди" class="w-full mt-1 dark:!border-zinc-700" :pt="selectPt" />
               <div v-if="s.hasHomeLocation.value" class="mt-1 text-[11px] text-stone-500 dark:text-zinc-400">
-                «Люди недалеко» — до {{ FREE_SWIPES_RADIUS_KM }} км от точки, которую вы определили в профиле.
+                «Люди недалеко» — до {{ FREE_SWIPES_RADIUS_KM }} км от точки<template v-if="s.viewerLocationLabel.value"> ({{ s.viewerLocationLabel.value }})</template>. Точный дом не показывается.
               </div>
-              <div v-else class="mt-1 flex items-start gap-1.5 rounded-xl bg-amber-50 px-2.5 py-2 text-[11px] text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
-                <i class="pi pi-info-circle mt-0.5 shrink-0" aria-hidden="true" />
+              <div v-else class="mt-1 flex items-start gap-1.5 rounded-xl bg-sky-50 px-2.5 py-2 text-[11px] text-sky-800 dark:bg-sky-500/10 dark:text-sky-300">
+                <i class="pi pi-map-marker mt-0.5 shrink-0" aria-hidden="true" />
                 <span>
-                  Чтобы включить «Люди недалеко», определите локацию в профиле.
-                  <Link href="/settings" class="font-bold underline">Определить</Link>
+                  При включении определим твою локацию автоматически — город, район и улицу без номера дома.
+                  <Link href="/settings" class="font-bold underline">Профиль</Link>
                 </span>
+              </div>
+              <div v-if="s.nearbyLocating.value" class="mt-1 flex items-center gap-1.5 text-[11px] text-stone-500 dark:text-zinc-400">
+                <i class="pi pi-spin pi-spinner" aria-hidden="true" /> Определяем локацию…
               </div>
             </div>
           </div>
@@ -1010,8 +1014,8 @@ onUnmounted(() => {
             <Button label="Сохранить приватность" severity="secondary" size="small" rounded outlined :loading="s.savingPrivacy.value" @click="s.savePrivacy()" />
           </div>
           <div class="flex gap-2 pb-[var(--sab)]">
-            <Button label="Сбросить" severity="secondary" outlined rounded class="flex-1" :loading="s.loading.value" @click="s.resetFilters()" />
-            <Button label="Показать" rounded class="flex-1" :loading="s.loading.value" @click="s.applyFilters()" />
+            <Button label="Сбросить" severity="secondary" outlined rounded class="flex-1" :loading="s.loading.value || s.nearbyLocating.value" @click="s.resetFilters()" />
+            <Button label="Показать" rounded class="flex-1" :loading="s.loading.value || s.nearbyLocating.value" @click="s.applyFilters()" />
           </div>
         </div>
       </Dialog>
@@ -1036,7 +1040,7 @@ onUnmounted(() => {
       <Dialog :visible="s.showHelp.value" @update:visible="(v:boolean)=>{ s.showHelp.value = v }" modal header="Как работают свайпы" :style="{ width: '420px', maxWidth: '94vw', maxHeight: '92dvh' }" :pt="dialogPt">
         <div class="flex flex-col gap-3 text-sm text-stone-600 dark:text-zinc-300 pt-1">
           <div>ULove — листай, свайпай и находи людей рядом. Главное — что человек в ULove: мэтч открывает чат, дальше договаривайтесь сами.</div>
-          <div>«Люди недалеко» — до {{ FREE_SWIPES_RADIUS_KM }} км от точки в профиле. Без определённой точки показываем всех людей.</div>
+          <div>«Люди недалеко» — до {{ FREE_SWIPES_RADIUS_KM }} км от точки. Если локации ещё нет, определим её автоматически: город, район и улицу без номера дома — так видны расстояния и тебя видят рядом.</div>
           <div>Свайпы безлимитные. Сообщения без мэтча: Free {{ s.quota.value ? `${s.quota.value.left}/${s.quota.value.limit}` : '3/3' }}, PRO — 10/мес. Взаимный лайк (мэтч) открывает чат всегда, даже при исчерпанном лимите.</div>
           <div>Избранное — свежие лайкнутые без мэтча. Лимиты: Free до 3, Pro до 10, Premium до 15. Лайки сверх лимита тоже ждут мэтча — человек их видит.</div>
           <div>Лента умная: выше те, кто лайкнул тебя (особенно суперлайком), кто онлайн, с общими или похожими интересами и целью, с фото, рядом и новички. Цель «По интересам» подбирает людей под твою анкету.</div>

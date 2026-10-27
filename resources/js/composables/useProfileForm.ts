@@ -135,6 +135,7 @@ export function useProfileForm() {
     let city: string | null = null
     let country: string | null = null
     let countryCode: string | null = null
+    let placeLabel = ''
 
     try {
       const place = await reverseGeocodeHome(lat, lng)
@@ -143,6 +144,10 @@ export function useProfileForm() {
       city = place.city
       country = place.country
       countryCode = place.country_code
+      placeLabel = [place.country, place.city, place.district, place.street]
+        .map((part) => String(part ?? '').trim())
+        .filter((part, index, all) => part !== '' && all.indexOf(part) === index)
+        .join(' · ')
     } catch {
       address = `${lat}, ${lng}`
     }
@@ -163,8 +168,8 @@ export function useProfileForm() {
       summary: 'Точка определена',
       detail: address === `${lat}, ${lng}`
         ? 'Адрес не нашёлся — расстояние всё равно будет считаться по координатам'
-        : `Город и улица (или район): ${address}`,
-      life: 4000,
+        : `Страна · город · район · улица: ${placeLabel || address}`,
+      life: 4500,
     })
   }
 
@@ -425,6 +430,40 @@ export function useProfileForm() {
     return hasHomePoint.value ? 'Моя локация' : 'Не определена'
   })
 
+  /**
+   * Части локации для карточки профиля: страна, город, район/улица.
+   *
+   * Адрес хранится строкой без номера дома (улица · район · город),
+   * поэтому показываем его отдельной строкой, а не сырые координаты.
+   * Пустые части помечаем прочерком — человек видит, чего не хватает.
+   *
+   * @returns список строк карточки локации
+   */
+  const homeLocationParts = computed<Array<{ key: string; label: string; value: string; icon: string }>>(() => {
+    const country = String((values as any).country ?? '').trim()
+    const city = String((values as any).home_city ?? '').trim()
+    const address = String((values as any).home_address ?? '').trim()
+
+    // home_address хранит «улица · район · город»; город уже показан
+    // отдельной строкой, поэтому из адреса его убираем, чтобы не дублировать.
+    const addressDetail = address
+      .split('·')
+      .map((part) => part.trim())
+      .filter((part) => part !== '' && part !== city)
+      .join(' · ')
+
+    return [
+      { key: 'country', label: 'Страна', value: country || '—', icon: 'pi pi-globe' },
+      { key: 'city', label: 'Город', value: city || '—', icon: 'pi pi-building' },
+      {
+        key: 'address',
+        label: 'Район · улица',
+        value: addressDetail || (geolocation.loading.value ? 'Определяется…' : '—'),
+        icon: 'pi pi-map',
+      },
+    ]
+  })
+
   const age = useUserAge(() => (values as any).birth_date)
   const isAdmin = computed(() => !!user.value?.is_admin || user.value?.role === 'admin')
   const countryWarning = computed(() => (isAdmin.value ? null : residenceCheck.countryWarning.value))
@@ -434,5 +473,5 @@ export function useProfileForm() {
   // ещё до нажатия «Определить». Отказ и ошибки — молча, см. autoLocateHome.
   void autoLocateHome()
 
-  return { user, name, nameAttrs, gender, birth_date, age: age.age, ageLabel: age.label, country, country_code, email, emailAttrs, canChangeEmail, emailChangesLeft, emailChangeHint, canChangeName, nameChangesLeft, nameChangeHint, home_lat, homeLatAttrs, home_lng, homeLngAttrs, home_city, home_address, home_visibility, home_show_exact, home_radius_km, bio, is_anonymous_default, plan, errors, values, setValues, setErrors, submit, isSubmitting, useMyLocation, homeLocating: geolocation.loading, clearMyLocation, setCountry, maxRadius, homeLocation, hasHomePoint, homeLocationLabel, countryWarning, checkingCountry }
+  return { user, name, nameAttrs, gender, birth_date, age: age.age, ageLabel: age.label, country, country_code, email, emailAttrs, canChangeEmail, emailChangesLeft, emailChangeHint, canChangeName, nameChangesLeft, nameChangeHint, home_lat, homeLatAttrs, home_lng, homeLngAttrs, home_city, home_address, home_visibility, home_show_exact, home_radius_km, bio, is_anonymous_default, plan, errors, values, setValues, setErrors, submit, isSubmitting, useMyLocation, homeLocating: geolocation.loading, clearMyLocation, setCountry, maxRadius, homeLocation, hasHomePoint, homeLocationLabel, homeLocationParts, countryWarning, checkingCountry }
 }
