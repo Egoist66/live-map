@@ -99,24 +99,31 @@ export function useProfileForm() {
   /**
    * Подставить домашнюю точку по геолокации браузера.
    *
-   * Берём точный адрес (zoom 18): город + улица с домом, а если улицы
-   * в OSM нет — район. Координаты нужны свайпам для дистанции, адрес —
+   * Берём точный адрес (zoom 18): город + улица, а если улицы в OSM
+   * нет — район. Координаты нужны свайпам для дистанции, адрес —
    * чтобы человек видел, что точка попала в его двор, а не «в центр
    * города». Заодно обновляем город и страну из reverse-geocode: если
    * человек переехал, профиль не останется со старым городом.
    *
+   * @param options silent — автоопределение: без тоста об отказе,
+   *   остаётся город; человек нажмёт «Определить» вручную, когда захочет
    * @returns Promise<void>
    */
-  async function useMyLocation(): Promise<void> {
+  async function useMyLocation(options: { silent?: boolean } = {}): Promise<void> {
+    const silent = !!options.silent
     const position = await geolocation.requestGeolocation()
 
     if (!position) {
-      toast?.add({
-        severity: 'warn',
-        summary: 'Без геопозиции',
-        detail: 'Можно указать город и страну вручную — дистанция посчитается по ним',
-        life: 4000,
-      })
+      if (!silent) {
+        const reason = geolocation.error.value || 'Не удалось определить позицию'
+
+        toast?.add({
+          severity: 'warn',
+          summary: 'Без геопозиции',
+          detail: `${reason} — можно указать город и страну вручную, дистанция посчитается по ним`,
+          life: 4000,
+        })
+      }
 
       return
     }
@@ -159,6 +166,42 @@ export function useProfileForm() {
         : `Город и улица (или район): ${address}`,
       life: 4000,
     })
+  }
+
+  /**
+   * Автозапуск определения точки при открытии профиля.
+   *
+   * Просим у браузера позицию сразу и тихо — ровно один системный
+   * prompt с вкладки (это разрешено для geolocation). Человек уже
+   * отказал (permissions: 'denied') — не дёргаемся: остаётся город
+   * по умолчанию, точную точку он задаст кнопкой «Определить», когда
+   * захочет. Точка уже задана — не переспрашиваем, чтобы не подменять
+   * сохранённый адрес при каждом заходе.
+   *
+   * @returns Promise<void>
+   */
+  async function autoLocateHome(): Promise<void> {
+    if (typeof window === 'undefined' || !navigator.geolocation) {
+      return
+    }
+
+    if (hasHomePoint.value || geolocation.loading.value) {
+      return
+    }
+
+    if (navigator.permissions) {
+      try {
+        const status = await navigator.permissions.query({ name: 'geolocation' as PermissionName })
+
+        if (status.state === 'denied') {
+          return
+        }
+      } catch {
+        // Safari и приватные режимы могут не поддерживать permissions API.
+      }
+    }
+
+    await useMyLocation({ silent: true })
   }
 
   /**
@@ -379,13 +422,17 @@ export function useProfileForm() {
       return country
     }
 
-    return hasHomePoint.value ? 'Точка на карте' : 'Не определена'
+    return hasHomePoint.value ? 'Моя локация' : 'Не определена'
   })
 
   const age = useUserAge(() => (values as any).birth_date)
   const isAdmin = computed(() => !!user.value?.is_admin || user.value?.role === 'admin')
   const countryWarning = computed(() => (isAdmin.value ? null : residenceCheck.countryWarning.value))
   const checkingCountry = computed(() => (isAdmin.value ? false : residenceCheck.checkingCountry.value))
+
+  // Форма открылась в браузере — точку определяем автоматически,
+  // ещё до нажатия «Определить». Отказ и ошибки — молча, см. autoLocateHome.
+  void autoLocateHome()
 
   return { user, name, nameAttrs, gender, birth_date, age: age.age, ageLabel: age.label, country, country_code, email, emailAttrs, canChangeEmail, emailChangesLeft, emailChangeHint, canChangeName, nameChangesLeft, nameChangeHint, home_lat, homeLatAttrs, home_lng, homeLngAttrs, home_city, home_address, home_visibility, home_show_exact, home_radius_km, bio, is_anonymous_default, plan, errors, values, setValues, setErrors, submit, isSubmitting, useMyLocation, homeLocating: geolocation.loading, clearMyLocation, setCountry, maxRadius, homeLocation, hasHomePoint, homeLocationLabel, countryWarning, checkingCountry }
 }

@@ -1,4 +1,4 @@
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { useForm } from 'vee-validate'
 import { loginSchema } from '@/validation/schemas/login.schema'
 import { registerSchema } from '@/validation/schemas/register.schema'
@@ -218,8 +218,11 @@ export function useRegisterForm() {
   /**
    * Определяет геопозицию и подставляет адрес/город/страну.
    * Без геопозиции карта позже откроется по стране+городу из профиля.
+   *
+   * @param options silent — автоопределение: без тоста об отказе,
+   *   чтобы не пугать человека, только пришедшего на шаг «Где ты»
    */
-  async function detectLocation(): Promise<void> {
+  async function detectLocation(options: { silent?: boolean } = {}): Promise<void> {
     locating.value = true
     try {
       const pos = await readBrowserPosition()
@@ -244,16 +247,36 @@ export function useRegisterForm() {
         addrLoading.value = false
       }
     } catch {
-      toast?.add({
-        severity: 'warn',
-        summary: 'Без геопозиции',
-        detail: 'Карта откроется по стране и городу из профиля',
-        life: 3500,
-      })
+      if (!options.silent) {
+        toast?.add({
+          severity: 'warn',
+          summary: 'Без геопозиции',
+          detail: 'Карта откроется по стране и городу из профиля',
+          life: 3500,
+        })
+      }
     } finally {
       locating.value = false
     }
   }
+
+  /**
+   * Автоопределение на шаге «Где ты»: браузер сам запрашивает
+   * разрешение, как только человек доходит до локации — кнопка
+   * нужна только для повторного запроса. Отказ молча оставляет
+   * город по умолчанию; повторная попытка — вручную.
+   */
+  const autoLocateDone = ref(false)
+
+  watch(stepIndex, async (next) => {
+    if (next !== 1 || autoLocateDone.value) return
+
+    autoLocateDone.value = true
+
+    if ((values as any).home_lat != null || locating.value) return
+
+    await detectLocation({ silent: true })
+  })
 
   /**
    * Убирает ранее определённую точку.

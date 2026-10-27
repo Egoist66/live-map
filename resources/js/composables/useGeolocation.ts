@@ -13,7 +13,28 @@ function readLastPos(): { lat: number; lng: number } | null {
 }
 
 /**
- * Одноразовый запрос геопозиции через браузерный API.
+ * Понятная причина отказа по коду GeolocationPositionError.
+ *
+ * @param err ошибка браузерного geolocation API
+ * @returns текст для тоста/карточки
+ */
+function describeError(err: unknown): string {
+  const code = (err as GeolocationPositionError | null | undefined)?.code
+  if (code === 1) return 'Геолокация отклонена в настройках браузера'
+  if (code === 2) return 'Позиция недоступна — сеть не слышна'
+  if (code === 3) return 'Ожидание позиции истекло'
+  return 'Не удалось определить позицию'
+}
+
+/**
+ * Одноразовый запрос геопозиции с каскадом попыток.
+ *
+ * Точный GPS-приёмник часто молчит под крышей или в квартире: тогда
+ * первая попытка (enableHighAccuracy) упирается в таймаут или код 2
+ * (POSITION_UNAVAILABLE), хотя разрешение браузером выдано. Поэтому:
+ * 1) точный запрос — 2) грубая сеть/Wi-Fi позиция — 3) кэш последней
+ * удачной фиксации. Отказ по правам (код 1) ретраям не подлежит —
+ * браузер ответит им мгновенно для обеих попыток.
  *
  * @returns координаты с точностью или null при отказе/ошибке
  */
@@ -22,35 +43,63 @@ export function useGeolocation() {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
+  /**
+   * Одна попытка первого API-browser: резолв позицией либо reject.
+   *
+   * @param opts настройки точности и таймаутов
+   */
+  function singleAttempt(opts: PositionOptions): Promise<GeolocationPosition> {
+    return new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, opts)
+    })
+  }
+
   async function requestGeolocation(): Promise<{ lat: number; lng: number; accuracy: number | null } | null> {
     loading.value = true
     error.value = null
-    return new Promise((resolve) => {
+
+    try {
       if (!navigator.geolocation) {
-        loading.value = false
         error.value = 'Геолокация недоступна'
-        resolve(null)
-        return
+        return null
       }
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const next = { lat: pos.coords.latitude, lng: pos.coords.longitude }
-          coords.value = next
-          try {
-            localStorage.setItem(LAST_POS_KEY, JSON.stringify(next))
-          } catch {}
-          loading.value = false
-          const accuracy = Number(pos.coords.accuracy)
-          resolve({ ...next, accuracy: Number.isFinite(accuracy) ? accuracy : null })
-        },
-        (err) => {
-          error.value = err?.code === 1 ? 'Геолокация отклонена' : 'Не удалось определить позицию'
-          loading.value = false
-          resolve(null)
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 },
-      )
-    })
+
+      let position: GeolocationPosition
+
+      try {
+        position = await singleAttempt({ enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 })
+      } catch (err) {
+        if ((err as GeolocationPositionError)?.code === 1) {
+          error.value = describeError(err)
+          return null
+        }
+
+        // GPS не отвечает — пробуем грубую позицию по сети.
+        try {
+          position = await singleAttempt({ enableHighAccuracy: false, timeout: 8000, maximumAge: 5 * 60000 })
+        } catch (fallbackErr) {
+          const cached = readLastPos()
+
+          if (cached) {
+            return { ...cached, accuracy: null }
+          }
+
+          error.value = describeError(fallbackErr)
+          return null
+        }
+      }
+
+      const next = { lat: position.coords.latitude, lng: position.coords.longitude }
+      coords.value = next
+      try {
+        localStorage.setItem(LAST_POS_KEY, JSON.stringify(next))
+      } catch {}
+
+      const accuracy = Number(position.coords.accuracy)
+      return { ...next, accuracy: Number.isFinite(accuracy) ? accuracy : null }
+    } finally {
+      loading.value = false
+    }
   }
 
   return { coords, loading, error, requestGeolocation }

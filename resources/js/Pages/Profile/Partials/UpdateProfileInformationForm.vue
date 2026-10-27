@@ -144,7 +144,7 @@ const uloveOnly = useUloveOnly()
             <h4 class="text-sm font-bold dark:text-white">{{ showMapFields ? 'Домашняя точка' : 'Локация для свайпов' }}</h4>
             <div class="flex items-center gap-1.5">
               <Button v-if="f.home_lat.value || f.home_lng.value" @click="f.clearMyLocation" label="Сбросить" size="small" text severity="secondary" />
-              <Button @click="f.useMyLocation" label="Определить" icon="pi pi-map-marker" size="small" rounded :loading="f.homeLocating.value" class="!bg-black dark:!bg-white !border-black dark:!border-white !text-white dark:!text-black" />
+              <Button @click="() => f.useMyLocation()" label="Определить" icon="pi pi-map-marker" size="small" rounded :loading="f.homeLocating.value" class="!bg-black dark:!bg-white !border-black dark:!border-white !text-white dark:!text-black" />
             </div>
           </div>
           <p class="text-[11px] text-stone-500 mt-1">
@@ -164,8 +164,8 @@ const uloveOnly = useUloveOnly()
               <div class="truncate text-sm font-semibold text-stone-900 dark:text-white">{{ f.homeLocationLabel.value }}</div>
               <div class="text-[11px] text-stone-500 dark:text-zinc-400">
                 {{ f.hasHomePoint.value
-                  ? 'От этой точки считаем расстояние в свайпах и «Люди недалеко».'
-                  : 'Определите точку — и в свайпах включится «Люди недалеко».' }}
+                  ? 'От неё считается расстояние в свайпах и «Люди недалеко».'
+                  : 'Локация из регистрации (страна, город). Нажми «Определить» — и дистанция станет точной.' }}
               </div>
             </div>
           </div>

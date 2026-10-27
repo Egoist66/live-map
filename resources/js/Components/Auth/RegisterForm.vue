@@ -111,7 +111,7 @@ function onCountryChange(v: string): void {
                 <span class="text-[11px] font-bold text-stone-500 dark:text-zinc-400">необязательно</span>
               </div>
               <p class="text-[11px] leading-relaxed text-stone-500 dark:text-zinc-400">{{ reg.locationHint.value }}</p>
-              <Button type="button" :loading="f.locating.value" severity="secondary" outlined rounded class="w-full" :label="f.values.home_lat ? 'Обновить моё место' : 'Определить моё место'" icon="pi pi-map-marker" @click="f.detectLocation" />
+              <Button type="button" :loading="f.locating.value" severity="secondary" outlined rounded class="w-full" :label="f.values.home_lat ? 'Обновить моё место' : 'Определить моё место'" icon="pi pi-map-marker" @click="() => f.detectLocation()" />
               <div v-if="f.values.home_address || f.addrLoading.value" class="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2.5 flex items-center gap-2">
                 <span class="w-7 h-7 rounded-full bg-ink-900 dark:bg-white text-white dark:text-ink-900 grid place-items-center shrink-0 text-[11px]">◉</span>
                 <div class="min-w-0 flex-1">
