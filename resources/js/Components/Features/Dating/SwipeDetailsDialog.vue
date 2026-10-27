@@ -12,7 +12,7 @@ import { useSwipeTrustWarning } from '@/composables/useSwipeTrustWarning'
 import { usePresenceState } from '@/composables/usePresence'
 import { useViewportBreakpoints } from '@/composables/useViewportBreakpoints'
 import { formatRelative } from '@/utils/date'
-import { formatPlace } from '@/utils/place'
+import { formatCardLocation } from '@/utils/place'
 import DatingFriendButton from '@/Components/Features/Dating/DatingFriendButton.vue'
 import DatingReviewsSection from '@/Components/Features/Dating/DatingReviewsSection.vue'
 import ModeratedContent from '@/Components/Features/Moderation/ModeratedContent.vue'
@@ -99,8 +99,8 @@ function ageText(card: SwipeCard): string {
             title="Открыть профиль"
           >{{ card.name }} · {{ ageText(card) }}</Link>
           <div v-else class="text-lg font-black truncate text-stone-900 dark:text-white">{{ card.name }} · {{ ageText(card) }}</div>
-          <div v-if="formatPlace(card.city, card.country) || card.distance_km != null" class="text-xs text-stone-500 dark:text-zinc-400 truncate">
-            {{ [formatPlace(card.city, card.country), card.distance_km != null ? `${card.distance_km} км` : null].filter(Boolean).join(' · ') }}
+          <div v-if="formatCardLocation(card) || card.distance_km != null" class="text-xs text-stone-500 dark:text-zinc-400 truncate">
+            {{ [formatCardLocation(card), card.distance_km != null ? `${card.distance_km} км` : null].filter(Boolean).join(' · ') }}
           </div>
           <div class="mt-1 flex items-center gap-1.5 text-xs font-semibold" :class="peerOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-stone-400 dark:text-zinc-500'">
             <span :class="peerOnline ? 'bg-emerald-500' : 'bg-zinc-400 dark:bg-zinc-600'" class="h-1.5 w-1.5 rounded-full" />{{ presenceLabel }}

@@ -11,7 +11,7 @@ import BoostSplash from '@/Components/Features/Dating/BoostSplash.vue'
 import MatchSplash from '@/Components/Features/Dating/MatchSplash.vue'
 import AppImage from '@/Components/Ui/Media/AppImage.vue'
 import { FREE_SWIPES_RADIUS_KM, useSwipes } from '@/composables/useSwipes'
-import { formatPlace } from '@/utils/place'
+import { formatCardLocation } from '@/utils/place'
 import InfiniteSentinel from '@/Components/Ui/List/InfiniteSentinel.vue'
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 import { useSwipeCardPhotos } from '@/composables/useSwipeCardPhotos'
@@ -324,7 +324,7 @@ onUnmounted(() => {
                   </Link>
                   <Link :href="userProfileUrl(u)" class="mt-2 min-w-0 w-full">
                     <div class="text-sm font-bold truncate text-stone-900 dark:text-white">{{ u.name }} · {{ s.ageLabel(u) }}</div>
-                    <div v-if="formatPlace(u.city, u.country)" class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">{{ formatPlace(u.city, u.country) }}</div>
+                    <div v-if="formatCardLocation(u)" class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">{{ formatCardLocation(u) }}</div>
                     <div v-if="u.distance_km != null" class="text-[11px] text-stone-500 dark:text-zinc-400">{{ u.distance_km }} км</div>
                   </Link>
                   <Button
@@ -370,7 +370,7 @@ onUnmounted(() => {
                 <Link :href="userProfileUrl(f)" class="shrink-0"><Avatar :image="f.avatar_url ?? undefined" :label="!f.avatar_url ? (f.name ?? '?').slice(0, 1) : undefined" shape="circle" class="!w-10 !h-10 sm:!w-12 sm:!h-12" /></Link>
                 <Link :href="userProfileUrl(f)" class="min-w-0 flex-1 basis-32">
                   <div class="text-sm font-bold truncate text-stone-900 dark:text-white">{{ f.name }}<span class="font-semibold text-stone-500 dark:text-zinc-400"> · {{ s.ageLabel(f) }}</span></div>
-                  <div v-if="formatPlace(f.city, f.country)" class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">{{ formatPlace(f.city, f.country) }}</div>
+                  <div v-if="formatCardLocation(f)" class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">{{ formatCardLocation(f) }}</div>
                 </Link>
                 <Button icon="pi pi-send" rounded size="small" aria-label="Написать" title="Написать" :loading="s.creatingChat.value" class="!w-9 !h-9 sm:!w-10 sm:!h-10 !p-0 shrink-0" @click="s.writeWithoutMatch(f.id)" />
                 <Button icon="pi pi-times" rounded size="small" severity="secondary" outlined aria-label="Убрать" title="Убрать из избранного" class="!w-9 !h-9 sm:!w-10 sm:!h-10 !p-0 shrink-0" @click="s.removeFavorite(f.id)" />
@@ -402,7 +402,7 @@ onUnmounted(() => {
                 <component :is="f.is_incognito ? 'span' : Link" :href="f.is_incognito ? undefined : userProfileUrl(f)" class="min-w-0 flex-1 basis-32">
                   <div class="text-sm font-bold truncate text-stone-900 dark:text-white">{{ f.is_incognito ? 'Тайный поклонник' : f.name }}<span v-if="!f.is_incognito" class="font-semibold text-stone-500 dark:text-zinc-400"> · {{ s.ageLabel(f) }}</span></div>
                   <div v-if="f.is_incognito" class="text-[11px] text-violet-500 font-bold leading-snug">Скрыл себя · PRO · лайкни в ответ — откроется при мэтче</div>
-                  <div v-else-if="formatPlace(f.city, f.country)" class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">{{ formatPlace(f.city, f.country) }}</div>
+                  <div v-else-if="formatCardLocation(f)" class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">{{ formatCardLocation(f) }}</div>
                 </component>
                 <Chip v-if="f.is_superlike" label="Суперлайк" icon="pi pi-star-fill" class="!rounded-full !text-[10px] !bg-[#1786FF] !text-white !border-0 shrink-0" />
                 <Chip v-if="f.liked_me || f.is_match" label="Взаимно" icon="pi pi-heart-fill" class="!rounded-full !text-[10px] shrink-0" />
@@ -687,7 +687,7 @@ onUnmounted(() => {
                         <div v-if="!s.current.value.rating_hidden && (s.current.value.rating_count ?? 0) > 0" class="flex items-center">
                           <DatingRatingStars :avg="s.current.value.rating_avg ?? null" :count="s.current.value.rating_count ?? 0" size="sm" />
                         </div>
-                        <div v-if="formatPlace(s.current.value.city, s.current.value.country) || s.current.value.distance_km != null" class="truncate">📍 {{ [formatPlace(s.current.value.city, s.current.value.country), s.current.value.distance_km != null ? `${s.current.value.distance_km} км` : null].filter(Boolean).join(' · ') }}</div>
+                        <div v-if="formatCardLocation(s.current.value) || s.current.value.distance_km != null" class="truncate">📍 {{ [formatCardLocation(s.current.value), s.current.value.distance_km != null ? `${s.current.value.distance_km} км` : null].filter(Boolean).join(' · ') }}</div>
                       </div>
                     </div>
                     <Button

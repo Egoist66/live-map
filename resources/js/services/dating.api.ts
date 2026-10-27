@@ -17,6 +17,8 @@ export interface SwipeCard {
   photos_limit?: number
   is_pro?: boolean
   city: string | null
+  /** Район/улица без номера дома; null — скрыто приватностью или не задано. */
+  address?: string | null
   /** Страна из анкеты — резервная подпись, если город не указан. */
   country?: string | null
   distance_km: number | null

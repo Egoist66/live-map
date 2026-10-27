@@ -25,11 +25,7 @@ class AdminSeeder extends Seeder
                 'is_admin' => true,
                 'level' => 'guide',
                 'reputation_score' => 99999,
-                'home_lat' => 55.7558,
-                'home_lng' => 37.6173,
                 'home_radius_km' => 50,
-                'latitude' => 55.7558,
-                'longitude' => 37.6173,
                 'is_anonymous_default' => false,
                 'is_invisible' => true,
                 'settings' => [

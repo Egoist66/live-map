@@ -51,11 +51,7 @@ class MakeAdmin extends Command
                 'is_admin' => true,
                 'level' => 'guide',
                 'reputation_score' => 99999,
-                'home_lat' => 55.7558,
-                'home_lng' => 37.6173,
                 'home_radius_km' => 50,
-                'latitude' => 55.7558,
-                'longitude' => 37.6173,
                 'is_invisible' => true,
                 // Дефолт ULove-фишек для нового админа — ВКЛ (Premium).
                 // Существующих юзеров при повышении не трогаем: их явное ВЫКЛ обязано сохраняться.

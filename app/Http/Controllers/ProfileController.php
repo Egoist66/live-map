@@ -537,10 +537,10 @@ class ProfileController extends Controller
         ])->save();
 
         return response()->json([
-            'home_lat' => $lat,
-            'home_lng' => $lng,
-            'home_city' => $user->home_city,
-            'home_address' => $user->home_address,
+            'lat' => $lat,
+            'lng' => $lng,
+            'city' => $user->home_city,
+            'address' => $user->home_address,
             'country' => $user->country,
             'country_code' => $user->country_code,
         ]);
