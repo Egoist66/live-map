@@ -10,6 +10,7 @@ import TurnstileWidget from '@/Components/Security/TurnstileWidget.vue'
 import { useBotQr } from '@/composables/useBotQr'
 import InputText from 'primevue/inputtext'
 import Button from 'primevue/button'
+import Message from 'primevue/message'
 import ProgressBar from 'primevue/progressbar'
 import Select from 'primevue/select'
 import DatePicker from 'primevue/datepicker'
@@ -48,8 +49,7 @@ function onCountryChange(v: string): void {
 
 <template>
   <div>
-    <div class="flex flex-col items-center text-center gap-2">
-      <span class="w-11 h-11 rounded-2xl bg-[#FF4267] grid place-items-center text-white shadow-lg shadow-[#FF4267]/30 shrink-0"><i class="pi pi-heart-fill leading-none" /></span>
+    <div class="flex flex-col items-center text-center">
       <h1 class="text-[22px] font-black tracking-tight text-ink-900 dark:text-white leading-tight">{{ t.registerTitle.value }}</h1>
     </div>
 
@@ -112,6 +112,7 @@ function onCountryChange(v: string): void {
               </div>
               <p class="text-[11px] leading-relaxed text-stone-500 dark:text-zinc-400">{{ reg.locationHint.value }}</p>
               <Button type="button" :loading="f.locating.value" severity="secondary" outlined rounded class="w-full" :label="f.values.home_lat ? 'Обновить моё место' : 'Определить моё место'" icon="pi pi-map-marker" @click="() => f.detectLocation()" />
+              <Message v-if="f.locationError.value" severity="warn" :closable="false" class="!text-[11px]">{{ f.locationError.value }}</Message>
               <div v-if="f.values.home_address || f.addrLoading.value" class="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2.5 flex items-center gap-2">
                 <span class="w-7 h-7 rounded-full bg-ink-900 dark:bg-white text-white dark:text-ink-900 grid place-items-center shrink-0 text-[11px]">◉</span>
                 <div class="min-w-0 flex-1">

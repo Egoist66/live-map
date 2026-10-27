@@ -4,6 +4,7 @@ import { loginSchema } from '@/validation/schemas/login.schema'
 import { registerSchema } from '@/validation/schemas/register.schema'
 import { forwardGeocodePlace, reverseGeocodeHome } from '@/services/geo.api'
 import { useCountryMismatch } from '@/composables/useCountryMismatch'
+import { useGeolocation } from '@/composables/useGeolocation'
 import { useSignupGoals } from '@/composables/useSignupGoals'
 import { useHoneypot } from '@/composables/useTurnstile'
 import { useToast } from 'primevue/usetoast'
@@ -48,6 +49,8 @@ export function useRegisterForm() {
   const showPass2 = ref(false)
   const locating = ref(false)
   const addrLoading = ref(false)
+  const locationError = ref<string | null>(null)
+  const geolocation = useGeolocation()
   const goals = useSignupGoals()
   const goalPreset = goals.preset
 
@@ -224,12 +227,32 @@ export function useRegisterForm() {
    */
   async function detectLocation(options: { silent?: boolean } = {}): Promise<void> {
     locating.value = true
+    locationError.value = null
+
     try {
-      const pos = await readBrowserPosition()
-      const lat = Number(pos.coords.latitude.toFixed(7))
-      const lng = Number(pos.coords.longitude.toFixed(7))
+      const position = await geolocation.requestGeolocation()
+
+      if (!position) {
+        const reason = geolocation.error.value || 'Не удалось определить позицию'
+
+        if (!options.silent) {
+          locationError.value = reason
+          toast?.add({
+            severity: 'warn',
+            summary: 'Без геопозиции',
+            detail: reason,
+            life: 4500,
+          })
+        }
+
+        return
+      }
+
+      const lat = Number(position.lat.toFixed(7))
+      const lng = Number(position.lng.toFixed(7))
       setValues({ home_lat: lat, home_lng: lng } as any)
       addrLoading.value = true
+
       try {
         const geo = await reverseGeocodeHome(lat, lng)
         const prevCity = (values as any).home_city || null
@@ -248,12 +271,7 @@ export function useRegisterForm() {
       }
     } catch {
       if (!options.silent) {
-        toast?.add({
-          severity: 'warn',
-          summary: 'Без геопозиции',
-          detail: 'Карта откроется по стране и городу из профиля',
-          life: 3500,
-        })
+        locationError.value = 'Не удалось определить позицию'
       }
     } finally {
       locating.value = false
@@ -369,6 +387,7 @@ export function useRegisterForm() {
     showPass2,
     locating,
     addrLoading,
+    locationError,
     detectLocation,
     clearLocation,
     submit,
@@ -389,21 +408,4 @@ export function useRegisterForm() {
     countryWarning: residenceCheck.countryWarning,
     checkingCountry: residenceCheck.checkingCountry,
   }
-}
-
-/**
- * Однократно читает позицию браузера.
- * @throws {GeolocationPositionError | Error} если геолокация недоступна
- */
-function readBrowserPosition(): Promise<GeolocationPosition> {
-  return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) {
-      reject(new Error('Геолокация недоступна'))
-      return
-    }
-    const onOk = (pos: GeolocationPosition): void => resolve(pos)
-    const onErr = (err: GeolocationPositionError): void => reject(err)
-    const opts: PositionOptions = { enableHighAccuracy: false, timeout: 6000 }
-    navigator.geolocation.getCurrentPosition(onOk, onErr, opts)
-  })
 }

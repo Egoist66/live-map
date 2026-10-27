@@ -770,7 +770,7 @@ class DatingService
             if ($isIncognito) {
                 $incognitoCount++;
             }
-            $distance = $this->distanceKm($me, $candidate, $isMatch);
+            $distance = $this->distanceKm($me, $candidate);
             $card = $this->cardFor($candidate, $me, $distance, $isMatch, true, $ratings[(int) $candidate->id] ?? null);
             $card['is_incognito'] = $isIncognito;
             $card['is_superlike'] = (bool) ($row->is_superlike ?? false);
@@ -784,7 +784,7 @@ class DatingService
                 $card['age'] = null;
                 $card['age_hidden'] = true;
                 $card['city'] = null;
-                $card['address'] = null;
+                $card['district'] = null;
                 $card['country'] = null;
                 $card['distance_km'] = null;
                 $card['bio'] = null;
@@ -1946,7 +1946,7 @@ class DatingService
             }
 
             $isMatch = isset($matchedIds[$candidate->id]);
-            $distance = $this->distanceKm($me, $candidate, $isMatch);
+            $distance = $this->distanceKm($me, $candidate);
 
             if ($radiusKm !== null && $radiusKm > 0) {
                 if ($distance === null) {
@@ -2536,7 +2536,7 @@ class DatingService
 
         foreach ($candidates as $candidate) {
             $isMatch = isset($matchedFlip[$candidate->id]);
-            $distance = $this->distanceKm($me, $candidate, $isMatch);
+            $distance = $this->distanceKm($me, $candidate);
             $card = $this->cardFor($candidate, $me, $distance, $isMatch, isset($likedMeIds[$candidate->id]), $ratings[(int) $candidate->id] ?? null);
 
             $card['is_online'] = true;
@@ -2725,7 +2725,7 @@ class DatingService
         $hideName = (bool) $candidate->dating_hide_name && ! $canSeeReal;
         $hideAge = (bool) $candidate->dating_hide_age && ! $canSeeReal;
         $hideDistance = (bool) ($candidate->dating_hide_distance ?? false) && ! $canSeeReal;
-        $showAddress = $this->canShowDatingAddress($candidate, $viewer, $isMatch);
+        $showDistrict = $this->canShowDatingAddress($candidate, $viewer, $isMatch);
 
         $hiddenOnline = $candidate->isInvisibleActive() && ! $viewer->isAdmin();
 
@@ -2767,7 +2767,7 @@ class DatingService
             'photos_limit' => $photosLimit,
             'is_pro' => $isProCandidate,
             'city' => $candidate->home_city,
-            'address' => $showAddress ? $candidate->home_address : null,
+            'district' => $showDistrict ? $this->districtForCard($candidate) : null,
             'country' => $candidate->country,
             'distance_km' => $hideDistance || $distanceKm === null ? null : round($distanceKm, 1),
             'distance_hidden' => $hideDistance,
@@ -2796,47 +2796,38 @@ class DatingService
     /**
      * Расстояние между пользователями по домашним координатам.
      *
-     * Точные координаты кандидата используем только когда их видно
-     * зрителю по настройкам приватности. Если точка скрыта или её нет,
-     * считаем от центра указанного города/страны. Зритель всегда
-     * считается от своей сохранённой точки.
+     * Считаем от точной сохранённой точки, как и раньше. Если у кого-то
+     * из двоих нет координат, расстояние неизвестно.
      *
      * @param User $me зритель
      * @param User $candidate кандидат
-     * @param bool $isMatch есть ли взаимный мэтч
      * @return float|null расстояние в километрах либо null
      */
-    private function distanceKm(User $me, User $candidate, bool $isMatch = false): ?float
+    private function distanceKm(User $me, User $candidate): ?float
     {
-        $meCoordinates = $this->userCoordinates($me);
-
-        if ($meCoordinates === null) {
+        if ($me->home_lat === null || $me->home_lng === null) {
             return null;
         }
 
-        $candidateCoordinates = $this->canShowDatingAddress($candidate, $me, $isMatch)
-            ? $this->userCoordinates($candidate)
-            : $this->fallbackCoordinates($candidate);
-
-        if ($candidateCoordinates === null) {
+        if ($candidate->home_lat === null || $candidate->home_lng === null) {
             return null;
         }
 
         return $this->haversine(
-            $meCoordinates['lat'],
-            $meCoordinates['lng'],
-            $candidateCoordinates['lat'],
-            $candidateCoordinates['lng']
+            (float) $me->home_lat,
+            (float) $me->home_lng,
+            (float) $candidate->home_lat,
+            (float) $candidate->home_lng
         );
     }
 
     /**
-     * Можно ли показать район/улицу кандидата зрителю.
+     * Можно ли показать район кандидата зрителю.
      *
      * @param User $candidate кандидат
      * @param User $viewer зритель
      * @param bool $isMatch есть ли взаимный мэтч
-     * @return bool true когда адрес не скрыт настройками
+     * @return bool true когда район не скрыт настройками
      */
     private function canShowDatingAddress(User $candidate, User $viewer, bool $isMatch): bool
     {
@@ -2860,106 +2851,45 @@ class DatingService
     }
 
     /**
-     * Координаты пользователя: точные либо центр его города/страны.
+     * Район кандидата для карточки без улицы.
+     *
+     * `home_address` хранится как «улица · район · город». Город
+     * приходит отдельным полем, поэтому после его удаления район —
+     * последняя часть. Если осталась только улица, район не отдаём.
      *
      * @param User $user пользователь
-     * @return array{lat:float,lng:float}|null
+     * @return string|null район либо null
      */
-    private function userCoordinates(User $user): ?array
+    private function districtForCard(User $user): ?string
     {
-        if ($user->home_lat !== null && $user->home_lng !== null) {
-            $lat = (float) $user->home_lat;
-            $lng = (float) $user->home_lng;
-
-            if ($this->coordinatesAreValid($lat, $lng)) {
-                return ['lat' => $lat, 'lng' => $lng];
-            }
-        }
-
-        return $this->fallbackCoordinates($user);
-    }
-
-    /**
-     * Центр города/страны для пользователя без доступных точных координат.
-     *
-     * @param User $user пользователь
-     * @return array{lat:float,lng:float}|null
-     */
-    private function fallbackCoordinates(User $user): ?array
-    {
-        $city = $this->cityForFallback($user);
-        $query = app(HomeLocationService::class)->queryFor($city, $user->country ?: $user->country_code);
-
-        if ($query === null) {
-            return null;
-        }
-
-        $key = mb_strtolower($query);
-
-        /** @var array<string, array{lat:float,lng:float}|null> $cache */
-        static $cache = [];
-
-        if (array_key_exists($key, $cache)) {
-            return $cache[$key];
-        }
-
-        $coordinates = app(HomeLocationService::class)->coordinatesFor($query);
-
-        if ($coordinates !== null) {
-            $coordinates = [
-                'lat' => (float) $coordinates['lat'],
-                'lng' => (float) $coordinates['lng'],
-            ];
-        }
-
-        $cache[$key] = $coordinates;
-
-        return $coordinates;
-    }
-
-    /**
-     * Город для fallback-координат.
-     *
-     * Если отдельного города нет, берём последнюю часть адреса
-     * «улица · район · город» — так работает формат профиля.
-     *
-     * @param User $user пользователь
-     * @return string|null
-     */
-    private function cityForFallback(User $user): ?string
-    {
+        $address = trim((string) $user->home_address);
         $city = trim((string) $user->home_city);
 
-        if ($city !== '') {
-            return $city;
-        }
-
-        $address = trim((string) $user->home_address);
-
-        if ($address === '' || ! str_contains($address, '·')) {
+        if ($address === '' || $city === '') {
             return null;
         }
 
-        $parts = array_map('trim', explode('·', $address));
-        $last = end($parts);
+        $parts = preg_split('/\s*[·,]\s*/u', $address) ?: [];
+        $cityKey = mb_strtolower($city);
+        $details = [];
 
-        return is_string($last) && $last !== '' ? $last : null;
-    }
+        foreach ($parts as $part) {
+            $value = trim($part);
 
-    /**
-     * Валидны ли координаты как широта/долгота.
-     *
-     * @param float $lat широта
-     * @param float $lng долгота
-     * @return bool
-     */
-    private function coordinatesAreValid(float $lat, float $lng): bool
-    {
-        if ($lat < -90 || $lat > 90 || $lng < -180 || $lng > 180) {
-            return false;
+            if ($value === '' || mb_strtolower($value) === $cityKey) {
+                continue;
+            }
+
+            $details[] = $value;
         }
 
-        return $lat !== 0.0 || $lng !== 0.0;
+        if (count($details) < 2) {
+            return null;
+        }
+
+        $district = (string) end($details);
+
+        return $district !== '' ? $district : null;
     }
 
     /**

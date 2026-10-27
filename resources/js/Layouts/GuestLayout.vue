@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3'
 import Card from 'primevue/card'
+import Toast from 'primevue/toast'
 import PageTransition from '@/Components/Features/Feedback/PageTransition.vue'
 import AppFooter from '@/Layouts/AppFooter.vue'
 import BrandMark from '@/Components/Brand/BrandMark.vue'
@@ -71,11 +72,16 @@ const backdrop = useAuthBackdrop()
         </template>
         <template v-else>
           <div class="auth-card-enter w-full max-w-[640px] min-w-0 mx-auto">
-            <Link href="/" class="flex flex-col items-center justify-center gap-2.5 mb-5 sm:mb-6">
-              <span class="font-black tracking-[-0.04em] text-[34px] leading-none text-[#FF4267]">ULove</span>
-              <span class="w-10 h-10 rounded-xl overflow-hidden shadow-float shrink-0">
-                <BrandMark class="h-full w-full" />
-              </span>
+            <Link href="/" class="flex items-center justify-center mb-5 sm:mb-6" aria-label="ULove — на главную">
+              <img
+                src="/logo.svg"
+                alt="ULove"
+                width="620"
+                height="180"
+                class="h-12 sm:h-14 w-auto max-w-[240px] object-contain"
+                loading="eager"
+                decoding="async"
+              />
             </Link>
             <Card :class="['w-full max-w-full !bg-white/85 dark:!bg-zinc-900/80 backdrop-blur-xl !border !rounded-[20px] sm:!rounded-[24px] !shadow-float !p-0', backdrop.tokens.value.cardClass]">
               <template #content>
@@ -97,6 +103,7 @@ const backdrop = useAuthBackdrop()
            чего сервер не видел — enter-transition во время гидратации даёт
            `insertBefore of null`. См. useClientReady. -->
       <template v-if="isClientReady">
+        <Toast />
         <NetworkStatusToast />
         <PwaInstallBanner />
         <PwaUpdateBanner />

@@ -26,61 +26,44 @@ export function formatPlace(city?: string | null, country?: string | null): stri
 /** Минимальные поля карточки, нужные для подписи места. */
 export interface CardPlace {
   city?: string | null
+  district?: string | null
   country?: string | null
-  address?: string | null
 }
 
 /**
- * Подпись места для карточки свайпа: город, район и улица без дублей.
+ * Подпись места для карточки свайпа: только город и район.
  *
- * Бэкенд отдаёт `address` как «улица · район · город» и только если
- * это разрешено приватностью. Город уже приходит отдельным полем,
- * поэтому убираем его из адреса. Если адрес скрыт, остаётся город
- * или страна — те же данные, что человек указал в анкете.
+ * Улицу намеренно не показываем — она остаётся на бэкенде для точных
+ * расчётов. Если района нет или он скрыт приватностью, остаётся город,
+ * а при отсутствии города — страна.
  *
- * @param card карточка с city/address/country
- * @returns «Минск · Чижовка · улица Корзюки» либо короткий fallback
+ * @param card карточка с city/district/country
+ * @returns «Минск · Чижовка» либо короткий fallback
  * @example
- * formatCardLocation({ city: 'Минск', address: 'улица Корзюки · Чижовка · Минск' })
- * // 'Минск · Чижовка · улица Корзюки'
+ * formatCardLocation({ city: 'Минск', district: 'Чижовка' })
+ * // 'Минск · Чижовка'
  */
 export function formatCardLocation(card: CardPlace): string {
   const city = String(card.city ?? '').trim()
+  const district = String(card.district ?? '').trim()
   const country = String(card.country ?? '').trim()
-  const address = String(card.address ?? '').trim()
 
-  const rawParts = address === ''
-    ? []
-    : address.split(address.includes('·') ? '·' : ',')
+  const parts: string[] = []
 
-  const ignored = [city, country]
-    .map((part) => part.toLowerCase())
-    .filter((part) => part !== '')
-
-  const details: string[] = []
-
-  for (const rawPart of rawParts) {
-    const part = rawPart.trim()
-
-    if (part === '') {
-      continue
-    }
-
-    if (ignored.includes(part.toLowerCase())) {
-      continue
-    }
-
-    if (!details.some((known) => known.toLowerCase() === part.toLowerCase())) {
-      details.push(part)
-    }
+  if (city !== '') {
+    parts.push(city)
   }
 
-  if (details.length === 0) {
-    return formatPlace(city, country)
+  const cityKey = city.toLowerCase()
+  const districtKey = district.toLowerCase()
+
+  if (district !== '' && districtKey !== cityKey) {
+    parts.push(district)
   }
 
-  const detailParts = address.includes('·') ? [...details].reverse() : details
-  const parts = city !== '' ? [city, ...detailParts] : detailParts
+  if (parts.length > 0) {
+    return parts.join(' · ')
+  }
 
-  return parts.join(' · ')
+  return formatPlace(city, country)
 }
