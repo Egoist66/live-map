@@ -89,6 +89,7 @@ function subscribe() {
     if (busBound) return
     busBound = true
     busOn('user:notification.created', onNotification)
+    busOn('user:notification.inbox-changed', () => { void refresh() })
   } catch {}
 }
 

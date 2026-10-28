@@ -25,6 +25,7 @@ const USER_EVENTS = [
   'report.created',
   'impersonation.started',
   'notification.created',
+  'notification.inbox-changed',
   'saved-notes.changed',
   'session.revoked',
   'gallery.changed',

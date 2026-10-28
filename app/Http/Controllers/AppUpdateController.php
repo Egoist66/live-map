@@ -2,9 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\NotificationInboxChanged;
 use App\Models\AppUpdate;
+use App\Services\AppModulesWelcomeNews;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\DatabaseNotification;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Новости приложения для пользователя (читаются из inbox-таблицы notifications).
@@ -41,7 +46,7 @@ class AppUpdateController extends Controller
 
     public function index(Request $request)
     {
-        \App\Services\AppModulesWelcomeNews::ensureDelivered($request->user());
+        AppModulesWelcomeNews::ensureDelivered($request->user());
 
         $rows = $this->baseQuery($request)
             ->latest('updated_at')
@@ -53,7 +58,7 @@ class AppUpdateController extends Controller
 
     public function unread(Request $request)
     {
-        \App\Services\AppModulesWelcomeNews::ensureDelivered($request->user());
+        AppModulesWelcomeNews::ensureDelivered($request->user());
 
         $total = (clone $this->baseQuery($request))->whereNull('read_at')->count();
         $rows = $this->baseQuery($request)
@@ -79,9 +84,9 @@ class AppUpdateController extends Controller
      * ошибку, локально выкидывал новость, а следующий unread() возвращал её же —
      * модалка «Что нового» закрывалась и тут же открывалась бесконечно.
      *
-     * @param Request $request запрос с авторизованным пользователем
-     * @param string|int $appUpdate id новости из inbox-пейлоада (без implicit binding: записи может уже не быть)
-     * @return \Illuminate\Http\JsonResponse всегда ok:true — строка погашена либо её уже нет
+     * @param  Request  $request  запрос с авторизованным пользователем
+     * @param  string|int  $appUpdate  id новости из inbox-пейлоада (без implicit binding: записи может уже не быть)
+     * @return JsonResponse всегда ok:true — строка погашена либо её уже нет
      */
     public function markRead(Request $request, $appUpdate)
     {
@@ -108,10 +113,14 @@ class AppUpdateController extends Controller
                 ->update(['read_at' => now()]);
         }
 
-        \Illuminate\Support\Facades\Cache::forget("realtime:badges:{$request->user()->id}");
+        Cache::forget("realtime:badges:{$request->user()->id}");
+
+        if ($marked > 0) {
+            NotificationInboxChanged::dispatchFor((int) $request->user()->id, false);
+        }
 
         if ($guideVersion !== null) {
-            \App\Services\AppModulesWelcomeNews::dismissVersionFor($request->user(), $guideVersion);
+            AppModulesWelcomeNews::dismissVersionFor($request->user(), $guideVersion);
         }
 
         return response()->json(['ok' => true, 'marked' => $marked]);
@@ -125,8 +134,8 @@ class AppUpdateController extends Controller
      * версия с префиксом modules-guide-* считается гидом: старую
      * версию тоже надо гасить навсегда, а не только текущую.
      *
-     * @param int $updateId id новости из запроса
-     * @param \Illuminate\Support\Collection $rows затронутые inbox-строки
+     * @param  int  $updateId  id новости из запроса
+     * @param  Collection  $rows  затронутые inbox-строки
      * @return string|null версия гида либо null для обычных новостей
      */
     private function resolveGuideVersion(int $updateId, $rows): ?string
@@ -167,8 +176,12 @@ class AppUpdateController extends Controller
             ->whereNull('read_at')
             ->update(['read_at' => now()]);
 
-        \Illuminate\Support\Facades\Cache::forget("realtime:badges:{$request->user()->id}");
-        \App\Services\AppModulesWelcomeNews::dismissFor($request->user());
+        Cache::forget("realtime:badges:{$request->user()->id}");
+        AppModulesWelcomeNews::dismissFor($request->user());
+
+        if ($marked > 0) {
+            NotificationInboxChanged::dispatchFor((int) $request->user()->id, true);
+        }
 
         return response()->json(['ok' => true, 'count' => $marked]);
     }

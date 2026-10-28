@@ -1,5 +1,14 @@
 # Dev-лог
 
+## 2026-10-28 — Фантомные бейджи: прочтение синхронизируется между устройствами
+- 🐞 Колокольчик и иконка сообщений держали «2» после прочтения на телефоне/во второй вкладке: сокет-режим не получал события о прочтении inbox, а `badges.ts` сверялся с сервером раз в минуту. В polling-режиме тик приносил только итоговые числа.
+- 🔔 Новое событие `NotificationInboxChanged` (`notification.inbox-changed`, `ShouldBroadcastNow`, `toOthers`): `NotificationController@read/clear` и `AppUpdateController@markRead/markAllRead` рассылают его владельцу inbox вместе со сбросом кеша бейджей.
+- 🔧 Фронт: `useUserChannel` слушает событие, `badges` делает `fetch(true)`, `usePinActivity`/`useAppUpdates` перечитывают ленту, колокольчик при `all` обновляет срез непрочитанных чатов.
+- 🔧 Поллер: `mirrorBadgeDrops` по падению `pin_activity`/`updates` эмитит `user:notification.inbox-changed`, по падению `conversations_unread` — `chat:unread-changed`; колокольчик перечитывает список по обоим сигналам. Событие `chat:unread-changed` добавлено в карту шины.
+- 🧹 `useMiniChatDock`: бейдж FAB берёт только серверный `badges.unread` — локальный `mini.unreadTotal` больше не удерживает протухшее число.
+- 🛠 Команда `notifications:read-all {--force}`: массово ставит `read_at` уведомлениям и сообщениям, `delivered_at`, `last_read_at`, сбрасывает кеши бейджей и будит онлайн-клиентов (активность ≤15 мин) событием inbox-changed.
+- ✅ Проверки: `php -l` ×4, `pint --test` ✅, `vue-tsc --noEmit` ✅. Прогон команды на живой БД — после поднятия MySQL.
+
 ## 2026-10-23 — Анкета ULove: модерация у интересов + перенос между устройствами
 - 🛡 Тексты анкеты (`dating_about`, `dating_custom_goal`, интересы) проверяет серверный `ContentModeration` (Blasp + темы). Теперь 422 из `content` показывается прямо под интересами, а при добавлении своего интереса локальная проверка сразу подсвечивает мат.
 - 🧹 Нормализация и модерация анкеты вынесены в `DatingQuestionnaireService`: PATCH настроек и импорт работают по одним правилам, без дублей в контроллере.

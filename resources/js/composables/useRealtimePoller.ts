@@ -37,6 +37,12 @@ let lastActivitySync = 0
 let modeListenerAttached = false
 let trackingAttached = false
 let lastBusinessStatus: string | null = null
+/** Предыдущие счётчики бейджей: по падению понимаем прочтение на другом устройстве */
+let lastBadgeCounts: { pin: number | null; updates: number | null; chats: number | null } = {
+  pin: null,
+  updates: null,
+  chats: null,
+}
 const seenBusinessPendingIds = new Set<number>()
 const emittedKeys = new Set<string>()
 const seenMessageIds = new Set<number>()
@@ -85,6 +91,36 @@ function clearFast(): void {
 function clearSlow(): void {
   if (slowTimer) clearTimeout(slowTimer)
   slowTimer = null
+}
+
+/**
+ * По падению серверных счётчиков понять, что inbox или чат прочитали
+ * на другом устройстве, и разбудить подписчиков шины как это делает сокет.
+ *
+ * В polling-режиме отдельного события прочтения нет: тик приносит только
+ * итоговые числа. Уменьшение `pin_activity`/`updates` — единственный сигнал,
+ * что колокольчик пора перечитать; уменьшение `conversations_unread` —
+ * что из панели нужно убрать прочитанный диалог.
+ *
+ * @param badges счётчики из /api/realtime/sync
+ */
+function mirrorBadgeDrops(badges: { pin_activity?: unknown; updates?: unknown; conversations_unread?: unknown }): void {
+  const pin = Number(badges.pin_activity ?? 0)
+  const updates = Number(badges.updates ?? 0)
+  const chats = Number(badges.conversations_unread ?? 0)
+  const pinDropped = lastBadgeCounts.pin !== null && pin < lastBadgeCounts.pin
+  const updatesDropped = lastBadgeCounts.updates !== null && updates < lastBadgeCounts.updates
+  const chatsDropped = lastBadgeCounts.chats !== null && chats < lastBadgeCounts.chats
+
+  lastBadgeCounts = { pin, updates, chats }
+
+  if (pinDropped || updatesDropped) {
+    busEmit('user:notification.inbox-changed', { all: false, category: null, ids: [] })
+  }
+
+  if (chatsDropped) {
+    busEmit('chat:unread-changed', {})
+  }
 }
 
 /**
@@ -429,7 +465,10 @@ export function useRealtimePoller() {
     if (data?.peer && ctx.conversationId) {
       busEmit('chat:peer', { conversationId: Number(ctx.conversationId), peer: data.peer })
     }
-    if (data?.badges) busEmit('badges:update', data.badges)
+    if (data?.badges) {
+      mirrorBadgeDrops(data.badges)
+      busEmit('badges:update', data.badges)
+    }
   }
 
   /**

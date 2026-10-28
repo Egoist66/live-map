@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\NotificationInboxChanged;
 use App\Models\UserDatabaseNotification;
 use App\Services\AppModulesWelcomeNews;
 use App\Services\NotificationModuleGate;
@@ -97,11 +98,22 @@ class NotificationController extends Controller
                 $query->whereIn('id', $data['ids']);
             }
         }
+        $isAll = (bool) ($data['all'] ?? false);
+        $changedIds = empty($data['ids']) ? [] : (clone $query)->pluck('id')->all();
         $marked = $query->update(['read_at' => now()]);
 
         Cache::forget("realtime:badges:{$request->user()->id}");
 
-        if ($data['all'] ?? false) {
+        if ($marked > 0) {
+            NotificationInboxChanged::dispatchFor(
+                (int) $request->user()->id,
+                $isAll,
+                $data['category'] ?? null,
+                $changedIds,
+            );
+        }
+
+        if ($isAll) {
             AppModulesWelcomeNews::dismissFor($request->user());
         } elseif (! empty($data['ids'])) {
             AppModulesWelcomeNews::dismissIfGuideRead($request->user(), $data['ids']);
@@ -128,6 +140,14 @@ class NotificationController extends Controller
         $deleted = $query->delete();
 
         Cache::forget("realtime:badges:{$request->user()->id}");
+
+        if ($deleted > 0) {
+            NotificationInboxChanged::dispatchFor(
+                (int) $request->user()->id,
+                true,
+                $data['category'] ?? null,
+            );
+        }
 
         if ($hadGuide) {
             AppModulesWelcomeNews::dismissFor($request->user());

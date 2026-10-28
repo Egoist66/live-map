@@ -37,17 +37,15 @@ export function useMiniChatDock() {
   })
 
   /**
-   * Бейдж FAB: число чатов с непрочитанным — та же логика,
-   * что в колокольчике. Пока список дока не открыт, берём
-   * счётчик из глобального стора (тоже по чатам, не по сообщениям).
+   * Бейдж FAB: число чатов с непрочитанным — та же серверная правда,
+   * что у иконки в нижней навигации и колокольчика.
+   *
+   * Локальный список дока может пережить прочтение в другой вкладке
+   * или на другом устройстве и держать протухший `unread_count`.
+   * Раньше он имел приоритет и «залипал» навсегда, поэтому источником
+   * остаётся только стор бейджей (он сверяется с бэкендом по таймеру).
    */
-  const unreadBadge = computed(() => {
-    const fromList = Number(mini.unreadTotal.value || 0)
-    if (fromList > 0) {
-      return fromList
-    }
-    return Number(badges.unread || 0)
-  })
+  const unreadBadge = computed(() => Number(badges.unread || 0))
 
   const unreadLabel = computed(() => {
     const total = unreadBadge.value

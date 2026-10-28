@@ -40,6 +40,8 @@ export type RealtimeEventMap = {
   'chat:open-ids': { conversationId: number; ids: number[] }
   /** Локальное прочтение диалога: страница чата или мини-окно уже пометили read — остальным спискам (док, колокольчик) обнулить счётчик без запросов */
   'chat:dialog-read': number
+  /** Серверный счётчик непрочитанных чатов упал (прочли на другом устройстве): спискам пора перечитать срез */
+  'chat:unread-changed': Record<string, never>
   /** Общий фон беседы сменился (сокет conversation.wallpaper / поллинг wallpapers) */
   'chat:wallpaper': { conversation_id: number; wallpaper: unknown }
   /** Сеансы пользователя отозваны: сторожить текущий и вылететь при его смерти */
@@ -67,6 +69,8 @@ export type RealtimeEventMap = {
   'dating:questionnaire-saved': Record<string, any>
   /** Единое inbox-уведомление (таблица notifications): тосты и колокольчик */
   'user:notification.created': { notification: any }
+  /** Inbox прочитан/очищен на другом устройстве: перечитать ленту и счётчики */
+  'user:notification.inbox-changed': { all: boolean; category: string | null; ids: string[] }
   /** Входящий звонок (сокет VideoIncoming / поллинг freshIncoming) */
   'user:video.incoming': { call_id: number; mode: string; caller: any; callee: any }
   /** Signaling-фрейм звонка (сокет VideoSignalEvent / поллинг freshSignals) */

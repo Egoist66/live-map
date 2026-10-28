@@ -261,9 +261,52 @@ function ensureLiveChats(): void {
   liveChatsBound = true
   try {
     busOn('user:message.sent', onIncomingMessage)
+    busOn('user:message.read', onOwnReadRemotely)
+    busOn('user:notification.inbox-changed', onInboxChanged)
+    busOn('chat:unread-changed', onChatsUnreadChanged)
   } catch {
     liveChatsBound = false
   }
+}
+
+/**
+ * Inbox погасили целиком на другом устройстве (вторая вкладка, телефон
+ * или админская команда): на каждую строку `user:message.read` в этом
+ * случае не приходит, поэтому перечитываем срез непрочитанных.
+ *
+ * @param e событие user:notification.inbox-changed
+ */
+function onInboxChanged(e: { all?: boolean } | null): void {
+  if (!e?.all || !isOpen.value) return
+  void fetchAll()
+}
+
+/**
+ * Серверный счётчик непрочитанных чатов упал (поллер увидел прочтение
+ * на другом устройстве): держим открытую панель в согласии с бэкендом.
+ */
+function onChatsUnreadChanged(): void {
+  if (!isOpen.value) return
+  void fetchAll()
+}
+
+/**
+ * Диалог прочитан этим же аккаунтом на другом устройстве.
+ *
+ * Сокет приходит на user-каналы всех участников, поэтому реагируем
+ * только когда `user_id` — наш: чужое прочтение наших сообщений
+ * не должно убирать нашу непрочитанную строку.
+ *
+ * @param e событие user:message.read с conversation_id и user_id
+ */
+function onOwnReadRemotely(e: { conversation_id?: number; user_id?: number } | null): void {
+  const uid = currentAuthUid()
+  if (uid <= 0 || Number(e?.user_id) !== uid) return
+  const id = Number(e?.conversation_id ?? 0)
+  if (!(id > 0)) return
+  const before = conversations.value.length
+  conversations.value = conversations.value.filter((c: any) => Number(c?.id) !== id)
+  if (conversations.value.length !== before) unreadChats.value = Math.max(0, unreadChats.value - 1)
 }
 
 /**

@@ -391,6 +391,10 @@ export function useAppUpdates() {
           if (!n?.id || n.type !== 'app.published' || !n.data?.update) return
           mergeIncoming([n.data.update])
         })
+        busOn('user:notification.inbox-changed', () => {
+          void loadUnread()
+          void loadHistory()
+        })
       } catch {}
     }
   }
