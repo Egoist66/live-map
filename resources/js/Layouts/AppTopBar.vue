@@ -35,7 +35,7 @@ const showTgClose = computed(() => isTelegram.value && isDesktopTelegram.value)
       <ApplicationLogo />
     </Link>
 
-    <nav aria-label="Основная навигация" class="hidden lg:flex items-center gap-1 bg-stone-100/80 dark:bg-zinc-800 p-1 rounded-full border border-stone-200/60 dark:border-zinc-700 shrink-0">
+    <nav aria-label="Основная навигация" class="liquid-glass hidden lg:flex items-center gap-1 p-1 rounded-full shrink-0">
       <Link v-if="isBusiness" href="/cabinet" :class="['px-4 py-1.5 rounded-full text-[13px] font-semibold transition', topNavPillClass(route().current('cabinet.*'))]">Кабинет</Link>
       <Link :href="route('chat')" :class="['px-4 py-1.5 rounded-full text-[13px] font-semibold transition relative', topNavPillClass(route().current('chat'))]">Чат</Link>
       <Link

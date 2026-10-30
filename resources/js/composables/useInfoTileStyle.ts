@@ -20,10 +20,10 @@ export type InfoTileKind =
   | 'home'
 
 const tileCls =
-  'w-full flex items-center gap-3 rounded-2xl border border-stone-200 bg-stone-100/70 px-3 py-3 text-left transition hover:bg-stone-100 active:scale-[0.99] dark:border-zinc-800 dark:bg-white/[0.03] dark:hover:bg-white/[0.06]'
+  'w-full flex items-center gap-3 rounded-2xl border border-stone-200 bg-stone-100/70 px-3 py-3 text-left transition hover:bg-stone-100 active:scale-[0.99] dark:border-white/10 dark:bg-white/[0.03] dark:hover:bg-white/[0.06]'
 
 const rowCls =
-  'flex items-center gap-3 p-3 rounded-3xl bg-stone-50 border min-w-0 dark:bg-white/[0.03] dark:border-zinc-800'
+  'flex items-center gap-3 p-3 rounded-3xl bg-stone-50 border min-w-0 dark:bg-white/[0.03] dark:border-white/10'
 
 const iconBase =
   'grid h-10 w-10 shrink-0 place-items-center rounded-xl border-0 text-base text-white shadow-md'

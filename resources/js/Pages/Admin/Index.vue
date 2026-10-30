@@ -98,7 +98,7 @@ const layout = useAdminLayout(layoutBadges)
  *
  * До ввода пароля ничего чувствительного не грузим.
  * Модератору грузим только его табы (Статистика, Модерация,
- * Справочники, SEO): Управление и Безопасность — лишь админам.
+ * Справочники, SEO, Тарифы): Управление и Безопасность — лишь админам.
  */
 function loadAll(): void {
   reports.init()
@@ -290,7 +290,7 @@ enforceVisibleTab()
               </div>
             </section>
 
-            <section v-else-if="tab === 'payments' && staff.isAdmin.value" aria-label="Тарифы">
+            <section v-else-if="tab === 'payments'" aria-label="Тарифы">
               <div class="min-w-0 max-w-[960px]">
                 <AdminPaymentsSection />
               </div>

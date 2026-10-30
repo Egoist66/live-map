@@ -53,7 +53,7 @@ const peerAvatar = computed(() => getAvatarUrl(props.peer))
 </script>
 
 <template>
-  <aside class="hidden min-h-0 w-[280px] shrink-0 flex-col overflow-y-auto rounded-2xl border border-stone-200 bg-white p-5 xl:flex dark:border-zinc-800 dark:bg-zinc-900">
+  <aside class="hidden min-h-0 w-[280px] shrink-0 flex-col overflow-y-auto rounded-2xl border border-stone-200 bg-white p-5 xl:flex dark:border-zinc-800 dark:bg-[#0F121F]">
     <div class="flex flex-col items-center text-center">
       <UserAvatar :user="peer" :label="!peerAvatar ? initial : undefined" shape="circle" class="!h-24 !w-24 !text-3xl" />
       <div class="mt-3 max-w-full truncate text-xl font-bold text-stone-900 dark:text-white">{{ peer?.name ?? 'Собеседник' }}</div>

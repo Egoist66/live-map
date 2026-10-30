@@ -35,7 +35,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <section class="rounded-[20px] min-[411px]:rounded-[24px] border border-stone-200 bg-white shadow-soft p-3 min-[411px]:p-4 sm:p-5 dark:border-zinc-800 dark:bg-zinc-900 min-w-0 max-w-full overflow-hidden">
+  <section class="liquid-glass rounded-[20px] min-[411px]:rounded-[24px] shadow-soft p-3 min-[411px]:p-4 sm:p-5 min-w-0 max-w-full overflow-hidden">
     <div class="flex gap-2.5 min-[411px]:gap-3 sm:gap-5 min-w-0">
       <div class="shrink-0">
         <button
@@ -84,9 +84,9 @@ const emit = defineEmits<{
           />
         </p>
         <div class="mt-2 flex flex-wrap items-center gap-1 min-[411px]:gap-1.5">
-          <span v-if="activity.isReleased.value" class="rounded-full border border-stone-200 bg-stone-100 px-2.5 min-[411px]:px-3 py-1 text-[11px] min-[411px]:text-xs font-semibold text-stone-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 max-w-full truncate">{{ levelName }}</span>
-          <span v-if="activity.isReleased.value" class="rounded-full border border-stone-200 bg-stone-100 px-2.5 min-[411px]:px-3 py-1 text-[11px] min-[411px]:text-xs font-semibold text-stone-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 max-w-full truncate">{{ reputationText }} ★</span>
-          <span class="rounded-full border border-stone-200 bg-stone-100 px-2.5 min-[411px]:px-3 py-1 text-[11px] min-[411px]:text-xs font-semibold text-stone-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-200 max-w-full truncate">{{ planName }}</span>
+          <span v-if="activity.isReleased.value" class="rounded-full border border-stone-200 bg-stone-100 px-2.5 min-[411px]:px-3 py-1 text-[11px] min-[411px]:text-xs font-semibold text-stone-600 dark:border-white/10 dark:bg-white/[0.06] dark:text-zinc-200 max-w-full truncate">{{ levelName }}</span>
+          <span v-if="activity.isReleased.value" class="rounded-full border border-stone-200 bg-stone-100 px-2.5 min-[411px]:px-3 py-1 text-[11px] min-[411px]:text-xs font-semibold text-stone-600 dark:border-white/10 dark:bg-white/[0.06] dark:text-zinc-200 max-w-full truncate">{{ reputationText }} ★</span>
+          <span class="rounded-full border border-stone-200 bg-stone-100 px-2.5 min-[411px]:px-3 py-1 text-[11px] min-[411px]:text-xs font-semibold text-stone-600 dark:border-white/10 dark:bg-white/[0.06] dark:text-zinc-200 max-w-full truncate">{{ planName }}</span>
         </div>
         <p class="mt-1.5 text-xs font-semibold" :class="online ? 'text-emerald-600 dark:text-emerald-400' : 'text-stone-500 dark:text-zinc-400'">{{ presenceText }}</p>
         <p v-if="headlineText" class="mt-2 flex min-w-0 items-center gap-1 text-[13px] italic text-stone-500 dark:text-zinc-400">

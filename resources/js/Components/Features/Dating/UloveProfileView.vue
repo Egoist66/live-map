@@ -264,7 +264,7 @@ const activePrivacyFlags = computed(() => {
   <!-- Мобила — стопка 420px; десктоп — две колонки: липкое фото слева, инфо справа. -->
   <div class="mx-auto w-full max-w-[420px] lg:max-w-[920px] lg:grid lg:grid-cols-[380px_minmax(0,1fr)] lg:gap-5 lg:items-start">
     <div class="min-w-0 lg:sticky lg:top-20">
-    <div class="relative aspect-[3/4] overflow-hidden rounded-2xl bg-zinc-200 dark:bg-zinc-800 shadow-soft">
+    <div class="relative aspect-[3/4] overflow-hidden rounded-2xl bg-zinc-200 dark:bg-white/10 shadow-soft">
       <div :key="displaySrc ?? 'empty'" :class="slideClass" class="absolute inset-0">
         <AppImage
           v-if="displaySrc"
@@ -350,7 +350,7 @@ const activePrivacyFlags = computed(() => {
         <Button label="Вернуть в поиск" icon="pi pi-eye" size="small" rounded :loading="visibility.toggling.value" class="mt-2.5 !border-0 !bg-violet-600 !text-white" @click="visibility.toggle()" />
       </div>
 
-      <div class="rounded-2xl bg-white p-4 shadow-soft dark:bg-zinc-900">
+      <div class="liquid-glass rounded-2xl p-4 shadow-soft">
         <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
           <span
             v-for="fact in p.factItems.value"
@@ -362,7 +362,7 @@ const activePrivacyFlags = computed(() => {
             <span class="truncate">{{ fact.text }}</span>
           </span>
           <span class="ml-auto inline-flex shrink-0 items-center gap-1.5">
-            <span v-if="showPlanBadge" class="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-stone-400 dark:bg-zinc-800 dark:text-zinc-500" title="Тариф">
+            <span v-if="showPlanBadge" class="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-stone-400 dark:bg-white/10 dark:text-zinc-400" title="Тариф">
               <i class="pi pi-crown text-[10px]" />{{ planLabel }}
             </span>
             <Button
@@ -396,7 +396,7 @@ const activePrivacyFlags = computed(() => {
         </ModeratedContent>
         <p v-else class="mt-3 text-sm text-stone-400 dark:text-zinc-500">{{ isOwn ? 'Расскажи о себе — заполни анкету' : 'Человек пока ничего не написал о себе' }}</p>
         <div v-if="p.interests.value.length" class="mt-3 flex flex-wrap gap-1.5">
-          <span v-for="tag in p.interests.value" :key="tag" class="rounded-full border border-stone-200 px-2.5 py-1 text-xs font-semibold text-stone-600 dark:border-zinc-700 dark:text-zinc-300">{{ tag }}</span>
+          <span v-for="tag in p.interests.value" :key="tag" class="rounded-full border border-stone-200 bg-stone-100/70 px-2.5 py-1 text-xs font-semibold text-stone-600 dark:border-white/10 dark:bg-white/[0.06] dark:text-zinc-200">{{ tag }}</span>
         </div>
         <div v-if="isOwn && activePrivacyFlags.length" class="mt-3 flex flex-wrap gap-1.5">
           <span v-for="flag in activePrivacyFlags" :key="flag" class="rounded-full bg-violet-100 px-2.5 py-1 text-[11px] font-bold text-violet-700 dark:bg-violet-950 dark:text-violet-300">🔒 {{ flag }}</span>
@@ -413,7 +413,7 @@ const activePrivacyFlags = computed(() => {
             v-for="(slot, i) in photoSlots"
             :key="slot.key"
             class="relative aspect-[3/4] overflow-hidden rounded-xl border"
-            :class="slot.url ? 'border-transparent' : 'border-dashed border-stone-300 dark:border-zinc-700 bg-white dark:bg-zinc-900'"
+            :class="slot.url ? 'border-transparent' : 'border-dashed border-stone-300 dark:border-zinc-700 bg-white dark:bg-[#0F121F]'"
           >
             <button
               v-if="slot.url"
@@ -433,7 +433,7 @@ const activePrivacyFlags = computed(() => {
               class="group absolute inset-0 grid h-full w-full place-items-center text-stone-300 transition active:scale-95 disabled:opacity-70 hover:border-rose-400 hover:bg-rose-500/[0.07] hover:text-rose-500 hover:shadow-lg hover:shadow-rose-500/20 dark:text-zinc-600 dark:hover:border-rose-500/60 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
               @click="emit('add-photos')"
             >
-              <span class="grid h-8 w-8 place-items-center rounded-full bg-stone-100 transition group-hover:scale-110 group-hover:bg-rose-500 group-hover:text-white group-hover:shadow-md group-hover:shadow-rose-500/40 dark:bg-zinc-800"><i class="pi pi-plus text-sm" /></span>
+              <span class="grid h-8 w-8 place-items-center rounded-full bg-stone-100 transition group-hover:scale-110 group-hover:bg-rose-500 group-hover:text-white group-hover:shadow-md group-hover:shadow-rose-500/40 dark:bg-white/10"><i class="pi pi-plus text-sm" /></span>
             </button>
             <span v-if="slot.url && (slot.isMain || i === 0)" title="Главная" aria-label="Главная фотография" class="pointer-events-none absolute bottom-1 left-1 grid h-5 w-5 place-items-center rounded-full bg-black/55 text-white"><i class="pi pi-star-fill text-[9px]" /></span>
             <button
@@ -463,8 +463,8 @@ const activePrivacyFlags = computed(() => {
             <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/20"><i :class="[tile.icon, 'text-sm']" /></span>
             <span class="min-w-0"><span class="block truncate text-sm font-black">{{ tile.label }}</span><span v-if="'desc' in tile && tile.desc" class="block truncate text-[11px] text-white/80">{{ tile.desc }}</span></span>
           </button>
-          <Link v-else :href="tile.href" class="flex items-center gap-2.5 rounded-2xl border border-stone-200 bg-white p-3 text-left shadow-soft active:scale-[0.98] transition dark:border-zinc-800 dark:bg-zinc-900">
-            <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-stone-100 text-stone-500 dark:bg-zinc-800 dark:text-zinc-300"><i :class="[tile.icon, 'text-sm']" /></span>
+          <Link v-else :href="tile.href" class="liquid-glass flex items-center gap-2.5 rounded-2xl p-3 text-left shadow-soft active:scale-[0.98] transition">
+            <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-stone-100 text-stone-500 dark:bg-white/10 dark:text-zinc-300"><i :class="[tile.icon, 'text-sm']" /></span>
             <span class="min-w-0"><span class="block truncate text-sm font-black text-stone-900 dark:text-white">{{ tile.label }}</span><span v-if="'desc' in tile && tile.desc" class="block truncate text-[11px] text-stone-500 dark:text-zinc-400">{{ tile.desc }}</span></span>
           </Link>
         </template>
@@ -493,7 +493,7 @@ const activePrivacyFlags = computed(() => {
       <div v-if="!isOwn && profileUser?.id != null" class="flex">
         <DatingFriendButton :user-id="Number(profileUser.id)" class="flex-1 [&>button]:w-full" />
       </div>
-      <div v-if="profileUser?.id != null" class="rounded-2xl bg-white p-4 shadow-soft dark:bg-zinc-900">
+      <div v-if="profileUser?.id != null" class="liquid-glass rounded-2xl p-4 shadow-soft">
         <DatingReviewsSection
           :user-id="Number(profileUser.id)"
           :seed-avg="rating?.avg ?? null"

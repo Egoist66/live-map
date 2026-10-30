@@ -72,7 +72,7 @@ const { userProfileUrl } = useProfileUrl()
 </script>
 <template>
   <div class="flex-1 flex flex-col min-h-0 w-full max-w-full">
-    <div class="p-2.5 border-b dark:border-zinc-800 bg-stone-50/50 dark:bg-zinc-900/50 shrink-0">
+    <div class="p-2.5 border-b dark:border-zinc-800 bg-stone-50/50 dark:bg-[#0F121F]/50 shrink-0">
       <div class="relative w-full">
         <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 text-sm pointer-events-none" />
         <input :value="filter" @input="emit('update:filter', ($event.target as HTMLInputElement).value)" placeholder="Поиск по чатам — имя фамилия..." enterkeyhint="search" inputmode="search" autocomplete="off" class="w-full rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 pl-9 pr-9 py-2.5 text-base lg:text-sm focus:outline-none focus:ring-2 focus:ring-violet-500" />
@@ -145,13 +145,13 @@ const { userProfileUrl } = useProfileUrl()
           </div>
         </template>
       </VirtualScroller>
-      <div v-if="!directItems.length && !directLoadingMore" class="absolute inset-0 z-10 flex flex-col items-center justify-center p-6 sm:p-8 text-center bg-white dark:bg-zinc-900">
+      <div v-if="!directItems.length && !directLoadingMore" class="absolute inset-0 z-10 flex flex-col items-center justify-center p-6 sm:p-8 text-center bg-white dark:bg-[#0F121F]">
         <div class="w-14 h-14 rounded-2xl bg-rose-500/10 text-rose-500 grid place-items-center mb-3 text-xl">💞</div>
         <div class="text-sm font-semibold text-stone-900 dark:text-white">Пока нет диалогов</div>
         <div class="text-xs text-stone-500 mt-1">Начни общение — новые переписки появятся здесь</div>
         <Button v-if="canLoadMoreDirect" label="Показать ещё" icon="pi pi-arrow-down" size="small" rounded outlined class="!mt-4" @click="loadMoreDirect" />
       </div>
-      <div v-if="directItems.length && (directLoadingMore || canLoadMoreDirect)" class="absolute bottom-0 inset-x-0 z-10 flex justify-center py-2.5 border-t border-stone-100 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-sm">
+      <div v-if="directItems.length && (directLoadingMore || canLoadMoreDirect)" class="absolute bottom-0 inset-x-0 z-10 flex justify-center py-2.5 border-t border-stone-100 dark:border-zinc-800 bg-white/95 dark:bg-[#0F121F]/95 backdrop-blur-sm">
         <ProgressSpinner v-if="directLoadingMore" :style="{ width: '24px', height: '24px' }" :stroke-width="5" aria-label="Загрузка" />
         <Button v-else-if="canLoadMoreDirect" label="Показать ещё" icon="pi pi-arrow-down" size="small" rounded outlined @click="loadMoreDirect" />
       </div>

@@ -22,8 +22,8 @@ export function useChatLayout(
 ) {
   const pageClass = 'mx-auto max-w-[1280px] xl:max-w-[1400px] 2xl:max-w-[1600px] w-full min-w-0 overflow-hidden overscroll-none p-0 lg:px-6 lg:py-4'
   const frameClass = 'flex flex-col lg:flex-row lg:gap-4 w-full min-w-0 overflow-hidden overscroll-contain bg-transparent'
-  const sidebarCardClass = 'w-full lg:w-[360px] lg:min-w-[360px] xl:w-[400px] xl:min-w-[400px] 2xl:w-[440px] 2xl:min-w-[440px] flex-1 lg:flex-none min-h-0 lg:h-full lg:max-h-full bg-white dark:bg-zinc-900 rounded-none lg:rounded-2xl border-0 lg:border border-stone-200 dark:border-zinc-800 flex-col overflow-hidden max-w-full'
-  const windowCardClass = 'flex-1 min-h-0 bg-white dark:bg-zinc-900 rounded-none lg:rounded-2xl border-0 lg:border border-stone-200 dark:border-zinc-800 flex-col overflow-hidden min-w-0 w-full max-w-full'
+  const sidebarCardClass = 'w-full lg:w-[360px] lg:min-w-[360px] xl:w-[400px] xl:min-w-[400px] 2xl:w-[440px] 2xl:min-w-[440px] flex-1 lg:flex-none min-h-0 lg:h-full lg:max-h-full bg-white dark:bg-[#0F121F] rounded-none lg:rounded-2xl border-0 lg:border border-stone-200 dark:border-zinc-800 flex-col overflow-hidden max-w-full'
+  const windowCardClass = 'flex-1 min-h-0 bg-white dark:bg-[#0F121F] rounded-none lg:rounded-2xl border-0 lg:border border-stone-200 dark:border-zinc-800 flex-col overflow-hidden min-w-0 w-full max-w-full'
 
   /**
    * Ручной оффсет клавиатуры запрещён на десктопе: высота фрейма

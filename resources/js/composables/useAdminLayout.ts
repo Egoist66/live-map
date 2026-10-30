@@ -222,7 +222,7 @@ export function useAdminLayout(badges: Ref<AdminLayoutBadges> | ComputedRef<Admi
         hint: 'цены, что входит, оплаты',
         icon: 'pi pi-credit-card',
         group: 'Настройки',
-        adminOnly: true,
+        adminOnly: false,
       },
       {
         id: 'ai',

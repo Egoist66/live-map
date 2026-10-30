@@ -26,7 +26,7 @@ const dockRef = dock.dockRef
     <div class="pointer-events-auto relative flex flex-col items-end gap-2">
       <div
         v-if="dock.isListOpen.value"
-        class="flex h-[480px] w-[320px] flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-soft dark:border-zinc-700 dark:bg-zinc-900"
+        class="flex h-[480px] w-[320px] flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-soft dark:border-zinc-700 dark:bg-[#0F121F]"
       >
         <div class="flex shrink-0 items-center gap-2 border-b border-stone-100 px-3 py-2.5 dark:border-zinc-800">
           <span class="flex-1 text-sm font-black text-ink-900 dark:text-white">Сообщения</span>

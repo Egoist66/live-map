@@ -21,7 +21,7 @@ const { target: draftTarget } = useAutoFocusInput()
 </script>
 
 <template>
-  <div class="flex h-[420px] w-[300px] flex-col overflow-hidden rounded-2xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-soft">
+  <div class="flex h-[420px] w-[300px] flex-col overflow-hidden rounded-2xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-[#0F121F] shadow-soft">
     <div class="flex shrink-0 items-center gap-2 border-b border-stone-100 dark:border-zinc-800 px-2.5 py-2">
       <Avatar :image="win.avatar || undefined" shape="circle" class="!w-8 !h-8 shrink-0" />
       <span class="min-w-0 flex-1 truncate text-[13px] font-bold text-ink-900 dark:text-white">{{ win.title }}</span>

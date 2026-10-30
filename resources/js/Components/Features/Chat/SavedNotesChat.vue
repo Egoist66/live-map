@@ -63,8 +63,8 @@ async function selectStorage(mode: 'server' | 'local'): Promise<void> {
 </script>
 
 <template>
-  <div :class="['flex', 'flex-col', 'h-full', 'min-h-0', 'min-w-0', 'w-full', 'max-w-full', 'bg-white', 'dark:bg-zinc-900', 'overflow-hidden', windowCardClass]">
-    <div class="chat-header flex items-center gap-2 pl-1 pr-2 sm:px-4 py-2 border-b dark:border-zinc-800 shrink-0 bg-white/95 dark:bg-zinc-900/95 backdrop-blur sticky top-0 z-30 min-w-0 min-h-[60px]">
+  <div :class="['flex', 'flex-col', 'h-full', 'min-h-0', 'min-w-0', 'w-full', 'max-w-full', 'bg-white', 'dark:bg-[#0F121F]', 'overflow-hidden', windowCardClass]">
+    <div class="chat-header flex items-center gap-2 pl-1 pr-2 sm:px-4 py-2 border-b dark:border-zinc-800 shrink-0 bg-white/95 dark:bg-[#0F121F]/95 backdrop-blur sticky top-0 z-30 min-w-0 min-h-[60px]">
       <button v-if="showBack" type="button" aria-label="Назад" class="lg:hidden w-9 h-9 grid place-items-center rounded-full hover:bg-black/10 dark:hover:bg-white/10 active:scale-95 shrink-0 text-xl leading-none text-stone-600 dark:text-zinc-300" @click="emit('back')">‹</button>
       <span class="relative block shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white grid place-items-center text-xl">⭐</span>
       <span class="min-w-0 flex-1 block">
@@ -155,7 +155,7 @@ async function selectStorage(mode: 'server' | 'local'): Promise<void> {
       </div>
     </div>
 
-    <div data-notes-composer class="relative p-2 sm:p-3 border-t dark:border-zinc-800 bg-white dark:bg-zinc-900 shrink-0 flex-none grow-0 basis-auto pb-[calc(0.5rem+var(--sab))] sm:pb-3 w-full max-w-full min-w-0">
+    <div data-notes-composer class="relative p-2 sm:p-3 border-t dark:border-zinc-800 bg-white dark:bg-[#0F121F] shrink-0 flex-none grow-0 basis-auto pb-[calc(0.5rem+var(--sab))] sm:pb-3 w-full max-w-full min-w-0">
       <div v-if="chat.attachError.value" class="text-[11px] text-red-600 dark:text-red-400 px-1 mb-1.5">{{ chat.attachError.value }}</div>
       <div v-if="chat.file.value" class="flex items-center gap-2 bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-800 rounded-2xl px-2.5 py-2 mb-2 min-w-0">
         <img v-if="chat.previewUrl.value" :src="chat.previewUrl.value" alt="" class="w-10 h-10 rounded-xl object-cover shrink-0" />

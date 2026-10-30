@@ -400,7 +400,7 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:300,1'])->group(function
     Route::post('/business-ads/{ad}/districts', [\App\Http\Controllers\BusinessAdController::class, 'placeInDistricts'])->middleware('throttle:social-write');
 });
 
-// Табы модератора: Статистика, Модерация, Справочники, SEO.
+// Табы модератора: Статистика, Модерация, Справочники, SEO, Тарифы.
 // Админ проходит тоже: canModerate() включает админов.
 // Действия по отношению к админам модератору запрещены
 // внутри контроллеров (AdminUserController).
@@ -438,12 +438,21 @@ Route::middleware(['web', 'auth:web,sanctum', 'admin:moderator', 'throttle:300,1
     Route::delete('/admin/reference/{referencePage}', [\App\Http\Controllers\AdminReferencePageController::class, 'destroy']);
     Route::post('/admin/reference/{referencePage}/attachments', [\App\Http\Controllers\AdminReferencePageController::class, 'uploadAttachment']);
     Route::delete('/admin/reference/{referencePage}/attachments/{index}', [\App\Http\Controllers\AdminReferencePageController::class, 'destroyAttachment'])->whereNumber('index');
+    Route::get('/admin/payments/overview', [\App\Http\Controllers\AdminPaymentsController::class, 'overview']);
+    Route::get('/admin/payments/export', [\App\Http\Controllers\AdminPaymentsController::class, 'export']);
+    Route::post('/admin/payments/import', [\App\Http\Controllers\AdminPaymentsController::class, 'import']);
+    Route::get('/admin/payments/items', [\App\Http\Controllers\AdminPaymentsController::class, 'items']);
+    Route::post('/admin/payments/items', [\App\Http\Controllers\AdminPaymentsController::class, 'store']);
+    Route::patch('/admin/payments/items/{item}', [\App\Http\Controllers\AdminPaymentsController::class, 'update']);
+    Route::delete('/admin/payments/items/{item}', [\App\Http\Controllers\AdminPaymentsController::class, 'destroy']);
+    Route::put('/admin/payments/plan-prices', [\App\Http\Controllers\AdminPaymentsController::class, 'savePlanPrices']);
+    Route::put('/admin/payments/plan-meta', [\App\Http\Controllers\AdminPaymentsController::class, 'savePlanMeta']);
 });
 
-// Только полные админы: Управление, Безопасность, роли/тарифы,
+// Только полные админы: Управление, Безопасность, роли,
 // баны, вход в чужой аккаунт, обновления, maintenance, realtime.
-// Верификация бизнеса — в группе модераторов выше (admin:moderator),
-// чтобы заявки видели и обрабатывали и модераторы, и админы.
+// Верификация бизнеса и тарифы (Payments) — в группе модераторов выше
+// (admin:moderator), чтобы ими управляли и модераторы, и админы.
 Route::middleware(['web', 'auth:web,sanctum', 'admin', 'throttle:300,1'])->group(function () {
     Route::get('/admin/updates', [\App\Http\Controllers\AdminAppUpdateController::class, 'index']);
     Route::post('/admin/updates', [\App\Http\Controllers\AdminAppUpdateController::class, 'store']);
@@ -470,13 +479,4 @@ Route::middleware(['web', 'auth:web,sanctum', 'admin', 'throttle:300,1'])->group
     Route::patch('/admin/users/{user}', [AdminUserController::class, 'update']);
     Route::post('/admin/users/{user}/impersonate', [\App\Http\Controllers\AdminImpersonationController::class, 'impersonate']);
     Route::get('/admin/impersonations', [\App\Http\Controllers\AdminImpersonationController::class, 'index']);
-    Route::get('/admin/payments/overview', [\App\Http\Controllers\AdminPaymentsController::class, 'overview']);
-    Route::get('/admin/payments/export', [\App\Http\Controllers\AdminPaymentsController::class, 'export']);
-    Route::post('/admin/payments/import', [\App\Http\Controllers\AdminPaymentsController::class, 'import']);
-    Route::get('/admin/payments/items', [\App\Http\Controllers\AdminPaymentsController::class, 'items']);
-    Route::post('/admin/payments/items', [\App\Http\Controllers\AdminPaymentsController::class, 'store']);
-    Route::patch('/admin/payments/items/{item}', [\App\Http\Controllers\AdminPaymentsController::class, 'update']);
-    Route::delete('/admin/payments/items/{item}', [\App\Http\Controllers\AdminPaymentsController::class, 'destroy']);
-    Route::put('/admin/payments/plan-prices', [\App\Http\Controllers\AdminPaymentsController::class, 'savePlanPrices']);
-    Route::put('/admin/payments/plan-meta', [\App\Http\Controllers\AdminPaymentsController::class, 'savePlanMeta']);
 });

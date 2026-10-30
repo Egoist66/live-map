@@ -89,7 +89,7 @@ function onAction(key: QuickNavKey): void {
   <nav
     v-if="variant === 'sidebar'"
     aria-label="Меню профиля"
-    class="rounded-[24px] border border-stone-200 bg-white shadow-soft p-2 dark:border-zinc-800 dark:bg-zinc-900"
+    class="liquid-glass rounded-[24px] shadow-soft p-2"
   >
     <button
       v-for="action in actions"

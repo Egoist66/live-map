@@ -19,7 +19,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <section class="rounded-[24px] border border-stone-200 bg-white shadow-soft p-4 sm:p-5 dark:border-zinc-800 dark:bg-zinc-900">
+  <section class="liquid-glass rounded-[24px] shadow-soft p-4 sm:p-5">
     <div class="flex items-center justify-between">
       <h2 class="text-lg sm:text-xl font-extrabold tracking-tight text-ink-900 dark:text-white">UGallery</h2>
       <button
@@ -32,14 +32,14 @@ const emit = defineEmits<{
     </div>
 
     <div v-if="loading && !photos.length" class="mt-3 grid grid-cols-4 gap-1.5 sm:gap-2">
-      <div v-for="n in 8" :key="`sk-${n}`" class="aspect-square animate-pulse rounded-xl bg-stone-200/70 dark:bg-zinc-800"></div>
+      <div v-for="n in 8" :key="`sk-${n}`" class="aspect-square animate-pulse rounded-xl bg-stone-200/70 dark:bg-white/[0.06]"></div>
     </div>
     <div v-else-if="photos.length || addSlots > 0 || uploading" class="mt-3 grid grid-cols-4 gap-1.5 sm:gap-2">
       <button
         v-for="photo in photos"
         :key="photo.id"
         type="button"
-        class="group relative aspect-square overflow-hidden rounded-xl bg-stone-100 transition active:scale-[0.97] dark:bg-zinc-800"
+        class="group relative aspect-square overflow-hidden rounded-xl bg-stone-100 transition active:scale-[0.97] dark:bg-white/[0.06]"
         @click="emit('open', photo)"
       >
         <!-- Сетка ~84px: грузим превью 480px (~40КБ), а не оригинал 1440px

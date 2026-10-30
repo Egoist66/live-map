@@ -147,7 +147,7 @@ function dayLabel(value: any): string {
       <div><div class="w-16 h-16 rounded-2xl bg-violet-50 dark:bg-zinc-800 grid place-items-center mx-auto text-2xl mb-3">💬</div><div class="font-semibold text-stone-900 dark:text-white">Выберите чат</div><div class="text-xs mt-1">Или найдите человека через поиск</div></div>
     </div>
     <template v-else>
-      <div :class="datingEntry ? 'chat-header pl-1 pr-2 lg:px-4 py-2 border-b border-rose-200 flex items-center gap-2 shrink-0 bg-gradient-to-r from-rose-500 to-orange-400 text-white sticky top-0 z-30 min-w-0 rounded-t-none lg:rounded-t-2xl min-h-[60px]' : 'chat-header pl-1 pr-2 lg:px-4 py-2 border-b dark:border-zinc-800 flex items-center gap-2 shrink-0 bg-white/95 dark:bg-zinc-900/95 backdrop-blur sticky top-0 z-30 min-w-0 rounded-t-none lg:rounded-t-2xl min-h-[60px]'">
+      <div :class="datingEntry ? 'chat-header pl-1 pr-2 lg:px-4 py-2 border-b border-rose-200 flex items-center gap-2 shrink-0 bg-gradient-to-r from-rose-500 to-orange-400 text-white sticky top-0 z-30 min-w-0 rounded-t-none lg:rounded-t-2xl min-h-[60px]' : 'chat-header pl-1 pr-2 lg:px-4 py-2 border-b dark:border-zinc-800 flex items-center gap-2 shrink-0 bg-white/95 dark:bg-[#0F121F]/95 backdrop-blur sticky top-0 z-30 min-w-0 rounded-t-none lg:rounded-t-2xl min-h-[60px]'">
         <button @click="emit('back')" :class="datingEntry ? 'text-white hover:bg-white/20' : 'hover:bg-black/10'" class="lg:hidden w-9 h-9 grid place-items-center rounded-full active:scale-95 shrink-0 text-xl leading-none">‹</button>
         <div class="flex items-center gap-2.5 min-w-0 flex-1 overflow-hidden py-0.5">
           <span class="chat-header-avatar relative block shrink-0 w-10 h-10"><span v-if="activeConv?.title" class="w-10 h-10 rounded-full bg-gradient-to-br from-violet-700 to-purple-900 text-white grid place-items-center">🏘️</span><UserAvatar v-else :user="activeConv?.other" shape="circle" class="!w-10 !h-10 [&_img]:object-cover" :class="datingEntry ? 'ring-2 ring-white/70' : ''" :pt="{ image: { class: 'object-cover' } }" /></span>
@@ -198,7 +198,7 @@ function dayLabel(value: any): string {
           </div>
         </div>
       </div>
-      <div class="relative flex-1 min-h-0 min-w-0 w-full max-w-full overflow-hidden bg-white dark:bg-zinc-950">
+      <div class="relative flex-1 min-h-0 min-w-0 w-full max-w-full overflow-hidden bg-white dark:bg-[#0F121F]">
         <div v-if="wallpaper.hasWallpaper.value" aria-hidden="true" class="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat" :style="(wallpaper.wallpaperLayerStyle.value as any)" />
         <div v-if="wallpaper.hasWallpaper.value" aria-hidden="true" class="pointer-events-none absolute inset-0 bg-black/25 dark:bg-black/60" />
         <div id="chat-messages" class="relative z-10 h-full overflow-auto overscroll-contain [scrollbar-width:thin] max-lg:[-ms-overflow-style:none] max-lg:[scrollbar-width:none] max-lg:[&::-webkit-scrollbar]:hidden p-3 lg:p-4 min-w-0 w-full max-w-full bg-transparent">
@@ -239,13 +239,13 @@ function dayLabel(value: any): string {
         </div>
       </div>
       <ContextMenu ref="cm" :model="menuModel" :pt="menuPt" />
-      <div v-if="selectionActive" class="relative z-10 flex items-center gap-1.5 px-2 lg:px-3 py-2 border-t dark:border-zinc-800 bg-stone-50 dark:bg-zinc-900 shrink-0">
+      <div v-if="selectionActive" class="relative z-10 flex items-center gap-1.5 px-2 lg:px-3 py-2 border-t dark:border-zinc-800 bg-stone-50 dark:bg-[#0F121F] shrink-0">
         <Button @click="emit('selectionCancel')" icon="pi pi-times" text rounded severity="secondary" class="!w-9 !h-9 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" aria-label="Отменить выбор" title="Отменить выбор (Esc)" />
         <span class="text-sm font-bold dark:text-white min-w-0 flex-1 truncate">{{ selectionCount || 0 }} выбрано</span>
         <Button @click="emit('selectionForward')" icon="pi pi-forward" :label="(selectionCount || 0) > 1 ? 'Переслать' : undefined" text rounded class="!rounded-full shrink-0" aria-label="Переслать выбранные" title="Переслать" />
         <Button v-if="canDeleteSelection" @click="emit('selectionDelete')" icon="pi pi-trash" :label="(selectionCount || 0) > 1 ? 'Удалить' : undefined" text rounded severity="danger" class="!rounded-full shrink-0" aria-label="Удалить выбранные" title="Удалить" />
       </div>
-      <div data-chat-composer-wrap class="relative p-2 lg:p-3 border-t dark:border-zinc-800 bg-white dark:bg-zinc-900 shrink-0 flex-none grow-0 basis-auto pb-[calc(0.5rem+var(--sab))] lg:pb-3 w-full max-w-full min-w-0 rounded-b-none lg:rounded-b-2xl">
+      <div data-chat-composer-wrap class="relative p-2 lg:p-3 border-t dark:border-zinc-800 bg-white dark:bg-[#0F121F] shrink-0 flex-none grow-0 basis-auto pb-[calc(0.5rem+var(--sab))] lg:pb-3 w-full max-w-full min-w-0 rounded-b-none lg:rounded-b-2xl">
         <div v-if="replyTo" class="flex items-center gap-2.5 bg-violet-50 dark:bg-violet-500/10 border-l-[3px] border-violet-500 rounded-r-xl rounded-l-sm px-3 py-2 mb-2 min-w-0">
           <div class="flex-1 min-w-0">
             <div class="text-[11px] font-bold text-violet-600 dark:text-violet-300 truncate">↩ {{ isOwnMessage(replyTo) ? 'Вы' : (replyTo.sender?.name || 'Сообщение') }}</div>

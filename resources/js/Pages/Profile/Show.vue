@@ -129,7 +129,7 @@ onMounted(() => {
   <Toast />
     <div class="page-scroll bg-surface dark:bg-[#0F121F]">
       <div class="max-w-[1040px] lg:max-w-[1120px] xl:max-w-[1280px] 2xl:max-w-[1440px] mx-auto px-3 sm:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4">
-        <div v-if="page.isLocked.value" class="rounded-[24px] border border-stone-200 bg-white shadow-soft p-6 flex flex-col items-center text-center gap-3 dark:border-zinc-800 dark:bg-zinc-900">
+        <div v-if="page.isLocked.value" class="liquid-glass rounded-[24px] shadow-soft p-6 flex flex-col items-center text-center gap-3">
           <button type="button" class="h-16 w-16 overflow-hidden rounded-[22px] bg-stone-100 dark:bg-zinc-800" @click="page.showAvatar.value = true">
             <Avatar :image="page.avatarSrc.value" shape="square" class="!h-full !w-full [&_img]:object-cover" />
           </button>
@@ -192,7 +192,7 @@ onMounted(() => {
             <aside class="min-w-0 space-y-3 sm:space-y-4">
               <div
                 v-if="!isOwn && !page.isLocked.value"
-                class="flex items-center gap-2 rounded-[24px] border border-stone-200 bg-white shadow-soft p-2.5 dark:border-zinc-800 dark:bg-zinc-900"
+                class="liquid-glass flex items-center gap-2 rounded-[24px] shadow-soft p-2.5"
               >
                 <Button
                   v-if="!page.isFriend.value && !page.isPending.value && !page.isBlocked.value"
@@ -311,7 +311,7 @@ onMounted(() => {
         <ProfileThoughtDialog :open="thought.open.value" :draft="thought.draft.value" :saving="thought.saving.value" :error="thought.error.value" @update:draft="(v:string)=>thought.setDraft(v)" @close="thought.close()" @save="thought.save()" />
         <ChatSearchDialog :open="search.open.value" @update:open="(v:boolean)=>{ if(!v) search.closeDialog() }" :query="search.query.value" @update:query="(v:string)=>search.setQuery(v)" :results="search.results.value" :searching="search.searching.value" :creating="search.creating.value" :is-online="(id?:number,lastSeen?:string|null)=>search.isOnline(id,lastSeen)" @chat="search.startChat" @add="search.addFriend" @block="search.askBlock" />
         <ProfileGalleryDialog :gallery="gallery" :is-own="isOwn" :plan="planOf(profileUser)" @make-main="design.setMainAvatar" />
-        <Dialog :visible="showDatingEdit" @update:visible="(v:boolean)=>{ if(!v) showDatingEdit = false }" modal header="Моя анкета" :style="{ width: '640px', maxWidth: 'calc(100vw - 2rem)' }" :pt="{ root: { class: '!rounded-3xl max-sm:!rounded-b-none dark:!bg-zinc-900 dark:!border-zinc-700' }, content: { class: '!max-h-[78dvh] !overflow-y-auto' } }">
+        <Dialog :visible="showDatingEdit" @update:visible="(v:boolean)=>{ if(!v) showDatingEdit = false }" modal header="Моя анкета" :style="{ width: '640px', maxWidth: 'calc(100vw - 2rem)' }" :pt="{ root: { class: '!rounded-3xl max-sm:!rounded-b-none dark:!bg-[#0F121F] dark:!border-white/10' }, content: { class: '!max-h-[78dvh] !overflow-y-auto' } }">
           <DatingQuestionnaireDialog @saved="onDatingSaved" />
         </Dialog>
         <ProfilePhotoViewer :gallery="gallery" :comments="photoComments" :is-own="isOwn" :user-name="profileUser.name" :avatar-src="page.avatarSrc.value" @make-main="design.setMainAvatar" />
