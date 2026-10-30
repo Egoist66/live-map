@@ -48,7 +48,7 @@ function fmtActivity(iso: string | null): string {
 }
 </script>
 <template>
-  <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-6' }, content: { class: '!p-0' } }">
+  <Card class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-6' }, content: { class: '!p-0' } }">
     <template #content>
       <span id="sessions" class="block scroll-mt-28" aria-hidden="true" />
       <div class="flex items-center gap-2 flex-wrap">
@@ -60,9 +60,9 @@ function fmtActivity(iso: string | null): string {
       <div v-if="sessions.loading.value" class="py-8 grid place-items-center"><ProgressSpinner style="width:24px;height:24px" :strokeWidth="6" /></div>
       <div v-else-if="!sessions.items.value.length" class="py-8 text-center text-sm text-stone-400 dark:text-zinc-500">Активных сеансов нет</div>
       <div v-else class="mt-3 space-y-2">
-        <div v-for="s in sessions.items.value" :key="s.id" class="rounded-2xl border border-stone-200 dark:border-zinc-700 p-3" :class="s.is_current ? '!border-emerald-300 dark:!border-emerald-800' : ''">
+        <div v-for="s in sessions.items.value" :key="s.id" class="rounded-2xl border border-stone-200 dark:border-white/10 p-3" :class="s.is_current ? '!border-emerald-300 dark:!border-emerald-800' : ''">
           <div class="flex items-center gap-2.5 min-w-0">
-            <span class="w-10 h-10 rounded-2xl grid place-items-center shrink-0" :class="s.is_current ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300' : 'bg-stone-100 text-stone-500 dark:bg-zinc-800 dark:text-zinc-300'">
+            <span class="w-10 h-10 rounded-2xl grid place-items-center shrink-0" :class="s.is_current ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300' : 'bg-stone-100 text-stone-500 dark:bg-white/10 dark:text-zinc-300'">
               <i :class="deviceIcon(s.device)" class="text-base" />
             </span>
             <div class="min-w-0 flex-1">
@@ -96,7 +96,7 @@ function fmtActivity(iso: string | null): string {
         severity="danger"
         class="mt-3 !text-xs"
       />
-      <div class="mt-5 pt-4 border-t border-stone-100 dark:border-zinc-800">
+      <div class="mt-5 pt-4 border-t border-stone-100 dark:border-white/10">
         <div class="flex items-center gap-2 flex-wrap">
           <div class="font-black dark:text-white text-[15px]">Устройства</div>
           <Tag v-if="pendingDevices" :value="`требуют подтверждения: ${pendingDevices}`" severity="warn" class="!text-[9px]" />
@@ -104,9 +104,9 @@ function fmtActivity(iso: string | null): string {
         <p class="text-xs text-stone-500 dark:text-zinc-400 mt-1">Подтвердите свои телефон и ноутбук кнопкой «Это я» — чужие гасите или блокируйте навсегда.</p>
         <div v-if="!sessions.devices.value.length" class="py-4 text-center text-sm text-stone-400 dark:text-zinc-500">Устройств пока нет</div>
         <div v-else class="mt-3 space-y-2">
-          <div v-for="d in sessions.devices.value" :key="d.id" class="rounded-2xl border p-3" :class="d.blocked ? '!border-red-300 dark:!border-red-800' : (!d.trusted ? '!border-amber-300 dark:!border-amber-800' : 'border-stone-200 dark:border-zinc-700')">
+          <div v-for="d in sessions.devices.value" :key="d.id" class="rounded-2xl border p-3" :class="d.blocked ? '!border-red-300 dark:!border-red-800' : (!d.trusted ? '!border-amber-300 dark:!border-amber-800' : 'border-stone-200 dark:border-white/10')">
             <div class="flex items-center gap-2.5 min-w-0">
-              <span class="w-10 h-10 rounded-2xl grid place-items-center shrink-0 bg-stone-100 text-stone-500 dark:bg-zinc-800 dark:text-zinc-300">
+              <span class="w-10 h-10 rounded-2xl grid place-items-center shrink-0 bg-stone-100 text-stone-500 dark:bg-white/10 dark:text-zinc-300">
                 <i :class="deviceIcon(d.device)" class="text-base" />
               </span>
               <div class="min-w-0 flex-1">

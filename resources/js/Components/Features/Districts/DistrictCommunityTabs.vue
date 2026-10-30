@@ -26,7 +26,7 @@ function tabClass(isActive: boolean): string {
 </script>
 
 <template>
-  <div class="flex gap-1 overflow-x-auto border-b border-stone-200/70 bg-white px-2 [scrollbar-width:none] sm:gap-2 sm:rounded-3xl sm:border sm:px-4 dark:border-zinc-800 dark:bg-zinc-900 [&::-webkit-scrollbar]:hidden">
+  <div class="flex gap-1 overflow-x-auto border-b border-stone-200/70 bg-white px-2 [scrollbar-width:none] sm:gap-2 sm:rounded-3xl sm:border sm:px-4 dark:border-white/10 dark:bg-[#0F121F] [&::-webkit-scrollbar]:hidden">
     <button type="button" :class="tabClass(active === 'feed')" @click="emit('select', 'feed')">
       Лента
     </button>

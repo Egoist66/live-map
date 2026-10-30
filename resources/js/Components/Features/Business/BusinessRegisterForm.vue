@@ -11,7 +11,7 @@ const form = useBusinessRegisterForm()
 <template>
   <div>
     <div class="flex items-center gap-3">
-      <span class="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-600 grid place-items-center text-white shrink-0"><i class="pi pi-briefcase" /></span>
+      <span class="w-11 h-11 rounded-2xl bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 grid place-items-center text-white shrink-0"><i class="pi pi-briefcase" /></span>
       <div class="min-w-0">
         <h1 class="text-[22px] font-black tracking-tight text-ink-900 dark:text-white leading-tight">Регистрация компании</h1>
         <p class="text-[13px] text-stone-500 dark:text-zinc-400">Кабинет для бизнеса · проверка по УНП · карта для клиентов</p>
@@ -90,7 +90,7 @@ const form = useBusinessRegisterForm()
         <small class="auth-err">{{ form.errors.value.password_confirmation }}</small>
       </div>
 
-      <Button :loading="form.isSubmitting.value" type="submit" label="Создать кабинет компании →" class="w-full !bg-gradient-to-r !from-indigo-500 !to-violet-600 !border-0 !text-white !rounded-full !py-3.5" />
+      <Button :loading="form.isSubmitting.value" type="submit" label="Создать кабинет компании →" class="w-full !bg-gradient-to-r !from-rose-500 !via-pink-500 !to-fuchsia-500 !border-0 !text-white !rounded-full !py-3.5" />
       <div class="text-sm text-center text-stone-500 dark:text-zinc-400">Уже есть кабинет? <Link href="/login?account=business" class="font-semibold text-ink-900 dark:text-white hover:underline">Войти</Link></div>
     </form>
   </div>

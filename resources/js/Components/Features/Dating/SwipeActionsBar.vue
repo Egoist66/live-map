@@ -39,13 +39,13 @@ defineEmits<{
 }>()
 
 const sideBtn =
-  'swipe-side-btn pointer-events-auto grid place-items-center rounded-full bg-white dark:bg-zinc-800 shadow-[0_2px_10px_rgba(0,0,0,0.18)] dark:shadow-black/60 transition active:scale-90 disabled:opacity-40 shrink-0 touch-manipulation'
+  'swipe-side-btn pointer-events-auto grid place-items-center rounded-full bg-white dark:bg-white/[0.06] shadow-[0_2px_10px_rgba(0,0,0,0.18)] dark:shadow-black/60 transition active:scale-90 disabled:opacity-40 shrink-0 touch-manipulation'
 
 const superBtn =
-  'swipe-super-btn pointer-events-auto grid place-items-center rounded-full text-white shadow-[0_4px_18px_rgba(23,134,255,0.5)] dark:shadow-[0_4px_18px_rgba(23,134,255,0.45)] transition active:scale-90 disabled:opacity-40 shrink-0 bg-gradient-to-br from-[#1786FF] via-[#1f9dff] to-[#00C6FF] ring-2 ring-[#1786FF]/30 dark:ring-[#7cc4ff]/30 touch-manipulation'
+  'swipe-super-btn pointer-events-auto grid place-items-center rounded-full text-white shadow-[0_4px_18px_rgba(23,134,255,0.5)] dark:shadow-[0_4px_18px_rgba(23,134,255,0.45)] transition active:scale-90 disabled:opacity-40 shrink-0 bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 ring-2 ring-[#1786FF]/30 dark:ring-[#7cc4ff]/30 touch-manipulation'
 
 const likeBtn =
-  'swipe-like-btn pointer-events-auto grid shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#FD267D] to-[#FF7854] text-white shadow-lg shadow-rose-500/40 transition active:scale-90 disabled:opacity-40 touch-manipulation'
+  'swipe-like-btn pointer-events-auto grid shrink-0 place-items-center rounded-full bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white shadow-lg shadow-rose-500/40 transition active:scale-90 disabled:opacity-40 touch-manipulation'
 
 /** Размер боковых кнопок: обычные 56px, в TG — 52px. */
 const sideSize = computed(() => (props.compact ? 'w-[52px] h-[52px]' : 'w-14 h-14'))

@@ -10,5 +10,5 @@ const model = computed({
 const binary = computed(() => !Array.isArray(props.checked))
 </script>
 <template>
-  <PrimeCheckbox v-model="model" :binary="binary" :value="value" v-bind="$attrs" class="!rounded !border-stone-300 dark:!border-zinc-600" />
+  <PrimeCheckbox v-model="model" :binary="binary" :value="value" v-bind="$attrs" class="!rounded !border-stone-300 dark:!border-white/15" />
 </template>

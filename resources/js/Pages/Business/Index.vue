@@ -39,9 +39,9 @@ if (props.initialDashboard && !dash.store.dashboard) {
 <template>
   <Head title="Кабинет бизнеса" />
   <div class="space-y-4 pb-2">
-    <section class="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-indigo-950 via-indigo-900 to-violet-900 text-white shadow-float">
+    <section class="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white shadow-float">
       <img v-if="dash.store.profile?.cover_url" :src="dash.store.profile.cover_url" alt="" aria-hidden="true" class="absolute inset-0 w-full h-full object-cover pointer-events-none" />
-      <div class="absolute inset-0 pointer-events-none bg-gradient-to-t from-indigo-950/85 via-indigo-950/45 to-indigo-950/25"></div>
+      <div class="absolute inset-0 pointer-events-none bg-gradient-to-t from-rose-950/85 via-pink-950/45 to-fuchsia-950/25"></div>
       <div class="absolute inset-0 pointer-events-none" style="background-image: radial-gradient(circle at 85% 15%, rgba(255,255,255,.14) 0 2px, transparent 3px), radial-gradient(circle at 70% 80%, rgba(255,255,255,.10) 0 2px, transparent 3px); background-size: 72px 72px;"></div>
       <div class="absolute -top-20 -right-20 w-72 h-72 rounded-full bg-violet-500/30 blur-[70px] pointer-events-none"></div>
       <div class="relative p-5 sm:p-7">
@@ -121,16 +121,16 @@ if (props.initialDashboard && !dash.store.dashboard) {
     </div>
 
     <div class="grid lg:grid-cols-[1fr_360px] gap-3 items-start">
-      <Card class="!rounded-[24px] !border-stone-200 dark:!border-zinc-800 !bg-white dark:!bg-zinc-900 !shadow-sm">
+      <Card class="!rounded-[24px] !border-stone-200 dark:!border-white/10 !bg-white dark:!bg-[#0F121F] !shadow-sm">
         <template #title><span class="text-[16px] font-black dark:text-white">Продвижение</span></template>
         <template #content>
           <div class="space-y-2.5">
             <div
               v-for="(hint, hintIndex) in dash.store.earnHints"
               :key="hint.key"
-              class="rounded-2xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/60 p-3.5 flex gap-3"
+              class="rounded-2xl border border-stone-200 dark:border-white/10 bg-stone-50 dark:bg-white/[0.06] p-3.5 flex gap-3"
             >
-              <span class="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white grid place-items-center text-[13px] font-black shrink-0">{{ hintIndex + 1 }}</span>
+              <span class="w-8 h-8 rounded-xl bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white grid place-items-center text-[13px] font-black shrink-0">{{ hintIndex + 1 }}</span>
               <div class="min-w-0">
                 <div class="text-sm font-bold dark:text-white">{{ hint.title }}</div>
                 <div class="text-[13px] text-stone-500 dark:text-zinc-400 mt-1 leading-relaxed">{{ hint.text }}</div>
@@ -141,7 +141,7 @@ if (props.initialDashboard && !dash.store.dashboard) {
         </template>
       </Card>
 
-      <Card class="!rounded-[24px] !border-stone-200 dark:!border-zinc-800 !bg-white dark:!bg-zinc-900 !shadow-sm">
+      <Card class="!rounded-[24px] !border-stone-200 dark:!border-white/10 !bg-white dark:!bg-[#0F121F] !shadow-sm">
         <template #title>
           <span class="flex items-center justify-between gap-2">
             <span class="text-[16px] font-black dark:text-white">Пины компании</span>
@@ -149,10 +149,10 @@ if (props.initialDashboard && !dash.store.dashboard) {
           </span>
         </template>
         <template #content>
-          <div v-if="!dash.recentPins.value.length" class="rounded-2xl border-2 border-dashed border-stone-200 dark:border-zinc-700 p-4 text-center">
+          <div v-if="!dash.recentPins.value.length" class="rounded-2xl border-2 border-dashed border-stone-200 dark:border-white/10 p-4 text-center">
             <div class="text-sm font-bold dark:text-white">Пинов пока нет</div>
             <div class="text-[13px] text-stone-500 dark:text-zinc-400 mt-1">Первый пин приводит первых клиентов с карты. Пины компании видят все сотрудники организации.</div>
-            <Link v-if="gate.canCreatePin.value" href="/map" class="inline-block mt-3"><Button label="Создать первый пин" icon="pi pi-map-marker" size="small" rounded class="!bg-gradient-to-r !from-indigo-500 !to-violet-600 !border-0 !text-white" /></Link>
+            <Link v-if="gate.canCreatePin.value" href="/map" class="inline-block mt-3"><Button label="Создать первый пин" icon="pi pi-map-marker" size="small" rounded class="!bg-gradient-to-r !from-rose-500 !via-pink-500 !to-fuchsia-500 !border-0 !text-white" /></Link>
             <div v-else class="mt-3 text-[12px] text-stone-500 dark:text-zinc-400 flex items-center justify-center gap-1.5"><i class="pi pi-lock text-[11px]" />{{ gate.gateHint.value }}</div>
           </div>
           <div v-else class="space-y-2">
@@ -160,7 +160,7 @@ if (props.initialDashboard && !dash.store.dashboard) {
               v-for="pin in dash.recentPins.value"
               :key="pin.id"
               :href="`/map?pin=${pin.id}`"
-              class="block rounded-2xl border border-stone-200 dark:border-zinc-700 px-3.5 py-2.5 hover:border-indigo-400 transition active:scale-[0.99]"
+              class="block rounded-2xl border border-stone-200 dark:border-white/10 px-3.5 py-2.5 hover:border-indigo-400 transition active:scale-[0.99]"
             >
               <div class="text-sm font-bold truncate dark:text-white">{{ pin.title }}</div>
               <div v-if="pin.promo" class="text-[12px] font-semibold text-indigo-600 dark:text-indigo-400 truncate mt-0.5">📢 {{ pin.promo }}</div>
@@ -183,7 +183,7 @@ if (props.initialDashboard && !dash.store.dashboard) {
       </Card>
     </div>
 
-    <Card class="!rounded-[24px] !border-stone-200 dark:!border-zinc-800 !bg-white dark:!bg-zinc-900 !shadow-sm">
+    <Card class="!rounded-[24px] !border-stone-200 dark:!border-white/10 !bg-white dark:!bg-[#0F121F] !shadow-sm">
       <template #title>
         <span class="flex items-center justify-between gap-2">
           <span class="text-[16px] font-black dark:text-white">Реклама компании</span>
@@ -191,27 +191,27 @@ if (props.initialDashboard && !dash.store.dashboard) {
         </span>
       </template>
       <template #content>
-        <div v-if="!ads.isVerified.value" class="rounded-2xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/60 p-3.5 text-[13px] text-stone-500 dark:text-zinc-400 flex items-center gap-2">
+        <div v-if="!ads.isVerified.value" class="rounded-2xl border border-stone-200 dark:border-white/10 bg-stone-50 dark:bg-white/[0.06] p-3.5 text-[13px] text-stone-500 dark:text-zinc-400 flex items-center gap-2">
           <i class="pi pi-lock text-[13px]" />Реклама откроется после проверки компании — максимум 3 новости в неделю, без спама.
         </div>
         <div v-else class="space-y-2.5">
-          <div class="rounded-2xl border border-stone-200 dark:border-zinc-700 p-3.5 space-y-2">
+          <div class="rounded-2xl border border-stone-200 dark:border-white/10 p-3.5 space-y-2">
             <InputText v-model="ads.title.value" maxlength="100" placeholder="Заголовок новости или акции" fluid class="!rounded-2xl" />
             <Textarea v-model="ads.body.value" rows="2" maxlength="1000" auto-resize fluid placeholder="Текст — что, где и до какого числа…" class="!rounded-2xl !text-sm" />
             <div class="flex items-center gap-2">
               <span class="text-[12px] text-stone-500 dark:text-zinc-400 flex-1">Выйдет в UFlow от бренда · {{ ads.quotaLabel.value }}</span>
-              <Button label="Опубликовать" icon="pi pi-megaphone" size="small" rounded :loading="ads.saving.value" :disabled="!ads.canSubmit.value" class="!bg-gradient-to-r !from-indigo-500 !to-violet-600 !border-0 !text-white" @click="ads.publish()" />
+              <Button label="Опубликовать" icon="pi pi-megaphone" size="small" rounded :loading="ads.saving.value" :disabled="!ads.canSubmit.value" class="!bg-gradient-to-r !from-rose-500 !via-pink-500 !to-fuchsia-500 !border-0 !text-white" @click="ads.publish()" />
             </div>
           </div>
           <div v-if="ads.loading.value" class="space-y-2">
             <Skeleton v-for="i in 2" :key="i" height="64px" class="!rounded-2xl" />
           </div>
-          <div v-else-if="!ads.ads.value.length" class="rounded-2xl border-2 border-dashed border-stone-200 dark:border-zinc-700 p-4 text-center">
+          <div v-else-if="!ads.ads.value.length" class="rounded-2xl border-2 border-dashed border-stone-200 dark:border-white/10 p-4 text-center">
             <div class="text-sm font-bold dark:text-white">Пока тихо</div>
             <div class="text-[13px] text-stone-500 dark:text-zinc-400 mt-1">Первая новость увидят все на витрине компании.</div>
           </div>
           <div v-else class="space-y-2">
-            <div v-for="ad in ads.ads.value" :key="ad.id" class="rounded-2xl border border-stone-200 dark:border-zinc-700 px-3.5 py-2.5">
+            <div v-for="ad in ads.ads.value" :key="ad.id" class="rounded-2xl border border-stone-200 dark:border-white/10 px-3.5 py-2.5">
               <div class="flex items-center gap-2">
                 <div class="text-sm font-bold truncate dark:text-white flex-1">📢 {{ ad.title }}</div>
                 <Button icon="pi pi-send" size="small" rounded outlined title="Разместить в районах" aria-label="Разместить в районах" class="!w-8 !h-8 !p-0 shrink-0" @click="ads.openPlaceDialog(ad)" />

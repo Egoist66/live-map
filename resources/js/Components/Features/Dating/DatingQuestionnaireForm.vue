@@ -141,9 +141,9 @@ async function onImportSelect(event: FileUploadSelectEvent): Promise<void> {
 -->
 <template>
   <div class="flex flex-col gap-4 min-w-0">
-    <div class="rounded-2xl border border-rose-200 bg-gradient-to-br from-rose-50 to-orange-50 p-3 dark:border-rose-500/30 dark:from-rose-500/10 dark:to-orange-500/10">
+    <div class="rounded-2xl border border-rose-200 bg-gradient-to-br from-rose-50 via-pink-50 to-fuchsia-50 p-3 dark:border-rose-500/30 dark:from-rose-500/10 dark:to-fuchsia-500/10">
       <div class="flex items-center gap-2">
-        <span class="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-rose-500 to-orange-400 text-sm text-white"><i class="pi pi-bolt" /></span>
+        <span class="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-sm text-white"><i class="pi pi-bolt" /></span>
         <div class="min-w-0 flex-1">
           <div class="text-[13px] font-black text-stone-800 dark:text-zinc-100">Готовый шаблон · заполни за секунду</div>
           <div class="truncate text-[11px] text-stone-500 dark:text-zinc-400">Выбери — поля подставятся, останется подправить</div>
@@ -155,7 +155,7 @@ async function onImportSelect(event: FileUploadSelectEvent): Promise<void> {
         option-label="label"
         option-value="id"
         placeholder="Выбери шаблон анкеты..."
-        class="w-full mt-2 dark:!border-zinc-700"
+        class="w-full mt-2 dark:!border-white/10"
         :pt="selectPt"
         @update:model-value="onTemplateSelect"
       >
@@ -172,9 +172,9 @@ async function onImportSelect(event: FileUploadSelectEvent): Promise<void> {
       <div v-if="templateDesc" class="mt-1.5 text-[11px] text-stone-500 dark:text-zinc-400">{{ templateDesc }}</div>
       <div v-if="tpl.applied.value" class="mt-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-300">Шаблон подставлен — подправь под себя и нажми «Сохранить анкету».</div>
     </div>
-    <div v-if="ai.canUse.value" class="rounded-2xl border border-violet-200 bg-gradient-to-br from-violet-50 to-fuchsia-50 p-3 dark:border-violet-500/30 dark:from-violet-500/10 dark:to-fuchsia-500/10">
+    <div v-if="ai.canUse.value" class="rounded-2xl border border-violet-200 bg-gradient-to-br from-rose-50 via-pink-50 to-fuchsia-50 p-3 dark:border-violet-500/30 dark:from-rose-500/10 dark:to-fuchsia-500/10">
       <div class="flex items-center gap-2">
-        <span class="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-sm text-white"><i class="pi pi-sparkles" /></span>
+        <span class="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-sm text-white"><i class="pi pi-sparkles" /></span>
         <div class="min-w-0 flex-1">
           <div class="text-[13px] font-black text-stone-800 dark:text-zinc-100">AI-анкета · Premium</div>
           <div class="truncate text-[11px] text-stone-500 dark:text-zinc-400">Опиши себя парой фраз — ИИ заполнит поля</div>
@@ -186,7 +186,7 @@ async function onImportSelect(event: FileUploadSelectEvent): Promise<void> {
         maxlength="500"
         autoResize
         placeholder="Например: люблю походы и кино, ищу девушку для серьёзных отношений..."
-        class="w-full mt-2 !rounded-xl !text-sm dark:!border-zinc-700"
+        class="w-full mt-2 !rounded-xl !text-sm dark:!border-white/10"
       />
       <div class="mt-2 flex items-center gap-2">
         <span class="flex-1 text-[11px] text-stone-400 dark:text-zinc-500">Осталось {{ ai.promptLeft.value }}</span>
@@ -197,7 +197,7 @@ async function onImportSelect(event: FileUploadSelectEvent): Promise<void> {
           rounded
           :loading="ai.generating.value"
           :disabled="ai.prompt.value.trim().length < 3"
-          class="!border-0 !bg-gradient-to-r !from-violet-500 !to-fuchsia-500 !text-white disabled:!opacity-50"
+          class="!border-0 !bg-gradient-to-r !from-rose-500 !via-pink-500 !to-fuchsia-500 !text-white disabled:!opacity-50"
           @click="onGenerate()"
         />
       </div>
@@ -209,7 +209,7 @@ async function onImportSelect(event: FileUploadSelectEvent): Promise<void> {
       href="/settings/billing"
       class="flex items-center gap-2.5 rounded-2xl border border-dashed border-violet-300 bg-violet-50/50 px-3 py-2.5 transition hover:bg-violet-50 dark:border-violet-500/30 dark:bg-violet-500/5 dark:hover:bg-violet-500/10"
     >
-      <span class="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-sm text-white"><i class="pi pi-crown" /></span>
+      <span class="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-sm text-white"><i class="pi pi-crown" /></span>
       <span class="min-w-0 flex-1">
         <span class="block text-[13px] font-black text-stone-800 dark:text-zinc-100">AI-анкета · Premium</span>
         <span class="block truncate text-[11px] text-stone-500 dark:text-zinc-400">ИИ напишет анкету по твоему описанию</span>
@@ -230,20 +230,20 @@ async function onImportSelect(event: FileUploadSelectEvent): Promise<void> {
         option-label="label"
         option-value="value"
         placeholder="Выбери цель"
-        class="w-full mt-1 dark:!border-zinc-700"
+        class="w-full mt-1 dark:!border-white/10"
         :pt="selectPt"
       />
     </div>
 
     <div class="min-w-0">
       <label class="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500">Или своё — коротко ({{ q.customLeft.value }})</label>
-      <InputText v-model="q.customGoal.value" maxlength="60" placeholder="Например: ищу компанию для походов" class="w-full mt-1 dark:!border-zinc-700" />
+      <InputText v-model="q.customGoal.value" maxlength="60" placeholder="Например: ищу компанию для походов" class="w-full mt-1 dark:!border-white/10" />
       <div v-if="q.errors.value.dating_custom_goal" class="mt-1 text-xs text-rose-600">{{ q.errors.value.dating_custom_goal }}</div>
     </div>
 
     <div class="min-w-0">
       <label class="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500">О себе подробно ({{ q.aboutLeft.value }})</label>
-      <Textarea v-model="q.about.value" rows="4" maxlength="1000" autoResize placeholder="Что любишь, что ищешь, как проводишь время..." class="w-full mt-1 dark:!border-zinc-700" />
+      <Textarea v-model="q.about.value" rows="4" maxlength="1000" autoResize placeholder="Что любишь, что ищешь, как проводишь время..." class="w-full mt-1 dark:!border-white/10" />
       <div v-if="q.errors.value.dating_about" class="mt-1 text-xs text-rose-600">{{ q.errors.value.dating_about }}</div>
     </div>
 
@@ -264,7 +264,7 @@ async function onImportSelect(event: FileUploadSelectEvent): Promise<void> {
           v-model="q.interestInput.value"
           maxlength="40"
           placeholder="Свой интерес + Enter"
-          class="flex-1 min-w-0 dark:!border-zinc-700"
+          class="flex-1 min-w-0 dark:!border-white/10"
           @keydown.enter.prevent="q.addInterest(q.interestInput.value)"
         />
         <Button icon="pi pi-plus" rounded aria-label="Добавить интерес" @click="q.addInterest(q.interestInput.value)" />
@@ -290,9 +290,9 @@ async function onImportSelect(event: FileUploadSelectEvent): Promise<void> {
 
     <Button label="Сохранить анкету" icon="pi pi-check" rounded class="w-full !border-0 !bg-[#F6627B] !text-white shadow-lg shadow-rose-500/30 hover:!bg-[#e2556c] active:!bg-[#d84b61]" :loading="q.saving.value" @click="onSave()" />
 
-    <div class="rounded-2xl border border-dashed border-stone-300 bg-stone-50/60 p-3 dark:border-zinc-700 dark:bg-zinc-800/40">
+    <div class="rounded-2xl border border-dashed border-stone-300 bg-stone-50/60 p-3 dark:border-white/10 dark:bg-white/[0.06]/40">
       <div class="flex items-start gap-2.5">
-        <span class="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-white text-stone-500 shadow-sm dark:bg-zinc-900 dark:text-zinc-300">
+        <span class="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-white text-stone-500 shadow-sm dark:bg-[#0F121F] dark:text-zinc-300">
           <i class="pi pi-box text-sm" />
         </span>
         <div class="min-w-0 flex-1">

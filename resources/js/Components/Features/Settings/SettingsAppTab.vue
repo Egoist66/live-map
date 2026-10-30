@@ -39,7 +39,7 @@ const appTabs = useSettingsAppTabs()
       </TabList>
       <TabPanels class="!bg-transparent !p-0 !pt-3 !min-w-0">
         <TabPanel value="sections" class="!min-w-0">
-          <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-6' }, content: { class: '!p-0' } }">
+          <Card class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-6' }, content: { class: '!p-0' } }">
             <template #content>
               <h3 class="font-black tracking-tight text-lg dark:text-white">Разделы приложения</h3>
               <div class="mt-4 max-w-xl">
@@ -49,7 +49,7 @@ const appTabs = useSettingsAppTabs()
           </Card>
         </TabPanel>
         <TabPanel value="notify" class="!min-w-0">
-          <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-6' }, content: { class: '!p-0' } }">
+          <Card class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-6' }, content: { class: '!p-0' } }">
             <template #content>
               <h3 class="font-black tracking-tight text-lg dark:text-white">Уведомления</h3>
               <p class="text-sm text-stone-500 mt-1">Пуши на этом устройстве и сообщения бота Telegram.</p>
@@ -67,7 +67,7 @@ const appTabs = useSettingsAppTabs()
           <SettingsAppInstallSection />
         </TabPanel>
         <TabPanel value="telegram" class="!min-w-0">
-          <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-6' }, content: { class: '!p-0' } }">
+          <Card class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-6' }, content: { class: '!p-0' } }">
             <template #content>
               <h3 class="font-black tracking-tight text-lg dark:text-white">Telegram</h3>
               <p class="text-sm text-stone-500 mt-1">Привязка второго аккаунта к боту.</p>
@@ -178,7 +178,7 @@ html.dark .app-subtabs {
   box-shadow: 0 6px 18px -6px rgba(244, 63, 94, 0.55);
 }
 html.dark .app-subtab-pill {
-  background: #18181b;
+  background: #0F121F;
   border-color: #3f3f46;
   color: #d4d4d8;
 }

@@ -40,7 +40,7 @@ function onRetry(): void {
 </script>
 
 <template>
-  <div class="rounded-3xl border border-stone-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900" role="alert">
+  <div class="rounded-3xl border border-stone-200 bg-white p-5 dark:border-white/10 dark:bg-[#0F121F]" role="alert">
     <Message severity="error" :closable="false" class="!rounded-2xl">
       Не удалось загрузить раздел консоли
       <template v-if="detail">

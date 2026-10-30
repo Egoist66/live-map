@@ -151,7 +151,7 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
   function ensureTooltip() {
     if (pinTooltip) return pinTooltip
     pinTooltip = document.createElement('div')
-    pinTooltip.className = 'hidden fixed z-[40] pointer-events-none max-w-[300px] bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl shadow-[0_12px_32px_rgba(15,23,42,0.18)] overflow-hidden'
+    pinTooltip.className = 'hidden fixed z-[40] pointer-events-none max-w-[300px] bg-white dark:bg-white/[0.06] border border-stone-200 dark:border-white/10 rounded-2xl shadow-[0_12px_32px_rgba(15,23,42,0.18)] overflow-hidden'
     pinTooltip.style.transform = 'translate(-50%, calc(-100% - 14px))'
     document.body.appendChild(pinTooltip)
     if (!tipGlobalBound) {
@@ -176,7 +176,7 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
     const bi = pinBlurInfo(p)
     const blurHint = bi ? `<div class="mt-2 text-[11px] leading-snug bg-violet-50 dark:bg-violet-950/40 border border-violet-200 dark:border-violet-800 text-violet-800 dark:text-violet-200 rounded-xl px-2.5 py-1.5">📍 Виртуальная точка · сдвиг ${bi.label} — не точное местоположение</div>` : ''
     const inviteHint = p.is_invited ? `<div class="mt-2 text-[11px] leading-snug bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 rounded-xl px-2.5 py-1.5">🎫 Вас пригласили — видно вне зоны и страны</div>` : ''
-    tip.innerHTML = `<div class="p-3.5 bg-white dark:bg-zinc-800"><div class="flex items-center gap-1.5 flex-wrap"><span class="text-xs bg-stone-900 dark:bg-white dark:text-zinc-900 text-white rounded-full px-2 py-0.5 font-semibold">${catIcon[p.category]||'📍'} ${catLabel[p.category]||p.category}</span>${p.is_boosted?'<span class="text-[11px] bg-amber-400 text-stone-900 rounded-full px-2 py-0.5 font-bold">★ ТОП</span>':''}${p.priority==='sponsored'?'<span class="text-[11px] bg-violet-600 text-white rounded-full px-2 py-0.5 font-bold">AD</span>':''}${p.is_invited?'<span class="text-[11px] bg-emerald-500 text-white rounded-full px-2 py-0.5 font-bold">🎫 Приглашение</span>':''}</div><div class="font-bold text-[13px] leading-tight mt-2 text-stone-900 dark:text-white">${p.title}</div>${body?`<div class="text-xs text-stone-600 dark:text-zinc-300 mt-1.5 leading-relaxed">${body}</div>`:''}${inviteHint}${blurHint}<div class="flex items-center gap-2 mt-2.5 text-[11px] text-stone-500 dark:text-zinc-400 flex-wrap"><span class="bg-stone-100 dark:bg-zinc-700 dark:text-zinc-200 border border-stone-200 dark:border-zinc-600 rounded-full px-2 py-0.5">${author}${level}</span>${exp?`<span class="bg-amber-50 dark:bg-amber-950/30 dark:text-amber-300 border border-amber-200 dark:border-amber-900 rounded-full px-2 py-0.5">до ${exp}</span>`:''}<span class="bg-white dark:bg-zinc-700 dark:text-zinc-200 border border-stone-200 dark:border-zinc-600 rounded-full px-2 py-0.5">❤️ ${p.reactions_count||0} · 💬 ${p.comments_count||0}</span></div></div><div class="h-1 w-full ${p.is_boosted?'bg-amber-400':p.category==='sos'?'bg-[#B91C1C]':p.category==='warning'?'bg-[#EA580C]':p.category==='event'?'bg-[#7C3AED]':p.category==='help'?'bg-[#DB2777]':p.category==='question'?'bg-[#2563EB]':p.category==='offer'?'bg-[#0891B2]':'bg-[#DC2626]'}"></div>`
+    tip.innerHTML = `<div class="p-3.5 bg-white dark:bg-white/[0.06]"><div class="flex items-center gap-1.5 flex-wrap"><span class="text-xs bg-stone-900 dark:bg-white dark:text-[#0F121F] text-white rounded-full px-2 py-0.5 font-semibold">${catIcon[p.category]||'📍'} ${catLabel[p.category]||p.category}</span>${p.is_boosted?'<span class="text-[11px] bg-amber-400 text-stone-900 rounded-full px-2 py-0.5 font-bold">★ ТОП</span>':''}${p.priority==='sponsored'?'<span class="text-[11px] bg-violet-600 text-white rounded-full px-2 py-0.5 font-bold">AD</span>':''}${p.is_invited?'<span class="text-[11px] bg-emerald-500 text-white rounded-full px-2 py-0.5 font-bold">🎫 Приглашение</span>':''}</div><div class="font-bold text-[13px] leading-tight mt-2 text-stone-900 dark:text-white">${p.title}</div>${body?`<div class="text-xs text-stone-600 dark:text-zinc-300 mt-1.5 leading-relaxed">${body}</div>`:''}${inviteHint}${blurHint}<div class="flex items-center gap-2 mt-2.5 text-[11px] text-stone-500 dark:text-zinc-400 flex-wrap"><span class="bg-stone-100 dark:bg-white/10 dark:text-zinc-200 border border-stone-200 dark:border-white/15 rounded-full px-2 py-0.5">${author}${level}</span>${exp?`<span class="bg-amber-50 dark:bg-amber-950/30 dark:text-amber-300 border border-amber-200 dark:border-amber-900 rounded-full px-2 py-0.5">до ${exp}</span>`:''}<span class="bg-white dark:bg-white/10 dark:text-zinc-200 border border-stone-200 dark:border-white/15 rounded-full px-2 py-0.5">❤️ ${p.reactions_count||0} · 💬 ${p.comments_count||0}</span></div></div><div class="h-1 w-full ${p.is_boosted?'bg-amber-400':p.category==='sos'?'bg-[#B91C1C]':p.category==='warning'?'bg-[#EA580C]':p.category==='event'?'bg-[#7C3AED]':p.category==='help'?'bg-[#DB2777]':p.category==='question'?'bg-[#2563EB]':p.category==='offer'?'bg-[#0891B2]':'bg-[#DC2626]'}"></div>`
     tip.style.left = x + 'px'
     tip.style.top = y + 'px'
     tip.classList.remove('hidden')
@@ -192,8 +192,8 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
   function ensureCtxMenu() {
     if (ctxMenu) return ctxMenu
     ctxMenu = document.createElement('div')
-    ctxMenu.className = 'hidden fixed z-[50] bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-xl shadow-[0_10px_28px_rgba(15,23,42,0.18)] p-1.5 min-w-[160px]'
-    ctxMenu.innerHTML = `<button data-act="edit" class="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold hover:bg-stone-50 dark:hover:bg-zinc-700 dark:text-white flex items-center gap-2">✎ Редактировать</button><button data-act="del" class="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600 dark:hover:text-red-400 flex items-center gap-2">🗑 Удалить пин</button><button data-act="cancel" class="w-full text-left px-3 py-2 rounded-lg text-xs text-stone-500 dark:text-zinc-400 hover:bg-stone-50 dark:hover:bg-zinc-700">Отмена</button>`
+    ctxMenu.className = 'hidden fixed z-[50] bg-white dark:bg-white/[0.06] border border-stone-200 dark:border-white/10 rounded-xl shadow-[0_10px_28px_rgba(15,23,42,0.18)] p-1.5 min-w-[160px]'
+    ctxMenu.innerHTML = `<button data-act="edit" class="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold hover:bg-stone-50 dark:hover:bg-white/15 dark:text-white flex items-center gap-2">✎ Редактировать</button><button data-act="del" class="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600 dark:hover:text-red-400 flex items-center gap-2">🗑 Удалить пин</button><button data-act="cancel" class="w-full text-left px-3 py-2 rounded-lg text-xs text-stone-500 dark:text-zinc-400 hover:bg-stone-50 dark:hover:bg-white/15">Отмена</button>`
     ctxMenu.addEventListener('click', async (e: any) => {
       const act = e.target.closest('[data-act]')?.dataset.act
       if (act === 'cancel') { hideCtxMenu(); return }
@@ -322,7 +322,7 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
         const brandName = String(company?.brand || (p as any).user?.name || '').trim()
         const logoUrl = String(company?.logo_url ?? '').trim()
         core.style.borderRadius = '18px'
-        core.style.background = 'linear-gradient(135deg, #4F46E5 0%, #7C3AED 60%, #9333EA 100%)'
+        core.style.background = 'linear-gradient(135deg, #f43f5e 0%, #ec4899 60%, #d946ef 100%)'
         core.style.width = (34*scale)+'px'
         core.style.height = (34*scale)+'px'
         core.innerHTML = ''
@@ -402,7 +402,7 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
         badge.style.top = '-13px'
         badge.style.left = '50%'
         badge.style.transform = 'translateX(-50%)'
-        badge.style.background = 'rgba(24,24,27,0.92)'
+        badge.style.background = 'rgba(15,18,31,0.92)'
         badge.style.color = '#fff'
         badge.style.fontSize = '10px'
         badge.style.fontWeight = '800'
@@ -428,7 +428,7 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
           promoLabel.style.bottom = '-16px'
           promoLabel.style.left = '50%'
           promoLabel.style.transform = 'translateX(-50%)'
-          promoLabel.style.background = 'linear-gradient(135deg, #4F46E5, #7C3AED)'
+          promoLabel.style.background = 'linear-gradient(135deg, #f43f5e, #d946ef)'
           promoLabel.style.color = '#fff'
           promoLabel.style.fontSize = '11px'
           promoLabel.style.fontWeight = '800'
@@ -526,7 +526,7 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
     const hint = meters > 0 ? `Ваша видимая позиция сдвинута на ~${formatBlurMeters(meters)} — это не точное местоположение` : 'Ваша точная позиция'
     wrap.addEventListener('mouseenter', (e: any) => {
       const tip = ensureTooltip()
-      tip.innerHTML = `<div class="px-3.5 py-2.5 text-[11px] leading-snug bg-white dark:bg-zinc-800 text-stone-700 dark:text-zinc-200">📍 <b>Вы</b> · ${hint}</div>`
+      tip.innerHTML = `<div class="px-3.5 py-2.5 text-[11px] leading-snug bg-white dark:bg-white/[0.06] text-stone-700 dark:text-zinc-200">📍 <b>Вы</b> · ${hint}</div>`
       tip.style.left = e.clientX + 'px'
       tip.style.top = e.clientY + 'px'
       tip.classList.remove('hidden')
@@ -768,7 +768,7 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
     if (districtMenu) return districtMenu
     const menu = document.createElement('div')
     menu.className =
-      'hidden fixed z-50 bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-xl shadow-[0_10px_28px_rgba(76,29,149,0.25)] p-1.5 min-w-[180px]'
+      'hidden fixed z-50 bg-white dark:bg-white/[0.06] border border-stone-200 dark:border-white/10 rounded-xl shadow-[0_10px_28px_rgba(76,29,149,0.25)] p-1.5 min-w-[180px]'
     menu.addEventListener('click', (e: Event) => {
       const target = (e.target as HTMLElement | null)?.closest?.('[data-act]') as HTMLElement | null
       const act = target?.dataset.act
@@ -817,7 +817,7 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
       (canDelete
         ? `<button data-act="del" class="w-full text-left px-3 py-2 rounded-lg text-sm font-semibold hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600 dark:hover:text-red-400 flex items-center gap-2">🗑 Удалить район</button>`
         : ``) +
-      `<button data-act="cancel" class="w-full text-left px-3 py-2 rounded-lg text-xs text-stone-500 dark:text-zinc-400 hover:bg-stone-50 dark:hover:bg-zinc-700">Отмена</button>`
+      `<button data-act="cancel" class="w-full text-left px-3 py-2 rounded-lg text-xs text-stone-500 dark:text-zinc-400 hover:bg-stone-50 dark:hover:bg-white/15">Отмена</button>`
     // normalize dataset key: del -> delete
     menu.querySelector('[data-act="del"]')?.setAttribute('data-act', 'delete')
     menu.style.left = `${x}px`
@@ -868,7 +868,7 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
     if (districtTip) return districtTip
     const tip = document.createElement('div')
     tip.className =
-      'hidden fixed z-[40] pointer-events-none max-w-[260px] bg-white dark:bg-zinc-800 border border-violet-200 dark:border-violet-900/60 rounded-2xl shadow-[0_12px_32px_rgba(76,29,149,0.25)] overflow-hidden'
+      'hidden fixed z-[40] pointer-events-none max-w-[260px] bg-white dark:bg-white/[0.06] border border-violet-200 dark:border-violet-900/60 rounded-2xl shadow-[0_12px_32px_rgba(76,29,149,0.25)] overflow-hidden'
     tip.style.transform = 'translate(-50%, calc(-100% - 14px))'
     document.body.appendChild(tip)
     districtTip = tip
@@ -888,12 +888,12 @@ export function useMap(onPinClick: (pin: any) => void, onPinEdit?: (pin: any) =>
     const owner = escapeTipText(d?.owner?.name ?? '—')
     const members = Number(d?.members_count ?? 1)
     tip.innerHTML =
-      `<div class="p-3 bg-white dark:bg-zinc-800">` +
+      `<div class="p-3 bg-white dark:bg-white/[0.06]">` +
       `<div class="flex items-center gap-1.5"><span class="text-xs bg-violet-700 text-white rounded-full px-2 py-0.5 font-semibold">${districtInterestEmoji(d?.interest)} UDistrict</span></div>` +
       `<div class="font-bold text-[13px] leading-tight mt-1.5 text-stone-900 dark:text-white">${name}</div>` +
       `<div class="text-[11px] text-stone-500 dark:text-zinc-400 mt-1">Владелец: ${owner} · 👥 ${members}</div>` +
       `<div class="text-[11px] font-bold text-violet-700 dark:text-violet-300 mt-1">Клик — открыть район</div>` +
-      `</div><div class="h-1 w-full bg-gradient-to-r from-violet-700 to-purple-900"></div>`
+      `</div><div class="h-1 w-full bg-gradient-to-r from-rose-500 via-pink-500 to-fuchsia-500"></div>`
     tip.style.left = `${x}px`
     tip.style.top = `${y}px`
     tip.classList.remove('hidden')

@@ -22,7 +22,7 @@ const player = useVoicePlayer(props.duration ?? null)
       <div
         @click="player.seek($event)"
         class="relative h-1.5 rounded-full cursor-pointer"
-        :class="own ? 'bg-rose-900/15 dark:bg-white/25' : 'bg-stone-200 dark:bg-zinc-700'"
+        :class="own ? 'bg-rose-900/15 dark:bg-white/25' : 'bg-stone-200 dark:bg-white/20'"
         role="slider"
         aria-label="Прогресс"
       >

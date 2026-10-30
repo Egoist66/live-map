@@ -60,7 +60,7 @@ async function onAccept(): Promise<void> {
       label="Дружить в ответ"
       rounded
       :loading="friend.busy.value"
-      class="!py-2.5 !border-0 !bg-gradient-to-r !from-[#FD267D] !to-[#FF7854] !text-white"
+      class="!py-2.5 !border-0 !bg-gradient-to-r !from-rose-500 !via-pink-500 !to-fuchsia-500 !text-white"
       @click="onAccept()"
     />
     <Button

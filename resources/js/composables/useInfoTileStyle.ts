@@ -35,14 +35,14 @@ const valueCls = 'block truncate text-sm font-bold text-ink-900 dark:text-zinc-1
 const chevronCls = 'pi pi-chevron-right shrink-0 text-xs text-stone-300 dark:text-zinc-600'
 
 const iconVariants: Record<InfoTileKind, string> = {
-  status: 'bg-gradient-to-br from-emerald-400 to-teal-600 shadow-emerald-500/30 dark:from-emerald-500 dark:to-teal-600',
-  name: 'bg-gradient-to-br from-violet-500 to-purple-700 shadow-violet-500/30 dark:from-violet-500 dark:to-purple-600',
-  age: 'bg-gradient-to-br from-amber-400 to-orange-600 shadow-orange-500/30 dark:from-amber-500 dark:to-orange-600',
-  gender: 'bg-gradient-to-br from-pink-400 to-rose-600 shadow-pink-500/30 dark:from-pink-500 dark:to-rose-600',
-  city: 'bg-gradient-to-br from-sky-400 to-blue-600 shadow-sky-500/30 dark:from-sky-500 dark:to-blue-600',
-  bio: 'bg-gradient-to-br from-indigo-400 to-violet-600 shadow-indigo-500/30 dark:from-indigo-500 dark:to-violet-600',
-  email: 'bg-gradient-to-br from-cyan-400 to-sky-600 shadow-cyan-500/30 dark:from-cyan-500 dark:to-sky-600',
-  home: 'bg-gradient-to-br from-lime-400 to-emerald-600 shadow-emerald-500/30 dark:from-lime-500 dark:to-emerald-600',
+  status: 'bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 shadow-emerald-500/30 dark:from-rose-500 dark:to-fuchsia-500',
+  name: 'bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 shadow-violet-500/30 dark:from-rose-500 dark:to-fuchsia-500',
+  age: 'bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 shadow-orange-500/30 dark:from-rose-500 dark:to-fuchsia-500',
+  gender: 'bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 shadow-pink-500/30 dark:from-rose-500 dark:to-fuchsia-500',
+  city: 'bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 shadow-sky-500/30 dark:from-rose-500 dark:to-fuchsia-500',
+  bio: 'bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 shadow-indigo-500/30 dark:from-rose-500 dark:to-fuchsia-500',
+  email: 'bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 shadow-cyan-500/30 dark:from-rose-500 dark:to-fuchsia-500',
+  home: 'bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 shadow-emerald-500/30 dark:from-rose-500 dark:to-fuchsia-500',
 }
 
 export function useInfoTileStyle() {

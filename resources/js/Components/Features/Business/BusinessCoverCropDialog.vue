@@ -16,11 +16,11 @@ const emit = defineEmits<{ (e: 'cancel'): void; (e: 'confirm'): void }>()
     :draggable="false"
     header="Обложка компании"
     :style="{ width: '560px', maxWidth: 'calc(100vw - 1.5rem)' }"
-    :pt="{ root: { class: '!rounded-3xl max-sm:!rounded-b-none !bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-700 overflow-hidden' }, header: { class: '!py-3 !px-4' }, title: { class: '!font-black !text-[16px]' }, content: { class: '!px-4 !pb-2 !overflow-y-auto !overscroll-contain' }, footer: { class: '!px-4 !py-3' } }"
+    :pt="{ root: { class: '!rounded-3xl max-sm:!rounded-b-none !bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 overflow-hidden' }, header: { class: '!py-3 !px-4' }, title: { class: '!font-black !text-[16px]' }, content: { class: '!px-4 !pb-2 !overflow-y-auto !overscroll-contain' }, footer: { class: '!px-4 !py-3' } }"
   >
     <div
       :ref="(el:any)=>crop.setFrameEl(el)"
-      class="relative w-full aspect-[3/1] overflow-hidden rounded-2xl bg-stone-100 dark:bg-zinc-800 select-none touch-none"
+      class="relative w-full aspect-[3/1] overflow-hidden rounded-2xl bg-stone-100 dark:bg-white/[0.06] select-none touch-none"
       :class="crop.dragging.value ? 'cursor-grabbing' : 'cursor-grab'"
       @pointerdown="crop.onPointerDown"
       @pointermove="crop.onPointerMove"

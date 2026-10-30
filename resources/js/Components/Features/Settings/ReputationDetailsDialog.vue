@@ -33,21 +33,21 @@ function onVisibleChange(visible: boolean): void {
     :breakpoints="{ '640px': '100vw' }"
     header="Сведения о репутации"
     :style="{ width: '440px', maxWidth: '94vw', maxHeight: '92dvh' }"
-    :pt="{ root: { class: 'reputation-sheet !rounded-3xl max-sm:!rounded-b-none !overflow-hidden dark:!bg-zinc-900 dark:!border-zinc-700' }, header: { class: 'dark:!bg-zinc-900 dark:!text-white' }, content: { class: 'dark:!bg-zinc-900 dark:!text-zinc-100 !max-h-[78dvh] !overflow-y-auto overscroll-contain' } }"
+    :pt="{ root: { class: 'reputation-sheet !rounded-3xl max-sm:!rounded-b-none !overflow-hidden dark:!bg-[#0F121F] dark:!border-white/10' }, header: { class: 'dark:!bg-[#0F121F] dark:!text-white' }, content: { class: 'dark:!bg-[#0F121F] dark:!text-zinc-100 !max-h-[78dvh] !overflow-y-auto overscroll-contain' } }"
   >
     <section aria-label="Сведения о репутации" class="pt-1">
       <div v-if="details.trust.loading.value" class="flex items-center gap-2 text-xs text-stone-400 dark:text-zinc-500">
         <i class="pi pi-spin pi-spinner" aria-label="Загрузка репутации" /> Грузим репутацию…
       </div>
       <div v-else-if="details.score.value != null" class="flex items-center gap-3">
-        <span class="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-xl font-black text-white shadow">{{ details.score.value }}</span>
+        <span class="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-xl font-black text-white shadow">{{ details.score.value }}</span>
         <div class="min-w-0">
           <div class="text-sm font-black text-stone-900 dark:text-white">{{ details.score.value }} из 10 · {{ details.trust.label.value }}</div>
           <div class="text-xs text-stone-500 dark:text-zinc-400">{{ details.trust.hint.value }}</div>
         </div>
       </div>
 
-      <div v-if="details.rating.hasRatings.value" class="mt-3 rounded-2xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800 px-3 py-2.5">
+      <div v-if="details.rating.hasRatings.value" class="mt-3 rounded-2xl border border-stone-200 dark:border-white/10 bg-stone-50 dark:bg-white/10 px-3 py-2.5">
         <DatingRatingStars :avg="details.rating.average.value" :count="details.rating.count.value" tone="light" />
         <p class="mt-1 text-[11px] text-stone-500 dark:text-zinc-400">Ваши звёзды — средний балл отзывов<span v-if="details.rating.isHidden.value"> · скрыты от других (PRO)</span></p>
       </div>
@@ -60,9 +60,9 @@ function onVisibleChange(visible: boolean): void {
           class="flex items-center gap-2.5 rounded-2xl border px-3 py-2 text-sm"
           :class="details.currentZone.value?.label === zone.label
             ? 'border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/40'
-            : 'border-stone-200 dark:border-zinc-700'"
+            : 'border-stone-200 dark:border-white/10'"
         >
-          <span class="shrink-0 rounded-full bg-stone-100 dark:bg-zinc-800 px-2 py-0.5 text-[11px] font-black text-stone-600 dark:text-zinc-200">{{ zone.min }}–{{ zone.max }}</span>
+          <span class="shrink-0 rounded-full bg-stone-100 dark:bg-white/10 px-2 py-0.5 text-[11px] font-black text-stone-600 dark:text-zinc-200">{{ zone.min }}–{{ zone.max }}</span>
           <span class="min-w-0 flex-1 font-semibold text-stone-700 dark:text-zinc-200">{{ zone.label }}</span>
           <Tag v-if="details.currentZone.value?.label === zone.label" value="вы здесь" class="!text-[10px] !font-bold !bg-amber-400 !text-white !border-0 shrink-0" />
         </li>

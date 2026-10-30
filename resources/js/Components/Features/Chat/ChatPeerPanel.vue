@@ -53,7 +53,7 @@ const peerAvatar = computed(() => getAvatarUrl(props.peer))
 </script>
 
 <template>
-  <aside class="hidden min-h-0 w-[280px] shrink-0 flex-col overflow-y-auto rounded-2xl border border-stone-200 bg-white p-5 xl:flex dark:border-zinc-800 dark:bg-[#0F121F]">
+  <aside class="hidden min-h-0 w-[280px] shrink-0 flex-col overflow-y-auto rounded-2xl border border-stone-200 bg-white p-5 xl:flex dark:border-white/10 dark:bg-[#0F121F]">
     <div class="flex flex-col items-center text-center">
       <UserAvatar :user="peer" :label="!peerAvatar ? initial : undefined" shape="circle" class="!h-24 !w-24 !text-3xl" />
       <div class="mt-3 max-w-full truncate text-xl font-bold text-stone-900 dark:text-white">{{ peer?.name ?? 'Собеседник' }}</div>
@@ -61,15 +61,15 @@ const peerAvatar = computed(() => getAvatarUrl(props.peer))
       <span v-else-if="isMatch" :class="['mt-1.5 inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-black', theme.match]">♥ Мэтч</span>
     </div>
 
-    <div v-if="goalLabel || interests.length" class="mt-5 border-t border-stone-100 pt-4 dark:border-zinc-800">
+    <div v-if="goalLabel || interests.length" class="mt-5 border-t border-stone-100 pt-4 dark:border-white/10">
       <div class="text-[11px] font-black uppercase tracking-wider text-stone-400 dark:text-zinc-500">{{ theme.sectionTitle }}</div>
       <div v-if="goalLabel" class="mt-2 text-sm font-semibold text-stone-700 dark:text-zinc-200">💘 {{ goalLabel }}</div>
       <div v-if="interests.length" class="mt-2 flex flex-wrap justify-center gap-1.5">
-        <span v-for="tag in interests" :key="tag" class="rounded-full bg-stone-100 px-2.5 py-1 text-xs font-semibold text-stone-600 dark:bg-zinc-800 dark:text-zinc-300">{{ tag }}</span>
+        <span v-for="tag in interests" :key="tag" class="rounded-full bg-stone-100 px-2.5 py-1 text-xs font-semibold text-stone-600 dark:bg-white/10 dark:text-zinc-300">{{ tag }}</span>
       </div>
     </div>
 
-    <div class="mt-5 space-y-2 border-t border-stone-100 pt-4 dark:border-zinc-800">
+    <div class="mt-5 space-y-2 border-t border-stone-100 pt-4 dark:border-white/10">
       <Link v-if="profileUrl" :href="profileUrl" class="block">
         <Button label="Открыть профиль" icon="pi pi-user" rounded :class="['w-full !border-0 !text-white', theme.cta]" />
       </Link>

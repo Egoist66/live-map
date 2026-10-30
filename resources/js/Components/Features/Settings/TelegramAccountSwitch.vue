@@ -7,13 +7,13 @@ const acc = useTelegramAccount()
 </script>
 
 <template>
-  <div class="flex items-center gap-3 rounded-2xl border border-stone-200/70 dark:border-zinc-800 px-4 py-3">
+  <div class="flex items-center gap-3 rounded-2xl border border-stone-200/70 dark:border-white/10 px-4 py-3">
     <i class="pi pi-users text-lg text-violet-500 shrink-0" />
     <div class="flex-1 text-sm min-w-0">
       <p class="font-semibold dark:text-white">Второй аккаунт в боте</p>
       <p class="text-xs opacity-60">Есть аккаунт с сайта? Сгенерируйте код и пришлите его боту — он переключится сюда.</p>
 
-      <div v-if="acc.code.value" class="mt-3 rounded-xl bg-stone-50 dark:bg-zinc-800/60 px-3 py-2.5">
+      <div v-if="acc.code.value" class="mt-3 rounded-xl bg-stone-50 dark:bg-white/[0.06] px-3 py-2.5">
         <p class="text-xs opacity-60">Код для бота (одноразовый, 10 минут):</p>
         <p class="mt-1 text-2xl font-black tracking-[0.3em] dark:text-white select-all">{{ acc.code.value }}</p>
         <div class="mt-2 flex flex-wrap gap-2">

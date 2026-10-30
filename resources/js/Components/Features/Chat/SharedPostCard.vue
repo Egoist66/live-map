@@ -33,7 +33,7 @@ function openPost(): void {
     :class="[
       own
         ? 'border-rose-900/10 bg-white/40 hover:bg-white/60 dark:border-white/20 dark:bg-black/20 dark:hover:bg-black/30'
-        : 'border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-900 hover:border-violet-300 dark:hover:border-violet-500',
+        : 'border-stone-200 dark:border-white/10 bg-stone-50 dark:bg-white/[0.05] hover:border-violet-300 dark:hover:border-violet-500',
       isUnavailable ? 'opacity-70 cursor-default' : 'cursor-pointer',
     ]"
     @click="openPost"

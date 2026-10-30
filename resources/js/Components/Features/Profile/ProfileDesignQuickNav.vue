@@ -25,35 +25,35 @@ const allActions: Array<{ key: QuickNavKey; label: string; icon: string; tile: s
     key: 'profile',
     label: 'Профиль',
     icon: 'pi pi-user',
-    tile: '!border-0 !bg-gradient-to-br !from-blue-500 !to-indigo-600 hover:!from-blue-400 hover:!to-indigo-500 shadow-[0_8px_20px_-8px_rgba(59,130,246,0.7)]',
+    tile: '!border-0 !bg-gradient-to-br !from-rose-500 !via-pink-500 !to-fuchsia-500 hover:!from-rose-500 hover:!to-fuchsia-500 shadow-[0_8px_20px_-8px_rgba(244,63,94,0.7)]',
     iconColor: '!text-white',
   },
   {
     key: 'friends',
     label: 'Друзья',
     icon: 'pi pi-users',
-    tile: '!border-0 !bg-gradient-to-br !from-emerald-500 !to-teal-600 hover:!from-emerald-400 hover:!to-teal-500 shadow-[0_8px_20px_-8px_rgba(16,185,129,0.7)]',
+    tile: '!border-0 !bg-gradient-to-br !from-rose-500 !via-pink-500 !to-fuchsia-500 hover:!from-rose-500 hover:!to-fuchsia-500 shadow-[0_8px_20px_-8px_rgba(244,63,94,0.7)]',
     iconColor: '!text-white',
   },
   {
     key: 'districts',
     label: 'Районы',
     icon: 'pi pi-map-marker',
-    tile: '!border-0 !bg-gradient-to-br !from-sky-500 !to-blue-600 hover:!from-sky-400 hover:!to-blue-500 shadow-[0_8px_20px_-8px_rgba(14,165,233,0.7)]',
+    tile: '!border-0 !bg-gradient-to-br !from-rose-500 !via-pink-500 !to-fuchsia-500 hover:!from-rose-500 hover:!to-fuchsia-500 shadow-[0_8px_20px_-8px_rgba(244,63,94,0.7)]',
     iconColor: '!text-white',
   },
   {
     key: 'search',
     label: 'Поиск',
     icon: 'pi pi-search',
-    tile: '!border-0 !bg-gradient-to-br !from-amber-400 !to-orange-500 hover:!from-amber-300 hover:!to-orange-400 shadow-[0_8px_20px_-8px_rgba(245,158,11,0.7)]',
+    tile: '!border-0 !bg-gradient-to-br !from-rose-500 !via-pink-500 !to-fuchsia-500 hover:!from-rose-500 hover:!to-fuchsia-500 shadow-[0_8px_20px_-8px_rgba(244,63,94,0.7)]',
     iconColor: '!text-white',
   },
   {
     key: 'share',
     label: 'Поделиться',
     icon: 'pi pi-share-alt',
-    tile: '!border-0 !bg-gradient-to-br !from-violet-500 !to-fuchsia-600 hover:!from-violet-400 hover:!to-fuchsia-500 shadow-[0_8px_20px_-8px_rgba(139,92,246,0.7)]',
+    tile: '!border-0 !bg-gradient-to-br !from-rose-500 !via-pink-500 !to-fuchsia-500 hover:!from-rose-500 hover:!to-fuchsia-500 shadow-[0_8px_20px_-8px_rgba(244,63,94,0.7)]',
     iconColor: '!text-white',
   },
 ]
@@ -89,7 +89,7 @@ function onAction(key: QuickNavKey): void {
   <nav
     v-if="variant === 'sidebar'"
     aria-label="Меню профиля"
-    class="liquid-glass rounded-[24px] shadow-soft p-2"
+    class="panel-surface rounded-[24px] shadow-soft p-2"
   >
     <button
       v-for="action in actions"

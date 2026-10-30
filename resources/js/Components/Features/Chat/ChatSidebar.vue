@@ -19,7 +19,7 @@ const chatPrivacy = useChatPrivacy(toRef(props, 'privacy') as any, toRef(props, 
 </script>
 <template>
   <div :class="[(selectedId || isSavedOpen) ? 'hidden lg:flex' : 'flex', sidebarCardClass]">
-    <div class="p-3 border-b dark:border-zinc-800 shrink-0 w-full max-w-full min-w-0">
+    <div class="p-3 border-b dark:border-white/10 shrink-0 w-full max-w-full min-w-0">
       <div class="flex items-center gap-2 mb-3">
         <h2 class="text-[15px] font-bold text-stone-900 dark:text-white tracking-tight">{{ uloveOnly ? '💞 ULove' : 'UConnect' }}</h2>
         <Button v-if="!uloveOnly" @click="emit('people')" icon="pi pi-users" rounded severity="secondary" outlined class="!w-8 !h-8 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden" aria-label="Поиск людей" />
@@ -38,8 +38,8 @@ const chatPrivacy = useChatPrivacy(toRef(props, 'privacy') as any, toRef(props, 
       </Tabs>
     </div>
     <ChatList :conversations="conversations" :ulove-conversations="uloveConversations ?? []" :friends="friends" :pending-in="pendingIn" :blocked="blocked" :tab="tab" :selected-id="selectedId" :is-saved-open="isSavedOpen" :filter="filter" :conversations-sentinel="conversationsSentinel" :conversations-has-more="conversationsHasMore" :conversations-loading-more="conversationsLoadingMore" :direct-has-more="directHasMore" :direct-loading-more="directLoadingMore" :direct-load-more="directLoadMore" :ulove-only="uloveOnly" :friends-sentinel="friendsSentinel" :friends-has-more="friendsHasMore" :friends-loading-more="friendsLoadingMore" :is-online="isOnline" :format-time="formatTime" @update:filter="(v:string)=>emit('update:filter', v)" @saved="emit('saved')" @open="(id:number)=>emit('open', id)" @start-chat="(u:any)=>emit('startChat', u)" @toggle-chat-pin="(id:number,pinned:boolean)=>emit('toggleChatPin', id, pinned)" @delete-chat="(id:number)=>emit('deleteChat', id)" @block="(id:number,n?:string)=>emit('block', id, n)" @unblock="(id:number)=>emit('unblock', id)" @remove-friend="(f:any)=>emit('removeFriend', f)" @accept="(id:number)=>emit('accept', id)" @decline="(id:number)=>emit('decline', id)" />
-    <div class="shrink-0 flex-none border-t dark:border-zinc-800 bg-stone-50 dark:bg-[#0F121F] rounded-b-none lg:rounded-b-2xl overflow-hidden">
-      <button @click="emit('update:showPrivacy', !showPrivacy)" class="w-full flex items-center justify-between px-3 py-3 lg:py-2.5 text-left active:bg-stone-100 dark:active:bg-zinc-800 lg:cursor-default">
+    <div class="shrink-0 flex-none border-t dark:border-white/10 bg-stone-50 dark:bg-[#0F121F] rounded-b-none lg:rounded-b-2xl overflow-hidden">
+      <button @click="emit('update:showPrivacy', !showPrivacy)" class="w-full flex items-center justify-between px-3 py-3 lg:py-2.5 text-left active:bg-stone-100 dark:active:bg-white/10 lg:cursor-default">
         <span class="text-xs font-bold flex items-center gap-1.5 text-stone-900 dark:text-white">Приватность</span>
         <span class="lg:hidden text-stone-400 text-xs">{{ showPrivacy ? '▲' : '▼' }}</span>
         <span class="hidden lg:block text-[11px] text-stone-500">{{ chatPrivacy.shortLabel.value }}</span>
@@ -55,11 +55,11 @@ const chatPrivacy = useChatPrivacy(toRef(props, 'privacy') as any, toRef(props, 
 .chat-tabs .p-tablist-content { padding: 0; border: 0; scrollbar-width: none; -ms-overflow-style: none; }
 .chat-tabs .p-tablist-content { padding: 0; scrollbar-width: none; -ms-overflow-style: none; }
 .chat-tabs .p-tablist-content::-webkit-scrollbar { display: none; width: 0; height: 0; }
-.chat-tabs .p-tablist-active-bar { display: block; height: 3px; border-radius: 9999px; background: linear-gradient(90deg, #FD267D, #FF7854); box-shadow: 0 1px 6px rgba(253, 38, 125, 0.5); transition: left 0.35s cubic-bezier(0.16, 1, 0.3, 1), width 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+.chat-tabs .p-tablist-active-bar { display: block; height: 3px; border-radius: 9999px; background: linear-gradient(90deg, #f43f5e, #d946ef); box-shadow: 0 1px 6px rgba(244, 63, 94, 0.45); transition: left 0.35s cubic-bezier(0.16, 1, 0.3, 1), width 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
 .chat-tab { background: transparent; border: 0; box-shadow: none; color: #78716c; font-weight: 700; }
 .chat-tab:hover { background: transparent; color: #1c1917; }
-.chat-tab.p-tab-active { background: transparent; color: #FD267D; box-shadow: none; }
-.chat-tab:focus-visible { outline: none; box-shadow: none; color: #FD267D; }
+.chat-tab.p-tab-active { background: transparent; color: #f43f5e; box-shadow: none; }
+.chat-tab:focus-visible { outline: none; box-shadow: none; color: #f43f5e; }
 :global(.dark) .chat-tab { color: #a1a1aa; }
 :global(.dark) .chat-tab:hover { background: transparent; color: #ffffff; }
 :global(.dark) .chat-tab.p-tab-active { background: transparent; color: #FB7185; box-shadow: none; }

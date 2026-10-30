@@ -49,7 +49,7 @@ function isResetting(attempts: any, email: string): boolean {
 }
 </script>
 <template>
-  <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0' } }">
+  <Card class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0' } }">
     <template #content>
       <div class="flex items-center gap-2 flex-wrap">
         <div class="font-black dark:text-white">Неудачные входы</div>
@@ -66,7 +66,7 @@ function isResetting(attempts: any, email: string): boolean {
       <div v-if="attempts.loading.value" class="py-8 grid place-items-center"><ProgressSpinner style="width:24px;height:24px" :strokeWidth="6" /></div>
       <div v-else-if="!attempts.items.value.length" class="py-8 text-center text-sm text-stone-400 dark:text-zinc-500">Попыток пока нет — всё чисто</div>
       <div v-else class="admin-list-scroll mt-3 space-y-2 pr-1">
-        <div v-for="a in attempts.items.value" :key="a.id" class="rounded-2xl border border-stone-200 dark:border-zinc-700 p-3" :class="!a.successful && (a.ip_fails_24h ?? 0) >= REPEAT_OFFENDER_IP_FAILS ? '!border-red-300 dark:!border-red-800' : ''">
+        <div v-for="a in attempts.items.value" :key="a.id" class="rounded-2xl border border-stone-200 dark:border-white/10 p-3" :class="!a.successful && (a.ip_fails_24h ?? 0) >= REPEAT_OFFENDER_IP_FAILS ? '!border-red-300 dark:!border-red-800' : ''">
           <div class="flex items-center gap-2 min-w-0">
             <i :class="a.successful ? 'pi pi-check-circle text-emerald-500' : 'pi pi-times-circle text-red-500'" class="text-sm shrink-0" />
             <div class="min-w-0 flex-1">
@@ -96,7 +96,7 @@ function isResetting(attempts: any, email: string): boolean {
           <div class="mt-1 text-[11px] text-stone-400 truncate" :title="a.user_agent">{{ shortUa(a.user_agent) }}</div>
           <details class="mt-1 text-[11px] text-stone-500 dark:text-zinc-400">
             <summary class="cursor-pointer select-none text-[11px] text-stone-400 hover:text-stone-600 dark:hover:text-zinc-200">Полный user-agent и сырые данные</summary>
-            <div class="mt-1 break-all rounded-xl bg-stone-100 dark:bg-zinc-800 px-2.5 py-2">{{ a.user_agent || '—' }}</div>
+            <div class="mt-1 break-all rounded-xl bg-stone-100 dark:bg-white/[0.06] px-2.5 py-2">{{ a.user_agent || '—' }}</div>
             <div class="mt-1 truncate">IP {{ a.ip || 'скрыт' }} · {{ a.country || '?' }} ({{ a.country_code || '?' }}) · {{ a.city || 'город?' }}</div>
           </details>
           <div v-if="a.user" class="mt-2 flex gap-1.5 flex-wrap items-center">

@@ -30,10 +30,10 @@ const f = useOnboardingForm()
 <template>
   <Head title="Заполни анкету" />
   <div class="mx-auto w-full max-w-[560px] px-4 py-10 sm:py-14">
-    <Card :pt="{ root: { class: '!rounded-[28px] !border-0 shadow-xl dark:!bg-zinc-900' }, body: { class: '!p-6 sm:!p-8' } }">
+    <Card :pt="{ root: { class: '!rounded-[28px] !border-0 shadow-xl dark:!bg-[#0F121F]' }, body: { class: '!p-6 sm:!p-8' } }">
       <template #content>
         <div class="flex flex-col items-center text-center">
-          <span class="grid h-14 w-14 place-items-center rounded-3xl bg-gradient-to-br from-rose-500 via-fuchsia-500 to-orange-400 text-white shadow-lg shadow-rose-500/30"><i class="pi pi-user-edit text-2xl leading-none" /></span>
+          <span class="grid h-14 w-14 place-items-center rounded-3xl bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white shadow-lg shadow-rose-500/30"><i class="pi pi-user-edit text-2xl leading-none" /></span>
           <h1 class="mt-4 text-[24px] font-black tracking-tight text-ink-900 dark:text-white">Почти готово! 📝</h1>
         </div>
 
@@ -79,7 +79,7 @@ const f = useOnboardingForm()
             <small class="auth-err">{{ f.errors.value.home_city }}</small>
           </div>
 
-          <Button :loading="f.isSubmitting.value" type="submit" label="Готово — показать свайпы →" class="w-full !border-0 !bg-gradient-to-r !from-rose-500 !via-fuchsia-500 !to-orange-400 !py-3.5 !font-bold !text-white !rounded-full shadow-lg shadow-rose-500/30" />
+          <Button :loading="f.isSubmitting.value" type="submit" label="Готово — показать свайпы →" class="w-full !border-0 !bg-gradient-to-r !from-rose-500 !via-pink-500 !to-fuchsia-500 !py-3.5 !font-bold !text-white !rounded-full shadow-lg shadow-rose-500/30" />
           <p class="text-center text-xs leading-relaxed text-stone-400 dark:text-zinc-500">Свайпы — строго с 18 лет. Город поможет подобрать людей рядом.</p>
         </form>
       </template>

@@ -89,19 +89,19 @@ async function declineDistrictFromToast(t: any) {
         v-on="swipe.bindToast(t, () => remove(t.id))"
         :style="swipe.toastStyle(t.id)"
         @click="onToastClick(t)"
-        class="pointer-events-auto group cursor-pointer bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-[20px] shadow-[0_12px_40px_rgba(0,0,0,0.16)] p-3.5 flex gap-3 items-center hover:scale-[1.01] active:scale-[0.99] transition-all touch-pan-y"
+        class="pointer-events-auto group cursor-pointer bg-white dark:bg-[#0F121F] border border-stone-200 dark:border-white/10 rounded-[20px] shadow-[0_12px_40px_rgba(0,0,0,0.16)] p-3.5 flex gap-3 items-center hover:scale-[1.01] active:scale-[0.99] transition-all touch-pan-y"
       >
         <div class="relative shrink-0">
-          <img v-if="t.avatar" :src="t.avatar" class="w-11 h-11 rounded-full object-cover border border-stone-200 dark:border-zinc-700 bg-stone-100 dark:bg-zinc-800" :alt="t.title" />
-          <span v-else class="w-11 h-11 rounded-full grid place-items-center border border-stone-200 dark:border-zinc-700 text-lg" :class="t.type==='sos' ? 'bg-red-600 text-white' : t.type==='match' ? 'bg-pink-500 text-white' : t.type==='message' ? 'bg-violet-600 text-white' : t.type==='pin' ? 'bg-rose-500 text-white' : t.type==='report' ? 'bg-red-600 text-white' : 'bg-amber-500 text-white'"><i :class="[t.icon || 'pi pi-bell', 'text-base']" /></span>
+          <img v-if="t.avatar" :src="t.avatar" class="w-11 h-11 rounded-full object-cover border border-stone-200 dark:border-white/10 bg-stone-100 dark:bg-white/[0.06]" :alt="t.title" />
+          <span v-else class="w-11 h-11 rounded-full grid place-items-center border border-stone-200 dark:border-white/10 text-lg" :class="t.type==='sos' ? 'bg-red-600 text-white' : t.type==='match' ? 'bg-pink-500 text-white' : t.type==='message' ? 'bg-violet-600 text-white' : t.type==='pin' ? 'bg-rose-500 text-white' : t.type==='report' ? 'bg-red-600 text-white' : 'bg-amber-500 text-white'"><i :class="[t.icon || 'pi pi-bell', 'text-base']" /></span>
           <span
             v-if="t.avatar"
-            class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full grid place-items-center border-2 border-white dark:border-zinc-900 shadow text-white text-xs"
+            class="absolute -bottom-1 -right-1 w-6 h-6 rounded-full grid place-items-center border-2 border-white dark:border-[#0F121F] shadow text-white text-xs"
             :class="t.type==='message' ? 'bg-violet-600' : t.type==='pin' ? 'bg-rose-500' : t.type==='sos' ? 'bg-red-600' : t.type==='match' ? 'bg-pink-500' : t.type==='report' ? 'bg-red-600' : 'bg-amber-500'"
           >
             <i :class="[t.icon || 'pi pi-bell', 'text-[10px]']" />
           </span>
-          <span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-zinc-900 animate-[ping_1.6s_ease-out_infinite] opacity-60"></span>
+          <span class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-[#0F121F] animate-[ping_1.6s_ease-out_infinite] opacity-60"></span>
         </div>
         <div class="min-w-0 flex-1">
           <div class="flex items-center gap-1.5">
@@ -119,7 +119,7 @@ async function declineDistrictFromToast(t: any) {
             <Button label="Отклонить" icon="pi pi-times" size="small" severity="secondary" outlined rounded @click.stop="declineDistrictFromToast(t)" />
           </div>
         </div>
-        <button @click.stop="remove(t.id)" class="shrink-0 w-8 h-8 grid place-items-center rounded-full hover:bg-stone-100 dark:hover:bg-zinc-800 text-stone-400 dark:text-zinc-500 hover:text-stone-600 dark:hover:text-zinc-300 transition">
+        <button @click.stop="remove(t.id)" class="shrink-0 w-8 h-8 grid place-items-center rounded-full hover:bg-stone-100 dark:hover:bg-white/10 text-stone-400 dark:text-zinc-500 hover:text-stone-600 dark:hover:text-zinc-300 transition">
           <i class="pi pi-times text-xs"></i>
         </button>
       </div>

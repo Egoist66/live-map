@@ -48,7 +48,7 @@ onMounted(() => load())
         </div>
 
         <div v-else-if="notFound || !refPage" class="mt-8">
-          <Card class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[20px] !shadow-soft">
+          <Card class="!bg-white dark:!bg-[#0F121F] !border !border-stone-200 dark:!border-white/10 !rounded-[20px] !shadow-soft">
             <template #content>
               <div class="p-6 text-center">
                 <div class="text-lg font-bold dark:text-white">Страница пока не заполнена</div>
@@ -60,13 +60,13 @@ onMounted(() => load())
         </div>
 
         <div v-else class="mt-8 space-y-4">
-          <Card v-if="refPage.body" class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[20px] !shadow-soft">
+          <Card v-if="refPage.body" class="!bg-white dark:!bg-[#0F121F] !border !border-stone-200 dark:!border-white/10 !rounded-[20px] !shadow-soft">
             <template #content>
               <div class="p-5 sm:p-6 text-sm leading-relaxed text-stone-700 dark:text-zinc-300 whitespace-pre-wrap">{{ refPage.body }}</div>
             </template>
           </Card>
 
-          <Card v-if="hasCompanyBlock" class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[20px] !shadow-soft">
+          <Card v-if="hasCompanyBlock" class="!bg-white dark:!bg-[#0F121F] !border !border-stone-200 dark:!border-white/10 !rounded-[20px] !shadow-soft">
             <template #content>
               <div class="p-5 sm:p-6">
                 <div class="text-xs font-bold tracking-widest uppercase text-stone-400">Данные организации</div>
@@ -100,7 +100,7 @@ onMounted(() => load())
             </template>
           </Card>
 
-          <Card v-if="attachments.length" class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[20px] !shadow-soft">
+          <Card v-if="attachments.length" class="!bg-white dark:!bg-[#0F121F] !border !border-stone-200 dark:!border-white/10 !rounded-[20px] !shadow-soft">
             <template #content>
               <div class="p-5 sm:p-6">
                 <div class="text-xs font-bold tracking-widest uppercase text-stone-400">Документы</div>
@@ -110,9 +110,9 @@ onMounted(() => load())
                     :key="fileIndex"
                     :href="file.url"
                     target="_blank"
-                    class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-700 p-3 hover:bg-stone-50 dark:hover:bg-zinc-800 transition"
+                    class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-white/10 p-3 hover:bg-stone-50 dark:hover:bg-white/10 transition"
                   >
-                    <span class="w-10 h-10 rounded-xl bg-ink-900 dark:bg-zinc-700 text-white grid place-items-center shrink-0"><i class="pi pi-file text-sm" /></span>
+                    <span class="w-10 h-10 rounded-xl bg-ink-900 dark:bg-white/10 text-white grid place-items-center shrink-0"><i class="pi pi-file text-sm" /></span>
                     <span class="min-w-0 flex-1">
                       <span class="block text-sm font-bold truncate dark:text-white">{{ file.name }}</span>
                       <span class="block text-[11px] text-stone-400">Открыть документ</span>

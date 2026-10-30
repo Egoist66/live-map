@@ -169,7 +169,7 @@ export const LANDING_THEMES: Record<LandingTabId, LandingTheme> = {
     accentText: 'bg-gradient-to-r from-rose-500 via-pink-500 to-fuchsia-500 bg-clip-text text-transparent',
     ctaBtn: '!bg-gradient-to-r !from-rose-500 !via-pink-500 !to-fuchsia-500',
     badge: '!bg-gradient-to-r !from-rose-500 !via-pink-500 !to-fuchsia-500',
-    stepIcon: 'bg-gradient-to-r from-rose-500 to-pink-500',
+    stepIcon: 'bg-gradient-to-r from-rose-500 via-pink-500 to-fuchsia-500',
     logo: 'bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500',
     logoIcon: 'pi pi-heart-fill',
   },

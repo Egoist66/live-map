@@ -109,7 +109,7 @@ function planCaption(u: any): string {
 }
 </script>
 <template>
-  <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0' } }">
+  <Card class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0' } }">
     <template #content>
       <div class="flex items-center gap-2 flex-wrap">
         <span class="text-xs font-bold text-stone-400 dark:text-zinc-500">Всего: {{ meta.total }}</span>
@@ -133,12 +133,12 @@ function planCaption(u: any): string {
       </div>
       <div v-if="loading" class="py-8 grid place-items-center"><ProgressSpinner style="width:24px;height:24px" :strokeWidth="6" /></div>
       <div v-else-if="!list.length" class="py-8 text-center text-sm text-stone-400 dark:text-zinc-500">Ничего не найдено</div>
-      <ul v-else class="admin-list-scroll mt-1 divide-y divide-stone-100 border-t border-stone-100 pr-1 dark:divide-zinc-800 dark:border-zinc-800">
+      <ul v-else class="admin-list-scroll mt-1 divide-y divide-stone-100 border-t border-stone-100 pr-1 dark:divide-white/10 dark:border-white/10">
         <li v-for="u in list" :key="u.id" class="py-2">
           <div class="flex min-w-0 items-center gap-2.5">
             <div class="relative shrink-0" :title="u.is_online ? 'онлайн' : 'офлайн'">
               <Avatar :image="avatarSrcFor(u)" shape="circle" class="!w-8 !h-8 [&_img]:object-cover" />
-              <span v-if="u.is_online" class="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500 dark:border-zinc-900" />
+              <span v-if="u.is_online" class="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-emerald-500 dark:border-[#0F121F]" />
             </div>
             <div class="min-w-0 flex-1">
               <div class="flex min-w-0 items-center gap-1.5">

@@ -8,7 +8,7 @@ import Checkbox from 'primevue/checkbox'
 defineProps<{ hidden: any }>()
 </script>
 <template>
-  <div class="!border !border-stone-200 dark:!border-zinc-800 !rounded-3xl !p-4 bg-white dark:bg-zinc-900">
+  <div class="!border !border-stone-200 dark:!border-white/10 !rounded-3xl !p-4 bg-white dark:bg-[#0F121F]">
     <div class="flex items-start justify-between gap-3">
       <div class="min-w-0">
         <div class="text-sm font-semibold dark:text-white flex items-center gap-2">
@@ -31,7 +31,7 @@ defineProps<{ hidden: any }>()
     <Message v-if="!hidden.canHideMore.value && !hidden.hiddenUnlimited.value" severity="warn" :closable="false" class="!mt-3 !rounded-2xl !text-xs">Лимит исчерпан. Удали кого-то из скрытых или обнови тариф.</Message>
     <div v-if="hidden.loading.value" class="mt-3 text-xs text-stone-500">Загрузка…</div>
     <div v-else-if="!hidden.visibleFriends.value.length" class="mt-3 text-xs text-stone-500">Друзей нет</div>
-    <div v-else class="mt-2 divide-y divide-stone-100 dark:divide-zinc-800 max-h-72 overflow-auto">
+    <div v-else class="mt-2 divide-y divide-stone-100 dark:divide-white/10 max-h-72 overflow-auto">
       <div v-for="f in hidden.visibleFriends.value" :key="f.id" class="flex items-center justify-between gap-3 py-2">
         <div class="min-w-0 flex items-center gap-2">
           <i :class="['pi text-xs', f.is_hidden ? 'pi-eye-slash text-stone-400' : 'pi-eye text-emerald-500']" />

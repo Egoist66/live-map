@@ -19,7 +19,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <section class="liquid-glass rounded-[24px] shadow-soft p-4 sm:p-5">
+  <section class="panel-surface rounded-[24px] shadow-soft p-4 sm:p-5">
     <div class="flex items-center justify-between">
       <h2 class="text-lg sm:text-xl font-extrabold tracking-tight text-ink-900 dark:text-white">UGallery</h2>
       <button
@@ -74,13 +74,13 @@ const emit = defineEmits<{
         type="button"
         title="Добавить фото"
         aria-label="Добавить фото"
-        class="grid aspect-square place-items-center rounded-xl border-2 border-dashed border-stone-300 text-stone-400 transition hover:border-blue-500 hover:bg-blue-500/5 hover:text-blue-500 active:scale-[0.97] dark:border-zinc-700 dark:text-zinc-500 dark:hover:border-blue-400 dark:hover:text-blue-400"
+        class="grid aspect-square place-items-center rounded-xl border-2 border-dashed border-stone-300 text-stone-400 transition hover:border-blue-500 hover:bg-blue-500/5 hover:text-blue-500 active:scale-[0.97] dark:border-white/10 dark:text-zinc-500 dark:hover:border-blue-400 dark:hover:text-blue-400"
         @click="emit('add')"
       >
         <span class="grid place-items-center"><i class="pi pi-plus text-xl"></i></span>
       </button>
     </div>
-    <p v-else class="mt-3 rounded-2xl border border-dashed border-stone-300 px-4 py-6 text-center text-[13px] text-stone-500 dark:border-zinc-700 dark:text-zinc-400">
+    <p v-else class="mt-3 rounded-2xl border border-dashed border-stone-300 px-4 py-6 text-center text-[13px] text-stone-500 dark:border-white/10 dark:text-zinc-400">
       Пока нет фотографий
     </p>
   </section>

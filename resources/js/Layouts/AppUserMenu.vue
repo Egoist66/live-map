@@ -10,14 +10,14 @@ const { menuItemClass, menuPt } = useDropdownMenuStyle()
 
 const chip: Record<string, string> = {
   violet: 'bg-violet-500/15 text-violet-600 dark:!bg-violet-500/15 dark:!text-violet-300',
-  slate: 'bg-stone-200/70 text-stone-600 dark:!bg-zinc-500/15 dark:!text-zinc-300',
+  slate: 'bg-stone-200/70 text-stone-600 dark:!bg-white/10 dark:!text-zinc-300',
   teal: 'bg-teal-500/15 text-teal-600 dark:!bg-teal-500/15 dark:!text-teal-300',
   red: 'bg-red-500/10 text-red-600 dark:!bg-red-500/15 dark:!text-red-400',
   sky: 'bg-sky-500/15 text-sky-600 dark:!bg-sky-500/15 dark:!text-sky-300',
 }
 </script>
 <template>
-  <Menu ref="menuRef" :model="items" popup class="!min-w-[280px] !p-0 !bg-white dark:!bg-zinc-900/95 dark:!backdrop-blur-xl !border !border-stone-200 dark:!border-white/10 !rounded-[20px] !shadow-float dark:!shadow-[0_24px_70px_-16px_rgba(0,0,0,0.8)] !overflow-hidden" :pt="menuPt">
+  <Menu ref="menuRef" :model="items" popup class="!min-w-[280px] !p-0 !bg-white dark:!bg-[#0F121F]/95 dark:!backdrop-blur-xl !border !border-stone-200 dark:!border-white/10 !rounded-[20px] !shadow-float dark:!shadow-[0_24px_70px_-16px_rgba(0,0,0,0.8)] !overflow-hidden" :pt="menuPt">
     <template #item="{ item, props }">
       <div v-if="(item as any).isHeader" class="px-4 pt-4 pb-3 flex gap-3 items-center bg-transparent">
         <Avatar :image="avatarSrc" shape="circle" size="large" class="!w-10 !h-10 ring-2 ring-white dark:!ring-white/20 shadow" />

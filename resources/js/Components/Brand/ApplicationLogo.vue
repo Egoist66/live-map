@@ -19,7 +19,7 @@ withDefaults(defineProps<{ pro?: boolean }>(), { pro: false })
     </span>
     <span
       v-if="pro"
-      class="font-black text-[11px] min-[411px]:text-[12px] tracking-wide bg-gradient-to-r from-indigo-500 to-violet-600 dark:from-indigo-400 dark:to-violet-400 bg-clip-text text-transparent"
+      class="font-black text-[11px] min-[411px]:text-[12px] tracking-wide bg-gradient-to-r from-rose-500 via-pink-500 to-fuchsia-500 dark:from-rose-500 dark:to-fuchsia-500 bg-clip-text text-transparent"
     >Pro</span>
   </div>
 </template>

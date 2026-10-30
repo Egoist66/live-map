@@ -38,5 +38,5 @@ createInertiaApp({
     const authUserId = extractAuthUserId(props.initialPage.props)
     void bootClientApp(authUserId)
   },
-  progress: { color: '#5B5BFF' },
+  progress: { color: '#F43F5E' },
 })

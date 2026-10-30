@@ -31,7 +31,7 @@ function onFile(event: Event): void {
 </script>
 
 <template>
-  <Card class="!rounded-3xl !border-stone-200 dark:!border-zinc-800 !bg-white dark:!bg-zinc-900 !shadow-soft overflow-hidden">
+  <Card class="!rounded-3xl !border-stone-200 dark:!border-white/10 !bg-white dark:!bg-[#0F121F] !shadow-soft overflow-hidden">
     <template #content>
       <div class="p-3 sm:p-5">
         <div class="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-zinc-500">
@@ -50,10 +50,10 @@ function onFile(event: Event): void {
           auto-resize
           placeholder="Что нового в районе? Расскажите жителям…"
           maxlength="2000"
-          class="mt-2 w-full !rounded-2xl !border-0 !bg-stone-100 !text-[15px] dark:!bg-zinc-800/70"
+          class="mt-2 w-full !rounded-2xl !border-0 !bg-stone-100 !text-[15px] dark:!bg-white/[0.06]"
           @update:model-value="(v: string | undefined) => emit('update:body', v ?? '')"
         />
-        <div v-if="imagePreview" class="relative mt-3 overflow-hidden rounded-2xl border border-stone-200 dark:border-zinc-700">
+        <div v-if="imagePreview" class="relative mt-3 overflow-hidden rounded-2xl border border-stone-200 dark:border-white/10">
           <img :src="imagePreview" alt="Превью" class="max-h-72 w-full object-cover" />
           <Button icon="pi pi-times" rounded severity="danger" class="!absolute !right-2 !top-2 !h-8 !w-8" @click="emit('clear-image')" />
         </div>

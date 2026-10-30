@@ -11,10 +11,10 @@ import ProgressSpinner from 'primevue/progressspinner'
 defineProps<{ mgr: any }>()
 </script>
 <template>
-  <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0' } }">
+  <Card class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0' } }">
     <template #content>
       <div class="flex items-center gap-2">
-        <span class="w-9 h-9 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white grid place-items-center shrink-0"><i class="pi pi-wrench text-sm" /></span>
+        <span class="w-9 h-9 rounded-2xl bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white grid place-items-center shrink-0"><i class="pi pi-wrench text-sm" /></span>
         <div class="flex-1 min-w-0">
           <div class="font-black dark:text-white">Режим обслуживания</div>
           <div class="text-xs text-stone-500 dark:text-zinc-400">Закрывает приложение заглушкой для всех, кроме модераторов.</div>
@@ -26,7 +26,7 @@ defineProps<{ mgr: any }>()
 
       <div v-if="mgr.loading.value" class="py-8 grid place-items-center"><ProgressSpinner style="width:24px;height:24px" :strokeWidth="6" /></div>
       <div v-else class="mt-3 space-y-3">
-        <label class="flex items-center justify-between gap-3 rounded-2xl border border-stone-200 dark:border-zinc-700 px-3.5 py-3 cursor-pointer">
+        <label class="flex items-center justify-between gap-3 rounded-2xl border border-stone-200 dark:border-white/10 px-3.5 py-3 cursor-pointer">
           <span class="text-sm font-bold dark:text-white">Включить обслуживание</span>
           <ToggleSwitch :modelValue="mgr.enabled.value" @update:modelValue="(v:boolean)=>mgr.enabled.value=v" />
         </label>

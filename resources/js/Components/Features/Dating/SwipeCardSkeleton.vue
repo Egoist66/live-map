@@ -17,7 +17,7 @@ import Skeleton from 'primevue/skeleton'
     role="status"
     aria-busy="true"
     aria-label="Загружаем анкеты"
-    class="swipes-feed-skeleton relative overflow-hidden rounded-xl border border-stone-200 bg-white shadow-soft dark:border-zinc-800 dark:bg-zinc-900 sm:h-[60dvh] sm:min-h-[380px] sm:max-h-[520px] lg:h-[62dvh] lg:max-h-[600px] xl:h-[66dvh] xl:max-h-[680px] 2xl:max-h-[740px]"
+    class="swipes-feed-skeleton relative overflow-hidden rounded-xl border border-stone-200 bg-white shadow-soft dark:border-white/10 dark:bg-[#0F121F] sm:h-[60dvh] sm:min-h-[380px] sm:max-h-[520px] lg:h-[62dvh] lg:max-h-[600px] xl:h-[66dvh] xl:max-h-[680px] 2xl:max-h-[740px]"
   >
     <Skeleton width="100%" height="100%" border-radius="0" class="!absolute !inset-0" />
 

@@ -149,21 +149,21 @@ async function share(): Promise<void> {
 </script>
 
 <template>
-  <Card class="!rounded-3xl !border-stone-200 dark:!border-zinc-800 !bg-white dark:!bg-zinc-900 !shadow-soft overflow-hidden">
+  <Card class="!rounded-3xl !border-stone-200 dark:!border-white/10 !bg-white dark:!bg-[#0F121F] !shadow-soft overflow-hidden">
     <template #content>
       <article class="p-3 sm:p-5">
         <div class="flex items-start gap-3">
           <CompanyNewsBadge v-if="(post as any).company" :company="(post as any).company" class="min-w-0 flex-1" />
           <template v-else>
             <Avatar v-if="post.author.avatar_url" :image="post.author.avatar_url" shape="circle" class="!w-11 !h-11" />
-            <Avatar v-else icon="pi pi-user-secret" shape="circle" class="!w-11 !h-11 !bg-stone-900 !text-white dark:!bg-zinc-700" />
+            <Avatar v-else icon="pi pi-user-secret" shape="circle" class="!w-11 !h-11 !bg-stone-900 !text-white dark:!bg-white/10" />
             <div class="min-w-0 flex-1">
               <div class="flex items-center gap-2 min-w-0">
                 <Link v-if="post.author.id" :href="userProfileUrl(post.author)" class="truncate text-[15px] font-bold text-ink-900 dark:text-white hover:underline">
                   {{ post.author.name }}
                 </Link>
                 <span v-else class="truncate text-[15px] font-bold text-ink-900 dark:text-white">{{ post.author.name }}</span>
-                <span v-if="post.is_anonymous" class="shrink-0 inline-flex items-center gap-1 rounded-full bg-stone-100 dark:bg-zinc-800 px-2 py-0.5 text-[11px] font-semibold text-stone-500 dark:text-zinc-400">
+                <span v-if="post.is_anonymous" class="shrink-0 inline-flex items-center gap-1 rounded-full bg-stone-100 dark:bg-white/[0.06] px-2 py-0.5 text-[11px] font-semibold text-stone-500 dark:text-zinc-400">
                   <i class="pi pi-eye-slash text-[10px]" />аноним
                 </span>
               </div>
@@ -190,7 +190,7 @@ async function share(): Promise<void> {
           :media="post.media"
           @preview="(_url: string, i: number) => lightbox.openFlowMedia(post.media ?? [], i, shown.title || 'Фото поста')"
         />
-        <div v-else-if="shown.imageUrl" class="mt-3 overflow-hidden rounded-2xl border border-stone-200 dark:border-zinc-800">
+        <div v-else-if="shown.imageUrl" class="mt-3 overflow-hidden rounded-2xl border border-stone-200 dark:border-white/10">
           <button type="button" class="block w-full cursor-zoom-in" aria-label="Открыть фото на весь экран" @click="lightbox.openSingle(shown.imageUrl, shown.title || 'Фото поста')">
             <!-- Явные размеры + aspect держат место до загрузки (CLS),
                  decoding async не блочит main thread. -->
@@ -201,12 +201,12 @@ async function share(): Promise<void> {
         <button
           v-if="isQuote && post.repost"
           type="button"
-          class="mt-3 block w-full overflow-hidden rounded-2xl border border-stone-200 dark:border-zinc-800 text-left transition hover:border-violet-300"
+          class="mt-3 block w-full overflow-hidden rounded-2xl border border-stone-200 dark:border-white/10 text-left transition hover:border-violet-300"
           @click="reposter.goPost(post.repost.id)"
         >
           <div class="flex items-center gap-2 px-3 pt-2.5">
             <template v-if="(post.repost as any).company">
-              <span class="grid place-items-center !w-6 !h-6 rounded-full overflow-hidden bg-gradient-to-br from-indigo-500 to-violet-600 text-white text-xs shrink-0">
+              <span class="grid place-items-center !w-6 !h-6 rounded-full overflow-hidden bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white text-xs shrink-0">
                 <img v-if="(post.repost as any).company.logo_url" :src="(post.repost as any).company.logo_url" alt="" class="w-full h-full object-cover" loading="lazy" />
                 <span v-else>🏢</span>
               </span>
@@ -215,7 +215,7 @@ async function share(): Promise<void> {
             </template>
             <template v-else>
               <Avatar v-if="post.repost.author.avatar_url" :image="post.repost.author.avatar_url" shape="circle" class="!w-6 !h-6" />
-              <Avatar v-else icon="pi pi-user-secret" shape="circle" class="!w-6 !h-6 !bg-stone-200 dark:!bg-zinc-700" />
+              <Avatar v-else icon="pi pi-user-secret" shape="circle" class="!w-6 !h-6 !bg-stone-200 dark:!bg-white/10" />
               <span class="truncate text-[13px] font-bold text-ink-900 dark:text-white">{{ post.repost.author.name }}</span>
             </template>
           </div>
@@ -226,7 +226,7 @@ async function share(): Promise<void> {
         </button>
         <PhotoLightbox :photos="lightbox.photos.value" :index="lightbox.index.value" :open="lightbox.open.value" @close="lightbox.close()" @update:index="(v: number) => lightbox.index.value = v" />
 
-        <div class="mt-3 flex items-center gap-1 border-t border-stone-100 dark:border-zinc-800 pt-2">
+        <div class="mt-3 flex items-center gap-1 border-t border-stone-100 dark:border-white/10 pt-2">
           <Button
             :icon="post.liked ? 'pi pi-heart-fill' : 'pi pi-heart'"
             text
@@ -258,12 +258,12 @@ async function share(): Promise<void> {
           <Button icon="pi pi-send" text rounded severity="secondary" aria-label="Отправить как сообщение" title="Отправить как сообщение" v-tooltip.bottom="'Отправить как сообщение'" @click="openShareDialog()" />
           <Button icon="pi pi-share-alt" text rounded severity="secondary" aria-label="Поделиться ссылкой" title="Поделиться ссылкой" :loading="sharing" @click="share()" />
         </div>
-        <div v-if="post.repost" class="mt-2 flex items-center gap-1.5 border-t border-stone-100 dark:border-zinc-800 pt-2 text-xs text-stone-400 dark:text-zinc-500">
+        <div v-if="post.repost" class="mt-2 flex items-center gap-1.5 border-t border-stone-100 dark:border-white/10 pt-2 text-xs text-stone-400 dark:text-zinc-500">
           <RepostIcon :size="12" class="shrink-0 text-violet-500" />
           <span class="truncate">Репост от <span class="font-bold text-stone-500 dark:text-zinc-300">{{ post.repost.author.name }}</span></span>
         </div>
 
-        <div v-if="expanded" class="mt-2 border-t border-stone-100 dark:border-zinc-800 pt-3">
+        <div v-if="expanded" class="mt-2 border-t border-stone-100 dark:border-white/10 pt-3">
           <div v-if="thread.loading.value" class="py-4 text-center text-sm text-stone-400">Загружаем комментарии…</div>
           <template v-else>
             <div v-if="thread.comments.value.length" class="mb-2 flex items-center gap-1 text-[11px] font-bold text-stone-400">
@@ -287,7 +287,7 @@ async function share(): Promise<void> {
           </template>
           <InfiniteSentinel :sentinel="threadSentinel" :has-more="thread.hasMore.value" :loading="thread.loadingMore.value" />
 
-          <div v-if="canWrite" class="sticky bottom-0 -mx-1 mt-3 bg-white/95 pb-1 pt-2 backdrop-blur dark:bg-zinc-900/95">
+          <div v-if="canWrite" class="sticky bottom-0 -mx-1 mt-3 bg-white/95 pb-1 pt-2 backdrop-blur dark:bg-[#0F121F]/95">
             <div v-if="thread.replyTo.value" class="mb-2 flex min-w-0 items-center gap-2 rounded-full bg-violet-50 py-1.5 pl-3 pr-1.5 text-xs text-stone-600 dark:bg-violet-950/50 dark:text-zinc-300">
               <i class="pi pi-reply shrink-0 text-[11px] text-violet-500" />
               <span class="min-w-0 flex-1 truncate">Ответ для <b>{{ replyName(thread.replyTo.value) }}</b></span>
@@ -311,7 +311,7 @@ async function share(): Promise<void> {
                   v-model="thread.draft.value"
                   placeholder="Написать комментарий…"
                   enterkeyhint="send"
-                  class="w-full !rounded-2xl !border-0 !bg-stone-100 !py-3 !text-[16px] !leading-snug dark:!bg-zinc-800"
+                  class="w-full !rounded-2xl !border-0 !bg-stone-100 !py-3 !text-[16px] !leading-snug dark:!bg-white/[0.06]"
                   @keyup.enter="thread.send()"
                 />
               </div>
@@ -322,7 +322,7 @@ async function share(): Promise<void> {
               <label for="anon-flow">анонимно</label>
             </div>
           </div>
-          <div v-else class="mt-3 flex items-center gap-2 rounded-2xl bg-stone-100 dark:bg-zinc-800 px-3 py-2.5 text-xs text-stone-500 dark:text-zinc-400">
+          <div v-else class="mt-3 flex items-center gap-2 rounded-2xl bg-stone-100 dark:bg-white/[0.06] px-3 py-2.5 text-xs text-stone-500 dark:text-zinc-400">
             <i class="pi pi-lock shrink-0 text-[11px]" />
             <span>Автор ограничил комментарии</span>
           </div>

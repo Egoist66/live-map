@@ -81,11 +81,11 @@ function reviewStatusSeverity(status: string): 'secondary' | 'success' | 'warn' 
 }
 </script>
 <template>
-  <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-6' }, content: { class: '!p-0' } }">
+  <Card class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-6' }, content: { class: '!p-0' } }">
     <template #content>
       <p class="text-sm text-stone-500 dark:text-zinc-400">Жалобы, скрытие профилей и удаление аккаунтов.</p>
       <div class="mt-5 space-y-4 max-w-xl">
-        <Card v-if="staff.isAdmin.value" class="!border-amber-200 dark:!border-amber-950 !rounded-3xl !shadow-none !bg-white dark:!bg-zinc-900" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
+        <Card v-if="staff.isAdmin.value" class="!border-amber-200 dark:!border-amber-950 !rounded-3xl !shadow-none !bg-white dark:!bg-[#0F121F]" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
           <template #content>
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
@@ -101,7 +101,7 @@ function reviewStatusSeverity(status: string): 'secondary' | 'success' | 'warn' 
             <Message v-if="realtime.error.value" severity="error" :closable="false" class="!mt-3 !rounded-2xl !text-xs">{{ realtime.error.value }}</Message>
           </template>
         </Card>
-        <Card class="!border-red-200 dark:!border-red-950 !rounded-3xl !shadow-none !bg-white dark:!bg-zinc-900" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
+        <Card class="!border-red-200 dark:!border-red-950 !rounded-3xl !shadow-none !bg-white dark:!bg-[#0F121F]" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
           <template #content>
             <div class="flex items-center gap-2">
               <span class="w-8 h-8 rounded-2xl bg-red-600 text-white grid place-items-center shrink-0"><i class="pi pi-flag text-xs"></i></span>
@@ -114,7 +114,7 @@ function reviewStatusSeverity(status: string): 'secondary' | 'success' | 'warn' 
               <ProgressSpinner style="width:22px;height:22px" :strokeWidth="6" />
             </div>
             <div v-else-if="reports.reports.value.length" class="mt-3 space-y-2">
-              <div v-for="r in reports.reports.value" :key="r.id" class="rounded-2xl border border-stone-200 dark:border-zinc-700 p-3">
+              <div v-for="r in reports.reports.value" :key="r.id" class="rounded-2xl border border-stone-200 dark:border-white/10 p-3">
                 <div class="flex items-center gap-2 min-w-0">
                   <Avatar :image="avatarSrcFor(r.reporter)" shape="circle" class="!w-8 !h-8 shrink-0 [&_img]:object-cover" />
                   <div class="min-w-0 flex-1">
@@ -134,10 +134,10 @@ function reviewStatusSeverity(status: string): 'secondary' | 'success' | 'warn' 
             <Message v-if="reports.error.value" severity="error" :closable="false" class="!mt-3 !rounded-2xl !text-xs">{{ reports.error.value }}</Message>
           </template>
         </Card>
-        <Card v-if="props.reviewMods" class="!border-amber-200 dark:!border-amber-950 !rounded-3xl !shadow-none !bg-white dark:!bg-zinc-900" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
+        <Card v-if="props.reviewMods" class="!border-amber-200 dark:!border-amber-950 !rounded-3xl !shadow-none !bg-white dark:!bg-[#0F121F]" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
           <template #content>
             <div class="flex items-center gap-2">
-              <span class="w-8 h-8 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-white grid place-items-center shrink-0"><i class="pi pi-star text-xs"></i></span>
+              <span class="w-8 h-8 rounded-2xl bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white grid place-items-center shrink-0"><i class="pi pi-star text-xs"></i></span>
               <div class="text-sm font-semibold dark:text-white">Отзывы ULove · модерация</div>
               <Tag v-if="props.reviewMods.pendingCount.value" :value="String(props.reviewMods.pendingCount.value)" severity="danger" class="!text-[10px]" />
               <Button label="обновить" link size="small" class="ml-auto !text-xs !px-1" @click="props.reviewMods.refresh()" />
@@ -148,7 +148,7 @@ function reviewStatusSeverity(status: string): 'secondary' | 'success' | 'warn' 
               <ProgressSpinner style="width:22px;height:22px" :strokeWidth="6" />
             </div>
             <div v-else-if="props.reviewMods.reviews.value.length" class="mt-3 space-y-2">
-              <div v-for="r in props.reviewMods.reviews.value" :key="r.id" class="rounded-2xl border border-stone-200 dark:border-zinc-700 p-3">
+              <div v-for="r in props.reviewMods.reviews.value" :key="r.id" class="rounded-2xl border border-stone-200 dark:border-white/10 p-3">
                 <div class="flex items-center gap-2 min-w-0">
                   <Avatar :image="avatarSrcFor(r.author)" shape="circle" class="!w-8 !h-8 shrink-0 [&_img]:object-cover" />
                   <div class="min-w-0 flex-1">
@@ -172,7 +172,7 @@ function reviewStatusSeverity(status: string): 'secondary' | 'success' | 'warn' 
             <Message v-if="props.reviewMods.error.value" severity="error" :closable="false" class="!mt-3 !rounded-2xl !text-xs">{{ props.reviewMods.error.value }}</Message>
           </template>
         </Card>
-        <Card class="!border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-none !bg-white dark:!bg-zinc-900" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
+        <Card class="!border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-none !bg-white dark:!bg-[#0F121F]" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
           <template #content>
             <div class="flex items-start justify-between gap-3">
               <div class="min-w-0">
@@ -184,7 +184,7 @@ function reviewStatusSeverity(status: string): 'secondary' | 'success' | 'warn' 
             <Message v-if="admin.error.value" severity="error" :closable="false" class="!mt-3 !rounded-2xl !text-xs">{{ admin.error.value }}</Message>
           </template>
         </Card>
-        <Card class="!border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-none !bg-white dark:!bg-zinc-900" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
+        <Card class="!border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-none !bg-white dark:!bg-[#0F121F]" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
           <template #content>
             <div class="text-sm font-semibold dark:text-white">Скрыть / удалить чужой аккаунт</div>
             <p class="text-xs text-stone-500 dark:text-zinc-400 mt-1">Найди по имени или email (мин. 2 символа). Скрытый пропадает из поиска, профиля и карты у обычных пользователей.</p>
@@ -194,7 +194,7 @@ function reviewStatusSeverity(status: string): 'secondary' | 'success' | 'warn' 
               <InputText :modelValue="admin.query.value" @update:modelValue="(v:string|undefined)=>admin.query.value=v ?? ''" placeholder="Имя или email..." fluid size="small" rounded />
             </IconField>
             <div v-if="admin.searching.value" class="py-4 grid place-items-center"><ProgressSpinner style="width:22px;height:22px" :strokeWidth="6" /></div>
-            <div v-else-if="admin.results.value.length" class="mt-3 divide-y divide-stone-100 dark:divide-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl overflow-hidden">
+            <div v-else-if="admin.results.value.length" class="mt-3 divide-y divide-stone-100 dark:divide-white/10 border border-stone-200 dark:border-white/10 rounded-2xl overflow-hidden">
               <div v-for="u in admin.results.value" :key="u.id" class="flex items-center justify-between gap-2 p-3">
                 <div class="flex items-center gap-2.5 min-w-0">
                   <Avatar :image="avatarSrcFor(u)" shape="circle" size="normal" class="!w-9 !h-9 [&_img]:object-cover" />

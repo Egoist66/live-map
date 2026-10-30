@@ -39,7 +39,7 @@ const emit = defineEmits<{
     <template #footer>
       <div class="flex justify-end gap-2">
         <Button label="Отмена" severity="secondary" text :disabled="saving" @click="emit('close')" />
-        <Button label="Сохранить" :loading="saving" rounded class="!border-0 !bg-gradient-to-r !from-[#7c3aed] !to-[#3b82f6] !text-sm !font-bold !text-white" @click="emit('save')" />
+        <Button label="Сохранить" :loading="saving" rounded class="!border-0 !bg-gradient-to-r !from-rose-500 !via-pink-500 !to-fuchsia-500 !text-sm !font-bold !text-white" @click="emit('save')" />
       </div>
     </template>
   </Dialog>

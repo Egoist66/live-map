@@ -81,7 +81,7 @@ const sourceAuthors = computed(() => {
     header="Переслать"
     :draggable="false"
     :style="{ width: '400px', maxWidth: 'calc(100vw - 2rem)' }"
-    :pt="{ root: { class: '!rounded-3xl max-sm:!rounded-b-none' }, header: { class: '!py-3 !px-4' }, content: { class: '!px-2 !pb-2 !pt-0' } }"
+    :pt="{ root: { class: '!rounded-3xl max-sm:!rounded-b-none dark:!bg-[#0F121F] dark:!border-white/10' }, header: { class: '!py-3 !px-4' }, content: { class: '!px-2 !pb-2 !pt-0' } }"
   >
     <p class="px-3 pb-2 text-xs text-stone-500 dark:text-zinc-400 flex items-center gap-2">
       <span>Выбрано: {{ count }} · куда переслать?</span>
@@ -97,7 +97,7 @@ const sourceAuthors = computed(() => {
           :key="String(a?.sender_id ?? a?.id)"
           :user="a?.sender ?? a?.forwarded_from ?? { name: a?.sender_name }"
           shape="circle"
-          class="!w-6 !h-6 ring-2 ring-white dark:ring-zinc-900 [&_img]:object-cover"
+          class="!w-6 !h-6 ring-2 ring-white dark:ring-[#0F121F] [&_img]:object-cover"
         />
       </span>
       <span class="min-w-0 flex-1 truncate text-xs text-stone-500 dark:text-zinc-400">
@@ -113,7 +113,7 @@ const sourceAuthors = computed(() => {
         @click="emit('pick', 'saved')"
       >
         <span class="relative shrink-0">
-          <span class="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white grid place-items-center text-lg">⭐</span>
+          <span class="w-10 h-10 rounded-full bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white grid place-items-center text-lg">⭐</span>
         </span>
         <span class="flex-1 min-w-0">
           <span class="flex items-center gap-1.5 text-sm font-semibold text-stone-900 dark:text-white truncate">Избранное</span>
@@ -131,7 +131,7 @@ const sourceAuthors = computed(() => {
         @click="emit('pick', Number(c?.id))"
       >
         <span class="relative shrink-0">
-          <span v-if="c?.title" class="w-10 h-10 rounded-full bg-gradient-to-br from-violet-700 to-purple-900 text-white grid place-items-center">🏘️</span>
+          <span v-if="c?.title" class="w-10 h-10 rounded-full bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white grid place-items-center">🏘️</span>
           <UserAvatar v-else :user="c?.other" shape="circle" class="!w-10 !h-10 [&_img]:object-cover" />
         </span>
         <span class="flex-1 min-w-0">

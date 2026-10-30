@@ -48,7 +48,7 @@ const stepItems = [{ label: 'Компания' }, { label: 'Реквизиты �
       </span>
     </Message>
 
-    <Card class="!rounded-[24px] !border-stone-200 dark:!border-zinc-800 !bg-white dark:!bg-zinc-900 !shadow-sm">
+    <Card class="!rounded-[24px] !border-stone-200 dark:!border-white/10 !bg-white dark:!bg-[#0F121F] !shadow-sm">
       <template #content>
         <form @submit.prevent="ob.finish" class="space-y-4">
           <template v-if="ob.step.value === 0">
@@ -141,7 +141,7 @@ const stepItems = [{ label: 'Компания' }, { label: 'Реквизиты �
           <div class="flex gap-2 pt-1">
             <Button v-if="ob.step.value > 0" label="Назад" severity="secondary" outlined rounded class="flex-1" @click="ob.back()" type="button" />
             <Button v-if="ob.step.value < 2" label="Дальше" rounded class="flex-1 !bg-ink-900 dark:!bg-white dark:!text-ink-900 !text-white !border-0" :disabled="!ob.stepValid.value" @click="ob.next()" type="button" />
-            <Button v-else label="Отправить на проверку" icon="pi pi-check" rounded class="flex-1 !bg-gradient-to-r !from-indigo-500 !to-violet-600 !text-white !border-0" :loading="ob.store.saving" type="submit" />
+            <Button v-else label="Отправить на проверку" icon="pi pi-check" rounded class="flex-1 !bg-gradient-to-r !from-rose-500 !via-pink-500 !to-fuchsia-500 !text-white !border-0" :loading="ob.store.saving" type="submit" />
           </div>
           <p v-if="ob.store.error" class="text-[13px] text-red-500 text-center">{{ ob.store.error }}</p>
         </form>

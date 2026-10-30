@@ -35,9 +35,9 @@ const props = withDefaults(defineProps<SwipesIconAccentProps>(), { size: 18, act
   >
     <defs>
       <linearGradient id="swipes-icon-gradient" x1="4" y1="5" x2="21" y2="20" gradientUnits="userSpaceOnUse">
-        <stop offset="0" stop-color="#FD267D" />
-        <stop offset="0.55" stop-color="#F04D9F" />
-        <stop offset="1" stop-color="#FF8A5B" />
+        <stop offset="0" stop-color="#f43f5e" />
+        <stop offset="0.55" stop-color="#ec4899" />
+        <stop offset="1" stop-color="#d946ef" />
       </linearGradient>
     </defs>
     <rect

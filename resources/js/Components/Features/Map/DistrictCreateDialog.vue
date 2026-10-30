@@ -42,10 +42,10 @@ function submit(): void {
 }
 </script>
 <template>
-  <Dialog :visible="open" modal dismissableMask :style="{ width: '560px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none !border-stone-200 dark:!border-white/10 overflow-hidden !bg-white dark:!bg-zinc-900' }, header: { class: '!p-0 !border-0 !bg-white dark:!bg-zinc-900' }, content: { class: '!px-5 !py-0 sm:!px-6 !bg-white dark:!bg-zinc-900 !max-h-[70dvh] !overflow-y-auto' }, footer: { class: '!p-5 sm:!px-6 !pt-2 !border-0 !bg-white dark:!bg-zinc-900' } }" @update:visible="(v:boolean)=>emit('update:open', v)">
+  <Dialog :visible="open" modal dismissableMask :style="{ width: '560px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none !border-stone-200 dark:!border-white/10 overflow-hidden !bg-white dark:!bg-[#0F121F]' }, header: { class: '!p-0 !border-0 !bg-white dark:!bg-[#0F121F]' }, content: { class: '!px-5 !py-0 sm:!px-6 !bg-white dark:!bg-[#0F121F] !max-h-[70dvh] !overflow-y-auto' }, footer: { class: '!p-5 sm:!px-6 !pt-2 !border-0 !bg-white dark:!bg-[#0F121F]' } }" @update:visible="(v:boolean)=>emit('update:open', v)">
     <template #header>
       <div class="w-full">
-        <div class="relative h-[118px] sm:h-[132px] overflow-hidden bg-gradient-to-br from-violet-700 via-purple-800 to-indigo-950 dark:from-violet-800 dark:via-purple-950 dark:to-black">
+        <div class="relative h-[118px] sm:h-[132px] overflow-hidden bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500">
           <i class="pi pi-map-marker absolute left-8 top-4 text-white/20 text-3xl -rotate-12 pointer-events-none" />
           <i class="pi pi-home absolute left-[38%] bottom-3 text-white/10 text-4xl rotate-6 pointer-events-none" />
           <i class="pi pi-heart absolute right-20 top-6 text-white/15 text-2xl rotate-12 pointer-events-none" />
@@ -56,7 +56,7 @@ function submit(): void {
         </div>
         <div class="px-5 sm:px-6">
           <div class="flex items-end gap-3 -mt-8">
-            <span class="w-16 h-16 rounded-full bg-gradient-to-br from-violet-600 to-purple-900 text-white grid place-items-center shadow-glow shrink-0 ring-4 ring-white dark:ring-zinc-900 text-xl"><i class="pi pi-palette" /></span>
+            <span class="w-16 h-16 rounded-full bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white grid place-items-center shadow-glow shrink-0 ring-4 ring-white dark:ring-[#0F121F] text-xl"><i class="pi pi-palette" /></span>
             <div class="min-w-0 flex-1 pb-0.5">
               <InputText v-model="name" maxlength="80" placeholder="Название района" class="w-full !border-0 !bg-transparent !shadow-none !ring-0 !rounded-none !px-0 !py-0 !font-black !text-[19px] !tracking-tight dark:!text-white placeholder:!text-stone-400 placeholder:!font-bold focus:!border-0 focus:!shadow-none focus:!ring-0" />
               <div class="text-[11px] text-stone-500 dark:text-zinc-400 truncate">вы — создатель · заявки решаете вы</div>
@@ -105,7 +105,7 @@ function submit(): void {
     <template #footer>
       <div class="flex flex-col-reverse sm:flex-row gap-2">
         <Button label="Назад к кисти" severity="secondary" outlined rounded class="flex-1 hover:!bg-stone-100 dark:hover:!bg-white/10 active:scale-[0.99] transition" :disabled="saving" @click="emit('update:open', false)" />
-        <Button label="Создать район" icon="pi pi-check" rounded class="flex-[1.4] !bg-gradient-to-r !from-violet-700 !to-purple-900 !border-0 !shadow-glow !text-white hover:!opacity-90 hover:!brightness-110 active:scale-[0.99] transition disabled:!opacity-50" :loading="saving" @click="submit" />
+        <Button label="Создать район" icon="pi pi-check" rounded class="flex-[1.4] !bg-gradient-to-r !from-rose-500 !via-pink-500 !to-fuchsia-500 !border-0 !shadow-glow !text-white hover:!opacity-90 hover:!brightness-110 active:scale-[0.99] transition disabled:!opacity-50" :loading="saving" @click="submit" />
       </div>
     </template>
   </Dialog>

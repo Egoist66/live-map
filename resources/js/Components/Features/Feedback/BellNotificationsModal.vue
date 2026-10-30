@@ -138,10 +138,10 @@ function openNews(item: any) {
     :style="{ width: '560px', maxWidth: 'calc(100vw - 1.5rem)', marginTop: '4.5rem', maxHeight: '85dvh' }"
     :pt="{
       root: {
-        class: '!rounded-[24px] sm:!rounded-[24px] !rounded-b-none sm:!rounded-b-[24px] p-2 !border-stone-200 dark:!border-zinc-800 overflow-hidden notif-modal',
+        class: '!rounded-[24px] sm:!rounded-[24px] !rounded-b-none sm:!rounded-b-[24px] p-2 !border-stone-200 dark:!border-white/10 overflow-hidden notif-modal',
       },
       header: { class: '!p-0 !border-0' },
-      content: { class: '!p-0 !bg-white dark:!bg-zinc-900' },
+      content: { class: '!p-0 !bg-white dark:!bg-[#0F121F]' },
     }"
   >
     <template #header>
@@ -217,7 +217,7 @@ function openNews(item: any) {
               <template v-else>
                 <div v-if="uloveOnly ? !uloveHasData : (!bell.hasData.value && !pinAct.eventActivities.value.length && !pinAct.otherNotifications.value.length && !admRep.reports.value.length && !proc.items.value.length)" class="py-10 text-center px-4">
                   <div
-                    class="w-12 h-12 rounded-2xl bg-stone-100 dark:bg-zinc-800 grid place-items-center mx-auto text-xl"
+                    class="w-12 h-12 rounded-2xl bg-stone-100 dark:bg-white/[0.06] grid place-items-center mx-auto text-xl"
                   >
                     {{ uloveOnly ? '💞' : '🔔' }}
                   </div>
@@ -293,7 +293,7 @@ function openNews(item: any) {
                         :class="
                           !l.seen_at
                             ? 'bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-800'
-                            : 'hover:bg-stone-50 dark:hover:bg-zinc-800 border border-transparent'
+                            : 'hover:bg-stone-50 dark:hover:bg-white/10 border border-transparent'
                         "
                         class="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition min-h-[56px]"
                       >
@@ -344,7 +344,7 @@ function openNews(item: any) {
                         :class="
                           !a.read_at
                             ? 'bg-pink-50 dark:bg-pink-500/10 border border-pink-200 dark:border-pink-800'
-                            : 'hover:bg-stone-50 dark:hover:bg-zinc-800 border border-transparent'
+                            : 'hover:bg-stone-50 dark:hover:bg-white/10 border border-transparent'
                         "
                         class="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition min-h-[56px]"
                       >
@@ -354,7 +354,7 @@ function openNews(item: any) {
                             shape="circle"
                             class="!w-10 !h-10 [&_img]:object-cover"
                             :pt="{ image: { class: 'object-cover' } }" /><span
-                            class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center border-2 border-white dark:border-zinc-900 text-[10px] bg-pink-500"
+                            class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center border-2 border-white dark:border-[#0F121F] text-[10px] bg-pink-500"
                             >{{ pinAct.describe(a).emoji }}</span
                           ></span
                         >
@@ -400,7 +400,7 @@ function openNews(item: any) {
                         :class="
                           !a.read_at
                             ? 'bg-sky-50 dark:bg-sky-500/10 border border-sky-200 dark:border-sky-800'
-                            : 'hover:bg-stone-50 dark:hover:bg-zinc-800 border border-transparent'
+                            : 'hover:bg-stone-50 dark:hover:bg-white/10 border border-transparent'
                         "
                         class="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition min-h-[56px]"
                       >
@@ -410,7 +410,7 @@ function openNews(item: any) {
                             shape="circle"
                             class="!w-10 !h-10 [&_img]:object-cover"
                             :pt="{ image: { class: 'object-cover' } }" /><span
-                            class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center border-2 border-white dark:border-zinc-900 text-[10px] bg-sky-500"
+                            class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center border-2 border-white dark:border-[#0F121F] text-[10px] bg-sky-500"
                             >{{ pinAct.describe(a).emoji }}</span
                           ></span
                         >
@@ -432,7 +432,7 @@ function openNews(item: any) {
                           :src="media.entityImage(a) || ''"
                           alt="Миниатюра поста"
                           loading="lazy"
-                          class="w-11 h-11 rounded-xl object-cover shrink-0 border border-stone-200 dark:border-zinc-700"
+                          class="w-11 h-11 rounded-xl object-cover shrink-0 border border-stone-200 dark:border-white/10"
                         />
                         <span
                           v-if="!a.read_at"
@@ -461,7 +461,7 @@ function openNews(item: any) {
                         :class="
                           !a.read_at
                             ? 'bg-sky-50 dark:bg-sky-500/10 border border-sky-200 dark:border-sky-800'
-                            : 'hover:bg-stone-50 dark:hover:bg-zinc-800 border border-transparent'
+                            : 'hover:bg-stone-50 dark:hover:bg-white/10 border border-transparent'
                         "
                         class="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition min-h-[56px]"
                       >
@@ -471,7 +471,7 @@ function openNews(item: any) {
                             shape="circle"
                             class="!w-10 !h-10 [&_img]:object-cover"
                             :pt="{ image: { class: 'object-cover' } }" /><span
-                            class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center border-2 border-white dark:border-zinc-900 text-[10px] bg-sky-500"
+                            class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center border-2 border-white dark:border-[#0F121F] text-[10px] bg-sky-500"
                             >{{ pinAct.describe(a).emoji }}</span
                           ></span
                         >
@@ -493,7 +493,7 @@ function openNews(item: any) {
                           :src="media.entityImage(a) || ''"
                           alt="Миниатюра фото"
                           loading="lazy"
-                          class="w-11 h-11 rounded-xl object-cover shrink-0 border border-stone-200 dark:border-zinc-700"
+                          class="w-11 h-11 rounded-xl object-cover shrink-0 border border-stone-200 dark:border-white/10"
                         />
                         <span
                           v-if="!a.read_at"
@@ -517,7 +517,7 @@ function openNews(item: any) {
                         :class="
                           !a.read_at
                             ? 'bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-800'
-                            : 'hover:bg-stone-50 dark:hover:bg-zinc-800 border border-transparent'
+                            : 'hover:bg-stone-50 dark:hover:bg-white/10 border border-transparent'
                         "
                         class="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition min-h-[56px]"
                       >
@@ -527,7 +527,7 @@ function openNews(item: any) {
                             shape="circle"
                             class="!w-10 !h-10 [&_img]:object-cover"
                             :pt="{ image: { class: 'object-cover' } }" /><span
-                            class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center border-2 border-white dark:border-zinc-900 text-[10px] bg-violet-600"
+                            class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center border-2 border-white dark:border-[#0F121F] text-[10px] bg-violet-600"
                             >{{ pinAct.describe(a).emoji }}</span
                           ></span
                         >
@@ -549,7 +549,7 @@ function openNews(item: any) {
                           :src="media.entityImage(a) || ''"
                           alt="Миниатюра"
                           loading="lazy"
-                          class="w-11 h-11 rounded-xl object-cover shrink-0 border border-stone-200 dark:border-zinc-700"
+                          class="w-11 h-11 rounded-xl object-cover shrink-0 border border-stone-200 dark:border-white/10"
                         />
                         <span
                           v-if="!a.read_at"
@@ -578,7 +578,7 @@ function openNews(item: any) {
                         :class="
                           !a.read_at
                             ? 'bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-800'
-                            : 'hover:bg-stone-50 dark:hover:bg-zinc-800 border border-transparent'
+                            : 'hover:bg-stone-50 dark:hover:bg-white/10 border border-transparent'
                         "
                         class="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition min-h-[56px]"
                       >
@@ -588,7 +588,7 @@ function openNews(item: any) {
                             shape="circle"
                             class="!w-10 !h-10 [&_img]:object-cover"
                             :pt="{ image: { class: 'object-cover' } }" /><span
-                            class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center border-2 border-white dark:border-zinc-900 text-[10px] bg-emerald-500"
+                            class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center border-2 border-white dark:border-[#0F121F] text-[10px] bg-emerald-500"
                             >{{ pinAct.describe(a).emoji }}</span
                           ></span
                         >
@@ -632,7 +632,7 @@ function openNews(item: any) {
                         :class="
                           !a.read_at
                             ? 'bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-800'
-                            : 'hover:bg-stone-50 dark:hover:bg-zinc-800 border border-transparent'
+                            : 'hover:bg-stone-50 dark:hover:bg-white/10 border border-transparent'
                         "
                         class="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition min-h-[56px]"
                       >
@@ -642,7 +642,7 @@ function openNews(item: any) {
                             shape="circle"
                             class="!w-10 !h-10 [&_img]:object-cover"
                             :pt="{ image: { class: 'object-cover' } }" /><span
-                            class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center border-2 border-white dark:border-zinc-900 text-[10px] bg-violet-600"
+                            class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center border-2 border-white dark:border-[#0F121F] text-[10px] bg-violet-600"
                             >{{ pinAct.describe(a).emoji }}</span
                           ></span
                         >
@@ -686,7 +686,7 @@ function openNews(item: any) {
                         :class="
                           !n.read_at
                             ? 'bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-800'
-                            : 'hover:bg-stone-50 dark:hover:bg-zinc-800 border border-transparent'
+                            : 'hover:bg-stone-50 dark:hover:bg-white/10 border border-transparent'
                         "
                         class="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition min-h-[56px]"
                       >
@@ -699,7 +699,7 @@ function openNews(item: any) {
                             :pt="{ image: { class: 'object-cover' } }"
                           />
                           <span
-                            class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center border-2 border-white dark:border-zinc-900 text-[10px]"
+                            class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center border-2 border-white dark:border-[#0F121F] text-[10px]"
                             :class="n.type === 'sos.chat_closed' ? 'bg-red-600' : 'bg-violet-600'"
                             >{{ describeInboxRow(n).emoji }}</span
                           ></span
@@ -747,7 +747,7 @@ function openNews(item: any) {
                         v-for="r in bell.pending.value"
                         :key="r.id"
                         @click="bell.goRequests()"
-                        class="w-full flex items-center gap-3 p-2.5 rounded-2xl hover:bg-amber-50 dark:hover:bg-zinc-800 text-left transition min-h-[56px]"
+                        class="w-full flex items-center gap-3 p-2.5 rounded-2xl hover:bg-amber-50 dark:hover:bg-white/10 text-left transition min-h-[56px]"
                       >
                         <Avatar
                           :image="avatarSrcFor(r.requester)"
@@ -791,7 +791,7 @@ function openNews(item: any) {
                         :class="
                           c.unread_count
                             ? 'bg-violet-50 dark:bg-violet-500/10 border border-violet-200 dark:border-violet-800'
-                            : 'hover:bg-stone-50 dark:hover:bg-zinc-800 border border-transparent'
+                            : 'hover:bg-stone-50 dark:hover:bg-white/10 border border-transparent'
                         "
                         class="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition min-h-[56px]"
                       >
@@ -802,7 +802,7 @@ function openNews(item: any) {
                             class="!w-10 !h-10 [&_img]:object-cover"
                             :pt="{ image: { class: 'object-cover' } }" /><span
                             v-if="c.unread_count"
-                            class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-zinc-900"
+                            class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white dark:border-[#0F121F]"
                           ></span
                         ></span>
                         <div class="min-w-0 flex-1">
@@ -853,7 +853,7 @@ function openNews(item: any) {
                 />
               </div>
               <div v-if="!pinAct.pinActivities.value.length" class="py-10 text-center px-4">
-                <div class="w-12 h-12 rounded-2xl bg-stone-100 dark:bg-zinc-800 grid place-items-center mx-auto text-xl">📍</div>
+                <div class="w-12 h-12 rounded-2xl bg-stone-100 dark:bg-white/[0.06] grid place-items-center mx-auto text-xl">📍</div>
                 <div class="text-sm font-semibold dark:text-white mt-3">Реакций на пины нет</div>
                 <div class="text-xs text-stone-500 dark:text-zinc-400 mt-1">Лайки фото, ULove и UFlow — во вкладке «События»</div>
               </div>
@@ -865,7 +865,7 @@ function openNews(item: any) {
                   :class="
                     !a.read_at
                       ? 'bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-800'
-                      : 'hover:bg-stone-50 dark:hover:bg-zinc-800 border border-transparent'
+                      : 'hover:bg-stone-50 dark:hover:bg-white/10 border border-transparent'
                   "
                   class="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition min-h-[56px] cursor-pointer"
                 >
@@ -875,7 +875,7 @@ function openNews(item: any) {
                       shape="circle"
                       class="!w-10 !h-10 [&_img]:object-cover"
                       :pt="{ image: { class: 'object-cover' } }" /><span
-                      class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center border-2 border-white dark:border-zinc-900 text-[10px]"
+                      class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center border-2 border-white dark:border-[#0F121F] text-[10px]"
                       :class="a.kind === 'comment' ? 'bg-violet-600' : a.kind === 'mention' ? 'bg-amber-500' : a.kind === 'sub_pin' ? 'bg-emerald-500' : a.kind === 'scheduled_published' ? 'bg-emerald-500' : a.kind === 'invite' ? 'bg-amber-500' : a.kind === 'invite_accepted' ? 'bg-emerald-500' : 'bg-rose-500'"
                       >{{ pinAct.describe(a).emoji }}</span
                     ></span
@@ -914,7 +914,7 @@ function openNews(item: any) {
                 <ProgressSpinner style="width:26px;height:26px" :strokeWidth="6" />
               </div>
               <div v-else-if="!updates.history.value.length" class="py-10 text-center px-4">
-                <div class="w-12 h-12 rounded-2xl bg-stone-100 dark:bg-zinc-800 grid place-items-center mx-auto text-xl">✨</div>
+                <div class="w-12 h-12 rounded-2xl bg-stone-100 dark:bg-white/[0.06] grid place-items-center mx-auto text-xl">✨</div>
                 <div class="text-sm font-semibold dark:text-white mt-3">Новостей пока нет</div>
                 <div class="text-xs text-stone-500 dark:text-zinc-400 mt-1">Здесь появятся заметки о новых функциях</div>
               </div>
@@ -929,10 +929,10 @@ function openNews(item: any) {
                     v-for="n in updates.sortedHistory.value"
                     :key="n.id"
                     @click="openNews(n)"
-                    :class="!n.is_read ? 'bg-sky-50 dark:bg-sky-500/10 border border-sky-200 dark:border-sky-800' : 'hover:bg-stone-50 dark:hover:bg-zinc-800 border border-transparent'"
+                    :class="!n.is_read ? 'bg-sky-50 dark:bg-sky-500/10 border border-sky-200 dark:border-sky-800' : 'hover:bg-stone-50 dark:hover:bg-white/10 border border-transparent'"
                     class="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left transition min-h-[56px]"
                   >
-                    <span class="w-10 h-10 rounded-full bg-gradient-to-br from-violet-600 to-indigo-600 text-white grid place-items-center shrink-0"><i class="pi pi-sparkles text-sm"></i></span>
+                    <span class="w-10 h-10 rounded-full bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white grid place-items-center shrink-0"><i class="pi pi-sparkles text-sm"></i></span>
                     <div class="min-w-0 flex-1">
                       <div class="flex items-center gap-1.5">
                         <span class="text-sm font-semibold dark:text-white truncate">{{ n.title }}</span>

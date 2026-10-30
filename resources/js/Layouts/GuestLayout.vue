@@ -3,7 +3,6 @@ import { Link } from '@inertiajs/vue3'
 import Card from 'primevue/card'
 import Toast from 'primevue/toast'
 import PageTransition from '@/Components/Features/Feedback/PageTransition.vue'
-import AppFooter from '@/Layouts/AppFooter.vue'
 import BrandMark from '@/Components/Brand/BrandMark.vue'
 import AuthBackdrop from '@/Components/Features/Auth/AuthBackdrop.vue'
 import { useAuthBackdrop } from '@/composables/useAuthBackdrop'
@@ -16,7 +15,7 @@ import { useGlobalDialogDismiss } from '@/composables/useGlobalDialogDismiss'
 
 useGlobalDialogDismiss()
 
-const { isFaq, isAuthPage, shouldShowFooter, showSidebar } = useGuestLayout()
+const { isFaq, isAuthPage, showSidebar } = useGuestLayout()
 const { isClientReady } = useClientReady()
 const backdrop = useAuthBackdrop()
 </script>
@@ -26,8 +25,8 @@ const backdrop = useAuthBackdrop()
     <div v-if="showSidebar" class="hidden lg:flex w-[360px] xl:w-[400px] shrink-0 bg-ink-900 text-white relative overflow-hidden">
       <div class="absolute inset-0">
         <div class="absolute inset-0 opacity-[0.04]" style="background-image: radial-gradient(circle at 1px 1px, white 1px, transparent 0); background-size: 24px 24px"></div>
-        <div class="absolute -top-24 -right-24 w-[520px] h-[520px] bg-gradient-to-br from-brand-500 via-violet-600 to-accent-teal rounded-full blur-[90px] opacity-25"></div>
-        <div class="absolute -bottom-32 -left-32 w-[480px] h-[480px] bg-gradient-to-tr from-amber-500 to-accent-coral rounded-full blur-[80px] opacity-15"></div>
+        <div class="absolute -top-24 -right-24 w-[520px] h-[520px] bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 rounded-full blur-[90px] opacity-25"></div>
+        <div class="absolute -bottom-32 -left-32 w-[480px] h-[480px] bg-gradient-to-tr from-rose-500 via-pink-500 to-fuchsia-500 rounded-full blur-[80px] opacity-15"></div>
       </div>
       <div class="relative p-8 xl:p-9 flex flex-col w-full">
         <Link href="/" class="flex items-center gap-2.5 shrink-0">
@@ -38,7 +37,7 @@ const backdrop = useAuthBackdrop()
           <div class="inline-flex items-center gap-2 bg-white/10 backdrop-blur border border-white/15 rounded-full px-3 py-1.5 text-xs font-medium">
             <span class="w-2 h-2 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]"></span> live • новые анкеты
           </div>
-          <h2 class="mt-5 text-[36px] xl:text-[40px] font-black leading-[0.9] tracking-[-0.04em]">Знакомства<br /><span class="bg-gradient-to-r from-[#FFFFFF] via-rose-200 to-orange-200 bg-clip-text text-transparent">рядом с тобой</span></h2>
+          <h2 class="mt-5 text-[36px] xl:text-[40px] font-black leading-[0.9] tracking-[-0.04em]">Знакомства<br /><span class="bg-gradient-to-r from-[#FFFFFF] via-rose-200 to-fuchsia-200 bg-clip-text text-transparent">рядом с тобой</span></h2>
           <p class="text-white/60 mt-3 leading-relaxed text-[14px]">Свайпай людей рядом, лайкай в один тап и переписывайся только по взаимности.</p>
           <div class="mt-6 grid grid-cols-1 gap-3">
             <div class="bg-white/[0.07] backdrop-blur border border-white/10 rounded-2xl p-3.5 flex items-center gap-3">
@@ -57,7 +56,7 @@ const backdrop = useAuthBackdrop()
       </div>
     </div>
     <div :class="isFaq ? 'flex-1 flex flex-col px-0 py-0 relative dark:bg-[#0F121F] overflow-auto min-w-0 w-full overflow-x-clip pt-tg-chrome pb-[var(--sab,0px)]' : 'flex-1 flex flex-col items-center px-4 sm:px-6 relative dark:bg-[#0F121F] min-w-0 w-full overflow-x-clip pt-tg-chrome pb-[var(--sab,0px)]'">
-      <div v-if="!isAuthPage" class="absolute inset-0 bg-gradient-to-b from-white to-surface dark:from-zinc-900 dark:to-[#0F121F]"></div>
+      <div v-if="!isAuthPage" class="absolute inset-0 bg-gradient-to-b from-white to-surface dark:from-[#0F121F] dark:to-[#0F121F]"></div>
       <!-- Фон только после гидратации: без отрицательного z-index, порядок
            в DOM + relative у контента решают наложение. Фон всегда один
            (ULove), поэтому смена login ↔ register его не трогает. -->
@@ -83,7 +82,7 @@ const backdrop = useAuthBackdrop()
                 decoding="async"
               />
             </Link>
-            <Card :class="['w-full max-w-full !bg-white/85 dark:!bg-zinc-900/80 backdrop-blur-xl !border !rounded-[20px] sm:!rounded-[24px] !shadow-float !p-0', backdrop.tokens.value.cardClass]">
+            <Card :class="['w-full max-w-full !bg-white/85 dark:!bg-[#0F121F] backdrop-blur-xl !border !rounded-[20px] sm:!rounded-[24px] !shadow-float !p-0 dark:!border-white/10', backdrop.tokens.value.cardClass]">
               <template #content>
                 <div class="p-5 sm:p-8">
                   <slot />
@@ -93,9 +92,6 @@ const backdrop = useAuthBackdrop()
           </div>
           </template>
         </PageTransition>
-        </div>
-        <div v-if="shouldShowFooter" class="mt-auto hidden w-full lg:block">
-          <AppFooter />
         </div>
       </div>
       <!-- Баннеры с Transition + PrimeVue Dialog (Teleport) монтируем только

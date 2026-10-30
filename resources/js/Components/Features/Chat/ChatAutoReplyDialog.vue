@@ -63,14 +63,14 @@ function useDefault(): void {
     dismissable-mask
     header="Автоответ"
     class="w-[min(480px,94vw)]"
-    :pt="{ root: { class: '!rounded-3xl max-sm:!rounded-b-none' } }"
+    :pt="{ root: { class: '!rounded-3xl max-sm:!rounded-b-none dark:!bg-[#0F121F] dark:!border-white/10' } }"
   >
     <div class="flex flex-col gap-3 min-w-0">
       <div v-if="autoReply.loading.value" class="flex justify-center py-6">
         <span class="w-6 h-6 border-2 border-violet-200 border-t-violet-600 rounded-full animate-spin"></span>
       </div>
       <template v-else>
-        <div class="flex items-center justify-between gap-3 bg-stone-50 dark:bg-zinc-800/70 border border-stone-100 dark:border-zinc-700/60 rounded-2xl px-3 py-2.5">
+        <div class="flex items-center justify-between gap-3 bg-stone-50 dark:bg-white/[0.06] border border-stone-100 dark:border-white/10 rounded-2xl px-3 py-2.5">
           <div class="min-w-0">
             <div class="text-sm font-bold dark:text-white">Отвечать, когда я не онлайн</div>
             <div class="text-xs text-stone-500 dark:text-zinc-400">Собеседник получит сообщение, а тебе придёт пинг на email</div>

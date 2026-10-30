@@ -28,7 +28,7 @@ async function onFile(event: Event): Promise<void> {
   <div class="relative shrink-0">
     <span
       :class="[
-        'grid place-items-center overflow-hidden bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-soft',
+        'grid place-items-center overflow-hidden bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white shadow-soft',
         size === 'lg' ? 'w-14 h-14 rounded-2xl text-2xl' : 'w-11 h-11 rounded-2xl text-xl',
       ]"
     >
@@ -39,7 +39,7 @@ async function onFile(event: Event): Promise<void> {
       type="button"
       aria-label="Загрузить логотип"
       :disabled="settings.store.saving"
-      class="absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow grid place-items-center text-indigo-600 dark:text-indigo-400 hover:scale-105 transition active:scale-95 disabled:opacity-60"
+      class="absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-full bg-white dark:bg-white/[0.06] border border-stone-200 dark:border-white/10 shadow grid place-items-center text-indigo-600 dark:text-indigo-400 hover:scale-105 transition active:scale-95 disabled:opacity-60"
       @click="openPicker"
     >
       <i class="pi pi-camera text-[11px]" />

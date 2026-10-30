@@ -67,9 +67,9 @@ const websiteHref = computed(() => {
 <template>
   <Head :title="business.name" />
   <div class="max-w-[760px] mx-auto space-y-3 pb-2">
-    <section class="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-indigo-950 via-indigo-900 to-violet-900 text-white shadow-float">
+    <section class="relative overflow-hidden rounded-[24px] bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white shadow-float">
       <img v-if="business.cover_url" :src="business.cover_url" alt="" aria-hidden="true" class="absolute inset-0 w-full h-full object-cover pointer-events-none" />
-      <div v-if="business.cover_url" class="absolute inset-0 pointer-events-none bg-gradient-to-t from-indigo-950/85 via-indigo-950/45 to-indigo-950/25"></div>
+      <div v-if="business.cover_url" class="absolute inset-0 pointer-events-none bg-gradient-to-t from-rose-950/85 via-pink-950/45 to-fuchsia-950/25"></div>
       <div class="absolute -top-20 -right-20 w-72 h-72 rounded-full bg-violet-500/30 blur-[70px] pointer-events-none"></div>
       <div class="relative p-5 sm:p-7">
         <div class="flex flex-wrap items-start gap-4">
@@ -111,25 +111,25 @@ const websiteHref = computed(() => {
     <Message v-if="isBlockedBy" severity="error" class="w-full">Компания ограничила связь — профиль скрыт.</Message>
 
     <template v-else>
-      <Card v-if="business.description" class="!rounded-[24px] !border-stone-200 dark:!border-zinc-800 !bg-white dark:!bg-zinc-900 !shadow-sm">
+      <Card v-if="business.description" class="!rounded-[24px] !border-stone-200 dark:!border-white/10 !bg-white dark:!bg-[#0F121F] !shadow-sm">
         <template #content>
           <div class="font-black text-[16px] dark:text-white">О компании</div>
           <p class="mt-1.5 text-sm leading-relaxed text-stone-600 dark:text-zinc-300 whitespace-pre-line">{{ business.description }}</p>
         </template>
       </Card>
 
-      <Card v-if="business.services" class="!rounded-[24px] !border-stone-200 dark:!border-zinc-800 !bg-white dark:!bg-zinc-900 !shadow-sm">
+      <Card v-if="business.services" class="!rounded-[24px] !border-stone-200 dark:!border-white/10 !bg-white dark:!bg-[#0F121F] !shadow-sm">
         <template #content>
           <div class="font-black text-[16px] dark:text-white">Услуги</div>
           <p class="mt-1.5 text-sm leading-relaxed text-stone-600 dark:text-zinc-300 whitespace-pre-line">{{ business.services }}</p>
         </template>
       </Card>
 
-      <Card v-if="page.ads.value.length" class="!rounded-[24px] !border-stone-200 dark:!border-zinc-800 !bg-white dark:!bg-zinc-900 !shadow-sm">
+      <Card v-if="page.ads.value.length" class="!rounded-[24px] !border-stone-200 dark:!border-white/10 !bg-white dark:!bg-[#0F121F] !shadow-sm">
         <template #content>
           <div class="font-black text-[16px] dark:text-white">Новости и акции</div>
           <div class="mt-3 space-y-2">
-            <div v-for="ad in page.ads.value" :key="ad.id" class="rounded-2xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/60 px-4 py-3">
+            <div v-for="ad in page.ads.value" :key="ad.id" class="rounded-2xl border border-stone-200 dark:border-white/10 bg-stone-50 dark:bg-white/[0.06] px-4 py-3">
               <div class="text-sm font-bold dark:text-white">📢 {{ ad.title }}</div>
               <p class="mt-1 text-sm leading-relaxed text-stone-600 dark:text-zinc-300 whitespace-pre-line break-words">{{ ad.body }}</p>
             </div>
@@ -137,19 +137,19 @@ const websiteHref = computed(() => {
         </template>
       </Card>
 
-      <Card class="!rounded-[24px] !border-stone-200 dark:!border-zinc-800 !bg-white dark:!bg-zinc-900 !shadow-sm">
+      <Card class="!rounded-[24px] !border-stone-200 dark:!border-white/10 !bg-white dark:!bg-[#0F121F] !shadow-sm">
         <template #content>
           <div class="font-black text-[16px] dark:text-white">Контакты</div>
           <div class="mt-3 space-y-2">
-            <a v-if="business.phone" :href="`tel:${business.phone.replace(/[^+\d]/g, '')}`" class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-700 px-4 py-3 hover:border-indigo-400 transition">
+            <a v-if="business.phone" :href="`tel:${business.phone.replace(/[^+\d]/g, '')}`" class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-white/10 px-4 py-3 hover:border-indigo-400 transition">
               <i class="pi pi-phone text-indigo-500 shrink-0" />
               <span class="text-sm font-semibold dark:text-white">{{ business.phone }}</span>
             </a>
-            <a v-if="websiteHref" :href="websiteHref" target="_blank" rel="noopener" class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-700 px-4 py-3 hover:border-indigo-400 transition">
+            <a v-if="websiteHref" :href="websiteHref" target="_blank" rel="noopener" class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-white/10 px-4 py-3 hover:border-indigo-400 transition">
               <i class="pi pi-globe text-indigo-500 shrink-0" />
               <span class="text-sm font-semibold dark:text-white truncate">{{ business.website }}</span>
             </a>
-            <div v-if="business.address" class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-700 px-4 py-3">
+            <div v-if="business.address" class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-white/10 px-4 py-3">
               <i class="pi pi-map-marker text-indigo-500 shrink-0" />
               <span class="text-sm font-semibold dark:text-white">{{ business.address }}</span>
             </div>
@@ -158,7 +158,7 @@ const websiteHref = computed(() => {
         </template>
       </Card>
 
-      <Card v-if="workingHours.length" class="!rounded-[24px] !border-stone-200 dark:!border-zinc-800 !bg-white dark:!bg-zinc-900 !shadow-sm">
+      <Card v-if="workingHours.length" class="!rounded-[24px] !border-stone-200 dark:!border-white/10 !bg-white dark:!bg-[#0F121F] !shadow-sm">
         <template #content>
           <div class="font-black text-[16px] dark:text-white">Часы работы</div>
           <div class="mt-3 space-y-1.5">

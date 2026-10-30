@@ -13,7 +13,7 @@ function fmt(dt: string | null) {
 }
 </script>
 <template>
-  <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }">
+  <Card class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }">
     <template #content>
       <div class="flex items-center gap-2">
         <h3 class="font-black tracking-tight text-lg dark:text-white">Процедуры доступа</h3>
@@ -21,7 +21,7 @@ function fmt(dt: string | null) {
       </div>
       <p class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Здесь фиксируется каждый служебный вход в ваш аккаунт.</p>
 
-      <div class="mt-4 rounded-2xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/50 p-4 text-[13px] leading-relaxed text-stone-700 dark:text-zinc-200 space-y-2">
+      <div class="mt-4 rounded-2xl border border-stone-200 dark:border-white/10 bg-stone-50 dark:bg-white/[0.05] p-4 text-[13px] leading-relaxed text-stone-700 dark:text-zinc-200 space-y-2">
         <p><b>Ваши права.</b> Тайна переписки и личных сообщений защищена <b>ст. 28 Конституции Республики Беларусь</b>. Незаконный просмотр чужих диалогов — это <b>ст. 203 УК РБ</b> (нарушение тайны переписки, для должностных лиц — до 2 лет лишения свободы), <b>ст. 349 УК РБ</b> (несанкционированный доступ к компьютерной информации) и <b>ст. 203-1 УК РБ</b> (незаконные действия с персональными данными).</p>
         <p><b>Наш принцип.</b> Мы действуем строго в соответствии с законом: вход в аккаунт возможен только <b>по решению или официальной просьбе соответствующих органов</b>, либо для устранения технической проблемы по вашему обращению. У команды сервиса есть технический доступ к серверам, но нет права читать переписку «из любопытства».</p>
         <p><b>Прозрачность.</b> Каждый такой вход записывается в журнал с датой и основанием и <b>показывается вам здесь</b>. Если вы не обращались в поддержку и не знаете об официальном запросе — это повод задать вопрос команде сервиса или обратиться с жалобой в правоохранительные органы.</p>
@@ -34,7 +34,7 @@ function fmt(dt: string | null) {
       </div>
       <div v-if="proc.loading.value" class="py-6 grid place-items-center"><ProgressSpinner style="width:22px;height:22px" :strokeWidth="6" /></div>
       <div v-else-if="proc.items.value.length" class="mt-3 space-y-2">
-        <div v-for="l in proc.items.value" :key="l.id" class="rounded-2xl border border-stone-200 dark:border-zinc-700 p-3">
+        <div v-for="l in proc.items.value" :key="l.id" class="rounded-2xl border border-stone-200 dark:border-white/10 p-3">
           <div class="flex items-center gap-2">
             <i class="pi pi-eye text-red-500 text-sm" />
             <div class="text-[13px] font-semibold dark:text-white flex-1">Служебный вход · {{ fmt(l.started_at) }}</div>

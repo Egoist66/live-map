@@ -86,7 +86,7 @@ function ageText(card: SwipeCard): string {
     :breakpoints="{ '640px': '100vw' }"
     header="Анкета"
     :style="{ width: '420px', maxWidth: '94vw', maxHeight: '92dvh' }"
-    :pt="{ root: { class: 'swipe-details-sheet !rounded-3xl max-sm:!rounded-b-none !overflow-hidden dark:!bg-zinc-900 dark:!border-zinc-700' }, header: { class: 'dark:!bg-zinc-900 dark:!text-white' }, content: { class: 'dark:!bg-zinc-900 dark:!text-zinc-100 !max-h-[78dvh] !overflow-y-auto overscroll-contain' } }"
+    :pt="{ root: { class: 'swipe-details-sheet !rounded-3xl max-sm:!rounded-b-none !overflow-hidden dark:!bg-[#0F121F] dark:!border-white/10' }, header: { class: 'dark:!bg-[#0F121F] dark:!text-white' }, content: { class: 'dark:!bg-[#0F121F] dark:!text-zinc-100 !max-h-[78dvh] !overflow-y-auto overscroll-contain' } }"
   >
     <div v-if="card" class="pt-1">
       <div class="flex items-center gap-3">
@@ -103,7 +103,7 @@ function ageText(card: SwipeCard): string {
             {{ [formatCardLocation(card), card.distance_km != null ? `${card.distance_km} км` : null].filter(Boolean).join(' · ') }}
           </div>
           <div class="mt-1 flex items-center gap-1.5 text-xs font-semibold" :class="peerOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-stone-400 dark:text-zinc-500'">
-            <span :class="peerOnline ? 'bg-emerald-500' : 'bg-zinc-400 dark:bg-zinc-600'" class="h-1.5 w-1.5 rounded-full" />{{ presenceLabel }}
+            <span :class="peerOnline ? 'bg-emerald-500' : 'bg-zinc-400 dark:bg-white/15'" class="h-1.5 w-1.5 rounded-full" />{{ presenceLabel }}
           </div>
         </div>
       </div>

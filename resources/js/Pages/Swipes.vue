@@ -127,9 +127,9 @@ function onQuestionnaireSaved(): void {
 }
 
 const dialogPt = {
-  root: { class: '!rounded-3xl max-sm:!rounded-b-none dark:!bg-zinc-900 dark:!border-zinc-700' },
-  header: { class: 'dark:!bg-zinc-900 dark:!text-white' },
-  content: { class: 'dark:!bg-zinc-900 dark:!text-zinc-100 !max-h-[78dvh] !overflow-y-auto' },
+  root: { class: '!rounded-3xl max-sm:!rounded-b-none dark:!bg-[#0F121F] dark:!border-white/10' },
+  header: { class: 'dark:!bg-[#0F121F] dark:!text-white' },
+  content: { class: 'dark:!bg-[#0F121F] dark:!text-zinc-100 !max-h-[78dvh] !overflow-y-auto' },
 }
 
 const interestTags = ['музыка', 'спорт', 'кино', 'путешествия', 'игры', 'еда', 'книги', 'танцы']
@@ -233,9 +233,9 @@ onUnmounted(() => {
             >
               <span
                 class="swipes-topbar-boost-icon relative w-9 h-9 rounded-[10px] grid place-items-center transition"
-                :class="s.boostActive.value ? 'bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-md shadow-orange-500/40 boost-icon-glow' : 'bg-stone-100 dark:bg-zinc-800 text-stone-400 dark:text-zinc-500 hover:!text-amber-500'"
+                :class="s.boostActive.value ? 'bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white shadow-md shadow-orange-500/40 boost-icon-glow' : 'bg-stone-100 dark:bg-white/[0.06] text-stone-400 dark:text-zinc-500 hover:!text-amber-500'"
               ><i class="pi pi-bolt text-lg" /></span>
-              <span v-if="s.boostActive.value" class="absolute top-0.5 right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-white dark:ring-zinc-900" />
+              <span v-if="s.boostActive.value" class="absolute top-0.5 right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-white dark:ring-[#0F121F]" />
             </button>
             <span v-else class="w-11 h-11 shrink-0" aria-hidden="true" />
           </div>
@@ -245,7 +245,7 @@ onUnmounted(() => {
         </div>
 
         <template v-if="!isAuth">
-          <div class="mt-6 rounded-[20px] border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-6 text-center shadow-soft">
+          <div class="mt-6 rounded-[20px] border border-stone-200 dark:border-white/10 bg-white dark:bg-[#0F121F] p-6 text-center shadow-soft">
             <div class="text-lg font-black text-stone-900 dark:text-white">Войди, чтобы листать</div>
             <div class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Свайпы, мэтчи и чаты доступны после входа.</div>
             <div class="mt-4 flex gap-2 justify-center">
@@ -286,8 +286,8 @@ onUnmounted(() => {
                 class="flex w-16 shrink-0 flex-col items-center gap-1 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 active:scale-95 transition"
                 @click="s.openChat(m.user.id, m.conversation_id)"
               >
-                <span class="block rounded-full bg-gradient-to-br from-[#FD267D] to-[#FF7854] p-[2.5px]">
-                  <Avatar :image="m.user.avatar_url ?? undefined" :label="!m.user.avatar_url ? (m.user.name ?? '?').slice(0, 1) : undefined" shape="circle" class="!block !h-14 !w-14 overflow-hidden !text-xl !border-2 !border-white dark:!border-zinc-900" />
+                <span class="block rounded-full bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 p-[2.5px]">
+                  <Avatar :image="m.user.avatar_url ?? undefined" :label="!m.user.avatar_url ? (m.user.name ?? '?').slice(0, 1) : undefined" shape="circle" class="!block !h-14 !w-14 overflow-hidden !text-xl !border-2 !border-white dark:!border-[#0F121F]" />
                 </span>
                 <span class="w-full truncate text-center text-[11px] font-semibold leading-tight text-stone-600 dark:text-zinc-200">{{ m.user.name }}</span>
               </button>
@@ -307,7 +307,7 @@ onUnmounted(() => {
           </div>
 
           <template v-if="s.activeTab.value === 'active'">
-            <div v-if="s.activeLoading.value" class="mt-4 rounded-[24px] border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 h-[40dvh] min-h-[240px] grid place-items-center">
+            <div v-if="s.activeLoading.value" class="mt-4 rounded-[24px] border border-stone-200 dark:border-white/10 bg-white dark:bg-[#0F121F] h-[40dvh] min-h-[240px] grid place-items-center">
               <i class="pi pi-spin pi-spinner text-2xl text-stone-400 dark:text-zinc-500" />
             </div>
             <div v-else-if="s.activeUsers.value.length" class="mt-4">
@@ -316,11 +316,11 @@ onUnmounted(() => {
                 <div
                   v-for="u in s.activeUsers.value"
                   :key="u.id ?? u.name"
-                  class="rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3 flex flex-col items-center text-center"
+                  class="rounded-2xl border border-stone-200 dark:border-white/10 bg-white dark:bg-[#0F121F] p-3 flex flex-col items-center text-center"
                 >
                   <Link :href="userProfileUrl(u)" class="relative shrink-0">
                     <Avatar :image="u.avatar_url ?? undefined" :label="!u.avatar_url ? (u.name ?? '?').slice(0, 1) : undefined" shape="circle" class="!w-16 !h-16" />
-                    <span class="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white dark:border-zinc-900" title="В сети" />
+                    <span class="absolute bottom-0 right-0 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white dark:border-[#0F121F]" title="В сети" />
                   </Link>
                   <Link :href="userProfileUrl(u)" class="mt-2 min-w-0 w-full">
                     <div class="text-sm font-bold truncate text-stone-900 dark:text-white">{{ u.name }} · {{ s.ageLabel(u) }}</div>
@@ -346,7 +346,7 @@ onUnmounted(() => {
                 <Button label="Обновить" icon="pi pi-refresh" severity="secondary" rounded outlined size="small" :loading="s.activeLoading.value" @click="s.loadActive()" />
               </div>
             </div>
-            <div v-else class="mt-4 rounded-[24px] border border-dashed border-stone-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-6 sm:p-8 text-center">
+            <div v-else class="mt-4 rounded-[24px] border border-dashed border-stone-300 dark:border-white/10 bg-white dark:bg-[#0F121F] p-6 sm:p-8 text-center">
               <div class="w-14 h-14 mx-auto rounded-2xl bg-emerald-500/10 text-emerald-500 grid place-items-center"><i class="pi pi-users text-xl" /></div>
               <div class="mt-4 text-lg font-black text-stone-900 dark:text-white">Пока никого онлайн</div>
               <div class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Загляни в ленту — там все люди, а сюда возвращайся за живым общением.</div>
@@ -358,14 +358,14 @@ onUnmounted(() => {
           </template>
 
           <template v-else-if="s.activeTab.value === 'favorites'">
-            <div v-if="s.favoritesLoading.value" class="mt-4 rounded-[24px] border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 h-[40dvh] min-h-[240px] grid place-items-center">
+            <div v-if="s.favoritesLoading.value" class="mt-4 rounded-[24px] border border-stone-200 dark:border-white/10 bg-white dark:bg-[#0F121F] h-[40dvh] min-h-[240px] grid place-items-center">
               <i class="pi pi-spin pi-spinner text-2xl text-stone-400 dark:text-zinc-500" />
             </div>
             <div v-else-if="s.favorites.value.length" class="mt-4 space-y-2">
               <div
                 v-for="f in s.favorites.value"
                 :key="f.id ?? f.name"
-                class="flex flex-wrap items-center gap-2 sm:gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3"
+                class="flex flex-wrap items-center gap-2 sm:gap-3 rounded-2xl border border-stone-200 dark:border-white/10 bg-white dark:bg-[#0F121F] p-3"
               >
                 <Link :href="userProfileUrl(f)" class="shrink-0"><Avatar :image="f.avatar_url ?? undefined" :label="!f.avatar_url ? (f.name ?? '?').slice(0, 1) : undefined" shape="circle" class="!w-10 !h-10 sm:!w-12 sm:!h-12" /></Link>
                 <Link :href="userProfileUrl(f)" class="min-w-0 flex-1 basis-32">
@@ -377,7 +377,7 @@ onUnmounted(() => {
               </div>
               <div class="text-center text-[11px] text-stone-400 dark:text-zinc-500">Занято {{ s.favoritesCount.value }} из {{ s.favoritesLimit.value }} · Free: до 3 · Pro: до 10</div>
             </div>
-            <div v-else class="mt-4 rounded-[24px] border border-dashed border-stone-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-6 sm:p-8 text-center">
+            <div v-else class="mt-4 rounded-[24px] border border-dashed border-stone-300 dark:border-white/10 bg-white dark:bg-[#0F121F] p-6 sm:p-8 text-center">
               <div class="w-14 h-14 mx-auto rounded-2xl bg-rose-500/10 text-rose-500 grid place-items-center"><i class="pi pi-star text-xl" /></div>
               <div class="mt-4 text-lg font-black text-stone-900 dark:text-white">Пока пусто</div>
               <div class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Лайкни кого-то в ленте — не потеряешь. Free: до {{ s.favoritesLimit.value }}.</div>
@@ -386,7 +386,7 @@ onUnmounted(() => {
           </template>
 
           <template v-else-if="s.activeTab.value === 'admirers'">
-            <div v-if="s.admirersLoading.value" class="mt-4 rounded-[24px] border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 h-[40dvh] min-h-[240px] grid place-items-center">
+            <div v-if="s.admirersLoading.value" class="mt-4 rounded-[24px] border border-stone-200 dark:border-white/10 bg-white dark:bg-[#0F121F] h-[40dvh] min-h-[240px] grid place-items-center">
               <i class="pi pi-spin pi-spinner text-2xl text-stone-400 dark:text-zinc-500" />
             </div>
             <div v-else-if="s.admirers.value.length" class="mt-4 space-y-2">
@@ -394,7 +394,7 @@ onUnmounted(() => {
               <div
                 v-for="f in s.admirers.value"
                 :key="s.admirerKey(f)"
-                class="flex flex-wrap items-center gap-2 sm:gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3"
+                class="flex flex-wrap items-center gap-2 sm:gap-3 rounded-2xl border border-stone-200 dark:border-white/10 bg-white dark:bg-[#0F121F] p-3"
               >
                 <component :is="f.is_incognito ? 'span' : Link" :href="f.is_incognito ? undefined : userProfileUrl(f)" class="shrink-0">
                   <Avatar :image="(!f.is_incognito && f.avatar_url) ? f.avatar_url : undefined" :label="f.is_incognito ? '🕵️' : (!f.avatar_url ? (f.name ?? '?').slice(0, 1) : undefined)" shape="circle" class="!w-10 !h-10 sm:!w-12 sm:!h-12" />
@@ -410,7 +410,7 @@ onUnmounted(() => {
                 <Button v-if="!f.is_incognito" icon="pi pi-send" rounded size="small" severity="secondary" outlined aria-label="Написать" title="Написать" :loading="s.creatingChat.value" class="!w-9 !h-9 sm:!w-10 sm:!h-10 !p-0 shrink-0" @click="s.writeWithoutMatch(f.id)" />
               </div>
             </div>
-            <div v-else class="mt-4 rounded-[24px] border border-dashed border-stone-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-6 sm:p-8 text-center">
+            <div v-else class="mt-4 rounded-[24px] border border-dashed border-stone-300 dark:border-white/10 bg-white dark:bg-[#0F121F] p-6 sm:p-8 text-center">
               <div class="w-14 h-14 mx-auto rounded-2xl bg-rose-500/10 text-rose-500 grid place-items-center"><i class="pi pi-heart text-xl" /></div>
               <div class="mt-4 text-lg font-black text-stone-900 dark:text-white">Тебя пока не лайкнули</div>
               <div class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Заполни анкету и добавь фото — так заметнее. Каждый лайк прилетит в колокольчик.</div>
@@ -419,9 +419,9 @@ onUnmounted(() => {
           </template>
 
           <template v-else-if="s.activeTab.value === 'questionnaire'">
-            <div class="mt-4 rounded-[24px] border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 sm:p-6 shadow-soft">
+            <div class="mt-4 rounded-[24px] border border-stone-200 dark:border-white/10 bg-white dark:bg-[#0F121F] p-4 sm:p-6 shadow-soft">
               <div class="mb-4 flex items-center gap-2.5">
-                <span class="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 via-fuchsia-500 to-orange-400 grid place-items-center text-white"><i class="pi pi-user-edit" /></span>
+                <span class="w-10 h-10 rounded-2xl bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 grid place-items-center text-white"><i class="pi pi-user-edit" /></span>
                 <div>
                   <div class="text-base font-black text-stone-900 dark:text-white">Моя анкета</div>
                   <div class="text-xs text-stone-500 dark:text-zinc-400">Так тебя видят в ленте ULove</div>
@@ -432,7 +432,7 @@ onUnmounted(() => {
           </template>
 
           <template v-else-if="s.activeTab.value === 'premium'">
-            <div class="mt-4 rounded-[24px] bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500 p-4 sm:p-6 text-white shadow-soft">
+            <div class="mt-4 rounded-[24px] bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 p-4 sm:p-6 text-white shadow-soft">
               <div class="flex flex-wrap items-center gap-2.5">
                 <span class="w-10 h-10 rounded-2xl bg-white/20 grid place-items-center shrink-0"><i class="pi pi-crown" /></span>
                 <div class="min-w-0 flex-1 basis-40">
@@ -448,7 +448,7 @@ onUnmounted(() => {
             </div>
 
             <div class="mt-2 space-y-2">
-              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
+              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-white/10 bg-white dark:bg-[#0F121F] p-3">
                 <span class="w-10 h-10 rounded-2xl bg-violet-500/15 text-violet-500 grid place-items-center shrink-0"><i class="pi pi-eye-slash" /></span>
                 <div class="min-w-0 flex-1">
                   <div class="text-sm font-black text-stone-900 dark:text-white">Инкогнито-лайк <span class="text-violet-500">PRO</span></div>
@@ -457,7 +457,7 @@ onUnmounted(() => {
                 <ToggleSwitch class="shrink-0" :model-value="s.incognitoLike.value" input-id="premium-incognito" @update:model-value="(v:boolean)=>s.setIncognito(v)" />
               </div>
 
-              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
+              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-white/10 bg-white dark:bg-[#0F121F] p-3">
                 <span class="w-10 h-10 rounded-2xl bg-teal-500/15 text-teal-600 dark:text-teal-300 grid place-items-center shrink-0"><i class="pi pi-map-marker" /></span>
                 <div class="min-w-0 flex-1">
                   <div class="text-sm font-black text-stone-900 dark:text-white">Люди рядом</div>
@@ -466,7 +466,7 @@ onUnmounted(() => {
                 <Button label="Фильтры" icon="pi pi-sliders-h" rounded outlined size="small" @click="s.showFilters.value = true" />
               </div>
 
-              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
+              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-white/10 bg-white dark:bg-[#0F121F] p-3">
                 <span class="w-10 h-10 rounded-2xl bg-sky-500/15 text-sky-600 dark:text-sky-300 grid place-items-center shrink-0"><i class="pi pi-user" /></span>
                 <div class="min-w-0 flex-1">
                   <div class="text-sm font-black text-stone-900 dark:text-white">Скрыть имя <span class="text-amber-500">PRO</span></div>
@@ -475,7 +475,7 @@ onUnmounted(() => {
                 <ToggleSwitch class="shrink-0" :model-value="s.privacy.value.dating_hide_name" input-id="premium-hide-name" @update:model-value="(v:boolean)=>s.setPrivacyFlag('dating_hide_name', v)" />
               </div>
 
-              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
+              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-white/10 bg-white dark:bg-[#0F121F] p-3">
                 <span class="w-10 h-10 rounded-2xl bg-sky-500/15 text-sky-600 dark:text-sky-300 grid place-items-center shrink-0"><i class="pi pi-calendar" /></span>
                 <div class="min-w-0 flex-1">
                   <div class="text-sm font-black text-stone-900 dark:text-white">Скрыть возраст <span class="text-amber-500">PRO</span></div>
@@ -484,7 +484,7 @@ onUnmounted(() => {
                 <ToggleSwitch class="shrink-0" :model-value="s.privacy.value.dating_hide_age" input-id="premium-hide-age" @update:model-value="(v:boolean)=>s.setPrivacyFlag('dating_hide_age', v)" />
               </div>
 
-              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
+              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-white/10 bg-white dark:bg-[#0F121F] p-3">
                 <span class="w-10 h-10 rounded-2xl bg-sky-500/15 text-sky-600 dark:text-sky-300 grid place-items-center shrink-0"><i class="pi pi-send" /></span>
                 <div class="min-w-0 flex-1">
                   <div class="text-sm font-black text-stone-900 dark:text-white">Скрыть расстояние <span class="text-amber-500">PRO</span></div>
@@ -493,7 +493,7 @@ onUnmounted(() => {
                 <ToggleSwitch class="shrink-0" :model-value="s.privacy.value.dating_hide_distance" input-id="premium-hide-distance" @update:model-value="(v:boolean)=>s.setPrivacyFlag('dating_hide_distance', v)" />
               </div>
 
-              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
+              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-white/10 bg-white dark:bg-[#0F121F] p-3">
                 <span class="w-10 h-10 rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 grid place-items-center shrink-0"><i class="pi pi-lock" /></span>
                 <div class="min-w-0 flex-1">
                   <div class="text-sm font-black text-stone-900 dark:text-white">Пишут только мэтчи <span class="text-emerald-500">Free</span></div>
@@ -502,7 +502,7 @@ onUnmounted(() => {
                 <ToggleSwitch class="shrink-0" :model-value="s.privacy.value.dating_match_only" input-id="premium-match-only" @update:model-value="(v:boolean)=>s.setPrivacyFlag('dating_match_only', v)" />
               </div>
 
-              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
+              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-white/10 bg-white dark:bg-[#0F121F] p-3">
                 <span class="w-10 h-10 rounded-2xl bg-amber-500/15 text-amber-500 grid place-items-center shrink-0"><i class="pi pi-star" /></span>
                 <div class="min-w-0 flex-1">
                   <div class="text-sm font-black text-stone-900 dark:text-white">Избранное {{ s.favoritesCount.value }}/{{ s.favoritesLimit.value }}</div>
@@ -511,7 +511,7 @@ onUnmounted(() => {
                 <Button label="Открыть" icon="pi pi-star" rounded outlined size="small" @click="s.goTab('favorites')" />
               </div>
 
-              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
+              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-white/10 bg-white dark:bg-[#0F121F] p-3">
                 <span class="w-10 h-10 rounded-2xl bg-rose-500/15 text-rose-500 grid place-items-center shrink-0"><i class="pi pi-send" /></span>
                 <div class="min-w-0 flex-1">
                   <div class="text-sm font-black text-stone-900 dark:text-white">{{ s.quotaLabel.value || 'Сообщения' }}</div>
@@ -519,7 +519,7 @@ onUnmounted(() => {
                 </div>
               </div>
 
-              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
+              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-white/10 bg-white dark:bg-[#0F121F] p-3">
                 <span class="w-10 h-10 rounded-2xl bg-zinc-500/15 text-stone-500 dark:text-zinc-300 grid place-items-center shrink-0"><i class="pi pi-images" /></span>
                 <div class="min-w-0 flex-1">
                   <div class="text-sm font-black text-stone-900 dark:text-white">До 5 фото в анкете <span class="text-amber-500">PRO</span></div>
@@ -528,7 +528,7 @@ onUnmounted(() => {
                 <Link href="/profile"><Button label="Фото" icon="pi pi-camera" rounded outlined size="small" /></Link>
               </div>
 
-              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
+              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-white/10 bg-white dark:bg-[#0F121F] p-3">
                 <span class="w-10 h-10 rounded-2xl bg-orange-500/15 text-orange-500 grid place-items-center shrink-0"><i class="pi pi-refresh" /></span>
                 <div class="min-w-0 flex-1">
                   <div class="text-sm font-black text-stone-900 dark:text-white">Начать заново</div>
@@ -537,7 +537,7 @@ onUnmounted(() => {
                 <Button v-if="s.canResetHistory.value" :label="(s.isStaff.value || s.isPro.value) ? 'Сбросить' : 'Сбросить (1 раз)'" icon="pi pi-trash" severity="warn" rounded outlined size="small" :loading="s.resetting.value" @click="s.resetHistory()" />
               </div>
 
-              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
+              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-white/10 bg-white dark:bg-[#0F121F] p-3">
                 <span class="w-10 h-10 rounded-2xl bg-sky-500/15 text-[#1786FF] grid place-items-center shrink-0"><i class="pi pi-star-fill" /></span>
                 <div class="min-w-0 flex-1">
                   <div class="text-sm font-black text-stone-900 dark:text-white">Суперлайки · осталось {{ s.leftLabel(s.superlikesLeft.value) }}</div>
@@ -546,7 +546,7 @@ onUnmounted(() => {
                 <Button label="Пак +5" icon="pi pi-plus" rounded outlined size="small" :loading="s.buyingExtras.value" @click="s.purchaseExtras('superlike_pack')" />
               </div>
 
-              <div class="flex flex-wrap items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
+              <div class="flex flex-wrap items-center gap-3 rounded-2xl border border-stone-200 dark:border-white/10 bg-white dark:bg-[#0F121F] p-3">
                 <span class="w-10 h-10 rounded-2xl bg-amber-500/15 text-amber-500 grid place-items-center shrink-0"><i class="pi pi-bolt" /></span>
                 <div class="min-w-0 flex-1 basis-44">
                   <div class="text-sm font-black text-stone-900 dark:text-white leading-snug">{{ s.boostActive.value ? `Буст активен ${s.boostUntilLabel.value}` : 'Буст профиля · 30 мин в топе' }}</div>
@@ -558,7 +558,7 @@ onUnmounted(() => {
                 </div>
               </div>
 
-              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-3">
+              <div class="flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-white/10 bg-white dark:bg-[#0F121F] p-3">
                 <span class="w-10 h-10 rounded-2xl bg-yellow-500/15 text-[#FFC629] grid place-items-center shrink-0"><i class="pi pi-undo" /></span>
                 <div class="min-w-0 flex-1">
                   <div class="text-sm font-black text-stone-900 dark:text-white">Откат свайпа · осталось {{ s.leftLabel(s.undosLeft.value) }}</div>
@@ -577,7 +577,7 @@ onUnmounted(() => {
               <div class="swipe-deck relative overscroll-none sm:h-[60dvh] sm:min-h-[380px] sm:max-h-[520px] lg:h-[62dvh] lg:max-h-[600px] xl:h-[66dvh] xl:max-h-[680px] 2xl:max-h-[740px]" :style="tgDeckStyle">
               <div
                 v-if="s.next.value"
-                class="absolute inset-0 z-0 rounded-xl overflow-hidden bg-zinc-200 dark:bg-zinc-800 shadow-soft pointer-events-none"
+                class="absolute inset-0 z-0 rounded-xl overflow-hidden bg-zinc-200 dark:bg-white/[0.06] shadow-soft pointer-events-none"
                 :style="s.stackCardStyle.value"
               >
                 <AppImage
@@ -588,7 +588,7 @@ onUnmounted(() => {
                   class="absolute inset-0"
                   img-class="absolute inset-0 w-full h-full object-cover"
                 />
-                <div v-else class="absolute inset-0 grid place-items-center bg-gradient-to-br from-violet-600 via-fuchsia-500 to-orange-400">
+                <div v-else class="absolute inset-0 grid place-items-center bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500">
                   <span class="text-white text-7xl font-black">{{ (s.next.value.name ?? '?').slice(0, 1) }}</span>
                 </div>
                 <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
@@ -602,7 +602,7 @@ onUnmounted(() => {
 
               <div
                 :key="s.cardKey.value"
-                class="swipe-top absolute inset-0 z-10 rounded-xl overflow-hidden bg-zinc-200 dark:bg-zinc-800 shadow-soft touch-pan-y overscroll-contain cursor-grab active:cursor-grabbing"
+                class="swipe-top absolute inset-0 z-10 rounded-xl overflow-hidden bg-zinc-200 dark:bg-white/[0.06] shadow-soft touch-pan-y overscroll-contain cursor-grab active:cursor-grabbing"
                 :style="s.topCardStyle.value"
                 @pointerdown="s.dragStart($event.clientX, $event.clientY)"
                 @pointermove="s.dragMove($event.clientX, $event.clientY)"
@@ -651,7 +651,7 @@ onUnmounted(() => {
                   class="absolute inset-0"
                   img-class="absolute inset-0 w-full h-full object-cover"
                 />
-                <div v-else class="absolute inset-0 grid place-items-center bg-gradient-to-br from-violet-600 via-fuchsia-500 to-orange-400 dark:from-violet-900 dark:via-fuchsia-900 dark:to-orange-900">
+                <div v-else class="absolute inset-0 grid place-items-center bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500">
                   <span class="text-white text-7xl font-black">{{ (s.current.value.name ?? '?').slice(0, 1) }}</span>
                 </div>
                 <div
@@ -708,7 +708,7 @@ onUnmounted(() => {
 
               <div
                 v-if="s.exiting.value"
-                class="fly-card absolute inset-0 z-20 rounded-xl overflow-hidden bg-zinc-200 dark:bg-zinc-800 shadow-soft pointer-events-none"
+                class="fly-card absolute inset-0 z-20 rounded-xl overflow-hidden bg-zinc-200 dark:bg-white/[0.06] shadow-soft pointer-events-none"
                 :class="s.exiting.value.dir === 'like' ? 'fly-like' : 'fly-pass'"
                 :style="{ '--from-x': `${s.exiting.value.fromX}px`, '--from-y': `${s.exiting.value.fromY}px` }"
               >
@@ -721,7 +721,7 @@ onUnmounted(() => {
                   class="absolute inset-0"
                   img-class="absolute inset-0 w-full h-full object-cover"
                 />
-                <div v-else class="absolute inset-0 grid place-items-center bg-gradient-to-br from-violet-600 via-fuchsia-500 to-orange-400">
+                <div v-else class="absolute inset-0 grid place-items-center bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500">
                   <span class="text-white text-7xl font-black">{{ (s.exiting.value.card.name ?? '?').slice(0, 1) }}</span>
                 </div>
                 <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
@@ -735,15 +735,15 @@ onUnmounted(() => {
             </div>
             </div>
 
-            <div v-else class="rounded-xl bg-white dark:bg-zinc-900 p-6 sm:p-8 text-center shadow-soft sm:grid sm:place-items-center sm:overflow-y-auto sm:h-[60dvh] sm:min-h-[380px] sm:max-h-[520px] lg:h-[62dvh] lg:max-h-[600px] xl:h-[66dvh] xl:max-h-[680px] 2xl:max-h-[740px]">
+            <div v-else class="rounded-xl bg-white dark:bg-[#0F121F] p-6 sm:p-8 text-center shadow-soft sm:grid sm:place-items-center sm:overflow-y-auto sm:h-[60dvh] sm:min-h-[380px] sm:max-h-[520px] lg:h-[62dvh] lg:max-h-[600px] xl:h-[66dvh] xl:max-h-[680px] 2xl:max-h-[740px]">
               <div class="min-w-0">
-              <div class="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-[#FD267D] to-[#FF7854] text-white grid place-items-center shadow-lg shadow-rose-500/30"><i class="pi pi-heart-fill text-2xl" /></div>
+              <div class="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white grid place-items-center shadow-lg shadow-rose-500/30"><i class="pi pi-heart-fill text-2xl" /></div>
               <template v-if="s.feedExhausted.value && !s.hasActiveFilters.value">
                 <template v-if="s.isPro.value">
                   <div class="mt-4 text-lg font-black text-stone-900 dark:text-white">Ты просвайпал(а) всех текущих в ULove 🎉</div>
                   <div class="text-sm text-stone-500 dark:text-zinc-400 mt-1">PRO листает безлимитно: покажи всех снова — лента вернёт просвайпанных. Лайкнутые сохранены в «Избранном».</div>
                   <div class="mt-4 flex gap-2 justify-center flex-wrap">
-                    <Button label="Моё избранное" rounded size="small" class="!bg-gradient-to-br !from-rose-500 !to-orange-400 !border-0 !text-white" @click="s.goTab('favorites')" />
+                    <Button label="Моё избранное" rounded size="small" class="!bg-gradient-to-br !from-rose-500 !via-pink-500 !to-fuchsia-500 !border-0 !text-white" @click="s.goTab('favorites')" />
                     <Button label="Обновить" severity="secondary" rounded outlined size="small" @click="s.loadFeed()" />
                     <Button label="Показать снова" icon="pi pi-refresh" severity="warn" rounded outlined size="small" :loading="s.resetting.value" @click="s.resetHistory()" />
                   </div>
@@ -752,7 +752,7 @@ onUnmounted(() => {
                   <div class="mt-4 text-lg font-black text-stone-900 dark:text-white">Ты просвайпал(а) всех в ULove 🎉</div>
                   <div class="text-sm text-stone-500 dark:text-zinc-400 mt-1">Лайкнутые сохранены в «Избранном». Новые люди появляются каждый день — загляни позже.</div>
                   <div class="mt-4 flex gap-2 justify-center flex-wrap">
-                    <Button label="Моё избранное" rounded size="small" class="!bg-gradient-to-br !from-rose-500 !to-orange-400 !border-0 !text-white" @click="s.goTab('favorites')" />
+                    <Button label="Моё избранное" rounded size="small" class="!bg-gradient-to-br !from-rose-500 !via-pink-500 !to-fuchsia-500 !border-0 !text-white" @click="s.goTab('favorites')" />
                     <Button label="Обновить" severity="secondary" rounded outlined size="small" @click="s.loadFeed()" />
                     <Button v-if="s.canResetHistory.value" label="Начать заново (1 раз)" icon="pi pi-trash" severity="warn" rounded outlined size="small" :loading="s.resetting.value" @click="s.resetHistory()" />
                   </div>
@@ -794,7 +794,7 @@ onUnmounted(() => {
             :block-scroll="true"
             class="ulove-drawer !w-[86vw] !max-w-[340px] sm:!w-[360px] sm:!max-w-[360px] !rounded-l-[28px] !rounded-r-none !overflow-hidden !border-0"
             :pt="{
-              root: { class: '!bg-white dark:!bg-zinc-900 !border-0 !inset-y-0 !right-0 !mr-0 !ml-auto !h-dvh !max-h-dvh' },
+              root: { class: '!bg-white dark:!bg-[#0F121F] !border-0 !inset-y-0 !right-0 !mr-0 !ml-auto !h-dvh !max-h-dvh' },
               mask: { class: '!p-0 !m-0' },
               header: { class: '!p-0 !m-0 w-full !border-0 !bg-transparent' },
               title: { class: '!m-0 w-full max-w-full' },
@@ -803,9 +803,9 @@ onUnmounted(() => {
             @update:visible="(v:boolean) => { v ? mobileMenu.open() : mobileMenu.close() }"
           >
             <template #header>
-              <div class="w-full max-w-full border-b border-stone-100 px-4 pt-[max(0.875rem,env(safe-area-inset-top))] pb-3 dark:border-zinc-800">
+              <div class="w-full max-w-full border-b border-stone-100 px-4 pt-[max(0.875rem,env(safe-area-inset-top))] pb-3 dark:border-white/10">
                 <div class="flex w-full max-w-full items-center gap-2">
-                  <span class="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-[#FD267D] to-[#FF7854] text-white"><i class="pi pi-heart-fill text-sm leading-none" /></span>
+                  <span class="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white"><i class="pi pi-heart-fill text-sm leading-none" /></span>
                   <span class="text-lg font-black tracking-tight text-stone-900 dark:text-white">ULove</span>
                   <span class="ml-1 inline-flex min-w-0 items-center gap-1.5 text-xs font-semibold text-stone-500 dark:text-zinc-400"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" /><span class="truncate">{{ s.activeUsers.value.length }} онлайн</span></span>
                   <span class="flex-1" />
@@ -816,8 +816,8 @@ onUnmounted(() => {
             <div class="px-3 pt-3 pb-[max(1.25rem,env(safe-area-inset-bottom))] min-w-0 max-w-full">
               <div class="flex flex-col gap-0.5">
                 <Button unstyled class="ulove-nav group w-full !p-0" @click="mobileMenu.selectTab(s, 'feed')">
-                  <span class="flex items-center gap-3 w-full p-2.5 pr-3 rounded-2xl text-left transition active:scale-[0.98]" :class="s.activeTab.value === 'feed' ? 'bg-rose-50 dark:bg-rose-950/40' : 'hover:bg-stone-100 dark:hover:bg-zinc-800'">
-                    <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full text-base" :class="s.activeTab.value === 'feed' ? 'bg-gradient-to-br from-[#FD267D] to-[#FF7854] text-white' : 'bg-stone-100 text-stone-500 dark:bg-zinc-800 dark:text-zinc-300'"><i class="pi pi-images leading-none" /></span>
+                  <span class="flex items-center gap-3 w-full p-2.5 pr-3 rounded-2xl text-left transition active:scale-[0.98]" :class="s.activeTab.value === 'feed' ? 'bg-rose-50 dark:bg-rose-950/40' : 'hover:bg-stone-100 dark:hover:bg-white/10'">
+                    <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full text-base" :class="s.activeTab.value === 'feed' ? 'bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white' : 'bg-stone-100 text-stone-500 dark:bg-white/[0.06] dark:text-zinc-300'"><i class="pi pi-images leading-none" /></span>
                     <span class="min-w-0 flex-1">
                       <span class="block text-sm font-bold leading-tight" :class="s.activeTab.value === 'feed' ? 'text-rose-600 dark:text-rose-300' : 'text-stone-900 dark:text-white'">Лента</span>
                       <span class="mt-0.5 block text-[11px] leading-tight text-stone-500 dark:text-zinc-400">Листай людей · безлимит</span>
@@ -826,10 +826,10 @@ onUnmounted(() => {
                   </span>
                 </Button>
                 <Button unstyled class="ulove-nav group w-full !p-0" @click="mobileMenu.selectTab(s, 'active')">
-                  <span class="flex items-center gap-3 w-full p-2.5 pr-3 rounded-2xl text-left transition active:scale-[0.98]" :class="s.activeTab.value === 'active' ? 'bg-rose-50 dark:bg-rose-950/40' : 'hover:bg-stone-100 dark:hover:bg-zinc-800'">
-                    <span class="relative grid h-10 w-10 shrink-0 place-items-center rounded-full text-base" :class="s.activeTab.value === 'active' ? 'bg-gradient-to-br from-[#FD267D] to-[#FF7854] text-white' : 'bg-stone-100 text-stone-500 dark:bg-zinc-800 dark:text-zinc-300'">
+                  <span class="flex items-center gap-3 w-full p-2.5 pr-3 rounded-2xl text-left transition active:scale-[0.98]" :class="s.activeTab.value === 'active' ? 'bg-rose-50 dark:bg-rose-950/40' : 'hover:bg-stone-100 dark:hover:bg-white/10'">
+                    <span class="relative grid h-10 w-10 shrink-0 place-items-center rounded-full text-base" :class="s.activeTab.value === 'active' ? 'bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white' : 'bg-stone-100 text-stone-500 dark:bg-white/[0.06] dark:text-zinc-300'">
                       <i class="pi pi-bolt leading-none" />
-                      <span v-if="s.activeUsers.value.length" class="absolute -right-1 -top-1 grid h-5 min-w-[20px] place-items-center rounded-full bg-emerald-500 px-1 text-[10px] font-black text-white ring-2 ring-white dark:ring-zinc-900">{{ s.activeUsers.value.length }}</span>
+                      <span v-if="s.activeUsers.value.length" class="absolute -right-1 -top-1 grid h-5 min-w-[20px] place-items-center rounded-full bg-emerald-500 px-1 text-[10px] font-black text-white ring-2 ring-white dark:ring-[#0F121F]">{{ s.activeUsers.value.length }}</span>
                     </span>
                     <span class="min-w-0 flex-1">
                       <span class="block text-sm font-bold leading-tight" :class="s.activeTab.value === 'active' ? 'text-rose-600 dark:text-rose-300' : 'text-stone-900 dark:text-white'">Активные · онлайн</span>
@@ -839,8 +839,8 @@ onUnmounted(() => {
                   </span>
                 </Button>
                 <Button unstyled class="ulove-nav group w-full !p-0" @click="mobileMenu.selectTab(s, 'favorites')">
-                  <span class="flex items-center gap-3 w-full p-2.5 pr-3 rounded-2xl text-left transition active:scale-[0.98]" :class="s.activeTab.value === 'favorites' ? 'bg-rose-50 dark:bg-rose-950/40' : 'hover:bg-stone-100 dark:hover:bg-zinc-800'">
-                    <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full text-base" :class="s.activeTab.value === 'favorites' ? 'bg-gradient-to-br from-[#FD267D] to-[#FF7854] text-white' : 'bg-stone-100 text-stone-500 dark:bg-zinc-800 dark:text-zinc-300'">
+                  <span class="flex items-center gap-3 w-full p-2.5 pr-3 rounded-2xl text-left transition active:scale-[0.98]" :class="s.activeTab.value === 'favorites' ? 'bg-rose-50 dark:bg-rose-950/40' : 'hover:bg-stone-100 dark:hover:bg-white/10'">
+                    <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full text-base" :class="s.activeTab.value === 'favorites' ? 'bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white' : 'bg-stone-100 text-stone-500 dark:bg-white/[0.06] dark:text-zinc-300'">
                       <i class="pi pi-star-fill leading-none" />
                     </span>
                     <span class="min-w-0 flex-1">
@@ -851,10 +851,10 @@ onUnmounted(() => {
                   </span>
                 </Button>
                 <Button unstyled class="ulove-nav group w-full !p-0" @click="mobileMenu.selectTab(s, 'admirers')">
-                  <span class="flex items-center gap-3 w-full p-2.5 pr-3 rounded-2xl text-left transition active:scale-[0.98]" :class="s.activeTab.value === 'admirers' ? 'bg-rose-50 dark:bg-rose-950/40' : 'hover:bg-stone-100 dark:hover:bg-zinc-800'">
-                    <span class="relative grid h-10 w-10 shrink-0 place-items-center rounded-full text-base" :class="s.activeTab.value === 'admirers' ? 'bg-gradient-to-br from-[#FD267D] to-[#FF7854] text-white' : 'bg-stone-100 text-stone-500 dark:bg-zinc-800 dark:text-zinc-300'">
+                  <span class="flex items-center gap-3 w-full p-2.5 pr-3 rounded-2xl text-left transition active:scale-[0.98]" :class="s.activeTab.value === 'admirers' ? 'bg-rose-50 dark:bg-rose-950/40' : 'hover:bg-stone-100 dark:hover:bg-white/10'">
+                    <span class="relative grid h-10 w-10 shrink-0 place-items-center rounded-full text-base" :class="s.activeTab.value === 'admirers' ? 'bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white' : 'bg-stone-100 text-stone-500 dark:bg-white/[0.06] dark:text-zinc-300'">
                       <i class="pi pi-heart-fill leading-none" />
-                      <span v-if="s.admirersTotal.value" class="absolute -right-1 -top-1 grid h-5 min-w-[20px] place-items-center rounded-full bg-[#FD267D] px-1 text-[10px] font-black text-white ring-2 ring-white dark:ring-zinc-900">{{ s.admirersTotal.value }}</span>
+                      <span v-if="s.admirersTotal.value" class="absolute -right-1 -top-1 grid h-5 min-w-[20px] place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-black text-white ring-2 ring-white dark:ring-[#0F121F]">{{ s.admirersTotal.value }}</span>
                     </span>
                     <span class="min-w-0 flex-1">
                       <span class="block text-sm font-bold leading-tight" :class="s.activeTab.value === 'admirers' ? 'text-rose-600 dark:text-rose-300' : 'text-stone-900 dark:text-white'">Лайки мне</span>
@@ -864,8 +864,8 @@ onUnmounted(() => {
                   </span>
                 </Button>
                 <Button unstyled class="ulove-nav group w-full !p-0" @click="mobileMenu.selectTab(s, 'questionnaire')">
-                  <span class="flex items-center gap-3 w-full p-2.5 pr-3 rounded-2xl text-left transition active:scale-[0.98]" :class="s.activeTab.value === 'questionnaire' ? 'bg-rose-50 dark:bg-rose-950/40' : 'hover:bg-stone-100 dark:hover:bg-zinc-800'">
-                    <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full text-base" :class="s.activeTab.value === 'questionnaire' ? 'bg-gradient-to-br from-[#FD267D] to-[#FF7854] text-white' : 'bg-stone-100 text-stone-500 dark:bg-zinc-800 dark:text-zinc-300'"><i class="pi pi-user-edit leading-none" /></span>
+                  <span class="flex items-center gap-3 w-full p-2.5 pr-3 rounded-2xl text-left transition active:scale-[0.98]" :class="s.activeTab.value === 'questionnaire' ? 'bg-rose-50 dark:bg-rose-950/40' : 'hover:bg-stone-100 dark:hover:bg-white/10'">
+                    <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full text-base" :class="s.activeTab.value === 'questionnaire' ? 'bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white' : 'bg-stone-100 text-stone-500 dark:bg-white/[0.06] dark:text-zinc-300'"><i class="pi pi-user-edit leading-none" /></span>
                     <span class="min-w-0 flex-1">
                       <span class="block text-sm font-bold leading-tight" :class="s.activeTab.value === 'questionnaire' ? 'text-rose-600 dark:text-rose-300' : 'text-stone-900 dark:text-white'">Моя анкета</span>
                       <span class="mt-0.5 block text-[11px] leading-tight text-stone-500 dark:text-zinc-400">Как тебя видят в ленте</span>
@@ -874,8 +874,8 @@ onUnmounted(() => {
                   </span>
                 </Button>
                 <Button unstyled class="ulove-nav group w-full !p-0" @click="mobileMenu.selectTab(s, 'premium')">
-                  <span class="flex items-center gap-3 w-full p-2.5 pr-3 rounded-2xl text-left transition active:scale-[0.98]" :class="s.activeTab.value === 'premium' ? 'bg-rose-50 dark:bg-rose-950/40' : 'hover:bg-stone-100 dark:hover:bg-zinc-800'">
-                    <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-base text-white"><i class="pi pi-crown leading-none" /></span>
+                  <span class="flex items-center gap-3 w-full p-2.5 pr-3 rounded-2xl text-left transition active:scale-[0.98]" :class="s.activeTab.value === 'premium' ? 'bg-rose-50 dark:bg-rose-950/40' : 'hover:bg-stone-100 dark:hover:bg-white/10'">
+                    <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-base text-white"><i class="pi pi-crown leading-none" /></span>
                     <span class="min-w-0 flex-1">
                       <span class="block text-sm font-bold leading-tight text-stone-900 dark:text-white">ULove PRO</span>
                       <span class="mt-0.5 block text-[11px] leading-tight text-stone-500 dark:text-zinc-400">Инкогнито · радиус · хайды</span>
@@ -895,8 +895,8 @@ onUnmounted(() => {
                   class="flex w-16 shrink-0 flex-col items-center gap-1 active:scale-95 transition"
                   @click="mobileMenu.openMatch(s, m)"
                 >
-                  <span class="block rounded-full bg-gradient-to-br from-[#FD267D] to-[#FF7854] p-[2.5px]">
-                    <Avatar :image="m.user.avatar_url ?? undefined" :label="!m.user.avatar_url ? (m.user.name ?? '?').slice(0, 1) : undefined" shape="circle" class="!block !h-14 !w-14 overflow-hidden !border-2 !border-white dark:!border-zinc-900" />
+                  <span class="block rounded-full bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 p-[2.5px]">
+                    <Avatar :image="m.user.avatar_url ?? undefined" :label="!m.user.avatar_url ? (m.user.name ?? '?').slice(0, 1) : undefined" shape="circle" class="!block !h-14 !w-14 overflow-hidden !border-2 !border-white dark:!border-[#0F121F]" />
                   </span>
                   <span class="w-full truncate text-center text-[11px] font-semibold text-stone-600 dark:text-zinc-300">{{ m.user.name }}</span>
                 </button>
@@ -904,8 +904,8 @@ onUnmounted(() => {
             </div>
             <div class="px-3 mt-2 pb-2">
               <Button unstyled class="w-full !p-0" :disabled="!s.canUndo.value" @click="mobileMenu.undoSwipe(s)">
-                <span class="group flex items-center gap-3 w-full p-2.5 pr-3 rounded-2xl text-left transition active:scale-[0.98] hover:bg-stone-100 dark:hover:bg-zinc-800" :class="!s.canUndo.value ? 'opacity-40' : ''">
-                  <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-stone-100 text-base text-[#FFC629] dark:bg-zinc-800"><i class="pi pi-undo" /></span>
+                <span class="group flex items-center gap-3 w-full p-2.5 pr-3 rounded-2xl text-left transition active:scale-[0.98] hover:bg-stone-100 dark:hover:bg-white/10" :class="!s.canUndo.value ? 'opacity-40' : ''">
+                  <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-stone-100 text-base text-[#FFC629] dark:bg-white/[0.06]"><i class="pi pi-undo" /></span>
                   <span class="min-w-0 flex-1">
                     <span class="block text-sm font-bold leading-tight text-stone-900 dark:text-white">Откат свайпа</span>
                     <span class="mt-0.5 block text-[11px] leading-tight text-stone-500 dark:text-zinc-400">Осталось: {{ s.leftLabel(s.undosLeft.value) }} · Free 1/день · PRO безлимит</span>
@@ -914,8 +914,8 @@ onUnmounted(() => {
                 </span>
               </Button>
               <Button unstyled class="w-full !p-0" @click="mobileMenu.openFilters(s)">
-                <span class="group flex items-center gap-3 w-full p-2.5 pr-3 rounded-2xl text-left transition active:scale-[0.98] hover:bg-stone-100 dark:hover:bg-zinc-800">
-                  <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-stone-100 text-base text-stone-500 dark:bg-zinc-800 dark:text-zinc-300"><i class="pi pi-sliders-h" /></span>
+                <span class="group flex items-center gap-3 w-full p-2.5 pr-3 rounded-2xl text-left transition active:scale-[0.98] hover:bg-stone-100 dark:hover:bg-white/10">
+                  <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-stone-100 text-base text-stone-500 dark:bg-white/[0.06] dark:text-zinc-300"><i class="pi pi-sliders-h" /></span>
                   <span class="min-w-0 flex-1">
                     <span class="block text-sm font-bold leading-tight text-stone-900 dark:text-white">Фильтры</span>
                     <span class="mt-0.5 block text-[11px] leading-tight text-stone-500 dark:text-zinc-400">Цель · возраст · рядом</span>
@@ -924,8 +924,8 @@ onUnmounted(() => {
                 </span>
               </Button>
               <Button unstyled class="w-full !p-0" @click="mobileMenu.openHelp(s)">
-                <span class="group flex items-center gap-3 w-full p-2.5 pr-3 rounded-2xl text-left transition active:scale-[0.98] hover:bg-stone-100 dark:hover:bg-zinc-800">
-                  <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-stone-100 text-base text-stone-500 dark:bg-zinc-800 dark:text-zinc-300"><i class="pi pi-question-circle" /></span>
+                <span class="group flex items-center gap-3 w-full p-2.5 pr-3 rounded-2xl text-left transition active:scale-[0.98] hover:bg-stone-100 dark:hover:bg-white/10">
+                  <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-stone-100 text-base text-stone-500 dark:bg-white/[0.06] dark:text-zinc-300"><i class="pi pi-question-circle" /></span>
                   <span class="min-w-0 flex-1">
                     <span class="block text-sm font-bold leading-tight text-stone-900 dark:text-white">Как это работает</span>
                     <span class="mt-0.5 block text-[11px] leading-tight text-stone-500 dark:text-zinc-400">Мэтчи · лимиты · 18+</span>
@@ -933,7 +933,7 @@ onUnmounted(() => {
                   <i class="pi pi-chevron-right shrink-0 text-xs text-stone-300 transition group-hover:translate-x-0.5 dark:text-zinc-600" />
                 </span>
               </Button>
-              <div class="mt-2 flex items-center gap-2 rounded-2xl bg-stone-100 px-3 py-2.5 text-[11px] font-semibold text-stone-500 dark:bg-zinc-800 dark:text-zinc-400"><i class="pi pi-info-circle shrink-0" /><span>{{ s.isQuotaEmpty.value ? 'Лимит исчерпан — мэтчи пишут бесплатно' : 'Без мэтча · ' + s.quotaLabel.value.toLowerCase() + ' · мэтч открывает чат всегда' }}</span></div>
+              <div class="mt-2 flex items-center gap-2 rounded-2xl bg-stone-100 px-3 py-2.5 text-[11px] font-semibold text-stone-500 dark:bg-white/[0.06] dark:text-zinc-400"><i class="pi pi-info-circle shrink-0" /><span>{{ s.isQuotaEmpty.value ? 'Лимит исчерпан — мэтчи пишут бесплатно' : 'Без мэтча · ' + s.quotaLabel.value.toLowerCase() + ' · мэтч открывает чат всегда' }}</span></div>
             </div>
           </Drawer>
         </template>
@@ -943,16 +943,16 @@ onUnmounted(() => {
         <div class="flex flex-col gap-4 pt-1 min-w-0">
           <div class="min-w-0">
             <label class="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500">Что ищешь</label>
-            <Select v-model="s.filters.value.goal" :options="goalOptions" option-label="label" option-value="value" placeholder="Любая цель" class="w-full mt-1 dark:!border-zinc-700" :pt="selectPt" />
+            <Select v-model="s.filters.value.goal" :options="goalOptions" option-label="label" option-value="value" placeholder="Любая цель" class="w-full mt-1 dark:!border-white/10" :pt="selectPt" />
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div class="min-w-0">
               <label class="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500">Кого показать</label>
-              <Select v-model="s.filters.value.gender" :options="genderOptions" option-label="label" option-value="value" class="w-full mt-1 dark:!border-zinc-700" :pt="selectPt" />
+              <Select v-model="s.filters.value.gender" :options="genderOptions" option-label="label" option-value="value" class="w-full mt-1 dark:!border-white/10" :pt="selectPt" />
             </div>
             <div class="min-w-0">
               <label class="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500">Люди рядом</label>
-              <Select v-model="s.filters.value.radius_km" :options="radiusOptions" option-label="label" option-value="value" placeholder="Все люди" class="w-full mt-1 dark:!border-zinc-700" :pt="selectPt" />
+              <Select v-model="s.filters.value.radius_km" :options="radiusOptions" option-label="label" option-value="value" placeholder="Все люди" class="w-full mt-1 dark:!border-white/10" :pt="selectPt" />
               <div v-if="s.hasHomeLocation.value" class="mt-1 text-[11px] text-stone-500 dark:text-zinc-400">
                 «Люди недалеко» — до {{ FREE_SWIPES_RADIUS_KM }} км от точки<template v-if="s.viewerLocationLabel.value"> ({{ s.viewerLocationLabel.value }})</template>. Точный дом не показывается.
               </div>
@@ -971,11 +971,11 @@ onUnmounted(() => {
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div class="min-w-0">
               <label class="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500">Возраст от</label>
-              <InputText v-model="s.ageMinText.value" type="number" inputmode="numeric" min="18" max="99" placeholder="18" class="w-full mt-1 dark:!border-zinc-700" />
+              <InputText v-model="s.ageMinText.value" type="number" inputmode="numeric" min="18" max="99" placeholder="18" class="w-full mt-1 dark:!border-white/10" />
             </div>
             <div class="min-w-0">
               <label class="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500">Возраст до</label>
-              <InputText v-model="s.ageMaxText.value" type="number" inputmode="numeric" min="18" max="99" placeholder="99" class="w-full mt-1 dark:!border-zinc-700" />
+              <InputText v-model="s.ageMaxText.value" type="number" inputmode="numeric" min="18" max="99" placeholder="99" class="w-full mt-1 dark:!border-white/10" />
             </div>
           </div>
           <div>
@@ -994,7 +994,7 @@ onUnmounted(() => {
               {{ s.filterModerationWarning.value }}
             </Message>
           </div>
-          <div class="rounded-2xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/60 p-3 flex flex-col gap-3">
+          <div class="rounded-2xl border border-stone-200 dark:border-white/10 bg-stone-50 dark:bg-white/[0.06] p-3 flex flex-col gap-3">
             <div class="flex items-center gap-3">
               <ToggleSwitch class="shrink-0" v-model="s.privacy.value.dating_match_only" input-id="match-only" />
               <label for="match-only" class="text-sm text-stone-700 dark:text-zinc-200">Писать могут только мэтчи <span class="text-stone-400 dark:text-zinc-500">(базовая приватность, бесплатно)</span></label>
@@ -1048,25 +1048,25 @@ onUnmounted(() => {
           <div>Всех просвайпал(а)? Free возвращает ленту один раз кнопкой «Начать заново», а PRO/Premium — безлимитно кнопкой «Показать снова». Стафф (админ/модератор) всегда на Premium.</div>
           <div>Таб «Активные» — кто сейчас в ULove. Открывай анкету, пиши, если человек не закрыл сообщения.</div>
           <div>Кнопка ⓘ на карточке — подробная анкета: что ищет, интересы, о себе. Своя анкета — иконка-карандаш сверху.</div>
-          <div class="rounded-2xl bg-stone-100 dark:bg-zinc-800 px-3 py-2 text-center font-bold">Строго 18+</div>
+          <div class="rounded-2xl bg-stone-100 dark:bg-white/[0.06] px-3 py-2 text-center font-bold">Строго 18+</div>
         </div>
       </Dialog>
 
       <Dialog :visible="s.showPaywall.value" @update:visible="(v:boolean)=>{ if(!v) s.closePaywall() }" modal header="Нужен PRO" :style="{ width: '380px', maxWidth: '94vw', maxHeight: '92dvh' }" :pt="dialogPt">
         <div class="text-center py-2">
-          <div class="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-white grid place-items-center"><i class="pi pi-crown text-xl" /></div>
+          <div class="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white grid place-items-center"><i class="pi pi-crown text-xl" /></div>
           <div class="mt-3 text-lg font-black text-stone-900 dark:text-white">«{{ s.paywallFeature.value }}» — PRO-плюшка</div>
           <p class="mt-1 text-sm text-stone-500 dark:text-zinc-400">Твой тариф: {{ s.planLabel.value }}. Оформи подписку PRO, чтобы включить.</p>
           <div class="mt-4 flex gap-2 justify-center flex-wrap">
             <Button label="Понятно" severity="secondary" rounded outlined @click="s.closePaywall()" />
-            <Link href="/settings"><Button label="Выбрать тариф" icon="pi pi-crown" rounded class="!bg-gradient-to-br !from-amber-400 !to-orange-500 !border-0 !text-white" /></Link>
+            <Link href="/settings"><Button label="Выбрать тариф" icon="pi pi-crown" rounded class="!bg-gradient-to-br !from-rose-500 !via-pink-500 !to-fuchsia-500 !border-0 !text-white" /></Link>
           </div>
         </div>
       </Dialog>
 
       <Dialog :visible="s.ageGate.value" modal :closable="false" :draggable="false" header="Только 18+" :style="{ width: '400px', maxWidth: '94vw', maxHeight: '92dvh' }" :pt="dialogPt">
         <div class="pt-1">
-          <div class="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-500 to-orange-400 text-white grid place-items-center text-lg font-black">18+</div>
+          <div class="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white grid place-items-center text-lg font-black">18+</div>
           <div class="mt-3 text-center text-lg font-black text-stone-900 dark:text-white">Подтверди возраст</div>
           <p class="mt-1 text-center text-sm text-stone-500 dark:text-zinc-400">Приложением можно пользоваться свободно, но свайпы — строго с 18 лет. Укажи дату рождения один раз, изменить её будет нельзя.</p>
           <template v-if="s.ageGateReason.value === 'missing'">

@@ -20,12 +20,12 @@ const emit = defineEmits<{ (e: 'close'): void; (e: 'choose', id: PlanId): void }
     :draggable="false"
     :style="{ width: '560px', maxWidth: '94vw' }"
     :pt="{
-      root: { class: 'plan-dialog !rounded-[28px] max-sm:!rounded-b-none !border-0 overflow-hidden !bg-white dark:!bg-zinc-900' },
+      root: { class: 'plan-dialog !rounded-[28px] max-sm:!rounded-b-none !border-0 overflow-hidden !bg-white dark:!bg-[#0F121F]' },
       header: { class: '!p-0 !m-0 !border-0' },
       headerActions: { class: '!hidden' },
       closeButton: { class: '!hidden' },
       content: { class: '!px-4 !py-4 sm:!px-6 !overflow-y-auto !overscroll-contain max-h-[62dvh]' },
-      footer: { class: '!px-4 !py-4 sm:!px-6 !border-0 !bg-stone-50 dark:!bg-zinc-800/60' },
+      footer: { class: '!px-4 !py-4 sm:!px-6 !border-0 !bg-stone-50 dark:!bg-white/[0.06]' },
     }"
   >
     <template #header>

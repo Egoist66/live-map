@@ -5,7 +5,7 @@ defineProps<{ overview: any | null; pct: number; loading: boolean }>()
 </script>
 <template>
   <div class="grid grid-cols-2 xl:grid-cols-4 gap-3">
-    <Card class="!bg-stone-900 dark:!bg-zinc-900 !text-white !border-0 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0' } }">
+    <Card class="!bg-stone-900 dark:!bg-[#0F121F] !text-white !border-0 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0' } }">
       <template #content>
         <div class="text-[11px] uppercase tracking-wider text-white/50 font-bold">Всего пользователей</div>
         <div class="mt-1 text-2xl sm:text-3xl font-black">{{ loading ? '…' : (overview?.total_users ?? 0) }}</div>
@@ -19,14 +19,14 @@ defineProps<{ overview: any | null; pct: number; loading: boolean }>()
         <div class="mt-1 text-xs text-white/70">{{ pct }}% базы · активных сегодня {{ overview?.active_today ?? 0 }}</div>
       </template>
     </Card>
-    <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0' } }">
+    <Card class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0' } }">
       <template #content>
         <div class="text-[11px] uppercase tracking-wider text-stone-400 dark:text-zinc-500 font-bold">Новые / активные</div>
         <div class="mt-1 text-2xl sm:text-3xl font-black dark:text-white">{{ overview?.new_month ?? 0 }}<span class="text-sm font-semibold text-stone-400 dark:text-zinc-500"> / 30д</span></div>
         <div class="mt-1 text-xs text-stone-500 dark:text-zinc-400">активных за 7д: {{ overview?.active_week ?? 0 }}</div>
       </template>
     </Card>
-    <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0' } }">
+    <Card class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0' } }">
       <template #content>
         <div class="text-[11px] uppercase tracking-wider text-stone-400 dark:text-zinc-500 font-bold">Контент / жалобы</div>
         <div class="mt-1 text-2xl sm:text-3xl font-black dark:text-white">{{ overview?.active_pins ?? 0 }}<span class="text-sm font-semibold text-stone-400 dark:text-zinc-500"> пинов</span></div>

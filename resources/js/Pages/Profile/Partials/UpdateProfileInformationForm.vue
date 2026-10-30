@@ -45,11 +45,11 @@ const uloveOnly = useUloveOnly()
         <p class="text-sm text-zinc-500 mt-1">Аватар, контакты и локация для свайпов. Точный адрес никому не показывается.</p>
       </div>
     </header>
-    <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft mt-6" :pt="{ body:{ class:'!p-4' }, content:{ class:'!p-0' } }">
+    <Card class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft mt-6" :pt="{ body:{ class:'!p-4' }, content:{ class:'!p-0' } }">
       <template #content>
         <div class="flex flex-col sm:flex-row items-start gap-5">
           <div class="relative shrink-0">
-            <button @click="a.showPreview.value=true" :aria-label="f.user.value.name ? `Открыть фото профиля — ${f.user.value.name}` : 'Открыть фото профиля'" class="group relative w-20 h-20 rounded-3xl overflow-hidden border border-stone-200 dark:border-zinc-700 bg-stone-100 focus:outline-none focus:ring-2 focus:ring-brand-500/30">
+            <button @click="a.showPreview.value=true" :aria-label="f.user.value.name ? `Открыть фото профиля — ${f.user.value.name}` : 'Открыть фото профиля'" class="group relative w-20 h-20 rounded-3xl overflow-hidden border border-stone-200 dark:border-white/10 bg-stone-100 focus:outline-none focus:ring-2 focus:ring-brand-500/30">
               <UserAvatar :src="a.avatarSrc.value" :alt="f.user.value.name || 'Фото профиля'" shape="square" />
               <span class="absolute inset-0 bg-black/0 group-hover:bg-black/25 grid place-items-center opacity-0 group-hover:opacity-100 transition text-white text-[10px] font-bold">🔍 превью</span>
             </button>
@@ -61,7 +61,7 @@ const uloveOnly = useUloveOnly()
             <div class="flex gap-2 mt-3">
               <label class="flex-1 cursor-pointer">
                 <input type="file" accept="image/*" @change="a.onAvatar" class="hidden" />
-                <span class="block text-sm border border-stone-200 dark:border-zinc-700 rounded-2xl px-3 py-2.5 bg-stone-50 dark:bg-zinc-800 hover:bg-stone-100 text-stone-600 dark:text-zinc-300 truncate">{{ a.avatarFile.value ? a.avatarFile.value.name : 'Выбери файл…' }}</span>
+                <span class="block text-sm border border-stone-200 dark:border-white/10 rounded-2xl px-3 py-2.5 bg-stone-50 dark:bg-white/[0.06] hover:bg-stone-100 text-stone-600 dark:text-zinc-300 truncate">{{ a.avatarFile.value ? a.avatarFile.value.name : 'Выбери файл…' }}</span>
               </label>
               <Button @click="a.uploadAvatar" :disabled="!a.avatarFile.value || a.uploading.value" :loading="a.uploading.value" label="Загрузить" rounded class="!bg-ink-900 !border-ink-900 dark:!bg-white dark:!border-white dark:!text-ink-900 shrink-0" />
             </div>
@@ -138,7 +138,7 @@ const uloveOnly = useUloveOnly()
           <Message v-if="f.errors.value.home_city" severity="error" :closable="false" class="mt-1 !rounded-xl !py-1 !text-xs">{{ f.errors.value.home_city }}</Message>
         </div>
       </div>
-      <Card class="!bg-zinc-50 dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 !rounded-3xl !shadow-none" :pt="{ body:{ class:'!p-4' }, content:{ class:'!p-0' } }">
+      <Card class="!bg-zinc-50 dark:!bg-white/[0.06] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-none" :pt="{ body:{ class:'!p-4' }, content:{ class:'!p-0' } }">
         <template #content>
           <div class="flex flex-wrap items-center justify-between gap-2">
             <h4 class="text-sm font-bold dark:text-white">{{ showMapFields ? 'Домашняя точка' : 'Локация для свайпов' }}</h4>
@@ -151,13 +151,13 @@ const uloveOnly = useUloveOnly()
             Нужна для дистанции в свайпах. Если не определить, возьмём координаты по городу и стране выше.
             <template v-if="showMapFields"> Радиус зоны и точность — в разделе «Приватность».</template>
           </p>
-          <div class="mt-3 rounded-2xl border border-stone-200 bg-white p-3 dark:border-zinc-700 dark:bg-zinc-900">
+          <div class="mt-3 rounded-2xl border border-stone-200 bg-white p-3 dark:border-white/10 dark:bg-[#0F121F]">
             <div class="flex items-center gap-3">
               <span
                 class="grid h-9 w-9 shrink-0 place-items-center rounded-xl"
                 :class="f.hasHomePoint.value
                   ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                  : 'bg-stone-100 text-stone-400 dark:bg-zinc-800 dark:text-zinc-500'"
+                  : 'bg-stone-100 text-stone-400 dark:bg-white/[0.06] dark:text-zinc-500'"
               >
                 <i class="pi pi-map-marker" aria-hidden="true" />
               </span>
@@ -170,7 +170,7 @@ const uloveOnly = useUloveOnly()
                 </div>
               </div>
             </div>
-            <dl class="mt-3 grid gap-1.5 border-t border-stone-100 pt-3 dark:border-zinc-800">
+            <dl class="mt-3 grid gap-1.5 border-t border-stone-100 pt-3 dark:border-white/10">
               <div v-for="part in f.homeLocationParts.value" :key="part.key" class="flex items-start gap-2 text-xs">
                 <i :class="part.icon + ' mt-0.5 text-[11px] text-stone-400 dark:text-zinc-500'" aria-hidden="true" />
                 <dt class="w-24 shrink-0 text-stone-400 dark:text-zinc-500">{{ part.label }}</dt>
@@ -191,7 +191,7 @@ const uloveOnly = useUloveOnly()
       <div v-if="!uloveOnly">
         <label class="text-sm font-semibold dark:text-white">О себе</label>
         <p class="text-xs text-zinc-500 mb-2">Расскажи о себе — видно всем в профиле в разделе «Общая информация».</p>
-        <Textarea v-model="f.bio.value" rows="5" autoResize maxlength="10000" placeholder="Напиши пару строк о себе — интересы, чем занимаешься..." class="w-full mt-1 !rounded-3xl !bg-white dark:!bg-zinc-900" />
+        <Textarea v-model="f.bio.value" rows="5" autoResize maxlength="10000" placeholder="Напиши пару строк о себе — интересы, чем занимаешься..." class="w-full mt-1 !rounded-3xl !bg-white dark:!bg-[#0F121F]" />
         <div class="flex justify-between mt-1">
           <Message v-if="f.errors.value.bio" severity="error" :closable="false" class="!py-1 !text-xs">{{ f.errors.value.bio }}</Message><span v-else></span>
           <small class="text-stone-400">{{ (f.bio.value || '').length }} / 10000</small>
@@ -203,14 +203,14 @@ const uloveOnly = useUloveOnly()
         <div v-if="status==='verification-link-sent'" class="text-green-700 mt-1">Письмо отправлено</div>
       </Message>
       <div class="pt-1">
-        <Button :loading="f.isSubmitting.value" type="submit" label="Сохранить изменения" icon="pi pi-check" class="w-full !bg-gradient-to-r !from-violet-600 !to-indigo-600 !border-0 !text-white !font-bold !rounded-2xl !py-3.5 !text-[15px] shadow-lg shadow-violet-600/25 dark:shadow-violet-500/25 active:scale-[0.99]" />
+        <Button :loading="f.isSubmitting.value" type="submit" label="Сохранить изменения" icon="pi pi-check" class="w-full !bg-gradient-to-r !from-rose-500 !via-pink-500 !to-fuchsia-500 !border-0 !text-white !font-bold !rounded-2xl !py-3.5 !text-[15px] shadow-lg shadow-violet-600/25 dark:shadow-violet-500/25 active:scale-[0.99]" />
       </div>
     </form>
     <AvatarPreview :src="a.avatarSrc.value" :name="f.user.value.name" :open="a.showPreview.value" @close="a.showPreview.value=false" />
     <Dialog :visible="a.crop.showCropper.value" @update:visible="(v:boolean)=>{ if(!v) a.cancelCrop() }" modal dismissableMask :draggable="false" header="Позиционируй фото" :style="{ width: '440px', maxWidth: 'calc(100vw - 1.5rem)' }" :pt="{ root: { class: '!rounded-3xl max-sm:!rounded-b-none avatar-crop' }, header: { class: '!py-3 !px-4 !rounded-t-3xl' }, content: { class: '!px-4 !pb-2 !overflow-y-auto !overscroll-contain' }, footer: { class: '!px-4 !py-3 !rounded-b-3xl' } }">
       <div
         :ref="(el:any)=>a.crop.setFrameEl(el)"
-        class="relative w-[min(100%,44dvh)] mx-auto aspect-square overflow-hidden bg-stone-100 dark:bg-zinc-800 select-none touch-none"
+        class="relative w-[min(100%,44dvh)] mx-auto aspect-square overflow-hidden bg-stone-100 dark:bg-white/[0.06] select-none touch-none"
         :class="[a.crop.dragging.value ? 'cursor-grabbing' : 'cursor-grab', a.crop.shape.value === 'circle' ? 'rounded-full' : 'rounded-3xl']"
         @pointerdown="a.crop.onPointerDown"
         @pointermove="a.crop.onPointerMove"
@@ -229,14 +229,14 @@ const uloveOnly = useUloveOnly()
         <Button icon="pi pi-plus" rounded text aria-label="Приблизить" @click="a.crop.zoomIn()" :disabled="a.crop.zoom.value >= a.crop.ZOOM_MAX" class="!w-10 !h-10 shrink-0" />
       </div>
       <div class="flex flex-wrap items-center gap-x-4 gap-y-2 mt-3">
-        <button type="button" @click="a.crop.setShape('circle')" :aria-pressed="a.crop.shape.value === 'circle'" :class="['flex items-center gap-2 rounded-2xl p-1 transition', a.crop.shape.value === 'circle' ? 'ring-2 ring-violet-500 bg-violet-500/5' : 'ring-1 ring-stone-200 dark:ring-zinc-700']">
-          <span class="relative block w-14 h-14 rounded-full overflow-hidden bg-stone-100 dark:bg-zinc-800 shrink-0">
+        <button type="button" @click="a.crop.setShape('circle')" :aria-pressed="a.crop.shape.value === 'circle'" :class="['flex items-center gap-2 rounded-2xl p-1 transition', a.crop.shape.value === 'circle' ? 'ring-2 ring-violet-500 bg-violet-500/5' : 'ring-1 ring-stone-200 dark:ring-white/10']">
+          <span class="relative block w-14 h-14 rounded-full overflow-hidden bg-stone-100 dark:bg-white/[0.06] shrink-0">
             <img v-if="a.crop.sourceUrl.value" :src="a.crop.sourceUrl.value" alt="" draggable="false" class="absolute max-w-none pointer-events-none" :style="a.crop.frameStyle.value" />
           </span>
           <span class="text-xs text-zinc-500 text-left">кружок<br />в шапке</span>
         </button>
-        <button type="button" @click="a.crop.setShape('square')" :aria-pressed="a.crop.shape.value === 'square'" :class="['flex items-center gap-2 rounded-2xl p-1 transition', a.crop.shape.value === 'square' ? 'ring-2 ring-violet-500 bg-violet-500/5' : 'ring-1 ring-stone-200 dark:ring-zinc-700']">
-          <span class="relative block w-14 h-14 rounded-2xl overflow-hidden bg-stone-100 dark:bg-zinc-800 shrink-0">
+        <button type="button" @click="a.crop.setShape('square')" :aria-pressed="a.crop.shape.value === 'square'" :class="['flex items-center gap-2 rounded-2xl p-1 transition', a.crop.shape.value === 'square' ? 'ring-2 ring-violet-500 bg-violet-500/5' : 'ring-1 ring-stone-200 dark:ring-white/10']">
+          <span class="relative block w-14 h-14 rounded-2xl overflow-hidden bg-stone-100 dark:bg-white/[0.06] shrink-0">
             <img v-if="a.crop.sourceUrl.value" :src="a.crop.sourceUrl.value" alt="" draggable="false" class="absolute max-w-none pointer-events-none" :style="a.crop.frameStyle.value" />
           </span>
           <span class="text-xs text-zinc-500 text-left">квадрат<br />в превью</span>

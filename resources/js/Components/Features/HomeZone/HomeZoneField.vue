@@ -52,7 +52,7 @@ function onInput(e: Event) {
           'rounded-full py-2 text-xs font-semibold border transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed',
           radius === p.v
             ? 'bg-violet-600 text-white border-violet-600 shadow-glow'
-            : 'bg-white dark:bg-zinc-800 dark:text-zinc-200 border-stone-200 dark:border-zinc-700',
+            : 'bg-white dark:bg-white/[0.06] dark:text-zinc-200 border-stone-200 dark:border-white/10',
         ]"
       >
         {{ p.v }}<span v-if="p.locked" class="block text-[8px] font-black opacity-70 leading-none">{{ p.minPlan.toUpperCase() }}</span>
@@ -60,7 +60,7 @@ function onInput(e: Event) {
     </div>
     <div class="flex items-center gap-3 mt-3">
       <input type="range" :min="1" :max="maxHomeRadius" :value="Math.min(radius, maxHomeRadius)" @input="onInput" class="flex-1 accent-violet-600" />
-      <input type="number" :min="1" :max="maxHomeRadius" :value="radius" @input="onInput" class="w-20 rounded-2xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2 text-sm font-bold text-center" />
+      <input type="number" :min="1" :max="maxHomeRadius" :value="radius" @input="onInput" class="w-20 rounded-2xl border border-stone-200 dark:border-white/10 bg-white dark:bg-[#0F121F] px-3 py-2 text-sm font-bold text-center" />
     </div>
     <div class="flex items-center gap-3 mt-3 bg-violet-50/60 dark:bg-violet-950/20 border border-violet-100 dark:border-violet-900/50 rounded-2xl px-3 py-2.5">
       <div class="grid place-items-center shrink-0 w-[64px] h-[64px]">

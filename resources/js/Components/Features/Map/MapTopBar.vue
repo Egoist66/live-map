@@ -17,16 +17,16 @@ const activeMeta = computed(() => {
 })
 
 const optBase = 'flex items-center gap-3 rounded-2xl border p-3 text-left transition-all duration-200 active:scale-[0.98] w-full'
-const optOn = 'bg-gradient-to-br from-violet-600 to-indigo-600 border-transparent text-white shadow-glow'
+const optOn = 'bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 border-transparent text-white shadow-glow'
 const optOff = 'bg-stone-50 dark:bg-white/[0.05] border-stone-200/70 dark:border-white/10 text-ink-900 dark:text-zinc-100 hover:border-violet-300 dark:hover:border-violet-400/40'
 const iconOn = 'bg-white/20'
 const iconOff = 'bg-white dark:bg-white/10 shadow-sm border border-stone-200/60 dark:border-white/10'
 </script>
 <template>
-  <Card class="pointer-events-auto !rounded-full !shadow-float !border-stone-200/70 dark:!border-white/10 !bg-white/85 dark:!bg-zinc-900/80 backdrop-blur-xl !py-1 !pl-1 !pr-1 min-[411px]:!py-1.5 min-[411px]:!pl-1.5 min-[411px]:!pr-1.5 w-full sm:w-auto max-w-full min-w-0 overflow-hidden" :pt="{ body: { class: '!p-0' }, content: { class: '!p-0' } }">
+  <Card class="pointer-events-auto !rounded-full !shadow-float !border-stone-200/70 dark:!border-white/10 !bg-white/85 dark:!bg-[#0F121F]/80 backdrop-blur-xl !py-1 !pl-1 !pr-1 min-[411px]:!py-1.5 min-[411px]:!pl-1.5 min-[411px]:!pr-1.5 w-full sm:w-auto max-w-full min-w-0 overflow-hidden" :pt="{ body: { class: '!p-0' }, content: { class: '!p-0' } }">
     <template #content>
       <div class="flex items-center gap-1 min-[411px]:gap-1.5 max-w-full min-w-0">
-        <button @click="dlg.show()" class="flex-1 sm:flex-none min-w-0 flex items-center gap-1.5 min-[411px]:gap-2 rounded-full pl-2.5 min-[411px]:pl-3 pr-2 min-[411px]:pr-2.5 py-[6px] min-[411px]:py-[7px] text-[12px] min-[411px]:text-[13px] font-bold transition active:scale-95 bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-glow hover:opacity-90 border border-transparent">
+        <button @click="dlg.show()" class="flex-1 sm:flex-none min-w-0 flex items-center gap-1.5 min-[411px]:gap-2 rounded-full pl-2.5 min-[411px]:pl-3 pr-2 min-[411px]:pr-2.5 py-[6px] min-[411px]:py-[7px] text-[12px] min-[411px]:text-[13px] font-bold transition active:scale-95 bg-gradient-to-r from-rose-500 via-pink-500 to-fuchsia-500 text-white shadow-glow hover:opacity-90 border border-transparent">
           <i class="pi pi-sliders-h text-xs shrink-0"></i>
           <span v-if="activeMeta" class="truncate">{{ (activeMeta as any).i }} {{ (activeMeta as any).l }}</span>
           <span v-else class="truncate">Все пины</span>
@@ -45,7 +45,7 @@ const iconOff = 'bg-white dark:bg-white/10 shadow-sm border border-stone-200/60 
   <Dialog v-model:visible="dlg.open.value" modal dismissableMask :style="{ width: '480px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none !border-stone-200 dark:!border-white/10 overflow-hidden' }, header: { class: '!p-5 !pb-0 !border-0' }, content: { class: '!p-5' }, footer: { class: '!p-5 !pt-0 !border-0' } }">
     <template #header>
       <div class="flex items-center gap-3">
-        <span class="w-11 h-11 rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-600 text-white grid place-items-center shadow-glow shrink-0"><i class="pi pi-sliders-h"></i></span>
+        <span class="w-11 h-11 rounded-2xl bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white grid place-items-center shadow-glow shrink-0"><i class="pi pi-sliders-h"></i></span>
         <div class="min-w-0"><div class="font-black text-[17px] tracking-tight dark:text-white">Фильтры</div><div class="text-xs text-stone-500 dark:text-zinc-400">Что показать на карте</div></div>
       </div>
     </template>
@@ -76,7 +76,7 @@ const iconOff = 'bg-white dark:bg-white/10 shadow-sm border border-stone-200/60 
     <template #footer>
       <div class="flex gap-2">
         <Button label="Сбросить" severity="secondary" outlined rounded class="flex-1" @click="emit('update:category', 'all')" />
-        <Button :label="`Показать · ${count}`" rounded class="flex-[1.4] !bg-gradient-to-r !from-violet-600 !to-indigo-600 !border-0 !shadow-glow" @click="dlg.hide()" />
+        <Button :label="`Показать · ${count}`" rounded class="flex-[1.4] !bg-gradient-to-r !from-rose-500 !via-pink-500 !to-fuchsia-500 !border-0 !shadow-glow" @click="dlg.hide()" />
       </div>
     </template>
   </Dialog>

@@ -13,7 +13,7 @@ async function onToggle() {
 </script>
 
 <template>
-  <div v-if="supported" class="flex items-center gap-3 rounded-2xl border border-stone-200/70 dark:border-zinc-800 px-4 py-3">
+  <div v-if="supported" class="flex items-center gap-3 rounded-2xl border border-stone-200/70 dark:border-white/10 px-4 py-3">
     <i class="pi pi-bell text-lg text-indigo-500 shrink-0" />
     <div class="flex-1 text-sm">
       <p class="font-semibold">Системные уведомления</p>
@@ -26,14 +26,14 @@ async function onToggle() {
     </div>
     <button
       v-if="subscribed"
-      class="text-xs font-semibold px-3 py-2 rounded-xl border border-stone-300 dark:border-zinc-700 active:scale-95"
+      class="text-xs font-semibold px-3 py-2 rounded-xl border border-stone-300 dark:border-white/10 active:scale-95"
       @click="test"
     >
       Тест
     </button>
     <button
       class="text-xs font-semibold px-3 py-2 rounded-xl active:scale-95"
-      :class="subscribed ? 'bg-stone-200 dark:bg-zinc-800' : 'bg-indigo-500 text-white'"
+      :class="subscribed ? 'bg-stone-200 dark:bg-white/[0.06]' : 'bg-indigo-500 text-white'"
       :disabled="loading || permission === 'denied'"
       @click="onToggle"
     >

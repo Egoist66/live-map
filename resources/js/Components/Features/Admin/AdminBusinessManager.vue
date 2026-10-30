@@ -54,7 +54,7 @@ function legalFormLabel(legalForm: string): string {
 }
 </script>
 <template>
-  <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0' } }">
+  <Card class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0' } }">
     <template #content>
       <div class="flex items-center gap-2 flex-wrap">
         <span class="text-xs font-bold text-stone-400 dark:text-zinc-500">Всего: {{ queue.total.value }}</span>
@@ -73,7 +73,7 @@ function legalFormLabel(legalForm: string): string {
         {{ queue.status.value === 'pending' ? 'Заявок на проверке нет — новые прилетят сюда автоматически' : 'Ничего не найдено' }}
       </div>
       <div v-else class="mt-3 space-y-2">
-        <div v-for="b in queue.items.value" :key="b.id" class="rounded-2xl border border-stone-200 dark:border-zinc-700 p-3">
+        <div v-for="b in queue.items.value" :key="b.id" class="rounded-2xl border border-stone-200 dark:border-white/10 p-3">
           <div class="flex items-center gap-2.5 min-w-0">
             <div class="relative shrink-0">
               <Avatar :image="b.logo_url || avatarSrcFor({ avatar_path: null })" shape="circle" class="!w-9 !h-9 [&_img]:object-cover" />

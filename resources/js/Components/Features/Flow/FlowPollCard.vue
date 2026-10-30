@@ -17,7 +17,7 @@ async function choose(optionId: number): Promise<void> {
 </script>
 
 <template>
-  <div class="mt-3 overflow-hidden rounded-2xl border border-stone-200 dark:border-zinc-800">
+  <div class="mt-3 overflow-hidden rounded-2xl border border-stone-200 dark:border-white/10">
     <div class="space-y-1.5 p-3">
       <button
         v-for="o in poll.options"
@@ -25,7 +25,7 @@ async function choose(optionId: number): Promise<void> {
         type="button"
         :disabled="showResults() || poller.isBusy(poll.id)"
         class="relative block w-full overflow-hidden rounded-xl border text-left transition active:scale-[0.99] disabled:cursor-default"
-        :class="voted(o.id) ? 'border-violet-500 dark:border-violet-400' : 'border-stone-200 dark:border-zinc-700 hover:border-violet-300'"
+        :class="voted(o.id) ? 'border-violet-500 dark:border-violet-400' : 'border-stone-200 dark:border-white/10 hover:border-violet-300'"
         @click="choose(o.id)"
       >
         <span
@@ -40,7 +40,7 @@ async function choose(optionId: number): Promise<void> {
         </span>
       </button>
     </div>
-    <div class="flex items-center gap-2 border-t border-stone-100 dark:border-zinc-800 px-3 py-2 text-xs text-stone-400 dark:text-zinc-500">
+    <div class="flex items-center gap-2 border-t border-stone-100 dark:border-white/10 px-3 py-2 text-xs text-stone-400 dark:text-zinc-500">
       <i class="pi pi-chart-bar text-[11px]" />
       <span>{{ poll.total_votes }} {{ poll.total_votes === 1 ? 'голос' : 'голосов' }} · {{ poller.closesLabel(poll) }}</span>
       <span class="flex-1" />

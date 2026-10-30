@@ -21,11 +21,11 @@ onBeforeUnmount(() => {
 </script>
 <template>
   <Head title="Технические работы" />
-  <div class="min-h-[100dvh] grid place-items-center bg-gradient-to-br from-stone-950 via-zinc-900 to-indigo-950 px-4 py-10 overflow-hidden relative">
+  <div class="min-h-[100dvh] grid place-items-center bg-gradient-to-br from-stone-950 via-[#0F121F] to-rose-950 px-4 py-10 overflow-hidden relative">
     <div class="absolute -top-24 -left-24 w-72 h-72 rounded-full bg-violet-600/20 blur-3xl" />
     <div class="absolute -bottom-24 -right-24 w-72 h-72 rounded-full bg-indigo-600/20 blur-3xl" />
     <div class="relative w-full max-w-md text-center">
-      <div class="mx-auto w-20 h-20 rounded-[28px] bg-gradient-to-br from-violet-600 to-indigo-600 grid place-items-center shadow-glow animate-bounce" style="animation-duration: 2.5s">
+      <div class="mx-auto w-20 h-20 rounded-[28px] bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 grid place-items-center shadow-glow animate-bounce" style="animation-duration: 2.5s">
         <i class="pi pi-wrench text-white text-3xl" />
       </div>
       <h1 class="mt-6 text-2xl sm:text-3xl font-black tracking-tight text-white">{{ title }}</h1>

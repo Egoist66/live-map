@@ -17,7 +17,7 @@ const districts = useGlobalDistrictSearch()
     @keydown.enter="emit('open', row.id)"
     tabindex="0"
     role="link"
-    class="flex items-center justify-between p-3 select-none cursor-pointer hover:bg-stone-50 dark:hover:bg-zinc-800/60 transition rounded-xl"
+    class="flex items-center justify-between p-3 select-none cursor-pointer hover:bg-stone-50 dark:hover:bg-white/10/60 transition rounded-xl"
   >
     <div class="flex items-center gap-2.5 min-w-0">
       <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-blue-600 text-sm font-black text-white">{{ districts.letterOf(row.name) }}</span>
@@ -49,7 +49,7 @@ const districts = useGlobalDistrictSearch()
       <span
         v-else-if="row.role === 'pending'"
         title="Заявка отправлена"
-        class="w-9 h-9 grid place-items-center rounded-full bg-stone-100 text-stone-400 dark:bg-zinc-800 dark:text-zinc-500"
+        class="w-9 h-9 grid place-items-center rounded-full bg-stone-100 text-stone-400 dark:bg-white/[0.06] dark:text-zinc-500"
       >
         <i class="pi pi-clock text-sm" />
       </span>

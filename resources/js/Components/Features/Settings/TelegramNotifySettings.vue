@@ -45,7 +45,7 @@ function save(key: PrefKey, value: boolean): void {
 </script>
 
 <template>
-  <div class="flex items-center gap-3 rounded-2xl border border-stone-200/70 dark:border-zinc-800 px-4 py-3">
+  <div class="flex items-center gap-3 rounded-2xl border border-stone-200/70 dark:border-white/10 px-4 py-3">
     <i class="pi pi-telegram text-lg text-sky-500 shrink-0" />
     <div class="flex-1 text-sm min-w-0">
       <p class="font-semibold dark:text-white">Уведомления: бот, почта</p>
@@ -73,7 +73,7 @@ function save(key: PrefKey, value: boolean): void {
                 width="132"
                 height="132"
                 loading="lazy"
-                class="w-[120px] h-[120px] rounded-xl border border-stone-200 dark:border-zinc-700 bg-white object-contain cursor-pointer"
+                class="w-[120px] h-[120px] rounded-xl border border-stone-200 dark:border-white/10 bg-white object-contain cursor-pointer"
                 @error="qr.markQrFailed()"
                 @load="qr.markQrLoaded()"
               />
@@ -102,7 +102,7 @@ function save(key: PrefKey, value: boolean): void {
                   width="132"
                   height="132"
                   loading="lazy"
-                  class="w-[120px] h-[120px] rounded-xl border border-stone-200 dark:border-zinc-700 bg-white object-contain cursor-pointer"
+                  class="w-[120px] h-[120px] rounded-xl border border-stone-200 dark:border-white/10 bg-white object-contain cursor-pointer"
                   @error="qr.markQrFailed()"
                   @load="qr.markQrLoaded()"
                 />
@@ -116,7 +116,7 @@ function save(key: PrefKey, value: boolean): void {
             <label
               v-for="row in botRows"
               :key="row.key"
-              class="flex items-center gap-3 rounded-xl bg-stone-50 dark:bg-zinc-800/60 px-3 py-2.5 cursor-pointer"
+              class="flex items-center gap-3 rounded-xl bg-stone-50 dark:bg-white/[0.06] px-3 py-2.5 cursor-pointer"
             >
               <span class="flex-1 min-w-0">
                 <span class="block text-[13px] font-semibold dark:text-zinc-100">{{ row.title }}</span>
@@ -136,7 +136,7 @@ function save(key: PrefKey, value: boolean): void {
             <label
               v-for="row in emailRows"
               :key="row.key"
-              class="flex items-center gap-3 rounded-xl bg-stone-50 dark:bg-zinc-800/60 px-3 py-2.5 cursor-pointer"
+              class="flex items-center gap-3 rounded-xl bg-stone-50 dark:bg-white/[0.06] px-3 py-2.5 cursor-pointer"
             >
               <span class="flex-1 min-w-0">
                 <span class="block text-[13px] font-semibold dark:text-zinc-100">{{ row.title }}</span>

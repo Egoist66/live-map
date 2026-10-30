@@ -105,7 +105,7 @@ function onCountryChange(v: string): void {
                 <small class="auth-err">{{ f.errors.value.home_city }}</small>
               </div>
             </div>
-            <div class="rounded-2xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/60 p-3.5 space-y-2.5">
+            <div class="rounded-2xl border border-stone-200 dark:border-white/10 bg-stone-50 dark:bg-white/[0.06] p-3.5 space-y-2.5">
               <div class="flex items-center justify-between gap-2">
                 <span class="text-[13px] font-semibold text-ink-900 dark:text-zinc-100">{{ reg.locationTitle.value }}</span>
                 <span class="text-[11px] font-bold text-stone-500 dark:text-zinc-400">необязательно</span>
@@ -113,7 +113,7 @@ function onCountryChange(v: string): void {
               <p class="text-[11px] leading-relaxed text-stone-500 dark:text-zinc-400">{{ reg.locationHint.value }}</p>
               <Button type="button" :loading="f.locating.value" severity="secondary" outlined rounded class="w-full" :label="f.values.home_lat ? 'Обновить моё место' : 'Определить моё место'" icon="pi pi-map-marker" @click="() => f.detectLocation()" />
               <Message v-if="f.locationError.value" severity="warn" :closable="false" class="!text-[11px]">{{ f.locationError.value }}</Message>
-              <div v-if="f.values.home_address || f.addrLoading.value" class="rounded-xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-3 py-2.5 flex items-center gap-2">
+              <div v-if="f.values.home_address || f.addrLoading.value" class="rounded-xl border border-stone-200 dark:border-white/10 bg-white dark:bg-[#0F121F] px-3 py-2.5 flex items-center gap-2">
                 <span class="w-7 h-7 rounded-full bg-ink-900 dark:bg-white text-white dark:text-ink-900 grid place-items-center shrink-0 text-[11px]">◉</span>
                 <div class="min-w-0 flex-1">
                   <div class="text-xs font-semibold truncate dark:text-zinc-100">{{ f.addrLoading.value ? reg.addressLoadingText.value : f.values.home_address }}</div>
@@ -248,7 +248,7 @@ input.p-inputtext.auth-input {
 }
 :global(html.dark) .p-datepicker.auth-input {
   border-color: #52525b;
-  background: #18181b;
+  background: #0F121F;
 }
 .p-datepicker.auth-input:focus-within {
   border-color: #FF4267;

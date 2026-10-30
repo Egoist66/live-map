@@ -12,7 +12,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <button type="button" class="flex w-full items-center gap-2.5 rounded-2xl border border-stone-200/70 bg-white p-2.5 text-left transition hover:border-blue-300 active:scale-[0.99] dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-blue-500/40" @click="emit('open')">
+  <button type="button" class="flex w-full items-center gap-2.5 rounded-2xl border border-stone-200/70 bg-white p-2.5 text-left transition hover:border-blue-300 active:scale-[0.99] dark:border-white/10 dark:bg-[#0F121F] dark:hover:border-blue-500/40" @click="emit('open')">
     <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-600/10 text-blue-600 dark:bg-blue-500/15 dark:text-blue-400">
       <i class="pi pi-map-marker text-sm" />
     </span>

@@ -27,7 +27,7 @@ const dialogTitles: Record<string, string> = {
   offer: 'Публичная оферта',
 }
 
-const inputClass = 'w-full mt-1 !bg-white dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-600 dark:!text-white dark:placeholder:!text-zinc-500'
+const inputClass = 'w-full mt-1 !bg-white dark:!bg-white/[0.06] !border-stone-200 dark:!border-white/15 dark:!text-white dark:placeholder:!text-zinc-500'
 
 function filteredItems(items: any[]) {
   return items.filter((item) => item.slug === activeSlug.value)
@@ -49,10 +49,10 @@ function onFilePicked(mgr: any, event: Event) {
 </script>
 
 <template>
-  <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0' } }">
+  <Card class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0' } }">
     <template #content>
       <div class="flex items-center gap-2">
-        <span class="w-9 h-9 rounded-2xl bg-gradient-to-br from-teal-600 to-emerald-600 text-white grid place-items-center shrink-0"><i class="pi pi-book text-sm" /></span>
+        <span class="w-9 h-9 rounded-2xl bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white grid place-items-center shrink-0"><i class="pi pi-book text-sm" /></span>
         <div class="flex-1 min-w-0">
           <div class="text-xs text-stone-500 dark:text-zinc-400">Контакты, политика и оферта — видны всем в футере.</div>
         </div>
@@ -80,7 +80,7 @@ function onFilePicked(mgr: any, event: Event) {
       </div>
       <div v-else-if="!filteredItems(mgr.items.value).length" class="mt-3 text-center py-6 text-sm text-stone-500 dark:text-zinc-400">Нет записи — создайте первую.</div>
       <div v-else class="mt-3 space-y-2">
-        <div v-for="item in filteredItems(mgr.items.value)" :key="item.id" class="rounded-2xl border border-stone-200 dark:border-zinc-700 p-3">
+        <div v-for="item in filteredItems(mgr.items.value)" :key="item.id" class="rounded-2xl border border-stone-200 dark:border-white/10 p-3">
           <div class="flex items-center gap-2 min-w-0">
             <div class="min-w-0 flex-1">
               <div class="text-sm font-bold truncate dark:text-white">{{ item.title }}</div>
@@ -119,7 +119,7 @@ function onFilePicked(mgr: any, event: Event) {
         modal
         :header="dialogTitles[mgr.formSlug.value] ?? 'Справочная страница'"
         :style="{ width: '720px', maxWidth: '96vw' }"
-        :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none !border-stone-200 dark:!border-zinc-700 !bg-white dark:!bg-zinc-900' }, header: { class: '!bg-white dark:!bg-zinc-900 !text-ink-900 dark:!text-white !border-b !border-stone-200 dark:!border-zinc-800' }, content: { class: '!bg-white dark:!bg-zinc-900 !text-stone-700 dark:!text-zinc-200 !px-4 sm:!px-5' }, footer: { class: '!bg-white dark:!bg-zinc-900 !border-t !border-stone-200 dark:!border-zinc-800' } }"
+        :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none !border-stone-200 dark:!border-white/10 !bg-white dark:!bg-[#0F121F]' }, header: { class: '!bg-white dark:!bg-[#0F121F] !text-ink-900 dark:!text-white !border-b !border-stone-200 dark:!border-white/10' }, content: { class: '!bg-white dark:!bg-[#0F121F] !text-stone-700 dark:!text-zinc-200 !px-4 sm:!px-5' }, footer: { class: '!bg-white dark:!bg-[#0F121F] !border-t !border-stone-200 dark:!border-white/10' } }"
       >
         <form class="space-y-3 py-1" @submit.prevent="mgr.save()">
           <div>

@@ -125,8 +125,8 @@ export function useAuthBackdrop() {
     theme: 'ulove' as AuthBackdropTheme,
     skyClass: 'bg-gradient-to-b from-rose-50 via-pink-50 to-surface',
     skyDarkClass: 'dark:from-[#1D1016] dark:via-[#191019] dark:to-[#0F121F]',
-    blobAClass: 'bg-gradient-to-br from-rose-300/60 to-fuchsia-300/50 dark:from-rose-600/20 dark:to-fuchsia-700/15',
-    blobBClass: 'bg-gradient-to-tr from-orange-200/60 to-rose-200/50 dark:from-orange-500/10 dark:to-rose-600/10',
+    blobAClass: 'bg-gradient-to-br from-rose-500 via-pink-500/60 to-fuchsia-500/50 dark:from-rose-500/20 dark:to-fuchsia-500/15',
+    blobBClass: 'bg-gradient-to-tr from-rose-200 via-pink-200/60 to-fuchsia-200/50 dark:from-rose-500/10 dark:to-fuchsia-500/10',
     pattern: 'hearts' as AuthBackdropPattern,
     cardClass:
       '!border-rose-200/80 dark:!border-rose-400/20 dark:!shadow-[0_0_70px_-18px_rgba(244,63,94,0.45)] shadow-[0_24px_70px_-24px_rgba(244,63,94,0.5)]',

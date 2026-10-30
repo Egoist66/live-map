@@ -5,7 +5,7 @@ import ProgressBar from 'primevue/progressbar'
 defineProps<{ rating: any }>()
 </script>
 <template>
-  <Card v-if="rating" class="!bg-gradient-to-br !from-violet-600 !via-fuchsia-600 !to-orange-500 !border-0 !rounded-3xl !shadow-soft !text-white" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0' } }">
+  <Card v-if="rating" class="!bg-gradient-to-br !from-rose-500 !via-pink-500 !to-fuchsia-500 !border-0 !rounded-3xl !shadow-soft !text-white" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0' } }">
     <template #content>
       <div class="flex items-center gap-3">
         <span class="w-11 h-11 rounded-2xl bg-white/20 grid place-items-center shrink-0"><i :class="[rating.level_icon, 'text-lg']" /></span>

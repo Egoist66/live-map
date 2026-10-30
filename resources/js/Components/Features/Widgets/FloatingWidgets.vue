@@ -19,19 +19,19 @@ const ai = useAiEnabled()
         v-if="w.isPanelOpen.value"
         role="menu"
         aria-label="Виджеты"
-        class="w-60 overflow-hidden rounded-3xl border border-stone-200 bg-white p-1.5 shadow-float dark:border-zinc-700 dark:bg-zinc-900"
+        class="w-60 overflow-hidden rounded-3xl border border-stone-200 bg-white p-1.5 shadow-float dark:border-white/10 dark:bg-[#0F121F]"
       >
         <button
           type="button"
           role="menuitem"
-          class="flex w-full items-center gap-3 rounded-2xl px-2.5 py-2.5 text-left transition-colors hover:bg-stone-100 dark:hover:bg-zinc-800"
+          class="flex w-full items-center gap-3 rounded-2xl px-2.5 py-2.5 text-left transition-colors hover:bg-stone-100 dark:hover:bg-white/10"
           @click="w.openMessages()"
         >
           <span class="relative grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-ink-900 text-white dark:bg-white dark:text-ink-900">
             <i class="pi pi-comments text-base"></i>
             <span
               v-if="w.unreadLabel.value"
-              class="absolute -right-1.5 -top-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white ring-2 ring-white dark:ring-zinc-900"
+              class="absolute -right-1.5 -top-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white ring-2 ring-white dark:ring-[#0F121F]"
             >
               {{ w.unreadLabel.value }}
             </span>
@@ -46,7 +46,7 @@ const ai = useAiEnabled()
           v-if="ai.canSeeAi.value"
           type="button"
           role="menuitem"
-          class="flex w-full items-center gap-3 rounded-2xl px-2.5 py-2.5 text-left transition-colors hover:bg-stone-100 dark:hover:bg-zinc-800"
+          class="flex w-full items-center gap-3 rounded-2xl px-2.5 py-2.5 text-left transition-colors hover:bg-stone-100 dark:hover:bg-white/10"
           @click="w.openAssistant()"
         >
           <span class="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-rose-500 text-sm font-black text-white">

@@ -28,7 +28,7 @@ function fmt(dt: string | null): string {
 }
 </script>
 <template>
-  <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0' } }">
+  <Card class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0' } }">
     <template #content>
       <div class="flex items-center gap-2 flex-wrap">
         <Tag :value="`всего: ${tg.total.value}`" severity="info" class="!text-[9px]" />
@@ -42,11 +42,11 @@ function fmt(dt: string | null): string {
       <div v-if="tg.loading.value" class="py-8 grid place-items-center"><ProgressSpinner style="width:24px;height:24px" :strokeWidth="6" /></div>
       <div v-else-if="!tg.items.value.length" class="py-8 text-center text-sm text-stone-400 dark:text-zinc-500">TG-пользователей пока нет</div>
       <div v-else class="mt-3 space-y-2">
-        <div v-for="u in tg.items.value" :key="u.id" class="rounded-2xl border border-stone-200 dark:border-zinc-700 p-3">
+        <div v-for="u in tg.items.value" :key="u.id" class="rounded-2xl border border-stone-200 dark:border-white/10 p-3">
           <div class="flex items-center gap-2.5 min-w-0">
             <span class="relative shrink-0">
               <Avatar :image="u.telegram_photo_url || u.avatar_url" shape="circle" class="!w-10 !h-10 [&_img]:object-cover" />
-              <span v-if="u.is_online" class="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white dark:border-zinc-900" title="Онлайн" />
+              <span v-if="u.is_online" class="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white dark:border-[#0F121F]" title="Онлайн" />
             </span>
             <div class="min-w-0 flex-1">
               <div class="text-[13px] font-semibold truncate dark:text-white">{{ u.name || 'Без имени' }}</div>

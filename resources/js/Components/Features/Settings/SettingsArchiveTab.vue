@@ -61,7 +61,7 @@ async function onClearAll(): Promise<void> {
 }
 </script>
 <template>
-  <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft min-w-0 max-w-full overflow-hidden" :pt="{ body: { class: '!p-4 sm:!p-6 min-w-0 max-w-full' }, content: { class: '!p-0 min-w-0 max-w-full' } }">
+  <Card class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft min-w-0 max-w-full overflow-hidden" :pt="{ body: { class: '!p-4 sm:!p-6 min-w-0 max-w-full' }, content: { class: '!p-0 min-w-0 max-w-full' } }">
     <template #content>
       <div class="flex items-start justify-between gap-3 flex-wrap min-w-0">
         <div class="min-w-0 flex-1 basis-48">
@@ -77,7 +77,7 @@ async function onClearAll(): Promise<void> {
       <div v-if="archive.loading.value" class="mt-5 flex items-center gap-2 text-sm text-stone-500"><span class="w-4 h-4 border-2 border-stone-200 border-t-stone-900 rounded-full animate-spin"></span> Загружаем…</div>
       <div v-else-if="archive.error.value" class="mt-5 min-w-0"><Message severity="error" :closable="false" class="!rounded-2xl !text-xs break-words">{{ archive.error.value }}</Message></div>
       <div v-else-if="archive.items.value.length" class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3 min-w-0">
-        <Card v-for="item in archive.items.value" :key="item.id" class="!border-stone-200 !rounded-3xl !shadow-none !bg-white dark:!bg-zinc-800 relative min-w-0 max-w-full overflow-hidden" :pt="{ body: { class: '!p-4 min-w-0 max-w-full' }, content: { class: '!p-0 min-w-0 max-w-full' } }">
+        <Card v-for="item in archive.items.value" :key="item.id" class="!border-stone-200 !rounded-3xl !shadow-none !bg-white dark:!bg-white/10 relative min-w-0 max-w-full overflow-hidden" :pt="{ body: { class: '!p-4 min-w-0 max-w-full' }, content: { class: '!p-0 min-w-0 max-w-full' } }">
           <template #content>
             <Button @click="onDeleteOne(item.id)" :loading="archive.deletingId.value === item.id" rounded text severity="secondary" class="!absolute !top-3 !right-3 !w-7 !h-7 !p-0" icon="pi pi-times" aria-label="Удалить" />
             <div class="flex items-center gap-3 min-w-0">
@@ -98,9 +98,9 @@ async function onClearAll(): Promise<void> {
           </template>
         </Card>
       </div>
-      <Card v-else class="!border-dashed !border-stone-200 !rounded-3xl !shadow-none mt-6 text-center !bg-white dark:!bg-zinc-900" :pt="{ body: { class: '!py-8' }, content: { class: '!p-0' } }">
+      <Card v-else class="!border-dashed !border-stone-200 !rounded-3xl !shadow-none mt-6 text-center !bg-white dark:!bg-[#0F121F]" :pt="{ body: { class: '!py-8' }, content: { class: '!p-0' } }">
         <template #content>
-          <div class="w-10 h-10 rounded-xl bg-stone-100 dark:bg-zinc-800 border dark:border-zinc-700 mx-auto grid place-items-center"><i class="pi pi-folder text-stone-400"></i></div>
+          <div class="w-10 h-10 rounded-xl bg-stone-100 dark:bg-white/10 border dark:border-white/10 mx-auto grid place-items-center"><i class="pi pi-folder text-stone-400"></i></div>
           <div class="text-sm font-medium mt-2 dark:text-white">Архив пуст</div>
           <div class="text-xs text-stone-400">Отправленные файлы из чатов появятся здесь</div>
         </template>

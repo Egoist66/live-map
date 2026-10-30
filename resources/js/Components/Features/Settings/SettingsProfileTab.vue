@@ -22,13 +22,13 @@ const uloveOnly = useUloveOnly()
 </script>
 <template>
   <div class="space-y-4">
-    <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }">
+    <Card class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }">
       <template #content>
         <h3 class="font-black tracking-tight text-lg dark:text-white">Основное</h3>
         <UpdateProfileInformationForm :must-verify-email="mustVerifyEmail" :status="status" class="mt-5 max-w-xl" />
       </template>
     </Card>
-    <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }">
+    <Card class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }">
       <template #content>
         <h3 class="font-black tracking-tight text-lg dark:text-white">Мой рейтинг</h3>
         <div v-if="rating.loading.value" class="mt-3 flex items-center gap-2 text-xs text-stone-400 dark:text-zinc-500">
@@ -41,14 +41,14 @@ const uloveOnly = useUloveOnly()
         <p v-else class="mt-3 text-sm text-stone-500 dark:text-zinc-400">Пока без оценок — тебя оценят после общения.</p>
       </template>
     </Card>
-    <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }">
+    <Card class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }">
       <template #content>
         <h3 class="font-black tracking-tight text-lg dark:text-white">Моя репутация</h3>
         <div v-if="trust.loading.value" class="mt-3 flex items-center gap-2 text-xs text-stone-400 dark:text-zinc-500">
           <i class="pi pi-spin pi-spinner" aria-label="Загрузка репутации" /> Грузим репутацию…
         </div>
         <div v-else-if="trust.score.value != null" class="mt-3 flex items-center gap-3">
-          <span class="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-xl font-black text-white shadow">{{ trust.score.value }}</span>
+          <span class="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-xl font-black text-white shadow">{{ trust.score.value }}</span>
           <div class="min-w-0 flex-1">
             <div class="text-sm font-black text-stone-900 dark:text-white">{{ trust.score.value }} из 10 · {{ trust.label.value }}</div>
             <div class="text-xs text-stone-500 dark:text-zinc-400">{{ trust.hint.value }}</div>
@@ -58,7 +58,7 @@ const uloveOnly = useUloveOnly()
       </template>
     </Card>
     <ReputationDetailsDialog :details="reputationDetails" />
-    <Card v-if="!bioEmpty && !uloveOnly" class="!bg-white dark:!bg-zinc-900 !border-stone-200 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }">
+    <Card v-if="!bioEmpty && !uloveOnly" class="!bg-white dark:!bg-[#0F121F] !border-stone-200 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }">
       <template #content>
         <h4 class="text-sm font-black flex items-center gap-2">Превью «О себе» <Tag value="как видят другие" class="!text-xs !font-normal !bg-stone-100 !text-stone-500 !border-0" /></h4>
         <div class="mt-3 bg-stone-50 border rounded-3xl p-4 text-sm leading-relaxed whitespace-pre-wrap break-words text-stone-700">{{ bioText }}</div>

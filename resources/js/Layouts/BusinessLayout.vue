@@ -2,7 +2,6 @@
 import { computed, defineAsyncComponent, onMounted, ref } from 'vue'
 import { Link, router, usePage } from '@inertiajs/vue3'
 import { route } from '@/route'
-import AppFooter from '@/Layouts/AppFooter.vue'
 import ApplicationLogo from '@/Components/Brand/ApplicationLogo.vue'
 import AppUserMenu from '@/Layouts/AppUserMenu.vue'
 import Avatar from 'primevue/avatar'
@@ -100,7 +99,7 @@ function logout(): void {
 
 <template>
   <div class="flex min-h-screen min-h-dvh flex-col bg-surface dark:bg-[#0F121F] overflow-x-clip">
-    <header class="native-safe-top sticky top-0 z-50 glass border-b border-stone-200/70 dark:border-zinc-800 backdrop-blur">
+    <header class="native-safe-top sticky top-0 z-50 glass border-b border-stone-200/70 dark:border-white/10 backdrop-blur">
       <div class="mx-auto max-w-[1280px] xl:max-w-[1400px] 2xl:max-w-[1600px] px-4 sm:px-6 h-16 flex items-center gap-3">
         <Link href="/cabinet" class="min-w-0 shrink-0" aria-label="Кабинет">
           <ApplicationLogo pro />
@@ -122,12 +121,12 @@ function logout(): void {
           </Link>
         </nav>
         <div class="ml-auto flex items-center gap-2 shrink-0">
-          <button type="button" aria-label="Уведомления" title="Уведомления" class="relative grid h-10 w-10 place-items-center rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow-soft hover:bg-stone-50 dark:hover:bg-zinc-700 transition active:scale-95" @click="bell.open()">
+          <button type="button" aria-label="Уведомления" title="Уведомления" class="relative grid h-10 w-10 place-items-center rounded-full bg-white dark:bg-white/[0.06] border border-stone-200 dark:border-white/10 shadow-soft hover:bg-stone-50 dark:hover:bg-white/15 transition active:scale-95" @click="bell.open()">
             <i class="pi pi-bell text-sm text-stone-600 dark:text-zinc-300" />
-            <span v-if="badge.total" class="absolute -top-1 -right-1 grid h-[18px] min-w-[18px] place-items-center rounded-full border-2 border-white dark:border-zinc-900 bg-red-500 px-1 text-[10px] font-bold text-white">{{ badge.total > 9 ? '9+' : badge.total }}</span>
+            <span v-if="badge.total" class="absolute -top-1 -right-1 grid h-[18px] min-w-[18px] place-items-center rounded-full border-2 border-white dark:border-[#0F121F] bg-red-500 px-1 text-[10px] font-bold text-white">{{ badge.total > 9 ? '9+' : badge.total }}</span>
             <span v-if="badge.total" class="absolute -top-1 -right-1 h-[18px] min-w-[18px] rounded-full bg-red-500 animate-ping opacity-30"></span>
           </button>
-          <button type="button" aria-label="Меню компании" class="grid h-10 w-10 place-items-center overflow-hidden rounded-full bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 shadow-soft hover:bg-stone-50 dark:hover:bg-zinc-700 transition active:scale-95" @click="toggleMenu">
+          <button type="button" aria-label="Меню компании" class="grid h-10 w-10 place-items-center overflow-hidden rounded-full bg-white dark:bg-white/[0.06] border border-stone-200 dark:border-white/10 shadow-soft hover:bg-stone-50 dark:hover:bg-white/15 transition active:scale-95" @click="toggleMenu">
             <Avatar :image="avatarSrc" shape="circle" size="normal" class="!w-8 !h-8" />
           </button>
         </div>
@@ -157,9 +156,6 @@ function logout(): void {
       </div>
     </nav>
 
-    <div class="hidden lg:block mt-auto">
-      <AppFooter />
-    </div>
     <div class="lg:hidden h-16" aria-hidden="true" />
     <GlobalNotificationToasts />
     <NetworkStatusToast />

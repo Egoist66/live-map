@@ -25,7 +25,7 @@ const profileHref = computed(() => {
 <template>
   <div class="flex items-center gap-3 min-w-0">
     <Avatar v-if="company.logo_url" :image="company.logo_url" shape="circle" class="!w-11 !h-11 [&_img]:object-cover" />
-    <span v-else class="grid place-items-center !w-11 !h-11 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 text-white text-xl shrink-0">🏢</span>
+    <span v-else class="grid place-items-center !w-11 !h-11 rounded-full bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white text-xl shrink-0">🏢</span>
     <div class="min-w-0 flex-1">
       <div class="flex items-center gap-1.5 min-w-0">
         <Link v-if="profileHref" :href="profileHref" class="truncate text-[15px] font-bold text-ink-900 dark:text-white hover:underline">

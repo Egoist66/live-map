@@ -54,7 +54,7 @@ onMounted(() => {
     <div class="page-scroll bg-surface dark:bg-[#0F121F]">
       <div class="mx-auto max-w-[680px] px-2 sm:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4 lg:max-w-[760px] xl:max-w-[820px]">
         <div class="flex items-center gap-3">
-          <span class="text-xl font-black tracking-tight bg-gradient-to-r from-sky-500 via-blue-600 to-fuchsia-500 bg-clip-text text-transparent">UFlow</span>
+          <span class="text-xl font-black tracking-tight bg-gradient-to-r from-rose-500 via-pink-500 to-fuchsia-500 bg-clip-text text-transparent">UFlow</span>
           <span class="text-xs text-stone-400">новости друзей и людей рядом</span>
         </div>
 
@@ -73,7 +73,7 @@ onMounted(() => {
             v-for="t in tags.trending.value"
             :key="t.id"
             type="button"
-            :class="['shrink-0 rounded-full border px-3 py-1.5 text-xs font-bold transition active:scale-95', feed.store.tag === t.name ? 'bg-violet-600 border-violet-600 text-white' : 'bg-white dark:bg-zinc-900 border-stone-200 dark:border-zinc-700 text-stone-600 dark:text-zinc-300']"
+            :class="['shrink-0 rounded-full border px-3 py-1.5 text-xs font-bold transition active:scale-95', feed.store.tag === t.name ? 'bg-violet-600 border-violet-600 text-white' : 'bg-white dark:bg-[#0F121F] border-stone-200 dark:border-white/10 text-stone-600 dark:text-zinc-300']"
             @click="feed.setTag(feed.store.tag === t.name ? null : t.name)"
           >
             #{{ t.name }}
@@ -89,14 +89,14 @@ onMounted(() => {
         </div>
 
         <div v-if="feed.store.loading" class="space-y-4">
-          <div v-for="i in 3" :key="i" class="animate-pulse rounded-3xl bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 p-5">
-            <div class="h-4 w-1/3 rounded bg-stone-200 dark:bg-zinc-700" />
-            <div class="mt-3 h-3 rounded bg-stone-100 dark:bg-zinc-800" />
-            <div class="mt-2 h-3 w-2/3 rounded bg-stone-100 dark:bg-zinc-800" />
+          <div v-for="i in 3" :key="i" class="animate-pulse rounded-3xl bg-white dark:bg-[#0F121F] border border-stone-200 dark:border-white/10 p-5">
+            <div class="h-4 w-1/3 rounded bg-stone-200 dark:bg-white/10" />
+            <div class="mt-3 h-3 rounded bg-stone-100 dark:bg-white/[0.06]" />
+            <div class="mt-2 h-3 w-2/3 rounded bg-stone-100 dark:bg-white/[0.06]" />
           </div>
         </div>
 
-        <div v-else-if="!feed.store.posts.length" class="rounded-3xl border border-dashed border-stone-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-8 text-center">
+        <div v-else-if="!feed.store.posts.length" class="rounded-3xl border border-dashed border-stone-300 dark:border-white/10 bg-white dark:bg-[#0F121F] p-8 text-center">
           <div class="text-3xl">📰</div>
           <div class="mt-2 font-bold text-ink-900 dark:text-white">Пока пусто</div>
           <div class="mt-1 text-sm text-stone-500">Новости публикуются из профиля — загляните во вкладку «Подписки».</div>

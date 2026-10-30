@@ -16,7 +16,7 @@ const verification = useEmailVerification()
 
 <template>
   <Card
-    class="!bg-white dark:!bg-zinc-900 !border-stone-200 !rounded-3xl !shadow-soft"
+    class="!bg-white dark:!bg-[#0F121F] !border-stone-200 !rounded-3xl !shadow-soft"
     :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }"
   >
     <template #content>

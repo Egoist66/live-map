@@ -31,12 +31,12 @@ async function onClearCache(): Promise<void> {
 </script>
 
 <template>
-  <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }">
+  <Card class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }">
     <template #content>
       <h3 class="font-black tracking-tight text-lg dark:text-white">Установка и кэш</h3>
       <p class="text-sm text-stone-500 mt-1">Установка как приложение и оффлайн-режим на этом устройстве.</p>
       <div class="mt-6 space-y-4 max-w-xl">
-        <div class="flex items-center gap-3 rounded-2xl border border-stone-200/70 dark:border-zinc-800 px-4 py-3">
+        <div class="flex items-center gap-3 rounded-2xl border border-stone-200/70 dark:border-white/10 px-4 py-3">
           <i class="pi pi-mobile text-lg text-indigo-500 shrink-0" />
           <div class="flex-1 text-sm min-w-0">
             <p class="font-semibold dark:text-white">Режим приложения</p>
@@ -62,7 +62,7 @@ async function onClearCache(): Promise<void> {
           {{ s.canInstall.value ? 'Готово к установке в один клик.' : 'Покажем инструкцию под твое устройство.' }}
         </p>
 
-        <div class="flex items-center gap-3 rounded-2xl border border-stone-200/70 dark:border-zinc-800 px-4 py-3">
+        <div class="flex items-center gap-3 rounded-2xl border border-stone-200/70 dark:border-white/10 px-4 py-3">
           <i class="pi pi-database text-lg text-indigo-500 shrink-0" />
           <div class="flex-1 text-sm min-w-0">
             <p class="font-semibold dark:text-white">Оффлайн-кэш</p>
@@ -73,7 +73,7 @@ async function onClearCache(): Promise<void> {
             <p v-if="s.lastCleared.value" class="text-xs text-emerald-600 dark:text-emerald-400 mt-1">{{ s.lastCleared.value }}</p>
           </div>
           <button
-            class="text-xs font-semibold px-3 py-2 rounded-xl bg-stone-200 dark:bg-zinc-800 dark:text-white active:scale-95 disabled:opacity-60"
+            class="text-xs font-semibold px-3 py-2 rounded-xl bg-stone-200 dark:bg-white/10 dark:text-white active:scale-95 disabled:opacity-60"
             :disabled="s.clearing.value"
             @click="onClearCache"
           >

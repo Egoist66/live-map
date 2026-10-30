@@ -13,9 +13,9 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="rounded-3xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 sm:p-6 shadow-soft">
+  <div class="rounded-3xl border border-stone-200 dark:border-white/10 bg-white dark:bg-[#0F121F] p-4 sm:p-6 shadow-soft">
     <div class="flex items-center gap-2.5">
-      <span class="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 grid place-items-center text-white"><i class="pi pi-sparkles" /></span>
+      <span class="w-10 h-10 rounded-2xl bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 grid place-items-center text-white"><i class="pi pi-sparkles" /></span>
       <div class="min-w-0 flex-1">
         <div class="text-xs text-stone-500 dark:text-zinc-400">Выключен по умолчанию. Включи — пользователи увидят гида, AI-анкету и разбор профиля.</div>
       </div>

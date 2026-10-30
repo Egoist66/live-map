@@ -20,12 +20,12 @@ function goFullFeed(): void {
 </script>
 
 <template>
-  <section class="liquid-glass relative overflow-hidden rounded-[24px] p-4 sm:p-5">
-    <span class="pointer-events-none absolute inset-x-5 top-0 h-[3px] rounded-full bg-gradient-to-r from-sky-500 via-blue-600 to-fuchsia-500"></span>
+  <section class="panel-surface relative overflow-hidden rounded-[24px] p-4 shadow-soft sm:p-5">
+    <span class="pointer-events-none absolute inset-x-5 top-0 h-[3px] rounded-full bg-gradient-to-r from-rose-500 via-pink-500 to-fuchsia-500"></span>
     <div class="flex items-center justify-between">
       <h2 class="flex items-center gap-2 text-lg sm:text-xl font-extrabold tracking-tight">
-        <span class="grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br from-sky-500 via-blue-600 to-fuchsia-500 text-white"><i class="pi pi-th-large text-sm"></i></span>
-        <span class="bg-gradient-to-r from-sky-600 via-blue-600 to-fuchsia-600 bg-clip-text text-transparent dark:from-sky-400 dark:via-blue-400 dark:to-fuchsia-400">UFlow</span>
+        <span class="grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white"><i class="pi pi-th-large text-sm"></i></span>
+        <span class="bg-gradient-to-r from-rose-500 via-pink-500 to-fuchsia-500 bg-clip-text text-transparent dark:from-rose-500 dark:via-pink-500 dark:to-fuchsia-500">UFlow</span>
       </h2>
       <button
         type="button"

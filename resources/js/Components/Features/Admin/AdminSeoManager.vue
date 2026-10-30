@@ -26,7 +26,7 @@ const sectionOptions: Array<{ label: string; value: AdminSeoSection; icon: strin
   { label: 'Robots и Sitemap', value: 'crawl', icon: 'pi pi-sitemap' },
 ]
 
-const inputClass = 'w-full mt-1 !bg-white dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-600 dark:!text-white dark:placeholder:!text-zinc-500'
+const inputClass = 'w-full mt-1 !bg-white dark:!bg-white/[0.06] !border-stone-200 dark:!border-white/15 dark:!text-white dark:placeholder:!text-zinc-500'
 const labelClass = 'text-xs font-bold text-stone-500 dark:text-zinc-400'
 
 function counterClass(ok: boolean) {
@@ -35,10 +35,10 @@ function counterClass(ok: boolean) {
 </script>
 
 <template>
-  <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0' } }">
+  <Card class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0' } }">
     <template #content>
       <div class="flex items-center gap-2">
-        <span class="w-9 h-9 rounded-2xl bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white grid place-items-center shrink-0"><i class="pi pi-globe text-sm" /></span>
+        <span class="w-9 h-9 rounded-2xl bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white grid place-items-center shrink-0"><i class="pi pi-globe text-sm" /></span>
         <div class="flex-1 min-w-0">
           <div class="text-xs text-stone-500 dark:text-zinc-400">Мета, страницы, счётчики Google/Яндекс и скрипты — без правки кода.</div>
         </div>
@@ -65,7 +65,7 @@ function counterClass(ok: boolean) {
 
       <!-- ===== Общее ===== -->
       <div v-else-if="seoSection === 'general'" class="mt-4 space-y-3">
-        <div class="rounded-2xl border border-stone-200 dark:border-zinc-700 p-3.5 bg-stone-50 dark:bg-zinc-800/60">
+        <div class="rounded-2xl border border-stone-200 dark:border-white/10 p-3.5 bg-stone-50 dark:bg-white/[0.06]">
           <div class="text-xs font-bold uppercase tracking-wider text-stone-400 dark:text-zinc-500">Предпросмотр в Google</div>
           <div class="mt-2 text-[#1a0dab] dark:text-[#8ab4f8] text-lg leading-snug break-words">{{ mgr.global.value.default_title || 'Заголовок страницы' }}</div>
           <div class="text-[#006621] dark:text-[#bdc1c6] text-xs truncate">{{ origin }} › …</div>
@@ -148,10 +148,10 @@ function counterClass(ok: boolean) {
           <div class="text-sm font-bold dark:text-white">Переопределения для {{ mgr.pages.value.length }} стр.</div>
           <Button label="Добавить страницу" icon="pi pi-plus" size="small" rounded @click="mgr.openCreatePage()" />
         </div>
-        <div v-if="!mgr.pages.value.length" class="rounded-2xl border border-dashed border-stone-300 dark:border-zinc-700 p-6 text-center text-sm text-stone-500 dark:text-zinc-400">
+        <div v-if="!mgr.pages.value.length" class="rounded-2xl border border-dashed border-stone-300 dark:border-white/10 p-6 text-center text-sm text-stone-500 dark:text-zinc-400">
           Пока всё берётся из «Общего». Добавь страницу, чтобы задать ей свои title/description/robots.
         </div>
-        <div v-for="row in mgr.pages.value" :key="row.path" class="rounded-2xl border border-stone-200 dark:border-zinc-700 px-3.5 py-3 flex items-center gap-3">
+        <div v-for="row in mgr.pages.value" :key="row.path" class="rounded-2xl border border-stone-200 dark:border-white/10 px-3.5 py-3 flex items-center gap-3">
           <div class="flex-1 min-w-0">
             <div class="font-bold text-sm dark:text-white truncate">{{ row.path }}</div>
             <div class="text-xs text-stone-500 dark:text-zinc-400 truncate">{{ row.title || '—' }}</div>
@@ -206,7 +206,7 @@ function counterClass(ok: boolean) {
 
       <!-- ===== Скрипты ===== -->
       <div v-else-if="seoSection === 'scripts'" class="mt-4 space-y-3">
-        <label class="flex items-center justify-between gap-3 rounded-2xl border border-stone-200 dark:border-zinc-700 px-3.5 py-3 cursor-pointer">
+        <label class="flex items-center justify-between gap-3 rounded-2xl border border-stone-200 dark:border-white/10 px-3.5 py-3 cursor-pointer">
           <span class="text-sm font-bold dark:text-white">Включить кастомные скрипты</span>
           <ToggleSwitch :modelValue="mgr.integrations.value.scripts_enabled" @update:modelValue="(v:boolean)=>mgr.integrations.value.scripts_enabled=v" />
         </label>
@@ -255,15 +255,15 @@ function counterClass(ok: boolean) {
             <label :class="labelClass">Crawl-delay (сек)</label>
             <InputText v-model.number="mgr.robots.value.crawl_delay" type="number" min="0" max="60" :class="inputClass" />
           </div>
-          <label class="flex items-center justify-between gap-3 rounded-2xl border border-stone-200 dark:border-zinc-700 px-3.5 py-3 cursor-pointer self-end">
+          <label class="flex items-center justify-between gap-3 rounded-2xl border border-stone-200 dark:border-white/10 px-3.5 py-3 cursor-pointer self-end">
             <span class="text-sm font-bold dark:text-white">Ссылка на sitemap</span>
             <ToggleSwitch :modelValue="mgr.robots.value.sitemap_enabled" @update:modelValue="(v:boolean)=>mgr.robots.value.sitemap_enabled=v" />
           </label>
         </div>
         <Button label="Сохранить robots" icon="pi pi-save" rounded :loading="mgr.saving.value === 'robots'" @click="mgr.saveRobots()" class="!bg-stone-900 dark:!bg-white dark:!text-ink-900 !border-0 !font-bold" />
 
-        <div class="!mt-6 pt-4 border-t border-stone-200 dark:border-zinc-700 space-y-3">
-          <label class="flex items-center justify-between gap-3 rounded-2xl border border-stone-200 dark:border-zinc-700 px-3.5 py-3 cursor-pointer">
+        <div class="!mt-6 pt-4 border-t border-stone-200 dark:border-white/10 space-y-3">
+          <label class="flex items-center justify-between gap-3 rounded-2xl border border-stone-200 dark:border-white/10 px-3.5 py-3 cursor-pointer">
             <span class="text-sm font-bold dark:text-white">Sitemap включён</span>
             <ToggleSwitch :modelValue="mgr.sitemap.value.enabled" @update:modelValue="(v:boolean)=>mgr.sitemap.value=v" />
           </label>
@@ -323,7 +323,7 @@ function counterClass(ok: boolean) {
           <Select v-model="mgr.editingPage.value.robots" :options="mgr.robotsPresets" editable class="w-full mt-1" />
         </div>
       </div>
-      <label class="flex items-center justify-between gap-3 rounded-2xl border border-stone-200 dark:border-zinc-700 px-3.5 py-3 cursor-pointer">
+      <label class="flex items-center justify-between gap-3 rounded-2xl border border-stone-200 dark:border-white/10 px-3.5 py-3 cursor-pointer">
         <span class="text-sm font-bold dark:text-white">Переопределение включено</span>
         <ToggleSwitch :modelValue="mgr.editingPage.value.enabled" @update:modelValue="(v:boolean)=>mgr.editingPage.value.enabled=v" />
       </label>

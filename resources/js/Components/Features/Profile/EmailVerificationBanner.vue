@@ -32,14 +32,14 @@ defineExpose({ verification })
     :closable="false"
     :style="{ width: '430px', maxWidth: 'calc(100vw - 2rem)' }"
     :pt="{
-      root: { class: '!rounded-[28px] max-sm:!rounded-b-none !border-0 overflow-hidden !bg-white dark:!bg-zinc-900 shadow-2xl' },
+      root: { class: '!rounded-[28px] max-sm:!rounded-b-none !border-0 overflow-hidden !bg-white dark:!bg-[#0F121F] shadow-2xl' },
       header: { class: '!hidden' },
       content: { class: '!p-0' },
     }"
   >
     <div class="relative overflow-hidden px-6 pb-6 pt-8 text-center">
-      <div class="pointer-events-none absolute -top-16 left-1/2 h-44 w-72 -translate-x-1/2 rounded-full bg-gradient-to-br from-violet-500/30 via-fuchsia-500/20 to-rose-500/20 blur-2xl" aria-hidden="true" />
-      <div class="relative mx-auto grid h-16 w-16 place-items-center rounded-3xl bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-600/30">
+      <div class="pointer-events-none absolute -top-16 left-1/2 h-44 w-72 -translate-x-1/2 rounded-full bg-gradient-to-br from-rose-500/30 via-pink-500/20 to-fuchsia-500/20 blur-2xl" aria-hidden="true" />
+      <div class="relative mx-auto grid h-16 w-16 place-items-center rounded-3xl bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white shadow-lg shadow-violet-600/30">
         <i class="pi pi-envelope text-2xl" />
       </div>
       <h3 class="relative mt-4 text-xl font-black tracking-tight text-stone-900 dark:text-white">
@@ -70,7 +70,7 @@ defineExpose({ verification })
         rounded
         :loading="verification.resending.value"
         :disabled="!verification.canResend.value"
-        class="!mt-5 !w-full !bg-gradient-to-r !from-violet-600 !to-fuchsia-600 !border-0 !py-3 !font-bold shadow-lg shadow-violet-600/30 active:scale-[0.99]"
+        class="!mt-5 !w-full !bg-gradient-to-r !from-rose-500 !via-pink-500 !to-fuchsia-500 !border-0 !py-3 !font-bold shadow-lg shadow-violet-600/30 active:scale-[0.99]"
         @click="verification.resend()"
       />
       <p v-if="verification.cooldownLeft.value > 0" class="relative mt-2 text-xs text-stone-400 dark:text-zinc-500">

@@ -41,13 +41,13 @@ function onVisibleChange(nextVisible: boolean): void {
       <div
         v-for="(step, stepIndex) in guide.steps.value"
         :key="stepIndex"
-        class="flex items-start gap-3 rounded-2xl border border-stone-200/70 dark:border-zinc-800 bg-stone-50 dark:bg-white/[0.03] px-4 py-3"
+        class="flex items-start gap-3 rounded-2xl border border-stone-200/70 dark:border-white/10 bg-stone-50 dark:bg-white/[0.03] px-4 py-3"
       >
         <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-indigo-500/10 text-indigo-500 dark:bg-indigo-500/15 dark:text-indigo-300">
           <i :class="[step.icon, 'text-sm']"></i>
         </span>
         <p class="text-sm min-w-0">
-          <span class="mr-1.5 inline-grid h-5 w-5 place-items-center rounded-full bg-ink-900 text-[11px] font-bold text-white dark:bg-white dark:text-zinc-900 align-middle">
+          <span class="mr-1.5 inline-grid h-5 w-5 place-items-center rounded-full bg-ink-900 text-[11px] font-bold text-white dark:bg-white dark:text-[#0F121F] align-middle">
             {{ stepIndex + 1 }}
           </span>
           <span class="font-semibold dark:text-zinc-100">{{ step.title }}</span>
@@ -70,7 +70,7 @@ function onVisibleChange(nextVisible: boolean): void {
           rounded
           @click="guide.copyLink()"
         />
-        <Button label="Понятно" rounded class="!border-0 !bg-ink-900 !text-sm !font-bold !text-white dark:!bg-white dark:!text-zinc-900" @click="guide.closeGuide()" />
+        <Button label="Понятно" rounded class="!border-0 !bg-ink-900 !text-sm !font-bold !text-white dark:!bg-white dark:!text-[#0F121F]" @click="guide.closeGuide()" />
       </div>
     </template>
   </Dialog>

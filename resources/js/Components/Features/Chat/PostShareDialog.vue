@@ -45,7 +45,7 @@ const s = props.sharer
     modal
     dismissable-mask
     :draggable="false"
-    class="!m-3 sm:!m-0 !w-[calc(100vw-1.5rem)] sm:!w-[28rem]"
+    class="!m-3 sm:!m-0 !w-[calc(100vw-1.5rem)] sm:!w-[28rem] dark:!bg-[#0F121F] dark:!border-white/10"
     @update:visible="(v: boolean) => { if (!v) s.close() }"
   >
     <template #header>
@@ -63,7 +63,7 @@ const s = props.sharer
     </template>
 
     <div class="flex min-w-0 flex-col gap-3">
-      <div v-if="s.postRef.value?.image_url" class="flex items-center gap-2.5 overflow-hidden rounded-2xl border border-stone-200 dark:border-zinc-700">
+      <div v-if="s.postRef.value?.image_url" class="flex items-center gap-2.5 overflow-hidden rounded-2xl border border-stone-200 dark:border-white/10">
         <img :src="s.postRef.value.image_url" alt="Превью поста" class="h-12 w-12 shrink-0 object-cover" />
         <div class="min-w-0 flex-1 py-1.5 pr-2">
           <div v-if="s.postRef.value.title" class="truncate text-[13px] font-bold dark:text-white">{{ s.postRef.value.title }}</div>
@@ -99,7 +99,7 @@ const s = props.sharer
         </span>
       </div>
 
-      <div class="max-h-64 min-h-[120px] overflow-y-auto rounded-2xl border border-stone-200 dark:border-zinc-700">
+      <div class="max-h-64 min-h-[120px] overflow-y-auto rounded-2xl border border-stone-200 dark:border-white/10">
         <div v-if="s.loading.value || s.searching.value" class="grid place-items-center py-8 text-sm text-stone-400">
           <span class="h-6 w-6 animate-spin rounded-full border-2 border-violet-200 border-t-violet-600" />
         </div>
@@ -115,7 +115,7 @@ const s = props.sharer
           class="flex w-full items-center gap-2.5 px-3 py-2 text-left transition hover:bg-violet-50 dark:hover:bg-violet-500/10 disabled:opacity-50"
           @click="s.toggle(u.id)"
         >
-          <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full border-2" :class="s.selectedIds.value.includes(u.id) ? 'border-violet-600 bg-violet-600 text-white' : 'border-stone-300 dark:border-zinc-600 text-transparent'">
+          <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full border-2" :class="s.selectedIds.value.includes(u.id) ? 'border-violet-600 bg-violet-600 text-white' : 'border-stone-300 dark:border-white/20 text-transparent'">
             <i class="pi pi-check text-[10px]" />
           </span>
           <UserAvatar :user="u" :icon="!getAvatarUrl(u) ? 'pi pi-user' : undefined" shape="circle" class="!h-9 !w-9 shrink-0" />

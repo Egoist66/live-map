@@ -6,7 +6,7 @@ import Tag from 'primevue/tag'
 defineProps<{ quest: any }>()
 </script>
 <template>
-  <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
+  <Card class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
     <template #content>
       <div class="flex items-start gap-3">
         <span :class="['w-10 h-10 rounded-2xl grid place-items-center shrink-0', quest.completed ? 'bg-emerald-500/15 text-emerald-500' : 'bg-violet-500/15 text-violet-500']"><i :class="[quest.icon]" /></span>

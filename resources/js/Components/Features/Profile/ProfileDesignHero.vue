@@ -35,12 +35,12 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <section class="liquid-glass rounded-[20px] min-[411px]:rounded-[24px] shadow-soft p-3 min-[411px]:p-4 sm:p-5 min-w-0 max-w-full overflow-hidden">
+  <section class="panel-surface rounded-[20px] min-[411px]:rounded-[24px] shadow-soft p-3 min-[411px]:p-4 sm:p-5 min-w-0 max-w-full overflow-hidden">
     <div class="flex gap-2.5 min-[411px]:gap-3 sm:gap-5 min-w-0">
       <div class="shrink-0">
         <button
           type="button"
-          class="relative block h-[80px] w-[80px] min-[411px]:h-[104px] min-[411px]:w-[104px] sm:h-[128px] sm:w-[128px] overflow-hidden rounded-[18px] min-[411px]:rounded-[22px] bg-stone-200/70 dark:bg-zinc-800"
+          class="relative block h-[80px] w-[80px] min-[411px]:h-[104px] min-[411px]:w-[104px] sm:h-[128px] sm:w-[128px] overflow-hidden rounded-[18px] min-[411px]:rounded-[22px] bg-stone-200/70 dark:bg-white/[0.06]"
           aria-label="Открыть фото"
           @click="emit('avatar')"
         >
@@ -120,7 +120,7 @@ const emit = defineEmits<{
             outlined
             title="Открыть карту"
             aria-label="Открыть карту"
-            class="!h-10 !w-10 min-[411px]:!h-11 min-[411px]:!w-11 !p-0 !rounded-full !border-stone-300 !text-stone-600 hover:!border-stone-400 dark:!border-zinc-700 dark:!text-zinc-200 dark:hover:!border-zinc-500"
+            class="!h-10 !w-10 min-[411px]:!h-11 min-[411px]:!w-11 !p-0 !rounded-full !border-stone-300 !text-stone-600 hover:!border-stone-400 dark:!border-white/10 dark:!text-zinc-200 dark:hover:!border-white/20"
             @click="emit('openMap')"
           />
         </Link>
@@ -130,7 +130,7 @@ const emit = defineEmits<{
           rounded
           title="Редактировать профиль"
           aria-label="Редактировать профиль"
-          class="!h-10 !w-10 min-[411px]:!h-11 min-[411px]:!w-11 !p-0 !rounded-full !border-0 !bg-gradient-to-r !from-[#7c3aed] !to-[#3b82f6] !text-white hover:opacity-95"
+          class="!h-10 !w-10 min-[411px]:!h-11 min-[411px]:!w-11 !p-0 !rounded-full !border-0 !bg-gradient-to-r !from-rose-500 !via-pink-500 !to-fuchsia-500 !text-white hover:opacity-95"
           @click="emit('edit')"
         />
         <Button
@@ -140,7 +140,7 @@ const emit = defineEmits<{
           rounded
           title="Написать сообщение"
           aria-label="Написать сообщение"
-          class="!h-10 !w-10 min-[411px]:!h-11 min-[411px]:!w-11 !p-0 !rounded-full !border-0 !bg-gradient-to-r !from-[#7c3aed] !to-[#3b82f6] !text-white hover:opacity-95"
+          class="!h-10 !w-10 min-[411px]:!h-11 min-[411px]:!w-11 !p-0 !rounded-full !border-0 !bg-gradient-to-r !from-rose-500 !via-pink-500 !to-fuchsia-500 !text-white hover:opacity-95"
           @click="emit('chat')"
         />
       </div>

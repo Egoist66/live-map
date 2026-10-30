@@ -25,7 +25,7 @@ async function onFile(event: Event): Promise<void> {
 
 <template>
   <div>
-    <div class="relative rounded-2xl overflow-hidden bg-gradient-to-br from-indigo-500 to-violet-600 min-h-[110px] grid place-items-center">
+    <div class="relative rounded-2xl overflow-hidden bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 min-h-[110px] grid place-items-center">
       <img v-if="settings.profile.value?.cover_url" :src="settings.profile.value.cover_url" alt="Обложка компании" class="absolute inset-0 w-full h-full object-cover" />
       <div v-else class="absolute inset-0 opacity-30" style="background-image: radial-gradient(circle at 80% 20%, rgba(255,255,255,.5) 0 2px, transparent 3px); background-size: 48px 48px;"></div>
       <button

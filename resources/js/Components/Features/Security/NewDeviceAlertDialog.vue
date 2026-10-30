@@ -45,7 +45,7 @@ function clientLabel(client: string): string {
     :draggable="false"
     :closable="true"
     :style="{ width: '420px', maxWidth: '94vw' }"
-    :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none overflow-hidden dark:!bg-zinc-900 dark:!border-zinc-700' }, header: { class: '!p-5 !pb-0 !border-0 dark:!bg-zinc-900 dark:!text-white' }, content: { class: '!px-5 !py-4 dark:!bg-zinc-900' }, footer: { class: '!px-5 !pb-5 !pt-1 !border-0 dark:!bg-zinc-900' } }"
+    :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none overflow-hidden dark:!bg-[#0F121F] dark:!border-white/10' }, header: { class: '!p-5 !pb-0 !border-0 dark:!bg-[#0F121F] dark:!text-white' }, content: { class: '!px-5 !py-4 dark:!bg-[#0F121F]' }, footer: { class: '!px-5 !pb-5 !pt-1 !border-0 dark:!bg-[#0F121F]' } }"
   >
     <template #header>
       <div class="flex items-center gap-3">
@@ -56,7 +56,7 @@ function clientLabel(client: string): string {
         </div>
       </div>
     </template>
-    <div class="rounded-2xl bg-stone-100 dark:bg-zinc-800 px-4 py-3">
+    <div class="rounded-2xl bg-stone-100 dark:bg-white/[0.06] px-4 py-3">
       <div class="text-[15px] font-bold dark:text-white">{{ alert.device.value?.label || 'Неизвестное устройство' }}</div>
       <div class="mt-1 space-y-0.5 text-xs text-stone-500 dark:text-zinc-400">
         <div v-if="alert.device.value?.ip">IP {{ alert.device.value.ip }}</div>

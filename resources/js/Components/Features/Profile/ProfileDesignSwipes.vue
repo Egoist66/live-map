@@ -7,7 +7,7 @@ const emit = defineEmits<{
 <template>
   <button
     type="button"
-    class="relative block w-full overflow-hidden rounded-[24px] bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-700 p-5 text-left text-white transition hover:opacity-95 active:scale-[0.99]"
+    class="relative block w-full overflow-hidden rounded-[24px] bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 p-5 text-left text-white transition hover:opacity-95 active:scale-[0.99]"
     @click="emit('go')"
   >
     <div

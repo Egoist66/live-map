@@ -21,7 +21,7 @@ const ageText = computed(() => {
 const residenceText = computed(() => [props.user?.country, props.user?.home_city].filter(Boolean).join(' · '))
 </script>
 <template>
-  <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }">
+  <Card class="!bg-white dark:!bg-[#0F121F] !border-stone-200 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }">
     <template #content>
       <h3 class="font-black">Основная информация</h3>
       <Card class="!bg-stone-50 !border-stone-200 !rounded-3xl !shadow-none mt-4" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">

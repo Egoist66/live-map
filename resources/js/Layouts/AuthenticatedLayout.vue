@@ -3,7 +3,6 @@ import { defineAsyncComponent } from 'vue'
 import AppTopBar from '@/Layouts/AppTopBar.vue'
 import AppUserMenu from '@/Layouts/AppUserMenu.vue'
 import MobileBottomNav from '@/Components/Features/Navigation/MobileBottomNav.vue'
-import AppFooter from '@/Layouts/AppFooter.vue'
 import PageTransition from '@/Components/Features/Feedback/PageTransition.vue'
 import RouteErrorBoundary from '@/Components/Features/Feedback/RouteErrorBoundary.vue'
 import GlobalNotificationToasts from '@/Components/Features/Feedback/GlobalNotificationToasts.vue'
@@ -75,13 +74,13 @@ onMounted(() => { screenLock.init(); hotkeys.init() })
 </script>
 <template>
   <div class="flex min-h-screen min-h-dvh flex-col bg-surface dark:bg-[#0F121F] overflow-x-clip">
-    <header v-if="!layoutRoute.isSwipesRoute.value && !layoutRoute.isAdminRoute.value" class="native-safe-top sticky top-0 z-50 glass border-b border-stone-200/70 dark:border-zinc-800 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-[#0F121F]/70">
+    <header v-if="!layoutRoute.isSwipesRoute.value && !layoutRoute.isAdminRoute.value" class="native-safe-top sticky top-0 z-50 glass border-b border-stone-200/70 dark:border-white/10 backdrop-blur supports-[backdrop-filter]:bg-white/80 dark:supports-[backdrop-filter]:bg-[#0F121F]/70">
       <AppTopBar :user="user" :avatar-src="avatarSrc" :dashboard-href="dashboardHref" :badge-total="badge.total" :lock-enabled="screenLock.enabled.value" :is-business="isBusinessAccount" :show-love="navVisibility.showLove" :show-flow="navVisibility.showFlow" :can-search-people="isModerator" @bell="bell.open()" @menu="toggleMenu" @lock="screenLock.lockNow()" @search="openGlobalPeopleSearch()" />
     </header>
     <AppUserMenu v-model:menu-ref="menu" :user="user" :avatar-src="avatarSrc" :items="(menuItems as any)" />
     <div v-if="layoutRoute.isSwipesRoute.value" class="native-safe-top lg:hidden w-full shrink-0" aria-hidden="true" />
     <EmailVerificationBanner />
-    <div v-if="$slots.header" class="bg-white dark:bg-zinc-900 border-b border-stone-200/60 dark:border-zinc-800">
+    <div v-if="$slots.header" class="bg-white dark:bg-[#0F121F] border-b border-stone-200/60 dark:border-white/10">
       <div class="mx-auto max-w-[1280px] xl:max-w-[1400px] 2xl:max-w-[1600px] px-4 sm:px-6 py-4 sm:py-6"><slot name="header" /></div>
     </div>
     <main :class="layoutRoute.isAdminRoute.value ? 'flex-1 pb-0' : (layoutRoute.isScrollLockedPage.value ? 'flex-1 pb-0 lg:pb-0 overflow-hidden overscroll-none' : 'flex-1 pb-[calc(var(--app-bottomnav)+var(--sab))] lg:pb-0')">
@@ -98,9 +97,6 @@ onMounted(() => { screenLock.init(); hotkeys.init() })
         <PageTransition v-else><slot /></PageTransition>
       </RouteErrorBoundary>
     </main>
-    <div v-if="!layoutRoute.isChatRoute.value && !layoutRoute.isMapRoute.value && !layoutRoute.isSwipesRoute.value && !layoutRoute.isAdminRoute.value" class="mt-auto hidden pb-[calc(var(--app-bottomnav)+var(--sab))] lg:block lg:pb-0">
-      <AppFooter />
-    </div>
     <div aria-hidden="true" class="pointer-events-none fixed inset-x-0 bottom-0 z-30 h-[var(--sab)] bg-white dark:bg-[#0F121F] lg:hidden" />
     <MobileBottomNav v-if="!layoutRoute.isAdminRoute.value" @bell="bell.open()" @menu="toggleMenu" />
     <!-- Единая панель виджетов (мини-чат + AI): один лаунчер вместо
@@ -125,7 +121,7 @@ onMounted(() => { screenLock.init(); hotkeys.init() })
       <TermsAcceptanceModal />
       <SubscriptionRenewalDialog />
       <AppUpdateModal v-if="!needsAcceptance" :update="updates.current.value" :position="0" :total="updates.queue.value.length" @read="updates.dismissCurrent()" @later="updates.snooze()" @all="updates.dismissAll()" />
-      <ConfirmDialog :style="{ width: '400px', maxWidth: '92vw' }" :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none !border-stone-200 dark:!border-white/10 overflow-hidden !bg-white dark:!bg-zinc-900' }, header: { class: '!p-5 !pb-0 !border-0' }, title: { class: '!font-black !text-[17px] !tracking-tight' }, content: { class: '!px-5 !py-4 !text-sm !text-stone-600 dark:!text-zinc-300 !leading-relaxed' }, footer: { class: '!px-5 !pb-5 !pt-0 !border-0 !flex !gap-2' }, pcAcceptButton: { root: { class: '!rounded-full !bg-gradient-to-r !from-rose-500 !to-red-600 !border-0 !px-5 !shadow-glow' } }, pcRejectButton: { root: { class: '!rounded-full !px-5' } }, icon: { class: '!w-10 !h-10 !rounded-full !bg-gradient-to-br !from-rose-500 !to-red-600 !text-white !grid !place-items-center !self-center !shrink-0 !leading-none !mr-3 !text-base' } }">
+      <ConfirmDialog :style="{ width: '400px', maxWidth: '92vw' }" :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none !border-stone-200 dark:!border-white/10 overflow-hidden !bg-white dark:!bg-[#0F121F]' }, header: { class: '!p-5 !pb-0 !border-0' }, title: { class: '!font-black !text-[17px] !tracking-tight' }, content: { class: '!px-5 !py-4 !text-sm !text-stone-600 dark:!text-zinc-300 !leading-relaxed' }, footer: { class: '!px-5 !pb-5 !pt-0 !border-0 !flex !gap-2' }, pcAcceptButton: { root: { class: '!rounded-full !bg-gradient-to-r !from-rose-500 !via-pink-500 !to-fuchsia-500 !border-0 !px-5 !shadow-glow' } }, pcRejectButton: { root: { class: '!rounded-full !px-5' } }, icon: { class: '!w-10 !h-10 !rounded-full !bg-gradient-to-br !from-rose-500 !to-fuchsia-500 !text-white !grid !place-items-center !self-center !shrink-0 !leading-none !mr-3 !text-base' } }">
       </ConfirmDialog>
     </template>
   </div>

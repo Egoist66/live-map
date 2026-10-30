@@ -6,7 +6,6 @@ import { useWelcomeMode } from '@/composables/useWelcomeMode'
 import { useWelcomeHeroSwiper } from '@/composables/useWelcomeHeroSwiper'
 import { useSupportEmail } from '@/composables/useSettingsSupport'
 import { useCooperation } from '@/composables/useCooperation'
-import AppFooter from '@/Layouts/AppFooter.vue'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import Tag from 'primevue/tag'
@@ -46,7 +45,7 @@ function switchTab(next: LandingTabId): void {
   </Head>
   <div class="min-h-screen flex flex-col bg-surface dark:bg-[#0F121F] text-ink-900 dark:text-zinc-100 antialiased selection:bg-rose-500 selection:text-white overflow-x-hidden">
     <div class="flex flex-col min-h-screen">
-    <header class="native-safe-top sticky top-0 z-50 bg-white/80 dark:bg-zinc-900/70 backdrop-blur border-b border-stone-200/60 dark:border-zinc-800">
+    <header class="native-safe-top sticky top-0 z-50 bg-white/80 dark:bg-[#0F121F]/70 backdrop-blur border-b border-stone-200/60 dark:border-white/10">
       <div class="max-w-[1280px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-2 min-[411px]:px-4 sm:px-6 h-14 min-[411px]:h-[64px] flex items-center justify-between gap-2 min-w-0">
         <Link href="/" class="flex items-center gap-2 min-w-0 shrink-0">
           <img
@@ -58,7 +57,7 @@ function switchTab(next: LandingTabId): void {
             loading="eager"
             decoding="async"
           />
-          <span :class="['hidden sm:inline ml-2 text-xs font-black tracking-wide bg-clip-text text-transparent border-l border-stone-200 dark:border-zinc-700 pl-3', landing.headerTagClass.value]">{{ landing.headerTag.value }}</span>
+          <span :class="['hidden sm:inline ml-2 text-xs font-black tracking-wide bg-clip-text text-transparent border-l border-stone-200 dark:border-white/10 pl-3', landing.headerTagClass.value]">{{ landing.headerTag.value }}</span>
         </Link>
         <nav class="flex items-center gap-1 min-[411px]:gap-2 shrink-0">
           <Link :href="w.profileCtaHref.value"><Button :label="w.profileCtaLabel.value" class="!bg-[#FF456C] hover:!bg-[#E63A5E] dark:!bg-[#FF456C] dark:hover:!bg-[#E63A5E] !text-white !px-4 min-[411px]:!px-6 !py-2 min-[411px]:!py-2.5 !rounded-full !text-[13px] min-[411px]:!text-sm !font-semibold !border-0 shadow-soft whitespace-nowrap" /></Link>
@@ -67,7 +66,7 @@ function switchTab(next: LandingTabId): void {
     </header>
 
     <div v-if="landing.showTabs.value" class="max-w-[1280px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 pt-4 sm:pt-6 flex flex-col items-center gap-2.5">
-      <div class="relative grid grid-cols-2 w-full max-w-[420px] rounded-full bg-white/70 dark:bg-zinc-900/70 backdrop-blur border border-stone-200/80 dark:border-zinc-700/60 p-1 shadow-soft">
+      <div class="relative grid grid-cols-2 w-full max-w-[420px] rounded-full bg-white/70 dark:bg-[#0F121F]/70 backdrop-blur border border-stone-200/80 dark:border-white/10/60 p-1 shadow-soft">
         <span
           :class="['absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] rounded-full shadow-md transition-transform duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]', landing.thumbGradient[landing.tab.value], landing.thumbPosition[landing.tab.value]]"
         ></span>
@@ -85,7 +84,7 @@ function switchTab(next: LandingTabId): void {
 
     <section class="max-w-[1280px] xl:max-w-[1400px] 2xl:max-w-[1600px] w-full mx-auto px-4 sm:px-6 pt-4 sm:pt-10 pb-8 sm:pb-10 grid lg:grid-cols-[1.05fr_0.95fr] gap-6 sm:gap-10 items-center overflow-hidden">
       <div class="min-w-0">
-        <div class="flex max-w-full flex-wrap items-center gap-2 bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-2xl sm:rounded-full px-3 py-2 sm:pl-1.5 sm:pr-3 sm:py-1 shadow-soft min-w-0">
+        <div class="flex max-w-full flex-wrap items-center gap-2 bg-white dark:bg-[#0F121F] border border-stone-200 dark:border-white/10 rounded-2xl sm:rounded-full px-3 py-2 sm:pl-1.5 sm:pr-3 sm:py-1 shadow-soft min-w-0">
           <Tag :class="['!text-white !rounded-full !px-2.5 !py-1 !text-[11px] !font-bold tracking-wide !border-0 shrink-0', landing.theme.value.badge]"><span class="w-1.5 h-1.5 bg-white rounded-full animate-pulse inline-block mr-1.5 align-middle"></span>{{ landing.content.value.badge }}</Tag>
           <span class="min-w-0 flex-1 basis-full sm:basis-auto text-xs font-medium leading-relaxed text-stone-600 dark:text-zinc-400 break-words">{{ landing.content.value.badgeNote }}</span>
         </div>
@@ -93,24 +92,24 @@ function switchTab(next: LandingTabId): void {
         <p class="mt-5 text-[15px] sm:text-[17px] leading-relaxed text-stone-600 dark:text-zinc-400 max-w-[560px]">{{ landing.content.value.description }}</p>
         <div class="mt-6 sm:mt-7 flex flex-col sm:flex-row sm:flex-wrap gap-2.5 sm:gap-3">
           <Link :href="landing.primaryCta.value.href" class="w-full sm:w-auto"><Button :label="landing.primaryCta.value.label" :class="['w-full sm:w-auto !text-white !px-7 !py-3.5 !rounded-full !font-bold hover:opacity-90 !border-0 shadow-soft', landing.theme.value.ctaBtn]" /></Link>
-          <a href="#how" class="w-full sm:w-auto"><Button :label="landing.content.value.secondaryLabel" severity="secondary" outlined class="w-full sm:w-auto !bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-700 !px-7 !py-3.5 !rounded-full !font-semibold hover:!bg-stone-50 dark:hover:!bg-zinc-800 !text-ink-900 dark:!text-white" /></a>
+          <a href="#how" class="w-full sm:w-auto"><Button :label="landing.content.value.secondaryLabel" severity="secondary" outlined class="w-full sm:w-auto !bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !px-7 !py-3.5 !rounded-full !font-semibold hover:!bg-stone-50 dark:hover:!bg-white/10 !text-ink-900 dark:!text-white" /></a>
         </div>
-        <div class="mt-6 sm:mt-8 flex items-center gap-4 sm:gap-6 flex-wrap py-4 sm:py-5 border-y border-stone-200/60 dark:border-zinc-800 max-w-[520px]">
+        <div class="mt-6 sm:mt-8 flex items-center gap-4 sm:gap-6 flex-wrap py-4 sm:py-5 border-y border-stone-200/60 dark:border-white/10 max-w-[520px]">
           <div v-for="(stat, statIndex) in landing.content.value.stats" :key="stat.value" class="flex items-center gap-4 sm:gap-6">
             <div><div class="font-black text-xl sm:text-[22px] tracking-tight">{{ stat.value }}</div><div class="text-xs font-medium text-stone-500 dark:text-zinc-500 uppercase tracking-wide">{{ stat.note }}</div></div>
-            <div v-if="statIndex < landing.content.value.stats.length - 1" class="hidden sm:block w-px h-10 bg-stone-200 dark:bg-zinc-800"></div>
+            <div v-if="statIndex < landing.content.value.stats.length - 1" class="hidden sm:block w-px h-10 bg-stone-200 dark:bg-white/[0.06]"></div>
           </div>
         </div>
         <div class="mt-4 flex items-center gap-2 text-xs text-stone-500 dark:text-zinc-500">
-          <span class="w-7 h-7 rounded-full bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-700 grid place-items-center">✓</span> {{ landing.content.value.trust }}
+          <span class="w-7 h-7 rounded-full bg-white dark:bg-[#0F121F] border border-stone-200 dark:border-white/10 grid place-items-center">✓</span> {{ landing.content.value.trust }}
         </div>
       </div>
 
       <div class="relative w-full max-w-[560px] min-w-0 justify-self-center lg:justify-self-end">
-        <Card v-if="landing.isUlove.value" class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[28px] !shadow-float !p-3">
+        <Card v-if="landing.isUlove.value" class="!bg-white dark:!bg-[#0F121F] !border !border-stone-200 dark:!border-white/10 !rounded-[28px] !shadow-float !p-3">
           <template #content>
             <div
-              class="h-[300px] min-[411px]:h-[340px] sm:h-[400px] lg:h-[430px] rounded-xl overflow-hidden relative bg-stone-100 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700"
+              class="h-[300px] min-[411px]:h-[340px] sm:h-[400px] lg:h-[430px] rounded-xl overflow-hidden relative bg-stone-100 dark:bg-white/[0.06] border border-stone-200 dark:border-white/10"
               @mouseenter="hero.pause()"
               @mouseleave="hero.resume()"
               @touchstart="hero.onTouchStart"
@@ -175,10 +174,10 @@ function switchTab(next: LandingTabId): void {
                  (`SwipeActionsBar`): пас, суперлайк, лайк, написать.
                  Не кликабельна — это витрина, не колода. -->
             <div class="flex items-center justify-center gap-3 px-4 pt-3" aria-hidden="true">
-              <span class="w-12 h-12 grid place-items-center rounded-full bg-white dark:bg-zinc-800 shadow-[0_2px_10px_rgba(0,0,0,0.18)] shrink-0"><i class="pi pi-times text-lg leading-none text-[#FF4458]" /></span>
-              <span class="w-12 h-12 grid place-items-center rounded-full bg-white dark:bg-zinc-800 shadow-[0_2px_10px_rgba(0,0,0,0.18)] shrink-0"><i class="pi pi-heart-fill text-lg leading-none text-[#1786FF]" /></span>
-              <span class="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#FD267D] to-[#FF456C] text-white shadow-lg shadow-rose-500/40"><i class="pi pi-heart-fill text-2xl leading-none" /></span>
-              <span class="w-12 h-12 grid place-items-center rounded-full bg-white dark:bg-zinc-800 shadow-[0_2px_10px_rgba(0,0,0,0.18)] shrink-0"><i class="pi pi-send text-lg leading-none text-[#9B49DF]" /></span>
+              <span class="w-12 h-12 grid place-items-center rounded-full bg-white dark:bg-white/[0.06] shadow-[0_2px_10px_rgba(0,0,0,0.18)] shrink-0"><i class="pi pi-times text-lg leading-none text-[#FF4458]" /></span>
+              <span class="w-12 h-12 grid place-items-center rounded-full bg-white dark:bg-white/[0.06] shadow-[0_2px_10px_rgba(0,0,0,0.18)] shrink-0"><i class="pi pi-heart-fill text-lg leading-none text-[#1786FF]" /></span>
+              <span class="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white shadow-lg shadow-rose-500/40"><i class="pi pi-heart-fill text-2xl leading-none" /></span>
+              <span class="w-12 h-12 grid place-items-center rounded-full bg-white dark:bg-white/[0.06] shadow-[0_2px_10px_rgba(0,0,0,0.18)] shrink-0"><i class="pi pi-send text-lg leading-none text-[#9B49DF]" /></span>
             </div>
             <div class="flex justify-center items-center pt-3">
               <button
@@ -189,7 +188,7 @@ function switchTab(next: LandingTabId): void {
                 class="w-8 h-8 grid place-items-center shrink-0"
                 @click="hero.goTo(dotIndex)"
               >
-                <span :class="['block h-2 rounded-full transition-[width,background-color] duration-300', dotIndex === hero.activeIndex.value ? 'w-6 bg-gradient-to-r from-rose-500 to-pink-500' : 'w-2 bg-stone-300 dark:bg-zinc-600']" />
+                <span :class="['block h-2 rounded-full transition-[width,background-color] duration-300', dotIndex === hero.activeIndex.value ? 'w-6 bg-gradient-to-r from-rose-500 via-pink-500 to-fuchsia-500' : 'w-2 bg-stone-300 dark:bg-white/15']" />
               </button>
             </div>
             <div class="flex items-center justify-between px-1 pt-3">
@@ -204,15 +203,15 @@ function switchTab(next: LandingTabId): void {
           </template>
         </Card>
 
-        <div class="absolute -bottom-5 -left-4 bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-800 rounded-2xl p-4 shadow-float hidden sm:flex gap-3 items-center max-w-[320px]">
-          <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-rose-500 to-pink-500 grid place-items-center text-white shrink-0"><i class="pi pi-heart-fill text-lg" /></div>
+        <div class="absolute -bottom-5 -left-4 bg-white dark:bg-[#0F121F] border border-stone-200 dark:border-white/10 rounded-2xl p-4 shadow-float hidden sm:flex gap-3 items-center max-w-[320px]">
+          <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 grid place-items-center text-white shrink-0"><i class="pi pi-heart-fill text-lg" /></div>
           <div><div class="text-xs font-bold">Мэтч открывает чат</div><div class="text-xs text-stone-500 dark:text-zinc-400 leading-snug">Взаимный лайк — и вы уже в чате. Без спама.</div></div>
         </div>
       </div>
     </section>
 
     <section id="how" class="max-w-[1280px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 py-4 sm:py-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 scroll-mt-20 [content-visibility:auto] [contain-intrinsic-size:auto_480px]">
-      <Card v-for="step in landing.content.value.steps" :key="step.title" class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[20px] !shadow-soft card-hover group cursor-default">
+      <Card v-for="step in landing.content.value.steps" :key="step.title" class="!bg-white dark:!bg-[#0F121F] !border !border-stone-200 dark:!border-white/10 !rounded-[20px] !shadow-soft card-hover group cursor-default">
         <template #content>
           <div :class="['w-11 h-11 rounded-xl text-white grid place-items-center font-bold text-sm card-icon', landing.theme.value.stepIcon]"><i :class="`pi ${step.icon}`" /></div>
           <h3 class="mt-4 font-bold text-[15px]">{{ step.title }} <span class="card-arrow inline-block opacity-0 group-hover:opacity-100">→</span></h3><p class="text-sm text-stone-600 dark:text-zinc-400 mt-1.5 leading-relaxed">{{ step.text }}</p>
@@ -221,8 +220,8 @@ function switchTab(next: LandingTabId): void {
     </section>
 
     <section class="max-w-[1280px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 py-4 sm:py-6 grid lg:grid-cols-5 gap-3 sm:gap-4 [content-visibility:auto] [contain-intrinsic-size:auto_560px]">
-      <div class="lg:col-span-3 bg-ink-900 dark:bg-zinc-900 dark:border dark:border-zinc-800 text-white rounded-[20px] sm:rounded-[24px] p-5 sm:p-8 relative overflow-hidden">
-        <div class="absolute -right-20 -top-20 w-80 h-80 bg-gradient-to-br from-rose-500 to-pink-500 rounded-full blur-[60px] opacity-25"></div>
+      <div class="lg:col-span-3 bg-ink-900 dark:bg-[#0F121F] dark:border dark:border-white/10 text-white rounded-[20px] sm:rounded-[24px] p-5 sm:p-8 relative overflow-hidden">
+        <div class="absolute -right-20 -top-20 w-80 h-80 bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 rounded-full blur-[60px] opacity-25"></div>
       <div class="relative w-full max-w-[680px] mx-auto">
           <Tag class="!bg-white/10 !border !border-white/15 !rounded-full !px-3 !py-1 !text-xs !font-medium !text-white">{{ landing.content.value.spotlight.tag }}</Tag>
           <h3 class="mt-4 text-2xl font-black tracking-tight">{{ landing.content.value.spotlight.title }}</h3>
@@ -234,18 +233,18 @@ function switchTab(next: LandingTabId): void {
           <div class="mt-6"><Link :href="landing.content.value.spotlight.ctaHref"><Button :label="landing.content.value.spotlight.ctaLabel" outlined class="!border-white/25 !text-white !px-6 !py-3 !rounded-full !font-semibold hover:!bg-white/10" /></Link></div>
         </div>
       </div>
-      <Card class="lg:col-span-2 !bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[24px] !shadow-soft card-hover overflow-hidden">
+      <Card class="lg:col-span-2 !bg-white dark:!bg-[#0F121F] !border !border-stone-200 dark:!border-white/10 !rounded-[24px] !shadow-soft card-hover overflow-hidden">
         <template #content>
-          <Tag class="!bg-white/10 !rounded-full !px-3 !py-1 !text-xs !font-medium !text-white !bg-gradient-to-r !from-rose-500 !to-pink-500 !border-0">{{ landing.content.value.privacy.tag }}</Tag>
+          <Tag class="!bg-white/10 !rounded-full !px-3 !py-1 !text-xs !font-medium !text-white !bg-gradient-to-r !from-rose-500 !via-pink-500 !to-fuchsia-500 !border-0">{{ landing.content.value.privacy.tag }}</Tag>
           <h3 class="mt-4 text-xl font-black tracking-tight">{{ landing.content.value.privacy.title }}</h3>
           <p class="text-sm text-stone-600 dark:text-zinc-400 mt-2 leading-relaxed">{{ landing.content.value.privacy.text }}</p>
-          <div class="mt-4 flex flex-wrap gap-2 text-xs font-medium"><Tag v-for="chip in landing.content.value.privacy.chips" :key="chip" class="!bg-stone-100 dark:!bg-zinc-800 !text-ink-900 dark:!text-white !px-3 !py-1.5 !rounded-full !border-0">{{ chip }}</Tag></div>
+          <div class="mt-4 flex flex-wrap gap-2 text-xs font-medium"><Tag v-for="chip in landing.content.value.privacy.chips" :key="chip" class="!bg-stone-100 dark:!bg-white/[0.06] !text-ink-900 dark:!text-white !px-3 !py-1.5 !rounded-full !border-0">{{ chip }}</Tag></div>
         </template>
       </Card>
     </section>
 
     <section class="max-w-[1280px] xl:max-w-[1400px] 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 py-6 sm:py-8 pb-[calc(1.5rem+var(--sab))] [content-visibility:auto] [contain-intrinsic-size:auto_220px]">
-      <Card class="!bg-white dark:!bg-zinc-900 !border !border-stone-200 dark:!border-zinc-800 !rounded-[24px] !shadow-soft card-hover">
+      <Card class="!bg-white dark:!bg-[#0F121F] !border !border-stone-200 dark:!border-white/10 !rounded-[24px] !shadow-soft card-hover">
         <template #content>
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div class="min-w-0"><div class="text-[18px] sm:text-[20px] font-black tracking-tight text-balance">{{ landing.content.value.finalTitle }}</div><div class="text-sm text-stone-600 dark:text-zinc-400 mt-1">{{ landing.content.value.finalText }}</div></div>
@@ -271,7 +270,6 @@ function switchTab(next: LandingTabId): void {
     </section>
 
     <CooperationDialog />
-    <AppFooter class="mt-auto w-full" />
     </div>
   </div>
 </template>

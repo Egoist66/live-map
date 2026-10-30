@@ -23,7 +23,7 @@ function onSaved(saved?: Record<string, any>): void {
     modal
     header="Моя анкета ULove"
     :style="{ width: '640px', maxWidth: '94vw', maxHeight: '92dvh' }"
-    :pt="{ root: { class: '!rounded-3xl max-sm:!rounded-b-none dark:!bg-zinc-900 dark:!border-zinc-700' }, header: { class: 'dark:!bg-zinc-900 dark:!text-white' }, content: { class: 'dark:!bg-zinc-900 dark:!text-zinc-100 !max-h-[78dvh] !overflow-y-auto' } }"
+    :pt="{ root: { class: '!rounded-3xl max-sm:!rounded-b-none dark:!bg-[#0F121F] dark:!border-white/10' }, header: { class: 'dark:!bg-[#0F121F] dark:!text-white' }, content: { class: 'dark:!bg-[#0F121F] dark:!text-zinc-100 !max-h-[78dvh] !overflow-y-auto' } }"
   >
     <DatingQuestionnaireForm :key="String(open)" @saved="onSaved()" />
   </Dialog>

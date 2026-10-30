@@ -12,7 +12,7 @@ import { avatarSrcFor } from '@/composables/useAvatar'
 const LEVEL_LABEL: Record<string, string> = { novice: 'Новичок', explorer: 'Исследователь', active: 'Активист', local: 'Свой в городе', veteran: 'Ветеран', legend: 'Легенда', guide: 'Гид' }
 const LEVEL_COLOR: Record<string, string> = { novice: '!bg-stone-100 !text-stone-700 !border-stone-200', explorer: '!bg-sky-50 !text-sky-700 !border-sky-200', active: '!bg-cyan-50 !text-cyan-700 !border-cyan-200', local: '!bg-emerald-50 !text-emerald-700 !border-emerald-200', veteran: '!bg-violet-50 !text-violet-700 !border-violet-200', legend: '!bg-fuchsia-50 !text-fuchsia-700 !border-fuchsia-200', guide: '!bg-amber-50 !text-amber-700 !border-amber-200' }
 const PLAN_LABEL: Record<string, string> = { free: 'Free', pro: 'Pro', premium: 'Premium', business: 'Business' }
-const PLAN_COLOR: Record<string, string> = { free: '!bg-stone-100 !text-stone-700 !border-stone-200', pro: '!bg-gradient-to-br !from-violet-600 !to-indigo-600 !text-white !border-transparent', premium: '!bg-gradient-to-br !from-amber-500 !to-orange-600 !text-white !border-transparent', business: '!bg-ink-900 !text-white !border-ink-900' }
+const PLAN_COLOR: Record<string, string> = { free: '!bg-stone-100 !text-stone-700 !border-stone-200', pro: '!bg-gradient-to-br !from-rose-500 !via-pink-500 !to-fuchsia-500 !text-white !border-transparent', premium: '!bg-gradient-to-br !from-rose-500 !to-fuchsia-500 !text-white !border-transparent', business: '!bg-ink-900 !text-white !border-ink-900' }
 
 /**
  * Состояние страницы Dashboard (свой профиль).

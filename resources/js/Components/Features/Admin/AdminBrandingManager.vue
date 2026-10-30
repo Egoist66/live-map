@@ -19,12 +19,12 @@ const hintClass = 'text-[11px] leading-relaxed text-stone-500 dark:text-zinc-400
 
 <template>
   <Card
-    class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft"
+    class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft"
     :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0' } }"
   >
     <template #content>
       <div class="flex items-center gap-2">
-        <span class="w-9 h-9 rounded-2xl bg-gradient-to-br from-[#FD267D] to-[#F04D9F] text-white grid place-items-center shrink-0">
+        <span class="w-9 h-9 rounded-2xl bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white grid place-items-center shrink-0">
           <i class="pi pi-image text-sm" />
         </span>
         <div class="flex-1 min-w-0">
@@ -48,9 +48,9 @@ const hintClass = 'text-[11px] leading-relaxed text-stone-500 dark:text-zinc-400
       </div>
 
       <div v-else class="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <section class="rounded-2xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/60 p-3.5">
+        <section class="rounded-2xl border border-stone-200 dark:border-white/10 bg-stone-50 dark:bg-white/[0.06] p-3.5">
           <div class="flex items-start gap-3">
-            <div class="w-20 h-20 shrink-0 overflow-hidden rounded-2xl bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-700 grid place-items-center">
+            <div class="w-20 h-20 shrink-0 overflow-hidden rounded-2xl bg-white dark:bg-black/20 border border-stone-200 dark:border-white/10 grid place-items-center">
               <img
                 v-if="mgr.branding.value?.app_icon?.url"
                 :src="mgr.branding.value.app_icon.url"
@@ -97,9 +97,9 @@ const hintClass = 'text-[11px] leading-relaxed text-stone-500 dark:text-zinc-400
           </div>
         </section>
 
-        <section class="rounded-2xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/60 p-3.5">
+        <section class="rounded-2xl border border-stone-200 dark:border-white/10 bg-stone-50 dark:bg-white/[0.06] p-3.5">
           <div class="flex items-start gap-3">
-            <div class="w-20 h-20 shrink-0 overflow-hidden rounded-2xl bg-white dark:bg-zinc-950 border border-stone-200 dark:border-zinc-700 grid place-items-center">
+            <div class="w-20 h-20 shrink-0 overflow-hidden rounded-2xl bg-white dark:bg-black/20 border border-stone-200 dark:border-white/10 grid place-items-center">
               <img
                 v-if="mgr.branding.value?.favicon?.url"
                 :src="mgr.branding.value.favicon.url"

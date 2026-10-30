@@ -27,7 +27,7 @@ const genderIcon = computed(() => tiles.genderIconFor(props.genderValue))
 </script>
 
 <template>
-  <section class="liquid-glass rounded-[24px] shadow-soft p-4 sm:p-5">
+  <section class="panel-surface rounded-[24px] shadow-soft p-4 sm:p-5">
     <div class="flex items-center justify-between">
       <h2 class="text-lg sm:text-xl font-extrabold tracking-tight text-ink-900 dark:text-white">Общая информация</h2>
     </div>

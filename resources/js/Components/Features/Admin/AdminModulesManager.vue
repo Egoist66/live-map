@@ -23,9 +23,9 @@ const preview = computed(() => previewFor(store.globalEnabled))
 </script>
 
 <template>
-  <div class="rounded-3xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4 sm:p-6 shadow-soft">
+  <div class="rounded-3xl border border-stone-200 dark:border-white/10 bg-white dark:bg-[#0F121F] p-4 sm:p-6 shadow-soft">
     <div class="flex items-center gap-2.5">
-      <span class="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 grid place-items-center text-white"><i class="pi pi-th-large" /></span>
+      <span class="w-10 h-10 rounded-2xl bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 grid place-items-center text-white"><i class="pi pi-th-large" /></span>
       <div class="min-w-0 flex-1">
         <div class="text-xs text-stone-500 dark:text-zinc-400">По умолчанию только ULove. Включите нужный раздел — пользователи увидят его тумблер в настройках.</div>
       </div>
@@ -36,7 +36,7 @@ const preview = computed(() => previewFor(store.globalEnabled))
       <div
         v-for="row in mgr.rows.value"
         :key="row.id"
-        class="flex items-center gap-3 rounded-2xl border border-stone-200/70 dark:border-zinc-800 px-3 py-2.5"
+        class="flex items-center gap-3 rounded-2xl border border-stone-200/70 dark:border-white/10 px-3 py-2.5"
       >
         <i :class="[row.icon, 'text-base text-stone-500 dark:text-zinc-400 shrink-0']" />
         <div class="flex-1 text-sm min-w-0">
@@ -55,11 +55,11 @@ const preview = computed(() => previewFor(store.globalEnabled))
       </div>
     </div>
 
-    <div class="mt-4 rounded-2xl bg-stone-50 dark:bg-zinc-800/60 border border-stone-200 dark:border-zinc-700 px-3 py-2.5">
+    <div class="mt-4 rounded-2xl bg-stone-50 dark:bg-white/[0.06] border border-stone-200 dark:border-white/10 px-3 py-2.5">
       <p class="text-[11px] font-black uppercase tracking-wider text-stone-400 dark:text-zinc-500">Что увидят пользователи</p>
       <div class="mt-1.5 flex flex-wrap gap-1.5">
-        <Tag v-for="label in preview.tabs" :key="label" class="!rounded-full !text-[11px] !font-bold !border-0 !bg-gradient-to-r !from-rose-500 !to-orange-400 !text-white">Лендинг: {{ label }}</Tag>
-        <Tag class="!rounded-full !text-[11px] !font-semibold !border-0 !bg-stone-200 dark:!bg-zinc-700 !text-stone-700 dark:!text-zinc-200">FAQ: +{{ preview.faqExtras }} ответов</Tag>
+        <Tag v-for="label in preview.tabs" :key="label" class="!rounded-full !text-[11px] !font-bold !border-0 !bg-gradient-to-r !from-rose-500 !via-pink-500 !to-fuchsia-500 !text-white">Лендинг: {{ label }}</Tag>
+        <Tag class="!rounded-full !text-[11px] !font-semibold !border-0 !bg-stone-200 dark:!bg-white/10 !text-stone-700 dark:!text-zinc-200">FAQ: +{{ preview.faqExtras }} ответов</Tag>
       </div>
       <p class="mt-1.5 text-[11px] text-stone-500 dark:text-zinc-400 leading-relaxed">Лендинг, SEO, FAQ и бренд собираются из этого набора автоматически — руками ничего дописывать не нужно.</p>
     </div>

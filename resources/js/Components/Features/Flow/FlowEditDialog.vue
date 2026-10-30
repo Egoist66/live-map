@@ -76,7 +76,7 @@ function onVideo(e: Event): void {
         placeholder="Текст новости…"
         rows="14"
         auto-resize
-        class="w-full flex-1 !rounded-2xl !bg-stone-100 dark:!bg-zinc-800 !border-0 !text-[15px] !leading-relaxed"
+        class="w-full flex-1 !rounded-2xl !bg-stone-100 dark:!bg-white/[0.06] !border-0 !text-[15px] !leading-relaxed"
       />
       <FlowComposerPreview
         v-if="props.composer.imagePreviews.value.length"
@@ -87,7 +87,7 @@ function onVideo(e: Event): void {
         v-else-if="props.composer.existingMedia.value.length && !props.composer.removeMedia.value"
         :media="props.composer.existingMedia.value"
       />
-      <div v-if="props.composer.videoPreview.value" class="relative overflow-hidden rounded-2xl border border-stone-200 dark:border-zinc-700">
+      <div v-if="props.composer.videoPreview.value" class="relative overflow-hidden rounded-2xl border border-stone-200 dark:border-white/10">
         <video :src="props.composer.videoPreview.value" controls preload="metadata" playsinline class="max-h-72 w-full bg-black" />
         <Button icon="pi pi-times" rounded severity="danger" aria-label="Убрать видео" class="!absolute !top-2 !right-2 !w-9 !h-9" @click="props.composer.pickVideo(null)" />
       </div>

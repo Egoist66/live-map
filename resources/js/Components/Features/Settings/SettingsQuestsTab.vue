@@ -40,7 +40,7 @@ onMounted(async () => {
   <div class="space-y-3">
     <QuestRankBar v-if="q.store.state" :rating="q.store.state.rating" />
 
-    <Card v-if="q.store.loading" class="!bg-white dark:!bg-zinc-900 !rounded-3xl !shadow-soft !border-stone-200 dark:!border-zinc-800" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0 space-y-2' } }">
+    <Card v-if="q.store.loading" class="!bg-white dark:!bg-[#0F121F] !rounded-3xl !shadow-soft !border-stone-200 dark:!border-white/10" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0 space-y-2' } }">
       <template #content><Skeleton height="3rem" class="!rounded-2xl" /><Skeleton height="3rem" class="!rounded-2xl" /><Skeleton height="3rem" class="!rounded-2xl" /></template>
     </Card>
 
@@ -48,8 +48,8 @@ onMounted(async () => {
 
     <template v-if="q.store.state">
       <div class="flex gap-2">
-        <button type="button" :class="['flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-bold border', section === 'tasks' ? '!bg-ink-900 !text-white !border-ink-900 dark:!bg-white dark:!text-ink-900 dark:!border-white' : 'bg-white text-stone-600 border-stone-200 dark:bg-zinc-900 dark:text-zinc-300 dark:border-zinc-800']" @click="section = 'tasks'"><i class="pi pi-trophy text-xs" />Задания</button>
-        <button type="button" :class="['flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-bold border', section === 'rating' ? '!bg-ink-900 !text-white !border-ink-900 dark:!bg-white dark:!text-ink-900 dark:!border-white' : 'bg-white text-stone-600 border-stone-200 dark:bg-zinc-900 dark:text-zinc-300 dark:border-zinc-800']" @click="section = 'rating'"><i class="pi pi-star text-xs" />Система рейтинга</button>
+        <button type="button" :class="['flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-bold border', section === 'tasks' ? '!bg-ink-900 !text-white !border-ink-900 dark:!bg-white dark:!text-ink-900 dark:!border-white' : 'bg-white text-stone-600 border-stone-200 dark:bg-[#0F121F] dark:text-zinc-300 dark:border-white/10']" @click="section = 'tasks'"><i class="pi pi-trophy text-xs" />Задания</button>
+        <button type="button" :class="['flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-bold border', section === 'rating' ? '!bg-ink-900 !text-white !border-ink-900 dark:!bg-white dark:!text-ink-900 dark:!border-white' : 'bg-white text-stone-600 border-stone-200 dark:bg-[#0F121F] dark:text-zinc-300 dark:border-white/10']" @click="section = 'rating'"><i class="pi pi-star text-xs" />Система рейтинга</button>
       </div>
 
       <QuestRatingTab v-if="section === 'rating'" />

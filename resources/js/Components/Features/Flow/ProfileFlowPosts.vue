@@ -75,8 +75,8 @@ onMounted(() => feed.init())
       <Button label="Вся лента UFlow" text severity="secondary" size="small" icon="pi pi-arrow-right" icon-pos="right" @click="goFlow()" />
     </div>
     <FlowComposer v-if="isOwn" :compact="true" />
-    <div v-if="feed.store.loading" class="animate-pulse rounded-3xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-5 text-sm text-stone-400">Загружаем посты…</div>
-    <div v-else-if="!feed.store.posts.length" class="rounded-3xl border border-dashed border-stone-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 p-6 text-center text-sm text-stone-500">
+    <div v-if="feed.store.loading" class="animate-pulse rounded-3xl border border-stone-200 dark:border-white/10 bg-white dark:bg-[#0F121F] p-5 text-sm text-stone-400">Загружаем посты…</div>
+    <div v-else-if="!feed.store.posts.length" class="rounded-3xl border border-dashed border-stone-300 dark:border-white/10 bg-white dark:bg-[#0F121F] p-6 text-center text-sm text-stone-500">
       {{ isOwn ? 'Расскажите о себе первым постом — его увидят все.' : 'У пользователя пока нет постов.' }}
     </div>
     <div v-else class="space-y-4">

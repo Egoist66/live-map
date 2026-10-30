@@ -48,7 +48,7 @@ watch(
     circle,
     rgba(244, 63, 94, 0.35) 0%,
     rgba(236, 72, 153, 0.22) 38%,
-    rgba(251, 146, 60, 0.1) 62%,
+    rgba(217, 70, 239, 0.1) 62%,
     transparent 72%
   );
   animation: match-glow 2.4s ease-out infinite;

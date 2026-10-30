@@ -40,7 +40,7 @@ const altText = computed(() => {
         <Transition name="zoom" appear>
           <figure
             ref="cardRef"
-            class="relative m-auto w-[min(94vw,640px)] overflow-hidden rounded-[20px] border border-white/20 bg-stone-100 shadow-float dark:border-zinc-700 dark:bg-zinc-800 sm:w-[min(92vw,640px)] sm:rounded-[24px]"
+            class="relative m-auto w-[min(94vw,640px)] overflow-hidden rounded-[20px] border border-white/20 bg-stone-100 shadow-float dark:border-white/10 dark:bg-white/[0.06] sm:w-[min(92vw,640px)] sm:rounded-[24px]"
           >
             <img
               v-if="!isPlaceholder"
@@ -52,7 +52,7 @@ const altText = computed(() => {
               v-else
               role="img"
               :aria-label="altText"
-              class="grid aspect-square max-h-[calc(100dvh-1.5rem)] w-full place-items-center bg-stone-200 text-stone-400 dark:bg-zinc-700 dark:text-zinc-400 sm:max-h-[calc(100dvh-3rem)]"
+              class="grid aspect-square max-h-[calc(100dvh-1.5rem)] w-full place-items-center bg-stone-200 text-stone-400 dark:bg-white/10 dark:text-zinc-400 sm:max-h-[calc(100dvh-3rem)]"
             >
               <svg viewBox="0 0 64 64" fill="currentColor" aria-hidden="true" class="h-1/3 w-1/3">
                 <circle cx="32" cy="22" r="11" />
@@ -64,7 +64,7 @@ const altText = computed(() => {
               type="button"
               aria-label="Закрыть"
               @click="emit('close')"
-              class="absolute right-3 top-3 z-10 grid h-11 w-11 place-items-center rounded-full border border-stone-200 bg-white/95 text-stone-600 shadow-soft transition hover:bg-stone-50 dark:border-zinc-700 dark:bg-zinc-800/95 dark:text-zinc-300 dark:hover:bg-zinc-700 sm:right-4 sm:top-4 sm:h-9 sm:w-9"
+              class="absolute right-3 top-3 z-10 grid h-11 w-11 place-items-center rounded-full border border-stone-200 bg-white/95 text-stone-600 shadow-soft transition hover:bg-stone-50 dark:border-white/10 dark:bg-white/[0.06]/95 dark:text-zinc-300 dark:hover:bg-white/15 sm:right-4 sm:top-4 sm:h-9 sm:w-9"
             >
               <i class="pi pi-times text-sm"></i>
             </button>

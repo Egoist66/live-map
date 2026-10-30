@@ -31,11 +31,11 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="rounded-2xl border border-stone-200/70 bg-white p-2.5 transition hover:border-blue-300 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-blue-500/40">
+  <div class="rounded-2xl border border-stone-200/70 bg-white p-2.5 transition hover:border-blue-300 dark:border-white/10 dark:bg-[#0F121F] dark:hover:border-blue-500/40">
     <div class="flex items-center gap-2.5">
       <Link :href="userProfileUrl({ id: userId, profile_slug: profileSlug })" class="relative shrink-0">
         <Avatar :image="avatarUrl ?? undefined" :label="!avatarUrl ? name.slice(0, 1).toUpperCase() : undefined" shape="circle" class="!h-10 !w-10" />
-        <span v-if="badge === 'owner'" class="absolute -bottom-1 -right-1 grid h-4 w-4 place-items-center rounded-full bg-amber-400 ring-2 ring-white dark:ring-zinc-900" title="Владелец">
+        <span v-if="badge === 'owner'" class="absolute -bottom-1 -right-1 grid h-4 w-4 place-items-center rounded-full bg-amber-400 ring-2 ring-white dark:ring-[#0F121F]" title="Владелец">
           <i class="pi pi-crown text-[8px] text-white" />
         </span>
       </Link>

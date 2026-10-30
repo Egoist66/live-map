@@ -1,4 +1,4 @@
-﻿import PrimeVue from 'primevue/config'
+import PrimeVue from 'primevue/config'
 import Aura from '@primeuix/themes/aura'
 import { definePreset } from '@primeuix/themes'
 import ToastService from 'primevue/toastservice'
@@ -9,11 +9,11 @@ import type { App } from 'vue'
 const UlovePreset = definePreset(Aura as any, {
   semantic: {
     primary: {
-      50: '#EEF0FF', 100: '#E0E3FF', 200: '#C7CAFF', 300: '#A5AAFF', 400: '#8186FF', 500: '#5B5BFF', 600: '#4F46E5', 700: '#4338CA', 800: '#3730A3', 900: '#312E81', 950: '#1E1B4B',
+      50: '#FDF2F8', 100: '#FCE7F3', 200: '#FBCFE8', 300: '#F9A8D4', 400: '#F472B6', 500: '#F04D9F', 600: '#DB2777', 700: '#BE185D', 800: '#9D174D', 900: '#831843', 950: '#500724',
     },
     colorScheme: {
       light: { surface: { 0: '#FFFFFF', 50: '#F8F7F3', 100: '#F1F0ED', 200: '#E7E5E4', 300: '#D6D3D1', 400: '#A8A29E', 500: '#78716C', 600: '#57534E', 700: '#44403C', 800: '#292524', 900: '#1C1917', 950: '#0F172A' } },
-      dark: { surface: { 0: '#0F121F', 50: '#151928', 100: '#18181B', 200: '#27272A', 300: '#3F3F46', 400: '#52525B', 500: '#71717A', 600: '#A1A1AA', 700: '#D4D4D8', 800: '#E4E4E7', 900: '#FAFAFA', 950: '#FFFFFF' } },
+      dark: { surface: { 0: '#0F121F', 50: '#151928', 100: '#0F121F', 200: '#27272A', 300: '#3F3F46', 400: '#52525B', 500: '#71717A', 600: '#A1A1AA', 700: '#D4D4D8', 800: '#E4E4E7', 900: '#FAFAFA', 950: '#FFFFFF' } },
     },
   },
   components: {

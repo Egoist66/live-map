@@ -115,13 +115,13 @@ onUnmounted(() => {
       <div ref="mapContainer" class="absolute inset-0 w-full h-full bg-[#eaf0f6] dark:bg-[#0F121F]"></div>
       <DistrictPaintOverlay v-if="(districts as any).canCreate?.value ?? true" :armed="paint.armed.value" :brush-px="brushPx" :brush-radius-m="paint.brushRadiusM.value" :draft-strokes="paint.strokes.value" :map="mapApi.map" @stroke-end="onOverlayStrokeEnd" />
       <div v-if="!loaded" class="absolute inset-0 grid place-items-center bg-[#eef3f8] dark:bg-[#0F121F] z-[5]">
-        <div class="bg-white dark:bg-zinc-900 border border-stone-200 dark:border-zinc-700 rounded-2xl px-5 py-4 shadow flex items-center gap-3"><i class="pi pi-spin pi-spinner text-xl text-stone-900 dark:text-white shrink-0"></i><span class="text-sm font-medium dark:text-zinc-100">Загружаем карту…</span></div>
+        <div class="bg-white dark:bg-[#0F121F] border border-stone-200 dark:border-white/10 rounded-2xl px-5 py-4 shadow flex items-center gap-3"><i class="pi pi-spin pi-spinner text-xl text-stone-900 dark:text-white shrink-0"></i><span class="text-sm font-medium dark:text-zinc-100">Загружаем карту…</span></div>
       </div>
       <div class="absolute left-2 right-2 sm:left-4 sm:right-auto sm:max-w-[420px] flex flex-col gap-2 sm:gap-2.5 z-10 pointer-events-none native-safe-offset-top max-sm:!top-2">
         <MapTopBar :count="(filteredPins as any)?.value?.length ?? store.pins.length" :loading="store.loading" :refreshing="mapRefresh.refreshing.value" :categories="categories" :selected-category="selectedCategory" :can-draw-district="(districts as any).canCreate?.value ?? true" @update:category="(v:any)=>selectedCategory=v" @info="showLiveInfo = true" @mine="handleMineClick" @refresh="refreshMap" @districts="startDistrictPaint" />
         <SosModeBanner v-if="sosMode.isSosMode.value" @chat="goSosChat" @close="onSosClosed" />
         <Transition name="fade">
-          <div v-if="geoNotice" class="pointer-events-auto bg-white/95 dark:bg-zinc-900/95 backdrop-blur border border-amber-200 dark:border-amber-900/60 rounded-2xl px-3.5 py-3 shadow flex items-start gap-2.5 w-fit max-w-[min(92vw,380px)]">
+          <div v-if="geoNotice" class="pointer-events-auto bg-white/95 dark:bg-[#0F121F]/95 backdrop-blur border border-amber-200 dark:border-amber-900/60 rounded-2xl px-3.5 py-3 shadow flex items-start gap-2.5 w-fit max-w-[min(92vw,380px)]">
             <span class="w-8 h-8 rounded-full bg-amber-500/15 dark:bg-amber-400/15 grid place-items-center text-sm shrink-0"><i class="pi pi-map-marker text-amber-600 dark:text-amber-400"></i></span>
             <div class="min-w-0 flex-1">
               <div class="text-xs font-bold dark:text-zinc-100">Карта открыта по профилю · {{ geoNotice.place }}</div>
@@ -132,7 +132,7 @@ onUnmounted(() => {
           </div>
         </Transition>
         <Transition name="fade">
-          <div v-if="myStreet || loadingStreet" class="pointer-events-auto bg-white/95 dark:bg-zinc-900/95 backdrop-blur border border-stone-200 dark:border-zinc-700 rounded-2xl px-4 py-3 shadow flex items-center gap-3 w-fit max-w-[min(92vw,380px)]">
+          <div v-if="myStreet || loadingStreet" class="pointer-events-auto bg-white/95 dark:bg-[#0F121F]/95 backdrop-blur border border-stone-200 dark:border-white/10 rounded-2xl px-4 py-3 shadow flex items-center gap-3 w-fit max-w-[min(92vw,380px)]">
             <span class="w-8 h-8 rounded-full bg-emerald-500/15 dark:bg-emerald-400/15 grid place-items-center text-sm shrink-0">📍</span>
             <div class="min-w-0 leading-snug space-y-0.5"><div class="text-[10px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-400">вы здесь</div><div class="text-xs font-semibold truncate dark:text-zinc-100">{{ loadingStreet ? 'Определяем улицу…' : myStreet }}</div></div>
           </div>
@@ -155,7 +155,7 @@ onUnmounted(() => {
         @update:message="(v: string) => ((districts as any).joinRequest.message.value = v)"
         @submit="(districts as any).joinRequest.confirm()"
       />
-      <div v-if="homeZone" class="absolute left-3 bottom-12 z-10 bg-white/95 dark:bg-zinc-900/95 backdrop-blur border border-violet-200 dark:border-violet-900/60 rounded-2xl px-3 py-2 shadow flex items-center gap-2">
+      <div v-if="homeZone" class="absolute left-3 bottom-12 z-10 bg-white/95 dark:bg-[#0F121F]/95 backdrop-blur border border-violet-200 dark:border-violet-900/60 rounded-2xl px-3 py-2 shadow flex items-center gap-2">
         <button type="button" @click="mapApi.flyToHomeZone?.(homeZone.lat, homeZone.lng, homeZone.radiusKm)" title="Показать мою зону" class="w-5 h-5 rounded-full bg-violet-500/15 border border-dashed border-violet-500 grid place-items-center shrink-0 hover:bg-violet-500/30 transition">
           <span class="w-1.5 h-1.5 rounded-full bg-violet-600 block pointer-events-none"></span>
         </button>

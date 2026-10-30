@@ -129,14 +129,14 @@ onMounted(() => {
   <Toast />
     <div class="page-scroll bg-surface dark:bg-[#0F121F]">
       <div class="max-w-[1040px] lg:max-w-[1120px] xl:max-w-[1280px] 2xl:max-w-[1440px] mx-auto px-3 sm:px-6 py-3 sm:py-6 space-y-3 sm:space-y-4">
-        <div v-if="page.isLocked.value" class="liquid-glass rounded-[24px] shadow-soft p-6 flex flex-col items-center text-center gap-3">
-          <button type="button" class="h-16 w-16 overflow-hidden rounded-[22px] bg-stone-100 dark:bg-zinc-800" @click="page.showAvatar.value = true">
+        <div v-if="page.isLocked.value" class="panel-surface rounded-[24px] shadow-soft p-6 flex flex-col items-center text-center gap-3">
+          <button type="button" class="h-16 w-16 overflow-hidden rounded-[22px] bg-stone-100 dark:bg-white/[0.06]" @click="page.showAvatar.value = true">
             <Avatar :image="page.avatarSrc.value" shape="square" class="!h-full !w-full [&_img]:object-cover" />
           </button>
           <p class="font-bold text-ink-900 dark:text-white">⛔ Пользователь заблокировал вас</p>
           <p class="text-sm text-stone-500 dark:text-zinc-400">Профиль скрыт.</p>
           <Link href="/map">
-            <Button label="На карту →" rounded class="!border-0 !bg-gradient-to-r !from-[#7c3aed] !to-[#3b82f6] !text-sm !font-bold !text-white" />
+            <Button label="На карту →" rounded class="!border-0 !bg-gradient-to-r !from-rose-500 !via-pink-500 !to-fuchsia-500 !text-sm !font-bold !text-white" />
           </Link>
         </div>
 
@@ -192,7 +192,7 @@ onMounted(() => {
             <aside class="min-w-0 space-y-3 sm:space-y-4">
               <div
                 v-if="!isOwn && !page.isLocked.value"
-                class="liquid-glass flex items-center gap-2 rounded-[24px] shadow-soft p-2.5"
+                class="panel-surface flex items-center gap-2 rounded-[24px] shadow-soft p-2.5"
               >
                 <Button
                   v-if="!page.isFriend.value && !page.isPending.value && !page.isBlocked.value"

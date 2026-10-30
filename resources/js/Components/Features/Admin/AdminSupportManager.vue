@@ -69,7 +69,7 @@ async function askReject(): Promise<void> {
 </script>
 <template>
   <div class="grid min-w-0 grid-cols-1 items-start gap-4 xl:grid-cols-[380px_minmax(0,1fr)]">
-    <Card class="!rounded-3xl !border-stone-200 !bg-white dark:!border-zinc-800 dark:!bg-zinc-900" :pt="{ body: { class: '!p-3 sm:!p-4' }, content: { class: '!p-0 min-w-0' } }">
+    <Card class="!rounded-3xl !border-stone-200 !bg-white dark:!border-white/10 dark:!bg-[#0F121F]" :pt="{ body: { class: '!p-3 sm:!p-4' }, content: { class: '!p-0 min-w-0' } }">
       <template #content>
         <div class="flex min-w-0 items-center gap-2 px-1 pb-3">
           <span class="grid h-9 w-9 shrink-0 place-items-center rounded-2xl bg-violet-600 text-white"><i class="pi pi-inbox text-sm" /></span>
@@ -103,7 +103,7 @@ async function askReject(): Promise<void> {
         </div>
         <Message v-else-if="support.error.value" severity="error" :closable="false" class="!rounded-2xl !text-xs">{{ support.error.value }}</Message>
         <div v-else-if="!support.hasData.value" class="py-10 text-center">
-          <div class="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-stone-100 text-xl dark:bg-zinc-800">📭</div>
+          <div class="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-stone-100 text-xl dark:bg-white/[0.06]">📭</div>
           <div class="mt-3 text-sm font-semibold dark:text-white">Пусто</div>
           <div class="mt-1 text-xs text-stone-500 dark:text-zinc-400">Обращений с таким статусом нет</div>
         </div>
@@ -115,7 +115,7 @@ async function askReject(): Promise<void> {
             class="w-full min-w-0 rounded-2xl border p-2.5 text-left transition"
             :class="Number(support.selectedId.value) === Number(t.id)
               ? 'border-violet-300 bg-violet-50 dark:border-violet-700 dark:bg-violet-500/10'
-              : 'border-transparent hover:bg-stone-50 dark:hover:bg-zinc-800'"
+              : 'border-transparent hover:bg-stone-50 dark:hover:bg-white/10'"
             @click="support.select(Number(t.id))"
           >
             <div class="flex min-w-0 items-center gap-2.5">
@@ -140,10 +140,10 @@ async function askReject(): Promise<void> {
       </template>
     </Card>
 
-    <Card class="!rounded-3xl !border-stone-200 !bg-white dark:!border-zinc-800 dark:!bg-zinc-900" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0 min-w-0' } }">
+    <Card class="!rounded-3xl !border-stone-200 !bg-white dark:!border-white/10 dark:!bg-[#0F121F]" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0 min-w-0' } }">
       <template #content>
         <div v-if="!support.selected.value" class="py-14 text-center">
-          <div class="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-stone-100 text-xl dark:bg-zinc-800">👈</div>
+          <div class="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-stone-100 text-xl dark:bg-white/[0.06]">👈</div>
           <div class="mt-3 text-sm font-semibold dark:text-white">Выбери обращение слева</div>
           <div class="mt-1 text-xs text-stone-500 dark:text-zinc-400">Здесь появятся вопрос пользователя и форма ответа</div>
         </div>
@@ -154,7 +154,7 @@ async function askReject(): Promise<void> {
             <span class="ml-auto shrink-0 text-xs tabular-nums text-stone-400 dark:text-zinc-500">{{ fmtTime(support.selected.value.created_at) }}</span>
           </div>
           <h2 class="mt-2 min-w-0 break-words text-lg font-black leading-snug [overflow-wrap:anywhere] dark:text-white">{{ support.selected.value.subject }}</h2>
-          <div class="mt-3 flex min-w-0 items-center gap-2.5 rounded-2xl bg-stone-50 p-2.5 dark:bg-zinc-800/70">
+          <div class="mt-3 flex min-w-0 items-center gap-2.5 rounded-2xl bg-stone-50 p-2.5 dark:bg-white/[0.06]/70">
             <Avatar :image="support.avatarSrcFor(support.selected.value.user) || undefined" icon="pi pi-user" shape="circle" class="!h-10 !w-10 shrink-0 !bg-violet-100 !text-violet-600 dark:!bg-violet-500/20 dark:!text-violet-300 [&_img]:object-cover" />
             <div class="min-w-0 flex-1">
               <div class="truncate text-sm font-bold dark:text-white">{{ support.selected.value.name }}</div>
@@ -164,7 +164,7 @@ async function askReject(): Promise<void> {
               <a
                 v-if="profileHref(support.selected.value)"
                 :href="profileHref(support.selected.value) || '#'"
-                class="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-stone-200 px-2.5 py-1.5 text-xs font-bold text-stone-600 transition hover:bg-stone-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                class="inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-stone-200 px-2.5 py-1.5 text-xs font-bold text-stone-600 transition hover:bg-stone-100 dark:border-white/10 dark:text-zinc-300 dark:hover:bg-white/10"
               >
                 <i class="pi pi-user text-[11px]" /> Профиль
               </a>

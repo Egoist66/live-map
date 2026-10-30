@@ -117,7 +117,7 @@ function audienceMax(): number {
 <template>
   <div class="space-y-4 min-w-0">
     <Card
-      class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft"
+      class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft"
       :pt="{ body: { class: '!p-4 sm:!p-6' }, content: { class: '!p-0' } }"
     >
       <template #content>
@@ -145,22 +145,22 @@ function audienceMax(): number {
         </Message>
 
         <div v-else-if="stats.summary.value" class="mt-5 grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div class="rounded-2xl border border-stone-200/70 dark:border-zinc-800 px-4 py-3">
+          <div class="rounded-2xl border border-stone-200/70 dark:border-white/10 px-4 py-3">
             <p class="text-[11px] font-bold uppercase tracking-widest text-stone-400">Вы в приложении</p>
             <p class="mt-1 text-xl font-black dark:text-white">{{ minutesLabel(stats.summary.value.time.today_min) }}</p>
             <p class="text-xs text-stone-500 mt-0.5">неделя — {{ minutesLabel(stats.summary.value.time.week_min) }}</p>
           </div>
-          <div class="rounded-2xl border border-stone-200/70 dark:border-zinc-800 px-4 py-3">
+          <div class="rounded-2xl border border-stone-200/70 dark:border-white/10 px-4 py-3">
             <p class="text-[11px] font-bold uppercase tracking-widest text-stone-400">Лайки вам</p>
             <p class="mt-1 text-xl font-black dark:text-white">{{ stats.summary.value.likes.week }}</p>
             <p class="text-xs text-stone-500 mt-0.5">за неделю · {{ stats.summary.value.likes.month }} за месяц</p>
           </div>
-          <div class="rounded-2xl border border-stone-200/70 dark:border-zinc-800 px-4 py-3">
+          <div class="rounded-2xl border border-stone-200/70 dark:border-white/10 px-4 py-3">
             <p class="text-[11px] font-bold uppercase tracking-widest text-stone-400">Просмотры</p>
             <p class="mt-1 text-xl font-black dark:text-white">{{ stats.summary.value.views.week }}</p>
             <p class="text-xs text-stone-500 mt-0.5">за неделю · {{ stats.summary.value.views.month }} за месяц</p>
           </div>
-          <div class="rounded-2xl border border-stone-200/70 dark:border-zinc-800 px-4 py-3" title="Взаимные лайки в ULove — чат с человеком уже открыт">
+          <div class="rounded-2xl border border-stone-200/70 dark:border-white/10 px-4 py-3" title="Взаимные лайки в ULove — чат с человеком уже открыт">
             <p class="text-[11px] font-bold uppercase tracking-widest text-stone-400">Мэтчи</p>
             <p class="mt-1 text-xl font-black dark:text-white">{{ stats.summary.value.matches_total }}</p>
             <p class="text-xs text-stone-500 mt-0.5">взаимных лайков · непрочитанных сообщений — {{ stats.summary.value.unread }}</p>
@@ -170,7 +170,7 @@ function audienceMax(): number {
     </Card>
 
     <Card
-      class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft"
+      class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft"
       :pt="{ body: { class: '!p-4 sm:!p-6' }, content: { class: '!p-0' } }"
     >
       <template #content>
@@ -217,7 +217,7 @@ function audienceMax(): number {
     </Card>
 
     <Card
-      class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft"
+      class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft"
       :pt="{ body: { class: '!p-4 sm:!p-6' }, content: { class: '!p-0' } }"
     >
       <template #content>
@@ -247,7 +247,7 @@ function audienceMax(): number {
           </div>
           <p v-else class="text-sm text-stone-500 mt-2">Пока мало данных — как только прилетят лайки, здесь появится разбор.</p>
           <div class="grid sm:grid-cols-2 gap-3">
-            <div class="rounded-2xl bg-stone-50 dark:bg-zinc-800/60 px-4 py-3">
+            <div class="rounded-2xl bg-stone-50 dark:bg-white/[0.06] px-4 py-3">
               <p class="text-xs font-bold uppercase tracking-widest text-stone-400">Возраст</p>
               <p class="text-sm mt-1 dark:text-white">
                 18–24: <b>{{ stats.summary.value.audience.age_buckets['18-24'] ?? 0 }}</b>
@@ -256,7 +256,7 @@ function audienceMax(): number {
                 · 45+: <b>{{ stats.summary.value.audience.age_buckets['45+'] ?? 0 }}</b>
               </p>
             </div>
-            <div class="rounded-2xl bg-stone-50 dark:bg-zinc-800/60 px-4 py-3">
+            <div class="rounded-2xl bg-stone-50 dark:bg-white/[0.06] px-4 py-3">
               <p class="text-xs font-bold uppercase tracking-widest text-stone-400">Пол</p>
               <p class="text-sm mt-1 dark:text-white">
                 👨 <b>{{ stats.summary.value.audience.gender['male'] ?? 0 }}</b>
@@ -273,7 +273,7 @@ function audienceMax(): number {
     </Card>
 
     <Card
-      class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft"
+      class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft"
       :pt="{ body: { class: '!p-4 sm:!p-6' }, content: { class: '!p-0' } }"
     >
       <template #content>
@@ -358,7 +358,7 @@ function audienceMax(): number {
     </Card>
 
     <Card
-      class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft"
+      class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft"
       :pt="{ body: { class: '!p-4 sm:!p-6' }, content: { class: '!p-0' } }"
     >
       <template #content>
@@ -382,7 +382,7 @@ function audienceMax(): number {
           >
             <template #value>
               <span v-if="chatExport.selected.value" class="flex items-center gap-2.5 min-w-0">
-                <span v-if="chatExport.selected.value.isDistrict" class="w-6 h-6 rounded-full bg-gradient-to-br from-violet-700 to-purple-900 text-white grid place-items-center text-xs shrink-0">🏘️</span>
+                <span v-if="chatExport.selected.value.isDistrict" class="w-6 h-6 rounded-full bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white grid place-items-center text-xs shrink-0">🏘️</span>
                 <Avatar v-else :image="chatExport.selected.value.avatar ?? undefined" :label="chatExport.selected.value.label.slice(0, 1)" shape="circle" class="!w-6 !h-6 shrink-0 [&_img]:object-cover" />
                 <span class="truncate text-sm">{{ chatExport.selected.value.label }}</span>
               </span>
@@ -390,7 +390,7 @@ function audienceMax(): number {
             </template>
             <template #option="{ option }">
               <span class="flex items-center gap-2.5 min-w-0">
-                <span v-if="option.isDistrict" class="w-8 h-8 rounded-full bg-gradient-to-br from-violet-700 to-purple-900 text-white grid place-items-center text-sm shrink-0">🏘️</span>
+                <span v-if="option.isDistrict" class="w-8 h-8 rounded-full bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white grid place-items-center text-sm shrink-0">🏘️</span>
                 <Avatar v-else :image="option.avatar ?? undefined" :label="option.label.slice(0, 1)" shape="circle" class="!w-8 !h-8 shrink-0 [&_img]:object-cover" />
                 <span class="block min-w-0 flex-1">
                   <span class="block text-sm font-semibold truncate">{{ option.label }}</span>

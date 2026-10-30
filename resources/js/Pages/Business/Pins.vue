@@ -36,10 +36,10 @@ const gate = useBusinessPinGate()
     </Message>
 
     <div class="grid grid-cols-4 gap-2 sm:gap-3">
-      <Card class="!rounded-2xl !border-stone-200 dark:!border-zinc-800 !bg-white dark:!bg-zinc-900 !shadow-sm"><template #content><div class="text-center py-1"><div class="text-xl sm:text-2xl font-black dark:text-white">{{ list.totals.value.count }}</div><div class="text-[11px] font-medium text-stone-500 dark:text-zinc-400 uppercase">пинов</div></div></template></Card>
-      <Card class="!rounded-2xl !border-stone-200 dark:!border-zinc-800 !bg-white dark:!bg-zinc-900 !shadow-sm"><template #content><div class="text-center py-1"><div class="text-xl sm:text-2xl font-black dark:text-white">{{ list.totals.value.views }}</div><div class="text-[11px] font-medium text-stone-500 dark:text-zinc-400 uppercase">просм.</div></div></template></Card>
-      <Card class="!rounded-2xl !border-stone-200 dark:!border-zinc-800 !bg-white dark:!bg-zinc-900 !shadow-sm"><template #content><div class="text-center py-1"><div class="text-xl sm:text-2xl font-black dark:text-white">{{ list.totals.value.likes }}</div><div class="text-[11px] font-medium text-stone-500 dark:text-zinc-400 uppercase">лайков</div></div></template></Card>
-      <Card class="!rounded-2xl !border-stone-200 dark:!border-zinc-800 !bg-white dark:!bg-zinc-900 !shadow-sm"><template #content><div class="text-center py-1"><div class="text-xl sm:text-2xl font-black dark:text-white">{{ list.totals.value.comments }}</div><div class="text-[11px] font-medium text-stone-500 dark:text-zinc-400 uppercase">комм.</div></div></template></Card>
+      <Card class="!rounded-2xl !border-stone-200 dark:!border-white/10 !bg-white dark:!bg-[#0F121F] !shadow-sm"><template #content><div class="text-center py-1"><div class="text-xl sm:text-2xl font-black dark:text-white">{{ list.totals.value.count }}</div><div class="text-[11px] font-medium text-stone-500 dark:text-zinc-400 uppercase">пинов</div></div></template></Card>
+      <Card class="!rounded-2xl !border-stone-200 dark:!border-white/10 !bg-white dark:!bg-[#0F121F] !shadow-sm"><template #content><div class="text-center py-1"><div class="text-xl sm:text-2xl font-black dark:text-white">{{ list.totals.value.views }}</div><div class="text-[11px] font-medium text-stone-500 dark:text-zinc-400 uppercase">просм.</div></div></template></Card>
+      <Card class="!rounded-2xl !border-stone-200 dark:!border-white/10 !bg-white dark:!bg-[#0F121F] !shadow-sm"><template #content><div class="text-center py-1"><div class="text-xl sm:text-2xl font-black dark:text-white">{{ list.totals.value.likes }}</div><div class="text-[11px] font-medium text-stone-500 dark:text-zinc-400 uppercase">лайков</div></div></template></Card>
+      <Card class="!rounded-2xl !border-stone-200 dark:!border-white/10 !bg-white dark:!bg-[#0F121F] !shadow-sm"><template #content><div class="text-center py-1"><div class="text-xl sm:text-2xl font-black dark:text-white">{{ list.totals.value.comments }}</div><div class="text-[11px] font-medium text-stone-500 dark:text-zinc-400 uppercase">комм.</div></div></template></Card>
     </div>
 
     <Message v-if="list.error.value" severity="error" class="w-full">{{ list.error.value }}</Message>
@@ -47,17 +47,17 @@ const gate = useBusinessPinGate()
     <div v-if="list.loading.value" class="space-y-2">
       <Skeleton v-for="i in 4" :key="i" height="76px" class="!rounded-2xl" />
     </div>
-    <div v-else-if="!list.pins.value.length" class="rounded-[24px] border-2 border-dashed border-stone-200 dark:border-zinc-700 p-6 text-center">
+    <div v-else-if="!list.pins.value.length" class="rounded-[24px] border-2 border-dashed border-stone-200 dark:border-white/10 p-6 text-center">
       <div class="text-[15px] font-black dark:text-white">Пинов пока нет</div>
       <p class="text-[13px] text-stone-500 dark:text-zinc-400 mt-1">Создайте первый пин на карте — клиенты увидят его рядом.</p>
-      <Link v-if="gate.canCreatePin.value" href="/map" class="inline-block mt-3"><Button label="Создать пин" icon="pi pi-map-marker" rounded class="!bg-gradient-to-r !from-indigo-500 !to-violet-600 !border-0 !text-white" /></Link>
+      <Link v-if="gate.canCreatePin.value" href="/map" class="inline-block mt-3"><Button label="Создать пин" icon="pi pi-map-marker" rounded class="!bg-gradient-to-r !from-rose-500 !via-pink-500 !to-fuchsia-500 !border-0 !text-white" /></Link>
     </div>
     <div v-else class="space-y-2">
       <Link
         v-for="pin in list.pins.value"
         :key="pin.id"
         :href="`/map?pin=${pin.id}`"
-        class="block rounded-2xl border border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-4 py-3 hover:border-indigo-400 transition active:scale-[0.99]"
+        class="block rounded-2xl border border-stone-200 dark:border-white/10 bg-white dark:bg-[#0F121F] px-4 py-3 hover:border-indigo-400 transition active:scale-[0.99]"
       >
         <div class="flex items-center gap-2">
           <div class="text-sm font-bold truncate dark:text-white flex-1">{{ pin.title }}</div>

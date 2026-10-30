@@ -7,8 +7,8 @@ const m = useAppModulesSettings()
 </script>
 
 <template>
-  <div class="rounded-2xl border border-stone-200/70 dark:border-zinc-800 px-4 py-3">
-    <div v-if="m.legacy.value && m.hasExtras.value" class="rounded-xl bg-stone-100 dark:bg-zinc-800 px-3 py-2 text-xs text-stone-600 dark:text-zinc-300">
+  <div class="rounded-2xl border border-stone-200/70 dark:border-white/10 px-4 py-3">
+    <div v-if="m.legacy.value && m.hasExtras.value" class="rounded-xl bg-stone-100 dark:bg-white/10 px-3 py-2 text-xs text-stone-600 dark:text-zinc-300">
       Включено всё. Выключи лишнее.
     </div>
 
@@ -16,7 +16,7 @@ const m = useAppModulesSettings()
       <div
         v-for="row in m.rows.value"
         :key="row.id"
-        class="flex items-center gap-3 rounded-xl border border-stone-200/60 dark:border-zinc-800 px-3 py-2.5"
+        class="flex items-center gap-3 rounded-xl border border-stone-200/60 dark:border-white/10 px-3 py-2.5"
       >
         <i :class="[row.icon, 'text-base text-stone-500 dark:text-zinc-400 shrink-0']" />
         <div class="flex-1 text-sm min-w-0">

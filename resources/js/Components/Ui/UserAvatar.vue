@@ -33,7 +33,7 @@ const isPlaceholder = computed(() => {
     v-else
     role="img"
     :aria-label="alt"
-    class="grid h-full w-full place-items-center overflow-hidden rounded-[inherit] bg-stone-200 text-stone-400 dark:bg-zinc-700 dark:text-zinc-400"
+    class="grid h-full w-full place-items-center overflow-hidden rounded-[inherit] bg-stone-200 text-stone-400 dark:bg-white/10 dark:text-zinc-400"
   >
     <svg viewBox="0 0 64 64" fill="currentColor" aria-hidden="true" class="h-3/5 w-3/5">
       <circle cx="32" cy="22" r="11" />

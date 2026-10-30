@@ -103,12 +103,12 @@ onBeforeUnmount(() => {
     <Transition name="lock-fade">
       <div v-if="lock.locked.value" data-lock-overlay data-lock-scroll class="fixed inset-0 z-[200] overflow-y-auto overscroll-contain bg-[#0f1420]/70 backdrop-blur-2xl">
         <div class="min-h-full grid place-items-center p-4">
-          <div :key="shakeKey" :class="['w-full max-w-[340px] rounded-[28px] bg-white dark:bg-zinc-900 border border-white/10 shadow-2xl px-6 py-8 text-center', shakeKey && 'lock-shake']">
+          <div :key="shakeKey" :class="['w-full max-w-[340px] rounded-[28px] bg-white dark:bg-[#0F121F] border border-white/10 shadow-2xl px-6 py-8 text-center', shakeKey && 'lock-shake']">
             <Avatar :image="avatarSrc" shape="circle" size="xlarge" class="!w-20 !h-20 mx-auto shadow-soft" />
             <div class="mt-4 font-black text-lg tracking-tight dark:text-white truncate">{{ user?.name || 'ULove' }}</div>
             <p class="text-xs text-stone-500 dark:text-zinc-400 mt-1">{{ lock.kind.value === 'alpha8' ? 'Введи пароль · 8 символов' : 'Введи PIN · 4 цифры' }}</p>
             <div v-if="lock.kind.value === 'alpha8'" class="mt-5 relative">
-              <input ref="textInput" v-model="input" @input="cleanInput" @keydown.enter.prevent="submit" :type="showPass ? 'text' : 'password'" maxlength="8" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="••••••••" class="w-full min-h-[52px] px-4 pr-12 rounded-2xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800 text-center text-lg font-black tracking-[0.3em] outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition dark:text-white" />
+              <input ref="textInput" v-model="input" @input="cleanInput" @keydown.enter.prevent="submit" :type="showPass ? 'text' : 'password'" maxlength="8" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="••••••••" class="w-full min-h-[52px] px-4 pr-12 rounded-2xl border border-stone-200 dark:border-white/10 bg-stone-50 dark:bg-white/[0.06] text-center text-lg font-black tracking-[0.3em] outline-none focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 transition dark:text-white" />
               <button type="button" @click="showPass = !showPass" class="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 grid place-items-center rounded-xl text-stone-400 hover:text-stone-600 dark:hover:text-zinc-200 transition" :aria-label="showPass ? 'Скрыть' : 'Показать'">
                 <i :class="showPass ? 'pi pi-eye-slash' : 'pi pi-eye'"></i>
               </button>
@@ -120,16 +120,16 @@ onBeforeUnmount(() => {
             <p v-if="lock.error.value" class="mt-2 text-xs font-semibold text-red-500">{{ lock.error.value }}</p>
             <p v-else class="mt-2 text-[11px] text-stone-400">Код проверяется на этом устройстве</p>
             <div v-if="lock.kind.value !== 'alpha8'" class="mt-5 grid grid-cols-3 gap-2.5">
-              <button v-for="n in 9" :key="n" type="button" @click="press(String(n))" class="h-14 rounded-2xl bg-stone-100 dark:bg-zinc-800 text-xl font-bold dark:text-white hover:bg-stone-200 dark:hover:bg-zinc-700 active:scale-95 transition">
+              <button v-for="n in 9" :key="n" type="button" @click="press(String(n))" class="h-14 rounded-2xl bg-stone-100 dark:bg-white/[0.06] text-xl font-bold dark:text-white hover:bg-stone-200 dark:hover:bg-white/15 active:scale-95 transition">
                 {{ n }}
               </button>
               <span />
-              <button type="button" @click="press('0')" class="h-14 rounded-2xl bg-stone-100 dark:bg-zinc-800 text-xl font-bold dark:text-white hover:bg-stone-200 dark:hover:bg-zinc-700 active:scale-95 transition">0</button>
-              <button type="button" @click="backspace" class="h-14 rounded-2xl bg-stone-100 dark:bg-zinc-800 hover:bg-stone-200 dark:hover:bg-zinc-700 active:scale-95 transition grid place-items-center">
+              <button type="button" @click="press('0')" class="h-14 rounded-2xl bg-stone-100 dark:bg-white/[0.06] text-xl font-bold dark:text-white hover:bg-stone-200 dark:hover:bg-white/15 active:scale-95 transition">0</button>
+              <button type="button" @click="backspace" class="h-14 rounded-2xl bg-stone-100 dark:bg-white/[0.06] hover:bg-stone-200 dark:hover:bg-white/15 active:scale-95 transition grid place-items-center">
                 <i class="pi pi-delete-left text-lg dark:text-white" />
               </button>
             </div>
-            <Button @click="submit" :loading="lock.verifying.value" :disabled="input.length < need" label="Разблокировать" rounded class="w-full mt-5 !bg-gradient-to-r !from-violet-600 !to-indigo-600 !border-0 !text-white !shadow-glow" />
+            <Button @click="submit" :loading="lock.verifying.value" :disabled="input.length < need" label="Разблокировать" rounded class="w-full mt-5 !bg-gradient-to-r !from-rose-500 !via-pink-500 !to-fuchsia-500 !border-0 !text-white !shadow-glow" />
             <button type="button" @click="openReset" class="mt-3 text-xs text-stone-400 hover:text-stone-600 dark:hover:text-zinc-200 transition">Забыл код? Сбросить</button>
           </div>
         </div>
@@ -141,7 +141,7 @@ onBeforeUnmount(() => {
           :closable="!reset.sending.value && !reset.verifying.value"
           header="Сброс скринлокера"
           :style="{ width: '400px', maxWidth: '94vw' }"
-          :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none overflow-hidden' }, header: { class: '!p-5 !pb-0 !border-0 dark:!bg-zinc-900 dark:!text-white' }, content: { class: '!px-5 !py-4 dark:!bg-zinc-900' }, footer: { class: '!px-5 !pb-5 !pt-1 !border-0 dark:!bg-zinc-900' } }"
+          :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none overflow-hidden' }, header: { class: '!p-5 !pb-0 !border-0 dark:!bg-[#0F121F] dark:!text-white' }, content: { class: '!px-5 !py-4 dark:!bg-[#0F121F]' }, footer: { class: '!px-5 !pb-5 !pt-1 !border-0 dark:!bg-[#0F121F]' } }"
         >
           <div class="flex items-start gap-3">
             <span class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-pink-100 text-pink-600 dark:bg-pink-500/15 dark:text-pink-300"><i class="pi pi-unlock" /></span>
@@ -157,7 +157,7 @@ onBeforeUnmount(() => {
                 label="Получить код на почту"
                 icon="pi pi-envelope"
                 rounded
-                class="w-full !bg-gradient-to-r !from-rose-500 !via-pink-500 !to-orange-400 !border-0 !text-white !shadow-lg !shadow-pink-500/25 active:!scale-[0.98] transition"
+                class="w-full !bg-gradient-to-r !from-rose-500 !via-pink-500 !to-fuchsia-500 !border-0 !text-white !shadow-lg !shadow-pink-500/25 active:!scale-[0.98] transition"
                 :loading="reset.sending.value"
                 @click="reset.requestCode()"
               />
@@ -204,7 +204,7 @@ onBeforeUnmount(() => {
                 label="Сбросить код"
                 icon="pi pi-check"
                 rounded
-                class="w-full !bg-gradient-to-r !from-rose-500 !via-pink-500 !to-orange-400 !border-0 !text-white !shadow-lg !shadow-pink-500/25 active:!scale-[0.98] transition"
+                class="w-full !bg-gradient-to-r !from-rose-500 !via-pink-500 !to-fuchsia-500 !border-0 !text-white !shadow-lg !shadow-pink-500/25 active:!scale-[0.98] transition"
                 :loading="reset.verifying.value"
                 :disabled="!reset.canSubmit.value"
                 @click="reset.verifyCode()"

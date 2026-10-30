@@ -46,7 +46,7 @@ async function onPushToggle(): Promise<void> {
       <BusinessVerificationBadge :status="settings.profile.value?.verification_status ?? 'draft'" />
     </div>
 
-    <Card class="!rounded-[24px] !border-stone-200 dark:!border-zinc-800 !bg-white dark:!bg-zinc-900 !shadow-sm">
+    <Card class="!rounded-[24px] !border-stone-200 dark:!border-white/10 !bg-white dark:!bg-[#0F121F] !shadow-sm">
       <template #content>
         <div class="flex items-start gap-3">
           <BusinessLogoPicker />
@@ -58,7 +58,7 @@ async function onPushToggle(): Promise<void> {
             <div class="text-[13px] text-stone-500 dark:text-zinc-400 truncate">{{ settings.profile.value?.legal_address ?? 'Юридический адрес не указан' }}</div>
           </div>
         </div>
-        <div class="mt-4 rounded-2xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800/60 p-3.5">
+        <div class="mt-4 rounded-2xl border border-stone-200 dark:border-white/10 bg-stone-50 dark:bg-white/[0.06] p-3.5">
           <label class="text-[13px] font-bold dark:text-white">Бренд — название для клиентов</label>
           <p class="text-[12px] text-stone-500 dark:text-zinc-400 mt-0.5">Видно везде: кабинет, витрина, карта и поиск. Юрназвание остаётся в реквизитах.</p>
           <div class="mt-2 flex gap-2">
@@ -73,7 +73,7 @@ async function onPushToggle(): Promise<void> {
       </template>
     </Card>
 
-    <Card class="!rounded-[24px] !border-stone-200 dark:!border-zinc-800 !bg-white dark:!bg-zinc-900 !shadow-sm">
+    <Card class="!rounded-[24px] !border-stone-200 dark:!border-white/10 !bg-white dark:!bg-[#0F121F] !shadow-sm">
       <template #content>
         <div class="font-black text-[16px] dark:text-white">Обложка</div>
         <p class="text-[13px] text-stone-500 dark:text-zinc-400 mt-0.5">Баннер плашки кабинета и профиля.</p>
@@ -83,7 +83,7 @@ async function onPushToggle(): Promise<void> {
       </template>
     </Card>
 
-    <Card class="!rounded-[24px] !border-stone-200 dark:!border-zinc-800 !bg-white dark:!bg-zinc-900 !shadow-sm">
+    <Card class="!rounded-[24px] !border-stone-200 dark:!border-white/10 !bg-white dark:!bg-[#0F121F] !shadow-sm">
       <template #content>
         <div class="font-black text-[16px] dark:text-white">Фотографии</div>
         <p class="text-[13px] text-stone-500 dark:text-zinc-400 mt-0.5">Листаются в пинах компании на карте.</p>
@@ -94,10 +94,10 @@ async function onPushToggle(): Promise<void> {
       </template>
     </Card>
 
-    <Card class="!rounded-[24px] !border-stone-200 dark:!border-zinc-800 !bg-white dark:!bg-zinc-900 !shadow-sm">
+    <Card class="!rounded-[24px] !border-stone-200 dark:!border-white/10 !bg-white dark:!bg-[#0F121F] !shadow-sm">
       <template #content>
         <div class="flex items-center gap-3">
-          <span class="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-white grid place-items-center shrink-0"><i class="pi pi-crown" /></span>
+          <span class="w-11 h-11 rounded-2xl bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white grid place-items-center shrink-0"><i class="pi pi-crown" /></span>
           <div class="min-w-0 flex-1">
             <div class="font-black text-[16px] dark:text-white">Тариф</div>
             <div class="text-[13px] text-stone-500 dark:text-zinc-400">Сейчас: {{ settings.planLabel.value }}</div>
@@ -114,11 +114,11 @@ async function onPushToggle(): Promise<void> {
       </template>
     </Card>
 
-    <Card class="!rounded-[24px] !border-stone-200 dark:!border-zinc-800 !bg-white dark:!bg-zinc-900 !shadow-sm">
+    <Card class="!rounded-[24px] !border-stone-200 dark:!border-white/10 !bg-white dark:!bg-[#0F121F] !shadow-sm">
       <template #content>
         <div class="font-black text-[16px] dark:text-white">Уведомления</div>
         <p class="text-[13px] text-stone-500 dark:text-zinc-400 mt-0.5">Сообщения клиентов и статус проверки — даже при закрытой вкладке.</p>
-        <div class="mt-3 flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-700 px-4 py-3">
+        <div class="mt-3 flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-white/10 px-4 py-3">
           <i class="pi pi-bell text-lg text-indigo-500 shrink-0" />
           <div class="flex-1 text-sm min-w-0">
             <p class="font-semibold dark:text-white">Системные уведомления</p>
@@ -138,10 +138,10 @@ async function onPushToggle(): Promise<void> {
       </template>
     </Card>
 
-    <Card class="!rounded-[24px] !border-stone-200 dark:!border-zinc-800 !bg-white dark:!bg-zinc-900 !shadow-sm">
+    <Card class="!rounded-[24px] !border-stone-200 dark:!border-white/10 !bg-white dark:!bg-[#0F121F] !shadow-sm">
       <template #content>
         <div class="font-black text-[16px] dark:text-white">Внешний вид</div>
-        <div class="mt-3 flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-700 px-4 py-3">
+        <div class="mt-3 flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-white/10 px-4 py-3">
           <i class="pi pi-palette text-lg text-indigo-500 shrink-0" />
           <div class="flex-1 text-sm min-w-0">
             <p class="font-semibold dark:text-white">Тёмная тема</p>
@@ -152,10 +152,10 @@ async function onPushToggle(): Promise<void> {
       </template>
     </Card>
 
-    <Card class="!rounded-[24px] !border-stone-200 dark:!border-zinc-800 !bg-white dark:!bg-zinc-900 !shadow-sm">
+    <Card class="!rounded-[24px] !border-stone-200 dark:!border-white/10 !bg-white dark:!bg-[#0F121F] !shadow-sm">
       <template #content>
         <div class="font-black text-[16px] dark:text-white">Приложение</div>
-        <div class="mt-3 flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-zinc-700 px-4 py-3">
+        <div class="mt-3 flex items-center gap-3 rounded-2xl border border-stone-200 dark:border-white/10 px-4 py-3">
           <i class="pi pi-mobile text-lg text-indigo-500 shrink-0" />
           <div class="flex-1 text-sm min-w-0">
             <p class="font-semibold dark:text-white">Режим приложения</p>

@@ -26,19 +26,19 @@ export interface ChatPeerTheme {
 
 const THEMES: Record<ChatPeerTone, ChatPeerTheme> = {
   ulove: {
-    ring: 'bg-gradient-to-br from-[#FD267D] to-[#FF7854]',
-    badge: 'bg-gradient-to-r from-[#FD267D] to-[#FF7854]',
+    ring: 'bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500',
+    badge: 'bg-gradient-to-r from-rose-500 via-pink-500 to-fuchsia-500',
     match: 'bg-rose-100 text-rose-600 dark:bg-rose-950 dark:text-rose-300',
     sectionTitle: 'Анкета ULove',
-    cta: '!bg-gradient-to-r !from-[#FD267D] !to-[#FF7854]',
+    cta: '!bg-gradient-to-r !from-rose-500 !via-pink-500 !to-fuchsia-500',
     toggleActive: '!bg-rose-50 !text-rose-600 dark:!bg-rose-500/15 dark:!text-rose-300',
   },
   upin: {
-    ring: 'bg-gradient-to-br from-sky-500 to-indigo-600',
-    badge: 'bg-gradient-to-r from-sky-500 to-indigo-600',
+    ring: 'bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500',
+    badge: 'bg-gradient-to-r from-rose-500 via-pink-500 to-fuchsia-500',
     match: 'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300',
     sectionTitle: 'О собеседнике',
-    cta: '!bg-gradient-to-r !from-sky-500 !to-indigo-600',
+    cta: '!bg-gradient-to-r !from-rose-500 !via-pink-500 !to-fuchsia-500',
     toggleActive: '!bg-sky-50 !text-sky-600 dark:!bg-sky-500/15 dark:!text-sky-300',
   },
 }

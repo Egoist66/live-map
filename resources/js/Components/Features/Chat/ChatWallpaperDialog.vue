@@ -85,7 +85,7 @@ async function onReset(): Promise<void> {
 }
 </script>
 <template>
-  <Dialog :visible="open" @update:visible="(v:boolean)=>emit('update:open', v)" modal header="Фон чата" :style="{ width: '440px', maxWidth: '94vw' }" :pt="{ content: { class: '!pt-1' } }">
+  <Dialog :visible="open" @update:visible="(v:boolean)=>emit('update:open', v)" modal header="Фон чата" :style="{ width: '440px', maxWidth: '94vw' }" :pt="{ root: { class: 'dark:!bg-[#0F121F] dark:!border-white/10' }, content: { class: '!pt-1' } }">
     <p class="text-xs text-stone-500 dark:text-zinc-400 mb-3">Фон общий для беседы — смена применяется у обоих собеседников сразу.</p>
     <div v-if="!props.conversationId" class="mb-3">
       <Message severity="warn" :closable="false" class="!rounded-2xl !text-xs">Откройте диалог, чтобы сменить фон.</Message>
@@ -98,9 +98,9 @@ async function onReset(): Promise<void> {
         @click="onPickPreset(preset.id)"
         :disabled="!props.conversationId || wallpaper.isSaving.value"
         :aria-label="preset.label"
-        :class="['flex flex-col gap-1.5 rounded-2xl border p-1.5 transition active:scale-95 disabled:opacity-50', wallpaper.activePresetId.value === preset.id ? '!border-violet-600 ring-2 ring-violet-600/30' : 'border-stone-200 dark:border-zinc-700 hover:border-violet-400']"
+        :class="['flex flex-col gap-1.5 rounded-2xl border p-1.5 transition active:scale-95 disabled:opacity-50', wallpaper.activePresetId.value === preset.id ? '!border-violet-600 ring-2 ring-violet-600/30' : 'border-stone-200 dark:border-white/10 hover:border-violet-400']"
       >
-        <span :style="preset.css ? { background: preset.css } : {}" :class="['h-16 rounded-xl', preset.css ? '' : 'bg-stone-100 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 grid place-items-center text-stone-400 text-lg']">
+        <span :style="preset.css ? { background: preset.css } : {}" :class="['h-16 rounded-xl', preset.css ? '' : 'bg-stone-100 dark:bg-white/10 border border-stone-200 dark:border-white/10 grid place-items-center text-stone-400 text-lg']">
           <i v-if="!preset.css" class="pi pi-ban"></i>
         </span>
         <span class="text-[11px] font-semibold text-center truncate dark:text-zinc-200">{{ preset.label }}</span>
@@ -132,7 +132,7 @@ async function onReset(): Promise<void> {
       @click="fileInput?.click()"
       :disabled="!props.conversationId || wallpaper.isSaving.value"
       aria-label="Свой фон"
-      :class="['w-full flex items-center gap-3 rounded-2xl border p-1.5 pr-3 transition active:scale-[0.99] disabled:opacity-50 overflow-hidden text-left', wallpaper.isCustomActive.value ? '!border-violet-600 ring-2 ring-violet-600/30' : 'border-dashed border-stone-300 dark:border-zinc-600 hover:border-violet-400']"
+      :class="['w-full flex items-center gap-3 rounded-2xl border p-1.5 pr-3 transition active:scale-[0.99] disabled:opacity-50 overflow-hidden text-left', wallpaper.isCustomActive.value ? '!border-violet-600 ring-2 ring-violet-600/30' : 'border-dashed border-stone-300 dark:border-white/20 hover:border-violet-400']"
     >
       <span class="h-16 w-24 rounded-xl overflow-hidden grid place-items-center bg-violet-50 dark:bg-violet-500/10 text-violet-500 shrink-0">
         <img v-if="wallpaper.customImageUrl.value" :src="wallpaper.customImageUrl.value" alt="" class="w-full h-full object-cover" />

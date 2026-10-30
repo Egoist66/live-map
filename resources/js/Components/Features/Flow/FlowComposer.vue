@@ -27,7 +27,7 @@ function onVideo(e: Event) {
 </script>
 
 <template>
-  <Card class="!rounded-3xl !border-stone-200 dark:!border-zinc-800 !bg-white dark:!bg-zinc-900 !shadow-soft overflow-hidden">
+  <Card class="!rounded-3xl !border-stone-200 dark:!border-white/10 !bg-white dark:!bg-[#0F121F] !shadow-soft overflow-hidden">
     <template #content>
       <div class="p-3 sm:p-5">
         <div class="flex-1 min-w-0">
@@ -42,14 +42,14 @@ function onVideo(e: Event) {
               rows="4"
               auto-resize
               placeholder="Что нового? Поделитесь новостью…"
-              class="w-full !rounded-2xl !bg-stone-100 dark:!bg-zinc-800/70 !border-0 !text-[15px] !min-h-[7rem]"
+              class="w-full !rounded-2xl !bg-stone-100 dark:!bg-white/[0.06] !border-0 !text-[15px] !min-h-[7rem]"
             />
             <FlowComposerPreview :previews="composer.imagePreviews.value" @remove="composer.removeImageAt($event)" />
-            <div v-if="composer.videoPreview.value" class="relative mt-3 overflow-hidden rounded-2xl border border-stone-200 dark:border-zinc-700">
+            <div v-if="composer.videoPreview.value" class="relative mt-3 overflow-hidden rounded-2xl border border-stone-200 dark:border-white/10">
               <video :src="composer.videoPreview.value" controls preload="metadata" playsinline class="max-h-72 w-full bg-black" />
               <Button icon="pi pi-times" rounded severity="danger" class="!absolute !top-2 !right-2 !w-8 !h-8" @click="composer.pickVideo(null)" />
             </div>
-            <div v-if="composer.pollEnabled.value" class="mt-3 rounded-2xl border border-stone-200 dark:border-zinc-700 p-3">
+            <div v-if="composer.pollEnabled.value" class="mt-3 rounded-2xl border border-stone-200 dark:border-white/10 p-3">
               <div class="flex items-center gap-2 text-sm font-bold dark:text-white">
                 <i class="pi pi-chart-bar text-violet-500" />Опрос
                 <span class="flex-1" />

@@ -131,8 +131,8 @@ function canDeleteComment(c: any): boolean {
 }
 </script>
 <template>
-  <div v-if="pin" ref="cardRef" :style="cardStyle" :class="isEditingPin ? 'sm:max-h-[calc(100dvh-2rem)]' : 'sm:max-h-none'" class="above-bottomnav absolute inset-x-2 sm:inset-x-auto top-auto max-h-[72dvh] sm:right-4 sm:top-4 sm:w-[380px] bg-white dark:bg-zinc-900 rounded-[20px] shadow-float border border-stone-200 dark:border-zinc-700 flex flex-col overflow-hidden z-20">
-    <div class="p-4 sm:p-5 border-b border-stone-200 dark:border-zinc-700 shrink-0 min-h-0 overflow-y-auto overscroll-contain" :class="isEditingPin ? 'max-h-[30dvh] sm:max-h-[280px]' : 'max-h-[44dvh] sm:max-h-[380px]'">
+  <div v-if="pin" ref="cardRef" :style="cardStyle" :class="isEditingPin ? 'sm:max-h-[calc(100dvh-2rem)]' : 'sm:max-h-none'" class="above-bottomnav absolute inset-x-2 sm:inset-x-auto top-auto max-h-[72dvh] sm:right-4 sm:top-4 sm:w-[380px] bg-white dark:bg-[#0F121F] rounded-[20px] shadow-float border border-stone-200 dark:border-white/10 flex flex-col overflow-hidden z-20">
+    <div class="p-4 sm:p-5 border-b border-stone-200 dark:border-white/10 shrink-0 min-h-0 overflow-y-auto overscroll-contain" :class="isEditingPin ? 'max-h-[30dvh] sm:max-h-[280px]' : 'max-h-[44dvh] sm:max-h-[380px]'">
       <div v-if="!pinEdit.editing.value" class="flex justify-between items-start gap-3">
         <h3 class="font-bold leading-tight pr-2 text-[15px] break-words min-w-0 flex-1">{{ pin.title }}</h3>
         <div class="flex items-center gap-1 shrink-0">
@@ -148,7 +148,7 @@ function canDeleteComment(c: any): boolean {
           <InputText v-model="pinEdit.promo.value" maxlength="140" placeholder="Промо-подпись · видна на карте" class="w-full !rounded-xl" />
           <small class="text-[11px] text-indigo-500">Короткий завлекающий текст под пином. Пусто — покажем заголовок.</small>
         </div>
-        <div class="flex gap-1.5 flex-wrap"><button v-for="c in categories" :key="c.v" @click="pinEdit.selectCategory(c.v)" :class="['px-3 py-1.5 rounded-full text-xs font-semibold border transition active:scale-95', (pinEdit.category.value as any) === c.v ? 'bg-stone-900 dark:bg-white text-white dark:text-ink-900 border-stone-900 dark:border-white' : 'bg-zinc-500/10 dark:bg-zinc-500/15 border-zinc-500/25 dark:border-zinc-500/30 text-ink-900 dark:text-zinc-200 hover:bg-zinc-500/20']">{{ c.i }} {{ c.l }}</button></div>
+        <div class="flex gap-1.5 flex-wrap"><button v-for="c in categories" :key="c.v" @click="pinEdit.selectCategory(c.v)" :class="['px-3 py-1.5 rounded-full text-xs font-semibold border transition active:scale-95', (pinEdit.category.value as any) === c.v ? 'bg-stone-900 dark:bg-white text-white dark:text-ink-900 border-stone-900 dark:border-white' : 'bg-zinc-500/10 dark:bg-white/10 border-zinc-500/25 dark:border-white/15 text-ink-900 dark:text-zinc-200 hover:bg-zinc-500/20']">{{ c.i }} {{ c.l }}</button></div>
         <div class="flex gap-2">
           <Button label="Сохранить" rounded class="flex-1 !bg-stone-900 dark:!bg-white dark:!text-ink-900 !border-stone-900 dark:!border-white" :loading="pinEdit.updating.value" @click="emit('saveEdit')" />
           <Button label="Отмена" severity="secondary" outlined rounded class="flex-1" @click="pinEdit.cancel()" />
@@ -173,7 +173,7 @@ function canDeleteComment(c: any): boolean {
       <ModeratedContent v-if="!pinEdit.editing.value && pin.body" :text="String(pin.body || '')" :moderation="(pin as any).moderation">
         <p class="text-sm text-stone-600 dark:text-zinc-300 mt-2 leading-relaxed break-words overflow-wrap-anywhere comment-body" v-html="renderWithMentions(pin.body || '')" @click="mentionNav.onRichClick"></p>
       </ModeratedContent>
-      <div v-if="!pinEdit.editing.value && (pin as any).promo" class="mt-2 text-[13px] font-bold leading-snug bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-xl px-3 py-2 shadow-glow">📢 {{ (pin as any).promo }}</div>
+      <div v-if="!pinEdit.editing.value && (pin as any).promo" class="mt-2 text-[13px] font-bold leading-snug bg-gradient-to-r from-rose-500 via-pink-500 to-fuchsia-500 text-white rounded-xl px-3 py-2 shadow-glow">📢 {{ (pin as any).promo }}</div>
       <div v-if="!pinEdit.editing.value && companyGallery.photos.value.length" class="mt-2 -mx-1">
         <Galleria
           :value="companyGallery.photos.value"
@@ -182,7 +182,7 @@ function canDeleteComment(c: any): boolean {
           :show-indicators="companyGallery.photos.value.length > 1"
           :change-item-on-indicator-hover="false"
           :circular="companyGallery.photos.value.length > 1"
-          container-class="!rounded-2xl overflow-hidden border border-stone-200 dark:border-zinc-700"
+          container-class="!rounded-2xl overflow-hidden border border-stone-200 dark:border-white/10"
         >
           <template #item="{ item }">
             <img :src="(item as any).url" :alt="(item as any).caption ?? 'Фото компании'" class="w-full h-44 sm:h-52 object-cover" loading="lazy" />
@@ -199,15 +199,15 @@ function canDeleteComment(c: any): boolean {
       <div v-if="!pinEdit.editing.value && Number((pin as any).district_id) > 0" class="mt-2 text-[11px] leading-snug bg-violet-50 dark:bg-violet-950/40 border border-violet-200 dark:border-violet-800 text-violet-800 dark:text-violet-200 rounded-xl px-2.5 py-1.5">🏘️ Пин района · видят только жители в своей зоне</div>
       <div v-if="!pinEdit.editing.value && blur" title="Точка на карте сдвинута от реального места" class="mt-2 text-[11px] leading-snug bg-violet-50 dark:bg-violet-950/40 border border-violet-200 dark:border-violet-800 text-violet-800 dark:text-violet-200 rounded-xl px-2.5 py-1.5">📍 {{ blur.hint }}</div>
       <div v-if="!pinEdit.editing.value" class="flex flex-wrap gap-1.5 mt-3 items-center">
-        <span class="text-xs bg-stone-100 dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 text-stone-700 dark:text-zinc-200 rounded-full px-2.5 py-1 font-medium">{{ catMeta ? `${catMeta.i} ${catMeta.l}` : pin.category }}</span>
+        <span class="text-xs bg-stone-100 dark:bg-white/[0.06] border border-stone-200 dark:border-white/10 text-stone-700 dark:text-zinc-200 rounded-full px-2.5 py-1 font-medium">{{ catMeta ? `${catMeta.i} ${catMeta.l}` : pin.category }}</span>
         <span v-if="(pin.gender_audience ?? 'all') === 'female'" class="text-xs bg-pink-600 text-white rounded-full px-2.5 py-1 font-medium">👩 Только женщины</span>
         <span v-else-if="(pin.gender_audience ?? 'all') === 'male'" class="text-xs bg-sky-600 text-white rounded-full px-2.5 py-1 font-medium">👨 Только мужчины</span>
-        <Link v-if="pin.user && !pin.is_anonymous" :href="userProfileUrl(pin.user)" class="hover:opacity-80"><Chip :label="`${pin.user?.name} · ${pin.user?.level || 'novice'}`" :image="avatarSrcFor(pin.user) || undefined" class="!bg-white dark:!bg-zinc-800 !border-stone-200 dark:!border-zinc-700 !rounded-full !text-xs !text-ink-900 dark:!text-zinc-100" /></Link>
+        <Link v-if="pin.user && !pin.is_anonymous" :href="userProfileUrl(pin.user)" class="hover:opacity-80"><Chip :label="`${pin.user?.name} · ${pin.user?.level || 'novice'}`" :image="avatarSrcFor(pin.user) || undefined" class="!bg-white dark:!bg-white/[0.06] !border-stone-200 dark:!border-white/10 !rounded-full !text-xs !text-ink-900 dark:!text-zinc-100" /></Link>
         <span class="text-xs bg-amber-50 dark:bg-amber-500/15 border border-amber-200 dark:border-amber-400/30 text-amber-800 dark:text-amber-300 rounded-full px-2.5 py-1">{{ pin.expires_at ? `до ${formatTime(pin.expires_at)}` : '∞ бессрочно' }}</span>
       </div>
       <div v-if="!pinEdit.editing.value" class="mt-3">
         <div class="flex items-center justify-between text-[11px] font-semibold text-stone-500 dark:text-zinc-400"><span>❤️ {{ lifetime.label.value }}</span><span v-if="!lifetime.isEternal.value && !lifetime.isScheduled.value">{{ Math.round(lifetime.percent.value * 100) }}%</span></div>
-        <div v-if="!lifetime.isEternal.value" class="mt-1 h-1.5 rounded-full bg-stone-200 dark:bg-zinc-700 overflow-hidden"><div class="h-full rounded-full transition-all" :style="{ width: `${Math.round(lifetime.percent.value * 100)}%` }" :class="lifetime.tone.value === 'good' ? 'bg-emerald-500' : lifetime.tone.value === 'warn' ? 'bg-amber-500' : 'bg-red-500'" /></div>
+        <div v-if="!lifetime.isEternal.value" class="mt-1 h-1.5 rounded-full bg-stone-200 dark:bg-white/10 overflow-hidden"><div class="h-full rounded-full transition-all" :style="{ width: `${Math.round(lifetime.percent.value * 100)}%` }" :class="lifetime.tone.value === 'good' ? 'bg-emerald-500' : lifetime.tone.value === 'warn' ? 'bg-amber-500' : 'bg-red-500'" /></div>
       </div>
       <div v-if="!pinEdit.editing.value && pin.is_owner" class="mt-3">
         <PinInviteButton :pin-id="pin.id" :is-owner="pin.is_owner" />
@@ -219,11 +219,11 @@ function canDeleteComment(c: any): boolean {
         </div>
         <button @click="emit('react', 'fire')" :disabled="reacting" :class="['px-4 rounded-full text-xs font-semibold border active:scale-95 transition disabled:opacity-50', pin.my_reaction === 'fire' ? 'bg-orange-500 text-white border-orange-500 shadow-[0_4px_16px_-4px_rgba(249,115,22,0.5)]' : 'bg-orange-500/10 dark:bg-orange-500/15 border-orange-500/30 dark:border-orange-400/30 hover:bg-orange-500/20']">🔥</button>
         <button @click="emit('react', 'useful')" :disabled="reacting" :class="['px-4 rounded-full text-xs font-semibold border active:scale-95 transition disabled:opacity-50', pin.my_reaction === 'useful' ? 'bg-emerald-500 text-white border-emerald-500 shadow-[0_4px_16px_-4px_rgba(16,185,129,0.5)]' : 'bg-emerald-500/10 dark:bg-emerald-500/15 border-emerald-500/30 dark:border-emerald-400/30 hover:bg-emerald-500/20']">👍</button>
-        <button @click="emit('report')" :disabled="reporting" class="w-10 h-10 rounded-full grid place-items-center border active:scale-95 transition disabled:opacity-50 bg-zinc-500/10 dark:bg-zinc-500/15 border-zinc-500/25 dark:border-zinc-500/30 text-zinc-500 dark:text-zinc-300 hover:bg-red-500/15 hover:border-red-500/40 hover:text-red-500 dark:hover:text-red-400">⚠</button>
+        <button @click="emit('report')" :disabled="reporting" class="w-10 h-10 rounded-full grid place-items-center border active:scale-95 transition disabled:opacity-50 bg-zinc-500/10 dark:bg-white/10 border-zinc-500/25 dark:border-white/15 text-zinc-500 dark:text-zinc-300 hover:bg-red-500/15 hover:border-red-500/40 hover:text-red-500 dark:hover:text-red-400">⚠</button>
       </div>
     </div>
     <div ref="listRef" class="flex-1 min-h-[140px] sm:min-h-[200px] overflow-y-auto overscroll-contain p-4 space-y-3 bg-stone-50/40 dark:bg-black/30" :class="isEditingPin ? 'min-h-[160px] sm:min-h-[240px]' : ''" style="webkit-overflow-scrolling: touch;">
-      <div v-for="root in comments" :key="root.id" :id="`pin-comment-${root.id}`" :class="['bg-white dark:bg-zinc-800 border rounded-2xl p-3.5', Number(highlightCommentId) === Number(root.id) ? 'border-violet-500 ring-2 ring-violet-500/40' : 'border-stone-200 dark:border-zinc-700']">
+      <div v-for="root in comments" :key="root.id" :id="`pin-comment-${root.id}`" :class="['bg-white dark:bg-white/[0.06] border rounded-2xl p-3.5', Number(highlightCommentId) === Number(root.id) ? 'border-violet-500 ring-2 ring-violet-500/40' : 'border-stone-200 dark:border-white/10']">
         <div class="font-semibold text-xs flex items-center gap-2 dark:text-zinc-100">
           <img v-if="!root.is_anonymous" :src="avatarSrcFor(root.user)" class="w-6 h-6 rounded-full object-cover shrink-0" alt="" />
           <span class="truncate">{{ authorName(root) }}</span>
@@ -261,7 +261,7 @@ function canDeleteComment(c: any): boolean {
       <div v-if="!comments.length" class="text-center py-10"><div class="text-xs text-stone-400 mt-2">Комментариев пока нет<br />Будь первым</div></div>
       <InfiniteSentinel :sentinel="commentsSentinel as any" :has-more="!!commentsHasMore" :loading="!!commentsLoadingMore" />
     </div>
-    <div class="p-3 pb-[calc(0.75rem+var(--sab))] border-t bg-white dark:bg-zinc-900 dark:border-zinc-700 shrink-0">
+    <div class="p-3 pb-[calc(0.75rem+var(--sab))] border-t bg-white dark:bg-[#0F121F] dark:border-white/10 shrink-0">
       <div v-if="replyTo" class="mb-2 flex items-center gap-2 text-[11px] bg-violet-50 dark:bg-violet-950/40 border border-violet-200 dark:border-violet-800 text-violet-800 dark:text-violet-200 rounded-full pl-3 pr-1.5 py-1 w-fit max-w-full">
         <span class="truncate">Ответ для {{ replyTo.is_anonymous ? 'анонима' : '@' + (replyTo.user?.name || 'пользователя') }}</span>
         <button type="button" @click="emit('cancelReply')" class="w-5 h-5 rounded-full grid place-items-center hover:bg-violet-200 dark:hover:bg-violet-800 shrink-0"><i class="pi pi-times text-[9px]"></i></button>
@@ -269,7 +269,7 @@ function canDeleteComment(c: any): boolean {
       <form v-if="!composer.useModalComposer.value" @submit.prevent="onSend" class="relative flex gap-2 items-end">
         <Textarea ref="commentInput" :model-value="commentText" @update:model-value="(v:any)=>{ emit('update:comment', v); onCommentInput() }" @input="onCommentInput" @keyup="onCommentInput" @click="onCommentInput" @focus="onInputFocus" @keydown="(e:any)=>handleEnterToSend(e, onSend)" rows="1" autoResize maxlength="1000" enterkeyhint="enter" autocomplete="off" autocapitalize="sentences" :placeholder="newCommentPlaceholder" class="flex-1 !rounded-2xl max-h-32" :disabled="creatingComment" />
         <Button type="submit" icon="pi pi-send" rounded class="!bg-stone-900 dark:!bg-white dark:!text-ink-900 !border-stone-900 dark:!border-white shrink-0" :loading="creatingComment" />
-        <div v-if="mentions?.mentionOpen.value" class="absolute left-0 right-12 bottom-[calc(100%+8px)] bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl shadow-float overflow-hidden z-30 max-h-56 overflow-y-auto">
+        <div v-if="mentions?.mentionOpen.value" class="absolute left-0 right-12 bottom-[calc(100%+8px)] bg-white dark:bg-white/[0.06] border border-stone-200 dark:border-white/10 rounded-2xl shadow-float overflow-hidden z-30 max-h-56 overflow-y-auto">
           <div v-if="mentions.mentionLoading.value" class="px-4 py-3 text-xs text-stone-400">Ищем людей…</div>
           <template v-else>
             <button v-for="u in mentions.mentionResults.value" :key="u.id" type="button" @click="pickMention(u)" class="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-violet-50 dark:hover:bg-violet-950/40 active:bg-violet-100 transition text-left">
@@ -283,7 +283,7 @@ function canDeleteComment(c: any): boolean {
       <button
         v-else
         type="button"
-        class="w-full flex gap-2 items-center rounded-2xl border border-stone-200 dark:border-zinc-700 bg-stone-50 dark:bg-zinc-800 px-3.5 py-2.5 text-left text-[15px] text-stone-400 dark:text-zinc-500 active:scale-[0.99] transition"
+        class="w-full flex gap-2 items-center rounded-2xl border border-stone-200 dark:border-white/10 bg-stone-50 dark:bg-white/[0.06] px-3.5 py-2.5 text-left text-[15px] text-stone-400 dark:text-zinc-500 active:scale-[0.99] transition"
         @click="composer.openComposer('create')"
       >
         <span class="flex-1 truncate">{{ replyTo ? `Ответ для @${replyTo.is_anonymous ? 'анонима' : (replyTo.user?.name || 'пользователя')}` : commentText || 'Написать комментарий…' }}</span>

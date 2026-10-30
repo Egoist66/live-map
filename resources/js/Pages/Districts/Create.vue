@@ -28,8 +28,8 @@ const page = useDistrictCreatePage(props.canCreate, props.limitText)
         </div>
 
         <div class="grid items-start gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <div class="overflow-hidden rounded-3xl border border-stone-200/70 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-            <div class="relative h-28 bg-stone-100 sm:h-36 dark:bg-zinc-800">
+          <div class="overflow-hidden rounded-3xl border border-stone-200/70 bg-white dark:border-white/10 dark:bg-[#0F121F]">
+            <div class="relative h-28 bg-stone-100 sm:h-36 dark:bg-white/[0.06]">
               <div
                 class="absolute inset-0 opacity-60 dark:opacity-40"
                 style="background-image: radial-gradient(circle at 1px 1px, rgba(100,116,139,0.28) 1px, transparent 0); background-size: 18px 18px"
@@ -49,17 +49,17 @@ const page = useDistrictCreatePage(props.canCreate, props.limitText)
               </div>
 
               <div class="mt-4 grid grid-cols-3 gap-2">
-                <div class="flex flex-col gap-1 rounded-2xl border border-stone-200/70 bg-stone-50 p-2.5 dark:border-zinc-800 dark:bg-white/[0.03]">
+                <div class="flex flex-col gap-1 rounded-2xl border border-stone-200/70 bg-stone-50 p-2.5 dark:border-white/10 dark:bg-white/[0.03]">
                   <span class="grid h-8 w-8 place-items-center rounded-xl bg-blue-600/10 text-sm text-blue-600 dark:bg-blue-500/15 dark:text-blue-400"><i class="pi pi-comments" /></span>
                   <div class="text-[11px] font-bold leading-tight text-ink-900 dark:text-white">Общий чат</div>
                   <div class="text-[10px] leading-tight text-stone-500 dark:text-zinc-400">появится сразу</div>
                 </div>
-                <div class="flex flex-col gap-1 rounded-2xl border border-stone-200/70 bg-stone-50 p-2.5 dark:border-zinc-800 dark:bg-white/[0.03]">
+                <div class="flex flex-col gap-1 rounded-2xl border border-stone-200/70 bg-stone-50 p-2.5 dark:border-white/10 dark:bg-white/[0.03]">
                   <span class="grid h-8 w-8 place-items-center rounded-xl bg-emerald-500/10 text-sm text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400"><i class="pi pi-users" /></span>
                   <div class="text-[11px] font-bold leading-tight text-ink-900 dark:text-white">Участники</div>
                   <div class="text-[10px] leading-tight text-stone-500 dark:text-zinc-400">вы — первый</div>
                 </div>
-                <div class="flex flex-col gap-1 rounded-2xl border border-stone-200/70 bg-stone-50 p-2.5 dark:border-zinc-800 dark:bg-white/[0.03]">
+                <div class="flex flex-col gap-1 rounded-2xl border border-stone-200/70 bg-stone-50 p-2.5 dark:border-white/10 dark:bg-white/[0.03]">
                   <span class="grid h-8 w-8 place-items-center rounded-xl bg-amber-500/10 text-sm text-amber-600 dark:bg-amber-500/15 dark:text-amber-400"><i class="pi pi-user-plus" /></span>
                   <div class="text-[11px] font-bold leading-tight text-ink-900 dark:text-white">Заявки</div>
                   <div class="text-[10px] leading-tight text-stone-500 dark:text-zinc-400">пускать или нет</div>
@@ -91,7 +91,7 @@ const page = useDistrictCreatePage(props.canCreate, props.limitText)
           </div>
 
           <aside class="grid gap-3">
-            <div class="rounded-3xl border border-stone-200/70 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+            <div class="rounded-3xl border border-stone-200/70 bg-white p-4 dark:border-white/10 dark:bg-[#0F121F]">
               <div class="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-zinc-500">Заливка с карты</div>
               <div v-if="page.hasDraft.value" class="mt-2 flex items-center gap-2.5">
                 <span class="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400"><i class="pi pi-check" /></span>

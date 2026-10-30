@@ -275,7 +275,7 @@ const activePrivacyFlags = computed(() => {
           class="absolute inset-0"
           img-class="absolute inset-0 h-full w-full object-cover will-change-transform"
         />
-        <div v-else class="absolute inset-0 grid place-items-center bg-gradient-to-br from-[#FD267D] to-[#FF7854]">
+        <div v-else class="absolute inset-0 grid place-items-center bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500">
           <span class="text-7xl font-black text-white">{{ p.name.value.slice(0, 1) }}</span>
         </div>
       </div>
@@ -342,7 +342,7 @@ const activePrivacyFlags = computed(() => {
       <div v-if="isOwn && !p.datingEnabled.value" class="rounded-2xl border border-amber-300 bg-amber-50 p-3.5 text-sm dark:border-amber-800 dark:bg-amber-950/40">
         <div class="font-bold text-amber-800 dark:text-amber-200">Анкета скрыта из ленты</div>
         <div class="mt-0.5 text-[13px] text-amber-700 dark:text-amber-300">Тебя никто не видит в свайпах. Включи показ в анкете.</div>
-        <Button label="Редактировать анкету" size="small" rounded class="mt-2.5 !border-0 !bg-gradient-to-r !from-[#FD267D] !to-[#FF7854] !text-white" @click="emit('edit')" />
+        <Button label="Редактировать анкету" size="small" rounded class="mt-2.5 !border-0 !bg-gradient-to-r !from-rose-500 !via-pink-500 !to-fuchsia-500 !text-white" @click="emit('edit')" />
       </div>
       <div v-if="isOwn && visibility.hidden.value" class="rounded-2xl border border-violet-300 bg-violet-50 p-3.5 text-sm dark:border-violet-800 dark:bg-violet-950/40">
         <div class="font-bold text-violet-800 dark:text-violet-200">🙈 Профиль скрыт из публичного доступа</div>
@@ -350,7 +350,7 @@ const activePrivacyFlags = computed(() => {
         <Button label="Вернуть в поиск" icon="pi pi-eye" size="small" rounded :loading="visibility.toggling.value" class="mt-2.5 !border-0 !bg-violet-600 !text-white" @click="visibility.toggle()" />
       </div>
 
-      <div class="liquid-glass rounded-2xl p-4 shadow-soft">
+      <div class="panel-surface rounded-2xl p-4 shadow-soft">
         <div class="flex flex-wrap items-center gap-x-3 gap-y-1.5">
           <span
             v-for="fact in p.factItems.value"
@@ -413,7 +413,7 @@ const activePrivacyFlags = computed(() => {
             v-for="(slot, i) in photoSlots"
             :key="slot.key"
             class="relative aspect-[3/4] overflow-hidden rounded-xl border"
-            :class="slot.url ? 'border-transparent' : 'border-dashed border-stone-300 dark:border-zinc-700 bg-white dark:bg-[#0F121F]'"
+            :class="slot.url ? 'border-transparent' : 'border-dashed border-stone-300 dark:border-white/10 bg-white dark:bg-[#0F121F]'"
           >
             <button
               v-if="slot.url"
@@ -457,13 +457,13 @@ const activePrivacyFlags = computed(() => {
           <button
             v-if="tile.action === 'edit'"
             type="button"
-            class="flex items-center gap-2.5 rounded-2xl bg-gradient-to-r from-[#FD267D] to-[#FF7854] p-3 text-left text-white shadow-lg shadow-rose-500/30 active:scale-[0.98] transition"
+            class="flex items-center gap-2.5 rounded-2xl bg-gradient-to-r from-rose-500 via-pink-500 to-fuchsia-500 p-3 text-left text-white shadow-lg shadow-rose-500/30 active:scale-[0.98] transition"
             @click="emit('edit')"
           >
             <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white/20"><i :class="[tile.icon, 'text-sm']" /></span>
             <span class="min-w-0"><span class="block truncate text-sm font-black">{{ tile.label }}</span><span v-if="'desc' in tile && tile.desc" class="block truncate text-[11px] text-white/80">{{ tile.desc }}</span></span>
           </button>
-          <Link v-else :href="tile.href" class="liquid-glass flex items-center gap-2.5 rounded-2xl p-3 text-left shadow-soft active:scale-[0.98] transition">
+          <Link v-else :href="tile.href" class="panel-surface flex items-center gap-2.5 rounded-2xl p-3 text-left shadow-soft active:scale-[0.98] transition">
             <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-stone-100 text-stone-500 dark:bg-white/10 dark:text-zinc-300"><i :class="[tile.icon, 'text-sm']" /></span>
             <span class="min-w-0"><span class="block truncate text-sm font-black text-stone-900 dark:text-white">{{ tile.label }}</span><span v-if="'desc' in tile && tile.desc" class="block truncate text-[11px] text-stone-500 dark:text-zinc-400">{{ tile.desc }}</span></span>
           </Link>
@@ -476,7 +476,7 @@ const activePrivacyFlags = computed(() => {
           rounded
           :loading="p.liking.value"
           :disabled="p.liked.value"
-          class="flex-1 !border-0 !bg-gradient-to-r !from-[#FD267D] !to-[#FF7854] !py-3 !text-white shadow-lg shadow-rose-500/30 disabled:!opacity-70"
+          class="flex-1 !border-0 !bg-gradient-to-r !from-rose-500 !via-pink-500 !to-fuchsia-500 !py-3 !text-white shadow-lg shadow-rose-500/30 disabled:!opacity-70"
           @click="p.like(profileUser?.id ?? null)"
         />
         <Button
@@ -493,7 +493,7 @@ const activePrivacyFlags = computed(() => {
       <div v-if="!isOwn && profileUser?.id != null" class="flex">
         <DatingFriendButton :user-id="Number(profileUser.id)" class="flex-1 [&>button]:w-full" />
       </div>
-      <div v-if="profileUser?.id != null" class="liquid-glass rounded-2xl p-4 shadow-soft">
+      <div v-if="profileUser?.id != null" class="panel-surface rounded-2xl p-4 shadow-soft">
         <DatingReviewsSection
           :user-id="Number(profileUser.id)"
           :seed-avg="rating?.avg ?? null"
@@ -505,7 +505,7 @@ const activePrivacyFlags = computed(() => {
       <Link
         v-if="p.matched.value"
         :href="p.matchedConversationId.value ? `/chat/${p.matchedConversationId.value}?from=swipes` : '/swipes'"
-        class="flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#FD267D] via-[#E936C7] to-[#FF7854] px-4 py-3 text-sm font-black text-white shadow-lg shadow-rose-500/30 active:scale-[0.99] transition"
+        class="flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-rose-500 via-pink-500 to-fuchsia-500 px-4 py-3 text-sm font-black text-white shadow-lg shadow-rose-500/30 active:scale-[0.99] transition"
       >
         <i class="pi pi-heart-fill text-sm" /> Это мэтч! Открыть чат →
       </Link>

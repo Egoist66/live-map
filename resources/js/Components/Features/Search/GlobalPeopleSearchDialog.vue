@@ -77,7 +77,7 @@ function onTab(value: string | number | undefined): void {
               :autofocus="isDesktop"
               enterkeyhint="search"
               fluid
-              class="!rounded-full !pl-10 !pr-10 !py-2.5 !text-base lg:!text-sm !border-stone-200 dark:!border-zinc-700 focus:!border-violet-500 focus:!ring-2 focus:!ring-violet-500/30"
+              class="!rounded-full !pl-10 !pr-10 !py-2.5 !text-base lg:!text-sm !border-stone-200 dark:!border-white/10 focus:!border-violet-500 focus:!ring-2 focus:!ring-violet-500/30"
             />
             <i
               v-if="search.searching.value"
@@ -87,7 +87,7 @@ function onTab(value: string | number | undefined): void {
 
           <div
             v-if="search.results.value.length"
-            class="mt-3 max-h-[60dvh] sm:max-h-[52vh] overflow-auto divide-y divide-stone-100 dark:divide-zinc-800 border rounded-2xl bg-white dark:bg-zinc-900 dark:border-zinc-700 shadow-sm"
+            class="mt-3 max-h-[60dvh] sm:max-h-[52vh] overflow-auto divide-y divide-stone-100 dark:divide-white/10 border rounded-2xl bg-white dark:bg-[#0F121F] dark:border-white/10 shadow-sm"
           >
             <div
               v-for="u in search.results.value"
@@ -96,7 +96,7 @@ function onTab(value: string | number | undefined): void {
               @keydown.enter="search.openProfile(u)"
               tabindex="0"
               role="link"
-              class="flex items-center justify-between p-3 select-none cursor-pointer hover:bg-stone-50 dark:hover:bg-zinc-800/60 transition rounded-xl"
+              class="flex items-center justify-between p-3 select-none cursor-pointer hover:bg-stone-50 dark:hover:bg-white/10/60 transition rounded-xl"
             >
               <div class="flex items-center gap-2.5 min-w-0">
                 <span class="relative shrink-0">
@@ -141,7 +141,7 @@ function onTab(value: string | number | undefined): void {
                 <span
                   v-else-if="isPending(u)"
                   :title="addTitle(u)"
-                  class="w-9 h-9 grid place-items-center rounded-full bg-stone-100 text-stone-400 dark:bg-zinc-800 dark:text-zinc-500"
+                  class="w-9 h-9 grid place-items-center rounded-full bg-stone-100 text-stone-400 dark:bg-white/[0.06] dark:text-zinc-500"
                 >
                   <i class="pi pi-clock text-sm" />
                 </span>
@@ -194,7 +194,7 @@ function onTab(value: string | number | undefined): void {
               :autofocus="isDesktop"
               enterkeyhint="search"
               fluid
-              class="!rounded-full !pl-10 !pr-10 !py-2.5 !text-base lg:!text-sm !border-stone-200 dark:!border-zinc-700 focus:!border-violet-500 focus:!ring-2 focus:!ring-violet-500/30"
+              class="!rounded-full !pl-10 !pr-10 !py-2.5 !text-base lg:!text-sm !border-stone-200 dark:!border-white/10 focus:!border-violet-500 focus:!ring-2 focus:!ring-violet-500/30"
             />
             <i
               v-if="districts.districtSearching.value"
@@ -204,7 +204,7 @@ function onTab(value: string | number | undefined): void {
 
           <div
             v-if="districts.districtResults.value.length"
-            class="mt-3 max-h-[60dvh] sm:max-h-[52vh] overflow-auto divide-y divide-stone-100 dark:divide-zinc-800 border rounded-2xl bg-white dark:bg-zinc-900 dark:border-zinc-700 shadow-sm"
+            class="mt-3 max-h-[60dvh] sm:max-h-[52vh] overflow-auto divide-y divide-stone-100 dark:divide-white/10 border rounded-2xl bg-white dark:bg-[#0F121F] dark:border-white/10 shadow-sm"
           >
             <DistrictSearchList :rows="districts.districtResults.value" @open="(id) => districts.openDistrict(id)" @chat="(row) => districts.openChat(row)" />`r`n            <InfiniteSentinel :sentinel="districtsSentinel" :has-more="peopleStore.districtsHasMore" :loading="peopleStore.loadingMoreDistricts" />
           </div>
@@ -217,7 +217,7 @@ function onTab(value: string | number | undefined): void {
           </div>
           <div
             v-else-if="districts.suggestedDistricts.value.length || districts.districtSuggestionsLoading.value"
-            class="mt-3 max-h-[60dvh] sm:max-h-[52vh] overflow-auto divide-y divide-stone-100 dark:divide-zinc-800 border rounded-2xl bg-white dark:bg-zinc-900 dark:border-zinc-700 shadow-sm"
+            class="mt-3 max-h-[60dvh] sm:max-h-[52vh] overflow-auto divide-y divide-stone-100 dark:divide-white/10 border rounded-2xl bg-white dark:bg-[#0F121F] dark:border-white/10 shadow-sm"
           >
             <div class="px-3 pt-2.5 text-[11px] font-bold uppercase tracking-wide text-stone-400 dark:text-zinc-500">Существующие районы</div>
             <div v-if="districts.districtSuggestionsLoading.value && !districts.suggestedDistricts.value.length" class="p-4 text-center"><i class="pi pi-spin pi-spinner text-violet-400 text-sm" /></div>

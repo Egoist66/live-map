@@ -22,7 +22,7 @@ const emit = defineEmits<{ (e: 'update:subject', v: string): void; (e: 'update:b
 </script>
 <template>
   <div class="min-w-0 space-y-4">
-    <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-6' }, content: { class: '!p-0 min-w-0' } }">
+    <Card class="!bg-white dark:!bg-[#0F121F] !border-stone-200 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-6' }, content: { class: '!p-0 min-w-0' } }">
       <template #content>
         <h3 class="break-words text-lg font-black tracking-tight dark:text-white">Обратиться в поддержку</h3>
         <p class="mt-1 break-words text-sm text-stone-500">Опиши проблему — ответим в течение часа.</p>

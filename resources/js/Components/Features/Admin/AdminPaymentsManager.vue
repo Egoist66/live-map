@@ -93,9 +93,9 @@ function kindSeverity(kind: string): string {
 <template>
   <div class="space-y-3 sm:space-y-4">
     <!-- Шапка раздела -->
-    <section class="rounded-3xl border border-stone-200 bg-white p-4 shadow-soft sm:p-6 dark:border-zinc-800 dark:bg-zinc-900">
+    <section class="rounded-3xl border border-stone-200 bg-white p-4 shadow-soft sm:p-6 dark:border-white/10 dark:bg-[#0F121F]">
       <div class="flex flex-wrap items-center gap-2.5">
-        <span class="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white">
+        <span class="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white">
           <i class="pi pi-credit-card" />
         </span>
         <div class="min-w-0 flex-1 basis-40">
@@ -142,7 +142,7 @@ function kindSeverity(kind: string): string {
         <div
           v-for="gw in pay.state.gateways"
           :key="gw.id"
-          class="flex items-center gap-3 rounded-2xl border border-stone-200/70 px-3 py-2.5 dark:border-zinc-800"
+          class="flex items-center gap-3 rounded-2xl border border-stone-200/70 px-3 py-2.5 dark:border-white/10"
         >
           <i class="pi pi-wallet shrink-0 text-base text-stone-400 dark:text-zinc-500" />
           <div class="min-w-0 flex-1">
@@ -156,7 +156,7 @@ function kindSeverity(kind: string): string {
     </section>
 
     <!-- Тарифы -->
-    <section class="rounded-3xl border border-stone-200 bg-white p-4 shadow-soft sm:p-6 dark:border-zinc-800 dark:bg-zinc-900">
+    <section class="rounded-3xl border border-stone-200 bg-white p-4 shadow-soft sm:p-6 dark:border-white/10 dark:bg-[#0F121F]">
       <div class="flex flex-wrap items-center gap-2">
         <p class="min-w-0 flex-1 basis-48 text-xs leading-relaxed text-stone-500 dark:text-zinc-400">
           Нажмите на тариф, чтобы увидеть, что в него входит. Пустое поле — вернётся стандартная цена из настроек.
@@ -179,12 +179,12 @@ function kindSeverity(kind: string): string {
         <article
           v-for="plan in pay.state.plans"
           :key="plan.id"
-          class="overflow-hidden rounded-2xl border border-stone-200/70 dark:border-zinc-800"
+          class="overflow-hidden rounded-2xl border border-stone-200/70 dark:border-white/10"
         >
           <!-- Шапка тарифа: клик раскрывает возможности -->
           <button
             type="button"
-            class="flex w-full items-center gap-2.5 px-3 py-3 text-left transition-colors hover:bg-stone-50 sm:px-4 dark:hover:bg-zinc-800/50"
+            class="flex w-full items-center gap-2.5 px-3 py-3 text-left transition-colors hover:bg-stone-50 sm:px-4 dark:hover:bg-white/10/50"
             :aria-expanded="pay.isExpanded(plan.id)"
             @click="pay.togglePlan(plan.id)"
           >
@@ -203,7 +203,7 @@ function kindSeverity(kind: string): string {
             <span class="shrink-0 text-right text-sm font-black text-emerald-600 dark:text-emerald-400">{{ planMonthlyLabel(plan) }}</span>
           </button>
 
-          <div class="border-t border-stone-100 px-3 py-3 sm:px-4 dark:border-zinc-800">
+          <div class="border-t border-stone-100 px-3 py-3 sm:px-4 dark:border-white/10">
             <!-- Название и описание -->
             <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <label class="block">
@@ -237,7 +237,7 @@ function kindSeverity(kind: string): string {
             </p>
 
             <!-- Вложенные возможности -->
-            <div v-if="pay.isExpanded(plan.id)" class="mt-3 rounded-2xl bg-stone-50 p-2.5 sm:p-3 dark:bg-zinc-800/60">
+            <div v-if="pay.isExpanded(plan.id)" class="mt-3 rounded-2xl bg-stone-50 p-2.5 sm:p-3 dark:bg-white/[0.06]">
               <div class="flex flex-wrap items-center gap-2 px-1 pb-2">
                 <p class="min-w-0 flex-1 basis-40 text-[11px] font-black uppercase tracking-wider text-stone-400 dark:text-zinc-500">
                   Что входит в «{{ plan.name }}»
@@ -245,7 +245,7 @@ function kindSeverity(kind: string): string {
                 <Button label="Добавить" icon="pi pi-plus" rounded size="small" @click="pay.openCreateForPlan(plan.id)" />
               </div>
 
-              <p v-if="pay.featureCount(plan.id) === 0" class="rounded-xl bg-white px-3 py-4 text-center text-xs text-stone-500 sm:text-sm dark:bg-zinc-900 dark:text-zinc-400">
+              <p v-if="pay.featureCount(plan.id) === 0" class="rounded-xl bg-white px-3 py-4 text-center text-xs text-stone-500 sm:text-sm dark:bg-[#0F121F] dark:text-zinc-400">
                 Пока пусто — добавьте первую возможность кнопкой «Добавить».
               </p>
 
@@ -253,7 +253,7 @@ function kindSeverity(kind: string): string {
                 <li
                   v-for="feat in pay.featuresByPlan.value[plan.id]"
                   :key="feat.id"
-                  class="flex items-center gap-2 rounded-xl border border-stone-200/60 bg-white px-2.5 py-2 dark:border-zinc-700/60 dark:bg-zinc-900"
+                  class="flex items-center gap-2 rounded-xl border border-stone-200/60 bg-white px-2.5 py-2 dark:border-white/10/60 dark:bg-[#0F121F]"
                 >
                   <span class="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                     <i class="pi pi-check text-xs" />
@@ -292,7 +292,7 @@ function kindSeverity(kind: string): string {
     </section>
 
     <!-- Витрина -->
-    <section class="rounded-3xl border border-stone-200 bg-white p-4 shadow-soft sm:p-6 dark:border-zinc-800 dark:bg-zinc-900">
+    <section class="rounded-3xl border border-stone-200 bg-white p-4 shadow-soft sm:p-6 dark:border-white/10 dark:bg-[#0F121F]">
       <div class="flex flex-wrap items-center gap-2">
         <div class="min-w-0 flex-1 basis-48">
           <h2 class="text-base font-black text-stone-900 dark:text-white">Витрина: кредиты и реклама</h2>
@@ -357,7 +357,7 @@ function kindSeverity(kind: string): string {
         <li
           v-for="item in pay.visibleItems.value"
           :key="item.id"
-          class="rounded-2xl border border-stone-200/70 px-3 py-2.5 dark:border-zinc-800"
+          class="rounded-2xl border border-stone-200/70 px-3 py-2.5 dark:border-white/10"
         >
           <div class="flex items-start gap-2">
             <div class="min-w-0 flex-1">
@@ -373,7 +373,7 @@ function kindSeverity(kind: string): string {
               <ToggleSwitch :model-value="item.is_active" :aria-label="item.name" @update:model-value="pay.toggleActive(item)" />
             </div>
           </div>
-          <div class="mt-1.5 flex justify-end gap-1 border-t border-stone-100 pt-1.5 dark:border-zinc-800">
+          <div class="mt-1.5 flex justify-end gap-1 border-t border-stone-100 pt-1.5 dark:border-white/10">
             <Button icon="pi pi-pencil" rounded text size="small" aria-label="Изменить" @click="pay.openEdit(item)" />
             <Button icon="pi pi-trash" rounded text severity="danger" size="small" aria-label="Удалить" @click="pay.removeItem(item)" />
           </div>
@@ -438,7 +438,7 @@ function kindSeverity(kind: string): string {
         <p v-if="pay.state.importFileName" class="text-xs text-stone-500 dark:text-zinc-400">
           Файл: {{ pay.state.importFileName }}
         </p>
-        <label class="flex cursor-pointer items-start gap-2 rounded-2xl border border-stone-200 px-3 py-2.5 dark:border-zinc-700">
+        <label class="flex cursor-pointer items-start gap-2 rounded-2xl border border-stone-200 px-3 py-2.5 dark:border-white/10">
           <Checkbox v-model="pay.state.replaceOnImport" binary />
           <span>
             <span class="block text-sm font-bold text-stone-800 dark:text-zinc-100">Очистить всё перед загрузкой</span>
@@ -549,7 +549,7 @@ function kindSeverity(kind: string): string {
             </label>
           </div>
 
-          <div class="rounded-2xl border border-stone-200 bg-stone-50 px-3 py-2.5 dark:border-zinc-700 dark:bg-zinc-800/60">
+          <div class="rounded-2xl border border-stone-200 bg-stone-50 px-3 py-2.5 dark:border-white/10 dark:bg-white/[0.06]">
             <label class="flex cursor-pointer items-center gap-2">
               <ToggleSwitch v-model="pay.state.draft.showPricesByPlan" />
               <span class="text-sm font-bold text-stone-800 dark:text-zinc-100">Разные цены для тарифов</span>
@@ -559,7 +559,7 @@ function kindSeverity(kind: string): string {
             </p>
             <p v-if="!pay.state.draft.showPricesByPlan" class="mt-1 text-xs font-semibold text-stone-500 dark:text-zinc-400">{{ ownPricesSummary() }}</p>
             <div v-if="pay.state.draft.showPricesByPlan" class="mt-2 grid grid-cols-2 gap-2">
-              <label v-for="planId in (['free', 'pro', 'premium', 'business'] as const)" :key="planId" class="block rounded-xl bg-white px-2 py-2 dark:bg-zinc-900">
+              <label v-for="planId in (['free', 'pro', 'premium', 'business'] as const)" :key="planId" class="block rounded-xl bg-white px-2 py-2 dark:bg-[#0F121F]">
                 <span class="mb-1 block text-xs font-bold text-stone-700 dark:text-zinc-200">Для «{{ planNameOf(planId) }}»</span>
                 <InputNumber v-model="pay.state.draft.pricesByPlan[planId]" mode="currency" currency="USD" locale="en-US" :min-fraction-digits="2" placeholder="Как всем" class="w-full" input-class="w-full" />
               </label>

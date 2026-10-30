@@ -26,9 +26,9 @@ const dockRef = dock.dockRef
     <div class="pointer-events-auto relative flex flex-col items-end gap-2">
       <div
         v-if="dock.isListOpen.value"
-        class="flex h-[480px] w-[320px] flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-soft dark:border-zinc-700 dark:bg-[#0F121F]"
+        class="flex h-[480px] w-[320px] flex-col overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-soft dark:border-white/10 dark:bg-[#0F121F]"
       >
-        <div class="flex shrink-0 items-center gap-2 border-b border-stone-100 px-3 py-2.5 dark:border-zinc-800">
+        <div class="flex shrink-0 items-center gap-2 border-b border-stone-100 px-3 py-2.5 dark:border-white/10">
           <span class="flex-1 text-sm font-black text-ink-900 dark:text-white">Сообщения</span>
           <Button
             icon="pi pi-external-link"
@@ -51,13 +51,13 @@ const dockRef = dock.dockRef
           />
         </div>
 
-        <div class="shrink-0 border-b border-stone-100 px-3 py-2 dark:border-zinc-800">
+        <div class="shrink-0 border-b border-stone-100 px-3 py-2 dark:border-white/10">
           <div class="relative w-full">
             <i class="pi pi-search pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-stone-400" />
             <InputText
               :model-value="dock.searchQuery.value"
               placeholder="Поиск по чатам…"
-              class="input-search-violet w-full !rounded-full !bg-stone-100 !pl-9 !text-sm dark:!bg-zinc-800"
+              class="input-search-violet w-full !rounded-full !bg-stone-100 !pl-9 !text-sm dark:!bg-white/10"
               @update:model-value="(v: string | undefined) => dock.setQuery(v ?? '')"
             />
           </div>
@@ -75,13 +75,13 @@ const dockRef = dock.dockRef
               v-for="conv in dock.chatRows.value"
               :key="conv.id"
               type="button"
-              class="flex w-full items-center gap-2.5 rounded-xl px-2 py-2 text-left transition-colors hover:bg-stone-100 dark:hover:bg-zinc-800"
+              class="flex w-full items-center gap-2.5 rounded-xl px-2 py-2 text-left transition-colors hover:bg-stone-100 dark:hover:bg-white/10"
               @click="dock.openChat(conv.id)"
             >
               <span class="relative shrink-0">
-                <span v-if="conv.title" class="grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-violet-700 to-purple-900 text-base text-white">🏘️</span>
+                <span v-if="conv.title" class="grid h-10 w-10 place-items-center rounded-full bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-base text-white">🏘️</span>
                 <Avatar v-else :image="dock.avatarFor(conv)" shape="circle" class="!h-10 !w-10 [&_img]:object-cover" />
-                <span v-if="Number(conv.unread_count || 0) > 0" class="absolute -right-0.5 -top-0.5 grid h-5 min-w-5 place-items-center rounded-full bg-violet-600 px-1 text-[10px] font-bold text-white ring-2 ring-white dark:ring-zinc-900">
+                <span v-if="Number(conv.unread_count || 0) > 0" class="absolute -right-0.5 -top-0.5 grid h-5 min-w-5 place-items-center rounded-full bg-violet-600 px-1 text-[10px] font-bold text-white ring-2 ring-white dark:ring-[#0F121F]">
                   {{ Number(conv.unread_count) > 9 ? '9+' : conv.unread_count }}
                 </span>
               </span>
@@ -98,7 +98,7 @@ const dockRef = dock.dockRef
 
         <button
           type="button"
-          class="flex shrink-0 items-center justify-center gap-2 border-t border-stone-100 px-3 py-2.5 text-[13px] font-bold text-violet-700 transition-colors hover:bg-violet-50 dark:border-zinc-800 dark:text-violet-300 dark:hover:bg-violet-500/10"
+          class="flex shrink-0 items-center justify-center gap-2 border-t border-stone-100 px-3 py-2.5 text-[13px] font-bold text-violet-700 transition-colors hover:bg-violet-50 dark:border-white/10 dark:text-violet-300 dark:hover:bg-violet-500/10"
           @click="dock.openAllChats()"
         >
           <i class="pi pi-comments text-sm" />

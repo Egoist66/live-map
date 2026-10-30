@@ -84,7 +84,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <Card class="!overflow-hidden !rounded-3xl !border-stone-200 !bg-white !shadow-soft dark:!border-zinc-800 dark:!bg-zinc-900">
+  <Card class="!overflow-hidden !rounded-3xl !border-stone-200 !bg-white !shadow-soft dark:!border-white/10 dark:!bg-[#0F121F]">
     <template #content>
       <article class="p-3 sm:p-5">
         <div class="flex items-start gap-3">
@@ -110,14 +110,14 @@ onBeforeUnmount(() => {
         <div class="mt-1.5" :class="!post.title && 'mt-3'">
           <ModeratedContent :text="post.body" :moderation="post.moderation" />
         </div>
-        <div v-if="post.image_url" class="mt-3 overflow-hidden rounded-2xl border border-stone-200 dark:border-zinc-800">
+        <div v-if="post.image_url" class="mt-3 overflow-hidden rounded-2xl border border-stone-200 dark:border-white/10">
           <button type="button" class="block w-full cursor-zoom-in" aria-label="Открыть фото на весь экран" @click="lightbox.openSingle(post.image_url, post.title || 'Фото новости')">
             <img :src="post.image_url" alt="Фото новости" loading="lazy" class="max-h-[420px] w-full object-cover" />
           </button>
         </div>
         <PhotoLightbox :photos="lightbox.photos.value" :index="lightbox.index.value" :open="lightbox.open.value" @close="lightbox.close()" @update:index="(v: number) => lightbox.index.value = v" />
 
-        <div class="mt-3 flex items-center gap-1 border-t border-stone-100 pt-2 dark:border-zinc-800">
+        <div class="mt-3 flex items-center gap-1 border-t border-stone-100 pt-2 dark:border-white/10">
           <Button
             :icon="post.liked ? 'pi pi-heart-fill' : 'pi pi-heart'"
             text
@@ -133,15 +133,15 @@ onBeforeUnmount(() => {
           <Button icon="pi pi-send" text rounded severity="secondary" aria-label="Отправить как сообщение" title="Отправить как сообщение" v-tooltip.bottom="'Отправить как сообщение'" @click="openShareDialog()" />
         </div>
 
-        <div v-if="expanded" class="mt-2 border-t border-stone-100 pt-3 dark:border-zinc-800">
+        <div v-if="expanded" class="mt-2 border-t border-stone-100 pt-3 dark:border-white/10">
           <div v-if="thread.loading.value" class="py-4 text-center text-sm text-stone-400">Загружаем комментарии…</div>
           <div v-else-if="!thread.comments.value.length" class="py-4 text-center text-sm text-stone-400">Пока тихо — станьте первым.</div>
           <div v-else class="space-y-3">
             <div v-for="c in thread.comments.value" :key="c.id" class="flex min-w-0 gap-2.5">
               <Avatar v-if="c.author.avatar_url" :image="c.author.avatar_url" shape="circle" class="!h-8 !w-8 shrink-0" />
-              <Avatar v-else icon="pi pi-user" shape="circle" class="!h-8 !w-8 shrink-0 !bg-stone-200 dark:!bg-zinc-700" />
+              <Avatar v-else icon="pi pi-user" shape="circle" class="!h-8 !w-8 shrink-0 !bg-stone-200 dark:!bg-white/10" />
               <div class="min-w-0 flex-1">
-                <div class="min-w-0 rounded-2xl bg-stone-100 px-3 py-2 dark:bg-zinc-800">
+                <div class="min-w-0 rounded-2xl bg-stone-100 px-3 py-2 dark:bg-white/[0.06]">
                   <div class="truncate text-[13px] font-bold leading-tight text-ink-900 dark:text-white">{{ c.author.name }}</div>
                   <ModeratedContent :text="c.content" :moderation="c.moderation" />
                 </div>
@@ -150,12 +150,12 @@ onBeforeUnmount(() => {
                   <button v-if="canComment" class="shrink-0 px-1 py-1.5 font-semibold text-stone-500 active:text-violet-600 dark:text-zinc-400" @click="thread.setReply(c)">Ответить</button>
                   <button v-if="c.can_delete" class="shrink-0 px-1 py-1.5 active:text-red-500" @click="thread.remove(c)">Удалить</button>
                 </div>
-                <div v-if="c.replies?.length" class="mt-1.5 space-y-2.5 border-l-2 border-stone-200 pl-2.5 dark:border-zinc-700">
+                <div v-if="c.replies?.length" class="mt-1.5 space-y-2.5 border-l-2 border-stone-200 pl-2.5 dark:border-white/10">
                   <div v-for="r in c.replies" :key="r.id" class="flex min-w-0 gap-2">
                     <Avatar v-if="r.author.avatar_url" :image="r.author.avatar_url" shape="circle" class="!h-6 !w-6 shrink-0" />
-                    <Avatar v-else icon="pi pi-user" shape="circle" class="!h-6 !w-6 shrink-0 !bg-stone-200 dark:!bg-zinc-700" />
+                    <Avatar v-else icon="pi pi-user" shape="circle" class="!h-6 !w-6 shrink-0 !bg-stone-200 dark:!bg-white/10" />
                     <div class="min-w-0 flex-1">
-                      <div class="min-w-0 rounded-xl bg-stone-100 px-2.5 py-1.5 dark:bg-zinc-800">
+                      <div class="min-w-0 rounded-xl bg-stone-100 px-2.5 py-1.5 dark:bg-white/[0.06]">
                         <div class="truncate text-xs font-bold leading-tight text-ink-900 dark:text-white">{{ r.author.name }}</div>
                         <ModeratedContent :text="r.content" :moderation="r.moderation" />
                       </div>
@@ -170,7 +170,7 @@ onBeforeUnmount(() => {
             </div>
           </div>
 
-          <div v-if="canComment" class="sticky bottom-0 -mx-1 mt-3 bg-white/95 pb-1 pt-2 backdrop-blur dark:bg-zinc-900/95">
+          <div v-if="canComment" class="sticky bottom-0 -mx-1 mt-3 bg-white/95 pb-1 pt-2 backdrop-blur dark:bg-[#0F121F]/95">
             <div v-if="thread.replyTo.value" class="mb-2 flex min-w-0 items-center gap-2 rounded-full bg-violet-50 py-1.5 pl-3 pr-1.5 text-xs text-stone-600 dark:bg-violet-950/50 dark:text-zinc-300">
               <i class="pi pi-reply shrink-0 text-[11px] text-violet-500" />
               <span class="min-w-0 flex-1 truncate">Ответ для <b>{{ thread.replyTo.value.author.name }}</b></span>
@@ -183,7 +183,7 @@ onBeforeUnmount(() => {
                   v-model="thread.draft.value"
                   placeholder="Написать комментарий…"
                   enterkeyhint="send"
-                  class="w-full !rounded-2xl !border-0 !bg-stone-100 !py-3 !text-[16px] !leading-snug dark:!bg-zinc-800"
+                  class="w-full !rounded-2xl !border-0 !bg-stone-100 !py-3 !text-[16px] !leading-snug dark:!bg-white/[0.06]"
                   @keyup.enter="thread.send()"
                 />
               </div>

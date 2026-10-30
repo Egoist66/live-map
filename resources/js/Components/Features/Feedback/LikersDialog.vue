@@ -24,7 +24,7 @@ function initialOf(name: string): string {
     :closable="false"
     :base-z-index="baseZIndex ?? 0"
     :style="{ width: '360px', maxWidth: 'calc(100vw - 2rem)' }"
-    :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none !border-stone-200 dark:!border-zinc-800 overflow-hidden' }, header: { class: '!p-0 !border-0' }, content: { class: '!p-0 !bg-white dark:!bg-zinc-900' } }"
+    :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none !border-stone-200 dark:!border-white/10 overflow-hidden' }, header: { class: '!p-0 !border-0' }, content: { class: '!p-0 !bg-white dark:!bg-[#0F121F]' } }"
   >
     <template #header>
       <div class="w-full flex items-center gap-2 px-5 pt-5 pb-3">
@@ -45,7 +45,7 @@ function initialOf(name: string): string {
           v-for="l in likers"
           :key="`${l.user_id ?? 'inc'}-${l.name}`"
           :href="l.user_id ? userProfileUrl(l) : undefined"
-          class="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-2xl text-left transition hover:bg-stone-100 dark:hover:bg-zinc-800"
+          class="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-2xl text-left transition hover:bg-stone-100 dark:hover:bg-white/10"
         >
           <img v-if="l.avatar_url" :src="l.avatar_url" alt="" loading="lazy" class="w-9 h-9 rounded-full object-cover shrink-0 bg-stone-100 dark:bg-white/10" />
           <span v-else class="w-9 h-9 rounded-full bg-stone-200 dark:bg-white/10 grid place-items-center text-xs font-black text-stone-600 dark:text-zinc-200 shrink-0 overflow-hidden">{{ l.is_incognito ? '🕵️' : initialOf(l.name) }}</span>

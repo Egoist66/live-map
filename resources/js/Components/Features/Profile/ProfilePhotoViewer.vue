@@ -79,7 +79,7 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
   <Teleport to="body">
     <div v-if="gallery.viewerOpen.value && gallery.active.value" class="fixed inset-0 z-[2000]" role="dialog" aria-modal="true">
       <div class="absolute inset-0 hidden md:block bg-ink-900/70 dark:bg-black/80 backdrop-blur-sm" @click="onBackdropClick" />
-      <div ref="viewerRootRef" class="absolute inset-0 flex flex-col bg-white dark:bg-zinc-950 md:mx-auto md:max-w-[720px] md:border-x md:border-stone-200/70 dark:md:border-white/10">
+      <div ref="viewerRootRef" class="absolute inset-0 flex flex-col bg-white dark:bg-black/20 md:mx-auto md:max-w-[720px] md:border-x md:border-stone-200/70 dark:md:border-white/10">
       <div class="shrink-0 flex items-center gap-2.5 pl-1 pr-3 border-b border-stone-200/70 dark:border-white/10 viewer-fullscreen-header">
         <Button icon="pi pi-arrow-left" rounded text class="!w-10 !h-10" @click="gallery.close()" aria-label="Назад" />
         <img v-if="avatarSrc" :src="avatarSrc" alt="" loading="lazy" draggable="false" class="block w-8 h-8 rounded-full object-cover object-center bg-stone-100 dark:bg-white/10" />
@@ -152,7 +152,7 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
           <span class="w-8 h-8 shrink-0 rounded-full bg-stone-200 dark:bg-white/10 grid place-items-center text-[11px] font-black text-stone-500">Вы</span>
           <Textarea ref="commentTarget" v-model="comments.draft.value" :placeholder="commentPlaceholder" rows="1" autoResize maxlength="1000" enterkeyhint="enter" class="flex-1 min-w-0 !rounded-2xl !text-sm max-h-32" @input="mentionInput.onInput()" @click="mentionInput.onInput()" @focus="mentionInput.onFocus()" @keydown="(e:any)=>handleEnterToSend(e, sendPhotoComment)" />
           <Button icon="pi pi-send" rounded :loading="comments.sending.value" :disabled="!comments.draft.value.trim()" class="!bg-violet-600 !border-violet-600 shrink-0" @click="sendPhotoComment" aria-label="Отправить" />
-          <div v-if="mentionInput.mentions.mentionOpen.value" class="absolute left-0 right-0 bottom-[calc(100%+8px)] bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl shadow-float overflow-hidden z-30 max-h-56 overflow-y-auto">
+          <div v-if="mentionInput.mentions.mentionOpen.value" class="absolute left-0 right-0 bottom-[calc(100%+8px)] bg-white dark:bg-white/[0.06] border border-stone-200 dark:border-white/10 rounded-2xl shadow-float overflow-hidden z-30 max-h-56 overflow-y-auto">
             <div v-if="mentionInput.mentions.mentionLoading.value" class="px-4 py-3 text-xs text-stone-400">Ищем людей…</div>
             <template v-else>
               <button v-for="u in mentionInput.mentions.mentionResults.value" :key="u.id" type="button" @click="mentionInput.pick(u)" class="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-violet-50 dark:hover:bg-violet-950/40 active:bg-violet-100 transition text-left">
@@ -183,7 +183,7 @@ const canComment = () => !!(props.gallery.active.value?.can_comment || props.gal
   </Teleport>
   <Teleport to="body">
     <Dialog :visible="viewer.anonPromoVisible.value" @update:visible="(v:boolean)=>{ if (!v) viewer.closeAnonPromo() }" modal :draggable="false" :base-z-index="3000" class="!rounded-3xl" :style="{ width: '380px', maxWidth: 'calc(100vw - 2rem)' }" :pt="{ root: { class: '!rounded-3xl max-sm:!rounded-b-none !border-0' }, content: { class: '!p-0' }, header: { class: '!hidden' } }">
-      <div class="bg-gradient-to-br from-violet-600 via-fuchsia-600 to-indigo-600 p-6 text-white text-center">
+      <div class="bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 p-6 text-white text-center">
         <div class="w-16 h-16 mx-auto rounded-3xl bg-white/20 grid place-items-center text-3xl">🕵️</div>
         <div class="mt-3 text-xl font-black">Анонимные лайки</div>
         <div class="mt-1 text-sm text-white/85">Можно лайкать фото так, чтобы вас видели как «Тайного поклонника». Для этого нужен тариф PRO.</div>

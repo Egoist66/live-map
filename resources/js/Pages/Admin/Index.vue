@@ -194,7 +194,7 @@ enforceVisibleTab()
 
     <template v-if="!access.unlocked.value">
       <main class="mx-auto grid min-h-[calc(100dvh-3.5rem)] w-full max-w-[560px] place-items-center px-4 py-10">
-        <Card class="!rounded-3xl !border-stone-200 !bg-white !shadow-soft dark:!border-zinc-800 dark:!bg-zinc-900" :pt="{ body: { class: '!p-8 sm:!p-10' }, content: { class: '!p-0 text-center' } }">
+        <Card class="!rounded-3xl !border-stone-200 !bg-white !shadow-soft dark:!border-white/10 dark:!bg-[#0F121F]" :pt="{ body: { class: '!p-8 sm:!p-10' }, content: { class: '!p-0 text-center' } }">
           <template #content>
             <div class="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-[#1d2327] text-white"><i class="pi pi-lock text-xl" /></div>
             <h1 class="mt-4 text-lg font-black dark:text-white">{{ access.checking.value ? 'Проверяем доступ…' : 'Консоль закрыта' }}</h1>
@@ -231,7 +231,7 @@ enforceVisibleTab()
               </p>
               <span class="flex-1" />
               <span
-                class="inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-white px-2.5 py-1 text-[11px] font-bold text-stone-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+                class="inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-white px-2.5 py-1 text-[11px] font-bold text-stone-600 dark:border-white/10 dark:bg-[#0F121F] dark:text-zinc-300"
               >
                 <i class="pi" :class="staff.isAdmin.value ? 'pi-shield' : 'pi-eye'" aria-hidden="true" />
                 {{ staff.isAdmin.value ? 'Администратор' : 'Модератор' }}
@@ -376,7 +376,7 @@ enforceVisibleTab()
       </Drawer>
     </template>
 
-    <Dialog :visible="!access.unlocked.value && !access.checking.value" modal :closable="false" :draggable="false" header="Консоль закрыта" :style="{ width: '400px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none overflow-hidden' }, header: { class: '!p-5 !pb-0 !border-0 dark:!bg-zinc-900 dark:!text-white' }, content: { class: '!px-5 !py-4 dark:!bg-zinc-900' }, footer: { class: '!px-5 !pb-5 !pt-1 !border-0 dark:!bg-zinc-900' } }">
+    <Dialog :visible="!access.unlocked.value && !access.checking.value" modal :closable="false" :draggable="false" header="Консоль закрыта" :style="{ width: '400px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none overflow-hidden' }, header: { class: '!p-5 !pb-0 !border-0 dark:!bg-[#0F121F] dark:!text-white' }, content: { class: '!px-5 !py-4 dark:!bg-[#0F121F]' }, footer: { class: '!px-5 !pb-5 !pt-1 !border-0 dark:!bg-[#0F121F]' } }">
       <div class="flex items-center gap-3">
         <span class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#1d2327] text-white"><i class="pi pi-envelope" /></span>
         <p class="text-sm text-stone-600 dark:text-zinc-300">{{ access.step.value === 'code' ? 'Код отправлен на почту — введи 6 цифр. Действует 10 минут.' : 'Введи свою почту — пришлём туда одноразовый код.' }}</p>
@@ -435,7 +435,7 @@ enforceVisibleTab()
         <Button label="Снять права" severity="danger" :loading="mon.actingId.value !== null" @click="mon.confirmSelfRoleChange()" />
       </template>
     </Dialog>
-    <Dialog :visible="!!mon.pendingOrganizationRole.value" modal header="Выдать роль «организация»?" :style="{ width: '440px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none overflow-hidden' }, header: { class: '!p-5 !pb-0 !border-0 dark:!bg-zinc-900 dark:!text-white' }, content: { class: '!px-5 !py-4 dark:!bg-zinc-900' }, footer: { class: '!px-5 !pb-5 !pt-1 !border-0 dark:!bg-zinc-900' } }" @update:visible="(v:boolean)=>{ if(!v) mon.cancelOrganizationRoleChange() }">
+    <Dialog :visible="!!mon.pendingOrganizationRole.value" modal header="Выдать роль «организация»?" :style="{ width: '440px', maxWidth: '94vw' }" :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none overflow-hidden' }, header: { class: '!p-5 !pb-0 !border-0 dark:!bg-[#0F121F] dark:!text-white' }, content: { class: '!px-5 !py-4 dark:!bg-[#0F121F]' }, footer: { class: '!px-5 !pb-5 !pt-1 !border-0 dark:!bg-[#0F121F]' } }" @update:visible="(v:boolean)=>{ if(!v) mon.cancelOrganizationRoleChange() }">
       <Message severity="warn" :closable="false" class="!rounded-2xl !text-xs">Данный аккаунт персональный и не связан с предпринимательской деятельностью.</Message>
       <p class="mt-3 text-sm text-stone-600 dark:text-zinc-300">Выдать <b>{{ mon.pendingOrganizationRole.value?.user?.name }}</b> ({{ mon.pendingOrganizationRole.value?.user?.email }}) роль «организация»? Вместе с ролью автоматически включится тариф <b>business</b> — как у всех, кто зашёл в кабинет компании.</p>
       <template #footer>

@@ -39,8 +39,8 @@ const roleClass = computed(() => {
 </script>
 
 <template>
-  <div class="isolate overflow-hidden rounded-3xl border border-stone-200/70 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-    <div class="relative h-32 bg-stone-100 sm:h-48 dark:bg-zinc-800">
+  <div class="isolate overflow-hidden rounded-3xl border border-stone-200/70 bg-white dark:border-white/10 dark:bg-[#0F121F]">
+    <div class="relative h-32 bg-stone-100 sm:h-48 dark:bg-white/[0.06]">
       <img
         v-if="coverUrl"
         :src="coverUrl"
@@ -88,7 +88,7 @@ const roleClass = computed(() => {
     </div>
     <div class="relative z-10 px-4 pb-4 sm:px-6 sm:pb-5">
       <div class="flex items-end gap-3 sm:gap-4">
-        <div class="relative z-10 -mt-8 grid h-16 w-16 shrink-0 place-items-center rounded-2xl border-4 border-white bg-blue-600 text-2xl font-black text-white shadow-md sm:-mt-12 sm:h-24 sm:w-24 sm:rounded-3xl sm:text-4xl dark:border-zinc-900">
+        <div class="relative z-10 -mt-8 grid h-16 w-16 shrink-0 place-items-center rounded-2xl border-4 border-white bg-blue-600 text-2xl font-black text-white shadow-md sm:-mt-12 sm:h-24 sm:w-24 sm:rounded-3xl sm:text-4xl dark:border-[#0F121F]">
           {{ avatarLetter }}
         </div>
         <div class="min-w-0 flex-1 pb-0.5 sm:pb-1">

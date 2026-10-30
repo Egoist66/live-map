@@ -17,7 +17,7 @@ const { isOffline, showRestored, dismissRestored } = useNetworkToast()
         class="pointer-events-auto w-full max-w-md rounded-2xl border border-red-200/80 bg-white/95 px-4 py-3 shadow-[0_16px_48px_rgba(220,38,38,0.28)] backdrop-blur-xl dark:border-red-500/20 dark:bg-[#1B1216]/95 dark:shadow-black/60"
       >
         <div class="flex items-center gap-3">
-          <span class="relative grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/30">
+          <span class="relative grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white shadow-lg shadow-red-500/30">
             <i class="pi pi-wifi text-base"></i>
             <span class="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-white bg-red-500 dark:border-[#1B1216]"></span>
             <span class="absolute -right-0.5 -top-0.5 h-3 w-3 animate-ping rounded-full bg-red-400 opacity-60"></span>
@@ -37,7 +37,7 @@ const { isOffline, showRestored, dismissRestored } = useNetworkToast()
         class="pointer-events-auto w-full max-w-md rounded-2xl border border-emerald-200/80 bg-white/95 px-4 py-3 shadow-[0_16px_48px_rgba(16,185,129,0.28)] backdrop-blur-xl dark:border-emerald-500/20 dark:bg-[#0F1B16]/95 dark:shadow-black/60"
       >
         <div class="flex items-center gap-3">
-          <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/30">
+          <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white shadow-lg shadow-emerald-500/30">
             <i class="pi pi-check text-base"></i>
           </span>
           <p class="min-w-0 flex-1 text-sm">

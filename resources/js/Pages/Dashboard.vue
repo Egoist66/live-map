@@ -136,7 +136,7 @@ onMounted(async () => {
           class="flex items-center gap-1.5 text-[11px] font-bold text-stone-500 transition hover:text-ink-900 dark:text-zinc-500 dark:hover:text-zinc-200"
           @click="dash.goAdmin"
         >
-          <span class="grid h-5 w-5 shrink-0 place-items-center rounded-md bg-ink-900 text-white dark:bg-white dark:text-zinc-900"><i class="pi pi-shield text-[10px]"></i></span>
+          <span class="grid h-5 w-5 shrink-0 place-items-center rounded-md bg-ink-900 text-white dark:bg-white dark:text-[#0F121F]"><i class="pi pi-shield text-[10px]"></i></span>
           <span class="truncate">Модератор · Панель модерации →</span>
         </button>
 
@@ -234,7 +234,7 @@ onMounted(async () => {
         <ProfileThoughtDialog :open="thought.open.value" :draft="thought.draft.value" :saving="thought.saving.value" :error="thought.error.value" @update:draft="(v:string)=>thought.setDraft(v)" @close="thought.close()" @save="thought.save()" />
         <ChatSearchDialog :open="search.open.value" @update:open="(v:boolean)=>{ if(!v) search.closeDialog() }" :query="search.query.value" @update:query="(v:string)=>search.setQuery(v)" :results="search.results.value" :searching="search.searching.value" :creating="search.creating.value" :is-online="(id?:number,lastSeen?:string|null)=>search.isOnline(id,lastSeen)" @chat="search.startChat" @add="search.addFriend" @block="search.askBlock" />
         <ProfileGalleryDialog :gallery="gallery" :is-own="true" :plan="planOf(dash.u.value)" @make-main="design.setMainAvatar" />
-        <Dialog :visible="showDatingEdit" @update:visible="(v:boolean)=>{ if(!v) showDatingEdit = false }" modal header="Моя анкета" :style="{ width: '640px', maxWidth: 'calc(100vw - 2rem)' }" :pt="{ root: { class: '!rounded-3xl max-sm:!rounded-b-none dark:!bg-zinc-900 dark:!border-zinc-700' }, content: { class: '!max-h-[78dvh] !overflow-y-auto' } }">
+        <Dialog :visible="showDatingEdit" @update:visible="(v:boolean)=>{ if(!v) showDatingEdit = false }" modal header="Моя анкета" :style="{ width: '640px', maxWidth: 'calc(100vw - 2rem)' }" :pt="{ root: { class: '!rounded-3xl max-sm:!rounded-b-none dark:!bg-[#0F121F] dark:!border-white/10' }, content: { class: '!max-h-[78dvh] !overflow-y-auto' } }">
           <DatingQuestionnaireDialog @saved="onDatingSaved" />
         </Dialog>
         <ProfilePhotoViewer :gallery="gallery" :comments="photoComments" :is-own="true" :user-name="dash.u.value.name" :avatar-src="dash.avatarSrc.value" @make-main="design.setMainAvatar" />

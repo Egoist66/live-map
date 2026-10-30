@@ -49,7 +49,7 @@ function toggle(): void {
         class="moderated-blurred break-words text-[15px] leading-relaxed [overflow-wrap:anywhere]"
         aria-hidden="true"
       ><slot>{{ text }}</slot></div>
-      <div class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/60 p-3 text-center backdrop-blur-[2px] dark:bg-zinc-950/60">
+      <div class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/60 p-3 text-center backdrop-blur-[2px] dark:bg-black/20/60">
         <Tag severity="warn" class="!text-[11px">
           <template #icon><i class="pi pi-eye-slash text-[11px]" /></template>
           {{ reasonLabel }} — скрыто

@@ -40,7 +40,7 @@ function ago(iso?: string | null) {
 }
 </script>
 <template>
-  <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0' } }">
+  <Card class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0' } }">
     <template #content>
       <div class="flex items-center gap-2 flex-wrap">
         <div class="font-black dark:text-white flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block" />Онлайн <span class="text-xs font-bold text-stone-400 dark:text-zinc-500">· {{ meta.total }}</span></div>
@@ -55,11 +55,11 @@ function ago(iso?: string | null) {
       </IconField>
       <div v-if="loading" class="py-8 grid place-items-center"><ProgressSpinner style="width:24px;height:24px" :strokeWidth="6" /></div>
       <div v-else-if="!list.length" class="py-8 text-center text-sm text-stone-400 dark:text-zinc-500">Никого нет в онлайне</div>
-      <div v-else class="admin-list-scroll mt-3 divide-y divide-stone-100 pr-1 dark:divide-zinc-800">
+      <div v-else class="admin-list-scroll mt-3 divide-y divide-stone-100 pr-1 dark:divide-white/10">
         <div v-for="u in rows" :key="u.id" class="flex items-center gap-2.5 py-2.5">
           <div class="relative shrink-0">
             <Avatar :image="avatarSrcFor(u)" shape="circle" class="!w-9 !h-9 [&_img]:object-cover" />
-            <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white dark:border-zinc-900" />
+            <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white dark:border-[#0F121F]" />
           </div>
           <div class="min-w-0 flex-1">
             <div class="text-sm font-semibold truncate dark:text-white">{{ u.name }} <Tag v-if="u.tag" :value="u.tag.label" :severity="u.tag.severity" class="!text-[9px] !py-0 ml-1" /></div>

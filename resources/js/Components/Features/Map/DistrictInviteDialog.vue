@@ -40,7 +40,7 @@ const emit = defineEmits<{
       <i v-if="searching" class="pi pi-spin pi-spinner absolute right-3.5 top-1/2 -translate-y-1/2 text-violet-400 text-sm pointer-events-none" />
     </div>
     <Message v-if="error" severity="error" :closable="false" class="!rounded-2xl !text-xs mt-3">{{ error }}</Message>
-    <div v-if="results.length" class="mt-3 max-h-[320px] overflow-auto divide-y border rounded-2xl bg-white dark:bg-zinc-900 dark:border-zinc-700">
+    <div v-if="results.length" class="mt-3 max-h-[320px] overflow-auto divide-y border rounded-2xl bg-white dark:bg-[#0F121F] dark:border-white/10">
       <div v-for="u in results" :key="u.id" class="flex items-center gap-2.5 p-2.5">
         <Avatar :image="u.avatar_url ?? undefined" :label="!u.avatar_url ? (u.name ?? '?').slice(0, 1) : undefined" shape="circle" class="!w-9 !h-9 shrink-0" />
         <div class="min-w-0 flex-1 text-sm font-bold truncate dark:text-white">{{ u.name }}</div>
@@ -50,7 +50,7 @@ const emit = defineEmits<{
           rounded
           size="small"
           :loading="invitingId === u.id"
-          class="!bg-gradient-to-r !from-violet-700 !to-purple-900 !border-0 !text-white"
+          class="!bg-gradient-to-r !from-rose-500 !via-pink-500 !to-fuchsia-500 !border-0 !text-white"
           @click="emit('invite', u.id)"
         />
       </div>

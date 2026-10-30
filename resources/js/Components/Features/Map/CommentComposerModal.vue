@@ -87,7 +87,7 @@ defineExpose({ focusInput })
     :draggable="false"
     :closable="false"
     :style="{ width: '400px', maxWidth: 'calc(100vw - 2rem)' }"
-    :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none !border-stone-200 dark:!border-zinc-700 overflow-visible', style: liftStyle }, content: { class: '!p-0 !bg-white dark:!bg-zinc-900 overflow-visible' } }"
+    :pt="{ root: { class: '!rounded-[24px] max-sm:!rounded-b-none !border-stone-200 dark:!border-white/10 overflow-visible', style: liftStyle }, content: { class: '!p-0 !bg-white dark:!bg-[#0F121F] overflow-visible' } }"
   >
     <div class="px-5 pt-5 pb-4">
       <div class="text-[15px] font-black dark:text-white leading-tight">{{ title }}</div>
@@ -107,7 +107,7 @@ defineExpose({ focusInput })
           class="w-full !rounded-2xl !text-[15px] max-h-44"
           :disabled="sending"
         />
-        <div v-if="mentions?.mentionOpen?.value" class="absolute left-0 right-0 bottom-[calc(100%+8px)] bg-white dark:bg-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl shadow-float overflow-hidden z-30 max-h-56 overflow-y-auto">
+        <div v-if="mentions?.mentionOpen?.value" class="absolute left-0 right-0 bottom-[calc(100%+8px)] bg-white dark:bg-white/[0.06] border border-stone-200 dark:border-white/10 rounded-2xl shadow-float overflow-hidden z-30 max-h-56 overflow-y-auto">
           <div v-if="mentions.mentionLoading.value" class="px-4 py-3 text-xs text-stone-400">Ищем людей…</div>
           <template v-else>
             <button v-for="u in mentions.mentionResults.value" :key="u.id" type="button" @click="emit('pickMention', u)" class="w-full flex items-center gap-2.5 px-3 py-2 active:bg-violet-100 transition text-left">

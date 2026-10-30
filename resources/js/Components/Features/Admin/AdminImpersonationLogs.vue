@@ -24,7 +24,7 @@ function fmt(dt: string | null) {
 }
 </script>
 <template>
-  <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0' } }">
+  <Card class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4 sm:!p-5' }, content: { class: '!p-0' } }">
     <template #content>
       <div class="flex items-center gap-2">
         <div class="font-black dark:text-white">Входы в аккаунты</div>
@@ -40,7 +40,7 @@ function fmt(dt: string | null) {
       <div v-if="logs.loading.value" class="py-8 grid place-items-center"><ProgressSpinner style="width:24px;height:24px" :strokeWidth="6" /></div>
       <div v-else-if="!logs.items.value.length" class="py-8 text-center text-sm text-stone-400 dark:text-zinc-500">Входов пока нет</div>
       <div v-else class="admin-list-scroll mt-3 space-y-2 pr-1">
-        <div v-for="l in logs.items.value" :key="l.id" class="rounded-2xl border border-stone-200 dark:border-zinc-700 p-3">
+        <div v-for="l in logs.items.value" :key="l.id" class="rounded-2xl border border-stone-200 dark:border-white/10 p-3">
           <div class="flex items-center gap-2 min-w-0">
             <i class="pi pi-eye text-red-500 text-sm shrink-0" />
             <div class="min-w-0 flex-1">

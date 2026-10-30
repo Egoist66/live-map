@@ -37,7 +37,7 @@ function sendNow(text: string): void {
     dismissable-mask
     header="Пресеты сообщений"
     class="w-[min(560px,94vw)]"
-    :pt="{ root: { class: '!rounded-3xl max-sm:!rounded-b-none' } }"
+    :pt="{ root: { class: '!rounded-3xl max-sm:!rounded-b-none dark:!bg-[#0F121F] dark:!border-white/10' } }"
     @hide="presets.reset()"
   >
     <div class="flex flex-col gap-3 min-w-0">
@@ -55,7 +55,7 @@ function sendNow(text: string): void {
       <div class="flex gap-1.5 overflow-x-auto pb-1 -mx-0.5 px-0.5">
         <button
           @click="presets.setCategory('all')"
-          :class="presets.activeCategoryId.value === 'all' ? 'bg-violet-600 text-white border-violet-600' : 'bg-white dark:bg-zinc-800 text-stone-600 dark:text-zinc-300 border-stone-200 dark:border-zinc-700'"
+          :class="presets.activeCategoryId.value === 'all' ? 'bg-violet-600 text-white border-violet-600' : 'bg-white dark:bg-white/10 text-stone-600 dark:text-zinc-300 border-stone-200 dark:border-white/10'"
           class="shrink-0 px-3 py-1.5 rounded-full border text-xs font-bold active:scale-95 transition"
         >
           Все · {{ presets.totalCount.value }}
@@ -64,7 +64,7 @@ function sendNow(text: string): void {
           v-for="category in presets.categories.value"
           :key="category.id"
           @click="presets.setCategory(category.id)"
-          :class="presets.activeCategoryId.value === category.id ? 'bg-violet-600 text-white border-violet-600' : 'bg-white dark:bg-zinc-800 text-stone-600 dark:text-zinc-300 border-stone-200 dark:border-zinc-700'"
+          :class="presets.activeCategoryId.value === category.id ? 'bg-violet-600 text-white border-violet-600' : 'bg-white dark:bg-white/10 text-stone-600 dark:text-zinc-300 border-stone-200 dark:border-white/10'"
           class="shrink-0 px-3 py-1.5 rounded-full border text-xs font-bold active:scale-95 transition"
         >
           {{ category.label }}
@@ -85,7 +85,7 @@ function sendNow(text: string): void {
             <div
               v-for="(item, idx) in category.items"
               :key="category.id + '-' + idx"
-              class="flex items-center gap-1.5 bg-stone-50 dark:bg-zinc-800/70 border border-stone-100 dark:border-zinc-700/60 rounded-2xl pl-3 pr-1.5 py-1.5 min-w-0"
+              class="flex items-center gap-1.5 bg-stone-50 dark:bg-white/[0.06] border border-stone-100 dark:border-white/10 rounded-2xl pl-3 pr-1.5 py-1.5 min-w-0"
             >
               <button @click="choose(item)" class="flex-1 min-w-0 text-left text-[13px] leading-snug dark:text-zinc-100 hover:text-violet-700 dark:hover:text-violet-300 transition" :title="item">
                 <span class="block truncate">{{ item }}</span>

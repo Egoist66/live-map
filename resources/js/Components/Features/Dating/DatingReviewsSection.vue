@@ -234,12 +234,12 @@ function reviewDate(iso: string | null): string {
   <div class="mt-4">
     <button
       type="button"
-      class="flex w-full items-center gap-3 rounded-2xl bg-stone-50 px-3 py-2.5 text-left transition active:scale-[0.99] dark:bg-zinc-800/60"
+      class="flex w-full items-center gap-3 rounded-2xl bg-stone-50 px-3 py-2.5 text-left transition active:scale-[0.99] dark:bg-white/[0.06]"
       :aria-expanded="reviews.expanded.value"
       aria-controls="dating-reviews-panel"
       @click="reviews.toggle()"
     >
-      <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-white">
+      <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white">
         <i class="pi pi-star-fill text-sm" aria-hidden="true" />
       </span>
       <span class="min-w-0 flex-1">
@@ -269,7 +269,7 @@ function reviewDate(iso: string | null): string {
           <div
             v-for="item in reviews.items.value"
             :key="item.id"
-            class="rounded-2xl border border-stone-200/70 dark:border-zinc-800 px-3 py-2.5"
+            class="rounded-2xl border border-stone-200/70 dark:border-white/10 px-3 py-2.5"
           >
             <div class="flex items-center gap-2 min-w-0">
               <Avatar :image="item.author?.avatar_url ?? undefined" :label="!item.author?.avatar_url ? (item.author?.name ?? '?').slice(0, 1) : undefined" shape="circle" class="!w-7 !h-7 !text-xs shrink-0" />
@@ -311,14 +311,14 @@ function reviewDate(iso: string | null): string {
           />
         </div>
 
-        <div v-if="!reviews.canReview.value && reviews.canReviewReason.value" class="mt-3 rounded-2xl bg-stone-50 dark:bg-zinc-800/60 border border-stone-200/70 dark:border-zinc-800 px-3 py-2.5">
+        <div v-if="!reviews.canReview.value && reviews.canReviewReason.value" class="mt-3 rounded-2xl bg-stone-50 dark:bg-white/[0.06] border border-stone-200/70 dark:border-white/10 px-3 py-2.5">
           <p class="flex items-start gap-1.5 text-xs text-stone-500 dark:text-zinc-400">
             <i class="pi pi-info-circle mt-0.5 shrink-0" aria-hidden="true" />
             <span>{{ reviews.canReviewReason.value }}</span>
           </p>
         </div>
 
-        <div v-if="reviews.canReview.value" class="mt-3 rounded-2xl bg-stone-50 dark:bg-zinc-800/60 border border-stone-200/70 dark:border-zinc-800 px-3 py-2.5">
+        <div v-if="reviews.canReview.value" class="mt-3 rounded-2xl bg-stone-50 dark:bg-white/[0.06] border border-stone-200/70 dark:border-white/10 px-3 py-2.5">
           <div v-if="!editing && reviews.myReview.value" class="flex items-center gap-2">
             <span class="flex-1 text-xs text-stone-500 dark:text-zinc-400 min-w-0">Твоя оценка: <b class="text-amber-500">{{ reviews.myReview.value.rating }} ★</b><span v-if="reviews.myReview.value.body"> — «{{ reviews.myReview.value.body.slice(0, 60) }}»</span></span>
             <Tag v-if="reviews.myReviewOnModeration.value" value="на модерации" severity="warn" class="!text-[9px] shrink-0" />
@@ -329,7 +329,7 @@ function reviewDate(iso: string | null): string {
 
           <div v-else-if="!editing" class="flex items-center gap-2">
             <span class="flex-1 text-xs text-stone-500 dark:text-zinc-400">Вы общались — оцени человека</span>
-            <Button label="Оценить" size="small" rounded class="!border-0 !bg-gradient-to-r !from-[#FD267D] !to-[#FF7854] !text-white" @click="startEdit()" />
+            <Button label="Оценить" size="small" rounded class="!border-0 !bg-gradient-to-r !from-rose-500 !via-pink-500 !to-fuchsia-500 !text-white" @click="startEdit()" />
           </div>
 
           <div v-else>
@@ -366,7 +366,7 @@ function reviewDate(iso: string | null): string {
                 {{ bodyToMin > 0 ? `Ещё ${bodyToMin} символов до минимума` : `Осталось ${bodyLeft}` }}
               </span>
               <Button label="Отмена" text size="small" class="!text-xs" @click="cancelEdit()" />
-              <Button label="Сохранить" size="small" rounded :disabled="!canSave" :loading="reviews.saving.value" class="!border-0 !bg-gradient-to-r !from-[#FD267D] !to-[#FF7854] !text-white disabled:!opacity-50" @click="onSave()" />
+              <Button label="Сохранить" size="small" rounded :disabled="!canSave" :loading="reviews.saving.value" class="!border-0 !bg-gradient-to-r !from-rose-500 !via-pink-500 !to-fuchsia-500 !text-white disabled:!opacity-50" @click="onSave()" />
             </div>
           </div>
         </div>
@@ -377,10 +377,10 @@ function reviewDate(iso: string | null): string {
       <button
         v-if="isOwn"
         type="button"
-        class="mt-3 flex w-full items-center gap-2.5 rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 p-3 text-left shadow-soft active:scale-[0.98] transition dark:border-amber-500/30 dark:from-amber-500/10 dark:to-orange-500/10"
+        class="mt-3 flex w-full items-center gap-2.5 rounded-2xl border border-amber-200 bg-gradient-to-r from-rose-50 via-pink-50 to-fuchsia-50 p-3 text-left shadow-soft active:scale-[0.98] transition dark:border-amber-500/30 dark:from-rose-500/10 dark:to-fuchsia-500/10"
         @click="myRaters.open()"
       >
-        <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 text-white"><i class="pi pi-star-fill text-sm" /></span>
+        <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white"><i class="pi pi-star-fill text-sm" /></span>
         <span class="min-w-0 flex-1">
           <span class="block truncate text-sm font-black text-stone-900 dark:text-white">Кто меня оценил</span>
           <span class="block truncate text-[11px] text-stone-500 dark:text-zinc-400">{{ (reviews.count.value ?? 0) > 0 ? `оценок: ${reviews.count.value}` : 'имена и отзывы — для Premium' }}</span>
@@ -398,7 +398,7 @@ function reviewDate(iso: string | null): string {
     header="Удалить чужой отзыв?"
     :style="{ width: '440px', maxWidth: '94vw' }"
     :pt="{
-      root: { class: '!rounded-[24px] !border-stone-200 dark:!border-white/10 !bg-white dark:!bg-zinc-900 overflow-hidden' },
+      root: { class: '!rounded-[24px] !border-stone-200 dark:!border-white/10 !bg-white dark:!bg-[#0F121F] overflow-hidden' },
       header: { class: '!px-5 !pt-5 !pb-0 !font-black !text-[17px] !tracking-tight !text-stone-900 dark:!text-white' },
       content: { class: '!px-5 !py-4 !text-sm !text-stone-600 dark:!text-zinc-300' },
       footer: { class: '!px-5 !pb-5 !pt-0 !flex !gap-2' },

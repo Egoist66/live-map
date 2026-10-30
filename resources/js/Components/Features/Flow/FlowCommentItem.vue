@@ -30,9 +30,9 @@ const authorName = () => props.comment.author?.name || 'Аноним'
 <template>
   <div class="flex min-w-0 gap-2.5">
     <Avatar v-if="comment.author.avatar_url" :image="comment.author.avatar_url" shape="circle" class="!w-8 !h-8 shrink-0" />
-    <Avatar v-else icon="pi pi-user-secret" shape="circle" class="!w-8 !h-8 shrink-0 !bg-stone-200 dark:!bg-zinc-700" />
+    <Avatar v-else icon="pi pi-user-secret" shape="circle" class="!w-8 !h-8 shrink-0 !bg-stone-200 dark:!bg-white/10" />
     <div class="min-w-0 flex-1">
-      <div class="min-w-0 rounded-2xl bg-stone-100 dark:bg-zinc-800 px-3 py-2">
+      <div class="min-w-0 rounded-2xl bg-stone-100 dark:bg-white/[0.06] px-3 py-2">
         <div class="truncate text-[13px] font-bold leading-tight text-ink-900 dark:text-white">{{ authorName() }}</div>
         <ModeratedContent :text="comment.content" :moderation="(comment as any).moderation" />
       </div>
@@ -42,7 +42,7 @@ const authorName = () => props.comment.author?.name || 'Аноним'
         <button v-if="comment.can_delete" class="shrink-0 px-1 py-1.5 active:text-red-500" @click="emit('remove', comment)">Удалить</button>
         <button v-if="hasKids()" class="shrink-0 px-1 py-1.5 font-semibold" @click="collapsed = !collapsed">{{ collapsed ? `Показать ветку (${totalKids()})` : 'Скрыть' }}</button>
       </div>
-      <div v-if="!collapsed && hasKids()" class="mt-1.5 space-y-2.5 border-l-2 border-stone-200 pl-2.5 dark:border-zinc-700">
+      <div v-if="!collapsed && hasKids()" class="mt-1.5 space-y-2.5 border-l-2 border-stone-200 pl-2.5 dark:border-white/10">
         <FlowCommentItem
           v-for="r in comment.replies"
           :key="r.id"

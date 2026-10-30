@@ -85,14 +85,14 @@ const attachmentSize = computed(() => {
 </script>
 <template>
   <div v-if="isSystem" class="flex justify-center w-full max-w-full py-1">
-    <div class="max-w-[92%] rounded-full bg-stone-200/70 dark:bg-zinc-800 px-3.5 py-1.5 text-center text-xs leading-snug text-stone-500 dark:text-zinc-300 shadow-sm">
+    <div class="max-w-[92%] rounded-full bg-stone-200/70 dark:bg-white/10 px-3.5 py-1.5 text-center text-xs leading-snug text-stone-500 dark:text-zinc-300 shadow-sm">
       {{ (message as any)?.body }}<span class="opacity-70"> · {{ time }}</span>
     </div>
   </div>
   <div v-else :class="own ? 'flex justify-end' : 'flex justify-start'" class="min-w-0 w-full max-w-full">
     <div class="flex items-end gap-1.5 sm:gap-2 max-w-[88%] sm:max-w-[72%] lg:max-w-[68%] min-w-0" :class="own ? 'flex-row-reverse' : 'flex-row'">
       <div class="relative min-w-0 flex-1 select-none">
-        <div :class="['rounded-[22px] px-3.5 py-2.5 lg:px-4 lg:py-2 text-[15px] lg:text-sm leading-[1.45] shadow-sm transition-all duration-300', own ? 'bg-pink-200 dark:bg-pink-950 text-pink-950 dark:text-pink-100 rounded-br-[6px]' : 'bg-[#F0F2F4] dark:bg-zinc-800 text-stone-900 dark:text-white rounded-bl-[6px]', (message as any).pending ? 'opacity-60 scale-[0.98]' : 'opacity-100 scale-100', (message as any).failed ? '!bg-red-500 !text-white' : '', (message as any).justSent ? 'ring-2 ring-pink-400/60 dark:ring-pink-400/40' : '']">
+        <div :class="['rounded-[22px] px-3.5 py-2.5 lg:px-4 lg:py-2 text-[15px] lg:text-sm leading-[1.45] shadow-sm transition-all duration-300', own ? 'bg-pink-200 dark:bg-pink-950 text-pink-950 dark:text-pink-100 rounded-br-[6px]' : 'bg-[#F0F2F4] dark:bg-white/10 text-stone-900 dark:text-white rounded-bl-[6px]', (message as any).pending ? 'opacity-60 scale-[0.98]' : 'opacity-100 scale-100', (message as any).failed ? '!bg-red-500 !text-white' : '', (message as any).justSent ? 'ring-2 ring-pink-400/60 dark:ring-pink-400/40' : '']">
           <div v-if="(message as any).is_pinned || pinned" class="text-[11px] lg:text-[10px] font-bold mb-1 opacity-80">📌 Закреплено</div>
           <div v-if="forwardedFrom" class="flex items-center gap-1.5 mb-1.5 min-w-0">
             <UserAvatar :user="forwardedFrom" shape="circle" class="!w-5 !h-5 shrink-0 [&_img]:object-cover" />

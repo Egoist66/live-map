@@ -48,7 +48,7 @@ async function onFile(event: Event): Promise<void> {
       <div
         v-for="photo in manager.photos.value"
         :key="photo.id"
-        class="relative rounded-2xl overflow-hidden bg-stone-100 dark:bg-zinc-800 aspect-square group"
+        class="relative rounded-2xl overflow-hidden bg-stone-100 dark:bg-white/[0.06] aspect-square group"
       >
         <img :src="photo.url ?? ''" :alt="photo.caption ?? 'Фото компании'" class="w-full h-full object-cover" loading="lazy" />
         <button

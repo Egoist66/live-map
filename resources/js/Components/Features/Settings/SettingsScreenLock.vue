@@ -19,12 +19,12 @@ function isAlpha(): boolean {
 }
 </script>
 <template>
-  <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }">
+  <Card class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }">
     <template #content>
       <div class="flex items-start justify-between gap-3">
         <div>
           <h3 class="font-black tracking-tight text-lg dark:text-white flex items-center gap-2">
-            <span class="w-9 h-9 rounded-2xl grid place-items-center bg-gradient-to-br from-violet-600 to-indigo-600 text-white text-base shrink-0"><i class="pi pi-lock" /></span>
+            <span class="w-9 h-9 rounded-2xl grid place-items-center bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white text-base shrink-0"><i class="pi pi-lock" /></span>
             Пароль на приложение
           </h3>
         </div>
@@ -55,7 +55,7 @@ function isAlpha(): boolean {
           <div>
             <label class="text-sm font-medium dark:text-white">Тип пароля</label>
             <div class="grid grid-cols-2 gap-2 mt-1.5">
-              <button v-for="k in CODE_KINDS" :key="k.v" type="button" @click="f.setKind(k.v)" :class="['rounded-2xl border p-3 text-left transition active:scale-[0.98]', (f.kindField as any).value === k.v ? '!border-violet-500 !bg-violet-50 dark:!bg-violet-950/40 shadow-soft' : 'border-stone-200 dark:border-zinc-700 bg-white dark:bg-zinc-800']">
+              <button v-for="k in CODE_KINDS" :key="k.v" type="button" @click="f.setKind(k.v)" :class="['rounded-2xl border p-3 text-left transition active:scale-[0.98]', (f.kindField as any).value === k.v ? '!border-violet-500 !bg-violet-50 dark:!bg-violet-950/40 shadow-soft' : 'border-stone-200 dark:border-white/10 bg-white dark:bg-white/10']">
                 <span class="block text-sm font-bold dark:text-white">{{ k.l }}</span>
                 <span class="block text-[11px] text-stone-500 dark:text-zinc-400 mt-0.5">{{ k.d }}</span>
               </button>

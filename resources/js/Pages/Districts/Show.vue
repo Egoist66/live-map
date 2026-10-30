@@ -58,8 +58,8 @@ onMounted(async () => {
         </div>
 
         <div v-if="page.loading.value && !page.district.value" class="grid gap-3">
-          <div class="h-44 animate-pulse rounded-3xl bg-white dark:bg-zinc-900" />
-          <div class="h-24 animate-pulse rounded-3xl bg-white dark:bg-zinc-900" />
+          <div class="h-44 animate-pulse rounded-3xl bg-white dark:bg-[#0F121F]" />
+          <div class="h-24 animate-pulse rounded-3xl bg-white dark:bg-[#0F121F]" />
         </div>
 
         <div v-else-if="page.district.value" class="grid gap-3">
@@ -95,7 +95,7 @@ onMounted(async () => {
             </template>
           </DistrictCommunityHeader>
 
-          <div v-if="page.editing.value" class="rounded-3xl border border-stone-200/70 bg-white p-4 sm:p-5 dark:border-zinc-800 dark:bg-zinc-900">
+          <div v-if="page.editing.value" class="rounded-3xl border border-stone-200/70 bg-white p-4 sm:p-5 dark:border-white/10 dark:bg-[#0F121F]">
             <div class="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-zinc-500">Редактирование</div>
             <InputText v-model="page.editName.value" maxlength="80" placeholder="Название сообщества" class="mt-2 w-full !rounded-2xl" />
             <Textarea v-model="page.editDescription.value" maxlength="500" rows="3" auto-resize placeholder="Чем тут занимаются" class="mt-2 w-full !rounded-2xl !text-sm" />
@@ -134,7 +134,7 @@ onMounted(async () => {
                   @cancel="news.resetComposer()"
                 />
                 <div v-if="news.loading.value" class="grid gap-3">
-                  <div class="h-36 animate-pulse rounded-3xl bg-white dark:bg-zinc-900" />
+                  <div class="h-36 animate-pulse rounded-3xl bg-white dark:bg-[#0F121F]" />
                 </div>
                 <div v-else-if="news.posts.value.length" class="grid gap-3">
                   <DistrictNewsCard
@@ -150,19 +150,19 @@ onMounted(async () => {
                     @comments-delta="(postId: number, delta: number) => news.applyCommentsDelta(postId, delta)"
                   />
                 </div>
-                <div v-else class="rounded-2xl border border-dashed border-stone-300 p-3 text-center text-xs text-stone-400 dark:border-zinc-700 dark:text-zinc-500">
+                <div v-else class="rounded-2xl border border-dashed border-stone-300 p-3 text-center text-xs text-stone-400 dark:border-white/10 dark:text-zinc-500">
                   Новостей пока нет — {{ page.isOwner.value ? 'расскажите жителям, что происходит' : 'загляните позже' }}
                 </div>
-                <div class="rounded-3xl border border-stone-200/70 bg-white p-4 sm:p-5 dark:border-zinc-800 dark:bg-zinc-900">
+                <div class="rounded-3xl border border-stone-200/70 bg-white p-4 sm:p-5 dark:border-white/10 dark:bg-[#0F121F]">
                   <div class="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-zinc-500">О сообществе</div>
                   <p v-if="page.district.value.description" class="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed text-ink-900 dark:text-zinc-100">
                     {{ page.district.value.description }}
                   </p>
                   <p v-else class="mt-2 text-[13px] text-stone-400 dark:text-zinc-500">Без описания — спросите у жителей, что тут происходит.</p>
                 </div>
-                <div class="rounded-3xl border border-stone-200/70 bg-white p-4 sm:p-5 dark:border-zinc-800 dark:bg-zinc-900">
+                <div class="rounded-3xl border border-stone-200/70 bg-white p-4 sm:p-5 dark:border-white/10 dark:bg-[#0F121F]">
                   <div class="mb-2 text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-zinc-500">Пины сообщества</div>
-                  <div v-if="page.district.value.pins_locked" class="rounded-2xl border border-stone-200 bg-stone-50 p-4 text-center dark:border-zinc-700 dark:bg-white/[0.04]">
+                  <div v-if="page.district.value.pins_locked" class="rounded-2xl border border-stone-200 bg-stone-50 p-4 text-center dark:border-white/10 dark:bg-white/[0.04]">
                     <i class="pi pi-lock text-xl text-stone-400 dark:text-zinc-500" />
                     <div class="mt-1 text-[13px] font-bold text-ink-900 dark:text-white">Записи скрыты</div>
                     <div class="mt-0.5 text-[11px] text-stone-500 dark:text-zinc-400">Внутри {{ page.district.value.pins_count }} · видят только жители</div>
@@ -179,13 +179,13 @@ onMounted(async () => {
                       @open="page.openPin(pin)"
                     />
                   </div>
-                  <div v-else class="rounded-2xl border border-dashed border-stone-300 p-3 text-center text-xs text-stone-400 dark:border-zinc-700 dark:text-zinc-500">
+                  <div v-else class="rounded-2xl border border-dashed border-stone-300 p-3 text-center text-xs text-stone-400 dark:border-white/10 dark:text-zinc-500">
                     Пока тихо — станьте первым, кто поставит пин внутри
                   </div>
                 </div>
               </div>
 
-              <div v-if="page.activeTab.value === 'members'" class="rounded-3xl border border-stone-200/70 bg-white p-4 sm:p-5 dark:border-zinc-800 dark:bg-zinc-900">
+              <div v-if="page.activeTab.value === 'members'" class="rounded-3xl border border-stone-200/70 bg-white p-4 sm:p-5 dark:border-white/10 dark:bg-[#0F121F]">
                 <div v-if="page.membersLoading.value" class="text-xs text-stone-400">Загружаем участников…</div>
                 <div v-else-if="page.residents.value.length" class="grid grid-cols-1 gap-2 min-[480px]:grid-cols-2">
                   <DistrictMemberRow
@@ -200,13 +200,13 @@ onMounted(async () => {
                     @kick="page.kickMember"
                   />
                 </div>
-                <div v-else class="rounded-2xl border border-dashed border-stone-300 p-3 text-center text-xs text-stone-400 dark:border-zinc-700 dark:text-zinc-500">
+                <div v-else class="rounded-2xl border border-dashed border-stone-300 p-3 text-center text-xs text-stone-400 dark:border-white/10 dark:text-zinc-500">
                   Пока только владелец
                 </div>
               </div>
 
-              <div v-if="page.activeTab.value === 'info'" class="rounded-3xl border border-stone-200/70 bg-white p-4 sm:p-5 dark:border-zinc-800 dark:bg-zinc-900">
-                <div class="divide-y divide-stone-100 text-sm dark:divide-zinc-800">
+              <div v-if="page.activeTab.value === 'info'" class="rounded-3xl border border-stone-200/70 bg-white p-4 sm:p-5 dark:border-white/10 dark:bg-[#0F121F]">
+                <div class="divide-y divide-stone-100 text-sm dark:divide-white/10">
                   <div class="flex justify-between gap-3 py-3">
                     <span class="flex items-center gap-2 text-stone-500 dark:text-zinc-400"><i class="pi pi-tag" />Направление</span>
                     <span class="text-right font-semibold text-ink-900 dark:text-white">{{ page.interestLabel.value }}</span>
@@ -230,7 +230,7 @@ onMounted(async () => {
               </div>
 
               <div v-if="page.activeTab.value === 'requests' && page.isOwner.value" class="grid gap-3">
-                <div class="rounded-3xl border border-stone-200/70 bg-white p-4 sm:p-5 dark:border-zinc-800 dark:bg-zinc-900">
+                <div class="rounded-3xl border border-stone-200/70 bg-white p-4 sm:p-5 dark:border-white/10 dark:bg-[#0F121F]">
                   <div class="mb-2 text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-zinc-500">Приглашены · ждут ответа</div>
                   <div v-if="page.invited.value.length" class="grid gap-2">
                     <DistrictMemberRow
@@ -247,7 +247,7 @@ onMounted(async () => {
                   </div>
                   <div v-else class="text-xs text-stone-400 dark:text-zinc-500">Исходящих приглашений нет</div>
                 </div>
-                <div class="rounded-3xl border border-stone-200/70 bg-white p-4 sm:p-5 dark:border-zinc-800 dark:bg-zinc-900">
+                <div class="rounded-3xl border border-stone-200/70 bg-white p-4 sm:p-5 dark:border-white/10 dark:bg-[#0F121F]">
                   <div class="mb-2 text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-zinc-500">Заявки</div>
                   <div v-if="page.pending.value.length" class="grid gap-2">
                     <DistrictMemberRow
@@ -266,7 +266,7 @@ onMounted(async () => {
                       @contact="page.writeToMember"
                     />
                   </div>
-                  <div v-else class="rounded-2xl border border-dashed border-stone-300 p-3 text-center text-xs text-stone-400 dark:border-zinc-700 dark:text-zinc-500">
+                  <div v-else class="rounded-2xl border border-dashed border-stone-300 p-3 text-center text-xs text-stone-400 dark:border-white/10 dark:text-zinc-500">
                     Заявок нет — все жители на месте
                   </div>
                 </div>
@@ -274,7 +274,7 @@ onMounted(async () => {
             </div>
 
             <aside class="grid min-w-0 gap-3">
-              <div class="rounded-3xl border border-stone-200/70 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+              <div class="rounded-3xl border border-stone-200/70 bg-white p-4 dark:border-white/10 dark:bg-[#0F121F]">
                 <div class="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-zinc-500">Контакты</div>
                 <Link v-if="page.district.value.owner" :href="userProfileUrl(page.district.value.owner)" class="mt-2 block truncate text-sm font-bold text-blue-600 hover:underline dark:text-blue-400">
                   {{ page.district.value.owner.name }}
@@ -282,7 +282,7 @@ onMounted(async () => {
                 <div class="text-[11px] text-stone-500 dark:text-zinc-400">администратор сообщества</div>
                 <Button v-if="!page.isOwner.value" label="Написать" icon="pi pi-send" rounded size="small" :loading="page.writingOwner.value" class="mt-3 w-full !border-0 !bg-ink-900 !text-white dark:!bg-white dark:!text-ink-900" @click="page.writeToOwner()" />
               </div>
-              <div class="rounded-3xl border border-stone-200/70 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+              <div class="rounded-3xl border border-stone-200/70 bg-white p-4 dark:border-white/10 dark:bg-[#0F121F]">
                 <div class="text-[11px] font-bold uppercase tracking-widest text-stone-400 dark:text-zinc-500">На карте</div>
                 <p class="mt-2 text-[13px] leading-relaxed text-stone-500 dark:text-zinc-400">Заливка видна всем. Пины внутри — только жителям.</p>
                 <Button label="Показать район" icon="pi pi-map-marker" rounded outlined size="small" class="mt-3 w-full" @click="page.backToMap()" />
@@ -292,7 +292,7 @@ onMounted(async () => {
           </div>
         </div>
 
-        <div v-else class="rounded-3xl border border-stone-200/70 bg-white p-8 text-center dark:border-zinc-800 dark:bg-zinc-900">
+        <div v-else class="rounded-3xl border border-stone-200/70 bg-white p-8 text-center dark:border-white/10 dark:bg-[#0F121F]">
           <div class="text-lg font-black text-ink-900 dark:text-white">Район не найден</div>
           <p class="mt-1 text-sm text-stone-500 dark:text-zinc-400">Возможно, его удалили.</p>
           <Link href="/districts"><Button label="К списку районов" rounded class="mt-4 !border-0 !bg-blue-600 !text-white" /></Link>

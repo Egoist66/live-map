@@ -16,7 +16,7 @@ const modules = [Keyboard]
 </script>
 
 <template>
-  <div v-if="media.length" class="relative mt-3 overflow-hidden rounded-2xl border border-stone-200 dark:border-zinc-800">
+  <div v-if="media.length" class="relative mt-3 overflow-hidden rounded-2xl border border-stone-200 dark:border-white/10">
     <Swiper
       :slides-per-view="1"
       :space-between="0"

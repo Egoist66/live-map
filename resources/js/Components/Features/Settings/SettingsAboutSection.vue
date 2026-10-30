@@ -35,7 +35,7 @@ const icons: Record<string, string> = {
 </script>
 
 <template>
-  <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }">
+  <Card class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }">
     <template #content>
       <h3 class="font-black tracking-tight text-lg dark:text-white">О сервисе</h3>
       <p class="text-sm text-stone-500 mt-1">{{ content.multiModule.value ? 'Знакомства и встречи рядом: все включённые разделы — в меню. Справка, связь и документы — ниже.' : 'ULove — знакомства рядом: свайпы, мэтчи и чат. Справка, связь и документы — ниже.' }}</p>
@@ -44,7 +44,7 @@ const icons: Record<string, string> = {
           v-for="footerLink in footerLinks"
           :key="footerLink.href"
           :href="footerLink.href"
-          class="group flex items-center gap-3 rounded-2xl border border-stone-200/70 dark:border-zinc-800 px-4 py-3 transition hover:border-violet-300 dark:hover:border-violet-500/40 active:scale-[0.99]"
+          class="group flex items-center gap-3 rounded-2xl border border-stone-200/70 dark:border-white/10 px-4 py-3 transition hover:border-violet-300 dark:hover:border-violet-500/40 active:scale-[0.99]"
         >
           <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-violet-500/10 text-violet-600 dark:text-violet-300"><i :class="icons[footerLink.href] ?? 'pi pi-info-circle'" /></span>
           <span class="min-w-0 flex-1 truncate text-sm font-bold text-stone-800 dark:text-zinc-100">{{ footerLink.label }}</span>

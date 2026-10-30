@@ -9,7 +9,7 @@ const rating = useRatingSystem()
 
 <template>
   <div class="space-y-3">
-    <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
+    <Card class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
       <template #content>
         <div class="flex items-center gap-3">
           <span class="w-10 h-10 rounded-2xl grid place-items-center shrink-0 bg-amber-500/15 text-amber-500"><i class="pi pi-star" /></span>
@@ -32,12 +32,12 @@ const rating = useRatingSystem()
       </template>
     </Card>
 
-    <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
+    <Card class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
       <template #content>
         <div class="text-sm font-black text-stone-900 dark:text-white">Шкала рангов</div>
         <div class="text-xs text-stone-500 dark:text-zinc-400 mt-0.5">У тебя {{ rating.score.value }} ★ · титул и уровень в профиле обновляются сами</div>
         <div class="mt-3 space-y-1.5">
-          <div v-for="r in rating.ranks.value" :key="r.code" :class="['flex items-center gap-2.5 px-3 py-2 rounded-2xl border text-sm', r.reached ? 'bg-violet-500/10 border-violet-500/30' : 'bg-stone-50 dark:bg-zinc-800/50 border-stone-200 dark:border-zinc-800']">
+          <div v-for="r in rating.ranks.value" :key="r.code" :class="['flex items-center gap-2.5 px-3 py-2 rounded-2xl border text-sm', r.reached ? 'bg-violet-500/10 border-violet-500/30' : 'bg-stone-50 dark:bg-white/[0.06]/50 border-stone-200 dark:border-white/10']">
             <i :class="[r.icon, r.reached ? 'text-violet-500' : 'text-stone-300 dark:text-zinc-600']" />
             <span :class="['flex-1 font-bold', r.reached ? 'text-stone-900 dark:text-white' : 'text-stone-400 dark:text-zinc-500']">{{ r.reached ? '✓ ' : '' }}{{ r.name }}</span>
             <span class="text-xs font-bold text-stone-400">{{ r.points }} ★</span>
@@ -46,11 +46,11 @@ const rating = useRatingSystem()
       </template>
     </Card>
 
-    <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
+    <Card class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
       <template #content>
         <div class="text-sm font-black text-stone-900 dark:text-white">Сколько что даёт</div>
         <div class="text-xs text-stone-500 dark:text-zinc-400 mt-0.5">Повтор по тому же объекту на неделе не платит: снял лайк и поставил заново — 0 ★</div>
-        <div class="mt-3 divide-y divide-stone-100 dark:divide-zinc-800">
+        <div class="mt-3 divide-y divide-stone-100 dark:divide-white/10">
           <div v-for="a in rating.catalog.value" :key="a.code" class="flex items-center gap-2 py-2 text-sm">
             <span class="flex-1 min-w-0 text-stone-600 dark:text-zinc-300">{{ a.label }}</span>
             <span class="font-black text-emerald-500 whitespace-nowrap">+{{ a.points }} ★</span>

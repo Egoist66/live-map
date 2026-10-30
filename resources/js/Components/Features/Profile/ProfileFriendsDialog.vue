@@ -46,12 +46,12 @@ function isOnline(other: any): boolean {
       <button v-for="f in people.friends.value" :key="f.id" type="button" @click="people.goProfile(f.other)" class="w-full min-h-[60px] flex items-center gap-3 px-2 py-1.5 rounded-2xl hover:bg-stone-50 dark:hover:bg-white/5 active:scale-[0.99] transition text-left overflow-hidden">
         <span class="relative shrink-0">
           <img :src="avatarSrcFor(f.other) || undefined" class="w-10 h-10 rounded-full object-cover shrink-0" alt="" />
-          <span v-if="isOnline(f.other)" class="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white dark:border-zinc-900" title="В сети" />
+          <span v-if="isOnline(f.other)" class="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white dark:border-[#0F121F]" title="В сети" />
         </span>
         <span class="min-w-0 flex-1">
           <span class="flex items-center gap-1.5">
             <span class="block text-sm font-bold truncate dark:text-zinc-100">{{ f.other.name }}</span>
-            <span class="h-2 w-2 shrink-0 rounded-full" :class="isOnline(f.other) ? 'bg-emerald-500' : 'bg-stone-300 dark:bg-zinc-600'" :title="statusText(f.other)"></span>
+            <span class="h-2 w-2 shrink-0 rounded-full" :class="isOnline(f.other) ? 'bg-emerald-500' : 'bg-stone-300 dark:bg-white/15'" :title="statusText(f.other)"></span>
           </span>
           <span class="block text-xs truncate" :class="isOnline(f.other) ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : 'text-stone-500 dark:text-zinc-400'">{{ statusText(f.other) }}</span>
         </span>

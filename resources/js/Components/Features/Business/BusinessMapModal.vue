@@ -26,13 +26,13 @@ function badgeStatus(): BusinessVerificationStatus {
     position="center"
     :style="{ width: '560px', maxWidth: 'calc(100vw - 2rem)' }"
     :pt="{
-      root: { class: '!border-0 overflow-hidden !bg-white dark:!bg-zinc-900 shadow-2xl !rounded-[28px] max-sm:!rounded-b-none' },
-      content: { class: '!p-0 !bg-white dark:!bg-zinc-900' },
+      root: { class: '!border-0 overflow-hidden !bg-white dark:!bg-[#0F121F] shadow-2xl !rounded-[28px] max-sm:!rounded-b-none' },
+      content: { class: '!p-0 !bg-white dark:!bg-[#0F121F]' },
     }"
     @hide="closeCompany()"
   >
     <div v-if="opened" class="max-h-[86dvh] overflow-y-auto overscroll-contain">
-      <div class="relative overflow-hidden bg-gradient-to-br from-indigo-950 via-indigo-900 to-violet-900 px-5 sm:px-6 pt-5 pb-5 text-white">
+      <div class="relative overflow-hidden bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 px-5 sm:px-6 pt-5 pb-5 text-white">
         <div class="absolute -top-12 -right-12 w-44 h-44 rounded-full bg-violet-500/30 blur-[50px] pointer-events-none"></div>
         <div class="relative flex items-start gap-3">
           <span class="w-12 h-12 rounded-2xl bg-white/15 border border-white/20 grid place-items-center text-2xl shrink-0 overflow-hidden">
@@ -66,7 +66,7 @@ function badgeStatus(): BusinessVerificationStatus {
             v-for="pin in companyPins"
             :key="pin.id"
             type="button"
-            class="w-full text-left rounded-2xl border border-stone-200 dark:border-zinc-700 px-3.5 py-2.5 hover:border-indigo-400 transition active:scale-[0.99]"
+            class="w-full text-left rounded-2xl border border-stone-200 dark:border-white/10 px-3.5 py-2.5 hover:border-indigo-400 transition active:scale-[0.99]"
             @click="openCompanyPin(pin)"
           >
             <div class="text-sm font-bold truncate dark:text-white">{{ pin.title }}</div>

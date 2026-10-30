@@ -42,7 +42,7 @@ async function remove(): Promise<void> {
 <template>
   <Dialog :visible="!!post" @update:visible="(v: boolean) => { if (!v) emit('close') }" modal dismissableMask :draggable="false" header="Репост" :breakpoints="{ '640px': '100vw' }" :style="{ width: '440px' }">
     <div v-if="post" class="space-y-3">
-      <div class="rounded-2xl bg-stone-100 dark:bg-zinc-800 px-3 py-2.5 text-[13px] text-stone-600 dark:text-zinc-300">
+      <div class="rounded-2xl bg-stone-100 dark:bg-white/[0.06] px-3 py-2.5 text-[13px] text-stone-600 dark:text-zinc-300">
         <span class="font-bold text-ink-900 dark:text-white">{{ post.author.name }}</span>
         <span class="mt-0.5 block line-clamp-3">{{ post.repost ? reposter.originExcerpt(post.repost, 140) : (post.body || '').slice(0, 140) }}</span>
       </div>

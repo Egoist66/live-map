@@ -33,7 +33,7 @@ const ulove = useUlovePrivacy()
 const visitors = useProfileVisitorsNotify()
 </script>
 <template>
-  <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }">
+  <Card class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }">
     <template #content>
       <h3 class="font-black tracking-tight text-lg dark:text-white">Приватность</h3>
       <p class="text-sm text-stone-500 mt-1">{{ showMapSection ? 'Ты — не точка, ты — пин. Управляй видимостью своей геопозиции и анонимностью.' : 'Управляй видимостью анкеты и анонимностью знакомств.' }}</p>
@@ -53,7 +53,7 @@ const visitors = useProfileVisitorsNotify()
       <div class="mt-5 max-w-xl">
         <SelectButton v-if="showSelector" v-model="privacyTab" :options="[...privacyTabOptions]" option-label="label" option-value="value" class="w-full" />
         <div v-if="showMapSection && privacyTab === 'map'" class="mt-4 space-y-4">
-        <Card class="!bg-stone-50 dark:!bg-zinc-800 !border-stone-200 !rounded-3xl !shadow-none" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
+        <Card class="!bg-stone-50 dark:!bg-white/10 !border-stone-200 !rounded-3xl !shadow-none" :pt="{ body: { class: '!p-4' }, content: { class: '!p-0' } }">
           <template #content>
             <div class="text-sm font-semibold dark:text-white">Базовые принципы</div>
             <ul class="text-sm text-stone-600 mt-2 space-y-1 list-disc pl-5">
@@ -133,12 +133,12 @@ const visitors = useProfileVisitorsNotify()
         </Card>
         </div>
         <div v-else-if="showUloveSection" class="mt-4 space-y-4">
-          <div class="rounded-3xl border-2 border-rose-200 dark:border-rose-900 bg-gradient-to-br from-rose-50 to-orange-50 dark:from-rose-950/40 dark:to-orange-950/20 p-4">
+          <div class="rounded-3xl border-2 border-rose-200 dark:border-rose-900 bg-gradient-to-br from-rose-50 via-pink-50 to-fuchsia-50 dark:from-rose-950/40 dark:to-fuchsia-950/20 p-4">
             <div class="text-sm font-semibold dark:text-white">💘 ULove — платные фишки</div>
             <p class="text-xs text-stone-500 mt-1 leading-relaxed">Включай приватность знакомств. Твой тариф: {{ ulove.planLabel.value }}.</p>
             <Link href="/settings/billing"><Button label="Выбрать тариф" icon="pi pi-crown" rounded size="small" class="mt-3 !bg-white !text-orange-600 !border-0" /></Link>
           </div>
-          <div v-for="feature in ulove.features" :key="feature.key" class="flex items-center gap-3 rounded-3xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4">
+          <div v-for="feature in ulove.features" :key="feature.key" class="flex items-center gap-3 rounded-3xl border border-stone-200 dark:border-white/10 bg-white dark:bg-[#0F121F] p-4">
             <span :class="['w-10 h-10 rounded-2xl grid place-items-center shrink-0', feature.iconClass]"><i :class="feature.icon" /></span>
             <div class="min-w-0 flex-1">
               <div class="text-sm font-black text-stone-900 dark:text-white">{{ feature.title }} <span :class="feature.plan === 'PRO' ? 'text-amber-500' : 'text-emerald-500'">{{ feature.plan }}</span></div>
@@ -146,7 +146,7 @@ const visitors = useProfileVisitorsNotify()
             </div>
             <ToggleSwitch :model-value="ulove.flags.value[feature.key]" :disabled="ulove.isLocked(feature.key) || ulove.saving.value" class="shrink-0" @update:model-value="(next:boolean)=>ulove.toggle(feature.key, next)" />
           </div>
-          <div class="flex items-center gap-3 rounded-3xl border border-stone-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 p-4">
+          <div class="flex items-center gap-3 rounded-3xl border border-stone-200 dark:border-white/10 bg-white dark:bg-[#0F121F] p-4">
             <span class="w-10 h-10 rounded-2xl grid place-items-center shrink-0 bg-amber-500/15 text-amber-600 dark:text-amber-300"><i class="pi pi-eye" /></span>
             <div class="min-w-0 flex-1">
               <div class="text-sm font-black text-stone-900 dark:text-white">Кто заходил в мой профиль <span class="text-amber-500">PRO</span></div>
@@ -154,7 +154,7 @@ const visitors = useProfileVisitorsNotify()
             </div>
             <ToggleSwitch :model-value="visitors.state.value.enabled" :disabled="!visitors.canUse.value || visitors.state.value.saving" class="shrink-0" @update:model-value="(next:boolean)=>visitors.save(next)" />
           </div>
-          <div class="rounded-3xl border-2 border-amber-200 dark:border-amber-900 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/40 dark:to-orange-950/20 p-4">
+          <div class="rounded-3xl border-2 border-amber-200 dark:border-amber-900 bg-gradient-to-br from-rose-50 via-pink-50 to-fuchsia-50 dark:from-rose-950/40 dark:to-fuchsia-950/20 p-4">
             <div class="text-sm font-semibold dark:text-white">👑 На Premium — то же самое, но возможностей больше</div>
             <p class="text-xs text-stone-500 mt-1 leading-relaxed">Уведомления о гостях работают и там, а сверху: конкретные гости с анкетами и кнопкой «Написать», разбор аудитории и выгрузка статистики в CSV. Детали — в тарифе.</p>
             <Link href="/settings/billing"><Button label="Детали в тарифе" icon="pi pi-crown" rounded size="small" class="mt-3 !bg-white !text-orange-600 !border-0" /></Link>

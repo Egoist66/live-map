@@ -116,7 +116,7 @@ export const PLAN_DETAILS: PlanDetails[] = [
     name: 'PRO',
     price: '$3.99 / мес',
     tagline: 'Для активных знакомств: тебя видят, тебе отвечают',
-    gradient: 'from-violet-600 to-indigo-600',
+    gradient: 'from-rose-500 via-pink-500 to-fuchsia-500',
     audience: 'users',
     groups: [
       {
@@ -165,7 +165,7 @@ export const PLAN_DETAILS: PlanDetails[] = [
     name: 'Premium',
     price: '$7.99 / мес',
     tagline: 'Максимум для знакомств: всё из PRO без ограничений',
-    gradient: 'from-amber-500 to-orange-600',
+    gradient: 'from-rose-500 via-pink-500 to-fuchsia-500',
     audience: 'users',
     groups: [
       {

@@ -55,7 +55,7 @@ watch(isGuideOpen, async (open) => {
     :style="{ width: '620px', maxWidth: '96vw' }"
     :breakpoints="{ '640px': '96vw' }"
     :pt="{
-      root: { class: '!rounded-[24px] max-sm:!rounded-b-none !border-stone-200 dark:!border-white/10 !bg-white dark:!bg-zinc-900 overflow-hidden mobile-sheet' },
+      root: { class: '!rounded-[24px] max-sm:!rounded-b-none !border-stone-200 dark:!border-white/10 !bg-white dark:!bg-[#0F121F] overflow-hidden mobile-sheet' },
       header: { class: '!p-4 sm:!p-5 !pb-0 !border-0' },
       content: { class: '!px-4 !pb-4 sm:!px-5 sm:!pb-5 !pt-2' },
     }"
@@ -94,7 +94,7 @@ watch(isGuideOpen, async (open) => {
         role="log"
         aria-live="polite"
         aria-label="История диалога"
-        class="max-h-[52dvh] min-h-[240px] space-y-3 overflow-y-auto overscroll-contain rounded-3xl bg-stone-50 p-3 sm:max-h-[46vh] sm:p-4 dark:bg-zinc-900/60"
+        class="max-h-[52dvh] min-h-[240px] space-y-3 overflow-y-auto overscroll-contain rounded-3xl bg-stone-50 p-3 sm:max-h-[46vh] sm:p-4 dark:bg-[#0F121F]/60"
       >
         <div v-if="!hasGuideHistory && !guideLoading" class="flex flex-col items-center px-2 py-6 text-center">
           <span class="grid h-16 w-16 place-items-center rounded-[22px] bg-rose-500 text-2xl text-white shadow-glow">
@@ -113,7 +113,7 @@ watch(isGuideOpen, async (open) => {
               outlined
               rounded
               size="small"
-              class="!justify-start !bg-white dark:!bg-zinc-800"
+              class="!justify-start !bg-white dark:!bg-white/[0.06]"
               @click="sendSuggestion(s.question)"
             />
           </div>
@@ -133,14 +133,14 @@ watch(isGuideOpen, async (open) => {
               <div class="flex min-w-0 max-w-[88%] flex-col gap-1">
                 <div
                   v-html="renderedText(msg.text, i)"
-                  class="ai-body rounded-2xl rounded-bl-md border border-stone-200/70 bg-white px-3.5 py-2.5 text-sm leading-relaxed text-stone-800 shadow-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                  class="ai-body rounded-2xl rounded-bl-md border border-stone-200/70 bg-white px-3.5 py-2.5 text-sm leading-relaxed text-stone-800 shadow-sm dark:border-white/10 dark:bg-white/[0.06] dark:text-zinc-100"
                 ></div>
                 <span class="flex items-center gap-2 pl-1">
                   <time v-if="formatTime(msg.at)" class="text-[10px] text-stone-400 dark:text-zinc-500">{{ formatTime(msg.at) }}</time>
                   <button
                     type="button"
                     :aria-label="copiedIndex === i ? 'Скопировано' : 'Скопировать ответ'"
-                    class="grid h-6 w-6 place-items-center rounded-lg text-stone-400 transition hover:bg-stone-200/60 hover:text-stone-600 dark:text-zinc-500 dark:hover:bg-zinc-700 dark:hover:text-zinc-300"
+                    class="grid h-6 w-6 place-items-center rounded-lg text-stone-400 transition hover:bg-stone-200/60 hover:text-stone-600 dark:text-zinc-500 dark:hover:bg-white/15 dark:hover:text-zinc-300"
                     @click="copyText(msg.text, i)"
                   >
                     <i :class="copiedIndex === i ? 'pi pi-check text-[11px] text-emerald-500' : 'pi pi-copy text-[11px]'"></i>
@@ -153,7 +153,7 @@ watch(isGuideOpen, async (open) => {
             <span class="grid h-7 w-7 shrink-0 place-items-center rounded-xl bg-rose-500 text-[11px] text-white">
               <i class="pi pi-sparkles"></i>
             </span>
-            <span class="flex gap-1.5 rounded-2xl rounded-bl-md border border-stone-200/70 bg-white px-4 py-3 shadow-sm dark:border-zinc-700 dark:bg-zinc-800">
+            <span class="flex gap-1.5 rounded-2xl rounded-bl-md border border-stone-200/70 bg-white px-4 py-3 shadow-sm dark:border-white/10 dark:bg-white/[0.06]">
               <span class="h-2 w-2 animate-bounce rounded-full bg-rose-400 [animation-delay:0ms]"></span>
               <span class="h-2 w-2 animate-bounce rounded-full bg-rose-400 [animation-delay:150ms]"></span>
               <span class="h-2 w-2 animate-bounce rounded-full bg-rose-400 [animation-delay:300ms]"></span>
@@ -167,7 +167,7 @@ watch(isGuideOpen, async (open) => {
         <button
           type="button"
           aria-label="Ответ помог"
-          class="grid h-7 w-7 place-items-center rounded-lg transition hover:bg-stone-200/60 hover:text-emerald-600 dark:hover:bg-zinc-700"
+          class="grid h-7 w-7 place-items-center rounded-lg transition hover:bg-stone-200/60 hover:text-emerald-600 dark:hover:bg-white/15"
           @click="rateAnswer(1)"
         >
           <i class="pi pi-thumbs-up text-[12px]"></i>
@@ -175,13 +175,13 @@ watch(isGuideOpen, async (open) => {
         <button
           type="button"
           aria-label="Ответ не помог"
-          class="grid h-7 w-7 place-items-center rounded-lg transition hover:bg-stone-200/60 hover:text-rose-600 dark:hover:bg-zinc-700"
+          class="grid h-7 w-7 place-items-center rounded-lg transition hover:bg-stone-200/60 hover:text-rose-600 dark:hover:bg-white/15"
           @click="rateAnswer(-1)"
         >
           <i class="pi pi-thumbs-down text-[12px]"></i>
         </button>
       </div>
-      <div class="rounded-[24px] border border-stone-200 bg-white p-2 pl-4 transition focus-within:border-rose-400 focus-within:ring-2 focus-within:ring-rose-500/20 dark:border-zinc-700 dark:bg-zinc-900">
+      <div class="rounded-[24px] border border-stone-200 bg-white p-2 pl-4 transition focus-within:border-rose-400 focus-within:ring-2 focus-within:ring-rose-500/20 dark:border-white/10 dark:bg-[#0F121F]">
         <div class="flex items-end gap-2">
           <Textarea
             v-model="draft"

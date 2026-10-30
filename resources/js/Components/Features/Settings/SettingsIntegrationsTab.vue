@@ -44,7 +44,7 @@ async function copyBotName(): Promise<void> {
 </script>
 
 <template>
-  <Card class="!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-800 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }">
+  <Card class="!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10 !rounded-3xl !shadow-soft" :pt="{ body: { class: '!p-6' }, content: { class: '!p-0' } }">
     <template #content>
       <h3 class="font-black tracking-tight text-lg dark:text-white">Интеграции</h3>
       <p class="text-sm text-stone-500 mt-1">Telegram-бот: уведомления, избранное и вход в один клик.</p>
@@ -58,7 +58,7 @@ async function copyBotName(): Promise<void> {
               width="220"
               height="220"
               loading="lazy"
-              class="w-[200px] h-[200px] sm:w-[220px] sm:h-[220px] rounded-2xl border border-stone-200 dark:border-zinc-800 bg-white object-contain cursor-pointer"
+              class="w-[200px] h-[200px] sm:w-[220px] sm:h-[220px] rounded-2xl border border-stone-200 dark:border-white/10 bg-white object-contain cursor-pointer"
               @error="tg.markQrFailed()"
               @load="tg.markQrLoaded()"
             />

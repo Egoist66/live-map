@@ -50,7 +50,7 @@ function goDistrict(id: number): void {
 }
 </script>
 <template>
-  <Dialog :visible="open" @update:visible="(v:boolean)=>emit('update:open', v)" modal header="Поиск" :style="{ width: '480px', maxWidth: '96vw', maxHeight: '92dvh' }" :pt="{ root: { class: '!bg-white dark:!bg-zinc-900 !border-stone-200 dark:!border-zinc-700' }, header: { class: '!pb-1' }, title: { class: 'dark:!text-white' }, content: { class: '!pt-2 !max-h-[80dvh] !overflow-y-auto !bg-white dark:!bg-zinc-900' } }">
+  <Dialog :visible="open" @update:visible="(v:boolean)=>emit('update:open', v)" modal header="Поиск" :style="{ width: '480px', maxWidth: '96vw', maxHeight: '92dvh' }" :pt="{ root: { class: '!bg-white dark:!bg-[#0F121F] !border-stone-200 dark:!border-white/10' }, header: { class: '!pb-1' }, title: { class: 'dark:!text-white' }, content: { class: '!pt-2 !max-h-[80dvh] !overflow-y-auto !bg-white dark:!bg-[#0F121F]' } }">
     <Tabs :value="peopleStore.activeTab" @update:value="onTab">
       <TabList class="!bg-transparent" :pt="{ activeBar: { class: '!bg-violet-600' } }">
         <Tab value="people" class="!text-[13px] !font-bold">
@@ -69,19 +69,19 @@ function goDistrict(id: number): void {
           <div class="text-xs text-stone-500 dark:text-zinc-400 mb-3">Найди человека по имени чтобы начать чат — отдельный глобальный поиск</div>
           <div class="relative w-full">
             <i class="pi pi-search absolute left-3.5 top-1/2 -translate-y-1/2 text-violet-500 text-sm pointer-events-none z-[1]" />
-            <InputText :model-value="query" @update:model-value="emit('update:query', String($event ?? ''))" placeholder="Имя, например Петр..." :autofocus="isDesktop" enterkeyhint="search" fluid class="!rounded-full !pl-10 !pr-10 !py-2.5 !text-base lg:!text-sm !border-stone-200 dark:!border-zinc-700 input-search-violet" />
+            <InputText :model-value="query" @update:model-value="emit('update:query', String($event ?? ''))" placeholder="Имя, например Петр..." :autofocus="isDesktop" enterkeyhint="search" fluid class="!rounded-full !pl-10 !pr-10 !py-2.5 !text-base lg:!text-sm !border-stone-200 dark:!border-white/10 input-search-violet" />
             <i v-if="searching" class="pi pi-spin pi-spinner absolute right-3.5 top-1/2 -translate-y-1/2 text-violet-400 text-sm pointer-events-none" />
           </div>
-          <div v-if="results.length" class="mt-3 max-h-[60dvh] sm:max-h-[52vh] overflow-auto divide-y divide-stone-100 dark:divide-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl bg-white dark:bg-zinc-900 shadow-sm">
+          <div v-if="results.length" class="mt-3 max-h-[60dvh] sm:max-h-[52vh] overflow-auto divide-y divide-stone-100 dark:divide-white/10 border border-stone-200 dark:border-white/10 rounded-2xl bg-white dark:bg-white/[0.04] shadow-sm">
             <div v-for="u in results" :key="u.id" class="flex items-center justify-between p-3 select-none">
               <Link :href="userProfileUrl(u)" class="flex items-center gap-2.5 min-w-0">
                 <span class="relative shrink-0"><UserAvatar :user="u" shape="circle" size="normal" class="!w-9 !h-9 [&_img]:object-cover" /><OnlineDot :online="isOnline(u.id, u.last_seen_at)" size="w-3 h-3" /></span>
                 <div class="min-w-0"><div class="text-sm font-medium truncate text-stone-900 dark:text-white">{{ u.name }} <OrgBadge :is-organization="u.is_organization" /></div></div>
               </Link>
               <div class="flex gap-1.5 shrink-0 ml-2 items-center">
-                <button v-if="u.can_message !== false" @click="emit('chat', u)" :disabled="creating" title="Написать сообщение" aria-label="Написать сообщение" class="w-9 h-9 grid place-items-center rounded-full bg-ink-900 text-white transition hover:opacity-90 active:scale-95 disabled:opacity-40 dark:bg-white dark:text-zinc-900"><i class="pi pi-send text-sm" /></button>
+                <button v-if="u.can_message !== false" @click="emit('chat', u)" :disabled="creating" title="Написать сообщение" aria-label="Написать сообщение" class="w-9 h-9 grid place-items-center rounded-full bg-ink-900 text-white transition hover:opacity-90 active:scale-95 disabled:opacity-40 dark:bg-white dark:text-[#0F121F]"><i class="pi pi-send text-sm" /></button>
                 <button v-if="showAdd(u)" @click.stop="emit('add', u.id)" :title="addTitle(u)" :aria-label="addTitle(u)" class="w-9 h-9 grid place-items-center rounded-full bg-blue-600/10 text-blue-600 transition hover:bg-blue-600/20 active:scale-95 dark:bg-blue-500/15 dark:text-blue-400 dark:hover:bg-blue-500/25"><i class="pi pi-user-plus text-sm" /></button>
-                <button v-else-if="isPending(u)" :title="addTitle(u)" :aria-label="addTitle(u)" disabled class="w-9 h-9 grid place-items-center rounded-full bg-stone-100 text-stone-400 cursor-default dark:bg-zinc-800 dark:text-zinc-500"><i class="pi pi-clock text-sm" /></button>
+                <button v-else-if="isPending(u)" :title="addTitle(u)" :aria-label="addTitle(u)" disabled class="w-9 h-9 grid place-items-center rounded-full bg-stone-100 text-stone-400 cursor-default dark:bg-white/10 dark:text-zinc-500"><i class="pi pi-clock text-sm" /></button>
                 <span v-else :title="addTitle(u)" class="w-9 h-9 grid place-items-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"><i class="pi pi-check text-sm" /></span>
                 <button @click.stop="emit('block', u.id, u.name)" title="Заблокировать" aria-label="Заблокировать" class="w-9 h-9 grid place-items-center rounded-full bg-red-500/10 text-red-600 transition hover:bg-red-500/20 active:scale-95 dark:text-red-400 dark:hover:bg-red-500/20"><i class="pi pi-ban text-sm" /></button>
               </div>
@@ -95,14 +95,14 @@ function goDistrict(id: number): void {
           <div class="text-xs text-stone-500 dark:text-zinc-400 mb-3">Найди район, вступи и знакомься внутри — пины и чат открыты жителям</div>
           <div class="relative w-full">
             <i class="pi pi-search absolute left-3.5 top-1/2 -translate-y-1/2 text-violet-500 text-sm pointer-events-none z-[1]" />
-            <InputText :model-value="districts.districtQuery.value" @update:model-value="districts.setQuery(String($event ?? ''))" placeholder="Название района..." enterkeyhint="search" fluid class="!rounded-full !pl-10 !pr-10 !py-2.5 !text-base lg:!text-sm !border-stone-200 dark:!border-zinc-700 input-search-violet" />
+            <InputText :model-value="districts.districtQuery.value" @update:model-value="districts.setQuery(String($event ?? ''))" placeholder="Название района..." enterkeyhint="search" fluid class="!rounded-full !pl-10 !pr-10 !py-2.5 !text-base lg:!text-sm !border-stone-200 dark:!border-white/10 input-search-violet" />
             <i v-if="districts.districtSearching.value" class="pi pi-spin pi-spinner absolute right-3.5 top-1/2 -translate-y-1/2 text-violet-400 text-sm pointer-events-none" />
           </div>
-          <div v-if="districts.districtResults.value.length" class="mt-3 max-h-[60dvh] sm:max-h-[52vh] overflow-auto divide-y divide-stone-100 dark:divide-zinc-800 border rounded-2xl bg-white dark:bg-zinc-900 dark:border-zinc-700 shadow-sm">
+          <div v-if="districts.districtResults.value.length" class="mt-3 max-h-[60dvh] sm:max-h-[52vh] overflow-auto divide-y divide-stone-100 dark:divide-white/10 border rounded-2xl bg-white dark:bg-white/[0.04] dark:border-white/10 shadow-sm">
             <DistrictSearchList :rows="districts.districtResults.value" @open="goDistrict" @chat="(row) => { emit('update:open', false); districts.openChat(row) }" />
           </div>
           <div v-else-if="districts.hasQuery.value && !districts.districtSearching.value" class="mt-4 text-center py-6 text-sm text-stone-500 dark:text-zinc-400">Ничего не найдено — попробуй другой запрос</div>
-          <div v-else-if="districts.suggestedDistricts.value.length || districts.districtSuggestionsLoading.value" class="mt-3 max-h-[60dvh] sm:max-h-[52vh] overflow-auto divide-y divide-stone-100 dark:divide-zinc-800 border rounded-2xl bg-white dark:bg-zinc-900 dark:border-zinc-700 shadow-sm">
+          <div v-else-if="districts.suggestedDistricts.value.length || districts.districtSuggestionsLoading.value" class="mt-3 max-h-[60dvh] sm:max-h-[52vh] overflow-auto divide-y divide-stone-100 dark:divide-white/10 border rounded-2xl bg-white dark:bg-white/[0.04] dark:border-white/10 shadow-sm">
             <div class="px-3 pt-2.5 text-[11px] font-bold uppercase tracking-wide text-stone-400 dark:text-zinc-500">Существующие районы</div>
             <div v-if="districts.districtSuggestionsLoading.value && !districts.suggestedDistricts.value.length" class="p-4 text-center"><i class="pi pi-spin pi-spinner text-violet-400 text-sm" /></div>
             <DistrictSearchList :rows="districts.suggestedDistricts.value" @open="goDistrict" @chat="(row) => { emit('update:open', false); districts.openChat(row) }" />
@@ -114,18 +114,18 @@ function goDistrict(id: number): void {
           <div class="text-xs text-stone-500 dark:text-zinc-400 mb-3">Найди компанию по названию или бренду — откроем её профиль</div>
           <div class="relative w-full">
             <i class="pi pi-search absolute left-3.5 top-1/2 -translate-y-1/2 text-violet-500 text-sm pointer-events-none z-[1]" />
-            <InputText :model-value="orgs.orgQuery.value" @update:model-value="orgs.setQuery(String($event ?? ''))" placeholder="Название или бренд…" enterkeyhint="search" fluid class="!rounded-full !pl-10 !pr-10 !py-2.5 !text-base lg:!text-sm !border-stone-200 dark:!border-zinc-700 input-search-violet" />
+            <InputText :model-value="orgs.orgQuery.value" @update:model-value="orgs.setQuery(String($event ?? ''))" placeholder="Название или бренд…" enterkeyhint="search" fluid class="!rounded-full !pl-10 !pr-10 !py-2.5 !text-base lg:!text-sm !border-stone-200 dark:!border-white/10 input-search-violet" />
             <i v-if="orgs.orgSearching.value" class="pi pi-spin pi-spinner absolute right-3.5 top-1/2 -translate-y-1/2 text-violet-400 text-sm pointer-events-none" />
           </div>
-          <div v-if="orgs.orgResults.value.length" class="mt-3 max-h-[60dvh] sm:max-h-[52vh] overflow-auto divide-y divide-stone-100 dark:divide-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl bg-white dark:bg-zinc-900 shadow-sm">
+          <div v-if="orgs.orgResults.value.length" class="mt-3 max-h-[60dvh] sm:max-h-[52vh] overflow-auto divide-y divide-stone-100 dark:divide-white/10 border border-stone-200 dark:border-white/10 rounded-2xl bg-white dark:bg-white/[0.04] shadow-sm">
             <button
               v-for="org in orgs.orgResults.value"
               :key="org.id"
               type="button"
-              class="w-full flex items-center gap-2.5 p-3 select-none text-left hover:bg-stone-50 dark:hover:bg-zinc-800/60 transition active:scale-[0.99]"
+              class="w-full flex items-center gap-2.5 p-3 select-none text-left hover:bg-stone-50 dark:hover:bg-white/[0.06] transition active:scale-[0.99]"
               @click="orgs.openCompany(org)"
             >
-              <span class="relative shrink-0 grid place-items-center w-9 h-9 rounded-full overflow-hidden bg-gradient-to-br from-indigo-500 to-violet-600 text-white">
+              <span class="relative shrink-0 grid place-items-center w-9 h-9 rounded-full overflow-hidden bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white">
                 <img v-if="org.logo_url" :src="org.logo_url" :alt="orgs.displayName(org)" class="w-full h-full object-cover" loading="lazy" />
                 <span v-else class="text-sm">🏢</span>
               </span>

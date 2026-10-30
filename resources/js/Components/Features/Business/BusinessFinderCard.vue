@@ -19,7 +19,7 @@ const orgs = useOrganizationSearch()
 const districts = useGlobalDistrictSearch()
 </script>
 <template>
-  <Card class="!rounded-[24px] !border-stone-200 dark:!border-zinc-800 !bg-white dark:!bg-zinc-900 !shadow-sm">
+  <Card class="!rounded-[24px] !border-stone-200 dark:!border-white/10 !bg-white dark:!bg-[#0F121F] !shadow-sm">
     <template #title>
       <span class="flex items-center justify-between gap-2">
         <span class="text-[16px] font-black dark:text-white">Поиск в приложении</span>
@@ -40,18 +40,18 @@ const districts = useGlobalDistrictSearch()
           <TabPanel value="organizations">
             <div class="relative w-full">
               <i class="pi pi-search absolute left-3.5 top-1/2 -translate-y-1/2 text-violet-500 text-sm pointer-events-none z-[1]" />
-              <InputText :model-value="orgs.orgQuery.value" @update:model-value="orgs.setQuery(String($event ?? ''))" placeholder="Название или бренд…" enterkeyhint="search" fluid class="!rounded-full !pl-10 !pr-10 !py-2.5 !text-sm !border-stone-200 dark:!border-zinc-700 focus:!border-violet-500 focus:!ring-2 focus:!ring-violet-500/30" />
+              <InputText :model-value="orgs.orgQuery.value" @update:model-value="orgs.setQuery(String($event ?? ''))" placeholder="Название или бренд…" enterkeyhint="search" fluid class="!rounded-full !pl-10 !pr-10 !py-2.5 !text-sm !border-stone-200 dark:!border-white/10 focus:!border-violet-500 focus:!ring-2 focus:!ring-violet-500/30" />
               <i v-if="orgs.orgSearching.value" class="pi pi-spin pi-spinner absolute right-3.5 top-1/2 -translate-y-1/2 text-violet-400 text-sm pointer-events-none" />
             </div>
-            <div v-if="orgs.orgResults.value.length" class="mt-3 max-h-[320px] overflow-auto divide-y divide-stone-100 dark:divide-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl shadow-sm">
+            <div v-if="orgs.orgResults.value.length" class="mt-3 max-h-[320px] overflow-auto divide-y divide-stone-100 dark:divide-white/10 border border-stone-200 dark:border-white/10 rounded-2xl shadow-sm">
               <button
                 v-for="org in orgs.orgResults.value"
                 :key="org.id"
                 type="button"
-                class="w-full flex items-center gap-2.5 p-3 select-none text-left hover:bg-stone-50 dark:hover:bg-zinc-800/60 transition active:scale-[0.99]"
+                class="w-full flex items-center gap-2.5 p-3 select-none text-left hover:bg-stone-50 dark:hover:bg-white/10/60 transition active:scale-[0.99]"
                 @click="orgs.openCompany(org)"
               >
-                <span class="relative shrink-0 grid place-items-center w-9 h-9 rounded-full overflow-hidden bg-gradient-to-br from-indigo-500 to-violet-600 text-white">
+                <span class="relative shrink-0 grid place-items-center w-9 h-9 rounded-full overflow-hidden bg-gradient-to-br from-rose-500 via-pink-500 to-fuchsia-500 text-white">
                   <img v-if="org.logo_url" :src="org.logo_url" :alt="orgs.displayName(org)" class="w-full h-full object-cover" loading="lazy" />
                   <span v-else class="text-sm">🏢</span>
                 </span>
@@ -68,10 +68,10 @@ const districts = useGlobalDistrictSearch()
           <TabPanel value="districts">
             <div class="relative w-full">
               <i class="pi pi-search absolute left-3.5 top-1/2 -translate-y-1/2 text-violet-500 text-sm pointer-events-none z-[1]" />
-              <InputText :model-value="districts.districtQuery.value" @update:model-value="districts.setQuery(String($event ?? ''))" placeholder="Название района…" enterkeyhint="search" fluid class="!rounded-full !pl-10 !pr-10 !py-2.5 !text-sm !border-stone-200 dark:!border-zinc-700 focus:!border-violet-500 focus:!ring-2 focus:!ring-violet-500/30" />
+              <InputText :model-value="districts.districtQuery.value" @update:model-value="districts.setQuery(String($event ?? ''))" placeholder="Название района…" enterkeyhint="search" fluid class="!rounded-full !pl-10 !pr-10 !py-2.5 !text-sm !border-stone-200 dark:!border-white/10 focus:!border-violet-500 focus:!ring-2 focus:!ring-violet-500/30" />
               <i v-if="districts.districtSearching.value" class="pi pi-spin pi-spinner absolute right-3.5 top-1/2 -translate-y-1/2 text-violet-400 text-sm pointer-events-none" />
             </div>
-            <div v-if="districts.districtResults.value.length" class="mt-3 max-h-[320px] overflow-auto divide-y divide-stone-100 dark:divide-zinc-800 border border-stone-200 dark:border-zinc-700 rounded-2xl shadow-sm">
+            <div v-if="districts.districtResults.value.length" class="mt-3 max-h-[320px] overflow-auto divide-y divide-stone-100 dark:divide-white/10 border border-stone-200 dark:border-white/10 rounded-2xl shadow-sm">
               <DistrictSearchList :rows="districts.districtResults.value" @open="districts.openDistrict" @chat="districts.openChat" />
             </div>
             <div v-else-if="districts.hasQuery.value && !districts.districtSearching.value" class="mt-3 text-center py-5 text-sm text-stone-500 dark:text-zinc-400">Ничего не найдено — попробуй другой запрос</div>
