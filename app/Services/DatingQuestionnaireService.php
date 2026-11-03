@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\User;
+use App\Rules\NoContactInfo;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use JsonException;
@@ -283,10 +284,10 @@ class DatingQuestionnaireService
         return [
             'dating_enabled' => ['sometimes', 'boolean'],
             'dating_goal' => ['nullable', 'in:'.implode(',', self::GOALS)],
-            'dating_custom_goal' => ['nullable', 'string', 'max:60'],
-            'dating_about' => ['nullable', 'string', 'max:1000'],
+            'dating_custom_goal' => ['nullable', 'string', 'max:60', new NoContactInfo()],
+            'dating_about' => ['nullable', 'string', 'max:1000', new NoContactInfo()],
             'dating_interests' => ['nullable', 'array', 'max:'.self::INTERESTS_LIMIT],
-            'dating_interests.*' => ['string', 'max:'.self::INTEREST_LENGTH],
+            'dating_interests.*' => ['string', 'max:'.self::INTEREST_LENGTH, new NoContactInfo()],
         ];
     }
 

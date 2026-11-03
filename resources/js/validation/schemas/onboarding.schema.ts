@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { toTypedSchema } from '@vee-validate/zod'
+import { CONTACT_INFO_ERROR, containsContactInfo } from '@/utils/contactInfo'
 
 /**
  * Проверка совершеннолетия для дейтинга.
@@ -16,7 +17,11 @@ function isAdult(value: Date): boolean {
 
 export const onboardingSchema = toTypedSchema(
   z.object({
-    name: z.string().min(2, 'Имя — от 2 символов').max(255, 'Слишком длинное имя'),
+    name: z
+      .string()
+      .min(2, 'Имя — от 2 символов')
+      .max(255, 'Слишком длинное имя')
+      .refine((v) => !containsContactInfo(v), CONTACT_INFO_ERROR),
     gender: z.enum(['male', 'female'], { message: 'Выбери пол' }),
     birth_date: z
       .date({ message: 'Укажи дату рождения' })

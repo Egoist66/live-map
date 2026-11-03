@@ -72,8 +72,8 @@ function onCountryChange(v: string): void {
               <small class="auth-err">{{ f.errors.value.signup_goal }}</small>
             </div>
             <div class="min-w-0">
-              <label class="auth-label">Имя / ник</label>
-              <InputText v-model="f.name.value" v-bind="f.nameAttrs" placeholder="Роберт Дауни" autocomplete="nickname" class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.name" />
+              <label class="auth-label">Имя</label>
+              <InputText v-model="f.name.value" v-bind="f.nameAttrs" placeholder="Роберт Дауни" autocomplete="name" class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.name" />
               <small class="auth-err">{{ f.errors.value.name }}</small>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">

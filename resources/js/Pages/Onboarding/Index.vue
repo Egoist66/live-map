@@ -49,8 +49,8 @@ const f = useOnboardingForm()
 
         <form v-else class="mt-6 space-y-4" @submit.prevent="f.submit">
           <div>
-            <label class="text-[13px] font-semibold text-ink-900 dark:text-zinc-100">Имя / ник *</label>
-            <InputText v-model="f.name.value" v-bind="f.nameAttrs" placeholder="Как тебя зовут?" autocomplete="nickname" class="mt-1.5 w-full !rounded-2xl" :invalid="!!f.errors.value.name" />
+            <label class="text-[13px] font-semibold text-ink-900 dark:text-zinc-100">Имя *</label>
+            <InputText v-model="f.name.value" v-bind="f.nameAttrs" placeholder="Как тебя зовут?" autocomplete="name" class="mt-1.5 w-full !rounded-2xl" :invalid="!!f.errors.value.name" />
             <small class="auth-err">{{ f.errors.value.name }}</small>
           </div>
 

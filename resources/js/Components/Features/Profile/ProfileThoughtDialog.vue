@@ -32,7 +32,7 @@ const emit = defineEmits<{
       />
       <div class="flex items-center justify-between">
         <span v-if="error" class="text-xs text-red-500">{{ error }}</span>
-        <span v-else class="text-xs text-stone-400">Одна строка под именем</span>
+        <span v-else class="text-xs text-stone-400">Одна строка под именем, без соцсетей и ников</span>
         <span class="text-xs text-stone-400">{{ draft.length }}/{{ THOUGHT_MAX_LENGTH }}</span>
       </div>
     </div>

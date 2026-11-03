@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import { api } from '@/services/api'
 import { isSameText } from '@/composables/useUnchangedGuard'
+import { CONTACT_INFO_ERROR, containsContactInfo } from '@/utils/contactInfo'
 
 /** Максимум символов короткой мысли. */
 export const THOUGHT_MAX_LENGTH = 140
@@ -70,6 +71,10 @@ export function useProfileThought(
     const current = committed.value === undefined ? initial() : committed.value
     if (isSameText(next, current)) {
       open.value = false
+      return
+    }
+    if (next !== null && containsContactInfo(next)) {
+      error.value = CONTACT_INFO_ERROR
       return
     }
     saving.value = true

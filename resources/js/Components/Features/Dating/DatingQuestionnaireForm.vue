@@ -285,54 +285,65 @@ async function onImportSelect(event: FileUploadSelectEvent): Promise<void> {
       </Message>
     </div>
 
-    <div class="text-[11px] text-stone-400 dark:text-zinc-500">Свои тексты проверяются: политика, 18+, мат и т.д. запрещены.</div>
+    <div class="text-[11px] text-stone-400 dark:text-zinc-500">Свои тексты проверяются: политика, 18+, мат, никнеймы и ссылки на соцсети запрещены.</div>
     <div v-if="q.serverError.value" class="text-sm text-rose-600 dark:text-rose-300">{{ q.serverError.value }}</div>
 
     <Button label="Сохранить анкету" icon="pi pi-check" rounded class="w-full !border-0 !bg-[#F6627B] !text-white shadow-lg shadow-rose-500/30 hover:!bg-[#e2556c] active:!bg-[#d84b61]" :loading="q.saving.value" @click="onSave()" />
 
-    <div class="rounded-2xl border border-dashed border-stone-300 bg-stone-50/60 p-3 dark:border-white/10 dark:bg-white/[0.06]/40">
-      <div class="flex items-start gap-2.5">
-        <span class="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-white text-stone-500 shadow-sm dark:bg-[#0F121F] dark:text-zinc-300">
-          <i class="pi pi-box text-sm" />
+    <div class="overflow-hidden rounded-2xl border border-dashed border-stone-300 bg-stone-50/70 dark:border-white/10 dark:bg-white/[0.04]">
+      <Button
+        text
+        severity="secondary"
+        class="!w-full !justify-start !rounded-none !px-3 !py-3 !text-left !text-stone-800 hover:!bg-stone-100/70 dark:!text-zinc-100 dark:hover:!bg-white/[0.05]"
+        :aria-expanded="q.transferOpen.value"
+        aria-controls="questionnaire-transfer-body"
+        @click="q.toggleTransfer()"
+      >
+        <span class="flex w-full items-start gap-2.5">
+          <span class="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-white text-stone-500 shadow-sm dark:bg-white/[0.06] dark:text-zinc-300">
+            <i class="pi pi-box text-sm" />
+          </span>
+          <span class="min-w-0 flex-1">
+            <span class="block text-[13px] font-black text-stone-800 dark:text-zinc-100">Перенос анкеты</span>
+            <span class="block text-[11px] leading-relaxed text-stone-500 dark:text-zinc-400">Скачать или загрузить анкету в другом аккаунте</span>
+          </span>
+          <i class="pi mt-1.5 shrink-0 text-xs text-stone-400 transition-transform dark:text-zinc-500" :class="q.transferOpen.value ? 'pi-chevron-up' : 'pi-chevron-down'" />
         </span>
-        <div class="min-w-0 flex-1">
-          <div class="text-[13px] font-black text-stone-800 dark:text-zinc-100">Перенос анкеты</div>
-          <div class="text-[11px] leading-relaxed text-stone-500 dark:text-zinc-400">
-            Скачайте анкету и загрузите её в другом аккаунте. Импорт заменит текущую анкету.
-          </div>
+      </Button>
+      <div v-if="q.transferOpen.value" id="questionnaire-transfer-body" class="border-t border-stone-200/80 px-3 pb-3 pt-2.5 dark:border-white/10">
+        <p class="text-[11px] leading-relaxed text-stone-500 dark:text-zinc-400">Импорт заменит текущую анкету.</p>
+        <div class="mt-2.5 flex flex-wrap items-center gap-2">
+          <Button
+            label="Скачать"
+            icon="pi pi-download"
+            size="small"
+            rounded
+            class="!border-0 !bg-[#F6627B] !text-white shadow-sm shadow-rose-500/30 hover:!bg-[#e2556c] active:!bg-[#d84b61]"
+            :loading="q.exporting.value"
+            :disabled="q.importing.value"
+            @click="onExport()"
+          />
+          <FileUpload
+            :key="importKey"
+            mode="basic"
+            accept=".json,application/json"
+            :auto="false"
+            choose-label="Загрузить"
+            choose-icon="pi pi-upload"
+            :choose-button-props="{
+              size: 'small',
+              rounded: true,
+              class: '!border-0 !bg-[#F6627B] !text-white shadow-sm shadow-rose-500/30 hover:!bg-[#e2556c] active:!bg-[#d84b61]'
+            }"
+            :disabled="q.importing.value || q.exporting.value"
+            @select="onImportSelect"
+          />
         </div>
+        <div v-if="q.importing.value" class="mt-1.5 text-[11px] text-stone-500 dark:text-zinc-400">Загружаем анкету...</div>
+        <Message v-if="q.transferError.value" severity="error" :closable="false" class="mt-2 !rounded-xl !text-xs">
+          {{ q.transferError.value }}
+        </Message>
       </div>
-      <div class="mt-2.5 flex flex-wrap items-center gap-2">
-        <Button
-          label="Скачать"
-          icon="pi pi-download"
-          size="small"
-          rounded
-          class="!border-0 !bg-[#F6627B] !text-white shadow-sm shadow-rose-500/30 hover:!bg-[#e2556c] active:!bg-[#d84b61]"
-          :loading="q.exporting.value"
-          :disabled="q.importing.value"
-          @click="onExport()"
-        />
-        <FileUpload
-          :key="importKey"
-          mode="basic"
-          accept=".json,application/json"
-          :auto="false"
-          choose-label="Загрузить"
-          choose-icon="pi pi-upload"
-          :choose-button-props="{
-            size: 'small',
-            rounded: true,
-            class: '!border-0 !bg-[#F6627B] !text-white shadow-sm shadow-rose-500/30 hover:!bg-[#e2556c] active:!bg-[#d84b61]'
-          }"
-          :disabled="q.importing.value || q.exporting.value"
-          @select="onImportSelect"
-        />
-      </div>
-      <div v-if="q.importing.value" class="mt-1.5 text-[11px] text-stone-500 dark:text-zinc-400">Загружаем анкету...</div>
-      <Message v-if="q.transferError.value" severity="error" :closable="false" class="mt-2 !rounded-xl !text-xs">
-        {{ q.transferError.value }}
-      </Message>
     </div>
   </div>
 </template>

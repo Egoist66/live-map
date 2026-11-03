@@ -1,4 +1,5 @@
 import { computed, ref } from 'vue'
+import { useToggle } from '@vueuse/core'
 import { router, usePage } from '@inertiajs/vue3'
 import { datingApi } from '@/services/dating.api'
 import { datingQuestionnaireSchema } from '@/validation/schemas/dating.schema'
@@ -6,6 +7,7 @@ import { isUnchangedPayload } from '@/composables/useUnchangedGuard'
 import { emitDatingSaved } from '@/composables/useDatingSavedSync'
 import { useContentModeration } from '@/composables/useContentModeration'
 import { useFileDownload } from '@/composables/useFileDownload'
+import { CONTACT_INFO_ERROR, containsContactInfo } from '@/utils/contactInfo'
 
 /**
  * Анкета ULove: создание и редактирование «о себе».
@@ -40,6 +42,8 @@ export function useDatingQuestionnaire() {
   const moderationWarning = ref<string | null>(null)
   /** Последний сохранённый payload — форма пробрасывает его в emit('saved'). */
   const lastSaved = ref<Record<string, any> | null>(null)
+  /** Блок «Перенос анкеты» свёрнут по умолчанию: импорт — редкое действие. */
+  const [transferOpen, toggleTransfer] = useToggle(false)
 
   function resetFromUser(): void {
     const u = authUser.value
@@ -108,6 +112,11 @@ export function useDatingQuestionnaire() {
   function addInterest(raw: string): void {
     const tag = raw.trim().toLowerCase().slice(0, 40)
     if (!tag || interests.value.includes(tag) || interests.value.length >= 10) return
+
+    if (containsContactInfo(tag)) {
+      moderationWarning.value = CONTACT_INFO_ERROR
+      return
+    }
 
     const blockReason = moderator.assertPublishable(tag)
 
@@ -347,6 +356,8 @@ export function useDatingQuestionnaire() {
     transferError,
     moderationWarning,
     lastSaved,
+    transferOpen,
+    toggleTransfer,
     goalShort,
     aboutLeft,
     customLeft,

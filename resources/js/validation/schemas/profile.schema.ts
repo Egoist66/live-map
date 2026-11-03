@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { toTypedSchema } from '@vee-validate/zod'
 import { isValidBirthDate, toIsoBirthDate } from '@/utils/birthDate'
+import { CONTACT_INFO_ERROR, containsContactInfo } from '@/utils/contactInfo'
 
 const toNull = (v: unknown) => (v === '' || v === undefined ? null : v)
 const toNumberOrNull = (v: unknown) => {
@@ -19,7 +20,11 @@ const MAX_BY_PLAN: Record<string, number> = { free: 10, pro: 15, premium: 50, bu
 export const updateProfileSchema = toTypedSchema(
   z
     .object({
-      name: z.string().min(1, 'Имя обязательно').max(255),
+      name: z
+        .string()
+        .min(1, 'Имя обязательно')
+        .max(255)
+        .refine((v) => !containsContactInfo(v), CONTACT_INFO_ERROR),
       gender: z.enum(['male', 'female', 'other']).nullable().optional(),
       birth_date: z.preprocess(toBirthDate, z.string().max(10).nullable().optional()).refine((v) => v == null || isValidBirthDate(v), { message: 'Некорректная дата рождения' }),
       country: z.preprocess((v) => (v === '' || v === undefined ? null : v), z.string().max(120).nullable().optional()),
@@ -32,7 +37,15 @@ export const updateProfileSchema = toTypedSchema(
       home_visibility: z.enum(['everyone', 'friends', 'none']).optional(),
       home_show_exact: z.boolean().optional(),
       home_radius_km: z.preprocess(toNull, z.preprocess((v: unknown) => (v === null ? v : Number(String(v).replace(',', '.'))), z.number({ invalid_type_error: 'Радиус должен быть числом' }).int('Целое число').min(1, 'Минимум 1 км').max(500, 'Максимум 500 км').nullable().optional())),
-      bio: z.preprocess((v) => (v === '' || v === undefined ? null : v), z.string().max(10000, 'Слишком длинно').nullable().optional()),
+      bio: z.preprocess(
+        (v) => (v === '' || v === undefined ? null : v),
+        z
+          .string()
+          .max(10000, 'Слишком длинно')
+          .refine((v) => !containsContactInfo(v), CONTACT_INFO_ERROR)
+          .nullable()
+          .optional(),
+      ),
       is_anonymous_default: z.boolean().optional(),
       default_location_precision: z.enum(['blur_200', 'exact', 'district', 'custom']).optional(),
       default_blur_meters: z.number().min(0).max(5000).optional(),

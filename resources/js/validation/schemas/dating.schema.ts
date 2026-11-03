@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { CONTACT_INFO_ERROR, containsContactInfo } from '@/utils/contactInfo'
 
 const emptyToNull = (v: unknown) => {
   if (v === '' || v === undefined) return null
@@ -15,14 +16,29 @@ export const datingQuestionnaireSchema = z.object({
   dating_goal: z.enum(['love', 'flirt', 'friendship', 'chat', 'interests']).nullable().optional(),
   dating_custom_goal: z.preprocess(
     emptyToNull,
-    z.string().max(60, 'Максимум 60 символов').nullable().optional(),
+    z
+      .string()
+      .max(60, 'Максимум 60 символов')
+      .refine((v) => !containsContactInfo(v), CONTACT_INFO_ERROR)
+      .nullable()
+      .optional(),
   ),
   dating_about: z.preprocess(
     emptyToNull,
-    z.string().max(1000, 'Максимум 1000 символов').nullable().optional(),
+    z
+      .string()
+      .max(1000, 'Максимум 1000 символов')
+      .refine((v) => !containsContactInfo(v), CONTACT_INFO_ERROR)
+      .nullable()
+      .optional(),
   ),
   dating_interests: z
-    .array(z.string().max(40, 'Тег максимум 40 символов'))
+    .array(
+      z
+        .string()
+        .max(40, 'Тег максимум 40 символов')
+        .refine((v) => !containsContactInfo(v), CONTACT_INFO_ERROR),
+    )
     .max(10, 'Максимум 10 интересов')
     .optional()
     .default([]),

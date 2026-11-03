@@ -191,7 +191,7 @@ const uloveOnly = useUloveOnly()
       <div v-if="!uloveOnly">
         <label class="text-sm font-semibold dark:text-white">О себе</label>
         <p class="text-xs text-zinc-500 mb-2">Расскажи о себе — видно всем в профиле в разделе «Общая информация».</p>
-        <Textarea v-model="f.bio.value" rows="5" autoResize maxlength="10000" placeholder="Напиши пару строк о себе — интересы, чем занимаешься..." class="w-full mt-1 !rounded-3xl !bg-white dark:!bg-[#0F121F]" />
+        <Textarea v-model="f.bio.value" rows="5" autoResize maxlength="10000" placeholder="Напиши пару строк о себе — интересы, чем занимаешься... Без никнеймов и ссылок на соцсети." class="w-full mt-1 !rounded-3xl !bg-white dark:!bg-[#0F121F]" />
         <div class="flex justify-between mt-1">
           <Message v-if="f.errors.value.bio" severity="error" :closable="false" class="!py-1 !text-xs">{{ f.errors.value.bio }}</Message><span v-else></span>
           <small class="text-stone-400">{{ (f.bio.value || '').length }} / 10000</small>

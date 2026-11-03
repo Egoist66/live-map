@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Rules\NoContactInfo;
 use App\Services\ActivityRewards;
 use App\Services\DatingQuestionnaireService;
 use App\Services\DatingService;
@@ -309,10 +310,10 @@ class SwipeController extends Controller
         $data = $request->validate([
             'dating_enabled' => 'sometimes|boolean',
             'dating_goal' => 'nullable|in:love,flirt,friendship,chat,interests',
-            'dating_custom_goal' => 'nullable|string|max:60',
-            'dating_about' => 'nullable|string|max:1000',
+            'dating_custom_goal' => ['nullable', 'string', 'max:60', new NoContactInfo()],
+            'dating_about' => ['nullable', 'string', 'max:1000', new NoContactInfo()],
             'dating_interests' => 'nullable|array|max:10',
-            'dating_interests.*' => 'string|max:40',
+            'dating_interests.*' => ['string', 'max:40', new NoContactInfo()],
             'dating_gender_pref' => 'sometimes|in:male,female,all',
             'dating_hide_name' => 'sometimes|boolean',
             'dating_hide_age' => 'sometimes|boolean',

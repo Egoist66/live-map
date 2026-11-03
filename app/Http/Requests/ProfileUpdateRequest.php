@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\User;
+use App\Rules\NoContactInfo;
 use App\Rules\NoProfanity;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -92,7 +93,7 @@ class ProfileUpdateRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'max:255', new NoProfanity(), function ($attr, $value, $fail) {
+            'name' => ['required', 'string', 'max:255', new NoProfanity(), new NoContactInfo(), function ($attr, $value, $fail) {
                 $this->assertNameChangeAllowed($value, $fail);
             }],
             'gender' => ['nullable','in:male,female,other'],
@@ -126,8 +127,8 @@ class ProfileUpdateRequest extends FormRequest
                     $fail("Максимум {$max} км на твоём тарифе. Нужно: {$need} — радиус = зона видимости пина.");
                 }
             }],
-            'bio' => ['nullable','string','max:10000'],
-            'thought' => ['nullable','string','max:140'],
+            'bio' => ['nullable','string','max:10000', new NoContactInfo()],
+            'thought' => ['nullable','string','max:140', new NoContactInfo()],
             'is_anonymous_default' => ['nullable','boolean'],
             'default_location_precision' => ['nullable','in:blur_200,exact,district,custom'],
             'default_blur_meters' => ['nullable','integer','min:0','max:5000'],

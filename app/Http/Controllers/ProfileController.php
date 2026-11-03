@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Rules\NoContactInfo;
 use App\Services\CountryResolver;
 use App\Services\HomeLocationService;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
@@ -575,7 +576,7 @@ class ProfileController extends Controller
     public function updateThought(Request $request): RedirectResponse|JsonResponse
     {
         $data = $request->validate([
-            'thought' => ['nullable', 'string', 'max:140'],
+            'thought' => ['nullable', 'string', 'max:140', new NoContactInfo()],
         ]);
         $raw = $data['thought'] ?? null;
         $thought = is_string($raw) ? trim((string) preg_replace('/\s+/u', ' ', strip_tags($raw))) : null;

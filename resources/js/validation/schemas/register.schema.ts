@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { toTypedSchema } from '@vee-validate/zod'
 import { isValidBirthDate, toIsoBirthDate } from '@/utils/birthDate'
+import { CONTACT_INFO_ERROR, containsContactInfo } from '@/utils/contactInfo'
 
 const toNumberOrNull = (v: unknown) => {
   if (v === '' || v === null || v === undefined) return null
@@ -14,7 +15,12 @@ const toBirthDate = (v: unknown) => toIsoBirthDate(v)
 export const registerSchema = toTypedSchema(
   z
     .object({
-      name: z.string().min(1, 'Имя обязательно').min(2, 'Минимум 2 символа').max(255),
+      name: z
+        .string()
+        .min(1, 'Имя обязательно')
+        .min(2, 'Минимум 2 символа')
+        .max(255)
+        .refine((v) => !containsContactInfo(v), CONTACT_INFO_ERROR),
       email: z.string().min(1, 'Email обязателен').email('Некорректный email'),
       gender: z.enum(['male', 'female', 'other'], { errorMap: () => ({ message: 'Выбери пол' }) }),
       password: z.string().min(8, 'Минимум 8 символов'),
