@@ -14,11 +14,15 @@ Route::middleware('guest')->group(function () {
     // Отдельной страницы регистрации нет: вход и регистрация — тогл
     // на одной странице Auth/Login. Имя register висит
     // на POST, чтобы route('register') и Route::has('register') работали.
+    // GET-редирект пишем только на GET: Route::redirect() создаёт ANY-роут
+    // и в коллекции POST затирает одноимённый named-роут
+    // (`routes[POST]['/register']`), из-за чего POST /register уезжал
+    // на /login до контроллера — без ошибок и без создания аккаунта.
+    Route::get('register', fn () => redirect('/login'));
+
     Route::post('register', [RegisteredUserController::class, 'store'])
         ->middleware('throttle:auth-register')
         ->name('register');
-
-    Route::redirect('register', '/login');
 
     Route::get('login', [AuthenticatedSessionController::class, 'create'])
         ->name('login');
