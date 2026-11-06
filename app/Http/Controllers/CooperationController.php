@@ -81,7 +81,9 @@ class CooperationController extends Controller
             'email' => 'required|email:rfc|max:255',
             'message' => 'nullable|string|max:1000',
             'website' => 'nullable|string|max:255',
-            'captcha_token' => ['required', new \App\Rules\ValidTurnstile($request)],
+            'captcha_token' => \App\Rules\ValidTurnstile::rules($request),
+        ], [
+            'captcha_token.required' => \App\Rules\ValidTurnstile::emptyMessage(),
         ]);
 
         $email = mb_strtolower(trim($data['email']));

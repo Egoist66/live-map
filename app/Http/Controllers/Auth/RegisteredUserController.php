@@ -65,7 +65,7 @@ class RegisteredUserController extends Controller
             'signup_goal' => 'required|in:love,flirt,friendship,chat,interests,neighbors,business',
             'account_type' => 'nullable|in:person,business',
             'website' => 'nullable|string|max:255',
-            'captcha_token' => ['required', new \App\Rules\ValidTurnstile($request)],
+            'captcha_token' => \App\Rules\ValidTurnstile::rules($request),
             'landing_tab' => 'nullable|in:ulove,upin,business',
             'enabled_modules' => 'nullable|array',
             'enabled_modules.*' => 'nullable|string|in:ulove,upin,uflow,districts,business',
@@ -85,6 +85,7 @@ class RegisteredUserController extends Controller
         $request->validate($rules, [
             'unp.regex' => 'УНП — строго 9 цифр',
             'legal_form.in' => 'Выберите форму собственности',
+            'captcha_token.required' => \App\Rules\ValidTurnstile::emptyMessage(),
         ]);
 
         $country = $request->input('country');

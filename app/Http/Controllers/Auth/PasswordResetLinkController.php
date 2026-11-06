@@ -45,7 +45,9 @@ class PasswordResetLinkController extends Controller
         $request->validate([
             'email' => 'required|email',
             'website' => 'nullable|string|max:255',
-            'captcha_token' => ['required', new \App\Rules\ValidTurnstile($request)],
+            'captcha_token' => \App\Rules\ValidTurnstile::rules($request),
+        ], [
+            'captcha_token.required' => \App\Rules\ValidTurnstile::emptyMessage(),
         ]);
 
         // We will send the password reset link to this user. Once we have attempted

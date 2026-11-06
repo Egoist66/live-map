@@ -52,7 +52,9 @@ class NewPasswordController extends Controller
             'email' => 'required|email',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'website' => 'nullable|string|max:255',
-            'captcha_token' => ['required', new \App\Rules\ValidTurnstile($request)],
+            'captcha_token' => \App\Rules\ValidTurnstile::rules($request),
+        ], [
+            'captcha_token.required' => \App\Rules\ValidTurnstile::emptyMessage(),
         ]);
 
         // Here we will attempt to reset the user's password. If it is successful we
