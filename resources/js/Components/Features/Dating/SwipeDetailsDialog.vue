@@ -105,6 +105,9 @@ function ageText(card: SwipeCard): string {
           <div class="mt-1 flex items-center gap-1.5 text-xs font-semibold" :class="peerOnline ? 'text-emerald-600 dark:text-emerald-400' : 'text-stone-400 dark:text-zinc-500'">
             <span :class="peerOnline ? 'bg-emerald-500' : 'bg-zinc-400 dark:bg-white/15'" class="h-1.5 w-1.5 rounded-full" />{{ presenceLabel }}
           </div>
+          <div v-if="card.email_verified === false" class="mt-1 inline-flex items-center gap-1 rounded-full border border-amber-200 dark:border-amber-900/60 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 text-[10px] font-black text-amber-700 dark:text-amber-300">
+            <i class="pi pi-exclamation-circle" aria-hidden="true" />Аккаунт не верифицирован
+          </div>
         </div>
       </div>
 

@@ -2790,6 +2790,8 @@ class DatingService
             'rating_count' => (int) ($rating['count'] ?? 0),
             'rating_hidden' => (bool) ($rating['hidden'] ?? false),
             'trust_score' => TrustScoreService::scoreOf($candidate),
+            // Визовая метка: подтверждён ли email — показываем на карточке.
+            'email_verified' => $candidate->email_verified_at !== null,
         ];
     }
 

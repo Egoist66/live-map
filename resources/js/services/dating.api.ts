@@ -42,6 +42,11 @@ export interface SwipeCard {
   rating_hidden?: boolean
   /** Репутация 1–10; null у «Тайного поклонника». */
   trust_score?: number | null
+  /**
+   * Подтверждён ли email кандидата (email_verified_at на бэке).
+   * false — показать метку «Аккаунт не верифицирован» на карточке.
+   */
+  email_verified?: boolean
   /** Флаги модерации анкеты (бэкенд ContentModeration::flagsFor). */
   moderation?: import('@/types/flow').ModerationFlags | null
 }

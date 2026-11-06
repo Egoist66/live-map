@@ -51,3 +51,33 @@ export function isValidBirthDate(v: unknown): boolean {
   if (d.getFullYear() < 1900) return false
   return true
 }
+
+/**
+ * Максимальная дата рождения, при которой человеку исполнилось 18.
+ *
+ * Считается как «сегодня минус 18 лет». Годится для max-date
+ * пикера в регистрационной форме и гейта возраста.
+ *
+ * @returns Date для max-date DatePicker
+ */
+export function adultMaxBirthDate(): Date {
+  const d = new Date()
+  d.setFullYear(d.getFullYear() - 18)
+  return d
+}
+
+/**
+ * Проверка совершеннолетия по дате рождения.
+ *
+ * Валидная дата обязана, иначе false. Совершеннолетие считаем так же,
+ * как бэкенд: 18-летие наступило не позже сегодня (год + 18 <= сейчас).
+ *
+ * @param v значение из формы (ISO-строка «YYYY-MM-DD», дд.мм.гггг или Date)
+ * @returns true, когда дата валидна и человеку уже есть 18
+ */
+export function isAdultBirthDate(v: unknown): boolean {
+  const d = parseBirthDate(v)
+  if (!d || !isValidBirthDate(d)) return false
+  const adult = new Date(d.getFullYear() + 18, d.getMonth(), d.getDate())
+  return adult.getTime() <= Date.now()
+}

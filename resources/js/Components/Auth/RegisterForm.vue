@@ -3,6 +3,7 @@ import { useRegisterForm } from '@/composables/useAuthForm'
 import { useAuthTheme } from '@/composables/useAuthTheme'
 import { useRegisterVisibility } from '@/composables/useRegisterVisibility'
 import { useBirthDateField } from '@/composables/useBirthDate'
+import { adultMaxBirthDate } from '@/utils/birthDate'
 import { useGender } from '@/composables/useGender'
 import { useUserAge } from '@/composables/useUserAge'
 import { RESIDENCE_COUNTRIES } from '@/composables/useResidence'
@@ -36,7 +37,7 @@ const bot = useBotQr()
 
 const f = useRegisterForm()
 const reg = useRegisterVisibility()
-const bd = useBirthDateField(f.birth_date as any)
+const bd = useBirthDateField(f.birth_date as any, { maxDate: adultMaxBirthDate() })
 const g = useGender()
 const { label: ageLabel } = useUserAge(() => (f.values as any).birth_date)
 
@@ -83,10 +84,11 @@ function onCountryChange(v: string): void {
                 <small class="auth-err">{{ f.errors.value.gender }}</small>
               </div>
               <div class="min-w-0">
-                <label class="auth-label">Дата рождения</label>
+                <label class="auth-label">Дата рождения *</label>
                 <DatePicker v-model="bd.birthDateInput.value" v-bind="bd.birthDatePickerProps.value" placeholder="12.07.1997" class="w-full mt-1.5 auth-input" :invalid="!!f.errors.value.birth_date" />
                 <small class="auth-err">{{ f.errors.value.birth_date }}</small>
                 <small v-if="ageLabel" class="text-stone-500 dark:text-zinc-400">{{ ageLabel }}</small>
+                <small v-else class="text-stone-500 dark:text-zinc-400">Только 18+ — свайпы и мэтч для взрослых</small>
               </div>
             </div>
           </template>

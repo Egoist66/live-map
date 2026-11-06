@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { toTypedSchema } from '@vee-validate/zod'
-import { isValidBirthDate, toIsoBirthDate } from '@/utils/birthDate'
+import { isAdultBirthDate, isValidBirthDate, toIsoBirthDate } from '@/utils/birthDate'
 import { CONTACT_INFO_ERROR, containsContactInfo } from '@/utils/contactInfo'
 
 const toNumberOrNull = (v: unknown) => {
@@ -32,7 +32,10 @@ export const registerSchema = toTypedSchema(
       home_city: z.preprocess((v) => (v === '' || v === undefined ? null : v), z.string().max(120).nullable().optional()),
       country: z.preprocess((v) => (v === '' || v === undefined ? null : v), z.string().max(120).nullable().optional()),
       country_code: z.preprocess((v) => (v === '' || v === undefined ? null : v), z.string().max(8).nullable().optional()),
-      birth_date: z.preprocess(toBirthDate, z.string().max(10).nullable().optional()).refine((v) => v == null || isValidBirthDate(v), { message: 'Некорректная дата рождения' }),
+      birth_date: z
+        .preprocess(toBirthDate, z.string({ invalid_type_error: 'Укажи дату рождения' }).max(10))
+        .refine((v) => isValidBirthDate(v), { message: 'Некорректная дата рождения' })
+        .refine((v) => isAdultBirthDate(v), { message: 'Свайпы и мэтчи — строго с 18 лет' }),
       signup_goal: z.enum(['love', 'flirt', 'friendship', 'chat', 'interests', 'neighbors', 'business'], { errorMap: () => ({ message: 'Выбери цель' }) }),
       account_type: z.enum(['person', 'business']).nullable().optional(),
     })

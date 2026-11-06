@@ -82,7 +82,7 @@ export function useRegisterForm() {
     {
       id: 'about',
       title: 'О тебе',
-      hint: 'Цель знакомств, имя и дата рождения.',
+      hint: 'Цель знакомств, имя и дата рождения (строго 18+).',
       fields: ['signup_goal', 'name', 'gender', 'birth_date'],
     },
     {

@@ -80,12 +80,17 @@ class RegisteredUserController extends Controller
             $rules['brand'] = 'nullable|string|max:255';
         } else {
             $rules['gender'] = 'required|in:male,female,other';
+            // Для физлиц дата рождения обязательна и строго 18+ —
+            // модалка-гейт в свайпах у таких аккаунтов уже не всплывает.
+            $rules['birth_date'] = 'required|date|after:1900-01-01|before_or_equal:'.$this->adultMaxBirthDate();
         }
 
         $request->validate($rules, [
             'unp.regex' => 'УНП — строго 9 цифр',
             'legal_form.in' => 'Выберите форму собственности',
             'captcha_token.required' => \App\Rules\ValidTurnstile::emptyMessage(),
+            'birth_date.required' => 'Укажи дату рождения — регистрация доступна с 18 лет',
+            'birth_date.before_or_equal' => 'Свайпы и мэтчи — строго с 18 лет',
         ]);
 
         $country = $request->input('country');
@@ -170,6 +175,16 @@ class RegisteredUserController extends Controller
         }
 
         return redirect($this->landingFor($defaultMode));
+    }
+
+    /**
+     * Максимальная дата рождения для регистрации: сегодня минус 18 лет.
+     *
+     * @return string дата в формате Y-m-d
+     */
+    private function adultMaxBirthDate(): string
+    {
+        return now()->subYears(18)->toDateString();
     }
 
     /**

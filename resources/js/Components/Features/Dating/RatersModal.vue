@@ -84,7 +84,6 @@ function raterDate(iso: string | null): string {
           <p class="mt-2 text-sm font-black text-stone-900 dark:text-white">Имена и отзывы видят Premium</p>
           <p class="mt-1 text-xs leading-relaxed text-stone-500 dark:text-zinc-400">
             {{ raters.state.total > 0 ? `Тебя оценили ${raters.state.total} — узнай кто и что написал.` : 'Как только появятся оценки — узнай кто и что написал.' }}
-            Админам и модераторам доступно всегда.
           </p>
           <Link href="/settings/billing" class="mt-3 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-rose-500 via-pink-500 to-fuchsia-500 px-5 py-2.5 text-[13px] font-black text-white shadow-lg shadow-violet-500/30 active:scale-[0.98] transition">
             <i class="pi pi-crown text-xs" /> Выбрать Premium

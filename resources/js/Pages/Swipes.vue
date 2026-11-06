@@ -662,8 +662,9 @@ onUnmounted(() => {
                 />
                 <div class="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent pointer-events-none" />
 
-                <div v-if="s.current.value.liked_me" class="absolute top-14 left-4 z-30 pointer-events-none flex flex-col items-start gap-1.5">
-                  <span class="inline-flex items-center gap-1 rounded-full bg-[#21D07A] px-2.5 py-1 text-[11px] font-black text-white shadow"><i class="pi pi-heart-fill text-[10px]" />Лайкнул тебя</span>
+                <div v-if="s.current.value.liked_me || s.current.value.email_verified === false" class="absolute top-14 left-4 z-30 pointer-events-none flex flex-col items-start gap-1.5">
+                  <span v-if="s.current.value.email_verified === false" class="inline-flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[11px] font-black text-amber-300 shadow backdrop-blur-sm"><i class="pi pi-exclamation-circle text-[10px]" />Аккаунт не верифицирован</span>
+                  <span v-if="s.current.value.liked_me" class="inline-flex items-center gap-1 rounded-full bg-[#21D07A] px-2.5 py-1 text-[11px] font-black text-white shadow"><i class="pi pi-heart-fill text-[10px]" />Лайкнул тебя</span>
                   <span v-if="s.current.value.is_superlike" class="inline-flex items-center gap-1 rounded-full bg-[#1786FF] px-2.5 py-1 text-[11px] font-black text-white shadow"><i class="pi pi-star-fill text-[10px]" />Суперлайк</span>
                   <span v-if="s.current.value.is_boosted" class="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2.5 py-1 text-[11px] font-black text-white shadow"><i class="pi pi-bolt text-[10px]" />В топе</span>
                 </div>
