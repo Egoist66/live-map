@@ -13,7 +13,10 @@ use Illuminate\Http\Request;
 class PipeReplyController extends Controller
 {
     /**
-     * Ответы треда: верхний уровень с одним вложенным уровнем детей.
+     * Ответы треда: верхний уровень постранично + полное дерево потомков.
+     *
+     * Ветка собирается целиком (глубина любая): ответ на вложенный ответ
+     * раньше терялся — счётчик рос, а ответ не рисовался нигде.
      *
      * @param Request $request запрос
      * @param PipeThread $thread тред
@@ -24,14 +27,35 @@ class PipeReplyController extends Controller
         PipeService::abortIfBlocked($request->user(), $thread->user);
 
         $replies = $thread->replies()
-            ->with(['user:id,name,avatar_path', 'children.user:id,name,avatar_path', 'thread:id,user_id'])
+            ->with(['user:id,name,avatar_path', 'thread:id,user_id'])
             ->orderByDesc('is_pinned')
             ->orderByDesc('pinned_at')
             ->orderBy('id')
             ->paginate(20);
 
-        $replies->getCollection()->transform(function ($reply) use ($request) {
-            return PipeService::serializeReply($reply, $request->user(), [], true);
+        $topLevel = $replies->getCollection();
+
+        $nested = PipeReply::query()
+            ->where('thread_id', $thread->id)
+            ->whereNotNull('parent_id')
+            ->with('user:id,name,profile_slug,avatar_path')
+            ->orderBy('id')
+            ->get();
+
+        $childrenByParent = $nested->groupBy('parent_id');
+
+        $attachChildren = function (PipeReply $reply) use ($childrenByParent, &$attachChildren): void {
+            $children = $childrenByParent->get($reply->id, collect())->values();
+            $children->each($attachChildren);
+            $reply->setRelation('children', $children);
+        };
+        $topLevel->each($attachChildren);
+
+        $allReplies = $topLevel->merge($nested);
+        $likedMap = PipeService::likedReplyIds($allReplies, $request->user());
+
+        $topLevel->transform(function (PipeReply $reply) use ($request, $likedMap) {
+            return PipeService::serializeReply($reply, $request->user(), $likedMap, true);
         });
 
         return $replies;

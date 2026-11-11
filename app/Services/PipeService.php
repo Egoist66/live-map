@@ -212,7 +212,7 @@ class PipeService
      * @param PipeReply $reply ответ
      * @param User|null $viewer смотрящий
      * @param array<int,bool> $likedMap карта лайков ответов смотрящего
-     * @param bool $withChildren сериализовать ли один уровень вложенных ответов
+     * @param bool $withChildren сериализовать ли ветку детей (рекурсивно, любая глубина)
      * @param PipeReply|null $knownParent уже загруженный родитель (дети ветки
      *                                     получают текущий ответ, чтобы не плодить запросов)
      */
@@ -271,7 +271,7 @@ class PipeService
 
         if ($withChildren) {
             $children = $reply->children
-                ->map(fn ($child) => self::serializeReply($child, $viewer, $likedMap, false, $reply))
+                ->map(fn ($child) => self::serializeReply($child, $viewer, $likedMap, true, $reply))
                 ->values()
                 ->all();
 

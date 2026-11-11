@@ -74,6 +74,8 @@ export function resetAppNotifications(): void {
   toastedInboxIds.clear()
   seenMsgIds = new Set<number>()
   seenEventAt = new Map<string, number>()
+  recentToastSignatures.clear()
+  recentBodySignatures.clear()
   timers.forEach((t) => clearTimeout(t))
   timers = new Map()
   toasts.value = []
@@ -128,7 +130,12 @@ function playTick() {
     o.connect(g).connect(ac.destination); o.start(); g.gain.exponentialRampToValueAtTime(0.01, ac.currentTime + 0.22); o.stop(ac.currentTime + 0.23)
   } catch {}
 }
-function push(t: AppToast) {
+/**
+ * Показать тост без контент-дедупа: для группировки подряд-сообщений
+ * одного чата (текст может совпадать — счётчик обязан расти).
+ * @param t тост
+ */
+function pushGrouped(t: AppToast): void {
   if (isLockedNow()) return
   noteToastSignature(t.title, t.body)
   toasts.value = [t, ...toasts.value].slice(0, 3)
@@ -139,6 +146,21 @@ function push(t: AppToast) {
   try {
     if (typeof document !== 'undefined' && document.hidden) void notifyHidden(t)
   } catch {}
+}
+
+/**
+ * Обычный вход тоста: дедуп по контенту и показ.
+ *
+ * Один и тот же тост может ехать двумя путями (сокет + веб-пуш-фолбэк,
+ * сокет + 20с-поллер): заголовки у транспортов разные, поэтому сверяем
+ * и полное содержимое, и тело отдельно (30с — длиннее тика поллера).
+ *
+ * @param t тост
+ */
+function push(t: AppToast) {
+  if (isLockedNow()) return
+  if (seenToastRecently(t.title, t.body)) return
+  pushGrouped(t)
 }
 /**
  * Системный баннер для скрытой вкладки — быстрый локальный путь.
@@ -194,7 +216,11 @@ function remove(id: string) {
 }
 /** Сигнатуры недавно показанных тостов: защита SW-фолбэка от дублей с Echo. */
 const recentToastSignatures = new Map<string, number>()
+/** Сигнатуры по одному телу: заголовки сокета и веб-пуша различаются. */
+const recentBodySignatures = new Map<string, number>()
 const SIGNATURE_TTL_MS = 10000
+/** Тело живёт дольше: поллер тикает раз в 20с — его тосты гасим этим окном. */
+const BODY_SIGNATURE_TTL_MS = 30000
 const SW_FALLBACK_DELAY_MS = 1500
 
 function toastSignature(title: string, body: string): string {
@@ -202,20 +228,34 @@ function toastSignature(title: string, body: string): string {
   return raw.slice(0, 160)
 }
 
+function toastBodySignature(body: string): string {
+  const raw = body.toLowerCase().replace(/\s+/g, ' ').trim()
+  return raw.slice(0, 160)
+}
+
+function capSignatureMap(map: Map<string, number>): void {
+  if (map.size <= 200) return
+  const first = map.keys().next().value as string | undefined
+  if (first !== undefined) map.delete(first)
+}
+
 function noteToastSignature(title: string, body: string): void {
   try {
     recentToastSignatures.set(toastSignature(title, body), Date.now())
-    if (recentToastSignatures.size > 200) {
-      const first = recentToastSignatures.keys().next().value as string | undefined
-      if (first !== undefined) recentToastSignatures.delete(first)
-    }
+    capSignatureMap(recentToastSignatures)
+    recentBodySignatures.set(toastBodySignature(body), Date.now())
+    capSignatureMap(recentBodySignatures)
   } catch {}
 }
 
 function seenToastRecently(title: string, body: string): boolean {
   try {
     const at = recentToastSignatures.get(toastSignature(title, body))
-    return at !== undefined && Date.now() - at < SIGNATURE_TTL_MS
+    if (at !== undefined && Date.now() - at < SIGNATURE_TTL_MS) return true
+    // Заголовки у сокет-тоста и у веб-пуша одного события разные
+    // (бэк пишет их независимо) — сверяем и тело с запасным окном.
+    const bodyAt = recentBodySignatures.get(toastBodySignature(body))
+    return bodyAt !== undefined && Date.now() - bodyAt < BODY_SIGNATURE_TTL_MS
   } catch {
     return false
   }
@@ -232,9 +272,10 @@ function swPushToastKind(link: string): { type: AppToast['type']; icon: string }
  * Фолбэк тоста из сервис-воркера (`upin:sw-push`).
  *
  * SW пересылает пуш сфокусированной вкладке вместо системного баннера.
- * Если Echo жив — тот же тост уже показан, гасим по сигнатуре с задержкой.
- * Если сокет мёртв — это единственная доставка: in-app тост, а для успевшей
- * скрыться вкладки — локальный баннер (серверный SW сознательно пропустил).
+ * Если Echo жив — тост покажет inbox-строка по сокету, и заголовки у двух
+ * транспортов разные (сигнатура не совпадёт), поэтому пуш гасим проверкой
+ * живого сокета. Если сокет мёртв — это единственная доставка: in-app тост,
+ * а для успевшей скрыться вкладки — локальный баннер.
  */
 function handleSwPush(event: Event): void {
   const detail = (event as CustomEvent<ForegroundPush>).detail
@@ -245,10 +286,15 @@ function handleSwPush(event: Event): void {
   const tag = String(detail.tag || 'upin-push')
   const avatar = typeof detail.avatar === 'string' ? detail.avatar : null
   if (seenToastRecently(title, body)) return
+  // Живой сокет сам покажет тост по inbox-строке (user:notification.created),
+  // причём с другим заголовком — сигнатуры не совпадут и тост задвоится.
+  // Пуш важен только когда realtime мёртв: тогда он единственная доставка.
+  if (socketAlive()) return
   window.setTimeout(() => {
     try {
       if (isLockedNow()) return
       if (seenToastRecently(title, body)) return
+      if (socketAlive()) return
       if (typeof document !== 'undefined' && document.hidden) {
         void showLocal(title, { body, url: link, avatar, tag: `sw-${tag}` })
         return
@@ -288,7 +334,7 @@ function handleMessage(e: any) {
     const nextTitle = `${name} · ${nextCount} сообщ.`.slice(0, 60)
     const grouped: AppToast = { ...existing, id: existing.id, count: nextCount, title: nextTitle, body }
     remove(existing.id)
-    push(grouped)
+    pushGrouped(grouped)
     return
   }
   push({

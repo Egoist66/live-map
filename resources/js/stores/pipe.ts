@@ -377,7 +377,7 @@ export const usePipeStore = defineStore('pipe', () => {
   }
 
   /**
-   * Добавить вложенный ответ к родителю (один уровень вложенности).
+   * Добавить вложенный ответ к родителю (ветка рисуется на любую глубину).
    * @param reply созданный ответ
    */
   function prependNestedReply(reply: PipeReply): void {
