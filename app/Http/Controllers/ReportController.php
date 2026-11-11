@@ -25,7 +25,7 @@ class ReportController extends Controller
     public function store(Request $request)
     {
         $data = $request->validate([
-            'target_type' => 'required|in:pin,comment,user',
+            'target_type' => 'required|in:pin,comment,user,pipe_thread,pipe_reply',
             'target_id' => 'required|integer',
             'reason' => 'required|in:spam,abuse,inappropriate,illegal,fake',
             'description' => 'nullable|string|max:1000',
@@ -33,6 +33,12 @@ class ReportController extends Controller
         if ($data['target_type'] === 'user') {
             abort_if((int) $data['target_id'] === (int) $request->user()->id, 422, 'Нельзя жаловаться на себя');
             abort_unless(\App\Models\User::whereKey($data['target_id'])->exists(), 404);
+        }
+        if ($data['target_type'] === 'pipe_thread') {
+            abort_unless(\App\Models\PipeThread::whereKey($data['target_id'])->exists(), 404);
+        }
+        if ($data['target_type'] === 'pipe_reply') {
+            abort_unless(\App\Models\PipeReply::whereKey($data['target_id'])->exists(), 404);
         }
         $exists = Report::where('reporter_id', $request->user()->id)
             ->where('target_type', $data['target_type'])
@@ -135,6 +141,16 @@ class ReportController extends Controller
                 }
             } catch (\Throwable $e) {
                 Log::warning('trust restore failed', ['report' => $report->id, 'error' => $e->getMessage()]);
+            }
+        }
+
+        // Подтверждённая жалоба на Pipe-контент удаляет тред/ответ:
+        // лента — публичное место, у нарушившего нет «архива».
+        if ($data['status'] === 'resolved' && in_array($report->target_type, ['pipe_thread', 'pipe_reply'], true)) {
+            if ($report->target_type === 'pipe_thread') {
+                \App\Models\PipeThread::whereKey($report->target_id)->delete();
+            } else {
+                \App\Models\PipeReply::whereKey($report->target_id)->delete();
             }
         }
 

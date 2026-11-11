@@ -34,7 +34,7 @@ class ModeratePublicContentJob implements ShouldQueue
     use SerializesModels;
 
     /**
-     * @param  string  $kind  flow_post|flow_comment|pin|pin_comment|district_post|district_comment|dating_review|business_ad|photo_caption
+     * @param  string  $kind  flow_post|flow_comment|pin|pin_comment|district_post|district_comment|dating_review|business_ad|photo_caption|pipe_thread|pipe_reply
      * @param  int  $entityId  id сущности
      * @param  int  $authorId  id автора
      * @param  string  $text  склеенный текст для анализа (до 2000 символов)
@@ -77,10 +77,11 @@ class ModeratePublicContentJob implements ShouldQueue
 
         try {
             $isUserReport = $this->kind === 'dating_review';
+            $isPipeTarget = in_array($this->kind, ['pipe_thread', 'pipe_reply'], true);
 
             if ($isUserReport) {
                 // Отзывы и так проходят ручную модерацию в админке:
-                // вторичный проход снял текст с флагами — отзыв
+                // вторичный процесс снял текст с флагами — отзыв
                 // отклоняем сразу, жалобу на автора не заводим.
                 \App\Models\DatingReview::whereKey($this->entityId)
                     ->where('status', 'pending')
@@ -88,6 +89,17 @@ class ModeratePublicContentJob implements ShouldQueue
                         'status' => 'rejected',
                         'moderated_at' => now(),
                     ]);
+            } elseif ($isPipeTarget) {
+                // Pipe-сущности заводят жалобу с их реальным target_type:
+                // админка резолвит цель и удаляет контент по «Решено».
+                Report::create([
+                    'reporter_id' => $this->authorId,
+                    'target_type' => $this->kind,
+                    'target_id' => $this->entityId,
+                    'reason' => 'abuse',
+                    'description' => 'auto-moderation '.$this->kind.'#'.$this->entityId.' '.$category.': '.mb_substr($reason, 0, 200),
+                    'status' => 'pending',
+                ]);
             } else {
                 Report::create([
                     'reporter_id' => $this->authorId,

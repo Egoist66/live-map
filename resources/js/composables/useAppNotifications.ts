@@ -800,6 +800,51 @@ function handlePinActivity(e: any) {
     })
     return
   }
+  if (a.kind === 'pipe_reply') {
+    // Мини-сайт Pipe (pipe.ulove.by) живёт на своём домене:
+    // диплинк приходит готовым из пейлоада уведомления.
+    const pipeLink = String(a.pipe_thread?.url || '')
+    const isAnonymousReply = Boolean(a.is_incognito)
+    push({
+      id: `pipe-reply-${a.id}-${Date.now()}`,
+      type: 'pin',
+      icon: isAnonymousReply ? 'pi pi-user-secret' : 'pi pi-comments',
+      title: isAnonymousReply ? 'Анонимный ответ в Pipe' : `Ответ в треде от ${name}`,
+      body: ((a.excerpt ? `${a.excerpt}` : 'Откройте тред, чтобы прочитать') as string).slice(0, 90),
+      avatar: isAnonymousReply ? null : avatarSrcFor(actor),
+      link: pipeLink || '/pipe',
+      createdAt: Date.now(),
+    })
+    return
+  }
+  if (a.kind === 'pipe_like') {
+    const pipeLink = String(a.pipe_thread?.url || '')
+    const isAnonymousLike = Boolean(a.is_incognito)
+    push({
+      id: `pipe-like-${a.id}-${Date.now()}`,
+      type: 'pin',
+      icon: 'pi pi-heart',
+      title: isAnonymousLike ? 'Новый лайк в Pipe' : `${name} оценил ваш тред`,
+      body: ((a.excerpt ? a.excerpt : 'Кто-то лайкнул вас в Pipe') as string).slice(0, 90),
+      avatar: isAnonymousLike ? null : avatarSrcFor(actor),
+      link: pipeLink || '/pipe',
+      createdAt: Date.now(),
+    })
+    return
+  }
+  if (a.kind === 'pipe_follow') {
+    push({
+      id: `pipe-follow-${a.id}-${Date.now()}`,
+      type: 'pin',
+      icon: 'pi pi-user-plus',
+      title: `${name} читает ваши треды`,
+      body: 'Новый подписчик в Pipe'.slice(0, 90),
+      avatar: avatarSrcFor(actor),
+      link: '/pipe',
+      createdAt: Date.now(),
+    })
+    return
+  }
   if (a.kind === 'profile_visit') {
     push({
       id: `pin-${a.id}-${Date.now()}`,

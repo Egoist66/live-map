@@ -44,6 +44,10 @@ class HandleInertiaRequests extends Middleware
             ],
             'unreadCount' => $request->user() ? $request->user()->unreadMessagesCount() : 0,
             'appVersion' => AppVersionService::version(),
+            // Абсолютный origin главного сайта (ulove.by): Pipe-домен
+            // строит ссылки на главный сайт именно от него, потому что
+            // route() на чужом host-запросе метает в тот же домен.
+            'appUrl' => rtrim((string) config('app.url'), '/'),
             'seo' => function () use ($request) {
                 $path = '/' . ltrim($request->path(), '/');
 

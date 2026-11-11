@@ -46,6 +46,14 @@ Route::middleware(['web', 'auth:web,sanctum'])->group(function () {
     Route::delete('/telegram/link', [\App\Http\Controllers\TelegramAuthController::class, 'unlink'])->middleware('throttle:telegram-status');
 });
 
+// Публичные чтения Pipe: лента/тред/ветка — видны гостям,
+// как на Threads. Писать можно только внутри auth-группы выше.
+Route::middleware(['web', 'throttle:60,1'])->group(function () {
+    Route::get('/pipe/threads', [\App\Http\Controllers\PipeThreadController::class, 'index']);
+    Route::get('/pipe/threads/{thread}', [\App\Http\Controllers\PipeThreadController::class, 'show']);
+    Route::get('/pipe/threads/{thread}/replies', [\App\Http\Controllers\PipeReplyController::class, 'index']);
+});
+
 // Скринлокер: код живёт на устройстве, серверу нужен только флаг активности
 // (для меню бота) и сброс забытого кода через почту. Отдельное ведро, чтобы
 // письма не спамились и не делили общий лимит с поллингом.
@@ -126,6 +134,20 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:status-read'])->group(fu
 // писательные именные лимитеры (social-write 60, messages 60 и т.д.)
 // поверх остаются и режут спам/флуд как раньше.
 Route::middleware(['web', 'auth:web,sanctum', 'throttle:300,1'])->group(function () {
+    // Мини-сайт Pipe (pipe.ulove.by): чтение ленты — гостям (см. ниже),
+    // действия (тред/ответ/лайк/подписка) — только авторизованным.
+    Route::post('/pipe/threads', [\App\Http\Controllers\PipeThreadController::class, 'store'])->middleware('throttle:social-write');
+    Route::put('/pipe/threads/{thread}', [\App\Http\Controllers\PipeThreadController::class, 'update'])->middleware('throttle:social-write');
+    Route::delete('/pipe/threads/{thread}', [\App\Http\Controllers\PipeThreadController::class, 'destroy'])->middleware('throttle:social-write');
+    Route::post('/pipe/threads/{thread}/like', [\App\Http\Controllers\PipeThreadController::class, 'toggleLike'])->middleware('throttle:reactions');
+    Route::post('/pipe/threads/{thread}/save', [\App\Http\Controllers\PipeThreadController::class, 'toggleSave'])->middleware('throttle:reactions');
+    Route::get('/pipe/threads/{thread}/likers', [\App\Http\Controllers\PipeThreadController::class, 'likers']);
+    Route::post('/pipe/threads/{thread}/replies', [\App\Http\Controllers\PipeReplyController::class, 'store'])->middleware('throttle:comments-write');
+    Route::delete('/pipe/replies/{reply}', [\App\Http\Controllers\PipeReplyController::class, 'destroy'])->middleware('throttle:social-write');
+    Route::post('/pipe/replies/{reply}/like', [\App\Http\Controllers\PipeReplyController::class, 'toggleLike'])->middleware('throttle:reactions');
+    Route::get('/pipe/profile/{user}/status', [\App\Http\Controllers\PipeFollowController::class, 'status']);
+    Route::post('/pipe/profile/{user}/follow', [\App\Http\Controllers\PipeFollowController::class, 'toggle'])->middleware('throttle:social-write');
+
     Route::get('/pins/mine', [PinController::class, 'mine']);
     Route::get('/pins/mine/scheduled', [PinController::class, 'scheduled']);
     Route::get('/pins/mine/archived', [PinController::class, 'archived']);

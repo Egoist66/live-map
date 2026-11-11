@@ -36,6 +36,14 @@ class Report extends Model
             if ($this->target_type === 'user') {
                 return User::where('id', $this->target_id)->value('name');
             }
+            if ($this->target_type === 'pipe_thread') {
+                $body = PipeThread::where('id', $this->target_id)->value('body');
+                return $body ? mb_strimwidth(trim(preg_replace('/\s+/', ' ', $body) ?? ''), 0, 80, '…') : null;
+            }
+            if ($this->target_type === 'pipe_reply') {
+                $body = PipeReply::where('id', $this->target_id)->value('body');
+                return $body ? mb_strimwidth(trim(preg_replace('/\s+/', ' ', $body) ?? ''), 0, 80, '…') : null;
+            }
         } catch (\Throwable) {
         }
         return null;

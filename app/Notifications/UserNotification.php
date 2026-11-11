@@ -107,6 +107,29 @@ abstract class UserNotification
     }
 
     /**
+     * Краткий тред Pipe для пейлоада (диплинк на pipe.ulove.by).
+     *
+     * @param \App\Models\PipeThread|\App\Models\PipeReply $target тред или ответ
+     * @return array{id:int,thread_id:int,url:string}
+     */
+    protected static function pipeThreadShape($target): array
+    {
+        if ($target instanceof \App\Models\PipeThread) {
+            return [
+                'id' => (int) $target->id,
+                'thread_id' => (int) $target->id,
+                'url' => route('pipe.show', ['thread' => $target->id]),
+            ];
+        }
+
+        return [
+            'id' => (int) $target->thread_id,
+            'thread_id' => (int) $target->thread_id,
+            'url' => route('pipe.show', ['thread' => $target->thread_id]),
+        ];
+    }
+
+    /**
      * Краткий актор для пейлоада.
      * Инкогнито скрывает и id: по уведомлению нельзя открыть анкету.
      *
@@ -172,9 +195,10 @@ abstract class UserNotification
     }
 
     /**
-     * Короткий анонс текста для excerpt.
+     * Короткий анонс текста для excerpt. Public: сервисы (PipeNotifier
+     * и др.) собирают свои activity-пейлоады этим же хелпером.
      */
-    protected static function excerpt(?string $content, int $limit = 120): ?string
+    public static function excerpt(?string $content, int $limit = 120): ?string
     {
         $clean = trim((string) preg_replace('/\s+/', ' ', (string) $content));
         if ($clean === '') {

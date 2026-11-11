@@ -553,7 +553,7 @@ class RealtimeController extends Controller
             $id = (int) $id;
             $known = (int) $known;
 
-            if (! in_array($kind, ['pin', 'flow', 'district', 'photo'], true) || $id <= 0 || $known < 0) {
+            if (! in_array($kind, ['pin', 'flow', 'district', 'photo', 'pipe'], true) || $id <= 0 || $known < 0) {
                 continue;
             }
 
@@ -589,6 +589,8 @@ class RealtimeController extends Controller
                 'flow' => (int) \App\Models\FlowPostComment::where('post_id', $id)->max('id'),
                 'district' => (int) \App\Models\DistrictPostComment::where('post_id', $id)->max('id'),
                 'photo' => (int) \App\Models\ProfilePhotoComment::where('photo_id', $id)->max('id'),
+                // Реалтайм-тред Pipe: max id ответов (в т.ч. вложенных).
+                'pipe' => (int) \App\Models\PipeReply::where('thread_id', $id)->max('id'),
                 default => 0,
             };
         } catch (\Throwable) {

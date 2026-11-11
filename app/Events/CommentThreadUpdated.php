@@ -58,13 +58,13 @@ class CommentThreadUpdated implements ShouldBroadcastNow
      * Пнуть тред одной строкой из контроллеров.
      * Ошибки шины глушим: realtime не должен ронять запись коммента.
      *
-     * @param string $kind pin|flow|district|photo
+     * @param string $kind pin|flow|district|photo|pipe
      * @param int $id id объекта
      * @return void
      */
     public static function touch(string $kind, int $id): void
     {
-        if ($id <= 0 || ! in_array($kind, ['pin', 'flow', 'district', 'photo'], true)) {
+        if ($id <= 0 || ! in_array($kind, ['pin', 'flow', 'district', 'photo', 'pipe'], true)) {
             return;
         }
 

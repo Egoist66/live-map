@@ -4,7 +4,7 @@ import { busEmit, busOn, registerPollContextProvider } from '@/services/realtime
 /**
  * Вид треда комментариев.
  */
-export type ThreadKind = 'pin' | 'flow' | 'district' | 'photo'
+export type ThreadKind = 'pin' | 'flow' | 'district' | 'photo' | 'pipe'
 
 /** Пауза против двойного рефетча (сокет + тик поллинга рядом). */
 const REFETCH_DEBOUNCE_MS = 800

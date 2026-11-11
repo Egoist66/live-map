@@ -70,3 +70,4 @@ Route::middleware('auth')->group(function () {
 Route::fallback([PageController::class, 'fallback']);
 
 require __DIR__.'/auth.php';
+require __DIR__.'/pipe.php';

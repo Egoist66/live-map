@@ -110,6 +110,36 @@ export interface SyncMetaRow {
 }
 
 /**
+ * Закешированный тред Pipe.
+ *
+ * key — `${uid}:${threadId}`: изоляция по аккаунту, как в чатах.
+ * value — сырой payload треда (как от pipeApi), патчится точечно
+ * (лайки, закладки, счётчики) и живёт до 200 штук на аккаунт.
+ */
+export interface CachedPipeThreadRow {
+  key: string
+  uid: number
+  id: number
+  updatedAt: number
+  value: string
+}
+
+/**
+ * Снапшот ленты Pipe (какой scope и в каком порядке показывать треды).
+ *
+ * key — `${uid}:${scope}`, scope — `${filter}:${authorId ?? 0}`
+ * (например `all:0`, `mine:0`, `saved:0`, `all:42`). value — JSON
+ * `{ ids: number[], page, last_page }`; сами треды лежат в pipeThreads.
+ */
+export interface CachedPipeFeedRow {
+  key: string
+  uid: number
+  scope: string
+  updatedAt: number
+  value: string
+}
+
+/**
  * Локальная настройка скринлокера пользователя.
  *
  * Персональный код блокировки — приватная настройка устройства, а не
@@ -135,6 +165,8 @@ class AppDb extends Dexie {
   imageBlobs!: Table<CachedImageRow, string>
   syncMeta!: Table<SyncMetaRow, string>
   screenLock!: Table<ScreenLockRow, number>
+  pipeThreads!: Table<CachedPipeThreadRow, string>
+  pipeFeeds!: Table<CachedPipeFeedRow, string>
 
   constructor() {
     super('upin')
@@ -160,6 +192,19 @@ class AppDb extends Dexie {
       imageBlobs: 'hash, lastUsed',
       syncMeta: 'key, uid',
       screenLock: 'uid',
+    })
+    this.version(5).stores({
+      kv: 'key',
+      noteFiles: 'key, uid',
+      chatConversations: 'key, uid, convId',
+      chatMessages: 'key, uid, convId, id',
+      galleries: 'key, uid, ownerId',
+      profileHeaders: 'key, uid, ownerId',
+      imageBlobs: 'hash, lastUsed',
+      syncMeta: 'key, uid',
+      screenLock: 'uid',
+      pipeThreads: 'key, uid, id, updatedAt',
+      pipeFeeds: 'key, uid, updatedAt',
     })
   }
 }

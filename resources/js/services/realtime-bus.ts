@@ -169,17 +169,27 @@ export function registerPollContextProvider(key: string, provider: (() => Partia
 
 /**
  * Текущий контекст поллинга (слияние всех провайдеров).
+ *
+ * watchThreads — конкатенация тикетов от всех провайдеров
+ * (у ThreadLive-тредов и Pipe-страниц свои множества), дедуп и
+ * верхний предел 5 соблюдает сервер.
  */
 export function getPollContext(): PollContext {
   const merged: PollContext = { conversationId: null }
+  const threadTickets = new Set<string>()
+
   try {
     contextProviders.forEach((provider) => {
       const part = provider?.() ?? {}
       if (part.conversationId != null) merged.conversationId = part.conversationId
       if (part.mapBbox !== undefined) merged.mapBbox = part.mapBbox
       if (part.knownPinIds !== undefined) merged.knownPinIds = part.knownPinIds
-      if (part.watchThreads !== undefined) merged.watchThreads = part.watchThreads
+      if (part.watchThreads) {
+        String(part.watchThreads).split(',').filter(Boolean).forEach((ticket) => threadTickets.add(ticket))
+      }
     })
   } catch {}
+  if (threadTickets.size) merged.watchThreads = Array.from(threadTickets).slice(0, 5).join(',')
+
   return merged
 }
