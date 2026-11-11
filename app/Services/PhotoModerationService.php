@@ -47,9 +47,9 @@ class PhotoModerationService
     /**
      * Проверить фото и отклонить загрузку при запрещённом контенте (422).
      *
-     * Стафф (админ/модератор) не проверяется — по аналогии с
-     * ContentModeration::assertClean: их контент доверенный,
-     * а самим сотрудникам нужно тестировать загрузку.
+     * Проверяются ВСЕ авторы, включая админов и модераторов: их фото
+     * попадают в публичную ленту/профили, которые видят гости и
+     * обычные пользователи, — правила едины для всех.
      *
      * @param UploadedFile $file загруженный файл изображения
      * @return void
@@ -58,14 +58,6 @@ class PhotoModerationService
      */
     public static function assertAllowed(UploadedFile $file): void
     {
-        try {
-            if (auth()->user()?->canModerate()) {
-                return;
-            }
-        } catch (\Throwable) {
-            // Нет сессии (CLI, сиды) — проверяем как обычного пользователя.
-        }
-
         $verdict = self::check($file);
 
         if ($verdict['allowed']) {

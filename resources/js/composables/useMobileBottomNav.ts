@@ -9,8 +9,8 @@ import { route } from '@/route'
 /**
  * Состояние нижней мобильной навигации.
  *
- * Внизу — только ядро: веб/PWA — Профиль, Чат, ULove;
- * Telegram — Чат, ULove, уведомления и аватар профиля.
+ * Внизу — только ядро: веб/PWA — Профиль, Чат, ULove, Pipes;
+ * Telegram — Чат, ULove, Pipes, уведомления и аватар профиля.
  * Колокол в вебе живёт в топбаре. Доп.модули (Карта, UFlow,
  * Районы) — в дропдауне профиля (см. `useAppLayout`).
  * Прячет меню при открытой клавиатуре, чтобы инпуты чата/комментариев
@@ -84,7 +84,7 @@ export function useMobileBottomNav() {
   /**
    * Видимость пунктов нижней навигации.
    *
-   * Внизу — только ядро: Профиль, Чат и ULove (дефолт). UFlow
+   * Внизу — только ядро: Профиль, Чат, ULove и Pipes (дефолт). UFlow
    * живёт в дропдауне профиля и добавляется туда при активации
    * модуля (см. `useAppLayout`). Бизнес-аккаунт — исключение:
    * Кабинет и Чат. Профиль и чат — всегда (общее ядро).
@@ -92,6 +92,13 @@ export function useMobileBottomNav() {
   const modules = useAppModulesStore()
 
   const showLove = computed(() => !isBusiness.value && modules.isEnabled('ulove'))
+
+  /**
+   * Лента Pipes (/pipe) — мини-сайт поверх ULove: маршрут всегда
+   * доступен на текущем хосте, поэтому пункт показываем всем
+   * (кроме бизнес-аккаунтов, у которых своё меню кабинета).
+   */
+  const showPipes = computed(() => !isBusiness.value)
   const showFlow = computed(() => false)
   const showDistricts = computed(() => false)
 
@@ -115,6 +122,10 @@ export function useMobileBottomNav() {
     }
 
     if (showLove.value) {
+      count += 1
+    }
+
+    if (showPipes.value) {
       count += 1
     }
 
@@ -230,6 +241,13 @@ export function useMobileBottomNav() {
     }
     return 'text-stone-500 dark:text-zinc-400'
   }
+
+  /**
+   * Классы пункта «Pipes»: активность считается по пути /pipe
+   * (роут мини-сайта pipe.path.index), схема та же, что у остальных.
+   */
+  const pipesActiveClass = 'text-[#F04D9F] dark:text-[#F04D9F] bg-[#F04D9F]/10 dark:bg-[#F04D9F]/15'
+  const pipesIdleClass = 'text-stone-500 dark:text-zinc-400'
 
   /**
    * Классы бизнес-пункта нижней навигации (Кабинет).
@@ -411,5 +429,5 @@ export function useMobileBottomNav() {
     document.documentElement.classList.remove('native-swipes')
   })
 
-  return { dashboardHref, isActive, isActivePath, navLinkClass, businessActiveClass, businessIdleClass, total, bellTotal, avatarSrc, isTelegram, showSystemItems, showProfileLink, navHidden, keyboardOpen, isBusiness, isStaff, showLove, showFlow, showDistricts, gridClass }
+  return { dashboardHref, isActive, isActivePath, navLinkClass, businessActiveClass, businessIdleClass, pipesActiveClass, pipesIdleClass, total, bellTotal, avatarSrc, isTelegram, showSystemItems, showProfileLink, navHidden, keyboardOpen, isBusiness, isStaff, showLove, showPipes, showFlow, showDistricts, gridClass }
 }

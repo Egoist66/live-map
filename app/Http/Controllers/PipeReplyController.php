@@ -24,8 +24,10 @@ class PipeReplyController extends Controller
         PipeService::abortIfBlocked($request->user(), $thread->user);
 
         $replies = $thread->replies()
-            ->with(['user:id,name,avatar_path', 'children.user:id,name,avatar_path'])
-            ->oldest()
+            ->with(['user:id,name,avatar_path', 'children.user:id,name,avatar_path', 'thread:id,user_id'])
+            ->orderByDesc('is_pinned')
+            ->orderByDesc('pinned_at')
+            ->orderBy('id')
             ->paginate(20);
 
         $replies->getCollection()->transform(function ($reply) use ($request) {
@@ -99,6 +101,34 @@ class PipeReplyController extends Controller
         }
 
         return response()->json(['ok' => true]);
+    }
+
+    /**
+     * Обновить свой ответ (чужой запрещено даже админу).
+     *
+     * @param Request $request запрос
+     * @param PipeReply $reply ответ
+     */
+    public function update(Request $request, PipeReply $reply)
+    {
+        $data = $request->validate([
+            'body' => 'required|string|max:'.config('pipe.reply_max_length'),
+        ]);
+
+        $updated = PipeService::updateReply($request->user(), $reply, $data['body']);
+
+        return response()->json(PipeService::serializeReply($updated->refresh(), $request->user()));
+    }
+
+    /**
+     * Закрепить / открепить ответ (автор треда, максимум 3, только верхний уровень).
+     *
+     * @param Request $request запрос
+     * @param PipeReply $reply ответ
+     */
+    public function togglePin(Request $request, PipeReply $reply)
+    {
+        return response()->json(PipeService::toggleReplyPin($request->user(), $reply));
     }
 
     /**

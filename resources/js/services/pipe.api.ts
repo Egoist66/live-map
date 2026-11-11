@@ -127,6 +127,25 @@ export const pipeApi = {
   },
 
   /**
+   * Закрепить / открепить ответ (только автор треда, максимум 3).
+   * @param replyId ответ
+   */
+  async toggleReplyPin(replyId: number): Promise<{ id: number; pinned: boolean }> {
+    const { data } = await api.post(`/api/pipe/replies/${replyId}/pin`)
+    return data as { id: number; pinned: boolean }
+  },
+
+  /**
+   * Обновить свой ответ (чужой запрещено даже админу).
+   * @param replyId ответ
+   * @param body новый текст
+   */
+  async updateReply(replyId: number, body: string): Promise<PipeReply> {
+    const { data } = await api.put(`/api/pipe/replies/${replyId}`, { body })
+    return data as PipeReply
+  },
+
+  /**
    * Статус профиля автора: треды чьи, подписан ли, счётчики.
    * @param userId автор
    */

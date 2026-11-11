@@ -817,6 +817,22 @@ function handlePinActivity(e: any) {
     })
     return
   }
+  if (a.kind === 'pipe_mention') {
+    // Упоминание @ник в треде или ответе Pipe: диплинк — из пейлоада.
+    const pipeLink = String(a.pipe_thread?.url || '')
+    const isAnonymousMention = Boolean(a.is_incognito)
+    push({
+      id: `pipe-mention-${a.id}-${Date.now()}`,
+      type: 'pin',
+      icon: isAnonymousMention ? 'pi pi-user-secret' : 'pi pi-at',
+      title: isAnonymousMention ? 'Вас упомянули в Pipe' : `${name} упомянул вас в Pipe`,
+      body: ((a.excerpt ? a.excerpt : 'Откройте тред, чтобы прочитать') as string).slice(0, 90),
+      avatar: isAnonymousMention ? null : avatarSrcFor(actor),
+      link: pipeLink || '/pipe',
+      createdAt: Date.now(),
+    })
+    return
+  }
   if (a.kind === 'pipe_like') {
     const pipeLink = String(a.pipe_thread?.url || '')
     const isAnonymousLike = Boolean(a.is_incognito)
@@ -1473,6 +1489,15 @@ export function useAppNotifications() {
       remove(t.id)
       return
     }
+
+    // Pipe-диплинки на свой домен: полный переход, не Inertia.
+    const isExternalLink = /^https?:\/\//i.test(t.link)
+    if (isExternalLink) {
+      window.location.href = t.link
+      remove(t.id)
+      return
+    }
+
     router.visit(t.link); remove(t.id)
   }
   return { toasts, init, push, remove, openToast, subscribe }

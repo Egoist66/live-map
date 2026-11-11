@@ -24,7 +24,7 @@ import { usePipeApp } from '@/composables/usePipeApp'
 import { pipeApi } from '@/services/pipe.api'
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
 import { useConfirm } from 'primevue/useconfirm'
-import { route } from '@/route'
+import { pipeRoute } from '@/services/pipe.routes'
 import type { PipeReply } from '@/types/pipe'
 
 defineOptions({
@@ -80,7 +80,7 @@ function askDeleteThread(): void {
     accept: async () => {
       try {
         await pipeApi.remove(target.id)
-        router.visit(String(route('pipe.index')))
+        router.visit(pipeRoute('index'))
       } catch { /* остаёмся, тост покажет реальную ошибку сети */ }
     },
   })
@@ -90,6 +90,13 @@ function askDeleteThread(): void {
 function onReply(reply: PipeReply | null): void {
   thread.startReplyTo(reply)
 }
+
+/** id ответа, который сохраняется в правке (для лоадера кнопки). */
+const editBusyId = computed(() => {
+  const id = thread.editingReplyId.value
+  if (!id) return null
+  return thread.replyBusy.value[id] ? id : null
+})
 
 /** Клик по автору ответа: SPA-переход на публичный профиль ULove без перезагрузки. */
 function onAuthorAnchor(anchor: { id: number | null } | null): void {
@@ -113,7 +120,7 @@ function onReplyReport(payload: { replyId: number; reason: string }): void {
 
 /** Возврат в ленту: SPA-переход без полного перезагруза страницы. */
 function goToFeed(): void {
-  router.visit(String(route('pipe.index')))
+  router.visit(pipeRoute('index'))
 }
 
 onMounted(() => {
@@ -183,10 +190,17 @@ onBeforeUnmount(() => {
               :reply="reply"
               :is-guest="thread.isGuest.value"
               :like-busy="Boolean(thread.replyBusy.value[reply.id])"
+              :pin-busy="Boolean(thread.replyBusy.value[reply.id])"
+              :editing-id="thread.editingReplyId.value"
+              :edit-busy-id="editBusyId"
               @reply="onReply($event)"
               @author="onAuthorAnchor($event)"
               @delete="thread.deleteReply($event)"
               @like="thread.toggleReplyLike($event)"
+              @pin="thread.toggleReplyPin($event)"
+              @edit-start="thread.startEditReply($event)"
+              @edit-cancel="thread.cancelEditReply"
+              @edit-save="thread.saveEditReply($event.replyId, $event.body)"
               @report="onReplyReport"
             />
           </ul>

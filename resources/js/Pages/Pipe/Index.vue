@@ -22,9 +22,9 @@ import PipeThreadCard from '@/Components/Features/Pipe/PipeThreadCard.vue'
 import PipeLayout from '@/Layouts/PipeLayout.vue'
 import { usePipeFeed } from '@/composables/usePipeFeed'
 import { usePipeComposer } from '@/composables/usePipeComposer'
+import { usePipeFeedList } from '@/composables/usePipeFeedList'
 import { usePipeShare } from '@/composables/usePipeShare'
-import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
-import { route } from '@/route'
+import { pipeRoute } from '@/services/pipe.routes'
 import type { PipeFilter, PipeThread } from '@/types/pipe'
 
 defineOptions({
@@ -44,10 +44,12 @@ let searchTimer: ReturnType<typeof setTimeout> | null = null
 
 /**
  * Единый вид диалогов Pipe на мобилке и в тёмной теме:
- * скруглённая карта, на узких экранах — нижний лист без скруглений снизу.
+ * скруглённая карта, на узких экранах — нижний лист на всю ширину
+ * (важно перебить инлайновый width/maxWidth, иначе справа остаётся
+ * зазор, как под скроллбар).
  */
 const PIPE_DIALOG_PT = {
-  root: { class: '!rounded-[24px] max-sm:!rounded-b-none max-sm:!bottom-0 max-sm:!top-auto max-sm:!translate-y-0 !border-stone-200 dark:!border-white/10 overflow-hidden !bg-white dark:!bg-[#0F121F]' },
+  root: { class: '!rounded-[24px] max-sm:!w-full max-sm:!max-w-full max-sm:!m-0 max-sm:!rounded-b-none max-sm:!bottom-0 max-sm:!top-auto max-sm:!translate-y-0 !border-stone-200 dark:!border-white/10 overflow-hidden !bg-white dark:!bg-[#0F121F]' },
   header: { class: '!p-5 !pb-0 !border-0' },
   title: { class: '!font-black !text-[17px] !tracking-tight' },
   content: { class: '!px-5 !py-4' },
@@ -60,18 +62,26 @@ const hasFeed = computed(() => feed.store.threads.length > 0)
 
 const feedHasMore = computed(() => feed.store.page < feed.store.lastPage)
 
+/**
+ * Списочная механика ленты: нативный скролл-контейнер фиксированной
+ * высоты (см. .pipe-feed-viewport в <style>) + догрузка по sentinel.
+ * Динамический VirtualScroller PrimeVue с мутирующим списком
+ * (prepend/удаление/realtime) работает нестабильно — показывал
+ * стоп-кадр из 3 карточек без скролла, поэтому заменён на обычный
+ * v-for + IntersectionObserver, как во всех лентах приложения.
+ */
+const list = usePipeFeedList({
+  store: feed.store,
+  hasMore: () => feedHasMore.value,
+  loadMore: () => feed.store.loadMoreThreads(),
+})
+
 /** Иконка нижнего таб-бара по вкладке (нативная навигация телефона). */
 function tabIcon(value: PipeFilter): string {
   if (value === 'mine') return 'pi pi-user'
   if (value === 'saved') return 'pi pi-bookmark'
   return 'pi pi-align-left'
 }
-
-const { sentinel: feedSentinel } = useInfiniteScroll({
-  hasMore: feedHasMore,
-  loading: computed(() => feed.store.loadingMore),
-  onLoadMore: () => feed.store.loadMoreThreads(),
-})
 
 /** Поиск с дебаунсом: поллинг-пинает перезагрузку ленты. */
 function onSearch(): void {
@@ -81,7 +91,7 @@ function onSearch(): void {
 
 /** Кнопка «Ответить» на карточке: SPA-переход на страницу pipe. */
 function openThread(thread: PipeThread): void {
-  router.visit(String(route('pipe.show', { thread: thread.id })))
+  router.visit(pipeRoute('show', { thread: thread.id }))
 }
 
 function openCompose(): void {
@@ -194,34 +204,65 @@ onMounted(() => {
         <Button v-if="!feed.isGuest.value" label="Написать pipe" rounded class="mt-4" icon="pi pi-pencil" @click="openCompose" />
       </section>
 
-      <section v-else class="space-y-3" aria-label="Список pipes">
-        <PipeThreadCard
-          v-for="thread in feed.store.threads"
-          :key="thread.id"
-          :thread="thread"
-          :is-guest="feed.isGuest.value"
-          :like-busy="Boolean(feed.likeBusy.value[thread.id])"
-          :save-busy="Boolean(feed.saveBusy.value[thread.id])"
-          @like="feed.toggleLike($event)"
-          @save="feed.toggleSave($event)"
-          @share="shareThread($event)"
-          @delete="feed.removeThread($event)"
-          @reply="openThread"
-          @report="feed.reportThread(thread, $event)"
-          @edit="openEdit"
-        />
-        <InfiniteSentinel
-          :sentinel="feedSentinel"
-          :has-more="feedHasMore"
-          :loading="feed.store.loadingMore"
-          end-text="Это все pipes"
-        />
-        <div v-if="feedHasMore" class="flex justify-center pt-1">
-          <Button label="Показать ещё" rounded outlined :loading="feed.store.loadingMore" @click="feed.store.loadMoreThreads()" />
+      <!--
+        Лента: нативный скролл-контейнер фиксированной высоты
+        (.pipe-feed-viewport — вьюпорт минус шапка/поиск/таб-бар).
+        Карточки — обычный v-for (DOM ограничен загруженными страницами),
+        догрузка — sentinel в потоке + кнопка «Показать ещё».
+      -->
+      <section
+        v-else
+        :ref="list.scrollEl"
+        class="pipe-feed-viewport relative overflow-y-auto overscroll-contain"
+        aria-label="Список pipes"
+      >
+        <div class="w-full max-w-[540px] mx-auto">
+          <!--
+            Удаление с эффектом: во время запроса (removingIds) карточка
+            блюрится и прижимается, после ответа бэка плавно гаснет и
+            вылетает из списка. pointer-events-none — чтобы нельзя было
+            дожать лайк/ответ по уходящей карточке.
+          -->
+          <div
+            v-for="thread in feed.store.threads"
+            :key="thread.id"
+            class="w-full pb-3 transform-gpu transition-all duration-[500ms] ease-out"
+            :class="feed.removingIds.value[thread.id] ? 'pointer-events-none scale-[0.97] opacity-0 blur-md' : 'opacity-100'"
+          >
+            <PipeThreadCard
+              :thread="thread"
+              :is-guest="feed.isGuest.value"
+              :like-busy="Boolean(feed.likeBusy.value[thread.id])"
+              :save-busy="Boolean(feed.saveBusy.value[thread.id])"
+              @like="feed.toggleLike($event)"
+              @save="feed.toggleSave($event)"
+              @share="shareThread($event)"
+              @delete="feed.removeThread($event)"
+              @reply="openThread"
+              @report="feed.reportThread(thread, $event)"
+              @edit="openEdit"
+            />
+          </div>
+
+          <InfiniteSentinel
+            :sentinel="list.sentinel"
+            :has-more="feedHasMore"
+            :loading="Boolean(feed.store.loadingMore)"
+          />
+
+          <div v-if="feedHasMore && !feed.store.loadingMore" class="flex justify-center pb-3">
+            <Button
+              label="Показать ещё"
+              rounded
+              outlined
+              size="small"
+              @click="feed.store.loadMoreThreads()"
+            />
+          </div>
         </div>
       </section>
 
-      <div class="h-20 sm:hidden" aria-hidden="true" />
+      <div class="h-4 sm:hidden" aria-hidden="true" />
     </article>
 
     <!-- Нижний таб-бар: нативная навигация телефона (только мобильные) -->
@@ -374,6 +415,37 @@ onMounted(() => {
 </template>
 
 <style scoped>
+/*
+ * Область скролла ленты: вьюпорт минус шапка, поиск и нижний таб-бар
+ * (с safe-area). Задана обычным CSS, а не Tailwind-произвольным классом:
+ * calc(100dvh-12.5rem-env(...)) без пробелов вокруг «−» — невалидный
+ * CSS и браузер такое объявление отбрасывает (список схлопывался).
+ */
+.pipe-feed-viewport {
+  height: calc(100dvh - 12.5rem - env(safe-area-inset-bottom));
+}
+
+@media (min-width: 640px) {
+  .pipe-feed-viewport {
+    height: calc(100dvh - 10rem);
+  }
+}
+
+/*
+ * Скролл внутри ленты невидим: полоса прокрутки скрыта (как в
+ * Threads/Instagram), сама прокрутка — тач, колесо, клавиши — работает.
+ */
+.pipe-feed-viewport {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.pipe-feed-viewport::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 /* Табы фильтра на мобилке: одна строка с горизонтальным скроллом без скроллбара. */
 :deep(.p-selectbutton) {
   flex-wrap: nowrap;

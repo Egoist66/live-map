@@ -306,6 +306,49 @@ export const usePipeStore = defineStore('pipe', () => {
   }
 
   /**
+   * Локальная правка текста ответа: заменяем тело, сохраняем
+   * локально подгруженные вложенные ответы (сервер их не отдаёт).
+   * @param replyId ответ
+   * @param updated сериализованный ответ с сервера
+   */
+  function applyReplyEdit(replyId: number, updated: PipeReply): void {
+    const walk = (list: PipeReply[]): boolean => {
+      for (let i = 0; i < list.length; i += 1) {
+        const reply = list[i]
+        if (reply.id === replyId) {
+          list[i] = { ...updated, replies: reply.replies ?? [], replies_count: reply.replies_count ?? 0 }
+          return true
+        }
+        if (reply.replies?.length && walk(reply.replies)) return true
+      }
+      return false
+    }
+
+    walk(replies.value)
+  }
+
+  /**
+   * Локальный пин ответа: рекурсивный проход по ветке (флаг
+   * is_pinned; порядок пересобирается при перезагрузке ветки).
+   * @param replyId ответ
+   * @param pinned состояние
+   */
+  function applyReplyPin(replyId: number, pinned: boolean): void {
+    const walk = (list: PipeReply[]): boolean => {
+      for (const reply of list) {
+        if (reply.id === replyId) {
+          reply.is_pinned = pinned
+          return true
+        }
+        if (reply.replies?.length && walk(reply.replies)) return true
+      }
+      return false
+    }
+
+    walk(replies.value)
+  }
+
+  /**
    * Прибавить счётчик ответов треда (свой ответ / realtime).
    * @param threadId тред
    * @param delta +1 / -1
@@ -445,7 +488,7 @@ export const usePipeStore = defineStore('pipe', () => {
     threads, page, lastPage, loading, loadingMore, filter, search, authorId,
     currentThread, replies, repliesPage, repliesLastPage, repliesLoading, repliesLoadingMore,
     hasMoreThreads, hasMoreReplies, loadThreads, loadMoreThreads, loadThread, loadMoreReplies,
-    prependThread, replaceThread, removeThread, applyLike, applySaved, applyReplyLike, applyRepliesDelta,
+    prependThread, replaceThread, removeThread, applyLike, applySaved, applyReplyLike, applyReplyPin, applyReplyEdit, applyRepliesDelta,
     prependReply, prependNestedReply, removeReplyLocally, refreshThread, reloadReplies, subscribeRealtime,
   }
 })

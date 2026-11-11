@@ -81,7 +81,7 @@ class PipeThreadRepliedNotification extends UserNotification
         return [
             'title' => $title,
             'body' => mb_substr((string) ($preview ?? 'Откройте тред, чтобы прочитать'), 0, 120),
-            'url' => route('pipe.show', ['thread' => $this->thread->id]),
+            'url' => self::pipeThreadUrl((int) $this->thread->id),
             'tag' => "pipe-reply-{$this->reply->id}-{$this->actor->id}",
             'avatar' => $isAnonymous ? null : $this->actor->avatar_url,
         ];

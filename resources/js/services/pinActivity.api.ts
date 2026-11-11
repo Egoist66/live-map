@@ -6,7 +6,7 @@ import { api } from './api'
  */
 export interface PinActivityItem {
   id: number | string
-  kind: 'reaction' | 'comment' | 'mention' | 'photo_comment' | 'photo_reply' | 'photo_like' | 'swipe_like' | 'match' | 'profile_visit' | 'review' | 'sub_pin' | 'sub_photo' | 'sub_level' | 'sub_flow_post' | 'flow_like' | 'flow_comment' | 'flow_reply' | 'flow_mention' | 'flow_repost' | 'invite' | 'invite_accepted' | 'scheduled_published' | 'district_pin' | 'district_post' | 'district_post_comment' | 'district_post_reply' | 'district_post_like' | 'rewards_weekly'
+  kind: 'reaction' | 'comment' | 'mention' | 'photo_comment' | 'photo_reply' | 'photo_like' | 'swipe_like' | 'match' | 'profile_visit' | 'review' | 'sub_pin' | 'sub_photo' | 'sub_level' | 'sub_flow_post' | 'flow_like' | 'flow_comment' | 'flow_reply' | 'flow_mention' | 'flow_repost' | 'invite' | 'invite_accepted' | 'scheduled_published' | 'district_pin' | 'district_post' | 'district_post_comment' | 'district_post_reply' | 'district_post_like' | 'rewards_weekly' | 'pipe_reply' | 'pipe_reply_reply' | 'pipe_like' | 'pipe_mention' | 'pipe_follow'
   owner_id?: number | null
   reaction_type?: string | null
   /** Оценка 1–5 для kind=review. */
@@ -18,11 +18,14 @@ export interface PinActivityItem {
   flow_comment_id?: number | null
   invite_id?: number | null
   pin_id?: number | null
+  pipe_thread_id?: number | null
+  is_incognito?: boolean
   read_at?: string | null
   created_at?: string | null
   pin?: { id: number; title?: string; category?: string } | null
   photo?: { id: number; user_id?: number; caption?: string | null; url?: string | null } | null
   flow_post?: { id: number; user_id?: number; image_url?: string | null } | null
+  pipe_thread?: { id: number; thread_id: number; url: string } | null
   actor: { id: number | null; name?: string; avatar_path?: string | null; avatar_url?: string | null }
 }
 

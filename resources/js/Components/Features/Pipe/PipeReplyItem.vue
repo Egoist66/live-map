@@ -7,13 +7,23 @@
  * a11y-разметкой (li/ul). Модерационный блюр объясняется флагом сервера
  * и кнопкой раскрытия.
  */
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import Textarea from 'primevue/textarea'
+import Button from 'primevue/button'
+import { renderWithMentions } from '@/composables/useMentions'
+import { usePipeMentions } from '@/composables/usePipeMentions'
 import type { PipeReply } from '@/types/pipe'
+import { PIPE_REPLY_MAX } from '@/composables/usePipeThread'
 
 const props = defineProps<{
   reply: PipeReply
   isGuest?: boolean
   likeBusy?: boolean
+  pinBusy?: boolean
+  /** id ответа, открытого в правке (каскадом по всему дереву ветки). */
+  editingId?: number | null
+  /** id ответа, который прямо сейчас сохраняется. */
+  editBusyId?: number | null
 }>()
 
 const emit = defineEmits<{
@@ -25,9 +35,20 @@ const emit = defineEmits<{
   (e: 'delete', replyId: number): void
   /** Лайк / анлайк ответа. */
   (e: 'like', replyId: number): void
+  /** Закрепить / открепить ответ (автор треда). */
+  (e: 'pin', replyId: number): void
+  /** Открыть правку своего ответа. */
+  (e: 'edit-start', reply: PipeReply): void
+  /** Отменить правку. */
+  (e: 'edit-cancel'): void
+  /** Сохранить правку. */
+  (e: 'edit-save', payload: { replyId: number; body: string }): void
   /** Жалоба на ответ. */
   (e: 'report', payload: { replyId: number; reason: string }): void
 }>()
+
+/** Клики по @упоминаниям в теле ответа: скролл к автору в ветке / профиль. */
+const mentionNav = usePipeMentions()
 
 const revealed = ref(false)
 const reportOpen = ref(false)
@@ -35,7 +56,37 @@ const reportReason = ref('spam')
 /** Ветка детей сворачивается: длинные ветки читаются по частям. */
 const branchOpen = ref(true)
 
+/** Черновик правки: открывается копией текущего текста ответа. */
+const editDraft = ref('')
+
+const isEditing = computed(() => props.editingId === props.reply.id)
+const isEditBusy = computed(() => props.editBusyId === props.reply.id && isEditing.value)
+
+watch(
+  isEditing,
+  (isEditing) => {
+    if (isEditing) editDraft.value = props.reply.body
+  },
+)
+
+const canSaveEdit = computed(() => editDraft.value.trim().length > 0 && editDraft.value.length <= PIPE_REPLY_MAX)
+
+const isEdited = computed(() => {
+  const updatedAt = props.reply.updated_at
+  const createdAt = props.reply.created_at
+  return Boolean(updatedAt && createdAt && updatedAt !== createdAt)
+})
+
+const editLeft = computed(() => PIPE_REPLY_MAX - editDraft.value.length)
+
+function saveEdit(): void {
+  emit('edit-save', { replyId: props.reply.id, body: editDraft.value.trim() })
+}
+
 const needsBlur = computed(() => Boolean(props.reply.moderation?.blur) && !revealed.value)
+
+/** Текст ответа с подсвеченными @упоминаниями и ссылками. */
+const bodyHtml = computed(() => renderWithMentions(props.reply.body))
 
 /** Короткая цитата родительского ответа: контекст глубокой ветки. */
 const parentQuote = computed(() => {
@@ -77,7 +128,7 @@ function sendReport(): void {
 </script>
 
 <template>
-  <li class="min-w-0 list-none">
+  <li class="min-w-0 list-none" :data-pipe-reply="reply.id">
     <div class="flex items-start gap-2.5">
       <span class="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-sky-400 to-indigo-500 text-xs font-black text-white">
         <img
@@ -95,6 +146,14 @@ function sendReport(): void {
 
       <div class="min-w-0 flex-1">
         <div class="flex flex-wrap items-center gap-1.5 text-xs">
+          <span
+            v-if="reply.is_pinned"
+            class="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:bg-amber-500/15 dark:text-amber-300"
+            title="Ответ закреплён автором треда"
+          >
+            <i class="pi pi-thumbtack text-[9px]" aria-hidden="true" />
+            <span>Закреплено</span>
+          </span>
           <button
             v-if="isAuthorClickable"
             type="button"
@@ -105,6 +164,7 @@ function sendReport(): void {
           </button>
           <span v-else class="truncate font-bold text-stone-700 dark:text-zinc-200">{{ reply.author?.name ?? 'Аноним' }}</span>
           <span class="shrink-0 text-stone-400 dark:text-zinc-500">{{ timeLabel }}</span>
+          <span v-if="isEdited" class="shrink-0 italic text-stone-400 dark:text-zinc-500">· изменено</span>
         </div>
 
         <div
@@ -120,9 +180,53 @@ function sendReport(): void {
           </span>
         </div>
 
-        <p :class="['mt-0.5 break-words text-[14px] leading-snug', needsBlur ? 'pointer-events-none select-none blur-[5px]' : '']">
-          {{ reply.body }}
-        </p>
+        <template v-if="isEditing">
+          <div class="mt-1">
+            <Textarea
+              v-model="editDraft"
+              auto-resize
+              rows="2"
+              class="w-full text-[14px]"
+              aria-label="Правка ответа"
+              maxlength="300"
+            />
+            <div class="mt-1 flex items-center justify-between">
+              <span
+                class="text-[11px] tabular-nums"
+                :class="editLeft < 0 ? 'text-red-500' : 'text-stone-400 dark:text-zinc-500'"
+              >
+                {{ editLeft }}
+              </span>
+              <div class="flex items-center gap-1.5">
+                <Button
+                  type="button"
+                  label="Отмена"
+                  size="small"
+                  severity="secondary"
+                  text
+                  aria-label="Отменить правку"
+                  @click="emit('edit-cancel')"
+                />
+                <Button
+                  type="button"
+                  label="Сохранить"
+                  size="small"
+                  :disabled="!canSaveEdit || isEditBusy"
+                  :loading="isEditBusy"
+                  aria-label="Сохранить правку"
+                  @click="saveEdit"
+                />
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <div
+          v-else
+          :class="['mt-0.5 break-words text-[14px] leading-snug pipe-rich-body', needsBlur ? 'pointer-events-none select-none blur-[5px]' : '']"
+          v-html="bodyHtml"
+          @click="mentionNav.onBodyClick"
+        />
 
         <button
           v-if="reply.moderation?.blur"
@@ -133,7 +237,7 @@ function sendReport(): void {
           {{ revealed ? 'Скрыть' : (reply.moderation.label ?? 'Показать помеченный ответ') }}
         </button>
 
-        <div class="mt-1 flex items-center gap-3 text-stone-500 dark:text-zinc-400">
+        <div v-if="!isEditing" class="mt-1 flex items-center gap-3 text-stone-500 dark:text-zinc-400">
           <button
             type="button"
             class="inline-flex items-center gap-1 text-[13px] transition hover:text-rose-500 active:scale-95 disabled:opacity-50"
@@ -159,6 +263,18 @@ function sendReport(): void {
           </button>
 
           <button
+            v-if="reply.can_pin && !reply.parent_id"
+            type="button"
+            class="inline-flex items-center gap-1 text-[13px] transition hover:text-sky-600 active:scale-95 disabled:opacity-50 dark:hover:text-sky-400"
+            :aria-pressed="reply.is_pinned"
+            :aria-label="reply.is_pinned ? 'Открепить ответ' : 'Закрепить ответ'"
+            :disabled="pinBusy"
+            @click="emit('pin', reply.id)"
+          >
+            <i class="pi pi-thumbtack" :class="reply.is_pinned ? 'text-sky-600 dark:text-sky-400' : ''" aria-hidden="true" />
+          </button>
+
+          <button
             v-if="!isGuest"
             type="button"
             class="inline-flex items-center gap-1 text-[13px] transition hover:text-amber-600 dark:hover:text-amber-400"
@@ -169,7 +285,17 @@ function sendReport(): void {
           </button>
 
           <button
-            v-if="reply.can_delete"
+            v-if="reply.can_edit && !isEditing"
+            type="button"
+            class="inline-flex items-center gap-1 text-[13px] transition hover:text-sky-600 dark:hover:text-sky-400"
+            aria-label="Редактировать ответ"
+            @click="emit('edit-start', reply)"
+          >
+            <i class="pi pi-pencil" aria-hidden="true" />
+          </button>
+
+          <button
+            v-if="reply.can_delete && !isEditing"
             type="button"
             class="inline-flex items-center gap-1 text-[13px] transition hover:text-red-600 dark:hover:text-red-400"
             aria-label="Удалить ответ"
@@ -219,12 +345,45 @@ function sendReport(): void {
         :reply="child"
         :is-guest="isGuest"
         :like-busy="likeBusy"
+        :pin-busy="pinBusy"
+        :editing-id="editingId"
+        :edit-busy-id="editBusyId"
         @reply="emit('reply', $event)"
         @author="emit('author', $event)"
         @delete="emit('delete', $event)"
         @like="emit('like', $event)"
+        @pin="emit('pin', $event)"
+        @edit-start="emit('edit-start', $event)"
+        @edit-cancel="emit('edit-cancel')"
+        @edit-save="emit('edit-save', $event)"
         @report="emit('report', $event)"
       />
     </ul>
   </li>
 </template>
+
+<style scoped>
+.pipe-rich-body :deep(.mention) {
+  color: #FE7677;
+  font-weight: 700;
+}
+
+.pipe-rich-body :deep(.mention-link) {
+  cursor: pointer;
+}
+
+:global(.dark) .pipe-rich-body :deep(.mention) {
+  color: #FE7677;
+}
+
+.pipe-mention-flash {
+  animation: pipe-mention-flash 1.8s ease-out;
+  border-radius: 1rem;
+}
+
+@keyframes pipe-mention-flash {
+  0% { background-color: rgb(254 118 119 / 0.20); }
+  70% { background-color: rgb(254 118 119 / 0.12); }
+  100% { background-color: transparent; }
+}
+</style>

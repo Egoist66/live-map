@@ -10,6 +10,18 @@ import type { PipeFilter, PipeThread } from '@/types/pipe'
 
 export const PIPE_THREAD_MAX = 500
 
+/** Сколько мс играет анимация исчезновения карточки после ответа бэка. */
+const REMOVE_LEAVE_MS = 500
+
+/**
+ * Пауза в виде промиса — чтобы успела проиграться анимация ухода карточки.
+ *
+ * @param ms длительность паузы
+ */
+function pause(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 /**
  * Лента Pipes: фильтры, поиск, пагинация, лайки, создание/правка,
  * удаление и жалобы.
@@ -34,6 +46,7 @@ export function usePipeFeed(options?: { authorId?: number | null; threadId?: num
 
   const likeBusy = ref<Record<number, boolean>>({})
   const saveBusy = ref<Record<number, boolean>>({})
+  const removingIds = ref<Record<number, boolean>>({})
   const saving = ref(false)
   const editing = ref<PipeThread | null>(null)
   const editText = ref('')
@@ -172,17 +185,27 @@ export function usePipeFeed(options?: { authorId?: number | null; threadId?: num
   }
 
   /**
-   * Удалить свой тред (после подтверждения confirm.require).
+   * Удалить свой тред (после подтверждения confirm.require) с эффектом:
+   * карточка сразу блюрится и прижимается, а после ответа бэка плавно
+   * гаснет и уходит из ленты. При ошибке блюр снимается — тред остаётся.
    *
    * @param threadId тред
    */
   async function removeThread(threadId: number): Promise<void> {
+    if (removingIds.value[threadId]) return
+
+    removingIds.value = { ...removingIds.value, [threadId]: true }
+
     try {
       await pipeApi.remove(threadId)
+      await pause(REMOVE_LEAVE_MS)
       store.removeThread(threadId)
-      toast?.add({ severity: 'success', summary: 'Удалено', detail: 'Pipe удалён', life: 2500 })
     } catch {
       toast?.add({ severity: 'error', summary: 'Ошибка', detail: 'Не вышло удалить pipe', life: 2500 })
+    } finally {
+      const stillBusy = { ...removingIds.value }
+      delete stillBusy[threadId]
+      removingIds.value = stillBusy
     }
   }
 
@@ -218,7 +241,7 @@ export function usePipeFeed(options?: { authorId?: number | null; threadId?: num
     const blockReason = moderator.assertPublishable(text)
 
     if (blockReason) {
-      toast?.add({ severity: 'warn', summary: 'Модерация', detail: blockReason, life: 3500 })
+      toast?.add({ severity: 'error', detail: blockReason, life: 3500 })
       return false
     }
 
@@ -231,7 +254,7 @@ export function usePipeFeed(options?: { authorId?: number | null; threadId?: num
       return true
     } catch (error) {
       const message = (error as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })?.response?.data
-      const detail = message?.errors?.body?.[0] ?? message?.message ?? 'Не вышло сохранить правку'
+      const detail = message?.errors?.content?.[0] ?? message?.errors?.body?.[0] ?? message?.message ?? 'Не вышло сохранить правку'
       toast?.add({ severity: 'error', summary: 'Ошибка', detail, life: 4000 })
       return false
     } finally {
@@ -254,7 +277,7 @@ export function usePipeFeed(options?: { authorId?: number | null; threadId?: num
   }
 
   return {
-    store, tabs, reportReasons, likeBusy, saveBusy, isGuest, me, saving,
+    store, tabs, reportReasons, likeBusy, saveBusy, removingIds, isGuest, me, saving,
     editing, editText, editLeft,
     init, setFilter, setSearch, clearAuthor, promptLogin,
     toggleLike, toggleSave, removeThread, startEdit, cancelEdit, saveEdit, reportThread,

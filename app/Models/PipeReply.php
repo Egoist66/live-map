@@ -20,6 +20,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $user_id
  * @property string $body Текст ответа (до 300 символов)
  * @property bool $is_anonymous
+ * @property bool $is_pinned Закреплён автором треда (как в Instagram)
+ * @property \Illuminate\Support\Carbon|null $pinned_at Когда закреплён
  * @property int $likes_count Денормализованный счётчик лайков
  * @property string|null $moderation_category Категория авто-модерации
  * @property-read PipeThread $thread Тред-родитель
@@ -31,10 +33,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class PipeReply extends Model
 {
     /** @var array<int,string> массово заполняемые поля */
-    protected $fillable = ['thread_id', 'parent_id', 'user_id', 'body', 'is_anonymous', 'moderation_category'];
+    protected $fillable = ['thread_id', 'parent_id', 'user_id', 'body', 'is_anonymous', 'is_pinned', 'moderation_category'];
 
     /**
-     * Касты счётчиков и флага анонимности.
+     * Касты счётчиков и флагов.
      *
      * @return array<string,string>
      */
@@ -42,6 +44,7 @@ class PipeReply extends Model
     {
         return [
             'is_anonymous' => 'boolean',
+            'is_pinned' => 'boolean',
             'likes_count' => 'integer',
         ];
     }

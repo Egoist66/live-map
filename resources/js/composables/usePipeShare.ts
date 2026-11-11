@@ -1,13 +1,13 @@
 import { useToast } from 'primevue/usetoast'
-import { route } from '@/route'
+import { pipeRoute } from '@/services/pipe.routes'
 import type { PipeThread } from '@/types/pipe'
 
 /**
  * Шаринг pipe: нативная системная шара на мобильных, клипборд-фолбэк.
  *
- * Диплинк строится Ziggy-роутом pipe.show — он резолвится в хост
- * текущего мини-сайта (prod: pipe.ulove.by, dev: /pipe префикс),
- * поэтому ссылка всегда открывает тред в Pipe.
+ * Диплинк строится pipeRoute('show'): канонический домен pipe.ulove.by,
+ * когда PIPE_DOMAIN задан, иначе путь-версия /pipe/thread/{id} —
+ * ссылка всегда открывает тред в Pipe.
  *
  * @example
  * const { shareThread } = usePipeShare()
@@ -28,7 +28,7 @@ export function usePipeShare() {
    * @param thread тред Pipe
    */
   async function shareThread(thread: PipeThread): Promise<void> {
-    const url = String(route('pipe.show', { thread: thread.id }))
+    const url = pipeRoute('show', { thread: thread.id })
     const authorLabel = thread.author?.name ?? 'Аноним'
     const title = `Pipe от ${authorLabel}`
     const excerpt = thread.body.length > 80 ? `${thread.body.slice(0, 80)}…` : thread.body

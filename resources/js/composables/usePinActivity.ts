@@ -376,6 +376,23 @@ function describe(a: PinActivityItem): { emoji: string; text: string } {
     const excerpt = (a as unknown as { excerpt?: string }).excerpt
     return { emoji: '🔁', text: excerpt ? `${name} репостнул с цитатой: ${excerpt}` : `${name} поделился вашим постом в UFlow` }
   }
+  if (a.kind === 'pipe_reply' || a.kind === 'pipe_reply_reply') {
+    const excerpt = (a as unknown as { excerpt?: string }).excerpt
+    const isIncognito = Boolean((a as any).is_incognito)
+    const displayName = isIncognito ? 'Кто-то' : name
+    const prefix = a.kind === 'pipe_reply_reply' ? 'ответил на ваш ответ в Pipe' : 'ответил в вашем треде Pipe'
+    return { emoji: '💬', text: excerpt ? `${displayName} ${prefix}: ${excerpt}` : `${displayName} ${prefix}` }
+  }
+  if (a.kind === 'pipe_like') {
+    return { emoji: '❤️', text: `${name} оценил ваш тред в Pipe` }
+  }
+  if (a.kind === 'pipe_mention') {
+    const excerpt = (a as unknown as { excerpt?: string }).excerpt
+    return { emoji: '📣', text: excerpt ? `${name} упомянул вас в Pipe: ${excerpt}` : `${name} упомянул вас в Pipe` }
+  }
+  if (a.kind === 'pipe_follow') {
+    return { emoji: '👥', text: `${name} подписался на ваши треды в Pipe` }
+  }
   if (a.kind === 'sub_pin') {
     const title = (a as any).excerpt || a.pin?.title || 'новый пин'
     return { emoji: '📍', text: `${name} создал пин «${title}»` }
@@ -457,6 +474,18 @@ function resolveTarget(a: PinActivityItem): { url: string; pending: any } {
     return { url: '/profile/edit', pending: null }
   }
   if (
+    a.kind === 'pipe_reply' ||
+    a.kind === 'pipe_reply_reply' ||
+    a.kind === 'pipe_like' ||
+    a.kind === 'pipe_mention' ||
+    a.kind === 'pipe_follow'
+  ) {
+    // Pipe живёт на своём домене (pipe.ulove.by): диплинк готовый
+    // из пейлоада. Абсолютный URL — полный переход (не Inertia).
+    const pipeUrl = String((a as any).pipe_thread?.url || '')
+    return { url: pipeUrl || '/pipe', pending: null }
+  }
+  if (
     a.kind === 'district_pin' ||
     a.kind === 'district_post' ||
     a.kind === 'district_post_comment' ||
@@ -513,6 +542,13 @@ function goPin(a: PinActivityItem) {
   try {
     if (pending) sessionStorage.setItem('live-map:pending-activity', JSON.stringify(pending))
   } catch {}
+
+  const isExternal = /^https?:\/\//i.test(url)
+  if (isExternal) {
+    window.location.href = url
+    return
+  }
+
   router.visit(url)
 }
 

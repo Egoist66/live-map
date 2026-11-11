@@ -78,6 +78,14 @@ return [
             'recreational_drug' => 0.60,
             'minor_face' => 0.80,
         ],
+
+        // Пороги текст-модерации (ML-оценки TextModerationService, 0–1).
+        // Правило-категории (rules) срабатывают по факту матча без порогов.
+        'text_thresholds' => [
+            'sexual' => 0.60,
+            'violent' => 0.60,
+            'discriminatory' => 0.60,
+        ],
     ],
 
     'messages_crypto_key' => env('MESSAGE_CRYPTO_KEY'),

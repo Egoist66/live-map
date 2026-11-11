@@ -23,6 +23,7 @@ import { usePipeRealtime } from '@/composables/usePipeRealtime'
 import { useBellNotifications } from '@/composables/useBellNotifications'
 import { useClientReady } from '@/composables/useClientReady'
 import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
+import { pipeRoute } from '@/services/pipe.routes'
 
 /** Тяжёлая стандартная панель уведомлений ULove — асинхронно. */
 const BellNotificationsModal = defineAsyncComponent(() => import('@/Components/Features/Feedback/BellNotificationsModal.vue'))
@@ -110,7 +111,7 @@ async function logout(): Promise<void> {
 
 /** SPA-переход в ленту: полный релоад не нужен — layout персистентный. */
 function goFeed(): void {
-  router.visit(String(route('pipe.index')))
+  router.visit(pipeRoute('index'))
 }
 
 function openBell(): void {
@@ -132,7 +133,7 @@ onMounted(() => {
 
 <template>
   <div class="min-h-screen min-h-dvh bg-white dark:bg-[#0F121F] text-stone-900 dark:text-zinc-100">
-    <Toast position="top-center" />
+    <Toast position="top-right" />
     <GlobalNotificationToasts />
     <BellNotificationsModal v-if="isClientReady" />
 

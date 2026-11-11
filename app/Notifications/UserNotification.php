@@ -107,6 +107,41 @@ abstract class UserNotification
     }
 
     /**
+     * URL диплинка треда Pipe: канонический домен pipe.ulove.by,
+     * когда задан PIPE_DOMAIN, иначе путь-версия /pipe/thread/{id}.
+     *
+     * Имя pipe.show существует только при PIPE_DOMAIN: без фолбэка
+     * исключение роняло весь payload() — уведомление не создавалось
+     * вовсе (ни inbox, ни realtime, ни пуш).
+     *
+     * @param int $threadId id треда
+     * @return string абсолютный или относительный URL треда
+     */
+    protected static function pipeThreadUrl(int $threadId): string
+    {
+        try {
+            return route('pipe.show', ['thread' => $threadId]);
+        } catch (\Throwable) {
+            return route('pipe.path.show', ['thread' => $threadId]);
+        }
+    }
+
+    /**
+     * URL диплинка профиля автора в Pipe (фолбэк — как у pipeThreadUrl).
+     *
+     * @param int $userId id автора
+     * @return string URL страницы автора Pipe
+     */
+    protected static function pipeProfileUrl(int $userId): string
+    {
+        try {
+            return route('pipe.profile', ['user' => $userId]);
+        } catch (\Throwable) {
+            return route('pipe.path.profile', ['user' => $userId]);
+        }
+    }
+
+    /**
      * Краткий тред Pipe для пейлоада (диплинк на pipe.ulove.by).
      *
      * @param \App\Models\PipeThread|\App\Models\PipeReply $target тред или ответ
@@ -118,14 +153,14 @@ abstract class UserNotification
             return [
                 'id' => (int) $target->id,
                 'thread_id' => (int) $target->id,
-                'url' => route('pipe.show', ['thread' => $target->id]),
+                'url' => self::pipeThreadUrl((int) $target->id),
             ];
         }
 
         return [
             'id' => (int) $target->thread_id,
             'thread_id' => (int) $target->thread_id,
-            'url' => route('pipe.show', ['thread' => $target->thread_id]),
+            'url' => self::pipeThreadUrl((int) $target->thread_id),
         ];
     }
 

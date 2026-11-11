@@ -12,6 +12,7 @@ use App\Models\PipeThread;
 use App\Models\PipeThreadMedia;
 use App\Models\User;
 use App\Models\UserBlock;
+use App\Notifications\PipeMentionNotification;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Log;
@@ -31,6 +32,9 @@ class PipeService
 {
     /** Максимум картинок на тред Pipe. */
     private const MAX_THREAD_IMAGES = 3;
+
+    /** Максимум закреплённых ответов в треде (как в Instagram). */
+    private const MAX_PINNED_REPLIES = 3;
     /**
      * Проверка блокировок между смотрящим и автором (кроме самого себя и админа).
      *
@@ -246,13 +250,19 @@ class PipeService
             'parent_id' => $reply->parent_id,
             'body' => $reply->body,
             'is_anonymous' => (bool) $reply->is_anonymous,
+            'is_pinned' => (bool) $reply->is_pinned,
+            'pinned_at' => $reply->pinned_at?->toISOString(),
             'moderation' => ContentModeration::flagsFor($reply->body),
             'moderation_category' => $reply->moderation_category,
             'likes_count' => (int) $reply->likes_count,
             'liked' => (bool) ($likedMap[$reply->id] ?? false),
             'can_edit' => $isOwn,
             'can_delete' => $isOwn || ($viewer && $viewer->isAdmin()),
+            'can_pin' => $reply->parent_id === null
+                && $viewer !== null
+                && ((int) $viewer->id === self::replyThreadAuthorId($reply) || $viewer->isAdmin()),
             'created_at' => $reply->created_at?->toISOString(),
+            'updated_at' => $reply->updated_at?->toISOString(),
             'author' => $author,
             'parent' => $parentPayload,
             'replies_count' => 0,
@@ -443,18 +453,25 @@ class PipeService
     /**
      * Создать тред: модерация → FloodGuard → запись → картинки → realtime.
      *
+     * Картинки проверяются модерацией ДО создания треда: запрещённое
+     * фото отклоняет весь запрос на 422, а не создаёт тред с молча
+     * пропущенной картинкой.
+     *
      * @param User $user автор
      * @param array{body:string, is_anonymous:bool} $data провалидированный payload
      * @param array<int, UploadedFile> $images картинки (максимум 3, остальное срезается)
      * @return PipeThread созданный тред
      *
-     * @throws \Illuminate\Validation\ValidationException при запрещённом тексте
+     * @throws \Illuminate\Validation\ValidationException при запрещённом тексте или фото
      */
     public static function createThread(User $user, array $data, array $images = []): PipeThread
     {
         $body = trim((string) $data['body']);
 
         ContentModeration::assertClean($body);
+        TextModerationService::assertClean($body);
+
+        self::assertThreadImagesAllowed($images);
 
         $guard = new FloodGuard();
         $guard->assertNotFlooding($user, $body, 'pipe_thread');
@@ -469,14 +486,35 @@ class PipeService
 
         $guard->remember($user, $body, 'pipe_thread');
         self::dispatchModerationReview('pipe_thread', (int) $thread->id, (int) $user->id, $body);
+        self::notifyThreadMentions($thread, $user);
 
         return $thread;
     }
 
     /**
+     * Проверить картинки треда модерацией (до создания треда).
+     *
+     * Первое запрещённое фото отклоняет весь запрос на 422 — как и
+     * загрузку аватара/фото профиля.
+     *
+     * @param array<int, UploadedFile> $images загруженные файлы
+     *
+     * @throws \Illuminate\Validation\ValidationException при запрещённом фото
+     */
+    private static function assertThreadImagesAllowed(array $images): void
+    {
+        foreach ($images as $image) {
+            if ($image instanceof UploadedFile) {
+                PhotoModerationService::assertAllowed($image);
+            }
+        }
+    }
+
+    /**
      * Сохранить картинки треда (до 3): оптимизация + thumb + строки медиа.
      *
-     * Ошибки одного файла не роняют тред: неудачные просто пропускаются.
+     * Модерация уже пройдена в createThread (assertThreadImagesAllowed);
+     * здесь ошибки одного файла не роняют тред: неудачные просто пропускаются.
      *
      * @param PipeThread $thread тред
      * @param array<int, UploadedFile> $images загруженные файлы
@@ -496,8 +534,6 @@ class PipeService
             $sort += 1;
 
             try {
-                PhotoModerationService::assertAllowed($image);
-
                 $path = ImageOptimizer::storeOptimized($image, 'pipe-threads', $disk, [
                     'maxSide' => ImageOptimizer::GALLERY_MAX_SIDE,
                 ]);
@@ -534,6 +570,7 @@ class PipeService
         $body = trim((string) $data['body']);
 
         ContentModeration::assertClean($body);
+        TextModerationService::assertClean($body);
 
         $guard = new FloodGuard();
         $guard->assertNotFlooding($user, $body, 'pipe_thread');
@@ -562,6 +599,7 @@ class PipeService
         $body = trim((string) $data['body']);
 
         ContentModeration::assertClean($body);
+        TextModerationService::assertClean($body);
 
         $guard = new FloodGuard();
         $guard->assertNotFlooding($user, $body, 'pipe_reply');
@@ -583,8 +621,178 @@ class PipeService
 
         $kind = $parent ? 'pipe_reply_reply' : 'pipe_reply';
         self::notifyTargets($kind, $thread, $reply, $parent, $user);
+        self::notifyMentions($thread, $reply, $user, $parent);
 
         return $reply;
+    }
+
+    /**
+     * Обновить свой ответ: только владелец (чужой нельзя даже админу,
+     * как у комментов UFlow), с теми же фильтрами модерации, что и
+     * при создании. После правки тред тянется realtime-событием.
+     *
+     * @param User $user автор ответа
+     * @param PipeReply $reply ответ
+     * @param string $body новый текст
+     * @return PipeReply обновлённый ответ
+     *
+     * @throws \Illuminate\Auth\Access\AuthorizationException чужой ответ
+     * @throws \Illuminate\Validation\ValidationException запрещённый текст
+     */
+    public static function updateReply(User $user, PipeReply $reply, string $body): PipeReply
+    {
+        abort_unless((int) $user->id === (int) $reply->user_id, 403, 'Редактировать можно только свой ответ');
+
+        $text = trim($body);
+
+        ContentModeration::assertClean($text);
+        TextModerationService::assertClean($text);
+
+        $reply->update(['body' => $text]);
+
+        CommentThreadUpdated::touch('pipe', (int) $reply->thread_id);
+
+        return $reply;
+    }
+
+    /**
+     * Закрепить / открепить ответ треда (как в Instagram).
+     *
+     * Закреплять может только автор треда (или админ), только ответы
+     * верхнего уровня, максимум MAX_PINNED_REPLIES на тред. После
+     * смены флага тред тянется realtime-событием thread:updated.
+     *
+     * @param User $user кто закрепляет
+     * @param PipeReply $reply ответ
+     * @return array{id:int,pinned:bool}
+     *
+     * @throws \Symfony\Component\HttpKernel\Exception\HttpException не автор, вложенный ответ или лимит
+     */
+    public static function toggleReplyPin(User $user, PipeReply $reply): array
+    {
+        abort_unless($reply->parent_id === null, 422, 'Закреплять можно только ответы верхнего уровня');
+
+        $thread = $reply->thread()->firstOrFail();
+        $isThreadAuthor = (int) $user->id === (int) $thread->user_id;
+
+        abort_unless($isThreadAuthor || $user->isAdmin(), 403, 'Закреплять может только автор треда');
+
+        $reply->refresh();
+
+        if ($reply->is_pinned) {
+            $reply->update(['is_pinned' => false, 'pinned_at' => null]);
+            $isPinned = false;
+        } else {
+            $pinnedCount = PipeReply::where('thread_id', $thread->id)
+                ->where('is_pinned', true)
+                ->count();
+
+            abort_if($pinnedCount >= self::MAX_PINNED_REPLIES, 422, 'Можно закрепить не больше '.self::MAX_PINNED_REPLIES.' ответов');
+
+            $reply->update(['is_pinned' => true, 'pinned_at' => now()]);
+            $isPinned = true;
+        }
+
+        CommentThreadUpdated::touch('pipe', (int) $thread->id);
+
+        return ['id' => (int) $reply->id, 'pinned' => $isPinned];
+    }
+
+    /**
+     * id автора треда ответа (для can_pin): берём из eager-loaded связи,
+     * иначе — один лёгкий запрос.
+     *
+     * @param PipeReply $reply ответ
+     * @return int id автора треда
+     */
+    private static function replyThreadAuthorId(PipeReply $reply): int
+    {
+        if ($reply->relationLoaded('thread')) {
+            return (int) $reply->thread->user_id;
+        }
+
+        $thread = $reply->thread()->first(['user_id']);
+
+        return (int) ($thread->user_id ?? 0);
+    }
+
+    /**
+     * Упоминания @ник в ответе: уведомить упомянутых, кроме уже
+     * уведомленных (автор треда, автор родительского ответа),
+     * самого актора и людей в блокировках.
+     * @param PipeThread $thread тред
+     * @param PipeReply $reply свежий ответ
+     * @param User $actor автор ответа
+     * @param PipeReply|null $parent родительский ответ (его автор уже уведомлен)
+     */
+    private static function notifyMentions(PipeThread $thread, PipeReply $reply, User $actor, ?PipeReply $parent): void
+    {
+        try {
+            $mentionedIds = Mentions::extractIds($reply->body, (int) $actor->id);
+            $notifyableIds = Mentions::notifyableIds($mentionedIds, (int) $actor->id);
+
+            $skipIds = [(int) $thread->user_id, (int) $actor->id];
+
+            if ($parent) {
+                $skipIds[] = (int) $parent->user_id;
+            }
+
+            foreach ($notifyableIds as $userId) {
+                if (in_array($userId, $skipIds, true)) {
+                    continue;
+                }
+
+                $mentioned = User::find($userId);
+
+                if ($mentioned) {
+                    UserNotifier::send($mentioned, new PipeMentionNotification($thread, $reply, self::excerpt($reply->body), $actor, $userId));
+                }
+            }
+        } catch (\Throwable $error) {
+            Log::warning('pipe mention notify failed', ['error' => $error->getMessage()]);
+        }
+    }
+
+    /**
+     * Упоминания @ник в теле нового треда: уведомить упомянутых,
+     * кроме автора треда и людей в блокировках.
+     *
+     * @param PipeThread $thread свежий тред
+     * @param User $actor автор треда
+     */
+    private static function notifyThreadMentions(PipeThread $thread, User $actor): void
+    {
+        try {
+            $mentionedIds = Mentions::extractIds($thread->body, (int) $actor->id);
+            $notifyableIds = Mentions::notifyableIds($mentionedIds, (int) $actor->id);
+
+            $skipIds = [(int) $thread->user_id, (int) $actor->id];
+
+            foreach ($notifyableIds as $userId) {
+                if (in_array($userId, $skipIds, true)) {
+                    continue;
+                }
+
+                $mentioned = User::find($userId);
+
+                if ($mentioned) {
+                    UserNotifier::send($mentioned, new PipeMentionNotification($thread, null, self::excerpt($thread->body), $actor, $userId));
+                }
+            }
+        } catch (\Throwable $error) {
+            Log::warning('pipe thread mention notify failed', ['error' => $error->getMessage()]);
+        }
+    }
+
+    /**
+     * Короткий анонс текста (обёртка над UserNotification::excerpt).
+     *
+     * @param string|null $text исходный текст
+     * @return string|null анонс до ~90 символов
+     */
+    private static function excerpt(?string $text): ?string
+    {
+        return UserNotification::excerpt($text);
     }
 
     /**

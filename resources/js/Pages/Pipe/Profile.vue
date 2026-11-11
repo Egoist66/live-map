@@ -16,7 +16,7 @@ import { usePipeFeed } from '@/composables/usePipeFeed'
 import { usePipeProfile } from '@/composables/usePipeProfile'
 import { usePipeShare } from '@/composables/usePipeShare'
 import { useInfiniteScroll } from '@/composables/useInfiniteScroll'
-import { route } from '@/route'
+import { pipeRoute } from '@/services/pipe.routes'
 import type { PipeProfile } from '@/types/pipe'
 
 defineOptions({
@@ -39,7 +39,7 @@ const { sentinel: feedSentinel } = useInfiniteScroll({
 
 /** SPA-переход к странице pipe без полного релоада. */
 function openThread(threadId: number): void {
-  router.visit(String(route('pipe.show', { thread: threadId })))
+  router.visit(pipeRoute('show', { thread: threadId }))
 }
 
 onMounted(() => {

@@ -57,13 +57,17 @@ export type PipeReply = {
   parent_id: number | null
   body: string
   is_anonymous: boolean
+  is_pinned?: boolean
+  pinned_at?: string | null
   moderation?: PipeModerationFlags | null
   moderation_category: string | null
   likes_count: number
   liked: boolean
   can_edit: boolean
   can_delete: boolean
+  can_pin?: boolean
   created_at: string | null
+  updated_at?: string | null
   author: PipeAuthor
   parent?: PipeReplyParent | null
   replies_count: number

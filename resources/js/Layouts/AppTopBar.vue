@@ -53,6 +53,21 @@ const showTgClose = computed(() => isTelegram.value && isDesktopTelegram.value)
           ]"
         >ULove</span>
       </Link>
+      <Link
+        v-if="!isBusiness"
+        :href="route('pipe.path.index')"
+        title="Pipes"
+        :class="['px-4 py-1.5 rounded-full text-[13px] font-semibold transition inline-flex items-center', topNavPillClass(route().current('pipe.path.*'))]"
+      >
+        <span
+          :class="[
+            'text-[13px] font-black tracking-tight leading-none',
+            route().current('pipe.path.*')
+              ? '!text-white'
+              : 'bg-gradient-to-r from-rose-500 via-pink-500 to-fuchsia-500 bg-clip-text text-transparent',
+          ]"
+        >Pipes</span>
+      </Link>
       <Link v-if="!isBusiness && showFlow" :href="route('flow')" title="UFlow" :class="['px-4 py-1.5 rounded-full transition inline-flex items-center', topNavBrandPillClass(route().current('flow'))]"><span :class="['text-[13px] font-black tracking-tight leading-none', route().current('flow') ? '!text-white' : 'bg-gradient-to-r from-rose-500 via-pink-500 to-fuchsia-500 dark:from-rose-500 dark:via-pink-500 dark:to-fuchsia-500 bg-clip-text text-transparent']">UFlow</span></Link>
     </nav>
 

@@ -130,7 +130,7 @@ export function usePipeComposer(onCreated?: (thread: PipeThread) => void) {
       const blockReason = moderator.assertPublishable(text)
 
       if (blockReason) {
-        toast?.add({ severity: 'warn', summary: 'Модерация', detail: blockReason, life: 3500 })
+        toast?.add({ severity: 'error', detail: blockReason, life: 3500 })
         return false
       }
     }
@@ -148,7 +148,7 @@ export function usePipeComposer(onCreated?: (thread: PipeThread) => void) {
       return true
     } catch (error) {
       const message = (error as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } })?.response?.data
-      const detail = message?.errors?.body?.[0] ?? message?.message ?? 'Не вышло опубликовать тред'
+      const detail = message?.errors?.content?.[0] ?? message?.errors?.body?.[0] ?? message?.errors?.photo?.[0] ?? message?.message ?? 'Не вышло опубликовать тред'
       toast?.add({ severity: 'error', summary: 'Ошибка', detail, life: 4000 })
       return false
     } finally {

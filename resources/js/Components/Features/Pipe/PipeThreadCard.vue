@@ -10,6 +10,8 @@ import { computed, ref } from 'vue'
 import { useConfirm } from 'primevue/useconfirm'
 import Dialog from 'primevue/dialog'
 import { usePipeApp } from '@/composables/usePipeApp'
+import { renderWithMentions } from '@/composables/useMentions'
+import { usePipeMentions } from '@/composables/usePipeMentions'
 import type { PipeThread } from '@/types/pipe'
 
 const props = withDefaults(defineProps<{
@@ -41,6 +43,12 @@ const emit = defineEmits<{
 
 const confirm = useConfirm()
 const { mainHref, visitMain } = usePipeApp()
+
+/** Клики по @упоминаниям в тексте треда: скролл к автору в ветке / профиль. */
+const mentionNav = usePipeMentions()
+
+/** Текст треда с подсвеченными @упоминаниями и ссылками. */
+const bodyHtml = computed(() => renderWithMentions(props.thread.body))
 
 const revealed = ref(false)
 const reportOpen = ref(false)
@@ -163,11 +171,10 @@ function askDelete(): void {
         </div>
 
         <div
-          :class="[needsBlur ? 'select-none blur-[6px] pointer-events-none' : '', compact ? 'mt-1.5 text-[15px]' : 'mt-1.5 whitespace-pre-line break-words text-[15px] leading-relaxed']"
-        >
-          <template v-if="!needsBlur">{{ thread.body }}</template>
-          <template v-else>{{ thread.body.slice(0, 60) }}…</template>
-        </div>
+          :class="[needsBlur ? 'select-none blur-[6px] pointer-events-none' : '', compact ? 'mt-1.5 text-[15px]' : 'mt-1.5 whitespace-pre-line break-words text-[15px] leading-relaxed pipe-rich-body']"
+          v-html="bodyHtml"
+          @click="mentionNav.onBodyClick"
+        />
 
         <div
           v-if="!needsBlur && thread.images?.length"
@@ -320,3 +327,18 @@ function askDelete(): void {
     </div>
   </article>
 </template>
+
+<style scoped>
+.pipe-rich-body :deep(.mention) {
+  color: #FE7677;
+  font-weight: 700;
+}
+
+.pipe-rich-body :deep(.mention-link) {
+  cursor: pointer;
+}
+
+:global(.dark) .pipe-rich-body :deep(.mention) {
+  color: #FE7677;
+}
+</style>

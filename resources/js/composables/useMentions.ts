@@ -8,7 +8,8 @@ export interface MentionUser {
   avatar_url?: string | null
 }
 
-const MENTION_RE = /@([\p{L}\p{N}_]+(?: [\p{L}\p{N}_]+)?)/gu
+/** Упоминание — только одиночный ник после @: всё после пробела не считается частью. */
+const MENTION_RE = /@([\p{L}\p{N}_]+)/gu
 const URL_RE = /\bhttps?:\/\/[^\s<>"')\]]+/gi
 
 export function escapeHtml(s: string): string {

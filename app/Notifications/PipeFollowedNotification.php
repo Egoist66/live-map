@@ -53,7 +53,7 @@ class PipeFollowedNotification extends UserNotification
         return [
             'title' => 'Новый читатель в Pipe',
             'body' => ($this->follower->name ?: 'Кто-то').' подписался на ваши треды',
-            'url' => route('pipe.profile', ['user' => $this->follower->id]),
+            'url' => self::pipeProfileUrl((int) $this->follower->id),
             'tag' => "pipe-follow:{$this->follower->id}",
             'avatar' => $this->follower->avatar_url,
         ];

@@ -13,11 +13,10 @@ use Illuminate\Support\Facades\Route;
 | сессии общие с ulove.by при SESSION_DOMAIN=.ulove.by, так что
 | залогиненный пользователь главного сайта сразу «внутри» Pipes.
 |
-| Локальная разработка без hosts-записи (PIPE_DOMAIN не задан в .env):
-| те же экшены отвечают по пути /pipe главного приложения —
-|   http://localhost:8000/pipe, /pipe/thread/1, /pipe/author/2
-| поэтому route('pipe.show') локально метает в localhost, а не
-| в недоступный pipe.ulove.by:8000.
+| Путь /pipe доступен ВСЕГДА и на любом хосте (ulove.by, localhost,
+| dev-домены) — можно открыть ленту напрямую из основного приложения.
+| Дополнительно, когда задан PIPE_DOMAIN, те же экшены отвечают на
+| отдельном домене pipe.ulove.by.
 |
 */
 
@@ -35,9 +34,9 @@ $pipeDomain = (string) config('pipe.domain', '');
 
 if ($pipeDomain !== '') {
     Route::domain($pipeDomain)->name('pipe.')->group($pipePages);
-    return;
 }
 
-if (app()->environment('local')) {
-    Route::prefix('pipe')->name('pipe.')->group($pipePages);
-}
+// Путь-версия: всегда доступна (ulove.by/pipe, localhost/pipe).
+// Имена pipe.path.* не конфликтуют с pipe.* (домен) — route('pipe.*')
+// при заданном PIPE_DOMAIN продолжает метать в домен мини-сайта.
+Route::prefix('pipe')->name('pipe.path.')->group($pipePages);

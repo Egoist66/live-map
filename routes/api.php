@@ -144,7 +144,9 @@ Route::middleware(['web', 'auth:web,sanctum', 'throttle:300,1'])->group(function
     Route::get('/pipe/threads/{thread}/likers', [\App\Http\Controllers\PipeThreadController::class, 'likers']);
     Route::post('/pipe/threads/{thread}/replies', [\App\Http\Controllers\PipeReplyController::class, 'store'])->middleware('throttle:comments-write');
     Route::delete('/pipe/replies/{reply}', [\App\Http\Controllers\PipeReplyController::class, 'destroy'])->middleware('throttle:social-write');
+    Route::put('/pipe/replies/{reply}', [\App\Http\Controllers\PipeReplyController::class, 'update'])->middleware('throttle:social-write');
     Route::post('/pipe/replies/{reply}/like', [\App\Http\Controllers\PipeReplyController::class, 'toggleLike'])->middleware('throttle:reactions');
+    Route::post('/pipe/replies/{reply}/pin', [\App\Http\Controllers\PipeReplyController::class, 'togglePin'])->middleware('throttle:social-write');
     Route::get('/pipe/profile/{user}/status', [\App\Http\Controllers\PipeFollowController::class, 'status']);
     Route::post('/pipe/profile/{user}/follow', [\App\Http\Controllers\PipeFollowController::class, 'toggle'])->middleware('throttle:social-write');
 

@@ -70,7 +70,7 @@ class PipeLikedNotification extends UserNotification
         return [
             'title' => 'Новый лайк в Pipe',
             'body' => 'Кто-то оценил '.($target instanceof PipeThread ? 'ваш тред' : 'ваш ответ'),
-            'url' => route('pipe.show', ['thread' => $this->pipeThreadId($target)]),
+            'url' => self::pipeThreadUrl($this->pipeThreadId($target)),
             'tag' => "pipe-like:{$target->id}:{$this->actor->id}",
             'avatar' => $target->is_anonymous ? null : $this->actor->avatar_url,
         ];
