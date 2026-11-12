@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Events\NotificationInboxChanged;
 use App\Models\User;
 use Illuminate\Console\Command;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -55,8 +56,18 @@ class ReadAllNotifications extends Command
 
         $now = now();
 
-        // updated_at не трогаем: иначе вся старая история разом
-        // поднимется наверх ленты, которая сортируется по updated_at.
+        // Запоминаем только диалоги, где реально были непрочитанные:
+        // их updated_at нужен дельта-синку, чтобы клиент сбросил
+        // протухший unread_count. Остальную историю не трогаем,
+        // иначе старые диалоги поднимутся наверх ленты.
+        $unreadConversationIds = DB::table('messages')
+            ->whereNull('read_at')
+            ->distinct()
+            ->pluck('conversation_id')
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn (int $id) => $id > 0)
+            ->values();
+
         $notifications = DB::table('notifications')
             ->whereNull('read_at')
             ->update(['read_at' => $now]);
@@ -72,6 +83,8 @@ class ReadAllNotifications extends Command
         $participants = DB::table('conversation_participants')
             ->update(['last_read_at' => $now]);
 
+        $this->touchConversations($unreadConversationIds, $now);
+
         $userIds = $this->affectedUserIds();
         $forgotten = $this->forgetBadgeCaches($userIds);
         $woken = $this->broadcastInboxChanged($userIds);
@@ -79,6 +92,24 @@ class ReadAllNotifications extends Command
         $this->info("Уведомления: {$notifications}, сообщения: {$messages}, доставлено: {$delivered}, участники: {$participants}, кешей сброшено: {$forgotten}, онлайн-клиентов разбужено: {$woken}.");
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Поднять updated_at диалогов с погашенными непрочитанными.
+     *
+     * Дельта-синк списка диалогов фильтрует по last_message_at/updated_at;
+     * без этого клиент до полного рефетча рисует старый unread_count.
+     *
+     * @param  Collection<int, int>  $conversationIds  диалоги с непрочитанными
+     * @param  Carbon  $now  метка прочтения
+     */
+    private function touchConversations(Collection $conversationIds, $now): void
+    {
+        foreach ($conversationIds->chunk(500) as $chunk) {
+            DB::table('conversations')
+                ->whereIn('id', $chunk->all())
+                ->update(['updated_at' => $now]);
+        }
     }
 
     /**

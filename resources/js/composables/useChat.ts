@@ -30,6 +30,7 @@ import { ensureUserChannel, leaveUserChannel } from '@/composables/useUserChanne
 import { pokeRealtime, syncRealtimeNow } from '@/composables/useRealtimePoller'
 import { captureAuthUid, currentAuthUid } from '@/composables/useAuthUid'
 import { useRewardToast } from '@/composables/useRewardToast'
+import { useBadgeStore } from '@/stores/badges'
 import type { Conversation, ConversationDetail, Message } from '@/types/entities/Chat'
 
 let searchAbort: AbortController | null = null
@@ -80,6 +81,7 @@ function voiceKindFor(file: File): 'image' | 'voice' | 'file' {
 
 export function useChat() {
   captureAuthUid()
+  const badges = useBadgeStore()
   const rewards = useRewardToast()
   const conversations = ref<Conversation[]>([])
   const activeConv = ref<ConversationDetail | null>(null)
@@ -413,6 +415,7 @@ export function useChat() {
       try {
         await syncConversationsDelta()
       } catch {}
+      void reconcileUnreadFromServer()
       return conversations.value
     }
     loadConversationsInflight = (async (): Promise<Conversation[]> => {
@@ -437,6 +440,7 @@ export function useChat() {
     w.__conversationsInflight = loadConversationsInflight
     try {
       const data = await loadConversationsInflight
+      void reconcileUnreadFromServer()
       return data
     } finally { loadConversationsInflight = null; w.__conversationsInflight = null }
   }
@@ -509,6 +513,85 @@ export function useChat() {
     }
     if (delta.server_time > 0) {
       await setSyncCursor(uid, 'conversations', delta.server_time)
+    }
+  }
+
+  let unreadReconcileTimer: ReturnType<typeof setTimeout> | null = null
+  let unreadReconcileInflight = false
+  let unreadReconcileQueued = false
+
+  /**
+   * Отложенно сверить непрочитанные диалоги с сервером.
+   *
+   * События `chat:unread-changed` и `user:notification.inbox-changed`
+   * могут прийти пачкой после массового прочтения или прочтения на другом
+   * устройстве. Дебаунс склеивает их в один запрос.
+   *
+   * @param delay задержка в миллисекундах
+   */
+  function scheduleUnreadReconcile(delay = 700): void {
+    if (!alive) return
+    if (unreadReconcileTimer) clearTimeout(unreadReconcileTimer)
+    unreadReconcileTimer = setTimeout(() => {
+      unreadReconcileTimer = null
+      void reconcileUnreadFromServer()
+    }, delay)
+  }
+
+  /**
+   * Привести `unread_count` локального списка к серверной правде.
+   *
+   * Список из IndexedDB и дельта-синк могут хранить протухшие счётчики
+   * (например, после `notifications:read-all`, который исторически не
+   * трогал `conversations.updated_at`). Тянем только непрочитанные:
+   * если сервер вернул меньше страницы — всё остальное точно прочитано.
+   *
+   * @returns void
+   */
+  async function reconcileUnreadFromServer(): Promise<void> {
+    if (!alive) return
+    if (unreadReconcileInflight) {
+      unreadReconcileQueued = true
+      return
+    }
+    unreadReconcileInflight = true
+    try {
+      const pageSize = 50
+      const rows = await chatApi.conversations(1, pageSize, { onlyUnread: true })
+      if (!alive) return
+      const unreadById = new Map<number, number>()
+      for (const row of rows) {
+        const id = Number(row?.id ?? 0)
+        if (!(id > 0)) continue
+        unreadById.set(id, Math.max(0, Number((row as any)?.unread_count ?? 0) || 0))
+      }
+      const serverMayHaveMore = rows.length >= pageSize
+      const changed: Conversation[] = []
+      for (const conv of conversations.value) {
+        const id = Number(conv?.id ?? 0)
+        if (!(id > 0)) continue
+        const serverValue = unreadById.get(id)
+        if (serverValue === undefined && serverMayHaveMore) continue
+        const next = serverValue ?? 0
+        const prev = Math.max(0, Number((conv as any)?.unread_count ?? 0) || 0)
+        if (next === prev) continue
+        ;(conv as any).unread_count = next
+        changed.push(conv)
+      }
+      if (changed.length === 0) return
+      sortConversations()
+      const cacheUid = getUid()
+      if (cacheUid > 0) {
+        void saveConversations(cacheUid, changed)
+      }
+    } catch {
+      // Следующий фокус или тик поллера всё равно сверит счётчики.
+    } finally {
+      unreadReconcileInflight = false
+      if (unreadReconcileQueued) {
+        unreadReconcileQueued = false
+        scheduleUnreadReconcile(0)
+      }
     }
   }
 
@@ -1191,6 +1274,16 @@ export function useChat() {
       busUnsubs.push(busOn('chat:peer', (e: any) => applyPeer(Number(e?.conversationId), e?.peer)))
       busUnsubs.push(busOn('chat:open-ids', (e: any) => applyOpenIds(Number(e?.conversationId), e?.ids)))
       busUnsubs.push(busOn('chat:dialog-read', (convId: number) => applyDialogRead(Number(convId))))
+      busUnsubs.push(busOn('chat:unread-changed', () => scheduleUnreadReconcile()))
+      busUnsubs.push(busOn('user:notification.inbox-changed', (e: any) => {
+        if (e?.all) scheduleUnreadReconcile()
+      }))
+      busUnsubs.push(busOn('badges:update', (b: any) => {
+        const serverUnread = Number(b?.conversations_unread)
+        if (Number.isFinite(serverUnread) && serverUnread < unreadTotal.value) {
+          scheduleUnreadReconcile()
+        }
+      }))
     } catch {}
   }
 
@@ -1669,7 +1762,10 @@ export function useChat() {
     const id = Number(convId)
     if (!(id > 0)) return
     const row = conversations.value.find((c) => c?.id === id) as any
+    const hadUnread = Number(row?.unread_count || 0) > 0
+    const readRecently = Date.now() - (localReadAt.get(id) ?? 0) < 15000
     if (row) row.unread_count = 0
+    if (hadUnread && !readRecently) badges.decUnread()
     localReadAt.set(id, Date.now())
     if (localReadAt.size > 100) {
       const first = localReadAt.keys().next().value as number | undefined
@@ -1696,7 +1792,10 @@ export function useChat() {
     const id = Number(convId)
     if (!(id > 0)) return
     const row = conversations.value.find((c) => c?.id === id) as any
+    const hadUnread = Number(row?.unread_count || 0) > 0
+    const readRecently = Date.now() - (localReadAt.get(id) ?? 0) < 15000
     if (row) row.unread_count = 0
+    if (hadUnread && !readRecently) badges.decUnread()
     const cacheUid = getUid()
     if (cacheUid > 0) {
       void markCachedConversationRead(cacheUid, id)

@@ -14,12 +14,14 @@
 import { computed, defineAsyncComponent, onMounted, ref } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
 import Avatar from 'primevue/avatar'
+import Button from 'primevue/button'
 import Menu from 'primevue/menu'
 import Toast from 'primevue/toast'
 import ConfirmDialog from 'primevue/confirmdialog'
 import GlobalNotificationToasts from '@/Components/Features/Feedback/GlobalNotificationToasts.vue'
 import { usePipeApp } from '@/composables/usePipeApp'
 import { usePipeRealtime } from '@/composables/usePipeRealtime'
+import { usePipeRefresh } from '@/composables/usePipeRefresh'
 import { useBellNotifications } from '@/composables/useBellNotifications'
 import { useClientReady } from '@/composables/useClientReady'
 import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
@@ -38,6 +40,9 @@ const { mainHref, visitMain } = usePipeApp()
 
 const me = computed(() => (usePage().props.auth as { user?: { id: number; name: string; avatar_url: string | null } }).user)
 const profileHref = computed(() => (me.value ? mainHref(`/users/${me.value.id}`) : ''))
+
+/** Ручное обновление ленты/треда: маленькая стрелка в шапке. */
+const { refreshing, refresh } = usePipeRefresh()
 
 /** Стандартная панель уведомлений (общий state с BellNotificationsModal). */
 const bell = useBellNotifications()
@@ -168,6 +173,17 @@ onMounted(() => {
         </button>
 
         <span class="ml-auto" />
+
+        <Button
+          icon="pi pi-refresh"
+          text
+          rounded
+          severity="secondary"
+          class="!h-9 !w-9 !min-w-0 !p-0"
+          aria-label="Обновить Pipes"
+          :loading="refreshing"
+          @click="refresh"
+        />
 
         <button
           v-if="me"

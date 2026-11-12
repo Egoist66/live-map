@@ -42,7 +42,7 @@ let stopLive: (() => void) | null = null
 const repliesHasMore = computed(() => thread.store.hasMoreReplies())
 const repliesLoadingMore = computed(() => thread.store.repliesLoadingMore)
 const hasReplies = computed(() => thread.store.replies.length > 0)
-const stateLoading = computed(() => thread.store.repliesLoading && !thread.store.currentThread)
+const stateLoading = computed(() => !thread.store.currentThread && !thread.threadMissing.value)
 
 const { sentinel: repliesSentinel } = useInfiniteScroll({
   hasMore: repliesHasMore,
@@ -78,10 +78,8 @@ function askDeleteThread(): void {
     acceptLabel: 'Удалить',
     rejectLabel: 'Отмена',
     accept: async () => {
-      try {
-        await pipeApi.remove(target.id)
-        router.visit(pipeRoute('index'))
-      } catch { /* остаёмся, тост покажет реальную ошибку сети */ }
+      const removed = await thread.deleteThread(target.id)
+      if (removed) router.visit(pipeRoute('index'))
     },
   })
 }
@@ -260,6 +258,17 @@ onBeforeUnmount(() => {
           <span class="text-stone-500 dark:text-zinc-400"> — чтобы ответить и лайкать</span>
         </p>
       </template>
+
+      <section
+        v-else
+        class="rounded-3xl border border-dashed border-stone-300 dark:border-white/10 bg-white dark:bg-[#0F121F] p-8 text-center"
+        aria-label="Pipe не найден"
+      >
+        <div class="text-3xl" aria-hidden="true">🧵</div>
+        <h2 class="mt-2 font-bold text-stone-900 dark:text-white">Pipe не найден</h2>
+        <p class="mt-1 text-sm text-stone-500 dark:text-zinc-400">Возможно, автор уже удалил его.</p>
+        <Button label="К ленте" rounded class="mt-4" icon="pi pi-arrow-left" @click="goToFeed" />
+      </section>
     </div>
   
 </template>

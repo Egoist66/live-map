@@ -3,7 +3,6 @@ import Dialog from "primevue/dialog";
 import Avatar from "primevue/avatar";
 import Button from "primevue/button";
 import Badge from "primevue/badge";
-import Tag from "primevue/tag";
 import Tabs from "primevue/tabs";
 import TabList from "primevue/tablist";
 import Tab from "primevue/tab";
@@ -20,13 +19,14 @@ import { useAdminReports } from "@/composables/useAdminReports";
 import { useAppUpdates } from "@/composables/useAppUpdates";
 import { useAppUpdateModal } from "@/composables/useAppUpdateModal";
 import { useSecurityImpersonations } from "@/composables/useSecurityImpersonations";
-import { useBellUloveMode, uloveHeaderBadge } from "@/composables/useBellUloveMode";
+import { useBellUloveMode } from "@/composables/useBellUloveMode";
 import { avatarSrcFor } from "@/composables/useAvatar";
 import { useAppConfirm } from "@/composables/useAppConfirm";
 import { useNotificationsReadAll } from "@/composables/useNotificationsReadAll";
 import { useNotificationMedia } from "@/composables/useNotificationMedia";
 import { isAdminBlockedClient } from "@/composables/useAdminClientGate";
 import { describeInboxRow } from "@/services/notifications.api";
+import { useBadgeStore } from "@/stores/badges";
 
 const bell = useBellNotifications();
 const bellTicks = useChatListTicks(() => Number((usePage().props.auth as any)?.user?.id ?? 0));
@@ -39,23 +39,7 @@ const newsGuide = useAppUpdateModal();
 const proc = useSecurityImpersonations();
 const bellMode = useBellUloveMode();
 const uloveOnly = bellMode.uloveOnly;
-/** Бейдж шапки в ULove-режиме: базовый слой без пинов/UFlow/районов. */
-const uloveBadge = computed(() =>
-  uloveHeaderBadge({
-    loveUnread: pinAct.loveUnread.value,
-    photoUnread: pinAct.photoUnread.value,
-    subUnread: pinAct.subUnread.value,
-    genericUnread: pinAct.genericEventUnread.value,
-    otherUnread: pinAct.otherUnread.value,
-    pending: bell.pending.value.length,
-    reportsUnread: admRep.pendingCount.value,
-    chatUnread: bell.unreadCount.value,
-    securityUnread: proc.unread.value,
-    newsUnread: updates.unreadCount.value,
-  }),
-);
-/** Бейдж таба «События» в ULove-режиме (новости живут в своём табе). */
-const uloveEventsBadge = computed(() => uloveBadge.value - updates.unreadCount.value);
+const badge = useBadgeStore();
 /** Есть ли что показать в ULove-режиме: база без пинов/UFlow/районов. */
 const uloveHasData = computed(
   () =>
@@ -88,6 +72,7 @@ watch(
     // Только подтягиваем свежие данные. Прочитанным ничего не помечаем:
     // иначе строка пропадает из непрочитанных раньше, чем пользователь её увидел.
     await Promise.allSettled([
+      badge.refresh(),
       pinAct.refresh(),
       isAdminBlockedClient() ? Promise.resolve() : admRep.refresh(),
       updates.loadUnread(),
@@ -184,8 +169,8 @@ function openNews(item: any) {
             class="!w-9 !h-9 !p-0 !rounded-full shrink-0 grid place-items-center [&_.p-button-icon]:!m-0 [&_.p-button-label]:hidden"
           />
           <Badge
-            v-if="uloveOnly ? uloveBadge : (bell.unreadCount.value + bell.pending.value.length + pinAct.unread.value + admRep.pendingCount.value + updates.unreadCount.value + proc.unread.value)"
-            :value="(uloveOnly ? uloveBadge : (bell.unreadCount.value + bell.pending.value.length + pinAct.unread.value + admRep.pendingCount.value + updates.unreadCount.value + proc.unread.value))>9?'9+':String(uloveOnly ? uloveBadge : (bell.unreadCount.value + bell.pending.value.length + pinAct.unread.value + admRep.pendingCount.value + updates.unreadCount.value + proc.unread.value))"
+            v-if="badge.total"
+            :value="badge.total > 9 ? '9+' : String(badge.total)"
             severity="danger"
           />
         </div>
@@ -194,19 +179,9 @@ function openNews(item: any) {
     <div class="px-2 sm:px-3 pb-3 pb-safe">
       <Tabs v-model:value="bell.tab.value" class="notif-tabs">
         <TabList class="!bg-transparent overflow-x-auto" :pt="{ activeBar: { class: '!bg-violet-600' } }">
-          <Tab value="events" class="!text-[13px] !font-bold whitespace-nowrap">
-            <span class="flex items-center gap-1.5">События
-              <Badge v-if="uloveOnly ? uloveEventsBadge : (pinAct.eventUnread.value + bell.pending.value.length + bell.unreadCount.value + proc.unread.value)" :value="((uloveOnly ? uloveEventsBadge : (pinAct.eventUnread.value + bell.pending.value.length + bell.unreadCount.value + proc.unread.value))) > 9 ? '9+' : String(uloveOnly ? uloveEventsBadge : (pinAct.eventUnread.value + bell.pending.value.length + bell.unreadCount.value + proc.unread.value))" severity="danger" class="!text-[10px] !min-w-[20px] !h-5" />
-            </span>
-          </Tab>
-          <Tab v-if="!uloveOnly" value="pins" class="!text-[13px] !font-bold whitespace-nowrap">
-            <span class="flex items-center gap-1.5">Пины
-              <Badge v-if="pinAct.pinUnread.value" :value="pinAct.pinUnread.value > 9 ? '9+' : String(pinAct.pinUnread.value)" severity="danger" class="!text-[10px] !min-w-[20px] !h-5" />
-            </span>
-          </Tab>
-          <Tab v-if="!bell.isAdmin.value" value="news" class="!text-[13px] !font-bold whitespace-nowrap">
-            <span class="flex items-center gap-1.5">Новости<Badge v-if="updates.unreadCount.value" :value="updates.unreadCount.value > 9 ? '9+' : String(updates.unreadCount.value)" severity="info" class="!text-[10px] !min-w-[20px] !h-5" /></span>
-          </Tab>
+          <Tab value="events" class="!text-[13px] !font-bold whitespace-nowrap">События</Tab>
+          <Tab v-if="!uloveOnly" value="pins" class="!text-[13px] !font-bold whitespace-nowrap">Пины</Tab>
+          <Tab v-if="!bell.isAdmin.value" value="news" class="!text-[13px] !font-bold whitespace-nowrap">Новости</Tab>
         </TabList>
         <TabPanels class="!p-0 !bg-transparent">
           <TabPanel value="events">
@@ -230,11 +205,6 @@ function openNews(item: any) {
                       class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500 px-2 py-1.5 flex items-center gap-1.5"
                     >
                       Жалобы
-                      <span
-                        v-if="admRep.pendingCount.value"
-                        class="bg-red-600 text-white text-[10px] px-1.5 py-0.5 rounded-full"
-                        >{{ admRep.pendingCount.value }}</span
-                      >
                     </div>
                     <div class="space-y-1">
                       <button
@@ -271,11 +241,6 @@ function openNews(item: any) {
                       class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500 px-2 py-1.5 flex items-center gap-1.5"
                     >
                       <span class="text-red-500">❗</span> Безопасность
-                      <span
-                        v-if="proc.unread.value"
-                        class="bg-red-600 text-white text-[10px] px-1.5 py-0.5 rounded-full"
-                        >{{ proc.unread.value }}</span
-                      >
                       <Button
                         v-if="proc.unread.value"
                         @click="proc.markRead()"
@@ -330,11 +295,6 @@ function openNews(item: any) {
                       class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500 px-2 py-1.5 flex items-center gap-1.5"
                     >
                       Знакомства
-                      <span
-                        v-if="pinAct.loveUnread.value"
-                        class="bg-pink-500 text-white text-[10px] px-1.5 py-0.5 rounded-full"
-                        >{{ pinAct.loveUnread.value }}</span
-                      >
                     </div>
                     <div class="space-y-1">
                       <button
@@ -386,11 +346,6 @@ function openNews(item: any) {
                       class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500 px-2 py-1.5 flex items-center gap-1.5"
                     >
                       UFlow
-                      <span
-                        v-if="pinAct.flowUnread.value"
-                        class="bg-sky-500 text-white text-[10px] px-1.5 py-0.5 rounded-full"
-                        >{{ pinAct.flowUnread.value }}</span
-                      >
                     </div>
                     <div class="space-y-1">
                       <button
@@ -447,11 +402,6 @@ function openNews(item: any) {
                       class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500 px-2 py-1.5 flex items-center gap-1.5"
                     >
                       Фото
-                      <span
-                        v-if="pinAct.photoUnread.value"
-                        class="bg-sky-500 text-white text-[10px] px-1.5 py-0.5 rounded-full"
-                        >{{ pinAct.photoUnread.value }}</span
-                      >
                     </div>
                     <div class="space-y-1">
                       <button
@@ -564,11 +514,6 @@ function openNews(item: any) {
                       class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500 px-2 py-1.5 flex items-center gap-1.5"
                     >
                       Районы
-                      <span
-                        v-if="pinAct.districtUnread.value"
-                        class="bg-emerald-500 text-white text-[10px] px-1.5 py-0.5 rounded-full"
-                        >{{ pinAct.districtUnread.value }}</span
-                      >
                     </div>
                     <div class="space-y-1">
                       <button
@@ -618,11 +563,6 @@ function openNews(item: any) {
                       class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500 px-2 py-1.5 flex items-center gap-1.5"
                     >
                       События
-                      <span
-                        v-if="pinAct.genericEventUnread.value"
-                        class="bg-violet-600 text-white text-[10px] px-1.5 py-0.5 rounded-full"
-                        >{{ pinAct.genericEventUnread.value }}</span
-                      >
                     </div>
                     <div class="space-y-1">
                       <button
@@ -672,11 +612,6 @@ function openNews(item: any) {
                       class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500 px-2 py-1.5 flex items-center gap-1.5"
                     >
                       Уведомления
-                      <span
-                        v-if="pinAct.otherUnread.value"
-                        class="bg-violet-600 text-white text-[10px] px-1.5 py-0.5 rounded-full"
-                        >{{ pinAct.otherUnread.value }}</span
-                      >
                     </div>
                     <div class="space-y-1">
                       <button
@@ -737,10 +672,6 @@ function openNews(item: any) {
                       class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500 px-2 py-1.5 flex items-center gap-1.5"
                     >
                       Заявки
-                      <span
-                        class="bg-amber-500 text-white text-[10px] px-1.5 py-0.5 rounded-full"
-                        >{{ bell.pending.value.length }}</span
-                      >
                     </div>
                     <div class="space-y-1">
                       <button
@@ -838,11 +769,6 @@ function openNews(item: any) {
             <div class="notif-scroll">
               <div class="px-2 py-1.5 flex items-center gap-1.5">
                 <span class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500">Активность пинов</span>
-                <span
-                  v-if="pinAct.pinUnread.value"
-                  class="bg-rose-500 text-white text-[10px] px-1.5 py-0.5 rounded-full"
-                  >{{ pinAct.pinUnread.value }}</span
-                >
                 <Button
                   v-if="pinAct.pinUnread.value"
                   @click="pinAct.markAllRead()"
@@ -921,7 +847,6 @@ function openNews(item: any) {
               <div v-else>
                 <div class="px-2 py-1.5 flex items-center gap-1.5">
                   <span class="text-[11px] font-bold tracking-widest uppercase text-stone-400 dark:text-zinc-500">Что нового</span>
-                  <Tag v-if="updates.unreadCount.value" :value="`новых: ${updates.unreadCount.value}`" severity="info" class="!text-[10px]" />
                   <Button v-if="updates.unreadCount.value" @click="updates.dismissAll()" label="Прочитать все" link size="small" class="ml-auto !text-[11px]" />
                 </div>
                 <div class="space-y-1">

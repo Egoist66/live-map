@@ -292,6 +292,19 @@ onMounted(() => {
             {{ tab.label }}
           </span>
         </button>
+
+        <!-- Возврат из Pipes в свой профиль ULove (на мобилке) -->
+        <button
+          type="button"
+          class="flex flex-1 flex-col items-center gap-0.5 px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] transition active:scale-95"
+          :aria-label="feed.me.value ? 'Мой профиль в ULove' : 'Войти в ULove'"
+          @click="feed.openMyProfile()"
+        >
+          <i class="pi pi-user text-lg text-stone-400 dark:text-zinc-500" aria-hidden="true" />
+          <span class="text-[10px] font-semibold leading-none text-stone-500 dark:text-zinc-400">
+            {{ feed.me.value ? 'Профиль' : 'Войти' }}
+          </span>
+        </button>
       </div>
     </nav>
 

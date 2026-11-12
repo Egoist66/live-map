@@ -6,6 +6,7 @@ import { usePipeStore } from '@/stores/pipe'
 import { pipeApi } from '@/services/pipe.api'
 import { useContentModeration } from '@/composables/useContentModeration'
 import { usePipeApp } from '@/composables/usePipeApp'
+import { isNotFoundError } from '@/utils/httpError'
 import type { PipeReply, PipeThread } from '@/types/pipe'
 
 export const PIPE_REPLY_MAX = 300
@@ -39,6 +40,9 @@ export function usePipeThread(threadIdGetter: () => number | null) {
   const replyBusy = ref<Record<number, boolean>>({})
   const saveBusy = ref(false)
 
+  /** Тред удалён/недоступен: страница показывает мягкий «не найден». */
+  const threadMissing = ref(false)
+
   /** Редактирование своего ответа: какой ответ и черновик правки. */
   const editingReplyId = ref<number | null>(null)
   const editBody = ref('')
@@ -55,6 +59,23 @@ export function usePipeThread(threadIdGetter: () => number | null) {
 
   /** Куда ответить: null — на сам тред. */
   const replyTo = computed(() => replyParent.value)
+
+  /**
+   * Тред уже удалён на сервере (404): убираем устаревшую карточку
+   * из стора/кеша и сообщаем мягко, без красного тоста ошибки.
+   *
+   * @param threadId удалённый тред
+   */
+  function handleGoneThread(threadId: number): void {
+    store.removeThread(threadId)
+    threadMissing.value = true
+    toast?.add({
+      severity: 'info',
+      summary: 'Pipe уже удалён',
+      detail: 'Обновите ленту — карточка больше не актуальна',
+      life: 2600,
+    })
+  }
 
   /** Цитата-контекст композера: кому и на что отвечаем (глубокие ветки читаются). */
   const replyQuote = computed(() => {
@@ -101,10 +122,15 @@ export function usePipeThread(threadIdGetter: () => number | null) {
 
   /**
    * Загрузить тред: карточка + первая страница ветки ответов.
+   * Если сервер ответил 404 — помечаем тред как отсутствующий,
+   * чтобы страница показала понятное состояние вместо пустоты.
+   *
    * @param threadId тред
    */
   async function load(threadId: number): Promise<void> {
-    await store.loadThread(threadId)
+    threadMissing.value = false
+    const loaded = await store.loadThread(threadId)
+    threadMissing.value = !loaded && !store.currentThread
   }
 
   /** Максимальный id известных локально ответов (для поллинг-тика). */
@@ -176,6 +202,11 @@ export function usePipeThread(threadIdGetter: () => number | null) {
       replyMention = ''
       return true
     } catch (error) {
+      if (isNotFoundError(error)) {
+        handleGoneThread(threadId)
+        return false
+      }
+
       const detail = replyErrorText(error)
       toast?.add({ severity: 'error', summary: 'Ошибка', detail, life: 3500 })
       return false
@@ -210,7 +241,12 @@ export function usePipeThread(threadIdGetter: () => number | null) {
         detail: res.saved ? 'Pipe сохранён — найдёте во вкладке «Избранные» ленты' : undefined,
         life: 2200,
       })
-    } catch {
+    } catch (error) {
+      if (isNotFoundError(error)) {
+        handleGoneThread(target.id)
+        return
+      }
+
       store.applySaved(target.id, !nextSaved)
       toast?.add({ severity: 'error', summary: 'Ошибка', detail: 'Не вышло сохранить pipe', life: 2500 })
     } finally {
@@ -222,15 +258,21 @@ export function usePipeThread(threadIdGetter: () => number | null) {
    * Прогон дублей: лайк/анлайк ответа без перезагрузки ветки.
    * @param replyId ответ
    */
-  async function toggleReplyLike(replyId: number): Promise<void> {    if (isGuest.value) return
+  async function toggleReplyLike(replyId: number): Promise<void> {
+    if (isGuest.value) return
     if (replyBusy.value[replyId]) return
 
     replyBusy.value = { ...replyBusy.value, [replyId]: true }
     try {
       const res = await pipeApi.toggleReplyLike(replyId)
       store.applyReplyLike(replyId, res.liked, res.likes_count)
-    } catch {
-      toast?.add({ severity: 'error', summary: 'Ошибка', detail: 'Не вышло поставить лайк', life: 2500 })
+    } catch (error) {
+      if (isNotFoundError(error)) {
+        store.removeReplyLocally(replyId)
+        toast?.add({ severity: 'info', summary: 'Ответ уже удалён', life: 2200 })
+      } else {
+        toast?.add({ severity: 'error', summary: 'Ошибка', detail: 'Не вышло поставить лайк', life: 2500 })
+      }
     } finally {
       const next = { ...replyBusy.value }
       delete next[replyId]
@@ -259,6 +301,12 @@ export function usePipeThread(threadIdGetter: () => number | null) {
         life: 2200,
       })
     } catch (error) {
+      if (isNotFoundError(error)) {
+        store.removeReplyLocally(replyId)
+        toast?.add({ severity: 'info', summary: 'Ответ уже удалён', life: 2200 })
+        return
+      }
+
       const detail = replyErrorText(error)
       toast?.add({ severity: 'error', summary: 'Ошибка', detail, life: 3500 })
     } finally {
@@ -310,12 +358,45 @@ export function usePipeThread(threadIdGetter: () => number | null) {
       cancelEditReply()
       toast?.add({ severity: 'success', summary: 'Ответ обновлён', life: 2200 })
     } catch (error) {
+      if (isNotFoundError(error)) {
+        cancelEditReply()
+        store.removeReplyLocally(replyId)
+        toast?.add({ severity: 'info', summary: 'Ответ уже удалён', life: 2200 })
+        return
+      }
+
       const detail = replyErrorText(error)
       toast?.add({ severity: 'error', summary: 'Ошибка', detail, life: 3500 })
     } finally {
       const next = { ...replyBusy.value }
       delete next[replyId]
       replyBusy.value = next
+    }
+  }
+
+  /**
+   * Удалить открытый тред со страницы pipe.
+   *
+   * 404 означает, что тред уже удалён (например, с другого устройства):
+   * это не ошибка — просто чистим локальное состояние и уходим в ленту.
+   *
+   * @param threadId тред
+   * @returns true, если тред удалён (или уже отсутствовал)
+   */
+  async function deleteThread(threadId: number): Promise<boolean> {
+    try {
+      await pipeApi.remove(threadId)
+      store.removeThread(threadId)
+      toast?.add({ severity: 'success', summary: 'Pipe удалён', life: 2000 })
+      return true
+    } catch (error) {
+      if (isNotFoundError(error)) {
+        handleGoneThread(threadId)
+        return true
+      }
+
+      toast?.add({ severity: 'error', summary: 'Ошибка', detail: 'Не вышло удалить pipe', life: 2500 })
+      return false
     }
   }
 
@@ -334,7 +415,15 @@ export function usePipeThread(threadIdGetter: () => number | null) {
 
       const threadId = threadIdGetter()
       if (threadId) store.applyRepliesDelta(threadId, -1)
-    } catch {
+    } catch (error) {
+      if (isNotFoundError(error)) {
+        store.removeReplyLocally(replyId)
+        const threadId = threadIdGetter()
+        if (threadId) store.applyRepliesDelta(threadId, -1)
+        toast?.add({ severity: 'info', summary: 'Ответ уже удалён', life: 2200 })
+        return
+      }
+
       toast?.add({ severity: 'error', summary: 'Ошибка', detail: 'Не вышло удалить ответ', life: 2500 })
     }
   }
@@ -380,9 +469,9 @@ export function usePipeThread(threadIdGetter: () => number | null) {
   }
 
   return {
-    store, me, isGuest, replyBody, replyParent, replyAnonymous, sending, replyBusy, saveBusy,
+    store, me, isGuest, threadMissing, replyBody, replyParent, replyAnonymous, sending, replyBusy, saveBusy,
     replyTo, replyQuote, left, canSend, startReplyTo, load, bindLive, sendReply,
     editingReplyId, editBody, startEditReply, cancelEditReply, saveEditReply,
-    toggleReplyLike, toggleReplyPin, toggleThreadSave, deleteReply, reportReply, reportThread,
+    toggleReplyLike, toggleReplyPin, toggleThreadSave, deleteThread, deleteReply, reportReply, reportThread,
   }
 }

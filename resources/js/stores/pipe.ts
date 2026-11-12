@@ -14,11 +14,21 @@ import {
   removeCachedThread,
   saveFeed,
 } from '@/composables/usePipeCache'
+import { isNotFoundError } from '@/utils/httpError'
 import type { PipeFilter, PipeReply, PipeThread } from '@/types/pipe'
 
 let realtimeBound = false
-const refreshing = new Set<number>()
+const refreshingThreadIds = new Set<number>()
 const threadChangedListeners = new Set<() => void>()
+
+/**
+ * Треды, удалённые локально (своё удаление или 404 с другого устройства).
+ *
+ * Защита от «воскрешения»: in-flight ответ ленты, отправленный до удаления,
+ * не должен вернуть карточку обратно. Сет хранится на время жизни модуля,
+ * id тредов глобально уникальны — пересечений между аккаунтами нет.
+ */
+const goneThreadIds = new Set<number>()
 
 /**
  * Стор мини-приложения Pipe: треды — бизнес-сущность, живёт в pinia.
@@ -48,6 +58,8 @@ export const usePipeStore = defineStore('pipe', () => {
   const lastPage = ref(1)
   const loading = ref(false)
   const loadingMore = ref(false)
+  /** Ручное обновление (кнопка-стрелка): крутит иконку и блокирует дубли. */
+  const refreshing = ref(false)
   const filter = ref<PipeFilter>('all')
   const search = ref('')
   const authorId = ref<number | null>(null)
@@ -74,16 +86,24 @@ export const usePipeStore = defineStore('pipe', () => {
   }
 
   /**
-   * Загрузить первую страницу ленты (cache-first).
+   * Загрузить первую страницу ленты (stale-while-revalidate).
    *
-   * Авторизованному и без поиска: мгновенный рендер из IndexedDB;
-   * если кеш свежий (offlineCache TTL 10 минут) — сеть не дёргаем
-   * вовсе, иначе тихая фоновая ревалидация с сервера. Протухшего
-   * рендера не бывает: ответ сервера всегда перезаписывает выдачу.
+   * Авторизованному и без поиска: мгновенный рендер из IndexedDB,
+   * затем **всегда** фоновая ревалидация с сервера — даже если кеш
+   * помечен свежим. Так удаление/правка с другого устройства не
+   * застревает в локальном снимке до истечения TTL.
    *
-   * @param query фильтр, автор, поиск, диплинк-тред
+   * @param query фильтр, автор, поиск, диплинк-тред, ручной force-режим
+   * @returns true, если ответ сервера получен и применён
    */
-  async function loadThreads(query?: { filter?: PipeFilter; authorId?: number | null; search?: string; threadId?: number | null }): Promise<void> {
+  async function loadThreads(query?: {
+    filter?: PipeFilter
+    authorId?: number | null
+    search?: string
+    threadId?: number | null
+    force?: boolean
+    background?: boolean
+  }): Promise<boolean> {
     if (query?.filter) filter.value = query.filter
     if (query && 'authorId' in query) authorId.value = query.authorId ?? null
     if (query && 'search' in query) search.value = query.search ?? ''
@@ -95,42 +115,74 @@ export const usePipeStore = defineStore('pipe', () => {
     const cacheScope = `pipe:feed:${scope}`
     const searchTerm = search.value.trim()
     const cacheable = searchTerm === ''
+    const isForce = query?.force === true
+    const isBackground = query?.background === true
 
     let paintedFromCache = false
 
-    if (cacheable && uid > 0) {
+    if (cacheable && uid > 0 && !isForce) {
       const cached = await loadCachedFeed(uid, scope)
       const cacheStillCurrent = requestId === feedRequestId
       if (cacheStillCurrent && cached && cached.threads.length > 0) {
-        threads.value = cached.threads
+        threads.value = cached.threads.filter((thread) => !goneThreadIds.has(thread.id))
         page.value = cached.page
         lastPage.value = cached.lastPage
         paintedFromCache = true
-
-        if (cacheStore.isFresh(cacheScope)) return
       }
     }
 
-    loading.value = !paintedFromCache
-    try {
-      const res = await pipeApi.feed({
-        filter: filter.value,
-        author_id: authorId.value,
-        search: searchTerm || undefined,
-        thread_id: query?.threadId ?? undefined,
-        page: 1,
-      })
-      if (requestId !== feedRequestId) return
+    if (!paintedFromCache && !isBackground) loading.value = true
+    if (cacheable && uid > 0) cacheStore.markSyncing(cacheScope)
 
-      threads.value = res.data
-      page.value = res.current_page
-      lastPage.value = res.last_page
+    try {
+      /**
+       * Фоновая ревалидация не должна сбрасывать докрученную ленту на
+       * первую страницу: перезапрашиваем все уже загруженные страницы
+       * и собираем их заново (ручное обновление работает так же).
+       */
+      const pagesToLoad = isBackground ? Math.max(1, page.value) : 1
+      const responses = await Promise.all(
+        Array.from({ length: pagesToLoad }, (_, index) =>
+          pipeApi.feed({
+            filter: filter.value,
+            author_id: authorId.value,
+            search: searchTerm || undefined,
+            thread_id: query?.threadId ?? undefined,
+            page: index + 1,
+          }),
+        ),
+      )
+      if (requestId !== feedRequestId) return false
+
+      const firstPage = responses[0]
+      const seenIds = new Set<number>()
+      const freshThreads: PipeThread[] = []
+
+      for (const response of responses) {
+        for (const thread of response.data) {
+          const isGone = goneThreadIds.has(thread.id)
+          const isDuplicate = seenIds.has(thread.id)
+          if (isGone || isDuplicate) continue
+
+          seenIds.add(thread.id)
+          freshThreads.push(thread)
+        }
+      }
+
+      threads.value = freshThreads
+      page.value = Math.min(pagesToLoad, firstPage.last_page)
+      lastPage.value = firstPage.last_page
 
       if (cacheable && uid > 0) {
-        await saveFeed(uid, scope, res.data, res.current_page, res.last_page)
+        await saveFeed(uid, scope, freshThreads, page.value, firstPage.last_page)
         void prunePipeThreads(uid)
         cacheStore.markSynced(cacheScope)
       }
+
+      return true
+    } catch {
+      if (cacheable && uid > 0) cacheStore.markSyncFailed(cacheScope)
+      return false
     } finally {
       if (requestId === feedRequestId) loading.value = false
     }
@@ -153,7 +205,8 @@ export const usePipeStore = defineStore('pipe', () => {
         search: search.value || undefined,
         page: page.value + 1,
       })
-      threads.value = [...threads.value, ...res.data]
+      const freshThreads = res.data.filter((thread) => !goneThreadIds.has(thread.id))
+      threads.value = [...threads.value, ...freshThreads]
       page.value = res.current_page
       lastPage.value = res.last_page
 
@@ -166,32 +219,38 @@ export const usePipeStore = defineStore('pipe', () => {
     }
   }
 
-  /** Загрузить тред с десктопа: карточка сверху, ответы ниже. Карточка — cache-first. */
-  async function loadThread(threadId: number): Promise<void> {
+  /**
+   * Загрузить тред с десктопа: карточка сверху, ответы ниже.
+   *
+   * Карточка — cache-first, но сеть дёргается всегда (фоновая
+   * ревалидация). Если тред уже удалён на сервере — убираем его
+   * из стора и кеша без ошибки на экране.
+   *
+   * @param threadId тред
+   * @param options force — пропустить кеш, background — без скелетона
+   * @returns true, если удалось получить свежие данные
+   */
+  async function loadThread(threadId: number, options?: { force?: boolean; background?: boolean }): Promise<boolean> {
     const uid = currentAuthUid()
     const cacheStore = useOfflineCacheStore()
     const threadCacheScope = `pipe:thread:${threadId}`
+    const isForce = options?.force === true
+    const isBackground = options?.background === true
 
     let paintedFromCache = false
 
-    if (uid > 0) {
+    if (uid > 0 && !isForce) {
       const cached = await loadCachedThread(uid, threadId)
-      if (cached) {
+      const isGone = goneThreadIds.has(threadId)
+      if (cached && !isGone) {
         currentThread.value = cached
         paintedFromCache = true
-        if (cacheStore.isFresh(threadCacheScope)) {
-          if (!repliesLoading.value) {
-            const repliesLoaded = await pipeApi.replies(threadId, 1)
-            replies.value = repliesLoaded.data
-            repliesPage.value = repliesLoaded.current_page
-            repliesLastPage.value = repliesLoaded.last_page
-          }
-          return
-        }
       }
     }
 
-    repliesLoading.value = true
+    if (!paintedFromCache && !isBackground) repliesLoading.value = true
+    if (uid > 0) cacheStore.markSyncing(threadCacheScope)
+
     try {
       const [threadLoaded, repliesLoaded] = await Promise.all([
         pipeApi.show(threadId),
@@ -206,6 +265,12 @@ export const usePipeStore = defineStore('pipe', () => {
         await patchCachedThread(uid, threadLoaded)
         cacheStore.markSynced(threadCacheScope)
       }
+
+      return true
+    } catch (error) {
+      if (isNotFoundError(error)) removeThread(threadId)
+      if (uid > 0) cacheStore.markSyncFailed(threadCacheScope)
+      return false
     } finally {
       repliesLoading.value = false
     }
@@ -227,6 +292,40 @@ export const usePipeStore = defineStore('pipe', () => {
     }
   }
 
+  /**
+   * Ручное обновление всех данных Pipe: текущая лента + открытый тред
+   * с ответами. Сеть тянется принудительно, кеш-снимок перезаписывается.
+   *
+   * Используется кнопкой-стрелкой в шапке; фоновая ревалидация при этом
+   * продолжает работать штатно (фокус вкладки, открытие страницы).
+   *
+   * @returns true, если хотя бы одна часть данных обновилась
+   */
+  async function refreshAll(): Promise<boolean> {
+    if (refreshing.value) return false
+
+    refreshing.value = true
+    try {
+      const openThreadId = currentThread.value?.id ?? null
+      const results = await Promise.all([
+        loadThreads({
+          filter: filter.value,
+          authorId: authorId.value,
+          search: search.value,
+          force: true,
+          background: true,
+        }),
+        openThreadId
+          ? loadThread(openThreadId, { force: true, background: true })
+          : Promise.resolve(false),
+      ])
+
+      return results.some(Boolean)
+    } finally {
+      refreshing.value = false
+    }
+  }
+
   /** Свежий тред наверх после создания (кеш: строка + снапшоты лент). */
   function prependThread(thread: PipeThread): void {
     const without = threads.value.filter((item) => item.id !== thread.id)
@@ -243,8 +342,29 @@ export const usePipeStore = defineStore('pipe', () => {
     if (uid > 0) void patchCachedThread(uid, thread)
   }
 
-  /** Убрать тред после удаления (и из offline-снапшотов лент). */
+  /**
+   * Убрать карточку только из текущей выдачи (тред жив).
+   *
+   * Нужно, например, когда на вкладке «Избранные» сняли закладку:
+   * карточка уходит из списка, но тред остаётся в кеше и в других
+   * лентах. Tombstone и удаление из IndexedDB не применяются.
+   *
+   * @param id тред
+   */
+  function dropThreadFromFeed(id: number): void {
+    threads.value = threads.value.filter((item) => item.id !== id)
+  }
+
+  /**
+   * Убрать тред после удаления (и из offline-снапшотов лент).
+   *
+   * Id попадает в gone-набор, чтобы запоздавший ответ ревалидации
+   * не вернул удалённую карточку обратно в ленту.
+   *
+   * @param id тред
+   */
   function removeThread(id: number): void {
+    goneThreadIds.add(id)
     threads.value = threads.value.filter((item) => item.id !== id)
     if (currentThread.value?.id === id) currentThread.value = null
     const uid = currentAuthUid()
@@ -410,21 +530,24 @@ export const usePipeStore = defineStore('pipe', () => {
 
   /**
    * Освежить тред с сервера (лайки/счётчики/модерация).
-   * Удалённый модератором тред тихо уходит из ленты.
+   * Удалённый тред тихо уходит из ленты и кеша.
+   *
    * @param threadId тред
+   * @returns true, если тред получен и применён
    */
-  async function refreshThread(threadId: number): Promise<void> {
-    if (refreshing.has(threadId)) return
+  async function refreshThread(threadId: number): Promise<boolean> {
+    if (refreshingThreadIds.has(threadId)) return false
 
-    refreshing.add(threadId)
+    refreshingThreadIds.add(threadId)
     try {
       const fresh = await pipeApi.show(threadId)
       replaceThread(fresh)
+      return true
     } catch (error) {
-      const status = (error as { response?: { status?: number } })?.response?.status
-      if (status === 404) removeThread(threadId)
+      if (isNotFoundError(error)) removeThread(threadId)
+      return false
     } finally {
-      refreshing.delete(threadId)
+      refreshingThreadIds.delete(threadId)
     }
   }
 
@@ -485,10 +608,11 @@ export const usePipeStore = defineStore('pipe', () => {
   }
 
   return {
-    threads, page, lastPage, loading, loadingMore, filter, search, authorId,
+    threads, page, lastPage, loading, loadingMore, refreshing, filter, search, authorId,
     currentThread, replies, repliesPage, repliesLastPage, repliesLoading, repliesLoadingMore,
     hasMoreThreads, hasMoreReplies, loadThreads, loadMoreThreads, loadThread, loadMoreReplies,
-    prependThread, replaceThread, removeThread, applyLike, applySaved, applyReplyLike, applyReplyPin, applyReplyEdit, applyRepliesDelta,
+    refreshAll,
+    prependThread, replaceThread, removeThread, dropThreadFromFeed, applyLike, applySaved, applyReplyLike, applyReplyPin, applyReplyEdit, applyRepliesDelta,
     prependReply, prependNestedReply, removeReplyLocally, refreshThread, reloadReplies, subscribeRealtime,
   }
 })

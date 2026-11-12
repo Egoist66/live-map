@@ -1,4 +1,5 @@
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useDocumentVisibility, useWindowFocus } from '@vueuse/core'
 import { usePage } from '@inertiajs/vue3'
 import { useToast } from 'primevue/usetoast'
 import { usePipeStore } from '@/stores/pipe'
@@ -6,6 +7,7 @@ import { pipeApi } from '@/services/pipe.api'
 import { useContentModeration } from '@/composables/useContentModeration'
 import { usePipeApp } from '@/composables/usePipeApp'
 import { captureAuthUid } from '@/composables/useAuthUid'
+import { isNotFoundError } from '@/utils/httpError'
 import type { PipeFilter, PipeThread } from '@/types/pipe'
 
 export const PIPE_THREAD_MAX = 500
@@ -55,7 +57,47 @@ export function usePipeFeed(options?: { authorId?: number | null; threadId?: num
 
   const me = computed(() => (usePage().props.auth as { user?: { id: number } }).user)
   const isGuest = computed(() => !me.value)
-  const { mainHref } = usePipeApp()
+  const { mainHref, visitMain } = usePipeApp()
+
+  /** Лента первично загружена: ревалидация по фокусу не гонит лишний запрос. */
+  const feedReady = ref(false)
+
+  /** Не чаще раза в 15 секунд: возврат из фона не должен спамить сеть. */
+  const ACTIVE_RESYNC_MS = 15_000
+  let lastActiveResyncAt = 0
+
+  const documentVisibility = useDocumentVisibility()
+  const windowFocused = useWindowFocus()
+
+  /**
+   * Тихая ревалидация при возврате к вкладке/приложению.
+   *
+   * Другое устройство могло удалить/изменить pipes, пока вкладка была
+   * в фоне — при возврате показываем актуальную ленту без скелетона.
+   */
+  function revalidateWhenActive(): void {
+    if (!feedReady.value || store.refreshing) return
+
+    const now = Date.now()
+    const isTooSoon = now - lastActiveResyncAt < ACTIVE_RESYNC_MS
+    if (isTooSoon) return
+
+    lastActiveResyncAt = now
+    void store.loadThreads({
+      filter: store.filter,
+      authorId: store.authorId,
+      search: store.search,
+      background: true,
+    })
+  }
+
+  watch(documentVisibility, (state) => {
+    if (state === 'visible') revalidateWhenActive()
+  })
+
+  watch(windowFocused, (isFocused) => {
+    if (isFocused) revalidateWhenActive()
+  })
 
   /** Осталось символов при правке pipe. */
   const editLeft = computed(() => PIPE_THREAD_MAX - editText.value.length)
@@ -88,11 +130,15 @@ export function usePipeFeed(options?: { authorId?: number | null; threadId?: num
 
     store.subscribeRealtime()
 
-    await store.loadThreads({
-      filter: options?.authorId || resolvedAuthor ? 'all' : store.filter,
-      authorId: resolvedAuthor,
-      threadId: options?.threadId ?? null,
-    })
+    try {
+      await store.loadThreads({
+        filter: options?.authorId || resolvedAuthor ? 'all' : store.filter,
+        authorId: resolvedAuthor,
+        threadId: options?.threadId ?? null,
+      })
+    } finally {
+      feedReady.value = true
+    }
   }
 
   /** Сменить вкладку ленты. */
@@ -126,6 +172,33 @@ export function usePipeFeed(options?: { authorId?: number | null; threadId?: num
   }
 
   /**
+   * Переход в свой профиль ULove — пункт «Профиль» мобильной навигации
+   * Pipes (чтобы вернуться обратно из мини-сайта). Гость уходит на логин.
+   */
+  function openMyProfile(): void {
+    const userId = me.value?.id
+    if (!userId) return promptLogin()
+    visitMain(`/users/${userId}`)
+  }
+
+  /**
+   * Тред уже удалён на сервере (404): скорее всего, действие пришло
+   * с устаревшей карточки другого устройства. Убираем её из ленты и
+   * кеша мягко, без красного тоста «не вышло».
+   *
+   * @param threadId удалённый тред
+   */
+  function handleGoneThread(threadId: number): void {
+    store.removeThread(threadId)
+    toast?.add({
+      severity: 'info',
+      summary: 'Pipe уже удалён',
+      detail: 'Убрали устаревшую карточку из ленты',
+      life: 2600,
+    })
+  }
+
+  /**
    * Лайк / анлайк без перезагрузки.
    * @param threadId тред
    */
@@ -137,8 +210,12 @@ export function usePipeFeed(options?: { authorId?: number | null; threadId?: num
     try {
       const res = await pipeApi.toggleLike(threadId)
       store.applyLike(threadId, res.liked, res.likes_count)
-    } catch {
-      toast?.add({ severity: 'error', summary: 'Ошибка', detail: 'Не вышло поставить лайк', life: 2500 })
+    } catch (error) {
+      if (isNotFoundError(error)) {
+        handleGoneThread(threadId)
+      } else {
+        toast?.add({ severity: 'error', summary: 'Ошибка', detail: 'Не вышло поставить лайк', life: 2500 })
+      }
     } finally {
       const next = { ...likeBusy.value }
       delete next[threadId]
@@ -162,7 +239,7 @@ export function usePipeFeed(options?: { authorId?: number | null; threadId?: num
     const nextSaved = !current.saved
     saveBusy.value = { ...saveBusy.value, [threadId]: true }
     store.applySaved(threadId, nextSaved)
-    if (!nextSaved && store.filter === 'saved') store.removeThread(threadId)
+    if (!nextSaved && store.filter === 'saved') store.dropThreadFromFeed(threadId)
 
     try {
       const res = await pipeApi.toggleSave(threadId)
@@ -173,7 +250,12 @@ export function usePipeFeed(options?: { authorId?: number | null; threadId?: num
         detail: res.saved ? 'Pipe сохранён — найдёте во вкладке «Избранные»' : undefined,
         life: 2200,
       })
-    } catch {
+    } catch (error) {
+      if (isNotFoundError(error)) {
+        handleGoneThread(threadId)
+        return
+      }
+
       store.applySaved(threadId, !nextSaved)
       if (nextSaved && store.filter === 'saved') await store.loadThreads({ filter: 'saved' })
       toast?.add({ severity: 'error', summary: 'Ошибка', detail: 'Не вышло сохранить pipe', life: 2500 })
@@ -200,8 +282,12 @@ export function usePipeFeed(options?: { authorId?: number | null; threadId?: num
       await pipeApi.remove(threadId)
       await pause(REMOVE_LEAVE_MS)
       store.removeThread(threadId)
-    } catch {
-      toast?.add({ severity: 'error', summary: 'Ошибка', detail: 'Не вышло удалить pipe', life: 2500 })
+    } catch (error) {
+      if (isNotFoundError(error)) {
+        handleGoneThread(threadId)
+      } else {
+        toast?.add({ severity: 'error', summary: 'Ошибка', detail: 'Не вышло удалить pipe', life: 2500 })
+      }
     } finally {
       const stillBusy = { ...removingIds.value }
       delete stillBusy[threadId]
@@ -279,7 +365,7 @@ export function usePipeFeed(options?: { authorId?: number | null; threadId?: num
   return {
     store, tabs, reportReasons, likeBusy, saveBusy, removingIds, isGuest, me, saving,
     editing, editText, editLeft,
-    init, setFilter, setSearch, clearAuthor, promptLogin,
+    init, setFilter, setSearch, clearAuthor, promptLogin, openMyProfile,
     toggleLike, toggleSave, removeThread, startEdit, cancelEdit, saveEdit, reportThread,
   }
 }
