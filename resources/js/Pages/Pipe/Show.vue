@@ -102,6 +102,13 @@ function onAuthorAnchor(anchor: { id: number | null } | null): void {
   visitMain(`/users/${anchor.id}`)
 }
 
+/** Жалоба на сам pipe со страницы треда. */
+function onThreadReport(reason: string): void {
+  const target = thread.store.currentThread
+  if (!target) return
+  void thread.reportThread(target, reason)
+}
+
 /** Жалоба на ответ (в т.ч. вложенный) из ветки. */
 function onReplyReport(payload: { replyId: number; reason: string }): void {
   let target: PipeReply | null = null
@@ -173,6 +180,7 @@ onBeforeUnmount(() => {
           @save="thread.toggleThreadSave()"
           @share="shareThread($event)"
           @reply="onReply(null)"
+          @report="onThreadReport"
           @delete="askDeleteThread"
         />
 

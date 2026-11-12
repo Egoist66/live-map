@@ -8,10 +8,14 @@
  */
 import { computed, ref } from 'vue'
 import { useConfirm } from 'primevue/useconfirm'
+import Button from 'primevue/button'
 import Dialog from 'primevue/dialog'
+import Menu from 'primevue/menu'
 import { usePipeApp } from '@/composables/usePipeApp'
 import { renderWithMentions } from '@/composables/useMentions'
 import { usePipeMentions } from '@/composables/usePipeMentions'
+import { usePipeThreadMenu } from '@/composables/usePipeThreadMenu'
+import { useDropdownMenuStyle } from '@/composables/useDropdownMenuStyle'
 import type { PipeThread } from '@/types/pipe'
 
 const props = withDefaults(defineProps<{
@@ -128,12 +132,56 @@ function askDelete(): void {
     accept: () => emit('delete', props.thread.id),
   })
 }
+
+const { menuPt } = useDropdownMenuStyle()
+
+/** Меню «⋯»: поделиться, избранное, правка, жалоба, удаление. */
+const threadMenu = usePipeThreadMenu(
+  () => ({
+    isGuest: props.isGuest,
+    saved: props.thread.saved,
+    canEdit: Boolean(props.thread.can_edit) && props.showEdit,
+    canDelete: Boolean(props.thread.can_delete),
+  }),
+  {
+    openThread: () => emit('reply', props.thread),
+    share: () => emit('share', props.thread),
+    save: () => emit('save', props.thread.id),
+    report: () => {
+      reportOpen.value = true
+    },
+    edit: () => emit('edit', props.thread),
+    delete: askDelete,
+  },
+)
+
+const {
+  menu: threadMenuAnchor,
+  sheetOpen: threadMenuSheetOpen,
+  items: threadMenuItems,
+  open: openThreadMenu,
+  close: closeThreadMenu,
+  onTouchStart,
+  onTouchMove,
+  onTouchEnd,
+  onTouchCancel,
+  onContextMenu,
+  onClickCapture,
+  onCardClick,
+} = threadMenu
 </script>
 
 <template>
   <article
-    class="rounded-3xl border border-stone-200 dark:border-white/10 bg-white dark:bg-[#0F121F] p-4 sm:p-5"
+    class="cursor-pointer rounded-3xl border border-stone-200 bg-white p-4 transition-colors hover:border-stone-300 dark:border-white/10 dark:bg-[#0F121F] dark:hover:border-white/15 sm:p-5"
     :aria-label="`Pipe от ${author?.name ?? 'Аноним'} от ${timeLabel}`"
+    @touchstart.passive="onTouchStart"
+    @touchmove.passive="onTouchMove"
+    @touchend.passive="onTouchEnd"
+    @touchcancel="onTouchCancel"
+    @contextmenu="onContextMenu"
+    @click.capture="onClickCapture"
+    @click="onCardClick"
   >
     <header class="flex items-start gap-3">
       <component
@@ -155,19 +203,27 @@ function askDelete(): void {
       </component>
 
       <div class="min-w-0 flex-1">
-        <div class="flex items-center gap-2 text-sm">
+        <div class="flex min-w-0 items-center gap-1.5 text-sm">
           <component
             :is="authorHref ? 'a' : 'span'"
             :href="authorHref ?? undefined"
-            class="truncate font-bold hover:underline"
+            class="min-w-0 flex-1 truncate font-bold hover:underline"
             @click="onAuthorNavigate($event)"
           >
             {{ author?.name ?? 'Аноним' }}
           </component>
-          <span v-if="thread.is_anonymous" class="rounded-full bg-stone-100 dark:bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-stone-500 dark:text-zinc-400">
+          <span
+            v-if="thread.is_anonymous"
+            class="shrink-0 whitespace-nowrap rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-semibold text-stone-500 dark:bg-white/10 dark:text-zinc-400"
+          >
             анонимно
           </span>
-          <span class="ml-auto shrink-0 text-xs text-stone-400 dark:text-zinc-500" :title="thread.created_at ?? undefined">{{ timeLabel }}</span>
+          <span
+            class="shrink-0 whitespace-nowrap text-xs text-stone-400 dark:text-zinc-500"
+            :title="thread.created_at ?? undefined"
+          >
+            {{ timeLabel }}
+          </span>
         </div>
 
         <div
@@ -196,7 +252,9 @@ function askDelete(): void {
               loading="lazy"
               decoding="async"
               class="w-full object-cover"
-              :class="thread.images.length === 1 ? 'aspect-[4/3]' : 'aspect-square'"
+              :class="thread.images.length === 1
+                ? 'aspect-[16/10] max-h-[220px] sm:aspect-[4/3] sm:max-h-none'
+                : 'aspect-square max-h-[150px] sm:max-h-none'"
             />
           </button>
         </div>
@@ -249,62 +307,61 @@ function askDelete(): void {
         <span class="tabular-nums">{{ thread.replies_count > 0 ? thread.replies_count : '' }}</span>
       </button>
 
-      <button
-        v-if="!isGuest"
-        type="button"
-        class="inline-flex items-center gap-1.5 rounded-full px-2 py-1.5 text-sm transition active:scale-95 disabled:opacity-50"
-        :class="[thread.saved ? 'text-amber-500 dark:text-amber-400' : 'hover:text-amber-600 dark:hover:text-amber-400']"
-        :disabled="saveBusy"
-        :aria-pressed="thread.saved"
-        :aria-label="thread.saved ? 'Убрать из избранного' : 'Сохранить в избранное'"
-        @click="emit('save', thread.id)"
-      >
-        <i :class="thread.saved ? 'pi pi-bookmark-fill' : 'pi pi-bookmark'" aria-hidden="true" />
-      </button>
-
       <span class="ml-auto" />
 
-      <button
-        type="button"
-        class="rounded-full p-1.5 text-sm transition hover:text-sky-600 dark:hover:text-sky-400"
-        aria-label="Поделиться pipe"
-        @click="emit('share', props.thread)"
-      >
-        <i class="pi pi-share-alt" aria-hidden="true" />
-      </button>
-
-      <button
-        v-if="thread.can_edit && showEdit"
-        type="button"
-        class="rounded-full p-1.5 text-sm transition hover:text-violet-600 dark:hover:text-violet-400"
-        aria-label="Редактировать pipe"
-        @click="emit('edit', props.thread)"
-      >
-        <i class="pi pi-pencil" aria-hidden="true" />
-      </button>
-
-      <button
-        v-if="!isGuest"
-        type="button"
-        class="rounded-full p-1.5 text-sm transition hover:text-amber-600 dark:hover:text-amber-400"
-        aria-label="Сообщить о нарушении"
-        @click="reportOpen = true"
-      >
-        <i class="pi pi-flag" aria-hidden="true" />
-      </button>
-
-      <button
-        v-if="thread.can_delete"
-        type="button"
-        class="rounded-full p-1.5 text-sm transition hover:text-red-600 dark:hover:text-red-400"
-        aria-label="Удалить pipe"
-        @click="askDelete"
-      >
-        <i class="pi pi-trash" aria-hidden="true" />
-      </button>
+      <Button
+        icon="pi pi-ellipsis-h"
+        text
+        rounded
+        severity="secondary"
+        aria-label="Ещё действия с pipe"
+        aria-haspopup="menu"
+        class="!h-9 !w-9 !p-0 !text-stone-500 dark:!text-zinc-400 [&_.p-button-icon]:!text-base"
+        @click="openThreadMenu($event)"
+      />
     </footer>
 
-    <div v-if="reportOpen" class="mt-3 rounded-2xl border border-amber-300/60 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 p-3">
+    <Menu ref="threadMenuAnchor" :model="threadMenuItems" :popup="true" :pt="menuPt" />
+
+    <Dialog
+      v-model:visible="threadMenuSheetOpen"
+      position="bottom"
+      :draggable="false"
+      :modal="true"
+      :dismissable-mask="true"
+      :show-header="false"
+      :pt="{ root: { class: '!m-0 !w-full !rounded-t-[24px] !rounded-b-none !border-0 !max-h-[80dvh] sm:!max-w-[380px]' }, content: { class: '!p-2 !pb-[calc(0.5rem+var(--sab))]' } }"
+    >
+      <div class="px-1 pb-1">
+        <template v-for="(item, index) in threadMenuItems" :key="index">
+          <div v-if="item.separator" class="my-1 border-t border-stone-200 dark:border-white/10" />
+          <Button
+            v-else
+            :label="item.label"
+            :icon="item.icon"
+            text
+            rounded
+            :severity="item.danger ? 'danger' : 'secondary'"
+            class="w-full !justify-start !px-4 !py-3.5 !text-[15px] !font-medium"
+            @click="item.command?.()"
+          />
+        </template>
+        <Button
+          label="Отмена"
+          text
+          rounded
+          severity="secondary"
+          class="mt-1 w-full !rounded-2xl !bg-stone-100 !px-4 !py-3.5 !text-[15px] !font-medium dark:!bg-white/10"
+          @click="closeThreadMenu"
+        />
+      </div>
+    </Dialog>
+
+    <div
+      v-if="reportOpen"
+      data-no-card-open
+      class="mt-3 rounded-2xl border border-amber-300/60 bg-amber-50 p-3 dark:border-amber-500/30 dark:bg-amber-500/10"
+    >
       <p class="text-xs font-bold text-amber-700 dark:text-amber-300">Что не так с этим pipe?</p>
       <div class="mt-2 flex flex-wrap gap-1.5">
         <button

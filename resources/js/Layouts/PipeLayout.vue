@@ -142,7 +142,7 @@ onMounted(() => {
     <GlobalNotificationToasts />
     <BellNotificationsModal v-if="isClientReady" />
 
-    <header class="sticky top-0 z-20 border-b border-stone-200/80 dark:border-white/10 bg-white/90 dark:bg-[#0F121F]/85 backdrop-blur-md">
+    <header class="pipe-top-safe sticky top-0 z-20 border-b border-stone-200/80 bg-white/90 backdrop-blur-md dark:border-white/10 dark:bg-[#0F121F]/85">
       <div class="mx-auto flex h-14 max-w-[540px] items-center gap-2 px-3">
         <button
           type="button"
@@ -233,11 +233,11 @@ onMounted(() => {
       </div>
     </header>
 
-    <main class="mx-auto min-h-[calc(100dvh-3.5rem-6rem)] max-w-[540px] px-3 pb-16">
+    <main class="pipe-main mx-auto max-w-[540px] px-3 pb-16">
       <slot />
     </main>
 
-    <footer class="pb-[calc(4.5rem+env(safe-area-inset-bottom))] pt-6 text-center text-xs text-stone-400 dark:text-zinc-500 sm:pb-6">
+    <footer class="pipe-footer pt-6 text-center text-xs text-stone-400 dark:text-zinc-500">
       <nav class="flex items-center justify-center gap-3" aria-label="Справочные страницы главного сайта">
         <a :href="mainHref('/privacy')" class="hover:underline">Приватность</a>
         <span aria-hidden="true">·</span>
@@ -265,6 +265,45 @@ onMounted(() => {
 </template>
 
 <style>
+/*
+ * Верхний отступ шапки Pipes: чёлка iPhone и нативные кнопки Telegram
+ * (закрыть/свернуть/меню) парят поверх WebView. На тач-устройствах
+ * резервируем safe-area + хром клиента, на десктопе оставляем ноль.
+ */
+.pipe-top-safe {
+  padding-top: 0;
+}
+
+@media (pointer: coarse) {
+  .pipe-top-safe {
+    padding-top: calc(var(--sat-real, 0px) + var(--tg-chrome-top, 0px));
+  }
+}
+
+/* Футер: место под мобильный таб-бар и системный индикатор iPhone. */
+.pipe-footer {
+  padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 640px) {
+  .pipe-footer {
+    padding-bottom: 1.5rem;
+  }
+}
+
+/* Высота контента Pipes с учётом выросшей шапки (safe-area + TG-хром). */
+.pipe-main {
+  min-height: calc(100dvh - 3.5rem - 6rem);
+}
+
+@media (pointer: coarse) {
+  .pipe-main {
+    min-height: calc(
+      100dvh - 3.5rem - 6rem - var(--sat-real, 0px) - var(--tg-chrome-top, 0px)
+    );
+  }
+}
+
 /*
  * Меню профиля Pipes: PrimeVue телепортирует попап в <body>,
  * поэтому ховер пунктов красим глобальным CSS (класс .pipe-user-menu

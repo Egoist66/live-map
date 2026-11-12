@@ -78,7 +78,7 @@ const list = usePipeFeedList({
 
 /** Иконка нижнего таб-бара по вкладке (нативная навигация телефона). */
 function tabIcon(value: PipeFilter): string {
-  if (value === 'mine') return 'pi pi-user'
+  if (value === 'mine') return 'pi pi-user-edit'
   if (value === 'saved') return 'pi pi-bookmark'
   return 'pi pi-align-left'
 }
@@ -216,7 +216,7 @@ onMounted(() => {
         class="pipe-feed-viewport relative overflow-y-auto overscroll-contain"
         aria-label="Список pipes"
       >
-        <div class="w-full max-w-[540px] mx-auto">
+        <div class="pipe-list-bottom mx-auto w-full max-w-[540px]">
           <!--
             Удаление с эффектом: во время запроса (removingIds) карточка
             блюрится и прижимается, после ответа бэка плавно гаснет и
@@ -275,7 +275,7 @@ onMounted(() => {
           v-for="tab in feed.tabs.value"
           :key="tab.value"
           type="button"
-          class="flex flex-1 flex-col items-center gap-0.5 px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] transition active:scale-95"
+          class="pipe-tabbar-safe flex flex-1 flex-col items-center gap-0.5 px-2 pt-2 transition active:scale-95"
           :aria-current="feed.store.filter === tab.value ? 'page' : undefined"
           :aria-label="tab.label"
           @click="feed.setFilter(tab.value)"
@@ -296,7 +296,7 @@ onMounted(() => {
         <!-- Возврат из Pipes в свой профиль ULove (на мобилке) -->
         <button
           type="button"
-          class="flex flex-1 flex-col items-center gap-0.5 px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] transition active:scale-95"
+          class="pipe-tabbar-safe flex flex-1 flex-col items-center gap-0.5 px-2 pt-2 transition active:scale-95"
           :aria-label="feed.me.value ? 'Мой профиль в ULove' : 'Войти в ULove'"
           @click="feed.openMyProfile()"
         >
@@ -435,12 +435,14 @@ onMounted(() => {
  * CSS и браузер такое объявление отбрасывает (список схлопывался).
  */
 .pipe-feed-viewport {
-  height: calc(100dvh - 12.5rem - env(safe-area-inset-bottom));
+  height: calc(
+    100dvh - 12.5rem - env(safe-area-inset-bottom) - var(--sat-real, 0px) - var(--tg-chrome-top, 0px)
+  );
 }
 
 @media (min-width: 640px) {
   .pipe-feed-viewport {
-    height: calc(100dvh - 10rem);
+    height: calc(100dvh - 10rem - var(--sat-real, 0px) - var(--tg-chrome-top, 0px));
   }
 }
 
@@ -467,5 +469,21 @@ onMounted(() => {
 
 :deep(.p-togglebutton) {
   white-space: nowrap;
+}
+
+/* Нижний отступ списка: последняя карточка не прячется под таб-бар. */
+.pipe-list-bottom {
+  padding-bottom: calc(3rem + env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 640px) {
+  .pipe-list-bottom {
+    padding-bottom: 0.75rem;
+  }
+}
+
+/* Таб-бар: отступ под системный индикатор iPhone / жест навигации. */
+.pipe-tabbar-safe {
+  padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
 }
 </style>
